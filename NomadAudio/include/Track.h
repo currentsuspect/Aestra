@@ -56,6 +56,10 @@ public:
 
     void setSolo(bool solo);
     bool isSoloed() const { return m_soloed.load(); }
+    
+    // System track flag (preview, test sound, etc - not affected by transport)
+    void setSystemTrack(bool isSystem) { m_isSystemTrack = isSystem; }
+    bool isSystemTrack() const { return m_isSystemTrack; }
 
     // Track State
     void setState(TrackState state);
@@ -65,6 +69,7 @@ public:
     bool loadAudioFile(const std::string& filePath);
     bool generatePreviewTone(const std::string& filePath);
     bool generateDemoAudio(const std::string& filePath);
+    void setAudioData(const float* data, uint32_t numSamples, uint32_t sampleRate, uint32_t numChannels);
     void clearAudioData();
 
     // Recording
@@ -95,6 +100,7 @@ private:
     std::string m_name;
     uint32_t m_trackId;
     uint32_t m_color;  // ARGB format
+    bool m_isSystemTrack{false};  // System tracks (preview, test sound) aren't affected by transport
 
     // Audio parameters (atomic for thread safety)
     std::atomic<float> m_volume{1.0f};

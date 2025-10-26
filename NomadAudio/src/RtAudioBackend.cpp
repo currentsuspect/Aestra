@@ -195,6 +195,12 @@ bool RtAudioBackend::startStream() {
         return false;
     }
 
+    // Check if stream is already running
+    if (m_rtAudio->isStreamRunning()) {
+        std::cout << "RtAudioBackend::startStream: Stream is already running" << std::endl;
+        return true;  // Already running is a success
+    }
+
     std::cout << "RtAudioBackend::startStream: Starting stream" << std::endl;
     std::cout.flush();
 

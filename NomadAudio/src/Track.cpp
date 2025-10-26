@@ -538,6 +538,26 @@ void Track::clearAudioData() {
     setState(TrackState::Empty);
 }
 
+void Track::setAudioData(const float* data, uint32_t numSamples, uint32_t sampleRate, uint32_t numChannels) {
+    if (!data || numSamples == 0) {
+        Log::error("Invalid audio data");
+        return;
+    }
+    
+    // Copy audio data
+    m_audioData.assign(data, data + (numSamples * numChannels));
+    m_sampleRate = sampleRate;
+    m_numChannels = numChannels;
+    m_durationSeconds.store(static_cast<double>(numSamples) / sampleRate);
+    m_playbackPhase.store(0.0);
+    m_positionSeconds.store(0.0);
+    setState(TrackState::Loaded);
+    
+    Log::info("Audio data loaded: " + std::to_string(numSamples) + " samples, " +
+               std::to_string(m_durationSeconds.load()) + " seconds, " + 
+               std::to_string(sampleRate) + " Hz, " + std::to_string(numChannels) + " channels");
+}
+
 // Recording
 void Track::startRecording() {
     if (getState() != TrackState::Empty) {
