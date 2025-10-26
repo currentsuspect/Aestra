@@ -104,11 +104,17 @@ bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallba
         return false;
     }
 
-    // Validate configuration
+    // TEMPORARILY DISABLED: Validate configuration
+    // The WASAPI device enumeration is failing intermittently when called rapidly
+    // This causes getDevices() to return empty list, breaking validation
+    // TODO: Fix the underlying WASAPI probe issue in RtAudio
+    /*
     if (!validateDeviceConfig(config.deviceId, config.sampleRate)) {
         std::cerr << "AudioDeviceManager::openStream: Device config validation failed" << std::endl;
         return false;
     }
+    */
+   std::cout << "AudioDeviceManager::openStream: Skipping validation (WASAPI probe issue)" << std::endl;
 
     m_currentConfig = config;
     m_currentCallback = callback;
@@ -298,9 +304,7 @@ const char* getVersion() {
 }
 
 const char* getBackendName() {
-    // Try to get the actual API being used at runtime (for ASIO/WASAPI fallback)
-    // This is more accurate than compile-time defines
-    return "RtAudio (ASIO with WASAPI fallback)";
+    return "RtAudio WASAPI";
 }
 
 } // namespace Audio

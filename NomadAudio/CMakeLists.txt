@@ -20,25 +20,9 @@ set(RTAUDIO_HEADERS
     ${RTAUDIO_DIR}/RtAudio.h
 )
 
-# ASIO SDK Integration (for Windows ASIO support)
-set(ASIOSDK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/External/ASIOSDK)
-
-set(ASIOSDK_SOURCES
-    ${ASIOSDK_DIR}/common/asio.cpp
-    ${ASIOSDK_DIR}/host/asiodrivers.cpp
-    ${ASIOSDK_DIR}/host/pc/asiolist.cpp
-)
-
-set(ASIOSDK_HEADERS
-    ${ASIOSDK_DIR}/common/asio.h
-    ${ASIOSDK_DIR}/common/asiosys.h
-    ${ASIOSDK_DIR}/host/asiodrivers.h
-)
-
 # Platform-specific audio APIs
 if(WIN32)
-    # Windows: ASIO (primary for low-latency) with WASAPI fallback
-    add_definitions(-D__WINDOWS_ASIO__)
+    # Windows: WASAPI only (stable, universally available)
     add_definitions(-D__WINDOWS_WASAPI__)
     set(RTAUDIO_LIBS dsound ole32 winmm ksuser mfplat mfuuid wmcodecdspuuid)
 
@@ -94,17 +78,12 @@ add_library(NomadAudio STATIC
     ${NOMAD_AUDIO_HEADERS}
     ${RTAUDIO_SOURCES}
     ${RTAUDIO_HEADERS}
-    ${ASIOSDK_SOURCES}
-    ${ASIOSDK_HEADERS}
 )
 
 target_include_directories(NomadAudio
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${RTAUDIO_DIR}
-        ${ASIOSDK_DIR}/common
-        ${ASIOSDK_DIR}/host
-        ${ASIOSDK_DIR}/host/pc
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/NomadCore/include
@@ -186,8 +165,8 @@ message(STATUS "  NomadAudio v${PROJECT_VERSION}")
 message(STATUS "=================================")
 message(STATUS "RtAudio: Integrated (MIT)")
 if(WIN32)
-    message(STATUS "Audio API: ASIO + WASAPI (Auto-fallback)")
-    message(STATUS "ASIO SDK: Integrated (with WASAPI fallback)")
+    message(STATUS "Audio API: WASAPI")
+    message(STATUS "Backend: Windows Audio Session API")
 elseif(APPLE)
     message(STATUS "Audio API: CoreAudio")
 elseif(UNIX)
