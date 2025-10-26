@@ -79,75 +79,55 @@ std::vector<AudioDeviceInfo> RtAudioBackend::getDevices() {
 }
 
 uint32_t RtAudioBackend::getDefaultOutputDevice() {
-    try {
-        std::vector<unsigned int> deviceIds = m_rtAudio->getDeviceIds();
-        std::cout << "RtAudioBackend::getDefaultOutputDevice: Checking " << deviceIds.size() << " devices" << std::endl;
-        
-        for (unsigned int id : deviceIds) {
-            try {
-                RtAudio::DeviceInfo info = m_rtAudio->getDeviceInfo(id);
-                if (info.isDefaultOutput) {
-                    std::cout << "  Found default output: " << info.name << " (ID " << id << ")" << std::endl;
-                    return id;
-                }
-            } catch (const std::exception& e) {
-                std::cerr << "  Exception checking device " << id << ": " << e.what() << std::endl;
-                continue;
-            }
+    // Use getDevices() which has better error handling for WASAPI
+    auto devices = getDevices();
+    
+    // First try to find a device marked as default
+    for (const auto& device : devices) {
+        if (device.maxOutputChannels > 0 && device.isDefaultOutput) {
+            std::cout << "RtAudioBackend::getDefaultOutputDevice: Found default output: " 
+                      << device.name << " (ID " << device.id << ")" << std::endl;
+            return device.id;
         }
-        
-        // No default found, return first device with output channels
-        for (unsigned int id : deviceIds) {
-            try {
-                RtAudio::DeviceInfo info = m_rtAudio->getDeviceInfo(id);
-                if (info.outputChannels > 0) {
-                    std::cout << "  Using first output device: " << info.name << " (ID " << id << ")" << std::endl;
-                    return id;
-                }
-            } catch (...) {
-                continue;
-            }
-        }
-        
-        std::cout << "  No output devices found, returning 0" << std::endl;
-        return 0;
-    } catch (const std::exception& e) {
-        std::cerr << "RtAudioBackend::getDefaultOutputDevice: Exception: " << e.what() << std::endl;
-        return 0;
     }
+    
+    // If no default found, return first device with output channels
+    for (const auto& device : devices) {
+        if (device.maxOutputChannels > 0) {
+            std::cout << "RtAudioBackend::getDefaultOutputDevice: Using first output device: " 
+                      << device.name << " (ID " << device.id << ")" << std::endl;
+            return device.id;
+        }
+    }
+    
+    std::cout << "RtAudioBackend::getDefaultOutputDevice: No output devices found, returning 0" << std::endl;
+    return 0;
 }
 
 uint32_t RtAudioBackend::getDefaultInputDevice() {
-    try {
-        std::vector<unsigned int> deviceIds = m_rtAudio->getDeviceIds();
-        for (unsigned int id : deviceIds) {
-            try {
-                RtAudio::DeviceInfo info = m_rtAudio->getDeviceInfo(id);
-                if (info.isDefaultInput) {
-                    return id;
-                }
-            } catch (...) {
-                continue;
-            }
+    // Use getDevices() which has better error handling for WASAPI
+    auto devices = getDevices();
+    
+    // First try to find a device marked as default
+    for (const auto& device : devices) {
+        if (device.maxInputChannels > 0 && device.isDefaultInput) {
+            std::cout << "RtAudioBackend::getDefaultInputDevice: Found default input: " 
+                      << device.name << " (ID " << device.id << ")" << std::endl;
+            return device.id;
         }
-        
-        // No default found, return first device with input channels
-        for (unsigned int id : deviceIds) {
-            try {
-                RtAudio::DeviceInfo info = m_rtAudio->getDeviceInfo(id);
-                if (info.inputChannels > 0) {
-                    return id;
-                }
-            } catch (...) {
-                continue;
-            }
-        }
-        
-        return 0;
-    } catch (const std::exception& e) {
-        std::cerr << "RtAudioBackend::getDefaultInputDevice: Exception: " << e.what() << std::endl;
-        return 0;
     }
+    
+    // If no default found, return first device with input channels
+    for (const auto& device : devices) {
+        if (device.maxInputChannels > 0) {
+            std::cout << "RtAudioBackend::getDefaultInputDevice: Using first input device: " 
+                      << device.name << " (ID " << device.id << ")" << std::endl;
+            return device.id;
+        }
+    }
+    
+    std::cout << "RtAudioBackend::getDefaultInputDevice: No input devices found, returning 0" << std::endl;
+    return 0;
 }
 
 bool RtAudioBackend::openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) {
