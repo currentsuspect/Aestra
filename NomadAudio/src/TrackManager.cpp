@@ -66,7 +66,10 @@ void TrackManager::play() {
     m_isRecording.store(false);
 
     for (auto& track : m_tracks) {
-        track->play();
+        // Skip system tracks (preview, test sound) - they manage their own playback
+        if (!track->isSystemTrack()) {
+            track->play();
+        }
     }
 
     Log::info("TrackManager: Play started");
@@ -76,10 +79,13 @@ void TrackManager::pause() {
     m_isPlaying.store(false);
 
     for (auto& track : m_tracks) {
-        track->pause();
+        // Skip system tracks (preview, test sound) - they manage their own playback
+        if (!track->isSystemTrack()) {
+            track->pause();
+        }
     }
 
-    Log::info("TrackManager: Play paused");
+    Log::info("TrackManager: Paused");
 }
 
 void TrackManager::stop() {
@@ -88,7 +94,10 @@ void TrackManager::stop() {
     m_positionSeconds.store(0.0);
 
     for (auto& track : m_tracks) {
-        track->stop();
+        // Skip system tracks (preview, test sound) - they manage their own playback
+        if (!track->isSystemTrack()) {
+            track->stop();
+        }
     }
 
     Log::info("TrackManager: Stopped");

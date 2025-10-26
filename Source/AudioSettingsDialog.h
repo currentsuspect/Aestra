@@ -16,6 +16,12 @@
 
 namespace Nomad {
 
+// Forward declarations
+namespace Audio {
+    class TrackManager;  // Not used anymore but keep for potential future use
+    class Track;
+}
+
 /**
  * @brief Audio settings dialog
  * 
@@ -23,12 +29,14 @@ namespace Nomad {
  */
 class AudioSettingsDialog : public NomadUI::NUIComponent {
 public:
-    AudioSettingsDialog(Nomad::Audio::AudioDeviceManager* audioManager);
+    AudioSettingsDialog(Nomad::Audio::AudioDeviceManager* audioManager, 
+                       std::shared_ptr<Audio::TrackManager> trackManager = nullptr);
     ~AudioSettingsDialog() override = default;
     
     // Callbacks
     void setOnApply(std::function<void()> callback) { m_onApply = callback; }
     void setOnCancel(std::function<void()> callback) { m_onCancel = callback; }
+    void setOnStreamRestore(std::function<void()> callback) { m_onStreamRestore = callback; }
     
     // Show/hide
     void show();
@@ -39,6 +47,10 @@ public:
     uint32_t getSelectedDeviceId() const { return m_selectedDeviceId; }
     uint32_t getSelectedSampleRate() const { return m_selectedSampleRate; }
     uint32_t getSelectedBufferSize() const { return m_selectedBufferSize; }
+    
+    // Test sound state (for audio callback)
+    bool isPlayingTestSound() const { return m_isPlayingTestSound; }
+    double& getTestSoundPhase() { return m_testSoundPhase; }
     
     // NUIComponent overrides
     void onRender(NomadUI::NUIRenderer& renderer) override;
@@ -60,15 +72,13 @@ private:
     // Test sound functionality
     void playTestSound();
     void stopTestSound();
-    static int testSoundCallback(float* outputBuffer, const float* inputBuffer,
-                                  uint32_t numFrames, double streamTime,
-                                  void* userData);
     
     // Rendering helpers
     void renderBackground(NomadUI::NUIRenderer& renderer);
     void renderDialog(NomadUI::NUIRenderer& renderer);
     
     Audio::AudioDeviceManager* m_audioManager;
+    std::shared_ptr<Audio::TrackManager> m_trackManager;
     
     // UI state
     bool m_visible;
@@ -102,13 +112,14 @@ private:
     // Callbacks
     std::function<void()> m_onApply;
     std::function<void()> m_onCancel;
+    std::function<void()> m_onStreamRestore;
     
     // Original settings (for cancel)
     uint32_t m_originalDeviceId;
     uint32_t m_originalSampleRate;
     uint32_t m_originalBufferSize;
     
-    // Test sound state
+    // Test sound state (simple flag + phase, tone generated in audio callback)
     bool m_isPlayingTestSound;
     double m_testSoundPhase;
     static constexpr double TEST_FREQUENCY = 440.0; // A4 note

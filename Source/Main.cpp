@@ -31,6 +31,7 @@
 #include <memory>
 #include <iostream>
 #include <chrono>
+#include <thread>
 #include <cmath>
 #include <cstring>
 
@@ -104,6 +105,7 @@ public:
         m_previewTrack = m_trackManager->addTrack("Preview");
         m_previewTrack->setVolume(0.5f); // Lower volume for preview
         m_previewTrack->setColor(0xFFFF8800); // Orange color for preview track
+        m_previewTrack->setSystemTrack(true); // Mark as system track (not affected by transport)
         m_previewIsPlaying = false;
         m_previewStartTime = std::chrono::steady_clock::time_point(); // Default construct
         m_previewDuration = 5.0; // 5 seconds preview
@@ -134,21 +136,21 @@ public:
     void addDemoTracks() {
         Log::info("addDemoTracks() called - starting demo track creation");
 
-        // Add some demo tracks for testing with numbered names
+        // Add some demo tracks (empty, no test audio)
         auto track1 = m_trackManager->addTrack("Track 1");
         track1->setColor(0xFF804020); // Orange
-        Log::info("Loading demo audio into Track 1");
-        track1->loadAudioFile("demo_guitar.wav"); // This will generate preview tone
+        // REMOVED: Demo audio generation (now we have dedicated test sound button)
+        // track1->loadAudioFile("demo_guitar.wav");
 
         auto track2 = m_trackManager->addTrack("Track 2");
         track2->setColor(0xFF408020); // Green
-        Log::info("Loading demo audio into Track 2");
-        track2->loadAudioFile("demo_drums.wav");
+        // REMOVED: Demo audio generation
+        // track2->loadAudioFile("demo_drums.wav");
 
         auto track3 = m_trackManager->addTrack("Track 3");
         track3->setColor(0xFF402080); // Purple
-        Log::info("Loading demo audio into Track 3");
-        track3->loadAudioFile("demo_vocals.wav");
+        // REMOVED: Demo audio generation
+        // track3->loadAudioFile("demo_vocals.wav");
 
         // Refresh the UI to show the new tracks
         if (m_trackManagerUI) {
@@ -257,8 +259,23 @@ public:
         // Stop any currently playing preview
         stopSoundPreview();
 
+        // Check if preview track exists
+        if (!m_previewTrack) {
+            Log::error("Preview track not initialized");
+            return;
+        }
+
         // Load the audio file into the preview track
-        if (m_previewTrack && m_previewTrack->loadAudioFile(file.path)) {
+        Log::info("Attempting to load audio file...");
+        bool loaded = false;
+        try {
+            loaded = m_previewTrack->loadAudioFile(file.path);
+        } catch (const std::exception& e) {
+            Log::error("Exception loading audio file: " + std::string(e.what()));
+            return;
+        }
+
+        if (loaded) {
             Log::info("Preview audio loaded successfully");
 
             // Set volume for preview (lower than normal)
@@ -547,33 +564,59 @@ public:
                 std::cout.flush();
                 
                 // First check if any devices are available
-                auto devices = m_audioManager->getDevices();
+                // Retry up to 3 times to work around WASAPI enumeration failures
+                std::vector<AudioDeviceInfo> devices;
+                int retryCount = 0;
+                const int maxRetries = 3;
+                
+                while (devices.empty() && retryCount < maxRetries) {
+                    if (retryCount > 0) {
+                        Log::info("Retry " + std::to_string(retryCount) + "/" + std::to_string(maxRetries) + " - waiting for WASAPI...");
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    }
+                    devices = m_audioManager->getDevices();
+                    retryCount++;
+                }
+                
                 if (devices.empty()) {
-                    Log::warning("No ASIO audio devices found. Please install ASIO drivers.");
+                    Log::warning("No audio devices found. Please check your audio drivers.");
                     Log::warning("Continuing without audio support.");
                     m_audioInitialized = false;
                 } else {
                     ss.str("");
-                    ss << "Found " << devices.size() << " ASIO device(s)";
+                    ss << "Found " << devices.size() << " audio device(s)";
                     Log::info(ss.str());
                     
-                    auto defaultDevice = m_audioManager->getDefaultOutputDevice();
+                    // Find first output device (instead of relying on getDefaultOutputDevice which can fail)
+                    AudioDeviceInfo outputDevice;
+                    bool foundOutput = false;
                     
-                    if (defaultDevice.name.empty()) {
-                        Log::warning("No default ASIO device available");
+                    for (const auto& device : devices) {
+                        if (device.maxOutputChannels > 0) {
+                            outputDevice = device;
+                            foundOutput = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!foundOutput) {
+                        Log::warning("No output audio device found");
                         m_audioInitialized = false;
                     } else {
                         ss.str("");
-                        ss << "Default audio device: " << defaultDevice.name;
+                        ss << "Using audio device: " << outputDevice.name << " (ID: " << outputDevice.id << ")";
                         Log::info(ss.str());
                         
                         // Configure audio stream
                         AudioStreamConfig config;
-                        config.deviceId = defaultDevice.id;
+                        config.deviceId = outputDevice.id;
                         config.sampleRate = 48000;
                         config.bufferSize = 512;
                         config.numInputChannels = 0;
                         config.numOutputChannels = 2;
+                        
+                        // Store config for later restoration
+                        m_mainStreamConfig = config;
 
                         std::cout << "Main::initialize: Opening audio stream" << std::endl;
                         std::cout.flush();
@@ -584,7 +627,17 @@ public:
                             ss << "Audio stream opened: " << config.sampleRate << " Hz, "
                                << config.bufferSize << " samples, " << config.numOutputChannels << " channels";
                             Log::info(ss.str());
-                            m_audioInitialized = true;
+                            
+                            // Start the audio stream
+                            if (m_audioManager->startStream()) {
+                                Log::info("========================================");
+                                Log::info("AUDIO STREAM STARTED SUCCESSFULLY!!!");
+                                Log::info("========================================");
+                                m_audioInitialized = true;
+                            } else {
+                                Log::error("!!!! FAILED TO START AUDIO STREAM !!!!");
+                                m_audioInitialized = false;
+                            }
                         } else {
                             Log::warning("Failed to open audio stream");
                             m_audioInitialized = false;
@@ -593,13 +646,13 @@ public:
                 }
             } catch (const std::exception& e) {
                 ss.str("");
-                ss << "Exception while initializing ASIO audio: " << e.what();
+                ss << "Exception while initializing audio: " << e.what();
                 Log::error(ss.str());
-                Log::warning("Continuing without audio support. Please install ASIO drivers.");
+                Log::warning("Continuing without audio support.");
                 m_audioInitialized = false;
             } catch (...) {
-                Log::error("Unknown exception while initializing ASIO audio");
-                Log::warning("Continuing without audio support. Please install ASIO drivers.");
+                Log::error("Unknown exception while initializing audio");
+                Log::warning("Continuing without audio support.");
                 m_audioInitialized = false;
             }
         }
@@ -664,8 +717,9 @@ public:
             });
         }
         
-        // Create audio settings dialog
-        m_audioSettingsDialog = std::make_shared<AudioSettingsDialog>(m_audioManager.get());
+        // Create audio settings dialog (pass TrackManager so test sound can be added as a track)
+        auto trackManager = m_content->getTrackManagerUI() ? m_content->getTrackManagerUI()->getTrackManager() : nullptr;
+        m_audioSettingsDialog = std::make_shared<AudioSettingsDialog>(m_audioManager.get(), trackManager);
         m_audioSettingsDialog->setBounds(NUIRect(0, 0, desc.width, desc.height));
         m_audioSettingsDialog->setOnApply([this]() {
             Log::info("Audio settings applied");
@@ -680,6 +734,48 @@ public:
         });
         m_audioSettingsDialog->setOnCancel([this]() {
             Log::info("Audio settings cancelled");
+        });
+        m_audioSettingsDialog->setOnStreamRestore([this]() {
+            // Restore main audio stream after test sound
+            Log::info("Restoring main audio stream...");
+            
+            // Get fresh device list to avoid stale device IDs
+            auto devices = m_audioManager->getDevices();
+            if (devices.empty()) {
+                Log::error("No audio devices available for stream restore");
+                return;
+            }
+            
+            // Find first output device
+            uint32_t deviceId = 0;
+            for (const auto& dev : devices) {
+                if (dev.maxOutputChannels > 0) {
+                    deviceId = dev.id;
+                    Log::info("Using device for restore: " + dev.name + " (ID: " + std::to_string(dev.id) + ")");
+                    break;
+                }
+            }
+            
+            if (deviceId == 0) {
+                Log::error("No output device found for stream restore");
+                return;
+            }
+            
+            // Update config with fresh device ID
+            m_mainStreamConfig.deviceId = deviceId;
+            
+            if (m_audioManager->openStream(m_mainStreamConfig, audioCallback, this)) {
+                if (m_audioManager->startStream()) {
+                    Log::info("Main audio stream restored successfully");
+                    m_audioInitialized = true;
+                } else {
+                    Log::error("Failed to start restored audio stream");
+                    m_audioInitialized = false;
+                }
+            } else {
+                Log::error("Failed to open restored audio stream");
+                m_audioInitialized = false;
+            }
         });
         // Add dialog to root component AFTER custom window so it renders on top
         Log::info("Audio settings dialog created");
@@ -956,9 +1052,52 @@ private:
                 trackManager->processAudio(outputBuffer, nFrames, streamTime);
             }
         }
+        
+        // Generate test sound if active (directly in callback, no track needed)
+        if (app->m_audioSettingsDialog && app->m_audioSettingsDialog->isPlayingTestSound()) {
+            static bool firstCallback = true;
+            if (firstCallback) {
+                // Can't use Log in audio callback, but this will show something happened
+                firstCallback = false;
+            }
+            
+            const double sampleRate = 48000.0;
+            const double frequency = 440.0; // A4
+            const double amplitude = 0.3; // 30% volume
+            const double phaseIncrement = 2.0 * 3.14159265358979323846 * frequency / sampleRate;
+            
+            double& phase = app->m_audioSettingsDialog->getTestSoundPhase();
+            
+            for (uint32_t i = 0; i < nFrames; ++i) {
+                float sample = static_cast<float>(amplitude * std::sin(phase));
+                
+                // Mix into existing output (don't replace)
+                outputBuffer[i * 2] += sample;     // Left
+                outputBuffer[i * 2 + 1] += sample; // Right
+                
+                phase += phaseIncrement;
+                if (phase >= 2.0 * 3.14159265358979323846) {
+                    phase -= 2.0 * 3.14159265358979323846;
+                }
+            }
+        }
 
-        // Note: Audio visualizer updates happen in the UI thread via setAudioData()
-        // No visualization updates in the audio callback to maintain real-time safety
+        // Send audio data to visualizer (thread-safe, uses atomic/mutex internally)
+        if (app->m_content && app->m_content->getAudioVisualizer()) {
+            auto visualizer = app->m_content->getAudioVisualizer();
+            
+            // Separate interleaved stereo buffer into left/right channels
+            std::vector<float> leftChannel(nFrames);
+            std::vector<float> rightChannel(nFrames);
+            
+            for (uint32_t i = 0; i < nFrames; ++i) {
+                leftChannel[i] = outputBuffer[i * 2];       // Left
+                rightChannel[i] = outputBuffer[i * 2 + 1];  // Right
+            }
+            
+            // Update visualizer with processed audio
+            visualizer->setAudioData(leftChannel.data(), rightChannel.data(), nFrames, 48000.0);
+        }
 
         return 0;
     }
@@ -973,6 +1112,7 @@ private:
     std::shared_ptr<AudioSettingsDialog> m_audioSettingsDialog;
     bool m_running;
     bool m_audioInitialized;
+    AudioStreamConfig m_mainStreamConfig;  // Store main audio stream configuration
 };
 
 /**

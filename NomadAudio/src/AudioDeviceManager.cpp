@@ -61,11 +61,23 @@ AudioDeviceInfo AudioDeviceManager::getDefaultOutputDevice() const {
         return {};
     }
 
-    uint32_t deviceId = m_driver->getDefaultOutputDevice();
+    // Get all devices and find first output device
+    // This is more reliable than calling the driver's getDefaultOutputDevice()
+    // which can fail due to WASAPI enumeration issues
     auto devices = m_driver->getDevices();
     
     for (const auto& device : devices) {
-        if (device.id == deviceId) {
+        if (device.maxOutputChannels > 0) {
+            // Prefer device marked as default if available
+            if (device.isDefaultOutput) {
+                return device;
+            }
+        }
+    }
+    
+    // If no default marked, return first output device
+    for (const auto& device : devices) {
+        if (device.maxOutputChannels > 0) {
             return device;
         }
     }
@@ -78,11 +90,23 @@ AudioDeviceInfo AudioDeviceManager::getDefaultInputDevice() const {
         return {};
     }
 
-    uint32_t deviceId = m_driver->getDefaultInputDevice();
+    // Get all devices and find first input device
+    // This is more reliable than calling the driver's getDefaultInputDevice()
+    // which can fail due to WASAPI enumeration issues
     auto devices = m_driver->getDevices();
     
     for (const auto& device : devices) {
-        if (device.id == deviceId) {
+        if (device.maxInputChannels > 0) {
+            // Prefer device marked as default if available
+            if (device.isDefaultInput) {
+                return device;
+            }
+        }
+    }
+    
+    // If no default marked, return first input device
+    for (const auto& device : devices) {
+        if (device.maxInputChannels > 0) {
             return device;
         }
     }
