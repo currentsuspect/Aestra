@@ -9,13 +9,7 @@ RtAudioBackend::RtAudioBackend()
     : m_userCallback(nullptr)
     , m_userData(nullptr)
 {
-    std::cout << "RtAudioBackend::RtAudioBackend: Initializing audio backend" << std::endl;
-    std::cout.flush();
-    
-    // Start with WASAPI by default (guaranteed to work on Windows)
-    // ASIO can be enabled later through audio settings if drivers are installed
-    std::cout << "RtAudioBackend: Using WASAPI (stable, universally available)" << std::endl;
-    std::cout << "RtAudioBackend: Note: ASIO support available through audio settings if drivers installed" << std::endl;
+    std::cout << "RtAudioBackend: Initializing WASAPI audio backend" << std::endl;
     std::cout.flush();
     
     try {
@@ -25,11 +19,11 @@ RtAudioBackend::RtAudioBackend()
         // Set error callback
         m_rtAudio->setErrorCallback([](RtAudioErrorType type, const std::string& errorText) {
             if (type != RTAUDIO_NO_ERROR && type != RTAUDIO_WARNING) {
-                std::cerr << "RtAudio Error: " << errorText << std::endl;
+                std::cerr << "RtAudio WASAPI Error: " << errorText << std::endl;
             }
         });
     } catch (const std::exception& e) {
-        std::cerr << "RtAudioBackend: WASAPI failed: " << e.what() << std::endl;
+        std::cerr << "RtAudioBackend: WASAPI initialization failed: " << e.what() << std::endl;
         throw;
     }
 }

@@ -57,6 +57,13 @@ private:
     void applySettings();
     void cancelSettings();
     
+    // Test sound functionality
+    void playTestSound();
+    void stopTestSound();
+    static int testSoundCallback(float* outputBuffer, const float* inputBuffer,
+                                  uint32_t numFrames, double streamTime,
+                                  void* userData);
+    
     // Rendering helpers
     void renderBackground(NomadUI::NUIRenderer& renderer);
     void renderDialog(NomadUI::NUIRenderer& renderer);
@@ -82,6 +89,7 @@ private:
     // UI Components
     std::shared_ptr<NomadUI::NUIButton> m_applyButton;
     std::shared_ptr<NomadUI::NUIButton> m_cancelButton;
+    std::shared_ptr<NomadUI::NUIButton> m_testSoundButton;
     std::shared_ptr<NomadUI::NUIDropdown> m_deviceDropdown;
     std::shared_ptr<NomadUI::NUIDropdown> m_sampleRateDropdown;
     std::shared_ptr<NomadUI::NUIDropdown> m_bufferSizeDropdown;
@@ -99,6 +107,11 @@ private:
     uint32_t m_originalDeviceId;
     uint32_t m_originalSampleRate;
     uint32_t m_originalBufferSize;
+    
+    // Test sound state
+    bool m_isPlayingTestSound;
+    double m_testSoundPhase;
+    static constexpr double TEST_FREQUENCY = 440.0; // A4 note
 };
 
 } // namespace Nomad

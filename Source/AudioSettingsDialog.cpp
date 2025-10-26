@@ -8,19 +8,22 @@
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
 #include <iostream>
+#include <cmath>
 
 namespace Nomad {
 
 AudioSettingsDialog::AudioSettingsDialog(Audio::AudioDeviceManager* audioManager)
     : m_audioManager(audioManager)
     , m_visible(false)
-    , m_dialogBounds(0, 0, 500, 420)
+    , m_dialogBounds(0, 0, 500, 480)
     , m_selectedDeviceId(0)
     , m_selectedSampleRate(48000)
     , m_selectedBufferSize(512)
     , m_originalDeviceId(0)
     , m_originalSampleRate(48000)
     , m_originalBufferSize(512)
+    , m_isPlayingTestSound(false)
+    , m_testSoundPhase(0.0)
 {
     createUI();
     loadCurrentSettings();
@@ -77,6 +80,17 @@ void AudioSettingsDialog::createUI() {
     });
     addChild(m_cancelButton);
     
+    m_testSoundButton = std::make_shared<NomadUI::NUIButton>();
+    m_testSoundButton->setText("Test Sound");
+    m_testSoundButton->setOnClick([this]() {
+        if (m_isPlayingTestSound) {
+            stopTestSound();
+        } else {
+            playTestSound();
+        }
+    });
+    addChild(m_testSoundButton);
+    
     // Load lists
     updateDeviceList();
     updateSampleRateList();
@@ -91,6 +105,11 @@ void AudioSettingsDialog::show() {
 }
 
 void AudioSettingsDialog::hide() {
+    // Stop test sound if playing
+    if (m_isPlayingTestSound) {
+        stopTestSound();
+    }
+    
     m_visible = false;
     setVisible(false);
 }
@@ -218,6 +237,11 @@ void AudioSettingsDialog::loadCurrentSettings() {
 void AudioSettingsDialog::applySettings() {
     if (!m_audioManager) return;
     
+    // Stop test sound if playing
+    if (m_isPlayingTestSound) {
+        stopTestSound();
+    }
+    
     // Apply new settings
     m_audioManager->switchDevice(m_selectedDeviceId);
     m_audioManager->setSampleRate(m_selectedSampleRate);
@@ -233,6 +257,11 @@ void AudioSettingsDialog::applySettings() {
 }
 
 void AudioSettingsDialog::cancelSettings() {
+    // Stop test sound if playing
+    if (m_isPlayingTestSound) {
+        stopTestSound();
+    }
+    
     // Restore original settings
     m_selectedDeviceId = m_originalDeviceId;
     m_selectedSampleRate = m_originalSampleRate;
@@ -278,6 +307,12 @@ void AudioSettingsDialog::layoutComponents() {
     m_bufferSizeLabel->setBounds(NomadUI::NUIRect(labelX, startY, labelWidth, dropdownHeight));
     m_bufferSizeDropdown->setBounds(NomadUI::NUIRect(dropdownX, startY, dropdownWidth, dropdownHeight));
     
+    // Test sound button (centered below settings)
+    startY += dropdownHeight + verticalSpacing + 10.0f;
+    float testButtonWidth = 150.0f;
+    float testButtonX = m_dialogBounds.x + (m_dialogBounds.width - testButtonWidth) / 2;
+    m_testSoundButton->setBounds(NomadUI::NUIRect(testButtonX, startY, testButtonWidth, buttonHeight));
+    
     // Position buttons at bottom
     float buttonY = m_dialogBounds.y + m_dialogBounds.height - buttonHeight - padding;
     float buttonX = m_dialogBounds.x + m_dialogBounds.width - (buttonWidth * 2 + buttonSpacing) - padding;
@@ -317,4 +352,141 @@ void AudioSettingsDialog::renderDialog(NomadUI::NUIRenderer& renderer) {
     renderer.drawText("Audio Settings", NomadUI::NUIPoint(titleX, titleY), 18, textColor);
 }
 
+void AudioSettingsDialog::playTestSound() {
+    if (!m_audioManager) {
+        Nomad::Log::error("AudioManager is null, cannot play test sound");
+        return;
+    }
+    
+    if (m_isPlayingTestSound) {
+        Nomad::Log::warning("Test sound already playing");
+        return;
+    }
+    
+    Nomad::Log::info("Starting test sound playback...");
+    Nomad::Log::info("Selected Device ID: " + std::to_string(m_selectedDeviceId));
+    Nomad::Log::info("Selected Sample Rate: " + std::to_string(m_selectedSampleRate));
+    Nomad::Log::info("Selected Buffer Size: " + std::to_string(m_selectedBufferSize));
+    
+    // Check if stream is already running and stop it temporarily
+    bool wasRunning = m_audioManager->isStreamRunning();
+    if (wasRunning) {
+        Nomad::Log::info("Stopping existing audio stream for test...");
+        m_audioManager->stopStream();
+        m_audioManager->closeStream();
+    }
+    
+    // Find a valid output device if current selection is invalid
+    uint32_t deviceIdToUse = m_selectedDeviceId;
+    if (deviceIdToUse == 0) {
+        // Try to find the first available output device
+        auto devices = m_audioManager->getDevices();
+        for (const auto& dev : devices) {
+            if (dev.maxOutputChannels >= 2) {
+                deviceIdToUse = dev.id;
+                Nomad::Log::info("Using first available output device: " + dev.name + " (ID: " + std::to_string(dev.id) + ")");
+                break;
+            }
+        }
+        
+        if (deviceIdToUse == 0) {
+            Nomad::Log::error("No valid output device found");
+            return;
+        }
+    }
+    
+    // Create a temporary audio configuration for the test
+    Audio::AudioStreamConfig testConfig;
+    testConfig.deviceId = deviceIdToUse;
+    testConfig.sampleRate = m_selectedSampleRate;
+    testConfig.bufferSize = m_selectedBufferSize;
+    testConfig.numInputChannels = 0;
+    testConfig.numOutputChannels = 2; // Stereo output
+    
+    // Reset phase
+    m_testSoundPhase = 0.0;
+    
+    // Open and start a test stream
+    Nomad::Log::info("Opening test audio stream...");
+    bool success = m_audioManager->openStream(testConfig, testSoundCallback, this);
+    
+    // If validation failed due to WASAPI errors, try bypassing validation by using default device
+    if (!success) {
+        Nomad::Log::warning("Failed with selected device, trying default output device...");
+        auto defaultDev = m_audioManager->getDefaultOutputDevice();
+        if (defaultDev.id != 0) {
+            testConfig.deviceId = defaultDev.id;
+            Nomad::Log::info("Trying default device: " + defaultDev.name + " (ID: " + std::to_string(defaultDev.id) + ")");
+            success = m_audioManager->openStream(testConfig, testSoundCallback, this);
+        }
+    }
+    
+    if (success) {
+        Nomad::Log::info("Test stream opened successfully, starting stream...");
+        success = m_audioManager->startStream();
+        if (success) {
+            m_isPlayingTestSound = true;
+            m_testSoundButton->setText("Stop Test");
+            Nomad::Log::info("Test sound started successfully!");
+        } else {
+            m_audioManager->closeStream();
+            Nomad::Log::error("Failed to start test sound stream");
+        }
+    } else {
+        Nomad::Log::error("Failed to open test sound stream");
+    }
+}
+
+void AudioSettingsDialog::stopTestSound() {
+    if (!m_audioManager || !m_isPlayingTestSound) return;
+    
+    m_audioManager->stopStream();
+    m_audioManager->closeStream();
+    m_isPlayingTestSound = false;
+    m_testSoundButton->setText("Test Sound");
+    Nomad::Log::info("Test sound stopped");
+}
+
+int AudioSettingsDialog::testSoundCallback(float* outputBuffer, const float* inputBuffer,
+                                            uint32_t numFrames, double streamTime,
+                                            void* userData) {
+    AudioSettingsDialog* dialog = static_cast<AudioSettingsDialog*>(userData);
+    
+    if (!dialog || !outputBuffer) {
+        return 0;
+    }
+    
+    // Log first callback (only once)
+    static bool firstCallback = true;
+    if (firstCallback) {
+        Nomad::Log::info("Test sound callback invoked! Generating audio...");
+        firstCallback = false;
+    }
+    
+    const double sampleRate = static_cast<double>(dialog->m_selectedSampleRate);
+    const double frequency = TEST_FREQUENCY;
+    const double phaseIncrement = 2.0 * 3.14159265358979323846 * frequency / sampleRate;
+    const float amplitude = 0.3f; // 30% volume to avoid clipping
+    
+    for (uint32_t i = 0; i < numFrames; ++i) {
+        // Generate sine wave
+        float sample = amplitude * static_cast<float>(std::sin(dialog->m_testSoundPhase));
+        
+        // Output to both channels (stereo)
+        outputBuffer[i * 2] = sample;     // Left channel
+        outputBuffer[i * 2 + 1] = sample; // Right channel
+        
+        // Increment phase
+        dialog->m_testSoundPhase += phaseIncrement;
+        
+        // Wrap phase to prevent overflow
+        if (dialog->m_testSoundPhase >= 2.0 * 3.14159265358979323846) {
+            dialog->m_testSoundPhase -= 2.0 * 3.14159265358979323846;
+        }
+    }
+    
+    return 0; // Continue processing
+}
+
 } // namespace Nomad
+
