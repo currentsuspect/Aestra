@@ -668,6 +668,12 @@ void Track::copyAudioData(float* outputBuffer, uint32_t numFrames) {
 
     uint32_t totalSamples = m_audioData.size();
     double phase = m_playbackPhase.load();
+    
+    // Calculate sample rate ratio for resampling (track sample rate / output sample rate)
+    // Output sample rate is typically 48000 Hz, track might be 44100 Hz, etc.
+    // For now, assume output is 48000 Hz (we should get this from the audio manager)
+    const double outputSampleRate = 48000.0;
+    const double sampleRateRatio = static_cast<double>(m_sampleRate) / outputSampleRate;
 
     for (uint32_t frame = 0; frame < numFrames; ++frame) {
         uint32_t sampleIndex = static_cast<uint32_t>(phase) * m_numChannels;
@@ -680,7 +686,7 @@ void Track::copyAudioData(float* outputBuffer, uint32_t numFrames) {
             outputBuffer[frame * m_numChannels + 1] = 0.0f;
         }
 
-        phase += 1.0;
+        phase += sampleRateRatio;
     }
 
     m_playbackPhase.store(phase);

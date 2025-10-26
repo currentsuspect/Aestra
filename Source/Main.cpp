@@ -257,8 +257,23 @@ public:
         // Stop any currently playing preview
         stopSoundPreview();
 
+        // Check if preview track exists
+        if (!m_previewTrack) {
+            Log::error("Preview track not initialized");
+            return;
+        }
+
         // Load the audio file into the preview track
-        if (m_previewTrack && m_previewTrack->loadAudioFile(file.path)) {
+        Log::info("Attempting to load audio file...");
+        bool loaded = false;
+        try {
+            loaded = m_previewTrack->loadAudioFile(file.path);
+        } catch (const std::exception& e) {
+            Log::error("Exception loading audio file: " + std::string(e.what()));
+            return;
+        }
+
+        if (loaded) {
             Log::info("Preview audio loaded successfully");
 
             // Set volume for preview (lower than normal)
@@ -549,27 +564,37 @@ public:
                 // First check if any devices are available
                 auto devices = m_audioManager->getDevices();
                 if (devices.empty()) {
-                    Log::warning("No ASIO audio devices found. Please install ASIO drivers.");
+                    Log::warning("No audio devices found. Please check your audio drivers.");
                     Log::warning("Continuing without audio support.");
                     m_audioInitialized = false;
                 } else {
                     ss.str("");
-                    ss << "Found " << devices.size() << " ASIO device(s)";
+                    ss << "Found " << devices.size() << " audio device(s)";
                     Log::info(ss.str());
                     
-                    auto defaultDevice = m_audioManager->getDefaultOutputDevice();
+                    // Find first output device (instead of relying on getDefaultOutputDevice which can fail)
+                    AudioDeviceInfo outputDevice;
+                    bool foundOutput = false;
                     
-                    if (defaultDevice.name.empty()) {
-                        Log::warning("No default ASIO device available");
+                    for (const auto& device : devices) {
+                        if (device.maxOutputChannels > 0) {
+                            outputDevice = device;
+                            foundOutput = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!foundOutput) {
+                        Log::warning("No output audio device found");
                         m_audioInitialized = false;
                     } else {
                         ss.str("");
-                        ss << "Default audio device: " << defaultDevice.name;
+                        ss << "Using audio device: " << outputDevice.name << " (ID: " << outputDevice.id << ")";
                         Log::info(ss.str());
                         
                         // Configure audio stream
                         AudioStreamConfig config;
-                        config.deviceId = defaultDevice.id;
+                        config.deviceId = outputDevice.id;
                         config.sampleRate = 48000;
                         config.bufferSize = 512;
                         config.numInputChannels = 0;
@@ -593,13 +618,13 @@ public:
                 }
             } catch (const std::exception& e) {
                 ss.str("");
-                ss << "Exception while initializing ASIO audio: " << e.what();
+                ss << "Exception while initializing audio: " << e.what();
                 Log::error(ss.str());
-                Log::warning("Continuing without audio support. Please install ASIO drivers.");
+                Log::warning("Continuing without audio support.");
                 m_audioInitialized = false;
             } catch (...) {
-                Log::error("Unknown exception while initializing ASIO audio");
-                Log::warning("Continuing without audio support. Please install ASIO drivers.");
+                Log::error("Unknown exception while initializing audio");
+                Log::warning("Continuing without audio support.");
                 m_audioInitialized = false;
             }
         }
