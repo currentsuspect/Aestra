@@ -8,6 +8,7 @@
 #include "../NomadUI/Core/NUIComponent.h"
 #include "../NomadUI/Core/NUIButton.h"
 #include "../NomadUI/Core/NUILabel.h"
+#include "../NomadUI/Core/NUIIcon.h"
 #include "../NomadUI/Widgets/NUIDropdown.h"
 #include "../NomadAudio/include/AudioDeviceManager.h"
 #include <memory>
@@ -55,6 +56,7 @@ public:
     // NUIComponent overrides
     void onRender(NomadUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
+    void onUpdate(double deltaTime) override;
     bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
     bool onKeyEvent(const NomadUI::NUIKeyEvent& event) override;
     void setVisible(bool visible);
@@ -62,9 +64,11 @@ public:
 private:
     void createUI();
     void layoutComponents();
+    void updateDriverList();
     void updateDeviceList();
     void updateSampleRateList();
     void updateBufferSizeList();
+    void updateASIOInfo();
     void loadCurrentSettings();
     void applySettings();
     void cancelSettings();
@@ -83,10 +87,22 @@ private:
     // UI state
     bool m_visible;
     NomadUI::NUIRect m_dialogBounds;
+    NomadUI::NUIRect m_closeButtonBounds; // For click detection
+    bool m_closeButtonHovered; // For hover effect
+    float m_blinkAnimation; // For "can't close" blink effect
+    std::string m_errorMessage; // Error message to display
+    float m_errorMessageAlpha; // Fade out animation for error
     
     // Device list
     std::vector<Audio::AudioDeviceInfo> m_devices;
     uint32_t m_selectedDeviceId;
+    
+    // Driver list
+    std::vector<Audio::AudioDriverType> m_drivers;
+    Audio::AudioDriverType m_selectedDriverType;
+    
+    // ASIO drivers (for display)
+    std::vector<Audio::ASIODriverInfo> m_asioDrivers;
     
     // Sample rate list
     std::vector<uint32_t> m_sampleRates;
@@ -100,14 +116,18 @@ private:
     std::shared_ptr<NomadUI::NUIButton> m_applyButton;
     std::shared_ptr<NomadUI::NUIButton> m_cancelButton;
     std::shared_ptr<NomadUI::NUIButton> m_testSoundButton;
+    std::shared_ptr<NomadUI::NUIIcon> m_playIcon;  // SVG play icon for test button
+    std::shared_ptr<NomadUI::NUIDropdown> m_driverDropdown;
     std::shared_ptr<NomadUI::NUIDropdown> m_deviceDropdown;
     std::shared_ptr<NomadUI::NUIDropdown> m_sampleRateDropdown;
     std::shared_ptr<NomadUI::NUIDropdown> m_bufferSizeDropdown;
     
     // Labels
+    std::shared_ptr<NomadUI::NUILabel> m_driverLabel;
     std::shared_ptr<NomadUI::NUILabel> m_deviceLabel;
     std::shared_ptr<NomadUI::NUILabel> m_sampleRateLabel;
     std::shared_ptr<NomadUI::NUILabel> m_bufferSizeLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_asioInfoLabel;
     
     // Callbacks
     std::function<void()> m_onApply;
@@ -115,6 +135,7 @@ private:
     std::function<void()> m_onStreamRestore;
     
     // Original settings (for cancel)
+    Audio::AudioDriverType m_originalDriverType;
     uint32_t m_originalDeviceId;
     uint32_t m_originalSampleRate;
     uint32_t m_originalBufferSize;
