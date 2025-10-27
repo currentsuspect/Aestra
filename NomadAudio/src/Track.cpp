@@ -559,6 +559,14 @@ void Track::setAudioData(const float* data, uint32_t numSamples, uint32_t sample
 }
 
 // Recording
+void Track::setLatencyCompensation(double inputLatencyMs, double outputLatencyMs) {
+    m_latencyCompensationMs = inputLatencyMs + outputLatencyMs;
+    Log::info("Track '" + m_name + "' latency compensation set: " + 
+              std::to_string(m_latencyCompensationMs) + " ms (Input: " + 
+              std::to_string(inputLatencyMs) + " ms + Output: " + 
+              std::to_string(outputLatencyMs) + " ms)");
+}
+
 void Track::startRecording() {
     if (getState() != TrackState::Empty) {
         Log::warning("Cannot start recording: track not empty");
@@ -579,6 +587,26 @@ void Track::stopRecording() {
     // Move recording buffer to main audio data
     if (!m_recordingBuffer.empty()) {
         m_audioData = std::move(m_recordingBuffer);
+        
+        // Apply latency compensation if configured
+        if (m_latencyCompensationMs > 0.0) {
+            // Calculate how many samples to shift (compensate for input + output latency)
+            uint32_t compensationSamples = static_cast<uint32_t>(
+                (m_latencyCompensationMs / 1000.0) * m_sampleRate * m_numChannels
+            );
+            
+            // Ensure we don't shift more than available data
+            if (compensationSamples > 0 && compensationSamples < m_audioData.size()) {
+                // Shift audio data earlier by removing the latency from the beginning
+                // This aligns the recorded audio with the timeline
+                m_audioData.erase(m_audioData.begin(), m_audioData.begin() + compensationSamples);
+                
+                Log::info("[Latency Compensation] Shifted recorded audio earlier by " + 
+                          std::to_string(m_latencyCompensationMs) + " ms (" + 
+                          std::to_string(compensationSamples / m_numChannels) + " frames)");
+            }
+        }
+        
         m_durationSeconds.store(static_cast<double>(m_audioData.size()) / (m_sampleRate * m_numChannels));
         setState(TrackState::Loaded);
     } else {

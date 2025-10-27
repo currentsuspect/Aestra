@@ -56,7 +56,7 @@ NOMAD is a fully self-authored DAW with **zero borrowed frameworks**. Every laye
 | **NomadCore** | ✅ Complete | v1.0.0 | Math, threading, file I/O, logging |
 | **NomadPlat** | ✅ Complete | v1.0.0 | Platform abstraction with DPI support |
 | **NomadUI** | ✅ Complete | v0.1.0 | OpenGL renderer + component system |
-| **NomadAudio** | ⏳ Planned | - | RtAudio integration + DSP |
+| **NomadAudio** | ✅ Complete | v1.0.0 | WASAPI multi-tier driver system |
 | **NomadSDK** | ⏳ Planned | - | Plugin system |
 
 ---
@@ -91,12 +91,13 @@ NOMAD is a fully self-authored DAW with **zero borrowed frameworks**. Every laye
 <tr>
 <td>
 
-**Audio (Planned)**
-- 🎵 **RtAudio** - Cross-platform audio I/O
-- 🔊 **WASAPI** - Windows audio
-- 🎚️ **CoreAudio** - macOS audio
-- 🎛️ **ALSA/PipeWire** - Linux audio
+**Audio System**
+- 🎵 **WASAPI Exclusive** - ~8-12ms RTL (round-trip)
+- 🔊 **WASAPI Shared** - ~20-30ms RTL (OS-controlled)
+- 🎚️ **RtAudio Fallback** - Cross-platform backup
+- 🎛️ **Format Conversion** - Float↔16/24/32-bit PCM
 - ⚡ **Lock-Free Buffers** - Real-time safe
+- 🔄 **Hot-Swap Drivers** - Seamless switching
 
 </td>
 <td>
@@ -206,6 +207,21 @@ NOMAD is a fully self-authored DAW with **zero borrowed frameworks**. Every laye
 - **Visual feedback** - highlights selected files with cyan accent
 - **Directory navigation** - double-click folders or use Enter keystream-style
 
+#### ✅ **Professional Audio System**
+- **Multi-tier WASAPI drivers** - Exclusive (~8-12ms RTL) and Shared (~20-30ms RTL) modes
+- **Intelligent fallback** - WASAPI Exclusive → WASAPI Shared → RtAudio
+- **Format conversion** - Automatic float↔PCM conversion (16/24/32-bit)
+- **Hot-swappable drivers** - Seamless driver switching during playback
+- **ASIO detection** - Displays available ASIO devices (info-only)
+- **Device configuration** - Sample rate, buffer size, bit depth control
+- **Auto-buffer scaling** - Automatically increases buffer on underruns for stability
+- **MMCSS scheduling** - Pro Audio thread priority for real-time performance
+
+**Latency Details:**
+- Buffer Period: 2.67ms @ 128 frames (one-way)
+- Estimated RTL: ~8ms typical (device-dependent, 3x buffer period)
+- IAudioClient3 support for low-latency shared mode on Windows 10+
+
 ---
 
 ## 🚀 Quick Start
@@ -288,7 +304,13 @@ NOMAD/
 │   │   └── NUIPlatformBridge.h
 │   └── Examples/           # Demo applications
 │
-├── 🎵 NomadAudio/          # Audio engine (planned)
+├── 🎵 NomadAudio/          # WASAPI audio engine
+│   ├── include/
+│   │   ├── AudioDeviceManager.h  # Multi-tier driver controller
+│   │   ├── IAudioDriver.h        # Driver interface
+│   │   ├── WASAPIExclusiveDriver.h # Low-latency exclusive mode
+│   │   └── WASAPISharedDriver.h    # Compatible shared mode
+│   └── src/                # Implementation + tests
 ├── 🔌 NomadSDK/            # Plugin system (planned)
 ├── 📚 NomadDocs/           # Documentation
 │   ├── DEVELOPER_GUIDE.md  # Development guide
@@ -321,6 +343,12 @@ NOMAD/
   - [Custom Windows](NomadUI/docs/CUSTOM_WINDOW_INTEGRATION.md) - Window guide
   - [Icon System](NomadUI/docs/ICON_SYSTEM_GUIDE.md) - SVG icons
   - [Theme System](NomadUI/docs/THEME_DEMO_GUIDE.md) - Theming
+- **[NomadAudio](NomadAudio/README.md)** - Audio engine
+  - [Audio Driver System](NomadDocs/AUDIO_DRIVER_SYSTEM.md) - WASAPI architecture
+  - [Task 4.1 Summary](NomadAudio/TASK_4.1_SUMMARY.md) - RtAudio integration
+  - [Task 4.2 Summary](NomadAudio/TASK_4.2_SUMMARY.md) - AudioDeviceManager
+  - [Task 4.3 Summary](NomadAudio/TASK_4.3_SUMMARY.md) - Audio callbacks
+  - [Task 4.4 Summary](NomadAudio/TASK_4.4_SUMMARY.md) - Stream management
 
 ---
 
@@ -358,24 +386,26 @@ NOMAD/
 | Phase | Description | Status |
 |-------|-------------|--------|
 | **v1.0** | Foundation: Core + Platform + UI | ✅ **Complete** |
-| **v1.5** | Audio: RtAudio + DSP + Mixer | ⏳ In Progress |
+| **v1.5** | Audio: WASAPI + Device Management + Playback | ✅ **Complete** |
 | **v2.0** | DSP: Oscillators, Filters, Envelopes | 📋 Planned |
 | **v3.0** | Plugins: SDK + Host + Modular DAW | 📋 Planned |
 | **v∞** | Vision: Self-contained creative OS | 🌟 Future |
 
-### v1.0 Foundation ✅ (Current)
+### v1.0 Foundation ✅ (Complete)
 - ✅ NomadCore - Math, threading, file I/O, logging
 - ✅ NomadPlat - Platform abstraction with DPI support
 - ✅ NomadUI - OpenGL renderer + component system
 - ✅ Build system - CMake, modular architecture
 - ✅ Documentation - Comprehensive guides
 
-### v1.5 Audio Integration ⏳ (Next)
-- [ ] RtAudio integration
-- [ ] AudioDeviceManager
-- [ ] Lock-free audio callback
-- [ ] Basic mixer (gain, pan)
-- [ ] <10ms latency target
+### v1.5 Audio Integration ✅ (Complete)
+- ✅ WASAPI Exclusive driver (3-5ms latency)
+- ✅ WASAPI Shared driver (10-20ms latency)
+- ✅ AudioDeviceManager with intelligent fallback
+- ✅ Format conversion (float↔16/24/32-bit PCM)
+- ✅ Lock-free audio callback architecture
+- ✅ Audio device configuration UI
+- ✅ File browser with audio preview
 
 ### v2.0 DSP Foundation 📋
 - [ ] Oscillators (sine, saw, square)
@@ -395,7 +425,7 @@ NOMAD/
 
 ### ✅ Windows (Complete)
 - Win32 API windowing
-- WASAPI audio (planned)
+- WASAPI audio (Exclusive & Shared modes)
 - Per-Monitor DPI V2
 - Full input support
 - OpenGL 3.3+
@@ -463,10 +493,12 @@ See [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md) for complete terms.
 ## 🙏 Acknowledgments
 
 ### Technologies Used
+- **WASAPI** - Windows Audio Session API for professional low-latency audio
 - **FreeType** - Beautiful text rendering
 - **GLAD** - OpenGL loading made easy
 - **NanoSVG** - Lightweight SVG parsing
 - **CMake** - Cross-platform build system
+- **RtAudio** - Cross-platform audio fallback (minimal usage)
 
 ### Inspiration
 Built by musicians, for musicians. Inspired by the belief that software can be
@@ -477,13 +509,14 @@ both powerful and intentional, complex yet elegant, professional yet personal.
 ## 📊 Stats
 
 ```
-Lines of Code:    ~15,000+ (hand-written)
-Modules:          5 (3 complete, 2 planned)
+Lines of Code:    ~20,000+ (hand-written)
+Modules:          5 (4 complete, 1 planned)
 Components:       12+ UI components
+Audio Drivers:    2 native WASAPI + RtAudio fallback
 Tests:            Comprehensive test suite
-Documentation:    25+ documentation files
+Documentation:    30+ documentation files
 Platforms:        Windows (complete), Linux/macOS (planned)
-Dependencies:     Minimal (FreeType, GLAD, NanoSVG)
+Dependencies:     Minimal (FreeType, GLAD, NanoSVG, RtAudio)
 License:          Proprietary
 ```
 

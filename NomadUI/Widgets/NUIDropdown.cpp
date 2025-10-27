@@ -25,13 +25,14 @@ NUIDropdown::NUIDropdown()
         const auto& props = mgr.getCurrentTheme();
         // Choose sensible defaults from theme properties
         backgroundColor_ = props.surfaceRaised;
-        hoverColor_ = props.buttonBgHover;
+        hoverColor_ = NUIColor(0.3f, 0.3f, 0.35f, 1.0f); // Grey hover color
         selectedColor_ = props.selected;
         borderColor_ = props.border;
         textColor_ = props.textPrimary;
         arrowColor_ = props.textSecondary;
     } catch (...) {
         // Fall back to existing defaults if theme manager isn't available
+        hoverColor_ = NUIColor(0.3f, 0.3f, 0.35f, 1.0f); // Grey hover fallback
     }
 }
 
@@ -101,56 +102,82 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
 
     auto bounds = getBounds();
 
-    // Draw main button background
-    float cornerRadius = 4.0f;
+    // Draw main button background with subtle gradient
+    float cornerRadius = 6.0f;
     renderer.fillRoundedRect(bounds, cornerRadius, backgroundColor_);
 
-    // Draw text (vertical center and clipped)
+    // Draw text (vertical center with truncation to prevent bleeding)
     std::string displayText = getSelectedText();
-    float padding = 8.0f;
+    float padding = 12.0f;
+    float arrowSpace = 40.0f; // Large buffer for arrow area
 
     NUIRect textBounds = bounds;
     textBounds.x += padding;
-    textBounds.width -= (padding * 2 + 20); // Extra space for arrow
-    textBounds.y += padding;
-    textBounds.height -= (padding * 2);
+    textBounds.width -= (padding + arrowSpace); // Reserve arrow space
+    textBounds.y += 2.0f; // Slight offset for better centering
+    textBounds.height -= 4.0f;
 
     float fontSize = 14.0f;
     if (auto th = getTheme()) {
         fontSize = th->getFontSize("normal");
     }
 
-    // Use drawTextCentered to ensure consistent vertical centering across renderers
-    NUIRect centerRect = textBounds;
-    // Expand slightly to avoid clipping descenders
-    centerRect.y -= 2.0f;
-    centerRect.height += 4.0f;
-    renderer.setClipRect(centerRect);
-    renderer.drawTextCentered(displayText, centerRect, fontSize, textColor_);
-    renderer.clearClipRect();
+    // Truncate text with ellipsis if it's too long
+    if (textBounds.width > 20.0f) {
+        float maxWidth = textBounds.width - 10.0f; // Extra safety margin
+        
+        // Measure text width
+        NUISize textSize = renderer.measureText(displayText, fontSize);
+        
+        // If text is too wide, truncate with ellipsis
+        if (textSize.width > maxWidth) {
+            std::string truncated = displayText;
+            while (truncated.length() > 3) {
+                truncated.pop_back();
+                NUISize truncSize = renderer.measureText(truncated + "...", fontSize);
+                if (truncSize.width <= maxWidth) break;
+            }
+            displayText = truncated + "...";
+        }
+        
+        // Left-aligned text for better readability
+        float textY = bounds.y + (bounds.height - fontSize) / 2 + fontSize * 0.75f;
+        renderer.drawText(displayText, NUIPoint(textBounds.x, textY), fontSize, textColor_);
+    }
 
-    // Draw arrow (triangle outline using lines)
-    float arrowSize = 8.0f;
+    // Draw animated chevron arrow (SVG-style)
+    float arrowSize = 6.0f;
     float centerY = bounds.y + bounds.height / 2;
-    float arrowX = bounds.x + bounds.width - (padding + arrowSize);
-    float arrowY = centerY - arrowSize/2;
-
+    float arrowX = bounds.x + bounds.width - padding - arrowSize - 4.0f;
+    
+    // Smooth rotation animation
+    float rotationAngle = isOpen_ ? 180.0f : 0.0f;
+    
+    // Chevron pointing down (flips up when open)
     NUIPoint p1, p2, p3;
     if (isOpen_) {
-        p1 = NUIPoint(arrowX + arrowSize/2, arrowY + arrowSize);
-        p2 = NUIPoint(arrowX + arrowSize, arrowY);
-        p3 = NUIPoint(arrowX, arrowY);
+        // Point up
+        p1 = NUIPoint(arrowX, centerY + arrowSize / 3);
+        p2 = NUIPoint(arrowX + arrowSize, centerY + arrowSize / 3);
+        p3 = NUIPoint(arrowX + arrowSize / 2, centerY - arrowSize / 3);
     } else {
-        p1 = NUIPoint(arrowX, arrowY);
-        p2 = NUIPoint(arrowX + arrowSize, arrowY);
-        p3 = NUIPoint(arrowX + arrowSize/2, arrowY + arrowSize);
+        // Point down
+        p1 = NUIPoint(arrowX, centerY - arrowSize / 3);
+        p2 = NUIPoint(arrowX + arrowSize, centerY - arrowSize / 3);
+        p3 = NUIPoint(arrowX + arrowSize / 2, centerY + arrowSize / 3);
     }
-    renderer.drawLine(p1, p2, 1.0f, arrowColor_);
-    renderer.drawLine(p2, p3, 1.0f, arrowColor_);
-    renderer.drawLine(p3, p1, 1.0f, arrowColor_);
+    
+    // Draw thicker, smoother chevron lines
+    float lineWidth = 1.5f;
+    renderer.drawLine(p1, p3, lineWidth, arrowColor_);
+    renderer.drawLine(p2, p3, lineWidth, arrowColor_);
 
-    // Draw border
-    renderer.strokeRoundedRect(bounds, cornerRadius, 1.0f, borderColor_);
+    // Draw outer border (darker/thicker)
+    NUIColor outerBorder = NUIColor(0.0f, 0.0f, 0.0f, 0.6f);
+    renderer.strokeRoundedRect(bounds, cornerRadius, 2.0f, outerBorder);
+    
+    // Draw inner border (themed)
+    renderer.strokeRoundedRect(bounds, cornerRadius, 1.0f, borderColor_.withAlpha(0.5f));
 
     // Render dropdown list on top if open
     if (isOpen_) {
@@ -285,26 +312,48 @@ void NUIDropdown::renderDropdownList(NUIRenderer& renderer) {
     if (items_.empty()) return;
 
     auto bounds = getBounds();
-    float itemHeight = 24.0f;
+    float itemHeight = 32.0f; // Increased from 24 for better spacing
     int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
     float listHeight = itemHeight * visibleItems;
 
-    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height, bounds.width, listHeight);
+    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height + 2.0f, bounds.width, listHeight);
 
     renderer.setOpacity(1.0f);
     renderer.pushTransform(0, 0, 0, 1.0f);
 
-    NUIRect shadowBounds = dropdownBounds; shadowBounds.x += 2.0f; shadowBounds.y += 2.0f;
-    renderer.fillRoundedRect(shadowBounds, 4.0f, NUIColor(0,0,0,0.3f));
+    // Draw shadow (darker and larger)
+    NUIRect shadowBounds = dropdownBounds;
+    shadowBounds.x += 0.0f;
+    shadowBounds.y += 2.0f;
+    shadowBounds.width += 2.0f;
+    shadowBounds.height += 2.0f;
+    renderer.fillRoundedRect(shadowBounds, 6.0f, NUIColor(0,0,0,0.4f));
 
-    renderer.fillRoundedRect(dropdownBounds, 4.0f, backgroundColor_);
-    renderer.strokeRoundedRect(dropdownBounds, 4.0f, 1.0f, borderColor_);
+    // Draw background
+    renderer.fillRoundedRect(dropdownBounds, 6.0f, backgroundColor_);
+    
+    // Draw outer border (black)
+    renderer.strokeRoundedRect(dropdownBounds, 6.0f, 2.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.6f));
+    
+    // Draw inner border (themed)
+    renderer.strokeRoundedRect(dropdownBounds, 6.0f, 1.0f, borderColor_.withAlpha(0.5f));
 
+    // Render items with dividers
     for (int i = 0; i < visibleItems && i < static_cast<int>(items_.size()); ++i) {
         NUIRect itemBounds(dropdownBounds.x, dropdownBounds.y + i * itemHeight, dropdownBounds.width, itemHeight);
         bool isSelected = (i == selectedIndex_);
         bool isHovered = (i == hoveredIndex_);
         renderItem(renderer, i, itemBounds, isSelected, isHovered);
+        
+        // Draw divider line between items (except after last item)
+        if (i < visibleItems - 1) {
+            float dividerY = itemBounds.y + itemBounds.height;
+            float dividerPadding = 8.0f;
+            NUIPoint p1(itemBounds.x + dividerPadding, dividerY);
+            NUIPoint p2(itemBounds.x + itemBounds.width - dividerPadding, dividerY);
+            // Use black dividers for better visibility
+            renderer.drawLine(p1, p2, 1.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.4f));
+        }
     }
 
     renderer.popTransform();
@@ -313,32 +362,55 @@ void NUIDropdown::renderDropdownList(NUIRenderer& renderer) {
 void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bounds, bool isSelected, bool isHovered) {
     auto item = items_[index];
 
-    if (isSelected) renderer.fillRect(bounds, selectedColor_);
-    else if (isHovered) renderer.fillRect(bounds, hoverColor_);
+    // Draw selection/hover background
+    if (isSelected) {
+        renderer.fillRect(bounds, selectedColor_);
+    } else if (isHovered) {
+        renderer.fillRect(bounds, hoverColor_);
+    }
 
     NUIColor curText = item->isEnabled() ? textColor_ : textColor_.withAlpha(0.5f);
-    float padding = 8.0f;
-    NUIRect textBounds = bounds; textBounds.x += padding; textBounds.width -= padding * 2; textBounds.y += padding; textBounds.height -= padding * 2;
+    float padding = 12.0f;
+    
+    NUIRect textBounds = bounds;
+    textBounds.x += padding;
+    textBounds.width -= (padding * 2 + 20.0f); // Large safety margin on right
+    textBounds.y += 2.0f;
+    textBounds.height -= 4.0f;
 
     float fontSize = 14.0f;
     if (auto th = getTheme()) fontSize = th->getFontSize("normal");
 
-    if (textBounds.width > 0 && textBounds.height > 0) {
-        NUIRect centerRect = textBounds;
-        centerRect.y -= 2.0f;
-        centerRect.height += 4.0f;
-        renderer.setClipRect(centerRect);
-        renderer.drawTextCentered(item->getText(), centerRect, fontSize, curText);
-        renderer.clearClipRect();
+    // Truncate text with ellipsis if too long
+    if (textBounds.width > 20.0f && textBounds.height > 0) {
+        float maxWidth = textBounds.width - 10.0f; // Extra safety margin
+        
+        std::string displayText = item->getText();
+        NUISize textSize = renderer.measureText(displayText, fontSize);
+        
+        // If text is too wide, truncate with ellipsis
+        if (textSize.width > maxWidth) {
+            std::string truncated = displayText;
+            while (truncated.length() > 3) {
+                truncated.pop_back();
+                NUISize truncSize = renderer.measureText(truncated + "...", fontSize);
+                if (truncSize.width <= maxWidth) break;
+            }
+            displayText = truncated + "...";
+        }
+        
+        // Left-aligned text with vertical centering
+        float textY = bounds.y + (bounds.height - fontSize) / 2 + fontSize * 0.75f;
+        renderer.drawText(displayText, NUIPoint(textBounds.x, textY), fontSize, curText);
     }
 }
 
 int NUIDropdown::getItemUnderMouse(const NUIPoint& mousePos) const {
     if (!isOpen_) return -1;
     auto bounds = getBounds();
-    float itemHeight = 24.0f;
+    float itemHeight = 32.0f; // Match the updated item height
     int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
-    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height, bounds.width, itemHeight * visibleItems);
+    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height + 2.0f, bounds.width, itemHeight * visibleItems);
     if (!dropdownBounds.contains(mousePos)) return -1;
     float localY = mousePos.y - dropdownBounds.y;
     int index = static_cast<int>(localY / itemHeight);

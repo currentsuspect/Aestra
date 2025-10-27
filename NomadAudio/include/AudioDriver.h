@@ -30,6 +30,33 @@ struct AudioStreamConfig {
     uint32_t bufferSize = 512;
     uint32_t numInputChannels = 0;
     uint32_t numOutputChannels = 2;
+    
+    // Latency compensation (in milliseconds)
+    double inputLatencyMs = 0.0;   // Input device latency
+    double outputLatencyMs = 0.0;  // Output device latency
+};
+
+/**
+ * @brief Audio latency metrics
+ * 
+ * Distinguishes between buffer period (one-way) and round-trip latency (RTL).
+ * RTL is what users actually experience during recording/monitoring.
+ */
+struct AudioLatencyInfo {
+    double bufferPeriodMs;      // Single buffer period (output or input)
+    double estimatedRTL_Ms;     // Estimated round-trip latency (3x buffer period typical)
+    uint32_t actualBufferFrames; // Actual buffer size (may differ from requested)
+    uint32_t sampleRate;        // Sample rate used
+    
+    // Calculate from buffer size
+    static AudioLatencyInfo calculate(uint32_t bufferFrames, uint32_t sampleRate, double rtlMultiplier = 3.0) {
+        AudioLatencyInfo info;
+        info.actualBufferFrames = bufferFrames;
+        info.sampleRate = sampleRate;
+        info.bufferPeriodMs = (1000.0 * bufferFrames) / sampleRate;
+        info.estimatedRTL_Ms = info.bufferPeriodMs * rtlMultiplier;
+        return info;
+    }
 };
 
 /**
