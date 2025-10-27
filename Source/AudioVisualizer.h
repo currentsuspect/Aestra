@@ -89,6 +89,12 @@ private:
     std::atomic<float> leftPeakHold_;
     std::atomic<float> rightPeakHold_;
     
+    // Smoothed values for fluid animation
+    std::atomic<float> leftPeakSmoothed_;
+    std::atomic<float> rightPeakSmoothed_;
+    std::atomic<float> leftRMSSmoothed_;
+    std::atomic<float> rightRMSSmoothed_;
+    
     // Visualization settings
     AudioVisualizationMode mode_;
     float sensitivity_;
@@ -106,6 +112,7 @@ private:
     // Animation
     float animationTime_;
     float peakDecayTime_;
+    float smoothingFactor_;  // Exponential smoothing (0.0 = instant, 1.0 = slow)
     
     // Audio manager reference
     Nomad::Audio::AudioDeviceManager* audioManager_;

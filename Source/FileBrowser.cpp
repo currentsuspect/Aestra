@@ -183,16 +183,8 @@ void FileBrowser::onResize(int width, int height) {
     scrollbarTrackHeight_ = height - headerHeight - 8 - 20; // Account for path bar spacing and height
     scrollbarWidth_ = scrollbarWidth;
 
-    // Debug logs for dimension validation
-    std::cout << "FileBrowser onResize Debug:" << std::endl;
-    std::cout << "  width: " << width << ", height: " << height << std::endl;
-    std::cout << "  headerHeight (theme): " << headerHeight << std::endl;
-    std::cout << "  itemHeight (theme): " << itemHeight << std::endl;
-    std::cout << "  visibleItems_: " << visibleItems_ << std::endl;
-    std::cout << "  scrollbarWidth (theme): " << scrollbarWidth << std::endl;
-    std::cout << "  scrollbarTrackHeight_: " << scrollbarTrackHeight_ << std::endl;
-
     updateScrollbarVisibility();
+
 }
 
 bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
@@ -645,21 +637,21 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         float textY = itemY + itemHeight / 2 + 7; // Perfect vertical centering for 14px font (baseline)
         
         // Measure text width and ensure it doesn't exceed bounds
-        auto nameTextSize = renderer.measureText(files_[i].name, 14);
-        float maxTextWidth = itemRect.width - layout.panelMargin - themeManager.getComponentDimension("fileBrowser", "iconSize") - 8;
-        float availableWidth = maxTextWidth;
+        // Calculate available width for filename (reserve space for file size on the right)
+        float sizeReservedWidth = 80.0f; // Reserve space for file size display
+        float maxTextWidth = itemRect.width - layout.panelMargin - themeManager.getComponentDimension("fileBrowser", "iconSize") - 8 - sizeReservedWidth - 8.0f; // 8px safety margin
         
         // Truncate filename if too long
         std::string displayName = files_[i].name;
-        if (nameTextSize.width > availableWidth) {
-            // Reserve space for "..." (3 characters at 14px)
-            float ellipsisWidth = renderer.measureText("...", 14).width;
-            float maxNameWidth = availableWidth - ellipsisWidth;
-            
-            // Find the maximum number of characters that fit
-            std::string truncated = files_[i].name;
-            while (!truncated.empty() && renderer.measureText(truncated, 14).width > maxNameWidth) {
-                truncated = truncated.substr(0, truncated.length() - 1);
+        auto nameTextSize = renderer.measureText(displayName, 14);
+        
+        if (nameTextSize.width > maxTextWidth) {
+            // Truncate with ellipsis
+            std::string truncated = displayName;
+            while (truncated.length() > 3) {
+                truncated.pop_back();
+                NUISize truncSize = renderer.measureText(truncated + "...", 14);
+                if (truncSize.width <= maxTextWidth) break;
             }
             displayName = truncated + "...";
         }
@@ -672,7 +664,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         
         renderer.drawText(displayName, NUIPoint(textX, textY), 14, nameColor);
         
-        // Render file size with bounds checking to prevent bleeding
+        // Render file size with aggressive truncation to prevent bleeding
         if (!files_[i].isDirectory && files_[i].size > 0) {
             std::string sizeStr;
             if (files_[i].size < 1024) {
@@ -685,20 +677,31 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             
             auto sizeText = renderer.measureText(sizeStr, 12);
             
-            // Ensure size text doesn't exceed item bounds
-            float maxSizeWidth = itemRect.width - layout.panelMargin - textX;
-            if (sizeText.width > maxSizeWidth) {
-                // Truncate size string if too long
-                std::string truncatedSize = sizeStr;
-                while (!truncatedSize.empty() && renderer.measureText(truncatedSize, 12).width > maxSizeWidth) {
-                    truncatedSize = truncatedSize.substr(0, truncatedSize.length() - 1);
+            // Calculate position from the right with safety margin
+            float rightMargin = layout.panelMargin + 8.0f; // 8px safety margin on right
+            float sizeX = itemRect.x + itemRect.width - sizeText.width - rightMargin;
+            
+            // Ensure size doesn't overlap with filename
+            float minSizeX = textX + renderer.measureText(displayName, 14).width + 20.0f; // 20px gap between name and size
+            
+            if (sizeX < minSizeX) {
+                // Not enough space - truncate size text
+                float maxSizeWidth = itemRect.x + itemRect.width - minSizeX - rightMargin;
+                if (maxSizeWidth > 20.0f) {
+                    std::string truncated = sizeStr;
+                    while (truncated.length() > 3) {
+                        truncated.pop_back();
+                        NUISize truncSize = renderer.measureText(truncated + "...", 12);
+                        if (truncSize.width <= maxSizeWidth) break;
+                    }
+                    sizeStr = truncated + "...";
+                    sizeX = minSizeX;
+                } else {
+                    // Skip rendering if not enough space
+                    return;
                 }
-                sizeStr = truncatedSize + "...";
-                sizeText = renderer.measureText(sizeStr, 12);
             }
             
-            // Position size text to ensure it fits within bounds
-            float sizeX = std::max(textX, itemRect.x + itemRect.width - sizeText.width - layout.panelMargin);
             renderer.drawText(sizeStr, NUIPoint(sizeX, textY), 12, textColor_.withAlpha(0.7f));
         }
     }
@@ -846,18 +849,6 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
     float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
     bool needsScrollbar = maxScroll > 0.0f;
 
-    // Debug output
-    std::cout << "FileBrowser renderScrollbar Debug:" << std::endl;
-    std::cout << "  files_.size(): " << files_.size() << std::endl;
-    std::cout << "  itemHeight: " << itemHeight << std::endl;
-    std::cout << "  headerHeight: " << headerHeight << std::endl;
-    std::cout << "  contentHeight: " << contentHeight << std::endl;
-    std::cout << "  scrollbarTrackHeight_: " << scrollbarTrackHeight_ << std::endl;
-    std::cout << "  maxScroll: " << maxScroll << std::endl;
-    std::cout << "  needsScrollbar: " << needsScrollbar << std::endl;
-    std::cout << "  scrollbarVisible_: " << scrollbarVisible_ << std::endl;
-    std::cout << "  scrollOffset_: " << scrollOffset_ << std::endl;
-
     if (!needsScrollbar || files_.size() == 0) return;
 
     // Use already calculated dimensions
@@ -865,9 +856,6 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
     float scrollbarX = bounds.x + bounds.width - scrollbarWidth_ - layout.panelMargin;
     float scrollbarY = bounds.y + headerHeight + 8 + 20; // After path bar
     float scrollbarHeight = bounds.height - headerHeight - 8 - 20;
-
-    std::cout << "  bounds: x=" << bounds.x << ", y=" << bounds.y << ", w=" << bounds.width << ", h=" << bounds.height << std::endl;
-    std::cout << "  scrollbarX: " << scrollbarX << ", scrollbarY: " << scrollbarY << ", scrollbarHeight: " << scrollbarHeight << std::endl;
 
     // Render scrollbar track
     NUIColor trackColor = themeManager.getColor("backgroundSecondary").withAlpha(0.8f); // Use theme color
@@ -879,7 +867,6 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
     float minThumbSize = themeManager.getComponentDimension("scrollbar", "minThumbSize");
     float thumbHeight = std::max(minThumbSize, scrollbarHeight * 0.2f); // Use theme minThumbSize
     float thumbY = scrollbarY + (scrollOffset_ / std::max(1.0f, (files_.size() * itemHeight) - scrollbarHeight)) * (scrollbarHeight - thumbHeight);
-    std::cout << "  thumbHeight: " << thumbHeight << ", thumbY: " << thumbY << std::endl;
     renderer.fillRoundedRect(NUIRect(scrollbarX, thumbY, scrollbarWidth_, thumbHeight),
                              4, thumbColor);
 }
@@ -895,13 +882,6 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
     float scrollbarX = bounds.x + bounds.width - scrollbarWidth - layout.panelMargin;
     float scrollbarY = bounds.y + headerHeight + 8 + 20; // After path bar
     float scrollbarHeight = bounds.height - headerHeight - 8 - 20;
-
-    // Debug log
-    std::cout << "FileBrowser handleScrollbarMouseEvent Debug:" << std::endl;
-    std::cout << "  event.position: x=" << event.position.x << ", y=" << event.position.y << std::endl;
-    std::cout << "  event.pressed: " << event.pressed << ", button: " << (int)event.button << std::endl;
-    std::cout << "  scrollbarX: " << scrollbarX << ", scrollbarY: " << scrollbarY << ", scrollbarWidth: " << scrollbarWidth << ", scrollbarHeight: " << scrollbarHeight << std::endl;
-    std::cout << "  scrollbarThumbY_: " << scrollbarThumbY_ << ", scrollbarThumbHeight_: " << scrollbarThumbHeight_ << std::endl;
 
     // If we're dragging, continue dragging regardless of mouse position
     if (isDraggingScrollbar_) {
@@ -929,8 +909,6 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
     // Check if mouse is over scrollbar area (with larger padding for easier clicking)
     bool inScrollbarArea = (event.position.x >= scrollbarX - 10 && event.position.x <= scrollbarX + scrollbarWidth_ + 10 &&
                              event.position.y >= scrollbarY - 10 && event.position.y <= scrollbarY + scrollbarTrackHeight_ + 10);
-
-    std::cout << "  inScrollbarArea: " << inScrollbarArea << std::endl;
 
     if (!inScrollbarArea) {
         return false;
@@ -977,15 +955,6 @@ void FileBrowser::updateScrollbarVisibility() {
     float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
     bool needsScrollbar = maxScroll > 0.0f;
 
-    std::cout << "FileBrowser updateScrollbarVisibility Debug:" << std::endl;
-    std::cout << "  files_.size(): " << files_.size() << std::endl;
-    std::cout << "  itemHeight: " << itemHeight << std::endl;
-    std::cout << "  contentHeight: " << contentHeight << std::endl;
-    std::cout << "  scrollbarTrackHeight_: " << scrollbarTrackHeight_ << std::endl;
-    std::cout << "  maxScroll: " << maxScroll << std::endl;
-    std::cout << "  needsScrollbar: " << needsScrollbar << std::endl;
-    std::cout << "  scrollOffset_: " << scrollOffset_ << std::endl;
-
     if (needsScrollbar) {
         scrollbarVisible_ = true;
         scrollbarOpacity_ = 1.0f;
@@ -1000,9 +969,6 @@ void FileBrowser::updateScrollbarVisibility() {
         } else {
             scrollbarThumbY_ = 0.0f;
         }
-
-        std::cout << "  scrollbarThumbHeight_: " << scrollbarThumbHeight_ << std::endl;
-        std::cout << "  scrollbarThumbY_: " << scrollbarThumbY_ << std::endl;
 
     } else {
         scrollbarVisible_ = false;

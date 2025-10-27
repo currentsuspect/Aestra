@@ -5,6 +5,11 @@ project(NomadAudio VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Prevent Windows min/max macros from conflicting with std::min/std::max
+if(WIN32)
+    add_definitions(-DNOMINMAX)
+endif()
+
 # =============================================================================
 # RtAudio Integration (MIT License)
 # =============================================================================
@@ -59,6 +64,10 @@ set(NOMAD_AUDIO_SOURCES
     src/Oscillator.cpp
     src/Track.cpp
     src/TrackManager.cpp
+    # New multi-tier driver system
+    src/WASAPISharedDriver.cpp
+    src/WASAPIExclusiveDriver.cpp
+    src/ASIODriverInfo.cpp
 )
 
 set(NOMAD_AUDIO_HEADERS
@@ -70,6 +79,12 @@ set(NOMAD_AUDIO_HEADERS
     include/Oscillator.h
     include/Track.h
     include/TrackManager.h
+    # New multi-tier driver system
+    include/AudioDriverTypes.h
+    include/NativeAudioDriver.h
+    include/WASAPISharedDriver.h
+    include/WASAPIExclusiveDriver.h
+    include/ASIODriverInfo.h
 )
 
 # Create NomadAudio library
@@ -95,6 +110,14 @@ target_link_libraries(NomadAudio
     PRIVATE
         ${RTAUDIO_LIBS}
 )
+
+# Additional Windows libraries for WASAPI drivers
+if(WIN32)
+    target_link_libraries(NomadAudio PRIVATE
+        avrt        # MMCSS (Multimedia Class Scheduler Service)
+        advapi32    # Registry access for ASIO detection
+    )
+endif()
 
 # =============================================================================
 # Test Applications

@@ -94,6 +94,10 @@ public:
     // Mixer Integration
     MixerBus* getMixerBus() { return m_mixerBus.get(); }
     const MixerBus* getMixerBus() const { return m_mixerBus.get(); }
+    
+    // Latency Compensation
+    void setLatencyCompensation(double inputLatencyMs, double outputLatencyMs);
+    double getLatencyCompensationMs() const { return m_latencyCompensationMs; }
 
 private:
     // Track identification
@@ -125,6 +129,9 @@ private:
     // Recording state
     std::vector<float> m_recordingBuffer;
     std::atomic<bool> m_isRecording{false};
+    
+    // Latency compensation (milliseconds)
+    double m_latencyCompensationMs{0.0};  // Total input + output latency for recording
 
     // Internal audio processing
     void generateSilence(float* buffer, uint32_t numFrames);

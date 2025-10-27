@@ -16,6 +16,10 @@ AudioVisualizer::AudioVisualizer()
     , rightRMS_(0.0f)
     , leftPeakHold_(0.0f)
     , rightPeakHold_(0.0f)
+    , leftPeakSmoothed_(0.0f)
+    , rightPeakSmoothed_(0.0f)
+    , leftRMSSmoothed_(0.0f)
+    , rightRMSSmoothed_(0.0f)
     , mode_(AudioVisualizationMode::Waveform)
     , sensitivity_(0.8f)
     , decayRate_(0.95f)
@@ -27,6 +31,7 @@ AudioVisualizer::AudioVisualizer()
     , currentSample_(0)
     , animationTime_(0.0f)
     , peakDecayTime_(0.0f)
+    , smoothingFactor_(0.85f)  // Smooth but responsive (0.85 = 15% new data, 85% old)
     , audioManager_(nullptr)
 {
     setSize(400, 200); // Default size
@@ -75,12 +80,65 @@ void AudioVisualizer::onRender(NUIRenderer& renderer) {
 void AudioVisualizer::onUpdate(double deltaTime) {
     animationTime_ += static_cast<float>(deltaTime);
     
-    // Update peak decay
-    peakDecayTime_ += static_cast<float>(deltaTime);
-    if (peakDecayTime_ >= 0.1f) { // Update every 100ms
-        leftPeakHold_ = leftPeakHold_ * decayRate_;
-        rightPeakHold_ = rightPeakHold_ * decayRate_;
-        peakDecayTime_ = 0.0f;
+    // Get current raw values from audio thread
+    float leftPeakCurrent = leftPeak_.load();
+    float rightPeakCurrent = rightPeak_.load();
+    float leftRMSCurrent = leftRMS_.load();
+    float rightRMSCurrent = rightRMS_.load();
+    
+    // Get previous smoothed values
+    float leftPeakPrev = leftPeakSmoothed_.load();
+    float rightPeakPrev = rightPeakSmoothed_.load();
+    float leftRMSPrev = leftRMSSmoothed_.load();
+    float rightRMSPrev = rightRMSSmoothed_.load();
+    
+    // Ballistics: Instant attack, very fast decay
+    // If new value is higher: instant attack (use new value)
+    // If new value is lower: very fast decay (blend with smoothing)
+    float attackFactor = 1.0f;      // Instant attack
+    float releaseFactor = 0.5f;     // Very fast release (50% retention, 50% decay)
+    
+    // Peak ballistics
+    float leftPeakNew = (leftPeakCurrent > leftPeakPrev) 
+        ? leftPeakCurrent  // Instant attack
+        : (releaseFactor * leftPeakPrev + (1.0f - releaseFactor) * leftPeakCurrent);  // Smooth decay
+    
+    float rightPeakNew = (rightPeakCurrent > rightPeakPrev)
+        ? rightPeakCurrent  // Instant attack
+        : (releaseFactor * rightPeakPrev + (1.0f - releaseFactor) * rightPeakCurrent);  // Smooth decay
+    
+    // RMS ballistics (smoother than peaks)
+    float leftRMSNew = (leftRMSCurrent > leftRMSPrev)
+        ? (0.7f * leftRMSPrev + 0.3f * leftRMSCurrent)  // Fast attack (30% new)
+        : (releaseFactor * leftRMSPrev + (1.0f - releaseFactor) * leftRMSCurrent);  // Smooth decay
+    
+    float rightRMSNew = (rightRMSCurrent > rightRMSPrev)
+        ? (0.7f * rightRMSPrev + 0.3f * rightRMSCurrent)  // Fast attack (30% new)
+        : (releaseFactor * rightRMSPrev + (1.0f - releaseFactor) * rightRMSCurrent);  // Smooth decay
+    
+    // Update smoothed values
+    leftPeakSmoothed_.store(leftPeakNew);
+    rightPeakSmoothed_.store(rightPeakNew);
+    leftRMSSmoothed_.store(leftRMSNew);
+    rightRMSSmoothed_.store(rightRMSNew);
+    
+    // Update peak hold: rise instantly to match RMS, decay very fast when RMS drops
+    float peakHoldDecay = 0.90f; // 90% retention per frame (very fast decay - almost instant)
+    float leftPeakHoldCurrent = leftPeakHold_.load();
+    float rightPeakHoldCurrent = rightPeakHold_.load();
+    
+    // If RMS is higher than peak hold: instant rise
+    // If RMS is lower: apply decay
+    if (leftRMSNew > leftPeakHoldCurrent) {
+        leftPeakHold_.store(leftRMSNew);
+    } else {
+        leftPeakHold_.store(leftPeakHoldCurrent * peakHoldDecay);
+    }
+    
+    if (rightRMSNew > rightPeakHoldCurrent) {
+        rightPeakHold_.store(rightRMSNew);
+    } else {
+        rightPeakHold_.store(rightPeakHoldCurrent * peakHoldDecay);
     }
     
     setDirty(true);
@@ -151,7 +209,7 @@ void AudioVisualizer::setShowPeakHold(bool showPeakHold) {
 }
 
 void AudioVisualizer::processAudioData(const float* leftChannel, const float* rightChannel, size_t numSamples) {
-    // Calculate peak values
+    // Calculate peak and RMS values from current audio buffer only
     float leftPeak = 0.0f;
     float rightPeak = 0.0f;
     float leftSum = 0.0f;
@@ -169,17 +227,19 @@ void AudioVisualizer::processAudioData(const float* leftChannel, const float* ri
         }
     }
     
-    // Update peak values
-    leftPeak_ = leftPeak;
-    rightPeak_ = rightPeak;
+    // Calculate RMS (Root Mean Square)
+    float leftRMS = std::sqrt(leftSum / numSamples);
+    float rightRMS = rightChannel ? std::sqrt(rightSum / numSamples) : leftRMS;
     
-    // Update RMS values
-    leftRMS_ = std::sqrt(leftSum / numSamples);
-    rightRMS_ = rightChannel ? std::sqrt(rightSum / numSamples) : leftRMS_;
+    // Store raw values (ballistics/smoothing happens in onUpdate)
+    leftPeak_.store(leftPeak);
+    rightPeak_.store(rightPeak);
+    leftRMS_.store(leftRMS);
+    rightRMS_.store(rightRMS);
     
-    // Update peak hold values
-    leftPeakHold_ = std::max(leftPeakHold_.load(), leftPeak);
-    rightPeakHold_ = std::max(rightPeakHold_.load(), rightPeak);
+    // Update peak hold (instant capture)
+    leftPeakHold_.store(std::max(leftPeakHold_.load(), leftPeak));
+    rightPeakHold_.store(std::max(rightPeakHold_.load(), rightPeak));
 }
 
 void AudioVisualizer::updatePeakMeters() {
@@ -221,8 +281,10 @@ void AudioVisualizer::renderWaveform(NUIRenderer& renderer) {
     float t = 0.5f + 0.5f * std::sin(animationTime_ * 0.8f);
     NUIColor waveColor = NUIColor::lerp(primaryColor_, secondaryColor_, t);  // #00bcd4 → #ff4081
     
-    // Energy-based glow intensity
-    float energy = (leftRMS_ + rightRMS_) * 0.5f;
+    // Energy-based glow intensity (use smoothed RMS for fluid animation)
+    float leftRMSSmooth = leftRMSSmoothed_.load();
+    float rightRMSSmooth = rightRMSSmoothed_.load();
+    float energy = (leftRMSSmooth + rightRMSSmooth) * 0.5f;
     float glowIntensity = std::clamp(energy * 1.5f, 0.2f, 1.0f);
     
     // Gentle horizontal drift animation
@@ -508,8 +570,10 @@ void AudioVisualizer::renderOscilloscope(NUIRenderer& renderer) {
     float t = 0.5f + 0.5f * std::sin(animationTime_ * 1.2f);
     NUIColor waveColor = NUIColor::lerp(primaryColor_, secondaryColor_, t);
     
-    // Energy-based glow
-    float energy = (leftRMS_ + rightRMS_) * 0.5f;
+    // Energy-based glow (use smoothed RMS for fluid animation)
+    float leftRMSSmooth = leftRMSSmoothed_.load();
+    float rightRMSSmooth = rightRMSSmoothed_.load();
+    float energy = (leftRMSSmooth + rightRMSSmooth) * 0.5f;
     float glowIntensity = std::clamp(energy * 1.8f, 0.3f, 1.0f);
     
     // Render waveform with oscilloscope-style persistence
@@ -543,13 +607,19 @@ void AudioVisualizer::renderCompactMeter(NUIRenderer& renderer) {
     float meterHeight = bounds.height - 8;
     float meterWidth = (bounds.width - 8) / 2; // Two very slim meters side by side
     
-    // Left channel meter (very slim)
-    NUIRect leftMeter(bounds.x + 2, bounds.y + 4, meterWidth, meterHeight);
-    renderLevelBar(renderer, leftMeter, leftRMS_, leftPeak_, primaryColor_);
+    // Use smoothed values for fluid animation
+    float leftRMSSmooth = leftRMSSmoothed_.load();
+    float rightRMSSmooth = rightRMSSmoothed_.load();
+    float leftPeakHold = leftPeakHold_.load();   // Use peak hold, not smoothed peak
+    float rightPeakHold = rightPeakHold_.load(); // Use peak hold, not smoothed peak
     
-    // Right channel meter (very slim)
+    // Left channel meter (very slim) - CYAN
+    NUIRect leftMeter(bounds.x + 2, bounds.y + 4, meterWidth, meterHeight);
+    renderLevelBar(renderer, leftMeter, leftRMSSmooth, leftPeakHold, primaryColor_);
+    
+    // Right channel meter (very slim) - MAGENTA
     NUIRect rightMeter(bounds.x + 4 + meterWidth, bounds.y + 4, meterWidth, meterHeight);
-    renderLevelBar(renderer, rightMeter, rightRMS_, rightPeak_, secondaryColor_);
+    renderLevelBar(renderer, rightMeter, rightRMSSmooth, rightPeakHold, secondaryColor_);
     
     // Add small channel labels
     renderer.drawText("L", NUIPoint(leftMeter.x + leftMeter.width / 2 - 3, bounds.y + 1), 8, textColor_.withAlpha(0.8f));
@@ -582,16 +652,20 @@ void AudioVisualizer::renderLevelBar(NUIRenderer& renderer, const NUIRect& bound
     // Background
     renderer.fillRoundedRect(bounds, 4, backgroundColor_.darkened(0.2f));
     
-    // Scale the level to use the full range (0.0 to 1.0)
-    // The audio signal maxes out around 0.5f, so we scale it to 1.0f
-    float scaledLevel = std::min(1.0f, level * 2.0f); // Scale 0.5f -> 1.0f
+    // Aggressive scaling for better visibility
+    // Most music peaks around 0.1-0.3 RMS, so we scale it to fill the meter
+    float scaledLevel = std::min(1.0f, level * 5.0f); // Increased scaling from 3.0 to 5.0
     float levelHeight = scaledLevel * bounds.height;
-    NUIRect levelRect(bounds.x, bounds.y + bounds.height - levelHeight, bounds.width, levelHeight);
-    renderer.fillRoundedRect(levelRect, 4, color);
     
-    // Peak indicator with same scaling
-    if (showPeakHold_) {
-        float scaledPeak = std::min(1.0f, peak * 2.0f); // Scale 0.5f -> 1.0f
+    // Draw the level bar (colored - cyan/magenta)
+    if (levelHeight > 1.0f) { // Only draw if visible
+        NUIRect levelRect(bounds.x, bounds.y + bounds.height - levelHeight, bounds.width, levelHeight);
+        renderer.fillRoundedRect(levelRect, 4, color);
+    }
+    
+    // Peak hold indicator (white line at the maximum)
+    if (showPeakHold_ && peak > 0.001f) {
+        float scaledPeak = std::min(1.0f, peak * 5.0f); // Same scaling as level
         float peakHeight = scaledPeak * bounds.height;
         NUIRect peakRect(bounds.x, bounds.y + bounds.height - peakHeight, bounds.width, 2);
         renderer.fillRoundedRect(peakRect, 1, NUIColor::white());
