@@ -611,7 +611,7 @@ public:
                         AudioStreamConfig config;
                         config.deviceId = outputDevice.id;
                         config.sampleRate = 48000;
-                        config.bufferSize = 512;
+                        config.bufferSize = 128;  // Ultra-low-latency default for WASAPI Exclusive (2.67ms @ 48kHz)
                         config.numInputChannels = 0;
                         config.numOutputChannels = 2;
                         
@@ -681,6 +681,23 @@ public:
         m_content = std::make_shared<NomadContent>();
         m_content->setAudioStatus(m_audioInitialized);
         m_customWindow->setContent(m_content.get());
+        
+        // Configure latency compensation for all tracks (if audio was initialized)
+        if (m_audioInitialized && m_audioManager && m_content->getTrackManager()) {
+            double inputLatencyMs = 0.0;
+            double outputLatencyMs = 0.0;
+            m_audioManager->getLatencyCompensationValues(inputLatencyMs, outputLatencyMs);
+            
+            // Apply latency compensation to all tracks
+            auto trackManager = m_content->getTrackManager();
+            size_t trackCount = trackManager->getTrackCount();
+            for (size_t i = 0; i < trackCount; ++i) {
+                auto track = trackManager->getTrack(i);
+                if (track && !track->isSystemTrack()) {
+                    track->setLatencyCompensation(inputLatencyMs, outputLatencyMs);
+                }
+            }
+        }
         
         // Wire up transport bar callbacks
         if (m_content->getTransportBar()) {
@@ -827,10 +844,8 @@ public:
         m_window->show();
         Log::info("Entering main loop...");
 
-        // Start audio if initialized
-        if (m_audioInitialized && !m_audioManager->startStream()) {
-            Log::warning("Failed to start audio stream");
-        }
+        // Audio stream is already started during initialization if audio is enabled
+        // No need to start it again here
 
         // Start track manager if tracks are loaded
         if (m_content && m_content->getTrackManagerUI() && m_content->getTrackManagerUI()->getTrackManager() &&
@@ -841,6 +856,17 @@ public:
 
         // Main event loop
         while (m_running && m_window->processEvents()) {
+            // Calculate delta time for smooth animations
+            static auto lastTime = std::chrono::high_resolution_clock::now();
+            auto currentTime = std::chrono::high_resolution_clock::now();
+            double deltaTime = std::chrono::duration<double>(currentTime - lastTime).count();
+            lastTime = currentTime;
+            
+            // Update all UI components (for animations, VU meters, etc.)
+            if (m_rootComponent) {
+                m_rootComponent->onUpdate(deltaTime);
+            }
+            
             // Update sound previews
             if (m_content) {
                 m_content->updateSoundPreview();
@@ -1055,29 +1081,34 @@ private:
         
         // Generate test sound if active (directly in callback, no track needed)
         if (app->m_audioSettingsDialog && app->m_audioSettingsDialog->isPlayingTestSound()) {
-            static bool firstCallback = true;
-            if (firstCallback) {
-                // Can't use Log in audio callback, but this will show something happened
-                firstCallback = false;
-            }
-            
-            const double sampleRate = 48000.0;
+            // Use actual sample rate from config instead of hardcoded value
+            const double sampleRate = static_cast<double>(app->m_mainStreamConfig.sampleRate);
             const double frequency = 440.0; // A4
-            const double amplitude = 0.3; // 30% volume
-            const double phaseIncrement = 2.0 * 3.14159265358979323846 * frequency / sampleRate;
+            const double amplitude = 0.05; // 5% volume (gentle test tone)
+            const double twoPi = 2.0 * 3.14159265358979323846;
+            const double phaseIncrement = twoPi * frequency / sampleRate;
             
             double& phase = app->m_audioSettingsDialog->getTestSoundPhase();
+            
+            // Safety check: reset phase if it's corrupted
+            if (phase < 0.0 || phase > twoPi || std::isnan(phase) || std::isinf(phase)) {
+                phase = 0.0;
+            }
             
             for (uint32_t i = 0; i < nFrames; ++i) {
                 float sample = static_cast<float>(amplitude * std::sin(phase));
                 
-                // Mix into existing output (don't replace)
-                outputBuffer[i * 2] += sample;     // Left
-                outputBuffer[i * 2 + 1] += sample; // Right
+                // Safety clamp
+                if (sample > 1.0f) sample = 1.0f;
+                if (sample < -1.0f) sample = -1.0f;
+                
+                // Replace output buffer (don't mix) for cleaner test tone
+                outputBuffer[i * 2] = sample;     // Left
+                outputBuffer[i * 2 + 1] = sample; // Right
                 
                 phase += phaseIncrement;
-                if (phase >= 2.0 * 3.14159265358979323846) {
-                    phase -= 2.0 * 3.14159265358979323846;
+                while (phase >= twoPi) {
+                    phase -= twoPi;
                 }
             }
         }
