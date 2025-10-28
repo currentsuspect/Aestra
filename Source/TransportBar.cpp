@@ -19,16 +19,20 @@ TransportBar::TransportBar()
     createIcons();
     createButtons();
     
-    // Create labels
-    m_tempoLabel = std::make_shared<NomadUI::NUILabel>();
-    m_tempoLabel->setAlignment(NomadUI::NUILabel::Alignment::Center);
-    addChild(m_tempoLabel);
+    // Create modular info container
+    m_infoContainer = std::make_shared<TransportInfoContainer>();
+    addChild(m_infoContainer);
     
-    m_positionLabel = std::make_shared<NomadUI::NUILabel>();
-    m_positionLabel->setAlignment(NomadUI::NUILabel::Alignment::Center);
-    addChild(m_positionLabel);
+    // Wire up BPM change callback from arrows
+    if (m_infoContainer && m_infoContainer->getBPMDisplay()) {
+        m_infoContainer->getBPMDisplay()->setOnBPMChange([this](float newBPM) {
+            m_tempo = newBPM;
+            if (m_onTempoChange) {
+                m_onTempoChange(m_tempo);
+            }
+        });
+    }
     
-    updateLabels();
     updateButtonStates();
 }
 
@@ -136,7 +140,9 @@ void TransportBar::stop() {
         m_state = TransportState::Stopped;
         m_position = 0.0;
         updateButtonStates();
-        updateLabels();
+        if (m_infoContainer) {
+            m_infoContainer->getTimerDisplay()->setTime(m_position);
+        }
         if (m_onStop) {
             m_onStop();
         }
@@ -153,7 +159,9 @@ void TransportBar::togglePlayPause() {
 
 void TransportBar::setTempo(float bpm) {
     m_tempo = std::max(20.0f, std::min(999.0f, bpm));
-    updateLabels();
+    if (m_infoContainer) {
+        m_infoContainer->getBPMDisplay()->setBPM(m_tempo);
+    }
     if (m_onTempoChange) {
         m_onTempoChange(m_tempo);
     }
@@ -161,7 +169,9 @@ void TransportBar::setTempo(float bpm) {
 
 void TransportBar::setPosition(double seconds) {
     m_position = std::max(0.0, seconds);
-    updateLabels();
+    if (m_infoContainer) {
+        m_infoContainer->getTimerDisplay()->setTime(m_position);
+    }
 }
 
 void TransportBar::updateButtonStates() {
@@ -178,29 +188,6 @@ void TransportBar::updateButtonStates() {
     
     // Update record button
     m_recordButton->setText("●"); // Record symbol
-}
-
-void TransportBar::updateLabels() {
-    // Update tempo label
-    std::stringstream tempoSs;
-    tempoSs << std::fixed << std::setprecision(1) << m_tempo << " BPM";
-    m_tempoLabel->setText(tempoSs.str());
-    
-    // Update position label
-    m_positionLabel->setText(formatTime(m_position));
-}
-
-std::string TransportBar::formatTime(double seconds) const {
-    int totalSeconds = static_cast<int>(seconds);
-    int minutes = totalSeconds / 60;
-    int secs = totalSeconds % 60;
-    int millis = static_cast<int>((seconds - totalSeconds) * 100);
-    
-    std::stringstream ss;
-    ss << std::setfill('0') << std::setw(2) << minutes << ":"
-       << std::setw(2) << secs << "."
-       << std::setw(2) << millis;
-    return ss.str();
 }
 
 void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
@@ -281,21 +268,11 @@ void TransportBar::layoutComponents() {
 
     // Record button
     m_recordButton->setBounds(NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize));
-    x += buttonSize + spacing * 2;
 
-    // Position label (left side) - improved vertical alignment
-    float positionWidth = 120.0f; // Could be made configurable
-    float positionHeight = 30.0f;
-    float positionOffsetY = bounds.height / 2.0f - 15.0f; // Center for 30px height
-    m_positionLabel->setBounds(NUIAbsolute(bounds, x, positionOffsetY, positionWidth, positionHeight));
-    x += positionWidth + spacing * 2;
-
-    // Tempo label (center) - improved vertical alignment
-    float tempoWidth = 100.0f; // Could be made configurable
-    float tempoHeight = 24.0f;
-    float tempoOffsetY = bounds.height / 2.0f - 12.0f; // Center for 24px height
-    float tempoOffsetX = (bounds.width - tempoWidth) / 2.0f; // Center horizontally
-    m_tempoLabel->setBounds(NUIAbsolute(bounds, tempoOffsetX, tempoOffsetY, tempoWidth, tempoHeight));
+    // Info container (timer + BPM) - full transport bar dimensions
+    if (m_infoContainer) {
+        m_infoContainer->setBounds(NUIAbsolute(bounds, 0, 0, bounds.width, bounds.height));
+    }
 }
 
 void TransportBar::onRender(NomadUI::NUIRenderer& renderer) {

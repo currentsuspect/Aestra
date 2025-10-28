@@ -595,15 +595,18 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         // Create item rect with proper dimensions
         NUIRect itemRect(bounds.x + layout.panelMargin, itemY, bounds.width - 2 * layout.panelMargin, itemHeight);
         
-        // Enhanced selection highlighting with Liminal Dark v2.0 effects
+        // Enhanced selection highlighting with purple accent (matches Audio Settings border)
         if (i == selectedIndex_) {
-            // Heavy selection highlight with cyan accent
-            renderer.fillRoundedRect(itemRect, 4, selectedColor_.withAlpha(0.3f));
-            renderer.strokeRoundedRect(itemRect, 4, 2, selectedColor_.withAlpha(0.8f));
+            // Use purple accent color (same as Audio Settings dialog border)
+            NomadUI::NUIColor purpleAccent = themeManager.getColor("accent");  // Purple accent
             
-            // Left accent bar in cyan for selected items
+            // Heavy selection highlight with purple accent
+            renderer.fillRoundedRect(itemRect, 4, purpleAccent.withAlpha(0.3f));
+            renderer.strokeRoundedRect(itemRect, 4, 2, purpleAccent.withAlpha(0.8f));
+            
+            // Left accent bar in purple for selected items
             NUIRect accentBar(itemRect.x, itemRect.y, 3, itemRect.height);
-            renderer.fillRoundedRect(accentBar, 1, selectedColor_);
+            renderer.fillRoundedRect(accentBar, 1, purpleAccent);
         } else if (i == hoveredIndex_) {
             // Hover highlight with subtle grey background
             renderer.fillRoundedRect(itemRect, 4, hoverColor_.withAlpha(0.4f));
@@ -636,12 +639,32 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         float textX = itemRect.x + layout.panelMargin + themeManager.getComponentDimension("fileBrowser", "iconSize") + 8; // Icon size + margin
         float textY = itemY + itemHeight / 2 + 7; // Perfect vertical centering for 14px font (baseline)
         
-        // Measure text width and ensure it doesn't exceed bounds
-        // Calculate available width for filename (reserve space for file size on the right)
-        float sizeReservedWidth = 80.0f; // Reserve space for file size display
-        float maxTextWidth = itemRect.width - layout.panelMargin - themeManager.getComponentDimension("fileBrowser", "iconSize") - 8 - sizeReservedWidth - 8.0f; // 8px safety margin
+        // Calculate file size string first (if applicable)
+        std::string sizeStr;
+        float actualSizeWidth = 0.0f;
+        bool hasSize = !files_[i].isDirectory && files_[i].size > 0;
         
-        // Truncate filename if too long
+        if (hasSize) {
+            if (files_[i].size < 1024) {
+                sizeStr = std::to_string(files_[i].size) + " B";
+            } else if (files_[i].size < 1024 * 1024) {
+                sizeStr = std::to_string(files_[i].size / 1024) + " KB";
+            } else {
+                sizeStr = std::to_string(files_[i].size / (1024 * 1024)) + " MB";
+            }
+            actualSizeWidth = renderer.measureText(sizeStr, 12).width;
+        }
+        
+        // Calculate available width for filename with smart spacing
+        float iconWidth = themeManager.getComponentDimension("fileBrowser", "iconSize");
+        float minGap = 20.0f; // Minimum gap between filename and size
+        float rightMargin = 12.0f; // Right edge safety margin (now accounts for scrollbar)
+        
+        // Dynamic width calculation: only reserve space if size actually exists
+        float reservedForSize = hasSize ? (actualSizeWidth + minGap + rightMargin) : rightMargin;
+        float maxTextWidth = itemRect.width - layout.panelMargin - iconWidth - 8 - reservedForSize;
+        
+        // Truncate filename ONLY if it truly overflows
         std::string displayName = files_[i].name;
         auto nameTextSize = renderer.measureText(displayName, 14);
         
@@ -664,45 +687,22 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         
         renderer.drawText(displayName, NUIPoint(textX, textY), 14, nameColor);
         
-        // Render file size with aggressive truncation to prevent bleeding
-        if (!files_[i].isDirectory && files_[i].size > 0) {
-            std::string sizeStr;
-            if (files_[i].size < 1024) {
-                sizeStr = std::to_string(files_[i].size) + " B";
-            } else if (files_[i].size < 1024 * 1024) {
-                sizeStr = std::to_string(files_[i].size / 1024) + " KB";
-            } else {
-                sizeStr = std::to_string(files_[i].size / (1024 * 1024)) + " MB";
-            }
-            
+        // Render file size (only if it exists and space allows)
+        if (hasSize) {
             auto sizeText = renderer.measureText(sizeStr, 12);
             
-            // Calculate position from the right with safety margin
-            float rightMargin = layout.panelMargin + 8.0f; // 8px safety margin on right
+            // Calculate position from the right with proper margins
             float sizeX = itemRect.x + itemRect.width - sizeText.width - rightMargin;
             
-            // Ensure size doesn't overlap with filename
-            float minSizeX = textX + renderer.measureText(displayName, 14).width + 20.0f; // 20px gap between name and size
+            // Final safety check: ensure size doesn't overlap with filename
+            float actualNameWidth = renderer.measureText(displayName, 14).width;
+            float minSizeX = textX + actualNameWidth + minGap;
             
-            if (sizeX < minSizeX) {
-                // Not enough space - truncate size text
-                float maxSizeWidth = itemRect.x + itemRect.width - minSizeX - rightMargin;
-                if (maxSizeWidth > 20.0f) {
-                    std::string truncated = sizeStr;
-                    while (truncated.length() > 3) {
-                        truncated.pop_back();
-                        NUISize truncSize = renderer.measureText(truncated + "...", 12);
-                        if (truncSize.width <= maxSizeWidth) break;
-                    }
-                    sizeStr = truncated + "...";
-                    sizeX = minSizeX;
-                } else {
-                    // Skip rendering if not enough space
-                    return;
-                }
+            if (sizeX >= minSizeX) {
+                // Safe to render
+                renderer.drawText(sizeStr, NUIPoint(sizeX, textY), 12, textColor_.withAlpha(0.7f));
             }
-            
-            renderer.drawText(sizeStr, NUIPoint(sizeX, textY), 12, textColor_.withAlpha(0.7f));
+            // If not safe, simply don't render the size (filename takes priority)
         }
     }
 }
@@ -851,14 +851,19 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
 
     if (!needsScrollbar || files_.size() == 0) return;
 
-    // Use already calculated dimensions
+    // Position scrollbar FLUSH with the right edge (no gap)
     NUIRect bounds = getBounds();
-    float scrollbarX = bounds.x + bounds.width - scrollbarWidth_ - layout.panelMargin;
+    float scrollbarX = bounds.x + bounds.width - scrollbarWidth_;  // FLUSH alignment - no panelMargin
     float scrollbarY = bounds.y + headerHeight + 8 + 20; // After path bar
     float scrollbarHeight = bounds.height - headerHeight - 8 - 20;
 
-    // Render scrollbar track
-    NUIColor trackColor = themeManager.getColor("backgroundSecondary").withAlpha(0.8f); // Use theme color
+    // Render solid background layer beneath scrollbar to prevent selection bleed
+    NUIColor bgColor = themeManager.getColor("backgroundSecondary");  // Solid background
+    renderer.fillRoundedRect(NUIRect(scrollbarX, scrollbarY, scrollbarWidth_, scrollbarHeight),
+                             4, bgColor);
+
+    // Render scrollbar track on top of background
+    NUIColor trackColor = themeManager.getColor("backgroundSecondary").withAlpha(0.8f);
     renderer.fillRoundedRect(NUIRect(scrollbarX, scrollbarY, scrollbarWidth_, scrollbarHeight),
                              4, trackColor);
 
@@ -879,7 +884,7 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
     NUIRect bounds = getBounds();
     float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
     float scrollbarWidth = themeManager.getComponentDimension("fileBrowser", "scrollbarWidth");
-    float scrollbarX = bounds.x + bounds.width - scrollbarWidth - layout.panelMargin;
+    float scrollbarX = bounds.x + bounds.width - scrollbarWidth;  // FLUSH alignment - no panelMargin
     float scrollbarY = bounds.y + headerHeight + 8 + 20; // After path bar
     float scrollbarHeight = bounds.height - headerHeight - 8 - 20;
 
