@@ -16,6 +16,30 @@
 
 ---
 
+## 🚀 Recent Updates
+
+### Latest (Dec 2024) - FL Studio Timeline & Critical Fixes
+
+**🔧 Critical Bug Fixes:**
+- ✅ **Fixed audio cutting 7 seconds early** - Resolved sample rate mismatch in position calculation
+  - Root cause: Position increment used track sample rate (44100Hz) instead of output rate (48000Hz)
+  - Now plays full duration without truncation
+- ✅ **Fixed ruler showing bar 9 on startup** - Off-by-one error in endBar calculation
+- ✅ **Fixed scrollbar disappearing on zoom** - Added bounds clamping after zoom changes
+
+**🎨 FL Studio-Style Features:**
+- ✅ **Adaptive grid system** - Dynamic extent based on sample length
+- ✅ **White slender playhead** - 1px vertical line with triangle flag, syncs accurately
+- ✅ **Sample clip containers** - Semi-transparent with colored borders
+- ✅ **Green playing indicator** - Play button & timer turn green during playback
+
+**⚡ Performance Optimizations:**
+- ✅ **Increased culling padding** - 200px (up from 50px) prevents visible clipping
+- ✅ **Fixed waveform cache** - 4096 samples for consistent performance
+- ✅ **Strict grid clipping** - No bleeding into control areas
+
+---
+
 ## 🎯 Philosophy
 
 > *"Every pixel and buffer here exists because someone decided it should. There is no automation without understanding, no shortcut without intent."*
@@ -187,40 +211,78 @@ NOMAD is a fully self-authored DAW with **zero borrowed frameworks**. Every laye
 
 ---
 
-## 🎵 Audio System Features
+## 🎵 DAW Features
 
-#### ✅ **Sound Preview System**
-- **5-second previews** when clicking on audio files in the file browser
-- **Unique tone generation** based on filename hash for each file
-- **Automatic preview management** - stops when selecting different files
-- **Lower volume playback** (30%) to avoid startling users
-- **Preview track hidden** from main track UI for clean interface
+### 🎹 **FL Studio-Inspired Timeline**
 
-#### ✅ **Silent Startup**
-- **No more startup sounds** - removed test tones from audio initialization
-- **Clean application launch** with immediate silence
-- **Professional audio behavior** - only plays when user initiates
+<table>
+<tr>
+<td width="50%">
 
-#### ✅ **File Browser Integration**
-- **Audio file detection** - automatically detects .wav, .mp3, .flac, .aiff files
-- **Preview on selection** - click or use arrow keys to trigger preview
-- **Visual feedback** - highlights selected files with cyan accent
-- **Directory navigation** - double-click folders or use Enter keystream-style
+**Timeline & Grid**
+- **Adaptive grid system** - Dynamic extent (8 bars min → sample length + 2 bars)
+- **Fluid zoom** - 10-200 pixels/beat with smooth scrolling
+- **Horizontal scroll** - Navigate long projects effortlessly
+- **Ruler clipping** - Bars displayed exactly as needed (no overflow)
+- **Dynamic background** - Content-aware, no infinite void
 
-#### ✅ **Professional Audio System**
-- **Multi-tier WASAPI drivers** - Exclusive (~8-12ms RTL) and Shared (~20-30ms RTL) modes
-- **Intelligent fallback** - WASAPI Exclusive → WASAPI Shared → RtAudio
-- **Format conversion** - Automatic float↔PCM conversion (16/24/32-bit)
-- **Hot-swappable drivers** - Seamless driver switching during playback
-- **ASIO detection** - Displays available ASIO devices (info-only)
-- **Device configuration** - Sample rate, buffer size, bit depth control
-- **Auto-buffer scaling** - Automatically increases buffer on underruns for stability
-- **MMCSS scheduling** - Pro Audio thread priority for real-time performance
+</td>
+<td width="50%">
+
+**Visual Feedback**
+- **White slender playhead** - 1px vertical line with triangle flag
+- **Green playing indicator** - Play button & timer turn green during playback
+- **Sample clip containers** - Semi-transparent with colored borders
+- **Duration display** - MM:SS.mmm for each sample
+- **Waveform visualization** - 4096-sample fixed cache with partial rendering
+
+</td>
+</tr>
+</table>
+
+### 🎚️ **Professional Audio Engine**
+
+**WASAPI Multi-Tier System:**
+- ✅ **WASAPI Exclusive Mode** - ~8-12ms RTL for professional low-latency
+- ✅ **WASAPI Shared Mode** - ~20-30ms RTL for system compatibility
+- ✅ **Intelligent Fallback** - Exclusive → Shared → RtAudio automatic switching
+- ✅ **Hot-Swap Drivers** - Seamless driver switching during playback
+- ✅ **Format Conversion** - Automatic float↔PCM (16/24/32-bit)
+- ✅ **MMCSS Scheduling** - Pro Audio thread priority
+- ✅ **IAudioClient3** - Low-latency shared mode (Windows 10+)
+
+**Playback Features:**
+- ✅ **Multi-track playback** - Multiple samples synchronized
+- ✅ **Sample rate conversion** - Automatic resampling (44.1kHz → 48kHz)
+- ✅ **Position tracking** - Accurate playback position (fixed sample rate bug)
+- ✅ **Looping** - Seamless audio looping
+- ✅ **Transport controls** - Play, pause, stop with visual feedback
+
+**Performance Optimizations:**
+- ✅ **Off-screen culling** - 200px padding for smooth scrolling
+- ✅ **Fixed waveform cache** - 4096 samples for consistent performance
+- ✅ **Partial rendering** - Only visible portions of waveforms
+- ✅ **Auto-buffer scaling** - Increases buffer on underruns
+
+### 🎨 **File Browser & Previews**
+
+- ✅ **Audio file detection** - .wav, .mp3, .flac, .aiff support
+- ✅ **5-second previews** - Click to preview (30% volume)
+- ✅ **Preview management** - Auto-stops on file change
+- ✅ **Visual feedback** - Cyan accent on selected files
+- ✅ **Directory navigation** - Double-click or Enter
+- ✅ **Hidden preview track** - Clean UI, no clutter
+
+### 🔧 **Audio Settings**
+
+- ✅ **Device configuration** - Sample rate, buffer size, bit depth
+- ✅ **Driver selection** - WASAPI Exclusive/Shared/RtAudio
+- ✅ **ASIO detection** - Displays available ASIO devices (info-only)
+- ✅ **Real-time switching** - Change settings without restarting
 
 **Latency Details:**
 - Buffer Period: 2.67ms @ 128 frames (one-way)
 - Estimated RTL: ~8ms typical (device-dependent, 3x buffer period)
-- IAudioClient3 support for low-latency shared mode on Windows 10+
 
 ---
 
