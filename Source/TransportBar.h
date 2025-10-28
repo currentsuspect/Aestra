@@ -16,6 +16,7 @@
 #include "../NomadUI/Core/NUIIcon.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
+#include "TransportInfoContainer.h"
 
 #include <memory>
 #include <functional>
@@ -75,8 +76,7 @@ private:
     std::shared_ptr<NomadUI::NUIButton> m_playButton;
     std::shared_ptr<NomadUI::NUIButton> m_stopButton;
     std::shared_ptr<NomadUI::NUIButton> m_recordButton;
-    std::shared_ptr<NomadUI::NUILabel> m_tempoLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_positionLabel;
+    std::shared_ptr<TransportInfoContainer> m_infoContainer;  // Modular info container
     
     // Icons
     std::shared_ptr<NomadUI::NUIIcon> m_playIcon;
@@ -99,10 +99,8 @@ private:
     void createButtons();
     void createIcons();
     void updateButtonStates();
-    void updateLabels();
     void layoutComponents();
     void renderButtonIcons(NomadUI::NUIRenderer& renderer);
-    std::string formatTime(double seconds) const;
 };
 
 } // namespace Nomad

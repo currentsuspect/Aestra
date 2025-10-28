@@ -9,6 +9,8 @@ add_executable(NOMAD_DAW
     Main.cpp
     TransportBar.h
     TransportBar.cpp
+    TransportInfoContainer.h
+    TransportInfoContainer.cpp
     AudioSettingsDialog.h
     AudioSettingsDialog.cpp
     FileBrowser.h
