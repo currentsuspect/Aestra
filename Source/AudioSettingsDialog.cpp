@@ -289,15 +289,30 @@ void AudioSettingsDialog::updateDriverList() {
     m_drivers = m_audioManager->getAvailableDriverTypes();
     m_driverDropdown->clearItems();
     
+    // Check if we're in fallback mode
+    bool isUsingFallback = m_audioManager->isUsingFallbackDriver();
+    Audio::AudioDriverType activeDriver = m_audioManager->getActiveDriverType();
+    
     // Add available WASAPI/RtAudio drivers with professional descriptions
+    int itemIndex = 0;
     for (const auto& driverType : m_drivers) {
         std::string name;
+        bool shouldEnable = true;
+        
         switch (driverType) {
             case Audio::AudioDriverType::WASAPI_EXCLUSIVE:
                 name = "WASAPI Exclusive (~8-12ms RTL)";
+                // Disable if Exclusive is blocked (fallback to Shared occurred)
+                if (isUsingFallback && activeDriver == Audio::AudioDriverType::WASAPI_SHARED) {
+                    name += " [Blocked]";
+                    shouldEnable = false;
+                }
                 break;
             case Audio::AudioDriverType::WASAPI_SHARED:
                 name = "WASAPI Shared (~20-30ms RTL)";
+                if (isUsingFallback && activeDriver == Audio::AudioDriverType::WASAPI_SHARED) {
+                    name += " [Active - Fallback]";
+                }
                 break;
             case Audio::AudioDriverType::RTAUDIO:
                 name = "RtAudio (Legacy)";
@@ -306,17 +321,28 @@ void AudioSettingsDialog::updateDriverList() {
                 name = "Unknown Driver";
                 break;
         }
+        
         m_driverDropdown->addItem(name, static_cast<int>(driverType));
-        if (driverType == m_selectedDriverType) {
-            m_driverDropdown->setSelectedIndex(m_driverDropdown->getItemCount() - 1);
+        
+        // Disable the item if it's blocked
+        if (!shouldEnable) {
+            m_driverDropdown->setItemEnabled(itemIndex, false);
         }
+        
+        if (driverType == m_selectedDriverType) {
+            m_driverDropdown->setSelectedIndex(itemIndex);
+        }
+        
+        itemIndex++;
     }
     
-    // Add ASIO drivers for informational display (not functional yet)
+    // Add ASIO drivers for informational display (not functional yet) - all disabled
     m_asioDrivers = m_audioManager->getASIODrivers();
     for (const auto& asioDriver : m_asioDrivers) {
-        std::string name = "ASIO: " + asioDriver.name;
+        std::string name = "ASIO: " + asioDriver.name + " [Not Yet Implemented]";
         m_driverDropdown->addItem(name, static_cast<int>(Audio::AudioDriverType::ASIO_EXTERNAL));
+        m_driverDropdown->setItemEnabled(itemIndex, false);  // Disable ASIO items
+        itemIndex++;
     }
 }
 

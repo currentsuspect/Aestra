@@ -28,6 +28,10 @@ set(NOMADUI_CORE_SOURCES
     Core/NUIAnimation.cpp
     Core/NUIThemeSystem.h
     Core/NUIThemeSystem.cpp
+    Core/NUIAdaptiveFPS.h
+    Core/NUIAdaptiveFPS.cpp
+    Core/NUIFrameProfiler.h
+    Core/NUIFrameProfiler.cpp
     Core/NUIButton.h
     Core/NUIButton.cpp
     Core/NUILabel.h
@@ -199,6 +203,12 @@ if(NOMADUI_BUILD_OPENGL)
     set(NOMADUI_OPENGL_SOURCES
         Graphics/OpenGL/NUIRendererGL.h
         Graphics/OpenGL/NUIRendererGL.cpp
+        Graphics/OpenGL/NUIRenderBatch.h
+        Graphics/OpenGL/NUIRenderBatch.cpp
+        Graphics/OpenGL/NUIDirtyRegion.h
+        Graphics/OpenGL/NUIDirtyRegion.cpp
+        Graphics/OpenGL/NUIRenderCache.h
+        Graphics/OpenGL/NUIRenderCache.cpp
     )
     
     add_library(NomadUI_OpenGL STATIC

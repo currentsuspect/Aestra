@@ -580,6 +580,36 @@ bool AudioDeviceManager::setPreferredDriverType(AudioDriverType type) {
     return true;
 }
 
+bool AudioDeviceManager::isDriverTypeAvailable(AudioDriverType type) const {
+    if (!m_initialized) {
+        return false;
+    }
+
+    // Quick availability check based on driver type
+    switch (type) {
+        case AudioDriverType::WASAPI_EXCLUSIVE:
+            // Check if Exclusive driver exists and is initialized
+            if (!m_exclusiveDriver || !m_exclusiveDriver->isAvailable()) {
+                return false;
+            }
+            // If we're currently using a different driver, Exclusive might be blocked
+            // by another application (like SoundID Reference)
+            // We can't easily test without disrupting the current stream,
+            // so we assume it's available if initialized
+            return true;
+
+        case AudioDriverType::WASAPI_SHARED:
+            // Shared mode is almost always available
+            return m_sharedDriver && m_sharedDriver->isAvailable();
+
+        case AudioDriverType::RTAUDIO:
+            return m_rtAudioDriver != nullptr;
+
+        default:
+            return false;
+    }
+}
+
 std::vector<AudioDriverType> AudioDeviceManager::getAvailableDriverTypes() const {
     std::vector<AudioDriverType> types;
     
@@ -594,6 +624,15 @@ std::vector<AudioDriverType> AudioDeviceManager::getAvailableDriverTypes() const
     }
     
     return types;
+}
+
+bool AudioDeviceManager::isUsingFallbackDriver() const {
+    if (!m_activeDriver) {
+        return false;
+    }
+
+    AudioDriverType activeType = getActiveDriverType();
+    return activeType != m_preferredDriverType;
 }
 
 std::vector<ASIODriverInfo> AudioDeviceManager::getASIODrivers() const {

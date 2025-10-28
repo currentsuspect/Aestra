@@ -37,7 +37,7 @@ TransportBar::TransportBar()
 }
 
 void TransportBar::createIcons() {
-    // Play icon (triangle) - Liminal Dark v2.0
+    // Play icon (triangle) - Purple accent
     const char* playSvg = R"(
         <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M8 5v14l11-7z"/>
@@ -45,7 +45,7 @@ void TransportBar::createIcons() {
     )";
     m_playIcon = std::make_shared<NomadUI::NUIIcon>(playSvg);
     m_playIcon->setIconSize(NomadUI::NUIIconSize::Medium);
-    m_playIcon->setColorFromTheme("accentCyan");  // #00bcd4 - Playful but professional blue
+    m_playIcon->setColorFromTheme("accent");  // #bb86fc - Purple accent
     
     // Pause icon (two bars)
     const char* pauseSvg = R"(
@@ -55,7 +55,7 @@ void TransportBar::createIcons() {
     )";
     m_pauseIcon = std::make_shared<NomadUI::NUIIcon>(pauseSvg);
     m_pauseIcon->setIconSize(NomadUI::NUIIconSize::Medium);
-    m_pauseIcon->setColorFromTheme("accentCyan");  // #00bcd4 - Same as play
+    m_pauseIcon->setColorFromTheme("accent");  // #bb86fc - Purple accent
     
     // Stop icon (square)
     const char* stopSvg = R"(
@@ -65,9 +65,9 @@ void TransportBar::createIcons() {
     )";
     m_stopIcon = std::make_shared<NomadUI::NUIIcon>(stopSvg);
     m_stopIcon->setIconSize(NomadUI::NUIIconSize::Medium);
-    m_stopIcon->setColorFromTheme("textSecondary");  // #9a9aa3 - Inactive labels
+    m_stopIcon->setColorFromTheme("accent");  // #bb86fc - Purple accent
     
-    // Record icon (circle) - Liminal Dark v2.0
+    // Record icon (circle) - Keep red
     const char* recordSvg = R"(
         <svg viewBox="0 0 24 24" fill="currentColor">
             <circle cx="12" cy="12" r="8"/>
@@ -87,6 +87,8 @@ void TransportBar::createButtons() {
     // Use theme color instead of hardcoded color
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     m_playButton->setBackgroundColor(themeManager.getColor("surfaceTertiary")); // #28282d - same as track buttons
+    m_playButton->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f)); // Dull grey hover
+    m_playButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
     m_playButton->setOnClick([this]() {
         togglePlayPause();
     });
@@ -99,6 +101,8 @@ void TransportBar::createButtons() {
     m_stopButton->setSize(40, 40);
     // Use theme color instead of hardcoded color
     m_stopButton->setBackgroundColor(themeManager.getColor("surfaceTertiary")); // #28282d - same as track buttons
+    m_stopButton->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f)); // Dull grey hover
+    m_stopButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
     m_stopButton->setOnClick([this]() {
         stop();
     });
@@ -111,6 +115,8 @@ void TransportBar::createButtons() {
     m_recordButton->setSize(40, 40);
     // Use theme color instead of hardcoded color
     m_recordButton->setBackgroundColor(themeManager.getColor("surfaceTertiary")); // #28282d - same as track buttons
+    m_recordButton->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f)); // Dull grey hover
+    m_recordButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
     m_recordButton->setEnabled(false); // Disabled for now
     addChild(m_recordButton);
 }
@@ -119,6 +125,12 @@ void TransportBar::play() {
     if (m_state != TransportState::Playing) {
         m_state = TransportState::Playing;
         updateButtonStates();
+        
+        // Update timer to show playing state (green color)
+        if (m_infoContainer) {
+            m_infoContainer->getTimerDisplay()->setPlaying(true);
+        }
+        
         if (m_onPlay) {
             m_onPlay();
         }
@@ -129,6 +141,12 @@ void TransportBar::pause() {
     if (m_state == TransportState::Playing) {
         m_state = TransportState::Paused;
         updateButtonStates();
+        
+        // Update timer to show stopped state (white color)
+        if (m_infoContainer) {
+            m_infoContainer->getTimerDisplay()->setPlaying(false);
+        }
+        
         if (m_onPause) {
             m_onPause();
         }
@@ -140,9 +158,13 @@ void TransportBar::stop() {
         m_state = TransportState::Stopped;
         m_position = 0.0;
         updateButtonStates();
+        
         if (m_infoContainer) {
             m_infoContainer->getTimerDisplay()->setTime(m_position);
+            // Update timer to show stopped state (white color)
+            m_infoContainer->getTimerDisplay()->setPlaying(false);
         }
+        
         if (m_onStop) {
             m_onStop();
         }
@@ -209,6 +231,16 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
         NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize);
         auto icon = (m_state == TransportState::Playing) ? m_pauseIcon : m_playIcon;
         if (icon) {
+            // CRITICAL: Green when playing, grey on hover, purple otherwise
+            if (m_state == TransportState::Playing) {
+                // Bright green when actively playing
+                icon->setColor(NomadUI::NUIColor(0.0f, 1.0f, 0.3f, 1.0f));  // Vibrant green
+            } else if (m_playButton->isHovered()) {
+                icon->setColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f));  // Dull grey on hover
+            } else {
+                icon->setColorFromTheme("accent");  // #bb86fc - Purple
+            }
+            
             float iconPadding = 8.0f; // Could be made configurable
             float iconSize = 24.0f;
             NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
@@ -221,6 +253,14 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     // Stop button icon
     if (m_stopButton && m_stopIcon) {
         NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize);
+        
+        // Dull grey on hover, purple otherwise
+        if (m_stopButton->isHovered()) {
+            m_stopIcon->setColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f));  // Dull grey on hover
+        } else {
+            m_stopIcon->setColorFromTheme("accent");  // #bb86fc - Purple
+        }
+        
         float iconPadding = 8.0f;
         float iconSize = 24.0f;
         NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
@@ -229,9 +269,13 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     }
     x += buttonSize + spacing;
 
-    // Record button icon
+    // Record button icon (always red, no hover change)
     if (m_recordButton && m_recordIcon) {
         NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize);
+        
+        // Record stays red always
+        m_recordIcon->setColorFromTheme("error");  // #ff4d4d - Red
+        
         float iconPadding = 8.0f;
         float iconSize = 24.0f;
         NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
@@ -269,7 +313,8 @@ void TransportBar::layoutComponents() {
     // Record button
     m_recordButton->setBounds(NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize));
 
-    // Info container (timer + BPM) - full transport bar dimensions
+    // Info container (timer + BPM) - spans full transport bar
+    // Use NUIAbsolute with 0,0 offset to position at transport bar's absolute position
     if (m_infoContainer) {
         m_infoContainer->setBounds(NUIAbsolute(bounds, 0, 0, bounds.width, bounds.height));
     }
@@ -302,6 +347,24 @@ void TransportBar::onRender(NomadUI::NUIRenderer& renderer) {
         NomadUI::NUIPoint(bounds.x + bounds.width, bounds.y + 1),
         1.0f,
         NomadUI::NUIColor::white().withAlpha(0.05f)
+    );
+    
+    // Add vertical separator between file browser and track area
+    auto& layout = themeManager.getLayoutDimensions();
+    float fileBrowserWidth = layout.fileBrowserWidth;
+    renderer.drawLine(
+        NomadUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y),
+        NomadUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y + bounds.height),
+        1.0f,
+        borderColor.withAlpha(0.8f)
+    );
+    
+    // Add horizontal divider at bottom to separate transport from track area
+    renderer.drawLine(
+        NomadUI::NUIPoint(bounds.x, bounds.y + bounds.height - 1),
+        NomadUI::NUIPoint(bounds.x + bounds.width, bounds.y + bounds.height - 1),
+        1.0f,
+        borderColor.withAlpha(0.8f)
     );
     
     // Render children (buttons and labels)

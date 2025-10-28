@@ -2,6 +2,7 @@
 
 #include "NUITypes.h"
 #include "NUIComponent.h"
+#include "NUIAdaptiveFPS.h"
 #include "../Graphics/NUIRenderer.h"
 #include <memory>
 #include <chrono>
@@ -72,6 +73,7 @@ public:
     
     /**
      * Set the target frame rate (default: 60 FPS).
+     * @deprecated Use adaptive FPS system instead
      */
     void setTargetFPS(int fps);
     
@@ -84,6 +86,25 @@ public:
      * Get the delta time of the last frame (in seconds).
      */
     double getDeltaTime() const { return deltaTime_; }
+    
+    // ========================================================================
+    // Adaptive FPS System
+    // ========================================================================
+    
+    /**
+     * Get the adaptive FPS manager.
+     */
+    NUIAdaptiveFPS* getAdaptiveFPS() { return &adaptiveFPS_; }
+    
+    /**
+     * Set adaptive FPS mode.
+     */
+    void setAdaptiveFPSMode(NUIAdaptiveFPS::Mode mode);
+    
+    /**
+     * Enable/disable adaptive FPS logging.
+     */
+    void setAdaptiveFPSLogging(bool enabled);
     
     // ========================================================================
     // Events
@@ -152,6 +173,9 @@ private:
     float currentFPS_ = 0.0f;
     int targetFPS_ = 60;
     double frameTime_ = 1.0 / 60.0;
+    
+    // Adaptive FPS
+    NUIAdaptiveFPS adaptiveFPS_;
     
     // State
     bool running_ = false;

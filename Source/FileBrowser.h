@@ -34,8 +34,15 @@ struct FileItem {
     size_t size;
     std::string lastModified;
     
+    // Cache for performance
+    mutable std::string cachedDisplayName;
+    mutable std::string cachedSizeStr;
+    mutable bool cacheValid = false;
+    
     FileItem(const std::string& n, const std::string& p, FileType t, bool isDir, size_t s = 0, const std::string& modified = "")
         : name(n), path(p), type(t), isDirectory(isDir), size(s), lastModified(modified) {}
+        
+    void invalidateCache() const { cacheValid = false; }
 };
 
 /**
@@ -51,6 +58,7 @@ public:
     
     // Component interface
     void onRender(NUIRenderer& renderer) override;
+    void onUpdate(double deltaTime) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
@@ -108,10 +116,13 @@ private:
     int selectedIndex_;
     
     // UI state
-    float scrollOffset_;
+    float scrollOffset_;          // Current rendered scroll position
+    float targetScrollOffset_;    // Target scroll position for lerp
     float itemHeight_;
     int visibleItems_;
     bool showHiddenFiles_;
+    float lastCachedWidth_;       // Track width changes to invalidate cache
+    float lastRenderedOffset_;    // Track when to trigger repaint
     
     // Scrollbar state
     bool scrollbarVisible_;

@@ -43,6 +43,9 @@ public:
     double getPosition() const { return m_positionSeconds.load(); }
 
     double getTotalDuration() const;
+    
+    // Position update callback (called during playback to update transport UI)
+    void setOnPositionUpdate(std::function<void(double)> callback) { m_onPositionUpdate = callback; }
 
     // Audio Processing
     void processAudio(float* outputBuffer, uint32_t numFrames, double streamTime);
@@ -64,6 +67,9 @@ private:
 
     // Track ID counter
     std::atomic<uint32_t> m_nextTrackId{1};
+    
+    // Callbacks
+    std::function<void(double)> m_onPositionUpdate;
 
     // Track creation helper
     std::string generateTrackName() const;

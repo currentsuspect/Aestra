@@ -22,42 +22,12 @@ void NUIButton::onRender(NUIRenderer& renderer)
     // Get theme colors
     const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
     
-    // Calculate smooth micro-motion animation with easing
-    float pressScale = 1.0f;
-    float opacity = 1.0f;
-    
-    if (state_ == State::Pressed)
-    {
-        pressScale = 0.96f; // Button "presses in" smoothly
-        opacity = 0.9f;
-    }
-    else if (state_ == State::Hovered)
-    {
-        pressScale = 1.0f; // No scaling on hover for smoother appearance
-        opacity = 1.0f;
-    }
-    else if (state_ == State::Disabled)
-    {
-        pressScale = 1.0f;
-        opacity = 0.6f;
-    }
-    
-    // Apply scaling to bounds with smooth interpolation
-    NUIRect scaledBounds = bounds;
-    if (pressScale != 1.0f)
-    {
-        float scaleOffset = (1.0f - pressScale) * 0.5f;
-        scaledBounds.x += bounds.width * scaleOffset;
-        scaledBounds.y += bounds.height * scaleOffset;
-        scaledBounds.width *= pressScale;
-        scaledBounds.height *= pressScale;
-    }
-
+    // PERFORMANCE MODE: Simplified rendering with minimal draw calls
     // Get current colors based on state
     NUIColor bgColor = backgroundColor_;
     NUIColor textColor = textColor_;
 
-    // Update colors based on state
+    // Update colors based on state (simple color changes, no animations)
     switch (state_)
     {
         case State::Hovered:
@@ -83,184 +53,54 @@ void NUIButton::onRender(NUIRenderer& renderer)
         bgColor = pressedColor_;
     }
 
-    // Draw background with enhanced graphics
-    switch (style_)
-    {
-    case Style::Primary:
-    {
-        // Simplified primary button with smooth hover effect
-        float cornerRadius = theme.radiusM;
-
-        // Subtle shadow for depth (only when not hovered for cleaner look)
-        if (state_ != State::Hovered)
-        {
-            NUIRect shadowRect = scaledBounds;
-            shadowRect.x += 1;
-            shadowRect.y += 1;
-            renderer.fillRoundedRect(shadowRect, cornerRadius, theme.shadowS.color.withAlpha(theme.shadowS.opacity * opacity));
-        }
-
-        // Simple hover glow effect - similar to secondary button
-        if (state_ == State::Hovered)
-        {
-            NUIRect glowRect = scaledBounds;
-            glowRect.x -= 1;
-            glowRect.y -= 1;
-            glowRect.width += 2;
-            glowRect.height += 2;
-            renderer.fillRoundedRect(glowRect, cornerRadius + 1, bgColor.withAlpha(0.3f * opacity));
-        }
-
-        // Simple flat background with subtle gradient
-        NUIColor baseColor = bgColor.withAlpha(opacity);
-        NUIColor topColor = baseColor.withLightness(std::min(1.0f, baseColor.toHSL().l + 0.05f));
-        NUIColor bottomColor = baseColor.withLightness(std::max(0.0f, baseColor.toHSL().l - 0.05f));
-
-        // Simple two-tone gradient instead of complex multi-layer
-        renderer.fillRoundedRect(scaledBounds, cornerRadius, topColor);
-        NUIRect bottomRect = scaledBounds;
-        bottomRect.y += scaledBounds.height * 0.6f;
-        bottomRect.height = scaledBounds.height * 0.4f;
-        renderer.fillRoundedRect(bottomRect, cornerRadius, bottomColor);
-
-        // Simple border with smooth hover effect
-        float borderWidth = (state_ == State::Hovered) ? 2.0f : 1.5f;
-        NUIColor borderColor = (state_ == State::Hovered) ?
-            bgColor.lightened(0.2f).withAlpha(opacity) :
-            bgColor.lightened(0.1f).withAlpha(opacity);
-        renderer.strokeRoundedRect(scaledBounds, cornerRadius, borderWidth, borderColor);
-        break;
-    }
-        case Style::Secondary:
-        {
-            // Enhanced outlined button with better contrast
-            float cornerRadius = 6.0f;
-
-            // Calculate squeeze effect when pressed (squeeze from both sides)
-            NUIRect renderBounds = scaledBounds;
-            if (isPressed_)
-            {
-                // Squeeze from both sides - reduce width by 2px total (1px each side)
-                renderBounds.x += 1.0f;
-                renderBounds.width -= 2.0f;
-                cornerRadius = 5.0f; // Slightly smaller radius when pressed
-            }
-
-            // Hover glow effect
-            if (state_ == State::Hovered)
-            {
-                NUIRect glowRect = renderBounds;
-                glowRect.x -= 1;
-                glowRect.y -= 1;
-                glowRect.width += 2;
-                glowRect.height += 2;
-                renderer.fillRoundedRect(glowRect, cornerRadius + 1, textColor.withAlpha(0.2f));
-            }
-
-            // Subtle background
-            renderer.fillRoundedRect(renderBounds, cornerRadius, bgColor.withAlpha(0.1f));
-
-            // Enhanced border with hover effect
-            float borderWidth = (state_ == State::Hovered) ? 2.5f : 2.0f;
-            renderer.strokeRoundedRect(renderBounds, cornerRadius, borderWidth, textColor);
-            break;
-        }
-        case Style::Text:
-        {
-            // Subtle background on hover with glow
-            if (state_ == State::Hovered)
-            {
-                float cornerRadius = 4.0f;
-                NUIRect glowRect = scaledBounds;
-                glowRect.x -= 1;
-                glowRect.y -= 1;
-                glowRect.width += 2;
-                glowRect.height += 2;
-                renderer.fillRoundedRect(glowRect, cornerRadius + 1, bgColor.withAlpha(0.15f));
-                renderer.fillRoundedRect(scaledBounds, cornerRadius, bgColor.withAlpha(0.1f));
-            }
-            break;
-        }
-        case Style::Icon:
-        {
-            // Enhanced circular background using rounded rect for better anti-aliasing
-            auto center = scaledBounds.getCentre();
-            float radius = std::min(scaledBounds.getWidth(), scaledBounds.getHeight()) * 0.4f;
-            float cornerRadius = radius; // Use full radius for perfect circle
-            
-            // Hover glow effect
-            if (state_ == State::Hovered)
-            {
-                NUIRect glowRect = scaledBounds;
-                glowRect.x -= 3;
-                glowRect.y -= 3;
-                glowRect.width += 6;
-                glowRect.height += 6;
-                renderer.fillRoundedRect(glowRect, cornerRadius + 3, bgColor.withAlpha(0.3f * opacity));
-            }
-            
-            // Shadow
-            NUIRect shadowRect = scaledBounds;
-            shadowRect.x += 1;
-            shadowRect.y += 1;
-            renderer.fillRoundedRect(shadowRect, cornerRadius, NUIColor(0, 0, 0, 0.3f * opacity));
-            
-            // Main circle with gradient effect using rounded rect
-            NUIColor topColor = bgColor.lightened(0.2f).withAlpha(opacity);
-            NUIColor bottomColor = bgColor.darkened(0.1f).withAlpha(opacity);
-            renderer.fillRoundedRect(scaledBounds, cornerRadius, topColor);
-            
-            // Inner circle for gradient effect
-            NUIRect innerRect = scaledBounds;
-            float innerPadding = radius * 0.2f;
-            innerRect.x += innerPadding;
-            innerRect.y += innerPadding;
-            innerRect.width -= innerPadding * 2;
-            innerRect.height -= innerPadding * 2;
-            renderer.fillRoundedRect(innerRect, cornerRadius - innerPadding, bottomColor);
-            
-            // Smooth border with anti-aliasing
-            renderer.strokeRoundedRect(scaledBounds, cornerRadius, 1.5f, bgColor.lightened(0.4f).withAlpha(opacity));
-            break;
-        }
+    // Single-call rendering based on style
+    float cornerRadius = (style_ == Style::Icon) ? std::min(bounds.width, bounds.height) * 0.5f : theme.radiusM;
+    
+    // Just background + border - 2 draw calls total!
+    renderer.fillRoundedRect(bounds, cornerRadius, bgColor);
+    
+    // Border only for non-text buttons
+    if (style_ != Style::Text) {
+        // Border: darker on hover, semi-transparent white when not hovering
+        NUIColor borderColor = (state_ == State::Hovered) ? NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f) : textColor.withAlpha(0.6f);
+        float borderWidth = (style_ == Style::Secondary) ? 2.0f : 1.0f;
+        renderer.strokeRoundedRect(bounds, cornerRadius, borderWidth, borderColor);
     }
 
-    // Draw text
+    // Draw text (1 draw call)
     if (!text_.empty() && style_ != Style::Icon)
     {
-        // TODO: Get font from theme
-        // renderer.setFont(NUITheme::getDefaultFont());
-        // Use smaller font size for compact buttons
-        float fontSize = std::min(14.0f, scaledBounds.height * 0.5f);
-
-        // Adjust text position for better vertical centering
-        NUIRect textRect = scaledBounds;
-        if (style_ == Style::Secondary) {
-            // Apply squeeze effect to text bounds when pressed
-            if (isPressed_)
-            {
-                textRect.x += 1.0f;
-                textRect.width -= 2.0f;
-            }
-            // Drop Secondary button text down by 2px for better alignment
-            textRect.y += 4.0f;
-        }
-
-        // Calculate text color with hover preview effect for Secondary buttons
+        float fontSize = std::min(14.0f, bounds.height * 0.5f);
+        
+        // Calculate text color - grey on hover by default
         NUIColor finalTextColor = textColor;
-        if (style_ == Style::Secondary && state_ == State::Hovered && !isPressed_)
+        
+        if (state_ == State::Hovered && !isPressed_)
         {
-            // Preview active state colors on hover for M and S buttons
-            if (text_ == "M") {
-                // Show red preview for mute button (like when muted)
-                finalTextColor = NUIColor(1.0f, 0.27f, 0.4f, 1.0f); // Error red color
-            } else if (text_ == "S") {
-                // Show lime preview for solo button (like when soloed)
-                finalTextColor = NUIColor(0.8f, 1.0f, 0.2f, 1.0f); // Accent lime color
+            // Default to grey on hover
+            finalTextColor = NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f);
+            
+            // Special preview for M and S buttons only
+            if (style_ == Style::Secondary) {
+                if (text_ == "M") {
+                    // Show red preview for mute button (like when muted)
+                    finalTextColor = NUIColor(1.0f, 0.27f, 0.4f, 1.0f); // Error red color
+                } else if (text_ == "S") {
+                    // Show lime preview for solo button (like when soloed)
+                    finalTextColor = NUIColor(0.8f, 1.0f, 0.2f, 1.0f); // Accent lime color
+                }
             }
         }
 
-        renderer.drawTextCentered(text_, textRect, fontSize, finalTextColor);
+        // Use same vertical alignment as BPM/timer displays
+        float textY = bounds.y + (bounds.height - fontSize) / 2.0f + fontSize * 0.75f;
+        float textX = bounds.x + (bounds.width / 2.0f); // Center horizontally
+        
+        // Manual horizontal centering
+        NUISize textSize = renderer.measureText(text_, fontSize);
+        textX -= textSize.width / 2.0f;
+        
+        renderer.drawText(text_, NUIPoint(textX, textY), fontSize, finalTextColor);
     }
 }
 

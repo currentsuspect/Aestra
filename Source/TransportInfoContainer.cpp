@@ -22,10 +22,6 @@ BPMDisplay::BPMDisplay()
     , m_upArrowHovered(false)
     , m_downArrowHovered(false)
 {
-    m_label = std::make_shared<NomadUI::NUILabel>();
-    m_label->setAlignment(NomadUI::NUILabel::Alignment::Center);
-    addChild(m_label);
-    
     // Create up arrow icon (small triangle pointing up)
     const char* upArrowSvg = R"(
         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -45,16 +41,12 @@ BPMDisplay::BPMDisplay()
     m_downArrow = std::make_shared<NomadUI::NUIIcon>(downArrowSvg);
     m_downArrow->setIconSize(NomadUI::NUIIconSize::Small);
     m_downArrow->setColorFromTheme("textSecondary");  // #9a9aa3 - Inactive by default
-    
-    // Initial text
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(1) << m_displayBPM << " BPM";
-    m_label->setText(ss.str());
 }
 
 void BPMDisplay::setBPM(float bpm) {
     m_targetBPM = std::max(20.0f, std::min(999.0f, bpm));
     m_currentBPM = m_targetBPM;
+    m_displayBPM = m_targetBPM; // Also update display to prevent animation conflicts
 }
 
 void BPMDisplay::incrementBPM(float amount) {
@@ -74,17 +66,20 @@ void BPMDisplay::decrementBPM(float amount) {
 NomadUI::NUIRect BPMDisplay::getUpArrowBounds() const {
     NomadUI::NUIRect bounds = getBounds();
     float arrowSize = 16.0f;
-    float spacing = 4.0f;
-    // Position up arrow to the right of BPM text, vertically centered
-    float x = bounds.x + bounds.width / 2.0f + 30.0f; // Offset from center
-    float y = bounds.y + (bounds.height - arrowSize) / 2.0f - spacing / 2.0f;
+    float spacing = 6.0f;
+    
+    // Position arrows at the right edge of the component, vertically stacked
+    float x = bounds.x + bounds.width - arrowSize - 5.0f; // 5px from right edge
+    float totalArrowHeight = arrowSize * 2 + spacing; // Both arrows + gap
+    float y = bounds.y + (bounds.height - totalArrowHeight) / 2.0f; // Vertically centered as a group
+    
     return NomadUI::NUIRect(x, y, arrowSize, arrowSize);
 }
 
 NomadUI::NUIRect BPMDisplay::getDownArrowBounds() const {
     NomadUI::NUIRect bounds = getBounds();
     float arrowSize = 16.0f;
-    float spacing = 4.0f;
+    float spacing = 6.0f;
     // Position down arrow below up arrow
     NomadUI::NUIRect upBounds = getUpArrowBounds();
     return NomadUI::NUIRect(upBounds.x, upBounds.y + arrowSize + spacing, arrowSize, arrowSize);
@@ -101,23 +96,29 @@ void BPMDisplay::onUpdate(double deltaTime) {
         m_displayBPM = m_targetBPM;
     }
     
-    // Update label text
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(1) << m_displayBPM << " BPM";
-    m_label->setText(ss.str());
-    
     NomadUI::NUIComponent::onUpdate(deltaTime);
 }
 
 void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
-    // Position label to fill bounds (centered)
-    m_label->setBounds(getBounds());
+    NomadUI::NUIRect bounds = getBounds();
     
-    renderChildren(renderer);
+    // Get theme for text rendering
+    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    NomadUI::NUIColor textColor = themeManager.getColor("textPrimary");
+    float fontSize = 14.0f;
+    
+    // Calculate text position with vertical centering (like dropdown does it)
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(1) << m_displayBPM << " BPM";
+    std::string bpmText = ss.str();
+    
+    float textY = bounds.y + (bounds.height - fontSize) / 2.0f + fontSize * 0.75f;
+    float textX = bounds.x + 5.0f; // Small left padding
+    
+    // Draw text directly (not using label)
+    renderer.drawText(bpmText, NomadUI::NUIPoint(textX, textY), fontSize, textColor);
     
     // Render arrow icons to the right of BPM text
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-    
     if (m_upArrow) {
         m_upArrow->setBounds(getUpArrowBounds());
         // Highlight on hover
@@ -183,17 +184,12 @@ bool BPMDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
 TimerDisplay::TimerDisplay()
     : NomadUI::NUIComponent()
     , m_currentTime(0.0)
+    , m_isPlaying(false)
 {
-    m_label = std::make_shared<NomadUI::NUILabel>();
-    m_label->setAlignment(NomadUI::NUILabel::Alignment::Center);
-    addChild(m_label);
-    
-    m_label->setText(formatTime(0.0));
 }
 
 void TimerDisplay::setTime(double seconds) {
     m_currentTime = std::max(0.0, seconds);
-    m_label->setText(formatTime(m_currentTime));
 }
 
 std::string TimerDisplay::formatTime(double seconds) const {
@@ -210,10 +206,25 @@ std::string TimerDisplay::formatTime(double seconds) const {
 }
 
 void TimerDisplay::onRender(NomadUI::NUIRenderer& renderer) {
-    // Position label to fill bounds
-    m_label->setBounds(getBounds());
+    NomadUI::NUIRect bounds = getBounds();
     
-    renderChildren(renderer);
+    // Get theme for text rendering
+    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    
+    // CRITICAL: Green when playing, white when stopped
+    NomadUI::NUIColor textColor = m_isPlaying 
+        ? NomadUI::NUIColor(0.0f, 1.0f, 0.3f, 1.0f)  // Vibrant green when playing
+        : themeManager.getColor("textPrimary");       // White when stopped
+    
+    float fontSize = 14.0f;
+    
+    // Calculate text position with vertical centering (like dropdown does it)
+    std::string timeText = formatTime(m_currentTime);
+    float textY = bounds.y + (bounds.height - fontSize) / 2.0f + fontSize * 0.75f;
+    float textX = bounds.x + 5.0f; // Small left padding
+    
+    // Draw text directly (not using label)
+    renderer.drawText(timeText, NomadUI::NUIPoint(textX, textY), fontSize, textColor);
 }
 
 // ============================================================================
@@ -239,21 +250,23 @@ void TransportInfoContainer::layoutComponents() {
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     
-    // Timer on the left
+    // Timer on the left - position using ABSOLUTE coordinates (bounds.x + offset)
     float timerWidth = 120.0f;
     float timerHeight = 30.0f;
-    float timerX = layout.transportButtonSize * 3 + layout.transportButtonSpacing * 4 + layout.panelMargin;
-    float timerY = (bounds.height - timerHeight) / 2.0f; // Vertically centered
+    float timerOffsetX = layout.transportButtonSize * 3 + layout.transportButtonSpacing * 4 + layout.panelMargin;
+    float timerOffsetY = (bounds.height - timerHeight) / 2.0f; // Vertically centered in container
     
-    m_timerDisplay->setBounds(NomadUI::NUIRect(timerX, timerY, timerWidth, timerHeight));
+    // Use absolute positioning (add bounds.x and bounds.y)
+    m_timerDisplay->setBounds(NomadUI::NUIRect(bounds.x + timerOffsetX, bounds.y + timerOffsetY, timerWidth, timerHeight));
     
-    // BPM in the center (horizontally centered in transport bar)
+    // BPM in the center (horizontally centered in transport bar) - also ABSOLUTE
     float bpmWidth = 100.0f;
-    float bpmHeight = 24.0f;
-    float bpmX = (bounds.width - bpmWidth) / 2.0f;
-    float bpmY = (bounds.height - bpmHeight) / 2.0f; // Vertically centered
+    float bpmHeight = 30.0f;  // Increased from 24 to match timer height for better vertical centering
+    float bpmOffsetX = (bounds.width - bpmWidth) / 2.0f;
+    float bpmOffsetY = (bounds.height - bpmHeight) / 2.0f; // Vertically centered in container
     
-    m_bpmDisplay->setBounds(NomadUI::NUIRect(bpmX, bpmY, bpmWidth, bpmHeight));
+    // Use absolute positioning (add bounds.x and bounds.y)
+    m_bpmDisplay->setBounds(NomadUI::NUIRect(bounds.x + bpmOffsetX, bounds.y + bpmOffsetY, bpmWidth, bpmHeight));
 }
 
 void TransportInfoContainer::onRender(NomadUI::NUIRenderer& renderer) {

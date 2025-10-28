@@ -5,6 +5,9 @@
 #include "../NUITextRenderer.h"
 #include "../NUITextRendererGDI.h"
 #include "../NUITextRendererModern.h"
+#include "NUIRenderBatch.h"
+#include "NUIDirtyRegion.h"
+#include "NUIRenderCache.h"
 #include <vector>
 #include <unordered_map>
 #include <memory>
@@ -110,6 +113,18 @@ public:
     void flush() override;
     
     // ========================================================================
+    // Performance Optimizations
+    // ========================================================================
+    
+    void setBatchingEnabled(bool enabled) override;
+    void setDirtyRegionTrackingEnabled(bool enabled) override;
+    void setCachingEnabled(bool enabled) override;
+    void getOptimizationStats(size_t& batchedQuads, size_t& dirtyRegions, 
+                             size_t& cachedWidgets, size_t& cacheMemoryBytes) override;
+    NUIDirtyRegionManager* getDirtyRegionManager() override { return &dirtyRegionManager_; }
+    NUIRenderCache* getRenderCache() override { return &renderCache_; }
+    
+    // ========================================================================
     // Info
     // ========================================================================
     
@@ -195,6 +210,12 @@ private:
     // Textures
     std::unordered_map<uint32_t, uint32_t> textures_;
     uint32_t nextTextureId_ = 1;
+    
+    // Optimization systems
+    NUIBatchManager batchManager_;
+    NUIDirtyRegionManager dirtyRegionManager_;
+    NUIRenderCache renderCache_;
+    uint64_t frameCounter_ = 0;
     
     // Text rendering support
     std::string defaultFontPath_;

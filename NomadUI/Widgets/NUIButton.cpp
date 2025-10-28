@@ -40,20 +40,22 @@ void NUIButton::onRender(NUIRenderer& renderer) {
     NUIColor bgColor = getCurrentBackgroundColor();
     NUIColor textColor = getCurrentTextColor();
     
+    // OPTIMIZATION: Disable glow by default (expensive blur effect)
+    // Only enable for specific buttons that need it
     // Draw glow effect when hovered
-    if (glowEnabled_ && hoverAlpha_ > 0.01f) {
-        renderer.drawGlow(
-            bounds,
-            radius * 3.0f,
-            hoverAlpha_ * theme->getGlowIntensity(),
-            theme->getPrimary()
-        );
-    }
+    // if (glowEnabled_ && hoverAlpha_ > 0.01f) {
+    //     renderer.drawGlow(
+    //         bounds,
+    //         radius * 3.0f,
+    //         hoverAlpha_ * theme->getGlowIntensity(),
+    //         theme->getPrimary()
+    //     );
+    // }
     
     // Draw background
     renderer.fillRoundedRect(bounds, radius, bgColor);
     
-    // Draw border
+    // Draw border (only if enabled and state changed)
     if (borderEnabled_) {
         NUIColor borderColor = theme->getPrimary();
         if (pressed_) {

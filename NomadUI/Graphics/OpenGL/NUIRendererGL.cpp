@@ -219,10 +219,25 @@ void NUIRendererGL::resize(int width, int height) {
 void NUIRendererGL::beginFrame() {
     vertices_.clear();
     indices_.clear();
+    frameCounter_++;
+    
+    // Mark all dirty at the start of frame (for simplicity - can be optimized later)
+    dirtyRegionManager_.markAllDirty(NUISize(static_cast<float>(width_), static_cast<float>(height_)));
+    
+    // Clear batch manager
+    batchManager_.clearAll();
 }
 
 void NUIRendererGL::endFrame() {
     flush();
+    
+    // Clear dirty regions for next frame
+    dirtyRegionManager_.clear();
+    
+    // Cleanup old caches every 60 frames
+    if (frameCounter_ % 60 == 0) {
+        renderCache_.cleanup(frameCounter_, 300);
+    }
 }
 
 void NUIRendererGL::clear(const NUIColor& color) {
@@ -1674,6 +1689,30 @@ void NUIRendererGL::updateProjectionMatrix() {
     projectionMatrix_[13] = -(top + bottom) / (top - bottom);
     projectionMatrix_[14] = -(farPlane + nearPlane) / (farPlane - nearPlane);
     projectionMatrix_[15] = 1.0f;
+}
+
+// ============================================================================
+// Performance Optimizations
+// ============================================================================
+
+void NUIRendererGL::setBatchingEnabled(bool enabled) {
+    batchManager_.setEnabled(enabled);
+}
+
+void NUIRendererGL::setDirtyRegionTrackingEnabled(bool enabled) {
+    dirtyRegionManager_.setEnabled(enabled);
+}
+
+void NUIRendererGL::setCachingEnabled(bool enabled) {
+    renderCache_.setEnabled(enabled);
+}
+
+void NUIRendererGL::getOptimizationStats(size_t& batchedQuads, size_t& dirtyRegions, 
+                                        size_t& cachedWidgets, size_t& cacheMemoryBytes) {
+    batchedQuads = batchManager_.getTotalQuads();
+    dirtyRegions = dirtyRegionManager_.getDirtyRegionCount();
+    cachedWidgets = renderCache_.getCacheCount();
+    cacheMemoryBytes = renderCache_.getMemoryUsage();
 }
 
 } // namespace NomadUI

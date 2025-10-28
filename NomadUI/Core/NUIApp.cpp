@@ -1,10 +1,13 @@
 #include "NUIApp.h"
+#include "NUIAdaptiveFPS.h"
 #include <algorithm>
 #include <thread>
 
 namespace NomadUI {
 
-NUIApp::NUIApp() {
+NUIApp::NUIApp() 
+    : adaptiveFPS_(NUIAdaptiveFPS::Config())
+{
 }
 
 NUIApp::~NUIApp() {
@@ -68,6 +71,9 @@ void NUIApp::run() {
     running_ = true;
     
     while (running_) {
+        // Begin frame timing
+        auto frameStart = adaptiveFPS_.beginFrame();
+        
         // Calculate delta time
         auto currentTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = currentTime - lastFrameTime_;
@@ -88,13 +94,10 @@ void NUIApp::run() {
         // Render
         render();
         
-        // Limit frame rate
-        double targetFrameTime = 1.0 / targetFPS_;
-        if (deltaTime_ < targetFrameTime) {
-            double sleepTime = targetFrameTime - deltaTime_;
-            std::this_thread::sleep_for(
-                std::chrono::duration<double>(sleepTime)
-            );
+        // End frame timing and sleep if needed
+        double sleepTime = adaptiveFPS_.endFrame(frameStart, deltaTime_);
+        if (sleepTime > 0.0) {
+            adaptiveFPS_.sleep(sleepTime);
         }
     }
 }
@@ -124,6 +127,16 @@ void NUIApp::setRootComponent(std::shared_ptr<NUIComponent> root) {
 void NUIApp::setTargetFPS(int fps) {
     targetFPS_ = std::max(1, std::min(fps, 240));
     frameTime_ = 1.0 / targetFPS_;
+}
+
+void NUIApp::setAdaptiveFPSMode(NUIAdaptiveFPS::Mode mode) {
+    adaptiveFPS_.setMode(mode);
+}
+
+void NUIApp::setAdaptiveFPSLogging(bool enabled) {
+    auto config = adaptiveFPS_.getConfig();
+    config.enableLogging = enabled;
+    adaptiveFPS_.setConfig(config);
 }
 
 // ============================================================================
@@ -203,6 +216,17 @@ void NUIApp::handleMouseEvent(const NUIMouseEvent& event) {
         return;
     }
     
+    // Signal activity to adaptive FPS system
+    if (event.type == NUIMouseEventType::Move) {
+        adaptiveFPS_.signalActivity(NUIAdaptiveFPS::ActivityType::MouseMove);
+    } else if (event.type == NUIMouseEventType::Down) {
+        adaptiveFPS_.signalActivity(NUIAdaptiveFPS::ActivityType::MouseClick);
+    } else if (event.type == NUIMouseEventType::Drag) {
+        adaptiveFPS_.signalActivity(NUIAdaptiveFPS::ActivityType::MouseDrag);
+    } else if (event.type == NUIMouseEventType::Scroll) {
+        adaptiveFPS_.signalActivity(NUIAdaptiveFPS::ActivityType::Scroll);
+    }
+    
     // Dispatch event to root component
     // The component will handle hover state internally
     rootComponent_->onMouseEvent(event);
@@ -216,6 +240,9 @@ void NUIApp::handleMouseEvent(const NUIMouseEvent& event) {
 }
 
 void NUIApp::handleKeyEvent(const NUIKeyEvent& event) {
+    // Signal activity to adaptive FPS system
+    adaptiveFPS_.signalActivity(NUIAdaptiveFPS::ActivityType::KeyPress);
+    
     // Dispatch to focused component
     if (focusedComponent_) {
         focusedComponent_->onKeyEvent(event);
@@ -223,6 +250,9 @@ void NUIApp::handleKeyEvent(const NUIKeyEvent& event) {
 }
 
 void NUIApp::handleResize(int width, int height) {
+    // Signal activity to adaptive FPS system
+    adaptiveFPS_.signalActivity(NUIAdaptiveFPS::ActivityType::WindowResize);
+    
     width_ = width;
     height_ = height;
     
