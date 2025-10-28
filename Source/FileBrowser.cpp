@@ -851,14 +851,19 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
 
     if (!needsScrollbar || files_.size() == 0) return;
 
-    // Use already calculated dimensions
+    // Position scrollbar FLUSH with the right edge (no gap)
     NUIRect bounds = getBounds();
-    float scrollbarX = bounds.x + bounds.width - scrollbarWidth_ - layout.panelMargin;
+    float scrollbarX = bounds.x + bounds.width - scrollbarWidth_;  // FLUSH alignment - no panelMargin
     float scrollbarY = bounds.y + headerHeight + 8 + 20; // After path bar
     float scrollbarHeight = bounds.height - headerHeight - 8 - 20;
 
-    // Render scrollbar track
-    NUIColor trackColor = themeManager.getColor("backgroundSecondary").withAlpha(0.8f); // Use theme color
+    // Render solid background layer beneath scrollbar to prevent selection bleed
+    NUIColor bgColor = themeManager.getColor("backgroundSecondary");  // Solid background
+    renderer.fillRoundedRect(NUIRect(scrollbarX, scrollbarY, scrollbarWidth_, scrollbarHeight),
+                             4, bgColor);
+
+    // Render scrollbar track on top of background
+    NUIColor trackColor = themeManager.getColor("backgroundSecondary").withAlpha(0.8f);
     renderer.fillRoundedRect(NUIRect(scrollbarX, scrollbarY, scrollbarWidth_, scrollbarHeight),
                              4, trackColor);
 
@@ -879,7 +884,7 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
     NUIRect bounds = getBounds();
     float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
     float scrollbarWidth = themeManager.getComponentDimension("fileBrowser", "scrollbarWidth");
-    float scrollbarX = bounds.x + bounds.width - scrollbarWidth - layout.panelMargin;
+    float scrollbarX = bounds.x + bounds.width - scrollbarWidth;  // FLUSH alignment - no panelMargin
     float scrollbarY = bounds.y + headerHeight + 8 + 20; // After path bar
     float scrollbarHeight = bounds.height - headerHeight - 8 - 20;
 
