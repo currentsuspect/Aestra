@@ -595,15 +595,18 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         // Create item rect with proper dimensions
         NUIRect itemRect(bounds.x + layout.panelMargin, itemY, bounds.width - 2 * layout.panelMargin, itemHeight);
         
-        // Enhanced selection highlighting with Liminal Dark v2.0 effects
+        // Enhanced selection highlighting with purple accent (matches Audio Settings border)
         if (i == selectedIndex_) {
-            // Heavy selection highlight with cyan accent
-            renderer.fillRoundedRect(itemRect, 4, selectedColor_.withAlpha(0.3f));
-            renderer.strokeRoundedRect(itemRect, 4, 2, selectedColor_.withAlpha(0.8f));
+            // Use purple accent color (same as Audio Settings dialog border)
+            NomadUI::NUIColor purpleAccent = themeManager.getColor("accent");  // Purple accent
             
-            // Left accent bar in cyan for selected items
+            // Heavy selection highlight with purple accent
+            renderer.fillRoundedRect(itemRect, 4, purpleAccent.withAlpha(0.3f));
+            renderer.strokeRoundedRect(itemRect, 4, 2, purpleAccent.withAlpha(0.8f));
+            
+            // Left accent bar in purple for selected items
             NUIRect accentBar(itemRect.x, itemRect.y, 3, itemRect.height);
-            renderer.fillRoundedRect(accentBar, 1, selectedColor_);
+            renderer.fillRoundedRect(accentBar, 1, purpleAccent);
         } else if (i == hoveredIndex_) {
             // Hover highlight with subtle grey background
             renderer.fillRoundedRect(itemRect, 4, hoverColor_.withAlpha(0.4f));
