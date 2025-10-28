@@ -50,7 +50,6 @@ private:
     float m_currentBPM;
     float m_targetBPM;
     float m_displayBPM; // For smooth scrolling animation
-    std::shared_ptr<NomadUI::NUILabel> m_label;
     std::shared_ptr<NomadUI::NUIIcon> m_upArrow;
     std::shared_ptr<NomadUI::NUIIcon> m_downArrow;
     
@@ -81,7 +80,6 @@ public:
 
 private:
     double m_currentTime;
-    std::shared_ptr<NomadUI::NUILabel> m_label;
     
     std::string formatTime(double seconds) const;
 };

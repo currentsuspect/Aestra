@@ -16,6 +16,8 @@
 #include "../NomadUI/Core/NUIComponent.h"
 #include "../NomadUI/Core/NUICustomWindow.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
+#include "../NomadUI/Core/NUIAdaptiveFPS.h"
+#include "../NomadUI/Core/NUIFrameProfiler.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadUI/Graphics/OpenGL/NUIRendererGL.h"
 #include "../NomadUI/Platform/NUIPlatformBridge.h"
@@ -27,6 +29,7 @@
 #include "AudioVisualizer.h"
 #include "TrackUIComponent.h"
 #include "TrackManagerUI.h"
+#include "FPSDisplay.h"
 
 #include <memory>
 #include <iostream>
@@ -136,27 +139,23 @@ public:
     void addDemoTracks() {
         Log::info("addDemoTracks() called - starting demo track creation");
 
-        // Add some demo tracks (empty, no test audio)
-        auto track1 = m_trackManager->addTrack("Track 1");
-        track1->setColor(0xFF804020); // Orange
-        // REMOVED: Demo audio generation (now we have dedicated test sound button)
-        // track1->loadAudioFile("demo_guitar.wav");
-
-        auto track2 = m_trackManager->addTrack("Track 2");
-        track2->setColor(0xFF408020); // Green
-        // REMOVED: Demo audio generation
-        // track2->loadAudioFile("demo_drums.wav");
-
-        auto track3 = m_trackManager->addTrack("Track 3");
-        track3->setColor(0xFF402080); // Purple
-        // REMOVED: Demo audio generation
-        // track3->loadAudioFile("demo_vocals.wav");
+        // Create 50 empty tracks by default for playlist testing
+        const int DEFAULT_TRACK_COUNT = 50;
+        const int MAX_TRACK_COUNT = 50; // Maximum tracks for now (will optimize later)
+        
+        for (int i = 1; i <= DEFAULT_TRACK_COUNT; ++i) {
+            auto track = m_trackManager->addTrack("Track " + std::to_string(i));
+            // Cycle through colors
+            if (i % 3 == 1) track->setColor(0xFFbb86fc); // Purple accent
+            else if (i % 3 == 2) track->setColor(0xFF00bcd4); // Cyan
+            else track->setColor(0xFF9a9aa3); // Gray
+        }
 
         // Refresh the UI to show the new tracks
         if (m_trackManagerUI) {
             m_trackManagerUI->refreshTracks();
         }
-        Log::info("addDemoTracks() completed");
+        Log::info("addDemoTracks() completed - created " + std::to_string(DEFAULT_TRACK_COUNT) + " tracks");
     }
 
     // Generate a simple test WAV file for demo purposes
@@ -425,6 +424,11 @@ public:
         m_audioSettingsDialog = dialog;
     }
     
+    void setFPSDisplay(std::shared_ptr<FPSDisplay> fpsDisplay) {
+        m_fpsDisplay = fpsDisplay;
+        addChild(m_fpsDisplay);
+    }
+    
     void onRender(NUIRenderer& renderer) override {
         // Debug output
         static bool firstRender = true;
@@ -461,6 +465,7 @@ public:
 private:
     std::shared_ptr<NUICustomWindow> m_customWindow;
     std::shared_ptr<AudioSettingsDialog> m_audioSettingsDialog;
+    std::shared_ptr<FPSDisplay> m_fpsDisplay;
 };
 
 /**
@@ -474,6 +479,17 @@ public:
         : m_running(false)
         , m_audioInitialized(false)
     {
+        // Configure adaptive FPS system
+        NomadUI::NUIAdaptiveFPS::Config fpsConfig;
+        fpsConfig.fps30 = 30.0;
+        fpsConfig.fps60 = 60.0;
+        fpsConfig.idleTimeout = 2.0;                // 2 seconds idle before lowering FPS
+        fpsConfig.performanceThreshold = 0.018;     // 18ms max frame time for 60 FPS
+        fpsConfig.performanceSampleCount = 10;      // Average over 10 frames
+        fpsConfig.transitionSpeed = 0.05;           // Smooth transition
+        fpsConfig.enableLogging = false;            // Disable by default (can be toggled)
+        
+        m_adaptiveFPS = std::make_unique<NomadUI::NUIAdaptiveFPS>(fpsConfig);
     }
 
     ~NomadApp() {
@@ -804,6 +820,12 @@ public:
         m_rootComponent->addChild(m_audioSettingsDialog);
         m_rootComponent->setAudioSettingsDialog(m_audioSettingsDialog);
         
+        // Create and add FPS display overlay (on top of everything)
+        auto fpsDisplay = std::make_shared<FPSDisplay>(m_adaptiveFPS.get());
+        m_rootComponent->setFPSDisplay(fpsDisplay);
+        m_fpsDisplay = fpsDisplay;
+        Log::info("FPS display overlay created");
+        
         // Debug: Verify dialog was added
         std::stringstream ss2;
         ss2 << "Dialog added to root component, pointer: " << m_audioSettingsDialog.get();
@@ -856,11 +878,27 @@ public:
 
         // Main event loop
         while (m_running && m_window->processEvents()) {
+            // 🔥 PROFILER: Begin frame timing
+            m_profiler.beginFrame();
+            
+            // Begin frame timing BEFORE any work
+            auto frameStart = m_adaptiveFPS->beginFrame();
+            
             // Calculate delta time for smooth animations
             static auto lastTime = std::chrono::high_resolution_clock::now();
             auto currentTime = std::chrono::high_resolution_clock::now();
             double deltaTime = std::chrono::duration<double>(currentTime - lastTime).count();
             lastTime = currentTime;
+            
+            // Signal audio visualization activity if visualizer is active
+            if (m_content && m_content->getAudioVisualizer()) {
+                // Check if audio is actually playing or visualizing
+                bool audioActive = m_audioInitialized && 
+                                   (m_content->getTrackManagerUI() && 
+                                    m_content->getTrackManagerUI()->getTrackManager() &&
+                                    m_content->getTrackManagerUI()->getTrackManager()->isPlaying());
+                m_adaptiveFPS->setAudioVisualizationActive(audioActive);
+            }
             
             // Update all UI components (for animations, VU meters, etc.)
             if (m_rootComponent) {
@@ -873,7 +911,33 @@ public:
             }
 
             render();
+            
+            // 🔥 PROFILER: Mark end of render work
+            m_profiler.markRenderEnd();
+            
+            // End frame timing BEFORE swapBuffers (to exclude VSync wait)
+            double sleepTime = m_adaptiveFPS->endFrame(frameStart, deltaTime);
+            
+            // SwapBuffers (may block on VSync)
             m_window->swapBuffers();
+            
+            // 🔥 PROFILER: Mark end of swap
+            m_profiler.markSwapEnd();
+            
+            // Sleep if needed (usually 0 since VSync already throttles us)
+            if (sleepTime > 0.0) {
+                m_adaptiveFPS->sleep(sleepTime);
+            }
+            
+            // 🔥 PROFILER: End frame
+            m_profiler.endFrame();
+            
+            // 🔥 PROFILER: Print stats every 100 frames
+            static int profilerFrameCount = 0;
+            if (++profilerFrameCount >= 100) {
+                m_profiler.printStats();
+                profilerFrameCount = 0;
+            }
         }
 
         Log::info("Exiting main loop");
@@ -931,6 +995,9 @@ private:
     void setupCallbacks() {
         // Window resize callback
         m_window->setResizeCallback([this](int width, int height) {
+            // Signal activity to adaptive FPS
+            m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::WindowResize);
+            
             if (m_renderer) {
                 m_renderer->resize(width, height);
             }
@@ -947,6 +1014,11 @@ private:
 
         // Key callback
         m_window->setKeyCallback([this](int key, bool pressed) {
+            // Signal activity to adaptive FPS
+            if (pressed) {
+                m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::KeyPress);
+            }
+            
             // Debug: Log key presses
             if (pressed) {
                 std::stringstream ss;
@@ -1010,7 +1082,123 @@ private:
                     Log::info("ERROR: m_audioSettingsDialog is NULL!");
                 }
                 Log::info("===== P KEY HANDLER END =====");
+            } else if (key == static_cast<int>(KeyCode::F) && pressed) {
+                // F key to cycle through FPS modes (Auto → 30 → 60 → Auto)
+                auto currentMode = m_adaptiveFPS->getMode();
+                NomadUI::NUIAdaptiveFPS::Mode newMode;
+                std::string modeName;
+                
+                switch (currentMode) {
+                    case NomadUI::NUIAdaptiveFPS::Mode::Auto:
+                        newMode = NomadUI::NUIAdaptiveFPS::Mode::Locked30;
+                        modeName = "Locked 30 FPS";
+                        break;
+                    case NomadUI::NUIAdaptiveFPS::Mode::Locked30:
+                        newMode = NomadUI::NUIAdaptiveFPS::Mode::Locked60;
+                        modeName = "Locked 60 FPS";
+                        break;
+                    case NomadUI::NUIAdaptiveFPS::Mode::Locked60:
+                        newMode = NomadUI::NUIAdaptiveFPS::Mode::Auto;
+                        modeName = "Auto (Adaptive)";
+                        break;
+                }
+                
+                m_adaptiveFPS->setMode(newMode);
+                
+                std::stringstream ss;
+                ss << "FPS Mode changed to: " << modeName;
+                Log::info(ss.str());
+                std::cout << "FPS Mode: " << modeName << std::endl;
+            } else if (key == static_cast<int>(KeyCode::G) && pressed) {
+                // G key to toggle FPS display overlay
+                if (m_fpsDisplay) {
+                    m_fpsDisplay->toggle();
+                    std::stringstream ss;
+                    ss << "FPS Display: " << (m_fpsDisplay->isVisible() ? "SHOWN" : "HIDDEN");
+                    Log::info(ss.str());
+                    std::cout << ss.str() << std::endl;
+                }
+            } else if (key == static_cast<int>(KeyCode::L) && pressed) {
+                // L key to toggle adaptive FPS logging
+                auto config = m_adaptiveFPS->getConfig();
+                config.enableLogging = !config.enableLogging;
+                m_adaptiveFPS->setConfig(config);
+                
+                std::stringstream ss;
+                ss << "Adaptive FPS logging: " << (config.enableLogging ? "ENABLED" : "DISABLED");
+                Log::info(ss.str());
+                std::cout << ss.str() << std::endl;
+            } else if (key == static_cast<int>(KeyCode::B) && pressed) {
+                // B key to toggle render batching
+                if (m_renderer) {
+                    static bool batchingEnabled = true;
+                    batchingEnabled = !batchingEnabled;
+                    m_renderer->setBatchingEnabled(batchingEnabled);
+                    
+                    std::stringstream ss;
+                    ss << "Render Batching: " << (batchingEnabled ? "ENABLED" : "DISABLED");
+                    Log::info(ss.str());
+                    std::cout << ss.str() << std::endl;
+                }
+            } else if (key == static_cast<int>(KeyCode::D) && pressed) {
+                // D key to toggle dirty region tracking
+                if (m_renderer) {
+                    static bool dirtyTrackingEnabled = true;
+                    dirtyTrackingEnabled = !dirtyTrackingEnabled;
+                    m_renderer->setDirtyRegionTrackingEnabled(dirtyTrackingEnabled);
+                    
+                    std::stringstream ss;
+                    ss << "Dirty Region Tracking: " << (dirtyTrackingEnabled ? "ENABLED" : "DISABLED");
+                    Log::info(ss.str());
+                    std::cout << ss.str() << std::endl;
+                }
+            } else if (key == static_cast<int>(KeyCode::C) && pressed) {
+                // C key to toggle render caching
+                if (m_renderer) {
+                    static bool cachingEnabled = true;
+                    cachingEnabled = !cachingEnabled;
+                    m_renderer->setCachingEnabled(cachingEnabled);
+                    
+                    std::stringstream ss;
+                    ss << "Render Caching: " << (cachingEnabled ? "ENABLED" : "DISABLED");
+                    Log::info(ss.str());
+                    std::cout << ss.str() << std::endl;
+                }
+            } else if (key == static_cast<int>(KeyCode::O) && pressed) {
+                // O key to print optimization stats
+                if (m_renderer) {
+                    size_t batchedQuads = 0, dirtyRegions = 0, cachedWidgets = 0, cacheMemoryBytes = 0;
+                    m_renderer->getOptimizationStats(batchedQuads, dirtyRegions, cachedWidgets, cacheMemoryBytes);
+                    
+                    std::cout << "\n╔══════════════════════════════════════════════════════╗\n";
+                    std::cout << "║        RENDERING OPTIMIZATION STATS                  ║\n";
+                    std::cout << "╠══════════════════════════════════════════════════════╣\n";
+                    std::cout << "║  Batched Quads:     " << batchedQuads << " quads\n";
+                    std::cout << "║  Dirty Regions:     " << dirtyRegions << " regions\n";
+                    std::cout << "║  Cached Widgets:    " << cachedWidgets << " widgets\n";
+                    std::cout << "║  Cache Memory:      " << (cacheMemoryBytes / 1024.0f / 1024.0f) << " MB\n";
+                    std::cout << "╚══════════════════════════════════════════════════════╝\n" << std::endl;
+                    
+                    Log::info("Optimization stats printed (press O to view)");
+                }
             }
+        });
+        
+        // Mouse move callback - signal activity to adaptive FPS
+        m_window->setMouseMoveCallback([this](int x, int y) {
+            m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::MouseMove);
+        });
+        
+        // Mouse button callback - signal activity to adaptive FPS
+        m_window->setMouseButtonCallback([this](int button, bool pressed) {
+            if (pressed) {
+                m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::MouseClick);
+            }
+        });
+        
+        // Mouse wheel callback - signal activity to adaptive FPS
+        m_window->setMouseWheelCallback([this](float delta) {
+            m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::Scroll);
         });
         
         // Mouse button and move callbacks are handled by NUIPlatformBridge
@@ -1141,6 +1329,9 @@ private:
     std::shared_ptr<NUICustomWindow> m_customWindow;
     std::shared_ptr<NomadContent> m_content;
     std::shared_ptr<AudioSettingsDialog> m_audioSettingsDialog;
+    std::shared_ptr<FPSDisplay> m_fpsDisplay;
+    std::unique_ptr<NomadUI::NUIAdaptiveFPS> m_adaptiveFPS;
+    NomadUI::NUIFrameProfiler m_profiler;  // 🔥 Frame profiler for surgical timing analysis
     bool m_running;
     bool m_audioInitialized;
     AudioStreamConfig m_mainStreamConfig;  // Store main audio stream configuration

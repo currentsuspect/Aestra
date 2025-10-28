@@ -88,6 +88,10 @@ private:
     
     // Editable state
     bool editable_ = false;
+    
+    // OPTIMIZATION: Cache text measurements
+    mutable NUISize cachedTextSize_{0, 0};
+    mutable bool textSizeValid_ = false;
 };
 
 } // namespace NomadUI

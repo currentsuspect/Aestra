@@ -101,7 +101,7 @@ void TrackManagerUI::layoutTracks() {
         if (trackUI) {
             // Position tracks starting from the left edge of the track manager area
             trackUI->setBounds(NUIAbsolute(bounds, 0, currentY, controlWidth, layout.trackHeight));
-            Log::info("TrackManagerUI trackUI[" + std::to_string(i) + "] bounds: x=" + std::to_string(bounds.x) + ", y=" + std::to_string(bounds.y + currentY));
+            // Log::info("TrackManagerUI trackUI[" + std::to_string(i) + "] bounds: x=" + std::to_string(bounds.x) + ", y=" + std::to_string(bounds.y + currentY));
             currentY += layout.trackHeight; // No spacing between tracks - they touch
         }
     }
@@ -123,19 +123,35 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIColor borderColor = themeManager.getColor("border");
     renderer.strokeRect(bounds, 1, borderColor);
 
-    // Draw track separator lines (from control width to end) - full width
+    // 🔥 VIEWPORT CULLING: Calculate visible track range
     const auto& layout = themeManager.getLayoutDimensions();
+    float buttonSize = 30.0f;
+    float trackStartY = buttonSize;
+    
+    // Find which tracks are actually visible
+    int firstVisibleTrack = 0;
+    int lastVisibleTrack = static_cast<int>(m_trackUIComponents.size());
+    
+    // Calculate visible range based on viewport
+    if (layout.trackHeight > 0) {
+        firstVisibleTrack = std::max(0, static_cast<int>((0 - trackStartY) / layout.trackHeight));
+        lastVisibleTrack = std::min(static_cast<int>(m_trackUIComponents.size()), 
+                                     static_cast<int>((bounds.height - trackStartY) / layout.trackHeight) + 1);
+    }
+
+    // Draw track separator lines (from control width to end) - full width
     float controlWidth = layout.trackControlsWidth;
-    float buttonSize = 30.0f; // Match button size from layoutTracks
     float currentY = buttonSize + layout.trackHeight; // Start after button and first track
-    for (size_t i = 0; i < m_trackUIComponents.size() - 1; ++i) {
+    
+    // Only draw separators for visible tracks
+    for (int i = firstVisibleTrack; i < std::min(lastVisibleTrack, static_cast<int>(m_trackUIComponents.size()) - 1); ++i) {
+        currentY = buttonSize + (i + 1) * layout.trackHeight;
         renderer.drawLine(
             NUIAbsolutePoint(bounds, controlWidth, currentY),
             NUIAbsolutePoint(bounds, bounds.width, currentY),
             1.0f,
             borderColor
         );
-        currentY += layout.trackHeight; // No spacing between tracks
     }
 
     // Draw track count - positioned in top-right corner with proper margin
@@ -189,6 +205,71 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
 
     // Render children (tracks and buttons) - this must come AFTER row backgrounds so + button renders on top
     renderChildren(renderer);
+}
+
+void TrackManagerUI::renderChildren(NomadUI::NUIRenderer& renderer) {
+    // 🔥 VIEWPORT CULLING: Only render visible tracks + always render add button
+    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    const auto& layout = themeManager.getLayoutDimensions();
+    NomadUI::NUIRect bounds = getBounds();
+    
+    float buttonSize = 30.0f;
+    float trackStartY = buttonSize;
+    
+    // Calculate visible track range
+    int firstVisibleTrack = 0;
+    int lastVisibleTrack = static_cast<int>(m_trackUIComponents.size());
+    
+    if (layout.trackHeight > 0) {
+        firstVisibleTrack = std::max(0, static_cast<int>((0 - trackStartY) / layout.trackHeight));
+        lastVisibleTrack = std::min(static_cast<int>(m_trackUIComponents.size()), 
+                                     static_cast<int>((bounds.height - trackStartY) / layout.trackHeight) + 1);
+    }
+    
+    // Render all children but skip track UIComponents that are outside viewport
+    const auto& children = getChildren();
+    for (const auto& child : children) {
+        if (!child->isVisible()) continue;
+        
+        // Always render the add button
+        if (child == m_addTrackButton) {
+            child->onRender(renderer);
+            continue;
+        }
+        
+        // Check if this child is a track UI component
+        bool isTrackUI = false;
+        int trackIndex = -1;
+        for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
+            if (child == m_trackUIComponents[i]) {
+                isTrackUI = true;
+                trackIndex = static_cast<int>(i);
+                break;
+            }
+        }
+        
+        // If it's a track, only render if visible in viewport
+        if (isTrackUI) {
+            if (trackIndex >= firstVisibleTrack && trackIndex < lastVisibleTrack) {
+                child->onRender(renderer);
+            }
+        } else {
+            // Not a track UI, render normally (other UI elements)
+            child->onRender(renderer);
+        }
+    }
+    
+    // Debug: Print culling stats occasionally
+    static int frameCount = 0;
+    if (++frameCount >= 300) {  // Every 300 frames
+        int culledTracks = static_cast<int>(m_trackUIComponents.size()) - (lastVisibleTrack - firstVisibleTrack);
+        if (culledTracks > 0) {
+            Log::info("Viewport Culling: Rendering " + std::to_string(lastVisibleTrack - firstVisibleTrack) + 
+                      "/" + std::to_string(m_trackUIComponents.size()) + " tracks (culled " + 
+                      std::to_string(culledTracks) + ")");
+        }
+        frameCount = 0;
+    }
 }
 
 void TrackManagerUI::onResize(int width, int height) {

@@ -31,11 +31,16 @@ void NUILabel::onRender(NUIRenderer& renderer)
     if (!text_.empty())
     {
         float fontSize = 14.0f;
-        auto textSize = renderer.measureText(text_, fontSize);
+        
+        // OPTIMIZATION: Cache text measurements - only measure when text changes
+        if (!textSizeValid_) {
+            cachedTextSize_ = renderer.measureText(text_, fontSize);
+            textSizeValid_ = true;
+        }
         
         // Calculate text position based on alignment
         float textX = bounds.x;
-        float textY = bounds.y + (bounds.height - textSize.height) / 2.0f;
+        float textY = bounds.y + (bounds.height - cachedTextSize_.height) / 2.0f;
         
         switch (alignment_)
         {
@@ -43,13 +48,13 @@ void NUILabel::onRender(NUIRenderer& renderer)
                 textX = bounds.x + 4.0f; // Small padding from left edge
                 break;
             case Alignment::Center:
-                textX = bounds.x + (bounds.width - textSize.width) / 2.0f;
+                textX = bounds.x + (bounds.width - cachedTextSize_.width) / 2.0f;
                 break;
             case Alignment::Right:
-                textX = bounds.x + bounds.width - textSize.width - 4.0f; // Small padding from right edge
+                textX = bounds.x + bounds.width - cachedTextSize_.width - 4.0f; // Small padding from right edge
                 break;
             case Alignment::Justified:
-                textX = bounds.x + (bounds.width - textSize.width) / 2.0f; // Center for now
+                textX = bounds.x + (bounds.width - cachedTextSize_.width) / 2.0f; // Center for now
                 break;
         }
         
@@ -59,8 +64,11 @@ void NUILabel::onRender(NUIRenderer& renderer)
 
 void NUILabel::setText(const std::string& text)
 {
-    text_ = text;
-    repaint();
+    if (text_ != text) {
+        text_ = text;
+        textSizeValid_ = false; // Invalidate cache when text changes
+        repaint();
+    }
 }
 
 // TODO: Implement font setting when NUIFont is available

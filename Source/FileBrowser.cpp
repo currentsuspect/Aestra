@@ -15,10 +15,18 @@ FileBrowser::FileBrowser()
     , selectedFile_(nullptr)
     , selectedIndex_(-1)
     , scrollOffset_(0.0f)
+    , targetScrollOffset_(0.0f)   // Initialize lerp target
+    , itemHeight_(32.0f)           // Initialize to default theme value
     , visibleItems_(0)
     , showHiddenFiles_(false)
+    , lastCachedWidth_(0.0f)       // Initialize cache width tracker
+    , lastRenderedOffset_(0.0f)    // Initialize render tracking
     , scrollbarVisible_(false)
     , scrollbarOpacity_(0.0f)
+    , scrollbarWidth_(8.0f)        // Initialize to default theme value
+    , scrollbarTrackHeight_(0.0f)
+    , scrollbarThumbHeight_(0.0f)
+    , scrollbarThumbY_(0.0f)
     , isDraggingScrollbar_(false)
     , dragStartY_(0.0f)
     , dragStartScrollOffset_(0.0f)
@@ -43,7 +51,7 @@ FileBrowser::FileBrowser()
     )";
     folderIcon_->loadSVG(folderSvg);
     folderIcon_->setIconSize(24, 24);
-    folderIcon_->setColor(NUIColor(0.0f, 0.737f, 0.831f, 1.0f));  // #00bcd4 - Brighter cyan for folders
+    folderIcon_->setColor(NUIColor(0.733f, 0.525f, 0.988f, 1.0f));  // #bb86fc - Purple accent for folders
     
     folderOpenIcon_ = std::make_shared<NUIIcon>();
     const char* folderOpenSvg = R"(
@@ -53,7 +61,7 @@ FileBrowser::FileBrowser()
     )";
     folderOpenIcon_->loadSVG(folderOpenSvg);
     folderOpenIcon_->setIconSize(24, 24);
-    folderOpenIcon_->setColor(NUIColor(0.0f, 0.737f, 0.831f, 1.0f));  // #00bcd4 - Brighter cyan for folders
+    folderOpenIcon_->setColor(NUIColor(0.733f, 0.525f, 0.988f, 1.0f));  // #bb86fc - Purple accent for folders
     
     audioFileIcon_ = std::make_shared<NUIIcon>();
     const char* audioFileSvg = R"(
@@ -63,7 +71,7 @@ FileBrowser::FileBrowser()
     )";
     audioFileIcon_->loadSVG(audioFileSvg);
     audioFileIcon_->setIconSize(24, 24);
-    audioFileIcon_->setColor(NUIColor(0.902f, 0.902f, 0.922f, 1.0f));  // #e6e6eb - Bright white for file icons
+    audioFileIcon_->setColor(NUIColor(0.733f, 0.525f, 0.988f, 1.0f));  // #bb86fc - Purple accent for file icons
     
     musicFileIcon_ = std::make_shared<NUIIcon>();
     const char* musicFileSvg = R"(
@@ -73,7 +81,7 @@ FileBrowser::FileBrowser()
     )";
     musicFileIcon_->loadSVG(musicFileSvg);
     musicFileIcon_->setIconSize(24, 24);
-    musicFileIcon_->setColor(NUIColor(0.902f, 0.902f, 0.922f, 1.0f));  // #e6e6eb - Bright white for file icons
+    musicFileIcon_->setColor(NUIColor(0.733f, 0.525f, 0.988f, 1.0f));  // #bb86fc - Purple accent for file icons
     
     projectFileIcon_ = std::make_shared<NUIIcon>();
     const char* projectFileSvg = R"(
@@ -83,7 +91,7 @@ FileBrowser::FileBrowser()
     )";
     projectFileIcon_->loadSVG(projectFileSvg);
     projectFileIcon_->setIconSize(24, 24);
-    projectFileIcon_->setColor(NUIColor(0.902f, 0.902f, 0.922f, 1.0f));  // #e6e6eb - Bright white for file icons
+    projectFileIcon_->setColor(NUIColor(0.733f, 0.525f, 0.988f, 1.0f));  // #bb86fc - Purple accent for file icons
     
     wavFileIcon_ = std::make_shared<NUIIcon>();
     const char* wavFileSvg = R"(
@@ -93,7 +101,7 @@ FileBrowser::FileBrowser()
     )";
     wavFileIcon_->loadSVG(wavFileSvg);
     wavFileIcon_->setIconSize(24, 24);
-    wavFileIcon_->setColor(NUIColor(0.902f, 0.902f, 0.922f, 1.0f));  // #e6e6eb - Bright white for file icons
+    wavFileIcon_->setColor(NUIColor(0.733f, 0.525f, 0.988f, 1.0f));  // #bb86fc - Purple accent for file icons
     
     mp3FileIcon_ = std::make_shared<NUIIcon>();
     const char* mp3FileSvg = R"(
@@ -103,7 +111,7 @@ FileBrowser::FileBrowser()
     )";
     mp3FileIcon_->loadSVG(mp3FileSvg);
     mp3FileIcon_->setIconSize(24, 24);
-    mp3FileIcon_->setColor(NUIColor(0.902f, 0.902f, 0.922f, 1.0f));  // #e6e6eb - Bright white for file icons
+    mp3FileIcon_->setColor(NUIColor(0.733f, 0.525f, 0.988f, 1.0f));  // #bb86fc - Purple accent for file icons
     
     flacFileIcon_ = std::make_shared<NUIIcon>();
     const char* flacFileSvg = R"(
@@ -113,7 +121,7 @@ FileBrowser::FileBrowser()
     )";
     flacFileIcon_->loadSVG(flacFileSvg);
     flacFileIcon_->setIconSize(24, 24);
-    flacFileIcon_->setColor(NUIColor(0.902f, 0.902f, 0.922f, 1.0f));  // #e6e6eb - Bright white for file icons
+    flacFileIcon_->setColor(NUIColor(0.733f, 0.525f, 0.988f, 1.0f));  // #bb86fc - Purple accent for file icons
     
     // Unknown file icon (use a generic document icon)
     unknownFileIcon_ = std::make_shared<NUIIcon>();
@@ -166,6 +174,25 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     renderScrollbar(renderer);
 }
 
+void FileBrowser::onUpdate(double deltaTime) {
+    NUIComponent::onUpdate(deltaTime);
+    
+    // Pure instant scrolling - no lerp, just sync
+    scrollOffset_ = targetScrollOffset_;
+    
+    // ALWAYS repaint if scroll position changed at all
+    if (std::abs(scrollOffset_ - lastRenderedOffset_) > 0.01f) {
+        lastRenderedOffset_ = scrollOffset_;
+        setDirty(true);
+    }
+    
+    // Update scrollbar thumb position based on current scroll
+    float maxScroll = std::max(0.0f, files_.size() * itemHeight_ - scrollbarTrackHeight_);
+    if (maxScroll > 0.0f) {
+        scrollbarThumbY_ = (scrollOffset_ / maxScroll) * (scrollbarTrackHeight_ - scrollbarThumbHeight_);
+    }
+}
+
 void FileBrowser::onResize(int width, int height) {
     NUIComponent::onResize(width, height);
 
@@ -216,6 +243,20 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
     bool needsScrollbar = maxScroll > 0.0f;
     
+    // Debug scrollbar state
+    // static bool debugPrinted = false;
+    // if (!debugPrinted && event.pressed) {
+    //     printf("FileBrowser Mouse Event Debug:\n");
+    //     printf("  files_.size(): %zu\n", files_.size());
+    //     printf("  itemHeight_: %.1f\n", itemHeight_);
+    //     printf("  scrollbarTrackHeight_: %.1f\n", scrollbarTrackHeight_);
+    //     printf("  contentHeight: %.1f\n", contentHeight);
+    //     printf("  maxScroll: %.1f\n", maxScroll);
+    //     printf("  needsScrollbar: %s\n", needsScrollbar ? "YES" : "NO");
+    //     printf("  isDraggingScrollbar_: %s\n", isDraggingScrollbar_ ? "YES" : "NO");
+    //     debugPrinted = true;
+    // }
+    
     // Handle mouse wheel scrolling first (works anywhere in the file browser)
     if (event.wheelDelta != 0) {
         auto& themeManager = NUIThemeManager::getInstance();
@@ -224,15 +265,19 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         float listY = bounds.y + headerHeight + 8 + 20; // After path bar
         float listHeight = bounds.height - headerHeight - 8 - 20;
 
-        // Smooth scroll speed - reduce acceleration
-        float scrollSpeed = 0.5f; // Scroll 0.5 items per wheel step for smoother feel
-        scrollOffset_ -= event.wheelDelta * scrollSpeed * itemHeight;
+        // Mouse wheel scrolling - INSTANT with micro-smoothing
+        float scrollSpeed = 2.0f; // Scroll 2 items per wheel step
+        float scrollDelta = event.wheelDelta * scrollSpeed * itemHeight;
+        
+        targetScrollOffset_ -= scrollDelta;
+        scrollOffset_ -= scrollDelta; // INSTANT - set both for zero lag
 
-        // Clamp scroll offset
+        // Clamp BOTH scroll offsets
         float maxScroll = std::max(0.0f, (files_.size() * itemHeight) - listHeight);
+        targetScrollOffset_ = std::max(0.0f, std::min(targetScrollOffset_, maxScroll));
         scrollOffset_ = std::max(0.0f, std::min(scrollOffset_, maxScroll));
 
-        updateScrollbarVisibility();
+        // Let onUpdate handle thumb position and dirty flag
         return true;
     }
     
@@ -582,13 +627,26 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     float listY = bounds.y + headerHeight + 8 + 20; // After toolbar + spacing + path bar height
     float listHeight = bounds.height - headerHeight - 8 - 20;
 
-    // Render file items
-    for (int i = 0; i < static_cast<int>(files_.size()); ++i) {
+    // CRITICAL: Check if width changed - invalidate ALL caches if so
+    if (std::abs(lastCachedWidth_ - bounds.width) > 0.1f) {
+        for (auto& file : files_) {
+            file.invalidateCache();
+        }
+        lastCachedWidth_ = bounds.width;
+    }
+
+    // OPTIMIZATION: Only render visible items (virtualization)
+    int firstVisibleIndex = std::max(0, static_cast<int>(scrollOffset_ / itemHeight));
+    int lastVisibleIndex = std::min(static_cast<int>(files_.size()), 
+                                     static_cast<int>((scrollOffset_ + listHeight) / itemHeight) + 1);
+
+    // Render file items (ONLY VISIBLE ONES!) - NO CLIPPING, manual bounds check instead
+    for (int i = firstVisibleIndex; i < lastVisibleIndex; ++i) {
         // Calculate item position: each item is positioned at listY + (i * itemHeight) - scrollOffset
         float itemY = listY + (i * itemHeight) - scrollOffset_;
 
-        // Skip items that are not visible
-        if (itemY + itemHeight < listY || itemY > listY + listHeight) {
+        // CRITICAL: Skip rendering if item would bleed above the list area (into path bar)
+        if (itemY < listY) {
             continue;
         }
 
@@ -639,44 +697,46 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         float textX = itemRect.x + layout.panelMargin + themeManager.getComponentDimension("fileBrowser", "iconSize") + 8; // Icon size + margin
         float textY = itemY + itemHeight / 2 + 7; // Perfect vertical centering for 14px font (baseline)
         
-        // Calculate file size string first (if applicable)
-        std::string sizeStr;
-        float actualSizeWidth = 0.0f;
-        bool hasSize = !files_[i].isDirectory && files_[i].size > 0;
-        
-        if (hasSize) {
-            if (files_[i].size < 1024) {
-                sizeStr = std::to_string(files_[i].size) + " B";
-            } else if (files_[i].size < 1024 * 1024) {
-                sizeStr = std::to_string(files_[i].size / 1024) + " KB";
-            } else {
-                sizeStr = std::to_string(files_[i].size / (1024 * 1024)) + " MB";
+        // OPTIMIZATION: Cache file size string and display name
+        auto& fileItem = files_[i];
+        if (!fileItem.cacheValid) {
+            // Calculate file size string (cache it)
+            fileItem.cachedSizeStr.clear();
+            bool hasSize = !fileItem.isDirectory && fileItem.size > 0;
+            
+            if (hasSize) {
+                if (fileItem.size < 1024) {
+                    fileItem.cachedSizeStr = std::to_string(fileItem.size) + " B";
+                } else if (fileItem.size < 1024 * 1024) {
+                    fileItem.cachedSizeStr = std::to_string(fileItem.size / 1024) + " KB";
+                } else {
+                    fileItem.cachedSizeStr = std::to_string(fileItem.size / (1024 * 1024)) + " MB";
+                }
             }
-            actualSizeWidth = renderer.measureText(sizeStr, 12).width;
-        }
-        
-        // Calculate available width for filename with smart spacing
-        float iconWidth = themeManager.getComponentDimension("fileBrowser", "iconSize");
-        float minGap = 20.0f; // Minimum gap between filename and size
-        float rightMargin = 12.0f; // Right edge safety margin (now accounts for scrollbar)
-        
-        // Dynamic width calculation: only reserve space if size actually exists
-        float reservedForSize = hasSize ? (actualSizeWidth + minGap + rightMargin) : rightMargin;
-        float maxTextWidth = itemRect.width - layout.panelMargin - iconWidth - 8 - reservedForSize;
-        
-        // Truncate filename ONLY if it truly overflows
-        std::string displayName = files_[i].name;
-        auto nameTextSize = renderer.measureText(displayName, 14);
-        
-        if (nameTextSize.width > maxTextWidth) {
-            // Truncate with ellipsis
-            std::string truncated = displayName;
-            while (truncated.length() > 3) {
-                truncated.pop_back();
-                NUISize truncSize = renderer.measureText(truncated + "...", 14);
-                if (truncSize.width <= maxTextWidth) break;
+            
+            // Calculate display name with truncation (cache it)
+            float iconWidth = themeManager.getComponentDimension("fileBrowser", "iconSize");
+            float minGap = 20.0f;
+            float rightMargin = 12.0f;
+            float actualSizeWidth = hasSize ? renderer.measureText(fileItem.cachedSizeStr, 12).width : 0.0f;
+            float reservedForSize = hasSize ? (actualSizeWidth + minGap + rightMargin) : rightMargin;
+            float maxTextWidth = itemRect.width - layout.panelMargin - iconWidth - 8 - reservedForSize;
+            
+            fileItem.cachedDisplayName = fileItem.name;
+            auto nameTextSize = renderer.measureText(fileItem.cachedDisplayName, 14);
+            
+            if (nameTextSize.width > maxTextWidth) {
+                // Truncate with ellipsis
+                std::string truncated = fileItem.name;
+                while (truncated.length() > 3) {
+                    truncated.pop_back();
+                    NUISize truncSize = renderer.measureText(truncated + "...", 14);
+                    if (truncSize.width <= maxTextWidth) break;
+                }
+                fileItem.cachedDisplayName = truncated + "...";
             }
-            displayName = truncated + "...";
+            
+            fileItem.cacheValid = true;
         }
         
         // Add hover effect
@@ -685,24 +745,19 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             nameColor = NUIColor::white(); // Bright white for selected
         }
         
-        renderer.drawText(displayName, NUIPoint(textX, textY), 14, nameColor);
+        // USE CACHED display name
+        renderer.drawText(fileItem.cachedDisplayName, NUIPoint(textX, textY), 14, nameColor);
         
-        // Render file size (only if it exists and space allows)
-        if (hasSize) {
-            auto sizeText = renderer.measureText(sizeStr, 12);
+        // Render file size (only if cached size exists)
+        if (!fileItem.cachedSizeStr.empty()) {
+            auto sizeText = renderer.measureText(fileItem.cachedSizeStr, 12);
             
-            // Calculate position from the right with proper margins
+            // Calculate position from the right
+            float rightMargin = 12.0f;
             float sizeX = itemRect.x + itemRect.width - sizeText.width - rightMargin;
             
-            // Final safety check: ensure size doesn't overlap with filename
-            float actualNameWidth = renderer.measureText(displayName, 14).width;
-            float minSizeX = textX + actualNameWidth + minGap;
-            
-            if (sizeX >= minSizeX) {
-                // Safe to render
-                renderer.drawText(sizeStr, NUIPoint(sizeX, textY), 12, textColor_.withAlpha(0.7f));
-            }
-            // If not safe, simply don't render the size (filename takes priority)
+            // Render size
+            renderer.drawText(fileItem.cachedSizeStr, NUIPoint(sizeX, textY), 12, textColor_.withAlpha(0.7f));
         }
     }
 }
@@ -867,26 +922,34 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
     renderer.fillRoundedRect(NUIRect(scrollbarX, scrollbarY, scrollbarWidth_, scrollbarHeight),
                              4, trackColor);
 
-    // Render scrollbar thumb with faded white color
+    // Render scrollbar thumb with faded white color using CACHED position
     NUIColor thumbColor = NUIColor(0.8f, 0.8f, 0.8f, 0.8f); // Faded white thumb color
-    float minThumbSize = themeManager.getComponentDimension("scrollbar", "minThumbSize");
-    float thumbHeight = std::max(minThumbSize, scrollbarHeight * 0.2f); // Use theme minThumbSize
-    float thumbY = scrollbarY + (scrollOffset_ / std::max(1.0f, (files_.size() * itemHeight) - scrollbarHeight)) * (scrollbarHeight - thumbHeight);
-    renderer.fillRoundedRect(NUIRect(scrollbarX, thumbY, scrollbarWidth_, thumbHeight),
+    float thumbY = scrollbarY + scrollbarThumbY_; // Use cached thumb position!
+    renderer.fillRoundedRect(NUIRect(scrollbarX, thumbY, scrollbarWidth_, scrollbarThumbHeight_),
                              4, thumbColor);
 }
 
 bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
     // Get component dimensions from theme
     auto& themeManager = NUIThemeManager::getInstance();
-    const auto& layout = themeManager.getLayoutDimensions();
 
     NUIRect bounds = getBounds();
     float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
-    float scrollbarWidth = themeManager.getComponentDimension("fileBrowser", "scrollbarWidth");
-    float scrollbarX = bounds.x + bounds.width - scrollbarWidth;  // FLUSH alignment - no panelMargin
+    float scrollbarX = bounds.x + bounds.width - scrollbarWidth_;  // FLUSH alignment - use member variable
     float scrollbarY = bounds.y + headerHeight + 8 + 20; // After path bar
-    float scrollbarHeight = bounds.height - headerHeight - 8 - 20;
+    
+    // Debug: Print scrollbar dimensions
+    // static bool printed = false;
+    // if (!printed && event.pressed) {
+    //     printf("Scrollbar Debug:\n");
+    //     printf("  scrollbarX: %.1f, scrollbarWidth_: %.1f\n", scrollbarX, scrollbarWidth_);
+    //     printf("  scrollbarY: %.1f, scrollbarTrackHeight_: %.1f\n", scrollbarY, scrollbarTrackHeight_);
+    //     printf("  Mouse: %.1f, %.1f\n", event.position.x, event.position.y);
+    //     printed = true;
+    // }
+    
+    // Use the member variable scrollbarTrackHeight_ for consistency
+    // It's set in onResize() and used for thumb calculation
 
     // If we're dragging, continue dragging regardless of mouse position
     if (isDraggingScrollbar_) {
@@ -902,18 +965,23 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
         float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
         float maxScroll = std::max(0.0f, (files_.size() * itemHeight) - scrollbarTrackHeight_);
 
-        // Direct scrolling for responsive dragging
-        scrollOffset_ = dragStartScrollOffset_ + (scrollRatio * maxScroll);
+        // Direct scrolling for responsive dragging - set BOTH for instant response
+        targetScrollOffset_ = dragStartScrollOffset_ + (scrollRatio * maxScroll);
+        scrollOffset_ = targetScrollOffset_; // Instant during drag, no lerp
 
         // Clamp scroll offset
         scrollOffset_ = std::max(0.0f, std::min(scrollOffset_, maxScroll));
-        updateScrollbarVisibility();
+        targetScrollOffset_ = scrollOffset_;
+        
+        // Let onUpdate handle thumb position and dirty flag
         return true;
     }
 
-    // Check if mouse is over scrollbar area (with larger padding for easier clicking)
-    bool inScrollbarArea = (event.position.x >= scrollbarX - 10 && event.position.x <= scrollbarX + scrollbarWidth_ + 10 &&
-                             event.position.y >= scrollbarY - 10 && event.position.y <= scrollbarY + scrollbarTrackHeight_ + 10);
+    // Check if mouse is over scrollbar area (with padding for easier clicking)
+    bool inScrollbarArea = (event.position.x >= scrollbarX - 10 && 
+                             event.position.x <= scrollbarX + scrollbarWidth_ + 10 &&
+                             event.position.y >= scrollbarY - 10 && 
+                             event.position.y <= scrollbarY + scrollbarTrackHeight_ + 10);
 
     if (!inScrollbarArea) {
         return false;
@@ -921,9 +989,10 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
 
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        // Check if clicking on thumb or track (with larger padding)
-        if (event.position.y >= scrollbarY + scrollbarThumbY_ - 10 &&
-            event.position.y <= scrollbarY + scrollbarThumbY_ + scrollbarThumbHeight_ + 10) {
+        // Check if clicking on thumb or track (with padding)
+        float thumbAbsoluteY = scrollbarY + scrollbarThumbY_;
+        if (event.position.y >= thumbAbsoluteY - 10 &&
+            event.position.y <= thumbAbsoluteY + scrollbarThumbHeight_ + 10) {
             // Start dragging thumb
             isDraggingScrollbar_ = true;
             dragStartY_ = event.position.y;
@@ -934,11 +1003,15 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
             float scrollRatio = relativeY / scrollbarTrackHeight_;
             float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
             float maxScroll = std::max(0.0f, (files_.size() * itemHeight) - scrollbarTrackHeight_);
-            scrollOffset_ = scrollRatio * maxScroll;
+            // Direct jump to clicked position - set both for instant response
+            targetScrollOffset_ = scrollRatio * maxScroll;
+            scrollOffset_ = targetScrollOffset_;
 
             // Clamp scroll offset
             scrollOffset_ = std::max(0.0f, std::min(scrollOffset_, maxScroll));
-            updateScrollbarVisibility();
+            targetScrollOffset_ = scrollOffset_;
+            
+            // Let onUpdate handle thumb position and dirty flag
         }
         return true;
     } else if (!event.pressed && event.button == NUIMouseButton::Left) {

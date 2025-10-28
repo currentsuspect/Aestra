@@ -27,6 +27,8 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track)
     m_muteButton = std::make_shared<NomadUI::NUIButton>();
     m_muteButton->setText("M");
     m_muteButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Back to Secondary for cool animations
+    m_muteButton->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f)); // Dull grey hover
+    m_muteButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
     m_muteButton->setOnClick([this]() {
         onMuteToggled();
     });
@@ -36,6 +38,8 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track)
     m_soloButton = std::make_shared<NomadUI::NUIButton>();
     m_soloButton->setText("S");
     m_soloButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Back to Secondary for cool animations
+    m_soloButton->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f)); // Dull grey hover
+    m_soloButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
     m_soloButton->setOnClick([this]() {
         onSoloToggled();
     });
@@ -45,6 +49,8 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track)
     m_recordButton = std::make_shared<NomadUI::NUIButton>();
     m_recordButton->setText("●");
     m_recordButton->setStyle(NomadUI::NUIButton::Style::Icon); // Keep Icon style for record circle
+    m_recordButton->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f)); // Dull grey hover
+    m_recordButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
     m_recordButton->setOnClick([this]() {
         onRecordToggled();
     });
@@ -262,20 +268,11 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
     // Get theme colors
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     NomadUI::NUIColor trackBgColor = themeManager.getColor("backgroundPrimary"); // #19191c - Same black as title bar
-    NomadUI::NUIColor trackBorderColor = themeManager.getColor("border");
 
-    // Draw track background
+    // Draw track background only (clean slate for future playlist grid)
     renderer.fillRect(bounds, trackBgColor);
-    renderer.strokeRect(bounds, 1, trackBorderColor);
 
-    // Draw track name at top (either single label or separate number/text labels)
-    if (m_nameLabel) {
-        // Name is rendered by the label component
-    }
-
-    // Waveform visualization removed
-
-    // Render child components (controls)
+    // Render child components (controls only - name label and buttons)
     renderChildren(renderer);
 }
 
@@ -318,7 +315,7 @@ void TrackUIComponent::onUpdate(double deltaTime) {
 
 void TrackUIComponent::onResize(int width, int height) {
     NomadUI::NUIRect bounds = getBounds();
-    Log::info("TrackUIComponent onResize: parent bounds x=" + std::to_string(bounds.x) + ", y=" + std::to_string(bounds.y) + ", w=" + std::to_string(bounds.width) + ", h=" + std::to_string(bounds.height));
+    // Log::info("TrackUIComponent onResize: parent bounds x=" + std::to_string(bounds.x) + ", y=" + std::to_string(bounds.y) + ", w=" + std::to_string(bounds.width) + ", h=" + std::to_string(bounds.height));
 
     // Get layout dimensions from theme
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
@@ -330,7 +327,7 @@ void TrackUIComponent::onResize(int width, int height) {
     // Name label on the left with compact margin
     if (m_nameLabel) {
         m_nameLabel->setBounds(NUIAbsolute(bounds, layout.panelMargin, centerY - bounds.y, 80, layout.trackLabelHeight));
-        Log::info("TrackUIComponent nameLabel bounds: x=" + std::to_string(bounds.x + layout.panelMargin) + ", y=" + std::to_string(centerY));
+        // Log::info("TrackUIComponent nameLabel bounds: x=" + std::to_string(bounds.x + layout.panelMargin) + ", y=" + std::to_string(centerY));
     }
 
     // Buttons vertically centered in a compact group

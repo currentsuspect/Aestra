@@ -31,6 +31,9 @@ public:
 protected:
     void onRender(NomadUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
+    
+    // 🔥 VIEWPORT CULLING: Override to only render visible tracks
+    void renderChildren(NomadUI::NUIRenderer& renderer);
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;
