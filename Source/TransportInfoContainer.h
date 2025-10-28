@@ -12,6 +12,7 @@
 
 #include "../NomadUI/Core/NUIComponent.h"
 #include "../NomadUI/Core/NUILabel.h"
+#include "../NomadUI/Core/NUIIcon.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 
@@ -24,6 +25,7 @@ namespace Nomad {
  * @brief BPM Display Component
  * 
  * Shows current BPM with smooth scrolling animation when changed.
+ * Includes arrow controls for adjusting BPM inline.
  */
 class BPMDisplay : public NomadUI::NUIComponent {
 public:
@@ -33,14 +35,33 @@ public:
     void setBPM(float bpm);
     float getBPM() const { return m_currentBPM; }
     
+    // BPM adjustment
+    void incrementBPM(float amount);
+    void decrementBPM(float amount);
+    
+    // Callback when BPM changes via arrows
+    void setOnBPMChange(std::function<void(float)> callback) { m_onBPMChange = callback; }
+    
     void onRender(NomadUI::NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
+    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
 
 private:
     float m_currentBPM;
     float m_targetBPM;
     float m_displayBPM; // For smooth scrolling animation
     std::shared_ptr<NomadUI::NUILabel> m_label;
+    std::shared_ptr<NomadUI::NUIIcon> m_upArrow;
+    std::shared_ptr<NomadUI::NUIIcon> m_downArrow;
+    
+    std::function<void(float)> m_onBPMChange;
+    
+    // Arrow interaction state
+    bool m_upArrowHovered;
+    bool m_downArrowHovered;
+    
+    NomadUI::NUIRect getUpArrowBounds() const;
+    NomadUI::NUIRect getDownArrowBounds() const;
 };
 
 /**

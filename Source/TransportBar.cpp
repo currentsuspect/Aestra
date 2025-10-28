@@ -23,6 +23,16 @@ TransportBar::TransportBar()
     m_infoContainer = std::make_shared<TransportInfoContainer>();
     addChild(m_infoContainer);
     
+    // Wire up BPM change callback from arrows
+    if (m_infoContainer && m_infoContainer->getBPMDisplay()) {
+        m_infoContainer->getBPMDisplay()->setOnBPMChange([this](float newBPM) {
+            m_tempo = newBPM;
+            if (m_onTempoChange) {
+                m_onTempoChange(m_tempo);
+            }
+        });
+    }
+    
     updateButtonStates();
 }
 
