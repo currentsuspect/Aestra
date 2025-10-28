@@ -286,6 +286,11 @@ void NUIScrollbar::scrollByPage(double direction)
     scrollBy(direction * pageStepSize_);
 }
 
+void NUIScrollbar::scrollByLine(double direction)
+{
+    scrollBy(direction * singleStepSize_);
+}
+
 double NUIScrollbar::getCurrentPosition() const
 {
     return currentRangeStart_;

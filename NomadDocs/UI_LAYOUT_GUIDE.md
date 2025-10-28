@@ -453,6 +453,176 @@ void updateSoundPreview() {
 }
 ```
 
+## Text Rendering & Vertical Alignment
+
+### The Text Baseline Problem
+
+**CRITICAL**: `NUIRenderer::drawText()` uses **baseline positioning**, NOT top-left positioning like rectangles.
+
+When you call `drawText(text, NUIPoint(x, y), fontSize, color)`, the Y coordinate specifies where the **baseline** of the text sits, not the top edge. This is a fundamental difference from how shapes and rectangles are positioned.
+
+#### What is the Baseline?
+The baseline is an imaginary line that most letters "sit" on:
+```
+        ┌─────┐  Top of tallest letter (ascender)
+        │  h  │
+────────┴─────┴──  ← BASELINE (where y points to)
+        g  
+        └─────┘  Bottom of lowest letter (descender)
+```
+
+#### The Problem
+If you try to center text naively using rectangle-style math:
+```cpp
+// ❌ WRONG - Text will be too high!
+float textY = bounds.y + (bounds.height - fontSize) / 2.0f;
+renderer.drawText(text, NUIPoint(x, textY), fontSize, color);
+```
+
+This positions the **baseline** at the vertical center, causing most of the text to appear **above** center because the baseline is near the bottom of the font's bounding box.
+
+### The Solution: Baseline Offset Formula
+
+**Use this formula for proper vertical centering:**
+```cpp
+// ✅ CORRECT - Accounts for baseline positioning
+float fontSize = 10.0f;  // or whatever size you need
+float textY = bounds.y + (bounds.height - fontSize) / 2.0f + fontSize * 0.75f;
+renderer.drawText(text, NUIPoint(x, textY), fontSize, color);
+```
+
+#### Why `fontSize * 0.75f`?
+
+The `0.75f` multiplier accounts for the typical relationship between font size and baseline position:
+- **Font size (100%)**: Total vertical space the font occupies
+- **Baseline position (~75%)**: Where the baseline sits within that space
+- **Descender space (~25%)**: Space below baseline for letters like 'g', 'y', 'p'
+
+By adding `fontSize * 0.75f`, we move the baseline down from the geometric center to account for the fact that most visual weight of text is **above** the baseline.
+
+### Real-World Examples
+
+#### Example 1: Time Ruler Numbers
+```cpp
+void renderTimeRuler(NUIRenderer& renderer, const NUIRect& rulerBounds) {
+    float fontSize = 10.0f;
+    
+    for (int bar = 0; bar <= 16; ++bar) {
+        std::string barText = std::to_string(bar + 1);
+        
+        // Use timer-style vertical centering (accounts for baseline)
+        float textY = rulerBounds.y + (rulerBounds.height - fontSize) / 2.0f 
+                      + fontSize * 0.75f;
+        
+        renderer.drawText(barText, NUIPoint(x + 2, textY), fontSize, accentColor);
+    }
+}
+```
+
+#### Example 2: Transport Timer Display
+```cpp
+void TimerDisplay::onRender(NUIRenderer& renderer) {
+    NUIRect bounds = getBounds();
+    float fontSize = 14.0f;
+    
+    std::string timeText = formatTime(m_currentTime);
+    
+    // Proper vertical centering with baseline offset
+    float textY = bounds.y + (bounds.height - fontSize) / 2.0f + fontSize * 0.75f;
+    float textX = bounds.x + 5.0f;
+    
+    renderer.drawText(timeText, NUIPoint(textX, textY), fontSize, textColor);
+}
+```
+
+#### Example 3: BPM Display
+```cpp
+void BPMDisplay::renderBPMText(NUIRenderer& renderer) {
+    NUIRect bounds = getBounds();
+    float fontSize = 14.0f;
+    
+    std::string bpmText = std::to_string((int)m_currentBPM);
+    
+    // Same formula for consistent alignment
+    float textY = bounds.y + (bounds.height - fontSize) / 2.0f + fontSize * 0.75f;
+    
+    renderer.drawText(bpmText, NUIPoint(textX, textY), fontSize, textColor);
+}
+```
+
+### Common Mistakes to Avoid
+
+#### ❌ Mistake 1: Using measureText() for Vertical Centering
+```cpp
+// This doesn't work because measureText returns visual bounds,
+// but drawText uses baseline positioning
+auto textSize = renderer.measureText(text, fontSize);
+float textY = bounds.y + (bounds.height - textSize.height) / 2.0f;  // Still wrong!
+```
+
+#### ❌ Mistake 2: Hardcoded Offsets
+```cpp
+// Don't use magic numbers - they break when font size changes
+float textY = bounds.y + 5.0f;  // Bad!
+```
+
+#### ❌ Mistake 3: Ignoring Font Size
+```cpp
+// The offset must scale with font size
+float textY = bounds.y + bounds.height / 2.0f + 7.5f;  // Only works for 10pt font!
+```
+
+### When to Use This Formula
+
+**Always use the baseline offset formula when:**
+- ✅ Centering text vertically in a fixed-height container (buttons, labels, rulers, etc.)
+- ✅ Aligning text with other UI elements
+- ✅ Creating custom text displays (timers, counters, labels)
+- ✅ Rendering text in grid cells or table rows
+
+**You DON'T need it when:**
+- ❌ Using `NUILabel` component (handles it internally)
+- ❌ Text is top-aligned or bottom-aligned (not centered)
+- ❌ Text positioning is relative to other text (use same baseline)
+
+### Visual Comparison
+
+```
+Without baseline offset (fontSize * 0.75f):
+┌──────────────────────┐
+│      123             │  ← Text appears too high
+├──────────────────────┤
+│                      │
+└──────────────────────┘
+
+With baseline offset (fontSize * 0.75f):
+┌──────────────────────┐
+│                      │
+│      123             │  ← Text properly centered
+└──────────────────────┘
+```
+
+### Font Metrics Reference
+
+For developers who want to understand the underlying math:
+
+```
+Font Height Breakdown:
+┌─────────────┐  ← Top (0%)
+│   Ascender  │    ~75% of font size
+├─────────────┤  ← Baseline (75%)
+│  Descender  │    ~25% of font size
+└─────────────┘  ← Bottom (100%)
+
+Therefore:
+- Baseline is at ~75% of font height
+- To center visually, place baseline at: center + (fontSize * 0.75)
+```
+
+**Key Takeaway**: The `fontSize * 0.75f` offset is not arbitrary—it's derived from standard font metrics where the baseline typically sits at 75% of the total font height. This ensures text appears visually centered to human eyes, accounting for how we perceive text weight distribution.
+
+---
+
 ## Final Summary
 
 This comprehensive guide covers the complete NOMAD DAW UI system:
@@ -468,6 +638,11 @@ This comprehensive guide covers the complete NOMAD DAW UI system:
 - **Compact control buttons** (20x15px) with tight 2px spacing
 - **Professional spacing** and alignment throughout
 
+### ✅ **Text Rendering**
+- **Baseline-aware positioning** for proper vertical centering
+- **Consistent formula** across all custom text rendering
+- **Font metrics understanding** for visual balance
+
 ### ✅ **Window Management**
 - **Proper minimize/restore** from taskbar (fixed from broken `WS_POPUP`)
 - **Borderless appearance** with full Windows integration
@@ -479,3 +654,4 @@ This comprehensive guide covers the complete NOMAD DAW UI system:
 - **Debugging guides** for layout troubleshooting
 
 The NOMAD DAW now has a **professional, responsive, and fully functional UI** that matches modern DAW standards! 🎯
+

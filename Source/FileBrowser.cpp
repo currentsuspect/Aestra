@@ -1,12 +1,15 @@
 #include "FileBrowser.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
+#include "../NomadCore/include/NomadLog.h"
 #include <algorithm>
 #include <filesystem>
 #include <chrono>
 #include <iomanip>
 #include <sstream>
 #include <iostream>
+
+using namespace Nomad;
 
 namespace NomadUI {
 
@@ -361,6 +364,8 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
     if (!event.pressed) return false;
     
+    Log::info("FileBrowser received key: " + std::to_string(static_cast<int>(event.keyCode)));
+    
     switch (event.keyCode) {
         case NUIKeyCode::Up:
             if (selectedIndex_ > 0) {
@@ -407,12 +412,18 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
             break;
             
         case NUIKeyCode::Enter:
+            Log::info("FileBrowser: Enter key pressed, selectedFile_ = " + 
+                     (selectedFile_ ? selectedFile_->name : "nullptr"));
             if (selectedFile_) {
+                Log::info("  isDirectory: " + std::string(selectedFile_->isDirectory ? "true" : "false"));
                 if (selectedFile_->isDirectory) {
                     navigateTo(selectedFile_->path);
                 } else {
+                    Log::info("  Calling onFileOpened callback");
                     if (onFileOpened_) {
                         onFileOpened_(*selectedFile_);
+                    } else {
+                        Log::warning("  onFileOpened callback is nullptr!");
                     }
                 }
                 return true;

@@ -153,8 +153,10 @@ void TrackManager::processAudio(float* outputBuffer, uint32_t numFrames, double 
     // Output buffer should already be cleared by caller
     // Process each track - tracks will mix themselves into the output buffer
     for (const auto& track : m_tracks) {
+        // Only process tracks that are playing
+        // System tracks (preview) always process if playing
+        // Regular tracks only process if transport is playing OR if they're explicitly playing
         if (track && track->isPlaying()) {
-            // Track will mix its audio into outputBuffer directly
             track->processAudio(outputBuffer, numFrames, streamTime);
         }
     }
@@ -163,6 +165,10 @@ void TrackManager::processAudio(float* outputBuffer, uint32_t numFrames, double 
     if (m_isPlaying.load()) {
         double newPosition = m_positionSeconds.load() + (numFrames / 48000.0);
         m_positionSeconds.store(newPosition);
+        
+        // Notify transport UI of position update (but not too frequently - every ~100ms is fine)
+        // We can't call UI updates directly from audio thread, so we'll use a flag-based approach
+        // For now, just update the position - the UI will poll it
     }
 }
 

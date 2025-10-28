@@ -147,9 +147,28 @@ public:
     bool setPreferredDriverType(AudioDriverType type);
 
     /**
+     * @brief Check if a specific driver type is currently available
+     * @param type Driver type to check
+     * @return true if the driver can be opened (not blocked by another app)
+     * 
+     * This performs a quick test-open to check availability without changing
+     * the active stream. Useful for UI to grey out unavailable options.
+     */
+    bool isDriverTypeAvailable(AudioDriverType type) const;
+
+    /**
      * @brief Get list of available driver types
      */
     std::vector<AudioDriverType> getAvailableDriverTypes() const;
+
+    /**
+     * @brief Check if we're using a fallback driver (not the preferred one)
+     * @return true if active driver differs from preferred driver
+     * 
+     * This is useful for showing warnings in the UI when Exclusive mode
+     * was requested but Shared mode is active (e.g., due to conflicts).
+     */
+    bool isUsingFallbackDriver() const;
 
     /**
      * @brief Get ASIO drivers for display purposes
@@ -184,7 +203,7 @@ private:
     std::unique_ptr<NativeAudioDriver> m_exclusiveDriver;
     std::unique_ptr<NativeAudioDriver> m_sharedDriver;
     NativeAudioDriver* m_activeDriver = nullptr;
-    AudioDriverType m_preferredDriverType = AudioDriverType::WASAPI_EXCLUSIVE;
+    AudioDriverType m_preferredDriverType = AudioDriverType::WASAPI_EXCLUSIVE;  // Prefer Exclusive, auto-fallback to Shared if blocked
     
     // Legacy RtAudio support (fallback)
     std::unique_ptr<AudioDriver> m_rtAudioDriver;

@@ -47,6 +47,51 @@ using namespace NomadUI;
 using namespace Nomad::Audio;
 
 /**
+ * @brief Convert Nomad::KeyCode to NomadUI::NUIKeyCode
+ * 
+ * Nomad::KeyCode uses actual key codes (Enter=13), while NUIKeyCode uses sequential enum values.
+ * This function maps between the two systems.
+ */
+NomadUI::NUIKeyCode convertToNUIKeyCode(int key) {
+    using KC = Nomad::KeyCode;
+    using NUIKC = NomadUI::NUIKeyCode;
+    
+    // Map Nomad platform key codes to NomadUI key codes
+    if (key == static_cast<int>(KC::Space)) return NUIKC::Space;
+    if (key == static_cast<int>(KC::Enter)) return NUIKC::Enter;
+    if (key == static_cast<int>(KC::Escape)) return NUIKC::Escape;
+    if (key == static_cast<int>(KC::Tab)) return NUIKC::Tab;
+    if (key == static_cast<int>(KC::Backspace)) return NUIKC::Backspace;
+    if (key == static_cast<int>(KC::Delete)) return NUIKC::Delete;
+    
+    // Arrow keys
+    if (key == static_cast<int>(KC::Left)) return NUIKC::Left;
+    if (key == static_cast<int>(KC::Right)) return NUIKC::Right;
+    if (key == static_cast<int>(KC::Up)) return NUIKC::Up;
+    if (key == static_cast<int>(KC::Down)) return NUIKC::Down;
+    
+    // Letters A-Z
+    if (key >= static_cast<int>(KC::A) && key <= static_cast<int>(KC::Z)) {
+        int offset = key - static_cast<int>(KC::A);
+        return static_cast<NUIKC>(static_cast<int>(NUIKC::A) + offset);
+    }
+    
+    // Numbers 0-9
+    if (key >= static_cast<int>(KC::Num0) && key <= static_cast<int>(KC::Num9)) {
+        int offset = key - static_cast<int>(KC::Num0);
+        return static_cast<NUIKC>(static_cast<int>(NUIKC::Num0) + offset);
+    }
+    
+    // Function keys F1-F12
+    if (key >= static_cast<int>(KC::F1) && key <= static_cast<int>(KC::F12)) {
+        int offset = key - static_cast<int>(KC::F1);
+        return static_cast<NUIKC>(static_cast<int>(NUIKC::F1) + offset);
+    }
+    
+    return NUIKC::Unknown;
+}
+
+/**
  * @brief Main application class
  * 
  * Manages the lifecycle of all NOMAD subsystems and the main event loop.
@@ -61,9 +106,16 @@ public:
         auto& themeManager = NomadUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
 
-        // Create transport bar
-        m_transportBar = std::make_shared<TransportBar>();
-        addChild(m_transportBar);
+        // Create track manager for multi-track functionality (add first so it renders behind transport)
+        m_trackManager = std::make_shared<TrackManager>();
+        addDemoTracks();
+
+        // Create track manager UI (add before transport so it renders behind)
+        m_trackManagerUI = std::make_shared<TrackManagerUI>(m_trackManager);
+        float trackAreaWidth = 800.0f; // Will be updated in onResize
+        float trackAreaHeight = 500.0f;
+        m_trackManagerUI->setBounds(NomadUI::NUIRect(layout.fileBrowserWidth, layout.transportBarHeight, trackAreaWidth, trackAreaHeight));
+        addChild(m_trackManagerUI);
 
         // Create file browser - starts right below transport bar
         m_fileBrowser = std::make_shared<NomadUI::FileBrowser>();
@@ -71,7 +123,7 @@ public:
         m_fileBrowser->setBounds(NomadUI::NUIRect(0, layout.transportBarHeight, layout.fileBrowserWidth, 620));
         m_fileBrowser->setOnFileOpened([this](const NomadUI::FileItem& file) {
             Log::info("File opened: " + file.path);
-            // TODO: Load audio file or project
+            loadSampleIntoSelectedTrack(file.path);
         });
         m_fileBrowser->setOnSoundPreview([this](const NomadUI::FileItem& file) {
             Log::info("Sound preview requested: " + file.path);
@@ -83,7 +135,12 @@ public:
         });
         addChild(m_fileBrowser);
 
+        // Create transport bar (add before VU meter so VU renders on top)
+        m_transportBar = std::make_shared<TransportBar>();
+        addChild(m_transportBar);
+
         // Create compact audio meter - positioned inside transport bar (right side)
+        // Add AFTER transport so it renders on top
         m_audioVisualizer = std::make_shared<NomadUI::AudioVisualizer>();
         float visualizerWidth = 80.0f;
         float visualizerHeight = 40.0f;
@@ -92,17 +149,6 @@ public:
         m_audioVisualizer->setMode(NomadUI::AudioVisualizationMode::CompactMeter);
         m_audioVisualizer->setShowStereo(true);
         addChild(m_audioVisualizer);
-
-        // Create track manager for multi-track functionality
-        m_trackManager = std::make_shared<TrackManager>();
-        addDemoTracks();
-
-        // Create track manager UI
-        m_trackManagerUI = std::make_shared<TrackManagerUI>(m_trackManager);
-        float trackAreaWidth = 800.0f; // Will be updated in onResize
-        float trackAreaHeight = 500.0f;
-        m_trackManagerUI->setBounds(NomadUI::NUIRect(layout.fileBrowserWidth, layout.transportBarHeight, trackAreaWidth, trackAreaHeight));
-        addChild(m_trackManagerUI);
 
         // Initialize sound preview system
         m_previewTrack = m_trackManager->addTrack("Preview");
@@ -294,12 +340,93 @@ public:
     }
 
     void stopSoundPreview() {
-        if (m_previewTrack && m_previewIsPlaying) {
-            m_previewTrack->stop();
-            m_previewTrack->setPosition(0.0);
-            m_previewIsPlaying = false;
-            m_currentPreviewFile.clear();
-            Log::info("Sound preview stopped");
+        if (m_previewTrack) {
+            bool wasPlaying = m_previewIsPlaying;
+            Log::info("stopSoundPreview called - wasPlaying: " + std::string(wasPlaying ? "true" : "false") + 
+                     ", track state before: " + std::to_string(static_cast<int>(m_previewTrack->getState())));
+            
+            if (m_previewIsPlaying) {
+                m_previewTrack->stop();
+                m_previewTrack->setPosition(0.0);
+                m_previewTrack->clearAudioData(); // Clear the audio data so it doesn't keep playing
+                m_previewIsPlaying = false;
+                m_currentPreviewFile.clear();
+                
+                Log::info("Sound preview stopped - track state after: " + 
+                         std::to_string(static_cast<int>(m_previewTrack->getState())) +
+                         ", isPlaying: " + std::string(m_previewTrack->isPlaying() ? "true" : "false"));
+            }
+        }
+    }
+    
+    void loadSampleIntoSelectedTrack(const std::string& filePath) {
+        Log::info("=== Loading sample into selected track: " + filePath + " ===");
+        
+        // Stop any preview that might be playing
+        stopSoundPreview();
+        
+        // Log all track states after stopping preview
+        for (int i = 0; i < m_trackManager->getTrackCount(); ++i) {
+            auto track = m_trackManager->getTrack(i);
+            if (track) {
+                Log::info("Track " + std::to_string(i) + " (" + track->getName() + "): state=" + 
+                         std::to_string(static_cast<int>(track->getState())) + 
+                         ", isPlaying=" + std::string(track->isPlaying() ? "true" : "false"));
+            }
+        }
+        
+        // Get the currently selected track from TrackManagerUI
+        if (!m_trackManagerUI) {
+            Log::error("TrackManagerUI not initialized");
+            return;
+        }
+        
+        // Get the track manager
+        auto trackManager = m_trackManagerUI->getTrackManager();
+        if (!trackManager) {
+            Log::error("TrackManager not found");
+            return;
+        }
+        
+        // Check if there are any tracks
+        size_t trackCount = trackManager->getTrackCount();
+        if (trackCount == 0) {
+            Log::warning("No tracks available - creating a new track");
+            trackManager->addTrack("Sample Track");
+            trackCount = trackManager->getTrackCount();
+        }
+        
+        // Find the first track
+        // TODO: Implement track selection in TrackManagerUI to get actually selected track
+        std::shared_ptr<Nomad::Audio::Track> targetTrack = trackManager->getTrack(0);
+        
+        if (!targetTrack) {
+            Log::error("Could not find target track");
+            return;
+        }
+        
+        Log::info("Loading sample into track: " + targetTrack->getName());
+        
+        // Load the audio file
+        bool loaded = false;
+        try {
+            loaded = targetTrack->loadAudioFile(filePath);
+        } catch (const std::exception& e) {
+            Log::error("Exception loading sample: " + std::string(e.what()));
+            return;
+        }
+        
+        if (loaded) {
+            Log::info("Sample loaded successfully into track: " + targetTrack->getName());
+            // Track is now in Loaded state and ready to play
+            // Reset position to start
+            targetTrack->setPosition(0.0);
+            // Set sample to start at current playhead position
+            double playheadPosition = m_transportBar ? m_transportBar->getPosition() : 0.0;
+            targetTrack->setStartPositionInTimeline(playheadPosition);
+            Log::info("Sample loaded at timeline position: " + std::to_string(playheadPosition) + "s");
+        } else {
+            Log::error("Failed to load sample: " + filePath);
         }
     }
 
@@ -390,6 +517,9 @@ public:
 
         NomadUI::NUIComponent::onResize(width, height);
     }
+    
+    // Getter for file browser to allow direct key event routing
+    std::shared_ptr<NomadUI::FileBrowser> getFileBrowser() const { return m_fileBrowser; }
     
 private:
     std::shared_ptr<TransportBar> m_transportBar;
@@ -627,7 +757,12 @@ public:
                         AudioStreamConfig config;
                         config.deviceId = outputDevice.id;
                         config.sampleRate = 48000;
-                        config.bufferSize = 128;  // Ultra-low-latency default for WASAPI Exclusive (2.67ms @ 48kHz)
+                        
+                        // Adaptive buffer size: Exclusive mode can use tiny buffers, Shared mode needs larger
+                        // The driver will try Exclusive first, then fallback to Shared if blocked
+                        // Shared mode will auto-adjust to a safe buffer size if 128 is too small
+                        config.bufferSize = 256;  // Safe default - works well for both modes (5.3ms @ 48kHz)
+                        
                         config.numInputChannels = 0;
                         config.numOutputChannels = 2;
                         
@@ -905,6 +1040,15 @@ public:
                 m_rootComponent->onUpdate(deltaTime);
             }
             
+            // Sync transport position with track manager during playback
+            if (m_content && m_content->getTransportBar() && m_content->getTrackManagerUI()) {
+                auto trackManager = m_content->getTrackManagerUI()->getTrackManager();
+                if (trackManager && trackManager->isPlaying()) {
+                    double currentPosition = trackManager->getPosition();
+                    m_content->getTransportBar()->setPosition(currentPosition);
+                }
+            }
+            
             // Update sound previews
             if (m_content) {
                 m_content->updateSoundPreview();
@@ -1030,7 +1174,7 @@ private:
             // First, try to handle key events in the audio settings dialog if it's visible
             if (m_audioSettingsDialog && m_audioSettingsDialog->isVisible()) {
                 NomadUI::NUIKeyEvent event;
-                event.keyCode = static_cast<NomadUI::NUIKeyCode>(key);
+                event.keyCode = convertToNUIKeyCode(key);
                 event.pressed = pressed;
                 event.released = !pressed;
                 
@@ -1181,6 +1325,18 @@ private:
                     
                     Log::info("Optimization stats printed (press O to view)");
                 }
+            } else {
+                // Forward unhandled key events directly to the FileBrowser
+                if (m_content && pressed) {
+                    auto fileBrowser = m_content->getFileBrowser();
+                    if (fileBrowser) {
+                        NomadUI::NUIKeyEvent event;
+                        event.keyCode = convertToNUIKeyCode(key);
+                        event.pressed = pressed;
+                        event.released = !pressed;
+                        fileBrowser->onKeyEvent(event);
+                    }
+                }
             }
         });
         
@@ -1301,22 +1457,8 @@ private:
             }
         }
 
-        // Send audio data to visualizer (thread-safe, uses atomic/mutex internally)
-        if (app->m_content && app->m_content->getAudioVisualizer()) {
-            auto visualizer = app->m_content->getAudioVisualizer();
-            
-            // Separate interleaved stereo buffer into left/right channels
-            std::vector<float> leftChannel(nFrames);
-            std::vector<float> rightChannel(nFrames);
-            
-            for (uint32_t i = 0; i < nFrames; ++i) {
-                leftChannel[i] = outputBuffer[i * 2];       // Left
-                rightChannel[i] = outputBuffer[i * 2 + 1];  // Right
-            }
-            
-            // Update visualizer with processed audio
-            visualizer->setAudioData(leftChannel.data(), rightChannel.data(), nFrames, 48000.0);
-        }
+        // Note: Visualizer update disabled in audio callback to prevent allocations
+        // We can update it from the main thread instead at 60fps
 
         return 0;
     }

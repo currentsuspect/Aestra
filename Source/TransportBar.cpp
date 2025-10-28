@@ -125,6 +125,12 @@ void TransportBar::play() {
     if (m_state != TransportState::Playing) {
         m_state = TransportState::Playing;
         updateButtonStates();
+        
+        // Update timer to show playing state (green color)
+        if (m_infoContainer) {
+            m_infoContainer->getTimerDisplay()->setPlaying(true);
+        }
+        
         if (m_onPlay) {
             m_onPlay();
         }
@@ -135,6 +141,12 @@ void TransportBar::pause() {
     if (m_state == TransportState::Playing) {
         m_state = TransportState::Paused;
         updateButtonStates();
+        
+        // Update timer to show stopped state (white color)
+        if (m_infoContainer) {
+            m_infoContainer->getTimerDisplay()->setPlaying(false);
+        }
+        
         if (m_onPause) {
             m_onPause();
         }
@@ -146,9 +158,13 @@ void TransportBar::stop() {
         m_state = TransportState::Stopped;
         m_position = 0.0;
         updateButtonStates();
+        
         if (m_infoContainer) {
             m_infoContainer->getTimerDisplay()->setTime(m_position);
+            // Update timer to show stopped state (white color)
+            m_infoContainer->getTimerDisplay()->setPlaying(false);
         }
+        
         if (m_onStop) {
             m_onStop();
         }
@@ -215,8 +231,11 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
         NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize);
         auto icon = (m_state == TransportState::Playing) ? m_pauseIcon : m_playIcon;
         if (icon) {
-            // Dull grey on hover, purple otherwise
-            if (m_playButton->isHovered()) {
+            // CRITICAL: Green when playing, grey on hover, purple otherwise
+            if (m_state == TransportState::Playing) {
+                // Bright green when actively playing
+                icon->setColor(NomadUI::NUIColor(0.0f, 1.0f, 0.3f, 1.0f));  // Vibrant green
+            } else if (m_playButton->isHovered()) {
                 icon->setColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f));  // Dull grey on hover
             } else {
                 icon->setColorFromTheme("accent");  // #bb86fc - Purple
@@ -328,6 +347,24 @@ void TransportBar::onRender(NomadUI::NUIRenderer& renderer) {
         NomadUI::NUIPoint(bounds.x + bounds.width, bounds.y + 1),
         1.0f,
         NomadUI::NUIColor::white().withAlpha(0.05f)
+    );
+    
+    // Add vertical separator between file browser and track area
+    auto& layout = themeManager.getLayoutDimensions();
+    float fileBrowserWidth = layout.fileBrowserWidth;
+    renderer.drawLine(
+        NomadUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y),
+        NomadUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y + bounds.height),
+        1.0f,
+        borderColor.withAlpha(0.8f)
+    );
+    
+    // Add horizontal divider at bottom to separate transport from track area
+    renderer.drawLine(
+        NomadUI::NUIPoint(bounds.x, bounds.y + bounds.height - 1),
+        NomadUI::NUIPoint(bounds.x + bounds.width, bounds.y + bounds.height - 1),
+        1.0f,
+        borderColor.withAlpha(0.8f)
     );
     
     // Render children (buttons and labels)

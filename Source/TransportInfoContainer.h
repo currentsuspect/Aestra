@@ -76,10 +76,15 @@ public:
     void setTime(double seconds);
     double getTime() const { return m_currentTime; }
     
+    // Set playing state to change color
+    void setPlaying(bool playing) { m_isPlaying = playing; }
+    bool isPlaying() const { return m_isPlaying; }
+    
     void onRender(NomadUI::NUIRenderer& renderer) override;
 
 private:
     double m_currentTime;
+    bool m_isPlaying;
     
     std::string formatTime(double seconds) const;
 };

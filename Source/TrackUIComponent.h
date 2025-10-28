@@ -22,6 +22,16 @@ public:
     ~TrackUIComponent() override;
 
     std::shared_ptr<Track> getTrack() const { return m_track; }
+    
+    // Selection state
+    void setSelected(bool selected) { m_selected = selected; }
+    bool isSelected() const { return m_selected; }
+    
+    // Timeline zoom settings
+    void setPixelsPerBeat(float ppb) { m_pixelsPerBeat = ppb; }
+    void setBeatsPerBar(int bpb) { m_beatsPerBar = bpb; }
+    void setTimelineScrollOffset(float offset) { m_timelineScrollOffset = offset; }
+    void setMaxTimelineExtent(double extent) { m_maxTimelineExtent = extent; }
 
 protected:
     void onRender(NomadUI::NUIRenderer& renderer) override;
@@ -33,9 +43,17 @@ protected:
 
 private:
     std::shared_ptr<Track> m_track;
+    bool m_selected = false; // Track selection state
+    
+    // Timeline settings (synced from TrackManagerUI)
+    float m_pixelsPerBeat = 50.0f;
+    int m_beatsPerBar = 4;
+    float m_timelineScrollOffset = 0.0f;
+    double m_maxTimelineExtent = 0.0; // Maximum timeline extent in seconds
 
     // UI Components
     std::shared_ptr<NomadUI::NUILabel> m_nameLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_durationLabel;  // Shows sample duration
     std::shared_ptr<NomadUI::NUIButton> m_muteButton;
     std::shared_ptr<NomadUI::NUIButton> m_soloButton;
     std::shared_ptr<NomadUI::NUIButton> m_recordButton;
@@ -48,7 +66,21 @@ private:
     void onRecordToggled();
 
     // Waveform rendering
-    void drawWaveform(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds);
+    void drawWaveform(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds, 
+                     float offsetRatio = 0.0f, float visibleRatio = 1.0f);
+    void generateWaveformCache(int width, int height);
+    
+    // Sample clip container (FL Studio style)
+    void drawSampleClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds);
+    
+    // Waveform cache (regenerate only when audio data or size changes)
+    std::vector<std::pair<float, float>> m_waveformCache; // min/max pairs per pixel
+    int m_cachedWidth = 0;
+    int m_cachedHeight = 0;
+    size_t m_cachedAudioDataSize = 0;
+    
+    // Playlist grid rendering
+    void drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds);
 
     // UI state
     void updateUI();

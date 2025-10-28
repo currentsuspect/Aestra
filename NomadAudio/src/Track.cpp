@@ -619,8 +619,18 @@ void Track::stopRecording() {
 
 // Playback Control
 void Track::play() {
-    if (getState() == TrackState::Loaded) {
+    TrackState currentState = getState();
+    
+    // Can play from Loaded or Stopped states
+    if (currentState == TrackState::Loaded || currentState == TrackState::Stopped) {
         Log::info("Playing track: " + m_name);
+        
+        // Reset position if stopped (start from beginning)
+        if (currentState == TrackState::Stopped) {
+            m_positionSeconds.store(0.0);
+            m_playbackPhase.store(0.0);
+        }
+        
         setState(TrackState::Playing);
     }
 }
@@ -635,8 +645,7 @@ void Track::pause() {
 void Track::stop() {
     Log::info("Stopping track: " + m_name);
     setState(TrackState::Stopped);
-    m_positionSeconds.store(0.0);
-    m_playbackPhase.store(0.0);
+    // Position reset will happen when play() is called again
 }
 
 // Position Control
@@ -646,7 +655,9 @@ void Track::setPosition(double seconds) {
     seconds = (seconds < 0.0) ? 0.0 : (seconds > duration) ? duration : seconds;
     m_positionSeconds.store(seconds);
 
-    // Update playback phase for sample-accurate positioning
+    // CRITICAL: Update playback phase for sample-accurate positioning
+    // Phase is in TRACK sample space (not output sample space)
+    // When we seek, we need to set phase to the correct position in the audio data
     m_playbackPhase.store(seconds * m_sampleRate);
 }
 
@@ -662,7 +673,7 @@ void Track::processAudio(float* outputBuffer, uint32_t numFrames, double streamT
     std::vector<float> trackBuffer(numFrames * m_numChannels, 0.0f);
 
     switch (currentState) {
-        case TrackState::Playing:
+        case TrackState::Playing: {
             // Copy audio data to temporary buffer
             copyAudioData(trackBuffer.data(), numFrames);
             
@@ -676,6 +687,7 @@ void Track::processAudio(float* outputBuffer, uint32_t numFrames, double streamT
                 outputBuffer[i] += trackBuffer[i];
             }
             break;
+        }
 
         case TrackState::Recording:
             m_playbackPhase.store(m_playbackPhase.load() + numFrames * m_numChannels);
@@ -693,7 +705,13 @@ void Track::processAudio(float* outputBuffer, uint32_t numFrames, double streamT
     // Update position for playing state
     if (currentState == TrackState::Playing) {
         double currentPos = m_positionSeconds.load();
-        double newPos = currentPos + (numFrames / static_cast<double>(m_sampleRate));
+        
+        // CRITICAL FIX: Use OUTPUT sample rate (48000Hz), not track sample rate
+        // When playing 44100Hz file on 48000Hz output, position was incrementing too fast
+        // causing audio to cut 7+ seconds early!
+        const double OUTPUT_SAMPLE_RATE = 48000.0;
+        double newPos = currentPos + (numFrames / OUTPUT_SAMPLE_RATE);
+        
         if (newPos >= getDuration()) {
             setPosition(0.0);
         } else {
@@ -724,14 +742,26 @@ void Track::copyAudioData(float* outputBuffer, uint32_t numFrames) {
     const double sampleRateRatio = static_cast<double>(m_sampleRate) / outputSampleRate;
 
     for (uint32_t frame = 0; frame < numFrames; ++frame) {
-        uint32_t sampleIndex = static_cast<uint32_t>(phase) * m_numChannels;
+        // Calculate exact sample position with fractional part
+        double exactSamplePos = phase;
+        uint32_t sampleIndex0 = static_cast<uint32_t>(exactSamplePos);
+        uint32_t sampleIndex1 = sampleIndex0 + 1;
+        double fraction = exactSamplePos - sampleIndex0;
 
-        if (sampleIndex + m_numChannels <= totalSamples) {
-            outputBuffer[frame * m_numChannels + 0] = m_audioData[sampleIndex + 0];
-            outputBuffer[frame * m_numChannels + 1] = m_audioData[sampleIndex + 1];
-        } else {
-            outputBuffer[frame * m_numChannels + 0] = 0.0f;
-            outputBuffer[frame * m_numChannels + 1] = 0.0f;
+        // Bounds check and linear interpolation for each channel
+        for (uint32_t ch = 0; ch < m_numChannels; ++ch) {
+            uint32_t idx0 = sampleIndex0 * m_numChannels + ch;
+            uint32_t idx1 = sampleIndex1 * m_numChannels + ch;
+
+            // CRITICAL: Don't cut silence - play full waveform data including silent parts
+            // If index is within audio data bounds, read it (even if it's silence)
+            // Only output actual silence if we're beyond the audio data
+            float sample0 = (idx0 < totalSamples) ? m_audioData[idx0] : 0.0f;
+            float sample1 = (idx1 < totalSamples) ? m_audioData[idx1] : 0.0f;
+
+            // Linear interpolation: sample0 + fraction * (sample1 - sample0)
+            float interpolated = sample0 + static_cast<float>(fraction) * (sample1 - sample0);
+            outputBuffer[frame * m_numChannels + ch] = interpolated;
         }
 
         phase += sampleRateRatio;

@@ -184,6 +184,7 @@ bool BPMDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
 TimerDisplay::TimerDisplay()
     : NomadUI::NUIComponent()
     , m_currentTime(0.0)
+    , m_isPlaying(false)
 {
 }
 
@@ -209,7 +210,12 @@ void TimerDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     
     // Get theme for text rendering
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-    NomadUI::NUIColor textColor = themeManager.getColor("textPrimary");
+    
+    // CRITICAL: Green when playing, white when stopped
+    NomadUI::NUIColor textColor = m_isPlaying 
+        ? NomadUI::NUIColor(0.0f, 1.0f, 0.3f, 1.0f)  // Vibrant green when playing
+        : themeManager.getColor("textPrimary");       // White when stopped
+    
     float fontSize = 14.0f;
     
     // Calculate text position with vertical centering (like dropdown does it)

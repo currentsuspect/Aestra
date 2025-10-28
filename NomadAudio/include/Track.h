@@ -71,6 +71,11 @@ public:
     bool generateDemoAudio(const std::string& filePath);
     void setAudioData(const float* data, uint32_t numSamples, uint32_t sampleRate, uint32_t numChannels);
     void clearAudioData();
+    
+    // Waveform data access (for UI visualization)
+    const std::vector<float>& getAudioData() const { return m_audioData; }
+    uint32_t getSampleRate() const { return m_sampleRate; }
+    uint32_t getNumChannels() const { return m_numChannels; }
 
     // Recording
     void startRecording();
@@ -87,6 +92,10 @@ public:
     void setPosition(double seconds);
     double getPosition() const { return m_positionSeconds.load(); }
     double getDuration() const { return m_durationSeconds.load(); }
+    
+    // Sample Timeline Position (where sample starts in the timeline, in seconds)
+    void setStartPositionInTimeline(double seconds) { m_startPositionInTimeline.store(seconds); }
+    double getStartPositionInTimeline() const { return m_startPositionInTimeline.load(); }
 
     // Audio Processing
     void processAudio(float* outputBuffer, uint32_t numFrames, double streamTime);
@@ -116,6 +125,7 @@ private:
     std::atomic<TrackState> m_state{TrackState::Empty};
     std::atomic<double> m_positionSeconds{0.0};
     std::atomic<double> m_durationSeconds{0.0};
+    std::atomic<double> m_startPositionInTimeline{0.0};  // Where sample starts in timeline (seconds)
 
     // Audio data
     std::vector<float> m_audioData;  // Interleaved stereo samples
