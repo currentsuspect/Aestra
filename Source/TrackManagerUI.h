@@ -7,6 +7,7 @@
 #include "../NomadUI/Core/NUIScrollbar.h"
 #include "../NomadUI/Core/NUIButton.h"
 #include "../NomadUI/Core/NUIIcon.h"
+#include "../NomadUI/Widgets/NUIPianoRollWidgets.h"
 #include <memory>
 #include <vector>
 
@@ -70,6 +71,10 @@ private:
     bool m_closeIconHovered = false;
     bool m_minimizeIconHovered = false;
     bool m_maximizeIconHovered = false;
+
+    // Piano roll panel
+    std::shared_ptr<NomadUI::PianoRollView> m_pianoRoll;
+    bool m_showPianoRoll = true;
 
     void layoutTracks();
     void onAddTrackClicked();

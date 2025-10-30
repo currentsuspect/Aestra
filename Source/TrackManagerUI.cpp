@@ -88,6 +88,10 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
 
     // Create UI components for existing tracks
     refreshTracks();
+
+    // Create Piano Roll view (initially visible)
+    m_pianoRoll = std::make_shared<NomadUI::PianoRollView>();
+    addChild(m_pianoRoll);
 }
 
 TrackManagerUI::~TrackManagerUI() {
@@ -177,6 +181,10 @@ void TrackManagerUI::layoutTracks() {
     float horizontalScrollbarHeight = 15.0f;
     float totalContentHeight = m_trackUIComponents.size() * (m_trackHeight + m_trackSpacing);
     float viewportHeight = bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight;
+    if (m_showPianoRoll) {
+        // Reserve space for piano roll at bottom (30% of height)
+        viewportHeight = viewportHeight * 0.7f;
+    }
     
     // Layout horizontal scrollbar (top, right after header, before ruler)
     if (m_horizontalScrollbar) {
@@ -203,6 +211,17 @@ void TrackManagerUI::layoutTracks() {
         
         trackUI->setBounds(NUIAbsolute(bounds, 0, currentY, trackWidth, m_trackHeight));
         currentY += m_trackHeight + m_trackSpacing;
+    }
+
+    // Layout Piano Roll at bottom
+    if (m_pianoRoll && m_showPianoRoll) {
+        float pianoY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight + viewportHeight;
+        float pianoHeight = (bounds.height - (pianoY - bounds.y));
+        m_pianoRoll->setBounds(NUIAbsolute(bounds, 0, pianoY - bounds.y, bounds.width, pianoHeight));
+        m_pianoRoll->setBeatsPerBar(m_beatsPerBar);
+        m_pianoRoll->setPixelsPerBeat(m_pixelsPerBeat);
+    } else if (m_pianoRoll) {
+        m_pianoRoll->setBounds(NUIAbsolute(bounds, 0, bounds.height, bounds.width, 0));
     }
 }
 
@@ -350,7 +369,7 @@ void TrackManagerUI::renderChildren(NomadUI::NUIRenderer& renderer) {
         
         // Always render UI controls (add button, scrollbar)
         // Icons are rendered manually in onRender()
-        if (child == m_addTrackButton || child == m_scrollbar) {
+        if (child == m_addTrackButton || child == m_scrollbar || child == m_pianoRoll) {
             child->onRender(renderer);
             continue;
         }

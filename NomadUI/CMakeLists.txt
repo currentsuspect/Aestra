@@ -67,6 +67,8 @@ list(APPEND NOMADUI_CORE_SOURCES
     Widgets/NUIMixerWidgets.cpp
     Widgets/NUIArrangementWidgets.h
     Widgets/NUIArrangementWidgets.cpp
+    Widgets/NUIPianoRollWidgets.h
+    Widgets/NUIPianoRollWidgets.cpp
     Widgets/NUIVisualWidgets.h
     Widgets/NUIVisualWidgets.cpp
     Widgets/NUIUtilityWidgets.h
