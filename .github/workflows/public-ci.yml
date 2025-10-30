@@ -1,0 +1,35 @@
+name: Public CI (Nomad Core)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-core:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Ensure no private folders
+        shell: pwsh
+        run: |
+          $blocked = @('nomad-premium','nomad-build','assets_premium','assets_private','models','weights')
+          foreach ($b in $blocked) {
+            if (Test-Path $b) { Write-Error "Private folder present in public CI: $b"; exit 1 }
+          }
+      - name: Setup CMake
+        uses: lukka/get-cmake@latest
+      - name: Configure
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path build | Out-Null
+          cmake -S nomad-core -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config Release --parallel
+      - name: Run tests (if any)
+        shell: pwsh
+        run: |
+          if (Test-Path build\tests\Release) { Get-ChildItem build\tests\Release\*.exe | ForEach-Object { & $_ } }
