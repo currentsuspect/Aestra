@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200">
+	<defs>
+		<linearGradient id="c" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0%" stop-color="#00FFFF"/>
+			<stop offset="100%" stop-color="#007A7A"/>
+		</linearGradient>
+		<filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+			<feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
+			<feMerge>
+				<feMergeNode in="coloredBlur"/>
+				<feMergeNode in="SourceGraphic"/>
+			</feMerge>
+		</filter>
+	</defs>
+	<rect x="8" y="8" width="304" height="184" rx="16" fill="url(#c)" stroke="#66FFFF" stroke-width="2"/>
+	<text x="24" y="48" fill="#002b2b" font-size="24" font-family="Segoe UI" filter="url(#glow)">Nomad Studio+</text>
+</svg>

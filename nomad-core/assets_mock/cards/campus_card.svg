@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200">
+	<defs>
+		<linearGradient id="u" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0%" stop-color="#6A82FB"/>
+			<stop offset="100%" stop-color="#FC5C7D"/>
+		</linearGradient>
+	</defs>
+	<rect x="8" y="8" width="304" height="184" rx="16" fill="url(#u)" stroke="#ffffff" stroke-width="2"/>
+	<text x="24" y="48" fill="#1a1a1a" font-size="24" font-family="Segoe UI">Nomad Campus</text>
+</svg>
