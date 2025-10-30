@@ -1,0 +1,46 @@
+# Text normalization
+* text=auto eol=lf
+
+# Windows project text files
+*.sln text eol=crlf
+*.vcxproj text eol=crlf
+*.props text eol=crlf
+*.targets text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Large binaries → LFS if ever used (public should avoid)
+*.wav filter=lfs diff=lfs merge=lfs -text
+*.mp3 filter=lfs diff=lfs merge=lfs -text
+*.flac filter=lfs diff=lfs merge=lfs -text
+*.aiff filter=lfs diff=lfs merge=lfs -text
+*.ogg filter=lfs diff=lfs merge=lfs -text
+*.onnx filter=lfs diff=lfs merge=lfs -text
+*.pt filter=lfs diff=lfs merge=lfs -text
+*.pth filter=lfs diff=lfs merge=lfs -text
+*.safetensors filter=lfs diff=lfs merge=lfs -text
+*.tflite filter=lfs diff=lfs merge=lfs -text
+*.pb filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.7z filter=lfs diff=lfs merge=lfs -text
+*.tar filter=lfs diff=lfs merge=lfs -text
+*.dll filter=lfs diff=lfs merge=lfs -text
+*.so filter=lfs diff=lfs merge=lfs -text
+*.dylib filter=lfs diff=lfs merge=lfs -text
+
+# Prevent accidentally including private premium assets in source tarballs
+NomadMuse/models/** export-ignore
+NomadAssets/** export-ignore
+
+# Treat model artefacts as binary and recommend LFS if added
+*.onnx binary
+*.pt binary
+*.pth binary
+*.h5 binary
+*.ckpt binary
+*.bin binary
+
+# Ensure line endings consistent for source
+*.cpp text eol=lf
+*.h text eol=lf
+*.md text eol=lf

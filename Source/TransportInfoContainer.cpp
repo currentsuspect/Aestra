@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file TransportInfoContainer.cpp
  * @brief Implementation of Transport Info Container components

@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "../NUIRenderer.h"
@@ -9,6 +10,7 @@
 #include "NUIDirtyRegion.h"
 #include "NUIRenderCache.h"
 #include <vector>
+#include <tuple>
 #include <unordered_map>
 #include <memory>
 
@@ -104,6 +106,10 @@ public:
     uint32_t createTexture(const uint8_t* data, int width, int height) override;
     void deleteTexture(uint32_t textureId) override;
     
+    // Render-to-texture helpers (FBO)
+    uint32_t renderToTextureBegin(int width, int height);
+    uint32_t renderToTextureEnd();
+    
     // ========================================================================
     // Batching
     // ========================================================================
@@ -123,6 +129,10 @@ public:
                              size_t& cachedWidgets, size_t& cacheMemoryBytes) override;
     NUIDirtyRegionManager* getDirtyRegionManager() override { return &dirtyRegionManager_; }
     NUIRenderCache* getRenderCache() override { return &renderCache_; }
+    
+    // Performance stats
+    uint32_t getDrawCallCount() const { return drawCallCount_; }
+    void resetDrawCallCount() { drawCallCount_ = 0; }
     
     // ========================================================================
     // Info
@@ -191,6 +201,7 @@ private:
     int height_ = 0;
     float globalOpacity_ = 1.0f;
     bool batching_ = false;
+    uint32_t drawCallCount_ = 0;  // Draw call tracking
     
     // OpenGL objects
     uint32_t vao_ = 0;
@@ -208,8 +219,17 @@ private:
     std::vector<Transform> transformStack_;
     
     // Textures
-    std::unordered_map<uint32_t, uint32_t> textures_;
+    struct TextureData { uint32_t glId = 0; int width = 0; int height = 0; };
+    std::unordered_map<uint32_t, TextureData> textures_;
     uint32_t nextTextureId_ = 1;
+
+    // Render-to-texture (FBO) support
+    uint32_t fbo_ = 0;
+    int fboPrevViewport_[4] = {0,0,0,0};
+    int fboWidth_ = 0;
+    int fboHeight_ = 0;
+    bool renderingToTexture_ = false;
+    uint32_t lastRenderTextureId_ = 0;
     
     // Optimization systems
     NUIBatchManager batchManager_;

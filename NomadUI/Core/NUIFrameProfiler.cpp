@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIFrameProfiler.h"
 #include <iostream>
 #include <iomanip>
@@ -127,52 +128,52 @@ void NUIFrameProfiler::printStats() const
 {
     if (!m_enabled || m_stats.frameCount == 0) return;
     
-    std::cout << "\n╔════════════════════════════════════════════════════════════╗\n";
-    std::cout << "║           NOMAD FRAME PROFILER - Frame #" 
-              << std::setw(9) << m_stats.frameCount << "          ║\n";
-    std::cout << "╠════════════════════════════════════════════════════════════╣\n";
+    std::cout << "\nâ•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—\n";
+    std::cout << "â•‘           NOMAD FRAME PROFILER - Frame #" 
+              << std::setw(9) << m_stats.frameCount << "          â•‘\n";
+    std::cout << "â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£\n";
     
     // Current frame
-    std::cout << "║ CURRENT FRAME:                                             ║\n";
-    std::cout << "║   Render Time:  " << std::setw(8) << std::fixed << std::setprecision(2) 
-              << m_stats.current.renderTimeMs << " ms                               ║\n";
-    std::cout << "║   Swap Time:    " << std::setw(8) << m_stats.current.swapTimeMs 
+    std::cout << "â•‘ CURRENT FRAME:                                             â•‘\n";
+    std::cout << "â•‘   Render Time:  " << std::setw(8) << std::fixed << std::setprecision(2) 
+              << m_stats.current.renderTimeMs << " ms                               â•‘\n";
+    std::cout << "â•‘   Swap Time:    " << std::setw(8) << m_stats.current.swapTimeMs 
               << " ms  ";
-    if (m_stats.current.swapTimeMs > 20.0) std::cout << "⚠️ VSync stall!        ║\n";
-    else std::cout << "                      ║\n";
+    if (m_stats.current.swapTimeMs > 20.0) std::cout << "âš ï¸ VSync stall!        â•‘\n";
+    else std::cout << "                      â•‘\n";
     
-    std::cout << "║   Sleep Time:   " << std::setw(8) << m_stats.current.sleepTimeMs 
-              << " ms                               ║\n";
-    std::cout << "║   Total Time:   " << std::setw(8) << m_stats.current.totalTimeMs 
-              << " ms                               ║\n";
-    std::cout << "║   FPS:          " << std::setw(8) << std::setprecision(1) 
-              << m_stats.current.fps << "                                    ║\n";
+    std::cout << "â•‘   Sleep Time:   " << std::setw(8) << m_stats.current.sleepTimeMs 
+              << " ms                               â•‘\n";
+    std::cout << "â•‘   Total Time:   " << std::setw(8) << m_stats.current.totalTimeMs 
+              << " ms                               â•‘\n";
+    std::cout << "â•‘   FPS:          " << std::setw(8) << std::setprecision(1) 
+              << m_stats.current.fps << "                                    â•‘\n";
     
-    std::cout << "╠════════════════════════════════════════════════════════════╣\n";
+    std::cout << "â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£\n";
     
     // Averages
-    std::cout << "║ AVERAGES (smoothed):                                       ║\n";
-    std::cout << "║   Render:       " << std::setw(8) << std::setprecision(2) 
-              << m_stats.avgRenderMs << " ms                               ║\n";
-    std::cout << "║   Swap:         " << std::setw(8) << m_stats.avgSwapMs 
-              << " ms                               ║\n";
-    std::cout << "║   Sleep:        " << std::setw(8) << m_stats.avgSleepMs 
-              << " ms                               ║\n";
-    std::cout << "║   Total:        " << std::setw(8) << m_stats.avgTotalMs 
-              << " ms                               ║\n";
-    std::cout << "║   FPS:          " << std::setw(8) << std::setprecision(1) 
-              << m_stats.avgFPS << "                                    ║\n";
+    std::cout << "â•‘ AVERAGES (smoothed):                                       â•‘\n";
+    std::cout << "â•‘   Render:       " << std::setw(8) << std::setprecision(2) 
+              << m_stats.avgRenderMs << " ms                               â•‘\n";
+    std::cout << "â•‘   Swap:         " << std::setw(8) << m_stats.avgSwapMs 
+              << " ms                               â•‘\n";
+    std::cout << "â•‘   Sleep:        " << std::setw(8) << m_stats.avgSleepMs 
+              << " ms                               â•‘\n";
+    std::cout << "â•‘   Total:        " << std::setw(8) << m_stats.avgTotalMs 
+              << " ms                               â•‘\n";
+    std::cout << "â•‘   FPS:          " << std::setw(8) << std::setprecision(1) 
+              << m_stats.avgFPS << "                                    â•‘\n";
     
-    std::cout << "╠════════════════════════════════════════════════════════════╣\n";
+    std::cout << "â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£\n";
     
     // Min/Max
-    std::cout << "║ RANGE (last " << std::min(m_history.size(), MAX_HISTORY) << " frames):                                     ║\n";
-    std::cout << "║   FPS:          " << std::setw(8) << std::setprecision(1) 
-              << m_stats.minFPS << " - " << std::setw(8) << m_stats.maxFPS << "                    ║\n";
-    std::cout << "║   Frame Time:   " << std::setw(8) << std::setprecision(2) 
-              << m_stats.minFrameMs << " - " << std::setw(8) << m_stats.maxFrameMs << " ms                ║\n";
+    std::cout << "â•‘ RANGE (last " << std::min(m_history.size(), MAX_HISTORY) << " frames):                                     â•‘\n";
+    std::cout << "â•‘   FPS:          " << std::setw(8) << std::setprecision(1) 
+              << m_stats.minFPS << " - " << std::setw(8) << m_stats.maxFPS << "                    â•‘\n";
+    std::cout << "â•‘   Frame Time:   " << std::setw(8) << std::setprecision(2) 
+              << m_stats.minFrameMs << " - " << std::setw(8) << m_stats.maxFrameMs << " ms                â•‘\n";
     
-    std::cout << "╠════════════════════════════════════════════════════════════╣\n";
+    std::cout << "â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£\n";
     
     // Breakdown percentages
     double totalWork = m_stats.avgRenderMs + m_stats.avgSwapMs + m_stats.avgSleepMs;
@@ -181,32 +182,32 @@ void NUIFrameProfiler::printStats() const
         double swapPct = (m_stats.avgSwapMs / totalWork) * 100.0;
         double sleepPct = (m_stats.avgSleepMs / totalWork) * 100.0;
         
-        std::cout << "║ BREAKDOWN:                                                 ║\n";
-        std::cout << "║   Render:       " << std::setw(5) << std::setprecision(1) 
-                  << renderPct << "%                                       ║\n";
-        std::cout << "║   Swap:         " << std::setw(5) << swapPct 
-                  << "%                                       ║\n";
-        std::cout << "║   Sleep:        " << std::setw(5) << sleepPct 
-                  << "%                                       ║\n";
+        std::cout << "â•‘ BREAKDOWN:                                                 â•‘\n";
+        std::cout << "â•‘   Render:       " << std::setw(5) << std::setprecision(1) 
+                  << renderPct << "%                                       â•‘\n";
+        std::cout << "â•‘   Swap:         " << std::setw(5) << swapPct 
+                  << "%                                       â•‘\n";
+        std::cout << "â•‘   Sleep:        " << std::setw(5) << sleepPct 
+                  << "%                                       â•‘\n";
     }
     
-    std::cout << "╚════════════════════════════════════════════════════════════╝\n\n";
+    std::cout << "â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n\n";
     
     // Diagnostics
     if (m_stats.avgSwapMs > 20.0) {
-        std::cout << "⚠️  WARNING: Swap time is very high (" << m_stats.avgSwapMs 
+        std::cout << "âš ï¸  WARNING: Swap time is very high (" << m_stats.avgSwapMs 
                   << "ms) - likely VSync stall!\n";
         std::cout << "    Try disabling VSync to test if it's GPU-bound.\n\n";
     }
     
     if (m_stats.avgRenderMs > 50.0) {
-        std::cout << "⚠️  WARNING: Render time is very high (" << m_stats.avgRenderMs 
+        std::cout << "âš ï¸  WARNING: Render time is very high (" << m_stats.avgRenderMs 
                   << "ms) - CPU bottleneck!\n";
         std::cout << "    Consider optimizing draw calls or enabling batching.\n\n";
     }
     
     if (m_stats.avgSleepMs < 0.0) {
-        std::cout << "⚠️  WARNING: Negative sleep time detected - frame pacing issues!\n";
+        std::cout << "âš ï¸  WARNING: Negative sleep time detected - frame pacing issues!\n";
         std::cout << "    Your render+swap exceeds target frame time.\n\n";
     }
 }

@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "../Core/NUIComponent.h"
@@ -106,6 +107,19 @@ private:
     std::function<void()> onOpen_;
     std::function<void()> onClose_;
     std::function<void(int, int, const std::string&)> onSelectionChanged_;
+    
+    // Text measurement cache to avoid repeated expensive measureText() calls
+    std::vector<float> itemTextWidthCache_;
+    bool itemWidthCacheValid_ = false;
+    
+    // Dropdown rendering cache
+    uint32_t cachedTextureId_ = 0;
+    int cachedTextureWidth_ = 0;
+    int cachedTextureHeight_ = 0;
+    bool cacheDirty_ = true; // need to regenerate when open/contents change
+
+    // Internal rendering helper used by cache generation and normal rendering
+    void renderDropdownListInternal(NUIRenderer& renderer);
 };
 
 

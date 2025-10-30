@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file FilterTest.cpp
  * @brief Test application for Filter DSP module
@@ -105,8 +106,8 @@ bool testLowPassFilter() {
     bool passesLow = freq100Hz > 0.8f;
     bool attenuatesHigh = freq5000Hz < freq100Hz * 0.3f;
     
-    std::cout << "  Low freq passes: " << (passesLow ? "✓" : "✗") << std::endl;
-    std::cout << "  High freq attenuated: " << (attenuatesHigh ? "✓" : "✗") << std::endl;
+    std::cout << "  Low freq passes: " << (passesLow ? "âœ“" : "âœ—") << std::endl;
+    std::cout << "  High freq attenuated: " << (attenuatesHigh ? "âœ“" : "âœ—") << std::endl;
     
     return passesLow && attenuatesHigh;
 }
@@ -135,8 +136,8 @@ bool testHighPassFilter() {
     bool passesHigh = freq5000Hz > 0.8f;
     bool attenuatesLow = freq100Hz < freq5000Hz * 0.3f;
     
-    std::cout << "  High freq passes: " << (passesHigh ? "✓" : "✗") << std::endl;
-    std::cout << "  Low freq attenuated: " << (attenuatesLow ? "✓" : "✗") << std::endl;
+    std::cout << "  High freq passes: " << (passesHigh ? "âœ“" : "âœ—") << std::endl;
+    std::cout << "  Low freq attenuated: " << (attenuatesLow ? "âœ“" : "âœ—") << std::endl;
     
     return passesHigh && attenuatesLow;
 }
@@ -165,8 +166,8 @@ bool testBandPassFilter() {
     bool passesBand = freq1000Hz > freq100Hz && freq1000Hz > freq5000Hz;
     bool attenuatesSides = freq100Hz < freq1000Hz * 0.5f && freq5000Hz < freq1000Hz * 0.5f;
     
-    std::cout << "  Center freq highest: " << (passesBand ? "✓" : "✗") << std::endl;
-    std::cout << "  Sides attenuated: " << (attenuatesSides ? "✓" : "✗") << std::endl;
+    std::cout << "  Center freq highest: " << (passesBand ? "âœ“" : "âœ—") << std::endl;
+    std::cout << "  Sides attenuated: " << (attenuatesSides ? "âœ“" : "âœ—") << std::endl;
     
     return passesBand && attenuatesSides;
 }
@@ -195,7 +196,7 @@ bool testResonanceControl() {
     // High resonance should boost cutoff frequency
     bool resonanceWorks = highRes > lowRes * 1.5f;
     
-    std::cout << "  Resonance boosts cutoff: " << (resonanceWorks ? "✓" : "✗") << std::endl;
+    std::cout << "  Resonance boosts cutoff: " << (resonanceWorks ? "âœ“" : "âœ—") << std::endl;
     
     return resonanceWorks;
 }
@@ -230,7 +231,7 @@ bool testFilterStability() {
     }
     
     std::cout << "  Max output after impulse: " << maxOutput << std::endl;
-    std::cout << "  Filter stable: " << (stable ? "✓" : "✗") << std::endl;
+    std::cout << "  Filter stable: " << (stable ? "âœ“" : "âœ—") << std::endl;
     
     return stable;
 }
@@ -286,7 +287,7 @@ void interactiveAudioTest() {
         return;
     }
     
-    std::cout << "\n✓ Audio stream started" << std::endl;
+    std::cout << "\nâœ“ Audio stream started" << std::endl;
     std::cout << "\nControls:" << std::endl;
     std::cout << "  1 - Low-pass filter" << std::endl;
     std::cout << "  2 - High-pass filter" << std::endl;
@@ -345,7 +346,7 @@ void interactiveAudioTest() {
     g_oscillator = nullptr;
     g_filter = nullptr;
     
-    std::cout << "\n✓ Audio stream stopped" << std::endl;
+    std::cout << "\nâœ“ Audio stream stopped" << std::endl;
 }
 
 int main() {
@@ -364,9 +365,9 @@ int main() {
     
     std::cout << "\n========================================" << std::endl;
     if (allPassed) {
-        std::cout << "✓ All tests passed!" << std::endl;
+        std::cout << "âœ“ All tests passed!" << std::endl;
     } else {
-        std::cout << "✗ Some tests failed" << std::endl;
+        std::cout << "âœ— Some tests failed" << std::endl;
     }
     std::cout << "========================================" << std::endl;
     

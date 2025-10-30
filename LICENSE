@@ -1,68 +1,54 @@
-NOMAD DAW PROPRIETARY LICENSE
+Nomad Studios Source-Available License (NSSAL)
+Version 1.0 — October 30, 2025
 
-Copyright (c) 2025 Dylan Makori. All rights reserved.
+Copyright (c) 2025 Dylan Makori
 
-NOTICE: This software and its source code are proprietary and confidential.
-
-LICENSE GRANT
-
-This repository is made publicly available for transparency and development
-purposes only. Viewing the source code does NOT grant you any rights to use,
-copy, modify, or distribute the software.
-
-USE OF THIS SOFTWARE REQUIRES A PAID LICENSE.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to
+view, study, and modify the Software for personal, educational, or
+contributory purposes, subject to the following conditions:
 
 RESTRICTIONS
-
-You may NOT:
-- Use this software for any purpose without a valid commercial license
-- Copy, modify, or distribute this software or its source code
-- Reverse engineer, decompile, or disassemble any compiled binaries
-- Remove or alter any proprietary notices, labels, or marks
-- Create derivative works or competing products based on this code
-- Use any part of this codebase in your own projects
+You MAY NOT:
+- Remove or alter any proprietary notices, labels, or marks.
+- Create derivative works or competing products based on this code.
+- Use any part of this codebase in your own projects without written consent.
 
 PERMITTED ACTIONS
-
 You MAY:
-- View the source code for educational purposes
-- Report bugs and security issues
-- Suggest features and improvements
-- Submit pull requests (contributors grant all rights to NOMAD DAW)
+- View and study the source code for educational purposes.
+- Report bugs and security issues.
+- Suggest features and improvements.
+- Submit pull requests (contributors grant all rights to Nomad Studios).
 
 OWNERSHIP
-
 All title, ownership rights, and intellectual property rights in and to the
 Software, including all source code, documentation, designs, and associated
-materials, remain the exclusive property of Dylan Makori.
+materials, remain the exclusive property of Dylan Makori and Nomad Studios.
 
 NO WARRANTY
-
-THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS
-OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT.
+THE SOFTWARE IS PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT.
 
 LIMITATION OF LIABILITY
-
-IN NO EVENT SHALL DYLAN MAKORI OR NOMAD DAW BE LIABLE FOR ANY DIRECT, INDIRECT,
-INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE
-OF OR INABILITY TO USE THE SOFTWARE.
+IN NO EVENT SHALL DYLAN MAKORI OR NOMAD STUDIOS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING
+OUT OF THE USE OF OR INABILITY TO USE THE SOFTWARE.
 
 COMMERCIAL LICENSING
-
 NOMAD DAW is currently in development. Commercial licensing will be available
 upon official release.
 
-For inquiries, early access, or partnership opportunities, contact:
+CONTACT
+For inquiries, early access, or partnership opportunities:
 Email: makoridylan@gmail.com
 Website: Coming Soon
 
 TERMINATION
-
-Any unauthorized use of this software will result in immediate termination of
+Any unauthorized use of this Software will result in immediate termination of
 any implied permissions and may result in legal action.
 
 GOVERNING LAW
-
 This license shall be governed by and construed in accordance with the laws
 of the Republic of Kenya, without regard to its conflict of law provisions.

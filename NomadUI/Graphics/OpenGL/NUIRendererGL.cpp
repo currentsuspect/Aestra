@@ -1,9 +1,12 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIRendererGL.h"
 #include <cstring>
 #include <cmath>
 #include <iostream>
 #include <ft2build.h>
 #include FT_FREETYPE_H
+// Profiler include for recording draw calls/triangles
+#include "../../../NomadCore/include/NomadProfiler.h"
 
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
@@ -220,6 +223,7 @@ void NUIRendererGL::beginFrame() {
     vertices_.clear();
     indices_.clear();
     frameCounter_++;
+    drawCallCount_ = 0;  // Reset draw call counter each frame
     
     // Mark all dirty at the start of frame (for simplicity - can be optimized later)
     dirtyRegionManager_.markAllDirty(NUISize(static_cast<float>(width_), static_cast<float>(height_)));
@@ -431,6 +435,7 @@ void NUIRendererGL::drawGlow(const NUIRect& rect, float radius, float intensity,
 }
 
 void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY, float blur, const NUIColor& color) {
+    NOMAD_ZONE("Renderer_DrawShadow");
     NUIRect shadowRect = rect;
     shadowRect.x += offsetX;
     shadowRect.y += offsetY;
@@ -1313,11 +1318,12 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
     }
     
     fontInitialized_ = true;
-    std::cout << "✓ Font loaded successfully: " << fontPath << " (" << loadedChars << " characters)" << std::endl;
+    std::cout << "âœ“ Font loaded successfully: " << fontPath << " (" << loadedChars << " characters)" << std::endl;
     return true;
 }
 
 void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) {
+    NOMAD_ZONE("Text_Render");
     if (!fontInitialized_) {
         // Fallback to blocky text if font not loaded
         drawText(text, position, fontSize, color);
@@ -1377,7 +1383,63 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
 // ============================================================================
 
 void NUIRendererGL::drawTexture(uint32_t textureId, const NUIRect& destRect, const NUIRect& sourceRect) {
-    // Texture drawing implementation
+    if (textureId == 0) return;
+    auto it = textures_.find(textureId);
+    if (it == textures_.end()) return;
+    const TextureData& td = it->second;
+
+    NOMAD_ZONE("Texture_Draw");
+
+    // Flush batch to ensure correct ordering
+    flush();
+
+    // Compute texture coordinates (sourceRect is in pixels)
+    float tx0 = 0.0f, ty0 = 0.0f, tx1 = 1.0f, ty1 = 1.0f;
+    if (td.width > 0 && td.height > 0) {
+        tx0 = sourceRect.x / static_cast<float>(td.width);
+        ty0 = sourceRect.y / static_cast<float>(td.height);
+        tx1 = (sourceRect.x + sourceRect.width) / static_cast<float>(td.width);
+        ty1 = (sourceRect.y + sourceRect.height) / static_cast<float>(td.height);
+    }
+
+    NUIColor white(1.0f, 1.0f, 1.0f, 1.0f);
+    addVertex(destRect.x, destRect.y, tx0, ty0, white);
+    addVertex(destRect.right(), destRect.y, tx1, ty0, white);
+    addVertex(destRect.right(), destRect.bottom(), tx1, ty1, white);
+    addVertex(destRect.x, destRect.bottom(), tx0, ty1, white);
+
+    uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
+    indices_.push_back(base + 0);
+    indices_.push_back(base + 1);
+    indices_.push_back(base + 2);
+    indices_.push_back(base + 0);
+    indices_.push_back(base + 2);
+    indices_.push_back(base + 3);
+
+    glBindVertexArray(vao_);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+    glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(Vertex), vertices_.data(), GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(uint32_t), indices_.data(), GL_DYNAMIC_DRAW);
+
+    glUseProgram(primitiveShader_.id);
+    glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
+    glUniform1i(primitiveShader_.primitiveTypeLoc, 0);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, td.glId);
+    glUniform1i(primitiveShader_.textureLoc, 0);
+    glUniform1i(primitiveShader_.useTextureLoc, 1);
+
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()), GL_UNSIGNED_INT, 0);
+    drawCallCount_++;
+    if (Nomad::Profiler::getInstance().isEnabled()) {
+        Nomad::Profiler::getInstance().recordDrawCall();
+        Nomad::Profiler::getInstance().recordTriangles(static_cast<uint32_t>(indices_.size() / 3));
+    }
+
+    vertices_.clear();
+    indices_.clear();
 }
 
 void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba, 
@@ -1388,43 +1450,34 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
                   << ", width=" << width << ", height=" << height << ")" << std::endl;
         return;
     }
-    
+
+    NOMAD_ZONE("Texture_Upload");
+
     // Flush any pending batched geometry before texture rendering
     flush();
-    
-    // 1. Create OpenGL texture from RGBA data
+
+    // Create a temporary texture, upload pixels, draw and delete (legacy one-shot path)
     GLuint texture;
     glGenTextures(1, &texture);
-    
     if (texture == 0) {
         std::cerr << "OpenGL: Failed to generate texture" << std::endl;
         return;
     }
-    
+
     glBindTexture(GL_TEXTURE_2D, texture);
-    
-    // 2. Upload RGBA data to GPU
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, 
-                 GL_RGBA, GL_UNSIGNED_BYTE, rgba);
-    
-    // 3. Configure texture parameters for linear filtering (smooth scaling)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
-    // 4. Set texture wrapping to clamp to edge (prevents border artifacts)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    
-    // 5. Render textured quad at specified bounds
-    // Create a quad with proper texture coordinates
-    NUIColor white(1.0f, 1.0f, 1.0f, 1.0f); // Use white to preserve texture colors
-    
-    // Add vertices for textured quad (applying current transform and opacity)
+
+    // Draw textured quad using the uploaded texture
+    NUIColor white(1.0f, 1.0f, 1.0f, 1.0f);
     addVertex(bounds.x, bounds.y, 0.0f, 0.0f, white);
     addVertex(bounds.right(), bounds.y, 1.0f, 0.0f, white);
     addVertex(bounds.right(), bounds.bottom(), 1.0f, 1.0f, white);
     addVertex(bounds.x, bounds.bottom(), 0.0f, 1.0f, white);
-    
+
     uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
     indices_.push_back(base + 0);
     indices_.push_back(base + 1);
@@ -1432,37 +1485,32 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
     indices_.push_back(base + 0);
     indices_.push_back(base + 2);
     indices_.push_back(base + 3);
-    
-    // Upload and render the textured quad
+
     glBindVertexArray(vao_);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(Vertex), 
-                 vertices_.data(), GL_DYNAMIC_DRAW);
-    
+    glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(Vertex), vertices_.data(), GL_DYNAMIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(uint32_t), 
-                 indices_.data(), GL_DYNAMIC_DRAW);
-    
-    // Use shader and bind texture
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(uint32_t), indices_.data(), GL_DYNAMIC_DRAW);
+
     glUseProgram(primitiveShader_.id);
     glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
-    glUniform1i(primitiveShader_.primitiveTypeLoc, 0); // Simple textured quad
-    
-    // Enable texturing
+    glUniform1i(primitiveShader_.primitiveTypeLoc, 0);
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glUniform1i(primitiveShader_.textureLoc, 0); // Texture unit 0
-    glUniform1i(primitiveShader_.useTextureLoc, 1); // Enable texture sampling
-    
-    // Draw the textured quad
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()), 
-                   GL_UNSIGNED_INT, 0);
-    
-    // Clear vertex buffers for next draw call
+    glUniform1i(primitiveShader_.textureLoc, 0);
+    glUniform1i(primitiveShader_.useTextureLoc, 1);
+
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()), GL_UNSIGNED_INT, 0);
+    drawCallCount_++;
+    if (Nomad::Profiler::getInstance().isEnabled()) {
+        Nomad::Profiler::getInstance().recordDrawCall();
+        Nomad::Profiler::getInstance().recordTriangles(static_cast<uint32_t>(indices_.size() / 3));
+    }
+
     vertices_.clear();
     indices_.clear();
-    
-    // 6. Clean up texture immediately (one-time use)
+
     glDeleteTextures(1, &texture);
 }
 
@@ -1471,15 +1519,62 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
 // ============================================================================
 
 uint32_t NUIRendererGL::loadTexture(const std::string& filepath) {
-    return 0; // Not implemented
+    // Simple stub - file loading not implemented here
+    (void)filepath;
+    return 0;
 }
 
 uint32_t NUIRendererGL::createTexture(const uint8_t* data, int width, int height) {
-    return 0; // Not implemented
+    if (width <= 0 || height <= 0) return 0;
+
+    NOMAD_ZONE("Texture_Create");
+
+    GLuint tex = 0;
+    glGenTextures(1, &tex);
+    if (tex == 0) return 0;
+
+    glBindTexture(GL_TEXTURE_2D, tex);
+    // Allocate storage (data can be null for empty texture)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    uint32_t id = nextTextureId_++;
+    textures_[id] = TextureData{ static_cast<uint32_t>(tex), width, height };
+    return id;
 }
 
 void NUIRendererGL::deleteTexture(uint32_t textureId) {
-    // Not implemented
+    if (textureId == 0) return;
+    auto it = textures_.find(textureId);
+    if (it == textures_.end()) return;
+    uint32_t glId = it->second.glId;
+    if (glId != 0) glDeleteTextures(1, &glId);
+    textures_.erase(it);
+}
+
+uint32_t NUIRendererGL::renderToTextureBegin(int width, int height) {
+    // Simplified stub: create an empty persistent texture and return its id.
+    if (width <= 0 || height <= 0) return 0;
+    uint32_t texId = createTexture(nullptr, width, height);
+    if (texId == 0) return 0;
+    lastRenderTextureId_ = texId;
+    renderingToTexture_ = true;
+    fboWidth_ = width; fboHeight_ = height;
+    return texId;
+}
+
+uint32_t NUIRendererGL::renderToTextureEnd() {
+    if (!renderingToTexture_) return 0;
+    renderingToTexture_ = false;
+    uint32_t tex = lastRenderTextureId_;
+    lastRenderTextureId_ = 0;
+    int w = fboWidth_; int h = fboHeight_;
+    fboWidth_ = 0; fboHeight_ = 0;
+    (void)w; (void)h;
+    return tex;
 }
 
 // ============================================================================
@@ -1496,6 +1591,7 @@ void NUIRendererGL::endBatch() {
 }
 
 void NUIRendererGL::flush() {
+    NOMAD_ZONE("Renderer_Flush");
     if (vertices_.empty()) {
         return;
     }
@@ -1517,7 +1613,15 @@ void NUIRendererGL::flush() {
     
     // Draw
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()), GL_UNSIGNED_INT, 0);
-    
+    drawCallCount_++;  // Track draw call
+    // Record with global profiler
+    {
+        if (Nomad::Profiler::getInstance().isEnabled()) {
+            Nomad::Profiler::getInstance().recordDrawCall();
+            Nomad::Profiler::getInstance().recordTriangles(static_cast<uint32_t>(indices_.size() / 3));
+        }
+    }
+
     // Clear for next batch
     vertices_.clear();
     indices_.clear();

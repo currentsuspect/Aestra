@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIThemeSystem.h"
 #include <algorithm>
 #include <cmath>
@@ -459,7 +460,7 @@ float NUIThemedComponent::getThemeComponentDimension(const std::string& componen
 NUIThemeProperties NUIThemePresets::createNomadDark() {
     NUIThemeProperties theme;
     
-    // 🌌 Modern Professional Dark - Core Structure
+    // ðŸŒŒ Modern Professional Dark - Core Structure
     theme.backgroundPrimary = NUIColor(0.098f, 0.098f, 0.110f, 1.0f);    // #19191c - Deep slate background
     theme.backgroundSecondary = NUIColor(0.118f, 0.118f, 0.133f, 1.0f);  // #1e1e22 - Panels, sidebars, file browser
     theme.surfaceTertiary = NUIColor(0.157f, 0.157f, 0.176f, 1.0f);      // #28282d - Popups, transport bar, elevated surfaces
@@ -470,7 +471,7 @@ NUIThemeProperties NUIThemePresets::createNomadDark() {
     theme.surface = theme.backgroundSecondary;
     theme.surfaceVariant = theme.surfaceTertiary;
     
-    // 💡 2. Accent & Branding - Modern Professional
+    // ðŸ’¡ 2. Accent & Branding - Modern Professional
     theme.primary = NUIColor(0.471f, 0.353f, 1.0f, 1.0f);                // #785aff - Vibrant purple (FL Studio inspired)
     theme.primaryHover = NUIColor(0.549f, 0.451f, 1.0f, 1.0f);           // #8c73ff - Lighter purple for hover
     theme.primaryPressed = NUIColor(0.392f, 0.275f, 0.863f, 1.0f);       // #6446dc - Darker purple for pressed
@@ -486,20 +487,20 @@ NUIThemeProperties NUIThemePresets::createNomadDark() {
     theme.accentPrimary = theme.primary;
     theme.accentSecondary = theme.secondary;
     
-    // 🌈 6. Functional Colors - Modern Professional
+    // ðŸŒˆ 6. Functional Colors - Modern Professional
     theme.success = NUIColor(0.0f, 0.831f, 0.620f, 1.0f);                // #00d49e - Teal green for success
     theme.warning = NUIColor(1.0f, 0.706f, 0.0f, 1.0f);                  // #ffb400 - Amber warning
     theme.error = NUIColor(1.0f, 0.267f, 0.396f, 1.0f);                  // #ff4465 - Vibrant red for errors
     theme.info = NUIColor(0.471f, 0.353f, 1.0f, 1.0f);                   // #785aff - Purple (matches primary)
     
-    // 🧭 3. Text & Typography - Modern Professional
+    // ðŸ§­ 3. Text & Typography - Modern Professional
     theme.textPrimary = NUIColor(0.933f, 0.933f, 0.949f, 1.0f);          // #eeeeF2 - Crisp white with excellent readability
     theme.textSecondary = NUIColor(0.667f, 0.667f, 0.698f, 1.0f);        // #aaaab2 - Secondary text, labels
     theme.textDisabled = NUIColor(0.502f, 0.502f, 0.533f, 1.0f);         // #808088 - Disabled text
     theme.textLink = theme.primary;                                       // #785aff - Links/actions (purple)
     theme.textCritical = theme.error;                                     // #ff4465 - Errors
     
-    // 🪞 5. Borders & Highlights - Modern Professional
+    // ðŸªž 5. Borders & Highlights - Modern Professional
     theme.borderSubtle = NUIColor(0.196f, 0.196f, 0.220f, 1.0f);         // #323238 - Subtle separation lines
     theme.borderActive = theme.primary;                                   // #785aff - Selected/focused (purple)
     theme.border = theme.borderSubtle;
@@ -507,7 +508,7 @@ NUIThemeProperties NUIThemePresets::createNomadDark() {
     theme.outline = NUIColor(0.392f, 0.392f, 0.431f, 1.0f);              // #64646e
     theme.outlineVariant = NUIColor(0.275f, 0.275f, 0.306f, 1.0f);       // #46464e
     
-    // 🖱️ 4. Interactive Elements - Buttons (Modern Professional)
+    // ðŸ–±ï¸ 4. Interactive Elements - Buttons (Modern Professional)
     theme.buttonBgDefault = theme.surfaceTertiary;                        // #28282d - Button background
     theme.buttonBgHover = NUIColor(0.196f, 0.196f, 0.220f, 1.0f);        // #323238 - Hovered buttons
     theme.buttonBgActive = theme.primary;                                 // #785aff - Active state (purple)
@@ -540,7 +541,7 @@ NUIThemeProperties NUIThemePresets::createNomadDark() {
     // Highlight glow
     theme.highlightGlow = NUIColor(0.471f, 0.353f, 1.0f, 0.25f);         // rgba(120, 90, 255, 0.25) - Purple glow
     
-    // 🪞 5. Shadows
+    // ðŸªž 5. Shadows
     theme.shadowXS = NUIThemeProperties::Shadow(0, 1, 2, 0, NUIColor::black(), 0.1f);
     theme.shadowS = NUIThemeProperties::Shadow(0, 2, 4, 0, NUIColor::black(), 0.15f);
     theme.shadowM = NUIThemeProperties::Shadow(0, 4, 8, 0, NUIColor::black(), 0.4f);   // Ambient

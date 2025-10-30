@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUITextRendererGDI.h"
 #include <iostream>
 
@@ -47,7 +48,7 @@ bool NUITextRendererGDI::initialize() {
     }
     
     initialized_ = true;
-    std::cout << "✓ GDI Text renderer initialized" << std::endl;
+    std::cout << "âœ“ GDI Text renderer initialized" << std::endl;
     return true;
 }
 

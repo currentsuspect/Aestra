@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "../include/NomadPlatform.h"
 #include "../../NomadCore/include/NomadConfig.h"
 #include "../../NomadCore/include/NomadLog.h"

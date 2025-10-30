@@ -21,6 +21,8 @@ add_executable(NOMAD_DAW
     TrackUIComponent.cpp
     TrackManagerUI.h
     TrackManagerUI.cpp
+    PerformanceHUD.h
+    PerformanceHUD.cpp
 )
 
 # Set C++ standard

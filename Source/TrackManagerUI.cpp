@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "TrackManagerUI.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
@@ -18,7 +19,7 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
 
     // Create window control icons (lightweight SVGs instead of buttons)
-    // Close icon (×)
+    // Close icon (Ã—)
     const char* closeSvg = R"(
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -31,7 +32,7 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
     m_closeIcon->setVisible(true);
     // Don't add as child - we'll render manually
 
-    // Minimize icon (−)
+    // Minimize icon (âˆ’)
     const char* minimizeSvg = R"(
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -43,7 +44,7 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
     m_minimizeIcon->setVisible(true);
     // Don't add as child - we'll render manually
 
-    // Maximize icon (□)
+    // Maximize icon (â–¡)
     const char* maximizeSvg = R"(
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="6" y="6" width="12" height="12"/>
@@ -227,23 +228,19 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
     float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
     float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
     float gridStartX = controlAreaWidth + 5;
-    float gridEndX = gridStartX + maxExtentInPixels - m_timelineScrollOffset;
     
-    // Clamp to bounds
-    gridEndX = std::min(gridEndX, bounds.x + bounds.width);
-    
-    // Draw background ONLY where the grid exists (control area + grid area)
+    // Draw background (control area + full grid area - no bounds restriction)
     NomadUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
     
     // Background for control area (always visible)
     NomadUI::NUIRect controlBg(bounds.x, bounds.y, controlAreaWidth, bounds.height);
     renderer.fillRect(controlBg, bgColor);
     
-    // Background for grid area (only up to max extent)
-    if (gridEndX > gridStartX) {
-        NomadUI::NUIRect gridBg(bounds.x + gridStartX, bounds.y, gridEndX - gridStartX, bounds.height);
-        renderer.fillRect(gridBg, bgColor);
-    }
+    // Background for grid area (extends freely, not bounded by maxExtent)
+    float scrollbarWidth = 15.0f;
+    float gridWidth = bounds.width - controlAreaWidth - scrollbarWidth - 5;
+    NomadUI::NUIRect gridBg(bounds.x + gridStartX, bounds.y, gridWidth, bounds.height);
+    renderer.fillRect(gridBg, bgColor);
 
     // Draw border
     NomadUI::NUIColor borderColor = themeManager.getColor("border");
@@ -294,9 +291,6 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIRect rulerRect(bounds.x, bounds.y + headerHeight + horizontalScrollbarHeight, bounds.width, rulerHeight);
     renderTimeRuler(renderer, rulerRect);
     
-    // Draw playhead on top of everything (shows current playback position)
-    renderPlayhead(renderer);
-    
     // Render window control icons on header
     // Convert relative bounds to absolute for rendering
     if (m_closeIcon) {
@@ -315,14 +309,18 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
         m_minimizeIcon->onRender(renderer);
     }
     
-    // Re-render UI controls (add button, scrollbars) on top of header
+    // Draw playhead BEFORE scrollbars (Z-order: playhead behind scrollbars)
+    // This prevents playhead from drawing through scrollbar arrows
+    renderPlayhead(renderer);
+    
+    // Re-render UI controls (add button, scrollbars) on top of playhead
     if (m_addTrackButton && m_addTrackButton->isVisible()) m_addTrackButton->onRender(renderer);
     if (m_horizontalScrollbar && m_horizontalScrollbar->isVisible()) m_horizontalScrollbar->onRender(renderer);
     if (m_scrollbar && m_scrollbar->isVisible()) m_scrollbar->onRender(renderer);
 }
 
 void TrackManagerUI::renderChildren(NomadUI::NUIRenderer& renderer) {
-    // 🔥 VIEWPORT CULLING: Only render visible tracks + always render controls
+    // ðŸ”¥ VIEWPORT CULLING: Only render visible tracks + always render controls
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     NomadUI::NUIRect bounds = getBounds();
@@ -439,6 +437,61 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
         
         Log::info("Zoom: " + std::to_string(m_pixelsPerBeat) + " pixels per beat");
+        return true;
+    }
+    
+    // PLAYLIST SCRUBBING: Click on ruler to scrub playback position
+    if (rulerRect.contains(localPos) && event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+        // Calculate position from mouse X coordinate
+        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        const auto& layout = themeManager.getLayoutDimensions();
+        float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
+        float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
+        float gridStartX = controlAreaWidth + 5;
+        
+        // Mouse position relative to grid start
+        float mouseX = localPos.x - gridStartX + m_timelineScrollOffset;
+        
+        // Convert pixel position to time (seconds)
+        double bpm = 120.0;
+        double secondsPerBeat = 60.0 / bpm;
+        double positionInBeats = mouseX / m_pixelsPerBeat;
+        double positionInSeconds = positionInBeats * secondsPerBeat;
+        
+        // Clamp to valid range
+        positionInSeconds = std::max(0.0, positionInSeconds);
+        
+        // Set playback position
+        if (m_trackManager) {
+            m_trackManager->setPosition(positionInSeconds);
+        }
+        
+        return true;
+    }
+    
+    // Mouse wheel vertical scroll on track grid area
+    float trackAreaY = headerHeight + horizontalScrollbarHeight + rulerHeight;
+    NomadUI::NUIRect trackAreaRect(0, trackAreaY, bounds.width, bounds.height - trackAreaY);
+    
+    if (event.wheelDelta != 0.0f && trackAreaRect.contains(localPos)) {
+        // Vertical scrolling
+        float scrollSpeed = 60.0f; // pixels per wheel notch
+        float scrollDelta = -event.wheelDelta * scrollSpeed;
+        
+        m_scrollOffset += scrollDelta;
+        
+        // Clamp scroll offset
+        float viewportHeight = bounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight;
+        float totalContentHeight = m_trackUIComponents.size() * (m_trackHeight + m_trackSpacing);
+        float maxScroll = std::max(0.0f, totalContentHeight - viewportHeight);
+        m_scrollOffset = std::max(0.0f, std::min(m_scrollOffset, maxScroll));
+        
+        // Update scrollbar
+        if (m_scrollbar) {
+            m_scrollbar->setCurrentRange(m_scrollOffset, viewportHeight);
+        }
+        
+        layoutTracks(); // Re-layout tracks
         return true;
     }
     
@@ -770,18 +823,24 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
     float playheadX = gridStartX + positionInPixels - m_timelineScrollOffset;
     
     // Only draw if playhead is visible in viewport
+    // Add padding to prevent premature culling (triangle extends beyond line)
     float scrollbarWidth = 15.0f;
     float trackWidth = bounds.width - scrollbarWidth;
     float gridWidth = trackWidth - (buttonX + layout.controlButtonWidth + 10);
     float gridEndX = gridStartX + gridWidth;
+    float cullPadding = 50.0f;  // Generous padding to ensure playhead is always visible when near edges
     
-    if (playheadX >= gridStartX && playheadX <= gridEndX) {
-        // Draw playhead line from below ruler to bottom of viewport
+    // CRITICAL: Widen culling bounds to ensure playhead remains visible even at viewport edges
+    if (playheadX >= gridStartX - cullPadding && playheadX <= gridEndX + cullPadding) {
+        // Draw playhead line from below ruler to ABOVE vertical scrollbar (not all the way to bottom)
         float headerHeight = 30.0f;
         float horizontalScrollbarHeight = 15.0f;
         float rulerHeight = 20.0f;
         float playheadStartY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
-        float playheadEndY = bounds.y + bounds.height;
+        
+        // CRITICAL: Stop playhead BEFORE the vertical scrollbar area at the bottom
+        // Don't draw all the way to bounds.height - stop before scrollbar
+        float playheadEndY = bounds.y + bounds.height - scrollbarWidth;  // Stop before vertical scrollbar
         
         // Playhead color - white and slender for elegance
         NomadUI::NUIColor playheadColor(1.0f, 1.0f, 1.0f, 0.8f);  // White, slightly transparent

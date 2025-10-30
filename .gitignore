@@ -1,3 +1,148 @@
+# Build outputs
+**/build/
+**/out/
+**/bin/
+**/obj/
+.vs/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# OS/editor
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+*.swo
+*.user
+*.sln.docstates
+.idea/
+.vscode/
+*.code-workspace
+
+# Binaries and archives
+*.exe
+*.dll
+*.pdb
+*.lib
+*.so
+*.dylib
+*.a
+*.app
+*.apk
+*.ipa
+*.zip
+*.7z
+*.tar
+*.gz
+*.tgz
+*.pkg
+*.msi
+
+# Audio assets
+*.wav
+*.mp3
+*.flac
+*.aiff
+*.aif
+*.ogg
+*.m4a
+
+# Models and large data
+*.onnx
+*.pt
+*.pth
+*.tflite
+*.pb
+*.safetensors
+models/
+assets/
+private_assets/
+assets_private/
+assets_premium/
+weights/
+checkpoints/
+
+# Keys/secrets
+*.key
+*.pem
+*.pfx
+*.keystore
+*.jks
+*.cer
+*.crt
+*.p12
+*.sign
+*.enc
+*.asc
+.env
+.env.*
+secrets/
+secret/
+credentials/
+config/private/
+**/signing/
+**/codesign/
+**/notarize/
+**/provisioning/
+
+# Generated
+docs/_site/
+coverage/
+dist/
+.cmake/api/
+.cache/
+.lfsconfig
+.gitleaks.toml.local
+
+# Build output
+/build/
+/dist/
+/bin/
+/Release/
+
+# Visual Studio
+/.vs/
+*.vcxproj.user
+*.suo
+
+# CMake
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+
+# OS generated
+Thumbs.db
+.DS_Store
+
+# Signing / certificates
+*.pfx
+*.p12
+*.pem
+*.key
+*.jks
+*.keystore
+NomadCert.cer
+
+# Model / ML artifacts (private)
+*.onnx
+*.pt
+*.pth
+*.h5
+*.ckpt
+*.bin
+
+# Large assets (use LFS or private repo)
+/NomadAssets/
+/NomadMuse/models/
+
+# Installer outputs
+/dist/installers/
+
+# Logs
+*.log
 # Ignore locally provided ASIO SDK (do not commit proprietary SDK)
 NomadAudio/External/ASIOSDK/
 

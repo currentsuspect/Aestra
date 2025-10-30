@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIPlatformBridge.h"
 #include "../Core/NUIButton.h"
 #include "../Core/NUILabel.h"
@@ -127,18 +128,18 @@ public:
         renderer.fillRect(bounds, bgColor);
 
         // Draw title
-        renderer.drawText("🖱️ Button Hover System Demo",
+        renderer.drawText("ðŸ–±ï¸ Button Hover System Demo",
                          NUIPoint(bounds.width/2 - 100, 15),
                          16, themeManager.getColor("textPrimary"));
 
         // Draw instructions
-        renderer.drawText("✓ Smooth hover effects",
+        renderer.drawText("âœ“ Smooth hover effects",
                          NUIPoint(20, bounds.height - 60),
                          12, themeManager.getColor("textSecondary"));
-        renderer.drawText("✓ No lingering hover states",
+        renderer.drawText("âœ“ No lingering hover states",
                          NUIPoint(20, bounds.height - 45),
                          12, themeManager.getColor("textSecondary"));
-        renderer.drawText("✓ Clean button press feedback",
+        renderer.drawText("âœ“ Clean button press feedback",
                          NUIPoint(20, bounds.height - 30),
                          12, themeManager.getColor("textSecondary"));
 

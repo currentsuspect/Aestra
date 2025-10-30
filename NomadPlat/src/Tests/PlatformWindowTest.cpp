@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "../../include/NomadPlatform.h"
 #include "../../../NomadCore/include/NomadLog.h"
 #include "../../../NomadCore/include/NomadAssert.h"
@@ -26,7 +27,7 @@ bool testPlatformInit() {
     std::cout << "  Processors: " << utils->getProcessorCount() << std::endl;
     std::cout << "  Memory: " << (utils->getSystemMemory() / (1024 * 1024)) << " MB" << std::endl;
 
-    std::cout << "  ✓ Platform initialization tests passed" << std::endl;
+    std::cout << "  âœ“ Platform initialization tests passed" << std::endl;
     return true;
 }
 
@@ -52,7 +53,7 @@ bool testPlatformUtils() {
     std::string clipboardText = utils->getClipboardText();
     TEST_ASSERT(clipboardText == testText, "Clipboard should work");
 
-    std::cout << "  ✓ Platform utilities tests passed" << std::endl;
+    std::cout << "  âœ“ Platform utilities tests passed" << std::endl;
     return true;
 }
 
@@ -102,7 +103,7 @@ bool testWindowCreation() {
     window->destroy();
     delete window;
 
-    std::cout << "  ✓ Window creation tests passed" << std::endl;
+    std::cout << "  âœ“ Window creation tests passed" << std::endl;
     return true;
 }
 
@@ -148,7 +149,7 @@ bool testWindowState() {
     window->destroy();
     delete window;
 
-    std::cout << "  ✓ Window state tests passed" << std::endl;
+    std::cout << "  âœ“ Window state tests passed" << std::endl;
     return true;
 }
 
@@ -208,7 +209,7 @@ bool testEventCallbacks() {
     window->destroy();
     delete window;
 
-    std::cout << "  ✓ Event callback tests passed" << std::endl;
+    std::cout << "  âœ“ Event callback tests passed" << std::endl;
     return true;
 }
 
@@ -236,9 +237,9 @@ int main() {
 
     std::cout << "\n==================================" << std::endl;
     if (allPassed) {
-        std::cout << "  ✓ ALL TESTS PASSED" << std::endl;
+        std::cout << "  âœ“ ALL TESTS PASSED" << std::endl;
     } else {
-        std::cout << "  ✗ SOME TESTS FAILED" << std::endl;
+        std::cout << "  âœ— SOME TESTS FAILED" << std::endl;
     }
     std::cout << "==================================" << std::endl;
 

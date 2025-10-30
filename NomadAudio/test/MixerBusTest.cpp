@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NomadAudio.h"
 #include "MixerBus.h"
 #include <iostream>
@@ -251,14 +252,14 @@ void testMixerBus()
 
     std::cout << "\n=== All Tests Complete ===" << std::endl;
     std::cout << "\nTest Results:" << std::endl;
-    std::cout << "✓ Mixer bus creation" << std::endl;
-    std::cout << "✓ Gain control (0.0 to 2.0)" << std::endl;
-    std::cout << "✓ Pan control (-1.0 to 1.0)" << std::endl;
-    std::cout << "✓ Mute functionality" << std::endl;
-    std::cout << "✓ Solo functionality" << std::endl;
-    std::cout << "✓ Audio routing (3 buses to master)" << std::endl;
-    std::cout << "✓ Thread-safe parameter changes" << std::endl;
-    std::cout << "✓ Constant power panning" << std::endl;
+    std::cout << "âœ“ Mixer bus creation" << std::endl;
+    std::cout << "âœ“ Gain control (0.0 to 2.0)" << std::endl;
+    std::cout << "âœ“ Pan control (-1.0 to 1.0)" << std::endl;
+    std::cout << "âœ“ Mute functionality" << std::endl;
+    std::cout << "âœ“ Solo functionality" << std::endl;
+    std::cout << "âœ“ Audio routing (3 buses to master)" << std::endl;
+    std::cout << "âœ“ Thread-safe parameter changes" << std::endl;
+    std::cout << "âœ“ Constant power panning" << std::endl;
 }
 
 int main()

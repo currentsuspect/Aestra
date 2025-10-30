@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUITextRenderer.h"
 #include <iostream>
 #include <sstream>
@@ -108,7 +109,7 @@ bool NUITextRenderer::initialize() {
     
     createBuffers();
     
-    std::cout << "✓ Text renderer initialized" << std::endl;
+    std::cout << "âœ“ Text renderer initialized" << std::endl;
     return true;
 }
 

@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NomadAudio.h"
 #include <iostream>
 #include <cmath>
@@ -60,7 +61,7 @@ int main() {
         std::cerr << "ERROR: Failed to initialize audio system!\n";
         return 1;
     }
-    std::cout << "✓ Audio system initialized\n\n";
+    std::cout << "âœ“ Audio system initialized\n\n";
 
     // List available devices
     std::cout << "Available Audio Devices:\n";
@@ -104,7 +105,7 @@ int main() {
         std::cerr << "ERROR: Failed to open audio stream!\n";
         return 1;
     }
-    std::cout << "✓ Audio stream opened\n";
+    std::cout << "âœ“ Audio stream opened\n";
     std::cout << "  Latency: " << (manager.getStreamLatency() * 1000.0) << " ms\n\n";
 
     // Start audio stream
@@ -113,7 +114,7 @@ int main() {
         std::cerr << "ERROR: Failed to start audio stream!\n";
         return 1;
     }
-    std::cout << "✓ Audio stream started\n\n";
+    std::cout << "âœ“ Audio stream started\n\n";
 
     // Play sine wave for 3 seconds
     std::cout << "Playing 440 Hz sine wave for 3 seconds...\n";
@@ -124,7 +125,7 @@ int main() {
     // Stop audio stream
     std::cout << "Stopping audio stream...\n";
     manager.stopStream();
-    std::cout << "✓ Audio stream stopped\n\n";
+    std::cout << "âœ“ Audio stream stopped\n\n";
 
     // Cleanup
     manager.closeStream();

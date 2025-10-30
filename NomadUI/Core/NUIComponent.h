@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "NUITypes.h"
@@ -32,7 +33,7 @@ enum class NUILayer {
  * - Event-driven architecture
  * - Composable hierarchy
  * 
- * ⚠️ CRITICAL COORDINATE SYSTEM WARNING:
+ * âš ï¸ CRITICAL COORDINATE SYSTEM WARNING:
  * NomadUI uses ABSOLUTE screen coordinates for all components.
  * Child components are NOT automatically positioned relative to their parent.
  * 

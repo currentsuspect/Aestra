@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIFont.h"
 #include <iostream>
 #include <cstring>
@@ -95,7 +96,7 @@ bool NUIFont::loadFromFile(const std::string& filepath, int fontSize) {
     filepath_ = filepath;
     setSize(fontSize);
     
-    std::cout << "✓ Font loaded: " << filepath << " (" << fontSize << "px)" << std::endl;
+    std::cout << "âœ“ Font loaded: " << filepath << " (" << fontSize << "px)" << std::endl;
     return true;
 }
 
@@ -115,7 +116,7 @@ bool NUIFont::loadFromMemory(const uint8_t* data, size_t size, int fontSize) {
     filepath_ = "[memory]";
     setSize(fontSize);
     
-    std::cout << "✓ Font loaded from memory (" << fontSize << "px)" << std::endl;
+    std::cout << "âœ“ Font loaded from memory (" << fontSize << "px)" << std::endl;
     return true;
 }
 
@@ -214,7 +215,7 @@ void NUIFont::cacheASCII() {
         }
     }
     
-    std::cout << "✓ Cached " << cached << " ASCII glyphs" << std::endl;
+    std::cout << "âœ“ Cached " << cached << " ASCII glyphs" << std::endl;
 }
 
 void NUIFont::clearCache() {

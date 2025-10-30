@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * Minimal Test - Verify Core Classes Compile
  * 
@@ -69,7 +70,7 @@ void testTypes() {
     NUIColor c2 = c1.withAlpha(0.5f);
     assert(c2.a == 0.5f);
     
-    std::cout << "  ✓ NUITypes tests passed" << std::endl;
+    std::cout << "  âœ“ NUITypes tests passed" << std::endl;
 }
 
 void testComponent() {
@@ -120,7 +121,7 @@ void testComponent() {
     comp->setDirty(true);
     assert(comp->isDirty());
     
-    std::cout << "  ✓ NUIComponent tests passed" << std::endl;
+    std::cout << "  âœ“ NUIComponent tests passed" << std::endl;
 }
 
 void testTheme() {
@@ -157,7 +158,7 @@ void testTheme() {
     auto custom = theme->getColor("custom");
     assert(custom.r > 0.0f || custom.g > 0.0f || custom.b > 0.0f);
     
-    std::cout << "  ✓ NUITheme tests passed" << std::endl;
+    std::cout << "  âœ“ NUITheme tests passed" << std::endl;
 }
 
 void testComponentHierarchy() {
@@ -196,7 +197,7 @@ void testComponentHierarchy() {
     assert(global.x == 120.0f);
     assert(global.y == 120.0f);
     
-    std::cout << "  ✓ Component Hierarchy tests passed" << std::endl;
+    std::cout << "  âœ“ Component Hierarchy tests passed" << std::endl;
 }
 
 void testEvents() {
@@ -224,7 +225,7 @@ void testEvents() {
     comp->setFocused(true);
     assert(comp->isFocused());
     
-    std::cout << "  ✓ Event System tests passed" << std::endl;
+    std::cout << "  âœ“ Event System tests passed" << std::endl;
 }
 
 void testThemeInheritance() {
@@ -242,7 +243,7 @@ void testThemeInheritance() {
     assert(child->getTheme() != nullptr);
     assert(child->getTheme() == theme);
     
-    std::cout << "  ✓ Theme Inheritance tests passed" << std::endl;
+    std::cout << "  âœ“ Theme Inheritance tests passed" << std::endl;
 }
 
 // ============================================================================
@@ -265,7 +266,7 @@ int main() {
         
         std::cout << std::endl;
         std::cout << "========================================" << std::endl;
-        std::cout << "  ✅ ALL TESTS PASSED!" << std::endl;
+        std::cout << "  âœ… ALL TESTS PASSED!" << std::endl;
         std::cout << "========================================" << std::endl;
         std::cout << std::endl;
         std::cout << "Core classes are working correctly." << std::endl;
@@ -275,7 +276,7 @@ int main() {
     }
     catch (const std::exception& e) {
         std::cerr << std::endl;
-        std::cerr << "❌ TEST FAILED: " << e.what() << std::endl;
+        std::cerr << "âŒ TEST FAILED: " << e.what() << std::endl;
         return 1;
     }
 }

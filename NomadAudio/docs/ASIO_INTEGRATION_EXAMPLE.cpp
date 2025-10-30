@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 // Example: How to integrate ASIO detection into AudioSettingsDialog
 // Add this to AudioSettingsDialog.cpp
 
@@ -22,7 +23,7 @@ void AudioSettingsDialog::updateDriverInfo() {
     if (!drivers.empty()) {
         std::cout << "Detected ASIO Drivers:" << std::endl;
         for (const auto& driver : drivers) {
-            std::cout << "  • " << driver.name << std::endl;
+            std::cout << "  â€¢ " << driver.name << std::endl;
             std::cout << "    CLSID: " << driver.clsid << std::endl;
             if (!driver.description.empty() && driver.description != driver.name) {
                 std::cout << "    Description: " << driver.description << std::endl;
@@ -45,43 +46,43 @@ void AudioSettingsDialog::updateDriverInfo() {
 /*
 
 Audio Settings Dialog
-┌─────────────────────────────────────────────────┐
-│                                                 │
-│  Driver Selection:                              │
-│  ┌─────────────────────────────────────┐        │
-│  │ ▼ WASAPI Exclusive (Recommended)    │        │
-│  └─────────────────────────────────────┘        │
-│     • WASAPI Exclusive                          │
-│     • WASAPI Shared                             │
-│     • DirectSound (Legacy)                      │
-│                                                 │
-│  Current Status:                                │
-│  ┌─────────────────────────────────────────┐   │
-│  │ Active: WASAPI Exclusive                 │   │
-│  │ Device: Speakers (Realtek High Def)     │   │
-│  │ Sample Rate: 48000 Hz                   │   │
-│  │ Buffer Size: 256 frames (5.33ms)        │   │
-│  │ Latency: 6.2ms (measured)               │   │
-│  │ CPU Load: 3.4%                           │   │
-│  └─────────────────────────────────────────┘   │
-│                                                 │
-│  ASIO Information:                              │
-│  ┌─────────────────────────────────────────┐   │
-│  │ ℹ️ ASIO drivers detected:                │   │
-│  │   • ASIO4ALL v2                          │   │
-│  │   • FL Studio ASIO                       │   │
-│  │                                          │   │
-│  │ NOMAD uses WASAPI Exclusive mode for    │   │
-│  │ professional low-latency audio (3-5ms). │   │
-│  │                                          │   │
-│  │ Your ASIO devices will work through     │   │
-│  │ their WASAPI endpoints automatically.   │   │
-│  └─────────────────────────────────────────┘   │
-│                                                 │
-│  Buffer Size: [128] [256] [512] [1024] frames  │
-│                                                 │
-│  [Apply] [OK] [Cancel]                          │
-└─────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                                                 â”‚
+â”‚  Driver Selection:                              â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”        â”‚
+â”‚  â”‚ â–¼ WASAPI Exclusive (Recommended)    â”‚        â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜        â”‚
+â”‚     â€¢ WASAPI Exclusive                          â”‚
+â”‚     â€¢ WASAPI Shared                             â”‚
+â”‚     â€¢ DirectSound (Legacy)                      â”‚
+â”‚                                                 â”‚
+â”‚  Current Status:                                â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
+â”‚  â”‚ Active: WASAPI Exclusive                 â”‚   â”‚
+â”‚  â”‚ Device: Speakers (Realtek High Def)     â”‚   â”‚
+â”‚  â”‚ Sample Rate: 48000 Hz                   â”‚   â”‚
+â”‚  â”‚ Buffer Size: 256 frames (5.33ms)        â”‚   â”‚
+â”‚  â”‚ Latency: 6.2ms (measured)               â”‚   â”‚
+â”‚  â”‚ CPU Load: 3.4%                           â”‚   â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
+â”‚                                                 â”‚
+â”‚  ASIO Information:                              â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
+â”‚  â”‚ â„¹ï¸ ASIO drivers detected:                â”‚   â”‚
+â”‚  â”‚   â€¢ ASIO4ALL v2                          â”‚   â”‚
+â”‚  â”‚   â€¢ FL Studio ASIO                       â”‚   â”‚
+â”‚  â”‚                                          â”‚   â”‚
+â”‚  â”‚ NOMAD uses WASAPI Exclusive mode for    â”‚   â”‚
+â”‚  â”‚ professional low-latency audio (3-5ms). â”‚   â”‚
+â”‚  â”‚                                          â”‚   â”‚
+â”‚  â”‚ Your ASIO devices will work through     â”‚   â”‚
+â”‚  â”‚ their WASAPI endpoints automatically.   â”‚   â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
+â”‚                                                 â”‚
+â”‚  Buffer Size: [128] [256] [512] [1024] frames  â”‚
+â”‚                                                 â”‚
+â”‚  [Apply] [OK] [Cancel]                          â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 
 */
 
@@ -122,11 +123,11 @@ void AudioSettingsDialog::showWASAPIExplanation() {
     std::string explanation = 
         "WASAPI (Windows Audio Session API)\n\n"
         "WASAPI Exclusive mode provides:\n"
-        "  • 3-5ms latency (same as ASIO)\n"
-        "  • Direct hardware access\n"
-        "  • No external drivers needed\n"
-        "  • Built into Windows\n"
-        "  • 100% stable and compatible\n\n"
+        "  â€¢ 3-5ms latency (same as ASIO)\n"
+        "  â€¢ Direct hardware access\n"
+        "  â€¢ No external drivers needed\n"
+        "  â€¢ Built into Windows\n"
+        "  â€¢ 100% stable and compatible\n\n"
         "Your ASIO-compatible audio interface will work perfectly "
         "with NOMAD through its WASAPI endpoint.";
     
@@ -149,7 +150,7 @@ void AudioDeviceManager::initialize() {
         auto drivers = ASIODriverScanner::scanInstalledDrivers();
         std::cout << "Found " << drivers.size() << " ASIO driver(s):" << std::endl;
         for (const auto& driver : drivers) {
-            std::cout << "  • " << driver.name << std::endl;
+            std::cout << "  â€¢ " << driver.name << std::endl;
         }
         std::cout << "\nNOMAD will use WASAPI for equivalent performance.\n" << std::endl;
     } else {
