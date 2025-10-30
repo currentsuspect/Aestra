@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioVisualizer.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
@@ -251,7 +252,7 @@ void AudioVisualizer::renderWaveform(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
     float centerY = bounds.y + bounds.height / 2.0f;
     
-    // Liminal Dark v2.0 background gradient - top: #121214 → bottom: #18181b
+    // Liminal Dark v2.0 background gradient - top: #121214 â†’ bottom: #18181b
     NUIColor topColor = backgroundColor_;  // #121214 - Deep charcoal
     NUIColor bottomColor = NUIColor(0.094f, 0.094f, 0.106f, 1.0f);  // #18181b - Slightly lighter
     
@@ -279,7 +280,7 @@ void AudioVisualizer::renderWaveform(NUIRenderer& renderer) {
     
     // Liminal Dark v2.0 waveform gradient - cyan to magenta
     float t = 0.5f + 0.5f * std::sin(animationTime_ * 0.8f);
-    NUIColor waveColor = NUIColor::lerp(primaryColor_, secondaryColor_, t);  // #00bcd4 → #ff4081
+    NUIColor waveColor = NUIColor::lerp(primaryColor_, secondaryColor_, t);  // #00bcd4 â†’ #ff4081
     
     // Energy-based glow intensity (use smoothed RMS for fluid animation)
     float leftRMSSmooth = leftRMSSmoothed_.load();
@@ -604,8 +605,8 @@ void AudioVisualizer::renderCompactMeter(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
     
     // Very slim vertical meters - side by side
-    float meterHeight = bounds.height - 8;
-    float meterWidth = (bounds.width - 8) / 2; // Two very slim meters side by side
+    float meterHeight = bounds.height - 4;  // Less padding since no labels
+    float meterWidth = (bounds.width - 6) / 2; // Two very slim meters side by side
     
     // Use smoothed values for fluid animation
     float leftRMSSmooth = leftRMSSmoothed_.load();
@@ -614,16 +615,14 @@ void AudioVisualizer::renderCompactMeter(NUIRenderer& renderer) {
     float rightPeakHold = rightPeakHold_.load(); // Use peak hold, not smoothed peak
     
     // Left channel meter (very slim) - CYAN
-    NUIRect leftMeter(bounds.x + 2, bounds.y + 4, meterWidth, meterHeight);
+    NUIRect leftMeter(bounds.x + 2, bounds.y + 2, meterWidth, meterHeight);
     renderLevelBar(renderer, leftMeter, leftRMSSmooth, leftPeakHold, primaryColor_);
     
     // Right channel meter (very slim) - MAGENTA
-    NUIRect rightMeter(bounds.x + 4 + meterWidth, bounds.y + 4, meterWidth, meterHeight);
+    NUIRect rightMeter(bounds.x + 4 + meterWidth, bounds.y + 2, meterWidth, meterHeight);
     renderLevelBar(renderer, rightMeter, rightRMSSmooth, rightPeakHold, secondaryColor_);
     
-    // Add small channel labels
-    renderer.drawText("L", NUIPoint(leftMeter.x + leftMeter.width / 2 - 3, bounds.y + 1), 8, textColor_.withAlpha(0.8f));
-    renderer.drawText("R", NUIPoint(rightMeter.x + rightMeter.width / 2 - 3, bounds.y + 1), 8, textColor_.withAlpha(0.8f));
+    // NOTE: Removed L/R text labels for cleaner look
     
     // Add peak indicators with proper scaling
     if (showPeakHold_) {

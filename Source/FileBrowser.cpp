@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "FileBrowser.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
@@ -336,22 +337,8 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                     }
                 }
                 
-                // Double click to open
-                static auto lastClickTime = std::chrono::steady_clock::now();
-                auto now = std::chrono::steady_clock::now();
-                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastClickTime);
+                // Double-click removed - use Enter key to load files
                 
-                if (duration.count() < 500) { // 500ms double click threshold
-                    if (selectedFile_->isDirectory) {
-                        navigateTo(selectedFile_->path);
-                    } else {
-                        if (onFileOpened_) {
-                            onFileOpened_(*selectedFile_);
-                        }
-                    }
-                }
-                
-                lastClickTime = now;
                 setDirty(true);
                 return true;
             }
@@ -407,6 +394,19 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
                     }
                 }
                 setDirty(true);
+                return true;
+            }
+            break;
+            
+        case NUIKeyCode::Left:
+            // Navigate up one directory level
+            navigateUp();
+            return true;
+            
+        case NUIKeyCode::Right:
+            // Navigate into selected folder (if it's a directory)
+            if (selectedFile_ && selectedFile_->isDirectory) {
+                navigateTo(selectedFile_->path);
                 return true;
             }
             break;
@@ -517,42 +517,77 @@ void FileBrowser::loadDirectoryContents() {
         }
         
         // Iterate through directory contents
-        for (const auto& entry : std::filesystem::directory_iterator(currentDir)) {
-            if (!showHiddenFiles_ && entry.path().filename().string()[0] == '.') {
-                continue;
-            }
-            
-            std::string name = entry.path().filename().string();
-            std::string path = entry.path().string();
-            bool isDir = entry.is_directory();
-            
-            FileType type = FileType::Unknown;
-            size_t size = 0;
-            std::string lastModified;
-            
-            if (isDir) {
-                type = FileType::Folder;
-            } else {
-                std::string extension = entry.path().extension().string();
-                std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+        // CRITICAL: Wrap in try-catch to handle Windows permission errors gracefully
+        try {
+            for (const auto& entry : std::filesystem::directory_iterator(currentDir)) {
+                if (!showHiddenFiles_ && entry.path().filename().string()[0] == '.') {
+                    continue;
+                }
                 
-                type = getFileTypeFromExtension(extension);
-                size = entry.file_size();
+                std::string name = entry.path().filename().string();
+                std::string path = entry.path().string();
+                bool isDir = false;
                 
-                // Get last modified time
-                auto time = std::filesystem::last_write_time(entry);
-                auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-                    time - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
-                auto time_t = std::chrono::system_clock::to_time_t(sctp);
-                std::stringstream ss;
-                ss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M");
-                lastModified = ss.str();
+                // Safely check if directory (can throw on permission errors)
+                try {
+                    isDir = entry.is_directory();
+                } catch (const std::filesystem::filesystem_error&) {
+                    // Skip entries we can't access
+                    continue;
+                }
+                
+                FileType type = FileType::Unknown;
+                size_t size = 0;
+                std::string lastModified;
+                
+                if (isDir) {
+                    type = FileType::Folder;
+                } else {
+                    std::string extension = entry.path().extension().string();
+                    std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+                    
+                    type = getFileTypeFromExtension(extension);
+                    
+                    // Safely get file size (can throw on permission errors)
+                    try {
+                        size = entry.file_size();
+                    } catch (const std::filesystem::filesystem_error&) {
+                        size = 0; // Default to 0 if can't read
+                    }
+                    
+                    // Get last modified time with error handling
+                    try {
+                        auto time = std::filesystem::last_write_time(entry);
+                        auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                            time - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
+                        auto time_t = std::chrono::system_clock::to_time_t(sctp);
+                        std::stringstream ss;
+                        ss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M");
+                        lastModified = ss.str();
+                    } catch (const std::filesystem::filesystem_error&) {
+                        lastModified = "Unknown";
+                    }
+                }
+                
+                files_.emplace_back(name, path, type, isDir, size, lastModified);
             }
-            
-            files_.emplace_back(name, path, type, isDir, size, lastModified);
+        } catch (const std::filesystem::filesystem_error& e) {
+            // Directory iteration itself failed - likely permission denied
+            std::cerr << "Error iterating directory: " << e.what() << std::endl;
+            // Show helpful error message to user
+            if (files_.empty()) {
+                files_.emplace_back("âš ï¸ Access Denied", "", FileType::Unknown, false);
+                files_.emplace_back("Cannot read this directory", "", FileType::Unknown, false);
+            }
         }
         
         sortFiles();
+        
+        // Auto-select first item for keyboard navigation
+        if (!files_.empty()) {
+            selectedIndex_ = 0;
+            selectedFile_ = &files_[0];
+        }
     }
     catch (const std::exception& e) {
         // Handle directory access errors
@@ -851,7 +886,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
         case SortMode::Size: sortText += "Size"; break;
         case SortMode::Modified: sortText += "Modified"; break;
     }
-    sortText += sortAscending_ ? " ↑" : " ↓";
+    sortText += sortAscending_ ? " â†‘" : " â†“";
 
     auto sortTextSize = renderer.measureText(sortText, 12);
     

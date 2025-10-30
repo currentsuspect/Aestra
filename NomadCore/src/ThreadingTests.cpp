@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "../include/NomadThreading.h"
 #include <iostream>
 #include <cassert>
@@ -48,7 +49,7 @@ bool testLockFreeRingBuffer() {
     buffer.pop(value);
     TEST_ASSERT(buffer.available() >= 1, "Should have available space after pop");
 
-    std::cout << "  ✓ LockFreeRingBuffer tests passed" << std::endl;
+    std::cout << "  âœ“ LockFreeRingBuffer tests passed" << std::endl;
     return true;
 }
 
@@ -94,7 +95,7 @@ bool testLockFreeRingBufferThreadSafety() {
     TEST_ASSERT(itemsConsumed == totalItems, "Should consume all items");
     TEST_ASSERT(buffer.isEmpty(), "Buffer should be empty at end");
 
-    std::cout << "  ✓ LockFreeRingBuffer thread safety tests passed" << std::endl;
+    std::cout << "  âœ“ LockFreeRingBuffer thread safety tests passed" << std::endl;
     return true;
 }
 
@@ -132,7 +133,7 @@ bool testThreadPool() {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     TEST_ASSERT(sum == 55, "Sum should be correct (1+2+...+10 = 55)");
 
-    std::cout << "  ✓ ThreadPool tests passed" << std::endl;
+    std::cout << "  âœ“ ThreadPool tests passed" << std::endl;
     return true;
 }
 
@@ -190,7 +191,7 @@ bool testAtomicUtilities() {
 
     TEST_ASSERT(sharedValue == 2000, "SpinLock should protect shared value");
 
-    std::cout << "  ✓ Atomic Utilities tests passed" << std::endl;
+    std::cout << "  âœ“ Atomic Utilities tests passed" << std::endl;
     return true;
 }
 
@@ -210,9 +211,9 @@ int main() {
 
     std::cout << "\n==================================" << std::endl;
     if (allPassed) {
-        std::cout << "  ✓ ALL TESTS PASSED" << std::endl;
+        std::cout << "  âœ“ ALL TESTS PASSED" << std::endl;
     } else {
-        std::cout << "  ✗ SOME TESTS FAILED" << std::endl;
+        std::cout << "  âœ— SOME TESTS FAILED" << std::endl;
     }
     std::cout << "==================================" << std::endl;
 

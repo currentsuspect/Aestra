@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file OscillatorTest.cpp
  * @brief Test application for Oscillator DSP module
@@ -73,7 +74,7 @@ bool validateOutputRange(Oscillator& osc, int numSamples = 1000) {
     bool valid = (minVal >= -1.0f && maxVal <= 1.0f);
     
     std::cout << "  Range: [" << minVal << ", " << maxVal << "] ";
-    std::cout << (valid ? "✓" : "✗") << std::endl;
+    std::cout << (valid ? "âœ“" : "âœ—") << std::endl;
     
     return valid;
 }
@@ -103,7 +104,7 @@ bool testSineWave() {
     }
     
     std::cout << "  Max sample diff: " << maxDiff << " ";
-    std::cout << (maxDiff < 0.2f ? "✓" : "✗") << std::endl;
+    std::cout << (maxDiff < 0.2f ? "âœ“" : "âœ—") << std::endl;
     
     return valid && (maxDiff < 0.2f);
 }
@@ -136,7 +137,7 @@ bool testSawWave() {
     }
     
     std::cout << "  Max discontinuity: " << maxJump << " ";
-    std::cout << (maxJump < 1.5f ? "✓ (anti-aliased)" : "✗ (aliasing detected)") << std::endl;
+    std::cout << (maxJump < 1.5f ? "âœ“ (anti-aliased)" : "âœ— (aliasing detected)") << std::endl;
     
     return valid && (maxJump < 1.5f);
 }
@@ -158,7 +159,7 @@ bool testSquareWave() {
     osc.setPulseWidth(0.25f);
     osc.reset();
     
-    std::cout << "  Pulse width: 0.25 ✓" << std::endl;
+    std::cout << "  Pulse width: 0.25 âœ“" << std::endl;
     
     return valid;
 }
@@ -197,7 +198,7 @@ bool testFrequencyAccuracy() {
         
         std::cout << "  " << freq << " Hz -> " << measuredFreq << " Hz ";
         std::cout << "(error: " << error << "%) ";
-        std::cout << (error < 1.0f ? "✓" : "✗") << std::endl;
+        std::cout << (error < 1.0f ? "âœ“" : "âœ—") << std::endl;
     }
     
     return true;
@@ -247,7 +248,7 @@ void interactiveAudioTest() {
         return;
     }
     
-    std::cout << "\n✓ Audio stream started" << std::endl;
+    std::cout << "\nâœ“ Audio stream started" << std::endl;
     std::cout << "\nControls:" << std::endl;
     std::cout << "  1 - Sine wave" << std::endl;
     std::cout << "  2 - Saw wave" << std::endl;
@@ -288,7 +289,7 @@ void interactiveAudioTest() {
     deviceManager.closeStream();
     g_oscillator = nullptr;
     
-    std::cout << "\n✓ Audio stream stopped" << std::endl;
+    std::cout << "\nâœ“ Audio stream stopped" << std::endl;
 }
 
 int main() {
@@ -306,9 +307,9 @@ int main() {
     
     std::cout << "\n========================================" << std::endl;
     if (allPassed) {
-        std::cout << "✓ All tests passed!" << std::endl;
+        std::cout << "âœ“ All tests passed!" << std::endl;
     } else {
-        std::cout << "✗ Some tests failed" << std::endl;
+        std::cout << "âœ— Some tests failed" << std::endl;
     }
     std::cout << "========================================" << std::endl;
     

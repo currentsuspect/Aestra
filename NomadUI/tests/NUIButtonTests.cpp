@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include <gtest/gtest.h>
 #include "../Core/NUIButton.h"
 #include "../Core/NUIComponent.h"

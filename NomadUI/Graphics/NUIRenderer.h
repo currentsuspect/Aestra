@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "../Core/NUITypes.h"
@@ -223,6 +224,19 @@ public:
      * Delete a texture.
      */
     virtual void deleteTexture(uint32_t textureId) = 0;
+    
+    /**
+     * Optional render-to-texture begin.
+     * Implementations may return a texture id that will contain the rendered content
+     * after renderToTextureEnd() is called. Default implementation returns 0 (not supported).
+     */
+    virtual uint32_t renderToTextureBegin(int width, int height) { (void)width; (void)height; return 0; }
+
+    /**
+     * Optional render-to-texture end.
+     * Returns the texture id (if any) that contains the rendered content.
+     */
+    virtual uint32_t renderToTextureEnd() { return 0; }
     
     // ========================================================================
     // Batching

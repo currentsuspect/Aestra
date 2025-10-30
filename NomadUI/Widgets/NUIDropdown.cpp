@@ -1,8 +1,11 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIDropdown.h"
 #include "../Graphics/NUIRenderer.h"
+#include "../../NomadCore/include/NomadProfiler.h"
 #include "../Core/NUIThemeSystem.h"
 #include "../Core/NUITheme.h"
 #include <algorithm>
+#include <cmath>
 
 namespace NomadUI {
 
@@ -43,17 +46,23 @@ NUIDropdown::~NUIDropdown() {
 void NUIDropdown::addItem(const std::string& text, int value) {
     items_.push_back(std::make_shared<NUIDropdownItem>(text, value));
     setDirty(true);
+    itemWidthCacheValid_ = false;
+    cacheDirty_ = true;
 }
 
 void NUIDropdown::addItem(std::shared_ptr<NUIDropdownItem> item) {
     items_.push_back(item);
     setDirty(true);
+    itemWidthCacheValid_ = false;
+    cacheDirty_ = true;
 }
 
 void NUIDropdown::setItemVisible(int index, bool visible) {
     if (index >= 0 && index < static_cast<int>(items_.size())) {
         items_[index]->setVisible(visible);
         setDirty(true);
+        itemWidthCacheValid_ = false;
+        cacheDirty_ = true;
     }
 }
 
@@ -61,6 +70,8 @@ void NUIDropdown::setItemEnabled(int index, bool enabled) {
     if (index >= 0 && index < static_cast<int>(items_.size())) {
         items_[index]->setEnabled(enabled);
         setDirty(true);
+        itemWidthCacheValid_ = false;
+        cacheDirty_ = true;
     }
 }
 
@@ -68,6 +79,8 @@ void NUIDropdown::clearItems() {
     items_.clear();
     selectedIndex_ = -1;
     setDirty(true);
+    itemWidthCacheValid_ = false;
+    cacheDirty_ = true;
 }
 
 int NUIDropdown::getSelectedValue() const {
@@ -292,6 +305,7 @@ void NUIDropdown::openDropdown() {
     if (onOpen_) onOpen_();
     s_openDropdown = this;
     setDirty(true);
+    cacheDirty_ = true; // regenerate cache when opened
 }
 
 void NUIDropdown::closeDropdown() {
@@ -308,7 +322,7 @@ void NUIDropdown::updateAnimations() {
     dropdownAnimProgress_ += (targetProgress - dropdownAnimProgress_) * 0.15f;
 }
 
-void NUIDropdown::renderDropdownList(NUIRenderer& renderer) {
+void NUIDropdown::renderDropdownListInternal(NUIRenderer& renderer) {
     if (items_.empty()) return;
 
     auto bounds = getBounds();
@@ -320,6 +334,23 @@ void NUIDropdown::renderDropdownList(NUIRenderer& renderer) {
 
     renderer.setOpacity(1.0f);
     renderer.pushTransform(0, 0, 0, 1.0f);
+
+    // Build a simple cache of measured text widths for visible items to avoid repeated expensive measureText() calls.
+    if (!itemWidthCacheValid_) {
+        itemTextWidthCache_.clear();
+        itemTextWidthCache_.reserve(items_.size());
+        float fontSize = 14.0f;
+        if (auto th = getTheme()) fontSize = th->getFontSize("normal");
+        for (const auto& it : items_) {
+            if (it) {
+                float w = static_cast<float>(renderer.measureText(it->getText(), fontSize).width);
+                itemTextWidthCache_.push_back(w);
+            } else {
+                itemTextWidthCache_.push_back(0.0f);
+            }
+        }
+        itemWidthCacheValid_ = true;
+    }
 
     // Draw shadow (darker and larger)
     NUIRect shadowBounds = dropdownBounds;
@@ -359,6 +390,28 @@ void NUIDropdown::renderDropdownList(NUIRenderer& renderer) {
     renderer.popTransform();
 }
 
+void NUIDropdown::renderDropdownList(NUIRenderer& renderer) {
+    if (items_.empty()) return;
+
+    NOMAD_ZONE("Dropdown_RenderList");
+
+    auto bounds = getBounds();
+    float itemHeight = 32.0f;
+    int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
+    float listHeight = itemHeight * visibleItems;
+    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height + 2.0f, bounds.width, listHeight);
+
+    // Try to use cached texture when available
+    if (cachedTextureId_ != 0 && !cacheDirty_) {
+        // Draw cached texture directly
+        renderer.drawTexture(cachedTextureId_, dropdownBounds, NUIRect(0,0,cachedTextureWidth_, cachedTextureHeight_));
+        return;
+    }
+
+    // No automatic cache generation available in this build; render directly.
+    renderDropdownListInternal(renderer);
+}
+
 void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bounds, bool isSelected, bool isHovered) {
     auto item = items_[index];
 
@@ -381,23 +434,32 @@ void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bo
     float fontSize = 14.0f;
     if (auto th = getTheme()) fontSize = th->getFontSize("normal");
 
-    // Truncate text with ellipsis if too long
-    if (textBounds.width > 20.0f && textBounds.height > 0) {
-        float maxWidth = textBounds.width - 10.0f; // Extra safety margin
-        
-        std::string displayText = item->getText();
-        NUISize textSize = renderer.measureText(displayText, fontSize);
-        
-        // If text is too wide, truncate with ellipsis
-        if (textSize.width > maxWidth) {
-            std::string truncated = displayText;
-            while (truncated.length() > 3) {
-                truncated.pop_back();
-                NUISize truncSize = renderer.measureText(truncated + "...", fontSize);
-                if (truncSize.width <= maxWidth) break;
+        // Truncate text with ellipsis if too long. Use cached measured width and a simple heuristic to reduce measureText calls.
+        if (textBounds.width > 20.0f && textBounds.height > 0) {
+            float maxWidth = textBounds.width - 10.0f; // Extra safety margin
+            std::string displayText = item->getText();
+            float measuredFull = 0.0f;
+            if (index >= 0 && index < static_cast<int>(itemTextWidthCache_.size())) measuredFull = itemTextWidthCache_[index];
+            
+            if (measuredFull <= maxWidth) {
+                // full text fits
+            } else {
+                // Estimate average char width and truncate roughly, then refine once
+                float avgChar = measuredFull / std::max(1u, static_cast<unsigned int>(displayText.length()));
+                int allowed = std::max(1, static_cast<int>(maxWidth / avgChar) - 3);
+                if (allowed < 1) allowed = 1;
+                if (allowed < static_cast<int>(displayText.length())) {
+                    displayText = displayText.substr(0, allowed) + "...";
+                }
+                // One refinement measurement
+                NUISize finalSize = renderer.measureText(displayText, fontSize);
+                while (finalSize.width > maxWidth && displayText.length() > 4) {
+                    // chop a few more characters
+                    displayText = displayText.substr(0, displayText.length() - 4);
+                    displayText = displayText + "...";
+                    finalSize = renderer.measureText(displayText, fontSize);
+                }
             }
-            displayText = truncated + "...";
-        }
         
         // Left-aligned text with vertical centering
         float textY = bounds.y + (bounds.height - fontSize) / 2 + fontSize * 0.75f;

@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIButton.h"
 #include "NUITheme.h"
 #include "NUIAnimation.h"
@@ -16,6 +17,14 @@ NUIButton::NUIButton(const std::string& text)
 
 void NUIButton::onRender(NUIRenderer& renderer)
 {
+    // Instrument button rendering cost
+#ifdef NOMAD_ENABLE_PROFILING
+    if (Nomad::Profiler::getInstance().isEnabled()) {
+        if (style_ == Style::Secondary) Nomad::Profiler::getInstance().beginZone("Button_Secondary");
+        else if (style_ == Style::Text) Nomad::Profiler::getInstance().beginZone("Button_Text");
+        else Nomad::Profiler::getInstance().beginZone("Button_Primary");
+    }
+#endif
     auto bounds = getBounds();
     if (bounds.isEmpty()) return;
 
@@ -102,6 +111,14 @@ void NUIButton::onRender(NUIRenderer& renderer)
         
         renderer.drawText(text_, NUIPoint(textX, textY), fontSize, finalTextColor);
     }
+
+#ifdef NOMAD_ENABLE_PROFILING
+    if (Nomad::Profiler::getInstance().isEnabled()) {
+        if (style_ == Style::Secondary) Nomad::Profiler::getInstance().endZone("Button_Secondary");
+        else if (style_ == Style::Text) Nomad::Profiler::getInstance().endZone("Button_Text");
+        else Nomad::Profiler::getInstance().endZone("Button_Primary");
+    }
+#endif
 }
 
 void NUIButton::onMouseEnter()

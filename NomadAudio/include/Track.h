@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "MixerBus.h"
@@ -19,6 +20,124 @@ enum class TrackState {
     Playing,    // Currently playing
     Paused,     // Playback paused
     Stopped     // Playback stopped
+};
+
+/**
+ * @brief Interpolation quality modes
+ */
+enum class InterpolationQuality {
+    Linear,     // Fast, basic quality (2-point linear)
+    Cubic,      // Good quality (4-point cubic Hermite)
+    Sinc,       // Best quality (8-point windowed sinc)
+    Ultra       // Mastering grade (16-point polyphase sinc)
+};
+
+/**
+ * @brief Resampling mode for sample rate conversion
+ */
+enum class ResamplingMode {
+    Fast,       // Linear interpolation (2-point)
+    Medium,     // Cubic interpolation (4-point)
+    High,       // Windowed sinc (8-point)
+    Ultra,      // Polyphase sinc (16-point, reference grade)
+    Extreme,    // Polyphase sinc (64-point, mastering grade)
+    Perfect     // Polyphase sinc (512-point, FL Studio grade - extreme quality)
+};
+
+/**
+ * @brief Dithering modes
+ */
+enum class DitheringMode {
+    None,           // No dithering
+    Triangular,     // TPDF (Triangular Probability Density Function)
+    HighPass,       // High-pass shaped dither
+    NoiseShaped     // Psychoacoustic noise shaping (pushes noise above hearing range)
+};
+
+/**
+ * @brief Internal processing precision
+ */
+enum class InternalPrecision {
+    Float32,    // 32-bit float (realtime)
+    Float64     // 64-bit double (mastering, reduces rounding errors)
+};
+
+/**
+ * @brief Oversampling modes
+ */
+enum class OversamplingMode {
+    None,       // No oversampling
+    Auto,       // Automatic (enable for nonlinear effects only)
+    Force2x,    // Force 2x oversampling
+    Force4x     // Force 4x oversampling (mastering)
+};
+
+/**
+ * @brief Nomad Mode - Sonic character toggle
+ */
+enum class NomadMode {
+    Off,            // Disabled (bypass all Nomad Mode processing)
+    Transparent,    // Clinical precision, reference-grade (default)
+    Euphoric        // Analog soul: harmonic warmth, smooth transients, rich tails
+};
+
+/**
+ * @brief Quality presets for easy configuration
+ */
+enum class QualityPreset {
+    Custom,         // User-defined settings
+    Economy,        // Low CPU: Linear, no oversampling, 32-bit
+    Balanced,       // Recommended: Cubic, auto oversampling, 32-bit
+    HighFidelity,   // High quality: Sinc, 2x oversampling, noise-shaped dither
+    Mastering       // Maximum: Ultra sinc, 4x oversampling, 64-bit, full processing
+};
+
+/**
+ * @brief Comprehensive audio quality settings
+ */
+struct AudioQualitySettings {
+    // Core Quality
+    ResamplingMode resampling{ResamplingMode::Medium};
+    DitheringMode dithering{DitheringMode::Triangular};
+    InternalPrecision precision{InternalPrecision::Float32};
+    OversamplingMode oversampling{OversamplingMode::None};
+    
+    // Legacy compatibility (maps to resampling)
+    InterpolationQuality interpolation{InterpolationQuality::Cubic};
+    
+    // Processing options
+    bool removeDCOffset{true};          // Remove DC bias from audio
+    bool enableSoftClipping{false};     // Soft-clip protection on output
+    bool autoGainNormalization{false};  // LUFS-based auto gain (future)
+    
+    // Nomad Mode - Sonic Character
+    NomadMode nomadMode{NomadMode::Off};  // Off / Transparent / Euphoric
+    
+    // Euphoria Engine Settings (active when nomadMode == Euphoric)
+    struct EuphoriaSettings {
+        bool tapeCircuit{true};         // Non-linear transient rounding + harmonic bloom
+        bool airEnhancement{true};       // Psychoacoustic stereo widening (mid/side delay)
+        bool driftEffect{false};         // Subtle detune & clock variance (warmth)
+        float harmonicBloom{0.15f};     // Harmonic saturation amount (0.0 - 1.0)
+        float transientSmoothing{0.25f}; // Transient rounding (0.0 - 1.0)
+    } euphoria;
+    
+    // Anti-aliasing filter steepness (for resampling)
+    enum class FilterSteepness { Soft, Medium, Steep } antiAliasingFilter{FilterSteepness::Medium};
+    
+    // Quality preset tracking
+    QualityPreset preset{QualityPreset::Balanced};
+    
+    AudioQualitySettings() = default;
+    
+    // Preset constructors
+    static AudioQualitySettings Economy();
+    static AudioQualitySettings Balanced();
+    static AudioQualitySettings HighFidelity();
+    static AudioQualitySettings Mastering();
+    
+    // Apply preset
+    void applyPreset(QualityPreset preset);
 };
 
 /**
@@ -107,6 +226,10 @@ public:
     // Latency Compensation
     void setLatencyCompensation(double inputLatencyMs, double outputLatencyMs);
     double getLatencyCompensationMs() const { return m_latencyCompensationMs; }
+    
+    // Audio Quality Settings
+    void setQualitySettings(const AudioQualitySettings& settings);
+    const AudioQualitySettings& getQualitySettings() const { return m_qualitySettings; }
 
 private:
     // Track identification
@@ -142,10 +265,40 @@ private:
     
     // Latency compensation (milliseconds)
     double m_latencyCompensationMs{0.0};  // Total input + output latency for recording
+    
+    // Audio quality settings
+    AudioQualitySettings m_qualitySettings;
+    double m_dcOffset{0.0};  // Accumulated DC offset for removal
+    
+    // Dithering state (for noise shaping)
+    float m_ditherHistory[2]{0.0f, 0.0f};  // Per-channel dither history for noise shaping
 
     // Internal audio processing
     void generateSilence(float* buffer, uint32_t numFrames);
     void copyAudioData(float* outputBuffer, uint32_t numFrames);
+    
+    // Interpolation methods
+    float interpolateLinear(const float* data, uint32_t totalSamples, double position, uint32_t channel) const;
+    float interpolateCubic(const float* data, uint32_t totalSamples, double position, uint32_t channel) const;
+    float interpolateSinc(const float* data, uint32_t totalSamples, double position, uint32_t channel) const;
+    float interpolateUltra(const float* data, uint32_t totalSamples, double position, uint32_t channel) const;
+    float interpolateExtreme(const float* data, uint32_t totalSamples, double position, uint32_t channel) const;
+    float interpolatePerfect(const float* data, uint32_t totalSamples, double position, uint32_t channel) const;
+    
+    // Audio quality processing
+    void applyDithering(float* buffer, uint32_t numSamples);
+    void applyTriangularDither(float* buffer, uint32_t numSamples);
+    void applyHighPassDither(float* buffer, uint32_t numSamples);
+    void applyNoiseShapedDither(float* buffer, uint32_t numSamples);
+    void removeDC(float* buffer, uint32_t numSamples);
+    void applySoftClipping(float* buffer, uint32_t numSamples);
+    void applyStereoWidth(float* buffer, uint32_t numFrames, float widthPercent);
+    
+    // Euphoria Engine (Nomad Mode signature processing)
+    void applyEuphoriaEngine(float* buffer, uint32_t numFrames);
+    void applyTapeCircuit(float* buffer, uint32_t numSamples, float bloomAmount, float smoothing);
+    void applyAir(float* buffer, uint32_t numFrames);
+    void applyDrift(float* buffer, uint32_t numFrames);
 };
 
 } // namespace Audio

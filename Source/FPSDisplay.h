@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "../NomadUI/Core/NUIComponent.h"
@@ -15,7 +16,7 @@ class FPSDisplay : public NomadUI::NUIComponent {
 public:
     FPSDisplay(NomadUI::NUIAdaptiveFPS* adaptiveFPS) 
         : m_adaptiveFPS(adaptiveFPS)
-        , m_visible(true)
+        , m_visible(false)  // Changed from true to false - FPS debug off by default
     {
         // Position in top-right corner
         setBounds(NomadUI::NUIRect(0, 0, 320, 120));
@@ -41,9 +42,11 @@ public:
         float textY = bounds.y + 10;
         float lineHeight = 18.0f;
 
-        // Title
+        // Title with proper baseline alignment
         NomadUI::NUIColor titleColor(0.4f, 0.8f, 1.0f, 1.0f); // Light blue
-        renderer.drawText("ADAPTIVE FPS MONITOR", NomadUI::NUIPoint(textX, textY), 14.0f, titleColor);
+        float titleFontSize = 14.0f;
+        float titleY = textY + titleFontSize * 0.75f; // Proper baseline offset
+        renderer.drawText("ADAPTIVE FPS MONITOR", NomadUI::NUIPoint(textX, titleY), titleFontSize, titleColor);
         textY += lineHeight + 5;
 
         // FPS info

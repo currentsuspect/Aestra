@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * Button and Label Demo - Test basic NomadUI components
  * Demonstrates NUIButton and NUILabel functionality
@@ -82,7 +83,7 @@ public:
         addChild(textButton);
 
         // === ICON STYLE BUTTONS ===
-        iconButton = std::make_shared<NUIButton>("●");
+        iconButton = std::make_shared<NUIButton>("â—");
         iconButton->setStyle(NUIButton::Style::Icon);
         iconButton->setBackgroundColor(NUIColor::fromHex(0xffE91E63));
         iconButton->setTextColor(NUIColor::fromHex(0xffffffff));

@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "../include/NomadMath.h"
 #include <cassert>
 #include <cmath>
@@ -50,7 +51,7 @@ bool testVector2() {
     Vector2 v6 = v1.normalized();
     TEST_ASSERT(FLOAT_EQUAL(v6.length(), 1.0f), "Vector2 normalization");
 
-    std::cout << "  ✓ Vector2 tests passed" << std::endl;
+    std::cout << "  âœ“ Vector2 tests passed" << std::endl;
     return true;
 }
 
@@ -89,7 +90,7 @@ bool testVector3() {
     Vector3 v7 = v6.normalized();
     TEST_ASSERT(FLOAT_EQUAL(v7.length(), 1.0f), "Vector3 normalization");
 
-    std::cout << "  ✓ Vector3 tests passed" << std::endl;
+    std::cout << "  âœ“ Vector3 tests passed" << std::endl;
     return true;
 }
 
@@ -117,7 +118,7 @@ bool testVector4() {
     float len = v4.length();
     TEST_ASSERT(FLOAT_EQUAL(len, 3.0f), "Vector4 length");
 
-    std::cout << "  ✓ Vector4 tests passed" << std::endl;
+    std::cout << "  âœ“ Vector4 tests passed" << std::endl;
     return true;
 }
 
@@ -151,7 +152,7 @@ bool testMatrix4x4() {
     TEST_ASSERT(result.m[0] == 2.0f && result.m[5] == 3.0f && result.m[10] == 4.0f, 
                 "Matrix4x4 multiplication");
 
-    std::cout << "  ✓ Matrix4x4 tests passed" << std::endl;
+    std::cout << "  âœ“ Matrix4x4 tests passed" << std::endl;
     return true;
 }
 
@@ -185,7 +186,7 @@ bool testDSPMath() {
     float db = gainToDb(1.0f);
     TEST_ASSERT(FLOAT_EQUAL(db, 0.0f), "gainToDb unity");
 
-    std::cout << "  ✓ DSP Math tests passed" << std::endl;
+    std::cout << "  âœ“ DSP Math tests passed" << std::endl;
     return true;
 }
 
@@ -206,9 +207,9 @@ int main() {
 
     std::cout << "\n==================================" << std::endl;
     if (allPassed) {
-        std::cout << "  ✓ ALL TESTS PASSED" << std::endl;
+        std::cout << "  âœ“ ALL TESTS PASSED" << std::endl;
     } else {
-        std::cout << "  ✗ SOME TESTS FAILED" << std::endl;
+        std::cout << "  âœ— SOME TESTS FAILED" << std::endl;
     }
     std::cout << "==================================" << std::endl;
 

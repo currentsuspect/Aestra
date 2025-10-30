@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "TrackUIComponent.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
@@ -53,7 +54,7 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track)
 
     // Create record button
     m_recordButton = std::make_shared<NomadUI::NUIButton>();
-    m_recordButton->setText("●");
+    m_recordButton->setText("â—");
     m_recordButton->setStyle(NomadUI::NUIButton::Style::Icon); // Keep Icon style for record circle
     m_recordButton->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f)); // Dull grey hover
     m_recordButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
@@ -88,6 +89,12 @@ void TrackUIComponent::onMuteToggled() {
     if (m_track) {
         bool newMute = !m_track->isMuted();
         m_track->setMute(newMute);
+        
+        // If muting, auto-disable solo (mute takes priority)
+        if (newMute && m_track->isSoloed()) {
+            m_track->setSolo(false);
+        }
+        
         updateUI();
         Log::info("Track " + m_track->getName() + " mute: " + (newMute ? "ON" : "OFF"));
     }
@@ -97,6 +104,12 @@ void TrackUIComponent::onSoloToggled() {
     if (m_track) {
         bool newSolo = !m_track->isSoloed();
         m_track->setSolo(newSolo);
+        
+        // If soloing, auto-disable mute (solo takes priority)
+        if (newSolo && m_track->isMuted()) {
+            m_track->setMute(false);
+        }
+        
         updateUI();
         Log::info("Track " + m_track->getName() + " solo: " + (newSolo ? "ON" : "OFF"));
     }
@@ -497,8 +510,8 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
         
         // CRITICAL: Add generous padding for off-screen culling to prevent visible clipping
         // Samples will render beyond screen edges to ensure smooth scrolling experience
-        float cullPaddingLeft = 200.0f;   // Start rendering 200px before visible area
-        float cullPaddingRight = 200.0f;  // Stop rendering 200px after visible area
+        float cullPaddingLeft = 400.0f;   // Start rendering 400px before visible area (increased from 200px)
+        float cullPaddingRight = 400.0f;  // Stop rendering 400px after visible area (increased from 200px)
         
         // Check if waveform intersects with visible area (with culling padding)
         if (waveformStartX + waveformWidthInPixels > gridStartX - cullPaddingLeft && 
@@ -553,6 +566,26 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
                 drawWaveform(renderer, waveformBounds, offsetRatio, visibleRatio);
             }
         }
+    }
+
+    // Apply greyscale overlay to playlist area for muted tracks (Bug #8: Mute/Solo Visual Feedback)
+    if (m_track && m_track->isMuted()) {
+        // Determine playlist area bounds (right side, after control area)
+        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        const auto& layout = themeManager.getLayoutDimensions();
+        float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
+        float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
+        
+        NomadUI::NUIRect playlistArea(
+            bounds.x + controlAreaWidth,
+            bounds.y,
+            bounds.width - controlAreaWidth,
+            bounds.height
+        );
+        
+        // Semi-transparent dark grey overlay to indicate muted state
+        NomadUI::NUIColor muteOverlay = NomadUI::NUIColor(0.0f, 0.0f, 0.0f, 0.4f);
+        renderer.fillRect(playlistArea, muteOverlay);
     }
 
     // Render child components (controls only - name label and buttons)

@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIScrollbar.h"
 #include "../Graphics/NUIRenderer.h"
 #include <algorithm>
@@ -18,6 +19,48 @@ NUIScrollbar::NUIScrollbar(Orientation orientation)
     setSize(orientation == Orientation::Vertical ? 16 : 200, 
             orientation == Orientation::Vertical ? 200 : 16);
     updateThumbSize();
+    
+    // Create SVG arrow icons based on orientation (Bug #11: Scrollbar Icons)
+    // CRITICAL: Horizontal scrollbars need left/right arrows, vertical need up/down arrows
+    if (orientation == Orientation::Vertical) {
+        // Vertical scrollbar: up arrow (top), down arrow (bottom)
+        const char* upArrowSvg = R"(
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M7 14l5-5 5 5z"/>
+            </svg>
+        )";
+        upArrowIcon_ = std::make_shared<NUIIcon>(upArrowSvg);
+        upArrowIcon_->setIconSize(NUIIconSize::Medium);  // 24px for better visibility
+        upArrowIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));  // Bright white
+        
+        const char* downArrowSvg = R"(
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M7 10l5 5 5-5z"/>
+            </svg>
+        )";
+        downArrowIcon_ = std::make_shared<NUIIcon>(downArrowSvg);
+        downArrowIcon_->setIconSize(NUIIconSize::Medium);  // 24px for better visibility
+        downArrowIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));  // Bright white
+    } else {
+        // Horizontal scrollbar: left arrow (left side), right arrow (right side)
+        const char* leftArrowSvg = R"(
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M14 7l-5 5 5 5z"/>
+            </svg>
+        )";
+        upArrowIcon_ = std::make_shared<NUIIcon>(leftArrowSvg);  // upArrowIcon_ = left for horizontal
+        upArrowIcon_->setIconSize(NUIIconSize::Medium);  // 24px for better visibility
+        upArrowIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));  // Bright white
+        
+        const char* rightArrowSvg = R"(
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 7l5 5-5 5z"/>
+            </svg>
+        )";
+        downArrowIcon_ = std::make_shared<NUIIcon>(rightArrowSvg);  // downArrowIcon_ = right for horizontal
+        downArrowIcon_->setIconSize(NUIIconSize::Medium);  // 24px for better visibility
+        downArrowIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));  // Bright white
+    }
 }
 
 void NUIScrollbar::onRender(NUIRenderer& renderer)
@@ -380,9 +423,12 @@ void NUIScrollbar::drawLeftArrow(NUIRenderer& renderer)
     // Draw arrow background
     renderer.fillRoundedRect(arrowRect, borderRadius_, arrowColor.withAlpha(0.3f));
     
-    // Draw arrow icon - left arrow points left for horizontal, up for vertical
-    float rotation = orientation_ == Orientation::Vertical ? -90.0f : 180.0f;
-    drawArrowIcon(renderer, arrowRect, rotation, arrowColor);
+    // Draw SVG arrow icon instead of geometric shapes (Bug #11: Scrollbar Icons)
+    if (upArrowIcon_) {
+        upArrowIcon_->setColor(arrowColor);
+        upArrowIcon_->setBounds(arrowRect);
+        upArrowIcon_->onRender(renderer);
+    }
 }
 
 void NUIScrollbar::drawRightArrow(NUIRenderer& renderer)
@@ -403,9 +449,12 @@ void NUIScrollbar::drawRightArrow(NUIRenderer& renderer)
     // Draw arrow background
     renderer.fillRoundedRect(arrowRect, borderRadius_, arrowColor.withAlpha(0.3f));
     
-    // Draw arrow icon - right arrow points right for horizontal, down for vertical
-    float rotation = orientation_ == Orientation::Vertical ? 90.0f : 0.0f;
-    drawArrowIcon(renderer, arrowRect, rotation, arrowColor);
+    // Draw SVG arrow icon instead of geometric shapes (Bug #11: Scrollbar Icons)
+    if (downArrowIcon_) {
+        downArrowIcon_->setColor(arrowColor);
+        downArrowIcon_->setBounds(arrowRect);
+        downArrowIcon_->onRender(renderer);
+    }
 }
 
 NUIScrollbar::Part NUIScrollbar::getPartAtPosition(const NUIPoint& position) const

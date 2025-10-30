@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUITextRendererSDF.h"
 #include "../External/glad/include/glad/glad.h"
 #include <iostream>
@@ -93,7 +94,7 @@ bool NUITextRendererSDF::initialize() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     initialized_ = true;
-    std::cout << "✓ SDF Text Renderer initialized" << std::endl;
+    std::cout << "âœ“ SDF Text Renderer initialized" << std::endl;
     return true;
 }
 

@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NomadAudio.h"
 #include <iostream>
 #include <cmath>
@@ -70,11 +71,11 @@ bool testDeviceEnumeration(AudioDeviceManager& manager) {
     
     auto devices = manager.getDevices();
     if (devices.empty()) {
-        std::cerr << "✗ FAILED: No audio devices found!\n";
+        std::cerr << "âœ— FAILED: No audio devices found!\n";
         return false;
     }
     
-    std::cout << "✓ Found " << devices.size() << " audio device(s)\n\n";
+    std::cout << "âœ“ Found " << devices.size() << " audio device(s)\n\n";
     for (const auto& device : devices) {
         printDeviceInfo(device);
         std::cout << "\n";
@@ -88,15 +89,15 @@ bool testDeviceSelection(AudioDeviceManager& manager) {
     
     auto defaultOutput = manager.getDefaultOutputDevice();
     if (defaultOutput.name.empty()) {
-        std::cerr << "✗ FAILED: No default output device found!\n";
+        std::cerr << "âœ— FAILED: No default output device found!\n";
         return false;
     }
     
-    std::cout << "✓ Default output device: " << defaultOutput.name << "\n";
+    std::cout << "âœ“ Default output device: " << defaultOutput.name << "\n";
     
     auto defaultInput = manager.getDefaultInputDevice();
     if (!defaultInput.name.empty()) {
-        std::cout << "✓ Default input device: " << defaultInput.name << "\n";
+        std::cout << "âœ“ Default input device: " << defaultInput.name << "\n";
     } else {
         std::cout << "  (No default input device available)\n";
     }
@@ -139,12 +140,12 @@ bool testSampleRateConfiguration(AudioDeviceManager& manager, SineWaveData& sine
         std::cout << "  Testing " << rate << " Hz... ";
         
         if (!manager.openStream(config, sineWaveCallback, &sineData)) {
-            std::cerr << "✗ FAILED\n";
+            std::cerr << "âœ— FAILED\n";
             return false;
         }
         
         if (!manager.startStream()) {
-            std::cerr << "✗ FAILED to start\n";
+            std::cerr << "âœ— FAILED to start\n";
             manager.closeStream();
             return false;
         }
@@ -154,7 +155,7 @@ bool testSampleRateConfiguration(AudioDeviceManager& manager, SineWaveData& sine
         manager.stopStream();
         manager.closeStream();
         
-        std::cout << "✓ OK\n";
+        std::cout << "âœ“ OK\n";
     }
     
     return true;
@@ -181,18 +182,18 @@ bool testBufferSizeConfiguration(AudioDeviceManager& manager, SineWaveData& sine
         std::cout << "  Testing buffer size " << bufferSize << " frames... ";
         
         if (!manager.openStream(config, sineWaveCallback, &sineData)) {
-            std::cerr << "✗ FAILED\n";
+            std::cerr << "âœ— FAILED\n";
             return false;
         }
         
         if (!manager.startStream()) {
-            std::cerr << "✗ FAILED to start\n";
+            std::cerr << "âœ— FAILED to start\n";
             manager.closeStream();
             return false;
         }
         
         double latency = manager.getStreamLatency();
-        std::cout << "✓ OK (latency: " << (latency * 1000.0) << " ms)\n";
+        std::cout << "âœ“ OK (latency: " << (latency * 1000.0) << " ms)\n";
         
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
         
@@ -237,47 +238,47 @@ bool testDeviceSwitching(AudioDeviceManager& manager, SineWaveData& sineData) {
     
     std::cout << "  Opening stream on device: " << outputDevices[0].name << "\n";
     if (!manager.openStream(config, sineWaveCallback, &sineData)) {
-        std::cerr << "✗ FAILED to open stream\n";
+        std::cerr << "âœ— FAILED to open stream\n";
         return false;
     }
     
     if (!manager.startStream()) {
-        std::cerr << "✗ FAILED to start stream\n";
+        std::cerr << "âœ— FAILED to start stream\n";
         manager.closeStream();
         return false;
     }
     
-    std::cout << "  ✓ Playing on first device...\n";
+    std::cout << "  âœ“ Playing on first device...\n";
     std::this_thread::sleep_for(std::chrono::seconds(1));
     
     // Switch to second device
     std::cout << "  Switching to device: " << outputDevices[1].name << "\n";
     if (!manager.switchDevice(outputDevices[1].id)) {
-        std::cerr << "✗ FAILED to switch device\n";
+        std::cerr << "âœ— FAILED to switch device\n";
         manager.stopStream();
         manager.closeStream();
         return false;
     }
     
-    std::cout << "  ✓ Playing on second device...\n";
+    std::cout << "  âœ“ Playing on second device...\n";
     std::this_thread::sleep_for(std::chrono::seconds(1));
     
     // Switch back to first device
     std::cout << "  Switching back to device: " << outputDevices[0].name << "\n";
     if (!manager.switchDevice(outputDevices[0].id)) {
-        std::cerr << "✗ FAILED to switch back\n";
+        std::cerr << "âœ— FAILED to switch back\n";
         manager.stopStream();
         manager.closeStream();
         return false;
     }
     
-    std::cout << "  ✓ Playing on first device again...\n";
+    std::cout << "  âœ“ Playing on first device again...\n";
     std::this_thread::sleep_for(std::chrono::seconds(1));
     
     manager.stopStream();
     manager.closeStream();
     
-    std::cout << "✓ Device switching test passed\n";
+    std::cout << "âœ“ Device switching test passed\n";
     return true;
 }
 
@@ -297,12 +298,12 @@ bool testDynamicConfiguration(AudioDeviceManager& manager, SineWaveData& sineDat
     sineData.sampleRate = 48000;
     
     if (!manager.openStream(config, sineWaveCallback, &sineData)) {
-        std::cerr << "✗ FAILED to open stream\n";
+        std::cerr << "âœ— FAILED to open stream\n";
         return false;
     }
     
     if (!manager.startStream()) {
-        std::cerr << "✗ FAILED to start stream\n";
+        std::cerr << "âœ— FAILED to start stream\n";
         manager.closeStream();
         return false;
     }
@@ -313,12 +314,12 @@ bool testDynamicConfiguration(AudioDeviceManager& manager, SineWaveData& sineDat
     // Change buffer size
     std::cout << "  Changing buffer size to 256 frames... ";
     if (!manager.setBufferSize(256)) {
-        std::cerr << "✗ FAILED\n";
+        std::cerr << "âœ— FAILED\n";
         manager.stopStream();
         manager.closeStream();
         return false;
     }
-    std::cout << "✓ OK\n";
+    std::cout << "âœ“ OK\n";
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     
     // Change sample rate (if 44100 is supported)
@@ -333,20 +334,20 @@ bool testDynamicConfiguration(AudioDeviceManager& manager, SineWaveData& sineDat
     if (supports44100) {
         std::cout << "  Changing sample rate to 44100 Hz... ";
         if (!manager.setSampleRate(44100)) {
-            std::cerr << "✗ FAILED\n";
+            std::cerr << "âœ— FAILED\n";
             manager.stopStream();
             manager.closeStream();
             return false;
         }
         sineData.sampleRate = 44100;
-        std::cout << "✓ OK\n";
+        std::cout << "âœ“ OK\n";
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
     
     manager.stopStream();
     manager.closeStream();
     
-    std::cout << "✓ Dynamic configuration test passed\n";
+    std::cout << "âœ“ Dynamic configuration test passed\n";
     return true;
 }
 
@@ -363,10 +364,10 @@ int main() {
     
     std::cout << "\nInitializing audio system...\n";
     if (!manager.initialize()) {
-        std::cerr << "✗ FAILED: Could not initialize audio system!\n";
+        std::cerr << "âœ— FAILED: Could not initialize audio system!\n";
         return 1;
     }
-    std::cout << "✓ Audio system initialized\n";
+    std::cout << "âœ“ Audio system initialized\n";
 
     int failedTests = 0;
     int totalTests = 6;
@@ -388,10 +389,10 @@ int main() {
     std::cout << "=========================================\n";
 
     if (failedTests == 0) {
-        std::cout << "✓ All tests passed!\n";
+        std::cout << "âœ“ All tests passed!\n";
         return 0;
     } else {
-        std::cout << "✗ Some tests failed\n";
+        std::cout << "âœ— Some tests failed\n";
         return 1;
     }
 }

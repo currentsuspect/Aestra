@@ -1,7 +1,9 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "NUIComponent.h"
 #include "NUITypes.h"
+#include "NUIIcon.h"
 #include <functional>
 
 namespace NomadUI {
@@ -211,6 +213,10 @@ private:
     std::function<void(double)> onScrollCallback_;
     std::function<void()> onScrollStartCallback_;
     std::function<void()> onScrollEndCallback_;
+    
+    // SVG Icons for arrow buttons (Bug #11: Scrollbar Icons)
+    std::shared_ptr<NUIIcon> upArrowIcon_;
+    std::shared_ptr<NUIIcon> downArrowIcon_;
 };
 
 } // namespace NomadUI

@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "../External/glad/include/glad/glad.h"  // MUST be first
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "../External/stb_truetype.h"
@@ -45,7 +46,7 @@ bool NUITextRendererSTB::initialize(const std::string& fontPath, float fontSize)
     glBindVertexArray(0);
 
     initialized_ = true;
-    std::cout << "✓ STB Text Renderer initialized with font: " << fontPath << std::endl;
+    std::cout << "âœ“ STB Text Renderer initialized with font: " << fontPath << std::endl;
     return true;
 }
 

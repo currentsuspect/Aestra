@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUISVGParser.h"
 #include "NUIRenderer.h"
 #include "NUISVGCache.h"
@@ -358,7 +359,7 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg, co
     float scaleY = bounds.height / image->height;
     float scale = std::min(scaleX, scaleY);
     
-    // Allocate RGBA buffer (width × height × 4 bytes)
+    // Allocate RGBA buffer (width Ã— height Ã— 4 bytes)
     std::vector<unsigned char> rgba(w * h * 4);
     
     // Create NSVGrasterizer

@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioDeviceManager.h"
 #include "RtAudioBackend.h"
 #include "WASAPIExclusiveDriver.h"
@@ -39,15 +40,15 @@ bool AudioDeviceManager::initialize() {
         bool sharedOk = m_sharedDriver->initialize();
         
         if (exclusiveOk) {
-            std::cout << "✓ WASAPI Exclusive mode available" << std::endl;
+            std::cout << "âœ“ WASAPI Exclusive mode available" << std::endl;
         } else {
-            std::cout << "✗ WASAPI Exclusive mode unavailable" << std::endl;
+            std::cout << "âœ— WASAPI Exclusive mode unavailable" << std::endl;
         }
         
         if (sharedOk) {
-            std::cout << "✓ WASAPI Shared mode available" << std::endl;
+            std::cout << "âœ“ WASAPI Shared mode available" << std::endl;
         } else {
-            std::cout << "✗ WASAPI Shared mode unavailable" << std::endl;
+            std::cout << "âœ— WASAPI Shared mode unavailable" << std::endl;
         }
         
         // Check for ASIO drivers (info only)
@@ -56,7 +57,7 @@ bool AudioDeviceManager::initialize() {
         if (!asioDrivers.empty()) {
             std::cout << "Found " << asioDrivers.size() << " ASIO driver(s):" << std::endl;
             for (const auto& driver : asioDrivers) {
-                std::cout << "  • " << driver.name << std::endl;
+                std::cout << "  â€¢ " << driver.name << std::endl;
             }
             std::cout << "Note: NOMAD uses WASAPI for equivalent low-latency performance.\n" << std::endl;
         } else {
@@ -191,13 +192,13 @@ bool AudioDeviceManager::tryDriver(NativeAudioDriver* driver, const AudioStreamC
     std::cout << "Trying " << driver->getDisplayName() << "..." << std::endl;
     
     if (driver->openStream(config, callback, userData)) {
-        std::cout << "✓ " << driver->getDisplayName() << " opened successfully" << std::endl;
+        std::cout << "âœ“ " << driver->getDisplayName() << " opened successfully" << std::endl;
         std::cout << "  Latency: " << (driver->getStreamLatency() * 1000.0) << "ms" << std::endl;
         m_activeDriver = driver;
         return true;
     }
     
-    std::cout << "✗ " << driver->getDisplayName() << " failed: " 
+    std::cout << "âœ— " << driver->getDisplayName() << " failed: " 
               << driver->getErrorMessage() << std::endl;
     return false;
 }
@@ -246,12 +247,12 @@ bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallba
     
     // 3. Try RtAudio (legacy fallback)
     if (m_rtAudioDriver && m_rtAudioDriver->openStream(config, callback, userData)) {
-        std::cout << "✓ RtAudio backend opened successfully" << std::endl;
+        std::cout << "âœ“ RtAudio backend opened successfully" << std::endl;
         std::cout << "=== Stream Opened with RtAudio ===" << std::endl;
         return true;
     }
     
-    std::cerr << "\n✗ All drivers failed to open stream!" << std::endl;
+    std::cerr << "\nâœ— All drivers failed to open stream!" << std::endl;
     std::cerr << "=== Stream Open Failed ===" << std::endl;
     return false;
 }
@@ -560,19 +561,19 @@ bool AudioDeviceManager::setPreferredDriverType(AudioDriverType type) {
         bool success = openStream(savedConfig, savedCallback, savedUserData);
         
         if (!success) {
-            std::cerr << "✗ Failed to reopen stream with any driver!" << std::endl;
+            std::cerr << "âœ— Failed to reopen stream with any driver!" << std::endl;
             std::cerr << "=== Driver Change Failed ===" << std::endl;
             return false;
         }
         
         if (wasRunning) {
             if (!startStream()) {
-                std::cerr << "✗ Failed to restart stream!" << std::endl;
+                std::cerr << "âœ— Failed to restart stream!" << std::endl;
                 return false;
             }
         }
         
-        std::cout << "✓ Driver changed successfully to: " << (m_activeDriver ? m_activeDriver->getDisplayName() : "Unknown") << std::endl;
+        std::cout << "âœ“ Driver changed successfully to: " << (m_activeDriver ? m_activeDriver->getDisplayName() : "Unknown") << std::endl;
         std::cout << "=== Driver Change Complete ===" << std::endl;
         return true;
     }

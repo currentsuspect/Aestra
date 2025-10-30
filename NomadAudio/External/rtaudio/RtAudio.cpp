@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /************************************************************************/
 /*! \class RtAudio
     \brief Realtime audio i/o C++ classes.
@@ -3828,7 +3829,7 @@ bool RtApiAsio :: probeDeviceOpen( unsigned int deviceId, StreamMode mode, unsig
   if ( result != ASE_OK ) {
     // Standard method failed. This can happen with strict/misbehaving drivers that return valid buffer size ranges
     // but only accept the preferred buffer size as parameter for ASIOCreateBuffers (e.g. Creative's ASIO driver).
-    // In that case, let's be naïve and try that instead.
+    // In that case, let's be naÃ¯ve and try that instead.
     *bufferSize = preferSize;
     stream_.bufferSize = *bufferSize;
     result = ASIOCreateBuffers( handle->bufferInfos, nChannels, stream_.bufferSize, &asioCallbacks );

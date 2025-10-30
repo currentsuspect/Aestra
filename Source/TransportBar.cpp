@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file TransportBar.cpp
  * @brief Transport bar implementation
@@ -201,15 +202,15 @@ void TransportBar::updateButtonStates() {
     if (m_state == TransportState::Playing) {
         m_playButton->setText("||"); // Pause symbol
     } else {
-        m_playButton->setText("▶"); // Play symbol
+        m_playButton->setText("â–¶"); // Play symbol
     }
     
     // Update stop button
-    m_stopButton->setText("■"); // Stop symbol
+    m_stopButton->setText("â– "); // Stop symbol
     m_stopButton->setEnabled(m_state != TransportState::Stopped);
     
     // Update record button
-    m_recordButton->setText("●"); // Record symbol
+    m_recordButton->setText("â—"); // Record symbol
 }
 
 void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {

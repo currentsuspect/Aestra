@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * Simple Window Test - Minimal NomadUI Window Demo
  * Tests basic window creation and OpenGL rendering without text/fonts
@@ -128,8 +129,8 @@ int main() {
         return 1;
     }
     
-    std::cout << "\n✓ Window created successfully!" << std::endl;
-    std::cout << "✓ OpenGL context initialized" << std::endl;
+    std::cout << "\nâœ“ Window created successfully!" << std::endl;
+    std::cout << "âœ“ OpenGL context initialized" << std::endl;
     std::cout << "\nRendering animated colors..." << std::endl;
     std::cout << "Close the window to exit.\n" << std::endl;
     
@@ -153,7 +154,7 @@ int main() {
     }
     
     std::cout << "\n==========================================" << std::endl;
-    std::cout << "  ✓ Test completed successfully!" << std::endl;
+    std::cout << "  âœ“ Test completed successfully!" << std::endl;
     std::cout << "==========================================" << std::endl;
     
     return 0;

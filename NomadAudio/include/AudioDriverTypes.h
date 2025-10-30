@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include <string>
@@ -14,7 +15,7 @@ namespace Audio {
 enum class AudioDriverType : uint8_t {
     // Phase 2-3: ASIO Drivers (lowest latency)
     ASIO_EXTERNAL = 0,      // External ASIO drivers (ASIO4ALL, FL ASIO, Focusrite, etc.)
-    ASIO_NOMAD = 1,         // Nomad's own ASIO wrapper → WASAPI Exclusive
+    ASIO_NOMAD = 1,         // Nomad's own ASIO wrapper â†’ WASAPI Exclusive
     
     // Phase 1: Native Windows Audio
     WASAPI_EXCLUSIVE = 2,   // Exclusive mode - Pro/low-latency

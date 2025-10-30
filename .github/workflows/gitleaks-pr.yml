@@ -1,0 +1,21 @@
+name: PR Secret Scan (gitleaks)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  gitleaks-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run gitleaks
+        uses: zricethezav/gitleaks-action@v2
+        with:
+          args: detect --redact --report-format json --report-path gitleaks-pr-report.json
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-pr-report
+          path: gitleaks-pr-report.json

@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NomadAudio.h"
 #include "AudioProcessor.h"
 #include <iostream>
@@ -8,11 +9,11 @@
 using namespace Nomad::Audio;
 
 /**
- * @brief Test audio callback with lock-free UI→Audio communication
+ * @brief Test audio callback with lock-free UIâ†’Audio communication
  * 
  * This test validates:
  * 1. Audio processing callback works correctly
- * 2. Lock-free command queue for UI→Audio communication
+ * 2. Lock-free command queue for UIâ†’Audio communication
  * 3. Buffer management
  * 4. Real-time performance (<10ms latency)
  */
@@ -57,7 +58,7 @@ int main() {
         std::cerr << "ERROR: Failed to initialize audio system!\n";
         return 1;
     }
-    std::cout << "✓ Audio system initialized\n\n";
+    std::cout << "âœ“ Audio system initialized\n\n";
 
     // Get default output device
     auto defaultDevice = manager.getDefaultOutputDevice();
@@ -100,16 +101,16 @@ int main() {
     }
     
     double latency = manager.getStreamLatency() * 1000.0;
-    std::cout << "✓ Audio stream opened\n";
+    std::cout << "âœ“ Audio stream opened\n";
     std::cout << "  Latency: " << std::fixed << std::setprecision(2) 
               << latency << " ms\n\n";
 
     // Validate latency requirement
     if (latency > 10.0) {
-        std::cout << "⚠ WARNING: Latency exceeds 10ms target!\n";
+        std::cout << "âš  WARNING: Latency exceeds 10ms target!\n";
         std::cout << "  Consider reducing buffer size.\n\n";
     } else {
-        std::cout << "✓ Latency meets <10ms requirement\n\n";
+        std::cout << "âœ“ Latency meets <10ms requirement\n\n";
     }
 
     // Start audio stream
@@ -118,7 +119,7 @@ int main() {
         std::cerr << "ERROR: Failed to start audio stream!\n";
         return 1;
     }
-    std::cout << "✓ Audio stream started\n\n";
+    std::cout << "âœ“ Audio stream started\n\n";
 
     // =============================================================================
     // Test 1: Basic audio callback
@@ -128,13 +129,13 @@ int main() {
     std::cout << "===========================================\n";
     std::cout << "Playing 440 Hz tone for 2 seconds...\n";
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    std::cout << "✓ Basic callback working\n\n";
+    std::cout << "âœ“ Basic callback working\n\n";
 
     // =============================================================================
-    // Test 2: Lock-free UI→Audio communication
+    // Test 2: Lock-free UIâ†’Audio communication
     // =============================================================================
     std::cout << "===========================================\n";
-    std::cout << "Test 2: Lock-Free UI→Audio Communication\n";
+    std::cout << "Test 2: Lock-Free UIâ†’Audio Communication\n";
     std::cout << "===========================================\n";
     
     // Test gain control
@@ -148,7 +149,7 @@ int main() {
     generator.sendCommand(AudioCommandMessage(AudioCommand::SetGain, 1.0f));
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     std::cout << "  Current gain: " << generator.getGain() << "\n";
-    std::cout << "✓ Gain control working\n\n";
+    std::cout << "âœ“ Gain control working\n\n";
     
     // Test pan control
     std::cout << "Testing pan control...\n";
@@ -167,7 +168,7 @@ int main() {
     std::cout << "  Panning center (0.0)...\n";
     generator.sendCommand(AudioCommandMessage(AudioCommand::SetPan, 0.0f));
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    std::cout << "✓ Pan control working\n\n";
+    std::cout << "âœ“ Pan control working\n\n";
     
     // Test mute/unmute
     std::cout << "Testing mute control...\n";
@@ -180,7 +181,7 @@ int main() {
     generator.sendCommand(AudioCommandMessage(AudioCommand::Unmute));
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     std::cout << "  Muted: " << (generator.isMuted() ? "Yes" : "No") << "\n";
-    std::cout << "✓ Mute control working\n\n";
+    std::cout << "âœ“ Mute control working\n\n";
 
     // =============================================================================
     // Test 3: Frequency sweep
@@ -198,7 +199,7 @@ int main() {
     }
     
     generator.setFrequency(440.0);
-    std::cout << "✓ Frequency sweep working\n\n";
+    std::cout << "âœ“ Frequency sweep working\n\n";
 
     // =============================================================================
     // Test 4: Buffer management
@@ -213,7 +214,7 @@ int main() {
     // Allocate test buffer
     float* buffer = bufferManager.allocate(512, 2);
     if (buffer) {
-        std::cout << "✓ Buffer allocation successful\n";
+        std::cout << "âœ“ Buffer allocation successful\n";
         
         // Test buffer clear
         bufferManager.clear();
@@ -224,7 +225,7 @@ int main() {
                 break;
             }
         }
-        std::cout << "✓ Buffer clear working: " << (allZero ? "Yes" : "No") << "\n";
+        std::cout << "âœ“ Buffer clear working: " << (allZero ? "Yes" : "No") << "\n";
     } else {
         std::cerr << "ERROR: Buffer allocation failed!\n";
     }
@@ -253,13 +254,13 @@ int main() {
     
     std::cout << "  Commands sent: 1000\n";
     std::cout << "  Commands queued: " << successCount << "\n";
-    std::cout << "  Time taken: " << duration.count() << " μs\n";
-    std::cout << "  Avg time per command: " << (duration.count() / 1000.0) << " μs\n";
+    std::cout << "  Time taken: " << duration.count() << " Î¼s\n";
+    std::cout << "  Avg time per command: " << (duration.count() / 1000.0) << " Î¼s\n";
     
     if (successCount >= 950) {
-        std::cout << "✓ Command queue handling high load\n";
+        std::cout << "âœ“ Command queue handling high load\n";
     } else {
-        std::cout << "⚠ WARNING: Some commands were dropped\n";
+        std::cout << "âš  WARNING: Some commands were dropped\n";
     }
     std::cout << "\n";
     
@@ -280,9 +281,9 @@ int main() {
               << (config.bufferSize * 1000.0 / config.sampleRate) << " ms\n";
     
     if (manager.getStreamLatency() * 1000.0 < 10.0) {
-        std::cout << "✓ Real-time performance requirement met (<10ms)\n";
+        std::cout << "âœ“ Real-time performance requirement met (<10ms)\n";
     } else {
-        std::cout << "⚠ Real-time performance requirement not met\n";
+        std::cout << "âš  Real-time performance requirement not met\n";
     }
     std::cout << "\n";
 
@@ -291,7 +292,7 @@ int main() {
     manager.stopStream();
     manager.closeStream();
     manager.shutdown();
-    std::cout << "✓ Cleanup complete\n\n";
+    std::cout << "âœ“ Cleanup complete\n\n";
 
     std::cout << "===========================================\n";
     std::cout << "  All tests completed successfully!\n";

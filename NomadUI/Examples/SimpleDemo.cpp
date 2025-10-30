@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * Simple Demo - Nomad UI Framework
  * 
@@ -75,7 +76,7 @@ public:
         
         // Subtitle
         renderer.drawTextCentered(
-            "GPU-Accelerated • Modern • Responsive",
+            "GPU-Accelerated â€¢ Modern â€¢ Responsive",
             NUIRect{panelRect.x, panelRect.y + 60, panelRect.width, 30},
             theme->getFontSizeNormal(),
             theme->getTextSecondary()
@@ -208,18 +209,18 @@ int main(int argc, char** argv) {
         std::cerr << "Failed to initialize application!" << std::endl;
         return 1;
     }
-    std::cout << "✓ Application initialized" << std::endl;
+    std::cout << "âœ“ Application initialized" << std::endl;
     
     // Create theme
     auto theme = NUITheme::createDefault();
-    std::cout << "✓ Theme loaded" << std::endl;
+    std::cout << "âœ“ Theme loaded" << std::endl;
     
     // Create root component
     auto root = std::make_shared<DemoPanel>();
     root->setBounds(0, 0, 1024, 768);
     root->setTheme(theme);
     app.setRootComponent(root);
-    std::cout << "✓ Root component created" << std::endl;
+    std::cout << "âœ“ Root component created" << std::endl;
     
     // Update callback
     app.onUpdate = [&app, root]() {
@@ -238,6 +239,6 @@ int main(int argc, char** argv) {
     std::cout << "Shutting down..." << std::endl;
     app.shutdown();
     
-    std::cout << "✓ Clean exit" << std::endl;
+    std::cout << "âœ“ Clean exit" << std::endl;
     return 0;
 }

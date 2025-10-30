@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file AudioSettingsDialog.cpp
  * @brief Audio settings dialog for NOMAD DAW
@@ -9,6 +10,8 @@
 #include "../NomadCore/include/NomadLog.h"
 #include "../NomadAudio/include/AudioDriverTypes.h"
 #include "../NomadAudio/include/ASIODriverInfo.h"
+#include "../NomadAudio/include/TrackManager.h"
+#include "../NomadAudio/include/Track.h"
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -20,7 +23,7 @@ AudioSettingsDialog::AudioSettingsDialog(Audio::AudioDeviceManager* audioManager
     : m_audioManager(audioManager)
     , m_trackManager(trackManager)
     , m_visible(false)
-    , m_dialogBounds(0, 0, 520, 520)
+    , m_dialogBounds(0, 0, 820, 520)  // Wider for two-column layout, shorter height
     , m_closeButtonHovered(false)
     , m_blinkAnimation(0.0f)
     , m_errorMessage("")
@@ -33,6 +36,7 @@ AudioSettingsDialog::AudioSettingsDialog(Audio::AudioDeviceManager* audioManager
     , m_originalBufferSize(128)
     , m_isPlayingTestSound(false)
     , m_testSoundPhase(0.0)
+    , m_anyDropdownOpen(false)
 {
     createUI();
     loadCurrentSettings();
@@ -91,6 +95,221 @@ void AudioSettingsDialog::createUI() {
         m_selectedBufferSize = static_cast<uint32_t>(value);
     });
     addChild(m_bufferSizeDropdown);
+    
+    // === Audio Quality Settings Section ===
+    m_qualitySectionLabel = std::make_shared<NomadUI::NUILabel>();
+    m_qualitySectionLabel->setText("Audio Quality:");
+    addChild(m_qualitySectionLabel);
+    
+    // Quality Preset dropdown
+    m_qualityPresetLabel = std::make_shared<NomadUI::NUILabel>();
+    m_qualityPresetLabel->setText("Quality Preset:");
+    addChild(m_qualityPresetLabel);
+    
+    m_qualityPresetDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_qualityPresetDropdown->setPlaceholderText("Select Quality Preset");
+    m_qualityPresetDropdown->addItem("Economy (Low CPU)", static_cast<int>(Audio::QualityPreset::Economy));
+    m_qualityPresetDropdown->addItem("Balanced (Recommended)", static_cast<int>(Audio::QualityPreset::Balanced));
+    m_qualityPresetDropdown->addItem("High-Fidelity", static_cast<int>(Audio::QualityPreset::HighFidelity));
+    m_qualityPresetDropdown->addItem("Mastering (Max Quality)", static_cast<int>(Audio::QualityPreset::Mastering));
+    m_qualityPresetDropdown->addItem("Custom", static_cast<int>(Audio::QualityPreset::Custom));
+    m_qualityPresetDropdown->setSelectedIndex(1); // Default to Balanced
+    m_qualityPresetDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        // Auto-configure advanced settings based on preset
+        auto preset = static_cast<Audio::QualityPreset>(value);
+        if (preset != Audio::QualityPreset::Custom) {
+            Audio::AudioQualitySettings settings;
+            settings.applyPreset(preset);
+            
+            // Update UI to match preset
+            m_resamplingDropdown->setSelectedIndex(static_cast<int>(settings.resampling));
+            m_ditheringDropdown->setSelectedIndex(static_cast<int>(settings.dithering));
+            m_dcRemovalToggle->setText(settings.removeDCOffset ? "ON" : "OFF");
+            m_softClippingToggle->setText(settings.enableSoftClipping ? "ON" : "OFF");
+        }
+    });
+    addChild(m_qualityPresetDropdown);
+    
+    // Resampling quality dropdown
+    m_resamplingLabel = std::make_shared<NomadUI::NUILabel>();
+    m_resamplingLabel->setText("Resampling:");
+    addChild(m_resamplingLabel);
+    
+    m_resamplingDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_resamplingDropdown->setPlaceholderText("Select Resampling Mode");
+    m_resamplingDropdown->addItem("Fast (Linear 2pt)", static_cast<int>(Audio::ResamplingMode::Fast));
+    m_resamplingDropdown->addItem("Medium (Cubic 4pt)", static_cast<int>(Audio::ResamplingMode::Medium));
+    m_resamplingDropdown->addItem("High (Sinc 8pt)", static_cast<int>(Audio::ResamplingMode::High));
+    m_resamplingDropdown->addItem("Ultra (Sinc 16pt)", static_cast<int>(Audio::ResamplingMode::Ultra));
+    m_resamplingDropdown->addItem("Extreme (Sinc 64pt)", static_cast<int>(Audio::ResamplingMode::Extreme));
+    m_resamplingDropdown->addItem("Perfect (512pt) âš ï¸ OFFLINE ONLY", static_cast<int>(Audio::ResamplingMode::Perfect));
+    m_resamplingDropdown->setSelectedIndex(1); // Default to Medium
+    m_resamplingDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        // Switch to Custom preset when manually changing settings
+        m_qualityPresetDropdown->setSelectedIndex(4); // Custom
+        
+        // Warn about Perfect mode CPU usage
+        auto mode = static_cast<Audio::ResamplingMode>(value);
+        if (mode == Audio::ResamplingMode::Perfect) {
+            Nomad::Log::warning("âš ï¸ Perfect mode (512pt) is EXTREMELY CPU intensive!");
+            Nomad::Log::warning("   Recommended ONLY for offline rendering/export.");
+            Nomad::Log::warning("   Real-time playback may stutter or drop out.");
+            Nomad::Log::warning("   Use Extreme (64pt) for real-time mastering.");
+        } else if (mode == Audio::ResamplingMode::Extreme) {
+            Nomad::Log::info("âœ“ Extreme mode (64pt) - Mastering grade quality");
+            Nomad::Log::info("  Real-time safe on modern CPUs");
+        }
+    });
+    addChild(m_resamplingDropdown);
+    
+    // Dithering mode dropdown
+    m_ditheringLabel = std::make_shared<NomadUI::NUILabel>();
+    m_ditheringLabel->setText("Dithering:");
+    addChild(m_ditheringLabel);
+    
+    m_ditheringDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_ditheringDropdown->setPlaceholderText("Select Dithering Mode");
+    m_ditheringDropdown->addItem("None", static_cast<int>(Audio::DitheringMode::None));
+    m_ditheringDropdown->addItem("Triangular (TPDF)", static_cast<int>(Audio::DitheringMode::Triangular));
+    m_ditheringDropdown->addItem("High-Pass Shaped", static_cast<int>(Audio::DitheringMode::HighPass));
+    m_ditheringDropdown->addItem("Noise-Shaped (Best)", static_cast<int>(Audio::DitheringMode::NoiseShaped));
+    m_ditheringDropdown->setSelectedIndex(1); // Default to Triangular
+    m_ditheringDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        m_qualityPresetDropdown->setSelectedIndex(4); // Custom
+    });
+    addChild(m_ditheringDropdown);
+    
+    // DC Removal toggle
+    m_dcRemovalLabel = std::make_shared<NomadUI::NUILabel>();
+    m_dcRemovalLabel->setText("DC Removal:");
+    addChild(m_dcRemovalLabel);
+    
+    m_dcRemovalToggle = std::make_shared<NomadUI::NUIButton>();
+    m_dcRemovalToggle->setText("ON");
+    m_dcRemovalToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_dcRemovalToggle->setOnClick([this]() {
+        if (m_dcRemovalToggle->getText() == "ON") {
+            m_dcRemovalToggle->setText("OFF");
+        } else {
+            m_dcRemovalToggle->setText("ON");
+        }
+        m_qualityPresetDropdown->setSelectedIndex(4); // Custom
+    });
+    addChild(m_dcRemovalToggle);
+    
+    // Soft Clipping toggle
+    m_softClippingLabel = std::make_shared<NomadUI::NUILabel>();
+    m_softClippingLabel->setText("Soft Clipping:");
+    addChild(m_softClippingLabel);
+    
+    m_softClippingToggle = std::make_shared<NomadUI::NUIButton>();
+    m_softClippingToggle->setText("OFF");
+    m_softClippingToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_softClippingToggle->setOnClick([this]() {
+        if (m_softClippingToggle->getText() == "ON") {
+            m_softClippingToggle->setText("OFF");
+        } else {
+            m_softClippingToggle->setText("ON");
+        }
+        m_qualityPresetDropdown->setSelectedIndex(4); // Custom
+    });
+    addChild(m_softClippingToggle);
+    
+    // 64-bit Processing toggle
+    m_precision64BitLabel = std::make_shared<NomadUI::NUILabel>();
+    m_precision64BitLabel->setText("64-bit Float:");
+    addChild(m_precision64BitLabel);
+    
+    m_precision64BitToggle = std::make_shared<NomadUI::NUIButton>();
+    m_precision64BitToggle->setText("OFF");
+    m_precision64BitToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_precision64BitToggle->setOnClick([this]() {
+        if (m_precision64BitToggle->getText() == "ON") {
+            m_precision64BitToggle->setText("OFF");
+            Nomad::Log::info("64-bit processing: Disabled (32-bit float)");
+        } else {
+            m_precision64BitToggle->setText("ON");
+            Nomad::Log::info("64-bit processing: Enabled (mastering-grade precision)");
+        }
+        m_qualityPresetDropdown->setSelectedIndex(4); // Custom
+    });
+    addChild(m_precision64BitToggle);
+    
+    // === MULTI-THREADING - Parallel Audio Processing ===
+    m_multiThreadingLabel = std::make_shared<NomadUI::NUILabel>();
+    m_multiThreadingLabel->setText("Multi-Threading:");
+    addChild(m_multiThreadingLabel);
+    
+    m_multiThreadingToggle = std::make_shared<NomadUI::NUIButton>();
+    m_multiThreadingToggle->setText("ON");
+    m_multiThreadingToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_multiThreadingToggle->setOnClick([this]() {
+        if (m_multiThreadingToggle->getText() == "ON") {
+            m_multiThreadingToggle->setText("OFF");
+            Nomad::Log::info("Multi-threading: Disabled (single-threaded processing)");
+        } else {
+            m_multiThreadingToggle->setText("ON");
+            Nomad::Log::info("Multi-threading: Enabled (parallel track processing)");
+        }
+    });
+    addChild(m_multiThreadingToggle);
+    
+    // Thread count dropdown
+    m_threadCountLabel = std::make_shared<NomadUI::NUILabel>();
+    m_threadCountLabel->setText("Thread Count:");
+    addChild(m_threadCountLabel);
+    
+    m_threadCountDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_threadCountDropdown->setPlaceholderText("Select Thread Count");
+    
+    // Detect hardware thread count
+    size_t hwThreads = std::thread::hardware_concurrency();
+    size_t maxThreads = std::max(size_t(2), std::min(size_t(16), hwThreads > 0 ? hwThreads : 8));
+    
+    // Add thread count options (2 to maxThreads)
+    for (size_t i = 2; i <= maxThreads; ++i) {
+        std::string label = std::to_string(i) + " threads";
+        if (i == hwThreads - 1) {
+            label += " (Recommended)";
+        } else if (i == hwThreads) {
+            label += " (All cores)";
+        }
+        m_threadCountDropdown->addItem(label, static_cast<int>(i));
+    }
+    
+    // Select recommended thread count (hardware - 1)
+    size_t recommendedThreads = std::max(size_t(2), hwThreads > 0 ? hwThreads - 1 : 4);
+    m_threadCountDropdown->setSelectedIndex(static_cast<int>(recommendedThreads) - 2); // -2 because we start from 2 threads
+    
+    m_threadCountDropdown->setOnSelectionChanged([](int index, int value, const std::string& text) {
+        Nomad::Log::info("Thread count changed to: " + std::to_string(value));
+    });
+    addChild(m_threadCountDropdown);
+    
+    // === NOMAD MODE - Signature Audio Character ===
+    m_nomadModeLabel = std::make_shared<NomadUI::NUILabel>();
+    m_nomadModeLabel->setText("Nomad Mode:");
+    addChild(m_nomadModeLabel);
+    
+    m_nomadModeDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_nomadModeDropdown->setPlaceholderText("Select Nomad Mode");
+    m_nomadModeDropdown->addItem("Off (Bypass)", static_cast<int>(Audio::NomadMode::Off));
+    m_nomadModeDropdown->addItem("Transparent (Reference)", static_cast<int>(Audio::NomadMode::Transparent));
+    m_nomadModeDropdown->addItem("Euphoric (Analog Soul)", static_cast<int>(Audio::NomadMode::Euphoric));
+    m_nomadModeDropdown->setSelectedIndex(0); // Default to Off
+    m_nomadModeDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        // Nomad Mode is independent of quality presets
+        // Update status message to show what mode we're in
+        auto mode = static_cast<Audio::NomadMode>(value);
+        if (mode == Audio::NomadMode::Euphoric) {
+            Nomad::Log::info("Nomad Mode: Euphoric - Harmonic warmth, smooth transients, rich tails");
+        } else if (mode == Audio::NomadMode::Transparent) {
+            Nomad::Log::info("Nomad Mode: Transparent - Clinical precision, reference-grade");
+        } else {
+            Nomad::Log::info("Nomad Mode: Off - Bypassed");
+        }
+    });
+    addChild(m_nomadModeDropdown);
 
     // Create buttons
     m_applyButton = std::make_shared<NomadUI::NUIButton>();
@@ -167,6 +386,21 @@ void AudioSettingsDialog::setVisible(bool visible) {
 void AudioSettingsDialog::onRender(NomadUI::NUIRenderer& renderer) {
     if (!m_visible) return;
     
+    // FPS Optimization: Check if dropdown state changed (avoids expensive re-renders)
+    bool currentDropdownState = (m_driverDropdown && m_driverDropdown->isOpen()) ||
+                                (m_deviceDropdown && m_deviceDropdown->isOpen()) ||
+                                (m_sampleRateDropdown && m_sampleRateDropdown->isOpen()) ||
+                                (m_bufferSizeDropdown && m_bufferSizeDropdown->isOpen()) ||
+                                (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) ||
+                                (m_resamplingDropdown && m_resamplingDropdown->isOpen()) ||
+                                (m_ditheringDropdown && m_ditheringDropdown->isOpen()) ||
+                                (m_nomadModeDropdown && m_nomadModeDropdown->isOpen());
+    
+    if (currentDropdownState != m_anyDropdownOpen) {
+        m_anyDropdownOpen = currentDropdownState;
+        setDirty(true);
+    }
+    
     // Render background overlay
     renderBackground(renderer);
     
@@ -204,6 +438,15 @@ void AudioSettingsDialog::onRender(NomadUI::NUIRenderer& renderer) {
     if (m_bufferSizeDropdown && m_bufferSizeDropdown->isOpen()) {
         m_bufferSizeDropdown->renderDropdownList(renderer);
     }
+    if (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) {
+        m_qualityPresetDropdown->renderDropdownList(renderer);
+    }
+    if (m_resamplingDropdown && m_resamplingDropdown->isOpen()) {
+        m_resamplingDropdown->renderDropdownList(renderer);
+    }
+    if (m_ditheringDropdown && m_ditheringDropdown->isOpen()) {
+        m_ditheringDropdown->renderDropdownList(renderer);
+    }
 }
 
 void AudioSettingsDialog::onResize(int width, int height) {
@@ -215,6 +458,9 @@ void AudioSettingsDialog::onResize(int width, int height) {
 }
 
 void AudioSettingsDialog::onUpdate(double deltaTime) {
+    // Skip expensive updates when hidden
+    if (!m_visible) return;
+    
     // Animate blink effect - slower decay for visibility
     if (m_blinkAnimation > 0.0f) {
         m_blinkAnimation -= static_cast<float>(deltaTime) * 2.0f; // Slower decay (was 5.0)
@@ -230,6 +476,7 @@ void AudioSettingsDialog::onUpdate(double deltaTime) {
         if (m_errorMessageAlpha < 0.0f) {
             m_errorMessageAlpha = 0.0f;
             m_errorMessage = ""; // Clear message when fully faded
+            layoutComponents(); // Restore layout when error message disappears
         }
         setDirty(true);
     }
@@ -240,6 +487,13 @@ void AudioSettingsDialog::onUpdate(double deltaTime) {
 
 bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     if (!m_visible) return false;
+    
+    // If any dropdown is open, it should handle events first (prevent clicks through to buttons)
+    if (m_anyDropdownOpen && event.pressed) {
+        // Let dropdowns handle the event first - they'll close if clicked outside
+        bool handled = NomadUI::NUIComponent::onMouseEvent(event);
+        return true; // Always consume click when dropdown is open
+    }
     
     // Track hover state for close button
     bool wasHovered = m_closeButtonHovered;
@@ -474,6 +728,7 @@ void AudioSettingsDialog::applySettings() {
             Log::error("Failed to apply sample rate");
             m_errorMessage = "Failed to change sample rate - restored previous setting";
             m_errorMessageAlpha = 1.0f;
+            layoutComponents(); // Adjust layout to prevent overlap
             
             // Restore dropdown to show actual value
             m_selectedSampleRate = m_originalSampleRate;
@@ -492,6 +747,7 @@ void AudioSettingsDialog::applySettings() {
             Log::error("Failed to apply buffer size");
             m_errorMessage = "Buffer size not supported - restored previous setting";
             m_errorMessageAlpha = 1.0f;
+            layoutComponents(); // Adjust layout to prevent overlap
             
             // Restore dropdown to show actual value
             m_selectedBufferSize = m_originalBufferSize;
@@ -501,6 +757,73 @@ void AudioSettingsDialog::applySettings() {
     
     // DON'T close dialog on Apply - let user close manually
     // hide(); // REMOVED
+    
+    // Apply audio quality settings to all tracks
+    if (m_trackManager) {
+        Audio::AudioQualitySettings qualitySettings;
+        
+        // Get preset or custom settings
+        int presetValue = m_qualityPresetDropdown->getSelectedValue();
+        qualitySettings.preset = static_cast<Audio::QualityPreset>(presetValue);
+        
+        // Get resampling mode from dropdown
+        int resamplingValue = m_resamplingDropdown->getSelectedValue();
+        qualitySettings.resampling = static_cast<Audio::ResamplingMode>(resamplingValue);
+        
+        // Get dithering mode from dropdown
+        int ditheringValue = m_ditheringDropdown->getSelectedValue();
+        qualitySettings.dithering = static_cast<Audio::DitheringMode>(ditheringValue);
+        
+        // Get toggle states
+        qualitySettings.removeDCOffset = (m_dcRemovalToggle->getText() == "ON");
+        qualitySettings.enableSoftClipping = (m_softClippingToggle->getText() == "ON");
+        
+        // Get 64-bit precision toggle
+        qualitySettings.precision = (m_precision64BitToggle->getText() == "ON") 
+            ? Audio::InternalPrecision::Float64 
+            : Audio::InternalPrecision::Float32;
+        
+        // Get Nomad Mode from dropdown
+        int nomadModeValue = m_nomadModeDropdown->getSelectedValue();
+        qualitySettings.nomadMode = static_cast<Audio::NomadMode>(nomadModeValue);
+        
+        // Additional settings (future expansion)
+        qualitySettings.oversampling = Audio::OversamplingMode::None;
+        
+        // Apply to all tracks
+        size_t trackCount = m_trackManager->getTrackCount();
+        for (size_t i = 0; i < trackCount; ++i) {
+            auto track = m_trackManager->getTrack(i);
+            if (track) {
+                track->setQualitySettings(qualitySettings);
+            }
+        }
+        
+        // Apply multi-threading settings to TrackManager
+        bool multiThreadingEnabled = (m_multiThreadingToggle->getText() == "ON");
+        m_trackManager->setMultiThreadingEnabled(multiThreadingEnabled);
+        
+        int threadCount = m_threadCountDropdown->getSelectedValue();
+        m_trackManager->setThreadCount(threadCount);
+        
+        // Log quality settings
+        const char* presetNames[] = {"Custom", "Economy", "Balanced", "High-Fidelity", "Mastering"};
+        const char* resamplingNames[] = {"Fast", "Medium", "High", "Ultra", "Extreme", "Perfect"};
+        const char* ditheringNames[] = {"None", "Triangular", "High-Pass", "Noise-Shaped"};
+        const char* nomadModeNames[] = {"Off", "Transparent", "Euphoric"};
+        const char* precisionNames[] = {"32-bit Float", "64-bit Float"};
+        
+        Log::info("Applied audio quality settings:");
+        Log::info("  Preset: " + std::string(presetNames[static_cast<int>(qualitySettings.preset)]));
+        Log::info("  Resampling: " + std::string(resamplingNames[static_cast<int>(qualitySettings.resampling)]));
+        Log::info("  Dithering: " + std::string(ditheringNames[static_cast<int>(qualitySettings.dithering)]));
+        Log::info("  Precision: " + std::string(precisionNames[static_cast<int>(qualitySettings.precision)]));
+        Log::info("  DC Removal: " + std::string(qualitySettings.removeDCOffset ? "ON" : "OFF"));
+        Log::info("  Soft Clipping: " + std::string(qualitySettings.enableSoftClipping ? "ON" : "OFF"));
+        Log::info("  Nomad Mode: " + std::string(nomadModeNames[static_cast<int>(qualitySettings.nomadMode)]));
+        Log::info("  Multi-Threading: " + std::string(multiThreadingEnabled ? "ON" : "OFF"));
+        Log::info("  Thread Count: " + std::to_string(threadCount));
+    }
     
     // Notify callback
     if (m_onApply) {
@@ -532,51 +855,112 @@ void AudioSettingsDialog::cancelSettings() {
 void AudioSettingsDialog::layoutComponents() {
     if (!m_visible) return;
     
+    // === TWO-COLUMN LAYOUT ===
     float padding = 24.0f;
-    float labelWidth = 120.0f;
-    float dropdownWidth = 320.0f;
+    float columnSpacing = 32.0f;
+    float labelWidth = 100.0f;
+    float dropdownWidth = 220.0f;
     float dropdownHeight = 36.0f;
     float buttonWidth = 110.0f;
     float buttonHeight = 38.0f;
     float buttonSpacing = 12.0f;
-    float verticalSpacing = 20.0f;
-    float sectionSpacing = 28.0f;
+    float verticalSpacing = 18.0f;
+    float sectionSpacing = 24.0f;
+    float toggleWidth = 70.0f;
     
-    // Start position for components (below title bar)
-    float startY = m_dialogBounds.y + 70.0f;
-    float labelX = m_dialogBounds.x + padding;
-    float dropdownX = labelX + labelWidth + 16.0f;
+    // Column positions
+    float leftColumnX = m_dialogBounds.x + padding;
+    float rightColumnX = m_dialogBounds.x + m_dialogBounds.width / 2 + columnSpacing / 2;
+    
+    // Start Y position (below title bar and column headers)
+    float errorHeight = (m_errorMessageAlpha > 0.0f && !m_errorMessage.empty()) ? 30.0f : 0.0f;
+    float startY = m_dialogBounds.y + 110.0f + errorHeight;  // Extra space for column headers
+    
+    // === LEFT COLUMN: Audio Device Settings ===
+    float leftY = startY;
+    float leftLabelX = leftColumnX;
+    float leftDropdownX = leftColumnX + labelWidth + 12.0f;
     
     // Driver selector
-    m_driverLabel->setBounds(NomadUI::NUIRect(labelX, startY, labelWidth, dropdownHeight));
-    m_driverDropdown->setBounds(NomadUI::NUIRect(dropdownX, startY, dropdownWidth, dropdownHeight));
+    m_driverLabel->setBounds(NomadUI::NUIRect(leftLabelX, leftY, labelWidth, dropdownHeight));
+    m_driverDropdown->setBounds(NomadUI::NUIRect(leftDropdownX, leftY, dropdownWidth, dropdownHeight));
     
     // Device selector
-    startY += dropdownHeight + verticalSpacing;
-    m_deviceLabel->setBounds(NomadUI::NUIRect(labelX, startY, labelWidth, dropdownHeight));
-    m_deviceDropdown->setBounds(NomadUI::NUIRect(dropdownX, startY, dropdownWidth, dropdownHeight));
+    leftY += dropdownHeight + verticalSpacing;
+    m_deviceLabel->setBounds(NomadUI::NUIRect(leftLabelX, leftY, labelWidth, dropdownHeight));
+    m_deviceDropdown->setBounds(NomadUI::NUIRect(leftDropdownX, leftY, dropdownWidth, dropdownHeight));
     
     // Sample rate selector
-    startY += dropdownHeight + sectionSpacing;
-    m_sampleRateLabel->setBounds(NomadUI::NUIRect(labelX, startY, labelWidth, dropdownHeight));
-    m_sampleRateDropdown->setBounds(NomadUI::NUIRect(dropdownX, startY, dropdownWidth, dropdownHeight));
+    leftY += dropdownHeight + sectionSpacing;
+    m_sampleRateLabel->setBounds(NomadUI::NUIRect(leftLabelX, leftY, labelWidth, dropdownHeight));
+    m_sampleRateDropdown->setBounds(NomadUI::NUIRect(leftDropdownX, leftY, dropdownWidth, dropdownHeight));
     
     // Buffer size selector
-    startY += dropdownHeight + verticalSpacing;
-    m_bufferSizeLabel->setBounds(NomadUI::NUIRect(labelX, startY, labelWidth, dropdownHeight));
-    m_bufferSizeDropdown->setBounds(NomadUI::NUIRect(dropdownX, startY, dropdownWidth, dropdownHeight));
+    leftY += dropdownHeight + verticalSpacing;
+    m_bufferSizeLabel->setBounds(NomadUI::NUIRect(leftLabelX, leftY, labelWidth, dropdownHeight));
+    m_bufferSizeDropdown->setBounds(NomadUI::NUIRect(leftDropdownX, leftY, dropdownWidth, dropdownHeight));
     
-    // ASIO info label (informational text)
-    startY += dropdownHeight + sectionSpacing + 5.0f;
-    float asioInfoWidth = dropdownWidth + labelWidth + 16.0f;
-    m_asioInfoLabel->setBounds(NomadUI::NUIRect(labelX, startY, asioInfoWidth, 28.0f));
+    // Test sound button (centered in left column)
+    leftY += dropdownHeight + sectionSpacing;
+    float testButtonWidth = 130.0f;
+    float testButtonHeight = 36.0f;
+    float testButtonX = leftColumnX + (dropdownWidth + labelWidth + 12.0f - testButtonWidth) / 2.0f;
+    m_testSoundButton->setBounds(NomadUI::NUIRect(testButtonX, leftY, testButtonWidth, testButtonHeight));
     
-    // Test sound button (centered, compact with icon)
-    startY += 50.0f + verticalSpacing;
-    float testButtonWidth = 120.0f; // More compact
-    float testButtonHeight = 36.0f; // Slightly smaller
-    float testButtonX = m_dialogBounds.x + (m_dialogBounds.width - testButtonWidth) / 2;
-    m_testSoundButton->setBounds(NomadUI::NUIRect(testButtonX, startY, testButtonWidth, testButtonHeight));
+    // === RIGHT COLUMN: Audio Quality Settings ===
+    float rightY = startY;
+    float rightLabelX = rightColumnX;
+    float rightDropdownX = rightColumnX + labelWidth + 12.0f;
+    
+    // Hide the quality section label (we have column header now)
+    m_qualitySectionLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
+    
+    // Quality Preset dropdown
+    m_qualityPresetLabel->setBounds(NomadUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+    m_qualityPresetDropdown->setBounds(NomadUI::NUIRect(rightDropdownX, rightY, dropdownWidth, dropdownHeight));
+    
+    // Resampling mode dropdown
+    rightY += dropdownHeight + verticalSpacing;
+    m_resamplingLabel->setBounds(NomadUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+    m_resamplingDropdown->setBounds(NomadUI::NUIRect(rightDropdownX, rightY, dropdownWidth, dropdownHeight));
+    
+    // Dithering mode dropdown
+    rightY += dropdownHeight + verticalSpacing;
+    m_ditheringLabel->setBounds(NomadUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+    m_ditheringDropdown->setBounds(NomadUI::NUIRect(rightDropdownX, rightY, dropdownWidth, dropdownHeight));
+    
+    // DC Removal toggle
+    rightY += dropdownHeight + verticalSpacing;
+    m_dcRemovalLabel->setBounds(NomadUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+    m_dcRemovalToggle->setBounds(NomadUI::NUIRect(rightDropdownX, rightY, toggleWidth, dropdownHeight));
+    
+    // Soft Clipping toggle
+    rightY += dropdownHeight + verticalSpacing;
+    m_softClippingLabel->setBounds(NomadUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+    m_softClippingToggle->setBounds(NomadUI::NUIRect(rightDropdownX, rightY, toggleWidth, dropdownHeight));
+    
+    // 64-bit Processing toggle
+    rightY += dropdownHeight + verticalSpacing;
+    m_precision64BitLabel->setBounds(NomadUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+    m_precision64BitToggle->setBounds(NomadUI::NUIRect(rightDropdownX, rightY, toggleWidth, dropdownHeight));
+    
+    // Multi-Threading toggle
+    rightY += dropdownHeight + verticalSpacing;
+    m_multiThreadingLabel->setBounds(NomadUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+    m_multiThreadingToggle->setBounds(NomadUI::NUIRect(rightDropdownX, rightY, toggleWidth, dropdownHeight));
+    
+    // Thread Count dropdown
+    rightY += dropdownHeight + verticalSpacing;
+    m_threadCountLabel->setBounds(NomadUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+    m_threadCountDropdown->setBounds(NomadUI::NUIRect(rightDropdownX, rightY, dropdownWidth, dropdownHeight));
+    
+    // Nomad Mode dropdown (signature feature)
+    rightY += dropdownHeight + sectionSpacing;  // Extra spacing before Nomad Mode
+    m_nomadModeLabel->setBounds(NomadUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+    m_nomadModeDropdown->setBounds(NomadUI::NUIRect(rightDropdownX, rightY, dropdownWidth, dropdownHeight));
+    
+    // Hide ASIO info label (redundant)
+    m_asioInfoLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
     
     // Position buttons at bottom right
     float buttonY = m_dialogBounds.y + m_dialogBounds.height - buttonHeight - padding;
@@ -590,10 +974,10 @@ void AudioSettingsDialog::layoutComponents() {
 }
 
 void AudioSettingsDialog::renderBackground(NomadUI::NUIRenderer& renderer) {
-    // Render semi-transparent overlay
+    // Render semi-transparent overlay (reduced from 0.8 to 0.6 for better FPS)
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     NomadUI::NUIColor overlayColor = themeManager.getColor("backgroundPrimary");
-    overlayColor = overlayColor.withAlpha(0.8f);
+    overlayColor = overlayColor.withAlpha(0.6f);
     
     NomadUI::NUIRect overlay(0, 0, 2000, 2000); // Large overlay
     renderer.fillRect(overlay, overlayColor);
@@ -684,6 +1068,36 @@ void AudioSettingsDialog::renderDialog(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIColor subtitleColor = themeManager.getColor("textSecondary");
     renderer.drawText("Configure your audio hardware and performance", 
                      NomadUI::NUIPoint(titleX + 2, titleY + 24), 11, subtitleColor);
+    
+    // === Visual Column Divider ===
+    float dividerX = m_dialogBounds.x + m_dialogBounds.width / 2;
+    float dividerY1 = m_dialogBounds.y + 65; // Below title bar
+    float dividerY2 = m_dialogBounds.y + m_dialogBounds.height - 70; // Above buttons
+    NomadUI::NUIColor dividerColor = themeManager.getColor("textSecondary").withAlpha(0.15f);
+    renderer.drawLine(NomadUI::NUIPoint(dividerX, dividerY1), 
+                     NomadUI::NUIPoint(dividerX, dividerY2), 
+                     1.0f, dividerColor);
+    
+    // Column headers with subtle background
+    float headerY = m_dialogBounds.y + 75;
+    float headerHeight = 24.0f;
+    float columnWidth = m_dialogBounds.width / 2 - 40;
+    
+    // Left column header: "Audio Device"
+    NomadUI::NUIColor headerBgColor = bgColor.lightened(0.03f);
+    NomadUI::NUIRect leftHeaderBg(m_dialogBounds.x + 20, headerY, columnWidth, headerHeight);
+    renderer.fillRoundedRect(leftHeaderBg, 4, headerBgColor);
+    NomadUI::NUIColor headerTextColor = themeManager.getColor("accentCyan");
+    renderer.drawText("Audio Device", 
+                     NomadUI::NUIPoint(leftHeaderBg.x + 10, leftHeaderBg.y + 16), 
+                     12, headerTextColor);
+    
+    // Right column header: "Audio Quality"
+    NomadUI::NUIRect rightHeaderBg(dividerX + 20, headerY, columnWidth, headerHeight);
+    renderer.fillRoundedRect(rightHeaderBg, 4, headerBgColor);
+    renderer.drawText("Audio Quality", 
+                     NomadUI::NUIPoint(rightHeaderBg.x + 10, rightHeaderBg.y + 16), 
+                     12, headerTextColor);
     
     // Error message (if any) - displayed below subtitle with fade animation
     if (m_errorMessageAlpha > 0.0f && !m_errorMessage.empty()) {

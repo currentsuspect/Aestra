@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "../NomadAudio/include/TrackManager.h"
@@ -36,7 +37,7 @@ protected:
     void onResize(int width, int height) override;
     bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
     
-    // 🔥 VIEWPORT CULLING: Override to only render visible tracks
+    // ðŸ”¥ VIEWPORT CULLING: Override to only render visible tracks
     void renderChildren(NomadUI::NUIRenderer& renderer);
 
 private:
