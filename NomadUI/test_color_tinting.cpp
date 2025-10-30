@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * Test program to verify color tinting with NanoSVG integration.
  * Tests that icons can be tinted with different theme colors and alpha transparency.
@@ -40,7 +41,7 @@ int main() {
         std::cout << " (hasCustomColor=" << (icon->hasCustomColor() ? "true" : "false") << ")" << std::endl;
     }
     
-    std::cout << "✓ Theme colors applied successfully" << std::endl;
+    std::cout << "âœ“ Theme colors applied successfully" << std::endl;
     std::cout << std::endl;
     
     // Test 2: Apply custom colors
@@ -68,7 +69,7 @@ int main() {
         std::cout << " (hasCustomColor=" << (icon->hasCustomColor() ? "true" : "false") << ")" << std::endl;
     }
     
-    std::cout << "✓ Custom colors applied successfully" << std::endl;
+    std::cout << "âœ“ Custom colors applied successfully" << std::endl;
     std::cout << std::endl;
     
     // Test 3: Test alpha transparency
@@ -84,7 +85,7 @@ int main() {
         std::cout << "R=" << color.r << " G=" << color.g << " B=" << color.b << " A=" << color.a << std::endl;
     }
     
-    std::cout << "✓ Alpha transparency values set successfully" << std::endl;
+    std::cout << "âœ“ Alpha transparency values set successfully" << std::endl;
     std::cout << std::endl;
     
     // Test 4: Clear color (use original SVG colors)
@@ -94,7 +95,7 @@ int main() {
     
     icon->clearColor();
     std::cout << "  - After clear: hasCustomColor=" << (icon->hasCustomColor() ? "true" : "false") << std::endl;
-    std::cout << "✓ Color cleared successfully" << std::endl;
+    std::cout << "âœ“ Color cleared successfully" << std::endl;
     std::cout << std::endl;
     
     // Test 5: Test with custom SVG file
@@ -110,7 +111,7 @@ int main() {
     std::cout << "  - Custom color with alpha: R=" << color.r << " G=" << color.g 
               << " B=" << color.b << " A=" << color.a << std::endl;
     
-    std::cout << "✓ Color tinting works with custom SVG files" << std::endl;
+    std::cout << "âœ“ Color tinting works with custom SVG files" << std::endl;
     std::cout << std::endl;
     
     std::cout << "==================" << std::endl;

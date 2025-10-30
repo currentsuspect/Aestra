@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUITextRendererModern.h"
 #include <iostream>
 #include <cassert>
@@ -70,7 +71,7 @@ bool NUITextRendererModern::initialize() {
     // Set initial viewport
     setViewport(width_, height_);
     
-    std::cout << "✓ Modern text renderer initialized" << std::endl;
+    std::cout << "âœ“ Modern text renderer initialized" << std::endl;
     return true;
 }
 
@@ -111,7 +112,7 @@ bool NUITextRendererModern::loadFont(const std::string& fontPath, int fontSize) 
     TTF_CloseFont(font);
     
     if (success) {
-        std::cout << "✓ Font loaded: " << fontPath << " (" << fontSize << "px)" << std::endl;
+        std::cout << "âœ“ Font loaded: " << fontPath << " (" << fontSize << "px)" << std::endl;
     }
     
     return success;

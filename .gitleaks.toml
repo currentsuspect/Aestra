@@ -1,0 +1,20 @@
+# gitleaks config to detect common secrets and private key patterns
+title = "Nomad gitleaks config"
+
+[allowlist]
+  description = "Allowed false positives"
+  files = [
+    "^LICENSE$",
+    "^NOTICE$",
+    "^CHANGELOG.*$"
+  ]
+
+[rules]
+# Rely on default gitleaks rules; custom additions below
+
+[[rules]]
+  id = "nomad-private-key-block"
+  description = "Private key block"
+  regex = '''-----BEGIN (RSA|OPENSSH|EC) PRIVATE KEY-----'''
+  entropy = 0
+  keywords = ["PRIVATE KEY"]

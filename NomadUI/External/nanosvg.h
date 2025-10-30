@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /*
  * Copyright (c) 2013-14 Mikko Mononen memon@inside.org
  *
@@ -156,7 +157,7 @@ typedef struct NSVGshape
 	char strokeLineCap;			// Stroke cap type.
 	float miterLimit;			// Miter limit
 	char fillRule;				// Fill rule, see NSVGfillRule.
-    unsigned char paintOrder;	// Encoded paint order (3×2-bit fields) see NSVGpaintOrder
+    unsigned char paintOrder;	// Encoded paint order (3Ã—2-bit fields) see NSVGpaintOrder
 	unsigned char flags;		// Logical or of NSVG_FLAGS_* flags
 	float bounds[4];			// Tight bounding box of the shape [minx,miny,maxx,maxy].
 	char fillGradient[64];		// Optional 'id' of fill gradient

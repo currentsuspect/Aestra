@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "AudioDriver.h"
@@ -9,7 +10,7 @@ namespace Nomad {
 namespace Audio {
 
 /**
- * @brief Audio command for lock-free UI→Audio communication
+ * @brief Audio command for lock-free UIâ†’Audio communication
  */
 enum class AudioCommand {
     None = 0,
@@ -99,7 +100,7 @@ protected:
     std::atomic<bool> m_muted;
 
 private:
-    // Lock-free command queue (UI → Audio)
+    // Lock-free command queue (UI â†’ Audio)
     static constexpr size_t COMMAND_QUEUE_SIZE = 256;
     Nomad::LockFreeRingBuffer<AudioCommandMessage, COMMAND_QUEUE_SIZE> m_commandQueue;
 };

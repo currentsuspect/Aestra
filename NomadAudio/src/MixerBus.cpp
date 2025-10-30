@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "MixerBus.h"
 #include <cmath>
 #include <cstring>

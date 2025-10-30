@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * Simple Render Test - Test basic OpenGL rendering
  * This creates a simple colored rectangle to verify OpenGL is working

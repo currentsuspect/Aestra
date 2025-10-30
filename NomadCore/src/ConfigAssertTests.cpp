@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "../include/NomadConfig.h"
 #include "../include/NomadAssert.h"
 #include "../include/NomadLog.h"
@@ -88,7 +89,7 @@ bool testConfig() {
     int testArray[] = {1, 2, 3, 4, 5};
     TEST_ASSERT(NOMAD_ARRAY_SIZE(testArray) == 5, "Array size macro should work");
 
-    std::cout << "  ✓ Configuration tests passed" << std::endl;
+    std::cout << "  âœ“ Configuration tests passed" << std::endl;
     return true;
 }
 
@@ -124,7 +125,7 @@ bool testAsserts() {
         int* ptr = &value;
         NOMAD_ASSERT_NOT_NULL(ptr);
         
-        std::cout << "  ✓ All passing assertions work correctly" << std::endl;
+        std::cout << "  âœ“ All passing assertions work correctly" << std::endl;
     #else
         std::cout << "  Assertions: DISABLED (release build)" << std::endl;
         
@@ -132,7 +133,7 @@ bool testAsserts() {
         NOMAD_ASSERT(false); // This won't trigger in release
         NOMAD_ASSERT_MSG(false, "This won't trigger");
         
-        std::cout << "  ✓ Assertions disabled correctly" << std::endl;
+        std::cout << "  âœ“ Assertions disabled correctly" << std::endl;
     #endif
 
     // Test static assertions (compile-time)
@@ -155,7 +156,7 @@ bool testAsserts() {
     // Cleanup
     std::remove("test_assert.log");
 
-    std::cout << "  ✓ Assertion tests passed" << std::endl;
+    std::cout << "  âœ“ Assertion tests passed" << std::endl;
     return true;
 }
 
@@ -185,7 +186,7 @@ bool testCompilerAttributes() {
     int unusedVar = 42;
     NOMAD_UNUSED(unusedVar);
 
-    std::cout << "  ✓ Compiler attribute tests passed" << std::endl;
+    std::cout << "  âœ“ Compiler attribute tests passed" << std::endl;
     return true;
 }
 
@@ -204,9 +205,9 @@ int main() {
 
     std::cout << "\n==================================" << std::endl;
     if (allPassed) {
-        std::cout << "  ✓ ALL TESTS PASSED" << std::endl;
+        std::cout << "  âœ“ ALL TESTS PASSED" << std::endl;
     } else {
-        std::cout << "  ✗ SOME TESTS FAILED" << std::endl;
+        std::cout << "  âœ— SOME TESTS FAILED" << std::endl;
     }
     std::cout << "==================================" << std::endl;
 

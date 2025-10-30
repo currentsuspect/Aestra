@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * Button Test App - Test button components without OpenGL
  * This tests the button functionality without requiring a window
@@ -25,7 +26,7 @@ public:
         primaryButton->setBackgroundColor(NUIColor::fromHex(0xff4CAF50));
         primaryButton->setTextColor(NUIColor::fromHex(0xffffffff));
         primaryButton->setOnClick([this]() {
-            std::cout << "✓ Primary button clicked!" << std::endl;
+            std::cout << "âœ“ Primary button clicked!" << std::endl;
         });
         addChild(primaryButton);
 
@@ -34,7 +35,7 @@ public:
         secondaryButton->setBackgroundColor(NUIColor::fromHex(0xff2196F3));
         secondaryButton->setTextColor(NUIColor::fromHex(0xffffffff));
         secondaryButton->setOnClick([this]() {
-            std::cout << "✓ Secondary button clicked!" << std::endl;
+            std::cout << "âœ“ Secondary button clicked!" << std::endl;
         });
         addChild(secondaryButton);
 
@@ -42,16 +43,16 @@ public:
         textButton->setStyle(NUIButton::Style::Text);
         textButton->setTextColor(NUIColor::fromHex(0xffFF9800));
         textButton->setOnClick([this]() {
-            std::cout << "✓ Text button clicked!" << std::endl;
+            std::cout << "âœ“ Text button clicked!" << std::endl;
         });
         addChild(textButton);
 
-        iconButton = std::make_shared<NUIButton>("●");
+        iconButton = std::make_shared<NUIButton>("â—");
         iconButton->setStyle(NUIButton::Style::Icon);
         iconButton->setBackgroundColor(NUIColor::fromHex(0xffE91E63));
         iconButton->setTextColor(NUIColor::fromHex(0xffffffff));
         iconButton->setOnClick([this]() {
-            std::cout << "✓ Icon button clicked!" << std::endl;
+            std::cout << "âœ“ Icon button clicked!" << std::endl;
         });
         addChild(iconButton);
 
@@ -61,7 +62,7 @@ public:
         toggleButton->setTextColor(NUIColor::fromHex(0xffffffff));
         toggleButton->setToggleable(true);
         toggleButton->setOnToggle([this](bool toggled) {
-            std::cout << "✓ Toggle button: " << (toggled ? "ON" : "OFF") << std::endl;
+            std::cout << "âœ“ Toggle button: " << (toggled ? "ON" : "OFF") << std::endl;
         });
         addChild(toggleButton);
 

@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "../include/NomadLog.h"
 #include "../include/NomadFile.h"
 #include <iostream>
@@ -36,7 +37,7 @@ bool testConsoleLogger() {
     logger.log(LogLevel::Warning, "This warning SHOULD appear");
     logger.log(LogLevel::Error, "This error SHOULD appear");
 
-    std::cout << "  ✓ ConsoleLogger tests passed" << std::endl;
+    std::cout << "  âœ“ ConsoleLogger tests passed" << std::endl;
     return true;
 }
 
@@ -88,7 +89,7 @@ bool testFileLogger() {
     // Cleanup
     std::remove(logFile.c_str());
 
-    std::cout << "  ✓ FileLogger tests passed" << std::endl;
+    std::cout << "  âœ“ FileLogger tests passed" << std::endl;
     return true;
 }
 
@@ -126,7 +127,7 @@ bool testMultiLogger() {
     // Cleanup
     std::remove(logFile.c_str());
 
-    std::cout << "  ✓ MultiLogger tests passed" << std::endl;
+    std::cout << "  âœ“ MultiLogger tests passed" << std::endl;
     return true;
 }
 
@@ -174,7 +175,7 @@ bool testGlobalLogger() {
     // Cleanup
     std::remove(logFile.c_str());
 
-    std::cout << "  ✓ Global Logger tests passed" << std::endl;
+    std::cout << "  âœ“ Global Logger tests passed" << std::endl;
     return true;
 }
 
@@ -224,7 +225,7 @@ bool testThreadSafety() {
     // Cleanup
     std::remove(logFile.c_str());
 
-    std::cout << "  ✓ Thread Safety tests passed" << std::endl;
+    std::cout << "  âœ“ Thread Safety tests passed" << std::endl;
     return true;
 }
 
@@ -245,9 +246,9 @@ int main() {
 
     std::cout << "\n==================================" << std::endl;
     if (allPassed) {
-        std::cout << "  ✓ ALL TESTS PASSED" << std::endl;
+        std::cout << "  âœ“ ALL TESTS PASSED" << std::endl;
     } else {
-        std::cout << "  ✗ SOME TESTS FAILED" << std::endl;
+        std::cout << "  âœ— SOME TESTS FAILED" << std::endl;
     }
     std::cout << "==================================" << std::endl;
 

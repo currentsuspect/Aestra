@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "../include/NomadFile.h"
 #include "../include/NomadJSON.h"
 #include <iostream>
@@ -44,7 +45,7 @@ bool testFile() {
     // Cleanup
     std::remove(testPath.c_str());
 
-    std::cout << "  ✓ File tests passed" << std::endl;
+    std::cout << "  âœ“ File tests passed" << std::endl;
     return true;
 }
 
@@ -108,7 +109,7 @@ bool testBinarySerialization() {
     // Cleanup
     std::remove(testPath.c_str());
 
-    std::cout << "  ✓ Binary Serialization tests passed" << std::endl;
+    std::cout << "  âœ“ Binary Serialization tests passed" << std::endl;
     return true;
 }
 
@@ -176,7 +177,7 @@ bool testJSON() {
     nested.set("audio", settings);
     TEST_ASSERT(nested["audio"]["sampleRate"].asNumber() == 48000.0, "Should access nested property");
 
-    std::cout << "  ✓ JSON tests passed" << std::endl;
+    std::cout << "  âœ“ JSON tests passed" << std::endl;
     return true;
 }
 
@@ -195,9 +196,9 @@ int main() {
 
     std::cout << "\n==================================" << std::endl;
     if (allPassed) {
-        std::cout << "  ✓ ALL TESTS PASSED" << std::endl;
+        std::cout << "  âœ“ ALL TESTS PASSED" << std::endl;
     } else {
-        std::cout << "  ✗ SOME TESTS FAILED" << std::endl;
+        std::cout << "  âœ— SOME TESTS FAILED" << std::endl;
     }
     std::cout << "==================================" << std::endl;
 

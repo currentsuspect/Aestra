@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /*
 	IASIOThiscallResolver.cpp see the comments in iasiothiscallresolver.h for
     the top level description - this comment describes the technical details of

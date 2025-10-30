@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "PlatformDPIWin32.h"
 #include "../../../NomadCore/include/NomadLog.h"
 #include <ShellScalingApi.h>

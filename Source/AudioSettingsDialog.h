@@ -1,3 +1,4 @@
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file AudioSettingsDialog.h
  * @brief Audio settings dialog for NOMAD DAW
@@ -9,6 +10,7 @@
 #include "../NomadUI/Core/NUIButton.h"
 #include "../NomadUI/Core/NUILabel.h"
 #include "../NomadUI/Core/NUIIcon.h"
+#include "../NomadUI/Core/NUISlider.h"
 #include "../NomadUI/Widgets/NUIDropdown.h"
 #include "../NomadAudio/include/AudioDeviceManager.h"
 #include <memory>
@@ -122,12 +124,36 @@ private:
     std::shared_ptr<NomadUI::NUIDropdown> m_sampleRateDropdown;
     std::shared_ptr<NomadUI::NUIDropdown> m_bufferSizeDropdown;
     
+    // Audio Quality Settings
+    std::shared_ptr<NomadUI::NUIDropdown> m_qualityPresetDropdown;
+    std::shared_ptr<NomadUI::NUIDropdown> m_resamplingDropdown;
+    std::shared_ptr<NomadUI::NUIDropdown> m_ditheringDropdown;
+    std::shared_ptr<NomadUI::NUIDropdown> m_interpolationDropdown;  // Legacy
+    std::shared_ptr<NomadUI::NUIButton> m_ditheringToggle;  // Legacy
+    std::shared_ptr<NomadUI::NUIButton> m_dcRemovalToggle;
+    std::shared_ptr<NomadUI::NUIButton> m_softClippingToggle;
+    std::shared_ptr<NomadUI::NUIButton> m_precision64BitToggle;
+    std::shared_ptr<NomadUI::NUIButton> m_multiThreadingToggle;
+    std::shared_ptr<NomadUI::NUIDropdown> m_threadCountDropdown;
+    std::shared_ptr<NomadUI::NUIDropdown> m_nomadModeDropdown;  // Nomad Mode toggle
+    
     // Labels
     std::shared_ptr<NomadUI::NUILabel> m_driverLabel;
     std::shared_ptr<NomadUI::NUILabel> m_deviceLabel;
     std::shared_ptr<NomadUI::NUILabel> m_sampleRateLabel;
     std::shared_ptr<NomadUI::NUILabel> m_bufferSizeLabel;
     std::shared_ptr<NomadUI::NUILabel> m_asioInfoLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_qualitySectionLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_qualityPresetLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_resamplingLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_ditheringLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_interpolationLabel;  // Legacy
+    std::shared_ptr<NomadUI::NUILabel> m_dcRemovalLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_softClippingLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_precision64BitLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_multiThreadingLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_threadCountLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_nomadModeLabel;  // Nomad Mode label
     
     // Callbacks
     std::function<void()> m_onApply;
@@ -144,6 +170,9 @@ private:
     bool m_isPlayingTestSound;
     double m_testSoundPhase;
     static constexpr double TEST_FREQUENCY = 440.0; // A4 note
+    
+    // FPS optimization - cache dropdown open states to avoid unnecessary re-renders
+    bool m_anyDropdownOpen;
 };
 
 } // namespace Nomad

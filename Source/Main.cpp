@@ -1,15 +1,18 @@
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+#define NOMAD_BUILD_ID "Nomad-2025-Core"
+
 /**
  * @file Main.cpp
  * @brief NOMAD DAW - Main Application Entry Point
  * 
  * This is the main entry point for the NOMAD Digital Audio Workstation.
  * It initializes all core systems:
- * - NomadPlat: Platform abstraction (windowing, input, OpenGL)
+ * - NomadPlat: Platform abstraction (windowing, input, Vulkan/OpenGL)
  * - NomadUI: UI rendering framework
  * - NomadAudio: Real-time audio engine
  * 
  * @version 1.0.0
- * @license Proprietary
+ * @license Nomad Studios Source-Available License (NSSAL) v1.0
  */
 
 #include "../NomadPlat/include/NomadPlatform.h"
@@ -23,11 +26,13 @@
 #include "../NomadUI/Platform/NUIPlatformBridge.h"
 #include "../NomadAudio/include/NomadAudio.h"
 #include "../NomadCore/include/NomadLog.h"
+#include "../NomadCore/include/NomadProfiler.h"
 #include "TransportBar.h"
 #include "AudioSettingsDialog.h"
 #include "FileBrowser.h"
 #include "AudioVisualizer.h"
 #include "TrackUIComponent.h"
+#include "PerformanceHUD.h"
 #include "TrackManagerUI.h"
 #include "FPSDisplay.h"
 
@@ -158,6 +163,14 @@ public:
         m_previewIsPlaying = false;
         m_previewStartTime = std::chrono::steady_clock::time_point(); // Default construct
         m_previewDuration = 5.0; // 5 seconds preview
+        
+        // Wire TrackManager audio output to AudioVisualizer for VU meter display
+        // This captures the master stereo output and sends it to the visualizer
+        m_trackManager->setOnAudioOutput([this](const float* leftChannel, const float* rightChannel, size_t numSamples, double sampleRate) {
+            if (m_audioVisualizer) {
+                m_audioVisualizer->setAudioData(leftChannel, rightChannel, numSamples, sampleRate);
+            }
+        });
         
         Log::info("Sound preview system initialized");
     }
@@ -559,17 +572,16 @@ public:
         addChild(m_fpsDisplay);
     }
     
+    void setPerformanceHUD(std::shared_ptr<PerformanceHUD> perfHUD) {
+        m_performanceHUD = perfHUD;
+        addChild(m_performanceHUD);
+    }
+    
+    std::shared_ptr<PerformanceHUD> getPerformanceHUD() const {
+        return m_performanceHUD;
+    }
+    
     void onRender(NUIRenderer& renderer) override {
-        // Debug output
-        static bool firstRender = true;
-        if (firstRender) {
-            std::cout << "NomadRootComponent::onRender() called" << std::endl;
-            std::cout << "  Bounds: " << getBounds().x << "," << getBounds().y << " " 
-                      << getBounds().width << "x" << getBounds().height << std::endl;
-            std::cout << "  Children count: " << getChildren().size() << std::endl;
-            firstRender = false;
-        }
-        
         // Don't draw background here - let custom window handle it
         // Just render children (custom window and audio settings dialog)
         renderChildren(renderer);
@@ -596,6 +608,7 @@ private:
     std::shared_ptr<NUICustomWindow> m_customWindow;
     std::shared_ptr<AudioSettingsDialog> m_audioSettingsDialog;
     std::shared_ptr<FPSDisplay> m_fpsDisplay;
+    std::shared_ptr<PerformanceHUD> m_performanceHUD;
 };
 
 /**
@@ -630,7 +643,6 @@ public:
      * @brief Initialize all subsystems
      */
     bool initialize() {
-        std::stringstream ss;
         Log::info("NOMAD DAW v1.0.0 - Initializing...");
 
         // Initialize platform
@@ -655,9 +667,7 @@ public:
             return false;
         }
         
-        ss.str("");
-        ss << "Window created: " << desc.width << "x" << desc.height;
-        Log::info(ss.str());
+        Log::info("Window created");
 
         // Create OpenGL context
         if (!m_window->createGLContext()) {
@@ -680,34 +690,26 @@ public:
                 return false;
             }
             
-            ss.str("");
-            ss << "UI renderer initialized: " << m_renderer->getBackendName();
-            Log::info(ss.str());
+            Log::info("UI renderer initialized");
         }
         catch (const std::exception& e) {
-            ss.str("");
-            ss << "Exception during renderer initialization: " << e.what();
-            Log::error(ss.str());
+            std::string errorMsg = "Exception during renderer initialization: ";
+            errorMsg += e.what();
+            Log::error(errorMsg);
             return false;
         }
 
         // Initialize audio engine
-        std::cout << "Main::initialize: Initializing audio engine" << std::endl;
-        std::cout.flush();
         m_audioManager = std::make_unique<AudioDeviceManager>();
         if (!m_audioManager->initialize()) {
             Log::error("Failed to initialize audio engine");
             // Continue without audio for now
             m_audioInitialized = false;
         } else {
-            ss.str("");
-            ss << "Audio engine initialized: " << Audio::getBackendName();
-            Log::info(ss.str());
+            Log::info("Audio engine initialized");
             
             try {
                 // Get default audio device with error handling
-                std::cout << "Main::initialize: Getting default output device" << std::endl;
-                std::cout.flush();
                 
                 // First check if any devices are available
                 // Retry up to 3 times to work around WASAPI enumeration failures
@@ -729,9 +731,7 @@ public:
                     Log::warning("Continuing without audio support.");
                     m_audioInitialized = false;
                 } else {
-                    ss.str("");
-                    ss << "Found " << devices.size() << " audio device(s)";
-                    Log::info(ss.str());
+                    Log::info("Audio devices found");
                     
                     // Find first output device (instead of relying on getDefaultOutputDevice which can fail)
                     AudioDeviceInfo outputDevice;
@@ -749,9 +749,7 @@ public:
                         Log::warning("No output audio device found");
                         m_audioInitialized = false;
                     } else {
-                        ss.str("");
-                        ss << "Using audio device: " << outputDevice.name << " (ID: " << outputDevice.id << ")";
-                        Log::info(ss.str());
+                        Log::info("Using audio device: " + outputDevice.name);
                         
                         // Configure audio stream
                         AudioStreamConfig config;
@@ -769,24 +767,16 @@ public:
                         // Store config for later restoration
                         m_mainStreamConfig = config;
 
-                        std::cout << "Main::initialize: Opening audio stream" << std::endl;
-                        std::cout.flush();
-                        
                         // Open audio stream with a simple callback
                         if (m_audioManager->openStream(config, audioCallback, this)) {
-                            ss.str("");
-                            ss << "Audio stream opened: " << config.sampleRate << " Hz, "
-                               << config.bufferSize << " samples, " << config.numOutputChannels << " channels";
-                            Log::info(ss.str());
+                            Log::info("Audio stream opened");
                             
                             // Start the audio stream
                             if (m_audioManager->startStream()) {
-                                Log::info("========================================");
-                                Log::info("AUDIO STREAM STARTED SUCCESSFULLY!!!");
-                                Log::info("========================================");
+                                Log::info("Audio stream started");
                                 m_audioInitialized = true;
                             } else {
-                                Log::error("!!!! FAILED TO START AUDIO STREAM !!!!");
+                                Log::error("Failed to start audio stream");
                                 m_audioInitialized = false;
                             }
                         } else {
@@ -796,9 +786,9 @@ public:
                     }
                 }
             } catch (const std::exception& e) {
-                ss.str("");
-                ss << "Exception while initializing audio: " << e.what();
-                Log::error(ss.str());
+                std::string errorMsg = "Exception while initializing audio: ";
+                errorMsg += e.what();
+                Log::error(errorMsg);
                 Log::warning("Continuing without audio support.");
                 m_audioInitialized = false;
             } catch (...) {
@@ -961,6 +951,13 @@ public:
         m_fpsDisplay = fpsDisplay;
         Log::info("FPS display overlay created");
         
+        // Create and add Performance HUD (F12 to toggle)
+        auto perfHUD = std::make_shared<PerformanceHUD>();
+        perfHUD->setVisible(false); // Hidden by default
+        m_rootComponent->setPerformanceHUD(perfHUD);
+        m_performanceHUD = perfHUD;
+        Log::info("Performance HUD created (press F12 to toggle)");
+        
         // Debug: Verify dialog was added
         std::stringstream ss2;
         ss2 << "Dialog added to root component, pointer: " << m_audioSettingsDialog.get();
@@ -972,12 +969,6 @@ public:
         
         // Connect custom window to platform window for dragging and window controls
         m_customWindow->setWindowHandle(m_window.get());
-        
-        // Debug: Check if custom window has children (should have title bar)
-        auto children = m_customWindow->getChildren();
-        ss.str("");
-        ss << "Custom window has " << children.size() << " children";
-        Log::info(ss.str());
         
         Log::info("Custom window created");
         
@@ -993,17 +984,18 @@ public:
      * @brief Main application loop
      */
     void run() {
-        if (!m_running) {
-            Log::error("Cannot run - application not initialized");
-            return;
+        // Prepare renderer
+        m_renderer->beginFrame();
+        m_renderer->clear(NUIColor(0.06f, 0.06f, 0.07f));
+
+        // Render UI root (instrumented)
+        if (m_rootComponent) {
+            NOMAD_ZONE("UI_Render");
+            m_rootComponent->onRender(*m_renderer);
         }
 
-        m_window->show();
-        Log::info("Entering main loop...");
-
-        // Audio stream is already started during initialization if audio is enabled
-        // No need to start it again here
-
+        // End renderer frame
+        m_renderer->endFrame();
         // Start track manager if tracks are loaded
         if (m_content && m_content->getTrackManagerUI() && m_content->getTrackManagerUI()->getTrackManager() &&
             m_content->getTrackManagerUI()->getTrackManager()->getTrackCount() > 0) {
@@ -1012,76 +1004,117 @@ public:
         }
 
         // Main event loop
+        double deltaTime = 0.0; // Declare outside so it's visible in all zones
+        
         while (m_running && m_window->processEvents()) {
-            // 🔥 PROFILER: Begin frame timing
-            m_profiler.beginFrame();
+            // Begin profiler frame
+            Profiler::getInstance().beginFrame();
             
             // Begin frame timing BEFORE any work
             auto frameStart = m_adaptiveFPS->beginFrame();
             
-            // Calculate delta time for smooth animations
-            static auto lastTime = std::chrono::high_resolution_clock::now();
-            auto currentTime = std::chrono::high_resolution_clock::now();
-            double deltaTime = std::chrono::duration<double>(currentTime - lastTime).count();
-            lastTime = currentTime;
-            
-            // Signal audio visualization activity if visualizer is active
-            if (m_content && m_content->getAudioVisualizer()) {
-                // Check if audio is actually playing or visualizing
-                bool audioActive = m_audioInitialized && 
-                                   (m_content->getTrackManagerUI() && 
-                                    m_content->getTrackManagerUI()->getTrackManager() &&
-                                    m_content->getTrackManagerUI()->getTrackManager()->isPlaying());
-                m_adaptiveFPS->setAudioVisualizationActive(audioActive);
-            }
-            
-            // Update all UI components (for animations, VU meters, etc.)
-            if (m_rootComponent) {
-                m_rootComponent->onUpdate(deltaTime);
-            }
-            
-            // Sync transport position with track manager during playback
-            if (m_content && m_content->getTransportBar() && m_content->getTrackManagerUI()) {
-                auto trackManager = m_content->getTrackManagerUI()->getTrackManager();
-                if (trackManager && trackManager->isPlaying()) {
-                    double currentPosition = trackManager->getPosition();
-                    m_content->getTransportBar()->setPosition(currentPosition);
+            {
+                NOMAD_ZONE("Input_Poll");
+                // Calculate delta time for smooth animations
+                static auto lastTime = std::chrono::high_resolution_clock::now();
+                auto currentTime = std::chrono::high_resolution_clock::now();
+                deltaTime = std::chrono::duration<double>(currentTime - lastTime).count();
+                lastTime = currentTime;
+                
+                // Signal audio visualization activity if visualizer is active
+                if (m_content && m_content->getAudioVisualizer()) {
+                    // Check if audio is actually playing or visualizing
+                    bool audioActive = m_audioInitialized && 
+                                       (m_content->getTrackManagerUI() && 
+                                        m_content->getTrackManagerUI()->getTrackManager() &&
+                                        m_content->getTrackManagerUI()->getTrackManager()->isPlaying());
+                    m_adaptiveFPS->setAudioVisualizationActive(audioActive);
                 }
             }
             
-            // Update sound previews
-            if (m_content) {
-                m_content->updateSoundPreview();
+            {
+                NOMAD_ZONE("UI_Update");
+                // Update all UI components (for animations, VU meters, etc.)
+                if (m_rootComponent) {
+                    NOMAD_ZONE("Root_OnUpdate");
+                    m_rootComponent->onUpdate(deltaTime);
+                }
+                
+                // Sync transport position with track manager during playback
+                if (m_content && m_content->getTransportBar() && m_content->getTrackManagerUI()) {
+                    auto trackManager = m_content->getTrackManagerUI()->getTrackManager();
+                    if (trackManager && trackManager->isPlaying()) {
+                        static double lastPosition = 0.0;
+                        double currentPosition = trackManager->getPosition();
+                        
+                        // Detect loop (position jumped backward significantly)
+                        if (currentPosition < lastPosition - 0.1) {
+                            // Loop occurred - force timer reset
+                            m_content->getTransportBar()->setPosition(0.0);
+                        } else {
+                            m_content->getTransportBar()->setPosition(currentPosition);
+                        }
+                        
+                        lastPosition = currentPosition;
+                    }
+                }
+                
+                // Update sound previews
+                if (m_content) {
+                    m_content->updateSoundPreview();
+                }
             }
 
-            render();
-            
-            // 🔥 PROFILER: Mark end of render work
-            m_profiler.markRenderEnd();
+            {
+                NOMAD_ZONE("Render_Prep");
+                render();
+            }
             
             // End frame timing BEFORE swapBuffers (to exclude VSync wait)
             double sleepTime = m_adaptiveFPS->endFrame(frameStart, deltaTime);
             
-            // SwapBuffers (may block on VSync)
-            m_window->swapBuffers();
-            
-            // 🔥 PROFILER: Mark end of swap
-            m_profiler.markSwapEnd();
+            {
+                NOMAD_ZONE("GPU_Submit");
+                // SwapBuffers (may block on VSync)
+                m_window->swapBuffers();
+            }
             
             // Sleep if needed (usually 0 since VSync already throttles us)
             if (sleepTime > 0.0) {
                 m_adaptiveFPS->sleep(sleepTime);
             }
             
-            // 🔥 PROFILER: End frame
-            m_profiler.endFrame();
-            
-            // 🔥 PROFILER: Print stats every 100 frames
-            static int profilerFrameCount = 0;
-            if (++profilerFrameCount >= 100) {
-                m_profiler.printStats();
-                profilerFrameCount = 0;
+            // Update profiler stats before ending frame
+            if (m_content && m_content->getTrackManagerUI()) {
+                auto trackManager = m_content->getTrackManagerUI()->getTrackManager();
+                if (trackManager) {
+                    Profiler::getInstance().setAudioLoad(trackManager->getAudioLoadPercent());
+                }
             }
+            
+            // Count widgets recursively
+            uint32_t widgetCount = 0;
+            if (m_rootComponent) {
+                std::function<void(NUIComponent*)> countWidgets = [&](NUIComponent* comp) {
+                    if (comp) {
+                        // Only count visible components
+                        if (comp->isVisible()) {
+                            widgetCount++;
+                            for (const auto& child : comp->getChildren()) {
+                                countWidgets(child.get());
+                            }
+                        }
+                        else {
+                            // If this component is hidden, don't traverse its children
+                        }
+                    }
+                };
+                countWidgets(m_rootComponent.get());
+            }
+            Profiler::getInstance().setWidgetCount(widgetCount);
+            
+            // End profiler frame
+            Profiler::getInstance().endFrame();
         }
 
         Log::info("Exiting main loop");
@@ -1184,11 +1217,6 @@ private:
             }
             
             // Handle global key shortcuts
-            // Debug: Log all key presses
-            if (pressed) {
-                std::cout << "Key pressed: " << key << " (P should be 80)" << std::endl;
-            }
-            
             if (key == static_cast<int>(KeyCode::Escape) && pressed) {
                 // If audio settings dialog is open, close it
                 if (m_audioSettingsDialog && m_audioSettingsDialog->isVisible()) {
@@ -1217,17 +1245,11 @@ private:
                 }
             } else if (key == static_cast<int>(KeyCode::P) && pressed) {
                 // P key to open audio settings (Preferences)
-                Log::info("===== P KEY HANDLER START =====");
                 if (m_audioSettingsDialog) {
-                    Log::info("Dialog pointer is valid, calling show()");
                     m_audioSettingsDialog->show();
-                    Log::info("show() method called successfully");
-                } else {
-                    Log::info("ERROR: m_audioSettingsDialog is NULL!");
                 }
-                Log::info("===== P KEY HANDLER END =====");
             } else if (key == static_cast<int>(KeyCode::F) && pressed) {
-                // F key to cycle through FPS modes (Auto → 30 → 60 → Auto)
+                // F key to cycle through FPS modes (Auto â†’ 30 â†’ 60 â†’ Auto)
                 auto currentMode = m_adaptiveFPS->getMode();
                 NomadUI::NUIAdaptiveFPS::Mode newMode;
                 std::string modeName;
@@ -1249,18 +1271,14 @@ private:
                 
                 m_adaptiveFPS->setMode(newMode);
                 
-                std::stringstream ss;
-                ss << "FPS Mode changed to: " << modeName;
-                Log::info(ss.str());
-                std::cout << "FPS Mode: " << modeName << std::endl;
-            } else if (key == static_cast<int>(KeyCode::G) && pressed) {
-                // G key to toggle FPS display overlay
+            } else if (key == static_cast<int>(KeyCode::F12) && pressed) {
+                // F12 key to toggle FPS display overlay AND Performance HUD
                 if (m_fpsDisplay) {
                     m_fpsDisplay->toggle();
-                    std::stringstream ss;
-                    ss << "FPS Display: " << (m_fpsDisplay->isVisible() ? "SHOWN" : "HIDDEN");
-                    Log::info(ss.str());
-                    std::cout << ss.str() << std::endl;
+                }
+                
+                if (m_performanceHUD) {
+                    m_performanceHUD->toggle();
                 }
             } else if (key == static_cast<int>(KeyCode::L) && pressed) {
                 // L key to toggle adaptive FPS logging
@@ -1268,21 +1286,12 @@ private:
                 config.enableLogging = !config.enableLogging;
                 m_adaptiveFPS->setConfig(config);
                 
-                std::stringstream ss;
-                ss << "Adaptive FPS logging: " << (config.enableLogging ? "ENABLED" : "DISABLED");
-                Log::info(ss.str());
-                std::cout << ss.str() << std::endl;
             } else if (key == static_cast<int>(KeyCode::B) && pressed) {
                 // B key to toggle render batching
                 if (m_renderer) {
                     static bool batchingEnabled = true;
                     batchingEnabled = !batchingEnabled;
                     m_renderer->setBatchingEnabled(batchingEnabled);
-                    
-                    std::stringstream ss;
-                    ss << "Render Batching: " << (batchingEnabled ? "ENABLED" : "DISABLED");
-                    Log::info(ss.str());
-                    std::cout << ss.str() << std::endl;
                 }
             } else if (key == static_cast<int>(KeyCode::D) && pressed) {
                 // D key to toggle dirty region tracking
@@ -1290,11 +1299,6 @@ private:
                     static bool dirtyTrackingEnabled = true;
                     dirtyTrackingEnabled = !dirtyTrackingEnabled;
                     m_renderer->setDirtyRegionTrackingEnabled(dirtyTrackingEnabled);
-                    
-                    std::stringstream ss;
-                    ss << "Dirty Region Tracking: " << (dirtyTrackingEnabled ? "ENABLED" : "DISABLED");
-                    Log::info(ss.str());
-                    std::cout << ss.str() << std::endl;
                 }
             } else if (key == static_cast<int>(KeyCode::C) && pressed) {
                 // C key to toggle render caching
@@ -1302,29 +1306,10 @@ private:
                     static bool cachingEnabled = true;
                     cachingEnabled = !cachingEnabled;
                     m_renderer->setCachingEnabled(cachingEnabled);
-                    
-                    std::stringstream ss;
-                    ss << "Render Caching: " << (cachingEnabled ? "ENABLED" : "DISABLED");
-                    Log::info(ss.str());
-                    std::cout << ss.str() << std::endl;
                 }
             } else if (key == static_cast<int>(KeyCode::O) && pressed) {
-                // O key to print optimization stats
-                if (m_renderer) {
-                    size_t batchedQuads = 0, dirtyRegions = 0, cachedWidgets = 0, cacheMemoryBytes = 0;
-                    m_renderer->getOptimizationStats(batchedQuads, dirtyRegions, cachedWidgets, cacheMemoryBytes);
-                    
-                    std::cout << "\n╔══════════════════════════════════════════════════════╗\n";
-                    std::cout << "║        RENDERING OPTIMIZATION STATS                  ║\n";
-                    std::cout << "╠══════════════════════════════════════════════════════╣\n";
-                    std::cout << "║  Batched Quads:     " << batchedQuads << " quads\n";
-                    std::cout << "║  Dirty Regions:     " << dirtyRegions << " regions\n";
-                    std::cout << "║  Cached Widgets:    " << cachedWidgets << " widgets\n";
-                    std::cout << "║  Cache Memory:      " << (cacheMemoryBytes / 1024.0f / 1024.0f) << " MB\n";
-                    std::cout << "╚══════════════════════════════════════════════════════╝\n" << std::endl;
-                    
-                    Log::info("Optimization stats printed (press O to view)");
-                }
+                // O key export profiler data to JSON
+                Profiler::getInstance().exportToJSON("nomad_profile.json");
             } else {
                 // Forward unhandled key events directly to the FileBrowser
                 if (m_content && pressed) {
@@ -1472,8 +1457,9 @@ private:
     std::shared_ptr<NomadContent> m_content;
     std::shared_ptr<AudioSettingsDialog> m_audioSettingsDialog;
     std::shared_ptr<FPSDisplay> m_fpsDisplay;
+    std::shared_ptr<PerformanceHUD> m_performanceHUD;
     std::unique_ptr<NomadUI::NUIAdaptiveFPS> m_adaptiveFPS;
-    NomadUI::NUIFrameProfiler m_profiler;  // 🔥 Frame profiler for surgical timing analysis
+    NomadUI::NUIFrameProfiler m_profiler;  // Legacy profiler (can be removed later)
     bool m_running;
     bool m_audioInitialized;
     AudioStreamConfig m_mainStreamConfig;  // Store main audio stream configuration
