@@ -25,7 +25,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path build | Out-Null
-          cmake -S nomad-core -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
       - name: Build
         shell: pwsh
         run: cmake --build build --config Release --parallel

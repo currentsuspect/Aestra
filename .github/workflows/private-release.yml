@@ -28,7 +28,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path build | Out-Null
-          cmake -S nomad-core -B build -DNOMAD_CORE_MODE=OFF -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DNOMAD_CORE_MODE=OFF -DCMAKE_BUILD_TYPE=Release
       - name: Build
         shell: pwsh
         run: cmake --build build --config Release --parallel
@@ -43,7 +43,7 @@ jobs:
           [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:PFX_BASE64))
           $bins = Get-ChildItem build -Recurse -Include *.exe,*.dll
           foreach ($b in $bins) {
-            & "C:\Program Files (x86)\Windows Kits\10\App Certification Kit\signtool.exe" sign `
+            & "C:\\Program Files (x86)\\Windows Kits\\10\\App Certification Kit\\signtool.exe" sign `
               /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $b.FullName
           }
       - name: Package artifacts

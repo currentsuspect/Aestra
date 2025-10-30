@@ -13,7 +13,7 @@ Thanks for your interest in contributing to Nomad Core!
 2. Install the pre-commit hook:
    - `pwsh -File scripts/install-hooks.ps1`
 3. Configure/build core-only:
-   - `cmake -S nomad-core -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo`
+   - `cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo`
    - `cmake --build build --config RelWithDebInfo --parallel`
 
 ## Coding Guidelines
