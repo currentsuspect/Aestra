@@ -65,7 +65,7 @@ assets_premium/
 weights/
 checkpoints/
 
-# Keys/secrets
+# Keys/secrets/licenses
 *.key
 *.pem
 *.pfx
@@ -87,6 +87,8 @@ config/private/
 **/codesign/
 **/notarize/
 **/provisioning/
+keys/
+licenses/
 
 # Generated
 docs/_site/

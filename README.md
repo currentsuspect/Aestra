@@ -13,7 +13,7 @@ Premium features are developed and released privately by Nomad Studios.
 2. Install Git hooks:
    - `pwsh -File scripts/install-hooks.ps1`
 3. Configure and build:
-   - `cmake -S nomad-core -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release`
+   - `cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release`
    - `cmake --build build --config Release --parallel`
 
 If private repos are present and you disable core-only mode, full builds can be made in private environments.

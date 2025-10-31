@@ -1,25 +1,63 @@
-name: Private Release (requires manual trigger)
+name: Private Release (Nomad Studio+)
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: Release version
+        required: true
+
+permissions:
+  contents: write
 
 jobs:
-  build-and-sign:
-    runs-on: [self-hosted, windows]
+  build-sign-package:
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'recursive'
-      - name: Setup MSVC
-        run: echo "Assumes self-hosted runner with signing tools and secrets available"
-      - name: Configure CMake
-        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
-      - name: Build
-        run: cmake --build build --config Release --parallel
-      - name: Code sign
-        env:
-          SIGNING_CERT_PATH: ${{ secrets.SIGNING_CERT_PATH }}
-          SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+          submodules: recursive
+      - name: Ensure premium/build present
+        shell: pwsh
         run: |
-          echo "The actual signing commands should run on a secure runner with access to the signing certificate."
-          echo "Use signtool or osslsigncode on Windows with the certificate loaded from a secure store."
+          $req = @('nomad-premium','nomad-build')
+          foreach ($r in $req) { if (-not (Test-Path $r)) { Write-Error "Missing private folder: $r"; exit 1 } }
+      - name: Setup CMake
+        uses: lukka/get-cmake@latest
+      - name: Configure (full)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path build | Out-Null
+          cmake -S . -B build -DNOMAD_CORE_MODE=OFF -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config Release --parallel
+      - name: Sign binaries
+        if: ${{ secrets.CODESIGN_PFX_BASE64 && secrets.CODESIGN_PFX_PASSWORD }}
+        shell: pwsh
+        env:
+          PFX_BASE64: ${{ secrets.CODESIGN_PFX_BASE64 }}
+          PFX_PASSWORD: ${{ secrets.CODESIGN_PFX_PASSWORD }}
+        run: |
+          $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:PFX_BASE64))
+          $bins = Get-ChildItem build -Recurse -Include *.exe,*.dll
+          foreach ($b in $bins) {
+            & "C:\\Program Files (x86)\\Windows Kits\\10\\App Certification Kit\\signtool.exe" sign `
+              /f $pfxPath /p $env:PFX_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $b.FullName
+          }
+      - name: Package artifacts
+        shell: pwsh
+        run: |
+          $name = "NomadStudioPlus-${{ github.event.inputs.version }}.zip"
+          Compress-Archive -Path build\**\*.exe,build\**\*.dll -DestinationPath $name
+          echo "PACKAGE_NAME=$name" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: Nomad Studio+ v${{ github.event.inputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            ${{ env.PACKAGE_NAME }}
