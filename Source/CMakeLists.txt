@@ -52,6 +52,7 @@ target_include_directories(NOMAD_DAW PRIVATE
 	${CMAKE_SOURCE_DIR}/NomadUI/Graphics
 	${CMAKE_SOURCE_DIR}/NomadUI/Core
 	${CMAKE_SOURCE_DIR}/NomadAudio/include
+	${CMAKE_CURRENT_SOURCE_DIR}/license
 )
 
 # Platform-specific settings
@@ -85,6 +86,11 @@ if(WIN32)
 		"/WHOLEARCHIVE:$<TARGET_FILE:glad>"
 		"/IGNORE:4098"  # Ignore CRT mismatch warning (FreeType uses static CRT)
 	)
+
+	# Add the resource script so the icon is embedded into the executable
+	# Note: we expect Source/nomad.ico to be present in the repository. The
+	# automatic SVG->ICO conversion was removed to keep CI/tooling simple.
+	target_sources(NOMAD_DAW PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.rc")
 elseif(UNIX AND NOT APPLE)
 	# Linux-specific settings
 	target_link_libraries(NOMAD_DAW PRIVATE

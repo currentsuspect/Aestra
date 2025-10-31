@@ -108,6 +108,19 @@ bool PlatformWindowWin32::create(const WindowDesc& desc) {
         return false;
     }
 
+    // Explicitly set the window icons via WM_SETICON. Load icons here so
+    // they are in scope; some shells prefer icons set on the window itself
+    // over the class icons for taskbar and Alt+Tab rendering.
+    HINSTANCE hInstLocal = GetModuleHandle(nullptr);
+    HICON hIconBig = (HICON)LoadImageW(hInstLocal, L"IDI_APP_ICON", IMAGE_ICON, 256, 256, LR_DEFAULTCOLOR);
+    HICON hIconSmall = (HICON)LoadImageW(hInstLocal, L"IDI_APP_ICON", IMAGE_ICON, 48, 48, LR_DEFAULTCOLOR);
+    if (hIconBig) {
+        SendMessageW(m_hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIconBig);
+    }
+    if (hIconSmall) {
+        SendMessageW(m_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIconSmall);
+    }
+
     // Get device context
     m_hdc = GetDC(m_hwnd);
     if (!m_hdc) {
@@ -174,6 +187,18 @@ bool PlatformWindowWin32::registerWindowClass() {
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = GetModuleHandle(nullptr);
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    // Try to load the application icon from resources. We use the resource
+    // name "IDI_APP_ICON" which is defined in Source/app_icon.rc. Load both
+    // large and small icons so Alt+Tab and the task switcher use the correct
+    // images.
+    HINSTANCE hInst = wc.hInstance;
+    // Load icons by name. Request explicit sizes so the OS uses appropriately-
+    // sized bitmaps for Alt+Tab (large) and taskbar/title (small). If the
+    // resource isn't present, fall back to the default application icon.
+    HICON hLargeIcon = (HICON)LoadImageW(hInst, L"IDI_APP_ICON", IMAGE_ICON, 256, 256, LR_DEFAULTCOLOR);
+    HICON hSmallIcon = (HICON)LoadImageW(hInst, L"IDI_APP_ICON", IMAGE_ICON, 48, 48, LR_DEFAULTCOLOR);
+    if (hLargeIcon) wc.hIcon = hLargeIcon; else wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+    if (hSmallIcon) wc.hIconSm = hSmallIcon; else wc.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
     wc.lpszClassName = WINDOW_CLASS_NAME;
 
     if (!RegisterClassExW(&wc)) {

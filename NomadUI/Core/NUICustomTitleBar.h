@@ -57,6 +57,8 @@ private:
     std::shared_ptr<NUIIcon> maximizeIcon_;
     std::shared_ptr<NUIIcon> restoreIcon_;
     std::shared_ptr<NUIIcon> closeIcon_;
+    // App icon (left side of title bar)
+    std::shared_ptr<NUIIcon> appIcon_;
     
     // Hover states
     enum class HoverButton {

@@ -232,7 +232,8 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event)
     // Horizontal scroll with Shift+Wheel, vertical with wheel
     if (event.wheelDelta != 0.0f)
     {
-        if (event.shift)
+        // Shift-modified wheel => horizontal scroll
+        if ((event.modifiers & NUIModifiers::Shift))
         {
             scrollX_ = std::max(0.0f, scrollX_ - event.wheelDelta * 60.0f);
             syncProps();
