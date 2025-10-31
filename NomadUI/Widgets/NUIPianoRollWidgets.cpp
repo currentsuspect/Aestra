@@ -219,7 +219,6 @@ void PianoRollView::onRender(NUIRenderer& renderer)
 {
     auto& theme = NUIThemeManager::getInstance();
     renderer.fillRect(getBounds(), theme.getColor("backgroundPrimary"));
-    layoutChildren();
 }
 
 void PianoRollView::onResize(int width, int height)
