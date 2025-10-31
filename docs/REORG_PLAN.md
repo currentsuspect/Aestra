@@ -71,7 +71,6 @@ Developer experience
 
 Checklist before public push
 
-- Run `.	ools
-un_gitleaks.ps1` (or `gitleaks detect`) and clear any findings.
+- Run `.\tools\run_gitleaks.ps1` (or `gitleaks detect`) and clear any findings.
 - Ensure no private cert/key files exist in the working tree or history (use `scan_history.ps1` to list large objects and `gitleaks`).
 - Prepare the cleaned public repo mirror and verify that it builds locally in `NOMAD_CORE_ONLY` mode.
