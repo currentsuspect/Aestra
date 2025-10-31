@@ -15,18 +15,12 @@ if %ERRORLEVEL% == 0 (
     exit /b 1
 )
 
-:: Generate a self-signed certificate if it doesn't exist
-if not exist "NomadCert.cer" (
-    echo Generating new self-signed certificate...
-    makecert -r -pe -n "CN=Nomad Studios Dev Cert" -ss My -sr CurrentUser -a sha256 -len 2048 -sky signature NomadCert.cer
-    if %ERRORLEVEL% NEQ 0 (
-        echo Failed to generate certificate
-        pause
-        exit /b 1
-    )
-    echo Certificate generated successfully
-) else (
-    echo Using existing certificate
+:: Generate a self-signed certificate if it doesn't exist in the store
+powershell -Command "$cert = Get-ChildItem -Path Cert:\CurrentUser\My | Where-Object {$_.Subject -eq 'CN=Nomad Studios Dev Cert'}; if (-not $cert) { New-SelfSignedCertificate -Subject 'CN=Nomad Studios Dev Cert' -CertStoreLocation 'Cert:\CurrentUser\My' -KeyAlgorithm RSA -KeyLength 2048 -HashAlgorithm SHA256 -Type CodeSigningCert; Write-Host 'Certificate generated successfully' } else { Write-Host 'Using existing certificate' }"
+if %ERRORLEVEL% NEQ 0 (
+    echo Failed to generate or find certificate
+    pause
+    exit /b 1
 )
 
 :: Build the project
