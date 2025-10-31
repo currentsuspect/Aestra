@@ -51,7 +51,8 @@ jobs:
         sudo apt-get install -y cmake g++ libgl1-mesa-dev libx11-dev
     
     - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      # Build only core components on CI when optional/audio modules are missing
+      run: cmake -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
     
     - name: Build NomadUI
       run: cmake --build build --config Release --target NomadUI_Core
@@ -73,7 +74,8 @@ jobs:
         submodules: recursive
     
     - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      # Build only core components on CI when optional/audio modules are missing
+      run: cmake -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
     
     - name: Build NomadUI
       run: cmake --build build --config Release --target NomadUI_Core
