@@ -2,9 +2,9 @@
 # Block pushes directly to main
 while read local_ref local_sha remote_ref remote_sha
 do
-  case   in
+  case "$local_ref" in
     refs/heads/main)
-      echo '? Direct pushes to main are blocked. Push to develop and open a PR.' 1>&2
+      echo "Direct pushes to main are blocked. Push to develop and open a PR." 1>&2
       exit 1
       ;;
   esac
