@@ -18,5 +18,6 @@ if ($LASTEXITCODE -ne 0) { Write-Error "git submodule add failed"; exit 1 }
 
 Write-Host "Initializing and updating submodules..." -ForegroundColor Cyan
 git submodule update --init --recursive
+if ($LASTEXITCODE -ne 0) { Write-Error "git submodule update failed"; exit 1 }
 
 Write-Host "Submodule added. Remember to commit the .gitmodules change if you intend to keep it." -ForegroundColor Green
