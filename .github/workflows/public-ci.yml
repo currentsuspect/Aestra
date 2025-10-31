@@ -1,9 +1,13 @@
 name: Public CI (Nomad Core)
 
+# Only run public CI on direct pushes to `main` to ensure the public build checks
+# verify the public repository state. Pull requests (which may originate from
+# forks or temporary branches) can contain private folders and will fail this
+# check; run pull-request checks in separate workflows if you want PR-level
+# validation without the private-folder guard.
 on:
   push:
     branches: [ main ]
-  pull_request:
 
 jobs:
   build-core:
