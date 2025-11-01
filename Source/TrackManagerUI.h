@@ -3,11 +3,12 @@
 
 #include "../NomadAudio/include/TrackManager.h"
 #include "TrackUIComponent.h"
+#include "PianoRollPanel.h"
+#include "MixerPanel.h"
 #include "../NomadUI/Core/NUIComponent.h"
 #include "../NomadUI/Core/NUIScrollbar.h"
 #include "../NomadUI/Core/NUIButton.h"
 #include "../NomadUI/Core/NUIIcon.h"
-#include "../NomadUI/Widgets/NUIPianoRollWidgets.h"
 #include <memory>
 #include <vector>
 
@@ -32,6 +33,12 @@ public:
     // Track Management
     void addTrack(const std::string& name = "");
     void refreshTracks();
+    
+    // Piano Roll Panel
+    void togglePianoRoll();  // Show/hide piano roll panel
+    
+    // Mixer Panel
+    void toggleMixer();  // Show/hide mixer panel
 
 protected:
     void onRender(NomadUI::NUIRenderer& renderer) override;
@@ -72,9 +79,46 @@ private:
     bool m_minimizeIconHovered = false;
     bool m_maximizeIconHovered = false;
 
-    // Piano roll panel
-    std::shared_ptr<NomadUI::PianoRollView> m_pianoRoll;
-    bool m_showPianoRoll = true;
+        // Piano Roll Panel (can dock at bottom or maximize to full view)
+    std::shared_ptr<PianoRollPanel> m_pianoRollPanel;
+    bool m_showPianoRoll{false};  // Hidden by default
+    float m_pianoRollHeight{300.0f};  // Default height when docked
+    
+    // Mixer Panel (can dock on right or maximize to full view)
+    std::shared_ptr<MixerPanel> m_mixerPanel;
+    bool m_showMixer{false};  // Hidden by default
+    float m_mixerWidth{400.0f};  // Default width when docked
+
+    // ⚡ MULTI-LAYER CACHING SYSTEM for 60+ FPS
+    
+    // Layer 1: Static Background (grid, ruler ticks)
+    uint32_t m_backgroundTextureId = 0;
+    int m_backgroundCachedWidth = 0;
+    int m_backgroundCachedHeight = 0;
+    float m_backgroundCachedZoom = 0.0f;
+    bool m_backgroundNeedsUpdate = true;
+    
+    // Layer 2: Track Controls (buttons, labels - semi-static)
+    uint32_t m_controlsTextureId = 0;
+    bool m_controlsNeedsUpdate = true;
+    
+    // Layer 3: Waveforms (per-track FBO caching)
+    struct TrackCache {
+        uint32_t textureId = 0;
+        bool needsUpdate = true;
+        double lastContentHash = 0; // Simple hash to detect content changes
+    };
+    std::vector<TrackCache> m_trackCaches;
+    
+    // Dirty flags for smart invalidation
+    bool m_playheadMoved = false;        // Only redraw playhead overlay
+    bool m_metersChanged = false;        // Only redraw audio meters
+    
+    void updateBackgroundCache(NomadUI::NUIRenderer& renderer);
+    void updateControlsCache(NomadUI::NUIRenderer& renderer);
+    void updateTrackCache(NomadUI::NUIRenderer& renderer, size_t trackIndex);
+    void invalidateAllCaches();
+    void invalidateCache(); // Keep for compatibility
 
     void layoutTracks();
     void onAddTrackClicked();

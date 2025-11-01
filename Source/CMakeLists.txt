@@ -21,12 +21,21 @@ add_executable(NOMAD_DAW
 	TrackUIComponent.cpp
 	TrackManagerUI.h
 	TrackManagerUI.cpp
-	PerformanceHUD.h
-	PerformanceHUD.cpp
+	MixerView.h
+	MixerView.cpp
+	WindowPanel.h
+	WindowPanel.cpp
+	PianoRollPanel.h
+	PianoRollPanel.cpp
+	MixerPanel.h
+	MixerPanel.cpp
 	ui/InfoTab.h
 	ui/InfoTab.cpp
 	license/LicenseVerifier.h
 	license/LicenseVerifier.cpp
+	# Remotery profiler
+	${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib/Remotery.c
+	${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib/Remotery.h
 )
 
 # Set C++ standard
@@ -43,6 +52,7 @@ target_link_libraries(NOMAD_DAW PRIVATE
 	NomadUI_Platform
 	NomadUI_OpenGL
 	NomadAudio
+	TracyClient
 )
 
 # Include directories
@@ -53,6 +63,7 @@ target_include_directories(NOMAD_DAW PRIVATE
 	${CMAKE_SOURCE_DIR}/NomadUI/Core
 	${CMAKE_SOURCE_DIR}/NomadAudio/include
 	${CMAKE_CURRENT_SOURCE_DIR}/license
+	${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib
 )
 
 # Platform-specific settings
