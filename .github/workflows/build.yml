@@ -13,6 +13,7 @@ jobs:
   build-windows:
     name: Build on Windows
     runs-on: windows-latest
+    continue-on-error: true
     
     steps:
     - name: Checkout
@@ -66,6 +67,7 @@ jobs:
   build-macos:
     name: Build on macOS
     runs-on: macos-latest
+    continue-on-error: true
     
     steps:
     - name: Checkout

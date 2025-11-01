@@ -7,7 +7,7 @@ on:
 
 jobs:
   scan:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -16,5 +16,6 @@ jobs:
         uses: zricethezav/gitleaks-action@v2
         env:
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: detect --source . --config .gitleaks.toml --no-banner --redact

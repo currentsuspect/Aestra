@@ -9,7 +9,6 @@ title = "Nomad gitleaks config"
     "^CHANGELOG.*$"
   ]
 
-[rules]
 # Rely on default gitleaks rules; custom additions below
 
 [[rules]]
