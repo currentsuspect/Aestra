@@ -547,9 +547,9 @@ If generation is slow:
   - Boost: https://www.boost.org/doc/libs/
 
 ### NOMAD Specific
-- [Coding Style Guide](../docs/developer/coding-style.md)
+- [Coding Style Guide](developer/coding-style.md)
 - [Contributing Guidelines](../CONTRIBUTING.md)
-- [Architecture Documentation](../docs/architecture/)
+- [Architecture Documentation](architecture/)
 
 ---
 

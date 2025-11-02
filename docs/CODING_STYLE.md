@@ -1,22 +1,42 @@
-# 💅 Nomad DAW Coding Style Guide
+# 💅 Nomad DAW Coding Style Guide# 💅 Nomad DAW Coding Style Guide
 
-![Code Style](https://img.shields.io/badge/Code%20Style-clang--format-blue)
-![C++ Standard](https://img.shields.io/badge/C%2B%2B-17-orange)
 
-This guide defines the coding standards and conventions for Nomad DAW. Following these guidelines ensures consistency and maintainability across the codebase.
 
-## 📋 Table of Contents
+> **📍 This file has been moved!**![Code Style](https://img.shields.io/badge/Code%20Style-clang--format-blue)
 
-- [Code Formatting](#-code-formatting)
+>![C++ Standard](https://img.shields.io/badge/C%2B%2B-17-orange)
+
+> The canonical Coding Style Guide is now maintained at:  
+
+> **[`developer/coding-style.md`](developer/coding-style.md)**This guide defines the coding standards and conventions for Nomad DAW. Following these guidelines ensures consistency and maintainability across the codebase.
+
+>
+
+> Please update your bookmarks and use the link above.## 📋 Table of Contents
+
+
+
+---- [Code Formatting](#-code-formatting)
+
 - [Naming Conventions](#-naming-conventions)
-- [File Organization](#-file-organization)
+
+## Quick Links- [File Organization](#-file-organization)
+
 - [Comments and Documentation](#-comments-and-documentation)
-- [Best Practices](#-best-practices)
-- [C++ Guidelines](#-c-guidelines)
+
+- **Canonical Guide**: [developer/coding-style.md](developer/coding-style.md)- [Best Practices](#-best-practices)
+
+- **GitHub**: [View on GitHub](https://github.com/currentsuspect/NOMAD/blob/develop/docs/developer/coding-style.md)- [C++ Guidelines](#-c-guidelines)
+
+- **Contributing**: [developer/contributing.md](developer/contributing.md)
 
 ## 🎨 Code Formatting
 
+---
+
 ### Automatic Formatting with clang-format
+
+**Why the move?** This consolidates our documentation structure, placing developer-focused guides under `docs/developer/` to prevent maintenance drift from duplicate files.
 
 Nomad uses **clang-format** for automatic code formatting. The configuration is in `.clang-format` at the project root.
 

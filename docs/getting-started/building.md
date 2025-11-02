@@ -325,7 +325,7 @@ cmake --build build --parallel
 
 - [Architecture Overview](../ARCHITECTURE.md) - Understand Nomad's structure
 - [Contributing Guide](../CONTRIBUTING.md) - How to contribute code
-- [Coding Style](../CODING_STYLE.md) - Code formatting guidelines
+- [Coding Style](../developer/coding-style.md) - Code formatting guidelines
 - [FAQ](../FAQ.md) - Frequently asked questions
 
 ## 🆘 Getting Help

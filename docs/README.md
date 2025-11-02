@@ -29,7 +29,7 @@ Nomad DAW is a professional digital audio workstation featuring:
 ### 🏗️ Architecture & Design
 
 - **[Architecture Overview](ARCHITECTURE.md)** — Nomad's modular architecture (Core, UI, Audio, Platform)
-- **[Coding Style Guide](CODING_STYLE.md)** — Code conventions, formatting rules, and best practices
+- **[Coding Style Guide](developer/coding-style.md)** — Code conventions, formatting rules, and best practices
 - **[Glossary](GLOSSARY.md)** — Technical terms and definitions
 
 ### 🐛 Development & Debugging
@@ -60,12 +60,12 @@ Nomad DAW is a professional digital audio workstation featuring:
 1. Start with [FAQ](FAQ.md) to understand common questions
 2. Read [Contributing Guide](CONTRIBUTING.md) to learn our workflow
 3. Check [Building Guide](BUILDING.md) to set up your development environment
-4. Review [Coding Style Guide](CODING_STYLE.md) before writing code
+4. Review [Coding Style Guide](developer/coding-style.md) before writing code
 
 ### For Developers
 1. Understand [Architecture Overview](ARCHITECTURE.md) to grasp system design
 2. Reference [Glossary](GLOSSARY.md) for technical terminology
-3. Follow [Coding Style Guide](CODING_STYLE.md) for consistent code quality
+3. Follow [Coding Style Guide](developer/coding-style.md) for consistent code quality
 4. Use [Debugging Guide](DEBUGGING.md) and [Performance Tuning](PERFORMANCE_TUNING.md) for optimization
 
 ### For Bug Reporters
@@ -119,7 +119,7 @@ We welcome contributions from the community! Before contributing:
 1. Read our [Contributing Guide](CONTRIBUTING.md)
 2. Check the [Roadmap](ROADMAP.md) for current priorities
 3. Review existing issues and discussions
-4. Follow our [Coding Style Guide](CODING_STYLE.md)
+4. Follow our [Coding Style Guide](developer/coding-style.md)
 
 **Note**: By contributing to Nomad, you agree to the Contributor License Agreement outlined in the contributing guide.
 

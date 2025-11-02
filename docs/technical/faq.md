@@ -167,7 +167,7 @@ This is necessary because Nomad is commercial software. See [Contributing Guide]
 
 ### What code style should I follow?
 
-Follow our [Coding Style Guide](../CODING_STYLE.md):
+Follow our [Coding Style Guide](../developer/coding-style.md):
 - **clang-format** for automatic formatting
 - **PascalCase** for classes
 - **camelCase** for functions and variables
@@ -349,7 +349,7 @@ Still have questions? Check these resources:
 - [Building Guide](../BUILDING.md) - Detailed build instructions
 - [Contributing Guide](../CONTRIBUTING.md) - How to contribute
 - [Architecture Overview](../ARCHITECTURE.md) - Technical deep dive
-- [Coding Style Guide](../CODING_STYLE.md) - Code conventions
+- [Coding Style Guide](../developer/coding-style.md) - Code conventions
 - [Glossary](../GLOSSARY.md) - Technical terminology
 
 ## 💬 Getting Help

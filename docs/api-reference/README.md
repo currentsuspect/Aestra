@@ -203,7 +203,7 @@ When adding new code:
 4. ✅ Run `doxygen Doxyfile` and check for warnings
 5. ✅ Review generated docs for clarity
 
-See [CODING_STYLE.md](../docs/developer/coding-style.md) for detailed documentation guidelines.
+See [coding-style.md](../developer/coding-style.md) for detailed documentation guidelines.
 
 ---
 

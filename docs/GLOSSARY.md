@@ -326,7 +326,7 @@ Test that verifies a single component in isolation. Helps catch bugs early.
 
 - [Architecture Overview](ARCHITECTURE.md) - Detailed system design
 - [Building Guide](BUILDING.md) - Build instructions
-- [Coding Style Guide](CODING_STYLE.md) - Code conventions
+- [Coding Style Guide](developer/coding-style.md) - Code conventions
 - [FAQ](FAQ.md) - Common questions
 
 ---

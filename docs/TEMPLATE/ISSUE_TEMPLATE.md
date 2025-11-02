@@ -19,7 +19,7 @@ Select one:
 - [ ] docs/README.md
 - [ ] docs/BUILDING.md
 - [ ] docs/CONTRIBUTING.md
-- [ ] docs/CODING_STYLE.md
+- [ ] docs/developer/coding-style.md
 - [ ] docs/ARCHITECTURE.md
 - [ ] docs/AI_GUIDE.md
 - [ ] docs/FAQ.md

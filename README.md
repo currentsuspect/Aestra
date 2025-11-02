@@ -186,7 +186,7 @@ We welcome contributions from the community! Whether you're fixing bugs, adding 
 
 1. **Fork and Clone** — Fork this repo and clone it locally
 2. **Create a Branch** — Work on a feature or fix in a separate branch
-3. **Follow Code Style** — Use clang-format and follow our [Coding Style Guide](docs/CODING_STYLE.md)
+3. **Follow Code Style** — Use clang-format and follow our [Coding Style Guide](docs/developer/coding-style.md)
 4. **Test Your Changes** — Ensure builds pass and functionality works
 5. **Submit a PR** — Open a pull request with a clear description
 
