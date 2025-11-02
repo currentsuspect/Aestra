@@ -83,6 +83,11 @@ jobs:
                 continue
               fi
               
+              # Skip HTML files (generated documentation meant for web serving, not file system)
+              if [[ $link =~ \.html$ ]]; then
+                continue
+              fi
+              
               # Skip if it looks like code (contains *, &, comma, or is a C++ type/variable name)
               if [[ $link =~ [\*\&,] ]] || [[ $link =~ ^(int|float|bool|const|void|char|double|uint32_t|size_t|btn|buffer|samples|width|height|x|y|key|value|index|text|pressed|toggled|checked)$ ]]; then
                 continue
