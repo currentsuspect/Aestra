@@ -3,26 +3,35 @@
 **/out/
 **/bin/
 **/obj/
-.vs/
+**/dist/
+**/Release/
+build/
+cmake-build-*/
+out/
+bin/
+lib/
+
+# CMake
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 compile_commands.json
+install_manifest.txt
+.cmake/api/
 
-# OS/editor
-.DS_Store
-Thumbs.db
-*.log
-*.tmp
-*.swp
-*.swo
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.suo
 *.user
 *.sln.docstates
+
+# IDE files
 .idea/
 .vscode/
 *.code-workspace
 
-# Binaries and archives
+# Compiled files
 *.exe
 *.dll
 *.pdb
@@ -30,18 +39,25 @@ Thumbs.db
 *.so
 *.dylib
 *.a
-*.app
-*.apk
-*.ipa
-*.zip
-*.7z
-*.tar
-*.gz
-*.tgz
-*.pkg
-*.msi
+*.o
+*.obj
 
-# Audio assets
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+test_*.txt
+test_*.log
+
+# Audio assets (large files)
 *.wav
 *.mp3
 *.flac
@@ -50,22 +66,21 @@ Thumbs.db
 *.ogg
 *.m4a
 
-# Models and large data
+# Models and ML artifacts
 *.onnx
 *.pt
 *.pth
 *.tflite
 *.pb
 *.safetensors
+*.h5
+*.ckpt
+*.bin
 models/
-assets/
-private_assets/
-assets_private/
-assets_premium/
 weights/
 checkpoints/
 
-# Keys/secrets/licenses
+# Keys/secrets/certificates
 *.key
 *.pem
 *.pfx
@@ -89,119 +104,49 @@ config/private/
 **/provisioning/
 keys/
 licenses/
+NomadCert.cer
 
-# Generated
+# Archives
+*.zip
+*.7z
+*.tar
+*.gz
+*.tgz
+*.pkg
+*.msi
+*.app
+*.apk
+*.ipa
+
+# Large assets (use LFS or private repo)
+assets/
+private_assets/
+assets_private/
+assets_premium/
+/NomadAssets/
+/NomadMuse/models/
+
+# Generated documentation
 docs/_site/
 coverage/
-dist/
-.cmake/api/
-.cache/
+
+# Build tools
 .lfsconfig
 .gitleaks.toml.local
 
-# Build output
-/build/
-/dist/
-/bin/
-/Release/
+# Proprietary SDKs
+NomadAudio/External/ASIOSDK/
 
-# Visual Studio
-/.vs/
-*.vcxproj.user
-*.suo
-
-# CMake
-/CMakeFiles/
-/CMakeCache.txt
-/cmake_install.cmake
-
-# OS generated
-Thumbs.db
-.DS_Store
-
-# Signing / certificates
-*.pfx
-*.p12
-*.pem
-*.key
-*.jks
-*.keystore
-NomadCert.cer
-
-# Model / ML artifacts (private)
-*.onnx
-*.pt
-*.pth
-*.h5
-*.ckpt
-*.bin
-
-# Large assets (use LFS or private repo)
-/NomadAssets/
-/NomadMuse/models/
+# AI tools
+.kiro/
 
 # Installer outputs
 /dist/installers/
 
-# Logs
-*.log
-# Ignore locally provided ASIO SDK (do not commit proprietary SDK)
-NomadAudio/External/ASIOSDK/
-
-# Build directories
-/build/
-
-# Visual Studio
-*.user
-*.suo
-*.vcxproj.user
-# Build directories
-build/
-cmake-build-*/
-out/
-bin/
-lib/
-
-# IDE files
-.vs/
-.vscode/
-.idea/
-*.suo
-*.user
-*.sln.docstates
-
-# Compiled files
-*.o
-*.obj
-*.exe
-*.dll
-*.so
-*.dylib
-*.a
-*.lib
-
-# CMake
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-install_manifest.txt
-
-# OS files
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Logs
-*.log
-test_*.txt
-test_*.log
-
-# Temporary files
-*.tmp
-*.temp
-*~
-# AI TOOLS
-.kiro/
-
-# GitHub setup instructions (temporary)
+# Temporary GitHub instructions
 GITHUB_SETUP.md
+
+# Cache
+.cache/
+__pycache__/
+node_modules/
