@@ -5,6 +5,7 @@
 #include <filesystem>
 
 #include "LicenseVerifier.h"
+#include "../../NomadCore/include/NomadLog.h"
 
 // NomadUI includes
 #include "NUILabel.h"

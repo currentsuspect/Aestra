@@ -66,6 +66,7 @@ public:
     void setPixelsPerBeat(float ppb);
     void setKeyHeight(float keyHeight);
     void setScrollOffsetX(float offset);
+    void setScrollOffsetY(float offset);
     void setFirstMidiNote(int note);
 
     void setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb);
@@ -75,6 +76,7 @@ private:
     float pixelsPerBeat_;
     float keyHeight_;
     float scrollX_;
+    float scrollY_;
     int firstNote_;
     std::function<void(const std::vector<MidiNote>&)> onNotesChanged_;
 };

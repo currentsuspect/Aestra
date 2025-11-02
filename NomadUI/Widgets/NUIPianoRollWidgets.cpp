@@ -103,7 +103,7 @@ void PianoGrid::setScrollOffsetX(float offset) { scrollX_ = std::max(0.0f, offse
 void PianoGrid::setScrollOffsetY(float offset) { scrollY_ = std::max(0.0f, offset); repaint(); }
 
 PianoRollNotes::PianoRollNotes()
-    : pixelsPerBeat_(60.0f), keyHeight_(16.0f), scrollX_(0.0f), firstNote_(72)
+    : pixelsPerBeat_(60.0f), keyHeight_(16.0f), scrollX_(0.0f), scrollY_(0.0f), firstNote_(72)
 {
 }
 
@@ -160,6 +160,7 @@ void PianoRollNotes::setNotes(const std::vector<MidiNote>& notes)
 void PianoRollNotes::setPixelsPerBeat(float ppb) { pixelsPerBeat_ = std::max(8.0f, ppb); repaint(); }
 void PianoRollNotes::setKeyHeight(float keyHeight) { keyHeight_ = std::max(6.0f, keyHeight); repaint(); }
 void PianoRollNotes::setScrollOffsetX(float offset) { scrollX_ = std::max(0.0f, offset); repaint(); }
+void PianoRollNotes::setScrollOffsetY(float offset) { scrollY_ = std::max(0.0f, offset); repaint(); }
 void PianoRollNotes::setFirstMidiNote(int note) { firstNote_ = std::clamp(note, 0, 127); repaint(); }
 void PianoRollNotes::setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb) { onNotesChanged_ = std::move(cb); }
 
