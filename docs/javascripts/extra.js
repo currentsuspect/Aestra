@@ -20,12 +20,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Add copy button feedback
   document.querySelectorAll('.md-clipboard').forEach(button => {
+    let timeoutId = null;
     button.addEventListener('click', function() {
       const icon = this.querySelector('.md-clipboard__icon');
       if (icon) {
+        if (timeoutId) clearTimeout(timeoutId);
         icon.textContent = '✓';
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           icon.textContent = '';
+          timeoutId = null;
         }, 2000);
       }
     });
