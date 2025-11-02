@@ -2,6 +2,11 @@
 
 Welcome to the NOMAD DAW API reference. This section provides detailed documentation for all public APIs.
 
+!!! tip "🚀 Full API Reference"
+    **[Browse the Complete Doxygen API Reference →](../api-reference/html/index.html)**
+    
+    Comprehensive documentation for all classes, functions, and modules with searchable interface, inheritance diagrams, and detailed member descriptions.
+
 ## 📚 Module APIs
 
 NOMAD's API is organized by module. Each module provides a focused set of functionality:
@@ -19,8 +24,8 @@ Foundation utilities and data structures.
 - `nomad::File` — Cross-platform file I/O
 - `nomad::Logger` — Structured logging
 
-!!! note "API Documentation In Progress"
-    Detailed API documentation is being actively developed. For now, refer to the [Architecture documentation](../architecture/nomad-core.md) and header files for inline documentation.
+!!! tip "Full API Reference Available"
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-core.md) for high-level design concepts.
 
 ---
 
@@ -36,8 +41,8 @@ Platform-specific functionality with unified interface.
 - `nomad::SystemInfo` — System capabilities
 - `nomad::Timer` — High-resolution timing
 
-!!! note "API Documentation In Progress"
-    Detailed API documentation is being actively developed. For now, refer to the [Architecture documentation](../architecture/nomad-plat.md) and header files for inline documentation.
+!!! tip "Full API Reference Available"
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-plat.md) for high-level design concepts.
 
 ---
 
@@ -55,8 +60,8 @@ GPU-accelerated UI framework.
 - `nomad::Layout` — Layout management
 - `nomad::Theme` — Theme system
 
-!!! note "API Documentation In Progress"
-    Detailed API documentation is being actively developed. For now, refer to the [Architecture documentation](../architecture/nomad-ui.md) and header files for inline documentation.
+!!! tip "Full API Reference Available"
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-ui.md) for high-level design concepts.
 
 ---
 
@@ -72,8 +77,8 @@ Professional audio processing system.
 - `nomad::DSP::Gain` — Gain processor
 - `nomad::DSP::EQ` — Equalizer processor
 
-!!! note "API Documentation In Progress"
-    Detailed API documentation is being actively developed. For now, refer to the [Architecture documentation](../architecture/nomad-audio.md) and header files for inline documentation.
+!!! tip "Full API Reference Available"
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-audio.md) for high-level design concepts.
 
 ---
 
@@ -271,17 +276,17 @@ Exploring a specific module? See architecture docs:
 
 | Module | API Docs | Examples | Coverage |
 |--------|----------|----------|----------|
-| NomadCore | 🚧 In Progress | ✅ Complete | 80% |
-| NomadPlat | 🚧 In Progress | ✅ Complete | 75% |
-| NomadUI | 🚧 In Progress | 🚧 Partial | 60% |
-| NomadAudio | 🚧 In Progress | ✅ Complete | 85% |
+| NomadCore | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 80% |
+| NomadPlat | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 75% |
+| NomadUI | ✅ [Complete](../api-reference/html/index.html) | 🚧 Partial | 60% |
+| NomadAudio | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 85% |
 | NomadSDK | 📅 Planned | 📅 Planned | 0% |
 
-!!! note "Documentation In Progress"
-    Detailed API documentation is being actively developed. For now, refer to:
+!!! success "Full API Reference Available"
+    Complete API documentation is now available via [Doxygen API Reference](../api-reference/html/index.html). Additional resources:
     
-    - Architecture documentation for high-level overview
-    - Header files for inline documentation
+    - [Architecture documentation](../architecture/overview.md) for high-level design concepts
+    - [Getting Started Guide](../getting-started/index.md) for quick setup
     - Example code in the repository
     - [GitHub Discussions](https://github.com/currentsuspect/NOMAD/discussions) for questions
 
