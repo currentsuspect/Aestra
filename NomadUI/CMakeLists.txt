@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.22)
 project(NomadUI VERSION 0.1.0 LANGUAGES CXX)
 
 # C++17 required
