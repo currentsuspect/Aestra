@@ -2,11 +2,12 @@
 
 :root {
   /* NOMAD Brand Colors */
-  --nomad-accent: #00d9ff;
-  --nomad-primary: #5c6bc0;
+  --nomad-primary: #4338ca;
+  --nomad-accent: #06b6d4;
+  --nomad-bg: #0f172a;
   --nomad-dark: #1a1a2e;
-  --nomad-gradient-start: #5c6bc0;
-  --nomad-gradient-end: #00d9ff;
+  --nomad-gradient-start: #4338ca;
+  --nomad-gradient-end: #06b6d4;
 }
 
 /* Hero Section Styling */
@@ -306,4 +307,26 @@
 .quick-ref-card .label {
   font-size: 0.9rem;
   color: var(--md-default-fg-color--light);
+}
+
+/* Custom Header Styling with Glassmorphism */
+.md-header {
+  backdrop-filter: blur(10px);
+  background: rgba(15, 23, 42, 0.8);
+}
+
+/* Navigation Title Styling */
+.md-nav__title {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Code Block Enhancement with Glow Effect */
+.codehilite code,
+.highlight code,
+pre code {
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 8px;
+  padding: 0.4em 0.6em;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
 }
