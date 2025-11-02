@@ -9,7 +9,7 @@ namespace Nomad {
 class PlatformUtilsWin32 : public IPlatformUtils {
 public:
     PlatformUtilsWin32();
-    ~PlatformUtilsWin32() override = default;
+    ~PlatformUtilsWin32() override;
 
     // Time
     double getTime() const override;
