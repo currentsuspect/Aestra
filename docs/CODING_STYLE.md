@@ -1,20 +1,38 @@
-# 💅 Nomad DAW Coding Style Guide# 💅 Nomad DAW Coding Style Guide
+# Coding Style Guide - Moved# 💅 Nomad DAW Coding Style Guide# 💅 Nomad DAW Coding Style Guide
 
 
 
-> **📍 This file has been moved!**![Code Style](https://img.shields.io/badge/Code%20Style-clang--format-blue)
-
->![C++ Standard](https://img.shields.io/badge/C%2B%2B-17-orange)
-
-> The canonical Coding Style Guide is now maintained at:  
-
-> **[`developer/coding-style.md`](developer/coding-style.md)**This guide defines the coding standards and conventions for Nomad DAW. Following these guidelines ensures consistency and maintainability across the codebase.
+> **This file has been moved!**
 
 >
 
+> The canonical Coding Style Guide is now maintained at:  > **📍 This file has been moved!**![Code Style](https://img.shields.io/badge/Code%20Style-clang--format-blue)
+
+> **[developer/coding-style.md](developer/coding-style.md)**
+
+>>![C++ Standard](https://img.shields.io/badge/C%2B%2B-17-orange)
+
+> Please update your bookmarks and use the link above.
+
+> The canonical Coding Style Guide is now maintained at:  
+
+## Quick Links
+
+> **[`developer/coding-style.md`](developer/coding-style.md)**This guide defines the coding standards and conventions for Nomad DAW. Following these guidelines ensures consistency and maintainability across the codebase.
+
+- **Canonical Guide**: [developer/coding-style.md](developer/coding-style.md)
+
+- **GitHub**: [View on GitHub](https://github.com/currentsuspect/NOMAD/blob/develop/docs/developer/coding-style.md)>
+
+- **Contributing**: [developer/contributing.md](developer/contributing.md)
+
 > Please update your bookmarks and use the link above.## 📋 Table of Contents
 
+---
 
+
+
+**Why the move?** This consolidates our documentation structure, placing developer-focused guides under `docs/developer/` to prevent maintenance drift from duplicate files.
 
 ---- [Code Formatting](#-code-formatting)
 
