@@ -130,6 +130,11 @@ assets_premium/
 docs/_site/
 coverage/
 site/
+docs/api-reference/html/
+docs/api-reference/xml/
+docs/api-reference/latex/
+doxygen_warnings.log
+doxygen_output.log
 
 # Build tools
 .lfsconfig

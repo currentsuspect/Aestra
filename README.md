@@ -151,6 +151,31 @@ Explore our beautiful, searchable documentation built with MkDocs Material:
 - [Contributing Guide](https://currentsuspect.github.io/NOMAD/developer/contributing/) — How to contribute
 - [Architecture Overview](https://currentsuspect.github.io/NOMAD/architecture/overview/) — Understanding NOMAD's design
 
+### 📚 API Documentation Generation
+
+Generate comprehensive API documentation locally using Doxygen:
+
+**Quick Start:**
+```bash
+# Windows
+.\scripts\generate-api-docs.bat
+
+# Or with PowerShell
+.\scripts\generate-api-docs.ps1 generate -Open
+
+# macOS/Linux
+doxygen Doxyfile
+```
+
+**Features:**
+- 📖 Complete API reference for all modules
+- 🔗 Cross-referenced code with call graphs
+- 📊 Class diagrams and inheritance trees
+- 🔍 Full-text search functionality
+- 💻 Source code browser
+
+See **[API Documentation Guide →](docs/API_DOCUMENTATION_GUIDE.md)** for detailed instructions.
+
 ---
 
 ## 🤝 How to Contribute
