@@ -23,6 +23,10 @@ jobs:
   generate-api-docs:
     name: Generate Doxygen Documentation
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     
     steps:
       - name: Checkout Repository
@@ -109,6 +113,10 @@ jobs:
   documentation-quality:
     name: Check Documentation Quality
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     
     steps:
       - name: Checkout Repository
@@ -134,12 +142,23 @@ jobs:
           else
             # Count undocumented items from the dedicated warnings log
             # Use tr to strip whitespace and ensure clean integer values
-            UNDOC_COUNT=$(grep -c "undocumented" doxygen_warnings.log 2>/dev/null || echo "0")
-            UNDOC_COUNT=$(echo "${UNDOC_COUNT}" | tr -d '[:space:]')
-            PARAM_COUNT=$(grep -c "documented param" doxygen_warnings.log 2>/dev/null || echo "0")
-            PARAM_COUNT=$(echo "${PARAM_COUNT}" | tr -d '[:space:]')
-            ERROR_COUNT=$(grep -c "error:" doxygen_warnings.log 2>/dev/null || echo "0")
-            ERROR_COUNT=$(echo "${ERROR_COUNT}" | tr -d '[:space:]')
+            if grep -q "undocumented" doxygen_warnings.log 2>/dev/null; then
+              UNDOC_COUNT=$(grep -c "undocumented" doxygen_warnings.log | tr -d '[:space:]')
+            else
+              UNDOC_COUNT=0
+            fi
+            
+            if grep -q "documented param" doxygen_warnings.log 2>/dev/null; then
+              PARAM_COUNT=$(grep -c "documented param" doxygen_warnings.log | tr -d '[:space:]')
+            else
+              PARAM_COUNT=0
+            fi
+            
+            if grep -q "error:" doxygen_warnings.log 2>/dev/null; then
+              ERROR_COUNT=$(grep -c "error:" doxygen_warnings.log | tr -d '[:space:]')
+            else
+              ERROR_COUNT=0
+            fi
             
             # Validate that we have integers (default to 0 if not)
             UNDOC_COUNT=${UNDOC_COUNT:-0}
