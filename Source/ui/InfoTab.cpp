@@ -72,12 +72,16 @@ void RenderInfoTab() {
 	// Card icon (SVG). In a full integration, load and cache the SVG as a texture once.
 	NUIIcon cardIcon;
 	// Load SVG for the membership card icon (uses NUIIcon loader)
-	cardIcon.loadSVGFile(g_cardSvgPath);
-
-	// Simple accent for verified tiers (placeholder: change icon tint)
-	if (g_profile.verified && g_profile.tier != "Nomad Core") {
-		// No glow API currently; tint the icon as a subtle verified accent
-		cardIcon.setColorFromTheme("accentPrimary");
+	try {
+		cardIcon.loadSVGFile(g_cardSvgPath);
+		
+		// Simple accent for verified tiers (placeholder: change icon tint)
+		if (g_profile.verified && g_profile.tier != "Nomad Core") {
+			// No glow API currently; tint the icon as a subtle verified accent
+			cardIcon.setColorFromTheme("accentPrimary");
+		}
+	} catch (...) {
+		// If loading fails, continue without the icon - non-fatal
 	}
 
 	// Note: Actual rendering requires attaching these components to the current UI

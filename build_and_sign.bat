@@ -26,7 +26,7 @@ if %ERRORLEVEL% NEQ 0 (
 :: Build the project
 echo.
 echo Building NOMAD DAW...
-call build.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0build.ps1"
 if %ERRORLEVEL% NEQ 0 (
     echo Build failed
     pause
