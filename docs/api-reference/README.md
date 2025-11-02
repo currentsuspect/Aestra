@@ -109,10 +109,10 @@ int m_count;  ///< Brief description of the member variable
 
 The generated API documentation can be integrated into the main MkDocs site.
 
-To link API docs in MkDocs pages:
+To link API docs in MkDocs pages (from docs/ directory):
 
 ```markdown
-See the [AudioDeviceManager API](../api-reference/html/class_nomad_1_1_audio_1_1_audio_device_manager.html) for details.
+See the [AudioDeviceManager API](api-reference/html/class_nomad_1_1_audio_1_1_audio_device_manager.html) for details.
 ```
 
 ## 🛠️ Maintenance
