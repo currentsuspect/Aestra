@@ -322,7 +322,9 @@
 }
 
 /* Code Block Enhancement with Glow Effect */
-.codehilite code {
+.codehilite code,
+.highlight code,
+pre code {
   background: rgba(15, 23, 42, 0.8);
   border-radius: 8px;
   padding: 0.4em 0.6em;
