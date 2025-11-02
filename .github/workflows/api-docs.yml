@@ -125,11 +125,34 @@ jobs:
           # Generate docs and capture warnings (warnings also go to doxygen_warnings.log via Doxyfile config)
           doxygen Doxyfile 2>&1 | tee doxygen_output.log
           
-          # Count undocumented items from the dedicated warnings log
-          UNDOC_COUNT=$(grep -c "undocumented" doxygen_warnings.log || echo "0")
-          PARAM_COUNT=$(grep -c "documented param" doxygen_warnings.log || echo "0")
-          ERROR_COUNT=$(grep -c "error:" doxygen_warnings.log || echo "0")
+          # Check if warnings log was created
+          if [ ! -f doxygen_warnings.log ]; then
+            echo "Warning: doxygen_warnings.log was not created. Using defaults."
+            UNDOC_COUNT=0
+            PARAM_COUNT=0
+            ERROR_COUNT=0
+          else
+            # Count undocumented items from the dedicated warnings log
+            # Use tr to strip whitespace and ensure clean integer values
+            UNDOC_COUNT=$(grep -c "undocumented" doxygen_warnings.log 2>/dev/null || echo "0")
+            UNDOC_COUNT=$(echo "${UNDOC_COUNT}" | tr -d '[:space:]')
+            PARAM_COUNT=$(grep -c "documented param" doxygen_warnings.log 2>/dev/null || echo "0")
+            PARAM_COUNT=$(echo "${PARAM_COUNT}" | tr -d '[:space:]')
+            ERROR_COUNT=$(grep -c "error:" doxygen_warnings.log 2>/dev/null || echo "0")
+            ERROR_COUNT=$(echo "${ERROR_COUNT}" | tr -d '[:space:]')
+            
+            # Validate that we have integers (default to 0 if not)
+            UNDOC_COUNT=${UNDOC_COUNT:-0}
+            PARAM_COUNT=${PARAM_COUNT:-0}
+            ERROR_COUNT=${ERROR_COUNT:-0}
+          fi
           
+          # Debug output to verify values
+          echo "Debug: UNDOC_COUNT='${UNDOC_COUNT}'"
+          echo "Debug: PARAM_COUNT='${PARAM_COUNT}'"
+          echo "Debug: ERROR_COUNT='${ERROR_COUNT}'"
+          
+          # Write to GitHub outputs
           echo "undocumented=${UNDOC_COUNT}" >> "$GITHUB_OUTPUT"
           echo "params=${PARAM_COUNT}" >> "$GITHUB_OUTPUT"
           echo "errors=${ERROR_COUNT}" >> "$GITHUB_OUTPUT"
