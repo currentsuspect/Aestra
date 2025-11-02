@@ -8,6 +8,9 @@ title = "Nomad gitleaks config"
     "^NOTICE$",
     "^CHANGELOG.*$"
   ]
+  paths = [
+    '''scripts/pre-commit-checks\.ps1'''
+  ]
 
 # Rely on default gitleaks rules; custom additions below
 

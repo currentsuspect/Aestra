@@ -1,0 +1,7 @@
+# Gitleaks ignore file
+# Format: <fingerprint>:<file>:<rule>:<line>
+# This file tells Gitleaks to ignore specific false positives
+
+# False positive: pre-commit-checks.ps1 contains pattern strings for security scanning
+# These are not actual secrets, but patterns used to detect secrets in other files
+63855ab248703a1ea889f3de1ba9e389ae37e552:scripts/pre-commit-checks.ps1:nomad-private-key-block:18

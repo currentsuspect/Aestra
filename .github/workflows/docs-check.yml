@@ -1,0 +1,200 @@
+name: Documentation Check
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'BUILD.md'
+      - 'CONTRIBUTING.md'
+      - '**/*.md'
+
+jobs:
+  check-docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Check for required documentation files
+        run: |
+          echo "🔍 Checking for required documentation files..."
+          
+          required_docs=(
+            "docs/README.md"
+            "docs/BUILDING.md"
+            "docs/CONTRIBUTING.md"
+            "docs/developer/coding-style.md"
+            "docs/ARCHITECTURE.md"
+            "docs/AI_GUIDE.md"
+            "docs/FAQ.md"
+            "docs/GLOSSARY.md"
+            "docs/ROADMAP.md"
+            "docs/LICENSE_REFERENCE.md"
+            "docs/TEMPLATE/ISSUE_TEMPLATE.md"
+            "docs/TEMPLATE/PR_TEMPLATE.md"
+            "docs/TEMPLATE/DOC_SECTION.md"
+          )
+          
+          missing_docs=()
+          
+          for doc in "${required_docs[@]}"; do
+            if [ ! -f "$doc" ]; then
+              missing_docs+=("$doc")
+              echo "❌ Missing: $doc"
+            else
+              echo "✅ Found: $doc"
+            fi
+          done
+          
+          if [ ${#missing_docs[@]} -gt 0 ]; then
+            echo ""
+            echo "❌ ERROR: Missing required documentation files:"
+            printf '%s\n' "${missing_docs[@]}"
+            exit 1
+          fi
+          
+          echo ""
+          echo "✅ All required documentation files are present!"
+          
+      - name: Check Markdown links
+        run: |
+          echo "🔗 Checking for broken internal Markdown links..."
+          
+          # Find all markdown files in docs/ folder only, excluding templates and examples
+          md_files=$(find docs -name "*.md" -not -path "docs/TEMPLATE/*" 2>/dev/null || true)
+          
+          broken_links=0
+          
+          for file in $md_files; do
+            # Extract markdown links [text](path) - only actual markdown links with text
+            # This pattern requires text before the link, avoiding false positives from code
+            links=$(grep -oP '(?<!\`)\[.+?\]\(\K[^)]+(?=\))(?!\`)' "$file" 2>/dev/null || true)
+            
+            for link in $links; do
+              # Skip external URLs
+              if [[ $link =~ ^https?:// ]] || [[ $link =~ ^mailto: ]]; then
+                continue
+              fi
+              
+              # Skip anchors
+              if [[ $link =~ ^# ]]; then
+                continue
+              fi
+              
+              # Skip HTML files (generated documentation meant for web serving, not file system)
+              if [[ $link =~ \.html$ ]]; then
+                continue
+              fi
+              
+              # Skip if it looks like code (contains *, &, comma, or is a C++ type/variable name)
+              if [[ $link =~ [\*\&,] ]] || [[ $link =~ ^(int|float|bool|const|void|char|double|uint32_t|size_t|btn|buffer|samples|width|height|x|y|key|value|index|text|pressed|toggled|checked)$ ]]; then
+                continue
+              fi
+              
+              # Skip example/placeholder paths
+              if [[ $link =~ path/to/ ]]; then
+                continue
+              fi
+              
+              # Get directory of current file
+              dir=$(dirname "$file")
+              
+              # Resolve relative path
+              if [[ $link =~ ^/ ]]; then
+                target_path=".$link"
+              else
+                target_path="$dir/$link"
+              fi
+              
+              # Remove anchor if present
+              target_path="${target_path%%#*}"
+              
+              # Check if target exists
+              if [ ! -e "$target_path" ]; then
+                echo "❌ Broken link in $file: $link (resolves to $target_path)"
+                broken_links=$((broken_links + 1))
+              fi
+            done
+          done
+          
+          if [ $broken_links -gt 0 ]; then
+            echo ""
+            echo "❌ Found $broken_links broken link(s)"
+            exit 1
+          fi
+          
+          echo "✅ No broken internal links found!"
+          
+      - name: Check for documentation updates in PR
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "📝 Checking if documentation should be updated..."
+          
+          # Get changed files in PR
+          git fetch origin ${{ github.base_ref }}
+          changed_files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          
+          # Check if code files were changed
+          code_changed=false
+          if echo "$changed_files" | grep -qE '\.(cpp|h|c|hpp|cc)$'; then
+            code_changed=true
+          fi
+          
+          # Check if docs were updated
+          docs_changed=false
+          if echo "$changed_files" | grep -qE '^docs/|\.md$'; then
+            docs_changed=true
+          fi
+          
+          if [ "$code_changed" = true ] && [ "$docs_changed" = false ]; then
+            echo "⚠️  WARNING: Code files were changed but no documentation was updated."
+            echo "Consider updating relevant documentation in /docs/ if needed."
+            # Don't fail, just warn
+          else
+            echo "✅ Documentation check passed!"
+          fi
+          
+      - name: Validate Markdown syntax
+        run: |
+          echo "📋 Validating Markdown syntax..."
+          
+          # Find all markdown files
+          md_files=$(find docs -name "*.md")
+          
+          errors=0
+          
+          for file in $md_files; do
+            # Check for common Markdown issues
+            
+            # Check for missing newline at end of file
+            if [ -n "$(tail -c 1 "$file")" ]; then
+              echo "⚠️  $file: Missing newline at end of file"
+            fi
+            
+            # Check for multiple consecutive blank lines
+            if grep -Pzo '\n\n\n' "$file" > /dev/null; then
+              echo "⚠️  $file: Contains multiple consecutive blank lines"
+            fi
+            
+            # Check for trailing whitespace
+            if grep -n ' $' "$file" > /dev/null; then
+              echo "⚠️  $file: Contains trailing whitespace"
+            fi
+          done
+          
+          echo "✅ Markdown syntax validation complete!"
+          
+      - name: Summary
+        run: |
+          echo ""
+          echo "=================================================="
+          echo "📚 Documentation Check Summary"
+          echo "=================================================="
+          echo "✅ All required documentation files present"
+          echo "✅ No broken internal links"
+          echo "✅ Markdown syntax validated"
+          echo "=================================================="
+          echo ""
+          echo "🎉 Documentation check passed successfully!"

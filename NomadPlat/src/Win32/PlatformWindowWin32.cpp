@@ -1,8 +1,9 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// Â© 2025 Nomad Studios â€" All Rights Reserved. Licensed for personal & educational use only.
 #include "PlatformWindowWin32.h"
 #include "PlatformDPIWin32.h"
 #include "../../../NomadCore/include/NomadLog.h"
 #include "../../../NomadCore/include/NomadAssert.h"
+#include "../../../Source/resource.h"
 #include <windowsx.h>
 
 namespace Nomad {
@@ -10,6 +11,8 @@ namespace Nomad {
 // Static members
 const wchar_t* PlatformWindowWin32::WINDOW_CLASS_NAME = L"NomadWindowClass";
 bool PlatformWindowWin32::s_classRegistered = false;
+HICON PlatformWindowWin32::s_hLargeIcon = nullptr;
+HICON PlatformWindowWin32::s_hSmallIcon = nullptr;
 
 // =============================================================================
 // Constructor / Destructor
@@ -108,6 +111,21 @@ bool PlatformWindowWin32::create(const WindowDesc& desc) {
         return false;
     }
 
+    // Explicitly set the window icons via WM_SETICON. Load icons here so
+    // they are in scope; some shells prefer icons set on the window itself
+    // over the class icons for taskbar and Alt+Tab rendering.
+    HINSTANCE hInstLocal = GetModuleHandle(nullptr);
+    HICON hIconBig = (HICON)LoadImageW(hInstLocal, MAKEINTRESOURCEW(IDI_APP_ICON), IMAGE_ICON, 256, 256, LR_DEFAULTCOLOR);
+    HICON hIconSmall = (HICON)LoadImageW(hInstLocal, MAKEINTRESOURCEW(IDI_APP_ICON), IMAGE_ICON, 48, 48, LR_DEFAULTCOLOR);
+    if (hIconBig) {
+        SendMessageW(m_hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIconBig);
+        DestroyIcon(hIconBig);
+    }
+    if (hIconSmall) {
+        SendMessageW(m_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIconSmall);
+        DestroyIcon(hIconSmall);
+    }
+
     // Get device context
     m_hdc = GetDC(m_hwnd);
     if (!m_hdc) {
@@ -174,6 +192,18 @@ bool PlatformWindowWin32::registerWindowClass() {
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = GetModuleHandle(nullptr);
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    // Try to load the application icon from resources. We use the resource
+    // name "IDI_APP_ICON" which is defined in Source/app_icon.rc. Load both
+    // large and small icons so Alt+Tab and the task switcher use the correct
+    // images.
+    HINSTANCE hInst = wc.hInstance;
+    // Load icons by resource ID. Request explicit sizes so the OS uses appropriately-
+    // sized bitmaps for Alt+Tab (large) and taskbar/title (small). If the
+    // resource isn't present, fall back to the default application icon.
+    s_hLargeIcon = (HICON)LoadImageW(hInst, MAKEINTRESOURCEW(IDI_APP_ICON), IMAGE_ICON, 256, 256, LR_DEFAULTCOLOR);
+    s_hSmallIcon = (HICON)LoadImageW(hInst, MAKEINTRESOURCEW(IDI_APP_ICON), IMAGE_ICON, 48, 48, LR_DEFAULTCOLOR);
+    if (s_hLargeIcon) wc.hIcon = s_hLargeIcon; else wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+    if (s_hSmallIcon) wc.hIconSm = s_hSmallIcon; else wc.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
     wc.lpszClassName = WINDOW_CLASS_NAME;
 
     if (!RegisterClassExW(&wc)) {
@@ -182,6 +212,24 @@ bool PlatformWindowWin32::registerWindowClass() {
 
     s_classRegistered = true;
     return true;
+}
+
+void PlatformWindowWin32::unregisterWindowClass() {
+    if (s_classRegistered) {
+        UnregisterClassW(WINDOW_CLASS_NAME, GetModuleHandle(nullptr));
+        
+        // Destroy the loaded icons
+        if (s_hLargeIcon) {
+            DestroyIcon(s_hLargeIcon);
+            s_hLargeIcon = nullptr;
+        }
+        if (s_hSmallIcon) {
+            DestroyIcon(s_hSmallIcon);
+            s_hSmallIcon = nullptr;
+        }
+        
+        s_classRegistered = false;
+    }
 }
 
 // =============================================================================

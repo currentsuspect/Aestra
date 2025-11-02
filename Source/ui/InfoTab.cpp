@@ -5,11 +5,14 @@
 #include <filesystem>
 
 #include "LicenseVerifier.h"
+#include "../../NomadCore/include/NomadLog.h"
 
 // NomadUI includes
 #include "NUILabel.h"
 #include "NUIButton.h"
 #include "NUIIcon.h"
+
+using namespace NomadUI;
 
 namespace Nomad {
 
@@ -59,7 +62,7 @@ void RenderInfoTab() {
 
 	NUILabel tierLabel;
 	tierLabel.setText("Access: " + g_profile.tier);
-	tierLabel.setTooltip(tooltipForTier(g_profile.tier));
+	// Tooltip support not implemented on NUILabel yet - keep text only
 
 	NUILabel serialLabel;
 	serialLabel.setText("Serial: " + g_profile.serial);
@@ -69,11 +72,20 @@ void RenderInfoTab() {
 
 	// Card icon (SVG). In a full integration, load and cache the SVG as a texture once.
 	NUIIcon cardIcon;
-	cardIcon.setSVGPath(g_cardSvgPath);
-
-	// Simple accent for verified tiers (placeholder: change icon tint)
-	if (g_profile.verified && g_profile.tier != "Nomad Core") {
-		cardIcon.setGlow(true); // assume this toggles a subtle glow animation if available
+	// Load SVG for the membership card icon (uses NUIIcon loader)
+	try {
+		cardIcon.loadSVGFile(g_cardSvgPath);
+		
+		// Simple accent for verified tiers (placeholder: change icon tint)
+		if (g_profile.verified && g_profile.tier != "Nomad Core") {
+			// No glow API currently; tint the icon as a subtle verified accent
+			cardIcon.setColorFromTheme("accentPrimary");
+		}
+	} catch (const std::exception& e) {
+		// If loading fails, continue without the icon - non-fatal
+		Log::warning("Failed to load card icon: " + std::string(e.what()));
+	} catch (...) {
+		Log::warning("Failed to load card icon: unknown error");
 	}
 
 	// Note: Actual rendering requires attaching these components to the current UI

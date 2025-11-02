@@ -1,5 +1,6 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// Â© 2025 Nomad Studios â€" All Rights Reserved. Licensed for personal & educational use only.
 #include "PlatformUtilsWin32.h"
+#include "PlatformWindowWin32.h"
 #include "../../../NomadCore/include/NomadLog.h"
 #include <commdlg.h>
 #include <shlobj.h>
@@ -10,6 +11,12 @@ namespace Nomad {
 PlatformUtilsWin32::PlatformUtilsWin32() {
     QueryPerformanceFrequency(&m_frequency);
     QueryPerformanceCounter(&m_startTime);
+}
+
+PlatformUtilsWin32::~PlatformUtilsWin32() {
+    // Clean up window class and icon resources during platform shutdown
+    // This is called after all windows have been destroyed (in Platform::shutdown())
+    PlatformWindowWin32::unregisterWindowClass();
 }
 
 // =============================================================================

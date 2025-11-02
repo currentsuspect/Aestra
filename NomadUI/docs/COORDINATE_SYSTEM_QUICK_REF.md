@@ -68,6 +68,7 @@ void onRender(NUIRenderer& renderer) {
 
 Make positioning easier with these helpers from `NUITypes.h`:
 
+{% raw %}
 ```cpp
 // Position child with offset
 child->setBounds(NUIAbsolute(getBounds(), 10, 20, 100, 50));
@@ -102,6 +103,7 @@ if (NUIRectsIntersect(rectA, rectB)) {
     // Handle intersection
 }
 ```
+{% endraw %}
 
 ## Common Mistakes
 

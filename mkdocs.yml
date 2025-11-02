@@ -1,0 +1,223 @@
+# ========================================
+# 🧭 NOMAD DAW – Official Documentation
+# ========================================
+# Built by Dylan Makori / Nomad Studios
+# Design philosophy: clarity, intention, and performance.
+# ----------------------------------------
+
+site_name: NOMAD DAW
+site_url: https://currentsuspect.github.io/NOMAD
+site_author: Dylan Makori / Nomad Studios
+site_description: >-
+  NOMAD is a next-generation Digital Audio Workstation built from scratch with precision,
+  fusing ultra-low latency audio with a GPU-accelerated UI and intentional workflow design.
+
+repo_name: currentsuspect/NOMAD
+repo_url: https://github.com/currentsuspect/NOMAD
+edit_uri: edit/main/docs/
+
+copyright: >
+  Copyright © 2025 <strong>Nomad Studios</strong>.
+  Crafted with precision by <a href="https://github.com/currentsuspect">Dylan Makori</a>.
+
+# ----------------------------------------
+# 🎨 THEME CONFIGURATION
+# ----------------------------------------
+theme:
+  name: material
+  custom_dir: overrides  # allows custom HTML injection (for branding, animations, etc.)
+  language: en
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.expand
+    - navigation.sections
+    - navigation.path
+    - navigation.footer
+    - navigation.top
+    - navigation.prune
+    - search.suggest
+    - search.highlight
+    - search.share
+    - toc.follow
+    - toc.integrate
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+    - content.action.view
+    - content.tabs.link
+    - content.tooltips
+    - content.code.select
+    - content.footnote.tooltips
+
+  icon:
+    logo: material/compass-outline
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    view: material/eye
+    admonition:
+      note: octicons/light-bulb-16
+      info: octicons/book-16
+      warning: octicons/alert-16
+      danger: octicons/flame-16
+
+  font:
+    text: "Inter"
+    code: "JetBrains Mono"
+
+  palette:
+    # Light Mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    # Dark Mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+# ----------------------------------------
+# ✨ CUSTOM STYLING & BEHAVIOR
+# ----------------------------------------
+extra_css:
+  - stylesheets/extra.css      # ambient gradient backgrounds + glassmorphism nav
+  - stylesheets/codeblocks.css # adds “Studio” code theme (cyan cursor glow)
+  - stylesheets/scrollbar.css  # custom scrollbar styling
+
+extra_javascript:
+  - javascripts/extra.js       # smooth transitions, ripple effects
+  - javascripts/scroll.js      # adds animated scroll reveals
+  - javascripts/shortcuts.js   # keyboard shortcuts for docs nav
+
+# ----------------------------------------
+# 🧩 PLUGINS
+# ----------------------------------------
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - git-revision-date-localized:
+      enable_creation_date: true
+      fallback_to_build_date: true
+      type: timeago
+  - minify:
+      minify_html: true
+  - glightbox       # image lightbox popups
+  - macros          # custom Nomad macros (for version badges, etc.)
+  - redirects
+
+# ----------------------------------------
+# 🧱 MARKDOWN EXTENSIONS
+# ----------------------------------------
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.snippets
+  - pymdownx.progressbar
+  - pymdownx.saneheaders
+
+# ----------------------------------------
+# 🌍 META & SOCIAL
+# ----------------------------------------
+extra:
+  homepage: https://currentsuspect.github.io/NOMAD
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/currentsuspect/NOMAD
+      name: NOMAD on GitHub
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/currentsuspect
+      name: Dylan on Twitter
+    - icon: fontawesome/solid/envelope
+      link: mailto:makoridylan@gmail.com
+      name: Email Dylan
+  version:
+    provider: mike
+    label: v1.0-dev
+  meta:
+    image: images/og-image.png
+    description: "NOMAD DAW – a modern audio workstation built with precision and love."
+    keywords: "Nomad, DAW, audio software, Dylan Makori, music production, low latency, C++"
+    theme_color: "#1E1B4B"
+
+# ----------------------------------------
+# 📚 NAVIGATION
+# ----------------------------------------
+nav:
+  - 🏠 Home: index.md
+  - 🚀 Getting Started:
+      - Overview: getting-started/index.md
+      - Building NOMAD: getting-started/building.md
+      - Quickstart: getting-started/quickstart.md
+  - 🧩 Architecture:
+      - System Overview: architecture/overview.md
+      - Module Hierarchy: architecture/modules.md
+      - NomadCore: architecture/nomad-core.md
+      - NomadPlat: architecture/nomad-plat.md
+      - NomadUI: architecture/nomad-ui.md
+      - NomadAudio: architecture/nomad-audio.md
+  - 👨‍💻 Developer Guide:
+      - Contributing: developer/contributing.md
+      - Coding Style: developer/coding-style.md
+      - Style Guide: developer/style-guide.md
+      - Bug Reports: developer/bug-reports.md
+      - Debugging: developer/debugging.md
+      - Performance Tuning: developer/performance-tuning.md
+  - ⚙️ Technical Reference:
+      - FAQ: technical/faq.md
+      - Glossary: technical/glossary.md
+      - AI Guide: technical/ai-guide.md
+      - Roadmap: technical/roadmap.md
+  - 📡 API Reference:
+      - Overview: api/index.md
+  - 🌐 Community:
+      - Code of Conduct: community/code-of-conduct.md
+      - Support: community/support.md
+      - Security: community/security.md
+  - 🧠 About:
+      - Philosophy: about/philosophy.md
+      - Licensing: about/licensing.md
+      - License Reference: about/license-reference.md

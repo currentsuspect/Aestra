@@ -1,0 +1,332 @@
+/* Custom NOMAD DAW Branding and Styling */
+
+:root {
+  /* NOMAD Brand Colors */
+  --nomad-primary: #4338ca;
+  --nomad-accent: #06b6d4;
+  --nomad-bg: #0f172a;
+  --nomad-dark: #1a1a2e;
+  --nomad-gradient-start: #4338ca;
+  --nomad-gradient-end: #06b6d4;
+}
+
+/* Hero Section Styling */
+.hero-section {
+  background: linear-gradient(135deg, var(--nomad-gradient-start) 0%, var(--nomad-gradient-end) 100%);
+  padding: 4rem 2rem;
+  margin: -2rem -2rem 3rem -2rem;
+  color: white;
+  text-align: center;
+  border-radius: 0 0 1rem 1rem;
+}
+
+.hero-section h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.hero-section .tagline {
+  font-size: 1.5rem;
+  font-weight: 300;
+  margin-bottom: 2rem;
+  opacity: 0.95;
+}
+
+.hero-section .cta-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+}
+
+.hero-section .cta-button {
+  padding: 0.75rem 2rem;
+  background: white;
+  color: var(--nomad-primary);
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-weight: 600;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.hero-section .cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.hero-section .cta-button.secondary {
+  background: transparent;
+  color: white;
+  border: 2px solid white;
+}
+
+/* Feature Grid Cards */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.feature-card {
+  padding: 1.5rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+  background: var(--md-default-bg-color);
+}
+
+.feature-card:hover {
+  border-color: var(--nomad-accent);
+  box-shadow: 0 4px 12px rgba(92, 107, 192, 0.15);
+  transform: translateY(-4px);
+}
+
+.feature-card .icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.feature-card h3 {
+  margin-top: 0;
+  color: var(--nomad-primary);
+  font-size: 1.25rem;
+}
+
+.feature-card p {
+  color: var(--md-default-fg-color--light);
+  line-height: 1.6;
+}
+
+/* Status Icons */
+.status-icon {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+
+.status-icon.success {
+  background-color: #4caf50;
+}
+
+.status-icon.warning {
+  background-color: #ff9800;
+}
+
+.status-icon.info {
+  background-color: #2196f3;
+}
+
+/* Philosophy Section */
+.philosophy-quote {
+  border-left: 4px solid var(--nomad-accent);
+  padding: 1.5rem 2rem;
+  margin: 2rem 0;
+  background: var(--md-code-bg-color);
+  font-size: 1.1rem;
+  font-style: italic;
+  border-radius: 0.5rem;
+}
+
+.philosophy-quote footer {
+  margin-top: 1rem;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--nomad-primary);
+}
+
+/* Module Status Table */
+.module-status-table {
+  width: 100%;
+  margin: 2rem 0;
+  border-collapse: collapse;
+}
+
+.module-status-table th,
+.module-status-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.module-status-table th {
+  background: var(--md-code-bg-color);
+  font-weight: 600;
+  color: var(--nomad-primary);
+}
+
+.module-status-table tr:hover {
+  background: var(--md-code-bg-color);
+}
+
+/* Code Blocks Enhancement */
+.highlight {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Responsive Tables */
+@media screen and (max-width: 768px) {
+  .module-status-table {
+    display: block;
+    overflow-x: auto;
+  }
+  
+  .hero-section h1 {
+    font-size: 2rem;
+  }
+  
+  .hero-section .tagline {
+    font-size: 1.2rem;
+  }
+  
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Platform Tabs */
+.tabbed-set {
+  margin: 1.5rem 0;
+}
+
+.tabbed-labels {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tabbed-labels label {
+  padding: 0.5rem 1.5rem;
+  background: var(--md-code-bg-color);
+  border-radius: 0.5rem 0.5rem 0 0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tabbed-labels input:checked + label {
+  background: var(--nomad-primary);
+  color: white;
+}
+
+/* Community Section */
+.community-section {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: var(--md-code-bg-color);
+  border-radius: 1rem;
+  margin: 3rem 0;
+}
+
+.community-section h2 {
+  color: var(--nomad-primary);
+  margin-bottom: 1rem;
+}
+
+.community-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+}
+
+.community-button {
+  padding: 0.75rem 2rem;
+  background: var(--nomad-primary);
+  color: white;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.community-button:hover {
+  background: var(--nomad-accent);
+  transform: translateY(-2px);
+}
+
+/* Admonition Custom Styling */
+.admonition {
+  border-radius: 0.5rem;
+}
+
+.admonition.tip {
+  border-left: 4px solid var(--nomad-accent);
+}
+
+.admonition.warning {
+  border-left: 4px solid #ff9800;
+}
+
+/* Navigation Breadcrumbs */
+.md-nav__title {
+  font-weight: 600;
+}
+
+/* Footer Styling */
+.md-footer {
+  background: linear-gradient(90deg, var(--nomad-gradient-start) 0%, var(--nomad-gradient-end) 100%);
+}
+
+/* Quick Reference Cards */
+.quick-ref-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.quick-ref-card {
+  padding: 1rem;
+  background: var(--md-code-bg-color);
+  border-radius: 0.5rem;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.quick-ref-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quick-ref-card .number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--nomad-primary);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.quick-ref-card .label {
+  font-size: 0.9rem;
+  color: var(--md-default-fg-color--light);
+}
+
+/* Custom Header Styling with Glassmorphism */
+.md-header {
+  backdrop-filter: blur(10px);
+  background: rgba(15, 23, 42, 0.8);
+}
+
+/* Navigation Title Styling */
+.md-nav__title {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Code Block Enhancement with Glow Effect */
+.codehilite code,
+.highlight code,
+pre code {
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 8px;
+  padding: 0.4em 0.6em;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+}

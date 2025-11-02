@@ -2,12 +2,49 @@
 
 **"Built from scratch. Perfected with intention."**
 
-## 📚 Core Documentation
+This directory contains comprehensive documentation for the NOMAD DAW project, organized into logical categories for easy navigation.
 
-### Getting Started
-- [Developer Guide](DEVELOPER_GUIDE.md) - Philosophy, architecture, and contribution guidelines
-- [Build Status](BUILD_STATUS.md) - Current build status and module completion
-- [Branching Strategy](BRANCHING_STRATEGY.md) - Git workflow and commit conventions
+## 📁 Directory Structure
+
+### 🏛️ [architecture/](architecture/)
+Architectural documentation and design decisions:
+- [ADAPTIVE_FPS_ARCHITECTURE.md](architecture/ADAPTIVE_FPS_ARCHITECTURE.md) - Adaptive frame rate system design
+- [DROPDOWN_ARCHITECTURE.md](architecture/DROPDOWN_ARCHITECTURE.md) - Dropdown menu system architecture
+- [NOMAD_MODE_IMPLEMENTATION.md](architecture/NOMAD_MODE_IMPLEMENTATION.md) - NOMAD mode implementation details
+- [NOMADUI_COORDINATE_SYSTEM.md](architecture/NOMADUI_COORDINATE_SYSTEM.md) - **CRITICAL:** UI coordinate system specification
+
+### 📖 [guides/](guides/)
+How-to guides and reference documentation:
+- [DEVELOPER_GUIDE.md](guides/DEVELOPER_GUIDE.md) - Philosophy, architecture, and contribution guidelines
+- [ADAPTIVE_FPS_GUIDE.md](guides/ADAPTIVE_FPS_GUIDE.md) - Using the adaptive FPS system
+- [ADAPTIVE_FPS_README.md](guides/ADAPTIVE_FPS_README.md) - Adaptive FPS quick reference
+- [UI_LAYOUT_GUIDE.md](guides/UI_LAYOUT_GUIDE.md) - UI layout and design guide
+- [OPENGL_LINKING_GUIDE.md](guides/OPENGL_LINKING_GUIDE.md) - OpenGL setup and linking
+- [DROPDOWN_QUICK_REFERENCE.md](guides/DROPDOWN_QUICK_REFERENCE.md) - Dropdown usage reference
+- [COORDINATE_UTILITIES_V1.1.md](guides/COORDINATE_UTILITIES_V1.1.md) - Coordinate utility functions
+- [DOCUMENTATION_POLISH_V1.1.md](guides/DOCUMENTATION_POLISH_V1.1.md) - Documentation standards
+
+### 🔧 [systems/](systems/)
+System-specific technical documentation:
+- [AUDIO_DRIVER_SYSTEM.md](systems/AUDIO_DRIVER_SYSTEM.md) - Audio driver architecture and implementation
+- [AUDIO_TIMING_QUALITY.md](systems/AUDIO_TIMING_QUALITY.md) - Audio timing and quality analysis
+- [CUSTOM_WINDOW_INTEGRATION.md](systems/CUSTOM_WINDOW_INTEGRATION.md) - Custom window system integration
+- [DROPDOWN_SYSTEM_V2.0.md](systems/DROPDOWN_SYSTEM_V2.0.md) - Dropdown system v2.0 specification
+- [ADAPTIVE_FPS_PERFORMANCE_DIAGNOSTIC.md](systems/ADAPTIVE_FPS_PERFORMANCE_DIAGNOSTIC.md) - FPS performance diagnostics
+
+### 📊 [status/](status/)
+Project status, analysis, and planning documents:
+- [BUILD_STATUS.md](status/BUILD_STATUS.md) - Current build status and module completion
+- [BRANCHING_STRATEGY.md](status/BRANCHING_STRATEGY.md) - Git workflow and commit conventions
+- [CURRENT_STATE_ANALYSIS.md](status/CURRENT_STATE_ANALYSIS.md) - Current project state analysis
+- [DOCUMENTATION_STATUS.md](status/DOCUMENTATION_STATUS.md) - Documentation coverage status
+- [SCREENSHOT_LIMITATION.md](status/SCREENSHOT_LIMITATION.md) - Known screenshot/rendering limitations
+
+### 🐛 [Bug Reports/](Bug%20Reports/)
+Bug reports and issue tracking:
+- Historical bug reports and analysis
+
+## 📚 Core Documentation
 
 ## 🏗️ Module Documentation
 

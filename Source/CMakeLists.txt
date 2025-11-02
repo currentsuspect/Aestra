@@ -4,8 +4,18 @@
 
 cmake_minimum_required(VERSION 3.22)
 
+# Check if Remotery profiler is available
+set(REMOTERY_SOURCE "${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib/Remotery.c")
+if(EXISTS "${REMOTERY_SOURCE}")
+	set(NOMAD_HAS_REMOTERY ON)
+	message(STATUS "Remotery profiler: ENABLED")
+else()
+	set(NOMAD_HAS_REMOTERY OFF)
+	message(STATUS "Remotery profiler: DISABLED (files not found)")
+endif()
+
 # Create executable
-add_executable(NOMAD_DAW
+set(NOMAD_DAW_SOURCES
 	Main.cpp
 	TransportBar.h
 	TransportBar.cpp
@@ -21,13 +31,31 @@ add_executable(NOMAD_DAW
 	TrackUIComponent.cpp
 	TrackManagerUI.h
 	TrackManagerUI.cpp
-	PerformanceHUD.h
-	PerformanceHUD.cpp
+	MixerView.h
+	MixerView.cpp
+	WindowPanel.h
+	WindowPanel.cpp
+	PianoRollPanel.h
+	PianoRollPanel.cpp
+	MixerPanel.h
+	MixerPanel.cpp
 	ui/InfoTab.h
 	ui/InfoTab.cpp
 	license/LicenseVerifier.h
 	license/LicenseVerifier.cpp
+	PerformanceHUD.h
+	PerformanceHUD.cpp
 )
+
+# Conditionally add Remotery sources if available
+if(NOMAD_HAS_REMOTERY)
+	list(APPEND NOMAD_DAW_SOURCES
+		${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib/Remotery.c
+		${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib/Remotery.h
+	)
+endif()
+
+add_executable(NOMAD_DAW ${NOMAD_DAW_SOURCES})
 
 # Set C++ standard
 set_target_properties(NOMAD_DAW PROPERTIES
@@ -52,7 +80,19 @@ target_include_directories(NOMAD_DAW PRIVATE
 	${CMAKE_SOURCE_DIR}/NomadUI/Graphics
 	${CMAKE_SOURCE_DIR}/NomadUI/Core
 	${CMAKE_SOURCE_DIR}/NomadAudio/include
+	${CMAKE_CURRENT_SOURCE_DIR}/license
 )
+
+# Conditionally include Remotery directory and define if available
+if(NOMAD_HAS_REMOTERY)
+	target_include_directories(NOMAD_DAW PRIVATE
+		${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib
+	)
+	target_compile_definitions(NOMAD_DAW PRIVATE
+		NOMAD_ENABLE_REMOTERY=1
+		RMT_ENABLED=1
+	)
+endif()
 
 # Platform-specific settings
 if(WIN32)
@@ -85,6 +125,11 @@ if(WIN32)
 		"/WHOLEARCHIVE:$<TARGET_FILE:glad>"
 		"/IGNORE:4098"  # Ignore CRT mismatch warning (FreeType uses static CRT)
 	)
+
+	# Add the resource script so the icon is embedded into the executable
+	# Note: we expect Source/nomad.ico to be present in the repository. The
+	# automatic SVG->ICO conversion was removed to keep CI/tooling simple.
+	target_sources(NOMAD_DAW PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.rc")
 elseif(UNIX AND NOT APPLE)
 	# Linux-specific settings
 	target_link_libraries(NOMAD_DAW PRIVATE

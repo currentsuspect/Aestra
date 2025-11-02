@@ -43,6 +43,16 @@ void NUICustomTitleBar::createIcons() {
     
     closeIcon_ = NUIIcon::createCloseIcon();
     closeIcon_->setIconSize(NUIIconSize::Small);
+
+    // Try to load the Nomad app icon (SVG) from assets; non-fatal if missing
+    appIcon_ = std::make_shared<NUIIcon>();
+    try {
+        appIcon_->loadSVGFile("NomadAssets/icons/nomad_daw_logo.svg");
+        appIcon_->setIconSize(NUIIconSize::Medium);
+        appIcon_->setColorFromTheme("textPrimary");
+    } catch (...) {
+        // If loading fails, leave appIcon_ null/empty — title bar will still render
+    }
 }
 
 void NUICustomTitleBar::setMaximized(bool maximized) {
@@ -81,7 +91,16 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     NUISize titleSize = renderer.measureText(title_, fontSize);
     // Vertically center the text in the title bar (accounting for baseline)
     float textY = bounds.y + (bounds.height - fontSize) * 0.5f + fontSize * 0.75f;
-    NUIPoint titlePos(bounds.x + 12, textY); // 12px left padding for better spacing
+    // If we have an app icon, render it and shift the title text to the right
+    float leftPadding = 12.0f;
+    if (appIcon_ && appIcon_->getIconWidth() > 0.0f) {
+        float iconX = bounds.x + 8.0f;
+        float iconY = bounds.y + (bounds.height - appIcon_->getIconHeight()) * 0.5f;
+        appIcon_->setPosition(iconX, iconY);
+        appIcon_->onRender(renderer);
+        leftPadding += appIcon_->getIconWidth() + 8.0f; // extra gap after icon
+    }
+    NUIPoint titlePos(bounds.x + leftPadding, textY); // left padding (may include icon)
     renderer.drawText(title_, titlePos, fontSize, textColor);
     
     // Draw window controls

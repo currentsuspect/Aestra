@@ -1,0 +1,263 @@
+name: Generate API Documentation
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - '**.h'
+      - '**.hpp'
+      - '**.cpp'
+      - 'Doxyfile'
+      - '.github/workflows/api-docs.yml'
+  pull_request:
+    paths:
+      - '**.h'
+      - '**.hpp'
+      - '**.cpp'
+      - 'Doxyfile'
+  workflow_dispatch:
+
+jobs:
+  generate-api-docs:
+    name: Generate Doxygen Documentation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Install Doxygen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen graphviz
+          doxygen --version
+          dot -V
+          
+      - name: Generate Documentation
+        run: |
+          doxygen Doxyfile
+          
+      - name: Check for Warnings
+        run: |
+          if [ -f doxygen_warnings.log ]; then
+            echo "## 📋 Doxygen Warnings" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat doxygen_warnings.log >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            
+            WARN_COUNT=$(wc -l < doxygen_warnings.log)
+            echo "Total warnings: ${WARN_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+            
+            # Don't fail on warnings, just report them
+            if [ "${WARN_COUNT}" -gt 0 ]; then
+              echo "⚠️ Found ${WARN_COUNT} documentation warnings"
+            fi
+          fi
+          
+      - name: Generate Documentation Report
+        run: |
+          echo "## 📚 API Documentation Generated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Documentation generated successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Count documented items
+          if [ -d docs/api-reference/html ]; then
+            echo "### 📊 Documentation Statistics" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            CLASS_COUNT=$(find docs/api-reference/html -name "class*.html" | wc -l)
+            STRUCT_COUNT=$(find docs/api-reference/html -name "struct*.html" | wc -l)
+            FILE_COUNT=$(find docs/api-reference/html -name "*_8h.html" -o -name "*_8cpp.html" | wc -l)
+            
+            echo "- **Classes**: $CLASS_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "- **Structs**: $STRUCT_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "- **Files**: $FILE_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📁 Output directory: \`docs/api-reference/html/\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+      - name: Upload Documentation Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-documentation
+          path: docs/api-reference/html/
+          retention-days: 30
+          
+      - name: Upload XML Output (for integration)
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-documentation-xml
+          path: docs/api-reference/xml/
+          retention-days: 30
+          
+      # Only deploy on main branch
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/api-reference/html
+          destination_dir: api
+          keep_files: true
+          commit_message: 'docs: update API documentation [skip ci]'
+          
+  documentation-quality:
+    name: Check Documentation Quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Install Doxygen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen
+          
+      - name: Run Documentation Check
+        id: doc_check
+        run: |
+          # Generate docs and capture warnings (warnings also go to doxygen_warnings.log via Doxyfile config)
+          doxygen Doxyfile 2>&1 | tee doxygen_output.log
+          
+          # Check if warnings log was created
+          if [ ! -f doxygen_warnings.log ]; then
+            echo "Warning: doxygen_warnings.log was not created. Using defaults."
+            UNDOC_COUNT=0
+            PARAM_COUNT=0
+            ERROR_COUNT=0
+          else
+            # Count undocumented items from the dedicated warnings log
+            # Use tr to strip whitespace and ensure clean integer values
+            if grep -q "undocumented" doxygen_warnings.log 2>/dev/null; then
+              UNDOC_COUNT=$(grep -c "undocumented" doxygen_warnings.log | tr -d '[:space:]')
+            else
+              UNDOC_COUNT=0
+            fi
+            
+            if grep -q "documented param" doxygen_warnings.log 2>/dev/null; then
+              PARAM_COUNT=$(grep -c "documented param" doxygen_warnings.log | tr -d '[:space:]')
+            else
+              PARAM_COUNT=0
+            fi
+            
+            if grep -q "error:" doxygen_warnings.log 2>/dev/null; then
+              ERROR_COUNT=$(grep -c "error:" doxygen_warnings.log | tr -d '[:space:]')
+            else
+              ERROR_COUNT=0
+            fi
+            
+            # Validate that we have integers (default to 0 if not)
+            UNDOC_COUNT=${UNDOC_COUNT:-0}
+            PARAM_COUNT=${PARAM_COUNT:-0}
+            ERROR_COUNT=${ERROR_COUNT:-0}
+          fi
+          
+          # Debug output to verify values
+          echo "Debug: UNDOC_COUNT='${UNDOC_COUNT}'"
+          echo "Debug: PARAM_COUNT='${PARAM_COUNT}'"
+          echo "Debug: ERROR_COUNT='${ERROR_COUNT}'"
+          
+          # Write to GitHub outputs
+          echo "undocumented=${UNDOC_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "params=${PARAM_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "errors=${ERROR_COUNT}" >> "$GITHUB_OUTPUT"
+          
+          # Create detailed report
+          echo "## 📊 Documentation Quality Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Metric | Count | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          
+          if [ "${ERROR_COUNT}" -eq 0 ]; then
+            ERROR_STATUS="✅"
+          else
+            ERROR_STATUS="❌"
+          fi
+          echo "| Documentation Errors | ${ERROR_COUNT} | ${ERROR_STATUS} |" >> "$GITHUB_STEP_SUMMARY"
+          
+          if [ "${UNDOC_COUNT}" -lt 50 ]; then
+            UNDOC_STATUS="✅"
+          elif [ "${UNDOC_COUNT}" -lt 100 ]; then
+            UNDOC_STATUS="⚠️"
+          else
+            UNDOC_STATUS="❌"
+          fi
+          echo "| Undocumented Items | ${UNDOC_COUNT} | ${UNDOC_STATUS} |" >> "$GITHUB_STEP_SUMMARY"
+          
+          if [ "${PARAM_COUNT}" -eq 0 ]; then
+            PARAM_STATUS="✅"
+          elif [ "${PARAM_COUNT}" -lt 20 ]; then
+            PARAM_STATUS="⚠️"
+          else
+            PARAM_STATUS="❌"
+          fi
+          echo "| Missing Parameter Docs | ${PARAM_COUNT} | ${PARAM_STATUS} |" >> "$GITHUB_STEP_SUMMARY"
+          
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 🎯 Quality Thresholds" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ Excellent: < 50 undocumented items" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ⚠️  Good: 50-100 undocumented items" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ❌ Needs Improvement: > 100 undocumented items" >> "$GITHUB_STEP_SUMMARY"
+          
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const undoc = '${{ steps.doc_check.outputs.undocumented }}';
+            const params = '${{ steps.doc_check.outputs.params }}';
+            const errors = '${{ steps.doc_check.outputs.errors }}';
+            
+            let status = '✅ Good';
+            if (parseInt(undoc) > 100 || parseInt(errors) > 0) {
+              status = '❌ Needs Improvement';
+            } else if (parseInt(undoc) > 50) {
+              status = '⚠️ Acceptable';
+            }
+            
+            const body = `## 📚 API Documentation Quality Check
+            
+            **Status**: ${status}
+            
+            | Metric | Count |
+            |--------|-------|
+            | Documentation Errors | ${errors} |
+            | Undocumented Items | ${undoc} |
+            | Missing Parameter Docs | ${params} |
+            
+            ${parseInt(undoc) > 50 ? '⚠️ Consider improving documentation coverage before merging.' : ''}
+            ${parseInt(errors) > 0 ? '❌ Please fix documentation errors before merging.' : ''}
+            
+            <details>
+            <summary>📖 Documentation Guidelines</summary>
+            
+            - Document all public classes, functions, and members
+            - Use Doxygen-compatible comment syntax
+            - Include \`@param\` for all parameters
+            - Include \`@return\` for return values
+            - Add usage examples for complex APIs
+            
+            See [coding-style.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/develop/docs/developer/coding-style.md) for details.
+            </details>
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

@@ -11,6 +11,9 @@ public:
     PlatformWindowWin32();
     ~PlatformWindowWin32() override;
 
+    // Static cleanup method for window class (public for platform shutdown access)
+    static void unregisterWindowClass();
+
     // IPlatformWindow implementation
     bool create(const WindowDesc& desc) override;
     void destroy() override;
@@ -97,6 +100,8 @@ private:
     // Static members
     static const wchar_t* WINDOW_CLASS_NAME;
     static bool s_classRegistered;
+    static HICON s_hLargeIcon;
+    static HICON s_hSmallIcon;
 };
 
 } // namespace Nomad
