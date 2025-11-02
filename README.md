@@ -133,31 +133,23 @@ For comprehensive build instructions including troubleshooting, see **[Building 
 
 ---
 
-## 📚 Documentation Portal
+## 📚 Documentation
 
-Explore our comprehensive documentation for contributors and developers:
+**[📘 Visit the Complete Documentation Site →](https://currentsuspect.github.io/NOMAD/)**
 
-### 🚀 Getting Started
-- **[Building Guide](docs/BUILDING.md)** — Complete build instructions for all platforms
-- **[Contributing Guide](docs/CONTRIBUTING.md)** — How to contribute (GitHub workflow, PR guidelines)
-- **[FAQ](docs/FAQ.md)** — Frequently asked questions
+Explore our beautiful, searchable documentation built with MkDocs Material:
 
-### 🏗️ Architecture & Code
-- **[Architecture Overview](docs/ARCHITECTURE.md)** — System design and modular structure
-- **[Coding Style Guide](docs/CODING_STYLE.md)** — Code conventions, formatting rules, best practices
-- **[Glossary](docs/GLOSSARY.md)** — Technical terminology reference
+- **🚀 [Getting Started](https://currentsuspect.github.io/NOMAD/getting-started/)** — Setup guides and quickstart tutorials
+- **🏗️ [Architecture](https://currentsuspect.github.io/NOMAD/architecture/overview/)** — System design with interactive diagrams
+- **👨‍💻 [Developer Guide](https://currentsuspect.github.io/NOMAD/developer/contributing/)** — Contributing, coding standards, debugging
+- **📖 [Technical Reference](https://currentsuspect.github.io/NOMAD/technical/faq/)** — FAQ, glossary, roadmap
+- **🔌 [API Reference](https://currentsuspect.github.io/NOMAD/api/)** — Complete API documentation
+- **🤝 [Community](https://currentsuspect.github.io/NOMAD/community/code-of-conduct/)** — Code of conduct, support, security
 
-### 🐛 Development Workflow
-- **[Bug Reports Guide](docs/BUG_REPORTS.md)** — How to report bugs effectively
-- **[Debugging Guide](docs/DEBUGGING.md)** — Using Tracy profiler and debugging tools
-- **[Performance Tuning](docs/PERFORMANCE_TUNING.md)** — FPS and latency optimization tips
-- **[Style Guide](docs/STYLE_GUIDE.md)** — Documentation and comment standards
-
-### 🗺️ Project Resources
-- **[Roadmap](docs/ROADMAP.md)** — Project milestones and future plans
-- **[AI Guide](docs/AI_GUIDE.md)** — Muse AI integration documentation
-
-**[📘 Visit Full Documentation Portal →](docs/README.md)**
+### Quick Links
+- [Building NOMAD](https://currentsuspect.github.io/NOMAD/getting-started/building/) — Detailed build instructions
+- [Contributing Guide](https://currentsuspect.github.io/NOMAD/developer/contributing/) — How to contribute
+- [Architecture Overview](https://currentsuspect.github.io/NOMAD/architecture/overview/) — Understanding NOMAD's design
 
 ---
 

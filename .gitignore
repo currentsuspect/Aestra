@@ -129,6 +129,7 @@ assets_premium/
 # Generated documentation
 docs/_site/
 coverage/
+site/
 
 # Build tools
 .lfsconfig
