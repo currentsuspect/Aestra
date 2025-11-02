@@ -6,7 +6,7 @@ endif()
 
 if(NOT EXISTS "${NOMAD_PREMIUM_DIR}")
     message(STATUS "Nomad premium directory not found; enabling NOMAD_CORE_ONLY fallback")
-    add_definitions(-DNOMAD_CORE_ONLY)
+    add_compile_definitions(NOMAD_CORE_ONLY)
     # Point to mock assets so builds still succeed
     set(NOMAD_ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets_mock" CACHE PATH "Path to mock assets used when premium missing")
 else()

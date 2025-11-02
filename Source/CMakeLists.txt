@@ -33,9 +33,9 @@ add_executable(NOMAD_DAW
 	ui/InfoTab.cpp
 	license/LicenseVerifier.h
 	license/LicenseVerifier.cpp
-	# Remotery profiler
-	${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib/Remotery.c
-	${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib/Remotery.h
+	# Remotery profiler - files not present, commenting out
+	# ${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib/Remotery.c
+	# ${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib/Remotery.h
 )
 
 # Set C++ standard

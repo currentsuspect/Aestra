@@ -10,6 +10,8 @@ namespace Nomad {
 // Static members
 const wchar_t* PlatformWindowWin32::WINDOW_CLASS_NAME = L"NomadWindowClass";
 bool PlatformWindowWin32::s_classRegistered = false;
+HICON PlatformWindowWin32::s_hLargeIcon = nullptr;
+HICON PlatformWindowWin32::s_hSmallIcon = nullptr;
 
 // =============================================================================
 // Constructor / Destructor
@@ -197,10 +199,10 @@ bool PlatformWindowWin32::registerWindowClass() {
     // Load icons by name. Request explicit sizes so the OS uses appropriately-
     // sized bitmaps for Alt+Tab (large) and taskbar/title (small). If the
     // resource isn't present, fall back to the default application icon.
-    HICON hLargeIcon = (HICON)LoadImageW(hInst, L"IDI_APP_ICON", IMAGE_ICON, 256, 256, LR_DEFAULTCOLOR);
-    HICON hSmallIcon = (HICON)LoadImageW(hInst, L"IDI_APP_ICON", IMAGE_ICON, 48, 48, LR_DEFAULTCOLOR);
-    if (hLargeIcon) wc.hIcon = hLargeIcon; else wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
-    if (hSmallIcon) wc.hIconSm = hSmallIcon; else wc.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
+    s_hLargeIcon = (HICON)LoadImageW(hInst, L"IDI_APP_ICON", IMAGE_ICON, 256, 256, LR_DEFAULTCOLOR);
+    s_hSmallIcon = (HICON)LoadImageW(hInst, L"IDI_APP_ICON", IMAGE_ICON, 48, 48, LR_DEFAULTCOLOR);
+    if (s_hLargeIcon) wc.hIcon = s_hLargeIcon; else wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+    if (s_hSmallIcon) wc.hIconSm = s_hSmallIcon; else wc.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
     wc.lpszClassName = WINDOW_CLASS_NAME;
 
     if (!RegisterClassExW(&wc)) {
@@ -209,6 +211,24 @@ bool PlatformWindowWin32::registerWindowClass() {
 
     s_classRegistered = true;
     return true;
+}
+
+void PlatformWindowWin32::unregisterWindowClass() {
+    if (s_classRegistered) {
+        UnregisterClassW(WINDOW_CLASS_NAME, GetModuleHandle(nullptr));
+        
+        // Destroy the loaded icons
+        if (s_hLargeIcon) {
+            DestroyIcon(s_hLargeIcon);
+            s_hLargeIcon = nullptr;
+        }
+        if (s_hSmallIcon) {
+            DestroyIcon(s_hSmallIcon);
+            s_hSmallIcon = nullptr;
+        }
+        
+        s_classRegistered = false;
+    }
 }
 
 // =============================================================================
