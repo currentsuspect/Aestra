@@ -195,6 +195,11 @@ void MixerView::onResize(int width, int height) {
 }
 
 void MixerView::refreshChannels() {
+    // Remove old channel strips from parent before clearing
+    for (auto& strip : m_channelStrips) {
+        removeChild(strip);
+    }
+    
     // Clear existing channel strips
     m_channelStrips.clear();
     

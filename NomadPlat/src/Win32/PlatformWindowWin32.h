@@ -97,6 +97,11 @@ private:
     // Static members
     static const wchar_t* WINDOW_CLASS_NAME;
     static bool s_classRegistered;
+    static HICON s_hLargeIcon;
+    static HICON s_hSmallIcon;
+    
+    // Cleanup method for window class
+    static void unregisterWindowClass();
 };
 
 } // namespace Nomad

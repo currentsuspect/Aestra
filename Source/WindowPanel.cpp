@@ -86,6 +86,11 @@ void WindowPanel::setMinimized(bool minimized) {
 void WindowPanel::setMaximized(bool maximized) {
     if (m_maximized == maximized) return;
     
+    // Clear minimized state when maximizing
+    if (maximized && m_minimized) {
+        setMinimized(false);
+    }
+    
     m_maximized = maximized;
     
     // Update maximize button icon

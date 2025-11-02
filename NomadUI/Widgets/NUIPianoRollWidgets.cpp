@@ -294,7 +294,11 @@ void PianoRollView::syncProps()
         notesView_->setPixelsPerBeat(pixelsPerBeat_);
         notesView_->setKeyHeight(16.0f);
         notesView_->setScrollOffsetX(scrollX_);
+        notesView_->setScrollOffsetY(scrollY_);  // Propagate vertical scroll to notes
         notesView_->setFirstMidiNote(72);
+    }
+    if (keyboard_) {
+        keyboard_->setScrollOffsetY(scrollY_);  // Propagate vertical scroll to keyboard
     }
 }
 

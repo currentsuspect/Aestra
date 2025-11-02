@@ -128,22 +128,26 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
 
 TrackManagerUI::~TrackManagerUI() {
     // ⚡ Cleanup cached textures
-    // Assuming a renderer instance is accessible, e.g., via a singleton or member
-    auto& renderer = NomadUI::NUIRenderer::getInstance(); 
+    // Wrap in try-catch for safe shutdown when renderer may be unavailable
+    try {
+        auto& renderer = NomadUI::NUIRenderer::getInstance(); 
 
-    if (m_backgroundTextureId != 0) {
-        renderer.deleteTexture(m_backgroundTextureId);
-        m_backgroundTextureId = 0;
-    }
-    if (m_controlsTextureId != 0) {
-        renderer.deleteTexture(m_controlsTextureId);
-        m_controlsTextureId = 0;
-    }
-    for (auto& cache : m_trackCaches) {
-        if (cache.textureId != 0) {
-            renderer.deleteTexture(cache.textureId);
-            cache.textureId = 0;
+        if (m_backgroundTextureId != 0) {
+            renderer.deleteTexture(m_backgroundTextureId);
+            m_backgroundTextureId = 0;
         }
+        if (m_controlsTextureId != 0) {
+            renderer.deleteTexture(m_controlsTextureId);
+            m_controlsTextureId = 0;
+        }
+        for (auto& cache : m_trackCaches) {
+            if (cache.textureId != 0) {
+                renderer.deleteTexture(cache.textureId);
+                cache.textureId = 0;
+            }
+        }
+    } catch (...) {
+        // Renderer may not be available during shutdown - safe to ignore
     }
     Log::info("TrackManagerUI destroyed");
 }
@@ -615,6 +619,11 @@ void TrackManagerUI::renderChildren(NomadUI::NUIRenderer& renderer) {
 }
 
 void TrackManagerUI::onResize(int width, int height) {
+    // Update cached dimensions before layout/cache update
+    m_backgroundCachedWidth = width;
+    m_backgroundCachedHeight = height;
+    m_backgroundNeedsUpdate = true;
+    
     layoutTracks();
     NomadUI::NUIComponent::onResize(width, height);
 }
@@ -1078,7 +1087,11 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
         float playheadStartY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
         
         // CRITICAL: Stop playhead BEFORE the piano roll (if visible) or scrollbar, and BEFORE mixer
-        float pianoRollSpace = m_showPianoRoll ? m_pianoRollHeight + 5.0f : 0.0f;
+        // Use title bar height when minimized instead of full panel height
+        float pianoRollSpace = 0.0f;
+        if (m_showPianoRoll && m_pianoRollPanel) {
+            pianoRollSpace = m_pianoRollPanel->isMinimized() ? m_pianoRollPanel->getTitleBarHeight() + 5.0f : m_pianoRollHeight + 5.0f;
+        }
         float mixerSpace = m_showMixer ? m_mixerWidth + 5.0f : 0.0f;
         // Calculate playhead end X to stop before mixer if visible
         float playheadEndX = m_showMixer ? bounds.x + bounds.width - mixerSpace : bounds.x + bounds.width - scrollbarWidth;

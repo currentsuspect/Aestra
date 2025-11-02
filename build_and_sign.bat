@@ -5,14 +5,13 @@ echo =============================================
 echo NOMAD DAW Build and Sign Tool
 echo =============================================
 
-:: Check if we're running as administrator
+:: Check if we're running as administrator (optional, for certificate generation)
 net session >nul 2>&1
 if %ERRORLEVEL% == 0 (
     echo Running with administrative privileges
 ) else (
-    echo Please run this script as Administrator
-    pause
-    exit /b 1
+    echo Warning: Not running as administrator - certificate generation may fail
+    echo Continuing anyway...
 )
 
 :: Generate a self-signed certificate if it doesn't exist in the store
