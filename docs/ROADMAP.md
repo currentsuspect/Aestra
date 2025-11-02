@@ -387,6 +387,4 @@ Share your priorities: [GitHub Discussions](https://github.com/currentsuspect/NO
 
 ---
 
-**Last updated**: November 2024
-
-[← Return to Nomad Docs Index](README.md)
+*Last updated: January 2025*
