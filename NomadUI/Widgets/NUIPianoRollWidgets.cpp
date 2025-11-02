@@ -14,7 +14,7 @@ static bool isBlackKey(int midiNote)
 }
 
 PianoKeyboard::PianoKeyboard()
-    : keyHeight_(16.0f), firstNote_(72), numKeys_(36)
+    : keyHeight_(16.0f), firstNote_(72), numKeys_(36), scrollY_(0.0f)
 {
 }
 
@@ -56,6 +56,12 @@ void PianoKeyboard::setFirstMidiNote(int note)
 void PianoKeyboard::setNumKeys(int numKeys)
 {
     numKeys_ = std::max(1, std::min(numKeys, 128));
+    repaint();
+}
+
+void PianoKeyboard::setScrollOffsetY(float offset)
+{
+    scrollY_ = std::max(0.0f, offset);
     repaint();
 }
 

@@ -28,11 +28,13 @@ public:
 
     void setFirstMidiNote(int note);
     void setNumKeys(int numKeys);
+    void setScrollOffsetY(float offset);
 
 private:
     float keyHeight_;
     int firstNote_;
     int numKeys_;
+    float scrollY_;
 };
 
 class PianoGrid : public NUIComponent {
