@@ -33,7 +33,7 @@ void PianoKeyboard::onRender(NUIRenderer& renderer)
     for (int i = 0; i < numKeys_; ++i)
     {
         int midi = firstNote_ - i;
-        float y = b.y + i * keyHeight_;
+        float y = b.y + i * keyHeight_ - scrollY_;
         NUIRect keyRect(b.x, y, b.width, keyHeight_);
         bool blackKey = isBlackKey(midi);
         renderer.fillRect(keyRect, blackKey ? black : white);
@@ -125,7 +125,7 @@ void PianoRollNotes::onRender(NUIRenderer& renderer)
         float x = b.x + static_cast<float>(n.startBeat * pixelsPerBeat_) - scrollX_;
         float w = std::max(4.0f, static_cast<float>(n.durationBeats * pixelsPerBeat_));
         int row = firstNote_ - n.pitch; // 0 at firstNote_
-        float y = b.y + row * keyHeight_;
+        float y = b.y + row * keyHeight_ - scrollY_;
         NUIRect rect(x, y + 1.0f, w, keyHeight_ - 2.0f);
         renderer.fillRect(rect, filled.withAlpha(0.85f));
         renderer.strokeRect(rect, 1, border);
@@ -139,12 +139,12 @@ bool PianoRollNotes::onMouseEvent(const NUIMouseEvent& event)
     {
         auto b = getBounds();
         float localX = event.position.x - b.x + scrollX_;
-        float localY = event.position.y - b.y;
+        float contentY = event.position.y - b.y + scrollY_;
 
         double beat = std::max(0.0, static_cast<double>(localX / pixelsPerBeat_));
         double snapped = std::round(beat * 4.0) / 4.0; // 16th notes
 
-        int row = static_cast<int>(localY / keyHeight_);
+        int row = static_cast<int>(contentY / keyHeight_);
         int pitch = firstNote_ - row;
         pitch = std::clamp(pitch, 0, 127);
 
