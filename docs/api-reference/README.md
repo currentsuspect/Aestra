@@ -175,7 +175,7 @@ The API documentation can be hosted on:
 - **ReadTheDocs** (alongside MkDocs)
 - **Custom server** (deploy `docs/api-reference/html/` directory)
 
-See `.github/workflows/docs.yml` for automated deployment setup.
+See `.github/workflows/api-docs.yml` for automated deployment setup.
 
 ## 📝 Best Practices
 
