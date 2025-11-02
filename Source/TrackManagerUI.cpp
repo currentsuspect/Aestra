@@ -146,8 +146,12 @@ TrackManagerUI::~TrackManagerUI() {
                 cache.textureId = 0;
             }
         }
+    } catch (const std::exception& e) {
+        // Renderer may not be available during shutdown - log but continue
+        Log::warning("TrackManagerUI destructor: Failed to cleanup textures: " + std::string(e.what()));
     } catch (...) {
         // Renderer may not be available during shutdown - safe to ignore
+        Log::warning("TrackManagerUI destructor: Failed to cleanup textures: unknown error");
     }
     Log::info("TrackManagerUI destroyed");
 }

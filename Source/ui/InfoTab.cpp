@@ -80,8 +80,11 @@ void RenderInfoTab() {
 			// No glow API currently; tint the icon as a subtle verified accent
 			cardIcon.setColorFromTheme("accentPrimary");
 		}
-	} catch (...) {
+	} catch (const std::exception& e) {
 		// If loading fails, continue without the icon - non-fatal
+		Log::warning("Failed to load card icon: " + std::string(e.what()));
+	} catch (...) {
+		Log::warning("Failed to load card icon: unknown error");
 	}
 
 	// Note: Actual rendering requires attaching these components to the current UI
