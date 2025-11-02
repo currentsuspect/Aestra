@@ -830,8 +830,8 @@ pwsh -File scripts/install-hooks.ps1
 
 - **[C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/)** — Industry standard C++ best practices
 - **[clang-format Documentation](https://clang.llvm.org/docs/ClangFormat.html)** — Code formatting tool
-- **[Architecture Overview](ARCHITECTURE.md)** — System design and structure
-- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute to Nomad
+- **[Architecture Overview](../ARCHITECTURE.md)** — System design and structure
+- **[Contributing Guide](../CONTRIBUTING.md)** — How to contribute to Nomad
 - **[Style Guide](STYLE_GUIDE.md)** — Documentation and comment standards
 
 ---

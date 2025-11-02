@@ -295,7 +295,7 @@ While you grant full rights, we value contributions:
 - [Full License Text](../LICENSE) - Complete NSSAL license terms
 - [Licensing Details](../LICENSING.md) - Original licensing document
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute
-- [FAQ](FAQ.md) - General questions
+- [FAQ](../FAQ.md) - General questions
 
 ## ⚠️ Legal Disclaimer
 

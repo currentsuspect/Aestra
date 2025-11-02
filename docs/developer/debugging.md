@@ -572,7 +572,7 @@ TEST(TrackTest, PositionCalculation) {
 
 - **[Bug Reports Guide](BUG_REPORTS.md)** — How to report bugs effectively
 - **[Performance Tuning](PERFORMANCE_TUNING.md)** — Optimization techniques
-- **[Coding Style Guide](CODING_STYLE.md)** — Code conventions
+- **[Coding Style Guide](../CODING_STYLE.md)** — Code conventions
 
 ---
 

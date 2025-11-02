@@ -368,9 +368,9 @@ Share your priorities: [GitHub Discussions](https://github.com/currentsuspect/NO
 
 ## 📚 Related Documentation
 
-- [Architecture Overview](ARCHITECTURE.md) - System design
-- [Contributing Guide](CONTRIBUTING.md) - How to contribute
-- [FAQ](FAQ.md) - Common questions
+- [Architecture Overview](../ARCHITECTURE.md) - System design
+- [Contributing Guide](../CONTRIBUTING.md) - How to contribute
+- [FAQ](../FAQ.md) - Common questions
 - [Current State Analysis](../NomadDocs/CURRENT_STATE_ANALYSIS.md) - Detailed status
 
 ## 📝 Notes

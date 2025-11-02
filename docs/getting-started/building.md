@@ -326,13 +326,13 @@ cmake --build build --parallel
 - [Architecture Overview](ARCHITECTURE.md) - Understand Nomad's structure
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute code
 - [Coding Style](CODING_STYLE.md) - Code formatting guidelines
-- [FAQ](FAQ.md) - Frequently asked questions
+- [FAQ](../FAQ.md) - Frequently asked questions
 
 ## 🆘 Getting Help
 
 If you encounter issues not covered here:
 
-1. Check [FAQ](FAQ.md) for common problems
+1. Check [FAQ](../FAQ.md) for common problems
 2. Search [GitHub Issues](https://github.com/currentsuspect/NOMAD/issues)
 3. Open a new issue with:
    - Operating system and version
