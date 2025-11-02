@@ -35,7 +35,7 @@ if %ERRORLEVEL% NEQ 0 (
 :: Sign the executable
 echo.
 echo Signing the executable...
-signtool sign /a /v /n "Nomad Studios Dev Cert" /t http://timestamp.digicert.com "build\Release\NomadDAW.exe"
+signtool sign /a /v /n "Nomad Studios Dev Cert" /tr http://timestamp.digicert.com /td sha256 "build\Release\NomadDAW.exe"
 if %ERRORLEVEL% NEQ 0 (
     echo Signing failed
     pause
