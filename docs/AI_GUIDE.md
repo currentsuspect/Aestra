@@ -341,7 +341,7 @@ Muse AI is part of **Nomad Premium**:
 **Have ideas for Muse AI features?**
 
 - 💡 Open a feature request on GitHub
-- 📧 Email: makoridylan@gmail.com
+- 📧 Email: [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
 - 💬 Join our community discussions
 
 We're actively gathering input during development. Your feedback helps shape Muse!
