@@ -9,7 +9,7 @@ Comprehensive glossary of technical terms, acronyms, and concepts used in Nomad 
 - [Audio Terms](#-audio-terms)
 - [Programming Concepts](#-programming-concepts)
 - [Nomad-Specific Terms](#-nomad-specific-terms)
-- [UI/UX Terms](#-uiux-terms)
+- [UI/UX Terms](#%EF%B8%8F-uiux-terms)
 - [Acronyms](#-acronyms)
 
 ## 🎵 Audio Terms
