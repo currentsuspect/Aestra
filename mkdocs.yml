@@ -1,0 +1,159 @@
+site_name: NOMAD DAW Documentation
+site_url: https://currentsuspect.github.io/NOMAD
+site_author: Dylan Makori / Nomad Studios
+site_description: >-
+  A modern, professional digital audio workstation built from the ground up with intention.
+  Ultra-low latency audio, GPU-accelerated UI, and FL Studio-inspired workflow.
+
+repo_name: currentsuspect/NOMAD
+repo_url: https://github.com/currentsuspect/NOMAD
+edit_uri: edit/main/docs/
+
+copyright: Copyright &copy; 2025 Dylan Makori / Nomad Studios - All Rights Reserved
+
+theme:
+  name: material
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+  icon:
+    logo: material/music-circle
+    repo: fontawesome/brands/github
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - search.share
+    - toc.follow
+    - toc.integrate
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+    - content.action.view
+    - content.tabs.link
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/extra.js
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+  - minify:
+      minify_html: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/currentsuspect/NOMAD
+      name: NOMAD on GitHub
+    - icon: fontawesome/solid/envelope
+      link: mailto:makoridylan@gmail.com
+      name: Email Dylan Makori
+  version:
+    provider: mike
+  generator: false
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Overview: getting-started/index.md
+    - Building NOMAD: getting-started/building.md
+    - Quickstart: getting-started/quickstart.md
+  - Architecture:
+    - System Overview: architecture/overview.md
+    - Module Hierarchy: architecture/modules.md
+    - NomadCore: architecture/nomad-core.md
+    - NomadPlat: architecture/nomad-plat.md
+    - NomadUI: architecture/nomad-ui.md
+    - NomadAudio: architecture/nomad-audio.md
+  - Developer Guide:
+    - Contributing: developer/contributing.md
+    - Coding Style: developer/coding-style.md
+    - Style Guide: developer/style-guide.md
+    - Bug Reports: developer/bug-reports.md
+    - Debugging: developer/debugging.md
+    - Performance Tuning: developer/performance-tuning.md
+  - Technical Reference:
+    - FAQ: technical/faq.md
+    - Glossary: technical/glossary.md
+    - AI Guide: technical/ai-guide.md
+    - Roadmap: technical/roadmap.md
+  - API Reference:
+    - Overview: api/index.md
+  - Community:
+    - Code of Conduct: community/code-of-conduct.md
+    - Support: community/support.md
+    - Security: community/security.md
+  - About:
+    - Philosophy: about/philosophy.md
+    - Licensing: about/licensing.md
+    - License Reference: about/license-reference.md
