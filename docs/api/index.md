@@ -8,7 +8,7 @@ NOMAD's API is organized by module. Each module provides a focused set of functi
 
 ### Core Foundation
 
-#### [NomadCore API](nomad-core-api.md)
+#### NomadCore API
 Foundation utilities and data structures.
 
 **Key APIs:**
@@ -19,13 +19,14 @@ Foundation utilities and data structures.
 - `nomad::File` — Cross-platform file I/O
 - `nomad::Logger` — Structured logging
 
-[View NomadCore API →](nomad-core-api.md)
+!!! note "API Documentation In Progress"
+    Detailed API documentation is being actively developed. For now, refer to the [Architecture documentation](../architecture/nomad-core.md) and header files for inline documentation.
 
 ---
 
 ### Platform Abstraction
 
-#### [NomadPlat API](nomad-plat-api.md)
+#### NomadPlat API
 Platform-specific functionality with unified interface.
 
 **Key APIs:**
@@ -35,13 +36,14 @@ Platform-specific functionality with unified interface.
 - `nomad::SystemInfo` — System capabilities
 - `nomad::Timer` — High-resolution timing
 
-[View NomadPlat API →](nomad-plat-api.md)
+!!! note "API Documentation In Progress"
+    Detailed API documentation is being actively developed. For now, refer to the [Architecture documentation](../architecture/nomad-plat.md) and header files for inline documentation.
 
 ---
 
 ### User Interface
 
-#### [NomadUI API](nomad-ui-api.md)
+#### NomadUI API
 GPU-accelerated UI framework.
 
 **Key APIs:**
@@ -53,13 +55,14 @@ GPU-accelerated UI framework.
 - `nomad::Layout` — Layout management
 - `nomad::Theme` — Theme system
 
-[View NomadUI API →](nomad-ui-api.md)
+!!! note "API Documentation In Progress"
+    Detailed API documentation is being actively developed. For now, refer to the [Architecture documentation](../architecture/nomad-ui.md) and header files for inline documentation.
 
 ---
 
 ### Audio Engine
 
-#### [NomadAudio API](nomad-audio-api.md)
+#### NomadAudio API
 Professional audio processing system.
 
 **Key APIs:**
@@ -69,7 +72,8 @@ Professional audio processing system.
 - `nomad::DSP::Gain` — Gain processor
 - `nomad::DSP::EQ` — Equalizer processor
 
-[View NomadAudio API →](nomad-audio-api.md)
+!!! note "API Documentation In Progress"
+    Detailed API documentation is being actively developed. For now, refer to the [Architecture documentation](../architecture/nomad-audio.md) and header files for inline documentation.
 
 ---
 
@@ -247,12 +251,12 @@ void AudioBuffer::read(float* buffer, int samples);
 
 ### By Feature
 
-Looking for specific functionality? Use the search bar or browse:
+Looking for specific functionality? See the architecture documentation:
 
-- **Window Management** → [NomadPlat API](nomad-plat-api.md)
-- **Rendering** → [NomadUI API](nomad-ui-api.md)
-- **Audio I/O** → [NomadAudio API](nomad-audio-api.md)
-- **File Operations** → [NomadCore API](nomad-core-api.md)
+- **Window Management** → [NomadPlat Architecture](../architecture/nomad-plat.md)
+- **Rendering** → [NomadUI Architecture](../architecture/nomad-ui.md)
+- **Audio I/O** → [NomadAudio Architecture](../architecture/nomad-audio.md)
+- **File Operations** → [NomadCore Architecture](../architecture/nomad-core.md)
 
 ### By Module
 
