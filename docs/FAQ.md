@@ -30,11 +30,12 @@ Nomad is developed by Dylan Makori in Kenya, with contributions from the open-so
 
 ### Is Nomad free to use?
 
-No. Nomad DAW is commercial software that will require a paid license. However:
-- Source code is publicly visible for educational purposes
-- Free trials will be available upon official release
-- Student discounts will be offered
-- Contributing to development is free and welcomed
+**Yes! Nomad Core is free forever.** The hybrid model:
+- ✅ **Nomad Core**: Completely free - full DAW with all essential features
+- 💰 **Premium Add-ons** (future): Muse AI and premium plugins require paid licenses
+- 👁️ Source code is publicly visible for transparency
+- 🎓 Student discounts will apply to premium add-ons
+- 🤝 Contributing to development is free and welcomed
 
 ### What platforms does Nomad support?
 
@@ -45,13 +46,15 @@ No. Nomad DAW is commercial software that will require a paid license. However:
 
 ### Is Nomad open-source?
 
-No. Nomad is **proprietary commercial software** with **publicly visible source code**. This means:
-- You can view and study the code
-- You can contribute improvements
-- You cannot use, modify, or distribute the code without permission
-- All contributions become property of the project
+No. Nomad uses the **NSSAL (Nomad Studios Source-Available License)** - a source-available license, not open-source. This means:
+- ✅ **Nomad Core is free to use** for all purposes
+- 👁️ You can view and study the source code
+- 🤝 You can contribute improvements
+- ❌ You cannot reuse the code in other projects
+- ❌ You cannot distribute modified versions
+- 📜 All contributions become property of the project
 
-See [License Reference](LICENSE_REFERENCE.md) for details.
+See [License Reference](LICENSE_REFERENCE.md) for complete details.
 
 ## 🔨 Building and Setup
 
@@ -230,13 +233,16 @@ See [Architecture Overview](ARCHITECTURE.md) for threading details.
 
 ### Can I use Nomad in my commercial projects?
 
-Yes, **once you have a paid license**. The license allows:
-- Commercial music production
-- Client work
-- Released tracks and albums
-- Live performances
+**Yes! Nomad Core is free for all commercial use.** This includes:
+- ✅ Commercial music production
+- ✅ Client work and studio projects
+- ✅ Released tracks and albums
+- ✅ Live performances
+- ✅ YouTube, streaming, broadcast
 
-The **source code** itself is proprietary and cannot be used in other projects.
+Only premium add-ons (Muse AI, premium plugins - future releases) will require paid licenses.
+
+**Note:** The source code itself is proprietary and cannot be reused in other software projects.
 
 ## ⚖️ Licensing
 

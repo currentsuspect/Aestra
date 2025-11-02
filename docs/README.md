@@ -1,7 +1,8 @@
 # 📘 Nomad DAW — Documentation Portal
 
 ![Nomad Version](https://img.shields.io/badge/Nomad-v1.0-blue)
-![License](https://img.shields.io/badge/License-Proprietary-red)
+![License](https://img.shields.io/badge/License-NSSAL-blue)
+![Core](https://img.shields.io/badge/Core-Free%20Forever-brightgreen)
 ![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
 
@@ -15,6 +16,7 @@ Nomad DAW is a professional digital audio workstation featuring:
 - **FL Studio-inspired workflow** - Intuitive pattern and playlist sequencer
 - **Professional audio quality** - 64-bit multi-threaded processing
 - **Modern C++ architecture** - Clean separation of concerns
+- **Free forever** - Nomad Core is completely free (premium add-ons available separately)
 
 ## 📚 Documentation Index
 
@@ -117,7 +119,10 @@ We welcome contributions from the community! Before contributing:
 
 ## ⚖️ License
 
-Nomad DAW is proprietary commercial software. See [License Reference](LICENSE_REFERENCE.md) for details.
+**Nomad Core is free forever** under the Nomad Studios Source-Available License (NSSAL). See [License Reference](LICENSE_REFERENCE.md) for full details.
+
+- 🆓 **Nomad Core**: Free to use for all purposes
+- 💰 **Premium Add-ons**: Muse AI and premium plugins (paid, future releases)
 
 The source code is publicly visible for transparency but is NOT open-source. All rights reserved.
 

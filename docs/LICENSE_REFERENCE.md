@@ -1,7 +1,8 @@
 # ⚖️ Nomad DAW License Reference
 
-![License](https://img.shields.io/badge/License-Proprietary-red)
-![Commercial](https://img.shields.io/badge/Software-Commercial-orange)
+![License](https://img.shields.io/badge/License-NSSAL-blue)
+![Core](https://img.shields.io/badge/Core-Free%20Forever-brightgreen)
+![Premium](https://img.shields.io/badge/Premium-Paid-orange)
 
 Comprehensive reference for Nomad DAW licensing, including the source-available license terms and contributor agreements.
 
@@ -16,52 +17,66 @@ Comprehensive reference for Nomad DAW licensing, including the source-available 
 
 ## 🌟 Overview
 
-**Nomad DAW License:**
+**Nomad DAW uses a hybrid licensing model:**
 
-Nomad DAW uses the **Nomad Studios Source-Available License (NSSAL) v1.0** - a proprietary source-available license.
+### Nomad Core (Free Forever)
+- **Nomad Core** (this repository) uses the **Nomad Studios Source-Available License (NSSAL) v1.0**
+- ✅ **Free to use forever** - No paid license required for the core DAW
+- 👁️ **Source-available** - Code is publicly visible for transparency and education
+- 🎵 **Full DAW functionality** - Complete digital audio workstation without restrictions
+
+### Premium Add-ons (Paid)
+- **Muse AI** - AI-powered music generation and production assistance (future)
+- **Premium Plugins** - Advanced effects and instruments (future)
+- 💰 **Paid licenses** - Available separately when released
 
 **Key Points:**
-- 🔒 Nomad DAW is **proprietary commercial software**
-- 👁️ Source code is **publicly visible** for transparency and education
-- ❌ Source code is **NOT open-source**
+- 🆓 Nomad Core is **free forever** under NSSAL
+- ❌ Source code is **NOT open-source** (cannot be used in other projects)
 - ✅ Contributions are **welcomed and credited**
-- 💰 Commercial use requires a **paid license** (coming soon)
+- 🤖 Premium features (Muse AI, plugins) will require paid licenses
 - 📜 Full license text available in [LICENSE](../LICENSE)
 
-## 🔒 Proprietary License
+## 🔒 Hybrid Licensing Model
 
-### Nomad DAW Core License
+### Nomad Core License (Free Forever)
 
 **Copyright © 2025 Dylan Makori. All rights reserved.**
 
-Nomad DAW (the "Software") is proprietary commercial software developed by Dylan Makori in Kenya.
+Nomad Core is source-available software developed by Dylan Makori in Kenya, licensed under NSSAL v1.0.
 
-### Grant of Rights
+### What You Can Do with Nomad Core (No License Required)
 
-**You are granted the right to:**
-- ✅ View the source code for **educational purposes**
-- ✅ Report bugs and security vulnerabilities
-- ✅ Suggest features and improvements
-- ✅ Submit pull requests (subject to CLA)
-- ✅ Star and watch the repository
+**Free usage rights:**
+- ✅ **Use for free forever** - Personal and commercial music production
+- ✅ **View and study** the source code for educational purposes
+- ✅ **Report bugs** and security vulnerabilities
+- ✅ **Suggest features** and improvements
+- ✅ **Submit pull requests** (subject to CLA)
+- ✅ **Release music** created with Nomad Core
+- ✅ **Client work** and commercial projects
+- ✅ **Live performances** with Nomad Core
 
-**Upon purchasing a license, you may:**
-- ✅ Use the Software for commercial music production
-- ✅ Use the Software for client work
-- ✅ Release music created with the Software
-- ✅ Use the Software in live performances
+### Premium Add-ons (Require Paid License)
 
-### Restrictions
+**Muse AI & Premium Plugins** (future releases):
+- 🤖 **Muse AI** - AI-powered pattern generation, mixing assistance, chord suggestions
+- 🎛️ **Premium Plugins** - Advanced effects, instruments, and processing
+- 💰 **Paid licenses** required when available
+- 🚀 **Enhanced features** beyond core DAW functionality
+
+### Restrictions (What You Cannot Do)
 
 **You may NOT:**
-- ❌ Use the Software without a paid license
-- ❌ Copy, modify, or distribute the source code
-- ❌ Create derivative works or forks
-- ❌ Use any code in your own projects
-- ❌ Build and distribute your own version
-- ❌ Reverse engineer the Software
-- ❌ Remove or modify copyright notices
-- ❌ Sublicense or transfer your license
+- ❌ **Copy, modify, or redistribute** the source code
+- ❌ **Create derivative works** or competing products
+- ❌ **Use code in other projects** without written consent
+- ❌ **Fork or distribute** modified versions
+- ❌ **Remove or modify** copyright notices
+- ❌ **Reverse engineer** the software
+- ❌ **Sublicense** to others
+
+**Note:** Nomad Core is **free to use**, but the code itself remains proprietary and cannot be reused elsewhere.
 
 ### Enforcement
 
@@ -141,84 +156,85 @@ While you grant full rights, we value contributions:
 - ⭐ Featured in documentation for significant contributions
 - 🎖️ Hall of Fame for major contributors
 
-## 💰 Commercial Licensing
+## 💰 Premium Add-on Licensing (Future)
 
-### License Tiers (Planned)
+### What's Free vs. Paid
 
-**Personal License** - Individual producers and hobbyists
-- ✅ Single-user license
+**Nomad Core (FREE Forever):**
+- ✅ Complete DAW application
+- ✅ Multi-track audio editing
+- ✅ MIDI sequencing
+- ✅ Mixing and effects
+- ✅ Plugin hosting (VST3, AU)
+- ✅ Project save/load
 - ✅ All core features
-- ✅ Personal and commercial music production
 - ✅ Regular updates
-- ✅ Email support
+- ✅ Community support
+- 💲 **Cost: FREE**
+
+**Premium Add-ons (PAID - Future Releases):**
+- 🤖 **Muse AI Suite** - AI-powered music generation, mixing assistance, pattern generation
+- 🎛️ **Premium Plugins Pack** - Advanced effects, instruments, and processors
+- 📚 **Premium Content Library** - Professional samples, presets, templates
+- 🎓 **Priority Support** - Direct access to development team
+- 💲 **Cost: Paid licenses** (pricing TBD)
+
+### Premium License Tiers (Planned for Muse AI & Plugins)
+
+**Muse AI Personal** - Individual producers
+- ✅ Muse AI pattern generation
+- ✅ Mix assistant
+- ✅ Chord suggestions
+- ✅ Personal use only
 - 💲 Pricing: TBD
 
-**Professional License** - Professional studios and producers
+**Muse AI Professional** - Professional studios
 - ✅ All Personal features
+- ✅ Advanced AI models
 - ✅ Priority support
-- ✅ Advanced features
-- ✅ Premium content library
-- ✅ Early access to new features
+- ✅ Commercial use
+- ✅ Premium plugin access
 - 💲 Pricing: TBD
 
-**Enterprise License** - Large organizations and institutions
+**Muse AI Enterprise** - Large organizations
 - ✅ All Professional features
 - ✅ Multiple seats
-- ✅ Custom integrations
+- ✅ Custom AI training
 - ✅ Dedicated support
-- ✅ Custom training
+- ✅ API access
 - 💲 Pricing: Contact sales
 
-**Educational License** - Students and schools
-- ✅ Discounted pricing for students
-- ✅ Institutional licenses for schools
-- ✅ All core features
-- ✅ Educational resources included
-- 💲 Pricing: 50-70% discount
+**Educational** - Students and schools
+- ✅ Access to Muse AI and plugins
+- ✅ Significant discounts (50-70% off)
+- ✅ Educational resources
+- 💲 Pricing: Discounted
 
-### What's Included
+### License Activation (Premium Add-ons Only)
 
-**All license tiers include:**
-- ✅ Full DAW application
-- ✅ NomadUI framework
-- ✅ Professional audio engine
-- ✅ Pattern & playlist sequencer
-- ✅ Regular updates and bug fixes
-- ✅ Technical support
-- ✅ Commercial rights for produced music
-
-**Premium features (Professional/Enterprise):**
-- 🎵 Advanced effects and instruments
-- 🤖 Muse AI integration
-- 📚 Premium content library
-- 🎛️ Advanced mixing tools
-- 🔌 Priority plugin development
-
-### License Activation
-
-**Coming soon:**
+**When Muse AI and plugins are released:**
 - Online activation system
 - Offline activation option
 - License transfer capability
 - Multi-machine support (per tier)
 
-### Free Trial
-
-**Planned trial program:**
-- 30-day fully functional trial
-- No credit card required
-- Full feature access
-- Convert to paid license anytime
+**Note:** Nomad Core requires no activation or license key.
 
 ## ❓ License FAQ
 
 ### Q: Is Nomad open-source?
 
-**A:** No. Nomad is proprietary commercial software. The source code is publicly visible for transparency and educational purposes, but it is NOT open-source and cannot be freely used or distributed.
+**A:** No. Nomad uses a source-available license (NSSAL). The code is publicly visible for transparency and education, but it is NOT open-source and cannot be reused in other projects.
 
-### Q: Can I use Nomad for free?
+### Q: Can I use Nomad Core for free?
 
-**A:** A free trial will be available. For continued use, a paid license is required.
+**A:** Yes! **Nomad Core is free forever.** You can use it for personal projects, commercial music production, and client work without paying anything. Only premium add-ons (Muse AI, premium plugins) will require paid licenses in the future.
+
+### Q: What's the difference between free and paid?
+
+**A:** 
+- **Free (Nomad Core):** Complete DAW with all essential features - audio/MIDI editing, mixing, effects, plugin hosting
+- **Paid (Future):** Premium add-ons like Muse AI (AI music generation), premium plugins, and advanced content libraries
 
 ### Q: Can I contribute to Nomad?
 
@@ -226,23 +242,23 @@ While you grant full rights, we value contributions:
 
 ### Q: What happens to my music?
 
-**A:** You own 100% of the music you create with Nomad. The license grants you commercial rights to produce, distribute, and sell your music.
+**A:** You own 100% of the music you create with Nomad. Both free and paid versions grant you full commercial rights to produce, distribute, and sell your music.
 
-### Q: Can I use Nomad for client work?
+### Q: Can I use Nomad Core for client work?
 
-**A:** Yes, with a valid license. All tiers include commercial use rights.
+**A:** Yes! Nomad Core is free for all uses including commercial client work, studio production, and live performances.
+
+### Q: Will Nomad Core always be free?
+
+**A:** Yes. Nomad Core will remain free forever. The business model is based on optional premium add-ons (Muse AI, plugins), not the core DAW.
 
 ### Q: Are there educational discounts?
 
-**A:** Yes. Students and educational institutions will receive significant discounts (50-70% off).
-
-### Q: Can I transfer my license?
-
-**A:** License transfer policies will be announced with the commercial release.
+**A:** Nomad Core is already free. Educational discounts (50-70% off) will apply to premium add-ons like Muse AI when they're released.
 
 ### Q: What about updates?
 
-**A:** All licenses include regular updates. Major version upgrades may require additional payment (TBD).
+**A:** Nomad Core receives free updates forever. Premium add-ons will have their own update policies announced at release.
 
 ### Q: Is there a subscription model?
 
