@@ -513,7 +513,7 @@ target_precompile_headers(NOMAD PRIVATE
 
 ### Tracy Profiler
 
-**See:** [Debugging Guide → Tracy Profiler](DEBUGGING.md#-tracy-profiler)
+**See:** [Debugging Guide → Tracy Profiler](developer/debugging.md#-tracy-profiler)
 
 Enable Tracy and profile your code:
 ```cpp
@@ -663,7 +663,7 @@ std::vector<float> largeBuffer = std::move(createBuffer());  // No copy
 
 ## 📚 Additional Resources
 
-- **[Debugging Guide](DEBUGGING.md)** — Profiling and debugging tools
+- **[Debugging Guide](developer/debugging.md)** — Profiling and debugging tools
 - **[Architecture Overview](ARCHITECTURE.md)** — System design
 - **[Coding Style Guide](developer/coding-style.md)** — Code conventions
 

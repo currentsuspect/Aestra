@@ -159,7 +159,7 @@ Have an idea for a new feature?
 - **[FAQ](docs/FAQ.md)** — Common questions answered
 
 ### For Experienced Developers
-- **[Debugging Guide](docs/DEBUGGING.md)** — Use Tracy profiler and debugging tools
+- **[Debugging Guide](docs/developer/debugging.md)** — Use Tracy profiler and debugging tools
 - **[Performance Tuning](docs/PERFORMANCE_TUNING.md)** — Optimize code for speed
 - **[Style Guide](docs/STYLE_GUIDE.md)** — Write good documentation
 

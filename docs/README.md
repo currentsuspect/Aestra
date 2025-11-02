@@ -35,7 +35,7 @@ Nomad DAW is a professional digital audio workstation featuring:
 ### 🐛 Development & Debugging
 
 - **[Bug Reports Guide](BUG_REPORTS.md)** — How to report bugs effectively with reproduction steps
-- **[Debugging Guide](DEBUGGING.md)** — Using Tracy profiler, Visual Studio debugger, and logging
+- **[Debugging Guide](developer/debugging.md)** — Using Tracy profiler, Visual Studio debugger, and logging
 - **[Performance Tuning](PERFORMANCE_TUNING.md)** — FPS optimization, latency reduction, and profiling
 - **[Style Guide](STYLE_GUIDE.md)** — Documentation and comment standards
 
@@ -66,7 +66,7 @@ Nomad DAW is a professional digital audio workstation featuring:
 1. Understand [Architecture Overview](ARCHITECTURE.md) to grasp system design
 2. Reference [Glossary](GLOSSARY.md) for technical terminology
 3. Follow [Coding Style Guide](developer/coding-style.md) for consistent code quality
-4. Use [Debugging Guide](DEBUGGING.md) and [Performance Tuning](PERFORMANCE_TUNING.md) for optimization
+4. Use [Debugging Guide](developer/debugging.md) and [Performance Tuning](PERFORMANCE_TUNING.md) for optimization
 
 ### For Bug Reporters
 1. Read [Bug Reports Guide](BUG_REPORTS.md) for effective bug reporting
