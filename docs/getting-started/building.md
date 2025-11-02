@@ -11,7 +11,7 @@ Complete guide for building Nomad DAW from source on Windows and Linux.
 - [Windows Build](#windows-build)
 - [Linux Build](#linux-build)
 - [Build Options](#build-options)
-- [Troubleshooting](#-troubleshooting)
+- [Troubleshooting](#troubleshooting)
 
 ## 🎯 Prerequisites
 
