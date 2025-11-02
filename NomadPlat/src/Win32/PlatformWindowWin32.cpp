@@ -116,9 +116,11 @@ bool PlatformWindowWin32::create(const WindowDesc& desc) {
     HICON hIconSmall = (HICON)LoadImageW(hInstLocal, L"IDI_APP_ICON", IMAGE_ICON, 48, 48, LR_DEFAULTCOLOR);
     if (hIconBig) {
         SendMessageW(m_hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIconBig);
+        DestroyIcon(hIconBig);
     }
     if (hIconSmall) {
         SendMessageW(m_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIconSmall);
+        DestroyIcon(hIconSmall);
     }
 
     // Get device context
