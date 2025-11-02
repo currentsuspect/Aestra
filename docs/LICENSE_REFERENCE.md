@@ -3,30 +3,30 @@
 ![License](https://img.shields.io/badge/License-Proprietary-red)
 ![Commercial](https://img.shields.io/badge/Software-Commercial-orange)
 
-Comprehensive reference for Nomad DAW licensing, including proprietary terms, MIT component licenses, and contributor agreements.
+Comprehensive reference for Nomad DAW licensing, including the source-available license terms and contributor agreements.
 
 ## 📋 Table of Contents
 
 - [Overview](#-overview)
 - [Proprietary License](#-proprietary-license)
-- [Open Source Components](#-open-source-components)
+- [NSSAL License Details](#-nomad-studios-source-available-license-nssal)
 - [Contributor License Agreement](#-contributor-license-agreement)
 - [Commercial Licensing](#-commercial-licensing)
 - [License FAQ](#-license-faq)
 
 ## 🌟 Overview
 
-**Nomad DAW uses a dual licensing approach:**
+**Nomad DAW License:**
 
-1. **Proprietary License** - The DAW application and most code
-2. **MIT License** - Selected third-party components (see [LICENSE](../LICENSE))
+Nomad DAW uses the **Nomad Studios Source-Available License (NSSAL) v1.0** - a proprietary source-available license.
 
 **Key Points:**
 - 🔒 Nomad DAW is **proprietary commercial software**
-- 👁️ Source code is **publicly visible** for transparency
+- 👁️ Source code is **publicly visible** for transparency and education
 - ❌ Source code is **NOT open-source**
 - ✅ Contributions are **welcomed and credited**
 - 💰 Commercial use requires a **paid license** (coming soon)
+- 📜 Full license text available in [LICENSE](../LICENSE)
 
 ## 🔒 Proprietary License
 
@@ -70,41 +70,33 @@ Unauthorized use, copying, or distribution of Nomad DAW will be prosecuted to th
 - International copyright treaties
 - DMCA (Digital Millennium Copyright Act)
 
-## 📜 Open Source Components
+## 📜 Nomad Studios Source-Available License (NSSAL)
 
-Nomad DAW includes some open-source components under their respective licenses:
+### Full License Details
 
-### MIT Licensed Components
+**License Name:** Nomad Studios Source-Available License (NSSAL)  
+**Version:** 1.0  
+**Date:** October 30, 2025  
+**Copyright:** © 2025 Dylan Makori
 
-The following components are licensed under the MIT License (see [LICENSE](../LICENSE)):
+### Key Terms
 
-**Internal Utilities:**
-- Build scripts and CMake modules
-- Git hooks and automation scripts
-- Documentation templates
+**Permitted Actions:**
+- ✅ View and study the source code for educational purposes
+- ✅ Report bugs and security issues
+- ✅ Suggest features and improvements
+- ✅ Submit pull requests (contributors grant all rights to Nomad Studios)
 
-**MIT License Text:**
-```
-MIT License
+**Restrictions:**
+- ❌ Remove or alter any proprietary notices, labels, or marks
+- ❌ Create derivative works or competing products based on this code
+- ❌ Use any part of this codebase in your own projects without written consent
+- ❌ Distribute or sublicense the software
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+**Ownership:**
+All title, ownership rights, and intellectual property rights in and to the Software, including all source code, documentation, designs, and associated materials, remain the exclusive property of Dylan Makori and Nomad Studios.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+**For the complete legal text, see:** [LICENSE](../LICENSE)
 
 ### Third-Party Dependencies
 
@@ -284,7 +276,7 @@ While you grant full rights, we value contributions:
 
 ## 📚 Additional Resources
 
-- [Full License Text](../LICENSE) - Complete MIT license for open components
+- [Full License Text](../LICENSE) - Complete NSSAL license terms
 - [Licensing Details](../LICENSING.md) - Original licensing document
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute
 - [FAQ](FAQ.md) - General questions
