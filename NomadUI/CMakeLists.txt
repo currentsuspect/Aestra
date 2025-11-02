@@ -1,3 +1,6 @@
+if(${CMAKE_VERSION} VERSION_LESS "3.22")
+    message(FATAL_ERROR "NomadUI requires CMake >= 3.22, but found ${CMAKE_VERSION}. Please upgrade your CMake or adjust the top-level cmake_minimum_required.")
+endif()
 cmake_minimum_required(VERSION 3.22)
 project(NomadUI VERSION 0.1.0 LANGUAGES CXX)
 
