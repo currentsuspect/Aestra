@@ -334,7 +334,7 @@ Muse AI is part of **Nomad Premium**:
 - [Architecture Overview](../ARCHITECTURE.md) - Nomad system design
 - [Roadmap](../ROADMAP.md) - Feature timeline
 - [FAQ](../FAQ.md) - Common questions about Muse
-- [License Reference](LICENSE_REFERENCE.md) - Licensing terms
+- [License Reference](../LICENSE_REFERENCE.md) - Licensing terms
 
 ## 💬 Feedback and Requests
 

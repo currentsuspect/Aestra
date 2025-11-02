@@ -832,7 +832,7 @@ pwsh -File scripts/install-hooks.ps1
 - **[clang-format Documentation](https://clang.llvm.org/docs/ClangFormat.html)** — Code formatting tool
 - **[Architecture Overview](../ARCHITECTURE.md)** — System design and structure
 - **[Contributing Guide](../CONTRIBUTING.md)** — How to contribute to Nomad
-- **[Style Guide](STYLE_GUIDE.md)** — Documentation and comment standards
+- **[Style Guide](style-guide.md)** — Documentation and comment standards
 
 ---
 

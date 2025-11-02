@@ -570,8 +570,8 @@ TEST(TrackTest, PositionCalculation) {
 
 ## 📚 Additional Resources
 
-- **[Bug Reports Guide](BUG_REPORTS.md)** — How to report bugs effectively
-- **[Performance Tuning](PERFORMANCE_TUNING.md)** — Optimization techniques
+- **[Bug Reports Guide](bug-reports.md)** — How to report bugs effectively
+- **[Performance Tuning](performance-tuning.md)** — Optimization techniques
 - **[Coding Style Guide](../CODING_STYLE.md)** — Code conventions
 
 ---

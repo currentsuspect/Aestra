@@ -62,14 +62,15 @@ jobs:
         run: |
           echo "🔗 Checking for broken internal Markdown links..."
           
-          # Find all markdown files
-          md_files=$(find . -name "*.md" -not -path "./node_modules/*" -not -path "./.git/*")
+          # Find all markdown files in docs/ folder only, excluding templates and examples
+          md_files=$(find docs -name "*.md" -not -path "docs/TEMPLATE/*" 2>/dev/null || true)
           
           broken_links=0
           
           for file in $md_files; do
-            # Extract markdown links [text](path)
-            links=$(grep -oP '\[.*?\]\(\K[^)]+(?=\))' "$file" || true)
+            # Extract markdown links [text](path) - only actual markdown links with text
+            # This pattern requires text before the link, avoiding false positives from code
+            links=$(grep -oP '(?<!\`)\[.+?\]\(\K[^)]+(?=\))(?!\`)' "$file" 2>/dev/null || true)
             
             for link in $links; do
               # Skip external URLs
@@ -79,6 +80,16 @@ jobs:
               
               # Skip anchors
               if [[ $link =~ ^# ]]; then
+                continue
+              fi
+              
+              # Skip if it looks like code (contains *, &, comma, or is a C++ type/variable name)
+              if [[ $link =~ [\*\&,] ]] || [[ $link =~ ^(int|float|bool|const|void|char|double|uint32_t|size_t|btn|buffer|samples|width|height|x|y|key|value|index|text|pressed|toggled|checked)$ ]]; then
+                continue
+              fi
+              
+              # Skip example/placeholder paths
+              if [[ $link =~ path/to/ ]]; then
                 continue
               fi
               

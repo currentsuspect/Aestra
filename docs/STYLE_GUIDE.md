@@ -543,7 +543,7 @@ double Track::getPosition() const {
 
 ### Troubleshooting
 
-If you encounter build errors, see [Building Guide](docs/BUILDING.md).
+If you encounter build errors, see [Building Guide](BUILDING.md).
 ```
 
 ### Example 3: Inline Code Comment

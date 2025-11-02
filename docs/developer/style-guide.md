@@ -595,7 +595,7 @@ Before submitting documentation, verify:
 
 - **[Contributing Guide](../CONTRIBUTING.md)** — How to contribute
 - **[Coding Style Guide](../CODING_STYLE.md)** — Code formatting rules
-- **[Bug Reports Guide](BUG_REPORTS.md)** — Reporting issues
+- **[Bug Reports Guide](bug-reports.md)** — Reporting issues
 
 ---
 

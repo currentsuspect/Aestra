@@ -434,7 +434,7 @@ Before submitting, verify:
 ## 📚 Related Resources
 
 - **[Contributing Guide](../CONTRIBUTING.md)** — How to contribute to Nomad
-- **[Debugging Guide](DEBUGGING.md)** — Advanced debugging techniques
+- **[Debugging Guide](debugging.md)** — Advanced debugging techniques
 - **[GitHub Issues](https://github.com/currentsuspect/NOMAD/issues)** — Browse existing bugs
 
 ---

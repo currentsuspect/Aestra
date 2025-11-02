@@ -2,7 +2,7 @@
 
 **Nomad DAW** is licensed under the **Nomad Studios Source-Available License (NSSAL) v1.0**.
 
-This document provides an overview of the licensing terms and rights. For the complete legal text, see [LICENSE](LICENSE).
+This document provides an overview of the licensing terms and rights. For the complete legal text, see [LICENSE](../../LICENSE).
 
 ---
 
@@ -229,7 +229,7 @@ For a comprehensive breakdown of the license terms, including:
 - Contributor guidelines
 - Frequently asked questions
 
-See **[docs/LICENSE_REFERENCE.md](docs/LICENSE_REFERENCE.md)** for the complete license reference guide.
+See **[docs/LICENSE_REFERENCE.md](../LICENSE_REFERENCE.md)** for the complete license reference guide.
 
 ---
 
@@ -271,10 +271,10 @@ Any unauthorized use of this software will result in:
 
 ## 🔗 Additional Resources
 
-- **[Full LICENSE Text](LICENSE)** — Complete legal license document
-- **[License Reference Guide](docs/LICENSE_REFERENCE.md)** — Detailed FAQ and examples
-- **[Contributing Guide](docs/CONTRIBUTING.md)** — How to contribute to Nomad
-- **[Code of Conduct](CODE_OF_CONDUCT.md)** — Community guidelines
+- **[Full LICENSE Text](../../LICENSE)** — Complete legal license document
+- **[License Reference Guide](../LICENSE_REFERENCE.md)** — Detailed FAQ and examples
+- **[Contributing Guide](../CONTRIBUTING.md)** — How to contribute to Nomad
+- **[Code of Conduct](../community/code-of-conduct.md)** — Community guidelines
 
 ---
 

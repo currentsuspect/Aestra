@@ -54,7 +54,7 @@ No. Nomad uses the **NSSAL (Nomad Studios Source-Available License)** - a source
 - ❌ You cannot distribute modified versions
 - 📜 All contributions become property of the project
 
-See [License Reference](LICENSE_REFERENCE.md) for complete details.
+See [License Reference](../LICENSE_REFERENCE.md) for complete details.
 
 ## 🔨 Building and Setup
 
@@ -248,7 +248,7 @@ Only premium add-ons (Muse AI, premium plugins - future releases) will require p
 
 ### What license is Nomad under?
 
-Nomad DAW is **proprietary commercial software**. The source code is visible but not open-source. See [License Reference](LICENSE_REFERENCE.md) for complete terms.
+Nomad DAW is **proprietary commercial software**. The source code is visible but not open-source. See [License Reference](../LICENSE_REFERENCE.md) for complete terms.
 
 ### Can I fork Nomad?
 
