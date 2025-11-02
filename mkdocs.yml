@@ -15,7 +15,6 @@ site_description: >-
 repo_name: currentsuspect/NOMAD
 repo_url: https://github.com/currentsuspect/NOMAD
 edit_uri: edit/main/docs/
-favicon: images/nomad-logo.png
 
 copyright: >
   Copyright © 2025 <strong>Nomad Studios</strong>.
@@ -111,15 +110,9 @@ plugins:
       type: timeago
   - minify:
       minify_html: true
-  - autorefs
   - glightbox       # image lightbox popups
   - macros          # custom Nomad macros (for version badges, etc.)
-  - tags
-  - social
-  - offline
   - redirects
-  - changelog:
-      repo_url: https://github.com/currentsuspect/NOMAD/releases
 
 # ----------------------------------------
 # 🧱 MARKDOWN EXTENSIONS
