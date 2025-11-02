@@ -534,6 +534,245 @@ buffer[WAV_HEADER_SIZE] = 0;
 if (size > MAX_BUFFER_SIZE) { ... }
 ```
 
+## 📝 Real Code Examples from Nomad
+
+### Example 1: Logger Class (NomadCore/include/NomadLog.h)
+
+This example demonstrates proper naming, structure, and documentation:
+
+```cpp
+// © 2025 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
+#pragma once
+
+#include <string>
+#include <mutex>
+
+namespace Nomad {
+
+// =============================================================================
+// Log Levels
+// =============================================================================
+enum class LogLevel {
+    Debug,
+    Info,
+    Warning,
+    Error
+};
+
+// =============================================================================
+// Logger Interface
+// =============================================================================
+class ILogger {
+public:
+    virtual ~ILogger() = default;
+    virtual void log(LogLevel level, const std::string& message) = 0;
+    virtual void setLevel(LogLevel level) = 0;
+    virtual LogLevel getLevel() const = 0;
+};
+
+// =============================================================================
+// Console Logger
+// =============================================================================
+class ConsoleLogger : public ILogger {
+public:
+    ConsoleLogger(LogLevel minLevel = LogLevel::Info) 
+        : minLevel_(minLevel) {}
+
+    void log(LogLevel level, const std::string& message) override {
+        if (level < minLevel_) return;
+        
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::cout << "[" << getTimestamp() << "] ";
+        std::cout << getLevelString(level) << " " << message << std::endl;
+    }
+
+private:
+    LogLevel minLevel_;
+    std::mutex mutex_;
+    
+    std::string getTimestamp() const;
+    std::string getLevelString(LogLevel level) const;
+};
+
+} // namespace Nomad
+```
+
+**Key Points:**
+- ✅ Copyright header with NSSAL license reference
+- ✅ `#pragma once` for include guards
+- ✅ Section dividers for organization
+- ✅ PascalCase for classes (`ILogger`, `ConsoleLogger`)
+- ✅ Member variables with underscore suffix (`minLevel_`, `mutex_`)
+- ✅ Virtual destructor in interface
+- ✅ Const correctness (`getLevel() const`)
+- ✅ Default parameter values
+- ✅ Lock guard for thread safety
+
+### Example 2: Audio Processing Function
+
+```cpp
+void TrackManager::processAudio(float* outputBuffer, uint32_t numFrames, double streamTime) {
+    // Clear output buffer
+    memset(outputBuffer, 0, numFrames * 2 * sizeof(float));
+    
+    // Mix all non-muted tracks
+    for (auto& track : m_tracks) {
+        if (!track->isSystemTrack() && !track->isMuted()) {
+            // Process track audio into output buffer
+            track->processAudio(outputBuffer, numFrames, streamTime);
+        }
+    }
+    
+    // Apply master volume with range clamping
+    float masterVol = m_masterVolume.load();
+    for (uint32_t i = 0; i < numFrames * 2; ++i) {
+        outputBuffer[i] *= masterVol;
+        
+        // SAFETY: Clamp to prevent clipping
+        outputBuffer[i] = std::clamp(outputBuffer[i], -1.0f, 1.0f);
+    }
+}
+```
+
+**Key Points:**
+- ✅ camelCase for function names
+- ✅ Descriptive variable names (`numFrames`, not `n`)
+- ✅ Comments explain "why", not "what"
+- ✅ Member variables prefixed with `m_`
+- ✅ Use `auto` for iterator types
+- ✅ Atomic load for thread-safe variables
+- ✅ Performance annotations (`SAFETY:`)
+
+### Example 3: UI Component Class Structure
+
+```cpp
+// © 2025 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
+#pragma once
+
+#include "NomadUI/Core/NUIComponent.h"
+#include "NomadUI/Core/NUIRenderer.h"
+
+namespace NomadUI {
+
+class TransportBar : public NUIComponent {
+public:
+    TransportBar();
+    virtual ~TransportBar();
+    
+    // Position control
+    void setPosition(double positionSeconds);
+    double getPosition() const { return m_positionSeconds; }
+    
+    // Transport state
+    bool isPlaying() const { return m_isPlaying; }
+    void setPlaying(bool playing);
+    
+protected:
+    // NUIComponent overrides
+    void onRender(NUIRenderer& renderer) override;
+    bool onMouseEvent(const NUIMouseEvent& event) override;
+    void onUpdate(double deltaTime) override;
+    
+private:
+    // Helper methods
+    void updatePlayButton();
+    void renderTimeDisplay(NUIRenderer& renderer);
+    
+    // State
+    double m_positionSeconds = 0.0;
+    bool m_isPlaying = false;
+    
+    // UI components (owned)
+    std::unique_ptr<NUIButton> m_playButton;
+    std::unique_ptr<NUILabel> m_timeLabel;
+    
+    // Cached values for dirty checking
+    double m_lastRenderedPosition = -1.0;
+    bool m_needsRedraw = true;
+};
+
+} // namespace NomadUI
+```
+
+**Key Points:**
+- ✅ Forward declarations to reduce compile time
+- ✅ Public interface first, then protected, then private
+- ✅ Inline simple getters in header
+- ✅ Smart pointers for owned resources
+- ✅ In-class initialization for simple types
+- ✅ Dirty flag pattern for performance
+- ✅ Clear comment organization
+
+### Example 4: Before/After Bug Fix
+
+**Before (Bug: Sample rate mismatch causing audio timing issues):**
+
+```cpp
+// ❌ WRONG: Uses sample file rate instead of device rate
+double Track::getPosition() const {
+    // BUG: This uses the sample's rate, not the device's rate!
+    return m_playbackPhase.load() / (double)m_sampleInfo.sampleRate;
+}
+```
+
+**After (Fixed):**
+
+```cpp
+// ✅ CORRECT: Uses device sample rate for accurate timing
+double Track::getPosition() const {
+    // Use device sample rate for consistent timing across all samples
+    // regardless of their original sample rate
+    return m_playbackPhase.load() / (double)m_deviceSampleRate;
+}
+```
+
+**Explanation:**
+- Audio output device runs at a fixed sample rate (e.g., 48000 Hz)
+- Individual audio files may have different rates (44100, 48000, 96000 Hz)
+- Position calculations must use the OUTPUT rate, not the INPUT rate
+- This ensures accurate timing even when sample rates don't match
+
+### Example 5: Performance Optimization Pattern
+
+**Before (Slow: Allocations in audio thread):**
+
+```cpp
+// ❌ BAD: Allocates memory in real-time audio callback
+void Track::processAudio(float* buffer, uint32_t frames, double time) {
+    std::vector<float> tempBuffer(frames);  // ALLOCATION!
+    
+    // ... process audio ...
+}
+```
+
+**After (Fast: Pre-allocated buffer):**
+
+```cpp
+// Header file
+class Track {
+private:
+    std::vector<float> m_tempBuffer;  // Pre-allocated
+};
+
+// Constructor
+Track::Track() {
+    m_tempBuffer.resize(8192);  // Max buffer size
+}
+
+// ✅ GOOD: No allocation in audio thread
+void Track::processAudio(float* buffer, uint32_t frames, double time) {
+    // Reuse pre-allocated buffer (no allocation)
+    memset(m_tempBuffer.data(), 0, frames * sizeof(float));
+    
+    // ... process audio ...
+}
+```
+
+**Key Lesson:**
+- Never allocate memory in real-time audio threads
+- Pre-allocate buffers during initialization
+- Reuse existing allocations for performance
+
 ## 🔧 C++ Guidelines
 
 ### Memory Management
@@ -589,11 +828,14 @@ pwsh -File scripts/install-hooks.ps1
 
 ## 📚 Additional Resources
 
-- [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/)
-- [clang-format Documentation](https://clang.llvm.org/docs/ClangFormat.html)
-- [Architecture Overview](ARCHITECTURE.md)
-- [Contributing Guide](CONTRIBUTING.md)
+- **[C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/)** — Industry standard C++ best practices
+- **[clang-format Documentation](https://clang.llvm.org/docs/ClangFormat.html)** — Code formatting tool
+- **[Architecture Overview](ARCHITECTURE.md)** — System design and structure
+- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute to Nomad
+- **[Style Guide](STYLE_GUIDE.md)** — Documentation and comment standards
 
 ---
 
-[← Return to Nomad Docs Index](README.md)
+**Write clean code that others enjoy reading!** 💻
+
+*Last updated: January 2025*
