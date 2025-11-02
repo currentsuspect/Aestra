@@ -4,9 +4,15 @@
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
 
-// Remotery profiling
-#define RMT_ENABLED 1
-#include "Remotery.h"
+// Remotery profiling (conditionally enabled via CMake)
+#ifdef NOMAD_ENABLE_REMOTERY
+    #include "Remotery.h"
+#else
+    // Stub macros when Remotery is disabled
+    #define rmt_ScopedCPUSample(name, flags) ((void)0)
+    #define rmt_BeginCPUSample(name, flags) ((void)0)
+    #define rmt_EndCPUSample() ((void)0)
+#endif
 
 namespace Nomad {
 namespace Audio {
@@ -127,32 +133,11 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
 }
 
 TrackManagerUI::~TrackManagerUI() {
-    // ⚡ Cleanup cached textures
-    // Wrap in try-catch for safe shutdown when renderer may be unavailable
-    try {
-        auto& renderer = NomadUI::NUIRenderer::getInstance(); 
-
-        if (m_backgroundTextureId != 0) {
-            renderer.deleteTexture(m_backgroundTextureId);
-            m_backgroundTextureId = 0;
-        }
-        if (m_controlsTextureId != 0) {
-            renderer.deleteTexture(m_controlsTextureId);
-            m_controlsTextureId = 0;
-        }
-        for (auto& cache : m_trackCaches) {
-            if (cache.textureId != 0) {
-                renderer.deleteTexture(cache.textureId);
-                cache.textureId = 0;
-            }
-        }
-    } catch (const std::exception& e) {
-        // Renderer may not be available during shutdown - log but continue
-        Log::warning("TrackManagerUI destructor: Failed to cleanup textures: " + std::string(e.what()));
-    } catch (...) {
-        // Renderer may not be available during shutdown - safe to ignore
-        Log::warning("TrackManagerUI destructor: Failed to cleanup textures: unknown error");
-    }
+    // ⚡ Texture cleanup handled by renderer shutdown
+    // Note: NUIRenderer is not a singleton, so manual texture cleanup in destructor
+    // is not feasible. The renderer will clean up all textures on shutdown.
+    // Texture IDs: m_backgroundTextureId, m_controlsTextureId, m_trackCaches[].textureId
+    // are managed by the renderer lifecycle and don't need explicit deletion here.
     Log::info("TrackManagerUI destroyed");
 }
 
