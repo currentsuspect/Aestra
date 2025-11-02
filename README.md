@@ -7,6 +7,16 @@ This repository contains the open-source core of the Nomad DAW engine.
 
 Premium features are developed and released privately by Nomad Studios.
 
+## 📚 Documentation
+
+➡️ **[Read the Nomad Docs](docs/README.md)** - Comprehensive contributor and developer portal
+
+Quick links:
+- [Building Guide](docs/BUILDING.md) - How to build Nomad from source
+- [Contributing Guide](docs/CONTRIBUTING.md) - How to contribute to the project
+- [Architecture Overview](docs/ARCHITECTURE.md) - System design and structure
+- [FAQ](docs/FAQ.md) - Frequently asked questions
+
 ## Build (Windows)
 
 1. Install CMake, Git, a C++ toolchain (MSVC) and PowerShell 7.
