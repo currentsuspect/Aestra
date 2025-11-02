@@ -128,15 +128,20 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
 
 TrackManagerUI::~TrackManagerUI() {
     // ⚡ Cleanup cached textures
+    // Assuming a renderer instance is accessible, e.g., via a singleton or member
+    auto& renderer = NomadUI::NUIRenderer::getInstance(); 
+
     if (m_backgroundTextureId != 0) {
-        // Texture cleanup handled by renderer
+        renderer.deleteTexture(m_backgroundTextureId);
         m_backgroundTextureId = 0;
     }
     if (m_controlsTextureId != 0) {
+        renderer.deleteTexture(m_controlsTextureId);
         m_controlsTextureId = 0;
     }
     for (auto& cache : m_trackCaches) {
         if (cache.textureId != 0) {
+            renderer.deleteTexture(cache.textureId);
             cache.textureId = 0;
         }
     }
