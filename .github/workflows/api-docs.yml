@@ -232,7 +232,7 @@ jobs:
             - Include \`@return\` for return values
             - Add usage examples for complex APIs
             
-            See [CODING_STYLE.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/develop/docs/developer/coding-style.md) for details.
+            See [coding-style.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/develop/docs/developer/coding-style.md) for details.
             </details>
             `;
             
