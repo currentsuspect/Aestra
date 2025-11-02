@@ -44,17 +44,17 @@ jobs:
       - name: Check for Warnings
         run: |
           if [ -f doxygen_warnings.log ]; then
-            echo "## 📋 Doxygen Warnings" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat doxygen_warnings.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "## 📋 Doxygen Warnings" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat doxygen_warnings.log >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
             
             WARN_COUNT=$(wc -l < doxygen_warnings.log)
-            echo "Total warnings: $WARN_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "Total warnings: ${WARN_COUNT}" >> "$GITHUB_STEP_SUMMARY"
             
             # Don't fail on warnings, just report them
-            if [ $WARN_COUNT -gt 0 ]; then
-              echo "⚠️ Found $WARN_COUNT documentation warnings"
+            if [ "${WARN_COUNT}" -gt 0 ]; then
+              echo "⚠️ Found ${WARN_COUNT} documentation warnings"
             fi
           fi
           
@@ -122,54 +122,54 @@ jobs:
       - name: Run Documentation Check
         id: doc_check
         run: |
-          # Generate docs and capture warnings
+          # Generate docs and capture warnings (warnings also go to doxygen_warnings.log via Doxyfile config)
           doxygen Doxyfile 2>&1 | tee doxygen_output.log
           
-          # Count undocumented items
+          # Count undocumented items from the dedicated warnings log
           UNDOC_COUNT=$(grep -c "undocumented" doxygen_warnings.log || echo "0")
           PARAM_COUNT=$(grep -c "documented param" doxygen_warnings.log || echo "0")
           ERROR_COUNT=$(grep -c "error:" doxygen_warnings.log || echo "0")
           
-          echo "undocumented=$UNDOC_COUNT" >> $GITHUB_OUTPUT
-          echo "params=$PARAM_COUNT" >> $GITHUB_OUTPUT
-          echo "errors=$ERROR_COUNT" >> $GITHUB_OUTPUT
+          echo "undocumented=${UNDOC_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "params=${PARAM_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "errors=${ERROR_COUNT}" >> "$GITHUB_OUTPUT"
           
           # Create detailed report
-          echo "## 📊 Documentation Quality Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Count | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Documentation Quality Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Metric | Count | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
           
-          if [ $ERROR_COUNT -eq 0 ]; then
+          if [ "${ERROR_COUNT}" -eq 0 ]; then
             ERROR_STATUS="✅"
           else
             ERROR_STATUS="❌"
           fi
-          echo "| Documentation Errors | $ERROR_COUNT | $ERROR_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Documentation Errors | ${ERROR_COUNT} | ${ERROR_STATUS} |" >> "$GITHUB_STEP_SUMMARY"
           
-          if [ $UNDOC_COUNT -lt 50 ]; then
+          if [ "${UNDOC_COUNT}" -lt 50 ]; then
             UNDOC_STATUS="✅"
-          elif [ $UNDOC_COUNT -lt 100 ]; then
+          elif [ "${UNDOC_COUNT}" -lt 100 ]; then
             UNDOC_STATUS="⚠️"
           else
             UNDOC_STATUS="❌"
           fi
-          echo "| Undocumented Items | $UNDOC_COUNT | $UNDOC_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Undocumented Items | ${UNDOC_COUNT} | ${UNDOC_STATUS} |" >> "$GITHUB_STEP_SUMMARY"
           
-          if [ $PARAM_COUNT -eq 0 ]; then
+          if [ "${PARAM_COUNT}" -eq 0 ]; then
             PARAM_STATUS="✅"
-          elif [ $PARAM_COUNT -lt 20 ]; then
+          elif [ "${PARAM_COUNT}" -lt 20 ]; then
             PARAM_STATUS="⚠️"
           else
             PARAM_STATUS="❌"
           fi
-          echo "| Missing Parameter Docs | $PARAM_COUNT | $PARAM_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Missing Parameter Docs | ${PARAM_COUNT} | ${PARAM_STATUS} |" >> "$GITHUB_STEP_SUMMARY"
           
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🎯 Quality Thresholds" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Excellent: < 50 undocumented items" >> $GITHUB_STEP_SUMMARY
-          echo "- ⚠️  Good: 50-100 undocumented items" >> $GITHUB_STEP_SUMMARY
-          echo "- ❌ Needs Improvement: > 100 undocumented items" >> $GITHUB_STEP_SUMMARY
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 🎯 Quality Thresholds" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ Excellent: < 50 undocumented items" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ⚠️  Good: 50-100 undocumented items" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ❌ Needs Improvement: > 100 undocumented items" >> "$GITHUB_STEP_SUMMARY"
           
       - name: Comment on PR
         if: github.event_name == 'pull_request'
