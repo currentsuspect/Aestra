@@ -86,6 +86,7 @@ Native file open/save dialogs.
 - Remember last directory
 
 **Example:**
+{% raw %}
 ```cpp
 #include "NomadPlat/FileDialog.h"
 
@@ -99,6 +100,7 @@ if (path) {
     loadProject(*path);
 }
 ```
+{% endraw %}
 
 ### System Information
 

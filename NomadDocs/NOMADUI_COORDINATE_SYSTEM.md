@@ -350,6 +350,7 @@ child->setBounds(NUIAligned(getBounds(), 10, 10, 10, -1));
 
 ### NUIStackHorizontal() - Horizontal Layout
 
+{% raw %}
 ```cpp
 // Stack children horizontally with 10px spacing
 std::vector<NUISize> childSizes = {{100, 50}, {200, 50}, {150, 50}};
@@ -358,6 +359,7 @@ for (size_t i = 0; i < rects.size(); ++i) {
     children[i]->setBounds(rects[i]);
 }
 ```
+{% endraw %}
 
 ### NUIStackVertical() - Vertical Layout
 
