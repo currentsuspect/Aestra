@@ -46,6 +46,15 @@ void PerformanceHUD::update() {
 
 void PerformanceHUD::onUpdate(double deltaTime) {
     update();
+    
+    // Dynamically position in top-right corner like FPS monitor
+    // Stack below FPS display (FPS display is 120px tall + 10px margin + 10px gap = 140px offset)
+    if (getParent()) {
+        auto parentBounds = getParent()->getBounds();
+        float x = parentBounds.width - HUD_WIDTH - 10.0f; // HUD_WIDTH + 10px margin
+        float y = 140.0f; // Below FPS display (120px height + 10px margin + 10px gap)
+        setBounds(NUIRect(x, y, HUD_WIDTH, HUD_HEIGHT));
+    }
 }
 
 void PerformanceHUD::onRender(NUIRenderer& renderer) {
