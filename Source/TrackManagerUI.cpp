@@ -145,8 +145,14 @@ void TrackManagerUI::addTrack(const std::string& name) {
     if (m_trackManager) {
         auto track = m_trackManager->addTrack(name);
 
-        // Create UI component for the track
-        auto trackUI = std::make_shared<TrackUIComponent>(track);
+        // Create UI component for the track, passing TrackManager for solo coordination
+        auto trackUI = std::make_shared<TrackUIComponent>(track, m_trackManager.get());
+        
+        // Register callback for exclusive solo coordination
+        trackUI->setOnSoloToggled([this](TrackUIComponent* soloedTrack) {
+            this->onTrackSoloToggled(soloedTrack);
+        });
+        
         m_trackUIComponents.push_back(trackUI);
         addChild(trackUI);
 
@@ -168,7 +174,13 @@ void TrackManagerUI::refreshTracks() {
     for (size_t i = 0; i < m_trackManager->getTrackCount(); ++i) {
         auto track = m_trackManager->getTrack(i);
         if (track && track->getName() != "Preview") {  // Skip preview track
-            auto trackUI = std::make_shared<TrackUIComponent>(track);
+            // Pass TrackManager for solo coordination
+            auto trackUI = std::make_shared<TrackUIComponent>(track, m_trackManager.get());
+            
+            // Register callback for exclusive solo coordination
+            trackUI->setOnSoloToggled([this](TrackUIComponent* soloedTrack) {
+                this->onTrackSoloToggled(soloedTrack);
+            });
             
             // Sync zoom settings to new track
             trackUI->setPixelsPerBeat(m_pixelsPerBeat);
@@ -190,6 +202,23 @@ void TrackManagerUI::refreshTracks() {
     
     // Update scrollbar after tracks are refreshed (fixes initial glitch)
     updateHorizontalScrollbar();
+}
+
+void TrackManagerUI::onTrackSoloToggled(TrackUIComponent* soloedTrack) {
+    if (!m_trackManager || !soloedTrack) return;
+    
+    // Clear all solos in the TrackManager
+    m_trackManager->clearAllSolos();
+    
+    // Update ALL track UIs to reflect the cleared solo states
+    for (auto& trackUI : m_trackUIComponents) {
+        if (trackUI.get() != soloedTrack) {
+            // Force UI update for other tracks (their solo is now off)
+            trackUI->updateUI();
+        }
+    }
+    
+    Log::info("Solo coordination: Cleared all other solos");
 }
 
 void TrackManagerUI::togglePianoRoll() {

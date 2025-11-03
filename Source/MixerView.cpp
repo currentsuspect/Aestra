@@ -12,8 +12,9 @@ namespace Audio {
 // ChannelStrip Implementation
 //=============================================================================
 
-ChannelStrip::ChannelStrip(std::shared_ptr<Track> track)
+ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackManager)
     : m_track(track)
+    , m_trackManager(trackManager)
 {
     // Create volume fader (vertical slider)
     m_volumeFader = std::make_shared<NomadUI::NUISlider>();
@@ -53,7 +54,14 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track)
     m_soloButton->setToggleable(true);
     m_soloButton->setOnClick([this]() {
         if (m_track) {
-            m_track->setSolo(!m_track->isSoloed());
+            bool newSolo = !m_track->isSoloed();
+            
+            // If enabling solo, clear all other solos first (exclusive solo)
+            if (newSolo && m_trackManager) {
+                m_trackManager->clearAllSolos();
+            }
+            
+            m_track->setSolo(newSolo);
             m_soloButton->setToggled(m_track->isSoloed());
         }
     });
@@ -205,11 +213,11 @@ void MixerView::refreshChannels() {
     
     if (!m_trackManager) return;
     
-    // Create channel strip for each track
+    // Create channel strip for each track, passing TrackManager for solo coordination
     for (size_t i = 0; i < m_trackManager->getTrackCount(); ++i) {
         auto track = m_trackManager->getTrack(i);
         if (track && track->getName() != "Preview") {  // Skip preview track
-            auto channelStrip = std::make_shared<ChannelStrip>(track);
+            auto channelStrip = std::make_shared<ChannelStrip>(track, m_trackManager.get());
             m_channelStrips.push_back(channelStrip);
             addChild(channelStrip);
         }

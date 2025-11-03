@@ -11,6 +11,9 @@
 namespace Nomad {
 namespace Audio {
 
+// Forward declaration
+class TrackManager;
+
 /**
  * @brief UI wrapper for Track class
  *
@@ -19,10 +22,13 @@ namespace Audio {
  */
 class TrackUIComponent : public NomadUI::NUIComponent {
 public:
-    TrackUIComponent(std::shared_ptr<Track> track);
+    TrackUIComponent(std::shared_ptr<Track> track, TrackManager* trackManager = nullptr);
     ~TrackUIComponent() override;
 
     std::shared_ptr<Track> getTrack() const { return m_track; }
+    
+    // Callback for when solo is toggled (so parent can update all track UIs)
+    void setOnSoloToggled(std::function<void(TrackUIComponent*)> callback) { m_onSoloToggledCallback = callback; }
     
     // Selection state
     void setSelected(bool selected) { m_selected = selected; }
@@ -33,6 +39,9 @@ public:
     void setBeatsPerBar(int bpb) { m_beatsPerBar = bpb; }
     void setTimelineScrollOffset(float offset) { m_timelineScrollOffset = offset; }
     void setMaxTimelineExtent(double extent) { m_maxTimelineExtent = extent; }
+    
+    // UI state update (public so parent can refresh after clearing solos)
+    void updateUI();
 
 protected:
     void onRender(NomadUI::NUIRenderer& renderer) override;
@@ -44,7 +53,11 @@ protected:
 
 private:
     std::shared_ptr<Track> m_track;
+    TrackManager* m_trackManager; // For coordinating solo exclusivity
     bool m_selected = false; // Track selection state
+    
+    // Callback for solo coordination
+    std::function<void(TrackUIComponent*)> m_onSoloToggledCallback;
     
     // Timeline settings (synced from TrackManagerUI)
     float m_pixelsPerBeat = 50.0f;
@@ -84,7 +97,6 @@ private:
     void drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds);
 
     // UI state
-    void updateUI();
     void updateTrackNameColors(); // Update track name with bright colors based on number
 };
 

@@ -34,6 +34,9 @@ public:
     void addTrack(const std::string& name = "");
     void refreshTracks();
     
+    // Solo coordination (exclusive solo behavior)
+    void onTrackSoloToggled(TrackUIComponent* soloedTrack);
+    
     // Piano Roll Panel
     void togglePianoRoll();  // Show/hide piano roll panel
     

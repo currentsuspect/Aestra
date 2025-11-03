@@ -1,5 +1,6 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "TrackUIComponent.h"
+#include "../NomadAudio/include/TrackManager.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
@@ -9,8 +10,9 @@
 namespace Nomad {
 namespace Audio {
 
-TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track)
+TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track, TrackManager* trackManager)
     : m_track(track)
+    , m_trackManager(trackManager)
 {
     if (!m_track) {
         Log::error("TrackUIComponent created with null track");
@@ -103,6 +105,12 @@ void TrackUIComponent::onMuteToggled() {
 void TrackUIComponent::onSoloToggled() {
     if (m_track) {
         bool newSolo = !m_track->isSoloed();
+        
+        // If enabling solo, notify parent to handle exclusive solo logic
+        if (newSolo && m_onSoloToggledCallback) {
+            m_onSoloToggledCallback(this);
+        }
+        
         m_track->setSolo(newSolo);
         
         // If soloing, auto-disable mute (solo takes priority)
