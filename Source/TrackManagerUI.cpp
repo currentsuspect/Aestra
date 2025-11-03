@@ -1100,38 +1100,37 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
     float gridStartX = bounds.x + controlAreaWidth + 5;
     float playheadX = gridStartX + positionInPixels - m_timelineScrollOffset;
     
-    // Only draw if playhead is visible in viewport
-    // Add padding to prevent premature culling (triangle extends beyond line)
+    // Calculate bounds and triangle size for precise culling
     float scrollbarWidth = 15.0f;
     float trackWidth = bounds.width - scrollbarWidth;
     float gridWidth = trackWidth - (buttonX + layout.controlButtonWidth + 10);
     float gridEndX = gridStartX + gridWidth;
-    float cullPadding = 50.0f;  // Generous padding to ensure playhead is always visible when near edges
+    float triangleSize = 6.0f;  // Triangle extends this much left/right from playhead center
     
-    // CRITICAL: Widen culling bounds to ensure playhead remains visible even at viewport edges
-    if (playheadX >= gridStartX - cullPadding && playheadX <= gridEndX + cullPadding) {
-        // Draw playhead line from below ruler to ABOVE piano roll
-        float headerHeight = 30.0f;
-        float horizontalScrollbarHeight = 15.0f;
-        float rulerHeight = 20.0f;
-        float playheadStartY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
-        
-        // CRITICAL: Stop playhead BEFORE the piano roll (if visible) or scrollbar, and BEFORE mixer
-        // Use title bar height when minimized instead of full panel height
-        float pianoRollSpace = 0.0f;
-        if (m_showPianoRoll && m_pianoRollPanel) {
-            pianoRollSpace = m_pianoRollPanel->isMinimized() ? m_pianoRollPanel->getTitleBarHeight() + 5.0f : m_pianoRollHeight + 5.0f;
-        }
-        float mixerSpace = m_showMixer ? m_mixerWidth + 5.0f : 0.0f;
-        // Calculate playhead end X to stop before mixer if visible
-        float playheadEndX = m_showMixer ? bounds.x + bounds.width - mixerSpace : bounds.x + bounds.width - scrollbarWidth;
-        float playheadEndY = bounds.y + bounds.height - scrollbarWidth - pianoRollSpace;  // Stop before piano roll/scrollbar
-        
-        // Only draw if playhead is left of mixer
-        if (playheadX >= playheadEndX) {
-            return;  // Playhead is in mixer area, don't draw
-        }
-        
+    // Calculate playhead boundaries (where mixer is visible)
+    float headerHeight = 30.0f;
+    float horizontalScrollbarHeight = 15.0f;
+    float rulerHeight = 20.0f;
+    float playheadStartY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+    
+    float pianoRollSpace = 0.0f;
+    if (m_showPianoRoll && m_pianoRollPanel) {
+        pianoRollSpace = m_pianoRollPanel->isMinimized() ? m_pianoRollPanel->getTitleBarHeight() + 5.0f : m_pianoRollHeight + 5.0f;
+    }
+    float mixerSpace = m_showMixer ? m_mixerWidth + 5.0f : 0.0f;
+    float playheadEndX = m_showMixer ? bounds.x + bounds.width - mixerSpace : bounds.x + bounds.width - scrollbarWidth;
+    float playheadEndY = bounds.y + bounds.height - scrollbarWidth - pianoRollSpace;
+    
+    // PRECISE CULLING: Draw if the playhead CENTER is within bounds
+    // We allow the triangle to extend slightly outside for better visibility at boundaries
+    // This ensures playhead shows at position 0 (start) and at the right edge
+    // Only cull if the entire playhead is clearly outside the visible area
+    float playheadLeftEdge = playheadX - triangleSize;
+    float playheadRightEdge = playheadX + triangleSize;
+    
+    // Draw if playhead center is within the visible timeline bounds
+    // Allow triangle to extend outside as long as center line is visible
+    if (playheadX >= gridStartX && playheadX <= playheadEndX) {
         // Playhead color - white and slender for elegance
         NomadUI::NUIColor playheadColor(1.0f, 1.0f, 1.0f, 0.8f);  // White, slightly transparent
         
@@ -1144,7 +1143,6 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
         );
         
         // Draw playhead triangle/flag at top (smaller, more elegant)
-        float triangleSize = 6.0f;  // Smaller triangle
         NomadUI::NUIPoint p1(playheadX, playheadStartY);
         NomadUI::NUIPoint p2(playheadX - triangleSize, playheadStartY - triangleSize);
         NomadUI::NUIPoint p3(playheadX + triangleSize, playheadStartY - triangleSize);
@@ -1222,7 +1220,8 @@ void TrackManagerUI::updateBackgroundCache(NomadUI::NUIRenderer& renderer) {
     // Draw beat markers (grid lines)
     for (int beat = 0; beat <= static_cast<int>(maxExtentInBeats) + 10; ++beat) {
         float xPos = rulerRect.x + gridStartX + (beat * m_pixelsPerBeat) - m_timelineScrollOffset;
-        if (xPos < rulerRect.x + gridStartX || xPos > rulerRect.right()) continue;
+        // LENIENT CULLING: Allow 1px bleed for smooth appearance at boundaries
+        if (xPos < rulerRect.x + gridStartX - 1.0f || xPos > rulerRect.right() + 1.0f) continue;
         
         NomadUI::NUIColor tickColor = (beat % m_beatsPerBar == 0) ? 
             themeManager.getColor("textPrimary") : 

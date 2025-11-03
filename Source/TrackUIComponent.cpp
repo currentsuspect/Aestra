@@ -637,8 +637,9 @@ void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const No
         // Calculate x position accounting for scroll offset
         float x = gridStartX + (bar * pixelsPerBar) - m_timelineScrollOffset;
         
-        // CRITICAL: Clip to grid area - don't bleed into control area or beyond extent
-        if (x < gridStartX || x > gridDrawEndX) {
+        // LENIENT CULLING: Allow 1px bleed for smooth appearance
+        // This prevents premature disappearing and allows natural fade at boundaries
+        if (x < gridStartX - 1.0f || x > gridDrawEndX + 1.0f) {
             continue;
         }
         
@@ -654,8 +655,8 @@ void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const No
         for (int beat = 1; beat < m_beatsPerBar; ++beat) {
             float beatX = x + (beat * m_pixelsPerBeat);
             
-            // CRITICAL: Clip beat lines too - don't bleed into control area or beyond extent
-            if (beatX < gridStartX || beatX > gridDrawEndX) {
+            // LENIENT CULLING: Allow 1px bleed for smooth appearance
+            if (beatX < gridStartX - 1.0f || beatX > gridDrawEndX + 1.0f) {
                 continue;
             }
             
