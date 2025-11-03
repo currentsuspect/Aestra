@@ -674,9 +674,21 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         return true;
     }
     
-    // PLAYLIST SCRUBBING: Click on ruler to scrub playback position
-    if (rulerRect.contains(localPos) && event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
-        // Calculate position from mouse X coordinate
+    // PLAYHEAD SCRUBBING: Click and drag on ruler to scrub playback position
+    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left && rulerRect.contains(localPos)) {
+        // Start dragging playhead
+        m_isDraggingPlayhead = true;
+    }
+    
+    // Handle playhead dragging (continuous scrub)
+    if (m_isDraggingPlayhead) {
+        // Stop dragging on mouse release
+        if (event.released && event.button == NomadUI::NUIMouseButton::Left) {
+            m_isDraggingPlayhead = false;
+            return true;
+        }
+        
+        // Update playhead position while dragging (even outside ruler bounds for smooth scrubbing)
         auto& themeManager = NomadUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
@@ -692,10 +704,10 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         double positionInBeats = mouseX / m_pixelsPerBeat;
         double positionInSeconds = positionInBeats * secondsPerBeat;
         
-        // Clamp to valid range
+        // Clamp to valid range (allow negative briefly for smooth feel, but clamp at 0)
         positionInSeconds = std::max(0.0, positionInSeconds);
         
-        // Set playback position
+        // Set playback position continuously
         if (m_trackManager) {
             m_trackManager->setPosition(positionInSeconds);
         }

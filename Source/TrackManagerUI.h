@@ -78,6 +78,9 @@ private:
     bool m_closeIconHovered = false;
     bool m_minimizeIconHovered = false;
     bool m_maximizeIconHovered = false;
+    
+    // Playhead dragging state
+    bool m_isDraggingPlayhead = false;
 
         // Piano Roll Panel (can dock at bottom or maximize to full view)
     std::shared_ptr<PianoRollPanel> m_pianoRollPanel;
