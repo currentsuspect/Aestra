@@ -134,8 +134,27 @@ bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
     else if (isDragging_ && event.button == NUIMouseButton::None)
     {
         // Handle thumb dragging (mouse move events have button = None)
-        double newValue = positionToValue(event.position);
-        std::cout << "Dragging to value: " << newValue << std::endl;
+        // Use relative drag delta to preserve initial grab offset within thumb
+        NUIRect trackRect = getTrackRect();
+        double deltaPixels, trackLength;
+        
+        if (orientation_ == Orientation::Vertical)
+        {
+            deltaPixels = event.position.y - dragStartPosition_.y;
+            trackLength = trackRect.height;
+        }
+        else
+        {
+            deltaPixels = event.position.x - dragStartPosition_.x;
+            trackLength = trackRect.width;
+        }
+        
+        // Convert pixel delta to value delta
+        double proportion = deltaPixels / trackLength;
+        double valueDelta = proportion * rangeLimitSize_;
+        double newValue = dragStartValue_ + valueDelta;
+        
+        std::cout << "Dragging: delta=" << deltaPixels << "px, newValue=" << newValue << std::endl;
         scrollTo(newValue);
         return true;
     }
