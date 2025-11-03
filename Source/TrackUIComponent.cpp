@@ -1,5 +1,6 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "TrackUIComponent.h"
+#include "../NomadAudio/include/TrackManager.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
@@ -9,8 +10,9 @@
 namespace Nomad {
 namespace Audio {
 
-TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track)
+TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track, TrackManager* trackManager)
     : m_track(track)
+    , m_trackManager(trackManager)
 {
     if (!m_track) {
         Log::error("TrackUIComponent created with null track");
@@ -34,7 +36,7 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track)
     m_muteButton = std::make_shared<NomadUI::NUIButton>();
     m_muteButton->setText("M");
     m_muteButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Back to Secondary for cool animations
-    m_muteButton->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f)); // Dull grey hover
+    m_muteButton->setHoverColor(NomadUI::NUIColor(0.4f, 0.3f, 0.5f)); // Purple hover
     m_muteButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
     m_muteButton->setOnClick([this]() {
         onMuteToggled();
@@ -45,7 +47,7 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track)
     m_soloButton = std::make_shared<NomadUI::NUIButton>();
     m_soloButton->setText("S");
     m_soloButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Back to Secondary for cool animations
-    m_soloButton->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f)); // Dull grey hover
+    m_soloButton->setHoverColor(NomadUI::NUIColor(0.4f, 0.3f, 0.5f)); // Purple hover
     m_soloButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
     m_soloButton->setOnClick([this]() {
         onSoloToggled();
@@ -54,9 +56,9 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track)
 
     // Create record button
     m_recordButton = std::make_shared<NomadUI::NUIButton>();
-    m_recordButton->setText("â—");
+    m_recordButton->setText("●");
     m_recordButton->setStyle(NomadUI::NUIButton::Style::Icon); // Keep Icon style for record circle
-    m_recordButton->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f)); // Dull grey hover
+    m_recordButton->setHoverColor(NomadUI::NUIColor(0.4f, 0.3f, 0.5f)); // Purple hover
     m_recordButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
     m_recordButton->setOnClick([this]() {
         onRecordToggled();
@@ -103,6 +105,12 @@ void TrackUIComponent::onMuteToggled() {
 void TrackUIComponent::onSoloToggled() {
     if (m_track) {
         bool newSolo = !m_track->isSoloed();
+        
+        // If enabling solo, notify parent to handle exclusive solo logic
+        if (newSolo && m_onSoloToggledCallback) {
+            m_onSoloToggledCallback(this);
+        }
+        
         m_track->setSolo(newSolo);
         
         // If soloing, auto-disable mute (solo takes priority)
@@ -131,6 +139,11 @@ void TrackUIComponent::onRecordToggled() {
 void TrackUIComponent::updateUI() {
     if (!m_track) return;
 
+    // Invalidate parent cache since button colors are changing
+    if (m_onCacheInvalidationCallback) {
+        m_onCacheInvalidationCallback();
+    }
+
     // Update track name colors with bright colors based on number
     updateTrackNameColors();
     
@@ -157,13 +170,11 @@ void TrackUIComponent::updateUI() {
         // Use theme colors for Primary style
         m_muteButton->setBackgroundColor(themeManager.getColor("surfaceTertiary")); // #28282d - same as transport buttons
 
-        // Don't override text color if button is being hovered (to allow hover preview)
-        if (!m_muteButton->isHovered()) {
-            if (m_track->isMuted()) {
-                m_muteButton->setTextColor(themeManager.getColor("error")); // Red text when muted
-            } else {
-                m_muteButton->setTextColor(themeManager.getColor("textPrimary")); // White text when not muted
-            }
+        // Active state (muted/unmuted) - no hover colors, just clear state indication
+        if (m_track->isMuted()) {
+            m_muteButton->setTextColor(themeManager.getColor("error")); // Red text when muted
+        } else {
+            m_muteButton->setTextColor(themeManager.getColor("textPrimary")); // White text when not muted
         }
     }
 
@@ -172,13 +183,11 @@ void TrackUIComponent::updateUI() {
         // Use theme colors for Primary style
         m_soloButton->setBackgroundColor(themeManager.getColor("surfaceTertiary")); // #28282d - same as transport buttons
 
-        // Don't override text color if button is being hovered (to allow hover preview)
-        if (!m_soloButton->isHovered()) {
-            if (m_track->isSoloed()) {
-                m_soloButton->setTextColor(themeManager.getColor("accentLime")); // Lime text when soloed
-            } else {
-                m_soloButton->setTextColor(themeManager.getColor("textPrimary")); // White text when not soloed
-            }
+        // Active state (soloed/unsoloed) - no hover colors, just clear state indication
+        if (m_track->isSoloed()) {
+            m_soloButton->setTextColor(themeManager.getColor("accentLime")); // Lime text when soloed
+        } else {
+            m_soloButton->setTextColor(themeManager.getColor("textPrimary")); // White text when not soloed
         }
     }
 
@@ -610,27 +619,22 @@ void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const No
     // Grid spacing - DYNAMIC based on zoom level from TrackManagerUI
     float pixelsPerBar = m_pixelsPerBeat * m_beatsPerBar;
     
-    // Calculate maximum timeline extent (adaptive grid)
-    // Only draw grid up to the maximum extent needed by samples
-    double bpm = 120.0;
-    double secondsPerBeat = 60.0 / bpm;
-    double maxExtentInBeats = m_maxTimelineExtent / secondsPerBeat;
-    float maxExtentInPixels = static_cast<float>(maxExtentInBeats * m_pixelsPerBeat);
-    
-    // Limit grid drawing to the max extent
-    float gridDrawEndX = std::min(gridStartX + gridWidth, gridStartX + maxExtentInPixels - m_timelineScrollOffset);
+    // Unbounded grid - draw all visible bars (culling handles visibility)
+    float gridDrawEndX = gridStartX + gridWidth;
     
     // Calculate which bar to start/end drawing from
     int startBar = static_cast<int>(m_timelineScrollOffset / pixelsPerBar);
-    int endBar = static_cast<int>((m_timelineScrollOffset + (gridDrawEndX - gridStartX)) / pixelsPerBar) + 1;
+    int endBar = static_cast<int>((m_timelineScrollOffset + gridWidth) / pixelsPerBar) + 1;
     
     // Draw vertical grid lines with horizontal scroll offset
     for (int bar = startBar; bar <= endBar; ++bar) {
         // Calculate x position accounting for scroll offset
         float x = gridStartX + (bar * pixelsPerBar) - m_timelineScrollOffset;
         
-        // CRITICAL: Clip to grid area - don't bleed into control area or beyond extent
-        if (x < gridStartX || x > gridDrawEndX) {
+        // Asymmetric culling: tight on left (prevent bleeding into controls), generous on right (smooth scrolling)
+        float leftPadding = 0.5f;  // Tight - prevent bleeding into track controls (adjust to taste: 0.5-5.0)
+        float rightPadding = pixelsPerBar;  // Generous - smooth scrolling fade
+        if (x < gridStartX - leftPadding || x > gridDrawEndX + rightPadding) {
             continue;
         }
         
@@ -646,8 +650,8 @@ void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const No
         for (int beat = 1; beat < m_beatsPerBar; ++beat) {
             float beatX = x + (beat * m_pixelsPerBeat);
             
-            // CRITICAL: Clip beat lines too - don't bleed into control area or beyond extent
-            if (beatX < gridStartX || beatX > gridDrawEndX) {
+            // Same asymmetric padding for beat lines
+            if (beatX < gridStartX - leftPadding || beatX > gridDrawEndX + rightPadding) {
                 continue;
             }
             

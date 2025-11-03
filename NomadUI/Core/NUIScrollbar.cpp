@@ -134,8 +134,27 @@ bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
     else if (isDragging_ && event.button == NUIMouseButton::None)
     {
         // Handle thumb dragging (mouse move events have button = None)
-        double newValue = positionToValue(event.position);
-        std::cout << "Dragging to value: " << newValue << std::endl;
+        // Use relative drag delta to preserve initial grab offset within thumb
+        NUIRect trackRect = getTrackRect();
+        double deltaPixels, trackLength;
+        
+        if (orientation_ == Orientation::Vertical)
+        {
+            deltaPixels = event.position.y - dragStartPosition_.y;
+            trackLength = trackRect.height;
+        }
+        else
+        {
+            deltaPixels = event.position.x - dragStartPosition_.x;
+            trackLength = trackRect.width;
+        }
+        
+        // Convert pixel delta to value delta
+        double proportion = deltaPixels / trackLength;
+        double valueDelta = proportion * rangeLimitSize_;
+        double newValue = dragStartValue_ + valueDelta;
+        
+        std::cout << "Dragging: delta=" << deltaPixels << "px, newValue=" << newValue << std::endl;
         scrollTo(newValue);
         return true;
     }
@@ -173,8 +192,15 @@ void NUIScrollbar::onMouseLeave()
 
 void NUIScrollbar::setCurrentRange(double start, double size)
 {
-    currentRangeStart_ = std::clamp(start, rangeLimitStart_, rangeLimitStart_ + rangeLimitSize_ - size);
+    // Clamp size first to ensure valid range
     currentRangeSize_ = std::clamp(size, 0.0, rangeLimitSize_);
+    
+    // Calculate max start position, ensuring min <= max for clamp
+    double maxStart = rangeLimitStart_ + rangeLimitSize_ - currentRangeSize_;
+    maxStart = std::max(maxStart, rangeLimitStart_);  // Ensure max >= min
+    
+    currentRangeStart_ = std::clamp(start, rangeLimitStart_, maxStart);
+    
     updateThumbSize();
     updateThumbPosition();
     setDirty(true);

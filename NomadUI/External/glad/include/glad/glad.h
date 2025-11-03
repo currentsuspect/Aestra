@@ -91,9 +91,19 @@ typedef ptrdiff_t GLsizeiptr;
 #define GL_STATIC_DRAW 0x88E4
 #define GL_DYNAMIC_DRAW 0x88E8
 
-/* OpenGL 3.0+ */
+/* OpenGL 3.0+ FBO */
+#define GL_FRAMEBUFFER 0x8D40
+#define GL_FRAMEBUFFER_BINDING 0x8CA6
+#define GL_FRAMEBUFFER_COMPLETE 0x8CD5
+#define GL_COLOR_ATTACHMENT0 0x8CE0
+#define GL_RGBA8 0x8058
+
+/* OpenGL version */
 #define GL_MAJOR_VERSION 0x821B
 #define GL_MINOR_VERSION 0x821C
+
+/* Legacy immediate mode (for simple quad rendering) */
+#define GL_QUADS 0x0007
 
 /* Define APIENTRY if not already defined */
 #ifndef APIENTRY
@@ -153,6 +163,24 @@ typedef void (APIENTRY *PFNGLTEXPARAMETERIPROC)(GLenum target, GLenum pname, GLi
 typedef void (APIENTRY *PFNGLACTIVETEXTUREPROC)(GLenum texture);
 typedef void (APIENTRY *PFNGLPIXELSTOREIPROC)(GLenum pname, GLint param);
 
+/* Framebuffer Object functions (OpenGL 3.0+) */
+typedef void (APIENTRY *PFNGLGENFRAMEBUFFERSPROC)(GLsizei n, GLuint *framebuffers);
+typedef void (APIENTRY *PFNGLDELETEFRAMEBUFFERSPROC)(GLsizei n, const GLuint *framebuffers);
+typedef void (APIENTRY *PFNGLBINDFRAMEBUFFERPROC)(GLenum target, GLuint framebuffer);
+typedef void (APIENTRY *PFNGLFRAMEBUFFERTEXTURE2DPROC)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+typedef GLenum (APIENTRY *PFNGLCHECKFRAMEBUFFERSTATUSPROC)(GLenum target);
+typedef void (APIENTRY *PFNGLGETINTEGERVPROC)(GLenum pname, GLint *data);
+/* Draw/Read buffer selection */
+typedef void (APIENTRY *PFNGLDRAWBUFFERPROC)(GLenum buf);
+typedef void (APIENTRY *PFNGLDRAWBUFFERSPROC)(GLsizei n, const GLenum *bufs);
+typedef void (APIENTRY *PFNGLREADBUFFERPROC)(GLenum src);
+
+/* Legacy immediate mode functions (for simple rendering) */
+typedef void (APIENTRY *PFNGLBEGINPROC)(GLenum mode);
+typedef void (APIENTRY *PFNGLENDPROC)(void);
+typedef void (APIENTRY *PFNGLVERTEX2FPROC)(GLfloat x, GLfloat y);
+typedef void (APIENTRY *PFNGLTEXCOORD2FPROC)(GLfloat s, GLfloat t);
+
 /* Function declarations */
 extern PFNGLCLEARCOLORPROC glClearColor;
 extern PFNGLCLEARPROC glClear;
@@ -198,6 +226,21 @@ extern PFNGLTEXIMAGE2DPROC glTexImage2D;
 extern PFNGLTEXPARAMETERIPROC glTexParameteri;
 extern PFNGLACTIVETEXTUREPROC glActiveTexture;
 extern PFNGLPIXELSTOREIPROC glPixelStorei;
+
+extern PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers;
+extern PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;
+extern PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer;
+extern PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D;
+extern PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus;
+extern PFNGLGETINTEGERVPROC glGetIntegerv;
+extern PFNGLDRAWBUFFERPROC glDrawBuffer;
+extern PFNGLDRAWBUFFERSPROC glDrawBuffers;
+extern PFNGLREADBUFFERPROC glReadBuffer;
+
+extern PFNGLBEGINPROC glBegin;
+extern PFNGLENDPROC glEnd;
+extern PFNGLVERTEX2FPROC glVertex2f;
+extern PFNGLTEXCOORD2FPROC glTexCoord2f;
 
 /* Load OpenGL functions */
 int gladLoadGL(void);

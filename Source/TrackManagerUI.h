@@ -9,6 +9,7 @@
 #include "../NomadUI/Core/NUIScrollbar.h"
 #include "../NomadUI/Core/NUIButton.h"
 #include "../NomadUI/Core/NUIIcon.h"
+#include "../NomadUI/Graphics/OpenGL/NUIRenderCache.h"
 #include <memory>
 #include <vector>
 
@@ -34,6 +35,9 @@ public:
     void addTrack(const std::string& name = "");
     void refreshTracks();
     
+    // Solo coordination (exclusive solo behavior)
+    void onTrackSoloToggled(TrackUIComponent* soloedTrack);
+    
     // Piano Roll Panel
     void togglePianoRoll();  // Show/hide piano roll panel
     
@@ -45,7 +49,15 @@ protected:
     void onResize(int width, int height) override;
     bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
     
-    // ðŸ”¥ VIEWPORT CULLING: Override to only render visible tracks
+    // Hide setDirty to trigger cache invalidation (except during cache rendering)
+    void setDirty(bool dirty = true) {
+        NomadUI::NUIComponent::setDirty(dirty);
+        if (dirty && !m_isRenderingToCache) {
+            m_cacheInvalidated = true;
+        }
+    }
+    
+    // 🔥 VIEWPORT CULLING: Override to only render visible tracks
     void renderChildren(NomadUI::NUIRenderer& renderer);
 
 private:
@@ -78,6 +90,15 @@ private:
     bool m_closeIconHovered = false;
     bool m_minimizeIconHovered = false;
     bool m_maximizeIconHovered = false;
+    
+    // Playhead dragging state
+    bool m_isDraggingPlayhead = false;
+    
+    // === FBO CACHING SYSTEM (like AudioSettingsDialog) ===
+    NomadUI::CachedRenderData* m_cachedRender = nullptr;
+    uint64_t m_cacheId;
+    bool m_cacheInvalidated = true;  // Start invalidated to force initial render
+    bool m_isRenderingToCache = false;  // Guard flag to prevent invalidation loops
 
         // Piano Roll Panel (can dock at bottom or maximize to full view)
     std::shared_ptr<PianoRollPanel> m_pianoRollPanel;
@@ -130,6 +151,7 @@ private:
     void deselectAllTracks();
     void renderTimeRuler(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& rulerBounds);
     void renderPlayhead(NomadUI::NUIRenderer& renderer);
+    void renderTrackManagerDirect(NomadUI::NUIRenderer& renderer);  // Direct rendering helper
     
     // Calculate maximum timeline extent based on samples
     double getMaxTimelineExtent() const;

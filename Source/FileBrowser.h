@@ -142,6 +142,11 @@ private:
     // Hover state
     int hoveredIndex_;
     
+    // Double-click detection
+    int lastClickedIndex_;
+    double lastClickTime_;
+    static constexpr double DOUBLE_CLICK_TIME = 0.5; // 500ms window for double-click
+    
     // Sorting
     SortMode sortMode_;
     bool sortAscending_;

@@ -19,6 +19,9 @@ namespace Audio {
 
 TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
     : m_trackManager(trackManager)
+    , m_cacheId(reinterpret_cast<uint64_t>(this))
+    , m_cacheInvalidated(true)
+    , m_isRenderingToCache(false)
 {
     if (!m_trackManager) {
         Log::error("TrackManagerUI created with null track manager");
@@ -145,12 +148,24 @@ void TrackManagerUI::addTrack(const std::string& name) {
     if (m_trackManager) {
         auto track = m_trackManager->addTrack(name);
 
-        // Create UI component for the track
-        auto trackUI = std::make_shared<TrackUIComponent>(track);
+        // Create UI component for the track, passing TrackManager for solo coordination
+        auto trackUI = std::make_shared<TrackUIComponent>(track, m_trackManager.get());
+        
+        // Register callback for exclusive solo coordination
+        trackUI->setOnSoloToggled([this](TrackUIComponent* soloedTrack) {
+            this->onTrackSoloToggled(soloedTrack);
+        });
+        
+        // Register callback for cache invalidation (button hover, etc.)
+        trackUI->setOnCacheInvalidationNeeded([this]() {
+            this->invalidateCache();
+        });
+        
         m_trackUIComponents.push_back(trackUI);
         addChild(trackUI);
 
         layoutTracks();
+        m_cacheInvalidated = true;  // Invalidate cache when track added
         Log::info("Added track UI: " + name);
     }
 }
@@ -168,13 +183,24 @@ void TrackManagerUI::refreshTracks() {
     for (size_t i = 0; i < m_trackManager->getTrackCount(); ++i) {
         auto track = m_trackManager->getTrack(i);
         if (track && track->getName() != "Preview") {  // Skip preview track
-            auto trackUI = std::make_shared<TrackUIComponent>(track);
+            // Pass TrackManager for solo coordination
+            auto trackUI = std::make_shared<TrackUIComponent>(track, m_trackManager.get());
+            
+            // Register callback for exclusive solo coordination
+            trackUI->setOnSoloToggled([this](TrackUIComponent* soloedTrack) {
+                this->onTrackSoloToggled(soloedTrack);
+            });
+            
+            // Register callback for cache invalidation (button hover, etc.)
+            trackUI->setOnCacheInvalidationNeeded([this]() {
+                this->invalidateCache();
+            });
             
             // Sync zoom settings to new track
             trackUI->setPixelsPerBeat(m_pixelsPerBeat);
             trackUI->setBeatsPerBar(m_beatsPerBar);
             trackUI->setTimelineScrollOffset(m_timelineScrollOffset);
-            trackUI->setMaxTimelineExtent(getMaxTimelineExtent());
+            // No maxExtent needed - infinite timeline with culling
             
             m_trackUIComponents.push_back(trackUI);
             addChild(trackUI);
@@ -190,6 +216,25 @@ void TrackManagerUI::refreshTracks() {
     
     // Update scrollbar after tracks are refreshed (fixes initial glitch)
     updateHorizontalScrollbar();
+    
+    m_cacheInvalidated = true;  // Invalidate cache when tracks refreshed
+}
+
+void TrackManagerUI::onTrackSoloToggled(TrackUIComponent* soloedTrack) {
+    if (!m_trackManager || !soloedTrack) return;
+    
+    // Clear all solos in the TrackManager
+    m_trackManager->clearAllSolos();
+    
+    // Update ALL track UIs to reflect the cleared solo states
+    for (auto& trackUI : m_trackUIComponents) {
+        if (trackUI.get() != soloedTrack) {
+            // Force UI update for other tracks (their solo is now off)
+            trackUI->updateUI();
+        }
+    }
+    
+    Log::info("Solo coordination: Cleared all other solos");
 }
 
 void TrackManagerUI::togglePianoRoll() {
@@ -400,7 +445,7 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
     
     NomadUI::NUIRect bounds = getBounds();
     
-    // Check if any panel is maximized - if so, only render that panel
+    // Check if any panel is maximized - if so, only render that panel (no caching needed)
     bool pianoRollMaximized = m_showPianoRoll && m_pianoRollPanel && m_pianoRollPanel->isMaximized();
     bool mixerMaximized = m_showMixer && m_mixerPanel && m_mixerPanel->isMaximized();
     
@@ -414,19 +459,75 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
         return;
     }
     
-    // Normal rendering (no maximized panels)
-    // ⚡ OPTIMIZED: Simple direct rendering with viewport culling
-    // NO FBO CACHING - just efficient draw call batching
+    // Normal rendering with FBO CACHING for massive FPS boost! 🚀
+    // Cache the entire playlist view except the playhead (which moves every frame)
     
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     
-    // Calculate max timeline extent for dynamic elements
-    double maxExtent = getMaxTimelineExtent();
-    double bpm = 120.0;
-    double secondsPerBeat = 60.0 / bpm;
-    double maxExtentInBeats = maxExtent / secondsPerBeat;
-    float maxExtentInPixels = static_cast<float>(maxExtentInBeats * m_pixelsPerBeat);
+    auto* renderCache = renderer.getRenderCache();
+    if (!renderCache) {
+        // Fallback: No cache available, render normally
+        renderTrackManagerDirect(renderer);
+        return;
+    }
+    
+    // === FBO CACHING ENABLED ===
+    // Get or create FBO cache (cache entire playlist view area)
+    NomadUI::NUISize cacheSize(
+        static_cast<int>(bounds.width),
+        static_cast<int>(bounds.height)
+    );
+    m_cachedRender = renderCache->getOrCreateCache(m_cacheId, cacheSize);
+    
+    // Check if we need to invalidate the cache
+    if (m_cacheInvalidated && m_cachedRender) {
+        renderCache->invalidate(m_cacheId);
+        m_cacheInvalidated = false;
+    }
+    
+    // Render using cache (auto-rebuild if invalid)
+    if (m_cachedRender) {
+        renderCache->renderCachedOrUpdate(m_cachedRender, bounds, [&]() {
+            // Re-render playlist contents into the cache
+            m_isRenderingToCache = true;
+            
+            renderer.clear(NomadUI::NUIColor(0, 0, 0, 0));
+            renderer.pushTransform(-bounds.x, -bounds.y);
+            renderTrackManagerDirect(renderer);
+            renderer.popTransform();
+            
+            m_isRenderingToCache = false;
+        });
+    } else {
+        renderTrackManagerDirect(renderer);
+    }
+    
+    // Render playhead OUTSIDE cache (it moves every frame during playback)
+    renderPlayhead(renderer);
+    
+    // Render scrollbars OUTSIDE cache (they interact with mouse)
+    if (m_addTrackButton && m_addTrackButton->isVisible()) m_addTrackButton->onRender(renderer);
+    if (m_horizontalScrollbar && m_horizontalScrollbar->isVisible()) m_horizontalScrollbar->onRender(renderer);
+    if (m_scrollbar && m_scrollbar->isVisible()) m_scrollbar->onRender(renderer);
+    
+    // Render panels OUTSIDE cache (they are dynamic/interactive)
+    if (m_pianoRollPanel && m_showPianoRoll && m_pianoRollPanel->isVisible()) {
+        m_pianoRollPanel->onRender(renderer);
+    }
+    if (m_mixerPanel && m_showMixer && m_mixerPanel->isVisible()) {
+        m_mixerPanel->onRender(renderer);
+    }
+}
+
+// Helper method: Direct rendering (used both for fallback and cache rebuild)
+void TrackManagerUI::renderTrackManagerDirect(NomadUI::NUIRenderer& renderer) {
+    NomadUI::NUIRect bounds = getBounds();
+    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    const auto& layout = themeManager.getLayoutDimensions();
+    
+    // Check panel states for layout calculations
+    bool mixerMaximized = m_showMixer && m_mixerPanel && m_mixerPanel->isMaximized();
     
     // Calculate where the grid/background should end
     float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
@@ -440,7 +541,7 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIRect controlBg(bounds.x, bounds.y, controlAreaWidth, bounds.height);
     renderer.fillRect(controlBg, bgColor);
     
-    // Background for grid area (extends freely, not bounded by maxExtent)
+    // Background for grid area (extends infinitely, culling handles visibility)
     float scrollbarWidth = 15.0f;
     float gridWidth = bounds.width - controlAreaWidth - scrollbarWidth - 5;
     NomadUI::NUIRect gridBg(bounds.x + gridStartX, bounds.y, gridWidth, bounds.height);
@@ -450,12 +551,7 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIColor borderColor = themeManager.getColor("border");
     renderer.strokeRect(bounds, 1, borderColor);
     
-    // Update max extent for all tracks (ensures consistency)
-    for (auto& trackUI : m_trackUIComponents) {
-        trackUI->setMaxTimelineExtent(maxExtent);
-    }
-    
-    // Update scrollbar range dynamically (fixes glitches when extent changes)
+    // Update scrollbar range dynamically
     updateHorizontalScrollbar();
 
     // Calculate available width for header elements (excluding mixer if visible)
@@ -525,25 +621,6 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
         NomadUI::NUIRect absoluteBounds = NUIAbsolute(bounds, m_minimizeIconBounds.x, m_minimizeIconBounds.y, m_minimizeIconBounds.width, m_minimizeIconBounds.height);
         m_minimizeIcon->setBounds(absoluteBounds);
         m_minimizeIcon->onRender(renderer);
-    }
-    
-    // Draw playhead BEFORE scrollbars (Z-order: playhead behind scrollbars)
-    // This prevents playhead from drawing through scrollbar arrows
-    renderPlayhead(renderer);
-    
-    // Re-render UI controls (add button, scrollbars) on top of playhead
-    if (m_addTrackButton && m_addTrackButton->isVisible()) m_addTrackButton->onRender(renderer);
-    if (m_horizontalScrollbar && m_horizontalScrollbar->isVisible()) m_horizontalScrollbar->onRender(renderer);
-    if (m_scrollbar && m_scrollbar->isVisible()) m_scrollbar->onRender(renderer);
-    
-    // Render piano roll panel (before mixer so mixer overlays it if needed)
-    if (m_pianoRollPanel && m_showPianoRoll && m_pianoRollPanel->isVisible()) {
-        m_pianoRollPanel->onRender(renderer);
-    }
-    
-    // Render mixer panel LAST (on top of everything else)
-    if (m_mixerPanel && m_showMixer && m_mixerPanel->isVisible()) {
-        m_mixerPanel->onRender(renderer);
     }
 }
 
@@ -642,41 +719,36 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             trackUI->setBeatsPerBar(m_beatsPerBar);
         }
         
-        // CRITICAL: Update scrollbar range BEFORE adjusting scroll position
-        // This prevents scrollbar from breaking when zooming out
+        // Update scrollbar range for new zoom level
         updateHorizontalScrollbar();
         
-        // Adjust scroll position to keep ruler content centered on zoom
-        // This prevents the ruler from breaking bounds when zooming
-        double bpm = 120.0;
-        double secondsPerBeat = 60.0 / bpm;
-        double maxExtent = getMaxTimelineExtent();
-        double maxExtentInBeats = maxExtent / secondsPerBeat;
-        float maxTimelineWidth = static_cast<float>(maxExtentInBeats * m_pixelsPerBeat);
-        
-        // Clamp scroll offset to prevent out-of-bounds
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-        const auto& layout = themeManager.getLayoutDimensions();
-        float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-        float scrollbarWidth = 15.0f;
-        float trackWidth = bounds.width - scrollbarWidth;
-        float gridWidth = trackWidth - (buttonX + layout.controlButtonWidth + 10);
-        
-        float maxScroll = std::max(0.0f, maxTimelineWidth - gridWidth);
-        m_timelineScrollOffset = std::min(m_timelineScrollOffset, maxScroll);
+        // No clamping needed - infinite timeline with culling handles everything
         
         // Sync scroll offset to all tracks
         for (auto& trackUI : m_trackUIComponents) {
             trackUI->setTimelineScrollOffset(m_timelineScrollOffset);
         }
         
+        m_cacheInvalidated = true;  // Invalidate cache when zoom changes
         Log::info("Zoom: " + std::to_string(m_pixelsPerBeat) + " pixels per beat");
         return true;
     }
     
-    // PLAYLIST SCRUBBING: Click on ruler to scrub playback position
-    if (rulerRect.contains(localPos) && event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
-        // Calculate position from mouse X coordinate
+    // PLAYHEAD SCRUBBING: Click and drag on ruler to scrub playback position
+    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left && rulerRect.contains(localPos)) {
+        // Start dragging playhead
+        m_isDraggingPlayhead = true;
+    }
+    
+    // Handle playhead dragging (continuous scrub)
+    if (m_isDraggingPlayhead) {
+        // Stop dragging on mouse release
+        if (event.released && event.button == NomadUI::NUIMouseButton::Left) {
+            m_isDraggingPlayhead = false;
+            return true;
+        }
+        
+        // Update playhead position while dragging (even outside ruler bounds for smooth scrubbing)
         auto& themeManager = NomadUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
@@ -692,10 +764,10 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         double positionInBeats = mouseX / m_pixelsPerBeat;
         double positionInSeconds = positionInBeats * secondsPerBeat;
         
-        // Clamp to valid range
+        // Clamp to valid range (allow negative briefly for smooth feel, but clamp at 0)
         positionInSeconds = std::max(0.0, positionInSeconds);
         
-        // Set playback position
+        // Set playback position continuously
         if (m_trackManager) {
             m_trackManager->setPosition(positionInSeconds);
         }
@@ -726,6 +798,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
         
         layoutTracks(); // Re-layout tracks
+        m_cacheInvalidated = true;  // Invalidate cache when vertical scroll changes
         return true;
     }
     
@@ -744,7 +817,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     m_maximizeIconHovered = m_maximizeIconBounds.contains(localPos);
     bool isHovered = m_closeIconHovered || m_minimizeIconHovered || m_maximizeIconHovered;
     
-    // Update icon colors based on hover state
+    // Update icon colors based on hover state (and invalidate cache if hover state changed)
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     if (m_closeIconHovered) {
         m_closeIcon->setColor(NomadUI::NUIColor(1.0f, 0.3f, 0.3f, 1.0f)); // Red on hover
@@ -764,23 +837,31 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         m_maximizeIcon->setColorFromTheme("textPrimary");
     }
     
+    // Invalidate cache if hover state changed (for icon color updates)
+    if (wasHovered != isHovered) {
+        m_cacheInvalidated = true;
+    }
+    
     // Check if icon was clicked
     if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
         // Check close icon
         if (m_closeIconBounds.contains(localPos)) {
             setVisible(false);
+            m_cacheInvalidated = true;  // Invalidate cache when visibility changes
             Log::info("Playlist closed");
             return true;
         }
         
         // Check minimize icon
         if (m_minimizeIconBounds.contains(localPos)) {
+            m_cacheInvalidated = true;  // Invalidate cache for minimize action
             Log::info("Playlist minimized");
             return true;
         }
         
         // Check maximize icon
         if (m_maximizeIconBounds.contains(localPos)) {
+            m_cacheInvalidated = true;  // Invalidate cache for maximize action
             Log::info("Playlist maximized");
             return true;
         }
@@ -800,6 +881,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                         m_trackUIComponents[j]->setSelected(false);
                     }
                 }
+                m_cacheInvalidated = true;  // Invalidate cache when track selection changes
                 break;
             }
         }
@@ -843,30 +925,25 @@ void TrackManagerUI::updateHorizontalScrollbar() {
     float trackWidth = bounds.width - scrollbarWidth;
     float gridWidth = trackWidth - (buttonX + layout.controlButtonWidth + 10);
     
-    // Total timeline width based on max extent (dynamic)
-    double maxExtent = getMaxTimelineExtent();
-    double bpm = 120.0;
-    double secondsPerBeat = 60.0 / bpm;
-    double maxExtentInBeats = maxExtent / secondsPerBeat;
-    float totalTimelineWidth = static_cast<float>(maxExtentInBeats * m_pixelsPerBeat);
+    // Dynamic timeline range - grows with scroll position for unbounded timeline
+    // Always show at least 3 screens worth of content, expanding as needed
+    float minTimelineWidth = gridWidth * 3.0f;  // Minimum: 3 screens
+    float currentViewEnd = m_timelineScrollOffset + gridWidth;
+    float totalTimelineWidth = std::max(minTimelineWidth, currentViewEnd * 1.5f);  // 50% padding beyond current position
     
     // Set horizontal scrollbar range
     m_horizontalScrollbar->setRangeLimit(0, totalTimelineWidth);
     m_horizontalScrollbar->setCurrentRange(m_timelineScrollOffset, gridWidth);
     m_horizontalScrollbar->setAutoHide(totalTimelineWidth <= gridWidth);
-    m_horizontalScrollbar->setAutoHide(totalTimelineWidth <= gridWidth);
 }
 
 void TrackManagerUI::onHorizontalScroll(double position) {
-    m_timelineScrollOffset = static_cast<float>(position);
+    // Clamp scroll position to valid range (no negative scrolling)
+    m_timelineScrollOffset = std::max(0.0f, static_cast<float>(position));
     
-    // Get current max extent
-    double maxExtent = getMaxTimelineExtent();
-    
-    // Sync horizontal scroll offset and max extent to all tracks
+    // Sync horizontal scroll offset to all tracks
     for (auto& trackUI : m_trackUIComponents) {
         trackUI->setTimelineScrollOffset(m_timelineScrollOffset);
-        trackUI->setMaxTimelineExtent(maxExtent);
     }
     
     invalidateCache();  // ⚡ Mark cache dirty
@@ -916,44 +993,28 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
     int beatsPerBar = m_beatsPerBar;
     float pixelsPerBar = m_pixelsPerBeat * beatsPerBar;
     
-    // Calculate max extent for ruler bounds
-    double maxExtent = getMaxTimelineExtent();
-    double bpm = 120.0;
-    double secondsPerBeat = 60.0 / bpm;
-    double maxExtentInBeats = maxExtent / secondsPerBeat;
-    float maxExtentInPixels = static_cast<float>(maxExtentInBeats * m_pixelsPerBeat);
-    
     // Calculate which bar to start drawing from based on scroll offset
     int startBar = static_cast<int>(m_timelineScrollOffset / pixelsPerBar);
     
-    // Calculate end bar based on max extent (not just visible width)
-    int maxBars = static_cast<int>(std::ceil(maxExtentInPixels / pixelsPerBar));
+    // Calculate end bar based on visible width (no max extent bounds)
     int visibleBars = static_cast<int>(std::ceil((m_timelineScrollOffset + gridWidth) / pixelsPerBar)) - startBar;
-    
-    // CRITICAL: Ensure we don't draw beyond max extent (fixes on-start glitch)
-    int endBar = std::min(startBar + visibleBars + 1, maxBars - 1);  // -1 because we're 0-indexed but display 1-indexed
+    int endBar = startBar + visibleBars + 1;  // Draw all visible bars
     
     // Add padding to prevent drawing at the very edges (software clipping)
-    // For bars: allow them to appear when tick line is visible (lenient left, strict right)
-    // For text: clip strictly on right, but allow partial appearance on left (so "1" shows early)
-    float barLeftPadding = -20.0f;   // Allow bars to start drawing even if mostly off-screen (left)
-    float barRightPadding = 10.0f;    // Strict right clipping for bars
     float textRightPadding = 10.0f;   // Strict right clipping for text
+    float textRightEdge = gridStartX + gridWidth - textRightPadding;
     
-    float barLeft = gridStartX + barLeftPadding;
+    // Asymmetric culling: tight on left (prevent bleeding), generous on right (smooth scrolling)
+    float leftPadding = 0.5f;  // Tight - prevent bleeding into controls (adjust to taste: 0.5-5.0)
+    float rightPadding = pixelsPerBar;  // Generous - smooth scrolling fade
     
-    // CRITICAL: Respect max extent - don't draw beyond the actual content bounds
-    float maxExtentDrawX = gridStartX + maxExtentInPixels - m_timelineScrollOffset;
-    float barRight = std::min(gridStartX + gridWidth - barRightPadding, maxExtentDrawX);
-    float textRightEdge = std::min(gridStartX + gridWidth - textRightPadding, maxExtentDrawX);
-    
-    // Draw vertical ticks - dynamically based on visible bars, scroll offset, AND max extent
+    // Draw vertical ticks - dynamically based on visible bars and scroll offset
     for (int bar = startBar; bar <= endBar; ++bar) {
         // Calculate x position accounting for scroll offset
         float x = gridStartX + (bar * pixelsPerBar) - m_timelineScrollOffset;
         
-        // Skip if bar tick is completely outside visible area OR beyond max extent
-        if (x < barLeft || x > barRight) {
+        // Asymmetric culling - tight on left, generous on right
+        if (x < gridStartX - leftPadding || x > gridStartX + gridWidth + rightPadding) {
             continue;
         }
         
@@ -987,8 +1048,8 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
         for (int beat = 1; beat < beatsPerBar; ++beat) {
             float beatX = x + (beat * m_pixelsPerBeat);
             
-            // Skip if outside visible area (same bounds as bars)
-            if (beatX < barLeft || beatX > barRight) {
+            // Same asymmetric padding for beat lines
+            if (beatX < gridStartX - leftPadding || beatX > gridStartX + gridWidth + rightPadding) {
                 continue;
             }
             
@@ -1059,38 +1120,37 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
     float gridStartX = bounds.x + controlAreaWidth + 5;
     float playheadX = gridStartX + positionInPixels - m_timelineScrollOffset;
     
-    // Only draw if playhead is visible in viewport
-    // Add padding to prevent premature culling (triangle extends beyond line)
+    // Calculate bounds and triangle size for precise culling
     float scrollbarWidth = 15.0f;
     float trackWidth = bounds.width - scrollbarWidth;
     float gridWidth = trackWidth - (buttonX + layout.controlButtonWidth + 10);
     float gridEndX = gridStartX + gridWidth;
-    float cullPadding = 50.0f;  // Generous padding to ensure playhead is always visible when near edges
+    float triangleSize = 6.0f;  // Triangle extends this much left/right from playhead center
     
-    // CRITICAL: Widen culling bounds to ensure playhead remains visible even at viewport edges
-    if (playheadX >= gridStartX - cullPadding && playheadX <= gridEndX + cullPadding) {
-        // Draw playhead line from below ruler to ABOVE piano roll
-        float headerHeight = 30.0f;
-        float horizontalScrollbarHeight = 15.0f;
-        float rulerHeight = 20.0f;
-        float playheadStartY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
-        
-        // CRITICAL: Stop playhead BEFORE the piano roll (if visible) or scrollbar, and BEFORE mixer
-        // Use title bar height when minimized instead of full panel height
-        float pianoRollSpace = 0.0f;
-        if (m_showPianoRoll && m_pianoRollPanel) {
-            pianoRollSpace = m_pianoRollPanel->isMinimized() ? m_pianoRollPanel->getTitleBarHeight() + 5.0f : m_pianoRollHeight + 5.0f;
-        }
-        float mixerSpace = m_showMixer ? m_mixerWidth + 5.0f : 0.0f;
-        // Calculate playhead end X to stop before mixer if visible
-        float playheadEndX = m_showMixer ? bounds.x + bounds.width - mixerSpace : bounds.x + bounds.width - scrollbarWidth;
-        float playheadEndY = bounds.y + bounds.height - scrollbarWidth - pianoRollSpace;  // Stop before piano roll/scrollbar
-        
-        // Only draw if playhead is left of mixer
-        if (playheadX >= playheadEndX) {
-            return;  // Playhead is in mixer area, don't draw
-        }
-        
+    // Calculate playhead boundaries (where mixer is visible)
+    float headerHeight = 30.0f;
+    float horizontalScrollbarHeight = 15.0f;
+    float rulerHeight = 20.0f;
+    float playheadStartY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+    
+    float pianoRollSpace = 0.0f;
+    if (m_showPianoRoll && m_pianoRollPanel) {
+        pianoRollSpace = m_pianoRollPanel->isMinimized() ? m_pianoRollPanel->getTitleBarHeight() + 5.0f : m_pianoRollHeight + 5.0f;
+    }
+    float mixerSpace = m_showMixer ? m_mixerWidth + 5.0f : 0.0f;
+    float playheadEndX = m_showMixer ? bounds.x + bounds.width - mixerSpace : bounds.x + bounds.width - scrollbarWidth;
+    float playheadEndY = bounds.y + bounds.height - scrollbarWidth - pianoRollSpace;
+    
+    // PRECISE CULLING: Draw if the playhead CENTER is within bounds
+    // We allow the triangle to extend slightly outside for better visibility at boundaries
+    // This ensures playhead shows at position 0 (start) and at the right edge
+    // Only cull if the entire playhead is clearly outside the visible area
+    float playheadLeftEdge = playheadX - triangleSize;
+    float playheadRightEdge = playheadX + triangleSize;
+    
+    // Draw if playhead center is within the visible timeline bounds
+    // Allow triangle to extend outside as long as center line is visible
+    if (playheadX >= gridStartX && playheadX <= playheadEndX) {
         // Playhead color - white and slender for elegance
         NomadUI::NUIColor playheadColor(1.0f, 1.0f, 1.0f, 0.8f);  // White, slightly transparent
         
@@ -1103,7 +1163,6 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
         );
         
         // Draw playhead triangle/flag at top (smaller, more elegant)
-        float triangleSize = 6.0f;  // Smaller triangle
         NomadUI::NUIPoint p1(playheadX, playheadStartY);
         NomadUI::NUIPoint p2(playheadX - triangleSize, playheadStartY - triangleSize);
         NomadUI::NUIPoint p3(playheadX + triangleSize, playheadStartY - triangleSize);
@@ -1181,7 +1240,8 @@ void TrackManagerUI::updateBackgroundCache(NomadUI::NUIRenderer& renderer) {
     // Draw beat markers (grid lines)
     for (int beat = 0; beat <= static_cast<int>(maxExtentInBeats) + 10; ++beat) {
         float xPos = rulerRect.x + gridStartX + (beat * m_pixelsPerBeat) - m_timelineScrollOffset;
-        if (xPos < rulerRect.x + gridStartX || xPos > rulerRect.right()) continue;
+        // LENIENT CULLING: Allow 1px bleed for smooth appearance at boundaries
+        if (xPos < rulerRect.x + gridStartX - 1.0f || xPos > rulerRect.right() + 1.0f) continue;
         
         NomadUI::NUIColor tickColor = (beat % m_beatsPerBar == 0) ? 
             themeManager.getColor("textPrimary") : 
@@ -1222,7 +1282,10 @@ void TrackManagerUI::invalidateAllCaches() {
 }
 
 void TrackManagerUI::invalidateCache() {
-    // Keep for compatibility - just invalidate background for now
+    // New FBO caching system - invalidate the main cache
+    m_cacheInvalidated = true;
+    
+    // Also invalidate old multi-layer caches for compatibility
     m_backgroundNeedsUpdate = true;
 }
 

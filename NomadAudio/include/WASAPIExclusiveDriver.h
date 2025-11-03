@@ -93,6 +93,11 @@ private:
     WAVEFORMATEX* m_waveFormat = nullptr;
     uint32_t m_bufferFrameCount = 0;
     uint32_t m_actualSampleRate = 0;
+    
+    // Soft-start ramp to prevent harsh audio on initialization
+    uint32_t m_rampSampleCount = 0;
+    uint32_t m_rampDurationSamples = 0;
+    bool m_isRamping = false;
 
     // Performance monitoring
     LARGE_INTEGER m_perfFreq;

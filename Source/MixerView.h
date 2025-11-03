@@ -17,7 +17,7 @@ namespace Audio {
  */
 class ChannelStrip : public NomadUI::NUIComponent {
 public:
-    ChannelStrip(std::shared_ptr<Track> track);
+    ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackManager = nullptr);
     
     void onRender(NomadUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
@@ -28,6 +28,7 @@ public:
 
 private:
     std::shared_ptr<Track> m_track;
+    TrackManager* m_trackManager; // For coordinating solo exclusivity
     
     // UI Controls
     std::shared_ptr<NomadUI::NUISlider> m_volumeFader;

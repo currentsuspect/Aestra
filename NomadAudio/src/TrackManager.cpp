@@ -287,6 +287,26 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
         return;
     }
 
+    // Check if any track is soloed (for exclusive solo behavior)
+    bool anySoloed = false;
+    std::string soloedTrackName;
+    for (const auto& track : m_tracks) {
+        if (track && track->isSoloed()) {
+            anySoloed = true;
+            soloedTrackName = track->getName();
+            break;
+        }
+    }
+    
+    // Debug: Log solo state once every ~1 second (48000 samples / 512 frames = ~94 calls/sec, log every 100 calls)
+    static int debugCounter = 0;
+    if (++debugCounter >= 100) {
+        debugCounter = 0;
+        if (anySoloed) {
+            Log::info("Solo active - only processing: " + soloedTrackName);
+        }
+    }
+
     // Output buffer should already be cleared by caller
     // Process each track - tracks will mix themselves into the output buffer
     for (const auto& track : m_tracks) {
@@ -294,6 +314,15 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
         // System tracks (preview) always process if playing
         // Regular tracks only process if transport is playing OR if they're explicitly playing
         if (track && track->isPlaying()) {
+            // System tracks (preview, test sound) always play regardless of solo state
+            bool isSystemTrack = track->isSystemTrack();
+            
+            // If any track is soloed, only process soloed tracks (unless track is muted)
+            // Exception: System tracks always play
+            if (anySoloed && !track->isSoloed() && !isSystemTrack) {
+                continue; // Skip non-soloed tracks when solo is active
+            }
+            
             track->processAudio(outputBuffer, numFrames, streamTime);
         }
     }
@@ -363,12 +392,31 @@ void TrackManager::processAudioMultiThreaded(float* outputBuffer, uint32_t numFr
         std::memset(buffer.data(), 0, bufferSize * sizeof(float));
     }
     
+    // Check if any track is soloed (for exclusive solo behavior)
+    bool anySoloed = false;
+    for (const auto& track : m_tracks) {
+        if (track && track->isSoloed()) {
+            anySoloed = true;
+            break;
+        }
+    }
+    
     // Process each track in parallel into separate buffers
     for (size_t i = 0; i < m_tracks.size(); ++i) {
         const auto& track = m_tracks[i];
         
         // Only process playing tracks
         if (track && track->isPlaying()) {
+            // System tracks (preview, test sound) always play regardless of solo state
+            bool isSystemTrack = track->isSystemTrack();
+            
+            // If any track is soloed, only process soloed tracks
+            // Exception: System tracks always play
+            // Mute always takes priority over solo
+            if (anySoloed && !track->isSoloed() && !isSystemTrack) {
+                continue; // Skip non-soloed tracks when solo is active
+            }
+            
             // Submit track processing task to thread pool
             m_threadPool->enqueue([track, &buffer = m_trackBuffers[i], numFrames, streamTime]() {
                 track->processAudio(buffer.data(), numFrames, streamTime);
