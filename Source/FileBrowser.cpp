@@ -36,6 +36,8 @@ FileBrowser::FileBrowser()
     , dragStartScrollOffset_(0.0f)
     , scrollbarFadeTimer_(0.0f)
     , hoveredIndex_(-1)
+    , lastClickedIndex_(-1)
+    , lastClickTime_(0.0)
     , sortMode_(SortMode::Name)
     , sortAscending_(true)
 {
@@ -319,6 +321,20 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             int itemIndex = static_cast<int>((relativeY + scrollOffset_) / itemHeight);
             
             if (itemIndex >= 0 && itemIndex < static_cast<int>(files_.size())) {
+                // Get current time for double-click detection
+                double currentTime = std::chrono::duration<double>(
+                    std::chrono::steady_clock::now().time_since_epoch()
+                ).count();
+                
+                // Check for double-click: same item clicked within time window
+                bool isDoubleClick = (itemIndex == lastClickedIndex_) && 
+                                    ((currentTime - lastClickTime_) < DOUBLE_CLICK_TIME);
+                
+                // Update click tracking
+                lastClickedIndex_ = itemIndex;
+                lastClickTime_ = currentTime;
+                
+                // Update selection
                 selectedIndex_ = itemIndex;
                 selectedFile_ = &files_[itemIndex];
                 
@@ -326,18 +342,28 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                     onFileSelected_(*selectedFile_);
                 }
                 
-                // Trigger sound preview for audio files
-                if (onSoundPreview_ && selectedFile_ && !selectedFile_->isDirectory) {
-                    // Check if it's an audio file
-                    FileType type = selectedFile_->type;
-                    if (type == FileType::AudioFile || type == FileType::MusicFile ||
-                        type == FileType::WavFile || type == FileType::Mp3File ||
-                        type == FileType::FlacFile) {
-                        onSoundPreview_(*selectedFile_);
+                // Handle double-click: open folders or files
+                if (isDoubleClick && selectedFile_) {
+                    if (selectedFile_->isDirectory) {
+                        // Double-click on folder: navigate into it
+                        navigateTo(selectedFile_->path);
+                    } else {
+                        // Double-click on file: open it
+                        if (onFileOpened_) {
+                            onFileOpened_(*selectedFile_);
+                        }
+                    }
+                } else {
+                    // Single click: trigger sound preview for audio files
+                    if (onSoundPreview_ && selectedFile_ && !selectedFile_->isDirectory) {
+                        FileType type = selectedFile_->type;
+                        if (type == FileType::AudioFile || type == FileType::MusicFile ||
+                            type == FileType::WavFile || type == FileType::Mp3File ||
+                            type == FileType::FlacFile) {
+                            onSoundPreview_(*selectedFile_);
+                        }
                     }
                 }
-                
-                // Double-click removed - use Enter key to load files
                 
                 setDirty(true);
                 return true;
@@ -398,18 +424,9 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
             }
             break;
             
-        case NUIKeyCode::Left:
-            // Navigate up one directory level
-            navigateUp();
-            return true;
-            
-        case NUIKeyCode::Right:
-            // Navigate into selected folder (if it's a directory)
-            if (selectedFile_ && selectedFile_->isDirectory) {
-                navigateTo(selectedFile_->path);
-                return true;
-            }
-            break;
+        // Left/Right keys removed per Bug #2:
+        // Only Up/Down should move selection; Enter activates; Backspace goes up
+        // (Left/Right navigation caused issues with item selection)
             
         case NUIKeyCode::Enter:
             Log::info("FileBrowser: Enter key pressed, selectedFile_ = " + 
