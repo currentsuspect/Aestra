@@ -37,6 +37,7 @@ AudioSettingsDialog::AudioSettingsDialog(Audio::AudioDeviceManager* audioManager
     , m_isPlayingTestSound(false)
     , m_testSoundPhase(0.0)
     , m_anyDropdownOpen(false)
+    , m_blockingEventsForDropdown(false)
 {
     createUI();
     loadCurrentSettings();
@@ -332,12 +333,9 @@ void AudioSettingsDialog::createUI() {
     m_testSoundButton->setText("Test Sound");
     m_testSoundButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Secondary style
     m_testSoundButton->setOnClick([this]() {
-        Nomad::Log::info("Test sound button clicked!");
         if (m_isPlayingTestSound) {
-            Nomad::Log::info("Stopping test sound...");
             stopTestSound();
         } else {
-            Nomad::Log::info("Starting test sound...");
             playTestSound();
         }
     });
@@ -488,11 +486,61 @@ void AudioSettingsDialog::onUpdate(double deltaTime) {
 bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     if (!m_visible) return false;
     
-    // If any dropdown is open, it should handle events first (prevent clicks through to buttons)
-    if (m_anyDropdownOpen && event.pressed) {
-        // Let dropdowns handle the event first - they'll close if clicked outside
-        bool handled = NomadUI::NUIComponent::onMouseEvent(event);
-        return true; // Always consume click when dropdown is open
+    // Check if any dropdown is CURRENTLY open (real-time check, not cached flag)
+    // This prevents clicks from passing through to underlying buttons
+    bool anyDropdownCurrentlyOpen = (m_driverDropdown && m_driverDropdown->isOpen()) ||
+                                     (m_deviceDropdown && m_deviceDropdown->isOpen()) ||
+                                     (m_sampleRateDropdown && m_sampleRateDropdown->isOpen()) ||
+                                     (m_bufferSizeDropdown && m_bufferSizeDropdown->isOpen()) ||
+                                     (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) ||
+                                     (m_resamplingDropdown && m_resamplingDropdown->isOpen()) ||
+                                     (m_ditheringDropdown && m_ditheringDropdown->isOpen()) ||
+                                     (m_nomadModeDropdown && m_nomadModeDropdown->isOpen());
+    
+    // If PRESSED event occurs while dropdown is open, set blocking flag
+    // This flag persists until RELEASED to prevent click-through
+    if (anyDropdownCurrentlyOpen && event.pressed) {
+        m_blockingEventsForDropdown = true;
+    }
+    
+    // If we're blocking events due to dropdown interaction, consume ALL events
+    // until the RELEASED event completes the click sequence
+    if (m_blockingEventsForDropdown || anyDropdownCurrentlyOpen) {
+        // Manually route event to ONLY the open dropdowns, NOT all children
+        bool handled = false;
+        if (m_driverDropdown && m_driverDropdown->isOpen()) {
+            handled = m_driverDropdown->onMouseEvent(event) || handled;
+        }
+        if (m_deviceDropdown && m_deviceDropdown->isOpen()) {
+            handled = m_deviceDropdown->onMouseEvent(event) || handled;
+        }
+        if (m_sampleRateDropdown && m_sampleRateDropdown->isOpen()) {
+            handled = m_sampleRateDropdown->onMouseEvent(event) || handled;
+        }
+        if (m_bufferSizeDropdown && m_bufferSizeDropdown->isOpen()) {
+            handled = m_bufferSizeDropdown->onMouseEvent(event) || handled;
+        }
+        if (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) {
+            handled = m_qualityPresetDropdown->onMouseEvent(event) || handled;
+        }
+        if (m_resamplingDropdown && m_resamplingDropdown->isOpen()) {
+            handled = m_resamplingDropdown->onMouseEvent(event) || handled;
+        }
+        if (m_ditheringDropdown && m_ditheringDropdown->isOpen()) {
+            handled = m_ditheringDropdown->onMouseEvent(event) || handled;
+        }
+        if (m_nomadModeDropdown && m_nomadModeDropdown->isOpen()) {
+            handled = m_nomadModeDropdown->onMouseEvent(event) || handled;
+        }
+        
+        // Clear blocking flag when RELEASED event completes the sequence
+        if (event.released) {
+            m_blockingEventsForDropdown = false;
+        }
+        
+        // CRITICAL: Always consume the event to prevent buttons from receiving it
+        // Even if dropdowns didn't handle it (clicked outside), we block propagation
+        return true;
     }
     
     // Track hover state for close button

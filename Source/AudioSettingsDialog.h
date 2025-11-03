@@ -173,6 +173,11 @@ private:
     
     // FPS optimization - cache dropdown open states to avoid unnecessary re-renders
     bool m_anyDropdownOpen;
+    
+    // Bug #5 fix: Track if we're blocking events due to dropdown interaction
+    // Set to true when PRESSED event occurs while dropdown is open
+    // Remains true until RELEASED event, preventing click-through to buttons
+    bool m_blockingEventsForDropdown;
 };
 
 } // namespace Nomad
