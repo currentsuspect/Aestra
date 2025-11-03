@@ -16,7 +16,7 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
       - name: Run unit tests
-        run: ctest --test-dir build --output-on-failure || true
+        run: ctest --test-dir build --output-on-failure
 
   scan:
     runs-on: ubuntu-latest
