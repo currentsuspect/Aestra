@@ -148,6 +148,9 @@ public:
     int getWidth() const override { return width_; }
     int getHeight() const override { return height_; }
     const char* getBackendName() const override { return "OpenGL 3.3+"; }
+
+    // Query renderer state
+    bool isScissorEnabled() const { return scissorEnabled_; }
     
 private:
     // Vertex structure for batching
@@ -209,6 +212,7 @@ private:
     float globalOpacity_ = 1.0f;
     bool batching_ = false;
     uint32_t drawCallCount_ = 0;  // Draw call tracking
+    bool scissorEnabled_ = false;
     
     // OpenGL objects
     uint32_t vao_ = 0;

@@ -39,6 +39,7 @@ namespace NomadUI {
         , m_previousFBO(0)
         , m_previousViewport{0, 0, 0, 0}
         , m_restoreViewport(false)
+        , m_previousScissorEnabled(false)
         , m_activeCache(nullptr)
         , m_renderInProgress(false)
         , m_renderer(nullptr)
@@ -254,7 +255,16 @@ namespace NomadUI {
 #if defined(GL_READ_BUFFER)
     glReadBuffer(GL_COLOR_ATTACHMENT0);
 #endif
-    glDisable(GL_SCISSOR_TEST); // avoid accidental clipping from previous state
+    // Capture and preserve caller scissor state, then disable to avoid accidental clipping.
+    // Use glGetBooleanv rather than glIsEnabled for compatibility with some GL loaders.
+    // Ask the renderer (if available) for scissor state; avoids calling GL query
+    // functions directly which may not be exposed by the project's GL loader.
+    if (m_renderer) {
+        m_previousScissorEnabled = m_renderer->isScissorEnabled();
+    } else {
+        m_previousScissorEnabled = false;
+    }
+    glDisable(GL_SCISSOR_TEST);
     glClearColor(0.f, 0.f, 0.f, 0.f);
     glClear(GL_COLOR_BUFFER_BIT);
         glCheckLog("beginCacheRender", m_debug);
@@ -295,6 +305,12 @@ namespace NomadUI {
         // Restore renderer projection
         if (m_renderer) {
             m_renderer->endOffscreen();
+        }
+        // Restore caller scissor test state saved at beginCacheRender
+        if (m_previousScissorEnabled) {
+            glEnable(GL_SCISSOR_TEST);
+        } else {
+            glDisable(GL_SCISSOR_TEST);
         }
         glCheckLog("endCacheRender", m_debug);
     }

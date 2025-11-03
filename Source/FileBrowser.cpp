@@ -347,10 +347,16 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                     if (selectedFile_->isDirectory) {
                         // Double-click on folder: navigate into it
                         navigateTo(selectedFile_->path);
+                        // Clear double-click tracking so subsequent clicks start fresh
+                        lastClickedIndex_ = -1;
+                        lastClickTime_ = 0.0;
                     } else {
                         // Double-click on file: open it
                         if (onFileOpened_) {
                             onFileOpened_(*selectedFile_);
+                            // Clear double-click tracking so subsequent clicks start fresh
+                            lastClickedIndex_ = -1;
+                            lastClickTime_ = 0.0;
                         }
                     }
                 } else {

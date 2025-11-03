@@ -278,10 +278,13 @@ void NUIRendererGL::setClipRect(const NUIRect& rect) {
         static_cast<int>(rect.width),
         static_cast<int>(rect.height)
     );
+    // Track renderer-side scissor state so other systems can query it
+    scissorEnabled_ = true;
 }
 
 void NUIRendererGL::clearClipRect() {
     glDisable(GL_SCISSOR_TEST);
+    scissorEnabled_ = false;
 }
 
 void NUIRendererGL::setOpacity(float opacity) {
@@ -1677,6 +1680,8 @@ void NUIRendererGL::beginOffscreen(int width, int height) {
     width_ = width;
     height_ = height;
     updateProjectionMatrix();
+    // Set viewport to match offscreen target so draw calls map correctly
+    glViewport(0, 0, width, height);
 }
 
 void NUIRendererGL::endOffscreen() {
@@ -1686,6 +1691,8 @@ void NUIRendererGL::endOffscreen() {
     updateProjectionMatrix();
     // Restore backup matrix explicitly (avoid precision drift)
     std::memcpy(projectionMatrix_, projectionBackup_, sizeof(projectionBackup_));
+    // Restore viewport to the original backbuffer size
+    glViewport(0, 0, width_, height_);
 }
 
 // ============================================================================

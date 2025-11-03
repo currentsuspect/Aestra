@@ -89,6 +89,8 @@ namespace NomadUI {
         uint32_t m_previousFBO;
         int m_previousViewport[4];
         bool m_restoreViewport;
+    // Preserve caller's scissor test enabled state across begin/end
+    bool m_previousScissorEnabled;
         CachedRenderData* m_activeCache;
         bool m_renderInProgress;
         NUIRendererGL* m_renderer;

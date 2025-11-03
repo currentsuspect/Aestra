@@ -586,6 +586,12 @@ void AudioSettingsDialog::onRender(NomadUI::NUIRenderer& renderer) {
     if (m_ditheringDropdown && m_ditheringDropdown->isOpen()) {
         m_ditheringDropdown->renderDropdownList(renderer);
     }
+    if (m_threadCountDropdown && m_threadCountDropdown->isOpen()) {
+        m_threadCountDropdown->renderDropdownList(renderer);
+    }
+    if (m_nomadModeDropdown && m_nomadModeDropdown->isOpen()) {
+        m_nomadModeDropdown->renderDropdownList(renderer);
+    }
 }
 
 void AudioSettingsDialog::onResize(int width, int height) {
@@ -639,6 +645,7 @@ bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                                      (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) ||
                                      (m_resamplingDropdown && m_resamplingDropdown->isOpen()) ||
                                      (m_ditheringDropdown && m_ditheringDropdown->isOpen()) ||
+                                     (m_threadCountDropdown && m_threadCountDropdown->isOpen()) ||
                                      (m_nomadModeDropdown && m_nomadModeDropdown->isOpen());
     
     // If PRESSED event occurs while dropdown is open, set blocking flag
@@ -672,6 +679,9 @@ bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
         if (m_ditheringDropdown && m_ditheringDropdown->isOpen()) {
             handled = m_ditheringDropdown->onMouseEvent(event) || handled;
+        }
+        if (m_threadCountDropdown && m_threadCountDropdown->isOpen()) {
+            handled = m_threadCountDropdown->onMouseEvent(event) || handled;
         }
         if (m_nomadModeDropdown && m_nomadModeDropdown->isOpen()) {
             handled = m_nomadModeDropdown->onMouseEvent(event) || handled;
