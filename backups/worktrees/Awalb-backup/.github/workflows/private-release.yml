@@ -17,6 +17,7 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
       - name: Code sign
+        if: false  # Signing not yet implemented; prevent accidental unsigned releases
         env:
           SIGNING_CERT_PATH: ${{ secrets.SIGNING_CERT_PATH }}
           SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
