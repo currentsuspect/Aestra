@@ -401,6 +401,43 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
     }
 
     m_actualSampleRate = m_waveFormat->nSamplesPerSec;
+    
+    // Log format details for diagnostics
+    std::cout << "[WASAPI Exclusive] Requested format: "
+              << m_actualSampleRate << " Hz, "
+              << m_waveFormat->nChannels << " channels, "
+              << m_waveFormat->wBitsPerSample << " bits, "
+              << (m_waveFormat->wFormatTag == WAVE_FORMAT_IEEE_FLOAT ? "Float32" : "PCM")
+              << std::endl;
+
+    // Pre-flight check: Test if exclusive mode is available
+    // This helps detect if another application is already using the device
+    WAVEFORMATEX* testFormat = nullptr;
+    hr = m_audioClient->IsFormatSupported(
+        AUDCLNT_SHAREMODE_EXCLUSIVE,
+        m_waveFormat,
+        &testFormat
+    );
+    
+    if (testFormat) {
+        CoTaskMemFree(testFormat);
+    }
+    
+    if (hr == AUDCLNT_E_DEVICE_IN_USE) {
+        setError(DriverError::DEVICE_IN_USE, 
+                "Device is in use by another application in Exclusive mode. "
+                "Please close other audio applications or switch to Shared mode.");
+        std::cerr << "[WASAPI Exclusive] Device busy (AUDCLNT_E_DEVICE_IN_USE)" << std::endl;
+        return false;
+    }
+    
+    if (hr == AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED) {
+        setError(DriverError::EXCLUSIVE_MODE_UNAVAILABLE,
+                "Exclusive mode is not allowed for this device. "
+                "Windows may have disabled exclusive access in device properties.");
+        std::cerr << "[WASAPI Exclusive] Exclusive mode not allowed (AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED)" << std::endl;
+        return false;
+    }
 
     // Calculate minimum buffer duration (100ns units)
     // For exclusive mode, use smaller buffers for lower latency
@@ -450,6 +487,8 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
                 10000000.0 * m_bufferFrameCount / m_actualSampleRate + 0.5
             );
 
+            std::cout << "[WASAPI Exclusive] Realigning buffer: " << m_bufferFrameCount << " frames" << std::endl;
+
             // Try again with aligned buffer
             hr = m_device->Activate(
                 IID_IAudioClient,
@@ -471,13 +510,41 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
         }
     }
 
+    // Enhanced error handling with specific diagnostics
     if (hr == AUDCLNT_E_DEVICE_IN_USE) {
-        setError(DriverError::DEVICE_IN_USE, "Device is in use by another application");
+        setError(DriverError::DEVICE_IN_USE, 
+                "Device is in use by another application (e.g., FL Studio, Ableton). "
+                "Close other audio software or switch to Shared mode. "
+                "HRESULT: " + HResultToString(hr));
+        std::cerr << "[WASAPI Exclusive] Initialize failed: AUDCLNT_E_DEVICE_IN_USE" << std::endl;
+        return false;
+    }
+    
+    if (hr == AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED) {
+        setError(DriverError::EXCLUSIVE_MODE_UNAVAILABLE,
+                "Exclusive mode not allowed. Check Windows Sound settings: "
+                "Right-click speaker icon → Sounds → Playback → Device Properties → Advanced → "
+                "Enable 'Allow applications to take exclusive control'. "
+                "HRESULT: " + HResultToString(hr));
+        std::cerr << "[WASAPI Exclusive] Initialize failed: AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED" << std::endl;
+        return false;
+    }
+    
+    if (hr == AUDCLNT_E_UNSUPPORTED_FORMAT) {
+        setError(DriverError::STREAM_OPEN_FAILED,
+                "Audio format not supported by hardware in Exclusive mode. "
+                "Format: " + std::to_string(m_actualSampleRate) + " Hz, " +
+                std::to_string(m_waveFormat->nChannels) + " channels, " +
+                std::to_string(m_waveFormat->wBitsPerSample) + " bits. "
+                "HRESULT: " + HResultToString(hr));
+        std::cerr << "[WASAPI Exclusive] Initialize failed: AUDCLNT_E_UNSUPPORTED_FORMAT" << std::endl;
         return false;
     }
 
     if (FAILED(hr)) {
-        setError(DriverError::STREAM_OPEN_FAILED, "Failed to initialize exclusive mode: " + HResultToString(hr));
+        setError(DriverError::STREAM_OPEN_FAILED, 
+                "Failed to initialize exclusive mode. HRESULT: " + HResultToString(hr));
+        std::cerr << "[WASAPI Exclusive] Initialize failed: " << HResultToString(hr) << std::endl;
         return false;
     }
 
@@ -643,13 +710,24 @@ bool WASAPIExclusiveDriver::startStream() {
         return false;
     }
 
-    // Pre-fill buffer with silence
+    // Pre-fill buffer with silence to prevent any initial garbage
     BYTE* data = nullptr;
     HRESULT hr = m_renderClient->GetBuffer(m_bufferFrameCount, &data);
     if (SUCCEEDED(hr)) {
+        // Zero the entire buffer
         memset(data, 0, m_bufferFrameCount * m_waveFormat->nBlockAlign);
         m_renderClient->ReleaseBuffer(m_bufferFrameCount, 0);
+        std::cout << "[WASAPI Exclusive] Pre-filled buffer with silence (" 
+                  << m_bufferFrameCount << " frames)" << std::endl;
     }
+    
+    // Initialize soft-start ramp (150ms fade-in to prevent pops/clicks)
+    m_rampDurationSamples = static_cast<uint32_t>(m_actualSampleRate * 0.150); // 150ms
+    m_rampSampleCount = 0;
+    m_isRamping = true;
+    std::cout << "[WASAPI Exclusive] Soft-start ramp: " << m_rampDurationSamples 
+              << " samples (" << (m_rampDurationSamples / static_cast<double>(m_actualSampleRate) * 1000.0) 
+              << "ms)" << std::endl;
 
     m_shouldStop = false;
     m_isRunning = true;
@@ -666,7 +744,7 @@ bool WASAPIExclusiveDriver::startStream() {
     m_audioThread = std::thread(&WASAPIExclusiveDriver::audioThreadProc, this);
 
     m_state = DriverState::STREAM_RUNNING;
-    std::cout << "[WASAPI Exclusive] Stream started" << std::endl;
+    std::cout << "[WASAPI Exclusive] Stream started with safety features active" << std::endl;
     return true;
 }
 
@@ -735,6 +813,15 @@ void WASAPIExclusiveDriver::audioThreadProc() {
             if (!m_shouldStop) {
                 std::cerr << "[WASAPI Exclusive] Event timeout!" << std::endl;
                 m_statistics.underrunCount++;
+                
+                // On timeout/underrun, try to recover by filling silence
+                BYTE* data = nullptr;
+                HRESULT hr = m_renderClient->GetBuffer(m_bufferFrameCount, &data);
+                if (SUCCEEDED(hr)) {
+                    memset(data, 0, m_bufferFrameCount * m_waveFormat->nBlockAlign);
+                    m_renderClient->ReleaseBuffer(m_bufferFrameCount, 0);
+                    std::cout << "[WASAPI Exclusive] Recovered from timeout with silence" << std::endl;
+                }
             }
             continue;
         }
@@ -752,6 +839,9 @@ void WASAPIExclusiveDriver::audioThreadProc() {
         if (FAILED(hr)) {
             std::cerr << "[WASAPI Exclusive] GetBuffer failed: " << HResultToString(hr) << std::endl;
             m_statistics.underrunCount++;
+            
+            // Zero user buffer to prevent stale data on next successful callback
+            std::fill(userBuffer.begin(), userBuffer.end(), 0.0f);
             continue;
         }
 
@@ -769,6 +859,35 @@ void WASAPIExclusiveDriver::audioThreadProc() {
         } else {
             std::fill(userBuffer.begin(), userBuffer.end(), 0.0f);
         }
+        
+        // Apply soft-start ramp to prevent harsh audio on startup
+        if (m_isRamping) {
+            for (uint32_t frame = 0; frame < m_bufferFrameCount; ++frame) {
+                if (m_rampSampleCount < m_rampDurationSamples) {
+                    // Linear fade-in ramp
+                    float rampGain = static_cast<float>(m_rampSampleCount) / m_rampDurationSamples;
+                    
+                    // Apply ramp to all channels in this frame
+                    for (uint32_t ch = 0; ch < m_config.numOutputChannels; ++ch) {
+                        userBuffer[frame * m_config.numOutputChannels + ch] *= rampGain;
+                    }
+                    
+                    m_rampSampleCount++;
+                } else {
+                    // Ramp complete
+                    m_isRamping = false;
+                    break;
+                }
+            }
+        }
+        
+        // Apply peak limiter to prevent clipping (safety net)
+        for (uint32_t i = 0; i < m_bufferFrameCount * m_config.numOutputChannels; ++i) {
+            float sample = userBuffer[i];
+            // Hard limit to ±1.0 to prevent distortion
+            if (sample > 1.0f) userBuffer[i] = 1.0f;
+            else if (sample < -1.0f) userBuffer[i] = -1.0f;
+        }
 
         // Convert and copy to WASAPI buffer based on format
         if (m_waveFormat->wFormatTag == WAVE_FORMAT_IEEE_FLOAT) {
@@ -776,41 +895,59 @@ void WASAPIExclusiveDriver::audioThreadProc() {
             memcpy(data, userBuffer.data(), m_bufferFrameCount * m_waveFormat->nBlockAlign);
         }
         else if (m_waveFormat->wFormatTag == WAVE_FORMAT_PCM) {
-            // PCM format - need to convert floats to integers
+            // PCM format - need to convert floats to integers with proper clamping
             if (m_waveFormat->wBitsPerSample == 16) {
                 // 16-bit PCM
                 int16_t* pcmData = reinterpret_cast<int16_t*>(data);
                 for (uint32_t i = 0; i < m_bufferFrameCount * m_config.numOutputChannels; ++i) {
                     // Convert float (-1.0 to 1.0) to int16_t (-32768 to 32767)
                     float sample = userBuffer[i];
-                    // Clamp to valid range
+                    // Clamp to valid range (already done above, but double-check)
                     if (sample > 1.0f) sample = 1.0f;
                     if (sample < -1.0f) sample = -1.0f;
+                    // Convert with proper scaling (32767.0f, not 32768.0f to avoid overflow)
                     pcmData[i] = static_cast<int16_t>(sample * 32767.0f);
                 }
             }
             else if (m_waveFormat->wBitsPerSample == 24) {
-                // 24-bit PCM (stored in 32-bit containers typically)
+                // 24-bit PCM (stored in 3 bytes, little-endian)
                 uint8_t* pcmData = data;
                 for (uint32_t i = 0; i < m_bufferFrameCount * m_config.numOutputChannels; ++i) {
                     float sample = userBuffer[i];
+                    // Clamp to valid range
                     if (sample > 1.0f) sample = 1.0f;
                     if (sample < -1.0f) sample = -1.0f;
-                    // Convert to 24-bit (stored in 3 bytes)
-                    int32_t pcmValue = static_cast<int32_t>(sample * 8388607.0f); // 2^23 - 1
+                    // Convert to 24-bit (8388607 = 2^23 - 1)
+                    int32_t pcmValue = static_cast<int32_t>(sample * 8388607.0f);
                     // Write 3 bytes (little-endian)
                     pcmData[i * 3 + 0] = static_cast<uint8_t>(pcmValue & 0xFF);
                     pcmData[i * 3 + 1] = static_cast<uint8_t>((pcmValue >> 8) & 0xFF);
                     pcmData[i * 3 + 2] = static_cast<uint8_t>((pcmValue >> 16) & 0xFF);
                 }
             }
+            else if (m_waveFormat->wBitsPerSample == 32) {
+                // 32-bit PCM
+                int32_t* pcmData = reinterpret_cast<int32_t*>(data);
+                for (uint32_t i = 0; i < m_bufferFrameCount * m_config.numOutputChannels; ++i) {
+                    float sample = userBuffer[i];
+                    // Clamp to valid range
+                    if (sample > 1.0f) sample = 1.0f;
+                    if (sample < -1.0f) sample = -1.0f;
+                    // Convert to 32-bit (2147483647 = 2^31 - 1)
+                    pcmData[i] = static_cast<int32_t>(sample * 2147483647.0f);
+                }
+            }
             else {
-                // Unknown bit depth - zero the buffer
+                // Unknown bit depth - zero the buffer and log warning
+                std::cerr << "[WASAPI Exclusive] Unknown PCM bit depth: " 
+                          << m_waveFormat->wBitsPerSample << " bits. Outputting silence." << std::endl;
                 memset(data, 0, m_bufferFrameCount * m_waveFormat->nBlockAlign);
             }
         }
         else {
-            // Unknown format - zero the buffer
+            // Unknown format - zero the buffer and log warning
+            std::cerr << "[WASAPI Exclusive] Unknown format tag: " 
+                      << m_waveFormat->wFormatTag << ". Outputting silence." << std::endl;
             memset(data, 0, m_bufferFrameCount * m_waveFormat->nBlockAlign);
         }
 
