@@ -499,6 +499,8 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
             
             m_isRenderingToCache = false;
         });
+    } else {
+        renderTrackManagerDirect(renderer);
     }
     
     // Render playhead OUTSIDE cache (it moves every frame during playback)
