@@ -1,0 +1,221 @@
+# ========================================
+# 🧭 NOMAD DAW - Doxygen Configuration
+# ========================================
+# Built by Dylan Makori / Nomad Studios
+# ----------------------------------------
+
+# Project Information
+PROJECT_NAME           = "NOMAD DAW"
+PROJECT_NUMBER         = "v0.1.0-alpha"
+PROJECT_BRIEF          = "Next-generation Digital Audio Workstation with ultra-low latency and GPU-accelerated UI"
+PROJECT_LOGO           = 
+
+# Output Configuration
+OUTPUT_DIRECTORY       = docs/api-reference
+CREATE_SUBDIRS         = YES
+OUTPUT_LANGUAGE        = English
+
+# Build Configuration
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_ANON_NSPACES   = NO
+
+# Input Configuration
+INPUT                  = NomadCore/include \
+                         NomadCore/src \
+                         NomadAudio/include \
+                         NomadAudio/src \
+                         NomadPlat/include \
+                         NomadPlat/src \
+                         NomadUI/Core \
+                         NomadUI/Graphics \
+                         NomadUI/Platform \
+                         NomadUI/Widgets \
+                         Source
+
+FILE_PATTERNS          = *.cpp \
+                         *.h \
+                         *.hpp \
+                         *.cc \
+                         *.hh
+
+RECURSIVE              = YES
+
+# Exclude patterns (external dependencies, build artifacts)
+EXCLUDE_PATTERNS       = */External/* \
+                         */external/* \
+                         */build/* \
+                         */Build/* \
+                         */_deps/* \
+                         */CMakeFiles/* \
+                         */x64/* \
+                         */backups/* \
+                         */sensitive-backup-*/* \
+                         */tracy-source/* \
+                         */nanovg/* \
+                         */glad/* \
+                         */stb/* \
+                         */.git/* \
+                         */node_modules/*
+
+EXCLUDE_SYMBOLS        = 
+
+# Source Browser
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = YES
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+REFERENCES_LINK_SOURCE = YES
+
+# Alphabetical Index
+ALPHABETICAL_INDEX     = YES
+COLS_IN_ALPHA_INDEX    = 5
+IGNORE_PREFIX          = 
+
+# HTML Output
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+HTML_HEADER            = 
+HTML_FOOTER            = 
+HTML_STYLESHEET        = 
+HTML_EXTRA_STYLESHEET  = 
+HTML_EXTRA_FILES       = 
+HTML_COLORSTYLE_HUE    = 220
+HTML_COLORSTYLE_SAT    = 100
+HTML_COLORSTYLE_GAMMA  = 80
+HTML_TIMESTAMP         = YES
+HTML_DYNAMIC_SECTIONS  = YES
+HTML_INDEX_NUM_ENTRIES = 100
+
+# LaTeX Output (disabled by default)
+GENERATE_LATEX         = NO
+
+# XML Output (useful for integration)
+GENERATE_XML           = YES
+XML_OUTPUT             = xml
+XML_PROGRAMLISTING     = YES
+
+# Preprocessor
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = NO
+SEARCH_INCLUDES        = YES
+INCLUDE_PATH           = NomadCore/include \
+                         NomadAudio/include \
+                         NomadPlat/include \
+                         NomadUI
+
+INCLUDE_FILE_PATTERNS  = 
+PREDEFINED             = NOMAD_API= \
+                         NOMAD_EXPORT= \
+                         NOMAD_INLINE=inline \
+                         _WIN32 \
+                         UNICODE \
+                         _UNICODE
+
+EXPAND_AS_DEFINED      = 
+SKIP_FUNCTION_MACROS   = YES
+
+# Diagram Generation
+CLASS_DIAGRAMS         = YES
+HIDE_UNDOC_RELATIONS   = NO
+HAVE_DOT               = YES
+DOT_NUM_THREADS        = 0
+DOT_FONTNAME           = Helvetica
+DOT_FONTSIZE           = 10
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+GROUP_GRAPHS           = YES
+UML_LOOK               = NO
+UML_LIMIT_NUM_FIELDS   = 10
+TEMPLATE_RELATIONS     = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+GRAPHICAL_HIERARCHY    = YES
+DIRECTORY_GRAPH        = YES
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+DOT_PATH               = 
+DOTFILE_DIRS           = 
+MSCFILE_DIRS           = 
+DIAFILE_DIRS           = 
+DOT_GRAPH_MAX_NODES    = 50
+MAX_DOT_GRAPH_DEPTH    = 0
+DOT_TRANSPARENT        = YES
+DOT_MULTI_TARGETS      = YES
+GENERATE_LEGEND        = YES
+DOT_CLEANUP            = YES
+
+# Search Engine
+SEARCHENGINE           = YES
+SERVER_BASED_SEARCH    = NO
+
+# Documentation Style
+OPTIMIZE_OUTPUT_FOR_C  = NO
+OPTIMIZE_OUTPUT_JAVA   = NO
+BUILTIN_STL_SUPPORT    = YES
+CPP_CLI_SUPPORT        = NO
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = NO
+MULTILINE_CPP_IS_BRIEF = NO
+INHERIT_DOCS           = YES
+SEPARATE_MEMBER_PAGES  = NO
+TAB_SIZE               = 4
+MARKDOWN_SUPPORT       = YES
+AUTOLINK_SUPPORT       = YES
+
+# Warnings
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+WARN_FORMAT            = "$file:$line: $text"
+WARN_LOGFILE           = doxygen_warnings.log
+
+# Brief Member Descriptions
+BRIEF_MEMBER_DESC      = YES
+REPEAT_BRIEF           = YES
+ABBREVIATE_BRIEF       = "The $name class" \
+                         "The $name widget" \
+                         "The $name file" \
+                         is \
+                         provides \
+                         specifies \
+                         contains \
+                         represents \
+                         a \
+                         an \
+                         the
+
+# Additional Features
+GENERATE_TODOLIST      = YES
+GENERATE_TESTLIST      = YES
+GENERATE_BUGLIST       = YES
+GENERATE_DEPRECATEDLIST= YES
+
+# External References
+ALLEXTERNALS           = NO
+EXTERNAL_GROUPS        = YES
+EXTERNAL_PAGES         = YES
+
+# Perl Module Output (disabled)
+GENERATE_PERLMOD       = NO
+
+# RTF Output (disabled)
+GENERATE_RTF           = NO
+
+# Man Page Output (disabled)
+GENERATE_MAN           = NO
+
+# DocBook Output (disabled)
+GENERATE_DOCBOOK       = NO
+
+# AutoGen Output (disabled)
+GENERATE_AUTOGEN_DEF   = NO

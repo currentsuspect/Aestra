@@ -1,0 +1,22 @@
+# NomadUI Slider Configuration
+# Edit these values in NUISlider.cpp constructor to fine-tune behavior
+
+# Scroll behavior
+scroll_unlock_delay_ms = 500        # Delay before unlocking cursor (milliseconds)
+scroll_sensitivity = 0.01           # Scroll sensitivity multiplier
+
+# Drag behavior  
+drag_cursor_force_throttle_ms = 8   # Cursor forcing frequency for drag (milliseconds)
+
+# Visual effects
+shrink_animation_duration_ms = 100  # Shrink animation duration (milliseconds)
+color_animation_duration_ms = 120   # Color fade animation duration (milliseconds)
+shrink_factor = 0.15                # Shrink amount (0.0 = no shrink, 1.0 = full shrink)
+
+# Instructions:
+# 1. Edit the values in NUISlider.cpp constructor (lines 24-25)
+# 2. Rebuild the project
+# 3. Test the changes
+# 4. Repeat until you find the perfect settings!
+
+

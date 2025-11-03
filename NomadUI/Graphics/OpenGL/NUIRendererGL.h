@@ -100,15 +100,22 @@ public:
     // ========================================================================
     
     void drawTexture(uint32_t textureId, const NUIRect& destRect, const NUIRect& sourceRect) override;
+    // Helper to draw a texture flipped vertically (used when sampling FBOs rendered in GL origin space)
+    void drawTextureFlippedV(uint32_t textureId, const NUIRect& destRect, const NUIRect& sourceRect);
     void drawTexture(const NUIRect& bounds, const unsigned char* rgba, 
                     int width, int height) override;
     uint32_t loadTexture(const std::string& filepath) override;
     uint32_t createTexture(const uint8_t* data, int width, int height) override;
     void deleteTexture(uint32_t textureId) override;
+    uint32_t getGLTextureId(uint32_t textureId) const;
     
     // Render-to-texture helpers (FBO)
     uint32_t renderToTextureBegin(int width, int height);
     uint32_t renderToTextureEnd();
+
+    // Temporary offscreen rendering (adjusts projection to target size)
+    void beginOffscreen(int width, int height);
+    void endOffscreen();
     
     // ========================================================================
     // Batching
@@ -254,6 +261,11 @@ private:
     
     // Projection matrix (orthographic)
     float projectionMatrix_[16];
+
+    // Offscreen state backup
+    float projectionBackup_[16];
+    int widthBackup_ = 0;
+    int heightBackup_ = 0;
 };
 
 } // namespace NomadUI

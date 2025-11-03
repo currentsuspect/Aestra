@@ -65,6 +65,21 @@ PFNGLTEXPARAMETERIPROC glTexParameteri = NULL;
 PFNGLACTIVETEXTUREPROC glActiveTexture = NULL;
 PFNGLPIXELSTOREIPROC glPixelStorei = NULL;
 
+PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers = NULL;
+PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = NULL;
+PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
+PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
+PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus = NULL;
+PFNGLGETINTEGERVPROC glGetIntegerv = NULL;
+PFNGLDRAWBUFFERPROC glDrawBuffer = NULL;
+PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
+PFNGLREADBUFFERPROC glReadBuffer = NULL;
+
+PFNGLBEGINPROC glBegin = NULL;
+PFNGLENDPROC glEnd = NULL;
+PFNGLVERTEX2FPROC glVertex2f = NULL;
+PFNGLTEXCOORD2FPROC glTexCoord2f = NULL;
+
 static void* get_proc(const char* name) {
     void* proc = (void*)wglGetProcAddress(name);
     if (!proc) {
@@ -123,6 +138,23 @@ int gladLoadGL(void) {
     glTexParameteri = (PFNGLTEXPARAMETERIPROC)get_proc("glTexParameteri");
     glActiveTexture = (PFNGLACTIVETEXTUREPROC)get_proc("glActiveTexture");
     glPixelStorei = (PFNGLPIXELSTOREIPROC)get_proc("glPixelStorei");
+    
+    /* Load FBO functions (OpenGL 3.0+) */
+    glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)get_proc("glGenFramebuffers");
+    glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)get_proc("glDeleteFramebuffers");
+    glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)get_proc("glBindFramebuffer");
+    glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)get_proc("glFramebufferTexture2D");
+    glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)get_proc("glCheckFramebufferStatus");
+    glGetIntegerv = (PFNGLGETINTEGERVPROC)get_proc("glGetIntegerv");
+    glDrawBuffer = (PFNGLDRAWBUFFERPROC)get_proc("glDrawBuffer");
+    glDrawBuffers = (PFNGLDRAWBUFFERSPROC)get_proc("glDrawBuffers");
+    glReadBuffer = (PFNGLREADBUFFERPROC)get_proc("glReadBuffer");
+    
+    /* Load legacy immediate mode functions */
+    glBegin = (PFNGLBEGINPROC)get_proc("glBegin");
+    glEnd = (PFNGLENDPROC)get_proc("glEnd");
+    glVertex2f = (PFNGLVERTEX2FPROC)get_proc("glVertex2f");
+    glTexCoord2f = (PFNGLTEXCOORD2FPROC)get_proc("glTexCoord2f");
     
     /* Check if essential functions loaded */
     if (!glCreateShader || !glGenVertexArrays) {

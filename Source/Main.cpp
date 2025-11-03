@@ -691,6 +691,14 @@ public:
             }
             
             Log::info("UI renderer initialized");
+            
+            // Enable debug logging for FBO cache (temporary for testing)
+            #ifdef _DEBUG
+            if (m_renderer->getRenderCache()) {
+                m_renderer->getRenderCache()->setDebugEnabled(true);
+                Log::info("FBO cache debug logging enabled");
+            }
+            #endif
         }
         catch (const std::exception& e) {
             std::string errorMsg = "Exception during renderer initialization: ";

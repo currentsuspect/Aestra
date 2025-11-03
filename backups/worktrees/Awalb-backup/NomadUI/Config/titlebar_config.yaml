@@ -1,0 +1,39 @@
+# NomadUI Title Bar Configuration
+# This file controls the appearance and behavior of the custom title bar
+
+# Icon sizing (as multiplier of button size)
+icons:
+  size_multiplier: 0.4        # 40% of button size
+  line_thickness: 3.0         # Thickness of icon lines
+  close_line_thickness: 3.0   # Thickness of close button X lines
+  
+# Text positioning and sizing
+text:
+  font_size_multiplier: 0.4   # 40% of title bar height
+  left_padding: 2.0           # Pixels from left edge
+  vertical_center: true       # Center text vertically
+  
+# Button sizing and spacing
+buttons:
+  width: 32.0                 # Button width in pixels
+  height: 32.0                # Button height in pixels
+  right_padding: 4.0          # Pixels from right edge
+  spacing: 2.0                # Pixels between buttons
+  
+# Colors
+colors:
+  background: "#1a1a1a"       # Title bar background
+  text: "#ffffff"             # Title text color
+  icon: "#ffffff"             # Icon color
+  hover_minimize: "#a855f7"   # Purple for minimize hover
+  hover_maximize: "#a855f7"   # Purple for maximize hover
+  hover_close: "#dc2626"      # Red for close hover
+  press_minimize: "#a855f7"   # Purple for minimize press
+  press_maximize: "#a855f7"   # Purple for maximize press
+  press_close: "#dc2626"      # Red for close press
+  
+# Hover/press effects
+effects:
+  hover_alpha: 0.8            # Alpha for hover state
+  press_alpha: 0.9            # Alpha for press state
+  border_width: 1.0           # Border width on hover/press

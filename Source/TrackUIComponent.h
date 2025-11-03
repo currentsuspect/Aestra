@@ -30,6 +30,9 @@ public:
     // Callback for when solo is toggled (so parent can update all track UIs)
     void setOnSoloToggled(std::function<void(TrackUIComponent*)> callback) { m_onSoloToggledCallback = callback; }
     
+    // Callback for when UI needs cache invalidation (button hover, etc.)
+    void setOnCacheInvalidationNeeded(std::function<void()> callback) { m_onCacheInvalidationCallback = callback; }
+    
     // Selection state
     void setSelected(bool selected) { m_selected = selected; }
     bool isSelected() const { return m_selected; }
@@ -56,8 +59,9 @@ private:
     TrackManager* m_trackManager; // For coordinating solo exclusivity
     bool m_selected = false; // Track selection state
     
-    // Callback for solo coordination
+    // Callbacks
     std::function<void(TrackUIComponent*)> m_onSoloToggledCallback;
+    std::function<void()> m_onCacheInvalidationCallback;
     
     // Timeline settings (synced from TrackManagerUI)
     float m_pixelsPerBeat = 50.0f;

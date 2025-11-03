@@ -192,8 +192,15 @@ void NUIScrollbar::onMouseLeave()
 
 void NUIScrollbar::setCurrentRange(double start, double size)
 {
-    currentRangeStart_ = std::clamp(start, rangeLimitStart_, rangeLimitStart_ + rangeLimitSize_ - size);
+    // Clamp size first to ensure valid range
     currentRangeSize_ = std::clamp(size, 0.0, rangeLimitSize_);
+    
+    // Calculate max start position, ensuring min <= max for clamp
+    double maxStart = rangeLimitStart_ + rangeLimitSize_ - currentRangeSize_;
+    maxStart = std::max(maxStart, rangeLimitStart_);  // Ensure max >= min
+    
+    currentRangeStart_ = std::clamp(start, rangeLimitStart_, maxStart);
+    
     updateThumbSize();
     updateThumbPosition();
     setDirty(true);

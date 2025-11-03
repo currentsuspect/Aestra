@@ -3,6 +3,7 @@
 #include <cstring>
 #include <cmath>
 #include <iostream>
+#include <algorithm>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 // Profiler include for recording draw calls/triangles
@@ -96,6 +97,7 @@ void main() {
 // ============================================================================
 
 NUIRendererGL::NUIRendererGL() {
+    renderCache_.setRenderer(this);
 }
 
 NUIRendererGL::~NUIRendererGL() {
@@ -1396,10 +1398,21 @@ void NUIRendererGL::drawTexture(uint32_t textureId, const NUIRect& destRect, con
     // Compute texture coordinates (sourceRect is in pixels)
     float tx0 = 0.0f, ty0 = 0.0f, tx1 = 1.0f, ty1 = 1.0f;
     if (td.width > 0 && td.height > 0) {
-        tx0 = sourceRect.x / static_cast<float>(td.width);
-        ty0 = sourceRect.y / static_cast<float>(td.height);
-        tx1 = (sourceRect.x + sourceRect.width) / static_cast<float>(td.width);
-        ty1 = (sourceRect.y + sourceRect.height) / static_cast<float>(td.height);
+        float srcX0 = sourceRect.x;
+        float srcY0 = sourceRect.y;
+        float srcX1 = sourceRect.x + sourceRect.width;
+        float srcY1 = sourceRect.y + sourceRect.height;
+
+        const float invWidth = 1.0f / static_cast<float>(td.width);
+        const float invHeight = 1.0f / static_cast<float>(td.height);
+
+        tx0 = srcX0 * invWidth;
+        tx1 = srcX1 * invWidth;
+        ty0 = srcY0 * invHeight;
+        ty1 = srcY1 * invHeight;
+
+        if (sourceRect.width < 0.0f) std::swap(tx0, tx1);
+        if (sourceRect.height < 0.0f) std::swap(ty0, ty1);
     }
 
     NUIColor white(1.0f, 1.0f, 1.0f, 1.0f);
@@ -1514,6 +1527,75 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
     glDeleteTextures(1, &texture);
 }
 
+void NUIRendererGL::drawTextureFlippedV(uint32_t textureId, const NUIRect& destRect, const NUIRect& sourceRect) {
+    if (textureId == 0) return;
+    auto it = textures_.find(textureId);
+    if (it == textures_.end()) return;
+    const TextureData& td = it->second;
+
+    NOMAD_ZONE("Texture_Draw_FlippedV");
+
+    // Flush batch to ensure correct ordering
+    flush();
+
+    // Compute normalized texture coordinates, with V flipped
+    float tx0 = 0.0f, ty0 = 1.0f, tx1 = 1.0f, ty1 = 0.0f; // note V flipped
+    if (td.width > 0 && td.height > 0) {
+        float srcX0 = sourceRect.x;
+        float srcY0 = sourceRect.y;
+        float srcX1 = sourceRect.x + sourceRect.width;
+        float srcY1 = sourceRect.y + sourceRect.height;
+
+        const float invWidth = 1.0f / static_cast<float>(td.width);
+        const float invHeight = 1.0f / static_cast<float>(td.height);
+
+        tx0 = srcX0 * invWidth;
+        tx1 = srcX1 * invWidth;
+        // Flip V: swap mapping of top/bottom
+        ty0 = srcY1 * invHeight; // top
+        ty1 = srcY0 * invHeight; // bottom
+    }
+
+    NUIColor white(1.0f, 1.0f, 1.0f, 1.0f);
+    addVertex(destRect.x, destRect.y, tx0, ty0, white);
+    addVertex(destRect.right(), destRect.y, tx1, ty0, white);
+    addVertex(destRect.right(), destRect.bottom(), tx1, ty1, white);
+    addVertex(destRect.x, destRect.bottom(), tx0, ty1, white);
+
+    uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
+    indices_.push_back(base + 0);
+    indices_.push_back(base + 1);
+    indices_.push_back(base + 2);
+    indices_.push_back(base + 0);
+    indices_.push_back(base + 2);
+    indices_.push_back(base + 3);
+
+    glBindVertexArray(vao_);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+    glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(Vertex), vertices_.data(), GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(uint32_t), indices_.data(), GL_DYNAMIC_DRAW);
+
+    glUseProgram(primitiveShader_.id);
+    glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
+    glUniform1i(primitiveShader_.primitiveTypeLoc, 0);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, td.glId);
+    glUniform1i(primitiveShader_.textureLoc, 0);
+    glUniform1i(primitiveShader_.useTextureLoc, 1);
+
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()), GL_UNSIGNED_INT, 0);
+    drawCallCount_++;
+    if (Nomad::Profiler::getInstance().isEnabled()) {
+        Nomad::Profiler::getInstance().recordDrawCall();
+        Nomad::Profiler::getInstance().recordTriangles(static_cast<uint32_t>(indices_.size() / 3));
+    }
+
+    vertices_.clear();
+    indices_.clear();
+}
+
 // ============================================================================
 // Texture/Image Drawing (Stub implementations)
 // ============================================================================
@@ -1575,6 +1657,35 @@ uint32_t NUIRendererGL::renderToTextureEnd() {
     fboWidth_ = 0; fboHeight_ = 0;
     (void)w; (void)h;
     return tex;
+}
+
+uint32_t NUIRendererGL::getGLTextureId(uint32_t textureId) const {
+    auto it = textures_.find(textureId);
+    if (it == textures_.end()) {
+        return 0;
+    }
+    return it->second.glId;
+}
+
+void NUIRendererGL::beginOffscreen(int width, int height) {
+    // Backup current size and projection
+    widthBackup_ = width_;
+    heightBackup_ = height_;
+    std::memcpy(projectionBackup_, projectionMatrix_, sizeof(projectionMatrix_));
+
+    // Switch to offscreen size and update projection
+    width_ = width;
+    height_ = height;
+    updateProjectionMatrix();
+}
+
+void NUIRendererGL::endOffscreen() {
+    // Restore original projection and size
+    width_ = widthBackup_;
+    height_ = heightBackup_;
+    updateProjectionMatrix();
+    // Restore backup matrix explicitly (avoid precision drift)
+    std::memcpy(projectionMatrix_, projectionBackup_, sizeof(projectionBackup_));
 }
 
 // ============================================================================
