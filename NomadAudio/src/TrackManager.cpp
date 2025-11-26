@@ -259,14 +259,19 @@ double TrackManager::getTotalDuration() const {
 void TrackManager::processAudio(float* outputBuffer, uint32_t numFrames, double streamTime) {
     // Start timing
     auto startTime = std::chrono::high_resolution_clock::now();
+
+    double outputSampleRate = m_outputSampleRate.load();
+    if (outputSampleRate <= 0.0) {
+        outputSampleRate = 48000.0;
+    }
     
     // Dispatch to single-threaded or multi-threaded implementation
     if (m_multiThreadingEnabled && m_threadPool && m_tracks.size() > 2) {
         // Use multi-threading for 3+ tracks
-        processAudioMultiThreaded(outputBuffer, numFrames, streamTime);
+        processAudioMultiThreaded(outputBuffer, numFrames, streamTime, outputSampleRate);
     } else {
         // Use single-threaded for 1-2 tracks or when multi-threading is disabled
-        processAudioSingleThreaded(outputBuffer, numFrames, streamTime);
+        processAudioSingleThreaded(outputBuffer, numFrames, streamTime, outputSampleRate);
     }
     
     // End timing and calculate load percentage
@@ -274,15 +279,14 @@ void TrackManager::processAudio(float* outputBuffer, uint32_t numFrames, double 
     double processingTimeUs = std::chrono::duration<double, std::micro>(endTime - startTime).count();
     
     // Calculate available time for this buffer (in microseconds)
-    // Assuming 44.1kHz sample rate (will work for other rates too)
-    double availableTimeUs = (numFrames / 44100.0) * 1000000.0;
+    double availableTimeUs = (numFrames / outputSampleRate) * 1000000.0;
     
     // Calculate load percentage
     double loadPercent = (processingTimeUs / availableTimeUs) * 100.0;
     m_audioLoadPercent.store(loadPercent);
 }
 
-void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numFrames, double streamTime) {
+void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate) {
     if (!outputBuffer || numFrames == 0) {
         return;
     }
@@ -298,7 +302,7 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
         }
     }
     
-    // Debug: Log solo state once every ~1 second (48000 samples / 512 frames = ~94 calls/sec, log every 100 calls)
+    // Debug: Log solo state once every ~1 second (approx based on outputSampleRate)
     static int debugCounter = 0;
     if (++debugCounter >= 100) {
         debugCounter = 0;
@@ -323,7 +327,7 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
                 continue; // Skip non-soloed tracks when solo is active
             }
             
-            track->processAudio(outputBuffer, numFrames, streamTime);
+            track->processAudio(outputBuffer, numFrames, streamTime, outputSampleRate);
         }
     }
 
@@ -341,13 +345,13 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
         }
         
         // Call visualizer callback with deinterleaved channels
-        m_onAudioOutput(leftChannel.data(), rightChannel.data(), numFrames, 48000.0);
+        m_onAudioOutput(leftChannel.data(), rightChannel.data(), numFrames, outputSampleRate);
     }
 
     // Update position
     if (m_isPlaying.load()) {
         double currentPos = m_positionSeconds.load();
-        double newPosition = currentPos + (numFrames / 48000.0);
+        double newPosition = currentPos + (numFrames / outputSampleRate);
         double maxDuration = getTotalDuration();
         
         // Check for loop boundary - reset to 0 if we've exceeded duration
@@ -373,7 +377,7 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
     }
 }
 
-void TrackManager::processAudioMultiThreaded(float* outputBuffer, uint32_t numFrames, double streamTime) {
+void TrackManager::processAudioMultiThreaded(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate) {
     if (!outputBuffer || numFrames == 0 || !m_threadPool) {
         return;
     }
@@ -418,8 +422,8 @@ void TrackManager::processAudioMultiThreaded(float* outputBuffer, uint32_t numFr
             }
             
             // Submit track processing task to thread pool
-            m_threadPool->enqueue([track, &buffer = m_trackBuffers[i], numFrames, streamTime]() {
-                track->processAudio(buffer.data(), numFrames, streamTime);
+            m_threadPool->enqueue([track, &buffer = m_trackBuffers[i], numFrames, streamTime, outputSampleRate]() {
+                track->processAudio(buffer.data(), numFrames, streamTime, outputSampleRate);
             });
         }
     }
@@ -449,13 +453,13 @@ void TrackManager::processAudioMultiThreaded(float* outputBuffer, uint32_t numFr
             rightChannel[i] = outputBuffer[i * 2 + 1];
         }
         
-        m_onAudioOutput(leftChannel.data(), rightChannel.data(), numFrames, 48000.0);
+        m_onAudioOutput(leftChannel.data(), rightChannel.data(), numFrames, outputSampleRate);
     }
     
     // Update position
     if (m_isPlaying.load()) {
         double currentPos = m_positionSeconds.load();
-        double newPosition = currentPos + (numFrames / 48000.0);
+        double newPosition = currentPos + (numFrames / outputSampleRate);
         double maxDuration = getTotalDuration();
         
         if (maxDuration > 0.0 && newPosition >= maxDuration) {

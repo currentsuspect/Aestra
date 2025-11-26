@@ -101,6 +101,8 @@ public:
 
     // Audio Processing
     void processAudio(float* outputBuffer, uint32_t numFrames, double streamTime);
+    void setOutputSampleRate(double sampleRate) { m_outputSampleRate.store(sampleRate); }
+    double getOutputSampleRate() const { return m_outputSampleRate.load(); }
     
     // Multi-threading control
     void setMultiThreadingEnabled(bool enabled) { m_multiThreadingEnabled = enabled; }
@@ -121,6 +123,7 @@ public:
 private:
     // Track collection
     std::vector<std::shared_ptr<Track>> m_tracks;
+    std::atomic<double> m_outputSampleRate{48000.0};
 
     // Transport state
     std::atomic<bool> m_isPlaying{false};
@@ -148,8 +151,8 @@ private:
     std::string generateTrackName() const;
     
     // Processing helpers
-    void processAudioSingleThreaded(float* outputBuffer, uint32_t numFrames, double streamTime);
-    void processAudioMultiThreaded(float* outputBuffer, uint32_t numFrames, double streamTime);
+    void processAudioSingleThreaded(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate);
+    void processAudioMultiThreaded(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate);
 };
 
 } // namespace Audio

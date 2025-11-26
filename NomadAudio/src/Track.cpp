@@ -111,251 +111,164 @@ bool loadWavFile(const std::string& filePath, std::vector<float>& audioData, uin
         return false;
     }
 
-    WavHeader header = {};
-    file.read(reinterpret_cast<char*>(&header), sizeof(WavHeader));
-
-    // Debug: Log WAV header information
-    Log::info("WAV Header Debug:");
-    Log::info("  RIFF: " + std::string(header.riff, 4));
-    Log::info("  File size: " + std::to_string(header.fileSize));
-    Log::info("  WAVE: " + std::string(header.wave, 4));
-    Log::info("  fmt: " + std::string(header.fmt, 4));
-    Log::info("  Format size: " + std::to_string(header.fmtSize));
-    Log::info("  Audio format: " + std::to_string(header.audioFormat));
-    Log::info("  Channels: " + std::to_string(header.numChannels));
-    Log::info("  Sample rate: " + std::to_string(header.sampleRate));
-    Log::info("  Bits per sample: " + std::to_string(header.bitsPerSample));
-    Log::info("  Data chunk: " + std::string(header.data, 4));
-    Log::info("  Data size: " + std::to_string(header.dataSize));
-
-    // Handle JUNK chunk before fmt chunk (some WAV files have metadata)
-    std::cout << "DEBUG: Checking for JUNK chunk, header.fmt = '" << std::string(header.fmt, 4) << "'" << std::endl;
-    if (std::strncmp(header.fmt, "JUNK", 4) == 0) {
-        Log::info("Found JUNK chunk, skipping " + std::to_string(header.fmtSize) + " bytes");
-
-        // Skip the JUNK chunk data
-        file.seekg(header.fmtSize, std::ios::cur);
-
-        // Read the next chunk header (should be the real fmt chunk)
-        char nextChunk[4];
-        uint32_t nextChunkSize;
-        if (!file.read(nextChunk, 4)) {
-            Log::error("Failed to read next chunk type after JUNK");
-            return false;
-        }
-        if (!file.read(reinterpret_cast<char*>(&nextChunkSize), 4)) {
-            Log::error("Failed to read next chunk size after JUNK");
-            return false;
-        }
-
-        Log::info("Next chunk: " + std::string(nextChunk, 4) + ", size: " + std::to_string(nextChunkSize));
-
-        // Verify this is the fmt chunk
-        if (std::strncmp(nextChunk, "fmt ", 4) != 0) {
-            Log::warning("Expected fmt chunk after JUNK, got: " + std::string(nextChunk, 4));
-
-            // Special case: some WAV files have JUNK + DATA but no fmt chunk
-            // Try to handle this by assuming standard format parameters
-            if (std::strncmp(nextChunk, "data", 4) == 0) {
-                Log::warning("WAV file missing fmt chunk, attempting to load with assumed parameters");
-                Log::info("Assuming: 16-bit, 44100 Hz, stereo PCM");
-
-                // Set default format parameters
-                header.audioFormat = 1; // PCM
-                header.numChannels = 2; // Stereo
-                header.sampleRate = 44100;
-                header.bitsPerSample = 16;
-                header.byteRate = header.sampleRate * header.numChannels * (header.bitsPerSample / 8);
-                header.blockAlign = header.numChannels * (header.bitsPerSample / 8);
-                header.dataSize = nextChunkSize;
-
-                Log::info("Using assumed format: " + std::to_string(header.audioFormat) +
-                          ", channels=" + std::to_string(header.numChannels) +
-                          ", sampleRate=" + std::to_string(header.sampleRate) +
-                          ", bitsPerSample=" + std::to_string(header.bitsPerSample) +
-                          ", dataSize=" + std::to_string(header.dataSize));
-
-                // Skip validation since we're using assumed parameters
-                goto load_audio_data;
-            } else {
-                Log::error("Unsupported chunk after JUNK: " + std::string(nextChunk, 4));
-                return false;
-            }
-        }
-
-        // Read the fmt chunk data
-        if (!file.read(reinterpret_cast<char*>(&header.audioFormat), 2)) {
-            Log::error("Failed to read audio format");
-            return false;
-        }
-        if (!file.read(reinterpret_cast<char*>(&header.numChannels), 2)) {
-            Log::error("Failed to read numChannels");
-            return false;
-        }
-        if (!file.read(reinterpret_cast<char*>(&header.sampleRate), 4)) {
-            Log::error("Failed to read sampleRate");
-            return false;
-        }
-        if (!file.read(reinterpret_cast<char*>(&header.byteRate), 4)) {
-            Log::error("Failed to read byteRate");
-            return false;
-        }
-        if (!file.read(reinterpret_cast<char*>(&header.blockAlign), 2)) {
-            Log::error("Failed to read blockAlign");
-            return false;
-        }
-        if (!file.read(reinterpret_cast<char*>(&header.bitsPerSample), 2)) {
-            Log::error("Failed to read bitsPerSample");
-            return false;
-        }
-
-        Log::info("Real fmt chunk data: format=" + std::to_string(header.audioFormat) +
-                  ", channels=" + std::to_string(header.numChannels) +
-                  ", sampleRate=" + std::to_string(header.sampleRate) +
-                  ", bitsPerSample=" + std::to_string(header.bitsPerSample));
-
-        // Now find the data chunk
-        bool foundDataChunk = false;
-        while (!foundDataChunk && file) {
-            char chunkType[4];
-            uint32_t chunkSize;
-
-            if (!file.read(chunkType, 4)) break;
-            if (!file.read(reinterpret_cast<char*>(&chunkSize), 4)) break;
-
-            std::string chunkTypeStr(chunkType, 4);
-            Log::info("Found chunk: " + chunkTypeStr + ", size: " + std::to_string(chunkSize));
-
-            if (chunkTypeStr == "data") {
-                header.dataSize = chunkSize;
-                foundDataChunk = true;
-                Log::info("Found data chunk with " + std::to_string(chunkSize) + " bytes");
-            } else {
-                // Skip this chunk
-                file.seekg(chunkSize, std::ios::cur);
-            }
-        }
-
-        if (!foundDataChunk) {
-            Log::error("No data chunk found in WAV file");
-            return false;
-        }
-    } else {
-        // Normal case - find the data chunk
-        bool foundDataChunk = false;
-        while (!foundDataChunk && file) {
-            char chunkType[4];
-            uint32_t chunkSize;
-
-            if (!file.read(chunkType, 4)) break;
-            if (!file.read(reinterpret_cast<char*>(&chunkSize), 4)) break;
-
-            std::string chunkTypeStr(chunkType, 4);
-            Log::info("Found chunk: " + chunkTypeStr + ", size: " + std::to_string(chunkSize));
-
-            if (chunkTypeStr == "data") {
-                header.dataSize = chunkSize;
-                foundDataChunk = true;
-                Log::info("Found data chunk with " + std::to_string(chunkSize) + " bytes");
-            } else {
-                // Skip this chunk
-                file.seekg(chunkSize, std::ios::cur);
-            }
-        }
-
-        if (!foundDataChunk) {
-            Log::error("No data chunk found in WAV file");
-            return false;
-        }
+    // Read RIFF header
+    char riffId[4];
+    uint32_t riffSize = 0;
+    char waveId[4];
+    if (!file.read(riffId, 4) || !file.read(reinterpret_cast<char*>(&riffSize), 4) || !file.read(waveId, 4)) {
+        Log::warning("Invalid WAV header (too short): " + filePath);
+        return false;
     }
 
-    // Load audio data (reached via normal path or JUNK+assumed format path)
-    load_audio_data:
-
-    // Validate WAV format after handling JUNK chunks
-    bool hasJunkChunk = (std::strncmp(header.fmt, "JUNK", 4) == 0);
-    if (std::strncmp(header.riff, "RIFF", 4) != 0 ||
-        std::strncmp(header.wave, "WAVE", 4) != 0) {
+    if (std::strncmp(riffId, "RIFF", 4) != 0 || std::strncmp(waveId, "WAVE", 4) != 0) {
         Log::warning("Invalid WAV file format: " + filePath);
         Log::warning("  Expected: RIFF, WAVE");
-        Log::warning("  Got: " + std::string(header.riff, 4) + ", " + std::string(header.wave, 4));
+        Log::warning("  Got: " + std::string(riffId, 4) + ", " + std::string(waveId, 4));
         return false;
     }
 
-    // Only validate fmt chunk if it's not a JUNK chunk (which we already handled)
-    if (!hasJunkChunk && std::strncmp(header.fmt, "fmt ", 4) != 0) {
-        Log::warning("Invalid WAV file format: " + filePath);
-        Log::warning("  Expected: fmt ");
-        Log::warning("  Got: " + std::string(header.fmt, 4));
-        return false;
-    }
+    Log::info("WAV Header Debug:");
+    Log::info("  RIFF: " + std::string(riffId, 4));
+    Log::info("  File size: " + std::to_string(riffSize));
+    Log::info("  WAVE: " + std::string(waveId, 4));
 
-    Log::info("WAV format validated successfully (JUNK chunk: " + std::string(hasJunkChunk ? "yes" : "no") + ")");
+    // Parse chunks
+    bool fmtFound = false;
+    bool dataFound = false;
+    uint16_t audioFormat = 1;
+    uint16_t channelCount = 2;
+    uint32_t sr = 44100;
+    uint32_t byteRate = 0;
+    uint16_t blockAlign = 0;
+    uint16_t bitsPerSample = 16;
+    uint32_t dataSize = 0;
+    std::streampos dataPos{};
 
-    // Check format parameters only if we didn't use assumed values
-    if (!hasJunkChunk) {
-        // Check if it's PCM format (allow both PCM and floating point)
-        if (header.audioFormat != 1 && header.audioFormat != 3) {
-            Log::warning("Unsupported audio format: " + std::to_string(header.audioFormat) + " (only PCM supported)");
-            return false;
+    while (file && !(fmtFound && dataFound)) {
+        char chunkId[4];
+        uint32_t chunkSize = 0;
+
+        if (!file.read(chunkId, 4)) {
+            break;
+        }
+        if (!file.read(reinterpret_cast<char*>(&chunkSize), 4)) {
+            break;
         }
 
-        // Support different bit depths
-        if (header.bitsPerSample != 16 && header.bitsPerSample != 24 && header.bitsPerSample != 32) {
-            Log::warning("Unsupported bit depth: " + std::to_string(header.bitsPerSample) + " (only 16/24/32-bit supported)");
-            return false;
-        }
-    } else {
-        Log::info("Skipping format validation (using assumed parameters)");
-    }
+        std::string chunk(chunkId, 4);
+        Log::info("Found chunk: " + chunk + ", size: " + std::to_string(chunkSize));
 
-    Log::info("WAV format validated successfully");
-
-    // Read audio data based on bit depth
-    size_t bytesPerSample = header.bitsPerSample / 8;
-    audioData.resize(header.dataSize / bytesPerSample);
-
-    if (header.bitsPerSample == 16) {
-        // 16-bit samples
-        std::vector<int16_t> rawData(header.dataSize / sizeof(int16_t));
-        file.read(reinterpret_cast<char*>(rawData.data()), header.dataSize);
-
-        // Convert to float and normalize
-        for (size_t i = 0; i < rawData.size(); ++i) {
-            audioData[i] = rawData[i] / 32768.0f; // Normalize 16-bit to [-1, 1]
-        }
-    } else if (header.bitsPerSample == 24) {
-        // 24-bit samples (need to handle endianness)
-        std::vector<uint8_t> rawData(header.dataSize);
-        file.read(reinterpret_cast<char*>(rawData.data()), header.dataSize);
-
-        for (size_t i = 0; i < audioData.size(); ++i) {
-            // Convert 24-bit to 32-bit then to float
-            uint32_t sample24 = 0;
-            if (header.blockAlign == 3) { // Little endian
-                sample24 = rawData[i * 3] | (rawData[i * 3 + 1] << 8) | (rawData[i * 3 + 2] << 16);
+        if (chunk == "fmt ") {
+            // Minimum fmt chunk is 16 bytes
+            if (chunkSize < 16) {
+                Log::warning("Invalid fmt chunk size: " + std::to_string(chunkSize));
+                return false;
             }
 
-            // Sign extend 24-bit to 32-bit
+            if (!file.read(reinterpret_cast<char*>(&audioFormat), 2) ||
+                !file.read(reinterpret_cast<char*>(&channelCount), 2) ||
+                !file.read(reinterpret_cast<char*>(&sr), 4) ||
+                !file.read(reinterpret_cast<char*>(&byteRate), 4) ||
+                !file.read(reinterpret_cast<char*>(&blockAlign), 2) ||
+                !file.read(reinterpret_cast<char*>(&bitsPerSample), 2)) {
+                Log::warning("Failed to read fmt chunk");
+                return false;
+            }
+
+            // Skip any extra fmt bytes
+            uint32_t remaining = chunkSize > 16 ? (chunkSize - 16) : 0;
+            if (remaining > 0) {
+                file.seekg(remaining, std::ios::cur);
+            }
+
+            fmtFound = true;
+        } else if (chunk == "data") {
+            dataPos = file.tellg();
+            dataSize = chunkSize;
+            // Skip data for now; we'll read after validation
+            file.seekg(chunkSize, std::ios::cur);
+            dataFound = true;
+        } else {
+            // Skip unknown/metadata chunks (JUNK, LIST, bext, etc.)
+            file.seekg(chunkSize, std::ios::cur);
+        }
+
+        // Chunks are word-aligned; skip padding byte if chunkSize is odd
+        if (chunkSize % 2 == 1) {
+            file.seekg(1, std::ios::cur);
+        }
+    }
+
+    if (!fmtFound) {
+        Log::warning("fmt chunk not found, cannot determine WAV format: " + filePath);
+        return false;
+    }
+    if (!dataFound) {
+        Log::warning("data chunk not found in WAV file: " + filePath);
+        return false;
+    }
+
+    Log::info("WAV format:");
+    Log::info("  Audio format: " + std::to_string(audioFormat));
+    Log::info("  Channels: " + std::to_string(channelCount));
+    Log::info("  Sample rate: " + std::to_string(sr));
+    Log::info("  Bits per sample: " + std::to_string(bitsPerSample));
+    Log::info("  Data size: " + std::to_string(dataSize));
+
+    if (audioFormat != 1 && audioFormat != 3) { // PCM or IEEE float
+        Log::warning("Unsupported audio format: " + std::to_string(audioFormat) + " (only PCM/float supported)");
+        return false;
+    }
+
+    if (bitsPerSample != 16 && bitsPerSample != 24 && bitsPerSample != 32) {
+        Log::warning("Unsupported bit depth: " + std::to_string(bitsPerSample) + " (only 16/24/32-bit supported)");
+        return false;
+    }
+
+    // Read audio data based on bit depth
+    file.seekg(dataPos);
+    size_t bytesPerSample = bitsPerSample / 8;
+    audioData.resize(dataSize / bytesPerSample);
+
+    if (bitsPerSample == 16) {
+        std::vector<int16_t> rawData(dataSize / sizeof(int16_t));
+        file.read(reinterpret_cast<char*>(rawData.data()), dataSize);
+
+        for (size_t i = 0; i < rawData.size(); ++i) {
+            audioData[i] = rawData[i] / 32768.0f;
+        }
+    } else if (bitsPerSample == 24) {
+        std::vector<uint8_t> rawData(dataSize);
+        file.read(reinterpret_cast<char*>(rawData.data()), dataSize);
+
+        for (size_t i = 0; i < audioData.size(); ++i) {
+            uint32_t sample24 = rawData[i * 3] | (rawData[i * 3 + 1] << 8) | (rawData[i * 3 + 2] << 16);
+
+            // Sign extend
             if (sample24 & 0x800000) {
                 sample24 |= 0xFF000000;
             }
 
-            // Convert to float
-            audioData[i] = sample24 / 8388608.0f; // Normalize 24-bit to [-1, 1]
+            audioData[i] = static_cast<int32_t>(sample24) / 8388608.0f;
         }
-    } else if (header.bitsPerSample == 32) {
-        // 32-bit float samples
-        file.read(reinterpret_cast<char*>(audioData.data()), header.dataSize);
-
-        // 32-bit float is already in the right range [-1, 1], but clamp just in case
-        for (size_t i = 0; i < audioData.size(); ++i) {
-            audioData[i] = std::max(-1.0f, std::min(1.0f, audioData[i]));
+    } else if (bitsPerSample == 32) {
+        if (audioFormat == 1) { // 32-bit PCM
+            std::vector<int32_t> rawData(dataSize / sizeof(int32_t));
+            file.read(reinterpret_cast<char*>(rawData.data()), dataSize);
+            const float invScale = 1.0f / 2147483648.0f;
+            for (size_t i = 0; i < rawData.size(); ++i) {
+                audioData[i] = std::max(-1.0f, std::min(1.0f, rawData[i] * invScale));
+            }
+        } else { // IEEE float
+            file.read(reinterpret_cast<char*>(audioData.data()), dataSize);
+            for (size_t i = 0; i < audioData.size(); ++i) {
+                audioData[i] = std::max(-1.0f, std::min(1.0f, audioData[i]));
+            }
         }
     }
 
-    sampleRate = header.sampleRate;
-    numChannels = header.numChannels;
+    sampleRate = sr;
+    numChannels = channelCount;
 
     Log::info("WAV loaded: " + std::to_string(audioData.size()) + " samples, " +
               std::to_string(sampleRate) + " Hz, " + std::to_string(numChannels) + " channels");
@@ -747,9 +660,14 @@ void Track::setPosition(double seconds) {
 }
 
 // Audio Processing
-void Track::processAudio(float* outputBuffer, uint32_t numFrames, double streamTime) {
+void Track::processAudio(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate) {
     if (!outputBuffer || numFrames == 0) {
         return;
+    }
+
+    // Fallback to sane output sample rate to avoid divide-by-zero
+    if (outputSampleRate <= 0.0) {
+        outputSampleRate = 48000.0;
     }
 
     TrackState currentState = getState();
@@ -760,7 +678,7 @@ void Track::processAudio(float* outputBuffer, uint32_t numFrames, double streamT
     switch (currentState) {
         case TrackState::Playing: {
             // Copy audio data to temporary buffer
-            copyAudioData(trackBuffer.data(), numFrames);
+            copyAudioData(trackBuffer.data(), numFrames, outputSampleRate);
             
             // Process through mixer bus for volume/pan/mute/solo
             if (m_mixerBus) {
@@ -792,10 +710,9 @@ void Track::processAudio(float* outputBuffer, uint32_t numFrames, double streamT
         double currentPos = m_positionSeconds.load();
         
         // CRITICAL FIX: Use OUTPUT sample rate (48000Hz), not track sample rate
-        // When playing 44100Hz file on 48000Hz output, position was incrementing too fast
-        // causing audio to cut 7+ seconds early!
-        const double OUTPUT_SAMPLE_RATE = 48000.0;
-        double newPos = currentPos + (numFrames / OUTPUT_SAMPLE_RATE);
+        // When playing 44100Hz file on higher output rates, position must be advanced
+        // using the device sample rate to keep timeline in sync.
+        double newPos = currentPos + (numFrames / outputSampleRate);
         
         if (newPos >= getDuration()) {
             setPosition(0.0);
@@ -811,7 +728,7 @@ void Track::generateSilence(float* buffer, uint32_t numFrames) {
     }
 }
 
-void Track::copyAudioData(float* outputBuffer, uint32_t numFrames) {
+void Track::copyAudioData(float* outputBuffer, uint32_t numFrames, double outputSampleRate) {
     if (m_audioData.empty()) {
         generateSilence(outputBuffer, numFrames);
         return;
@@ -821,7 +738,9 @@ void Track::copyAudioData(float* outputBuffer, uint32_t numFrames) {
     double phase = m_playbackPhase.load();
     
     // Calculate sample rate ratio for resampling
-    const double outputSampleRate = 48000.0;
+    if (outputSampleRate <= 0.0) {
+        outputSampleRate = 48000.0;
+    }
     const double sampleRateRatio = static_cast<double>(m_sampleRate) / outputSampleRate;
 
     // Process audio based on quality settings

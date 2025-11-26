@@ -1412,6 +1412,7 @@ private:
             auto trackManager = app->m_content->getTrackManagerUI()->getTrackManager();
             if (trackManager) {
                 // Let track manager mix all playing tracks
+                trackManager->setOutputSampleRate(static_cast<double>(app->m_mainStreamConfig.sampleRate));
                 trackManager->processAudio(outputBuffer, nFrames, streamTime);
             }
         }
