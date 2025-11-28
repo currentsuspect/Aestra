@@ -672,17 +672,21 @@ void Track::processAudio(float* outputBuffer, uint32_t numFrames, double streamT
 
     TrackState currentState = getState();
 
-    // Create temporary buffer for this track's audio before mixing
-    std::vector<float> trackBuffer(numFrames * m_numChannels, 0.0f);
+    // Reuse per-track temp buffer to avoid allocations each callback
+    size_t requiredSamples = static_cast<size_t>(numFrames) * m_numChannels;
+    if (m_tempBuffer.size() < requiredSamples) {
+        m_tempBuffer.resize(requiredSamples);
+    }
+    float* trackBuffer = m_tempBuffer.data();
 
     switch (currentState) {
         case TrackState::Playing: {
             // Copy audio data to temporary buffer
-            copyAudioData(trackBuffer.data(), numFrames, outputSampleRate);
+            copyAudioData(trackBuffer, numFrames, outputSampleRate);
             
             // Process through mixer bus for volume/pan/mute/solo
             if (m_mixerBus) {
-                m_mixerBus->process(trackBuffer.data(), numFrames);
+                m_mixerBus->process(trackBuffer, numFrames);
             }
             
             // Mix into output buffer

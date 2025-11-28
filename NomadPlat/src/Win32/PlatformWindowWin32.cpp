@@ -438,12 +438,19 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
         case WM_SIZE: {
             int width = LOWORD(lParam);
             int height = HIWORD(lParam);
-            if (width != m_width || height != m_height) {
+            bool sizeChanged = (width != m_width || height != m_height);
+            bool minimizedEvent = (wParam == SIZE_MINIMIZED);
+            bool restoredEvent = (wParam == SIZE_RESTORED);
+
+            if (sizeChanged) {
                 m_width = width;
                 m_height = height;
-                if (m_resizeCallback) {
-                    m_resizeCallback(width, height);
-                }
+            }
+
+            // Notify resize callback even when minimized/restored so renderers can
+            // flush caches when the window hides/shows without a size delta.
+            if (m_resizeCallback && (sizeChanged || minimizedEvent || restoredEvent)) {
+                m_resizeCallback(width, height);
             }
             return 0;
         }

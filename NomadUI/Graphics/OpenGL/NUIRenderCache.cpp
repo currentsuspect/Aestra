@@ -11,6 +11,17 @@
 
 // GLAD must be included after Windows headers
 #include "../../External/glad/include/glad/glad.h"
+#include <cstring>
+
+#ifndef GL_DRAW_BUFFER
+#define GL_DRAW_BUFFER 0x0C01
+#endif
+#ifndef GL_SCISSOR_BOX
+#define GL_SCISSOR_BOX 0x0C10
+#endif
+#ifndef GL_READ_BUFFER
+#define GL_READ_BUFFER 0x0C02
+#endif
 
 #ifndef GL_VIEWPORT
 #define GL_VIEWPORT 0x0BA2
@@ -63,6 +74,15 @@ namespace NomadUI {
             }
 
             return it->second.get();
+        }
+
+        // Soft cap memory usage to avoid runaway FBO allocations
+        size_t currentBytes = getMemoryUsage();
+        size_t newBytes = static_cast<size_t>(size.width * size.height * 4);
+        if (currentBytes + newBytes > m_maxMemoryBytes) {
+            std::cerr << "[NUIRenderCache] Skipping cache creation (over budget): "
+                      << currentBytes + newBytes << " bytes" << std::endl;
+            return nullptr;
         }
 
         auto cache = std::make_unique<CachedRenderData>();
@@ -231,12 +251,21 @@ namespace NomadUI {
 
         // Capture current viewport to restore later
         GLint viewport[4];
-        glGetIntegerv(GL_VIEWPORT, viewport);
+    glGetIntegerv(GL_VIEWPORT, viewport);
         m_previousViewport[0] = viewport[0];
         m_previousViewport[1] = viewport[1];
         m_previousViewport[2] = viewport[2];
         m_previousViewport[3] = viewport[3];
         m_restoreViewport = true;
+
+        // Capture and restore clear color/draw/read buffers to avoid side effects
+        glGetIntegerv(GL_DRAW_BUFFER, reinterpret_cast<GLint*>(&m_previousDrawBuffer));
+#if defined(GL_COLOR_CLEAR_VALUE)
+        glGetFloatv(GL_COLOR_CLEAR_VALUE, m_previousClearColor);
+        m_restoreClearColor = true;
+#else
+        m_restoreClearColor = false;
+#endif
 
         // Track active cache so we can mark content valid when finished
         m_activeCache = cache;
@@ -264,6 +293,10 @@ namespace NomadUI {
     } else {
         m_previousScissorEnabled = false;
     }
+    GLint scissorBox[4] = {0, 0, 0, 0};
+    glGetIntegerv(GL_SCISSOR_BOX, scissorBox);
+    std::memcpy(m_previousScissorBox, scissorBox, sizeof(m_previousScissorBox));
+    m_restoreScissorBox = true;
     glDisable(GL_SCISSOR_TEST);
     glClearColor(0.f, 0.f, 0.f, 0.f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -293,6 +326,14 @@ namespace NomadUI {
             m_restoreViewport = false;
         }
 
+        // Restore draw buffer
+        glDrawBuffer(static_cast<GLenum>(m_previousDrawBuffer));
+        if (m_restoreClearColor) {
+            glClearColor(m_previousClearColor[0], m_previousClearColor[1],
+                         m_previousClearColor[2], m_previousClearColor[3]);
+            m_restoreClearColor = false;
+        }
+
         if (m_activeCache) {
             // Mark cached content as valid now that rendering is complete
             m_activeCache->valid = true;
@@ -307,6 +348,11 @@ namespace NomadUI {
             m_renderer->endOffscreen();
         }
         // Restore caller scissor test state saved at beginCacheRender
+        if (m_restoreScissorBox) {
+            glScissor(m_previousScissorBox[0], m_previousScissorBox[1],
+                      m_previousScissorBox[2], m_previousScissorBox[3]);
+            m_restoreScissorBox = false;
+        }
         if (m_previousScissorEnabled) {
             glEnable(GL_SCISSOR_TEST);
         } else {

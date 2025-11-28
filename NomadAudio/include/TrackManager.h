@@ -143,6 +143,9 @@ private:
     
     // Performance tracking
     std::atomic<double> m_audioLoadPercent{0.0};
+    // Scratch buffers reused for VU extraction to avoid per-callback allocations
+    std::vector<float> m_leftScratch;
+    std::vector<float> m_rightScratch;
     
     // Per-track temporary buffers for parallel processing
     std::vector<std::vector<float>> m_trackBuffers;

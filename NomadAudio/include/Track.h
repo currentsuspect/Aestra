@@ -273,6 +273,9 @@ private:
     // Dithering state (for noise shaping)
     float m_ditherHistory[2]{0.0f, 0.0f};  // Per-channel dither history for noise shaping
 
+    // Temporary buffer reused per process call to avoid allocations
+    mutable std::vector<float> m_tempBuffer;
+
     // Internal audio processing
     void generateSilence(float* buffer, uint32_t numFrames);
     void copyAudioData(float* outputBuffer, uint32_t numFrames, double outputSampleRate);

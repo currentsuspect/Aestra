@@ -212,6 +212,10 @@ void NUIRendererGL::resize(int width, int height) {
     height_ = height;
     updateProjectionMatrix();
     
+    // Invalidate all cached FBOs when the surface size changes
+    // to avoid sampling from stale textures after minimize/restore.
+    renderCache_.clearAll();
+    
     // MSDF text renderer viewport will be updated externally
     
     glViewport(0, 0, width, height);
@@ -226,6 +230,7 @@ void NUIRendererGL::beginFrame() {
     indices_.clear();
     frameCounter_++;
     drawCallCount_ = 0;  // Reset draw call counter each frame
+    renderCache_.setCurrentFrame(frameCounter_);
     
     // Mark all dirty at the start of frame (for simplicity - can be optimized later)
     dirtyRegionManager_.markAllDirty(NUISize(static_cast<float>(width_), static_cast<float>(height_)));
@@ -498,45 +503,7 @@ float NUIRendererGL::getDPIScale() {
     return 1.0f; // Default scale
 }
 
-void NUIRendererGL::renderCharacterImproved(char c, float x, float y, FT_Bitmap* bitmap, const NUIColor& color, float dpiScale) {
-    if (!bitmap || bitmap->width == 0 || bitmap->rows == 0) {
-        return;
-    }
-    
-    // Subpixel positioning for ultra-smooth text (FL Studio style)
-    float startX = x;
-    float startY = y;
-    
-    // Render each pixel with subpixel anti-aliasing
-    for (int row = 0; row < bitmap->rows; row++) {
-        for (int col = 0; col < bitmap->width; col++) {
-            unsigned char alpha = bitmap->buffer[row * bitmap->width + col];
-            
-            if (alpha > 0) {
-                // Subpixel positioning for smooth edges
-                float pixelX = startX + col;
-                float pixelY = startY + row;
-                
-                // Enhanced alpha blending with subpixel precision
-                float normalizedAlpha = alpha / 255.0f;
-                
-                // Subpixel anti-aliasing: blend with neighboring pixels
-                float subpixelAlpha = normalizedAlpha;
-                
-                // Apply gamma correction for better color accuracy
-                float gammaCorrectedAlpha = std::pow(subpixelAlpha, 0.85f);
-                
-                // Create pixel color with subpixel alpha
-                NUIColor pixelColor = color;
-                pixelColor.a = gammaCorrectedAlpha * color.a;
-                
-                // Draw pixel with subpixel positioning for smoothness
-                NUIRect pixelRect(pixelX, pixelY, 1.0f, 1.0f);
-                fillRect(pixelRect, pixelColor);
-            }
-        }
-    }
-}
+// REMOVED: renderCharacterImproved (replaced by atlas rendering)
 
 void NUIRendererGL::drawCleanCharacter(char c, float x, float y, float width, float height, const NUIColor& color) {
     // Clean character rendering using filled rectangles
@@ -1276,110 +1243,174 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         return false;
     }
     
-    // Set font size (48 pixels)
-    FT_Set_Pixel_Sizes(ftFace_, 0, 48);
+    // Set font size (96 pixels for high quality)
+    FT_Set_Pixel_Sizes(ftFace_, 0, 96);
     
-    // Pre-generate character textures for common ASCII characters
+    // Create Texture Atlas
+    // ---------------------------------------------------------
+    glGenTextures(1, &fontAtlasTextureId_);
+    glBindTexture(GL_TEXTURE_2D, fontAtlasTextureId_);
+    
+    // Allocate empty texture storage
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RED,
+        fontAtlasWidth_,
+        fontAtlasHeight_,
+        0,
+        GL_RED,
+        GL_UNSIGNED_BYTE,
+        nullptr
+    );
+    
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+    // Swizzle R to Alpha (so text color works correctly)
+    GLint swizzleMask[] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
+    glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+    
+    // Reset atlas cursor
+    fontAtlasX_ = 0;
+    fontAtlasY_ = 0;
+    fontAtlasRowHeight_ = 0;
+    
+    // Load characters into atlas
     int loadedChars = 0;
+    // Load ASCII + some Latin-1 supplement
     for (unsigned char c = 32; c < 128; c++) {
         if (FT_Load_Char(ftFace_, c, FT_LOAD_RENDER)) {
             std::cerr << "ERROR: Failed to load glyph for character: " << c << std::endl;
             continue;
         }
-        loadedChars++;
         
-        // Generate texture
-        uint32_t textureId;
-        glGenTextures(1, &textureId);
-        glBindTexture(GL_TEXTURE_2D, textureId);
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RED,
-            ftFace_->glyph->bitmap.width,
-            ftFace_->glyph->bitmap.rows,
-            0,
-            GL_RED,
-            GL_UNSIGNED_BYTE,
-            ftFace_->glyph->bitmap.buffer
-        );
+        FT_Bitmap* bitmap = &ftFace_->glyph->bitmap;
+        int width = bitmap->width;
+        int height = bitmap->rows;
         
-        // Set texture parameters
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // Add padding to prevent bleeding
+        int padding = 2;
+        
+        // Check if we need to move to next row
+        if (fontAtlasX_ + width + padding >= fontAtlasWidth_) {
+            fontAtlasX_ = 0;
+            fontAtlasY_ += fontAtlasRowHeight_ + padding;
+            fontAtlasRowHeight_ = 0;
+        }
+        
+        // Check if atlas is full
+        if (fontAtlasY_ + height + padding >= fontAtlasHeight_) {
+            std::cerr << "ERROR: Font atlas full!" << std::endl;
+            break;
+        }
+        
+        // Upload glyph to atlas
+        if (width > 0 && height > 0) {
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            glTexSubImage2D(
+                GL_TEXTURE_2D,
+                0,
+                fontAtlasX_,
+                fontAtlasY_,
+                width,
+                height,
+                GL_RED,
+                GL_UNSIGNED_BYTE,
+                bitmap->buffer
+            );
+        }
         
         // Store character data
         FontData charData;
-        charData.textureId = textureId;
-        charData.width = ftFace_->glyph->bitmap.width;
-        charData.height = ftFace_->glyph->bitmap.rows;
+        charData.textureId = fontAtlasTextureId_;
+        charData.width = width;
+        charData.height = height;
         charData.bearingX = ftFace_->glyph->bitmap_left;
         charData.bearingY = ftFace_->glyph->bitmap_top;
         charData.advance = ftFace_->glyph->advance.x;
         
+        // Calculate UVs
+        float invW = 1.0f / fontAtlasWidth_;
+        float invH = 1.0f / fontAtlasHeight_;
+        
+        charData.u0 = fontAtlasX_ * invW;
+        charData.v0 = fontAtlasY_ * invH;
+        charData.u1 = (fontAtlasX_ + width) * invW;
+        charData.v1 = (fontAtlasY_ + height) * invH;
+        
         fontCache_[c] = charData;
+        
+        // Advance cursor
+        fontAtlasX_ += width + padding;
+        fontAtlasRowHeight_ = std::max(fontAtlasRowHeight_, height);
+        
+        loadedChars++;
     }
     
     fontInitialized_ = true;
-    std::cout << "âœ“ Font loaded successfully: " << fontPath << " (" << loadedChars << " characters)" << std::endl;
+    std::cout << "âœ“ Font loaded successfully: " << fontPath << " (" << loadedChars << " characters in atlas)" << std::endl;
     return true;
 }
 
 void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) {
     NOMAD_ZONE("Text_Render");
     if (!fontInitialized_) {
-        // Fallback to blocky text if font not loaded
         drawText(text, position, fontSize, color);
         return;
     }
     
-    try {
-        // High-quality text rendering with simple improvements
-        float dpiScale = getDPIScale();
-        float actualFontSize = fontSize * dpiScale;
+    // Ensure we are using the font atlas texture
+    if (currentTextureId_ != fontAtlasTextureId_) {
+        flush();
+        currentTextureId_ = fontAtlasTextureId_;
+    }
+    
+    float dpiScale = getDPIScale();
+    float scale = (fontSize * dpiScale) / 96.0f; // 96 is our atlas font size
+    
+    float x = position.x;
+    float y = position.y;
+    
+    for (char c : text) {
+        if (fontCache_.find(c) == fontCache_.end()) continue;
         
-        // Set font size for FreeType with better rendering
-        FT_Set_Pixel_Sizes(ftFace_, 0, static_cast<FT_UInt>(actualFontSize));
+        const FontData& ch = fontCache_[c];
         
-        // Subpixel positioning for ultra-smooth text (FL Studio style)
-        float x = position.x;
-        float y = position.y;
+        float xpos = x + ch.bearingX * scale;
+        float ypos = y - ch.bearingY * scale; // Correct baseline alignment
         
-        // CPU-based text rendering with quality improvements
-        for (char c : text) {
-            if (fontCache_.find(c) == fontCache_.end()) {
-                continue; // Skip unknown characters
-            }
-            
-            // Load character with better rendering quality
-            if (FT_Load_Char(ftFace_, c, FT_LOAD_RENDER)) {
-                continue; // Skip failed characters
-            }
-            
-            FT_Bitmap* bitmap = &ftFace_->glyph->bitmap;
-            if (bitmap->width == 0 || bitmap->rows == 0) {
-                // Advance for spaces and empty characters
-                x += (ftFace_->glyph->advance.x >> 6) / dpiScale;
-                continue;
-            }
-            
-            // Calculate position with proper font metrics
-            float charX = x + (ftFace_->glyph->bitmap_left / dpiScale);
-            float charY = y - (ftFace_->glyph->bitmap_top / dpiScale);
-            
-            // Render character with improved quality
-            renderCharacterImproved(c, charX, charY, bitmap, color, dpiScale);
-            
-            // Advance cursor for next character
-            x += (ftFace_->glyph->advance.x >> 6) / dpiScale;
-        }
+        float w = ch.width * scale;
+        float h = ch.height * scale;
         
-    } catch (...) {
-        // If font rendering fails, fallback to blocky text
-        std::cerr << "Font rendering failed, falling back to blocky text" << std::endl;
-        drawText(text, position, fontSize, color);
+        // Draw textured quad for character
+        // Note: We use the atlas UVs
+        // Fix: Map Top-Left Screen (y) to Top-Texture (v0)
+        // Vertices are: BL, BR, TR, TL (CCW winding)
+        
+        // 0: Bottom-Left (x, y+h) -> v1 (Bottom)
+        addVertex(xpos,     ypos + h, ch.u0, ch.v1, color); 
+        // 1: Bottom-Right (x+w, y+h) -> v1 (Bottom)
+        addVertex(xpos + w, ypos + h, ch.u1, ch.v1, color); 
+        // 2: Top-Right (x+w, y) -> v0 (Top)
+        addVertex(xpos + w, ypos,     ch.u1, ch.v0, color); 
+        // 3: Top-Left (x, y) -> v0 (Top)
+        addVertex(xpos,     ypos,     ch.u0, ch.v0, color);
+        
+        // Add indices for quad
+        uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
+        indices_.push_back(base + 0);
+        indices_.push_back(base + 1);
+        indices_.push_back(base + 2);
+        indices_.push_back(base + 0);
+        indices_.push_back(base + 2);
+        indices_.push_back(base + 3);
+        
+        // Advance cursor
+        x += (ch.advance >> 6) * scale;
     }
 }
 
@@ -1395,8 +1426,11 @@ void NUIRendererGL::drawTexture(uint32_t textureId, const NUIRect& destRect, con
 
     NOMAD_ZONE("Texture_Draw");
 
-    // Flush batch to ensure correct ordering
-    flush();
+    // Check if we need to switch textures (batch breaking)
+    if (currentTextureId_ != td.glId) {
+        flush(); // Draw pending batch with old texture
+        currentTextureId_ = td.glId; // Switch to new texture
+    }
 
     // Compute texture coordinates (sourceRect is in pixels)
     float tx0 = 0.0f, ty0 = 0.0f, tx1 = 1.0f, ty1 = 1.0f;
@@ -1431,31 +1465,6 @@ void NUIRendererGL::drawTexture(uint32_t textureId, const NUIRect& destRect, con
     indices_.push_back(base + 0);
     indices_.push_back(base + 2);
     indices_.push_back(base + 3);
-
-    glBindVertexArray(vao_);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(Vertex), vertices_.data(), GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(uint32_t), indices_.data(), GL_DYNAMIC_DRAW);
-
-    glUseProgram(primitiveShader_.id);
-    glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
-    glUniform1i(primitiveShader_.primitiveTypeLoc, 0);
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, td.glId);
-    glUniform1i(primitiveShader_.textureLoc, 0);
-    glUniform1i(primitiveShader_.useTextureLoc, 1);
-
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()), GL_UNSIGNED_INT, 0);
-    drawCallCount_++;
-    if (Nomad::Profiler::getInstance().isEnabled()) {
-        Nomad::Profiler::getInstance().recordDrawCall();
-        Nomad::Profiler::getInstance().recordTriangles(static_cast<uint32_t>(indices_.size() / 3));
-    }
-
-    vertices_.clear();
-    indices_.clear();
 }
 
 void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba, 
@@ -1727,7 +1736,16 @@ void NUIRendererGL::flush() {
     glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
     // Note: opacity is already in vertex colors
     glUniform1i(primitiveShader_.primitiveTypeLoc, 0); // Simple rect
-    glUniform1i(primitiveShader_.useTextureLoc, 0); // Disable texture sampling for regular geometry
+    
+    // Bind current texture if needed
+    if (currentTextureId_ != 0) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, currentTextureId_);
+        glUniform1i(primitiveShader_.textureLoc, 0);
+        glUniform1i(primitiveShader_.useTextureLoc, 1);
+    } else {
+        glUniform1i(primitiveShader_.useTextureLoc, 0);
+    }
     
     // Draw
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()), GL_UNSIGNED_INT, 0);
@@ -1743,6 +1761,13 @@ void NUIRendererGL::flush() {
     // Clear for next batch
     vertices_.clear();
     indices_.clear();
+    
+    // Reset texture state after flush? No, keep it until it changes or frame ends.
+    // Actually, if we just flushed, we might want to reset if the next call is a non-textured primitive.
+    // But for now, we rely on the caller setting currentTextureId_ = 0 for non-textured.
+    // Let's enforce that: if we flushed, we don't necessarily change the state, 
+    // but addVertex/addQuad should probably set currentTextureId_ = 0 if they don't use textures.
+    // For now, let's just clear the buffers.
 }
 
 // ============================================================================
@@ -1865,10 +1890,16 @@ void NUIRendererGL::addVertex(float x, float y, float u, float v, const NUIColor
 }
 
 void NUIRendererGL::addQuad(const NUIRect& rect, const NUIColor& color) {
-    addVertex(rect.x, rect.y, 0, 0, color);
-    addVertex(rect.right(), rect.y, 1, 0, color);
-    addVertex(rect.right(), rect.bottom(), 1, 1, color);
-    addVertex(rect.x, rect.bottom(), 0, 1, color);
+    // Check if we need to switch to non-textured mode (batch breaking)
+    if (currentTextureId_ != 0) {
+        flush();
+        currentTextureId_ = 0;
+    }
+
+    addVertex(rect.x, rect.y, 0.0f, 0.0f, color);
+    addVertex(rect.right(), rect.y, 1.0f, 0.0f, color);
+    addVertex(rect.right(), rect.bottom(), 1.0f, 1.0f, color);
+    addVertex(rect.x, rect.bottom(), 0.0f, 1.0f, color);
     
     uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
     indices_.push_back(base + 0);
@@ -1938,4 +1969,3 @@ void NUIRendererGL::getOptimizationStats(size_t& batchedQuads, size_t& dirtyRegi
 }
 
 } // namespace NomadUI
-
