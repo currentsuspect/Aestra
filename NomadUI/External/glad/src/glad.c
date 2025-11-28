@@ -61,7 +61,9 @@ PFNGLGENTEXTURESPROC glGenTextures = NULL;
 PFNGLDELETETEXTURESPROC glDeleteTextures = NULL;
 PFNGLBINDTEXTUREPROC glBindTexture = NULL;
 PFNGLTEXIMAGE2DPROC glTexImage2D = NULL;
+PFNGLTEXSUBIMAGE2DPROC glTexSubImage2D = NULL;
 PFNGLTEXPARAMETERIPROC glTexParameteri = NULL;
+PFNGLTEXPARAMETERIVPROC glTexParameteriv = NULL;
 PFNGLACTIVETEXTUREPROC glActiveTexture = NULL;
 PFNGLPIXELSTOREIPROC glPixelStorei = NULL;
 
@@ -135,7 +137,9 @@ int gladLoadGL(void) {
     glDeleteTextures = (PFNGLDELETETEXTURESPROC)get_proc("glDeleteTextures");
     glBindTexture = (PFNGLBINDTEXTUREPROC)get_proc("glBindTexture");
     glTexImage2D = (PFNGLTEXIMAGE2DPROC)get_proc("glTexImage2D");
+    glTexSubImage2D = (PFNGLTEXSUBIMAGE2DPROC)get_proc("glTexSubImage2D");
     glTexParameteri = (PFNGLTEXPARAMETERIPROC)get_proc("glTexParameteri");
+    glTexParameteriv = (PFNGLTEXPARAMETERIVPROC)get_proc("glTexParameteriv");
     glActiveTexture = (PFNGLACTIVETEXTUREPROC)get_proc("glActiveTexture");
     glPixelStorei = (PFNGLPIXELSTOREIPROC)get_proc("glPixelStorei");
     

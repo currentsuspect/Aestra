@@ -1,20 +1,24 @@
 # NOMAD Documentation Index
 
-**"Built from scratch. Perfected with intention."**
+> **Built from scratch. Perfected with intention.**
 
 This directory contains comprehensive documentation for the NOMAD DAW project, organized into logical categories for easy navigation.
 
 ## 📁 Directory Structure
 
 ### 🏛️ [architecture/](architecture/)
+
 Architectural documentation and design decisions:
+
 - [ADAPTIVE_FPS_ARCHITECTURE.md](architecture/ADAPTIVE_FPS_ARCHITECTURE.md) - Adaptive frame rate system design
 - [DROPDOWN_ARCHITECTURE.md](architecture/DROPDOWN_ARCHITECTURE.md) - Dropdown menu system architecture
 - [NOMAD_MODE_IMPLEMENTATION.md](architecture/NOMAD_MODE_IMPLEMENTATION.md) - NOMAD mode implementation details
 - [NOMADUI_COORDINATE_SYSTEM.md](architecture/NOMADUI_COORDINATE_SYSTEM.md) - **CRITICAL:** UI coordinate system specification
 
 ### 📖 [guides/](guides/)
+
 How-to guides and reference documentation:
+
 - [DEVELOPER_GUIDE.md](guides/DEVELOPER_GUIDE.md) - Philosophy, architecture, and contribution guidelines
 - [ADAPTIVE_FPS_GUIDE.md](guides/ADAPTIVE_FPS_GUIDE.md) - Using the adaptive FPS system
 - [ADAPTIVE_FPS_README.md](guides/ADAPTIVE_FPS_README.md) - Adaptive FPS quick reference
@@ -25,7 +29,9 @@ How-to guides and reference documentation:
 - [DOCUMENTATION_POLISH_V1.1.md](guides/DOCUMENTATION_POLISH_V1.1.md) - Documentation standards
 
 ### 🔧 [systems/](systems/)
+
 System-specific technical documentation:
+
 - [AUDIO_DRIVER_SYSTEM.md](systems/AUDIO_DRIVER_SYSTEM.md) - Audio driver architecture and implementation
 - [AUDIO_TIMING_QUALITY.md](systems/AUDIO_TIMING_QUALITY.md) - Audio timing and quality analysis
 - [CUSTOM_WINDOW_INTEGRATION.md](systems/CUSTOM_WINDOW_INTEGRATION.md) - Custom window system integration
@@ -33,7 +39,9 @@ System-specific technical documentation:
 - [ADAPTIVE_FPS_PERFORMANCE_DIAGNOSTIC.md](systems/ADAPTIVE_FPS_PERFORMANCE_DIAGNOSTIC.md) - FPS performance diagnostics
 
 ### 📊 [status/](status/)
+
 Project status, analysis, and planning documents:
+
 - [BUILD_STATUS.md](status/BUILD_STATUS.md) - Current build status and module completion
 - [BRANCHING_STRATEGY.md](status/BRANCHING_STRATEGY.md) - Git workflow and commit conventions
 - [CURRENT_STATE_ANALYSIS.md](status/CURRENT_STATE_ANALYSIS.md) - Current project state analysis
@@ -41,7 +49,9 @@ Project status, analysis, and planning documents:
 - [SCREENSHOT_LIMITATION.md](status/SCREENSHOT_LIMITATION.md) - Known screenshot/rendering limitations
 
 ### 🐛 [Bug Reports/](Bug%20Reports/)
+
 Bug reports and issue tracking:
+
 - Historical bug reports and analysis
 
 ## 📚 Core Documentation
@@ -49,18 +59,22 @@ Bug reports and issue tracking:
 ## 🏗️ Module Documentation
 
 ### NomadCore
+
 **Location:** `NomadCore/README.md`
 
 Base utilities for the entire NOMAD ecosystem:
+
 - Math utilities (vectors, matrices, DSP functions)
 - Threading primitives (lock-free structures, thread pools)
 - File I/O (binary serialization, JSON parsing)
 - Logging system (multi-destination, stream-style)
 
 ### NomadPlat
+
 **Location:** `NomadPlat/README.md`
 
 Platform abstraction layer:
+
 - Window management (Win32, X11, Cocoa)
 - Input handling (mouse, keyboard, gamepad)
 - OpenGL context creation
@@ -68,12 +82,15 @@ Platform abstraction layer:
 - Platform utilities (time, dialogs, clipboard)
 
 **Additional Docs:**
+
 - [DPI Support Guide](../NomadPlat/docs/DPI_SUPPORT.md) - Comprehensive DPI implementation details
 
 ### NomadUI
+
 **Location:** `NomadUI/docs/`
 
 UI framework with OpenGL rendering:
+
 - Component system
 - Theme and styling
 - Animation system
@@ -81,6 +98,7 @@ UI framework with OpenGL rendering:
 - Custom windows
 
 **Key Guides:**
+
 - [Platform Migration](../NomadUI/docs/PLATFORM_MIGRATION.md) - Migration from old Windows code to NomadPlat
 - [Architecture](../NomadUI/docs/ARCHITECTURE.md) - UI framework architecture
 - [Custom Window Integration](../NomadUI/docs/CUSTOM_WINDOW_INTEGRATION.md) - Building custom windows
@@ -93,17 +111,20 @@ UI framework with OpenGL rendering:
 ## 🎯 Quick Links
 
 ### For New Contributors
+
 1. Read [Developer Guide](DEVELOPER_GUIDE.md) - Understand the philosophy
 2. Check [Build Status](BUILD_STATUS.md) - See what's complete
 3. Review [Branching Strategy](BRANCHING_STRATEGY.md) - Learn the workflow
 4. Pick a module and dive in!
 
 ### For Module Development
+
 - **Working on Core?** → `NomadCore/README.md`
 - **Working on Platform?** → `NomadPlat/README.md` + `NomadPlat/docs/DPI_SUPPORT.md`
 - **Working on UI?** → `NomadUI/docs/ARCHITECTURE.md`
 
 ### For Integration
+
 - **Adding DPI support?** → `NomadPlat/docs/DPI_SUPPORT.md`
 - **Migrating from old code?** → `NomadUI/docs/PLATFORM_MIGRATION.md`
 - **Building custom windows?** → `NomadUI/docs/CUSTOM_WINDOW_INTEGRATION.md`
@@ -122,17 +143,20 @@ UI framework with OpenGL rendering:
 ## 🔧 Build & Test
 
 ### Quick Build
+
 ```powershell
 .\build.ps1
 ```
 
 ### Manual Build
+
 ```bash
 cmake -B build
 cmake --build build --config Debug
 ```
 
 ### Run Tests
+
 ```bash
 # Core tests
 .\build\NomadCore\Debug\MathTests.exe
@@ -152,12 +176,14 @@ cmake --build build --config Debug
 ## 📝 Documentation Standards
 
 ### File Naming
+
 - `README.md` - Module overview and quick start
 - `GUIDE.md` suffix - Comprehensive guides
 - `STATUS.md` suffix - Status and progress tracking
 - `STRATEGY.md` suffix - Architectural decisions
 
 ### Content Structure
+
 1. **Overview** - What is this?
 2. **Features** - What can it do?
 3. **Usage** - How do I use it?
@@ -166,6 +192,7 @@ cmake --build build --config Debug
 6. **Notes** - Important considerations
 
 ### Code Examples
+
 - Always include complete, runnable examples
 - Show both simple and advanced usage
 - Include error handling
@@ -193,5 +220,5 @@ For questions, suggestions, or contributions, please refer to the project reposi
 
 ---
 
-**Last Updated:** October 2025  
+**Last Updated:** November 2025  
 **Maintained by:** NOMAD Development Team

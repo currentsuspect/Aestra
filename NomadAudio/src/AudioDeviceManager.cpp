@@ -672,7 +672,7 @@ void AudioDeviceManager::checkAndAutoScaleBuffer() {
     DriverStatistics stats = m_activeDriver->getStatistics();
     uint64_t newUnderruns = stats.underrunCount - m_lastUnderrunCount;
     
-    std::cout << "[Auto-Buffer Scaling] Check - Underruns in last minute: " << newUnderruns << std::endl;
+    // std::cout << "[Auto-Buffer Scaling] Check - Underruns in last minute: " << newUnderruns << std::endl;
     
     if (newUnderruns >= m_underrunThreshold) {
         // Need to scale up buffer
@@ -689,14 +689,14 @@ void AudioDeviceManager::checkAndAutoScaleBuffer() {
         } else if (currentBuffer < 1024) {
             newBuffer = 1024;
         } else {
-            std::cerr << "[Auto-Buffer Scaling] Already at maximum buffer size (1024)" << std::endl;
+            // std::cerr << "[Auto-Buffer Scaling] Already at maximum buffer size (1024)" << std::endl;
             m_lastUnderrunCheck = now;
             m_lastUnderrunCount = stats.underrunCount;
             return;
         }
         
-        std::cout << "[Auto-Buffer Scaling] Too many underruns (" << newUnderruns << "/" << m_underrunThreshold 
-                  << ") - increasing buffer: " << currentBuffer << " -> " << newBuffer << " frames" << std::endl;
+        // std::cout << "[Auto-Buffer Scaling] Too many underruns (" << newUnderruns << "/" << m_underrunThreshold 
+        //           << ") - increasing buffer: " << currentBuffer << " -> " << newBuffer << " frames" << std::endl;
         
         // Update buffer size and restart stream
         bool wasRunning = isStreamRunning();
@@ -711,10 +711,10 @@ void AudioDeviceManager::checkAndAutoScaleBuffer() {
             if (wasRunning) {
                 startStream();
             }
-            std::cout << "[Auto-Buffer Scaling] Buffer increased successfully. New latency: " 
-                      << getStreamLatency() * 1000.0 << "ms" << std::endl;
+            // std::cout << "[Auto-Buffer Scaling] Buffer increased successfully. New latency: " 
+            //           << getStreamLatency() * 1000.0 << "ms" << std::endl;
         } else {
-            std::cerr << "[Auto-Buffer Scaling] Failed to reopen stream with new buffer size" << std::endl;
+            // std::cerr << "[Auto-Buffer Scaling] Failed to reopen stream with new buffer size" << std::endl;
         }
     }
     

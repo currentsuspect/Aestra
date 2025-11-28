@@ -65,6 +65,7 @@ typedef ptrdiff_t GLsizeiptr;
 #define GL_LINEAR 0x2601
 #define GL_CLAMP_TO_EDGE 0x812F
 #define GL_UNPACK_ALIGNMENT 0x0CF5
+#define GL_TEXTURE_SWIZZLE_RGBA 0x8E46
 #define GL_ONE 1
 #define GL_SRC_ALPHA 0x0302
 #define GL_ONE_MINUS_SRC_ALPHA 0x0303
@@ -159,7 +160,9 @@ typedef void (APIENTRY *PFNGLGENTEXTURESPROC)(GLsizei n, GLuint *textures);
 typedef void (APIENTRY *PFNGLDELETETEXTURESPROC)(GLsizei n, const GLuint *textures);
 typedef void (APIENTRY *PFNGLBINDTEXTUREPROC)(GLenum target, GLuint texture);
 typedef void (APIENTRY *PFNGLTEXIMAGE2DPROC)(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void *pixels);
+typedef void (APIENTRY *PFNGLTEXSUBIMAGE2DPROC)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *pixels);
 typedef void (APIENTRY *PFNGLTEXPARAMETERIPROC)(GLenum target, GLenum pname, GLint param);
+typedef void (APIENTRY *PFNGLTEXPARAMETERIVPROC)(GLenum target, GLenum pname, const GLint *params);
 typedef void (APIENTRY *PFNGLACTIVETEXTUREPROC)(GLenum texture);
 typedef void (APIENTRY *PFNGLPIXELSTOREIPROC)(GLenum pname, GLint param);
 
@@ -223,7 +226,9 @@ extern PFNGLGENTEXTURESPROC glGenTextures;
 extern PFNGLDELETETEXTURESPROC glDeleteTextures;
 extern PFNGLBINDTEXTUREPROC glBindTexture;
 extern PFNGLTEXIMAGE2DPROC glTexImage2D;
+extern PFNGLTEXSUBIMAGE2DPROC glTexSubImage2D;
 extern PFNGLTEXPARAMETERIPROC glTexParameteri;
+extern PFNGLTEXPARAMETERIVPROC glTexParameteriv;
 extern PFNGLACTIVETEXTUREPROC glActiveTexture;
 extern PFNGLPIXELSTOREIPROC glPixelStorei;
 

@@ -4,15 +4,7 @@
 
 cmake_minimum_required(VERSION 3.22)
 
-# Check if Remotery profiler is available
-set(REMOTERY_SOURCE "${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib/Remotery.c")
-if(EXISTS "${REMOTERY_SOURCE}")
-	set(NOMAD_HAS_REMOTERY ON)
-	message(STATUS "Remotery profiler: ENABLED")
-else()
-	set(NOMAD_HAS_REMOTERY OFF)
-	message(STATUS "Remotery profiler: DISABLED (files not found)")
-endif()
+
 
 # Create executable
 set(NOMAD_DAW_SOURCES
@@ -47,13 +39,7 @@ set(NOMAD_DAW_SOURCES
 	PerformanceHUD.cpp
 )
 
-# Conditionally add Remotery sources if available
-if(NOMAD_HAS_REMOTERY)
-	list(APPEND NOMAD_DAW_SOURCES
-		${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib/Remotery.c
-		${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib/Remotery.h
-	)
-endif()
+
 
 add_executable(NOMAD_DAW ${NOMAD_DAW_SOURCES})
 
@@ -83,16 +69,7 @@ target_include_directories(NOMAD_DAW PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/license
 )
 
-# Conditionally include Remotery directory and define if available
-if(NOMAD_HAS_REMOTERY)
-	target_include_directories(NOMAD_DAW PRIVATE
-		${CMAKE_SOURCE_DIR}/NomadUI/External/Remotery/lib
-	)
-	target_compile_definitions(NOMAD_DAW PRIVATE
-		NOMAD_ENABLE_REMOTERY=1
-		RMT_ENABLED=1
-	)
-endif()
+
 
 # Platform-specific settings
 if(WIN32)

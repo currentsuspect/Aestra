@@ -3,6 +3,7 @@
 
 #include "../Graphics/NUIRenderer.h"
 #include <algorithm>
+#include <string>
 
 namespace NomadUI {
 
@@ -13,7 +14,46 @@ TimelineRuler::TimelineRuler()
 
 void TimelineRuler::onRender(NUIRenderer& renderer)
 {
-    (void)renderer;
+    NUIRect bounds = getBounds();
+    
+    // Background
+    renderer.fillRect(bounds, NUIColor::fromHex(0x2A2A2AFF));
+    
+    // Bottom border
+    renderer.drawLine(NUIPoint(bounds.x, bounds.bottom()), 
+                      NUIPoint(bounds.right(), bounds.bottom()), 
+                      1.0f, NUIColor::fromHex(0x3A3A3AFF));
+
+    // Ticks and Labels
+    // Assume 120 BPM, 4/4 signature for now
+    // zoom_ = pixels per beat? Let's say zoom 1.0 = 50 pixels per beat.
+    float pixelsPerBeat = 50.0f * static_cast<float>(zoom_);
+    float pixelsPerBar = pixelsPerBeat * 4.0f;
+    
+    int startBar = 0;
+    int endBar = static_cast<int>(bounds.width / pixelsPerBar) + 1;
+    
+    for (int bar = startBar; bar <= endBar; ++bar) {
+        float x = bounds.x + bar * pixelsPerBar;
+        
+        // Major tick (Bar)
+        renderer.drawLine(NUIPoint(x, bounds.bottom()), 
+                          NUIPoint(x, bounds.bottom() - 15.0f), 
+                          1.0f, NUIColor::fromHex(0xAAAAAAFF));
+                          
+        // Label
+        std::string label = std::to_string(bar + 1);
+        renderer.drawText(label, NUIPoint(x + 5.0f, bounds.y + 5.0f), 10.0f, NUIColor::fromHex(0xAAAAAAFF));
+        
+        // Minor ticks (Beats)
+        for (int beat = 1; beat < 4; ++beat) {
+            float bx = x + beat * pixelsPerBeat;
+            if (bx > bounds.right()) break;
+            renderer.drawLine(NUIPoint(bx, bounds.bottom()), 
+                              NUIPoint(bx, bounds.bottom() - 8.0f), 
+                              1.0f, NUIColor::fromHex(0x666666FF));
+        }
+    }
 }
 
 void TimelineRuler::setZoom(double zoom)
@@ -189,4 +229,3 @@ void ArrangementCanvas::setTimeline(std::shared_ptr<TimelineRuler> ruler)
 }
 
 } // namespace NomadUI
-

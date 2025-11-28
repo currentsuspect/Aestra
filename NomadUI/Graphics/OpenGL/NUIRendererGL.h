@@ -194,7 +194,8 @@ private:
     
     // High-quality text rendering helpers
     float getDPIScale();
-    void renderCharacterImproved(char c, float x, float y, FT_Bitmap* bitmap, const NUIColor& color, float dpiScale);
+
+    // REMOVED: renderCharacterImproved (replaced by atlas rendering)
     
     // Shader helpers
     uint32_t compileShader(const char* source, uint32_t type);
@@ -240,7 +241,11 @@ private:
     int fboWidth_ = 0;
     int fboHeight_ = 0;
     bool renderingToTexture_ = false;
+
     uint32_t lastRenderTextureId_ = 0;
+    
+    // Batching state
+    uint32_t currentTextureId_ = 0; // 0 = no texture (flat color)
     
     // Optimization systems
     NUIBatchManager batchManager_;
@@ -253,13 +258,22 @@ private:
     
     // FreeType text rendering
     struct FontData {
-        uint32_t textureId;
+        uint32_t textureId; // Now refers to the atlas texture
         int width, height;
         int bearingX, bearingY;
         int advance;
+        // Atlas UV coordinates
+        float u0, v0, u1, v1;
     };
     std::unordered_map<char, FontData> fontCache_;
     bool fontInitialized_;
+    uint32_t fontAtlasTextureId_ = 0; // The single texture atlas
+    int fontAtlasWidth_ = 2048;
+    int fontAtlasHeight_ = 2048;
+    int fontAtlasX_ = 0;
+    int fontAtlasY_ = 0;
+    int fontAtlasRowHeight_ = 0;
+
     FT_Library ftLibrary_;
     FT_Face ftFace_;
     

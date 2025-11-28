@@ -515,11 +515,6 @@ target_precompile_headers(NOMAD PRIVATE
 
 **See:** [Debugging Guide → Tracy Profiler](debugging.md#-tracy-profiler)
 
-Enable Tracy and profile your code:
-```cpp
-NOMAD_ZONE("MyFunction");
-```
-
 ### Visual Studio Profiler
 
 1. `Debug → Performance Profiler`
