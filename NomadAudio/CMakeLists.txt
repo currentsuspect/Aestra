@@ -178,6 +178,17 @@ target_link_libraries(NomadOscillatorTest
         NomadCore
 )
 
+# WAV loader regression test
+add_executable(NomadWavLoaderTest
+    test/WavLoaderTest.cpp
+)
+
+target_link_libraries(NomadWavLoaderTest
+    PRIVATE
+        NomadAudio
+        NomadCore
+)
+
 # =============================================================================
 # Status
 # =============================================================================
