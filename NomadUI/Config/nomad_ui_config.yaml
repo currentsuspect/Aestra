@@ -73,7 +73,7 @@ layout:
   # Track dimensions
   trackHeight: 80.0                # Height of each track row
   trackSpacing: 5.0                # Space between tracks (currently 0 for touching)
-  trackLabelHeight: 20.0           # Height of track name label
+  trackLabelHeight: 28.0           # Height of track name label
 
   # Transport bar dimensions
   transportBarHeight: 60.0         # Height of transport controls
@@ -81,10 +81,10 @@ layout:
   transportButtonSpacing: 8.0      # Space between transport buttons
 
   # Control button dimensions (compact)
-  controlButtonWidth: 20.0         # Width of M/S/R buttons
-  controlButtonHeight: 15.0        # Height of M/S/R buttons
+  controlButtonWidth: 28.0         # Width of M/S/R buttons
+  controlButtonHeight: 22.0        # Height of M/S/R buttons
   controlButtonSpacing: 2.0        # Space between control buttons
-  controlButtonStartX: 20.0        # X position where control buttons start
+  controlButtonStartX: 180.0       # X position where control buttons start
 
   # Grid and timeline
   gridLineSpacing: 50.0            # Distance between vertical grid lines
@@ -119,13 +119,65 @@ spacing:
 typography:
   fontSizeXS: 10.0                 # Extra small text
   fontSizeS: 12.0                  # Small text
-  fontSizeM: 14.0                  # Medium text (default)
-  fontSizeL: 16.0                  # Large text
-  fontSizeXL: 18.0                 # Extra large text
-  fontSizeXXL: 24.0                # Double extra large text
-  fontSizeH1: 32.0                 # Heading 1
-  fontSizeH2: 28.0                 # Heading 2
-  fontSizeH3: 24.0                 # Heading 3
+  fontSizeM: 18.0                  # Medium text (default)
+  fontSizeL: 20.0                  # Large text
+  fontSizeXL: 22.0                 # Extra large text
+  fontSizeXXL: 28.0                # Double extra large text
+  fontSizeH1: 34.0                 # Heading 1
+  fontSizeH2: 30.0                 # Heading 2
+  fontSizeH3: 26.0                 # Heading 3
+
+  lineHeightTight: 1.2             # Tight line spacing
+  lineHeightNormal: 1.4            # Normal line spacing
+  lineHeightRelaxed: 1.6           # Relaxed line spacing
+
+# Border Radius
+radius:
+  xs: 2.0                          # Extra small radius
+  s: 4.0                           # Small radius
+  m: 8.0                           # Medium radius (default)
+  l: 12.0                          # Large radius
+  xl: 16.0                         # Extra large radius
+  xxl: 24.0                        # Double extra large radius
+
+# Shadows
+shadows:
+  xs: [0, 1, 2, 0, "#000000", 0.1]    # Extra small shadow
+  s: [0, 2, 4, 0, "#000000", 0.15]    # Small shadow
+  m: [0, 4, 8, 0, "#000000", 0.4]     # Medium shadow (ambient)
+  l: [0, 8, 16, 0, "#000000", 0.6]    # Large shadow (floating UI)
+  xl: [0, 16, 32, 0, "#000000", 0.6]  # Extra large shadow
+
+# Animation Settings
+animations:
+  durationFast: 150.0              # Fast animations (ms)
+  durationNormal: 250.0            # Normal animations (ms)
+  durationSlow: 350.0              # Slow animations (ms)
+
+  easingStandard: "ease-out-cubic" # Standard easing
+  easingDecelerate: "ease-out-cubic" # Decelerate easing
+  easingAccelerate: "ease-in-cubic"  # Accelerate easing
+  easingSharp: "ease-in-out-cubic"   # Sharp easing
+
+# Z-Index Layers
+zIndex:
+  background: 0                    # Background layer
+  surface: 100                     # Surface layer
+  dropdown: 200                    # Dropdown layer
+  modal: 300                       # Modal layer
+  tooltip: 400                     # Tooltip layer
+  notification: 500                # Notification layer
+
+# Component-Specific Settings
+components:
+  # Dropdown styling - Modern FL Studio inspired
+  dropdown:
+    background: "#28282d"           # Dropdown background (surfaceTertiary)
+    border: "#000000"               # Black border for modern look
+    borderRadius: 8.0               # Modern rounded corners
+    padding: 8.0                    # Internal padding
+    itemHeight: 32.0                # Height of dropdown items
+    itemSpacing: 4.0                # Space between items
 
   lineHeightTight: 1.2             # Tight line spacing
   lineHeightNormal: 1.4            # Normal line spacing
@@ -192,13 +244,21 @@ components:
     hoverOpacity: 0.1              # Hover effect opacity
     scrollbarWidth: 8.0            # Width of scrollbar
     headerHeight: 45.0             # Height of toolbar + path bar (more compact)
+    previewPanelWidth: 220.0       # Width of preview panel when visible
+    previewPanelMinHeight: 150.0   # Minimum height for preview panel
+    breadcrumbHeight: 28.0         # Height of breadcrumb bar
+    breadcrumbButtonSpacing: 4.0   # Space between breadcrumbs
+    searchBoxHeight: 28.0          # Search input height
+    searchBoxWidth: 180.0          # Default search box width
+    favoriteStarSize: 16.0         # Size of favorite star icon
+    waveformHeight: 80.0           # Height of waveform preview
 
   # Track Controls
   trackControls:
     background: "#19191c"           # Same black as title bar
     border: "#323238"               # Subtle border
     padding: 8.0                    # Internal padding
-    buttonStartX: 20.0             # X position (aligned like add button)
+    buttonStartX: 180.0            # X position (aligned like add button)
     buttonSpacing: 2.0             # Tight spacing between buttons
     buttonWidth: 28.0              # Width of M/S/R buttons (increased from 25.0)
     buttonHeight: 22.0             # Height of M/S/R buttons (increased from 20.0)

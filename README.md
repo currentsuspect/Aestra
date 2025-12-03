@@ -381,6 +381,40 @@ See **[SECURITY.md](SECURITY.md)** for our full security policy.
 
 ---
 
+## 💬 Community
+
+Join the conversation:
+
+- **Discord** — [Invite Link](https://discord.gg/nomad-studios)
+- **GitHub Discussions** — [Open Discussions](https://github.com/NomadStudios/Nomad/discussions)
+- **Twitter/X** — [@NomadStudios](https://twitter.com/NomadStudios)
+
+---
+
+## 📜 License
+
+Nomad is distributed under the **Nomad Studios Software Agreement License (NSSAL) v1.1**. See **[LICENSE](LICENSE)** for full terms.
+
+**Key Terms:**
+
+- **Non-commercial use only** (for now)
+- **No redistribution** without permission
+- **No reverse engineering** of proprietary components
+
+For commercial licensing inquiries, contact: [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
+
+---
+
+## 🎵 Support Nomad
+
+If you enjoy using Nomad, consider supporting its development:
+
+- **GitHub Sponsors** — [Sponsor Nomad](https://github.com/sponsors/NomadStudios)
+- **Ko-fi** — [Buy Me a Coffee](https://ko-fi.com/nomadstudios)
+- **Patreon** — [Become a Patron](https://patreon.com/Nomad_Studios?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink)
+
+---
+
 <div align="center">
 
 **Built by musicians, for musicians. Crafted with intention.** 🎵
@@ -388,6 +422,7 @@ See **[SECURITY.md](SECURITY.md)** for our full security policy.
 ⭐ **Star this repo** if you believe in transparent, professional audio software!
 
 *Copyright © 2025 Dylan Makori / Nomad Studios. All rights reserved.*  
-*Licensed under NSSAL v1.0*
+*Licensed under NSSAL v1.1*
 
 </div>
+</html>

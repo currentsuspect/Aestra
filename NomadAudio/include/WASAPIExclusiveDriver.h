@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "NativeAudioDriver.h"
@@ -52,6 +52,7 @@ public:
     void stopStream() override;
     bool isStreamRunning() const override { return m_isRunning; }
     double getStreamLatency() const override;
+    uint32_t getStreamSampleRate() const override { return m_waveFormat ? m_waveFormat->nSamplesPerSec : 0; }
 
     /**
      * @brief Check if exclusive mode is available for a device

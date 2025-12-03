@@ -35,21 +35,40 @@ void NUIButton::onRender(NUIRenderer& renderer)
     // Get current colors based on state
     NUIColor bgColor = backgroundColor_;
     NUIColor textColor = textColor_;
+    NUIColor borderColor = textColor.withAlpha(0.65f);
+
+    // Style-specific baselines
+    if (style_ == Style::Primary) {
+        bgColor = theme.primary;
+        textColor = NUIColor::white();
+        borderColor = theme.primary.lightened(0.15f);
+    } else if (style_ == Style::Secondary) {
+        bgColor = theme.surface.lightened(0.08f);
+        borderColor = theme.border.withAlpha(0.8f);
+    } else if (style_ == Style::Icon) {
+        bgColor = theme.surface.darkened(0.06f);
+        borderColor = theme.border.withAlpha(0.55f);
+    }
 
     // Update colors based on state (simple color changes, no animations)
     switch (state_)
     {
         case State::Hovered:
-            if (enabled_)
+            if (enabled_) {
                 bgColor = hoverColor_;
+                borderColor = borderColor.lightened(0.12f);
+            }
             break;
         case State::Pressed:
-            if (enabled_)
+            if (enabled_) {
                 bgColor = pressedColor_;
+                borderColor = borderColor.darkened(0.1f);
+            }
             break;
         case State::Disabled:
             bgColor = backgroundColor_.withAlpha(0.5f);
             textColor = textColor_.withAlpha(0.5f);
+            borderColor = borderColor.withAlpha(0.35f);
             break;
         case State::Normal:
         default:
@@ -60,26 +79,47 @@ void NUIButton::onRender(NUIRenderer& renderer)
     if (toggleable_ && toggled_)
     {
         bgColor = pressedColor_;
+        borderColor = borderColor.darkened(0.08f);
     }
 
     // Single-call rendering based on style
     float cornerRadius = (style_ == Style::Icon) ? std::min(bounds.width, bounds.height) * 0.5f : theme.radiusM;
     
-    // Just background + border - 2 draw calls total!
+    // Depth: subtle shadow for lift
+    if (enabled_) {
+        const auto& shadow = theme.shadowS;
+        float blur = shadow.blurRadius > 0.0f ? shadow.blurRadius : 4.0f;
+        float offsetX = shadow.offsetX;
+        float offsetY = (shadow.offsetY != 0.0f ? shadow.offsetY : 1.5f);
+        NUIColor shadowColor = shadow.color.withAlpha(shadow.opacity * bgColor.a);
+        renderer.drawShadow(bounds, offsetX, offsetY, blur, shadowColor);
+    }
+
+    // Base fill
     renderer.fillRoundedRect(bounds, cornerRadius, bgColor);
-    
+
+    // Soft sheen on the top half for a tactile feel
+    NUIRect sheenRect = bounds;
+    sheenRect.height *= 0.55f;
+    renderer.fillRoundedRect(sheenRect, cornerRadius, bgColor.lightened(0.12f).withAlpha(0.35f));
+
     // Border only for non-text buttons
     if (style_ != Style::Text) {
-        // Border: darker on hover, semi-transparent white when not hovering
-        NUIColor borderColor = (state_ == State::Hovered) ? NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f) : textColor.withAlpha(0.6f);
         float borderWidth = (style_ == Style::Secondary) ? 2.0f : 1.0f;
-        renderer.strokeRoundedRect(bounds, cornerRadius, borderWidth, borderColor);
+        // Inset the stroke so the arc matches the fill curvature
+        NUIRect strokeRect = bounds;
+        strokeRect.x += borderWidth * 0.5f;
+        strokeRect.y += borderWidth * 0.5f;
+        strokeRect.width -= borderWidth;
+        strokeRect.height -= borderWidth;
+        float strokeRadius = std::max(0.0f, cornerRadius - borderWidth * 0.5f);
+        renderer.strokeRoundedRect(strokeRect, strokeRadius, borderWidth, borderColor);
     }
 
     // Draw text (1 draw call)
     if (!text_.empty() && style_ != Style::Icon)
     {
-        float fontSize = std::min(14.0f, bounds.height * 0.5f);
+        float fontSize = fontSize_ > 0.0f ? fontSize_ : std::clamp(bounds.height * 0.56f, 12.0f, 18.0f);
         
         // Calculate text color - grey on hover by default
         NUIColor finalTextColor = textColor;
@@ -101,15 +141,12 @@ void NUIButton::onRender(NUIRenderer& renderer)
             }
         }
 
-        // Use same vertical alignment as BPM/timer displays
-        float textY = bounds.y + (bounds.height - fontSize) / 2.0f + fontSize * 0.75f;
-        float textX = bounds.x + (bounds.width / 2.0f); // Center horizontally
-        
-        // Manual horizontal centering
+        // Measure text for precise centering; drawText expects baseline Y
         NUISize textSize = renderer.measureText(text_, fontSize);
-        textX -= textSize.width / 2.0f;
+        float textX = bounds.x + (bounds.width - textSize.width) * 0.5f;
+        float baselineY = bounds.y + (bounds.height - textSize.height) * 0.5f + textSize.height;
         
-        renderer.drawText(text_, NUIPoint(textX, textY), fontSize, finalTextColor);
+        renderer.drawText(text_, NUIPoint(textX, baselineY), fontSize, finalTextColor);
     }
 
 #ifdef NOMAD_ENABLE_PROFILING

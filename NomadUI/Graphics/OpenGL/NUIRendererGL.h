@@ -3,6 +3,7 @@
 
 #include "../NUIRenderer.h"
 #include "../NUIFont.h"
+#include "../NUITextRendererSDF.h"
 #include "../NUITextRenderer.h"
 #include "../NUITextRendererGDI.h"
 #include "../NUITextRendererModern.h"
@@ -168,9 +169,13 @@ private:
         int32_t opacityLoc = -1;
         int32_t primitiveTypeLoc = -1;
         int32_t radiusLoc = -1;
-        int32_t sizeLoc = -1;
+        int32_t rectWidthLoc = -1;
+        int32_t rectHeightLoc = -1;
+        int32_t quadWidthLoc = -1;
+        int32_t quadHeightLoc = -1;
         int32_t textureLoc = -1;
         int32_t useTextureLoc = -1;
+        int32_t blurLoc = -1;
     };
     
     // Transform stack
@@ -202,6 +207,7 @@ private:
     uint32_t linkProgram(uint32_t vertexShader, uint32_t fragmentShader);
     
     // Drawing helpers
+    void ensureBasicPrimitive();
     void addVertex(float x, float y, float u, float v, const NUIColor& color);
     void addQuad(const NUIRect& rect, const NUIColor& color);
     void applyTransform(float& x, float& y);
@@ -246,6 +252,11 @@ private:
     
     // Batching state
     uint32_t currentTextureId_ = 0; // 0 = no texture (flat color)
+    int currentPrimitiveType_ = 0;
+    float currentRadius_ = 0.0f;
+    float currentBlur_ = 0.0f;
+    NUISize currentSize_ = {0.0f, 0.0f};
+    NUISize currentQuadSize_ = {0.0f, 0.0f};
     
     // Optimization systems
     NUIBatchManager batchManager_;
@@ -255,6 +266,9 @@ private:
     
     // Text rendering support
     std::string defaultFontPath_;
+    std::unique_ptr<NUITextRendererSDF> sdfRenderer_;
+    bool useSDFText_{false};
+    bool triedSDFInit_{false};
     
     // FreeType text rendering
     struct FontData {

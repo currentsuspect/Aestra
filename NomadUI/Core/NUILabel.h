@@ -39,6 +39,8 @@ public:
 
     void setTextColor(const NUIColor& color);
     NUIColor getTextColor() const { return textColor_; }
+    void setFontSize(float size);
+    float getFontSize() const { return fontSize_; }
 
     void setAlignment(Alignment alignment);
     Alignment getAlignment() const { return alignment_; }
@@ -74,6 +76,7 @@ private:
     std::string text_;
     // NUIFont font_; // TODO: Add back when NUIFont is available
     NUIColor textColor_ = NUIColor::fromHex(0xffffffff);
+    float fontSize_ = 18.0f;
     Alignment alignment_ = Alignment::Left;
     bool multiline_ = false;
     bool wordWrap_ = true;

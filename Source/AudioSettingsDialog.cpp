@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file AudioSettingsDialog.cpp
  * @brief Audio settings dialog for NOMAD DAW

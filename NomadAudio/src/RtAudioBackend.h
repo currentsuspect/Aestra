@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "AudioDriver.h"
@@ -25,6 +25,7 @@ public:
     void stopStream() override;
     bool isStreamRunning() const override;
     double getStreamLatency() const override;
+    uint32_t getStreamSampleRate() const override;
     
     // Get the actual API being used
     RtAudio::Api getCurrentApi() const { return m_rtAudio ? m_rtAudio->getCurrentApi() : RtAudio::UNSPECIFIED; }

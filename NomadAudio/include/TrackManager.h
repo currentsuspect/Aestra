@@ -89,6 +89,13 @@ public:
     double getPosition() const { return m_positionSeconds.load(); }
 
     double getTotalDuration() const;
+    // Max extent considering track start offsets
+    double getMaxTimelineExtent() const;
+    
+    // Clip manipulation
+    bool moveClipToTrack(size_t fromIndex, size_t toIndex);
+    std::shared_ptr<Track> sliceClip(size_t trackIndex, double sliceTimeSeconds);
+    bool moveClipWithinTrack(size_t trackIndex, double newStartSeconds);
     
     // Position update callback (called during playback to update transport UI)
     void setOnPositionUpdate(std::function<void(double)> callback) { m_onPositionUpdate = callback; }

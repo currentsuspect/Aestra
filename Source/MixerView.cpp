@@ -84,10 +84,10 @@ void ChannelStrip::onRender(NomadUI::NUIRenderer& renderer) {
     
     // Track name at bottom
     if (m_track) {
-        auto textColor = theme.getColor("textPrimary");
+        auto textColor = theme.getColor("accentPrimary");
         std::string trackName = m_track->getName();
-        float textY = bounds.y + bounds.height - 25.0f;
-        renderer.drawText(trackName, NomadUI::NUIPoint(bounds.x + 5, textY), 12.0f, textColor);
+        float textY = bounds.y + bounds.height - 30.0f;
+        renderer.drawText(trackName, NomadUI::NUIPoint(bounds.x + 5, textY), 18.0f, textColor);
     }
     
     // Level meter (simple bar for now) - positioned above track name

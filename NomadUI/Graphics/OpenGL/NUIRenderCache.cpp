@@ -372,21 +372,7 @@ namespace NomadUI {
             return;
         }
 
-        // Fallback legacy immediate-mode draw (should rarely be used)
-        if (cache->textureId == 0) return;
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glActiveTexture(GL_TEXTURE0);
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, cache->textureId);
-        glBegin(GL_QUADS);
-            glTexCoord2f(0.0f, 1.0f); glVertex2f(destRect.x, destRect.y);
-            glTexCoord2f(1.0f, 1.0f); glVertex2f(destRect.x + destRect.width, destRect.y);
-            glTexCoord2f(1.0f, 0.0f); glVertex2f(destRect.x + destRect.width, destRect.y + destRect.height);
-            glTexCoord2f(0.0f, 0.0f); glVertex2f(destRect.x, destRect.y + destRect.height);
-        glEnd();
-        glDisable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        // If no renderer texture is available, skip rendering rather than using deprecated immediate mode.
     }
 
     void NUIRenderCache::renderCachedOrUpdate(CachedRenderData* cache, const NUIRect& destRect,

@@ -162,6 +162,8 @@ if(NOMADUI_BUILD_OPENGL)
         Graphics/OpenGL/NUIDirtyRegion.cpp
         Graphics/OpenGL/NUIRenderCache.h
         Graphics/OpenGL/NUIRenderCache.cpp
+        Graphics/NUITextRendererSDF.h
+        Graphics/NUITextRendererSDF.cpp
     )
     
     add_library(NomadUI_OpenGL STATIC

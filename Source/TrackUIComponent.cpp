@@ -22,12 +22,20 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track, TrackManager* t
     // Create track name label
     m_nameLabel = std::make_shared<NomadUI::NUILabel>();
     m_nameLabel->setText(m_track->getName());
+    {
+        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        m_nameLabel->setFontSize(themeManager.getFontSize("l"));
+    }
     updateTrackNameColors();
     addChild(m_nameLabel);
     
     // Create duration label (shows sample duration)
     m_durationLabel = std::make_shared<NomadUI::NUILabel>();
     m_durationLabel->setText("");
+    {
+        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        m_durationLabel->setFontSize(themeManager.getFontSize("m"));
+    }
     m_durationLabel->setTextColor(NomadUI::NUIColor(0.5f, 0.5f, 0.5f, 1.0f)); // Grey text
     addChild(m_durationLabel);
 
@@ -38,6 +46,7 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track, TrackManager* t
     m_muteButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Back to Secondary for cool animations
     m_muteButton->setHoverColor(NomadUI::NUIColor(0.4f, 0.3f, 0.5f)); // Purple hover
     m_muteButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
+    m_muteButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
     m_muteButton->setOnClick([this]() {
         onMuteToggled();
     });
@@ -49,6 +58,7 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track, TrackManager* t
     m_soloButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Back to Secondary for cool animations
     m_soloButton->setHoverColor(NomadUI::NUIColor(0.4f, 0.3f, 0.5f)); // Purple hover
     m_soloButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
+    m_soloButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
     m_soloButton->setOnClick([this]() {
         onSoloToggled();
     });
@@ -60,6 +70,7 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track, TrackManager* t
     m_recordButton->setStyle(NomadUI::NUIButton::Style::Icon); // Keep Icon style for record circle
     m_recordButton->setHoverColor(NomadUI::NUIColor(0.4f, 0.3f, 0.5f)); // Purple hover
     m_recordButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
+    m_recordButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
     m_recordButton->setOnClick([this]() {
         onRecordToggled();
     });
@@ -712,22 +723,23 @@ void TrackUIComponent::onResize(int width, int height) {
 
     // Layout controls vertically next to the name label using configurable dimensions
     float centerY = bounds.y + (bounds.height - layout.trackLabelHeight) / 2.0f;
+    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX"); // Use component-specific setting
+    float labelWidth = std::max(80.0f, buttonX - layout.panelMargin * 2.0f);
 
     // Name label on the left with compact margin
     if (m_nameLabel) {
-        m_nameLabel->setBounds(NUIAbsolute(bounds, layout.panelMargin, centerY - bounds.y, 80, layout.trackLabelHeight));
+        m_nameLabel->setBounds(NUIAbsolute(bounds, layout.panelMargin, centerY - bounds.y, labelWidth, layout.trackLabelHeight));
         // Log::info("TrackUIComponent nameLabel bounds: x=" + std::to_string(bounds.x + layout.panelMargin) + ", y=" + std::to_string(centerY));
     }
     
     // Duration label below name label
     if (m_durationLabel) {
-        m_durationLabel->setBounds(NUIAbsolute(bounds, layout.panelMargin, centerY - bounds.y + layout.trackLabelHeight + 2, 80, 16));
+        m_durationLabel->setBounds(NUIAbsolute(bounds, layout.panelMargin, centerY - bounds.y + layout.trackLabelHeight + 2, 140, 20));
     }
 
     // Buttons vertically centered in a compact group
     float buttonGroupHeight = 3 * layout.controlButtonHeight + 2 * layout.controlButtonSpacing;
     float buttonY = bounds.y + (bounds.height - buttonGroupHeight) / 2.0f; // Center the group vertically
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX"); // Use component-specific setting
 
     // Layout buttons with compact spacing
     if (m_muteButton) {

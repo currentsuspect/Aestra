@@ -778,7 +778,7 @@ double WASAPIExclusiveDriver::getStreamLatency() const {
     }
 
     // In exclusive mode, latency is simply buffer size / sample rate
-    return static_cast<double>(m_bufferFrameCount) / m_actualSampleRate;
+    return (m_actualSampleRate > 0) ? static_cast<double>(m_bufferFrameCount) / m_actualSampleRate : 0.0;
 }
 
 void WASAPIExclusiveDriver::audioThreadProc() {

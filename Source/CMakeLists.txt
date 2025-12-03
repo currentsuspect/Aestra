@@ -22,7 +22,8 @@ set(NOMAD_DAW_SOURCES
 	TrackUIComponent.h
 	TrackUIComponent.cpp
 	TrackManagerUI.h
-	TrackManagerUI.cpp
+    TrackManagerUI.cpp
+    ProjectSerializer.cpp
 	MixerView.h
 	MixerView.cpp
 	WindowPanel.h

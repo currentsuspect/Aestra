@@ -126,12 +126,13 @@ void NUIFont::setSize(int fontSize) {
     fontSize_ = fontSize;
     
     // Set pixel size (width 0 means "dynamically calculate based on height")
-    FT_Set_Pixel_Sizes(face_, 0, fontSize);
+    int targetSize = fontSize_ * supersampleFactor_;
+    FT_Set_Pixel_Sizes(face_, 0, targetSize);
     
     // Update metrics
-    ascender_ = static_cast<int>(face_->size->metrics.ascender >> 6);
-    descender_ = static_cast<int>(face_->size->metrics.descender >> 6);
-    lineHeight_ = static_cast<int>(face_->size->metrics.height >> 6);
+    ascender_ = static_cast<int>((face_->size->metrics.ascender >> 6) / supersampleFactor_);
+    descender_ = static_cast<int>((face_->size->metrics.descender >> 6) / supersampleFactor_);
+    lineHeight_ = static_cast<int>((face_->size->metrics.height >> 6) / supersampleFactor_);
     
     // Clear glyph cache since size changed
     clearCache();
@@ -250,11 +251,12 @@ bool NUIFont::rasterizeGlyph(uint32_t character, NUIGlyph& glyph) {
     glyph.textureID = createGlyphTexture(bitmap);
     
     // Store glyph metrics
-    glyph.width = bitmap.width;
-    glyph.height = bitmap.rows;
-    glyph.bearingX = slot->bitmap_left;
-    glyph.bearingY = slot->bitmap_top;
-    glyph.advance = static_cast<int>(slot->advance.x >> 6);
+    // Downscale metrics by supersample factor to draw at requested size while sampling higher-res texture
+    glyph.width = static_cast<int>(bitmap.width / supersampleFactor_);
+    glyph.height = static_cast<int>(bitmap.rows / supersampleFactor_);
+    glyph.bearingX = static_cast<int>(slot->bitmap_left / supersampleFactor_);
+    glyph.bearingY = static_cast<int>(slot->bitmap_top / supersampleFactor_);
+    glyph.advance = static_cast<int>((slot->advance.x >> 6) / supersampleFactor_);
     
     // For individual textures (not atlas), UV coords are 0-1
     glyph.u0 = 0.0f;
@@ -288,6 +290,10 @@ uint32_t NUIFont::createGlyphTexture(FT_Bitmap& bitmap) {
         GL_UNSIGNED_BYTE,
         bitmap.buffer
     );
+
+    // Swizzle single-channel glyph to RGBA so shader sampling is consistent
+    GLint swizzleMask[] = {GL_RED, GL_RED, GL_RED, GL_RED};
+    glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
     
     // Set texture parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

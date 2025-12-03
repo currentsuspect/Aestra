@@ -64,11 +64,20 @@ void NUIButton::onRender(NUIRenderer& renderer) {
         } else if (isHovered()) {
             borderColor = borderColor.withBrightness(1.1f);
         }
+
+        float borderWidth = theme->getBorderWidth();
+        // Inset stroke so the arc matches the fill curvature
+        NUIRect strokeRect = bounds;
+        strokeRect.x += borderWidth * 0.5f;
+        strokeRect.y += borderWidth * 0.5f;
+        strokeRect.width -= borderWidth;
+        strokeRect.height -= borderWidth;
+        float strokeRadius = std::max(0.0f, radius - borderWidth * 0.5f);
         
         renderer.strokeRoundedRect(
-            bounds,
-            radius,
-            theme->getBorderWidth(),
+            strokeRect,
+            strokeRadius,
+            borderWidth,
             borderColor
         );
     }

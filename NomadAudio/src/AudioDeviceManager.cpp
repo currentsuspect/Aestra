@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioDeviceManager.h"
 #include "RtAudioBackend.h"
 #include "WASAPIExclusiveDriver.h"
@@ -272,11 +272,29 @@ void AudioDeviceManager::closeStream() {
 }
 
 bool AudioDeviceManager::startStream() {
+    auto logStreamInfo = [this](AudioDriver* driver, const char* label) {
+        if (!driver) return;
+        uint32_t actualRate = driver->getStreamSampleRate();
+        uint32_t requestedRate = m_currentConfig.sampleRate;
+        std::cout << label << ": requested " << requestedRate << " Hz"
+                  << ", actual " << actualRate << " Hz"
+                  << ", buffer " << m_currentConfig.bufferSize << " frames"
+                  << std::endl;
+    };
+
     if (m_activeDriver) {
-        return m_activeDriver->startStream();
+        bool ok = m_activeDriver->startStream();
+        if (ok) {
+            logStreamInfo(m_activeDriver, "Active driver stream started");
+        }
+        return ok;
     }
     if (m_rtAudioDriver) {
-        return m_rtAudioDriver->startStream();
+        bool ok = m_rtAudioDriver->startStream();
+        if (ok) {
+            logStreamInfo(m_rtAudioDriver.get(), "RtAudio stream started");
+        }
+        return ok;
     }
     return false;
 }
@@ -308,6 +326,16 @@ double AudioDeviceManager::getStreamLatency() const {
         return m_rtAudioDriver->getStreamLatency();
     }
     return 0.0;
+}
+
+uint32_t AudioDeviceManager::getStreamSampleRate() const {
+    if (m_activeDriver) {
+        return m_activeDriver->getStreamSampleRate();
+    }
+    if (m_rtAudioDriver) {
+        return m_rtAudioDriver->getStreamSampleRate();
+    }
+    return 0;
 }
 
 void AudioDeviceManager::getLatencyCompensationValues(double& inputLatencyMs, double& outputLatencyMs) const {

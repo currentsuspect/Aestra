@@ -23,6 +23,7 @@
 ## 📦 Implemented Files (9 Files)
 
 ### Core Driver System
+
 1. ✅ `AudioDriverTypes.h` - Types, enums, priorities
 2. ✅ `NativeAudioDriver.h` - Base interface
 3. ✅ `WASAPISharedDriver.h/cpp` - Default safe mode
@@ -30,16 +31,18 @@
 5. ✅ `ASIODriverInfo.h/cpp` - Minimal ASIO detection (read-only)
 
 ### Documentation
-6. ✅ `MULTI_DRIVER_ARCHITECTURE.md` - Full specification
-7. ✅ `DRIVER_IMPLEMENTATION_QUICKSTART.md` - Developer guide
-8. ✅ `MINIMAL_ASIO_STRATEGY.md` - ASIO approach explained
-9. ✅ `ASIO_INTEGRATION_EXAMPLE.cpp` - UI integration examples
+
+1. ✅ `MULTI_DRIVER_ARCHITECTURE.md` - Full specification
+2. ✅ `DRIVER_IMPLEMENTATION_QUICKSTART.md` - Developer guide
+3. ✅ `MINIMAL_ASIO_STRATEGY.md` - ASIO approach explained
+4. ✅ `ASIO_INTEGRATION_EXAMPLE.cpp` - UI integration examples
 
 ---
 
 ## 🎨 Key Features
 
-### ✅ WASAPI Exclusive (Pro Mode)
+### ✅ WASAPI Exclusive
+
 ```cpp
 • Exclusive hardware access
 • 3-5ms latency (professional grade)
@@ -51,6 +54,7 @@
 ```
 
 ### ✅ WASAPI Shared (Safe Mode)
+
 ```cpp
 • Shared device access
 • 10-20ms latency (acceptable for general use)
@@ -61,6 +65,7 @@
 ```
 
 ### ✅ Minimal ASIO Detection
+
 ```cpp
 • Scans Windows Registry (read-only)
 • Detects installed ASIO drivers:
@@ -76,7 +81,7 @@
 
 ## 🔄 Intelligent Fallback System
 
-```
+```fallback explained
 User Opens Audio Stream
     ↓
 1. Try WASAPI Exclusive
@@ -110,6 +115,7 @@ User Opens Audio Stream
 | DirectSound | 2048 | 42.67ms | ~45-50ms | 4-6% |
 
 ### Statistics Tracked
+
 ```cpp
 struct DriverStatistics {
     uint64_t callbackCount;      // Total callbacks
@@ -126,12 +132,14 @@ struct DriverStatistics {
 ## 💡 ASIO Strategy (Minimal & Safe)
 
 ### What We Do ✅
+
 - **Detect** installed ASIO drivers via registry
 - **Display** what's available to users
 - **Educate** users that WASAPI = ASIO performance
 - **Reassure** that their ASIO hardware will work
 
 ### What We DON'T Do ❌
+
 - ❌ Load ASIO DLLs
 - ❌ Call ASIO functions
 - ❌ Require Steinberg SDK
@@ -139,10 +147,11 @@ struct DriverStatistics {
 - ❌ Take on maintenance burden
 
 ### User Messaging
-```
+
+```demonstration
 If ASIO drivers found:
 ┌─────────────────────────────────────────────┐
-│ ℹ️ ASIO drivers detected:                   │
+│ ℹ️ ASIO drivers detected:                   | 
 │   • ASIO4ALL v2                             │
 │   • FL Studio ASIO                          │
 │                                             │
@@ -159,6 +168,7 @@ If ASIO drivers found:
 ## 🎨 UI Integration
 
 ### Audio Settings Dialog
+
 ```cpp
 #include "ASIODriverInfo.h"
 
@@ -176,6 +186,7 @@ for (const auto& driver : drivers) {
 ```
 
 ### Driver Status Display
+
 ```cpp
 auto* driver = m_deviceManager->getActiveDriver();
 
@@ -189,6 +200,7 @@ std::cout << "CPU: " << driver->getStatistics().cpuLoadPercent << "%" << std::en
 ## ✅ Success Criteria - ALL MET
 
 Phase 1 Goals:
+
 - ✅ **Stability**: Zero crashes across all driver modes
 - ✅ **Performance**: Sub-10ms latency achievable
 - ✅ **Compatibility**: Works on every Windows machine
@@ -197,7 +209,17 @@ Phase 1 Goals:
 - ✅ **Professional**: Same stack as industry DAWs
 
 ASIO Goals:
+
 - ✅ **Detection**: Shows what ASIO drivers are installed
+
+---
+
+## 🔊 Sample-Rate Reality Check (Playback/Preview)
+
+- WASAPI Shared may run at the device mix rate (often 48 kHz) regardless of the requested/project rate.
+- The engine now queries the active backend for the **actual stream sample rate** and feeds it into the TrackManager so resampling and playhead advance stay correct (no speed/pitch shift).
+- SamplePool cache hits must carry correct `sampleRate`/`channels` metadata; Track refreshes these on reuse to keep durations and SRC ratios accurate.
+- Preview uses the same Track path, so it also consumes the actual stream rate—no more fast/raised-pitch previews when the device mixes at a different rate.
 - ✅ **Education**: Explains WASAPI = ASIO performance
 - ✅ **Safety**: Zero risk (no DLL loading)
 - ✅ **Future-proof**: Easy to upgrade if needed
@@ -209,6 +231,7 @@ ASIO Goals:
 ### To Use in Your Application
 
 1. **Add to CMakeLists.txt**
+
    ```cmake
    set(NOMAD_AUDIO_SOURCES
        src/WASAPISharedDriver.cpp
@@ -232,6 +255,7 @@ ASIO Goals:
    ```
 
 2. **Update AudioDeviceManager**
+
    ```cpp
    // Replace RtAudioBackend with WASAPI drivers
    auto exclusive = std::make_unique<WASAPIExclusiveDriver>();
@@ -246,6 +270,7 @@ ASIO Goals:
    ```
 
 3. **Add to AudioSettingsDialog**
+
    ```cpp
    // Display ASIO detection info
    std::string asioInfo = ASIODriverScanner::getAvailabilityMessage();
@@ -257,6 +282,7 @@ ASIO Goals:
 ## 🎓 Technical Highlights
 
 ### Thread Management
+
 ```cpp
 • SetThreadPriority(THREAD_PRIORITY_TIME_CRITICAL)
 • AvSetMmThreadCharacteristics(L"Pro Audio")
@@ -265,6 +291,7 @@ ASIO Goals:
 ```
 
 ### Error Handling
+
 ```cpp
 • Comprehensive DriverError enum
 • Error callbacks for logging
@@ -273,6 +300,7 @@ ASIO Goals:
 ```
 
 ### Sample Rate Negotiation
+
 ```cpp
 // Tests in order: 44.1, 48, 88.2, 96, 176.4, 192 kHz
 // Uses closest match if exact not available
@@ -284,18 +312,21 @@ ASIO Goals:
 ## 🚀 What This Means for NOMAD
 
 ### Professional Credibility ✨
-- Same audio stack as FL Studio, Ableton, Reaper
+
+- Same audio stack as proffesional DAWs
 - Sub-5ms latency (professional grade)
 - Robust fallback system
 - Shows awareness of ASIO ecosystem
 
 ### User Benefits ✨
+
 - Works on every Windows machine
 - Never locked out of audio
 - Optimal performance automatically
 - Transparent about what's happening
 
 ### Developer Benefits ✨
+
 - Clean, modular architecture
 - Easy to maintain (no external SDKs)
 - Well-documented
@@ -306,6 +337,7 @@ ASIO Goals:
 ## 📈 Next Steps (Optional)
 
 ### Immediate Priorities
+
 1. ✅ Test on multiple Windows versions
 2. ✅ Test with USB audio interfaces
 3. ✅ Add UI for driver selection
@@ -313,12 +345,14 @@ ASIO Goals:
 5. ✅ Persist user preferences
 
 ### Future Enhancements (Low Priority)
+
 - Hot-plug detection (device connect/disconnect)
 - Sample rate visualization
 - Latency graphing
 - Advanced tuning options
 
 ### If Users Demand Full ASIO (Unlikely)
+
 - Already have detection ✅
 - Easy to extend ASIODriverScanner
 - Can add DLL loading if needed
@@ -330,7 +364,9 @@ ASIO Goals:
 
 ### **Production Ready** ✅
 
-You now have a **professional-grade, multi-tier audio driver system** that:
+We now have a **professional-grade, multi-tier audio driver system** that:
+
+- Handles all Windows audio scenarios
 - Matches industry-standard DAWs
 - Works universally on Windows
 - Provides pro-level latency
@@ -341,6 +377,10 @@ You now have a **professional-grade, multi-tier audio driver system** that:
 ### **ASIO Strategy: Perfect** ✅
 
 The minimal ASIO detection:
+
+- Doesn't force ASIO on users
+- Doesn't require licensing
+- Doesn't add complexity
 - Shows users you understand the ecosystem
 - Educates them about WASAPI
 - Avoids all the ASIO pitfalls
@@ -350,7 +390,7 @@ The minimal ASIO detection:
 
 ## 📚 File Locations
 
-```
+```file
 NOMAD/
 └── NomadAudio/
     ├── include/
@@ -376,7 +416,8 @@ NOMAD/
 
 **Professional DAW Audio System** 🏆
 
-You've implemented the same foundation that powers:
+We've implemented the same foundation that powers:
+
 - FL Studio
 - Ableton Live
 - Reaper
@@ -384,6 +425,7 @@ You've implemented the same foundation that powers:
 - Pro Tools (WASAPI support)
 
 **With the added bonus of:**
+
 - No ASIO licensing headaches
 - No external SDK dependencies
 - Universal compatibility
@@ -395,6 +437,5 @@ You've implemented the same foundation that powers:
 **Status**: ✅ COMPLETE and PRODUCTION READY  
 **Risk Level**: Minimal (all Windows APIs)  
 **Maintenance**: Low (no external dependencies)  
-**User Experience**: Professional  
-
-**Ship it!** 🚀🎵✨
+**User Experience**: Professional
+**Performance**: Industry Standard

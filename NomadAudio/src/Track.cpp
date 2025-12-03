@@ -1,13 +1,208 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "Track.h"
 #include "NomadLog.h"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <cstring>
+#include <codecvt>
+#include <locale>
+#include <mutex>
+#include <numeric>
+#include <condition_variable>
+#include "SamplePool.h"
+#ifdef _WIN32
+#include <mfapi.h>
+#include <mfidl.h>
+#include <mfreadwrite.h>
+#include <wrl/client.h>
+#endif
 
 namespace Nomad {
 namespace Audio {
+
+namespace {
+    // Downmix multi-channel audio to stereo using sensible weights
+    void downmixToStereo(const std::vector<float>& input,
+                         uint32_t inChannels,
+                         std::vector<float>& output) {
+        if (inChannels == 0) return;
+        const size_t frames = input.size() / inChannels;
+        output.assign(frames * 2, 0.0f);
+
+        for (size_t i = 0; i < frames; ++i) {
+            float left = 0.0f;
+            float right = 0.0f;
+            const float* frame = &input[i * inChannels];
+
+            // Standard mapping for common layouts: L, R, C, LFE, Ls, Rs
+            if (inChannels >= 1) left  += frame[0];
+            if (inChannels >= 2) right += frame[1];
+            if (inChannels >= 3) { // Center
+                float c = frame[2] * 0.7071f;
+                left += c; right += c;
+            }
+            if (inChannels >= 4) { // LFE
+                float lfe = frame[3] * 0.5f;
+                left += lfe; right += lfe;
+            }
+            if (inChannels >= 5) left  += frame[4] * 0.7071f; // Ls
+            if (inChannels >= 6) right += frame[5] * 0.7071f; // Rs
+
+            // Any extra channels beyond 6: average into stereo
+            for (uint32_t ch = 6; ch < inChannels; ++ch) {
+                float v = frame[ch] * 0.5f;
+                left += v;
+                right += v;
+            }
+
+            output[i * 2 + 0] = std::max(-1.0f, std::min(1.0f, left));
+            output[i * 2 + 1] = std::max(-1.0f, std::min(1.0f, right));
+        }
+    }
+
+    void forceStereo(std::vector<float>& buffer, uint32_t& channelCount, uint32_t& sourceChannels) {
+        sourceChannels = channelCount;
+        if (channelCount == 2) return;
+        if (channelCount == 1) {
+            const size_t frames = buffer.size();
+            std::vector<float> stereo;
+            stereo.reserve(frames * 2);
+            for (size_t i = 0; i < frames; ++i) {
+                float s = buffer[i];
+                stereo.push_back(s);
+                stereo.push_back(s);
+            }
+            buffer.swap(stereo);
+            channelCount = 2;
+            return;
+        }
+
+        std::vector<float> stereo;
+        downmixToStereo(buffer, static_cast<uint32_t>(channelCount), stereo);
+        buffer.swap(stereo);
+        channelCount = 2;
+    }
+#ifdef _WIN32
+    // Downmix multi-channel audio to stereo using sensible weights
+    bool ensureMediaFoundationInitialized() {
+        static std::once_flag initFlag;
+        static HRESULT initResult = E_FAIL;
+        std::call_once(initFlag, []() {
+            initResult = MFStartup(MF_VERSION, MFSTARTUP_LITE);
+        });
+        return SUCCEEDED(initResult);
+    }
+
+    std::wstring utf8ToWide(const std::string& input) {
+        if (input.empty()) return L"";
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+        return converter.from_bytes(input);
+    }
+
+    bool loadWithMediaFoundation(const std::string& filePath,
+                                 std::vector<float>& audioData,
+                                 uint32_t& sampleRate,
+                                 uint32_t& numChannels) {
+        using Microsoft::WRL::ComPtr;
+
+        if (!ensureMediaFoundationInitialized()) {
+            Log::warning("Media Foundation failed to initialize, cannot decode audio: " + filePath);
+            return false;
+        }
+
+                ComPtr<IMFAttributes> attributes;
+                if (FAILED(MFCreateAttributes(&attributes, 1))) {
+                    Log::warning("MFCreateAttributes failed for FLAC decode");
+                    return false;
+                }
+        
+                // Enable built-in audio processing (format conversion)
+        #if defined(MF_SOURCE_READER_ENABLE_AUDIO_PROCESSING)
+                attributes->SetUINT32(MF_SOURCE_READER_ENABLE_AUDIO_PROCESSING, TRUE);
+        #elif defined(MF_READWRITE_ENABLE_AUDIO_PROCESSING)
+                attributes->SetUINT32(MF_READWRITE_ENABLE_AUDIO_PROCESSING, TRUE);
+        #else
+                // Attribute not available in this SDK: skip enabling audio processing.
+                // This is a safe fallback for older/newer SDK mismatches.
+                (void)attributes;
+        #endif
+
+        ComPtr<IMFSourceReader> reader;
+        std::wstring widePath = utf8ToWide(filePath);
+        HRESULT hr = MFCreateSourceReaderFromURL(widePath.c_str(), attributes.Get(), &reader);
+        if (FAILED(hr)) {
+            Log::warning("MFCreateSourceReaderFromURL failed for: " + filePath);
+            return false;
+        }
+
+        // Request 32-bit float PCM output
+        ComPtr<IMFMediaType> audioType;
+        hr = MFCreateMediaType(&audioType);
+        if (FAILED(hr)) return false;
+        audioType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
+        audioType->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_Float);
+        audioType->SetUINT32(MF_MT_AUDIO_BITS_PER_SAMPLE, 32);
+
+        hr = reader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, nullptr, audioType.Get());
+        if (FAILED(hr)) {
+            Log::warning("Failed to set PCM output type: " + filePath);
+            return false;
+        }
+
+        // Get resolved output format (sample rate, channels)
+        ComPtr<IMFMediaType> currentType;
+        hr = reader->GetCurrentMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, &currentType);
+        if (FAILED(hr)) return false;
+
+        UINT32 sr = 0, ch = 0;
+        // Use IMFMediaType::GetUINT32 to avoid macro/signature mismatches with MFGetAttributeUINT32
+        if (FAILED(currentType->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, &sr))) {
+            Log::warning("Failed to get sample rate from media type");
+            return false;
+        }
+        if (FAILED(currentType->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &ch))) {
+            Log::warning("Failed to get channel count from media type");
+            return false;
+        }
+        sampleRate = sr;
+        numChannels = ch;
+
+        audioData.clear();
+        while (true) {
+            DWORD flags = 0;
+            ComPtr<IMFSample> sample;
+            hr = reader->ReadSample(MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, nullptr, &flags, nullptr, &sample);
+            if (FAILED(hr)) {
+            Log::warning("ReadSample failed during decode: " + std::to_string(hr));
+                return false;
+            }
+            if (flags & MF_SOURCE_READERF_ENDOFSTREAM) break;
+            if (!sample) continue;
+
+            ComPtr<IMFMediaBuffer> buffer;
+            if (FAILED(sample->ConvertToContiguousBuffer(&buffer))) continue;
+
+            BYTE* data = nullptr;
+            DWORD maxLen = 0, curLen = 0;
+            if (FAILED(buffer->Lock(&data, &maxLen, &curLen))) continue;
+
+            size_t prev = audioData.size();
+            audioData.resize(prev + (curLen / sizeof(float)));
+            std::memcpy(audioData.data() + prev, data, curLen);
+
+            buffer->Unlock();
+        }
+
+        if (audioData.empty()) {
+            Log::warning("No audio frames decoded: " + filePath);
+            return false;
+        }
+
+        return true;
+    }
+}
+#endif // _WIN32
 
 // === Audio Quality Preset Implementations ===
 
@@ -103,8 +298,84 @@ struct WavHeader {
 };
 #pragma pack(pop)
 
+struct WavInfo {
+    uint32_t sampleRate{0};
+    uint16_t channels{0};
+    uint16_t bitsPerSample{0};
+    uint32_t dataOffset{0};
+    uint32_t dataSize{0};
+    uint16_t audioFormat{0};
+};
+
+static bool parseWavInfo(const std::string& filePath, WavInfo& info) {
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file) {
+        Log::warning("Failed to open WAV file: " + filePath);
+        return false;
+    }
+
+    char riffId[4];
+    uint32_t riffSize = 0;
+    char waveId[4];
+    if (!file.read(riffId, 4) || !file.read(reinterpret_cast<char*>(&riffSize), 4) || !file.read(waveId, 4)) {
+        return false;
+    }
+    if (std::strncmp(riffId, "RIFF", 4) != 0 || std::strncmp(waveId, "WAVE", 4) != 0) {
+        return false;
+    }
+
+    bool fmtFound = false;
+    bool dataFound = false;
+    uint16_t audioFormat = 1;
+    uint16_t channelCount = 2;
+    uint32_t sr = 44100;
+    uint16_t bitsPerSample = 16;
+    uint32_t dataSize = 0;
+    std::streampos dataPos{};
+
+    while (file && !(fmtFound && dataFound)) {
+        char chunkId[4];
+        uint32_t chunkSize = 0;
+        if (!file.read(chunkId, 4) || !file.read(reinterpret_cast<char*>(&chunkSize), 4)) break;
+
+        if (std::strncmp(chunkId, "fmt ", 4) == 0) {
+            fmtFound = true;
+            if (chunkSize < 16) return false;
+            file.read(reinterpret_cast<char*>(&audioFormat), sizeof(uint16_t));
+            file.read(reinterpret_cast<char*>(&channelCount), sizeof(uint16_t));
+            file.read(reinterpret_cast<char*>(&sr), sizeof(uint32_t));
+
+            uint32_t byteRate = 0;
+            uint16_t blockAlign = 0;
+            file.read(reinterpret_cast<char*>(&byteRate), sizeof(uint32_t));
+            file.read(reinterpret_cast<char*>(&blockAlign), sizeof(uint16_t));
+            file.read(reinterpret_cast<char*>(&bitsPerSample), sizeof(uint16_t));
+            if (chunkSize > 16) {
+                file.seekg(chunkSize - 16, std::ios::cur);
+            }
+        } else if (std::strncmp(chunkId, "data", 4) == 0) {
+            dataFound = true;
+            dataSize = chunkSize;
+            dataPos = file.tellg();
+            file.seekg(chunkSize, std::ios::cur);
+        } else {
+            file.seekg(chunkSize, std::ios::cur);
+        }
+    }
+
+    if (!(fmtFound && dataFound)) return false;
+
+    info.sampleRate = sr;
+    info.channels = channelCount;
+    info.bitsPerSample = bitsPerSample;
+    info.dataOffset = static_cast<uint32_t>(dataPos);
+    info.dataSize = dataSize;
+    info.audioFormat = audioFormat;
+    return true;
+}
+
 // Simple WAV file loader
-bool loadWavFile(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate, uint16_t& numChannels) {
+bool loadWavFile(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate, uint32_t& numChannels) {
     std::ifstream file(filePath, std::ios::binary);
     if (!file) {
         Log::warning("Failed to open WAV file: " + filePath);
@@ -136,7 +407,7 @@ bool loadWavFile(const std::string& filePath, std::vector<float>& audioData, uin
     bool fmtFound = false;
     bool dataFound = false;
     uint16_t audioFormat = 1;
-    uint16_t channelCount = 2;
+    uint32_t channelCount = 2;
     uint32_t sr = 44100;
     uint32_t byteRate = 0;
     uint16_t blockAlign = 0;
@@ -299,10 +570,19 @@ Track::Track(const std::string& name, uint32_t trackId)
 }
 
 Track::~Track() {
+    stopStreaming();
     if (isRecording()) {
         stopRecording();
     }
     Log::info("Track destroyed: " + m_name);
+}
+
+const std::vector<float>& Track::getAudioData() const {
+    // Prefer shared sample buffer if present (non-streaming full loads)
+    if (m_sampleBuffer && m_sampleBuffer->ready.load()) {
+        return m_sampleBuffer->data;
+    }
+    return m_audioData;
 }
 
 // Track Properties
@@ -385,6 +665,8 @@ void Track::setState(TrackState state) {
 // Audio Data Management
 bool Track::loadAudioFile(const std::string& filePath) {
     std::cout << "Loading: " << filePath << " (track: " << m_name << ")" << std::endl;
+    stopStreaming();
+    m_sampleBuffer.reset();
 
     // Check if file exists
     std::ifstream checkFile(filePath);
@@ -394,33 +676,142 @@ bool Track::loadAudioFile(const std::string& filePath) {
     }
     checkFile.close();
 
-    // Clear any existing audio data
-    m_audioData.clear();
+    // Clear any existing audio data (streaming/recording buffers)
+    {
+        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        m_audioData.clear();
+    }
     m_durationSeconds.store(0.0);
     m_playbackPhase.store(0.0);
     m_positionSeconds.store(0.0);
 
     // Determine file extension to choose appropriate loader
-    std::string extension = filePath.substr(filePath.find_last_of('.') + 1);
-    std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+    std::string extension;
+    if (auto dotPos = filePath.find_last_of('.'); dotPos != std::string::npos && dotPos + 1 < filePath.size()) {
+        extension = filePath.substr(dotPos + 1);
+        std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+    }
 
     if (extension == "wav") {
-        // Load WAV file
-        uint32_t sampleRate = 48000; // Default fallback
-        uint16_t numChannels = 2;    // Default fallback
+        WavInfo info{};
+        bool infoOk = parseWavInfo(filePath, info);
+        const uint64_t STREAM_THRESHOLD_BYTES = 50ull * 1024ull * 1024ull; // 50MB
 
-        if (loadWavFile(filePath, m_audioData, sampleRate, numChannels)) {
+        if (infoOk) {
+            const uint64_t bytesPerFrame = (info.bitsPerSample / 8) * info.channels;
+            const uint64_t totalFrames = bytesPerFrame ? (static_cast<uint64_t>(info.dataSize) / bytesPerFrame) : 0;
+            bool streamableFormat = (info.audioFormat == 1 || info.audioFormat == 3) &&
+                                    (info.bitsPerSample == 16 || info.bitsPerSample == 24 || info.bitsPerSample == 32);
+
+            if (streamableFormat && info.dataSize > STREAM_THRESHOLD_BYTES && totalFrames > 0) {
+                if (startWavStreaming(filePath, info.sampleRate, info.channels, info.bitsPerSample, info.dataOffset, info.dataSize)) {
+                    m_sourcePath = filePath;
+                    m_durationSeconds.store(static_cast<double>(totalFrames) / info.sampleRate);
+                    setState(TrackState::Loaded);
+                    Log::info("WAV streaming enabled: " + std::to_string(totalFrames) + " frames");
+                    return true;
+                }
+                Log::warning("Streaming setup failed, falling back to full load");
+            }
+        }
+
+        // Load WAV file fully through SamplePool
+        uint32_t sampleRate = 48000; // Default fallback
+        uint32_t numChannels = 2;    // Default fallback
+        uint32_t sourceChannels = 2;
+
+        auto loader = [this, &sampleRate, &numChannels, &sourceChannels, filePath](AudioBuffer& out) -> bool {
+            std::vector<float> decoded;
+            uint32_t sr = sampleRate;
+            uint32_t ch = numChannels;
+            if (!loadWavFile(filePath, decoded, sr, ch)) {
+                return false;
+            }
+            uint32_t srcCh = ch;
+            forceStereo(decoded, ch, srcCh);
+
+            out.sampleRate = sr;
+            out.channels = ch;
+            out.data.swap(decoded);
+            out.sourcePath = filePath;
+
+            sampleRate = sr;
+            numChannels = ch;
+            sourceChannels = srcCh;
+            return true;
+        };
+
+        auto buffer = SamplePool::getInstance().acquire(filePath, loader);
+        if (buffer && buffer->ready.load()) {
+            // If this was a cache hit, populate metadata from buffer
+            if (buffer->sampleRate > 0) sampleRate = buffer->sampleRate;
+            if (buffer->channels > 0) { numChannels = buffer->channels; sourceChannels = buffer->channels; }
+
+            m_sampleBuffer = buffer;
             m_sampleRate = sampleRate;
             m_numChannels = numChannels;
-            m_durationSeconds.store(static_cast<double>(m_audioData.size()) / (sampleRate * numChannels));
+            m_sourceChannels = sourceChannels;
+            m_sourcePath = filePath;
+            m_durationSeconds.store(sampleRate > 0 ? static_cast<double>(buffer->numFrames) / sampleRate : 0.0);
             setState(TrackState::Loaded);
 
-            Log::info("WAV loaded successfully: " + std::to_string(m_audioData.size()) + " samples, " +
+            Log::info("WAV loaded successfully via SamplePool: " + std::to_string(buffer->data.size()) + " samples, " +
                        std::to_string(m_durationSeconds.load()) + " seconds");
             return true;
-        } else {
-            Log::warning("Failed to load WAV file: " + filePath + ", generating preview tone instead");
         }
+
+        Log::warning("Failed to load WAV file: " + filePath + ", generating preview tone instead");
+    } else {
+#ifdef _WIN32
+        uint32_t sampleRate = 48000;
+        uint32_t numChannels = 2;
+        uint32_t sourceChannels = 2;
+
+        auto loader = [this, &sampleRate, &numChannels, &sourceChannels, filePath](AudioBuffer& out) -> bool {
+            std::vector<float> decoded;
+            uint32_t sr = sampleRate;
+            uint32_t ch = numChannels;
+            if (!loadWithMediaFoundation(filePath, decoded, sr, ch)) {
+                return false;
+            }
+            uint32_t srcCh = ch;
+            forceStereo(decoded, ch, srcCh);
+
+            out.sampleRate = sr;
+            out.channels = ch;
+            out.data.swap(decoded);
+            out.sourcePath = filePath;
+
+            sampleRate = sr;
+            numChannels = ch;
+            sourceChannels = srcCh;
+            return true;
+        };
+
+        auto buffer = SamplePool::getInstance().acquire(filePath, loader);
+        if (buffer && buffer->ready.load()) {
+            // Cache hit path: pull metadata from buffer if loader wasn't used
+            if (buffer->sampleRate > 0) sampleRate = buffer->sampleRate;
+            if (buffer->channels > 0) { numChannels = buffer->channels; sourceChannels = buffer->channels; }
+
+            m_sampleBuffer = buffer;
+            m_sampleRate = sampleRate;
+            m_numChannels = numChannels;
+            m_sourceChannels = sourceChannels;
+            m_sourcePath = filePath;
+            m_durationSeconds.store(sampleRate > 0 ? static_cast<double>(buffer->numFrames) / sampleRate : 0.0);
+            setState(TrackState::Loaded);
+
+            Log::info("Audio loaded via Media Foundation + SamplePool: " + std::to_string(buffer->data.size()) + " samples, " +
+                       std::to_string(m_durationSeconds.load()) + " seconds @ " +
+                       std::to_string(sampleRate) + " Hz, channels: " + std::to_string(numChannels));
+            return true;
+        }
+
+        Log::warning("Failed to decode audio file: " + filePath + ", generating preview tone instead");
+#else
+        Log::warning("Media Foundation decoding not supported on this platform: " + filePath);
+#endif
     }
 
     // Special handling for demo files - generate audio directly
@@ -435,6 +826,8 @@ bool Track::loadAudioFile(const std::string& filePath) {
 }
 
 bool Track::generatePreviewTone(const std::string& filePath) {
+    m_sampleBuffer.reset();
+    m_sourcePath = filePath;
     // Use filename hash to generate a unique frequency
     size_t filenameHash = std::hash<std::string>{}(filePath);
     double baseFrequency = 220.0 + (filenameHash % 440);
@@ -442,7 +835,7 @@ bool Track::generatePreviewTone(const std::string& filePath) {
     // Generate 5 seconds of audio
     const double duration = 5.0;
     const uint32_t totalSamples = static_cast<uint32_t>(m_sampleRate * duration * m_numChannels);
-    m_audioData.resize(totalSamples);
+    std::vector<float> buffer(totalSamples);
 
     // Generate waveform
     double freq1 = baseFrequency;
@@ -461,8 +854,15 @@ bool Track::generatePreviewTone(const std::string& filePath) {
         float sample = sample1 + sample2 + sample3;
         sample = (sample < -0.9f) ? -0.9f : (sample > 0.9f) ? 0.9f : sample;
 
-        m_audioData[i * m_numChannels + 0] = sample;
-        m_audioData[i * m_numChannels + 1] = sample;
+        buffer[i * m_numChannels + 0] = sample;
+        buffer[i * m_numChannels + 1] = sample;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        m_audioData.swap(buffer);
+        m_numChannels = 2;
+        m_sourceChannels = 2;
     }
 
     m_durationSeconds.store(duration);
@@ -475,7 +875,9 @@ bool Track::generatePreviewTone(const std::string& filePath) {
 }
 
 bool Track::generateDemoAudio(const std::string& filePath) {
+    m_sampleBuffer.reset();
     std::cout << "Generating demo audio for: " << filePath << std::endl;
+    m_sourcePath = filePath;
 
     // Determine frequency and duration based on filename
     double frequency = 440.0;
@@ -491,7 +893,7 @@ bool Track::generateDemoAudio(const std::string& filePath) {
 
     // Generate audio data
     const uint32_t totalSamples = static_cast<uint32_t>(m_sampleRate * duration * m_numChannels);
-    m_audioData.resize(totalSamples);
+    std::vector<float> buffer(totalSamples);
 
     // Generate waveform
     double freq1 = frequency;
@@ -510,8 +912,15 @@ bool Track::generateDemoAudio(const std::string& filePath) {
         float sample = sample1 + sample2 + sample3;
         sample = (sample < -0.9f) ? -0.9f : (sample > 0.9f) ? 0.9f : sample;
 
-        m_audioData[i * m_numChannels + 0] = sample;
-        m_audioData[i * m_numChannels + 1] = sample;
+        buffer[i * m_numChannels + 0] = sample;
+        buffer[i * m_numChannels + 1] = sample;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        m_audioData.swap(buffer);
+        m_numChannels = 2;
+        m_sourceChannels = 2;
     }
 
     m_durationSeconds.store(duration);
@@ -524,8 +933,14 @@ bool Track::generateDemoAudio(const std::string& filePath) {
 }
 
 void Track::clearAudioData() {
-    m_audioData.clear();
-    m_recordingBuffer.clear();
+    m_sampleBuffer.reset();
+    {
+        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        m_audioData.clear();
+        m_recordingBuffer.clear();
+        m_numChannels = 2;
+        m_sourceChannels = 2;
+    }
     m_durationSeconds.store(0.0);
     m_playbackPhase.store(0.0);
     m_positionSeconds.store(0.0);
@@ -538,10 +953,19 @@ void Track::setAudioData(const float* data, uint32_t numSamples, uint32_t sample
         return;
     }
     
-    // Copy audio data
-    m_audioData.assign(data, data + (numSamples * numChannels));
-    m_sampleRate = sampleRate;
-    m_numChannels = numChannels;
+    stopStreaming();
+    m_sampleBuffer.reset();
+
+    // Copy audio data and enforce stereo for the engine
+    std::vector<float> temp(data, data + (numSamples * numChannels));
+    uint32_t inChannels = numChannels;
+    {
+        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        m_sampleRate = sampleRate;
+        forceStereo(temp, inChannels, m_sourceChannels);
+        m_audioData.swap(temp);
+        m_numChannels = 2;
+    }
     m_durationSeconds.store(static_cast<double>(numSamples) / sampleRate);
     m_playbackPhase.store(0.0);
     m_positionSeconds.store(0.0);
@@ -622,13 +1046,6 @@ void Track::play() {
         
         Log::info("Playing track: " + m_name);
         
-        // Reset position if stopped (start from beginning)
-        // Don't reset if paused (resume from current position)
-        if (currentState == TrackState::Stopped) {
-            m_positionSeconds.store(0.0);
-            m_playbackPhase.store(0.0);
-        }
-        
         setState(TrackState::Playing);
     }
 }
@@ -651,6 +1068,19 @@ void Track::setPosition(double seconds) {
     // Clamp position to valid range
     double duration = getDuration();
     seconds = (seconds < 0.0) ? 0.0 : (seconds > duration) ? duration : seconds;
+    
+    if (m_streaming) {
+        uint64_t targetFrame = static_cast<uint64_t>(seconds * m_sampleRate);
+        uint64_t maxFrames = m_streamTotalFrames;
+        if (targetFrame > maxFrames) targetFrame = maxFrames;
+
+        // Re-seek streaming source
+        uint64_t dataSizeBytes = m_streamTotalFrames * static_cast<uint64_t>(m_streamBytesPerSample * m_sourceChannels);
+        startWavStreaming(m_sourcePath, m_sampleRate, static_cast<uint16_t>(m_sourceChannels),
+                          static_cast<uint16_t>(m_streamBytesPerSample * 8),
+                          m_streamDataOffset, dataSizeBytes, targetFrame);
+    }
+
     m_positionSeconds.store(seconds);
 
     // CRITICAL: Update playback phase for sample-accurate positioning
@@ -733,12 +1163,24 @@ void Track::generateSilence(float* buffer, uint32_t numFrames) {
 }
 
 void Track::copyAudioData(float* outputBuffer, uint32_t numFrames, double outputSampleRate) {
-    if (m_audioData.empty()) {
+    std::lock_guard<std::mutex> lock(m_audioDataMutex);
+
+    const std::vector<float>* buffer = nullptr;
+    uint32_t channels = m_numChannels;
+    if (m_streaming) {
+        buffer = &m_audioData;
+    } else if (m_sampleBuffer && m_sampleBuffer->ready.load()) {
+        buffer = &m_sampleBuffer->data;
+    } else {
+        buffer = &m_audioData;
+    }
+
+    if (!buffer || buffer->empty()) {
         generateSilence(outputBuffer, numFrames);
         return;
     }
 
-    uint32_t totalSamples = m_audioData.size();
+    uint32_t totalSamples = static_cast<uint32_t>(buffer->size());
     double phase = m_playbackPhase.load();
     
     // Calculate sample rate ratio for resampling
@@ -747,33 +1189,41 @@ void Track::copyAudioData(float* outputBuffer, uint32_t numFrames, double output
     }
     const double sampleRateRatio = static_cast<double>(m_sampleRate) / outputSampleRate;
 
+    const uint64_t bufferFrames = totalSamples / channels;
+    const uint64_t baseFrame = m_streamBaseFrame;
+
     // Process audio based on quality settings
     for (uint32_t frame = 0; frame < numFrames; ++frame) {
         double exactSamplePos = phase;
         
-        for (uint32_t ch = 0; ch < m_numChannels; ++ch) {
+        for (uint32_t ch = 0; ch < channels; ++ch) {
             float sample = 0.0f;
-            
-            // Choose interpolation method based on resampling mode
-            switch (m_qualitySettings.resampling) {
-                case ResamplingMode::Fast:
-                    sample = interpolateLinear(m_audioData.data(), totalSamples, exactSamplePos, ch);
-                    break;
-                case ResamplingMode::Medium:
-                    sample = interpolateCubic(m_audioData.data(), totalSamples, exactSamplePos, ch);
-                    break;
-                case ResamplingMode::High:
-                    sample = interpolateSinc(m_audioData.data(), totalSamples, exactSamplePos, ch);
-                    break;
-                case ResamplingMode::Ultra:
-                    sample = interpolateUltra(m_audioData.data(), totalSamples, exactSamplePos, ch);
-                    break;
-                case ResamplingMode::Extreme:
-                    sample = interpolateExtreme(m_audioData.data(), totalSamples, exactSamplePos, ch);
-                    break;
-                case ResamplingMode::Perfect:
-                    sample = interpolatePerfect(m_audioData.data(), totalSamples, exactSamplePos, ch);
-                    break;
+            double localPos = m_streaming ? (exactSamplePos - baseFrame) : exactSamplePos;
+
+            if (!m_streaming || (localPos >= 0.0 && localPos + 1.0 < bufferFrames)) {
+                // Choose interpolation method based on resampling mode
+                switch (m_qualitySettings.resampling) {
+                    case ResamplingMode::Fast:
+                        sample = interpolateLinear(buffer->data(), totalSamples, localPos, ch);
+                        break;
+                    case ResamplingMode::Medium:
+                        sample = interpolateCubic(buffer->data(), totalSamples, localPos, ch);
+                        break;
+                    case ResamplingMode::High:
+                        sample = interpolateSinc(buffer->data(), totalSamples, localPos, ch);
+                        break;
+                    case ResamplingMode::Ultra:
+                        sample = interpolateUltra(buffer->data(), totalSamples, localPos, ch);
+                        break;
+                    case ResamplingMode::Extreme:
+                        sample = interpolateExtreme(buffer->data(), totalSamples, localPos, ch);
+                        break;
+                    case ResamplingMode::Perfect:
+                        sample = interpolatePerfect(buffer->data(), totalSamples, localPos, ch);
+                        break;
+                }
+            } else {
+                sample = 0.0f; // gap until buffer catches up
             }
             
             outputBuffer[frame * m_numChannels + ch] = sample;
@@ -812,6 +1262,173 @@ void Track::copyAudioData(float* outputBuffer, uint32_t numFrames, double output
     }
 
     m_playbackPhase.store(phase);
+    if (m_streaming) {
+        trimStreamBuffer(static_cast<uint64_t>(phase));
+        m_streamCv.notify_one();
+    }
+}
+
+void Track::trimStreamBuffer(uint64_t currentFrame) {
+    if (!m_streaming) return;
+    const uint32_t keepMargin = 8192; // frames to keep ahead of playhead for safety
+    const uint64_t targetBase = (currentFrame > keepMargin) ? (currentFrame - keepMargin) : 0;
+
+    if (targetBase > m_streamBaseFrame) {
+        uint64_t framesToDrop = targetBase - m_streamBaseFrame;
+        uint64_t availableFrames = m_audioData.size() / m_numChannels;
+        if (framesToDrop >= availableFrames) {
+            // Do not drop everything
+            return;
+        }
+        const size_t dropSamples = static_cast<size_t>(framesToDrop * m_numChannels);
+        m_audioData.erase(m_audioData.begin(), m_audioData.begin() + dropSamples);
+        m_streamBaseFrame += framesToDrop;
+    }
+}
+
+bool Track::startWavStreaming(const std::string& filePath, uint32_t sampleRate, uint16_t channels, uint16_t bitsPerSample, uint32_t dataOffset, uint64_t dataSize, uint64_t startFrame) {
+    stopStreaming();
+    m_sampleBuffer.reset();
+
+    m_streamFile = std::ifstream(filePath, std::ios::binary);
+    if (!m_streamFile) {
+        Log::warning("Failed to open WAV for streaming: " + filePath);
+        return false;
+    }
+
+    const uint32_t bytesPerFrame = (bitsPerSample / 8) * channels;
+    uint64_t startOffset = dataOffset + startFrame * bytesPerFrame;
+    uint64_t maxOffset = dataOffset + dataSize;
+    if (startOffset >= maxOffset) {
+        startOffset = dataOffset;
+        startFrame = 0;
+    }
+
+    m_streamFile.seekg(static_cast<std::streamoff>(startOffset), std::ios::beg);
+    if (!m_streamFile.good()) {
+        Log::warning("Failed to seek WAV data chunk for streaming");
+        return false;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        m_audioData.clear();
+        m_streamBaseFrame = startFrame;
+        m_streamEof = false;
+        m_streamTotalFrames = (bitsPerSample / 8 == 0 || channels == 0) ? 0 : dataSize / bytesPerFrame;
+        m_streamBytesPerSample = bitsPerSample / 8;
+        m_streamDataOffset = dataOffset;
+        m_sampleRate = sampleRate;
+        m_numChannels = 2;
+        m_sourceChannels = channels;
+    }
+
+    m_streamStop.store(false);
+    m_streaming = true;
+
+    // Launch background thread
+    m_streamThread = std::thread(&Track::streamWavThread, this, channels);
+    return true;
+}
+
+void Track::stopStreaming() {
+    if (!m_streaming) return;
+    m_streamStop.store(true);
+    m_streamCv.notify_one();
+    if (m_streamThread.joinable()) {
+        m_streamThread.join();
+    }
+    m_streaming = false;
+    m_streamEof = false;
+    if (m_streamFile.is_open()) {
+        m_streamFile.close();
+    }
+}
+
+void Track::streamWavThread(uint32_t channels) {
+    const uint32_t bytesPerSample = m_streamBytesPerSample;
+    const uint32_t bytesPerFrame = bytesPerSample * channels;
+    const uint32_t targetBufferFrames = m_sampleRate * 6; // keep ~6s buffered
+    const uint32_t chunkFrames = m_sampleRate;            // read ~1s per iteration
+
+    while (!m_streamStop.load()) {
+        std::unique_lock<std::mutex> lk(m_streamMutex);
+        m_streamCv.wait_for(lk, std::chrono::milliseconds(20), [&] {
+            std::lock_guard<std::mutex> audioLock(m_audioDataMutex);
+            uint64_t bufferedFrames = m_audioData.size() / m_numChannels;
+            return m_streamStop.load() || bufferedFrames < targetBufferFrames;
+        });
+        lk.unlock();
+        if (m_streamStop.load()) break;
+
+        // Check EOF
+        {
+            std::lock_guard<std::mutex> audioLock(m_audioDataMutex);
+            uint64_t bufferedFrames = m_audioData.size() / m_numChannels;
+            if (m_streamEof || (m_streamBaseFrame + bufferedFrames) >= m_streamTotalFrames) {
+                m_streamEof = true;
+                continue;
+            }
+        }
+
+        // Read next chunk
+        const uint64_t currentEndFrame = m_streamBaseFrame + (m_audioData.size() / m_numChannels);
+        const uint64_t remainingFrames = (m_streamTotalFrames > currentEndFrame) ? (m_streamTotalFrames - currentEndFrame) : 0;
+        uint32_t framesToRead = static_cast<uint32_t>(std::min<uint64_t>(chunkFrames, remainingFrames));
+        if (framesToRead == 0) {
+            m_streamEof = true;
+            continue;
+        }
+
+        std::vector<char> raw(framesToRead * bytesPerFrame);
+        m_streamFile.read(raw.data(), raw.size());
+        size_t got = static_cast<size_t>(m_streamFile.gcount());
+        if (got == 0) {
+            m_streamEof = true;
+            continue;
+        }
+        const size_t gotFrames = got / bytesPerFrame;
+        std::vector<float> decoded;
+        decoded.reserve(gotFrames * channels);
+
+        if (bytesPerSample == 2) {
+            const int16_t* in = reinterpret_cast<int16_t*>(raw.data());
+            for (size_t i = 0; i < gotFrames * channels; ++i) {
+                decoded.push_back(static_cast<float>(in[i]) / 32768.0f);
+            }
+        } else if (bytesPerSample == 3) {
+            for (size_t i = 0; i < gotFrames * channels; ++i) {
+                int32_t sample = (static_cast<uint8_t>(raw[i * 3])) |
+                                 (static_cast<uint8_t>(raw[i * 3 + 1]) << 8) |
+                                 (static_cast<int8_t>(raw[i * 3 + 2]) << 16);
+                decoded.push_back(std::max(-1.0f, std::min(1.0f, sample / 8388608.0f)));
+            }
+        } else if (bytesPerSample == 4) {
+            if (m_streamBytesPerSample == 4 && m_streamTotalFrames) {
+                // Assume float32 if audioFormat was IEEE float (we only stream PCM/float)
+                const float* in = reinterpret_cast<float*>(raw.data());
+                decoded.insert(decoded.end(), in, in + gotFrames * channels);
+            } else {
+                const int32_t* in = reinterpret_cast<int32_t*>(raw.data());
+                const float inv = 1.0f / 2147483648.0f;
+                for (size_t i = 0; i < gotFrames * channels; ++i) {
+                    decoded.push_back(std::max(-1.0f, std::min(1.0f, in[i] * inv)));
+                }
+            }
+        }
+
+        uint32_t inCh = channels;
+        forceStereo(decoded, inCh, m_sourceChannels);
+
+        {
+            std::lock_guard<std::mutex> audioLock(m_audioDataMutex);
+            m_audioData.insert(m_audioData.end(), decoded.begin(), decoded.end());
+        }
+
+        if (decoded.empty() || gotFrames < framesToRead) {
+            m_streamEof = true;
+        }
+    }
 }
 
 // Linear interpolation (2-point, fast)

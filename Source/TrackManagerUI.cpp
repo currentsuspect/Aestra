@@ -705,13 +705,25 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     NomadUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, bounds.width, rulerHeight);
     
     if (event.wheelDelta != 0.0f && rulerRect.contains(localPos)) {
-        // Zoom in/out with mouse wheel
+        // Zoom around mouse position instead of locking to the left
+        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        const auto& layout = themeManager.getLayoutDimensions();
+        float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
+        float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
+        float gridStartX = controlAreaWidth + 5;
+
+        // Preserve the timeline position under the cursor
+        float worldUnderMouse = (localPos.x - gridStartX) + m_timelineScrollOffset;
+
         float oldZoom = m_pixelsPerBeat;
-        float zoomDelta = event.wheelDelta > 0 ? 1.2f : 0.8f; // 20% zoom steps
-        m_pixelsPerBeat *= zoomDelta;
+        float zoomDelta = event.wheelDelta > 0 ? 1.12f : 0.9f; // smaller step for smoother feel
+        float targetZoom = std::clamp(oldZoom * zoomDelta, 10.0f, 200.0f);
+
+        // Smooth toward target to avoid harsh jumps
+        m_pixelsPerBeat = oldZoom + (targetZoom - oldZoom) * 0.35f;
         
-        // Clamp zoom level (min 10 pixels per beat, max 200 pixels per beat)
-        m_pixelsPerBeat = std::max(10.0f, std::min(200.0f, m_pixelsPerBeat));
+        // Recompute scroll offset so the world position under the cursor stays fixed
+        m_timelineScrollOffset = std::max(0.0f, worldUnderMouse - (localPos.x - gridStartX));
         
         // Sync zoom to all tracks
         for (auto& trackUI : m_trackUIComponents) {
@@ -925,12 +937,16 @@ void TrackManagerUI::updateHorizontalScrollbar() {
     float trackWidth = bounds.width - scrollbarWidth;
     float gridWidth = trackWidth - (buttonX + layout.controlButtonWidth + 10);
     
-    // Dynamic timeline range - grows with scroll position for unbounded timeline
-    // Always show at least 3 screens worth of content, expanding as needed
+    // Dynamic timeline range - based on clip extents with headroom
     float minTimelineWidth = gridWidth * 3.0f;  // Minimum: 3 screens
-    float currentViewEnd = m_timelineScrollOffset + gridWidth;
-    float totalTimelineWidth = std::max(minTimelineWidth, currentViewEnd * 1.5f);  // 50% padding beyond current position
-    
+    double extentSeconds = getMaxTimelineExtent();
+    double bpm = 120.0; // TODO: fetch from transport/project
+    double secondsPerBeat = 60.0 / bpm;
+    double totalBeats = extentSeconds / secondsPerBeat;
+    float contentWidth = static_cast<float>(totalBeats * m_pixelsPerBeat);
+    float paddedEnd = contentWidth + gridWidth * 0.5f; // 50% headroom
+    float totalTimelineWidth = std::max(minTimelineWidth, paddedEnd);
+
     // Set horizontal scrollbar range
     m_horizontalScrollbar->setRangeLimit(0, totalTimelineWidth);
     m_horizontalScrollbar->setCurrentRange(m_timelineScrollOffset, gridWidth);
@@ -1021,14 +1037,19 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
         // Bar number (1-based)
         std::string barText = std::to_string(bar + 1);
         
-        // Use timer-style vertical centering (accounts for baseline positioning)
-        float fontSize = 10.0f;
-        float textY = rulerBounds.y + (rulerBounds.height - fontSize) / 2.0f + fontSize * 0.75f;
+        // Draw ruler labels with MSDF size that stays readable
+        float fontSize = 22.0f;
+        auto textSize = renderer.measureText(barText, fontSize);
+        
+        // Place text near the top of the ruler area
+        float textY = std::floor(rulerBounds.y + 4.0f);
+        
+        // Center text horizontally on the grid line
+        float textX = std::floor(x - textSize.width * 0.5f);
         
         // Only draw text if it won't bleed off the right edge
         // Allow it to appear from the left (even partially) so "1" shows up early
-        float textX = x + 2;
-        float textWidth = fontSize * barText.length() * 0.6f; // Rough estimate
+        float textWidth = textSize.width;
         // Only check right edge - allow text to start appearing from left
         if (textX + textWidth <= textRightEdge) {
             renderer.drawText(barText, 
@@ -1253,6 +1274,27 @@ void TrackManagerUI::updateBackgroundCache(NomadUI::NUIRenderer& renderer) {
         NomadUI::NUIPoint p2(xPos, rulerRect.y + rulerHeight);
         renderer.drawLine(p1, p2, 1.0f, tickColor);
     }
+
+    // Bar numbers (cached in background texture)
+    float barFontSize = 18.0f;
+    for (int bar = 0; bar <= static_cast<int>(maxExtentInBeats / m_beatsPerBar) + 4; ++bar) {
+        float x = rulerRect.x + gridStartX + (bar * m_beatsPerBar * m_pixelsPerBeat) - m_timelineScrollOffset;
+        if (x < rulerRect.x + gridStartX - 2.0f || x > rulerRect.right() + m_pixelsPerBeat) continue;
+
+        std::string barText = std::to_string(bar + 1);
+        auto textSize = renderer.measureText(barText, barFontSize);
+        
+        // Center text box vertically: baseline at middle + half text height
+        // Note: drawText expects Top-Left coordinate, renderer handles baseline conversion
+        float textY = std::floor(rulerRect.y + (rulerRect.height - textSize.height) * 0.5f);
+        
+        // Center text horizontally on the grid line
+        float textX = std::floor(x - textSize.width * 0.5f);
+
+        if (textX + textSize.width <= rulerRect.right() - 6.0f) {
+            renderer.drawText(barText, NomadUI::NUIPoint(textX, textY), barFontSize, themeManager.getColor("accentPrimary"));
+        }
+    }
     
     renderer.renderToTextureEnd();
     m_backgroundTextureId = texId;
@@ -1291,4 +1333,3 @@ void TrackManagerUI::invalidateCache() {
 
 } // namespace Audio
 } // namespace Nomad
-

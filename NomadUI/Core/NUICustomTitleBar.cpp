@@ -26,11 +26,9 @@ void NUICustomTitleBar::createIcons() {
     // Create window control icons using the NUIIcon system
     minimizeIcon_ = NUIIcon::createMinimizeIcon();
     minimizeIcon_->setIconSize(NUIIconSize::Small);
-    minimizeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
     
     maximizeIcon_ = NUIIcon::createMaximizeIcon();
     maximizeIcon_->setIconSize(NUIIconSize::Small);
-    maximizeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
     
     // Create a restore icon (two overlapping squares)
     const char* restoreSvg = R"(
@@ -41,11 +39,10 @@ void NUICustomTitleBar::createIcons() {
     )";
     restoreIcon_ = std::make_shared<NUIIcon>(restoreSvg);
     restoreIcon_->setIconSize(NUIIconSize::Small);
-    restoreIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+    restoreIcon_->setColorFromTheme("textPrimary");
     
     closeIcon_ = NUIIcon::createCloseIcon();
     closeIcon_->setIconSize(NUIIconSize::Small);
-    closeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
 
     // Try to load the Nomad app icon (SVG) from assets; non-fatal if missing
     appIcon_ = std::make_shared<NUIIcon>();
@@ -142,7 +139,7 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
         renderer.fillRect(closeButtonRect_, closeHoverBg);
         closeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // White on red
     } else {
-        closeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+        closeIcon_->setColorFromTheme("textPrimary");
     }
     NUIPoint closeCenter(closeButtonRect_.x + closeButtonRect_.width * 0.5f,
                          closeButtonRect_.y + closeButtonRect_.height * 0.5f);

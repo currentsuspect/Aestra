@@ -27,6 +27,10 @@
 #pragma warning(pop)
 #endif
 
+#ifndef GL_VIEWPORT
+#define GL_VIEWPORT 0x0BA2
+#endif
+
 namespace NomadUI {
 
 // ============================================================================
@@ -60,7 +64,11 @@ out vec4 FragColor;
 
 uniform int uPrimitiveType;
 uniform float uRadius;
-uniform vec2 uSize;
+uniform float uBlur;
+uniform float uRectWidth;
+uniform float uRectHeight;
+uniform float uQuadWidth;
+uniform float uQuadHeight;
 uniform sampler2D uTexture;
 uniform bool uUseTexture;
 
@@ -79,13 +87,20 @@ void main() {
     }
     
     if (uPrimitiveType == 1) {
-        // Rounded rectangle
-        vec2 center = uSize * 0.5;
-        vec2 pos = vTexCoord * uSize;
-        float dist = sdRoundedRect(pos - center, center, uRadius);
-        float alpha = 1.0 - smoothstep(-1.0, 1.0, dist);
+        // Rounded rectangle / Shadow
+        // Map vTexCoord (0..1) to centered coordinates based on Quad Size
+        vec2 pos = (vTexCoord - 0.5) * vec2(uQuadWidth, uQuadHeight);
+        
+        // Calculate SDF to the Rect (Shape)
+        float dist = sdRoundedRect(pos, vec2(uRectWidth, uRectHeight) * 0.5, uRadius);
+        
+        // Soft edge / Shadow blur
+        // Inside is negative, Outside is positive
+        // We want 1.0 inside, 0.0 outside
+        // smoothstep(-blur, blur, dist) goes from 0 to 1 as we go from inside to outside
+        float alpha = 1.0 - smoothstep(-uBlur, uBlur, dist);
+        
         color.a *= alpha;
-        if (color.a < 0.01) discard;
     }
     
     FragColor = color;
@@ -98,6 +113,7 @@ void main() {
 
 NUIRendererGL::NUIRendererGL() {
     renderCache_.setRenderer(this);
+    sdfRenderer_ = std::make_unique<NUITextRendererSDF>();
 }
 
 NUIRendererGL::~NUIRendererGL() {
@@ -152,6 +168,15 @@ bool NUIRendererGL::initialize(int width, int height) {
         
         if (!fontLoaded) {
             std::cerr << "WARNING: Could not load any font, using fallback" << std::endl;
+            useSDFText_ = false;
+        } else if (sdfRenderer_) {
+            useSDFText_ = sdfRenderer_->initialize(defaultFontPath_, 64.0f);
+            if (!useSDFText_) {
+                std::cerr << "MSDF init failed, falling back to bitmap text\n";
+            } else {
+                std::cout << "MSDF text renderer enabled (atlas @64px)\n";
+                useSDFText_ = true;
+            }
         }
     
     // Set initial state
@@ -169,7 +194,9 @@ bool NUIRendererGL::initialize(int width, int height) {
 }
 
 void NUIRendererGL::shutdown() {
-    // MSDF text renderer cleanup handled externally
+    if (sdfRenderer_) {
+        sdfRenderer_->shutdown();
+    }
     
     // Cleanup FreeType
     if (fontInitialized_) {
@@ -230,6 +257,12 @@ void NUIRendererGL::beginFrame() {
     indices_.clear();
     frameCounter_++;
     drawCallCount_ = 0;  // Reset draw call counter each frame
+    // Reset primitive state so the first non-rounded draw in a frame does not inherit rounded settings
+    currentPrimitiveType_ = 0;
+    currentRadius_ = 0.0f;
+    currentBlur_ = 0.0f;
+    currentSize_ = {0.0f, 0.0f};
+    currentQuadSize_ = {0.0f, 0.0f};
     renderCache_.setCurrentFrame(frameCounter_);
     
     // Mark all dirty at the start of frame (for simplicity - can be optimized later)
@@ -301,12 +334,28 @@ void NUIRendererGL::setOpacity(float opacity) {
 // ============================================================================
 
 void NUIRendererGL::fillRect(const NUIRect& rect, const NUIColor& color) {
+    ensureBasicPrimitive();
     addQuad(rect, color);
 }
 
 void NUIRendererGL::fillRoundedRect(const NUIRect& rect, float radius, const NUIColor& color) {
-    // For now, use simple rect
-    // Rounded rectangle implementation
+    // Check if we need to flush (state change or size change)
+    // Note: uQuadSize and uRectSize are uniforms, so we must flush if they change.
+    // For simple rounded rects, QuadSize == RectSize.
+    if (currentPrimitiveType_ != 1 || 
+        currentRadius_ != radius || 
+        currentBlur_ != 1.0f || 
+        currentSize_.width != rect.width || 
+        currentSize_.height != rect.height) {
+        flush();
+    }
+    
+    currentPrimitiveType_ = 1;
+    currentRadius_ = radius;
+    currentBlur_ = 1.0f; // 1px blur for anti-aliasing
+    currentSize_ = {rect.width, rect.height};
+    currentQuadSize_ = {rect.width, rect.height};
+    
     addQuad(rect, color);
 }
 
@@ -324,6 +373,7 @@ void NUIRendererGL::strokeRoundedRect(const NUIRect& rect, float radius, float t
 }
 
 void NUIRendererGL::fillCircle(const NUIPoint& center, float radius, const NUIColor& color) {
+    ensureBasicPrimitive();
     // Approximate circle with triangle fan
     const int segments = 32;
     const float angleStep = 2.0f * 3.14159f / segments;
@@ -339,6 +389,7 @@ void NUIRendererGL::fillCircle(const NUIPoint& center, float radius, const NUICo
 }
 
 void NUIRendererGL::strokeCircle(const NUIPoint& center, float radius, float thickness, const NUIColor& color) {
+    ensureBasicPrimitive();
     // Approximate with line segments
     const int segments = 32;
     const float angleStep = 2.0f * 3.14159f / segments;
@@ -355,6 +406,7 @@ void NUIRendererGL::strokeCircle(const NUIPoint& center, float radius, float thi
 }
 
 void NUIRendererGL::drawLine(const NUIPoint& start, const NUIPoint& end, float thickness, const NUIColor& color) {
+    ensureBasicPrimitive();
     // Simple line as thin quad
     float dx = end.x - start.x;
     float dy = end.y - start.y;
@@ -380,6 +432,7 @@ void NUIRendererGL::drawLine(const NUIPoint& start, const NUIPoint& end, float t
 }
 
 void NUIRendererGL::drawPolyline(const NUIPoint* points, int count, float thickness, const NUIColor& color) {
+    ensureBasicPrimitive();
     for (int i = 0; i < count - 1; ++i) {
         drawLine(points[i], points[i + 1], thickness, color);
     }
@@ -390,6 +443,7 @@ void NUIRendererGL::drawPolyline(const NUIPoint* points, int count, float thickn
 // ============================================================================
 
 void NUIRendererGL::fillRectGradient(const NUIRect& rect, const NUIColor& colorStart, const NUIColor& colorEnd, bool vertical) {
+    ensureBasicPrimitive();
     if (vertical) {
         addVertex(rect.x, rect.y, 0, 0, colorStart);
         addVertex(rect.right(), rect.y, 1, 0, colorStart);
@@ -412,6 +466,7 @@ void NUIRendererGL::fillRectGradient(const NUIRect& rect, const NUIColor& colorS
 }
 
 void NUIRendererGL::fillCircleGradient(const NUIPoint& center, float radius, const NUIColor& colorInner, const NUIColor& colorOuter) {
+    ensureBasicPrimitive();
     // Simple radial gradient
     const int segments = 32;
     const float angleStep = 2.0f * 3.14159f / segments;
@@ -446,14 +501,34 @@ void NUIRendererGL::drawGlow(const NUIRect& rect, float radius, float intensity,
 
 void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY, float blur, const NUIColor& color) {
     NOMAD_ZONE("Renderer_DrawShadow");
-    NUIRect shadowRect = rect;
-    shadowRect.x += offsetX;
-    shadowRect.y += offsetY;
     
-    NUIColor shadowColor = color;
-    shadowColor.a *= 0.5f;
+    // Shadow quad is larger than the rect to contain the blur
+    float spread = blur * 2.0f;
+    NUIRect shadowQuad = rect;
+    shadowQuad.x += offsetX - spread;
+    shadowQuad.y += offsetY - spread;
+    shadowQuad.width += spread * 2.0f;
+    shadowQuad.height += spread * 2.0f;
     
-    fillRect(shadowRect, shadowColor);
+    // Flush if state changes
+    if (currentPrimitiveType_ != 1 || 
+        currentRadius_ != 8.0f || // Default radius for shadows
+        currentBlur_ != blur ||
+        currentSize_.width != rect.width || 
+        currentSize_.height != rect.height ||
+        currentQuadSize_.width != shadowQuad.width ||
+        currentQuadSize_.height != shadowQuad.height) {
+        flush();
+    }
+    
+    currentPrimitiveType_ = 1;
+    currentRadius_ = 8.0f;
+    currentBlur_ = blur;
+    currentSize_ = {rect.width, rect.height};
+    currentQuadSize_ = {shadowQuad.width, shadowQuad.height};
+    
+    // Use the passed color (alpha should be handled by caller or config)
+    addQuad(shadowQuad, color);
 }
 
 // ============================================================================
@@ -461,9 +536,43 @@ void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY
 // ============================================================================
 
 void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) {
+    if (!useSDFText_ && !triedSDFInit_ && sdfRenderer_ && !defaultFontPath_.empty()) {
+        useSDFText_ = sdfRenderer_->initialize(defaultFontPath_, 64.0f);
+        triedSDFInit_ = true;
+    }
+
+    if (useSDFText_ && sdfRenderer_ && sdfRenderer_->isInitialized()) {
+        // Convert Top-Left (UI) to Baseline (SDF)
+        // baseline = y + ascent
+        // Use logical fontSize for geometry calculations
+        float dpiScale = getDPIScale();
+        float ascent = sdfRenderer_->getAscent(fontSize);
+        float alignedY = std::floor(position.y + ascent + 0.5f);
+        float alignedX = std::floor(position.x + 0.5f);
+        
+        // CRITICAL FIX: Flush pending batch before letting SDF renderer take over
+        // SDF renderer changes GL state (Program, VAO, Texture) immediately
+        flush();
+        
+        sdfRenderer_->drawText(text, NUIPoint(alignedX, alignedY), fontSize * dpiScale, color, projectionMatrix_);
+        
+        // CRITICAL FIX: Invalidate renderer state after SDF returns
+        // The SDF renderer has clobbered our state, so we must force a re-bind
+        currentPrimitiveType_ = -1; // Force shader re-bind
+        currentTextureId_ = 0;      // Force texture re-bind
+        glBindVertexArray(vao_);    // Restore our VAO
+        
+        return;
+    }
+    
     // Use real font rendering if available, otherwise fallback to blocky text
     if (fontInitialized_) {
-        renderTextWithFont(text, position, fontSize, color);
+        // Convert Top-Left (UI) to Baseline (FreeType)
+        float dpiScale = getDPIScale();
+        FT_Set_Pixel_Sizes(ftFace_, 0, static_cast<FT_UInt>(fontSize * dpiScale));
+        float ascent = (ftFace_->size->metrics.ascender >> 6) / dpiScale;
+        
+        renderTextWithFont(text, NUIPoint(position.x, position.y + ascent), fontSize, color);
     } else {
         // Fallback to blocky text rendering
         float charWidth = fontSize * 0.5f;  // Narrower for better spacing
@@ -1169,33 +1278,24 @@ void NUIRendererGL::drawTextCentered(const std::string& text, const NUIRect& rec
     // Calculate horizontal centering
     float x = rect.x + (rect.width - textSize.width) * 0.5f;
     
-    // Calculate vertical centering with proper baseline adjustment
-    if (fontInitialized_ && ftFace_) {
-        // Use font metrics for accurate vertical centering
-        float dpiScale = getDPIScale();
-        FT_Set_Pixel_Sizes(ftFace_, 0, static_cast<FT_UInt>(fontSize * dpiScale));
-        
-        // Get font metrics (in 26.6 fractional pixel format)
-        float ascent = (ftFace_->size->metrics.ascender >> 6) / dpiScale;
-        float descent = (ftFace_->size->metrics.descender >> 6) / dpiScale;  // Negative value
-        
-        // Simple and accurate: position baseline so the font's natural center aligns with rect center
-        // The font's center is at ascent/2 above the baseline (since descent is negative)
-        // We want: baseline + ascent/2 = rect.y + rect.height/2
-        // Therefore: baseline = rect.y + rect.height/2 + ascent/2
-        // Add visual adjustment (6px up) for perceived centering
-        float y = rect.y + rect.height * 0.5f + ascent * 0.5f - 6.5f;
-        
-        drawText(text, NUIPoint(x, y), fontSize, color);
-    } else {
-        // Fallback for blocky text: simple vertical centering
-        // Blocky text renders from top-left, so we center differently
-        float y = rect.y + (rect.height - textSize.height) * 0.5f;
-        drawText(text, NUIPoint(x, y), fontSize, color);
-    }
+    // Calculate vertical centering (Top-Left)
+    // We standardize on Top-Left coordinates for drawText
+    float y = std::floor(rect.y + (rect.height - textSize.height) * 0.5f);
+    
+    drawText(text, NUIPoint(x, y), fontSize, color);
 }
 
 NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
+    if (!useSDFText_ && !triedSDFInit_ && sdfRenderer_ && !defaultFontPath_.empty()) {
+        useSDFText_ = sdfRenderer_->initialize(defaultFontPath_, 64.0f);
+        triedSDFInit_ = true;
+    }
+
+    if (useSDFText_ && sdfRenderer_ && sdfRenderer_->isInitialized()) {
+        float dpiScale = getDPIScale();
+        return sdfRenderer_->measureText(text, fontSize * dpiScale);
+    }
+
     if (!fontInitialized_ || text.empty()) {
         return {text.length() * fontSize * 0.6f, fontSize};
     }
@@ -1242,6 +1342,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         std::cerr << "ERROR: Failed to load font: " << fontPath << std::endl;
         return false;
     }
+    defaultFontPath_ = fontPath;
     
     // Set font size (96 pixels for high quality)
     FT_Set_Pixel_Sizes(ftFace_, 0, 96);
@@ -1425,6 +1526,8 @@ void NUIRendererGL::drawTexture(uint32_t textureId, const NUIRect& destRect, con
     const TextureData& td = it->second;
 
     NOMAD_ZONE("Texture_Draw");
+
+    ensureBasicPrimitive();
 
     // Check if we need to switch textures (batch breaking)
     if (currentTextureId_ != td.glId) {
@@ -1650,26 +1753,79 @@ void NUIRendererGL::deleteTexture(uint32_t textureId) {
 }
 
 uint32_t NUIRendererGL::renderToTextureBegin(int width, int height) {
-    // Simplified stub: create an empty persistent texture and return its id.
     if (width <= 0 || height <= 0) return 0;
+    
+    // Flush current batch to screen before switching target
+    flush();
+
+    // Create FBO if needed
+    if (fbo_ == 0) {
+        glGenFramebuffers(1, &fbo_);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+
+    // Create texture
     uint32_t texId = createTexture(nullptr, width, height);
-    if (texId == 0) return 0;
-    lastRenderTextureId_ = texId;
+    if (texId == 0) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        return 0;
+    }
+    
+    // Attach texture to FBO
+    uint32_t glTexId = getGLTextureId(texId);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glTexId, 0);
+
+    // Check status
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "FBO incomplete" << std::endl;
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        return 0;
+    }
+
+    // Save state
+    glGetIntegerv(GL_VIEWPORT, fboPrevViewport_);
+    widthBackup_ = width_;
+    heightBackup_ = height_;
+
+    // Set up FBO state
+    glViewport(0, 0, width, height);
+    
+    // Update projection for FBO (Ortho 0..width, 0..height)
+    width_ = width;
+    height_ = height;
+    updateProjectionMatrix();
+
+    // Clear FBO (transparent black)
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+
     renderingToTexture_ = true;
-    fboWidth_ = width; fboHeight_ = height;
+    lastRenderTextureId_ = texId;
+    fboWidth_ = width;
+    fboHeight_ = height;
+
     return texId;
 }
 
 uint32_t NUIRendererGL::renderToTextureEnd() {
     if (!renderingToTexture_) return 0;
+
+    // Flush batch to FBO
+    flush();
+
+    // Restore state
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(fboPrevViewport_[0], fboPrevViewport_[1], fboPrevViewport_[2], fboPrevViewport_[3]);
+    
+    width_ = widthBackup_;
+    height_ = heightBackup_;
+    updateProjectionMatrix();
+
     renderingToTexture_ = false;
-    uint32_t tex = lastRenderTextureId_;
-    lastRenderTextureId_ = 0;
-    int w = fboWidth_; int h = fboHeight_;
-    fboWidth_ = 0; fboHeight_ = 0;
-    (void)w; (void)h;
-    return tex;
+    return lastRenderTextureId_;
 }
+
+
 
 uint32_t NUIRendererGL::getGLTextureId(uint32_t textureId) const {
     auto it = textures_.find(textureId);
@@ -1735,7 +1891,20 @@ void NUIRendererGL::flush() {
     glUseProgram(primitiveShader_.id);
     glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
     // Note: opacity is already in vertex colors
-    glUniform1i(primitiveShader_.primitiveTypeLoc, 0); // Simple rect
+    glUniform1i(primitiveShader_.primitiveTypeLoc, currentPrimitiveType_);
+    // Default to no texturing; enable below if a texture is bound
+    glUniform1i(primitiveShader_.useTextureLoc, 0);
+    
+    if (currentPrimitiveType_ == 1) {
+        glUniform1f(primitiveShader_.radiusLoc, currentRadius_);
+        glUniform1f(primitiveShader_.blurLoc, currentBlur_);
+        glUniform1f(primitiveShader_.rectWidthLoc, currentSize_.width);
+        glUniform1f(primitiveShader_.rectHeightLoc, currentSize_.height);
+        glUniform1f(primitiveShader_.quadWidthLoc, currentQuadSize_.width);
+        glUniform1f(primitiveShader_.quadHeightLoc, currentQuadSize_.height);
+    } else {
+        glUniform1i(primitiveShader_.useTextureLoc, 0);
+    }
     
     // Bind current texture if needed
     if (currentTextureId_ != 0) {
@@ -1743,8 +1912,6 @@ void NUIRendererGL::flush() {
         glBindTexture(GL_TEXTURE_2D, currentTextureId_);
         glUniform1i(primitiveShader_.textureLoc, 0);
         glUniform1i(primitiveShader_.useTextureLoc, 1);
-    } else {
-        glUniform1i(primitiveShader_.useTextureLoc, 0);
     }
     
     // Draw
@@ -1768,6 +1935,18 @@ void NUIRendererGL::flush() {
     // Let's enforce that: if we flushed, we don't necessarily change the state, 
     // but addVertex/addQuad should probably set currentTextureId_ = 0 if they don't use textures.
     // For now, let's just clear the buffers.
+}
+
+void NUIRendererGL::ensureBasicPrimitive() {
+    // Switch back to flat primitives when the previous draw used the rounded-rect path
+    if (currentPrimitiveType_ != 0) {
+        flush();
+        currentPrimitiveType_ = 0;
+        currentRadius_ = 0.0f;
+        currentBlur_ = 0.0f;
+        currentSize_ = {0.0f, 0.0f};
+        currentQuadSize_ = {0.0f, 0.0f};
+    }
 }
 
 // ============================================================================
@@ -1807,7 +1986,11 @@ bool NUIRendererGL::loadShaders() {
     // Note: opacity is baked into vertex colors, no uniform needed
     primitiveShader_.primitiveTypeLoc = glGetUniformLocation(primitiveShader_.id, "uPrimitiveType");
     primitiveShader_.radiusLoc = glGetUniformLocation(primitiveShader_.id, "uRadius");
-    primitiveShader_.sizeLoc = glGetUniformLocation(primitiveShader_.id, "uSize");
+    primitiveShader_.blurLoc = glGetUniformLocation(primitiveShader_.id, "uBlur");
+    primitiveShader_.rectWidthLoc = glGetUniformLocation(primitiveShader_.id, "uRectWidth");
+    primitiveShader_.rectHeightLoc = glGetUniformLocation(primitiveShader_.id, "uRectHeight");
+    primitiveShader_.quadWidthLoc = glGetUniformLocation(primitiveShader_.id, "uQuadWidth");
+    primitiveShader_.quadHeightLoc = glGetUniformLocation(primitiveShader_.id, "uQuadHeight");
     primitiveShader_.textureLoc = glGetUniformLocation(primitiveShader_.id, "uTexture");
     primitiveShader_.useTextureLoc = glGetUniformLocation(primitiveShader_.id, "uUseTexture");
     

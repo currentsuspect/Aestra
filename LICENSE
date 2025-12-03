@@ -1,54 +1,429 @@
-Nomad Studios Source-Available License (NSSAL)
-Version 1.0 — October 30, 2025
+# Nomad Studios Source-Available License (NSSAL)
 
-Copyright (c) 2025 Dylan Makori
+## **Version 1.1 — November 2025**
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to
-view, study, and modify the Software for personal, educational, or
-contributory purposes, subject to the following conditions:
+---
 
-RESTRICTIONS
-You MAY NOT:
-- Remove or alter any proprietary notices, labels, or marks.
-- Create derivative works or competing products based on this code.
-- Use any part of this codebase in your own projects without written consent.
+## Copyright Notice
 
-PERMITTED ACTIONS
-You MAY:
-- View and study the source code for educational purposes.
-- Report bugs and security issues.
-- Suggest features and improvements.
-- Submit pull requests (contributors grant all rights to Nomad Studios).
+Copyright © 2024-2025 Dylan Makori (Nomad Studios)  
+All rights reserved.
 
-OWNERSHIP
-All title, ownership rights, and intellectual property rights in and to the
-Software, including all source code, documentation, designs, and associated
-materials, remain the exclusive property of Dylan Makori and Nomad Studios.
+---
 
-NO WARRANTY
-THE SOFTWARE IS PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS
-OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT.
+## Preamble
 
-LIMITATION OF LIABILITY
-IN NO EVENT SHALL DYLAN MAKORI OR NOMAD STUDIOS BE LIABLE FOR ANY DIRECT,
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING
-OUT OF THE USE OF OR INABILITY TO USE THE SOFTWARE.
+Nomad DAW is a free, professional-grade Digital Audio Workstation built to democratize music production. This license allows you to view, study, and contribute to the codebase while protecting Nomad Studios' ability to sustain development and maintain the product's mission.
 
-COMMERCIAL LICENSING
-NOMAD DAW is currently in development. Commercial licensing will be available
-upon official release.
+**Philosophy:** We believe in transparency and community contribution, but we also believe creators deserve to be compensated for their work. This license balances both.
 
-CONTACT
-For inquiries, early access, or partnership opportunities:
-Email: makoridylan@gmail.com
-Website: Coming Soon
+---
 
-TERMINATION
-Any unauthorized use of this Software will result in immediate termination of
-any implied permissions and may result in legal action.
+## 1. Definitions
 
-GOVERNING LAW
-This license shall be governed by and construed in accordance with the laws
-of the Republic of Kenya, without regard to its conflict of law provisions.
+**"Software"** means the Nomad DAW source code, binaries, documentation, assets, and associated materials available in this repository.
+
+**"You"** or **"Your"** means any individual or legal entity exercising rights under this License.
+
+**"Personal Use"** means use by an individual for non-commercial purposes, including learning, experimentation, and personal music production.
+
+**"Educational Use"** means use in academic institutions, online courses, tutorials, or research, provided such use is non-commercial.
+
+**"Contribution"** means any code, documentation, bug fix, feature, or other material you submit to the Nomad Studios repository.
+
+**"Derivative Work"** means any software, product, or service that incorporates, is based upon, or substantially replicates the functionality of the Software.
+
+**"Commercial Use"** means any use intended for or directed toward commercial advantage or monetary compensation, including but not limited to:
+
+- Selling, licensing, or distributing the Software or modified versions
+- Using the Software to provide paid services
+- Incorporating the Software into commercial products
+- Using the Software in a business or for-profit entity
+
+**“Commercial Use”** does not include selling, licensing, publishing, or distributing music, audio files, sound recordings, or artistic content created with the Software.
+You own 100% of the music you make with Nomad DAW. ALWAYS!
+
+*This exception applies regardless of whether the music was created for personal use, commercial release, client work, or any other artistic purpose.*
+
+**"Competing Product"** means any Digital Audio Workstation (DAW), music production software, or audio editing tool that directly competes with Nomad DAW in functionality or target market.
+
+---
+
+## 2. Grant of Rights
+
+Subject to the terms and conditions of this License, Dylan Makori (Nomad Studios) grants You a worldwide, non-exclusive, non-transferable, revocable license to:
+
+### 2.1 Permitted Actions
+
+**You MAY:**
+
+✅ **View and Study** — Examine the source code for educational purposes, learning, and research.
+
+✅ **Personal Use** — Use unmodified binaries of Nomad DAW for personal, non-commercial music production.
+
+✅ **Educational Use** — Use the Software in academic settings, tutorials, or courses, provided proper attribution is given.
+
+✅ **Report Issues** — Submit bug reports, security vulnerabilities, and feedback through official channels (GitHub Issues).
+
+✅ **Suggest Features** — Propose improvements, features, and enhancements.
+
+✅ **Contribute** — Submit pull requests for bug fixes, features, documentation, or other improvements, provided:
+
+- You agree to the Contributor License Agreement (Section 5)
+- Your contribution does not violate third-party rights
+- Your contribution aligns with the project's mission and coding standards
+
+✅ **Fork for Contributions** — Create a fork solely for the purpose of preparing contributions back to the main repository.
+
+✅ **Compile and Build** — Build the Software from source for personal use or contribution purposes.
+
+### 2.2 Restrictions
+
+**You MAY NOT:**
+
+❌ **Commercial Use Without Permission** — Use the Software for commercial purposes without explicit written consent from Nomad Studios.
+
+❌ **Create Competing Products** — Create, distribute, or sell Derivative Works that compete with Nomad DAW, including but not limited to:
+
+- Other DAWs or music production software
+- Audio editing tools
+- Plugin hosting environments
+- Substantially similar products marketed to music producers
+
+❌ **Remove or Modify Notices** — Remove, alter, or obscure any copyright notices, trademarks, attributions, or license information.
+
+❌ **Redistribute Modified Versions** — Distribute modified versions of the Software publicly without explicit written permission.
+
+❌ **Sublicense or Transfer** — Sublicense, rent, lease, lend, or transfer Your rights under this License to any third party.
+
+❌ **Reverse Engineer for Competition** — Use the Software's design, architecture, or algorithms to build competing products.
+
+❌ **Misrepresent Origin** — Claim authorship of the Software or misrepresent Your relationship with Nomad Studios.
+
+❌ **Use for Training AI Models** — Use the source code to train machine learning models, large language models, or AI systems without explicit written permission, except:
+
+- Academic research with proper citation
+- Personal learning projects not distributed publicly
+
+---
+
+## 3. Ownership and Intellectual Property
+
+### 3.1 Retained Rights
+
+All title, ownership rights, and intellectual property rights in and to the Software, including but not limited to:
+
+- Source code and object code
+- Documentation and specifications
+- Algorithms and architectures
+- User interfaces and designs
+- Trademarks and branding ("Nomad," "Nomad DAW," "Muse," "Nomad Studios")
+- Associated research papers and publications
+
+...remain the **exclusive property of Dylan Makori and Nomad Studios**.
+
+### 3.2 Trademarks
+
+The names "Nomad," "Nomad DAW," "Nomad Studios," and "Muse," along with associated logos and branding, are trademarks of Nomad Studios. You may not use these trademarks in any manner that suggests endorsement, affiliation, or sponsorship without prior written permission.
+
+**Permitted:** "Built for Nomad DAW" (with attribution)  
+**Not Permitted:** "Nomad Pro" or "MyDAW based on Nomad"
+
+### 3.3 Attribution Requirements
+
+If You reference, discuss, or use the Software in educational materials, blog posts, videos, or publications, You must:
+
+- Clearly attribute the Software to "Dylan Makori / Nomad Studios"
+- Include a link to the official repository: [NOMAD](https://github.com/currentsuspect/NOMAD)
+- Do not imply endorsement without permission
+
+---
+
+## 4. Open Source Clarification
+
+**This is NOT an Open Source License** as defined by the Open Source Initiative (OSI). While the source code is publicly visible ("source-available"), it does not grant the freedoms typically associated with open source licenses (e.g., MIT, GPL, Apache).
+
+**Why Source-Available?**
+
+- **Transparency:** Users can verify security and privacy claims.
+- **Education:** Aspiring developers can learn from professional-grade code.
+- **Community:** Contributors can improve the software for everyone.
+- **Sustainability:** Nomad Studios retains control to monetize and sustain development.
+
+---
+
+## 5. Contributor License Agreement (CLA)
+
+By submitting a Contribution to the Nomad Studios repository, You agree to the following terms:
+
+### 5.1 Grant of Rights
+
+You hereby grant to Dylan Makori and Nomad Studios:
+
+- A perpetual, worldwide, non-exclusive, royalty-free, irrevocable license to use, reproduce, modify, distribute, and sublicense Your Contribution.
+- The right to incorporate Your Contribution into the Software under any license, including proprietary licenses.
+- The right to use Your name and contribution details for attribution purposes (You may request anonymity).
+
+### 5.2 Representations and Warranties
+
+You represent that:
+
+- You are the original author of the Contribution or have the legal right to submit it.
+- Your Contribution does not infringe any third-party intellectual property rights.
+- You have not signed agreements that conflict with this CLA.
+
+### 5.3 Moral Rights
+
+To the extent permitted by law, You waive any moral rights in Your Contribution that would prevent Nomad Studios from fully exercising its rights.
+
+### 5.4 No Obligation
+
+Nomad Studios is under no obligation to accept, include, or maintain Your Contribution in the Software.
+
+---
+
+## 6. Community Guidelines
+
+### 6.1 Code of Conduct
+
+All contributors and community members must:
+
+- Be respectful and constructive in discussions.
+- Avoid harassment, discrimination, or abusive behavior.
+- Focus feedback on ideas and code, not individuals.
+
+Violations may result in removal from the community and revocation of access.
+
+### 6.2 Issue Reporting
+
+When reporting bugs or security vulnerabilities:
+
+- Use GitHub Issues for bugs and feature requests.
+- For security issues, email directly: [makoridylan@gmail.com](mailto:makoridylan@gmail.com) with subject "SECURITY:"
+- Provide detailed reproduction steps and environment information.
+
+### 6.3 Feature Requests
+
+Feature requests are welcome, but acceptance is at the sole discretion of Nomad Studios based on:
+
+- Alignment with product vision
+- Technical feasibility
+- Community demand
+
+---
+
+## 7. Commercial Licensing
+
+### 7.1 Free Use
+
+**The Nomad DAW base application is and will remain free for personal use.** This license applies to the source code repository, not the end-user application.
+
+### 7.2 Commercial Inquiries
+
+If You wish to:
+
+- Incorporate Nomad DAW technology into a commercial product
+- Offer Nomad DAW as part of a paid service
+- Create a Derivative Work for commercial purposes
+- Use the Software in a business or enterprise setting beyond personal use
+
+...contact Nomad Studios to negotiate a commercial license:  
+**Email:** [makoridylan@gmail.com](mailto:makoridylan@gmail.com)  
+**Subject:** "Commercial License Inquiry"
+
+### 7.3 Future Licensing
+
+Nomad Studios reserves the right to offer the Software under additional licenses, including dual-licensing arrangements. Pre-existing installations and uses remain valid under the license version under which they were obtained.
+
+---
+
+## 8. Disclaimers and Limitations
+
+### 8.1 No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+IN NO EVENT SHALL DYLAN MAKORI OR NOMAD STUDIOS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+### 8.2 Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL NOMAD STUDIOS BE LIABLE FOR:
+
+- Any direct, indirect, incidental, special, exemplary, or consequential damages
+- Loss of profits, data, or business opportunities
+- Costs of procurement of substitute goods or services
+- Any damages resulting from use or inability to use the Software
+
+...even if advised of the possibility of such damages.
+
+### 8.3 User Responsibility
+
+You are solely responsible for:
+
+- Your use of the Software
+- Compliance with applicable laws and regulations
+- Backup of Your data and projects
+- Any consequences of modifications You make
+
+---
+
+## 9. Updates and Modifications
+
+### 9.1 Software Updates
+
+Nomad Studios may release updates, patches, and new versions of the Software at its discretion. Updates may:
+
+- Fix bugs and security vulnerabilities
+- Add new features or improve existing ones
+- Change or remove functionality
+
+You are encouraged but not required to update to the latest version.
+
+### 9.2 License Updates
+
+Nomad Studios reserves the right to update this License for future versions of the Software. Changes will be:
+
+- Announced in release notes and repository documentation
+- Effective for new downloads and installations
+- Non-retroactive (previous versions remain under their original license)
+
+You may choose to remain on an older version with its associated license, but support and updates may be discontinued.
+
+---
+
+## 10. Termination
+
+### 10.1 Automatic Termination
+
+This License and the rights granted hereunder will terminate automatically if You:
+
+- Violate any term or condition of this License
+- Use the Software to create a Competing Product
+- Fail to comply with attribution requirements
+- Engage in prohibited Commercial Use
+
+### 10.2 Effects of Termination
+
+Upon termination:
+
+- You must immediately cease all use of the Software
+- You must delete or destroy all copies of the Software in Your possession
+- Any Contributions You made remain licensed to Nomad Studios (Section 5)
+- Termination does not affect any rights of third parties who received the Software from You under this License prior to termination
+
+### 10.3 Survival
+
+The following sections survive termination:
+
+- Section 3 (Ownership and Intellectual Property)
+- Section 5 (Contributor License Agreement)
+- Section 8 (Disclaimers and Limitations)
+- Section 11 (Dispute Resolution)
+
+---
+
+## 11. Dispute Resolution
+
+### 11.1 Governing Law
+
+This License shall be governed by and construed in accordance with the laws of the **Republic of Kenya**, without regard to its conflict of law provisions.
+
+### 11.2 Jurisdiction
+
+Any disputes arising out of or relating to this License shall be resolved in the courts of Nairobi, Kenya, and You consent to the personal jurisdiction of such courts.
+
+### 11.3 Informal Resolution
+
+Before initiating formal legal proceedings, parties agree to attempt to resolve disputes through:
+
+1. Direct communication via email
+2. Mediation, if mutually agreed
+
+### 11.4 No Class Actions
+
+You agree that any dispute resolution proceedings will be conducted only on an individual basis and not in a class, consolidated, or representative action.
+
+---
+
+## 12. Miscellaneous
+
+### 12.1 Entire Agreement
+
+This License constitutes the entire agreement between You and Nomad Studios regarding the Software and supersedes all prior or contemporaneous understandings, whether written or oral.
+
+### 12.2 Severability
+
+If any provision of this License is held to be invalid or unenforceable, the remaining provisions shall continue in full force and effect.
+
+### 12.3 No Waiver
+
+The failure of Nomad Studios to enforce any right or provision of this License shall not constitute a waiver of such right or provision.
+
+### 12.4 Assignment
+
+You may not assign or transfer Your rights or obligations under this License without prior written consent from Nomad Studios. Nomad Studios may assign this License at any time without restriction.
+
+### 12.5 Language
+
+This License is written in English. Any translations are provided for convenience only. In case of conflict, the English version prevails.
+
+---
+
+## 13. Contact Information
+
+**Nomad Studios**  
+Founder: Dylan Makori  
+Email: [makoridylan@gmail.com](mailto:makoridylan@gmail.com)  
+GitHub: [NOMAD](https://github.com/currentsuspect/NOMAD)  
+Website: [Coming Soon]
+
+**For:**
+
+- Commercial licensing inquiries
+- Partnership opportunities
+- Security vulnerability reports (use subject "SECURITY:")
+- Media and press inquiries
+- General questions
+
+---
+
+## 14. Acknowledgments
+
+Nomad DAW is built with the following principles:
+
+- **Accessibility:** Professional tools should be free for personal use
+- **Transparency:** Source code visibility builds trust
+- **Community:** Great software is improved by diverse contributors
+- **Sustainability:** Creators deserve compensation for their work
+- **Privacy:** User data is sacred and never exploited
+
+Thank you for respecting these values and this license.
+
+---
+
+## Quick Reference
+
+| Action | Allowed? | Notes |
+|--------|----------|-------|
+| View source code | ✅ Yes | For learning and transparency |
+| Use Nomad DAW for personal music | ✅ Yes | Base app is free forever |
+| Report bugs | ✅ Yes | Via GitHub Issues |
+| Submit pull requests | ✅ Yes | Must agree to CLA |
+| Fork for contributions | ✅ Yes | To prepare PRs only |
+| Build from source | ✅ Yes | For personal use |
+| Create tutorials/content | ✅ Yes | With attribution |
+| Use in a business | ⚠️ Contact | Requires commercial license |
+| Create a competing DAW | ❌ No | Derivative works prohibited |
+| Redistribute modified versions | ❌ No | Without written permission |
+| Remove copyright notices | ❌ No | All notices must remain |
+| Train AI on code | ❌ No | Without written permission |
+
+---
+
+**Last Updated:** November 29, 2025  
+**License Version:** 1.1  
+**Effective Date:** Upon download or use of the Software
+
+---
+
+*By using, copying, modifying, or distributing the Software, You agree to be bound by the terms of this License. If You do not agree to these terms, do not use the Software.*

@@ -5,6 +5,8 @@
 #include "../../../NomadCore/include/NomadAssert.h"
 #include "../../../Source/resource.h"
 #include <windowsx.h>
+#include "../../../NomadUI/External/glad/include/glad/glad.h"
+#include "../../../NomadUI/External/glad/include/glad/wglext.h"
 
 namespace Nomad {
 
@@ -264,20 +266,73 @@ bool PlatformWindowWin32::createGLContext() {
         return true;  // Already created
     }
 
-    m_hglrc = wglCreateContext(m_hdc);
-    if (!m_hglrc) {
-        NOMAD_LOG_ERROR("Failed to create OpenGL context");
+    // Step 1: Create a temporary legacy context to load WGL extensions
+    HGLRC tempCtx = wglCreateContext(m_hdc);
+    if (!tempCtx) {
+        NOMAD_LOG_ERROR("Failed to create temporary OpenGL context");
+        return false;
+    }
+    if (!wglMakeCurrent(m_hdc, tempCtx)) {
+        NOMAD_LOG_ERROR("Failed to make temporary OpenGL context current");
+        wglDeleteContext(tempCtx);
         return false;
     }
 
+    // Load wglCreateContextAttribsARB
+    auto createAttribs = reinterpret_cast<PFNWGLCREATECONTEXTATTRIBSARBPROC>(
+        wglGetProcAddress("wglCreateContextAttribsARB"));
+
+    HGLRC modernCtx = nullptr;
+    int chosenMajor = 0, chosenMinor = 0;
+
+    if (createAttribs) {
+        const int attempts[][2] = { {4,1}, {4,0}, {3,3} };
+        for (const auto& ver : attempts) {
+            int attribs[] = {
+                WGL_CONTEXT_MAJOR_VERSION_ARB, ver[0],
+                WGL_CONTEXT_MINOR_VERSION_ARB, ver[1],
+                WGL_CONTEXT_PROFILE_MASK_ARB,  WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+                WGL_CONTEXT_FLAGS_ARB,         WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+                0
+            };
+            modernCtx = createAttribs(m_hdc, nullptr, attribs);
+            if (modernCtx) {
+                chosenMajor = ver[0];
+                chosenMinor = ver[1];
+                break;
+            }
+        }
+    }
+
+    // Destroy temp context
+    wglMakeCurrent(nullptr, nullptr);
+    wglDeleteContext(tempCtx);
+
+    if (modernCtx) {
+        if (!wglMakeCurrent(m_hdc, modernCtx)) {
+            NOMAD_LOG_ERROR("Failed to make modern OpenGL context current");
+            wglDeleteContext(modernCtx);
+            return false;
+        }
+        m_hglrc = modernCtx;
+        NOMAD_LOG_INFO("OpenGL core context created ("
+            + std::to_string(chosenMajor) + "." + std::to_string(chosenMinor) + ")");
+        return true;
+    }
+
+    // Fallback to legacy context if attribs path failed
+    m_hglrc = wglCreateContext(m_hdc);
+    if (!m_hglrc) {
+        NOMAD_LOG_ERROR("Failed to create fallback OpenGL context");
+        return false;
+    }
     if (!wglMakeCurrent(m_hdc, m_hglrc)) {
-        NOMAD_LOG_ERROR("Failed to make OpenGL context current");
+        NOMAD_LOG_ERROR("Failed to make fallback OpenGL context current");
         wglDeleteContext(m_hglrc);
         m_hglrc = nullptr;
         return false;
     }
-
-    NOMAD_LOG_INFO("OpenGL context created successfully");
+    NOMAD_LOG_WARNING("Using legacy OpenGL context (attribs path unavailable).");
     return true;
 }
 

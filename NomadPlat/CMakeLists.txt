@@ -44,6 +44,9 @@ add_library(NomadPlat STATIC ${NOMAD_PLAT_SOURCES} ${NOMAD_PLAT_HEADERS})
 target_include_directories(NomadPlat PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+target_include_directories(NomadPlat PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadUI/External/glad/include
+)
 
 # Link dependencies
 target_link_libraries(NomadPlat PUBLIC NomadCore)

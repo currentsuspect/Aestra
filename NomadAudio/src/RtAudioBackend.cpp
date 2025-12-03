@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "RtAudioBackend.h"
 #include <stdexcept>
 #include <string>
@@ -229,6 +229,13 @@ double RtAudioBackend::getStreamLatency() const {
         return 0.0;
     }
     return m_rtAudio->getStreamLatency();
+}
+
+uint32_t RtAudioBackend::getStreamSampleRate() const {
+    if (!m_rtAudio || !m_rtAudio->isStreamOpen()) {
+        return 0;
+    }
+    return m_rtAudio->getStreamSampleRate();
 }
 
 int RtAudioBackend::rtAudioCallback(

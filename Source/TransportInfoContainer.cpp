@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file TransportInfoContainer.cpp
  * @brief Implementation of Transport Info Container components
@@ -10,6 +10,12 @@
 #include <cmath>
 
 namespace Nomad {
+
+// Define a constant for the text baseline adjustment factor, as text rendering
+// APIs often place y at the baseline, not the top of the glyph.
+// This value (0.8f) is critical for vertical centering the text based on the 
+// engine's font rendering.
+const float TEXT_BASELINE_COMPENSATION_FACTOR = 0.8f;
 
 // ============================================================================
 // BPM Display Component
@@ -31,7 +37,7 @@ BPMDisplay::BPMDisplay()
     )";
     m_upArrow = std::make_shared<NomadUI::NUIIcon>(upArrowSvg);
     m_upArrow->setIconSize(NomadUI::NUIIconSize::Small);
-    m_upArrow->setColorFromTheme("textSecondary");  // #9a9aa3 - Inactive by default
+    m_upArrow->setColorFromTheme("textSecondary"); 	// #9a9aa3 - Inactive by default
     
     // Create down arrow icon (small triangle pointing down)
     const char* downArrowSvg = R"(
@@ -41,7 +47,7 @@ BPMDisplay::BPMDisplay()
     )";
     m_downArrow = std::make_shared<NomadUI::NUIIcon>(downArrowSvg);
     m_downArrow->setIconSize(NomadUI::NUIIconSize::Small);
-    m_downArrow->setColorFromTheme("textSecondary");  // #9a9aa3 - Inactive by default
+    m_downArrow->setColorFromTheme("textSecondary"); 	// #9a9aa3 - Inactive by default
 }
 
 void BPMDisplay::setBPM(float bpm) {
@@ -106,14 +112,15 @@ void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     // Get theme for text rendering
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     NomadUI::NUIColor textColor = themeManager.getColor("textPrimary");
-    float fontSize = 14.0f;
+    float fontSize = themeManager.getFontSize("l"); // use larger theme size
     
     // Calculate text position with vertical centering (like dropdown does it)
     std::stringstream ss;
     ss << std::fixed << std::setprecision(1) << m_displayBPM << " BPM";
     std::string bpmText = ss.str();
     
-    float textY = bounds.y + (bounds.height - fontSize) / 2.0f + fontSize * 0.75f;
+    // ALIGNMENT CODE: Centers the text's bounding box vertically, then offsets to the baseline.
+    float textY = bounds.y + (bounds.height - fontSize) * 0.5f + fontSize * TEXT_BASELINE_COMPENSATION_FACTOR;
     float textX = bounds.x + 5.0f; // Small left padding
     
     // Draw text directly (not using label)
@@ -124,9 +131,9 @@ void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
         m_upArrow->setBounds(getUpArrowBounds());
         // Highlight on hover
         if (m_upArrowHovered) {
-            m_upArrow->setColorFromTheme("accentCyan");  // #00bcd4
+            m_upArrow->setColorFromTheme("accentCyan"); 	// #00bcd4
         } else {
-            m_upArrow->setColorFromTheme("textSecondary");  // #9a9aa3
+            m_upArrow->setColorFromTheme("textSecondary"); 	// #9a9aa3
         }
         m_upArrow->onRender(renderer);
     }
@@ -135,9 +142,9 @@ void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
         m_downArrow->setBounds(getDownArrowBounds());
         // Highlight on hover
         if (m_downArrowHovered) {
-            m_downArrow->setColorFromTheme("accentCyan");  // #00bcd4
+            m_downArrow->setColorFromTheme("accentCyan"); 	// #00bcd4
         } else {
-            m_downArrow->setColorFromTheme("textSecondary");  // #9a9aa3
+            m_downArrow->setColorFromTheme("textSecondary"); 	// #9a9aa3
         }
         m_downArrow->onRender(renderer);
     }
@@ -154,10 +161,10 @@ bool BPMDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // Handle clicks
     if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
         if (m_upArrowHovered) {
-            incrementBPM(1.0f);  // +1 BPM per click
+            incrementBPM(1.0f); 	// +1 BPM per click
             return true;
         } else if (m_downArrowHovered) {
-            decrementBPM(1.0f);  // -1 BPM per click
+            decrementBPM(1.0f); 	// -1 BPM per click
             return true;
         }
     }
@@ -167,9 +174,9 @@ bool BPMDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         NomadUI::NUIRect bounds = getBounds();
         if (bounds.contains(event.position)) {
             if (event.wheelDelta > 0) {
-                incrementBPM(0.5f);  // +0.5 BPM per scroll up
+                incrementBPM(0.5f); 	// +0.5 BPM per scroll up
             } else {
-                decrementBPM(0.5f);  // -0.5 BPM per scroll down
+                decrementBPM(0.5f); 	// -0.5 BPM per scroll down
             }
             return true;
         }
@@ -201,8 +208,8 @@ std::string TimerDisplay::formatTime(double seconds) const {
     
     std::stringstream ss;
     ss << std::setfill('0') << std::setw(2) << minutes << ":"
-       << std::setw(2) << secs << "."
-       << std::setw(2) << millis;
+        << std::setw(2) << secs << "."
+        << std::setw(2) << millis;
     return ss.str();
 }
 
@@ -214,14 +221,16 @@ void TimerDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     
     // CRITICAL: Green when playing, white when stopped
     NomadUI::NUIColor textColor = m_isPlaying 
-        ? NomadUI::NUIColor(0.0f, 1.0f, 0.3f, 1.0f)  // Vibrant green when playing
-        : themeManager.getColor("textPrimary");       // White when stopped
+        ? NomadUI::NUIColor(0.0f, 1.0f, 0.3f, 1.0f) 	// Vibrant green when playing
+        : themeManager.getColor("textPrimary"); 	 	// White when stopped
     
-    float fontSize = 14.0f;
+    float fontSize = themeManager.getFontSize("l"); // use larger theme size
     
     // Calculate text position with vertical centering (like dropdown does it)
     std::string timeText = formatTime(m_currentTime);
-    float textY = bounds.y + (bounds.height - fontSize) / 2.0f + fontSize * 0.75f;
+    
+    // ALIGNMENT CODE: Centers the text's bounding box vertically, then offsets to the baseline.
+    float textY = bounds.y + (bounds.height - fontSize) * 0.5f + fontSize * TEXT_BASELINE_COMPENSATION_FACTOR;
     float textX = bounds.x + 5.0f; // Small left padding
     
     // Draw text directly (not using label)
@@ -262,7 +271,7 @@ void TransportInfoContainer::layoutComponents() {
     
     // BPM in the center (horizontally centered in transport bar) - also ABSOLUTE
     float bpmWidth = 100.0f;
-    float bpmHeight = 30.0f;  // Increased from 24 to match timer height for better vertical centering
+    float bpmHeight = 30.0f; 	// Increased from 24 to match timer height for better vertical centering
     float bpmOffsetX = (bounds.width - bpmWidth) / 2.0f;
     float bpmOffsetY = (bounds.height - bpmHeight) / 2.0f; // Vertically centered in container
     
