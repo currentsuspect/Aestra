@@ -141,12 +141,12 @@ void NUIButton::onRender(NUIRenderer& renderer)
             }
         }
 
-        // Measure text for precise centering; drawText expects baseline Y
+        // Measure text for precise centering; drawText expects top-left Y
         NUISize textSize = renderer.measureText(text_, fontSize);
         float textX = bounds.x + (bounds.width - textSize.width) * 0.5f;
-        float baselineY = bounds.y + (bounds.height - textSize.height) * 0.5f + textSize.height;
+        float textY = bounds.y + (bounds.height - textSize.height) * 0.5f;
         
-        renderer.drawText(text_, NUIPoint(textX, baselineY), fontSize, finalTextColor);
+        renderer.drawText(text_, NUIPoint(textX, textY), fontSize, finalTextColor);
     }
 
 #ifdef NOMAD_ENABLE_PROFILING

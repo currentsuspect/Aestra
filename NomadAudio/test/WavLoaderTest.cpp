@@ -12,7 +12,7 @@ namespace fs = std::filesystem;
 namespace Nomad {
 namespace Audio {
     bool loadWavFile(const std::string& filePath, std::vector<float>& audioData,
-                     uint32_t& sampleRate, uint16_t& numChannels);
+                     uint32_t& sampleRate, uint32_t& numChannels);
 }
 }
 
@@ -105,7 +105,7 @@ bool runBasic16BitTest() {
 
     std::vector<float> audio;
     uint32_t sampleRate = 0;
-    uint16_t channels = 0;
+    uint32_t channels = 0;
     bool ok = loadWavFile(path, audio, sampleRate, channels);
     fs::remove(path);
 
@@ -131,7 +131,7 @@ bool runJunkChunkTest() {
 
     std::vector<float> audio;
     uint32_t sampleRate = 0;
-    uint16_t channels = 0;
+    uint32_t channels = 0;
     bool ok = loadWavFile(path, audio, sampleRate, channels);
     fs::remove(path);
 
@@ -152,7 +152,7 @@ bool run24BitTest() {
 
     std::vector<float> audio;
     uint32_t sampleRate = 0;
-    uint16_t channels = 0;
+    uint32_t channels = 0;
     bool ok = loadWavFile(path, audio, sampleRate, channels);
     fs::remove(path);
 

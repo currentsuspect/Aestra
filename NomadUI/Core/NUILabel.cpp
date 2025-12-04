@@ -39,9 +39,9 @@ void NUILabel::onRender(NUIRenderer& renderer)
             textSizeValid_ = true;
         }
         
-        // Calculate text position based on alignment
+        // Calculate text position based on alignment (top-left Y)
         float textX = bounds.x;
-        float textY = bounds.y + (bounds.height - cachedTextSize_.height) / 2.0f;
+        float textY = bounds.y + (bounds.height - fontSize) * 0.5f;
         
         switch (alignment_)
         {

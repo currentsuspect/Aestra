@@ -266,16 +266,16 @@ private:
     std::string m_sourcePath;
     std::atomic<double> m_playbackPhase{0.0};  // For sample-accurate playback
     mutable std::mutex m_audioDataMutex;
-    bool m_streaming{false};
+    std::atomic<bool> m_streaming{false};
     std::thread m_streamThread;
     std::atomic<bool> m_streamStop{false};
     std::condition_variable m_streamCv;
     std::mutex m_streamMutex;
-    uint64_t m_streamBaseFrame{0};     // absolute frame index for m_audioData[0]
-    uint64_t m_streamTotalFrames{0};   // total frames in source
-    bool m_streamEof{false};
-    uint32_t m_streamBytesPerSample{0};
-    uint32_t m_streamDataOffset{0};
+    std::atomic<uint64_t> m_streamBaseFrame{0};     // absolute frame index for m_audioData[0]
+    std::atomic<uint64_t> m_streamTotalFrames{0};   // total frames in source
+    std::atomic<bool> m_streamEof{false};
+    std::atomic<uint32_t> m_streamBytesPerSample{0};
+    std::atomic<uint32_t> m_streamDataOffset{0};
     std::ifstream m_streamFile;
 
     // Mixer integration

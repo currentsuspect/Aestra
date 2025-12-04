@@ -1,6 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "FileBrowser.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
+#include "../NomadUI/Core/NUIDragDrop.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
 #include <algorithm>
@@ -27,6 +28,7 @@ FileBrowser::FileBrowser()
     , showHiddenFiles_(false)
     , lastCachedWidth_(0.0f)       // Initialize cache width tracker
     , lastRenderedOffset_(0.0f)    // Initialize render tracking
+    , effectiveWidth_(0.0f)        // Initialize effective render width
     , scrollbarVisible_(false)
     , scrollbarOpacity_(0.0f)
     , scrollbarWidth_(8.0f)        // Initialize to default theme value
@@ -45,7 +47,7 @@ FileBrowser::FileBrowser()
     , lastShiftSelectIndex_(-1)
     , searchBoxFocused_(false)
     , searchBoxWidth_(180.0f)
-    , previewPanelVisible_(true)  // Start with preview visible
+    , previewPanelVisible_(false)  // Disabled - preview panel causes layout glitches
     , previewPanelWidth_(220.0f)
     , hoveredBreadcrumbIndex_(-1)
     , navHistoryIndex_(-1)
@@ -256,6 +258,7 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
         fileBrowserWidth -= previewPanelWidth_ + 8;  // Subtract preview panel width + spacing
     }
+    effectiveWidth_ = fileBrowserWidth; // Store for child render functions
     
     NUIRect fileBrowserBounds(bounds.x, bounds.y, fileBrowserWidth, bounds.height);
     
@@ -349,6 +352,60 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     float listY = bounds.y + headerHeight + 8 + 20; // After path bar
     float listHeight = bounds.height - headerHeight - 8 - 20;
     
+    // === DRAG AND DROP HANDLING ===
+    auto& dragManager = NUIDragDropManager::getInstance();
+    
+    // If global drag is active, update it with mouse movement
+    if (dragManager.isDragging()) {
+        // Always update drag position on any mouse event
+        dragManager.updateDrag(event.position);
+        
+        if (!event.pressed && event.button == NUIMouseButton::Left) {
+            dragManager.endDrag(event.position);
+            dragPotential_ = false;
+            isDraggingFile_ = false;
+            dragSourceIndex_ = -1;
+            return true;
+        }
+        return true;  // Consume all events while dragging
+    }
+    
+    // Check for potential drag initiation (mouse moved while button held)
+    if (dragPotential_ && dragSourceIndex_ >= 0) {
+        float dx = event.position.x - dragStartPos_.x;
+        float dy = event.position.y - dragStartPos_.y;
+        float dist = std::sqrt(dx * dx + dy * dy);
+        
+        if (dist >= dragManager.getDragThreshold()) {
+            // Start the drag!
+            const auto& dragFile = view[dragSourceIndex_];
+            
+            // Only drag audio files, not folders
+            if (!dragFile.isDirectory) {
+                NomadUI::DragData dragData;
+                dragData.type = NomadUI::DragDataType::File;
+                dragData.filePath = dragFile.path;
+                dragData.displayName = dragFile.name;
+                dragData.accentColor = NUIColor(0.733f, 0.525f, 0.988f, 1.0f); // Purple accent
+                dragData.previewWidth = 150.0f;
+                dragData.previewHeight = 30.0f;
+                
+                dragManager.beginDrag(dragData, dragStartPos_, this);
+                isDraggingFile_ = true;
+                dragPotential_ = false;
+                
+                Log::info("[FileBrowser] Started drag: " + dragFile.name);
+                return true;
+            }
+        }
+    }
+    
+    // Cancel drag potential on mouse release
+    if (!event.pressed && event.button == NUIMouseButton::Left) {
+        dragPotential_ = false;
+        dragSourceIndex_ = -1;
+    }
+    
     // If we're dragging the scrollbar, handle mouse events even outside bounds
     if (isDraggingScrollbar_) {
         // Always check scrollbar events if we're dragging
@@ -441,6 +498,14 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             int itemIndex = static_cast<int>((relativeY + scrollOffset_) / itemHeight);
             
             if (itemIndex >= 0 && itemIndex < static_cast<int>(view.size())) {
+                // Store drag potential state
+                const auto& clickedFile = view[itemIndex];
+                if (!clickedFile.isDirectory) {
+                    dragPotential_ = true;
+                    dragSourceIndex_ = itemIndex;
+                    dragStartPos_ = event.position;
+                }
+                
                 // Get current time for double-click detection
                 double currentTime = std::chrono::duration<double>(
                     std::chrono::steady_clock::now().time_since_epoch()
@@ -469,6 +534,10 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                 
                 // Handle double-click: open folders or files
                 if (isDoubleClick && selectedFile_) {
+                    // Cancel drag potential on double-click
+                    dragPotential_ = false;
+                    dragSourceIndex_ = -1;
+                    
                     if (selectedFile_->isDirectory) {
                         // Double-click on folder: navigate into it
                         navigateTo(selectedFile_->path);
@@ -702,6 +771,7 @@ void FileBrowser::loadDirectoryContents() {
     files_.clear();
     selectedFile_ = nullptr;
     selectedIndex_ = -1;
+    selectedIndices_.clear(); // Clear multi-selection when navigating folders
     
     try {
         std::filesystem::path currentDir(currentPath_);
@@ -870,20 +940,22 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     const auto& layout = themeManager.getLayoutDimensions();
 
     NUIRect bounds = getBounds();
+    // Use effective width to account for preview panel
+    float effectiveW = effectiveWidth_ > 0 ? effectiveWidth_ : bounds.width;
     float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
     float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
     float listY = bounds.y + headerHeight + 8 + 20; // After toolbar + spacing + path bar height
     float listHeight = bounds.height - headerHeight - 8 - 20;
-    NUIRect listClip(bounds.x + layout.panelMargin, listY, bounds.width - 2 * layout.panelMargin, listHeight);
+    NUIRect listClip(bounds.x + layout.panelMargin, listY, effectiveW - 2 * layout.panelMargin, listHeight);
 
     const auto& view = searchQuery_.empty() ? files_ : filteredFiles_;
 
     // CRITICAL: Check if width changed - invalidate ALL caches if so
-    if (std::abs(lastCachedWidth_ - bounds.width) > 0.1f) {
+    if (std::abs(lastCachedWidth_ - effectiveW) > 0.1f) {
         for (auto& file : files_) {
             file.invalidateCache();
         }
-        lastCachedWidth_ = bounds.width;
+        lastCachedWidth_ = effectiveW;
     }
 
     // OPTIMIZATION: Only render visible items (virtualization)
@@ -909,8 +981,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             continue;
         }
 
-        // Create item rect with proper dimensions
-        NUIRect itemRect(bounds.x + layout.panelMargin, itemY, bounds.width - 2 * layout.panelMargin, itemHeight);
+        // Create item rect with proper dimensions (use effectiveW for preview panel support)
+        NUIRect itemRect(bounds.x + layout.panelMargin, itemY, effectiveW - 2 * layout.panelMargin, itemHeight);
         bool selected = isSelected(i);
         bool hovered = (i == hoveredIndex_);
 
@@ -1026,8 +1098,10 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
 
     NUIRect bounds = getBounds();
+    // Use effective width to account for preview panel
+    float effectiveW = effectiveWidth_ > 0 ? effectiveWidth_ : bounds.width;
     float toolbarHeight = headerHeight; // Use theme headerHeight instead of hardcoded
-    NUIRect toolbarRect(bounds.x + layout.panelMargin, bounds.y + layout.panelMargin, bounds.width - 2 * layout.panelMargin, toolbarHeight);
+    NUIRect toolbarRect(bounds.x + layout.panelMargin, bounds.y + layout.panelMargin, effectiveW - 2 * layout.panelMargin, toolbarHeight);
 
     // Render toolbar background with enhanced styling
     renderer.fillRoundedRect(toolbarRect, 4, backgroundColor_.darkened(0.08f));
@@ -1051,7 +1125,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
 
     // Render refresh button with proper vertical alignment and bounds checking
     float toolbarFont = 16.0f;
-    float textY = toolbarRect.y + (toolbarRect.height - toolbarFont) * 0.5f + toolbarFont * 0.8f;
+    float textY = toolbarRect.y + (toolbarRect.height - toolbarFont) * 0.5f;
     
     // Measure refresh text and ensure it fits
     auto refreshTextSize = renderer.measureText("Refresh", toolbarFont);
@@ -1145,8 +1219,10 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
     if (!needsScrollbar || view.empty()) return;
 
     // Position scrollbar FLUSH with the right edge (no gap)
+    // Use effective width to account for preview panel
     NUIRect bounds = getBounds();
-    float scrollbarX = bounds.x + bounds.width - scrollbarWidth_;  // FLUSH alignment - no panelMargin
+    float effectiveW = effectiveWidth_ > 0 ? effectiveWidth_ : bounds.width;
+    float scrollbarX = bounds.x + effectiveW - scrollbarWidth_;  // FLUSH alignment - no panelMargin
     float scrollbarY = bounds.y + headerHeight + 8 + 20; // After path bar
     float scrollbarHeight = bounds.height - headerHeight - 8 - 20;
 
@@ -1401,8 +1477,10 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
     float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
     float fontSize = themeManager.getFontSize("s");
     NUIRect bounds = getBounds();
+    // Use effective width to account for preview panel
+    float effectiveW = effectiveWidth_ > 0 ? effectiveWidth_ : bounds.width;
 
-    NUIRect breadcrumbRect(bounds.x + 8, bounds.y + headerHeight + 4, bounds.width - 16, 20);
+    NUIRect breadcrumbRect(bounds.x + 8, bounds.y + headerHeight + 4, effectiveW - 16, 20);
 
     std::filesystem::path p(currentPath_);
     std::vector<std::filesystem::path> parts;
@@ -1410,32 +1488,90 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
         parts.push_back(*it);
     }
 
-    float currentX = breadcrumbRect.x;
+    // Calculate total width needed for all breadcrumbs
     float iconSize = 12.0f;
-    breadcrumbs_.clear();
-    std::filesystem::path buildPath;
-
+    float chevronWidth = iconSize + 2.0f;
+    float totalWidth = 0.0f;
+    std::vector<float> partWidths;
+    
     for (size_t i = 0; i < parts.size(); ++i) {
         std::string partName = parts[i].string();
         if (!partName.empty() && partName.back() == std::filesystem::path::preferred_separator) {
             partName.pop_back();
         }
-
         float textWidth = renderer.measureText(partName, fontSize).width;
+        partWidths.push_back(textWidth);
+        totalWidth += textWidth + 2.0f;
+        if (i < parts.size() - 1) {
+            totalWidth += chevronWidth;
+        }
+    }
+    
+    // Determine if we need to truncate from the left
+    float availableWidth = breadcrumbRect.width;
+    float ellipsisWidth = renderer.measureText("...", fontSize).width + 4.0f;
+    
+    // Find starting index - skip parts from the beginning if path is too long
+    size_t startIndex = 0;
+    if (totalWidth > availableWidth && parts.size() > 1) {
+        // Calculate how much we need to skip
+        float skipWidth = totalWidth - availableWidth + ellipsisWidth;
+        float skipped = 0.0f;
+        
+        for (size_t i = 0; i < parts.size() - 1; ++i) { // Always show at least the last part
+            float partTotal = partWidths[i] + 2.0f + chevronWidth;
+            if (skipped + partTotal <= skipWidth) {
+                skipped += partTotal;
+                startIndex = i + 1;
+            } else {
+                break;
+            }
+        }
+    }
+    
+    float currentX = breadcrumbRect.x;
+    breadcrumbs_.clear();
+    std::filesystem::path buildPath;
+    
+    // Build path up to start index (for navigation)
+    for (size_t i = 0; i < startIndex; ++i) {
+        buildPath /= parts[i];
+    }
+    
+    // Draw ellipsis if we're skipping parts
+    if (startIndex > 0) {
+        renderer.drawText("...", NUIPoint(currentX, breadcrumbRect.y + (breadcrumbRect.height - fontSize) * 0.5f), fontSize, themeManager.getColor("textSecondary"));
+        currentX += ellipsisWidth;
+    }
+
+    // Render visible breadcrumb parts
+    for (size_t i = startIndex; i < parts.size(); ++i) {
+        std::string partName = parts[i].string();
+        if (!partName.empty() && partName.back() == std::filesystem::path::preferred_separator) {
+            partName.pop_back();
+        }
+
+        float textWidth = partWidths[i];
+        
+        // Check if this part would exceed the available width
+        if (currentX + textWidth > breadcrumbRect.x + breadcrumbRect.width) {
+            break; // Stop rendering if we'd overflow
+        }
+        
         NUIColor breadcrumbColor = (i == parts.size() - 1) ? textColor_ : themeManager.getColor("textSecondary");
+        float textY = breadcrumbRect.y + (breadcrumbRect.height - fontSize) * 0.5f;
 
-        renderer.drawText(partName, NUIPoint(currentX, breadcrumbRect.y + 4), fontSize, breadcrumbColor);
+        renderer.drawText(partName, NUIPoint(currentX, textY), fontSize, breadcrumbColor);
 
-        breadcrumbs_.push_back({partName, (buildPath / parts[i]).string(), currentX, textWidth});
+        buildPath /= parts[i];
+        breadcrumbs_.push_back({partName, buildPath.string(), currentX, textWidth});
         currentX += textWidth + 2.0f;
 
         if (i < parts.size() - 1 && chevronIcon_) {
-            chevronIcon_->setPosition(currentX, breadcrumbRect.y + 4);
+            chevronIcon_->setPosition(currentX, breadcrumbRect.y + (breadcrumbRect.height - iconSize) * 0.5f);
             chevronIcon_->onRender(renderer);
-            currentX += iconSize + 2.0f;
+            currentX += chevronWidth;
         }
-
-        buildPath /= parts[i];
     }
 }
 bool FileBrowser::handleBreadcrumbMouseEvent(const NUIMouseEvent& event) {

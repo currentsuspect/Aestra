@@ -133,6 +133,7 @@ void TrackManager::setThreadCount(size_t count) {
 
 // Track Management
 std::shared_ptr<Track> TrackManager::addTrack(const std::string& name) {
+    std::lock_guard<std::mutex> lock(m_trackMutex);
     std::string trackName = name.empty() ? generateTrackName() : name;
     uint32_t trackId = m_nextTrackId.fetch_add(1);
 
@@ -167,6 +168,7 @@ std::shared_ptr<const Track> TrackManager::getTrack(size_t index) const {
 }
 
 void TrackManager::removeTrack(size_t index) {
+    std::lock_guard<std::mutex> lock(m_trackMutex);
     if (index < m_tracks.size()) {
         std::string trackName = m_tracks[index]->getName();
         m_tracks.erase(m_tracks.begin() + index);
@@ -181,6 +183,7 @@ void TrackManager::removeTrack(size_t index) {
 }
 
 void TrackManager::clearAllTracks() {
+    std::lock_guard<std::mutex> lock(m_trackMutex);
     for (auto& track : m_tracks) {
         if (track->isRecording()) {
             track->stopRecording();
@@ -400,6 +403,7 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
     if (!outputBuffer || numFrames == 0) {
         return;
     }
+    std::lock_guard<std::mutex> lock(m_trackMutex);
 
     // Check if any track is soloed (for exclusive solo behavior)
     bool anySoloed = false;
@@ -500,6 +504,7 @@ void TrackManager::processAudioMultiThreaded(float* outputBuffer, uint32_t numFr
     if (!outputBuffer || numFrames == 0 || !m_threadPool) {
         return;
     }
+    std::lock_guard<std::mutex> lock(m_trackMutex);
     
     size_t bufferSize = numFrames * 2; // Stereo
     

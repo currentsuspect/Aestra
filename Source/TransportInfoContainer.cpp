@@ -119,8 +119,9 @@ void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     ss << std::fixed << std::setprecision(1) << m_displayBPM << " BPM";
     std::string bpmText = ss.str();
     
-    // ALIGNMENT CODE: Centers the text's bounding box vertically, then offsets to the baseline.
-    float textY = bounds.y + (bounds.height - fontSize) * 0.5f + fontSize * TEXT_BASELINE_COMPENSATION_FACTOR;
+    // ALIGNMENT: measure text height and center (top-left Y positioning)
+    NomadUI::NUISize textSize = renderer.measureText(bpmText, fontSize);
+    float textY = bounds.y + (bounds.height - fontSize) * 0.5f;
     float textX = bounds.x + 5.0f; // Small left padding
     
     // Draw text directly (not using label)
@@ -229,8 +230,9 @@ void TimerDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     // Calculate text position with vertical centering (like dropdown does it)
     std::string timeText = formatTime(m_currentTime);
     
-    // ALIGNMENT CODE: Centers the text's bounding box vertically, then offsets to the baseline.
-    float textY = bounds.y + (bounds.height - fontSize) * 0.5f + fontSize * TEXT_BASELINE_COMPENSATION_FACTOR;
+    // ALIGNMENT: measure text height and center (top-left Y positioning)
+    NomadUI::NUISize textSize = renderer.measureText(timeText, fontSize);
+    float textY = bounds.y + (bounds.height - fontSize) * 0.5f;
     float textX = bounds.x + 5.0f; // Small left padding
     
     // Draw text directly (not using label)

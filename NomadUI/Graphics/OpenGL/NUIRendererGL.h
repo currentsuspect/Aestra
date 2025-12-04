@@ -73,6 +73,7 @@ public:
     void strokeCircle(const NUIPoint& center, float radius, float thickness, const NUIColor& color) override;
     void drawLine(const NUIPoint& start, const NUIPoint& end, float thickness, const NUIColor& color) override;
     void drawPolyline(const NUIPoint* points, int count, float thickness, const NUIColor& color) override;
+    void fillWaveform(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, const NUIColor& color) override;
     
     // ========================================================================
     // Gradient Drawing

@@ -153,8 +153,8 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
             displayText = truncated + "...";
         }
         
-        // Left-aligned text for better readability
-        float textY = bounds.y + (bounds.height - fontSize) / 2 + fontSize * 0.75f;
+        // Left-aligned text for better readability (top-left Y positioning)
+        float textY = bounds.y + (bounds.height - fontSize) * 0.5f;
         renderer.drawText(displayText, NUIPoint(textBounds.x, textY), fontSize, textColor_);
     }
 
@@ -461,8 +461,8 @@ void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bo
                 }
             }
         
-        // Left-aligned text with vertical centering
-        float textY = bounds.y + (bounds.height - fontSize) / 2 + fontSize * 0.75f;
+        // Left-aligned text with vertical centering (top-left Y positioning)
+        float textY = bounds.y + (bounds.height - fontSize) * 0.5f;
         renderer.drawText(displayText, NUIPoint(textBounds.x, textY), fontSize, curText);
     }
 }

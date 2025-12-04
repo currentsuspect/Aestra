@@ -21,6 +21,7 @@
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Core/NUIAdaptiveFPS.h"
 #include "../NomadUI/Core/NUIFrameProfiler.h"
+#include "../NomadUI/Core/NUIDragDrop.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadUI/Graphics/OpenGL/NUIRendererGL.h"
 #include "../NomadUI/Platform/NUIPlatformBridge.h"
@@ -1409,6 +1410,9 @@ private:
 
         // Render root component (which contains custom window)
         m_rootComponent->onRender(*m_renderer);
+        
+        // Render drag ghost on top of everything (if dragging)
+        NUIDragDropManager::getInstance().renderDragGhost(*m_renderer);
 
         m_renderer->endFrame();
     }

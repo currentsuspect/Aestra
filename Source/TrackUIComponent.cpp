@@ -366,7 +366,15 @@ void TrackUIComponent::drawWaveform(NomadUI::NUIRenderer& renderer, const NomadU
     int visibleCacheSamples = cacheEndIndex - cacheStartIndex;
     if (visibleCacheSamples <= 0) return;
     
-    // Draw the visible portion across the screen width
+    // OPTIMIZED: Build waveform as triangle strip instead of per-pixel lines
+    // This reduces draw calls from 1920 to 1 per waveform
+    std::vector<NomadUI::NUIPoint> topPoints;
+    std::vector<NomadUI::NUIPoint> bottomPoints;
+    topPoints.reserve(width);
+    bottomPoints.reserve(width);
+    
+    float halfHeight = height / 2.0f;
+    
     for (int x = 0; x < width; ++x) {
         // Map screen pixel to cache index
         float cacheProgress = static_cast<float>(x) / static_cast<float>(width);
@@ -378,17 +386,14 @@ void TrackUIComponent::drawWaveform(NomadUI::NUIRenderer& renderer, const NomadU
         float minVal = minMax.first;
         float maxVal = minMax.second;
         
-        int yMin = centerY - static_cast<int>(maxVal * height / 2);
-        int yMax = centerY - static_cast<int>(minVal * height / 2);
-        
-        if (yMax > yMin) {
-            renderer.drawLine(
-                NomadUI::NUIPoint(bounds.x + x, yMin),
-                NomadUI::NUIPoint(bounds.x + x, yMax),
-                1.0f,
-                waveformColor
-            );
-        }
+        // Top point (max value) and bottom point (min value)
+        topPoints.push_back(NomadUI::NUIPoint(bounds.x + x, centerY - maxVal * halfHeight));
+        bottomPoints.push_back(NomadUI::NUIPoint(bounds.x + x, centerY - minVal * halfHeight));
+    }
+    
+    // Single draw call for entire waveform
+    if (!topPoints.empty()) {
+        renderer.fillWaveform(topPoints.data(), bottomPoints.data(), static_cast<int>(topPoints.size()), waveformColor);
     }
 }
 
@@ -444,8 +449,46 @@ void TrackUIComponent::drawSampleClip(NomadUI::NUIRenderer& renderer, const Noma
         borderColor
     );
     
-    // Draw sample name overlay (top-left corner)
-    // TODO: Add text rendering for sample name when text API is available
+    // Draw sample name strip at top of clip (FL Studio style)
+    float nameStripHeight = 16.0f;
+    if (clipBounds.height > nameStripHeight + 5) {
+        // Name strip background (solid color from track)
+        NomadUI::NUIRect nameStripBounds(
+            clipBounds.x,
+            clipBounds.y,
+            clipBounds.width,
+            nameStripHeight
+        );
+        NomadUI::NUIColor stripColor = clipColor.withAlpha(0.85f);
+        renderer.fillRect(nameStripBounds, stripColor);
+        
+        // Draw sample name text (from the actual loaded file, not track name)
+        std::string sampleName;
+        const std::string& sourcePath = m_track->getSourcePath();
+        if (!sourcePath.empty()) {
+            // Extract filename from source path
+            size_t lastSlash = sourcePath.find_last_of("/\\");
+            sampleName = (lastSlash != std::string::npos) ? sourcePath.substr(lastSlash + 1) : sourcePath;
+            // Remove extension for cleaner display
+            size_t lastDot = sampleName.find_last_of('.');
+            if (lastDot != std::string::npos) {
+                sampleName = sampleName.substr(0, lastDot);
+            }
+        } else {
+            sampleName = m_track->getName(); // Fallback to track name if no source path
+        }
+        // Truncate if too long
+        if (sampleName.length() > 20 && clipBounds.width < 200) {
+            sampleName = sampleName.substr(0, 17) + "...";
+        }
+        
+        // Text color (light on dark background)
+        NomadUI::NUIColor textColor(1.0f, 1.0f, 1.0f, 0.95f);
+        
+        // Draw text with padding
+        NomadUI::NUIPoint textPos(clipBounds.x + 4.0f, clipBounds.y + 2.0f);
+        renderer.drawText(sampleName, textPos, 11.0f, textColor);
+    }
 }
 
 // UI Rendering
@@ -581,9 +624,28 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
                         bounds.height - 4
                     );
                     drawSampleClip(renderer, clippedClipBounds);
+                    
+                    // Store the FULL clip bounds (not clipped) for hit testing
+                    // This allows clicking on the clip even when partially scrolled
+                    m_clipBounds = NomadUI::NUIRect(
+                        waveformStartX,
+                        bounds.y + 2,
+                        waveformWidthInPixels,
+                        bounds.height - 4
+                    );
+                    
+                    // Draw waveform INSIDE the clip, below the name strip
+                    // Name strip is 16px, add some padding for clean look
+                    float nameStripHeight = 16.0f;
+                    float waveformPadding = 2.0f;
+                    NomadUI::NUIRect waveformInsideClip(
+                        visibleStartX,
+                        bounds.y + 2 + nameStripHeight + waveformPadding,
+                        visibleWidth,
+                        bounds.height - 4 - nameStripHeight - waveformPadding * 2
+                    );
+                    drawWaveform(renderer, waveformInsideClip, offsetRatio, visibleRatio);
                 }
-                
-                drawWaveform(renderer, waveformBounds, offsetRatio, visibleRatio);
             }
         }
     }
@@ -768,24 +830,108 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
     }
 
-    // Handle track-specific mouse events
+    NomadUI::NUIRect bounds = getBounds();
+    auto& dragManager = NomadUI::NUIDragDropManager::getInstance();
+    
+    // Handle clip drag potential detection
     if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
-        NomadUI::NUIRect bounds = getBounds();
+        // Check if clicking on clip bounds (for drag initiation)
+        if (m_track && !m_track->getAudioData().empty() && m_clipBounds.width > 0) {
+            // Get the visible grid area
+            auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+            const auto& layout = themeManager.getLayoutDimensions();
+            float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
+            float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
+            float gridStartX = bounds.x + controlAreaWidth + 5;
+            float gridEndX = bounds.x + bounds.width - 5;
+            
+            // Check if click is within the grid area AND within clip bounds
+            if (event.position.x >= gridStartX && event.position.x <= gridEndX &&
+                m_clipBounds.contains(event.position)) {
+                // Start potential drag
+                m_clipDragPotential = true;
+                m_clipDragStartPos = event.position;
+                m_selected = true;
+                return true;
+            }
+        }
+        
+        // Standard track selection
         if (bounds.contains(event.position.x, event.position.y)) {
-            // Select this track
             m_selected = true;
             
             // Calculate position within track for waveform/grid click
             if (m_track && event.position.y > bounds.y + 30) {
-                // Clicked in grid/playlist area - set play position or add clip
-                double clickRatio = static_cast<double>(event.position.x - bounds.x - 120) / (bounds.width - 120); // Account for controls offset
+                // Clicked in grid/playlist area - set play position
+                double clickRatio = static_cast<double>(event.position.x - bounds.x - 120) / (bounds.width - 120);
                 double newPosition = clickRatio * m_track->getDuration();
                 m_track->setPosition(newPosition);
                 Log::info("Track position set to: " + std::to_string(newPosition));
             }
             
-            return true; // Track consumed the click
+            return true;
         }
+    }
+    
+    // Handle right-click to delete clip (FL Studio style)
+    if (event.pressed && event.button == NomadUI::NUIMouseButton::Right) {
+        if (m_track && !m_track->getAudioData().empty() && m_clipBounds.width > 0) {
+            // Check if right-click is on the clip
+            if (m_clipBounds.contains(event.position)) {
+                // Notify parent to start delete animation
+                if (m_onClipDeletedCallback) {
+                    m_onClipDeletedCallback(this, event.position);
+                }
+                return true;
+            }
+        }
+    }
+    
+    // Handle drag threshold detection
+    if (m_clipDragPotential && !dragManager.isDragging()) {
+        float dx = event.position.x - m_clipDragStartPos.x;
+        float dy = event.position.y - m_clipDragStartPos.y;
+        float distance = std::sqrt(dx * dx + dy * dy);
+        
+        const float DRAG_THRESHOLD = 5.0f;
+        if (distance >= DRAG_THRESHOLD) {
+            // Start the drag operation
+            m_isDraggingClip = true;
+            m_clipDragPotential = false;
+            
+            NomadUI::DragData dragData;
+            dragData.type = NomadUI::DragDataType::AudioClip;
+            dragData.displayName = m_track->getName();
+            
+            // Store track info for repositioning
+            dragData.filePath = m_track->getSourcePath(); // Original file path
+            dragData.sourceTrackIndex = static_cast<int>(m_track->getTrackId());
+            dragData.sourceTimePosition = m_track->getStartPositionInTimeline();
+            
+            // Use track color (converted from ARGB uint32_t to NUIColor)
+            uint32_t trackColor = m_track->getColor();
+            dragData.accentColor = NomadUI::NUIColor(
+                ((trackColor >> 16) & 0xFF) / 255.0f,  // R
+                ((trackColor >> 8) & 0xFF) / 255.0f,   // G
+                (trackColor & 0xFF) / 255.0f,          // B
+                1.0f
+            );
+            
+            // Set preview dimensions
+            dragData.previewWidth = m_clipBounds.width;
+            dragData.previewHeight = m_clipBounds.height;
+            
+            dragManager.beginDrag(dragData, m_clipDragStartPos, this);
+            
+            Log::info("Started dragging clip: " + dragData.displayName);
+            return true;
+        }
+    }
+    
+    // Handle drag release
+    if (!event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+        m_clipDragPotential = false;
+        m_isDraggingClip = false;
     }
 
     // Pass through to parent if not handled

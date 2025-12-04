@@ -84,6 +84,7 @@ private:
     void setupEventBridges();
     int convertMouseButton(Nomad::MouseButton button);
     int convertKeyCode(Nomad::KeyCode key);
+    NUIModifiers convertModifiers(const Nomad::KeyModifiers& mods);
 
     // NomadPlat window
     Nomad::IPlatformWindow* m_window;

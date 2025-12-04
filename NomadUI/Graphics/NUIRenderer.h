@@ -135,6 +135,16 @@ public:
      */
     virtual void drawPolyline(const NUIPoint* points, int count, float thickness, const NUIColor& color) = 0;
     
+    /**
+     * Draw a waveform as an optimized filled shape (triangle strip).
+     * Much faster than per-pixel lines for audio visualization.
+     * @param topPoints Array of points defining the top edge of the waveform
+     * @param bottomPoints Array of points defining the bottom edge (same count as topPoints)
+     * @param count Number of points in each array
+     * @param color Fill color for the waveform
+     */
+    virtual void fillWaveform(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, const NUIColor& color) = 0;
+    
     // ========================================================================
     // Gradient Drawing
     // ========================================================================
@@ -197,15 +207,15 @@ public:
     
     /**
      * Calculate baseline-aligned Y position for vertically centered text using measured size.
-     * This accounts for the MSDF renderer's baseline coordinate system.
+     * This accounts for the MSDF renderer's top-left coordinate system.
      * 
      * @param rect The rectangle to center text within
-     * @param textSize The measured text size from measureText()
-     * @return Baseline Y coordinate for centered text
+     * @param fontSize The font size being used
+     * @return Top-left Y coordinate for centered text
      */
-    float calculateTextBaselineY(const NUIRect& rect, const NUISize& textSize) const {
-        // Center vertically using measured height, then offset to baseline
-        return rect.y + (rect.height - textSize.height) * 0.5f + textSize.height;
+    float calculateTextY(const NUIRect& rect, float fontSize) const {
+        // Center vertically using font size (top-left Y positioning)
+        return rect.y + (rect.height - fontSize) * 0.5f;
     }
     
     // ========================================================================

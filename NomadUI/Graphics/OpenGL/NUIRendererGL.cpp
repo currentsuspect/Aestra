@@ -265,8 +265,9 @@ void NUIRendererGL::beginFrame() {
     currentQuadSize_ = {0.0f, 0.0f};
     renderCache_.setCurrentFrame(frameCounter_);
     
-    // Mark all dirty at the start of frame (for simplicity - can be optimized later)
-    dirtyRegionManager_.markAllDirty(NUISize(static_cast<float>(width_), static_cast<float>(height_)));
+    // OPTIMIZED: Don't mark all dirty - let widgets mark their own dirty regions
+    // This enables true incremental rendering where only changed areas are redrawn
+    // dirtyRegionManager_.markAllDirty(NUISize(static_cast<float>(width_), static_cast<float>(height_)));
     
     // Clear batch manager
     batchManager_.clearAll();
@@ -438,6 +439,41 @@ void NUIRendererGL::drawPolyline(const NUIPoint* points, int count, float thickn
     }
 }
 
+void NUIRendererGL::fillWaveform(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, const NUIColor& color) {
+    if (count < 2) return;
+    
+    ensureBasicPrimitive();
+    
+    // Build triangle strip: top[0], bottom[0], top[1], bottom[1], ...
+    // This creates a filled shape between the top and bottom edges
+    uint32_t baseIndex = static_cast<uint32_t>(vertices_.size());
+    
+    // Add all vertices - addVertex handles transform internally
+    for (int i = 0; i < count; ++i) {
+        addVertex(topPoints[i].x, topPoints[i].y, 0, 0, color);
+        addVertex(bottomPoints[i].x, bottomPoints[i].y, 0, 1, color);
+    }
+    
+    // Build triangle strip indices
+    // For each quad between columns: 4 vertices -> 2 triangles
+    for (int i = 0; i < count - 1; ++i) {
+        uint32_t topLeft = baseIndex + i * 2;
+        uint32_t bottomLeft = baseIndex + i * 2 + 1;
+        uint32_t topRight = baseIndex + (i + 1) * 2;
+        uint32_t bottomRight = baseIndex + (i + 1) * 2 + 1;
+        
+        // Triangle 1: topLeft, bottomLeft, topRight
+        indices_.push_back(topLeft);
+        indices_.push_back(bottomLeft);
+        indices_.push_back(topRight);
+        
+        // Triangle 2: topRight, bottomLeft, bottomRight
+        indices_.push_back(topRight);
+        indices_.push_back(bottomLeft);
+        indices_.push_back(bottomRight);
+    }
+}
+
 // ============================================================================
 // Gradient Drawing
 // ============================================================================
@@ -532,7 +568,7 @@ void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY
 }
 
 // ============================================================================
-// Text Rendering (Placeholder)
+// Text Rendering
 // ============================================================================
 
 void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) {
@@ -542,32 +578,32 @@ void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, 
     }
 
     if (useSDFText_ && sdfRenderer_ && sdfRenderer_->isInitialized()) {
+        // Apply transform stack to position (critical for FBO cache rendering)
+        float transformedX = position.x;
+        float transformedY = position.y;
+        applyTransform(transformedX, transformedY);
+        
         // Convert Top-Left (UI) to Baseline (SDF)
-        // baseline = y + ascent
-        // Use logical fontSize for geometry calculations
         float dpiScale = getDPIScale();
         float ascent = sdfRenderer_->getAscent(fontSize);
-        float alignedY = std::floor(position.y + ascent + 0.5f);
-        float alignedX = std::floor(position.x + 0.5f);
+        float alignedY = std::floor(transformedY + ascent + 0.5f);
+        float alignedX = std::floor(transformedX + 0.5f);
         
-        // CRITICAL FIX: Flush pending batch before letting SDF renderer take over
-        // SDF renderer changes GL state (Program, VAO, Texture) immediately
+        // Flush pending batch before SDF renderer takes over
         flush();
         
         sdfRenderer_->drawText(text, NUIPoint(alignedX, alignedY), fontSize * dpiScale, color, projectionMatrix_);
         
-        // CRITICAL FIX: Invalidate renderer state after SDF returns
-        // The SDF renderer has clobbered our state, so we must force a re-bind
-        currentPrimitiveType_ = -1; // Force shader re-bind
-        currentTextureId_ = 0;      // Force texture re-bind
-        glBindVertexArray(vao_);    // Restore our VAO
+        // Invalidate renderer state after SDF returns
+        currentPrimitiveType_ = -1;
+        currentTextureId_ = 0;
+        glBindVertexArray(vao_);
         
         return;
     }
     
     // Use real font rendering if available, otherwise fallback to blocky text
     if (fontInitialized_) {
-        // Convert Top-Left (UI) to Baseline (FreeType)
         float dpiScale = getDPIScale();
         FT_Set_Pixel_Sizes(ftFace_, 0, static_cast<FT_UInt>(fontSize * dpiScale));
         float ascent = (ftFace_->size->metrics.ascender >> 6) / dpiScale;
@@ -575,21 +611,17 @@ void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, 
         renderTextWithFont(text, NUIPoint(position.x, position.y + ascent), fontSize, color);
     } else {
         // Fallback to blocky text rendering
-        float charWidth = fontSize * 0.5f;  // Narrower for better spacing
-        float charHeight = fontSize * 0.8f; // Shorter for better proportions
+        float charWidth = fontSize * 0.5f;
+        float charHeight = fontSize * 0.8f;
         
-        // Set up text rendering state
         glUseProgram(primitiveShader_.id);
         glBindVertexArray(vao_);
         
-        // Draw each character as a clean, filled shape
         for (size_t i = 0; i < text.length(); ++i) {
             char c = text[i];
-            if (c >= 32 && c <= 126) { // Printable ASCII characters
+            if (c >= 32 && c <= 126) {
                 float x = position.x + i * charWidth;
                 float y = position.y;
-                
-                // Draw character using clean filled shapes
                 drawCleanCharacter(c, x, y, charWidth, charHeight, color);
             }
         }

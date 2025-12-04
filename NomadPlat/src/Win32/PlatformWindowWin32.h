@@ -47,6 +47,8 @@ public:
     void* getNativeDisplayHandle() const override { return m_hdc; }
 
     float getDPIScale() const override { return m_dpiScale; }
+    
+    KeyModifiers getCurrentModifiers() const override { return getKeyModifiers(); }
 
     void setMouseMoveCallback(std::function<void(int, int)> callback) override { m_mouseMoveCallback = callback; }
     void setMouseButtonCallback(std::function<void(MouseButton, bool, int, int)> callback) override { m_mouseButtonCallback = callback; }
@@ -67,7 +69,7 @@ private:
     bool registerWindowClass();
     bool setupPixelFormat();
     KeyCode translateKeyCode(WPARAM wParam, LPARAM lParam);
-    KeyModifiers getKeyModifiers();
+    KeyModifiers getKeyModifiers() const;
 
     // Window handles
     HWND m_hwnd;

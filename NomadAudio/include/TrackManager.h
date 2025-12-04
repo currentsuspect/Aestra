@@ -130,6 +130,7 @@ public:
 private:
     // Track collection
     std::vector<std::shared_ptr<Track>> m_tracks;
+    mutable std::mutex m_trackMutex; // Guards m_tracks and m_trackBuffers against concurrent mutation
     std::atomic<double> m_outputSampleRate{48000.0};
 
     // Transport state

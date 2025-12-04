@@ -116,6 +116,9 @@ public:
 
     // DPI support
     virtual float getDPIScale() const = 0;
+    
+    // Modifier key state query (for wheel events that need modifier info)
+    virtual KeyModifiers getCurrentModifiers() const = 0;
 
     // Event callbacks
     virtual void setMouseMoveCallback(std::function<void(int x, int y)> callback) = 0;

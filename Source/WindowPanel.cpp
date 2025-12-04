@@ -134,11 +134,12 @@ void WindowPanel::onRender(NomadUI::NUIRenderer& renderer) {
     auto borderColor = theme.getColor("border");
     renderer.strokeRect(titleBarRect, 1, borderColor);
     
-    // Draw title text (centered vertically in title bar)
+    // Draw title text (centered vertically in title bar, top-left Y positioning)
     auto textColor = theme.getColor("text");
+    float fontSize = 12.0f;
     float textX = bounds.x + 8.0f;
-    float textY = bounds.y + (m_titleBarHeight - 12.0f) / 2.0f + 10.0f; // Center vertically
-    renderer.drawText(m_title, NomadUI::NUIPoint(textX, textY), 12.0f, textColor);
+    float textY = bounds.y + (m_titleBarHeight - fontSize) * 0.5f;
+    renderer.drawText(m_title, NomadUI::NUIPoint(textX, textY), fontSize, textColor);
     
     // Draw content background (if expanded)
     if (!m_minimized) {

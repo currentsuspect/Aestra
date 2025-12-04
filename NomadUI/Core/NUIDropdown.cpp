@@ -501,15 +501,15 @@ namespace NomadUI {
         float textX = getX() + 10.0f;
         float fontSize = getTheme()->getFontSizeNormal();
         
-        // Create rect for text area and calculate proper baseline Y
-        NUIRect textRect(getX(), getY(), getWidth(), getHeight());
-        float textY = textRect.y + textRect.height / 2.0f + fontSize / 6.0f;
+        // Measure text for true vertical centering (top-left Y positioning)
+        std::string displayText = items.empty() ? placeholderText : items[selectedIndex].text;
+        NUISize textSize = renderer.measureText(displayText, fontSize);
+        float textY = getY() + (getHeight() - fontSize) * 0.5f;
         
         NUIColor textColor = items.empty() ? 
             getTheme()->getColor("dropdown.placeholder", NUIColor(0.5f, 0.5f, 0.5f, 1.0f)) :
             getTheme()->getText();
         
-        std::string displayText = items.empty() ? placeholderText : items[selectedIndex].text;
         renderer.drawText(displayText, NUIPoint(textX, textY), fontSize, textColor);
 
         // Draw dropdown arrow
@@ -567,8 +567,8 @@ namespace NomadUI {
             float fontSize = getTheme()->getFontSizeSmall();
             
             // Create rect for search text and calculate proper baseline Y
-            NUIRect searchRect(getX() + 5.0f, dropdownY + dropdownHeight + 5.0f, getWidth() - 10.0f, fontSize + 4.0f);
-            float searchY = searchRect.y + searchRect.height / 2.0f + fontSize / 6.0f;
+            NUISize searchSize = renderer.measureText(searchText, fontSize);
+            float searchY = dropdownY + dropdownHeight + 5.0f + (fontSize + 4.0f - searchSize.height) * 0.5f + searchSize.height;
             
             renderer.drawText(searchText, NUIPoint(getX() + 5.0f, searchY), 
                             fontSize, getTheme()->getText());
@@ -600,9 +600,9 @@ namespace NomadUI {
         float textX = getX() + 10.0f;
         float fontSize = getTheme()->getFontSizeNormal();
         
-        // Create rect for item text area and calculate proper baseline Y
-        NUIRect textRect(getX(), y, getWidth(), itemHeight);
-        float textY = y + itemHeight / 2.0f + fontSize / 2.0f;
+        // Measure text for true vertical centering (top-left Y positioning)
+        NUISize textSize = renderer.measureText(item.text, fontSize);
+        float textY = y + (itemHeight - fontSize) * 0.5f;
         
         renderer.drawText(item.text, NUIPoint(textX, textY), fontSize, textColor);
     }

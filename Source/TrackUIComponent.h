@@ -6,6 +6,7 @@
 #include "../NomadUI/Core/NUILabel.h"
 #include "../NomadUI/Core/NUIButton.h"
 #include "../NomadUI/Core/NUISlider.h"
+#include "../NomadUI/Core/NUIDragDrop.h"
 #include <memory>
 
 namespace Nomad {
@@ -32,6 +33,9 @@ public:
     
     // Callback for when UI needs cache invalidation (button hover, etc.)
     void setOnCacheInvalidationNeeded(std::function<void()> callback) { m_onCacheInvalidationCallback = callback; }
+    
+    // Callback for clip deletion (ripple position for animation)
+    void setOnClipDeleted(std::function<void(TrackUIComponent*, NomadUI::NUIPoint)> callback) { m_onClipDeletedCallback = callback; }
     
     // Selection state
     void setSelected(bool selected) { m_selected = selected; }
@@ -62,12 +66,19 @@ private:
     // Callbacks
     std::function<void(TrackUIComponent*)> m_onSoloToggledCallback;
     std::function<void()> m_onCacheInvalidationCallback;
+    std::function<void(TrackUIComponent*, NomadUI::NUIPoint)> m_onClipDeletedCallback;
     
     // Timeline settings (synced from TrackManagerUI)
     float m_pixelsPerBeat = 50.0f;
     int m_beatsPerBar = 4;
     float m_timelineScrollOffset = 0.0f;
     double m_maxTimelineExtent = 0.0; // Maximum timeline extent in seconds
+    
+    // Clip dragging state
+    bool m_clipDragPotential = false;     // Potential drag detected (mousedown on clip)
+    bool m_isDraggingClip = false;        // Active drag in progress
+    NomadUI::NUIPoint m_clipDragStartPos; // Where drag started
+    NomadUI::NUIRect m_clipBounds;        // Cached clip bounds for hit testing
 
     // UI Components
     std::shared_ptr<NomadUI::NUILabel> m_nameLabel;

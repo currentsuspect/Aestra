@@ -3,6 +3,7 @@
 
 #include "../NomadUI/Core/NUIComponent.h"
 #include "../NomadUI/Core/NUIIcon.h"
+#include "../NomadUI/Core/NUIDragDrop.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -158,6 +159,7 @@ private:
     bool showHiddenFiles_;
     float lastCachedWidth_;       // Track width changes to invalidate cache
     float lastRenderedOffset_;    // Track when to trigger repaint
+    float effectiveWidth_;        // Current render width (accounts for preview panel)
     
     // Scrollbar state
     bool scrollbarVisible_;
@@ -245,6 +247,12 @@ private:
     std::vector<std::string> navHistory_;
     int navHistoryIndex_;
     bool isNavigatingHistory_;
+    
+    // Drag-and-drop state
+    bool isDraggingFile_ = false;          // True when dragging from file list
+    int dragSourceIndex_ = -1;             // Index of file being dragged
+    NUIPoint dragStartPos_;                // Position where drag started
+    bool dragPotential_ = false;           // True when mouse down, waiting for threshold
 };
 
 } // namespace NomadUI

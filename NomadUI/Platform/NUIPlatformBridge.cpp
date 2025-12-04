@@ -137,6 +137,10 @@ void NUIPlatformBridge::setupEventBridges() {
             event.pressed = false;
             event.released = false;
             event.wheelDelta = delta;
+            // Query current modifier state for Shift+scroll zoom support
+            if (m_window) {
+                event.modifiers = convertModifiers(m_window->getCurrentModifiers());
+            }
             m_rootComponent->onMouseEvent(event);
         }
     });
@@ -198,6 +202,15 @@ int NUIPlatformBridge::convertMouseButton(Nomad::MouseButton button) {
 
 int NUIPlatformBridge::convertKeyCode(Nomad::KeyCode key) {
     return static_cast<int>(key);
+}
+
+NUIModifiers NUIPlatformBridge::convertModifiers(const Nomad::KeyModifiers& mods) {
+    NUIModifiers result = NUIModifiers::None;
+    if (mods.shift) result = result | NUIModifiers::Shift;
+    if (mods.control) result = result | NUIModifiers::Ctrl;
+    if (mods.alt) result = result | NUIModifiers::Alt;
+    if (mods.super) result = result | NUIModifiers::Super;
+    return result;
 }
 
 // =============================================================================

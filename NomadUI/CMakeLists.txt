@@ -35,6 +35,8 @@ set(NOMADUI_CORE_SOURCES
     Core/NUIAdaptiveFPS.cpp
     Core/NUIFrameProfiler.h
     Core/NUIFrameProfiler.cpp
+    Core/NUIDragDrop.h
+    Core/NUIDragDrop.cpp
     Core/NUIButton.h
     Core/NUIButton.cpp
     Core/NUILabel.h

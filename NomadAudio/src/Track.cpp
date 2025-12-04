@@ -747,12 +747,15 @@ bool Track::loadAudioFile(const std::string& filePath) {
             if (buffer->sampleRate > 0) sampleRate = buffer->sampleRate;
             if (buffer->channels > 0) { numChannels = buffer->channels; sourceChannels = buffer->channels; }
 
-            m_sampleBuffer = buffer;
-            m_sampleRate = sampleRate;
-            m_numChannels = numChannels;
-            m_sourceChannels = sourceChannels;
-            m_sourcePath = filePath;
-            m_durationSeconds.store(sampleRate > 0 ? static_cast<double>(buffer->numFrames) / sampleRate : 0.0);
+            {
+                std::lock_guard<std::mutex> lock(m_audioDataMutex);
+                m_sampleBuffer = buffer;
+                m_sampleRate = sampleRate;
+                m_numChannels = numChannels;
+                m_sourceChannels = sourceChannels;
+                m_sourcePath = filePath;
+                m_durationSeconds.store(sampleRate > 0 ? static_cast<double>(buffer->numFrames) / sampleRate : 0.0);
+            }
             setState(TrackState::Loaded);
 
             Log::info("WAV loaded successfully via SamplePool: " + std::to_string(buffer->data.size()) + " samples, " +
@@ -794,12 +797,15 @@ bool Track::loadAudioFile(const std::string& filePath) {
             if (buffer->sampleRate > 0) sampleRate = buffer->sampleRate;
             if (buffer->channels > 0) { numChannels = buffer->channels; sourceChannels = buffer->channels; }
 
-            m_sampleBuffer = buffer;
-            m_sampleRate = sampleRate;
-            m_numChannels = numChannels;
-            m_sourceChannels = sourceChannels;
-            m_sourcePath = filePath;
-            m_durationSeconds.store(sampleRate > 0 ? static_cast<double>(buffer->numFrames) / sampleRate : 0.0);
+            {
+                std::lock_guard<std::mutex> lock(m_audioDataMutex);
+                m_sampleBuffer = buffer;
+                m_sampleRate = sampleRate;
+                m_numChannels = numChannels;
+                m_sourceChannels = sourceChannels;
+                m_sourcePath = filePath;
+                m_durationSeconds.store(sampleRate > 0 ? static_cast<double>(buffer->numFrames) / sampleRate : 0.0);
+            }
             setState(TrackState::Loaded);
 
             Log::info("Audio loaded via Media Foundation + SamplePool: " + std::to_string(buffer->data.size()) + " samples, " +
@@ -933,7 +939,10 @@ bool Track::generateDemoAudio(const std::string& filePath) {
 }
 
 void Track::clearAudioData() {
-    m_sampleBuffer.reset();
+    {
+        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        m_sampleBuffer.reset();
+    }
     {
         std::lock_guard<std::mutex> lock(m_audioDataMutex);
         m_audioData.clear();
@@ -954,7 +963,10 @@ void Track::setAudioData(const float* data, uint32_t numSamples, uint32_t sample
     }
     
     stopStreaming();
-    m_sampleBuffer.reset();
+    {
+        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        m_sampleBuffer.reset();
+    }
 
     // Copy audio data and enforce stereo for the engine
     std::vector<float> temp(data, data + (numSamples * numChannels));
@@ -1069,16 +1081,16 @@ void Track::setPosition(double seconds) {
     double duration = getDuration();
     seconds = (seconds < 0.0) ? 0.0 : (seconds > duration) ? duration : seconds;
     
-    if (m_streaming) {
+    if (m_streaming.load(std::memory_order_relaxed)) {
         uint64_t targetFrame = static_cast<uint64_t>(seconds * m_sampleRate);
-        uint64_t maxFrames = m_streamTotalFrames;
+        uint64_t maxFrames = m_streamTotalFrames.load(std::memory_order_relaxed);
         if (targetFrame > maxFrames) targetFrame = maxFrames;
 
         // Re-seek streaming source
-        uint64_t dataSizeBytes = m_streamTotalFrames * static_cast<uint64_t>(m_streamBytesPerSample * m_sourceChannels);
+        uint64_t dataSizeBytes = maxFrames * static_cast<uint64_t>(m_streamBytesPerSample.load(std::memory_order_relaxed) * m_sourceChannels);
         startWavStreaming(m_sourcePath, m_sampleRate, static_cast<uint16_t>(m_sourceChannels),
-                          static_cast<uint16_t>(m_streamBytesPerSample * 8),
-                          m_streamDataOffset, dataSizeBytes, targetFrame);
+                          static_cast<uint16_t>(m_streamBytesPerSample.load(std::memory_order_relaxed) * 8),
+                          m_streamDataOffset.load(std::memory_order_relaxed), dataSizeBytes, targetFrame);
     }
 
     m_positionSeconds.store(seconds);
@@ -1165,12 +1177,13 @@ void Track::generateSilence(float* buffer, uint32_t numFrames) {
 void Track::copyAudioData(float* outputBuffer, uint32_t numFrames, double outputSampleRate) {
     std::lock_guard<std::mutex> lock(m_audioDataMutex);
 
+    std::shared_ptr<AudioBuffer> sampleBuffer = m_sampleBuffer;
     const std::vector<float>* buffer = nullptr;
     uint32_t channels = m_numChannels;
     if (m_streaming) {
         buffer = &m_audioData;
-    } else if (m_sampleBuffer && m_sampleBuffer->ready.load()) {
-        buffer = &m_sampleBuffer->data;
+    } else if (sampleBuffer && sampleBuffer->ready.load()) {
+        buffer = &sampleBuffer->data;
     } else {
         buffer = &m_audioData;
     }
@@ -1190,7 +1203,7 @@ void Track::copyAudioData(float* outputBuffer, uint32_t numFrames, double output
     const double sampleRateRatio = static_cast<double>(m_sampleRate) / outputSampleRate;
 
     const uint64_t bufferFrames = totalSamples / channels;
-    const uint64_t baseFrame = m_streamBaseFrame;
+    const uint64_t baseFrame = m_streamBaseFrame.load(std::memory_order_relaxed);
 
     // Process audio based on quality settings
     for (uint32_t frame = 0; frame < numFrames; ++frame) {
@@ -1262,19 +1275,20 @@ void Track::copyAudioData(float* outputBuffer, uint32_t numFrames, double output
     }
 
     m_playbackPhase.store(phase);
-    if (m_streaming) {
+    if (m_streaming.load(std::memory_order_relaxed)) {
         trimStreamBuffer(static_cast<uint64_t>(phase));
         m_streamCv.notify_one();
     }
 }
 
 void Track::trimStreamBuffer(uint64_t currentFrame) {
-    if (!m_streaming) return;
+    if (!m_streaming.load(std::memory_order_relaxed)) return;
     const uint32_t keepMargin = 8192; // frames to keep ahead of playhead for safety
     const uint64_t targetBase = (currentFrame > keepMargin) ? (currentFrame - keepMargin) : 0;
 
-    if (targetBase > m_streamBaseFrame) {
-        uint64_t framesToDrop = targetBase - m_streamBaseFrame;
+    uint64_t baseFrame = m_streamBaseFrame.load(std::memory_order_relaxed);
+    if (targetBase > baseFrame) {
+        uint64_t framesToDrop = targetBase - baseFrame;
         uint64_t availableFrames = m_audioData.size() / m_numChannels;
         if (framesToDrop >= availableFrames) {
             // Do not drop everything
@@ -1282,7 +1296,7 @@ void Track::trimStreamBuffer(uint64_t currentFrame) {
         }
         const size_t dropSamples = static_cast<size_t>(framesToDrop * m_numChannels);
         m_audioData.erase(m_audioData.begin(), m_audioData.begin() + dropSamples);
-        m_streamBaseFrame += framesToDrop;
+        m_streamBaseFrame.store(baseFrame + framesToDrop, std::memory_order_relaxed);
     }
 }
 
@@ -1313,18 +1327,18 @@ bool Track::startWavStreaming(const std::string& filePath, uint32_t sampleRate, 
     {
         std::lock_guard<std::mutex> lock(m_audioDataMutex);
         m_audioData.clear();
-        m_streamBaseFrame = startFrame;
-        m_streamEof = false;
-        m_streamTotalFrames = (bitsPerSample / 8 == 0 || channels == 0) ? 0 : dataSize / bytesPerFrame;
-        m_streamBytesPerSample = bitsPerSample / 8;
-        m_streamDataOffset = dataOffset;
+        m_streamBaseFrame.store(startFrame, std::memory_order_relaxed);
+        m_streamEof.store(false, std::memory_order_relaxed);
+        m_streamTotalFrames.store((bitsPerSample / 8 == 0 || channels == 0) ? 0 : dataSize / bytesPerFrame, std::memory_order_relaxed);
+        m_streamBytesPerSample.store(bitsPerSample / 8, std::memory_order_relaxed);
+        m_streamDataOffset.store(dataOffset, std::memory_order_relaxed);
         m_sampleRate = sampleRate;
         m_numChannels = 2;
         m_sourceChannels = channels;
     }
 
     m_streamStop.store(false);
-    m_streaming = true;
+    m_streaming.store(true, std::memory_order_release);
 
     // Launch background thread
     m_streamThread = std::thread(&Track::streamWavThread, this, channels);
@@ -1332,21 +1346,21 @@ bool Track::startWavStreaming(const std::string& filePath, uint32_t sampleRate, 
 }
 
 void Track::stopStreaming() {
-    if (!m_streaming) return;
+    if (!m_streaming.load(std::memory_order_relaxed)) return;
     m_streamStop.store(true);
     m_streamCv.notify_one();
     if (m_streamThread.joinable()) {
         m_streamThread.join();
     }
-    m_streaming = false;
-    m_streamEof = false;
+    m_streaming.store(false, std::memory_order_release);
+    m_streamEof.store(false, std::memory_order_relaxed);
     if (m_streamFile.is_open()) {
         m_streamFile.close();
     }
 }
 
 void Track::streamWavThread(uint32_t channels) {
-    const uint32_t bytesPerSample = m_streamBytesPerSample;
+    const uint32_t bytesPerSample = m_streamBytesPerSample.load(std::memory_order_relaxed);
     const uint32_t bytesPerFrame = bytesPerSample * channels;
     const uint32_t targetBufferFrames = m_sampleRate * 6; // keep ~6s buffered
     const uint32_t chunkFrames = m_sampleRate;            // read ~1s per iteration
@@ -1365,18 +1379,22 @@ void Track::streamWavThread(uint32_t channels) {
         {
             std::lock_guard<std::mutex> audioLock(m_audioDataMutex);
             uint64_t bufferedFrames = m_audioData.size() / m_numChannels;
-            if (m_streamEof || (m_streamBaseFrame + bufferedFrames) >= m_streamTotalFrames) {
-                m_streamEof = true;
+            uint64_t baseFrame = m_streamBaseFrame.load(std::memory_order_relaxed);
+            uint64_t totalFrames = m_streamTotalFrames.load(std::memory_order_relaxed);
+            if (m_streamEof.load(std::memory_order_relaxed) || (baseFrame + bufferedFrames) >= totalFrames) {
+                m_streamEof.store(true, std::memory_order_relaxed);
                 continue;
             }
         }
 
         // Read next chunk
-        const uint64_t currentEndFrame = m_streamBaseFrame + (m_audioData.size() / m_numChannels);
-        const uint64_t remainingFrames = (m_streamTotalFrames > currentEndFrame) ? (m_streamTotalFrames - currentEndFrame) : 0;
+        const uint64_t baseFrame = m_streamBaseFrame.load(std::memory_order_relaxed);
+        const uint64_t totalFrames = m_streamTotalFrames.load(std::memory_order_relaxed);
+        const uint64_t currentEndFrame = baseFrame + (m_audioData.size() / m_numChannels);
+        const uint64_t remainingFrames = (totalFrames > currentEndFrame) ? (totalFrames - currentEndFrame) : 0;
         uint32_t framesToRead = static_cast<uint32_t>(std::min<uint64_t>(chunkFrames, remainingFrames));
         if (framesToRead == 0) {
-            m_streamEof = true;
+            m_streamEof.store(true, std::memory_order_relaxed);
             continue;
         }
 
@@ -1426,7 +1444,7 @@ void Track::streamWavThread(uint32_t channels) {
         }
 
         if (decoded.empty() || gotFrames < framesToRead) {
-            m_streamEof = true;
+            m_streamEof.store(true, std::memory_order_relaxed);
         }
     }
 }
