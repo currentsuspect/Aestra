@@ -156,3 +156,4 @@ GITHUB_SETUP.md
 .cache/
 __pycache__/
 node_modules/
+_codeql_detected_source_root

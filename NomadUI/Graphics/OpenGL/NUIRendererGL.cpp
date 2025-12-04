@@ -644,8 +644,6 @@ float NUIRendererGL::getDPIScale() {
     return 1.0f; // Default scale
 }
 
-// REMOVED: renderCharacterImproved (replaced by atlas rendering)
-
 void NUIRendererGL::drawCleanCharacter(char c, float x, float y, float width, float height, const NUIColor& color) {
     // Clean character rendering using filled rectangles
     // This creates much more readable text

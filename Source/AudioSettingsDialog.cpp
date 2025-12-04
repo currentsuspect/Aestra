@@ -250,14 +250,14 @@ void AudioSettingsDialog::createUI() {
         std::string oldText = m_dcRemovalToggle->getText();
         if (oldText == "ON") {
             m_dcRemovalToggle->setText("OFF");
-            std::cerr << "[DC Removal] Button clicked: ON -> OFF" << std::endl;
+            Nomad::Log::info("[DC Removal] Button clicked: ON -> OFF");
         } else {
             m_dcRemovalToggle->setText("ON");
-            std::cerr << "[DC Removal] Button clicked: OFF -> ON" << std::endl;
+            Nomad::Log::info("[DC Removal] Button clicked: OFF -> ON");
         }
         m_qualityPresetDropdown->setSelectedIndex(4); // Custom
         m_cacheInvalidated = true; // Text changed, invalidate cache
-        std::cerr << "[DC Removal] Cache invalidated, new text: " << m_dcRemovalToggle->getText() << std::endl;
+        Nomad::Log::info("[DC Removal] Cache invalidated, new text: " + m_dcRemovalToggle->getText());
     });
     addChild(m_dcRemovalToggle);
     
