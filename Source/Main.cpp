@@ -636,7 +636,9 @@ std::string getAppDataPath() {
     
     // Create directory if it doesn't exist
     std::error_code ec;
-    std::filesystem::create_directories(appDataDir, ec);
+    if (!std::filesystem::create_directories(appDataDir, ec) && ec) {
+        Log::warning("Failed to create app data directory: " + appDataDir.string() + " (" + ec.message() + ")");
+    }
     
     return appDataDir.string();
 }
