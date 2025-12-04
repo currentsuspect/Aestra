@@ -14,6 +14,8 @@
 #include <iostream>
 #include <cstring>
 #include <algorithm>
+#include <sstream>
+#include "../../NomadCore/include/NomadLog.h"
 
 namespace NomadUI {
 
@@ -74,11 +76,15 @@ bool NUITextRendererSDF::initialize(const std::string& fontPath, float fontSize)
         atlasFontSize_ = fontSize * 2.5f;  // 2.5x for large fonts
     }
     
-    std::cout << "MSDF atlas: " << fontSize << "px -> " << atlasFontSize_ << "px (" 
-              << (atlasFontSize_/fontSize) << "x scale)" << std::endl;
+    {
+        std::ostringstream oss;
+        oss << "MSDF atlas: " << fontSize << "px -> " << atlasFontSize_ << "px (" 
+            << (atlasFontSize_/fontSize) << "x scale)";
+        Nomad::Log::info(oss.str());
+    }
 
     if (!createShader()) {
-        std::cerr << "MSDF shader compile failed" << std::endl;
+        Nomad::Log::error("MSDF shader compile failed");
         return false;
     }
 

@@ -44,6 +44,12 @@
 #include <thread>
 #include <cmath>
 #include <cstring>
+#include <cstdlib>
+#include <filesystem>
+
+#ifdef _WIN32
+#include <shlobj.h>
+#endif
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -584,6 +590,63 @@ private:
     std::shared_ptr<FPSDisplay> m_fpsDisplay;
     std::shared_ptr<PerformanceHUD> m_performanceHUD;
 };
+
+/**
+ * @brief Get the application data directory path
+ * 
+ * Returns a platform-specific path for storing application data:
+ * - Windows: %APPDATA%/Nomad/
+ * - macOS: ~/Library/Application Support/Nomad/
+ * - Linux: ~/.local/share/Nomad/
+ * 
+ * Creates the directory if it doesn't exist.
+ */
+std::string getAppDataPath() {
+    std::filesystem::path appDataDir;
+    
+#ifdef _WIN32
+    char path[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, path))) {
+        appDataDir = std::filesystem::path(path) / "Nomad";
+    } else {
+        // Fallback to current directory
+        appDataDir = std::filesystem::current_path();
+    }
+#elif defined(__APPLE__)
+    const char* home = std::getenv("HOME");
+    if (home) {
+        appDataDir = std::filesystem::path(home) / "Library" / "Application Support" / "Nomad";
+    } else {
+        appDataDir = std::filesystem::current_path();
+    }
+#else
+    // Linux/Unix
+    const char* xdgData = std::getenv("XDG_DATA_HOME");
+    if (xdgData) {
+        appDataDir = std::filesystem::path(xdgData) / "Nomad";
+    } else {
+        const char* home = std::getenv("HOME");
+        if (home) {
+            appDataDir = std::filesystem::path(home) / ".local" / "share" / "Nomad";
+        } else {
+            appDataDir = std::filesystem::current_path();
+        }
+    }
+#endif
+    
+    // Create directory if it doesn't exist
+    std::error_code ec;
+    std::filesystem::create_directories(appDataDir, ec);
+    
+    return appDataDir.string();
+}
+
+/**
+ * @brief Get the autosave file path
+ */
+std::string getAutosavePath() {
+    return (std::filesystem::path(getAppDataPath()) / "autosave.nomadproj").string();
+}
 
 /**
  * @brief Main application class
@@ -1515,7 +1578,7 @@ private:
     bool m_running;
     bool m_audioInitialized;
     AudioStreamConfig m_mainStreamConfig;  // Store main audio stream configuration
-    std::string m_projectPath{"autosave.nomadproj"};
+    std::string m_projectPath{getAutosavePath()};
 };
 
 /**
