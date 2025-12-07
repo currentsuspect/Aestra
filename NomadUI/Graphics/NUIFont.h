@@ -147,6 +147,8 @@ public:
     
     bool isLoaded() const { return face_ != nullptr; }
     std::string getFilepath() const { return filepath_; }
+    void setSupersampleFactor(int factor) { supersampleFactor_ = (factor < 1) ? 1 : factor; }
+    int getSupersampleFactor() const { return supersampleFactor_; }
     
 private:
     // FreeType library (static, shared across all fonts)
@@ -162,6 +164,7 @@ private:
     int ascender_;
     int descender_;
     int lineHeight_;
+    int supersampleFactor_{1}; // No supersampling by default
     
     // Glyph cache
     std::map<uint32_t, NUIGlyph> glyphs_;

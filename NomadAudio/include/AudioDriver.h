@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include <cstdint>
@@ -129,6 +129,14 @@ public:
      * @brief Get current stream latency in seconds
      */
     virtual double getStreamLatency() const = 0;
+
+    /**
+     * @brief Get the actual sample rate the stream is running at
+     *
+     * May differ from requested rate if the backend performs conversion (e.g., WASAPI Shared).
+     * Return 0 if stream is not open.
+     */
+    virtual uint32_t getStreamSampleRate() const = 0;
 };
 
 } // namespace Audio

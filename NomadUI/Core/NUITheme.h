@@ -85,10 +85,10 @@ public:
     float getFontSize(const std::string& name, float defaultSize = 14.0f) const;
     
     // Common font size accessors
-    float getFontSizeSmall() const { return getFontSize("small", 11.0f); }
-    float getFontSizeNormal() const { return getFontSize("normal", 14.0f); }
-    float getFontSizeLarge() const { return getFontSize("large", 18.0f); }
-    float getFontSizeTitle() const { return getFontSize("title", 24.0f); }
+    float getFontSizeSmall() const { return getFontSize("small", 14.0f); }
+    float getFontSizeNormal() const { return getFontSize("normal", 18.0f); }
+    float getFontSizeLarge() const { return getFontSize("large", 22.0f); }
+    float getFontSizeTitle() const { return getFontSize("title", 28.0f); }
     
     // Font creation
     // TODO: Implement font creation when NUIFont supports copying

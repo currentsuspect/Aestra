@@ -1,11 +1,13 @@
 # NOMAD DAW - Current State Analysis & Future Roadmap
-*December 2024*
+
+## *December 2025*
 
 ---
 
 ## 📊 Executive Summary
 
 NOMAD has evolved from a basic audio playback prototype to a **professional FL Studio-inspired DAW** with:
+
 - ✅ Working WASAPI multi-tier audio engine (Exclusive/Shared modes)
 - ✅ FL Studio-style adaptive timeline with dynamic grid
 - ✅ Waveform visualization with performance optimizations
@@ -21,6 +23,7 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 ### 1. **Professional Audio Engine** ⭐⭐⭐⭐⭐
 
 **Strengths:**
+
 - ✅ Multi-tier WASAPI system (Exclusive → Shared → RtAudio fallback)
 - ✅ Intelligent driver switching with user feedback
 - ✅ Sample rate conversion (44.1kHz → 48kHz)
@@ -30,10 +33,12 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 - ✅ Auto-buffer scaling on underruns
 
 **Latency Achieved:**
+
 - WASAPI Exclusive: ~8-12ms RTL (professional grade)
 - WASAPI Shared: ~20-30ms RTL (system compatible)
 
 **What Makes It Special:**
+
 - Hot-swappable drivers during playback (rare in DAWs!)
 - Intelligent fallback prevents audio failures
 - Full duration playback without cutting (fixed sample rate bug)
@@ -45,6 +50,7 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 ### 2. **FL Studio-Inspired Timeline** ⭐⭐⭐⭐
 
 **Strengths:**
+
 - ✅ Adaptive grid (8 bars min → sample extent + 2 bars padding)
 - ✅ Fluid zoom (10-200 px/beat) with smooth scrolling
 - ✅ Dynamic background (content-aware, no infinite void)
@@ -54,12 +60,14 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 - ✅ Duration display (MM:SS.mmm)
 
 **What Makes It Special:**
+
 - Grid adapts to content length (professional behavior)
 - Playhead syncs accurately with audio (no drift)
 - Zoom doesn't break scrollbar (fixed bounds clamping)
 - Off-screen culling with 200px padding (no visible clipping)
 
 **Weaknesses:**
+
 - ⚠️ No snap-to-grid functionality
 - ⚠️ No time signature changes (fixed 4/4)
 - ⚠️ No BPM changes (fixed 120 BPM)
@@ -73,6 +81,7 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 ### 3. **Waveform Visualization** ⭐⭐⭐⭐
 
 **Strengths:**
+
 - ✅ Fixed 4096-sample cache (consistent performance)
 - ✅ Partial rendering (offset/visible ratios)
 - ✅ Off-screen culling (200px padding)
@@ -80,6 +89,7 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 - ✅ Color-coded samples
 
 **Weaknesses:**
+
 - ⚠️ No waveform zoom (always shows full sample)
 - ⚠️ No RMS/peak switching
 - ⚠️ No multi-channel waveform display (stereo = mono mix)
@@ -92,6 +102,7 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 ### 4. **Visual Polish & UX** ⭐⭐⭐⭐⭐
 
 **Strengths:**
+
 - ✅ Green playing indicator (play button + timer)
 - ✅ Smooth animations (no janky transitions)
 - ✅ Proper clipping (grid, samples, ruler)
@@ -100,6 +111,7 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 - ✅ Icon system (SVG with color tinting)
 
 **What Makes It Special:**
+
 - Instant visual feedback (green = playing, purple = stopped)
 - Zero UI glitches (fixed all clipping/bounds issues)
 - Feels like a professional DAW (not a prototype)
@@ -111,6 +123,7 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 ### 5. **File Browser & Workflow** ⭐⭐⭐
 
 **Strengths:**
+
 - ✅ Audio file detection (.wav, .mp3, .flac, .aiff)
 - ✅ 5-second previews (30% volume)
 - ✅ Visual feedback (cyan accent on selected files)
@@ -118,6 +131,7 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 - ✅ Hidden preview track (clean UI)
 
 **Weaknesses:**
+
 - ⚠️ No drag-and-drop to timeline
 - ⚠️ No file metadata display (sample rate, bit depth, duration)
 - ⚠️ No search/filter functionality
@@ -130,12 +144,14 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 ### 6. **Transport Controls** ⭐⭐⭐⭐
 
 **Strengths:**
+
 - ✅ Play, pause, stop with visual feedback
 - ✅ Position display (MM:SS.mmm)
 - ✅ Green playing indicator
 - ✅ Looping support
 
 **Weaknesses:**
+
 - ⚠️ No record button
 - ⚠️ No metronome
 - ⚠️ No tempo control UI
@@ -148,6 +164,7 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 ## 🚧 Known Limitations
 
 ### Technical Debt
+
 1. **Fixed BPM/Time Signature** - Hardcoded to 120 BPM, 4/4 time
 2. **No Undo/Redo** - Critical for production DAW
 3. **No Save/Load Projects** - All work is lost on exit
@@ -156,11 +173,13 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 6. **No Effects** - No EQ, compression, reverb, etc.
 
 ### Performance Bottlenecks
+
 1. **No multi-threading for waveform rendering** - Could lag on large projects
 2. **No GPU-accelerated waveforms** - Currently CPU-bound
 3. **Fixed cache size** - No adaptive quality based on zoom
 
 ### UX Gaps
+
 1. **No keyboard shortcuts** - Everything requires mouse clicks
 2. **No context menus** - Right-click does nothing
 3. **No track controls** - Can't mute, solo, or adjust volume per track
@@ -173,10 +192,13 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 ### Phase 1: Core DAW Functionality (High Priority)
 
 #### 1.1 Sample Manipulation ⭐⭐⭐⭐⭐
+
 **Priority: CRITICAL** - This is the #1 missing feature.
 
 **Features:**
-- [ ] **Drag-and-drop from file browser** - Click sample → drag to timeline
+
+- [x] **Drag-and-drop from file browser** - Click sample → drag to timeline
+
 - [ ] **Sample repositioning** - Click and drag sample clips in timeline
 - [ ] **Snap-to-grid** - Option to snap samples to beats/bars
 - [ ] **Sample trimming** - Drag edges to trim start/end
@@ -185,6 +207,7 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 - [ ] **Copy/paste** - Duplicate samples quickly
 
 **Implementation Notes:**
+
 - Need click detection in timeline grid area
 - Hit testing for sample clips (check if mouse is inside clip bounds)
 - Drag state machine (idle → hover → dragging → drop)
@@ -196,9 +219,11 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 ---
 
 #### 1.2 Mixing & Track Controls ⭐⭐⭐⭐⭐
+
 **Priority: CRITICAL** - Can't mix without this.
 
 **Features:**
+
 - [ ] **Volume faders** - Per-track volume control (-∞ to +6dB)
 - [ ] **Pan knobs** - Stereo positioning (-100% L to +100% R)
 - [ ] **Mute buttons** - Silence track without deleting
@@ -208,6 +233,7 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 - [ ] **Track renaming** - Click to rename tracks
 
 **Implementation Notes:**
+
 - Add `m_volume` (0.0-2.0), `m_pan` (-1.0 to 1.0), `m_mute`, `m_solo` to Track class
 - Apply volume/pan in `Track::processAudio()` before mixing
 - Solo logic: If any track is solo'd, mute all non-solo tracks
@@ -219,9 +245,11 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 ---
 
 #### 1.3 Save/Load Projects ⭐⭐⭐⭐⭐
+
 **Priority: CRITICAL** - Can't use DAW without saving work.
 
 **File Format (JSON):**
+
 ```json
 {
   "version": "1.0",
@@ -248,12 +276,15 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 ```
 
 **Features:**
+
 - [ ] **Save project** - Serialize to JSON
+- [ ] **Save as** - Choose new location
 - [ ] **Load project** - Deserialize and rebuild tracks
 - [ ] **Auto-save** - Every 5 minutes
 - [ ] **Recent projects** - File menu with recent files
 
 **Implementation Notes:**
+
 - Use `NomadCore` JSON utilities (if available) or add `nlohmann/json`
 - Store relative paths when possible (portable projects)
 - Validate JSON on load (check version, required fields)
@@ -264,9 +295,11 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 ---
 
 #### 1.4 Undo/Redo System ⭐⭐⭐⭐
+
 **Priority: HIGH** - Professional DAWs require this.
 
 **Architecture:**
+
 ```cpp
 class ICommand {
     virtual void execute() = 0;
@@ -293,6 +326,7 @@ class UndoManager {
 ```
 
 **Commands to Implement:**
+
 - AddSampleCommand
 - DeleteSampleCommand
 - MoveSampleCommand
@@ -308,14 +342,30 @@ class UndoManager {
 ### Phase 2: Advanced Timeline Features (Medium Priority)
 
 #### 2.1 BPM & Time Signature Control ⭐⭐⭐⭐
+
 **Priority: MEDIUM** - Important for music production.
 
 **Features:**
+
 - [ ] **BPM slider** - 60-240 BPM range
 - [ ] **Time signature dropdown** - 3/4, 4/4, 5/4, 6/8, 7/8
 - [ ] **Tempo automation** - BPM changes over time (advanced)
 
 **Implementation Notes:**
+
+```cpp
+struct TimeSignature {
+    int numerator;
+    int denominator;
+};
+
+class Timeline {
+    double m_bpm = 120.0;
+    TimeSignature m_timeSig = {4, 4};
+    double m_pixelsPerBeat = 100.0; // Adjust based on BPM
+};
+```
+
 - Change `m_pixelsPerBeat` based on BPM (affects grid spacing)
 - Recalculate ruler when time signature changes
 - Tempo automation requires interpolation (linear/curved)
@@ -326,14 +376,17 @@ class UndoManager {
 ---
 
 #### 2.2 Loop Region & Markers ⭐⭐⭐
+
 **Priority: MEDIUM** - Useful for composition workflow.
 
 **Features:**
+
 - [ ] **Loop region** - Set start/end markers, loop playback
 - [ ] **Named markers** - Add markers at specific times (verse, chorus, etc.)
 - [ ] **Marker navigation** - Jump to previous/next marker
 
 **Implementation Notes:**
+
 - Draw loop region as highlighted area above timeline
 - Store markers as `std::map<double, std::string>` (time → name)
 - Check if position is in loop region in `TrackManager::processAudio()`
@@ -344,15 +397,18 @@ class UndoManager {
 ---
 
 #### 2.3 Waveform Zoom & Detail ⭐⭐⭐
+
 **Priority: MEDIUM** - Helpful for precise editing.
 
 **Features:**
+
 - [ ] **Waveform zoom** - Independent of timeline zoom
 - [ ] **RMS/Peak switching** - Toggle between waveform styles
 - [ ] **Stereo waveform** - Show L/R channels separately
 - [ ] **Adaptive cache quality** - Higher resolution at high zoom
 
 **Implementation Notes:**
+
 - Add `m_waveformZoom` to TrackUIComponent
 - Calculate visible sample range based on zoom
 - Pre-compute RMS (sqrt of average squared samples over window)
@@ -366,9 +422,11 @@ class UndoManager {
 ### Phase 3: Effects & Processing (Lower Priority)
 
 #### 3.1 Real-Time Effects Chain ⭐⭐⭐⭐
+
 **Priority: MEDIUM-LOW** - Complex but essential for production DAW.
 
 **Architecture:**
+
 ```cpp
 class IEffect {
     virtual void process(float* buffer, int numFrames, int numChannels) = 0;
@@ -388,6 +446,7 @@ class Track {
 ```
 
 **Effects to Implement:**
+
 1. **EQ (3-band)** - Low, Mid, High with gain/frequency controls
 2. **Compressor** - Threshold, ratio, attack, release
 3. **Reverb** - Room size, damping, wet/dry
@@ -395,6 +454,7 @@ class Track {
 5. **Limiter** - Ceiling, release
 
 **Implementation Notes:**
+
 - Use DSP algorithms from "Audio Effects: Theory, Implementation and Application" (Reiss & McPherson)
 - Start with simple biquad filters for EQ
 - Use feedback delay network for reverb
@@ -406,9 +466,11 @@ class Track {
 ---
 
 #### 3.2 VST Plugin Support ⭐⭐⭐⭐⭐
+
 **Priority: HIGH (long-term)** - Industry standard.
 
 **Options:**
+
 1. **VST3 SDK** - Official Steinberg SDK (complex but powerful)
 2. **JUCE** - Simplifies VST hosting (but defeats "from scratch" philosophy)
 3. **Custom VST2 Host** - VST2 is simpler but deprecated
@@ -423,9 +485,11 @@ class Track {
 ### Phase 4: MIDI & Instruments (Future)
 
 #### 4.1 MIDI Sequencing ⭐⭐⭐⭐⭐
+
 **Priority: HIGH (long-term)** - Essential for electronic music production.
 
 **Features:**
+
 - [ ] **MIDI tracks** - Separate from audio tracks
 - [ ] **Piano roll editor** - Click to add notes
 - [ ] **MIDI recording** - Capture from MIDI keyboard
@@ -438,9 +502,11 @@ class Track {
 ---
 
 #### 4.2 Built-in Instruments ⭐⭐⭐
+
 **Priority: MEDIUM (long-term)** - Useful for quick sketching.
 
 **Instruments:**
+
 1. **Sampler** - Load WAV/MP3, map to MIDI notes
 2. **Synth (subtractive)** - Oscillators, filter, ADSR
 3. **Drum Machine** - 16-step sequencer with samples
@@ -453,15 +519,20 @@ class Track {
 ## 🔥 Recommended Next Steps (Immediate)
 
 ### Week 1: Sample Manipulation (drag-and-drop, repositioning)
+
 **Why:** This is the biggest missing piece. Without this, NOMAD is just a viewer.
 
 **Tasks:**
-1. Add click detection to timeline grid (mouse down → check if inside sample clip)
-2. Implement drag state (hover → dragging → drop)
-3. Add snap-to-grid option (checkbox in UI)
-4. Implement sample deletion (Delete key)
+
+1. Add drag-and-drop from file browser to timeline
+2. Implement sample repositioning (drag to move)
+3. Add click detection to timeline grid (mouse down → check if inside sample clip)
+4. Implement drag state (hover → dragging → drop)
+5. Add snap-to-grid option (checkbox in UI)
+6. Implement sample deletion (Delete key)
 
 **Success Criteria:**
+
 - ✅ Can drag sample from file browser to timeline
 - ✅ Can reposition existing samples
 - ✅ Can delete samples with Delete key
@@ -470,9 +541,11 @@ class Track {
 ---
 
 ### Week 2: Mixing Controls (volume, pan, mute, solo)
+
 **Why:** Can't mix tracks without this.
 
 **Tasks:**
+
 1. Add volume slider to TrackUIComponent (left panel)
 2. Add pan knob (or slider)
 3. Add mute/solo buttons
@@ -480,6 +553,7 @@ class Track {
 5. Add VU meters for visual feedback
 
 **Success Criteria:**
+
 - ✅ Can adjust track volume (0-200%)
 - ✅ Can pan tracks (L/R)
 - ✅ Can mute/solo tracks
@@ -488,9 +562,11 @@ class Track {
 ---
 
 ### Week 3: Save/Load Projects
+
 **Why:** Can't use DAW if work is lost on exit.
 
 **Tasks:**
+
 1. Define JSON project format
 2. Implement serialization (TrackManager → JSON)
 3. Implement deserialization (JSON → TrackManager)
@@ -498,6 +574,7 @@ class Track {
 5. Implement auto-save (every 5 minutes)
 
 **Success Criteria:**
+
 - ✅ Can save project to .nomad file
 - ✅ Can load project and resume work
 - ✅ Auto-save prevents data loss
@@ -505,15 +582,18 @@ class Track {
 ---
 
 ### Week 4: Undo/Redo System
+
 **Why:** Professional DAWs require this for confidence.
 
 **Tasks:**
+
 1. Design Command pattern architecture
 2. Implement UndoManager
 3. Wrap all modifications in commands
 4. Add Ctrl+Z / Ctrl+Y keyboard shortcuts
 
 **Success Criteria:**
+
 - ✅ Can undo/redo all timeline edits
 - ✅ Undo stack persists across saves
 
@@ -522,15 +602,30 @@ class Track {
 ## 📈 Long-Term Vision (6-12 months)
 
 ### The NOMAD Philosophy
+
+**Mission Statement:**
 > "Build the DAW we wish existed - focused, intentional, uncompromising."
 
 **Core Principles:**
+
 1. **No bloat** - Every feature must earn its place
 2. **Low latency first** - Real-time performance is non-negotiable
 3. **Transparent architecture** - Code is documentation
 4. **Musician-designed** - Workflow beats features
 
 ### Target Features (1 Year)
+
+**Timeline View:**
+
+- ✅ Sample dragging from file browser
+- ✅ Sample repositioning
+- ✅ Sample deletion
+- ✅ Grid snapping
+- ✅ Track height resizing
+
+**Audio Engine:**
+
+- ✅ Sample playback with precise timing
 - ✅ Multi-track audio recording & editing
 - ✅ MIDI sequencing with piano roll
 - ✅ Built-in effects (EQ, compressor, reverb, delay)
@@ -542,6 +637,7 @@ class Track {
 - ✅ Professional metering (LUFS, true peak)
 
 ### What Makes NOMAD Special (Differentiators)
+
 1. **Zero frameworks** - Everything built from scratch
 2. **Educational DAW** - Source code teaches audio programming
 3. **Performance-first** - No compromises on latency
@@ -553,18 +649,21 @@ class Track {
 ## 🎓 Learning Resources (For Future Development)
 
 ### Books
+
 1. **"Designing Audio Effect Plugins in C++"** - Will Pirkle (effects & DSP)
 2. **"The Audio Programming Book"** - Boulanger & Lazzarini (fundamentals)
 3. **"DAFX: Digital Audio Effects"** - Zölzer (algorithms)
 4. **"Hack Audio"** - Eric Tarr (practical DSP)
 
 ### Online Resources
+
 1. **The Audio Programmer** (YouTube channel) - DAW development insights
 2. **JUCE Forum** - Even if not using JUCE, great discussions
 3. **KVR Developer Forum** - VST development community
 4. **DSP Stack Exchange** - Algorithm help
 
 ### Reference DAWs (Study These)
+
 1. **FL Studio** - Timeline & workflow inspiration (already using this!)
 2. **Reaper** - Efficient architecture, small footprint
 3. **Bitwig** - Modern UI/UX
@@ -575,6 +674,7 @@ class Track {
 ## 🏆 Strengths to Maintain
 
 ### What NOMAD Does Right
+
 1. **Clean architecture** - Separation of concerns (Audio, UI, Platform)
 2. **Professional audio** - WASAPI multi-tier system is production-quality
 3. **Visual polish** - Green playing indicators, smooth animations
@@ -582,6 +682,16 @@ class Track {
 5. **Stability** - Zero critical bugs after recent fixes
 
 ### Don't Lose This
+
+- **Core values** (see below)
+- **Current architecture** (clean separation of concerns)
+- **Audio quality** (WASAPI multi-tier system)
+- **UI polish** (green playing indicators, smooth animations)
+- **Performance** (off-screen culling, fixed caching, no lag)
+- **Stability** (zero critical bugs after recent fixes)
+
+### Core Values
+
 - Intentional design (every feature earns its place)
 - From-scratch ethos (no framework bloat)
 - Musician focus (workflow over features)
@@ -598,6 +708,7 @@ NOMAD is a **functional DAW prototype** with professional audio infrastructure a
 The gap between "prototype" and "production DAW" is **sample manipulation** (drag-and-drop, editing), **mixing controls** (volume, pan, mute, solo), and **project persistence** (save/load). These three features are critical for daily use.
 
 **Recommended Focus:**
+
 1. **Immediate (1 month):** Sample manipulation + mixing controls + save/load
 2. **Short-term (3 months):** Undo/redo + BPM control + loop regions
 3. **Medium-term (6 months):** Effects chain + automation
@@ -610,5 +721,5 @@ NOMAD has a **solid foundation**. The architecture is clean, the audio is profes
 
 ---
 
-*Analysis by GitHub Copilot - December 2024*
+*Analysis by GitHub Copilot - December 2025*
 *Based on NOMAD v1.0 Foundation Complete*

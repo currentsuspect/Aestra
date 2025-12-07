@@ -3,6 +3,7 @@
 
 #include "../NUIRenderer.h"
 #include "../NUIFont.h"
+#include "../NUITextRendererSDF.h"
 #include "../NUITextRenderer.h"
 #include "../NUITextRendererGDI.h"
 #include "../NUITextRendererModern.h"
@@ -72,6 +73,7 @@ public:
     void strokeCircle(const NUIPoint& center, float radius, float thickness, const NUIColor& color) override;
     void drawLine(const NUIPoint& start, const NUIPoint& end, float thickness, const NUIColor& color) override;
     void drawPolyline(const NUIPoint* points, int count, float thickness, const NUIColor& color) override;
+    void fillWaveform(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, const NUIColor& color) override;
     
     // ========================================================================
     // Gradient Drawing
@@ -100,15 +102,22 @@ public:
     // ========================================================================
     
     void drawTexture(uint32_t textureId, const NUIRect& destRect, const NUIRect& sourceRect) override;
+    // Helper to draw a texture flipped vertically (used when sampling FBOs rendered in GL origin space)
+    void drawTextureFlippedV(uint32_t textureId, const NUIRect& destRect, const NUIRect& sourceRect);
     void drawTexture(const NUIRect& bounds, const unsigned char* rgba, 
                     int width, int height) override;
     uint32_t loadTexture(const std::string& filepath) override;
     uint32_t createTexture(const uint8_t* data, int width, int height) override;
     void deleteTexture(uint32_t textureId) override;
+    uint32_t getGLTextureId(uint32_t textureId) const;
     
     // Render-to-texture helpers (FBO)
     uint32_t renderToTextureBegin(int width, int height);
     uint32_t renderToTextureEnd();
+
+    // Temporary offscreen rendering (adjusts projection to target size)
+    void beginOffscreen(int width, int height);
+    void endOffscreen();
     
     // ========================================================================
     // Batching
@@ -141,6 +150,9 @@ public:
     int getWidth() const override { return width_; }
     int getHeight() const override { return height_; }
     const char* getBackendName() const override { return "OpenGL 3.3+"; }
+
+    // Query renderer state
+    bool isScissorEnabled() const { return scissorEnabled_; }
     
 private:
     // Vertex structure for batching
@@ -158,9 +170,14 @@ private:
         int32_t opacityLoc = -1;
         int32_t primitiveTypeLoc = -1;
         int32_t radiusLoc = -1;
-        int32_t sizeLoc = -1;
+        int32_t rectWidthLoc = -1;
+        int32_t rectHeightLoc = -1;
+        int32_t quadWidthLoc = -1;
+        int32_t quadHeightLoc = -1;
         int32_t textureLoc = -1;
         int32_t useTextureLoc = -1;
+        int32_t blurLoc = -1;
+        int32_t smoothnessLoc = -1; // Added for SDF text
     };
     
     // Transform stack
@@ -184,13 +201,15 @@ private:
     
     // High-quality text rendering helpers
     float getDPIScale();
-    void renderCharacterImproved(char c, float x, float y, FT_Bitmap* bitmap, const NUIColor& color, float dpiScale);
+
+    // REMOVED: renderCharacterImproved (replaced by atlas rendering)
     
     // Shader helpers
     uint32_t compileShader(const char* source, uint32_t type);
     uint32_t linkProgram(uint32_t vertexShader, uint32_t fragmentShader);
     
     // Drawing helpers
+    void ensureBasicPrimitive();
     void addVertex(float x, float y, float u, float v, const NUIColor& color);
     void addQuad(const NUIRect& rect, const NUIColor& color);
     void applyTransform(float& x, float& y);
@@ -202,6 +221,7 @@ private:
     float globalOpacity_ = 1.0f;
     bool batching_ = false;
     uint32_t drawCallCount_ = 0;  // Draw call tracking
+    bool scissorEnabled_ = false;
     
     // OpenGL objects
     uint32_t vao_ = 0;
@@ -229,7 +249,17 @@ private:
     int fboWidth_ = 0;
     int fboHeight_ = 0;
     bool renderingToTexture_ = false;
+
     uint32_t lastRenderTextureId_ = 0;
+
+    // Batching state
+    uint32_t currentTextureId_ = 0; // 0 = no texture (flat color)
+    int currentPrimitiveType_ = 0;
+    float currentRadius_ = 0.0f;
+    float currentBlur_ = 0.0f;
+    float currentSmoothness_ = 1.0f; // Added
+    NUISize currentSize_ = {0.0f, 0.0f};
+    NUISize currentQuadSize_ = {0.0f, 0.0f};
     
     // Optimization systems
     NUIBatchManager batchManager_;
@@ -239,21 +269,38 @@ private:
     
     // Text rendering support
     std::string defaultFontPath_;
+    std::unique_ptr<NUITextRendererSDF> sdfRenderer_;
+    bool useSDFText_{false};
+    bool triedSDFInit_{false};
     
     // FreeType text rendering
     struct FontData {
-        uint32_t textureId;
+        uint32_t textureId; // Now refers to the atlas texture
         int width, height;
         int bearingX, bearingY;
         int advance;
+        // Atlas UV coordinates
+        float u0, v0, u1, v1;
     };
     std::unordered_map<char, FontData> fontCache_;
     bool fontInitialized_;
+    uint32_t fontAtlasTextureId_ = 0; // The single texture atlas
+    int fontAtlasWidth_ = 2048;
+    int fontAtlasHeight_ = 2048;
+    int fontAtlasX_ = 0;
+    int fontAtlasY_ = 0;
+    int fontAtlasRowHeight_ = 0;
+
     FT_Library ftLibrary_;
     FT_Face ftFace_;
     
     // Projection matrix (orthographic)
     float projectionMatrix_[16];
+
+    // Offscreen state backup
+    float projectionBackup_[16];
+    int widthBackup_ = 0;
+    int heightBackup_ = 0;
 };
 
 } // namespace NomadUI

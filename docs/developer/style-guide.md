@@ -194,7 +194,7 @@ See [Building Guide](../BUILDING.md) for instructions.
 
 **External Links:**
 ```markdown
-Download [Tracy Profiler](https://github.com/wolfpld/tracy/releases).
+
 ```
 
 **Anchor Links (same page):**

@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "NativeAudioDriver.h"
@@ -52,6 +52,7 @@ public:
     void stopStream() override;
     bool isStreamRunning() const override { return m_isRunning; }
     double getStreamLatency() const override;
+    uint32_t getStreamSampleRate() const override { return m_waveFormat ? m_waveFormat->nSamplesPerSec : 0; }
 
     /**
      * @brief Check if exclusive mode is available for a device
@@ -93,6 +94,11 @@ private:
     WAVEFORMATEX* m_waveFormat = nullptr;
     uint32_t m_bufferFrameCount = 0;
     uint32_t m_actualSampleRate = 0;
+    
+    // Soft-start ramp to prevent harsh audio on initialization
+    uint32_t m_rampSampleCount = 0;
+    uint32_t m_rampDurationSamples = 0;
+    bool m_isRamping = false;
 
     // Performance monitoring
     LARGE_INTEGER m_perfFreq;
@@ -105,6 +111,7 @@ private:
     bool openDevice(uint32_t deviceId);
     void closeDevice();
     bool initializeAudioClient();
+    bool initializeSharedFallback();
     bool findBestExclusiveFormat(WAVEFORMATEX** format);
     bool testExclusiveFormat(uint32_t sampleRate, uint32_t channels, WAVEFORMATEX** format);
     bool testExclusiveFormatPCM(uint32_t sampleRate, uint32_t channels, uint32_t bitsPerSample, WAVEFORMATEX** format);
@@ -112,6 +119,8 @@ private:
     void setError(DriverError error, const std::string& message);
     void updateStatistics(double callbackTimeUs);
     bool setThreadPriority();
+
+    bool m_usingSharedFallback{ false };
 };
 
 } // namespace Audio

@@ -134,8 +134,32 @@ bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
     else if (isDragging_ && event.button == NUIMouseButton::None)
     {
         // Handle thumb dragging (mouse move events have button = None)
-        double newValue = positionToValue(event.position);
-        std::cout << "Dragging to value: " << newValue << std::endl;
+        // Use relative drag delta to preserve initial grab offset within thumb
+        NUIRect trackRect = getTrackRect();
+        double deltaPixels, trackLength;
+        
+        if (orientation_ == Orientation::Vertical)
+        {
+            deltaPixels = event.position.y - dragStartPosition_.y;
+            trackLength = trackRect.height;
+        }
+        else
+        {
+            deltaPixels = event.position.x - dragStartPosition_.x;
+            trackLength = trackRect.width;
+        }
+        
+        // Guard against division by zero when trackLength is zero
+        if (trackLength == 0.0) {
+            return false;
+        }
+        
+        // Convert pixel delta to value delta
+        double proportion = deltaPixels / trackLength;
+        double valueDelta = proportion * rangeLimitSize_;
+        double newValue = dragStartValue_ + valueDelta;
+        
+        std::cout << "Dragging: delta=" << deltaPixels << "px, newValue=" << newValue << std::endl;
         scrollTo(newValue);
         return true;
     }
@@ -173,8 +197,15 @@ void NUIScrollbar::onMouseLeave()
 
 void NUIScrollbar::setCurrentRange(double start, double size)
 {
-    currentRangeStart_ = std::clamp(start, rangeLimitStart_, rangeLimitStart_ + rangeLimitSize_ - size);
+    // Clamp size first to ensure valid range
     currentRangeSize_ = std::clamp(size, 0.0, rangeLimitSize_);
+    
+    // Calculate max start position, ensuring min <= max for clamp
+    double maxStart = rangeLimitStart_ + rangeLimitSize_ - currentRangeSize_;
+    maxStart = std::max(maxStart, rangeLimitStart_);  // Ensure max >= min
+    
+    currentRangeStart_ = std::clamp(start, rangeLimitStart_, maxStart);
+    
     updateThumbSize();
     updateThumbPosition();
     setDirty(true);
@@ -577,6 +608,12 @@ double NUIScrollbar::positionToValue(const NUIPoint& position) const
     {
         float relativeY = position.y - trackRect.y;
         float trackHeight = trackRect.height;
+        
+        // Guard against division by zero when trackHeight is zero
+        if (trackHeight == 0.0f) {
+            return rangeLimitStart_;
+        }
+        
         double proportion = static_cast<double>(relativeY) / trackHeight;
         return rangeLimitStart_ + proportion * rangeLimitSize_;
     }
@@ -584,6 +621,12 @@ double NUIScrollbar::positionToValue(const NUIPoint& position) const
     {
         float relativeX = position.x - trackRect.x;
         float trackWidth = trackRect.width;
+        
+        // Guard against division by zero when trackWidth is zero
+        if (trackWidth == 0.0f) {
+            return rangeLimitStart_;
+        }
+        
         double proportion = static_cast<double>(relativeX) / trackWidth;
         return rangeLimitStart_ + proportion * rangeLimitSize_;
     }
@@ -592,6 +635,13 @@ double NUIScrollbar::positionToValue(const NUIPoint& position) const
 NUIPoint NUIScrollbar::valueToPosition(double value) const
 {
     NUIRect trackRect = getTrackRect();
+    
+    // Guard against division by zero when rangeLimitSize_ is zero
+    if (rangeLimitSize_ <= 0.0) {
+        // Return center of track when range is invalid
+        return NUIPoint(trackRect.x + trackRect.width * 0.5f, trackRect.y + trackRect.height * 0.5f);
+    }
+    
     double proportion = (value - rangeLimitStart_) / rangeLimitSize_;
     
     if (orientation_ == Orientation::Vertical)

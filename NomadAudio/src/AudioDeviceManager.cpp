@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioDeviceManager.h"
 #include "RtAudioBackend.h"
 #include "WASAPIExclusiveDriver.h"
@@ -272,11 +272,29 @@ void AudioDeviceManager::closeStream() {
 }
 
 bool AudioDeviceManager::startStream() {
+    auto logStreamInfo = [this](AudioDriver* driver, const char* label) {
+        if (!driver) return;
+        uint32_t actualRate = driver->getStreamSampleRate();
+        uint32_t requestedRate = m_currentConfig.sampleRate;
+        std::cout << label << ": requested " << requestedRate << " Hz"
+                  << ", actual " << actualRate << " Hz"
+                  << ", buffer " << m_currentConfig.bufferSize << " frames"
+                  << std::endl;
+    };
+
     if (m_activeDriver) {
-        return m_activeDriver->startStream();
+        bool ok = m_activeDriver->startStream();
+        if (ok) {
+            logStreamInfo(m_activeDriver, "Active driver stream started");
+        }
+        return ok;
     }
     if (m_rtAudioDriver) {
-        return m_rtAudioDriver->startStream();
+        bool ok = m_rtAudioDriver->startStream();
+        if (ok) {
+            logStreamInfo(m_rtAudioDriver.get(), "RtAudio stream started");
+        }
+        return ok;
     }
     return false;
 }
@@ -308,6 +326,16 @@ double AudioDeviceManager::getStreamLatency() const {
         return m_rtAudioDriver->getStreamLatency();
     }
     return 0.0;
+}
+
+uint32_t AudioDeviceManager::getStreamSampleRate() const {
+    if (m_activeDriver) {
+        return m_activeDriver->getStreamSampleRate();
+    }
+    if (m_rtAudioDriver) {
+        return m_rtAudioDriver->getStreamSampleRate();
+    }
+    return 0;
 }
 
 void AudioDeviceManager::getLatencyCompensationValues(double& inputLatencyMs, double& outputLatencyMs) const {
@@ -672,7 +700,7 @@ void AudioDeviceManager::checkAndAutoScaleBuffer() {
     DriverStatistics stats = m_activeDriver->getStatistics();
     uint64_t newUnderruns = stats.underrunCount - m_lastUnderrunCount;
     
-    std::cout << "[Auto-Buffer Scaling] Check - Underruns in last minute: " << newUnderruns << std::endl;
+    // std::cout << "[Auto-Buffer Scaling] Check - Underruns in last minute: " << newUnderruns << std::endl;
     
     if (newUnderruns >= m_underrunThreshold) {
         // Need to scale up buffer
@@ -689,14 +717,14 @@ void AudioDeviceManager::checkAndAutoScaleBuffer() {
         } else if (currentBuffer < 1024) {
             newBuffer = 1024;
         } else {
-            std::cerr << "[Auto-Buffer Scaling] Already at maximum buffer size (1024)" << std::endl;
+            // std::cerr << "[Auto-Buffer Scaling] Already at maximum buffer size (1024)" << std::endl;
             m_lastUnderrunCheck = now;
             m_lastUnderrunCount = stats.underrunCount;
             return;
         }
         
-        std::cout << "[Auto-Buffer Scaling] Too many underruns (" << newUnderruns << "/" << m_underrunThreshold 
-                  << ") - increasing buffer: " << currentBuffer << " -> " << newBuffer << " frames" << std::endl;
+        // std::cout << "[Auto-Buffer Scaling] Too many underruns (" << newUnderruns << "/" << m_underrunThreshold 
+        //           << ") - increasing buffer: " << currentBuffer << " -> " << newBuffer << " frames" << std::endl;
         
         // Update buffer size and restart stream
         bool wasRunning = isStreamRunning();
@@ -711,10 +739,10 @@ void AudioDeviceManager::checkAndAutoScaleBuffer() {
             if (wasRunning) {
                 startStream();
             }
-            std::cout << "[Auto-Buffer Scaling] Buffer increased successfully. New latency: " 
-                      << getStreamLatency() * 1000.0 << "ms" << std::endl;
+            // std::cout << "[Auto-Buffer Scaling] Buffer increased successfully. New latency: " 
+            //           << getStreamLatency() * 1000.0 << "ms" << std::endl;
         } else {
-            std::cerr << "[Auto-Buffer Scaling] Failed to reopen stream with new buffer size" << std::endl;
+            // std::cerr << "[Auto-Buffer Scaling] Failed to reopen stream with new buffer size" << std::endl;
         }
     }
     

@@ -137,6 +137,10 @@ void NUIPlatformBridge::setupEventBridges() {
             event.pressed = false;
             event.released = false;
             event.wheelDelta = delta;
+            // Query current modifier state for Shift+scroll zoom support
+            if (m_window) {
+                event.modifiers = convertModifiers(m_window->getCurrentModifiers());
+            }
             m_rootComponent->onMouseEvent(event);
         }
     });
@@ -145,6 +149,9 @@ void NUIPlatformBridge::setupEventBridges() {
     m_window->setKeyCallback([this](Nomad::KeyCode key, bool pressed, const Nomad::KeyModifiers& mods) {
         if (m_keyCallback) {
             m_keyCallback(convertKeyCode(key), pressed);
+        }
+        if (m_keyCallbackEx) {
+            m_keyCallbackEx(convertKeyCode(key), pressed, mods.control, mods.shift, mods.alt);
         }
     });
 
@@ -198,6 +205,15 @@ int NUIPlatformBridge::convertMouseButton(Nomad::MouseButton button) {
 
 int NUIPlatformBridge::convertKeyCode(Nomad::KeyCode key) {
     return static_cast<int>(key);
+}
+
+NUIModifiers NUIPlatformBridge::convertModifiers(const Nomad::KeyModifiers& mods) {
+    NUIModifiers result = NUIModifiers::None;
+    if (mods.shift) result = result | NUIModifiers::Shift;
+    if (mods.control) result = result | NUIModifiers::Ctrl;
+    if (mods.alt) result = result | NUIModifiers::Alt;
+    if (mods.super) result = result | NUIModifiers::Super;
+    return result;
 }
 
 // =============================================================================
@@ -316,6 +332,10 @@ void NUIPlatformBridge::setMouseWheelCallback(std::function<void(float)> callbac
 
 void NUIPlatformBridge::setKeyCallback(std::function<void(int, bool)> callback) {
     m_keyCallback = callback;
+}
+
+void NUIPlatformBridge::setKeyCallbackEx(std::function<void(int, bool, bool ctrl, bool shift, bool alt)> callback) {
+    m_keyCallbackEx = callback;
 }
 
 void NUIPlatformBridge::setResizeCallback(std::function<void(int, int)> callback) {

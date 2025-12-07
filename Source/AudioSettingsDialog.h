@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file AudioSettingsDialog.h
  * @brief Audio settings dialog for NOMAD DAW
@@ -12,10 +12,13 @@
 #include "../NomadUI/Core/NUIIcon.h"
 #include "../NomadUI/Core/NUISlider.h"
 #include "../NomadUI/Widgets/NUIDropdown.h"
+#include "../NomadUI/Widgets/NUICoreWidgets.h"
+#include "../NomadUI/Graphics/OpenGL/NUIRenderCache.h"
 #include "../NomadAudio/include/AudioDeviceManager.h"
 #include <memory>
 #include <functional>
 #include <vector>
+#include <iostream>
 
 namespace Nomad {
 
@@ -62,6 +65,20 @@ public:
     bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
     bool onKeyEvent(const NomadUI::NUIKeyEvent& event) override;
     void setVisible(bool visible);
+    
+    // Override setDirty to invalidate FBO cache
+    void setDirty(bool dirty = true) { 
+        NomadUI::NUIComponent::setDirty(dirty); 
+        // Don't invalidate during cache rendering (prevents infinite loops)
+        if (dirty && !m_isRenderingToCache) {
+            #ifdef _DEBUG
+            if (!m_cacheInvalidated) {
+                std::cerr << "[AudioSettingsDialog::setDirty] Cache invalidation triggered" << std::endl;
+            }
+            #endif
+            m_cacheInvalidated = true;
+        }
+    }
     
 private:
     void createUI();
@@ -173,6 +190,26 @@ private:
     
     // FPS optimization - cache dropdown open states to avoid unnecessary re-renders
     bool m_anyDropdownOpen;
+    
+    // Bug #5 fix: Track if we're blocking events due to dropdown interaction
+    // Set to true when PRESSED event occurs while dropdown is open
+    // Remains true until RELEASED event, preventing click-through to buttons
+    bool m_blockingEventsForDropdown;
+    
+    // FBO caching for FPS optimization
+    NomadUI::CachedRenderData* m_cachedRender;
+    uint64_t m_cacheId;
+    bool m_cacheInvalidated;
+    bool m_isRenderingToCache; // Prevent invalidation loops during cache rendering
+    
+    // Tab system (using buttons instead of NUITabBar since it doesn't render)
+    std::shared_ptr<NomadUI::NUIButton> m_settingsTabButton;
+    std::shared_ptr<NomadUI::NUIButton> m_infoTabButton;
+    std::string m_activeTab; // "settings" or "info"
+    
+    // Info tab content
+    std::shared_ptr<NomadUI::NUILabel> m_infoTitle;
+    std::shared_ptr<NomadUI::NUILabel> m_infoContent;
 };
 
 } // namespace Nomad

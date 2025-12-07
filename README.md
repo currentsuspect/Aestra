@@ -16,6 +16,7 @@
 **Nomad DAW** is a next-generation digital audio workstation designed for musicians who demand professional quality without compromise. Built with modern C++17, Nomad delivers a clean, responsive experience with cutting-edge audio technology and a workflow that makes sense.
 
 Nomad combines:
+
 - **Ultra-low latency audio engine** powered by WASAPI multi-tier processing
 - **Custom GPU-accelerated UI framework** (NomadUI) for buttery-smooth 60 FPS performance
 - **FL Studio-inspired timeline** with intuitive pattern and playlist sequencing
@@ -29,6 +30,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 ## ⚙️ Core Features
 
 ### 🎵 Audio Engine
+
 - **WASAPI Integration** — Exclusive and Shared mode with automatic fallback
 - **Multi-threaded Processing** — 64-bit audio pipeline for maximum performance
 - **Sample-accurate Timing** — Professional-grade playback precision
@@ -36,6 +38,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 - **RtAudio Backend** — Cross-platform audio abstraction layer
 
 ### 🎨 User Interface
+
 - **NomadUI Framework** — Custom OpenGL 3.3+ renderer with MSAA anti-aliasing
 - **Adaptive FPS System** — Intelligent rendering optimization (24-60 FPS)
 - **FL Studio-inspired Timeline** — Familiar workflow with adaptive grid and waveform visualization
@@ -44,6 +47,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 - **Smooth Animations** — Hardware-accelerated transitions and effects
 
 ### 🛠️ Development
+
 - **Modern C++17** — Clean, maintainable codebase
 - **CMake Build System** — Cross-platform build configuration
 - **Modular Architecture** — Clear separation: Core, Platform, Audio, UI
@@ -56,7 +60,9 @@ Whether you're producing electronic music, scoring films, or recording live inst
 ## 🎧 Supported Platforms & Requirements
 
 ### Windows 10/11 (Primary Platform)
+
 **Minimum Requirements:**
+
 - OS: Windows 10 64-bit (build 1809+) or Windows 11
 - CPU: Intel Core i5 (4th gen) or AMD Ryzen 3
 - RAM: 8 GB
@@ -64,6 +70,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 - Audio: WASAPI-compatible audio interface
 
 **Recommended:**
+
 - CPU: Intel Core i7/i9 or AMD Ryzen 7/9
 - RAM: 16 GB or more
 - GPU: Dedicated graphics card with 2+ GB VRAM
@@ -71,6 +78,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 - Storage: SSD for project files and sample libraries
 
 ### Future Platform Support
+
 - **Linux** — X11/Wayland support planned
 - **macOS** — Cocoa integration planned
 
@@ -81,6 +89,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 At Nomad Studios, we believe software should feel like art — light, native, and human.
 
 **Our Core Values:**
+
 - 🆓 **Transparency First** — Source-available code you can trust and learn from
 - 🎯 **Intention Over Features** — Every feature serves a purpose, no bloat
 - ⚡ **Performance Matters** — Professional-grade audio with ultra-low latency
@@ -88,6 +97,7 @@ At Nomad Studios, we believe software should feel like art — light, native, an
 - 🤝 **Community-Driven** — Built by musicians, for musicians
 
 **Why Nomad is Different:**
+
 - Source code is publicly visible for educational transparency
 - Modern architecture designed for the future, not legacy constraints
 - GPU-accelerated UI that rivals native applications
@@ -108,6 +118,7 @@ We're building the DAW we wish existed — powerful yet approachable, profession
    - PowerShell 7
 
 2. **Clone and Build:**
+
    ```powershell
    git clone https://github.com/currentsuspect/NOMAD.git
    cd NOMAD
@@ -123,12 +134,14 @@ We're building the DAW we wish existed — powerful yet approachable, profession
    ```
 
 3. **Run Nomad:**
+
    ```powershell
    cd build/bin/Release
    ./NOMAD.exe
    ```
 
 ### Detailed Build Instructions
+
 For comprehensive build instructions including troubleshooting, see **[Building Guide →](docs/BUILDING.md)**
 
 ---
@@ -147,6 +160,7 @@ Explore our beautiful, searchable documentation built with MkDocs Material:
 - **🤝 [Community](https://currentsuspect.github.io/NOMAD/community/code-of-conduct/)** — Code of conduct, support, security
 
 ### Quick Links
+
 - [Building NOMAD](https://currentsuspect.github.io/NOMAD/getting-started/building/) — Detailed build instructions
 - [Contributing Guide](https://currentsuspect.github.io/NOMAD/developer/contributing/) — How to contribute
 - [Architecture Overview](https://currentsuspect.github.io/NOMAD/architecture/overview/) — Understanding NOMAD's design
@@ -156,6 +170,7 @@ Explore our beautiful, searchable documentation built with MkDocs Material:
 Generate comprehensive API documentation locally using Doxygen:
 
 **Quick Start:**
+
 ```bash
 # Windows
 .\scripts\generate-api-docs.bat
@@ -168,6 +183,7 @@ doxygen Doxyfile
 ```
 
 **Features:**
+
 - 📖 Complete API reference for all modules
 - 🔗 Cross-referenced code with call graphs
 - 📊 Class diagrams and inheritance trees
@@ -191,7 +207,9 @@ We welcome contributions from the community! Whether you're fixing bugs, adding 
 5. **Submit a PR** — Open a pull request with a clear description
 
 ### Contributor License Agreement
+
 By contributing to Nomad, you agree that:
+
 - All contributed code becomes property of Dylan Makori / Nomad Studios
 - You grant Nomad Studios full rights to use, modify, and distribute your contributions
 - You waive ownership claims to your contributions
@@ -200,6 +218,7 @@ By contributing to Nomad, you agree that:
 For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRIBUTING.md)**
 
 ### Ways to Contribute
+
 - 🐛 **Report Bugs** — Help us identify and fix issues
 - 💡 **Suggest Features** — Share ideas in GitHub Discussions
 - 📝 **Improve Documentation** — Help others understand Nomad
@@ -215,28 +234,34 @@ For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRI
 ### License Summary
 
 **You MAY:**
+
 - ✅ View and study the source code for educational purposes
 - ✅ Report bugs and security vulnerabilities
 - ✅ Suggest features and improvements
 - ✅ Submit pull requests (contributors grant all rights to Nomad Studios)
 
 **You MAY NOT:**
+
 - ❌ Use the software or code without written consent
 - ❌ Create derivative works or competing products
 - ❌ Redistribute or sublicense the code
 - ❌ Remove or alter proprietary notices
 
 ### SPDX Identifier
-```
+
+```SPDX
+
 SPDX-License-Identifier: NSSAL
 ```
 
 All source files include the following header:
+
 ```cpp
 // © 2025 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
 ```
 
 ### Full License Text
+
 - **[View LICENSE →](LICENSE)** — Full legal license text
 - **[License Reference →](docs/LICENSE_REFERENCE.md)** — Detailed breakdown and FAQ
 
@@ -249,11 +274,13 @@ All source files include the following header:
 **Nomad Studios** was founded by **Dylan Makori** in Kenya with a simple mission: make professional music tools accessible to everyone, without compromise.
 
 ### Our Story
+
 Frustrated with bloated DAWs that prioritized features over performance, Dylan set out to build a modern audio workstation from scratch. Nomad is the result of that vision — a DAW that respects your time, your creativity, and your hardware.
 
 Every line of code in Nomad is written with intention. No shortcuts, no legacy cruft, just clean, modern C++ designed for the future of music production.
 
 ### Brand Values
+
 - 🌍 **Global Accessibility** — Built in Kenya, for the world
 - 🎓 **Education First** — Source-available code for learning
 - ⚡ **Performance Obsessed** — Every millisecond matters
@@ -268,6 +295,7 @@ Every line of code in Nomad is written with intention. No shortcuts, no legacy c
 🌐 Website: Coming Soon
 
 **Support Channels:**
+
 - 🐛 [Report Issues](https://github.com/currentsuspect/NOMAD/issues) — Bug reports and feature requests
 - 💬 [GitHub Discussions](https://github.com/currentsuspect/NOMAD/discussions) — Community forum
 - 📧 Direct Email — For partnerships and licensing inquiries
@@ -291,6 +319,7 @@ Thank you to all contributors and the open-source community for making Nomad pos
 ## 🗺️ Roadmap Highlights
 
 **Q1 2025:**
+
 - ✅ Core audio engine with WASAPI
 - ✅ NomadUI framework with OpenGL rendering
 - ✅ FL Studio-inspired timeline
@@ -299,12 +328,14 @@ Thank you to all contributors and the open-source community for making Nomad pos
 - 🚧 Project save/load system
 
 **Q2 2025:**
+
 - 📅 VST3 plugin hosting
 - 📅 MIDI support and piano roll
 - 📅 Undo/redo system
 - 📅 Cross-platform support (Linux, macOS)
 
 **Q3-Q4 2025:**
+
 - 📅 Advanced automation
 - 📅 Effects and mixing console
 - 📅 Muse AI integration (premium)
@@ -316,7 +347,7 @@ See the full **[Roadmap →](docs/ROADMAP.md)** for detailed milestones.
 
 ## 📜 Repository Structure
 
-```
+```FILESYSTEM
 NOMAD/
 ├── docs/               # Comprehensive documentation portal
 ├── NomadCore/          # Core utilities (math, threading, file I/O, logging)
@@ -350,6 +381,40 @@ See **[SECURITY.md](SECURITY.md)** for our full security policy.
 
 ---
 
+## 💬 Community
+
+Join the conversation:
+
+- **Discord** — [Invite Link](https://discord.gg/nomad-studios)
+- **GitHub Discussions** — [Open Discussions](https://github.com/NomadStudios/Nomad/discussions)
+- **Twitter/X** — [@NomadStudios](https://twitter.com/NomadStudios)
+
+---
+
+## 📜 License
+
+Nomad is distributed under the **Nomad Studios Software Agreement License (NSSAL) v1.1**. See **[LICENSE](LICENSE)** for full terms.
+
+**Key Terms:**
+
+- **Non-commercial use only** (for now)
+- **No redistribution** without permission
+- **No reverse engineering** of proprietary components
+
+For commercial licensing inquiries, contact: [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
+
+---
+
+## 🎵 Support Nomad
+
+If you enjoy using Nomad, consider supporting its development:
+
+- **GitHub Sponsors** — [Sponsor Nomad](https://github.com/sponsors/NomadStudios)
+- **Ko-fi** — [Buy Me a Coffee](https://ko-fi.com/nomadstudios)
+- **Patreon** — [Become a Patron](https://patreon.com/Nomad_Studios?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink)
+
+---
+
 <div align="center">
 
 **Built by musicians, for musicians. Crafted with intention.** 🎵
@@ -357,6 +422,7 @@ See **[SECURITY.md](SECURITY.md)** for our full security policy.
 ⭐ **Star this repo** if you believe in transparent, professional audio software!
 
 *Copyright © 2025 Dylan Makori / Nomad Studios. All rights reserved.*  
-*Licensed under NSSAL v1.0*
+*Licensed under NSSAL v1.1*
 
 </div>
+</html>

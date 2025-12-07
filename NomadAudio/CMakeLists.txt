@@ -29,7 +29,7 @@ set(RTAUDIO_HEADERS
 if(WIN32)
     # Windows: WASAPI only (stable, universally available)
     add_definitions(-D__WINDOWS_WASAPI__)
-    set(RTAUDIO_LIBS dsound ole32 winmm ksuser mfplat mfuuid wmcodecdspuuid)
+    set(RTAUDIO_LIBS dsound ole32 winmm ksuser mfplat mfuuid wmcodecdspuuid mfreadwrite)
 
 elseif(APPLE)
     # macOS: CoreAudio
@@ -62,6 +62,8 @@ set(NOMAD_AUDIO_SOURCES
     src/AudioProcessor.cpp
     src/MixerBus.cpp
     src/Oscillator.cpp
+    src/PreviewEngine.cpp
+    src/SamplePool.cpp
     src/Track.cpp
     src/TrackManager.cpp
     # New multi-tier driver system
@@ -77,6 +79,8 @@ set(NOMAD_AUDIO_HEADERS
     include/AudioProcessor.h
     include/MixerBus.h
     include/Oscillator.h
+    include/PreviewEngine.h
+    include/SamplePool.h
     include/Track.h
     include/TrackManager.h
     # New multi-tier driver system
@@ -173,6 +177,17 @@ add_executable(NomadOscillatorTest
 )
 
 target_link_libraries(NomadOscillatorTest
+    PRIVATE
+        NomadAudio
+        NomadCore
+)
+
+# WAV loader regression test
+add_executable(NomadWavLoaderTest
+    test/WavLoaderTest.cpp
+)
+
+target_link_libraries(NomadWavLoaderTest
     PRIVATE
         NomadAudio
         NomadCore

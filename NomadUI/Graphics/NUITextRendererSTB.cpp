@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios. All Rights Reserved. Licensed for personal & educational use only.
 #include "../External/glad/include/glad/glad.h"  // MUST be first
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "../External/stb_truetype.h"

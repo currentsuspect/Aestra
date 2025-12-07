@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "MixerBus.h"
@@ -6,6 +6,11 @@
 #include <vector>
 #include <string>
 #include <atomic>
+#include <mutex>
+#include <thread>
+#include <condition_variable>
+#include <fstream>
+#include "SamplePool.h"
 
 namespace Nomad {
 namespace Audio {
@@ -192,7 +197,7 @@ public:
     void clearAudioData();
     
     // Waveform data access (for UI visualization)
-    const std::vector<float>& getAudioData() const { return m_audioData; }
+    const std::vector<float>& getAudioData() const;
     uint32_t getSampleRate() const { return m_sampleRate; }
     uint32_t getNumChannels() const { return m_numChannels; }
 
@@ -215,9 +220,26 @@ public:
     // Sample Timeline Position (where sample starts in the timeline, in seconds)
     void setStartPositionInTimeline(double seconds) { m_startPositionInTimeline.store(seconds); }
     double getStartPositionInTimeline() const { return m_startPositionInTimeline.load(); }
+    void setSourcePath(const std::string& path) { m_sourcePath = path; }
+    const std::string& getSourcePath() const { return m_sourcePath; }
+    
+    // === CLIP TRIMMING (non-destructive) ===
+    // Trim positions define which portion of the audio is used (in seconds from start of audio)
+    void setTrimStart(double seconds);    // Where playback begins within the audio
+    void setTrimEnd(double seconds);      // Where playback ends within the audio  
+    double getTrimStart() const { return m_trimStart.load(); }
+    double getTrimEnd() const { return m_trimEnd.load(); }
+    double getTrimmedDuration() const;    // Duration of trimmed clip
+    void resetTrim();                     // Reset to full audio length
+    
+    // Split clip at position (returns new Track with second half, modifies this track in place)
+    std::shared_ptr<Track> splitAt(double positionInClip);
+    
+    // Create a copy of this clip (for duplicate/copy operations)
+    std::shared_ptr<Track> duplicate() const;
 
     // Audio Processing
-    void processAudio(float* outputBuffer, uint32_t numFrames, double streamTime);
+    void processAudio(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate);
 
     // Mixer Integration
     MixerBus* getMixerBus() { return m_mixerBus.get(); }
@@ -249,12 +271,31 @@ private:
     std::atomic<double> m_positionSeconds{0.0};
     std::atomic<double> m_durationSeconds{0.0};
     std::atomic<double> m_startPositionInTimeline{0.0};  // Where sample starts in timeline (seconds)
+    
+    // Clip trim positions (non-destructive - define which portion of audio to use)
+    std::atomic<double> m_trimStart{0.0};     // Start point within audio (seconds)
+    std::atomic<double> m_trimEnd{-1.0};      // End point within audio (-1 = full length)
 
     // Audio data
-    std::vector<float> m_audioData;  // Interleaved stereo samples
+    std::vector<float> m_audioData;  // Interleaved stereo samples (streaming/recording/temp)
+    std::shared_ptr<AudioBuffer> m_sampleBuffer; // Shared decoded buffer from SamplePool (non-streaming)
     uint32_t m_sampleRate{48000};
-    uint32_t m_numChannels{2};
+    uint32_t m_numChannels{2};       // Always 2 after downmix
+    uint32_t m_sourceChannels{2};    // Original channel count on load
+    std::string m_sourcePath;
     std::atomic<double> m_playbackPhase{0.0};  // For sample-accurate playback
+    mutable std::mutex m_audioDataMutex;
+    std::atomic<bool> m_streaming{false};
+    std::thread m_streamThread;
+    std::atomic<bool> m_streamStop{false};
+    std::condition_variable m_streamCv;
+    std::mutex m_streamMutex;
+    std::atomic<uint64_t> m_streamBaseFrame{0};     // absolute frame index for m_audioData[0]
+    std::atomic<uint64_t> m_streamTotalFrames{0};   // total frames in source
+    std::atomic<bool> m_streamEof{false};
+    std::atomic<uint32_t> m_streamBytesPerSample{0};
+    std::atomic<uint32_t> m_streamDataOffset{0};
+    std::ifstream m_streamFile;
 
     // Mixer integration
     std::unique_ptr<MixerBus> m_mixerBus;
@@ -273,9 +314,16 @@ private:
     // Dithering state (for noise shaping)
     float m_ditherHistory[2]{0.0f, 0.0f};  // Per-channel dither history for noise shaping
 
+    // Temporary buffer reused per process call to avoid allocations
+    mutable std::vector<float> m_tempBuffer;
+
     // Internal audio processing
     void generateSilence(float* buffer, uint32_t numFrames);
-    void copyAudioData(float* outputBuffer, uint32_t numFrames);
+    void copyAudioData(float* outputBuffer, uint32_t numFrames, double outputSampleRate);
+    void trimStreamBuffer(uint64_t currentFrame);
+    void stopStreaming();
+    bool startWavStreaming(const std::string& filePath, uint32_t sampleRate, uint16_t channels, uint16_t bitsPerSample, uint32_t dataOffset, uint64_t dataSize, uint64_t startFrame = 0);
+    void streamWavThread(uint32_t channels);
     
     // Interpolation methods
     float interpolateLinear(const float* data, uint32_t totalSamples, double position, uint32_t channel) const;

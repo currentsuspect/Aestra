@@ -5,6 +5,8 @@
 #include "../../../NomadCore/include/NomadAssert.h"
 #include "../../../Source/resource.h"
 #include <windowsx.h>
+#include "../../../NomadUI/External/glad/include/glad/glad.h"
+#include "../../../NomadUI/External/glad/include/glad/wglext.h"
 
 namespace Nomad {
 
@@ -237,6 +239,10 @@ void PlatformWindowWin32::unregisterWindowClass() {
 // =============================================================================
 
 bool PlatformWindowWin32::setupPixelFormat() {
+    // First, try to set up MSAA pixel format using WGL extensions
+    // This requires creating a temporary context first
+    
+    // Basic pixel format for fallback/temp context
     PIXELFORMATDESCRIPTOR pfd = {};
     pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
     pfd.nVersion = 1;
@@ -259,25 +265,92 @@ bool PlatformWindowWin32::setupPixelFormat() {
     return true;
 }
 
+// Note: MSAA requires setting pixel format before context creation
+// For proper MSAA support, implement two-window initialization:
+// 1. Create dummy window with basic pixel format
+// 2. Create temp GL context to load WGL extensions
+// 3. Use wglChoosePixelFormatARB on real window with MSAA attributes
+// 4. Create real context
+// Current implementation relies on shader-based anti-aliasing (SDF smoothstep)
+
 bool PlatformWindowWin32::createGLContext() {
     if (m_hglrc) {
         return true;  // Already created
     }
 
-    m_hglrc = wglCreateContext(m_hdc);
-    if (!m_hglrc) {
-        NOMAD_LOG_ERROR("Failed to create OpenGL context");
+    // Step 1: Create a temporary legacy context to load WGL extensions
+    HGLRC tempCtx = wglCreateContext(m_hdc);
+    if (!tempCtx) {
+        NOMAD_LOG_ERROR("Failed to create temporary OpenGL context");
+        return false;
+    }
+    if (!wglMakeCurrent(m_hdc, tempCtx)) {
+        NOMAD_LOG_ERROR("Failed to make temporary OpenGL context current");
+        wglDeleteContext(tempCtx);
         return false;
     }
 
+    // Load wglCreateContextAttribsARB
+    auto createAttribs = reinterpret_cast<PFNWGLCREATECONTEXTATTRIBSARBPROC>(
+        wglGetProcAddress("wglCreateContextAttribsARB"));
+
+    HGLRC modernCtx = nullptr;
+    int chosenMajor = 0, chosenMinor = 0;
+
+    if (createAttribs) {
+        const int attempts[][2] = { {4,1}, {4,0}, {3,3} };
+        for (const auto& ver : attempts) {
+            int attribs[] = {
+                WGL_CONTEXT_MAJOR_VERSION_ARB, ver[0],
+                WGL_CONTEXT_MINOR_VERSION_ARB, ver[1],
+                WGL_CONTEXT_PROFILE_MASK_ARB,  WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+                WGL_CONTEXT_FLAGS_ARB,         WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+                0
+            };
+            modernCtx = createAttribs(m_hdc, nullptr, attribs);
+            if (modernCtx) {
+                chosenMajor = ver[0];
+                chosenMinor = ver[1];
+                break;
+            }
+        }
+    }
+
+    // Destroy temp context
+    wglMakeCurrent(nullptr, nullptr);
+    wglDeleteContext(tempCtx);
+
+    if (modernCtx) {
+        if (!wglMakeCurrent(m_hdc, modernCtx)) {
+            NOMAD_LOG_ERROR("Failed to make modern OpenGL context current");
+            wglDeleteContext(modernCtx);
+            return false;
+        }
+        m_hglrc = modernCtx;
+        
+        // Note: For proper MSAA, pixel format must be set before context creation
+        // This requires a two-window approach (dummy window to load WGL extensions)
+        // Our current approach relies on shader-based anti-aliasing (SDF smoothstep)
+        // which provides good quality without hardware MSAA
+        
+        NOMAD_LOG_INFO("OpenGL core context created ("
+            + std::to_string(chosenMajor) + "." + std::to_string(chosenMinor) + ")");
+        return true;
+    }
+
+    // Fallback to legacy context if attribs path failed
+    m_hglrc = wglCreateContext(m_hdc);
+    if (!m_hglrc) {
+        NOMAD_LOG_ERROR("Failed to create fallback OpenGL context");
+        return false;
+    }
     if (!wglMakeCurrent(m_hdc, m_hglrc)) {
-        NOMAD_LOG_ERROR("Failed to make OpenGL context current");
+        NOMAD_LOG_ERROR("Failed to make fallback OpenGL context current");
         wglDeleteContext(m_hglrc);
         m_hglrc = nullptr;
         return false;
     }
-
-    NOMAD_LOG_INFO("OpenGL context created successfully");
+    NOMAD_LOG_WARNING("Using legacy OpenGL context (attribs path unavailable).");
     return true;
 }
 
@@ -438,12 +511,19 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
         case WM_SIZE: {
             int width = LOWORD(lParam);
             int height = HIWORD(lParam);
-            if (width != m_width || height != m_height) {
+            bool sizeChanged = (width != m_width || height != m_height);
+            bool minimizedEvent = (wParam == SIZE_MINIMIZED);
+            bool restoredEvent = (wParam == SIZE_RESTORED);
+
+            if (sizeChanged) {
                 m_width = width;
                 m_height = height;
-                if (m_resizeCallback) {
-                    m_resizeCallback(width, height);
-                }
+            }
+
+            // Notify resize callback even when minimized/restored so renderers can
+            // flush caches when the window hides/shows without a size delta.
+            if (m_resizeCallback && (sizeChanged || minimizedEvent || restoredEvent)) {
+                m_resizeCallback(width, height);
             }
             return 0;
         }
@@ -776,7 +856,7 @@ KeyCode PlatformWindowWin32::translateKeyCode(WPARAM wParam, LPARAM lParam) {
     }
 }
 
-KeyModifiers PlatformWindowWin32::getKeyModifiers() {
+KeyModifiers PlatformWindowWin32::getKeyModifiers() const {
     KeyModifiers mods;
     mods.shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
     mods.control = (GetKeyState(VK_CONTROL) & 0x8000) != 0;

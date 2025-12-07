@@ -44,15 +44,8 @@ void NUICustomTitleBar::createIcons() {
     closeIcon_ = NUIIcon::createCloseIcon();
     closeIcon_->setIconSize(NUIIconSize::Small);
 
-    // Try to load the Nomad app icon (SVG) from assets; non-fatal if missing
-    appIcon_ = std::make_shared<NUIIcon>();
-    try {
-        appIcon_->loadSVGFile("NomadAssets/icons/nomad_daw_logo.svg");
-        appIcon_->setIconSize(NUIIconSize::Medium);
-        appIcon_->setColorFromTheme("textPrimary");
-    } catch (...) {
-        // If loading fails, leave appIcon_ null/empty — title bar will still render
-    }
+    // App icon removed for minimal header (Ableton-style)
+    appIcon_.reset();
 }
 
 void NUICustomTitleBar::setMaximized(bool maximized) {
@@ -86,22 +79,16 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     
     // No separator line for clean, flush appearance
     
-    // Draw title text - left-aligned, vertically centered
-    float fontSize = 13.0f; // Fixed size for consistency
-    NUISize titleSize = renderer.measureText(title_, fontSize);
-    // Vertically center the text in the title bar (accounting for baseline)
-    float textY = bounds.y + (bounds.height - fontSize) * 0.5f + fontSize * 0.75f;
-    // If we have an app icon, render it and shift the title text to the right
-    float leftPadding = 12.0f;
-    if (appIcon_ && appIcon_->getIconWidth() > 0.0f) {
-        float iconX = bounds.x + 8.0f;
-        float iconY = bounds.y + (bounds.height - appIcon_->getIconHeight()) * 0.5f;
-        appIcon_->setPosition(iconX, iconY);
-        appIcon_->onRender(renderer);
-        leftPadding += appIcon_->getIconWidth() + 8.0f; // extra gap after icon
+    // Minimal left-aligned menu labels (Ableton-style)
+    float fontSize = 12.0f;
+    std::vector<std::string> menuItems = {"File", "Edit", "View"};
+    float x = bounds.x + 10.0f;
+    for (const auto& item : menuItems) {
+        NUISize sz = renderer.measureText(item, fontSize);
+        float textY = bounds.y + (bounds.height - fontSize) * 0.5f; // Top-left Y positioning
+        renderer.drawText(item, NUIPoint(x, textY), fontSize, textColor);
+        x += sz.width + 14.0f; // spacing between menu items
     }
-    NUIPoint titlePos(bounds.x + leftPadding, textY); // left padding (may include icon)
-    renderer.drawText(title_, titlePos, fontSize, textColor);
     
     // Draw window controls
     drawWindowControls(renderer);

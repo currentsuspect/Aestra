@@ -73,6 +73,8 @@ public:
     void setTextColor(const NUIColor& color);
     void setHoverColor(const NUIColor& color);
     void setPressedColor(const NUIColor& color);
+    void setFontSize(float size) { fontSize_ = size; }
+    float getFontSize() const { return fontSize_; }
 
 private:
     void updateState();
@@ -92,6 +94,7 @@ private:
     NUIColor textColor_ = NUIColor::fromHex(0xffffffff);
     NUIColor hoverColor_ = NUIColor::fromHex(0xffaa44ff);
     NUIColor pressedColor_ = NUIColor::fromHex(0xff8822ee);
+    float fontSize_ = 0.0f; // 0 means use theme default
 
     // Callbacks
     std::function<void()> onClickCallback_;

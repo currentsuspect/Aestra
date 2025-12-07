@@ -130,9 +130,9 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
     textBounds.y += 2.0f; // Slight offset for better centering
     textBounds.height -= 4.0f;
 
-    float fontSize = 14.0f;
+    float fontSize = 18.0f;
     if (auto th = getTheme()) {
-        fontSize = th->getFontSize("normal");
+        fontSize = th->getFontSize("large");
     }
 
     // Truncate text with ellipsis if it's too long
@@ -153,8 +153,8 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
             displayText = truncated + "...";
         }
         
-        // Left-aligned text for better readability
-        float textY = bounds.y + (bounds.height - fontSize) / 2 + fontSize * 0.75f;
+        // Left-aligned text for better readability (top-left Y positioning)
+        float textY = bounds.y + (bounds.height - fontSize) * 0.5f;
         renderer.drawText(displayText, NUIPoint(textBounds.x, textY), fontSize, textColor_);
     }
 
@@ -326,7 +326,7 @@ void NUIDropdown::renderDropdownListInternal(NUIRenderer& renderer) {
     if (items_.empty()) return;
 
     auto bounds = getBounds();
-    float itemHeight = 32.0f; // Increased from 24 for better spacing
+    float itemHeight = 36.0f; // room for larger text
     int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
     float listHeight = itemHeight * visibleItems;
 
@@ -339,8 +339,8 @@ void NUIDropdown::renderDropdownListInternal(NUIRenderer& renderer) {
     if (!itemWidthCacheValid_) {
         itemTextWidthCache_.clear();
         itemTextWidthCache_.reserve(items_.size());
-        float fontSize = 14.0f;
-        if (auto th = getTheme()) fontSize = th->getFontSize("normal");
+        float fontSize = 18.0f;
+        if (auto th = getTheme()) fontSize = th->getFontSize("large");
         for (const auto& it : items_) {
             if (it) {
                 float w = static_cast<float>(renderer.measureText(it->getText(), fontSize).width);
@@ -396,7 +396,7 @@ void NUIDropdown::renderDropdownList(NUIRenderer& renderer) {
     NOMAD_ZONE("Dropdown_RenderList");
 
     auto bounds = getBounds();
-    float itemHeight = 32.0f;
+    float itemHeight = 36.0f;
     int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
     float listHeight = itemHeight * visibleItems;
     NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height + 2.0f, bounds.width, listHeight);
@@ -431,8 +431,8 @@ void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bo
     textBounds.y += 2.0f;
     textBounds.height -= 4.0f;
 
-    float fontSize = 14.0f;
-    if (auto th = getTheme()) fontSize = th->getFontSize("normal");
+    float fontSize = 18.0f;
+    if (auto th = getTheme()) fontSize = th->getFontSize("large");
 
         // Truncate text with ellipsis if too long. Use cached measured width and a simple heuristic to reduce measureText calls.
         if (textBounds.width > 20.0f && textBounds.height > 0) {
@@ -461,8 +461,8 @@ void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bo
                 }
             }
         
-        // Left-aligned text with vertical centering
-        float textY = bounds.y + (bounds.height - fontSize) / 2 + fontSize * 0.75f;
+        // Left-aligned text with vertical centering (top-left Y positioning)
+        float textY = bounds.y + (bounds.height - fontSize) * 0.5f;
         renderer.drawText(displayText, NUIPoint(textBounds.x, textY), fontSize, curText);
     }
 }

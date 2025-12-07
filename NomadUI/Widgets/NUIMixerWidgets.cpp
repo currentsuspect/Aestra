@@ -2,6 +2,7 @@
 #include "NUIMixerWidgets.h"
 
 #include "../Graphics/NUIRenderer.h"
+#include "../Core/NUIThemeSystem.h"
 #include <algorithm>
 
 namespace NomadUI {
@@ -45,14 +46,53 @@ MuteButton::MuteButton()
     setOn(false);
 }
 
+void MuteButton::onRender(NUIRenderer& renderer)
+{
+    auto& theme = NUIThemeManager::getInstance();
+    auto b = getBounds();
+    
+    NUIColor bg = isOn() ? NUIColor(0.8f, 0.2f, 0.2f, 1.0f) : theme.getColor("backgroundSecondary");
+    NUIColor text = isOn() ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : theme.getColor("textPrimary");
+    
+    renderer.fillRect(b, bg);
+    renderer.strokeRect(b, 1, theme.getColor("border"));
+    renderer.drawText("M", NUIPoint(b.x + b.width/2 - 4, b.y + b.height/2 - 6), 14.0f, text);
+}
+
 SoloButton::SoloButton()
 {
     setOn(false);
 }
 
+void SoloButton::onRender(NUIRenderer& renderer)
+{
+    auto& theme = NUIThemeManager::getInstance();
+    auto b = getBounds();
+    
+    NUIColor bg = isOn() ? NUIColor(0.9f, 0.8f, 0.2f, 1.0f) : theme.getColor("backgroundSecondary");
+    NUIColor text = isOn() ? NUIColor(0.0f, 0.0f, 0.0f, 1.0f) : theme.getColor("textPrimary");
+    
+    renderer.fillRect(b, bg);
+    renderer.strokeRect(b, 1, theme.getColor("border"));
+    renderer.drawText("S", NUIPoint(b.x + b.width/2 - 4, b.y + b.height/2 - 6), 14.0f, text);
+}
+
 ArmButton::ArmButton()
 {
     setOn(false);
+}
+
+void ArmButton::onRender(NUIRenderer& renderer)
+{
+    auto& theme = NUIThemeManager::getInstance();
+    auto b = getBounds();
+    
+    NUIColor bg = isOn() ? NUIColor(0.8f, 0.2f, 0.2f, 1.0f) : theme.getColor("backgroundSecondary");
+    NUIColor text = isOn() ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : theme.getColor("textPrimary");
+    
+    renderer.fillRect(b, bg);
+    renderer.strokeRect(b, 1, theme.getColor("border"));
+    renderer.drawText("R", NUIPoint(b.x + b.width/2 - 4, b.y + b.height/2 - 6), 14.0f, text);
 }
 
 InsertSlot::InsertSlot() = default;

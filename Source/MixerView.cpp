@@ -12,12 +12,12 @@ namespace Audio {
 // ChannelStrip Implementation
 //=============================================================================
 
-ChannelStrip::ChannelStrip(std::shared_ptr<Track> track)
+ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackManager)
     : m_track(track)
+    , m_trackManager(trackManager)
 {
     // Create volume fader (vertical slider)
-    m_volumeFader = std::make_shared<NomadUI::NUISlider>();
-    m_volumeFader->setOrientation(NomadUI::NUISlider::Orientation::Vertical);
+    m_volumeFader = std::make_shared<NomadUI::Fader>();
     m_volumeFader->setValue(m_track ? m_track->getVolume() : 0.8f);
     m_volumeFader->setOnValueChange([this](double value) {
         if (m_track) {
@@ -27,36 +27,44 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track)
     addChild(m_volumeFader);
     
     // Create pan knob (horizontal slider for now)
-    m_panKnob = std::make_shared<NomadUI::NUISlider>();
-    m_panKnob->setOrientation(NomadUI::NUISlider::Orientation::Horizontal);
-    m_panKnob->setValue(0.5f);  // Center
+    m_panKnob = std::make_shared<NomadUI::PanKnob>();
+    m_panKnob->setValue(0.0f);  // Center
     m_panKnob->setOnValueChange([this](double value) {
         if (m_track) {
-            m_track->setPan(static_cast<float>((value - 0.5) * 2.0));  // Convert 0..1 to -1..1
+            m_track->setPan(static_cast<float>(value));
         }
     });
     addChild(m_panKnob);
     
     // Create mute button
-    m_muteButton = std::make_shared<NomadUI::NUIButton>("M");
-    m_muteButton->setToggleable(true);
-    m_muteButton->setOnClick([this]() {
+    m_muteButton = std::make_shared<NomadUI::MuteButton>();
+    m_muteButton->setOnToggle([this](bool toggled) {
         if (m_track) {
-            m_track->setMute(!m_track->isMuted());
-            m_muteButton->setToggled(m_track->isMuted());
+            m_track->setMute(toggled);
+            // m_muteButton->setOn(m_track->isMuted()); // Already set by toggle
         }
     });
+    // Initialize state
+    if (m_track) m_muteButton->setOn(m_track->isMuted());
     addChild(m_muteButton);
     
     // Create solo button
-    m_soloButton = std::make_shared<NomadUI::NUIButton>("S");
-    m_soloButton->setToggleable(true);
-    m_soloButton->setOnClick([this]() {
+    m_soloButton = std::make_shared<NomadUI::SoloButton>();
+    m_soloButton->setOnToggle([this](bool toggled) {
         if (m_track) {
-            m_track->setSolo(!m_track->isSoloed());
-            m_soloButton->setToggled(m_track->isSoloed());
+            bool newSolo = toggled;
+            
+            // If enabling solo, clear all other solos first (exclusive solo)
+            if (newSolo && m_trackManager) {
+                m_trackManager->clearAllSolos();
+            }
+            
+            m_track->setSolo(newSolo);
+            // m_soloButton->setOn(m_track->isSoloed()); // Already set by toggle
         }
     });
+    // Initialize state
+    if (m_track) m_soloButton->setOn(m_track->isSoloed());
     addChild(m_soloButton);
     
     layoutControls();
@@ -76,10 +84,10 @@ void ChannelStrip::onRender(NomadUI::NUIRenderer& renderer) {
     
     // Track name at bottom
     if (m_track) {
-        auto textColor = theme.getColor("textPrimary");
+        auto textColor = theme.getColor("accentPrimary");
         std::string trackName = m_track->getName();
-        float textY = bounds.y + bounds.height - 25.0f;
-        renderer.drawText(trackName, NomadUI::NUIPoint(bounds.x + 5, textY), 12.0f, textColor);
+        float textY = bounds.y + bounds.height - 30.0f;
+        renderer.drawText(trackName, NomadUI::NUIPoint(bounds.x + 5, textY), 18.0f, textColor);
     }
     
     // Level meter (simple bar for now) - positioned above track name
@@ -205,11 +213,11 @@ void MixerView::refreshChannels() {
     
     if (!m_trackManager) return;
     
-    // Create channel strip for each track
+    // Create channel strip for each track, passing TrackManager for solo coordination
     for (size_t i = 0; i < m_trackManager->getTrackCount(); ++i) {
         auto track = m_trackManager->getTrack(i);
         if (track && track->getName() != "Preview") {  // Skip preview track
-            auto channelStrip = std::make_shared<ChannelStrip>(track);
+            auto channelStrip = std::make_shared<ChannelStrip>(track, m_trackManager.get());
             m_channelStrips.push_back(channelStrip);
             addChild(channelStrip);
         }

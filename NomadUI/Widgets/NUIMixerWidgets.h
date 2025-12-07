@@ -41,16 +41,19 @@ private:
 class MuteButton : public NUIToggle {
 public:
     MuteButton();
+    void onRender(NUIRenderer& renderer) override;
 };
 
 class SoloButton : public NUIToggle {
 public:
     SoloButton();
+    void onRender(NUIRenderer& renderer) override;
 };
 
 class ArmButton : public NUIToggle {
 public:
     ArmButton();
+    void onRender(NUIRenderer& renderer) override;
 };
 
 class InsertSlot : public NUIComponent {

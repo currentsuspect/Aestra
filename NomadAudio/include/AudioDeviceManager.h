@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "AudioDriver.h"
@@ -80,6 +80,13 @@ public:
      * @brief Get current stream latency
      */
     double getStreamLatency() const;
+
+    /**
+     * @brief Get the actual stream sample rate (post-backend)
+     *
+     * Returns 0 if no active stream.
+     */
+    uint32_t getStreamSampleRate() const;
     
     /**
      * @brief Get latency compensation values for recording
