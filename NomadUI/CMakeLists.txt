@@ -80,6 +80,8 @@ list(APPEND NOMADUI_CORE_SOURCES
     Widgets/NUIUtilityWidgets.cpp
     Widgets/NUIThematicWidgets.h
     Widgets/NUIThematicWidgets.cpp
+    Widgets/NUIStepSequencer.h
+    Widgets/NUIStepSequencer.cpp
 )
 
 set(NOMADUI_GRAPHICS_SOURCES

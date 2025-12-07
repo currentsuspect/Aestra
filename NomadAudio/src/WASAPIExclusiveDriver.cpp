@@ -325,7 +325,11 @@ bool WASAPIExclusiveDriver::openStream(const AudioStreamConfig& config, AudioCal
     }
 
     m_state = DriverState::STREAM_OPEN;
-    std::cout << "[WASAPI Exclusive] Stream opened successfully" << std::endl;
+    if (m_usingSharedFallback) {
+        std::cout << "[WASAPI] Stream opened in shared fallback mode" << std::endl;
+    } else {
+        std::cout << "[WASAPI Exclusive] Stream opened successfully" << std::endl;
+    }
     return true;
 }
 
@@ -379,9 +383,11 @@ void WASAPIExclusiveDriver::closeDevice() {
         CloseHandle(m_audioEvent);
         m_audioEvent = nullptr;
     }
+    m_usingSharedFallback = false;
 }
 
 bool WASAPIExclusiveDriver::initializeAudioClient() {
+    m_usingSharedFallback = false;
     HRESULT hr = m_device->Activate(
         IID_IAudioClient,
         CLSCTX_ALL,
@@ -511,25 +517,18 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
     }
 
     // Enhanced error handling with specific diagnostics
-    if (hr == AUDCLNT_E_DEVICE_IN_USE) {
-        setError(DriverError::DEVICE_IN_USE, 
-                "Device is in use by another application (e.g., FL Studio, Ableton). "
-                "Close other audio software or switch to Shared mode. "
-                "HRESULT: " + HResultToString(hr));
-        std::cerr << "[WASAPI Exclusive] Initialize failed: AUDCLNT_E_DEVICE_IN_USE" << std::endl;
-        return false;
+    if (hr == AUDCLNT_E_DEVICE_IN_USE || hr == AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED) {
+        std::cerr << "[WASAPI Exclusive] Exclusive unavailable (" << HResultToString(hr)
+                  << "), attempting shared fallback" << std::endl;
+        // Clean up exclusive client resources before retrying shared
+        if (m_audioClient) { m_audioClient->Release(); m_audioClient = nullptr; }
+        if (m_renderClient) { m_renderClient->Release(); m_renderClient = nullptr; }
+        if (m_captureClient) { m_captureClient->Release(); m_captureClient = nullptr; }
+        if (m_audioEvent) { CloseHandle(m_audioEvent); m_audioEvent = nullptr; }
+        if (m_waveFormat) { CoTaskMemFree(m_waveFormat); m_waveFormat = nullptr; }
+        return initializeSharedFallback();
     }
-    
-    if (hr == AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED) {
-        setError(DriverError::EXCLUSIVE_MODE_UNAVAILABLE,
-                "Exclusive mode not allowed. Check Windows Sound settings: "
-                "Right-click speaker icon → Sounds → Playback → Device Properties → Advanced → "
-                "Enable 'Allow applications to take exclusive control'. "
-                "HRESULT: " + HResultToString(hr));
-        std::cerr << "[WASAPI Exclusive] Initialize failed: AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED" << std::endl;
-        return false;
-    }
-    
+
     if (hr == AUDCLNT_E_UNSUPPORTED_FORMAT) {
         setError(DriverError::STREAM_OPEN_FAILED,
                 "Audio format not supported by hardware in Exclusive mode. "
@@ -770,6 +769,72 @@ void WASAPIExclusiveDriver::stopStream() {
     m_isRunning = false;
     m_state = DriverState::STREAM_OPEN;
     std::cout << "[WASAPI Exclusive] Stream stopped" << std::endl;
+}
+
+bool WASAPIExclusiveDriver::initializeSharedFallback() {
+    m_usingSharedFallback = true;
+
+    HRESULT hr = m_device->Activate(
+        IID_IAudioClient,
+        CLSCTX_ALL,
+        nullptr,
+        (void**)&m_audioClient
+    );
+
+    if (FAILED(hr)) {
+        setError(DriverError::STREAM_OPEN_FAILED, "Shared fallback: failed to activate audio client: " + HResultToString(hr));
+        return false;
+    }
+
+    // Get the shared-mode mix format
+    WAVEFORMATEX* mixFormat = nullptr;
+    hr = m_audioClient->GetMixFormat(&mixFormat);
+    if (FAILED(hr) || !mixFormat) {
+        setError(DriverError::STREAM_OPEN_FAILED, "Shared fallback: failed to get mix format");
+        return false;
+    }
+    m_waveFormat = mixFormat;
+    m_actualSampleRate = m_waveFormat->nSamplesPerSec;
+
+    // Create event for audio thread
+    m_audioEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    if (!m_audioEvent) {
+        setError(DriverError::STREAM_OPEN_FAILED, "Shared fallback: failed to create audio event");
+        return false;
+    }
+
+    // Initialize in shared mode; let WASAPI pick the buffer duration
+    hr = m_audioClient->Initialize(
+        AUDCLNT_SHAREMODE_SHARED,
+        AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+        0,
+        0,
+        m_waveFormat,
+        nullptr
+    );
+
+    if (FAILED(hr)) {
+        setError(DriverError::STREAM_OPEN_FAILED,
+                "Shared fallback: initialize failed. HRESULT: " + HResultToString(hr));
+        return false;
+    }
+
+    hr = m_audioClient->GetBufferSize(&m_bufferFrameCount);
+    if (FAILED(hr)) {
+        setError(DriverError::STREAM_OPEN_FAILED, "Shared fallback: failed to get buffer size");
+        return false;
+    }
+
+    hr = m_audioClient->GetService(IID_IAudioRenderClient, (void**)&m_renderClient);
+    if (FAILED(hr)) {
+        setError(DriverError::STREAM_OPEN_FAILED, "Shared fallback: failed to get render client");
+        return false;
+    }
+
+    std::cout << "[WASAPI Shared Fallback] Initialized - "
+              << "Sample Rate: " << m_actualSampleRate << " Hz, "
+              << "Buffer: " << m_bufferFrameCount << " frames\n";
+    return true;
 }
 
 double WASAPIExclusiveDriver::getStreamLatency() const {

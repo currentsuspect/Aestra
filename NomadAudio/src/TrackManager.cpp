@@ -153,6 +153,21 @@ std::shared_ptr<Track> TrackManager::addTrack(const std::string& name) {
     return track;
 }
 
+void TrackManager::addExistingTrack(std::shared_ptr<Track> track) {
+    if (!track) return;
+    
+    std::lock_guard<std::mutex> lock(m_trackMutex);
+    m_tracks.push_back(track);
+    
+    // Pre-allocate buffer for the new track
+    if (m_trackBuffers.size() < m_tracks.size()) {
+        std::vector<float> newBuffer(MAX_AUDIO_BUFFER_SIZE * 2, 0.0f);
+        m_trackBuffers.resize(m_tracks.size(), std::move(newBuffer));
+    }
+    
+    Log::info("Added existing track: " + track->getName() + " (ID: " + std::to_string(track->getTrackId()) + ")");
+}
+
 std::shared_ptr<Track> TrackManager::getTrack(size_t index) {
     if (index < m_tracks.size()) {
         return m_tracks[index];

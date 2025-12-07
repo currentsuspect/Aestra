@@ -117,43 +117,163 @@ void PianoRollNotes::onRender(NUIRenderer& renderer)
 {
     auto& theme = NUIThemeManager::getInstance();
     auto filled = theme.getColor("accentPrimary");
+    auto selectedColor = theme.getColor("accentSecondary"); // Use secondary for selection
     auto border = theme.getColor("border").withAlpha(0.8f);
+    auto selectedBorder = NUIColor(1.0f, 1.0f, 1.0f, 1.0f);
 
     auto b = getBounds();
-    for (const auto& n : notes_)
+    for (int i = 0; i < (int)notes_.size(); ++i)
     {
+        const auto& n = notes_[i];
         float x = b.x + static_cast<float>(n.startBeat * pixelsPerBeat_) - scrollX_;
         float w = std::max(4.0f, static_cast<float>(n.durationBeats * pixelsPerBeat_));
         int row = firstNote_ - n.pitch; // 0 at firstNote_
         float y = b.y + row * keyHeight_ - scrollY_;
         NUIRect rect(x, y + 1.0f, w, keyHeight_ - 2.0f);
-        renderer.fillRect(rect, filled.withAlpha(0.85f));
-        renderer.strokeRect(rect, 1, border);
+        
+        if (n.selected) {
+            renderer.fillRect(rect, selectedColor.withAlpha(0.9f));
+            renderer.strokeRect(rect, 2, selectedBorder);
+        } else {
+            renderer.fillRect(rect, filled.withAlpha(0.85f));
+            renderer.strokeRect(rect, 1, border);
+        }
+
+        if (i == hoveredNoteIndex_) {
+             renderer.strokeRect(rect, 1, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+        }
     }
 }
 
 bool PianoRollNotes::onMouseEvent(const NUIMouseEvent& event)
 {
-    // Minimal: left click to add a fixed 1-beat note at nearest grid
+    auto b = getBounds();
+    float localX = event.position.x - b.x + scrollX_;
+    float contentY = event.position.y - b.y + scrollY_;
+
+    // Helper to find note at position
+    auto findNoteAt = [&](float x, float y) -> int {
+        for (int i = 0; i < (int)notes_.size(); ++i) {
+            const auto& n = notes_[i];
+            float nx = static_cast<float>(n.startBeat * pixelsPerBeat_);
+            float nw = std::max(4.0f, static_cast<float>(n.durationBeats * pixelsPerBeat_));
+            int row = firstNote_ - n.pitch;
+            float ny = row * keyHeight_;
+            
+            if (x >= nx && x < nx + nw && y >= ny && y < ny + keyHeight_) {
+                return i;
+            }
+        }
+        return -1;
+    };
+
     if (event.pressed && event.button == NUIMouseButton::Left)
     {
-        auto b = getBounds();
-        float localX = event.position.x - b.x + scrollX_;
-        float contentY = event.position.y - b.y + scrollY_;
+        int noteIdx = findNoteAt(localX, contentY);
+        
+        if (noteIdx != -1) {
+            // Clicked on a note
+            bool shift = (event.modifiers & NUIModifiers::Shift);
+            
+            if (!shift && !notes_[noteIdx].selected) {
+                // Deselect others if not shift-clicking and clicking an unselected note
+                for (auto& n : notes_) n.selected = false;
+            }
+            
+            notes_[noteIdx].selected = true;
+            
+            // Check for resize (right edge)
+            const auto& n = notes_[noteIdx];
+            float nx = static_cast<float>(n.startBeat * pixelsPerBeat_);
+            float nw = std::max(4.0f, static_cast<float>(n.durationBeats * pixelsPerBeat_));
+            if (localX > nx + nw - 8.0f) {
+                state_ = State::Resizing;
+                resizeEdge_ = 1;
+            } else {
+                state_ = State::Moving;
+            }
+            
+            dragStart_ = event.position;
+            dragStartNotes_ = notes_; // Snapshot
+            repaint();
+            return true;
+        }
+        else {
+            // Clicked on empty space
+            bool shift = (event.modifiers & NUIModifiers::Shift);
+            if (!shift) {
+                for (auto& n : notes_) n.selected = false;
+            }
+            
+            double beat = std::max(0.0, static_cast<double>(localX / pixelsPerBeat_));
+            double snapped = std::round(beat * 4.0) / 4.0; // 16th notes
 
-        double beat = std::max(0.0, static_cast<double>(localX / pixelsPerBeat_));
-        double snapped = std::round(beat * 4.0) / 4.0; // 16th notes
+            int row = static_cast<int>(contentY / keyHeight_);
+            int pitch = firstNote_ - row;
+            pitch = std::clamp(pitch, 0, 127);
 
-        int row = static_cast<int>(contentY / keyHeight_);
-        int pitch = firstNote_ - row;
-        pitch = std::clamp(pitch, 0, 127);
-
-        MidiNote note{pitch, snapped, 1.0, 0.8f};
-        notes_.push_back(note);
-        repaint();
-        if (onNotesChanged_) onNotesChanged_(notes_);
-        return true;
+            MidiNote note{pitch, snapped, 1.0, 0.8f, true}; // Select new note
+            notes_.push_back(note);
+            
+            // Start moving the new note immediately?
+            // For now, just add it.
+            
+            repaint();
+            if (onNotesChanged_) onNotesChanged_(notes_);
+            return true;
+        }
     }
+    else if (event.released && event.button == NUIMouseButton::Left)
+    {
+        if (state_ != State::None) {
+            state_ = State::None;
+            if (onNotesChanged_) onNotesChanged_(notes_); // Commit changes
+            repaint();
+            return true;
+        }
+    }
+    else if (!event.pressed && !event.released) // Move/Drag
+    {
+        if (state_ == State::Moving) {
+            float dx = event.position.x - dragStart_.x;
+            float dy = event.position.y - dragStart_.y;
+            
+            double beatDelta = dx / pixelsPerBeat_;
+            int pitchDelta = -static_cast<int>(dy / keyHeight_);
+            
+            for (size_t i = 0; i < notes_.size(); ++i) {
+                if (dragStartNotes_[i].selected) {
+                    notes_[i].startBeat = std::max(0.0, dragStartNotes_[i].startBeat + beatDelta);
+                    // Snap startBeat
+                    notes_[i].startBeat = std::round(notes_[i].startBeat * 4.0) / 4.0;
+                    
+                    notes_[i].pitch = std::clamp(dragStartNotes_[i].pitch + pitchDelta, 0, 127);
+                }
+            }
+            repaint();
+            return true;
+        }
+        else if (state_ == State::Resizing) {
+            float dx = event.position.x - dragStart_.x;
+            double beatDelta = dx / pixelsPerBeat_;
+            
+            for (size_t i = 0; i < notes_.size(); ++i) {
+                if (dragStartNotes_[i].selected) {
+                    double newDur = dragStartNotes_[i].durationBeats + beatDelta;
+                    notes_[i].durationBeats = std::max(0.25, std::round(newDur * 4.0) / 4.0);
+                }
+            }
+            repaint();
+            return true;
+        }
+        else {
+            // Hover update
+            int oldHover = hoveredNoteIndex_;
+            hoveredNoteIndex_ = findNoteAt(localX, contentY);
+            if (oldHover != hoveredNoteIndex_) repaint();
+        }
+    }
+
     return NUIComponent::onMouseEvent(event);
 }
 

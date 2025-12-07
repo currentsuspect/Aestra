@@ -19,6 +19,12 @@ bool NUIToggle::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isEnabled() || state_ == State::Disabled)
         return false;
+
+    // Check if event is within bounds
+    if (!containsPoint(event.position)) {
+        return false;
+    }
+
     // Old widget code used event.type/enum; map to current event fields
     if (event.pressed && event.button == NUIMouseButton::Left)
     {

@@ -33,6 +33,18 @@ struct NUIPoint {
     NUIPoint operator+(const NUIPoint& other) const {
         return NUIPoint(x + other.x, y + other.y);
     }
+
+    NUIPoint operator-(const NUIPoint& other) const {
+        return NUIPoint(x - other.x, y - other.y);
+    }
+
+    float length() const {
+        return std::sqrt(x * x + y * y);
+    }
+
+    float distanceTo(const NUIPoint& other) const {
+        return (*this - other).length();
+    }
 };
 
 struct NUISize {
@@ -681,7 +693,7 @@ inline NUIRect NUIUnionRects(const std::vector<NUIRect>& rects) {
  */
 inline bool NUIRectsIntersect(const NUIRect& a, const NUIRect& b) {
     return !(a.x + a.width < b.x || b.x + b.width < a.x ||
-             a.y + a.height < b.y || b.y + b.height < b.y);
+             a.y + a.height < b.y || b.y + b.height < a.y);
 }
 
 // ============================================================================

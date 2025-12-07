@@ -111,6 +111,7 @@ private:
     bool openDevice(uint32_t deviceId);
     void closeDevice();
     bool initializeAudioClient();
+    bool initializeSharedFallback();
     bool findBestExclusiveFormat(WAVEFORMATEX** format);
     bool testExclusiveFormat(uint32_t sampleRate, uint32_t channels, WAVEFORMATEX** format);
     bool testExclusiveFormatPCM(uint32_t sampleRate, uint32_t channels, uint32_t bitsPerSample, WAVEFORMATEX** format);
@@ -118,6 +119,8 @@ private:
     void setError(DriverError error, const std::string& message);
     void updateStatistics(double callbackTimeUs);
     bool setThreadPriority();
+
+    bool m_usingSharedFallback{ false };
 };
 
 } // namespace Audio

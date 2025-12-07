@@ -26,11 +26,18 @@ public:
     bool initialize(const std::string& fontPath, float fontSize);
     void shutdown();
 
-    void drawText(const std::string& text,
-                  const NUIPoint& position,
-                  float fontSize,
-                  const NUIColor& color,
-                  const float* projection);
+    // Unified batching API
+    uint32_t getAtlasTextureId() const { return atlasTexture_; }
+    
+    // Append text geometry to the provided vertex/index buffers
+    // Returns true if any geometry was added
+    bool generateMesh(const std::string& text,
+                      const NUIPoint& position,
+                      float fontSize,
+                      const NUIColor& color,
+                      std::vector<float>& outVertices,
+                      std::vector<unsigned int>& outIndices,
+                      uint32_t vertexOffset);
 
     NUISize measureText(const std::string& text, float fontSize) const;
     float getAscent(float fontSize) const;
@@ -38,7 +45,6 @@ public:
     bool isInitialized() const { return initialized_; }
 
 private:
-    bool createShader();
     bool loadFontAtlas(const std::string& fontPath, float fontSize);
 
     bool initialized_{false};
@@ -48,10 +54,11 @@ private:
     float descent_{0.0f};
 
     uint32_t atlasTexture_{0};
-    uint32_t shaderProgram_{0};
-    uint32_t vao_{0};
-    uint32_t vbo_{0};
-    uint32_t ebo_{0};
+    // Removed legacy immediate-mode GL objects
+    // uint32_t shaderProgram_{0};
+    // uint32_t vao_{0};
+    // uint32_t vbo_{0};
+    // uint32_t ebo_{0};
 
     float atlasWidth_{2048.0f};   // Increased for better character packing
     float atlasHeight_{2048.0f};  // Increased for better character packing

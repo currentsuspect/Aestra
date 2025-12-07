@@ -72,6 +72,8 @@ uniform float uQuadHeight;
 uniform sampler2D uTexture;
 uniform bool uUseTexture;
 
+uniform float uSmoothness;
+
 float sdRoundedRect(vec2 p, vec2 size, float radius) {
     vec2 d = abs(p) - size + radius;
     return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
@@ -83,28 +85,31 @@ void main() {
     // Apply texture if enabled
     if (uUseTexture) {
         vec4 texColor = texture(uTexture, vTexCoord);
-        color *= texColor;
+        if (uPrimitiveType == 2) {
+             // Text (SDF) - R channel is distance
+             float dist = texColor.r;
+             // Adaptive width based on smoothness (derivative)
+             float width = max(fwidth(dist) * uSmoothness, 1e-4);
+             float alpha = smoothstep(0.5 - width, 0.5 + width, dist);
+             // Gamma correction
+             alpha = pow(alpha, 1.0 / 1.4); 
+             color.a *= alpha;
+        } else {
+             color *= texColor;
+        }
     }
     
     if (uPrimitiveType == 1) {
         // Rounded rectangle / Shadow
-        // Map vTexCoord (0..1) to centered coordinates based on Quad Size
         vec2 pos = (vTexCoord - 0.5) * vec2(uQuadWidth, uQuadHeight);
-        
-        // Calculate SDF to the Rect (Shape)
         float dist = sdRoundedRect(pos, vec2(uRectWidth, uRectHeight) * 0.5, uRadius);
-        
-        // Soft edge / Shadow blur
-        // Inside is negative, Outside is positive
-        // We want 1.0 inside, 0.0 outside
-        // smoothstep(-blur, blur, dist) goes from 0 to 1 as we go from inside to outside
         float alpha = 1.0 - smoothstep(-uBlur, uBlur, dist);
-        
         color.a *= alpha;
     }
     
     FragColor = color;
 }
+
 )";
 
 // ============================================================================
@@ -183,7 +188,9 @@ bool NUIRendererGL::initialize(int width, int height) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE); // Ensure we don't write to depth buffer in 2D mode
     glDisable(GL_CULL_FACE);
+    // Leave framebuffer sRGB disabled; palette is authored in sRGB and shaders output in sRGB
     
     // Note: MSAA support will be added in Phase 2
     // For now, we rely on thin lines (1.0px) and proper blending for good quality
@@ -408,6 +415,13 @@ void NUIRendererGL::strokeCircle(const NUIPoint& center, float radius, float thi
 
 void NUIRendererGL::drawLine(const NUIPoint& start, const NUIPoint& end, float thickness, const NUIColor& color) {
     ensureBasicPrimitive();
+
+    // Ensure we are not using a texture (batch breaking)
+    if (currentTextureId_ != 0) {
+        flush();
+        currentTextureId_ = 0;
+    }
+
     // Simple line as thin quad
     float dx = end.x - start.x;
     float dy = end.y - start.y;
@@ -418,10 +432,14 @@ void NUIRendererGL::drawLine(const NUIPoint& start, const NUIPoint& end, float t
     float nx = -dy / len * thickness * 0.5f;
     float ny = dx / len * thickness * 0.5f;
     
+    // Use UVs (0,0) to ensure texture sampling (if accidentally enabled) samples corner
+    // But more importantly, ensure we are not using texture in shader
+    // The flush() above handles the batch break, but we rely on flush() to update uniforms.
+    
     addVertex(start.x + nx, start.y + ny, 0, 0, color);
-    addVertex(start.x - nx, start.y - ny, 0, 1, color);
-    addVertex(end.x - nx, end.y - ny, 1, 1, color);
-    addVertex(end.x + nx, end.y + ny, 1, 0, color);
+    addVertex(start.x - nx, start.y - ny, 0, 0, color); // Fix UVs to be consistent 0,0
+    addVertex(end.x - nx, end.y - ny, 0, 0, color);
+    addVertex(end.x + nx, end.y + ny, 0, 0, color);
     
     uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
     indices_.push_back(base + 0);
@@ -443,6 +461,12 @@ void NUIRendererGL::fillWaveform(const NUIPoint* topPoints, const NUIPoint* bott
     if (count < 2) return;
     
     ensureBasicPrimitive();
+
+    // Ensure we are not using a texture (batch breaking)
+    if (currentTextureId_ != 0) {
+        flush();
+        currentTextureId_ = 0;
+    }
     
     // Build triangle strip: top[0], bottom[0], top[1], bottom[1], ...
     // This creates a filled shape between the top and bottom edges
@@ -578,7 +602,9 @@ void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, 
     }
 
     if (useSDFText_ && sdfRenderer_ && sdfRenderer_->isInitialized()) {
-        // Apply transform stack to position (critical for FBO cache rendering)
+        uint32_t atlasId = sdfRenderer_->getAtlasTextureId();
+        
+        // Apply transform stack to position
         float transformedX = position.x;
         float transformedY = position.y;
         applyTransform(transformedX, transformedY);
@@ -589,18 +615,37 @@ void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, 
         float alignedY = std::floor(transformedY + ascent + 0.5f);
         float alignedX = std::floor(transformedX + 0.5f);
         
-        // Flush pending batch before SDF renderer takes over
-        flush();
+        // Calculate smoothness
+        float adaptiveSmoothness;
+        if (fontSize <= 12.0f) adaptiveSmoothness = 0.4f;
+        else if (fontSize <= 24.0f) adaptiveSmoothness = 0.6f;
+        else adaptiveSmoothness = 0.8f;
+
+        // Batch break check
+        if (currentTextureId_ != atlasId || 
+            currentPrimitiveType_ != 2 || 
+            std::abs(currentSmoothness_ - adaptiveSmoothness) > 0.01f) {
+            flush();
+            currentTextureId_ = atlasId;
+            currentPrimitiveType_ = 2; // Text
+            currentSmoothness_ = adaptiveSmoothness;
+        }
         
-        sdfRenderer_->drawText(text, NUIPoint(alignedX, alignedY), fontSize * dpiScale, color, projectionMatrix_);
+        std::vector<float> tempVerts;
+        std::vector<unsigned int> tempIndices;
+        uint32_t vOffset = static_cast<uint32_t>(vertices_.size());
         
-        // Invalidate renderer state after SDF returns
-        currentPrimitiveType_ = -1;
-        currentTextureId_ = 0;
-        glBindVertexArray(vao_);
+        if (sdfRenderer_->generateMesh(text, NUIPoint(alignedX, alignedY), fontSize * dpiScale, color, tempVerts, tempIndices, vOffset)) {
+             size_t numVerts = tempVerts.size() / 8; // 8 floats per vertex
+             size_t oldSize = vertices_.size();
+             vertices_.resize(oldSize + numVerts);
+             std::memcpy(&vertices_[oldSize], tempVerts.data(), tempVerts.size() * sizeof(float));
+             indices_.insert(indices_.end(), tempIndices.begin(), tempIndices.end());
+        }
         
         return;
     }
+
     
     // Use real font rendering if available, otherwise fallback to blocky text
     if (fontInitialized_) {
@@ -1932,9 +1977,13 @@ void NUIRendererGL::flush() {
         glUniform1f(primitiveShader_.rectHeightLoc, currentSize_.height);
         glUniform1f(primitiveShader_.quadWidthLoc, currentQuadSize_.width);
         glUniform1f(primitiveShader_.quadHeightLoc, currentQuadSize_.height);
+    } else if (currentPrimitiveType_ == 2) {
+        // Text
+        glUniform1f(primitiveShader_.smoothnessLoc, currentSmoothness_);
     } else {
         glUniform1i(primitiveShader_.useTextureLoc, 0);
     }
+
     
     // Bind current texture if needed
     if (currentTextureId_ != 0) {
@@ -1990,6 +2039,10 @@ bool NUIRendererGL::initializeGL() {
         return false;
     }
     
+    // Enable blending for transparency
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
     // OpenGL context should already be created by platform layer
     return true;
 }
@@ -2023,6 +2076,8 @@ bool NUIRendererGL::loadShaders() {
     primitiveShader_.quadHeightLoc = glGetUniformLocation(primitiveShader_.id, "uQuadHeight");
     primitiveShader_.textureLoc = glGetUniformLocation(primitiveShader_.id, "uTexture");
     primitiveShader_.useTextureLoc = glGetUniformLocation(primitiveShader_.id, "uUseTexture");
+    primitiveShader_.smoothnessLoc = glGetUniformLocation(primitiveShader_.id, "uSmoothness");
+
     
     return true;
 }

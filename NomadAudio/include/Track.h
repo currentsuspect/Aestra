@@ -222,6 +222,21 @@ public:
     double getStartPositionInTimeline() const { return m_startPositionInTimeline.load(); }
     void setSourcePath(const std::string& path) { m_sourcePath = path; }
     const std::string& getSourcePath() const { return m_sourcePath; }
+    
+    // === CLIP TRIMMING (non-destructive) ===
+    // Trim positions define which portion of the audio is used (in seconds from start of audio)
+    void setTrimStart(double seconds);    // Where playback begins within the audio
+    void setTrimEnd(double seconds);      // Where playback ends within the audio  
+    double getTrimStart() const { return m_trimStart.load(); }
+    double getTrimEnd() const { return m_trimEnd.load(); }
+    double getTrimmedDuration() const;    // Duration of trimmed clip
+    void resetTrim();                     // Reset to full audio length
+    
+    // Split clip at position (returns new Track with second half, modifies this track in place)
+    std::shared_ptr<Track> splitAt(double positionInClip);
+    
+    // Create a copy of this clip (for duplicate/copy operations)
+    std::shared_ptr<Track> duplicate() const;
 
     // Audio Processing
     void processAudio(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate);
@@ -256,6 +271,10 @@ private:
     std::atomic<double> m_positionSeconds{0.0};
     std::atomic<double> m_durationSeconds{0.0};
     std::atomic<double> m_startPositionInTimeline{0.0};  // Where sample starts in timeline (seconds)
+    
+    // Clip trim positions (non-destructive - define which portion of audio to use)
+    std::atomic<double> m_trimStart{0.0};     // Start point within audio (seconds)
+    std::atomic<double> m_trimEnd{-1.0};      // End point within audio (-1 = full length)
 
     // Audio data
     std::vector<float> m_audioData;  // Interleaved stereo samples (streaming/recording/temp)

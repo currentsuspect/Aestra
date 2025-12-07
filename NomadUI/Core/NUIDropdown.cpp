@@ -504,13 +504,13 @@ namespace NomadUI {
         // Measure text for true vertical centering (top-left Y positioning)
         std::string displayText = items.empty() ? placeholderText : items[selectedIndex].text;
         NUISize textSize = renderer.measureText(displayText, fontSize);
-        float textY = getY() + (getHeight() - fontSize) * 0.5f;
+        float textY = std::round(getY() + (getHeight() - fontSize) * 0.5f);
         
         NUIColor textColor = items.empty() ? 
             getTheme()->getColor("dropdown.placeholder", NUIColor(0.5f, 0.5f, 0.5f, 1.0f)) :
             getTheme()->getText();
         
-        renderer.drawText(displayText, NUIPoint(textX, textY), fontSize, textColor);
+        renderer.drawText(displayText, NUIPoint(std::round(textX), textY), fontSize, textColor);
 
         // Draw dropdown arrow
         float arrowSize = 8.0f;
@@ -570,7 +570,7 @@ namespace NomadUI {
             NUISize searchSize = renderer.measureText(searchText, fontSize);
             float searchY = dropdownY + dropdownHeight + 5.0f + (fontSize + 4.0f - searchSize.height) * 0.5f + searchSize.height;
             
-            renderer.drawText(searchText, NUIPoint(getX() + 5.0f, searchY), 
+            renderer.drawText(searchText, NUIPoint(std::round(getX() + 5.0f), std::round(searchY)), 
                             fontSize, getTheme()->getText());
         }
     }
@@ -602,9 +602,9 @@ namespace NomadUI {
         
         // Measure text for true vertical centering (top-left Y positioning)
         NUISize textSize = renderer.measureText(item.text, fontSize);
-        float textY = y + (itemHeight - fontSize) * 0.5f;
+        float textY = std::round(y + (itemHeight - fontSize) * 0.5f);
         
-        renderer.drawText(item.text, NUIPoint(textX, textY), fontSize, textColor);
+        renderer.drawText(item.text, NUIPoint(std::round(textX), textY), fontSize, textColor);
     }
 
     void NUIDropdown::renderScrollbar(NUIRenderer& renderer) {

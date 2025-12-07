@@ -67,6 +67,12 @@ public:
     void setOnStop(std::function<void()> callback) { m_onStop = callback; }
     void setOnTempoChange(std::function<void(float)> callback) { m_onTempoChange = callback; }
     
+    // View Toggle Callbacks
+    void setOnToggleMixer(std::function<void()> callback) { m_onToggleMixer = callback; }
+    void setOnToggleSequencer(std::function<void()> callback) { m_onToggleSequencer = callback; }
+    void setOnTogglePianoRoll(std::function<void()> callback) { m_onTogglePianoRoll = callback; }
+    void setOnTogglePlaylist(std::function<void()> callback) { m_onTogglePlaylist = callback; }
+
     // Component overrides
     void onRender(NomadUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
@@ -77,6 +83,13 @@ private:
     std::shared_ptr<NomadUI::NUIButton> m_playButton;
     std::shared_ptr<NomadUI::NUIButton> m_stopButton;
     std::shared_ptr<NomadUI::NUIButton> m_recordButton;
+    
+    // View Toggle Buttons
+    std::shared_ptr<NomadUI::NUIButton> m_mixerButton;
+    std::shared_ptr<NomadUI::NUIButton> m_sequencerButton;
+    std::shared_ptr<NomadUI::NUIButton> m_pianoRollButton;
+    std::shared_ptr<NomadUI::NUIButton> m_playlistButton;
+
     std::shared_ptr<TransportInfoContainer> m_infoContainer;  // Modular info container
     
     // Icons
@@ -85,10 +98,11 @@ private:
     std::shared_ptr<NomadUI::NUIIcon> m_stopIcon;
     std::shared_ptr<NomadUI::NUIIcon> m_recordIcon;
     
-    // State
-    TransportState m_state;
-    float m_tempo;
-    double m_position;
+    // View Icons
+    std::shared_ptr<NomadUI::NUIIcon> m_mixerIcon;
+    std::shared_ptr<NomadUI::NUIIcon> m_sequencerIcon;
+    std::shared_ptr<NomadUI::NUIIcon> m_pianoRollIcon;
+    std::shared_ptr<NomadUI::NUIIcon> m_playlistIcon;
     
     // Callbacks
     std::function<void()> m_onPlay;
@@ -96,9 +110,19 @@ private:
     std::function<void()> m_onStop;
     std::function<void(float)> m_onTempoChange;
     
-    // Helper methods
-    void createButtons();
+    // View Toggle Callbacks
+    std::function<void()> m_onToggleMixer;
+    std::function<void()> m_onToggleSequencer;
+    std::function<void()> m_onTogglePianoRoll;
+    std::function<void()> m_onTogglePlaylist;
+    
+    // Internal state
+    TransportState m_state;
+    float m_tempo;
+    double m_position;
+    
     void createIcons();
+    void createButtons();
     void updateButtonStates();
     void layoutComponents();
     void renderButtonIcons(NomadUI::NUIRenderer& renderer);

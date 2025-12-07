@@ -177,6 +177,7 @@ private:
         int32_t textureLoc = -1;
         int32_t useTextureLoc = -1;
         int32_t blurLoc = -1;
+        int32_t smoothnessLoc = -1; // Added for SDF text
     };
     
     // Transform stack
@@ -250,12 +251,13 @@ private:
     bool renderingToTexture_ = false;
 
     uint32_t lastRenderTextureId_ = 0;
-    
+
     // Batching state
     uint32_t currentTextureId_ = 0; // 0 = no texture (flat color)
     int currentPrimitiveType_ = 0;
     float currentRadius_ = 0.0f;
     float currentBlur_ = 0.0f;
+    float currentSmoothness_ = 1.0f; // Added
     NUISize currentSize_ = {0.0f, 0.0f};
     NUISize currentQuadSize_ = {0.0f, 0.0f};
     

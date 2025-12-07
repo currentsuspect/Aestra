@@ -68,6 +68,7 @@ public:
 
     // Track Management
     std::shared_ptr<Track> addTrack(const std::string& name = "");
+    void addExistingTrack(std::shared_ptr<Track> track);  // Add an already-created track
     std::shared_ptr<Track> getTrack(size_t index);
     std::shared_ptr<const Track> getTrack(size_t index) const;
     size_t getTrackCount() const { return m_tracks.size(); }

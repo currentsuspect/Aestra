@@ -94,6 +94,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 
             std::string name = t.has("name") ? t["name"].asString() : "Track";
             auto track = trackManager->addTrack(name);
+            
+            if (!track) {
+                Log::error("Failed to create track: " + name);
+                continue;
+            }
 
             if (t.has("color")) track->setColor(static_cast<uint32_t>(t["color"].asNumber()));
             if (t.has("volume")) track->setVolume(static_cast<float>(t["volume"].asNumber()));

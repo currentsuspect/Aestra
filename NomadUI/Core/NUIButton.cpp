@@ -143,8 +143,8 @@ void NUIButton::onRender(NUIRenderer& renderer)
 
         // Measure text for precise centering; drawText expects top-left Y
         NUISize textSize = renderer.measureText(text_, fontSize);
-        float textX = bounds.x + (bounds.width - textSize.width) * 0.5f;
-        float textY = bounds.y + (bounds.height - textSize.height) * 0.5f;
+        float textX = std::round(bounds.x + (bounds.width - textSize.width) * 0.5f);
+        float textY = std::round(bounds.y + (bounds.height - textSize.height) * 0.5f);
         
         renderer.drawText(text_, NUIPoint(textX, textY), fontSize, finalTextColor);
     }

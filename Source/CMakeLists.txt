@@ -32,6 +32,8 @@ set(NOMAD_DAW_SOURCES
 	PianoRollPanel.cpp
 	MixerPanel.h
 	MixerPanel.cpp
+	StepSequencerPanel.h
+	StepSequencerPanel.cpp
 	ui/InfoTab.h
 	ui/InfoTab.cpp
 	license/LicenseVerifier.h

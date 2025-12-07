@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// Copyright 2025 Nomad Studios - All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "NUITypes.h"
@@ -123,7 +123,7 @@ public:
     DropFeedback getCurrentFeedback() const { return m_currentFeedback; }
     
     // Drop target registration
-    void registerDropTarget(IDropTarget* target);
+    void registerDropTarget(std::weak_ptr<IDropTarget> target);
     void unregisterDropTarget(IDropTarget* target);
     
     // Visual rendering (call from top-level render)
@@ -146,7 +146,7 @@ private:
     NUIDragDropManager(const NUIDragDropManager&) = delete;
     NUIDragDropManager& operator=(const NUIDragDropManager&) = delete;
     
-    IDropTarget* findTargetAt(const NUIPoint& position);
+    std::shared_ptr<IDropTarget> findTargetAt(const NUIPoint& position);
     void updateCurrentTarget(const NUIPoint& position);
     
     // State
@@ -159,14 +159,14 @@ private:
     float m_dragThreshold = 5.0f;   // Pixels before drag starts
     
     // Current target
-    IDropTarget* m_currentTarget = nullptr;
+    std::weak_ptr<IDropTarget> m_currentTarget;
     DropFeedback m_currentFeedback = DropFeedback::None;
     
-    // Registered targets
-    std::vector<IDropTarget*> m_dropTargets;
+    // Registered targets (weak_ptr to avoid ownership, expired entries are pruned during lookups)
+    std::vector<std::weak_ptr<IDropTarget>> m_dropTargets;
     
     // Source component
-    NUIComponent* m_sourceComponent = nullptr;
+    std::weak_ptr<NUIComponent> m_sourceComponent;
     
     // Callbacks
     std::function<void(const DragData&)> m_onDragStart;

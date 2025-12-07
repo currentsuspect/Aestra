@@ -59,6 +59,7 @@ public:
     void setMouseButtonCallback(std::function<void(int, bool)> callback);
     void setMouseWheelCallback(std::function<void(float)> callback);
     void setKeyCallback(std::function<void(int, bool)> callback);
+    void setKeyCallbackEx(std::function<void(int, bool, bool ctrl, bool shift, bool alt)> callback);
     void setResizeCallback(std::function<void(int, int)> callback);
     void setCloseCallback(std::function<void()> callback);
     void setDPIChangeCallback(std::function<void(float)> callback);
@@ -102,6 +103,7 @@ private:
     std::function<void(int, bool)> m_mouseButtonCallback;
     std::function<void(float)> m_mouseWheelCallback;
     std::function<void(int, bool)> m_keyCallback;
+    std::function<void(int, bool, bool, bool, bool)> m_keyCallbackEx;
     std::function<void(int, int)> m_resizeCallback;
     std::function<void()> m_closeCallback;
     std::function<void(float)> m_dpiChangeCallback;

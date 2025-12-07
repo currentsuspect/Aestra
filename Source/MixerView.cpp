@@ -17,8 +17,7 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     , m_trackManager(trackManager)
 {
     // Create volume fader (vertical slider)
-    m_volumeFader = std::make_shared<NomadUI::NUISlider>();
-    m_volumeFader->setOrientation(NomadUI::NUISlider::Orientation::Vertical);
+    m_volumeFader = std::make_shared<NomadUI::Fader>();
     m_volumeFader->setValue(m_track ? m_track->getVolume() : 0.8f);
     m_volumeFader->setOnValueChange([this](double value) {
         if (m_track) {
@@ -28,33 +27,32 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     addChild(m_volumeFader);
     
     // Create pan knob (horizontal slider for now)
-    m_panKnob = std::make_shared<NomadUI::NUISlider>();
-    m_panKnob->setOrientation(NomadUI::NUISlider::Orientation::Horizontal);
-    m_panKnob->setValue(0.5f);  // Center
+    m_panKnob = std::make_shared<NomadUI::PanKnob>();
+    m_panKnob->setValue(0.0f);  // Center
     m_panKnob->setOnValueChange([this](double value) {
         if (m_track) {
-            m_track->setPan(static_cast<float>((value - 0.5) * 2.0));  // Convert 0..1 to -1..1
+            m_track->setPan(static_cast<float>(value));
         }
     });
     addChild(m_panKnob);
     
     // Create mute button
-    m_muteButton = std::make_shared<NomadUI::NUIButton>("M");
-    m_muteButton->setToggleable(true);
-    m_muteButton->setOnClick([this]() {
+    m_muteButton = std::make_shared<NomadUI::MuteButton>();
+    m_muteButton->setOnToggle([this](bool toggled) {
         if (m_track) {
-            m_track->setMute(!m_track->isMuted());
-            m_muteButton->setToggled(m_track->isMuted());
+            m_track->setMute(toggled);
+            // m_muteButton->setOn(m_track->isMuted()); // Already set by toggle
         }
     });
+    // Initialize state
+    if (m_track) m_muteButton->setOn(m_track->isMuted());
     addChild(m_muteButton);
     
     // Create solo button
-    m_soloButton = std::make_shared<NomadUI::NUIButton>("S");
-    m_soloButton->setToggleable(true);
-    m_soloButton->setOnClick([this]() {
+    m_soloButton = std::make_shared<NomadUI::SoloButton>();
+    m_soloButton->setOnToggle([this](bool toggled) {
         if (m_track) {
-            bool newSolo = !m_track->isSoloed();
+            bool newSolo = toggled;
             
             // If enabling solo, clear all other solos first (exclusive solo)
             if (newSolo && m_trackManager) {
@@ -62,9 +60,11 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
             }
             
             m_track->setSolo(newSolo);
-            m_soloButton->setToggled(m_track->isSoloed());
+            // m_soloButton->setOn(m_track->isSoloed()); // Already set by toggle
         }
     });
+    // Initialize state
+    if (m_track) m_soloButton->setOn(m_track->isSoloed());
     addChild(m_soloButton);
     
     layoutControls();

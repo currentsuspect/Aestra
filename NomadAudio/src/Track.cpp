@@ -664,6 +664,7 @@ void Track::setState(TrackState state) {
 
 // Audio Data Management
 bool Track::loadAudioFile(const std::string& filePath) {
+    const TrackState previousState = getState();
     std::cout << "Loading: " << filePath << " (track: " << m_name << ")" << std::endl;
     stopStreaming();
     m_sampleBuffer.reset();
@@ -760,6 +761,10 @@ bool Track::loadAudioFile(const std::string& filePath) {
 
             Log::info("WAV loaded successfully via SamplePool: " + std::to_string(buffer->data.size()) + " samples, " +
                        std::to_string(m_durationSeconds.load()) + " seconds");
+            // If we were already playing, keep playing with the new buffer
+            if (previousState == TrackState::Playing) {
+                setState(TrackState::Playing);
+            }
             return true;
         }
 
@@ -811,6 +816,10 @@ bool Track::loadAudioFile(const std::string& filePath) {
             Log::info("Audio loaded via Media Foundation + SamplePool: " + std::to_string(buffer->data.size()) + " samples, " +
                        std::to_string(m_durationSeconds.load()) + " seconds @ " +
                        std::to_string(sampleRate) + " Hz, channels: " + std::to_string(numChannels));
+            // If we were already playing, keep playing with the new buffer
+            if (previousState == TrackState::Playing) {
+                setState(TrackState::Playing);
+            }
             return true;
         }
 
@@ -2004,6 +2013,138 @@ void Track::removeDC(float* buffer, uint32_t numSamples) {
 // Set quality settings
 void Track::setQualitySettings(const AudioQualitySettings& settings) {
     m_qualitySettings = settings;
+}
+
+// ============================================================================
+// CLIP TRIMMING (non-destructive editing)
+// ============================================================================
+
+void Track::setTrimStart(double seconds) {
+    double duration = getDuration();
+    // Clamp to valid range
+    seconds = std::max(0.0, std::min(seconds, duration));
+    
+    // Ensure trim start is before trim end
+    double trimEnd = m_trimEnd.load();
+    if (trimEnd >= 0.0 && seconds >= trimEnd) {
+        seconds = trimEnd - 0.001; // At least 1ms before end
+    }
+    
+    m_trimStart.store(seconds);
+    Log::info("Track " + m_name + " trim start set to " + std::to_string(seconds) + "s");
+}
+
+void Track::setTrimEnd(double seconds) {
+    double duration = getDuration();
+    
+    // -1 means use full length
+    if (seconds < 0) {
+        m_trimEnd.store(-1.0);
+        return;
+    }
+    
+    // Clamp to valid range
+    seconds = std::max(0.0, std::min(seconds, duration));
+    
+    // Ensure trim end is after trim start
+    double trimStart = m_trimStart.load();
+    if (seconds <= trimStart) {
+        seconds = trimStart + 0.001; // At least 1ms after start
+    }
+    
+    m_trimEnd.store(seconds);
+    Log::info("Track " + m_name + " trim end set to " + std::to_string(seconds) + "s");
+}
+
+double Track::getTrimmedDuration() const {
+    double duration = getDuration();
+    if (duration <= 0.0) return 0.0;
+    
+    double trimStart = m_trimStart.load();
+    double trimEnd = m_trimEnd.load();
+    
+    if (trimEnd < 0.0) {
+        trimEnd = duration;
+    }
+    
+    return std::max(0.0, trimEnd - trimStart);
+}
+
+void Track::resetTrim() {
+    m_trimStart.store(0.0);
+    m_trimEnd.store(-1.0);
+    Log::info("Track " + m_name + " trim reset to full length");
+}
+
+std::shared_ptr<Track> Track::splitAt(double positionInClip) {
+    double duration = getDuration();
+    if (positionInClip <= 0.0 || positionInClip >= duration) {
+        Log::warning("Cannot split track at position " + std::to_string(positionInClip));
+        return nullptr;
+    }
+    
+    // Calculate split position in samples
+    uint32_t splitSample = static_cast<uint32_t>(positionInClip * m_sampleRate);
+    uint32_t totalSamples = static_cast<uint32_t>(m_audioData.size() / m_numChannels);
+    
+    if (splitSample >= totalSamples) {
+        return nullptr;
+    }
+    
+    // Create new track for second half
+    auto newTrack = std::make_shared<Track>(m_name + " (split)", m_trackId + 1000);
+    newTrack->setColor(m_color);
+    
+    // Copy second half to new track
+    size_t splitIndex = splitSample * m_numChannels;
+    std::vector<float> secondHalf(m_audioData.begin() + splitIndex, m_audioData.end());
+    newTrack->setAudioData(secondHalf.data(), 
+                           totalSamples - splitSample,
+                           m_sampleRate, m_numChannels);
+    
+    // Position new track in timeline right after split point
+    double originalStart = getStartPositionInTimeline();
+    newTrack->setStartPositionInTimeline(originalStart + positionInClip);
+    newTrack->setSourcePath(m_sourcePath);
+    
+    // Trim this track to only first half
+    m_audioData.resize(splitIndex);
+    m_durationSeconds.store(positionInClip);
+    
+    // Reset trim end since we truncated
+    if (m_trimEnd.load() > positionInClip) {
+        m_trimEnd.store(-1.0);
+    }
+    
+    Log::info("Track " + m_name + " split at " + std::to_string(positionInClip) + "s");
+    return newTrack;
+}
+
+std::shared_ptr<Track> Track::duplicate() const {
+    auto newTrack = std::make_shared<Track>(m_name + " (copy)", m_trackId + 2000);
+    
+    // Copy all properties
+    newTrack->setColor(m_color);
+    newTrack->setVolume(getVolume());
+    newTrack->setPan(getPan());
+    newTrack->setMute(isMuted());
+    newTrack->setSourcePath(m_sourcePath);
+    
+    // Copy audio data
+    if (!m_audioData.empty()) {
+        uint32_t totalSamples = static_cast<uint32_t>(m_audioData.size() / m_numChannels);
+        newTrack->setAudioData(m_audioData.data(), totalSamples, m_sampleRate, m_numChannels);
+    }
+    
+    // Copy trim settings
+    newTrack->m_trimStart.store(m_trimStart.load());
+    newTrack->m_trimEnd.store(m_trimEnd.load());
+    
+    // Position slightly offset from original
+    newTrack->setStartPositionInTimeline(getStartPositionInTimeline());
+    
+    Log::info("Track " + m_name + " duplicated");
+    return newTrack;
 }
 
 } // namespace Audio

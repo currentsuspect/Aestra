@@ -36,6 +36,12 @@ struct FileItem {
     size_t size;
     std::string lastModified;
     
+    // Tree view support
+    bool isExpanded = false;
+    bool hasLoadedChildren = false;
+    std::vector<FileItem> children;
+    int depth = 0;
+    
     // Cache for performance
     mutable std::string cachedDisplayName;
     mutable std::string cachedSizeStr;
@@ -75,6 +81,7 @@ public:
     void selectFile(const std::string& path);
     void openFile(const std::string& path);
     void openFolder(const std::string& path);
+    void toggleFolder(FileItem* item);
     
     // Callbacks
     void setOnFileSelected(std::function<void(const FileItem&)> callback) { onFileSelected_ = callback; }
@@ -106,7 +113,7 @@ public:
     // Properties
     const std::string& getCurrentPath() const { return currentPath_; }
     const FileItem* getSelectedFile() const { return selectedFile_; }
-    const std::vector<FileItem>& getFiles() const { return files_; }
+    const std::vector<FileItem*>& getFiles() const { return displayItems_; }
     
     // Sorting
     enum class SortMode {
@@ -121,6 +128,9 @@ public:
     
 private:
     void loadDirectoryContents();
+    void loadFolderContents(FileItem* item);
+    void updateDisplayList();
+    void updateDisplayListRecursive(FileItem& item, std::vector<FileItem*>& list);
     void sortFiles();
     FileType getFileTypeFromExtension(const std::string& extension);
     std::shared_ptr<NUIIcon> getIconForFileType(FileType type);
@@ -143,8 +153,9 @@ private:
     
     // File management
     std::string currentPath_;
-    std::vector<FileItem> files_;
-    std::vector<FileItem> filteredFiles_;  // Filtered files for search
+    std::vector<FileItem> rootItems_;
+    std::vector<FileItem*> displayItems_;
+    std::vector<FileItem*> filteredFiles_;  // Filtered files for search
     const FileItem* selectedFile_;
     int selectedIndex_;
     std::vector<int> selectedIndices_;     // Multi-select support
@@ -225,6 +236,7 @@ private:
     std::shared_ptr<NUIIcon> starIcon_;
     std::shared_ptr<NUIIcon> starFilledIcon_;
     std::shared_ptr<NUIIcon> chevronIcon_;
+    std::shared_ptr<NUIIcon> chevronDownIcon_;
     std::shared_ptr<NUIIcon> playIcon_;
     std::shared_ptr<NUIIcon> pauseIcon_;
     std::shared_ptr<NUIIcon> backIcon_;

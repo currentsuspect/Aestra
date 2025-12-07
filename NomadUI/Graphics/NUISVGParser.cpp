@@ -359,8 +359,8 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg, co
     float scaleY = bounds.height / image->height;
     float scale = std::min(scaleX, scaleY);
     
-    // Allocate RGBA buffer (width Ã— height Ã— 4 bytes)
-    std::vector<unsigned char> rgba(w * h * 4);
+    // Allocate RGBA buffer (width × height × 4 bytes) - initialize to transparent
+    std::vector<unsigned char> rgba(w * h * 4, 0);  // Explicitly zero-initialize for transparency
     
     // Create NSVGrasterizer
     NSVGrasterizer* rast = nsvgCreateRasterizer();

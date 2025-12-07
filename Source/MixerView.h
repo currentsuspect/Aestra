@@ -2,8 +2,7 @@
 #pragma once
 
 #include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUISlider.h"
-#include "../NomadUI/Core/NUIButton.h"
+#include "../NomadUI/Widgets/NUIMixerWidgets.h"
 #include "../NomadAudio/include/TrackManager.h"
 #include <memory>
 #include <vector>
@@ -31,10 +30,10 @@ private:
     TrackManager* m_trackManager; // For coordinating solo exclusivity
     
     // UI Controls
-    std::shared_ptr<NomadUI::NUISlider> m_volumeFader;
-    std::shared_ptr<NomadUI::NUISlider> m_panKnob;
-    std::shared_ptr<NomadUI::NUIButton> m_muteButton;
-    std::shared_ptr<NomadUI::NUIButton> m_soloButton;
+    std::shared_ptr<NomadUI::Fader> m_volumeFader;
+    std::shared_ptr<NomadUI::PanKnob> m_panKnob;
+    std::shared_ptr<NomadUI::MuteButton> m_muteButton;
+    std::shared_ptr<NomadUI::SoloButton> m_soloButton;
     
     // Level meter state
     float m_peakLevel{0.0f};

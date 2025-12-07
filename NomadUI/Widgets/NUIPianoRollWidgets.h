@@ -15,6 +15,7 @@ struct MidiNote {
     double startBeat;    // Start position in beats
     double durationBeats;// Duration in beats
     float velocity;      // 0..1
+    bool selected = false;
 };
 
 class PianoKeyboard : public NUIComponent {
@@ -81,6 +82,14 @@ private:
     float scrollY_;
     int firstNote_;
     std::function<void(const std::vector<MidiNote>&)> onNotesChanged_;
+
+    // Interaction
+    enum class State { None, Moving, Resizing, Selecting };
+    State state_ = State::None;
+    NUIPoint dragStart_;
+    int hoveredNoteIndex_ = -1;
+    int resizeEdge_ = 0; // -1 left, 1 right
+    std::vector<MidiNote> dragStartNotes_;
 };
 
 class VelocityLane : public NUIComponent {

@@ -77,6 +77,46 @@ void TransportBar::createIcons() {
     m_recordIcon = std::make_shared<NomadUI::NUIIcon>(recordSvg);
     m_recordIcon->setIconSize(NomadUI::NUIIconSize::Medium);
     m_recordIcon->setColorFromTheme("error");  // #ff4d4d - Clear red for recording
+
+    // Mixer icon (sliders)
+    const char* mixerSvg = R"(
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+        </svg>
+    )";
+    m_mixerIcon = std::make_shared<NomadUI::NUIIcon>(mixerSvg);
+    m_mixerIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_mixerIcon->setColorFromTheme("textSecondary");
+
+    // Sequencer icon (grid)
+    const char* sequencerSvg = R"(
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/>
+        </svg>
+    )";
+    m_sequencerIcon = std::make_shared<NomadUI::NUIIcon>(sequencerSvg);
+    m_sequencerIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_sequencerIcon->setColorFromTheme("textSecondary");
+
+    // Piano Roll icon (keys)
+    const char* pianoRollSvg = R"(
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-5.5 17h-2.5v-7h2.5v7zm-4.5 0H7.5v-7h2.5v7zM20 19h-2.5v-7H20v7z"/>
+        </svg>
+    )";
+    m_pianoRollIcon = std::make_shared<NomadUI::NUIIcon>(pianoRollSvg);
+    m_pianoRollIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_pianoRollIcon->setColorFromTheme("textSecondary");
+
+    // Playlist icon (tracks)
+    const char* playlistSvg = R"(
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 13h8v-2H3v2zm0 4h8v-2H3v2zm0-8h8V7H3v2zm10-6v18h8V3h-8zm6 16h-4V5h4v14z"/>
+        </svg>
+    )";
+    m_playlistIcon = std::make_shared<NomadUI::NUIIcon>(playlistSvg);
+    m_playlistIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_playlistIcon->setColorFromTheme("textSecondary");
 }
 
 void TransportBar::createButtons() {
@@ -120,6 +160,24 @@ void TransportBar::createButtons() {
     m_recordButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
     m_recordButton->setEnabled(false); // Disabled for now
     addChild(m_recordButton);
+
+    // Helper to create view toggle buttons
+    auto createViewButton = [&](std::shared_ptr<NomadUI::NUIButton>& btn, std::function<void()> onClick) {
+        btn = std::make_shared<NomadUI::NUIButton>();
+        btn->setText("");
+        btn->setStyle(NomadUI::NUIButton::Style::Icon);
+        btn->setSize(40, 40);
+        btn->setBackgroundColor(themeManager.getColor("surfaceTertiary"));
+        btn->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f));
+        btn->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f));
+        btn->setOnClick(onClick);
+        addChild(btn);
+    };
+
+    createViewButton(m_mixerButton, [this]() { if (m_onToggleMixer) m_onToggleMixer(); });
+    createViewButton(m_sequencerButton, [this]() { if (m_onToggleSequencer) m_onToggleSequencer(); });
+    createViewButton(m_pianoRollButton, [this]() { if (m_onTogglePianoRoll) m_onTogglePianoRoll(); });
+    createViewButton(m_playlistButton, [this]() { if (m_onTogglePlaylist) m_onTogglePlaylist(); });
 }
 
 void TransportBar::play() {
@@ -286,6 +344,38 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
         m_recordIcon->setBounds(iconRect);
         m_recordIcon->onRender(renderer);
     }
+    x += buttonSize + spacing;
+
+    // Calculate position for view toggles
+    // Move to the right of the center (BPM display)
+    float centerX = bounds.width / 2.0f;
+    float viewButtonsX = centerX + 120.0f; // Offset from center to avoid BPM
+    
+    // Helper to render view icons
+    auto renderViewIcon = [&](std::shared_ptr<NomadUI::NUIButton>& btn, std::shared_ptr<NomadUI::NUIIcon>& icon) {
+        if (btn && icon) {
+            NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, viewButtonsX, centerOffsetY, buttonSize, buttonSize);
+            
+            if (btn->isHovered()) {
+                icon->setColorFromTheme("textPrimary"); // White on hover
+            } else {
+                icon->setColorFromTheme("accent"); // Purple default
+            }
+            
+            float iconPadding = 8.0f;
+            float iconSize = 24.0f;
+            NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
+            icon->setBounds(iconRect);
+            icon->onRender(renderer);
+            
+            viewButtonsX += buttonSize + spacing;
+        }
+    };
+
+    renderViewIcon(m_mixerButton, m_mixerIcon);
+    renderViewIcon(m_sequencerButton, m_sequencerIcon);
+    renderViewIcon(m_pianoRollButton, m_pianoRollIcon);
+    renderViewIcon(m_playlistButton, m_playlistIcon);
 }
 
 void TransportBar::layoutComponents() {
@@ -316,6 +406,30 @@ void TransportBar::layoutComponents() {
 
     // Record button
     m_recordButton->setBounds(NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize));
+    
+    // Calculate position for view toggles (Right side)
+    float rightEdge = bounds.width;
+    // View toggle buttons
+    // Move to the right of the center (BPM display)
+    float centerX = bounds.width / 2.0f;
+    float viewButtonsX = centerX + 120.0f; // Offset from center to avoid BPM
+
+    if (m_mixerButton) {
+        m_mixerButton->setBounds(NUIAbsolute(bounds, viewButtonsX, centerOffsetY, buttonSize, buttonSize));
+        viewButtonsX += buttonSize + spacing;
+    }
+    if (m_sequencerButton) {
+        m_sequencerButton->setBounds(NUIAbsolute(bounds, viewButtonsX, centerOffsetY, buttonSize, buttonSize));
+        viewButtonsX += buttonSize + spacing;
+    }
+    if (m_pianoRollButton) {
+        m_pianoRollButton->setBounds(NUIAbsolute(bounds, viewButtonsX, centerOffsetY, buttonSize, buttonSize));
+        viewButtonsX += buttonSize + spacing;
+    }
+    if (m_playlistButton) {
+        m_playlistButton->setBounds(NUIAbsolute(bounds, viewButtonsX, centerOffsetY, buttonSize, buttonSize));
+        viewButtonsX += buttonSize + spacing;
+    }
 
     // Info container (timer + BPM) - spans full transport bar
     // Use NUIAbsolute with 0,0 offset to position at transport bar's absolute position

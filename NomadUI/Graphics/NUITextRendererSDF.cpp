@@ -18,43 +18,8 @@
 
 namespace NomadUI {
 
-namespace {
-const char* kVertexSrc = R"(
-#version 330 core
-layout(location = 0) in vec2 aPos;
-layout(location = 1) in vec2 aUV;
-layout(location = 2) in vec4 aColor;
+// Shader strings removed - using unified renderer shader
 
-out vec2 vUV;
-out vec4 vColor;
-
-uniform mat4 uProjection;
-
-void main() {
-    vUV = aUV;
-    vColor = aColor;
-    gl_Position = uProjection * vec4(aPos, 0.0, 1.0);
-}
-)";
-
-const char* kFragmentSrc = R"(
-#version 330 core
-in vec2 vUV;
-in vec4 vColor;
-out vec4 FragColor;
-
-uniform sampler2D uTexture;
-uniform float uSmoothness;
-
-void main() {
-    float dist = texture(uTexture, vUV).r;
-    // Derivative-based smoothing to stay crisp at any scale
-    float width = max(fwidth(dist) * uSmoothness, 1e-4);
-    float alpha = smoothstep(0.5 - width, 0.5 + width, dist);
-    FragColor = vec4(vColor.rgb, vColor.a * alpha);
-}
-)";
-} // namespace
 
 NUITextRendererSDF::NUITextRendererSDF() = default;
 
@@ -78,25 +43,11 @@ bool NUITextRendererSDF::initialize(const std::string& fontPath, float fontSize)
     NOMAD_LOG_STREAM_INFO << "MSDF atlas: " << fontSize << "px -> " << atlasFontSize_ << "px (" 
                           << (atlasFontSize_/fontSize) << "x scale)";
 
-    if (!createShader()) {
-        Nomad::Log::error("MSDF shader compile failed");
-        return false;
-    }
+    NOMAD_LOG_STREAM_INFO << "MSDF atlas: " << fontSize << "px -> " << atlasFontSize_ << "px (" 
+                          << (atlasFontSize_/fontSize) << "x scale)";
 
-    glGenVertexArrays(1, &vao_);
-    glGenBuffers(1, &vbo_);
-    glGenBuffers(1, &ebo_);
+    // Legacy GL object creation removed - strictly using Texture Atlas now
 
-    glBindVertexArray(vao_);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(4 * sizeof(float)));
-    glBindVertexArray(0);
 
     if (!loadFontAtlas(fontPath, atlasFontSize_)) {
         std::cerr << "Failed to build MSDF atlas" << std::endl;
@@ -113,64 +64,20 @@ void NUITextRendererSDF::shutdown() {
         glDeleteTextures(1, &atlasTexture_);
         atlasTexture_ = 0;
     }
-    if (vbo_) {
-        glDeleteBuffers(1, &vbo_);
-        vbo_ = 0;
-    }
-    if (ebo_) {
-        glDeleteBuffers(1, &ebo_);
-        ebo_ = 0;
-    }
-    if (vao_) {
-        glDeleteVertexArrays(1, &vao_);
-        vao_ = 0;
-    }
-    if (shaderProgram_) {
-        glDeleteProgram(shaderProgram_);
-        shaderProgram_ = 0;
-    }
+    // Legacy cleanup removed
+
     glyphs_.clear();
     initialized_ = false;
 }
 
-void NUITextRendererSDF::drawText(const std::string& text,
-                                  const NUIPoint& position,
-                                  float fontSize,
-                                  const NUIColor& color,
-                                  const float* projection) {
-    if (!initialized_) return;
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glUseProgram(shaderProgram_);
-    GLint smoothLoc = glGetUniformLocation(shaderProgram_, "uSmoothness");
-    if (smoothLoc >= 0) {
-        // Adaptive smoothing based on font size for crisp text
-        float adaptiveSmoothness;
-        if (fontSize <= 12.0f) {
-            adaptiveSmoothness = 0.4f;  // Less smoothing for small fonts
-        } else if (fontSize <= 24.0f) {
-            adaptiveSmoothness = 0.6f;  // Moderate smoothing for medium fonts
-        } else {
-            adaptiveSmoothness = 0.8f;  // More smoothing for large fonts
-        }
-        glUniform1f(smoothLoc, adaptiveSmoothness);
-    }
-    GLint projLoc = glGetUniformLocation(shaderProgram_, "uProjection");
-    if (projLoc >= 0) {
-        glUniformMatrix4fv(projLoc, 1, GL_FALSE, projection);
-    }
-    GLint texLoc = glGetUniformLocation(shaderProgram_, "uTexture");
-    if (texLoc >= 0) {
-        glUniform1i(texLoc, 0);
-    }
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, atlasTexture_);
-
-    glBindVertexArray(vao_);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
+bool NUITextRendererSDF::generateMesh(const std::string& text,
+                                      const NUIPoint& position,
+                                      float fontSize,
+                                      const NUIColor& color,
+                                      std::vector<float>& outVertices,
+                                      std::vector<unsigned int>& outIndices,
+                                      uint32_t vertexOffset) {
+    if (!initialized_) return false;
 
     // Incoming position.y is the baseline (matches FreeType path)
     float scale = fontSize / atlasFontSize_;
@@ -178,19 +85,17 @@ void NUITextRendererSDF::drawText(const std::string& text,
     float penX = std::floor(position.x + 0.5f);
     float baseline = std::floor(position.y + 0.5f);
 
-    std::vector<float> verts;
-    std::vector<unsigned int> indices;
-    verts.reserve(text.size() * 4 * 8);
-    indices.reserve(text.size() * 6);
+    bool addedAny = false;
+
+    // Pre-calculate indices to avoid resizing repeatedly? 
+    // Vector implementation usually handles amortized growth well.
 
     for (char c : text) {
         if (c == ' ') {
-            // Special handling for space character - always advance the pen
             auto spaceIt = glyphs_.find(' ');
             if (spaceIt != glyphs_.end()) {
                 penX += spaceIt->second.advance * scale;
             } else {
-                // Fallback: use quarter font-size spacing for missing space glyph
                 penX += fontSize * 0.25f * scale;
             }
             continue;
@@ -198,7 +103,6 @@ void NUITextRendererSDF::drawText(const std::string& text,
         
         auto it = glyphs_.find(c);
         if (it == glyphs_.end()) {
-            // For missing non-space characters, still advance by some amount
             penX += fontSize * 0.5f * scale;
             continue;
         }
@@ -215,35 +119,32 @@ void NUITextRendererSDF::drawText(const std::string& text,
         float x1 = xpos + w;
         float y1 = ypos + h;
 
-        // order: top-left, bottom-left, bottom-right, top-right
+        // Add 4 vertices
+        // Layout: x, y, u, v, r, g, b, a
         float quad[4][8] = {
             {x0, y0, g.u0, g.v0, color.r, color.g, color.b, color.a},
             {x0, y1, g.u0, g.v1, color.r, color.g, color.b, color.a},
             {x1, y1, g.u1, g.v1, color.r, color.g, color.b, color.a},
             {x1, y0, g.u1, g.v0, color.r, color.g, color.b, color.a}
         };
-        verts.insert(verts.end(), &quad[0][0], &quad[0][0] + 4 * 8);
-        unsigned int startIdx = static_cast<unsigned int>(verts.size() / 8) - 4;
-        indices.push_back(startIdx + 0);
-        indices.push_back(startIdx + 1);
-        indices.push_back(startIdx + 2);
-        indices.push_back(startIdx + 0);
-        indices.push_back(startIdx + 2);
-        indices.push_back(startIdx + 3);
 
+        outVertices.insert(outVertices.end(), &quad[0][0], &quad[0][0] + 32);
+
+        // Add 6 indices
+        uint32_t base = vertexOffset;
+        outIndices.push_back(base + 0);
+        outIndices.push_back(base + 1);
+        outIndices.push_back(base + 2);
+        outIndices.push_back(base + 0);
+        outIndices.push_back(base + 2);
+        outIndices.push_back(base + 3);
+
+        vertexOffset += 4;
         penX += g.advance * scale;
+        addedAny = true;
     }
 
-    if (!verts.empty()) {
-        glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-        glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_DYNAMIC_DRAW);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_DYNAMIC_DRAW);
-        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0);
-    }
-
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    return addedAny;
 }
 
 NUISize NUITextRendererSDF::measureText(const std::string& text, float fontSize) const {
@@ -283,49 +184,8 @@ float NUITextRendererSDF::getAscent(float fontSize) const {
     return ascent_ * scale;
 }
 
-bool NUITextRendererSDF::createShader() {
-    auto compile = [](const char* src, GLenum type) -> GLuint {
-        GLuint shader = glCreateShader(type);
-        glShaderSource(shader, 1, &src, nullptr);
-        glCompileShader(shader);
-        GLint status;
-        glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-        if (!status) {
-            char log[512];
-            glGetShaderInfoLog(shader, 512, nullptr, log);
-            std::cerr << "MSDF shader compile failed: " << log << std::endl;
-            glDeleteShader(shader);
-            return 0;
-        }
-        return shader;
-    };
+// createShader removed
 
-    GLuint vs = compile(kVertexSrc, GL_VERTEX_SHADER);
-    GLuint fs = compile(kFragmentSrc, GL_FRAGMENT_SHADER);
-    if (!vs || !fs) return false;
-
-    shaderProgram_ = glCreateProgram();
-    glAttachShader(shaderProgram_, vs);
-    glAttachShader(shaderProgram_, fs);
-    glLinkProgram(shaderProgram_);
-
-    GLint status;
-    glGetProgramiv(shaderProgram_, GL_LINK_STATUS, &status);
-    if (!status) {
-        char log[512];
-        glGetProgramInfoLog(shaderProgram_, 512, nullptr, log);
-        std::cerr << "MSDF shader link failed: " << log << std::endl;
-        glDeleteProgram(shaderProgram_);
-        shaderProgram_ = 0;
-        glDeleteShader(vs);
-        glDeleteShader(fs);
-        return false;
-    }
-
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-    return true;
-}
 
 bool NUITextRendererSDF::loadFontAtlas(const std::string& fontPath, float fontSize) {
     std::ifstream file(fontPath, std::ios::binary | std::ios::ate);
@@ -436,8 +296,17 @@ bool NUITextRendererSDF::loadFontAtlas(const std::string& fontPath, float fontSi
 
     glGenTextures(1, &atlasTexture_);
     glBindTexture(GL_TEXTURE_2D, atlasTexture_);
+    // Ensure byte-aligned rows for arbitrary glyph widths
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, atlasW, atlasH, 0, GL_RED, GL_UNSIGNED_BYTE, atlas.data());
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // Mipmaps can soften small text; keep them optional for UI at 1:1 scale
+    const bool useMipmaps = false;
+    if (useMipmaps) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

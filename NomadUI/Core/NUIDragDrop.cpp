@@ -24,10 +24,10 @@ void NUIDragDropManager::beginDrag(const DragData& data, const NUIPoint& startPo
     m_startPosition = startPosition;
     m_currentPosition = startPosition;
     m_dragOffset = {0, 0};
-    m_sourceComponent = source;
+    m_sourceComponent = source ? source->shared_from_this() : std::weak_ptr<NUIComponent>{};
     m_isDragging = true;
     m_dragStarted = false;  // Will become true after threshold
-    m_currentTarget = nullptr;
+    m_currentTarget = std::weak_ptr<IDropTarget>{};
     m_currentFeedback = DropFeedback::None;
     
     Nomad::Log::info("[DragDrop] Drag initiated: " + data.displayName);
@@ -40,16 +40,9 @@ void NUIDragDropManager::updateDrag(const NUIPoint& position) {
     
     // Check if we've exceeded drag threshold
     if (!m_dragStarted) {
-        float dx = position.x - m_startPosition.x;
-        float dy = position.y - m_startPosition.y;
-        float distance = std::sqrt(dx * dx + dy * dy);
-        
-        if (distance >= m_dragThreshold) {
+        if (m_startPosition.distanceTo(position) >= m_dragThreshold) {
             m_dragStarted = true;
-            m_dragOffset = {
-                m_startPosition.x - position.x,
-                m_startPosition.y - position.y
-            };
+            m_dragOffset = m_startPosition - position;
             
             Nomad::Log::info("[DragDrop] Drag threshold exceeded, drag started");
             
@@ -71,16 +64,18 @@ void NUIDragDropManager::endDrag(const NUIPoint& position) {
     DropResult result;
     
     // Only process drop if drag actually started
-    if (m_dragStarted && m_currentTarget) {
-        result = m_currentTarget->onDrop(m_dragData, position);
-        m_currentTarget->onDragLeave();
-        
-        if (result.accepted) {
-            Nomad::Log::info("[DragDrop] Drop accepted at track " + 
-                std::to_string(result.targetTrackIndex) + 
-                ", time " + std::to_string(result.targetTimePosition));
-        } else {
-            Nomad::Log::info("[DragDrop] Drop rejected: " + result.message);
+    if (m_dragStarted && !m_currentTarget.expired()) {
+        if (auto target = m_currentTarget.lock()) {
+            result = target->onDrop(m_dragData, position);
+            target->onDragLeave();
+            
+            if (result.accepted) {
+                Nomad::Log::info("[DragDrop] Drop accepted at track " + 
+                    std::to_string(result.targetTrackIndex) + 
+                    ", time " + std::to_string(result.targetTimePosition));
+            } else {
+                Nomad::Log::info("[DragDrop] Drop rejected: " + result.message);
+            }
         }
     } else {
         result.accepted = false;
@@ -94,9 +89,9 @@ void NUIDragDropManager::endDrag(const NUIPoint& position) {
     // Reset state
     m_isDragging = false;
     m_dragStarted = false;
-    m_currentTarget = nullptr;
+    m_currentTarget = std::weak_ptr<IDropTarget>{};
     m_currentFeedback = DropFeedback::None;
-    m_sourceComponent = nullptr;
+    m_sourceComponent = std::weak_ptr<NUIComponent>{};
     m_dragData = DragData{};
 }
 
@@ -105,8 +100,10 @@ void NUIDragDropManager::cancelDrag() {
     
     Nomad::Log::info("[DragDrop] Drag cancelled");
     
-    if (m_currentTarget) {
-        m_currentTarget->onDragLeave();
+    if (!m_currentTarget.expired()) {
+        if (auto target = m_currentTarget.lock()) {
+            target->onDragLeave();
+        }
     }
     
     DropResult result;
@@ -119,63 +116,96 @@ void NUIDragDropManager::cancelDrag() {
     
     m_isDragging = false;
     m_dragStarted = false;
-    m_currentTarget = nullptr;
+    m_currentTarget = std::weak_ptr<IDropTarget>{};
     m_currentFeedback = DropFeedback::None;
-    m_sourceComponent = nullptr;
+    m_sourceComponent = std::weak_ptr<NUIComponent>{};
     m_dragData = DragData{};
 }
 
-void NUIDragDropManager::registerDropTarget(IDropTarget* target) {
-    if (target && std::find(m_dropTargets.begin(), m_dropTargets.end(), target) == m_dropTargets.end()) {
-        m_dropTargets.push_back(target);
+void NUIDragDropManager::registerDropTarget(std::weak_ptr<IDropTarget> target) {
+    if (auto targetPtr = target.lock()) {
+        // Check if this target is already registered
+        bool alreadyRegistered = false;
+        for (const auto& weakTarget : m_dropTargets) {
+            if (auto existingTarget = weakTarget.lock()) {
+                if (existingTarget.get() == targetPtr.get()) {
+                    alreadyRegistered = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!alreadyRegistered) {
+            m_dropTargets.push_back(target);
+        }
     }
 }
 
 void NUIDragDropManager::unregisterDropTarget(IDropTarget* target) {
-    auto it = std::find(m_dropTargets.begin(), m_dropTargets.end(), target);
-    if (it != m_dropTargets.end()) {
-        if (m_currentTarget == target) {
-            m_currentTarget->onDragLeave();
-            m_currentTarget = nullptr;
+    if (!target) return;
+    
+    // Find and remove the target from the vector
+    auto it = m_dropTargets.begin();
+    while (it != m_dropTargets.end()) {
+        if (auto targetPtr = it->lock()) {
+            if (targetPtr.get() == target) {
+                // If this is the current target, clear it
+                if (!m_currentTarget.expired()) {
+                    if (auto currentTarget = m_currentTarget.lock()) {
+                        if (currentTarget.get() == target) {
+                            currentTarget->onDragLeave();
+                            m_currentTarget = std::weak_ptr<IDropTarget>{};
+                        }
+                    }
+                }
+                m_dropTargets.erase(it);
+                break;
+            }
+        } else {
+            // Clean up expired weak_ptr
+            it = m_dropTargets.erase(it);
         }
-        m_dropTargets.erase(it);
     }
 }
 
-IDropTarget* NUIDragDropManager::findTargetAt(const NUIPoint& position) {
-    // Search in reverse order (front-most first)
-    for (auto it = m_dropTargets.rbegin(); it != m_dropTargets.rend(); ++it) {
-        IDropTarget* target = *it;
-        NUIRect bounds = target->getDropBounds();
-        
-        if (position.x >= bounds.x && position.x < bounds.x + bounds.width &&
-            position.y >= bounds.y && position.y < bounds.y + bounds.height) {
-            return target;
+std::shared_ptr<IDropTarget> NUIDragDropManager::findTargetAt(const NUIPoint& position) {
+    auto it = m_dropTargets.begin();
+    while (it != m_dropTargets.end()) {
+        if (auto target = it->lock()) {
+            NUIRect bounds = target->getDropBounds();
+            
+            if (bounds.contains(position)) {
+                return target;
+            }
+            ++it;
+        } else {
+            // Clean up expired weak_ptr
+            it = m_dropTargets.erase(it);
         }
     }
     return nullptr;
 }
 
 void NUIDragDropManager::updateCurrentTarget(const NUIPoint& position) {
-    IDropTarget* newTarget = findTargetAt(position);
+    std::shared_ptr<IDropTarget> newTarget = findTargetAt(position);
     
-    if (newTarget != m_currentTarget) {
+    if (newTarget.get() != (m_currentTarget.expired() ? nullptr : m_currentTarget.lock().get())) {
         // Leave old target
-        if (m_currentTarget) {
-            m_currentTarget->onDragLeave();
+        if (auto oldTarget = m_currentTarget.lock()) {
+            oldTarget->onDragLeave();
         }
         
         m_currentTarget = newTarget;
         
         // Enter new target
-        if (m_currentTarget) {
-            m_currentFeedback = m_currentTarget->onDragEnter(m_dragData, position);
+        if (newTarget) {
+            m_currentFeedback = newTarget->onDragEnter(m_dragData, position);
         } else {
             m_currentFeedback = DropFeedback::None;
         }
-    } else if (m_currentTarget) {
+    } else if (auto currentTarget = m_currentTarget.lock()) {
         // Still over same target, update position
-        m_currentFeedback = m_currentTarget->onDragOver(m_dragData, position);
+        m_currentFeedback = currentTarget->onDragOver(m_dragData, position);
     }
 }
 

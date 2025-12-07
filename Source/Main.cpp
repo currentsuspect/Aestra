@@ -150,6 +150,25 @@ public:
 
         // Create transport bar (add before VU meter so VU renders on top)
         m_transportBar = std::make_shared<TransportBar>();
+        
+        // Wire up view toggle buttons
+        m_transportBar->setOnToggleMixer([this]() {
+            if (m_trackManagerUI) m_trackManagerUI->toggleMixer();
+        });
+        m_transportBar->setOnToggleSequencer([this]() {
+            if (m_trackManagerUI) m_trackManagerUI->toggleSequencer();
+        });
+        m_transportBar->setOnTogglePianoRoll([this]() {
+            if (m_trackManagerUI) m_trackManagerUI->togglePianoRoll();
+        });
+        m_transportBar->setOnTogglePlaylist([this]() {
+            if (m_trackManagerUI) {
+                bool isVisible = m_trackManagerUI->isVisible();
+                m_trackManagerUI->setVisible(!isVisible);
+                Log::info("Playlist visibility toggled: " + std::string(!isVisible ? "Visible" : "Hidden"));
+            }
+        });
+        
         addChild(m_transportBar);
 
         // Create compact audio meter - positioned inside transport bar (right side)
@@ -728,6 +747,9 @@ public:
                 Log::error("Failed to initialize UI renderer");
                 return false;
             }
+            
+            // Enable render caching by default for performance
+            m_renderer->setCachingEnabled(true);
             
             Log::info("UI renderer initialized");
             
@@ -1343,6 +1365,21 @@ private:
                 if (m_audioSettingsDialog) {
                     m_audioSettingsDialog->show();
                 }
+            } else if (key == static_cast<int>(KeyCode::M) && pressed) {
+                // M key to toggle Mixer
+                if (m_content && m_content->getTrackManagerUI()) {
+                    m_content->getTrackManagerUI()->toggleMixer();
+                }
+            } else if (key == static_cast<int>(KeyCode::S) && pressed) {
+                // S key to toggle Sequencer
+                if (m_content && m_content->getTrackManagerUI()) {
+                    m_content->getTrackManagerUI()->toggleSequencer();
+                }
+            } else if (key == static_cast<int>(KeyCode::R) && pressed) {
+                // R key to toggle Piano Roll
+                if (m_content && m_content->getTrackManagerUI()) {
+                    m_content->getTrackManagerUI()->togglePianoRoll();
+                }
             } else if (key == static_cast<int>(KeyCode::F) && pressed) {
                 // F key to cycle through FPS modes (Auto â†’ 30 â†’ 60 â†’ Auto)
                 auto currentMode = m_adaptiveFPS->getMode();
@@ -1395,16 +1432,17 @@ private:
                     dirtyTrackingEnabled = !dirtyTrackingEnabled;
                     m_renderer->setDirtyRegionTrackingEnabled(dirtyTrackingEnabled);
                 }
-            } else if (key == static_cast<int>(KeyCode::C) && pressed) {
-                // C key to toggle render caching
-                if (m_renderer) {
-                    static bool cachingEnabled = true;
-                    cachingEnabled = !cachingEnabled;
-                    m_renderer->setCachingEnabled(cachingEnabled);
-                }
             } else if (key == static_cast<int>(KeyCode::O) && pressed) {
                 // O key export profiler data to JSON
                 Profiler::getInstance().exportToJSON("nomad_profile.json");
+            } else if (key == static_cast<int>(KeyCode::Tab) && pressed) {
+                // Tab key to toggle playlist visibility
+                if (m_content && m_content->getTrackManagerUI()) {
+                    auto trackManagerUI = m_content->getTrackManagerUI();
+                    bool isVisible = trackManagerUI->isVisible();
+                    trackManagerUI->setVisible(!isVisible);
+                    Log::info("Playlist visibility toggled via shortcut");
+                }
             } else {
                 // Forward unhandled key events directly to the FileBrowser
                 if (m_content && pressed) {
@@ -1420,15 +1458,86 @@ private:
             }
         });
         
+        // Extended key callback with modifier support for clip manipulation
+        m_window->setKeyCallbackEx([this](int key, bool pressed, bool ctrl, bool shift, bool alt) {
+            if (!pressed) return;  // Only handle key press, not release
+            
+            // Clip manipulation shortcuts (require Ctrl modifier)
+            if (ctrl && m_content) {
+                auto trackManager = m_content->getTrackManagerUI();
+                if (!trackManager) return;
+                
+                if (key == static_cast<int>(KeyCode::C)) {
+                    // Ctrl+C - Copy selected clip
+                    trackManager->copySelectedClip();
+                    Log::info("Clip copied to clipboard");
+                } else if (key == static_cast<int>(KeyCode::X)) {
+                    // Ctrl+X - Cut selected clip
+                    trackManager->cutSelectedClip();
+                    Log::info("Clip cut to clipboard");
+                } else if (key == static_cast<int>(KeyCode::V)) {
+                    // Ctrl+V - Paste clip
+                    trackManager->pasteClip();
+                    Log::info("Clip pasted");
+                } else if (key == static_cast<int>(KeyCode::D)) {
+                    // Ctrl+D - Duplicate selected clip
+                    trackManager->duplicateSelectedClip();
+                    Log::info("Clip duplicated");
+                }
+            }
+            
+            // Split clip (S key without modifiers)
+            if (!ctrl && !shift && !alt && key == static_cast<int>(KeyCode::S) && m_content) {
+                auto trackManager = m_content->getTrackManagerUI();
+                if (trackManager) {
+                    trackManager->splitSelectedClipAtPlayhead();
+                    Log::info("Clip split at playhead");
+                }
+            }
+            
+            // Tool switching shortcuts (number keys 1-4)
+            if (!ctrl && !shift && !alt && m_content) {
+                auto trackManager = m_content->getTrackManagerUI();
+                if (trackManager) {
+                    // Use 1, 2, 3, 4 keys for tool switching
+                    if (key == static_cast<int>(KeyCode::Num1)) {
+                        trackManager->setActiveTool(Nomad::Audio::PlaylistTool::Select);
+                    } else if (key == static_cast<int>(KeyCode::Num2)) {
+                        trackManager->setActiveTool(Nomad::Audio::PlaylistTool::Split);
+                    } else if (key == static_cast<int>(KeyCode::Num3)) {
+                        trackManager->setActiveTool(Nomad::Audio::PlaylistTool::MultiSelect);
+                    } else if (key == static_cast<int>(KeyCode::Num4)) {
+                        trackManager->setActiveTool(Nomad::Audio::PlaylistTool::Loop);
+                    }
+                }
+            }
+        });
+        
         // Mouse move callback - signal activity to adaptive FPS
         m_window->setMouseMoveCallback([this](int x, int y) {
             m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::MouseMove);
+            m_lastMouseX = x;
+            m_lastMouseY = y;
+            
+            // Update drag manager position
+            auto& dragManager = NomadUI::NUIDragDropManager::getInstance();
+            if (dragManager.isDragging()) {
+                dragManager.updateDrag(NomadUI::NUIPoint(static_cast<float>(x), static_cast<float>(y)));
+            }
         });
         
         // Mouse button callback - signal activity to adaptive FPS
         m_window->setMouseButtonCallback([this](int button, bool pressed) {
             if (pressed) {
                 m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::MouseClick);
+            }
+            
+            // Global drag end handling on mouse release
+            if (!pressed && button == 0) { // Left mouse release
+                auto& dragManager = NomadUI::NUIDragDropManager::getInstance();
+                if (dragManager.isDragging()) {
+                    dragManager.endDrag(NomadUI::NUIPoint(static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY)));
+                }
             }
         });
         
@@ -1581,6 +1690,10 @@ private:
     bool m_audioInitialized;
     AudioStreamConfig m_mainStreamConfig;  // Store main audio stream configuration
     std::string m_projectPath{getAutosavePath()};
+    
+    // Mouse tracking for global drag-and-drop handling
+    int m_lastMouseX{0};
+    int m_lastMouseY{0};
 };
 
 /**

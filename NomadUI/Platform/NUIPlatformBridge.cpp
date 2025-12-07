@@ -150,6 +150,9 @@ void NUIPlatformBridge::setupEventBridges() {
         if (m_keyCallback) {
             m_keyCallback(convertKeyCode(key), pressed);
         }
+        if (m_keyCallbackEx) {
+            m_keyCallbackEx(convertKeyCode(key), pressed, mods.control, mods.shift, mods.alt);
+        }
     });
 
     // Resize
@@ -329,6 +332,10 @@ void NUIPlatformBridge::setMouseWheelCallback(std::function<void(float)> callbac
 
 void NUIPlatformBridge::setKeyCallback(std::function<void(int, bool)> callback) {
     m_keyCallback = callback;
+}
+
+void NUIPlatformBridge::setKeyCallbackEx(std::function<void(int, bool, bool ctrl, bool shift, bool alt)> callback) {
+    m_keyCallbackEx = callback;
 }
 
 void NUIPlatformBridge::setResizeCallback(std::function<void(int, int)> callback) {
