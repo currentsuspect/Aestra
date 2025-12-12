@@ -603,11 +603,16 @@ void Track::setColor(uint32_t color) {
 // Audio Parameters (thread-safe)
 void Track::setVolume(float volume) {
     volume = (volume < 0.0f) ? 0.0f : (volume > 2.0f) ? 2.0f : volume;  // 0% to 200%
-    m_volume.store(volume);
+    const float prev = m_volume.exchange(volume);
+    if (std::abs(prev - volume) < 1e-6f) {
+        return;
+    }
     if (m_mixerBus) {
         m_mixerBus->setGain(volume);
     }
-    if (m_onDataChanged) {
+    // Volume is RT-controlled via command queue; avoid forcing graph rebuilds for
+    // parameter-only changes while the engine is connected.
+    if (!m_commandSink && m_onDataChanged) {
         m_onDataChanged();
     }
     if (m_commandSink) {
@@ -621,11 +626,14 @@ void Track::setVolume(float volume) {
 
 void Track::setPan(float pan) {
     pan = (pan < -1.0f) ? -1.0f : (pan > 1.0f) ? 1.0f : pan;
-    m_pan.store(pan);
+    const float prev = m_pan.exchange(pan);
+    if (std::abs(prev - pan) < 1e-6f) {
+        return;
+    }
     if (m_mixerBus) {
         m_mixerBus->setPan(pan);
     }
-    if (m_onDataChanged) {
+    if (!m_commandSink && m_onDataChanged) {
         m_onDataChanged();
     }
     if (m_commandSink) {
@@ -638,11 +646,14 @@ void Track::setPan(float pan) {
 }
 
 void Track::setMute(bool mute) {
-    m_muted.store(mute);
+    const bool prev = m_muted.exchange(mute);
+    if (prev == mute) {
+        return;
+    }
     if (m_mixerBus) {
         m_mixerBus->setMute(mute);
     }
-    if (m_onDataChanged) {
+    if (!m_commandSink && m_onDataChanged) {
         m_onDataChanged();
     }
     if (m_commandSink) {
@@ -655,11 +666,14 @@ void Track::setMute(bool mute) {
 }
 
 void Track::setSolo(bool solo) {
-    m_soloed.store(solo);
+    const bool prev = m_soloed.exchange(solo);
+    if (prev == solo) {
+        return;
+    }
     if (m_mixerBus) {
         m_mixerBus->setSolo(solo);
     }
-    if (m_onDataChanged) {
+    if (!m_commandSink && m_onDataChanged) {
         m_onDataChanged();
     }
     if (m_commandSink) {
@@ -740,7 +754,8 @@ bool Track::loadAudioFile(const std::string& filePath) {
         bool infoOk = parseWavInfo(filePath, info);
         const uint64_t STREAM_THRESHOLD_BYTES = 50ull * 1024ull * 1024ull; // 50MB
 
-        if (infoOk) {
+        const bool enableStreaming = false;
+        if (enableStreaming && infoOk) {
             const uint64_t bytesPerFrame = (info.bitsPerSample / 8) * info.channels;
             const uint64_t totalFrames = bytesPerFrame ? (static_cast<uint64_t>(info.dataSize) / bytesPerFrame) : 0;
             bool streamableFormat = (info.audioFormat == 1 || info.audioFormat == 3) &&

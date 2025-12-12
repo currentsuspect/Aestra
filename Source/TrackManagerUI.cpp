@@ -1587,6 +1587,9 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     if (event.pressed && event.button == NomadUI::NUIMouseButton::Left && isInRuler) {
         // Start dragging playhead
         m_isDraggingPlayhead = true;
+        if (m_trackManager) {
+            m_trackManager->setUserScrubbing(true);
+        }
     }
     
     // Handle playhead dragging (continuous scrub)
@@ -1594,6 +1597,9 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         // Stop dragging on mouse release
         if (event.released && event.button == NomadUI::NUIMouseButton::Left) {
             m_isDraggingPlayhead = false;
+            if (m_trackManager) {
+                m_trackManager->setUserScrubbing(false);
+            }
             return true;
         }
         

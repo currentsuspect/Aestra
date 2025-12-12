@@ -334,8 +334,20 @@ bool WASAPISharedDriver::initializeAudioClient() {
                       << ", Default: " << defaultPeriodFrames 
                       << ", Max: " << maxPeriodFrames << " frames" << std::endl;
             
-            // Use minimum period for lowest latency
-            UINT32 targetPeriodFrames = minPeriodFrames;
+            // Choose a safe period: honor requested buffer size when possible.
+            // Using absolute minPeriodFrames in shared mode is often too aggressive
+            // and can cause underruns on real projects.
+            UINT32 targetPeriodFrames = m_config.bufferSize;
+            if (targetPeriodFrames < minPeriodFrames) targetPeriodFrames = minPeriodFrames;
+            if (targetPeriodFrames > maxPeriodFrames) targetPeriodFrames = maxPeriodFrames;
+
+            // Align to the device's fundamental period if required.
+            if (fundamentalPeriodFrames > 0) {
+                UINT32 aligned = ((targetPeriodFrames + fundamentalPeriodFrames - 1) / fundamentalPeriodFrames) * fundamentalPeriodFrames;
+                if (aligned <= maxPeriodFrames) {
+                    targetPeriodFrames = aligned;
+                }
+            }
             
             // Create event for audio thread synchronization
             m_audioEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -723,8 +735,11 @@ void WASAPISharedDriver::updateStatistics(double callbackTimeUs) {
         m_statistics.cpuLoadPercent = (callbackTimeUs / bufferDurationUs) * 100.0;
     }
 
-    // Update measured latency
-    m_statistics.actualLatencyMs = getStreamLatency() * 1000.0;
+    // Avoid COM calls on the RT thread. Approximate latency from buffer period.
+    if (m_waveFormat && m_bufferFrameCount > 0) {
+        m_statistics.actualLatencyMs =
+            (static_cast<double>(m_bufferFrameCount) * 1000.0) / m_waveFormat->nSamplesPerSec;
+    }
 }
 
 } // namespace Audio

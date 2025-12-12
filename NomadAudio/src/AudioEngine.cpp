@@ -1,6 +1,5 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioEngine.h"
-#include <chrono>
 #include <cmath>
 #include <algorithm>
 #include <cstring>
@@ -82,8 +81,6 @@ void AudioEngine::processBlock(float* outputBuffer,
         return;
     }
 
-    // Start timing (optional - can be removed for lower latency)
-    const auto startNs = std::chrono::high_resolution_clock::now();
     const bool wasPlaying = m_transportPlaying;
 
     // Process commands FIRST (lock-free)
@@ -130,34 +127,37 @@ void AudioEngine::processBlock(float* outputBuffer,
     
     const double* src = m_masterBufferD.data();
     
+    const bool safety = m_safetyProcessingEnabled;
     // Optimized output loop - minimal branches
     for (uint32_t i = 0; i < numFrames; ++i) {
         // Read from double buffer
         double L = src[i * 2] * gain;
         double R = src[i * 2 + 1] * gain;
-        
-        // DC blocking (inline for speed)
-        {
-            double y = L - m_dcBlockerL.x1 + DCBlockerD::R * m_dcBlockerL.y1;
-            m_dcBlockerL.x1 = L;
-            m_dcBlockerL.y1 = y;
-            L = y;
+
+        if (safety) {
+            // DC blocking
+            {
+                double y = L - m_dcBlockerL.x1 + DCBlockerD::R * m_dcBlockerL.y1;
+                m_dcBlockerL.x1 = L;
+                m_dcBlockerL.y1 = y;
+                L = y;
+            }
+            {
+                double y = R - m_dcBlockerR.x1 + DCBlockerD::R * m_dcBlockerR.y1;
+                m_dcBlockerR.x1 = R;
+                m_dcBlockerR.y1 = y;
+                R = y;
+            }
+
+            // Soft safety clip (disabled by default; enable for debugging only)
+            if (L > 1.5) L = 1.0;
+            else if (L < -1.5) L = -1.0;
+            else { const double x2 = L * L; L = L * (27.0 + x2) / (27.0 + 9.0 * x2); }
+
+            if (R > 1.5) R = 1.0;
+            else if (R < -1.5) R = -1.0;
+            else { const double x2 = R * R; R = R * (27.0 + x2) / (27.0 + 9.0 * x2); }
         }
-        {
-            double y = R - m_dcBlockerR.x1 + DCBlockerD::R * m_dcBlockerR.y1;
-            m_dcBlockerR.x1 = R;
-            m_dcBlockerR.y1 = y;
-            R = y;
-        }
-        
-        // Soft clipping (inline)
-        if (L > 1.5) L = 1.0;
-        else if (L < -1.5) L = -1.0;
-        else { const double x2 = L * L; L = L * (27.0 + x2) / (27.0 + 9.0 * x2); }
-        
-        if (R > 1.5) R = 1.0;
-        else if (R < -1.5) R = -1.0;
-        else { const double x2 = R * R; R = R * (27.0 + x2) / (27.0 + 9.0 * x2); }
         
         // Track peaks
         const double absL = (L >= 0.0) ? L : -L;
@@ -215,17 +215,8 @@ void AudioEngine::processBlock(float* outputBuffer,
         m_globalSamplePos += numFrames;
     }
 
-    // Telemetry
+    // Telemetry (lightweight counter only on RT thread)
     m_telemetry.blocksProcessed.fetch_add(1, std::memory_order_relaxed);
-    const auto endNs = std::chrono::high_resolution_clock::now();
-    const uint64_t deltaNs = static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::nanoseconds>(endNs - startNs).count());
-    m_telemetry.lastCallbackNs.store(deltaNs, std::memory_order_relaxed);
-    
-    uint64_t prevMax = m_telemetry.maxCallbackNs.load(std::memory_order_relaxed);
-    while (deltaNs > prevMax && 
-           !m_telemetry.maxCallbackNs.compare_exchange_weak(prevMax, deltaNs, std::memory_order_relaxed)) {
-    }
 }
 
 void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
@@ -307,6 +298,16 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
         const bool muted = track.mute || state.mute;
         const bool soloed = track.solo || state.solo;
         if (muted || (anySolo && !soloed)) {
+            continue;
+        }
+
+        // Empty tracks should not touch RT buffers. Still keep param state updated
+        // so automation is consistent when clips appear later.
+        if (track.clips.empty()) {
+            state.volume.setTarget(static_cast<double>(track.volume));
+            state.pan.setTarget(static_cast<double>(track.pan));
+            state.volume.snap();
+            state.pan.snap();
             continue;
         }
         

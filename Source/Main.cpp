@@ -851,11 +851,16 @@ public:
                             Log::info("Audio stream opened");
                             
                             // Start the audio stream
-                            if (m_audioManager->startStream()) {
-                                Log::info("Audio stream started");
-                                m_audioInitialized = true;
-                                
-                                double actualRate = static_cast<double>(m_audioManager->getStreamSampleRate());
+	                            if (m_audioManager->startStream()) {
+	                                Log::info("Audio stream started");
+	                                m_audioInitialized = true;
+	                                
+	                                // Enable auto-buffer scaling to recover from underruns.
+	                                // This runs on the main thread and will increase buffer size
+	                                // if the driver reports repeated underruns.
+	                                m_audioManager->setAutoBufferScaling(true, 5);
+	                                
+	                                double actualRate = static_cast<double>(m_audioManager->getStreamSampleRate());
                                 if (actualRate <= 0.0) {
                                     actualRate = static_cast<double>(config.sampleRate);
                                 }
@@ -1260,9 +1265,10 @@ public:
         }
 
         // Main event loop
-        double deltaTime = 0.0; // Declare outside so it's visible in all zones
-        double autoSaveTimer = 0.0; // Timer for auto-save (in seconds)
-        const double autoSaveInterval = 60.0; // Auto-save every 60 seconds
+	        double deltaTime = 0.0; // Declare outside so it's visible in all zones
+	        double autoSaveTimer = 0.0; // Timer for auto-save (in seconds)
+	        const double autoSaveInterval = 60.0; // Auto-save every 60 seconds
+	        double underrunCheckTimer = 0.0; // Periodic underrun check
         
         while (m_running && m_window->processEvents()) {
             // Begin profiler frame
@@ -1304,14 +1310,18 @@ public:
                     // Only sync while UI transport is actually in Playing state.
                     // This prevents a just-triggered Stop from being overwritten
                     // by a few more audio blocks before the RT thread processes it.
-                    if (m_audioEngine->isTransportPlaying() &&
+                    auto trackManager = m_content->getTrackManager();
+                    const bool userScrubbing = trackManager && trackManager->isUserScrubbing();
+
+                    if (!userScrubbing &&
+                        m_audioEngine->isTransportPlaying() &&
                         m_content->getTransportBar()->getState() == TransportState::Playing) {
                         static double lastPosition = 0.0;
                         double currentPosition = m_audioEngine->getPositionSeconds();
                         
                         // Sync TrackManager without feeding seeks back into the engine.
-                        if (m_content->getTrackManager()) {
-                            m_content->getTrackManager()->syncPositionFromEngine(currentPosition);
+                        if (trackManager) {
+                            trackManager->syncPositionFromEngine(currentPosition);
                         }
                         
                         // Detect loop (position jumped backward significantly)
@@ -1331,7 +1341,9 @@ public:
                     m_content->updateSoundPreview();
                 }
 
-                // Rebuild audio graph for engine when track data changes
+                // Rebuild audio graph for engine when track data changes.
+                // IMPORTANT: while playing, do not push transport samplePos from this path,
+                // otherwise we can create tiny unintended seeks -> audible crackles.
                 if (m_audioEngine && m_content && m_content->getTrackManager() &&
                     m_content->getTrackManager()->consumeGraphDirty()) {
                     double graphSampleRate = static_cast<double>(m_mainStreamConfig.sampleRate);
@@ -1343,19 +1355,21 @@ public:
                     }
                     auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), graphSampleRate);
                     m_audioEngine->setGraph(graph);
-                    // Sync transport/sample position to engine
-                    AudioQueueCommand cmd;
-                    cmd.type = AudioQueueCommandType::SetTransportState;
-                    bool playing = m_content->getTrackManager()->isPlaying();
-                    cmd.value1 = playing ? 1.0f : 0.0f;
-                    double posSeconds = m_content->getTrackManager()->getPosition();
-                    cmd.samplePos = static_cast<uint64_t>(posSeconds * graphSampleRate);
-                    m_audioEngine->commandQueue().push(cmd);
+                    const bool playing = m_content->getTrackManager()->isPlaying();
+                    if (!playing) {
+                        // When stopped, keep engine position aligned to UI position.
+                        AudioQueueCommand cmd;
+                        cmd.type = AudioQueueCommandType::SetTransportState;
+                        cmd.value1 = 0.0f;
+                        double posSeconds = m_content->getTrackManager()->getPosition();
+                        cmd.samplePos = static_cast<uint64_t>(posSeconds * graphSampleRate);
+                        m_audioEngine->commandQueue().push(cmd);
+                    }
                 }
                 
-                // Auto-save check (only when modified and not playing to avoid audio glitches)
-                autoSaveTimer += deltaTime;
-                if (autoSaveTimer >= autoSaveInterval) {
+	                // Auto-save check (only when modified and not playing to avoid audio glitches)
+	                autoSaveTimer += deltaTime;
+	                if (autoSaveTimer >= autoSaveInterval) {
                     autoSaveTimer = 0.0;
                     
                     if (m_content && m_content->getTrackManager()) {
@@ -1370,8 +1384,17 @@ public:
                                 Log::info("[AutoSave] Project saved successfully");
                             } else {
                                 Log::warning("[AutoSave] Failed to save project");
-                            }
-                        }
+	                }
+	                
+	                // Periodically check driver underruns and auto-scale buffer if needed.
+	                underrunCheckTimer += deltaTime;
+	                if (underrunCheckTimer >= 1.0) {
+	                    underrunCheckTimer = 0.0;
+	                    if (m_audioManager) {
+	                        m_audioManager->checkAndAutoScaleBuffer();
+	                    }
+	                }
+	            }
                     }
                 }
             }

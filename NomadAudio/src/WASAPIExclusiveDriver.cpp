@@ -972,14 +972,6 @@ void WASAPIExclusiveDriver::audioThreadProc() {
             }
         }
         
-        // Apply peak limiter to prevent clipping (safety net)
-        for (uint32_t i = 0; i < m_bufferFrameCount * m_config.numOutputChannels; ++i) {
-            float sample = userBuffer[i];
-            // Hard limit to ±1.0 to prevent distortion
-            if (sample > 1.0f) userBuffer[i] = 1.0f;
-            else if (sample < -1.0f) userBuffer[i] = -1.0f;
-        }
-
         // Convert and copy to WASAPI buffer based on format
         if (m_waveFormat->wFormatTag == WAVE_FORMAT_IEEE_FLOAT) {
             // 32-bit float - direct copy

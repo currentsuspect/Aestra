@@ -63,6 +63,8 @@ public:
     void setMasterGain(float gain) { m_masterGainTarget = gain; }
     float getMasterGain() const { return m_masterGainTarget; }
     void setHeadroom(float db) { m_headroomLinear = std::pow(10.0f, db / 20.0f); }
+    void setSafetyProcessingEnabled(bool enabled) { m_safetyProcessingEnabled = enabled; }
+    bool isSafetyProcessingEnabled() const { return m_safetyProcessingEnabled; }
 
 private:
     static constexpr size_t kMaxTracks = 64;
@@ -139,6 +141,7 @@ private:
     SmoothedParamD m_smoothedMasterGain;
     DCBlockerD m_dcBlockerL;
     DCBlockerD m_dcBlockerR;
+    bool m_safetyProcessingEnabled{false};
     
     // Peak detection
     float m_peakL{0.0f};

@@ -92,6 +92,10 @@ public:
     void syncPositionFromEngine(double seconds);
     double getPosition() const { return m_positionSeconds.load(); }
 
+    // User scrubbing state (used to prevent engine->UI sync stomping seeks).
+    void setUserScrubbing(bool scrubbing) { m_userScrubbing.store(scrubbing, std::memory_order_release); }
+    bool isUserScrubbing() const { return m_userScrubbing.load(std::memory_order_acquire); }
+
     double getTotalDuration() const;
     // Max extent considering track start offsets
     double getMaxTimelineExtent() const;
@@ -150,6 +154,7 @@ private:
     std::atomic<bool> m_isPlaying{false};
     std::atomic<bool> m_isRecording{false};
     std::atomic<double> m_positionSeconds{0.0};
+    std::atomic<bool> m_userScrubbing{false};
 
     // Track ID counter
     std::atomic<uint32_t> m_nextTrackId{1};
