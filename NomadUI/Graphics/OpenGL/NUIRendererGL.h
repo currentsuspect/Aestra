@@ -97,6 +97,7 @@ public:
     void drawText(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) override;
     void drawTextCentered(const std::string& text, const NUIRect& rect, float fontSize, const NUIColor& color) override;
     NUISize measureText(const std::string& text, float fontSize) override;
+    NUIRenderer::FontMetrics getFontMetrics(float fontSize) const override;
     
     // ========================================================================
     // Texture/Image Drawing

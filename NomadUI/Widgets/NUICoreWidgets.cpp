@@ -2,7 +2,9 @@
 #include "NUICoreWidgets.h"
 
 #include "../Graphics/NUIRenderer.h"
+#include "../Core/NUIThemeSystem.h"
 #include <algorithm>
+#include <cmath>
 
 namespace NomadUI {
 
@@ -293,20 +295,80 @@ NUITabBar::NUITabBar() = default;
 
 void NUITabBar::onRender(NUIRenderer& renderer)
 {
-    (void)renderer;
+    if (!isVisible()) return;
+
+    const auto bounds = getBounds();
+    if (bounds.isEmpty()) return;
+
+    auto& themeManager = NUIThemeManager::getInstance();
+
+    const auto bg = themeManager.getColor("backgroundSecondary");
+    const auto border = themeManager.getColor("border").withAlpha(0.6f);
+    const auto active = themeManager.getColor("primary").withAlpha(0.35f);
+    const auto hover = themeManager.getColor("surfaceRaised").withAlpha(0.55f);
+    const auto textActive = themeManager.getColor("textPrimary");
+    const auto textInactive = themeManager.getColor("textSecondary").withAlpha(0.9f);
+
+    const float radius = themeManager.getRadius("m");
+    renderer.fillRoundedRect(bounds, radius, bg);
+    renderer.strokeRoundedRect(bounds, radius, 1.0f, border);
+
+    if (tabs_.empty()) {
+        return;
+    }
+
+    const float tabW = bounds.width / static_cast<float>(tabs_.size());
+    const float tabH = bounds.height;
+
+    const float fontSize = themeManager.getFontSize("m");
+
+    for (size_t i = 0; i < tabs_.size(); ++i) {
+        const auto& tab = tabs_[i];
+        const bool isActive = (tab.id == activeTabId_);
+        const bool isHovered = (static_cast<int>(i) == hoveredIndex_) && !isActive;
+
+        NUIRect tabRect(bounds.x + tabW * static_cast<float>(i), bounds.y, tabW, tabH);
+
+        // Inset to avoid drawing over the outer stroke and create separation.
+        const float inset = 2.0f;
+        tabRect.x += inset;
+        tabRect.y += inset;
+        tabRect.width -= inset * 2.0f;
+        tabRect.height -= inset * 2.0f;
+
+        if (isActive) {
+            renderer.fillRoundedRect(tabRect, radius - inset, active);
+        } else if (isHovered) {
+            renderer.fillRoundedRect(tabRect, radius - inset, hover);
+        }
+
+        const auto textColor = isActive ? textActive : textInactive;
+        const auto textSize = renderer.measureText(tab.label, fontSize);
+        const float textX = std::round(tabRect.x + (tabRect.width - textSize.width) * 0.5f);
+        const float textY = std::round(tabRect.y + (tabRect.height - textSize.height) * 0.5f);
+        renderer.drawText(tab.label, NUIPoint(textX, textY), fontSize, textColor);
+    }
 }
 
 bool NUITabBar::onMouseEvent(const NUIMouseEvent& event)
 {
-    if (event.pressed && event.button == NUIMouseButton::Left)
-    {
-        const int index = hitTestTab(static_cast<int>(event.position.x), static_cast<int>(event.position.y));
-        if (index >= 0 && index < static_cast<int>(tabs_.size()))
-        {
+    if (!isEnabled() || !isVisible()) {
+        return false;
+    }
+
+    const int index = hitTestTab(static_cast<int>(event.position.x), static_cast<int>(event.position.y));
+    if (index != hoveredIndex_) {
+        hoveredIndex_ = index;
+        repaint();
+    }
+
+    if (event.pressed && event.button == NUIMouseButton::Left) {
+        if (index >= 0 && index < static_cast<int>(tabs_.size())) {
             setActiveTab(tabs_[index].id);
             return true;
         }
     }
+
     return false;
 }
 
@@ -361,7 +423,9 @@ void NUITabBar::setOnTabChanged(std::function<void(const std::string&)> callback
 
 int NUITabBar::hitTestTab(int x, int y) const
 {
-    (void)y;
+    if (!containsPoint(NUIPoint(static_cast<float>(x), static_cast<float>(y)))) {
+        return -1;
+    }
     if (tabs_.empty())
         return -1;
     const float tabWidth = getWidth() / static_cast<float>(tabs_.size());

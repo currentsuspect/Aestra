@@ -88,9 +88,16 @@ private:
     void updateSampleRateList();
     void updateBufferSizeList();
     void updateASIOInfo();
+    void updateLatencyEstimate();
     void loadCurrentSettings();
     void applySettings();
     void cancelSettings();
+
+    void captureOriginalQualityStateFromUi();
+    void restoreOriginalUiState();
+    bool hasUnsavedChanges() const;
+    void updateApplyButtonState();
+    void markSettingsChanged();
     
     // Test sound functionality
     void playTestSound();
@@ -159,6 +166,7 @@ private:
     std::shared_ptr<NomadUI::NUILabel> m_deviceLabel;
     std::shared_ptr<NomadUI::NUILabel> m_sampleRateLabel;
     std::shared_ptr<NomadUI::NUILabel> m_bufferSizeLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_latencyLabel;
     std::shared_ptr<NomadUI::NUILabel> m_asioInfoLabel;
     std::shared_ptr<NomadUI::NUILabel> m_qualitySectionLabel;
     std::shared_ptr<NomadUI::NUILabel> m_qualityPresetLabel;
@@ -182,6 +190,20 @@ private:
     uint32_t m_originalDeviceId;
     uint32_t m_originalSampleRate;
     uint32_t m_originalBufferSize;
+
+    // Original quality/UI state (for dirty/cancel)
+    int m_originalQualityPresetIndex = -1;
+    int m_originalResamplingIndex = -1;
+    int m_originalDitheringIndex = -1;
+    bool m_originalDCRemoval = false;
+    bool m_originalSoftClipping = false;
+    bool m_originalPrecision64Bit = false;
+    bool m_originalMultiThreading = false;
+    int m_originalThreadCountIndex = -1;
+    int m_originalNomadModeIndex = -1;
+
+    bool m_isApplyingQualityPreset = false;
+    bool m_suppressDirtyStateUpdates = false;
     
     // Test sound state (simple flag + phase, tone generated in audio callback)
     bool m_isPlayingTestSound;
@@ -202,9 +224,8 @@ private:
     bool m_cacheInvalidated;
     bool m_isRenderingToCache; // Prevent invalidation loops during cache rendering
     
-    // Tab system (using buttons instead of NUITabBar since it doesn't render)
-    std::shared_ptr<NomadUI::NUIButton> m_settingsTabButton;
-    std::shared_ptr<NomadUI::NUIButton> m_infoTabButton;
+    // Tab system
+    std::shared_ptr<NomadUI::NUITabBar> m_tabBar;
     std::string m_activeTab; // "settings" or "info"
     
     // Info tab content

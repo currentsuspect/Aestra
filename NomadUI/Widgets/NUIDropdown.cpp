@@ -121,8 +121,9 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
 
     // Draw text (vertical center with truncation to prevent bleeding)
     std::string displayText = getSelectedText();
-    float padding = 12.0f;
-    float arrowSpace = 40.0f; // Large buffer for arrow area
+    // Slightly tighter padding/arrow reserve so selected text truncates less often.
+    float padding = 10.0f;
+    float arrowSpace = 26.0f; // Reserve enough for chevron + breathing room
 
     NUIRect textBounds = bounds;
     textBounds.x += padding;
@@ -137,7 +138,7 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
 
     // Truncate text with ellipsis if it's too long
     if (textBounds.width > 20.0f) {
-        float maxWidth = textBounds.width - 10.0f; // Extra safety margin
+        float maxWidth = textBounds.width - 4.0f; // Small safety margin
         
         // Measure text width
         NUISize textSize = renderer.measureText(displayText, fontSize);

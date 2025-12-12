@@ -55,13 +55,13 @@ void ConfirmationDialog::handleResponse(DialogResponse response) {
 void ConfirmationDialog::calculateLayout() {
     NomadUI::NUIRect parentBounds = getBounds();
     
-    // Dialog dimensions - wider for better button spacing
-    const float dialogWidth = 420.0f;
-    const float dialogHeight = 160.0f;
-    const float buttonWidth = 90.0f;
-    const float buttonHeight = 34.0f;
-    const float buttonSpacing = 10.0f;
-    const float buttonMargin = 24.0f;
+	    // Dialog dimensions - wider for better button spacing
+	    const float dialogWidth = 420.0f;
+	    const float dialogHeight = 160.0f;
+	    const float buttonWidth = 110.0f;
+	    const float buttonHeight = 34.0f;
+	    const float buttonSpacing = 10.0f;
+	    const float buttonMargin = 24.0f;
     
     // Center dialog in parent
     m_dialogRect.x = parentBounds.x + (parentBounds.width - dialogWidth) / 2.0f;
@@ -69,10 +69,10 @@ void ConfirmationDialog::calculateLayout() {
     m_dialogRect.width = dialogWidth;
     m_dialogRect.height = dialogHeight;
     
-    // Calculate button positions (right-aligned at bottom)
-    float totalButtonsWidth = 3 * buttonWidth + 2 * buttonSpacing;
-    float buttonsStartX = m_dialogRect.x + dialogWidth - buttonMargin - totalButtonsWidth;
-    float buttonY = m_dialogRect.y + dialogHeight - buttonMargin - buttonHeight;
+	    // Calculate button positions (centered at bottom)
+	    float totalButtonsWidth = 3 * buttonWidth + 2 * buttonSpacing;
+	    float buttonsStartX = m_dialogRect.x + (dialogWidth - totalButtonsWidth) * 0.5f;
+	    float buttonY = m_dialogRect.y + dialogHeight - buttonMargin - buttonHeight;
     
     m_saveButtonRect = {buttonsStartX, buttonY, buttonWidth, buttonHeight};
     m_dontSaveButtonRect = {buttonsStartX + buttonWidth + buttonSpacing, buttonY, buttonWidth, buttonHeight};

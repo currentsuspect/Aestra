@@ -662,13 +662,14 @@ void NUIScrollbar::drawLeftArrow(NUIRenderer& renderer)
     {
         arrowColor = arrowPressedColor_;
     }
-    else if (isHovered_)
+    else if (hoveredPart_ == Part::LeftArrow)
     {
         arrowColor = arrowHoverColor_;
     }
     
     // Draw arrow background
-    renderer.fillRoundedRect(arrowRect, borderRadius_, arrowColor.withAlpha(0.3f));
+    const float bgAlpha = std::clamp(arrowColor.a * 0.4f, 0.0f, 1.0f);
+    renderer.fillRoundedRect(arrowRect, borderRadius_, arrowColor.withAlpha(bgAlpha));
     
     // Draw SVG arrow icon instead of geometric shapes (Bug #11: Scrollbar Icons)
     if (upArrowIcon_) {
@@ -688,13 +689,14 @@ void NUIScrollbar::drawRightArrow(NUIRenderer& renderer)
     {
         arrowColor = arrowPressedColor_;
     }
-    else if (isHovered_)
+    else if (hoveredPart_ == Part::RightArrow)
     {
         arrowColor = arrowHoverColor_;
     }
     
     // Draw arrow background
-    renderer.fillRoundedRect(arrowRect, borderRadius_, arrowColor.withAlpha(0.3f));
+    const float bgAlpha = std::clamp(arrowColor.a * 0.4f, 0.0f, 1.0f);
+    renderer.fillRoundedRect(arrowRect, borderRadius_, arrowColor.withAlpha(bgAlpha));
     
     // Draw SVG arrow icon instead of geometric shapes (Bug #11: Scrollbar Icons)
     if (downArrowIcon_) {
@@ -978,10 +980,12 @@ void NUIScrollbar::drawArrowIcon(NUIRenderer& renderer, const NUIRect& rect, flo
 
 void NUIScrollbar::drawEnhancedTrack(NUIRenderer& renderer, const NUIRect& trackRect)
 {
-    // Normal 16px track with subtle dark gradient
-    NUIColor trackBase = NUIColor(0.15f, 0.15f, 0.18f, 1.0f); // Dark charcoal
-    NUIColor trackTop = trackBase.lightened(0.05f);
-    NUIColor trackBottom = trackBase.darkened(0.1f);
+    // Track: subtle gradient based on configured color
+    const float trackAlphaMul = (isHovered_ || isDragging_) ? 0.18f : 0.08f;
+    NUIColor trackBase = trackColor_.withAlpha(std::clamp(trackColor_.a * trackAlphaMul, 0.0f, 1.0f));
+    NUIColor trackTop = trackBase.lightened(0.03f);
+    NUIColor trackBottom = trackBase.darkened(0.06f);
+    const float radius = std::min(trackRect.width, trackRect.height) * 0.5f;
     
     // Draw gradient track background (16px wide)
     for (int i = 0; i < 4; ++i)
@@ -991,7 +995,7 @@ void NUIScrollbar::drawEnhancedTrack(NUIRenderer& renderer, const NUIRect& track
         NUIRect gradientRect = trackRect;
         gradientRect.y += i * 0.5f;
         gradientRect.height -= i * 0.5f;
-        renderer.fillRoundedRect(gradientRect, 8.0f, gradientColor); // 8px radius for 16px track
+        renderer.fillRoundedRect(gradientRect, radius, gradientColor);
     }
     
     // Very subtle inner highlight
@@ -1000,47 +1004,48 @@ void NUIScrollbar::drawEnhancedTrack(NUIRenderer& renderer, const NUIRect& track
     highlightRect.y += 1.0f;
     highlightRect.width -= 2.0f;
     highlightRect.height = trackRect.height * 0.3f;
-    renderer.fillRoundedRect(highlightRect, 7.0f, trackTop.withAlpha(0.2f));
+    const float highlightAlphaMul = (isHovered_ || isDragging_) ? 0.35f : 0.25f;
+    renderer.fillRoundedRect(highlightRect, std::max(0.0f, radius - 1.0f),
+                             trackTop.withAlpha(trackTop.a * highlightAlphaMul));
 }
 
 void NUIScrollbar::drawEnhancedThumb(NUIRenderer& renderer, const NUIRect& thumbRect)
 {
-    // Normal 16px thumb with faded white gradient and white markers
-    NUIColor thumbBase = NUIColor(0.8f, 0.8f, 0.8f, 0.8f); // Faded white gradient base
-    NUIColor thumbTop = thumbBase.lightened(0.1f);
-    NUIColor thumbBottom = thumbBase.darkened(0.1f);
-    
-    // Calculate hover scale (subtle)
-    float scale = 1.0f;
-    if (isPressed_ && pressedPart_ == Part::Thumb)
-    {
-        scale = 0.98f; // Very subtle press effect
+    // Thumb: subtle gradient based on configured colors
+    const bool thumbPressed = (isPressed_ && pressedPart_ == Part::Thumb) || (isDragging_ && pressedPart_ == Part::Thumb);
+    const bool thumbHot = thumbPressed || (hoveredPart_ == Part::Thumb);
+
+    NUIColor thumbBase = thumbColor_;
+    if (thumbPressed) {
+        thumbBase = thumbPressedColor_;
+    } else if (thumbHot) {
+        thumbBase = thumbHoverColor_;
     }
-    else if (isHovered_)
-    {
-        scale = 1.02f; // Very subtle scale up on hover
+    NUIColor thumbTop = thumbBase.lightened(0.06f);
+    NUIColor thumbBottom = thumbBase.darkened(0.06f);
+
+    // Thickness affordance: slightly narrower by default, slightly wider on hover.
+    NUIRect visualThumb = thumbRect;
+    const float inset = thumbHot ? 1.0f : 2.0f;
+    if (orientation_ == Orientation::Vertical) {
+        visualThumb.x += inset;
+        visualThumb.width = std::max(0.0f, visualThumb.width - inset * 2.0f);
+    } else {
+        visualThumb.y += inset;
+        visualThumb.height = std::max(0.0f, visualThumb.height - inset * 2.0f);
     }
-    
-    // Apply scaling
-    NUIRect scaledThumb = thumbRect;
-    if (scale != 1.0f)
-    {
-        float scaleOffset = (1.0f - scale) * 0.5f;
-        scaledThumb.x += thumbRect.width * scaleOffset;
-        scaledThumb.y += thumbRect.height * scaleOffset;
-        scaledThumb.width *= scale;
-        scaledThumb.height *= scale;
-    }
+
+    const float radius = std::min(visualThumb.width, visualThumb.height) * 0.5f;
     
     // Faded white gradient thumb (16px wide)
     for (int i = 0; i < 4; ++i)
     {
         float factor = static_cast<float>(i) / 3.0f;
         NUIColor gradientColor = NUIColor::lerp(thumbTop, thumbBottom, factor);
-        NUIRect gradientRect = scaledThumb;
+        NUIRect gradientRect = visualThumb;
         gradientRect.y += i * 0.5f;
         gradientRect.height -= i * 0.5f;
-        renderer.fillRoundedRect(gradientRect, 8.0f, gradientColor); // 8px radius for 16px thumb
+        renderer.fillRoundedRect(gradientRect, radius, gradientColor);
     }
     
     // White markers within the thumb (orientation-aware)
@@ -1052,16 +1057,17 @@ void NUIScrollbar::drawEnhancedThumb(NUIRenderer& renderer, const NUIRect& thumb
         float totalMarkerHeight = (markerHeight * 2) + markerSpacing;
         
         // Center the markers vertically in the thumb
-        float markerY = scaledThumb.y + (scaledThumb.height - totalMarkerHeight) * 0.5f;
+        float markerY = visualThumb.y + (visualThumb.height - totalMarkerHeight) * 0.5f;
         
         // Top horizontal white marker
-        NUIRect topMarker(scaledThumb.x + 2.0f, markerY, scaledThumb.width - 4.0f, markerHeight);
-        renderer.fillRoundedRect(topMarker, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
+        NUIRect topMarker(visualThumb.x + 2.0f, markerY, visualThumb.width - 4.0f, markerHeight);
+        const float markerAlpha = thumbHot ? 0.24f : 0.12f;
+        renderer.fillRoundedRect(topMarker, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, markerAlpha));
         
         // Bottom horizontal white marker
-        NUIRect bottomMarker(scaledThumb.x + 2.0f, markerY + markerHeight + markerSpacing, 
-                             scaledThumb.width - 4.0f, markerHeight);
-        renderer.fillRoundedRect(bottomMarker, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
+        NUIRect bottomMarker(visualThumb.x + 2.0f, markerY + markerHeight + markerSpacing, 
+                             visualThumb.width - 4.0f, markerHeight);
+        renderer.fillRoundedRect(bottomMarker, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, markerAlpha));
     }
     else
     {
@@ -1071,29 +1077,31 @@ void NUIScrollbar::drawEnhancedThumb(NUIRenderer& renderer, const NUIRect& thumb
         float totalMarkerWidth = (markerWidth * 2) + markerSpacing;
         
         // Center the markers horizontally in the thumb
-        float markerX = scaledThumb.x + (scaledThumb.width - totalMarkerWidth) * 0.5f;
+        float markerX = visualThumb.x + (visualThumb.width - totalMarkerWidth) * 0.5f;
         
         // Left vertical white marker
-        NUIRect leftMarker(markerX, scaledThumb.y + 2.0f, markerWidth, scaledThumb.height - 4.0f);
-        renderer.fillRoundedRect(leftMarker, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
+        NUIRect leftMarker(markerX, visualThumb.y + 2.0f, markerWidth, visualThumb.height - 4.0f);
+        const float markerAlpha = thumbHot ? 0.24f : 0.12f;
+        renderer.fillRoundedRect(leftMarker, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, markerAlpha));
         
         // Right vertical white marker
-        NUIRect rightMarker(markerX + markerWidth + markerSpacing, scaledThumb.y + 2.0f, 
-                            markerWidth, scaledThumb.height - 4.0f);
-        renderer.fillRoundedRect(rightMarker, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
+        NUIRect rightMarker(markerX + markerWidth + markerSpacing, visualThumb.y + 2.0f, 
+                            markerWidth, visualThumb.height - 4.0f);
+        renderer.fillRoundedRect(rightMarker, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, markerAlpha));
     }
     
     // Subtle inner highlight
-    NUIRect highlightRect = scaledThumb;
+    NUIRect highlightRect = visualThumb;
     highlightRect.x += 1.0f;
     highlightRect.y += 1.0f;
     highlightRect.width -= 2.0f;
-    highlightRect.height = scaledThumb.height * 0.4f;
-    renderer.fillRoundedRect(highlightRect, 7.0f, thumbTop.withAlpha(0.3f));
+    highlightRect.height = visualThumb.height * 0.4f;
+    renderer.fillRoundedRect(highlightRect, std::max(0.0f, radius - 1.0f),
+                             thumbTop.withAlpha(thumbTop.a * 0.25f));
     
     // Very subtle border
-    renderer.strokeRoundedRect(scaledThumb, 8.0f, 1.0f, 
-        thumbBase.lightened(0.1f).withAlpha(0.6f));
+    renderer.strokeRoundedRect(visualThumb, radius, 1.0f,
+        thumbBase.lightened(0.05f).withAlpha(std::clamp(thumbBase.a * (thumbHot ? 0.55f : 0.45f), 0.0f, 1.0f)));
 }
 
 } // namespace NomadUI

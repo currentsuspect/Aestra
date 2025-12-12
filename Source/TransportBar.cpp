@@ -285,6 +285,10 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     float spacing = layout.transportButtonSpacing;
     float centerOffsetY = (bounds.height - buttonSize) / 2.0f;
     float x = padding;
+    
+    const float iconSize = 24.0f;
+    float iconPadding = (buttonSize - iconSize) * 0.5f;
+    if (iconPadding < 0.0f) iconPadding = 0.0f;
 
     // Play/Pause button icon
     if (m_playButton && m_playIcon && m_pauseIcon) {
@@ -301,8 +305,6 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
                 icon->setColor(themeManager.getColor("primary"));
             }
             
-            float iconPadding = 8.0f; // Could be made configurable
-            float iconSize = 24.0f;
             NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
             icon->setBounds(iconRect);
             icon->onRender(renderer);
@@ -313,16 +315,15 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     // Stop button icon
     if (m_stopButton && m_stopIcon) {
         NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize);
-        
-        // Dull grey on hover, purple otherwise
-        if (m_stopButton->isHovered()) {
+
+        if (!m_stopButton->isEnabled()) {
+            m_stopIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.35f));
+        } else if (m_stopButton->isHovered()) {
             m_stopIcon->setColor(themeManager.getColor("textSecondary"));
         } else {
             m_stopIcon->setColor(themeManager.getColor("primary"));
         }
         
-        float iconPadding = 8.0f;
-        float iconSize = 24.0f;
         NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
         m_stopIcon->setBounds(iconRect);
         m_stopIcon->onRender(renderer);
@@ -332,12 +333,13 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     // Record button icon (always red, no hover change)
     if (m_recordButton && m_recordIcon) {
         NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize);
+
+        if (!m_recordButton->isEnabled()) {
+            m_recordIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.35f));
+        } else {
+            m_recordIcon->setColorFromTheme("error");  // #ff4d4d - Red
+        }
         
-        // Record stays red always
-        m_recordIcon->setColorFromTheme("error");  // #ff4d4d - Red
-        
-        float iconPadding = 8.0f;
-        float iconSize = 24.0f;
         NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
         m_recordIcon->setBounds(iconRect);
         m_recordIcon->onRender(renderer);
@@ -360,8 +362,6 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
                 icon->setColorFromTheme("accent"); // Purple default
             }
             
-            float iconPadding = 8.0f;
-            float iconSize = 24.0f;
             NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
             icon->setBounds(iconRect);
             icon->onRender(renderer);

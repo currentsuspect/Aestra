@@ -175,13 +175,21 @@ public:
         
         addChild(m_transportBar);
 
-        // Create compact audio meter - positioned inside transport bar (right side)
-        // Add AFTER transport so it renders on top
-        m_audioVisualizer = std::make_shared<NomadUI::AudioVisualizer>();
-        float visualizerWidth = 80.0f;
+        // Create compact master meters inside transport bar (right side)
+        // 1) Mini waveform scope
+        m_waveformVisualizer = std::make_shared<NomadUI::AudioVisualizer>();
+        float waveformWidth = 150.0f;
         float visualizerHeight = 40.0f;
         float vuY = layout.componentPadding; // Will be centered in onResize
-        m_audioVisualizer->setBounds(NomadUI::NUIRect(1100, vuY, visualizerWidth, visualizerHeight));
+        m_waveformVisualizer->setBounds(NomadUI::NUIRect(980, vuY, waveformWidth, visualizerHeight));
+        m_waveformVisualizer->setMode(NomadUI::AudioVisualizationMode::CompactWaveform);
+        m_waveformVisualizer->setShowStereo(true);
+        addChild(m_waveformVisualizer);
+
+        // 2) Slim VU/peak meters
+        m_audioVisualizer = std::make_shared<NomadUI::AudioVisualizer>();
+        float meterWidth = 60.0f;
+        m_audioVisualizer->setBounds(NomadUI::NUIRect(1135, vuY, meterWidth, visualizerHeight));
         m_audioVisualizer->setMode(NomadUI::AudioVisualizationMode::CompactMeter);
         m_audioVisualizer->setShowStereo(true);
         addChild(m_audioVisualizer);
@@ -191,14 +199,6 @@ public:
         m_previewIsPlaying = false;
         m_previewStartTime = std::chrono::steady_clock::time_point(); // Default construct
         m_previewDuration = 5.0; // 5 seconds preview
-        
-        // Wire TrackManager audio output to AudioVisualizer for VU meter display
-        // This captures the master stereo output and sends it to the visualizer
-        m_trackManager->setOnAudioOutput([this](const float* leftChannel, const float* rightChannel, size_t numSamples, double sampleRate) {
-            if (m_audioVisualizer) {
-                m_audioVisualizer->setAudioData(leftChannel, rightChannel, numSamples, sampleRate);
-            }
-        });
         
         Log::info("Sound preview system initialized");
     }
@@ -213,6 +213,10 @@ public:
     
     std::shared_ptr<NomadUI::AudioVisualizer> getAudioVisualizer() const {
         return m_audioVisualizer;
+    }
+
+    std::shared_ptr<NomadUI::AudioVisualizer> getWaveformVisualizer() const {
+        return m_waveformVisualizer;
     }
 
     PreviewEngine* getPreviewEngine() const { return m_previewEngine.get(); }
@@ -511,14 +515,30 @@ public:
                                                        fileBrowserWidth, fileBrowserHeight));
         }
 
-        // Update audio visualizer position - centered in transport bar
-        if (m_audioVisualizer) {
+        // Update master meters position - centered in transport bar (right side)
+        if (m_audioVisualizer || m_waveformVisualizer) {
             NomadUI::NUIRect contentBounds = getBounds();
-            float visualizerWidth = 80.0f; // Could be made configurable
-            float visualizerHeight = 40.0f;
-            float vuY = contentBounds.y + (layout.transportBarHeight - visualizerHeight) / 2.0f; // Vertically centered
-            m_audioVisualizer->setBounds(NomadUI::NUIRect(contentBounds.x + width - visualizerWidth - layout.panelMargin,
-                                                           vuY, visualizerWidth, visualizerHeight));
+            const float meterWidth = 60.0f;
+            const float waveformWidth = 150.0f;
+            const float visualizerHeight = 40.0f;
+            const float gap = 6.0f;
+            float vuY = contentBounds.y + (layout.transportBarHeight - visualizerHeight) / 2.0f;
+
+            float totalWidth = meterWidth;
+            if (m_waveformVisualizer) {
+                totalWidth += waveformWidth + gap;
+            }
+
+            float xStart = contentBounds.x + width - totalWidth - layout.panelMargin;
+            if (m_waveformVisualizer) {
+                m_waveformVisualizer->setBounds(
+                    NomadUI::NUIRect(xStart, vuY, waveformWidth, visualizerHeight));
+                xStart += waveformWidth + gap;
+            }
+            if (m_audioVisualizer) {
+                m_audioVisualizer->setBounds(
+                    NomadUI::NUIRect(xStart, vuY, meterWidth, visualizerHeight));
+            }
         }
 
         // Update track manager UI bounds using full window dimensions (no margins)
@@ -541,6 +561,7 @@ private:
     std::shared_ptr<TransportBar> m_transportBar;
     std::shared_ptr<NomadUI::FileBrowser> m_fileBrowser;
     std::shared_ptr<NomadUI::AudioVisualizer> m_audioVisualizer;
+    std::shared_ptr<NomadUI::AudioVisualizer> m_waveformVisualizer;
     std::shared_ptr<TrackManager> m_trackManager;
     std::shared_ptr<TrackManagerUI> m_trackManagerUI;
     std::unique_ptr<PreviewEngine> m_previewEngine; // Dedicated preview engine (separate from transport)
@@ -1310,8 +1331,26 @@ public:
                 if (m_audioEngine && m_content && m_content->getAudioVisualizer()) {
                     m_content->getAudioVisualizer()->setPeakLevels(
                         m_audioEngine->getPeakL(),
-                        m_audioEngine->getPeakR()
+                        m_audioEngine->getPeakR(),
+                        m_audioEngine->getRmsL(),
+                        m_audioEngine->getRmsR()
                     );
+                }
+
+                // Feed recent master output to the mini waveform meter (non-RT).
+                if (m_audioEngine && m_content && m_content->getWaveformVisualizer()) {
+                    static std::vector<float> waveformScratch;
+                    const uint32_t framesToRead = std::min<uint32_t>(
+                        m_audioEngine->getWaveformHistoryCapacity(), 256);
+                    if (framesToRead > 0) {
+                        waveformScratch.resize(static_cast<size_t>(framesToRead) * 2);
+                        const uint32_t read = m_audioEngine->copyWaveformHistory(
+                            waveformScratch.data(), framesToRead);
+                        if (read > 0) {
+                            m_content->getWaveformVisualizer()->setInterleavedWaveform(
+                                waveformScratch.data(), read);
+                        }
+                    }
                 }
                 
                 // Sync transport position from AudioEngine during playback
@@ -1673,8 +1712,8 @@ private:
             requestClose();
         });
 
-        // Key callback
-        m_window->setKeyCallback([this](int key, bool pressed) {
+	        // Key callback
+	        m_window->setKeyCallback([this](int key, bool pressed) {
             // Signal activity to adaptive FPS
             if (pressed) {
                 m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::KeyPress);
@@ -1700,8 +1739,8 @@ private:
                 }
             }
             
-            // Handle confirmation dialog key events if visible
-            if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
+	            // Handle confirmation dialog key events if visible
+	            if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
                 NomadUI::NUIKeyEvent event;
                 event.keyCode = convertToNUIKeyCode(key);
                 event.pressed = pressed;
@@ -1710,10 +1749,23 @@ private:
                 if (m_confirmationDialog->onKeyEvent(event)) {
                     return; // Dialog handled the event
                 }
-            }
-            
-            // Handle global key shortcuts
-            if (key == static_cast<int>(KeyCode::Escape) && pressed) {
+	            }
+	            
+	            // If the FileBrowser search box is focused, it owns typing and shortcuts should not trigger.
+	            if (m_content && pressed) {
+	                auto fileBrowser = m_content->getFileBrowser();
+	                if (fileBrowser && fileBrowser->isSearchBoxFocused()) {
+	                    NomadUI::NUIKeyEvent event;
+	                    event.keyCode = convertToNUIKeyCode(key);
+	                    event.pressed = pressed;
+	                    event.released = !pressed;
+	                    fileBrowser->onKeyEvent(event);
+	                    return;
+	                }
+	            }
+	            
+	            // Handle global key shortcuts
+	            if (key == static_cast<int>(KeyCode::Escape) && pressed) {
                 // If confirmation dialog is open, let it handle escape
                 if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
                     return; // Already handled above
@@ -1826,27 +1878,43 @@ private:
                     trackManagerUI->setVisible(!isVisible);
                     Log::info("Playlist visibility toggled via shortcut");
                 }
-            } else {
-                // Forward unhandled key events directly to the FileBrowser
-                if (m_content && pressed) {
-                    auto fileBrowser = m_content->getFileBrowser();
-                    if (fileBrowser) {
-                        NomadUI::NUIKeyEvent event;
-                        event.keyCode = convertToNUIKeyCode(key);
-                        event.pressed = pressed;
-                        event.released = !pressed;
-                        fileBrowser->onKeyEvent(event);
-                    }
-                }
-            }
-        });
+	            } else {
+	                // Forward unhandled key events directly to the FileBrowser
+	                if (m_content && pressed) {
+	                    auto fileBrowser = m_content->getFileBrowser();
+	                    if (fileBrowser) {
+	                        NomadUI::NUIKeyEvent event;
+	                        event.keyCode = convertToNUIKeyCode(key);
+	                        event.pressed = pressed;
+	                        event.released = !pressed;
+	                        fileBrowser->onKeyEvent(event);
+	                    }
+	                }
+	            }
+	        });
         
-        // Extended key callback with modifier support for clip manipulation
-        m_window->setKeyCallbackEx([this](int key, bool pressed, bool ctrl, bool shift, bool alt) {
-            if (!pressed) return;  // Only handle key press, not release
-            
-            // Clip manipulation shortcuts (require Ctrl modifier)
-            if (ctrl && m_content) {
+	        // Extended key callback with modifier support for clip manipulation
+	        m_window->setKeyCallbackEx([this](int key, bool pressed, bool ctrl, bool shift, bool alt) {
+	            if (!pressed) return;  // Only handle key press, not release
+	            
+	            // If the FileBrowser search box is focused, it owns typing and shortcuts should not trigger.
+	            if (m_content) {
+	                auto fileBrowser = m_content->getFileBrowser();
+	                if (fileBrowser && fileBrowser->isSearchBoxFocused()) {
+	                    NomadUI::NUIKeyEvent event;
+	                    event.keyCode = convertToNUIKeyCode(key);
+	                    event.pressed = true;
+	                    event.modifiers = NomadUI::NUIModifiers::None;
+	                    if (ctrl) event.modifiers = event.modifiers | NomadUI::NUIModifiers::Ctrl;
+	                    if (shift) event.modifiers = event.modifiers | NomadUI::NUIModifiers::Shift;
+	                    if (alt) event.modifiers = event.modifiers | NomadUI::NUIModifiers::Alt;
+	                    fileBrowser->onKeyEvent(event);
+	                    return;
+	                }
+	            }
+	            
+	            // Clip manipulation shortcuts (require Ctrl modifier)
+	            if (ctrl && m_content) {
                 auto trackManager = m_content->getTrackManagerUI();
                 if (!trackManager) return;
                 

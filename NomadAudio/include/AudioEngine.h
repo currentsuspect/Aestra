@@ -70,9 +70,16 @@ public:
     // Metering (read on UI thread)
     float getPeakL() const { return m_peakL.load(std::memory_order_relaxed); }
     float getPeakR() const { return m_peakR.load(std::memory_order_relaxed); }
+    float getRmsL() const { return m_rmsL.load(std::memory_order_relaxed); }
+    float getRmsR() const { return m_rmsR.load(std::memory_order_relaxed); }
+
+    // Waveform history (interleaved stereo), safe to read on UI thread.
+    uint32_t getWaveformHistoryCapacity() const { return m_waveformHistoryFrames; }
+    uint32_t copyWaveformHistory(float* outInterleaved, uint32_t maxFrames) const;
 
 private:
     static constexpr size_t kMaxTracks = 64;
+    static constexpr uint32_t kWaveformHistoryFramesDefault = 2048;
 
     // Double-precision smoothed parameter for zero-zipper automation
     struct SmoothedParamD {
@@ -151,6 +158,13 @@ private:
     // Peak detection
     std::atomic<float> m_peakL{0.0f};
     std::atomic<float> m_peakR{0.0f};
+    std::atomic<float> m_rmsL{0.0f};
+    std::atomic<float> m_rmsR{0.0f};
+
+    // Recent output ring buffer for oscilloscope/mini-waveform displays.
+    std::vector<float> m_waveformHistory;
+    std::atomic<uint32_t> m_waveformWriteIndex{0};
+    uint32_t m_waveformHistoryFrames{0};
     
     // Fade state machine
     enum class FadeState { None, FadingIn, FadingOut, Silent };

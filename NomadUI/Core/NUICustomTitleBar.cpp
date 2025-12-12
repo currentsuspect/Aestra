@@ -3,6 +3,7 @@
 #include "../Graphics/NUIRenderer.h"
 #include "../Core/NUIThemeSystem.h"
 #include <iostream>
+#include <cmath>
 
 namespace NomadUI {
 
@@ -85,7 +86,7 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     float x = bounds.x + 10.0f;
     for (const auto& item : menuItems) {
         NUISize sz = renderer.measureText(item, fontSize);
-        float textY = bounds.y + (bounds.height - fontSize) * 0.5f; // Top-left Y positioning
+        float textY = std::round(renderer.calculateTextY(bounds, fontSize));
         renderer.drawText(item, NUIPoint(x, textY), fontSize, textColor);
         x += sz.width + 14.0f; // spacing between menu items
     }

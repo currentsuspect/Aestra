@@ -24,13 +24,36 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackMan
         trackState.mute = track->isMuted();
         trackState.solo = track->isSoloed();
 
-        const auto& audioData = track->getAudioData();
         const uint32_t channels = track->getNumChannels();
-        if (!audioData.empty() && channels > 0) {
+
+        // Resolve an owned buffer for this snapshot. If the track already has a
+        // shared decoded buffer, reuse it; otherwise, copy from the track's
+        // internal vector so edits/clears can't invalidate the active graph.
+        std::shared_ptr<const AudioBuffer> clipBuffer = track->getSampleBuffer();
+        const std::vector<float>* audioDataPtr = nullptr;
+        if (clipBuffer && clipBuffer->ready.load(std::memory_order_relaxed)) {
+            audioDataPtr = &clipBuffer->data;
+        } else {
+            const auto& audioData = track->getAudioData();
+            if (!audioData.empty() && channels > 0) {
+                auto owned = std::make_shared<AudioBuffer>();
+                owned->data = audioData;
+                owned->channels = channels;
+                owned->sampleRate = track->getSampleRate();
+                owned->numFrames = owned->channels > 0 ? owned->data.size() / owned->channels : 0;
+                owned->ready.store(true, std::memory_order_relaxed);
+                owned->sourcePath = track->getSourcePath();
+                clipBuffer = owned;
+                audioDataPtr = &owned->data;
+            }
+        }
+
+        if (audioDataPtr && !audioDataPtr->empty() && channels > 0) {
             // Single-clip fallback (until playlist provides multiple)
             ClipRenderState clip;
-            clip.audioData = audioData.data();
-            const uint64_t frames = static_cast<uint64_t>(audioData.size() / channels);
+            clip.buffer = clipBuffer;
+            clip.audioData = audioDataPtr->data();
+            const uint64_t frames = static_cast<uint64_t>(audioDataPtr->size() / channels);
             const double startSeconds = track->getStartPositionInTimeline();
             const double trimStart = track->getTrimStart();
             const double trimEnd = track->getTrimEnd();

@@ -501,10 +501,9 @@ namespace NomadUI {
         float textX = getX() + 10.0f;
         float fontSize = getTheme()->getFontSizeNormal();
         
-        // Measure text for true vertical centering (top-left Y positioning)
+        // Vertically center using renderer font metrics (drawText expects top-left Y).
         std::string displayText = items.empty() ? placeholderText : items[selectedIndex].text;
-        NUISize textSize = renderer.measureText(displayText, fontSize);
-        float textY = std::round(getY() + (getHeight() - fontSize) * 0.5f);
+        float textY = std::round(renderer.calculateTextY(rect, fontSize));
         
         NUIColor textColor = items.empty() ? 
             getTheme()->getColor("dropdown.placeholder", NUIColor(0.5f, 0.5f, 0.5f, 1.0f)) :
@@ -566,11 +565,11 @@ namespace NomadUI {
             std::string searchText = "Search: " + searchBuffer;
             float fontSize = getTheme()->getFontSizeSmall();
             
-            // Create rect for search text and calculate proper baseline Y
-            NUISize searchSize = renderer.measureText(searchText, fontSize);
-            float searchY = dropdownY + dropdownHeight + 5.0f + (fontSize + 4.0f - searchSize.height) * 0.5f + searchSize.height;
+            const float searchRowHeight = fontSize + 4.0f;
+            const NUIRect searchRect(getX(), dropdownY + dropdownHeight + 5.0f, getWidth(), searchRowHeight);
+            const float searchY = std::round(renderer.calculateTextY(searchRect, fontSize));
             
-            renderer.drawText(searchText, NUIPoint(std::round(getX() + 5.0f), std::round(searchY)), 
+            renderer.drawText(searchText, NUIPoint(std::round(getX() + 5.0f), searchY), 
                             fontSize, getTheme()->getText());
         }
     }
@@ -600,9 +599,8 @@ namespace NomadUI {
         float textX = getX() + 10.0f;
         float fontSize = getTheme()->getFontSizeNormal();
         
-        // Measure text for true vertical centering (top-left Y positioning)
-        NUISize textSize = renderer.measureText(item.text, fontSize);
-        float textY = std::round(y + (itemHeight - fontSize) * 0.5f);
+        // Vertically center using renderer font metrics (drawText expects top-left Y).
+        float textY = std::round(renderer.calculateTextY(itemRect, fontSize));
         
         renderer.drawText(item.text, NUIPoint(std::round(textX), textY), fontSize, textColor);
     }

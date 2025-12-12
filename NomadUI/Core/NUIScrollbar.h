@@ -189,14 +189,14 @@ private:
 
     // Visual properties
     Orientation orientation_ = Orientation::Vertical;
-    NUIColor trackColor_ = NUIColor(0.15f, 0.15f, 0.18f, 1.0f); // Dark charcoal track
-    NUIColor thumbColor_ = NUIColor(0.8f, 0.8f, 0.8f, 0.8f); // Faded white thumb base
-    NUIColor thumbHoverColor_ = NUIColor(0.9f, 0.9f, 0.9f, 0.9f); // Lighter white on hover
-    NUIColor thumbPressedColor_ = NUIColor(0.7f, 0.7f, 0.7f, 0.9f); // Darker white when pressed
-    NUIColor arrowColor_ = NUIColor(0.8f, 0.8f, 0.8f, 1.0f); // Light gray arrows
-    NUIColor arrowHoverColor_ = NUIColor(1.0f, 1.0f, 1.0f, 1.0f); // White on hover
-    NUIColor arrowPressedColor_ = NUIColor(0.6f, 0.6f, 0.6f, 1.0f); // Darker grey when pressed
-    NUIColor borderColor_ = NUIColor(0.3f, 0.3f, 0.35f, 1.0f); // Subtle border
+    NUIColor trackColor_ = NUIColor(0.15f, 0.15f, 0.18f, 1.0f);          // Track base (alpha applied at draw time)
+    NUIColor thumbColor_ = NUIColor(0.85f, 0.85f, 0.90f, 0.28f);         // Quiet thumb default
+    NUIColor thumbHoverColor_ = NUIColor(0.95f, 0.95f, 1.00f, 0.45f);    // Brighter on hover
+    NUIColor thumbPressedColor_ = NUIColor(0.70f, 0.70f, 0.80f, 0.65f);  // Stronger on press
+    NUIColor arrowColor_ = NUIColor(0.85f, 0.85f, 0.90f, 0.25f);         // Subtle arrows
+    NUIColor arrowHoverColor_ = NUIColor(0.95f, 0.95f, 1.00f, 0.45f);    // Brighter on hover
+    NUIColor arrowPressedColor_ = NUIColor(0.70f, 0.70f, 0.80f, 0.65f);  // Stronger on press
+    NUIColor borderColor_ = NUIColor(0.30f, 0.30f, 0.35f, 0.35f);        // Subtle border
     float borderWidth_ = 1.0f;
     float borderRadius_ = 4.0f;
     float arrowSize_ = 12.0f;

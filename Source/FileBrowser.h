@@ -98,6 +98,7 @@ public:
     void setSearchQuery(const std::string& query);
     void applyFilter();
     const std::string& getSearchQuery() const { return searchQuery_; }
+    bool isSearchBoxFocused() const { return searchBoxFocused_; }
     
     // Preview panel
     void setPreviewPanelVisible(bool visible);
@@ -184,6 +185,7 @@ private:
     float scrollbarThumbHeight_;
     float scrollbarThumbY_;
     bool isDraggingScrollbar_;
+    bool scrollbarHovered_;
     float dragStartY_;
     float dragStartScrollOffset_;
     float scrollbarFadeTimer_;
@@ -197,6 +199,7 @@ private:
     std::string searchQuery_;
     bool searchBoxFocused_;
     float searchBoxWidth_;
+    NUIRect searchBoxBounds_;
     
     // Preview panel state
     bool previewPanelVisible_;
@@ -212,6 +215,7 @@ private:
     };
     std::vector<Breadcrumb> breadcrumbs_;
     int hoveredBreadcrumbIndex_;
+    NUIRect breadcrumbBounds_;
     
     // Favorites state
     std::vector<std::string> favoritesPaths_;

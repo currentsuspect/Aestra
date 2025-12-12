@@ -43,13 +43,14 @@ void NUIButton::onRender(NUIRenderer& renderer)
         textColor = NUIColor::white();
         borderColor = theme.primary.lightened(0.15f);
     } else if (style_ == Style::Secondary) {
-        // FLAT DESIGN: Transparent background by default for secondary buttons
-        bgColor = NUIColor::transparent(); 
+        // Secondary buttons: solid by default (dialogs/toggles), raised on hover.
+        bgColor = hasCustomBackgroundColor_ ? backgroundColor_ : theme.surfaceTertiary;
+        textColor = theme.textPrimary;
         borderColor = theme.border.withAlpha(0.8f);
     } else if (style_ == Style::Icon) {
-        // FLAT DESIGN: Transparent background by default for icon buttons
-        bgColor = NUIColor::transparent();
-        borderColor = NUIColor::transparent(); // No border for icons by default
+        // Icon buttons: transparent until hovered/pressed.
+        bgColor = hasCustomBackgroundColor_ ? backgroundColor_ : NUIColor::transparent();
+        borderColor = NUIColor::transparent();
     }
 
     // Update colors based on state (simple color changes, no animations)
@@ -57,25 +58,51 @@ void NUIButton::onRender(NUIRenderer& renderer)
     {
         case State::Hovered:
             if (enabled_) {
-                // On hover, show a subtle background
-                if (style_ == Style::Secondary || style_ == Style::Icon) {
+                if (style_ == Style::Secondary) {
+                    // Subtle raised surface for secondary buttons.
                     bgColor = theme.surfaceRaised;
+                    borderColor = borderColor.lightened(0.12f);
+                } else if (style_ == Style::Icon) {
+                    // Keep transport/toolbar areas visually flat; use a subtle outline only.
+                    bgColor = NUIColor::transparent();
+                    borderColor = theme.border.withAlpha(0.5f);
                 } else {
                     bgColor = hoverColor_;
+                    borderColor = borderColor.lightened(0.12f);
                 }
-                borderColor = borderColor.lightened(0.12f);
             }
             break;
         case State::Pressed:
             if (enabled_) {
-                bgColor = pressedColor_;
-                borderColor = borderColor.darkened(0.1f);
+                if (style_ == Style::Icon) {
+                    bgColor = NUIColor::transparent();
+                    borderColor = theme.borderActive.withAlpha(0.75f);
+                } else {
+                    bgColor = pressedColor_;
+                    borderColor = borderColor.darkened(0.1f);
+                }
             }
             break;
         case State::Disabled:
-            bgColor = backgroundColor_.withAlpha(0.5f);
-            textColor = textColor_.withAlpha(0.5f);
-            borderColor = borderColor.withAlpha(0.35f);
+            if (style_ == Style::Icon) {
+                // Keep icon buttons flat/transparent when disabled (prevents "black box").
+                bgColor = NUIColor::transparent();
+                borderColor = NUIColor::transparent();
+                textColor = textColor_.withAlpha(0.4f);
+            } else if (style_ == Style::Secondary) {
+                const auto base = hasCustomBackgroundColor_ ? backgroundColor_ : theme.surfaceTertiary;
+                bgColor = base.withAlpha(0.45f);
+                textColor = textColor_.withAlpha(0.45f);
+                borderColor = theme.border.withAlpha(0.35f);
+            } else if (style_ == Style::Primary) {
+                bgColor = theme.primary.withAlpha(0.5f);
+                textColor = NUIColor::white().withAlpha(0.6f);
+                borderColor = theme.primary.withAlpha(0.35f);
+            } else {
+                bgColor = backgroundColor_.withAlpha(0.5f);
+                textColor = textColor_.withAlpha(0.5f);
+                borderColor = borderColor.withAlpha(0.35f);
+            }
             break;
         case State::Normal:
         default:
@@ -85,8 +112,13 @@ void NUIButton::onRender(NUIRenderer& renderer)
     // Apply toggle state
     if (toggleable_ && toggled_)
     {
-        bgColor = pressedColor_; // Active state color
-        borderColor = borderColor.darkened(0.08f);
+        if (style_ == Style::Icon) {
+            bgColor = theme.primary.withAlpha(0.22f);
+            borderColor = theme.primary.withAlpha(0.6f);
+        } else {
+            bgColor = pressedColor_; // Active state color
+            borderColor = borderColor.darkened(0.08f);
+        }
     }
 
     // Single-call rendering based on style
@@ -120,7 +152,7 @@ void NUIButton::onRender(NUIRenderer& renderer)
         // Calculate text color - grey on hover by default
         NUIColor finalTextColor = textColor;
         
-        if (state_ == State::Hovered && !isPressed_)
+        if (state_ == State::Hovered && !isPressed_ && !(toggleable_ && toggled_))
         {
             // Default to grey on hover
             finalTextColor = NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f);
@@ -133,6 +165,8 @@ void NUIButton::onRender(NUIRenderer& renderer)
                 } else if (text_ == "S") {
                     // Show lime preview for solo button (like when soloed)
                     finalTextColor = NUIColor(0.8f, 1.0f, 0.2f, 1.0f); // Accent lime color
+                } else if (text_ == "R") {
+                    finalTextColor = theme.error;
                 }
             }
         }
@@ -140,7 +174,7 @@ void NUIButton::onRender(NUIRenderer& renderer)
         // Measure text for precise centering; drawText expects top-left Y
         NUISize textSize = renderer.measureText(text_, fontSize);
         float textX = std::round(bounds.x + (bounds.width - textSize.width) * 0.5f);
-        float textY = std::round(bounds.y + (bounds.height - textSize.height) * 0.5f);
+        float textY = std::round(renderer.calculateTextY(bounds, fontSize));
         
         renderer.drawText(text_, NUIPoint(textX, textY), fontSize, finalTextColor);
     }
@@ -177,9 +211,28 @@ bool NUIButton::onMouseEvent(const NUIMouseEvent& event)
     // Let base class handle hover detection and child events first
     bool handled = NUIComponent::onMouseEvent(event);
 
-    // If this event was not within bounds, return early
-    if (!containsPoint(event.position)) {
-        return false;
+    const bool isInside = containsPoint(event.position);
+
+    // Always clear pressed state on mouse-up, even if released outside.
+    if (event.released && event.button == NUIMouseButton::Left && isPressed_) {
+        isPressed_ = false;
+
+        if (isInside) {
+            if (toggleable_) {
+                toggled_ = !toggled_;
+                triggerToggle();
+            } else {
+                triggerClick();
+            }
+        }
+
+        repaint();
+        return true;
+    }
+
+    // If this event was not within bounds, ignore it (hover tracking is handled by base).
+    if (!isInside) {
+        return handled;
     }
 
     // Handle mouse down
@@ -194,25 +247,8 @@ bool NUIButton::onMouseEvent(const NUIMouseEvent& event)
     // Handle mouse up
     if (event.released && event.button == NUIMouseButton::Left)
     {
-        bool wasPressed = isPressed_;
-        isPressed_ = false;
-
-        if (containsPoint(event.position))
-        {
-            if (toggleable_)
-            {
-                toggled_ = !toggled_;
-                triggerToggle();
-            }
-            else
-            {
-                triggerClick();
-            }
-        }
-
-        // Don't manually set state - let hover system handle it
-        repaint();
-        return true;
+        // Not pressed here (handled above), so ignore.
+        return handled;
     }
 
     return handled;
@@ -299,6 +335,7 @@ void NUIButton::setOnToggle(std::function<void(bool)> callback)
 void NUIButton::setBackgroundColor(const NUIColor& color)
 {
     backgroundColor_ = color;
+    hasCustomBackgroundColor_ = true;
     repaint();
 }
 

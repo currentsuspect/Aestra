@@ -73,6 +73,7 @@ public:
     
     // UI state update (public so parent can refresh after clearing solos)
     void updateUI();
+    void renderControlOverlay(NomadUI::NUIRenderer& renderer);
 
 protected:
     void onRender(NomadUI::NUIRenderer& renderer) override;
@@ -120,12 +121,11 @@ private:
     float m_trimDragStartX = 0.0f;            // Mouse X when trim started
     static constexpr float TRIM_EDGE_WIDTH = 8.0f;  // Pixels for edge hit detection
 
-    // UI Components
-    std::shared_ptr<NomadUI::NUILabel> m_nameLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_durationLabel;  // Shows sample duration
-    std::shared_ptr<NomadUI::NUIButton> m_muteButton;
-    std::shared_ptr<NomadUI::NUIButton> m_soloButton;
-    std::shared_ptr<NomadUI::NUIButton> m_recordButton;
+	    // UI Components
+	    std::shared_ptr<NomadUI::NUILabel> m_nameLabel;
+	    std::shared_ptr<NomadUI::NUIButton> m_muteButton;
+	    std::shared_ptr<NomadUI::NUIButton> m_soloButton;
+	    std::shared_ptr<NomadUI::NUIButton> m_recordButton;
 
     // UI callbacks
     void onVolumeChanged(float volume);

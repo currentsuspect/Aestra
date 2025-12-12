@@ -2,10 +2,13 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 namespace Nomad {
 namespace Audio {
+
+struct AudioBuffer; // Forward declaration (defined in SamplePool.h)
 
 /**
  * @brief Render-time clip state used by the audio thread.
@@ -14,6 +17,7 @@ namespace Audio {
  * becoming visible to the audio callback.
  */
 struct ClipRenderState {
+    std::shared_ptr<const AudioBuffer> buffer; // Owns audioData lifetime for the snapshot
     const float* audioData{nullptr};    // Interleaved stereo (engine format)
     uint64_t startSample{0};            // Absolute project sample (engine rate)
     uint64_t endSample{0};              // Exclusive end

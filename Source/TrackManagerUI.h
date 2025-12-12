@@ -136,8 +136,8 @@ private:
     std::vector<std::shared_ptr<TrackUIComponent>> m_trackUIComponents;
 
     // UI Layout
-    int m_trackHeight{80};
-    int m_trackSpacing{2}; // Small gap for thick separator line
+    int m_trackHeight{48};
+    int m_trackSpacing{4}; // 8px grid spacing scale (S1)
     float m_scrollOffset{0.0f};
     
     // Timeline/Ruler settings
@@ -149,13 +149,9 @@ private:
     // UI Components
     std::shared_ptr<NomadUI::NUIScrollbar> m_scrollbar;
     std::shared_ptr<NomadUI::NUIScrollbar> m_horizontalScrollbar;
-    std::shared_ptr<NomadUI::NUIButton> m_addTrackButton;
-    std::shared_ptr<NomadUI::NUIIcon> m_closeIcon;
-    std::shared_ptr<NomadUI::NUIIcon> m_minimizeIcon;
-    std::shared_ptr<NomadUI::NUIIcon> m_maximizeIcon;
-    NomadUI::NUIRect m_closeIconBounds;
-    NomadUI::NUIRect m_minimizeIconBounds;
-    NomadUI::NUIRect m_maximizeIconBounds;
+    std::shared_ptr<NomadUI::NUIIcon> m_addTrackIcon;
+    NomadUI::NUIRect m_addTrackBounds;
+    bool m_addTrackHovered = false;
     
     // Tool icons (toolbar)
     std::shared_ptr<NomadUI::NUIIcon> m_selectToolIcon;
@@ -191,11 +187,6 @@ private:
     float m_splitCursorX = 0.0f;
     bool m_showSplitCursor = false;
     NomadUI::NUIPoint m_lastMousePos;  // Track mouse for split cursor rendering
-    
-    // Hover states for icons
-    bool m_closeIconHovered = false;
-    bool m_minimizeIconHovered = false;
-    bool m_maximizeIconHovered = false;
     
     // Playhead dragging state
     bool m_isDraggingPlayhead = false;

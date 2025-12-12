@@ -588,6 +588,10 @@ const std::vector<float>& Track::getAudioData() const {
     return m_audioData;
 }
 
+std::shared_ptr<const AudioBuffer> Track::getSampleBuffer() const {
+    return m_sampleBuffer;
+}
+
 // Track Properties
 void Track::setName(const std::string& name) {
     m_name = name;

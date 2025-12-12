@@ -68,7 +68,7 @@ colors:
 layout:
   # Panel widths
   fileBrowserWidth: 250.0          # Left sidebar width
-  trackControlsWidth: 150.0        # Track controls panel width
+  trackControlsWidth: 200.0        # Track controls panel width
   timelineAreaWidth: 800.0         # Main timeline area width
 
   # Track dimensions
@@ -84,7 +84,7 @@ layout:
   # Control button dimensions (compact)
   controlButtonWidth: 28.0         # Width of M/S/R buttons
   controlButtonHeight: 22.0        # Height of M/S/R buttons
-  controlButtonSpacing: 2.0        # Space between control buttons
+  controlButtonSpacing: 4.0        # Space between control buttons
   controlButtonStartX: 180.0       # X position where control buttons start
 
   # Grid and timeline

@@ -51,6 +51,10 @@ public:
     void setWordWrap(bool wordWrap);
     bool isWordWrap() const { return wordWrap_; }
 
+    // Single-line truncation
+    void setEllipsize(bool ellipsize);
+    bool isEllipsize() const { return ellipsize_; }
+
     // Background
     void setBackgroundColor(const NUIColor& color);
     NUIColor getBackgroundColor() const { return backgroundColor_; }
@@ -80,6 +84,7 @@ private:
     Alignment alignment_ = Alignment::Left;
     bool multiline_ = false;
     bool wordWrap_ = true;
+    bool ellipsize_ = false;
     
     // Background
     NUIColor backgroundColor_ = NUIColor::fromHex(0x00000000); // Transparent

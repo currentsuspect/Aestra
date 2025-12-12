@@ -27,23 +27,13 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track, TrackManager* t
         // Use large font for track names (now 14px after theme reduction)
         m_nameLabel->setFontSize(themeManager.getFontSize("l"));
     }
-    updateTrackNameColors();
-    addChild(m_nameLabel);
-    
-    // Create duration label (shows sample duration)
-    m_durationLabel = std::make_shared<NomadUI::NUILabel>();
-    m_durationLabel->setText("");
-    {
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-        m_durationLabel->setFontSize(themeManager.getFontSize("m"));
-        m_durationLabel->setTextColor(themeManager.getColor("textSecondary"));
-    }
-    addChild(m_durationLabel);
+	    m_nameLabel->setEllipsize(true);
+	    updateTrackNameColors();
+	    addChild(m_nameLabel);
 
-
-    // Create mute button
-    m_muteButton = std::make_shared<NomadUI::NUIButton>();
-    m_muteButton->setText("M");
+	    // Create mute button
+	    m_muteButton = std::make_shared<NomadUI::NUIButton>();
+	    m_muteButton->setText("M");
     m_muteButton->setStyle(NomadUI::NUIButton::Style::Secondary); 
     m_muteButton->setToggleable(true);
     // Use theme-derived hover color (transparent/subtle)
@@ -52,7 +42,7 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track, TrackManager* t
     m_muteButton->setPressedColor(NomadUI::NUIThemeManager::getInstance().getColor("accentAmber")); 
     m_muteButton->setTextColor(NomadUI::NUIColor::white());
     m_muteButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
-    m_muteButton->setOnClick([this]() {
+    m_muteButton->setOnToggle([this](bool) {
         onMuteToggled();
     });
     addChild(m_muteButton);
@@ -67,21 +57,21 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track, TrackManager* t
     m_soloButton->setPressedColor(NomadUI::NUIThemeManager::getInstance().getColor("accentCyan"));
     m_soloButton->setTextColor(NomadUI::NUIColor::white());
     m_soloButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
-    m_soloButton->setOnClick([this]() {
+    m_soloButton->setOnToggle([this](bool) {
         onSoloToggled();
     });
     addChild(m_soloButton);
 
     // Create record button
     m_recordButton = std::make_shared<NomadUI::NUIButton>();
-    m_recordButton->setText("●");
-    m_recordButton->setStyle(NomadUI::NUIButton::Style::Icon); 
+    m_recordButton->setText("R");
+    m_recordButton->setStyle(NomadUI::NUIButton::Style::Secondary);
     m_recordButton->setToggleable(true);
     m_recordButton->setHoverColor(NomadUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.15f));
     // Active state: Red
     m_recordButton->setPressedColor(NomadUI::NUIThemeManager::getInstance().getColor("error"));
     m_recordButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
-    m_recordButton->setOnClick([this]() {
+    m_recordButton->setOnToggle([this](bool) {
         onRecordToggled();
     });
     addChild(m_recordButton);
@@ -175,29 +165,12 @@ void TrackUIComponent::updateUI() {
         m_onCacheInvalidationCallback();
     }
 
-    // Update track name colors with bright colors based on number
-    updateTrackNameColors();
-    
-    // Update duration label if sample is loaded
-    if (m_durationLabel) {
-        double duration = m_track->getDuration();
-        if (duration > 0.0) {
-            // Format as MM:SS.mmm
-            int minutes = static_cast<int>(duration / 60.0);
-            int seconds = static_cast<int>(duration) % 60;
-            int milliseconds = static_cast<int>((duration - static_cast<int>(duration)) * 1000.0);
-            
-            char buffer[32];
-            snprintf(buffer, sizeof(buffer), "%02d:%02d.%03d", minutes, seconds, milliseconds);
-            m_durationLabel->setText(buffer);
-        } else {
-            m_durationLabel->setText("");
-        }
-    }
+	    // Update track name colors with bright colors based on number
+	    updateTrackNameColors();
 
 
-    if (m_muteButton) {
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+	    if (m_muteButton) {
+	        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
         // Use theme colors for Primary style
         m_muteButton->setBackgroundColor(themeManager.getColor("surfaceTertiary")); // #28282d - same as transport buttons
 
@@ -775,31 +748,42 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIColor trackBgColor = themeManager.getColor("backgroundPrimary"); // #19191c - Same black as title bar
     NomadUI::NUIColor borderColor = themeManager.getColor("border");
     
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-    float controlAreaWidth = buttonX + layout.controlButtonWidth + 10; // Up to end of buttons
+    // Clamp to the component width to prevent any overdraw/bleed when the viewport is narrow.
+    float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
     
     // Only PRIMARY components draw the control area and background
     // Secondary components (same lane) only draw their clip
     if (m_isPrimaryForLane) {
-        // Determine track highlight color based on state
+        // Determine track highlight color based on state (semantic theme roles)
         NomadUI::NUIColor highlightColor = trackBgColor;
-        
         if (m_track) {
             if (m_track->isSoloed()) {
-                highlightColor = NomadUI::NUIColor(0.3f, 0.3f, 0.35f, 1.0f);
+                highlightColor = themeManager.getColor("accentCyan").withAlpha(0.10f);
             } else if (m_track->isMuted()) {
-                highlightColor = NomadUI::NUIColor(0.05f, 0.05f, 0.05f, 1.0f);
+                highlightColor = themeManager.getColor("backgroundPrimary").darkened(0.35f);
             } else if (m_selected) {
-                highlightColor = NomadUI::NUIColor(0.15f, 0.15f, 0.15f, 1.0f);
+                highlightColor = themeManager.getColor("primary").withAlpha(0.12f); // AccentSoft
             }
         }
 
-        // Draw track background (full width)
-        renderer.fillRect(bounds, trackBgColor);
-        
-        // Draw highlight ONLY in control area (not playlist area)
-        NomadUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
-        renderer.fillRect(controlAreaBounds, highlightColor);
+	        // Draw track background (full width).
+	        renderer.fillRect(bounds, trackBgColor);
+
+	        // Draw highlight ONLY in control area (not playlist area).
+	        NomadUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
+	        renderer.fillRect(controlAreaBounds, highlightColor);
+
+        // Track color strip (identity)
+        if (m_track) {
+            uint32_t argb = m_track->getColor();
+            float a = ((argb >> 24) & 0xFF) / 255.0f;
+            float r = ((argb >> 16) & 0xFF) / 255.0f;
+            float g = ((argb >> 8) & 0xFF) / 255.0f;
+            float b = (argb & 0xFF) / 255.0f;
+            NomadUI::NUIColor stripColor(r, g, b, a > 0.0f ? a : 1.0f);
+            const float stripWidth = 5.0f;
+            renderer.fillRect(NomadUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
+        }
         
         // Draw vertical separator between control area and playlist area
         renderer.drawLine(
@@ -841,11 +825,6 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
     // Apply greyscale overlay to playlist area for muted tracks (Bug #8: Mute/Solo Visual Feedback)
     if (m_track && m_track->isMuted() && m_isPrimaryForLane) {
         // Determine playlist area bounds (right side, after control area)
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-        const auto& layout = themeManager.getLayoutDimensions();
-        float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-        float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
-        
         NomadUI::NUIRect playlistArea(
             bounds.x + controlAreaWidth,
             bounds.y,
@@ -864,17 +843,76 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
     }
 }
 
+void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
+    if (!m_isPrimaryForLane) return;
+
+    const NomadUI::NUIRect bounds = getBounds();
+    if (bounds.isEmpty()) return;
+
+    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    const auto& layout = themeManager.getLayoutDimensions();
+
+    const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
+    const NomadUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
+
+    const NomadUI::NUIColor trackBgColor = themeManager.getColor("backgroundPrimary");
+    const NomadUI::NUIColor borderColor = themeManager.getColor("border");
+
+    // Reset the control strip to a stable base so hover/press visuals don't "stick" in cached renders.
+    renderer.fillRect(controlAreaBounds, trackBgColor);
+
+    // Apply highlight overlay (matches TrackUIComponent::onRender)
+    if (m_track) {
+        if (m_track->isSoloed()) {
+            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentCyan").withAlpha(0.10f));
+        } else if (m_track->isMuted()) {
+            renderer.fillRect(controlAreaBounds, trackBgColor.darkened(0.35f));
+        } else if (m_selected) {
+            renderer.fillRect(controlAreaBounds, themeManager.getColor("primary").withAlpha(0.12f));
+        }
+    }
+
+    // Track color strip (identity)
+    if (m_track) {
+        const uint32_t argb = m_track->getColor();
+        const float a = ((argb >> 24) & 0xFF) / 255.0f;
+        const float r = ((argb >> 16) & 0xFF) / 255.0f;
+        const float g = ((argb >> 8) & 0xFF) / 255.0f;
+        const float b = (argb & 0xFF) / 255.0f;
+        const NomadUI::NUIColor stripColor(r, g, b, a > 0.0f ? a : 1.0f);
+        const float stripWidth = 5.0f;
+        renderer.fillRect(NomadUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
+    }
+
+    // Draw vertical separator between control area and playlist area
+    renderer.drawLine(
+        NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
+        NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y + bounds.height),
+        1.0f,
+        borderColor.withAlpha(0.5f)
+    );
+
+    // Render control components (track name + M/S/R)
+    renderChildren(renderer);
+}
+
 // Draw playlist grid (beat/bar grid)
 void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds) {
     // Get layout dimensions from theme
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
+    const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
     
-    // Grid settings - start after buttons (buttonX + buttonWidth + margin)
-    float gridStartX = bounds.x + buttonX + layout.controlButtonWidth + 10; // 10px margin after record button
-    float gridWidth = bounds.width - (buttonX + layout.controlButtonWidth + 10);
-    float gridEndX = gridStartX + gridWidth;
+    // Grid settings - start after control area (robust to narrow widths)
+    const float desiredGap = 5.0f;
+    const float gridGap = std::min(desiredGap, std::max(0.0f, bounds.width - controlAreaWidth));
+    const float gridStartX = bounds.x + controlAreaWidth + gridGap;
+    const float gridWidth = std::max(0.0f, bounds.width - controlAreaWidth - gridGap);
+    const float gridEndX = gridStartX + gridWidth;
+
+    if (gridWidth <= 0.0f) {
+        return;
+    }
     
     // Grid colors
     NomadUI::NUIColor barLineColor(0.5f, 0.5f, 0.5f, 0.6f);   // Brighter, more visible lines for bars
@@ -990,37 +1028,44 @@ void TrackUIComponent::onResize(int width, int height) {
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 
-    // Layout controls vertically next to the name label using configurable dimensions
+    // Docked control area width from theme (clamped to bounds to prevent overflow).
+    const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
+
+    // Buttons cluster (horizontal, right-aligned)
+    const float buttonW = layout.controlButtonWidth;
+    const float buttonH = layout.controlButtonHeight;
+    const float spacing = layout.controlButtonSpacing;
+    const int numButtons = (m_recordButton ? 3 : 2);
+    const float buttonsTotalW = numButtons * buttonW + (numButtons - 1) * spacing;
+    const float buttonsXStart = bounds.x + controlAreaWidth - buttonsTotalW - layout.panelMargin;
+    const float buttonsY = bounds.y + (bounds.height - buttonH) * 0.5f;
+
+    // Labels occupy the remaining left side of the control area
+    const float labelLeft = bounds.x + layout.panelMargin;
+    const float labelRight = buttonsXStart - layout.panelMargin;
+    const float labelWidth = std::max(40.0f, labelRight - labelLeft);
     float centerY = bounds.y + (bounds.height - layout.trackLabelHeight) / 2.0f;
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX"); // Use component-specific setting
-    float labelWidth = std::max(80.0f, buttonX - layout.panelMargin * 2.0f);
 
-    // Name label on the left with compact margin
-    if (m_nameLabel) {
-        m_nameLabel->setBounds(NUIAbsolute(bounds, layout.panelMargin, centerY - bounds.y, labelWidth, layout.trackLabelHeight));
-        // Log::info("TrackUIComponent nameLabel bounds: x=" + std::to_string(bounds.x + layout.panelMargin) + ", y=" + std::to_string(centerY));
+	    // Name label on the left with compact margin
+	    if (m_nameLabel) {
+	        m_nameLabel->setBounds(NUIAbsolute(bounds, layout.panelMargin, centerY - bounds.y, labelWidth, layout.trackLabelHeight));
+	        // Log::info("TrackUIComponent nameLabel bounds: x=" + std::to_string(bounds.x + layout.panelMargin) + ", y=" + std::to_string(centerY));
+	    }
+
+	    float xCursor = buttonsXStart;
+	    if (m_muteButton) {
+	        m_muteButton->setBounds(
+            NUIAbsolute(bounds, xCursor - bounds.x, buttonsY - bounds.y, buttonW, buttonH));
+        xCursor += buttonW + spacing;
     }
-    
-    // Duration label below name label
-    if (m_durationLabel) {
-        m_durationLabel->setBounds(NUIAbsolute(bounds, layout.panelMargin, centerY - bounds.y + layout.trackLabelHeight + 2, 140, 20));
-    }
-
-    // Buttons vertically centered in a compact group
-    float buttonGroupHeight = 3 * layout.controlButtonHeight + 2 * layout.controlButtonSpacing;
-    float buttonY = bounds.y + (bounds.height - buttonGroupHeight) / 2.0f; // Center the group vertically
-
-    // Layout buttons with compact spacing
-    if (m_muteButton) {
-        m_muteButton->setBounds(NUIAbsolute(bounds, buttonX, buttonY - bounds.y, layout.controlButtonWidth, layout.controlButtonHeight));
-    }
-
     if (m_soloButton) {
-        m_soloButton->setBounds(NUIAbsolute(bounds, buttonX, (buttonY + layout.controlButtonHeight + layout.controlButtonSpacing) - bounds.y, layout.controlButtonWidth, layout.controlButtonHeight));
+        m_soloButton->setBounds(
+            NUIAbsolute(bounds, xCursor - bounds.x, buttonsY - bounds.y, buttonW, buttonH));
+        xCursor += buttonW + spacing;
     }
-
     if (m_recordButton) {
-        m_recordButton->setBounds(NUIAbsolute(bounds, buttonX, (buttonY + 2 * (layout.controlButtonHeight + layout.controlButtonSpacing)) - bounds.y, layout.controlButtonWidth, layout.controlButtonHeight));
+        m_recordButton->setBounds(
+            NUIAbsolute(bounds, xCursor - bounds.x, buttonsY - bounds.y, buttonW, buttonH));
     }
 
     NomadUI::NUIComponent::onResize(width, height);
@@ -1032,29 +1077,42 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // Early exit: If event is outside our bounds and we're not in an active operation, don't handle it
     bool isInsideBounds = bounds.contains(event.position);
     bool isActiveOperation = m_isTrimming || m_isDraggingClip || m_clipDragPotential;
+    bool isControlCapture = (m_muteButton && m_muteButton->isPressed()) ||
+                            (m_soloButton && m_soloButton->isPressed()) ||
+                            (m_recordButton && m_recordButton->isPressed());
+    bool controlsNeedEvents = isControlCapture ||
+                              (m_muteButton && m_muteButton->isHovered()) ||
+                              (m_soloButton && m_soloButton->isHovered()) ||
+                              (m_recordButton && m_recordButton->isHovered());
     
-    if (!isInsideBounds && !isActiveOperation) {
+    if (!isInsideBounds && !isActiveOperation && !controlsNeedEvents) {
         return false;  // Let parent/siblings handle it (e.g., scrollbar)
     }
     
     // Get theme to determine control area bounds
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-    float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
+    float controlAreaWidth = layout.trackControlsWidth;
     float controlAreaEndX = bounds.x + controlAreaWidth;
     float gridStartX = bounds.x + controlAreaWidth + 5;
     float gridEndX = bounds.x + bounds.width - 5;
     
-    // PRIORITY 1: Always let child buttons handle events in control area first
-    // This ensures M/S/Record buttons work even when a sample is loaded
-    if (isInsideBounds && event.position.x < controlAreaEndX) {
-        for (auto& child : getChildren()) {
-            if (child->getBounds().contains(event.position)) {
-                if (child->onMouseEvent(event)) {
-                    return true;  // Button handled it
-                }
-            }
+    // Keep button hover/press state accurate even when leaving the track row.
+    // This is important for cached UIs (and prevents stuck hover/press visuals).
+    if (isInsideBounds || controlsNeedEvents) {
+        auto routeControlButton = [&](const std::shared_ptr<NomadUI::NUIButton>& button) -> bool {
+            if (!button) return false;
+            const bool handled = button->onMouseEvent(event);
+            return handled;
+        };
+
+        bool handledByControls = false;
+        handledByControls = routeControlButton(m_muteButton) || handledByControls;
+        handledByControls = routeControlButton(m_soloButton) || handledByControls;
+        handledByControls = routeControlButton(m_recordButton) || handledByControls;
+
+        if (handledByControls) {
+            return true;
         }
     }
     

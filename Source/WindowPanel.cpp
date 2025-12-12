@@ -141,8 +141,9 @@ void WindowPanel::onRender(NomadUI::NUIRenderer& renderer) {
     // Draw title text (centered vertically in title bar, top-left Y positioning)
     auto textColor = theme.getColor("textSecondary"); // Use secondary text color
     float fontSize = 12.0f;
+    auto titleSize = renderer.measureText(m_title, fontSize);
     float textX = bounds.x + 8.0f;
-    float textY = bounds.y + (m_titleBarHeight - fontSize) * 0.5f;
+    float textY = bounds.y + (m_titleBarHeight - titleSize.height) * 0.5f;
     renderer.drawText(m_title, NomadUI::NUIPoint(textX, textY), fontSize, textColor);
     
     // Draw content background (if expanded)

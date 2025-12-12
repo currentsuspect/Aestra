@@ -184,24 +184,24 @@ struct NUIThemeProperties {
     // Layout Dimensions - Configurable UI Sizing
     struct LayoutDimensions {
         // Panel widths
-        float fileBrowserWidth = 250.0f;
-        float trackControlsWidth = 150.0f;
+        float fileBrowserWidth = 300.0f;
+        float trackControlsWidth = 200.0f;
         float timelineAreaWidth = 800.0f;
 
         // Track heights and spacing
-        float trackHeight = 80.0f;
-        float trackSpacing = 5.0f;
+        float trackHeight = 48.0f;
+        float trackSpacing = 4.0f;
         float trackLabelHeight = 20.0f;
 
         // Transport bar dimensions
-        float transportBarHeight = 60.0f;
-        float transportButtonSize = 40.0f;
+        float transportBarHeight = 56.0f;
+        float transportButtonSize = 36.0f;
         float transportButtonSpacing = 8.0f;
 
         // Control button dimensions
-        float controlButtonWidth = 25.0f;
+        float controlButtonWidth = 32.0f;
         float controlButtonHeight = 20.0f;
-        float controlButtonSpacing = 5.0f;
+        float controlButtonSpacing = 4.0f;
         float controlButtonStartX = 100.0f; // X position where control buttons start
 
         // Grid and timeline

@@ -100,6 +100,11 @@ void AudioEngine::processBlock(float* outputBuffer,
     // Fast path: silent
     if (m_fadeState == FadeState::Silent) {
         std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * m_outputChannels * sizeof(float));
+        // Clear meters so UI doesn't freeze on the last loud block.
+        m_peakL.store(0.0f, std::memory_order_relaxed);
+        m_peakR.store(0.0f, std::memory_order_relaxed);
+        m_rmsL.store(0.0f, std::memory_order_relaxed);
+        m_rmsR.store(0.0f, std::memory_order_relaxed);
         m_telemetry.blocksProcessed.fetch_add(1, std::memory_order_relaxed);
         return;
     }
@@ -133,6 +138,8 @@ void AudioEngine::processBlock(float* outputBuffer,
     
     double peakL = 0.0;
     double peakR = 0.0;
+    double rmsAccL = 0.0;
+    double rmsAccR = 0.0;
     
     const double* src = m_masterBufferD.data();
     
@@ -173,6 +180,9 @@ void AudioEngine::processBlock(float* outputBuffer,
         const double absR = (R >= 0.0) ? R : -R;
         if (absL > peakL) peakL = absL;
         if (absR > peakR) peakR = absR;
+
+        rmsAccL += L * L;
+        rmsAccR += R * R;
         
         // Output as float
         outputBuffer[i * 2] = static_cast<float>(L);
@@ -187,6 +197,14 @@ void AudioEngine::processBlock(float* outputBuffer,
     
     m_peakL.store(static_cast<float>(peakL), std::memory_order_relaxed);
     m_peakR.store(static_cast<float>(peakR), std::memory_order_relaxed);
+    if (numFrames > 0) {
+        const double invN = 1.0 / static_cast<double>(numFrames);
+        m_rmsL.store(static_cast<float>(std::sqrt(rmsAccL * invN)), std::memory_order_relaxed);
+        m_rmsR.store(static_cast<float>(std::sqrt(rmsAccR * invN)), std::memory_order_relaxed);
+    } else {
+        m_rmsL.store(0.0f, std::memory_order_relaxed);
+        m_rmsR.store(0.0f, std::memory_order_relaxed);
+    }
 
     // Fade envelopes (short ramps prevent clicks on stop/seek)
     if (m_fadeState == FadeState::FadingIn) {
@@ -218,6 +236,26 @@ void AudioEngine::processBlock(float* outputBuffer,
             outputBuffer[i * 2 + 1] *= static_cast<float>(fadeGain);
             --m_fadeSamplesRemaining;
         }
+    }
+
+    // Capture recent output for compact waveform displays (post-fade).
+    if (m_waveformHistoryFrames > 0 && !m_waveformHistory.empty()) {
+        const uint32_t cap = m_waveformHistoryFrames;
+        uint32_t write = m_waveformWriteIndex.load(std::memory_order_relaxed);
+        const uint32_t framesToCopy = std::min(numFrames, cap);
+        const uint32_t first = std::min(framesToCopy, cap - write);
+        const size_t stride = static_cast<size_t>(m_outputChannels);
+
+        std::memcpy(&m_waveformHistory[static_cast<size_t>(write) * stride],
+                    outputBuffer,
+                    static_cast<size_t>(first) * stride * sizeof(float));
+        if (framesToCopy > first) {
+            std::memcpy(m_waveformHistory.data(),
+                        outputBuffer + static_cast<size_t>(first) * stride,
+                        static_cast<size_t>(framesToCopy - first) * stride * sizeof(float));
+        }
+        write = (write + framesToCopy) % cap;
+        m_waveformWriteIndex.store(write, std::memory_order_release);
     }
 
     if (m_transportPlaying) {
@@ -255,9 +293,41 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         }
     }
 
+    // Allocate waveform history ring (non-RT).
+    if (m_waveformHistoryFrames == 0) {
+        m_waveformHistoryFrames = kWaveformHistoryFramesDefault;
+    }
+    const size_t historyRequired = static_cast<size_t>(m_waveformHistoryFrames) * m_outputChannels;
+    if (m_waveformHistory.size() < historyRequired) {
+        m_waveformHistory.assign(historyRequired, 0.0f);
+        m_waveformWriteIndex.store(0, std::memory_order_relaxed);
+    }
+
     // Initialize smoothing coefficients based on requested buffer size
     const uint32_t coeffFrames = std::max<uint32_t>(1, maxFrames);
     m_smoothedMasterGain.coeff = 1.0 / static_cast<double>(coeffFrames);
+}
+
+uint32_t AudioEngine::copyWaveformHistory(float* outInterleaved, uint32_t maxFrames) const {
+    if (!outInterleaved || m_waveformHistoryFrames == 0 || m_waveformHistory.empty()) {
+        return 0;
+    }
+    const uint32_t cap = m_waveformHistoryFrames;
+    uint32_t frames = std::min(maxFrames, cap);
+    const uint32_t write = m_waveformWriteIndex.load(std::memory_order_acquire);
+    const uint32_t start = (write + cap - frames) % cap;
+    const size_t stride = static_cast<size_t>(m_outputChannels);
+
+    const uint32_t first = std::min(frames, cap - start);
+    std::memcpy(outInterleaved,
+                &m_waveformHistory[static_cast<size_t>(start) * stride],
+                static_cast<size_t>(first) * stride * sizeof(float));
+    if (frames > first) {
+        std::memcpy(outInterleaved + static_cast<size_t>(first) * stride,
+                    m_waveformHistory.data(),
+                    static_cast<size_t>(frames - first) * stride * sizeof(float));
+    }
+    return frames;
 }
 
 void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {

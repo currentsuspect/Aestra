@@ -269,6 +269,8 @@ public:
     
     // Waveform data access (for UI visualization)
     const std::vector<float>& getAudioData() const;
+    // Shared decoded buffer (non-streaming). Non-RT thread only.
+    std::shared_ptr<const AudioBuffer> getSampleBuffer() const;
     uint32_t getSampleRate() const { return m_sampleRate; }
     uint32_t getNumChannels() const { return m_numChannels; }
 

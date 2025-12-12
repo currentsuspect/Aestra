@@ -1378,61 +1378,86 @@ void NUIRendererGL::drawTextCentered(const std::string& text, const NUIRect& rec
     NUISize textSize = measureText(text, fontSize);
     
     // Calculate horizontal centering
-    float x = rect.x + (rect.width - textSize.width) * 0.5f;
+    float x = std::round(rect.x + (rect.width - textSize.width) * 0.5f);
     
-    // Calculate vertical centering (Top-Left)
-    // We standardize on Top-Left coordinates for drawText
-    float y = std::floor(rect.y + (rect.height - textSize.height) * 0.5f);
+    // Calculate vertical centering using real font metrics (Top-Left Y).
+    float y = std::round(calculateTextY(rect, fontSize));
     
     drawText(text, NUIPoint(x, y), fontSize, color);
 }
 
+NUIRenderer::FontMetrics NUIRendererGL::getFontMetrics(float fontSize) const {
+    NUIRenderer::FontMetrics metrics;
+    if (fontInitialized_ && atlasFontSize_ > 0) {
+        const float scale = fontSize / static_cast<float>(atlasFontSize_);
+        metrics.ascent = fontAscent_ * scale;
+        metrics.descent = fontDescent_ * scale;
+        metrics.lineHeight = fontLineHeight_ * scale;
+        return metrics;
+    }
+
+    // Fallback approximation (matches the base NUIRenderer default).
+    metrics.ascent = fontSize * 0.8f;
+    metrics.descent = fontSize * 0.2f;
+    metrics.lineHeight = metrics.ascent + metrics.descent;
+    return metrics;
+}
+
 NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
+    // IMPORTANT: drawText() renders via the FreeType atlas path; prefer matching metrics here
+    // so layout (centering/truncation) matches what actually hits the screen.
+    if (text.empty()) {
+        if (fontInitialized_ && atlasFontSize_ > 0) {
+            float scale = fontSize / static_cast<float>(atlasFontSize_);
+            return {0.0f, fontLineHeight_ * scale};
+        }
+        return {0.0f, fontSize};
+    }
+
+    if (fontInitialized_ && atlasFontSize_ > 0) {
+        try {
+            float totalWidth = 0.0f;
+            float scale = fontSize / static_cast<float>(atlasFontSize_);
+            FT_UInt previousGlyph = 0;
+
+            for (char c : text) {
+                auto it = fontCache_.find(c);
+                if (it == fontCache_.end()) {
+                    continue; // Skip unknown characters
+                }
+
+                const FontData& glyph = it->second;
+
+                if (fontHasKerning_ && previousGlyph != 0 && glyph.glyphIndex != 0) {
+                    FT_Vector kerning = {0, 0};
+                    if (FT_Get_Kerning(ftFace_, previousGlyph, glyph.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
+                        totalWidth += (kerning.x >> 6) * scale;
+                    }
+                }
+
+                totalWidth += (glyph.advance >> 6) * scale;
+                previousGlyph = glyph.glyphIndex;
+            }
+
+            float lineHeight = fontLineHeight_ * scale;
+            return {totalWidth, lineHeight};
+        } catch (...) {
+            // Fallback to simple estimation
+            return {text.length() * fontSize * 0.6f, fontSize};
+        }
+    }
+
+    // Fallback: SDF measurement (if atlas text isn't available).
     if (!useSDFText_ && !triedSDFInit_ && sdfRenderer_ && !defaultFontPath_.empty()) {
         useSDFText_ = sdfRenderer_->initialize(defaultFontPath_, 64.0f);
         triedSDFInit_ = true;
     }
-
     if (useSDFText_ && sdfRenderer_ && sdfRenderer_->isInitialized()) {
         // fontSize is in logical pixels - no DPI scaling
         return sdfRenderer_->measureText(text, fontSize);
     }
-
-    if (!fontInitialized_ || text.empty()) {
-        return {text.length() * fontSize * 0.6f, fontSize};
-    }
     
-    try {
-        float totalWidth = 0.0f;
-        float scale = fontSize / static_cast<float>(atlasFontSize_);
-        FT_UInt previousGlyph = 0;
-        
-        for (char c : text) {
-            auto it = fontCache_.find(c);
-            if (it == fontCache_.end()) {
-                continue; // Skip unknown characters
-            }
-
-            const FontData& glyph = it->second;
-
-            if (fontHasKerning_ && previousGlyph != 0 && glyph.glyphIndex != 0) {
-                FT_Vector kerning = {0, 0};
-                if (FT_Get_Kerning(ftFace_, previousGlyph, glyph.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
-                    totalWidth += (kerning.x >> 6) * scale;
-                }
-            }
-
-            totalWidth += (glyph.advance >> 6) * scale;
-            previousGlyph = glyph.glyphIndex;
-        }
-        
-        float lineHeight = fontLineHeight_ * scale;
-        return {totalWidth, lineHeight};
-        
-    } catch (...) {
-        // Fallback to simple estimation
-        return {text.length() * fontSize * 0.6f, fontSize};
-    }
+    return {text.length() * fontSize * 0.6f, fontSize};
 }
 
 // ============================================================================
