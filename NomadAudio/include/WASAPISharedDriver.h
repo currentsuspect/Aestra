@@ -53,6 +53,7 @@ public:
     bool isStreamRunning() const override { return m_isRunning; }
     double getStreamLatency() const override;
     uint32_t getStreamSampleRate() const override { return m_waveFormat ? m_waveFormat->nSamplesPerSec : 0; }
+    uint32_t getStreamBufferSize() const override { return m_bufferFrameCount; }
 
 private:
     // COM interfaces

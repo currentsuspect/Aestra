@@ -57,6 +57,8 @@ endif()
 # =============================================================================
 
 set(NOMAD_AUDIO_SOURCES
+    src/AudioGraphBuilder.cpp
+    src/AudioEngine.cpp
     src/AudioDeviceManager.cpp
     src/RtAudioBackend.cpp
     src/AudioProcessor.cpp
@@ -64,15 +66,29 @@ set(NOMAD_AUDIO_SOURCES
     src/Oscillator.cpp
     src/PreviewEngine.cpp
     src/SamplePool.cpp
+    src/SampleRateConverter.cpp
     src/Track.cpp
     src/TrackManager.cpp
+    src/AudioClip.cpp
+    src/PlaylistTrack.cpp
     # New multi-tier driver system
     src/WASAPISharedDriver.cpp
     src/WASAPIExclusiveDriver.cpp
     src/ASIODriverInfo.cpp
+    # Multi-clip playlist system
+    src/ClipSource.cpp
+    src/PlaylistModel.cpp
+    src/SelectionModel.cpp
+    src/WaveformCache.cpp
 )
 
 set(NOMAD_AUDIO_HEADERS
+    include/AudioGraphBuilder.h
+    include/AudioEngine.h
+    include/AudioCommandQueue.h
+    include/AudioTelemetry.h
+    include/AudioGraph.h
+    include/EngineState.h
     include/NomadAudio.h
     include/AudioDeviceManager.h
     include/AudioDriver.h
@@ -81,14 +97,29 @@ set(NOMAD_AUDIO_HEADERS
     include/Oscillator.h
     include/PreviewEngine.h
     include/SamplePool.h
+    include/SampleRateConverter.h
     include/Track.h
     include/TrackManager.h
+    include/AudioClip.h
+    include/PlaylistTrack.h
     # New multi-tier driver system
     include/AudioDriverTypes.h
     include/NativeAudioDriver.h
     include/WASAPISharedDriver.h
     include/WASAPIExclusiveDriver.h
     include/ASIODriverInfo.h
+    # Multi-clip playlist system
+    include/TimeTypes.h
+    include/ClipSource.h
+    include/PlaylistClip.h
+    include/PlaylistModel.h
+    include/PlaylistRuntimeSnapshot.h
+    include/PlaylistMixer.h
+    include/SelectionModel.h
+    include/WaveformCache.h
+    include/PlaylistGeometry.h
+    include/PlaylistSerializer.h
+    include/MultiClipPlaylist.h
 )
 
 # Create NomadAudio library
@@ -188,6 +219,17 @@ add_executable(NomadWavLoaderTest
 )
 
 target_link_libraries(NomadWavLoaderTest
+    PRIVATE
+        NomadAudio
+        NomadCore
+)
+
+# Sample Rate Converter test
+add_executable(NomadSampleRateConverterTest
+    test/SampleRateConverterTest.cpp
+)
+
+target_link_libraries(NomadSampleRateConverterTest
     PRIVATE
         NomadAudio
         NomadCore

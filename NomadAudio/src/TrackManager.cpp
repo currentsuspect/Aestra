@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstring>
 #include <chrono>
+#include <unordered_map>
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -17,6 +18,20 @@ namespace Audio {
 
 // Maximum buffer size for pre-allocation (16384 frames is plenty for any reasonable latency)
 static constexpr size_t MAX_AUDIO_BUFFER_SIZE = 16384;
+
+//==============================================================================
+// Helpers
+//==============================================================================
+
+static void reindexTracks(std::vector<std::shared_ptr<Track>>& tracks, std::unordered_map<uint32_t, uint32_t>& idToIndex) {
+    idToIndex.clear();
+    for (uint32_t idx = 0; idx < tracks.size(); ++idx) {
+        if (tracks[idx]) {
+            tracks[idx]->setTrackIndex(idx);
+            idToIndex[tracks[idx]->getTrackId()] = idx;
+        }
+    }
+}
 
 //==============================================================================
 // AudioThreadPool Implementation
@@ -138,7 +153,13 @@ std::shared_ptr<Track> TrackManager::addTrack(const std::string& name) {
     uint32_t trackId = m_nextTrackId.fetch_add(1);
 
     auto track = std::make_shared<Track>(trackName, trackId);
+    track->setOnDataChanged([this]() { markGraphDirty(); });
+    track->setTrackIndex(static_cast<uint32_t>(m_tracks.size()));
+    if (m_commandSink) {
+        track->setCommandSink(m_commandSink);
+    }
     m_tracks.push_back(track);
+    m_idToIndex[track->getTrackId()] = track->getTrackIndex();
 
     // Pre-allocate buffer for the new track
     // We resize m_trackBuffers to match m_tracks size
@@ -149,7 +170,12 @@ std::shared_ptr<Track> TrackManager::addTrack(const std::string& name) {
         m_trackBuffers.resize(m_tracks.size(), std::move(newBuffer));
     }
 
+    // Mark project as modified for auto-save
+    m_isModified.store(true);
+    m_graphDirty.store(true, std::memory_order_release);
+
     Log::info("Added track: " + trackName + " (ID: " + std::to_string(trackId) + ")");
+    m_idToIndex[trackId] = track->getTrackIndex();
     return track;
 }
 
@@ -157,6 +183,11 @@ void TrackManager::addExistingTrack(std::shared_ptr<Track> track) {
     if (!track) return;
     
     std::lock_guard<std::mutex> lock(m_trackMutex);
+    track->setOnDataChanged([this]() { markGraphDirty(); });
+    track->setTrackIndex(static_cast<uint32_t>(m_tracks.size()));
+    if (m_commandSink) {
+        track->setCommandSink(m_commandSink);
+    }
     m_tracks.push_back(track);
     
     // Pre-allocate buffer for the new track
@@ -166,6 +197,8 @@ void TrackManager::addExistingTrack(std::shared_ptr<Track> track) {
     }
     
     Log::info("Added existing track: " + track->getName() + " (ID: " + std::to_string(track->getTrackId()) + ")");
+    m_graphDirty.store(true, std::memory_order_release);
+    m_idToIndex[track->getTrackId()] = track->getTrackIndex();
 }
 
 std::shared_ptr<Track> TrackManager::getTrack(size_t index) {
@@ -182,16 +215,52 @@ std::shared_ptr<const Track> TrackManager::getTrack(size_t index) const {
     return nullptr;
 }
 
+uint32_t TrackManager::getCompactIndex(uint32_t trackId) const {
+    auto it = m_idToIndex.find(trackId);
+    if (it != m_idToIndex.end()) {
+        return it->second;
+    }
+    return 0;
+}
+
 void TrackManager::removeTrack(size_t index) {
     std::lock_guard<std::mutex> lock(m_trackMutex);
     if (index < m_tracks.size()) {
         std::string trackName = m_tracks[index]->getName();
+        int32_t removedLaneIndex = m_tracks[index]->getLaneIndex();
+        
         m_tracks.erase(m_tracks.begin() + index);
+        reindexTracks(m_tracks, m_idToIndex);
         
         // Keep buffers in sync
         if (index < m_trackBuffers.size()) {
             m_trackBuffers.erase(m_trackBuffers.begin() + index);
         }
+        
+        // Reset lane indices for any tracks that shared the removed track's lane
+        // This prevents orphaned lane references
+        if (removedLaneIndex >= 0) {
+            int remainingOnLane = 0;
+            for (auto& track : m_tracks) {
+                if (track && track->getLaneIndex() == removedLaneIndex) {
+                    remainingOnLane++;
+                }
+            }
+            // If only one track remains on this lane, reset it to independent
+            // (a single clip doesn't need lane grouping)
+            if (remainingOnLane == 1) {
+                for (auto& track : m_tracks) {
+                    if (track && track->getLaneIndex() == removedLaneIndex) {
+                        track->setLaneIndex(-1);  // Force re-assignment
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Mark project as modified for auto-save
+        m_isModified.store(true);
+        m_graphDirty.store(true, std::memory_order_release);
 
         Log::info("Removed track: " + trackName);
     }
@@ -207,6 +276,8 @@ void TrackManager::clearAllTracks() {
 
     m_tracks.clear();
     m_trackBuffers.clear();
+    m_idToIndex.clear();
+    m_graphDirty.store(true, std::memory_order_release);
     Log::info("Cleared all tracks");
 }
 
@@ -292,6 +363,33 @@ void TrackManager::setPosition(double seconds) {
     if (m_onPositionUpdate) {
         m_onPositionUpdate(seconds);
     }
+
+    // Seeking/scrubbing does not change graph structure; avoid forcing rebuilds
+    // (rebuilding on every ruler drag can starve audio thread and cause crackles).
+
+    // Push seek command to audio engine if connected
+    if (m_commandSink) {
+        AudioQueueCommand cmd;
+        cmd.type = AudioQueueCommandType::SetTransportState;
+        cmd.value1 = m_isPlaying.load() ? 1.0f : 0.0f;
+        double sr = m_outputSampleRate.load();
+        if (sr <= 0.0) sr = 48000.0;
+        cmd.samplePos = static_cast<uint64_t>(seconds * sr);
+        m_commandSink(cmd);
+    }
+}
+
+// Sync from audio engine playback position (no commands back to engine).
+void TrackManager::syncPositionFromEngine(double seconds) {
+    seconds = std::max(0.0, seconds);
+    m_positionSeconds.store(seconds);
+
+    for (auto& track : m_tracks) {
+        if (!track) continue;
+        double rel = seconds - track->getStartPositionInTimeline();
+        if (rel < 0.0) rel = 0.0;
+        track->setPosition(rel);
+    }
 }
 
 double TrackManager::getTotalDuration() const {
@@ -326,11 +424,13 @@ bool TrackManager::moveClipToTrack(size_t fromIndex, size_t toIndex) {
     to->setAudioData(from->getAudioData().data(),
                      static_cast<uint32_t>(from->getAudioData().size() / from->getNumChannels()),
                      from->getSampleRate(),
-                     from->getNumChannels());
+                     from->getNumChannels(),
+                     static_cast<uint32_t>(m_outputSampleRate.load()));
     to->setStartPositionInTimeline(from->getStartPositionInTimeline());
     to->setSourcePath(from->getSourcePath());
     // Clear source track
     from->clearAudioData();
+    reindexTracks(m_tracks, m_idToIndex);
     return true;
 }
 
@@ -354,23 +454,62 @@ std::shared_ptr<Track> TrackManager::sliceClip(size_t trackIndex, double sliceTi
     if (sliceSample >= data.size()) return nullptr;
 
     // Create new track with second half
-    auto newTrack = addTrack(track->getName() + " (Slice)");
+    std::lock_guard<std::mutex> lock(m_trackMutex);
+    
+    // === FL STUDIO STYLE LANE GROUPING ===
+    // If original track has no lane index, assign one based on its position
+    // All clips from a split share the same lane index (same visual row)
+    int32_t laneIndex = track->getLaneIndex();
+    if (laneIndex < 0) {
+        // First time splitting - assign lane index based on current track position
+        laneIndex = static_cast<int32_t>(trackIndex);
+        track->setLaneIndex(laneIndex);
+    }
+    
+    // Create new track manually (don't use addTrack which adds to end)
+    uint32_t trackId = m_nextTrackId.fetch_add(1);
+    auto newTrack = std::make_shared<Track>(track->getName(), trackId);
+    
     std::vector<float> secondPart(data.begin() + sliceSample, data.end());
     newTrack->setAudioData(secondPart.data(),
                            static_cast<uint32_t>(secondPart.size() / numChannels),
                            sampleRate,
-                           numChannels);
+                           numChannels,
+                           static_cast<uint32_t>(m_outputSampleRate.load()));
     double newStart = track->getStartPositionInTimeline() + sliceTimeSeconds;
     newTrack->setStartPositionInTimeline(newStart);
     newTrack->setSourcePath(track->getSourcePath());
+    newTrack->setColor(track->getColor());  // Preserve color
+    
+    // Assign same lane index - this groups clips on the same visual row
+    newTrack->setLaneIndex(laneIndex);
 
-    // Resize original track to first part
+    // Insert new track immediately after the original one (not at the end)
+    auto insertPos = m_tracks.begin() + trackIndex + 1;
+    m_tracks.insert(insertPos, newTrack);
+    
+    // Add buffer for new track
+    if (m_trackBuffers.size() < m_tracks.size()) {
+        std::vector<float> newBuffer(MAX_AUDIO_BUFFER_SIZE * 2, 0.0f);
+        m_trackBuffers.resize(m_tracks.size(), std::move(newBuffer));
+    }
+
+    // Resize original track to first part (must do this AFTER we read from data)
     std::vector<float> firstPart(data.begin(), data.begin() + sliceSample);
     track->setAudioData(firstPart.data(),
                         static_cast<uint32_t>(firstPart.size() / numChannels),
                         sampleRate,
-                        numChannels);
-    // Keep original start
+                        numChannels,
+                        static_cast<uint32_t>(m_outputSampleRate.load()));
+    // Keep original start position
+    
+    // Mark project as modified
+    m_isModified.store(true);
+    m_graphDirty.store(true, std::memory_order_release);
+    
+    Log::info("Sliced track '" + track->getName() + "' at " + std::to_string(sliceTimeSeconds) + 
+              "s (lane " + std::to_string(laneIndex) + ")");
+    
     return newTrack;
 }
 
@@ -380,6 +519,7 @@ bool TrackManager::moveClipWithinTrack(size_t trackIndex, double newStartSeconds
     if (!track) return false;
     if (newStartSeconds < 0.0) newStartSeconds = 0.0;
     track->setStartPositionInTimeline(newStartSeconds);
+    m_graphDirty.store(true, std::memory_order_release);
     return true;
 }
 
@@ -668,11 +808,22 @@ void TrackManager::clearAllSolos() {
 }
 
 std::string TrackManager::generateTrackName() const {
-    // Generate track name based on the number of non-preview tracks
-    // Since we start with 1 Preview track, we need to subtract 1
-    uint32_t nextId = m_nextTrackId.load();
-    uint32_t displayNumber = nextId - 1; // Account for Preview track
-    return "Track " + std::to_string(displayNumber);
+    // Generate track name based on actual track count (excluding system/preview tracks)
+    // Count non-system tracks to get proper numbering
+    size_t userTrackCount = 0;
+    for (const auto& track : m_tracks) {
+        if (track && !track->isSystemTrack()) {
+            userTrackCount++;
+        }
+    }
+    // New track will be userTrackCount + 1
+    return "Track " + std::to_string(userTrackCount + 1);
+}
+
+void TrackManager::setOutputSampleRate(double sampleRate) {
+    m_outputSampleRate.store(sampleRate);
+    // Rebuild graph at new rate on next render
+    m_graphDirty.store(true, std::memory_order_release);
 }
 
 } // namespace Audio

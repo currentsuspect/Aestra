@@ -548,7 +548,8 @@ bool loadWavFile(const std::string& filePath, std::vector<float>& audioData, uin
 }
 
 Track::Track(const std::string& name, uint32_t trackId)
-    : m_name(name)
+    : m_uuid(TrackUUID::generate())  // Generate stable UUID on creation
+    , m_name(name)
     , m_trackId(trackId)
     , m_color(0xFF4080FF)  // Default blue (ARGB)
     , m_state(TrackState::Empty)
@@ -566,7 +567,8 @@ Track::Track(const std::string& name, uint32_t trackId)
     m_mixerBus->setMute(m_muted.load());
     m_mixerBus->setSolo(m_soloed.load());
 
-    Log::info("Track created: " + m_name + " (ID: " + std::to_string(m_trackId) + ")");
+    Log::info("Track created: " + m_name + " (ID: " + std::to_string(m_trackId) + 
+              ", UUID: " + m_uuid.toString() + ")");
 }
 
 Track::~Track() {
@@ -605,6 +607,16 @@ void Track::setVolume(float volume) {
     if (m_mixerBus) {
         m_mixerBus->setGain(volume);
     }
+    if (m_onDataChanged) {
+        m_onDataChanged();
+    }
+    if (m_commandSink) {
+        AudioQueueCommand cmd;
+        cmd.type = AudioQueueCommandType::SetTrackVolume;
+        cmd.trackIndex = m_trackIndex;
+        cmd.value1 = volume;
+        m_commandSink(cmd);
+    }
 }
 
 void Track::setPan(float pan) {
@@ -613,6 +625,16 @@ void Track::setPan(float pan) {
     if (m_mixerBus) {
         m_mixerBus->setPan(pan);
     }
+    if (m_onDataChanged) {
+        m_onDataChanged();
+    }
+    if (m_commandSink) {
+        AudioQueueCommand cmd;
+        cmd.type = AudioQueueCommandType::SetTrackPan;
+        cmd.trackIndex = m_trackIndex;
+        cmd.value1 = pan;
+        m_commandSink(cmd);
+    }
 }
 
 void Track::setMute(bool mute) {
@@ -620,12 +642,32 @@ void Track::setMute(bool mute) {
     if (m_mixerBus) {
         m_mixerBus->setMute(mute);
     }
+    if (m_onDataChanged) {
+        m_onDataChanged();
+    }
+    if (m_commandSink) {
+        AudioQueueCommand cmd;
+        cmd.type = AudioQueueCommandType::SetTrackMute;
+        cmd.trackIndex = m_trackIndex;
+        cmd.value1 = mute ? 1.0f : 0.0f;
+        m_commandSink(cmd);
+    }
 }
 
 void Track::setSolo(bool solo) {
     m_soloed.store(solo);
     if (m_mixerBus) {
         m_mixerBus->setSolo(solo);
+    }
+    if (m_onDataChanged) {
+        m_onDataChanged();
+    }
+    if (m_commandSink) {
+        AudioQueueCommand cmd;
+        cmd.type = AudioQueueCommandType::SetTrackSolo;
+        cmd.trackIndex = m_trackIndex;
+        cmd.value1 = solo ? 1.0f : 0.0f;
+        m_commandSink(cmd);
     }
 }
 
@@ -679,7 +721,7 @@ bool Track::loadAudioFile(const std::string& filePath) {
 
     // Clear any existing audio data (streaming/recording buffers)
     {
-        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        std::lock_guard<std::recursive_mutex> lock(m_audioDataMutex);
         m_audioData.clear();
     }
     m_durationSeconds.store(0.0);
@@ -710,6 +752,10 @@ bool Track::loadAudioFile(const std::string& filePath) {
                     m_durationSeconds.store(static_cast<double>(totalFrames) / info.sampleRate);
                     setState(TrackState::Loaded);
                     Log::info("WAV streaming enabled: " + std::to_string(totalFrames) + " frames");
+                    // Notify that audio data changed (for graph rebuild)
+                    if (m_onDataChanged) {
+                        m_onDataChanged();
+                    }
                     return true;
                 }
                 Log::warning("Streaming setup failed, falling back to full load");
@@ -749,7 +795,7 @@ bool Track::loadAudioFile(const std::string& filePath) {
             if (buffer->channels > 0) { numChannels = buffer->channels; sourceChannels = buffer->channels; }
 
             {
-                std::lock_guard<std::mutex> lock(m_audioDataMutex);
+                std::lock_guard<std::recursive_mutex> lock(m_audioDataMutex);
                 m_sampleBuffer = buffer;
                 m_sampleRate = sampleRate;
                 m_numChannels = numChannels;
@@ -761,6 +807,10 @@ bool Track::loadAudioFile(const std::string& filePath) {
 
             Log::info("WAV loaded successfully via SamplePool: " + std::to_string(buffer->data.size()) + " samples, " +
                        std::to_string(m_durationSeconds.load()) + " seconds");
+            // Notify that audio data changed (for graph rebuild)
+            if (m_onDataChanged) {
+                m_onDataChanged();
+            }
             // If we were already playing, keep playing with the new buffer
             if (previousState == TrackState::Playing) {
                 setState(TrackState::Playing);
@@ -803,7 +853,7 @@ bool Track::loadAudioFile(const std::string& filePath) {
             if (buffer->channels > 0) { numChannels = buffer->channels; sourceChannels = buffer->channels; }
 
             {
-                std::lock_guard<std::mutex> lock(m_audioDataMutex);
+                std::lock_guard<std::recursive_mutex> lock(m_audioDataMutex);
                 m_sampleBuffer = buffer;
                 m_sampleRate = sampleRate;
                 m_numChannels = numChannels;
@@ -816,6 +866,10 @@ bool Track::loadAudioFile(const std::string& filePath) {
             Log::info("Audio loaded via Media Foundation + SamplePool: " + std::to_string(buffer->data.size()) + " samples, " +
                        std::to_string(m_durationSeconds.load()) + " seconds @ " +
                        std::to_string(sampleRate) + " Hz, channels: " + std::to_string(numChannels));
+            // Notify that audio data changed (for graph rebuild)
+            if (m_onDataChanged) {
+                m_onDataChanged();
+            }
             // If we were already playing, keep playing with the new buffer
             if (previousState == TrackState::Playing) {
                 setState(TrackState::Playing);
@@ -874,7 +928,7 @@ bool Track::generatePreviewTone(const std::string& filePath) {
     }
 
     {
-        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        std::lock_guard<std::recursive_mutex> lock(m_audioDataMutex);
         m_audioData.swap(buffer);
         m_numChannels = 2;
         m_sourceChannels = 2;
@@ -886,6 +940,10 @@ bool Track::generatePreviewTone(const std::string& filePath) {
     std::cout << "Preview tone generated: " << m_audioData.size() << " samples, "
               << m_durationSeconds.load() << " seconds, " << baseFrequency << " Hz" << std::endl;
 
+    // Notify that audio data changed (for graph rebuild)
+    if (m_onDataChanged) {
+        m_onDataChanged();
+    }
     return true;
 }
 
@@ -932,7 +990,7 @@ bool Track::generateDemoAudio(const std::string& filePath) {
     }
 
     {
-        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        std::lock_guard<std::recursive_mutex> lock(m_audioDataMutex);
         m_audioData.swap(buffer);
         m_numChannels = 2;
         m_sourceChannels = 2;
@@ -944,16 +1002,20 @@ bool Track::generateDemoAudio(const std::string& filePath) {
     std::cout << "Demo audio generated: " << m_audioData.size() << " samples, "
               << m_durationSeconds.load() << " seconds, " << frequency << " Hz" << std::endl;
 
+    // Notify that audio data changed (for graph rebuild)
+    if (m_onDataChanged) {
+        m_onDataChanged();
+    }
     return true;
 }
 
 void Track::clearAudioData() {
     {
-        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        std::lock_guard<std::recursive_mutex> lock(m_audioDataMutex);
         m_sampleBuffer.reset();
     }
     {
-        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        std::lock_guard<std::recursive_mutex> lock(m_audioDataMutex);
         m_audioData.clear();
         m_recordingBuffer.clear();
         m_numChannels = 2;
@@ -963,9 +1025,68 @@ void Track::clearAudioData() {
     m_playbackPhase.store(0.0);
     m_positionSeconds.store(0.0);
     setState(TrackState::Empty);
+
+    if (m_onDataChanged) {
+        m_onDataChanged();
+    }
 }
 
-void Track::setAudioData(const float* data, uint32_t numSamples, uint32_t sampleRate, uint32_t numChannels) {
+namespace {
+std::vector<float> resampleLinearStereo(const std::vector<float>& inputStereo,
+                                        uint32_t inSampleRate,
+                                        uint32_t outSampleRate) {
+    if (inputStereo.empty() || inSampleRate == 0 || outSampleRate == 0) {
+        return {};
+    }
+    const uint64_t inFrames = static_cast<uint64_t>(inputStereo.size() / 2);
+    const double rateRatio = static_cast<double>(inSampleRate) / static_cast<double>(outSampleRate);
+    const uint64_t outFrames = static_cast<uint64_t>(std::ceil(static_cast<double>(inFrames) * static_cast<double>(outSampleRate) / static_cast<double>(inSampleRate)));
+    std::vector<float> output;
+    output.resize(static_cast<size_t>(outFrames) * 2);
+
+    const float* src = inputStereo.data();
+    const int64_t inFramesSigned = static_cast<int64_t>(inFrames);
+
+    for (uint64_t i = 0; i < outFrames; ++i) {
+        double srcPos = static_cast<double>(i) * rateRatio;
+        int64_t idx = static_cast<int64_t>(srcPos);
+        float frac = static_cast<float>(srcPos - static_cast<double>(idx));
+
+        // Get 4 samples for cubic Hermite interpolation (clamped to bounds)
+        int64_t idx0 = std::max<int64_t>(0, idx - 1);
+        int64_t idx1 = std::max<int64_t>(0, idx);
+        int64_t idx2 = std::min<int64_t>(idx + 1, inFramesSigned - 1);
+        int64_t idx3 = std::min<int64_t>(idx + 2, inFramesSigned - 1);
+
+        // Left channel
+        float l0 = src[idx0 * 2];
+        float l1 = src[idx1 * 2];
+        float l2 = src[idx2 * 2];
+        float l3 = src[idx3 * 2];
+
+        // Right channel
+        float r0 = src[idx0 * 2 + 1];
+        float r1 = src[idx1 * 2 + 1];
+        float r2 = src[idx2 * 2 + 1];
+        float r3 = src[idx3 * 2 + 1];
+
+        // Cubic Hermite coefficients
+        float frac2 = frac * frac;
+        float frac3 = frac2 * frac;
+
+        float c0 = -0.5f * frac3 + frac2 - 0.5f * frac;
+        float c1 = 1.5f * frac3 - 2.5f * frac2 + 1.0f;
+        float c2 = -1.5f * frac3 + 2.0f * frac2 + 0.5f * frac;
+        float c3 = 0.5f * frac3 - 0.5f * frac2;
+
+        output[static_cast<size_t>(i) * 2]     = l0 * c0 + l1 * c1 + l2 * c2 + l3 * c3;
+        output[static_cast<size_t>(i) * 2 + 1] = r0 * c0 + r1 * c1 + r2 * c2 + r3 * c3;
+    }
+    return output;
+}
+} // namespace
+
+void Track::setAudioData(const float* data, uint32_t numSamples, uint32_t sampleRate, uint32_t numChannels, uint32_t targetSampleRate) {
     if (!data || numSamples == 0) {
         Log::error("Invalid audio data");
         return;
@@ -973,28 +1094,50 @@ void Track::setAudioData(const float* data, uint32_t numSamples, uint32_t sample
     
     stopStreaming();
     {
-        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        std::lock_guard<std::recursive_mutex> lock(m_audioDataMutex);
         m_sampleBuffer.reset();
     }
 
     // Copy audio data and enforce stereo for the engine
     std::vector<float> temp(data, data + (numSamples * numChannels));
     uint32_t inChannels = numChannels;
+
+    // Preserve source channel count for UI; force stereo for engine
+    m_sourceChannels = numChannels;
+    forceStereo(temp, inChannels, m_sourceChannels);
+
+    // Optional resample to target SR (if provided and different)
+    uint32_t targetSR = (targetSampleRate > 0) ? targetSampleRate : sampleRate;
+    if (targetSR == 0) {
+        targetSR = sampleRate;
+    }
+    std::vector<float> finalData;
+    if (targetSR != sampleRate) {
+        finalData = resampleLinearStereo(temp, sampleRate, targetSR);
+    } else {
+        finalData.swap(temp);
+    }
+
     {
-        std::lock_guard<std::mutex> lock(m_audioDataMutex);
-        m_sampleRate = sampleRate;
-        forceStereo(temp, inChannels, m_sourceChannels);
-        m_audioData.swap(temp);
+        std::lock_guard<std::recursive_mutex> lock(m_audioDataMutex);
+        m_sampleRate = targetSR;
+        m_audioData.swap(finalData.empty() ? temp : finalData);
         m_numChannels = 2;
     }
-    m_durationSeconds.store(static_cast<double>(numSamples) / sampleRate);
+    const double durationSeconds = static_cast<double>(m_audioData.size() / m_numChannels) / static_cast<double>(m_sampleRate);
+    m_durationSeconds.store(durationSeconds);
     m_playbackPhase.store(0.0);
     m_positionSeconds.store(0.0);
     setState(TrackState::Loaded);
     
-    Log::info("Audio data loaded: " + std::to_string(numSamples) + " samples, " +
-               std::to_string(m_durationSeconds.load()) + " seconds, " + 
-               std::to_string(sampleRate) + " Hz, " + std::to_string(numChannels) + " channels");
+    const uint64_t storedFrames = static_cast<uint64_t>(m_audioData.size() / m_numChannels);
+    Log::info("Audio data loaded: " + std::to_string(storedFrames) + " frames @ " +
+               std::to_string(m_sampleRate) + " Hz (source " + std::to_string(sampleRate) + " Hz, " +
+               std::to_string(numChannels) + " ch)");
+
+    if (m_onDataChanged) {
+        m_onDataChanged();
+    }
 }
 
 // Recording
@@ -1184,7 +1327,7 @@ void Track::generateSilence(float* buffer, uint32_t numFrames) {
 }
 
 void Track::copyAudioData(float* outputBuffer, uint32_t numFrames, double outputSampleRate) {
-    std::lock_guard<std::mutex> lock(m_audioDataMutex);
+    std::lock_guard<std::recursive_mutex> lock(m_audioDataMutex);
 
     std::shared_ptr<AudioBuffer> sampleBuffer = m_sampleBuffer;
     const std::vector<float>* buffer = nullptr;
@@ -1210,48 +1353,99 @@ void Track::copyAudioData(float* outputBuffer, uint32_t numFrames, double output
         outputSampleRate = 48000.0;
     }
     const double sampleRateRatio = static_cast<double>(m_sampleRate) / outputSampleRate;
+    const uint32_t outputRate = static_cast<uint32_t>(outputSampleRate);
 
     const uint64_t bufferFrames = totalSamples / channels;
     const uint64_t baseFrame = m_streamBaseFrame.load(std::memory_order_relaxed);
 
-    // Process audio based on quality settings
-    for (uint32_t frame = 0; frame < numFrames; ++frame) {
-        double exactSamplePos = phase;
-        
-        for (uint32_t ch = 0; ch < channels; ++ch) {
-            float sample = 0.0f;
-            double localPos = m_streaming ? (exactSamplePos - baseFrame) : exactSamplePos;
-
-            if (!m_streaming || (localPos >= 0.0 && localPos + 1.0 < bufferFrames)) {
-                // Choose interpolation method based on resampling mode
-                switch (m_qualitySettings.resampling) {
-                    case ResamplingMode::Fast:
-                        sample = interpolateLinear(buffer->data(), totalSamples, localPos, ch);
-                        break;
-                    case ResamplingMode::Medium:
-                        sample = interpolateCubic(buffer->data(), totalSamples, localPos, ch);
-                        break;
-                    case ResamplingMode::High:
-                        sample = interpolateSinc(buffer->data(), totalSamples, localPos, ch);
-                        break;
-                    case ResamplingMode::Ultra:
-                        sample = interpolateUltra(buffer->data(), totalSamples, localPos, ch);
-                        break;
-                    case ResamplingMode::Extreme:
-                        sample = interpolateExtreme(buffer->data(), totalSamples, localPos, ch);
-                        break;
-                    case ResamplingMode::Perfect:
-                        sample = interpolatePerfect(buffer->data(), totalSamples, localPos, ch);
-                        break;
-                }
-            } else {
-                sample = 0.0f; // gap until buffer catches up
-            }
+    // ============================================================================
+    // SRC Module Path (batch processing - more efficient)
+    // ============================================================================
+    if (m_useSRCModule && !m_streaming && m_sampleRate != outputRate) {
+        // Configure SRC if sample rate or output rate changed
+        if (!m_srcConverter.isConfigured() || 
+            m_srcConverter.getSourceRate() != m_sampleRate ||
+            m_lastOutputSampleRate != outputRate) {
             
-            outputBuffer[frame * m_numChannels + ch] = sample;
+            SRCQuality quality = mapResamplingToSRC(m_qualitySettings.resampling);
+            m_srcConverter.configure(m_sampleRate, outputRate, channels, quality);
+            m_srcConverter.reset();  // Clear history to prevent discontinuities on config change
+            m_lastOutputSampleRate = outputRate;
         }
+        
+        // Calculate input frames needed based on phase
+        uint64_t startFrame = static_cast<uint64_t>(phase);
+        if (startFrame >= bufferFrames) {
+            generateSilence(outputBuffer, numFrames);
+            m_playbackPhase.store(0.0);
+            return;
+        }
+        
+        // Process available frames
+        uint32_t availableFrames = static_cast<uint32_t>(bufferFrames - startFrame);
+        uint32_t inputFramesToProcess = std::min(
+            availableFrames,
+            static_cast<uint32_t>(numFrames * sampleRateRatio) + 16  // Extra for filter delay
+        );
+        
+        const float* inputPtr = buffer->data() + startFrame * channels;
+        uint32_t written = m_srcConverter.process(inputPtr, inputFramesToProcess, 
+                                                   outputBuffer, numFrames);
+        
+        // Fill remainder with silence if needed
+        if (written < numFrames) {
+            std::fill(outputBuffer + written * channels, 
+                     outputBuffer + numFrames * channels, 0.0f);
+        }
+        
+        // Update phase correctly: advance by input frames consumed
+        // Each output frame consumed (1 / ratio) input frames from source
+        // Use the actual written frames to calculate precise phase advancement
+        const double effectiveRatio = static_cast<double>(m_sampleRate) / static_cast<double>(outputRate);
+        phase += static_cast<double>(written) * effectiveRatio;
+        
+    } else {
+        // ============================================================================
+        // Legacy Path (per-sample interpolation)
+        // ============================================================================
+        for (uint32_t frame = 0; frame < numFrames; ++frame) {
+            double exactSamplePos = phase;
+            
+            for (uint32_t ch = 0; ch < channels; ++ch) {
+                float sample = 0.0f;
+                double localPos = m_streaming ? (exactSamplePos - baseFrame) : exactSamplePos;
 
-        phase += sampleRateRatio;
+                if (!m_streaming || (localPos >= 0.0 && localPos + 1.0 < bufferFrames)) {
+                    // Choose interpolation method based on resampling mode
+                    switch (m_qualitySettings.resampling) {
+                        case ResamplingMode::Fast:
+                            sample = interpolateLinear(buffer->data(), totalSamples, localPos, ch);
+                            break;
+                        case ResamplingMode::Medium:
+                            sample = interpolateCubic(buffer->data(), totalSamples, localPos, ch);
+                            break;
+                        case ResamplingMode::High:
+                            sample = interpolateSinc(buffer->data(), totalSamples, localPos, ch);
+                            break;
+                        case ResamplingMode::Ultra:
+                            sample = interpolateUltra(buffer->data(), totalSamples, localPos, ch);
+                            break;
+                        case ResamplingMode::Extreme:
+                            sample = interpolateExtreme(buffer->data(), totalSamples, localPos, ch);
+                            break;
+                        case ResamplingMode::Perfect:
+                            sample = interpolatePerfect(buffer->data(), totalSamples, localPos, ch);
+                            break;
+                    }
+                } else {
+                    sample = 0.0f; // gap until buffer catches up
+                }
+                
+                outputBuffer[frame * m_numChannels + ch] = sample;
+            }
+
+            phase += sampleRateRatio;
+        }
     }
     
     // Apply audio quality enhancements
@@ -1295,6 +1489,12 @@ void Track::trimStreamBuffer(uint64_t currentFrame) {
     const uint32_t keepMargin = 8192; // frames to keep ahead of playhead for safety
     const uint64_t targetBase = (currentFrame > keepMargin) ? (currentFrame - keepMargin) : 0;
 
+    // CRITICAL: Must hold m_audioDataMutex when modifying m_audioData to prevent
+    // race conditions with streamWavThread and copyAudioData.
+    // Note: m_audioDataMutex is recursive, so this is safe even when called from
+    // copyAudioData which already holds the lock.
+    std::lock_guard<std::recursive_mutex> lock(m_audioDataMutex);
+    
     uint64_t baseFrame = m_streamBaseFrame.load(std::memory_order_relaxed);
     if (targetBase > baseFrame) {
         uint64_t framesToDrop = targetBase - baseFrame;
@@ -1334,7 +1534,7 @@ bool Track::startWavStreaming(const std::string& filePath, uint32_t sampleRate, 
     }
 
     {
-        std::lock_guard<std::mutex> lock(m_audioDataMutex);
+        std::lock_guard<std::recursive_mutex> lock(m_audioDataMutex);
         m_audioData.clear();
         m_streamBaseFrame.store(startFrame, std::memory_order_relaxed);
         m_streamEof.store(false, std::memory_order_relaxed);
@@ -1377,7 +1577,7 @@ void Track::streamWavThread(uint32_t channels) {
     while (!m_streamStop.load()) {
         std::unique_lock<std::mutex> lk(m_streamMutex);
         m_streamCv.wait_for(lk, std::chrono::milliseconds(20), [&] {
-            std::lock_guard<std::mutex> audioLock(m_audioDataMutex);
+            std::lock_guard<std::recursive_mutex> audioLock(m_audioDataMutex);
             uint64_t bufferedFrames = m_audioData.size() / m_numChannels;
             return m_streamStop.load() || bufferedFrames < targetBufferFrames;
         });
@@ -1386,7 +1586,7 @@ void Track::streamWavThread(uint32_t channels) {
 
         // Check EOF
         {
-            std::lock_guard<std::mutex> audioLock(m_audioDataMutex);
+            std::lock_guard<std::recursive_mutex> audioLock(m_audioDataMutex);
             uint64_t bufferedFrames = m_audioData.size() / m_numChannels;
             uint64_t baseFrame = m_streamBaseFrame.load(std::memory_order_relaxed);
             uint64_t totalFrames = m_streamTotalFrames.load(std::memory_order_relaxed);
@@ -1448,7 +1648,7 @@ void Track::streamWavThread(uint32_t channels) {
         forceStereo(decoded, inCh, m_sourceChannels);
 
         {
-            std::lock_guard<std::mutex> audioLock(m_audioDataMutex);
+            std::lock_guard<std::recursive_mutex> audioLock(m_audioDataMutex);
             m_audioData.insert(m_audioData.end(), decoded.begin(), decoded.end());
         }
 
@@ -1474,49 +1674,53 @@ float Track::interpolateLinear(const float* data, uint32_t totalSamples, double 
 }
 
 // Cubic Hermite interpolation (4-point, good quality)
+// Using Catmull-Rom spline for smooth curves without overshoot
 float Track::interpolateCubic(const float* data, uint32_t totalSamples, double position, uint32_t channel) const {
     uint32_t idx = static_cast<uint32_t>(position);
-    double fraction = position - idx;
+    double t = position - idx;  // Use double for precision
     
-    // Get 4 samples for cubic interpolation
+    // Get 4 samples for cubic interpolation (centered on idx)
     uint32_t idx0 = (idx > 0) ? (idx - 1) * m_numChannels + channel : 0;
     uint32_t idx1 = idx * m_numChannels + channel;
     uint32_t idx2 = (idx + 1) * m_numChannels + channel;
     uint32_t idx3 = (idx + 2) * m_numChannels + channel;
     
-    float s0 = (idx0 < totalSamples) ? data[idx0] : 0.0f;
-    float s1 = (idx1 < totalSamples) ? data[idx1] : 0.0f;
-    float s2 = (idx2 < totalSamples) ? data[idx2] : 0.0f;
-    float s3 = (idx3 < totalSamples) ? data[idx3] : 0.0f;
+    // Use double precision for samples to preserve dynamic range
+    double s0 = (idx0 < totalSamples) ? static_cast<double>(data[idx0]) : 0.0;
+    double s1 = (idx1 < totalSamples) ? static_cast<double>(data[idx1]) : 0.0;
+    double s2 = (idx2 < totalSamples) ? static_cast<double>(data[idx2]) : 0.0;
+    double s3 = (idx3 < totalSamples) ? static_cast<double>(data[idx3]) : 0.0;
     
-    // Hermite basis functions
-    float t = static_cast<float>(fraction);
-    float t2 = t * t;
-    float t3 = t2 * t;
+    // Catmull-Rom spline (tension = 0.5) - optimal for audio
+    double t2 = t * t;
+    double t3 = t2 * t;
     
-    float a0 = -0.5f * s0 + 1.5f * s1 - 1.5f * s2 + 0.5f * s3;
-    float a1 = s0 - 2.5f * s1 + 2.0f * s2 - 0.5f * s3;
-    float a2 = -0.5f * s0 + 0.5f * s2;
-    float a3 = s1;
+    // Horner form for efficiency
+    double a0 = -0.5 * s0 + 1.5 * s1 - 1.5 * s2 + 0.5 * s3;
+    double a1 = s0 - 2.5 * s1 + 2.0 * s2 - 0.5 * s3;
+    double a2 = -0.5 * s0 + 0.5 * s2;
+    double a3 = s1;
     
-    float result = a0 * t3 + a1 * t2 + a2 * t + a3;
-    
-    // Soft clipping to prevent overshoots
-    return std::max(-1.0f, std::min(1.0f, result));
+    // No clamping! DAWs don't clamp during interpolation - only at final output
+    // This preserves full dynamic range and prevents high-frequency distortion
+    return static_cast<float>(a0 * t3 + a1 * t2 + a2 * t + a3);
 }
 
-// Windowed Sinc interpolation (best quality, more CPU intensive)
+// Windowed Sinc interpolation (high quality, efficient)
+// Using Blackman window for excellent stopband rejection (-74dB)
 float Track::interpolateSinc(const float* data, uint32_t totalSamples, double position, uint32_t channel) const {
-    const int SINC_WINDOW_SIZE = 8;  // 8-point sinc (high quality)
-    const float PI = 3.14159265359f;
+    constexpr int SINC_WINDOW_SIZE = 8;  // 8-point sinc (good quality/performance balance)
+    constexpr double PI = 3.14159265358979323846;
+    constexpr double INV_PI = 1.0 / PI;
     
     uint32_t centerIdx = static_cast<uint32_t>(position);
-    double fraction = position - centerIdx;
+    double fraction = position - static_cast<double>(centerIdx);
     
-    float sum = 0.0f;
-    float windowSum = 0.0f;
+    // Use double precision accumulation for better dynamic range
+    double sum = 0.0;
+    double windowSum = 0.0;
     
-    // Windowed sinc interpolation
+    // Windowed sinc interpolation with Blackman window
     for (int i = -SINC_WINDOW_SIZE/2; i < SINC_WINDOW_SIZE/2; ++i) {
         int sampleIdx = static_cast<int>(centerIdx) + i;
         
@@ -1524,44 +1728,45 @@ float Track::interpolateSinc(const float* data, uint32_t totalSamples, double po
             continue;
         }
         
-        float sample = data[sampleIdx * m_numChannels + channel];
+        double sample = static_cast<double>(data[sampleIdx * m_numChannels + channel]);
         
         // Sinc function: sin(PI*x) / (PI*x)
-        float x = static_cast<float>(i) - static_cast<float>(fraction);
-        float sinc = (std::abs(x) < 0.0001f) ? 1.0f : std::sin(PI * x) / (PI * x);
+        double x = static_cast<double>(i) - fraction;
+        double sinc = (std::abs(x) < 1e-10) ? 1.0 : std::sin(PI * x) * INV_PI / x;
         
-        // Blackman window for better frequency response
-        float window = 0.42f - 0.5f * std::cos(2.0f * PI * (i + SINC_WINDOW_SIZE/2) / SINC_WINDOW_SIZE)
-                            + 0.08f * std::cos(4.0f * PI * (i + SINC_WINDOW_SIZE/2) / SINC_WINDOW_SIZE);
+        // Blackman window (better stopband than Hann)
+        double windowPos = static_cast<double>(i + SINC_WINDOW_SIZE/2) / static_cast<double>(SINC_WINDOW_SIZE);
+        double window = 0.42 - 0.5 * std::cos(2.0 * PI * windowPos) + 0.08 * std::cos(4.0 * PI * windowPos);
         
-        float weight = sinc * window;
+        double weight = sinc * window;
         sum += sample * weight;
         windowSum += weight;
     }
     
-    // Normalize and clamp
-    float result = (windowSum > 0.0001f) ? (sum / windowSum) : 0.0f;
-    return std::max(-1.0f, std::min(1.0f, result));
+    // Normalize by window sum (no clamping - preserves dynamic range)
+    return static_cast<float>((windowSum > 1e-10) ? (sum / windowSum) : 0.0);
 }
 
 // Ultra (Polyphase Sinc) interpolation (16-point, mastering grade)
+// Uses precomputed Kaiser window for efficiency
 float Track::interpolateUltra(const float* data, uint32_t totalSamples, double position, uint32_t channel) const {
-    const int POLYPHASE_SIZE = 16;  // 16-point polyphase for reference quality
-    const float PI = 3.14159265359f;
+    constexpr int POLYPHASE_SIZE = 16;
+    constexpr double PI = 3.14159265358979323846;
+    constexpr double INV_PI = 1.0 / PI;
     
     // Precomputed Kaiser window lookup table (beta=8.6)
-    static const float kaiserWindow[POLYPHASE_SIZE] = {
-        0.0000f, 0.0217f, 0.0854f, 0.1865f, 0.3180f, 0.4706f, 0.6341f, 0.7975f,
-        0.9500f, 0.9500f, 0.7975f, 0.6341f, 0.4706f, 0.3180f, 0.1865f, 0.0854f
+    static const double kaiserWindow[POLYPHASE_SIZE] = {
+        0.0000, 0.0217, 0.0854, 0.1865, 0.3180, 0.4706, 0.6341, 0.7975,
+        0.9500, 0.9500, 0.7975, 0.6341, 0.4706, 0.3180, 0.1865, 0.0854
     };
     
     uint32_t centerIdx = static_cast<uint32_t>(position);
-    double fraction = position - centerIdx;
+    double fraction = position - static_cast<double>(centerIdx);
     
-    float sum = 0.0f;
-    float windowSum = 0.0f;
+    // Double precision accumulation for ~144dB dynamic range
+    double sum = 0.0;
+    double windowSum = 0.0;
     
-    // Polyphase sinc interpolation with precomputed Kaiser window
     for (int i = -POLYPHASE_SIZE/2; i < POLYPHASE_SIZE/2; ++i) {
         int sampleIdx = static_cast<int>(centerIdx) + i;
         
@@ -1569,51 +1774,50 @@ float Track::interpolateUltra(const float* data, uint32_t totalSamples, double p
             continue;
         }
         
-        float sample = data[sampleIdx * m_numChannels + channel];
+        double sample = static_cast<double>(data[sampleIdx * m_numChannels + channel]);
         
-        // Sinc function with higher precision
-        float x = static_cast<float>(i) - static_cast<float>(fraction);
-        float sinc = (std::abs(x) < 0.0001f) ? 1.0f : std::sin(PI * x) / (PI * x);
+        // Sinc function with double precision
+        double x = static_cast<double>(i) - fraction;
+        double sinc = (std::abs(x) < 1e-10) ? 1.0 : std::sin(PI * x) * INV_PI / x;
         
-        // Get precomputed Kaiser window value (FAST!)
+        // Get precomputed Kaiser window value
         int windowIdx = i + POLYPHASE_SIZE/2;
-        float window = kaiserWindow[windowIdx];
+        double window = kaiserWindow[windowIdx];
         
-        float weight = sinc * window;
+        double weight = sinc * window;
         sum += sample * weight;
         windowSum += weight;
     }
     
-    // Normalize and clamp
-    float result = (windowSum > 0.0001f) ? (sum / windowSum) : 0.0f;
-    return std::max(-1.0f, std::min(1.0f, result));
+    // No clamping - preserves full dynamic range
+    return static_cast<float>((windowSum > 1e-10) ? (sum / windowSum) : 0.0);
 }
 
 // Extreme interpolation (64-point polyphase sinc - mastering grade, real-time safe)
 float Track::interpolateExtreme(const float* data, uint32_t totalSamples, double position, uint32_t channel) const {
-    const int EXTREME_SIZE = 64;  // 64-point sinc (sweet spot for quality/performance)
-    const float PI = 3.14159265359f;
+    constexpr int EXTREME_SIZE = 64;
+    constexpr double PI = 3.14159265358979323846;
+    constexpr double INV_PI = 1.0 / PI;
     
     // Precomputed Kaiser window lookup table (beta=10.0)
-    // Computed once, reused for all samples - HUGE performance win!
-    static const float kaiserWindow[EXTREME_SIZE] = {
-        0.0000f, 0.0011f, 0.0044f, 0.0098f, 0.0173f, 0.0268f, 0.0384f, 0.0520f,
-        0.0675f, 0.0849f, 0.1042f, 0.1252f, 0.1479f, 0.1722f, 0.1980f, 0.2252f,
-        0.2537f, 0.2834f, 0.3142f, 0.3460f, 0.3786f, 0.4119f, 0.4459f, 0.4803f,
-        0.5151f, 0.5502f, 0.5854f, 0.6206f, 0.6557f, 0.6906f, 0.7250f, 0.7590f,
-        0.7923f, 0.8249f, 0.8566f, 0.8873f, 0.9169f, 0.9453f, 0.9724f, 0.9981f,
-        1.0000f, 0.9981f, 0.9724f, 0.9453f, 0.9169f, 0.8873f, 0.8566f, 0.8249f,
-        0.7923f, 0.7590f, 0.7250f, 0.6906f, 0.6557f, 0.6206f, 0.5854f, 0.5502f,
-        0.5151f, 0.4803f, 0.4459f, 0.4119f, 0.3786f, 0.3460f, 0.3142f, 0.2834f
+    static const double kaiserWindow[EXTREME_SIZE] = {
+        0.0000, 0.0011, 0.0044, 0.0098, 0.0173, 0.0268, 0.0384, 0.0520,
+        0.0675, 0.0849, 0.1042, 0.1252, 0.1479, 0.1722, 0.1980, 0.2252,
+        0.2537, 0.2834, 0.3142, 0.3460, 0.3786, 0.4119, 0.4459, 0.4803,
+        0.5151, 0.5502, 0.5854, 0.6206, 0.6557, 0.6906, 0.7250, 0.7590,
+        0.7923, 0.8249, 0.8566, 0.8873, 0.9169, 0.9453, 0.9724, 0.9981,
+        1.0000, 0.9981, 0.9724, 0.9453, 0.9169, 0.8873, 0.8566, 0.8249,
+        0.7923, 0.7590, 0.7250, 0.6906, 0.6557, 0.6206, 0.5854, 0.5502,
+        0.5151, 0.4803, 0.4459, 0.4119, 0.3786, 0.3460, 0.3142, 0.2834
     };
     
     uint32_t centerIdx = static_cast<uint32_t>(position);
-    double fraction = position - centerIdx;
+    double fraction = position - static_cast<double>(centerIdx);
     
-    float sum = 0.0f;
-    float windowSum = 0.0f;
+    // Double precision accumulation
+    double sum = 0.0;
+    double windowSum = 0.0;
     
-    // 64-point polyphase sinc with precomputed Kaiser window
     for (int i = -EXTREME_SIZE/2; i < EXTREME_SIZE/2; ++i) {
         int sampleIdx = static_cast<int>(centerIdx) + i;
         
@@ -1621,39 +1825,49 @@ float Track::interpolateExtreme(const float* data, uint32_t totalSamples, double
             continue;
         }
         
-        float sample = data[sampleIdx * m_numChannels + channel];
+        double sample = static_cast<double>(data[sampleIdx * m_numChannels + channel]);
         
-        // Sinc function: sin(PI*x) / (PI*x)
-        float x = static_cast<float>(i) - static_cast<float>(fraction);
-        float sinc = (std::abs(x) < 0.00001f) ? 1.0f : std::sin(PI * x) / (PI * x);
+        double x = static_cast<double>(i) - fraction;
+        double sinc = (std::abs(x) < 1e-10) ? 1.0 : std::sin(PI * x) * INV_PI / x;
         
-        // Get precomputed Kaiser window value (FAST!)
         int windowIdx = i + EXTREME_SIZE/2;
-        float window = kaiserWindow[windowIdx];
+        double window = kaiserWindow[windowIdx];
         
-        float weight = sinc * window;
+        double weight = sinc * window;
         sum += sample * weight;
         windowSum += weight;
     }
     
-    // Normalize and clamp
-    float result = (windowSum > 0.0001f) ? (sum / windowSum) : 0.0f;
-    return std::max(-1.0f, std::min(1.0f, result));
+    return static_cast<float>((windowSum > 1e-10) ? (sum / windowSum) : 0.0);
 }
 
 // Perfect interpolation (512-point polyphase sinc - FL Studio grade)
-// WARNING: EXTREMELY CPU INTENSIVE - Use only for offline rendering/mastering
+// WARNING: CPU intensive - best for offline rendering
 float Track::interpolatePerfect(const float* data, uint32_t totalSamples, double position, uint32_t channel) const {
-    const int PERFECT_SIZE = 512;  // 512-point sinc (FL Studio quality)
-    const float PI = 3.14159265359f;
+    constexpr int PERFECT_SIZE = 512;
+    constexpr double PI = 3.14159265358979323846;
+    constexpr double INV_PI = 1.0 / PI;
     
     uint32_t centerIdx = static_cast<uint32_t>(position);
-    double fraction = position - centerIdx;
+    double fraction = position - static_cast<double>(centerIdx);
     
-    float sum = 0.0f;
-    float windowSum = 0.0f;
+    // Double precision for maximum dynamic range
+    double sum = 0.0;
+    double windowSum = 0.0;
     
-    // 512-point polyphase sinc with Kaiser window (beta=12.0 for extreme precision)
+    // Precompute Bessel I0(12.0) once
+    auto besselI0 = [](double x) -> double {
+        double sum = 1.0;
+        double term = 1.0;
+        for (int n = 1; n < 25; ++n) {
+            term *= (x / (2.0 * n)) * (x / (2.0 * n));
+            sum += term;
+            if (term < 1e-12) break;
+        }
+        return sum;
+    };
+    const double invI0_12 = 1.0 / besselI0(12.0);
+    
     for (int i = -PERFECT_SIZE/2; i < PERFECT_SIZE/2; ++i) {
         int sampleIdx = static_cast<int>(centerIdx) + i;
         
@@ -1661,38 +1875,23 @@ float Track::interpolatePerfect(const float* data, uint32_t totalSamples, double
             continue;
         }
         
-        float sample = data[sampleIdx * m_numChannels + channel];
+        double sample = static_cast<double>(data[sampleIdx * m_numChannels + channel]);
         
-        // Sinc function: sin(PI*x) / (PI*x)
-        float x = static_cast<float>(i) - static_cast<float>(fraction);
-        float sinc = (std::abs(x) < 0.00001f) ? 1.0f : std::sin(PI * x) / (PI * x);
+        double x = static_cast<double>(i) - fraction;
+        double sinc = (std::abs(x) < 1e-10) ? 1.0 : std::sin(PI * x) * INV_PI / x;
         
-        // Kaiser window (beta=12.0 for maximum stopband attenuation)
-        float alpha = static_cast<float>(i + PERFECT_SIZE/2) / PERFECT_SIZE;
-        float kaiserArg = 12.0f * std::sqrt(1.0f - (2.0f * alpha - 1.0f) * (2.0f * alpha - 1.0f));
+        // Kaiser window (beta=12.0)
+        double alpha = static_cast<double>(i + PERFECT_SIZE/2) / static_cast<double>(PERFECT_SIZE);
+        double arg = 2.0 * alpha - 1.0;
+        double kaiserArg = 12.0 * std::sqrt(std::max(0.0, 1.0 - arg * arg));
+        double window = besselI0(kaiserArg) * invI0_12;
         
-        // Modified Bessel function I0 approximation (higher precision)
-        auto besselI0 = [](float x) -> float {
-            float sum = 1.0f;
-            float term = 1.0f;
-            for (int n = 1; n < 20; ++n) {  // More iterations for better precision
-                term *= (x / (2.0f * n)) * (x / (2.0f * n));
-                sum += term;
-                if (term < 1e-10f) break;  // Early exit for convergence
-            }
-            return sum;
-        };
-        
-        float window = besselI0(kaiserArg) / besselI0(12.0f);
-        
-        float weight = sinc * window;
+        double weight = sinc * window;
         sum += sample * weight;
         windowSum += weight;
     }
     
-    // Normalize and clamp
-    float result = (windowSum > 0.0001f) ? (sum / windowSum) : 0.0f;
-    return std::max(-1.0f, std::min(1.0f, result));
+    return static_cast<float>((windowSum > 1e-10) ? (sum / windowSum) : 0.0);
 }
 
 // === Dithering Methods ===
@@ -1721,9 +1920,18 @@ void Track::applyTriangularDither(float* buffer, uint32_t numSamples) {
     const float DITHER_AMPLITUDE = 1.0f / 32768.0f;  // 16-bit dither
     
     for (uint32_t i = 0; i < numSamples; ++i) {
+        // Fast xorshift32 PRNG (better than rand() for audio - no thread safety issues)
+        m_ditherRngState ^= m_ditherRngState << 13;
+        m_ditherRngState ^= m_ditherRngState >> 17;
+        m_ditherRngState ^= m_ditherRngState << 5;
+        float r1 = static_cast<float>(m_ditherRngState) / 4294967295.0f - 0.5f;
+        
+        m_ditherRngState ^= m_ditherRngState << 13;
+        m_ditherRngState ^= m_ditherRngState >> 17;
+        m_ditherRngState ^= m_ditherRngState << 5;
+        float r2 = static_cast<float>(m_ditherRngState) / 4294967295.0f - 0.5f;
+        
         // TPDF: sum of two uniform random numbers gives triangular distribution
-        float r1 = static_cast<float>(rand()) / RAND_MAX - 0.5f;
-        float r2 = static_cast<float>(rand()) / RAND_MAX - 0.5f;
         float dither = (r1 + r2) * DITHER_AMPLITUDE;
         
         buffer[i] += dither;
@@ -1741,9 +1949,17 @@ void Track::applyHighPassDither(float* buffer, uint32_t numSamples) {
     float prevDither = 0.0f;
     
     for (uint32_t i = 0; i < numSamples; ++i) {
-        // Generate TPDF dither
-        float r1 = static_cast<float>(rand()) / RAND_MAX - 0.5f;
-        float r2 = static_cast<float>(rand()) / RAND_MAX - 0.5f;
+        // Fast xorshift32 PRNG for TPDF dither
+        m_ditherRngState ^= m_ditherRngState << 13;
+        m_ditherRngState ^= m_ditherRngState >> 17;
+        m_ditherRngState ^= m_ditherRngState << 5;
+        float r1 = static_cast<float>(m_ditherRngState) / 4294967295.0f - 0.5f;
+        
+        m_ditherRngState ^= m_ditherRngState << 13;
+        m_ditherRngState ^= m_ditherRngState >> 17;
+        m_ditherRngState ^= m_ditherRngState << 5;
+        float r2 = static_cast<float>(m_ditherRngState) / 4294967295.0f - 0.5f;
+        
         float dither = (r1 + r2) * DITHER_AMPLITUDE;
         
         // Apply high-pass shaping (pushes noise to higher frequencies)
@@ -1766,9 +1982,17 @@ void Track::applyNoiseShapedDither(float* buffer, uint32_t numSamples) {
     for (uint32_t i = 0; i < numSamples; ++i) {
         uint32_t channel = i % m_numChannels;
         
-        // Generate TPDF dither
-        float r1 = static_cast<float>(rand()) / RAND_MAX - 0.5f;
-        float r2 = static_cast<float>(rand()) / RAND_MAX - 0.5f;
+        // Fast xorshift32 PRNG for TPDF dither
+        m_ditherRngState ^= m_ditherRngState << 13;
+        m_ditherRngState ^= m_ditherRngState >> 17;
+        m_ditherRngState ^= m_ditherRngState << 5;
+        float r1 = static_cast<float>(m_ditherRngState) / 4294967295.0f - 0.5f;
+        
+        m_ditherRngState ^= m_ditherRngState << 13;
+        m_ditherRngState ^= m_ditherRngState >> 17;
+        m_ditherRngState ^= m_ditherRngState << 5;
+        float r2 = static_cast<float>(m_ditherRngState) / 4294967295.0f - 0.5f;
+        
         float dither = (r1 + r2) * DITHER_AMPLITUDE;
         
         // Apply noise shaping filter (2nd order for psychoacoustic curve)
@@ -1893,12 +2117,8 @@ void Track::applyAir(float* buffer, uint32_t numFrames) {
     
     const int DELAY_SAMPLES = 3;  // ~0.06ms at 48kHz (subtle Haas effect)
     const float HF_BOOST = 0.15f;  // High-frequency air enhancement
-    const float AIR_FREQ = 8000.0f;  // 8kHz+ gets enhanced
     
-    static float delayBufferL[8] = {0};
-    static float delayBufferR[8] = {0};
-    static int delayPos = 0;
-    
+    // Using member variables instead of static to prevent cross-track contamination
     for (uint32_t frame = 0; frame < numFrames; ++frame) {
         uint32_t leftIdx = frame * 2;
         uint32_t rightIdx = frame * 2 + 1;
@@ -1911,13 +2131,13 @@ void Track::applyAir(float* buffer, uint32_t numFrames) {
         float side = (left - right) * 0.5f;
         
         // Apply differential delay to side (creates depth)
-        int readPos = (delayPos - DELAY_SAMPLES + 8) % 8;
-        float delayedSide = (delayBufferL[readPos] - delayBufferR[readPos]) * 0.5f;
+        int readPos = (m_airDelayPos - DELAY_SAMPLES + 8) % 8;
+        float delayedSide = (m_airDelayL[readPos] - m_airDelayR[readPos]) * 0.5f;
         
-        // Store current samples
-        delayBufferL[delayPos] = left;
-        delayBufferR[delayPos] = right;
-        delayPos = (delayPos + 1) % 8;
+        // Store current samples in member delay buffers
+        m_airDelayL[m_airDelayPos] = left;
+        m_airDelayR[m_airDelayPos] = right;
+        m_airDelayPos = (m_airDelayPos + 1) % 8;
         
         // Mix delayed side signal (psychoacoustic spaciousness)
         side = side * 0.85f + delayedSide * 0.15f;
@@ -1938,25 +2158,27 @@ void Track::applyAir(float* buffer, uint32_t numFrames) {
  * Simulates tape speed fluctuations and crystal clock drift
  */
 void Track::applyDrift(float* buffer, uint32_t numFrames) {
-    static float driftPhase = 0.0f;
-    static float driftAmount = 0.0f;
+    // Using member variables instead of static to prevent cross-track contamination
     
     const float DRIFT_RATE = 0.0003f;      // Very slow modulation (~0.2 Hz)
-    const float DRIFT_DEPTH = 0.00015f;    // Â±0.015% pitch variance (very subtle)
+    const float DRIFT_DEPTH = 0.00015f;    // ±0.015% pitch variance (very subtle)
     const float JITTER_AMOUNT = 0.00005f;  // Clock jitter noise floor
     
     for (uint32_t frame = 0; frame < numFrames; ++frame) {
         // LFO for tape speed variance
-        driftPhase += DRIFT_RATE;
-        if (driftPhase > 6.28318f) driftPhase -= 6.28318f;
+        m_driftPhase += DRIFT_RATE;
+        if (m_driftPhase > 6.28318f) m_driftPhase -= 6.28318f;
         
         // Smooth drift modulation
-        float drift = std::sin(driftPhase) * DRIFT_DEPTH;
+        float drift = std::sin(m_driftPhase) * DRIFT_DEPTH;
         
-        // Add random jitter (clock instability)
-        float jitter = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * JITTER_AMOUNT;
+        // Fast PRNG for jitter (xorshift32 - better than rand() for audio)
+        m_ditherRngState ^= m_ditherRngState << 13;
+        m_ditherRngState ^= m_ditherRngState >> 17;
+        m_ditherRngState ^= m_ditherRngState << 5;
+        float jitter = (static_cast<float>(m_ditherRngState) / 4294967295.0f - 0.5f) * JITTER_AMOUNT;
         
-        driftAmount = drift + jitter;
+        m_driftAmount = drift + jitter;
         
         // Apply very subtle pitch modulation to stereo image
         // This creates the "living, breathing" quality of analog gear
@@ -1964,7 +2186,7 @@ void Track::applyDrift(float* buffer, uint32_t numFrames) {
         // For now, we apply a subtle amplitude modulation as a placeholder
         for (uint32_t ch = 0; ch < m_numChannels; ++ch) {
             uint32_t idx = frame * m_numChannels + ch;
-            buffer[idx] *= (1.0f + driftAmount);
+            buffer[idx] *= (1.0f + m_driftAmount);
         }
     }
 }
@@ -2091,16 +2313,20 @@ std::shared_ptr<Track> Track::splitAt(double positionInClip) {
         return nullptr;
     }
     
-    // Create new track for second half
-    auto newTrack = std::make_shared<Track>(m_name + " (split)", m_trackId + 1000);
+    // Create new track for second half - use SAME name (no "(split)" suffix!)
+    // The new track gets its own UUID automatically, preserving track identity
+    auto newTrack = std::make_shared<Track>(m_name, m_trackId + 1000);
     newTrack->setColor(m_color);
+    
+    // IMPORTANT: Copy lane index so both clips stay on the same visual row
+    newTrack->setLaneIndex(m_laneIndex);
     
     // Copy second half to new track
     size_t splitIndex = splitSample * m_numChannels;
     std::vector<float> secondHalf(m_audioData.begin() + splitIndex, m_audioData.end());
     newTrack->setAudioData(secondHalf.data(), 
                            totalSamples - splitSample,
-                           m_sampleRate, m_numChannels);
+                           m_sampleRate, m_numChannels, m_sampleRate);
     
     // Position new track in timeline right after split point
     double originalStart = getStartPositionInTimeline();
@@ -2116,12 +2342,16 @@ std::shared_ptr<Track> Track::splitAt(double positionInClip) {
         m_trimEnd.store(-1.0);
     }
     
-    Log::info("Track " + m_name + " split at " + std::to_string(positionInClip) + "s");
+    Log::info("Track " + m_name + " (UUID: " + m_uuid.toString() + 
+              ") split at " + std::to_string(positionInClip) + "s, new clip UUID: " + 
+              newTrack->getUUID().toString() + " (lane: " + std::to_string(m_laneIndex) + ")");
     return newTrack;
 }
 
 std::shared_ptr<Track> Track::duplicate() const {
-    auto newTrack = std::make_shared<Track>(m_name + " (copy)", m_trackId + 2000);
+    // Duplicate uses same name (no "(copy)" suffix for cleaner workflow)
+    // Each duplicate gets its own UUID automatically
+    auto newTrack = std::make_shared<Track>(m_name, m_trackId + 2000);
     
     // Copy all properties
     newTrack->setColor(m_color);
@@ -2133,7 +2363,7 @@ std::shared_ptr<Track> Track::duplicate() const {
     // Copy audio data
     if (!m_audioData.empty()) {
         uint32_t totalSamples = static_cast<uint32_t>(m_audioData.size() / m_numChannels);
-        newTrack->setAudioData(m_audioData.data(), totalSamples, m_sampleRate, m_numChannels);
+        newTrack->setAudioData(m_audioData.data(), totalSamples, m_sampleRate, m_numChannels, m_sampleRate);
     }
     
     // Copy trim settings
@@ -2143,8 +2373,30 @@ std::shared_ptr<Track> Track::duplicate() const {
     // Position slightly offset from original
     newTrack->setStartPositionInTimeline(getStartPositionInTimeline());
     
-    Log::info("Track " + m_name + " duplicated");
+    Log::info("Track " + m_name + " duplicated (new UUID: " + newTrack->getUUID().toString() + ")");
     return newTrack;
+}
+
+// =============================================================================
+// SRC Quality Mapping
+// =============================================================================
+
+SRCQuality Track::mapResamplingToSRC(ResamplingMode mode) {
+    switch (mode) {
+        case ResamplingMode::Fast:
+            return SRCQuality::Linear;
+        case ResamplingMode::Medium:
+            return SRCQuality::Cubic;
+        case ResamplingMode::High:
+            return SRCQuality::Sinc8;
+        case ResamplingMode::Ultra:
+            return SRCQuality::Sinc16;
+        case ResamplingMode::Extreme:
+        case ResamplingMode::Perfect:
+            return SRCQuality::Sinc64;
+        default:
+            return SRCQuality::Sinc16;
+    }
 }
 
 } // namespace Audio

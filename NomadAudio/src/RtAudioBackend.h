@@ -26,6 +26,7 @@ public:
     bool isStreamRunning() const override;
     double getStreamLatency() const override;
     uint32_t getStreamSampleRate() const override;
+    uint32_t getStreamBufferSize() const override;
     
     // Get the actual API being used
     RtAudio::Api getCurrentApi() const { return m_rtAudio ? m_rtAudio->getCurrentApi() : RtAudio::UNSPECIFIED; }
@@ -34,6 +35,7 @@ private:
     std::unique_ptr<RtAudio> m_rtAudio;
     AudioCallback m_userCallback;
     void* m_userData;
+    uint32_t m_bufferSize{0};  // Store buffer size after stream opened
 
     // RtAudio callback wrapper
     static int rtAudioCallback(

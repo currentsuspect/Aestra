@@ -87,6 +87,13 @@ public:
      * Returns 0 if no active stream.
      */
     uint32_t getStreamSampleRate() const;
+
+    /**
+     * @brief Get the actual stream buffer size (post-backend)
+     *
+     * Returns 0 if no active stream.
+     */
+    uint32_t getStreamBufferSize() const;
     
     /**
      * @brief Get latency compensation values for recording
@@ -179,6 +186,36 @@ public:
     bool isUsingFallbackDriver() const;
 
     /**
+     * @brief Callback type for driver mode change notifications
+     * @param preferredType The driver type that was requested
+     * @param actualType The driver type that was actually used
+     * @param reason Human-readable explanation of why fallback occurred
+     */
+    using DriverModeChangeCallback = std::function<void(AudioDriverType preferredType, 
+                                                         AudioDriverType actualType, 
+                                                         const std::string& reason)>;
+    
+    /**
+     * @brief Set callback for driver mode changes (fallback notifications)
+     * @param callback Function to call when driver mode changes
+     * 
+     * This callback is invoked when:
+     * - Exclusive mode was requested but Shared mode is used (conflict)
+     * - Any automatic driver fallback occurs
+     * 
+     * Use this to show info bars or notifications in the UI.
+     */
+    void setDriverModeChangeCallback(DriverModeChangeCallback callback) { 
+        m_driverModeChangeCallback = callback; 
+    }
+    
+    /**
+     * @brief Get reason for current fallback (if any)
+     * @return Human-readable reason, or empty string if using preferred driver
+     */
+    std::string getFallbackReason() const { return m_fallbackReason; }
+
+    /**
      * @brief Get ASIO drivers for display purposes
      */
     std::vector<ASIODriverInfo> getASIODrivers() const;
@@ -221,6 +258,10 @@ private:
     void* m_currentUserData;
     bool m_initialized;
     bool m_wasRunning;
+    
+    // Driver mode change notification
+    DriverModeChangeCallback m_driverModeChangeCallback;
+    std::string m_fallbackReason;
     
     // Auto-buffer scaling
     bool m_autoBufferScalingEnabled = false;

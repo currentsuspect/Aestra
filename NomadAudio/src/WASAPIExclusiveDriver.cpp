@@ -7,6 +7,8 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <future>
+#include <chrono>
 
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "avrt.lib")
@@ -752,23 +754,47 @@ void WASAPIExclusiveDriver::stopStream() {
         return;
     }
 
+    std::cout << "[WASAPI Exclusive] Stopping stream safely..." << std::endl;
+    
+    // Signal stop to audio thread
     m_shouldStop = true;
     
+    // Trigger event to wake up audio thread immediately
     if (m_audioEvent) {
         SetEvent(m_audioEvent);
     }
 
+    // Wait for audio thread with timeout to prevent hangs
     if (m_audioThread.joinable()) {
-        m_audioThread.join();
+        // Use a timed wait to prevent infinite blocking
+        auto future = std::async(std::launch::async, [this]() {
+            m_audioThread.join();
+        });
+        
+        // Wait up to 100ms for thread to finish (generous timeout)
+        if (future.wait_for(std::chrono::milliseconds(100)) == std::future_status::timeout) {
+            std::cerr << "[WASAPI Exclusive] Warning: Audio thread didn't stop in time" << std::endl;
+            // Thread will be detached on destruction if needed
+        }
     }
 
+    // Stop audio client - this should be silent since we've already stopped the thread
     if (m_audioClient) {
+        // Fill buffer with silence before stopping to prevent clicks
+        if (m_renderClient && m_bufferFrameCount > 0) {
+            BYTE* data = nullptr;
+            HRESULT hr = m_renderClient->GetBuffer(m_bufferFrameCount, &data);
+            if (SUCCEEDED(hr)) {
+                memset(data, 0, m_bufferFrameCount * m_waveFormat->nBlockAlign);
+                m_renderClient->ReleaseBuffer(m_bufferFrameCount, AUDCLNT_BUFFERFLAGS_SILENT);
+            }
+        }
         m_audioClient->Stop();
     }
 
     m_isRunning = false;
     m_state = DriverState::STREAM_OPEN;
-    std::cout << "[WASAPI Exclusive] Stream stopped" << std::endl;
+    std::cout << "[WASAPI Exclusive] Stream stopped safely" << std::endl;
 }
 
 bool WASAPIExclusiveDriver::initializeSharedFallback() {

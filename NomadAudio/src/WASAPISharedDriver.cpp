@@ -6,6 +6,8 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <future>
+#include <chrono>
 
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "avrt.lib")
@@ -478,16 +480,41 @@ void WASAPISharedDriver::stopStream() {
         return;
     }
 
+    std::cout << "[WASAPI Shared] Stopping stream safely..." << std::endl;
+    
     m_shouldStop = true;
     
-    // Signal event to wake up thread
+    // Signal event to wake up thread immediately
     if (m_audioEvent) {
         SetEvent(m_audioEvent);
     }
 
-    // Wait for thread to finish
+    // Wait for thread to finish with timeout
     if (m_audioThread.joinable()) {
-        m_audioThread.join();
+        auto future = std::async(std::launch::async, [this]() {
+            m_audioThread.join();
+        });
+        
+        if (future.wait_for(std::chrono::milliseconds(100)) == std::future_status::timeout) {
+            std::cerr << "[WASAPI Shared] Warning: Audio thread didn't stop in time" << std::endl;
+        }
+    }
+
+    // Fill buffer with silence before stopping to prevent clicks
+    if (m_audioClient && m_renderClient && m_bufferFrameCount > 0) {
+        UINT32 padding = 0;
+        HRESULT hr = m_audioClient->GetCurrentPadding(&padding);
+        if (SUCCEEDED(hr)) {
+            UINT32 framesAvailable = m_bufferFrameCount - padding;
+            if (framesAvailable > 0) {
+                BYTE* data = nullptr;
+                hr = m_renderClient->GetBuffer(framesAvailable, &data);
+                if (SUCCEEDED(hr)) {
+                    memset(data, 0, framesAvailable * m_waveFormat->nBlockAlign);
+                    m_renderClient->ReleaseBuffer(framesAvailable, AUDCLNT_BUFFERFLAGS_SILENT);
+                }
+            }
+        }
     }
 
     // Stop audio client
@@ -497,7 +524,7 @@ void WASAPISharedDriver::stopStream() {
 
     m_isRunning = false;
     m_state = DriverState::STREAM_OPEN;
-    std::cout << "[WASAPI Shared] Stream stopped" << std::endl;
+    std::cout << "[WASAPI Shared] Stream stopped safely" << std::endl;
 }
 
 double WASAPISharedDriver::getStreamLatency() const {

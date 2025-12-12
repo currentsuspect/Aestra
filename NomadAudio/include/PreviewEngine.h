@@ -5,7 +5,6 @@
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <string>
 
 namespace Nomad {
@@ -52,8 +51,6 @@ private:
     void downmixToStereo(std::vector<float>& data, uint32_t inChannels);
     float dbToLinear(float db) const;
 
-    // Use shared_ptr with a mutex guard instead of atomic (std::atomic does not support non-trivial types)
-    mutable std::mutex m_voiceMutex;
     std::shared_ptr<PreviewVoice> m_activeVoice;
     std::atomic<double> m_outputSampleRate;
     std::atomic<float> m_globalGainDb;

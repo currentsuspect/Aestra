@@ -178,6 +178,10 @@ bool RtAudioBackend::openStream(const AudioStreamConfig& config, AudioCallback c
     std::cout << "  Stream open: " << (m_rtAudio->isStreamOpen() ? "true" : "false") << std::endl;
     std::cout.flush();
 
+    if (error == RTAUDIO_NO_ERROR) {
+        m_bufferSize = bufferFrames;  // Store actual buffer size returned by RtAudio
+    }
+
     return (error == RTAUDIO_NO_ERROR);
 }
 
@@ -236,6 +240,13 @@ uint32_t RtAudioBackend::getStreamSampleRate() const {
         return 0;
     }
     return m_rtAudio->getStreamSampleRate();
+}
+
+uint32_t RtAudioBackend::getStreamBufferSize() const {
+    if (!m_rtAudio || !m_rtAudio->isStreamOpen()) {
+        return 0;
+    }
+    return m_bufferSize;  // Return stored buffer size
 }
 
 int RtAudioBackend::rtAudioCallback(

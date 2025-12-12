@@ -137,6 +137,14 @@ public:
      * Return 0 if stream is not open.
      */
     virtual uint32_t getStreamSampleRate() const = 0;
+
+    /**
+     * @brief Get the actual buffer size the stream is using
+     *
+     * May differ from requested size based on driver constraints.
+     * Return 0 if stream is not open.
+     */
+    virtual uint32_t getStreamBufferSize() const = 0;
 };
 
 } // namespace Audio

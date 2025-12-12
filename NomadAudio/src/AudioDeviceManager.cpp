@@ -226,21 +226,42 @@ bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallba
     if (m_preferredDriverType == AudioDriverType::WASAPI_EXCLUSIVE) {
         if (tryDriver(m_exclusiveDriver.get(), config, callback, userData)) {
             std::cout << "=== Stream Opened with WASAPI Exclusive (Preferred) ===" << std::endl;
+            m_fallbackReason.clear();
             return true;
         }
-        // Fallback to shared
+        // Fallback to shared - capture the reason
+        std::string exclusiveError = m_exclusiveDriver ? m_exclusiveDriver->getErrorMessage() : "Driver unavailable";
         if (tryDriver(m_sharedDriver.get(), config, callback, userData)) {
             std::cout << "=== Stream Opened with WASAPI Shared (Fallback) ===" << std::endl;
+            m_fallbackReason = "Exclusive mode unavailable: " + exclusiveError;
+            // Notify UI about fallback
+            if (m_driverModeChangeCallback) {
+                m_driverModeChangeCallback(
+                    AudioDriverType::WASAPI_EXCLUSIVE,
+                    AudioDriverType::WASAPI_SHARED,
+                    m_fallbackReason
+                );
+            }
             return true;
         }
     } else if (m_preferredDriverType == AudioDriverType::WASAPI_SHARED) {
         if (tryDriver(m_sharedDriver.get(), config, callback, userData)) {
             std::cout << "=== Stream Opened with WASAPI Shared (Preferred) ===" << std::endl;
+            m_fallbackReason.clear();
             return true;
         }
         // Fallback to exclusive
+        std::string sharedError = m_sharedDriver ? m_sharedDriver->getErrorMessage() : "Driver unavailable";
         if (tryDriver(m_exclusiveDriver.get(), config, callback, userData)) {
             std::cout << "=== Stream Opened with WASAPI Exclusive (Fallback) ===" << std::endl;
+            m_fallbackReason = "Shared mode unavailable: " + sharedError;
+            if (m_driverModeChangeCallback) {
+                m_driverModeChangeCallback(
+                    AudioDriverType::WASAPI_SHARED,
+                    AudioDriverType::WASAPI_EXCLUSIVE,
+                    m_fallbackReason
+                );
+            }
             return true;
         }
     }
@@ -334,6 +355,16 @@ uint32_t AudioDeviceManager::getStreamSampleRate() const {
     }
     if (m_rtAudioDriver) {
         return m_rtAudioDriver->getStreamSampleRate();
+    }
+    return 0;
+}
+
+uint32_t AudioDeviceManager::getStreamBufferSize() const {
+    if (m_activeDriver) {
+        return m_activeDriver->getStreamBufferSize();
+    }
+    if (m_rtAudioDriver) {
+        return m_rtAudioDriver->getStreamBufferSize();
     }
     return 0;
 }
