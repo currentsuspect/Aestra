@@ -40,6 +40,8 @@ public:
     
     // Audio data input
     void setAudioData(const float* leftChannel, const float* rightChannel, size_t numSamples, double sampleRate);
+    // Lightweight metering path (safe to call from main thread).
+    void setPeakLevels(float leftPeak, float rightPeak, float leftRMS = -1.0f, float rightRMS = -1.0f);
     void setAudioManager(Nomad::Audio::AudioDeviceManager* manager);
     
     // Visualization settings

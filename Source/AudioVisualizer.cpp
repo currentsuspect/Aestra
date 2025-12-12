@@ -176,6 +176,24 @@ void AudioVisualizer::setAudioData(const float* leftChannel, const float* rightC
     currentSample_ = (currentSample_ + samplesToCopy) % displayBufferSize_;
 }
 
+void AudioVisualizer::setPeakLevels(float leftPeak, float rightPeak, float leftRMS, float rightRMS) {
+    leftPeak = std::abs(leftPeak);
+    rightPeak = std::abs(rightPeak);
+
+    if (leftRMS < 0.0f) leftRMS = leftPeak;
+    if (rightRMS < 0.0f) rightRMS = rightPeak;
+
+    leftPeak_.store(leftPeak);
+    rightPeak_.store(rightPeak);
+    leftRMS_.store(leftRMS);
+    rightRMS_.store(rightRMS);
+
+    leftPeakHold_.store(std::max(leftPeakHold_.load(), leftPeak));
+    rightPeakHold_.store(std::max(rightPeakHold_.load(), rightPeak));
+
+    setDirty(true);
+}
+
 void AudioVisualizer::setAudioManager(Nomad::Audio::AudioDeviceManager* manager) {
     audioManager_ = manager;
 }

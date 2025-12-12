@@ -106,6 +106,15 @@ void AudioEngine::processBlock(float* outputBuffer,
 
     // Render to double-precision master buffer
     const AudioGraph& graph = m_state.activeGraph();
+
+    // Transport looping: if playback has passed the end of the timeline, wrap to 0.
+    // This is a simple whole-timeline loop until loop regions are implemented.
+    if (m_transportPlaying && graph.timelineEndSample > 0 &&
+        m_globalSamplePos >= graph.timelineEndSample) {
+        m_globalSamplePos = 0;
+        m_fadeState = FadeState::FadingIn;
+        m_fadeSamplesRemaining = FADE_IN_SAMPLES;
+    }
     if (!m_masterBufferD.empty() && (m_transportPlaying || m_fadeState == FadeState::FadingOut)) {
         renderGraph(graph, numFrames);
     } else {
@@ -176,8 +185,8 @@ void AudioEngine::processBlock(float* outputBuffer,
     m_smoothedMasterGain.current = targetGain;
     m_smoothedMasterGain.target = targetGain;
     
-    m_peakL = static_cast<float>(peakL);
-    m_peakR = static_cast<float>(peakR);
+    m_peakL.store(static_cast<float>(peakL), std::memory_order_relaxed);
+    m_peakR.store(static_cast<float>(peakR), std::memory_order_relaxed);
 
     // Fade envelopes (short ramps prevent clicks on stop/seek)
     if (m_fadeState == FadeState::FadingIn) {

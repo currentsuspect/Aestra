@@ -42,6 +42,9 @@ struct TrackRenderState {
  */
 struct AudioGraph {
     std::vector<TrackRenderState> tracks;
+    // Precomputed max end sample across all clips (engine sample rate).
+    // Used for transport looping without scanning clips on the RT thread.
+    uint64_t timelineEndSample{0};
 };
 
 } // namespace Audio

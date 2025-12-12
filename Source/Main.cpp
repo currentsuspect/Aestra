@@ -1303,6 +1303,16 @@ public:
                     NOMAD_ZONE("Root_OnUpdate");
                     m_rootComponent->onUpdate(deltaTime);
                 }
+
+                // Feed master peaks from AudioEngine into the VU meter.
+                // This avoids any RT-thread calls into UI and keeps metering in sync
+                // with the actual engine output.
+                if (m_audioEngine && m_content && m_content->getAudioVisualizer()) {
+                    m_content->getAudioVisualizer()->setPeakLevels(
+                        m_audioEngine->getPeakL(),
+                        m_audioEngine->getPeakR()
+                    );
+                }
                 
                 // Sync transport position from AudioEngine during playback
                 // AudioEngine is the authoritative source for playback position

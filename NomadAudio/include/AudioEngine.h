@@ -7,6 +7,7 @@
 #include "Interpolators.h"
 #include <cstdint>
 #include <cmath>
+#include <atomic>
 #include <vector>
 
 namespace Nomad {
@@ -65,6 +66,10 @@ public:
     void setHeadroom(float db) { m_headroomLinear = std::pow(10.0f, db / 20.0f); }
     void setSafetyProcessingEnabled(bool enabled) { m_safetyProcessingEnabled = enabled; }
     bool isSafetyProcessingEnabled() const { return m_safetyProcessingEnabled; }
+
+    // Metering (read on UI thread)
+    float getPeakL() const { return m_peakL.load(std::memory_order_relaxed); }
+    float getPeakR() const { return m_peakR.load(std::memory_order_relaxed); }
 
 private:
     static constexpr size_t kMaxTracks = 64;
@@ -144,8 +149,8 @@ private:
     bool m_safetyProcessingEnabled{false};
     
     // Peak detection
-    float m_peakL{0.0f};
-    float m_peakR{0.0f};
+    std::atomic<float> m_peakL{0.0f};
+    std::atomic<float> m_peakR{0.0f};
     
     // Fade state machine
     enum class FadeState { None, FadingIn, FadingOut, Silent };

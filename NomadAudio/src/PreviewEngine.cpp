@@ -1,6 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "PreviewEngine.h"
 #include "NomadLog.h"
+#include "MiniAudioDecoder.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -271,10 +272,12 @@ std::shared_ptr<AudioBuffer> PreviewEngine::loadBuffer(const std::string& path, 
         if (extension == "wav") {
             ok = loadWav(path, decoded, sr, ch);
         } else {
+            // Prefer miniaudio when enabled; fallback to platform decoder.
+            ok = loadWithMiniAudio(path, decoded, sr, ch);
 #ifdef _WIN32
-            ok = loadWithMediaFoundation(path, decoded, sr, ch);
-#else
-            ok = false;
+            if (!ok) {
+                ok = loadWithMediaFoundation(path, decoded, sr, ch);
+            }
 #endif
         }
 

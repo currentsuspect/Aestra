@@ -70,6 +70,7 @@ set(NOMAD_AUDIO_SOURCES
     src/Track.cpp
     src/TrackManager.cpp
     src/AudioClip.cpp
+    src/MiniAudioDecoder.cpp
     src/PlaylistTrack.cpp
     # New multi-tier driver system
     src/WASAPISharedDriver.cpp
@@ -101,6 +102,7 @@ set(NOMAD_AUDIO_HEADERS
     include/Track.h
     include/TrackManager.h
     include/AudioClip.h
+    include/MiniAudioDecoder.h
     include/PlaylistTrack.h
     # New multi-tier driver system
     include/AudioDriverTypes.h
@@ -130,6 +132,12 @@ add_library(NomadAudio STATIC
     ${RTAUDIO_HEADERS}
 )
 
+# Optional miniaudio decoder toggle (header must be vendored by user).
+option(NOMAD_USE_MINIAUDIO "Use miniaudio for MP3/FLAC/etc decoding" OFF)
+if (NOMAD_USE_MINIAUDIO)
+    target_compile_definitions(NomadAudio PRIVATE NOMAD_USE_MINIAUDIO)
+endif()
+
 target_include_directories(NomadAudio
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -138,6 +146,13 @@ target_include_directories(NomadAudio
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/NomadCore/include
 )
+
+# Optional miniaudio (vendored by user). Enabled via -DNOMAD_USE_MINIAUDIO=ON.
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio)
+    target_include_directories(NomadAudio PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio
+    )
+endif()
 
 target_link_libraries(NomadAudio
     PUBLIC

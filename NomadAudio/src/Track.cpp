@@ -11,6 +11,7 @@
 #include <numeric>
 #include <condition_variable>
 #include "SamplePool.h"
+#include "MiniAudioDecoder.h"
 #ifdef _WIN32
 #include <mfapi.h>
 #include <mfidl.h>
@@ -844,9 +845,14 @@ bool Track::loadAudioFile(const std::string& filePath) {
             std::vector<float> decoded;
             uint32_t sr = sampleRate;
             uint32_t ch = numChannels;
-            if (!loadWithMediaFoundation(filePath, decoded, sr, ch)) {
-                return false;
+
+            // Prefer miniaudio when enabled (MP3/FLAC/OGG/etc). Falls back to MF on Windows.
+            if (!loadWithMiniAudio(filePath, decoded, sr, ch)) {
+                if (!loadWithMediaFoundation(filePath, decoded, sr, ch)) {
+                    return false;
+                }
             }
+
             uint32_t srcCh = ch;
             forceStereo(decoded, ch, srcCh);
 

@@ -8,6 +8,7 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackMan
     AudioGraph graph;
     const size_t trackCount = trackManager.getTrackCount();
     graph.tracks.reserve(trackCount);
+    uint64_t maxEndSample = 0;
 
     for (size_t t = 0; t < trackCount; ++t) {
         auto track = trackManager.getTrack(t);
@@ -55,11 +56,15 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackMan
             }
 
             trackState.clips.push_back(clip);
+            if (clip.endSample > maxEndSample) {
+                maxEndSample = clip.endSample;
+            }
         }
 
         graph.tracks.push_back(std::move(trackState));
     }
 
+    graph.timelineEndSample = maxEndSample;
     return graph;
 }
 
