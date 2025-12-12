@@ -222,7 +222,7 @@ void TimerDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     
     // CRITICAL: Green when playing, white when stopped
     NomadUI::NUIColor textColor = m_isPlaying 
-        ? NomadUI::NUIColor(0.0f, 1.0f, 0.3f, 1.0f) 	// Vibrant green when playing
+        ? themeManager.getColor("success") 	// Vibrant green when playing
         : themeManager.getColor("textPrimary"); 	 	// White when stopped
     
     float fontSize = themeManager.getFontSize("l"); // use larger theme size

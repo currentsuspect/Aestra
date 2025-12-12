@@ -56,7 +56,7 @@ void MuteButton::onRender(NUIRenderer& renderer)
     
     renderer.fillRect(b, bg);
     renderer.strokeRect(b, 1, theme.getColor("border"));
-    renderer.drawText("M", NUIPoint(b.x + b.width/2 - 4, b.y + b.height/2 - 6), 14.0f, text);
+    renderer.drawTextCentered("M", b, 13.0f, text);
 }
 
 SoloButton::SoloButton()
@@ -74,7 +74,7 @@ void SoloButton::onRender(NUIRenderer& renderer)
     
     renderer.fillRect(b, bg);
     renderer.strokeRect(b, 1, theme.getColor("border"));
-    renderer.drawText("S", NUIPoint(b.x + b.width/2 - 4, b.y + b.height/2 - 6), 14.0f, text);
+    renderer.drawTextCentered("S", b, 13.0f, text);
 }
 
 ArmButton::ArmButton()
@@ -92,7 +92,7 @@ void ArmButton::onRender(NUIRenderer& renderer)
     
     renderer.fillRect(b, bg);
     renderer.strokeRect(b, 1, theme.getColor("border"));
-    renderer.drawText("R", NUIPoint(b.x + b.width/2 - 4, b.y + b.height/2 - 6), 14.0f, text);
+    renderer.drawTextCentered("R", b, 13.0f, text);
 }
 
 InsertSlot::InsertSlot() = default;

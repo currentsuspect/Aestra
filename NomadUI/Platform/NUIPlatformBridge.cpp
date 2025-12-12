@@ -376,4 +376,10 @@ float NUIPlatformBridge::getDPIScale() const {
     return m_window ? m_window->getDPIScale() : 1.0f;
 }
 
+void NUIPlatformBridge::setCursorVisible(bool visible) {
+    if (m_window) {
+        m_window->setCursorVisible(visible);
+    }
+}
+
 } // namespace NomadUI

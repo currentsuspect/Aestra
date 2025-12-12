@@ -76,7 +76,7 @@ private:
     std::string text_;
     // NUIFont font_; // TODO: Add back when NUIFont is available
     NUIColor textColor_ = NUIColor::fromHex(0xffffffff);
-    float fontSize_ = 18.0f;
+    float fontSize_ = 14.0f;
     Alignment alignment_ = Alignment::Left;
     bool multiline_ = false;
     bool wordWrap_ = true;

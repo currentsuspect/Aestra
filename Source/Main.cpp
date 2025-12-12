@@ -26,6 +26,9 @@
 #include "../NomadUI/Graphics/OpenGL/NUIRendererGL.h"
 #include "../NomadUI/Platform/NUIPlatformBridge.h"
 #include "../NomadAudio/include/NomadAudio.h"
+#include "../NomadAudio/include/AudioEngine.h"
+#include "../NomadAudio/include/AudioGraphBuilder.h"
+#include "../NomadAudio/include/AudioCommandQueue.h"
 #include "../NomadAudio/include/PreviewEngine.h"
 #include "../NomadCore/include/NomadLog.h"
 #include "../NomadCore/include/NomadProfiler.h"
@@ -38,6 +41,7 @@
 #include "TrackManagerUI.h"
 #include "FPSDisplay.h"
 #include "ProjectSerializer.h"
+#include "ConfirmationDialog.h"
 #include <memory>
 #include <iostream>
 #include <chrono>
@@ -710,8 +714,8 @@ public:
         }
         Log::info("Platform initialized");
 
-        // Create window using NUIPlatformBridge
-        m_window = std::make_unique<NUIPlatformBridge>();
+    // Create window using NUIPlatformBridge
+    m_window = std::make_unique<NUIPlatformBridge>();
         
         WindowDesc desc;
         desc.title = "NOMAD DAW v1.0";
@@ -770,6 +774,7 @@ public:
 
         // Initialize audio engine
         m_audioManager = std::make_unique<AudioDeviceManager>();
+        m_audioEngine = std::make_unique<AudioEngine>();
         if (!m_audioManager->initialize()) {
             Log::error("Failed to initialize audio engine");
             // Continue without audio for now
@@ -833,6 +838,11 @@ public:
                         config.numInputChannels = 0;
                         config.numOutputChannels = 2;
                         
+                        if (m_audioEngine) {
+                            m_audioEngine->setSampleRate(config.sampleRate);
+                            m_audioEngine->setBufferConfig(config.bufferSize, config.numOutputChannels);
+                        }
+                        
                         // Store config for later restoration
                         m_mainStreamConfig = config;
 
@@ -844,6 +854,27 @@ public:
                             if (m_audioManager->startStream()) {
                                 Log::info("Audio stream started");
                                 m_audioInitialized = true;
+                                
+                                double actualRate = static_cast<double>(m_audioManager->getStreamSampleRate());
+                                if (actualRate <= 0.0) {
+                                    actualRate = static_cast<double>(config.sampleRate);
+                                }
+                                // Keep engine, track managers, and graph in sync with the real device rate.
+                                if (m_audioEngine) {
+                                    m_audioEngine->setSampleRate(static_cast<uint32_t>(actualRate));
+                                    m_audioEngine->setBufferConfig(config.bufferSize, config.numOutputChannels);
+                                    if (m_content && m_content->getTrackManager()) {
+                                        auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), actualRate);
+                                        m_audioEngine->setGraph(graph);
+                                    }
+                                }
+                                m_mainStreamConfig.sampleRate = static_cast<uint32_t>(actualRate);
+                                if (m_content && m_content->getTrackManager()) {
+                                    m_content->getTrackManager()->setOutputSampleRate(actualRate);
+                                }
+                                if (m_content && m_content->getTrackManagerUI() && m_content->getTrackManagerUI()->getTrackManager()) {
+                                    m_content->getTrackManagerUI()->getTrackManager()->setOutputSampleRate(actualRate);
+                                }
                             } else {
                                 Log::error("Failed to start audio stream");
                                 m_audioInitialized = false;
@@ -891,9 +922,25 @@ public:
         m_content = std::make_shared<NomadContent>();
         m_content->setAudioStatus(m_audioInitialized);
         m_customWindow->setContent(m_content.get());
+
+        // Build initial audio graph for engine (uses default tracks created in NomadContent)
+        if (m_audioEngine && m_content && m_content->getTrackManager()) {
+            auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), m_mainStreamConfig.sampleRate);
+            m_audioEngine->setGraph(graph);
+        }
         
-        // Attempt to load last project state
-        auto loadResult = loadProject();
+        // TODO: Implement async project loading with progress indicator
+        // Currently disabled because loading audio files synchronously causes UI freeze
+        // The autosave contains 50+ tracks and references to large WAV files
+        // Future implementation should:
+        //   1. Show a loading splash/progress bar
+        //   2. Load track metadata first (instant)
+        //   3. Load audio files in background thread
+        //   4. Update UI as each file loads
+        // For now, start fresh each time
+        Log::info("[STARTUP] Project auto-load disabled (TODO: implement async loading)");
+        ProjectSerializer::LoadResult loadResult;
+        loadResult.ok = false;
         if (loadResult.ok) {
             if (m_content->getTransportBar()) {
                 m_content->getTransportBar()->setTempo(static_cast<float>(loadResult.tempo));
@@ -934,6 +981,29 @@ public:
                 if (m_content && m_content->getTrackManagerUI()) {
                     m_content->getTrackManagerUI()->getTrackManager()->play();
                 }
+                // Rebuild graph immediately before starting playback to ensure it's current
+                if (m_audioEngine && m_content && m_content->getTrackManager()) {
+                    double sampleRate = static_cast<double>(m_mainStreamConfig.sampleRate);
+                    if (m_audioManager) {
+                        double actual = static_cast<double>(m_audioManager->getStreamSampleRate());
+                        if (actual > 0.0) sampleRate = actual;
+                    }
+                    // Rebuild the graph with latest track data
+                    auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), sampleRate);
+                    m_audioEngine->setGraph(graph);
+                    // Clear the dirty flag since we just rebuilt
+                    m_content->getTrackManager()->consumeGraphDirty();
+                    
+                    // Notify audio engine transport
+                    AudioQueueCommand cmd;
+                    cmd.type = AudioQueueCommandType::SetTransportState;
+                    cmd.value1 = 1.0f;
+                    double posSeconds = m_content->getTrackManager()->getPosition();
+                    cmd.samplePos = static_cast<uint64_t>(posSeconds * sampleRate);
+                    m_audioEngine->commandQueue().push(cmd);
+                    
+                    Log::info("Transport: Graph rebuilt with " + std::to_string(graph.tracks.size()) + " tracks");
+                }
             });
             
             transport->setOnPause([this]() {
@@ -941,20 +1011,51 @@ public:
                 if (m_content && m_content->getTrackManagerUI()) {
                     m_content->getTrackManagerUI()->getTrackManager()->pause();
                 }
+                if (m_audioEngine) {
+                    AudioQueueCommand cmd;
+                    cmd.type = AudioQueueCommandType::SetTransportState;
+                    cmd.value1 = 0.0f;
+                    // Preserve current position on pause (avoid unintended seek-to-zero).
+                    if (m_content && m_content->getTrackManager()) {
+                        double sampleRate = static_cast<double>(m_mainStreamConfig.sampleRate);
+                        if (m_audioManager) {
+                            double actual = static_cast<double>(m_audioManager->getStreamSampleRate());
+                            if (actual > 0.0) sampleRate = actual;
+                        }
+                        double posSeconds = m_content->getTrackManager()->getPosition();
+                        cmd.samplePos = static_cast<uint64_t>(posSeconds * sampleRate);
+                    }
+                    m_audioEngine->commandQueue().push(cmd);
+                }
             });
             
             transport->setOnStop([this, transport]() {
                 Log::info("Transport: Stop");
                 // Stop preview when transport stops
                 if (m_content) {
-                    m_content->stopSoundPreview();
+                m_content->stopSoundPreview();
+            }
+            if (m_content && m_content->getTrackManagerUI()) {
+                m_content->getTrackManagerUI()->getTrackManager()->stop();
+            }
+            // Reset position to 0
+            transport->setPosition(0.0);
+            if (m_audioEngine) {
+                double sampleRate = static_cast<double>(m_mainStreamConfig.sampleRate);
+                if (m_audioManager) {
+                    double actual = static_cast<double>(m_audioManager->getStreamSampleRate());
+                    if (actual > 0.0) sampleRate = actual;
                 }
-                if (m_content && m_content->getTrackManagerUI()) {
-                    m_content->getTrackManagerUI()->getTrackManager()->stop();
-                }
-                // Reset position to 0
-                transport->setPosition(0.0);
-            });
+                AudioQueueCommand cmd;
+                cmd.type = AudioQueueCommandType::SetTransportState;
+                cmd.value1 = 0.0f;
+                cmd.samplePos = 0;
+                m_audioEngine->commandQueue().push(cmd);
+            }
+            if (m_content && m_content->getTrackManager()) {
+                m_content->getTrackManager()->setPosition(0.0);
+            }
+        });
             
             transport->setOnTempoChange([this](float bpm) {
                 std::stringstream ss;
@@ -978,6 +1079,35 @@ public:
         m_audioSettingsDialog->setBounds(NUIRect(0, 0, desc.width, desc.height));
         m_audioSettingsDialog->setOnApply([this]() {
             Log::info("Audio settings applied");
+            
+            // Sync buffer size and sample rate from actual driver to AudioEngine
+            // Use actual values from driver (may differ from requested)
+            if (m_audioManager && m_audioEngine) {
+                uint32_t actualSampleRate = m_audioManager->getStreamSampleRate();
+                uint32_t actualBufferSize = m_audioManager->getStreamBufferSize();
+                
+                // Fallback to dialog values if driver reports 0
+                if (actualSampleRate == 0 && m_audioSettingsDialog) {
+                    actualSampleRate = m_audioSettingsDialog->getSelectedSampleRate();
+                }
+                if (actualBufferSize == 0 && m_audioSettingsDialog) {
+                    actualBufferSize = m_audioSettingsDialog->getSelectedBufferSize();
+                }
+                
+                // Always update AudioEngine with actual driver values
+                if (actualSampleRate > 0) {
+                    m_mainStreamConfig.sampleRate = actualSampleRate;
+                    m_audioEngine->setSampleRate(actualSampleRate);
+                    Log::info("AudioEngine sample rate synced to: " + std::to_string(actualSampleRate));
+                }
+                
+                if (actualBufferSize > 0) {
+                    m_mainStreamConfig.bufferSize = actualBufferSize;
+                    m_audioEngine->setBufferConfig(actualBufferSize, m_mainStreamConfig.numOutputChannels);
+                    Log::info("AudioEngine buffer size synced to: " + std::to_string(actualBufferSize));
+                }
+            }
+            
             // Update audio status
             if (m_content) {
                 bool trackManagerActive = m_content->getTrackManagerUI() &&
@@ -1018,11 +1148,23 @@ public:
             
             // Update config with fresh device ID
             m_mainStreamConfig.deviceId = deviceId;
+            if (m_audioEngine) {
+                m_audioEngine->setSampleRate(m_mainStreamConfig.sampleRate);
+                m_audioEngine->setBufferConfig(m_mainStreamConfig.bufferSize, m_mainStreamConfig.numOutputChannels);
+            }
             
             if (m_audioManager->openStream(m_mainStreamConfig, audioCallback, this)) {
                 if (m_audioManager->startStream()) {
                     Log::info("Main audio stream restored successfully");
                     m_audioInitialized = true;
+                    double actualRate = static_cast<double>(m_audioManager->getStreamSampleRate());
+                    if (actualRate <= 0.0) actualRate = static_cast<double>(m_mainStreamConfig.sampleRate);
+                    if (m_content && m_content->getTrackManager()) {
+                        m_content->getTrackManager()->setOutputSampleRate(actualRate);
+                    }
+                    if (m_content && m_content->getTrackManagerUI() && m_content->getTrackManagerUI()->getTrackManager()) {
+                        m_content->getTrackManagerUI()->getTrackManager()->setOutputSampleRate(actualRate);
+                    }
                 } else {
                     Log::error("Failed to start restored audio stream");
                     m_audioInitialized = false;
@@ -1035,12 +1177,20 @@ public:
         // Add dialog to root component AFTER custom window so it renders on top
         Log::info("Audio settings dialog created");
         
+        // Create confirmation dialog for unsaved changes prompts
+        m_confirmationDialog = std::make_shared<ConfirmationDialog>();
+        m_confirmationDialog->setBounds(NUIRect(0, 0, desc.width, desc.height));
+        Log::info("Confirmation dialog created");
+        
         // Add custom window to root component
         m_rootComponent->setCustomWindow(m_customWindow);
         
         // Add audio settings dialog to root component (after custom window for proper z-ordering)
         m_rootComponent->addChild(m_audioSettingsDialog);
         m_rootComponent->setAudioSettingsDialog(m_audioSettingsDialog);
+        
+        // Add confirmation dialog (on top of everything except FPS display)
+        m_rootComponent->addChild(m_confirmationDialog);
         
         // Create and add FPS display overlay (on top of everything)
         auto fpsDisplay = std::make_shared<FPSDisplay>(m_adaptiveFPS.get());
@@ -1071,6 +1221,15 @@ public:
         
         // Setup window callbacks
         setupCallbacks();
+        
+        // Setup cursor visibility callback for TrackManagerUI (split tool hides cursor to show scissors)
+        if (m_content && m_content->getTrackManagerUI()) {
+            m_content->getTrackManagerUI()->setOnCursorVisibilityChanged([this](bool visible) {
+                if (m_window) {
+                    m_window->setCursorVisible(visible);
+                }
+            });
+        }
 
         m_running = true;
         Log::info("NOMAD DAW initialized successfully");
@@ -1102,6 +1261,8 @@ public:
 
         // Main event loop
         double deltaTime = 0.0; // Declare outside so it's visible in all zones
+        double autoSaveTimer = 0.0; // Timer for auto-save (in seconds)
+        const double autoSaveInterval = 60.0; // Auto-save every 60 seconds
         
         while (m_running && m_window->processEvents()) {
             // Begin profiler frame
@@ -1137,12 +1298,21 @@ public:
                     m_rootComponent->onUpdate(deltaTime);
                 }
                 
-                // Sync transport position with track manager during playback
-                if (m_content && m_content->getTransportBar() && m_content->getTrackManagerUI()) {
-                    auto trackManager = m_content->getTrackManagerUI()->getTrackManager();
-                    if (trackManager && trackManager->isPlaying()) {
+                // Sync transport position from AudioEngine during playback
+                // AudioEngine is the authoritative source for playback position
+                if (m_content && m_content->getTransportBar() && m_audioEngine) {
+                    // Only sync while UI transport is actually in Playing state.
+                    // This prevents a just-triggered Stop from being overwritten
+                    // by a few more audio blocks before the RT thread processes it.
+                    if (m_audioEngine->isTransportPlaying() &&
+                        m_content->getTransportBar()->getState() == TransportState::Playing) {
                         static double lastPosition = 0.0;
-                        double currentPosition = trackManager->getPosition();
+                        double currentPosition = m_audioEngine->getPositionSeconds();
+                        
+                        // Sync TrackManager without feeding seeks back into the engine.
+                        if (m_content->getTrackManager()) {
+                            m_content->getTrackManager()->syncPositionFromEngine(currentPosition);
+                        }
                         
                         // Detect loop (position jumped backward significantly)
                         if (currentPosition < lastPosition - 0.1) {
@@ -1159,6 +1329,50 @@ public:
                 // Update sound previews
                 if (m_content) {
                     m_content->updateSoundPreview();
+                }
+
+                // Rebuild audio graph for engine when track data changes
+                if (m_audioEngine && m_content && m_content->getTrackManager() &&
+                    m_content->getTrackManager()->consumeGraphDirty()) {
+                    double graphSampleRate = static_cast<double>(m_mainStreamConfig.sampleRate);
+                    if (m_audioManager) {
+                        double actual = static_cast<double>(m_audioManager->getStreamSampleRate());
+                        if (actual > 0.0) {
+                            graphSampleRate = actual;
+                        }
+                    }
+                    auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), graphSampleRate);
+                    m_audioEngine->setGraph(graph);
+                    // Sync transport/sample position to engine
+                    AudioQueueCommand cmd;
+                    cmd.type = AudioQueueCommandType::SetTransportState;
+                    bool playing = m_content->getTrackManager()->isPlaying();
+                    cmd.value1 = playing ? 1.0f : 0.0f;
+                    double posSeconds = m_content->getTrackManager()->getPosition();
+                    cmd.samplePos = static_cast<uint64_t>(posSeconds * graphSampleRate);
+                    m_audioEngine->commandQueue().push(cmd);
+                }
+                
+                // Auto-save check (only when modified and not playing to avoid audio glitches)
+                autoSaveTimer += deltaTime;
+                if (autoSaveTimer >= autoSaveInterval) {
+                    autoSaveTimer = 0.0;
+                    
+                    if (m_content && m_content->getTrackManager()) {
+                        bool isModified = m_content->getTrackManager()->isModified();
+                        bool isPlaying = m_content->getTrackManager()->isPlaying();
+                        bool isRecording = m_content->getTrackManager()->isRecording();
+                        
+                        // Only auto-save if modified and not in active audio operation
+                        if (isModified && !isPlaying && !isRecording) {
+                            Log::info("[AutoSave] Saving project...");
+                            if (saveProject()) {
+                                Log::info("[AutoSave] Project saved successfully");
+                            } else {
+                                Log::warning("[AutoSave] Failed to save project");
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1185,6 +1399,31 @@ public:
             if (m_content && m_content->getTrackManagerUI()) {
                 auto trackManager = m_content->getTrackManagerUI()->getTrackManager();
                 if (trackManager) {
+                    // Connect command sink for RT updates
+                    if (m_audioEngine) {
+                        trackManager->setCommandSink([this](const AudioQueueCommand& cmd) {
+                            if (m_audioEngine) {
+                                m_audioEngine->commandQueue().push(cmd);
+                            }
+                        });
+                    }
+                    if (m_content && m_content->getTrackManager()) {
+                        m_content->getTrackManager()->setCommandSink([this](const AudioQueueCommand& cmd) {
+                            if (m_audioEngine) {
+                                m_audioEngine->commandQueue().push(cmd);
+                            }
+                        });
+                    }
+                    // Keep track managers aware of current sample rate
+                    double actualRate = static_cast<double>(m_mainStreamConfig.sampleRate);
+                    if (m_audioManager) {
+                        double actual = static_cast<double>(m_audioManager->getStreamSampleRate());
+                        if (actual > 0.0) actualRate = actual;
+                    }
+                    trackManager->setOutputSampleRate(actualRate);
+                    if (m_content && m_content->getTrackManager()) {
+                        m_content->getTrackManager()->setOutputSampleRate(actualRate);
+                    }
                     Profiler::getInstance().setAudioLoad(trackManager->getAudioLoadPercent());
                 }
             }
@@ -1221,12 +1460,30 @@ public:
      * @brief Shutdown all subsystems
      */
     void shutdown() {
-        if (!m_running) {
+        Log::info("[SHUTDOWN] Entering shutdown function...");
+        
+        // Note: m_running is already false when we exit the main loop
+        // Use a separate flag to prevent double-shutdown
+        static bool shutdownComplete = false;
+        if (shutdownComplete) {
+            Log::info("[SHUTDOWN] Already completed, returning");
             return;
         }
+        shutdownComplete = true;
 
-        // Save project state before tearing down
-        saveProject();
+        // Save project state before tearing down (with error handling)
+        try {
+            Log::info("[SHUTDOWN] Saving project state...");
+            if (saveProject()) {
+                Log::info("[SHUTDOWN] Project saved successfully");
+            } else {
+                Log::warning("[SHUTDOWN] Project save returned false");
+            }
+        } catch (const std::exception& e) {
+            Log::error("[SHUTDOWN] Exception during save: " + std::string(e.what()));
+        } catch (...) {
+            Log::error("[SHUTDOWN] Unknown exception during save");
+        }
 
         Log::info("Shutting down NOMAD DAW...");
 
@@ -1267,9 +1524,26 @@ public:
 
     ProjectSerializer::LoadResult loadProject() {
         if (!m_content || !m_content->getTrackManager()) {
+            Log::warning("[loadProject] Content or TrackManager not available");
             return {};
         }
-        return ProjectSerializer::load(m_projectPath, m_content->getTrackManager());
+        
+        // Check if autosave file exists before attempting to load
+        if (!std::filesystem::exists(m_projectPath)) {
+            Log::info("[loadProject] No previous project file found at: " + m_projectPath);
+            return {};  // Return empty result, not an error
+        }
+        
+        try {
+            Log::info("[loadProject] Loading from: " + m_projectPath);
+            return ProjectSerializer::load(m_projectPath, m_content->getTrackManager());
+        } catch (const std::exception& e) {
+            Log::error("[loadProject] Exception: " + std::string(e.what()));
+            return {};
+        } catch (...) {
+            Log::error("[loadProject] Unknown exception");
+            return {};
+        }
     }
 
     bool saveProject() {
@@ -1279,7 +1553,67 @@ public:
         if (m_content->getTransportBar()) {
             tempo = m_content->getTransportBar()->getTempo();
         }
-        return ProjectSerializer::save(m_projectPath, m_content->getTrackManager(), tempo, playhead);
+        bool saved = ProjectSerializer::save(m_projectPath, m_content->getTrackManager(), tempo, playhead);
+        if (saved && m_content->getTrackManager()) {
+            m_content->getTrackManager()->setModified(false);
+        }
+        return saved;
+    }
+    
+    /**
+     * @brief Request application close with optional save prompt
+     * 
+     * If there are unsaved changes, shows a confirmation dialog.
+     * Otherwise, closes immediately.
+     */
+    void requestClose() {
+        Log::info("[requestClose] Close requested");
+        
+        // Check if there are unsaved changes
+        bool hasUnsavedChanges = false;
+        if (m_content && m_content->getTrackManager()) {
+            hasUnsavedChanges = m_content->getTrackManager()->isModified();
+            Log::info("[requestClose] isModified() = " + std::string(hasUnsavedChanges ? "true" : "false"));
+        } else {
+            Log::info("[requestClose] No content or track manager");
+        }
+        
+        // For now, ALWAYS show the dialog to test it works
+        // TODO: Restore hasUnsavedChanges check once we verify dialog works
+        if (m_confirmationDialog) {
+            Log::info("[requestClose] Showing confirmation dialog");
+            // Show confirmation dialog
+            m_confirmationDialog->show(
+                "Close NOMAD",
+                "Are you sure you want to close NOMAD?",
+                [this](DialogResponse response) {
+                    switch (response) {
+                        case DialogResponse::Save:
+                            if (saveProject()) {
+                                Log::info("Project saved before exit");
+                            } else {
+                                Log::error("Failed to save project before exit");
+                            }
+                            m_running = false;
+                            break;
+                        case DialogResponse::DontSave:
+                            Log::info("Exiting without saving");
+                            m_running = false;
+                            break;
+                        case DialogResponse::Cancel:
+                            Log::info("Close cancelled by user");
+                            // Don't close - user cancelled
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            );
+        } else {
+            // No dialog available, close immediately
+            Log::warning("[requestClose] No confirmation dialog, closing immediately");
+            m_running = false;
+        }
     }
 
 private:
@@ -1303,7 +1637,7 @@ private:
         // Window close callback
         m_window->setCloseCallback([this]() {
             Log::info("Window close requested");
-            m_running = false;
+            requestClose();
         });
 
         // Key callback
@@ -1333,8 +1667,24 @@ private:
                 }
             }
             
+            // Handle confirmation dialog key events if visible
+            if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
+                NomadUI::NUIKeyEvent event;
+                event.keyCode = convertToNUIKeyCode(key);
+                event.pressed = pressed;
+                event.released = !pressed;
+                
+                if (m_confirmationDialog->onKeyEvent(event)) {
+                    return; // Dialog handled the event
+                }
+            }
+            
             // Handle global key shortcuts
             if (key == static_cast<int>(KeyCode::Escape) && pressed) {
+                // If confirmation dialog is open, let it handle escape
+                if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
+                    return; // Already handled above
+                }
                 // If audio settings dialog is open, close it
                 if (m_audioSettingsDialog && m_audioSettingsDialog->isVisible()) {
                     m_audioSettingsDialog->hide();
@@ -1342,8 +1692,8 @@ private:
                     Log::info("Escape key pressed - exiting fullscreen");
                     m_customWindow->exitFullScreen();
                 } else {
-                    Log::info("Escape key pressed - exiting");
-                    m_running = false;
+                    Log::info("Escape key pressed - requesting close");
+                    requestClose();
                 }
             } else if (key == static_cast<int>(KeyCode::F11) && pressed) {
                 if (m_customWindow) {
@@ -1603,29 +1953,27 @@ private:
             return 1;
         }
 
-        // Clear output buffer first
-        std::fill(outputBuffer, outputBuffer + nFrames * 2, 0.0f);
+        // Determine effective sample rate once for this block
+        double actualRate = 0.0;
+        if (app->m_audioManager) {
+            actualRate = static_cast<double>(app->m_audioManager->getStreamSampleRate());
+        }
+        if (actualRate <= 0.0) {
+            actualRate = static_cast<double>(app->m_mainStreamConfig.sampleRate);
+        }
 
-        // Process audio through track manager
-        if (app->m_content && app->m_content->getTrackManagerUI()) {
-            auto trackManager = app->m_content->getTrackManagerUI()->getTrackManager();
-            PreviewEngine* previewEngine = app->m_content->getPreviewEngine();
-            if (trackManager) {
-                // Let track manager mix all playing tracks
-                double actualRate = 0.0;
-                if (app->m_audioManager) {
-                    actualRate = static_cast<double>(app->m_audioManager->getStreamSampleRate());
-                }
-                if (actualRate <= 0.0) {
-                    actualRate = static_cast<double>(app->m_mainStreamConfig.sampleRate);
-                }
-                trackManager->setOutputSampleRate(actualRate);
-                trackManager->processAudio(outputBuffer, nFrames, streamTime);
-                if (previewEngine) {
-                    previewEngine->setOutputSampleRate(actualRate);
-                    previewEngine->process(outputBuffer, nFrames);
-                }
-            }
+        if (app->m_audioEngine) {
+            app->m_audioEngine->setSampleRate(static_cast<uint32_t>(actualRate));
+            app->m_audioEngine->processBlock(outputBuffer, inputBuffer, nFrames, streamTime);
+        } else {
+            std::fill(outputBuffer, outputBuffer + nFrames * 2, 0.0f);
+        }
+        
+        // Preview mixing (RT-safe path to be refactored later)
+        if (app->m_content && app->m_content->getPreviewEngine()) {
+            auto previewEngine = app->m_content->getPreviewEngine();
+            previewEngine->setOutputSampleRate(actualRate);
+            previewEngine->process(outputBuffer, nFrames);
         }
         
         // Generate test sound if active (directly in callback, no track needed)
@@ -1678,16 +2026,19 @@ private:
     std::unique_ptr<NUIPlatformBridge> m_window;
     std::unique_ptr<NUIRenderer> m_renderer;
     std::unique_ptr<AudioDeviceManager> m_audioManager;
+    std::unique_ptr<AudioEngine> m_audioEngine;
     std::shared_ptr<NomadRootComponent> m_rootComponent;
     std::shared_ptr<NUICustomWindow> m_customWindow;
     std::shared_ptr<NomadContent> m_content;
     std::shared_ptr<AudioSettingsDialog> m_audioSettingsDialog;
+    std::shared_ptr<ConfirmationDialog> m_confirmationDialog;
     std::shared_ptr<FPSDisplay> m_fpsDisplay;
     std::shared_ptr<PerformanceHUD> m_performanceHUD;
     std::unique_ptr<NomadUI::NUIAdaptiveFPS> m_adaptiveFPS;
     NomadUI::NUIFrameProfiler m_profiler;  // Legacy profiler (can be removed later)
     bool m_running;
     bool m_audioInitialized;
+    bool m_pendingClose{false};  // Set when user requested close but awaiting dialog response
     AudioStreamConfig m_mainStreamConfig;  // Store main audio stream configuration
     std::string m_projectPath{getAutosavePath()};
     

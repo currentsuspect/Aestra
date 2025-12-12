@@ -1321,7 +1321,7 @@ void AudioSettingsDialog::renderDialog(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIColor textColor = themeManager.getColor("textPrimary");
     float titleY = titleBar.y + 19; // Tighter vertical position
     float titleX = titleBar.x + 18; // Tighter horizontal position
-    renderer.drawText("Audio Settings", NomadUI::NUIPoint(titleX, titleY), 18, textColor);
+    renderer.drawText("Audio Settings", NomadUI::NUIPoint(titleX, titleY), 14, textColor);
     
     // Close button (X) - symmetrical cross
     float closeSize = 28.0f;

@@ -48,6 +48,8 @@ public:
 
     float getDPIScale() const override { return m_dpiScale; }
     
+    void setCursorVisible(bool visible) override;
+    
     KeyModifiers getCurrentModifiers() const override { return getKeyModifiers(); }
 
     void setMouseMoveCallback(std::function<void(int, int)> callback) override { m_mouseMoveCallback = callback; }
@@ -87,6 +89,9 @@ private:
     // Fullscreen restore state
     WINDOWPLACEMENT m_wpPrev;
     DWORD m_styleBackup;
+    
+    // Cursor state
+    bool m_cursorVisible = true;
 
     // Event callbacks
     std::function<void(int, int)> m_mouseMoveCallback;

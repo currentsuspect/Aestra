@@ -81,6 +81,9 @@ public:
     PlaylistTool getCurrentTool() const { return m_currentTool; }
     PlaylistTool getActiveTool() const { return m_currentTool; }  // Alias
     
+    // Cursor visibility callback (for custom cursor support)
+    void setOnCursorVisibilityChanged(std::function<void(bool)> callback) { m_onCursorVisibilityChanged = callback; }
+    
     // === MULTI-SELECTION ===
     void selectTrack(TrackUIComponent* track, bool addToSelection = false);
     void deselectTrack(TrackUIComponent* track);
@@ -171,6 +174,8 @@ private:
     
     // Current editing tool
     PlaylistTool m_currentTool = PlaylistTool::Select;
+    bool m_cursorHidden = false;  // Track cursor visibility state
+    std::function<void(bool)> m_onCursorVisibilityChanged;
     
     // Multi-selection
     std::unordered_set<TrackUIComponent*> m_selectedTracks;
@@ -194,6 +199,11 @@ private:
     
     // Playhead dragging state
     bool m_isDraggingPlayhead = false;
+    
+    // === SELECTION BOX (Right-click drag or MultiSelect tool) ===
+    bool m_isDrawingSelectionBox = false;
+    NomadUI::NUIPoint m_selectionBoxStart;
+    NomadUI::NUIPoint m_selectionBoxEnd;
     
     // === SMOOTH ZOOM ANIMATION (FL Studio style) ===
     float m_targetPixelsPerBeat = 50.0f;   // Target zoom level for animation (match initial m_pixelsPerBeat)

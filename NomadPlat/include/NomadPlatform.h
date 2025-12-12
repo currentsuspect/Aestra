@@ -117,6 +117,9 @@ public:
     // DPI support
     virtual float getDPIScale() const = 0;
     
+    // Cursor control
+    virtual void setCursorVisible(bool visible) = 0;
+    
     // Modifier key state query (for wheel events that need modifier info)
     virtual KeyModifiers getCurrentModifiers() const = 0;
 

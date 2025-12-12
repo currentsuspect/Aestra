@@ -126,16 +126,16 @@ struct NUIThemeProperties {
     float radiusXL = 16.0f;
     float radiusXXL = 24.0f;
     
-    // Typography
+    // Typography - crisp UI text sizes (bumped +2px)
     float fontSizeXS = 12.0f;
-    float fontSizeS = 14.0f;
-    float fontSizeM = 18.0f;
-    float fontSizeL = 20.0f;
-    float fontSizeXL = 22.0f;
-    float fontSizeXXL = 28.0f;
-    float fontSizeH1 = 34.0f;
-    float fontSizeH2 = 30.0f;
-    float fontSizeH3 = 26.0f;
+    float fontSizeS = 13.0f;
+    float fontSizeM = 14.0f;
+    float fontSizeL = 16.0f;
+    float fontSizeXL = 18.0f;
+    float fontSizeXXL = 22.0f;
+    float fontSizeH1 = 26.0f;
+    float fontSizeH2 = 22.0f;
+    float fontSizeH3 = 20.0f;
     
     // Line heights
     float lineHeightTight = 1.2f;

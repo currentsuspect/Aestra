@@ -372,6 +372,19 @@ void PlatformWindowWin32::setVSync(bool enabled) {
     }
 }
 
+void PlatformWindowWin32::setCursorVisible(bool visible) {
+    if (m_cursorVisible != visible) {
+        m_cursorVisible = visible;
+        if (visible) {
+            // Increment cursor count until it's visible (>= 0)
+            while (ShowCursor(TRUE) < 0) {}
+        } else {
+            // Decrement cursor count until it's hidden (< 0)
+            while (ShowCursor(FALSE) >= 0) {}
+        }
+    }
+}
+
 // =============================================================================
 // Event Processing
 // =============================================================================
@@ -502,10 +515,16 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
         }
         
         case WM_CLOSE:
-            m_shouldClose = true;
+            // Don't set m_shouldClose here - let the app decide via callback
+            // The app can call requestClose() which may show a dialog
+            // If the app wants to close, it will set its own m_running = false
             if (m_closeCallback) {
                 m_closeCallback();
+                // Don't close yet - the callback will decide
+                return 0;
             }
+            // No callback, allow default close behavior
+            m_shouldClose = true;
             return 0;
 
         case WM_SIZE: {

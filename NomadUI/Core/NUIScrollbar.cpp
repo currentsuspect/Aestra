@@ -76,37 +76,63 @@ bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || isAutoHidden_) return false;
 
+    lastMousePosition_ = event.position;
+
     NUIRect bounds = getBounds();
     
     // If we're dragging, we need to handle mouse events even outside bounds
     // If not dragging and mouse is outside bounds, ignore the event
-    if (!isDragging_ && !bounds.contains(event.position)) return false;
+    if (!isDragging_ && !bounds.contains(event.position)) {
+        // Reset hover when mouse leaves
+        if (hoveredPart_ != Part::None) {
+            hoveredPart_ = Part::None;
+            setDirty(true);
+        }
+        return false;
+    }
     
-    std::cout << "Scrollbar received mouse event at (" << event.position.x << ", " << event.position.y << ")" << std::endl;
+    // Track hover state for visual feedback (on any mouse move within bounds)
+    if (!isDragging_) {
+        Part newHoveredPart = getPartAtPosition(event.position);
+        if (newHoveredPart != hoveredPart_) {
+            hoveredPart_ = newHoveredPart;
+            setDirty(true);
+        }
+    }
+    
+    // std::cout << "Scrollbar received mouse event at (" << event.position.x << ", " << event.position.y << ")" << std::endl;
 
     Part part = getPartAtPosition(event.position);
     
     if (event.pressed && event.button == NUIMouseButton::Left)
     {
-        std::cout << "Mouse pressed on part: " << static_cast<int>(part) << std::endl;
+        // std::cout << "Mouse pressed on part: " << static_cast<int>(part) << std::endl;
         isPressed_ = true;
         pressedPart_ = part;
         dragStartPosition_ = event.position;
+        lastMousePosition_ = event.position; // Initialize for relative drag
         dragStartValue_ = currentRangeStart_;
 
         switch (part)
         {
             case Part::Thumb:
                 isDragging_ = true;
-                std::cout << "Started dragging thumb" << std::endl;
+                // std::cout << "Started dragging thumb" << std::endl;
+                break;
+            case Part::ThumbStartEdge:
+            case Part::ThumbEndEdge:
+                isDragging_ = true;
+                resizeStartSize_ = currentRangeSize_;
+                resizeStartValue_ = currentRangeStart_;
+                // std::cout << "Started resizing thumb" << std::endl;
                 break;
             case Part::LeftArrow:
                 scrollByLine(-1.0);
-                std::cout << "Left arrow clicked, scrolled by line" << std::endl;
+                // std::cout << "Left arrow clicked, scrolled by line" << std::endl;
                 break;
             case Part::RightArrow:
                 scrollByLine(1.0);
-                std::cout << "Right arrow clicked, scrolled by line" << std::endl;
+                // std::cout << "Right arrow clicked, scrolled by line" << std::endl;
                 break;
             case Part::LeftTrack:
                 scrollByPage(-1.0);
@@ -136,31 +162,101 @@ bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
         // Handle thumb dragging (mouse move events have button = None)
         // Use relative drag delta to preserve initial grab offset within thumb
         NUIRect trackRect = getTrackRect();
-        double deltaPixels, trackLength;
+        NUIRect thumbRect = getThumbRect();
+        double deltaPixels, trackLength, thumbLengthPixels;
         
         if (orientation_ == Orientation::Vertical)
         {
             deltaPixels = event.position.y - dragStartPosition_.y;
             trackLength = trackRect.height;
+            thumbLengthPixels = thumbRect.height;
         }
         else
         {
             deltaPixels = event.position.x - dragStartPosition_.x;
             trackLength = trackRect.width;
+            thumbLengthPixels = thumbRect.width;
         }
         
         // Guard against division by zero when trackLength is zero
-        if (trackLength == 0.0) {
+        if (trackLength <= 0.0) {
             return false;
         }
         
-        // Convert pixel delta to value delta
-        double proportion = deltaPixels / trackLength;
-        double valueDelta = proportion * rangeLimitSize_;
-        double newValue = dragStartValue_ + valueDelta;
+        if (pressedPart_ == Part::Thumb) {
+            // Calculate available space for movement
+            double availableTrack = trackLength - thumbLengthPixels;
+            double availableValue = rangeLimitSize_ - currentRangeSize_;
+            
+            if (availableTrack > 0.5 && availableValue > 0.0) {
+                double valueDelta = (deltaPixels / availableTrack) * availableValue;
+                double newValue = dragStartValue_ + valueDelta;
+                scrollTo(newValue);
+            }
+        } else if (pressedPart_ == Part::ThumbStartEdge) {
+            // Dragging left/top edge: changes start and size
+            // Use relative movement (step delta) to handle dynamic range changes during drag
+            bool isTimelineResize = (style_ == Style::Timeline);
+            
+            double stepDeltaPixels;
+            if (orientation_ == Orientation::Vertical) stepDeltaPixels = event.position.y - lastMousePosition_.y;
+            else stepDeltaPixels = event.position.x - lastMousePosition_.x;
+
+            double valuePerPixel = rangeLimitSize_ / trackLength;
+            double valueDelta = stepDeltaPixels * valuePerPixel;
+
+            double newStart = currentRangeStart_ + valueDelta;
+            double newSize = currentRangeSize_ - valueDelta;
+            
+            // Constraints
+            if (newSize < 0.001) {
+                newSize = 0.001;
+                newStart = currentRangeStart_ + currentRangeSize_ - 0.001;
+            }
+            
+            // Clamp start
+            if (newStart < rangeLimitStart_) {
+                double diff = rangeLimitStart_ - newStart;
+                newStart = rangeLimitStart_;
+                newSize -= diff;
+            }
+            
+            currentRangeStart_ = newStart;
+            currentRangeSize_ = newSize;
+            updateThumbSize();
+            updateThumbPosition();
+            setDirty(true);
+            if (onRangeChangeCallback_) onRangeChangeCallback_(currentRangeStart_, currentRangeSize_);
+            
+        } else if (pressedPart_ == Part::ThumbEndEdge) {
+            // Dragging right/bottom edge: changes size only
+            // Use relative movement (step delta)
+            
+            double stepDeltaPixels;
+            if (orientation_ == Orientation::Vertical) stepDeltaPixels = event.position.y - lastMousePosition_.y;
+            else stepDeltaPixels = event.position.x - lastMousePosition_.x;
+
+            double valuePerPixel = rangeLimitSize_ / trackLength;
+            double valueDelta = stepDeltaPixels * valuePerPixel;
+
+            double newSize = currentRangeSize_ + valueDelta;
+             if (newSize < 0.001) {
+                newSize = 0.001;
+            }
+            
+            // Clamp size so start + size <= limit
+            if (currentRangeStart_ + newSize > rangeLimitStart_ + rangeLimitSize_) {
+                newSize = rangeLimitStart_ + rangeLimitSize_ - currentRangeStart_;
+            }
+            
+            currentRangeSize_ = newSize;
+            updateThumbSize();
+            updateThumbPosition();
+            setDirty(true);
+            if (onRangeChangeCallback_) onRangeChangeCallback_(currentRangeStart_, currentRangeSize_);
+        }
         
-        std::cout << "Dragging: delta=" << deltaPixels << "px, newValue=" << newValue << std::endl;
-        scrollTo(newValue);
+        lastMousePosition_ = event.position;
         return true;
     }
 
@@ -182,12 +278,11 @@ void NUIScrollbar::onMouseLeave()
 {
     isHovered_ = false;
     
-    // If we're dragging and mouse leaves, we need to continue tracking
-    // Don't stop dragging just because mouse left the component
-    if (!isDragging_)
-    {
-        if (autoHide_)
-        {
+    // Reset hover state when mouse leaves (unless dragging)
+    if (!isDragging_) {
+        hoveredPart_ = Part::None;
+        
+        if (autoHide_) {
             startAutoHideTimer();
         }
     }
@@ -248,6 +343,18 @@ void NUIScrollbar::setAutoHideDelay(double delay)
 void NUIScrollbar::setOrientation(Orientation orientation)
 {
     orientation_ = orientation;
+    updateThumbSize();
+    setDirty(true);
+}
+
+void NUIScrollbar::setStyle(Style style)
+{
+    style_ = style;
+    if (style_ == Style::Timeline) {
+        arrowSize_ = 0.0f;
+    } else {
+        arrowSize_ = 12.0f;
+    }
     updateThumbSize();
     setDirty(true);
 }
@@ -402,6 +509,11 @@ void NUIScrollbar::setOnScroll(std::function<void(double)> callback)
     onScrollCallback_ = callback;
 }
 
+void NUIScrollbar::setOnRangeChange(std::function<void(double start, double size)> callback)
+{
+    onRangeChangeCallback_ = callback;
+}
+
 void NUIScrollbar::setOnScrollStart(std::function<void()> callback)
 {
     onScrollStartCallback_ = callback;
@@ -426,12 +538,116 @@ void NUIScrollbar::drawThumb(NUIRenderer& renderer)
     
     NUIRect thumbRect = getThumbRect();
     
+    if (style_ == Style::Timeline) {
+        // Enhanced FL Studio style thumb with hover feedback on edges
+        NUIColor thumbColor = thumbColor_;
+        bool isThumbHovered = (hoveredPart_ == Part::Thumb);
+        bool isStartEdgeHovered = (hoveredPart_ == Part::ThumbStartEdge);
+        bool isEndEdgeHovered = (hoveredPart_ == Part::ThumbEndEdge);
+        bool isDraggingThumb = (isDragging_ && pressedPart_ == Part::Thumb);
+        bool isDraggingStart = (isDragging_ && pressedPart_ == Part::ThumbStartEdge);
+        bool isDraggingEnd = (isDragging_ && pressedPart_ == Part::ThumbEndEdge);
+        
+        // Adjust thumb color based on overall state
+        if (isDraggingThumb || isDraggingStart || isDraggingEnd) {
+            thumbColor = thumbPressedColor_;
+        } else if (isThumbHovered || isStartEdgeHovered || isEndEdgeHovered) {
+            thumbColor = thumbHoverColor_;
+        }
+        
+        // Main thumb body
+        renderer.fillRoundedRect(thumbRect, 4.0f, thumbColor);
+        
+        // Draw enhanced edge handles with hover/active states
+        float handleWidth = 12.0f;  // Match edge detection zone
+        NUIColor handleBaseColor = thumbColor.lightened(0.3f);
+        NUIColor handleHoverColor = NUIColor(0.73f, 0.52f, 0.99f, 1.0f);  // Purple accent
+        NUIColor handleActiveColor = NUIColor(0.6f, 0.4f, 0.9f, 1.0f);   // Darker purple when dragging
+        
+        if (orientation_ == Orientation::Horizontal) {
+            NUIRect leftHandle(thumbRect.x, thumbRect.y, handleWidth, thumbRect.height);
+            NUIRect rightHandle(thumbRect.x + thumbRect.width - handleWidth, thumbRect.y, handleWidth, thumbRect.height);
+            
+            // Left/Start handle color
+            NUIColor leftColor = handleBaseColor;
+            if (isDraggingStart) {
+                leftColor = handleActiveColor;
+            } else if (isStartEdgeHovered) {
+                leftColor = handleHoverColor;
+                // Add subtle glow on hover
+                renderer.drawGlow(leftHandle, 4.0f, 0.5f, handleHoverColor.withAlpha(0.4f));
+            }
+            
+            // Right/End handle color
+            NUIColor rightColor = handleBaseColor;
+            if (isDraggingEnd) {
+                rightColor = handleActiveColor;
+            } else if (isEndEdgeHovered) {
+                rightColor = handleHoverColor;
+                // Add subtle glow on hover
+                renderer.drawGlow(rightHandle, 4.0f, 0.5f, handleHoverColor.withAlpha(0.4f));
+            }
+            
+            renderer.fillRoundedRect(leftHandle, 2.0f, leftColor);
+            renderer.fillRoundedRect(rightHandle, 2.0f, rightColor);
+            
+            // Draw vertical grip lines inside handles for visual clarity
+            float lineX = leftHandle.x + handleWidth * 0.5f;
+            float lineTop = leftHandle.y + 4.0f;
+            float lineBottom = leftHandle.y + leftHandle.height - 4.0f;
+            renderer.drawLine(NUIPoint(lineX - 2.0f, lineTop), NUIPoint(lineX - 2.0f, lineBottom), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+            renderer.drawLine(NUIPoint(lineX + 2.0f, lineTop), NUIPoint(lineX + 2.0f, lineBottom), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+            
+            lineX = rightHandle.x + handleWidth * 0.5f;
+            renderer.drawLine(NUIPoint(lineX - 2.0f, lineTop), NUIPoint(lineX - 2.0f, lineBottom), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+            renderer.drawLine(NUIPoint(lineX + 2.0f, lineTop), NUIPoint(lineX + 2.0f, lineBottom), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+        } else {
+            NUIRect topHandle(thumbRect.x, thumbRect.y, thumbRect.width, handleWidth);
+            NUIRect bottomHandle(thumbRect.x, thumbRect.y + thumbRect.height - handleWidth, thumbRect.width, handleWidth);
+            
+            // Top/Start handle color
+            NUIColor topColor = handleBaseColor;
+            if (isDraggingStart) {
+                topColor = handleActiveColor;
+            } else if (isStartEdgeHovered) {
+                topColor = handleHoverColor;
+                renderer.drawGlow(topHandle, 4.0f, 0.5f, handleHoverColor.withAlpha(0.4f));
+            }
+            
+            // Bottom/End handle color
+            NUIColor bottomColor = handleBaseColor;
+            if (isDraggingEnd) {
+                bottomColor = handleActiveColor;
+            } else if (isEndEdgeHovered) {
+                bottomColor = handleHoverColor;
+                renderer.drawGlow(bottomHandle, 4.0f, 0.5f, handleHoverColor.withAlpha(0.4f));
+            }
+            
+            renderer.fillRoundedRect(topHandle, 2.0f, topColor);
+            renderer.fillRoundedRect(bottomHandle, 2.0f, bottomColor);
+            
+            // Draw horizontal grip lines inside handles
+            float lineY = topHandle.y + handleWidth * 0.5f;
+            float lineLeft = topHandle.x + 4.0f;
+            float lineRight = topHandle.x + topHandle.width - 4.0f;
+            renderer.drawLine(NUIPoint(lineLeft, lineY - 2.0f), NUIPoint(lineRight, lineY - 2.0f), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+            renderer.drawLine(NUIPoint(lineLeft, lineY + 2.0f), NUIPoint(lineRight, lineY + 2.0f), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+            
+            lineY = bottomHandle.y + handleWidth * 0.5f;
+            renderer.drawLine(NUIPoint(lineLeft, lineY - 2.0f), NUIPoint(lineRight, lineY - 2.0f), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+            renderer.drawLine(NUIPoint(lineLeft, lineY + 2.0f), NUIPoint(lineRight, lineY + 2.0f), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+        }
+        
+        return;
+    }
+
     // Enhanced thumb with translucent effect and smooth animations
     drawEnhancedThumb(renderer, thumbRect);
 }
 
 void NUIScrollbar::drawArrows(NUIRenderer& renderer)
 {
+    if (style_ == Style::Timeline) return;
     drawLeftArrow(renderer);
     drawRightArrow(renderer);
 }
@@ -491,6 +707,23 @@ void NUIScrollbar::drawRightArrow(NUIRenderer& renderer)
 NUIScrollbar::Part NUIScrollbar::getPartAtPosition(const NUIPoint& position) const
 {
     NUIRect bounds = getBounds();
+    NUIRect thumbRect = getThumbRect();
+    
+    if (style_ == Style::Timeline && thumbRect.contains(position))
+    {
+        float edgeSize = 12.0f; // Increased for easier grabbing
+        if (orientation_ == Orientation::Horizontal)
+        {
+            if (position.x < thumbRect.x + edgeSize) return Part::ThumbStartEdge;
+            if (position.x > thumbRect.x + thumbRect.width - edgeSize) return Part::ThumbEndEdge;
+        }
+        else
+        {
+            if (position.y < thumbRect.y + edgeSize) return Part::ThumbStartEdge;
+            if (position.y > thumbRect.y + thumbRect.height - edgeSize) return Part::ThumbEndEdge;
+        }
+        return Part::Thumb;
+    }
     
     if (orientation_ == Orientation::Vertical)
     {
@@ -502,7 +735,6 @@ NUIScrollbar::Part NUIScrollbar::getPartAtPosition(const NUIPoint& position) con
         if (y > height - arrowSize_)
             return Part::RightArrow;
         
-        NUIRect thumbRect = getThumbRect();
         if (thumbRect.contains(position))
             return Part::Thumb;
         
@@ -521,7 +753,6 @@ NUIScrollbar::Part NUIScrollbar::getPartAtPosition(const NUIPoint& position) con
         if (x > width - arrowSize_)
             return Part::RightArrow;
         
-        NUIRect thumbRect = getThumbRect();
         if (thumbRect.contains(position))
             return Part::Thumb;
         

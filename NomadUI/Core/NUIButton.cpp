@@ -43,11 +43,13 @@ void NUIButton::onRender(NUIRenderer& renderer)
         textColor = NUIColor::white();
         borderColor = theme.primary.lightened(0.15f);
     } else if (style_ == Style::Secondary) {
-        bgColor = theme.surface.lightened(0.08f);
+        // FLAT DESIGN: Transparent background by default for secondary buttons
+        bgColor = NUIColor::transparent(); 
         borderColor = theme.border.withAlpha(0.8f);
     } else if (style_ == Style::Icon) {
-        bgColor = theme.surface.darkened(0.06f);
-        borderColor = theme.border.withAlpha(0.55f);
+        // FLAT DESIGN: Transparent background by default for icon buttons
+        bgColor = NUIColor::transparent();
+        borderColor = NUIColor::transparent(); // No border for icons by default
     }
 
     // Update colors based on state (simple color changes, no animations)
@@ -55,7 +57,12 @@ void NUIButton::onRender(NUIRenderer& renderer)
     {
         case State::Hovered:
             if (enabled_) {
-                bgColor = hoverColor_;
+                // On hover, show a subtle background
+                if (style_ == Style::Secondary || style_ == Style::Icon) {
+                    bgColor = theme.surfaceRaised;
+                } else {
+                    bgColor = hoverColor_;
+                }
                 borderColor = borderColor.lightened(0.12f);
             }
             break;
@@ -78,33 +85,22 @@ void NUIButton::onRender(NUIRenderer& renderer)
     // Apply toggle state
     if (toggleable_ && toggled_)
     {
-        bgColor = pressedColor_;
+        bgColor = pressedColor_; // Active state color
         borderColor = borderColor.darkened(0.08f);
     }
 
     // Single-call rendering based on style
     float cornerRadius = (style_ == Style::Icon) ? std::min(bounds.width, bounds.height) * 0.5f : theme.radiusM;
     
-    // Depth: subtle shadow for lift
-    if (enabled_) {
-        const auto& shadow = theme.shadowS;
-        float blur = shadow.blurRadius > 0.0f ? shadow.blurRadius : 4.0f;
-        float offsetX = shadow.offsetX;
-        float offsetY = (shadow.offsetY != 0.0f ? shadow.offsetY : 1.5f);
-        NUIColor shadowColor = shadow.color.withAlpha(shadow.opacity * bgColor.a);
-        renderer.drawShadow(bounds, offsetX, offsetY, blur, shadowColor);
+    // Flat design: No shadow, no sheen
+    
+    // Base fill - Only draw if not transparent
+    if (bgColor.a > 0.0f) {
+        renderer.fillRoundedRect(bounds, cornerRadius, bgColor);
     }
 
-    // Base fill
-    renderer.fillRoundedRect(bounds, cornerRadius, bgColor);
-
-    // Soft sheen on the top half for a tactile feel
-    NUIRect sheenRect = bounds;
-    sheenRect.height *= 0.55f;
-    renderer.fillRoundedRect(sheenRect, cornerRadius, bgColor.lightened(0.12f).withAlpha(0.35f));
-
-    // Border only for non-text buttons
-    if (style_ != Style::Text) {
+    // Border only for non-text buttons and if visible
+    if (style_ != Style::Text && borderColor.a > 0.0f) {
         float borderWidth = (style_ == Style::Secondary) ? 2.0f : 1.0f;
         // Inset the stroke so the arc matches the fill curvature
         NUIRect strokeRect = bounds;
@@ -119,7 +115,7 @@ void NUIButton::onRender(NUIRenderer& renderer)
     // Draw text (1 draw call)
     if (!text_.empty() && style_ != Style::Icon)
     {
-        float fontSize = fontSize_ > 0.0f ? fontSize_ : std::clamp(bounds.height * 0.56f, 12.0f, 18.0f);
+        float fontSize = fontSize_ > 0.0f ? fontSize_ : std::clamp(bounds.height * 0.5f, 10.0f, 14.0f);
         
         // Calculate text color - grey on hover by default
         NUIColor finalTextColor = textColor;

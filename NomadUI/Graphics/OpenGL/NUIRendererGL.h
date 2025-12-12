@@ -12,6 +12,7 @@
 #include "NUIRenderCache.h"
 #include <vector>
 #include <tuple>
+#include <cstdint>
 #include <unordered_map>
 #include <memory>
 
@@ -178,6 +179,7 @@ private:
         int32_t useTextureLoc = -1;
         int32_t blurLoc = -1;
         int32_t smoothnessLoc = -1; // Added for SDF text
+        int32_t strokeWidthLoc = -1; // Added for SDF strokes
     };
     
     // Transform stack
@@ -258,6 +260,7 @@ private:
     float currentRadius_ = 0.0f;
     float currentBlur_ = 0.0f;
     float currentSmoothness_ = 1.0f; // Added
+    float currentStrokeWidth_ = 1.0f; // Added for SDF strokes
     NUISize currentSize_ = {0.0f, 0.0f};
     NUISize currentQuadSize_ = {0.0f, 0.0f};
     
@@ -275,15 +278,27 @@ private:
     
     // FreeType text rendering
     struct FontData {
-        uint32_t textureId; // Now refers to the atlas texture
-        int width, height;
-        int bearingX, bearingY;
-        int advance;
+        uint32_t textureId; // Atlas texture id
+        uint32_t glyphIndex = 0; // FreeType glyph index for kerning
+        int width = 0;
+        int height = 0;
+        int bearingX = 0;
+        int bearingY = 0;
+        int advance = 0;
         // Atlas UV coordinates
-        float u0, v0, u1, v1;
+        float u0 = 0.0f;
+        float v0 = 0.0f;
+        float u1 = 0.0f;
+        float v1 = 0.0f;
     };
     std::unordered_map<char, FontData> fontCache_;
     bool fontInitialized_;
+    bool fontUseLCD_ = true;       // Enable subpixel LCD rendering when available
+    bool fontHasKerning_ = false;  // Kerning support advertised by the font
+    int atlasFontSize_ = 32;       // Pixel height of glyphs baked into the atlas
+    float fontAscent_ = 0.0f;
+    float fontDescent_ = 0.0f;
+    float fontLineHeight_ = 0.0f;
     uint32_t fontAtlasTextureId_ = 0; // The single texture atlas
     int fontAtlasWidth_ = 2048;
     int fontAtlasHeight_ = 2048;

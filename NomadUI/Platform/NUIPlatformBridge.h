@@ -79,6 +79,9 @@ public:
 
     // DPI support
     float getDPIScale() const;
+    
+    // Cursor control
+    void setCursorVisible(bool visible);
 
 private:
     // Convert NomadPlat events to NomadUI events

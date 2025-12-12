@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_LCD_FILTER_H
 // Profiler include for recording draw calls/triangles
 #include "../../../NomadCore/include/NomadProfiler.h"
 
@@ -69,6 +70,7 @@ uniform float uRectWidth;
 uniform float uRectHeight;
 uniform float uQuadWidth;
 uniform float uQuadHeight;
+uniform float uStrokeWidth;
 uniform sampler2D uTexture;
 uniform bool uUseTexture;
 
@@ -86,24 +88,56 @@ void main() {
     if (uUseTexture) {
         vec4 texColor = texture(uTexture, vTexCoord);
         if (uPrimitiveType == 2) {
-             // Text (SDF) - R channel is distance
+             // SDF Text Rendering - ultra crisp
              float dist = texColor.r;
-             // Adaptive width based on smoothness (derivative)
-             float width = max(fwidth(dist) * uSmoothness, 1e-4);
-             float alpha = smoothstep(0.5 - width, 0.5 + width, dist);
-             // Gamma correction
-             alpha = pow(alpha, 1.0 / 1.4); 
+             
+             // Screen-space derivative for pixel-perfect edge detection
+             float ddist = fwidth(dist);
+             
+             // Very tight smoothing for crisp edges
+             // uSmoothness of 0.5 = ~0.5 pixel AA (very sharp)
+             // uSmoothness of 1.0 = ~1 pixel AA (balanced)
+             float edgeWidth = ddist * uSmoothness * 0.5;
+             
+             // Hard edge with minimal anti-aliasing
+             float alpha = smoothstep(0.5 - edgeWidth, 0.5 + edgeWidth, dist);
+             
+             // Boost contrast for extra crispness (subtle S-curve)
+             alpha = alpha * alpha * (3.0 - 2.0 * alpha);
+             
              color.a *= alpha;
+        } else if (uPrimitiveType == 4) {
+             // LCD/subpixel aware text rendering
+             // Collapse RGB mask to a single coverage to avoid color fringes on tinted UI text
+             vec3 coverage = texColor.rgb;
+             float coverageAlpha = max(max(coverage.r, coverage.g), coverage.b);
+             // Gentle gamma to keep stems crisp without halos
+             coverageAlpha = pow(coverageAlpha, 1.0 / 1.4);
+             color.rgb *= coverageAlpha;
+             color.a *= coverageAlpha;
         } else {
+             // Regular textured primitive
              color *= texColor;
         }
     }
     
     if (uPrimitiveType == 1) {
-        // Rounded rectangle / Shadow
+        // Filled rounded rectangle / Shadow
         vec2 pos = (vTexCoord - 0.5) * vec2(uQuadWidth, uQuadHeight);
         float dist = sdRoundedRect(pos, vec2(uRectWidth, uRectHeight) * 0.5, uRadius);
         float alpha = 1.0 - smoothstep(-uBlur, uBlur, dist);
+        color.a *= alpha;
+    }
+    
+    if (uPrimitiveType == 3) {
+        // Stroked rounded rectangle using SDF
+        vec2 pos = (vTexCoord - 0.5) * vec2(uQuadWidth, uQuadHeight);
+        float dist = sdRoundedRect(pos, vec2(uRectWidth, uRectHeight) * 0.5, uRadius);
+        // Create stroke by checking if distance is near the edge
+        float halfStroke = uStrokeWidth * 0.5;
+        float outerAlpha = 1.0 - smoothstep(-uBlur, uBlur, dist - halfStroke);
+        float innerAlpha = 1.0 - smoothstep(-uBlur, uBlur, dist + halfStroke);
+        float alpha = outerAlpha - innerAlpha;
         color.a *= alpha;
     }
     
@@ -153,14 +187,35 @@ bool NUIRendererGL::initialize(int width, int height) {
         return false;
     }
     
+    // Enable LCD filtering for crisper subpixel text when available
+    {
+        FT_Error filterErr = FT_Library_SetLcdFilter(ftLibrary_, FT_LCD_FILTER_DEFAULT);
+        if (filterErr) {
+            std::cerr << "WARNING: FreeType LCD filter not available, using grayscale text (err=" 
+                      << filterErr << ")" << std::endl;
+            fontUseLCD_ = false;
+        } else {
+            // Use mutable weights because FreeType API expects non-const pointer
+            static FT_Byte weights[5] = { 16, 48, 96, 48, 16 }; // Soft ClearType-style weights
+            FT_Library_SetLcdFilterWeights(ftLibrary_, weights);
+            fontUseLCD_ = true;
+        }
+    }
+    
         // Try to load the best font for Nomad
         std::vector<std::string> fontPaths = {
-            "C:/Windows/Fonts/segoeui.ttf",      // Segoe UI - Windows native, excellent for UI
-            "C:/Windows/Fonts/calibri.ttf",      // Calibri - Modern, very clear
-            "C:/Windows/Fonts/arial.ttf",        // Arial - Classic fallback
-            "C:/Windows/Fonts/consola.ttf",      // Consolas - Monospace fallback
-            "C:/Windows/Fonts/tahoma.ttf",       // Tahoma - Good for small text
-            "C:/Windows/Fonts/verdana.ttf"       // Verdana - Designed for screen clarity
+            // Bundled UI fonts (drop the TTFs into these paths)
+            "NomadAssets/fonts/Geist/Geist-Regular.ttf",   // Preferred: crisp neutral UI
+            "NomadAssets/fonts/Manrope/Manrope-Regular.ttf",
+
+            // System fallbacks (Windows)
+            "C:/Windows/Fonts/segoeui.ttf",      // VS Code look
+            "C:/Windows/Fonts/segoeuisl.ttf",    // Segoe UI Semilight
+            "C:/Windows/Fonts/calibri.ttf",      // Modern, clear
+            "C:/Windows/Fonts/arial.ttf",        // Classic fallback
+            "C:/Windows/Fonts/consola.ttf",      // Monospace fallback
+            "C:/Windows/Fonts/tahoma.ttf",       // Good for small text
+            "C:/Windows/Fonts/verdana.ttf"       // Designed for screen clarity
         };
         
         bool fontLoaded = false;
@@ -207,15 +262,19 @@ void NUIRendererGL::shutdown() {
     
     // Cleanup FreeType
     if (fontInitialized_) {
-        // Clean up character textures
-        for (auto& pair : fontCache_) {
-            glDeleteTextures(1, &pair.second.textureId);
+        // Clean up atlas texture
+        if (fontAtlasTextureId_ != 0) {
+            glDeleteTextures(1, &fontAtlasTextureId_);
+            fontAtlasTextureId_ = 0;
         }
         fontCache_.clear();
         
         FT_Done_Face(ftFace_);
         FT_Done_FreeType(ftLibrary_);
         fontInitialized_ = false;
+        fontHasKerning_ = false;
+        fontUseLCD_ = true;
+        fontAscent_ = fontDescent_ = fontLineHeight_ = 0.0f;
     }
     
     if (vao_) {
@@ -376,8 +435,25 @@ void NUIRendererGL::strokeRect(const NUIRect& rect, float thickness, const NUICo
 }
 
 void NUIRendererGL::strokeRoundedRect(const NUIRect& rect, float radius, float thickness, const NUIColor& color) {
-    // For now, use simple stroke
-    strokeRect(rect, thickness, color);
+    // Use SDF-based shader for smooth anti-aliased strokes
+    // Check if we need to flush (state change)
+    if (currentPrimitiveType_ != 3 || 
+        currentRadius_ != radius || 
+        currentBlur_ != 1.0f || 
+        currentStrokeWidth_ != thickness ||
+        currentSize_.width != rect.width || 
+        currentSize_.height != rect.height) {
+        flush();
+    }
+    
+    currentPrimitiveType_ = 3;  // Stroked rounded rect
+    currentRadius_ = radius;
+    currentBlur_ = 1.0f;  // 1px blur for anti-aliasing
+    currentStrokeWidth_ = thickness;
+    currentSize_ = {rect.width, rect.height};
+    currentQuadSize_ = {rect.width, rect.height};
+    
+    addQuad(rect, color);
 }
 
 void NUIRendererGL::fillCircle(const NUIPoint& center, float radius, const NUIColor& color) {
@@ -596,79 +672,30 @@ void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY
 // ============================================================================
 
 void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) {
-    if (!useSDFText_ && !triedSDFInit_ && sdfRenderer_ && !defaultFontPath_.empty()) {
-        useSDFText_ = sdfRenderer_->initialize(defaultFontPath_, 64.0f);
-        triedSDFInit_ = true;
-    }
-
-    if (useSDFText_ && sdfRenderer_ && sdfRenderer_->isInitialized()) {
-        uint32_t atlasId = sdfRenderer_->getAtlasTextureId();
+    // Use FreeType atlas for ALL text - consistent rendering
+    // The atlas is rendered at 48px and scaled for all sizes
+    
+    if (fontInitialized_) {
+        // Scale factor from baked atlas to requested fontSize
+        float scale = fontSize / static_cast<float>(atlasFontSize_);
         
-        // Apply transform stack to position
-        float transformedX = position.x;
-        float transformedY = position.y;
-        applyTransform(transformedX, transformedY);
+        // Use cached ascent for consistent baseline placement
+        float scaledAscent = fontAscent_ * scale;
         
-        // Convert Top-Left (UI) to Baseline (SDF)
-        float dpiScale = getDPIScale();
-        float ascent = sdfRenderer_->getAscent(fontSize);
-        float alignedY = std::floor(transformedY + ascent + 0.5f);
-        float alignedX = std::floor(transformedX + 0.5f);
-        
-        // Calculate smoothness
-        float adaptiveSmoothness;
-        if (fontSize <= 12.0f) adaptiveSmoothness = 0.4f;
-        else if (fontSize <= 24.0f) adaptiveSmoothness = 0.6f;
-        else adaptiveSmoothness = 0.8f;
-
-        // Batch break check
-        if (currentTextureId_ != atlasId || 
-            currentPrimitiveType_ != 2 || 
-            std::abs(currentSmoothness_ - adaptiveSmoothness) > 0.01f) {
-            flush();
-            currentTextureId_ = atlasId;
-            currentPrimitiveType_ = 2; // Text
-            currentSmoothness_ = adaptiveSmoothness;
-        }
-        
-        std::vector<float> tempVerts;
-        std::vector<unsigned int> tempIndices;
-        uint32_t vOffset = static_cast<uint32_t>(vertices_.size());
-        
-        if (sdfRenderer_->generateMesh(text, NUIPoint(alignedX, alignedY), fontSize * dpiScale, color, tempVerts, tempIndices, vOffset)) {
-             size_t numVerts = tempVerts.size() / 8; // 8 floats per vertex
-             size_t oldSize = vertices_.size();
-             vertices_.resize(oldSize + numVerts);
-             std::memcpy(&vertices_[oldSize], tempVerts.data(), tempVerts.size() * sizeof(float));
-             indices_.insert(indices_.end(), tempIndices.begin(), tempIndices.end());
-        }
-        
+        renderTextWithFont(text, NUIPoint(position.x, position.y + scaledAscent), fontSize, color);
         return;
     }
 
+    // Fallback only if FreeType not initialized - simple rectangles
+    float charWidth = fontSize * 0.5f;
+    float charHeight = fontSize * 0.8f;
     
-    // Use real font rendering if available, otherwise fallback to blocky text
-    if (fontInitialized_) {
-        float dpiScale = getDPIScale();
-        FT_Set_Pixel_Sizes(ftFace_, 0, static_cast<FT_UInt>(fontSize * dpiScale));
-        float ascent = (ftFace_->size->metrics.ascender >> 6) / dpiScale;
-        
-        renderTextWithFont(text, NUIPoint(position.x, position.y + ascent), fontSize, color);
-    } else {
-        // Fallback to blocky text rendering
-        float charWidth = fontSize * 0.5f;
-        float charHeight = fontSize * 0.8f;
-        
-        glUseProgram(primitiveShader_.id);
-        glBindVertexArray(vao_);
-        
-        for (size_t i = 0; i < text.length(); ++i) {
-            char c = text[i];
-            if (c >= 32 && c <= 126) {
-                float x = position.x + i * charWidth;
-                float y = position.y;
-                drawCleanCharacter(c, x, y, charWidth, charHeight, color);
-            }
+    for (size_t i = 0; i < text.length(); ++i) {
+        char c = text[i];
+        if (c >= 32 && c <= 126) {
+            float x = position.x + i * charWidth;
+            float y = position.y;
+            drawCleanCharacter(c, x, y, charWidth, charHeight, color);
         }
     }
 }
@@ -1367,8 +1394,8 @@ NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
     }
 
     if (useSDFText_ && sdfRenderer_ && sdfRenderer_->isInitialized()) {
-        float dpiScale = getDPIScale();
-        return sdfRenderer_->measureText(text, fontSize * dpiScale);
+        // fontSize is in logical pixels - no DPI scaling
+        return sdfRenderer_->measureText(text, fontSize);
     }
 
     if (!fontInitialized_ || text.empty()) {
@@ -1376,31 +1403,31 @@ NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
     }
     
     try {
-        // Use DPI scaling for accurate measurements
-        float dpiScale = getDPIScale();
-        float actualFontSize = fontSize * dpiScale;
-        
-        // Set font size for FreeType
-        FT_Set_Pixel_Sizes(ftFace_, 0, static_cast<FT_UInt>(actualFontSize));
-        
         float totalWidth = 0.0f;
-        float maxHeight = 0.0f;
+        float scale = fontSize / static_cast<float>(atlasFontSize_);
+        FT_UInt previousGlyph = 0;
         
-        // Measure each character
         for (char c : text) {
-            if (FT_Load_Char(ftFace_, c, FT_LOAD_RENDER)) {
-                continue; // Skip failed characters
+            auto it = fontCache_.find(c);
+            if (it == fontCache_.end()) {
+                continue; // Skip unknown characters
             }
-            
-            // Get character metrics
-            float charWidth = (ftFace_->glyph->advance.x >> 6) / dpiScale;
-            float charHeight = (ftFace_->glyph->bitmap_top + ftFace_->glyph->bitmap.rows) / dpiScale;
-            
-            totalWidth += charWidth;
-            maxHeight = std::max(maxHeight, charHeight);
+
+            const FontData& glyph = it->second;
+
+            if (fontHasKerning_ && previousGlyph != 0 && glyph.glyphIndex != 0) {
+                FT_Vector kerning = {0, 0};
+                if (FT_Get_Kerning(ftFace_, previousGlyph, glyph.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
+                    totalWidth += (kerning.x >> 6) * scale;
+                }
+            }
+
+            totalWidth += (glyph.advance >> 6) * scale;
+            previousGlyph = glyph.glyphIndex;
         }
         
-        return {totalWidth, maxHeight};
+        float lineHeight = fontLineHeight_ * scale;
+        return {totalWidth, lineHeight};
         
     } catch (...) {
         // Fallback to simple estimation
@@ -1418,12 +1445,28 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         return false;
     }
     defaultFontPath_ = fontPath;
-    
-    // Set font size (96 pixels for high quality)
-    FT_Set_Pixel_Sizes(ftFace_, 0, 96);
+
+    // Bake glyphs larger (48px) then scale down in the shader.
+    // This preserves stem contrast at small UI sizes while keeping atlas reasonable.
+    const int ATLAS_FONT_SIZE = 48;
+    atlasFontSize_ = ATLAS_FONT_SIZE;
+    if (FT_Set_Pixel_Sizes(ftFace_, 0, ATLAS_FONT_SIZE) != 0) {
+        std::cerr << "ERROR: Failed to set atlas pixel size for font: " << fontPath << std::endl;
+        return false;
+    }
+    fontHasKerning_ = FT_HAS_KERNING(ftFace_) != 0;
+
+    // Cache metrics so we don't repeatedly touch FreeType state during rendering
+    fontAscent_ = static_cast<float>(ftFace_->size->metrics.ascender >> 6);
+    fontDescent_ = static_cast<float>(-(ftFace_->size->metrics.descender >> 6));
+    fontLineHeight_ = fontAscent_ + fontDescent_;
     
     // Create Texture Atlas
     // ---------------------------------------------------------
+    if (fontAtlasTextureId_ != 0) {
+        glDeleteTextures(1, &fontAtlasTextureId_);
+        fontAtlasTextureId_ = 0;
+    }
     glGenTextures(1, &fontAtlasTextureId_);
     glBindTexture(GL_TEXTURE_2D, fontAtlasTextureId_);
     
@@ -1431,11 +1474,11 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
     glTexImage2D(
         GL_TEXTURE_2D,
         0,
-        GL_RED,
+        GL_RGBA,
         fontAtlasWidth_,
         fontAtlasHeight_,
         0,
-        GL_RED,
+        GL_RGBA,
         GL_UNSIGNED_BYTE,
         nullptr
     );
@@ -1446,30 +1489,48 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     
-    // Swizzle R to Alpha (so text color works correctly)
-    GLint swizzleMask[] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
-    glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-    
     // Reset atlas cursor
     fontAtlasX_ = 0;
     fontAtlasY_ = 0;
     fontAtlasRowHeight_ = 0;
+    fontCache_.clear();
     
     // Load characters into atlas
     int loadedChars = 0;
-    // Load ASCII + some Latin-1 supplement
-    for (unsigned char c = 32; c < 128; c++) {
-        if (FT_Load_Char(ftFace_, c, FT_LOAD_RENDER)) {
-            std::cerr << "ERROR: Failed to load glyph for character: " << c << std::endl;
+    // Load ASCII + Latin-1 supplement so UI copy doesn't fall back to boxes
+    // Use LCD subpixel rendering when available, otherwise fall back to light hinting
+    const int loadFlagsBase = FT_LOAD_RENDER | FT_LOAD_NO_BITMAP;
+    const int loadFlagsLCD = loadFlagsBase | FT_LOAD_TARGET_LCD | FT_LOAD_FORCE_AUTOHINT;
+    const int loadFlagsGray = loadFlagsBase | FT_LOAD_TARGET_LIGHT;
+
+    // Slightly larger padding so mip-less sampling doesn't bleed between glyphs
+    const int padding = 3;
+
+    for (int codepoint = 32; codepoint <= 255; ++codepoint) {
+        FT_UInt glyphIndex = FT_Get_Char_Index(ftFace_, static_cast<FT_ULong>(codepoint));
+        if (glyphIndex == 0) {
+            continue; // Not present in this face
+        }
+
+        int loadFlags = fontUseLCD_ ? loadFlagsLCD : loadFlagsGray;
+        if (FT_Load_Char(ftFace_, static_cast<FT_ULong>(codepoint), loadFlags)) {
+            std::cerr << "ERROR: Failed to load glyph for character: " << codepoint << std::endl;
             continue;
         }
         
         FT_Bitmap* bitmap = &ftFace_->glyph->bitmap;
-        int width = bitmap->width;
+        const bool glyphIsLCD = fontUseLCD_ && (bitmap->pixel_mode == FT_PIXEL_MODE_LCD);
+        int width = glyphIsLCD ? (bitmap->width / 3) : bitmap->width; // LCD produces tripled width
         int height = bitmap->rows;
-        
-        // Add padding to prevent bleeding
-        int padding = 2;
+
+        if (fontUseLCD_ && !glyphIsLCD) {
+            static bool loggedLcdFallback = false;
+            if (!loggedLcdFallback) {
+                std::cerr << "WARNING: LCD rendering unavailable for this font/build, falling back to grayscale atlas." << std::endl;
+                loggedLcdFallback = true;
+            }
+            fontUseLCD_ = false;
+        }
         
         // Check if we need to move to next row
         if (fontAtlasX_ + width + padding >= fontAtlasWidth_) {
@@ -1484,8 +1545,39 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
             break;
         }
         
-        // Upload glyph to atlas
+        // Upload glyph to atlas (converted to RGBA so the fragment shader can use subpixel coverage)
         if (width > 0 && height > 0) {
+            std::vector<unsigned char> rgba(static_cast<size_t>(width * height * 4), 0);
+            const int rowStride = std::abs(bitmap->pitch);
+            const bool flipRows = bitmap->pitch < 0;
+            const unsigned char* base = flipRows 
+                ? bitmap->buffer + static_cast<long>(rowStride) * (height - 1)
+                : bitmap->buffer;
+            for (int y = 0; y < height; ++y) {
+                const unsigned char* srcRow = flipRows
+                    ? base - static_cast<long>(y * rowStride)
+                    : base + static_cast<long>(y * rowStride);
+                for (int x = 0; x < width; ++x) {
+                    unsigned char r = 0, g = 0, b = 0, a = 0;
+                    if (glyphIsLCD) {
+                        // FreeType outputs RGB triplets for each pixel in LCD mode
+                        r = srcRow[x * 3 + 0];
+                        g = srcRow[x * 3 + 1];
+                        b = srcRow[x * 3 + 2];
+                        a = std::max({r, g, b});
+                    } else {
+                        r = g = b = srcRow[x];
+                        a = srcRow[x];
+                    }
+                    
+                    size_t dst = static_cast<size_t>(y * width + x) * 4;
+                    rgba[dst + 0] = r;
+                    rgba[dst + 1] = g;
+                    rgba[dst + 2] = b;
+                    rgba[dst + 3] = a;
+                }
+            }
+
             glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
             glTexSubImage2D(
                 GL_TEXTURE_2D,
@@ -1494,15 +1586,16 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
                 fontAtlasY_,
                 width,
                 height,
-                GL_RED,
+                GL_RGBA,
                 GL_UNSIGNED_BYTE,
-                bitmap->buffer
+                rgba.data()
             );
         }
         
         // Store character data
         FontData charData;
         charData.textureId = fontAtlasTextureId_;
+        charData.glyphIndex = glyphIndex;
         charData.width = width;
         charData.height = height;
         charData.bearingX = ftFace_->glyph->bitmap_left;
@@ -1518,7 +1611,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         charData.u1 = (fontAtlasX_ + width) * invW;
         charData.v1 = (fontAtlasY_ + height) * invH;
         
-        fontCache_[c] = charData;
+        fontCache_[static_cast<char>(codepoint)] = charData;
         
         // Advance cursor
         fontAtlasX_ += width + padding;
@@ -1528,52 +1621,74 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
     }
     
     fontInitialized_ = true;
-    std::cout << "âœ“ Font loaded successfully: " << fontPath << " (" << loadedChars << " characters in atlas)" << std::endl;
+    std::cout << "[Text] Font loaded: " << fontPath 
+              << " (" << loadedChars << " glyphs, "
+              << (fontUseLCD_ ? "LCD subpixel" : "grayscale") << ")" << std::endl;
     return true;
 }
 
 void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) {
     NOMAD_ZONE("Text_Render");
     if (!fontInitialized_) {
-        drawText(text, position, fontSize, color);
-        return;
+        return; // Can't render without font
     }
     
-    // Ensure we are using the font atlas texture
-    if (currentTextureId_ != fontAtlasTextureId_) {
+    // Ensure we are using the font atlas texture and text primitive type
+    if (currentTextureId_ != fontAtlasTextureId_ || currentPrimitiveType_ != 4) {
         flush();
         currentTextureId_ = fontAtlasTextureId_;
+        currentPrimitiveType_ = 4; // Bitmap/LCD text
     }
     
-    float dpiScale = getDPIScale();
-    float scale = (fontSize * dpiScale) / 96.0f; // 96 is our atlas font size
+    // fontSize is in logical pixels - no DPI scaling needed here
+    // Scale factor from 32px atlas to requested font size
+    float scale = fontSize / static_cast<float>(atlasFontSize_);
     
-    float x = position.x;
-    float y = position.y;
+    // position.y is the BASELINE position (already adjusted by caller)
+    // Pixel-align starting position for crisp text
+    float x = std::floor(position.x + 0.5f);
+    float baseline = std::floor(position.y + 0.5f);
+    FT_UInt previousGlyph = 0;
     
     for (char c : text) {
-        if (fontCache_.find(c) == fontCache_.end()) continue;
+        auto it = fontCache_.find(c);
+        if (it == fontCache_.end()) continue;
         
-        const FontData& ch = fontCache_[c];
+        const FontData& ch = it->second;
         
-        float xpos = x + ch.bearingX * scale;
-        float ypos = y - ch.bearingY * scale; // Correct baseline alignment
+        // Apply kerning for better spacing (especially pairs like "VA" and "To")
+        if (fontHasKerning_ && previousGlyph != 0 && ch.glyphIndex != 0) {
+            FT_Vector kerning = {0, 0};
+            if (FT_Get_Kerning(ftFace_, previousGlyph, ch.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
+                x += (kerning.x >> 6) * scale;
+            }
+        }
+        previousGlyph = ch.glyphIndex;
         
+        // Scale glyph metrics from the atlas to the target size
+        float scaledBearingX = ch.bearingX * scale;
+        float scaledBearingY = ch.bearingY * scale;
         float w = ch.width * scale;
         float h = ch.height * scale;
         
-        // Draw textured quad for character
-        // Note: We use the atlas UVs
-        // Fix: Map Top-Left Screen (y) to Top-Texture (v0)
-        // Vertices are: BL, BR, TR, TL (CCW winding)
+        // Glyph positioning relative to baseline:
+        // - xpos: current x + horizontal bearing (left side bearing)
+        // - ypos: baseline - bearingY gives the TOP of the glyph
+        //   (bearingY is distance from baseline to top of glyph)
+        float xpos = std::floor(x + scaledBearingX + 0.5f);
+        float ypos = std::floor(baseline - scaledBearingY + 0.5f);
         
-        // 0: Bottom-Left (x, y+h) -> v1 (Bottom)
+        // Draw textured quad for character
+        // Vertices are: BL, BR, TR, TL (CCW winding)
+        // ypos is TOP of glyph, ypos + h is BOTTOM
+        
+        // 0: Bottom-Left
         addVertex(xpos,     ypos + h, ch.u0, ch.v1, color); 
-        // 1: Bottom-Right (x+w, y+h) -> v1 (Bottom)
+        // 1: Bottom-Right
         addVertex(xpos + w, ypos + h, ch.u1, ch.v1, color); 
-        // 2: Top-Right (x+w, y) -> v0 (Top)
+        // 2: Top-Right
         addVertex(xpos + w, ypos,     ch.u1, ch.v0, color); 
-        // 3: Top-Left (x, y) -> v0 (Top)
+        // 3: Top-Left
         addVertex(xpos,     ypos,     ch.u0, ch.v0, color);
         
         // Add indices for quad
@@ -1585,7 +1700,7 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         indices_.push_back(base + 2);
         indices_.push_back(base + 3);
         
-        // Advance cursor
+        // Advance cursor - use advance width (in 26.6 fixed point, >> 6 to get pixels)
         x += (ch.advance >> 6) * scale;
     }
 }
@@ -1928,7 +2043,6 @@ void NUIRendererGL::endOffscreen() {
     // Restore original projection and size
     width_ = widthBackup_;
     height_ = heightBackup_;
-    updateProjectionMatrix();
     // Restore backup matrix explicitly (avoid precision drift)
     std::memcpy(projectionMatrix_, projectionBackup_, sizeof(projectionBackup_));
     // Restore viewport to the original backbuffer size
@@ -1980,6 +2094,15 @@ void NUIRendererGL::flush() {
     } else if (currentPrimitiveType_ == 2) {
         // Text
         glUniform1f(primitiveShader_.smoothnessLoc, currentSmoothness_);
+    } else if (currentPrimitiveType_ == 3) {
+        // Stroked rounded rectangle (SDF-based)
+        glUniform1f(primitiveShader_.radiusLoc, currentRadius_);
+        glUniform1f(primitiveShader_.blurLoc, currentBlur_);
+        glUniform1f(primitiveShader_.rectWidthLoc, currentSize_.width);
+        glUniform1f(primitiveShader_.rectHeightLoc, currentSize_.height);
+        glUniform1f(primitiveShader_.quadWidthLoc, currentQuadSize_.width);
+        glUniform1f(primitiveShader_.quadHeightLoc, currentQuadSize_.height);
+        glUniform1f(primitiveShader_.strokeWidthLoc, currentStrokeWidth_);
     } else {
         glUniform1i(primitiveShader_.useTextureLoc, 0);
     }
@@ -2077,6 +2200,7 @@ bool NUIRendererGL::loadShaders() {
     primitiveShader_.textureLoc = glGetUniformLocation(primitiveShader_.id, "uTexture");
     primitiveShader_.useTextureLoc = glGetUniformLocation(primitiveShader_.id, "uUseTexture");
     primitiveShader_.smoothnessLoc = glGetUniformLocation(primitiveShader_.id, "uSmoothness");
+    primitiveShader_.strokeWidthLoc = glGetUniformLocation(primitiveShader_.id, "uStrokeWidth");
 
     
     return true;

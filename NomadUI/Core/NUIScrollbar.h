@@ -23,12 +23,21 @@ public:
         Vertical
     };
 
+    // Scrollbar styles
+    enum class Style
+    {
+        Standard,
+        Timeline
+    };
+
     // Scrollbar parts
     enum class Part
     {
         None,
         Track,
         Thumb,
+        ThumbStartEdge, // Left or Top edge of thumb
+        ThumbEndEdge,   // Right or Bottom edge of thumb
         LeftArrow,   // or UpArrow for vertical
         RightArrow,  // or DownArrow for vertical
         LeftTrack,   // Track before thumb
@@ -68,6 +77,9 @@ public:
     // Visual properties
     void setOrientation(Orientation orientation);
     Orientation getOrientation() const { return orientation_; }
+
+    void setStyle(Style style);
+    Style getStyle() const { return style_; }
 
     void setThumbSize(double size);
     double getThumbSize() const { return thumbSize_; }
@@ -126,6 +138,7 @@ public:
 
     // Event callbacks
     void setOnScroll(std::function<void(double)> callback);
+    void setOnRangeChange(std::function<void(double start, double size)> callback);
     void setOnScrollStart(std::function<void()> callback);
     void setOnScrollEnd(std::function<void()> callback);
 
@@ -199,8 +212,10 @@ private:
     bool isPressed_ = false;
     Part pressedPart_ = Part::None;
     NUIPoint dragStartPosition_;
+    NUIPoint lastMousePosition_;
     double dragStartValue_ = 0.0;
     bool isDragging_ = false;
+    Part hoveredPart_ = Part::None;  // Track hover state for visual feedback on edge handles
 
     // Animation state
     bool isAnimating_ = false;
@@ -211,9 +226,15 @@ private:
 
     // Callbacks
     std::function<void(double)> onScrollCallback_;
+    std::function<void(double start, double size)> onRangeChangeCallback_;
     std::function<void()> onScrollStartCallback_;
     std::function<void()> onScrollEndCallback_;
     
+    // Dragging state for resizing
+    double resizeStartSize_ = 0.0;
+    double resizeStartValue_ = 0.0;
+    Style style_ = Style::Standard;
+
     // SVG Icons for arrow buttons (Bug #11: Scrollbar Icons)
     std::shared_ptr<NUIIcon> upArrowIcon_;
     std::shared_ptr<NUIIcon> downArrowIcon_;

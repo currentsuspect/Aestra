@@ -40,9 +40,10 @@ void NUILabel::onRender(NUIRenderer& renderer)
             textSizeValid_ = true;
         }
         
-        // Calculate text position based on alignment (top-left Y) and snap to pixels
+        // Calculate text position based on alignment
+        // Use actual measured text height for proper vertical centering
         float textX = bounds.x;
-        float textY = bounds.y + (bounds.height - fontSize) * 0.5f;
+        float textY = bounds.y + (bounds.height - cachedTextSize_.height) * 0.5f;
         
         switch (alignment_)
         {

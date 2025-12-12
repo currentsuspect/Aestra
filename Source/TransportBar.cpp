@@ -38,57 +38,57 @@ TransportBar::TransportBar()
 }
 
 void TransportBar::createIcons() {
-    // Play icon (triangle) - Purple accent
+    // Play icon (Rounded Triangle) - Electric Purple
     const char* playSvg = R"(
         <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8 5v14l11-7z"/>
+            <path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z"/>
         </svg>
     )";
     m_playIcon = std::make_shared<NomadUI::NUIIcon>(playSvg);
     m_playIcon->setIconSize(NomadUI::NUIIconSize::Medium);
-    m_playIcon->setColorFromTheme("accent");  // #bb86fc - Purple accent
+    m_playIcon->setColorFromTheme("primary");  // Use primary theme color
     
-    // Pause icon (two bars)
+    // Pause icon (Thicker Bars)
     const char* pauseSvg = R"(
         <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+            <path d="M8 19c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2v10c0 1.1.9 2 2 2zm6-12v10c0 1.1.9 2 2 2s2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2z"/>
         </svg>
     )";
     m_pauseIcon = std::make_shared<NomadUI::NUIIcon>(pauseSvg);
     m_pauseIcon->setIconSize(NomadUI::NUIIconSize::Medium);
-    m_pauseIcon->setColorFromTheme("accent");  // #bb86fc - Purple accent
+    m_pauseIcon->setColorFromTheme("primary");
     
-    // Stop icon (square)
+    // Stop icon (Rounded Square)
     const char* stopSvg = R"(
         <svg viewBox="0 0 24 24" fill="currentColor">
-            <rect x="6" y="6" width="12" height="12"/>
+            <path d="M8 6h8c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2z"/>
         </svg>
     )";
     m_stopIcon = std::make_shared<NomadUI::NUIIcon>(stopSvg);
     m_stopIcon->setIconSize(NomadUI::NUIIconSize::Medium);
-    m_stopIcon->setColorFromTheme("accent");  // #bb86fc - Purple accent
+    m_stopIcon->setColorFromTheme("primary");
     
-    // Record icon (circle) - Keep red
+    // Record icon (Solid Circle) - Vibrant Red
     const char* recordSvg = R"(
         <svg viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="12" r="8"/>
+            <circle cx="12" cy="12" r="9"/>
         </svg>
     )";
     m_recordIcon = std::make_shared<NomadUI::NUIIcon>(recordSvg);
     m_recordIcon->setIconSize(NomadUI::NUIIconSize::Medium);
     m_recordIcon->setColorFromTheme("error");  // #ff4d4d - Clear red for recording
 
-    // Mixer icon (sliders)
+    // Mixer icon (Stylized Sliders)
     const char* mixerSvg = R"(
         <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+            <path d="M5 15h2v4H5v-4zm0-10h2v8H5V5zm6 12h2v2h-2v-2zm0-12h2v10h-2V5zm6 8h2v6h-2v-6zm0-8h2v6h-2V5z"/>
         </svg>
     )";
     m_mixerIcon = std::make_shared<NomadUI::NUIIcon>(mixerSvg);
     m_mixerIcon->setIconSize(NomadUI::NUIIconSize::Medium);
     m_mixerIcon->setColorFromTheme("textSecondary");
 
-    // Sequencer icon (grid)
+    // Sequencer icon (Grid)
     const char* sequencerSvg = R"(
         <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/>
@@ -125,11 +125,11 @@ void TransportBar::createButtons() {
     m_playButton->setText("");
     m_playButton->setStyle(NomadUI::NUIButton::Style::Icon);
     m_playButton->setSize(40, 40);
-    // Use theme color instead of hardcoded color
+    // FLAT DESIGN: Removed background color for cleaner look
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-    m_playButton->setBackgroundColor(themeManager.getColor("surfaceTertiary")); // #28282d - same as track buttons
-    m_playButton->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f)); // Dull grey hover
-    m_playButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
+    // Explicitly set transparent background to ensure no "black box"
+    m_playButton->setBackgroundColor(NomadUI::NUIColor(0,0,0,0)); 
+    // Hover/Press colors handled by theme now
     m_playButton->setOnClick([this]() {
         togglePlayPause();
     });
@@ -140,10 +140,9 @@ void TransportBar::createButtons() {
     m_stopButton->setText("");
     m_stopButton->setStyle(NomadUI::NUIButton::Style::Icon);
     m_stopButton->setSize(40, 40);
-    // Use theme color instead of hardcoded color
-    m_stopButton->setBackgroundColor(themeManager.getColor("surfaceTertiary")); // #28282d - same as track buttons
-    m_stopButton->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f)); // Dull grey hover
-    m_stopButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
+    // FLAT DESIGN: Removed background color
+    m_stopButton->setBackgroundColor(NomadUI::NUIColor(0,0,0,0));
+    // Hover/Press colors handled by theme now
     m_stopButton->setOnClick([this]() {
         stop();
     });
@@ -154,10 +153,9 @@ void TransportBar::createButtons() {
     m_recordButton->setText("");
     m_recordButton->setStyle(NomadUI::NUIButton::Style::Icon);
     m_recordButton->setSize(40, 40);
-    // Use theme color instead of hardcoded color
-    m_recordButton->setBackgroundColor(themeManager.getColor("surfaceTertiary")); // #28282d - same as track buttons
-    m_recordButton->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f)); // Dull grey hover
-    m_recordButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
+    // FLAT DESIGN: Removed background color
+    m_recordButton->setBackgroundColor(NomadUI::NUIColor(0,0,0,0));
+    // Hover/Press colors handled by theme now
     m_recordButton->setEnabled(false); // Disabled for now
     addChild(m_recordButton);
 
@@ -167,9 +165,9 @@ void TransportBar::createButtons() {
         btn->setText("");
         btn->setStyle(NomadUI::NUIButton::Style::Icon);
         btn->setSize(40, 40);
-        btn->setBackgroundColor(themeManager.getColor("surfaceTertiary"));
-        btn->setHoverColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f));
-        btn->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f));
+        // FLAT DESIGN: Removed background color
+        btn->setBackgroundColor(NomadUI::NUIColor(0,0,0,0));
+        // Hover/Press colors handled by theme now
         btn->setOnClick(onClick);
         addChild(btn);
     };
@@ -296,11 +294,11 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
             // CRITICAL: Green when playing, grey on hover, purple otherwise
             if (m_state == TransportState::Playing) {
                 // Bright green when actively playing
-                icon->setColor(NomadUI::NUIColor(0.0f, 1.0f, 0.3f, 1.0f));  // Vibrant green
+                icon->setColor(themeManager.getColor("success"));
             } else if (m_playButton->isHovered()) {
-                icon->setColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f));  // Dull grey on hover
+                icon->setColor(themeManager.getColor("textSecondary"));
             } else {
-                icon->setColorFromTheme("accent");  // #bb86fc - Purple
+                icon->setColor(themeManager.getColor("primary"));
             }
             
             float iconPadding = 8.0f; // Could be made configurable
@@ -318,9 +316,9 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
         
         // Dull grey on hover, purple otherwise
         if (m_stopButton->isHovered()) {
-            m_stopIcon->setColor(NomadUI::NUIColor(70.0f/255.0f, 70.0f/255.0f, 70.0f/255.0f));  // Dull grey on hover
+            m_stopIcon->setColor(themeManager.getColor("textSecondary"));
         } else {
-            m_stopIcon->setColorFromTheme("accent");  // #bb86fc - Purple
+            m_stopIcon->setColor(themeManager.getColor("primary"));
         }
         
         float iconPadding = 8.0f;

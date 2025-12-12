@@ -28,6 +28,8 @@ bool ProjectSerializer::save(const std::string& path,
         if (!track || track->isSystemTrack()) continue;
 
         JSON t = JSON::object();
+        // Save UUID for stable identity across sessions
+        t.set("uuid", JSON(track->getUUID().toString()));
         t.set("name", JSON(track->getName()));
         t.set("color", JSON(static_cast<double>(track->getColor())));
         t.set("volume", JSON(track->getVolume()));
@@ -38,6 +40,9 @@ bool ProjectSerializer::save(const std::string& path,
         t.set("file", JSON(track->getSourcePath()));
         t.set("sampleRate", JSON(static_cast<double>(track->getSampleRate())));
         t.set("channels", JSON(static_cast<double>(track->getNumChannels())));
+        // Save trim settings
+        t.set("trimStart", JSON(track->getTrimStart()));
+        t.set("trimEnd", JSON(track->getTrimEnd()));
 
         tracksJson.push(t);
     }
@@ -100,6 +105,15 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 continue;
             }
 
+            // Restore UUID if present (for stable identity)
+            if (t.has("uuid")) {
+                std::string uuidStr = t["uuid"].asString();
+                TrackUUID uuid = TrackUUID::fromString(uuidStr);
+                if (uuid.isValid()) {
+                    track->setUUID(uuid);
+                }
+            }
+
             if (t.has("color")) track->setColor(static_cast<uint32_t>(t["color"].asNumber()));
             if (t.has("volume")) track->setVolume(static_cast<float>(t["volume"].asNumber()));
             if (t.has("pan")) track->setPan(static_cast<float>(t["pan"].asNumber()));
@@ -107,12 +121,19 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             if (t.has("solo")) track->setSolo(t["solo"].asBool());
             if (t.has("start")) track->setStartPositionInTimeline(t["start"].asNumber());
 
+            // Store the audio file path but DON'T load it during project restore
+            // This prevents hangs from loading large audio files synchronously
             std::string file = t.has("file") ? t["file"].asString() : "";
             if (!file.empty()) {
-                if (!track->loadAudioFile(file)) {
-                    Log::warning("Failed to load clip: " + file);
-                }
+                // Just store the source path - don't load the audio data
+                // User can drag the file again to reload, or we can add async loading later
+                track->setSourcePath(file);
+                Log::info("Track '" + name + "' references audio: " + file + " (not loaded - drag to reload)");
             }
+            
+            // Restore trim settings
+            if (t.has("trimStart")) track->setTrimStart(t["trimStart"].asNumber());
+            if (t.has("trimEnd")) track->setTrimEnd(t["trimEnd"].asNumber());
         }
     }
 

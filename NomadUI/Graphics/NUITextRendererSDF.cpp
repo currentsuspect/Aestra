@@ -31,26 +31,18 @@ bool NUITextRendererSDF::initialize(const std::string& fontPath, float fontSize)
     if (initialized_) return true;
     baseFontSize_ = fontSize;
     
-    // Adaptive resolution based on font size for optimal crispness
-    if (fontSize <= 12.0f) {
-        atlasFontSize_ = fontSize * 4.0f;  // 4x for small fonts
-    } else if (fontSize <= 24.0f) {
-        atlasFontSize_ = fontSize * 3.0f;  // 3x for medium fonts
-    } else {
-        atlasFontSize_ = fontSize * 2.5f;  // 2.5x for large fonts
-    }
+    // High resolution atlas for ULTRA crisp text at all sizes
+    // Generate glyphs at 4x requested size for maximum quality
+    atlasFontSize_ = fontSize * 4.0f;
     
-    NOMAD_LOG_STREAM_INFO << "MSDF atlas: " << fontSize << "px -> " << atlasFontSize_ << "px (" 
+    // Clamp to reasonable range (64px minimum for quality, 320px max for memory)
+    atlasFontSize_ = std::max(64.0f, std::min(atlasFontSize_, 320.0f));
+    
+    NOMAD_LOG_STREAM_INFO << "SDF atlas: " << fontSize << "px -> " << atlasFontSize_ << "px (" 
                           << (atlasFontSize_/fontSize) << "x scale)";
-
-    NOMAD_LOG_STREAM_INFO << "MSDF atlas: " << fontSize << "px -> " << atlasFontSize_ << "px (" 
-                          << (atlasFontSize_/fontSize) << "x scale)";
-
-    // Legacy GL object creation removed - strictly using Texture Atlas now
-
 
     if (!loadFontAtlas(fontPath, atlasFontSize_)) {
-        std::cerr << "Failed to build MSDF atlas" << std::endl;
+        std::cerr << "Failed to build SDF atlas" << std::endl;
         return false;
     }
 
@@ -96,7 +88,8 @@ bool NUITextRendererSDF::generateMesh(const std::string& text,
             if (spaceIt != glyphs_.end()) {
                 penX += spaceIt->second.advance * scale;
             } else {
-                penX += fontSize * 0.25f * scale;
+                // Fallback: ~1/3 em is typical space width
+                penX += fontSize * 0.33f * scale;
             }
             continue;
         }
@@ -159,8 +152,8 @@ NUISize NUITextRendererSDF::measureText(const std::string& text, float fontSize)
             if (spaceIt != glyphs_.end()) {
                 width += spaceIt->second.advance * scale;
             } else {
-                // Fallback: use quarter font-size spacing for missing space glyph
-                width += fontSize * 0.25f * scale;
+                // Fallback: ~1/3 em is typical space width
+                width += fontSize * 0.33f * scale;
             }
             continue;
         }
@@ -213,22 +206,22 @@ bool NUITextRendererSDF::loadFontAtlas(const std::string& fontPath, float fontSi
     // Store scaled metrics in atlas pixel space so we can downscale accurately later
     ascent_ = static_cast<float>(ascent) * scale;
     descent_ = static_cast<float>(descent) * scale; // descent is negative
-    int padding = 8;
+    int padding = 8;  // Adequate padding for SDF spread without waste
     
-    // Adaptive SDF parameters optimized for crisp text rendering
-    float onedge_value, pixel_dist_scale;
-    if (fontSize <= 12.0f) {
-        onedge_value = 96.0f;      // Lower value = sharper edges for small fonts
-        pixel_dist_scale = 150.0f; // Higher scale = better gradient for small fonts
-    } else if (fontSize <= 24.0f) {
-        onedge_value = 128.0f;     // Balanced for medium fonts
-        pixel_dist_scale = 120.0f;
-    } else {
-        onedge_value = 160.0f;     // Smoother for large fonts
-        pixel_dist_scale = 100.0f;
+    // SDF parameters tuned for CRISP text rendering
+    // onedge_value: 180 = ~0.7 normalized, makes edge detection more robust
+    // pixel_dist_scale: higher values = more precision in the distance field
+    //   For crisp text, we want a well-defined gradient around edges
+    float onedge_value = 180.0f;     // Slightly above 0.5 for robust edges
+    float pixel_dist_scale = 255.0f / 4.0f;  // ~64 - good balance of precision
+    
+    // For very large fonts, we can use even tighter values
+    if (fontSize > 128.0f) {
+        pixel_dist_scale = 255.0f / 5.0f;  // ~51 - tighter for huge text
     }
     
-    std::cout << "SDF params: onedge=" << onedge_value << ", dist_scale=" << pixel_dist_scale << std::endl;
+    std::cout << "SDF params: onedge=" << onedge_value << ", dist_scale=" << pixel_dist_scale 
+              << ", padding=" << padding << std::endl;
 
     int atlasW = static_cast<int>(atlasWidth_);
     int atlasH = static_cast<int>(atlasHeight_);
@@ -280,18 +273,25 @@ bool NUITextRendererSDF::loadFontAtlas(const std::string& fontPath, float fontSi
     }
 
     // Ensure space character exists in atlas
+    // Space character has no visible bitmap (stbtt_GetCodepointSDF returns nullptr)
+    // but we MUST add it with correct advance width from font metrics
     auto spaceIt = glyphs_.find(' ');
     if (spaceIt == glyphs_.end()) {
-        std::cerr << "WARNING: Space character not found in font atlas! Creating fallback." << std::endl;
-        // Create a manual space glyph with default spacing
+        // Get actual space advance from font metrics (this is the key fix!)
+        int spaceAdvance, spaceLsb;
+        stbtt_GetCodepointHMetrics(&font, ' ', &spaceAdvance, &spaceLsb);
+        
         GlyphData spaceGlyph{};
         spaceGlyph.width = 0.0f;
         spaceGlyph.height = 0.0f;
         spaceGlyph.bearingX = 0.0f;
         spaceGlyph.bearingY = 0.0f;
-        spaceGlyph.advance = static_cast<float>(fontSize * 0.25f); // Quarter font-size spacing
+        spaceGlyph.advance = spaceAdvance * scale;  // Use ACTUAL font metrics
         spaceGlyph.u0 = spaceGlyph.u1 = spaceGlyph.v0 = spaceGlyph.v1 = 0.0f;
         glyphs_[' '] = spaceGlyph;
+        
+        std::cout << "Space character created with advance: " << spaceGlyph.advance 
+                  << "px (font metrics)" << std::endl;
     }
 
     glGenTextures(1, &atlasTexture_);

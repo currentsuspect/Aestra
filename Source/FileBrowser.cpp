@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <sstream>
 #include <iostream>
+#include <fstream>
 
 using namespace Nomad;
 
@@ -23,7 +24,7 @@ FileBrowser::FileBrowser()
     , scrollOffset_(0.0f)
     , targetScrollOffset_(0.0f)   // Initialize lerp target
     , scrollVelocity_(0.0f)
-    , itemHeight_(32.0f)           // Initialize to default theme value
+    , itemHeight_(36.0f)           // Initialize to default theme value (matches theme)
     , visibleItems_(0)
     , showHiddenFiles_(false)
     , lastCachedWidth_(0.0f)       // Initialize cache width tracker
@@ -392,7 +393,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         
         if (dist >= dragManager.getDragThreshold()) {
             // Start the drag!
-            FileItem* dragFile = view[dragSourceIndex_];
+            const FileItem* dragFile = view[dragSourceIndex_];
             
             // Only drag audio files, not folders
             if (!dragFile->isDirectory) {
@@ -512,7 +513,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             int itemIndex = static_cast<int>((relativeY + scrollOffset_) / itemHeight);
             
             if (itemIndex >= 0 && itemIndex < static_cast<int>(view.size())) {
-                FileItem* clickedFile = view[itemIndex];
+                const FileItem* clickedFile = view[itemIndex];
                 
                 // Check for expander click
                 float indent = clickedFile->depth * 20.0f;
@@ -521,7 +522,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                 
                 if (clickedFile->isDirectory && 
                     event.position.x >= arrowX && event.position.x <= arrowX + arrowSize) {
-                    toggleFolder(clickedFile);
+                    toggleFolder(const_cast<FileItem*>(clickedFile));
                     return true;
                 }
 
@@ -834,7 +835,8 @@ void FileBrowser::loadDirectoryContents() {
                 
                 try {
                     isDir = entry.is_directory();
-                } catch (const std::filesystem::filesystem_error&) {
+                } catch (const std::exception& e) {
+                    Log::warning("[FileBrowser] Failed to check directory status for " + path + ": " + std::string(e.what()));
                     continue;
                 }
                 
@@ -862,8 +864,8 @@ void FileBrowser::loadDirectoryContents() {
                 
                 rootItems_.emplace_back(name, path, type, isDir, size, lastModified);
             }
-        } catch (const std::filesystem::filesystem_error& e) {
-            std::cerr << "Error iterating directory: " << e.what() << std::endl;
+        } catch (const std::exception& e) {
+            Log::warning("[FileBrowser] Error iterating directory " + currentPath_ + ": " + std::string(e.what()));
         }
         
         sortFiles();
@@ -896,18 +898,31 @@ void FileBrowser::loadFolderContents(FileItem* item) {
             std::string name = entry.path().filename().string();
             std::string path = entry.path().string();
             bool isDir = false;
-            try { isDir = entry.is_directory(); } catch (...) { continue; }
+            try { 
+                isDir = entry.is_directory(); 
+            } catch (const std::exception& e) { 
+                Log::debug("[FileBrowser] Failed to check directory status for " + path + ": " + std::string(e.what()));
+                continue; 
+            }
             
             FileType type = FileType::Unknown;
-            if (isDir) type = FileType::Folder;
-            else {
+            if (isDir) {
+                type = FileType::Folder;
+            } else {
                 std::string extension = entry.path().extension().string();
                 std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
                 type = getFileTypeFromExtension(extension);
             }
             
             size_t size = 0;
-            if (!isDir) try { size = entry.file_size(); } catch (...) {}
+            if (!isDir) {
+                try { 
+                    size = entry.file_size(); 
+                } catch (const std::exception& e) { 
+                    Log::debug("[FileBrowser] Could not get file size for " + path + ": " + std::string(e.what()));
+                    size = 0;
+                }
+            }
             
             FileItem child(name, path, type, isDir, size, "");
             child.depth = item->depth + 1;
@@ -930,7 +945,9 @@ void FileBrowser::loadFolderContents(FileItem* item) {
             return sortAscending_ ? result : !result;
         });
         
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        Log::warning("[FileBrowser] Failed to load folder contents for " + item->path + ": " + std::string(e.what()));
+    }
 }
 
 void FileBrowser::updateDisplayList() {
@@ -943,7 +960,7 @@ void FileBrowser::updateDisplayList() {
     }
 }
 
-void FileBrowser::updateDisplayListRecursive(FileItem& item, std::vector<FileItem*>& list) {
+void FileBrowser::updateDisplayListRecursive(FileItem& item, std::vector<const FileItem*>& list) {
     for (auto& child : item.children) {
         list.push_back(&child);
         if (child.isExpanded) {
@@ -952,16 +969,19 @@ void FileBrowser::updateDisplayListRecursive(FileItem& item, std::vector<FileIte
     }
 }
 
-void FileBrowser::toggleFolder(FileItem* item) {
+void FileBrowser::toggleFolder(const FileItem* item) {
     if (!item->isDirectory) return;
     
-    if (item->isExpanded) {
-        item->isExpanded = false;
+    // We need to modify the item, so cast away const (safe in this context)
+    FileItem* nonConstItem = const_cast<FileItem*>(item);
+    
+    if (nonConstItem->isExpanded) {
+        nonConstItem->isExpanded = false;
     } else {
-        if (!item->hasLoadedChildren) {
-            loadFolderContents(item);
+        if (!nonConstItem->hasLoadedChildren) {
+            loadFolderContents(nonConstItem);
         }
-        item->isExpanded = true;
+        nonConstItem->isExpanded = true;
     }
     updateDisplayList();
     setDirty(true);
@@ -1068,7 +1088,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         bool selected = isSelected(i);
         bool hovered = (i == hoveredIndex_);
         
-        FileItem* item = view[i];
+        const FileItem* item = view[i];
 
         // Background styling
         if (selected) {
@@ -1136,8 +1156,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         }
 
         // Render file name with proper vertical alignment and bounds checking to prevent bleeding
-        float labelFont = 18.0f;
-        float metaFont = 16.0f;
+        float labelFont = 14.0f;   // +3px for better legibility
+        float metaFont = 12.0f;    // +2px for metadata
         float textX = contentX;
         float textY = itemY + (itemHeight - labelFont) * 0.5f;
         
@@ -1251,8 +1271,9 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     
     // Draw button background for Refresh
     NUIRect refreshRect(contentStartX - 10, toolbarRect.y + 4, refreshTextSize.width + 20, toolbarRect.height - 8);
-    renderer.fillRoundedRect(refreshRect, 6, NUIColor(1.0f, 1.0f, 1.0f, 0.08f)); // Slightly more visible
-    renderer.strokeRoundedRect(refreshRect, 6, 1, borderColor_.withAlpha(0.4f));
+    // FLAT DESIGN: Removed background/border for cleaner look
+    // renderer.fillRoundedRect(refreshRect, 6, NUIColor(1.0f, 1.0f, 1.0f, 0.08f)); 
+    // renderer.strokeRoundedRect(refreshRect, 6, 1, borderColor_.withAlpha(0.4f));
 
     if (refreshTextSize.width > maxRefreshWidth) {
         std::string truncatedRefresh = "Refresh";
@@ -1292,8 +1313,9 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     
     // Draw button background for Sort
     NUIRect sortRect(sortX - 10, toolbarRect.y + 4, sortTextSize.width + 20, toolbarRect.height - 8);
-    renderer.fillRoundedRect(sortRect, 6, NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
-    renderer.strokeRoundedRect(sortRect, 6, 1, borderColor_.withAlpha(0.4f));
+    // FLAT DESIGN: Removed background/border
+    // renderer.fillRoundedRect(sortRect, 6, NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+    // renderer.strokeRoundedRect(sortRect, 6, 1, borderColor_.withAlpha(0.4f));
 
     renderer.drawText(sortText, NUIPoint(sortX, textY), toolbarFont, textColor_.withAlpha(0.9f));
     
@@ -1564,7 +1586,7 @@ void FileBrowser::applyFilter() {
             std::string hay = item.name;
             std::transform(hay.begin(), hay.end(), hay.begin(), ::tolower);
             if (hay.find(needle) != std::string::npos) {
-                filteredFiles_.push_back(const_cast<FileItem*>(&item));
+                filteredFiles_.push_back(&item);
             }
             if (item.hasLoadedChildren) {
                 searchRecursive(item.children);
@@ -1750,13 +1772,13 @@ bool FileBrowser::handleBreadcrumbMouseEvent(const NUIMouseEvent& event) {
     auto& themeManager = NUIThemeManager::getInstance();
     float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
     float fontSize = themeManager.getFontSize("s");
-    float y = getBounds().y + headerHeight + 4;
+    float y = getBounds().y + headerHeight + 6;
 
     for (size_t i = 0; i < breadcrumbs_.size(); ++i) {
         const auto& crumb = breadcrumbs_[i];
         float w = crumb.width > 0.0f ? crumb.width : static_cast<float>(crumb.name.size()) * 7.0f;
         if (event.position.x >= crumb.x && event.position.x <= crumb.x + w &&
-            event.position.y >= y && event.position.y <= y + 20.0f) {
+            event.position.y >= y && event.position.y <= y + 26.0f) {
             if (event.pressed && event.button == NUIMouseButton::Left) {
                 navigateToBreadcrumb(static_cast<int>(i));
                 return true;
@@ -1779,6 +1801,145 @@ void FileBrowser::setPreviewPanelVisible(bool visible) {
 void FileBrowser::renderPreviewPanel(NUIRenderer& renderer) {
     (void)renderer;
     // To be implemented in preview phase (waveform + metadata + mini transport)
+}
+
+void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
+    (void)renderer;
+    // Placeholder implementation - search box rendering to be implemented
+    // Currently handled within renderToolbar() for integrated approach
+}
+
+// === PERSISTENT STATE SAVE/LOAD ===
+
+void FileBrowser::saveState(const std::string& filePath) {
+    std::ofstream file(filePath);
+    if (!file.is_open()) {
+        Nomad::Log::warning("[FileBrowser] Failed to save state to: " + filePath);
+        return;
+    }
+    
+    // Save as simple key=value format
+    file << "currentPath=" << currentPath_ << "\n";
+    file << "scrollOffset=" << scrollOffset_ << "\n";
+    file << "sortMode=" << static_cast<int>(sortMode_) << "\n";
+    file << "sortAscending=" << (sortAscending_ ? "1" : "0") << "\n";
+    
+    // Save expanded folders
+    file << "expandedFolders=";
+    bool first = true;
+    std::function<void(const FileItem&)> saveExpanded = [&](const FileItem& item) {
+        if (item.isDirectory && item.isExpanded) {
+            if (!first) file << "|";
+            file << item.path;
+            first = false;
+        }
+        for (const auto& child : item.children) {
+            saveExpanded(child);
+        }
+    };
+    for (const auto& item : rootItems_) {
+        saveExpanded(item);
+    }
+    file << "\n";
+    
+    // Save favorites
+    file << "favorites=";
+    for (size_t i = 0; i < favoritesPaths_.size(); ++i) {
+        if (i > 0) file << "|";
+        file << favoritesPaths_[i];
+    }
+    file << "\n";
+    
+    file.close();
+    Nomad::Log::info("[FileBrowser] State saved to: " + filePath);
+}
+
+void FileBrowser::loadState(const std::string& filePath) {
+    std::ifstream file(filePath);
+    if (!file.is_open()) {
+        Nomad::Log::info("[FileBrowser] No saved state found at: " + filePath);
+        return;
+    }
+    
+    std::string line;
+    std::vector<std::string> expandedFolders;
+    
+    while (std::getline(file, line)) {
+        size_t eqPos = line.find('=');
+        if (eqPos == std::string::npos) continue;
+        
+        std::string key = line.substr(0, eqPos);
+        std::string value = line.substr(eqPos + 1);
+        
+        if (key == "currentPath" && !value.empty()) {
+            setCurrentPath(value);
+        }
+        else if (key == "scrollOffset") {
+            try {
+                scrollOffset_ = std::stof(value);
+                targetScrollOffset_ = scrollOffset_;
+            } catch (...) {}
+        }
+        else if (key == "sortMode") {
+            try {
+                sortMode_ = static_cast<SortMode>(std::stoi(value));
+            } catch (...) {}
+        }
+        else if (key == "sortAscending") {
+            sortAscending_ = (value == "1");
+        }
+        else if (key == "expandedFolders" && !value.empty()) {
+            // Parse pipe-separated paths
+            size_t start = 0;
+            size_t end;
+            while ((end = value.find('|', start)) != std::string::npos) {
+                expandedFolders.push_back(value.substr(start, end - start));
+                start = end + 1;
+            }
+            if (start < value.length()) {
+                expandedFolders.push_back(value.substr(start));
+            }
+        }
+        else if (key == "favorites" && !value.empty()) {
+            favoritesPaths_.clear();
+            size_t start = 0;
+            size_t end;
+            while ((end = value.find('|', start)) != std::string::npos) {
+                favoritesPaths_.push_back(value.substr(start, end - start));
+                start = end + 1;
+            }
+            if (start < value.length()) {
+                favoritesPaths_.push_back(value.substr(start));
+            }
+        }
+    }
+    
+    file.close();
+    
+    // Re-expand saved folders
+    std::function<void(FileItem&)> expandSaved = [&](FileItem& item) {
+        if (item.isDirectory) {
+            for (const auto& expandedPath : expandedFolders) {
+                if (item.path == expandedPath) {
+                    // Load children and expand
+                    if (!item.hasLoadedChildren) {
+                        loadFolderContents(&item);
+                    }
+                    item.isExpanded = true;
+                    break;
+                }
+            }
+            for (auto& child : item.children) {
+                expandSaved(child);
+            }
+        }
+    };
+    for (auto& item : rootItems_) {
+        expandSaved(item);
+    }
+    
+    updateDisplayList();
+    Nomad::Log::info("[FileBrowser] State loaded from: " + filePath);
 }
 
 } // namespace NomadUI

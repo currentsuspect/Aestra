@@ -11,6 +11,7 @@ WindowPanel::WindowPanel(const std::string& title)
 {
     // Create close button (X)
     m_closeButton = std::make_shared<NomadUI::NUIButton>("×");
+    m_closeButton->setStyle(NomadUI::NUIButton::Style::Icon); // Use Icon style for transparency
     m_closeButton->setOnClick([this]() {
         onCloseClicked();
     });
@@ -18,6 +19,7 @@ WindowPanel::WindowPanel(const std::string& title)
     
     // Create maximize button (□ when normal, ▭ when maximized)
     m_maximizeButton = std::make_shared<NomadUI::NUIButton>("□");
+    m_maximizeButton->setStyle(NomadUI::NUIButton::Style::Icon); // Use Icon style for transparency
     m_maximizeButton->setOnClick([this]() {
         onMaximizeClicked();
     });
@@ -25,6 +27,7 @@ WindowPanel::WindowPanel(const std::string& title)
     
     // Create minimize button (−)
     m_minimizeButton = std::make_shared<NomadUI::NUIButton>("−");
+    m_minimizeButton->setStyle(NomadUI::NUIButton::Style::Icon); // Use Icon style for transparency
     m_minimizeButton->setOnClick([this]() {
         onMinimizeClicked();
     });
@@ -126,16 +129,17 @@ void WindowPanel::onRender(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIRect titleBarRect(bounds.x, bounds.y, bounds.width, m_titleBarHeight);
     m_titleBarBounds = titleBarRect;
     
-    // Title bar background (darker)
-    auto titleBarColor = theme.getColor("backgroundDark");
-    renderer.fillRect(titleBarRect, titleBarColor);
+    // Title bar background (transparent/flush)
+    // FLAT DESIGN: No background fill for title bar to blend with main window
+    // auto titleBarColor = theme.getColor("backgroundDark");
+    // renderer.fillRect(titleBarRect, titleBarColor);
     
-    // Title bar border
-    auto borderColor = theme.getColor("border");
-    renderer.strokeRect(titleBarRect, 1, borderColor);
+    // Title bar border (removed for cleaner look)
+    // auto borderColor = theme.getColor("border");
+    // renderer.strokeRect(titleBarRect, 1, borderColor);
     
     // Draw title text (centered vertically in title bar, top-left Y positioning)
-    auto textColor = theme.getColor("text");
+    auto textColor = theme.getColor("textSecondary"); // Use secondary text color
     float fontSize = 12.0f;
     float textX = bounds.x + 8.0f;
     float textY = bounds.y + (m_titleBarHeight - fontSize) * 0.5f;
@@ -146,7 +150,7 @@ void WindowPanel::onRender(NomadUI::NUIRenderer& renderer) {
         NomadUI::NUIRect contentBgRect(bounds.x, bounds.y + m_titleBarHeight, bounds.width, bounds.height - m_titleBarHeight);
         auto bgColor = theme.getColor("backgroundSecondary");
         renderer.fillRect(contentBgRect, bgColor);
-        renderer.strokeRect(contentBgRect, 1, borderColor);
+        // renderer.strokeRect(contentBgRect, 1, borderColor); // Remove border
     }
     
     // Render children (content + buttons)

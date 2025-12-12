@@ -36,6 +36,21 @@ void NUIButton::onRender(NUIRenderer& renderer) {
     
     auto bounds = getBounds();
     float radius = theme->getBorderRadius();
+
+    // ANIMATION: "Squish" effect on pressstill 
+    if (pressed_) {
+        float scale = 0.96f;
+        float cx = bounds.x + bounds.width * 0.5f;
+        float cy = bounds.y + bounds.height * 0.5f;
+        
+        float newW = bounds.width * scale;
+        float newH = bounds.height * scale;
+        
+        bounds.x = cx - newW * 0.5f;
+        bounds.y = cy - newH * 0.5f;
+        bounds.width = newW;
+        bounds.height = newH;
+    }
     
     // Get colors
     NUIColor bgColor = getCurrentBackgroundColor();
@@ -54,7 +69,21 @@ void NUIButton::onRender(NUIRenderer& renderer) {
     // }
     
     // Draw background
-    renderer.fillRoundedRect(bounds, radius, bgColor);
+    // FLAT DESIGN: Only draw background if hovered, pressed, or explicitly set
+    // This removes the "light square boxes" for a cleaner look
+    if (isHovered() || pressed_ || useCustomColors_) {
+        NUIColor drawColor = bgColor;
+        
+        // Refined hover style: Use subtle transparency instead of solid block
+        // This gives the "Ableton-like" feel without the "boxy" look
+        if (!useCustomColors_ && isHovered() && !pressed_) {
+            // Use a very low opacity for the hover state
+            // This assumes the theme hover color is meant to be an overlay
+            drawColor = drawColor.withAlpha(0.15f); 
+        }
+        
+        renderer.fillRoundedRect(bounds, radius, drawColor);
+    }
     
     // Draw border (only if enabled and state changed)
     if (borderEnabled_) {

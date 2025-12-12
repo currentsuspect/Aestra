@@ -21,7 +21,8 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     m_volumeFader->setValue(m_track ? m_track->getVolume() : 0.8f);
     m_volumeFader->setOnValueChange([this](double value) {
         if (m_track) {
-            m_track->setVolume(static_cast<float>(value));
+            float vol = static_cast<float>(value);
+            m_track->setVolume(vol);
         }
     });
     addChild(m_volumeFader);
@@ -31,7 +32,8 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     m_panKnob->setValue(0.0f);  // Center
     m_panKnob->setOnValueChange([this](double value) {
         if (m_track) {
-            m_track->setPan(static_cast<float>(value));
+            float pan = static_cast<float>(value);
+            m_track->setPan(pan);
         }
     });
     addChild(m_panKnob);
@@ -87,7 +89,7 @@ void ChannelStrip::onRender(NomadUI::NUIRenderer& renderer) {
         auto textColor = theme.getColor("accentPrimary");
         std::string trackName = m_track->getName();
         float textY = bounds.y + bounds.height - 30.0f;
-        renderer.drawText(trackName, NomadUI::NUIPoint(bounds.x + 5, textY), 18.0f, textColor);
+        renderer.drawText(trackName, NomadUI::NUIPoint(bounds.x + 5, textY), 12.0f, textColor);
     }
     
     // Level meter (simple bar for now) - positioned above track name
