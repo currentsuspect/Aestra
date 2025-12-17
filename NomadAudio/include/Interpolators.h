@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <array>
+#include <cassert>
 
 namespace Nomad {
 namespace Audio {
@@ -138,6 +139,7 @@ struct Sinc8Interpolator {
         // Double precision accumulation
         double sumL = 0.0;
         double sumR = 0.0;
+        double weightSum = 0.0;  // Track sum of applied filter weights
         
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
             const int64_t sampleIdx = idx + t;
@@ -150,6 +152,13 @@ struct Sinc8Interpolator {
             
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
+            weightSum += s;  // Accumulate the weight for normalization
+        }
+        
+        // Normalize by weight sum to prevent gain loss at edges
+        if (weightSum > 0.0) {
+            sumL /= weightSum;
+            sumR /= weightSum;
         }
         
         outL = static_cast<float>(sumL);
@@ -177,6 +186,7 @@ struct Sinc16Interpolator {
         
         double sumL = 0.0;
         double sumR = 0.0;
+        double weightSum = 0.0;  // Track sum of applied filter weights
         
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
             const int64_t sampleIdx = idx + t;
@@ -189,6 +199,13 @@ struct Sinc16Interpolator {
             
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
+            weightSum += s;  // Accumulate the weight for normalization
+        }
+        
+        // Normalize by weight sum to prevent gain loss at edges
+        if (weightSum > 0.0) {
+            sumL /= weightSum;
+            sumR /= weightSum;
         }
         
         outL = static_cast<float>(sumL);
@@ -216,6 +233,7 @@ struct Sinc32Interpolator {
         
         double sumL = 0.0;
         double sumR = 0.0;
+        double weightSum = 0.0;  // Track sum of applied filter weights
         
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
             const int64_t sampleIdx = idx + t;
@@ -228,6 +246,13 @@ struct Sinc32Interpolator {
             
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
+            weightSum += s;  // Accumulate the weight for normalization
+        }
+        
+        // Normalize by weight sum to prevent gain loss at edges
+        if (weightSum > 0.0) {
+            sumL /= weightSum;
+            sumR /= weightSum;
         }
         
         outL = static_cast<float>(sumL);
@@ -255,6 +280,7 @@ struct Sinc64Interpolator {
         
         double sumL = 0.0;
         double sumR = 0.0;
+        double weightSum = 0.0;  // Track sum of applied filter weights
         
         // Unrolled inner loop for better cache behavior
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
@@ -268,6 +294,13 @@ struct Sinc64Interpolator {
             
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
+            weightSum += s;  // Accumulate the weight for normalization
+        }
+        
+        // Normalize by weight sum to prevent gain loss at edges
+        if (weightSum > 0.0) {
+            sumL /= weightSum;
+            sumR /= weightSum;
         }
         
         outL = static_cast<float>(sumL);
@@ -310,6 +343,14 @@ inline void interpolateSample(
             break;
         case InterpolationQuality::Sinc64:
             Sinc64Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+            break;
+        default:
+            // Defensive handling for unknown/added enum values
+            // Assert in debug builds to catch issues during development/testing
+            assert(false && "Unknown InterpolationQuality enum value in interpolateSample");
+            // Fall back to safe CubicInterpolator to prevent undefined behavior
+            // in release builds or when assertions are disabled
+            CubicInterpolator::interpolate(data, totalFrames, phase, outL, outR);
             break;
     }
 }

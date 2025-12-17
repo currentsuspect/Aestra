@@ -1,7 +1,7 @@
 // Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include <Windows.h>
+#include "WinHeaders.h"
 
 namespace Nomad {
 

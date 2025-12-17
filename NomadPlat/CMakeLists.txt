@@ -24,6 +24,7 @@ if(WIN32)
         src/Win32/PlatformWindowWin32.cpp
         src/Win32/PlatformUtilsWin32.cpp
         src/Win32/PlatformDPIWin32.cpp
+        src/Win32/PlatformThreadWin32.cpp
     )
     list(APPEND NOMAD_PLAT_HEADERS
         src/Win32/PlatformWindowWin32.h
@@ -31,9 +32,15 @@ if(WIN32)
         src/Win32/PlatformDPIWin32.h
     )
 elseif(UNIX AND NOT APPLE)
-    # TODO: Linux X11 implementation
-    message(WARNING "Linux platform not yet implemented")
-elseif(APPLE)
+    list(APPEND NOMAD_PLAT_SOURCES
+        src/Linux/PlatformWindowLinux.cpp
+        src/Linux/PlatformUtilsLinux.cpp
+        src/Linux/PlatformThreadLinux.cpp
+        src/Linux/PlatformFileSystemLinux.cpp
+    )
+    list(APPEND NOMAD_PLAT_HEADERS
+        src/Linux/PlatformWindowLinux.h
+    )
     # TODO: macOS Cocoa implementation
     message(WARNING "macOS platform not yet implemented")
 endif()
@@ -65,7 +72,11 @@ if(WIN32)
         shell32
     )
 elseif(UNIX AND NOT APPLE)
-    # TODO: Linux libraries (X11, GL, etc.)
+    target_link_libraries(NomadPlat PRIVATE
+        SDL2::SDL2
+        ${CMAKE_DL_LIBS}
+        padding_pthread # cmake usually handles -lpthread via CXX flags but sometimes explicit needed
+    )
 elseif(APPLE)
     # TODO: macOS frameworks (Cocoa, OpenGL, etc.)
 endif()

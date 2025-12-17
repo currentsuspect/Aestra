@@ -2,11 +2,10 @@
 #include "PreviewEngine.h"
 #include "NomadLog.h"
 #include "MiniAudioDecoder.h"
+#include "PathUtils.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
-#include <codecvt>
-#include <locale>
 
 #ifdef _WIN32
 #include <mfapi.h>
@@ -84,7 +83,8 @@ namespace {
     };
 
     bool loadWav(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate, uint32_t& numChannels) {
-        std::ifstream file(filePath, std::ios::binary);
+        // Use makeUnicodePath for proper Unicode file path handling
+        std::ifstream file(makeUnicodePath(filePath), std::ios::binary);
         if (!file) {
             Log::warning("PreviewEngine: Failed to open WAV file: " + filePath);
             return false;
@@ -193,8 +193,7 @@ namespace {
 #endif
 
         ComPtr<IMFSourceReader> reader;
-        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-        std::wstring widePath = converter.from_bytes(filePath);
+        std::wstring widePath = pathStringToWide(filePath);
         HRESULT hr = MFCreateSourceReaderFromURL(widePath.c_str(), attributes.Get(), &reader);
         if (FAILED(hr)) return false;
 

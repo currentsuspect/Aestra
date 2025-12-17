@@ -107,14 +107,12 @@ void main() {
              
              color.a *= alpha;
         } else if (uPrimitiveType == 4) {
-             // LCD/subpixel aware text rendering
-             // Collapse RGB mask to a single coverage to avoid color fringes on tinted UI text
-             vec3 coverage = texColor.rgb;
-             float coverageAlpha = max(max(coverage.r, coverage.g), coverage.b);
-             // Gentle gamma to keep stems crisp without halos
-             coverageAlpha = pow(coverageAlpha, 1.0 / 1.4);
-             color.rgb *= coverageAlpha;
-             color.a *= coverageAlpha;
+               // Bitmap text rendering (coverage stored in alpha)
+               float coverageAlpha = texColor.a;
+               // We use standard (non-premultiplied) alpha blending: SRC_ALPHA, ONE_MINUS_SRC_ALPHA.
+               // Only alpha should be modulated by coverage; multiplying RGB as well effectively squares
+               // coverage in the blend equation and makes small text look overly faded.
+               color.a *= coverageAlpha;
         } else {
              // Regular textured primitive
              color *= texColor;
@@ -186,21 +184,11 @@ bool NUIRendererGL::initialize(int width, int height) {
         std::cerr << "ERROR: Could not init FreeType Library" << std::endl;
         return false;
     }
-    
-    // Enable LCD filtering for crisper subpixel text when available
-    {
-        FT_Error filterErr = FT_Library_SetLcdFilter(ftLibrary_, FT_LCD_FILTER_DEFAULT);
-        if (filterErr) {
-            std::cerr << "WARNING: FreeType LCD filter not available, using grayscale text (err=" 
-                      << filterErr << ")" << std::endl;
-            fontUseLCD_ = false;
-        } else {
-            // Use mutable weights because FreeType API expects non-const pointer
-            static FT_Byte weights[5] = { 16, 48, 96, 48, 16 }; // Soft ClearType-style weights
-            FT_Library_SetLcdFilterWeights(ftLibrary_, weights);
-            fontUseLCD_ = true;
-        }
-    }
+
+    // NOTE: Nomad UI currently tints text in the shader and composites into an sRGB-authored UI.
+    // Proper LCD/subpixel text requires display subpixel order/orientation handling and a
+    // subpixel-aware blending pipeline. Until that's implemented, default to grayscale coverage.
+    fontUseLCD_ = false;
     
         // Try to load the best font for Nomad
         std::vector<std::string> fontPaths = {
@@ -267,14 +255,26 @@ void NUIRendererGL::shutdown() {
             glDeleteTextures(1, &fontAtlasTextureId_);
             fontAtlasTextureId_ = 0;
         }
+        if (fontAtlasTextureIdMedium_ != 0) {
+            glDeleteTextures(1, &fontAtlasTextureIdMedium_);
+            fontAtlasTextureIdMedium_ = 0;
+        }
+        if (fontAtlasTextureIdSmall_ != 0) {
+            glDeleteTextures(1, &fontAtlasTextureIdSmall_);
+            fontAtlasTextureIdSmall_ = 0;
+        }
         fontCache_.clear();
+        fontCacheMedium_.clear();
+        fontCacheSmall_.clear();
         
         FT_Done_Face(ftFace_);
         FT_Done_FreeType(ftLibrary_);
         fontInitialized_ = false;
         fontHasKerning_ = false;
-        fontUseLCD_ = true;
+        fontUseLCD_ = false;
         fontAscent_ = fontDescent_ = fontLineHeight_ = 0.0f;
+        fontAscentMedium_ = fontDescentMedium_ = fontLineHeightMedium_ = 0.0f;
+        fontAscentSmall_ = fontDescentSmall_ = fontLineHeightSmall_ = 0.0f;
     }
     
     if (vao_) {
@@ -377,15 +377,29 @@ void NUIRendererGL::popTransform() {
 
 void NUIRendererGL::setClipRect(const NUIRect& rect) {
     glEnable(GL_SCISSOR_TEST);
-    glScissor(
-        static_cast<int>(rect.x),
-        static_cast<int>(height_ - rect.y - rect.height),
-        static_cast<int>(rect.width),
-        static_cast<int>(rect.height)
-    );
+    
+    // Correct rounding to prevent shrinking (floor min, ceil max)
+    int glX = static_cast<int>(std::floor(rect.x));
+    int glRight = static_cast<int>(std::ceil(rect.x + rect.width));
+    int glWidth = std::max(0, glRight - glX);
+    
+    // Convert to GL coords (bottom-up)
+    // Range in UI (y-down): [rect.y, rect.y + rect.height]
+    // Range in GL (y-up):   [height_ - (rect.y + rect.height), height_ - rect.y]
+    // We want to encompass this range fully.
+    float bottomGL = static_cast<float>(height_) - (rect.y + rect.height);
+    float topGL = static_cast<float>(height_) - rect.y;
+    
+    int glY = static_cast<int>(std::floor(bottomGL));
+    int glTop = static_cast<int>(std::ceil(topGL));
+    int glHeight = std::max(0, glTop - glY);
+
+    glScissor(glX, glY, glWidth, glHeight);
+    
     // Track renderer-side scissor state so other systems can query it
     scissorEnabled_ = true;
 }
+
 
 void NUIRendererGL::clearClipRect() {
     glDisable(GL_SCISSOR_TEST);
@@ -676,12 +690,17 @@ void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, 
     // The atlas is rendered at 48px and scaled for all sizes
     
     if (fontInitialized_) {
+        // Choose atlas based on target size to avoid heavy minification (fragmentation) and keep
+        // common UI sizes (14–17px) crisp.
+        const bool useSmallAtlas = (fontSize <= 13.0f);
+        const bool useMediumAtlas = (!useSmallAtlas && fontSize <= 17.0f);
+        const int atlasSize = useSmallAtlas ? atlasFontSizeSmall_ : (useMediumAtlas ? atlasFontSizeMedium_ : atlasFontSize_);
+        const float ascent = useSmallAtlas ? fontAscentSmall_ : (useMediumAtlas ? fontAscentMedium_ : fontAscent_);
+
         // Scale factor from baked atlas to requested fontSize
-        float scale = fontSize / static_cast<float>(atlasFontSize_);
-        
-        // Use cached ascent for consistent baseline placement
-        float scaledAscent = fontAscent_ * scale;
-        
+        float scale = fontSize / static_cast<float>(atlasSize);
+        float scaledAscent = ascent * scale;
+
         renderTextWithFont(text, NUIPoint(position.x, position.y + scaledAscent), fontSize, color);
         return;
     }
@@ -1388,11 +1407,20 @@ void NUIRendererGL::drawTextCentered(const std::string& text, const NUIRect& rec
 
 NUIRenderer::FontMetrics NUIRendererGL::getFontMetrics(float fontSize) const {
     NUIRenderer::FontMetrics metrics;
-    if (fontInitialized_ && atlasFontSize_ > 0) {
-        const float scale = fontSize / static_cast<float>(atlasFontSize_);
-        metrics.ascent = fontAscent_ * scale;
-        metrics.descent = fontDescent_ * scale;
-        metrics.lineHeight = fontLineHeight_ * scale;
+    if (fontInitialized_) {
+        const bool useSmallAtlas = (fontSize <= 13.0f);
+        const bool useMediumAtlas = (!useSmallAtlas && fontSize <= 17.0f);
+        const int atlasSize = useSmallAtlas ? atlasFontSizeSmall_ : (useMediumAtlas ? atlasFontSizeMedium_ : atlasFontSize_);
+        const float ascent = useSmallAtlas ? fontAscentSmall_ : (useMediumAtlas ? fontAscentMedium_ : fontAscent_);
+        const float descent = useSmallAtlas ? fontDescentSmall_ : (useMediumAtlas ? fontDescentMedium_ : fontDescent_);
+        const float lineHeight = useSmallAtlas ? fontLineHeightSmall_ : (useMediumAtlas ? fontLineHeightMedium_ : fontLineHeight_);
+        if (atlasSize > 0) {
+            const float scale = fontSize / static_cast<float>(atlasSize);
+            metrics.ascent = ascent * scale;
+            metrics.descent = descent * scale;
+            metrics.lineHeight = lineHeight * scale;
+            return metrics;
+        }
         return metrics;
     }
 
@@ -1407,22 +1435,36 @@ NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
     // IMPORTANT: drawText() renders via the FreeType atlas path; prefer matching metrics here
     // so layout (centering/truncation) matches what actually hits the screen.
     if (text.empty()) {
-        if (fontInitialized_ && atlasFontSize_ > 0) {
-            float scale = fontSize / static_cast<float>(atlasFontSize_);
-            return {0.0f, fontLineHeight_ * scale};
+        if (fontInitialized_) {
+            const bool useSmallAtlas = (fontSize <= 13.0f);
+            const bool useMediumAtlas = (!useSmallAtlas && fontSize <= 17.0f);
+            const int atlasSize = useSmallAtlas ? atlasFontSizeSmall_ : (useMediumAtlas ? atlasFontSizeMedium_ : atlasFontSize_);
+            const float lineHeight = useSmallAtlas ? fontLineHeightSmall_ : (useMediumAtlas ? fontLineHeightMedium_ : fontLineHeight_);
+            if (atlasSize > 0) {
+                float scale = fontSize / static_cast<float>(atlasSize);
+                return {0.0f, lineHeight * scale};
+            }
         }
         return {0.0f, fontSize};
     }
 
-    if (fontInitialized_ && atlasFontSize_ > 0) {
+    if (fontInitialized_) {
         try {
             float totalWidth = 0.0f;
-            float scale = fontSize / static_cast<float>(atlasFontSize_);
+            const bool useSmallAtlas = (fontSize <= 13.0f);
+            const bool useMediumAtlas = (!useSmallAtlas && fontSize <= 17.0f);
+            const int atlasSize = useSmallAtlas ? atlasFontSizeSmall_ : (useMediumAtlas ? atlasFontSizeMedium_ : atlasFontSize_);
+            const float lineHeight = useSmallAtlas ? fontLineHeightSmall_ : (useMediumAtlas ? fontLineHeightMedium_ : fontLineHeight_);
+            const auto& cache = useSmallAtlas ? fontCacheSmall_ : (useMediumAtlas ? fontCacheMedium_ : fontCache_);
+            if (atlasSize <= 0) {
+                return {text.length() * fontSize * 0.6f, fontSize};
+            }
+            float scale = fontSize / static_cast<float>(atlasSize);
             FT_UInt previousGlyph = 0;
 
             for (char c : text) {
-                auto it = fontCache_.find(c);
-                if (it == fontCache_.end()) {
+                auto it = cache.find(c);
+                if (it == cache.end()) {
                     continue; // Skip unknown characters
                 }
 
@@ -1439,8 +1481,7 @@ NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
                 previousGlyph = glyph.glyphIndex;
             }
 
-            float lineHeight = fontLineHeight_ * scale;
-            return {totalWidth, lineHeight};
+            return {totalWidth, lineHeight * scale};
         } catch (...) {
             // Fallback to simple estimation
             return {text.length() * fontSize * 0.6f, fontSize};
@@ -1471,184 +1512,213 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
     }
     defaultFontPath_ = fontPath;
 
-    // Bake glyphs larger (48px) then scale down in the shader.
-    // This preserves stem contrast at small UI sizes while keeping atlas reasonable.
-    const int ATLAS_FONT_SIZE = 48;
-    atlasFontSize_ = ATLAS_FONT_SIZE;
-    if (FT_Set_Pixel_Sizes(ftFace_, 0, ATLAS_FONT_SIZE) != 0) {
-        std::cerr << "ERROR: Failed to set atlas pixel size for font: " << fontPath << std::endl;
-        return false;
-    }
     fontHasKerning_ = FT_HAS_KERNING(ftFace_) != 0;
 
-    // Cache metrics so we don't repeatedly touch FreeType state during rendering
-    fontAscent_ = static_cast<float>(ftFace_->size->metrics.ascender >> 6);
-    fontDescent_ = static_cast<float>(-(ftFace_->size->metrics.descender >> 6));
-    fontLineHeight_ = fontAscent_ + fontDescent_;
-    
-    // Create Texture Atlas
-    // ---------------------------------------------------------
-    if (fontAtlasTextureId_ != 0) {
-        glDeleteTextures(1, &fontAtlasTextureId_);
-        fontAtlasTextureId_ = 0;
-    }
-    glGenTextures(1, &fontAtlasTextureId_);
-    glBindTexture(GL_TEXTURE_2D, fontAtlasTextureId_);
-    
-    // Allocate empty texture storage
-    glTexImage2D(
-        GL_TEXTURE_2D,
-        0,
-        GL_RGBA,
-        fontAtlasWidth_,
-        fontAtlasHeight_,
-        0,
-        GL_RGBA,
-        GL_UNSIGNED_BYTE,
-        nullptr
-    );
-    
-    // Set texture parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
-    // Reset atlas cursor
-    fontAtlasX_ = 0;
-    fontAtlasY_ = 0;
-    fontAtlasRowHeight_ = 0;
-    fontCache_.clear();
-    
-    // Load characters into atlas
-    int loadedChars = 0;
-    // Load ASCII + Latin-1 supplement so UI copy doesn't fall back to boxes
-    // Use LCD subpixel rendering when available, otherwise fall back to light hinting
-    const int loadFlagsBase = FT_LOAD_RENDER | FT_LOAD_NO_BITMAP;
-    const int loadFlagsLCD = loadFlagsBase | FT_LOAD_TARGET_LCD | FT_LOAD_FORCE_AUTOHINT;
-    const int loadFlagsGray = loadFlagsBase | FT_LOAD_TARGET_LIGHT;
-
-    // Slightly larger padding so mip-less sampling doesn't bleed between glyphs
-    const int padding = 3;
-
-    for (int codepoint = 32; codepoint <= 255; ++codepoint) {
-        FT_UInt glyphIndex = FT_Get_Char_Index(ftFace_, static_cast<FT_ULong>(codepoint));
-        if (glyphIndex == 0) {
-            continue; // Not present in this face
+    auto buildAtlas = [&](int atlasFontSize,
+                          uint32_t& atlasTextureId,
+                          std::unordered_map<char, FontData>& cache,
+                          float& outAscent,
+                          float& outDescent,
+                          float& outLineHeight,
+                          int& atlasX,
+                          int& atlasY,
+                          int& atlasRowHeight) -> bool {
+        if (FT_Set_Pixel_Sizes(ftFace_, 0, atlasFontSize) != 0) {
+            std::cerr << "ERROR: Failed to set atlas pixel size (" << atlasFontSize << ") for font: " << fontPath << std::endl;
+            return false;
         }
 
-        int loadFlags = fontUseLCD_ ? loadFlagsLCD : loadFlagsGray;
-        if (FT_Load_Char(ftFace_, static_cast<FT_ULong>(codepoint), loadFlags)) {
-            std::cerr << "ERROR: Failed to load glyph for character: " << codepoint << std::endl;
-            continue;
-        }
-        
-        FT_Bitmap* bitmap = &ftFace_->glyph->bitmap;
-        const bool glyphIsLCD = fontUseLCD_ && (bitmap->pixel_mode == FT_PIXEL_MODE_LCD);
-        int width = glyphIsLCD ? (bitmap->width / 3) : bitmap->width; // LCD produces tripled width
-        int height = bitmap->rows;
+        outAscent = static_cast<float>(ftFace_->size->metrics.ascender >> 6);
+        outDescent = static_cast<float>(-(ftFace_->size->metrics.descender >> 6));
+        outLineHeight = outAscent + outDescent;
 
-        if (fontUseLCD_ && !glyphIsLCD) {
-            static bool loggedLcdFallback = false;
-            if (!loggedLcdFallback) {
-                std::cerr << "WARNING: LCD rendering unavailable for this font/build, falling back to grayscale atlas." << std::endl;
-                loggedLcdFallback = true;
+        if (atlasTextureId != 0) {
+            glDeleteTextures(1, &atlasTextureId);
+            atlasTextureId = 0;
+        }
+        glGenTextures(1, &atlasTextureId);
+        glBindTexture(GL_TEXTURE_2D, atlasTextureId);
+
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RGBA,
+            fontAtlasWidth_,
+            fontAtlasHeight_,
+            0,
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,
+            nullptr
+        );
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        atlasX = 0;
+        atlasY = 0;
+        atlasRowHeight = 0;
+        cache.clear();
+
+        int loadedChars = 0;
+        const int loadFlagsBase = FT_LOAD_RENDER | FT_LOAD_NO_BITMAP;
+        const int loadFlagsLCD = loadFlagsBase | FT_LOAD_TARGET_LCD | FT_LOAD_FORCE_AUTOHINT;
+        const int loadFlagsGray = loadFlagsBase | FT_LOAD_TARGET_LIGHT;
+        const int padding = 3;
+
+        for (int codepoint = 32; codepoint <= 255; ++codepoint) {
+            FT_UInt glyphIndex = FT_Get_Char_Index(ftFace_, static_cast<FT_ULong>(codepoint));
+            if (glyphIndex == 0) {
+                continue;
             }
-            fontUseLCD_ = false;
-        }
-        
-        // Check if we need to move to next row
-        if (fontAtlasX_ + width + padding >= fontAtlasWidth_) {
-            fontAtlasX_ = 0;
-            fontAtlasY_ += fontAtlasRowHeight_ + padding;
-            fontAtlasRowHeight_ = 0;
-        }
-        
-        // Check if atlas is full
-        if (fontAtlasY_ + height + padding >= fontAtlasHeight_) {
-            std::cerr << "ERROR: Font atlas full!" << std::endl;
-            break;
-        }
-        
-        // Upload glyph to atlas (converted to RGBA so the fragment shader can use subpixel coverage)
-        if (width > 0 && height > 0) {
-            std::vector<unsigned char> rgba(static_cast<size_t>(width * height * 4), 0);
-            const int rowStride = std::abs(bitmap->pitch);
-            const bool flipRows = bitmap->pitch < 0;
-            const unsigned char* base = flipRows 
-                ? bitmap->buffer + static_cast<long>(rowStride) * (height - 1)
-                : bitmap->buffer;
-            for (int y = 0; y < height; ++y) {
-                const unsigned char* srcRow = flipRows
-                    ? base - static_cast<long>(y * rowStride)
-                    : base + static_cast<long>(y * rowStride);
-                for (int x = 0; x < width; ++x) {
-                    unsigned char r = 0, g = 0, b = 0, a = 0;
-                    if (glyphIsLCD) {
-                        // FreeType outputs RGB triplets for each pixel in LCD mode
-                        r = srcRow[x * 3 + 0];
-                        g = srcRow[x * 3 + 1];
-                        b = srcRow[x * 3 + 2];
-                        a = std::max({r, g, b});
-                    } else {
-                        r = g = b = srcRow[x];
-                        a = srcRow[x];
+
+            int loadFlags = fontUseLCD_ ? loadFlagsLCD : loadFlagsGray;
+            if (FT_Load_Char(ftFace_, static_cast<FT_ULong>(codepoint), loadFlags)) {
+                std::cerr << "ERROR: Failed to load glyph for character: " << codepoint << std::endl;
+                continue;
+            }
+
+            FT_Bitmap* bitmap = &ftFace_->glyph->bitmap;
+            const bool glyphIsLCD = fontUseLCD_ && (bitmap->pixel_mode == FT_PIXEL_MODE_LCD);
+            int width = glyphIsLCD ? (bitmap->width / 3) : bitmap->width;
+            int height = bitmap->rows;
+
+            // Check if we need to move to next row
+            if (atlasX + width + padding >= fontAtlasWidth_) {
+                atlasX = 0;
+                atlasY += atlasRowHeight + padding;
+                atlasRowHeight = 0;
+            }
+
+            // Check if atlas is full
+            if (atlasY + height + padding >= fontAtlasHeight_) {
+                std::cerr << "ERROR: Font atlas full (" << atlasFontSize << "px)!" << std::endl;
+                break;
+            }
+
+            if (width > 0 && height > 0) {
+                std::vector<unsigned char> rgba(static_cast<size_t>(width * height * 4), 0);
+                const int rowStride = std::abs(bitmap->pitch);
+                const bool flipRows = bitmap->pitch < 0;
+                const unsigned char* base = flipRows
+                    ? bitmap->buffer + static_cast<long>(rowStride) * (height - 1)
+                    : bitmap->buffer;
+                for (int y = 0; y < height; ++y) {
+                    const unsigned char* srcRow = flipRows
+                        ? base - static_cast<long>(y * rowStride)
+                        : base + static_cast<long>(y * rowStride);
+                    for (int x = 0; x < width; ++x) {
+                        unsigned char r = 0, g = 0, b = 0, a = 0;
+                        if (glyphIsLCD) {
+                            r = srcRow[x * 3 + 0];
+                            g = srcRow[x * 3 + 1];
+                            b = srcRow[x * 3 + 2];
+                            a = std::max({r, g, b});
+                        } else {
+                            r = g = b = srcRow[x];
+                            a = srcRow[x];
+                        }
+                        size_t dst = static_cast<size_t>(y * width + x) * 4;
+                        rgba[dst + 0] = r;
+                        rgba[dst + 1] = g;
+                        rgba[dst + 2] = b;
+                        rgba[dst + 3] = a;
                     }
-                    
-                    size_t dst = static_cast<size_t>(y * width + x) * 4;
-                    rgba[dst + 0] = r;
-                    rgba[dst + 1] = g;
-                    rgba[dst + 2] = b;
-                    rgba[dst + 3] = a;
                 }
+
+                glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+                glTexSubImage2D(
+                    GL_TEXTURE_2D,
+                    0,
+                    atlasX,
+                    atlasY,
+                    width,
+                    height,
+                    GL_RGBA,
+                    GL_UNSIGNED_BYTE,
+                    rgba.data()
+                );
             }
 
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-            glTexSubImage2D(
-                GL_TEXTURE_2D,
-                0,
-                fontAtlasX_,
-                fontAtlasY_,
-                width,
-                height,
-                GL_RGBA,
-                GL_UNSIGNED_BYTE,
-                rgba.data()
-            );
+            FontData charData;
+            charData.textureId = atlasTextureId;
+            charData.glyphIndex = glyphIndex;
+            charData.width = width;
+            charData.height = height;
+            charData.bearingX = ftFace_->glyph->bitmap_left;
+            charData.bearingY = ftFace_->glyph->bitmap_top;
+            charData.advance = ftFace_->glyph->advance.x;
+
+            float invW = 1.0f / fontAtlasWidth_;
+            float invH = 1.0f / fontAtlasHeight_;
+            charData.u0 = atlasX * invW;
+            charData.v0 = atlasY * invH;
+            charData.u1 = (atlasX + width) * invW;
+            charData.v1 = (atlasY + height) * invH;
+
+            cache[static_cast<char>(codepoint)] = charData;
+
+            atlasX += width + padding;
+            atlasRowHeight = std::max(atlasRowHeight, height);
+            loadedChars++;
         }
-        
-        // Store character data
-        FontData charData;
-        charData.textureId = fontAtlasTextureId_;
-        charData.glyphIndex = glyphIndex;
-        charData.width = width;
-        charData.height = height;
-        charData.bearingX = ftFace_->glyph->bitmap_left;
-        charData.bearingY = ftFace_->glyph->bitmap_top;
-        charData.advance = ftFace_->glyph->advance.x;
-        
-        // Calculate UVs
-        float invW = 1.0f / fontAtlasWidth_;
-        float invH = 1.0f / fontAtlasHeight_;
-        
-        charData.u0 = fontAtlasX_ * invW;
-        charData.v0 = fontAtlasY_ * invH;
-        charData.u1 = (fontAtlasX_ + width) * invW;
-        charData.v1 = (fontAtlasY_ + height) * invH;
-        
-        fontCache_[static_cast<char>(codepoint)] = charData;
-        
-        // Advance cursor
-        fontAtlasX_ += width + padding;
-        fontAtlasRowHeight_ = std::max(fontAtlasRowHeight_, height);
-        
-        loadedChars++;
+
+        std::cout << "[Text] Font atlas built: " << fontPath
+                  << " (" << atlasFontSize << "px, " << loadedChars << " glyphs, "
+                  << (fontUseLCD_ ? "LCD subpixel" : "grayscale") << ")" << std::endl;
+        return loadedChars > 0;
+    };
+
+    // Large atlas (48px)
+    {
+        const int ATLAS_FONT_SIZE = 48;
+        atlasFontSize_ = ATLAS_FONT_SIZE;
+        if (!buildAtlas(ATLAS_FONT_SIZE,
+                        fontAtlasTextureId_,
+                        fontCache_,
+                        fontAscent_,
+                        fontDescent_,
+                        fontLineHeight_,
+                        fontAtlasX_,
+                        fontAtlasY_,
+                        fontAtlasRowHeight_)) {
+            return false;
+        }
     }
-    
+
+    // Medium atlas (32px) for common UI copy
+    {
+        const int ATLAS_FONT_SIZE_MEDIUM = 32;
+        atlasFontSizeMedium_ = ATLAS_FONT_SIZE_MEDIUM;
+        (void)buildAtlas(ATLAS_FONT_SIZE_MEDIUM,
+                         fontAtlasTextureIdMedium_,
+                         fontCacheMedium_,
+                         fontAscentMedium_,
+                         fontDescentMedium_,
+                         fontLineHeightMedium_,
+                         fontAtlasXMedium_,
+                         fontAtlasYMedium_,
+                         fontAtlasRowHeightMedium_);
+    }
+
+    // Small atlas (24px) for tiny labels
+    {
+        const int ATLAS_FONT_SIZE_SMALL = 24;
+        atlasFontSizeSmall_ = ATLAS_FONT_SIZE_SMALL;
+        (void)buildAtlas(ATLAS_FONT_SIZE_SMALL,
+                         fontAtlasTextureIdSmall_,
+                         fontCacheSmall_,
+                         fontAscentSmall_,
+                         fontDescentSmall_,
+                         fontLineHeightSmall_,
+                         fontAtlasXSmall_,
+                         fontAtlasYSmall_,
+                         fontAtlasRowHeightSmall_);
+    }
+
     fontInitialized_ = true;
-    std::cout << "[Text] Font loaded: " << fontPath 
-              << " (" << loadedChars << " glyphs, "
-              << (fontUseLCD_ ? "LCD subpixel" : "grayscale") << ")" << std::endl;
+    std::cout << "[Text] Font loaded: " << fontPath << " (dual atlases enabled)" << std::endl;
     return true;
 }
 
@@ -1657,31 +1727,64 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
     if (!fontInitialized_) {
         return; // Can't render without font
     }
+
+    const bool useSmallAtlas = (fontSize <= 13.0f);
+    const bool useMediumAtlas = (!useSmallAtlas && fontSize <= 17.0f);
+
+    const bool canUseSmall = useSmallAtlas && (fontAtlasTextureIdSmall_ != 0) && (atlasFontSizeSmall_ > 0);
+    const bool canUseMedium = useMediumAtlas && (fontAtlasTextureIdMedium_ != 0) && (atlasFontSizeMedium_ > 0);
+
+    const uint32_t atlasTextureId = canUseSmall ? fontAtlasTextureIdSmall_ : (canUseMedium ? fontAtlasTextureIdMedium_ : fontAtlasTextureId_);
+    const int atlasSize = canUseSmall ? atlasFontSizeSmall_ : (canUseMedium ? atlasFontSizeMedium_ : atlasFontSize_);
+    const auto& cache = canUseSmall ? fontCacheSmall_ : (canUseMedium ? fontCacheMedium_ : fontCache_);
     
     // Ensure we are using the font atlas texture and text primitive type
-    if (currentTextureId_ != fontAtlasTextureId_ || currentPrimitiveType_ != 4) {
+    if (currentTextureId_ != atlasTextureId || currentPrimitiveType_ != 4) {
         flush();
-        currentTextureId_ = fontAtlasTextureId_;
+        currentTextureId_ = atlasTextureId;
         currentPrimitiveType_ = 4; // Bitmap/LCD text
     }
     
     // fontSize is in logical pixels - no DPI scaling needed here
     // Scale factor from 32px atlas to requested font size
-    float scale = fontSize / static_cast<float>(atlasFontSize_);
+    float scale = fontSize / static_cast<float>(atlasSize);
     
     // position.y is the BASELINE position (already adjusted by caller)
     // Pixel-align starting position for crisp text
-    float x = std::floor(position.x + 0.5f);
-    float baseline = std::floor(position.y + 0.5f);
+    float x = std::round(position.x);
+    float baseline = std::round(position.y);
     FT_UInt previousGlyph = 0;
-    
+    // Calculate total bounds for debug
+
+    float minX = 1e9f, minY = 1e9f, maxX = -1e9f, maxY = -1e9f;
+    float startX = x;
+
+    // Logging for specific strings (Reproduce step 2)
+    bool debugLog = (text == "Telegram Desktop" || text == "gypq" || text == "gypqj" || text == "Beyoncé");
+    if (debugLog) {
+        std::cout << "[TextDebug] String: \"" << text << "\"" << std::endl;
+        std::cout << "  FontSize: " << fontSize << " (Scale: " << scale << ")" << std::endl;
+        std::cout << "  Position: " << position.x << ", " << position.y << std::endl;
+        std::cout << "  Baseline (rounded): " << baseline << std::endl;
+        
+        if (scissorEnabled_) {
+            GLint scissor[4];
+            glGetIntegerv(GL_SCISSOR_BOX, scissor);
+            // GL scissor is bottom-up
+            std::cout << "  GL Scissor: x=" << scissor[0] << ", y=" << scissor[1] 
+                      << ", w=" << scissor[2] << ", h=" << scissor[3] << std::endl;
+        } else {
+            std::cout << "  Scissor: Disabled" << std::endl;
+        }
+    }
+
     for (char c : text) {
-        auto it = fontCache_.find(c);
-        if (it == fontCache_.end()) continue;
+        auto it = cache.find(c);
+        if (it == cache.end()) continue;
         
         const FontData& ch = it->second;
         
-        // Apply kerning for better spacing (especially pairs like "VA" and "To")
+        // Apply kerning for better spacing
         if (fontHasKerning_ && previousGlyph != 0 && ch.glyphIndex != 0) {
             FT_Vector kerning = {0, 0};
             if (FT_Get_Kerning(ftFace_, previousGlyph, ch.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
@@ -1696,24 +1799,27 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         float w = ch.width * scale;
         float h = ch.height * scale;
         
-        // Glyph positioning relative to baseline:
-        // - xpos: current x + horizontal bearing (left side bearing)
-        // - ypos: baseline - bearingY gives the TOP of the glyph
-        //   (bearingY is distance from baseline to top of glyph)
-        float xpos = std::floor(x + scaledBearingX + 0.5f);
-        float ypos = std::floor(baseline - scaledBearingY + 0.5f);
+        // Glyph positioning relative to baseline
+        float xpos = std::round(x + scaledBearingX);
+        float ypos = std::round(baseline - scaledBearingY); // Top of glyph
         
+        if (debugLog) {
+            std::cout << "  Glyph '" << c << "': Quad [" << xpos << ", " << ypos << ", " 
+                      << (xpos+w) << ", " << (ypos+h) << "]" 
+                      << " UV [" << ch.u0 << ", " << ch.v0 << " - " << ch.u1 << ", " << ch.v1 << "]"
+                      << (scissorEnabled_ ? " (Clip check needed)" : "") 
+                      << std::endl;
+        }
+
+        minX = std::min(minX, xpos);
+        minY = std::min(minY, ypos);
+        maxX = std::max(maxX, xpos + w);
+        maxY = std::max(maxY, ypos + h);
+
         // Draw textured quad for character
-        // Vertices are: BL, BR, TR, TL (CCW winding)
-        // ypos is TOP of glyph, ypos + h is BOTTOM
-        
-        // 0: Bottom-Left
         addVertex(xpos,     ypos + h, ch.u0, ch.v1, color); 
-        // 1: Bottom-Right
         addVertex(xpos + w, ypos + h, ch.u1, ch.v1, color); 
-        // 2: Top-Right
         addVertex(xpos + w, ypos,     ch.u1, ch.v0, color); 
-        // 3: Top-Left
         addVertex(xpos,     ypos,     ch.u0, ch.v0, color);
         
         // Add indices for quad
@@ -1725,9 +1831,41 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         indices_.push_back(base + 2);
         indices_.push_back(base + 3);
         
-        // Advance cursor - use advance width (in 26.6 fixed point, >> 6 to get pixels)
+        // Advance cursor
         x += (ch.advance >> 6) * scale;
     }
+
+    if (debugTextBounds_) {
+        // Draw debug overlay (requires breaking batch)
+        // Store current text state to restore? No, just flush.
+        flush();
+        
+        // 1. Draw Text Bounds (Green)
+        strokeRect(NUIRect(minX, minY, maxX - minX, maxY - minY), 1.0f, NUIColor(0, 1, 0, 1));
+        
+        // 2. Draw Baseline (Blue)
+        drawLine(NUIPoint(minX, baseline), NUIPoint(maxX, baseline), 1.0f, NUIColor(0, 0, 1, 1));
+        
+        // 3. Draw Clip Rect (Red)
+        if (scissorEnabled_) {
+            GLint scissor[4];
+            glGetIntegerv(GL_SCISSOR_BOX, scissor);
+            // Convert GL bottom-up scissor back to UI coordinates top-down
+            // Window height needed... using height_ member
+            float sx = (float)scissor[0];
+            float sy = (float)(height_ - scissor[1] - scissor[3]);
+            float sw = (float)scissor[2];
+            float sh = (float)scissor[3];
+            strokeRect(NUIRect(sx, sy, sw, sh), 1.0f, NUIColor(1, 0, 0, 1));
+        }
+        
+        // Restore text state for potential next text calls
+        // Actually, the caller will set state if needed, but we should make sure we don't leave it in primitive mode if caller expects text batching.
+        // It's safer to just let the next draw setup its state.
+        
+        // However, we need to ensure we don't accidentally leave a bound texture if we used strokeRect which clears it.
+    }
+
 }
 
 // ============================================================================

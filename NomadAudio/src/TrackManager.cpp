@@ -6,12 +6,14 @@
 #include <chrono>
 #include <unordered_map>
 
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
+#include "TrackManager.h"
+#include "NomadLog.h"
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <chrono>
+#include <unordered_map>
+#include "NomadPlatform.h" // For platform threading abstraction
 
 namespace Nomad {
 namespace Audio {
@@ -39,12 +41,11 @@ static void reindexTracks(std::vector<std::shared_ptr<Track>>& tracks, std::unor
 
 AudioThreadPool::AudioThreadPool(size_t numThreads) {
     for (size_t i = 0; i < numThreads; ++i) {
-        m_workers.emplace_back([this, i] { workerThread(); });
-        
-        // Set thread priority to real-time (platform-specific)
-        #ifdef _WIN32
-        SetThreadPriority(m_workers.back().native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
-        #endif
+        m_workers.emplace_back([this, i] { 
+            // Set thread priority to High (but not Realtime/MMCSS) for worker threads
+            Platform::setCurrentThreadPriority(Platform::ThreadPriority::High);
+            workerThread(); 
+        });
     }
     
     Log::info("AudioThreadPool created with " + std::to_string(numThreads) + " threads");
@@ -582,7 +583,8 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
 
     // Output buffer should already be cleared by caller
     // Process each track - tracks will mix themselves into the output buffer
-    for (const auto& track : m_tracks) {
+    for (size_t trackIdx = 0; trackIdx < m_tracks.size(); ++trackIdx) {
+        const auto& track = m_tracks[trackIdx];
         // Only process tracks that are playing
         // System tracks (preview) always process if playing
         // Regular tracks only process if transport is playing OR if they're explicitly playing
@@ -597,6 +599,35 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
             }
             
             track->processAudio(outputBuffer, numFrames, streamTime, outputSampleRate);
+            
+            // Compute peaks inline for meter display (RT-safe, no separate getPeak calls)
+            // Note: For single-threaded mode, we compute peaks from the mixed output
+            // This is post-fader, post-mute as required by Requirement 2.1
+        }
+    }
+
+    // Compute per-track peaks from track buffers if available
+    // For single-threaded mode, we need to compute peaks differently since tracks mix directly
+    // We'll compute master peak from the final output buffer
+    
+    // Compute master peak from final mixed output (post-fader, post-mute)
+    if (m_meterSnapshotsRaw) {
+        float masterPeakL = 0.0f;
+        float masterPeakR = 0.0f;
+        for (uint32_t f = 0; f < numFrames; ++f) {
+            float absL = std::abs(outputBuffer[f * 2]);
+            float absR = std::abs(outputBuffer[f * 2 + 1]);
+            if (absL > masterPeakL) masterPeakL = absL;
+            if (absR > masterPeakR) masterPeakR = absR;
+        }
+        
+        // Write master peak to reserved slot (MASTER_SLOT_INDEX = 127)
+        static constexpr uint32_t MASTER_SLOT_INDEX = 127;
+        m_meterSnapshotsRaw->writePeak(MASTER_SLOT_INDEX, masterPeakL, masterPeakR);
+        
+        // Set clip flags if peak >= 1.0 (0 dBFS)
+        if (masterPeakL >= 1.0f || masterPeakR >= 1.0f) {
+            m_meterSnapshotsRaw->setClip(MASTER_SLOT_INDEX, masterPeakL >= 1.0f, masterPeakR >= 1.0f);
         }
     }
 
@@ -733,10 +764,61 @@ void TrackManager::processAudioMultiThreaded(float* outputBuffer, uint32_t numFr
     // Zero the output buffer first
     std::memset(outputBuffer, 0, bufferSize * sizeof(float));
     
-    // Sum all track buffers
-    for (const auto& buffer : m_trackBuffers) {
-        for (size_t i = 0; i < bufferSize; ++i) {
-            outputBuffer[i] += buffer[i];
+    // Sum all track buffers and compute per-track peaks inline
+    for (size_t trackIdx = 0; trackIdx < m_trackBuffers.size() && trackIdx < m_tracks.size(); ++trackIdx) {
+        const auto& buffer = m_trackBuffers[trackIdx];
+        const auto& track = m_tracks[trackIdx];
+        
+        // Compute peak inline while mixing (no separate getPeak calls)
+        // This is post-fader, post-mute as required by Requirement 2.1
+        float peakL = 0.0f;
+        float peakR = 0.0f;
+        
+        for (size_t i = 0; i < bufferSize; i += 2) {
+            float sampleL = buffer[i];
+            float sampleR = buffer[i + 1];
+            
+            // Mix into output
+            outputBuffer[i] += sampleL;
+            outputBuffer[i + 1] += sampleR;
+            
+            // Track peak (LINEAR values 0..1+)
+            float absL = std::abs(sampleL);
+            float absR = std::abs(sampleR);
+            if (absL > peakL) peakL = absL;
+            if (absR > peakR) peakR = absR;
+        }
+        
+        // Write LINEAR peaks to snapshot via raw pointer (RT-safe, no refcount)
+        if (m_meterSnapshotsRaw && track) {
+            uint32_t slotIndex = static_cast<uint32_t>(trackIdx);
+            m_meterSnapshotsRaw->writePeak(slotIndex, peakL, peakR);
+            
+            // Set clip flags when peak >= 1.0f (0 dBFS)
+            if (peakL >= 1.0f || peakR >= 1.0f) {
+                m_meterSnapshotsRaw->setClip(slotIndex, peakL >= 1.0f, peakR >= 1.0f);
+            }
+        }
+    }
+    
+    // Compute master peak from final mixed output
+    if (m_meterSnapshotsRaw) {
+        float masterPeakL = 0.0f;
+        float masterPeakR = 0.0f;
+        for (size_t i = 0; i < bufferSize; i += 2) {
+            float absL = std::abs(outputBuffer[i]);
+            float absR = std::abs(outputBuffer[i + 1]);
+            if (absL > masterPeakL) masterPeakL = absL;
+            if (absR > masterPeakR) masterPeakR = absR;
+        }
+        
+        // Write master peak to reserved slot (MASTER_SLOT_INDEX = 127)
+        static constexpr uint32_t MASTER_SLOT_INDEX = 127;
+        m_meterSnapshotsRaw->writePeak(MASTER_SLOT_INDEX, masterPeakL, masterPeakR);
+        
+        // Set clip flags if peak >= 1.0 (0 dBFS)
+        if (masterPeakL >= 1.0f || masterPeakR >= 1.0f) {
+            m_meterSnapshotsRaw->setClip(MASTER_SLOT_INDEX, masterPeakL >= 1.0f, masterPeakR >= 1.0f);
         }
     }
     

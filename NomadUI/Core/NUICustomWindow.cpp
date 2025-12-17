@@ -5,10 +5,7 @@
 #include "../Core/NUIThemeSystem.h"
 #include <iostream>
 
-// Windows includes for PostMessageW
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
+// Windows-specific code removed - use NomadPlat abstraction instead
 
 namespace NomadUI {
 
@@ -205,8 +202,8 @@ void NUICustomWindow::handleWindowMaximize() {
 
 void NUICustomWindow::handleWindowClose() {
     if (windowHandle_) {
-        // Trigger the window close event
-        PostMessageW(static_cast<HWND>(windowHandle_->getNativeHandle()), WM_CLOSE, 0, 0);
+        // Request window close through platform abstraction
+        windowHandle_->requestClose();
     }
 }
 

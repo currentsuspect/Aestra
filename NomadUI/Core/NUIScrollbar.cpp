@@ -161,9 +161,11 @@ bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
     {
         // Handle thumb dragging (mouse move events have button = None)
         // Use relative drag delta to preserve initial grab offset within thumb
+        const double kMinRangeSize = 0.001;  // Minimum allowed range size
+        
         NUIRect trackRect = getTrackRect();
         NUIRect thumbRect = getThumbRect();
-        double deltaPixels, trackLength, thumbLengthPixels;
+        double deltaPixels = 0.0, trackLength = 0.0, thumbLengthPixels = 0.0;
         
         if (orientation_ == Orientation::Vertical)
         {
@@ -196,7 +198,6 @@ bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
         } else if (pressedPart_ == Part::ThumbStartEdge) {
             // Dragging left/top edge: changes start and size
             // Use relative movement (step delta) to handle dynamic range changes during drag
-            bool isTimelineResize = (style_ == Style::Timeline);
             
             double stepDeltaPixels;
             if (orientation_ == Orientation::Vertical) stepDeltaPixels = event.position.y - lastMousePosition_.y;
@@ -209,9 +210,9 @@ bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
             double newSize = currentRangeSize_ - valueDelta;
             
             // Constraints
-            if (newSize < 0.001) {
-                newSize = 0.001;
-                newStart = currentRangeStart_ + currentRangeSize_ - 0.001;
+            if (newSize < kMinRangeSize) {
+                newSize = kMinRangeSize;
+                newStart = currentRangeStart_ + currentRangeSize_ - kMinRangeSize;
             }
             
             // Clamp start
@@ -240,8 +241,8 @@ bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
             double valueDelta = stepDeltaPixels * valuePerPixel;
 
             double newSize = currentRangeSize_ + valueDelta;
-             if (newSize < 0.001) {
-                newSize = 0.001;
+             if (newSize < kMinRangeSize) {
+                newSize = kMinRangeSize;
             }
             
             // Clamp size so start + size <= limit

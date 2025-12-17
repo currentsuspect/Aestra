@@ -110,8 +110,12 @@ struct PolyphaseFilterBank {
  * zero dynamic allocation during operation.
  */
 struct SampleHistory {
-    // Interleaved sample storage (fixed size for max channels)
-    float data[SRCConstants::HISTORY_SIZE * SRCConstants::MAX_CHANNELS];
+    // Planar + mirrored storage for SIMD-friendly contiguous windows.
+    // Layout: data[channel][index], where index spans kMirrorFactor * HISTORY_SIZE.
+    // Mirroring eliminates wrap checks for tap windows (RT-safe, fixed size).
+    static constexpr uint32_t kMirrorFactor = 3; // 2 is usually enough; 3 covers any start+MAX_TAPS window safely.
+
+    alignas(32) float data[SRCConstants::MAX_CHANNELS][SRCConstants::HISTORY_SIZE * kMirrorFactor];
     
     uint32_t writePos{0};       // Current write position in ring
     uint32_t channels{0};       // Number of active channels
@@ -123,27 +127,46 @@ struct SampleHistory {
         size = SRCConstants::HISTORY_SIZE;
         writePos = 0;
         // Clear buffer
-        for (float& s : data) s = 0.0f;
+        for (auto& chBuf : data) {
+            for (float& s : chBuf) {
+                s = 0.0f;
+            }
+        }
     }
     
     // Push a frame (all channels) into the ring buffer
     void push(const float* frame) noexcept {
-        const uint32_t base = writePos * channels;
+        const uint32_t base0 = writePos;
+        const uint32_t base1 = base0 + size;
+        const uint32_t base2 = base0 + 2 * size;
+
         for (uint32_t ch = 0; ch < channels; ++ch) {
-            data[base + ch] = frame[ch];
+            const float s = frame[ch];
+            data[ch][base0] = s;
+            data[ch][base1] = s;
+            data[ch][base2] = s;
         }
         writePos = (writePos + 1) % size;
     }
     
-    // Get sample at relative position (0 = oldest, size-1 = newest)
-    // Handles wrap-around automatically
+    // Get a contiguous window pointer for the given channel starting at relPos
+    // (0 = oldest, size-1 = newest). relPos wraps like get().
+    const float* getWindow(uint32_t channel, int32_t relPos) const noexcept {
+        if (size == 0) return nullptr;
+        const int32_t sizeI = static_cast<int32_t>(size);
+        int32_t rel = relPos % sizeI;
+        if (rel < 0) rel += sizeI;
+
+        // Chronological ring is laid out contiguously at [writePos .. writePos+size-1].
+        // Mirroring extends past wrap so tap windows are contiguous.
+        const uint32_t idx = writePos + static_cast<uint32_t>(rel);
+        return &data[channel][idx];
+    }
+
+    // Scalar accessor (kept for reference/testing and edge-case fallbacks)
     float get(int32_t relPos, uint32_t channel) const noexcept {
-        // Convert relative to absolute ring position
-        int32_t absPos = static_cast<int32_t>(writePos) - static_cast<int32_t>(size) + relPos;
-        while (absPos < 0) absPos += static_cast<int32_t>(size);
-        absPos %= static_cast<int32_t>(size);
-        
-        return data[static_cast<uint32_t>(absPos) * channels + channel];
+        const float* p = getWindow(channel, relPos);
+        return p ? *p : 0.0f;
     }
 };
 
@@ -320,6 +343,11 @@ public:
         return false;
 #endif
     }
+
+    // Allow tests/tools to force scalar processing even when SIMD is available.
+    // RT-safe (atomic flag read in process()).
+    void setSIMDEnabled(bool enabled) noexcept { m_simdEnabled.store(enabled, std::memory_order_relaxed); }
+    bool isSIMDEnabled() const noexcept { return m_simdEnabled.load(std::memory_order_relaxed); }
     
 private:
     // =========================================================================
@@ -371,6 +399,9 @@ private:
     double m_targetRatio{1.0};       // Target ratio to smooth toward
     uint32_t m_ratioSmoothFrames{0}; // Frames remaining in transition
     uint32_t m_ratioSmoothTotal{0};  // Total frames for current transition
+
+    // SIMD enable toggle (mostly for tests / debugging)
+    std::atomic<bool> m_simdEnabled{true};
 };
 
 // =============================================================================

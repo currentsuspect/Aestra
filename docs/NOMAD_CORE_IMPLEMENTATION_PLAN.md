@@ -2020,7 +2020,7 @@ NOMAD_TEST_CASE(TestAddTrackCommand) {
 
 #### Implementation Plan
 
-**Step 1: Tracy Profiler Integration**
+**Step 1: Nomad Profiler Integration**
 ```cpp
 // ProfilerIntegration.h
 #ifdef TRACY_ENABLE

@@ -1,18 +1,10 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "../Core/NUITypes.h"
 #include <string>
 #include <memory>
 #include <unordered_map>
-
-#ifdef _WIN32
-    #define WIN32_LEAN_AND_MEAN
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #include <Windows.h>
-#endif
 
 namespace NomadUI {
 
@@ -36,9 +28,9 @@ public:
 
 private:
     bool initialized_;
-    HFONT font_;
-    HFONT oldFont_;
-    std::unordered_map<int, HFONT> fontCache_; // Cache fonts by size
+    void* font_; // HFONT (opaque)
+    void* oldFont_; // HFONT (opaque)
+    std::unordered_map<int, void*> fontCache_; // Cache fonts by size (HFONT opaque)
 };
 
 } // namespace NomadUI

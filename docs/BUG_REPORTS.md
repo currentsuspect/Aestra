@@ -287,12 +287,12 @@ Crackling does not occur on 48kHz samples.
 For performance bugs (lag, FPS drops):
 
 ### Profiling Data
-1. Enable Tracy profiler (if available):
+1. Enable Nomad profiler (if available):
    ```cpp
    #define NOMAD_PROFILE_ENABLED 1
    ```
 2. Reproduce the lag
-3. Export Tracy trace: `File → Export JSON`
+3. Export Nomad profiler trace: `File → Export JSON`
 4. Attach to bug report
 
 ### FPS Display

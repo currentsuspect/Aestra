@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "../include/NomadPlatform.h"
 #include "../../NomadCore/include/NomadConfig.h"
 #include "../../NomadCore/include/NomadLog.h"
@@ -9,8 +9,9 @@
     #include "Win32/PlatformUtilsWin32.h"
     #include "Win32/PlatformDPIWin32.h"
 #elif NOMAD_PLATFORM_LINUX
-    // TODO: Linux implementation
-    #error "Linux platform not yet implemented"
+    #include "Linux/PlatformWindowLinux.h"
+    #include "Linux/PlatformUtilsLinux.h"
+    #include <SDL2/SDL.h>
 #elif NOMAD_PLATFORM_MACOS
     // TODO: macOS implementation
     #error "macOS platform not yet implemented"
@@ -29,7 +30,7 @@ IPlatformWindow* Platform::createWindow() {
 #if NOMAD_PLATFORM_WINDOWS
     return new PlatformWindowWin32();
 #elif NOMAD_PLATFORM_LINUX
-    return nullptr;  // TODO
+    return new PlatformWindowLinux();
 #elif NOMAD_PLATFORM_MACOS
     return nullptr;  // TODO
 #endif
@@ -54,9 +55,14 @@ bool Platform::initialize() {
     s_utils = new PlatformUtilsWin32();
     NOMAD_LOG_INFO("Windows platform initialized");
 #elif NOMAD_PLATFORM_LINUX
-    // TODO: Linux initialization
-    NOMAD_LOG_ERROR("Linux platform not yet implemented");
-    return false;
+    // Initialize SDL
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) != 0) {
+         NOMAD_LOG_ERROR("SDL_Init failed: " << SDL_GetError());
+         return false;
+    }
+    
+    s_utils = new PlatformUtilsLinux();
+    NOMAD_LOG_INFO("Linux platform initialized (SDL2)");
 #elif NOMAD_PLATFORM_MACOS
     // TODO: macOS initialization
     NOMAD_LOG_ERROR("macOS platform not yet implemented");
@@ -70,6 +76,9 @@ void Platform::shutdown() {
     if (s_utils) {
         delete s_utils;
         s_utils = nullptr;
+        #if NOMAD_PLATFORM_LINUX
+        SDL_Quit();
+        #endif
         NOMAD_LOG_INFO("Platform shutdown");
     }
 }

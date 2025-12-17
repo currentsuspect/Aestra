@@ -8,8 +8,12 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <unordered_map>
 
 namespace NomadUI {
+
+class NUIContextMenu;
+class NUITextInput;
 
 /**
  * File type enumeration for proper icon display
@@ -46,6 +50,7 @@ struct FileItem {
     mutable std::string cachedDisplayName;
     mutable std::string cachedSizeStr;
     mutable bool cacheValid = false;
+    mutable int searchScore = 0;
     
     FileItem(const std::string& n, const std::string& p, FileType t, bool isDir, size_t s = 0, const std::string& modified = "")
         : name(n), path(p), type(t), isDirectory(isDir), size(s), lastModified(modified) {}
@@ -97,8 +102,8 @@ public:
     // Search/filter
     void setSearchQuery(const std::string& query);
     void applyFilter();
-    const std::string& getSearchQuery() const { return searchQuery_; }
-    bool isSearchBoxFocused() const { return searchBoxFocused_; }
+    std::string getSearchQuery() const;
+    bool isSearchBoxFocused() const;
     
     // Preview panel
     void setPreviewPanelVisible(bool visible);
@@ -131,30 +136,41 @@ public:
     void setSortMode(SortMode mode);
     void setSortAscending(bool ascending);
     
-private:
-    void loadDirectoryContents();
-    void loadFolderContents(FileItem* item);
-    void updateDisplayList();
-    void updateDisplayListRecursive(FileItem& item, std::vector<const FileItem*>& list);
-    void sortFiles();
-    FileType getFileTypeFromExtension(const std::string& extension);
-    std::shared_ptr<NUIIcon> getIconForFileType(FileType type);
-    void renderFileList(NUIRenderer& renderer);
-    void renderInteractiveBreadcrumbs(NUIRenderer& renderer);
-    void renderToolbar(NUIRenderer& renderer);
-    void renderScrollbar(NUIRenderer& renderer);
-    void renderPreviewPanel(NUIRenderer& renderer);
+	private:
+	    void loadDirectoryContents();
+	    void loadFolderContents(FileItem* item);
+		    void updateDisplayList();
+		    void updateDisplayListRecursive(FileItem& item, std::vector<const FileItem*>& list);
+		    void sortFiles();
+		    bool compareFileItems(const FileItem& a, const FileItem& b) const;
+		    FileType getFileTypeFromExtension(const std::string& extension);
+		    std::shared_ptr<NUIIcon> getIconForFileType(FileType type);
+		    bool isFilterActive() const;
+		    const std::vector<const FileItem*>& getActiveView() const;
+		    void renderFileList(NUIRenderer& renderer);
+		    void renderInteractiveBreadcrumbs(NUIRenderer& renderer);
+		    void renderToolbar(NUIRenderer& renderer);
+	    void renderScrollbar(NUIRenderer& renderer);
+	    void renderPreviewPanel(NUIRenderer& renderer);
     void renderSearchBox(NUIRenderer& renderer);
     void updateScrollPosition();
-    void updateBreadcrumbs();
-    void navigateToBreadcrumb(int index);
-    bool handleSearchBoxMouseEvent(const NUIMouseEvent& event);
-    bool handleScrollbarMouseEvent(const NUIMouseEvent& event);
-    bool handleBreadcrumbMouseEvent(const NUIMouseEvent& event);
-    void updateScrollbarVisibility();
-    void pushToHistory(const std::string& path);
-    void navigateBack();
-    void navigateForward();
+	    void updateBreadcrumbs();
+	    void navigateToBreadcrumb(int index);
+	    bool handleSearchBoxMouseEvent(const NUIMouseEvent& event);
+	    bool handleScrollbarMouseEvent(const NUIMouseEvent& event);
+	    bool handleBreadcrumbMouseEvent(const NUIMouseEvent& event);
+	    void updateScrollbarVisibility();
+	    void showFavoritesMenu();
+	    void showSortMenu();
+	    void showTagFilterMenu();
+	    void showItemContextMenu(const FileItem& item, const NUIPoint& position);
+	    void hidePopupMenu();
+	    void toggleTag(const std::string& path, const std::string& tag);
+	    bool hasTag(const std::string& path, const std::string& tag) const;
+	    std::vector<std::string> getAllTagsSorted() const;
+	    void pushToHistory(const std::string& path);
+	    void navigateBack();
+	    void navigateForward();
     
     // File management
     std::string currentPath_;
@@ -192,14 +208,30 @@ private:
     static constexpr float SCROLLBAR_FADE_DELAY = 1.0f; // seconds
     static constexpr float SCROLLBAR_FADE_DURATION = 0.3f; // seconds
     
-    // Hover state
-    int hoveredIndex_;
+	    // Hover state
+	    int hoveredIndex_;
+	    NUIPoint lastMousePos_{0.0f, 0.0f};
     
-    // Search/filter state
-    std::string searchQuery_;
-    bool searchBoxFocused_;
-    float searchBoxWidth_;
-    NUIRect searchBoxBounds_;
+	    // Search/filter state
+	    std::shared_ptr<NUITextInput> searchInput_; // Replaced searchQuery_, searchBoxFocused_, searchCaretBlinkTime_, searchCaretVisible_
+	    float searchBoxWidth_;
+	    NUIRect searchBoxBounds_;
+	    NUIRect refreshButtonBounds_;
+	    NUIRect favoritesButtonBounds_;
+	    NUIRect tagsButtonBounds_;
+	    NUIRect sortButtonBounds_;
+	    bool refreshHovered_ = false;
+	    bool favoritesHovered_ = false;
+	    bool tagsHovered_ = false;
+	    bool sortHovered_ = false;
+	    std::shared_ptr<NUIContextMenu> popupMenu_;
+	    std::string popupMenuTargetPath_;
+	    bool popupMenuTargetIsDirectory_ = false;
+	    std::string rootPath_;
+
+	    // Tags / filtering
+	    std::unordered_map<std::string, std::vector<std::string>> tagsByPath_;
+	    std::string activeTagFilter_;
     
     // Preview panel state
     bool previewPanelVisible_;
@@ -247,6 +279,7 @@ private:
     std::shared_ptr<NUIIcon> chevronDownIcon_;
     std::shared_ptr<NUIIcon> playIcon_;
     std::shared_ptr<NUIIcon> pauseIcon_;
+    std::shared_ptr<NUIIcon> refreshIcon_; // Added missing icon
     std::shared_ptr<NUIIcon> backIcon_;
     std::shared_ptr<NUIIcon> forwardIcon_;
     

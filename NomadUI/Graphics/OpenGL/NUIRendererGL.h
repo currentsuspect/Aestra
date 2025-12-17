@@ -61,6 +61,10 @@ public:
     void setClipRect(const NUIRect& rect) override;
     void clearClipRect() override;
     void setOpacity(float opacity) override;
+
+    // Debug
+    void setDebugTextBounds(bool enabled) override { debugTextBounds_ = enabled; }
+
     
     // ========================================================================
     // Primitive Drawing
@@ -225,6 +229,8 @@ private:
     bool batching_ = false;
     uint32_t drawCallCount_ = 0;  // Draw call tracking
     bool scissorEnabled_ = false;
+    bool debugTextBounds_ = false;
+
     
     // OpenGL objects
     uint32_t vao_ = 0;
@@ -292,20 +298,43 @@ private:
         float u1 = 0.0f;
         float v1 = 0.0f;
     };
+
+    // Multiple atlases to avoid extreme minification artifacts:
+    // - Large atlas (48px) for bigger UI text
+    // - Medium atlas (32px) for common 14–17px UI copy
+    // - Small atlas (24px) for <= ~13px labels (ruler, clip strips)
     std::unordered_map<char, FontData> fontCache_;
+    std::unordered_map<char, FontData> fontCacheMedium_;
+    std::unordered_map<char, FontData> fontCacheSmall_;
     bool fontInitialized_;
     bool fontUseLCD_ = true;       // Enable subpixel LCD rendering when available
     bool fontHasKerning_ = false;  // Kerning support advertised by the font
-    int atlasFontSize_ = 32;       // Pixel height of glyphs baked into the atlas
+    int atlasFontSize_ = 32;       // Pixel height of glyphs baked into the large atlas
+    int atlasFontSizeMedium_ = 32; // Pixel height of glyphs baked into the medium atlas
+    int atlasFontSizeSmall_ = 24;  // Pixel height of glyphs baked into the small atlas
     float fontAscent_ = 0.0f;
     float fontDescent_ = 0.0f;
     float fontLineHeight_ = 0.0f;
-    uint32_t fontAtlasTextureId_ = 0; // The single texture atlas
+    float fontAscentMedium_ = 0.0f;
+    float fontDescentMedium_ = 0.0f;
+    float fontLineHeightMedium_ = 0.0f;
+    float fontAscentSmall_ = 0.0f;
+    float fontDescentSmall_ = 0.0f;
+    float fontLineHeightSmall_ = 0.0f;
+    uint32_t fontAtlasTextureId_ = 0;      // Large atlas texture
+    uint32_t fontAtlasTextureIdMedium_ = 0; // Medium atlas texture
+    uint32_t fontAtlasTextureIdSmall_ = 0; // Small atlas texture
     int fontAtlasWidth_ = 2048;
     int fontAtlasHeight_ = 2048;
     int fontAtlasX_ = 0;
     int fontAtlasY_ = 0;
     int fontAtlasRowHeight_ = 0;
+    int fontAtlasXMedium_ = 0;
+    int fontAtlasYMedium_ = 0;
+    int fontAtlasRowHeightMedium_ = 0;
+    int fontAtlasXSmall_ = 0;
+    int fontAtlasYSmall_ = 0;
+    int fontAtlasRowHeightSmall_ = 0;
 
     FT_Library ftLibrary_;
     FT_Face ftFace_;

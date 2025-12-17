@@ -1,6 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "SamplePool.h"
 #include "NomadLog.h"
+#include "PathUtils.h"
 
 #include <algorithm>
 #include <chrono>
@@ -20,8 +21,10 @@ SamplePool& SamplePool::getInstance() {
 SampleKey SamplePool::makeKey(const std::string& path) {
     SampleKey key;
     try {
-        fs::path p = fs::absolute(path);
-        key.filePath = p.string();
+        // Use makeUnicodePath to handle non-ASCII characters properly
+        fs::path p = fs::absolute(makeUnicodePath(path));
+        // Convert to UTF-8 for consistent cache key regardless of platform
+        key.filePath = pathToUtf8(p);
         auto mod = fs::last_write_time(p);
         key.modTime = static_cast<uint64_t>(mod.time_since_epoch().count());
     } catch (const std::exception& e) {

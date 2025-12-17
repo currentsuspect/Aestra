@@ -35,7 +35,7 @@ Nomad DAW is a professional digital audio workstation featuring:
 ### 🐛 Development & Debugging
 
 - **[Bug Reports Guide](BUG_REPORTS.md)** — How to report bugs effectively with reproduction steps
-- **[Debugging Guide](developer/debugging.md)** — Using Tracy profiler, Visual Studio debugger, and logging
+- **[Debugging Guide](developer/debugging.md)** — Using Nomad profiler, Visual Studio debugger, and logging
 - **[Performance Tuning](PERFORMANCE_TUNING.md)** — FPS optimization, latency reduction, and profiling
 - **[Style Guide](STYLE_GUIDE.md)** — Documentation and comment standards
 

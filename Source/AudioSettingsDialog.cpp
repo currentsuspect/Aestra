@@ -9,7 +9,6 @@
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
 #include "../NomadAudio/include/AudioDriverTypes.h"
-#include "../NomadAudio/include/ASIODriverInfo.h"
 #include "../NomadAudio/include/TrackManager.h"
 #include "../NomadAudio/include/Track.h"
 #include <iostream>
@@ -455,7 +454,6 @@ void AudioSettingsDialog::createUI() {
     updateDeviceList();
     updateSampleRateList();
     updateBufferSizeList();
-    updateASIOInfo();
 }
 
 void AudioSettingsDialog::show() {
@@ -483,7 +481,6 @@ void AudioSettingsDialog::show() {
     updateDeviceList();
     updateSampleRateList();
     updateBufferSizeList();
-    updateASIOInfo();
     captureOriginalQualityStateFromUi();
     m_suppressDirtyStateUpdates = false;
     updateApplyButtonState();
@@ -766,32 +763,7 @@ void AudioSettingsDialog::updateDriverList() {
     }
     
     // Add ASIO drivers for informational display (not functional yet) - all disabled
-    m_asioDrivers = m_audioManager->getASIODrivers();
-    for (const auto& asioDriver : m_asioDrivers) {
-        std::string name = "ASIO: " + asioDriver.name + " [Not Yet Implemented]";
-        m_driverDropdown->addItem(name, static_cast<int>(Audio::AudioDriverType::ASIO_EXTERNAL));
-        m_driverDropdown->setItemEnabled(itemIndex, false);  // Disable ASIO items
-        itemIndex++;
-    }
-}
-
-void AudioSettingsDialog::updateASIOInfo() {
-    if (!m_audioManager) return;
-    
-    m_asioDrivers = m_audioManager->getASIODrivers();
-    
-    if (!m_asioDrivers.empty()) {
-        std::string infoText = "ASIO: ";
-        for (size_t i = 0; i < m_asioDrivers.size(); ++i) {
-            infoText += m_asioDrivers[i].name;
-            if (i < m_asioDrivers.size() - 1) {
-                infoText += ", ";
-            }
-        }
-        m_asioInfoLabel->setText(infoText);
-    } else {
-        m_asioInfoLabel->setText("No ASIO drivers detected");
-    }
+    // ASIO enumeration temporarily removed during refactor
 }
 
 void AudioSettingsDialog::updateDeviceList() {
@@ -943,7 +915,6 @@ void AudioSettingsDialog::restoreOriginalUiState() {
     updateDeviceList();
     updateSampleRateList();
     updateBufferSizeList();
-    updateASIOInfo();
 
     // Quality + processing
     if (m_qualityPresetDropdown && m_originalQualityPresetIndex != -1) {

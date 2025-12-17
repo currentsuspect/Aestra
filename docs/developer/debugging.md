@@ -404,7 +404,7 @@ if (frameTime.count() > 33) {  // > 30 FPS
 }
 ```
 
-**Solution:** Profile with Tracy to find bottleneck
+**Solution:** Profile with Nomad profiler to find bottleneck
 
 ---
 

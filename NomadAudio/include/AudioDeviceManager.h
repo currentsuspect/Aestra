@@ -1,10 +1,8 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "AudioDriver.h"
-#include "NativeAudioDriver.h"
+#include "IAudioDriver.h"
 #include "AudioDriverTypes.h"
-#include "ASIODriverInfo.h"
 #include <memory>
 #include <functional>
 #include <vector>
@@ -216,19 +214,15 @@ public:
     std::string getFallbackReason() const { return m_fallbackReason; }
 
     /**
-     * @brief Get ASIO drivers for display purposes
+     * @brief Add a driver to the manager (Dependency Injection)
+     * @param driver Unique pointer to the driver instance
      */
-    std::vector<ASIODriverInfo> getASIODrivers() const;
+    void addDriver(std::unique_ptr<IAudioDriver> driver);
 
     /**
      * @brief Get active driver statistics
      */
     DriverStatistics getDriverStatistics() const;
-
-    /**
-     * @brief Get ASIO driver info message
-     */
-    std::string getASIOInfo() const;
 
     /**
      * @brief Enable/disable auto-buffer scaling on underruns
@@ -245,13 +239,9 @@ public:
 
 private:
     // Driver management
-    std::unique_ptr<NativeAudioDriver> m_exclusiveDriver;
-    std::unique_ptr<NativeAudioDriver> m_sharedDriver;
-    NativeAudioDriver* m_activeDriver = nullptr;
+    std::vector<std::unique_ptr<IAudioDriver>> m_drivers;
+    IAudioDriver* m_activeDriver = nullptr;
     AudioDriverType m_preferredDriverType = AudioDriverType::WASAPI_EXCLUSIVE;  // Prefer Exclusive, auto-fallback to Shared if blocked
-    
-    // Legacy RtAudio support (fallback)
-    std::unique_ptr<AudioDriver> m_rtAudioDriver;
     
     AudioStreamConfig m_currentConfig;
     AudioCallback m_currentCallback;
@@ -270,9 +260,14 @@ private:
     std::chrono::steady_clock::time_point m_lastUnderrunCheck;
     
     // Helper methods
-    bool tryDriver(NativeAudioDriver* driver, const AudioStreamConfig& config, 
+    bool tryDriver(IAudioDriver* driver, const AudioStreamConfig& config, 
                    AudioCallback callback, void* userData);
 };
+
+// =============================================================================
+// Registry Interface (Implemented by Platform Backend)
+// =============================================================================
+void RegisterPlatformDrivers(AudioDeviceManager& manager);
 
 } // namespace Audio
 } // namespace Nomad

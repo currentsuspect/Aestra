@@ -56,12 +56,18 @@ endif()
 # NomadAudio Library
 # =============================================================================
 
-set(NOMAD_AUDIO_SOURCES
+# =============================================================================
+# NomadAudioCore (Platform-Agnostic)
+# =============================================================================
+
+# Core sources (NO platform-specific code)
+set(NOMAD_AUDIO_CORE_SOURCES
     src/AudioGraphBuilder.cpp
+    src/PathUtils.cpp
     src/AudioEngine.cpp
     src/AudioDeviceManager.cpp
-    src/RtAudioBackend.cpp
     src/AudioProcessor.cpp
+    src/ChannelSlotMap.cpp
     src/MixerBus.cpp
     src/Oscillator.cpp
     src/PreviewEngine.cpp
@@ -72,10 +78,6 @@ set(NOMAD_AUDIO_SOURCES
     src/AudioClip.cpp
     src/MiniAudioDecoder.cpp
     src/PlaylistTrack.cpp
-    # New multi-tier driver system
-    src/WASAPISharedDriver.cpp
-    src/WASAPIExclusiveDriver.cpp
-    src/ASIODriverInfo.cpp
     # Multi-clip playlist system
     src/ClipSource.cpp
     src/PlaylistModel.cpp
@@ -83,19 +85,26 @@ set(NOMAD_AUDIO_SOURCES
     src/WaveformCache.cpp
 )
 
-set(NOMAD_AUDIO_HEADERS
+# Core headers
+set(NOMAD_AUDIO_CORE_HEADERS
     include/AudioGraphBuilder.h
     include/AudioEngine.h
     include/AudioCommandQueue.h
     include/AudioTelemetry.h
     include/AudioGraph.h
+    include/ChannelSlotMap.h
     include/EngineState.h
     include/NomadAudio.h
     include/AudioDeviceManager.h
-    include/AudioDriver.h
+    include/IAudioDriver.h
+    include/AudioDriver.h           # Legacy/Base types
+    include/AudioDriverTypes.h
+    include/AudioDriverRegistry.h   # Registry interface
     include/AudioProcessor.h
+    include/MeterSnapshot.h
     include/MixerBus.h
     include/Oscillator.h
+    include/PathUtils.h
     include/PreviewEngine.h
     include/SamplePool.h
     include/SampleRateConverter.h
@@ -104,12 +113,6 @@ set(NOMAD_AUDIO_HEADERS
     include/AudioClip.h
     include/MiniAudioDecoder.h
     include/PlaylistTrack.h
-    # New multi-tier driver system
-    include/AudioDriverTypes.h
-    include/NativeAudioDriver.h
-    include/WASAPISharedDriver.h
-    include/WASAPIExclusiveDriver.h
-    include/ASIODriverInfo.h
     # Multi-clip playlist system
     include/TimeTypes.h
     include/ClipSource.h
@@ -124,50 +127,128 @@ set(NOMAD_AUDIO_HEADERS
     include/MultiClipPlaylist.h
 )
 
-# Create NomadAudio library
-add_library(NomadAudio STATIC
-    ${NOMAD_AUDIO_SOURCES}
-    ${NOMAD_AUDIO_HEADERS}
-    ${RTAUDIO_SOURCES}
-    ${RTAUDIO_HEADERS}
+# Create NomadAudioCore library
+add_library(NomadAudioCore STATIC
+    ${NOMAD_AUDIO_CORE_SOURCES}
+    ${NOMAD_AUDIO_CORE_HEADERS}
 )
 
-# Optional miniaudio decoder toggle (header must be vendored by user).
-option(NOMAD_USE_MINIAUDIO "Use miniaudio for MP3/FLAC/etc decoding" OFF)
+# Optional miniaudio
 if (NOMAD_USE_MINIAUDIO)
-    target_compile_definitions(NomadAudio PRIVATE NOMAD_USE_MINIAUDIO)
+    target_compile_definitions(NomadAudioCore PRIVATE NOMAD_USE_MINIAUDIO)
 endif()
 
-target_include_directories(NomadAudio
+target_include_directories(NomadAudioCore
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${RTAUDIO_DIR}
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/NomadCore/include
 )
 
-# Optional miniaudio (vendored by user). Enabled via -DNOMAD_USE_MINIAUDIO=ON.
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio)
-    target_include_directories(NomadAudio PRIVATE
+    target_include_directories(NomadAudioCore PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio
     )
 endif()
 
-target_link_libraries(NomadAudio
+target_link_libraries(NomadAudioCore
     PUBLIC
         NomadCore
-    PRIVATE
-        ${RTAUDIO_LIBS}
+        NomadPlat # For strict thread priority API (Platform::setCurrentThreadPriority)
 )
 
-# Additional Windows libraries for WASAPI drivers
+# ENFORCEMENT: NomadAudioCore MUST NOT link Windows libraries
+# We can check this by property retrieval (not easy at config time for implicit libs)
+# But we ensure we DO NOT call target_link_libraries with avrt, advapi32 etc.
+
+# =============================================================================
+# NomadAudioWin (Windows Backend)
+# =============================================================================
+
 if(WIN32)
-    target_link_libraries(NomadAudio PRIVATE
-        avrt        # MMCSS (Multimedia Class Scheduler Service)
-        advapi32    # Registry access for ASIO detection
+    set(NOMAD_AUDIO_WIN_SOURCES
+        src/Win32/WindowsDriverRegistry.cpp
+        src/Win32/WASAPISharedDriver.cpp
+        src/Win32/WASAPIExclusiveDriver.cpp
+        src/Win32/ASIODriverInfo.cpp
+        src/Win32/RtAudioBackend.cpp
     )
+    
+    set(NOMAD_AUDIO_WIN_HEADERS
+        src/Win32/WASAPISharedDriver.h
+        src/Win32/WASAPIExclusiveDriver.h
+        src/Win32/ASIODriverInfo.h
+        src/Win32/RtAudioBackend.h
+        include/NativeAudioDriver.h
+        ${RTAUDIO_HEADERS} # RtAudio headers needed for backend compilation
+    )
+
+    add_library(NomadAudioWin STATIC
+        ${NOMAD_AUDIO_WIN_SOURCES}
+        ${NOMAD_AUDIO_WIN_HEADERS}
+        ${RTAUDIO_SOURCES}
+    )
+
+    target_include_directories(NomadAudioWin
+        PUBLIC
+            # Nothing public - backend is opaque
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include # Access to Core headers
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/Win32
+            ${RTAUDIO_DIR}
+    )
+
+    target_link_libraries(NomadAudioWin
+        PUBLIC
+            NomadAudioCore
+        PRIVATE
+            ${RTAUDIO_LIBS}
+            avrt        # MMCSS
+            advapi32    # Registry
+    )
+    
+    # Define "NomadAudio" as an alias to the platform library for main app linking
+    add_library(NomadAudio ALIAS NomadAudioWin)
+
+elseif(UNIX)
+    # Non-Windows (Linux)
+    set(NOMAD_AUDIO_LINUX_SOURCES
+        src/Linux/LinuxDriverRegistry.cpp
+        src/Linux/RtAudioDriver.cpp
+    )
+    
+    set(NOMAD_AUDIO_LINUX_HEADERS
+        src/Linux/RtAudioDriver.h
+        include/AudioPlatformRegistry.h
+        ${RTAUDIO_HEADERS}
+    )
+
+    add_library(NomadAudioLinux STATIC
+        ${NOMAD_AUDIO_LINUX_SOURCES}
+        ${NOMAD_AUDIO_LINUX_HEADERS}
+        ${RTAUDIO_SOURCES}
+    )
+    
+    target_include_directories(NomadAudioLinux
+        PUBLIC
+            # Nothing public
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/Linux
+            ${RTAUDIO_DIR}
+    )
+    
+    target_link_libraries(NomadAudioLinux
+        PUBLIC
+            NomadAudioCore
+        PRIVATE
+            ${RTAUDIO_LIBS}
+    )
+    
+    add_library(NomadAudio ALIAS NomadAudioLinux)
 endif()
+
 
 # =============================================================================
 # Test Applications
@@ -245,6 +326,17 @@ add_executable(NomadSampleRateConverterTest
 )
 
 target_link_libraries(NomadSampleRateConverterTest
+    PRIVATE
+        NomadAudio
+        NomadCore
+)
+
+# Audio engine long-session soak test (no device required)
+add_executable(NomadAudioSoakTest
+    test/AudioEngineSoakTest.cpp
+)
+
+target_link_libraries(NomadAudioSoakTest
     PRIVATE
         NomadAudio
         NomadCore

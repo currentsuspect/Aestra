@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "../Core/NUITypes.h"
@@ -6,14 +6,6 @@
 #include <vector>
 #include <map>
 #include <memory>
-
-#ifdef _WIN32
-    #define WIN32_LEAN_AND_MEAN
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #include <Windows.h>
-#endif
 
 // OpenGL includes
 #include "../External/glad/include/glad/glad.h"

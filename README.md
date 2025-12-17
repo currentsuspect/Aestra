@@ -309,7 +309,7 @@ Nomad wouldn't be possible without these incredible open-source projects:
 - **RtAudio** — Cross-platform audio I/O
 - **nanovg** — Hardware-accelerated vector graphics
 - **stb_image** — Image loading utilities
-- **Tracy Profiler** — Performance profiling
+- **Nomad Profiler** — Performance profiling
 - **CMake** — Build system
 
 Thank you to all contributors and the open-source community for making Nomad possible.

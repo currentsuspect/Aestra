@@ -2,8 +2,6 @@
 #include "PlatformUtilsWin32.h"
 #include "PlatformWindowWin32.h"
 #include "../../../NomadCore/include/NomadLog.h"
-#include <commdlg.h>
-#include <shlobj.h>
 #include <thread>
 
 namespace Nomad {
@@ -152,6 +150,19 @@ size_t PlatformUtilsWin32::getSystemMemory() const {
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
     return static_cast<size_t>(memInfo.ullTotalPhys);
+}
+
+// =============================================================================
+// Paths
+// =============================================================================
+
+std::string PlatformUtilsWin32::getAppDataPath(const std::string& appName) const {
+    char path[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, path))) {
+        return std::string(path) + "\\" + appName;
+    }
+    // Fallback to current directory
+    return std::string(".");
 }
 
 } // namespace Nomad

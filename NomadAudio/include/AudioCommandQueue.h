@@ -2,6 +2,7 @@
 #pragma once
 
 #include "NomadThreading.h"
+#include <atomic>
 #include <cstdint>
 
 namespace Nomad {
@@ -26,13 +27,8 @@ enum class AudioQueueCommandType : uint8_t {
     StopPreview,
 };
 
-/**
- * @brief Lightweight command envelope.
- *
- * payloadIndex can be used to point into a preallocated payload array if larger
- * data is required. The RT thread should never allocate when consuming commands.
- */
-struct AudioQueueCommand {
+// Ensure cache-friendly alignment for RT path
+struct alignas(32) AudioQueueCommand {
     AudioQueueCommandType type{AudioQueueCommandType::None};
     uint32_t trackIndex{0};    // For track-scoped commands
     float value1{0.0f};        // Generic value (gain/pan/mute flag/etc.)
@@ -52,7 +48,21 @@ public:
     static constexpr size_t kQueueCapacity = 1024;
 
     bool push(const AudioQueueCommand& cmd) {
-        return m_queue.push(cmd);
+        const bool ok = m_queue.push(cmd);
+        if (!ok) {
+            // Drop-newest policy: keep audio thread deterministic; UI can observe drops via telemetry.
+            m_dropped.fetch_add(1, std::memory_order_relaxed);
+            return false;
+        }
+
+        const uint32_t depth = static_cast<uint32_t>(m_queue.size());
+        uint32_t prev = m_maxDepth.load(std::memory_order_relaxed);
+        while (depth > prev &&
+               !m_maxDepth.compare_exchange_weak(prev, depth,
+                                                std::memory_order_relaxed,
+                                                std::memory_order_relaxed)) {
+        }
+        return true;
     }
 
     bool pop(AudioQueueCommand& outCmd) {
@@ -63,8 +73,26 @@ public:
         return m_queue.isEmpty();
     }
 
+    uint32_t approxDepth() const noexcept {
+        return static_cast<uint32_t>(m_queue.size());
+    }
+
+    uint32_t maxDepth() const noexcept {
+        return m_maxDepth.load(std::memory_order_relaxed);
+    }
+
+    uint64_t droppedCount() const noexcept {
+        return m_dropped.load(std::memory_order_relaxed);
+    }
+
+    static constexpr uint32_t capacity() noexcept {
+        return static_cast<uint32_t>(Nomad::LockFreeRingBuffer<AudioQueueCommand, kQueueCapacity>::capacity());
+    }
+
 private:
     Nomad::LockFreeRingBuffer<AudioQueueCommand, kQueueCapacity> m_queue;
+    std::atomic<uint64_t> m_dropped{0};
+    std::atomic<uint32_t> m_maxDepth{0};
 };
 
 } // namespace Audio

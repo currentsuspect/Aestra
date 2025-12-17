@@ -87,7 +87,6 @@ private:
     void updateDeviceList();
     void updateSampleRateList();
     void updateBufferSizeList();
-    void updateASIOInfo();
     void updateLatencyEstimate();
     void loadCurrentSettings();
     void applySettings();
@@ -126,9 +125,6 @@ private:
     // Driver list
     std::vector<Audio::AudioDriverType> m_drivers;
     Audio::AudioDriverType m_selectedDriverType;
-    
-    // ASIO drivers (for display)
-    std::vector<Audio::ASIODriverInfo> m_asioDrivers;
     
     // Sample rate list
     std::vector<uint32_t> m_sampleRates;

@@ -252,6 +252,12 @@ public:
     virtual void drawTexture(uint32_t textureId, const NUIRect& destRect, const NUIRect& sourceRect) = 0;
     
     /**
+     * Enable/disable debug text bounds visualization.
+     */
+    virtual void setDebugTextBounds(bool enabled) { (void)enabled; }
+
+    
+    /**
      * Draw a texture from raw RGBA pixel data.
      * 
      * This method creates a temporary OpenGL texture from the provided RGBA data,

@@ -3,12 +3,14 @@
 ## ⚠️ Testing Status
 
 ### What Was Tested
+
 - ✅ **Code review** - Manual inspection for obvious errors
 - ✅ **Syntax validation** - Found and fixed 2 bugs:
   1. Missing `#include <algorithm>` for `std::max`
   2. Incorrect `uOpacity` uniform lookup (not in shader)
 
 ### What Was NOT Tested
+
 - ❌ **Full compilation** - Cannot compile on Linux without OpenGL dev libs
 - ❌ **Runtime testing** - No Windows environment available
 - ❌ **Visual verification** - Text rendering not visually confirmed
@@ -203,7 +205,7 @@ Before considering it production-ready:
 1. **Test on real Windows system** with Visual Studio
 2. **Visual verification** of text rendering quality
 3. **Memory profiling** with AddressSanitizer
-4. **Performance profiling** with Tracy/Optick
+4. **Performance profiling** with Nomad profiler
 5. **Add unit tests** for font loading/rendering
 6. **Add integration tests** for full pipeline
 7. **Test edge cases** systematically

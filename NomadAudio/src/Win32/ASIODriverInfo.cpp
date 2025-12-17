@@ -1,5 +1,13 @@
 // © 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "ASIODriverInfo.h"
+
+// Windows-specific includes (only in .cpp file)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #include <iostream>
 #include <sstream>

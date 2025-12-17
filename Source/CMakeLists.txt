@@ -42,6 +42,9 @@ set(NOMAD_DAW_SOURCES
 	license/LicenseVerifier.cpp
 	PerformanceHUD.h
 	PerformanceHUD.cpp
+	MixerMath.h
+	MixerViewModel.h
+	MixerViewModel.cpp
 )
 
 

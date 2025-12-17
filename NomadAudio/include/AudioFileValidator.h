@@ -3,8 +3,11 @@
 
 #include <string>
 #include <vector>
+#include <array>
+#include <string_view>
 #include <fstream>
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 
 namespace Nomad {
@@ -40,7 +43,8 @@ public:
      */
     static std::string getAudioFileType(const std::string& path) {
         std::string ext = getExtension(path);
-        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        std::transform(ext.begin(), ext.end(), ext.begin(),
+                      [](unsigned char c){ return std::tolower(c); });
         
         if (ext == ".wav" || ext == ".wave") return "WAV";
         if (ext == ".mp3") return "MP3";
@@ -62,22 +66,25 @@ public:
         std::string ext = getExtension(path);
         
         // Convert to lowercase for comparison
-        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        std::transform(ext.begin(), ext.end(), ext.begin(),
+                      [](unsigned char c){ return std::tolower(c); });
         
-        // List of supported audio extensions
-        static const std::vector<std::string> validExtensions = {
+        // List of supported audio extensions - compile-time container to avoid heap allocation
+        static constexpr std::array<std::string_view, 14> validExtensions = {
             ".wav", ".wave",
             ".mp3",
             ".flac",
             ".ogg", ".oga",
             ".aiff", ".aif", ".aifc",
             ".m4a", ".mp4", ".aac",
-            ".wma",
-            ".opus"
+            ".wma", ".opus"
         };
         
+        // Convert extension to string_view for comparison
+        std::string_view extView(ext);
+        
         for (const auto& valid : validExtensions) {
-            if (ext == valid) {
+            if (extView == valid) {
                 return true;
             }
         }
@@ -96,55 +103,56 @@ public:
             return false;
         }
         
-        // Read first 12 bytes for header detection
-        uint8_t header[12] = {0};
+        // Read first 16 bytes for header detection (need up to 16 for ASF GUID)
+        uint8_t header[16] = {0};
         file.read(reinterpret_cast<char*>(header), sizeof(header));
         
+        // Basic check - need at least 4 bytes for any header detection
         if (file.gcount() < 4) {
             return false; // File too small
         }
         
-        // WAV: RIFF....WAVE
-        if (memcmp(header, "RIFF", 4) == 0 && memcmp(header + 8, "WAVE", 4) == 0) {
+        // WAV: RIFF....WAVE (requires 12 bytes for header+8 check)
+        if (file.gcount() >= 12 && memcmp(header, "RIFF", 4) == 0 && memcmp(header + 8, "WAVE", 4) == 0) {
             return true;
         }
         
-        // MP3: ID3 tag or frame sync
-        if (memcmp(header, "ID3", 3) == 0) {
+        // MP3: ID3 tag or frame sync (requires 3-4 bytes)
+        if (file.gcount() >= 3 && memcmp(header, "ID3", 3) == 0) {
             return true; // ID3v2 tag
         }
-        if (header[0] == 0xFF && (header[1] & 0xE0) == 0xE0) {
+        if (file.gcount() >= 2 && header[0] == 0xFF && (header[1] & 0xE0) == 0xE0) {
             return true; // MP3 frame sync
         }
         
-        // FLAC: fLaC
-        if (memcmp(header, "fLaC", 4) == 0) {
+        // FLAC: fLaC (requires 4 bytes)
+        if (file.gcount() >= 4 && memcmp(header, "fLaC", 4) == 0) {
             return true;
         }
         
-        // OGG: OggS
-        if (memcmp(header, "OggS", 4) == 0) {
+        // OGG: OggS (requires 4 bytes)
+        if (file.gcount() >= 4 && memcmp(header, "OggS", 4) == 0) {
             return true;
         }
         
-        // AIFF: FORM....AIFF or FORM....AIFC
-        if (memcmp(header, "FORM", 4) == 0) {
+        // AIFF: FORM....AIFF or FORM....AIFC (requires 12 bytes for header+8 check)
+        if (file.gcount() >= 12 && memcmp(header, "FORM", 4) == 0) {
             if (memcmp(header + 8, "AIFF", 4) == 0 || memcmp(header + 8, "AIFC", 4) == 0) {
                 return true;
             }
         }
         
-        // M4A/MP4/AAC: ftyp
-        if (memcmp(header + 4, "ftyp", 4) == 0) {
+        // M4A/MP4/AAC: ftyp (requires 8 bytes for header+4 check)
+        if (file.gcount() >= 8 && memcmp(header + 4, "ftyp", 4) == 0) {
             return true;
         }
         
-        // WMA/ASF: ASF header GUID
+        // WMA/ASF: ASF header GUID (requires full 16 bytes)
         static const uint8_t asfGuid[16] = {
             0x30, 0x26, 0xB2, 0x75, 0x8E, 0x66, 0xCF, 0x11,
             0xA6, 0xD9, 0x00, 0xAA, 0x00, 0x62, 0xCE, 0x6C
         };
-        if (memcmp(header, asfGuid, 4) == 0) { // Just check first 4 bytes
+        if (file.gcount() >= 16 && memcmp(header, asfGuid, 16) == 0) { // Check full 16-byte GUID
             return true;
         }
         

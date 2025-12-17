@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Track.h"
+#include "MeterSnapshot.h"
 #include <memory>
 #include <vector>
 #include <atomic>
@@ -145,6 +146,13 @@ public:
     // Track index mapping
     uint32_t getCompactIndex(uint32_t trackId) const;
 
+    // Meter snapshot buffer for RT-safe metering
+    // Stores shared_ptr for ownership AND raw pointer for RT-safe access (no refcount on audio thread)
+    void setMeterSnapshots(std::shared_ptr<MeterSnapshotBuffer> snapshots) {
+        m_meterSnapshotsOwned = snapshots;
+        m_meterSnapshotsRaw = snapshots.get();
+    }
+
 private:
     // Track collection
     std::vector<std::shared_ptr<Track>> m_tracks;
@@ -182,6 +190,12 @@ private:
     std::function<void(const AudioQueueCommand&)> m_commandSink;
     std::atomic<double> m_outputSampleRate{48000.0};
     std::unordered_map<uint32_t, uint32_t> m_idToIndex;
+
+    // Meter snapshot buffer for RT-safe metering
+    // Ownership (prevents destruction while audio thread uses it)
+    std::shared_ptr<MeterSnapshotBuffer> m_meterSnapshotsOwned;
+    // RT-safe access (no refcount operations on audio thread)
+    MeterSnapshotBuffer* m_meterSnapshotsRaw{nullptr};
 
     // Track creation helper
     std::string generateTrackName() const;

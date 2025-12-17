@@ -1,8 +1,36 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioGraphBuilder.h"
+#include <limits>
+#include <iostream>
+#include <cmath>
 
 namespace Nomad {
 namespace Audio {
+
+namespace {
+    /**
+     * @brief Safely converts seconds to sample count with high precision
+     * @param seconds Time duration in seconds
+     * @param sampleRate Sample rate in Hz
+     * @return Sample count, clamped to maximum safe value
+     *
+     * Maximum safe timeline: std::numeric_limits<uint64_t>::max() / sampleRate seconds
+     * For 44.1kHz: ~418 years, for 192kHz: ~96 years
+     */
+    uint64_t safeSecondsToSamples(long double seconds, double sampleRate) {
+        const long double maxSamples = static_cast<long double>(std::numeric_limits<uint64_t>::max());
+        const long double samples = seconds * static_cast<long double>(sampleRate);
+        
+        // Check for overflow and clamp to maximum safe value
+        if (samples > maxSamples) {
+            std::cerr << "[AudioGraphBuilder] Warning: Timeline exceeds maximum safe duration, clamping to maximum" << std::endl;
+            return std::numeric_limits<uint64_t>::max();
+        }
+        
+        // Round to nearest sample and cast to uint64_t
+        return static_cast<uint64_t>(std::llround(samples));
+    }
+}
 
 AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackManager, double outputSampleRate) {
     AudioGraph graph;
@@ -61,9 +89,9 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackMan
             const double effectiveEnd = (trimEnd > 0.0) ? trimEnd : sourceDuration;
             const double trimmedDuration = std::max(0.0, effectiveEnd - trimStart);
 
-            clip.startSample = static_cast<uint64_t>(startSeconds * outputSampleRate);
-            clip.endSample = clip.startSample + static_cast<uint64_t>(trimmedDuration * outputSampleRate);
-            clip.sampleOffset = static_cast<uint64_t>(trimStart * track->getSampleRate());
+            clip.startSample = safeSecondsToSamples(startSeconds, outputSampleRate);
+            clip.endSample = clip.startSample + safeSecondsToSamples(trimmedDuration, outputSampleRate);
+            clip.sampleOffset = safeSecondsToSamples(trimStart, static_cast<double>(track->getSampleRate()));
             clip.totalFrames = frames;
             clip.sourceSampleRate = static_cast<double>(track->getSampleRate());
             clip.gain = 1.0f;

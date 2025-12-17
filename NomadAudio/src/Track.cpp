@@ -5,13 +5,12 @@
 #include <cmath>
 #include <fstream>
 #include <cstring>
-#include <codecvt>
-#include <locale>
 #include <mutex>
 #include <numeric>
 #include <condition_variable>
 #include "SamplePool.h"
 #include "MiniAudioDecoder.h"
+#include "PathUtils.h"
 #ifdef _WIN32
 #include <mfapi.h>
 #include <mfidl.h>
@@ -95,12 +94,6 @@ namespace {
         return SUCCEEDED(initResult);
     }
 
-    std::wstring utf8ToWide(const std::string& input) {
-        if (input.empty()) return L"";
-        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-        return converter.from_bytes(input);
-    }
-
     bool loadWithMediaFoundation(const std::string& filePath,
                                  std::vector<float>& audioData,
                                  uint32_t& sampleRate,
@@ -130,7 +123,7 @@ namespace {
         #endif
 
         ComPtr<IMFSourceReader> reader;
-        std::wstring widePath = utf8ToWide(filePath);
+        std::wstring widePath = pathStringToWide(filePath);
         HRESULT hr = MFCreateSourceReaderFromURL(widePath.c_str(), attributes.Get(), &reader);
         if (FAILED(hr)) {
             Log::warning("MFCreateSourceReaderFromURL failed for: " + filePath);
@@ -309,7 +302,8 @@ struct WavInfo {
 };
 
 static bool parseWavInfo(const std::string& filePath, WavInfo& info) {
-    std::ifstream file(filePath, std::ios::binary);
+    // Use makeUnicodePath for proper Unicode file path handling
+    std::ifstream file(makeUnicodePath(filePath), std::ios::binary);
     if (!file) {
         Log::warning("Failed to open WAV file: " + filePath);
         return false;
@@ -377,7 +371,8 @@ static bool parseWavInfo(const std::string& filePath, WavInfo& info) {
 
 // Simple WAV file loader
 bool loadWavFile(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate, uint32_t& numChannels) {
-    std::ifstream file(filePath, std::ios::binary);
+    // Use makeUnicodePath for proper Unicode file path handling
+    std::ifstream file(makeUnicodePath(filePath), std::ios::binary);
     if (!file) {
         Log::warning("Failed to open WAV file: " + filePath);
         return false;
@@ -730,8 +725,8 @@ bool Track::loadAudioFile(const std::string& filePath) {
     stopStreaming();
     m_sampleBuffer.reset();
 
-    // Check if file exists
-    std::ifstream checkFile(filePath);
+    // Check if file exists (using makeUnicodePath for Unicode support)
+    std::ifstream checkFile(makeUnicodePath(filePath));
     if (!checkFile) {
         std::cout << "File not found, generating preview tone" << std::endl;
         return generatePreviewTone(filePath);
@@ -1538,7 +1533,8 @@ bool Track::startWavStreaming(const std::string& filePath, uint32_t sampleRate, 
     stopStreaming();
     m_sampleBuffer.reset();
 
-    m_streamFile = std::ifstream(filePath, std::ios::binary);
+    // Use makeUnicodePath for proper Unicode file path handling
+    m_streamFile = std::ifstream(makeUnicodePath(filePath), std::ios::binary);
     if (!m_streamFile) {
         Log::warning("Failed to open WAV for streaming: " + filePath);
         return false;

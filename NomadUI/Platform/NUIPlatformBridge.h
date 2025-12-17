@@ -43,6 +43,7 @@ public:
     void maximize();
     void restore();
     bool isMaximized() const;
+    void requestClose();  // Request window close through platform abstraction
     
     // Full screen support
     void toggleFullScreen();

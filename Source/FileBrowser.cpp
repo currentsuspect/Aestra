@@ -1,9 +1,13 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "FileBrowser.h"
+#include "../NomadUI/Core/NUIContextMenu.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Core/NUIDragDrop.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
+#include "../NomadUI/Core/NUITextInput.h"
 #include "../NomadCore/include/NomadLog.h"
+#include "../NomadAudio/include/AudioFileValidator.h"
+#include "../NomadPlat/include/NomadPlatform.h"
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
@@ -63,7 +67,46 @@ std::string ellipsizeMiddle(NUIRenderer& renderer, const std::string& text, floa
         }
     }
 
-    return std::string(kEllipsis);
+	return std::string(kEllipsis);
+}
+
+std::filesystem::path canonicalOrNormalized(const std::filesystem::path& p) {
+    try {
+        return std::filesystem::weakly_canonical(p);
+    } catch (...) {
+        return p.lexically_normal();
+    }
+}
+
+std::string normalizedPathForCompare(const std::filesystem::path& p) {
+    std::string s = canonicalOrNormalized(p).generic_string();
+#if defined(_WIN32)
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+#endif
+    return s;
+}
+
+std::string mapKeyForPath(const std::string& path) {
+    if (path.empty()) return "";
+    std::string s = std::filesystem::path(path).lexically_normal().generic_string();
+#if defined(_WIN32)
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+#endif
+    return s;
+}
+
+bool isPathUnderRoot(const std::filesystem::path& candidatePath, const std::filesystem::path& rootPath) {
+    const std::string candidate = normalizedPathForCompare(candidatePath);
+    std::string root = normalizedPathForCompare(rootPath);
+    if (root.empty()) return true;
+
+    // Allow exact match.
+    if (candidate == root) return true;
+
+    // Ensure `root/` prefix match.
+    if (root.back() != '/') root.push_back('/');
+    if (candidate.size() < root.size()) return false;
+    return candidate.compare(0, root.size(), root) == 0;
 }
 
 } // namespace
@@ -98,11 +141,9 @@ FileBrowser::FileBrowser()
     , sortMode_(SortMode::Name)
     , sortAscending_(true)
     , lastShiftSelectIndex_(-1)
-    , searchBoxFocused_(false)
-    , searchBoxWidth_(180.0f)
     , previewPanelVisible_(false)  // Disabled - preview panel causes layout glitches
     , previewPanelWidth_(220.0f)
-    , hoveredBreadcrumbIndex_(-1)
+	    , hoveredBreadcrumbIndex_(-1)
     , navHistoryIndex_(-1)
     , isNavigatingHistory_(false)
 {
@@ -111,7 +152,23 @@ FileBrowser::FileBrowser()
     float defaultWidth = themeManager.getLayoutDimension("fileBrowserWidth");
     float defaultHeight = 300.0f; // Default height
     setSize(defaultWidth, defaultHeight);
+
+    // Initialize search input
+    searchInput_ = std::make_shared<NUITextInput>();
+    searchInput_->setPlaceholderText("Search files...");
+    addChild(searchInput_);
     
+    // Force layout update to position the search input correctly
+    onResize(static_cast<int>(getWidth()), static_cast<int>(getHeight()));
+    
+    // Bind search callback
+    // Note: capturing 'this' is safe because searchInput_ is a child and will be destroyed before 'this'
+    searchInput_->setOnTextChange([this](const std::string& text) {
+        applyFilter();
+    });
+    searchInput_->setMaxLength(512); // Ensure it can accept text
+    searchInput_->setTextColor(themeManager.getColor("textPrimary")); // Ensure text is visible
+
     // Initialize icons with improved visibility for Liminal Dark v2.0
     // Use inline SVG content for reliable icon loading
     folderIcon_ = std::make_shared<NUIIcon>();
@@ -282,6 +339,20 @@ FileBrowser::FileBrowser()
     pauseIcon_->setIconSize(16, 16);
     pauseIcon_->setColor(themeManager.getColor("primary"));
 
+    // Refresh icon
+    refreshIcon_ = std::make_shared<NUIIcon>();
+    const char* refreshSvg = R"(<svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>)";
+    refreshIcon_->loadSVG(refreshSvg);
+    refreshIcon_->setIconSize(16, 16); // Slightly smaller strictly for button
+    refreshIcon_->setColor(themeManager.getColor("textSecondary"));
+
+    // Unknown file icon (was missing)
+    unknownFileIcon_ = std::make_shared<NUIIcon>();
+    const char* unknownSvg = R"(<svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h12c1.1 0 2-.89 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>)";
+    unknownFileIcon_->loadSVG(unknownSvg);
+    unknownFileIcon_->setIconSize(24, 24);
+    unknownFileIcon_->setColor(themeManager.getColor("textSecondary"));
+
     // Back icon
     backIcon_ = std::make_shared<NUIIcon>();
     const char* backSvg = R"(<svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>)";
@@ -292,12 +363,17 @@ FileBrowser::FileBrowser()
     // Forward icon
     forwardIcon_ = std::make_shared<NUIIcon>();
     const char* forwardSvg = R"(<svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>)";
-    forwardIcon_->loadSVG(forwardSvg);
-    forwardIcon_->setIconSize(20, 20);
-    forwardIcon_->setColor(themeManager.getColor("textSecondary"));
-    
-    // Set initial path to current directory
-    currentPath_ = std::filesystem::current_path().string();
+	    forwardIcon_->loadSVG(forwardSvg);
+	    forwardIcon_->setIconSize(20, 20);
+	    forwardIcon_->setColor(themeManager.getColor("textSecondary"));
+
+	    // Popup menu (context + dropdowns)
+	    popupMenu_ = std::make_shared<NUIContextMenu>();
+	    popupMenu_->hide();
+	    addChild(popupMenu_);
+	    
+	    // Set initial path to current directory
+	    currentPath_ = std::filesystem::current_path().string();
     
     // Initialize navigation history
     navHistory_.push_back(currentPath_);
@@ -312,8 +388,8 @@ FileBrowser::FileBrowser()
     // Use a refined purple accent to match the icons
     selectedColor_ = NUIColor(0.733f, 0.525f, 0.988f, 1.0f);          // #bb86fc - Matching the folder icons
     
-    hoverColor_ = themeManager.getColor("surfaceRaised").lightened(0.05f); // Slightly lighter for better visibility
-    borderColor_ = themeManager.getColor("border");                   // #2e2e35 - Subtle separation lines
+    hoverColor_ = selectedColor_.withAlpha(0.1f); // Subtle purple highlight
+    borderColor_ = themeManager.getColor("interfaceBorder");                   // #2e2e35 - Subtle separation lines
 }
 
 void FileBrowser::onRender(NUIRenderer& renderer) {
@@ -348,15 +424,18 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     // Render scrollbar
     renderScrollbar(renderer);
     
-    // Render preview panel if visible and file is selected
-    if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
-        renderPreviewPanel(renderer);
-    }
-}
+	    // Render preview panel if visible and file is selected
+	    if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
+	        renderPreviewPanel(renderer);
+	    }
+
+	    // Popup menus / overlays
+	    renderChildren(renderer);
+	}
 
 void FileBrowser::onUpdate(double deltaTime) {
-    NUIComponent::onUpdate(deltaTime);
-    
+	    NUIComponent::onUpdate(deltaTime);
+	    
     // Smooth scrolling with lerp
     float lerpSpeed = 12.0f;
     float snapThreshold = 0.5f;
@@ -381,17 +460,17 @@ void FileBrowser::onUpdate(double deltaTime) {
     }
     
     // Update scrollbar thumb position based on current scroll
-    const auto& view = searchQuery_.empty() ? displayItems_ : filteredFiles_;
+    const auto& view = getActiveView();
     float maxScroll = std::max(0.0f, view.size() * itemHeight_ - scrollbarTrackHeight_);
     if (maxScroll > 0.0f) {
         scrollbarThumbY_ = (scrollOffset_ / maxScroll) * (scrollbarTrackHeight_ - scrollbarThumbHeight_);
     }
 
-    // Auto-hide scrollbar when idle
-    if (scrollbarVisible_) {
-        if (isDraggingScrollbar_) {
-            scrollbarFadeTimer_ = 0.0f;
-            scrollbarOpacity_ = 1.0f;
+	    // Auto-hide scrollbar when idle
+	    if (scrollbarVisible_) {
+	        if (isDraggingScrollbar_) {
+	            scrollbarFadeTimer_ = 0.0f;
+	            scrollbarOpacity_ = 1.0f;
         } else {
             scrollbarFadeTimer_ += static_cast<float>(deltaTime);
             if (scrollbarFadeTimer_ > SCROLLBAR_FADE_DELAY) {
@@ -400,44 +479,87 @@ void FileBrowser::onUpdate(double deltaTime) {
                 if (std::abs(newOpacity - scrollbarOpacity_) > 0.001f) {
                     scrollbarOpacity_ = newOpacity;
                     setDirty(true);
-                }
-            }
-        }
-    }
+	            }
+	        }
+	    }
+
+    // Search caret blink handled by NUITextInput now
+}
 }
 
 void FileBrowser::onResize(int width, int height) {
     NUIComponent::onResize(width, height);
 
-    // Get component dimensions from theme
     auto& themeManager = NUIThemeManager::getInstance();
-
-    // Update visible items count using configurable dimensions
-    float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
+    // Ignore legacy headerHeight, define our own stack
+    const float buttonsRowHeight = 40.0f;     // Increased from 36
+    const float breadcrumbRowHeight = 32.0f;  // Increased from 28
+    const float searchRowHeight = 36.0f;      // Increased from 32
+    const float innerPad = 8.0f;
+    const float rowSpacing = 8.0f;            // Increased from 4
+    
+    // 1. Header background area (Buttons + Breadcrumbs)
+    // We don't set bounds for this render pass, but renderToolbar uses getBounds() top area.
+    
+    // 2. Search Input Position
+    // Position search input below Buttons and Breadcrumbs
+    const float searchY = getBounds().y + buttonsRowHeight + breadcrumbRowHeight + rowSpacing;
+    
+    if (searchInput_) {
+        // Full width minus padding
+        NUIRect searchBounds(
+            getBounds().x + innerPad, 
+            searchY, 
+            static_cast<float>(width) - innerPad * 2.0f, 
+            searchRowHeight
+        );
+        searchInput_->setBounds(searchBounds);
+        
+        searchInput_->setTextColor(textColor_);
+        searchInput_->setBackgroundColor(themeManager.getColor("inputBgDefault"));
+        searchInput_->setBorderColor(borderColor_.withAlpha(0.5f));
+        searchInput_->setBorderRadius(themeManager.getRadius("s"));
+    }
+    
+    // 3. File List
     float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
-    const float pathBarHeight = 30.0f;
-    float listHeight = height - headerHeight - 8.0f - pathBarHeight;
+    const float listYOffset = (searchY - getBounds().y) + searchRowHeight + rowSpacing;
+    float listHeight = height - listYOffset;
+    
     visibleItems_ = static_cast<int>(listHeight / itemHeight);
     visibleItems_ = std::max(1, visibleItems_);
 
-    // Update scrollbar dimensions using configurable dimensions
+    // Update scrollbar dimensions
     float scrollbarWidth = themeManager.getComponentDimension("fileBrowser", "scrollbarWidth");
-    scrollbarTrackHeight_ = listHeight; // Match list height for correct thumb math
+    scrollbarTrackHeight_ = listHeight; 
     scrollbarWidth_ = scrollbarWidth;
 
-    updateScrollbarVisibility();
-
+    // Update caches
+    updateScrollPosition();
+    updateBreadcrumbs();
+    updateScrollbarVisibility(); 
 }
 
 bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
+    lastMousePos_ = event.position;
     NUIRect bounds = getBounds();
-    const auto& view = searchQuery_.empty() ? displayItems_ : filteredFiles_;
+    const auto& view = getActiveView();
     auto& themeManager = NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 	    float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
 	    float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
-	    float listY = bounds.y + headerHeight + 8 + 30; // After path bar
-	    float listHeight = bounds.height - headerHeight - 8 - 30;
+
+    // NEW STACK LAYOUT LOGIC (Shared with onResize and renderToolbar)
+    const float buttonsRowHeight = 40.0f;
+    const float breadcrumbRowHeight = 32.0f;
+    const float searchRowHeight = 36.0f; 
+    const float rowSpacing = 8.0f;
+    
+    // Calculate header total height
+    float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
+    
+    float listY = bounds.y + totalHeaderH; 
+    float listHeight = bounds.height - totalHeaderH;
 	    float effectiveW = effectiveWidth_ > 0 ? effectiveWidth_ : bounds.width;
     
     // === DRAG AND DROP HANDLING ===
@@ -457,6 +579,17 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         }
         return true;  // Consume all events while dragging
     }
+
+    // Popup menu handling (context + dropdowns)
+    if (NUIComponent::onMouseEvent(event)) {
+        return true;
+    }
+    if (popupMenu_ && popupMenu_->isVisible() &&
+        event.pressed && (event.button == NUIMouseButton::Left || event.button == NUIMouseButton::Right) &&
+        !popupMenu_->getBounds().contains(event.position)) {
+        hidePopupMenu();
+        // Continue processing the click (e.g., select item) after closing.
+    }
     
     // Check for potential drag initiation (mouse moved while button held)
     if (dragPotential_ && dragSourceIndex_ >= 0 && dragSourceIndex_ < static_cast<int>(view.size())) {
@@ -464,29 +597,30 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         float dy = event.position.y - dragStartPos_.y;
         float dist = std::sqrt(dx * dx + dy * dy);
         
-        if (dist >= dragManager.getDragThreshold()) {
-            // Start the drag!
-            const FileItem* dragFile = view[dragSourceIndex_];
-            
-            // Only drag audio files, not folders
-            if (!dragFile->isDirectory) {
-                NomadUI::DragData dragData;
-                dragData.type = NomadUI::DragDataType::File;
-                dragData.filePath = dragFile->path;
-                dragData.displayName = dragFile->name;
-                dragData.accentColor = NUIColor(0.733f, 0.525f, 0.988f, 1.0f); // Purple accent
+	        if (dist >= dragManager.getDragThreshold()) {
+	            // Start the drag!
+	            const FileItem* dragFile = view[dragSourceIndex_];
+	            
+	            // Only drag supported audio formats into tracks.
+	            if (!dragFile->isDirectory && Nomad::Audio::AudioFileValidator::hasValidAudioExtension(dragFile->path)) {
+	                NomadUI::DragData dragData;
+	                dragData.type = NomadUI::DragDataType::File;
+	                dragData.filePath = dragFile->path;
+	                dragData.displayName = dragFile->name;
+	                dragData.accentColor = NUIColor(0.733f, 0.525f, 0.988f, 1.0f); // Purple accent
                 dragData.previewWidth = 150.0f;
                 dragData.previewHeight = 30.0f;
-                
-                dragManager.beginDrag(dragData, dragStartPos_, this);
-                isDraggingFile_ = true;
-                dragPotential_ = false;
-                
-                Log::info("[FileBrowser] Started drag: " + dragFile->name);
-                return true;
-            }
-        }
-    }
+	                
+	                dragManager.beginDrag(dragData, dragStartPos_, this);
+	                isDraggingFile_ = true;
+	                dragPotential_ = false;
+	                return true;
+	            }
+	            dragPotential_ = false;
+	            dragSourceIndex_ = -1;
+	            return true;
+	        }
+	    }
     
     // Cancel drag potential on mouse release
     if (!event.pressed && event.button == NUIMouseButton::Left) {
@@ -507,11 +641,34 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 
     // Clear hover if mouse leaves the file browser entirely (but allow scrollbar dragging)
     if (!mouseInside && !isDraggingScrollbar_) {
+        bool dirty = false;
         if (hoveredIndex_ != -1) {
             hoveredIndex_ = -1;
-            setDirty(true); // Trigger redraw when clearing hover
+            dirty = true;
         }
+        if (refreshHovered_ || favoritesHovered_ || tagsHovered_ || sortHovered_) {
+            refreshHovered_ = false;
+            favoritesHovered_ = false;
+            tagsHovered_ = false;
+            sortHovered_ = false;
+            dirty = true;
+        }
+        if (dirty) setDirty(true);
         return false;
+    }
+
+    // Update toolbar hover states
+    const bool newRefreshHovered = !refreshButtonBounds_.isEmpty() && refreshButtonBounds_.contains(event.position);
+    const bool newFavoritesHovered = !favoritesButtonBounds_.isEmpty() && favoritesButtonBounds_.contains(event.position);
+    const bool newTagsHovered = !tagsButtonBounds_.isEmpty() && tagsButtonBounds_.contains(event.position);
+    const bool newSortHovered = !sortButtonBounds_.isEmpty() && sortButtonBounds_.contains(event.position);
+    if (newRefreshHovered != refreshHovered_ || newFavoritesHovered != favoritesHovered_ ||
+        newTagsHovered != tagsHovered_ || newSortHovered != sortHovered_) {
+        refreshHovered_ = newRefreshHovered;
+        favoritesHovered_ = newFavoritesHovered;
+        tagsHovered_ = newTagsHovered;
+        sortHovered_ = newSortHovered;
+        setDirty(true);
     }
     
     // Handle scrollbar mouse events first - check if scrollbar should be visible
@@ -542,16 +699,23 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
 
-    // Search box focus (search-first workflow)
+    // Toolbar controls
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        if (searchBoxBounds_.contains(event.position)) {
-            searchBoxFocused_ = true;
-            setDirty(true);
+        if (!refreshButtonBounds_.isEmpty() && refreshButtonBounds_.contains(event.position)) {
+            refresh();
             return true;
         }
-        if (searchBoxFocused_) {
-            searchBoxFocused_ = false;
-            setDirty(true);
+        if (!favoritesButtonBounds_.isEmpty() && favoritesButtonBounds_.contains(event.position)) {
+            showFavoritesMenu();
+            return true;
+        }
+        if (!tagsButtonBounds_.isEmpty() && tagsButtonBounds_.contains(event.position)) {
+            showTagFilterMenu();
+            return true;
+        }
+        if (!sortButtonBounds_.isEmpty() && sortButtonBounds_.contains(event.position)) {
+            showSortMenu();
+            return true;
         }
     }
 
@@ -594,18 +758,45 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         float relativeY = event.position.y - listY;
         int itemIndex = static_cast<int>((relativeY + scrollOffset_) / itemHeight);
 
-        // Update hover state
-        int newHoveredIndex = (itemIndex >= 0 && itemIndex < static_cast<int>(view.size())) ? itemIndex : -1;
-        if (newHoveredIndex != hoveredIndex_) {
-            hoveredIndex_ = newHoveredIndex;
-            setDirty(true); // Trigger redraw when hover state changes
-        }
+	        // Update hover state
+	        int newHoveredIndex = (itemIndex >= 0 && itemIndex < static_cast<int>(view.size())) ? itemIndex : -1;
+	        if (newHoveredIndex != hoveredIndex_) {
+	            hoveredIndex_ = newHoveredIndex;
+	            setDirty(true); // Trigger redraw when hover state changes
+	        }
 
-        if (event.pressed && event.button == NUIMouseButton::Left) {
-            // Calculate which file was clicked
-            float relativeY = event.position.y - listY;
-            int itemIndex = static_cast<int>((relativeY + scrollOffset_) / itemHeight);
-            
+	        // Context menu (right-click)
+	        if (event.pressed && event.button == NUIMouseButton::Right) {
+	            if (itemIndex >= 0 && itemIndex < static_cast<int>(view.size())) {
+	                const FileItem* clickedFile = view[itemIndex];
+	                if (clickedFile) {
+	                    // Keep multi-select if the right-clicked item is already selected; otherwise select it.
+	                    const bool alreadySelected =
+	                        (std::find(selectedIndices_.begin(), selectedIndices_.end(), itemIndex) != selectedIndices_.end());
+		                    if (!alreadySelected) {
+		                        toggleFileSelection(itemIndex, false, false);
+		                        const auto& activeView = getActiveView();
+		                        if (selectedIndex_ >= 0 && selectedIndex_ < static_cast<int>(activeView.size())) {
+		                            selectedFile_ = activeView[selectedIndex_];
+		                            if (onFileSelected_) {
+		                                onFileSelected_(*selectedFile_);
+	                            }
+	                        }
+	                    }
+
+	                    dragPotential_ = false;
+	                    dragSourceIndex_ = -1;
+	                    showItemContextMenu(*clickedFile, event.position);
+	                    return true;
+	                }
+	            }
+	        }
+
+	        if (event.pressed && event.button == NUIMouseButton::Left) {
+	            // Calculate which file was clicked
+	            float relativeY = event.position.y - listY;
+	            int itemIndex = static_cast<int>((relativeY + scrollOffset_) / itemHeight);
+	            
 	            if (itemIndex >= 0 && itemIndex < static_cast<int>(view.size())) {
 	                const FileItem* clickedFile = view[itemIndex];
 	                
@@ -627,12 +818,12 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	                    }
 	                }
 
-	                // Store drag potential state
-	                if (!clickedFile->isDirectory) {
-	                    dragPotential_ = true;
-                    dragSourceIndex_ = itemIndex;
-                    dragStartPos_ = event.position;
-                }
+		                // Store drag potential state (only for supported audio formats)
+		                if (!clickedFile->isDirectory && Nomad::Audio::AudioFileValidator::hasValidAudioExtension(clickedFile->path)) {
+		                    dragPotential_ = true;
+	                    dragSourceIndex_ = itemIndex;
+	                    dragStartPos_ = event.position;
+	                }
                 
                 // Get current time for double-click detection
                 double currentTime = std::chrono::duration<double>(
@@ -651,14 +842,14 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                 bool ctrl = event.modifiers & NUIModifiers::Ctrl;
                 bool shift = event.modifiers & NUIModifiers::Shift;
                 toggleFileSelection(itemIndex, ctrl, shift);
-                // Update selectedFile_ from active view
-                const auto& activeView = searchQuery_.empty() ? displayItems_ : filteredFiles_;
-                if (selectedIndex_ >= 0 && selectedIndex_ < static_cast<int>(activeView.size())) {
-                    selectedFile_ = activeView[selectedIndex_];
-                    if (onFileSelected_) {
-                        onFileSelected_(*selectedFile_);
-                    }
-                }
+	                // Update selectedFile_ from active view
+	                const auto& activeView = getActiveView();
+	                if (selectedIndex_ >= 0 && selectedIndex_ < static_cast<int>(activeView.size())) {
+	                    selectedFile_ = activeView[selectedIndex_];
+	                    if (onFileSelected_) {
+	                        onFileSelected_(*selectedFile_);
+	                    }
+	                }
                 
                 // Handle double-click: open folders or files
                 if (isDoubleClick && selectedFile_) {
@@ -704,90 +895,43 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 }
 
 bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
-    if (!event.pressed) return false;
+    if (!isVisible() || !isEnabled()) return false;
     
-    Log::info("FileBrowser received key: " + std::to_string(static_cast<int>(event.keyCode)));
-    
-    // Ctrl+F focuses search (producer-fast workflow)
-    if ((event.modifiers & NUIModifiers::Ctrl) && event.keyCode == NUIKeyCode::F) {
-        searchBoxFocused_ = true;
-        setDirty(true);
-        return true;
+    // DOMINANT ROUTING: If search is focused, give it the event and STOP.
+    // Do NOT let NUIComponent::onKeyEvent run if search handles it, to prevent double-handling or parent overrides.
+    if (searchInput_ && searchInput_->isFocused()) {
+        if (searchInput_->onKeyEvent(event)) return true;
+        
+        // If search didn't consume it (e.g. random key), we might want to let parents handle shortcuts like Ctrl+S?
+        // But for typing safety, let's just fall through ONLY if it wasn't a typing key.
     }
+    
+    // Pass to children (if check above failed or wasn't focused)
+    if (NUIComponent::onKeyEvent(event)) return true;
 
-    // When search is focused, consume keystrokes for query editing.
-    if (searchBoxFocused_) {
-        const bool ctrlDown = (event.modifiers & NUIModifiers::Ctrl);
-        const bool altDown = (event.modifiers & NUIModifiers::Alt);
-
-        auto appendChar = [&](char c) {
-            if (c == 0) return;
-            if (!std::isprint(static_cast<unsigned char>(c))) return;
-            searchQuery_.push_back(c);
-            applyFilter();
-            setDirty(true);
-        };
-
-        auto keyCodeToChar = [&](NUIKeyCode code) -> char {
-            if (code == NUIKeyCode::Space) return ' ';
-            if (code >= NUIKeyCode::A && code <= NUIKeyCode::Z) {
-                char base = static_cast<char>('a' + (static_cast<int>(code) - static_cast<int>(NUIKeyCode::A)));
-                if (event.modifiers & NUIModifiers::Shift) base = static_cast<char>(std::toupper(static_cast<unsigned char>(base)));
-                return base;
+    if (event.pressed) {
+        // Ctrl+F -> Focus Search
+        if (event.keyCode == NUIKeyCode::F && (event.modifiers & NUIModifiers::Ctrl)) {
+            if (searchInput_) {
+                searchInput_->setFocused(true);
+                return true;
             }
-            if (code >= NUIKeyCode::Num0 && code <= NUIKeyCode::Num9) {
-                return static_cast<char>('0' + (static_cast<int>(code) - static_cast<int>(NUIKeyCode::Num0)));
-            }
-            return 0;
-        };
-
-        switch (event.keyCode) {
-            case NUIKeyCode::Escape:
-                if (!searchQuery_.empty()) {
-                    searchQuery_.clear();
-                    applyFilter();
+        }
+        
+        // Esc -> Clear search or blur
+        if (event.keyCode == NUIKeyCode::Escape) {
+            if (searchInput_ && searchInput_->isFocused()) {
+                if (searchInput_->getText().empty()) {
+                    searchInput_->setFocused(false);
                 } else {
-                    searchBoxFocused_ = false;
-                }
-                setDirty(true);
-                return true;
-            case NUIKeyCode::Enter:
-                searchBoxFocused_ = false;
-                setDirty(true);
-                return true;
-            case NUIKeyCode::Backspace:
-                if (!searchQuery_.empty()) {
-                    searchQuery_.pop_back();
-                    applyFilter();
-                    setDirty(true);
+                    searchInput_->setText(""); // Will trigger onTextChange -> applyFilter
                 }
                 return true;
-            case NUIKeyCode::Delete:
-                if (!searchQuery_.empty()) {
-                    searchQuery_.clear();
-                    applyFilter();
-                    setDirty(true);
-                }
-                return true;
-            default:
-                break;
+            }
         }
-
-        // Don't interpret modifier shortcuts as text input.
-        if (ctrlDown || altDown) {
-            return true;
-        }
-
-        // Prefer provided character; fall back to keyCode mapping.
-        if (event.character != 0) {
-            appendChar(event.character);
-            return true;
-        }
-        appendChar(keyCodeToChar(event.keyCode));
-        return true;
     }
-
-    const auto& view = searchQuery_.empty() ? displayItems_ : filteredFiles_;
+    
+    const auto& view = getActiveView();
 
     switch (event.keyCode) {
         case NUIKeyCode::Up:
@@ -856,23 +1000,17 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
             }
             break;
             
-        case NUIKeyCode::Enter:
-            Log::info("FileBrowser: Enter key pressed, selectedFile_ = " + 
-                     (selectedFile_ ? selectedFile_->name : "nullptr"));
-            if (selectedFile_) {
-                Log::info("  isDirectory: " + std::string(selectedFile_->isDirectory ? "true" : "false"));
-                if (selectedFile_->isDirectory) {
-                    toggleFolder(const_cast<FileItem*>(selectedFile_));
-                } else {
-                    Log::info("  Calling onFileOpened callback");
-                    if (onFileOpened_) {
-                        onFileOpened_(*selectedFile_);
-                    } else {
-                        Log::warning("  onFileOpened callback is nullptr!");
-                    }
-                }
-                return true;
-            }
+	        case NUIKeyCode::Enter:
+	            if (selectedFile_) {
+	                if (selectedFile_->isDirectory) {
+	                    toggleFolder(const_cast<FileItem*>(selectedFile_));
+	                } else {
+	                    if (onFileOpened_) {
+	                        onFileOpened_(*selectedFile_);
+	                    }
+	                }
+	                return true;
+	            }
             break;
             
         case NUIKeyCode::Backspace:
@@ -884,11 +1022,20 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
 }
 
 void FileBrowser::setCurrentPath(const std::string& path) {
-    if (currentPath_ == path) {
+    std::string targetPath = path;
+    if (!rootPath_.empty()) {
+        const std::filesystem::path root(rootPath_);
+        const std::filesystem::path candidate(path);
+        if (!isPathUnderRoot(candidate, root)) {
+            targetPath = rootPath_;
+        }
+    }
+
+    if (currentPath_ == targetPath) {
         return;
     }
 
-    currentPath_ = path;
+    currentPath_ = targetPath;
     
     if (!isNavigatingHistory_) {
         pushToHistory(currentPath_);
@@ -942,34 +1089,75 @@ void FileBrowser::refresh() {
 }
 
 void FileBrowser::navigateUp() {
-    std::filesystem::path parent = std::filesystem::path(currentPath_).parent_path();
-    if (parent != currentPath_) {
-        setCurrentPath(parent.string());
+    std::filesystem::path current(currentPath_);
+    std::filesystem::path parent = current.parent_path();
+    if (parent.empty() || parent == current) return;
+
+    if (!rootPath_.empty()) {
+        const std::filesystem::path root(rootPath_);
+        if (!isPathUnderRoot(parent, root)) {
+            setCurrentPath(root.string());
+            return;
+        }
     }
+
+    setCurrentPath(parent.string());
 }
 
 void FileBrowser::navigateTo(const std::string& path) {
-    if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
-        setCurrentPath(path);
+    if (!std::filesystem::exists(path) || !std::filesystem::is_directory(path)) return;
+    if (!rootPath_.empty()) {
+        const std::filesystem::path root(rootPath_);
+        const std::filesystem::path candidate(path);
+        if (!isPathUnderRoot(candidate, root)) return;
     }
+    setCurrentPath(path);
 }
 
 void FileBrowser::selectFile(const std::string& path) {
-    for (size_t i = 0; i < displayItems_.size(); ++i) {
-        if (displayItems_[i]->path == path) {
-            selectedIndex_ = static_cast<int>(i);
-            selectedFile_ = displayItems_[i];
+    const auto& view = getActiveView();
+    for (int i = 0; i < static_cast<int>(view.size()); ++i) {
+        if (view[i] && view[i]->path == path) {
+            selectedIndex_ = i;
+            selectedIndices_.clear();
+            selectedIndices_.push_back(i);
+            lastShiftSelectIndex_ = i;
+            selectedFile_ = view[i];
             updateScrollPosition();
             if (onFileSelected_) {
                 onFileSelected_(*selectedFile_);
             }
             setDirty(true);
-            break;
+            return;
+        }
+    }
+
+    // Not in active view (e.g. tag filter active). Still update selectedFile_ if we can find it.
+    for (const auto* item : displayItems_) {
+        if (item && item->path == path) {
+            selectedFile_ = item;
+            selectedIndex_ = -1;
+            selectedIndices_.clear();
+            lastShiftSelectIndex_ = -1;
+            if (onFileSelected_) {
+                onFileSelected_(*selectedFile_);
+            }
+            setDirty(true);
+            return;
         }
     }
 }
 
 void FileBrowser::openFile(const std::string& path) {
+    try {
+        const std::filesystem::path p(path);
+        const std::filesystem::path parent = p.parent_path();
+        if (!parent.empty() && parent.string() != currentPath_) {
+            setCurrentPath(parent.string());
+        }
+    } catch (...) {
+    }
+
     selectFile(path);
     if (selectedFile_ && onFileOpened_) {
         onFileOpened_(*selectedFile_);
@@ -980,15 +1168,130 @@ void FileBrowser::openFolder(const std::string& path) {
     navigateTo(path);
 }
 
+void FileBrowser::addToFavorites(const std::string& path) {
+    const std::string key = mapKeyForPath(path);
+    if (key.empty()) return;
+    if (std::find(favoritesPaths_.begin(), favoritesPaths_.end(), key) != favoritesPaths_.end()) return;
+    favoritesPaths_.push_back(key);
+}
+
+void FileBrowser::removeFromFavorites(const std::string& path) {
+    const std::string key = mapKeyForPath(path);
+    auto it = std::remove(favoritesPaths_.begin(), favoritesPaths_.end(), key);
+    favoritesPaths_.erase(it, favoritesPaths_.end());
+}
+
+bool FileBrowser::isFavorite(const std::string& path) const {
+    const std::string key = mapKeyForPath(path);
+    return !key.empty() && (std::find(favoritesPaths_.begin(), favoritesPaths_.end(), key) != favoritesPaths_.end());
+}
+
+void FileBrowser::toggleFavorite(const std::string& path) {
+    if (isFavorite(path)) {
+        removeFromFavorites(path);
+    } else {
+        addToFavorites(path);
+    }
+    setDirty(true);
+}
+
 void FileBrowser::setSortMode(SortMode mode) {
+    if (sortMode_ == mode) return;
+
+    std::vector<std::string> selectedPaths;
+    {
+        const auto& view = getActiveView();
+        for (int idx : selectedIndices_) {
+            if (idx >= 0 && idx < static_cast<int>(view.size()) && view[idx]) {
+                selectedPaths.push_back(view[idx]->path);
+            }
+        }
+        if (selectedPaths.empty() && selectedFile_) {
+            selectedPaths.push_back(selectedFile_->path);
+        }
+    }
+
     sortMode_ = mode;
     sortFiles();
+    updateDisplayList();
+
+    if (isFilterActive()) {
+        applyFilter(); // rebuilds filtered pointers (also clears selection)
+    }
+
+    if (!selectedPaths.empty()) {
+        const auto& view = getActiveView();
+        selectedIndices_.clear();
+        for (int i = 0; i < static_cast<int>(view.size()); ++i) {
+            const FileItem* item = view[i];
+            if (!item) continue;
+            if (std::find(selectedPaths.begin(), selectedPaths.end(), item->path) != selectedPaths.end()) {
+                selectedIndices_.push_back(i);
+            }
+        }
+
+        if (!selectedIndices_.empty()) {
+            selectedIndex_ = selectedIndices_.back();
+            selectedFile_ = view[selectedIndex_];
+            updateScrollPosition();
+            if (onFileSelected_ && selectedFile_) {
+                onFileSelected_(*selectedFile_);
+            }
+        } else {
+            clearSelection();
+        }
+    }
+
     setDirty(true);
 }
 
 void FileBrowser::setSortAscending(bool ascending) {
+    if (sortAscending_ == ascending) return;
+
+    std::vector<std::string> selectedPaths;
+    {
+        const auto& view = getActiveView();
+        for (int idx : selectedIndices_) {
+            if (idx >= 0 && idx < static_cast<int>(view.size()) && view[idx]) {
+                selectedPaths.push_back(view[idx]->path);
+            }
+        }
+        if (selectedPaths.empty() && selectedFile_) {
+            selectedPaths.push_back(selectedFile_->path);
+        }
+    }
+
     sortAscending_ = ascending;
     sortFiles();
+    updateDisplayList();
+
+    if (isFilterActive()) {
+        applyFilter(); // rebuilds filtered pointers (also clears selection)
+    }
+
+    if (!selectedPaths.empty()) {
+        const auto& view = getActiveView();
+        selectedIndices_.clear();
+        for (int i = 0; i < static_cast<int>(view.size()); ++i) {
+            const FileItem* item = view[i];
+            if (!item) continue;
+            if (std::find(selectedPaths.begin(), selectedPaths.end(), item->path) != selectedPaths.end()) {
+                selectedIndices_.push_back(i);
+            }
+        }
+
+        if (!selectedIndices_.empty()) {
+            selectedIndex_ = selectedIndices_.back();
+            selectedFile_ = view[selectedIndex_];
+            updateScrollPosition();
+            if (onFileSelected_ && selectedFile_) {
+                onFileSelected_(*selectedFile_);
+            }
+        } else {
+            clearSelection();
+        }
+    }
+
     setDirty(true);
 }
 
@@ -1060,14 +1363,14 @@ void FileBrowser::loadDirectoryContents() {
         std::cerr << "Error loading directory: " << e.what() << std::endl;
     }
     
-    if (!searchQuery_.empty()) {
-        applyFilter();
-    } else {
-        filteredFiles_.clear();
-    }
-    
-    updateScrollbarVisibility();
-}
+	    if (isFilterActive()) {
+	        applyFilter();
+	    } else {
+	        filteredFiles_.clear();
+	    }
+	    
+	    updateScrollbarVisibility();
+	}
 
 void FileBrowser::loadFolderContents(FileItem* item) {
     item->children.clear();
@@ -1108,27 +1411,16 @@ void FileBrowser::loadFolderContents(FileItem* item) {
             child.depth = item->depth + 1;
             item->children.push_back(child);
         }
-        item->hasLoadedChildren = true;
-        
-        // Sort children
-        std::sort(item->children.begin(), item->children.end(), [this](const FileItem& a, const FileItem& b) {
-            if (a.isDirectory != b.isDirectory) return a.isDirectory > b.isDirectory;
-            
-            bool result = false;
-            switch (sortMode_) {
-                case SortMode::Name: result = a.name < b.name; break;
-                case SortMode::Type: result = a.type < b.type; break;
-                case SortMode::Size: result = a.size < b.size; break;
-                // case SortMode::Modified: result = a.lastModified < b.lastModified; break;
-                default: result = a.name < b.name; break;
-            }
-            return sortAscending_ ? result : !result;
-        });
-        
-    } catch (const std::exception& e) {
-        Log::warning("[FileBrowser] Failed to load folder contents for " + item->path + ": " + std::string(e.what()));
-    }
-}
+	        item->hasLoadedChildren = true;
+	        
+	        // Sort children
+	        std::sort(item->children.begin(), item->children.end(),
+	                  [this](const FileItem& a, const FileItem& b) { return compareFileItems(a, b); });
+	        
+	    } catch (const std::exception& e) {
+	        Log::warning("[FileBrowser] Failed to load folder contents for " + item->path + ": " + std::string(e.what()));
+	    }
+	}
 
 void FileBrowser::updateDisplayList() {
     displayItems_.clear();
@@ -1164,24 +1456,70 @@ void FileBrowser::toggleFolder(const FileItem* item) {
         nonConstItem->isExpanded = true;
     }
     updateDisplayList();
-    setDirty(true);
-}
+	    setDirty(true);
+	}
 
-void FileBrowser::sortFiles() {
-    std::sort(rootItems_.begin(), rootItems_.end(), [this](const FileItem& a, const FileItem& b) {
-        if (a.isDirectory != b.isDirectory) {
-            return a.isDirectory > b.isDirectory;
+	bool FileBrowser::compareFileItems(const FileItem& a, const FileItem& b) const {
+    // Priority: Search Score (descending) -> Folders First -> Name/etc (stable tie-break)
+    
+    if (searchInput_ && !searchInput_->getText().empty()) {
+        if (a.searchScore != b.searchScore) {
+            return a.searchScore > b.searchScore; // Higher score first
         }
+        // If scores equal, fall through to standard sort for stability
+    }
+
+    if (a.isDirectory != b.isDirectory) {
+        return a.isDirectory > b.isDirectory; // folders first
+    }
+
+	    const auto tieBreak = [&]() {
+	        if (a.name != b.name) {
+	            return sortAscending_ ? (a.name < b.name) : (a.name > b.name);
+	        }
+	        return a.path < b.path;
+	    };
+
+	    switch (sortMode_) {
+	        case SortMode::Name:
+	            return tieBreak();
+	        case SortMode::Type:
+	            if (a.type != b.type) return sortAscending_ ? (a.type < b.type) : (a.type > b.type);
+	            return tieBreak();
+	        case SortMode::Size:
+	            if (a.size != b.size) return sortAscending_ ? (a.size < b.size) : (a.size > b.size);
+	            return tieBreak();
+	        case SortMode::Modified:
+	            if (a.lastModified != b.lastModified) {
+	                return sortAscending_ ? (a.lastModified < b.lastModified) : (a.lastModified > b.lastModified);
+	            }
+	            return tieBreak();
+	    }
+	    return tieBreak();
+	}
+
+	void FileBrowser::sortFiles() {
+    bool hasSearch = searchInput_ && !searchInput_->getText().empty();
+
+    std::function<void(std::vector<FileItem>&)> sortRecursive = [&](std::vector<FileItem>& items) {
+        // Use stable_sort to keep the list from "jiggling" during fuzzy search updates
+        std::stable_sort(items.begin(), items.end(),
+                  [this](const FileItem& a, const FileItem& b) { return compareFileItems(a, b); });
         
-        bool result = false;
-        switch (sortMode_) {
-            case SortMode::Name: result = a.name < b.name; break;
-            case SortMode::Type: result = a.type < b.type; break;
-            case SortMode::Size: result = a.size < b.size; break;
-            case SortMode::Modified: result = a.lastModified < b.lastModified; break;
+        for (auto& item : items) {
+            if (item.isDirectory && item.hasLoadedChildren && !item.children.empty()) {
+                sortRecursive(item.children); // Recurse
+            }
         }
-        return sortAscending_ ? result : !result;
-    });
+    };
+
+    sortRecursive(rootItems_);
+    
+    // Also stable_sort the filtered View if it's active
+    if (!filteredFiles_.empty()) {
+        std::stable_sort(filteredFiles_.begin(), filteredFiles_.end(),
+             [this](const FileItem* a, const FileItem* b) { return compareFileItems(*a, *b); });
+    }
 }
 
 FileType FileBrowser::getFileTypeFromExtension(const std::string& extension) {
@@ -1223,13 +1561,25 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
     NUIRect bounds = getBounds();
     // Use effective width to account for preview panel
+    // Use effective width to account for preview panel
     float effectiveW = effectiveWidth_ > 0 ? effectiveWidth_ : bounds.width;
-    float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
+    
+    // NEW STACK LAYOUT LOGIC (Shared with onResize and renderToolbar)
+    const float buttonsRowHeight = 40.0f;
+    const float breadcrumbRowHeight = 32.0f;
+    const float searchRowHeight = 36.0f; 
+    const float rowSpacing = 8.0f;
+    
+    // Restore itemHeight which acts as the row height for file list items
     float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
-    float listY = bounds.y + headerHeight + 8 + 30; // After toolbar + spacing + path bar height
-    float listHeight = bounds.height - headerHeight - 8 - 30;
+    
+    // Calculate header total height
+    float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
+    
+    float listY = bounds.y + totalHeaderH; 
+    float listHeight = bounds.height - totalHeaderH;
 
-    const auto& view = searchQuery_.empty() ? displayItems_ : filteredFiles_;
+    const auto& view = getActiveView();
     const float contentHeight = static_cast<float>(view.size()) * itemHeight;
     const bool needsScrollbar = contentHeight > listHeight;
 
@@ -1304,17 +1654,19 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         float contentX = itemRect.x + layout.panelMargin + indent;
         const int guideDepth = std::min(depth, maxGuideDepth);
         
-        // Draw vertical guide lines for tree structure
-        if (guideDepth > 0) {
-            float lineX = itemRect.x + layout.panelMargin + rowIndentStep * 0.5f;
-            for (int d = 0; d < guideDepth; ++d) {
-                // Draw vertical line segment
-                renderer.drawLine(NUIPoint(lineX, itemRect.y), 
-                                  NUIPoint(lineX, itemRect.y + itemRect.height), 
-                                  1.0f, borderColor_.withAlpha(0.08f)); // Very subtle lines
-                lineX += rowIndentStep;
-            }
-        }
+	        // Draw vertical guide lines for tree structure
+	        if (guideDepth > 0) {
+	            float lineX = std::round(itemRect.x + layout.panelMargin + rowIndentStep * 0.5f) + 0.5f;
+	            const NUIColor guideColor = borderColor_.withAlpha(0.18f);
+	            const float yPad = 1.0f;
+	            for (int d = 0; d < guideDepth; ++d) {
+	                // Draw vertical line segment
+	                renderer.drawLine(NUIPoint(lineX, itemRect.y + yPad),
+	                                  NUIPoint(lineX, itemRect.y + itemRect.height - yPad),
+	                                  1.0f, guideColor);
+	                lineX += rowIndentStep;
+	            }
+	        }
 
         // Expander arrow
         if (item->isDirectory) {
@@ -1426,129 +1778,454 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     // Get layout dimensions from theme
     auto& themeManager = NUIThemeManager::getInstance();
-    const auto& layout = themeManager.getLayoutDimensions();
-    float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
+    // Use fixed heights matching onResize logic
+    const float buttonsRowHeight = 40.0f;
+    const float breadcrumbRowHeight = 32.0f;
+    float totalHeaderHeight = buttonsRowHeight + breadcrumbRowHeight;
+    const float innerPad = 8.0f;
 
     NUIRect bounds = getBounds();
     // Use effective width to account for preview panel
     float effectiveW = effectiveWidth_ > 0 ? effectiveWidth_ : bounds.width;
-    float toolbarHeight = headerHeight; // Use theme headerHeight instead of hardcoded
-    NUIRect toolbarRect(bounds.x + layout.panelMargin, bounds.y + layout.panelMargin, effectiveW - 2 * layout.panelMargin, toolbarHeight);
 
-    const float toolbarRadius = themeManager.getRadius("m");
+    NUIRect toolbarRect(bounds.x, bounds.y, effectiveW, totalHeaderHeight);
+    
+    // Background
+    // Use component background color to ensure it matches the dark theme and isn't accent-colored
+    // Background
+    // Use component background color for the header area
+    renderer.fillRoundedRect(toolbarRect, 0.0f, backgroundColor_); 
+    
+    // Draw separator
+    float sepY = toolbarRect.bottom(); 
+    renderer.drawLine(NUIPoint(bounds.x, sepY), NUIPoint(bounds.x + effectiveW, sepY), 1.0f, borderColor_.withAlpha(0.5f));
 
-    // Render toolbar background with enhanced styling
-    renderer.fillRoundedRect(toolbarRect, toolbarRadius, backgroundColor_.darkened(0.08f));
-    renderer.strokeRoundedRect(toolbarRect, toolbarRadius, 1, borderColor_.withAlpha(0.3f));
-
-    // Three-row header: toolbar row, breadcrumb row, search row.
-    const float innerPad = themeManager.getSpacing("xs"); // 4px
-    const float rowSpacing = themeManager.getSpacing("xs"); // 4px
-    const float toolbarRowHeight = 24.0f;
-    const float breadcrumbRowHeight = std::max(0.0f, toolbarRect.height - (innerPad * 2.0f) - rowSpacing - toolbarRowHeight);
-
-    const NUIRect toolbarRow(toolbarRect.x + innerPad, toolbarRect.y + innerPad,
-                             toolbarRect.width - innerPad * 2.0f, toolbarRowHeight);
-    const NUIRect breadcrumbRow(toolbarRect.x + innerPad, toolbarRow.y + toolbarRowHeight + rowSpacing,
-                                toolbarRect.width - innerPad * 2.0f, breadcrumbRowHeight);
-
-    // Toolbar row
-    float contentStartX = toolbarRow.x;
+    // Common sizes
     const float toolbarFont = themeManager.getFontSize("s");
+    const float buttonRadius = 14.0f; // Pill shape radius
+    const float buttonPadX = 12.0f;
+    const float buttonH = 28.0f; 
+    
+    // Center buttons in the TOP row (0 to buttonsRowHeight)
+    const float buttonY = toolbarRect.y + (buttonsRowHeight - buttonH) / 2.0f;
+    const float iconSize = 12.0f;
+    const float iconGap = 6.0f;
+    const float clusterGap = 8.0f;
 
-    // Left: refresh label (kept minimal for now)
-    const auto refreshTextSize = renderer.measureText("Refresh", toolbarFont);
+    // === MEASURE layout from edges ===
+    
+    // 1. Right Layout (Sort <- Tags <- Favorites)
+    float currentRightX = toolbarRect.right() - innerPad;
 
-    // Right: sort label
-    std::string sortText = "Sort ";
+    // Sort Button
+    std::string sortText = "Sort: ";
     switch (sortMode_) {
         case SortMode::Name: sortText += "Name"; break;
         case SortMode::Type: sortText += "Type"; break;
         case SortMode::Size: sortText += "Size"; break;
         case SortMode::Modified: sortText += "Modified"; break;
     }
-
+    sortText += sortAscending_ ? " ^" : " v"; 
     auto sortTextSize = renderer.measureText(sortText, toolbarFont);
-    float textY = std::round(renderer.calculateTextY(toolbarRow, toolbarFont));
+    float sortButtonW = sortTextSize.width + buttonPadX * 2.0f + iconGap + iconSize; 
+    
+    sortButtonBounds_ = NUIRect(currentRightX - sortButtonW, buttonY, sortButtonW, buttonH);
+    if (sortButtonBounds_.x < toolbarRect.x) sortButtonBounds_.x = toolbarRect.x;
+    currentRightX = sortButtonBounds_.x - clusterGap;
 
-    renderer.drawText("Refresh", NUIPoint(contentStartX, textY), toolbarFont, textColor_.withAlpha(0.9f));
+    // Tags Button
+    std::string tagsText = activeTagFilter_.empty() ? "Filter Tags" : activeTagFilter_;
+    // Add prefix if not redundant
+    if (!activeTagFilter_.empty() && activeTagFilter_.find("Tag") == std::string::npos) {
+         tagsText = "Tag: " + tagsText;
+    }
+    
+    auto tagsTextSize = renderer.measureText(tagsText, toolbarFont);
+    float tagsButtonW = tagsTextSize.width + buttonPadX * 2.0f + iconGap + iconSize;
 
-	    // Slightly larger right inset keeps the label fully inside the rounded toolbar bounds.
-	    const float sortRightPad = innerPad + 14.0f;
-	    float sortX = toolbarRow.x + toolbarRow.width - sortTextSize.width - sortRightPad;
-	    // Ensure there is always some separation from the left cluster.
-	    sortX = std::max(sortX, contentStartX + refreshTextSize.width + 30.0f);
-	    renderer.drawText(sortText, NUIPoint(sortX, textY), toolbarFont, textColor_.withAlpha(0.75f));
+    tagsButtonBounds_ = NUIRect(currentRightX - tagsButtonW, buttonY, tagsButtonW, buttonH);
+    if (tagsButtonBounds_.x < toolbarRect.x) tagsButtonBounds_.x = toolbarRect.x;
+    currentRightX = tagsButtonBounds_.x - clusterGap;
 
-    // Breadcrumb row (dedicated row to prevent collisions with sort label)
-    if (breadcrumbRow.height > 0.0f) {
-        breadcrumbBounds_ = breadcrumbRow;
+    // Favorites Button (Star only if no text needed, or text?)
+    // Just icon for favorites is cleaner
+    const float starSize = 14.0f;
+    const float starButtonW = starSize + buttonPadX * 2.0f; // Square-ish or pill?
+    
+    favoritesButtonBounds_ = NUIRect(currentRightX - starButtonW, buttonY, starButtonW, buttonH);
+    if (favoritesButtonBounds_.x < toolbarRect.x) favoritesButtonBounds_.x = toolbarRect.x;
+    currentRightX = favoritesButtonBounds_.x - clusterGap;
+
+
+    // 2. Left Layout (Refresh)
+    float currentLeftX = toolbarRect.x + innerPad;
+
+    // Refresh Button - compact (Icon only)
+    float refreshButtonW = buttonH; // Square button
+    
+    refreshButtonBounds_ = NUIRect(currentLeftX, buttonY, refreshButtonW, buttonH);
+    currentLeftX = refreshButtonBounds_.right() + clusterGap;
+
+
+    // 3. Middle (Breadcrumbs)
+    // Positioned BELOW the buttons
+    const float breadcrumbRowY = toolbarRect.y + 40.0f; // Below buttons (match buttonsRowHeight)
+    const float breadcrumbRowH = 32.0f;
+    
+    // Full width for breadcrumbs
+    float breadcrumbX = toolbarRect.x + innerPad;
+    float breadcrumbW = toolbarRect.width - innerPad * 2.0f;
+    
+    if (breadcrumbW > 10.0f) {
+        breadcrumbBounds_ = NUIRect(breadcrumbX, breadcrumbRowY, breadcrumbW, breadcrumbRowH);
         renderInteractiveBreadcrumbs(renderer);
     } else {
-        breadcrumbBounds_ = NUIRect(0, 0, 0, 0);
+        breadcrumbBounds_ = NUIRect(0,0,0,0);
     }
 
-    // Search row (dedicated, full-width) lives in the reserved "path bar" strip below the header.
-    const float pathBarHeight = 30.0f;
-    const NUIRect searchRow(toolbarRect.x + innerPad,
-                            toolbarRect.y + toolbarRect.height + rowSpacing,
-                            toolbarRect.width - innerPad * 2.0f,
-                            std::max(0.0f, pathBarHeight - rowSpacing));
 
-    if (searchRow.height > 0.0f) {
-        searchBoxBounds_ = searchRow;
-
-        const float searchRadius = themeManager.getRadius("s");
-        const NUIColor searchBg = themeManager.getColor("inputBgDefault");
-        const NUIColor searchBorder = searchBoxFocused_
-            ? themeManager.getColor("primary").withAlpha(0.9f)
-            : borderColor_.withAlpha(0.5f);
-
-        renderer.fillRoundedRect(searchRow, searchRadius, searchBg);
-        renderer.strokeRoundedRect(searchRow, searchRadius, 1, searchBorder);
-
-        const float searchIconSize = 16.0f;
-        const NUIRect searchIconRect(searchRow.x + 6.0f,
-                                     searchRow.y + (searchRow.height - searchIconSize) * 0.5f,
-                                     searchIconSize, searchIconSize);
-        if (searchIcon_) {
-            searchIcon_->setBounds(searchIconRect);
-            searchIcon_->setColor(themeManager.getColor("textSecondary"));
-            searchIcon_->onRender(renderer);
+    // === RENDER ===
+    
+    // Helper lambda for button drawing
+    auto drawButton = [&](const NUIRect& rect, const std::string& text, bool hovered, bool active = false) {
+        NUIColor bg = themeManager.getColor("surfaceRaised").withAlpha(hovered ? 0.32f : 0.20f);
+        if (active) bg = themeManager.getColor("accentPrimary").withAlpha(0.2f);
+        
+        renderer.fillRoundedRect(rect, buttonRadius, bg);
+        renderer.strokeRoundedRect(rect, buttonRadius, 1.0f, 
+                                   active ? themeManager.getColor("accentPrimary").withAlpha(0.5f) : 
+                                   borderColor_.withAlpha(hovered ? 0.45f : 0.25f));
+        
+        if (!text.empty()) {
+            float tY = std::round(renderer.calculateTextY(rect, toolbarFont));
+            renderer.drawText(text, NUIPoint(rect.x + buttonPadX, tY), 
+                              toolbarFont, textColor_.withAlpha(hovered ? 0.95f : 0.85f));
         }
+    };
 
-        const float searchFont = themeManager.getFontSize("m");
-        float searchTextX = searchIconRect.x + searchIconRect.width + 6.0f;
-        float maxTextWidth = searchRow.x + searchRow.width - searchTextX - 6.0f;
+    // Refresh
+    drawButton(refreshButtonBounds_, "", refreshHovered_);
+    if (refreshIcon_) {
+         float iconX = refreshButtonBounds_.x + (refreshButtonBounds_.width - iconSize) * 0.5f;
+         float iconY = refreshButtonBounds_.y + (refreshButtonBounds_.height - iconSize) * 0.5f;
+         refreshIcon_->setBounds(NUIRect(iconX, iconY, iconSize, iconSize));
+         refreshIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(refreshHovered_ ? 1.0f : 0.7f));
+         refreshIcon_->onRender(renderer);
+    }
 
-        std::string displayText = searchQuery_.empty() ? "Search..." : searchQuery_;
-        NUIColor displayColor = searchQuery_.empty()
-            ? themeManager.getColor("textSecondary").withAlpha(0.6f)
-            : textColor_.withAlpha(0.95f);
-
-        if (maxTextWidth > 0.0f) {
-            auto displaySize = renderer.measureText(displayText, searchFont);
-            if (displaySize.width > maxTextWidth) {
-                std::string truncated = displayText;
-                while (truncated.length() > 3) {
-                    truncated.pop_back();
-                    if (renderer.measureText(truncated + "...", searchFont).width <= maxTextWidth) {
-                        displayText = truncated + "...";
-                        break;
-                    }
-                }
-            }
+    // Sort
+    {
+        drawButton(sortButtonBounds_, sortText, sortHovered_);
+        if (chevronDownIcon_) {
+            const NUIRect chevronRect(sortButtonBounds_.right() - buttonPadX - iconSize,
+                                      sortButtonBounds_.y + (sortButtonBounds_.height - iconSize) * 0.5f,
+                                      iconSize, iconSize);
+            chevronDownIcon_->setBounds(chevronRect);
+            chevronDownIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(sortHovered_ ? 0.9f : 0.7f));
+            chevronDownIcon_->onRender(renderer);
         }
+    }
 
-        const float searchTextY = std::round(renderer.calculateTextY(searchRow, searchFont));
-        renderer.drawText(displayText, NUIPoint(searchTextX, searchTextY), searchFont, displayColor);
-    } else {
-        searchBoxBounds_ = NUIRect(0, 0, 0, 0);
+    // Tags
+    {
+        bool isActive = !activeTagFilter_.empty();
+        drawButton(tagsButtonBounds_, tagsText, tagsHovered_, isActive);
+
+        if (chevronDownIcon_) {
+            const NUIRect chevronRect(tagsButtonBounds_.right() - buttonPadX - iconSize,
+                                      tagsButtonBounds_.y + (tagsButtonBounds_.height - iconSize) * 0.5f,
+                                      iconSize, iconSize);
+            chevronDownIcon_->setBounds(chevronRect);
+            chevronDownIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(tagsHovered_ ? 0.9f : 0.7f));
+            chevronDownIcon_->onRender(renderer);
+        }
+    }
+
+    // Favorites
+    {
+        NUIColor bg = themeManager.getColor("surfaceRaised").withAlpha(favoritesHovered_ ? 0.32f : 0.20f);
+        renderer.fillRoundedRect(favoritesButtonBounds_, buttonRadius, bg);
+        renderer.strokeRoundedRect(favoritesButtonBounds_, buttonRadius, 1.0f,
+                                   borderColor_.withAlpha(favoritesHovered_ ? 0.45f : 0.25f));
+
+        const bool fav = isFavorite(currentPath_);
+        auto icon = fav ? starFilledIcon_ : starIcon_;
+        if (icon) {
+            const float iconX = favoritesButtonBounds_.x + (favoritesButtonBounds_.width - starSize) * 0.5f;
+            const float iconY = favoritesButtonBounds_.y + (favoritesButtonBounds_.height - starSize) * 0.5f;
+            icon->setBounds(NUIRect(iconX, iconY, starSize, starSize));
+            icon->setColor(fav ? themeManager.getColor("accentPrimary") 
+                              : textColor_.withAlpha(0.6f));
+            icon->onRender(renderer);
+        }
     }
 }
 
+void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
+    (void)renderer;
+    // DEPRECATED: Handled by searchInput_ child component
+}
+
+		void FileBrowser::hidePopupMenu() {
+		    if (popupMenu_ && popupMenu_->isVisible()) {
+		        popupMenu_->hide();
+		        popupMenuTargetPath_.clear();
+		        popupMenuTargetIsDirectory_ = false;
+		        setDirty(true);
+		    }
+		}
+
+		bool FileBrowser::hasTag(const std::string& path, const std::string& tag) const {
+		    if (tag.empty()) return false;
+		    const std::string key = mapKeyForPath(path);
+		    if (key.empty()) return false;
+		    auto it = tagsByPath_.find(key);
+		    if (it == tagsByPath_.end()) return false;
+		    const auto& tags = it->second;
+		    return std::find(tags.begin(), tags.end(), tag) != tags.end();
+		}
+
+		void FileBrowser::toggleTag(const std::string& path, const std::string& tag) {
+		    if (tag.empty()) return;
+		    const std::string key = mapKeyForPath(path);
+		    if (key.empty()) return;
+
+		    auto& tags = tagsByPath_[key];
+		    auto it = std::find(tags.begin(), tags.end(), tag);
+		    if (it != tags.end()) {
+		        tags.erase(it);
+		    } else {
+		        tags.push_back(tag);
+		    }
+
+		    if (tags.empty()) {
+		        tagsByPath_.erase(key);
+		    }
+
+		    // Refresh filtered view if active.
+		    if (isFilterActive()) {
+		        applyFilter();
+		    } else {
+		        setDirty(true);
+		    }
+		}
+
+		std::vector<std::string> FileBrowser::getAllTagsSorted() const {
+		    std::vector<std::string> all;
+		    for (const auto& [_, tags] : tagsByPath_) {
+		        for (const auto& t : tags) {
+		            if (t.empty()) continue;
+		            if (std::find(all.begin(), all.end(), t) == all.end()) {
+		                all.push_back(t);
+		            }
+		        }
+		    }
+		    std::sort(all.begin(), all.end());
+		    return all;
+		}
+
+		void FileBrowser::showFavoritesMenu() {
+		    if (!popupMenu_) return;
+
+		    popupMenu_->clear();
+		    popupMenuTargetPath_.clear();
+		    popupMenuTargetIsDirectory_ = false;
+
+		    const bool currentFav = isFavorite(currentPath_);
+		    popupMenu_->addItem(currentFav ? "Unfavorite Current Folder" : "Favorite Current Folder",
+		                        [this]() { toggleFavorite(currentPath_); });
+
+		    popupMenu_->addSeparator();
+
+		    if (favoritesPaths_.empty()) {
+		        auto emptyItem = std::make_shared<NUIContextMenuItem>("No favorites");
+		        emptyItem->setEnabled(false);
+		        popupMenu_->addItem(emptyItem);
+		    } else {
+		        // Stable order (path string)
+		        std::vector<std::string> favorites = favoritesPaths_;
+		        std::sort(favorites.begin(), favorites.end());
+
+		        for (const auto& favPath : favorites) {
+		            std::string label = favPath;
+		            try {
+		                std::filesystem::path p(favPath);
+		                const std::string name = p.filename().string();
+		                if (!name.empty()) label = name;
+		            } catch (...) {
+		            }
+
+		            bool isDir = false;
+		            try {
+		                isDir = std::filesystem::exists(favPath) && std::filesystem::is_directory(favPath);
+		            } catch (...) {
+		                isDir = false;
+		            }
+
+		            if (isDir) {
+		                popupMenu_->addItem(label, [this, path = favPath]() { openFolder(path); });
+		            } else {
+		                popupMenu_->addItem(label, [this, path = favPath]() { openFile(path); });
+		            }
+		        }
+
+		        popupMenu_->addSeparator();
+		        popupMenu_->addItem("Clear Favorites", [this]() {
+		            favoritesPaths_.clear();
+		            setDirty(true);
+		        });
+		    }
+
+		    const float menuX = favoritesButtonBounds_.x;
+		    const float menuY = favoritesButtonBounds_.bottom() + 6.0f;
+		    popupMenu_->showAt(static_cast<int>(menuX), static_cast<int>(menuY));
+		    setDirty(true);
+		}
+
+		void FileBrowser::showSortMenu() {
+		    if (!popupMenu_) return;
+
+	    popupMenu_->clear();
+	    popupMenuTargetPath_.clear();
+	    popupMenuTargetIsDirectory_ = false;
+
+	    popupMenu_->addRadioItem("Name", "sort_mode", sortMode_ == SortMode::Name, [this]() { setSortMode(SortMode::Name); });
+	    popupMenu_->addRadioItem("Type", "sort_mode", sortMode_ == SortMode::Type, [this]() { setSortMode(SortMode::Type); });
+	    popupMenu_->addRadioItem("Size", "sort_mode", sortMode_ == SortMode::Size, [this]() { setSortMode(SortMode::Size); });
+	    popupMenu_->addRadioItem("Modified", "sort_mode", sortMode_ == SortMode::Modified, [this]() { setSortMode(SortMode::Modified); });
+	    popupMenu_->addSeparator();
+	    popupMenu_->addCheckbox("Ascending", sortAscending_, [this](bool checked) { setSortAscending(checked); });
+
+	    const float menuX = sortButtonBounds_.x;
+	    const float menuY = sortButtonBounds_.bottom() + 6.0f;
+		    popupMenu_->showAt(static_cast<int>(menuX), static_cast<int>(menuY));
+		    setDirty(true);
+		}
+
+		void FileBrowser::showTagFilterMenu() {
+		    if (!popupMenu_) return;
+
+		    popupMenu_->clear();
+		    popupMenuTargetPath_.clear();
+		    popupMenuTargetIsDirectory_ = false;
+
+		    popupMenu_->addRadioItem("All", "tag_filter", activeTagFilter_.empty(), [this]() {
+		        activeTagFilter_.clear();
+		        applyFilter();
+		    });
+
+		    auto tags = getAllTagsSorted();
+		    if (!tags.empty()) {
+		        popupMenu_->addSeparator();
+		        for (const auto& t : tags) {
+		            popupMenu_->addRadioItem(t, "tag_filter", activeTagFilter_ == t, [this, tag = t]() {
+		                activeTagFilter_ = tag;
+		                applyFilter();
+		            });
+		        }
+		    }
+
+		    const float menuX = tagsButtonBounds_.isEmpty() ? (sortButtonBounds_.x - 150.0f) : tagsButtonBounds_.x;
+		    const float menuY = (tagsButtonBounds_.isEmpty() ? sortButtonBounds_.bottom() : tagsButtonBounds_.bottom()) + 6.0f;
+		    popupMenu_->showAt(static_cast<int>(menuX), static_cast<int>(menuY));
+		    setDirty(true);
+		}
+
+		void FileBrowser::showItemContextMenu(const FileItem& item, const NUIPoint& position) {
+		    if (!popupMenu_) return;
+
+	    popupMenu_->clear();
+	    popupMenuTargetPath_ = item.path;
+	    popupMenuTargetIsDirectory_ = item.isDirectory;
+
+	    const auto copyToClipboard = [](const std::string& text) {
+	        if (auto* utils = Nomad::Platform::getUtils()) {
+	            utils->setClipboardText(text);
+	        }
+	    };
+
+		    if (item.isDirectory) {
+		        popupMenu_->addItem("Open", [this, path = item.path]() { openFolder(path); });
+		        popupMenu_->addItem("Set as Root", [this, path = item.path]() {
+		            rootPath_ = canonicalOrNormalized(std::filesystem::path(path)).string();
+		            setCurrentPath(rootPath_);
+		        });
+	        if (!rootPath_.empty()) {
+	            popupMenu_->addItem("Clear Root", [this]() {
+	                rootPath_.clear();
+	                updateBreadcrumbs();
+	                setDirty(true);
+	            });
+	        }
+	        popupMenu_->addSeparator();
+
+		        const bool fav = isFavorite(item.path);
+		        popupMenu_->addItem(fav ? "Remove from Favorites" : "Add to Favorites",
+		                            [this, path = item.path]() { toggleFavorite(path); setDirty(true); });
+		        // Tags submenu
+		        {
+		            auto tagsMenu = std::make_shared<NUIContextMenu>();
+		            static const std::vector<std::string> kPresetTags = {
+		                "Drums", "Bass", "Vocal", "FX", "Loops", "One-shots", "Synth", "Pads", "Ambience"};
+		            for (const auto& tag : kPresetTags) {
+		                tagsMenu->addCheckbox(tag, hasTag(item.path, tag),
+		                                      [this, path = item.path, tag](bool) { toggleTag(path, tag); });
+		            }
+		            popupMenu_->addSubmenu("Tags", tagsMenu);
+		        }
+		        popupMenu_->addSeparator();
+		        popupMenu_->addItem("Copy Path", [path = item.path, copyToClipboard]() { copyToClipboard(path); });
+		    } else {
+	        // Navigate to containing folder
+	        popupMenu_->addItem("Show in Browser", [this, path = item.path]() {
+	            try {
+	                std::filesystem::path p(path);
+	                std::filesystem::path parent = p.parent_path();
+	                if (!parent.empty()) {
+	                    setCurrentPath(parent.string());
+	                    selectFile(path);
+	                }
+	            } catch (...) {
+	            }
+	        });
+
+	        const bool isAudio =
+	            item.type == FileType::AudioFile || item.type == FileType::MusicFile ||
+	            item.type == FileType::WavFile || item.type == FileType::Mp3File || item.type == FileType::FlacFile;
+
+		        if (isAudio) {
+		            popupMenu_->addSeparator();
+		            popupMenu_->addItem("Preview", [this, path = item.path]() {
+		                selectFile(path);
+		                if (selectedFile_ && onSoundPreview_) {
+		                    onSoundPreview_(*selectedFile_);
+		                }
+		            });
+		            popupMenu_->addItem("Load", [this, path = item.path]() { openFile(path); });
+		        }
+
+		        // Tags submenu
+		        {
+		            auto tagsMenu = std::make_shared<NUIContextMenu>();
+		            static const std::vector<std::string> kPresetTags = {
+		                "Drums", "Bass", "Vocal", "FX", "Loops", "One-shots", "Synth", "Pads", "Ambience"};
+		            for (const auto& tag : kPresetTags) {
+		                tagsMenu->addCheckbox(tag, hasTag(item.path, tag),
+		                                      [this, path = item.path, tag](bool) { toggleTag(path, tag); });
+		            }
+		            popupMenu_->addSubmenu("Tags", tagsMenu);
+		        }
+
+		        popupMenu_->addSeparator();
+		        popupMenu_->addItem("Copy Path", [path = item.path, copyToClipboard]() { copyToClipboard(path); });
+		    }
+
+	    popupMenu_->showAt(position);
+	    setDirty(true);
+	}
+
 void FileBrowser::updateScrollPosition() {
-    if (selectedIndex_ < 0) return;
+	    if (selectedIndex_ < 0) return;
 
     // Get component dimensions from theme
     auto& themeManager = NUIThemeManager::getInstance();
@@ -1557,10 +2234,11 @@ void FileBrowser::updateScrollPosition() {
     NUIRect bounds = getBounds();
     float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
     float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
-    float listY = bounds.y + headerHeight + 8 + 30; // After path bar
-    float listHeight = bounds.height - headerHeight - 8 - 30;
+    const float pathBarHeight = 30.0f;
+    float listY = bounds.y + headerHeight + 8 + pathBarHeight; // After path bar
+    float listHeight = bounds.height - headerHeight - 8 - pathBarHeight;
 
-    const auto& view = searchQuery_.empty() ? displayItems_ : filteredFiles_;
+    const auto& view = getActiveView();
     float itemY = listY + (selectedIndex_ * itemHeight) - scrollOffset_;
 
     // Scroll up if item is above visible area
@@ -1589,7 +2267,7 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
     float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
     float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
 
-    const auto& view = searchQuery_.empty() ? displayItems_ : filteredFiles_;
+    const auto& view = getActiveView();
     // Check if we need a scrollbar
     float contentHeight = view.size() * itemHeight;
     float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
@@ -1600,8 +2278,9 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
     // Scrollbar is on the left, inside the panel margin.
     float scrollbarX = bounds.x + layout.panelMargin;
-    float scrollbarY = bounds.y + headerHeight + 8 + 30; // After path bar
-    float scrollbarHeight = bounds.height - headerHeight - 8 - 30;
+    const float pathBarHeight = 30.0f;
+    float scrollbarY = bounds.y + headerHeight + 8 + pathBarHeight; // After path bar
+    float scrollbarHeight = bounds.height - headerHeight - 8 - pathBarHeight;
 
     float opacity = std::clamp(scrollbarOpacity_, 0.0f, 1.0f);
     if (opacity <= 0.01f) return;
@@ -1634,12 +2313,13 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
     NUIRect bounds = getBounds();
     float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
     float scrollbarX = bounds.x + layout.panelMargin; // Left-side scrollbar
-    float scrollbarY = bounds.y + headerHeight + 8 + 30; // After path bar
+    const float pathBarHeight = 30.0f;
+    float scrollbarY = bounds.y + headerHeight + 8 + pathBarHeight; // After path bar
     
     // Use the member variable scrollbarTrackHeight_ for consistency
     // It's set in onResize() and used for thumb calculation
 
-    const auto& view = searchQuery_.empty() ? displayItems_ : filteredFiles_;
+    const auto& view = getActiveView();
 
     // If we're dragging, continue dragging regardless of mouse position
     if (isDraggingScrollbar_) {
@@ -1735,7 +2415,7 @@ void FileBrowser::updateScrollbarVisibility() {
     // Get component dimensions from theme
     auto& themeManager = NUIThemeManager::getInstance();
     float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
-    const auto& view = searchQuery_.empty() ? displayItems_ : filteredFiles_;
+    const auto& view = getActiveView();
 
     // Calculate if we need a scrollbar
     float contentHeight = view.size() * itemHeight;
@@ -1770,8 +2450,16 @@ void FileBrowser::updateScrollbarVisibility() {
 // Selection / Filtering / Breadcrumb helpers
 // ========================================================================
 
+bool FileBrowser::isFilterActive() const {
+    return (searchInput_ && !searchInput_->getText().empty()) || !activeTagFilter_.empty();
+}
+
+const std::vector<const FileItem*>& FileBrowser::getActiveView() const {
+    return isFilterActive() ? filteredFiles_ : displayItems_;
+}
+
 void FileBrowser::toggleFileSelection(int index, bool ctrlPressed, bool shiftPressed) {
-    const auto& view = searchQuery_.empty() ? displayItems_ : filteredFiles_;
+    const auto& view = getActiveView();
     if (index < 0 || index >= static_cast<int>(view.size())) {
         clearSelection();
         return;
@@ -1812,39 +2500,156 @@ void FileBrowser::clearSelection() {
 }
 
 void FileBrowser::setSearchQuery(const std::string& query) {
-    searchQuery_ = query;
-    applyFilter();
+    if (searchInput_) {
+        searchInput_->setText(query);
+    }
 }
 
 void FileBrowser::applyFilter() {
     filteredFiles_.clear();
-    if (searchQuery_.empty()) {
+    std::string query = searchInput_ ? searchInput_->getText() : "";
+    const bool hasNameFilter = !query.empty();
+    const bool hasTagFilter = !activeTagFilter_.empty();
+    
+    if (!hasNameFilter && !hasTagFilter) {
+        // No filter active, display all root items
+        updateDisplayList();
+        selectedFile_ = nullptr;
+        selectedIndex_ = -1;
+        selectedIndices_.clear();
         updateScrollbarVisibility();
         setDirty(true);
         return;
     }
 
-    std::string needle = searchQuery_;
-    std::transform(needle.begin(), needle.end(), needle.begin(), ::tolower);
+    // Prepare search query
+    std::string needle = query;
+    std::transform(needle.begin(), needle.end(), needle.begin(), [](unsigned char c){ return std::tolower(c); });
     
-    // Recursive search helper
-    std::function<void(const std::vector<FileItem>&)> searchRecursive = 
+    // Hybrid Search Rules
+    bool isExtensionSearch = !needle.empty() && needle.front() == '.';
+    bool isSubstringSearch = !isExtensionSearch && needle.find('.') != std::string::npos;
+    bool isFuzzySearch = !isExtensionSearch && !isSubstringSearch;
+
+    // Flatten all items (including children) for comprehensive search
+    std::vector<const FileItem*> allItems;
+    std::function<void(const std::vector<FileItem>&)> gatherItems = 
         [&](const std::vector<FileItem>& items) {
         for (const auto& item : items) {
-            std::string hay = item.name;
-            std::transform(hay.begin(), hay.end(), hay.begin(), ::tolower);
-            if (hay.find(needle) != std::string::npos) {
-                filteredFiles_.push_back(&item);
-            }
-            if (item.hasLoadedChildren) {
-                searchRecursive(item.children);
+            allItems.push_back(&item);
+            if (item.isDirectory && item.hasLoadedChildren) {
+                gatherItems(item.children); // Recurse
             }
         }
     };
-    
-    searchRecursive(rootItems_);
+    gatherItems(rootItems_);
 
-    clearSelection();
+    for (const auto* item : allItems) {
+        bool matchesSearch = true;
+        int score = 0;
+
+        if (hasNameFilter) {
+            std::string hay = item->name; // Search against name (basename)
+            std::transform(hay.begin(), hay.end(), hay.begin(), [](unsigned char c){ return std::tolower(c); });
+
+            if (isExtensionSearch) {
+                // Rule 1: Extension Match (ends_with)
+                if (hay.length() >= needle.length()) {
+                    matchesSearch = (hay.compare(hay.length() - needle.length(), needle.length(), needle) == 0);
+                    score = 1000; // High score for exact extension
+                } else {
+                    matchesSearch = false;
+                }
+            } 
+            else if (isSubstringSearch) {
+                // Rule 2: Substring-ish (all chars in order, contiguous ideally)
+                // For "kick.wav" seeking "kick.wav" -> exact substring
+                size_t foundPos = hay.find(needle);
+                matchesSearch = (foundPos != std::string::npos);
+                if (matchesSearch) {
+                    score = 500 - static_cast<int>(foundPos); // Prefer earlier matches
+                }
+            } 
+            else {
+                // Rule 3: Fuzzy Subsequence with Scoring
+                // -1 gap, +10 start, +5 start of word, +5 contiguous
+                // Penalty: -len/10
+                
+                size_t nIdx = 0;
+                size_t hIdx = 0;
+                int gapPenalty = 0;
+                int bonuses = 0;
+                int contiguousRun = 0;
+                bool firstCharMatched = false;
+                
+                // Track start of match for scoring
+                int firstMatchIdx = -1;
+
+                while (nIdx < needle.length() && hIdx < hay.length()) {
+                    if (needle[nIdx] == hay[hIdx]) {
+                        if (firstMatchIdx == -1) firstMatchIdx = static_cast<int>(hIdx);
+                        
+                        // Start of string bonus
+                        if (hIdx == 0) bonuses += 10;
+                        
+                        // Start of word bonus (check prev char for separator)
+                        if (hIdx > 0) {
+                            char prev = hay[hIdx - 1];
+                            if (prev == '_' || prev == '-' || prev == ' ' || prev == '.') {
+                                bonuses += 5;
+                            }
+                        }
+                        
+                        // Contiguous bonus
+                        if (nIdx > 0 && hIdx > 0 && needle[nIdx-1] == hay[hIdx-1]) { // Logic check: actually just checking if we matched prev loop
+                            // This logic is slightly flawed for "contiguous in haystack", simplistic approach:
+                            contiguousRun++; 
+                            if (contiguousRun > 0) bonuses += 5;
+                        } else {
+                            contiguousRun = 0;
+                        }
+
+                        nIdx++;
+                    } else {
+                         // Gap
+                         if (firstMatchIdx != -1) gapPenalty -= 1; // Only penalize gaps inside the match span? 
+                         // Or simple: penalize every skipped char
+                    }
+                    hIdx++; // Always advance haystack
+                }
+
+                matchesSearch = (nIdx == needle.length()); // Found all chars
+                
+                if (matchesSearch) {
+                    // Simple fuzzy score calculation re-pass or simplification
+                    // Let's refine the score based on the successful match
+                    // Since the above verification loop is greedy, it might not find optimal alignment.
+                    // For UI responsiveness, greedy is usually fine.
+                    
+                    // Add penalty for total length to prefer shorter files
+                    int lengthPenalty = static_cast<int>(hay.length()) / 10;
+                    
+                    score = bonuses + gapPenalty - lengthPenalty;
+                }
+            }
+        }
+
+        bool matchesTag = true;
+        if (matchesTag && hasTagFilter) {
+            matchesTag = hasTag(item->path, activeTagFilter_);
+        }
+
+        if (matchesSearch && matchesTag) {
+            item->searchScore = score;
+            filteredFiles_.push_back(item);
+        }
+    }
+
+    sortFiles(); // Will use searchScore if query is active
+
+    selectedFile_ = nullptr;
+    selectedIndex_ = -1;
+    selectedIndices_.clear();
     updateScrollbarVisibility();
     setDirty(true);
 }
@@ -2032,7 +2837,8 @@ bool FileBrowser::handleBreadcrumbMouseEvent(const NUIMouseEvent& event) {
 }
 
 bool FileBrowser::handleSearchBoxMouseEvent(const NUIMouseEvent& event) {
-    // Placeholder: no interactive search box yet
+    // Handle legacy search box input? No, NUITextInput handles it.
+    // We return false here so events might propagate if we had other handlers
     return false;
 }
 
@@ -2046,10 +2852,12 @@ void FileBrowser::renderPreviewPanel(NUIRenderer& renderer) {
     // To be implemented in preview phase (waveform + metadata + mini transport)
 }
 
-void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
-    (void)renderer;
-    // Placeholder implementation - search box rendering to be implemented
-    // Currently handled within renderToolbar() for integrated approach
+std::string FileBrowser::getSearchQuery() const {
+    return searchInput_ ? searchInput_->getText() : "";
+}
+
+bool FileBrowser::isSearchBoxFocused() const {
+    return searchInput_ ? searchInput_->isFocused() : false;
 }
 
 // === PERSISTENT STATE SAVE/LOAD ===
@@ -2063,6 +2871,7 @@ void FileBrowser::saveState(const std::string& filePath) {
     
     // Save as simple key=value format
     file << "currentPath=" << currentPath_ << "\n";
+    file << "rootPath=" << rootPath_ << "\n";
     file << "scrollOffset=" << scrollOffset_ << "\n";
     file << "sortMode=" << static_cast<int>(sortMode_) << "\n";
     file << "sortAscending=" << (sortAscending_ ? "1" : "0") << "\n";
@@ -2092,6 +2901,22 @@ void FileBrowser::saveState(const std::string& filePath) {
         file << favoritesPaths_[i];
     }
     file << "\n";
+
+    // Save tag filter + tags
+    file << "tagFilter=" << activeTagFilter_ << "\n";
+    file << "tags=";
+    bool firstTagEntry = true;
+    for (const auto& [pathKey, tags] : tagsByPath_) {
+        if (pathKey.empty() || tags.empty()) continue;
+        if (!firstTagEntry) file << "|";
+        file << pathKey << ">";
+        for (size_t i = 0; i < tags.size(); ++i) {
+            if (i > 0) file << ",";
+            file << tags[i];
+        }
+        firstTagEntry = false;
+    }
+    file << "\n";
     
     file.close();
     Nomad::Log::info("[FileBrowser] State saved to: " + filePath);
@@ -2105,31 +2930,50 @@ void FileBrowser::loadState(const std::string& filePath) {
     }
     
     std::string line;
-    std::vector<std::string> expandedFolders;
-    
-    while (std::getline(file, line)) {
-        size_t eqPos = line.find('=');
-        if (eqPos == std::string::npos) continue;
+    std::string loadedCurrentPath;
+    std::string loadedRootPath;
+    float loadedScrollOffset = 0.0f;
+    bool hasScrollOffset = false;
+    SortMode loadedSortMode = sortMode_;
+	    bool hasSortMode = false;
+	    bool loadedSortAscending = sortAscending_;
+	    bool hasSortAscending = false;
+	    std::vector<std::string> expandedFolders;
+	    std::vector<std::string> loadedFavorites;
+	    bool hasFavorites = false;
+	    std::string loadedTagFilter;
+	    bool hasTagFilter = false;
+	    std::unordered_map<std::string, std::vector<std::string>> loadedTagsByPath;
+	    bool hasTags = false;
+	    
+	    while (std::getline(file, line)) {
+	        size_t eqPos = line.find('=');
+	        if (eqPos == std::string::npos) continue;
         
         std::string key = line.substr(0, eqPos);
         std::string value = line.substr(eqPos + 1);
         
         if (key == "currentPath" && !value.empty()) {
-            setCurrentPath(value);
+            loadedCurrentPath = value;
+        }
+        else if (key == "rootPath" && !value.empty()) {
+            loadedRootPath = value;
         }
         else if (key == "scrollOffset") {
             try {
-                scrollOffset_ = std::stof(value);
-                targetScrollOffset_ = scrollOffset_;
+                loadedScrollOffset = std::stof(value);
+                hasScrollOffset = true;
             } catch (...) {}
         }
         else if (key == "sortMode") {
             try {
-                sortMode_ = static_cast<SortMode>(std::stoi(value));
+                loadedSortMode = static_cast<SortMode>(std::stoi(value));
+                hasSortMode = true;
             } catch (...) {}
         }
         else if (key == "sortAscending") {
-            sortAscending_ = (value == "1");
+            loadedSortAscending = (value == "1");
+            hasSortAscending = true;
         }
         else if (key == "expandedFolders" && !value.empty()) {
             // Parse pipe-separated paths
@@ -2143,21 +2987,87 @@ void FileBrowser::loadState(const std::string& filePath) {
                 expandedFolders.push_back(value.substr(start));
             }
         }
-        else if (key == "favorites" && !value.empty()) {
-            favoritesPaths_.clear();
-            size_t start = 0;
-            size_t end;
-            while ((end = value.find('|', start)) != std::string::npos) {
-                favoritesPaths_.push_back(value.substr(start, end - start));
-                start = end + 1;
-            }
-            if (start < value.length()) {
-                favoritesPaths_.push_back(value.substr(start));
-            }
-        }
+	        else if (key == "favorites" && !value.empty()) {
+	            hasFavorites = true;
+	            size_t start = 0;
+	            size_t end;
+	            while ((end = value.find('|', start)) != std::string::npos) {
+	                loadedFavorites.push_back(value.substr(start, end - start));
+	                start = end + 1;
+	            }
+	            if (start < value.length()) {
+	                loadedFavorites.push_back(value.substr(start));
+	            }
+	        }
+	        else if (key == "favorites") {
+	            // Present but empty => clear favorites.
+	            hasFavorites = true;
+	        }
+	        else if (key == "tagFilter") {
+	            hasTagFilter = true;
+	            loadedTagFilter = value;
+	        }
+	        else if (key == "tags") {
+	            hasTags = true;
+	            loadedTagsByPath.clear();
+	            if (!value.empty()) {
+	                size_t start = 0;
+	                while (start < value.size()) {
+	                    size_t end = value.find('|', start);
+	                    if (end == std::string::npos) end = value.size();
+	                    const std::string entry = value.substr(start, end - start);
+	                    const size_t sep = entry.find('>');
+	                    if (sep != std::string::npos) {
+	                        const std::string pathKey = entry.substr(0, sep);
+	                        const std::string tagsCsv = entry.substr(sep + 1);
+	                        if (!pathKey.empty() && !tagsCsv.empty()) {
+	                            std::vector<std::string> tags;
+	                            size_t ts = 0;
+	                            while (ts < tagsCsv.size()) {
+	                                size_t te = tagsCsv.find(',', ts);
+	                                if (te == std::string::npos) te = tagsCsv.size();
+	                                std::string tag = tagsCsv.substr(ts, te - ts);
+	                                if (!tag.empty()) {
+	                                    tags.push_back(std::move(tag));
+	                                }
+	                                ts = te + 1;
+	                            }
+	                            if (!tags.empty()) {
+	                                loadedTagsByPath[pathKey] = std::move(tags);
+	                            }
+	                        }
+	                    }
+	                    start = end + 1;
+	                }
+	            }
+	        }
+	    }
+	    
+	    file.close();
+
+	    // Apply settings in safe order (sort/root before directory load)
+    if (!loadedRootPath.empty() && std::filesystem::exists(loadedRootPath) && std::filesystem::is_directory(loadedRootPath)) {
+        rootPath_ = canonicalOrNormalized(std::filesystem::path(loadedRootPath)).string();
+    } else {
+        rootPath_.clear();
     }
-    
-    file.close();
+
+	    if (hasSortMode) sortMode_ = loadedSortMode;
+	    if (hasSortAscending) sortAscending_ = loadedSortAscending;
+	    if (hasFavorites) favoritesPaths_ = std::move(loadedFavorites);
+	    if (hasTags) tagsByPath_ = std::move(loadedTagsByPath);
+	    if (hasTagFilter) activeTagFilter_ = std::move(loadedTagFilter);
+
+	    if (loadedCurrentPath.empty() && !rootPath_.empty()) {
+	        loadedCurrentPath = rootPath_;
+	    }
+    if (!loadedCurrentPath.empty()) {
+        setCurrentPath(loadedCurrentPath);
+    } else {
+        // Ensure content is loaded with the current sort settings.
+        loadDirectoryContents();
+        updateBreadcrumbs();
+    }
     
     // Re-expand saved folders
     std::function<void(FileItem&)> expandSaved = [&](FileItem& item) {
@@ -2179,9 +3089,23 @@ void FileBrowser::loadState(const std::string& filePath) {
     };
     for (auto& item : rootItems_) {
         expandSaved(item);
+	    }
+	    
+	    updateDisplayList();
+	    if (isFilterActive()) {
+	        applyFilter();
+	    }
+
+	    if (hasScrollOffset) {
+	        const auto& view = getActiveView();
+	        auto& themeManager = NUIThemeManager::getInstance();
+	        float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
+	        float maxScroll = std::max(0.0f, static_cast<float>(view.size()) * itemHeight - scrollbarTrackHeight_);
+	        scrollOffset_ = std::max(0.0f, std::min(loadedScrollOffset, maxScroll));
+        targetScrollOffset_ = scrollOffset_;
+        lastRenderedOffset_ = scrollOffset_;
+        updateScrollbarVisibility();
     }
-    
-    updateDisplayList();
     Nomad::Log::info("[FileBrowser] State loaded from: " + filePath);
 }
 

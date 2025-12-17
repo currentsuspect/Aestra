@@ -1,13 +1,24 @@
 // Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "WASAPISharedDriver.h"
+
+// Windows-specific includes (only in .cpp file)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <mmdeviceapi.h>
+#include <audioclient.h>
 #include <avrt.h>
 #include <functiondiscoverykeys_devpkey.h>
 #include <ksmedia.h>
 #include <iostream>
 #include <sstream>
 #include <iomanip>
-#include <future>
 #include <chrono>
+#include <cstring>
 
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "avrt.lib")
@@ -31,7 +42,9 @@ namespace {
 }
 
 WASAPISharedDriver::WASAPISharedDriver() {
-    QueryPerformanceFrequency(&m_perfFreq);
+    LARGE_INTEGER freq;
+    QueryPerformanceFrequency(&freq);
+    m_perfFreq = freq.QuadPart;
 }
 
 WASAPISharedDriver::~WASAPISharedDriver() {
@@ -104,17 +117,17 @@ bool WASAPISharedDriver::initializeCOM() {
 
 void WASAPISharedDriver::shutdownCOM() {
     if (m_deviceEnumerator) {
-        m_deviceEnumerator->Release();
+        reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->Release();
         m_deviceEnumerator = nullptr;
     }
     CoUninitialize();
 }
 
-std::vector<AudioDeviceInfo> WASAPISharedDriver::getDevices() {
+std::vector<AudioDeviceInfo> WASAPISharedDriver::getDevices() const {
     std::vector<AudioDeviceInfo> devices;
 
     if (!m_deviceEnumerator) {
-        setError(DriverError::INITIALIZATION_FAILED, "Device enumerator not initialized");
+        const_cast<WASAPISharedDriver*>(this)->setError(DriverError::INITIALIZATION_FAILED, "Device enumerator not initialized");
         return devices;
     }
 
@@ -122,11 +135,11 @@ std::vector<AudioDeviceInfo> WASAPISharedDriver::getDevices() {
     return devices;
 }
 
-bool WASAPISharedDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devices) {
+bool WASAPISharedDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devices) const {
     IMMDeviceCollection* deviceCollection = nullptr;
 
     // Enumerate output devices
-    HRESULT hr = m_deviceEnumerator->EnumAudioEndpoints(
+    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->EnumAudioEndpoints(
         eRender,
         DEVICE_STATE_ACTIVE,
         &deviceCollection
@@ -221,10 +234,10 @@ bool WASAPISharedDriver::openDevice(uint32_t deviceId) {
     }
 
     // Get default device for now (deviceId ignored)
-    HRESULT hr = m_deviceEnumerator->GetDefaultAudioEndpoint(
+    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->GetDefaultAudioEndpoint(
         eRender,
         eConsole,
-        &m_device
+        (IMMDevice**)&m_device
     );
 
     if (FAILED(hr)) {
@@ -242,27 +255,27 @@ void WASAPISharedDriver::closeDevice() {
     }
 
     if (m_renderClient) {
-        m_renderClient->Release();
+        reinterpret_cast<IAudioRenderClient*>(m_renderClient)->Release();
         m_renderClient = nullptr;
     }
 
     if (m_captureClient) {
-        m_captureClient->Release();
+        reinterpret_cast<IAudioCaptureClient*>(m_captureClient)->Release();
         m_captureClient = nullptr;
     }
 
     if (m_audioClient3) {
-        m_audioClient3->Release();
+        reinterpret_cast<IAudioClient3*>(m_audioClient3)->Release();
         m_audioClient3 = nullptr;
     }
 
     if (m_audioClient) {
-        m_audioClient->Release();
+        reinterpret_cast<IAudioClient*>(m_audioClient)->Release();
         m_audioClient = nullptr;
     }
 
     if (m_device) {
-        m_device->Release();
+        reinterpret_cast<IMMDevice*>(m_device)->Release();
         m_device = nullptr;
     }
 
@@ -273,7 +286,7 @@ void WASAPISharedDriver::closeDevice() {
 }
 
 bool WASAPISharedDriver::initializeAudioClient() {
-    HRESULT hr = m_device->Activate(
+    HRESULT hr = reinterpret_cast<IMMDevice*>(m_device)->Activate(
         IID_IAudioClient,
         CLSCTX_ALL,
         nullptr,
@@ -286,43 +299,45 @@ bool WASAPISharedDriver::initializeAudioClient() {
     }
 
     // Get the mix format
-    hr = m_audioClient->GetMixFormat(&m_waveFormat);
+    hr = reinterpret_cast<IAudioClient*>(m_audioClient)->GetMixFormat(reinterpret_cast<WAVEFORMATEX**>(&m_waveFormat));
     if (FAILED(hr)) {
         setError(DriverError::STREAM_OPEN_FAILED, "Failed to get mix format: " + HResultToString(hr));
         return false;
     }
 
     // Log the format we got
+    WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
     std::cout << "[WASAPI Shared] Mix format: ";
-    if (m_waveFormat->wFormatTag == WAVE_FORMAT_IEEE_FLOAT) {
+    if (wf->wFormatTag == WAVE_FORMAT_IEEE_FLOAT) {
         std::cout << "32-bit float";
-    } else if (m_waveFormat->wFormatTag == WAVE_FORMAT_PCM) {
-        std::cout << m_waveFormat->wBitsPerSample << "-bit PCM";
-    } else if (m_waveFormat->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
-        WAVEFORMATEXTENSIBLE* wfex = (WAVEFORMATEXTENSIBLE*)m_waveFormat;
+    } else if (wf->wFormatTag == WAVE_FORMAT_PCM) {
+        std::cout << wf->wBitsPerSample << "-bit PCM";
+    } else if (wf->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
+        WAVEFORMATEXTENSIBLE* wfex = (WAVEFORMATEXTENSIBLE*)wf;
         if (wfex->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT) {
             std::cout << "32-bit float (extensible)";
         } else if (wfex->SubFormat == KSDATAFORMAT_SUBTYPE_PCM) {
-            std::cout << m_waveFormat->wBitsPerSample << "-bit PCM (extensible)";
+            std::cout << wf->wBitsPerSample << "-bit PCM (extensible)";
         } else {
             std::cout << "UNKNOWN EXTENSIBLE SUBFORMAT";
         }
     } else {
-        std::cout << "UNKNOWN FORMAT TAG: " << m_waveFormat->wFormatTag;
+        std::cout << "UNKNOWN FORMAT TAG: " << wf->wFormatTag;
     }
-    std::cout << " @ " << m_waveFormat->nSamplesPerSec << " Hz, " 
-              << m_waveFormat->nChannels << " channels" << std::endl;
+    std::cout << " @ " << wf->nSamplesPerSec << " Hz, " 
+              << wf->nChannels << " channels" << std::endl;
 
     // Try to use IAudioClient3 for low-latency shared mode (Windows 10+)
     bool usingIAudioClient3 = false;
-    hr = m_audioClient->QueryInterface(__uuidof(IAudioClient3), (void**)&m_audioClient3);
+    hr = reinterpret_cast<IAudioClient*>(m_audioClient)->QueryInterface(__uuidof(IAudioClient3), (void**)&m_audioClient3);
     if (SUCCEEDED(hr) && m_audioClient3) {
         std::cout << "[WASAPI Shared] IAudioClient3 available - attempting low-latency mode" << std::endl;
         
         // Query supported engine periods
+        WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
         UINT32 defaultPeriodFrames, fundamentalPeriodFrames, minPeriodFrames, maxPeriodFrames;
-        hr = m_audioClient3->GetSharedModeEnginePeriod(
-            m_waveFormat,
+        hr = reinterpret_cast<IAudioClient3*>(m_audioClient3)->GetSharedModeEnginePeriod(
+            wf,
             &defaultPeriodFrames,
             &fundamentalPeriodFrames,
             &minPeriodFrames,
@@ -357,10 +372,10 @@ bool WASAPISharedDriver::initializeAudioClient() {
             }
             
             // Initialize with low-latency shared mode
-            hr = m_audioClient3->InitializeSharedAudioStream(
+            hr = reinterpret_cast<IAudioClient3*>(m_audioClient3)->InitializeSharedAudioStream(
                 AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
                 targetPeriodFrames,
-                m_waveFormat,
+                wf,
                 nullptr
             );
             
@@ -371,7 +386,7 @@ bool WASAPISharedDriver::initializeAudioClient() {
                           << targetPeriodFrames << " frames" << std::endl;
                 
                 // Set event handle
-                hr = m_audioClient3->SetEventHandle(m_audioEvent);
+                hr = reinterpret_cast<IAudioClient3*>(m_audioClient3)->SetEventHandle(reinterpret_cast<HANDLE>(m_audioEvent));
                 if (FAILED(hr)) {
                     setError(DriverError::STREAM_OPEN_FAILED, "Failed to set event handle (IAudioClient3): " + HResultToString(hr));
                     return false;
@@ -403,12 +418,12 @@ bool WASAPISharedDriver::initializeAudioClient() {
         }
 
         // Initialize audio client in shared mode with event-driven callback
-        hr = m_audioClient->Initialize(
+        hr = reinterpret_cast<IAudioClient*>(m_audioClient)->Initialize(
             AUDCLNT_SHAREMODE_SHARED,
             AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
             requestedDuration,
             0,
-            m_waveFormat,
+            reinterpret_cast<const WAVEFORMATEX*>(m_waveFormat),
             nullptr
         );
 
@@ -418,14 +433,14 @@ bool WASAPISharedDriver::initializeAudioClient() {
         }
 
         // Set event handle
-        hr = m_audioClient->SetEventHandle(m_audioEvent);
+        hr = reinterpret_cast<IAudioClient*>(m_audioClient)->SetEventHandle(reinterpret_cast<HANDLE>(m_audioEvent));
         if (FAILED(hr)) {
             setError(DriverError::STREAM_OPEN_FAILED, "Failed to set event handle: " + HResultToString(hr));
             return false;
         }
 
         // Get buffer size
-        hr = m_audioClient->GetBufferSize(&m_bufferFrameCount);
+        hr = reinterpret_cast<IAudioClient*>(m_audioClient)->GetBufferSize(&m_bufferFrameCount);
         if (FAILED(hr)) {
             setError(DriverError::STREAM_OPEN_FAILED, "Failed to get buffer size: " + HResultToString(hr));
             return false;
@@ -433,21 +448,22 @@ bool WASAPISharedDriver::initializeAudioClient() {
     }
 
     // Get render client
-    hr = m_audioClient->GetService(IID_IAudioRenderClient, (void**)&m_renderClient);
+    hr = reinterpret_cast<IAudioClient*>(m_audioClient)->GetService(IID_IAudioRenderClient, (void**)&m_renderClient);
     if (FAILED(hr)) {
         setError(DriverError::STREAM_OPEN_FAILED, "Failed to get render client: " + HResultToString(hr));
         return false;
     }
 
     // Calculate and report accurate latency metrics
+    wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
     AudioLatencyInfo latencyInfo = AudioLatencyInfo::calculate(
         m_bufferFrameCount,
-        m_waveFormat->nSamplesPerSec,
+        wf->nSamplesPerSec,
         3.0  // Shared mode typically has ~3x RTL multiplier
     );
     
     std::cout << "[WASAPI Shared] Initialized - "
-              << "Sample Rate: " << m_waveFormat->nSamplesPerSec << " Hz, "
+              << "Sample Rate: " << wf->nSamplesPerSec << " Hz, "
               << "Buffer: " << m_bufferFrameCount << " frames\n"
               << "  Buffer Period: " << std::fixed << std::setprecision(2) << latencyInfo.bufferPeriodMs << "ms (one-way)\n"
               << "  Estimated RTL: " << latencyInfo.estimatedRTL_Ms << "ms (round-trip)"
@@ -472,7 +488,7 @@ bool WASAPISharedDriver::startStream() {
     m_isRunning = true;
 
     // Start audio client
-    HRESULT hr = m_audioClient->Start();
+    HRESULT hr = reinterpret_cast<IAudioClient*>(m_audioClient)->Start();
     if (FAILED(hr)) {
         setError(DriverError::STREAM_START_FAILED, "Failed to start audio client: " + HResultToString(hr));
         m_isRunning = false;
@@ -501,42 +517,54 @@ void WASAPISharedDriver::stopStream() {
         SetEvent(m_audioEvent);
     }
 
-    // Wait for thread to finish with timeout
+    // Wait for thread to finish with proper shutdown sequence
     if (m_audioThread.joinable()) {
-        auto future = std::async(std::launch::async, [this]() {
-            m_audioThread.join();
-        });
+        // Wait a short period for thread to exit gracefully
+        if (m_audioThread.joinable()) {
+            m_audioThread.join();  // Try normal join first
+        }
         
-        if (future.wait_for(std::chrono::milliseconds(100)) == std::future_status::timeout) {
-            std::cerr << "[WASAPI Shared] Warning: Audio thread didn't stop in time" << std::endl;
+        // If still joinable after a brief wait, it may be hung - detach to prevent std::terminate
+        if (m_audioThread.joinable()) {
+            std::cerr << "[WASAPI Shared] Warning: Audio thread didn't stop gracefully, detaching" << std::endl;
+            m_audioThread.detach();
+        } else {
+            // Thread stopped successfully - safe to fill buffer
+            fillAudioBufferWithSilence();
         }
-    }
-
-    // Fill buffer with silence before stopping to prevent clicks
-    if (m_audioClient && m_renderClient && m_bufferFrameCount > 0) {
-        UINT32 padding = 0;
-        HRESULT hr = m_audioClient->GetCurrentPadding(&padding);
-        if (SUCCEEDED(hr)) {
-            UINT32 framesAvailable = m_bufferFrameCount - padding;
-            if (framesAvailable > 0) {
-                BYTE* data = nullptr;
-                hr = m_renderClient->GetBuffer(framesAvailable, &data);
-                if (SUCCEEDED(hr)) {
-                    memset(data, 0, framesAvailable * m_waveFormat->nBlockAlign);
-                    m_renderClient->ReleaseBuffer(framesAvailable, AUDCLNT_BUFFERFLAGS_SILENT);
-                }
-            }
-        }
+    } else {
+        // Thread was not joinable (already detached or not started)
+        fillAudioBufferWithSilence();
     }
 
     // Stop audio client
     if (m_audioClient) {
-        m_audioClient->Stop();
+        reinterpret_cast<IAudioClient*>(m_audioClient)->Stop();
     }
 
     m_isRunning = false;
     m_state = DriverState::STREAM_OPEN;
     std::cout << "[WASAPI Shared] Stream stopped safely" << std::endl;
+}
+
+void WASAPISharedDriver::fillAudioBufferWithSilence() {
+    // Fill buffer with silence before stopping to prevent clicks
+    // Only call this after thread has stopped to avoid race conditions
+    if (m_audioClient && m_renderClient && m_bufferFrameCount > 0) {
+        UINT32 padding = 0;
+        HRESULT hr = reinterpret_cast<IAudioClient*>(m_audioClient)->GetCurrentPadding(&padding);
+        if (SUCCEEDED(hr)) {
+            UINT32 framesAvailable = m_bufferFrameCount - padding;
+            if (framesAvailable > 0) {
+                BYTE* data = nullptr;
+                hr = reinterpret_cast<IAudioRenderClient*>(m_renderClient)->GetBuffer(framesAvailable, &data);
+                if (SUCCEEDED(hr)) {
+                    std::memset(reinterpret_cast<void*>(data), 0, framesAvailable * reinterpret_cast<WAVEFORMATEX*>(m_waveFormat)->nBlockAlign);
+                    reinterpret_cast<IAudioRenderClient*>(m_renderClient)->ReleaseBuffer(framesAvailable, AUDCLNT_BUFFERFLAGS_SILENT);
+                }
+            }
+        }
+    }
 }
 
 double WASAPISharedDriver::getStreamLatency() const {
@@ -545,7 +573,7 @@ double WASAPISharedDriver::getStreamLatency() const {
     }
 
     REFERENCE_TIME latency = 0;
-    HRESULT hr = m_audioClient->GetStreamLatency(&latency);
+    HRESULT hr = reinterpret_cast<IAudioClient*>(m_audioClient)->GetStreamLatency(&latency);
     if (SUCCEEDED(hr)) {
         // Convert from 100ns units to seconds
         return static_cast<double>(latency) / 10000000.0;
@@ -577,8 +605,9 @@ void WASAPISharedDriver::audioThreadProc() {
     // Temporary buffer for user callback
     std::vector<float> userBuffer(m_bufferFrameCount * m_config.numOutputChannels);
     
+    WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
     std::cout << "[WASAPI Shared] Audio thread running with " 
-              << m_bufferFrameCount << " frames at " << m_waveFormat->nSamplesPerSec << " Hz" << std::endl;
+              << m_bufferFrameCount << " frames at " << wf->nSamplesPerSec << " Hz" << std::endl;
 
     while (!m_shouldStop) {
         // Wait for buffer event
@@ -601,7 +630,7 @@ void WASAPISharedDriver::audioThreadProc() {
 
         // Get padding (number of frames already in buffer)
         UINT32 padding = 0;
-        HRESULT hr = m_audioClient->GetCurrentPadding(&padding);
+        HRESULT hr = reinterpret_cast<IAudioClient*>(m_audioClient)->GetCurrentPadding(&padding);
         if (FAILED(hr)) {
             continue;
         }
@@ -614,14 +643,15 @@ void WASAPISharedDriver::audioThreadProc() {
 
         // Get buffer from WASAPI
         BYTE* data = nullptr;
-        hr = m_renderClient->GetBuffer(availableFrames, &data);
+        hr = reinterpret_cast<IAudioRenderClient*>(m_renderClient)->GetBuffer(availableFrames, &data);
         if (FAILED(hr)) {
             m_statistics.underrunCount++;
             continue;
         }
 
         // Call user callback
-        double streamTime = static_cast<double>(m_statistics.callbackCount * m_bufferFrameCount) / m_waveFormat->nSamplesPerSec;
+        WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
+        double streamTime = static_cast<double>(m_statistics.callbackCount * m_bufferFrameCount) / wf->nSamplesPerSec;
         
         if (m_userCallback) {
             m_userCallback(
@@ -637,17 +667,17 @@ void WASAPISharedDriver::audioThreadProc() {
         }
 
         // Convert float to WASAPI format
-        if (m_waveFormat->wFormatTag == WAVE_FORMAT_IEEE_FLOAT ||
-            (m_waveFormat->wFormatTag == WAVE_FORMAT_EXTENSIBLE && 
-             ((WAVEFORMATEXTENSIBLE*)m_waveFormat)->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT)) {
+        if (wf->wFormatTag == WAVE_FORMAT_IEEE_FLOAT ||
+            (wf->wFormatTag == WAVE_FORMAT_EXTENSIBLE && 
+             ((WAVEFORMATEXTENSIBLE*)wf)->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT)) {
             // 32-bit float - direct copy
-            memcpy(data, userBuffer.data(), availableFrames * m_waveFormat->nBlockAlign);
+            std::memcpy(reinterpret_cast<void*>(data), userBuffer.data(), availableFrames * wf->nBlockAlign);
         }
-        else if (m_waveFormat->wFormatTag == WAVE_FORMAT_PCM ||
-                 (m_waveFormat->wFormatTag == WAVE_FORMAT_EXTENSIBLE &&
-                  ((WAVEFORMATEXTENSIBLE*)m_waveFormat)->SubFormat == KSDATAFORMAT_SUBTYPE_PCM)) {
+        else if (wf->wFormatTag == WAVE_FORMAT_PCM ||
+                 (wf->wFormatTag == WAVE_FORMAT_EXTENSIBLE &&
+                  ((WAVEFORMATEXTENSIBLE*)wf)->SubFormat == KSDATAFORMAT_SUBTYPE_PCM)) {
             // PCM format - need to convert floats to integers
-            if (m_waveFormat->wBitsPerSample == 16) {
+            if (wf->wBitsPerSample == 16) {
                 // 16-bit PCM
                 int16_t* pcmData = reinterpret_cast<int16_t*>(data);
                 for (uint32_t i = 0; i < availableFrames * m_config.numOutputChannels; ++i) {
@@ -657,7 +687,7 @@ void WASAPISharedDriver::audioThreadProc() {
                     pcmData[i] = static_cast<int16_t>(sample * 32767.0f);
                 }
             }
-            else if (m_waveFormat->wBitsPerSample == 24) {
+            else if (wf->wBitsPerSample == 24) {
                 // 24-bit PCM
                 uint8_t* pcmData = data;
                 for (uint32_t i = 0; i < availableFrames * m_config.numOutputChannels; ++i) {
@@ -672,16 +702,16 @@ void WASAPISharedDriver::audioThreadProc() {
             }
             else {
                 // Unknown bit depth - zero the buffer
-                memset(data, 0, availableFrames * m_waveFormat->nBlockAlign);
+                std::memset(reinterpret_cast<void*>(data), 0, availableFrames * wf->nBlockAlign);
             }
         }
         else {
             // Unknown format - zero the buffer
-            memset(data, 0, availableFrames * m_waveFormat->nBlockAlign);
+            std::memset(reinterpret_cast<void*>(data), 0, availableFrames * reinterpret_cast<WAVEFORMATEX*>(m_waveFormat)->nBlockAlign);
         }
 
         // Release buffer
-        hr = m_renderClient->ReleaseBuffer(availableFrames, 0);
+        hr = reinterpret_cast<IAudioRenderClient*>(m_renderClient)->ReleaseBuffer(availableFrames, 0);
         if (FAILED(hr)) {
             std::cerr << "[WASAPI Shared] Failed to release buffer" << std::endl;
         }
@@ -689,7 +719,7 @@ void WASAPISharedDriver::audioThreadProc() {
         // Update statistics
         LARGE_INTEGER endTime;
         QueryPerformanceCounter(&endTime);
-        double callbackTimeUs = static_cast<double>(endTime.QuadPart - startTime.QuadPart) * 1000000.0 / m_perfFreq.QuadPart;
+        double callbackTimeUs = static_cast<double>(endTime.QuadPart - startTime.QuadPart) * 1000000.0 / static_cast<double>(m_perfFreq);
         updateStatistics(callbackTimeUs);
     }
 
@@ -731,15 +761,23 @@ void WASAPISharedDriver::updateStatistics(double callbackTimeUs) {
 
     // Estimate CPU load
     if (m_waveFormat && m_bufferFrameCount > 0) {
-        double bufferDurationUs = static_cast<double>(m_bufferFrameCount) * 1000000.0 / m_waveFormat->nSamplesPerSec;
+        WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
+        double bufferDurationUs = static_cast<double>(m_bufferFrameCount) * 1000000.0 / wf->nSamplesPerSec;
         m_statistics.cpuLoadPercent = (callbackTimeUs / bufferDurationUs) * 100.0;
     }
 
     // Avoid COM calls on the RT thread. Approximate latency from buffer period.
     if (m_waveFormat && m_bufferFrameCount > 0) {
+        WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
         m_statistics.actualLatencyMs =
-            (static_cast<double>(m_bufferFrameCount) * 1000.0) / m_waveFormat->nSamplesPerSec;
+            (static_cast<double>(m_bufferFrameCount) * 1000.0) / wf->nSamplesPerSec;
     }
+}
+
+uint32_t WASAPISharedDriver::getStreamSampleRate() const {
+    if (!m_waveFormat) return 0;
+    WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
+    return wf->nSamplesPerSec;
 }
 
 } // namespace Audio

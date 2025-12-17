@@ -1,5 +1,6 @@
 // Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUITextInput.h"
+#include "NUIThemeSystem.h"
 #include "../Graphics/NUIRenderer.h"
 #include <algorithm>
 #include <cmath>
@@ -57,6 +58,11 @@ bool NUITextInput::onMouseEvent(const NUIMouseEvent& event)
         // Set caret position based on mouse click
         int newCaretPos = getCharacterIndexAtPosition(event.position);
         setCaretPosition(newCaretPos);
+        
+        // Request focus on click
+        if (!isFocused_) {
+            onFocusGained();
+        }
         
         // Clear selection if not extending
         if (!(event.modifiers & NUIModifiers::Shift))
@@ -459,9 +465,11 @@ void NUITextInput::drawText(NUIRenderer& renderer)
         displayText = std::string(text_.length(), passwordCharacter_);
     }
     
-    // TODO: Implement text rendering when NUIFont is available
-    // For now, this is a placeholder
-    // renderer.drawText(displayText, textRect, justification_, textColor_);
+    auto& themeManager = NUIThemeManager::getInstance();
+    float fontSize = themeManager.getFontSize("m");
+    float textY = renderer.calculateTextY(textRect, fontSize);
+    
+    renderer.drawText(displayText, NUIPoint(textRect.x, textY), fontSize, textColor_);
 }
 
 void NUITextInput::drawSelection(NUIRenderer& renderer)
@@ -488,8 +496,12 @@ void NUITextInput::drawPlaceholder(NUIRenderer& renderer)
     NUIRect textRect(bounds.x + padding_, bounds.y + padding_, 
                     bounds.width - padding_ * 2, bounds.height - padding_ * 2);
     
-    // TODO: Implement placeholder text rendering
-    // renderer.drawText(placeholderText_, textRect, justification_, placeholderColor_);
+    auto& themeManager = NUIThemeManager::getInstance();
+    float fontSize = themeManager.getFontSize("m");
+    float textY = renderer.calculateTextY(textRect, fontSize);
+    
+    // Draw placeholder with reduced opacity if not already handled by color
+    renderer.drawText(placeholderText_, NUIPoint(textRect.x, textY), fontSize, placeholderColor_);
 }
 
 void NUITextInput::updateTextLayout()
@@ -677,9 +689,28 @@ void NUITextInput::handleKeyInput(const NUIKeyEvent& event)
             break;
             
         default:
-            if (event.character != 0)
+            // Only handle character input if it wasn't a special key we handled above
+            // AND it's a valid printable character
+            char c = event.character;
+            
+            // Fallback: If character is 0 but we have a valid key code, map it (rudimentary)
+            if (c == 0) {
+                if (event.keyCode >= NUIKeyCode::A && event.keyCode <= NUIKeyCode::Z) {
+                     c = 'a' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::A));
+                     if (event.modifiers & NUIModifiers::Shift) c = std::toupper(c); // Simple shift handling
+                }
+                else if (event.keyCode >= NUIKeyCode::Num0 && event.keyCode <= NUIKeyCode::Num9) {
+                     c = '0' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::Num0));
+                     // Note: Handling shifted numbers (symbols) is too complex for this fallback without a map
+                }
+                else if (event.keyCode == NUIKeyCode::Space) {
+                     c = ' ';
+                }
+            }
+
+            if (c >= 32 && c != 127) // 32=Space, 127=DEL
             {
-                insertCharacter(event.character);
+                insertCharacter(c);
             }
             break;
     }

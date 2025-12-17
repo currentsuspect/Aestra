@@ -11,7 +11,7 @@
  * - NomadUI: UI rendering framework
  * - NomadAudio: Real-time audio engine
  * 
- * @version 1.0.0
+ * @version 1.1.0
  * @license Nomad Studios Source-Available License (NSSAL) v1.0
  */
 
@@ -29,6 +29,7 @@
 #include "../NomadAudio/include/AudioEngine.h"
 #include "../NomadAudio/include/AudioGraphBuilder.h"
 #include "../NomadAudio/include/AudioCommandQueue.h"
+#include "../NomadAudio/include/AudioRT.h"
 #include "../NomadAudio/include/PreviewEngine.h"
 #include "../NomadCore/include/NomadLog.h"
 #include "../NomadCore/include/NomadProfiler.h"
@@ -51,9 +52,7 @@
 #include <cstdlib>
 #include <filesystem>
 
-#ifdef _WIN32
-#include <shlobj.h>
-#endif
+// Windows-specific includes removed - use NomadPlat abstraction instead
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -62,6 +61,23 @@
 using namespace Nomad;
 using namespace NomadUI;
 using namespace Nomad::Audio;
+
+namespace {
+uint64_t estimateCycleHz() {
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
+    const auto t0 = std::chrono::steady_clock::now();
+    const uint64_t c0 = Nomad::Audio::RT::readCycleCounter();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    const auto t1 = std::chrono::steady_clock::now();
+    const uint64_t c1 = Nomad::Audio::RT::readCycleCounter();
+    const double sec = std::chrono::duration_cast<std::chrono::duration<double>>(t1 - t0).count();
+    if (sec <= 0.0 || c1 <= c0) return 0;
+    return static_cast<uint64_t>(static_cast<double>(c1 - c0) / sec);
+#else
+    return 0;
+#endif
+}
+} // namespace
 
 /**
  * @brief Convert Nomad::KeyCode to NomadUI::NUIKeyCode
@@ -638,53 +654,25 @@ private:
 /**
  * @brief Get the application data directory path
  * 
- * Returns a platform-specific path for storing application data:
- * - Windows: %APPDATA%/Nomad/
- * - macOS: ~/Library/Application Support/Nomad/
- * - Linux: ~/.local/share/Nomad/
- * 
+ * Returns a platform-specific path for storing application data using NomadPlat abstraction.
  * Creates the directory if it doesn't exist.
  */
 std::string getAppDataPath() {
-    std::filesystem::path appDataDir;
+    IPlatformUtils* utils = Platform::getUtils();
+    if (!utils) {
+        // Fallback if platform not initialized
+        return std::filesystem::current_path().string();
+    }
     
-#ifdef _WIN32
-    char path[MAX_PATH];
-    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, path))) {
-        appDataDir = std::filesystem::path(path) / "Nomad";
-    } else {
-        // Fallback to current directory
-        appDataDir = std::filesystem::current_path();
-    }
-#elif defined(__APPLE__)
-    const char* home = std::getenv("HOME");
-    if (home) {
-        appDataDir = std::filesystem::path(home) / "Library" / "Application Support" / "Nomad";
-    } else {
-        appDataDir = std::filesystem::current_path();
-    }
-#else
-    // Linux/Unix
-    const char* xdgData = std::getenv("XDG_DATA_HOME");
-    if (xdgData) {
-        appDataDir = std::filesystem::path(xdgData) / "Nomad";
-    } else {
-        const char* home = std::getenv("HOME");
-        if (home) {
-            appDataDir = std::filesystem::path(home) / ".local" / "share" / "Nomad";
-        } else {
-            appDataDir = std::filesystem::current_path();
-        }
-    }
-#endif
+    std::string appDataDir = utils->getAppDataPath("Nomad");
     
     // Create directory if it doesn't exist
     std::error_code ec;
     if (!std::filesystem::create_directories(appDataDir, ec) && ec) {
-        Log::warning("Failed to create app data directory: " + appDataDir.string() + " (" + ec.message() + ")");
+        Log::warning("Failed to create app data directory: " + appDataDir + " (" + ec.message() + ")");
     }
     
-    return appDataDir.string();
+    return appDataDir;
 }
 
 /**
@@ -895,6 +883,12 @@ public:
                                     }
                                 }
                                 m_mainStreamConfig.sampleRate = static_cast<uint32_t>(actualRate);
+                                if (m_audioEngine) {
+                                    const uint64_t hz = estimateCycleHz();
+                                    if (hz > 0) {
+                                        m_audioEngine->telemetry().cycleHz.store(hz, std::memory_order_relaxed);
+                                    }
+                                }
                                 if (m_content && m_content->getTrackManager()) {
                                     m_content->getTrackManager()->setOutputSampleRate(actualRate);
                                 }
@@ -1227,6 +1221,7 @@ public:
         // Create and add Performance HUD (F12 to toggle)
         auto perfHUD = std::make_shared<PerformanceHUD>();
         perfHUD->setVisible(false); // Hidden by default
+        perfHUD->setAudioEngine(m_audioEngine.get());
         m_rootComponent->setPerformanceHUD(perfHUD);
         m_performanceHUD = perfHUD;
         Log::info("Performance HUD created (press F12 to toggle)");
@@ -1712,24 +1707,16 @@ private:
             requestClose();
         });
 
-	        // Key callback
-	        m_window->setKeyCallback([this](int key, bool pressed) {
-            // Signal activity to adaptive FPS
-            if (pressed) {
-                m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::KeyPress);
-            }
-            
-            // Debug: Log key presses
-            if (pressed) {
-                std::stringstream ss;
-                ss << "Key pressed: " << key;
-                Log::info(ss.str());
-                std::cout << "Key pressed: " << key << " (P should be 80)" << std::endl;
-            }
-            
-            // First, try to handle key events in the audio settings dialog if it's visible
-            if (m_audioSettingsDialog && m_audioSettingsDialog->isVisible()) {
-                NomadUI::NUIKeyEvent event;
+		        // Key callback
+		        m_window->setKeyCallback([this](int key, bool pressed) {
+	            // Signal activity to adaptive FPS
+	            if (pressed) {
+	                m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::KeyPress);
+	            }
+	            
+	            // First, try to handle key events in the audio settings dialog if it's visible
+	            if (m_audioSettingsDialog && m_audioSettingsDialog->isVisible()) {
+	                NomadUI::NUIKeyEvent event;
                 event.keyCode = convertToNUIKeyCode(key);
                 event.pressed = pressed;
                 event.released = !pressed;
@@ -1750,19 +1737,16 @@ private:
                     return; // Dialog handled the event
                 }
 	            }
-	            
-	            // If the FileBrowser search box is focused, it owns typing and shortcuts should not trigger.
-	            if (m_content && pressed) {
-	                auto fileBrowser = m_content->getFileBrowser();
-	                if (fileBrowser && fileBrowser->isSearchBoxFocused()) {
-	                    NomadUI::NUIKeyEvent event;
-	                    event.keyCode = convertToNUIKeyCode(key);
-	                    event.pressed = pressed;
-	                    event.released = !pressed;
-	                    fileBrowser->onKeyEvent(event);
-	                    return;
-	                }
-	            }
+		            
+		            // If the FileBrowser search box is focused, it owns typing and shortcuts should not trigger.
+		            if (m_content && pressed) {
+		                auto fileBrowser = m_content->getFileBrowser();
+		                if (fileBrowser && fileBrowser->isSearchBoxFocused()) {
+		                    // Note: NUIPlatformBridge calls both `setKeyCallback` and `setKeyCallbackEx`.
+		                    // Let the extended callback handle FileBrowser typing to avoid double-delivery.
+		                    return;
+		                }
+		            }
 	            
 	            // Handle global key shortcuts
 	            if (key == static_cast<int>(KeyCode::Escape) && pressed) {
@@ -2054,14 +2038,13 @@ private:
             return 1;
         }
 
-        // Determine effective sample rate once for this block
-        double actualRate = 0.0;
-        if (app->m_audioManager) {
-            actualRate = static_cast<double>(app->m_audioManager->getStreamSampleRate());
-        }
-        if (actualRate <= 0.0) {
-            actualRate = static_cast<double>(app->m_mainStreamConfig.sampleRate);
-        }
+        // RT init (FTZ/DAZ) - once per audio thread, no OS calls.
+        Nomad::Audio::RT::initAudioThread();
+        const uint64_t cbStartCycles = Nomad::Audio::RT::readCycleCounter();
+
+        // Sample rate is fixed for the lifetime of the stream; avoid driver queries in the callback.
+        double actualRate = static_cast<double>(app->m_mainStreamConfig.sampleRate);
+        if (actualRate <= 0.0) actualRate = 48000.0;
 
         if (app->m_audioEngine) {
             app->m_audioEngine->setSampleRate(static_cast<uint32_t>(actualRate));
@@ -2079,14 +2062,8 @@ private:
         
         // Generate test sound if active (directly in callback, no track needed)
         if (app->m_audioSettingsDialog && app->m_audioSettingsDialog->isPlayingTestSound()) {
-            // Use actual sample rate (fallback to config)
-            double sampleRate = 0.0;
-            if (app->m_audioManager) {
-                sampleRate = static_cast<double>(app->m_audioManager->getStreamSampleRate());
-            }
-            if (sampleRate <= 0.0) {
-                sampleRate = static_cast<double>(app->m_mainStreamConfig.sampleRate);
-            }
+            // Use cached stream sample rate (do not query drivers from RT thread).
+            const double sampleRate = actualRate;
             const double frequency = 440.0; // A4
             const double amplitude = 0.05; // 5% volume (gentle test tone)
             const double twoPi = 2.0 * 3.14159265358979323846;
@@ -2119,6 +2096,35 @@ private:
 
         // Note: Visualizer update disabled in audio callback to prevent allocations
         // We can update it from the main thread instead at 60fps
+
+        const uint64_t cbEndCycles = Nomad::Audio::RT::readCycleCounter();
+        if (app->m_audioEngine && cbEndCycles > cbStartCycles) {
+            auto& tel = app->m_audioEngine->telemetry();
+            tel.lastBufferFrames.store(nFrames, std::memory_order_relaxed);
+            tel.lastSampleRate.store(static_cast<uint32_t>(actualRate), std::memory_order_relaxed);
+
+            const uint64_t hz = tel.cycleHz.load(std::memory_order_relaxed);
+            if (hz > 0) {
+                const uint64_t deltaCycles = cbEndCycles - cbStartCycles;
+                const uint64_t ns = (deltaCycles * 1000000000ull) / hz;
+                tel.lastCallbackNs.store(ns, std::memory_order_relaxed);
+
+                uint64_t prevMax = tel.maxCallbackNs.load(std::memory_order_relaxed);
+                while (ns > prevMax &&
+                       !tel.maxCallbackNs.compare_exchange_weak(prevMax, ns,
+                                                               std::memory_order_relaxed,
+                                                               std::memory_order_relaxed)) {
+                }
+
+                const uint32_t sr = tel.lastSampleRate.load(std::memory_order_relaxed);
+                if (sr > 0) {
+                    const uint64_t budgetNs = (static_cast<uint64_t>(nFrames) * 1000000000ull) / sr;
+                    if (ns > budgetNs) {
+                        tel.xruns.fetch_add(1, std::memory_order_relaxed);
+                    }
+                }
+            }
+        }
 
         return 0;
     }

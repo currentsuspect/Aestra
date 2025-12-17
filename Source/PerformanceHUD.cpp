@@ -7,6 +7,7 @@
 #include "PerformanceHUD.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
+#include "../NomadAudio/include/AudioEngine.h"
 #include "../NomadCore/include/NomadLog.h"
 #include <sstream>
 #include <iomanip>
@@ -152,6 +153,65 @@ void PerformanceHUD::renderStats(NUIRenderer& renderer) {
         
         renderer.drawText(oss.str(), NUIPoint(x, y), fontSize, audioColor);
         y += lineHeight;
+    }
+
+    // Engine health (RT telemetry snapshots; UI thread only)
+    if (m_audioEngine) {
+        const auto& tel = m_audioEngine->telemetry();
+
+        const uint64_t xruns = tel.xruns.load(std::memory_order_relaxed);
+        const uint64_t underruns = tel.underruns.load(std::memory_order_relaxed);
+        const uint64_t cbMaxNs = tel.maxCallbackNs.load(std::memory_order_relaxed);
+        const uint64_t blocks = tel.blocksProcessed.load(std::memory_order_relaxed);
+        const uint64_t srcBlocks = tel.srcActiveBlocks.load(std::memory_order_relaxed);
+        const uint32_t lastFrames = tel.lastBufferFrames.load(std::memory_order_relaxed);
+        const uint32_t lastSR = tel.lastSampleRate.load(std::memory_order_relaxed);
+
+        const uint64_t qDrops = m_audioEngine->commandQueue().droppedCount();
+        const uint32_t qMax = m_audioEngine->commandQueue().maxDepth();
+        const uint32_t qCap = Nomad::Audio::AudioCommandQueue::capacity();
+
+        const double cbMaxMs = static_cast<double>(cbMaxNs) / 1e6;
+        const double budgetMs = (lastSR > 0) ? (static_cast<double>(lastFrames) * 1000.0 / static_cast<double>(lastSR)) : 0.0;
+        const double srcPct = (blocks > 0) ? (100.0 * static_cast<double>(srcBlocks) / static_cast<double>(blocks)) : 0.0;
+
+        // Status: red on xruns/drops; yellow if close to budget; green otherwise.
+        const bool hasTiming = (cbMaxNs > 0 && budgetMs > 0.0);
+        const bool closeToBudget = hasTiming && (cbMaxMs >= 0.8 * budgetMs);
+        const bool warnQueue = (qCap > 0) && (static_cast<double>(qMax) / static_cast<double>(qCap) >= 0.8);
+
+        const char* status = "🟢";
+        NUIColor statusColor = theme.getColor("success");
+        if (xruns > 0 || underruns > 0 || qDrops > 0) {
+            status = "🔴";
+            statusColor = theme.getColor("error");
+        } else if (closeToBudget || warnQueue || !hasTiming) {
+            status = "🟡";
+            statusColor = theme.getColor("warning");
+        }
+
+        {
+            std::ostringstream oss;
+            oss << "Engine: " << status
+                << "  XRuns: " << xruns
+                << "  Qmax: " << qMax << "/" << qCap;
+            renderer.drawText(oss.str(), NUIPoint(x, y), fontSize, statusColor);
+            y += lineHeight;
+        }
+
+        {
+            std::ostringstream oss;
+            oss << "CBmax: ";
+            if (hasTiming) {
+                oss << std::fixed << std::setprecision(3) << cbMaxMs << "ms"
+                    << " / " << std::setprecision(3) << budgetMs << "ms";
+            } else {
+                oss << "n/a";
+            }
+            oss << "  SRC: " << std::fixed << std::setprecision(1) << srcPct << "%";
+            renderer.drawText(oss.str(), NUIPoint(x, y), fontSize, textColor);
+            y += lineHeight;
+        }
     }
 }
 

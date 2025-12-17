@@ -105,7 +105,7 @@ void AudioEngine::processBlock(float* outputBuffer,
         m_peakR.store(0.0f, std::memory_order_relaxed);
         m_rmsL.store(0.0f, std::memory_order_relaxed);
         m_rmsR.store(0.0f, std::memory_order_relaxed);
-        m_telemetry.blocksProcessed.fetch_add(1, std::memory_order_relaxed);
+        m_telemetry.incrementBlocksProcessed();
         return;
     }
 
@@ -263,7 +263,7 @@ void AudioEngine::processBlock(float* outputBuffer,
     }
 
     // Telemetry (lightweight counter only on RT thread)
-    m_telemetry.blocksProcessed.fetch_add(1, std::memory_order_relaxed);
+    m_telemetry.incrementBlocksProcessed();
 }
 
 void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
@@ -331,19 +331,21 @@ uint32_t AudioEngine::copyWaveformHistory(float* outInterleaved, uint32_t maxFra
 }
 
 void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
+    bool srcActiveThisBlock = false;
+
     // Guard
     if (numFrames > m_maxBufferFrames || m_outputChannels != 2) {
         std::memset(m_masterBufferD.data(), 0, 
                    static_cast<size_t>(numFrames) * m_outputChannels * sizeof(double));
-        m_telemetry.underruns.fetch_add(1, std::memory_order_relaxed);
-        return;
+       m_telemetry.incrementUnderruns();
+       return;
     }
 
     const size_t availableTracks = m_trackBuffersD.size();
     if (availableTracks == 0) {
         std::memset(m_masterBufferD.data(), 0,
                     static_cast<size_t>(numFrames) * m_outputChannels * sizeof(double));
-        m_telemetry.underruns.fetch_add(1, std::memory_order_relaxed);
+        m_telemetry.incrementUnderruns();
         return;
     }
 
@@ -368,7 +370,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
     for (const auto& track : graph.tracks) {
         const uint32_t trackIdx = track.trackIndex;
         if (static_cast<size_t>(trackIdx) >= availableTracks) {
-            m_telemetry.overruns.fetch_add(1, std::memory_order_relaxed);
+            m_telemetry.incrementOverruns();
             continue;
         }
         auto& state = ensureTrackState(trackIdx);
@@ -453,6 +455,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
                     dst[i * 2 + 1] = static_cast<double>(src[i * 2 + 1]) * clipGain * fade;
                 }
             } else {
+                srcActiveThisBlock = true;
                 // Resampling - use selected quality, pre-compute end condition
                 const double phaseEnd = static_cast<double>(totalFrames);
                 
@@ -601,6 +604,10 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
         // Snap smoothed params to target for next block
         state.volume.snap();
         state.pan.snap();
+    }
+
+    if (srcActiveThisBlock) {
+        m_telemetry.incrementSrcActiveBlocks();
     }
 }
 

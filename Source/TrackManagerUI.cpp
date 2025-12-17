@@ -2381,6 +2381,14 @@ NomadUI::DropFeedback TrackManagerUI::onDragEnter(const NomadUI::DragData& data,
     if (data.type != NomadUI::DragDataType::File && data.type != NomadUI::DragDataType::AudioClip) {
         return NomadUI::DropFeedback::Invalid;
     }
+
+    // Early reject unsupported formats (cheap extension check; full validation happens on drop).
+    if (data.type == NomadUI::DragDataType::File &&
+        !AudioFileValidator::hasValidAudioExtension(data.filePath)) {
+        m_showDropPreview = false;
+        setDirty(true);
+        return NomadUI::DropFeedback::Invalid;
+    }
     
     // Calculate target track and time
     m_dropTargetTrack = getTrackAtPosition(position.y);
@@ -2406,6 +2414,16 @@ NomadUI::DropFeedback TrackManagerUI::onDragEnter(const NomadUI::DragData& data,
 }
 
 NomadUI::DropFeedback TrackManagerUI::onDragOver(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
+    // Keep feedback "Invalid" for unsupported formats while hovering.
+    if (data.type == NomadUI::DragDataType::File &&
+        !AudioFileValidator::hasValidAudioExtension(data.filePath)) {
+        if (m_showDropPreview) {
+            m_showDropPreview = false;
+            setDirty(true);
+        }
+        return NomadUI::DropFeedback::Invalid;
+    }
+
     // Update target track and time as mouse moves
     int newTrack = getTrackAtPosition(position.y);
     double rawTime = getTimeAtPosition(position.x);

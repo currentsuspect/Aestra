@@ -28,10 +28,10 @@ float dotProductSSE(const float* a, const float* b, uint32_t n) noexcept {
     }
     
     // Horizontal sum: sum[0] + sum[1] + sum[2] + sum[3]
-    __m128 shuf = _mm_movehdup_ps(sum);       // [1,1,3,3]
-    sum = _mm_add_ps(sum, shuf);              // [0+1,1+1,2+3,3+3]
-    shuf = _mm_movehl_ps(shuf, sum);          // [2+3,3+3,...]
-    sum = _mm_add_ss(sum, shuf);              // [0+1+2+3,...]
+    __m128 shuf = _mm_shuffle_ps(sum, sum, _MM_SHUFFLE(2, 3, 0, 1));
+    sum = _mm_add_ps(sum, shuf);
+    shuf = _mm_movehl_ps(shuf, sum);
+    sum = _mm_add_ss(sum, shuf);
     float result = _mm_cvtss_f32(sum);
     
     // Handle remaining elements (scalar)
@@ -43,6 +43,37 @@ float dotProductSSE(const float* a, const float* b, uint32_t n) noexcept {
 }
 #endif
 
+#ifdef NOMAD_HAS_AVX
+// AVX dot product: processes 8 floats at a time
+float dotProductAVX(const float* a, const float* b, uint32_t n) noexcept {
+    __m256 sum = _mm256_setzero_ps();
+
+    uint32_t i = 0;
+    for (; i + 8 <= n; i += 8) {
+        __m256 va = _mm256_loadu_ps(a + i);
+        __m256 vb = _mm256_load_ps(b + i);  // Aligned load for coefficients
+        sum = _mm256_add_ps(sum, _mm256_mul_ps(va, vb));
+    }
+
+    // Reduce 8-wide sum to scalar
+    __m128 low = _mm256_castps256_ps128(sum);
+    __m128 high = _mm256_extractf128_ps(sum, 1);
+    __m128 sum128 = _mm_add_ps(low, high);
+
+    __m128 shuf = _mm_shuffle_ps(sum128, sum128, _MM_SHUFFLE(2, 3, 0, 1));
+    sum128 = _mm_add_ps(sum128, shuf);
+    shuf = _mm_movehl_ps(shuf, sum128);
+    sum128 = _mm_add_ss(sum128, shuf);
+    float result = _mm_cvtss_f32(sum128);
+
+    for (; i < n; ++i) {
+        result += a[i] * b[i];
+    }
+
+    return result;
+}
+#endif
+
 // Scalar fallback dot product
 float dotProductScalar(const float* a, const float* b, uint32_t n) noexcept {
     float sum = 0.0f;
@@ -50,15 +81,6 @@ float dotProductScalar(const float* a, const float* b, uint32_t n) noexcept {
         sum += a[i] * b[i];
     }
     return sum;
-}
-
-// Choose best implementation at compile time
-inline float dotProduct(const float* a, const float* b, uint32_t n) noexcept {
-#ifdef NOMAD_HAS_SSE
-    return dotProductSSE(a, b, n);
-#else
-    return dotProductScalar(a, b, n);
-#endif
 }
 
 } // anonymous namespace
@@ -116,7 +138,9 @@ void SampleRateConverter::configure(uint32_t srcRate, uint32_t dstRate,
 
 void SampleRateConverter::reset() noexcept {
     // Clear history buffer
-    for (float& s : m_history.data) s = 0.0f;
+    for (auto& chBuf : m_history.data) {
+        for (float& s : chBuf) s = 0.0f;
+    }
     m_history.writePos = 0;
     m_historyFilled = 0;
     
@@ -277,6 +301,8 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames,
     const uint32_t numTaps = m_filterBank.numTaps;
     const uint32_t halfTaps = m_filterBank.halfTaps;
     uint32_t outputFrames = 0;
+
+    const bool useSIMD = m_simdEnabled.load(std::memory_order_relaxed) && hasSIMD();
     
     // Update ratio smoothing
     if (m_ratioSmoothFrames > 0 && m_currentRatio != m_targetRatio) {
@@ -332,16 +358,28 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames,
             
             // Generate output for each channel
             for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                float sum = 0.0f;
                 const float* coeffs = m_filterBank.coeffs[phaseIndex];
-                
-                for (uint32_t tap = 0; tap < numTaps; ++tap) {
-                    const int32_t samplePos = static_cast<int32_t>(intPos) - 
-                                             static_cast<int32_t>(halfTaps) + 
-                                             static_cast<int32_t>(tap);
-                    sum += m_history.get(samplePos, ch) * coeffs[tap];
+                const int32_t samplePos0 = static_cast<int32_t>(intPos) - static_cast<int32_t>(halfTaps);
+                const float* window = m_history.getWindow(ch, samplePos0);
+                float sum = 0.0f;
+
+#ifdef NOMAD_HAS_AVX
+                if (useSIMD) {
+                    sum = dotProductAVX(window, coeffs, numTaps);
+                } else {
+                    sum = dotProductScalar(window, coeffs, numTaps);
                 }
-                
+#elif defined(NOMAD_HAS_SSE)
+                if (useSIMD) {
+                    sum = dotProductSSE(window, coeffs, numTaps);
+                } else {
+                    sum = dotProductScalar(window, coeffs, numTaps);
+                }
+#else
+                (void)useSIMD;
+                sum = dotProductScalar(window, coeffs, numTaps);
+#endif
+
                 output[outputFrames * m_channels + ch] = sum;
             }
             
@@ -354,18 +392,24 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames,
 
 float SampleRateConverter::interpolateSample(uint32_t channel, uint32_t phaseIndex,
                                              int32_t centerPos) const noexcept {
-    float sum = 0.0f;
     const float* coeffs = m_filterBank.coeffs[phaseIndex];
     const uint32_t numTaps = m_filterBank.numTaps;
     const uint32_t halfTaps = m_filterBank.halfTaps;
-    
-    for (uint32_t tap = 0; tap < numTaps; ++tap) {
-        const int32_t samplePos = centerPos - static_cast<int32_t>(halfTaps) + 
-                                 static_cast<int32_t>(tap);
-        sum += m_history.get(samplePos, channel) * coeffs[tap];
+
+    const int32_t samplePos0 = centerPos - static_cast<int32_t>(halfTaps);
+    const float* window = m_history.getWindow(channel, samplePos0);
+
+#ifdef NOMAD_HAS_AVX
+    if (m_simdEnabled.load(std::memory_order_relaxed) && hasSIMD()) {
+        return dotProductAVX(window, coeffs, numTaps);
     }
-    
-    return sum;
+#elif defined(NOMAD_HAS_SSE)
+    if (m_simdEnabled.load(std::memory_order_relaxed) && hasSIMD()) {
+        return dotProductSSE(window, coeffs, numTaps);
+    }
+#endif
+
+    return dotProductScalar(window, coeffs, numTaps);
 }
 
 // =============================================================================

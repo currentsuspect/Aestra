@@ -4,6 +4,7 @@
 #include "SampleRateConverter.h"
 #include "NomadLog.h"
 
+#include <array>
 #include <cmath>
 #include <iostream>
 #include <iomanip>
@@ -179,7 +180,7 @@ void testRoundTrip() {
     SampleRateConverter up;
     up.configure(originalRate, intermediateRate, 2, SRCQuality::Sinc16);
     
-    const uint32_t upFrames = estimateOutputFrames(frames, originalRate, 
+    const uint32_t upFrames = Nomad::Audio::estimateOutputFrames(frames, originalRate,
                                                     intermediateRate, up.getLatency());
     std::vector<float> upsampled(upFrames * 2);
     uint32_t upWritten = up.process(original.data(), frames, 
@@ -189,7 +190,7 @@ void testRoundTrip() {
     SampleRateConverter down;
     down.configure(intermediateRate, originalRate, 2, SRCQuality::Sinc16);
     
-    const uint32_t downFrames = estimateOutputFrames(upWritten, intermediateRate,
+    const uint32_t downFrames = Nomad::Audio::estimateOutputFrames(upWritten, intermediateRate,
                                                       originalRate, down.getLatency());
     std::vector<float> roundTrip(downFrames * 2);
     uint32_t downWritten = down.process(upsampled.data(), upWritten,
@@ -233,20 +234,20 @@ void testRoundTrip() {
 void testQualityLevels() {
     std::cout << "\n=== Test: All Quality Levels ===\n";
     
-    const SRCQuality levels[] = {
+    std::array<SRCQuality, 5> levels = {
         SRCQuality::Linear,
         SRCQuality::Cubic,
         SRCQuality::Sinc8,
         SRCQuality::Sinc16,
         SRCQuality::Sinc64
     };
-    const char* names[] = {"Linear", "Cubic", "Sinc8", "Sinc16", "Sinc64"};
+    std::array<const char*, 5> names = {"Linear", "Cubic", "Sinc8", "Sinc16", "Sinc64"};
     
     std::vector<float> input;
     generateSineWave(input, 4096, 2, 44100, 1000.0);
     std::vector<float> output(8192 * 2);
     
-    for (int i = 0; i < 5; ++i) {
+    for (size_t i = 0; i < levels.size(); ++i) {
         SampleRateConverter src;
         src.configure(44100, 48000, 2, levels[i]);
         
@@ -294,6 +295,62 @@ void testPerformance() {
     
     recordTest("Performance >= 10x real-time", realtimeFactor >= 10.0,
                std::to_string(realtimeFactor) + "x real-time");
+}
+
+void testSIMDMatchesScalar() {
+    std::cout << "\n=== Test: SIMD vs Scalar Equivalence ===\n";
+
+    if (!SampleRateConverter::hasSIMD()) {
+        recordTest("SIMD matches scalar (skipped)", true, "SIMD not available in this build");
+        return;
+    }
+
+    const uint32_t srcRate = 44100;
+    const uint32_t dstRate = 48000;
+    const uint32_t channels = 2;
+    const SRCQuality quality = SRCQuality::Sinc16;
+
+    // ~100ms of audio keeps the test fast but exercises enough phases.
+    const uint32_t inputFrames = 4410;
+
+    std::vector<float> input;
+    generateSineWave(input, inputFrames, channels, srcRate, 997.0);
+
+    const uint32_t outCap = Nomad::Audio::estimateOutputFrames(inputFrames, srcRate, dstRate, 64);
+    std::vector<float> outSIMD(outCap * channels);
+    std::vector<float> outScalar(outCap * channels);
+
+    SampleRateConverter simd;
+    simd.configure(srcRate, dstRate, channels, quality);
+    simd.setSIMDEnabled(true);
+
+    SampleRateConverter scalar;
+    scalar.configure(srcRate, dstRate, channels, quality);
+    scalar.setSIMDEnabled(false);
+
+    const uint32_t writtenSIMD = simd.process(input.data(), inputFrames, outSIMD.data(), outCap);
+    const uint32_t writtenScalar = scalar.process(input.data(), inputFrames, outScalar.data(), outCap);
+
+    const bool countsMatch = (writtenSIMD == writtenScalar);
+    recordTest("SIMD/scalar frame counts match", countsMatch,
+               "SIMD=" + std::to_string(writtenSIMD) + ", scalar=" + std::to_string(writtenScalar));
+
+    if (!countsMatch || writtenSIMD == 0) {
+        recordTest("SIMD matches scalar within tolerance", false, "No comparable output");
+        return;
+    }
+
+    const uint32_t samples = writtenSIMD * channels;
+    const double rms = calculateRMSError(outSIMD.data(), outScalar.data(), samples);
+    const float maxErr = calculateMaxError(outSIMD.data(), outScalar.data(), samples);
+
+    std::cout << "  SIMD vs scalar RMS error: " << std::scientific << std::setprecision(4) << rms << "\n";
+    std::cout << "  SIMD vs scalar max error: " << std::fixed << std::setprecision(8) << maxErr << "\n";
+
+    // SIMD summation order can differ slightly; keep tolerance tight but realistic.
+    const bool ok = (rms < 1e-6) && (maxErr < 1e-5f);
+    recordTest("SIMD matches scalar within tolerance", ok,
+               "RMS=" + std::to_string(rms) + ", max=" + std::to_string(maxErr));
 }
 
 void testMultiChannel() {
@@ -390,6 +447,7 @@ int main() {
     testMultiChannel();
     testReset();
     testVariableRatio();
+    testSIMDMatchesScalar();
     testPerformance();
     
     // Summary

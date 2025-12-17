@@ -280,6 +280,12 @@ bool NUIPlatformBridge::isMaximized() const {
     return m_window ? m_window->isMaximized() : false;
 }
 
+void NUIPlatformBridge::requestClose() {
+    if (m_window) {
+        m_window->requestClose();
+    }
+}
+
 // =============================================================================
 // Fullscreen
 // =============================================================================

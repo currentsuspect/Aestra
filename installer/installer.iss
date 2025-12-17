@@ -6,7 +6,7 @@
 ; =========================================================
 
 #define MyAppName        "NOMAD DAW"
-#define MyAppVersion     "1.0.0"
+#define MyAppVersion     "1.1.0"
 #define MyAppPublisher   "Nomad Studios"
 #define MyAppURL         "https://nomad-daw.com"
 #define MyAppExeName     "NomadDAW.exe"

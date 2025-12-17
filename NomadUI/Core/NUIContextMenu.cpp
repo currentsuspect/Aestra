@@ -481,7 +481,8 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
     
     // Draw item content
     float x = itemRect.x + itemPadding_ + 4.0f;
-    float y = itemRect.y + (itemRect.height * 0.5f) + 5.0f; // Vertically center text
+    const float itemFontSize = 13.0f;
+    float y = std::round(renderer.calculateTextY(itemRect, itemFontSize));
     
     // Draw icon if present
     if (item->getIconObject())
@@ -540,14 +541,16 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
     
     // Draw text
     NUIColor textColor = item->isEnabled() ? textColor_ : textColor_.withAlpha(0.4f);
-    renderer.drawText(item->getText(), NUIPoint(x, y), 13.0f, textColor);
+    renderer.drawText(item->getText(), NUIPoint(x, y), itemFontSize, textColor);
     
     // Draw shortcut
     if (!item->getShortcut().empty())
     {
         auto& themeManager = NUIThemeManager::getInstance();
         float shortcutX = itemRect.x + itemRect.width - itemPadding_ - 60.0f;
-        renderer.drawText(item->getShortcut(), NUIPoint(shortcutX, y), 12.0f, themeManager.getColor("textSecondary"));
+        const float shortcutFontSize = 12.0f;
+        float shortcutY = std::round(renderer.calculateTextY(itemRect, shortcutFontSize));
+        renderer.drawText(item->getShortcut(), NUIPoint(shortcutX, shortcutY), shortcutFontSize, themeManager.getColor("textSecondary"));
     }
     
     // Draw submenu arrow using NUIIcon
