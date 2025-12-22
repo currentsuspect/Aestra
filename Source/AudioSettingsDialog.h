@@ -7,7 +7,7 @@
 #pragma once
 
 #include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUIButton.h"
+#include "../NomadUI/Widgets/NUIButton.h"
 #include "../NomadUI/Core/NUILabel.h"
 #include "../NomadUI/Core/NUIIcon.h"
 #include "../NomadUI/Core/NUISlider.h"
@@ -25,8 +25,8 @@ namespace Nomad {
 // Forward declarations
 namespace Audio {
     class TrackManager;  // Not used anymore but keep for potential future use
-    class Track;
 }
+
 
 /**
  * @brief Audio settings dialog

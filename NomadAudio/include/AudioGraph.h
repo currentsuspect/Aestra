@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include "AutomationCurve.h"
 
 namespace Nomad {
 namespace Audio {
@@ -39,6 +40,7 @@ struct TrackRenderState {
     float pan{0.0f};
     bool mute{false};
     bool solo{false};
+    std::vector<AutomationCurve> automationCurves;
 };
 
 /**
@@ -49,6 +51,7 @@ struct AudioGraph {
     // Precomputed max end sample across all clips (engine sample rate).
     // Used for transport looping without scanning clips on the RT thread.
     uint64_t timelineEndSample{0};
+    double bpm{120.0};
 };
 
 } // namespace Audio

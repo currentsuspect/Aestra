@@ -5,12 +5,15 @@
  */
 
 #include "AudioSettingsDialog.h"
+#include "../NomadUI/Widgets/NUIButton.h"
+#include "../NomadUI/Widgets/NUICoreWidgets.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
 #include "../NomadAudio/include/AudioDriverTypes.h"
 #include "../NomadAudio/include/TrackManager.h"
-#include "../NomadAudio/include/Track.h"
+#include "../NomadAudio/include/MixerChannel.h"
+
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -276,6 +279,7 @@ void AudioSettingsDialog::createUI() {
     m_dcRemovalToggle = std::make_shared<NomadUI::NUIButton>();
     m_dcRemovalToggle->setText("ON");
     m_dcRemovalToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_dcRemovalToggle->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
     m_dcRemovalToggle->setOnClick([this]() {
         std::string oldText = m_dcRemovalToggle->getText();
         if (oldText == "ON") {
@@ -300,6 +304,7 @@ void AudioSettingsDialog::createUI() {
     m_softClippingToggle = std::make_shared<NomadUI::NUIButton>();
     m_softClippingToggle->setText("OFF");
     m_softClippingToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_softClippingToggle->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
     m_softClippingToggle->setOnClick([this]() {
         if (m_softClippingToggle->getText() == "ON") {
             m_softClippingToggle->setText("OFF");
@@ -320,6 +325,7 @@ void AudioSettingsDialog::createUI() {
     m_precision64BitToggle = std::make_shared<NomadUI::NUIButton>();
     m_precision64BitToggle->setText("OFF");
     m_precision64BitToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_precision64BitToggle->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
     m_precision64BitToggle->setOnClick([this]() {
         if (m_precision64BitToggle->getText() == "ON") {
             m_precision64BitToggle->setText("OFF");
@@ -342,6 +348,7 @@ void AudioSettingsDialog::createUI() {
     m_multiThreadingToggle = std::make_shared<NomadUI::NUIButton>();
     m_multiThreadingToggle->setText("ON");
     m_multiThreadingToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_multiThreadingToggle->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
     m_multiThreadingToggle->setOnClick([this]() {
         if (m_multiThreadingToggle->getText() == "ON") {
             m_multiThreadingToggle->setText("OFF");
@@ -417,16 +424,19 @@ void AudioSettingsDialog::createUI() {
     // Create buttons
     m_applyButton = std::make_shared<NomadUI::NUIButton>();
     m_applyButton->setText("Apply");
-    m_applyButton->setStyle(NomadUI::NUIButton::Style::Primary); // Primary action
+    m_applyButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Default to Secondary (inactive)
+    m_applyButton->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f)); // Stronger Bright hover
     m_applyButton->setOnClick([this]() {
         applySettings();
     });
     m_applyButton->setEnabled(false);
     addChild(m_applyButton);
     
-    m_cancelButton = std::make_shared<NomadUI::NUIButton>();
+    // m_cancelButton = std::make_shared<NomadUI::NUIButton>();
+    m_cancelButton.reset(new NomadUI::NUIButton());
     m_cancelButton->setText("Cancel");
     m_cancelButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Secondary style
+    m_cancelButton->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f)); // Stronger Bright hover
     m_cancelButton->setOnClick([this]() {
         cancelSettings();
     });
@@ -435,6 +445,7 @@ void AudioSettingsDialog::createUI() {
     m_testSoundButton = std::make_shared<NomadUI::NUIButton>();
     m_testSoundButton->setText("Test Sound");
     m_testSoundButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Secondary style
+    m_testSoundButton->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
     m_testSoundButton->setOnClick([this]() {
         if (m_isPlayingTestSound) {
             stopTestSound();
@@ -680,8 +691,42 @@ bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
     }
     
+    // Manual Hover Handling for Buttons to ensure repaints
+    // Standard dispatch sometimes misses the invalidation needed for instant feedback
+    bool anyHoverChanged = false;
+    
+    auto updateButtonHover = [&](std::shared_ptr<NomadUI::NUIButton> btn) {
+        if (!btn) return;
+        bool isOver = btn->getBounds().contains(event.position);
+        if (btn->isHovered() != isOver) {
+            btn->setHovered(isOver);
+            anyHoverChanged = true;
+        }
+    };
+    
+    updateButtonHover(m_applyButton);
+    updateButtonHover(m_cancelButton);
+    updateButtonHover(m_testSoundButton);
+    updateButtonHover(m_dcRemovalToggle);
+    updateButtonHover(m_softClippingToggle);
+    updateButtonHover(m_precision64BitToggle);
+    updateButtonHover(m_multiThreadingToggle);
+
+    if (anyHoverChanged) {
+        setDirty(true);
+        // Force repaint immediately
+    }
+
     // Let children handle events (buttons will handle their own clicks)
-    return NomadUI::NUIComponent::onMouseEvent(event);
+    if (NomadUI::NUIComponent::onMouseEvent(event)) {
+        return true;
+    }
+
+    // BLOCK CLICKTHROUGH:
+    // Since we are a modal dialog overlay, we must consume ALL mouse events
+    // that occur within our bounds (which is the entire screen/window).
+    // This prevents clicks from passing through to the playlist/tracks behind.
+    return true;
 }
 
 bool AudioSettingsDialog::onKeyEvent(const NomadUI::NUIKeyEvent& event) {
@@ -893,7 +938,16 @@ bool AudioSettingsDialog::hasUnsavedChanges() const {
 
 void AudioSettingsDialog::updateApplyButtonState() {
     if (!m_applyButton) return;
-    m_applyButton->setEnabled(hasUnsavedChanges());
+    
+    bool hasChanges = hasUnsavedChanges();
+    m_applyButton->setEnabled(hasChanges);
+    
+    // Dynamic styling: Light up when there are changes
+    if (hasChanges) {
+        m_applyButton->setStyle(NomadUI::NUIButton::Style::Primary);
+    } else {
+        m_applyButton->setStyle(NomadUI::NUIButton::Style::Secondary);
+    }
 }
 
 void AudioSettingsDialog::markSettingsChanged() {

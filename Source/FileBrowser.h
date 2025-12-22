@@ -9,12 +9,21 @@
 #include <memory>
 #include <functional>
 #include <unordered_map>
+#include <unordered_set>
+#include <atomic>
+#include <condition_variable>
+#include <deque>
+#include <mutex>
+#include <thread>
 
 namespace NomadUI {
 
 class NUIContextMenu;
 class NUITextInput;
 
+/**
+ * File type enumeration for proper icon display
+ */
 /**
  * File type enumeration for proper icon display
  */
@@ -27,6 +36,17 @@ enum class FileType {
     Mp3File,
     FlacFile,
     Unknown
+};
+
+/**
+ * Smart File Filter - Whitelist approach
+ */
+struct FileFilter {
+    static const std::unordered_set<std::string> audioExtensions;
+    static const std::unordered_set<std::string> projectExtensions;
+
+    static bool isAllowed(const std::string& path);
+    static FileType getType(const std::string& path, bool isDir);
 };
 
 /**
@@ -43,6 +63,8 @@ struct FileItem {
     // Tree view support
     bool isExpanded = false;
     bool hasLoadedChildren = false;
+    bool isLoadingChildren = false;
+    bool isPlaceholder = false;
     std::vector<FileItem> children;
     int depth = 0;
     
@@ -67,7 +89,7 @@ struct FileItem {
 class FileBrowser : public NUIComponent {
 public:
     FileBrowser();
-    ~FileBrowser() override = default;
+    ~FileBrowser() override;
     
     // Component interface
     void onRender(NUIRenderer& renderer) override;
@@ -139,14 +161,51 @@ public:
 	private:
 	    void loadDirectoryContents();
 	    void loadFolderContents(FileItem* item);
+
+        // Async scanning (prevents UI stalls on large directories)
+        enum class ScanKind { Root, Folder };
+        struct ScanTask {
+            ScanKind kind;
+            std::string path;
+            int depth = 0;
+            bool showHidden = false;
+            uint64_t generation = 0;
+        };
+        struct ScanResult {
+            ScanKind kind;
+            std::string path;
+            int depth = 0;
+            uint64_t generation = 0;
+            std::vector<FileItem> items;
+        };
+
+        void ensureScanWorker();
+        void stopScanWorker();
+        void enqueueScan(ScanKind kind, const std::string& path, int depth);
+        void processScanResults();
+        std::vector<FileItem> scanDirectory(const std::string& path, int depth, bool showHidden, uint64_t generation) const;
+        FileItem* findItemByPath(const std::string& path);
+        void scanWorkerLoop();
+
+        std::thread scanWorker_;
+        std::mutex scanMutex_;
+        std::condition_variable scanCv_;
+        std::deque<ScanTask> scanTasks_;
+        std::deque<ScanResult> scanResults_;
+        std::atomic<bool> scanStop_{false};
+        std::atomic<uint64_t> scanGeneration_{0};
+        bool scanWorkerStarted_{false};
+        bool scanningRoot_{false};
+
 		    void updateDisplayList();
 		    void updateDisplayListRecursive(FileItem& item, std::vector<const FileItem*>& list);
 		    void sortFiles();
 		    bool compareFileItems(const FileItem& a, const FileItem& b) const;
-		    FileType getFileTypeFromExtension(const std::string& extension);
+		    FileType getFileTypeFromExtension(const std::string& extension) const;
 		    std::shared_ptr<NUIIcon> getIconForFileType(FileType type);
 		    bool isFilterActive() const;
 		    const std::vector<const FileItem*>& getActiveView() const;
+		    void invalidateAllItemCaches();
 		    void renderFileList(NUIRenderer& renderer);
 		    void renderInteractiveBreadcrumbs(NUIRenderer& renderer);
 		    void renderToolbar(NUIRenderer& renderer);
@@ -164,6 +223,7 @@ public:
 	    void showSortMenu();
 	    void showTagFilterMenu();
 	    void showItemContextMenu(const FileItem& item, const NUIPoint& position);
+	    void showHiddenBreadcrumbMenu(const std::vector<std::string>& hiddenPaths, const NUIPoint& position);
 	    void hidePopupMenu();
 	    void toggleTag(const std::string& path, const std::string& tag);
 	    bool hasTag(const std::string& path, const std::string& tag) const;
@@ -192,6 +252,10 @@ public:
     float lastCachedWidth_;       // Track width changes to invalidate cache
     float lastRenderedOffset_;    // Track when to trigger repaint
     float effectiveWidth_;        // Current render width (accounts for preview panel)
+    
+    // View Cache
+    mutable std::vector<const FileItem*> cachedView_;
+    mutable bool viewDirty_ = true;
     
     // Scrollbar state
     bool scrollbarVisible_;
@@ -237,11 +301,16 @@ public:
     bool previewPanelVisible_;
     float previewPanelWidth_;
     std::vector<float> waveformData_;      // Cached waveform amplitude data
+    bool isLoadingPreview_;                // True while loading waveform/preview
+    float loadingAnimationTime_;           // Animation timer for loading spinner
+    bool isLoadingPlayback_;               // True while loading audio for playback
+    bool wasLoadingPlayback_;              // Previous frame's playback loading state
     
     // Breadcrumb state
     struct Breadcrumb {
         std::string name;
         std::string path;
+        std::vector<std::string> hiddenPaths; // For ellipsis menu
         float x;
         float width;
     };

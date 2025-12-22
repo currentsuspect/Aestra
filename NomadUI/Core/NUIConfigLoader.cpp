@@ -220,6 +220,11 @@ void NUIConfigLoader::applyColors(const Nomad::JSON& colors) {
     if (colors.has("error")) theme.error = parseColor(colors["error"].asString());
     if (colors.has("success")) theme.success = parseColor(colors["success"].asString());
     if (colors.has("warning")) theme.warning = parseColor(colors["warning"].asString());
+
+    // Glass Aesthetic tokens
+    if (colors.has("glassHover")) theme.glassHover = parseColor(colors["glassHover"].asString());
+    if (colors.has("glassBorder")) theme.glassBorder = parseColor(colors["glassBorder"].asString());
+    if (colors.has("glassActive")) theme.glassActive = parseColor(colors["glassActive"].asString());
 }
 
 void NUIConfigLoader::applyLayout(const Nomad::JSON& layout) {
@@ -264,8 +269,13 @@ NUIColor NUIConfigLoader::parseColor(const std::string& colorStr) {
         uint32_t color = std::stoul(hex, nullptr, 16);
         return NUIColor::fromHex(color);
     } else if (hex.length() == 8) {
+        // Handle 8-character hex (AARRGGBB)
         uint32_t color = std::stoul(hex, nullptr, 16);
-        return NUIColor::fromHex(color);
+        float a = ((color >> 24) & 0xFF) / 255.0f;
+        float r = ((color >> 16) & 0xFF) / 255.0f;
+        float g = ((color >> 8) & 0xFF) / 255.0f;
+        float b = (color & 0xFF) / 255.0f;
+        return NUIColor(r, g, b, a);
     }
 
     return NUIColor::black(); // fallback
@@ -292,7 +302,13 @@ float NUIConfigLoader::parseDimension(const Nomad::JSON& value) {
 std::string NUIConfigLoader::colorToHex(const NUIColor& color) {
     uint32_t hex = color.toHex();
     std::stringstream ss;
-    ss << std::hex << std::setw(6) << std::setfill('0') << (hex >> 8);
+    if (color.a < 0.999f) {
+        // 8-character hex (AARRGGBB)
+        ss << std::hex << std::setw(8) << std::setfill('0') << hex;
+    } else {
+        // 6-character hex (RRGGBB) - exclude alpha channel
+        ss << std::hex << std::setw(6) << std::setfill('0') << (hex & 0xFFFFFF);
+    }
     return ss.str();
 }
 

@@ -222,7 +222,6 @@ private:
     float scrollPosition_ = 0.0f;
 
     // Interaction state
-    bool isFocused_ = false;
     bool isHovered_ = false;
     bool isPressed_ = false;
     bool showCaret_ = true;

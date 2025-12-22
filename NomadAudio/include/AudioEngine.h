@@ -3,12 +3,18 @@
 
 #include "AudioCommandQueue.h"
 #include "AudioTelemetry.h"
+#include "ChannelSlotMap.h"
+#include "ContinuousParamBuffer.h"
 #include "EngineState.h"
 #include "Interpolators.h"
+#include "MeterSnapshot.h"
 #include <cstdint>
 #include <cmath>
 #include <atomic>
+#include <array>
 #include <vector>
+#include <memory>
+#include <string>
 
 namespace Nomad {
 namespace Audio {
@@ -41,31 +47,68 @@ public:
     AudioTelemetry& telemetry() { return m_telemetry; }
     EngineState& engineState() { return m_state; }
 
-    void setSampleRate(uint32_t sampleRate) { m_sampleRate = sampleRate; }
-    uint32_t getSampleRate() const { return m_sampleRate; }
+    void setSampleRate(uint32_t sampleRate) { m_sampleRate.store(sampleRate, std::memory_order_relaxed); }
+    uint32_t getSampleRate() const { return m_sampleRate.load(std::memory_order_relaxed); }
 
     void setBufferConfig(uint32_t maxFrames, uint32_t numChannels);
-    void setTransportPlaying(bool playing) { m_transportPlaying = playing; }
-    bool isTransportPlaying() const { return m_transportPlaying; }
+    void setTransportPlaying(bool playing) { m_transportPlaying.store(playing, std::memory_order_relaxed); }
+    bool isTransportPlaying() const { return m_transportPlaying.load(std::memory_order_relaxed); }
     void setGraph(const AudioGraph& graph) { m_state.swapGraph(graph); }
+
+    // RT-safe metering (written on audio thread, read on UI thread)
+    void setMeterSnapshots(std::shared_ptr<MeterSnapshotBuffer> snapshots) {
+        m_meterSnapshotsOwned = std::move(snapshots);
+        m_meterSnapshotsRaw.store(m_meterSnapshotsOwned.get(), std::memory_order_release);
+    }
+
+    // Continuous mixer params (UI writes, audio reads)
+    void setContinuousParams(std::shared_ptr<ContinuousParamBuffer> params) {
+        m_continuousParamsOwned = std::move(params);
+        m_continuousParamsRaw.store(m_continuousParamsOwned.get(), std::memory_order_release);
+    }
+
+    // Stable channelId -> dense slot mapping (set only at safe points)
+    void setChannelSlotMap(std::shared_ptr<const ChannelSlotMap> slotMap) {
+        m_channelSlotMapOwned = std::move(slotMap);
+        m_channelSlotMapRaw.store(m_channelSlotMapOwned.get(), std::memory_order_release);
+    }
     
     // Position tracking
-    uint64_t getGlobalSamplePos() const { return m_globalSamplePos; }
-    void setGlobalSamplePos(uint64_t pos) { m_globalSamplePos = pos; }
+    uint64_t getGlobalSamplePos() const { return m_globalSamplePos.load(std::memory_order_relaxed); }
+    void setGlobalSamplePos(uint64_t pos) { m_globalSamplePos.store(pos, std::memory_order_relaxed); }
     double getPositionSeconds() const { 
-        return m_sampleRate > 0 ? static_cast<double>(m_globalSamplePos) / m_sampleRate : 0.0; 
+        uint32_t sr = m_sampleRate.load(std::memory_order_relaxed);
+        return sr > 0 ? static_cast<double>(m_globalSamplePos.load(std::memory_order_relaxed)) / sr : 0.0; 
     }
     
     // Quality settings
-    void setInterpolationQuality(Interpolators::InterpolationQuality q) { m_interpQuality = q; }
-    Interpolators::InterpolationQuality getInterpolationQuality() const { return m_interpQuality; }
+    void setInterpolationQuality(Interpolators::InterpolationQuality q) { m_interpQuality.store(q, std::memory_order_relaxed); }
+    Interpolators::InterpolationQuality getInterpolationQuality() const { return m_interpQuality.load(std::memory_order_relaxed); }
     
     // Master output control
-    void setMasterGain(float gain) { m_masterGainTarget = gain; }
-    float getMasterGain() const { return m_masterGainTarget; }
-    void setHeadroom(float db) { m_headroomLinear = std::pow(10.0f, db / 20.0f); }
-    void setSafetyProcessingEnabled(bool enabled) { m_safetyProcessingEnabled = enabled; }
-    bool isSafetyProcessingEnabled() const { return m_safetyProcessingEnabled; }
+    void setMasterGain(float gain) { m_masterGainTarget.store(gain, std::memory_order_relaxed); }
+    float getMasterGain() const { return m_masterGainTarget.load(std::memory_order_relaxed); }
+    void setHeadroom(float db) { m_headroomLinear.store(std::pow(10.0f, db / 20.0f), std::memory_order_relaxed); }
+    void setSafetyProcessingEnabled(bool enabled) { m_safetyProcessingEnabled.store(enabled, std::memory_order_relaxed); }
+    bool isSafetyProcessingEnabled() const { return m_safetyProcessingEnabled.load(std::memory_order_relaxed); }
+    
+    // Metronome control
+    void setMetronomeEnabled(bool enabled) { m_metronomeEnabled.store(enabled, std::memory_order_relaxed); }
+    bool isMetronomeEnabled() const { return m_metronomeEnabled.load(std::memory_order_relaxed); }
+    void setMetronomeVolume(float vol) { m_metronomeVolume.store(vol, std::memory_order_relaxed); }
+    float getMetronomeVolume() const { return m_metronomeVolume.load(std::memory_order_relaxed); }
+    void setBPM(float bpm) { m_bpm.store(bpm, std::memory_order_relaxed); }
+    float getBPM() const { return m_bpm.load(std::memory_order_relaxed); }
+    void setBeatsPerBar(int beats) { m_beatsPerBar.store(beats, std::memory_order_relaxed); m_currentBeat = 0; }
+    int getBeatsPerBar() const { return m_beatsPerBar.load(std::memory_order_relaxed); }
+    void loadMetronomeClicks(const std::string& downbeatPath, const std::string& upbeatPath);
+
+    // Loop control
+    void setLoopEnabled(bool enabled) { m_loopEnabled.store(enabled, std::memory_order_relaxed); }
+    bool isLoopEnabled() const { return m_loopEnabled.load(std::memory_order_relaxed); }
+    void setLoopRegion(double startBeat, double endBeat);
+    double getLoopStartBeat() const { return m_loopStartBeat.load(std::memory_order_relaxed); }
+    double getLoopEndBeat() const { return m_loopEndBeat.load(std::memory_order_relaxed); }
 
     // Metering (read on UI thread)
     float getPeakL() const { return m_peakL.load(std::memory_order_relaxed); }
@@ -74,11 +117,11 @@ public:
     float getRmsR() const { return m_rmsR.load(std::memory_order_relaxed); }
 
     // Waveform history (interleaved stereo), safe to read on UI thread.
-    uint32_t getWaveformHistoryCapacity() const { return m_waveformHistoryFrames; }
+    uint32_t getWaveformHistoryCapacity() const { return m_waveformHistoryFrames.load(std::memory_order_relaxed); }
     uint32_t copyWaveformHistory(float* outInterleaved, uint32_t maxFrames) const;
 
 private:
-    static constexpr size_t kMaxTracks = 64;
+    static constexpr size_t kMaxTracks = 4096;
     static constexpr uint32_t kWaveformHistoryFramesDefault = 2048;
 
     // Double-precision smoothed parameter for zero-zipper automation
@@ -133,11 +176,11 @@ private:
     AudioTelemetry m_telemetry;
     EngineState m_state;
 
-    uint32_t m_sampleRate{48000};
-    uint32_t m_maxBufferFrames{4096};  // Larger default for safety
-    uint32_t m_outputChannels{2};
-    bool m_transportPlaying{false};
-    uint64_t m_globalSamplePos{0};
+    std::atomic<uint32_t> m_sampleRate{48000};
+    std::atomic<uint32_t> m_maxBufferFrames{4096};  // Larger default for safety
+    std::atomic<uint32_t> m_outputChannels{2};
+    std::atomic<bool> m_transportPlaying{false};
+    std::atomic<uint64_t> m_globalSamplePos{0};
     
     // Pre-allocated buffers - DOUBLE PRECISION for internal mixing
     std::vector<std::vector<double>> m_trackBuffersD;  // Double precision track buffers
@@ -145,15 +188,15 @@ private:
     std::vector<TrackRTState> m_trackState;
     
     // Interpolation quality
-    Interpolators::InterpolationQuality m_interpQuality{Interpolators::InterpolationQuality::Cubic};
+    std::atomic<Interpolators::InterpolationQuality> m_interpQuality{Interpolators::InterpolationQuality::Cubic};
     
     // Master output processing (double precision)
-    float m_masterGainTarget{1.0f};
-    float m_headroomLinear{0.5f};  // -6dB headroom
+    std::atomic<float> m_masterGainTarget{1.0f};
+    std::atomic<float> m_headroomLinear{0.5f};  // -6dB headroom
     SmoothedParamD m_smoothedMasterGain;
     DCBlockerD m_dcBlockerL;
     DCBlockerD m_dcBlockerR;
-    bool m_safetyProcessingEnabled{false};
+    std::atomic<bool> m_safetyProcessingEnabled{false};
     
     // Peak detection
     std::atomic<float> m_peakL{0.0f};
@@ -161,10 +204,18 @@ private:
     std::atomic<float> m_rmsL{0.0f};
     std::atomic<float> m_rmsR{0.0f};
 
+    // Mixer meter snapshots (optional; when set, audio thread writes peaks)
+    std::shared_ptr<MeterSnapshotBuffer> m_meterSnapshotsOwned;
+    std::atomic<MeterSnapshotBuffer*> m_meterSnapshotsRaw{nullptr};
+    std::shared_ptr<ContinuousParamBuffer> m_continuousParamsOwned;
+    std::atomic<ContinuousParamBuffer*> m_continuousParamsRaw{nullptr};
+    std::shared_ptr<const ChannelSlotMap> m_channelSlotMapOwned;
+    std::atomic<const ChannelSlotMap*> m_channelSlotMapRaw{nullptr};
+
     // Recent output ring buffer for oscilloscope/mini-waveform displays.
     std::vector<float> m_waveformHistory;
     std::atomic<uint32_t> m_waveformWriteIndex{0};
-    uint32_t m_waveformHistoryFrames{0};
+    std::atomic<uint32_t> m_waveformHistoryFrames{0};
     
     // Fade state machine
     enum class FadeState { None, FadingIn, FadingOut, Silent };
@@ -177,6 +228,32 @@ private:
     // Pre-computed constants
     static constexpr double PI_D = 3.14159265358979323846;
     static constexpr double QUARTER_PI_D = PI_D * 0.25;
+
+    // Meter analysis state (audio thread).
+    uint32_t m_meterAnalysisSampleRate{0};
+    double m_meterLfCoeff{0.0};
+    std::array<double, MeterSnapshotBuffer::MAX_CHANNELS> m_meterLfStateL{};
+    std::array<double, MeterSnapshotBuffer::MAX_CHANNELS> m_meterLfStateR{};
+    
+    // Metronome state
+    std::atomic<bool> m_metronomeEnabled{false};
+    std::atomic<float> m_metronomeVolume{0.7f};
+    std::atomic<float> m_bpm{120.0f};
+    std::atomic<int> m_beatsPerBar{4};              // Time signature numerator (4 for 4/4)
+    std::vector<float> m_clickSamplesDown;          // Mono click for downbeat (low pitch)
+    std::vector<float> m_clickSamplesUp;            // Mono click for upbeat (high pitch)
+    uint32_t m_clickSampleRate{48000};              // Sample rate of loaded click
+    size_t m_clickPlayhead{0};                      // Current position in click
+    bool m_clickPlaying{false};                     // Currently playing a click
+    uint64_t m_nextBeatSample{0};                   // Sample position of next beat
+    int m_currentBeat{0};                           // Current beat in bar (0-based, 0=downbeat)
+    float m_currentClickGain{1.0f};                 // Gain for current click
+    const std::vector<float>* m_activeClickSamples{nullptr};  // Points to down or up samples
+
+    // Loop state
+    std::atomic<bool> m_loopEnabled{false};
+    std::atomic<double> m_loopStartBeat{0.0};
+    std::atomic<double> m_loopEndBeat{4.0};         // Default: 1 bar (4 beats)
 };
 
 } // namespace Audio

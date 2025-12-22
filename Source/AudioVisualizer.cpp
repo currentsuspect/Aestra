@@ -100,7 +100,8 @@ void AudioVisualizer::onUpdate(double deltaTime) {
     const float rightRMSPrev = rightRMSSmoothed_.load();
 
     // Time-based ballistics for consistent feel across FPS
-    const float peakReleaseSec = 0.35f;   // ~350ms falloff
+    // Peak should feel punchy/instantaneous (FL-style), especially in compact meters.
+    const float peakReleaseSec = 0.12f;   // ~120ms falloff
     const float rmsAttackSec = 0.05f;     // 50ms rise
     const float rmsReleaseSec = 0.25f;    // 250ms falloff
 
@@ -699,19 +700,20 @@ void AudioVisualizer::renderCompactMeter(NUIRenderer& renderer) {
     float meterHeight = bounds.height - padding * 2.0f;
     float meterWidth = (bounds.width - padding * 2.0f - gap) / 2.0f;
     
-    // Use smoothed values for fluid animation
+    // Use smoothed RMS for the body and smoothed peak for the fast overlay line.
+    // This matches the mixer: energy body + responsive peak marker.
     float leftRMSSmooth = leftRMSSmoothed_.load();
     float rightRMSSmooth = rightRMSSmoothed_.load();
-    float leftPeakHold = leftPeakHold_.load();   // Use peak hold, not smoothed peak
-    float rightPeakHold = rightPeakHold_.load(); // Use peak hold, not smoothed peak
+    float leftPeakOverlay = leftPeakSmoothed_.load();
+    float rightPeakOverlay = rightPeakSmoothed_.load();
     
     // Left channel meter (very slim) - CYAN
     NUIRect leftMeter(bounds.x + padding, bounds.y + padding, meterWidth, meterHeight);
-    renderLevelBar(renderer, leftMeter, leftRMSSmooth, leftPeakHold, primaryColor_);
+    renderLevelBar(renderer, leftMeter, leftRMSSmooth, leftPeakOverlay, primaryColor_);
     
     // Right channel meter (very slim) - MAGENTA
     NUIRect rightMeter(bounds.x + padding + meterWidth + gap, bounds.y + padding, meterWidth, meterHeight);
-    renderLevelBar(renderer, rightMeter, rightRMSSmooth, rightPeakHold, secondaryColor_);
+    renderLevelBar(renderer, rightMeter, rightRMSSmooth, rightPeakOverlay, secondaryColor_);
 
     // Clip flash at the top of each meter
     if (leftClipIndicator_ > 0.02f) {

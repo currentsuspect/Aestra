@@ -1,10 +1,11 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
-
 #include "PlaylistModel.h"
 #include "PlaylistRuntimeSnapshot.h"
+#include "PatternManager.h"
 #include "NomadLog.h"
+#include <unordered_map>
 #include <algorithm>
 #include <mutex>
+
 
 namespace Nomad {
 namespace Audio {
@@ -17,13 +18,11 @@ struct PlaylistModel::Impl {
     std::vector<PlaylistLane> lanes;
     std::vector<ChangeCallback> observers;
     
-    double projectSampleRate = DEFAULT_SAMPLE_RATE;
-    double bpm = DEFAULT_BPM;
-    GridSubdivision gridSubdivision = GridSubdivision::Beat;
-    bool snapEnabled = true;
+    double projectSampleRate = 48000.0;
+    double bpm = 120.0;
     
     std::atomic<uint64_t> modificationCounter{0};
-    mutable std::mutex mutex;
+    mutable std::recursive_mutex mutex;
     uint32_t nextLaneNumber = 1;
 };
 
@@ -40,7 +39,7 @@ PlaylistModel::~PlaylistModel() {
 // === Project Settings ===
 
 void PlaylistModel::setProjectSampleRate(double sampleRate) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     if (sampleRate > 0) {
         m_impl->projectSampleRate = sampleRate;
         notifyChange();
@@ -48,12 +47,12 @@ void PlaylistModel::setProjectSampleRate(double sampleRate) {
 }
 
 double PlaylistModel::getProjectSampleRate() const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     return m_impl->projectSampleRate;
 }
 
 void PlaylistModel::setBPM(double bpm) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     if (bpm > 0) {
         m_impl->bpm = bpm;
         notifyChange();
@@ -61,39 +60,35 @@ void PlaylistModel::setBPM(double bpm) {
 }
 
 double PlaylistModel::getBPM() const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     return m_impl->bpm;
 }
 
-void PlaylistModel::setGridSubdivision(GridSubdivision grid) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    m_impl->gridSubdivision = grid;
-    notifyChange();
+double PlaylistModel::getBPMAtBeat(double beat) const {
+    // v3.0 placeholder for tempo automation
+    return getBPM();
 }
 
-GridSubdivision PlaylistModel::getGridSubdivision() const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    return m_impl->gridSubdivision;
+double PlaylistModel::beatToSeconds(double beat) const {
+    double bpm = getBPMAtBeat(beat);
+    if (bpm <= 0) return 0;
+    return beat * (60.0 / bpm);
 }
 
-void PlaylistModel::setSnapEnabled(bool enabled) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    m_impl->snapEnabled = enabled;
-}
-
-bool PlaylistModel::isSnapEnabled() const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    return m_impl->snapEnabled;
+double PlaylistModel::secondsToBeats(double seconds) const {
+    double bpm = getBPMAtBeat(0); // v3.0 simple case
+    if (bpm <= 0) return 0;
+    return seconds * (bpm / 60.0);
 }
 
 // === Lane Management ===
 
 PlaylistLaneID PlaylistModel::createLane(const std::string& name) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     
     std::string laneName = name;
     if (laneName.empty()) {
-        laneName = "Track " + std::to_string(m_impl->nextLaneNumber++);
+        laneName = "Lane " + std::to_string(m_impl->nextLaneNumber++);
     }
     
     PlaylistLane lane(laneName);
@@ -107,49 +102,35 @@ PlaylistLaneID PlaylistModel::createLane(const std::string& name) {
 }
 
 bool PlaylistModel::deleteLane(PlaylistLaneID laneId) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     
     int idx = findLaneIndex(laneId);
     if (idx < 0) return false;
     
-    std::string name = m_impl->lanes[idx].name;
     m_impl->lanes.erase(m_impl->lanes.begin() + idx);
-    
-    Log::info("PlaylistModel: Deleted lane '" + name + "'");
     notifyChange();
-    
     return true;
 }
 
 PlaylistLane* PlaylistModel::getLane(PlaylistLaneID laneId) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     int idx = findLaneIndex(laneId);
     return idx >= 0 ? &m_impl->lanes[idx] : nullptr;
 }
 
 const PlaylistLane* PlaylistModel::getLane(PlaylistLaneID laneId) const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     int idx = findLaneIndex(laneId);
     return idx >= 0 ? &m_impl->lanes[idx] : nullptr;
 }
 
-PlaylistLane* PlaylistModel::getLaneByIndex(size_t index) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    return index < m_impl->lanes.size() ? &m_impl->lanes[index] : nullptr;
-}
-
-const PlaylistLane* PlaylistModel::getLaneByIndex(size_t index) const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    return index < m_impl->lanes.size() ? &m_impl->lanes[index] : nullptr;
-}
-
 size_t PlaylistModel::getLaneCount() const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     return m_impl->lanes.size();
 }
 
 std::vector<PlaylistLaneID> PlaylistModel::getLaneIDs() const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     std::vector<PlaylistLaneID> ids;
     ids.reserve(m_impl->lanes.size());
     for (const auto& lane : m_impl->lanes) {
@@ -158,332 +139,200 @@ std::vector<PlaylistLaneID> PlaylistModel::getLaneIDs() const {
     return ids;
 }
 
+PlaylistLaneID PlaylistModel::getLaneId(size_t index) const {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
+    if (index >= m_impl->lanes.size()) return PlaylistLaneID();
+    return m_impl->lanes[index].id;
+}
+
 bool PlaylistModel::moveLane(PlaylistLaneID laneId, size_t newIndex) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     int oldIdx = findLaneIndex(laneId);
     if (oldIdx < 0) return false;
-    
-    if (newIndex >= m_impl->lanes.size()) {
-        newIndex = m_impl->lanes.size() - 1;
-    }
-    
+    if (newIndex >= m_impl->lanes.size()) newIndex = m_impl->lanes.size() - 1;
     if (static_cast<size_t>(oldIdx) == newIndex) return true;
     
     PlaylistLane lane = std::move(m_impl->lanes[oldIdx]);
     m_impl->lanes.erase(m_impl->lanes.begin() + oldIdx);
     m_impl->lanes.insert(m_impl->lanes.begin() + newIndex, std::move(lane));
-    
     notifyChange();
     return true;
 }
 
 // === Clip Operations ===
 
-PlaylistClipID PlaylistModel::addClip(PlaylistLaneID laneId, const PlaylistClip& clip) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
+ClipInstanceID PlaylistModel::addClip(PlaylistLaneID laneId, const ClipInstance& clip) {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     int laneIdx = findLaneIndex(laneId);
-    if (laneIdx < 0) return PlaylistClipID();
+    if (laneIdx < 0) return ClipInstanceID();
     
-    PlaylistClip newClip = clip;
-    if (!newClip.id.isValid()) {
-        newClip.id = PlaylistClipID::generate();
-    }
+    ClipInstance newClip = clip;
+    if (!newClip.id.isValid()) newClip.id = ClipInstanceID::generate();
     
     m_impl->lanes[laneIdx].clips.push_back(newClip);
     m_impl->lanes[laneIdx].sortClips();
     
-    Log::info("PlaylistModel: Added clip '" + newClip.name + "' to lane '" + 
-              m_impl->lanes[laneIdx].name + "' at " + 
-              std::to_string(samplesToSeconds(newClip.startTime, m_impl->projectSampleRate)) + "s");
     notifyChange();
-    
     return newClip.id;
 }
 
-PlaylistClipID PlaylistModel::addClipFromSource(PlaylistLaneID laneId, ClipSourceID sourceId,
-                                                  SampleIndex startTime, SampleIndex length,
-                                                  SampleIndex sourceStart) {
-    PlaylistClip clip(sourceId);
-    clip.startTime = startTime;
-    clip.length = length;
-    clip.sourceStart = sourceStart;
-    
+ClipInstanceID PlaylistModel::addClipFromPattern(PlaylistLaneID laneId, PatternID patternId,
+                                                   double startBeat, double durationBeats) {
+    ClipInstance clip;
+    clip.patternId = patternId.value;
+    clip.startBeat = startBeat;
+    clip.durationBeats = durationBeats;
     return addClip(laneId, clip);
 }
 
-bool PlaylistModel::removeClip(PlaylistClipID clipId) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
+bool PlaylistModel::removeClip(ClipInstanceID clipId) {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     auto [laneIdx, clipIdx] = findClipLocation(clipId);
     if (laneIdx < 0 || clipIdx < 0) return false;
     
-    std::string clipName = m_impl->lanes[laneIdx].clips[clipIdx].name;
     m_impl->lanes[laneIdx].clips.erase(m_impl->lanes[laneIdx].clips.begin() + clipIdx);
-    
-    Log::info("PlaylistModel: Removed clip '" + clipName + "'");
     notifyChange();
-    
     return true;
 }
 
-PlaylistClip* PlaylistModel::getClip(PlaylistClipID clipId) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+ClipInstance* PlaylistModel::getClip(ClipInstanceID clipId) {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     auto [laneIdx, clipIdx] = findClipLocation(clipId);
-    if (laneIdx < 0 || clipIdx < 0) return nullptr;
-    return &m_impl->lanes[laneIdx].clips[clipIdx];
+    return (laneIdx >= 0 && clipIdx >= 0) ? &m_impl->lanes[laneIdx].clips[clipIdx] : nullptr;
 }
 
-const PlaylistClip* PlaylistModel::getClip(PlaylistClipID clipId) const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+const ClipInstance* PlaylistModel::getClip(ClipInstanceID clipId) const {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     auto [laneIdx, clipIdx] = findClipLocation(clipId);
-    if (laneIdx < 0 || clipIdx < 0) return nullptr;
-    return &m_impl->lanes[laneIdx].clips[clipIdx];
+    return (laneIdx >= 0 && clipIdx >= 0) ? &m_impl->lanes[laneIdx].clips[clipIdx] : nullptr;
 }
 
-PlaylistLaneID PlaylistModel::findClipLane(PlaylistClipID clipId) const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+PlaylistLaneID PlaylistModel::findClipLane(ClipInstanceID clipId) const {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     auto [laneIdx, clipIdx] = findClipLocation(clipId);
-    if (laneIdx < 0) return PlaylistLaneID();
-    return m_impl->lanes[laneIdx].id;
+    return laneIdx >= 0 ? m_impl->lanes[laneIdx].id : PlaylistLaneID();
 }
 
-bool PlaylistModel::moveClip(PlaylistClipID clipId, PlaylistLaneID targetLaneId, SampleIndex newStartTime) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
+bool PlaylistModel::moveClip(ClipInstanceID clipId, PlaylistLaneID targetLaneId, double newStartBeat) {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     auto [srcLaneIdx, clipIdx] = findClipLocation(clipId);
     if (srcLaneIdx < 0 || clipIdx < 0) return false;
-    
     int dstLaneIdx = findLaneIndex(targetLaneId);
     if (dstLaneIdx < 0) return false;
     
-    // Apply snapping
-    if (m_impl->snapEnabled) {
-        newStartTime = Audio::snapToGrid(newStartTime, m_impl->gridSubdivision, 
-                                          m_impl->bpm, m_impl->projectSampleRate);
-    }
-    
     if (srcLaneIdx == dstLaneIdx) {
-        // Same lane - just update position
-        m_impl->lanes[srcLaneIdx].clips[clipIdx].startTime = newStartTime;
+        m_impl->lanes[srcLaneIdx].clips[clipIdx].startBeat = newStartBeat;
         m_impl->lanes[srcLaneIdx].sortClips();
     } else {
-        // Different lane - move clip
-        PlaylistClip clip = std::move(m_impl->lanes[srcLaneIdx].clips[clipIdx]);
-        clip.startTime = newStartTime;
+        ClipInstance clip = std::move(m_impl->lanes[srcLaneIdx].clips[clipIdx]);
+        clip.startBeat = newStartBeat;
         m_impl->lanes[srcLaneIdx].clips.erase(m_impl->lanes[srcLaneIdx].clips.begin() + clipIdx);
         m_impl->lanes[dstLaneIdx].clips.push_back(std::move(clip));
         m_impl->lanes[dstLaneIdx].sortClips();
     }
-    
     notifyChange();
     return true;
 }
 
-bool PlaylistModel::moveClip(PlaylistClipID clipId, SampleIndex newStartTime) {
-    PlaylistLaneID laneId = findClipLane(clipId);
-    if (!laneId.isValid()) return false;
-    return moveClip(clipId, laneId, newStartTime);
-}
-
-// === Trim Operations ===
-
-bool PlaylistModel::trimClipStart(PlaylistClipID clipId, SampleIndex deltaSamples) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
+bool PlaylistModel::setClipDuration(ClipInstanceID clipId, double newDurationBeats) {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     auto [laneIdx, clipIdx] = findClipLocation(clipId);
     if (laneIdx < 0 || clipIdx < 0) return false;
+    m_impl->lanes[laneIdx].clips[clipIdx].durationBeats = newDurationBeats;
+    notifyChange();
+    return true;
+}
+
+ClipInstanceID PlaylistModel::splitClip(ClipInstanceID clipId, double splitBeat) {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
+    auto [laneIdx, clipIdx] = findClipLocation(clipId);
+    if (laneIdx < 0 || clipIdx < 0) return ClipInstanceID();
     
-    PlaylistClip& clip = m_impl->lanes[laneIdx].clips[clipIdx];
+    ClipInstance& clip = m_impl->lanes[laneIdx].clips[clipIdx];
+    if (splitBeat <= clip.startBeat || splitBeat >= clip.startBeat + clip.durationBeats) return ClipInstanceID();
     
-    // Clamp delta to valid range
-    // Can't trim beyond start of source (sourceStart can't go negative)
-    if (deltaSamples < 0 && -deltaSamples > static_cast<SampleIndex>(clip.sourceStart)) {
-        deltaSamples = -static_cast<SampleIndex>(clip.sourceStart);
-    }
-    // Can't trim beyond end of clip
-    if (deltaSamples > 0 && deltaSamples >= clip.length) {
-        deltaSamples = clip.length - 1;
-    }
+    double firstPartDur = splitBeat - clip.startBeat;
+    ClipInstance nextPart = clip;
+    nextPart.id = ClipInstanceID::generate();
+    nextPart.startBeat = splitBeat;
+    nextPart.durationBeats = clip.durationBeats - firstPartDur;
     
-    clip.startTime += deltaSamples;
-    clip.sourceStart += deltaSamples;
-    clip.length -= deltaSamples;
-    
+    clip.durationBeats = firstPartDur;
+    m_impl->lanes[laneIdx].clips.push_back(nextPart);
     m_impl->lanes[laneIdx].sortClips();
     notifyChange();
-    
-    return true;
+    return nextPart.id;
 }
 
-bool PlaylistModel::trimClipEnd(PlaylistClipID clipId, SampleIndex deltaSamples) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
+ClipInstanceID PlaylistModel::duplicateClip(ClipInstanceID clipId) {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     auto [laneIdx, clipIdx] = findClipLocation(clipId);
-    if (laneIdx < 0 || clipIdx < 0) return false;
+    if (laneIdx < 0 || clipIdx < 0) return ClipInstanceID();
     
-    PlaylistClip& clip = m_impl->lanes[laneIdx].clips[clipIdx];
-    
-    // Clamp delta - can't make length <= 0
-    SampleIndex newLength = clip.length - deltaSamples;
-    if (newLength < 1) {
-        newLength = 1;
-    }
-    
-    clip.length = newLength;
-    notifyChange();
-    
-    return true;
-}
-
-bool PlaylistModel::setClipLength(PlaylistClipID clipId, SampleIndex newLength) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
-    auto [laneIdx, clipIdx] = findClipLocation(clipId);
-    if (laneIdx < 0 || clipIdx < 0) return false;
-    
-    if (newLength < 1) newLength = 1;
-    
-    m_impl->lanes[laneIdx].clips[clipIdx].length = newLength;
-    notifyChange();
-    
-    return true;
-}
-
-// === Split & Duplicate ===
-
-PlaylistClipID PlaylistModel::splitClip(PlaylistClipID clipId, SampleIndex splitTime) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
-    auto [laneIdx, clipIdx] = findClipLocation(clipId);
-    if (laneIdx < 0 || clipIdx < 0) return PlaylistClipID();
-    
-    PlaylistClip& clip = m_impl->lanes[laneIdx].clips[clipIdx];
-    
-    // Validate split time
-    if (splitTime <= clip.startTime || splitTime >= clip.getEndTime()) {
-        Log::warning("PlaylistModel: Invalid split time " + 
-                     std::to_string(splitTime) + " for clip");
-        return PlaylistClipID();
-    }
-    
-    // Calculate split positions
-    SampleIndex splitOffset = splitTime - clip.startTime;
-    
-    // Create second clip (right half)
-    PlaylistClip newClip = clip;
-    newClip.id = PlaylistClipID::generate();
-    newClip.startTime = splitTime;
-    newClip.length = clip.length - splitOffset;
-    newClip.sourceStart = clip.sourceStart + splitOffset;
-    
-    // Truncate original clip (left half)
-    clip.length = splitOffset;
-    
-    // Add new clip
+    ClipInstance newClip = m_impl->lanes[laneIdx].clips[clipIdx];
+    newClip.id = ClipInstanceID::generate();
+    newClip.startBeat += newClip.durationBeats;
     m_impl->lanes[laneIdx].clips.push_back(newClip);
     m_impl->lanes[laneIdx].sortClips();
-    
-    Log::info("PlaylistModel: Split clip at " + 
-              std::to_string(samplesToSeconds(splitTime, m_impl->projectSampleRate)) + "s");
     notifyChange();
-    
     return newClip.id;
 }
 
-PlaylistClipID PlaylistModel::duplicateClip(PlaylistClipID clipId) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
-    auto [laneIdx, clipIdx] = findClipLocation(clipId);
-    if (laneIdx < 0 || clipIdx < 0) return PlaylistClipID();
-    
-    PlaylistClip newClip = m_impl->lanes[laneIdx].clips[clipIdx];
-    newClip.id = PlaylistClipID::generate();
-    newClip.startTime = newClip.getEndTime(); // Place after original
-    
-    m_impl->lanes[laneIdx].clips.push_back(newClip);
-    m_impl->lanes[laneIdx].sortClips();
-    
-    Log::info("PlaylistModel: Duplicated clip '" + newClip.name + "'");
-    notifyChange();
-    
-    return newClip.id;
-}
-
-// === Queries ===
-
-std::vector<const PlaylistClip*> PlaylistModel::getClipsInRange(PlaylistLaneID laneId,
-                                                                   SampleIndex rangeStart,
-                                                                   SampleIndex rangeEnd) const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
+std::vector<const ClipInstance*> PlaylistModel::getClipsInRange(PlaylistLaneID laneId,
+                                                                 double startBeat,
+                                                                 double endBeat) const {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     int idx = findLaneIndex(laneId);
     if (idx < 0) return {};
     
-    return m_impl->lanes[idx].getClipsInRange(rangeStart, rangeEnd);
-}
-
-std::vector<std::pair<PlaylistLaneID, const PlaylistClip*>> 
-    PlaylistModel::getAllClipsInRange(SampleIndex rangeStart, SampleIndex rangeEnd) const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
-    std::vector<std::pair<PlaylistLaneID, const PlaylistClip*>> result;
-    
-    for (const auto& lane : m_impl->lanes) {
-        auto clips = lane.getClipsInRange(rangeStart, rangeEnd);
-        for (const auto* clip : clips) {
-            result.emplace_back(lane.id, clip);
+    std::vector<const ClipInstance*> result;
+    for (const auto& clip : m_impl->lanes[idx].clips) {
+        if (clip.startBeat < endBeat && clip.startBeat + clip.durationBeats > startBeat) {
+            result.push_back(&clip);
         }
     }
-    
     return result;
 }
 
-SampleIndex PlaylistModel::getTotalDuration() const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
-    SampleIndex maxEnd = 0;
+double PlaylistModel::getTotalDurationBeats() const {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
+    double maxEnd = 0.0;
     for (const auto& lane : m_impl->lanes) {
-        maxEnd = std::max(maxEnd, lane.getTotalDuration());
+        for (const auto& clip : lane.clips) {
+            maxEnd = std::max(maxEnd, clip.startBeat + clip.durationBeats);
+        }
     }
     return maxEnd;
 }
 
-// === Snapping ===
-
-SampleIndex PlaylistModel::snapToGrid(SampleIndex position) const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
-    if (!m_impl->snapEnabled) return position;
-    
-    return Audio::snapToGrid(position, m_impl->gridSubdivision, 
-                              m_impl->bpm, m_impl->projectSampleRate);
-}
-
-// === Observers ===
-
 void PlaylistModel::addChangeObserver(ChangeCallback callback) {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     m_impl->observers.push_back(std::move(callback));
 }
 
 void PlaylistModel::clearChangeObservers() {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     m_impl->observers.clear();
 }
 
-// === Snapshot ===
-
 std::unique_ptr<PlaylistRuntimeSnapshot> PlaylistModel::buildRuntimeSnapshot(
+    const PatternManager& patternManager,
     const SourceManager& sourceManager) const {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     
     auto snapshot = std::make_unique<PlaylistRuntimeSnapshot>();
     snapshot->projectSampleRate = m_impl->projectSampleRate;
+    snapshot->bpm = m_impl->bpm;
     snapshot->modificationId = m_impl->modificationCounter.load();
     
     snapshot->lanes.reserve(m_impl->lanes.size());
+    
+    // Get a thread-safe snapshot of all patterns
+    auto allPatterns = patternManager.getAllPatterns();
+    std::unordered_map<uint64_t, std::shared_ptr<PatternSource>> patternSnapshot;
+    for (const auto& p : allPatterns) {
+        patternSnapshot[p->id.value] = p;
+    }
     
     for (const auto& lane : m_impl->lanes) {
         LaneRuntimeInfo laneInfo;
@@ -491,35 +340,56 @@ std::unique_ptr<PlaylistRuntimeSnapshot> PlaylistModel::buildRuntimeSnapshot(
         laneInfo.pan = lane.pan;
         laneInfo.muted = lane.muted;
         laneInfo.solo = lane.solo;
+        laneInfo.automationCurves = lane.automationCurves;
         
         laneInfo.clips.reserve(lane.clips.size());
         
         for (const auto& clip : lane.clips) {
+            // 1. Resolve Pattern
+            if (patternSnapshot.find(clip.patternId.value) == patternSnapshot.end()) continue;
+            auto patternPtr = patternSnapshot[clip.patternId.value];
+            if (!patternPtr) continue;
+            
+            const PatternSource& pattern = *patternPtr;
+
+            
             ClipRuntimeInfo clipInfo;
-            clipInfo.startTime = clip.startTime;
-            clipInfo.length = clip.length;
-            clipInfo.sourceStart = clip.sourceStart;
-            clipInfo.gainLinear = clip.gainLinear;
-            clipInfo.pan = clip.pan;
-            clipInfo.muted = clip.muted;
-            clipInfo.playbackRate = clip.playbackRate;
-            clipInfo.fadeInLength = clip.fadeInLength;
-            clipInfo.fadeOutLength = clip.fadeOutLength;
-            clipInfo.flags = clip.flags;
+            clipInfo.patternId = clip.patternId.value;
+            clipInfo.patternVersion = pattern.version;
             
-            // Resolve source to raw buffer pointer
-            const ClipSource* source = sourceManager.getSource(clip.sourceId);
-            if (source && source->isReady()) {
-                clipInfo.audioData = source->getRawBuffer();
-                clipInfo.sourceSampleRate = source->getSampleRate();
-                clipInfo.sourceChannels = source->getNumChannels();
-            } else {
-                clipInfo.audioData = nullptr;
-                clipInfo.sourceSampleRate = 0;
-                clipInfo.sourceChannels = 0;
-            }
+            // 2. Convert Time (Beats -> Samples)
+            clipInfo.startTime = beatsToSamples(clip.startBeat, m_impl->bpm, m_impl->projectSampleRate);
+            clipInfo.length = beatsToSamples(clip.durationBeats, m_impl->bpm, m_impl->projectSampleRate);
             
-            laneInfo.clips.push_back(clipInfo);
+            // 3. Populate Local Edits
+            clipInfo.gainLinear = clip.edits.gainLinear;
+            clipInfo.pan = clip.edits.pan;
+            clipInfo.muted = clip.muted || clip.edits.muted; // Clip muting is OR of instance and override
+            clipInfo.playbackRate = clip.edits.playbackRate;
+            clipInfo.fadeInLength = beatsToSamples(clip.edits.fadeInBeats, m_impl->bpm, m_impl->projectSampleRate);
+            clipInfo.fadeOutLength = beatsToSamples(clip.edits.fadeOutBeats, m_impl->bpm, m_impl->projectSampleRate);
+            clipInfo.sourceStart = clip.edits.sourceStart;
+
+            
+            // 4. Resolve Payload
+            std::visit([&](auto&& arg) {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, MidiPayload>) {
+                    clipInfo.midiData = &arg.notes; // Pass pointer to notes vector
+                    clipInfo.midiNoteCount = static_cast<uint32_t>(arg.notes.size());
+                } else if constexpr (std::is_same_v<T, AudioSlicePayload>) {
+                    const ClipSource* source = sourceManager.getSource(arg.audioSourceId);
+                    if (source && source->isReady()) {
+                        clipInfo.audioData = source->getRawBuffer(); 
+                        clipInfo.sourceSampleRate = source->getSampleRate();
+                        clipInfo.sourceChannels = source->getNumChannels();
+                        clipInfo.sourceStart = clip.edits.sourceStart;
+                    }
+                }
+            }, pattern.payload);
+
+            
+            laneInfo.clips.push_back(std::move(clipInfo));
         }
         
         snapshot->lanes.push_back(std::move(laneInfo));
@@ -528,23 +398,16 @@ std::unique_ptr<PlaylistRuntimeSnapshot> PlaylistModel::buildRuntimeSnapshot(
     return snapshot;
 }
 
-// === Clear ===
-
 void PlaylistModel::clear() {
-    std::lock_guard<std::mutex> lock(m_impl->mutex);
-    
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     m_impl->lanes.clear();
     m_impl->nextLaneNumber = 1;
-    
-    Log::info("PlaylistModel: Cleared all data");
     notifyChange();
 }
 
 uint64_t PlaylistModel::getModificationCounter() const {
     return m_impl->modificationCounter.load();
 }
-
-// === Internal Helpers ===
 
 void PlaylistModel::notifyChange() {
     m_impl->modificationCounter.fetch_add(1);
@@ -555,19 +418,15 @@ void PlaylistModel::notifyChange() {
 
 int PlaylistModel::findLaneIndex(PlaylistLaneID laneId) const {
     for (size_t i = 0; i < m_impl->lanes.size(); ++i) {
-        if (m_impl->lanes[i].id == laneId) {
-            return static_cast<int>(i);
-        }
+        if (m_impl->lanes[i].id == laneId) return static_cast<int>(i);
     }
     return -1;
 }
 
-std::pair<int, int> PlaylistModel::findClipLocation(PlaylistClipID clipId) const {
+std::pair<int, int> PlaylistModel::findClipLocation(ClipInstanceID clipId) const {
     for (size_t i = 0; i < m_impl->lanes.size(); ++i) {
         int clipIdx = m_impl->lanes[i].findClipIndex(clipId);
-        if (clipIdx >= 0) {
-            return {static_cast<int>(i), clipIdx};
-        }
+        if (clipIdx >= 0) return {static_cast<int>(i), clipIdx};
     }
     return {-1, -1};
 }

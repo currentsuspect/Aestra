@@ -62,6 +62,7 @@ endif()
 
 # Core sources (NO platform-specific code)
 set(NOMAD_AUDIO_CORE_SOURCES
+    src/Filter.cpp
     src/AudioGraphBuilder.cpp
     src/PathUtils.cpp
     src/AudioEngine.cpp
@@ -73,7 +74,7 @@ set(NOMAD_AUDIO_CORE_SOURCES
     src/PreviewEngine.cpp
     src/SamplePool.cpp
     src/SampleRateConverter.cpp
-    src/Track.cpp
+    src/MixerChannel.cpp
     src/TrackManager.cpp
     src/AudioClip.cpp
     src/MiniAudioDecoder.cpp
@@ -83,7 +84,12 @@ set(NOMAD_AUDIO_CORE_SOURCES
     src/PlaylistModel.cpp
     src/SelectionModel.cpp
     src/WaveformCache.cpp
+    src/PatternManager.cpp
+    src/UnitManager.cpp
+    src/PatternPlaybackEngine.cpp
+    src/TimelineClock.cpp
 )
+
 
 # Core headers
 set(NOMAD_AUDIO_CORE_HEADERS
@@ -108,15 +114,17 @@ set(NOMAD_AUDIO_CORE_HEADERS
     include/PreviewEngine.h
     include/SamplePool.h
     include/SampleRateConverter.h
-    include/Track.h
+    include/MixerChannel.h
     include/TrackManager.h
+    include/PatternSource.h
+    include/ClipInstance.h
+    include/PatternManager.h
     include/AudioClip.h
     include/MiniAudioDecoder.h
     include/PlaylistTrack.h
     # Multi-clip playlist system
     include/TimeTypes.h
     include/ClipSource.h
-    include/PlaylistClip.h
     include/PlaylistModel.h
     include/PlaylistRuntimeSnapshot.h
     include/PlaylistMixer.h
@@ -125,6 +133,8 @@ set(NOMAD_AUDIO_CORE_HEADERS
     include/PlaylistGeometry.h
     include/PlaylistSerializer.h
     include/MultiClipPlaylist.h
+    include/ArsenalUnit.h
+    include/UnitManager.h
 )
 
 # Create NomadAudioCore library
@@ -341,6 +351,23 @@ target_link_libraries(NomadAudioSoakTest
         NomadAudio
         NomadCore
 )
+
+# Performance stress test suite
+add_executable(NomadAudioPerformanceTest
+    test/PerformanceStressTest.cpp
+    src/Filter.cpp  # Need to compile Filter directly if not exposed via library public headers effectively or just to be safe
+    src/Oscillator.cpp
+)
+
+target_link_libraries(NomadAudioPerformanceTest
+    PRIVATE
+        NomadAudio
+        NomadCore
+)
+
+if(WIN32)
+    target_link_libraries(NomadAudioPerformanceTest PRIVATE avrt)
+endif()
 
 # =============================================================================
 # Status

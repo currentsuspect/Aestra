@@ -425,19 +425,19 @@ void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bo
     }
 
     NUIColor curText = item->isEnabled() ? textColor_ : textColor_.withAlpha(0.5f);
-    float padding = 12.0f;
+    float padding = 8.0f; // Reduced from 12.0f
     
     NUIRect textBounds = bounds;
     textBounds.x += padding;
-    textBounds.width -= (padding * 2 + 20.0f); // Large safety margin on right
+    textBounds.width -= (padding * 2 + 4.0f); // Reduced safety margin from 20.0f to 4.0f
     textBounds.y += 2.0f;
     textBounds.height -= 4.0f;
 
     float fontSize = 14.0f;
     if (auto th = getTheme()) fontSize = th->getFontSize("large");
 
-        // Truncate text with ellipsis if too long. Use cached measured width and a simple heuristic to reduce measureText calls.
-        if (textBounds.width > 20.0f && textBounds.height > 0) {
+    // Truncate text with ellipsis if too long. Use cached measured width and a simple heuristic to reduce measureText calls.
+    if (textBounds.width > 2.0f && textBounds.height > 0) {
             float maxWidth = textBounds.width - 10.0f; // Extra safety margin
             std::string displayText = item->getText();
             float measuredFull = 0.0f;

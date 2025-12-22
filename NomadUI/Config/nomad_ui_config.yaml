@@ -5,10 +5,10 @@
 # Color Scheme - Modern Professional Dark Theme (Ableton/FL Hybrid)
 colors:
   # 🌌 Core Structure - Layered backgrounds (Modern Professional)
-  backgroundPrimary: "#121214"      # Deepest slate - main canvas (flatter)
-  backgroundSecondary: "#18181b"   # Panels, sidebars, file browser
-  surfaceTertiary: "#202024"       # Popups, transport bar, elevated surfaces
-  surfaceRaised: "#2a2a30"         # Cards, hover surface, active elements
+  backgroundPrimary: "#121212"      # Deepest Charcoal - main canvas
+  backgroundSecondary: "#181818"    # Soft Gray - Panels, sidebars, file browser
+  surfaceTertiary: "#202024"        # Popups, transport bar, elevated surfaces
+  surfaceRaised: "#2a2a30"          # Cards, hover surface, active elements
 
   # 💡 Accent & Branding - Modern Professional
   primary: "#8A2BE2"               # Electric Purple (FL Studio inspired)
@@ -25,6 +25,11 @@ colors:
   warning: "#FFCC00"               # Amber warning
   error: "#FF3366"                 # Vibrant red for errors
   info: "#8A2BE2"                  # Purple (matches primary)
+
+  # 🪟 Glass Aesthetic (v9.0 Systematic)
+  glassHover: "#0DFFFFFF"          # white @ 0.05 alpha
+  glassBorder: "#1FFFFFFF"         # white @ 0.12 alpha
+  glassActive: "#268A2BE2"         # primary (8A2BE2) @ 0.15 alpha
 
   # 🧭 Text & Typography - Modern Professional
   textPrimary: "#F0F0F2"           # Crisp white - excellent readability
@@ -67,7 +72,7 @@ colors:
 # Layout Dimensions - Pixel Perfect Sizing
 layout:
   # Panel widths
-  fileBrowserWidth: 250.0          # Left sidebar width
+  fileBrowserWidth: 260.0          # Left sidebar width (increased for hierarchy)
   trackControlsWidth: 200.0        # Track controls panel width
   timelineAreaWidth: 800.0         # Main timeline area width
 
@@ -82,8 +87,8 @@ layout:
   transportButtonSpacing: 8.0      # Space between transport buttons
 
   # Control button dimensions (compact)
-  controlButtonWidth: 28.0         # Width of M/S/R buttons
-  controlButtonHeight: 22.0        # Height of M/S/R buttons
+  controlButtonWidth: 24.0         # Width of M/S/R buttons (Circle/Pill Size)
+  controlButtonHeight: 24.0        # Height of M/S/R buttons (Circle/Pill Size)
   controlButtonSpacing: 4.0        # Space between control buttons
   controlButtonStartX: 180.0       # X position where control buttons start
 
@@ -120,65 +125,13 @@ spacing:
 typography:
   fontSizeXS: 10.0                 # Extra small text
   fontSizeS: 12.0                  # Small text
-  fontSizeM: 18.0                  # Medium text (default)
-  fontSizeL: 20.0                  # Large text
+  fontSizeM: 14.0                  # Medium text (Reduced from 18 for sharper look)
+  fontSizeL: 18.0                  # Large text
   fontSizeXL: 22.0                 # Extra large text
   fontSizeXXL: 28.0                # Double extra large text
   fontSizeH1: 34.0                 # Heading 1
   fontSizeH2: 30.0                 # Heading 2
   fontSizeH3: 26.0                 # Heading 3
-
-  lineHeightTight: 1.2             # Tight line spacing
-  lineHeightNormal: 1.4            # Normal line spacing
-  lineHeightRelaxed: 1.6           # Relaxed line spacing
-
-# Border Radius
-radius:
-  xs: 2.0                          # Extra small radius
-  s: 4.0                           # Small radius
-  m: 8.0                           # Medium radius (default)
-  l: 12.0                          # Large radius
-  xl: 16.0                         # Extra large radius
-  xxl: 24.0                        # Double extra large radius
-
-# Shadows
-shadows:
-  xs: [0, 1, 2, 0, "#000000", 0.1]    # Extra small shadow
-  s: [0, 2, 4, 0, "#000000", 0.15]    # Small shadow
-  m: [0, 4, 8, 0, "#000000", 0.4]     # Medium shadow (ambient)
-  l: [0, 8, 16, 0, "#000000", 0.6]    # Large shadow (floating UI)
-  xl: [0, 16, 32, 0, "#000000", 0.6]  # Extra large shadow
-
-# Animation Settings
-animations:
-  durationFast: 150.0              # Fast animations (ms)
-  durationNormal: 250.0            # Normal animations (ms)
-  durationSlow: 350.0              # Slow animations (ms)
-
-  easingStandard: "ease-out-cubic" # Standard easing
-  easingDecelerate: "ease-out-cubic" # Decelerate easing
-  easingAccelerate: "ease-in-cubic"  # Accelerate easing
-  easingSharp: "ease-in-out-cubic"   # Sharp easing
-
-# Z-Index Layers
-zIndex:
-  background: 0                    # Background layer
-  surface: 100                     # Surface layer
-  dropdown: 200                    # Dropdown layer
-  modal: 300                       # Modal layer
-  tooltip: 400                     # Tooltip layer
-  notification: 500                # Notification layer
-
-# Component-Specific Settings
-components:
-  # Dropdown styling - Modern FL Studio inspired
-  dropdown:
-    background: "#28282d"           # Dropdown background (surfaceTertiary)
-    border: "#000000"               # Black border for modern look
-    borderRadius: 8.0               # Modern rounded corners
-    padding: 8.0                    # Internal padding
-    itemHeight: 32.0                # Height of dropdown items
-    itemSpacing: 4.0                # Space between items
 
   lineHeightTight: 1.2             # Tight line spacing
   lineHeightNormal: 1.4            # Normal line spacing
@@ -240,8 +193,8 @@ components:
   # File Browser
   fileBrowser:
     itemHeight: 32.0               # Height of each file item
-    iconSize: 24.0                 # Size of file icons
-    indentSize: 16.0               # Indentation for nested folders
+    iconSize: 20.0                 # Size of file icons (Reduced slightly for crispness)
+    indentSize: 22.0               # Indentation for nested folders (Increased)
     hoverOpacity: 0.1              # Hover effect opacity
     scrollbarWidth: 8.0            # Width of scrollbar
     headerHeight: 45.0             # Height of toolbar + path bar (more compact)
@@ -249,20 +202,20 @@ components:
     previewPanelMinHeight: 150.0   # Minimum height for preview panel
     breadcrumbHeight: 28.0         # Height of breadcrumb bar
     breadcrumbButtonSpacing: 4.0   # Space between breadcrumbs
-    searchBoxHeight: 28.0          # Search input height
+    searchBoxHeight: 30.0          # Search input height
     searchBoxWidth: 180.0          # Default search box width
     favoriteStarSize: 16.0         # Size of favorite star icon
     waveformHeight: 80.0           # Height of waveform preview
 
   # Track Controls
   trackControls:
-    background: "#19191c"           # Same black as title bar
+    background: "#181818"           # Softer Gray
     border: "#323238"               # Subtle border
     padding: 8.0                    # Internal padding
     buttonStartX: 180.0            # X position (aligned like add button)
-    buttonSpacing: 2.0             # Tight spacing between buttons
-    buttonWidth: 28.0              # Width of M/S/R buttons (increased from 25.0)
-    buttonHeight: 22.0             # Height of M/S/R buttons (increased from 20.0)
+    buttonSpacing: 4.0             # Spacing between buttons
+    buttonWidth: 24.0              # Width of M/S/R buttons (Circle/Pill - matched global)
+    buttonHeight: 24.0             # Height of M/S/R buttons
     buttonBackground: "#28282d"    # Same as transport buttons
 
   # Transport Bar

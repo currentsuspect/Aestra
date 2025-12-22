@@ -139,14 +139,52 @@ void NUITextRendererGDI::drawText(
     SelectObject(deviceContext, previousFont);
 }
 
+// Accurate measurement using GDI
 NUISize NUITextRendererGDI::measureText(const std::string& text, float fontSize) {
     if (!initialized_) return {0, 0};
     
-    // This is a simplified measurement - in a real implementation,
-    // you'd need a device context to measure text properly
+    // Create a temporary DC if we don't have one (we don't persist it in this class)
+    HDC hdc = CreateCompatibleDC(NULL);
+    if (!hdc) {
+        // Fallback if DC creation fails
+        return {
+             static_cast<float>(text.length() * fontSize * 0.6f),
+             fontSize
+        };
+    }
+
+    int fontSizeInt = static_cast<int>(fontSize);
+    
+    // Get detailed font from cache or create one
+    HFONT hFont = nullptr;
+    auto it = fontCache_.find(fontSizeInt);
+    bool createdFont = false;
+    
+    if (it != fontCache_.end()) {
+        hFont = static_cast<HFONT>(it->second);
+    } else {
+        // Must create one to match drawText logic
+        hFont = CreateFontA(
+            fontSizeInt, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Arial"
+        );
+        createdFont = true;
+    }
+    
+    HGDIOBJ oldFont = SelectObject(hdc, hFont);
+    
+    SIZE size;
+    GetTextExtentPoint32A(hdc, text.c_str(), static_cast<int>(text.length()), &size);
+    
+    SelectObject(hdc, oldFont);
+    if (createdFont && hFont) DeleteObject(hFont);
+    DeleteDC(hdc);
+    
+    // Add a tiny bit of padding to ensure no clipping at edges due to anti-aliasing
     return {
-        static_cast<float>(text.length() * fontSize * 0.6f), // Approximate width
-        fontSize // Height
+        static_cast<float>(size.cx) + 2.0f, 
+        static_cast<float>(size.cy)
     };
 }
 

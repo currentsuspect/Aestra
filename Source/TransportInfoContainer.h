@@ -56,12 +56,48 @@ private:
     
     std::function<void(float)> m_onBPMChange;
     
-    // Arrow interaction state
+    // Visual feedback state
     bool m_upArrowHovered;
     bool m_downArrowHovered;
+    bool m_upArrowPressed;
+    bool m_downArrowPressed;
+    bool m_isHovered;           // Component hover for glow
+    float m_pulseAnimation;      // Flash on BPM change (0-1)
+    float m_holdTimer;           // For continuous increment when holding
+    float m_holdDelay;           // Initial delay before repeat
     
     NomadUI::NUIRect getUpArrowBounds() const;
     NomadUI::NUIRect getDownArrowBounds() const;
+};
+
+/**
+ * @brief Time Signature Display Component
+ * 
+ * Shows current time signature (e.g., 4/4) with click-to-cycle functionality.
+ */
+class TimeSignatureDisplay : public NomadUI::NUIComponent {
+public:
+    TimeSignatureDisplay();
+    ~TimeSignatureDisplay() = default;
+
+    void setBeatsPerBar(int beats) { m_beatsPerBar = beats; setDirty(true); }
+    int getBeatsPerBar() const { return m_beatsPerBar; }
+    
+    // Cycle to next time signature (2/4 -> 3/4 -> 4/4 -> 5/4 -> 6/8 -> 7/8 -> 2/4...)
+    void cycleNext();
+    
+    // Callback when time signature changes
+    void setOnTimeSignatureChange(std::function<void(int)> callback) { m_onTimeSignatureChange = callback; }
+    
+    void onRender(NomadUI::NUIRenderer& renderer) override;
+    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
+
+private:
+    int m_beatsPerBar{4};
+    bool m_isHovered{false};
+    std::function<void(int)> m_onTimeSignatureChange;
+    
+    std::string getDisplayText() const;
 };
 
 /**
@@ -104,13 +140,16 @@ public:
     // Access to child components
     BPMDisplay* getBPMDisplay() const { return m_bpmDisplay.get(); }
     TimerDisplay* getTimerDisplay() const { return m_timerDisplay.get(); }
+    TimeSignatureDisplay* getTimeSignatureDisplay() const { return m_timeSignatureDisplay.get(); }
     
     void onRender(NomadUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
+    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
 
 private:
     std::shared_ptr<BPMDisplay> m_bpmDisplay;
     std::shared_ptr<TimerDisplay> m_timerDisplay;
+    std::shared_ptr<TimeSignatureDisplay> m_timeSignatureDisplay;
     
     void layoutComponents();
 };

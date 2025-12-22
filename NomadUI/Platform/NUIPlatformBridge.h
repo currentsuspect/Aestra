@@ -12,6 +12,27 @@ class NUIRenderer;
 class NUIComponent;
 
 /**
+ * Cursor styles for setCursorStyle()
+ */
+enum class NUICursorStyle {
+    Arrow,          // Default arrow cursor
+    Hand,           // Pointing hand (for clickable elements)
+    IBeam,          // Text input cursor
+    Wait,           // Loading/busy cursor (hourglass/spinner)
+    WaitArrow,      // Arrow with loading indicator
+    Crosshair,      // Precision crosshair
+    ResizeNS,       // North-South resize (vertical)
+    ResizeEW,       // East-West resize (horizontal)
+    ResizeNESW,     // Diagonal resize (NE-SW)
+    ResizeNWSE,     // Diagonal resize (NW-SE)
+    ResizeAll,      // Move/all directions
+    NotAllowed,     // Disabled/not allowed
+    Grab,           // Open hand (ready to grab)
+    Grabbing,       // Closed hand (currently grabbing)
+    Hidden          // No cursor visible
+};
+
+/**
  * Bridge between NomadPlat and NomadUI
  * Wraps NomadPlat's IPlatformWindow to work with NomadUI's existing API
  */
@@ -64,6 +85,7 @@ public:
     void setResizeCallback(std::function<void(int, int)> callback);
     void setCloseCallback(std::function<void()> callback);
     void setDPIChangeCallback(std::function<void(float)> callback);
+    void setFocusCallback(std::function<void(bool focused)> callback);
     
     // NomadUI-specific: Root component
     void setRootComponent(NUIComponent* root) { m_rootComponent = root; }
@@ -83,6 +105,12 @@ public:
     
     // Cursor control
     void setCursorVisible(bool visible);
+    void setCursorPosition(int x, int y);
+    void setCursorStyle(NUICursorStyle style);  // Set cursor appearance
+    NUICursorStyle getCursorStyle() const;       // Get current cursor style
+    
+    // Mouse Capture
+    void setMouseCapture(bool captured);
 
 private:
     // Convert NomadPlat events to NomadUI events
@@ -102,6 +130,9 @@ private:
     int m_lastMouseX;
     int m_lastMouseY;
     
+    // Cursor style tracking
+    NUICursorStyle m_currentCursorStyle = NUICursorStyle::Arrow;
+    
     // NomadUI-style callbacks
     std::function<void(int, int)> m_mouseMoveCallback;
     std::function<void(int, bool)> m_mouseButtonCallback;
@@ -111,6 +142,7 @@ private:
     std::function<void(int, int)> m_resizeCallback;
     std::function<void()> m_closeCallback;
     std::function<void(float)> m_dpiChangeCallback;
+    std::function<void(bool)> m_focusCallback;
 };
 
 } // namespace NomadUI

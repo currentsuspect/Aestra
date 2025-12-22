@@ -1,14 +1,14 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "PlaylistClip.h"
-#include "ClipSource.h"
+#include "ClipInstance.h"
+#include "PatternSource.h"
 #include "TimeTypes.h"
+#include "AutomationCurve.h"
 #include <algorithm>
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <random>
 #include <string>
 #include <vector>
@@ -18,13 +18,15 @@ namespace Audio {
 
 // Forward declarations
 class PlaylistRuntimeSnapshot;
+class SourceManager;
+class PatternManager;
 
 // =============================================================================
 // PlaylistLaneID - Unique track/lane identity
 // =============================================================================
 
 /**
- * @brief Unique identifier for a playlist lane
+ * @brief Unique identifier for a playlist lane (v3.0)
  */
 struct PlaylistLaneID {
     uint64_t high = 0;
@@ -50,7 +52,23 @@ struct PlaylistLaneID {
         return std::string(buf);
     }
     
+    static PlaylistLaneID fromString(const std::string& str) {
+        PlaylistLaneID uuid;
+        if (str.length() >= 36) {
+            unsigned int a, b, c, d;
+            unsigned long long e;
+            if (sscanf(str.c_str(), "%8x-%4x-%4x-%4x-%12llx", &a, &b, &c, &d, &e) == 5) {
+                uuid.high = (static_cast<uint64_t>(a) << 32) | 
+                           (static_cast<uint64_t>(b) << 16) | 
+                           static_cast<uint64_t>(c);
+                uuid.low = (static_cast<uint64_t>(d) << 48) | e;
+            }
+        }
+        return uuid;
+    }
+
     static PlaylistLaneID generate() {
+
         static std::random_device rd;
         static std::mt19937_64 gen(rd());
         static std::uniform_int_distribution<uint64_t> dis;
@@ -62,13 +80,6 @@ struct PlaylistLaneID {
         id.low = (id.low & 0x3FFFFFFFFFFFFFFFULL) | 0x8000000000000000ULL;
         return id;
     }
-    
-    struct Hash {
-        size_t operator()(const PlaylistLaneID& id) const {
-            return std::hash<uint64_t>()(id.high) ^ 
-                   (std::hash<uint64_t>()(id.low) << 1);
-        }
-    };
 };
 
 // =============================================================================
@@ -76,30 +87,30 @@ struct PlaylistLaneID {
 // =============================================================================
 
 /**
- * @brief A single lane in the playlist view
+ * @brief A single lane in the playlist view (v3.0)
  * 
- * Represents a horizontal "track" or "lane" in the DAW's playlist.
- * Contains multiple clips, each at their own timeline position.
- * 
- * Invariant: clips vector is ALWAYS sorted by startTime.
+ * Represents a horizontal arrange lane.
+ * Invariant: clips vector is ALWAYS sorted by startBeat.
  */
 struct PlaylistLane {
     PlaylistLaneID id;
     std::string name;
     
-    // Clips (always sorted by startTime)
-    std::vector<PlaylistClip> clips;
+    // Clips (always sorted by startBeat)
+    std::vector<ClipInstance> clips;
     
     // Lane properties
-    float volume = 1.0f;                       ///< Master volume for lane
-    float pan = 0.0f;                          ///< Pan position
+    float volume = 1.0f;
+    float pan = 0.0f;
     bool muted = false;
     bool solo = false;
-    bool armed = false;                        ///< Armed for recording
+    
+    // Automation Curves
+    std::vector<AutomationCurve> automationCurves;
     
     // UI properties
     uint32_t colorRGBA = 0xFF4A90D9;
-    float height = 100.0f;                     ///< Lane height in pixels
+    float height = 100.0f;
     bool collapsed = false;
     
     // Constructors
@@ -109,13 +120,13 @@ struct PlaylistLane {
     
     // === Clip Sorting ===
     void sortClips() {
-        std::sort(clips.begin(), clips.end(), compareByStartTime);
+        std::sort(clips.begin(), clips.end(), [](const ClipInstance& a, const ClipInstance& b) {
+            return a.startBeat < b.startBeat;
+        });
     }
     
     // === Queries ===
-    
-    /// Find clip index by ID, returns -1 if not found
-    int findClipIndex(const PlaylistClipID& clipId) const {
+    int findClipIndex(const ClipInstanceID& clipId) const {
         for (size_t i = 0; i < clips.size(); ++i) {
             if (clips[i].id == clipId) {
                 return static_cast<int>(i);
@@ -124,226 +135,99 @@ struct PlaylistLane {
         return -1;
     }
     
-    /// Get clip by ID
-    PlaylistClip* getClip(const PlaylistClipID& clipId) {
+    ClipInstance* getClip(const ClipInstanceID& clipId) {
         int idx = findClipIndex(clipId);
         return idx >= 0 ? &clips[idx] : nullptr;
     }
     
-    const PlaylistClip* getClip(const PlaylistClipID& clipId) const {
+    const ClipInstance* getClip(const ClipInstanceID& clipId) const {
         int idx = findClipIndex(clipId);
         return idx >= 0 ? &clips[idx] : nullptr;
     }
-    
-    /// Get clip at timeline position
-    PlaylistClip* getClipAtPosition(SampleIndex position) {
-        for (auto& clip : clips) {
-            if (clip.containsTime(position)) {
-                return &clip;
-            }
-        }
-        return nullptr;
-    }
-    
-    /// Get all clips overlapping a range
-    std::vector<const PlaylistClip*> getClipsInRange(SampleIndex rangeStart, SampleIndex rangeEnd) const {
-        std::vector<const PlaylistClip*> result;
-        
-        // Binary search for first potentially overlapping clip
-        auto it = std::lower_bound(clips.begin(), clips.end(), rangeStart,
-            [](const PlaylistClip& clip, SampleIndex pos) {
-                return clip.getEndTime() <= pos;
-            });
-        
-        // Walk forward until clips start after range ends
-        while (it != clips.end() && it->startTime < rangeEnd) {
-            if (it->overlapsRange(rangeStart, rangeEnd)) {
-                result.push_back(&(*it));
-            }
-            ++it;
-        }
-        
-        return result;
-    }
-    
-    /// Get total duration (end of last clip)
-    SampleIndex getTotalDuration() const {
-        if (clips.empty()) return 0;
-        SampleIndex maxEnd = 0;
-        for (const auto& clip : clips) {
-            maxEnd = std::max(maxEnd, clip.getEndTime());
-        }
-        return maxEnd;
-    }
-    
-    /// Check if lane is empty
-    bool isEmpty() const { return clips.empty(); }
 };
 
 // =============================================================================
 // PlaylistModel - Central playlist controller
 // =============================================================================
 
-/**
- * @brief Central model for all playlist data and operations
- * 
- * This class manages:
- * - All playlist lanes and their clips
- * - CRUD operations for clips (add, remove, move, trim, split)
- * - Range queries for efficient playback
- * - Snapshot generation for RT thread
- * 
- * IMPORTANT: This class runs on the UI/Engine thread only.
- * The RT thread receives data through PlaylistRuntimeSnapshot.
- * 
- * Thread safety:
- * - All public methods are thread-safe (internal mutex)
- * - Observers are called with mutex held; keep callbacks fast
- */
 class PlaylistModel {
 public:
-    /// Observer callback types
     using ChangeCallback = std::function<void()>;
     
     PlaylistModel();
     ~PlaylistModel();
     
-    // Non-copyable
     PlaylistModel(const PlaylistModel&) = delete;
     PlaylistModel& operator=(const PlaylistModel&) = delete;
     
     // === Project Settings ===
     void setProjectSampleRate(double sampleRate);
     double getProjectSampleRate() const;
-    
     void setBPM(double bpm);
     double getBPM() const;
     
-    void setGridSubdivision(GridSubdivision grid);
-    GridSubdivision getGridSubdivision() const;
-    
-    void setSnapEnabled(bool enabled);
-    bool isSnapEnabled() const;
+    // === Temporal Conversion ===
+    double getBPMAtBeat(double beat) const;
+    double beatToSeconds(double beat) const;
+    double secondsToBeats(double seconds) const;
     
     // === Lane Management ===
-    
-    /// Create a new lane, returns its ID
     PlaylistLaneID createLane(const std::string& name = "");
-    
-    /// Delete a lane and all its clips
     bool deleteLane(PlaylistLaneID laneId);
-    
-    /// Get lane by ID
     PlaylistLane* getLane(PlaylistLaneID laneId);
     const PlaylistLane* getLane(PlaylistLaneID laneId) const;
-    
-    /// Get lane by index
-    PlaylistLane* getLaneByIndex(size_t index);
-    const PlaylistLane* getLaneByIndex(size_t index) const;
-    
-    /// Get number of lanes
     size_t getLaneCount() const;
-    
-    /// Get all lane IDs in order
     std::vector<PlaylistLaneID> getLaneIDs() const;
-    
-    /// Move lane to new position
+    PlaylistLaneID getLaneId(size_t index) const;
+
     bool moveLane(PlaylistLaneID laneId, size_t newIndex);
     
     // === Clip Operations ===
+    ClipInstanceID addClip(PlaylistLaneID laneId, const ClipInstance& clip);
     
-    /// Add a clip to a lane, returns the clip ID
-    PlaylistClipID addClip(PlaylistLaneID laneId, const PlaylistClip& clip);
+    /// Add a clip referencing a pattern
+    ClipInstanceID addClipFromPattern(PlaylistLaneID laneId, PatternID patternId,
+                                       double startBeat, double durationBeats);
     
-    /// Add a clip from a source at a specific position
-    PlaylistClipID addClipFromSource(PlaylistLaneID laneId, ClipSourceID sourceId,
-                                      SampleIndex startTime, SampleIndex length,
-                                      SampleIndex sourceStart = 0);
+    bool removeClip(ClipInstanceID clipId);
+    ClipInstance* getClip(ClipInstanceID clipId);
+    const ClipInstance* getClip(ClipInstanceID clipId) const;
+    PlaylistLaneID findClipLane(ClipInstanceID clipId) const;
     
-    /// Remove a clip
-    bool removeClip(PlaylistClipID clipId);
-    
-    /// Get clip by ID (searches all lanes)
-    PlaylistClip* getClip(PlaylistClipID clipId);
-    const PlaylistClip* getClip(PlaylistClipID clipId) const;
-    
-    /// Find which lane contains a clip
-    PlaylistLaneID findClipLane(PlaylistClipID clipId) const;
-    
-    /// Move clip to new position (same or different lane)
-    bool moveClip(PlaylistClipID clipId, PlaylistLaneID targetLaneId, SampleIndex newStartTime);
-    
-    /// Move clip within same lane
-    bool moveClip(PlaylistClipID clipId, SampleIndex newStartTime);
-    
-    // === Trim Operations ===
-    
-    /// Trim clip start (positive = shrink, negative = expand)
-    bool trimClipStart(PlaylistClipID clipId, SampleIndex deltaSamples);
-    
-    /// Trim clip end (positive = shrink, negative = expand)
-    bool trimClipEnd(PlaylistClipID clipId, SampleIndex deltaSamples);
-    
-    /// Set clip length directly
-    bool setClipLength(PlaylistClipID clipId, SampleIndex newLength);
+    // === Transformations ===
+    bool moveClip(ClipInstanceID clipId, PlaylistLaneID targetLaneId, double newStartBeat);
+    bool setClipDuration(ClipInstanceID clipId, double newDurationBeats);
     
     // === Split & Duplicate ===
-    
-    /// Split a clip at timeline position, returns new clip ID (second half)
-    PlaylistClipID splitClip(PlaylistClipID clipId, SampleIndex splitTime);
-    
-    /// Duplicate a clip
-    PlaylistClipID duplicateClip(PlaylistClipID clipId);
+    ClipInstanceID splitClip(ClipInstanceID clipId, double splitBeat);
+    ClipInstanceID duplicateClip(ClipInstanceID clipId);
     
     // === Queries ===
+    std::vector<const ClipInstance*> getClipsInRange(PlaylistLaneID laneId,
+                                                      double startBeat,
+                                                      double endBeat) const;
     
-    /// Get all clips overlapping a time range on a lane
-    std::vector<const PlaylistClip*> getClipsInRange(PlaylistLaneID laneId,
-                                                       SampleIndex rangeStart,
-                                                       SampleIndex rangeEnd) const;
-    
-    /// Get all clips overlapping a time range on all lanes
-    std::vector<std::pair<PlaylistLaneID, const PlaylistClip*>> 
-        getAllClipsInRange(SampleIndex rangeStart, SampleIndex rangeEnd) const;
-    
-    /// Get the total timeline duration (end of last clip across all lanes)
-    SampleIndex getTotalDuration() const;
-    
-    // === Snapping ===
-    
-    /// Snap a position to grid
-    SampleIndex snapToGrid(SampleIndex position) const;
+    double getTotalDurationBeats() const;
     
     // === Observer Pattern ===
-    
-    /// Register callback for model changes
     void addChangeObserver(ChangeCallback callback);
-    
-    /// Clear all observers
     void clearChangeObservers();
     
     // === Snapshot Generation ===
-    
-    /// Build a runtime snapshot for the audio thread
     std::unique_ptr<PlaylistRuntimeSnapshot> buildRuntimeSnapshot(
+        const PatternManager& patternManager,
         const SourceManager& sourceManager) const;
     
-    // === Serialization ===
-    
-    /// Clear all data
     void clear();
-    
-    /// Get modification counter (increments on each change)
     uint64_t getModificationCounter() const;
 
 private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;
     
-    // Internal helpers
     void notifyChange();
     int findLaneIndex(PlaylistLaneID laneId) const;
-    std::pair<int, int> findClipLocation(PlaylistClipID clipId) const;
+    std::pair<int, int> findClipLocation(ClipInstanceID clipId) const;
 };
 
 } // namespace Audio

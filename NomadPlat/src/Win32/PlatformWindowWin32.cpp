@@ -401,8 +401,17 @@ void PlatformWindowWin32::setCursorVisible(bool visible) {
 }
 
 // =============================================================================
-// Event Processing
+// Mouse Capture
 // =============================================================================
+
+void PlatformWindowWin32::setMouseCapture(bool captured) {
+    if (captured) {
+        SetCapture(m_hwnd);
+    } else {
+        ReleaseCapture();
+    }
+}
+
 
 bool PlatformWindowWin32::pollEvents() {
     MSG msg;
@@ -609,6 +618,16 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
             return 0;
         }
 
+        case WM_MOUSEHWHEEL: {
+            // Horizontal scroll (trackpads often send this)
+            // Convert to vertical for now since most UI expects vertical
+            float delta = -GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+            if (m_mouseWheelCallback) {
+                m_mouseWheelCallback(delta);
+            }
+            return 0;
+        }
+
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN: {
             KeyCode key = translateKeyCode(wParam, lParam);
@@ -716,6 +735,10 @@ void PlatformWindowWin32::getPosition(int& x, int& y) const {
     GetWindowRect(m_hwnd, &rect);
     x = rect.left;
     y = rect.top;
+}
+
+void PlatformWindowWin32::setCursorPosition(int x, int y) {
+    SetCursorPos(x, y);
 }
 
 // =============================================================================

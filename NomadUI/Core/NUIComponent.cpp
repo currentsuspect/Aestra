@@ -11,10 +11,17 @@ namespace NomadUI {
 
 namespace NomadUI {
 
+namespace {
+    NUIComponent* g_focusedComponent = nullptr;
+}
+
 NUIComponent::NUIComponent() {
 }
 
 NUIComponent::~NUIComponent() {
+    if (g_focusedComponent == this) {
+        g_focusedComponent = nullptr;
+    }
 }
 
 // ============================================================================
@@ -276,12 +283,36 @@ void NUIComponent::setEnabled(bool enabled) {
 }
 
 void NUIComponent::setFocused(bool focused) {
-    if (focused_ != focused) {
-        if (focused) {
-            onFocusGained();
-        } else {
-            onFocusLost();
+    if (focused) {
+        if (g_focusedComponent != this) {
+            if (g_focusedComponent) {
+                g_focusedComponent->setFocused(false);
+            }
+            g_focusedComponent = this;
         }
+
+        if (!focused_) {
+            onFocusGained();
+        }
+        return;
+    }
+
+    if (g_focusedComponent == this) {
+        g_focusedComponent = nullptr;
+    }
+
+    if (focused_) {
+        onFocusLost();
+    }
+}
+
+NUIComponent* NUIComponent::getFocusedComponent() {
+    return g_focusedComponent;
+}
+
+void NUIComponent::clearFocusedComponent() {
+    if (g_focusedComponent) {
+        g_focusedComponent->setFocused(false);
     }
 }
 

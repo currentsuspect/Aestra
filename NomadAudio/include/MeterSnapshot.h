@@ -41,6 +41,10 @@ struct alignas(64) ChannelMeterSnapshot {
     struct Buffer {
         uint32_t peakL_bits{0};  // float as uint32_t bitcast (LINEAR 0..1)
         uint32_t peakR_bits{0};  // float as uint32_t bitcast (LINEAR 0..1)
+        uint32_t rmsL_bits{0};   // float as uint32_t bitcast (LINEAR 0..1) - energy/RMS-like
+        uint32_t rmsR_bits{0};   // float as uint32_t bitcast (LINEAR 0..1) - energy/RMS-like
+        uint32_t lowL_bits{0};   // float as uint32_t bitcast (LINEAR 0..1) - LF energy (<~150Hz)
+        uint32_t lowR_bits{0};   // float as uint32_t bitcast (LINEAR 0..1) - LF energy (<~150Hz)
         uint8_t clipFlags{0};    // bit 0 = L clip, bit 1 = R clip
     };
 
@@ -66,24 +70,39 @@ public:
     static constexpr size_t MAX_CHANNELS = 128;
 
     /**
-     * @brief Write peak levels from audio thread.
+     * @brief Write peak/energy levels from audio thread.
      *
-     * Called during mix loop with LINEAR peak values (0..1).
+     * Called during mix loop with LINEAR values (0..1+).
      * Uses release semantics on index swap to ensure buffer writes are visible.
      *
      * @param slotIndex Dense slot index (0..MAX_CHANNELS-1)
      * @param peakL Left channel peak (LINEAR 0..1)
      * @param peakR Right channel peak (LINEAR 0..1)
+     * @param rmsL Left channel energy (LINEAR 0..1)
+     * @param rmsR Right channel energy (LINEAR 0..1)
+     * @param lowL Left channel low-frequency energy (LINEAR 0..1)
+     * @param lowR Right channel low-frequency energy (LINEAR 0..1)
      */
-    void writePeak(uint32_t slotIndex, float peakL, float peakR) {
+    void writeLevels(uint32_t slotIndex,
+                     float peakL, float peakR,
+                     float rmsL, float rmsR,
+                     float lowL, float lowR) {
         if (slotIndex >= MAX_CHANNELS) return;
         auto& snap = m_snapshots[slotIndex];
         uint8_t writeIdx = snap.writeIndex.load(std::memory_order_relaxed);
         auto& buf = snap.buffers[writeIdx];
         buf.peakL_bits = MeterBitcast::floatToU32(peakL);
         buf.peakR_bits = MeterBitcast::floatToU32(peakR);
+        buf.rmsL_bits = MeterBitcast::floatToU32(rmsL);
+        buf.rmsR_bits = MeterBitcast::floatToU32(rmsR);
+        buf.lowL_bits = MeterBitcast::floatToU32(lowL);
+        buf.lowR_bits = MeterBitcast::floatToU32(lowR);
         // Swap buffer index with release semantics
         snap.writeIndex.store(1 - writeIdx, std::memory_order_release);
+    }
+
+    void writePeak(uint32_t slotIndex, float peakL, float peakR) {
+        writeLevels(slotIndex, peakL, peakR, 0.0f, 0.0f, 0.0f, 0.0f);
     }
 
     /**
@@ -110,33 +129,43 @@ public:
         }
     }
 
+    struct MeterReadout {
+        float peakL{0.0f};
+        float peakR{0.0f};
+        float rmsL{0.0f};
+        float rmsR{0.0f};
+        float lowL{0.0f};
+        float lowR{0.0f};
+        bool clipL{false};
+        bool clipR{false};
+    };
+
     /**
      * @brief Read meter snapshot from UI thread.
      *
      * Uses acquire semantics to see audio thread writes.
-     * Returns LINEAR peak values - UI should convert to dB for display.
+     * Returns LINEAR values; UI should convert to dB and apply perceptual mapping.
      *
      * @param slotIndex Dense slot index
-     * @param[out] peakL Left channel peak (LINEAR 0..1)
-     * @param[out] peakR Right channel peak (LINEAR 0..1)
-     * @param[out] clipL True if left channel has clipped
-     * @param[out] clipR True if right channel has clipped
      */
-    void readSnapshot(uint32_t slotIndex, float& peakL, float& peakR,
-                      bool& clipL, bool& clipR) const {
+    MeterReadout readSnapshot(uint32_t slotIndex) const {
+        MeterReadout out{};
         if (slotIndex >= MAX_CHANNELS) {
-            peakL = peakR = 0.0f;
-            clipL = clipR = false;
-            return;
+            return out;
         }
         const auto& snap = m_snapshots[slotIndex];
         // Read from opposite buffer (the one audio isn't writing to)
         uint8_t readIdx = 1 - snap.writeIndex.load(std::memory_order_acquire);
         const auto& buf = snap.buffers[readIdx];
-        peakL = MeterBitcast::u32ToFloat(buf.peakL_bits);
-        peakR = MeterBitcast::u32ToFloat(buf.peakR_bits);
-        clipL = (buf.clipFlags & ChannelMeterSnapshot::CLIP_L) != 0;
-        clipR = (buf.clipFlags & ChannelMeterSnapshot::CLIP_R) != 0;
+        out.peakL = MeterBitcast::u32ToFloat(buf.peakL_bits);
+        out.peakR = MeterBitcast::u32ToFloat(buf.peakR_bits);
+        out.rmsL = MeterBitcast::u32ToFloat(buf.rmsL_bits);
+        out.rmsR = MeterBitcast::u32ToFloat(buf.rmsR_bits);
+        out.lowL = MeterBitcast::u32ToFloat(buf.lowL_bits);
+        out.lowR = MeterBitcast::u32ToFloat(buf.lowR_bits);
+        out.clipL = (buf.clipFlags & ChannelMeterSnapshot::CLIP_L) != 0;
+        out.clipR = (buf.clipFlags & ChannelMeterSnapshot::CLIP_R) != 0;
+        return out;
     }
 
     /**
@@ -162,9 +191,17 @@ public:
         for (auto& snap : m_snapshots) {
             snap.buffers[0].peakL_bits = 0;
             snap.buffers[0].peakR_bits = 0;
+            snap.buffers[0].rmsL_bits = 0;
+            snap.buffers[0].rmsR_bits = 0;
+            snap.buffers[0].lowL_bits = 0;
+            snap.buffers[0].lowR_bits = 0;
             snap.buffers[0].clipFlags = 0;
             snap.buffers[1].peakL_bits = 0;
             snap.buffers[1].peakR_bits = 0;
+            snap.buffers[1].rmsL_bits = 0;
+            snap.buffers[1].rmsR_bits = 0;
+            snap.buffers[1].lowL_bits = 0;
+            snap.buffers[1].lowR_bits = 0;
             snap.buffers[1].clipFlags = 0;
             snap.writeIndex.store(0, std::memory_order_relaxed);
         }

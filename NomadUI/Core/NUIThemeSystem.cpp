@@ -237,6 +237,39 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     
     if (colorName == "highlightGlow") return theme.highlightGlow;
     
+    // Glass Aesthetic tokens
+    if (colorName == "glassHover") return theme.glassHover;
+    if (colorName == "glassBorder") return theme.glassBorder;
+    if (colorName == "glassActive") return theme.glassActive;
+    
+    // === Arsenal / Step Sequencer Tokens ===
+    // Step Grid Colors
+    if (colorName == "stepActive") return theme.primary;                              // Active step (on)
+    if (colorName == "stepInactive") return theme.surfaceRaised;                      // Inactive step (off)
+    if (colorName == "stepHover") return theme.hover;                                 // Step hover state
+    if (colorName == "stepTriggerGlow") return theme.primary.withAlpha(0.6f);         // Glow on pad hit
+    if (colorName == "stepBeatMarker") return theme.borderSubtle.lightened(0.1f);     // Beat 1/4 markers
+    if (colorName == "stepBarMarker") return theme.borderActive;                       // Bar markers
+    
+    // Arsenal Panel Colors
+    if (colorName == "arsenalBackground") return theme.backgroundSecondary;            // Arsenal panel bg
+    if (colorName == "arsenalRowEven") return theme.surfaceRaised;                     // Even row
+    if (colorName == "arsenalRowOdd") return theme.surfaceRaised.darkened(0.02f);      // Odd row (subtle zebra)
+    if (colorName == "arsenalAccent") return theme.accentCyan;                         // Accent for highlights
+    
+    // Grid Tokens (for TrackManagerUI/TrackUIComponent)
+    if (colorName == "gridBar") return theme.border.withAlpha(0.60f);                  // Bar line
+    if (colorName == "gridBeat") return theme.border.withAlpha(0.30f);                 // Beat line
+    if (colorName == "gridSubdivision") return theme.border.withAlpha(0.16f);          // Sub-beat line
+    
+    // Waveform Preview Tokens
+    if (colorName == "waveformFill") return theme.accentCyan.withAlpha(0.7f);          // Waveform fill color
+    if (colorName == "waveformLine") return theme.accentCyan;                          // Waveform outline
+    if (colorName == "waveformBackground") return theme.backgroundPrimary;             // Preview background
+
+    // Red Accent (for Record, Arm states)
+    if (colorName == "accentRed") return NUIColor(0.95f, 0.25f, 0.35f, 1.0f);         // Record red
+    
     return theme.primary; // Default fallback
 }
 
@@ -460,78 +493,80 @@ float NUIThemedComponent::getThemeComponentDimension(const std::string& componen
 NUIThemeProperties NUIThemePresets::createNomadDark() {
     NUIThemeProperties theme;
     
-    // ðŸŒŒ Modern Professional Dark - Core Structure
-    theme.backgroundPrimary = NUIColor(0.098f, 0.098f, 0.110f, 1.0f);    // #19191c - Deep slate background
-    theme.backgroundSecondary = NUIColor(0.118f, 0.118f, 0.133f, 1.0f);  // #1e1e22 - Panels, sidebars, file browser
-    theme.surfaceTertiary = NUIColor(0.157f, 0.157f, 0.176f, 1.0f);      // #28282d - Popups, transport bar, elevated surfaces
-    theme.surfaceRaised = NUIColor(0.196f, 0.196f, 0.220f, 1.0f);        // #323238 - Cards, hover surface, active elements
+    // Core Structure - PREMIUM BLACK V4 (Unified Rich Black)
+    theme.backgroundPrimary = NUIColor(0.05f, 0.05f, 0.06f, 1.0f);       // Deepest Slate/Black (Title Bar)
+    theme.backgroundSecondary = NUIColor(0.05f, 0.05f, 0.06f, 1.0f);     // Match Primary! (Pattern Browser / Sidebars)
+    theme.surfaceTertiary = NUIColor(0.05f, 0.05f, 0.06f, 1.0f);         // Match Primary! (Arsenal / Panels)
+    theme.surfaceRaised = NUIColor(0.08f, 0.08f, 0.09f, 1.0f);           // Lighter elements (Cards)
     
     // Legacy compatibility
     theme.background = theme.backgroundPrimary;
     theme.surface = theme.backgroundSecondary;
     theme.surfaceVariant = theme.surfaceTertiary;
+
+    // ... (keep middle sections) ...
+
+    // Glass Aesthetic (v9.1 Premium Balanced)
+    theme.glassHover = NUIColor(1.0f, 1.0f, 1.0f, 0.04f);                // Subtle hover
+    theme.glassBorder = NUIColor(1.0f, 1.0f, 1.0f, 0.06f);               // Very faint edge definition
+    theme.glassActive = theme.primary.withAlpha(0.15f);                  // Clearer active state
     
-    // ðŸ’¡ 2. Accent & Branding - Modern Professional
-    theme.primary = NUIColor(0.471f, 0.353f, 1.0f, 1.0f);                // #785aff - Vibrant purple (FL Studio inspired)
-    theme.primaryHover = NUIColor(0.549f, 0.451f, 1.0f, 1.0f);           // #8c73ff - Lighter purple for hover
-    theme.primaryPressed = NUIColor(0.392f, 0.275f, 0.863f, 1.0f);       // #6446dc - Darker purple for pressed
+    // Accent & Branding
+    theme.primary = NUIColor(0.471f, 0.353f, 1.0f, 1.0f);                // #785aff - Vibrant purple
+    theme.primaryHover = NUIColor(0.549f, 0.451f, 1.0f, 1.0f);           // #8c73ff - Lighter purple
+    theme.primaryPressed = NUIColor(0.392f, 0.275f, 0.863f, 1.0f);       // #6446dc - Darker purple
     theme.primaryVariant = theme.primaryPressed;
     
     theme.secondary = NUIColor(0.0f, 0.831f, 0.737f, 1.0f);              // #00d4bc - Teal accent
     theme.secondaryVariant = NUIColor(0.0f, 0.698f, 0.620f, 1.0f);       // #00b29e - Darker teal
     
-    // Modern Professional Accent Colors
-    theme.accentCyan = NUIColor(0.0f, 0.831f, 0.737f, 1.0f);             // #00d4bc - Teal
-    theme.accentMagenta = NUIColor(0.863f, 0.275f, 0.588f, 1.0f);        // #dc4696 - Pink accent
-    theme.accentLime = NUIColor(0.620f, 0.941f, 0.380f, 1.0f);           // #9ef061 - Lime green
+    // Standard Accent Colors
+    theme.accentCyan = NUIColor(0.0f, 0.831f, 0.737f, 1.0f);
+    theme.accentMagenta = NUIColor(0.863f, 0.275f, 0.588f, 1.0f);
+    theme.accentLime = NUIColor(0.620f, 0.941f, 0.380f, 1.0f);
     theme.accentPrimary = theme.primary;
     theme.accentSecondary = theme.secondary;
     
-    // ðŸŒˆ 6. Functional Colors - Modern Professional
-    theme.success = NUIColor(0.0f, 0.831f, 0.620f, 1.0f);                // #00d49e - Teal green for success
-    theme.warning = NUIColor(1.0f, 0.706f, 0.0f, 1.0f);                  // #ffb400 - Amber warning
-    theme.error = NUIColor(1.0f, 0.267f, 0.396f, 1.0f);                  // #ff4465 - Vibrant red for errors
-    theme.info = NUIColor(0.471f, 0.353f, 1.0f, 1.0f);                   // #785aff - Purple (matches primary)
+    // Functional Colors
+    theme.success = NUIColor(0.0f, 0.831f, 0.620f, 1.0f);
+    theme.warning = NUIColor(1.0f, 0.706f, 0.0f, 1.0f);
+    theme.error = NUIColor(1.0f, 0.267f, 0.396f, 1.0f);
+    theme.info = NUIColor(0.471f, 0.353f, 1.0f, 1.0f);
     
-    // ðŸ§­ 3. Text & Typography - Modern Professional
-    theme.textPrimary = NUIColor(0.933f, 0.933f, 0.949f, 1.0f);          // #eeeeF2 - Crisp white with excellent readability
-    theme.textSecondary = NUIColor(0.667f, 0.667f, 0.698f, 1.0f);        // #aaaab2 - Secondary text, labels
-    theme.textDisabled = NUIColor(0.502f, 0.502f, 0.533f, 1.0f);         // #808088 - Disabled text
-    theme.textLink = theme.primary;                                       // #785aff - Links/actions (purple)
-    theme.textCritical = theme.error;                                     // #ff4465 - Errors
+    // Text
+    theme.textPrimary = NUIColor(0.933f, 0.933f, 0.949f, 1.0f);
+    theme.textSecondary = NUIColor(0.667f, 0.667f, 0.698f, 1.0f);
+    theme.textDisabled = NUIColor(0.502f, 0.502f, 0.533f, 1.0f);
+    theme.textLink = theme.primary;
+    theme.textCritical = theme.error;
     
-    // ðŸªž 5. Borders & Highlights - Modern Professional
-    theme.borderSubtle = NUIColor(0.196f, 0.196f, 0.220f, 1.0f);         // #323238 - Subtle separation lines
-    theme.borderActive = theme.primary;                                   // #785aff - Selected/focused (purple)
+    // Borders
+    theme.borderSubtle = NUIColor(0.196f, 0.196f, 0.220f, 1.0f);
+    theme.borderActive = theme.primary;
     theme.border = theme.borderSubtle;
-    theme.divider = NUIColor(0.157f, 0.157f, 0.176f, 1.0f);              // #28282d - Divider lines
-    theme.outline = NUIColor(0.392f, 0.392f, 0.431f, 1.0f);              // #64646e
-    theme.outlineVariant = NUIColor(0.275f, 0.275f, 0.306f, 1.0f);       // #46464e
+    theme.divider = NUIColor(0.157f, 0.157f, 0.176f, 1.0f);
+    theme.outline = NUIColor(0.392f, 0.392f, 0.431f, 1.0f);
+    theme.outlineVariant = NUIColor(0.275f, 0.275f, 0.306f, 1.0f);
     
-    // ðŸ–±ï¸ 4. Interactive Elements - Buttons (Modern Professional)
-    theme.buttonBgDefault = theme.surfaceTertiary;                        // #28282d - Button background
-    theme.buttonBgHover = NUIColor(0.196f, 0.196f, 0.220f, 1.0f);        // #323238 - Hovered buttons
-    theme.buttonBgActive = theme.primary;                                 // #785aff - Active state (purple)
-    theme.buttonTextDefault = theme.textPrimary;                          // #eeeeF2 - White text
-    theme.buttonTextActive = NUIColor(1.0f, 1.0f, 1.0f, 1.0f);          // #ffffff - Bright white for active
+    // Buttons
+    theme.buttonBgDefault = theme.surfaceTertiary;
+    theme.buttonBgHover = NUIColor(0.196f, 0.196f, 0.220f, 1.0f);
+    theme.buttonBgActive = theme.primary;
+    theme.buttonTextDefault = theme.textPrimary;
+    theme.buttonTextActive = NUIColor(1.0f, 1.0f, 1.0f, 1.0f);
     
-    // Toggle / Switch (Modern Professional)
-    theme.toggleDefault = NUIColor(0.235f, 0.235f, 0.259f, 1.0f);        // #3c3c42 - Toggle background
-    theme.toggleHover = NUIColor(0.275f, 0.275f, 0.306f, 1.0f);          // #46464e - Toggle hover
-    theme.toggleActive = theme.primary;                                   // #785aff - Purple active state
+    // Toggle
+    theme.toggleDefault = NUIColor(0.235f, 0.235f, 0.259f, 1.0f);
+    theme.toggleHover = NUIColor(0.275f, 0.275f, 0.306f, 1.0f);
+    theme.toggleActive = theme.primary;
     
-    // Input Fields (Modern Professional)
-    theme.inputBgDefault = NUIColor(0.118f, 0.118f, 0.133f, 1.0f);       // #1e1e22 - Input background
-    theme.inputBgHover = NUIColor(0.157f, 0.157f, 0.176f, 1.0f);         // #28282d - Input hover
-    theme.inputBorderFocus = theme.primary;                               // #785aff - Purple focus
+    // Sliders
+    theme.sliderTrack = NUIColor(0.196f, 0.196f, 0.220f, 1.0f);
+    theme.sliderHandle = theme.primary;
+    theme.sliderHandleHover = theme.primaryHover;
+    theme.sliderHandlePressed = theme.primaryPressed;
     
-    // Sliders (Modern Professional)
-    theme.sliderTrack = NUIColor(0.196f, 0.196f, 0.220f, 1.0f);          // #323238 - Slider track
-    theme.sliderHandle = theme.primary;                                   // #785aff - Purple handle
-    theme.sliderHandleHover = theme.primaryHover;                         // #8c73ff - Lighter purple hover
-    theme.sliderHandlePressed = theme.primaryPressed;                     // #6446dc - Darker purple pressed
-    
-    // Interactive states (legacy)
+    // States
     theme.hover = NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
     theme.pressed = NUIColor(1.0f, 1.0f, 1.0f, 0.12f);
     theme.focused = theme.primary.withAlpha(0.2f);
@@ -539,14 +574,19 @@ NUIThemeProperties NUIThemePresets::createNomadDark() {
     theme.disabled = NUIColor(0.5f, 0.5f, 0.5f, 0.38f);
     
     // Highlight glow
-    theme.highlightGlow = NUIColor(0.471f, 0.353f, 1.0f, 0.25f);         // rgba(120, 90, 255, 0.25) - Purple glow
+    theme.highlightGlow = NUIColor(0.471f, 0.353f, 1.0f, 0.25f);
     
-    // ðŸªž 5. Shadows
+    // Shadows
     theme.shadowXS = NUIThemeProperties::Shadow(0, 1, 2, 0, NUIColor::black(), 0.1f);
     theme.shadowS = NUIThemeProperties::Shadow(0, 2, 4, 0, NUIColor::black(), 0.15f);
-    theme.shadowM = NUIThemeProperties::Shadow(0, 4, 8, 0, NUIColor::black(), 0.4f);   // Ambient
-    theme.shadowL = NUIThemeProperties::Shadow(0, 8, 16, 0, NUIColor::black(), 0.6f);  // Floating UI
+    theme.shadowM = NUIThemeProperties::Shadow(0, 4, 8, 0, NUIColor::black(), 0.4f);
+    theme.shadowL = NUIThemeProperties::Shadow(0, 8, 16, 0, NUIColor::black(), 0.6f);
     theme.shadowXL = NUIThemeProperties::Shadow(0, 16, 32, 0, NUIColor::black(), 0.6f);
+    
+    // Glass Aesthetic (v9.0 Systematic)
+    theme.glassHover = NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
+    theme.glassBorder = NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
+    theme.glassActive = theme.primary.withAlpha(0.20f);
     
     return theme;
 }
@@ -591,41 +631,22 @@ NUIThemeProperties NUIThemePresets::createNomadLight() {
     theme.shadowM = NUIThemeProperties::Shadow(0, 4, 8, 0, NUIColor::black(), 0.12f);
     theme.shadowL = NUIThemeProperties::Shadow(0, 8, 16, 0, NUIColor::black(), 0.15f);
     theme.shadowXL = NUIThemeProperties::Shadow(0, 16, 32, 0, NUIColor::black(), 0.2f);
+
+    // Glass Aesthetic (v9.0 Systematic)
+    theme.glassHover = NUIColor(0.0f, 0.0f, 0.0f, 0.05f);
+    theme.glassBorder = NUIColor(0.0f, 0.0f, 0.0f, 0.12f);
+    theme.glassActive = theme.primary.withAlpha(0.12f);
     
     return theme;
 }
 
-// Placeholder implementations for other themes
-NUIThemeProperties NUIThemePresets::createMaterialLight() {
-    return createNomadLight(); // Simplified for now
-}
-
-NUIThemeProperties NUIThemePresets::createMaterialDark() {
-    return createNomadDark(); // Simplified for now
-}
-
-NUIThemeProperties NUIThemePresets::createFluentLight() {
-    return createNomadLight(); // Simplified for now
-}
-
-NUIThemeProperties NUIThemePresets::createFluentDark() {
-    return createNomadDark(); // Simplified for now
-}
-
-NUIThemeProperties NUIThemePresets::createCupertinoLight() {
-    return createNomadLight(); // Simplified for now
-}
-
-NUIThemeProperties NUIThemePresets::createCupertinoDark() {
-    return createNomadDark(); // Simplified for now
-}
-
-NUIThemeProperties NUIThemePresets::createHighContrastLight() {
-    return createNomadLight(); // Simplified for now
-}
-
-NUIThemeProperties NUIThemePresets::createHighContrastDark() {
-    return createNomadDark(); // Simplified for now
-}
+NUIThemeProperties NUIThemePresets::createMaterialLight() { return createNomadLight(); }
+NUIThemeProperties NUIThemePresets::createMaterialDark() { return createNomadDark(); }
+NUIThemeProperties NUIThemePresets::createFluentLight() { return createNomadLight(); }
+NUIThemeProperties NUIThemePresets::createFluentDark() { return createNomadDark(); }
+NUIThemeProperties NUIThemePresets::createCupertinoLight() { return createNomadLight(); }
+NUIThemeProperties NUIThemePresets::createCupertinoDark() { return createNomadDark(); }
+NUIThemeProperties NUIThemePresets::createHighContrastLight() { return createNomadLight(); }
+NUIThemeProperties NUIThemePresets::createHighContrastDark() { return createNomadDark(); }
 
 } // namespace NomadUI

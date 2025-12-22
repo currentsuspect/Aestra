@@ -25,9 +25,19 @@ public:
     
     std::shared_ptr<NomadUI::PianoRollView> getPianoRoll() const { return m_pianoRoll; }
 
+    // Pattern editing
+    void loadPattern(PatternID patternId);
+    void savePattern();
+    PatternID getCurrentPattern() const { return m_currentPatternId; }
+
+    void onUpdate(double deltaTime) override;
+
 private:
+    void updateGhostChannels();
+
     std::shared_ptr<TrackManager> m_trackManager;
     std::shared_ptr<NomadUI::PianoRollView> m_pianoRoll;
+    PatternID m_currentPatternId;  // Track which pattern is being edited
 };
 
 } // namespace Audio

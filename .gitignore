@@ -66,6 +66,10 @@ test_*.log
 *.ogg
 *.m4a
 
+# Exception: Essential bundled audio assets
+!NomadAudio/assets/nomad_metronome.wav
+!NomadAudio/assets/nomad_metronome_up.wav
+
 # Models and ML artifacts
 *.onnx
 *.pt

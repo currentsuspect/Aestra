@@ -2,7 +2,7 @@
 #pragma once
 
 #include "../Core/NUIComponent.h"
-#include "../Core/NUIButton.h"
+#include "NUIButton.h"
 #include "../Core/NUITextInput.h"
 #include "../Core/NUIIcon.h"
 #include "../Core/NUITypes.h"

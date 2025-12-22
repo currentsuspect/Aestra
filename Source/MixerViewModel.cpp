@@ -9,7 +9,8 @@ MixerViewModel::MixerViewModel() {
     m_master = std::make_unique<ChannelViewModel>();
     m_master->id = 0;
     m_master->slotIndex = Audio::ChannelSlotMap::MASTER_SLOT_INDEX;
-    m_master->name = "Master";
+    m_master->name = "MASTER";
+    m_master->routeName = "Output";
     m_master->trackColor = 0xFF8B7FFF; // Nomad purple
 }
 
@@ -18,18 +19,20 @@ void MixerViewModel::updateMeters(const Audio::MeterSnapshotBuffer& snapshots, d
     for (auto& channel : m_channels) {
         if (!channel) continue;
 
-        float linearL, linearR;
-        bool clipL, clipR;
-        snapshots.readSnapshot(channel->slotIndex, linearL, linearR, clipL, clipR);
-        smoothMeterChannel(*channel, linearL, linearR, clipL, clipR, deltaTime);
+        if (auto mc = channel->channel.lock()) {
+            channel->muted = mc->isMuted();
+            channel->soloed = mc->isSoloed();
+            // channel->armed = mc->isRecording(); // MixerChannel has no recording state
+        }
+
+        const auto snapshot = snapshots.readSnapshot(channel->slotIndex);
+        smoothMeterChannel(*channel, snapshot, deltaTime);
     }
 
     // Update master meter
     if (m_master) {
-        float linearL, linearR;
-        bool clipL, clipR;
-        snapshots.readSnapshot(m_master->slotIndex, linearL, linearR, clipL, clipR);
-        smoothMeterChannel(*m_master, linearL, linearR, clipL, clipR, deltaTime);
+        const auto snapshot = snapshots.readSnapshot(m_master->slotIndex);
+        smoothMeterChannel(*m_master, snapshot, deltaTime);
     }
 }
 
@@ -43,39 +46,67 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
         }
     }
 
-    // Collect track info from engine
-    std::vector<std::tuple<uint32_t, std::string, uint32_t, uint32_t>> trackInfo;
-    for (size_t i = 0; i < trackManager.getTrackCount(); ++i) {
-        auto track = trackManager.getTrack(i);
-        if (track) {
-            uint32_t id = track->getTrackId();
-            uint32_t slot = slotMap.getSlotIndex(id);
-            if (slot != Audio::ChannelSlotMap::INVALID_SLOT) {
-                trackInfo.emplace_back(id, track->getName(), track->getColor(), slot);
-            }
+    // Collect channel info from engine
+    struct ChannelInfo {
+        uint32_t id{0};
+        std::string name;
+        uint32_t color{0};
+        uint32_t slot{0};
+        std::weak_ptr<Audio::MixerChannel> channel;
+        bool muted{false};
+        bool soloed{false};
+        bool armed{false};
+    };
+    std::vector<ChannelInfo> channelInfo;
+    auto channels = trackManager.getChannelsSnapshot();
+    for (const auto& channel : channels) {
+        if (!channel) continue;
+
+        uint32_t id = channel->getChannelId();
+        uint32_t slot = slotMap.getSlotIndex(id);
+        if (slot != Audio::ChannelSlotMap::INVALID_SLOT) {
+            ChannelInfo info;
+            info.id = id;
+            info.name = channel->getName();
+            info.color = channel->getColor();
+            info.slot = slot;
+            info.channel = channel;
+            info.muted = channel->isMuted();
+            info.soloed = channel->isSoloed();
+            info.armed = false; // Stubbed for v3.0 Mixer separation
+            channelInfo.push_back(std::move(info));
         }
     }
 
     // Rebuild channel list to match tracks
     std::vector<std::unique_ptr<ChannelViewModel>> newChannels;
-    newChannels.reserve(trackInfo.size());
+    newChannels.reserve(channelInfo.size());
 
-    for (const auto& [id, name, color, slot] : trackInfo) {
-        auto it = existingIds.find(id);
+    for (const auto& info : channelInfo) {
+        const auto it = existingIds.find(info.id);
         if (it != existingIds.end() && m_channels[it->second]) {
             // Reuse existing channel (preserves meter state)
             auto& existing = m_channels[it->second];
-            existing->name = name;
-            existing->trackColor = color;
-            existing->slotIndex = slot;
+            existing->id = info.id;
+            existing->name = info.name;
+            existing->trackColor = info.color;
+            existing->slotIndex = info.slot;
+            existing->channel = info.channel;
+            existing->muted = info.muted;
+            existing->soloed = info.soloed;
+            existing->armed = info.armed;
             newChannels.push_back(std::move(existing));
         } else {
             // Create new channel
             auto channel = std::make_unique<ChannelViewModel>();
-            channel->id = id;
-            channel->slotIndex = slot;
-            channel->name = name;
-            channel->trackColor = color;
+            channel->id = info.id;
+            channel->slotIndex = info.slot;
+            channel->channel = info.channel;
+            channel->name = info.name;
+            channel->trackColor = info.color;
+            channel->muted = info.muted;
+            channel->soloed = info.soloed;
+            channel->armed = info.armed;
             newChannels.push_back(std::move(channel));
         }
     }
@@ -90,6 +121,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
 }
 
 ChannelViewModel* MixerViewModel::getChannelById(uint32_t id) {
+    if (id == 0) return m_master.get();
     auto it = m_idToIndex.find(id);
     if (it == m_idToIndex.end() || it->second >= m_channels.size()) {
         return nullptr;
@@ -98,6 +130,7 @@ ChannelViewModel* MixerViewModel::getChannelById(uint32_t id) {
 }
 
 const ChannelViewModel* MixerViewModel::getChannelById(uint32_t id) const {
+    if (id == 0) return m_master.get();
     auto it = m_idToIndex.find(id);
     if (it == m_idToIndex.end() || it->second >= m_channels.size()) {
         return nullptr;
@@ -151,66 +184,94 @@ void MixerViewModel::rebuildIdMap() {
 
 
 void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
-                                         float linearL, float linearR,
-                                         bool clipL, bool clipR,
-                                         double deltaTime) {
-    // Convert LINEAR to dB
-    float dbL = MixerMath::linearToDb(linearL);
-    float dbR = MixerMath::linearToDb(linearR);
+                                        const Audio::MeterSnapshotBuffer::MeterReadout& snapshot,
+                                        double deltaTime) {
+    // Convert LINEAR to dB (UI mapping is log-space).
+    const float peakDbL = MixerMath::linearToDb(snapshot.peakL);
+    const float peakDbR = MixerMath::linearToDb(snapshot.peakR);
+    const float energyDbL = MixerMath::linearToDb(snapshot.rmsL);
+    const float energyDbR = MixerMath::linearToDb(snapshot.rmsR);
+    const float lowDbL = MixerMath::linearToDb(snapshot.lowL);
+    const float lowDbR = MixerMath::linearToDb(snapshot.lowR);
 
-    // Calculate smoothing coefficients
-    // coeff = 1 - exp(-deltaTime / tau), where tau = time_ms / 1000
-    float attackCoeff = 1.0f - std::exp(static_cast<float>(-deltaTime * 1000.0 / METER_ATTACK_MS));
-    float releaseCoeff = 1.0f - std::exp(static_cast<float>(-deltaTime * 1000.0 / METER_RELEASE_MS));
+    auto smoothDb = [&](float current, float target, float attackMs, float releaseMs) -> float {
+        const float ms = static_cast<float>(deltaTime * 1000.0);
+        const float tau = (target > current) ? attackMs : releaseMs;
+        const float coeff = 1.0f - std::exp(-ms / std::max(1e-3f, tau));
+        return current + (target - current) * coeff;
+    };
 
-    // Apply attack/release smoothing (in dB space)
-    // Attack: fast rise to new peak
-    // Release: slow decay to new level
-    if (dbL > channel.smoothedPeakL) {
-        channel.smoothedPeakL += (dbL - channel.smoothedPeakL) * attackCoeff;
-    } else {
-        channel.smoothedPeakL += (dbL - channel.smoothedPeakL) * releaseCoeff;
+    // Analysis envelopes (never drawn directly).
+    channel.envPeakL = smoothDb(channel.envPeakL, peakDbL, PEAK_ATTACK_MS, PEAK_RELEASE_MS);
+    channel.envPeakR = smoothDb(channel.envPeakR, peakDbR, PEAK_ATTACK_MS, PEAK_RELEASE_MS);
+    channel.envEnergyL = smoothDb(channel.envEnergyL, energyDbL, ENERGY_ATTACK_MS, ENERGY_RELEASE_MS);
+    channel.envEnergyR = smoothDb(channel.envEnergyR, energyDbR, ENERGY_ATTACK_MS, ENERGY_RELEASE_MS);
+    channel.envLowEnergyL = smoothDb(channel.envLowEnergyL, lowDbL, LOW_ATTACK_MS, LOW_RELEASE_MS);
+    channel.envLowEnergyR = smoothDb(channel.envLowEnergyR, lowDbR, LOW_ATTACK_MS, LOW_RELEASE_MS);
+
+    // Perceptual mapping (Musical meters are interpretive, not purely peak).
+    auto computeMusicalDb = [&](float peakEnvDb, float energyEnvDb, float lowEnvDb) -> float {
+        // Transient strength: how much peak stands above energy (in dB).
+        const float transientDb = std::max(0.0f, peakEnvDb - energyEnvDb);
+        float peakWeight = std::clamp(transientDb / 12.0f, 0.0f, 1.0f);
+
+        // Bass-heavy material shouldn't visually "spike" like transients.
+        const float bassProximity = std::clamp((lowEnvDb - (energyEnvDb - 6.0f)) / 12.0f, 0.0f, 1.0f);
+        peakWeight *= (1.0f - 0.65f * bassProximity);
+
+        return energyEnvDb + peakWeight * (peakEnvDb - energyEnvDb);
+    };
+
+    float targetDbL = channel.envPeakL;
+    float targetDbR = channel.envPeakR;
+    switch (m_meterMode) {
+        case MeterMode::Musical:
+            targetDbL = computeMusicalDb(channel.envPeakL, channel.envEnergyL, channel.envLowEnergyL);
+            targetDbR = computeMusicalDb(channel.envPeakR, channel.envEnergyR, channel.envLowEnergyR);
+            break;
+        case MeterMode::Hybrid:
+            targetDbL = channel.envEnergyL;
+            targetDbR = channel.envEnergyR;
+            break;
+        case MeterMode::Technical:
+            targetDbL = channel.envPeakL;
+            targetDbR = channel.envPeakR;
+            break;
     }
 
-    if (dbR > channel.smoothedPeakR) {
-        channel.smoothedPeakR += (dbR - channel.smoothedPeakR) * attackCoeff;
-    } else {
-        channel.smoothedPeakR += (dbR - channel.smoothedPeakR) * releaseCoeff;
-    }
+    // Visual ballistics (meters with mass).
+    channel.smoothedPeakL = smoothDb(channel.smoothedPeakL, targetDbL, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
+    channel.smoothedPeakR = smoothDb(channel.smoothedPeakR, targetDbR, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
 
-    // Clamp to valid range
     channel.smoothedPeakL = std::max(channel.smoothedPeakL, MixerMath::DB_MIN);
     channel.smoothedPeakR = std::max(channel.smoothedPeakR, MixerMath::DB_MIN);
 
-    // Update peak hold (left)
-    if (dbL > channel.peakHoldL) {
-        channel.peakHoldL = dbL;
+    // Peak hold uses true peak (for gain-staging confidence).
+    if (peakDbL > channel.peakHoldL) {
+        channel.peakHoldL = peakDbL;
         channel.peakHoldTimerL = 0.0;
     } else {
         channel.peakHoldTimerL += deltaTime;
         if (channel.peakHoldTimerL > PEAK_HOLD_MS / 1000.0) {
-            // Decay peak hold
             float decayCoeff = 1.0f - std::exp(static_cast<float>(-deltaTime * 1000.0 / PEAK_DECAY_MS));
             channel.peakHoldL += (MixerMath::DB_MIN - channel.peakHoldL) * decayCoeff;
         }
     }
 
-    // Update peak hold (right)
-    if (dbR > channel.peakHoldR) {
-        channel.peakHoldR = dbR;
+    if (peakDbR > channel.peakHoldR) {
+        channel.peakHoldR = peakDbR;
         channel.peakHoldTimerR = 0.0;
     } else {
         channel.peakHoldTimerR += deltaTime;
         if (channel.peakHoldTimerR > PEAK_HOLD_MS / 1000.0) {
-            // Decay peak hold
             float decayCoeff = 1.0f - std::exp(static_cast<float>(-deltaTime * 1000.0 / PEAK_DECAY_MS));
             channel.peakHoldR += (MixerMath::DB_MIN - channel.peakHoldR) * decayCoeff;
         }
     }
 
-    // Update clip latch (sticky until cleared by user)
-    if (clipL) channel.clipLatchL = true;
-    if (clipR) channel.clipLatchR = true;
+    // Clip latch (sticky until cleared by user).
+    if (snapshot.clipL) channel.clipLatchL = true;
+    if (snapshot.clipR) channel.clipLatchR = true;
 }
 
 } // namespace Nomad

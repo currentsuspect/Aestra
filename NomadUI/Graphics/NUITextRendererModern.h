@@ -7,10 +7,21 @@
 #include <map>
 #include <memory>
 
-// OpenGL includes
+#ifdef NOMADUI_SDL2_AVAILABLE
+
+#ifdef _WIN32
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #include <Windows.h>
+#endif
+
+// OpenGL includes (must come after Windows headers on Win32 to avoid APIENTRY redefinition warnings)
 #include "../External/glad/include/glad/glad.h"
 
-#ifdef NOMADUI_SDL2_AVAILABLE
 // SDL2 includes
 #include <SDL.h>
 #include <SDL_ttf.h>

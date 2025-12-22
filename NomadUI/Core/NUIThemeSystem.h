@@ -110,6 +110,11 @@ struct NUIThemeProperties {
     NUIColor backdrop;
     NUIColor highlightGlow;          // rgba(139, 127, 255, 0.3)
     
+    // Glass Aesthetic tokens
+    NUIColor glassHover;             // Neutral clear glass highlighting
+    NUIColor glassBorder;            // Subtle white border for glass
+    NUIColor glassActive;            // Colored luminous glass (usually derived from accent)
+    
     // Spacing
     float spacingXS = 4.0f;
     float spacingS = 8.0f;

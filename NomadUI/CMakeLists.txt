@@ -37,8 +37,8 @@ set(NOMADUI_CORE_SOURCES
     Core/NUIFrameProfiler.cpp
     Core/NUIDragDrop.h
     Core/NUIDragDrop.cpp
-    Core/NUIButton.h
-    Core/NUIButton.cpp
+    Core/NUIDragDrop.cpp
+    # Core/NUIButton.h and .cpp removed - using Widgets version
     Core/NUILabel.h
     Core/NUILabel.cpp
     Core/NUISlider.h
@@ -47,7 +47,10 @@ set(NOMADUI_CORE_SOURCES
     Core/NUICheckbox.cpp
     Core/NUITextInput.h
     Core/NUITextInput.cpp
+    Core/NUITextInput.cpp
     Core/NUIProgressBar.h
+    Common/MusicHelpers.h
+    Common/MusicHelpers.cpp
     Core/NUIProgressBar.cpp
     Core/NUIScrollbar.h
     Core/NUIScrollbar.cpp
@@ -80,12 +83,33 @@ list(APPEND NOMADUI_CORE_SOURCES
     Widgets/NUIVisualWidgets.cpp
     Widgets/NUIUtilityWidgets.h
     Widgets/NUIUtilityWidgets.cpp
+    Widgets/NUIButton.cpp
     Widgets/NUIThematicWidgets.h
     Widgets/NUIThematicWidgets.cpp
     Widgets/NUIStepSequencer.h
     Widgets/NUIStepSequencer.cpp
     Widgets/UIMixerMeter.h
     Widgets/UIMixerMeter.cpp
+    Widgets/UIMixerPanel.h
+    Widgets/UIMixerPanel.cpp
+    Widgets/UIMixerFader.h
+    Widgets/UIMixerFader.cpp
+    Widgets/UIMixerButtonRow.h
+    Widgets/UIMixerButtonRow.cpp
+    Widgets/UIMixerHeader.h
+    Widgets/UIMixerHeader.cpp
+    Widgets/UIMixerKnob.h
+    Widgets/UIMixerKnob.cpp
+    Widgets/UIMixerFXSummary.h
+    Widgets/UIMixerFXSummary.cpp
+    Widgets/UIMixerStrip.h
+    Widgets/UIMixerStrip.cpp
+    Widgets/UIMixerFooter.h
+    Widgets/UIMixerFooter.cpp
+    Widgets/UIMixerInspector.h
+    Widgets/UIMixerInspector.cpp
+    Widgets/UnitRow.h
+    Widgets/UnitRow.cpp
 )
 
 set(NOMADUI_GRAPHICS_SOURCES
@@ -107,6 +131,15 @@ add_library(NomadUI_Core STATIC
 
 target_include_directories(NomadUI_Core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# The main application mixer widgets depend on NomadAudio + NomadCore headers.
+# Keep this PRIVATE so NomadUI can still be consumed as a standalone library
+# when these widgets are not used.
+target_include_directories(NomadUI_Core PRIVATE
+    ${CMAKE_SOURCE_DIR}/NomadCore/include
+    ${CMAKE_SOURCE_DIR}/NomadAudio/include
+    ${CMAKE_SOURCE_DIR}/Source
 )
 
 # FreeType dependency removed - handled by MSDF text renderer

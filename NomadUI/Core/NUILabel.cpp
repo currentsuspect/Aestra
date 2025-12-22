@@ -38,6 +38,14 @@ void NUILabel::onRender(NUIRenderer& renderer)
         // OPTIMIZATION: Cache text measurements - only measure when text or size changes
         if (!textSizeValid_) {
             cachedTextSize_ = renderer.measureText(text_, fontSize);
+            
+            // FIX: Add padding to account for visual overhangs and descenders
+            // The renderer's measureText often returns tight typographic bounds (ascent-to-baseline-to-descent).
+            // This causes clipping when glyphs visually extend beyond these bounds (e.g. anti-aliasing spread).
+            // Adding +2.0f width and +4.0f height ensures the layout allocates enough space.
+            cachedTextSize_.width += 2.0f;
+            cachedTextSize_.height += 4.0f;
+            
             textSizeValid_ = true;
         }
         

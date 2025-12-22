@@ -32,6 +32,22 @@ namespace Audio {
                                      uint32_t& sampleRate,
                                      uint32_t& numChannels);
 
+/**
+ * @brief Unified audio file decoder that tries multiple paths:
+ * 1. Native WAV loader (fast, handles PCM/Float WAV)
+ * 2. MiniAudio (compressed formats like MP3/FLAC/OGG)
+ * 3. Platform decoder (Media Foundation on Windows)
+ */
+[[nodiscard]] bool decodeAudioFile(const std::string& filePath,
+                                   std::vector<float>& audioData,
+                                   uint32_t& sampleRate,
+                                   uint32_t& numChannels);
+
+/**
+ * @brief Ensures audio data is stereo by upmixing or downmixing.
+ */
+void forceStereo(std::vector<float>& buffer, uint32_t& channelCount);
+
 } // namespace Audio
 } // namespace Nomad
 

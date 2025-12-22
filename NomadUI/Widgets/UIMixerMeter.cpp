@@ -21,9 +21,16 @@ void UIMixerMeter::cacheThemeColors()
     m_colorGreen = theme.getColor("success");       // #5BD896
     m_colorYellow = theme.getColor("warning");      // #FFD86B
     m_colorRed = theme.getColor("error");           // #FF5E5E
-    m_colorBackground = theme.getColor("backgroundPrimary"); // #181819
+    // Muted style: monochrome, slightly reduced alpha.
+    m_colorGreenDim = m_colorGreen.withSaturation(0.0f).withAlpha(0.55f);
+    m_colorYellowDim = m_colorYellow.withSaturation(0.0f).withAlpha(0.55f);
+    m_colorRedDim = m_colorRed.withSaturation(0.0f).withAlpha(0.55f);
+    // Match fader track background so meters feel integrated with the strip.
+    m_colorBackground = theme.getColor("backgroundSecondary"); // #1e1e1f
     m_colorPeakHold = theme.getColor("textPrimary"); // #E5E5E8
-    m_colorClipOff = theme.getColor("backgroundSecondary"); // #1e1e1f
+    m_colorPeakOverlay = m_colorPeakHold.withAlpha(0.8f);
+    m_colorPeakOverlayDim = m_colorPeakOverlay.withSaturation(0.0f).withAlpha(0.6f);
+    m_colorClipOff = theme.getColor("borderSubtle").withAlpha(0.55f);
 }
 
 void UIMixerMeter::setLevels(float dbL, float dbR)
@@ -31,6 +38,13 @@ void UIMixerMeter::setLevels(float dbL, float dbR)
     // Clamp to valid range
     m_peakL = std::max(DB_MIN, std::min(DB_MAX, dbL));
     m_peakR = std::max(DB_MIN, std::min(DB_MAX, dbR));
+    repaint();
+}
+
+void UIMixerMeter::setPeakOverlay(float peakDbL, float peakDbR)
+{
+    m_peakOverlayL = std::max(DB_MIN, std::min(DB_MAX, peakDbL));
+    m_peakOverlayR = std::max(DB_MIN, std::min(DB_MAX, peakDbR));
     repaint();
 }
 
@@ -46,6 +60,14 @@ void UIMixerMeter::setClipLatch(bool clipL, bool clipR)
     if (m_clipL != clipL || m_clipR != clipR) {
         m_clipL = clipL;
         m_clipR = clipR;
+        repaint();
+    }
+}
+
+void UIMixerMeter::setDimmed(bool dimmed)
+{
+    if (m_dimmed != dimmed) {
+        m_dimmed = dimmed;
         repaint();
     }
 }
@@ -77,10 +99,16 @@ NUIColor UIMixerMeter::getColorForLevel(float db) const
 }
 
 void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
-                                   float levelDb, float peakHoldDb, bool clip)
+                                   float levelDb, float peakOverlayDb, float peakHoldDb, bool clip)
 {
-    // Background
-    renderer.fillRect(bounds, m_colorBackground);
+    // Background ("Grey" - matching mixer panel interior)
+    // User requested "inactive/nothing playing mode should be the grey"
+    renderer.fillRect(bounds, NUIColor(0.12f, 0.12f, 0.14f, 1.0f)); // #1e1e22
+
+    const NUIColor& green = m_dimmed ? m_colorGreenDim : m_colorGreen;
+    const NUIColor& yellow = m_dimmed ? m_colorYellowDim : m_colorYellow;
+    const NUIColor& red = m_dimmed ? m_colorRedDim : m_colorRed;
+    const NUIColor& peakOverlay = m_dimmed ? m_colorPeakOverlayDim : m_colorPeakOverlay;
 
     // Calculate meter fill height
     float normalizedLevel = dbToNormalized(levelDb);
@@ -95,78 +123,49 @@ void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
         meterAreaHeight
     };
 
-    // Render meter fill from bottom up with color zones
-    if (fillHeight > 0.0f) {
-        // Calculate Y positions for color zone thresholds
-        float yellowNorm = dbToNormalized(DB_YELLOW_THRESHOLD);
-        float redNorm = dbToNormalized(DB_RED_THRESHOLD);
-
-        float yellowY = meterArea.y + meterArea.height * (1.0f - yellowNorm);
-        float redY = meterArea.y + meterArea.height * (1.0f - redNorm);
+    // Render meter fill (ANALOG GRADIENT)
+    if (fillHeight > 1.0f) {
         float fillTopY = meterArea.y + meterArea.height - fillHeight;
-        float bottomY = meterArea.y + meterArea.height;
-
-        // Green zone (bottom)
-        if (normalizedLevel > 0.0f) {
-            float greenTop = std::max(fillTopY, yellowY);
-            if (greenTop < bottomY) {
-                NUIRect greenRect = {
-                    meterArea.x,
-                    greenTop,
-                    meterArea.width,
-                    bottomY - greenTop
-                };
-                renderer.fillRect(greenRect, m_colorGreen);
-            }
-        }
-
-        // Yellow zone (middle)
-        if (normalizedLevel > yellowNorm) {
-            float yellowTop = std::max(fillTopY, redY);
-            float yellowBottom = std::min(yellowY, bottomY);
-            if (yellowTop < yellowBottom) {
-                NUIRect yellowRect = {
-                    meterArea.x,
-                    yellowTop,
-                    meterArea.width,
-                    yellowBottom - yellowTop
-                };
-                renderer.fillRect(yellowRect, m_colorYellow);
-            }
-        }
-
-        // Red zone (top)
-        if (normalizedLevel > redNorm) {
-            float redTop = fillTopY;
-            float redBottom = std::min(redY, bottomY);
-            if (redTop < redBottom) {
-                NUIRect redRect = {
-                    meterArea.x,
-                    redTop,
-                    meterArea.width,
-                    redBottom - redTop
-                };
-                renderer.fillRect(redRect, m_colorRed);
-            }
-        }
-    }
-
-    // Peak hold indicator (thin horizontal line)
-    if (peakHoldDb > DB_MIN) {
-        float peakNorm = dbToNormalized(peakHoldDb);
-        float peakY = meterArea.y + meterArea.height * (1.0f - peakNorm);
-
-        // Clamp to meter area
-        peakY = std::max(meterArea.y, std::min(peakY, meterArea.y + meterArea.height - PEAK_HOLD_HEIGHT));
-
-        NUIRect peakRect = {
+        NUIRect fillRect = {
             meterArea.x,
-            peakY,
+            fillTopY,
             meterArea.width,
-            PEAK_HOLD_HEIGHT
+            fillHeight
         };
-        renderer.fillRect(peakRect, m_colorPeakHold);
+        
+        // Dynamic Gradient Colors
+        // Bottom is always Green. Top color shifts from Green -> Yellow -> Red based on level.
+        // This gives a nice "heating up" effect.
+        NUIColor bottomColor = m_colorGreen;
+        NUIColor topColor = m_colorGreen;
+        
+        if (normalizedLevel > 0.8f) { // High levels -> Red tip
+             topColor = m_colorRed;
+        } else if (normalizedLevel > 0.5f) { // Mid levels -> Yellow tip
+             topColor = m_colorYellow;
+        } else {
+             topColor = m_colorGreen.lightened(0.2f); // Low levels -> Brighter green tip
+        }
+        
+        // Apply Dimming if muted
+        if (m_dimmed) {
+            bottomColor = bottomColor.withSaturation(0.0f).withAlpha(0.5f);
+            topColor = topColor.withSaturation(0.0f).withAlpha(0.5f);
+        }
+        
+        // Draw Gradient Fill
+        renderer.fillRectGradient(fillRect, topColor, bottomColor, true); // true = vertical
     }
+
+    // Fast peak overlay indicator (thin horizontal line).
+    if (peakOverlayDb > DB_MIN) {
+        float peakNorm = dbToNormalized(peakOverlayDb);
+        float peakY = meterArea.y + meterArea.height * (1.0f - peakNorm);
+        peakY = std::max(meterArea.y, std::min(peakY, meterArea.y + meterArea.height - PEAK_OVERLAY_HEIGHT));
+        renderer.fillRect(NUIRect{meterArea.x, peakY, meterArea.width, PEAK_OVERLAY_HEIGHT}, peakOverlay);
+    }
+
+    (void)peakHoldDb;
 
     // Clip indicator at top
     NUIRect clipRect = {
@@ -175,7 +174,7 @@ void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
         bounds.width,
         CLIP_HEIGHT
     };
-    renderer.fillRect(clipRect, clip ? m_colorRed : m_colorClipOff);
+    renderer.fillRect(clipRect, clip ? red : m_colorClipOff);
 }
 
 void UIMixerMeter::onRender(NUIRenderer& renderer)
@@ -193,7 +192,7 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         barWidth,
         bounds.height
     };
-    renderMeterBar(renderer, leftBounds, m_peakL, m_peakHoldL, m_clipL);
+    renderMeterBar(renderer, leftBounds, m_peakL, m_peakOverlayL, m_peakHoldL, m_clipL);
 
     // Right bar
     NUIRect rightBounds = {
@@ -202,7 +201,7 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         barWidth,
         bounds.height
     };
-    renderMeterBar(renderer, rightBounds, m_peakR, m_peakHoldR, m_clipR);
+    renderMeterBar(renderer, rightBounds, m_peakR, m_peakOverlayR, m_peakHoldR, m_clipR);
 
     // Render children
     renderChildren(renderer);

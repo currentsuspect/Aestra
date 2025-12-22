@@ -35,6 +35,52 @@
 namespace NomadUI {
 
 // ============================================================================
+// UTF-8 Decoding Helper
+// ============================================================================
+
+// Decode one UTF-8 codepoint from string, advancing the index
+// Returns Unicode codepoint (U+XXXX), or 0 if invalid/end
+static uint32_t decodeUTF8(const std::string& text, size_t& index) {
+    if (index >= text.length()) return 0;
+    
+    unsigned char c = static_cast<unsigned char>(text[index++]);
+    
+    // 1-byte (ASCII): 0xxxxxxx
+    if ((c & 0x80) == 0) {
+        return c;
+    }
+    
+    // 2-byte: 110xxxxx 10xxxxxx
+    if ((c & 0xE0) == 0xC0) {
+        if (index >= text.length()) return 0;
+        uint32_t c1 = static_cast<unsigned char>(text[index++]);
+        if ((c1 & 0xC0) != 0x80) return 0;
+        return ((c & 0x1F) << 6) | (c1 & 0x3F);
+    }
+    
+    // 3-byte: 1110xxxx 10xxxxxx 10xxxxxx  
+    if ((c & 0xF0) == 0xE0) {
+        if (index + 1 >= text.length()) return 0;
+        uint32_t c1 = static_cast<unsigned char>(text[index++]);
+        uint32_t c2 = static_cast<unsigned char>(text[index++]);
+        if ((c1 & 0xC0) != 0x80 || (c2 & 0xC0) != 0x80) return 0;
+        return ((c & 0x0F) << 12) | ((c1 & 0x3F) << 6) | (c2 & 0x3F);
+    }
+    
+    // 4-byte: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+    if ((c & 0xF8) == 0xF0) {
+        if (index + 2 >= text.length()) return 0;
+        uint32_t c1 = static_cast<unsigned char>(text[index++]);
+        uint32_t c2 = static_cast<unsigned char>(text[index++]);
+        uint32_t c3 = static_cast<unsigned char>(text[index++]);
+        if ((c1 & 0xC0) != 0x80 || (c2 & 0xC0) != 0x80 || (c3 & 0xC0) != 0x80) return 0;
+        return ((c & 0x07) << 18) | ((c1 & 0x3F) << 12) | ((c2 & 0x3F) << 6) | (c3 & 0x3F);
+    }
+    
+    return 0; // Invalid UTF-8
+}
+
+// ============================================================================
 // Shader Sources (embedded)
 // ============================================================================
 
@@ -97,13 +143,17 @@ void main() {
              // Very tight smoothing for crisp edges
              // uSmoothness of 0.5 = ~0.5 pixel AA (very sharp)
              // uSmoothness of 1.0 = ~1 pixel AA (balanced)
-             float edgeWidth = ddist * uSmoothness * 0.5;
+             float edgeWidth = ddist * uSmoothness * 0.65; // Slightly softer than 0.5 for better anti-aliasing
              
-             // Hard edge with minimal anti-aliasing
-             float alpha = smoothstep(0.5 - edgeWidth, 0.5 + edgeWidth, dist);
+             // Dilation for "Medium" look (Standard Regular SDFs can look thin)
+             // 0.5 is neutral. 0.42 makes it BOLDER (dilates the shape).
+             // This gives Geist a premium "Inter Medium" feel on dark backgrounds.
+             float center = 0.44; 
+
+             float alpha = smoothstep(center - edgeWidth, center + edgeWidth, dist);
              
-             // Boost contrast for extra crispness (subtle S-curve)
-             alpha = alpha * alpha * (3.0 - 2.0 * alpha);
+             // Boost contrast to reduce blur
+             alpha = pow(alpha, 1.15); // Gamma correction-ish
              
              color.a *= alpha;
         } else if (uPrimitiveType == 4) {
@@ -193,8 +243,15 @@ bool NUIRendererGL::initialize(int width, int height) {
         // Try to load the best font for Nomad
         std::vector<std::string> fontPaths = {
             // Bundled UI fonts (drop the TTFs into these paths)
-            "NomadAssets/fonts/Geist/Geist-Regular.ttf",   // Preferred: crisp neutral UI
+            // Bundled UI fonts (drop the TTFs into these paths)
+            // Try distinct paths for dev/build environments
+            "NomadAssets/fonts/Geist/Geist-Regular.ttf",
+            "../NomadAssets/fonts/Geist/Geist-Regular.ttf", 
+            "../../NomadAssets/fonts/Geist/Geist-Regular.ttf",
+            "../../../NomadAssets/fonts/Geist/Geist-Regular.ttf",
+
             "NomadAssets/fonts/Manrope/Manrope-Regular.ttf",
+            "../../../NomadAssets/fonts/Manrope/Manrope-Regular.ttf",
 
             // System fallbacks (Windows)
             "C:/Windows/Fonts/segoeui.ttf",      // VS Code look
@@ -1396,10 +1453,22 @@ void NUIRendererGL::drawTextCentered(const std::string& text, const NUIRect& rec
     // Measure actual text dimensions
     NUISize textSize = measureText(text, fontSize);
     
+    // Measure actual text dimensions
+    // NUISize textSize = measureText(text, fontSize); // Already declared above?
+    
+    // Check line 1454 in error message.
+    // If I'm replacing lines 1453-1495, and I include the declaration, it should be fine unless it was already there outside the block?
+    // The previous error said 1454: declaration, 1460: redefinition.
+    // My previous edit REMOVED the redefinition.
+    // Now I replaced the whole block.
+    // Let's just look at the code to be sure.
+    // I'll assume I need to remove one.
+
+    
     // Calculate horizontal centering
     float x = std::round(rect.x + (rect.width - textSize.width) * 0.5f);
     
-    // Calculate vertical centering using real font metrics (Top-Left Y).
+    // Calculate vertical centering using real font metrics (Top-Left Y + Ascent).
     float y = std::round(calculateTextY(rect, fontSize));
     
     drawText(text, NUIPoint(x, y), fontSize, color);
@@ -1462,22 +1531,25 @@ NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
             float scale = fontSize / static_cast<float>(atlasSize);
             FT_UInt previousGlyph = 0;
 
-            for (char c : text) {
-                auto it = cache.find(c);
-                if (it == cache.end()) {
-                    continue; // Skip unknown characters
-                }
+            // UTF-8 decode loop
+            size_t index = 0;
+            while (index < text.length()) {
+                uint32_t codepoint = decodeUTF8(text, index);
+                if (codepoint == 0) break;
+                
+                auto it = cache.find(codepoint);
+                if (it == cache.end()) continue;
 
                 const FontData& glyph = it->second;
 
                 if (fontHasKerning_ && previousGlyph != 0 && glyph.glyphIndex != 0) {
                     FT_Vector kerning = {0, 0};
                     if (FT_Get_Kerning(ftFace_, previousGlyph, glyph.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
-                        totalWidth += (kerning.x >> 6) * scale;
+                        totalWidth += (kerning.x / 64.0f) * scale; // Float precision
                     }
                 }
 
-                totalWidth += (glyph.advance >> 6) * scale;
+                totalWidth += (glyph.advance / 64.0f) * scale; // Float precision
                 previousGlyph = glyph.glyphIndex;
             }
 
@@ -1516,7 +1588,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
 
     auto buildAtlas = [&](int atlasFontSize,
                           uint32_t& atlasTextureId,
-                          std::unordered_map<char, FontData>& cache,
+                          std::unordered_map<uint32_t, FontData>& cache, // Changed to uint32_t
                           float& outAscent,
                           float& outDescent,
                           float& outLineHeight,
@@ -1528,9 +1600,25 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
             return false;
         }
 
-        outAscent = static_cast<float>(ftFace_->size->metrics.ascender >> 6);
-        outDescent = static_cast<float>(-(ftFace_->size->metrics.descender >> 6));
-        outLineHeight = outAscent + outDescent;
+        // Use precise float metrics
+        float rawAscent = static_cast<float>(ftFace_->size->metrics.ascender) / 64.0f;
+        float rawDescent = static_cast<float>(-(ftFace_->size->metrics.descender)) / 64.0f;
+        float rawLineHeight = rawAscent + rawDescent;
+
+        // FIX: Rebalance Metrics + Expand Spacing
+        // 1. Rebalance Ascent so Cap Height is centered (keeps text vertically aligned).
+        // 2. Expand Line Height by ~15% to remove "Invisible Border" feel.
+        
+        float verticalPadding = atlasFontSize * 0.15f; 
+        float capHalfHeight = atlasFontSize * 0.35f;
+        
+        // Center of Expanded Box = (RawLineHeight + Padding) / 2
+        // We want Cap Center to match this.
+        float expandedLineHeight = rawLineHeight + verticalPadding;
+        
+        outAscent = (expandedLineHeight * 0.5f) + capHalfHeight;
+        outDescent = expandedLineHeight - outAscent;
+        outLineHeight = expandedLineHeight;
 
         if (atlasTextureId != 0) {
             glDeleteTextures(1, &atlasTextureId);
@@ -1567,15 +1655,31 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         const int loadFlagsGray = loadFlagsBase | FT_LOAD_TARGET_LIGHT;
         const int padding = 3;
 
-        for (int codepoint = 32; codepoint <= 255; ++codepoint) {
-            FT_UInt glyphIndex = FT_Get_Char_Index(ftFace_, static_cast<FT_ULong>(codepoint));
+        // Build character set: ASCII + Unicode symbols
+        std::vector<uint32_t> charSet;
+        for (uint32_t c = 32; c <= 126; ++c) charSet.push_back(c); // ASCII printable
+        
+        // Add Unicode transport symbols for UI
+        charSet.push_back(0x25B6); // ▶ Play
+        charSet.push_back(0x25C0); // ◀ Reverse
+        charSet.push_back(0x25A0); // ■ Stop
+        charSet.push_back(0x23F8); // ⏸ Pause
+        charSet.push_back(0x23EF); // ⏯ Play/Pause
+        charSet.push_back(0x23F9); // ⏹ Stop
+        charSet.push_back(0x23FA); // ⏺ Record
+        
+        for (uint32_t codepoint : charSet) {
+            FT_UInt glyphIndex = FT_Get_Char_Index(ftFace_, codepoint);
             if (glyphIndex == 0) {
-                continue;
+                // Log only for symbols we explicitly requested (ignore control chars if any)
+                if (codepoint > 127) {
+                    std::cerr << "WARNING: Font missing glyph for U+" << std::hex << codepoint << std::dec << std::endl;
+                }
+                continue; // skip if not in font
             }
 
             int loadFlags = fontUseLCD_ ? loadFlagsLCD : loadFlagsGray;
-            if (FT_Load_Char(ftFace_, static_cast<FT_ULong>(codepoint), loadFlags)) {
-                std::cerr << "ERROR: Failed to load glyph for character: " << codepoint << std::endl;
+            if (FT_Load_Glyph(ftFace_, glyphIndex, loadFlags)) {
                 continue;
             }
 
@@ -1657,7 +1761,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
             charData.u1 = (atlasX + width) * invW;
             charData.v1 = (atlasY + height) * invH;
 
-            cache[static_cast<char>(codepoint)] = charData;
+            cache[codepoint] = charData; // Cache by Unicode codepoint
 
             atlasX += width + padding;
             atlasRowHeight = std::max(atlasRowHeight, height);
@@ -1748,7 +1852,7 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
     // fontSize is in logical pixels - no DPI scaling needed here
     // Scale factor from 32px atlas to requested font size
     float scale = fontSize / static_cast<float>(atlasSize);
-    
+
     // position.y is the BASELINE position (already adjusted by caller)
     // Pixel-align starting position for crisp text
     float x = std::round(position.x);
@@ -1758,29 +1862,26 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
 
     float minX = 1e9f, minY = 1e9f, maxX = -1e9f, maxY = -1e9f;
     float startX = x;
-
-    // Logging for specific strings (Reproduce step 2)
-    bool debugLog = (text == "Telegram Desktop" || text == "gypq" || text == "gypqj" || text == "Beyoncé");
-    if (debugLog) {
-        std::cout << "[TextDebug] String: \"" << text << "\"" << std::endl;
-        std::cout << "  FontSize: " << fontSize << " (Scale: " << scale << ")" << std::endl;
-        std::cout << "  Position: " << position.x << ", " << position.y << std::endl;
-        std::cout << "  Baseline (rounded): " << baseline << std::endl;
+    
+    // UTF-8 decode loop
+    size_t index = 0;
+    while (index < text.length()) {
+        size_t prevIndex = index;
+        uint32_t codepoint = decodeUTF8(text, index);
         
-        if (scissorEnabled_) {
-            GLint scissor[4];
-            glGetIntegerv(GL_SCISSOR_BOX, scissor);
-            // GL scissor is bottom-up
-            std::cout << "  GL Scissor: x=" << scissor[0] << ", y=" << scissor[1] 
-                      << ", w=" << scissor[2] << ", h=" << scissor[3] << std::endl;
-        } else {
-            std::cout << "  Scissor: Disabled" << std::endl;
+        if (codepoint == 0) {
+            // Prevent blank text: skip one byte and retry or continue
+            // decodeUTF8 might have advanced index partially.
+            // Ensure we advance at least by 1 to avoid infinite loop (decodeUTF8 handles this but let's be safe)
+            if (index == prevIndex) index++;
+            continue; 
         }
-    }
 
-    for (char c : text) {
-        auto it = cache.find(c);
-        if (it == cache.end()) continue;
+        auto it = cache.find(codepoint);
+        if (it == cache.end()) {
+             continue;
+        }
+        
         
         const FontData& ch = it->second;
         
@@ -1802,14 +1903,6 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         // Glyph positioning relative to baseline
         float xpos = std::round(x + scaledBearingX);
         float ypos = std::round(baseline - scaledBearingY); // Top of glyph
-        
-        if (debugLog) {
-            std::cout << "  Glyph '" << c << "': Quad [" << xpos << ", " << ypos << ", " 
-                      << (xpos+w) << ", " << (ypos+h) << "]" 
-                      << " UV [" << ch.u0 << ", " << ch.v0 << " - " << ch.u1 << ", " << ch.v1 << "]"
-                      << (scissorEnabled_ ? " (Clip check needed)" : "") 
-                      << std::endl;
-        }
 
         minX = std::min(minX, xpos);
         minY = std::min(minY, ypos);
@@ -1831,8 +1924,8 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         indices_.push_back(base + 2);
         indices_.push_back(base + 3);
         
-        // Advance cursor
-        x += (ch.advance >> 6) * scale;
+        // Advance cursor with sub-pixel precision to match measurement
+        x += (ch.advance / 64.0f) * scale;
     }
 
     if (debugTextBounds_) {
@@ -2502,6 +2595,33 @@ void NUIRendererGL::updateProjectionMatrix() {
 // ============================================================================
 // Performance Optimizations
 // ============================================================================
+
+void NUIRendererGL::invalidateCache(uint64_t widgetId) {
+    renderCache_.invalidate(widgetId);
+}
+
+bool NUIRendererGL::renderCachedOrUpdate(uint64_t widgetId, const NUIRect& destRect,
+                                         const std::function<void()>& renderCallback) {
+    // If caching is disabled, just render directly
+    if (!renderCache_.isEnabled()) {
+        renderCallback();
+        return false;
+    }
+
+    // Get or create cache entry for this widget
+    // Use destination rect size
+    NUISize size(destRect.width, destRect.height);
+    CachedRenderData* cache = renderCache_.getOrCreateCache(widgetId, size);
+    
+    if (!cache) {
+        renderCallback();
+        return false;
+    }
+
+    // Delegate to render cache manager to render from cache or update it
+    renderCache_.renderCachedOrUpdate(cache, destRect, renderCallback);
+    return true;
+}
 
 void NUIRendererGL::setBatchingEnabled(bool enabled) {
     batchManager_.setEnabled(enabled);

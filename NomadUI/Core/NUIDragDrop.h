@@ -20,6 +20,7 @@ enum class DragDataType {
     File,           // File from browser (path string)
     AudioClip,      // Audio clip being moved in timeline
     MidiClip,       // MIDI clip being moved
+    Pattern,        // Pattern from browser (to timeline)
     Plugin,         // Plugin from browser
     Custom          // User-defined data
 };
@@ -36,12 +37,18 @@ struct DragData {
     double sourceTimePosition = 0;  // For clip moves
     std::any customData;            // For extensibility
     
+    // v3.0 arrangement manipulation
+    std::string sourceClipIdString; // UUID as string
+    int sourceLaneIndex = -1;
+    
     // Original dimensions for visual preview
     float previewWidth = 100.0f;
     float previewHeight = 30.0f;
     
     bool isValid() const { return type != DragDataType::None; }
 };
+
+
 
 /**
  * @brief Result of a drop operation

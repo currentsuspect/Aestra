@@ -122,9 +122,13 @@ public:
     // IMPORTANT: All platform window implementations (Win32, X11, Cocoa) MUST override this method.
     // Expected behavior: Show/hide cursor immediately with no delay.
     // Thread requirements: MUST be called from the same thread that created the window (window thread).
-    // Cross-thread calls will cause cursor display count desynchronization and broken cursor state.
-    // Implementation should update cursor visibility state immediately and persist across window state changes.
     virtual void setCursorVisible(bool visible) = 0;
+    
+    // Set cursor position (screen coordinates)
+    virtual void setCursorPosition(int x, int y) = 0;
+
+    // Mouse Capture (for dragging outside window)
+    virtual void setMouseCapture(bool captured) {}
     
     // Modifier key state query (for wheel events that need modifier info)
     virtual KeyModifiers getCurrentModifiers() const = 0;

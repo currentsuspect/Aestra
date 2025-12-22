@@ -2,6 +2,7 @@
 #include "NUIRenderCache.h"
 #include "NUIRendererGL.h"
 #include <iostream>
+#include <cmath>
 
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
@@ -171,12 +172,14 @@ namespace NomadUI {
 
         // Ensure texture storage and parameters are correct regardless of ownership.
         // Many drivers default MIN_FILTER to a mipmapped mode, which causes sampling to
-        // return black when no mipmaps exist. Always force non-mipmapped linear filtering
+        // return black when no mipmaps exist. Always force non-mipmapped filtering
         // and clamp-to-edge for FBO-backed textures used as UI caches.
         // Allocate (or re-allocate) storage to the required size.
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, size.width, size.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // Prefer nearest filtering for UI caches to avoid text/line blurring when the cached
+        // texture is sampled at fractional pixel coordinates.
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
@@ -244,6 +247,11 @@ namespace NomadUI {
             return;
         }
 
+        // Ensure any pending draws to the current framebuffer are committed before we switch FBOs.
+        if (m_renderer) {
+            m_renderer->flush();
+        }
+
         // Save current FBO
         GLint currentFBO;
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &currentFBO);
@@ -266,6 +274,14 @@ namespace NomadUI {
 #else
         m_restoreClearColor = false;
 #endif
+
+        // Preserve blend state; rendering into transparent cache targets needs correct alpha accumulation.
+        m_previousBlendEnabled = (glIsEnabled(GL_BLEND) == GL_TRUE);
+        glGetIntegerv(GL_BLEND_SRC_RGB, &m_previousBlendSrcRGB);
+        glGetIntegerv(GL_BLEND_DST_RGB, &m_previousBlendDstRGB);
+        glGetIntegerv(GL_BLEND_SRC_ALPHA, &m_previousBlendSrcAlpha);
+        glGetIntegerv(GL_BLEND_DST_ALPHA, &m_previousBlendDstAlpha);
+        m_restoreBlend = true;
 
         // Track active cache so we can mark content valid when finished
         m_activeCache = cache;
@@ -297,7 +313,17 @@ namespace NomadUI {
     glGetIntegerv(GL_SCISSOR_BOX, scissorBox);
     std::memcpy(m_previousScissorBox, scissorBox, sizeof(m_previousScissorBox));
     m_restoreScissorBox = true;
-    glDisable(GL_SCISSOR_TEST);
+    if (m_renderer) {
+        m_renderer->clearClipRect();
+    } else {
+        glDisable(GL_SCISSOR_TEST);
+    }
+
+    // Ensure alpha writes are correct while rendering into the cache FBO.
+    // This avoids cached UI looking "faded" when composited later.
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
     glClearColor(0.f, 0.f, 0.f, 0.f);
     glClear(GL_COLOR_BUFFER_BIT);
         glCheckLog("beginCacheRender", m_debug);
@@ -311,6 +337,11 @@ namespace NomadUI {
     void NUIRenderCache::endCacheRender() {
         if (!m_renderInProgress) {
             return;
+        }
+
+        // Flush any queued draw calls into the cache FBO before restoring the previous framebuffer.
+        if (m_renderer) {
+            m_renderer->flush();
         }
 
         // Restore previous FBO
@@ -334,6 +365,22 @@ namespace NomadUI {
             m_restoreClearColor = false;
         }
 
+        // Restore blend state
+        if (m_restoreBlend) {
+            if (m_previousBlendEnabled) {
+                glEnable(GL_BLEND);
+            } else {
+                glDisable(GL_BLEND);
+            }
+            glBlendFuncSeparate(
+                static_cast<GLenum>(m_previousBlendSrcRGB),
+                static_cast<GLenum>(m_previousBlendDstRGB),
+                static_cast<GLenum>(m_previousBlendSrcAlpha),
+                static_cast<GLenum>(m_previousBlendDstAlpha)
+            );
+            m_restoreBlend = false;
+        }
+
         if (m_activeCache) {
             // Mark cached content as valid now that rendering is complete
             m_activeCache->valid = true;
@@ -346,17 +393,30 @@ namespace NomadUI {
         // Restore renderer projection
         if (m_renderer) {
             m_renderer->endOffscreen();
-        }
-        // Restore caller scissor test state saved at beginCacheRender
-        if (m_restoreScissorBox) {
-            glScissor(m_previousScissorBox[0], m_previousScissorBox[1],
-                      m_previousScissorBox[2], m_previousScissorBox[3]);
+
+            // Restore caller scissor state via the renderer so its internal bookkeeping stays in sync.
+            if (m_previousScissorEnabled && m_restoreScissorBox) {
+                const float uiX = static_cast<float>(m_previousScissorBox[0]);
+                const float uiY = static_cast<float>(m_renderer->getHeight() - (m_previousScissorBox[1] + m_previousScissorBox[3]));
+                const float uiW = static_cast<float>(m_previousScissorBox[2]);
+                const float uiH = static_cast<float>(m_previousScissorBox[3]);
+                m_renderer->setClipRect(NUIRect(uiX, uiY, uiW, uiH));
+            } else {
+                m_renderer->clearClipRect();
+            }
             m_restoreScissorBox = false;
-        }
-        if (m_previousScissorEnabled) {
-            glEnable(GL_SCISSOR_TEST);
         } else {
-            glDisable(GL_SCISSOR_TEST);
+            // Restore caller scissor test state saved at beginCacheRender
+            if (m_restoreScissorBox) {
+                glScissor(m_previousScissorBox[0], m_previousScissorBox[1],
+                          m_previousScissorBox[2], m_previousScissorBox[3]);
+                m_restoreScissorBox = false;
+            }
+            if (m_previousScissorEnabled) {
+                glEnable(GL_SCISSOR_TEST);
+            } else {
+                glDisable(GL_SCISSOR_TEST);
+            }
         }
         glCheckLog("endCacheRender", m_debug);
     }
@@ -368,7 +428,15 @@ namespace NomadUI {
         if (m_renderer && cache->rendererTextureId != 0) {
             // Flip vertically when sampling to match UI's top-left origin.
             NUIRect src(0.0f, 0.0f, static_cast<float>(cache->size.width), static_cast<float>(cache->size.height));
-            m_renderer->drawTextureFlippedV(cache->rendererTextureId, destRect, src);
+
+            // Snap the destination rect to whole pixels to preserve crisp cached text.
+            NUIRect snapped = destRect;
+            snapped.x = std::round(snapped.x);
+            snapped.y = std::round(snapped.y);
+            snapped.width = std::round(snapped.width);
+            snapped.height = std::round(snapped.height);
+
+            m_renderer->drawTextureFlippedV(cache->rendererTextureId, snapped, src);
             return;
         }
 

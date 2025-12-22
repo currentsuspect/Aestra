@@ -98,10 +98,17 @@ void TransportBar::createIcons() {
     m_sequencerIcon->setIconSize(NomadUI::NUIIconSize::Medium);
     m_sequencerIcon->setColorFromTheme("textSecondary");
 
-    // Piano Roll icon (keys)
+    // Piano Roll icon (MIDI Grid + Vertical Keys)
     const char* pianoRollSvg = R"(
-        <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-5.5 17h-2.5v-7h2.5v7zm-4.5 0H7.5v-7h2.5v7zM20 19h-2.5v-7H20v7z"/>
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="7" y1="4" x2="7" y2="20" stroke="currentColor" stroke-width="1"/>
+            <line x1="2" y1="8" x2="7" y2="8" stroke="currentColor" stroke-width="1"/>
+            <line x1="2" y1="12" x2="7" y2="12" stroke="currentColor" stroke-width="1"/>
+            <line x1="2" y1="16" x2="7" y2="16" stroke="currentColor" stroke-width="1"/>
+            <rect x="10" y="6" width="6" height="3" rx="1" fill="currentColor"/>
+            <rect x="15" y="10" width="4" height="3" rx="1" fill="currentColor"/>
+            <rect x="9" y="14" width="8" height="3" rx="1" fill="currentColor"/>
         </svg>
     )";
     m_pianoRollIcon = std::make_shared<NomadUI::NUIIcon>(pianoRollSvg);
@@ -117,65 +124,58 @@ void TransportBar::createIcons() {
     m_playlistIcon = std::make_shared<NomadUI::NUIIcon>(playlistSvg);
     m_playlistIcon->setIconSize(NomadUI::NUIIconSize::Medium);
     m_playlistIcon->setColorFromTheme("textSecondary");
+
+    // Metronome icon (classic metronome shape)
+    const char* metronomeSvg = R"(
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1.5L6 22h12L12 1.5zM11 8l1-3 1 3v6h-2V8z"/>
+            <circle cx="12" cy="18" r="2"/>
+        </svg>
+    )";
+    m_metronomeIcon = std::make_shared<NomadUI::NUIIcon>(metronomeSvg);
+    m_metronomeIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_metronomeIcon->setColorFromTheme("textSecondary");
+
 }
 
 void TransportBar::createButtons() {
-    // Play/Pause button
-    m_playButton = std::make_shared<NomadUI::NUIButton>();
-    m_playButton->setText("");
-    m_playButton->setStyle(NomadUI::NUIButton::Style::Icon);
-    m_playButton->setSize(40, 40);
-    // FLAT DESIGN: Removed background color for cleaner look
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-    // Explicitly set transparent background to ensure no "black box"
-    m_playButton->setBackgroundColor(NomadUI::NUIColor(0,0,0,0)); 
-    // Hover/Press colors handled by theme now
-    m_playButton->setOnClick([this]() {
-        togglePlayPause();
-    });
-    addChild(m_playButton);
-    
-    // Stop button
-    m_stopButton = std::make_shared<NomadUI::NUIButton>();
-    m_stopButton->setText("");
-    m_stopButton->setStyle(NomadUI::NUIButton::Style::Icon);
-    m_stopButton->setSize(40, 40);
-    // FLAT DESIGN: Removed background color
-    m_stopButton->setBackgroundColor(NomadUI::NUIColor(0,0,0,0));
-    // Hover/Press colors handled by theme now
-    m_stopButton->setOnClick([this]() {
-        stop();
-    });
-    addChild(m_stopButton);
-    
-    // Record button (for future use)
-    m_recordButton = std::make_shared<NomadUI::NUIButton>();
-    m_recordButton->setText("");
-    m_recordButton->setStyle(NomadUI::NUIButton::Style::Icon);
-    m_recordButton->setSize(40, 40);
-    // FLAT DESIGN: Removed background color
-    m_recordButton->setBackgroundColor(NomadUI::NUIColor(0,0,0,0));
-    // Hover/Press colors handled by theme now
-    m_recordButton->setEnabled(false); // Disabled for now
-    addChild(m_recordButton);
-
-    // Helper to create view toggle buttons
-    auto createViewButton = [&](std::shared_ptr<NomadUI::NUIButton>& btn, std::function<void()> onClick) {
+    // Play/Pause/Stop/Record...
+    auto createBtn = [&](std::shared_ptr<NomadUI::NUIButton>& btn, std::function<void()> cb) {
         btn = std::make_shared<NomadUI::NUIButton>();
         btn->setText("");
         btn->setStyle(NomadUI::NUIButton::Style::Icon);
         btn->setSize(40, 40);
-        // FLAT DESIGN: Removed background color
-        btn->setBackgroundColor(NomadUI::NUIColor(0,0,0,0));
-        // Hover/Press colors handled by theme now
-        btn->setOnClick(onClick);
+        btn->setBackgroundColor(NomadUI::NUIColor(0,0,0,0)); 
+        btn->setOnClick(cb);
         addChild(btn);
     };
 
-    createViewButton(m_mixerButton, [this]() { if (m_onToggleMixer) m_onToggleMixer(); });
-    createViewButton(m_sequencerButton, [this]() { if (m_onToggleSequencer) m_onToggleSequencer(); });
-    createViewButton(m_pianoRollButton, [this]() { if (m_onTogglePianoRoll) m_onTogglePianoRoll(); });
-    createViewButton(m_playlistButton, [this]() { if (m_onTogglePlaylist) m_onTogglePlaylist(); });
+    createBtn(m_playButton, [this]() { togglePlayPause(); });
+    createBtn(m_stopButton, [this]() { stop(); });
+    createBtn(m_recordButton, [](){});
+    m_recordButton->setEnabled(false);
+    
+    // Metronome toggle button
+    createBtn(m_metronomeButton, [this]() {
+        m_metronomeActive = !m_metronomeActive;
+        if (m_onMetronomeToggle) {
+            m_onMetronomeToggle(m_metronomeActive);
+        }
+        setDirty(true);
+    });
+
+    // View Toggles
+    auto createViewButton = [&](std::shared_ptr<NomadUI::NUIButton>& btn, std::function<void()> onClick) {
+        createBtn(btn, onClick);
+    };
+
+    createViewButton(m_mixerButton, [this]() { if (m_onToggleView) m_onToggleView(Audio::ViewType::Mixer); });
+    createViewButton(m_sequencerButton, [this]() { if (m_onToggleView) m_onToggleView(Audio::ViewType::Sequencer); });
+    createViewButton(m_pianoRollButton, [this]() { if (m_onToggleView) m_onToggleView(Audio::ViewType::PianoRoll); });
+    createViewButton(m_playlistButton, [this]() { if (m_onToggleView) m_onToggleView(Audio::ViewType::Playlist); });
+    
+    // Add Dropdowns LAST to ensure Z-ordering
+
 }
 
 void TransportBar::play() {
@@ -253,6 +253,16 @@ void TransportBar::setPosition(double seconds) {
     }
 }
 
+void TransportBar::setViewToggled(Audio::ViewType view, bool active) {
+    switch (view) {
+        case Audio::ViewType::Mixer: m_mixerActive = active; break;
+        case Audio::ViewType::Sequencer: m_sequencerActive = active; break;
+        case Audio::ViewType::PianoRoll: m_pianoRollActive = active; break;
+        case Audio::ViewType::Playlist: m_playlistActive = active; break;
+    }
+    setDirty(true);
+}
+
 void TransportBar::updateButtonStates() {
     // Clear textual fallbacks (we render SVG icons instead)
     if (m_playButton) {
@@ -293,6 +303,13 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     // Play/Pause button icon
     if (m_playButton && m_playIcon && m_pauseIcon) {
         NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize);
+        
+        // Draw True Glass highlight on hover
+        if (m_playButton->isHovered()) {
+             renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassHover"));
+             renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("glassBorder"));
+        }
+
         auto icon = (m_state == TransportState::Playing) ? m_pauseIcon : m_playIcon;
         if (icon) {
             // CRITICAL: Green when playing, grey on hover, purple otherwise
@@ -316,6 +333,12 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     if (m_stopButton && m_stopIcon) {
         NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize);
 
+        // Draw True Glass highlight on hover
+        if (m_stopButton->isHovered() && m_stopButton->isEnabled()) {
+             renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassHover"));
+             renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("glassBorder"));
+        }
+
         if (!m_stopButton->isEnabled()) {
             m_stopIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.35f));
         } else if (m_stopButton->isHovered()) {
@@ -330,7 +353,6 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     }
     x += buttonSize + spacing;
 
-    // Record button icon (always red, no hover change)
     if (m_recordButton && m_recordIcon) {
         NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize);
 
@@ -346,20 +368,54 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     }
     x += buttonSize + spacing;
 
-    // Calculate position for view toggles
+    // Tools
+
+    // Calculate position for view toggles and metronome
     // Move to the right of the center (BPM display)
     float centerX = bounds.width / 2.0f;
+    
+    // Metronome button icon - positioned to the LEFT of BPM display
+    float metronomeX = centerX - 120.0f - buttonSize;
+    if (m_metronomeButton && m_metronomeIcon) {
+        NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, metronomeX, centerOffsetY, buttonSize, buttonSize);
+        
+        if (m_metronomeActive) {
+            // Active: cyan highlight
+            renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassActive"));
+            renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("accentCyan").withAlpha(0.4f));
+            m_metronomeIcon->setColorFromTheme("accentCyan");
+        } else if (m_metronomeButton->isHovered()) {
+            renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassHover"));
+            renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("glassBorder"));
+            m_metronomeIcon->setColorFromTheme("textSecondary");
+        } else {
+            m_metronomeIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.5f));
+        }
+        
+        NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
+        m_metronomeIcon->setBounds(iconRect);
+        m_metronomeIcon->onRender(renderer);
+    }
+    
     float viewButtonsX = centerX + 120.0f; // Offset from center to avoid BPM
     
     // Helper to render view icons
-    auto renderViewIcon = [&](std::shared_ptr<NomadUI::NUIButton>& btn, std::shared_ptr<NomadUI::NUIIcon>& icon) {
+    auto renderViewIcon = [&](std::shared_ptr<NomadUI::NUIButton>& btn, std::shared_ptr<NomadUI::NUIIcon>& icon, bool isActive) {
         if (btn && icon) {
             NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, viewButtonsX, centerOffsetY, buttonSize, buttonSize);
             
-            if (btn->isHovered()) {
-                icon->setColorFromTheme("textPrimary"); // White on hover
+            if (isActive) {
+                // Background highlight for active state: Luminous Glass
+                renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassActive"));
+                renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("accentCyan").withAlpha(0.4f));
+                icon->setColorFromTheme("accentCyan"); 
+            } else if (btn->isHovered()) {
+                // Hover state: True Glass (neutral)
+                renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassHover"));
+                renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("glassBorder"));
+                icon->setColorFromTheme("accentCyan"); 
             } else {
-                icon->setColorFromTheme("accent"); // Purple default
+                icon->setColorFromTheme("textSecondary"); // Dimmer default for non-active
             }
             
             NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
@@ -370,10 +426,10 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
         }
     };
 
-    renderViewIcon(m_mixerButton, m_mixerIcon);
-    renderViewIcon(m_sequencerButton, m_sequencerIcon);
-    renderViewIcon(m_pianoRollButton, m_pianoRollIcon);
-    renderViewIcon(m_playlistButton, m_playlistIcon);
+    renderViewIcon(m_mixerButton, m_mixerIcon, m_mixerActive);
+    renderViewIcon(m_sequencerButton, m_sequencerIcon, m_sequencerActive);
+    renderViewIcon(m_pianoRollButton, m_pianoRollIcon, m_pianoRollActive);
+    renderViewIcon(m_playlistButton, m_playlistIcon, m_playlistActive);
 }
 
 void TransportBar::layoutComponents() {
@@ -404,12 +460,24 @@ void TransportBar::layoutComponents() {
 
     // Record button
     m_recordButton->setBounds(NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize));
+    x += buttonSize + layout.panelMargin; // Extra margin after transport
+
+    // Center of the transport bar (BPM display area)
+    float centerX = bounds.width / 2.0f;
+    
+    // Metronome button - positioned to the LEFT of BPM display (mirroring mixer position on right)
+    float metronomeX = centerX - 120.0f - buttonSize;  // Same offset as mixer from center, minus button width
+    m_metronomeButton->setBounds(NUIAbsolute(bounds, metronomeX, centerOffsetY, buttonSize, buttonSize));
+
     
     // Calculate position for view toggles (Right side)
     float rightEdge = bounds.width;
     // View toggle buttons
-    // Move to the right of the center (BPM display)
-    float centerX = bounds.width / 2.0f;
+    // Position to the right of center (BPM display) - centerX already declared above
+    if (x > centerX - 100) { 
+        // If our tools encroach on center, shift center or rely on manual absolute
+    }
+    
     float viewButtonsX = centerX + 120.0f; // Offset from center to avoid BPM
 
     if (m_mixerButton) {
@@ -476,18 +544,24 @@ void TransportBar::onRender(NomadUI::NUIRenderer& renderer) {
     );
     
     // Add horizontal divider at bottom to separate transport from track area
+    // REMOVED: Causing gap/double-border with playlist view
+    /*
     renderer.drawLine(
         NomadUI::NUIPoint(bounds.x, bounds.y + bounds.height - 1),
         NomadUI::NUIPoint(bounds.x + bounds.width, bounds.y + bounds.height - 1),
         1.0f,
         borderColor.withAlpha(0.8f)
     );
+    */
     
     // Render children (buttons and labels)
     renderChildren(renderer);
     
     // Render custom icons on top of buttons
     renderButtonIcons(renderer);
+
+    // Popups Last (Render Z-Top)
+
 }
 
 void TransportBar::onResize(int width, int height) {
@@ -500,7 +574,14 @@ void TransportBar::onResize(int width, int height) {
 }
 
 bool TransportBar::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
-    // Let children handle mouse events first
+    // Explicitly forward to info container first (for BPM scroll, arrow clicks)
+    if (m_infoContainer && m_infoContainer->getBounds().contains(event.position)) {
+        if (m_infoContainer->onMouseEvent(event)) {
+            return true;
+        }
+    }
+    
+    // Let other children handle mouse events
     return NomadUI::NUIComponent::onMouseEvent(event);
 }
 

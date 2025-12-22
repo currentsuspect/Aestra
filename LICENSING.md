@@ -1,6 +1,6 @@
 # 🧾 Nomad DAW — Licensing Information
 
-**Nomad DAW** is licensed under the **Nomad Studios Source-Available License (NSSAL) v1.0**.
+**Nomad DAW** is licensed under the **Nomad Studios Source-Available License (NSSAL) v1.1**.
 
 This document provides an overview of the licensing terms and rights. For the complete legal text, see [LICENSE](LICENSE).
 

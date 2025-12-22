@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include <memory>
+#include <functional>
 
 // Forward declarations
 struct FT_Bitmap_;
@@ -144,6 +145,9 @@ public:
                              size_t& cachedWidgets, size_t& cacheMemoryBytes) override;
     NUIDirtyRegionManager* getDirtyRegionManager() override { return &dirtyRegionManager_; }
     NUIRenderCache* getRenderCache() override { return &renderCache_; }
+    void invalidateCache(uint64_t widgetId) override;
+    bool renderCachedOrUpdate(uint64_t widgetId, const NUIRect& destRect,
+                              const std::function<void()>& renderCallback) override;
     
     // Performance stats
     uint32_t getDrawCallCount() const { return drawCallCount_; }
@@ -303,9 +307,10 @@ private:
     // - Large atlas (48px) for bigger UI text
     // - Medium atlas (32px) for common 14–17px UI copy
     // - Small atlas (24px) for <= ~13px labels (ruler, clip strips)
-    std::unordered_map<char, FontData> fontCache_;
-    std::unordered_map<char, FontData> fontCacheMedium_;
-    std::unordered_map<char, FontData> fontCacheSmall_;
+    // Cache by Unicode codepoint (uint32_t) instead of char for full UTF-8 support
+    std::unordered_map<uint32_t, FontData> fontCache_;
+    std::unordered_map<uint32_t, FontData> fontCacheMedium_;
+    std::unordered_map<uint32_t, FontData> fontCacheSmall_;
     bool fontInitialized_;
     bool fontUseLCD_ = true;       // Enable subpixel LCD rendering when available
     bool fontHasKerning_ = false;  // Kerning support advertised by the font

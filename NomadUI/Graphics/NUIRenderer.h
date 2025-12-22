@@ -357,6 +357,23 @@ public:
      * Access to render cache.
      */
     virtual NUIRenderCache* getRenderCache() = 0;
+
+    /**
+     * Invalidate a cached widget render (if supported by the backend).
+     */
+    virtual void invalidateCache(uint64_t widgetId) = 0;
+
+    /**
+     * Render a cached widget, rebuilding it on demand when invalid.
+     *
+     * The render callback should draw the widget contents at its normal absolute
+     * coordinates. When rendering to the cache, callers typically push a transform
+     * like `(-destRect.x, -destRect.y)` so absolute draws land at (0,0) in the FBO.
+     *
+     * @return true if the cache was used (or updated), false if caching isn't available.
+     */
+    virtual bool renderCachedOrUpdate(uint64_t widgetId, const NUIRect& destRect,
+                                      const std::function<void()>& renderCallback) = 0;
     
     // ========================================================================
     // Info

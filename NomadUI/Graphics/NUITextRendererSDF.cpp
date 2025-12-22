@@ -168,7 +168,10 @@ NUISize NUITextRendererSDF::measureText(const std::string& text, float fontSize)
         width += it->second.advance * scale;
         height = std::max(height, it->second.height * scale);
     }
-    return {width, height};
+    // Add slight padding to account for SDF spread/visual overhangs
+    // The user identified that tight bounding boxes clip descenders and right edges.
+    // +2.0f gives enough breathing room for the anti-aliased edges.
+    return {width + 2.0f, height + 2.0f};
 }
 
 float NUITextRendererSDF::getAscent(float fontSize) const {

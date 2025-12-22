@@ -2,7 +2,7 @@
 #pragma once
 
 #include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUIButton.h"
+#include "../NomadUI/Widgets/NUIButton.h"
 #include <string>
 #include <memory>
 #include <functional>
@@ -48,6 +48,7 @@ public:
     const std::string& getTitle() const { return m_title; }
 
     float getTitleBarHeight() const { return m_titleBarHeight; }
+    bool isUserPositioned() const { return m_userPositioned; }
 
     // Component overrides
     void onRender(NomadUI::NUIRenderer& renderer) override;
@@ -58,6 +59,12 @@ public:
     void setOnMinimizeToggle(std::function<void(bool)> callback) { m_onMinimizeToggle = callback; }
     void setOnMaximizeToggle(std::function<void(bool)> callback) { m_onMaximizeToggle = callback; }
     void setOnClose(std::function<void()> callback) { m_onClose = callback; }
+    
+    // Drag events (forwarded to parent controller)
+    using DragCallback = std::function<void(const NomadUI::NUIPoint&)>;
+    void setOnDragStart(DragCallback callback) { m_onDragStart = callback; }
+    void setOnDragMove(DragCallback callback) { m_onDragMove = callback; }
+    void setOnDragEnd(std::function<void()> callback) { m_onDragEnd = callback; }
 
 private:
     std::string m_title;
@@ -77,6 +84,8 @@ private:
     // Dragging state (for future docking)
     bool m_draggingTitleBar{false};
     NomadUI::NUIPoint m_dragStartPos;
+    NomadUI::NUIRect m_dragStartBounds;
+    bool m_userPositioned{false};
     
     // Hover states
     bool m_titleBarHovered{false};
@@ -86,6 +95,10 @@ private:
     std::function<void(bool)> m_onMinimizeToggle;
     std::function<void(bool)> m_onMaximizeToggle;
     std::function<void()> m_onClose;
+    
+    DragCallback m_onDragStart;
+    DragCallback m_onDragMove;
+    std::function<void()> m_onDragEnd;
     
     void layoutContent();
     void onMinimizeClicked();

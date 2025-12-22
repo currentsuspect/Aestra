@@ -33,6 +33,9 @@
 #include "../NomadAudio/include/PreviewEngine.h"
 #include "../NomadCore/include/NomadLog.h"
 #include "../NomadCore/include/NomadProfiler.h"
+#include "../NomadAudio/include/MiniAudioDecoder.h"
+#include "../NomadAudio/include/ClipSource.h"
+#include "MixerViewModel.h"
 #include "TransportBar.h"
 #include "AudioSettingsDialog.h"
 #include "FileBrowser.h"
@@ -43,6 +46,9 @@
 #include "FPSDisplay.h"
 #include "ProjectSerializer.h"
 #include "ConfirmationDialog.h"
+#include "ViewTypes.h"
+#include "PatternBrowserPanel.h"
+#include "ArsenalPanel.h"
 #include <memory>
 #include <iostream>
 #include <chrono>
@@ -61,6 +67,8 @@
 using namespace Nomad;
 using namespace NomadUI;
 using namespace Nomad::Audio;
+
+const std::string BROWSER_SETTINGS_FILE = "browser_settings.json";
 
 namespace {
 uint64_t estimateCycleHz() {
@@ -130,30 +138,151 @@ NomadUI::NUIKeyCode convertToNUIKeyCode(int key) {
  * Manages the lifecycle of all NOMAD subsystems and the main event loop.
  */
 /**
+ * @brief Custom label for the Scope Indicator that manually draws the Play icon via NUIIcon (SVG).
+ * This ensures consistent vector rendering matching the Transport Bar.
+ */
+class ScopeIndicatorLabel : public NomadUI::NUILabel {
+public:
+    ScopeIndicatorLabel(const std::string& text) : NUILabel(text) {
+        // Play icon (Rounded Triangle) - Matches TransportBar
+        const char* playSvg = R"(
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z"/>
+            </svg>
+        )";
+        m_icon = std::make_shared<NomadUI::NUIIcon>(playSvg);
+    }
+
+    void onRender(NomadUI::NUIRenderer& renderer) override {
+        // Calculate bounds and geometry
+        auto bounds = getBounds();
+        float fontSize = getFontSize();
+        float iconSize = fontSize * 1.0f;   // Icon size relative to font
+        float padding = 6.0f;               // Spacing between icon and text
+        
+        // Vertical centering
+        float centerY = bounds.y + bounds.height * 0.5f;
+        float iconY = centerY - iconSize * 0.5f;
+        
+        // 1. Draw SVG Icon
+        if (m_icon) {
+            m_icon->setColor(getTextColor());
+            m_icon->setBounds(NomadUI::NUIRect(bounds.x, iconY, iconSize, iconSize));
+            m_icon->onRender(renderer);
+        }
+        
+        // 2. Adjust Text Position
+        // Extract raw text without the special hex char if present
+        std::string fullText = getText();
+        std::string displayLabel = fullText;
+        
+        // If text starts with the triangle bytes (E2 96 B6), strip them
+        if (fullText.size() >= 3 && 
+            (unsigned char)fullText[0] == 0xE2 && 
+            (unsigned char)fullText[1] == 0x96 && 
+            (unsigned char)fullText[2] == 0xB6) {
+            
+            // +1 for the space that follows usually
+            size_t substrIdx = 3; 
+            if (fullText.size() > 3 && fullText[3] == ' ') substrIdx++;
+            
+            displayLabel = fullText.substr(substrIdx);
+        }
+        
+        // Draw the text offset by icon width
+        float textX = bounds.x + iconSize + padding;
+        float textY = bounds.y + (bounds.height - renderer.measureText(displayLabel, fontSize).height) * 0.5f;
+        
+        renderer.drawText(displayLabel, NomadUI::NUIPoint(std::round(textX), std::round(textY)), fontSize, getTextColor());
+    }
+
+private:
+    std::shared_ptr<NomadUI::NUIIcon> m_icon;
+};
+
+/**
+ * @brief Layer for overlays (Mixer, Piano Roll, etc.) with pass-through hit-testing
+ */
+class OverlayLayer : public NomadUI::NUIComponent {
+public:
+    OverlayLayer() {
+        setId("OverlayLayer");
+    }
+
+    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override {
+        // 1. Check if any child is being dragged (pointer capture)
+        // Note: NUIComponent doesn't expose capture state directly, 
+        // but we assume children handled it. In NomadUI, children return true if they handled it.
+        
+        // 2. Iterate children in reverse z-order for hit-testing
+        auto children = getChildren();
+        for (auto it = children.rbegin(); it != children.rend(); ++it) {
+            auto& child = *it;
+            if (child && child->isVisible() && child->isHitTestVisible()) {
+                if (child->onMouseEvent(event)) {
+                    return true; // Child consumed event
+                }
+            }
+        }
+
+        // 3. Modal override logic could go here if we had a modal stack reference
+
+        // 4. Pass-through to workspace if no child hit
+        return false;
+    }
+};
+
+/**
+ * @brief View focus - which part of the UI is emphasized
+ * Arsenal and Timeline coexist; one is focused, the other is backgrounded
+ */
+enum class ViewFocus {
+    Arsenal,   // Pattern construction/sound design
+    Timeline   // Arrangement/composition
+};
+
+/**
+ * @brief Playback scope - what the transport will play
+ * Makes playback intent explicit to prevent user confusion
+ */
+enum class PlaybackScope {
+    Pattern,      // Play active pattern (looped)
+    Arrangement,  // Play timeline arrangement
+    Selection,    // Future: play selected clips
+    LoopRegion    // Future: play loop region
+};
+
+/**
  * @brief Main content area for NOMAD DAW
  */
 class NomadContent : public NomadUI::NUIComponent {
 public:
     NomadContent() {
-        // Get layout dimensions from theme for initial setup
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-        const auto& layout = themeManager.getLayoutDimensions();
+        // Create layers
+        m_workspaceLayer = std::make_shared<NomadUI::NUIComponent>();
+        m_workspaceLayer->setId("WorkspaceLayer");
+        addChild(m_workspaceLayer);
 
-        // Create track manager for multi-track functionality (add first so it renders behind transport)
+        m_overlayLayer = std::make_shared<OverlayLayer>();
+        addChild(m_overlayLayer);
+
+        // Create track manager for multi-track functionality
         m_trackManager = std::make_shared<TrackManager>();
         addDemoTracks();
 
-        // Create track manager UI (add before transport so it renders behind)
+        // Create track manager UI (add to workspace)
         m_trackManagerUI = std::make_shared<TrackManagerUI>(m_trackManager);
-        float trackAreaWidth = 800.0f; // Will be updated in onResize
-        float trackAreaHeight = 500.0f;
-        m_trackManagerUI->setBounds(NomadUI::NUIRect(layout.fileBrowserWidth, layout.transportBarHeight, trackAreaWidth, trackAreaHeight));
-        addChild(m_trackManagerUI);
+        
+        // Wire up TrackManagerUI internal toggles to centralized authority (v3.1)
+        m_trackManagerUI->setOnToggleMixer([this]() { toggleView(Audio::ViewType::Mixer); });
+        m_trackManagerUI->setOnTogglePianoRoll([this]() { toggleView(Audio::ViewType::PianoRoll); });
+        m_trackManagerUI->setOnToggleSequencer([this]() { toggleView(Audio::ViewType::Sequencer); });
+        m_trackManagerUI->setOnTogglePlaylist([this]() { toggleView(Audio::ViewType::Playlist); });
+        
+        m_workspaceLayer->addChild(m_trackManagerUI);
 
-        // Create file browser - starts right below transport bar
+        // Create file browser (add to workspace)
         m_fileBrowser = std::make_shared<NomadUI::FileBrowser>();
-        // Initial positioning using configurable dimensions - will be updated in onResize
-        m_fileBrowser->setBounds(NomadUI::NUIRect(0, layout.transportBarHeight, layout.fileBrowserWidth, 620));
         m_fileBrowser->setOnFileOpened([this](const NomadUI::FileItem& file) {
             Log::info("File opened: " + file.path);
             loadSampleIntoSelectedTrack(file.path);
@@ -163,60 +292,525 @@ public:
             playSoundPreview(file);
         });
         m_fileBrowser->setOnFileSelected([this](const NomadUI::FileItem& file) {
-            // Stop any currently playing preview when selecting a file
             stopSoundPreview();
         });
-        addChild(m_fileBrowser);
+        m_workspaceLayer->addChild(m_fileBrowser);
 
-        // Create transport bar (add before VU meter so VU renders on top)
-        m_transportBar = std::make_shared<TransportBar>();
-        
-        // Wire up view toggle buttons
-        m_transportBar->setOnToggleMixer([this]() {
-            if (m_trackManagerUI) m_trackManagerUI->toggleMixer();
-        });
-        m_transportBar->setOnToggleSequencer([this]() {
-            if (m_trackManagerUI) m_trackManagerUI->toggleSequencer();
-        });
-        m_transportBar->setOnTogglePianoRoll([this]() {
-            if (m_trackManagerUI) m_trackManagerUI->togglePianoRoll();
-        });
-        m_transportBar->setOnTogglePlaylist([this]() {
-            if (m_trackManagerUI) {
-                bool isVisible = m_trackManagerUI->isVisible();
-                m_trackManagerUI->setVisible(!isVisible);
-                Log::info("Playlist visibility toggled: " + std::string(!isVisible ? "Visible" : "Hidden"));
+        // Create pattern browser panel (add to workspace, FL Studio style side panel)
+        m_patternBrowser = std::make_shared<PatternBrowserPanel>(m_trackManager.get());
+        m_patternBrowser->setOnPatternSelected([this](PatternID patternId) {
+            Log::info("Pattern selected: " + std::to_string(patternId.value));
+            // Notify Arsenal to switch to this pattern
+            if (m_sequencerPanel) {
+                m_sequencerPanel->setActivePattern(patternId);
             }
         });
+        m_patternBrowser->setOnPatternDragStart([this](PatternID patternId) {
+            Log::info("Pattern drag started: " + std::to_string(patternId.value));
+            // TODO: Implement drag-to-timeline
+        });
+        m_patternBrowser->setOnPatternDoubleClick([this](PatternID patternId) {
+            Log::info("Pattern double-clicked: " + std::to_string(patternId.value));
+            
+            // Open piano roll window (FL-style)
+            if (m_pianoRollPanel && m_trackManager) {
+                auto& pm = m_trackManager->getPatternManager();
+                auto pattern = pm.getPattern(patternId);
+                
+                if (pattern && pattern->isMidi()) {
+                    // Calculate centered position in allowed content area
+                    NomadUI::NUIRect allowed = computeAllowedRectForPanels();
+                    float editorWidth = std::min(900.0f, allowed.width * 0.8f);
+                    float editorHeight = std::min(500.0f, allowed.height * 0.7f);
+                    float editorX = allowed.x + (allowed.width - editorWidth) / 2.0f;
+                    float editorY = allowed.y + (allowed.height - editorHeight) / 2.0f;
+                    
+                    // Update saved rect so setViewOpen uses correct position
+                    m_viewState.pianoRollRect = NomadUI::NUIRect(editorX, editorY, editorWidth, editorHeight);
+                    
+                    // Load pattern into piano roll using new method
+                    m_pianoRollPanel->loadPattern(patternId);
+                    
+                    // Use setViewOpen to properly manage visibility and button state
+                    setViewOpen(Audio::ViewType::PianoRoll, true);
+                }
+            }
+        });
+        m_workspaceLayer->addChild(m_patternBrowser);
         
-        addChild(m_transportBar);
+        // Pattern editor removed - will use separate piano roll window (FL-style)
 
-        // Create compact master meters inside transport bar (right side)
-        // 1) Mini waveform scope
+        // Create panels (add to overlay)
+        m_mixerPanel = std::make_shared<MixerPanel>(m_trackManager);
+        m_mixerPanel->setVisible(false);
+        m_mixerPanel->setVisible(false);
+        m_mixerPanel->setOnClose([this]() { toggleView(Audio::ViewType::Mixer); });
+        m_mixerPanel->setOnMaximizeToggle([this](bool) { 
+            onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); 
+        });
+        m_mixerPanel->setOnDragStart([this](const NomadUI::NUIPoint& pos) { beginPanelDrag(ViewType::Mixer, pos); });
+        m_mixerPanel->setOnDragMove([this](const NomadUI::NUIPoint& pos) { updatePanelDrag(ViewType::Mixer, pos); });
+        m_mixerPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::Mixer); });
+        m_overlayLayer->addChild(m_mixerPanel);
+
+        m_pianoRollPanel = std::make_shared<PianoRollPanel>(m_trackManager);
+        m_pianoRollPanel->setVisible(false);  // Start hidden, only show on pattern double-click
+        m_pianoRollPanel->setOnClose([this]() { 
+            m_pianoRollPanel->savePattern();  // Save edits before closing
+            toggleView(Audio::ViewType::PianoRoll); 
+        });
+        m_pianoRollPanel->setOnMaximizeToggle([this](bool) { 
+            onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); 
+        });
+        m_pianoRollPanel->setOnDragStart([this](const NomadUI::NUIPoint& pos) { beginPanelDrag(ViewType::PianoRoll, pos); });
+        m_pianoRollPanel->setOnDragMove([this](const NomadUI::NUIPoint& pos) { updatePanelDrag(ViewType::PianoRoll, pos); });
+        m_pianoRollPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::PianoRoll); });
+        // Create Arsenal panel (The Arsenal - FL Studio style pattern editor)
+        m_sequencerPanel = std::make_shared<ArsenalPanel>(m_trackManager);
+        m_sequencerPanel->setPatternBrowser(m_patternBrowser.get()); // Wire bidirectional communication
+        
+        // Refresh Pattern Browser to show Pattern 1 created by Arsenal
+        m_patternBrowser->refreshPatterns();
+        
+        // Arsenal visible by default since ViewFocus defaults to Arsenal
+        m_sequencerPanel->setVisible(true);
+        m_sequencerPanel->setOnClose([this]() { setViewOpen(Audio::ViewType::Sequencer, false); });
+        m_sequencerPanel->setOnMaximizeToggle([this](bool) { 
+            onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); 
+        });
+        m_sequencerPanel->setOnDragStart([this](const NomadUI::NUIPoint& pos) { beginPanelDrag(ViewType::Sequencer, pos); });
+        m_sequencerPanel->setOnDragMove([this](const NomadUI::NUIPoint& pos) { updatePanelDrag(ViewType::Sequencer, pos); });
+        m_sequencerPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::Sequencer); });
+        m_overlayLayer->addChild(m_sequencerPanel);
+
+        // Create transport bar (add to overlay so it renders on top of workspace)
+        m_transportBar = std::make_shared<TransportBar>();
+        
+        // Wire up view toggle buttons (v3.1 Centralized)
+        m_transportBar->setOnToggleView([this](Audio::ViewType view) {
+            toggleView(view);
+        });
+
+
+        m_overlayLayer->addChild(m_transportBar);
+        
+        // Create Focus Toggle Buttons (Arsenal / Timeline)
+        auto& theme = NomadUI::NUIThemeManager::getInstance();
+        
+        m_arsenalFocusBtn = std::make_shared<NomadUI::NUIButton>("🎹 Arsenal");
+        m_arsenalFocusBtn->setBackgroundColor(theme.getColor("accentPrimary"));
+        m_arsenalFocusBtn->setHoverColor(theme.getColor("accentPrimary"));
+        m_arsenalFocusBtn->setTextColor(theme.getColor("textPrimary"));
+        m_arsenalFocusBtn->setOnClick([this]() {
+            setViewFocus(::ViewFocus::Arsenal);
+        });
+        m_overlayLayer->addChild(m_arsenalFocusBtn);
+        
+        m_timelineFocusBtn = std::make_shared<NomadUI::NUIButton>("📊 Timeline");
+        m_timelineFocusBtn->setBackgroundColor(theme.getColor("surfaceSecondary"));
+        m_timelineFocusBtn->setHoverColor(theme.getColor("surfaceSecondary"));
+        m_timelineFocusBtn->setTextColor(theme.getColor("textSecondary"));
+        m_timelineFocusBtn->setOnClick([this]() {
+            setViewFocus(::ViewFocus::Timeline);
+        });
+        m_overlayLayer->addChild(m_timelineFocusBtn);
+        
+        // Initialize focus state (sync button appearance with m_viewFocus default)
+        setViewFocus(::ViewFocus::Arsenal);
+        
+        // Create scope indicator label (use Geometry-based label for robust Play icon)
+        // Initial text includes the hex char, but our class strips it and draws geometry.
+        m_scopeLabel = std::make_shared<ScopeIndicatorLabel>("\xE2\x96\xB6 Pattern");
+        m_scopeLabel->setTextColor(theme.getColor("accentPrimary"));
+        m_scopeLabel->setFontSize(12);
+        m_overlayLayer->addChild(m_scopeLabel);
+
+        // Create compact master meters inside transport bar (add to overlay)
         m_waveformVisualizer = std::make_shared<NomadUI::AudioVisualizer>();
-        float waveformWidth = 150.0f;
-        float visualizerHeight = 40.0f;
-        float vuY = layout.componentPadding; // Will be centered in onResize
-        m_waveformVisualizer->setBounds(NomadUI::NUIRect(980, vuY, waveformWidth, visualizerHeight));
         m_waveformVisualizer->setMode(NomadUI::AudioVisualizationMode::CompactWaveform);
         m_waveformVisualizer->setShowStereo(true);
-        addChild(m_waveformVisualizer);
+        m_overlayLayer->addChild(m_waveformVisualizer);
 
-        // 2) Slim VU/peak meters
         m_audioVisualizer = std::make_shared<NomadUI::AudioVisualizer>();
-        float meterWidth = 60.0f;
-        m_audioVisualizer->setBounds(NomadUI::NUIRect(1135, vuY, meterWidth, visualizerHeight));
         m_audioVisualizer->setMode(NomadUI::AudioVisualizationMode::CompactMeter);
         m_audioVisualizer->setShowStereo(true);
-        addChild(m_audioVisualizer);
+        m_overlayLayer->addChild(m_audioVisualizer);
 
         // Initialize preview engine
         m_previewEngine = std::make_unique<PreviewEngine>();
         m_previewIsPlaying = false;
-        m_previewStartTime = std::chrono::steady_clock::time_point(); // Default construct
-        m_previewDuration = 5.0; // 5 seconds preview
+        m_previewDuration = 5.0; 
         
-        Log::info("Sound preview system initialized");
+        Log::info("Sound preview system and UI layers initialized");
+        
+        // Initial state sync
+        syncViewState();
+    }
+
+    struct ViewState {
+        bool mixerOpen = false;
+        bool pianoRollOpen = false;
+        bool sequencerOpen = false;
+        bool playlistActive = true;
+
+        // Canonical Panel Positions (Overlay-local coordinates)
+        NomadUI::NUIRect mixerRect = {0, 0, 800, 400};
+        NomadUI::NUIRect pianoRollRect = {0, 0, 800, 450};
+        NomadUI::NUIRect sequencerRect = {0, 0, 600, 300};
+
+        // Temporary Drag State
+        bool isDragging = false;
+        Audio::ViewType draggingView = Audio::ViewType::Playlist;
+        NomadUI::NUIPoint dragStartMouseOverlay = {0, 0};
+        NomadUI::NUIRect dragStartRect = {0, 0, 0, 0};
+    } m_viewState;
+
+    void onUpdate(double dt) override {
+        // Sync track changes to MixerViewModel
+        auto tm = getTrackManager();
+        if (tm && tm->isModified()) {
+             if (m_mixerPanel) {
+                 auto viewModel = m_mixerPanel->getViewModel();
+                 if (viewModel) {
+                     // Sync view model with engine
+                     // We need raw pointer to slot map
+                     auto slotMap = tm->getChannelSlotMapRaw();
+                     if (slotMap) {
+                        viewModel->syncFromEngine(*tm, *slotMap);
+                        // Refresh mixer panel
+                        m_mixerPanel->refreshChannels();
+                        Log::info("Refreshed mixer channels from engine update");
+                     }
+                 }
+             }
+             // Consume modified flag
+             tm->setModified(false);
+        }
+        
+        NomadUI::NUIComponent::onUpdate(dt);
+    }
+
+    void setViewOpen(Audio::ViewType view, bool open) {
+        bool changed = false;
+        switch (view) {
+            case Audio::ViewType::Mixer:
+                if (m_viewState.mixerOpen != open) {
+                    m_viewState.mixerOpen = open;
+                    if (m_mixerPanel) {
+                        m_mixerPanel->setVisible(open);
+                        if (open) m_mixerPanel->refreshChannels();
+                    }
+                    changed = true;
+                }
+                break;
+            case Audio::ViewType::PianoRoll:
+                if (m_viewState.pianoRollOpen != open) {
+                    m_viewState.pianoRollOpen = open;
+                    if (m_pianoRollPanel) m_pianoRollPanel->setVisible(open);
+                    changed = true;
+                }
+                break;
+            case Audio::ViewType::Sequencer:
+                if (m_viewState.sequencerOpen != open) {
+                    m_viewState.sequencerOpen = open;
+                    if (m_sequencerPanel) m_sequencerPanel->setVisible(open);
+                    changed = true;
+                }
+                break;
+            case Audio::ViewType::Playlist:
+                // Playlist visibility is handled by TrackManagerUI
+                if (m_viewState.playlistActive != open) {
+                    m_viewState.playlistActive = open;
+                    if (m_trackManagerUI) m_trackManagerUI->setVisible(open);
+                    changed = true;
+                }
+                break;
+        }
+
+        if (changed) {
+            Log::info("[ViewState] View changed: " + std::to_string(static_cast<int>(view)) + " -> " + (open ? "OPEN" : "CLOSED"));
+            syncViewState();
+            
+            // If opening a panel, ensure it's positioned correctly according to constraints
+            if (open) {
+                NomadUI::NUIRect allowed = computeAllowedRectForPanels();
+                switch (view) {
+                    case Audio::ViewType::Mixer:
+                        m_viewState.mixerRect = clampRectToAllowed(m_viewState.mixerRect, allowed);
+                        if (m_mixerPanel) m_mixerPanel->setBounds(m_viewState.mixerRect);
+                        break;
+                    case Audio::ViewType::PianoRoll:
+                        m_viewState.pianoRollRect = clampRectToAllowed(m_viewState.pianoRollRect, allowed);
+                        if (m_pianoRollPanel) m_pianoRollPanel->setBounds(m_viewState.pianoRollRect);
+                        break;
+                    case Audio::ViewType::Sequencer:
+                        m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, allowed);
+                        if (m_sequencerPanel) m_sequencerPanel->setBounds(m_viewState.sequencerRect);
+                        break; 
+                }
+            }
+
+            // Trigger layout reflow
+            onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
+            setDirty(true);
+        }
+    }
+
+    // =================================================================================================
+    // Panel Physics & Constraints (v3.1)
+    // =================================================================================================
+
+    NomadUI::NUIRect computeSafeRect() const {
+        NomadUI::NUIRect bounds = getBounds();
+        
+        // Exclude TransportBar (top)
+        float transportHeight = 60.0f; // Default assumption, or query m_transportBar->getHeight()
+        if (m_transportBar) transportHeight = m_transportBar->getHeight();
+        
+        NomadUI::NUIRect safe = bounds;
+        safe.y += transportHeight;
+        safe.height -= transportHeight;
+        
+        // Apply padding
+        // Apply padding (User requested flushness even for minimized/restored state)
+        float padding = 0.0f;
+        safe.x += padding;
+        safe.y += padding;
+        safe.width -= (padding * 2);
+        safe.height -= (padding * 2);
+        
+        return safe;
+    }
+
+    NomadUI::NUIRect computeAllowedRectForPanels() const {
+        NomadUI::NUIRect safe = computeSafeRect();
+        
+        // If FileBrowser is visible, exclude its area
+        if (m_fileBrowser && m_fileBrowser->isVisible()) {
+            NomadUI::NUIRect browserRect = m_fileBrowser->getBounds();
+            // Assuming browser is on the left
+            // Assuming browser is on the left
+            // safe.x ALREADY has global padding (e.g. 8px).
+            // browserRect is [0, 0, width, height].
+            // We want (browserWidth + margin) to correspond to the NEW starts-at X.
+            // But we must respect the max of (existing safe x) and (browser + margin).
+            
+            float margin = 0.0f; // Flush with browser
+            float browserEdge = browserRect.width + margin;
+            
+            // If the browser edge pushes past the current safe x, adjust.
+            // computeSafeRect already adds padding (8px). 
+            // If we want FLUSH, we should override safe.x to be exactly browserEdge.
+            // But safe.width also needs to shrink.
+            
+            if (browserEdge > safe.x) {
+               float shift = browserEdge - safe.x;
+               safe.x = browserEdge;
+               safe.width -= shift; 
+            }
+            
+            // Clamp minimum width to avoid degenerate rects
+            if (safe.width < 100.0f) safe.width = 100.0f;
+        }
+        
+        return safe;
+    }
+
+    NomadUI::NUIRect computeMaximizedRect() const {
+        NomadUI::NUIRect bounds = getBounds();
+        
+        // Exclude TransportBar (top)
+        float transportHeight = 60.0f; // Default assumption, or query m_transportBar->getHeight()
+        if (m_transportBar) transportHeight = m_transportBar->getHeight();
+        
+        NomadUI::NUIRect maxRect = bounds;
+        maxRect.y += transportHeight;
+        maxRect.height -= transportHeight;
+        
+        // If FileBrowser is visible, exclude its area
+        if (m_fileBrowser && m_fileBrowser->isVisible()) {
+            NomadUI::NUIRect browserRect = m_fileBrowser->getBounds();
+            // Flush with browser (no margin)
+            float browserEdge = browserRect.width;
+            
+            if (browserEdge > maxRect.x) {
+               float shift = browserEdge - maxRect.x;
+               maxRect.x = browserEdge;
+               maxRect.width -= shift; 
+            }
+        }
+        
+        return maxRect;
+    }
+
+    NomadUI::NUIRect clampRectToAllowed(NomadUI::NUIRect panel, const NomadUI::NUIRect& allowed) const {
+        float x = std::clamp(panel.x, allowed.x, allowed.right() - panel.width);
+        float y = std::clamp(panel.y, allowed.y, allowed.bottom() - panel.height);
+        
+        // If panel is larger than allowed area, fit it
+        float w = panel.width;
+        float h = panel.height;
+        
+        if (w > allowed.width) w = allowed.width;
+        if (h > allowed.height) h = allowed.height;
+        
+        // Second clamp to ensure top-left is firmly inside if we resized
+        x = std::clamp(x, allowed.x, allowed.right() - w);
+        y = std::clamp(y, allowed.y, allowed.bottom() - h);
+
+        return NomadUI::NUIRect(x, y, w, h);
+    }
+
+    // Drag Handlers forwarded from Panel Headers
+    void beginPanelDrag(Audio::ViewType view, const NomadUI::NUIPoint& mouseScreen) {
+        if (!m_overlayLayer) return;
+        
+        m_viewState.isDragging = true;
+        m_viewState.draggingView = view;
+        m_viewState.dragStartMouseOverlay = m_overlayLayer->globalToLocal(mouseScreen);
+        
+        switch (view) {
+            case Audio::ViewType::Mixer: m_viewState.dragStartRect = m_viewState.mixerRect; break;
+            case Audio::ViewType::PianoRoll: m_viewState.dragStartRect = m_viewState.pianoRollRect; break;
+            case Audio::ViewType::Sequencer: m_viewState.dragStartRect = m_viewState.sequencerRect; break;
+        }
+        
+        Log::info("Started dragging panel: " + std::to_string(static_cast<int>(view)));
+    }
+
+    void updatePanelDrag(Audio::ViewType view, const NomadUI::NUIPoint& mouseScreen) {
+        if (!m_viewState.isDragging || !m_overlayLayer) return;
+        
+        NomadUI::NUIPoint currentMouseOverlay = m_overlayLayer->globalToLocal(mouseScreen);
+        NomadUI::NUIPoint delta = currentMouseOverlay - m_viewState.dragStartMouseOverlay;
+        
+        NomadUI::NUIRect proposed = m_viewState.dragStartRect;
+        proposed.x += delta.x;
+        proposed.y += delta.y;
+        
+        NomadUI::NUIRect allowed = computeAllowedRectForPanels();
+        NomadUI::NUIRect finalRect = clampRectToAllowed(proposed, allowed);
+        
+        // Update persistent state and UI
+        switch (view) {
+            case Audio::ViewType::Mixer:
+                m_viewState.mixerRect = finalRect;
+                if (m_mixerPanel) m_mixerPanel->setBounds(finalRect);
+                break;
+            case Audio::ViewType::PianoRoll:
+                m_viewState.pianoRollRect = finalRect;
+                if (m_pianoRollPanel) m_pianoRollPanel->setBounds(finalRect);
+                break;
+            case Audio::ViewType::Sequencer:
+                m_viewState.sequencerRect = finalRect;
+                if (m_sequencerPanel) m_sequencerPanel->setBounds(finalRect);
+                break;
+        }
+        
+        setDirty(true);
+    }
+
+    void endPanelDrag(Audio::ViewType view) {
+         m_viewState.isDragging = false;
+         Log::info("Ended dragging panel: " + std::to_string(static_cast<int>(view)));
+    }
+
+    void toggleView(Audio::ViewType view) {
+        bool current = false;
+        switch (view) {
+            case Audio::ViewType::Mixer: current = m_viewState.mixerOpen; break;
+            case Audio::ViewType::PianoRoll: current = m_viewState.pianoRollOpen; break;
+            case Audio::ViewType::Sequencer: current = m_viewState.sequencerOpen; break;
+            case Audio::ViewType::Playlist: current = m_viewState.playlistActive; break;
+        }
+        setViewOpen(view, !current);
+    }
+
+    void toggleFileBrowser() {
+        if (m_fileBrowser) {
+            bool isVisible = m_fileBrowser->isVisible();
+            m_fileBrowser->setVisible(!isVisible);
+            Log::info("File Browser toggled: " + std::string(!isVisible ? "VISIBLE" : "HIDDEN"));
+            
+            // Trigger layout update to enforce panel physics constraints
+            onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
+        }
+    }
+
+    void syncViewState() {
+        if (m_transportBar) {
+            m_transportBar->setViewToggled(Audio::ViewType::Mixer, m_viewState.mixerOpen);
+            m_transportBar->setViewToggled(Audio::ViewType::PianoRoll, m_viewState.pianoRollOpen);
+            m_transportBar->setViewToggled(Audio::ViewType::Sequencer, m_viewState.sequencerOpen);
+            m_transportBar->setViewToggled(Audio::ViewType::Playlist, m_viewState.playlistActive);
+        }
+    }
+    
+    /**
+     * @brief Set view focus (Arsenal vs Timeline)
+     * Updates button styles and panel emphasis
+     */
+    void setViewFocus(::ViewFocus focus) {
+        // Check if we're hot-swapping during playback
+        bool wasPlaying = (m_transportBar && m_transportBar->getState() == TransportState::Playing);
+        
+        m_viewFocus = focus;
+        
+        auto& theme = NomadUI::NUIThemeManager::getInstance();
+        
+        // Update button styles based on focus
+        if (focus == ::ViewFocus::Arsenal) {
+            m_arsenalFocusBtn->setBackgroundColor(theme.getColor("accentPrimary"));
+            m_arsenalFocusBtn->setTextColor(theme.getColor("textPrimary"));
+            
+            m_timelineFocusBtn->setBackgroundColor(theme.getColor("surfaceSecondary"));
+            m_timelineFocusBtn->setTextColor(theme.getColor("textSecondary"));
+            
+            // Show Arsenal panel with fade-in
+            if (m_sequencerPanel) {
+                if (!m_sequencerPanel->isVisible()) {
+                    m_sequencerPanel->setOpacity(0.0f); // Start invisible
+                }
+                m_sequencerPanel->setVisible(true);
+                // Fade in over 250ms
+                m_sequencerPanel->setOpacity(1.0f);
+                m_viewState.sequencerOpen = true; // Sync internal state
+            }
+        } else {
+            m_arsenalFocusBtn->setBackgroundColor(theme.getColor("surfaceSecondary"));
+            m_arsenalFocusBtn->setTextColor(theme.getColor("textSecondary"));
+            
+            m_timelineFocusBtn->setBackgroundColor(theme.getColor("accentPrimary"));
+            m_timelineFocusBtn->setTextColor(theme.getColor("textPrimary"));
+            
+            // Hide Arsenal panel with fade-out
+            if (m_sequencerPanel) {
+                m_sequencerPanel->setOpacity(0.7f); // Dim when not focused
+                m_viewState.sequencerOpen = false; // Sync internal state
+            }
+        }
+        
+        // Sync transport bar button state manually
+        if (m_transportBar) {
+            m_transportBar->setViewToggled(Audio::ViewType::Sequencer, focus == ::ViewFocus::Arsenal);
+        }
+        
+        // Update scope indicator label
+        if (m_scopeLabel) {
+            if (focus == ::ViewFocus::Arsenal) {
+                m_scopeLabel->setText("\xE2\x96\xB6 Pattern");
+            } else {
+                m_scopeLabel->setText("\xE2\x96\xB6 Arrangement");
+            }
+        }
+        
+        // Hot-swap: If playing, stop and restart in new mode
+        if (wasPlaying && m_transportBar) {
+            Log::info("[Focus] Hot-swapping playback mode");
+            m_transportBar->stop();
+            // Small delay to let stop complete, then restart
+            m_transportBar->play();
+        }
     }
     
     void setAudioStatus(bool active) {
@@ -245,27 +839,69 @@ public:
         return m_trackManagerUI;
     }
     
-    void addDemoTracks() {
-        Log::info("addDemoTracks() called - starting demo track creation");
+    // Focus-based playback getters
+    ::ViewFocus getViewFocus() const {
+        return m_viewFocus;
+    }
+    
+    PatternID getActivePatternID() const {
+        // Get active pattern from Arsenal panel
+        if (m_sequencerPanel) {
+            return m_sequencerPanel->getActivePatternID();
+        }
+        return PatternID(); // Invalid
+    }
 
-        // Create 50 empty tracks by default for playlist testing
+    void setPlatformBridge(NomadUI::NUIPlatformBridge* bridge) {
+        m_platformBridge = bridge;
+        if (m_trackManagerUI) {
+            m_trackManagerUI->setPlatformWindow(bridge);
+        }
+    }
+    
+    void addDemoTracks() {
+        Log::info("addDemoTracks() called - starting demo track creation (v3.0)");
+
+        if (!m_trackManager) return;
+        auto& playlist = m_trackManager->getPlaylistModel();
+
+        // Create 50 empty lanes by default for playlist testing
         const int DEFAULT_TRACK_COUNT = 50;
-        const int MAX_TRACK_COUNT = 50; // Maximum tracks for now (will optimize later)
         
         for (int i = 1; i <= DEFAULT_TRACK_COUNT; ++i) {
-            auto track = m_trackManager->addTrack("Track " + std::to_string(i));
-            // Cycle through colors
-            if (i % 3 == 1) track->setColor(0xFFbb86fc); // Purple accent
-            else if (i % 3 == 2) track->setColor(0xFF00bcd4); // Cyan
-            else track->setColor(0xFF9a9aa3); // Gray
+            std::string name = "Track " + std::to_string(i);
+            PlaylistLaneID laneId = playlist.createLane(name);
+            
+            // Also ensure a mixer channel exists for this lane (1-to-1 fallback)
+            m_trackManager->addChannel(name);
+            
+            // Set lane color
+            if (auto* lane = playlist.getLane(laneId)) {
+                if (i % 3 == 1) lane->colorRGBA = 0xFFbb86fc; // Purple accent
+                else if (i % 3 == 2) lane->colorRGBA = 0xFF00bcd4; // Cyan
+                else lane->colorRGBA = 0xFF9a9aa3; // Gray
+
+                // Add demo automation to the first track (v3.1)
+                if (i == 1) {
+                    AutomationCurve vol("Volume", AutomationTarget::Volume);
+                    vol.setDefaultValue(0.8);
+                    // Use 0.5f curve tension for smooth ease-in/out
+                    vol.addPoint(0.0, 0.5, 0.5f);
+                    vol.addPoint(4.0, 1.0, 0.5f);
+                    vol.addPoint(8.0, 0.2, 0.5f);
+                    vol.addPoint(12.0, 0.8, 0.5f);
+                    lane->automationCurves.push_back(vol);
+                }
+            }
         }
 
         // Refresh the UI to show the new tracks
         if (m_trackManagerUI) {
             m_trackManagerUI->refreshTracks();
         }
-        Log::info("addDemoTracks() completed - created " + std::to_string(DEFAULT_TRACK_COUNT) + " tracks");
+        Log::info("addDemoTracks() completed - created " + std::to_string(DEFAULT_TRACK_COUNT) + " lanes/channels");
     }
+
 
     // Generate a simple test WAV file for demo purposes
     bool generateTestWavFile(const std::string& filename, float frequency, double duration) {
@@ -394,75 +1030,100 @@ public:
     }
     
     void loadSampleIntoSelectedTrack(const std::string& filePath) {
-        Log::info("=== Loading sample into selected track: " + filePath + " ===");
+        Log::info("=== Loading sample into arrangement: " + filePath + " ===");
         
         // Stop any preview that might be playing
         stopSoundPreview();
         
-        // Log all track states after stopping preview
-        for (int i = 0; i < m_trackManager->getTrackCount(); ++i) {
-            auto track = m_trackManager->getTrack(i);
-            if (track) {
-                Log::info("Track " + std::to_string(i) + " (" + track->getName() + "): state=" + 
-                         std::to_string(static_cast<int>(track->getState())) + 
-                         ", isPlaying=" + std::string(track->isPlaying() ? "true" : "false"));
+        if (!m_trackManager) {
+            Log::error("TrackManager not initialized");
+            return;
+        }
+        
+        // 1. Load source via SourceManager
+        auto& sourceManager = m_trackManager->getSourceManager();
+        ClipSourceID sourceId = sourceManager.getOrCreateSource(filePath);
+        
+        if (!sourceId.isValid()) {
+            Log::error("Failed to load sample source: " + filePath);
+            return;
+        }
+        
+        // 2. Determine duration in beats
+        ClipSource* source = sourceManager.getSource(sourceId);
+        if (source && !source->isReady()) {
+            Log::info("Decoding source in Main: " + filePath);
+            std::vector<float> decodedData;
+            uint32_t sampleRate = 0;
+            uint32_t numChannels = 0;
+            if (decodeAudioFile(filePath, decodedData, sampleRate, numChannels)) {
+                auto buffer = std::make_shared<AudioBufferData>();
+                buffer->interleavedData = std::move(decodedData);
+                buffer->sampleRate = sampleRate;
+                buffer->numChannels = numChannels;
+                buffer->numFrames = buffer->interleavedData.size() / numChannels;
+                source->setBuffer(buffer);
+            }
+        }
+
+        if (!source || !source->isReady()) {
+            Log::error("Failed to decode or ready sample source: " + filePath);
+            return;
+        }
+
+        double durationSeconds = source->getDurationSeconds();
+        double bpm = m_trackManager->getPlaylistModel().getBPMAtBeat(0);
+        double durationBeats = m_trackManager->getPlaylistModel().secondsToBeats(durationSeconds);
+        
+        // 3. Create audio pattern via PatternManager
+        auto& patternManager = m_trackManager->getPatternManager();
+        AudioSlicePayload payload;
+        payload.audioSourceId = sourceId;
+        // Optionally add a full-file slice
+        payload.slices.push_back({0.0, static_cast<double>(source->getNumFrames())});
+        
+        std::string patternName = std::filesystem::path(filePath).filename().string();
+        PatternID patternId = patternManager.createAudioPattern(patternName, durationBeats, payload);
+        
+        if (!patternId.isValid()) {
+            Log::error("Failed to create pattern for sample");
+            return;
+        }
+
+        // 4. Find target lane (currently selected track, or first lane)
+        PlaylistLaneID targetLaneId;
+        if (m_trackManagerUI) {
+            auto* selectedUI = m_trackManagerUI->getSelectedTrackUI();
+            if (selectedUI) {
+                targetLaneId = selectedUI->getLaneId();
             }
         }
         
-        // Get the currently selected track from TrackManagerUI
-        if (!m_trackManagerUI) {
-            Log::error("TrackManagerUI not initialized");
-            return;
+        auto& playlist = m_trackManager->getPlaylistModel();
+        if (!targetLaneId.isValid()) {
+            if (playlist.getLaneCount() == 0) {
+                targetLaneId = playlist.createLane("Sample Lane");
+            } else {
+                targetLaneId = playlist.getLaneId(0);
+            }
         }
         
-        // Get the track manager
-        auto trackManager = m_trackManagerUI->getTrackManager();
-        if (!trackManager) {
-            Log::error("TrackManager not found");
-            return;
+        // 5. Add clip at current playhead position
+        double playheadPositionSeconds = m_transportBar ? m_transportBar->getPosition() : 0.0;
+        double startBeat = m_trackManager->getPlaylistModel().secondsToBeats(playheadPositionSeconds);
+        
+        playlist.addClipFromPattern(targetLaneId, patternId, startBeat, durationBeats);
+
+        
+        // 6. Refresh UI
+        if (m_trackManagerUI) {
+            m_trackManagerUI->refreshTracks();
+            m_trackManagerUI->invalidateCache();
         }
         
-        // Check if there are any tracks
-        size_t trackCount = trackManager->getTrackCount();
-        if (trackCount == 0) {
-            Log::warning("No tracks available - creating a new track");
-            trackManager->addTrack("Sample Track");
-            trackCount = trackManager->getTrackCount();
-        }
-        
-        // Find the first track
-        // TODO: Implement track selection in TrackManagerUI to get actually selected track
-        std::shared_ptr<Nomad::Audio::Track> targetTrack = trackManager->getTrack(0);
-        
-        if (!targetTrack) {
-            Log::error("Could not find target track");
-            return;
-        }
-        
-        Log::info("Loading sample into track: " + targetTrack->getName());
-        
-        // Load the audio file
-        bool loaded = false;
-        try {
-            loaded = targetTrack->loadAudioFile(filePath);
-        } catch (const std::exception& e) {
-            Log::error("Exception loading sample: " + std::string(e.what()));
-            return;
-        }
-        
-        if (loaded) {
-            Log::info("Sample loaded successfully into track: " + targetTrack->getName());
-            // Track is now in Loaded state and ready to play
-            // Reset position to start
-            targetTrack->setPosition(0.0);
-            // Set sample to start at current playhead position
-            double playheadPosition = m_transportBar ? m_transportBar->getPosition() : 0.0;
-            targetTrack->setStartPositionInTimeline(playheadPosition);
-            Log::info("Sample loaded at timeline position: " + std::to_string(playheadPosition) + "s");
-        } else {
-            Log::error("Failed to load sample: " + filePath);
-        }
+        Log::info("Sample loaded into arrangement via v3.0 architecture");
     }
+
 
     void updateSoundPreview() {
         if (m_previewEngine && m_previewIsPlaying) {
@@ -514,57 +1175,125 @@ public:
         auto& themeManager = NomadUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
 
-        // Update transport bar bounds using configurable dimensions
+        NomadUI::NUIRect contentBounds = getBounds();
+
+        // Ensure layers cover the full content area
+        if (m_workspaceLayer) m_workspaceLayer->setBounds(contentBounds);
+        if (m_overlayLayer) m_overlayLayer->setBounds(contentBounds);
+
+        // Update transport bar bounds (Overlay Layer)
         if (m_transportBar) {
-            NomadUI::NUIRect contentBounds = getBounds();
-            m_transportBar->setBounds(NomadUI::NUIRect(contentBounds.x, contentBounds.y,
-                                                       static_cast<float>(width), layout.transportBarHeight));
-            m_transportBar->onResize(width, static_cast<int>(layout.transportBarHeight));
+            m_transportBar->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, 0,
+                contentBounds.width, 60.0f));
+        }
+        
+        // Position focus toggle buttons (stacked vertically next to timecode)
+        if (m_arsenalFocusBtn && m_timelineFocusBtn) {
+            float btnWidth = 80.0f;
+            float btnHeight = 20.0f;
+            float xOffset = 280.0f; // Right after timecode display
+            float yTop = 10.0f;     // Top button
+            float spacing = 2.0f;   // Vertical spacing between buttons
+            
+            // Arsenal button on top
+            m_arsenalFocusBtn->setBounds(NomadUI::NUIAbsolute(contentBounds, 
+                xOffset, yTop, btnWidth, btnHeight));
+            // Timeline button below
+            m_timelineFocusBtn->setBounds(NomadUI::NUIAbsolute(contentBounds, 
+                xOffset, yTop + btnHeight + spacing, btnWidth, btnHeight));
+        }
+        
+        // Position scope indicator label (right of focus buttons)
+        if (m_scopeLabel) {
+            float labelX = 280.0f + 85.0f; // Right after focus buttons
+            float labelY = 15.0f; // Vertically centered
+            m_scopeLabel->setBounds(NomadUI::NUIAbsolute(contentBounds, 
+                labelX, labelY, 150.0f, 30.0f));
         }
 
-        // Update file browser bounds using full window dimensions
+        // Update file browser bounds (Workspace Layer) - Left sidebar
+        float fileBrowserWidth = 0;
+        float sidebarHeight = height - layout.transportBarHeight;
+        float patternBrowserWidth = 0;
+        
         if (m_fileBrowser) {
-            float fileBrowserWidth = std::min(layout.fileBrowserWidth, width * 0.25f); // 25% of width or max configured width
-            float fileBrowserHeight = height - layout.transportBarHeight; // Full height to bottom
-            NomadUI::NUIRect contentBounds = getBounds();
-            m_fileBrowser->setBounds(NomadUI::NUIRect(contentBounds.x, contentBounds.y + layout.transportBarHeight,
-                                                       fileBrowserWidth, fileBrowserHeight));
+            fileBrowserWidth = std::min(layout.fileBrowserWidth, width * 0.20f); // 20% for file browser
+            m_fileBrowser->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, layout.transportBarHeight,
+                                                       fileBrowserWidth, sidebarHeight));
         }
+        
+        // Update pattern browser bounds (Workspace Layer) - Right of file browser
+        if (m_patternBrowser) {
+            patternBrowserWidth = std::min(layout.fileBrowserWidth * 0.8f, width * 0.15f); // 15% for pattern browser
+            float patternBrowserX = fileBrowserWidth;
+            m_patternBrowser->setBounds(NomadUI::NUIAbsolute(contentBounds, patternBrowserX, layout.transportBarHeight,
+                                                            patternBrowserWidth, sidebarHeight));
+        }
+        
+        // Pattern editor removed - piano roll will be separate window
 
-        // Update master meters position - centered in transport bar (right side)
+        // Update master meters position (Overlay Layer)
         if (m_audioVisualizer || m_waveformVisualizer) {
-            NomadUI::NUIRect contentBounds = getBounds();
             const float meterWidth = 60.0f;
             const float waveformWidth = 150.0f;
             const float visualizerHeight = 40.0f;
             const float gap = 6.0f;
-            float vuY = contentBounds.y + (layout.transportBarHeight - visualizerHeight) / 2.0f;
+            float vuY = (layout.transportBarHeight - visualizerHeight) / 2.0f;
 
             float totalWidth = meterWidth;
-            if (m_waveformVisualizer) {
-                totalWidth += waveformWidth + gap;
-            }
+            if (m_waveformVisualizer) totalWidth += waveformWidth + gap;
 
-            float xStart = contentBounds.x + width - totalWidth - layout.panelMargin;
+            float xStart = width - totalWidth - layout.panelMargin;
             if (m_waveformVisualizer) {
-                m_waveformVisualizer->setBounds(
-                    NomadUI::NUIRect(xStart, vuY, waveformWidth, visualizerHeight));
+                m_waveformVisualizer->setBounds(NomadUI::NUIAbsolute(contentBounds, xStart, vuY, waveformWidth, visualizerHeight));
                 xStart += waveformWidth + gap;
             }
             if (m_audioVisualizer) {
-                m_audioVisualizer->setBounds(
-                    NomadUI::NUIRect(xStart, vuY, meterWidth, visualizerHeight));
+                m_audioVisualizer->setBounds(NomadUI::NUIAbsolute(contentBounds, xStart, vuY, meterWidth, visualizerHeight));
             }
         }
 
-        // Update track manager UI bounds using full window dimensions (no margins)
+        // Update track manager UI bounds (Workspace Layer)
         if (m_trackManagerUI) {
-            float trackAreaX = layout.fileBrowserWidth; // Use configured file browser width
-            float trackAreaWidth = width - trackAreaX; // Full width to window edge
-            float trackAreaHeight = height - layout.transportBarHeight; // Full height to bottom
-            // Position track manager to start immediately after transport bar, matching file browser positioning
-            NomadUI::NUIRect contentBounds = getBounds();
-            m_trackManagerUI->setBounds(NomadUI::NUIRect(trackAreaX, contentBounds.y + layout.transportBarHeight, trackAreaWidth, trackAreaHeight));
+            float trackAreaX = fileBrowserWidth + patternBrowserWidth; // After both sidebars
+            float trackAreaWidth = width - trackAreaX;
+            float trackAreaHeight = height - layout.transportBarHeight;
+            m_trackManagerUI->setBounds(NomadUI::NUIAbsolute(contentBounds, trackAreaX, layout.transportBarHeight, trackAreaWidth, trackAreaHeight));
+        }
+
+        // Update panels (Overlay Layer)
+        // Physics-based constraints: Clamp panels to allowed area
+        NomadUI::NUIRect allowed = computeAllowedRectForPanels();
+
+        NomadUI::NUIRect maxRect = computeMaximizedRect();
+
+        if (m_mixerPanel && m_mixerPanel->isVisible()) {
+             if (m_mixerPanel->isMaximized()) {
+                 // Maximized panels take up the full allowed area without padding
+                 m_mixerPanel->setBounds(maxRect);
+             } else {
+                 // Ensure the stored rect is valid relative to new layout
+                 m_viewState.mixerRect = clampRectToAllowed(m_viewState.mixerRect, allowed);
+                 m_mixerPanel->setBounds(m_viewState.mixerRect);
+             }
+        }
+        
+        if (m_pianoRollPanel && m_pianoRollPanel->isVisible()) {
+            if (m_pianoRollPanel->isMaximized()) {
+                m_pianoRollPanel->setBounds(maxRect);
+            } else {
+                m_viewState.pianoRollRect = clampRectToAllowed(m_viewState.pianoRollRect, allowed);
+                m_pianoRollPanel->setBounds(m_viewState.pianoRollRect);
+            }
+        }
+
+        if (m_sequencerPanel && m_sequencerPanel->isVisible()) {
+            if (m_sequencerPanel->isMaximized()) {
+                m_sequencerPanel->setBounds(maxRect);
+            } else {
+                m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, allowed);
+                m_sequencerPanel->setBounds(m_viewState.sequencerRect);
+            }
         }
 
         NomadUI::NUIComponent::onResize(width, height);
@@ -574,15 +1303,34 @@ public:
     std::shared_ptr<NomadUI::FileBrowser> getFileBrowser() const { return m_fileBrowser; }
     
 private:
+    std::shared_ptr<NomadUI::NUIComponent> m_workspaceLayer;
+    std::shared_ptr<NomadUI::NUIComponent> m_overlayLayer;
+
     std::shared_ptr<TransportBar> m_transportBar;
+    
+    // Focus toggle buttons
+    std::shared_ptr<NomadUI::NUIButton> m_arsenalFocusBtn;
+    std::shared_ptr<NomadUI::NUIButton> m_timelineFocusBtn;
+    std::shared_ptr<NomadUI::NUILabel> m_scopeLabel; // "▶ Pattern" or "▶ Arrangement"
+    
     std::shared_ptr<NomadUI::FileBrowser> m_fileBrowser;
+    std::shared_ptr<PatternBrowserPanel> m_patternBrowser;
     std::shared_ptr<NomadUI::AudioVisualizer> m_audioVisualizer;
     std::shared_ptr<NomadUI::AudioVisualizer> m_waveformVisualizer;
     std::shared_ptr<TrackManager> m_trackManager;
     std::shared_ptr<TrackManagerUI> m_trackManagerUI;
+    NomadUI::NUIPlatformBridge* m_platformBridge = nullptr;
+    
+    std::shared_ptr<MixerPanel> m_mixerPanel;
+    std::shared_ptr<PianoRollPanel> m_pianoRollPanel;
+    std::shared_ptr<ArsenalPanel> m_sequencerPanel;
+
     std::unique_ptr<PreviewEngine> m_previewEngine; // Dedicated preview engine (separate from transport)
     bool m_audioActive = false;
-
+    
+    // Focus-based playback
+    ::ViewFocus m_viewFocus = ::ViewFocus::Arsenal; // Default to Arsenal (panel visible on startup)
+    
     // Sound preview state
     bool m_previewIsPlaying = false;
     std::chrono::steady_clock::time_point m_previewStartTime{}; // Default initialized
@@ -755,14 +1503,19 @@ public:
 
         // Initialize UI renderer (this will initialize GLAD internally)
         try {
-            m_renderer = std::make_unique<NUIRendererGL>();
-            if (!m_renderer->initialize(desc.width, desc.height)) {
+            // Use raw pointer for initialization to avoid unique_ptr casting issues
+            auto* glRenderer = new NUIRendererGL();
+            if (!glRenderer->initialize(desc.width, desc.height)) {
+                delete glRenderer; // Clean up on failure
                 Log::error("Failed to initialize UI renderer");
                 return false;
             }
             
             // Enable render caching by default for performance
-            m_renderer->setCachingEnabled(true);
+            glRenderer->setCachingEnabled(true);
+            
+            // Transfer ownership to unique_ptr
+            m_renderer.reset(glRenderer);
             
             Log::info("UI renderer initialized");
             
@@ -878,6 +1631,9 @@ public:
                                     m_audioEngine->setSampleRate(static_cast<uint32_t>(actualRate));
                                     m_audioEngine->setBufferConfig(config.bufferSize, config.numOutputChannels);
                                     if (m_content && m_content->getTrackManager()) {
+                                        m_audioEngine->setMeterSnapshots(m_content->getTrackManager()->getMeterSnapshots());
+                                        m_audioEngine->setContinuousParams(m_content->getTrackManager()->getContinuousParams());
+                                        m_audioEngine->setChannelSlotMap(m_content->getTrackManager()->getChannelSlotMapShared());
                                         auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), actualRate);
                                         m_audioEngine->setGraph(graph);
                                     }
@@ -894,6 +1650,17 @@ public:
                                 }
                                 if (m_content && m_content->getTrackManagerUI() && m_content->getTrackManagerUI()->getTrackManager()) {
                                     m_content->getTrackManagerUI()->getTrackManager()->setOutputSampleRate(actualRate);
+                                }
+                                
+                                // Load metronome click sounds (low pitch for downbeat, high pitch for upbeats)
+                                if (m_audioEngine) {
+                                    // Paths relative to build/bin/Release, going up to project root
+                                    m_audioEngine->loadMetronomeClicks(
+                                        "../../../NomadAudio/assets/nomad_metronome.wav",      // Downbeat (low pitch)
+                                        "../../../NomadAudio/assets/nomad_metronome_up.wav"   // Upbeat (high pitch)
+                                    );
+                                    m_audioEngine->setBPM(120.0f);  // Default BPM
+                                    // Metronome disabled by default - user enables via toggle button
                                 }
                             } else {
                                 Log::error("Failed to start audio stream");
@@ -940,13 +1707,122 @@ public:
         
         // Create content area
         m_content = std::make_shared<NomadContent>();
+        m_content->setPlatformBridge(m_window.get());
         m_content->setAudioStatus(m_audioInitialized);
         m_customWindow->setContent(m_content.get());
+        
+        // Pass platform window to TrackManagerUI for cursor control (Task: Selection Tool Enhancements)
+        if (m_content->getTrackManagerUI()) {
+            m_content->getTrackManagerUI()->setPlatformWindow(m_window.get());
+        }
+        
+        // Restore File Browser state (Favorites, History, etc.)
+        if (m_content->getFileBrowser()) {
+            m_content->getFileBrowser()->loadState(BROWSER_SETTINGS_FILE);
+        }
 
         // Build initial audio graph for engine (uses default tracks created in NomadContent)
         if (m_audioEngine && m_content && m_content->getTrackManager()) {
+            m_audioEngine->setMeterSnapshots(m_content->getTrackManager()->getMeterSnapshots());
+            m_audioEngine->setContinuousParams(m_content->getTrackManager()->getContinuousParams());
+            m_audioEngine->setChannelSlotMap(m_content->getTrackManager()->getChannelSlotMapShared());
             auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), m_mainStreamConfig.sampleRate);
             m_audioEngine->setGraph(graph);
+        }
+        
+        // Wire metronome toggle callback from TransportBar to AudioEngine
+        if (m_content && m_content->getTransportBar() && m_audioEngine) {
+            m_content->getTransportBar()->setOnMetronomeToggle([this](bool enabled) {
+                if (m_audioEngine) {
+                    m_audioEngine->setMetronomeEnabled(enabled);
+                    Log::info(std::string("Metronome ") + (enabled ? "enabled" : "disabled"));
+                }
+            });
+            // Also wire tempo changes to keep BPM in sync
+            m_content->getTransportBar()->setOnTempoChange([this](float bpm) {
+                if (m_audioEngine) {
+                    m_audioEngine->setBPM(bpm);
+                    Log::info("BPM changed to " + std::to_string(static_cast<int>(bpm)));
+                }
+            });
+            // Wire time signature changes from TransportInfoContainer
+            if (auto* infoContainer = m_content->getTransportBar()->getInfoContainer()) {
+                if (auto* timeSigDisplay = infoContainer->getTimeSignatureDisplay()) {
+                    timeSigDisplay->setOnTimeSignatureChange([this](int beatsPerBar) {
+                        if (m_audioEngine) {
+                            m_audioEngine->setBeatsPerBar(beatsPerBar);
+                            Log::info("Time signature changed to " + std::to_string(beatsPerBar) + "/4");
+                        }
+                        // Sync TrackManagerUI grid
+                        if (m_content && m_content->getTrackManagerUI()) {
+                            m_content->getTrackManagerUI()->setBeatsPerBar(beatsPerBar);
+                        }
+                    });
+                }
+            }
+        }
+        
+        // Wire loop preset callback from TrackManagerUI to AudioEngine
+        if (m_content && m_content->getTrackManagerUI() && m_audioEngine) {
+            m_content->getTrackManagerUI()->setOnLoopPresetChanged([this](int preset) {
+                if (!m_audioEngine) return;
+                
+                // Preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection
+                if (preset == 0) {
+                    m_audioEngine->setLoopEnabled(false);
+                    Log::info("Loop disabled");
+                } else if (preset >= 1 && preset <= 4) {
+                    // Calculate loop region in beats based on preset
+                    int beatsPerBar = m_audioEngine->getBeatsPerBar();
+                    double loopBars = (preset == 1) ? 1.0 : (preset == 2) ? 2.0 : (preset == 3) ? 4.0 : 8.0;
+                    double loopBeats = loopBars * beatsPerBar;
+                    
+                    // FL Studio-style: loop from beat 0 (not current position)
+                    m_audioEngine->setLoopRegion(0.0, loopBeats);
+                    m_audioEngine->setLoopEnabled(true);
+                    if (auto trackManagerUI = m_content->getTrackManagerUI()) {
+                        trackManagerUI->setLoopRegion(0.0, loopBeats, true);  // Update visual markers
+                    }
+                    Log::info("Loop enabled: 0.0 - " + std::to_string(loopBeats) + " beats (" + std::to_string(static_cast<int>(loopBars)) + " bars)");
+                } else if (preset == 5) {
+                    // Selection-based loop (FL Studio: selection overrides bar looping)
+                    if (auto trackManagerUI = m_content->getTrackManagerUI()) {
+                        auto selection = trackManagerUI->getSelectionBeatRange();
+                        if (selection.second > selection.first) {
+                            m_audioEngine->setLoopRegion(selection.first, selection.second);
+                            m_audioEngine->setLoopEnabled(true);
+                            if (auto trackManagerUI = m_content->getTrackManagerUI()) {
+                                trackManagerUI->setLoopRegion(selection.first, selection.second, true);  // Update visual markers
+                            }
+                            Log::info("Looping selection: " + std::to_string(selection.first) + " - " + std::to_string(selection.second));
+                        } else {
+                            // No valid selection - fall back to smart 1-bar loop
+                            int beatsPerBar = m_audioEngine->getBeatsPerBar();
+                            double currentBeat = 0.0;
+                            if (m_content && m_content->getTrackManager()) {
+                                double posSeconds = m_content->getTrackManager()->getPosition();
+                                double bpm = m_audioEngine->getBPM();
+                                currentBeat = (posSeconds * bpm) / 60.0;
+                            }
+                            double currentBar = std::floor(currentBeat / beatsPerBar);
+                            double loopStartBeat = currentBar * beatsPerBar;
+                            double loopEndBeat = loopStartBeat + beatsPerBar;
+                            
+                            m_audioEngine->setLoopRegion(loopStartBeat, loopEndBeat);
+                            m_audioEngine->setLoopEnabled(true);
+                            Log::warning("Loop Selection: No valid selection found, defaulting to 1-bar loop");
+                        }
+                    }
+                }
+            });
+            
+            // FL Studio-style: Enable 1-bar loop by default on startup
+            if (m_audioEngine) {
+                int beatsPerBar = m_audioEngine->getBeatsPerBar();
+                m_audioEngine->setLoopRegion(0.0, static_cast<double>(beatsPerBar));
+                m_audioEngine->setLoopEnabled(true);
+                Log::info("Default 1-bar loop enabled (FL Studio mode)");
+            }
         }
         
         // TODO: Implement async project loading with progress indicator
@@ -971,22 +1847,8 @@ public:
             }
         }
         
-        // Configure latency compensation for all tracks (if audio was initialized)
-        if (m_audioInitialized && m_audioManager && m_content->getTrackManager()) {
-            double inputLatencyMs = 0.0;
-            double outputLatencyMs = 0.0;
-            m_audioManager->getLatencyCompensationValues(inputLatencyMs, outputLatencyMs);
-            
-            // Apply latency compensation to all tracks
-            auto trackManager = m_content->getTrackManager();
-            size_t trackCount = trackManager->getTrackCount();
-            for (size_t i = 0; i < trackCount; ++i) {
-                auto track = trackManager->getTrack(i);
-                if (track && !track->isSystemTrack()) {
-                    track->setLatencyCompensation(inputLatencyMs, outputLatencyMs);
-                }
-            }
-        }
+        // v3.0: Latency compensation is now managed by the Audio Engine's internal clock 
+        // and PlaylistRuntimeSnapshot offsets. Per-track latency setters are deprecated.
         
         // Wire up transport bar callbacks
         if (m_content->getTransportBar()) {
@@ -998,31 +1860,53 @@ public:
                 if (m_content) {
                     m_content->stopSoundPreview();
                 }
-                if (m_content && m_content->getTrackManagerUI()) {
-                    m_content->getTrackManagerUI()->getTrackManager()->play();
-                }
-                // Rebuild graph immediately before starting playback to ensure it's current
-                if (m_audioEngine && m_content && m_content->getTrackManager()) {
-                    double sampleRate = static_cast<double>(m_mainStreamConfig.sampleRate);
-                    if (m_audioManager) {
-                        double actual = static_cast<double>(m_audioManager->getStreamSampleRate());
-                        if (actual > 0.0) sampleRate = actual;
+                
+                // **Focus-aware playback routing**
+                if (m_content && m_content->getViewFocus() == ViewFocus::Arsenal) {
+                    // Arsenal Focus - Play active pattern
+                    Log::info("[Focus] Arsenal mode - Playing pattern");
+                    if (m_content->getTrackManager()) {
+                        auto& patternMgr = m_content->getTrackManager()->getPatternManager();
+                        PatternID activePattern = m_content->getActivePatternID();
+                        if (activePattern.isValid()) {
+                            m_content->getTrackManager()->playPatternInArsenal(activePattern);
+                        } else {
+                            Log::warning("[Focus] No active pattern to play");
+                        }
                     }
-                    // Rebuild the graph with latest track data
-                    auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), sampleRate);
-                    m_audioEngine->setGraph(graph);
-                    // Clear the dirty flag since we just rebuilt
-                    m_content->getTrackManager()->consumeGraphDirty();
+                } else {
+                    // Timeline Focus - Play arrangement
+                    Log::info("[Focus] Timeline mode - Playing arrangement");
+                    if (m_content && m_content->getTrackManagerUI()) {
+                        m_content->getTrackManagerUI()->getTrackManager()->play();
+                    }
                     
-                    // Notify audio engine transport
-                    AudioQueueCommand cmd;
-                    cmd.type = AudioQueueCommandType::SetTransportState;
-                    cmd.value1 = 1.0f;
-                    double posSeconds = m_content->getTrackManager()->getPosition();
-                    cmd.samplePos = static_cast<uint64_t>(posSeconds * sampleRate);
-                    m_audioEngine->commandQueue().push(cmd);
-                    
-                    Log::info("Transport: Graph rebuilt with " + std::to_string(graph.tracks.size()) + " tracks");
+                    // Rebuild graph immediately before starting playback to ensure it's current
+                    if (m_audioEngine && m_content && m_content->getTrackManager()) {
+                        double sampleRate = static_cast<double>(m_mainStreamConfig.sampleRate);
+                        if (m_audioManager) {
+                            double actual = static_cast<double>(m_audioManager->getStreamSampleRate());
+                            if (actual > 0.0) sampleRate = actual;
+                        }
+                        // Rebuild the graph with latest track data
+                        m_audioEngine->setMeterSnapshots(m_content->getTrackManager()->getMeterSnapshots());
+                        m_audioEngine->setContinuousParams(m_content->getTrackManager()->getContinuousParams());
+                        m_audioEngine->setChannelSlotMap(m_content->getTrackManager()->getChannelSlotMapShared());
+                        auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), sampleRate);
+                        m_audioEngine->setGraph(graph);
+                        // Clear the dirty flag since we just rebuilt
+                        m_content->getTrackManager()->consumeGraphDirty();
+                        
+                        // Notify audio engine transport
+                        AudioQueueCommand cmd;
+                        cmd.type = AudioQueueCommandType::SetTransportState;
+                        cmd.value1 = 1.0f;
+                        double posSeconds = m_content->getTrackManager()->getPosition();
+                        cmd.samplePos = static_cast<uint64_t>(posSeconds * sampleRate);
+                        m_audioEngine->commandQueue().push(cmd);
+                        
+                        Log::info("Transport: Graph rebuilt with " + std::to_string(graph.tracks.size()) + " tracks");
+                    }
                 }
             });
             
@@ -1081,7 +1965,16 @@ public:
                 std::stringstream ss;
                 ss << "Transport: Tempo changed to " << bpm << " BPM";
                 Log::info(ss.str());
-                // TODO: Update track manager tempo
+                
+                // Update AudioEngine BPM
+                if (m_audioEngine) {
+                    m_audioEngine->setBPM(bpm);
+                }
+                
+                // Update TrackManager/PlaylistModel BPM
+                if (m_content && m_content->getTrackManagerUI() && m_content->getTrackManagerUI()->getTrackManager()) {
+                    m_content->getTrackManagerUI()->getTrackManager()->getPlaylistModel().setBPM(static_cast<double>(bpm));
+                }
             });
 
             // Keep transport time in sync for scrubbing and playback
@@ -1357,11 +2250,22 @@ public:
                     auto trackManager = m_content->getTrackManager();
                     const bool userScrubbing = trackManager && trackManager->isUserScrubbing();
 
-                    if (!userScrubbing &&
+                    // Track play state transitions to reset loop detection properly
+                    static bool wasPlaying = false;
+                    static double lastPosition = 0.0;
+                    
+                    const bool isPlaying = !userScrubbing &&
                         m_audioEngine->isTransportPlaying() &&
-                        m_content->getTransportBar()->getState() == TransportState::Playing) {
-                        static double lastPosition = 0.0;
+                        m_content->getTransportBar()->getState() == TransportState::Playing;
+                    
+                    if (isPlaying) {
                         double currentPosition = m_audioEngine->getPositionSeconds();
+                        
+                        // Reset lastPosition when transitioning from stopped to playing
+                        // This prevents false loop detection after stop/play cycles
+                        if (!wasPlaying) {
+                            lastPosition = currentPosition;
+                        }
                         
                         // Sync TrackManager without feeding seeks back into the engine.
                         if (trackManager) {
@@ -1372,12 +2276,14 @@ public:
                         if (currentPosition < lastPosition - 0.1) {
                             // Loop occurred - force timer reset
                             m_content->getTransportBar()->setPosition(0.0);
+                            lastPosition = 0.0; // Also reset lastPosition for the loop
                         } else {
                             m_content->getTransportBar()->setPosition(currentPosition);
                         }
                         
                         lastPosition = currentPosition;
                     }
+                    wasPlaying = isPlaying;
                 }
                 
                 // Update sound previews
@@ -1397,6 +2303,9 @@ public:
                             graphSampleRate = actual;
                         }
                     }
+                    m_audioEngine->setMeterSnapshots(m_content->getTrackManager()->getMeterSnapshots());
+                    m_audioEngine->setContinuousParams(m_content->getTrackManager()->getContinuousParams());
+                    m_audioEngine->setChannelSlotMap(m_content->getTrackManager()->getChannelSlotMapShared());
                     auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), graphSampleRate);
                     m_audioEngine->setGraph(graph);
                     const bool playing = m_content->getTrackManager()->isPlaying();
@@ -1573,6 +2482,11 @@ public:
             m_renderer->shutdown();
             Log::info("UI renderer shutdown");
         }
+        
+        // Save File Browser state
+        if (m_content && m_content->getFileBrowser()) {
+            m_content->getFileBrowser()->saveState(BROWSER_SETTINGS_FILE);
+        }
 
         // Destroy window
         if (m_window) {
@@ -1688,6 +2602,22 @@ private:
      * @brief Setup window event callbacks
      */
     void setupCallbacks() {
+        // Register Global Drag Capture Hooks to ensure we track mouse outside window
+        auto& dragManager = NomadUI::NUIDragDropManager::getInstance();
+        dragManager.setOnDragStart([this](const NomadUI::DragData&) {
+            if (m_window) {
+                m_window->setMouseCapture(true);
+                // Log::info("[DragDrop] Global Drag Started - Mouse Captured");
+            }
+        });
+        
+        dragManager.setOnDragEnd([this](const NomadUI::DragData&, const NomadUI::DropResult&) {
+            if (m_window) {
+                m_window->setMouseCapture(false);
+                // Log::info("[DragDrop] Global Drag Ended - Mouse Released");
+            }
+        });
+
         // Window resize callback
         m_window->setResizeCallback([this](int width, int height) {
             // Signal activity to adaptive FPS
@@ -1709,47 +2639,75 @@ private:
 
 		        // Key callback
 		        m_window->setKeyCallback([this](int key, bool pressed) {
-	            // Signal activity to adaptive FPS
-	            if (pressed) {
-	                m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::KeyPress);
-	            }
-	            
-	            // First, try to handle key events in the audio settings dialog if it's visible
-	            if (m_audioSettingsDialog && m_audioSettingsDialog->isVisible()) {
-	                NomadUI::NUIKeyEvent event;
-                event.keyCode = convertToNUIKeyCode(key);
-                event.pressed = pressed;
-                event.released = !pressed;
-                
-                if (m_audioSettingsDialog->onKeyEvent(event)) {
-                    return; // Dialog handled the event
+ 	            // Signal activity to adaptive FPS
+ 	            if (pressed) {
+ 	                m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::KeyPress);
+ 	            }
+
+                // Maintain an authoritative modifier state so we can recover cleanly if KeyUp is lost.
+                auto setModifier = [this](NomadUI::NUIModifiers bit, bool down) {
+                    int mods = static_cast<int>(m_keyModifiers);
+                    const int flag = static_cast<int>(bit);
+                    mods = down ? (mods | flag) : (mods & ~flag);
+                    m_keyModifiers = static_cast<NomadUI::NUIModifiers>(mods);
+                };
+                if (key == static_cast<int>(KeyCode::Control)) {
+                    setModifier(NomadUI::NUIModifiers::Ctrl, pressed);
+                } else if (key == static_cast<int>(KeyCode::Shift)) {
+                    setModifier(NomadUI::NUIModifiers::Shift, pressed);
+                } else if (key == static_cast<int>(KeyCode::Alt)) {
+                    setModifier(NomadUI::NUIModifiers::Alt, pressed);
                 }
-            }
-            
-	            // Handle confirmation dialog key events if visible
-	            if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
+
                 NomadUI::NUIKeyEvent event;
                 event.keyCode = convertToNUIKeyCode(key);
                 event.pressed = pressed;
                 event.released = !pressed;
-                
-                if (m_confirmationDialog->onKeyEvent(event)) {
-                    return; // Dialog handled the event
-                }
-	            }
+                event.modifiers = m_keyModifiers;
+ 	            
+ 	            // First, try to handle key events in the audio settings dialog if it's visible
+ 	            if (m_audioSettingsDialog && m_audioSettingsDialog->isVisible()) {
+                 if (m_audioSettingsDialog->onKeyEvent(event)) {
+                     return; // Dialog handled the event
+                 }
+             }
+            
+	            // Handle confirmation dialog key events if visible
+ 	            if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
+                 if (m_confirmationDialog->onKeyEvent(event)) {
+                     return; // Dialog handled the event
+                 }
+ 	            }
 		            
-		            // If the FileBrowser search box is focused, it owns typing and shortcuts should not trigger.
-		            if (m_content && pressed) {
-		                auto fileBrowser = m_content->getFileBrowser();
-		                if (fileBrowser && fileBrowser->isSearchBoxFocused()) {
-		                    // Note: NUIPlatformBridge calls both `setKeyCallback` and `setKeyCallbackEx`.
-		                    // Let the extended callback handle FileBrowser typing to avoid double-delivery.
-		                    return;
-		                }
-		            }
-	            
-	            // Handle global key shortcuts
-	            if (key == static_cast<int>(KeyCode::Escape) && pressed) {
+ 		            // If the FileBrowser search box is focused, it owns typing and shortcuts should not trigger.
+ 		            if (m_content) {
+ 		                auto fileBrowser = m_content->getFileBrowser();
+ 		                if (fileBrowser && fileBrowser->isSearchBoxFocused()) {
+                            fileBrowser->onKeyEvent(event);
+ 		                    return;
+ 		                }
+ 		            }
+ 	            
+                    // Give the focused component first shot at key events (prevents focus leakage).
+                    if (auto* focused = NomadUI::NUIComponent::getFocusedComponent()) {
+                        if (focused->onKeyEvent(event)) {
+                            return;
+                        }
+                    }
+ 
+                    // TrackManagerUI shortcuts (v3.1)
+                    if (m_content && m_content->getTrackManagerUI() && m_content->getTrackManagerUI()->isVisible()) {
+                        if (m_content->getTrackManagerUI()->onKeyEvent(event)) {
+                             return;
+                        }
+                    }
+
+                const bool hasModifiers = (event.modifiers & NomadUI::NUIModifiers::Ctrl) ||
+                                          (event.modifiers & NomadUI::NUIModifiers::Shift) ||
+                                          (event.modifiers & NomadUI::NUIModifiers::Alt);
+
+ 	            // Handle global key shortcuts
+ 	            if (key == static_cast<int>(KeyCode::Escape) && pressed) {
                 // If confirmation dialog is open, let it handle escape
                 if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
                     return; // Already handled above
@@ -1779,27 +2737,32 @@ private:
                         transport->play();
                     }
                 }
-            } else if (key == static_cast<int>(KeyCode::P) && pressed) {
+            } else if (key == static_cast<int>(KeyCode::P) && pressed && !hasModifiers) {
                 // P key to open audio settings (Preferences)
                 if (m_audioSettingsDialog) {
                     m_audioSettingsDialog->show();
                 }
-            } else if (key == static_cast<int>(KeyCode::M) && pressed) {
+            } else if (key == static_cast<int>(KeyCode::M) && pressed && !hasModifiers) {
                 // M key to toggle Mixer
-                if (m_content && m_content->getTrackManagerUI()) {
-                    m_content->getTrackManagerUI()->toggleMixer();
+                if (m_content) {
+                    m_content->toggleView(Audio::ViewType::Mixer);
                 }
-            } else if (key == static_cast<int>(KeyCode::S) && pressed) {
+            } else if (key == static_cast<int>(KeyCode::S) && pressed && !hasModifiers) {
                 // S key to toggle Sequencer
-                if (m_content && m_content->getTrackManagerUI()) {
-                    m_content->getTrackManagerUI()->toggleSequencer();
+                if (m_content) {
+                    m_content->toggleView(Audio::ViewType::Sequencer);
                 }
-            } else if (key == static_cast<int>(KeyCode::R) && pressed) {
+            } else if (key == static_cast<int>(KeyCode::R) && pressed && !hasModifiers) {
                 // R key to toggle Piano Roll
-                if (m_content && m_content->getTrackManagerUI()) {
-                    m_content->getTrackManagerUI()->togglePianoRoll();
+                if (m_content) {
+                    m_content->toggleView(Audio::ViewType::PianoRoll);
                 }
-            } else if (key == static_cast<int>(KeyCode::F) && pressed) {
+            } else if (key == static_cast<int>(KeyCode::B) && pressed && (event.modifiers & NomadUI::NUIModifiers::Alt)) {
+                // Alt+B to toggle File Browser
+                if (m_content) {
+                    m_content->toggleFileBrowser();
+                }
+            } else if (key == static_cast<int>(KeyCode::F) && pressed && !hasModifiers) {
                 // F key to cycle through FPS modes (Auto â†’ 30 â†’ 60 â†’ Auto)
                 auto currentMode = m_adaptiveFPS->getMode();
                 NomadUI::NUIAdaptiveFPS::Mode newMode;
@@ -1822,7 +2785,7 @@ private:
                 
                 m_adaptiveFPS->setMode(newMode);
                 
-            } else if (key == static_cast<int>(KeyCode::F12) && pressed) {
+            } else if (key == static_cast<int>(KeyCode::F12) && pressed && !hasModifiers) {
                 // F12 key to toggle FPS display overlay AND Performance HUD
                 if (m_fpsDisplay) {
                     m_fpsDisplay->toggle();
@@ -1831,123 +2794,84 @@ private:
                 if (m_performanceHUD) {
                     m_performanceHUD->toggle();
                 }
-            } else if (key == static_cast<int>(KeyCode::L) && pressed) {
+            } else if (key == static_cast<int>(KeyCode::L) && pressed && !hasModifiers) {
                 // L key to toggle adaptive FPS logging
                 auto config = m_adaptiveFPS->getConfig();
                 config.enableLogging = !config.enableLogging;
                 m_adaptiveFPS->setConfig(config);
                 
-            } else if (key == static_cast<int>(KeyCode::B) && pressed) {
+            } else if (key == static_cast<int>(KeyCode::B) && pressed && !hasModifiers) {
                 // B key to toggle render batching
                 if (m_renderer) {
                     static bool batchingEnabled = true;
                     batchingEnabled = !batchingEnabled;
                     m_renderer->setBatchingEnabled(batchingEnabled);
                 }
-            } else if (key == static_cast<int>(KeyCode::D) && pressed) {
+            } else if (key == static_cast<int>(KeyCode::D) && pressed && !hasModifiers) {
                 // D key to toggle dirty region tracking
                 if (m_renderer) {
                     static bool dirtyTrackingEnabled = true;
                     dirtyTrackingEnabled = !dirtyTrackingEnabled;
                     m_renderer->setDirtyRegionTrackingEnabled(dirtyTrackingEnabled);
                 }
-            } else if (key == static_cast<int>(KeyCode::O) && pressed) {
+            } else if (key == static_cast<int>(KeyCode::O) && pressed && !hasModifiers) {
                 // O key export profiler data to JSON
                 Profiler::getInstance().exportToJSON("nomad_profile.json");
-            } else if (key == static_cast<int>(KeyCode::Tab) && pressed) {
+            } else if (key == static_cast<int>(KeyCode::Tab) && pressed && !hasModifiers) {
                 // Tab key to toggle playlist visibility
-                if (m_content && m_content->getTrackManagerUI()) {
-                    auto trackManagerUI = m_content->getTrackManagerUI();
-                    bool isVisible = trackManagerUI->isVisible();
-                    trackManagerUI->setVisible(!isVisible);
-                    Log::info("Playlist visibility toggled via shortcut");
-                }
-	            } else {
-	                // Forward unhandled key events directly to the FileBrowser
-	                if (m_content && pressed) {
-	                    auto fileBrowser = m_content->getFileBrowser();
-	                    if (fileBrowser) {
-	                        NomadUI::NUIKeyEvent event;
-	                        event.keyCode = convertToNUIKeyCode(key);
-	                        event.pressed = pressed;
-	                        event.released = !pressed;
-	                        fileBrowser->onKeyEvent(event);
-	                    }
-	                }
-	            }
-	        });
-        
-	        // Extended key callback with modifier support for clip manipulation
-	        m_window->setKeyCallbackEx([this](int key, bool pressed, bool ctrl, bool shift, bool alt) {
-	            if (!pressed) return;  // Only handle key press, not release
-	            
-	            // If the FileBrowser search box is focused, it owns typing and shortcuts should not trigger.
-	            if (m_content) {
-	                auto fileBrowser = m_content->getFileBrowser();
-	                if (fileBrowser && fileBrowser->isSearchBoxFocused()) {
-	                    NomadUI::NUIKeyEvent event;
-	                    event.keyCode = convertToNUIKeyCode(key);
-	                    event.pressed = true;
-	                    event.modifiers = NomadUI::NUIModifiers::None;
-	                    if (ctrl) event.modifiers = event.modifiers | NomadUI::NUIModifiers::Ctrl;
-	                    if (shift) event.modifiers = event.modifiers | NomadUI::NUIModifiers::Shift;
-	                    if (alt) event.modifiers = event.modifiers | NomadUI::NUIModifiers::Alt;
-	                    fileBrowser->onKeyEvent(event);
-	                    return;
-	                }
-	            }
-	            
-	            // Clip manipulation shortcuts (require Ctrl modifier)
-	            if (ctrl && m_content) {
-                auto trackManager = m_content->getTrackManagerUI();
-                if (!trackManager) return;
-                
-                if (key == static_cast<int>(KeyCode::C)) {
-                    // Ctrl+C - Copy selected clip
-                    trackManager->copySelectedClip();
-                    Log::info("Clip copied to clipboard");
-                } else if (key == static_cast<int>(KeyCode::X)) {
-                    // Ctrl+X - Cut selected clip
-                    trackManager->cutSelectedClip();
-                    Log::info("Clip cut to clipboard");
-                } else if (key == static_cast<int>(KeyCode::V)) {
-                    // Ctrl+V - Paste clip
-                    trackManager->pasteClip();
-                    Log::info("Clip pasted");
-                } else if (key == static_cast<int>(KeyCode::D)) {
-                    // Ctrl+D - Duplicate selected clip
-                    trackManager->duplicateSelectedClip();
-                    Log::info("Clip duplicated");
-                }
-            }
-            
-            // Split clip (S key without modifiers)
-            if (!ctrl && !shift && !alt && key == static_cast<int>(KeyCode::S) && m_content) {
-                auto trackManager = m_content->getTrackManagerUI();
-                if (trackManager) {
-                    trackManager->splitSelectedClipAtPlayhead();
-                    Log::info("Clip split at playhead");
-                }
-            }
-            
-            // Tool switching shortcuts (number keys 1-4)
-            if (!ctrl && !shift && !alt && m_content) {
-                auto trackManager = m_content->getTrackManagerUI();
-                if (trackManager) {
-                    // Use 1, 2, 3, 4 keys for tool switching
-                    if (key == static_cast<int>(KeyCode::Num1)) {
-                        trackManager->setActiveTool(Nomad::Audio::PlaylistTool::Select);
-                    } else if (key == static_cast<int>(KeyCode::Num2)) {
-                        trackManager->setActiveTool(Nomad::Audio::PlaylistTool::Split);
-                    } else if (key == static_cast<int>(KeyCode::Num3)) {
-                        trackManager->setActiveTool(Nomad::Audio::PlaylistTool::MultiSelect);
-                    } else if (key == static_cast<int>(KeyCode::Num4)) {
-                        trackManager->setActiveTool(Nomad::Audio::PlaylistTool::Loop);
+                 if (m_content && m_content->getTrackManagerUI()) {
+                     auto trackManagerUI = m_content->getTrackManagerUI();
+                     trackManagerUI->togglePlaylist();
+                     Log::info("Playlist view toggled via shortcut: " + std::string(trackManagerUI->isPlaylistVisible() ? "Visible" : "Hidden"));
+                 }
+
+                // Clip manipulation shortcuts (require Ctrl modifier)
+                if (pressed && (event.modifiers & NomadUI::NUIModifiers::Ctrl) && m_content) {
+                    auto trackManager = m_content->getTrackManagerUI();
+                    if (!trackManager) return;
+
+                    if (key == static_cast<int>(KeyCode::C)) {
+                        trackManager->copySelectedClip();
+                        Log::info("Clip copied to clipboard");
+                    } else if (key == static_cast<int>(KeyCode::X)) {
+                        trackManager->cutSelectedClip();
+                        Log::info("Clip cut to clipboard");
+                    } else if (key == static_cast<int>(KeyCode::V)) {
+                        trackManager->pasteClip();
+                        Log::info("Clip pasted");
+                    } else if (key == static_cast<int>(KeyCode::D)) {
+                        trackManager->duplicateSelectedClip();
+                        Log::info("Clip duplicated");
                     }
                 }
-            }
-        });
-        
+
+                // Split clip (S key without modifiers)
+                if (pressed && !hasModifiers && key == static_cast<int>(KeyCode::S) && m_content) {
+                    auto trackManager = m_content->getTrackManagerUI();
+                    if (trackManager) {
+                        trackManager->splitSelectedClipAtPlayhead();
+                        Log::info("Clip split at playhead");
+                    }
+                }
+
+                // Tool switching shortcuts (number keys 1-4)
+                if (pressed && !hasModifiers && m_content) {
+                    auto trackManager = m_content->getTrackManagerUI();
+                    if (trackManager) {
+                        if (key == static_cast<int>(KeyCode::Num1)) {
+                            trackManager->setActiveTool(Nomad::Audio::PlaylistTool::Select);
+                        } else if (key == static_cast<int>(KeyCode::Num2)) {
+                            trackManager->setActiveTool(Nomad::Audio::PlaylistTool::Split);
+                        } else if (key == static_cast<int>(KeyCode::Num3)) {
+                            trackManager->setActiveTool(Nomad::Audio::PlaylistTool::MultiSelect);
+                        } else if (key == static_cast<int>(KeyCode::Num4)) {
+                            trackManager->setActiveTool(Nomad::Audio::PlaylistTool::Loop);
+                        }
+                    }
+                }
+ 	            }
+ 	        });
+
         // Mouse move callback - signal activity to adaptive FPS
         m_window->setMouseMoveCallback([this](int x, int y) {
             m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::MouseMove);
@@ -1989,6 +2913,14 @@ private:
             std::stringstream ss;
             ss << "DPI changed: " << dpiScale;
             Log::info(ss.str());
+        });
+
+        // Window focus callback (authoritative reset for modifiers + focus)
+        m_window->setFocusCallback([this](bool focused) {
+            if (focused) return;
+
+            m_keyModifiers = NomadUI::NUIModifiers::None;
+            NomadUI::NUIComponent::clearFocusedComponent();
         });
     }
 
@@ -2148,6 +3080,7 @@ private:
     bool m_pendingClose{false};  // Set when user requested close but awaiting dialog response
     AudioStreamConfig m_mainStreamConfig;  // Store main audio stream configuration
     std::string m_projectPath{getAutosavePath()};
+    NomadUI::NUIModifiers m_keyModifiers{NomadUI::NUIModifiers::None};
     
     // Mouse tracking for global drag-and-drop handling
     int m_lastMouseX{0};
