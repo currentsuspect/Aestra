@@ -8,6 +8,7 @@
 #include "../NomadUI/Core/NUISlider.h"
 #include "../NomadUI/Core/NUIDragDrop.h"
 #include <memory>
+#include <map>
 
 namespace Nomad {
 namespace Audio {
@@ -27,6 +28,23 @@ public:
     ~TrackUIComponent() override;
 
     std::shared_ptr<Track> getTrack() const { return m_track; }
+    
+    // Multi-clip support: add additional clips to render on this same lane
+    void addLaneClip(std::shared_ptr<Track> clip) { m_laneClips.push_back(clip); }
+    void clearLaneClips() { m_laneClips.clear(); }
+    const std::vector<std::shared_ptr<Track>>& getLaneClips() const { return m_laneClips; }
+    
+    // Get all clips (primary + lane clips) for this lane
+    std::vector<std::shared_ptr<Track>> getAllClips() const {
+        std::vector<std::shared_ptr<Track>> all;
+        if (m_track) all.push_back(m_track);
+        all.insert(all.end(), m_laneClips.begin(), m_laneClips.end());
+        return all;
+    }
+    
+    // Primary/Secondary lane status - primary draws controls, secondary only draws clip
+    void setIsPrimaryForLane(bool isPrimary) { m_isPrimaryForLane = isPrimary; }
+    bool isPrimaryForLane() const { return m_isPrimaryForLane; }
     
     // Callback for when solo is toggled (so parent can update all track UIs)
     void setOnSoloToggled(std::function<void(TrackUIComponent*)> callback) { m_onSoloToggledCallback = callback; }
@@ -55,6 +73,7 @@ public:
     
     // UI state update (public so parent can refresh after clearing solos)
     void updateUI();
+    void renderControlOverlay(NomadUI::NUIRenderer& renderer);
 
 protected:
     void onRender(NomadUI::NUIRenderer& renderer) override;
@@ -68,6 +87,7 @@ private:
     std::shared_ptr<Track> m_track;
     TrackManager* m_trackManager; // For coordinating solo exclusivity
     bool m_selected = false; // Track selection state
+    bool m_isPrimaryForLane = true; // Primary draws control area, secondary only draws clip
     
     // Callbacks
     std::function<void(TrackUIComponent*)> m_onSoloToggledCallback;
@@ -86,7 +106,11 @@ private:
     bool m_clipDragPotential = false;     // Potential drag detected (mousedown on clip)
     bool m_isDraggingClip = false;        // Active drag in progress
     NomadUI::NUIPoint m_clipDragStartPos; // Where drag started
-    NomadUI::NUIRect m_clipBounds;        // Cached clip bounds for hit testing
+    NomadUI::NUIRect m_clipBounds;        // Cached clip bounds for hit testing (primary track)
+    
+    // Multi-clip bounds for hit testing (maps Track pointer to its rendered bounds)
+    std::map<std::shared_ptr<Track>, NomadUI::NUIRect> m_allClipBounds;
+    std::shared_ptr<Track> m_activeClip;  // Currently clicked/dragged clip (may be primary or lane clip)
     
     // Clip trimming state (edge resize)
     enum class TrimEdge { None, Left, Right };
@@ -97,12 +121,11 @@ private:
     float m_trimDragStartX = 0.0f;            // Mouse X when trim started
     static constexpr float TRIM_EDGE_WIDTH = 8.0f;  // Pixels for edge hit detection
 
-    // UI Components
-    std::shared_ptr<NomadUI::NUILabel> m_nameLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_durationLabel;  // Shows sample duration
-    std::shared_ptr<NomadUI::NUIButton> m_muteButton;
-    std::shared_ptr<NomadUI::NUIButton> m_soloButton;
-    std::shared_ptr<NomadUI::NUIButton> m_recordButton;
+	    // UI Components
+	    std::shared_ptr<NomadUI::NUILabel> m_nameLabel;
+	    std::shared_ptr<NomadUI::NUIButton> m_muteButton;
+	    std::shared_ptr<NomadUI::NUIButton> m_soloButton;
+	    std::shared_ptr<NomadUI::NUIButton> m_recordButton;
 
     // UI callbacks
     void onVolumeChanged(float volume);
@@ -114,10 +137,13 @@ private:
     // Waveform rendering
     void drawWaveform(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds, 
                      float offsetRatio = 0.0f, float visibleRatio = 1.0f);
+    void drawWaveformForTrack(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds,
+                              std::shared_ptr<Track> track, float offsetRatio = 0.0f, float visibleRatio = 1.0f);
     void generateWaveformCache(int width, int height);
     
     // Sample clip container (FL Studio style)
     void drawSampleClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds);
+    void drawSampleClipForTrack(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds, std::shared_ptr<Track> track);
     
     // Waveform cache (regenerate only when audio data or size changes)
     std::vector<std::pair<float, float>> m_waveformCache; // min/max pairs per pixel
@@ -125,8 +151,15 @@ private:
     int m_cachedHeight = 0;
     size_t m_cachedAudioDataSize = 0;
     
+    // Multi-clip support: additional clips on the same lane
+    std::vector<std::shared_ptr<Track>> m_laneClips;
+    
     // Playlist grid rendering
     void drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds);
+    
+    // Helper to draw a single clip (waveform + container) at calculated position
+    void drawClipAtPosition(NomadUI::NUIRenderer& renderer, std::shared_ptr<Track> clip,
+                           const NomadUI::NUIRect& bounds, float controlAreaWidth);
 
     // UI state
     void updateTrackNameColors(); // Update track name with bright colors based on number

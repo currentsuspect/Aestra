@@ -14,7 +14,7 @@ NomadPlat provides a unified interface for platform-specific functionality:
 ## Supported Platforms
 
 - ✅ **Windows** (Win32) - Fully implemented and tested
-- ⏳ **Linux** (X11) - Planned
+- 🚧 **Linux** (X11/SDL2) - Implemented and tested
 - ⏳ **macOS** (Cocoa) - Planned
 
 ## Architecture
@@ -168,10 +168,94 @@ Key features:
 - Mouse capture for dragging
 - Window snap zones (planned)
 
+## Platform Implementation Checklist
+
+### Required for All Platform Implementations
+
+All platform window implementations MUST implement the following methods to prevent compile breaks:
+
+#### Core Window Interface
+- [x] `PlatformWindowWin32` - **Windows (Win32) - COMPLETE**
+- [x] `PlatformWindowLinux` - **Linux (X11/SDL2) - COMPLETE**
+  - [x] `setCursorVisible(bool visible)` - Implemented using SDL_ShowCursor()
+  - [x] `getCurrentModifiers()` - Implemented using SDL_GetModState()
+  - [x] All other IPlatformWindow pure virtual methods
+- [ ] `PlatformWindowCocoa` - **macOS (Cocoa) - TODO**
+  - [ ] `setCursorVisible(bool visible)` - Show/hide cursor immediately using Cocoa APIs
+  - [ ] `getCurrentModifiers()` - Query modifier key state using NSEvent
+  - [ ] All other IPlatformWindow pure virtual methods
+
+#### Platform Utils Interface
+- [x] `PlatformUtilsWin32` - **Windows (Win32) - COMPLETE**
+- [x] `PlatformUtilsLinux` - **Linux (X11/SDL2) - COMPLETE**
+- [ ] `PlatformUtilsCocoa` - **macOS (Cocoa) - TODO**
+
+### Critical Implementation Notes
+
+1. **setCursorVisible() Requirements:**
+   - Must show/hide cursor immediately with no delay
+   - Should persist across window state changes (minimize/restore)
+   - **MUST be called from the same thread that created the window (window thread)**
+   - Cross-thread calls cause cursor display count desynchronization due to ShowCursor()'s per-thread behavior
+   - Reference implementations:
+     - Windows: `PlatformWindowWin32::setCursorVisible()` (lines 377-400)
+     - Linux: `PlatformWindowLinux::setCursorVisible()` (line 266-268)
+
+2. **getCurrentModifiers() Requirements:**
+   - Must return current state of Shift, Control, Alt, and Super keys
+   - Used by mouse wheel event handlers for modifier-aware scrolling
+   - Must be real-time accurate, not cached state
+   - **MUST be called from the same thread that created the window (window thread)**
+   - Cross-thread calls can cause inconsistent modifier state
+   - Reference implementations:
+     - Windows: `PlatformWindowWin32::getCurrentModifiers()` (lines 898-905)
+     - Linux: `PlatformWindowLinux::getCurrentModifiers()` (line 270-272)
+
+3. **Thread Safety Enforcement:**
+   - Windows implementation includes `assertWindowThread()` checks
+   - Debug builds will assert if called from wrong thread
+   - Release builds allow calls but may exhibit undefined behavior
+   - All platform implementations should enforce thread affinity
+
+### TODO: macOS/Cocoa Implementation Required
+
+When implementing `PlatformWindowCocoa`, ensure these methods are properly implemented:
+
+```cpp
+// TODO: Implement setCursorVisible for macOS
+void PlatformWindowCocoa::setCursorVisible(bool visible) override {
+    assertWindowThread(); // CRITICAL: Must enforce thread affinity
+    // TODO: Use [NSCursor setHiddenUntilMouseMoves:] or similar Cocoa APIs
+    // Must show/hide cursor immediately like Win32/Linux implementations
+}
+
+// TODO: Implement getCurrentModifiers for macOS
+KeyModifiers PlatformWindowCocoa::getCurrentModifiers() const override {
+    assertWindowThread(); // CRITICAL: Must enforce thread affinity
+    // TODO: Use [NSEvent modifierFlags] to query current modifier state
+    // Must return real-time accurate state like Win32/Linux implementations
+}
+
+// TODO: Add thread tracking to header
+private:
+    DWORD m_creatingThreadId; // Store creating thread for thread safety checks
+
+// TODO: Initialize in constructor
+PlatformWindowCocoa::PlatformWindowCocoa() {
+    m_creatingThreadId = GetCurrentThreadId(); // Or Cocoa equivalent
+}
+
+// TODO: Add assertion method
+void PlatformWindowCocoa::assertWindowThread() const {
+    NOMAD_ASSERT(GetCurrentThreadId() == m_creatingThreadId,
+        "PlatformWindowCocoa methods must be called from the same thread that created the window.");
+}
+```
+
 ## Future Enhancements
 
-- Linux X11 implementation
-- macOS Cocoa implementation
+- [ ] Linux X11 implementation (PlatformWindowX11, PlatformUtilsX11)
+- [ ] macOS Cocoa implementation (PlatformWindowCocoa, PlatformUtilsCocoa)
 - Vulkan context support
 - Multi-monitor support
 - Custom window decorations

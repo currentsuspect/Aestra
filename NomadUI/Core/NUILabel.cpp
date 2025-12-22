@@ -2,6 +2,7 @@
 #include "NUILabel.h"
 #include "NUITheme.h"
 #include "Graphics/NUIRenderer.h"
+#include <algorithm>
 #include <cmath>
 
 namespace NomadUI {
@@ -40,27 +41,61 @@ void NUILabel::onRender(NUIRenderer& renderer)
             textSizeValid_ = true;
         }
         
-        // Calculate text position based on alignment (top-left Y) and snap to pixels
+        std::string displayText = text_;
+        NUISize displaySize = cachedTextSize_;
+
+        // Single-line ellipsis truncation to avoid text bleeding into adjacent UI.
+        const float pad = 4.0f;
+        const float availableWidth = std::max(0.0f, bounds.width - pad * 2.0f);
+        if (ellipsize_ && !multiline_ && availableWidth > 0.0f && cachedTextSize_.width > availableWidth) {
+            const std::string ellipsis = "...";
+            const float ellipsisW = renderer.measureText(ellipsis, fontSize).width;
+
+            if (ellipsisW >= availableWidth) {
+                displayText = ellipsis;
+            } else {
+                size_t lo = 0;
+                size_t hi = text_.size();
+
+                while (lo < hi) {
+                    const size_t mid = (lo + hi + 1) / 2;
+                    const std::string candidate = text_.substr(0, mid);
+                    const float candidateW = renderer.measureText(candidate, fontSize).width;
+                    if (candidateW + ellipsisW <= availableWidth) {
+                        lo = mid;
+                    } else {
+                        hi = mid - 1;
+                    }
+                }
+
+                displayText = text_.substr(0, lo) + ellipsis;
+            }
+
+            displaySize = renderer.measureText(displayText, fontSize);
+        }
+        
+        // Calculate text position based on alignment
+        // Use actual measured text height for proper vertical centering
         float textX = bounds.x;
-        float textY = bounds.y + (bounds.height - fontSize) * 0.5f;
+        float textY = bounds.y + (bounds.height - displaySize.height) * 0.5f;
         
         switch (alignment_)
         {
             case Alignment::Left:
-                textX = bounds.x + 4.0f; // Small padding from left edge
+                textX = bounds.x + pad; // Small padding from left edge
                 break;
             case Alignment::Center:
-                textX = bounds.x + (bounds.width - cachedTextSize_.width) / 2.0f;
+                textX = bounds.x + (bounds.width - displaySize.width) / 2.0f;
                 break;
             case Alignment::Right:
-                textX = bounds.x + bounds.width - cachedTextSize_.width - 4.0f; // Small padding from right edge
+                textX = bounds.x + bounds.width - displaySize.width - pad; // Small padding from right edge
                 break;
             case Alignment::Justified:
-                textX = bounds.x + (bounds.width - cachedTextSize_.width) / 2.0f; // Center for now
+                textX = bounds.x + pad; // Fallback to left for now
                 break;
         }
         
-        renderer.drawText(text_, NUIPoint(std::round(textX), std::round(textY)), fontSize, textColor_);
+        renderer.drawText(displayText, NUIPoint(std::round(textX), std::round(textY)), fontSize, textColor_);
     }
 }
 
@@ -109,6 +144,14 @@ void NUILabel::setWordWrap(bool wordWrap)
 {
     wordWrap_ = wordWrap;
     repaint();
+}
+
+void NUILabel::setEllipsize(bool ellipsize)
+{
+    if (ellipsize_ != ellipsize) {
+        ellipsize_ = ellipsize;
+        repaint();
+    }
 }
 
 void NUILabel::setBackgroundColor(const NUIColor& color)

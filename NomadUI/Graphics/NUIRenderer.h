@@ -22,6 +22,12 @@ namespace NomadUI {
  */
 class NUIRenderer {
 public:
+    struct FontMetrics {
+        float ascent = 0.0f;
+        float descent = 0.0f;
+        float lineHeight = 0.0f;
+    };
+
     virtual ~NUIRenderer() = default;
     
     // ========================================================================
@@ -191,6 +197,20 @@ public:
      * Measure text dimensions.
      */
     virtual NUISize measureText(const std::string& text, float fontSize) = 0;
+
+    /**
+     * Retrieve font metrics (scaled for the requested font size).
+     *
+     * Renderers should override this to return real ascent/descent/line height when available.
+     */
+    virtual FontMetrics getFontMetrics(float fontSize) const {
+        FontMetrics metrics;
+        // Fallback approximation that matches the renderer's baseline compensation defaults.
+        metrics.ascent = fontSize * 0.8f;
+        metrics.descent = fontSize * 0.2f;
+        metrics.lineHeight = metrics.ascent + metrics.descent;
+        return metrics;
+    }
     
     /**
      * Calculate baseline-aligned Y position for vertically centered text.
@@ -201,8 +221,11 @@ public:
      * @return Baseline Y coordinate for centered text
      */
     float calculateTextBaselineY(const NUIRect& rect, float fontSize) const {
-        // Center vertically then offset to baseline (compensate for font ascent)
-        return rect.y + (rect.height - fontSize) * 0.5f + fontSize * 0.8f;
+        const FontMetrics metrics = getFontMetrics(fontSize);
+        const float lineHeight = (metrics.lineHeight > 0.0f) ? metrics.lineHeight : fontSize;
+        const float ascent = (metrics.ascent > 0.0f) ? metrics.ascent : (fontSize * 0.8f);
+        const float topY = rect.y + (rect.height - lineHeight) * 0.5f;
+        return topY + ascent;
     }
     
     /**
@@ -214,8 +237,9 @@ public:
      * @return Top-left Y coordinate for centered text
      */
     float calculateTextY(const NUIRect& rect, float fontSize) const {
-        // Center vertically using font size (top-left Y positioning)
-        return rect.y + (rect.height - fontSize) * 0.5f;
+        const FontMetrics metrics = getFontMetrics(fontSize);
+        const float lineHeight = (metrics.lineHeight > 0.0f) ? metrics.lineHeight : fontSize;
+        return rect.y + (rect.height - lineHeight) * 0.5f;
     }
     
     // ========================================================================
@@ -226,6 +250,12 @@ public:
      * Draw a texture/image.
      */
     virtual void drawTexture(uint32_t textureId, const NUIRect& destRect, const NUIRect& sourceRect) = 0;
+    
+    /**
+     * Enable/disable debug text bounds visualization.
+     */
+    virtual void setDebugTextBounds(bool enabled) { (void)enabled; }
+
     
     /**
      * Draw a texture from raw RGBA pixel data.

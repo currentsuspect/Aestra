@@ -1,9 +1,5 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioDeviceManager.h"
-#include "RtAudioBackend.h"
-#include "WASAPIExclusiveDriver.h"
-#include "WASAPISharedDriver.h"
-#include "ASIODriverInfo.h"
 #include <iostream>
 #include <chrono>
 
@@ -22,6 +18,12 @@ AudioDeviceManager::~AudioDeviceManager() {
     shutdown();
 }
 
+void AudioDeviceManager::addDriver(std::unique_ptr<IAudioDriver> driver) {
+    if (driver) {
+        m_drivers.push_back(std::move(driver));
+    }
+}
+
 bool AudioDeviceManager::initialize() {
     if (m_initialized) {
         return true;
@@ -31,44 +33,26 @@ bool AudioDeviceManager::initialize() {
     std::cout << "Initializing professional audio drivers..." << std::endl;
 
     try {
-        // Create WASAPI drivers
-        m_exclusiveDriver = std::make_unique<WASAPIExclusiveDriver>();
-        m_sharedDriver = std::make_unique<WASAPISharedDriver>();
+        // Register platform-specific drivers (Dependency Injection Point)
+        RegisterPlatformDrivers(*this);
         
-        // Initialize drivers
-        bool exclusiveOk = m_exclusiveDriver->initialize();
-        bool sharedOk = m_sharedDriver->initialize();
-        
-        if (exclusiveOk) {
-            std::cout << "âœ“ WASAPI Exclusive mode available" << std::endl;
-        } else {
-            std::cout << "âœ— WASAPI Exclusive mode unavailable" << std::endl;
+        if (m_drivers.empty()) {
+             std::cout << "No audio drivers available!" << std::endl;
+             // Continue initialization but warn? Or fail? 
+             // Logic suggests returning false if strictly no audio capability is fatal.
+             // But for audit tool we might want to continue. 
+             // Let's print warning.
+        }
+
+        std::cout << "Registered " << m_drivers.size() << " driver(s)." << std::endl;
+
+        // Log driver status
+        for (const auto& driver : m_drivers) {
+            std::cout << (driver->isAvailable() ? "✓ " : "✗ ") << driver->getDisplayName() 
+                      << (driver->isAvailable() ? " available" : " unavailable") << std::endl;
         }
         
-        if (sharedOk) {
-            std::cout << "âœ“ WASAPI Shared mode available" << std::endl;
-        } else {
-            std::cout << "âœ— WASAPI Shared mode unavailable" << std::endl;
-        }
-        
-        // Check for ASIO drivers (info only)
-        std::cout << "\nScanning for ASIO drivers..." << std::endl;
-        auto asioDrivers = ASIODriverScanner::scanInstalledDrivers();
-        if (!asioDrivers.empty()) {
-            std::cout << "Found " << asioDrivers.size() << " ASIO driver(s):" << std::endl;
-            for (const auto& driver : asioDrivers) {
-                std::cout << "  â€¢ " << driver.name << std::endl;
-            }
-            std::cout << "Note: NOMAD uses WASAPI for equivalent low-latency performance.\n" << std::endl;
-        } else {
-            std::cout << "No ASIO drivers detected (WASAPI provides professional audio).\n" << std::endl;
-        }
-        
-        // Fallback: Create RtAudio backend if WASAPI fails
-        if (!exclusiveOk && !sharedOk) {
-            std::cout << "Falling back to RtAudio backend..." << std::endl;
-            m_rtAudioDriver = std::make_unique<RtAudioBackend>();
-        }
+        // Removed explicit ASIO scanning (now handled by drivers themselves if registered)
         
         m_initialized = true;
         std::cout << "=== Audio System Ready ===" << std::endl;
@@ -88,17 +72,7 @@ void AudioDeviceManager::shutdown() {
     if (m_initialized) {
         closeStream();
         
-        if (m_exclusiveDriver) {
-            m_exclusiveDriver->shutdown();
-            m_exclusiveDriver.reset();
-        }
-        if (m_sharedDriver) {
-            m_sharedDriver->shutdown();
-            m_sharedDriver.reset();
-        }
-        if (m_rtAudioDriver) {
-            m_rtAudioDriver.reset();
-        }
+        m_drivers.clear();
         
         m_activeDriver = nullptr;
         m_initialized = false;
@@ -112,24 +86,21 @@ std::vector<AudioDeviceInfo> AudioDeviceManager::getDevices() const {
         return {};
     }
     
+    // Aggregated devices from all available drivers?
+    // Or just the active one?
+    // Original code: "active driver -> exclusive -> shared -> rtaudio"
+    // We should preserve this priority logic.
+    // Iterating drivers in order (assuming registration order implies priority).
+    
     // Use active driver if available
     if (m_activeDriver) {
         return m_activeDriver->getDevices();
     }
     
-    // Try exclusive first
-    if (m_exclusiveDriver && m_exclusiveDriver->isAvailable()) {
-        return m_exclusiveDriver->getDevices();
-    }
-    
-    // Then shared
-    if (m_sharedDriver && m_sharedDriver->isAvailable()) {
-        return m_sharedDriver->getDevices();
-    }
-    
-    // Fallback to RtAudio
-    if (m_rtAudioDriver) {
-        return m_rtAudioDriver->getDevices();
+    for (const auto& driver : m_drivers) {
+        if (driver && driver->isAvailable()) {
+             return driver->getDevices();
+        }
     }
     
     return {};
@@ -183,7 +154,8 @@ AudioDeviceInfo AudioDeviceManager::getDefaultInputDevice() const {
     return {};
 }
 
-bool AudioDeviceManager::tryDriver(NativeAudioDriver* driver, const AudioStreamConfig& config,
+
+bool AudioDeviceManager::tryDriver(IAudioDriver* driver, const AudioStreamConfig& config,
                                    AudioCallback callback, void* userData) {
     if (!driver || !driver->isAvailable()) {
         return false;
@@ -193,7 +165,8 @@ bool AudioDeviceManager::tryDriver(NativeAudioDriver* driver, const AudioStreamC
     
     if (driver->openStream(config, callback, userData)) {
         std::cout << "âœ“ " << driver->getDisplayName() << " opened successfully" << std::endl;
-        std::cout << "  Latency: " << (driver->getStreamLatency() * 1000.0) << "ms" << std::endl;
+        double lat = driver->getStreamLatency();
+        std::cout << "  Latency: " << (lat * 1000.0) << "ms" << std::endl;
         m_activeDriver = driver;
         return true;
     }
@@ -208,9 +181,7 @@ bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallba
     std::cout << "  Device ID: " << config.deviceId << std::endl;
     std::cout << "  Sample Rate: " << config.sampleRate << " Hz" << std::endl;
     std::cout << "  Buffer Size: " << config.bufferSize << " frames" << std::endl;
-    std::cout << "  Output Channels: " << config.numOutputChannels << std::endl;
-    std::cout << "  Input Channels: " << config.numInputChannels << std::endl;
-
+    
     if (!m_initialized) {
         std::cerr << "AudioDeviceManager::openStream: Not initialized" << std::endl;
         return false;
@@ -220,40 +191,52 @@ bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallba
     m_currentCallback = callback;
     m_currentUserData = userData;
     
-    // Try drivers based on preferred type first, then fallback
+    // Priority logic:
+    // If preferred type is set, try to find a driver matching that type first.
+    // If that fails, fallback to others.
     
-    // Try preferred driver first
-    if (m_preferredDriverType == AudioDriverType::WASAPI_EXCLUSIVE) {
-        if (tryDriver(m_exclusiveDriver.get(), config, callback, userData)) {
-            std::cout << "=== Stream Opened with WASAPI Exclusive (Preferred) ===" << std::endl;
-            return true;
-        }
-        // Fallback to shared
-        if (tryDriver(m_sharedDriver.get(), config, callback, userData)) {
-            std::cout << "=== Stream Opened with WASAPI Shared (Fallback) ===" << std::endl;
-            return true;
-        }
-    } else if (m_preferredDriverType == AudioDriverType::WASAPI_SHARED) {
-        if (tryDriver(m_sharedDriver.get(), config, callback, userData)) {
-            std::cout << "=== Stream Opened with WASAPI Shared (Preferred) ===" << std::endl;
-            return true;
-        }
-        // Fallback to exclusive
-        if (tryDriver(m_exclusiveDriver.get(), config, callback, userData)) {
-            std::cout << "=== Stream Opened with WASAPI Exclusive (Fallback) ===" << std::endl;
-            return true;
+    // Find preferred driver
+    IAudioDriver* preferred = nullptr;
+    // Assuming we can determine type from config or just iterating.
+    // The previous code checked m_preferredDriverType.
+    // We don't have getDriverType() on IAudioDriver yet (unless we added it? no).
+    // But we can check supportsExclusiveMode() for WASAPI_EXCLUSIVE.
+    // Ideally we'd have getDriverType(). 
+    // For now, let's iterate and check capabilities or name.
+    
+    // Note: Since IAudioDriver doesn't expose strict types, we rely on properties or name.
+    // Let's iterate all drivers. Prioritize based on capabilities.
+
+    // Try preferred strategy
+    for (auto& driver : m_drivers) {
+        bool isExclusiveFn = driver->supportsExclusiveMode();
+        bool wantExclusive = (m_preferredDriverType == AudioDriverType::WASAPI_EXCLUSIVE);
+        
+        if (wantExclusive == isExclusiveFn) {
+             if (tryDriver(driver.get(), config, callback, userData)) {
+                 return true;
+             }
         }
     }
     
-    // 3. Try RtAudio (legacy fallback)
-    if (m_rtAudioDriver && m_rtAudioDriver->openStream(config, callback, userData)) {
-        std::cout << "âœ“ RtAudio backend opened successfully" << std::endl;
-        std::cout << "=== Stream Opened with RtAudio ===" << std::endl;
-        return true;
+    // Fallback strategy: try remaining drivers
+    for (auto& driver : m_drivers) {
+        if (m_activeDriver == driver.get()) continue; // Skip if somehow active? (shouldn't happen here)
+        
+        if (tryDriver(driver.get(), config, callback, userData)) {
+            // Notify fallback
+            if (m_driverModeChangeCallback) {
+                 m_driverModeChangeCallback(
+                    m_preferredDriverType,
+                    AudioDriverType::UNKNOWN, // Can't easily map back without RTTI or type field
+                    "Preferred driver unavailable"
+                 );
+            }
+            return true;
+        }
     }
     
     std::cerr << "\nâœ— All drivers failed to open stream!" << std::endl;
-    std::cerr << "=== Stream Open Failed ===" << std::endl;
     return false;
 }
 
@@ -262,9 +245,6 @@ void AudioDeviceManager::closeStream() {
         m_activeDriver->closeStream();
         m_activeDriver = nullptr;
     }
-    if (m_rtAudioDriver) {
-        m_rtAudioDriver->closeStream();
-    }
     // DON'T clear callback/userData here - they need to be preserved for stream reopening
     // They will be updated when openStream() is called with new values
     // m_currentCallback = nullptr;
@@ -272,7 +252,7 @@ void AudioDeviceManager::closeStream() {
 }
 
 bool AudioDeviceManager::startStream() {
-    auto logStreamInfo = [this](AudioDriver* driver, const char* label) {
+    auto logStreamInfo = [this](IAudioDriver* driver, const char* label) {
         if (!driver) return;
         uint32_t actualRate = driver->getStreamSampleRate();
         uint32_t requestedRate = m_currentConfig.sampleRate;
@@ -289,13 +269,6 @@ bool AudioDeviceManager::startStream() {
         }
         return ok;
     }
-    if (m_rtAudioDriver) {
-        bool ok = m_rtAudioDriver->startStream();
-        if (ok) {
-            logStreamInfo(m_rtAudioDriver.get(), "RtAudio stream started");
-        }
-        return ok;
-    }
     return false;
 }
 
@@ -303,17 +276,11 @@ void AudioDeviceManager::stopStream() {
     if (m_activeDriver) {
         m_activeDriver->stopStream();
     }
-    if (m_rtAudioDriver) {
-        m_rtAudioDriver->stopStream();
-    }
 }
 
 bool AudioDeviceManager::isStreamRunning() const {
     if (m_activeDriver) {
         return m_activeDriver->isStreamRunning();
-    }
-    if (m_rtAudioDriver) {
-        return m_rtAudioDriver->isStreamRunning();
     }
     return false;
 }
@@ -322,9 +289,6 @@ double AudioDeviceManager::getStreamLatency() const {
     if (m_activeDriver) {
         return m_activeDriver->getStreamLatency();
     }
-    if (m_rtAudioDriver) {
-        return m_rtAudioDriver->getStreamLatency();
-    }
     return 0.0;
 }
 
@@ -332,8 +296,12 @@ uint32_t AudioDeviceManager::getStreamSampleRate() const {
     if (m_activeDriver) {
         return m_activeDriver->getStreamSampleRate();
     }
-    if (m_rtAudioDriver) {
-        return m_rtAudioDriver->getStreamSampleRate();
+    return 0;
+}
+
+uint32_t AudioDeviceManager::getStreamBufferSize() const {
+    if (m_activeDriver) {
+        return m_activeDriver->getStreamBufferSize();
     }
     return 0;
 }
@@ -558,22 +526,16 @@ bool AudioDeviceManager::setPreferredDriverType(AudioDriverType type) {
         return false;
     }
 
-    // Only support WASAPI types for now
-    if (type != AudioDriverType::WASAPI_EXCLUSIVE && type != AudioDriverType::WASAPI_SHARED) {
-        std::cerr << "Cannot set driver type: unsupported type" << std::endl;
-        return false;
-    }
-
+    // Only support WASAPI types for now (conceptually)
+    // In our new generic model, we just store the preference.
+    // Real switching happens in openStream.
     std::cout << "\n=== Changing Driver Type ===" << std::endl;
-    std::cout << "Requested: " << (type == AudioDriverType::WASAPI_EXCLUSIVE ? "WASAPI Exclusive" : "WASAPI Shared") << std::endl;
 
     m_preferredDriverType = type;
 
     // If stream is open, reopen with new driver preference
     if (m_activeDriver && m_currentCallback) {
         bool wasRunning = isStreamRunning();
-        
-        std::cout << "Stream was " << (wasRunning ? "running" : "stopped") << std::endl;
         
         // Save callback and user data before closing (closeStream clears them!)
         auto savedCallback = m_currentCallback;
@@ -590,7 +552,6 @@ bool AudioDeviceManager::setPreferredDriverType(AudioDriverType type) {
         
         if (!success) {
             std::cerr << "âœ— Failed to reopen stream with any driver!" << std::endl;
-            std::cerr << "=== Driver Change Failed ===" << std::endl;
             return false;
         }
         
@@ -601,8 +562,6 @@ bool AudioDeviceManager::setPreferredDriverType(AudioDriverType type) {
             }
         }
         
-        std::cout << "âœ“ Driver changed successfully to: " << (m_activeDriver ? m_activeDriver->getDisplayName() : "Unknown") << std::endl;
-        std::cout << "=== Driver Change Complete ===" << std::endl;
         return true;
     }
 
@@ -614,42 +573,21 @@ bool AudioDeviceManager::isDriverTypeAvailable(AudioDriverType type) const {
         return false;
     }
 
-    // Quick availability check based on driver type
-    switch (type) {
-        case AudioDriverType::WASAPI_EXCLUSIVE:
-            // Check if Exclusive driver exists and is initialized
-            if (!m_exclusiveDriver || !m_exclusiveDriver->isAvailable()) {
-                return false;
-            }
-            // If we're currently using a different driver, Exclusive might be blocked
-            // by another application (like SoundID Reference)
-            // We can't easily test without disrupting the current stream,
-            // so we assume it's available if initialized
-            return true;
-
-        case AudioDriverType::WASAPI_SHARED:
-            // Shared mode is almost always available
-            return m_sharedDriver && m_sharedDriver->isAvailable();
-
-        case AudioDriverType::RTAUDIO:
-            return m_rtAudioDriver != nullptr;
-
-        default:
-            return false;
+    for (const auto& driver : m_drivers) {
+        if (driver->getDriverType() == type) {
+            return driver->isAvailable();
+        }
     }
+    return false;
 }
 
 std::vector<AudioDriverType> AudioDeviceManager::getAvailableDriverTypes() const {
     std::vector<AudioDriverType> types;
     
-    if (m_exclusiveDriver) {
-        types.push_back(AudioDriverType::WASAPI_EXCLUSIVE);
-    }
-    if (m_sharedDriver) {
-        types.push_back(AudioDriverType::WASAPI_SHARED);
-    }
-    if (m_rtAudioDriver) {
-        types.push_back(AudioDriverType::RTAUDIO);
+    for (const auto& driver : m_drivers) {
+        if (driver && driver->isAvailable()) {
+            types.push_back(driver->getDriverType());
+        }
     }
     
     return types;
@@ -664,13 +602,7 @@ bool AudioDeviceManager::isUsingFallbackDriver() const {
     return activeType != m_preferredDriverType;
 }
 
-std::vector<ASIODriverInfo> AudioDeviceManager::getASIODrivers() const {
-    return ASIODriverScanner::scanInstalledDrivers();
-}
 
-std::string AudioDeviceManager::getASIOInfo() const {
-    return ASIODriverScanner::getAvailabilityMessage();
-}
 
 void AudioDeviceManager::setAutoBufferScaling(bool enable, uint32_t underrunsPerMinuteThreshold) {
     m_autoBufferScalingEnabled = enable;

@@ -2,51 +2,52 @@
 # This file controls all visual aspects of the interface including colors, sizes, spacing, and layout
 # Modify these values and rebuild to customize the UI appearance
 
-# Color Scheme - Modern Professional Dark Theme
+# Color Scheme - Modern Professional Dark Theme (Ableton/FL Hybrid)
 colors:
   # 🌌 Core Structure - Layered backgrounds (Modern Professional)
-  backgroundPrimary: "#19191c"      # Deep slate - main canvas (same as title bar)
-  backgroundSecondary: "#1e1e22"   # Panels, sidebars, file browser
-  surfaceTertiary: "#28282d"       # Popups, transport bar, elevated surfaces
-  surfaceRaised: "#323238"         # Cards, hover surface, active elements
+  backgroundPrimary: "#121214"      # Deepest slate - main canvas (flatter)
+  backgroundSecondary: "#18181b"   # Panels, sidebars, file browser
+  surfaceTertiary: "#202024"       # Popups, transport bar, elevated surfaces
+  surfaceRaised: "#2a2a30"         # Cards, hover surface, active elements
 
   # 💡 Accent & Branding - Modern Professional
-  primary: "#785aff"               # Vibrant purple (FL Studio inspired)
-  primaryHover: "#8c73ff"          # Lighter purple for hover
-  primaryPressed: "#6446dc"        # Darker purple for pressed
-  secondary: "#00d4bc"             # Teal accent
-  accentCyan: "#00d4bc"            # Teal
-  accentMagenta: "#dc4696"         # Pink accent
-  accentLime: "#9ef061"            # Lime green
+  primary: "#8A2BE2"               # Electric Purple (FL Studio inspired)
+  primaryHover: "#9D44FF"          # Lighter purple for hover
+  primaryPressed: "#6A1B9A"        # Darker purple for pressed
+  secondary: "#00FFCC"             # Neon Teal accent
+  accentCyan: "#00FFCC"            # Neon Teal
+  accentMagenta: "#FF00CC"         # Neon Pink accent
+  accentLime: "#CCFF00"            # Neon Lime green
+  accentAmber: "#FFCC00"           # Neon Amber (Mute)
 
   # 🌈 Functional Colors - Modern Professional
-  success: "#00d49e"               # Teal green for success
-  warning: "#ffb400"               # Amber warning
-  error: "#ff4465"                 # Vibrant red for errors
-  info: "#785aff"                  # Purple (matches primary)
+  success: "#00FF99"               # Neon green for success
+  warning: "#FFCC00"               # Amber warning
+  error: "#FF3366"                 # Vibrant red for errors
+  info: "#8A2BE2"                  # Purple (matches primary)
 
   # 🧭 Text & Typography - Modern Professional
-  textPrimary: "#eeeeF2"           # Crisp white - excellent readability
-  textSecondary: "#aaaab2"         # Secondary text, labels
-  textDisabled: "#808088"          # Disabled text
-  textLink: "#785aff"              # Links/actions (purple)
-  textCritical: "#ff4465"          # Errors
+  textPrimary: "#F0F0F2"           # Crisp white - excellent readability
+  textSecondary: "#A0A0A5"         # Secondary text, labels
+  textDisabled: "#606065"          # Disabled text
+  textLink: "#8A2BE2"              # Links/actions (purple)
+  textCritical: "#FF3366"          # Errors
 
   # 🪞 Borders & Highlights - Modern Professional
-  borderSubtle: "#323238"          # Subtle separation lines
-  borderActive: "#785aff"          # Selected/focused (purple)
-  border: "#323238"                # Default border
+  borderSubtle: "#2a2a30"          # Subtle separation lines
+  borderActive: "#8A2BE2"          # Selected/focused (purple)
+  border: "#2a2a30"                # Default border
 
   # 🖱️ Interactive Elements - Modern Professional
-  buttonBgDefault: "#28282d"       # Button background (surfaceTertiary)
-  buttonBgHover: "#323238"         # Hovered buttons (surfaceRaised)
-  buttonBgActive: "#785aff"        # Active state (purple)
-  buttonTextDefault: "#eeeeF2"     # White text
+  buttonBgDefault: "#252528"       # Button background (surfaceTertiary)
+  buttonBgHover: "#303035"         # Hovered buttons (surfaceRaised)
+  buttonBgActive: "#8A2BE2"        # Active state (purple)
+  buttonTextDefault: "#F0F0F2"     # White text
   buttonTextActive: "#ffffff"      # Bright white
 
-  toggleDefault: "#3c3c42"         # Toggle background
-  toggleHover: "#46464e"           # Toggle hover
-  toggleActive: "#785aff"          # Purple active state
+  toggleDefault: "#303035"         # Toggle background
+  toggleHover: "#3a3a40"           # Toggle hover
+  toggleActive: "#8A2BE2"          # Purple active state
 
   inputBgDefault: "#1e1e22"        # Input background
   inputBgHover: "#28282d"          # Input hover
@@ -67,7 +68,7 @@ colors:
 layout:
   # Panel widths
   fileBrowserWidth: 250.0          # Left sidebar width
-  trackControlsWidth: 150.0        # Track controls panel width
+  trackControlsWidth: 200.0        # Track controls panel width
   timelineAreaWidth: 800.0         # Main timeline area width
 
   # Track dimensions
@@ -83,7 +84,7 @@ layout:
   # Control button dimensions (compact)
   controlButtonWidth: 28.0         # Width of M/S/R buttons
   controlButtonHeight: 22.0        # Height of M/S/R buttons
-  controlButtonSpacing: 2.0        # Space between control buttons
+  controlButtonSpacing: 4.0        # Space between control buttons
   controlButtonStartX: 180.0       # X position where control buttons start
 
   # Grid and timeline

@@ -81,6 +81,18 @@ struct NUIRect {
     float getWidth() const { return width; }
     float getHeight() const { return height; }
     bool isEmpty() const { return width <= 0.0f || height <= 0.0f; }
+    
+    /**
+     * @brief Check if this rectangle intersects with another rectangle
+     * @param other The other rectangle to test against
+     * @return true if the rectangles overlap
+     */
+    bool intersects(const NUIRect& other) const {
+        return !(x >= other.x + other.width ||
+                 x + width <= other.x ||
+                 y >= other.y + other.height ||
+                 y + height <= other.y);
+    }
 };
 
 struct NUIColor {

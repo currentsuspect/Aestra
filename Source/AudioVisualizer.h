@@ -19,7 +19,8 @@ enum class AudioVisualizationMode {
     LevelMeter,
     VU,
     Oscilloscope,
-    CompactMeter  // New compact mode for FL-style positioning
+    CompactMeter,  // New compact mode for FL-style positioning
+    CompactWaveform
 };
 
 /**
@@ -40,6 +41,10 @@ public:
     
     // Audio data input
     void setAudioData(const float* leftChannel, const float* rightChannel, size_t numSamples, double sampleRate);
+    // Lightweight metering path (safe to call from main thread).
+    void setPeakLevels(float leftPeak, float rightPeak, float leftRMS = -1.0f, float rightRMS = -1.0f);
+    // Interleaved stereo waveform path (safe to call from main thread).
+    void setInterleavedWaveform(const float* interleavedStereo, size_t numFrames);
     void setAudioManager(Nomad::Audio::AudioDeviceManager* manager);
     
     // Visualization settings
@@ -72,6 +77,7 @@ private:
     void renderVU(NUIRenderer& renderer);
     void renderOscilloscope(NUIRenderer& renderer);
     void renderCompactMeter(NUIRenderer& renderer);
+    void renderCompactWaveform(NUIRenderer& renderer);
     
     void renderLevelBar(NUIRenderer& renderer, const NUIRect& bounds, float level, float peak, const NUIColor& color);
     void renderSpectrumBar(NUIRenderer& renderer, const NUIRect& bounds, float magnitude, const NUIColor& color);
@@ -114,6 +120,12 @@ private:
     float animationTime_;
     float peakDecayTime_;
     float smoothingFactor_;  // Exponential smoothing (0.0 = instant, 1.0 = slow)
+
+    // UI-thread-only peak hold timers and clip indicators
+    float leftPeakHoldTimer_{0.0f};
+    float rightPeakHoldTimer_{0.0f};
+    float leftClipIndicator_{0.0f};
+    float rightClipIndicator_{0.0f};
     
     // Audio manager reference
     Nomad::Audio::AudioDeviceManager* audioManager_;

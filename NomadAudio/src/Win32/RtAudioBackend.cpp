@@ -33,7 +33,7 @@ RtAudioBackend::~RtAudioBackend() {
     closeStream();
 }
 
-std::vector<AudioDeviceInfo> RtAudioBackend::getDevices() {
+std::vector<AudioDeviceInfo> RtAudioBackend::getDevices() const {
     std::vector<AudioDeviceInfo> devices;
     
     try {
@@ -79,65 +79,15 @@ std::vector<AudioDeviceInfo> RtAudioBackend::getDevices() {
     return devices;
 }
 
-uint32_t RtAudioBackend::getDefaultOutputDevice() {
-    // Use getDevices() which has better error handling for WASAPI
-    auto devices = getDevices();
-    
-    // First try to find a device marked as default
-    for (const auto& device : devices) {
-        if (device.maxOutputChannels > 0 && device.isDefaultOutput) {
-            std::cout << "RtAudioBackend::getDefaultOutputDevice: Found default output: " 
-                      << device.name << " (ID " << device.id << ")" << std::endl;
-            return device.id;
-        }
-    }
-    
-    // If no default found, return first device with output channels
-    for (const auto& device : devices) {
-        if (device.maxOutputChannels > 0) {
-            std::cout << "RtAudioBackend::getDefaultOutputDevice: Using first output device: " 
-                      << device.name << " (ID " << device.id << ")" << std::endl;
-            return device.id;
-        }
-    }
-    
-    std::cout << "RtAudioBackend::getDefaultOutputDevice: No output devices found, returning 0" << std::endl;
-    return 0;
-}
 
-uint32_t RtAudioBackend::getDefaultInputDevice() {
-    // Use getDevices() which has better error handling for WASAPI
-    auto devices = getDevices();
-    
-    // First try to find a device marked as default
-    for (const auto& device : devices) {
-        if (device.maxInputChannels > 0 && device.isDefaultInput) {
-            std::cout << "RtAudioBackend::getDefaultInputDevice: Found default input: " 
-                      << device.name << " (ID " << device.id << ")" << std::endl;
-            return device.id;
-        }
-    }
-    
-    // If no default found, return first device with input channels
-    for (const auto& device : devices) {
-        if (device.maxInputChannels > 0) {
-            std::cout << "RtAudioBackend::getDefaultInputDevice: Using first input device: " 
-                      << device.name << " (ID " << device.id << ")" << std::endl;
-            return device.id;
-        }
-    }
-    
-    std::cout << "RtAudioBackend::getDefaultInputDevice: No input devices found, returning 0" << std::endl;
-    return 0;
-}
 
 bool RtAudioBackend::openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) {
     if (m_rtAudio->isStreamOpen()) {
         closeStream();
     }
 
-    m_userCallback = callback;
-    m_userData = userData;
+    m_userCallback.store(callback, std::memory_order_relaxed);
+    m_userData.store(userData, std::memory_order_relaxed);
 
     RtAudio::StreamParameters outputParams;
     outputParams.deviceId = config.deviceId;
@@ -177,6 +127,10 @@ bool RtAudioBackend::openStream(const AudioStreamConfig& config, AudioCallback c
     std::cout << "  Final bufferFrames: " << bufferFrames << std::endl;
     std::cout << "  Stream open: " << (m_rtAudio->isStreamOpen() ? "true" : "false") << std::endl;
     std::cout.flush();
+
+    if (error == RTAUDIO_NO_ERROR) {
+        m_bufferSize.store(bufferFrames, std::memory_order_relaxed);  // Store actual buffer size returned by RtAudio
+    }
 
     return (error == RTAUDIO_NO_ERROR);
 }
@@ -238,6 +192,13 @@ uint32_t RtAudioBackend::getStreamSampleRate() const {
     return m_rtAudio->getStreamSampleRate();
 }
 
+uint32_t RtAudioBackend::getStreamBufferSize() const {
+    if (!m_rtAudio || !m_rtAudio->isStreamOpen()) {
+        return 0;
+    }
+    return m_bufferSize.load(std::memory_order_relaxed);  // Return stored buffer size
+}
+
 int RtAudioBackend::rtAudioCallback(
     void* outputBuffer,
     void* inputBuffer,
@@ -250,13 +211,16 @@ int RtAudioBackend::rtAudioCallback(
     
     RtAudioBackend* backend = static_cast<RtAudioBackend*>(userData);
     
-    if (backend->m_userCallback) {
-        return backend->m_userCallback(
+    AudioCallback userCallback = backend->m_userCallback.load(std::memory_order_relaxed);
+    void* callbackUserData = backend->m_userData.load(std::memory_order_relaxed);
+    
+    if (userCallback) {
+        return userCallback(
             static_cast<float*>(outputBuffer),
             static_cast<const float*>(inputBuffer),
             numFrames,
             streamTime,
-            backend->m_userData
+            callbackUserData
         );
     }
     

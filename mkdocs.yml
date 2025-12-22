@@ -176,7 +176,7 @@ extra:
       name: Email Dylan
   version:
     provider: mike
-    label: v1.0-dev
+    label: v1.1-dev
   meta:
     image: images/og-image.png
     description: "NOMAD DAW – a modern audio workstation built with precision and love."
@@ -213,6 +213,9 @@ nav:
       - Roadmap: technical/roadmap.md
   - 📡 API Reference:
       - Overview: api/index.md
+  - 📋 Changelog:
+      - Release Notes: ../meta/CHANGELOGS/CHANGELOG_2025Q1.md
+      - Development Logs: ../meta/SESSION_SUMMARY_DEC2024.md
   - 🌐 Community:
       - Code of Conduct: community/code-of-conduct.md
       - Support: community/support.md

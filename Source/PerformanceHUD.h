@@ -11,6 +11,9 @@
 #include <memory>
 
 namespace Nomad {
+namespace Audio {
+class AudioEngine;
+}
 
 /**
  * @brief Performance HUD overlay
@@ -30,6 +33,9 @@ public:
     // Toggle visibility (F12 key)
     void toggle();
     
+    // Optional: attach AudioEngine for RT health telemetry readout (UI thread only).
+    void setAudioEngine(Nomad::Audio::AudioEngine* engine) { m_audioEngine = engine; }
+
     // Update stats
     void update();
     
@@ -43,6 +49,7 @@ private:
     void renderGraph(NomadUI::NUIRenderer& renderer);
     
     Profiler& m_profiler;
+    Nomad::Audio::AudioEngine* m_audioEngine{nullptr};
     
     // Graph data (rolling buffer of frame times)
     static constexpr size_t GRAPH_SAMPLES = 120; // 2 seconds at 60fps
@@ -55,7 +62,7 @@ private:
     
     // Position and size
     static constexpr float HUD_WIDTH = 400.0f;
-    static constexpr float HUD_HEIGHT = 140.0f;
+    static constexpr float HUD_HEIGHT = 190.0f;
     static constexpr float GRAPH_HEIGHT = 60.0f;
     static constexpr float PADDING = 8.0f;
 };

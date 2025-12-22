@@ -1,29 +1,30 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "AudioDriver.h"
+#include "IAudioDriver.h"
 #include "AudioDriverTypes.h"
-#include <memory>
-#include <functional>
 #include <string>
+#include <vector>
+#include <functional>
 
 namespace Nomad {
 namespace Audio {
 
+// Helper for type-to-string conversion
+
+
 /**
- * @brief Extended audio driver interface with driver type awareness
- * 
- * Base class for all native NOMAD audio driver implementations
+ * @brief Base class for native drivers (WASAPI, ASIO)
+ * Extends IAudioDriver with additional diagnostics and state tracking.
  */
-class NativeAudioDriver : public AudioDriver {
+class NativeAudioDriver : public IAudioDriver {
 public:
     virtual ~NativeAudioDriver() = default;
 
-    /**
-     * @brief Get driver type
-     */
-    virtual AudioDriverType getDriverType() const = 0;
-
+    // IAudioDriver interface is inherited
+    
+    // Extended Native Interface
+    
     /**
      * @brief Get driver capabilities
      */
@@ -38,17 +39,10 @@ public:
      * @brief Get last error
      */
     virtual DriverError getLastError() const = 0;
-
-    /**
-     * @brief Get error message
-     */
-    virtual std::string getErrorMessage() const = 0;
-
-    /**
-     * @brief Get driver statistics
-     */
-    virtual DriverStatistics getStatistics() const = 0;
-
+    
+    // IAudioDriver overrides that we want to enforce or extend
+    // Note: getErrorMessage, getStatistics are already in IAudioDriver
+    
     /**
      * @brief Reset driver statistics
      */
@@ -64,18 +58,8 @@ public:
      * @brief Shutdown driver
      */
     virtual void shutdown() = 0;
-
-    /**
-     * @brief Check if driver is available on this system
-     */
-    virtual bool isAvailable() const = 0;
-
-    /**
-     * @brief Get driver display name
-     */
-    virtual const char* getDisplayName() const {
-        return DriverTypeToString(getDriverType());
-    }
+    
+    // Note: isAvailable is in IAudioDriver
 
     /**
      * @brief Get typical latency for this driver type

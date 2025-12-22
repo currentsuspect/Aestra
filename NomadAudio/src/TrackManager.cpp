@@ -4,13 +4,16 @@
 #include <algorithm>
 #include <cstring>
 #include <chrono>
+#include <unordered_map>
 
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
+#include "TrackManager.h"
+#include "NomadLog.h"
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <chrono>
+#include <unordered_map>
+#include "NomadPlatform.h" // For platform threading abstraction
 
 namespace Nomad {
 namespace Audio {
@@ -19,17 +22,30 @@ namespace Audio {
 static constexpr size_t MAX_AUDIO_BUFFER_SIZE = 16384;
 
 //==============================================================================
+// Helpers
+//==============================================================================
+
+static void reindexTracks(std::vector<std::shared_ptr<Track>>& tracks, std::unordered_map<uint32_t, uint32_t>& idToIndex) {
+    idToIndex.clear();
+    for (uint32_t idx = 0; idx < tracks.size(); ++idx) {
+        if (tracks[idx]) {
+            tracks[idx]->setTrackIndex(idx);
+            idToIndex[tracks[idx]->getTrackId()] = idx;
+        }
+    }
+}
+
+//==============================================================================
 // AudioThreadPool Implementation
 //==============================================================================
 
 AudioThreadPool::AudioThreadPool(size_t numThreads) {
     for (size_t i = 0; i < numThreads; ++i) {
-        m_workers.emplace_back([this, i] { workerThread(); });
-        
-        // Set thread priority to real-time (platform-specific)
-        #ifdef _WIN32
-        SetThreadPriority(m_workers.back().native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
-        #endif
+        m_workers.emplace_back([this, i] { 
+            // Set thread priority to High (but not Realtime/MMCSS) for worker threads
+            Platform::setCurrentThreadPriority(Platform::ThreadPriority::High);
+            workerThread(); 
+        });
     }
     
     Log::info("AudioThreadPool created with " + std::to_string(numThreads) + " threads");
@@ -138,7 +154,13 @@ std::shared_ptr<Track> TrackManager::addTrack(const std::string& name) {
     uint32_t trackId = m_nextTrackId.fetch_add(1);
 
     auto track = std::make_shared<Track>(trackName, trackId);
+    track->setOnDataChanged([this]() { markGraphDirty(); });
+    track->setTrackIndex(static_cast<uint32_t>(m_tracks.size()));
+    if (m_commandSink) {
+        track->setCommandSink(m_commandSink);
+    }
     m_tracks.push_back(track);
+    m_idToIndex[track->getTrackId()] = track->getTrackIndex();
 
     // Pre-allocate buffer for the new track
     // We resize m_trackBuffers to match m_tracks size
@@ -149,7 +171,12 @@ std::shared_ptr<Track> TrackManager::addTrack(const std::string& name) {
         m_trackBuffers.resize(m_tracks.size(), std::move(newBuffer));
     }
 
+    // Mark project as modified for auto-save
+    m_isModified.store(true);
+    m_graphDirty.store(true, std::memory_order_release);
+
     Log::info("Added track: " + trackName + " (ID: " + std::to_string(trackId) + ")");
+    m_idToIndex[trackId] = track->getTrackIndex();
     return track;
 }
 
@@ -157,6 +184,11 @@ void TrackManager::addExistingTrack(std::shared_ptr<Track> track) {
     if (!track) return;
     
     std::lock_guard<std::mutex> lock(m_trackMutex);
+    track->setOnDataChanged([this]() { markGraphDirty(); });
+    track->setTrackIndex(static_cast<uint32_t>(m_tracks.size()));
+    if (m_commandSink) {
+        track->setCommandSink(m_commandSink);
+    }
     m_tracks.push_back(track);
     
     // Pre-allocate buffer for the new track
@@ -166,6 +198,8 @@ void TrackManager::addExistingTrack(std::shared_ptr<Track> track) {
     }
     
     Log::info("Added existing track: " + track->getName() + " (ID: " + std::to_string(track->getTrackId()) + ")");
+    m_graphDirty.store(true, std::memory_order_release);
+    m_idToIndex[track->getTrackId()] = track->getTrackIndex();
 }
 
 std::shared_ptr<Track> TrackManager::getTrack(size_t index) {
@@ -182,16 +216,52 @@ std::shared_ptr<const Track> TrackManager::getTrack(size_t index) const {
     return nullptr;
 }
 
+uint32_t TrackManager::getCompactIndex(uint32_t trackId) const {
+    auto it = m_idToIndex.find(trackId);
+    if (it != m_idToIndex.end()) {
+        return it->second;
+    }
+    return 0;
+}
+
 void TrackManager::removeTrack(size_t index) {
     std::lock_guard<std::mutex> lock(m_trackMutex);
     if (index < m_tracks.size()) {
         std::string trackName = m_tracks[index]->getName();
+        int32_t removedLaneIndex = m_tracks[index]->getLaneIndex();
+        
         m_tracks.erase(m_tracks.begin() + index);
+        reindexTracks(m_tracks, m_idToIndex);
         
         // Keep buffers in sync
         if (index < m_trackBuffers.size()) {
             m_trackBuffers.erase(m_trackBuffers.begin() + index);
         }
+        
+        // Reset lane indices for any tracks that shared the removed track's lane
+        // This prevents orphaned lane references
+        if (removedLaneIndex >= 0) {
+            int remainingOnLane = 0;
+            for (auto& track : m_tracks) {
+                if (track && track->getLaneIndex() == removedLaneIndex) {
+                    remainingOnLane++;
+                }
+            }
+            // If only one track remains on this lane, reset it to independent
+            // (a single clip doesn't need lane grouping)
+            if (remainingOnLane == 1) {
+                for (auto& track : m_tracks) {
+                    if (track && track->getLaneIndex() == removedLaneIndex) {
+                        track->setLaneIndex(-1);  // Force re-assignment
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Mark project as modified for auto-save
+        m_isModified.store(true);
+        m_graphDirty.store(true, std::memory_order_release);
 
         Log::info("Removed track: " + trackName);
     }
@@ -207,6 +277,8 @@ void TrackManager::clearAllTracks() {
 
     m_tracks.clear();
     m_trackBuffers.clear();
+    m_idToIndex.clear();
+    m_graphDirty.store(true, std::memory_order_release);
     Log::info("Cleared all tracks");
 }
 
@@ -292,6 +364,33 @@ void TrackManager::setPosition(double seconds) {
     if (m_onPositionUpdate) {
         m_onPositionUpdate(seconds);
     }
+
+    // Seeking/scrubbing does not change graph structure; avoid forcing rebuilds
+    // (rebuilding on every ruler drag can starve audio thread and cause crackles).
+
+    // Push seek command to audio engine if connected
+    if (m_commandSink) {
+        AudioQueueCommand cmd;
+        cmd.type = AudioQueueCommandType::SetTransportState;
+        cmd.value1 = m_isPlaying.load() ? 1.0f : 0.0f;
+        double sr = m_outputSampleRate.load();
+        if (sr <= 0.0) sr = 48000.0;
+        cmd.samplePos = static_cast<uint64_t>(seconds * sr);
+        m_commandSink(cmd);
+    }
+}
+
+// Sync from audio engine playback position (no commands back to engine).
+void TrackManager::syncPositionFromEngine(double seconds) {
+    seconds = std::max(0.0, seconds);
+    m_positionSeconds.store(seconds);
+
+    for (auto& track : m_tracks) {
+        if (!track) continue;
+        double rel = seconds - track->getStartPositionInTimeline();
+        if (rel < 0.0) rel = 0.0;
+        track->setPosition(rel);
+    }
 }
 
 double TrackManager::getTotalDuration() const {
@@ -326,11 +425,13 @@ bool TrackManager::moveClipToTrack(size_t fromIndex, size_t toIndex) {
     to->setAudioData(from->getAudioData().data(),
                      static_cast<uint32_t>(from->getAudioData().size() / from->getNumChannels()),
                      from->getSampleRate(),
-                     from->getNumChannels());
+                     from->getNumChannels(),
+                     static_cast<uint32_t>(m_outputSampleRate.load()));
     to->setStartPositionInTimeline(from->getStartPositionInTimeline());
     to->setSourcePath(from->getSourcePath());
     // Clear source track
     from->clearAudioData();
+    reindexTracks(m_tracks, m_idToIndex);
     return true;
 }
 
@@ -354,23 +455,62 @@ std::shared_ptr<Track> TrackManager::sliceClip(size_t trackIndex, double sliceTi
     if (sliceSample >= data.size()) return nullptr;
 
     // Create new track with second half
-    auto newTrack = addTrack(track->getName() + " (Slice)");
+    std::lock_guard<std::mutex> lock(m_trackMutex);
+    
+    // === FL STUDIO STYLE LANE GROUPING ===
+    // If original track has no lane index, assign one based on its position
+    // All clips from a split share the same lane index (same visual row)
+    int32_t laneIndex = track->getLaneIndex();
+    if (laneIndex < 0) {
+        // First time splitting - assign lane index based on current track position
+        laneIndex = static_cast<int32_t>(trackIndex);
+        track->setLaneIndex(laneIndex);
+    }
+    
+    // Create new track manually (don't use addTrack which adds to end)
+    uint32_t trackId = m_nextTrackId.fetch_add(1);
+    auto newTrack = std::make_shared<Track>(track->getName(), trackId);
+    
     std::vector<float> secondPart(data.begin() + sliceSample, data.end());
     newTrack->setAudioData(secondPart.data(),
                            static_cast<uint32_t>(secondPart.size() / numChannels),
                            sampleRate,
-                           numChannels);
+                           numChannels,
+                           static_cast<uint32_t>(m_outputSampleRate.load()));
     double newStart = track->getStartPositionInTimeline() + sliceTimeSeconds;
     newTrack->setStartPositionInTimeline(newStart);
     newTrack->setSourcePath(track->getSourcePath());
+    newTrack->setColor(track->getColor());  // Preserve color
+    
+    // Assign same lane index - this groups clips on the same visual row
+    newTrack->setLaneIndex(laneIndex);
 
-    // Resize original track to first part
+    // Insert new track immediately after the original one (not at the end)
+    auto insertPos = m_tracks.begin() + trackIndex + 1;
+    m_tracks.insert(insertPos, newTrack);
+    
+    // Add buffer for new track
+    if (m_trackBuffers.size() < m_tracks.size()) {
+        std::vector<float> newBuffer(MAX_AUDIO_BUFFER_SIZE * 2, 0.0f);
+        m_trackBuffers.resize(m_tracks.size(), std::move(newBuffer));
+    }
+
+    // Resize original track to first part (must do this AFTER we read from data)
     std::vector<float> firstPart(data.begin(), data.begin() + sliceSample);
     track->setAudioData(firstPart.data(),
                         static_cast<uint32_t>(firstPart.size() / numChannels),
                         sampleRate,
-                        numChannels);
-    // Keep original start
+                        numChannels,
+                        static_cast<uint32_t>(m_outputSampleRate.load()));
+    // Keep original start position
+    
+    // Mark project as modified
+    m_isModified.store(true);
+    m_graphDirty.store(true, std::memory_order_release);
+    
+    Log::info("Sliced track '" + track->getName() + "' at " + std::to_string(sliceTimeSeconds) + 
+              "s (lane " + std::to_string(laneIndex) + ")");
+    
     return newTrack;
 }
 
@@ -380,6 +520,7 @@ bool TrackManager::moveClipWithinTrack(size_t trackIndex, double newStartSeconds
     if (!track) return false;
     if (newStartSeconds < 0.0) newStartSeconds = 0.0;
     track->setStartPositionInTimeline(newStartSeconds);
+    m_graphDirty.store(true, std::memory_order_release);
     return true;
 }
 
@@ -442,7 +583,8 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
 
     // Output buffer should already be cleared by caller
     // Process each track - tracks will mix themselves into the output buffer
-    for (const auto& track : m_tracks) {
+    for (size_t trackIdx = 0; trackIdx < m_tracks.size(); ++trackIdx) {
+        const auto& track = m_tracks[trackIdx];
         // Only process tracks that are playing
         // System tracks (preview) always process if playing
         // Regular tracks only process if transport is playing OR if they're explicitly playing
@@ -457,6 +599,35 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
             }
             
             track->processAudio(outputBuffer, numFrames, streamTime, outputSampleRate);
+            
+            // Compute peaks inline for meter display (RT-safe, no separate getPeak calls)
+            // Note: For single-threaded mode, we compute peaks from the mixed output
+            // This is post-fader, post-mute as required by Requirement 2.1
+        }
+    }
+
+    // Compute per-track peaks from track buffers if available
+    // For single-threaded mode, we need to compute peaks differently since tracks mix directly
+    // We'll compute master peak from the final output buffer
+    
+    // Compute master peak from final mixed output (post-fader, post-mute)
+    if (m_meterSnapshotsRaw) {
+        float masterPeakL = 0.0f;
+        float masterPeakR = 0.0f;
+        for (uint32_t f = 0; f < numFrames; ++f) {
+            float absL = std::abs(outputBuffer[f * 2]);
+            float absR = std::abs(outputBuffer[f * 2 + 1]);
+            if (absL > masterPeakL) masterPeakL = absL;
+            if (absR > masterPeakR) masterPeakR = absR;
+        }
+        
+        // Write master peak to reserved slot (MASTER_SLOT_INDEX = 127)
+        static constexpr uint32_t MASTER_SLOT_INDEX = 127;
+        m_meterSnapshotsRaw->writePeak(MASTER_SLOT_INDEX, masterPeakL, masterPeakR);
+        
+        // Set clip flags if peak >= 1.0 (0 dBFS)
+        if (masterPeakL >= 1.0f || masterPeakR >= 1.0f) {
+            m_meterSnapshotsRaw->setClip(MASTER_SLOT_INDEX, masterPeakL >= 1.0f, masterPeakR >= 1.0f);
         }
     }
 
@@ -593,10 +764,61 @@ void TrackManager::processAudioMultiThreaded(float* outputBuffer, uint32_t numFr
     // Zero the output buffer first
     std::memset(outputBuffer, 0, bufferSize * sizeof(float));
     
-    // Sum all track buffers
-    for (const auto& buffer : m_trackBuffers) {
-        for (size_t i = 0; i < bufferSize; ++i) {
-            outputBuffer[i] += buffer[i];
+    // Sum all track buffers and compute per-track peaks inline
+    for (size_t trackIdx = 0; trackIdx < m_trackBuffers.size() && trackIdx < m_tracks.size(); ++trackIdx) {
+        const auto& buffer = m_trackBuffers[trackIdx];
+        const auto& track = m_tracks[trackIdx];
+        
+        // Compute peak inline while mixing (no separate getPeak calls)
+        // This is post-fader, post-mute as required by Requirement 2.1
+        float peakL = 0.0f;
+        float peakR = 0.0f;
+        
+        for (size_t i = 0; i < bufferSize; i += 2) {
+            float sampleL = buffer[i];
+            float sampleR = buffer[i + 1];
+            
+            // Mix into output
+            outputBuffer[i] += sampleL;
+            outputBuffer[i + 1] += sampleR;
+            
+            // Track peak (LINEAR values 0..1+)
+            float absL = std::abs(sampleL);
+            float absR = std::abs(sampleR);
+            if (absL > peakL) peakL = absL;
+            if (absR > peakR) peakR = absR;
+        }
+        
+        // Write LINEAR peaks to snapshot via raw pointer (RT-safe, no refcount)
+        if (m_meterSnapshotsRaw && track) {
+            uint32_t slotIndex = static_cast<uint32_t>(trackIdx);
+            m_meterSnapshotsRaw->writePeak(slotIndex, peakL, peakR);
+            
+            // Set clip flags when peak >= 1.0f (0 dBFS)
+            if (peakL >= 1.0f || peakR >= 1.0f) {
+                m_meterSnapshotsRaw->setClip(slotIndex, peakL >= 1.0f, peakR >= 1.0f);
+            }
+        }
+    }
+    
+    // Compute master peak from final mixed output
+    if (m_meterSnapshotsRaw) {
+        float masterPeakL = 0.0f;
+        float masterPeakR = 0.0f;
+        for (size_t i = 0; i < bufferSize; i += 2) {
+            float absL = std::abs(outputBuffer[i]);
+            float absR = std::abs(outputBuffer[i + 1]);
+            if (absL > masterPeakL) masterPeakL = absL;
+            if (absR > masterPeakR) masterPeakR = absR;
+        }
+        
+        // Write master peak to reserved slot (MASTER_SLOT_INDEX = 127)
+        static constexpr uint32_t MASTER_SLOT_INDEX = 127;
+        m_meterSnapshotsRaw->writePeak(MASTER_SLOT_INDEX, masterPeakL, masterPeakR);
+        
+        // Set clip flags if peak >= 1.0 (0 dBFS)
+        if (masterPeakL >= 1.0f || masterPeakR >= 1.0f) {
+            m_meterSnapshotsRaw->setClip(MASTER_SLOT_INDEX, masterPeakL >= 1.0f, masterPeakR >= 1.0f);
         }
     }
     
@@ -668,11 +890,22 @@ void TrackManager::clearAllSolos() {
 }
 
 std::string TrackManager::generateTrackName() const {
-    // Generate track name based on the number of non-preview tracks
-    // Since we start with 1 Preview track, we need to subtract 1
-    uint32_t nextId = m_nextTrackId.load();
-    uint32_t displayNumber = nextId - 1; // Account for Preview track
-    return "Track " + std::to_string(displayNumber);
+    // Generate track name based on actual track count (excluding system/preview tracks)
+    // Count non-system tracks to get proper numbering
+    size_t userTrackCount = 0;
+    for (const auto& track : m_tracks) {
+        if (track && !track->isSystemTrack()) {
+            userTrackCount++;
+        }
+    }
+    // New track will be userTrackCount + 1
+    return "Track " + std::to_string(userTrackCount + 1);
+}
+
+void TrackManager::setOutputSampleRate(double sampleRate) {
+    m_outputSampleRate.store(sampleRate);
+    // Rebuild graph at new rate on next render
+    m_graphDirty.store(true, std::memory_order_release);
 }
 
 } // namespace Audio

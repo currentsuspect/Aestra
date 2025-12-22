@@ -51,7 +51,8 @@ void AudioVisualizer::onRender(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
     if (bounds.isEmpty()) return;
     
-    // Render background
+    // Render background for all modes. Compact meters still want a defined
+    // component area; any glow should be kept inside bounds by callers.
     renderer.fillRoundedRect(bounds, 8, backgroundColor_);
     renderer.strokeRoundedRect(bounds, 8, 1, gridColor_);
     
@@ -75,73 +76,101 @@ void AudioVisualizer::onRender(NUIRenderer& renderer) {
         case AudioVisualizationMode::CompactMeter:
             renderCompactMeter(renderer);
             break;
+        case AudioVisualizationMode::CompactWaveform:
+            renderCompactWaveform(renderer);
+            break;
     }
 }
 
 void AudioVisualizer::onUpdate(double deltaTime) {
     animationTime_ += static_cast<float>(deltaTime);
-    
-    // Get current raw values from audio thread
-    float leftPeakCurrent = leftPeak_.load();
-    float rightPeakCurrent = rightPeak_.load();
-    float leftRMSCurrent = leftRMS_.load();
-    float rightRMSCurrent = rightRMS_.load();
-    
-    // Get previous smoothed values
-    float leftPeakPrev = leftPeakSmoothed_.load();
-    float rightPeakPrev = rightPeakSmoothed_.load();
-    float leftRMSPrev = leftRMSSmoothed_.load();
-    float rightRMSPrev = rightRMSSmoothed_.load();
-    
-    // Ballistics: Instant attack, very fast decay
-    // If new value is higher: instant attack (use new value)
-    // If new value is lower: very fast decay (blend with smoothing)
-    float attackFactor = 1.0f;      // Instant attack
-    float releaseFactor = 0.5f;     // Very fast release (50% retention, 50% decay)
-    
-    // Peak ballistics
-    float leftPeakNew = (leftPeakCurrent > leftPeakPrev) 
-        ? leftPeakCurrent  // Instant attack
-        : (releaseFactor * leftPeakPrev + (1.0f - releaseFactor) * leftPeakCurrent);  // Smooth decay
-    
-    float rightPeakNew = (rightPeakCurrent > rightPeakPrev)
-        ? rightPeakCurrent  // Instant attack
-        : (releaseFactor * rightPeakPrev + (1.0f - releaseFactor) * rightPeakCurrent);  // Smooth decay
-    
-    // RMS ballistics (smoother than peaks)
-    float leftRMSNew = (leftRMSCurrent > leftRMSPrev)
-        ? (0.7f * leftRMSPrev + 0.3f * leftRMSCurrent)  // Fast attack (30% new)
-        : (releaseFactor * leftRMSPrev + (1.0f - releaseFactor) * leftRMSCurrent);  // Smooth decay
-    
-    float rightRMSNew = (rightRMSCurrent > rightRMSPrev)
-        ? (0.7f * rightRMSPrev + 0.3f * rightRMSCurrent)  // Fast attack (30% new)
-        : (releaseFactor * rightRMSPrev + (1.0f - releaseFactor) * rightRMSCurrent);  // Smooth decay
-    
-    // Update smoothed values
+
+    const float dt = static_cast<float>(std::max(0.0, deltaTime));
+
+    // Get current raw values
+    const float leftPeakCurrent = leftPeak_.load();
+    const float rightPeakCurrent = rightPeak_.load();
+    const float leftRMSCurrent = leftRMS_.load();
+    const float rightRMSCurrent = rightRMS_.load();
+
+    // Previous smoothed values
+    const float leftPeakPrev = leftPeakSmoothed_.load();
+    const float rightPeakPrev = rightPeakSmoothed_.load();
+    const float leftRMSPrev = leftRMSSmoothed_.load();
+    const float rightRMSPrev = rightRMSSmoothed_.load();
+
+    // Time-based ballistics for consistent feel across FPS
+    const float peakReleaseSec = 0.35f;   // ~350ms falloff
+    const float rmsAttackSec = 0.05f;     // 50ms rise
+    const float rmsReleaseSec = 0.25f;    // 250ms falloff
+
+    const float peakReleaseCoeff = std::exp(-dt / peakReleaseSec);
+    const float rmsAttackCoeff = std::exp(-dt / rmsAttackSec);
+    const float rmsReleaseCoeff = std::exp(-dt / rmsReleaseSec);
+
+    const float leftPeakNew = (leftPeakCurrent >= leftPeakPrev)
+        ? leftPeakCurrent
+        : leftPeakPrev * peakReleaseCoeff + leftPeakCurrent * (1.0f - peakReleaseCoeff);
+    const float rightPeakNew = (rightPeakCurrent >= rightPeakPrev)
+        ? rightPeakCurrent
+        : rightPeakPrev * peakReleaseCoeff + rightPeakCurrent * (1.0f - peakReleaseCoeff);
+
+    const float leftRMSNew = (leftRMSCurrent >= leftRMSPrev)
+        ? leftRMSCurrent * (1.0f - rmsAttackCoeff) + leftRMSPrev * rmsAttackCoeff
+        : leftRMSPrev * rmsReleaseCoeff + leftRMSCurrent * (1.0f - rmsReleaseCoeff);
+    const float rightRMSNew = (rightRMSCurrent >= rightRMSPrev)
+        ? rightRMSCurrent * (1.0f - rmsAttackCoeff) + rightRMSPrev * rmsAttackCoeff
+        : rightRMSPrev * rmsReleaseCoeff + rightRMSCurrent * (1.0f - rmsReleaseCoeff);
+
     leftPeakSmoothed_.store(leftPeakNew);
     rightPeakSmoothed_.store(rightPeakNew);
     leftRMSSmoothed_.store(leftRMSNew);
     rightRMSSmoothed_.store(rightRMSNew);
-    
-    // Update peak hold: rise instantly to match RMS, decay very fast when RMS drops
-    float peakHoldDecay = 0.90f; // 90% retention per frame (very fast decay - almost instant)
-    float leftPeakHoldCurrent = leftPeakHold_.load();
-    float rightPeakHoldCurrent = rightPeakHold_.load();
-    
-    // If RMS is higher than peak hold: instant rise
-    // If RMS is lower: apply decay
-    if (leftRMSNew > leftPeakHoldCurrent) {
-        leftPeakHold_.store(leftRMSNew);
+
+    // Peak hold with a short hold time, then smooth decay
+    const float holdSec = 0.75f;
+    const float holdDecaySec = 0.4f;
+    const float holdDecayCoeff = std::exp(-dt / holdDecaySec);
+
+    float leftHold = leftPeakHold_.load();
+    if (leftPeakCurrent >= leftHold) {
+        leftHold = leftPeakCurrent;
+        leftPeakHoldTimer_ = 0.0f;
     } else {
-        leftPeakHold_.store(leftPeakHoldCurrent * peakHoldDecay);
+        leftPeakHoldTimer_ += dt;
+        if (leftPeakHoldTimer_ > holdSec) {
+            leftHold *= holdDecayCoeff;
+        }
     }
-    
-    if (rightRMSNew > rightPeakHoldCurrent) {
-        rightPeakHold_.store(rightRMSNew);
+    leftPeakHold_.store(leftHold);
+
+    float rightHold = rightPeakHold_.load();
+    if (rightPeakCurrent >= rightHold) {
+        rightHold = rightPeakCurrent;
+        rightPeakHoldTimer_ = 0.0f;
     } else {
-        rightPeakHold_.store(rightPeakHoldCurrent * peakHoldDecay);
+        rightPeakHoldTimer_ += dt;
+        if (rightPeakHoldTimer_ > holdSec) {
+            rightHold *= holdDecayCoeff;
+        }
     }
-    
+    rightPeakHold_.store(rightHold);
+
+    // Clip indicators (flash + decay)
+    const float clipThreshold = 1.0f;
+    const float clipDecaySec = 0.6f;
+    const float clipDecayCoeff = std::exp(-dt / clipDecaySec);
+    if (leftPeakCurrent >= clipThreshold) {
+        leftClipIndicator_ = 1.0f;
+    } else {
+        leftClipIndicator_ *= clipDecayCoeff;
+    }
+    if (rightPeakCurrent >= clipThreshold) {
+        rightClipIndicator_ = 1.0f;
+    } else {
+        rightClipIndicator_ *= clipDecayCoeff;
+    }
+
     setDirty(true);
 }
 
@@ -174,6 +203,66 @@ void AudioVisualizer::setAudioData(const float* leftChannel, const float* rightC
     }
     
     currentSample_ = (currentSample_ + samplesToCopy) % displayBufferSize_;
+}
+
+void AudioVisualizer::setPeakLevels(float leftPeak, float rightPeak, float leftRMS, float rightRMS) {
+    leftPeak = std::abs(leftPeak);
+    rightPeak = std::abs(rightPeak);
+
+    if (leftRMS < 0.0f) leftRMS = leftPeak;
+    if (rightRMS < 0.0f) rightRMS = rightPeak;
+
+    leftPeak_.store(leftPeak);
+    rightPeak_.store(rightPeak);
+    leftRMS_.store(leftRMS);
+    rightRMS_.store(rightRMS);
+
+    leftPeakHold_.store(std::max(leftPeakHold_.load(), leftPeak));
+    rightPeakHold_.store(std::max(rightPeakHold_.load(), rightPeak));
+
+    setDirty(true);
+}
+
+void AudioVisualizer::setInterleavedWaveform(const float* interleavedStereo, size_t numFrames) {
+    if (!interleavedStereo || numFrames == 0) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(audioDataMutex_);
+
+    const size_t framesToCopy = std::min(numFrames, displayBufferSize_);
+    float peakL = 0.0f;
+    float peakR = 0.0f;
+    double sumL = 0.0;
+    double sumR = 0.0;
+
+    for (size_t i = 0; i < framesToCopy; ++i) {
+        const float Lraw = interleavedStereo[i * 2];
+        const float Rraw = interleavedStereo[i * 2 + 1];
+
+        const size_t bufferIndex = (currentSample_ + i) % displayBufferSize_;
+        displayBuffer_[bufferIndex * 2]     = Lraw * sensitivity_;
+        displayBuffer_[bufferIndex * 2 + 1] = Rraw * sensitivity_;
+
+        const float absL = std::abs(Lraw);
+        const float absR = std::abs(Rraw);
+        peakL = std::max(peakL, absL);
+        peakR = std::max(peakR, absR);
+        sumL += static_cast<double>(absL) * absL;
+        sumR += static_cast<double>(absR) * absR;
+    }
+
+    currentSample_ = (currentSample_ + framesToCopy) % displayBufferSize_;
+
+    if (framesToCopy > 0) {
+        const float rmsL = static_cast<float>(std::sqrt(sumL / framesToCopy));
+        const float rmsR = static_cast<float>(std::sqrt(sumR / framesToCopy));
+        leftPeak_.store(peakL);
+        rightPeak_.store(peakR);
+        leftRMS_.store(rmsL);
+        rightRMS_.store(rmsR);
+    }
+
+    setDirty(true);
 }
 
 void AudioVisualizer::setAudioManager(Nomad::Audio::AudioDeviceManager* manager) {
@@ -605,8 +694,10 @@ void AudioVisualizer::renderCompactMeter(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
     
     // Very slim vertical meters - side by side
-    float meterHeight = bounds.height - 4;  // Less padding since no labels
-    float meterWidth = (bounds.width - 6) / 2; // Two very slim meters side by side
+    const float padding = 2.0f;
+    const float gap = 2.0f;
+    float meterHeight = bounds.height - padding * 2.0f;
+    float meterWidth = (bounds.width - padding * 2.0f - gap) / 2.0f;
     
     // Use smoothed values for fluid animation
     float leftRMSSmooth = leftRMSSmoothed_.load();
@@ -615,62 +706,151 @@ void AudioVisualizer::renderCompactMeter(NUIRenderer& renderer) {
     float rightPeakHold = rightPeakHold_.load(); // Use peak hold, not smoothed peak
     
     // Left channel meter (very slim) - CYAN
-    NUIRect leftMeter(bounds.x + 2, bounds.y + 2, meterWidth, meterHeight);
+    NUIRect leftMeter(bounds.x + padding, bounds.y + padding, meterWidth, meterHeight);
     renderLevelBar(renderer, leftMeter, leftRMSSmooth, leftPeakHold, primaryColor_);
     
     // Right channel meter (very slim) - MAGENTA
-    NUIRect rightMeter(bounds.x + 4 + meterWidth, bounds.y + 2, meterWidth, meterHeight);
+    NUIRect rightMeter(bounds.x + padding + meterWidth + gap, bounds.y + padding, meterWidth, meterHeight);
     renderLevelBar(renderer, rightMeter, rightRMSSmooth, rightPeakHold, secondaryColor_);
-    
-    // NOTE: Removed L/R text labels for cleaner look
-    
-    // Add peak indicators with proper scaling
-    if (showPeakHold_) {
-        float scaledLeftPeak = std::min(1.0f, leftPeakHold_ * 2.0f); // Scale 0.5f -> 1.0f
-        float scaledRightPeak = std::min(1.0f, rightPeakHold_ * 2.0f); // Scale 0.5f -> 1.0f
-        float leftPeakHeight = scaledLeftPeak * leftMeter.height;
-        float rightPeakHeight = scaledRightPeak * rightMeter.height;
-        
-        // Left peak
-        renderer.drawLine(
-            NUIPoint(leftMeter.x, leftMeter.y + leftMeter.height - leftPeakHeight),
-            NUIPoint(leftMeter.x + leftMeter.width, leftMeter.y + leftMeter.height - leftPeakHeight),
-            2, primaryColor_.withAlpha(0.8f)
-        );
-        
-        // Right peak
-        renderer.drawLine(
-            NUIPoint(rightMeter.x, rightMeter.y + rightMeter.height - rightPeakHeight),
-            NUIPoint(rightMeter.x + rightMeter.width, rightMeter.y + rightMeter.height - rightPeakHeight),
-            2, secondaryColor_.withAlpha(0.8f)
-        );
+
+    // Clip flash at the top of each meter
+    if (leftClipIndicator_ > 0.02f) {
+        NUIRect clipRect(leftMeter.x, leftMeter.y - 1.0f, leftMeter.width, 3.0f);
+        renderer.fillRoundedRect(clipRect, 1.0f, NUIColor(1.0f, 0.15f, 0.15f, leftClipIndicator_));
     }
+    if (rightClipIndicator_ > 0.02f) {
+        NUIRect clipRect(rightMeter.x, rightMeter.y - 1.0f, rightMeter.width, 3.0f);
+        renderer.fillRoundedRect(clipRect, 1.0f, NUIColor(1.0f, 0.15f, 0.15f, rightClipIndicator_));
+    }
+}
+
+void AudioVisualizer::renderCompactWaveform(NUIRenderer& renderer) {
+    NUIRect bounds = getBounds();
+    if (bounds.isEmpty()) return;
+
+    const float centerY = bounds.y + bounds.height * 0.5f;
+    renderer.drawLine(NUIPoint(bounds.x, centerY),
+                      NUIPoint(bounds.x + bounds.width, centerY),
+                      1.0f, gridColor_.withAlpha(0.25f));
+
+    std::lock_guard<std::mutex> lock(audioDataMutex_);
+    if (displayBufferSize_ < 2) return;
+
+    std::vector<NUIPoint> points;
+    points.reserve(displayBufferSize_);
+
+    // Auto-gain so the mini scope "goes bonkers" with loud content.
+    float maxAbs = 0.0001f;
+    for (size_t i = 0; i < displayBufferSize_; ++i) {
+        const size_t idx = (currentSample_ + i) % displayBufferSize_;
+        const float s = (displayBuffer_[idx * 2] + displayBuffer_[idx * 2 + 1]) * 0.5f;
+        maxAbs = std::max(maxAbs, std::abs(s));
+    }
+    const float autoGain = std::clamp(0.9f / maxAbs, 1.0f, 8.0f);
+
+    const float halfH = bounds.height * 0.45f;
+    for (size_t i = 0; i < displayBufferSize_; ++i) {
+        const size_t idx = (currentSample_ + i) % displayBufferSize_;
+        const float s = (displayBuffer_[idx * 2] + displayBuffer_[idx * 2 + 1]) * 0.5f * autoGain;
+        const float x = bounds.x + (static_cast<float>(i) * bounds.width) /
+                                      static_cast<float>(displayBufferSize_ - 1);
+        const float y = centerY - s * halfH;
+        points.emplace_back(x, y);
+    }
+
+    const float t = 0.5f + 0.5f * std::sin(animationTime_ * 1.4f);
+    NUIColor waveColor = NUIColor::lerp(primaryColor_, secondaryColor_, t).withAlpha(0.9f);
+
+    const float energy = (leftRMSSmoothed_.load() + rightRMSSmoothed_.load()) * 0.5f;
+    const float glow = std::clamp(energy * 2.5f, 0.0f, 1.0f);
+    if (glow > 0.05f) {
+        const float radius = 6.0f;
+        NUIRect inner(bounds.x + radius,
+                      bounds.y + radius,
+                      bounds.width - radius * 2.0f,
+                      bounds.height - radius * 2.0f);
+        if (inner.width > 1.0f && inner.height > 1.0f) {
+            renderer.drawGlow(inner, radius, glow, waveColor);
+        }
+    }
+
+    renderer.drawPolyline(points.data(), static_cast<int>(points.size()), 1.5f, waveColor);
 }
 
 void AudioVisualizer::renderLevelBar(NUIRenderer& renderer, const NUIRect& bounds, float level, float peak, const NUIColor& color) {
     // Background
-    renderer.fillRoundedRect(bounds, 4, backgroundColor_.darkened(0.2f));
-    
-    // Aggressive scaling for better visibility
-    // Most music peaks around 0.1-0.3 RMS, so we scale it to fill the meter
-    float scaledLevel = std::min(1.0f, level * 5.0f); // Increased scaling from 3.0 to 5.0
-    float levelHeight = scaledLevel * bounds.height;
-    
-    // Draw the level bar (colored - cyan/magenta)
-    if (levelHeight > 1.0f) { // Only draw if visible
-        NUIRect levelRect(bounds.x, bounds.y + bounds.height - levelHeight, bounds.width, levelHeight);
-        renderer.fillRoundedRect(levelRect, 4, color);
+    renderer.fillRoundedRect(bounds, 3.0f, backgroundColor_.darkened(0.25f));
+
+    auto linToNorm = [](float lin) -> float {
+        const float eps = 1e-6f;
+        const float dbMin = -60.0f;
+        float v = std::max(lin, eps);
+        float db = 20.0f * std::log10(v);
+        db = std::clamp(db, dbMin, 0.0f);
+        return (db - dbMin) / (-dbMin);
+    };
+
+    const float normLevel = linToNorm(level);
+    const float levelHeight = normLevel * bounds.height;
+    if (levelHeight > 0.5f) {
+        const float bottomY = bounds.y + bounds.height;
+        const float topY = bottomY - levelHeight;
+
+        const float dbMin = -60.0f;
+        const float warnDb = -12.0f;
+        const float clipDb = -3.0f;
+        const float warnNorm = (warnDb - dbMin) / (-dbMin);
+        const float clipNorm = (clipDb - dbMin) / (-dbMin);
+        const float warnY = bottomY - warnNorm * bounds.height;
+        const float clipY = bottomY - clipNorm * bounds.height;
+
+        // Safe zone colors (channel-tinted)
+        const NUIColor safeBottom = color.darkened(0.25f);
+        const NUIColor safeTop = color;
+
+        // Warning zone shifts toward yellow/orange
+        const NUIColor warnBase = NUIColor::lerp(color, NUIColor(1.0f, 0.85f, 0.25f), 0.8f);
+        const NUIColor warnBottom = warnBase.darkened(0.1f);
+        const NUIColor warnTop = warnBase.lightened(0.1f);
+
+        // Clip zone is red-hot
+        const NUIColor clipBottom = NUIColor(1.0f, 0.3f, 0.2f);
+        const NUIColor clipTop = NUIColor(1.0f, 0.05f, 0.05f);
+
+        // Safe segment
+        float safeSegTop = std::max(topY, warnY);
+        if (safeSegTop < bottomY) {
+            NUIRect safeRect(bounds.x, safeSegTop, bounds.width, bottomY - safeSegTop);
+            renderer.fillRectGradient(safeRect, safeTop, safeBottom, true);
+        }
+
+        // Warn segment
+        if (topY < warnY) {
+            float warnSegBottom = warnY;
+            float warnSegTop = std::max(topY, clipY);
+            if (warnSegTop < warnSegBottom) {
+                NUIRect warnRect(bounds.x, warnSegTop, bounds.width, warnSegBottom - warnSegTop);
+                renderer.fillRectGradient(warnRect, warnTop, warnBottom, true);
+            }
+        }
+
+        // Clip segment
+        if (topY < clipY) {
+            NUIRect clipRect(bounds.x, topY, bounds.width, clipY - topY);
+            renderer.fillRectGradient(clipRect, clipTop, clipBottom, true);
+        }
     }
-    
-    // Peak hold indicator (white line at the maximum)
-    if (showPeakHold_ && peak > 0.001f) {
-        float scaledPeak = std::min(1.0f, peak * 5.0f); // Same scaling as level
-        float peakHeight = scaledPeak * bounds.height;
-        NUIRect peakRect(bounds.x, bounds.y + bounds.height - peakHeight, bounds.width, 2);
-        renderer.fillRoundedRect(peakRect, 1, NUIColor::white());
+
+    // Peak hold indicator (thin white line)
+    if (showPeakHold_ && peak > 0.0001f) {
+        const float normPeak = linToNorm(peak);
+        const float peakY = bounds.y + bounds.height - normPeak * bounds.height;
+        renderer.drawLine(NUIPoint(bounds.x, peakY), NUIPoint(bounds.x + bounds.width, peakY),
+                          1.5f, NUIColor::white().withAlpha(0.9f));
     }
-    
-    // No scale markers - clean look
+
+    // Subtle edge highlight
+    renderer.strokeRoundedRect(bounds, 3.0f, 1.0f, gridColor_.withAlpha(0.35f));
 }
 
 void AudioVisualizer::renderSpectrumBar(NUIRenderer& renderer, const NUIRect& bounds, float magnitude, const NUIColor& color) {

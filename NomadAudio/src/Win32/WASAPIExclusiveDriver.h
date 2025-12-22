@@ -2,12 +2,25 @@
 #pragma once
 
 #include "NativeAudioDriver.h"
-#include <windows.h>
-#include <mmdeviceapi.h>
-#include <audioclient.h>
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include "NativeAudioDriver.h"
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <cstdint>
+#include <vector>
+#include <string>
+#include <functional>
+
+// Forward declarations for Windows types (implementation details)
+// Note: Using opaque pointers to avoid Windows type leaks
+struct IMMDeviceEnumerator;
+struct IMMDevice;
+struct IAudioClient;
+struct IAudioRenderClient;
+struct IAudioCaptureClient;
 
 namespace Nomad {
 namespace Audio {
@@ -29,6 +42,7 @@ public:
     ~WASAPIExclusiveDriver() override;
 
     // NativeAudioDriver interface
+    std::string getDisplayName() const override { return "WASAPI Exclusive"; }
     AudioDriverType getDriverType() const override { return AudioDriverType::WASAPI_EXCLUSIVE; }
     DriverCapability getCapabilities() const override;
     DriverState getState() const override { return m_state; }
@@ -42,17 +56,26 @@ public:
     float getTypicalLatencyMs() const override { return 5.0f; }
     void setErrorCallback(ErrorCallback callback) override { m_errorCallback = callback; }
 
+    bool supportsExclusiveMode() const override { return true; }
+
     // AudioDriver interface
-    std::vector<AudioDeviceInfo> getDevices() override;
-    uint32_t getDefaultOutputDevice() override;
-    uint32_t getDefaultInputDevice() override;
+    virtual std::vector<AudioDeviceInfo> getDevices() const override;
+
+    // Native implementation details
+    uint32_t getDefaultOutputDevice();
+    uint32_t getDefaultInputDevice();
     bool openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) override;
     void closeStream() override;
     bool startStream() override;
     void stopStream() override;
     bool isStreamRunning() const override { return m_isRunning; }
     double getStreamLatency() const override;
-    uint32_t getStreamSampleRate() const override { return m_waveFormat ? m_waveFormat->nSamplesPerSec : 0; }
+    uint32_t getStreamSampleRate() const override {
+        return isStreamRunning() ? m_actualSampleRate : 0;
+    }
+    uint32_t getStreamBufferSize() const override {
+        return isStreamRunning() ? m_bufferFrameCount : 0;
+    }
 
     /**
      * @brief Check if exclusive mode is available for a device
@@ -65,18 +88,18 @@ public:
     std::vector<uint32_t> getSupportedExclusiveSampleRates(uint32_t deviceId) const;
 
 private:
-    // COM interfaces
-    IMMDeviceEnumerator* m_deviceEnumerator = nullptr;
-    IMMDevice* m_device = nullptr;
-    IAudioClient* m_audioClient = nullptr;
-    IAudioRenderClient* m_renderClient = nullptr;
-    IAudioCaptureClient* m_captureClient = nullptr;
+    // COM interfaces (opaque pointers - Windows-specific implementation)
+    void* m_deviceEnumerator = nullptr;  // IMMDeviceEnumerator*
+    void* m_device = nullptr;  // IMMDevice*
+    void* m_audioClient = nullptr;  // IAudioClient*
+    void* m_renderClient = nullptr;  // IAudioRenderClient*
+    void* m_captureClient = nullptr;  // IAudioCaptureClient*
 
     // Thread management
     std::thread m_audioThread;
     std::atomic<bool> m_isRunning{ false };
     std::atomic<bool> m_shouldStop{ false };
-    HANDLE m_audioEvent = nullptr;
+    void* m_audioEvent = nullptr;  // HANDLE (opaque)
 
     // State
     DriverState m_state = DriverState::UNINITIALIZED;
@@ -91,7 +114,7 @@ private:
     void* m_userData = nullptr;
 
     // Format information
-    WAVEFORMATEX* m_waveFormat = nullptr;
+    void* m_waveFormat = nullptr;  // WAVEFORMATEX* (opaque)
     uint32_t m_bufferFrameCount = 0;
     uint32_t m_actualSampleRate = 0;
     
@@ -100,22 +123,24 @@ private:
     uint32_t m_rampDurationSamples = 0;
     bool m_isRamping = false;
 
-    // Performance monitoring
-    LARGE_INTEGER m_perfFreq;
-    LARGE_INTEGER m_lastCallbackTime;
+    // Performance monitoring (Windows-specific, only accessed in .cpp)
+    // Using uint64_t to avoid Windows types in header
+    uint64_t m_perfFreq = 0;
+    uint64_t m_lastCallbackTime = 0;
 
     // Internal methods
     bool initializeCOM();
     void shutdownCOM();
-    bool enumerateDevices(std::vector<AudioDeviceInfo>& devices);
+    bool enumerateDevices(std::vector<AudioDeviceInfo>& devices) const;
     bool openDevice(uint32_t deviceId);
     void closeDevice();
     bool initializeAudioClient();
     bool initializeSharedFallback();
-    bool findBestExclusiveFormat(WAVEFORMATEX** format);
-    bool testExclusiveFormat(uint32_t sampleRate, uint32_t channels, WAVEFORMATEX** format);
-    bool testExclusiveFormatPCM(uint32_t sampleRate, uint32_t channels, uint32_t bitsPerSample, WAVEFORMATEX** format);
+    bool findBestExclusiveFormat(void** format);  // WAVEFORMATEX** (opaque)
+    bool testExclusiveFormat(uint32_t sampleRate, uint32_t channels, void** format);  // WAVEFORMATEX** (opaque)
+    bool testExclusiveFormatPCM(uint32_t sampleRate, uint32_t channels, uint32_t bitsPerSample, void** format);  // WAVEFORMATEX** (opaque)
     void audioThreadProc();
+    void fillAudioBufferWithSilence();
     void setError(DriverError error, const std::string& message);
     void updateStatistics(double callbackTimeUs);
     bool setThreadPriority();

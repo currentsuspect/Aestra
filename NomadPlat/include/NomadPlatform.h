@@ -100,6 +100,7 @@ public:
     virtual void restore() = 0;
     virtual bool isMaximized() const = 0;
     virtual bool isMinimized() const = 0;
+    virtual void requestClose() = 0;  // Request window close (triggers close callback)
 
     // Fullscreen
     virtual void setFullscreen(bool fullscreen) = 0;
@@ -116,6 +117,14 @@ public:
 
     // DPI support
     virtual float getDPIScale() const = 0;
+    
+    // Cursor control
+    // IMPORTANT: All platform window implementations (Win32, X11, Cocoa) MUST override this method.
+    // Expected behavior: Show/hide cursor immediately with no delay.
+    // Thread requirements: MUST be called from the same thread that created the window (window thread).
+    // Cross-thread calls will cause cursor display count desynchronization and broken cursor state.
+    // Implementation should update cursor visibility state immediately and persist across window state changes.
+    virtual void setCursorVisible(bool visible) = 0;
     
     // Modifier key state query (for wheel events that need modifier info)
     virtual KeyModifiers getCurrentModifiers() const = 0;
@@ -156,6 +165,9 @@ public:
     virtual std::string getPlatformName() const = 0;
     virtual int getProcessorCount() const = 0;
     virtual size_t getSystemMemory() const = 0;  // In bytes
+    
+    // Paths
+    virtual std::string getAppDataPath(const std::string& appName) const = 0;  // Returns platform-specific app data directory
 };
 
 // =============================================================================
@@ -173,8 +185,37 @@ public:
     static bool initialize();
     static void shutdown();
 
+    // Threading
+    enum class ThreadPriority {
+        Low,
+        Normal,
+        High,
+        RealtimeAudio // Maps to MMCSS "Pro Audio" on Windows
+    };
+
+    // Set priority for the CURRENT thread
+    static bool setCurrentThreadPriority(ThreadPriority priority);
+
 private:
     static IPlatformUtils* s_utils;
-};
+
+    // RAII scope for Realtime Audio threads (MMCSS on Windows)
+    // Usage: Create this ONLY on the main audio callback thread.
+    // WARNING: Do NOT create this in a loop or per-callback! Create once per thread lifetime.
+    class AudioThreadScope {
+    public:
+        AudioThreadScope();
+        ~AudioThreadScope();
+
+        // Prevent copying
+        AudioThreadScope(const AudioThreadScope&) = delete;
+        AudioThreadScope& operator=(const AudioThreadScope&) = delete;
+
+        bool isValid() const { return m_valid; }
+
+    private:
+        void* m_handle = nullptr; // Windows: HANDLE (MMCSS)
+        bool m_valid = false;
+    };};
 
 } // namespace Nomad

@@ -1,10 +1,8 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "AudioDriver.h"
-#include "NativeAudioDriver.h"
+#include "IAudioDriver.h"
 #include "AudioDriverTypes.h"
-#include "ASIODriverInfo.h"
 #include <memory>
 #include <functional>
 #include <vector>
@@ -87,6 +85,13 @@ public:
      * Returns 0 if no active stream.
      */
     uint32_t getStreamSampleRate() const;
+
+    /**
+     * @brief Get the actual stream buffer size (post-backend)
+     *
+     * Returns 0 if no active stream.
+     */
+    uint32_t getStreamBufferSize() const;
     
     /**
      * @brief Get latency compensation values for recording
@@ -179,19 +184,45 @@ public:
     bool isUsingFallbackDriver() const;
 
     /**
-     * @brief Get ASIO drivers for display purposes
+     * @brief Callback type for driver mode change notifications
+     * @param preferredType The driver type that was requested
+     * @param actualType The driver type that was actually used
+     * @param reason Human-readable explanation of why fallback occurred
      */
-    std::vector<ASIODriverInfo> getASIODrivers() const;
+    using DriverModeChangeCallback = std::function<void(AudioDriverType preferredType, 
+                                                         AudioDriverType actualType, 
+                                                         const std::string& reason)>;
+    
+    /**
+     * @brief Set callback for driver mode changes (fallback notifications)
+     * @param callback Function to call when driver mode changes
+     * 
+     * This callback is invoked when:
+     * - Exclusive mode was requested but Shared mode is used (conflict)
+     * - Any automatic driver fallback occurs
+     * 
+     * Use this to show info bars or notifications in the UI.
+     */
+    void setDriverModeChangeCallback(DriverModeChangeCallback callback) { 
+        m_driverModeChangeCallback = callback; 
+    }
+    
+    /**
+     * @brief Get reason for current fallback (if any)
+     * @return Human-readable reason, or empty string if using preferred driver
+     */
+    std::string getFallbackReason() const { return m_fallbackReason; }
+
+    /**
+     * @brief Add a driver to the manager (Dependency Injection)
+     * @param driver Unique pointer to the driver instance
+     */
+    void addDriver(std::unique_ptr<IAudioDriver> driver);
 
     /**
      * @brief Get active driver statistics
      */
     DriverStatistics getDriverStatistics() const;
-
-    /**
-     * @brief Get ASIO driver info message
-     */
-    std::string getASIOInfo() const;
 
     /**
      * @brief Enable/disable auto-buffer scaling on underruns
@@ -208,19 +239,19 @@ public:
 
 private:
     // Driver management
-    std::unique_ptr<NativeAudioDriver> m_exclusiveDriver;
-    std::unique_ptr<NativeAudioDriver> m_sharedDriver;
-    NativeAudioDriver* m_activeDriver = nullptr;
+    std::vector<std::unique_ptr<IAudioDriver>> m_drivers;
+    IAudioDriver* m_activeDriver = nullptr;
     AudioDriverType m_preferredDriverType = AudioDriverType::WASAPI_EXCLUSIVE;  // Prefer Exclusive, auto-fallback to Shared if blocked
-    
-    // Legacy RtAudio support (fallback)
-    std::unique_ptr<AudioDriver> m_rtAudioDriver;
     
     AudioStreamConfig m_currentConfig;
     AudioCallback m_currentCallback;
     void* m_currentUserData;
     bool m_initialized;
     bool m_wasRunning;
+    
+    // Driver mode change notification
+    DriverModeChangeCallback m_driverModeChangeCallback;
+    std::string m_fallbackReason;
     
     // Auto-buffer scaling
     bool m_autoBufferScalingEnabled = false;
@@ -229,9 +260,14 @@ private:
     std::chrono::steady_clock::time_point m_lastUnderrunCheck;
     
     // Helper methods
-    bool tryDriver(NativeAudioDriver* driver, const AudioStreamConfig& config, 
+    bool tryDriver(IAudioDriver* driver, const AudioStreamConfig& config, 
                    AudioCallback callback, void* userData);
 };
+
+// =============================================================================
+// Registry Interface (Implemented by Platform Backend)
+// =============================================================================
+void RegisterPlatformDrivers(AudioDeviceManager& manager);
 
 } // namespace Audio
 } // namespace Nomad

@@ -4,6 +4,10 @@
 #include "../NomadUI/Core/NUIDragDrop.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
+#include "../NomadAudio/include/AudioFileValidator.h"
+#include <algorithm>
+#include <cmath>
+#include <map>
 
 // Remotery profiling (conditionally enabled via CMake)
 #ifdef NOMAD_ENABLE_REMOTERY
@@ -29,62 +33,16 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
         return;
     }
 
-    // Get theme colors for consistent styling
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-
-    // Create window control icons (lightweight SVGs instead of buttons)
-    // Close icon (Ã—)
-    const char* closeSvg = R"(
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
+    // Create add-track icon (SVG) for consistent header styling
+    const char* addTrackSvg = R"(
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14"/>
         </svg>
     )";
-    m_closeIcon = std::make_shared<NomadUI::NUIIcon>(closeSvg);
-    m_closeIcon->setIconSize(NomadUI::NUIIconSize::Small);
-    m_closeIcon->setColorFromTheme("textPrimary");
-    m_closeIcon->setVisible(true);
-    // Don't add as child - we'll render manually
-
-    // Minimize icon (âˆ’)
-    const char* minimizeSvg = R"(
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-    )";
-    m_minimizeIcon = std::make_shared<NomadUI::NUIIcon>(minimizeSvg);
-    m_minimizeIcon->setIconSize(NomadUI::NUIIconSize::Small);
-    m_minimizeIcon->setColorFromTheme("textPrimary");
-    m_minimizeIcon->setVisible(true);
-    // Don't add as child - we'll render manually
-
-    // Maximize icon (â–¡)
-    const char* maximizeSvg = R"(
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="6" y="6" width="12" height="12"/>
-        </svg>
-    )";
-    m_maximizeIcon = std::make_shared<NomadUI::NUIIcon>(maximizeSvg);
-    m_maximizeIcon->setIconSize(NomadUI::NUIIconSize::Small);
-    m_maximizeIcon->setColorFromTheme("textPrimary");
-    m_maximizeIcon->setVisible(true);
-    // Don't add as child - we'll render manually
-
-    // Create add track button
-    m_addTrackButton = std::make_shared<NomadUI::NUIButton>();
-    m_addTrackButton->setText("+");
-    m_addTrackButton->setOnClick([this]() {
-        onAddTrackClicked();
-    });
-    // Set colors: grey on hover, white on click
-    NomadUI::NUIColor buttonBg(0.15f, 0.15f, 0.18f, 1.0f);
-    NomadUI::NUIColor buttonHover(0.25f, 0.25f, 0.28f, 1.0f);
-    NomadUI::NUIColor buttonPressed(0.15f, 0.15f, 0.18f, 1.0f);
-    m_addTrackButton->setBackgroundColor(buttonBg);
-    m_addTrackButton->setTextColor(themeManager.getColor("textPrimary"));
-    m_addTrackButton->setHoverColor(buttonHover);
-    m_addTrackButton->setPressedColor(buttonPressed);
-    addChild(m_addTrackButton);
+    m_addTrackIcon = std::make_shared<NomadUI::NUIIcon>(addTrackSvg);
+    m_addTrackIcon->setIconSize(16.0f, 16.0f);
+    m_addTrackIcon->setColorFromTheme("textPrimary");
+    m_addTrackIcon->setVisible(true);
     
     // Create scrollbar
     m_scrollbar = std::make_shared<NomadUI::NUIScrollbar>(NomadUI::NUIScrollbar::Orientation::Vertical);
@@ -95,9 +53,62 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
     
     // Create horizontal scrollbar for timeline panning
     m_horizontalScrollbar = std::make_shared<NomadUI::NUIScrollbar>(NomadUI::NUIScrollbar::Orientation::Horizontal);
+    m_horizontalScrollbar->setStyle(NomadUI::NUIScrollbar::Style::Timeline);
+    m_horizontalScrollbar->setThumbSize(24.0); // Initial size, will be updated
+    // We need to set the height of the scrollbar component itself, not just thumb size
+    // The scrollbar size is set in layout code usually.
+    
     m_horizontalScrollbar->setOnScroll([this](double position) {
         onHorizontalScroll(position);
     });
+    
+    m_horizontalScrollbar->setOnRangeChange([this](double start, double size) {
+        // Calculate grid width (viewport)
+        NomadUI::NUIRect bounds = getBounds();
+        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        const auto& layout = themeManager.getLayoutDimensions();
+        float scrollbarWidth = 15.0f;
+        float trackWidth = bounds.width - scrollbarWidth;
+        float controlAreaWidth = layout.trackControlsWidth;
+        float gridWidth = trackWidth - (controlAreaWidth + 5.0f);
+        
+        if (gridWidth <= 0 || size <= 0) return;
+        
+        // Calculate scale factor
+        // size is the amount of content (in current pixels) that we WANT to fit in gridWidth
+        double scaleFactor = gridWidth / size;
+        
+        // Update pixels per beat
+        float newPixelsPerBeat = m_pixelsPerBeat * static_cast<float>(scaleFactor);
+        
+        // Clamp zoom
+        newPixelsPerBeat = std::clamp(newPixelsPerBeat, 10.0f, 500.0f);
+        
+        // Update scroll offset
+        // start is the new start position in current pixels. Convert to new pixels.
+        // Note: start is in the same units as size (current pixels)
+        float newScrollOffset = static_cast<float>(start) * (newPixelsPerBeat / m_pixelsPerBeat);
+        
+        // Sync both current and target zoom so smooth-zoom animator
+        // doesn't immediately lerp us back to the previous target.
+        m_pixelsPerBeat = newPixelsPerBeat;
+        m_targetPixelsPerBeat = newPixelsPerBeat;
+        m_timelineScrollOffset = newScrollOffset;
+        
+        // Update UI
+        for (auto& trackUI : m_trackUIComponents) {
+            trackUI->setPixelsPerBeat(m_pixelsPerBeat);
+            trackUI->setTimelineScrollOffset(m_timelineScrollOffset);
+        }
+        
+        if (m_pianoRollPanel) {
+             m_pianoRollPanel->setPixelsPerBeat(m_pixelsPerBeat);
+        }
+        
+        updateHorizontalScrollbar();
+        invalidateCache();
+    });
+    
     addChild(m_horizontalScrollbar);
 
     // Create UI components for existing tracks
@@ -196,90 +207,96 @@ void TrackManagerUI::setCurrentTool(PlaylistTool tool) {
         m_showSplitCursor = (tool == PlaylistTool::Split);
         m_cacheInvalidated = true;  // Redraw toolbar with new selection
         
+        // Restore cursor visibility when switching away from Split tool
+        if (tool != PlaylistTool::Split && m_onCursorVisibilityChanged) {
+            m_onCursorVisibilityChanged(true);
+        }
+        
         const char* toolNames[] = {"Select", "Split", "MultiSelect", "Loop", "Draw", "Erase", "Mute", "Slip"};
         Log::info("Active tool changed to: " + std::string(toolNames[static_cast<int>(tool)]));
     }
 }
 
 void TrackManagerUI::updateToolbarBounds() {
-    // Position toolbar at top-left of grid area, aligned with header
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-    const auto& layout = themeManager.getLayoutDimensions();
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-    float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
-    float gridStartX = controlAreaWidth + 5;
-    
     NomadUI::NUIRect bounds = getBounds();
-    // Align toolbar with the ruler/header area to feel "attached"
-    // Move it slightly left to overlap the control area/grid boundary, acting as a bridge
-    float toolbarX = bounds.x + gridStartX - 10.0f; 
-    float toolbarY = bounds.y + 2.0f;  // Tucked into the top header space
-    float iconSize = 22.0f;  // Smaller, more compact icons
-    float iconSpacing = 2.0f;  // Tight spacing
-    float toolbarPadding = 4.0f;
-    
-    // Calculate toolbar width based on number of tools
-    int numTools = 4;  // Select, Split, MultiSelect, Loop
-    float toolbarWidth = (iconSize * numTools) + (iconSpacing * (numTools - 1)) + (toolbarPadding * 2);
-    float toolbarHeight = iconSize + (toolbarPadding * 2);
-    
+
+    constexpr float headerHeight = 38.0f; // Unified playlist header strip
+    const float iconSpacing = themeManager.getSpacing("xs"); // 4px grid
+    const float innerPad = themeManager.getSpacing("s"); // 8px
+
+    // Toolbar is docked inside the header, to the right of the + button.
+    const float plusSize = headerHeight - themeManager.getSpacing("xs") * 2.0f; // 30px
+    const float plusX = bounds.x + innerPad;
+    const float plusY = bounds.y + (headerHeight - plusSize) * 0.5f;
+    m_addTrackBounds = NomadUI::NUIRect(plusX, plusY, plusSize, plusSize);
+
+    const float iconSize = plusSize; // Keep all toolbar buttons consistent with +
+    float toolbarX = plusX + plusSize + innerPad;
+    float toolbarY = plusY;
+
+    const int numTools = 4;
+    float toolbarWidth = (iconSize * numTools) + (iconSpacing * (numTools - 1));
+    float toolbarHeight = iconSize;
+
     m_toolbarBounds = NomadUI::NUIRect(toolbarX, toolbarY, toolbarWidth, toolbarHeight);
-    
-    // Position individual icon bounds
-    float iconX = toolbarX + toolbarPadding;
-    float iconY = toolbarY + toolbarPadding;
-    
+
+    float iconX = toolbarX;
+    float iconY = toolbarY;
+
     m_selectToolBounds = NomadUI::NUIRect(iconX, iconY, iconSize, iconSize);
     iconX += iconSize + iconSpacing;
-    
     m_splitToolBounds = NomadUI::NUIRect(iconX, iconY, iconSize, iconSize);
     iconX += iconSize + iconSpacing;
-    
     m_multiSelectToolBounds = NomadUI::NUIRect(iconX, iconY, iconSize, iconSize);
     iconX += iconSize + iconSpacing;
-    
     m_loopToolBounds = NomadUI::NUIRect(iconX, iconY, iconSize, iconSize);
 }
 
 void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
     // Update bounds before rendering
     updateToolbarBounds();
-    
-    // GLASSMORPHISM POLISH
-    // 1. Drop Shadow for depth
-    renderer.drawShadow(m_toolbarBounds, 0.0f, 4.0f, 12.0f, NomadUI::NUIColor(0.0f, 0.0f, 0.0f, 0.5f));
 
-    // 2. Glassy Background (Semi-transparent dark with slight blue tint)
-    // Using 0-1 float range for colors
-    renderer.fillRoundedRect(m_toolbarBounds, 6.0f, NomadUI::NUIColor(30.0f/255.0f, 30.0f/255.0f, 35.0f/255.0f, 0.9f));
-    
-    // 3. Crisp Border (Subtle highlight on top/left, shadow on bottom/right implies 3D, but simple stroke is fine for now)
-    renderer.strokeRoundedRect(m_toolbarBounds, 6.0f, 1.0f, NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.15f));
-    
+    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    const float radius = themeManager.getRadius("m"); // 8px buttons
+    const auto activeBg = themeManager.getColor("primary").withAlpha(0.25f);
+    const auto hoverBg = themeManager.getColor("hover").withAlpha(0.6f);
+
+    // Add-track button (left)
+    if (m_addTrackHovered) {
+        renderer.fillRoundedRect(m_addTrackBounds, radius, hoverBg);
+    }
+    if (m_addTrackIcon) {
+        const float iconSz = 16.0f;
+        NomadUI::NUIRect iconRect(
+            std::round(m_addTrackBounds.x + (m_addTrackBounds.width - iconSz) * 0.5f),
+            std::round(m_addTrackBounds.y + (m_addTrackBounds.height - iconSz) * 0.5f),
+            iconSz, iconSz
+        );
+        m_addTrackIcon->setBounds(iconRect);
+        m_addTrackIcon->setColorFromTheme("textPrimary");
+        m_addTrackIcon->onRender(renderer);
+    }
+
     // Helper lambda to draw icon with selection state
     auto drawToolIcon = [&](std::shared_ptr<NomadUI::NUIIcon>& icon, const NomadUI::NUIRect& bounds, PlaylistTool tool, bool hovered) {
         bool isActive = (m_currentTool == tool);
         
         // Draw selection highlight background
         if (isActive) {
-            // Active tool gets accent color + Glow
-            NomadUI::NUIColor accentColor(187.0f/255.0f, 134.0f/255.0f, 252.0f/255.0f, 0.8f);
-            renderer.drawGlow(bounds, 4.0f, 0.5f, accentColor);
-            renderer.fillRoundedRect(bounds, 4.0f, accentColor);  // Purple accent
+            renderer.fillRoundedRect(bounds, radius, activeBg);
         } else if (hovered) {
             // Hover state
-            renderer.fillRoundedRect(bounds, 4.0f, NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.15f)); // Lighter hover
+            renderer.fillRoundedRect(bounds, radius, hoverBg);
         }
         
         // Draw icon
         if (icon) {
-            // Small padding around icon
-            float padding = 2.0f;
+            const float iconSz = 16.0f;
             NomadUI::NUIRect iconRect(
-                bounds.x + padding,
-                bounds.y + padding,
-                bounds.width - padding * 2,
-                bounds.height - padding * 2
+                std::round(bounds.x + (bounds.width - iconSz) * 0.5f),
+                std::round(bounds.y + (bounds.height - iconSz) * 0.5f),
+                iconSz, iconSz
             );
             icon->setBounds(iconRect);
             icon->onRender(renderer);
@@ -294,12 +311,10 @@ void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
 }
 
 bool TrackManagerUI::handleToolbarClick(const NomadUI::NUIPoint& position) {
-    // Check if click is within toolbar bounds
-    if (!m_toolbarBounds.contains(position)) {
-        return false;
+    if (m_addTrackBounds.contains(position)) {
+        onAddTrackClicked();
+        return true;
     }
-    
-    // Check each icon
     if (m_selectToolBounds.contains(position)) {
         setCurrentTool(PlaylistTool::Select);
         return true;
@@ -316,50 +331,91 @@ bool TrackManagerUI::handleToolbarClick(const NomadUI::NUIPoint& position) {
         setCurrentTool(PlaylistTool::Loop);
         return true;
     }
-    
-    return true;  // Consumed by toolbar area even if no icon hit
+
+    return false;
 }
 
 void TrackManagerUI::renderSplitCursor(NomadUI::NUIRenderer& renderer, const NomadUI::NUIPoint& position) {
     // Only render if split tool is active
-    if (m_currentTool != PlaylistTool::Split) return;
+    if (m_currentTool != PlaylistTool::Split) {
+        // Ensure cursor is visible when not in split mode
+        if (m_cursorHidden && m_onCursorVisibilityChanged) {
+            m_cursorHidden = false;
+            m_onCursorVisibilityChanged(true);
+        }
+        return;
+    }
     
     // Calculate grid bounds for checking
     NomadUI::NUIRect bounds = getBounds();
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-    float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
+    float controlAreaWidth = layout.trackControlsWidth;
     float gridStartX = bounds.x + controlAreaWidth + 5;
-    float headerHeight = 30.0f;
-    float rulerHeight = 20.0f;
-    float horizontalScrollbarHeight = 15.0f;
+    float headerHeight = 38.0f;
+    float rulerHeight = 28.0f;
+    float horizontalScrollbarHeight = 24.0f;
     float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
     
     NomadUI::NUIRect gridBounds(gridStartX, trackAreaTop, 
                                  bounds.width - controlAreaWidth - 20.0f, 
                                  bounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight);
     
-    if (!gridBounds.contains(position)) return;
+    // If mouse is outside grid, restore cursor and return
+    if (!gridBounds.contains(position)) {
+        if (m_cursorHidden && m_onCursorVisibilityChanged) {
+            m_cursorHidden = false;
+            m_onCursorVisibilityChanged(true);  // Show cursor when outside grid
+        }
+        return;
+    }
     
-    // Draw vertical dotted line from top to bottom of grid at mouse X
+    // Mouse is inside grid - ALWAYS hide system cursor and show scissors
+    if (!m_cursorHidden && m_onCursorVisibilityChanged) {
+        m_cursorHidden = true;
+        m_onCursorVisibilityChanged(false);  // Hide cursor
+    }
+    
+    // Find the clip directly under the cursor (both X AND Y position)
     float lineX = position.x;
-    float lineTop = gridBounds.y;
-    float lineBottom = gridBounds.y + gridBounds.height;
-    
-    // Draw dashed line segments
+    float lineY = position.y;
     NomadUI::NUIColor splitColor(255, 107, 107, 200);  // Coral red
     float dashLength = 6.0f;
     float gapLength = 4.0f;
-    float y = lineTop;
     
-    while (y < lineBottom) {
-        float dashEnd = std::min(y + dashLength, lineBottom);
-        renderer.drawLine(NomadUI::NUIPoint(lineX, y), NomadUI::NUIPoint(lineX, dashEnd), 2.0f, splitColor);
-        y = dashEnd + gapLength;
+    // Check each track for the clip directly under cursor (must match both X and Y)
+    for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
+        auto& trackUI = m_trackUIComponents[i];
+        if (!trackUI) continue;
+        
+        auto track = trackUI->getTrack();
+        if (!track || track->getAudioData().empty()) continue;
+        
+        // Calculate clip bounds for this track
+        NomadUI::NUIRect trackBounds = trackUI->getBounds();
+        float clipStartPixel = gridStartX + static_cast<float>(track->getStartPositionInTimeline() * m_pixelsPerBeat * (120.0 / 60.0)) - m_timelineScrollOffset;
+        float clipWidth = static_cast<float>(track->getDuration() * m_pixelsPerBeat * (120.0 / 60.0));
+        
+        NomadUI::NUIRect clipBounds(clipStartPixel, trackBounds.y, clipWidth, trackBounds.height);
+        
+        // Check if mouse is within this clip's bounds (BOTH X and Y)
+        // Only draw split line on the clip that's directly under the cursor
+        if (clipBounds.contains(NomadUI::NUIPoint(lineX, lineY))) {
+            // Draw dotted line only within this specific clip
+            float lineTop = clipBounds.y;
+            float lineBottom = clipBounds.y + clipBounds.height;
+            
+            float y = lineTop;
+            while (y < lineBottom) {
+                float dashEnd = std::min(y + dashLength, lineBottom);
+                renderer.drawLine(NomadUI::NUIPoint(lineX, y), NomadUI::NUIPoint(lineX, dashEnd), 2.0f, splitColor);
+                y = dashEnd + gapLength;
+            }
+            break;  // Only one clip can be directly under cursor, so stop after finding it
+        }
     }
     
-    // Draw small scissors icon at cursor position
+    // Always draw scissors icon at cursor position when in grid (Split tool)
     if (m_splitToolIcon) {
         NomadUI::NUIRect iconRect(position.x - 10, position.y - 10, 20, 20);
         m_splitToolIcon->setBounds(iconRect);
@@ -368,11 +424,42 @@ void TrackManagerUI::renderSplitCursor(NomadUI::NUIRenderer& renderer, const Nom
 }
 
 void TrackManagerUI::performSplitAtPosition(int trackIndex, double timeSeconds) {
-    // TODO: Implement split at position using track's trim functionality
     if (trackIndex < 0 || trackIndex >= static_cast<int>(m_trackUIComponents.size())) return;
     
-    Log::info("Split requested on track " + std::to_string(trackIndex) + " at time " + std::to_string(timeSeconds));
-    m_cacheInvalidated = true;
+    // Get the track at this index
+    auto track = m_trackManager->getTrack(trackIndex);
+    if (!track) {
+        Log::warning("Split failed: Track not found at index " + std::to_string(trackIndex));
+        return;
+    }
+    
+    // Convert timeline position to local track time
+    double trackStart = track->getStartPositionInTimeline();
+    double localTime = timeSeconds - trackStart;
+    
+    // Check if split point is within the track bounds
+    if (localTime <= 0.0 || localTime >= track->getDuration()) {
+        Log::info("Split point outside track bounds: " + std::to_string(localTime) + 
+                  "s (duration: " + std::to_string(track->getDuration()) + "s)");
+        return;
+    }
+    
+    // Perform the split using TrackManager
+    auto newTrack = m_trackManager->sliceClip(trackIndex, localTime);
+    
+    if (newTrack) {
+        Log::info("Successfully split track '" + track->getName() + 
+                  "' at " + std::to_string(timeSeconds) + "s (local: " + std::to_string(localTime) + "s)");
+        
+        // Mark project as modified
+        m_trackManager->markModified();
+        
+        // Refresh UI to show the new track
+        refreshTracks();
+        invalidateCache();
+    } else {
+        Log::warning("Split failed: TrackManager::sliceClip returned null");
+    }
 }
 
 // === INSTANT CLIP DRAGGING ===
@@ -562,98 +649,44 @@ void TrackManagerUI::onSplitRequested(TrackUIComponent* trackComp, double splitT
     auto track = trackComp->getTrack();
     if (!track || track->getAudioData().empty()) return;
     
-    // Get track info
-    double duration = track->getDuration();
-    double originalTimelinePos = track->getStartPositionInTimeline();
+    // Find the track index
+    int trackIndex = -1;
+    for (size_t i = 0; i < m_trackManager->getTrackCount(); ++i) {
+        if (m_trackManager->getTrack(i) == track) {
+            trackIndex = static_cast<int>(i);
+            break;
+        }
+    }
+    
+    if (trackIndex < 0) {
+        Log::warning("Split failed: Could not find track index");
+        return;
+    }
     
     // splitTime is already in audio-relative seconds (0 to duration)
     // Validate split time is within clip bounds
+    double duration = track->getDuration();
     if (splitTime <= 0.01 || splitTime >= duration - 0.01) {
         Log::warning("Split time outside clip bounds: " + std::to_string(splitTime) + 
                      " (duration=" + std::to_string(duration) + ")");
         return;
     }
     
-    // Get the original audio data
-    const auto& audioData = track->getAudioData();
-    uint32_t sampleRate = track->getSampleRate();
-    uint32_t numChannels = track->getNumChannels();
+    Log::info("Splitting track '" + track->getName() + "' at local time: " + std::to_string(splitTime));
     
-    if (numChannels == 0) numChannels = 1;  // Safety
-    if (sampleRate == 0) sampleRate = 44100;  // Safety
+    // Use TrackManager::sliceClip which handles lane index properly
+    auto newTrack = m_trackManager->sliceClip(static_cast<size_t>(trackIndex), splitTime);
     
-    // Calculate sample index for split - splitTime is in seconds from audio start
-    // For interleaved audio: sample_index = time_seconds * sampleRate * numChannels
-    size_t splitSample = static_cast<size_t>(splitTime * sampleRate) * numChannels;
-    // Round to nearest frame boundary
-    splitSample = (splitSample / numChannels) * numChannels;
-    
-    if (splitSample >= audioData.size() || splitSample == 0) {
-        Log::warning("Split sample index out of bounds: " + std::to_string(splitSample) + 
-                     " (audioData.size=" + std::to_string(audioData.size()) + ", splitTime=" + std::to_string(splitTime) + ")");
-        return;
-    }
-    
-    Log::info("Splitting clip at audio time: " + std::to_string(splitTime) + 
-              " (sample " + std::to_string(splitSample) + "/" + std::to_string(audioData.size()) + ")");
-    
-    // === CREATE NEW TRACK WITH SECOND HALF ===
-    
-    // Create new track for the right part
-    std::string newName = track->getName() + " (split)";
-    auto newTrack = m_trackManager->addTrack(newName);
-    
-    if (!newTrack) {
-        Log::error("Failed to create track for split");
-        return;
-    }
-    
-    // Copy the second half of audio data to new track
-    std::vector<float> rightHalf(audioData.begin() + splitSample, audioData.end());
-    uint32_t rightNumSamples = static_cast<uint32_t>(rightHalf.size() / numChannels);
-    
-    if (rightNumSamples > 0) {
-        newTrack->setAudioData(rightHalf.data(), rightNumSamples, sampleRate, numChannels);
-        // Position new track at: original timeline position + split time (splitTime is offset within audio)
-        double newTimelinePos = originalTimelinePos + splitTime;
-        newTrack->setStartPositionInTimeline(newTimelinePos);
-        newTrack->setTrimStart(0.0);  // New clip starts at beginning of its audio
+    if (newTrack) {
+        Log::info("Successfully split track - new track created with lane index: " + 
+                  std::to_string(newTrack->getLaneIndex()));
         
-        // Copy properties from original track
-        newTrack->setVolume(track->getVolume());
-        newTrack->setPan(track->getPan());
-        newTrack->setColor(track->getColor());
-        
-        Log::info("Right half: " + std::to_string(rightNumSamples) + " samples at timeline pos " + std::to_string(newTimelinePos));
+        // Refresh UI to show the new track
+        refreshTracks();
+        invalidateCache();
+    } else {
+        Log::warning("Split failed: TrackManager::sliceClip returned null");
     }
-    
-    // === TRIM ORIGINAL TRACK TO FIRST HALF ===
-    
-    // Create trimmed version of the original audio
-    std::vector<float> leftHalf(audioData.begin(), audioData.begin() + splitSample);
-    uint32_t leftNumSamples = static_cast<uint32_t>(leftHalf.size() / numChannels);
-    
-    if (leftNumSamples > 0) {
-        track->setAudioData(leftHalf.data(), leftNumSamples, sampleRate, numChannels);
-        // Keep original timeline position for left half
-        Log::info("Left half: " + std::to_string(leftNumSamples) + " samples at timeline pos " + std::to_string(originalTimelinePos));
-    }
-    
-    // Refresh tracks to show the new split
-    refreshTracks();
-    
-    // Scroll to the new track (at the bottom)
-    float totalHeight = m_trackUIComponents.size() * (m_trackHeight + m_trackSpacing);
-    float viewportHeight = getBounds().height - 100.0f; // Approximate header/ruler height
-    if (totalHeight > viewportHeight) {
-        m_scrollOffset = totalHeight - viewportHeight + m_trackHeight;
-        updateScrollbar();
-    }
-    
-    layoutTracks();
-    
-    Log::info("Clip split successfully! Total tracks now: " + std::to_string(m_trackManager->getTrackCount()));
-    Log::info("New track '" + newName + "' should be visible at bottom of track list");
 }
 
 void TrackManagerUI::togglePianoRoll() {
@@ -701,49 +734,24 @@ void TrackManagerUI::layoutTracks() {
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 
-    float headerHeight = 30.0f;
+    float headerHeight = 38.0f;
     float scrollbarWidth = 15.0f;
-    float iconSize = 20.0f; // Icon size
-    float iconPadding = 5.0f; // Padding around icons
     
     // Check if any panel is maximized (takes over full track area)
     bool pianoRollMaximized = m_showPianoRoll && m_pianoRollPanel && m_pianoRollPanel->isMaximized();
     bool sequencerMaximized = m_showSequencer && m_sequencerPanel && m_sequencerPanel->isMaximized();
     bool mixerMaximized = m_showMixer && m_mixerPanel && m_mixerPanel->isMaximized();
     
-    // Calculate available width (excluding mixer if visible and not maximized)
-    float availableWidth = bounds.width;
-    if (m_showMixer && m_mixerPanel && !mixerMaximized) {
-        float mixerPanelWidth = m_mixerPanel->isMinimized() ? m_mixerPanel->getTitleBarHeight() : m_mixerWidth;
-        availableWidth -= mixerPanelWidth;
-    }
-    
-    // Position window control icons (top-right corner of available space, centered in header)
-    // Store as RELATIVE bounds for hit testing (localPos is relative to component)
-    float iconY = (headerHeight - iconSize) / 2.0f;
-    float iconSpacing = iconSize + iconPadding;
-    
-    m_closeIconBounds = NomadUI::NUIRect(availableWidth - iconSize - iconPadding, iconY, iconSize, iconSize);
-    m_maximizeIconBounds = NomadUI::NUIRect(availableWidth - iconSize - iconPadding - iconSpacing, iconY, iconSize, iconSize);
-    m_minimizeIconBounds = NomadUI::NUIRect(availableWidth - iconSize - iconPadding - iconSpacing * 2, iconY, iconSize, iconSize);
-    
-    // Layout add track button (top-left)
-    float currentHeaderX = 0.0f;
-    if (m_addTrackButton) {
-        float buttonSize = 30.0f;
-        m_addTrackButton->setBounds(NUIAbsolute(bounds, 0.0f, 0.0f, buttonSize, buttonSize));
-        currentHeaderX += buttonSize + 5.0f;
-    }
+    // Header controls are laid out in updateToolbarBounds(); nothing to do here.
 
     // Calculate total content height
-    float rulerHeight = 20.0f; // Time ruler height
-    float horizontalScrollbarHeight = 15.0f;
+    float rulerHeight = 28.0f; // Time ruler height
+    float horizontalScrollbarHeight = 24.0f;
     float totalContentHeight = m_trackUIComponents.size() * (m_trackHeight + m_trackSpacing);
     
     // If a panel is maximized, it takes over the ENTIRE area (including title bar)
     if (pianoRollMaximized || mixerMaximized || sequencerMaximized) {
         // Hide track controls when a panel is maximized
-        if (m_addTrackButton) m_addTrackButton->setVisible(false);
         if (m_scrollbar) m_scrollbar->setVisible(false);
         if (m_horizontalScrollbar) m_horizontalScrollbar->setVisible(false);
         
@@ -788,7 +796,6 @@ void TrackManagerUI::layoutTracks() {
     
     // Normal layout (no maximized panels)
     // Show track controls ONLY if playlist is visible
-    if (m_addTrackButton) m_addTrackButton->setVisible(m_showPlaylist);
     if (m_scrollbar) m_scrollbar->setVisible(m_showPlaylist);
     if (m_horizontalScrollbar) m_horizontalScrollbar->setVisible(m_showPlaylist);
     
@@ -848,12 +855,58 @@ void TrackManagerUI::layoutTracks() {
 
     float currentY = headerHeight + horizontalScrollbarHeight + rulerHeight - m_scrollOffset; // Start below header, horizontal scrollbar, and ruler
 
-    // Layout track UI components (reserve space for mixer on right)
+    // === FL STUDIO STYLE LANE GROUPING ===
+    // Group tracks by their laneIndex - tracks with the same laneIndex share a visual row
+    // First track in each lane group becomes primary (draws controls), others are clips on that lane
+    
+    std::map<int32_t, std::vector<std::shared_ptr<TrackUIComponent>>> laneGroups;
+    std::map<int32_t, std::vector<std::shared_ptr<Track>>> laneTracks;
+    
+    // First pass: group tracks by lane index
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
         auto trackUI = m_trackUIComponents[i];
-        float trackWidth = bounds.width - scrollbarWidth - mixerSpace; // Account for scrollbar and mixer
+        auto track = trackUI->getTrack();
+        if (!track) continue;
         
-        trackUI->setBounds(NUIAbsolute(bounds, 0, currentY, trackWidth, m_trackHeight));
+        int32_t laneIndex = track->getLaneIndex();
+        if (laneIndex < 0) {
+            // Track has no lane index - treat it as its own lane (auto-assign based on visual order)
+            laneIndex = 10000 + static_cast<int32_t>(i);  // High number to place after grouped lanes
+        }
+        
+        laneGroups[laneIndex].push_back(trackUI);
+        laneTracks[laneIndex].push_back(track);
+    }
+    
+    // Second pass: layout each lane group
+    // Tracks with same laneIndex go on the same visual row
+    for (auto& [laneIndex, trackUIs] : laneGroups) {
+        if (trackUIs.empty()) continue;
+        
+        // First component in the lane is primary (draws controls)
+        auto primaryUI = trackUIs[0];
+        primaryUI->setIsPrimaryForLane(true);
+        primaryUI->clearLaneClips();
+        
+        // Add other tracks in this lane as additional clips
+        const auto& tracks = laneTracks[laneIndex];
+        for (size_t i = 1; i < tracks.size(); ++i) {
+            primaryUI->addLaneClip(tracks[i]);
+        }
+        
+        // Position primary at current Y (only primary is visible)
+        float trackWidth = bounds.width - scrollbarWidth - mixerSpace;
+        primaryUI->setBounds(NUIAbsolute(bounds, 0, currentY, trackWidth, m_trackHeight));
+        primaryUI->setVisible(m_showPlaylist);
+        
+        // Hide secondary UIs (their clips are rendered by primary)
+        for (size_t i = 1; i < trackUIs.size(); ++i) {
+            trackUIs[i]->setIsPrimaryForLane(false);
+            trackUIs[i]->clearLaneClips();
+            trackUIs[i]->setVisible(false);  // Hidden - primary renders all clips
+        }
+        
+        // Only advance Y for each visual lane (not each track)
         currentY += m_trackHeight + m_trackSpacing;
     }
     
@@ -978,6 +1031,62 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
     } else {
         renderTrackManagerDirect(renderer);
     }
+
+    // Render the left control strip OUTSIDE the cache to keep M/S/R hover/press responsive
+    // without forcing expensive cache invalidations on every mouse move.
+    //
+    // IMPORTANT: This pass must be clipped to the track viewport; otherwise partially-visible
+    // tracks can draw "above" the viewport and bleed into the ruler/corner region.
+    if (m_showPlaylist) {
+        const float headerHeight = 38.0f;
+        const float horizontalScrollbarHeight = 24.0f;
+        const float rulerHeight = 28.0f;
+        const float scrollbarWidth = 15.0f;
+
+        float mixerSpace = 0.0f;
+        if (m_showMixer && m_mixerPanel && !mixerMaximized) {
+            mixerSpace = m_mixerPanel->isMinimized()
+                ? (m_mixerPanel->getTitleBarHeight() + 5.0f)
+                : (m_mixerWidth + 5.0f);
+        }
+
+        float pianoRollSpace = 0.0f;
+        if (m_showPianoRoll && m_pianoRollPanel && !pianoRollMaximized) {
+            pianoRollSpace = m_pianoRollPanel->isMinimized()
+                ? (m_pianoRollPanel->getTitleBarHeight() + 5.0f)
+                : (m_pianoRollHeight + 5.0f);
+        }
+
+        float sequencerSpace = 0.0f;
+        if (m_showSequencer && m_sequencerPanel && !sequencerMaximized) {
+            sequencerSpace = m_sequencerPanel->isMinimized()
+                ? (m_sequencerPanel->getTitleBarHeight() + 5.0f)
+                : (m_pianoRollHeight + 5.0f);
+        }
+
+        const float viewportTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+        const float viewportHeight = std::max(0.0f, bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight - pianoRollSpace - sequencerSpace);
+        const float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth - mixerSpace);
+        const NomadUI::NUIRect viewportClip(bounds.x, viewportTop, trackWidth, viewportHeight);
+
+        bool clipEnabled = false;
+        if (!viewportClip.isEmpty()) {
+            renderer.setClipRect(viewportClip);
+            clipEnabled = true;
+        }
+
+        const float viewportBottom = viewportTop + viewportHeight;
+        for (const auto& trackUI : m_trackUIComponents) {
+            if (!trackUI || !trackUI->isVisible() || !trackUI->isPrimaryForLane()) continue;
+            const auto trackBounds = trackUI->getBounds();
+            if (trackBounds.bottom() < viewportTop || trackBounds.y > viewportBottom) continue;
+            trackUI->renderControlOverlay(renderer);
+        }
+
+        if (clipEnabled) {
+            renderer.clearClipRect();
+        }
+    }
     
     // Render playhead OUTSIDE cache (it moves every frame during playback)
     renderPlayhead(renderer);
@@ -991,7 +1100,6 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
     renderDeleteAnimations(renderer);
     
     // Render scrollbars OUTSIDE cache (they interact with mouse)
-    if (m_addTrackButton && m_addTrackButton->isVisible()) m_addTrackButton->onRender(renderer);
     if (m_horizontalScrollbar && m_horizontalScrollbar->isVisible()) m_horizontalScrollbar->onRender(renderer);
     if (m_scrollbar && m_scrollbar->isVisible()) m_scrollbar->onRender(renderer);
     
@@ -1013,6 +1121,48 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
     if (m_currentTool == PlaylistTool::Split) {
         renderSplitCursor(renderer, m_lastMousePos);
     }
+    
+    // Render selection box if currently drawing one
+    if (m_isDrawingSelectionBox) {
+        float minX = std::min(m_selectionBoxStart.x, m_selectionBoxEnd.x);
+        float maxX = std::max(m_selectionBoxStart.x, m_selectionBoxEnd.x);
+        float minY = std::min(m_selectionBoxStart.y, m_selectionBoxEnd.y);
+        float maxY = std::max(m_selectionBoxStart.y, m_selectionBoxEnd.y);
+        
+        NomadUI::NUIRect selectionRect(minX, minY, maxX - minX, maxY - minY);
+        
+        // Semi-transparent blue fill
+        NomadUI::NUIColor fillColor(79, 195, 247, 40);  // Light blue with low alpha
+        renderer.fillRect(selectionRect, fillColor);
+        
+        // Dashed blue border
+        NomadUI::NUIColor borderColor(79, 195, 247, 200);  // Light blue
+        
+        // Draw dashed border (top, bottom, left, right)
+        float dashLength = 5.0f;
+        float gapLength = 3.0f;
+        
+        // Top edge
+        for (float x = minX; x < maxX; x += dashLength + gapLength) {
+            float dashEnd = std::min(x + dashLength, maxX);
+            renderer.drawLine(NomadUI::NUIPoint(x, minY), NomadUI::NUIPoint(dashEnd, minY), 1.5f, borderColor);
+        }
+        // Bottom edge
+        for (float x = minX; x < maxX; x += dashLength + gapLength) {
+            float dashEnd = std::min(x + dashLength, maxX);
+            renderer.drawLine(NomadUI::NUIPoint(x, maxY), NomadUI::NUIPoint(dashEnd, maxY), 1.5f, borderColor);
+        }
+        // Left edge
+        for (float y = minY; y < maxY; y += dashLength + gapLength) {
+            float dashEnd = std::min(y + dashLength, maxY);
+            renderer.drawLine(NomadUI::NUIPoint(minX, y), NomadUI::NUIPoint(minX, dashEnd), 1.5f, borderColor);
+        }
+        // Right edge
+        for (float y = minY; y < maxY; y += dashLength + gapLength) {
+            float dashEnd = std::min(y + dashLength, maxY);
+            renderer.drawLine(NomadUI::NUIPoint(maxX, y), NomadUI::NUIPoint(maxX, dashEnd), 1.5f, borderColor);
+        }
+    }
 }
 
 // Helper method: Direct rendering (used both for fallback and cache rebuild)
@@ -1025,28 +1175,27 @@ void TrackManagerUI::renderTrackManagerDirect(NomadUI::NUIRenderer& renderer) {
     bool mixerMaximized = m_showMixer && m_mixerPanel && m_mixerPanel->isMaximized();
     
     // Calculate where the grid/background should end
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-    float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
+    float controlAreaWidth = layout.trackControlsWidth;
     float gridStartX = controlAreaWidth + 5;
     
     // Draw background (control area + full grid area - no bounds restriction)
     NomadUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
     
-    if (m_showPlaylist) {
-        // Background for control area (always visible)
-        NomadUI::NUIRect controlBg(bounds.x, bounds.y, controlAreaWidth, bounds.height);
-        renderer.fillRect(controlBg, bgColor);
-        
-        // Background for grid area (extends infinitely, culling handles visibility)
-        float scrollbarWidth = 15.0f;
-        float gridWidth = bounds.width - controlAreaWidth - scrollbarWidth - 5;
-        NomadUI::NUIRect gridBg(bounds.x + gridStartX, bounds.y, gridWidth, bounds.height);
-        renderer.fillRect(gridBg, bgColor);
+	    if (m_showPlaylist) {
+	        // Background for control area (always visible)
+	        NomadUI::NUIRect controlBg(bounds.x, bounds.y, controlAreaWidth, bounds.height);
+	        renderer.fillRect(controlBg, bgColor);
+	        
+	        // Background for grid area (match track background; zebra grid provides contrast)
+	        float scrollbarWidth = 15.0f;
+	        float gridWidth = bounds.width - controlAreaWidth - scrollbarWidth - 5;
+	        NomadUI::NUIRect gridBg(bounds.x + gridStartX, bounds.y, gridWidth, bounds.height);
+	        renderer.fillRect(gridBg, bgColor);
 
-        // Draw border
-        NomadUI::NUIColor borderColor = themeManager.getColor("border");
-        renderer.strokeRect(bounds, 1, borderColor);
-    }
+	        // Draw border
+	        NomadUI::NUIColor borderColor = themeManager.getColor("border");
+	        renderer.strokeRect(bounds, 1, borderColor);
+	    }
     
     // Update scrollbar range dynamically
     updateHorizontalScrollbar();
@@ -1058,10 +1207,11 @@ void TrackManagerUI::renderTrackManagerDirect(NomadUI::NUIRenderer& renderer) {
         headerAvailableWidth -= mixerPanelWidth;
     }
     
-    // Draw track count - positioned in top-right corner of available space with proper margin
-    if (m_showPlaylist) {
-        std::string infoText = "Tracks: " + std::to_string(m_trackManager ? m_trackManager->getTrackCount() - (m_trackManager->getTrackCount() > 0 ? 1 : 0) : 0);  // Exclude preview track
-        auto infoSize = renderer.measureText(infoText, 12);
+	    // Draw track count - positioned in top-right corner of available space with proper margin
+	    if (m_showPlaylist) {
+	        std::string infoText = "Tracks: " + std::to_string(m_trackManager ? m_trackManager->getTrackCount() - (m_trackManager->getTrackCount() > 0 ? 1 : 0) : 0);  // Exclude preview track
+	        const float infoFont = 12.0f;
+	        auto infoSize = renderer.measureText(infoText, infoFont);
 
         // Ensure text doesn't exceed available width and position with proper margin
         float margin = layout.panelMargin;
@@ -1069,17 +1219,22 @@ void TrackManagerUI::renderTrackManagerDirect(NomadUI::NUIRenderer& renderer) {
         if (infoSize.width > maxTextWidth) {
             // Truncate if too long
             std::string truncatedText = infoText;
-            while (!truncatedText.empty() && renderer.measureText(truncatedText, 12).width > maxTextWidth) {
+            while (!truncatedText.empty() && renderer.measureText(truncatedText, infoFont).width > maxTextWidth) {
                 truncatedText = truncatedText.substr(0, truncatedText.length() - 1);
             }
             infoText = truncatedText + "...";
-            infoSize = renderer.measureText(infoText, 12);
+            infoSize = renderer.measureText(infoText, infoFont);
         }
 
-        renderer.drawText(infoText,
-                           NUIAbsolutePoint(bounds, headerAvailableWidth - infoSize.width - margin, 15),
-                           12, themeManager.getColor("textSecondary"));
-    }
+        const float headerHeight = 38.0f;
+        const NomadUI::NUIRect headerBounds(bounds.x, bounds.y, headerAvailableWidth, headerHeight);
+	        // Slightly larger inset keeps the label safely inside the header bounds.
+	        const float rightPad = layout.panelMargin + 18.0f;
+	        const float textX = std::max(headerBounds.x + margin, headerBounds.right() - infoSize.width - rightPad);
+	        const float textY = std::round(renderer.calculateTextY(headerBounds, infoFont));
+
+	        renderer.drawText(infoText, NomadUI::NUIPoint(textX, textY), infoFont, themeManager.getColor("textSecondary"));
+	    }
 
     // Custom render order: tracks first, then UI controls on top
     // (Grid is now drawn by individual tracks in TrackUIComponent::drawPlaylistGrid)
@@ -1092,39 +1247,22 @@ void TrackManagerUI::renderTrackManagerDirect(NomadUI::NUIRenderer& renderer) {
         headerWidth -= mixerPanelWidth;
     }
     
-    // Draw header bar on top of everything (30px tall, available width excluding mixer)
+    // Draw header bar on top of everything (docked playlist header strip)
     if (m_showPlaylist) {
         NomadUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
         NomadUI::NUIColor borderColor = themeManager.getColor("border");
 
-        float headerHeight = 30.0f;
+        float headerHeight = 38.0f;
         NomadUI::NUIRect headerRect(bounds.x, bounds.y, headerWidth, headerHeight);
         renderer.fillRect(headerRect, bgColor);
         renderer.strokeRect(headerRect, 1, borderColor);
         
         // Draw time ruler below header and horizontal scrollbar (20px tall)
-        float rulerHeight = 20.0f;
-        float horizontalScrollbarHeight = 15.0f;
+        float rulerHeight = 28.0f;
+        float horizontalScrollbarHeight = 24.0f;
         NomadUI::NUIRect rulerRect(bounds.x, bounds.y + headerHeight + horizontalScrollbarHeight, headerWidth, rulerHeight);
         renderTimeRuler(renderer, rulerRect);
         
-        // Render window control icons on header
-        // Convert relative bounds to absolute for rendering
-        if (m_closeIcon) {
-            NomadUI::NUIRect absoluteBounds = NUIAbsolute(bounds, m_closeIconBounds.x, m_closeIconBounds.y, m_closeIconBounds.width, m_closeIconBounds.height);
-            m_closeIcon->setBounds(absoluteBounds);
-            m_closeIcon->onRender(renderer);
-        }
-        if (m_maximizeIcon) {
-            NomadUI::NUIRect absoluteBounds = NUIAbsolute(bounds, m_maximizeIconBounds.x, m_maximizeIconBounds.y, m_maximizeIconBounds.width, m_maximizeIconBounds.height);
-            m_maximizeIcon->setBounds(absoluteBounds);
-            m_maximizeIcon->onRender(renderer);
-        }
-        if (m_minimizeIcon) {
-            NomadUI::NUIRect absoluteBounds = NUIAbsolute(bounds, m_minimizeIconBounds.x, m_minimizeIconBounds.y, m_minimizeIconBounds.width, m_minimizeIconBounds.height);
-            m_minimizeIcon->setBounds(absoluteBounds);
-            m_minimizeIcon->onRender(renderer);
-        }
     }
 }
 
@@ -1134,22 +1272,47 @@ void TrackManagerUI::renderChildren(NomadUI::NUIRenderer& renderer) {
     const auto& layout = themeManager.getLayoutDimensions();
     NomadUI::NUIRect bounds = getBounds();
     
-    float headerHeight = 30.0f;
-    float viewportTop = headerHeight;
-    float viewportBottom = bounds.height;
-    
-    // Calculate which tracks are visible considering scroll offset
-    int firstVisibleTrack = 0;
-    int lastVisibleTrack = static_cast<int>(m_trackUIComponents.size());
-    
-    if (m_trackHeight > 0) {
-        // Account for scroll offset when calculating visible range
-        float scrollTop = m_scrollOffset;
-        float scrollBottom = m_scrollOffset + (viewportBottom - viewportTop);
-        
-        firstVisibleTrack = std::max(0, static_cast<int>(scrollTop / (m_trackHeight + m_trackSpacing)));
-        lastVisibleTrack = std::min(static_cast<int>(m_trackUIComponents.size()), 
-                                     static_cast<int>(scrollBottom / (m_trackHeight + m_trackSpacing)) + 2);
+    const float headerHeight = 38.0f;
+    const float rulerHeight = 28.0f;
+    const float horizontalScrollbarHeight = 24.0f;
+    const float scrollbarWidth = 15.0f;
+
+    float mixerSpace = 0.0f;
+    if (m_showMixer && m_mixerPanel && !m_mixerPanel->isMaximized()) {
+        mixerSpace = m_mixerPanel->isMinimized()
+            ? (m_mixerPanel->getTitleBarHeight() + 5.0f)
+            : (m_mixerWidth + 5.0f);
+    }
+
+    float pianoRollSpace = 0.0f;
+    if (m_showPianoRoll && m_pianoRollPanel && !m_pianoRollPanel->isMaximized()) {
+        pianoRollSpace = m_pianoRollPanel->isMinimized()
+            ? (m_pianoRollPanel->getTitleBarHeight() + 5.0f)
+            : (m_pianoRollHeight + 5.0f);
+    }
+
+    float sequencerSpace = 0.0f;
+    if (m_showSequencer && m_sequencerPanel && !m_sequencerPanel->isMaximized()) {
+        sequencerSpace = m_sequencerPanel->isMinimized()
+            ? (m_sequencerPanel->getTitleBarHeight() + 5.0f)
+            : (m_pianoRollHeight + 5.0f);
+    }
+
+    const float viewportHeight = std::max(0.0f, bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight - pianoRollSpace - sequencerSpace);
+    const float viewportTopAbs = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+    const float viewportBottomAbs = viewportTopAbs + viewportHeight;
+    const float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth - mixerSpace);
+
+    NomadUI::NUIRect viewportClip(bounds.x, viewportTopAbs, trackWidth, viewportHeight);
+    if (m_isRenderingToCache) {
+        viewportClip.x -= bounds.x;
+        viewportClip.y -= bounds.y;
+    }
+
+    bool clipEnabled = false;
+    if (m_showPlaylist && !viewportClip.isEmpty()) {
+        renderer.setClipRect(viewportClip);
+        clipEnabled = true;
     }
     
     // Render all children but skip track UIComponents that are outside viewport
@@ -1157,34 +1320,37 @@ void TrackManagerUI::renderChildren(NomadUI::NUIRenderer& renderer) {
     for (const auto& child : children) {
         if (!child->isVisible()) continue;
         
-        // Always render UI controls (add button, scrollbar)
+        // Always render UI controls (scrollbars)
         // Icons, piano roll panel, and mixer panel are rendered manually in onRender()
-        if (child == m_addTrackButton || child == m_scrollbar || child == m_horizontalScrollbar || 
+        if (child == m_scrollbar || child == m_horizontalScrollbar || 
             child == m_pianoRollPanel || child == m_mixerPanel || child == m_sequencerPanel) {
             // Skip - these are rendered explicitly in onRender()
             continue;
         }
         
-        // Check if this child is a track UI component
+        // Track UI components: cull by bounds (robust even with lane-grouping / hidden secondaries).
         bool isTrackUI = false;
-        int trackIndex = -1;
-        for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
-            if (child == m_trackUIComponents[i]) {
+        for (const auto& trackUI : m_trackUIComponents) {
+            if (child == trackUI) {
                 isTrackUI = true;
-                trackIndex = static_cast<int>(i);
                 break;
             }
         }
-        
-        // If it's a track, only render if visible in viewport AND playlist is visible
+
         if (isTrackUI) {
-            if (m_showPlaylist && trackIndex >= firstVisibleTrack && trackIndex < lastVisibleTrack) {
-                child->onRender(renderer);
-            }
-        } else {
-            // Not a track UI, render normally (other UI elements)
+            if (!m_showPlaylist) continue;
+            const auto trackBounds = child->getBounds();
+            if (trackBounds.bottom() < viewportTopAbs || trackBounds.y > viewportBottomAbs) continue;
             child->onRender(renderer);
+            continue;
         }
+
+        // Not a track UI, render normally (other UI elements)
+        child->onRender(renderer);
+    }
+
+    if (clipEnabled) {
+        renderer.clearClipRect();
     }
 }
 
@@ -1212,8 +1378,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         // Get control area width for zoom pivot calculation
         auto& themeManager = NomadUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
-        float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-        float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
+        float controlAreaWidth = layout.trackControlsWidth;
         float gridStartX = controlAreaWidth + 5;
         
         // Calculate world position under the zoom pivot point
@@ -1270,20 +1435,23 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     updateToolbarBounds();
     
     // Update toolbar hover states
+    bool oldAddHovered = m_addTrackHovered;
     bool oldSelectHovered = m_selectToolHovered;
     bool oldSplitHovered = m_splitToolHovered;
     bool oldMultiSelectHovered = m_multiSelectToolHovered;
     bool oldLoopHovered = m_loopToolHovered;
     
+    m_addTrackHovered = m_addTrackBounds.contains(event.position);
     m_selectToolHovered = m_selectToolBounds.contains(event.position);
     m_splitToolHovered = m_splitToolBounds.contains(event.position);
     m_multiSelectToolHovered = m_multiSelectToolBounds.contains(event.position);
     m_loopToolHovered = m_loopToolBounds.contains(event.position);
     
-    // Invalidate cache if hover state changed
-    if (m_selectToolHovered != oldSelectHovered || m_splitToolHovered != oldSplitHovered ||
+    // Toolbar is rendered outside the playlist cache; don't invalidate the cache on hover.
+    if (m_addTrackHovered != oldAddHovered ||
+        m_selectToolHovered != oldSelectHovered || m_splitToolHovered != oldSplitHovered ||
         m_multiSelectToolHovered != oldMultiSelectHovered || m_loopToolHovered != oldLoopHovered) {
-        m_cacheInvalidated = true;
+        setDirty(true);
     }
     
     // Handle toolbar clicks FIRST (highest priority)
@@ -1302,11 +1470,77 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         updateInstantClipDrag(event.position);
         return true;
     }
+
+    // Allow children (clips) to handle right-click press first.
+    // FL Studio style: right-click on a clip deletes it; only start selection
+    // box if nothing underneath handled the event.
+    if (event.pressed && event.button == NomadUI::NUIMouseButton::Right) {
+        if (NomadUI::NUIComponent::onMouseEvent(event)) {
+            return true;
+        }
+    }
+    
+    // === SELECTION BOX: Right-click drag or MultiSelect tool ===
+    // Start selection box on right-click drag OR left-click with MultiSelect tool
+    bool startSelectionBox = (event.pressed && event.button == NomadUI::NUIMouseButton::Right) ||
+                             (event.pressed && event.button == NomadUI::NUIMouseButton::Left && 
+                              m_currentTool == PlaylistTool::MultiSelect);
+    
+    if (startSelectionBox && !m_isDrawingSelectionBox) {
+        float headerHeight = 38.0f;
+        float rulerHeight = 28.0f;
+        float horizontalScrollbarHeight = 24.0f;
+        float trackAreaTop = headerHeight + horizontalScrollbarHeight + rulerHeight;
+        
+        // Only start selection box in track area
+        if (localPos.y > trackAreaTop) {
+            m_isDrawingSelectionBox = true;
+            m_selectionBoxStart = event.position;
+            m_selectionBoxEnd = event.position;
+            return true;
+        }
+    }
+    
+    // Update selection box while dragging
+    if (m_isDrawingSelectionBox) {
+        m_selectionBoxEnd = event.position;
+        
+        // Check for release to finalize selection
+        bool endSelectionBox = (event.released && event.button == NomadUI::NUIMouseButton::Right) ||
+                               (event.released && event.button == NomadUI::NUIMouseButton::Left && 
+                                m_currentTool == PlaylistTool::MultiSelect);
+        
+        if (endSelectionBox) {
+            // Calculate selection rectangle
+            float minX = std::min(m_selectionBoxStart.x, m_selectionBoxEnd.x);
+            float maxX = std::max(m_selectionBoxStart.x, m_selectionBoxEnd.x);
+            float minY = std::min(m_selectionBoxStart.y, m_selectionBoxEnd.y);
+            float maxY = std::max(m_selectionBoxStart.y, m_selectionBoxEnd.y);
+            
+            NomadUI::NUIRect selectionRect(minX, minY, maxX - minX, maxY - minY);
+            
+            // Select all tracks that intersect with selection box
+            clearSelection();
+            for (auto& trackUI : m_trackUIComponents) {
+                if (trackUI->getBounds().intersects(selectionRect)) {
+                    selectTrack(trackUI.get(), true);
+                }
+            }
+            
+            m_isDrawingSelectionBox = false;
+            m_cacheInvalidated = true;
+            
+            Log::info("Selection box completed, selected " + std::to_string(m_selectedTracks.size()) + " tracks");
+        }
+        
+        m_cacheInvalidated = true;
+        return true;
+    }
     
     // Layout constants
-    float headerHeight = 30.0f;
-    float rulerHeight = 20.0f;
-    float horizontalScrollbarHeight = 15.0f;
+    float headerHeight = 38.0f;
+    float rulerHeight = 28.0f;
+    float horizontalScrollbarHeight = 24.0f;
     NomadUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, bounds.width, rulerHeight);
     
     // Track area (below ruler)
@@ -1363,6 +1597,9 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     if (event.pressed && event.button == NomadUI::NUIMouseButton::Left && isInRuler) {
         // Start dragging playhead
         m_isDraggingPlayhead = true;
+        if (m_trackManager) {
+            m_trackManager->setUserScrubbing(true);
+        }
     }
     
     // Handle playhead dragging (continuous scrub)
@@ -1370,14 +1607,16 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         // Stop dragging on mouse release
         if (event.released && event.button == NomadUI::NUIMouseButton::Left) {
             m_isDraggingPlayhead = false;
+            if (m_trackManager) {
+                m_trackManager->setUserScrubbing(false);
+            }
             return true;
         }
         
         // Update playhead position while dragging (even outside ruler bounds for smooth scrubbing)
         auto& themeManager = NomadUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
-        float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-        float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
+        float controlAreaWidth = layout.trackControlsWidth;
         float gridStartX = controlAreaWidth + 5;
         
         // Mouse position relative to grid start
@@ -1402,68 +1641,45 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     
     // (Vertical scroll handling moved to main wheel handler above)
     
-    // Debug log mouse position and icon bounds
-    static int logCounter = 0;
-    if (++logCounter % 60 == 0) { // Log every 60 events to avoid spam
-        Log::info("Mouse: (" + std::to_string(localPos.x) + ", " + std::to_string(localPos.y) + ")");
-        Log::info("Close bounds: (" + std::to_string(m_closeIconBounds.x) + ", " + std::to_string(m_closeIconBounds.y) + 
-                  ", " + std::to_string(m_closeIconBounds.width) + "x" + std::to_string(m_closeIconBounds.height) + ")");
-    }
-    
-    // Update hover states for icons
-    bool wasHovered = m_closeIconHovered || m_minimizeIconHovered || m_maximizeIconHovered;
-    m_closeIconHovered = m_closeIconBounds.contains(localPos);
-    m_minimizeIconHovered = m_minimizeIconBounds.contains(localPos);
-    m_maximizeIconHovered = m_maximizeIconBounds.contains(localPos);
-    bool isHovered = m_closeIconHovered || m_minimizeIconHovered || m_maximizeIconHovered;
-    
-    // Update icon colors based on hover state (and invalidate cache if hover state changed)
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-    if (m_closeIconHovered) {
-        m_closeIcon->setColor(NomadUI::NUIColor(1.0f, 0.3f, 0.3f, 1.0f)); // Red on hover
-    } else {
-        m_closeIcon->setColorFromTheme("textPrimary"); // White normally
-    }
-    
-    if (m_minimizeIconHovered) {
-        m_minimizeIcon->setColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // White on hover
-    } else {
-        m_minimizeIcon->setColorFromTheme("textPrimary");
-    }
-    
-    if (m_maximizeIconHovered) {
-        m_maximizeIcon->setColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // White on hover
-    } else {
-        m_maximizeIcon->setColorFromTheme("textPrimary");
-    }
-    
-    // Invalidate cache if hover state changed (for icon color updates)
-    if (wasHovered != isHovered) {
-        m_cacheInvalidated = true;
-    }
-    
-    // Check if icon was clicked
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
-        // Check close icon
-        if (m_closeIconBounds.contains(localPos)) {
-            setVisible(false);
-            m_cacheInvalidated = true;  // Invalidate cache when visibility changes
-            Log::info("Playlist closed");
-            return true;
-        }
+    // === SPLIT TOOL: Click to split track at position ===
+    if (m_currentTool == PlaylistTool::Split && event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+        // Check if click is in track area
+        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        const auto& layout = themeManager.getLayoutDimensions();
+        float controlAreaWidth = layout.trackControlsWidth;
+        float gridStartX = controlAreaWidth + 5;
         
-        // Check minimize icon
-        if (m_minimizeIconBounds.contains(localPos)) {
-            m_cacheInvalidated = true;  // Invalidate cache for minimize action
-            Log::info("Playlist minimized");
-            return true;
-        }
+        float headerHeight = 38.0f;
+        float rulerHeight = 28.0f;
+        float horizontalScrollbarHeight = 24.0f;
+        float trackAreaTop = headerHeight + horizontalScrollbarHeight + rulerHeight;
         
-        // Check maximize icon
-        if (m_maximizeIconBounds.contains(localPos)) {
-            m_cacheInvalidated = true;  // Invalidate cache for maximize action
-            Log::info("Playlist maximized");
-            return true;
+        NomadUI::NUIRect gridBounds(bounds.x + gridStartX, bounds.y + trackAreaTop,
+                                     bounds.width - controlAreaWidth - 20.0f,
+                                     bounds.height - trackAreaTop);
+        
+        if (gridBounds.contains(event.position)) {
+            // Find which track was clicked
+            float relativeY = localPos.y - trackAreaTop + m_scrollOffset;
+            int trackIndex = static_cast<int>(relativeY / (m_trackHeight + m_trackSpacing));
+            
+            if (trackIndex >= 0 && trackIndex < static_cast<int>(m_trackUIComponents.size())) {
+                // Calculate time position from click X
+                float mouseX = localPos.x - gridStartX + m_timelineScrollOffset;
+                double bpm = 120.0;
+                double secondsPerBeat = 60.0 / bpm;
+                double positionInBeats = mouseX / m_pixelsPerBeat;
+                double positionInSeconds = positionInBeats * secondsPerBeat;
+                
+                // Snap to grid if enabled
+                if (m_snapEnabled) {
+                    positionInSeconds = snapTimeToGrid(positionInSeconds);
+                }
+                
+                // Perform the split
+                performSplitAtPosition(trackIndex, positionInSeconds);
+                return true;
+            }
         }
     }
     
@@ -1494,9 +1710,9 @@ void TrackManagerUI::updateScrollbar() {
     if (!m_scrollbar) return;
     
     NomadUI::NUIRect bounds = getBounds();
-    float headerHeight = 30.0f;
-    float rulerHeight = 20.0f;
-    float horizontalScrollbarHeight = 15.0f;
+    float headerHeight = 38.0f;
+    float rulerHeight = 28.0f;
+    float horizontalScrollbarHeight = 24.0f;
     float viewportHeight = bounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight;
     float totalContentHeight = m_trackUIComponents.size() * (m_trackHeight + m_trackSpacing);
     
@@ -1518,12 +1734,12 @@ void TrackManagerUI::updateHorizontalScrollbar() {
     NomadUI::NUIRect bounds = getBounds();
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
     
     // Calculate grid area width
     float scrollbarWidth = 15.0f;
     float trackWidth = bounds.width - scrollbarWidth;
-    float gridWidth = trackWidth - (buttonX + layout.controlButtonWidth + 10);
+    float controlAreaWidth = layout.trackControlsWidth;
+    float gridWidth = trackWidth - (controlAreaWidth + 5.0f);
     
     // Dynamic timeline range - based on clip extents with headroom
     float minTimelineWidth = gridWidth * 3.0f;  // Minimum: 3 screens
@@ -1571,15 +1787,15 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
     renderer.fillRect(rulerBounds, bgColor);
     
     // Calculate grid start EXACTLY like TrackUIComponent
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-    float gridStartX = rulerBounds.x + buttonX + layout.controlButtonWidth + 10;
+    float controlAreaWidth = layout.trackControlsWidth;
+    float gridStartX = rulerBounds.x + controlAreaWidth + 5.0f;
     
     // Calculate gridWidth EXACTLY like TrackUIComponent
     // Track uses: gridWidth = bounds.width - (buttonX + layout.controlButtonWidth + 10)
     // But tracks have scrollbar subtracted from their bounds.width
     float scrollbarWidth = 15.0f;
     float trackWidth = rulerBounds.width - scrollbarWidth; // Match track width (subtract scrollbar)
-    float gridWidth = trackWidth - (buttonX + layout.controlButtonWidth + 10);
+    float gridWidth = trackWidth - (controlAreaWidth + 5.0f);
     
     // Pitch black background for grid area only
     NomadUI::NUIColor rulerBgColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -1588,10 +1804,29 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
     
     // Draw border
     renderer.strokeRect(rulerBounds, 1, borderColor);
-    
-    // NOTE: Scissor clipping currently disabled - coordinate system issue between UI space and OpenGL window space
-    // The setClipRect expects window coordinates but we're passing UI component coordinates
-    // TODO: Fix coordinate transformation in setClipRect or add a UI-space clip method
+
+    // Dedicated "corner" panel where track controls meet the ruler.
+    // It draws its own right-hand separator so nothing feels like it bleeds across panels.
+    const NomadUI::NUIRect cornerRect(rulerBounds.x, rulerBounds.y, controlAreaWidth, rulerBounds.height);
+    renderer.drawLine(
+        NomadUI::NUIPoint(cornerRect.right(), cornerRect.y),
+        NomadUI::NUIPoint(cornerRect.right(), cornerRect.bottom()),
+        1.0f,
+        borderColor.withAlpha(0.5f)
+    );
+
+    // Clip ticks/labels to the grid area (prevents any accidental bleed into the corner/scrollbar).
+    NomadUI::NUIRect gridClip = gridRulerRect;
+    if (m_isRenderingToCache) {
+        const NomadUI::NUIRect componentBounds = getBounds();
+        gridClip.x -= componentBounds.x;
+        gridClip.y -= componentBounds.y;
+    }
+    bool rulerClipEnabled = false;
+    if (!gridClip.isEmpty()) {
+        renderer.setClipRect(gridClip);
+        rulerClipEnabled = true;
+    }
     
     // Grid spacing - DYNAMIC based on zoom level
     int beatsPerBar = m_beatsPerBar;
@@ -1624,13 +1859,13 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
         // FL Studio style: Bigger text for major bars (1, 5, 9, etc.), smaller for others
         // At low zoom, only show major bar numbers; at high zoom show all
         bool isMajorBar = (barNum == 1) || ((barNum - 1) % 4 == 0); // 1, 5, 9, 13...
-        float fontSize = isMajorBar ? 14.0f : 11.0f;  // Bumped up for better readability
+        float fontSize = isMajorBar ? 11.0f : 9.0f;  // Compact ruler text
         float textAlpha = isMajorBar ? 1.0f : 0.7f;
         
         auto textSize = renderer.measureText(barText, fontSize);
         
         // Place text vertically centered in ruler area (top-left Y positioning)
-        float textY = rulerBounds.y + (rulerBounds.height - fontSize) * 0.5f;
+        float textY = std::round(renderer.calculateTextY(rulerBounds, fontSize));
         
         // Position text to the RIGHT of the grid line with small offset
         float textX = x + 4.0f;
@@ -1673,8 +1908,10 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
             }
         }
     }
-    
-    // NOTE: clearClipRect() disabled since setClipRect is disabled above
+
+    if (rulerClipEnabled) {
+        renderer.clearClipRect();
+    }
 }
 
 // Calculate maximum timeline extent needed based on all samples
@@ -1724,8 +1961,7 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
     // Calculate playhead X position accounting for scroll offset
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-    float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
+    float controlAreaWidth = layout.trackControlsWidth;
     
     NomadUI::NUIRect bounds = getBounds();
     float gridStartX = bounds.x + controlAreaWidth + 5;
@@ -1734,14 +1970,14 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
     // Calculate bounds and triangle size for precise culling
     float scrollbarWidth = 15.0f;
     float trackWidth = bounds.width - scrollbarWidth;
-    float gridWidth = trackWidth - (buttonX + layout.controlButtonWidth + 10);
+    float gridWidth = trackWidth - (controlAreaWidth + 5.0f);
     float gridEndX = gridStartX + gridWidth;
     float triangleSize = 6.0f;  // Triangle extends this much left/right from playhead center
     
     // Calculate playhead boundaries (where mixer is visible)
-    float headerHeight = 30.0f;
-    float horizontalScrollbarHeight = 15.0f;
-    float rulerHeight = 20.0f;
+    float headerHeight = 38.0f;
+    float horizontalScrollbarHeight = 24.0f;
+    float rulerHeight = 28.0f;
     float playheadStartY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
     
     float pianoRollSpace = 0.0f;
@@ -1808,8 +2044,7 @@ void TrackManagerUI::updateBackgroundCache(NomadUI::NUIRenderer& renderer) {
     const auto& layout = themeManager.getLayoutDimensions();
     
     // Calculate layout dimensions
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-    float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
+    float controlAreaWidth = layout.trackControlsWidth;
     float gridStartX = controlAreaWidth + 5;
     float scrollbarWidth = 15.0f;
     float gridWidth = width - controlAreaWidth - scrollbarWidth - 5;
@@ -1829,14 +2064,14 @@ void TrackManagerUI::updateBackgroundCache(NomadUI::NUIRenderer& renderer) {
     renderer.strokeRect(textureBounds, 1, borderColor);
     
     // Draw header bar
-    float headerHeight = 30.0f;
+    float headerHeight = 38.0f;
     NomadUI::NUIRect headerRect(0, 0, static_cast<float>(width), headerHeight);
     renderer.fillRect(headerRect, bgColor);
     renderer.strokeRect(headerRect, 1, borderColor);
     
     // Draw time ruler
-    float rulerHeight = 20.0f;
-    float horizontalScrollbarHeight = 15.0f;
+    float rulerHeight = 28.0f;
+    float horizontalScrollbarHeight = 24.0f;
     NomadUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, static_cast<float>(width), rulerHeight);
     
     // Render ruler ticks (static part only - no moving elements)
@@ -1867,7 +2102,7 @@ void TrackManagerUI::updateBackgroundCache(NomadUI::NUIRenderer& renderer) {
     }
 
     // Bar numbers (cached in background texture)
-    float barFontSize = 18.0f;
+    float barFontSize = 11.0f;
     for (int bar = 0; bar <= static_cast<int>(maxExtentInBeats / m_beatsPerBar) + 4; ++bar) {
         float x = rulerRect.x + gridStartX + (bar * m_beatsPerBar * m_pixelsPerBeat) - m_timelineScrollOffset;
         if (x < rulerRect.x + gridStartX - 2.0f || x > rulerRect.right() + m_pixelsPerBeat) continue;
@@ -1920,6 +2155,9 @@ void TrackManagerUI::invalidateCache() {
     
     // Also invalidate old multi-layer caches for compatibility
     m_backgroundNeedsUpdate = true;
+
+    // Ensure we get a redraw even if the outer loop is dirty-driven.
+    setDirty(true);
 }
 
 // =============================================================================
@@ -2062,9 +2300,10 @@ void TrackManagerUI::pasteClip() {
     
     // Paste the audio data
     uint32_t totalSamples = static_cast<uint32_t>(m_clipboard.audioData.size() / m_clipboard.numChannels);
+    uint32_t targetSR = static_cast<uint32_t>(m_trackManager ? m_trackManager->getOutputSampleRate() : m_clipboard.sampleRate);
     targetTrack->setAudioData(m_clipboard.audioData.data(), totalSamples,
-                              m_clipboard.sampleRate, m_clipboard.numChannels);
-    targetTrack->setName(m_clipboard.name + " (pasted)");
+                              m_clipboard.sampleRate, m_clipboard.numChannels, targetSR);
+    targetTrack->setName(m_clipboard.name);  // Keep original name, no suffix
     targetTrack->setColor(m_clipboard.sourceColor);
     targetTrack->setTrimStart(m_clipboard.trimStart);
     if (m_clipboard.trimEnd >= 0) {
@@ -2142,6 +2381,14 @@ NomadUI::DropFeedback TrackManagerUI::onDragEnter(const NomadUI::DragData& data,
     if (data.type != NomadUI::DragDataType::File && data.type != NomadUI::DragDataType::AudioClip) {
         return NomadUI::DropFeedback::Invalid;
     }
+
+    // Early reject unsupported formats (cheap extension check; full validation happens on drop).
+    if (data.type == NomadUI::DragDataType::File &&
+        !AudioFileValidator::hasValidAudioExtension(data.filePath)) {
+        m_showDropPreview = false;
+        setDirty(true);
+        return NomadUI::DropFeedback::Invalid;
+    }
     
     // Calculate target track and time
     m_dropTargetTrack = getTrackAtPosition(position.y);
@@ -2167,6 +2414,16 @@ NomadUI::DropFeedback TrackManagerUI::onDragEnter(const NomadUI::DragData& data,
 }
 
 NomadUI::DropFeedback TrackManagerUI::onDragOver(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
+    // Keep feedback "Invalid" for unsupported formats while hovering.
+    if (data.type == NomadUI::DragDataType::File &&
+        !AudioFileValidator::hasValidAudioExtension(data.filePath)) {
+        if (m_showDropPreview) {
+            m_showDropPreview = false;
+            setDirty(true);
+        }
+        return NomadUI::DropFeedback::Invalid;
+    }
+
     // Update target track and time as mouse moves
     int newTrack = getTrackAtPosition(position.y);
     double rawTime = getTimeAtPosition(position.x);
@@ -2279,13 +2536,15 @@ NomadUI::DropResult TrackManagerUI::onDrop(const NomadUI::DragData& data, const 
                 uint32_t numChannels = sourceTrack->getNumChannels();
                 
                 // Set audio data on target track
+                uint32_t targetSR = static_cast<uint32_t>(m_trackManager ? m_trackManager->getOutputSampleRate() : sampleRate);
                 targetTrack->setAudioData(audioData.data(), 
                                           static_cast<uint32_t>(audioData.size() / numChannels),
-                                          sampleRate, numChannels);
+                                          sampleRate, numChannels, targetSR);
                 targetTrack->setStartPositionInTimeline(timePosition);
-                targetTrack->setName(sourceTrack->getName());
+                targetTrack->setSourcePath(sourceTrack->getSourcePath());
+                targetTrack->setColor(sourceTrack->getColor());
                 
-                // Clear source track
+                // Clear source track (leaves empty track row)
                 sourceTrack->clearAudioData();
                 
                 result.accepted = true;
@@ -2310,6 +2569,20 @@ NomadUI::DropResult TrackManagerUI::onDrop(const NomadUI::DragData& data, const 
     
     // Handle file drop (new file being loaded)
     if (data.type == NomadUI::DragDataType::File) {
+        // Validate the audio file before loading
+        if (!AudioFileValidator::isValidAudioFile(data.filePath)) {
+            result.accepted = false;
+            std::string fileType = AudioFileValidator::getAudioFileType(data.filePath);
+            if (fileType == "Unknown") {
+                result.message = "Unsupported file format. Supported: WAV, MP3, FLAC, OGG, AIFF";
+            } else {
+                result.message = "Invalid or corrupted " + fileType + " file";
+            }
+            Log::warning("[TrackManagerUI] File validation failed: " + data.filePath);
+            clearDropPreview();
+            return result;
+        }
+        
         // If dropping on a new track slot, create it first
         std::shared_ptr<Track> track;
         if (trackIndex == trackCount) {
@@ -2400,10 +2673,10 @@ int TrackManagerUI::getTrackAtPosition(float y) const {
     
     // Get ruler height and track area start
     // MUST match renderTrackManagerDirect layout exactly:
-    // header(30) + horizontalScrollbar(15) + ruler(20) = 65
-    float headerHeight = 30.0f;
-    float horizontalScrollbarHeight = 15.0f;
-    float rulerHeight = 20.0f;
+    // header(38) + horizontalScrollbar(24) + ruler(28)
+    float headerHeight = 38.0f;
+    float horizontalScrollbarHeight = 24.0f;
+    float rulerHeight = 28.0f;
     float trackAreaY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
     
     // Relative Y position in track area
@@ -2424,8 +2697,7 @@ double TrackManagerUI::getTimeAtPosition(float x) const {
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     
     // Get control area width (where track buttons are)
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-    float controlAreaWidth = buttonX + themeManager.getLayoutDimensions().controlButtonWidth + 10;
+    float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
     float gridStartX = controlAreaWidth + 5;
     
     // Relative X position in grid area
@@ -2454,15 +2726,14 @@ void TrackManagerUI::renderDropPreview(NomadUI::NUIRenderer& renderer) {
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     
     // Calculate grid area
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-    float controlAreaWidth = buttonX + themeManager.getLayoutDimensions().controlButtonWidth + 10;
+    float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
     float gridStartX = bounds.x + controlAreaWidth + 5;
     
     // Calculate track Y position - MUST match layoutTracks() calculation exactly
-    // layoutTracks uses: headerHeight(30) + horizontalScrollbarHeight(15) + rulerHeight(20) = 65
-    float headerHeight = 30.0f;
-    float horizontalScrollbarHeight = 15.0f;
-    float rulerHeight = 20.0f;
+    // layoutTracks uses: headerHeight(38) + horizontalScrollbarHeight(24) + rulerHeight(28)
+    float headerHeight = 38.0f;
+    float horizontalScrollbarHeight = 24.0f;
+    float rulerHeight = 28.0f;
     float trackAreaStartY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
     float trackY = trackAreaStartY + (m_dropTargetTrack * (m_trackHeight + m_trackSpacing)) - m_scrollOffset;
     
@@ -2609,6 +2880,72 @@ void TrackManagerUI::renderDeleteAnimations(NomadUI::NUIRenderer& renderer) {
         
         ++it;
     }
+}
+
+// =============================================================================
+// MULTI-SELECTION METHODS
+// =============================================================================
+
+void TrackManagerUI::selectTrack(TrackUIComponent* track, bool addToSelection) {
+    if (!track) return;
+    
+    if (!addToSelection) {
+        // Clear existing selection first
+        clearSelection();
+    }
+    
+    m_selectedTracks.insert(track);
+    track->setSelected(true);
+    
+    std::string trackName = track->getTrack() ? track->getTrack()->getName() : "Unknown";
+    Log::info("[TrackManagerUI] Selected track: " + trackName + 
+              " (total selected: " + std::to_string(m_selectedTracks.size()) + ")");
+    
+    invalidateCache();
+}
+
+void TrackManagerUI::deselectTrack(TrackUIComponent* track) {
+    if (!track) return;
+    
+    auto it = m_selectedTracks.find(track);
+    if (it != m_selectedTracks.end()) {
+        m_selectedTracks.erase(it);
+        track->setSelected(false);
+        
+        std::string trackName = track->getTrack() ? track->getTrack()->getName() : "Unknown";
+        Log::info("[TrackManagerUI] Deselected track: " + trackName);
+        invalidateCache();
+    }
+}
+
+void TrackManagerUI::clearSelection() {
+    for (auto* track : m_selectedTracks) {
+        if (track) {
+            track->setSelected(false);
+        }
+    }
+    m_selectedTracks.clear();
+    
+    Log::info("[TrackManagerUI] Cleared all track selection");
+    invalidateCache();
+}
+
+bool TrackManagerUI::isTrackSelected(TrackUIComponent* track) const {
+    return m_selectedTracks.find(track) != m_selectedTracks.end();
+}
+
+void TrackManagerUI::selectAllTracks() {
+    clearSelection();
+    
+    for (auto& trackUI : m_trackUIComponents) {
+        if (trackUI) {
+            m_selectedTracks.insert(trackUI.get());
+            trackUI->setSelected(true);
+        }
+    }
+    
+    Log::info("[TrackManagerUI] Selected all tracks (" + std::to_string(m_selectedTracks.size()) + ")");
+    invalidateCache();
 }
 
 } // namespace Audio

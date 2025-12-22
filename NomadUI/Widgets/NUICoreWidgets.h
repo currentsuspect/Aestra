@@ -200,7 +200,7 @@ private:
     std::vector<Tab> tabs_;
     std::string activeTabId_;
     std::function<void(const std::string&)> onTabChanged_;
+    int hoveredIndex_ = -1;
 };
 
 } // namespace NomadUI
-

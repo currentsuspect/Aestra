@@ -12,6 +12,7 @@
 #include "NUIRenderCache.h"
 #include <vector>
 #include <tuple>
+#include <cstdint>
 #include <unordered_map>
 #include <memory>
 
@@ -60,6 +61,10 @@ public:
     void setClipRect(const NUIRect& rect) override;
     void clearClipRect() override;
     void setOpacity(float opacity) override;
+
+    // Debug
+    void setDebugTextBounds(bool enabled) override { debugTextBounds_ = enabled; }
+
     
     // ========================================================================
     // Primitive Drawing
@@ -96,6 +101,7 @@ public:
     void drawText(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) override;
     void drawTextCentered(const std::string& text, const NUIRect& rect, float fontSize, const NUIColor& color) override;
     NUISize measureText(const std::string& text, float fontSize) override;
+    NUIRenderer::FontMetrics getFontMetrics(float fontSize) const override;
     
     // ========================================================================
     // Texture/Image Drawing
@@ -178,6 +184,7 @@ private:
         int32_t useTextureLoc = -1;
         int32_t blurLoc = -1;
         int32_t smoothnessLoc = -1; // Added for SDF text
+        int32_t strokeWidthLoc = -1; // Added for SDF strokes
     };
     
     // Transform stack
@@ -222,6 +229,8 @@ private:
     bool batching_ = false;
     uint32_t drawCallCount_ = 0;  // Draw call tracking
     bool scissorEnabled_ = false;
+    bool debugTextBounds_ = false;
+
     
     // OpenGL objects
     uint32_t vao_ = 0;
@@ -258,6 +267,7 @@ private:
     float currentRadius_ = 0.0f;
     float currentBlur_ = 0.0f;
     float currentSmoothness_ = 1.0f; // Added
+    float currentStrokeWidth_ = 1.0f; // Added for SDF strokes
     NUISize currentSize_ = {0.0f, 0.0f};
     NUISize currentQuadSize_ = {0.0f, 0.0f};
     
@@ -275,21 +285,56 @@ private:
     
     // FreeType text rendering
     struct FontData {
-        uint32_t textureId; // Now refers to the atlas texture
-        int width, height;
-        int bearingX, bearingY;
-        int advance;
+        uint32_t textureId; // Atlas texture id
+        uint32_t glyphIndex = 0; // FreeType glyph index for kerning
+        int width = 0;
+        int height = 0;
+        int bearingX = 0;
+        int bearingY = 0;
+        int advance = 0;
         // Atlas UV coordinates
-        float u0, v0, u1, v1;
+        float u0 = 0.0f;
+        float v0 = 0.0f;
+        float u1 = 0.0f;
+        float v1 = 0.0f;
     };
+
+    // Multiple atlases to avoid extreme minification artifacts:
+    // - Large atlas (48px) for bigger UI text
+    // - Medium atlas (32px) for common 14–17px UI copy
+    // - Small atlas (24px) for <= ~13px labels (ruler, clip strips)
     std::unordered_map<char, FontData> fontCache_;
+    std::unordered_map<char, FontData> fontCacheMedium_;
+    std::unordered_map<char, FontData> fontCacheSmall_;
     bool fontInitialized_;
-    uint32_t fontAtlasTextureId_ = 0; // The single texture atlas
+    bool fontUseLCD_ = true;       // Enable subpixel LCD rendering when available
+    bool fontHasKerning_ = false;  // Kerning support advertised by the font
+    int atlasFontSize_ = 32;       // Pixel height of glyphs baked into the large atlas
+    int atlasFontSizeMedium_ = 32; // Pixel height of glyphs baked into the medium atlas
+    int atlasFontSizeSmall_ = 24;  // Pixel height of glyphs baked into the small atlas
+    float fontAscent_ = 0.0f;
+    float fontDescent_ = 0.0f;
+    float fontLineHeight_ = 0.0f;
+    float fontAscentMedium_ = 0.0f;
+    float fontDescentMedium_ = 0.0f;
+    float fontLineHeightMedium_ = 0.0f;
+    float fontAscentSmall_ = 0.0f;
+    float fontDescentSmall_ = 0.0f;
+    float fontLineHeightSmall_ = 0.0f;
+    uint32_t fontAtlasTextureId_ = 0;      // Large atlas texture
+    uint32_t fontAtlasTextureIdMedium_ = 0; // Medium atlas texture
+    uint32_t fontAtlasTextureIdSmall_ = 0; // Small atlas texture
     int fontAtlasWidth_ = 2048;
     int fontAtlasHeight_ = 2048;
     int fontAtlasX_ = 0;
     int fontAtlasY_ = 0;
     int fontAtlasRowHeight_ = 0;
+    int fontAtlasXMedium_ = 0;
+    int fontAtlasYMedium_ = 0;
+    int fontAtlasRowHeightMedium_ = 0;
+    int fontAtlasXSmall_ = 0;
+    int fontAtlasYSmall_ = 0;
+    int fontAtlasRowHeightSmall_ = 0;
 
     FT_Library ftLibrary_;
     FT_Face ftFace_;

@@ -11,7 +11,7 @@
  * - NomadUI: UI rendering framework
  * - NomadAudio: Real-time audio engine
  * 
- * @version 1.0.0
+ * @version 1.1.0
  * @license Nomad Studios Source-Available License (NSSAL) v1.0
  */
 
@@ -26,6 +26,10 @@
 #include "../NomadUI/Graphics/OpenGL/NUIRendererGL.h"
 #include "../NomadUI/Platform/NUIPlatformBridge.h"
 #include "../NomadAudio/include/NomadAudio.h"
+#include "../NomadAudio/include/AudioEngine.h"
+#include "../NomadAudio/include/AudioGraphBuilder.h"
+#include "../NomadAudio/include/AudioCommandQueue.h"
+#include "../NomadAudio/include/AudioRT.h"
 #include "../NomadAudio/include/PreviewEngine.h"
 #include "../NomadCore/include/NomadLog.h"
 #include "../NomadCore/include/NomadProfiler.h"
@@ -38,6 +42,7 @@
 #include "TrackManagerUI.h"
 #include "FPSDisplay.h"
 #include "ProjectSerializer.h"
+#include "ConfirmationDialog.h"
 #include <memory>
 #include <iostream>
 #include <chrono>
@@ -47,9 +52,7 @@
 #include <cstdlib>
 #include <filesystem>
 
-#ifdef _WIN32
-#include <shlobj.h>
-#endif
+// Windows-specific includes removed - use NomadPlat abstraction instead
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -58,6 +61,23 @@
 using namespace Nomad;
 using namespace NomadUI;
 using namespace Nomad::Audio;
+
+namespace {
+uint64_t estimateCycleHz() {
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
+    const auto t0 = std::chrono::steady_clock::now();
+    const uint64_t c0 = Nomad::Audio::RT::readCycleCounter();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    const auto t1 = std::chrono::steady_clock::now();
+    const uint64_t c1 = Nomad::Audio::RT::readCycleCounter();
+    const double sec = std::chrono::duration_cast<std::chrono::duration<double>>(t1 - t0).count();
+    if (sec <= 0.0 || c1 <= c0) return 0;
+    return static_cast<uint64_t>(static_cast<double>(c1 - c0) / sec);
+#else
+    return 0;
+#endif
+}
+} // namespace
 
 /**
  * @brief Convert Nomad::KeyCode to NomadUI::NUIKeyCode
@@ -171,13 +191,21 @@ public:
         
         addChild(m_transportBar);
 
-        // Create compact audio meter - positioned inside transport bar (right side)
-        // Add AFTER transport so it renders on top
-        m_audioVisualizer = std::make_shared<NomadUI::AudioVisualizer>();
-        float visualizerWidth = 80.0f;
+        // Create compact master meters inside transport bar (right side)
+        // 1) Mini waveform scope
+        m_waveformVisualizer = std::make_shared<NomadUI::AudioVisualizer>();
+        float waveformWidth = 150.0f;
         float visualizerHeight = 40.0f;
         float vuY = layout.componentPadding; // Will be centered in onResize
-        m_audioVisualizer->setBounds(NomadUI::NUIRect(1100, vuY, visualizerWidth, visualizerHeight));
+        m_waveformVisualizer->setBounds(NomadUI::NUIRect(980, vuY, waveformWidth, visualizerHeight));
+        m_waveformVisualizer->setMode(NomadUI::AudioVisualizationMode::CompactWaveform);
+        m_waveformVisualizer->setShowStereo(true);
+        addChild(m_waveformVisualizer);
+
+        // 2) Slim VU/peak meters
+        m_audioVisualizer = std::make_shared<NomadUI::AudioVisualizer>();
+        float meterWidth = 60.0f;
+        m_audioVisualizer->setBounds(NomadUI::NUIRect(1135, vuY, meterWidth, visualizerHeight));
         m_audioVisualizer->setMode(NomadUI::AudioVisualizationMode::CompactMeter);
         m_audioVisualizer->setShowStereo(true);
         addChild(m_audioVisualizer);
@@ -187,14 +215,6 @@ public:
         m_previewIsPlaying = false;
         m_previewStartTime = std::chrono::steady_clock::time_point(); // Default construct
         m_previewDuration = 5.0; // 5 seconds preview
-        
-        // Wire TrackManager audio output to AudioVisualizer for VU meter display
-        // This captures the master stereo output and sends it to the visualizer
-        m_trackManager->setOnAudioOutput([this](const float* leftChannel, const float* rightChannel, size_t numSamples, double sampleRate) {
-            if (m_audioVisualizer) {
-                m_audioVisualizer->setAudioData(leftChannel, rightChannel, numSamples, sampleRate);
-            }
-        });
         
         Log::info("Sound preview system initialized");
     }
@@ -209,6 +229,10 @@ public:
     
     std::shared_ptr<NomadUI::AudioVisualizer> getAudioVisualizer() const {
         return m_audioVisualizer;
+    }
+
+    std::shared_ptr<NomadUI::AudioVisualizer> getWaveformVisualizer() const {
+        return m_waveformVisualizer;
     }
 
     PreviewEngine* getPreviewEngine() const { return m_previewEngine.get(); }
@@ -507,14 +531,30 @@ public:
                                                        fileBrowserWidth, fileBrowserHeight));
         }
 
-        // Update audio visualizer position - centered in transport bar
-        if (m_audioVisualizer) {
+        // Update master meters position - centered in transport bar (right side)
+        if (m_audioVisualizer || m_waveformVisualizer) {
             NomadUI::NUIRect contentBounds = getBounds();
-            float visualizerWidth = 80.0f; // Could be made configurable
-            float visualizerHeight = 40.0f;
-            float vuY = contentBounds.y + (layout.transportBarHeight - visualizerHeight) / 2.0f; // Vertically centered
-            m_audioVisualizer->setBounds(NomadUI::NUIRect(contentBounds.x + width - visualizerWidth - layout.panelMargin,
-                                                           vuY, visualizerWidth, visualizerHeight));
+            const float meterWidth = 60.0f;
+            const float waveformWidth = 150.0f;
+            const float visualizerHeight = 40.0f;
+            const float gap = 6.0f;
+            float vuY = contentBounds.y + (layout.transportBarHeight - visualizerHeight) / 2.0f;
+
+            float totalWidth = meterWidth;
+            if (m_waveformVisualizer) {
+                totalWidth += waveformWidth + gap;
+            }
+
+            float xStart = contentBounds.x + width - totalWidth - layout.panelMargin;
+            if (m_waveformVisualizer) {
+                m_waveformVisualizer->setBounds(
+                    NomadUI::NUIRect(xStart, vuY, waveformWidth, visualizerHeight));
+                xStart += waveformWidth + gap;
+            }
+            if (m_audioVisualizer) {
+                m_audioVisualizer->setBounds(
+                    NomadUI::NUIRect(xStart, vuY, meterWidth, visualizerHeight));
+            }
         }
 
         // Update track manager UI bounds using full window dimensions (no margins)
@@ -537,6 +577,7 @@ private:
     std::shared_ptr<TransportBar> m_transportBar;
     std::shared_ptr<NomadUI::FileBrowser> m_fileBrowser;
     std::shared_ptr<NomadUI::AudioVisualizer> m_audioVisualizer;
+    std::shared_ptr<NomadUI::AudioVisualizer> m_waveformVisualizer;
     std::shared_ptr<TrackManager> m_trackManager;
     std::shared_ptr<TrackManagerUI> m_trackManagerUI;
     std::unique_ptr<PreviewEngine> m_previewEngine; // Dedicated preview engine (separate from transport)
@@ -613,53 +654,25 @@ private:
 /**
  * @brief Get the application data directory path
  * 
- * Returns a platform-specific path for storing application data:
- * - Windows: %APPDATA%/Nomad/
- * - macOS: ~/Library/Application Support/Nomad/
- * - Linux: ~/.local/share/Nomad/
- * 
+ * Returns a platform-specific path for storing application data using NomadPlat abstraction.
  * Creates the directory if it doesn't exist.
  */
 std::string getAppDataPath() {
-    std::filesystem::path appDataDir;
+    IPlatformUtils* utils = Platform::getUtils();
+    if (!utils) {
+        // Fallback if platform not initialized
+        return std::filesystem::current_path().string();
+    }
     
-#ifdef _WIN32
-    char path[MAX_PATH];
-    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, path))) {
-        appDataDir = std::filesystem::path(path) / "Nomad";
-    } else {
-        // Fallback to current directory
-        appDataDir = std::filesystem::current_path();
-    }
-#elif defined(__APPLE__)
-    const char* home = std::getenv("HOME");
-    if (home) {
-        appDataDir = std::filesystem::path(home) / "Library" / "Application Support" / "Nomad";
-    } else {
-        appDataDir = std::filesystem::current_path();
-    }
-#else
-    // Linux/Unix
-    const char* xdgData = std::getenv("XDG_DATA_HOME");
-    if (xdgData) {
-        appDataDir = std::filesystem::path(xdgData) / "Nomad";
-    } else {
-        const char* home = std::getenv("HOME");
-        if (home) {
-            appDataDir = std::filesystem::path(home) / ".local" / "share" / "Nomad";
-        } else {
-            appDataDir = std::filesystem::current_path();
-        }
-    }
-#endif
+    std::string appDataDir = utils->getAppDataPath("Nomad");
     
     // Create directory if it doesn't exist
     std::error_code ec;
     if (!std::filesystem::create_directories(appDataDir, ec) && ec) {
-        Log::warning("Failed to create app data directory: " + appDataDir.string() + " (" + ec.message() + ")");
+        Log::warning("Failed to create app data directory: " + appDataDir + " (" + ec.message() + ")");
     }
     
-    return appDataDir.string();
+    return appDataDir;
 }
 
 /**
@@ -710,8 +723,8 @@ public:
         }
         Log::info("Platform initialized");
 
-        // Create window using NUIPlatformBridge
-        m_window = std::make_unique<NUIPlatformBridge>();
+    // Create window using NUIPlatformBridge
+    m_window = std::make_unique<NUIPlatformBridge>();
         
         WindowDesc desc;
         desc.title = "NOMAD DAW v1.0";
@@ -770,6 +783,7 @@ public:
 
         // Initialize audio engine
         m_audioManager = std::make_unique<AudioDeviceManager>();
+        m_audioEngine = std::make_unique<AudioEngine>();
         if (!m_audioManager->initialize()) {
             Log::error("Failed to initialize audio engine");
             // Continue without audio for now
@@ -833,6 +847,11 @@ public:
                         config.numInputChannels = 0;
                         config.numOutputChannels = 2;
                         
+                        if (m_audioEngine) {
+                            m_audioEngine->setSampleRate(config.sampleRate);
+                            m_audioEngine->setBufferConfig(config.bufferSize, config.numOutputChannels);
+                        }
+                        
                         // Store config for later restoration
                         m_mainStreamConfig = config;
 
@@ -841,9 +860,41 @@ public:
                             Log::info("Audio stream opened");
                             
                             // Start the audio stream
-                            if (m_audioManager->startStream()) {
-                                Log::info("Audio stream started");
-                                m_audioInitialized = true;
+	                            if (m_audioManager->startStream()) {
+	                                Log::info("Audio stream started");
+	                                m_audioInitialized = true;
+	                                
+	                                // Enable auto-buffer scaling to recover from underruns.
+	                                // This runs on the main thread and will increase buffer size
+	                                // if the driver reports repeated underruns.
+	                                m_audioManager->setAutoBufferScaling(true, 5);
+	                                
+	                                double actualRate = static_cast<double>(m_audioManager->getStreamSampleRate());
+                                if (actualRate <= 0.0) {
+                                    actualRate = static_cast<double>(config.sampleRate);
+                                }
+                                // Keep engine, track managers, and graph in sync with the real device rate.
+                                if (m_audioEngine) {
+                                    m_audioEngine->setSampleRate(static_cast<uint32_t>(actualRate));
+                                    m_audioEngine->setBufferConfig(config.bufferSize, config.numOutputChannels);
+                                    if (m_content && m_content->getTrackManager()) {
+                                        auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), actualRate);
+                                        m_audioEngine->setGraph(graph);
+                                    }
+                                }
+                                m_mainStreamConfig.sampleRate = static_cast<uint32_t>(actualRate);
+                                if (m_audioEngine) {
+                                    const uint64_t hz = estimateCycleHz();
+                                    if (hz > 0) {
+                                        m_audioEngine->telemetry().cycleHz.store(hz, std::memory_order_relaxed);
+                                    }
+                                }
+                                if (m_content && m_content->getTrackManager()) {
+                                    m_content->getTrackManager()->setOutputSampleRate(actualRate);
+                                }
+                                if (m_content && m_content->getTrackManagerUI() && m_content->getTrackManagerUI()->getTrackManager()) {
+                                    m_content->getTrackManagerUI()->getTrackManager()->setOutputSampleRate(actualRate);
+                                }
                             } else {
                                 Log::error("Failed to start audio stream");
                                 m_audioInitialized = false;
@@ -891,9 +942,25 @@ public:
         m_content = std::make_shared<NomadContent>();
         m_content->setAudioStatus(m_audioInitialized);
         m_customWindow->setContent(m_content.get());
+
+        // Build initial audio graph for engine (uses default tracks created in NomadContent)
+        if (m_audioEngine && m_content && m_content->getTrackManager()) {
+            auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), m_mainStreamConfig.sampleRate);
+            m_audioEngine->setGraph(graph);
+        }
         
-        // Attempt to load last project state
-        auto loadResult = loadProject();
+        // TODO: Implement async project loading with progress indicator
+        // Currently disabled because loading audio files synchronously causes UI freeze
+        // The autosave contains 50+ tracks and references to large WAV files
+        // Future implementation should:
+        //   1. Show a loading splash/progress bar
+        //   2. Load track metadata first (instant)
+        //   3. Load audio files in background thread
+        //   4. Update UI as each file loads
+        // For now, start fresh each time
+        Log::info("[STARTUP] Project auto-load disabled (TODO: implement async loading)");
+        ProjectSerializer::LoadResult loadResult;
+        loadResult.ok = false;
         if (loadResult.ok) {
             if (m_content->getTransportBar()) {
                 m_content->getTransportBar()->setTempo(static_cast<float>(loadResult.tempo));
@@ -934,6 +1001,29 @@ public:
                 if (m_content && m_content->getTrackManagerUI()) {
                     m_content->getTrackManagerUI()->getTrackManager()->play();
                 }
+                // Rebuild graph immediately before starting playback to ensure it's current
+                if (m_audioEngine && m_content && m_content->getTrackManager()) {
+                    double sampleRate = static_cast<double>(m_mainStreamConfig.sampleRate);
+                    if (m_audioManager) {
+                        double actual = static_cast<double>(m_audioManager->getStreamSampleRate());
+                        if (actual > 0.0) sampleRate = actual;
+                    }
+                    // Rebuild the graph with latest track data
+                    auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), sampleRate);
+                    m_audioEngine->setGraph(graph);
+                    // Clear the dirty flag since we just rebuilt
+                    m_content->getTrackManager()->consumeGraphDirty();
+                    
+                    // Notify audio engine transport
+                    AudioQueueCommand cmd;
+                    cmd.type = AudioQueueCommandType::SetTransportState;
+                    cmd.value1 = 1.0f;
+                    double posSeconds = m_content->getTrackManager()->getPosition();
+                    cmd.samplePos = static_cast<uint64_t>(posSeconds * sampleRate);
+                    m_audioEngine->commandQueue().push(cmd);
+                    
+                    Log::info("Transport: Graph rebuilt with " + std::to_string(graph.tracks.size()) + " tracks");
+                }
             });
             
             transport->setOnPause([this]() {
@@ -941,20 +1031,51 @@ public:
                 if (m_content && m_content->getTrackManagerUI()) {
                     m_content->getTrackManagerUI()->getTrackManager()->pause();
                 }
+                if (m_audioEngine) {
+                    AudioQueueCommand cmd;
+                    cmd.type = AudioQueueCommandType::SetTransportState;
+                    cmd.value1 = 0.0f;
+                    // Preserve current position on pause (avoid unintended seek-to-zero).
+                    if (m_content && m_content->getTrackManager()) {
+                        double sampleRate = static_cast<double>(m_mainStreamConfig.sampleRate);
+                        if (m_audioManager) {
+                            double actual = static_cast<double>(m_audioManager->getStreamSampleRate());
+                            if (actual > 0.0) sampleRate = actual;
+                        }
+                        double posSeconds = m_content->getTrackManager()->getPosition();
+                        cmd.samplePos = static_cast<uint64_t>(posSeconds * sampleRate);
+                    }
+                    m_audioEngine->commandQueue().push(cmd);
+                }
             });
             
             transport->setOnStop([this, transport]() {
                 Log::info("Transport: Stop");
                 // Stop preview when transport stops
                 if (m_content) {
-                    m_content->stopSoundPreview();
+                m_content->stopSoundPreview();
+            }
+            if (m_content && m_content->getTrackManagerUI()) {
+                m_content->getTrackManagerUI()->getTrackManager()->stop();
+            }
+            // Reset position to 0
+            transport->setPosition(0.0);
+            if (m_audioEngine) {
+                double sampleRate = static_cast<double>(m_mainStreamConfig.sampleRate);
+                if (m_audioManager) {
+                    double actual = static_cast<double>(m_audioManager->getStreamSampleRate());
+                    if (actual > 0.0) sampleRate = actual;
                 }
-                if (m_content && m_content->getTrackManagerUI()) {
-                    m_content->getTrackManagerUI()->getTrackManager()->stop();
-                }
-                // Reset position to 0
-                transport->setPosition(0.0);
-            });
+                AudioQueueCommand cmd;
+                cmd.type = AudioQueueCommandType::SetTransportState;
+                cmd.value1 = 0.0f;
+                cmd.samplePos = 0;
+                m_audioEngine->commandQueue().push(cmd);
+            }
+            if (m_content && m_content->getTrackManager()) {
+                m_content->getTrackManager()->setPosition(0.0);
+            }
+        });
             
             transport->setOnTempoChange([this](float bpm) {
                 std::stringstream ss;
@@ -978,6 +1099,35 @@ public:
         m_audioSettingsDialog->setBounds(NUIRect(0, 0, desc.width, desc.height));
         m_audioSettingsDialog->setOnApply([this]() {
             Log::info("Audio settings applied");
+            
+            // Sync buffer size and sample rate from actual driver to AudioEngine
+            // Use actual values from driver (may differ from requested)
+            if (m_audioManager && m_audioEngine) {
+                uint32_t actualSampleRate = m_audioManager->getStreamSampleRate();
+                uint32_t actualBufferSize = m_audioManager->getStreamBufferSize();
+                
+                // Fallback to dialog values if driver reports 0
+                if (actualSampleRate == 0 && m_audioSettingsDialog) {
+                    actualSampleRate = m_audioSettingsDialog->getSelectedSampleRate();
+                }
+                if (actualBufferSize == 0 && m_audioSettingsDialog) {
+                    actualBufferSize = m_audioSettingsDialog->getSelectedBufferSize();
+                }
+                
+                // Always update AudioEngine with actual driver values
+                if (actualSampleRate > 0) {
+                    m_mainStreamConfig.sampleRate = actualSampleRate;
+                    m_audioEngine->setSampleRate(actualSampleRate);
+                    Log::info("AudioEngine sample rate synced to: " + std::to_string(actualSampleRate));
+                }
+                
+                if (actualBufferSize > 0) {
+                    m_mainStreamConfig.bufferSize = actualBufferSize;
+                    m_audioEngine->setBufferConfig(actualBufferSize, m_mainStreamConfig.numOutputChannels);
+                    Log::info("AudioEngine buffer size synced to: " + std::to_string(actualBufferSize));
+                }
+            }
+            
             // Update audio status
             if (m_content) {
                 bool trackManagerActive = m_content->getTrackManagerUI() &&
@@ -1018,11 +1168,23 @@ public:
             
             // Update config with fresh device ID
             m_mainStreamConfig.deviceId = deviceId;
+            if (m_audioEngine) {
+                m_audioEngine->setSampleRate(m_mainStreamConfig.sampleRate);
+                m_audioEngine->setBufferConfig(m_mainStreamConfig.bufferSize, m_mainStreamConfig.numOutputChannels);
+            }
             
             if (m_audioManager->openStream(m_mainStreamConfig, audioCallback, this)) {
                 if (m_audioManager->startStream()) {
                     Log::info("Main audio stream restored successfully");
                     m_audioInitialized = true;
+                    double actualRate = static_cast<double>(m_audioManager->getStreamSampleRate());
+                    if (actualRate <= 0.0) actualRate = static_cast<double>(m_mainStreamConfig.sampleRate);
+                    if (m_content && m_content->getTrackManager()) {
+                        m_content->getTrackManager()->setOutputSampleRate(actualRate);
+                    }
+                    if (m_content && m_content->getTrackManagerUI() && m_content->getTrackManagerUI()->getTrackManager()) {
+                        m_content->getTrackManagerUI()->getTrackManager()->setOutputSampleRate(actualRate);
+                    }
                 } else {
                     Log::error("Failed to start restored audio stream");
                     m_audioInitialized = false;
@@ -1035,12 +1197,20 @@ public:
         // Add dialog to root component AFTER custom window so it renders on top
         Log::info("Audio settings dialog created");
         
+        // Create confirmation dialog for unsaved changes prompts
+        m_confirmationDialog = std::make_shared<ConfirmationDialog>();
+        m_confirmationDialog->setBounds(NUIRect(0, 0, desc.width, desc.height));
+        Log::info("Confirmation dialog created");
+        
         // Add custom window to root component
         m_rootComponent->setCustomWindow(m_customWindow);
         
         // Add audio settings dialog to root component (after custom window for proper z-ordering)
         m_rootComponent->addChild(m_audioSettingsDialog);
         m_rootComponent->setAudioSettingsDialog(m_audioSettingsDialog);
+        
+        // Add confirmation dialog (on top of everything except FPS display)
+        m_rootComponent->addChild(m_confirmationDialog);
         
         // Create and add FPS display overlay (on top of everything)
         auto fpsDisplay = std::make_shared<FPSDisplay>(m_adaptiveFPS.get());
@@ -1051,6 +1221,7 @@ public:
         // Create and add Performance HUD (F12 to toggle)
         auto perfHUD = std::make_shared<PerformanceHUD>();
         perfHUD->setVisible(false); // Hidden by default
+        perfHUD->setAudioEngine(m_audioEngine.get());
         m_rootComponent->setPerformanceHUD(perfHUD);
         m_performanceHUD = perfHUD;
         Log::info("Performance HUD created (press F12 to toggle)");
@@ -1071,6 +1242,15 @@ public:
         
         // Setup window callbacks
         setupCallbacks();
+        
+        // Setup cursor visibility callback for TrackManagerUI (split tool hides cursor to show scissors)
+        if (m_content && m_content->getTrackManagerUI()) {
+            m_content->getTrackManagerUI()->setOnCursorVisibilityChanged([this](bool visible) {
+                if (m_window) {
+                    m_window->setCursorVisible(visible);
+                }
+            });
+        }
 
         m_running = true;
         Log::info("NOMAD DAW initialized successfully");
@@ -1101,7 +1281,10 @@ public:
         }
 
         // Main event loop
-        double deltaTime = 0.0; // Declare outside so it's visible in all zones
+	        double deltaTime = 0.0; // Declare outside so it's visible in all zones
+	        double autoSaveTimer = 0.0; // Timer for auto-save (in seconds)
+	        const double autoSaveInterval = 60.0; // Auto-save every 60 seconds
+	        double underrunCheckTimer = 0.0; // Periodic underrun check
         
         while (m_running && m_window->processEvents()) {
             // Begin profiler frame
@@ -1136,13 +1319,54 @@ public:
                     NOMAD_ZONE("Root_OnUpdate");
                     m_rootComponent->onUpdate(deltaTime);
                 }
+
+                // Feed master peaks from AudioEngine into the VU meter.
+                // This avoids any RT-thread calls into UI and keeps metering in sync
+                // with the actual engine output.
+                if (m_audioEngine && m_content && m_content->getAudioVisualizer()) {
+                    m_content->getAudioVisualizer()->setPeakLevels(
+                        m_audioEngine->getPeakL(),
+                        m_audioEngine->getPeakR(),
+                        m_audioEngine->getRmsL(),
+                        m_audioEngine->getRmsR()
+                    );
+                }
+
+                // Feed recent master output to the mini waveform meter (non-RT).
+                if (m_audioEngine && m_content && m_content->getWaveformVisualizer()) {
+                    static std::vector<float> waveformScratch;
+                    const uint32_t framesToRead = std::min<uint32_t>(
+                        m_audioEngine->getWaveformHistoryCapacity(), 256);
+                    if (framesToRead > 0) {
+                        waveformScratch.resize(static_cast<size_t>(framesToRead) * 2);
+                        const uint32_t read = m_audioEngine->copyWaveformHistory(
+                            waveformScratch.data(), framesToRead);
+                        if (read > 0) {
+                            m_content->getWaveformVisualizer()->setInterleavedWaveform(
+                                waveformScratch.data(), read);
+                        }
+                    }
+                }
                 
-                // Sync transport position with track manager during playback
-                if (m_content && m_content->getTransportBar() && m_content->getTrackManagerUI()) {
-                    auto trackManager = m_content->getTrackManagerUI()->getTrackManager();
-                    if (trackManager && trackManager->isPlaying()) {
+                // Sync transport position from AudioEngine during playback
+                // AudioEngine is the authoritative source for playback position
+                if (m_content && m_content->getTransportBar() && m_audioEngine) {
+                    // Only sync while UI transport is actually in Playing state.
+                    // This prevents a just-triggered Stop from being overwritten
+                    // by a few more audio blocks before the RT thread processes it.
+                    auto trackManager = m_content->getTrackManager();
+                    const bool userScrubbing = trackManager && trackManager->isUserScrubbing();
+
+                    if (!userScrubbing &&
+                        m_audioEngine->isTransportPlaying() &&
+                        m_content->getTransportBar()->getState() == TransportState::Playing) {
                         static double lastPosition = 0.0;
-                        double currentPosition = trackManager->getPosition();
+                        double currentPosition = m_audioEngine->getPositionSeconds();
+                        
+                        // Sync TrackManager without feeding seeks back into the engine.
+                        if (trackManager) {
+                            trackManager->syncPositionFromEngine(currentPosition);
+                        }
                         
                         // Detect loop (position jumped backward significantly)
                         if (currentPosition < lastPosition - 0.1) {
@@ -1159,6 +1383,63 @@ public:
                 // Update sound previews
                 if (m_content) {
                     m_content->updateSoundPreview();
+                }
+
+                // Rebuild audio graph for engine when track data changes.
+                // IMPORTANT: while playing, do not push transport samplePos from this path,
+                // otherwise we can create tiny unintended seeks -> audible crackles.
+                if (m_audioEngine && m_content && m_content->getTrackManager() &&
+                    m_content->getTrackManager()->consumeGraphDirty()) {
+                    double graphSampleRate = static_cast<double>(m_mainStreamConfig.sampleRate);
+                    if (m_audioManager) {
+                        double actual = static_cast<double>(m_audioManager->getStreamSampleRate());
+                        if (actual > 0.0) {
+                            graphSampleRate = actual;
+                        }
+                    }
+                    auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), graphSampleRate);
+                    m_audioEngine->setGraph(graph);
+                    const bool playing = m_content->getTrackManager()->isPlaying();
+                    if (!playing) {
+                        // When stopped, keep engine position aligned to UI position.
+                        AudioQueueCommand cmd;
+                        cmd.type = AudioQueueCommandType::SetTransportState;
+                        cmd.value1 = 0.0f;
+                        double posSeconds = m_content->getTrackManager()->getPosition();
+                        cmd.samplePos = static_cast<uint64_t>(posSeconds * graphSampleRate);
+                        m_audioEngine->commandQueue().push(cmd);
+                    }
+                }
+                
+	                // Auto-save check (only when modified and not playing to avoid audio glitches)
+	                autoSaveTimer += deltaTime;
+	                if (autoSaveTimer >= autoSaveInterval) {
+                    autoSaveTimer = 0.0;
+                    
+                    if (m_content && m_content->getTrackManager()) {
+                        bool isModified = m_content->getTrackManager()->isModified();
+                        bool isPlaying = m_content->getTrackManager()->isPlaying();
+                        bool isRecording = m_content->getTrackManager()->isRecording();
+                        
+                        // Only auto-save if modified and not in active audio operation
+                        if (isModified && !isPlaying && !isRecording) {
+                            Log::info("[AutoSave] Saving project...");
+                            if (saveProject()) {
+                                Log::info("[AutoSave] Project saved successfully");
+                            } else {
+                                Log::warning("[AutoSave] Failed to save project");
+	                }
+	                
+	                // Periodically check driver underruns and auto-scale buffer if needed.
+	                underrunCheckTimer += deltaTime;
+	                if (underrunCheckTimer >= 1.0) {
+	                    underrunCheckTimer = 0.0;
+	                    if (m_audioManager) {
+	                        m_audioManager->checkAndAutoScaleBuffer();
+	                    }
+	                }
+	            }
+                    }
                 }
             }
 
@@ -1185,6 +1466,31 @@ public:
             if (m_content && m_content->getTrackManagerUI()) {
                 auto trackManager = m_content->getTrackManagerUI()->getTrackManager();
                 if (trackManager) {
+                    // Connect command sink for RT updates
+                    if (m_audioEngine) {
+                        trackManager->setCommandSink([this](const AudioQueueCommand& cmd) {
+                            if (m_audioEngine) {
+                                m_audioEngine->commandQueue().push(cmd);
+                            }
+                        });
+                    }
+                    if (m_content && m_content->getTrackManager()) {
+                        m_content->getTrackManager()->setCommandSink([this](const AudioQueueCommand& cmd) {
+                            if (m_audioEngine) {
+                                m_audioEngine->commandQueue().push(cmd);
+                            }
+                        });
+                    }
+                    // Keep track managers aware of current sample rate
+                    double actualRate = static_cast<double>(m_mainStreamConfig.sampleRate);
+                    if (m_audioManager) {
+                        double actual = static_cast<double>(m_audioManager->getStreamSampleRate());
+                        if (actual > 0.0) actualRate = actual;
+                    }
+                    trackManager->setOutputSampleRate(actualRate);
+                    if (m_content && m_content->getTrackManager()) {
+                        m_content->getTrackManager()->setOutputSampleRate(actualRate);
+                    }
                     Profiler::getInstance().setAudioLoad(trackManager->getAudioLoadPercent());
                 }
             }
@@ -1221,12 +1527,30 @@ public:
      * @brief Shutdown all subsystems
      */
     void shutdown() {
-        if (!m_running) {
+        Log::info("[SHUTDOWN] Entering shutdown function...");
+        
+        // Note: m_running is already false when we exit the main loop
+        // Use a separate flag to prevent double-shutdown
+        static bool shutdownComplete = false;
+        if (shutdownComplete) {
+            Log::info("[SHUTDOWN] Already completed, returning");
             return;
         }
+        shutdownComplete = true;
 
-        // Save project state before tearing down
-        saveProject();
+        // Save project state before tearing down (with error handling)
+        try {
+            Log::info("[SHUTDOWN] Saving project state...");
+            if (saveProject()) {
+                Log::info("[SHUTDOWN] Project saved successfully");
+            } else {
+                Log::warning("[SHUTDOWN] Project save returned false");
+            }
+        } catch (const std::exception& e) {
+            Log::error("[SHUTDOWN] Exception during save: " + std::string(e.what()));
+        } catch (...) {
+            Log::error("[SHUTDOWN] Unknown exception during save");
+        }
 
         Log::info("Shutting down NOMAD DAW...");
 
@@ -1267,9 +1591,26 @@ public:
 
     ProjectSerializer::LoadResult loadProject() {
         if (!m_content || !m_content->getTrackManager()) {
+            Log::warning("[loadProject] Content or TrackManager not available");
             return {};
         }
-        return ProjectSerializer::load(m_projectPath, m_content->getTrackManager());
+        
+        // Check if autosave file exists before attempting to load
+        if (!std::filesystem::exists(m_projectPath)) {
+            Log::info("[loadProject] No previous project file found at: " + m_projectPath);
+            return {};  // Return empty result, not an error
+        }
+        
+        try {
+            Log::info("[loadProject] Loading from: " + m_projectPath);
+            return ProjectSerializer::load(m_projectPath, m_content->getTrackManager());
+        } catch (const std::exception& e) {
+            Log::error("[loadProject] Exception: " + std::string(e.what()));
+            return {};
+        } catch (...) {
+            Log::error("[loadProject] Unknown exception");
+            return {};
+        }
     }
 
     bool saveProject() {
@@ -1279,7 +1620,67 @@ public:
         if (m_content->getTransportBar()) {
             tempo = m_content->getTransportBar()->getTempo();
         }
-        return ProjectSerializer::save(m_projectPath, m_content->getTrackManager(), tempo, playhead);
+        bool saved = ProjectSerializer::save(m_projectPath, m_content->getTrackManager(), tempo, playhead);
+        if (saved && m_content->getTrackManager()) {
+            m_content->getTrackManager()->setModified(false);
+        }
+        return saved;
+    }
+    
+    /**
+     * @brief Request application close with optional save prompt
+     * 
+     * If there are unsaved changes, shows a confirmation dialog.
+     * Otherwise, closes immediately.
+     */
+    void requestClose() {
+        Log::info("[requestClose] Close requested");
+        
+        // Check if there are unsaved changes
+        bool hasUnsavedChanges = false;
+        if (m_content && m_content->getTrackManager()) {
+            hasUnsavedChanges = m_content->getTrackManager()->isModified();
+            Log::info("[requestClose] isModified() = " + std::string(hasUnsavedChanges ? "true" : "false"));
+        } else {
+            Log::info("[requestClose] No content or track manager");
+        }
+        
+        // For now, ALWAYS show the dialog to test it works
+        // TODO: Restore hasUnsavedChanges check once we verify dialog works
+        if (m_confirmationDialog) {
+            Log::info("[requestClose] Showing confirmation dialog");
+            // Show confirmation dialog
+            m_confirmationDialog->show(
+                "Close NOMAD",
+                "Are you sure you want to close NOMAD?",
+                [this](DialogResponse response) {
+                    switch (response) {
+                        case DialogResponse::Save:
+                            if (saveProject()) {
+                                Log::info("Project saved before exit");
+                            } else {
+                                Log::error("Failed to save project before exit");
+                            }
+                            m_running = false;
+                            break;
+                        case DialogResponse::DontSave:
+                            Log::info("Exiting without saving");
+                            m_running = false;
+                            break;
+                        case DialogResponse::Cancel:
+                            Log::info("Close cancelled by user");
+                            // Don't close - user cancelled
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            );
+        } else {
+            // No dialog available, close immediately
+            Log::warning("[requestClose] No confirmation dialog, closing immediately");
+            m_running = false;
+        }
     }
 
 private:
@@ -1303,27 +1704,19 @@ private:
         // Window close callback
         m_window->setCloseCallback([this]() {
             Log::info("Window close requested");
-            m_running = false;
+            requestClose();
         });
 
-        // Key callback
-        m_window->setKeyCallback([this](int key, bool pressed) {
-            // Signal activity to adaptive FPS
-            if (pressed) {
-                m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::KeyPress);
-            }
-            
-            // Debug: Log key presses
-            if (pressed) {
-                std::stringstream ss;
-                ss << "Key pressed: " << key;
-                Log::info(ss.str());
-                std::cout << "Key pressed: " << key << " (P should be 80)" << std::endl;
-            }
-            
-            // First, try to handle key events in the audio settings dialog if it's visible
-            if (m_audioSettingsDialog && m_audioSettingsDialog->isVisible()) {
-                NomadUI::NUIKeyEvent event;
+		        // Key callback
+		        m_window->setKeyCallback([this](int key, bool pressed) {
+	            // Signal activity to adaptive FPS
+	            if (pressed) {
+	                m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::KeyPress);
+	            }
+	            
+	            // First, try to handle key events in the audio settings dialog if it's visible
+	            if (m_audioSettingsDialog && m_audioSettingsDialog->isVisible()) {
+	                NomadUI::NUIKeyEvent event;
                 event.keyCode = convertToNUIKeyCode(key);
                 event.pressed = pressed;
                 event.released = !pressed;
@@ -1333,8 +1726,34 @@ private:
                 }
             }
             
-            // Handle global key shortcuts
-            if (key == static_cast<int>(KeyCode::Escape) && pressed) {
+	            // Handle confirmation dialog key events if visible
+	            if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
+                NomadUI::NUIKeyEvent event;
+                event.keyCode = convertToNUIKeyCode(key);
+                event.pressed = pressed;
+                event.released = !pressed;
+                
+                if (m_confirmationDialog->onKeyEvent(event)) {
+                    return; // Dialog handled the event
+                }
+	            }
+		            
+		            // If the FileBrowser search box is focused, it owns typing and shortcuts should not trigger.
+		            if (m_content && pressed) {
+		                auto fileBrowser = m_content->getFileBrowser();
+		                if (fileBrowser && fileBrowser->isSearchBoxFocused()) {
+		                    // Note: NUIPlatformBridge calls both `setKeyCallback` and `setKeyCallbackEx`.
+		                    // Let the extended callback handle FileBrowser typing to avoid double-delivery.
+		                    return;
+		                }
+		            }
+	            
+	            // Handle global key shortcuts
+	            if (key == static_cast<int>(KeyCode::Escape) && pressed) {
+                // If confirmation dialog is open, let it handle escape
+                if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
+                    return; // Already handled above
+                }
                 // If audio settings dialog is open, close it
                 if (m_audioSettingsDialog && m_audioSettingsDialog->isVisible()) {
                     m_audioSettingsDialog->hide();
@@ -1342,8 +1761,8 @@ private:
                     Log::info("Escape key pressed - exiting fullscreen");
                     m_customWindow->exitFullScreen();
                 } else {
-                    Log::info("Escape key pressed - exiting");
-                    m_running = false;
+                    Log::info("Escape key pressed - requesting close");
+                    requestClose();
                 }
             } else if (key == static_cast<int>(KeyCode::F11) && pressed) {
                 if (m_customWindow) {
@@ -1443,27 +1862,43 @@ private:
                     trackManagerUI->setVisible(!isVisible);
                     Log::info("Playlist visibility toggled via shortcut");
                 }
-            } else {
-                // Forward unhandled key events directly to the FileBrowser
-                if (m_content && pressed) {
-                    auto fileBrowser = m_content->getFileBrowser();
-                    if (fileBrowser) {
-                        NomadUI::NUIKeyEvent event;
-                        event.keyCode = convertToNUIKeyCode(key);
-                        event.pressed = pressed;
-                        event.released = !pressed;
-                        fileBrowser->onKeyEvent(event);
-                    }
-                }
-            }
-        });
+	            } else {
+	                // Forward unhandled key events directly to the FileBrowser
+	                if (m_content && pressed) {
+	                    auto fileBrowser = m_content->getFileBrowser();
+	                    if (fileBrowser) {
+	                        NomadUI::NUIKeyEvent event;
+	                        event.keyCode = convertToNUIKeyCode(key);
+	                        event.pressed = pressed;
+	                        event.released = !pressed;
+	                        fileBrowser->onKeyEvent(event);
+	                    }
+	                }
+	            }
+	        });
         
-        // Extended key callback with modifier support for clip manipulation
-        m_window->setKeyCallbackEx([this](int key, bool pressed, bool ctrl, bool shift, bool alt) {
-            if (!pressed) return;  // Only handle key press, not release
-            
-            // Clip manipulation shortcuts (require Ctrl modifier)
-            if (ctrl && m_content) {
+	        // Extended key callback with modifier support for clip manipulation
+	        m_window->setKeyCallbackEx([this](int key, bool pressed, bool ctrl, bool shift, bool alt) {
+	            if (!pressed) return;  // Only handle key press, not release
+	            
+	            // If the FileBrowser search box is focused, it owns typing and shortcuts should not trigger.
+	            if (m_content) {
+	                auto fileBrowser = m_content->getFileBrowser();
+	                if (fileBrowser && fileBrowser->isSearchBoxFocused()) {
+	                    NomadUI::NUIKeyEvent event;
+	                    event.keyCode = convertToNUIKeyCode(key);
+	                    event.pressed = true;
+	                    event.modifiers = NomadUI::NUIModifiers::None;
+	                    if (ctrl) event.modifiers = event.modifiers | NomadUI::NUIModifiers::Ctrl;
+	                    if (shift) event.modifiers = event.modifiers | NomadUI::NUIModifiers::Shift;
+	                    if (alt) event.modifiers = event.modifiers | NomadUI::NUIModifiers::Alt;
+	                    fileBrowser->onKeyEvent(event);
+	                    return;
+	                }
+	            }
+	            
+	            // Clip manipulation shortcuts (require Ctrl modifier)
+	            if (ctrl && m_content) {
                 auto trackManager = m_content->getTrackManagerUI();
                 if (!trackManager) return;
                 
@@ -1603,41 +2038,32 @@ private:
             return 1;
         }
 
-        // Clear output buffer first
-        std::fill(outputBuffer, outputBuffer + nFrames * 2, 0.0f);
+        // RT init (FTZ/DAZ) - once per audio thread, no OS calls.
+        Nomad::Audio::RT::initAudioThread();
+        const uint64_t cbStartCycles = Nomad::Audio::RT::readCycleCounter();
 
-        // Process audio through track manager
-        if (app->m_content && app->m_content->getTrackManagerUI()) {
-            auto trackManager = app->m_content->getTrackManagerUI()->getTrackManager();
-            PreviewEngine* previewEngine = app->m_content->getPreviewEngine();
-            if (trackManager) {
-                // Let track manager mix all playing tracks
-                double actualRate = 0.0;
-                if (app->m_audioManager) {
-                    actualRate = static_cast<double>(app->m_audioManager->getStreamSampleRate());
-                }
-                if (actualRate <= 0.0) {
-                    actualRate = static_cast<double>(app->m_mainStreamConfig.sampleRate);
-                }
-                trackManager->setOutputSampleRate(actualRate);
-                trackManager->processAudio(outputBuffer, nFrames, streamTime);
-                if (previewEngine) {
-                    previewEngine->setOutputSampleRate(actualRate);
-                    previewEngine->process(outputBuffer, nFrames);
-                }
-            }
+        // Sample rate is fixed for the lifetime of the stream; avoid driver queries in the callback.
+        double actualRate = static_cast<double>(app->m_mainStreamConfig.sampleRate);
+        if (actualRate <= 0.0) actualRate = 48000.0;
+
+        if (app->m_audioEngine) {
+            app->m_audioEngine->setSampleRate(static_cast<uint32_t>(actualRate));
+            app->m_audioEngine->processBlock(outputBuffer, inputBuffer, nFrames, streamTime);
+        } else {
+            std::fill(outputBuffer, outputBuffer + nFrames * 2, 0.0f);
+        }
+        
+        // Preview mixing (RT-safe path to be refactored later)
+        if (app->m_content && app->m_content->getPreviewEngine()) {
+            auto previewEngine = app->m_content->getPreviewEngine();
+            previewEngine->setOutputSampleRate(actualRate);
+            previewEngine->process(outputBuffer, nFrames);
         }
         
         // Generate test sound if active (directly in callback, no track needed)
         if (app->m_audioSettingsDialog && app->m_audioSettingsDialog->isPlayingTestSound()) {
-            // Use actual sample rate (fallback to config)
-            double sampleRate = 0.0;
-            if (app->m_audioManager) {
-                sampleRate = static_cast<double>(app->m_audioManager->getStreamSampleRate());
-            }
-            if (sampleRate <= 0.0) {
-                sampleRate = static_cast<double>(app->m_mainStreamConfig.sampleRate);
-            }
+            // Use cached stream sample rate (do not query drivers from RT thread).
+            const double sampleRate = actualRate;
             const double frequency = 440.0; // A4
             const double amplitude = 0.05; // 5% volume (gentle test tone)
             const double twoPi = 2.0 * 3.14159265358979323846;
@@ -1671,6 +2097,35 @@ private:
         // Note: Visualizer update disabled in audio callback to prevent allocations
         // We can update it from the main thread instead at 60fps
 
+        const uint64_t cbEndCycles = Nomad::Audio::RT::readCycleCounter();
+        if (app->m_audioEngine && cbEndCycles > cbStartCycles) {
+            auto& tel = app->m_audioEngine->telemetry();
+            tel.lastBufferFrames.store(nFrames, std::memory_order_relaxed);
+            tel.lastSampleRate.store(static_cast<uint32_t>(actualRate), std::memory_order_relaxed);
+
+            const uint64_t hz = tel.cycleHz.load(std::memory_order_relaxed);
+            if (hz > 0) {
+                const uint64_t deltaCycles = cbEndCycles - cbStartCycles;
+                const uint64_t ns = (deltaCycles * 1000000000ull) / hz;
+                tel.lastCallbackNs.store(ns, std::memory_order_relaxed);
+
+                uint64_t prevMax = tel.maxCallbackNs.load(std::memory_order_relaxed);
+                while (ns > prevMax &&
+                       !tel.maxCallbackNs.compare_exchange_weak(prevMax, ns,
+                                                               std::memory_order_relaxed,
+                                                               std::memory_order_relaxed)) {
+                }
+
+                const uint32_t sr = tel.lastSampleRate.load(std::memory_order_relaxed);
+                if (sr > 0) {
+                    const uint64_t budgetNs = (static_cast<uint64_t>(nFrames) * 1000000000ull) / sr;
+                    if (ns > budgetNs) {
+                        tel.xruns.fetch_add(1, std::memory_order_relaxed);
+                    }
+                }
+            }
+        }
+
         return 0;
     }
 
@@ -1678,16 +2133,19 @@ private:
     std::unique_ptr<NUIPlatformBridge> m_window;
     std::unique_ptr<NUIRenderer> m_renderer;
     std::unique_ptr<AudioDeviceManager> m_audioManager;
+    std::unique_ptr<AudioEngine> m_audioEngine;
     std::shared_ptr<NomadRootComponent> m_rootComponent;
     std::shared_ptr<NUICustomWindow> m_customWindow;
     std::shared_ptr<NomadContent> m_content;
     std::shared_ptr<AudioSettingsDialog> m_audioSettingsDialog;
+    std::shared_ptr<ConfirmationDialog> m_confirmationDialog;
     std::shared_ptr<FPSDisplay> m_fpsDisplay;
     std::shared_ptr<PerformanceHUD> m_performanceHUD;
     std::unique_ptr<NomadUI::NUIAdaptiveFPS> m_adaptiveFPS;
     NomadUI::NUIFrameProfiler m_profiler;  // Legacy profiler (can be removed later)
     bool m_running;
     bool m_audioInitialized;
+    bool m_pendingClose{false};  // Set when user requested close but awaiting dialog response
     AudioStreamConfig m_mainStreamConfig;  // Store main audio stream configuration
     std::string m_projectPath{getAutosavePath()};
     

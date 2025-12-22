@@ -25,7 +25,7 @@ bool NUITextRendererGDI::initialize() {
     if (initialized_) return true;
     
     // Create a default font
-    font_ = CreateFontA(
+    font_ = static_cast<void*>(CreateFontA(
         16,                    // Height
         0,                     // Width
         0,                     // Escapement
@@ -39,8 +39,9 @@ bool NUITextRendererGDI::initialize() {
         CLIP_DEFAULT_PRECIS,   // ClipPrecision
         DEFAULT_QUALITY,       // Quality
         DEFAULT_PITCH | FF_SWISS, // PitchAndFamily
+        DEFAULT_PITCH | FF_SWISS, // PitchAndFamily
         "Arial"                // FaceName
-    );
+    ));
     
     if (!font_) {
         std::cerr << "Failed to create GDI font" << std::endl;
@@ -54,13 +55,13 @@ bool NUITextRendererGDI::initialize() {
 
 void NUITextRendererGDI::shutdown() {
     if (font_) {
-        DeleteObject(font_);
+        DeleteObject(static_cast<HFONT>(font_));
         font_ = nullptr;
     }
     
     // Clean up font cache
     for (auto& [size, cachedFont] : fontCache_) {
-        DeleteObject(cachedFont);
+        DeleteObject(static_cast<HFONT>(cachedFont));
     }
     fontCache_.clear();
     
@@ -83,7 +84,7 @@ void NUITextRendererGDI::drawText(
     HFONT sizedFont = nullptr;
     auto it = fontCache_.find(fontSizeInt);
     if (it != fontCache_.end()) {
-        sizedFont = it->second;
+        sizedFont = static_cast<HFONT>(it->second);
     } else {
         // Create new font and cache it
         sizedFont = CreateFontA(
@@ -104,7 +105,7 @@ void NUITextRendererGDI::drawText(
         );
         
         if (sizedFont) {
-            fontCache_[fontSizeInt] = sizedFont;
+            fontCache_[fontSizeInt] = static_cast<void*>(sizedFont);
         }
     }
     

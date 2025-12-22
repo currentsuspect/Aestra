@@ -24,30 +24,25 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track, TrackManager* t
     m_nameLabel->setText(m_track->getName());
     {
         auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        // Use large font for track names (now 14px after theme reduction)
         m_nameLabel->setFontSize(themeManager.getFontSize("l"));
     }
-    updateTrackNameColors();
-    addChild(m_nameLabel);
-    
-    // Create duration label (shows sample duration)
-    m_durationLabel = std::make_shared<NomadUI::NUILabel>();
-    m_durationLabel->setText("");
-    {
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-        m_durationLabel->setFontSize(themeManager.getFontSize("m"));
-    }
-    m_durationLabel->setTextColor(NomadUI::NUIColor(0.5f, 0.5f, 0.5f, 1.0f)); // Grey text
-    addChild(m_durationLabel);
+	    m_nameLabel->setEllipsize(true);
+	    updateTrackNameColors();
+	    addChild(m_nameLabel);
 
-
-    // Create mute button
-    m_muteButton = std::make_shared<NomadUI::NUIButton>();
-    m_muteButton->setText("M");
-    m_muteButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Back to Secondary for cool animations
-    m_muteButton->setHoverColor(NomadUI::NUIColor(0.4f, 0.3f, 0.5f)); // Purple hover
-    m_muteButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
+	    // Create mute button
+	    m_muteButton = std::make_shared<NomadUI::NUIButton>();
+	    m_muteButton->setText("M");
+    m_muteButton->setStyle(NomadUI::NUIButton::Style::Secondary); 
+    m_muteButton->setToggleable(true);
+    // Use theme-derived hover color (transparent/subtle)
+    m_muteButton->setHoverColor(NomadUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.15f));
+    // Active state: Amber/Orange (Ableton/FL style)
+    m_muteButton->setPressedColor(NomadUI::NUIThemeManager::getInstance().getColor("accentAmber")); 
+    m_muteButton->setTextColor(NomadUI::NUIColor::white());
     m_muteButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
-    m_muteButton->setOnClick([this]() {
+    m_muteButton->setOnToggle([this](bool) {
         onMuteToggled();
     });
     addChild(m_muteButton);
@@ -55,23 +50,28 @@ TrackUIComponent::TrackUIComponent(std::shared_ptr<Track> track, TrackManager* t
     // Create solo button
     m_soloButton = std::make_shared<NomadUI::NUIButton>();
     m_soloButton->setText("S");
-    m_soloButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Back to Secondary for cool animations
-    m_soloButton->setHoverColor(NomadUI::NUIColor(0.4f, 0.3f, 0.5f)); // Purple hover
-    m_soloButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
+    m_soloButton->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_soloButton->setToggleable(true);
+    m_soloButton->setHoverColor(NomadUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.15f));
+    // Active state: Cyan/Blue
+    m_soloButton->setPressedColor(NomadUI::NUIThemeManager::getInstance().getColor("accentCyan"));
+    m_soloButton->setTextColor(NomadUI::NUIColor::white());
     m_soloButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
-    m_soloButton->setOnClick([this]() {
+    m_soloButton->setOnToggle([this](bool) {
         onSoloToggled();
     });
     addChild(m_soloButton);
 
     // Create record button
     m_recordButton = std::make_shared<NomadUI::NUIButton>();
-    m_recordButton->setText("●");
-    m_recordButton->setStyle(NomadUI::NUIButton::Style::Icon); // Keep Icon style for record circle
-    m_recordButton->setHoverColor(NomadUI::NUIColor(0.4f, 0.3f, 0.5f)); // Purple hover
-    m_recordButton->setPressedColor(NomadUI::NUIColor(50.0f/255.0f, 50.0f/255.0f, 50.0f/255.0f)); // Darker grey when pressed
+    m_recordButton->setText("R");
+    m_recordButton->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_recordButton->setToggleable(true);
+    m_recordButton->setHoverColor(NomadUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.15f));
+    // Active state: Red
+    m_recordButton->setPressedColor(NomadUI::NUIThemeManager::getInstance().getColor("error"));
     m_recordButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
-    m_recordButton->setOnClick([this]() {
+    m_recordButton->setOnToggle([this](bool) {
         onRecordToggled();
     });
     addChild(m_recordButton);
@@ -108,7 +108,12 @@ void TrackUIComponent::onMuteToggled() {
             m_track->setSolo(false);
         }
         
+        // Force immediate UI update
         updateUI();
+        
+        // Force repaint of the component
+        repaint();
+        
         Log::info("Track " + m_track->getName() + " mute: " + (newMute ? "ON" : "OFF"));
     }
 }
@@ -129,7 +134,12 @@ void TrackUIComponent::onSoloToggled() {
             m_track->setMute(false);
         }
         
+        // Force immediate UI update
         updateUI();
+        
+        // Force repaint of the component
+        repaint();
+        
         Log::info("Track " + m_track->getName() + " solo: " + (newSolo ? "ON" : "OFF"));
     }
 }
@@ -155,35 +165,19 @@ void TrackUIComponent::updateUI() {
         m_onCacheInvalidationCallback();
     }
 
-    // Update track name colors with bright colors based on number
-    updateTrackNameColors();
-    
-    // Update duration label if sample is loaded
-    if (m_durationLabel) {
-        double duration = m_track->getDuration();
-        if (duration > 0.0) {
-            // Format as MM:SS.mmm
-            int minutes = static_cast<int>(duration / 60.0);
-            int seconds = static_cast<int>(duration) % 60;
-            int milliseconds = static_cast<int>((duration - static_cast<int>(duration)) * 1000.0);
-            
-            char buffer[32];
-            snprintf(buffer, sizeof(buffer), "%02d:%02d.%03d", minutes, seconds, milliseconds);
-            m_durationLabel->setText(buffer);
-        } else {
-            m_durationLabel->setText("");
-        }
-    }
+	    // Update track name colors with bright colors based on number
+	    updateTrackNameColors();
 
 
-    if (m_muteButton) {
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+	    if (m_muteButton) {
+	        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
         // Use theme colors for Primary style
         m_muteButton->setBackgroundColor(themeManager.getColor("surfaceTertiary")); // #28282d - same as transport buttons
 
         // Active state (muted/unmuted) - no hover colors, just clear state indication
+        m_muteButton->setToggled(m_track->isMuted());
         if (m_track->isMuted()) {
-            m_muteButton->setTextColor(themeManager.getColor("error")); // Red text when muted
+            m_muteButton->setTextColor(NomadUI::NUIColor::black()); // Black text when muted (on yellow)
         } else {
             m_muteButton->setTextColor(themeManager.getColor("textPrimary")); // White text when not muted
         }
@@ -195,8 +189,9 @@ void TrackUIComponent::updateUI() {
         m_soloButton->setBackgroundColor(themeManager.getColor("surfaceTertiary")); // #28282d - same as transport buttons
 
         // Active state (soloed/unsoloed) - no hover colors, just clear state indication
+        m_soloButton->setToggled(m_track->isSoloed());
         if (m_track->isSoloed()) {
-            m_soloButton->setTextColor(themeManager.getColor("accentLime")); // Lime text when soloed
+            m_soloButton->setTextColor(NomadUI::NUIColor::black()); // Black text when soloed (on cyan)
         } else {
             m_soloButton->setTextColor(themeManager.getColor("textPrimary")); // White text when not soloed
         }
@@ -207,8 +202,9 @@ void TrackUIComponent::updateUI() {
         // Use theme colors for Icon style
         m_recordButton->setBackgroundColor(themeManager.getColor("surfaceTertiary")); // #28282d - same as transport buttons
         TrackState state = m_track->getState();
+        m_recordButton->setToggled(state == TrackState::Recording);
         if (state == TrackState::Recording) {
-            m_recordButton->setTextColor(themeManager.getColor("error")); // Red text when recording
+            m_recordButton->setTextColor(NomadUI::NUIColor::white()); // White text when recording (on red)
         } else {
             m_recordButton->setTextColor(themeManager.getColor("textPrimary")); // White text when not recording
         }
@@ -337,6 +333,100 @@ void TrackUIComponent::generateWaveformCache(int width, int height) {
     m_cachedAudioDataSize = audioData.size();
 }
 
+// Draw waveform for a specific track (for multi-clip lane support)
+void TrackUIComponent::drawWaveformForTrack(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds,
+                                            std::shared_ptr<Track> track, float offsetRatio, float visibleRatio) {
+    if (!track) return;
+
+    const auto& audioData = track->getAudioData();
+    if (audioData.empty()) return;
+
+    int width = static_cast<int>(bounds.width);
+    int height = static_cast<int>(bounds.height);
+    
+    // For non-primary tracks, we need to generate waveform data on the fly
+    // (the cache is only for the primary track)
+    // Use a simpler approach: directly sample the audio data
+    
+    uint32_t color = track->getColor();
+    NomadUI::NUIColor waveformColor = NomadUI::NUIColor(
+        (color >> 16) & 0xFF,
+        (color >> 8) & 0xFF,
+        color & 0xFF,
+        (color >> 24) & 0xFF
+    ) / 255.0f;
+    waveformColor = waveformColor.withAlpha(0.7f);
+    
+    int centerY = bounds.y + height / 2;
+    
+    // Draw center line
+    renderer.drawLine(
+        NomadUI::NUIPoint(bounds.x, centerY),
+        NomadUI::NUIPoint(bounds.x + bounds.width, centerY),
+        1.0f,
+        waveformColor.withAlpha(0.3f)
+    );
+    
+    // Calculate sample range to draw
+    size_t numChannels = track->getNumChannels();
+    size_t totalFrames = audioData.size() / (numChannels > 0 ? numChannels : 1);
+    size_t startFrame = static_cast<size_t>(offsetRatio * totalFrames);
+    size_t endFrame = static_cast<size_t>((offsetRatio + visibleRatio) * totalFrames);
+    
+    startFrame = std::min(startFrame, totalFrames);
+    endFrame = std::min(endFrame, totalFrames);
+    
+    size_t visibleFrames = endFrame - startFrame;
+    if (visibleFrames == 0 || width <= 0) return;
+    
+    // Build waveform as points
+    std::vector<NomadUI::NUIPoint> topPoints;
+    std::vector<NomadUI::NUIPoint> bottomPoints;
+    topPoints.reserve(width);
+    bottomPoints.reserve(width);
+    
+    float halfHeight = height / 2.0f;
+    size_t framesPerPixel = std::max(size_t(1), visibleFrames / width);
+    
+    for (int x = 0; x < width; ++x) {
+        size_t frameIndex = startFrame + (x * visibleFrames) / width;
+        size_t frameEnd = std::min(frameIndex + framesPerPixel, endFrame);
+        
+        float minVal = 0.0f;
+        float maxVal = 0.0f;
+        
+        // Find min/max in this pixel's range
+        for (size_t f = frameIndex; f < frameEnd; ++f) {
+            for (size_t c = 0; c < numChannels; ++c) {
+                size_t sampleIndex = f * numChannels + c;
+                if (sampleIndex < audioData.size()) {
+                    float sample = audioData[sampleIndex];
+                    minVal = std::min(minVal, sample);
+                    maxVal = std::max(maxVal, sample);
+                }
+            }
+        }
+        
+        // Calculate screen coordinates
+        float topY = centerY - maxVal * halfHeight;
+        float bottomY = centerY - minVal * halfHeight;
+        
+        // Ensure silence is rendered as a 1px line
+        if (bottomY - topY < 1.0f) {
+            topY = centerY - 0.5f;
+            bottomY = centerY + 0.5f;
+        }
+        
+        topPoints.push_back(NomadUI::NUIPoint(bounds.x + x, topY));
+        bottomPoints.push_back(NomadUI::NUIPoint(bounds.x + x, bottomY));
+    }
+    
+    // Single draw call for entire waveform
+    if (!topPoints.empty()) {
+        renderer.fillWaveform(topPoints.data(), bottomPoints.data(), static_cast<int>(topPoints.size()), waveformColor);
+    }
+}
+
 void TrackUIComponent::drawWaveform(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds,
                                      float offsetRatio, float visibleRatio) {
     if (!m_track) return;
@@ -437,12 +527,12 @@ void TrackUIComponent::drawWaveform(NomadUI::NUIRenderer& renderer, const NomadU
     }
 }
 
-// Draw sample clip container (FL Studio style)
-void TrackUIComponent::drawSampleClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds) {
-    if (!m_track) return;
+// Draw sample clip container (FL Studio style) - uses a specific track (for multi-clip lanes)
+void TrackUIComponent::drawSampleClipForTrack(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds, std::shared_ptr<Track> track) {
+    if (!track) return;
     
     // Get track color
-    uint32_t color = m_track->getColor();
+    uint32_t color = track->getColor();
     NomadUI::NUIColor clipColor = NomadUI::NUIColor(
         (color >> 16) & 0xFF,
         (color >> 8) & 0xFF,
@@ -458,7 +548,10 @@ void TrackUIComponent::drawSampleClip(NomadUI::NUIRenderer& renderer, const Noma
     NomadUI::NUIColor borderColor;
     float borderWidth;
     
-    if (m_selected) {
+    // Check if this specific clip is selected (primary track selected and this is primary)
+    bool clipSelected = m_selected && (track == m_track);
+    
+    if (clipSelected) {
         // Bright white border for selected clip
         borderColor = NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.95f);
         borderWidth = 2.0f;
@@ -471,8 +564,8 @@ void TrackUIComponent::drawSampleClip(NomadUI::NUIRenderer& renderer, const Noma
     renderer.drawLine(
         NomadUI::NUIPoint(clipBounds.x, clipBounds.y),
         NomadUI::NUIPoint(clipBounds.x + clipBounds.width, clipBounds.y),
-        m_selected ? 3.0f : 2.0f,
-        m_selected ? borderColor : borderColor.withAlpha(0.8f)
+        clipSelected ? 3.0f : 2.0f,
+        clipSelected ? borderColor : borderColor.withAlpha(0.8f)
     );
     
     // Bottom border
@@ -514,7 +607,7 @@ void TrackUIComponent::drawSampleClip(NomadUI::NUIRenderer& renderer, const Noma
         
         // Draw sample name text (from the actual loaded file, not track name)
         std::string sampleName;
-        const std::string& sourcePath = m_track->getSourcePath();
+        const std::string& sourcePath = track->getSourcePath();
         if (!sourcePath.empty()) {
             // Extract filename from source path
             size_t lastSlash = sourcePath.find_last_of("/\\");
@@ -525,7 +618,7 @@ void TrackUIComponent::drawSampleClip(NomadUI::NUIRenderer& renderer, const Noma
                 sampleName = sampleName.substr(0, lastDot);
             }
         } else {
-            sampleName = m_track->getName(); // Fallback to track name if no source path
+            sampleName = track->getName(); // Fallback to track name if no source path
         }
         // Truncate if too long
         if (sampleName.length() > 20 && clipBounds.width < 200) {
@@ -541,9 +634,113 @@ void TrackUIComponent::drawSampleClip(NomadUI::NUIRenderer& renderer, const Noma
     }
 }
 
+// Legacy wrapper for backward compatibility
+void TrackUIComponent::drawSampleClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds) {
+    drawSampleClipForTrack(renderer, clipBounds, m_track);
+}
+
+// Helper to draw a clip at its calculated position (for multi-clip lane support)
+void TrackUIComponent::drawClipAtPosition(NomadUI::NUIRenderer& renderer, std::shared_ptr<Track> clip,
+                                          const NomadUI::NUIRect& bounds, float controlAreaWidth) {
+    if (!clip || clip->getAudioData().empty()) return;
+    
+    // Calculate waveform position in timeline space
+    double startPositionSeconds = clip->getStartPositionInTimeline();
+    double audioDuration = clip->getDuration();
+    double bpm = 120.0; // TODO: Get from project settings
+    double secondsPerBeat = 60.0 / bpm;
+    
+    // Convert timeline position to beats
+    double startPositionInBeats = startPositionSeconds / secondsPerBeat;
+    double durationInBeats = audioDuration / secondsPerBeat;
+    
+    // Calculate waveform dimensions in pixel space
+    float waveformWidthInPixels = static_cast<float>(durationInBeats * m_pixelsPerBeat);
+    float waveformStartX = bounds.x + controlAreaWidth + 5 +
+                           static_cast<float>(startPositionInBeats * m_pixelsPerBeat) -
+                           m_timelineScrollOffset;
+    
+    // Only draw if waveform is visible in the current viewport
+    float gridStartX = bounds.x + controlAreaWidth + 5;
+    float gridWidth = bounds.width - controlAreaWidth - 10;
+    float gridEndX = gridStartX + gridWidth;
+    
+    // Culling padding for smooth scrolling
+    float cullPaddingLeft = 400.0f;
+    float cullPaddingRight = 400.0f;
+    
+    // Check if waveform intersects with visible area
+    if (waveformStartX + waveformWidthInPixels > gridStartX - cullPaddingLeft &&
+        waveformStartX < gridEndX + cullPaddingRight) {
+        
+        // Determine the visible portion
+        float visibleStartX = std::max(waveformStartX, gridStartX);
+        float visibleEndX = std::min(waveformStartX + waveformWidthInPixels, gridEndX);
+        float visibleWidth = visibleEndX - visibleStartX;
+        
+        if (visibleWidth > 0) {
+            // Calculate offset and ratio for visible portion
+            float offsetRatio = 0.0f;
+            float visibleRatio = 1.0f;
+            
+            if (waveformStartX < gridStartX) {
+                offsetRatio = (gridStartX - waveformStartX) / waveformWidthInPixels;
+            }
+            
+            if (waveformStartX + waveformWidthInPixels > gridEndX) {
+                float endRatio = (gridEndX - waveformStartX) / waveformWidthInPixels;
+                visibleRatio = endRatio - offsetRatio;
+            }
+            
+            // Clip bounds for drawing
+            float clipStartX = std::max(waveformStartX, gridStartX);
+            float clipEndX = std::min(waveformStartX + waveformWidthInPixels, gridEndX);
+            float clipWidth = clipEndX - clipStartX;
+            
+            if (clipWidth > 0) {
+                NomadUI::NUIRect clippedClipBounds(
+                    clipStartX,
+                    bounds.y + 2,
+                    clipWidth,
+                    bounds.height - 4
+                );
+                drawSampleClipForTrack(renderer, clippedClipBounds, clip);
+                
+                // Store FULL clip bounds for hit testing (for ALL clips, not just primary)
+                NomadUI::NUIRect fullClipBounds(
+                    waveformStartX,
+                    bounds.y + 2,
+                    waveformWidthInPixels,
+                    bounds.height - 4
+                );
+                m_allClipBounds[clip] = fullClipBounds;
+                
+                // Also store for primary if this is the primary track (backwards compatibility)
+                if (clip == m_track) {
+                    m_clipBounds = fullClipBounds;
+                }
+                
+                // Draw waveform INSIDE the clip
+                float nameStripHeight = 16.0f;
+                float waveformPadding = 2.0f;
+                NomadUI::NUIRect waveformInsideClip(
+                    visibleStartX,
+                    bounds.y + 2 + nameStripHeight + waveformPadding,
+                    visibleWidth,
+                    bounds.height - 4 - nameStripHeight - waveformPadding * 2
+                );
+                drawWaveformForTrack(renderer, waveformInsideClip, clip, offsetRatio, visibleRatio);
+            }
+        }
+    }
+}
+
 // UI Rendering
 void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIRect bounds = getBounds();
+    
+    // Clear clip bounds map - will be repopulated during drawClipAtPosition
+    m_allClipBounds.clear();
 
     // Get theme colors and layout
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
@@ -551,165 +748,83 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIColor trackBgColor = themeManager.getColor("backgroundPrimary"); // #19191c - Same black as title bar
     NomadUI::NUIColor borderColor = themeManager.getColor("border");
     
-    // Determine track highlight color based on state
-    NomadUI::NUIColor highlightColor = trackBgColor;
+    // Clamp to the component width to prevent any overdraw/bleed when the viewport is narrow.
+    float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
     
-    if (m_track) {
-        if (m_track->isSoloed()) {
-            // Inverse highlight for solo (brighter)
-            highlightColor = NomadUI::NUIColor(0.3f, 0.3f, 0.35f, 1.0f); // Lighter grey-blue
-        } else if (m_track->isMuted()) {
-            // Dull highlight for mute (darker)
-            highlightColor = NomadUI::NUIColor(0.05f, 0.05f, 0.05f, 1.0f); // Very dark grey
-        } else if (m_selected) {
-            // Grey highlight for selected
-            highlightColor = NomadUI::NUIColor(0.15f, 0.15f, 0.15f, 1.0f); // Medium grey
-        }
-    }
-
-    // Draw track background (full width)
-    renderer.fillRect(bounds, trackBgColor);
-    
-    // Draw highlight ONLY in control area (not playlist area)
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-    float controlAreaWidth = buttonX + layout.controlButtonWidth + 10; // Up to end of buttons
-    NomadUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
-    renderer.fillRect(controlAreaBounds, highlightColor);
-    
-    // Draw vertical separator between control area and playlist area
-    renderer.drawLine(
-        NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
-        NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y + bounds.height),
-        1.0f,
-        borderColor.withAlpha(0.5f)
-    );
-    
-    // Draw horizontal separator at bottom of track (filling the gap)
-    // Thick line to clearly separate tracks
-    float separatorY = bounds.y + bounds.height + 1.0f; // Center in the 2px gap
-    renderer.drawLine(
-        NomadUI::NUIPoint(bounds.x, separatorY),
-        NomadUI::NUIPoint(bounds.x + bounds.width, separatorY),
-        2.0f,
-        NomadUI::NUIColor(0.0f, 0.0f, 0.0f, 1.0f) // Solid black separator
-    );
-    
-    // Draw grid ABOVE track content (playlist grid)
-    drawPlaylistGrid(renderer, bounds);
-    
-    // Draw waveform in the playlist area (if sample is loaded)
-    // Waveform scrolls and zooms with the timeline
-    if (m_track && !m_track->getAudioData().empty()) {
-        // Calculate waveform position in timeline space
-        // The waveform starts at the sample's timeline position
-        
-        double startPositionSeconds = m_track->getStartPositionInTimeline();
-        double audioDuration = m_track->getDuration(); // in seconds
-        double bpm = 120.0; // TODO: Get from project settings
-        double secondsPerBeat = 60.0 / bpm;
-        
-        // Convert timeline position to beats
-        double startPositionInBeats = startPositionSeconds / secondsPerBeat;
-        double durationInBeats = audioDuration / secondsPerBeat;
-        
-        // Calculate waveform dimensions in pixel space
-        float waveformWidthInPixels = static_cast<float>(durationInBeats * m_pixelsPerBeat);
-        float waveformStartX = bounds.x + controlAreaWidth + 5 + 
-                               static_cast<float>(startPositionInBeats * m_pixelsPerBeat) - 
-                               m_timelineScrollOffset; // Start at sample position, scroll with timeline
-        
-        // Only draw if waveform is visible in the current viewport
-        float gridStartX = bounds.x + controlAreaWidth + 5;
-        float gridWidth = bounds.width - controlAreaWidth - 10;
-        float gridEndX = gridStartX + gridWidth;
-        
-        // CRITICAL: Add generous padding for off-screen culling to prevent visible clipping
-        // Samples will render beyond screen edges to ensure smooth scrolling experience
-        float cullPaddingLeft = 400.0f;   // Start rendering 400px before visible area (increased from 200px)
-        float cullPaddingRight = 400.0f;  // Stop rendering 400px after visible area (increased from 200px)
-        
-        // Check if waveform intersects with visible area (with culling padding)
-        if (waveformStartX + waveformWidthInPixels > gridStartX - cullPaddingLeft && 
-            waveformStartX < gridEndX + cullPaddingRight) {
-            
-            // Determine the visible portion of the waveform
-            float visibleStartX = std::max(waveformStartX, gridStartX);
-            float visibleEndX = std::min(waveformStartX + waveformWidthInPixels, gridEndX);
-            float visibleWidth = visibleEndX - visibleStartX;
-            
-            if (visibleWidth > 0) {
-                // Calculate offset and ratio for the visible portion
-                float offsetRatio = 0.0f;
-                float visibleRatio = 1.0f;
-                
-                if (waveformStartX < gridStartX) {
-                    // Waveform starts off-screen to the left - skip the beginning
-                    offsetRatio = (gridStartX - waveformStartX) / waveformWidthInPixels;
-                }
-                
-                if (waveformStartX + waveformWidthInPixels > gridEndX) {
-                    // Waveform extends off-screen to the right - calculate visible portion
-                    float endRatio = (gridEndX - waveformStartX) / waveformWidthInPixels;
-                    visibleRatio = endRatio - offsetRatio;
-                }
-                
-                // Create bounds for the VISIBLE portion only
-                // This is where we actually draw on screen
-                NomadUI::NUIRect waveformBounds(
-                    visibleStartX,  // Start at visible position (clipped)
-                    bounds.y + 5,
-                    visibleWidth,   // Only the visible width
-                    bounds.height - 10
-                );
-                
-                // Draw sample clip container (FL Studio style) - CLIP TO GRID AREA
-                // Clip both left (control area) and right (grid end)
-                float clipStartX = std::max(waveformStartX, gridStartX);
-                float clipEndX = std::min(waveformStartX + waveformWidthInPixels, gridEndX);
-                float clipWidth = clipEndX - clipStartX;
-                
-                if (clipWidth > 0) {
-                    NomadUI::NUIRect clippedClipBounds(
-                        clipStartX,
-                        bounds.y + 2,
-                        clipWidth,
-                        bounds.height - 4
-                    );
-                    drawSampleClip(renderer, clippedClipBounds);
-                    
-                    // Store the FULL clip bounds (not clipped) for hit testing
-                    // This allows clicking on the clip even when partially scrolled
-                    m_clipBounds = NomadUI::NUIRect(
-                        waveformStartX,
-                        bounds.y + 2,
-                        waveformWidthInPixels,
-                        bounds.height - 4
-                    );
-                    
-                    // Draw waveform INSIDE the clip, below the name strip
-                    // Name strip is 16px, add some padding for clean look
-                    float nameStripHeight = 16.0f;
-                    float waveformPadding = 2.0f;
-                    NomadUI::NUIRect waveformInsideClip(
-                        visibleStartX,
-                        bounds.y + 2 + nameStripHeight + waveformPadding,
-                        visibleWidth,
-                        bounds.height - 4 - nameStripHeight - waveformPadding * 2
-                    );
-                    drawWaveform(renderer, waveformInsideClip, offsetRatio, visibleRatio);
-                }
+    // Only PRIMARY components draw the control area and background
+    // Secondary components (same lane) only draw their clip
+    if (m_isPrimaryForLane) {
+        // Determine track highlight color based on state (semantic theme roles)
+        NomadUI::NUIColor highlightColor = trackBgColor;
+        if (m_track) {
+            if (m_track->isSoloed()) {
+                highlightColor = themeManager.getColor("accentCyan").withAlpha(0.10f);
+            } else if (m_track->isMuted()) {
+                highlightColor = themeManager.getColor("backgroundPrimary").darkened(0.35f);
+            } else if (m_selected) {
+                highlightColor = themeManager.getColor("primary").withAlpha(0.12f); // AccentSoft
             }
+        }
+
+	        // Draw track background (full width).
+	        renderer.fillRect(bounds, trackBgColor);
+
+	        // Draw highlight ONLY in control area (not playlist area).
+	        NomadUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
+	        renderer.fillRect(controlAreaBounds, highlightColor);
+
+        // Track color strip (identity)
+        if (m_track) {
+            uint32_t argb = m_track->getColor();
+            float a = ((argb >> 24) & 0xFF) / 255.0f;
+            float r = ((argb >> 16) & 0xFF) / 255.0f;
+            float g = ((argb >> 8) & 0xFF) / 255.0f;
+            float b = (argb & 0xFF) / 255.0f;
+            NomadUI::NUIColor stripColor(r, g, b, a > 0.0f ? a : 1.0f);
+            const float stripWidth = 5.0f;
+            renderer.fillRect(NomadUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
+        }
+        
+        // Draw vertical separator between control area and playlist area
+        renderer.drawLine(
+            NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
+            NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y + bounds.height),
+            1.0f,
+            borderColor.withAlpha(0.5f)
+        );
+        
+        // Draw horizontal separator at bottom of track (filling the gap)
+        float separatorY = bounds.y + bounds.height + 1.0f;
+        renderer.drawLine(
+            NomadUI::NUIPoint(bounds.x, separatorY),
+            NomadUI::NUIPoint(bounds.x + bounds.width, separatorY),
+            2.0f,
+            NomadUI::NUIColor(0.0f, 0.0f, 0.0f, 1.0f)
+        );
+        
+        // Draw grid ABOVE track content (playlist grid)
+        drawPlaylistGrid(renderer, bounds);
+    }
+    
+    // === MULTI-CLIP RENDERING (FL STUDIO STYLE) ===
+    // Draw ALL clips on this lane: primary track + lane clips
+    // Each clip is positioned based on its timeline position
+    
+    // Draw primary track's clip
+    if (m_track && !m_track->getAudioData().empty()) {
+        drawClipAtPosition(renderer, m_track, bounds, controlAreaWidth);
+    }
+    
+    // Draw additional lane clips (from split operations)
+    for (const auto& laneClip : m_laneClips) {
+        if (laneClip && !laneClip->getAudioData().empty()) {
+            drawClipAtPosition(renderer, laneClip, bounds, controlAreaWidth);
         }
     }
 
     // Apply greyscale overlay to playlist area for muted tracks (Bug #8: Mute/Solo Visual Feedback)
-    if (m_track && m_track->isMuted()) {
+    if (m_track && m_track->isMuted() && m_isPrimaryForLane) {
         // Determine playlist area bounds (right side, after control area)
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-        const auto& layout = themeManager.getLayoutDimensions();
-        float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-        float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
-        
         NomadUI::NUIRect playlistArea(
             bounds.x + controlAreaWidth,
             bounds.y,
@@ -722,7 +837,62 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
         renderer.fillRect(playlistArea, muteOverlay);
     }
 
-    // Render child components (controls only - name label and buttons)
+    // Render child components (controls only - name label and buttons) - PRIMARY ONLY
+    if (m_isPrimaryForLane) {
+        renderChildren(renderer);
+    }
+}
+
+void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
+    if (!m_isPrimaryForLane) return;
+
+    const NomadUI::NUIRect bounds = getBounds();
+    if (bounds.isEmpty()) return;
+
+    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    const auto& layout = themeManager.getLayoutDimensions();
+
+    const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
+    const NomadUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
+
+    const NomadUI::NUIColor trackBgColor = themeManager.getColor("backgroundPrimary");
+    const NomadUI::NUIColor borderColor = themeManager.getColor("border");
+
+    // Reset the control strip to a stable base so hover/press visuals don't "stick" in cached renders.
+    renderer.fillRect(controlAreaBounds, trackBgColor);
+
+    // Apply highlight overlay (matches TrackUIComponent::onRender)
+    if (m_track) {
+        if (m_track->isSoloed()) {
+            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentCyan").withAlpha(0.10f));
+        } else if (m_track->isMuted()) {
+            renderer.fillRect(controlAreaBounds, trackBgColor.darkened(0.35f));
+        } else if (m_selected) {
+            renderer.fillRect(controlAreaBounds, themeManager.getColor("primary").withAlpha(0.12f));
+        }
+    }
+
+    // Track color strip (identity)
+    if (m_track) {
+        const uint32_t argb = m_track->getColor();
+        const float a = ((argb >> 24) & 0xFF) / 255.0f;
+        const float r = ((argb >> 16) & 0xFF) / 255.0f;
+        const float g = ((argb >> 8) & 0xFF) / 255.0f;
+        const float b = (argb & 0xFF) / 255.0f;
+        const NomadUI::NUIColor stripColor(r, g, b, a > 0.0f ? a : 1.0f);
+        const float stripWidth = 5.0f;
+        renderer.fillRect(NomadUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
+    }
+
+    // Draw vertical separator between control area and playlist area
+    renderer.drawLine(
+        NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
+        NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y + bounds.height),
+        1.0f,
+        borderColor.withAlpha(0.5f)
+    );
+
+    // Render control components (track name + M/S/R)
     renderChildren(renderer);
 }
 
@@ -731,12 +901,18 @@ void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const No
     // Get layout dimensions from theme
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
+    const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
     
-    // Grid settings - start after buttons (buttonX + buttonWidth + margin)
-    float gridStartX = bounds.x + buttonX + layout.controlButtonWidth + 10; // 10px margin after record button
-    float gridWidth = bounds.width - (buttonX + layout.controlButtonWidth + 10);
-    float gridEndX = gridStartX + gridWidth;
+    // Grid settings - start after control area (robust to narrow widths)
+    const float desiredGap = 5.0f;
+    const float gridGap = std::min(desiredGap, std::max(0.0f, bounds.width - controlAreaWidth));
+    const float gridStartX = bounds.x + controlAreaWidth + gridGap;
+    const float gridWidth = std::max(0.0f, bounds.width - controlAreaWidth - gridGap);
+    const float gridEndX = gridStartX + gridWidth;
+
+    if (gridWidth <= 0.0f) {
+        return;
+    }
     
     // Grid colors
     NomadUI::NUIColor barLineColor(0.5f, 0.5f, 0.5f, 0.6f);   // Brighter, more visible lines for bars
@@ -852,37 +1028,44 @@ void TrackUIComponent::onResize(int width, int height) {
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 
-    // Layout controls vertically next to the name label using configurable dimensions
+    // Docked control area width from theme (clamped to bounds to prevent overflow).
+    const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
+
+    // Buttons cluster (horizontal, right-aligned)
+    const float buttonW = layout.controlButtonWidth;
+    const float buttonH = layout.controlButtonHeight;
+    const float spacing = layout.controlButtonSpacing;
+    const int numButtons = (m_recordButton ? 3 : 2);
+    const float buttonsTotalW = numButtons * buttonW + (numButtons - 1) * spacing;
+    const float buttonsXStart = bounds.x + controlAreaWidth - buttonsTotalW - layout.panelMargin;
+    const float buttonsY = bounds.y + (bounds.height - buttonH) * 0.5f;
+
+    // Labels occupy the remaining left side of the control area
+    const float labelLeft = bounds.x + layout.panelMargin;
+    const float labelRight = buttonsXStart - layout.panelMargin;
+    const float labelWidth = std::max(40.0f, labelRight - labelLeft);
     float centerY = bounds.y + (bounds.height - layout.trackLabelHeight) / 2.0f;
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX"); // Use component-specific setting
-    float labelWidth = std::max(80.0f, buttonX - layout.panelMargin * 2.0f);
 
-    // Name label on the left with compact margin
-    if (m_nameLabel) {
-        m_nameLabel->setBounds(NUIAbsolute(bounds, layout.panelMargin, centerY - bounds.y, labelWidth, layout.trackLabelHeight));
-        // Log::info("TrackUIComponent nameLabel bounds: x=" + std::to_string(bounds.x + layout.panelMargin) + ", y=" + std::to_string(centerY));
+	    // Name label on the left with compact margin
+	    if (m_nameLabel) {
+	        m_nameLabel->setBounds(NUIAbsolute(bounds, layout.panelMargin, centerY - bounds.y, labelWidth, layout.trackLabelHeight));
+	        // Log::info("TrackUIComponent nameLabel bounds: x=" + std::to_string(bounds.x + layout.panelMargin) + ", y=" + std::to_string(centerY));
+	    }
+
+	    float xCursor = buttonsXStart;
+	    if (m_muteButton) {
+	        m_muteButton->setBounds(
+            NUIAbsolute(bounds, xCursor - bounds.x, buttonsY - bounds.y, buttonW, buttonH));
+        xCursor += buttonW + spacing;
     }
-    
-    // Duration label below name label
-    if (m_durationLabel) {
-        m_durationLabel->setBounds(NUIAbsolute(bounds, layout.panelMargin, centerY - bounds.y + layout.trackLabelHeight + 2, 140, 20));
-    }
-
-    // Buttons vertically centered in a compact group
-    float buttonGroupHeight = 3 * layout.controlButtonHeight + 2 * layout.controlButtonSpacing;
-    float buttonY = bounds.y + (bounds.height - buttonGroupHeight) / 2.0f; // Center the group vertically
-
-    // Layout buttons with compact spacing
-    if (m_muteButton) {
-        m_muteButton->setBounds(NUIAbsolute(bounds, buttonX, buttonY - bounds.y, layout.controlButtonWidth, layout.controlButtonHeight));
-    }
-
     if (m_soloButton) {
-        m_soloButton->setBounds(NUIAbsolute(bounds, buttonX, (buttonY + layout.controlButtonHeight + layout.controlButtonSpacing) - bounds.y, layout.controlButtonWidth, layout.controlButtonHeight));
+        m_soloButton->setBounds(
+            NUIAbsolute(bounds, xCursor - bounds.x, buttonsY - bounds.y, buttonW, buttonH));
+        xCursor += buttonW + spacing;
     }
-
     if (m_recordButton) {
-        m_recordButton->setBounds(NUIAbsolute(bounds, buttonX, (buttonY + 2 * (layout.controlButtonHeight + layout.controlButtonSpacing)) - bounds.y, layout.controlButtonWidth, layout.controlButtonHeight));
+        m_recordButton->setBounds(
+            NUIAbsolute(bounds, xCursor - bounds.x, buttonsY - bounds.y, buttonW, buttonH));
     }
 
     NomadUI::NUIComponent::onResize(width, height);
@@ -894,29 +1077,42 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // Early exit: If event is outside our bounds and we're not in an active operation, don't handle it
     bool isInsideBounds = bounds.contains(event.position);
     bool isActiveOperation = m_isTrimming || m_isDraggingClip || m_clipDragPotential;
+    bool isControlCapture = (m_muteButton && m_muteButton->isPressed()) ||
+                            (m_soloButton && m_soloButton->isPressed()) ||
+                            (m_recordButton && m_recordButton->isPressed());
+    bool controlsNeedEvents = isControlCapture ||
+                              (m_muteButton && m_muteButton->isHovered()) ||
+                              (m_soloButton && m_soloButton->isHovered()) ||
+                              (m_recordButton && m_recordButton->isHovered());
     
-    if (!isInsideBounds && !isActiveOperation) {
+    if (!isInsideBounds && !isActiveOperation && !controlsNeedEvents) {
         return false;  // Let parent/siblings handle it (e.g., scrollbar)
     }
     
     // Get theme to determine control area bounds
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
-    float buttonX = themeManager.getComponentDimension("trackControls", "buttonStartX");
-    float controlAreaWidth = buttonX + layout.controlButtonWidth + 10;
+    float controlAreaWidth = layout.trackControlsWidth;
     float controlAreaEndX = bounds.x + controlAreaWidth;
     float gridStartX = bounds.x + controlAreaWidth + 5;
     float gridEndX = bounds.x + bounds.width - 5;
     
-    // PRIORITY 1: Always let child buttons handle events in control area first
-    // This ensures M/S/Record buttons work even when a sample is loaded
-    if (isInsideBounds && event.position.x < controlAreaEndX) {
-        for (auto& child : getChildren()) {
-            if (child->getBounds().contains(event.position)) {
-                if (child->onMouseEvent(event)) {
-                    return true;  // Button handled it
-                }
-            }
+    // Keep button hover/press state accurate even when leaving the track row.
+    // This is important for cached UIs (and prevents stuck hover/press visuals).
+    if (isInsideBounds || controlsNeedEvents) {
+        auto routeControlButton = [&](const std::shared_ptr<NomadUI::NUIButton>& button) -> bool {
+            if (!button) return false;
+            const bool handled = button->onMouseEvent(event);
+            return handled;
+        };
+
+        bool handledByControls = false;
+        handledByControls = routeControlButton(m_muteButton) || handledByControls;
+        handledByControls = routeControlButton(m_soloButton) || handledByControls;
+        handledByControls = routeControlButton(m_recordButton) || handledByControls;
+
+        if (handledByControls) {
+            return true;
         }
     }
     
@@ -932,6 +1128,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         m_isDraggingClip = false;
         m_isTrimming = false;
         m_trimEdge = TrimEdge::None;
+        m_activeClip = nullptr;  // Clear active clip
         
         // Only consume the event if we were doing something
         if (wasActive) {
@@ -941,24 +1138,26 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
     
     // PRIORITY 2: Handle active trimming (mouse move while trimming)
-    if (m_isTrimming && m_track) {
+    if (m_isTrimming && m_activeClip) {
+        // Use m_activeClip instead of m_track - may be a lane clip
+        auto& clipBounds = m_allClipBounds[m_activeClip];
         float deltaX = event.position.x - m_trimDragStartX;
         
         // Convert pixel delta to time delta based on zoom level
-        double duration = m_track->getDuration();
-        if (duration > 0 && m_clipBounds.width > 0) {
-            double pixelsPerSecond = m_clipBounds.width / duration;
+        double duration = m_activeClip->getDuration();
+        if (duration > 0 && clipBounds.width > 0) {
+            double pixelsPerSecond = clipBounds.width / duration;
             double timeDelta = deltaX / pixelsPerSecond;
             
             if (m_trimEdge == TrimEdge::Left) {
                 double newTrimStart = std::max(0.0, m_trimOriginalStart + timeDelta);
                 double trimEnd = m_trimOriginalEnd < 0 ? duration : m_trimOriginalEnd;
                 newTrimStart = std::min(newTrimStart, trimEnd - 0.01);
-                m_track->setTrimStart(newTrimStart);
+                m_activeClip->setTrimStart(newTrimStart);
             } else if (m_trimEdge == TrimEdge::Right) {
                 double newTrimEnd = std::min(duration, m_trimOriginalEnd + timeDelta);
-                newTrimEnd = std::max(newTrimEnd, m_track->getTrimStart() + 0.01);
-                m_track->setTrimEnd(newTrimEnd);
+                newTrimEnd = std::max(newTrimEnd, m_activeClip->getTrimStart() + 0.01);
+                m_activeClip->setTrimEnd(newTrimEnd);
             }
             
             if (m_onCacheInvalidationCallback) {
@@ -976,22 +1175,21 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         float distance = std::sqrt(dx * dx + dy * dy);
         
         const float DRAG_THRESHOLD = 5.0f;
-        if (distance >= DRAG_THRESHOLD && m_track) {
-            // Start the drag operation
+        if (distance >= DRAG_THRESHOLD && m_activeClip) {
+            // Start the drag operation - use m_activeClip (may be primary or lane clip)
             m_isDraggingClip = true;
             m_clipDragPotential = false;
             
             NomadUI::DragData dragData;
             dragData.type = NomadUI::DragDataType::AudioClip;
-            dragData.displayName = m_track->getName();
-            dragData.filePath = m_track->getSourcePath();
+            dragData.displayName = m_activeClip->getName();
+            dragData.filePath = m_activeClip->getSourcePath();
             
             // Find correct track index by searching TrackManager
-            // TrackId is not necessarily the index (IDs are persistent, indices change)
             int trackIndex = -1;
             if (m_trackManager) {
                 for (size_t i = 0; i < m_trackManager->getTrackCount(); ++i) {
-                    if (m_trackManager->getTrack(i) == m_track) {
+                    if (m_trackManager->getTrack(i) == m_activeClip) {
                         trackIndex = static_cast<int>(i);
                         break;
                     }
@@ -999,9 +1197,9 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             }
             dragData.sourceTrackIndex = trackIndex;
             
-            dragData.sourceTimePosition = m_track->getStartPositionInTimeline();
+            dragData.sourceTimePosition = m_activeClip->getStartPositionInTimeline();
             
-            uint32_t trackColor = m_track->getColor();
+            uint32_t trackColor = m_activeClip->getColor();
             dragData.accentColor = NomadUI::NUIColor(
                 ((trackColor >> 16) & 0xFF) / 255.0f,
                 ((trackColor >> 8) & 0xFF) / 255.0f,
@@ -1009,8 +1207,9 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                 1.0f
             );
             
-            dragData.previewWidth = m_clipBounds.width;
-            dragData.previewHeight = m_clipBounds.height;
+            auto& clipBounds = m_allClipBounds[m_activeClip];
+            dragData.previewWidth = clipBounds.width;
+            dragData.previewHeight = clipBounds.height;
             
             dragManager.beginDrag(dragData, m_clipDragStartPos, this);
             Log::info("Started dragging clip: " + dragData.displayName);
@@ -1027,74 +1226,96 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             // Check if split tool is active
             bool isSplitToolActive = m_isSplitToolActiveCallback ? m_isSplitToolActiveCallback() : false;
             
-            // Handle SPLIT TOOL - click on clip to split at that position
-            if (isSplitToolActive && m_track && !m_track->getAudioData().empty() && m_clipBounds.width > 0) {
-                if (m_clipBounds.contains(event.position)) {
-                    // Calculate time position from click - simple ratio of click position to clip width
-                    double clickOffsetX = event.position.x - m_clipBounds.x;
-                    double duration = m_track->getDuration();
-                    
-                    if (m_clipBounds.width > 0 && duration > 0) {
-                        double splitRatio = clickOffsetX / m_clipBounds.width;
-                        // splitTime is seconds from start of the audio (0 to duration)
-                        double splitTime = splitRatio * duration;
-                        
-                        Log::info("Split requested at time: " + std::to_string(splitTime) + 
-                                  "s (ratio=" + std::to_string(splitRatio) + ", duration=" + std::to_string(duration) + ")");
-                        
-                        if (m_onSplitRequestedCallback) {
-                            m_onSplitRequestedCallback(this, splitTime);
-                        }
-                    }
-                    return true;
+            // === MULTI-CLIP HIT TESTING ===
+            // Find which clip was clicked (check all clips in m_allClipBounds)
+            std::shared_ptr<Track> clickedClip = nullptr;
+            NomadUI::NUIRect clickedClipBounds;
+            
+            for (const auto& [clip, clipBounds] : m_allClipBounds) {
+                if (clipBounds.contains(event.position)) {
+                    clickedClip = clip;
+                    clickedClipBounds = clipBounds;
+                    break;
                 }
             }
             
-            // Check if clicking on clip bounds (for drag initiation or trimming)
-            if (m_track && !m_track->getAudioData().empty() && m_clipBounds.width > 0) {
-                float leftEdge = m_clipBounds.x;
-                float rightEdge = m_clipBounds.x + m_clipBounds.width;
+            // Handle SPLIT TOOL - click on clip to split at that position
+            if (isSplitToolActive && clickedClip && clickedClipBounds.width > 0) {
+                // Calculate time position from click - simple ratio of click position to clip width
+                double clickOffsetX = event.position.x - clickedClipBounds.x;
+                double duration = clickedClip->getDuration();
+                
+                if (clickedClipBounds.width > 0 && duration > 0) {
+                    double splitRatio = clickOffsetX / clickedClipBounds.width;
+                    // splitTime is seconds from start of the audio (0 to duration)
+                    double splitTime = splitRatio * duration;
+                    
+                    Log::info("Split requested at time: " + std::to_string(splitTime) + 
+                              "s (ratio=" + std::to_string(splitRatio) + ", duration=" + std::to_string(duration) + ")");
+                    
+                    // Find the TrackUIComponent for this clip to send split request
+                    // If it's the primary track, use this component
+                    // If it's a lane clip, we need to find its actual TrackUIComponent in TrackManagerUI
+                    // For now, we'll handle split through the parent
+                    if (m_onSplitRequestedCallback && clickedClip == m_track) {
+                        m_onSplitRequestedCallback(this, splitTime);
+                    } else if (m_onSplitRequestedCallback) {
+                        // Lane clip - need to pass the correct track index to parent
+                        // We can't easily do this here, so let's log for now and handle via parent
+                        Log::info("Split on lane clip - routing to TrackManager");
+                        // The parent TrackManagerUI will need to handle this via direct track lookup
+                        // For now, we'll call with this component and figure out the clip via position
+                        m_onSplitRequestedCallback(this, splitTime);
+                    }
+                }
+                return true;
+            }
+            
+            // Check if clicking on any clip for drag initiation or trimming
+            if (clickedClip && clickedClipBounds.width > 0) {
+                float leftEdge = clickedClipBounds.x;
+                float rightEdge = clickedClipBounds.x + clickedClipBounds.width;
                 
                 // Left edge trim detection
                 if (std::abs(event.position.x - leftEdge) < TRIM_EDGE_WIDTH &&
-                    event.position.y >= m_clipBounds.y && 
-                    event.position.y <= m_clipBounds.y + m_clipBounds.height) {
+                    event.position.y >= clickedClipBounds.y && 
+                    event.position.y <= clickedClipBounds.y + clickedClipBounds.height) {
                     m_trimEdge = TrimEdge::Left;
                     m_isTrimming = true;
                     m_trimDragStartX = event.position.x;
-                    m_trimOriginalStart = m_track->getTrimStart();
-                    m_trimOriginalEnd = m_track->getTrimEnd();
+                    m_trimOriginalStart = clickedClip->getTrimStart();
+                    m_trimOriginalEnd = clickedClip->getTrimEnd();
+                    m_activeClip = clickedClip;
                     m_selected = true;
-                    Log::info("Started trimming left edge");
+                    Log::info("Started trimming left edge of clip: " + clickedClip->getName());
                     return true;
                 }
                 
                 // Right edge trim detection
                 if (std::abs(event.position.x - rightEdge) < TRIM_EDGE_WIDTH &&
-                    event.position.y >= m_clipBounds.y && 
-                    event.position.y <= m_clipBounds.y + m_clipBounds.height) {
+                    event.position.y >= clickedClipBounds.y && 
+                    event.position.y <= clickedClipBounds.y + clickedClipBounds.height) {
                     m_trimEdge = TrimEdge::Right;
                     m_isTrimming = true;
                     m_trimDragStartX = event.position.x;
-                    m_trimOriginalStart = m_track->getTrimStart();
-                    m_trimOriginalEnd = m_track->getTrimEnd() < 0 ? m_track->getDuration() : m_track->getTrimEnd();
+                    m_trimOriginalStart = clickedClip->getTrimStart();
+                    m_trimOriginalEnd = clickedClip->getTrimEnd() < 0 ? clickedClip->getDuration() : clickedClip->getTrimEnd();
+                    m_activeClip = clickedClip;
                     m_selected = true;
-                    Log::info("Started trimming right edge");
+                    Log::info("Started trimming right edge of clip: " + clickedClip->getName());
                     return true;
                 }
                 
-                // Check if within clip bounds for drag
-                if (m_clipBounds.contains(event.position)) {
-                    // Start potential drag
-                    m_clipDragPotential = true;
-                    m_clipDragStartPos = event.position;
-                    m_selected = true;
-                    Log::info("Clip selected - ready for drag");
-                    return true;
-                }
+                // Click inside clip - start potential drag
+                m_clipDragPotential = true;
+                m_clipDragStartPos = event.position;
+                m_activeClip = clickedClip;
+                m_selected = true;
+                Log::info("Clip selected - ready for drag: " + clickedClip->getName());
+                return true;
             }
             
-            // Grid area click (not on clip) - select track and set position
+            // Grid area click (not on any clip) - select track and set position
             m_selected = true;
             if (m_track && event.position.y > bounds.y + 30) {
                 // Clicked in grid/playlist area - set play position
@@ -1116,10 +1337,11 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
     }
     
-    // Handle right-click to delete clip (FL Studio style)
+    // Handle right-click to delete clip (FL Studio style) - check all clips
     if (event.pressed && event.button == NomadUI::NUIMouseButton::Right && isInsideBounds) {
-        if (m_track && !m_track->getAudioData().empty() && m_clipBounds.width > 0) {
-            if (m_clipBounds.contains(event.position)) {
+        // Find which clip was right-clicked
+        for (const auto& [clip, clipBounds] : m_allClipBounds) {
+            if (clipBounds.contains(event.position)) {
                 if (m_onClipDeletedCallback) {
                     m_onClipDeletedCallback(this, event.position);
                 }

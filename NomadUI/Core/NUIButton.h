@@ -95,6 +95,7 @@ private:
     NUIColor hoverColor_ = NUIColor::fromHex(0xffaa44ff);
     NUIColor pressedColor_ = NUIColor::fromHex(0xff8822ee);
     float fontSize_ = 0.0f; // 0 means use theme default
+    bool hasCustomBackgroundColor_ = false;
 
     // Callbacks
     std::function<void()> onClickCallback_;

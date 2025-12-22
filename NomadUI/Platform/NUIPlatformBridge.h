@@ -43,6 +43,7 @@ public:
     void maximize();
     void restore();
     bool isMaximized() const;
+    void requestClose();  // Request window close through platform abstraction
     
     // Full screen support
     void toggleFullScreen();
@@ -79,6 +80,9 @@ public:
 
     // DPI support
     float getDPIScale() const;
+    
+    // Cursor control
+    void setCursorVisible(bool visible);
 
 private:
     // Convert NomadPlat events to NomadUI events

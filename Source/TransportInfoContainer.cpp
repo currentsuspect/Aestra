@@ -119,57 +119,18 @@ void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     ss << std::fixed << std::setprecision(1) << m_displayBPM << " BPM";
     std::string bpmText = ss.str();
     
-    // ALIGNMENT: measure text height and center (top-left Y positioning)
+    // ALIGNMENT: use font metrics (drawText expects top-left Y)
     NomadUI::NUISize textSize = renderer.measureText(bpmText, fontSize);
-    float textY = bounds.y + (bounds.height - fontSize) * 0.5f;
-    float textX = bounds.x + 5.0f; // Small left padding
+    float textY = std::round(renderer.calculateTextY(bounds, fontSize));
+    float textX = std::round(bounds.x + (bounds.width - textSize.width) * 0.5f);
     
     // Draw text directly (not using label)
     renderer.drawText(bpmText, NomadUI::NUIPoint(textX, textY), fontSize, textColor);
     
-    // Render arrow icons to the right of BPM text
-    if (m_upArrow) {
-        m_upArrow->setBounds(getUpArrowBounds());
-        // Highlight on hover
-        if (m_upArrowHovered) {
-            m_upArrow->setColorFromTheme("accentCyan"); 	// #00bcd4
-        } else {
-            m_upArrow->setColorFromTheme("textSecondary"); 	// #9a9aa3
-        }
-        m_upArrow->onRender(renderer);
-    }
-    
-    if (m_downArrow) {
-        m_downArrow->setBounds(getDownArrowBounds());
-        // Highlight on hover
-        if (m_downArrowHovered) {
-            m_downArrow->setColorFromTheme("accentCyan"); 	// #00bcd4
-        } else {
-            m_downArrow->setColorFromTheme("textSecondary"); 	// #9a9aa3
-        }
-        m_downArrow->onRender(renderer);
-    }
+    // Arrow affordances removed: BPM is adjusted via mouse wheel.
 }
 
 bool BPMDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
-    NomadUI::NUIRect upBounds = getUpArrowBounds();
-    NomadUI::NUIRect downBounds = getDownArrowBounds();
-    
-    // Check hover states
-    m_upArrowHovered = upBounds.contains(event.position);
-    m_downArrowHovered = downBounds.contains(event.position);
-    
-    // Handle clicks
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
-        if (m_upArrowHovered) {
-            incrementBPM(1.0f); 	// +1 BPM per click
-            return true;
-        } else if (m_downArrowHovered) {
-            decrementBPM(1.0f); 	// -1 BPM per click
-            return true;
-        }
-    }
-    
     // Handle mouse wheel for fine adjustment (anywhere on BPM display)
     if (event.wheelDelta != 0.0f) {
         NomadUI::NUIRect bounds = getBounds();
@@ -222,7 +183,7 @@ void TimerDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     
     // CRITICAL: Green when playing, white when stopped
     NomadUI::NUIColor textColor = m_isPlaying 
-        ? NomadUI::NUIColor(0.0f, 1.0f, 0.3f, 1.0f) 	// Vibrant green when playing
+        ? themeManager.getColor("success") 	// Vibrant green when playing
         : themeManager.getColor("textPrimary"); 	 	// White when stopped
     
     float fontSize = themeManager.getFontSize("l"); // use larger theme size
@@ -230,10 +191,10 @@ void TimerDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     // Calculate text position with vertical centering (like dropdown does it)
     std::string timeText = formatTime(m_currentTime);
     
-    // ALIGNMENT: measure text height and center (top-left Y positioning)
+    // ALIGNMENT: use font metrics (drawText expects top-left Y)
     NomadUI::NUISize textSize = renderer.measureText(timeText, fontSize);
-    float textY = bounds.y + (bounds.height - fontSize) * 0.5f;
-    float textX = bounds.x + 5.0f; // Small left padding
+    float textY = std::round(renderer.calculateTextY(bounds, fontSize));
+    float textX = std::round(bounds.x + 5.0f); // Small left padding
     
     // Draw text directly (not using label)
     renderer.drawText(timeText, NomadUI::NUIPoint(textX, textY), fontSize, textColor);

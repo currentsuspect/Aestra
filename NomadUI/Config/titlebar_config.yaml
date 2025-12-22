@@ -22,15 +22,15 @@ buttons:
   
 # Colors
 colors:
-  background: "#1a1a1a"       # Title bar background
-  text: "#ffffff"             # Title text color
-  icon: "#ffffff"             # Icon color
-  hover_minimize: "#a855f7"   # Purple for minimize hover
-  hover_maximize: "#a855f7"   # Purple for maximize hover
-  hover_close: "#dc2626"      # Red for close hover
-  press_minimize: "#a855f7"   # Purple for minimize press
-  press_maximize: "#a855f7"   # Purple for maximize press
-  press_close: "#dc2626"      # Red for close press
+  background: "#121214"       # Title bar background (Matches main canvas)
+  text: "#F0F0F2"             # Title text color
+  icon: "#F0F0F2"             # Icon color
+  hover_minimize: "#8A2BE2"   # Electric Purple for minimize hover
+  hover_maximize: "#8A2BE2"   # Electric Purple for maximize hover
+  hover_close: "#FF3366"      # Vibrant Red for close hover
+  press_minimize: "#6A1B9A"   # Darker Purple for minimize press
+  press_maximize: "#6A1B9A"   # Darker Purple for maximize press
+  press_close: "#D50000"      # Darker Red for close press
   
 # Hover/press effects
 effects:

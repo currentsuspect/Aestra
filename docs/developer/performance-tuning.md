@@ -511,9 +511,9 @@ target_precompile_headers(NOMAD PRIVATE
 
 ## 📊 Profiling Tools
 
-### Tracy Profiler
+### Nomad Profiler
 
-**See:** [Debugging Guide → Tracy Profiler](debugging.md#-tracy-profiler)
+**See:** [Debugging Guide → Nomad Profiler](debugging.md#-nomad-profiler)
 
 ### Visual Studio Profiler
 

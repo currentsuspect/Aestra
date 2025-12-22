@@ -2,6 +2,7 @@
 #pragma once
 
 #include "MixerBus.h"
+#include "SampleRateConverter.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -10,10 +11,68 @@
 #include <thread>
 #include <condition_variable>
 #include <fstream>
+#include <random>
+#include <functional>
 #include "SamplePool.h"
+#include "AudioCommandQueue.h"
 
 namespace Nomad {
 namespace Audio {
+
+/**
+ * @brief Simple UUID implementation for stable track identity
+ */
+struct TrackUUID {
+    uint64_t high = 0;
+    uint64_t low = 0;
+    
+    bool isValid() const { return high != 0 || low != 0; }
+    bool operator==(const TrackUUID& other) const { return high == other.high && low == other.low; }
+    bool operator!=(const TrackUUID& other) const { return !(*this == other); }
+    bool operator<(const TrackUUID& other) const { 
+        return high < other.high || (high == other.high && low < other.low); 
+    }
+    
+    std::string toString() const {
+        char buf[37];
+        snprintf(buf, sizeof(buf), "%08x-%04x-%04x-%04x-%012llx",
+                 static_cast<uint32_t>(high >> 32),
+                 static_cast<uint16_t>(high >> 16),
+                 static_cast<uint16_t>(high),
+                 static_cast<uint16_t>(low >> 48),
+                 low & 0xFFFFFFFFFFFFULL);
+        return std::string(buf);
+    }
+    
+    static TrackUUID generate() {
+        static std::random_device rd;
+        static std::mt19937_64 gen(rd());
+        static std::uniform_int_distribution<uint64_t> dis;
+        
+        TrackUUID uuid;
+        uuid.high = dis(gen);
+        uuid.low = dis(gen);
+        // Set version 4 (random) and variant bits
+        uuid.high = (uuid.high & 0xFFFFFFFFFFFF0FFFULL) | 0x0000000000004000ULL;
+        uuid.low = (uuid.low & 0x3FFFFFFFFFFFFFFFULL) | 0x8000000000000000ULL;
+        return uuid;
+    }
+    
+    static TrackUUID fromString(const std::string& str) {
+        TrackUUID uuid;
+        if (str.length() >= 36) {
+            unsigned int a, b, c, d;
+            unsigned long long e;
+            if (sscanf(str.c_str(), "%8x-%4x-%4x-%4x-%12llx", &a, &b, &c, &d, &e) == 5) {
+                uuid.high = (static_cast<uint64_t>(a) << 32) | 
+                           (static_cast<uint64_t>(b) << 16) | 
+                           static_cast<uint64_t>(c);
+                uuid.low = (static_cast<uint64_t>(d) << 48) | e;
+            }
+        }
+        return uuid;
+    }
+};
 
 /**
  * @brief Audio track states
@@ -159,7 +218,11 @@ public:
     Track(const std::string& name = "Track", uint32_t trackId = 0);
     ~Track();
 
-    // Track Properties
+    // === STABLE IDENTITY (UUID - never changes after creation) ===
+    const TrackUUID& getUUID() const { return m_uuid; }
+    void setUUID(const TrackUUID& uuid) { m_uuid = uuid; }  // Only for deserialization
+    
+    // Track Properties (display name - user editable, NOT used for identity)
     void setName(const std::string& name);
     const std::string& getName() const { return m_name; }
 
@@ -167,6 +230,8 @@ public:
     uint32_t getColor() const { return m_color; }
 
     uint32_t getTrackId() const { return m_trackId; }
+    uint32_t getTrackIndex() const { return m_trackIndex; }
+    void setTrackIndex(uint32_t idx) { m_trackIndex = idx; }
 
     // Audio Parameters (thread-safe)
     void setVolume(float volume);  // 0.0 to 1.0
@@ -184,6 +249,11 @@ public:
     // System track flag (preview, test sound, etc - not affected by transport)
     void setSystemTrack(bool isSystem) { m_isSystemTrack = isSystem; }
     bool isSystemTrack() const { return m_isSystemTrack; }
+    
+    // === LANE INDEX (for grouping clips on the same visual row) ===
+    // Clips with the same laneIndex are rendered on the same horizontal lane
+    void setLaneIndex(int32_t index) { m_laneIndex = index; }
+    int32_t getLaneIndex() const { return m_laneIndex; }
 
     // Track State
     void setState(TrackState state);
@@ -193,11 +263,14 @@ public:
     bool loadAudioFile(const std::string& filePath);
     bool generatePreviewTone(const std::string& filePath);
     bool generateDemoAudio(const std::string& filePath);
-    void setAudioData(const float* data, uint32_t numSamples, uint32_t sampleRate, uint32_t numChannels);
+    // Optional targetSampleRate allows resampling on load to match engine/device SR.
+    void setAudioData(const float* data, uint32_t numSamples, uint32_t sampleRate, uint32_t numChannels, uint32_t targetSampleRate = 0);
     void clearAudioData();
     
     // Waveform data access (for UI visualization)
     const std::vector<float>& getAudioData() const;
+    // Shared decoded buffer (non-streaming). Non-RT thread only.
+    std::shared_ptr<const AudioBuffer> getSampleBuffer() const;
     uint32_t getSampleRate() const { return m_sampleRate; }
     uint32_t getNumChannels() const { return m_numChannels; }
 
@@ -253,12 +326,20 @@ public:
     void setQualitySettings(const AudioQualitySettings& settings);
     const AudioQualitySettings& getQualitySettings() const { return m_qualitySettings; }
 
+    // Change notifications (owner can observe data changes to rebuild graphs)
+    void setOnDataChanged(std::function<void()> cb) { m_onDataChanged = std::move(cb); }
+    // Command sink for RT parameter updates
+    void setCommandSink(std::function<void(const AudioQueueCommand&)> cb) { m_commandSink = std::move(cb); }
+
 private:
     // Track identification
-    std::string m_name;
+    TrackUUID m_uuid;        // Stable unique identifier (never changes after creation)
+    std::string m_name;      // Display name (user-editable, NOT used for identity)
     uint32_t m_trackId;
+    uint32_t m_trackIndex{0};  // zero-based index in TrackManager ordering
     uint32_t m_color;  // ARGB format
     bool m_isSystemTrack{false};  // System tracks (preview, test sound) aren't affected by transport
+    int32_t m_laneIndex{-1};      // Visual lane index (-1 = auto-assign based on track order)
 
     // Audio parameters (atomic for thread safety)
     std::atomic<float> m_volume{1.0f};
@@ -284,7 +365,7 @@ private:
     uint32_t m_sourceChannels{2};    // Original channel count on load
     std::string m_sourcePath;
     std::atomic<double> m_playbackPhase{0.0};  // For sample-accurate playback
-    mutable std::mutex m_audioDataMutex;
+    mutable std::recursive_mutex m_audioDataMutex;  // Recursive to allow nested locking (e.g., copyAudioData -> trimStreamBuffer)
     std::atomic<bool> m_streaming{false};
     std::thread m_streamThread;
     std::atomic<bool> m_streamStop{false};
@@ -316,6 +397,26 @@ private:
 
     // Temporary buffer reused per process call to avoid allocations
     mutable std::vector<float> m_tempBuffer;
+    
+    // Sample Rate Converter for batch processing (replaces legacy per-sample interpolation)
+    SampleRateConverter m_srcConverter;
+    bool m_useSRCModule{false};  // SRC module disabled - it's designed for streaming, not random-access playback
+    uint32_t m_lastOutputSampleRate{0};  // Track output rate changes
+    
+    // Air effect state (per-track, replaces static variables in applyAir)
+    float m_airDelayL[8]{};
+    float m_airDelayR[8]{};
+    int m_airDelayPos{0};
+    
+    // Drift effect state (per-track, replaces static variables in applyDrift)
+    float m_driftPhase{0.0f};
+    float m_driftAmount{0.0f};
+    
+    // Audio-quality fast PRNG state (for deterministic dithering)
+    uint32_t m_ditherRngState{12345};
+
+    std::function<void()> m_onDataChanged;
+    std::function<void(const AudioQueueCommand&)> m_commandSink;
 
     // Internal audio processing
     void generateSilence(float* buffer, uint32_t numFrames);
@@ -347,6 +448,9 @@ private:
     void applyTapeCircuit(float* buffer, uint32_t numSamples, float bloomAmount, float smoothing);
     void applyAir(float* buffer, uint32_t numFrames);
     void applyDrift(float* buffer, uint32_t numFrames);
+    
+    // SRC quality mapping helper
+    static SRCQuality mapResamplingToSRC(ResamplingMode mode);
 };
 
 } // namespace Audio

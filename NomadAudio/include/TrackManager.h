@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Track.h"
+#include "MeterSnapshot.h"
 #include <memory>
 #include <vector>
 #include <atomic>
@@ -10,6 +11,7 @@
 #include <condition_variable>
 #include <queue>
 #include <functional>
+#include <unordered_map>
 
 namespace Nomad {
 namespace Audio {
@@ -87,7 +89,13 @@ public:
 
     // Position Control
     void setPosition(double seconds);
+    // RT-authoritative position sync (does not emit engine commands).
+    void syncPositionFromEngine(double seconds);
     double getPosition() const { return m_positionSeconds.load(); }
+
+    // User scrubbing state (used to prevent engine->UI sync stomping seeks).
+    void setUserScrubbing(bool scrubbing) { m_userScrubbing.store(scrubbing, std::memory_order_release); }
+    bool isUserScrubbing() const { return m_userScrubbing.load(std::memory_order_acquire); }
 
     double getTotalDuration() const;
     // Max extent considering track start offsets
@@ -109,7 +117,7 @@ public:
 
     // Audio Processing
     void processAudio(float* outputBuffer, uint32_t numFrames, double streamTime);
-    void setOutputSampleRate(double sampleRate) { m_outputSampleRate.store(sampleRate); }
+    void setOutputSampleRate(double sampleRate);
     double getOutputSampleRate() const { return m_outputSampleRate.load(); }
     
     // Multi-threading control
@@ -118,7 +126,10 @@ public:
     
     void setThreadCount(size_t count);
     size_t getThreadCount() const { return m_threadPool ? m_threadPool->getThreadCount() : 1; }
-    
+
+    // Connect a command sink for RT updates (pushed from tracks)
+    void setCommandSink(std::function<void(const AudioQueueCommand&)> sink) { m_commandSink = std::move(sink); }
+
     // Performance monitoring
     double getAudioLoadPercent() const { return m_audioLoadPercent.load(); }
 
@@ -128,16 +139,30 @@ public:
     // Solo/Mute Management
     void clearAllSolos();
 
+    // Graph rebuild hint
+    void markGraphDirty() { m_graphDirty.store(true, std::memory_order_release); }
+    bool consumeGraphDirty() { return m_graphDirty.exchange(false, std::memory_order_acq_rel); }
+
+    // Track index mapping
+    uint32_t getCompactIndex(uint32_t trackId) const;
+
+    // Meter snapshot buffer for RT-safe metering
+    // Stores shared_ptr for ownership AND raw pointer for RT-safe access (no refcount on audio thread)
+    void setMeterSnapshots(std::shared_ptr<MeterSnapshotBuffer> snapshots) {
+        m_meterSnapshotsOwned = snapshots;
+        m_meterSnapshotsRaw = snapshots.get();
+    }
+
 private:
     // Track collection
     std::vector<std::shared_ptr<Track>> m_tracks;
     mutable std::mutex m_trackMutex; // Guards m_tracks and m_trackBuffers against concurrent mutation
-    std::atomic<double> m_outputSampleRate{48000.0};
 
     // Transport state
     std::atomic<bool> m_isPlaying{false};
     std::atomic<bool> m_isRecording{false};
     std::atomic<double> m_positionSeconds{0.0};
+    std::atomic<bool> m_userScrubbing{false};
 
     // Track ID counter
     std::atomic<uint32_t> m_nextTrackId{1};
@@ -158,6 +183,19 @@ private:
     
     // Per-track temporary buffers for parallel processing
     std::vector<std::vector<float>> m_trackBuffers;
+    
+    // Project modification tracking for save prompts
+    std::atomic<bool> m_isModified{false};
+    std::atomic<bool> m_graphDirty{true};
+    std::function<void(const AudioQueueCommand&)> m_commandSink;
+    std::atomic<double> m_outputSampleRate{48000.0};
+    std::unordered_map<uint32_t, uint32_t> m_idToIndex;
+
+    // Meter snapshot buffer for RT-safe metering
+    // Ownership (prevents destruction while audio thread uses it)
+    std::shared_ptr<MeterSnapshotBuffer> m_meterSnapshotsOwned;
+    // RT-safe access (no refcount operations on audio thread)
+    MeterSnapshotBuffer* m_meterSnapshotsRaw{nullptr};
 
     // Track creation helper
     std::string generateTrackName() const;
@@ -165,6 +203,12 @@ private:
     // Processing helpers
     void processAudioSingleThreaded(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate);
     void processAudioMultiThreaded(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate);
+    
+public:
+    // Modified state tracking for graceful shutdown
+    bool isModified() const { return m_isModified.load(); }
+    void setModified(bool modified) { m_isModified.store(modified); }
+    void markModified() { m_isModified.store(true); }
 };
 
 } // namespace Audio

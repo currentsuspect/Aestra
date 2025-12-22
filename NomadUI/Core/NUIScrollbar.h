@@ -23,12 +23,21 @@ public:
         Vertical
     };
 
+    // Scrollbar styles
+    enum class Style
+    {
+        Standard,
+        Timeline
+    };
+
     // Scrollbar parts
     enum class Part
     {
         None,
         Track,
         Thumb,
+        ThumbStartEdge, // Left or Top edge of thumb
+        ThumbEndEdge,   // Right or Bottom edge of thumb
         LeftArrow,   // or UpArrow for vertical
         RightArrow,  // or DownArrow for vertical
         LeftTrack,   // Track before thumb
@@ -68,6 +77,9 @@ public:
     // Visual properties
     void setOrientation(Orientation orientation);
     Orientation getOrientation() const { return orientation_; }
+
+    void setStyle(Style style);
+    Style getStyle() const { return style_; }
 
     void setThumbSize(double size);
     double getThumbSize() const { return thumbSize_; }
@@ -126,6 +138,7 @@ public:
 
     // Event callbacks
     void setOnScroll(std::function<void(double)> callback);
+    void setOnRangeChange(std::function<void(double start, double size)> callback);
     void setOnScrollStart(std::function<void()> callback);
     void setOnScrollEnd(std::function<void()> callback);
 
@@ -176,14 +189,14 @@ private:
 
     // Visual properties
     Orientation orientation_ = Orientation::Vertical;
-    NUIColor trackColor_ = NUIColor(0.15f, 0.15f, 0.18f, 1.0f); // Dark charcoal track
-    NUIColor thumbColor_ = NUIColor(0.8f, 0.8f, 0.8f, 0.8f); // Faded white thumb base
-    NUIColor thumbHoverColor_ = NUIColor(0.9f, 0.9f, 0.9f, 0.9f); // Lighter white on hover
-    NUIColor thumbPressedColor_ = NUIColor(0.7f, 0.7f, 0.7f, 0.9f); // Darker white when pressed
-    NUIColor arrowColor_ = NUIColor(0.8f, 0.8f, 0.8f, 1.0f); // Light gray arrows
-    NUIColor arrowHoverColor_ = NUIColor(1.0f, 1.0f, 1.0f, 1.0f); // White on hover
-    NUIColor arrowPressedColor_ = NUIColor(0.6f, 0.6f, 0.6f, 1.0f); // Darker grey when pressed
-    NUIColor borderColor_ = NUIColor(0.3f, 0.3f, 0.35f, 1.0f); // Subtle border
+    NUIColor trackColor_ = NUIColor(0.15f, 0.15f, 0.18f, 1.0f);          // Track base (alpha applied at draw time)
+    NUIColor thumbColor_ = NUIColor(0.85f, 0.85f, 0.90f, 0.28f);         // Quiet thumb default
+    NUIColor thumbHoverColor_ = NUIColor(0.95f, 0.95f, 1.00f, 0.45f);    // Brighter on hover
+    NUIColor thumbPressedColor_ = NUIColor(0.70f, 0.70f, 0.80f, 0.65f);  // Stronger on press
+    NUIColor arrowColor_ = NUIColor(0.85f, 0.85f, 0.90f, 0.25f);         // Subtle arrows
+    NUIColor arrowHoverColor_ = NUIColor(0.95f, 0.95f, 1.00f, 0.45f);    // Brighter on hover
+    NUIColor arrowPressedColor_ = NUIColor(0.70f, 0.70f, 0.80f, 0.65f);  // Stronger on press
+    NUIColor borderColor_ = NUIColor(0.30f, 0.30f, 0.35f, 0.35f);        // Subtle border
     float borderWidth_ = 1.0f;
     float borderRadius_ = 4.0f;
     float arrowSize_ = 12.0f;
@@ -199,8 +212,10 @@ private:
     bool isPressed_ = false;
     Part pressedPart_ = Part::None;
     NUIPoint dragStartPosition_;
+    NUIPoint lastMousePosition_;
     double dragStartValue_ = 0.0;
     bool isDragging_ = false;
+    Part hoveredPart_ = Part::None;  // Track hover state for visual feedback on edge handles
 
     // Animation state
     bool isAnimating_ = false;
@@ -211,9 +226,15 @@ private:
 
     // Callbacks
     std::function<void(double)> onScrollCallback_;
+    std::function<void(double start, double size)> onRangeChangeCallback_;
     std::function<void()> onScrollStartCallback_;
     std::function<void()> onScrollEndCallback_;
     
+    // Dragging state for resizing
+    double resizeStartSize_ = 0.0;
+    double resizeStartValue_ = 0.0;
+    Style style_ = Style::Standard;
+
     // SVG Icons for arrow buttons (Bug #11: Scrollbar Icons)
     std::shared_ptr<NUIIcon> upArrowIcon_;
     std::shared_ptr<NUIIcon> downArrowIcon_;

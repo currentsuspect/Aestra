@@ -3,6 +3,7 @@
 #include "../Graphics/NUIRenderer.h"
 #include "../Core/NUIThemeSystem.h"
 #include <iostream>
+#include <cmath>
 
 namespace NomadUI {
 
@@ -85,7 +86,7 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     float x = bounds.x + 10.0f;
     for (const auto& item : menuItems) {
         NUISize sz = renderer.measureText(item, fontSize);
-        float textY = bounds.y + (bounds.height - fontSize) * 0.5f; // Top-left Y positioning
+        float textY = std::round(renderer.calculateTextY(bounds, fontSize));
         renderer.drawText(item, NUIPoint(x, textY), fontSize, textColor);
         x += sz.width + 14.0f; // spacing between menu items
     }
@@ -96,12 +97,14 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
 
 void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     auto& themeManager = NUIThemeManager::getInstance();
-    NUIColor hoverBgColor = NUIColor(1.0f, 1.0f, 1.0f, 0.1f); // Subtle white overlay
-    NUIColor closeHoverBg = NUIColor(0.9f, 0.2f, 0.2f, 1.0f); // Red for close button
+    // Use config colors for hover states
+    NUIColor hoverBgColor = themeManager.getColor("surfaceRaised"); // Subtle hover
+    NUIColor closeHoverBg = themeManager.getColor("error"); // Red for close button
     
     // Draw minimize button
     if (hoveredButton_ == HoverButton::Minimize) {
-        renderer.fillRect(minimizeButtonRect_, hoverBgColor);
+        // Rounded hover effect
+        renderer.fillRoundedRect(minimizeButtonRect_, 4.0f, hoverBgColor);
     }
     NUIPoint minCenter(minimizeButtonRect_.x + minimizeButtonRect_.width * 0.5f,
                        minimizeButtonRect_.y + minimizeButtonRect_.height * 0.5f);
@@ -111,7 +114,8 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     
     // Draw maximize/restore button
     if (hoveredButton_ == HoverButton::Maximize) {
-        renderer.fillRect(maximizeButtonRect_, hoverBgColor);
+        // Rounded hover effect
+        renderer.fillRoundedRect(maximizeButtonRect_, 4.0f, hoverBgColor);
     }
     NUIPoint maxCenter(maximizeButtonRect_.x + maximizeButtonRect_.width * 0.5f,
                        maximizeButtonRect_.y + maximizeButtonRect_.height * 0.5f);
@@ -123,7 +127,8 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     
     // Draw close button with red hover
     if (hoveredButton_ == HoverButton::Close) {
-        renderer.fillRect(closeButtonRect_, closeHoverBg);
+        // Rounded hover effect
+        renderer.fillRoundedRect(closeButtonRect_, 4.0f, closeHoverBg);
         closeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // White on red
     } else {
         closeIcon_->setColorFromTheme("textPrimary");
@@ -192,22 +197,22 @@ void NUICustomTitleBar::onResize(int width, int height) {
 void NUICustomTitleBar::updateButtonRects() {
     NUIRect bounds = getBounds();
     
-    // Button dimensions
-    float buttonWidth = 46.0f;
-    float buttonHeight = height_ - 2.0f;
-    float buttonY = bounds.y + 1.0f;
+    // Button dimensions - Smaller, more spaced out (Ableton/FL style)
+    float buttonWidth = 40.0f;
+    float buttonHeight = 28.0f; // Slightly shorter than bar
+    float buttonY = bounds.y + (height_ - buttonHeight) * 0.5f; // Vertically centered
+    float spacing = 4.0f;
     
-    // Position buttons from right edge
-    float rightX = bounds.x + bounds.width;
+    // Position buttons from right edge with padding
+    float currentX = bounds.x + bounds.width - buttonWidth - 6.0f;
     
-    // Close button (rightmost)
-    closeButtonRect_ = NUIRect(rightX - buttonWidth, buttonY, buttonWidth, buttonHeight);
+    closeButtonRect_ = NUIRect(currentX, buttonY, buttonWidth, buttonHeight);
+    currentX -= (buttonWidth + spacing);
     
-    // Maximize button
-    maximizeButtonRect_ = NUIRect(rightX - buttonWidth * 2, buttonY, buttonWidth, buttonHeight);
+    maximizeButtonRect_ = NUIRect(currentX, buttonY, buttonWidth, buttonHeight);
+    currentX -= (buttonWidth + spacing);
     
-    // Minimize button
-    minimizeButtonRect_ = NUIRect(rightX - buttonWidth * 3, buttonY, buttonWidth, buttonHeight);
+    minimizeButtonRect_ = NUIRect(currentX, buttonY, buttonWidth, buttonHeight);
 }
 
 bool NUICustomTitleBar::isPointInButton(const NUIPoint& point, const NUIRect& buttonRect) {

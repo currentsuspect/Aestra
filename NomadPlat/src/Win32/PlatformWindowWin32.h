@@ -2,7 +2,7 @@
 #pragma once
 
 #include "../../include/NomadPlatform.h"
-#include <Windows.h>
+#include "WinHeaders.h"
 
 namespace Nomad {
 
@@ -48,6 +48,8 @@ public:
 
     float getDPIScale() const override { return m_dpiScale; }
     
+    void setCursorVisible(bool visible) override;
+    
     KeyModifiers getCurrentModifiers() const override { return getKeyModifiers(); }
 
     void setMouseMoveCallback(std::function<void(int, int)> callback) override { m_mouseMoveCallback = callback; }
@@ -59,6 +61,8 @@ public:
     void setCloseCallback(std::function<void()> callback) override { m_closeCallback = callback; }
     void setFocusCallback(std::function<void(bool)> callback) override { m_focusCallback = callback; }
     void setDPIChangeCallback(std::function<void(float)> callback) override { m_dpiChangeCallback = callback; }
+    
+    void requestClose() override;
 
 private:
     // Window procedure
@@ -70,6 +74,9 @@ private:
     bool setupPixelFormat();
     KeyCode translateKeyCode(WPARAM wParam, LPARAM lParam);
     KeyModifiers getKeyModifiers() const;
+
+    // Thread safety
+    void assertWindowThread() const;
 
     // Window handles
     HWND m_hwnd;
@@ -87,6 +94,12 @@ private:
     // Fullscreen restore state
     WINDOWPLACEMENT m_wpPrev;
     DWORD m_styleBackup;
+    
+    // Thread affinity tracking (for cursor control and other window-thread-only operations)
+    DWORD m_creatingThreadId;
+    
+    // Cursor state
+    bool m_cursorVisible = true;
 
     // Event callbacks
     std::function<void(int, int)> m_mouseMoveCallback;

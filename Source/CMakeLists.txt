@@ -9,6 +9,8 @@ cmake_minimum_required(VERSION 3.22)
 # Create executable
 set(NOMAD_DAW_SOURCES
 	Main.cpp
+	ConfirmationDialog.h
+	ConfirmationDialog.cpp
 	TransportBar.h
 	TransportBar.cpp
 	TransportInfoContainer.h
@@ -40,6 +42,9 @@ set(NOMAD_DAW_SOURCES
 	license/LicenseVerifier.cpp
 	PerformanceHUD.h
 	PerformanceHUD.cpp
+	MixerMath.h
+	MixerViewModel.h
+	MixerViewModel.cpp
 )
 
 

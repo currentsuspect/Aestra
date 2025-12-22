@@ -55,11 +55,13 @@ set(NOMADUI_CORE_SOURCES
     Core/NUICustomTitleBar.cpp
     Core/NUICustomWindow.h
     Core/NUICustomWindow.cpp
-    Core/NUIIcon.h
-    Core/NUIIcon.cpp
-    # Core/NUIApp.h  # Requires renderer
-    # Core/NUIApp.cpp
-)
+	    Core/NUIIcon.h
+	    Core/NUIIcon.cpp
+	    Core/NUIContextMenu.h
+	    Core/NUIContextMenu.cpp
+	    # Core/NUIApp.h  # Requires renderer
+	    # Core/NUIApp.cpp
+	)
 
 # Widget implementations (compile into core library)
 list(APPEND NOMADUI_CORE_SOURCES
@@ -82,6 +84,8 @@ list(APPEND NOMADUI_CORE_SOURCES
     Widgets/NUIThematicWidgets.cpp
     Widgets/NUIStepSequencer.h
     Widgets/NUIStepSequencer.cpp
+    Widgets/UIMixerMeter.h
+    Widgets/UIMixerMeter.cpp
 )
 
 set(NOMADUI_GRAPHICS_SOURCES

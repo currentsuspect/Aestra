@@ -548,7 +548,7 @@ Load resources on background threads.
 
 ### Tools
 - **RenderDoc** - Graphics debugging
-- **Tracy** - Performance profiling
+- **Nomad Profiler** - Performance profiling
 - **Shader Playground** - Shader development
 
 ## Next Actions

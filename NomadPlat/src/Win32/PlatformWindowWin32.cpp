@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€" All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "PlatformWindowWin32.h"
 #include "PlatformDPIWin32.h"
 #include "../../../NomadCore/include/NomadLog.h"
@@ -30,9 +30,11 @@ PlatformWindowWin32::PlatformWindowWin32()
     , m_isFullscreen(false)
     , m_styleBackup(0)
     , m_dpiScale(1.0f)
+    , m_creatingThreadId(0)
 {
     m_wpPrev = {};
     m_wpPrev.length = sizeof(WINDOWPLACEMENT);
+    m_creatingThreadId = GetCurrentThreadId();
 }
 
 PlatformWindowWin32::~PlatformWindowWin32() {
@@ -372,6 +374,32 @@ void PlatformWindowWin32::setVSync(bool enabled) {
     }
 }
 
+void PlatformWindowWin32::setCursorVisible(bool visible) {
+    assertWindowThread();
+    if (m_cursorVisible != visible) {
+        m_cursorVisible = visible;
+        if (visible) {
+            // Increment cursor count until it's visible (>= 0)
+            int attempts = 0;
+            while (ShowCursor(TRUE) < 0) {
+                if (++attempts >= 50) {
+                    NOMAD_LOG_WARNING("setCursorVisible: Failed to show cursor after " + std::to_string(attempts) + " attempts");
+                    break;
+                }
+            }
+        } else {
+            // Decrement cursor count until it's hidden (< 0)
+            int attempts = 0;
+            while (ShowCursor(FALSE) >= 0) {
+                if (++attempts >= 50) {
+                    NOMAD_LOG_WARNING("setCursorVisible: Failed to hide cursor after " + std::to_string(attempts) + " attempts");
+                    break;
+                }
+            }
+        }
+    }
+}
+
 // =============================================================================
 // Event Processing
 // =============================================================================
@@ -502,10 +530,16 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
         }
         
         case WM_CLOSE:
-            m_shouldClose = true;
+            // Don't set m_shouldClose here - let the app decide via callback
+            // The app can call requestClose() which may show a dialog
+            // If the app wants to close, it will set its own m_running = false
             if (m_closeCallback) {
                 m_closeCallback();
+                // Don't close yet - the callback will decide
+                return 0;
             }
+            // No callback, allow default close behavior
+            m_shouldClose = true;
             return 0;
 
         case WM_SIZE: {
@@ -772,6 +806,12 @@ void PlatformWindowWin32::setFullscreen(bool fullscreen) {
 // Key Translation
 // =============================================================================
 
+void PlatformWindowWin32::requestClose() {
+    if (m_hwnd) {
+        PostMessageW(m_hwnd, WM_CLOSE, 0, 0);
+    }
+}
+
 KeyCode PlatformWindowWin32::translateKeyCode(WPARAM wParam, LPARAM lParam) {
     // Handle extended keys
     bool extended = (lParam & (1 << 24)) != 0;
@@ -857,12 +897,24 @@ KeyCode PlatformWindowWin32::translateKeyCode(WPARAM wParam, LPARAM lParam) {
 }
 
 KeyModifiers PlatformWindowWin32::getKeyModifiers() const {
+    assertWindowThread();
     KeyModifiers mods;
     mods.shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
     mods.control = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     mods.alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
     mods.super = (GetKeyState(VK_LWIN) & 0x8000) != 0 || (GetKeyState(VK_RWIN) & 0x8000) != 0;
     return mods;
+}
+
+// =============================================================================
+// Thread Safety
+// =============================================================================
+
+void PlatformWindowWin32::assertWindowThread() const {
+    NOMAD_ASSERT_MSG(GetCurrentThreadId() == m_creatingThreadId,
+        "PlatformWindowWin32 methods must be called from the same thread that created the window. "
+        "Cross-thread calls to setCursorVisible() and getCurrentModifiers() will cause "
+        "cursor display count desynchronization due to ShowCursor()'s per-thread behavior.");
 }
 
 } // namespace Nomad

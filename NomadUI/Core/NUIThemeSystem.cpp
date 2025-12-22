@@ -346,7 +346,7 @@ float NUIThemeManager::getComponentDimension(const std::string& componentName, c
 
     // File Browser dimensions
     if (componentName == "fileBrowser") {
-        if (dimensionName == "itemHeight") return 32.0f; // Default value
+        if (dimensionName == "itemHeight") return 36.0f; // Slightly taller rows for larger text
         if (dimensionName == "iconSize") return 24.0f;
         if (dimensionName == "indentSize") return 16.0f;
         if (dimensionName == "hoverOpacity") return 0.1f;
