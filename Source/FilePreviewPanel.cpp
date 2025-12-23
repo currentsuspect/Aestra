@@ -11,6 +11,13 @@ namespace NomadUI {
 
 FilePreviewPanel::FilePreviewPanel() {
     setId("FilePreviewPanel");
+
+    // Initialize SVG Icons
+    // Folder Icon (Material Design)
+    folderIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24'><path d='M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z'/></svg>");
+    
+    // File Icon (Text Snippet style)
+    fileIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24'><path d='M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z'/></svg>");
 }
 
 void FilePreviewPanel::setFile(const FileItem* file) {
@@ -70,9 +77,82 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     renderer.fillRoundedRect(bounds, 6.0f, theme.getColor("surfaceRaised"));
     renderer.strokeRoundedRect(bounds, 6.0f, 1.0f, theme.getColor("borderSubtle"));
     
-    if (!currentFile_) return;
+    // === EMPTY STATE ===
+    if (!currentFile_) {
+        float centerX = bounds.x + bounds.width * 0.5f;
+        float centerY = bounds.y + bounds.height * 0.5f;
+        
+        // Draw File Icon (faded)
+        float iconSize = 48.0f;
+        if (fileIcon_) {
+            fileIcon_->setBounds(NUIRect(centerX - iconSize * 0.5f, centerY - iconSize * 0.5f - 15, iconSize, iconSize));
+            fileIcon_->setColor(theme.getColor("textSecondary").withAlpha(0.2f));
+            fileIcon_->onRender(renderer);
+        }
+
+        // Draw centered empty state text
+        std::string emptyText = "Select a file to preview";
+        float fontSize = 14.0f;
+        auto size = renderer.measureText(emptyText, fontSize);
+        renderer.drawText(emptyText, 
+            NUIPoint(centerX - size.width * 0.5f, centerY + 25), 
+            fontSize, theme.getColor("textSecondary").withAlpha(0.6f));
+        return;
+    }
+
+    // === FOLDER STATE ===
+    if (currentFile_->isDirectory) {
+        float centerX = bounds.x + bounds.width * 0.5f;
+        float centerY = bounds.y + bounds.height * 0.5f;
+        
+        // Define layout
+        float iconSize = 32.0f;
+        float padding = 12.0f;
+        float startX = 20.0f; // Left margin
+        
+        // Folder Icon (SVG)
+        if (folderIcon_) {
+            // Icon on the left
+            NUIRect iconRect(bounds.x + startX, centerY - iconSize * 0.5f, iconSize, iconSize);
+            folderIcon_->setBounds(iconRect);
+            
+            // Purple Color (Matching sidebar selection)
+            // Using a vibrant purple accent
+            NUIColor purpleAccent(0.6f, 0.3f, 0.9f, 1.0f);
+            folderIcon_->setColor(purpleAccent);
+            
+            folderIcon_->onRender(renderer);
+        }
+        
+        // Text Position (Right of icon)
+        float textX = bounds.x + startX + iconSize + padding;
+        float textMaxWidth = bounds.width - (startX + iconSize + padding + 10.0f);
+        
+        // Vertical Alignment Calculation
+        // Name (14px) + Gap (4px) + Hint (11px) = 29px Total Height
+        float totalTextHeight = 14.0f + 4.0f + 11.0f;
+        float textStartY = centerY - (totalTextHeight * 0.5f);
+
+        // Folder Name
+        std::string name = currentFile_->name;
+        // Truncate if needed
+        float nameWidth = renderer.measureText(name, 14.0f).width;
+        if (nameWidth > textMaxWidth) {
+             if (name.length() > 25) {
+                 name = name.substr(0, 22) + "...";
+             }
+        }
+        
+        renderer.drawText(name, NUIPoint(textX, textStartY), 14.0f, theme.getColor("textPrimary"));
+        
+        // Hint / Info
+        std::string hint = "Folder";
+        renderer.drawText(hint, NUIPoint(textX, textStartY + 14.0f + 4.0f), 11.0f, theme.getColor("textSecondary"));
+        
+        return;
+    }
     
-    // === VERTICAL LAYOUT ===
+    // === VERTICAL LAYOUT (Audio File) ===
     // Top row: [Info] ............. [Play Button]
     // Bottom row: [======== Waveform ========]
     
@@ -116,8 +196,8 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     NUIColor btnColor = isPlaying_ ? theme.getColor("accentLime") : theme.getColor("primary");
     renderer.fillRoundedRect(playButtonBounds_, 4.0f, btnColor.withAlpha(0.3f));
     
-    std::string icon = isPlaying_ ? "■" : "▶";
-    renderer.drawText(icon, NUIPoint(playButtonBounds_.x + 10, playButtonBounds_.y + 5), 14.0f, btnColor);
+    std::string iconStr = isPlaying_ ? "■" : "▶";
+    renderer.drawText(iconStr, NUIPoint(playButtonBounds_.x + 10, playButtonBounds_.y + 5), 14.0f, btnColor);
     
     // === BOTTOM ROW: Waveform (Full Width) ===
     NUIRect waveformBounds(bounds.x + 8, waveformY, bounds.width - 16, waveformHeight);
@@ -186,7 +266,7 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
 }
 
 bool FilePreviewPanel::onMouseEvent(const NUIMouseEvent& event) {
-    if (!currentFile_) return false;
+    if (!currentFile_ || currentFile_->isDirectory) return false;
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (playButtonBounds_.contains(event.position)) {
