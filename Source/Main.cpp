@@ -39,6 +39,7 @@
 #include "TransportBar.h"
 #include "AudioSettingsDialog.h"
 #include "FileBrowser.h"
+#include "FilePreviewPanel.h"
 #include "AudioVisualizer.h"
 #include "TrackUIComponent.h"
 #include "PerformanceHUD.h"
@@ -210,24 +211,19 @@ public:
     }
 
     bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override {
-        // 1. Check if any child is being dragged (pointer capture)
-        // Note: NUIComponent doesn't expose capture state directly, 
-        // but we assume children handled it. In NomadUI, children return true if they handled it.
-        
-        // 2. Iterate children in reverse z-order for hit-testing
+        // 1. Iterate children in reverse z-order for hit-testing
         auto children = getChildren();
         for (auto it = children.rbegin(); it != children.rend(); ++it) {
             auto& child = *it;
             if (child && child->isVisible() && child->isHitTestVisible()) {
                 if (child->onMouseEvent(event)) {
-                    return true; // Child consumed event
+                    // Only consume wheel events if the child ACTUALLY handles it
+                    // But here child->onMouseEvent(event) returned true, so it claimed it.
+                    // However, we need to be careful with visualizers which might claim events but not use wheel.
+                    return true; 
                 }
             }
         }
-
-        // 3. Modal override logic could go here if we had a modal stack reference
-
-        // 4. Pass-through to workspace if no child hit
         return false;
     }
 };
@@ -291,10 +287,24 @@ public:
             Log::info("Sound preview requested: " + file.path);
             playSoundPreview(file);
         });
-        m_fileBrowser->setOnFileSelected([this](const NomadUI::FileItem& file) {
+
+        m_workspaceLayer->addChild(m_fileBrowser);
+
+        // Create file preview panel (add to workspace, below browser)
+        m_previewPanel = std::make_shared<NomadUI::FilePreviewPanel>();
+        m_previewPanel->setOnPlay([this](const NomadUI::FileItem& file) {
+            playSoundPreview(file);
+        });
+        m_previewPanel->setOnStop([this]() {
             stopSoundPreview();
         });
-        m_workspaceLayer->addChild(m_fileBrowser);
+        m_workspaceLayer->addChild(m_previewPanel);
+        
+        // Link file selection to preview panel
+        m_fileBrowser->setOnFileSelected([this](const NomadUI::FileItem& file) {
+            stopSoundPreview();
+            if (m_previewPanel) m_previewPanel->setFile(&file);
+        });
 
         // Create pattern browser panel (add to workspace, FL Studio style side panel)
         m_patternBrowser = std::make_shared<PatternBrowserPanel>(m_trackManager.get());
@@ -1019,10 +1029,11 @@ public:
             if (result == PreviewResult::Success) {
                 // Cache hit - no loading indicator needed
                 Log::info("Sound preview started (cache hit)");
+                if (m_previewPanel) m_previewPanel->setPlaying(true);
             } else {
                 // Pending async decode - show loading indicator
-                if (m_fileBrowser) {
-                    m_fileBrowser->setLoadingPlayback(true);
+                if (m_previewPanel) {
+                    m_previewPanel->setLoading(true);
                 }
                 Log::info("Sound preview pending (async decode)");
             }
@@ -1033,8 +1044,9 @@ public:
 
     void stopSoundPreview() {
         // Clear loading state when stopping
-        if (m_fileBrowser) {
-            m_fileBrowser->setLoadingPlayback(false);
+        if (m_previewPanel) {
+            m_previewPanel->setLoading(false);
+            m_previewPanel->setPlaying(false);
         }
         
         if (m_previewEngine && m_previewIsPlaying) {
@@ -1146,8 +1158,9 @@ public:
         if (m_previewEngine && m_previewIsPlaying) {
             // Check if preview buffer is ready (async decode complete)
             // Clear loading state once buffer is decoded
-            if (m_previewEngine->isBufferReady() && m_fileBrowser && m_fileBrowser->isLoadingPlayback()) {
-                m_fileBrowser->setLoadingPlayback(false);
+            if (m_previewEngine->isBufferReady() && m_previewPanel) {
+                m_previewPanel->setLoading(false);
+                if (m_previewEngine->isPlaying()) m_previewPanel->setPlaying(true);
             }
             
             if (!m_previewEngine->isPlaying()) {
@@ -1241,8 +1254,19 @@ public:
         
         if (m_fileBrowser) {
             fileBrowserWidth = std::min(layout.fileBrowserWidth, width * 0.20f); // 20% for file browser
+            float fbHeight = sidebarHeight;
+            
+            if (m_previewPanel) {
+               float previewHeight = 90.0f;
+               fbHeight -= previewHeight;
+               
+               // Preview panel at bottom of sidebar column
+               m_previewPanel->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, layout.transportBarHeight + fbHeight,
+                   fileBrowserWidth, previewHeight));
+            }
+            
             m_fileBrowser->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, layout.transportBarHeight,
-                                                       fileBrowserWidth, sidebarHeight));
+                                                       fileBrowserWidth, fbHeight));
         }
         
         // Update pattern browser bounds (Workspace Layer) - Right of file browser
@@ -1319,10 +1343,15 @@ public:
             }
         }
 
+        if (m_workspaceLayer) {
+            m_workspaceLayer->setBounds(NUIRect(0, 0, width, height));
+        }
+        if (m_overlayLayer) {
+            m_overlayLayer->setBounds(NUIRect(0, 0, width, height));
+        }
+
         NomadUI::NUIComponent::onResize(width, height);
     }
-    
-    // Getter for file browser to allow direct key event routing
     std::shared_ptr<NomadUI::FileBrowser> getFileBrowser() const { return m_fileBrowser; }
     
 private:
@@ -1337,6 +1366,7 @@ private:
     std::shared_ptr<NomadUI::NUILabel> m_scopeLabel; // "▶ Pattern" or "▶ Arrangement"
     
     std::shared_ptr<NomadUI::FileBrowser> m_fileBrowser;
+    std::shared_ptr<NomadUI::FilePreviewPanel> m_previewPanel;
     std::shared_ptr<PatternBrowserPanel> m_patternBrowser;
     std::shared_ptr<NomadUI::AudioVisualizer> m_audioVisualizer;
     std::shared_ptr<NomadUI::AudioVisualizer> m_waveformVisualizer;

@@ -151,7 +151,7 @@ void ArsenalPanel::onResize(int width, int height) {
 }
 
 bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
-    if (std::abs(event.wheelDelta) > 0.001f) {
+    if (std::abs(event.wheelDelta) > 0.001f && getBounds().contains(event.position)) {
         // Approx content height calculation
         float contentHeight = (m_unitRows.size() * (28.0f + 2.0f)) + 32.0f + 8.0f; 
         float viewportHeight = m_listContainer ? m_listContainer->getBounds().height : 100.0f;

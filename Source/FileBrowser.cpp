@@ -180,10 +180,6 @@ FileBrowser::FileBrowser()
     , sortMode_(SortMode::Name)
     , sortAscending_(true)
     , lastShiftSelectIndex_(-1)
-    , previewPanelVisible_(true)   // Enabled - show waveform preview for audio files
-    , previewPanelWidth_(220.0f)
-    , isLoadingPreview_(false)     // Not loading initially
-    , loadingAnimationTime_(0.0f)  // Animation timer
     , isLoadingPlayback_(false)    // Not loading playback initially
     , wasLoadingPlayback_(false)
 	    , hoveredBreadcrumbIndex_(-1)
@@ -639,10 +635,8 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     
     // Adjust bounds if preview panel is visible (bottom panel)
     float fileBrowserHeight = bounds.height;
-    // Use consistent constant for preview height (was 80.0f, mismatched with renderPreviewPanel's 90.0f)
-    if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
-        fileBrowserHeight -= kPreviewPanelHeight + 4;  // Subtract preview panel height + spacing
-    }
+    // Preview panel logic removed - FileBrowser now fills entire bounds
+    
     effectiveWidth_ = bounds.width; // Full width for file list
     
     // Update scrollbar track height to match current visible area
@@ -679,55 +673,12 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     // Render scrollbar
     renderScrollbar(renderer);
     
-	    // Render preview panel if visible and file is selected
-	    if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
-	        renderPreviewPanel(renderer);
-	    }
+
 
 	    // Popup menus / overlays
 	    renderChildren(renderer);
 	    
-	    // === LOADING SPINNER OVERLAY ===
-	    // Draw a custom circular spinner at mouse position when loading
-	    if (isLoadingPlayback_ || isLoadingPreview_) {
-	        auto& theme = NUIThemeManager::getInstance();
-	        NUIColor spinnerColor = theme.getColor("primary");
-	        
-	        // Spinner position centered on mouse (with slight offset so it doesn't obscure cursor)
-	        float spinnerX = lastMousePos_.x + 16.0f;
-	        float spinnerY = lastMousePos_.y + 16.0f;
-	        float spinnerRadius = 12.0f;
-	        
-	        // Keep spinner within bounds
-	        NUIRect bounds = getBounds();
-	        spinnerX = std::max(bounds.x + spinnerRadius, std::min(bounds.x + bounds.width - spinnerRadius, spinnerX));
-	        spinnerY = std::max(bounds.y + spinnerRadius, std::min(bounds.y + bounds.height - spinnerRadius, spinnerY));
-	        
-	        // Draw semi-transparent backdrop circle
-	        renderer.fillCircle(NUIPoint(spinnerX, spinnerY), spinnerRadius + 4, 
-	                           theme.getColor("surfaceOverlay").withAlpha(0.85f));
-	        renderer.strokeCircle(NUIPoint(spinnerX, spinnerY), spinnerRadius + 4, 
-	                             1.0f, theme.getColor("border").withAlpha(0.5f));
-	        
-	        // Animated spinning arc (8 segments with fading trail)
-	        float angle = loadingAnimationTime_ * 6.0f;  // Rotation speed
-	        int segments = 8;
-	        for (int i = 0; i < segments; ++i) {
-	            float segAngle = angle + (i * 2.0f * 3.14159f / segments);
-	            float alpha = (1.0f - static_cast<float>(i) / segments);
-	            
-	            float innerR = spinnerRadius - 4.0f;
-	            float outerR = spinnerRadius;
-	            
-	            float x1 = spinnerX + std::cos(segAngle) * innerR;
-	            float y1 = spinnerY + std::sin(segAngle) * innerR;
-	            float x2 = spinnerX + std::cos(segAngle) * outerR;
-	            float y2 = spinnerY + std::sin(segAngle) * outerR;
-	            
-	            renderer.drawLine(NUIPoint(x1, y1), NUIPoint(x2, y2), 
-	                             3.0f, spinnerColor.withAlpha(alpha * 0.9f));
-	        }
-	    }
+	    // Loading spinner removed - now handled by FilePreviewPanel
 	}
 
 void FileBrowser::onUpdate(double deltaTime) {
@@ -736,11 +687,7 @@ void FileBrowser::onUpdate(double deltaTime) {
     // Apply any completed async directory scans (keeps UI responsive on huge folders).
     processScanResults();
     
-    // Update loading animation timer (for spinner only, no cursor hiding)
-    if (isLoadingPreview_ || isLoadingPlayback_) {
-        loadingAnimationTime_ += static_cast<float>(deltaTime);
-        setDirty(true); // Keep redrawing for animation
-    }
+    // Loading animation removed - now handled by FilePreviewPanel
 	    
     // Smooth scrolling with lerp
     float lerpSpeed = 12.0f;
@@ -832,9 +779,7 @@ void FileBrowser::onResize(int width, int height) {
     
     // FIX: Calculate list height taking preview panel into account, consistent with onMouseEvent
     float availableHeight = height;
-    if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
-        availableHeight -= kPreviewPanelHeight + 4;
-    }
+
     const float listYOffset = (searchY - getBounds().y) + searchRowHeight + rowSpacing;
     float listHeight = availableHeight - listYOffset;
     
@@ -893,9 +838,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     
     // FIX: Calculate list height taking preview panel into account
     float availableHeight = bounds.height;
-    if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
-        availableHeight -= kPreviewPanelHeight + 4;
-    }
+
     
     float listY = bounds.y + totalHeaderH; 
     float listHeight = availableHeight - totalHeaderH;
@@ -998,6 +941,28 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     // Check if mouse is within bounds
     bool mouseInside = bounds.contains(event.position.x, event.position.y);
 
+    // === MOUSE WHEEL SCROLLING (handle before bounds check so scrolling works on hover) ===
+    if (mouseInside && event.wheelDelta != 0) {
+        float contentHeight = view.size() * itemHeight;
+        float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
+        bool needsScrollbar = maxScroll > 0.0f;
+        
+        if (needsScrollbar) {
+            scrollbarFadeTimer_ = 0.0f;
+            scrollbarOpacity_ = 1.0f;
+        }
+        float scrollSpeed = 3.0f; // Scroll 3 items per wheel step
+        float scrollDelta = event.wheelDelta * scrollSpeed * itemHeight;
+        
+        targetScrollOffset_ -= scrollDelta;
+
+        // Clamp target scroll offset
+        targetScrollOffset_ = std::max(0.0f, std::min(targetScrollOffset_, maxScroll));
+
+        setDirty(true);
+        return true;  // Consume the wheel event
+    }
+
     // Clear hover if mouse leaves the file browser entirely (but allow scrollbar dragging)
     if (!mouseInside && !isDraggingScrollbar_) {
         bool dirty = false;
@@ -1038,26 +1003,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	    const float listX = bounds.x + layout.panelMargin + scrollbarGutter;
 	    const float listW = effectiveW - 2 * layout.panelMargin - scrollbarGutter;
     
-    // Handle mouse wheel scrolling first (works anywhere in the file browser)
-    if (event.wheelDelta != 0) {
-        if (needsScrollbar) {
-            scrollbarFadeTimer_ = 0.0f;
-            scrollbarOpacity_ = 1.0f;
-        }
-        float scrollSpeed = 2.0f; // Scroll 2 items per wheel step
-        float scrollDelta = event.wheelDelta * scrollSpeed * itemHeight;
-        
-        targetScrollOffset_ -= scrollDelta;
-
-        // Clamp target scroll offset
-        float maxScroll = std::max(0.0f, (view.size() * itemHeight) - listHeight);
-        targetScrollOffset_ = std::max(0.0f, std::min(targetScrollOffset_, maxScroll));
-
-        // Let onUpdate handle interpolation and thumb position
-        setDirty(true);
-        return true;
-    }
-
+    // Wheel handling moved earlier in function (before bounds check)
     // Toolbar controls
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (!refreshButtonBounds_.isEmpty() && refreshButtonBounds_.contains(event.position)) {
@@ -1212,17 +1158,17 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	                if (selectedIndex_ >= 0 && selectedIndex_ < static_cast<int>(activeView.size())) {
 	                    selectedFile_ = activeView[selectedIndex_];
 	                    
-	                    // Generate waveform preview for audio files (async)
-	                    waveformData_.clear();
+	                    // Waveform generation moved to FilePreviewPanel
+	                    // waveformData_.clear();
 	                    if (selectedFile_ && !selectedFile_->isDirectory) {
 	                        std::string ext = std::filesystem::path(selectedFile_->path).extension().string();
 	                        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 	                        
 	                        if (ext == ".wav" || ext == ".mp3" || ext == ".flac" || ext == ".ogg" || 
 	                            ext == ".aif" || ext == ".aiff" || ext == ".m4a" || ext == ".mp4") {
-	                            // Start loading animation
-	                            isLoadingPreview_ = true;
-	                            loadingAnimationTime_ = 0.0f;
+	                            // Preview loading moved to FilePreviewPanel
+	                            // isLoadingPreview_ = true;
+	                            // loadingAnimationTime_ = 0.0f;
 	                            
 	                            // Capture path for async decode
 	                            std::string filePath = selectedFile_->path;
@@ -1243,9 +1189,9 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	                                    waveform = generateWaveformFromAudio(audioData, numChannels, 256);
 	                                }
 	                                
-	                                // Update UI on main thread (store result for next frame)
-	                                waveformData_ = std::move(waveform);
-	                                isLoadingPreview_ = false;
+	                                // Preview update moved to FilePreviewPanel
+	                                // waveformData_ = std::move(waveform);
+	                                // isLoadingPreview_ = false;
 	                                
 	                            }).detach();
 	                        }
@@ -1556,29 +1502,8 @@ void FileBrowser::selectFile(const std::string& path) {
             selectedFile_ = view[i];
             updateScrollPosition();
             
-            // Generate waveform preview for audio files
             if (selectedFile_ && !selectedFile_->isDirectory) {
-                // Clear old waveform
-                waveformData_.clear();
-                
-                // Check if audio file
-                std::string ext = std::filesystem::path(path).extension().string();
-                std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-                
-                if (ext == ".wav" || ext == ".mp3" || ext == ".flac" || ext == ".ogg" || 
-                    ext == ".aif" || ext == ".aiff" || ext == ".m4a" || ext == ".mp4") {
-                    // Generate placeholder waveform (simple sine pattern for demo)
-                    // TODO: Replace with actual audio decoder for real waveform
-                    waveformData_.resize(256);
-                    for (size_t s = 0; s < waveformData_.size(); ++s) {
-                        // Create a pseudo-random pattern based on file size for variety
-                        float t = static_cast<float>(s) / waveformData_.size();
-                        float wave = std::sin(t * 20.0f + static_cast<float>(selectedFile_->size % 1000) * 0.01f);
-                        float envelope = std::sin(t * 3.14159f); // Fade in/out
-                        float noise = std::sin(t * 47.0f + t * 123.0f) * 0.3f; // Add variation
-                        waveformData_[s] = std::abs(wave * envelope + noise) * 0.8f + 0.1f;
-                    }
-                }
+                // Waveform generation moved to FilePreviewPanel
             }
             
             if (onFileSelected_) {
@@ -1956,9 +1881,10 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     
     // FIX: Subtract preview panel height from list height for correct clipping
     float availableHeight = bounds.height;
-    if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
-        availableHeight -= kPreviewPanelHeight + 4;
-    }
+    // Preview panel moved to FilePreviewPanel
+    // if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
+    //     availableHeight -= kPreviewPanelHeight + 4;
+    // }
     
     float listY = bounds.y + totalHeaderH; 
     float listHeight = availableHeight - totalHeaderH;
@@ -2620,9 +2546,10 @@ void FileBrowser::updateScrollPosition() {
     float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
     
     float availableHeight = bounds.height;
-    if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
-        availableHeight -= kPreviewPanelHeight + 4;
-    }
+    // Preview panel moved to FilePreviewPanel
+    // if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
+    //     availableHeight -= kPreviewPanelHeight + 4;
+    // }
     
     float listY = bounds.y + totalHeaderH;
     float listHeight = availableHeight - totalHeaderH;
@@ -3423,6 +3350,8 @@ bool FileBrowser::handleSearchBoxMouseEvent(const NUIMouseEvent& event) {
     return false;
 }
 
+// setPreviewPanelVisible removed - functionality moved to FilePreviewPanel
+/*
 void FileBrowser::setPreviewPanelVisible(bool visible) {
     if (previewPanelVisible_ == visible) return;
     previewPanelVisible_ = visible;
@@ -3432,6 +3361,7 @@ void FileBrowser::setPreviewPanelVisible(bool visible) {
     onResize(b.width, b.height); 
     setDirty(true);
 }
+*/
 
 // renderPreviewPanel is implemented at the bottom of this file
 
@@ -3715,148 +3645,6 @@ void FileBrowser::showHiddenBreadcrumbMenu(const std::vector<std::string>& hidde
     popupMenu_->showAt(position);
 }
 
-void FileBrowser::renderPreviewPanel(NUIRenderer& renderer) {
-    auto& theme = NUIThemeManager::getInstance();
-    NUIRect bounds = getBounds();
-    
-    // Calculate preview panel bounds (BOTTOM of file browser)
-    // Calculate preview panel bounds (BOTTOM of file browser)
-    float previewHeight = kPreviewPanelHeight; // Use shared constant
-    float panelX = bounds.x + 4;
-    float panelY = bounds.y + bounds.height - previewHeight;
-    float panelWidth = bounds.width - 8;
-    
-    NUIRect panelBounds(panelX, panelY, panelWidth, previewHeight - 4);
-    
-    // Panel background
-    renderer.fillRoundedRect(panelBounds, 6.0f, theme.getColor("surfaceRaised"));
-    renderer.strokeRoundedRect(panelBounds, 6.0f, 1.0f, theme.getColor("borderSubtle"));
-    
-    if (!selectedFile_) return;
-    
-    // === VERTICAL LAYOUT ===
-    // Top row: [Info] ............. [Play Button]
-    // Bottom row: [======== Waveform ========]
-    
-    float topRowY = panelY + 6;
-    float topRowHeight = 32;
-    float waveformY = topRowY + topRowHeight + 4;
-    float waveformHeight = previewHeight - topRowHeight - 18;
-    
-    // === TOP ROW: Info (Left) + Play (Right) ===
-    float infoX = panelX + 10;
-    float playBtnWidth = 32.0f;
-    float playX = panelX + panelWidth - playBtnWidth - 10;
-    
-    // File name (truncated)
-    std::string displayName = selectedFile_->name;
-    if (displayName.length() > 25) {
-        displayName = displayName.substr(0, 22) + "...";
-    }
-    renderer.drawText(displayName, NUIPoint(infoX, topRowY + 2), 11.0f, theme.getColor("textPrimary"));
-    
-    // File size + extension on same line
-    std::string sizeStr;
-    if (selectedFile_->size < 1024) {
-        sizeStr = std::to_string(selectedFile_->size) + " B";
-    } else if (selectedFile_->size < 1024 * 1024) {
-        sizeStr = std::to_string(selectedFile_->size / 1024) + " KB";
-    } else {
-        sizeStr = std::to_string(selectedFile_->size / (1024 * 1024)) + " MB";
-    }
-    
-    std::string ext = std::filesystem::path(selectedFile_->path).extension().string();
-    std::transform(ext.begin(), ext.end(), ext.begin(), ::toupper);
-    if (!ext.empty() && ext[0] == '.') ext = ext.substr(1);
-    
-    std::string meta = sizeStr + " • " + ext;
-    renderer.drawText(meta, NUIPoint(infoX, topRowY + 16), 9.0f, theme.getColor("textSecondary"));
-    
-    // Play Button (Right side of top row)
-    NUIRect playBtnRect(playX, topRowY + 2, playBtnWidth, 26);
-    renderer.fillRoundedRect(playBtnRect, 4.0f, theme.getColor("primary").withAlpha(0.3f));
-    renderer.drawText("▶", NUIPoint(playBtnRect.x + 10, playBtnRect.y + 5), 14.0f, theme.getColor("primary"));
-    
-    // === BOTTOM ROW: Waveform (Full Width) ===
-    NUIRect waveformBounds(panelX + 8, waveformY, panelWidth - 16, waveformHeight);
-    
-    // Waveform background
-    renderer.fillRoundedRect(waveformBounds, 4.0f, theme.getColor("waveformBackground"));
-    
-    // Draw waveform or loading state
-    if (isLoadingPreview_) {
-        // === LOADING SPINNER ===
-        float centerX = waveformBounds.x + waveformBounds.width * 0.5f;
-        float centerY = waveformBounds.y + waveformBounds.height * 0.5f;
-        float spinnerRadius = std::min(waveformBounds.width, waveformBounds.height) * 0.3f;
-        
-        // Animated arc (spinning)
-        float angle = loadingAnimationTime_ * 4.0f; // Rotation speed
-        int segments = 8;
-        for (int i = 0; i < segments; ++i) {
-            float segmentAngle = angle + (i * 2.0f * 3.14159f / segments);
-            float alpha = (1.0f - static_cast<float>(i) / segments) * 0.8f;
-            
-            float x1 = centerX + std::cos(segmentAngle) * (spinnerRadius - 3);
-            float y1 = centerY + std::sin(segmentAngle) * (spinnerRadius - 3);
-            float x2 = centerX + std::cos(segmentAngle) * (spinnerRadius + 3);
-            float y2 = centerY + std::sin(segmentAngle) * (spinnerRadius + 3);
-            
-            renderer.drawLine(
-                NUIPoint(x1, y1), NUIPoint(x2, y2),
-                2.0f,
-                theme.getColor("primary").withAlpha(alpha)
-            );
-        }
-        
-        // Loading text
-        std::string loadText = "Loading...";
-        auto textSize = renderer.measureText(loadText, 9.0f);
-        float textX = centerX - textSize.width * 0.5f;
-        renderer.drawText(loadText, NUIPoint(textX, centerY + spinnerRadius + 8), 9.0f, theme.getColor("textSecondary"));
-        
-    } else if (!waveformData_.empty() && waveformBounds.width > 0 && waveformBounds.height > 0) {
-        // === WAVEFORM RENDERING ===
-        NUIColor waveformFill = theme.getColor("waveformFill");
-        
-        float centerY = waveformBounds.y + waveformBounds.height * 0.5f;
-        float maxAmplitude = waveformBounds.height * 0.45f;
-        float samplesPerPixel = static_cast<float>(waveformData_.size()) / waveformBounds.width;
-        
-        if (samplesPerPixel > 0.0f) {
-            for (float x = 0; x < waveformBounds.width; x += 1.0f) {
-                int sampleIdx = static_cast<int>(x * samplesPerPixel);
-                if (sampleIdx >= static_cast<int>(waveformData_.size())) break;
-                
-                float amplitude = waveformData_[sampleIdx] * maxAmplitude;
-                float lineX = waveformBounds.x + x;
-                
-                if (amplitude > 0.5f) {
-                    renderer.drawLine(
-                        NUIPoint(lineX, centerY - amplitude),
-                        NUIPoint(lineX, centerY + amplitude),
-                        1.0f,
-                        waveformFill
-                    );
-                }
-            }
-        }
-        
-        // Center line
-        renderer.drawLine(
-            NUIPoint(waveformBounds.x, centerY),
-            NUIPoint(waveformBounds.x + waveformBounds.width, centerY),
-            1.0f,
-            theme.getColor("waveformLine").withAlpha(0.3f)
-        );
-    } else {
-        // No waveform data - show placeholder
-        float centerY = waveformBounds.y + waveformBounds.height * 0.5f;
-        std::string placeholder = "Select audio file";
-        auto textSize = renderer.measureText(placeholder, 10.0f);
-        float textX = waveformBounds.x + (waveformBounds.width - textSize.width) * 0.5f;
-        renderer.drawText(placeholder, NUIPoint(textX, centerY - 4), 10.0f, theme.getColor("textDisabled"));
-    }
-}
+
 
 } // namespace NomadUI
