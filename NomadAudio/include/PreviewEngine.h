@@ -28,8 +28,9 @@ public:
     PreviewEngine(const PreviewEngine&) = delete;
     PreviewEngine& operator=(const PreviewEngine&) = delete;
 
-    PreviewResult play(const std::string& path, float gainDb = -6.0f, double maxSeconds = 5.0);
+    PreviewResult play(const std::string& path, float gainDb = -6.0f, double maxSeconds = 30.0);
     void stop();
+    void seek(double seconds); // New seek method
     void setOutputSampleRate(double sr);
     void process(float* interleavedOutput, uint32_t numFrames);
     bool isPlaying() const;
@@ -37,6 +38,7 @@ public:
     void setOnComplete(std::function<void(const std::string& path)> callback);
     void setGlobalPreviewVolume(float gainDb);
     float getGlobalPreviewVolume() const;
+    double getPlaybackPosition() const; // New method
 
 private:
     struct PreviewVoice {
@@ -52,6 +54,7 @@ private:
         double fadeInPos{0.0};
         double fadeOutPos{0.0};
         std::atomic<bool> stopRequested{false};
+        std::atomic<double> seekRequestSeconds{-1.0}; // -1.0 = no seek
         bool fadeOutActive{false};
         std::atomic<bool> playing{false};
         std::atomic<bool> bufferReady{false};  // True when buffer is decoded and ready

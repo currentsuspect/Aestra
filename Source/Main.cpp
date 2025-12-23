@@ -298,6 +298,9 @@ public:
         m_previewPanel->setOnStop([this]() {
             stopSoundPreview();
         });
+        m_previewPanel->setOnSeek([this](double seconds) {
+            seekSoundPreview(seconds);
+        });
         m_workspaceLayer->addChild(m_previewPanel);
         
         // Link file selection to preview panel
@@ -449,9 +452,7 @@ public:
         // Initialize preview engine
         m_previewEngine = std::make_unique<PreviewEngine>();
         m_previewIsPlaying = false;
-        m_previewDuration = 5.0; 
-        
-        Log::info("Sound preview system and UI layers initialized");
+        m_previewDuration = 8.0; // 8 seconds for initial preview
         
         // Initial state sync
         syncViewState();
@@ -1018,6 +1019,7 @@ public:
             return;
         }
 
+        m_previewDuration = 8.0; // Reset to 8s for a new sound
         auto result = m_previewEngine->play(file.path, -6.0f, m_previewDuration);
         
         // Handle both immediate playback (cache hit) and async decode (cache miss)
@@ -1053,8 +1055,9 @@ public:
             Log::info("stopSoundPreview called - wasPlaying: true");
             m_previewEngine->stop();
             m_previewIsPlaying = false;
-            m_currentPreviewFile.clear();
-            Log::info("Sound preview stopped");
+            // Note: We intentionally DO NOT clear m_currentPreviewFile here
+            // so that seekSoundPreview can restart the sound if scrubbing.
+            Log::info("Sound preview stopped (file path preserved)");
         }
     }
     
@@ -1354,6 +1357,32 @@ public:
     }
     std::shared_ptr<NomadUI::FileBrowser> getFileBrowser() const { return m_fileBrowser; }
     
+    void seekSoundPreview(double seconds) {
+        if (m_previewEngine) {
+            bool engineIsPlaying = m_previewEngine->isPlaying();
+            
+            // "Unlock" the duration when scrubbing - make it effectively infinite
+            m_previewDuration = 300.0; 
+
+            // Restart if it stopped (e.g. reached end of short sample or stale flag)
+            if ((!m_previewIsPlaying || !engineIsPlaying) && !m_currentPreviewFile.empty()) {
+                m_previewEngine->play(m_currentPreviewFile, -6.0f, m_previewDuration);
+                m_previewIsPlaying = true;
+                m_previewStartTime = std::chrono::steady_clock::now();
+                if (m_previewPanel) m_previewPanel->setPlaying(true);
+            }
+            m_previewEngine->seek(seconds);
+        }
+    }
+
+    bool isPlayingPreview() const { return m_previewIsPlaying; }
+    
+    void updatePreviewPlayhead() {
+        if (m_previewPanel && m_previewEngine) {
+            m_previewPanel->setPlayheadPosition(m_previewEngine->getPlaybackPosition());
+        }
+    }
+
 private:
     std::shared_ptr<NomadUI::NUIComponent> m_workspaceLayer;
     std::shared_ptr<NomadUI::NUIComponent> m_overlayLayer;
@@ -1387,7 +1416,7 @@ private:
     // Sound preview state
     bool m_previewIsPlaying = false;
     std::chrono::steady_clock::time_point m_previewStartTime{}; // Default initialized
-    double m_previewDuration = 5.0; // 5 seconds
+    double m_previewDuration = 300.0; // Extend duration for scrubbing support
     std::string m_currentPreviewFile;
 };
 
@@ -2407,6 +2436,12 @@ public:
 
             {
                 NOMAD_ZONE("Render_Prep");
+                
+                // Poll Preview Position if needed
+                if (m_content && m_content->isPlayingPreview()) {
+                    m_content->updatePreviewPlayhead();
+                }
+                
                 render();
             }
             

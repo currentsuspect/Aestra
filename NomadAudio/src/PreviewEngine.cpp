@@ -88,7 +88,10 @@ PreviewResult PreviewEngine::startVoiceWithBuffer(std::shared_ptr<AudioBuffer> b
     voice->elapsedSeconds = 0.0;
     voice->fadeInPos = 0.0;
     voice->fadeOutPos = 0.0;
+    voice->fadeInPos = 0.0;
+    voice->fadeOutPos = 0.0;
     voice->stopRequested.store(false, std::memory_order_release);
+    voice->seekRequestSeconds.store(-1.0, std::memory_order_release);
     voice->fadeOutActive = false;
     voice->bufferReady.store(true, std::memory_order_release);
     voice->playing.store(true, std::memory_order_release);
@@ -190,7 +193,9 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
     voice->elapsedSeconds = 0.0;
     voice->fadeInPos = 0.0;
     voice->fadeOutPos = 0.0;
+    voice->fadeOutPos = 0.0;
     voice->stopRequested.store(false, std::memory_order_release);
+    voice->seekRequestSeconds.store(-1.0, std::memory_order_release);
     voice->fadeOutActive = false;
     voice->bufferReady.store(false, std::memory_order_release);  // Not ready yet
     voice->playing.store(true, std::memory_order_release);       // Voice is active
@@ -240,6 +245,22 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
         ? m_outputSampleRate.load() : 48000.0;
     const double fadeInSamples = streamRate * 0.02;  // 20ms fade-in
     const double fadeOutSamples = streamRate * 0.05; // 50ms fade-out
+    
+    // Check Seek Request
+    double seekReq = voice->seekRequestSeconds.exchange(-1.0, std::memory_order_acq_rel);
+    if (seekReq >= 0.0) {
+        // Clamp to duration
+        if (seekReq > voice->durationSeconds) seekReq = voice->durationSeconds;
+        voice->phaseFrames = seekReq * voice->sampleRate;
+        voice->elapsedSeconds = seekReq;
+        
+        // Reset stop/fade state so seeking back from the end works
+        voice->stopRequested.store(false, std::memory_order_release);
+        voice->fadeOutActive = false;
+        voice->fadeOutPos = 0.0;
+        voice->fadeInPos = 0.0; // Smooth transition
+    }
+
     const double ratio = voice->sampleRate / streamRate;
     const uint64_t totalFrames = buffer->numFrames;
     const float* data = buffer->data.data();
@@ -499,6 +520,18 @@ void PreviewEngine::setGlobalPreviewVolume(float gainDb) {
 
 float PreviewEngine::getGlobalPreviewVolume() const {
     return m_globalGainDb.load(std::memory_order_relaxed);
+}
+
+void PreviewEngine::seek(double seconds) {
+    auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+    if (voice) {
+        voice->seekRequestSeconds.store(seconds, std::memory_order_release);
+    }
+}
+
+double PreviewEngine::getPlaybackPosition() const {
+    auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+    return voice ? voice->elapsedSeconds : 0.0;
 }
 
 } // namespace Audio
