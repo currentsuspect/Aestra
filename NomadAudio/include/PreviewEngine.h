@@ -8,6 +8,7 @@
 #include <string>
 #include <thread>
 #include <mutex>
+#include <optional>
 
 namespace Nomad {
 namespace Audio {
@@ -70,10 +71,24 @@ private:
     std::atomic<float> m_globalGainDb;
     std::function<void(const std::string&)> m_onComplete;
     
-    // Decode thread management - generation counter approach
-    // Each new decode increments the generation; stale decodes are ignored
+    // Decode Worker Thread
+    // Persistent thread to handle decode requests without spawn overhead
+    struct DecodeJob {
+        std::string path;
+        std::shared_ptr<PreviewVoice> voice;
+        uint64_t generation;
+    };
+
+    std::thread m_workerThread;
+    std::mutex m_workerMutex;
+    std::condition_variable m_workerCV;
+    std::optional<DecodeJob> m_pendingJob;
+    bool m_workerRunning{true};
+
+    void workerLoop();
+    
+    // Generation counter to handle rapid switching
     std::atomic<uint64_t> m_decodeGeneration{0};
-    std::mutex m_decodeMutex;
 };
 
 } // namespace Audio

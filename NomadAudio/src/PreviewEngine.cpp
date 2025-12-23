@@ -21,11 +21,25 @@ PreviewEngine::PreviewEngine()
     : m_activeVoice(nullptr)
     , m_outputSampleRate(48000.0)
     , m_globalGainDb(-6.0f)
-    , m_decodeGeneration(0) {}
+    , m_decodeGeneration(0) 
+    , m_workerRunning(true) // Initialize running state
+{
+    // Start worker thread
+    m_workerThread = std::thread(&PreviewEngine::workerLoop, this);
+}
 
 PreviewEngine::~PreviewEngine() {
     stop();
-    // No need to join threads - they will naturally expire when checking generation
+    
+    // Stop worker thread
+    {
+        std::lock_guard<std::mutex> lock(m_workerMutex);
+        m_workerRunning = false;
+        m_workerCV.notify_all();
+    }
+    if (m_workerThread.joinable()) {
+        m_workerThread.join();
+    }
 }
 
 float PreviewEngine::dbToLinear(float db) const {
@@ -88,46 +102,71 @@ void PreviewEngine::decodeAsync(const std::string& path, std::shared_ptr<Preview
     // Increment generation - any in-flight decodes with older generation will be discarded
     uint64_t thisGeneration = m_decodeGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
     
-    // Fire-and-forget thread - no tracking, no joining
-    // Thread captures generation and checks it before applying results
-    std::thread([this, path, voice, thisGeneration]() {
-        uint32_t sr = 0, ch = 0;
-        auto buffer = loadBuffer(path, sr, ch);
-        
-        // Check if this decode is still current (not superseded by newer request)
-        if (m_decodeGeneration.load(std::memory_order_acquire) != thisGeneration) {
-            // A newer decode was started - mark this voice as not playing
-            voice->playing.store(false, std::memory_order_release);
-            return;
+    // Queue job for worker thread
+    {
+        std::lock_guard<std::mutex> lock(m_workerMutex);
+        m_pendingJob = DecodeJob{path, voice, thisGeneration};
+        // Always overwrite pending job - we only care about the latest UI interaction
+    }
+    m_workerCV.notify_one();
+}
+
+void PreviewEngine::workerLoop() {
+    while (true) {
+        DecodeJob job;
+        {
+            std::unique_lock<std::mutex> lock(m_workerMutex);
+            m_workerCV.wait(lock, [this] { 
+                return m_pendingJob.has_value() || !m_workerRunning; 
+            });
+            
+            if (!m_workerRunning) break;
+            
+            job = *m_pendingJob;
+            m_pendingJob.reset();
         }
         
-        // Check if this voice is still the active one
+        // 1. Early Generation Check (Optimization)
+        if (m_decodeGeneration.load(std::memory_order_acquire) != job.generation) {
+             if (job.voice) job.voice->playing.store(false, std::memory_order_release);
+             continue;
+        }
+
+        // 2. Decode
+        uint32_t sr = 0, ch = 0;
+        auto buffer = loadBuffer(job.path, sr, ch);
+        
+        // 3. Late Generation Check (Correctness)
+        if (m_decodeGeneration.load(std::memory_order_acquire) != job.generation) {
+             if (job.voice) job.voice->playing.store(false, std::memory_order_release);
+             continue;
+        }
+        
+        // 4. Update Voice
+        auto voice = job.voice;
+        // Verify voice is still active (redundant with generation but safe)
         auto currentVoice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
         if (currentVoice.get() != voice.get()) {
-            // A different preview was started - mark this voice as not playing  
             voice->playing.store(false, std::memory_order_release);
-            return;
+            continue;
         }
-        
-        if (buffer && buffer->ready.load(std::memory_order_acquire)) {
+
+        if (voice && buffer && buffer->ready.load(std::memory_order_acquire)) {
             voice->buffer = buffer;
             voice->sampleRate = sr > 0 ? static_cast<double>(sr) : 48000.0;
             voice->channels = ch > 0 ? ch : 2;
             voice->durationSeconds = sr > 0 && buffer->numFrames > 0 
                 ? static_cast<double>(buffer->numFrames) / sr : 0.0;
             
-            // Signal that buffer is ready for playback
             voice->bufferReady.store(true, std::memory_order_release);
             
-            Log::info("PreviewEngine: Async decode complete for '" + path + "' (" + 
-                      std::to_string(sr) + " Hz, " + std::to_string(voice->durationSeconds) + " sec)");
-        } else {
-            // Decode failed - mark voice as not playing
-            Log::warning("PreviewEngine: Async decode failed for " + path);
+             Log::info("PreviewEngine: Async decode complete for '" + job.path + "' (" + 
+                       std::to_string(sr) + " Hz, " + std::to_string(voice->durationSeconds) + " sec)");
+        } else if (voice) {
+            Log::warning("PreviewEngine: Async decode failed for " + job.path);
             voice->playing.store(false, std::memory_order_release);
-            voice->bufferReady.store(false, std::memory_order_release);
         }
-    }).detach();  // Fire and forget
+    }
 }
 
 PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double maxSeconds) {
@@ -208,33 +247,57 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
     const float gain = voice->gain;
     const uint32_t srcChannels = voice->channels;
 
+    // Cubic Hermite Spline Interpolation Helper
+    // P(t) = a*t^3 + b*t^2 + c*t + d
+    auto cubic = [](float p0, float p1, float p2, float p3, float t) {
+        float a = -0.5f * p0 + 1.5f * p1 - 1.5f * p2 + 0.5f * p3;
+        float b = p0 - 2.5f * p1 + 2.0f * p2 - 0.5f * p3;
+        float c = -0.5f * p0 + 0.5f * p2;
+        float d = p1;
+        return a*t*t*t + b*t*t + c*t + d;
+    };
+
+    // Sample Access Helper
+    auto getSample = [&](int64_t index, uint32_t channel) -> float {
+        if (index < 0) index = 0;
+        if (index >= totalFrames) index = totalFrames - 1u;
+        
+        // Handle mono/stereo mapping inside access
+        if (srcChannels == 1) {
+            return data[index]; // Mono source
+        } else {
+            return data[index * 2 + channel];
+        }
+    };
+
     for (uint32_t i = 0; i < numFrames; ++i) {
-        if (static_cast<uint64_t>(phase) >= totalFrames) {
+        if (static_cast<uint64_t>(phase) >= totalFrames - 1) { // -1 for safety with cubic lookahead
             voice->stopRequested.store(true, std::memory_order_release);
             voice->fadeOutActive = true;
             break;
         }
+        
         uint64_t idx = static_cast<uint64_t>(phase);
-        uint64_t idx1 = std::min<uint64_t>(idx + 1, totalFrames - 1);
         float frac = static_cast<float>(phase - idx);
 
         float outL, outR;
         
-        // Handle mono vs stereo inline (lazy stereo conversion)
+        // Left Channel (or Mono)
+        float l0 = getSample((int64_t)idx - 1, 0);
+        float l1 = getSample((int64_t)idx,     0);
+        float l2 = getSample((int64_t)idx + 1, 0);
+        float l3 = getSample((int64_t)idx + 2, 0);
+        outL = cubic(l0, l1, l2, l3, frac);
+
         if (srcChannels == 1) {
-            // Mono: duplicate to stereo inline - no pre-conversion needed
-            float m0 = data[idx];
-            float m1 = data[idx1];
-            float mono = m0 + frac * (m1 - m0);
-            outL = outR = mono;
+            outR = outL;
         } else {
-            // Stereo (or already downmixed to stereo)
-            float l0 = data[idx * 2];
-            float l1 = data[idx1 * 2];
-            float r0 = data[idx * 2 + 1];
-            float r1 = data[idx1 * 2 + 1];
-            outL = l0 + frac * (l1 - l0);
-            outR = r0 + frac * (r1 - r0);
+            // Right Channel
+            float r0 = getSample((int64_t)idx - 1, 1);
+            float r1 = getSample((int64_t)idx,     1);
+            float r2 = getSample((int64_t)idx + 1, 1);
+            float r3 = getSample((int64_t)idx + 2, 1);
+            outR = cubic(r0, r1, r2, r3, frac);
         }
 
         float envelope = 1.0f;
