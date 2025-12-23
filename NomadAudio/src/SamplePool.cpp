@@ -35,6 +35,42 @@ SampleKey SamplePool::makeKey(const std::string& path) {
     return key;
 }
 
+// Fast key generation: path-only, no filesystem stat (for instant cache lookups)
+SampleKey SamplePool::makeKeyFast(const std::string& path) {
+    SampleKey key;
+    try {
+        fs::path p = fs::absolute(makeUnicodePath(path));
+        key.filePath = pathToUtf8(p);
+        key.modTime = 0;  // Skip file stat - much faster
+    } catch (...) {
+        key.filePath = path;
+        key.modTime = 0;
+    }
+    return key;
+}
+
+std::shared_ptr<AudioBuffer> SamplePool::tryGetCached(const std::string& path) {
+    // Fast path: path-only lookup without filesystem stat
+    // This is much faster than acquire() for checking cache hits
+    SampleKey fastKey = makeKeyFast(path);
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    
+    // Try exact path match first (ignoring mod time)
+    for (const auto& [key, weakBuf] : m_samples) {
+        // Compare paths only, ignore modification time for fast lookup
+        if (key.filePath == fastKey.filePath) {
+            if (auto existing = weakBuf.lock()) {
+                if (existing->ready.load(std::memory_order_acquire)) {
+                    existing->lastAccessTick.store(++m_accessCounter);
+                    return existing;  // Cache hit
+                }
+            }
+        }
+    }
+    return nullptr;  // Cache miss
+}
+
 size_t SamplePool::calculateBufferBytes(const AudioBuffer& buffer) {
     return buffer.data.size() * sizeof(float);
 }

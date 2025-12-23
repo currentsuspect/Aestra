@@ -721,18 +721,10 @@ void FileBrowser::onUpdate(double deltaTime) {
     // Apply any completed async directory scans (keeps UI responsive on huge folders).
     processScanResults();
     
-    // Update loading animation timer
+    // Update loading animation timer (for spinner only, no cursor hiding)
     if (isLoadingPreview_ || isLoadingPlayback_) {
         loadingAnimationTime_ += static_cast<float>(deltaTime);
         setDirty(true); // Keep redrawing for animation
-    }
-    
-    // Handle cursor visibility for playback loading
-    if (isLoadingPlayback_ != wasLoadingPlayback_) {
-#ifdef _WIN32
-        ::ShowCursor(!isLoadingPlayback_); // Hide if loading, Show if done
-#endif
-        wasLoadingPlayback_ = isLoadingPlayback_;
     }
 	    
     // Smooth scrolling with lerp
@@ -1253,24 +1245,9 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                         if (type == FileType::AudioFile || type == FileType::MusicFile ||
                             type == FileType::WavFile || type == FileType::Mp3File ||
                             type == FileType::FlacFile) {
-                            // Set loading state for UI spinner (shows immediately)
-                            isLoadingPlayback_ = true;
-                            loadingAnimationTime_ = 0.0f;
-                            setDirty(true);
-                            
-                            // Capture file for async preview
-                            FileItem previewFile = *selectedFile_;
-                            auto callback = onSoundPreview_;
-                            
-                            // Async preview - UI stays responsive, spinner animates
-                            std::thread([this, previewFile, callback]() {
-                                // Call the preview callback (this does the blocking decode)
-                                callback(previewFile);
-                                
-                                // Clear loading state when done
-                                isLoadingPlayback_ = false;
-                                setDirty(true);
-                            }).detach();
+                            // PreviewEngine now handles async decode internally
+                            // No need for wrapper thread - just call directly
+                            onSoundPreview_(*selectedFile_);
                         }
                     }
                 } else {
@@ -1280,24 +1257,9 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                         if (type == FileType::AudioFile || type == FileType::MusicFile ||
                             type == FileType::WavFile || type == FileType::Mp3File ||
                             type == FileType::FlacFile) {
-                            // Set loading state for UI spinner (shows immediately)
-                            isLoadingPlayback_ = true;
-                            loadingAnimationTime_ = 0.0f;
-                            setDirty(true);
-                            
-                            // Capture file for async preview
-                            FileItem previewFile = *selectedFile_;
-                            auto callback = onSoundPreview_;
-                            
-                            // Async preview - UI stays responsive, spinner animates
-                            std::thread([this, previewFile, callback]() {
-                                // Call the preview callback (this does the blocking decode)
-                                callback(previewFile);
-                                
-                                // Clear loading state when done
-                                isLoadingPlayback_ = false;
-                                setDirty(true);
-                            }).detach();
+                            // PreviewEngine now handles async decode internally
+                            // No need for wrapper thread - just call directly
+                            onSoundPreview_(*selectedFile_);
                         }
                     }
                 }

@@ -131,6 +131,9 @@ namespace {
 
 #ifdef _WIN32
     bool loadWithMediaFoundation(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate, uint32_t& numChannels) {
+        // Each decode is independent - Media Foundation is thread-safe
+        // Stale decodes are discarded at the PreviewEngine level via generation counter
+        
         using Microsoft::WRL::ComPtr;
         static std::once_flag initFlag;
         static HRESULT initResult = E_FAIL;

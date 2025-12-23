@@ -116,6 +116,14 @@ public:
     void setOnPathChanged(std::function<void(const std::string&)> callback) { onPathChanged_ = callback; }
     void setOnSoundPreview(std::function<void(const FileItem&)> callback) { onSoundPreview_ = callback; }
     
+    // Loading state control (for external async operations)
+    void setLoadingPlayback(bool loading) { 
+        isLoadingPlayback_ = loading;
+        if (loading) loadingAnimationTime_ = 0.0f;
+        setDirty(true);
+    }
+    bool isLoadingPlayback() const { return isLoadingPlayback_; }
+    
     // Multi-select
     void toggleFileSelection(int index, bool ctrlPressed, bool shiftPressed);
     void clearSelection();

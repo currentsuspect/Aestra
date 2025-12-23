@@ -6,13 +6,16 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <thread>
+#include <mutex>
 
 namespace Nomad {
 namespace Audio {
 
 enum class PreviewResult {
-    Success,
-    Failed
+    Success,   // Playback started immediately (cache hit)
+    Pending,   // Decode in progress, playback will start when ready
+    Failed     // Decode error or invalid file
 };
 
 class PreviewEngine {
@@ -20,11 +23,16 @@ public:
     PreviewEngine();
     ~PreviewEngine();
 
+    // Non-copyable
+    PreviewEngine(const PreviewEngine&) = delete;
+    PreviewEngine& operator=(const PreviewEngine&) = delete;
+
     PreviewResult play(const std::string& path, float gainDb = -6.0f, double maxSeconds = 5.0);
     void stop();
     void setOutputSampleRate(double sr);
     void process(float* interleavedOutput, uint32_t numFrames);
     bool isPlaying() const;
+    bool isBufferReady() const;  // True when buffer is decoded and ready for playback
     void setOnComplete(std::function<void(const std::string& path)> callback);
     void setGlobalPreviewVolume(float gainDb);
     float getGlobalPreviewVolume() const;
@@ -45,16 +53,27 @@ private:
         std::atomic<bool> stopRequested{false};
         bool fadeOutActive{false};
         std::atomic<bool> playing{false};
+        std::atomic<bool> bufferReady{false};  // True when buffer is decoded and ready
     };
 
     std::shared_ptr<AudioBuffer> loadBuffer(const std::string& path, uint32_t& sampleRate, uint32_t& channels);
     void downmixToStereo(std::vector<float>& data, uint32_t inChannels);
     float dbToLinear(float db) const;
+    
+    // Async decode support
+    void decodeAsync(const std::string& path, std::shared_ptr<PreviewVoice> voice);
+    PreviewResult startVoiceWithBuffer(std::shared_ptr<AudioBuffer> buffer, 
+                                        const std::string& path, float gainDb, double maxSeconds);
 
     std::shared_ptr<PreviewVoice> m_activeVoice;
     std::atomic<double> m_outputSampleRate;
     std::atomic<float> m_globalGainDb;
     std::function<void(const std::string&)> m_onComplete;
+    
+    // Decode thread management - generation counter approach
+    // Each new decode increments the generation; stale decodes are ignored
+    std::atomic<uint64_t> m_decodeGeneration{0};
+    std::mutex m_decodeMutex;
 };
 
 } // namespace Audio

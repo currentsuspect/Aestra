@@ -1000,7 +1000,7 @@ public:
     void playSoundPreview(const NomadUI::FileItem& file) {
         Log::info("Playing sound preview for: " + file.path);
 
-        // Stop any currently playing preview
+        // Stop any currently playing preview  
         stopSoundPreview();
 
         if (!m_previewEngine) {
@@ -1009,17 +1009,34 @@ public:
         }
 
         auto result = m_previewEngine->play(file.path, -6.0f, m_previewDuration);
-        if (result == PreviewResult::Success) {
+        
+        // Handle both immediate playback (cache hit) and async decode (cache miss)
+        if (result == PreviewResult::Success || result == PreviewResult::Pending) {
             m_previewIsPlaying = true;
             m_previewStartTime = std::chrono::steady_clock::now();
             m_currentPreviewFile = file.path;
-            Log::info("Sound preview started");
+            
+            if (result == PreviewResult::Success) {
+                // Cache hit - no loading indicator needed
+                Log::info("Sound preview started (cache hit)");
+            } else {
+                // Pending async decode - show loading indicator
+                if (m_fileBrowser) {
+                    m_fileBrowser->setLoadingPlayback(true);
+                }
+                Log::info("Sound preview pending (async decode)");
+            }
         } else {
             Log::warning("Failed to load preview audio: " + file.path);
         }
     }
 
     void stopSoundPreview() {
+        // Clear loading state when stopping
+        if (m_fileBrowser) {
+            m_fileBrowser->setLoadingPlayback(false);
+        }
+        
         if (m_previewEngine && m_previewIsPlaying) {
             Log::info("stopSoundPreview called - wasPlaying: true");
             m_previewEngine->stop();
@@ -1127,6 +1144,12 @@ public:
 
     void updateSoundPreview() {
         if (m_previewEngine && m_previewIsPlaying) {
+            // Check if preview buffer is ready (async decode complete)
+            // Clear loading state once buffer is decoded
+            if (m_previewEngine->isBufferReady() && m_fileBrowser && m_fileBrowser->isLoadingPlayback()) {
+                m_fileBrowser->setLoadingPlayback(false);
+            }
+            
             if (!m_previewEngine->isPlaying()) {
                 stopSoundPreview();
             } else {

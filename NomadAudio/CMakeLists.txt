@@ -82,12 +82,13 @@ set(NOMAD_AUDIO_CORE_SOURCES
     # Multi-clip playlist system
     src/ClipSource.cpp
     src/PlaylistModel.cpp
-    src/SelectionModel.cpp
+    # src/SelectionModel.cpp  # TODO: Fix API mismatches (PlaylistClip.h, etc)
     src/WaveformCache.cpp
     src/PatternManager.cpp
     src/UnitManager.cpp
     src/PatternPlaybackEngine.cpp
     src/TimelineClock.cpp
+    src/StreamingDecoder.cpp
 )
 
 
@@ -128,13 +129,14 @@ set(NOMAD_AUDIO_CORE_HEADERS
     include/PlaylistModel.h
     include/PlaylistRuntimeSnapshot.h
     include/PlaylistMixer.h
-    include/SelectionModel.h
+    # include/SelectionModel.h  # TODO: Fix - references non-existent PlaylistClip.h
     include/WaveformCache.h
     include/PlaylistGeometry.h
     include/PlaylistSerializer.h
     include/MultiClipPlaylist.h
     include/ArsenalUnit.h
     include/UnitManager.h
+    include/StreamingDecoder.h
 )
 
 # Create NomadAudioCore library
@@ -143,7 +145,10 @@ add_library(NomadAudioCore STATIC
     ${NOMAD_AUDIO_CORE_HEADERS}
 )
 
-# Optional miniaudio
+# Enable miniaudio for fast audio decoding (MP3, FLAC, etc.)
+set(NOMAD_USE_MINIAUDIO ON)
+
+# Apply miniaudio compile definition
 if (NOMAD_USE_MINIAUDIO)
     target_compile_definitions(NomadAudioCore PRIVATE NOMAD_USE_MINIAUDIO)
 endif()
