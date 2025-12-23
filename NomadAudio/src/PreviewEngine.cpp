@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <immintrin.h>
 
 #ifdef _WIN32
 #include <mfapi.h>
@@ -227,7 +228,6 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
     // Check if buffer is ready (async decode may still be in progress)
     if (!voice->bufferReady.load(std::memory_order_acquire)) {
         // Buffer not ready yet - output silence
-        // (could add a small "loading" indicator sound here if desired)
         return;
     }
     
@@ -247,8 +247,143 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
     const float gain = voice->gain;
     const uint32_t srcChannels = voice->channels;
 
-    // Cubic Hermite Spline Interpolation Helper
-    // P(t) = a*t^3 + b*t^2 + c*t + d
+    // SIMD Helper: 4-wide Cubic Hermite Spline
+    auto cubicSIMD = [&](__m128 p0, __m128 p1, __m128 p2, __m128 p3, __m128 t) -> __m128 {
+        const __m128 vHalf = _mm_set1_ps(0.5f);
+        const __m128 vOnePointFive = _mm_set1_ps(1.5f);
+        const __m128 vTwo = _mm_set1_ps(2.0f);
+        const __m128 vTwoPointFive = _mm_set1_ps(2.5f);
+
+        // a = -0.5*p0 + 1.5*p1 - 1.5*p2 + 0.5*p3
+        __m128 a = _mm_mul_ps(p0, _mm_set1_ps(-0.5f));
+        a = _mm_add_ps(a, _mm_mul_ps(p1, vOnePointFive));
+        a = _mm_sub_ps(a, _mm_mul_ps(p2, vOnePointFive));
+        a = _mm_add_ps(a, _mm_mul_ps(p3, vHalf));
+        
+        // b = p0 - 2.5*p1 + 2.0*p2 - 0.5*p3
+        __m128 b = p0;
+        b = _mm_sub_ps(b, _mm_mul_ps(p1, vTwoPointFive));
+        b = _mm_add_ps(b, _mm_mul_ps(p2, vTwo));
+        b = _mm_sub_ps(b, _mm_mul_ps(p3, vHalf));
+        
+        // c = -0.5*p0 + 0.5*p2
+        __m128 c = _mm_mul_ps(p0, _mm_set1_ps(-0.5f));
+        c = _mm_add_ps(c, _mm_mul_ps(p2, vHalf));
+        
+        // d = p1
+        __m128 d = p1;
+        
+        // Result = a*t^3 + b*t^2 + c*t + d
+        __m128 t2 = _mm_mul_ps(t, t);
+        __m128 t3 = _mm_mul_ps(t2, t);
+        
+        __m128 res = _mm_mul_ps(a, t3);
+        res = _mm_add_ps(res, _mm_mul_ps(b, t2));
+        res = _mm_add_ps(res, _mm_mul_ps(c, t));
+        res = _mm_add_ps(res, d);
+        return res;
+    };
+
+    uint32_t i = 0;
+
+    // --- SIMD LOOP (Process 4 frames at a time) ---
+    // Safety Limit: ensuring phase + 4*ratio + lookahead(2) is within [0, totalFrames-1]
+    const uint64_t safeLimit = totalFrames > 6 ? totalFrames - 5 : 0;
+    const __m128 vGain = _mm_set1_ps(gain);
+
+    // Only run SIMD loop if not fading (fades modify gain per-sample)
+    bool isFading = (voice->fadeInPos < fadeInSamples) || 
+                    (voice->stopRequested.load(std::memory_order_relaxed)) || 
+                    voice->fadeOutActive;
+
+    if (!isFading && safeLimit > 0) {
+        for (; i + 4 <= numFrames; i += 4) {
+             if (static_cast<uint64_t>(phase + ratio * 4.0) >= safeLimit) {
+                 break; 
+             }
+
+             double ph0 = phase;
+             double ph1 = phase + ratio;
+             double ph2 = phase + 2.0 * ratio;
+             double ph3 = phase + 3.0 * ratio;
+
+             int64_t idx0 = static_cast<int64_t>(ph0);
+             int64_t idx1 = static_cast<int64_t>(ph1);
+             int64_t idx2 = static_cast<int64_t>(ph2);
+             int64_t idx3 = static_cast<int64_t>(ph3);
+
+             float fr0 = static_cast<float>(ph0 - idx0);
+             float fr1 = static_cast<float>(ph1 - idx1);
+             float fr2 = static_cast<float>(ph2 - idx2);
+             float fr3 = static_cast<float>(ph3 - idx3);
+
+             __m128 vFrac = _mm_set_ps(fr3, fr2, fr1, fr0);
+             __m128 vOutL, vOutR;
+
+             if (srcChannels == 1) {
+                 // Mono Gather
+                 float m0_0 = data[idx0 - 1], m0_1 = data[idx0], m0_2 = data[idx0 + 1], m0_3 = data[idx0 + 2];
+                 float m1_0 = data[idx1 - 1], m1_1 = data[idx1], m1_2 = data[idx1 + 1], m1_3 = data[idx1 + 2];
+                 float m2_0 = data[idx2 - 1], m2_1 = data[idx2], m2_2 = data[idx2 + 1], m2_3 = data[idx2 + 2];
+                 float m3_0 = data[idx3 - 1], m3_1 = data[idx3], m3_2 = data[idx3 + 1], m3_3 = data[idx3 + 2];
+
+                 __m128 vP0 = _mm_set_ps(m3_0, m2_0, m1_0, m0_0);
+                 __m128 vP1 = _mm_set_ps(m3_1, m2_1, m1_1, m0_1);
+                 __m128 vP2 = _mm_set_ps(m3_2, m2_2, m1_2, m0_2);
+                 __m128 vP3 = _mm_set_ps(m3_3, m2_3, m1_3, m0_3);
+
+                 vOutL = cubicSIMD(vP0, vP1, vP2, vP3, vFrac);
+                 vOutR = vOutL; // Duplicate
+             } else {
+                 // Stereo Gather
+                 // Left
+                 float l0_0 = data[(idx0-1)*2], l0_1 = data[idx0*2], l0_2 = data[(idx0+1)*2], l0_3 = data[(idx0+2)*2];
+                 float l1_0 = data[(idx1-1)*2], l1_1 = data[idx1*2], l1_2 = data[(idx1+1)*2], l1_3 = data[(idx1+2)*2];
+                 float l2_0 = data[(idx2-1)*2], l2_1 = data[idx2*2], l2_2 = data[(idx2+1)*2], l2_3 = data[(idx2+2)*2];
+                 float l3_0 = data[(idx3-1)*2], l3_1 = data[idx3*2], l3_2 = data[(idx3+1)*2], l3_3 = data[(idx3+2)*2];
+                 
+                 __m128 vP0L = _mm_set_ps(l3_0, l2_0, l1_0, l0_0);
+                 __m128 vP1L = _mm_set_ps(l3_1, l2_1, l1_1, l0_1);
+                 __m128 vP2L = _mm_set_ps(l3_2, l2_2, l1_2, l0_2);
+                 __m128 vP3L = _mm_set_ps(l3_3, l2_3, l1_3, l0_3);
+                 vOutL = cubicSIMD(vP0L, vP1L, vP2L, vP3L, vFrac);
+
+                 // Right
+                 float r0_0 = data[(idx0-1)*2+1], r0_1 = data[idx0*2+1], r0_2 = data[(idx0+1)*2+1], r0_3 = data[(idx0+2)*2+1];
+                 float r1_0 = data[(idx1-1)*2+1], r1_1 = data[idx1*2+1], r1_2 = data[(idx1+1)*2+1], r1_3 = data[(idx1+2)*2+1];
+                 float r2_0 = data[(idx2-1)*2+1], r2_1 = data[idx2*2+1], r2_2 = data[(idx2+1)*2+1], r2_3 = data[(idx2+2)*2+1];
+                 float r3_0 = data[(idx3-1)*2+1], r3_1 = data[idx3*2+1], r3_2 = data[(idx3+1)*2+1], r3_3 = data[(idx3+2)*2+1];
+                 
+                 __m128 vP0R = _mm_set_ps(r3_0, r2_0, r1_0, r0_0);
+                 __m128 vP1R = _mm_set_ps(r3_1, r2_1, r1_1, r0_1);
+                 __m128 vP2R = _mm_set_ps(r3_2, r2_2, r1_2, r0_2);
+                 __m128 vP3R = _mm_set_ps(r3_3, r2_3, r1_3, r0_3);
+                 vOutR = cubicSIMD(vP0R, vP1R, vP2R, vP3R, vFrac);
+             }
+
+             // Apply Gain
+             vOutL = _mm_mul_ps(vOutL, vGain);
+             vOutR = _mm_mul_ps(vOutR, vGain);
+
+             // Store Interleaved (L0 R0 L1 R1...)
+             __m128 vLo = _mm_unpacklo_ps(vOutL, vOutR);
+             __m128 vHi = _mm_unpackhi_ps(vOutL, vOutR);
+             
+             // Accumulate (Add to existing output)
+             __m128 vDestLo = _mm_loadu_ps(interleavedOutput + i * 2);
+             __m128 vDestHi = _mm_loadu_ps(interleavedOutput + i * 2 + 4);
+             
+             vDestLo = _mm_add_ps(vDestLo, vLo);
+             vDestHi = _mm_add_ps(vDestHi, vHi);
+             
+             _mm_storeu_ps(interleavedOutput + i * 2, vDestLo);
+             _mm_storeu_ps(interleavedOutput + i * 2 + 4, vDestHi);
+
+             phase += ratio * 4.0;
+        }
+    }
+
+    // Scalar Helper
     auto cubic = [](float p0, float p1, float p2, float p3, float t) {
         float a = -0.5f * p0 + 1.5f * p1 - 1.5f * p2 + 0.5f * p3;
         float b = p0 - 2.5f * p1 + 2.0f * p2 - 0.5f * p3;
@@ -256,22 +391,10 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
         float d = p1;
         return a*t*t*t + b*t*t + c*t + d;
     };
-
-    // Sample Access Helper
-    auto getSample = [&](int64_t index, uint32_t channel) -> float {
-        if (index < 0) index = 0;
-        if (index >= totalFrames) index = totalFrames - 1u;
-        
-        // Handle mono/stereo mapping inside access
-        if (srcChannels == 1) {
-            return data[index]; // Mono source
-        } else {
-            return data[index * 2 + channel];
-        }
-    };
-
-    for (uint32_t i = 0; i < numFrames; ++i) {
-        if (static_cast<uint64_t>(phase) >= totalFrames - 1) { // -1 for safety with cubic lookahead
+    
+    // Scalar Loop (Cleanup & Fades)
+    for (; i < numFrames; ++i) {
+        if (static_cast<uint64_t>(phase) >= totalFrames - 1) {
             voice->stopRequested.store(true, std::memory_order_release);
             voice->fadeOutActive = true;
             break;
@@ -282,6 +405,35 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
 
         float outL, outR;
         
+        // Calculate dynamic gain (Fade In/Out)
+        float currentGain = gain;
+        if (voice->fadeOutActive) {
+             float f = 1.0f - (static_cast<float>(voice->fadeOutPos) / fadeOutSamples);
+             if (f < 0.0f) f = 0.0f;
+             currentGain *= f;
+             voice->fadeOutPos += 1.0;
+             if (f <= 0.0f) {
+                 voice->playing.store(false, std::memory_order_release);
+             }
+        } else if (voice->fadeInPos < fadeInSamples) {
+             float f = static_cast<float>(voice->fadeInPos) / fadeInSamples;
+             currentGain *= f;
+             voice->fadeInPos += 1.0;
+        }
+        
+        // Sample Access Helper
+        auto getSample = [&](int64_t index, uint32_t channel) -> float {
+            if (index < 0) index = 0;
+            if (index >= totalFrames) index = totalFrames - 1u;
+        
+            // Handle mono/stereo mapping inside access
+            if (srcChannels == 1) {
+                return data[index]; // Mono source
+            } else {
+                return data[index * 2 + channel];
+            }
+        };
+
         // Left Channel (or Mono)
         float l0 = getSample((int64_t)idx - 1, 0);
         float l1 = getSample((int64_t)idx,     0);
@@ -300,20 +452,8 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
             outR = cubic(r0, r1, r2, r3, frac);
         }
 
-        float envelope = 1.0f;
-        if (voice->fadeInPos < fadeInSamples) {
-            envelope = static_cast<float>(voice->fadeInPos / fadeInSamples);
-            voice->fadeInPos += 1.0;
-        }
-        if (voice->stopRequested.load(std::memory_order_acquire) || voice->fadeOutActive) {
-            voice->fadeOutActive = true;
-            double remaining = std::max(0.0, (fadeOutSamples - voice->fadeOutPos) / fadeOutSamples);
-            envelope *= static_cast<float>(remaining);
-            voice->fadeOutPos += 1.0;
-        }
-
-        interleavedOutput[i * 2] += outL * gain * envelope;
-        interleavedOutput[i * 2 + 1] += outR * gain * envelope;
+        interleavedOutput[i * 2] += outL * currentGain;
+        interleavedOutput[i * 2 + 1] += outR * currentGain;
 
         phase += ratio;
     }

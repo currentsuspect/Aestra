@@ -828,11 +828,17 @@ void FileBrowser::onResize(int width, int height) {
     }
     
     // 3. File List
-    float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
-    const float listYOffset = (searchY - getBounds().y) + searchRowHeight + rowSpacing;
-    float listHeight = height - listYOffset;
+    itemHeight_ = themeManager.getComponentDimension("fileBrowser", "itemHeight");
     
-    visibleItems_ = static_cast<int>(listHeight / itemHeight);
+    // FIX: Calculate list height taking preview panel into account, consistent with onMouseEvent
+    float availableHeight = height;
+    if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
+        availableHeight -= kPreviewPanelHeight + 4;
+    }
+    const float listYOffset = (searchY - getBounds().y) + searchRowHeight + rowSpacing;
+    float listHeight = availableHeight - listYOffset;
+    
+    visibleItems_ = static_cast<int>(listHeight / itemHeight_);
     visibleItems_ = std::max(1, visibleItems_);
 
     // Update scrollbar dimensions
@@ -1948,8 +1954,14 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     // Calculate header total height
     float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
     
+    // FIX: Subtract preview panel height from list height for correct clipping
+    float availableHeight = bounds.height;
+    if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
+        availableHeight -= kPreviewPanelHeight + 4;
+    }
+    
     float listY = bounds.y + totalHeaderH; 
-    float listHeight = bounds.height - totalHeaderH;
+    float listHeight = availableHeight - totalHeaderH;
 
     const auto& view = getActiveView();
     const float contentHeight = static_cast<float>(view.size()) * itemHeight;
@@ -2593,29 +2605,38 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 	}
 
 void FileBrowser::updateScrollPosition() {
-	    if (selectedIndex_ < 0) return;
+    if (selectedIndex_ < 0) return;
 
     // Get component dimensions from theme
     auto& themeManager = NUIThemeManager::getInstance();
-    const auto& layout = themeManager.getLayoutDimensions();
 
     NUIRect bounds = getBounds();
-    float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
-    float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
-    const float pathBarHeight = 30.0f;
-    float listY = bounds.y + headerHeight + 8 + pathBarHeight; // After path bar
-    float listHeight = bounds.height - headerHeight - 8 - pathBarHeight;
+    
+    // USE UNIFIED STACK LAYOUT LOGIC
+    const float buttonsRowHeight = 40.0f;
+    const float breadcrumbRowHeight = 32.0f;
+    const float searchRowHeight = 36.0f; 
+    const float rowSpacing = 8.0f;
+    float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
+    
+    float availableHeight = bounds.height;
+    if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
+        availableHeight -= kPreviewPanelHeight + 4;
+    }
+    
+    float listY = bounds.y + totalHeaderH;
+    float listHeight = availableHeight - totalHeaderH;
 
     const auto& view = getActiveView();
-    float itemY = listY + (selectedIndex_ * itemHeight) - scrollOffset_;
+    float itemY = listY + (selectedIndex_ * itemHeight_) - scrollOffset_;
 
     // Scroll up if item is above visible area
     if (itemY < listY) {
-        scrollOffset_ = selectedIndex_ * itemHeight;
+        scrollOffset_ = selectedIndex_ * itemHeight_;
     }
     // Scroll down if item is below visible area
-    else if (itemY + itemHeight > listY + listHeight) {
-        scrollOffset_ = (selectedIndex_ + 1) * itemHeight - listHeight;
+    else if (itemY + itemHeight_ > listY + listHeight) {
+        scrollOffset_ = (selectedIndex_ + 1) * itemHeight_ - listHeight;
     }
 
     // Clamp scroll offset
@@ -2629,15 +2650,18 @@ void FileBrowser::updateScrollPosition() {
 }
 
 void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
-    // Get component dimensions from theme
     auto& themeManager = NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
-    float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
-    float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
 
     const auto& view = getActiveView();
-    // Check if we need a scrollbar
-    float contentHeight = view.size() * itemHeight;
+    // Use stored track height which is correctly calculated in onResize/onMouseEvent
+    // If it's 0 (unlikely if sized), fall back to list height calc
+    if (scrollbarTrackHeight_ <= 0.0f) {
+        // Fallback or initialization
+        scrollbarTrackHeight_ = getBounds().height; // Rough calc
+    }
+
+    float contentHeight = view.size() * itemHeight_;
     float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
     bool needsScrollbar = maxScroll > 0.0f;
 
@@ -2646,9 +2670,16 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
     // Scrollbar is on the left, inside the panel margin.
     float scrollbarX = bounds.x + layout.panelMargin;
-    const float pathBarHeight = 30.0f;
-    float scrollbarY = bounds.y + headerHeight + 8 + pathBarHeight; // After path bar
-    float scrollbarHeight = bounds.height - headerHeight - 8 - pathBarHeight;
+    
+    // RE-CALCULATE List Y (Unified Stack) - Scrollbar starts at list top
+    const float buttonsRowHeight = 40.0f;
+    const float breadcrumbRowHeight = 32.0f;
+    const float searchRowHeight = 36.0f; 
+    const float rowSpacing = 8.0f;
+    float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
+    
+    float scrollbarY = bounds.y + totalHeaderH;
+    float scrollbarHeight = scrollbarTrackHeight_;
 
     float opacity = std::clamp(scrollbarOpacity_, 0.0f, 1.0f);
     if (opacity <= 0.01f) return;
@@ -3393,7 +3424,13 @@ bool FileBrowser::handleSearchBoxMouseEvent(const NUIMouseEvent& event) {
 }
 
 void FileBrowser::setPreviewPanelVisible(bool visible) {
+    if (previewPanelVisible_ == visible) return;
     previewPanelVisible_ = visible;
+    
+    // Trigger layout update and ensuring scrolling is clamped
+    NUIRect b = getBounds();
+    onResize(b.width, b.height); 
+    setDirty(true);
 }
 
 // renderPreviewPanel is implemented at the bottom of this file
