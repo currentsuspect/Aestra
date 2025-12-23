@@ -30,6 +30,8 @@ namespace NomadUI {
 
 namespace {
 
+constexpr float kPreviewPanelHeight = 90.0f;
+
 std::string ellipsizeMiddle(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth) {
     constexpr const char* kEllipsis = "...";
 
@@ -637,11 +639,24 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     
     // Adjust bounds if preview panel is visible (bottom panel)
     float fileBrowserHeight = bounds.height;
-    float previewHeight = 80.0f; // Compact waveform preview height
+    // Use consistent constant for preview height (was 80.0f, mismatched with renderPreviewPanel's 90.0f)
     if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
-        fileBrowserHeight -= previewHeight + 4;  // Subtract preview panel height + spacing
+        fileBrowserHeight -= kPreviewPanelHeight + 4;  // Subtract preview panel height + spacing
     }
     effectiveWidth_ = bounds.width; // Full width for file list
+    
+    // Update scrollbar track height to match current visible area
+    // This ensures drag and scroll clamping work correctly
+    auto& themeManager = NUIThemeManager::getInstance();
+    // Re-calculate header height (must match onMouseEvent/onResize logic)
+    const float buttonsRowHeight = 40.0f;
+    const float breadcrumbRowHeight = 32.0f;
+    const float searchRowHeight = 36.0f; 
+    const float rowSpacing = 8.0f;
+    float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
+    
+    // Store for other methods to use
+    scrollbarTrackHeight_ = fileBrowserHeight - totalHeaderH;
     
     NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, fileBrowserHeight);
     
@@ -870,9 +885,18 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     // Calculate header total height
     float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
     
+    // FIX: Calculate list height taking preview panel into account
+    float availableHeight = bounds.height;
+    if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
+        availableHeight -= kPreviewPanelHeight + 4;
+    }
+    
     float listY = bounds.y + totalHeaderH; 
-    float listHeight = bounds.height - totalHeaderH;
+    float listHeight = availableHeight - totalHeaderH;
 	    float effectiveW = effectiveWidth_ > 0 ? effectiveWidth_ : bounds.width;
+        
+    // Update scrollbar track height ensuring it is fresh for this event
+    scrollbarTrackHeight_ = listHeight;
 
     // If a click happens outside the search input, drop focus so shortcuts/navigation work normally.
     if (searchInput_ && event.pressed && event.button == NUIMouseButton::Left) {
@@ -3659,7 +3683,8 @@ void FileBrowser::renderPreviewPanel(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
     
     // Calculate preview panel bounds (BOTTOM of file browser)
-    float previewHeight = 90.0f; // Slightly taller for vertical layout
+    // Calculate preview panel bounds (BOTTOM of file browser)
+    float previewHeight = kPreviewPanelHeight; // Use shared constant
     float panelX = bounds.x + 4;
     float panelY = bounds.y + bounds.height - previewHeight;
     float panelWidth = bounds.width - 8;
