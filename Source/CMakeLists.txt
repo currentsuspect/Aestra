@@ -19,6 +19,8 @@ set(NOMAD_DAW_SOURCES
 	AudioSettingsDialog.cpp
 	FileBrowser.h
 	FileBrowser.cpp
+	FilePreviewPanel.h
+	FilePreviewPanel.cpp
 	AudioVisualizer.h
 	AudioVisualizer.cpp
 	TrackUIComponent.h

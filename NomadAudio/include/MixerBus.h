@@ -90,10 +90,14 @@ private:
     uint32_t m_numChannels;
 
     // Atomic parameters for thread-safe access
-    std::atomic<float> m_gain;      // Linear gain (0.0 to 1.0+)
-    std::atomic<float> m_pan;       // Pan (-1.0 to 1.0)
+    std::atomic<float> m_gain;      // Linear gain (target)
+    std::atomic<float> m_pan;       // Pan (target)
     std::atomic<bool> m_muted;      // Mute state
     std::atomic<bool> m_soloed;     // Solo state
+
+    // Smoothing state
+    float m_currentGain{1.0f};
+    float m_currentPan{0.0f};
 };
 
 /**

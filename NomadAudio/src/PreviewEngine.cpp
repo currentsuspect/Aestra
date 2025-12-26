@@ -534,5 +534,10 @@ double PreviewEngine::getPlaybackPosition() const {
     return voice ? voice->elapsedSeconds : 0.0;
 }
 
+double PreviewEngine::getDuration() const {
+    auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+    return voice ? voice->durationSeconds : 0.0;
+}
+
 } // namespace Audio
 } // namespace Nomad

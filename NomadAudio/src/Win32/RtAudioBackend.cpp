@@ -33,7 +33,7 @@ RtAudioBackend::~RtAudioBackend() {
     closeStream();
 }
 
-std::vector<AudioDeviceInfo> RtAudioBackend::getDevices() const {
+std::vector<AudioDeviceInfo> RtAudioBackend::getDevices() {
     std::vector<AudioDeviceInfo> devices;
     
     try {

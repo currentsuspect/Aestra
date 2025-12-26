@@ -54,6 +54,8 @@ struct ChannelViewModel {
     float envLowEnergyR{MixerMath::DB_MIN};  ///< Low-frequency energy envelope (dB)
     float smoothedPeakL{MixerMath::DB_MIN};  ///< Smoothed left peak (dB)
     float smoothedPeakR{MixerMath::DB_MIN};  ///< Smoothed right peak (dB)
+    float smoothedRmsL{MixerMath::DB_MIN};   ///< Smoothed left RMS (dB)
+    float smoothedRmsR{MixerMath::DB_MIN};   ///< Smoothed right RMS (dB)
     float peakHoldL{MixerMath::DB_MIN};      ///< Peak hold left (dB)
     float peakHoldR{MixerMath::DB_MIN};      ///< Peak hold right (dB)
     double peakHoldTimerL{0.0};              ///< Time since peak hold set (seconds)
@@ -104,7 +106,7 @@ public:
     static constexpr float PEAK_ATTACK_MS = 5.0f;
     static constexpr float PEAK_RELEASE_MS = 80.0f;
     static constexpr float ENERGY_ATTACK_MS = 35.0f;
-    static constexpr float ENERGY_RELEASE_MS = 260.0f;
+    static constexpr float ENERGY_RELEASE_MS = 300.0f;
     static constexpr float LOW_ATTACK_MS = 50.0f;
     static constexpr float LOW_RELEASE_MS = 450.0f;
     static constexpr float DISPLAY_ATTACK_MS = 5.0f;
@@ -226,7 +228,7 @@ private:
     int32_t m_selectedChannelId{-1};
 
     // Default: FL-style body (energy) + peak overlay line (UI draws peak separately).
-    MeterMode m_meterMode{MeterMode::Hybrid};
+    MeterMode m_meterMode{MeterMode::Technical};
 
     /**
      * @brief Rebuild id→index map after channel list changes.

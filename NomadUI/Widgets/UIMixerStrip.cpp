@@ -96,10 +96,36 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         }
 
     };
-    m_buttons->onSoloToggled = [this](bool soloed) {
+    m_buttons->onSoloToggled = [this](bool soloed, NUIModifiers modifiers) {
         if (!m_viewModel) return;
         auto* channel = m_viewModel->getChannelById(m_channelId);
         if (!channel || channel->id == 0) return;
+
+        // Solo Safe Logic (Ctrl + Click)
+        const bool isCtrl = (modifiers & NUIModifiers::Ctrl);
+        if (isCtrl) {
+            // Revert the local toggle because pure solo state shouldn't change
+            // But wait, the button row just toggled its internal visual state.
+            // For Solo Safe, we actually want to toggle a *different* visual state 
+            // (maybe different color or icon?), but for now let's just update the logic.
+            // NOTE: UIMixerButtonRow tracks 'soloed' boolean. If we are setting 'solo safe',
+            // we should probably revert the 'soloed' state on the button if it wasn't already soloed.
+            // Or, ideally, Solo Safe is an independent state.
+            // Given the button row is simple, let's treat it as:
+            // Ctrl+Click -> Toggle Safe. Restore Solo button state to what it was.
+            
+            // Revert button state visually (hacky but works for stateless widget)
+            m_buttons->setSoloed(!soloed); 
+            
+            // Toggle proper safe state
+            if (auto mc = channel->channel.lock()) {
+               bool newSafe = !mc->isSoloSafe();
+               mc->setSoloSafe(newSafe);
+               // Visual feedback? UIMixerStrip doesn't have a distinct 'Safe' icon yet.
+               // We might rely on the user knowing they did it, or add a small indicator later.
+            }
+            return;
+        }
 
         // Exclusive solo: clear other solos first (matches playlist behavior).
         if (soloed) {
@@ -111,7 +137,6 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
                     otherMC->setSolo(false);
                 }
                 other->soloed = false;
-
             }
         }
 
@@ -125,7 +150,6 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
                 channel->muted = false;
             }
         }
-
     };
     m_buttons->onArmToggled = [this](bool armed) {
         if (!m_viewModel) return;
@@ -140,6 +164,22 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     addChild(m_buttons);
 
     m_meter = std::make_shared<UIMixerMeter>();
+    m_meter->onClipCleared = [this]() {
+        if (!m_viewModel) return;
+        auto* channel = m_viewModel->getChannelById(m_channelId);
+        if (channel) {
+            channel->clipLatchL = false;
+            channel->clipLatchR = false;
+            // Also inform audio thread? The latch is arguably UI-side, 
+            // but if MeterSnapshot has clip bit set, it will re-latch next frame.
+            // For now, clearing UI latch logic is enough as snapshot only sends 'current' clip frame 
+            // OR we need to clear snapshot "sticky" bit if it exists.
+            // Analysis of MeterSnapshot.h shows it sends 'current' clip flags (CLIP_L, CLIP_R).
+            // Logic in MixerViewModel accumulates it into clipLatch.
+            // So simply setting channel->clipLatch = false here works, as long as audio isn't *currently* clipping.
+            invalidateStaticCache();
+        }
+    };
     addChild(m_meter);
 
     m_fader = std::make_shared<UIMixerFader>();
@@ -376,7 +416,9 @@ void UIMixerStrip::onUpdate(double deltaTime)
 
     if (m_meter) {
         m_meter->setLevels(channel->smoothedPeakL, channel->smoothedPeakR);
+        m_meter->setRmsLevels(channel->smoothedRmsL, channel->smoothedRmsR);
         m_meter->setPeakOverlay(channel->envPeakL, channel->envPeakR);
+        m_meter->setPeakHold(channel->peakHoldL, channel->peakHoldR);
         m_meter->setClipLatch(channel->clipLatchL, channel->clipLatchR);
     }
 

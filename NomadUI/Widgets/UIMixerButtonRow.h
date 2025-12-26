@@ -32,7 +32,7 @@ public:
 
     // Callbacks fire after internal state changes.
     std::function<void(bool)> onMuteToggled;
-    std::function<void(bool)> onSoloToggled;
+    std::function<void(bool, NUIModifiers)> onSoloToggled;
     std::function<void(bool)> onArmToggled;
 
     // Used by cached parents to invalidate their static layer on hover/press changes.

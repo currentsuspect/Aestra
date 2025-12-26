@@ -18,82 +18,135 @@ MixerBus::MixerBus(const char* name, uint32_t numChannels)
     , m_pan(0.0f)
     , m_muted(false)
     , m_soloed(false)
+    , m_currentGain(1.0f)
+    , m_currentPan(0.0f)
 {
 }
 
 void MixerBus::process(float* buffer, uint32_t numFrames)
 {
-    // Load parameters (atomic)
-    const float gain = m_gain.load(std::memory_order_acquire);
-    const float pan = m_pan.load(std::memory_order_acquire);
+    // Load targets (atomic)
+    const float targetGain = m_gain.load(std::memory_order_acquire);
+    const float targetPan = m_pan.load(std::memory_order_acquire);
     const bool muted = m_muted.load(std::memory_order_acquire);
 
-    // If muted, clear buffer and return
+    // If muted, clear buffer and reset smoothing state to prevent jumps on unmute
     if (muted) {
         clear(buffer, numFrames);
+        m_currentGain = targetGain;
+        m_currentPan = targetPan;
         return;
     }
 
     // Handle mono vs stereo
     if (m_numChannels == 1) {
-        // Mono: just apply gain
+        // Mono: just apply gain with smoothing
+        const float gainStart = m_currentGain;
+        const float gainEnd = targetGain;
+        const float gainDelta = (gainEnd - gainStart) / static_cast<float>(numFrames);
+        
+        float current = gainStart;
         for (uint32_t i = 0; i < numFrames; ++i) {
-            buffer[i] *= gain;
+            buffer[i] *= current;
+            current += gainDelta;
         }
     }
     else if (m_numChannels == 2) {
-        // Stereo: apply gain and pan
-        float leftGain, rightGain;
-        calculatePanGains(pan, leftGain, rightGain);
+        // Stereo: apply gain and pan with smoothing
+        const float panStart = m_currentPan;
+        const float panEnd = targetPan;
+        const float gainStart = m_currentGain;
+        const float gainEnd = targetGain;
         
-        leftGain *= gain;
-        rightGain *= gain;
+        const float panDelta = (panEnd - panStart) / static_cast<float>(numFrames);
+        const float gainDelta = (gainEnd - gainStart) / static_cast<float>(numFrames);
+
+        float currentPan = panStart;
+        float currentGain = gainStart;
 
         for (uint32_t i = 0; i < numFrames; ++i) {
+            float leftGain, rightGain;
+            calculatePanGains(currentPan, leftGain, rightGain);
+            
+            leftGain *= currentGain;
+            rightGain *= currentGain;
+
             const uint32_t leftIdx = i * 2;
             const uint32_t rightIdx = i * 2 + 1;
             
             buffer[leftIdx] *= leftGain;
             buffer[rightIdx] *= rightGain;
+            
+            currentPan += panDelta;
+            currentGain += gainDelta;
         }
     }
+    
+    // Snap to target at end of block
+    m_currentGain = targetGain;
+    m_currentPan = targetPan;
 }
 
 void MixerBus::mixInto(float* output, const float* input, uint32_t numFrames)
 {
-    // Load parameters (atomic)
-    const float gain = m_gain.load(std::memory_order_acquire);
-    const float pan = m_pan.load(std::memory_order_acquire);
+    // Load targets (atomic)
+    const float targetGain = m_gain.load(std::memory_order_acquire);
+    const float targetPan = m_pan.load(std::memory_order_acquire);
     const bool muted = m_muted.load(std::memory_order_acquire);
 
     // If muted, don't mix anything
     if (muted) {
+        m_currentGain = targetGain;
+        m_currentPan = targetPan;
         return;
     }
 
     // Handle mono vs stereo
     if (m_numChannels == 1) {
-        // Mono: mix with gain
+        const float gainStart = m_currentGain;
+        const float gainEnd = targetGain;
+        const float gainDelta = (gainEnd - gainStart) / static_cast<float>(numFrames);
+        
+        float current = gainStart;
         for (uint32_t i = 0; i < numFrames; ++i) {
-            output[i] += input[i] * gain;
+            output[i] += input[i] * current;
+            current += gainDelta;
         }
     }
     else if (m_numChannels == 2) {
-        // Stereo: mix with gain and pan
-        float leftGain, rightGain;
-        calculatePanGains(pan, leftGain, rightGain);
+        // Stereo: mix with gain and pan smoothing
+        const float panStart = m_currentPan;
+        const float panEnd = targetPan;
+        const float gainStart = m_currentGain;
+        const float gainEnd = targetGain;
         
-        leftGain *= gain;
-        rightGain *= gain;
+        const float panDelta = (panEnd - panStart) / static_cast<float>(numFrames);
+        const float gainDelta = (gainEnd - gainStart) / static_cast<float>(numFrames);
+
+        float currentPan = panStart;
+        float currentGain = gainStart;
 
         for (uint32_t i = 0; i < numFrames; ++i) {
+            float leftGain, rightGain;
+            calculatePanGains(currentPan, leftGain, rightGain);
+            
+            leftGain *= currentGain;
+            rightGain *= currentGain;
+
             const uint32_t leftIdx = i * 2;
             const uint32_t rightIdx = i * 2 + 1;
             
             output[leftIdx] += input[leftIdx] * leftGain;
             output[rightIdx] += input[rightIdx] * rightGain;
+            
+            currentPan += panDelta;
+            currentGain += gainDelta;
         }
     }
+    
+    // Snap to target
+    m_currentGain = targetGain;
+    m_currentPan = targetPan;
 }
 
 void MixerBus::clear(float* buffer, uint32_t numFrames)

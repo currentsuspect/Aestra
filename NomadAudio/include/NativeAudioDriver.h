@@ -60,6 +60,10 @@ public:
     virtual void shutdown() = 0;
     
     // Note: isAvailable is in IAudioDriver
+    
+    // Dithering defaults (can be overridden by specific drivers like WASAPI Shared)
+    virtual void setDitheringEnabled(bool enabled) override {}
+    virtual bool isDitheringEnabled() const override { return false; }
 
     /**
      * @brief Get typical latency for this driver type

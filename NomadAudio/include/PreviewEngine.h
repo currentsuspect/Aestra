@@ -39,6 +39,7 @@ public:
     void setGlobalPreviewVolume(float gainDb);
     float getGlobalPreviewVolume() const;
     double getPlaybackPosition() const; // New method
+    double getDuration() const;
 
 private:
     struct PreviewVoice {

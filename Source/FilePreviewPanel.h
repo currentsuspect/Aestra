@@ -29,6 +29,9 @@ public:
     // Events
     void setOnPlay(std::function<void(const FileItem&)> callback) { onPlay_ = callback; }
     void setOnStop(std::function<void()> callback) { onStop_ = callback; }
+    void setOnSeek(std::function<void(double)> callback) { onSeek_ = callback; }
+    void setPlayheadPosition(double seconds);
+    void setDuration(double seconds);
 
 private:
     void generateWaveform(const std::string& path, size_t fileSize);
@@ -39,13 +42,16 @@ private:
     bool isPlaying_ = false;
     bool isLoading_ = false;
     float loadingAnimationTime_ = 0.0f;
-
+    double playheadPosition_ = 0.0;
+    double duration_ = 0.0;
+    
     // Layout
     NUIRect playButtonBounds_;
 
     // Callbacks
     std::function<void(const FileItem&)> onPlay_;
     std::function<void()> onStop_;
+    std::function<void(double)> onSeek_;
 
     // Icons
     std::shared_ptr<NUIIcon> folderIcon_;

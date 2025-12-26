@@ -31,6 +31,13 @@ public:
      * @param dbR Right channel level in dB
      */
     void setLevels(float dbL, float dbR);
+    
+    /**
+     * @brief Set RMS meter levels (in dB).
+     * @param dbL Left channel RMS in dB
+     * @param dbR Right channel RMS in dB
+     */
+    void setRmsLevels(float dbL, float dbR);
 
     /**
      * @brief Set fast peak overlay (in dB).
@@ -63,6 +70,8 @@ private:
     // Current meter state (in dB)
     float m_peakL{-90.0f};
     float m_peakR{-90.0f};
+    float m_rmsL{-90.0f};
+    float m_rmsR{-90.0f};
     float m_peakOverlayL{-90.0f};
     float m_peakOverlayR{-90.0f};
     float m_peakHoldL{-90.0f};
@@ -114,7 +123,7 @@ private:
      * @param clip Whether clip latch is active
      */
     void renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
-                        float levelDb, float peakOverlayDb, float peakHoldDb, bool clip);
+                        float peakDb, float rmsDb, float peakOverlayDb, float peakHoldDb, bool clip);
 
     /**
      * @brief Get the color for a given dB level.

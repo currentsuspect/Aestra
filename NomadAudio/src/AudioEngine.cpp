@@ -41,12 +41,28 @@ void AudioEngine::applyPendingCommands() {
                 break;
             case AudioQueueCommandType::SetTrackVolume: {
                 auto& state = ensureTrackState(cmd.trackIndex);
-                state.volume.setTarget(static_cast<double>(cmd.value1));
+                state.currentVolume = cmd.value1;
+                
+                // Recalculate Targets
+                const double panClamped = clampD(static_cast<double>(state.currentPan), -1.0, 1.0);
+                const double angle = (panClamped + 1.0) * QUARTER_PI_D;
+                const double vol = static_cast<double>(state.currentVolume);
+                
+                state.gainL.setTarget(vol * std::cos(angle));
+                state.gainR.setTarget(vol * std::sin(angle));
                 break;
             }
             case AudioQueueCommandType::SetTrackPan: {
                 auto& state = ensureTrackState(cmd.trackIndex);
-                state.pan.setTarget(static_cast<double>(cmd.value1));
+                state.currentPan = cmd.value1;
+                
+                // Recalculate Targets
+                const double panClamped = clampD(static_cast<double>(state.currentPan), -1.0, 1.0);
+                const double angle = (panClamped + 1.0) * QUARTER_PI_D;
+                const double vol = static_cast<double>(state.currentVolume);
+                
+                state.gainL.setTarget(vol * std::cos(angle));
+                state.gainR.setTarget(vol * std::sin(angle));
                 break;
             }
             case AudioQueueCommandType::SetTrackMute: {
@@ -149,6 +165,10 @@ void AudioEngine::processBlock(float* outputBuffer,
         auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
         if (snaps) {
             snaps->writePeak(ChannelSlotMap::MASTER_SLOT_INDEX, 0.0f, 0.0f);
+            // Also clears all track slots so they don't freeze
+            for (uint32_t i = 0; i < ChannelSlotMap::MAX_CHANNEL_SLOTS; ++i) {
+                snaps->writePeak(i, 0.0f, 0.0f);
+            }
         }
         m_telemetry.incrementBlocksProcessed();
         return;
@@ -494,6 +514,11 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
     // Initialize smoothing coefficients based on requested buffer size
     const uint32_t coeffFrames = std::max<uint32_t>(1, maxFrames);
     m_smoothedMasterGain.coeff = 1.0 / static_cast<double>(coeffFrames);
+    
+    // Critical: Buffers may have moved after resize. Re-swizzle the pointers.
+    if (needAlloc) {
+        compileGraph();
+    }
 }
 
 uint32_t AudioEngine::copyWaveformHistory(float* outInterleaved, uint32_t maxFrames) const {
@@ -518,6 +543,7 @@ uint32_t AudioEngine::copyWaveformHistory(float* outInterleaved, uint32_t maxFra
     return frames;
 }
 
+#if 0
 void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
     bool srcActiveThisBlock = false;
 
@@ -602,7 +628,10 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
         // Muted tracks still render so meters keep moving, but they don't mix into master.
         const bool muted = track.mute || state.mute;
         const bool soloed = track.solo || state.solo;
-        if (anySolo && !soloed) {
+        const bool soloSafe = track.isSoloSafe || state.soloSafe; // Access cached state or track prop
+        
+        // If any track is soloed, we suppress this track UNLESS it is also soloed OR it is solo-safe.
+        if (anySolo && !soloed && !soloSafe) {
              auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
             if (snaps && slot != ChannelSlotMap::INVALID_SLOT) {
                 snaps->writePeak(slot, 0.0f, 0.0f);
@@ -890,6 +919,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
         m_telemetry.incrementSrcActiveBlocks();
     }
 }
+#endif
 
 AudioEngine::TrackRTState& AudioEngine::ensureTrackState(uint32_t trackIndex) {
     if (m_trackState.empty()) {
@@ -1024,6 +1054,451 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
     m_loopStartBeat.store(startBeat, std::memory_order_relaxed);
     m_loopEndBeat.store(endBeat, std::memory_order_relaxed);
 }
+
+    // === Antigravity Graph Compiler ===
+    void AudioEngine::compileGraph() {
+        std::lock_guard<std::mutex> lock(m_graphMutex);
+        
+        // Use double-buffering: Write to inactive index
+        const int inactiveIdx = 1 - m_activeRenderTrackIndex.load(std::memory_order_relaxed);
+        auto& targetOrder = m_renderTracks[inactiveIdx];
+        targetOrder.clear();
+        
+        auto* slotMap = m_channelSlotMapRaw.load(std::memory_order_relaxed);
+        if (!slotMap) return;
+        
+        targetOrder.reserve(slotMap->getChannelCount());
+        
+        // Access the current graph snapshot
+        const auto& graph = m_state.activeGraph(); // Fixed method name
+        
+        // Iterate Tracks directly from the graph snapshot
+        for (const auto& tr : graph.tracks) {
+             const uint32_t idx = tr.trackIndex;
+             
+             // Safety Check
+             if (idx >= m_trackBuffersD.size()) continue;
+
+             RenderTrack rt;
+             rt.trackIndex = idx;
+             rt.selfBuffer = m_trackBuffersD[idx].data();
+             
+             // --- Main Output Routing ---
+             // --- Main Output Routing ---
+             // Phase 4: Real-time Fader Support
+             // We set connection gain to 1.0 (Unity) because Volume/Pan will be applied
+             // dynamically to the track's selfBuffer in renderGraph using the continuous param buffer.
+             
+             const double gainL = 1.0;
+             const double gainR = 1.0;
+             
+             // Route to Main Output ID
+             if (tr.mainOutputId == 0xFFFFFFFF) {
+                 // Route to Master
+                 RuntimeConnection toMaster;
+                 toMaster.destinationBufferL = m_masterBufferD.data();
+                 toMaster.destinationBufferR = m_masterBufferD.data() + 1;
+                 toMaster.stride = 2;
+                 toMaster.gainL = gainL;
+                 toMaster.gainR = gainR;
+                 rt.activeConnections.push_back(toMaster);
+             } 
+             else {
+                 // Route to another track (Bus/Group)
+                 if (slotMap) {
+                     uint32_t destSlot = slotMap->getSlotIndex(tr.mainOutputId);
+                     if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < m_trackBuffersD.size()) {
+                         RuntimeConnection toTrack;
+                         toTrack.destinationBufferL = m_trackBuffersD[destSlot].data();
+                         toTrack.destinationBufferR = m_trackBuffersD[destSlot].data() + 1;
+                         toTrack.stride = 2;
+                         toTrack.gainL = gainL;
+                         toTrack.gainR = gainR;
+                         rt.activeConnections.push_back(toTrack);
+                     }
+                 }
+             }
+             
+             // Note: Sends would be processed here similarly (AudioRoute logic)
+             // Phase 4 task.
+             
+             targetOrder.push_back(rt);
+        }
+        
+        // Atomic Swap
+        m_activeRenderTrackIndex.store(inactiveIdx, std::memory_order_release);
+    }
+    
+    void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
+        (void)graph; // Unused in Antigravity mode (we use pre-compiled m_renderTracks)
+        
+        // 0. The output buffers (Master/Busses) must be cleared externally before this? 
+        // Currently processBlock clears masterBufferD if not playing, but we rely on accumulation.
+        // renderGraph assumes buffers are ready to be accumulated INTO.
+        // Wait, processBlock clears masterBufferD at line 170 IF NOT PLAYING.
+        // But if playing, it calls renderGraph.
+        // We MUST clear the accumulation buffers at the start of the block.
+        // Since we are adding, we need to start from zero.
+        std::fill(m_masterBufferD.begin(), 
+                  m_masterBufferD.begin() + static_cast<size_t>(numFrames) * m_outputChannels.load(std::memory_order_relaxed), 
+                  0.0);
+
+        // 1. Get Active Graph (Wait-Free)
+        const int activeIdx = m_activeRenderTrackIndex.load(std::memory_order_acquire);
+        const auto& tracks = m_renderTracks[activeIdx];
+        
+        // 2. Iterate Sorted List
+        for (const auto& track : tracks) {
+            TrackRTState& state = m_trackState[track.trackIndex];
+            
+            // A. Process Audio (Generate/Process)
+            // Render clips to track.selfBuffer (Pre-Fader)
+            renderClipAudio(track.selfBuffer, state, track.trackIndex, graph, numFrames);
+
+            // B. Apply Real-Time Fader & Pan (Post-Fader Processing)
+            // -----------------------------------------------------
+            // 1. Fetch live parameters
+            float faderDb = 0.0f;
+            float panParam = 0.0f;
+            float trimDb = 0.0f;
+            bool hasLiveParams = false;
+            
+            // Note: We need the Track ID to find the slot. TrackRenderState has it.
+            // But 'RenderTrack' only has index. 'graph.tracks' has the ID.
+            if (track.trackIndex < graph.tracks.size()) {
+                const auto& graphTrack = graph.tracks[track.trackIndex];
+                
+                auto* slotMap = m_channelSlotMapRaw.load(std::memory_order_acquire);
+                auto* params = m_continuousParamsRaw.load(std::memory_order_acquire);
+                
+                if (slotMap && params) {
+                   uint32_t slot = slotMap->getSlotIndex(graphTrack.trackId);
+                   if (slot != ChannelSlotMap::INVALID_SLOT) {
+                       params->read(slot, faderDb, panParam, trimDb);
+                       hasLiveParams = true;
+                   }
+                }
+            }
+            
+            // 2. Update Smoothing Targets from RT Params (if available)
+            if (hasLiveParams) {
+                // Fader dB to Linear
+                const double userVol = (faderDb <= -90.0f) ? 0.0 : std::pow(10.0, static_cast<double>(faderDb) * 0.05);
+                
+                // Pan Law: -3dB Constant Power (DONE ONCE PER BLOCK)
+                const double panClamped = clampD(static_cast<double>(panParam), -1.0, 1.0);
+                const double angle = (panClamped + 1.0) * QUARTER_PI_D;
+                
+                // Effective L/R Gains
+                const double targetL = userVol * std::cos(angle);
+                const double targetR = userVol * std::sin(angle);
+                
+                // Set targets for smoothing
+                state.gainL.setTarget(targetL);
+                state.gainR.setTarget(targetR);
+            } else if (track.trackIndex < graph.tracks.size()) {
+                // Fallback: No live params (e.g. unmapped track), use Track Snapshot
+                const auto& graphTrack = graph.tracks[track.trackIndex];
+                
+                // Consistently apply Pan Law here too
+                const double vol = static_cast<double>(graphTrack.volume);
+                const double panClamped = clampD(static_cast<double>(graphTrack.pan), -1.0, 1.0);
+                const double angle = (panClamped + 1.0) * QUARTER_PI_D;
+                
+                state.gainL.setTarget(vol * std::cos(angle));
+                state.gainR.setTarget(vol * std::sin(angle));
+            }
+            
+            // 3. Apply to Buffer (In-Place) & Metering
+            double* selfL = track.selfBuffer;
+            double* selfR = track.selfBuffer + 1;
+            
+            double peakL = 0.0;
+            double peakR = 0.0;
+            double sumSqL = 0.0;
+            double sumSqR = 0.0;
+            
+            for (uint32_t i = 0; i < numFrames; ++i) {
+                // Compute per-sample gains (Linear Ramp is cheap)
+                const double gL = state.gainL.next(); 
+                const double gR = state.gainR.next();
+                
+                // Apply
+                double valL = selfL[i * 2] * gL;
+                double valR = selfR[i * 2] * gR;
+                
+                // Store back (Post-Fader)
+                selfL[i * 2] = valL;
+                selfR[i * 2] = valR;
+                
+                // Metering stats
+                const double absL = std::abs(valL);
+                const double absR = std::abs(valR);
+                if (absL > peakL) peakL = absL;
+                if (absR > peakR) peakR = absR;
+                sumSqL += valL * valL;
+                sumSqR += valR * valR;
+            }
+            
+            // 4. Publish Metering
+            auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
+            auto* slotMap = m_channelSlotMapRaw.load(std::memory_order_relaxed);
+            
+            if (snaps && slotMap && track.trackIndex < graph.tracks.size()) {
+                 const auto& graphTrack = graph.tracks[track.trackIndex];
+                 uint32_t slot = slotMap->getSlotIndex(graphTrack.trackId);
+                 
+                 if (slot != ChannelSlotMap::INVALID_SLOT) {
+                     const float rmsL = static_cast<float>(std::sqrt(sumSqL / numFrames));
+                     const float rmsR = static_cast<float>(std::sqrt(sumSqR / numFrames));
+                     
+                     // We don't have separate Low-Pass state per track here easily without looking it up.
+                     // For Phase 4, let's just write Peak/RMS. UI handles decay.
+                     snaps->writeLevels(slot, static_cast<float>(peakL), static_cast<float>(peakR), rmsL, rmsR, rmsL, rmsR);
+                     
+                     if (peakL >= 1.0 || peakR >= 1.0) {
+                        snaps->setClip(slot, peakL >= 1.0, peakR >= 1.0);
+                     }
+                 }
+            }
+
+            // C. Antigravity Mixing (Sum to Output)
+            for (const auto& conn : track.activeConnections) {
+                double* destL = conn.destinationBufferL;
+                double* destR = conn.destinationBufferR;
+                const size_t stride = conn.stride;
+                
+                // Active connections are Unity Gain (1.0) because Post-Fader params
+                // were already applied to selfBuffer (Section B).
+                
+                // SIMD-friendly loop
+                // Buffer layout: Interleaved [L, R, L, R...]
+                for (uint32_t i = 0; i < numFrames; ++i) {
+                    destL[i * stride] += selfL[i * 2];
+                    destR[i * stride] += selfR[i * 2];
+                }
+            }
+        }
+    }
+    
+    // Helper to render clips for a specific track into its buffer
+    // Extracted from original renderGraph logic
+    void AudioEngine::renderClipAudio(double* outputBuffer, TrackRTState& state, uint32_t trackIndex, const AudioGraph& graph, uint32_t numFrames) {
+        // Clear track buffer first
+        std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
+        
+        // Find the graph track corresponding to this RT state
+        // usage of passed trackIndex
+        if (trackIndex >= graph.tracks.size()) return;
+        const auto& track = graph.tracks[trackIndex];
+        
+        const bool anySolo = graph.anySolo; 
+        
+        // If track is silent due to mute or solo suppression, we can return early (buffer is cleared).
+        // Check RT state for quick mute
+        if (track.mute) return; 
+        
+        // Solo Logic Check (Pre-Render Optimization)
+        // If global solo is active and this track is NOT soloed AND NOT safe, skip.
+        // We need to know if any track is soloed globally.
+        // m_trackState doesn't store "anySolo".
+        // Let's re-scan or assume graph has it.
+        // For Phase 3, let's render everything (safest) and handle mute during mix? 
+        // No, render clips is expensive.
+        
+        // Iterate clips
+        const uint64_t blockStart = m_globalSamplePos.load(std::memory_order_relaxed);
+        const uint64_t blockEnd = blockStart + numFrames;
+        
+        // Note: Volume/Pan processing happens AFTER clip rendering (during mix) in renderGraph.
+        // renderClipAudio is now pure audio generation.
+        
+        // Note: Volume/Pan processing happens AFTER clip rendering (during mix) in strict sense
+        // But Nomad applies smoothing via "MixerBus". 
+        // Since we are decoupling, we just render raw clips here? 
+        // NO. "track.selfBuffer" should contain the PROCESSED audio (Post-Fader? Pre-Fader?)
+        // The Antigravity Spec sends "conn.gain". This is the SEND gain.
+        // The TRACK Fader should be applied to "selfBuffer" OR applied during the send gain calc?
+        
+        // Critical Architecture Decision:
+        // Option A: selfBuffer is PRE-FADER. Sends apply (Fader * Send) or (Send).
+        // Option B: selfBuffer is POST-FADER.
+        
+        // If selfBuffer is Post-Fader, then Pre-Fader sends are hard.
+        // Standard Console:
+        // - Channel Input (Clips) -> Inserts -> Pre-Fader Sends -> Fader/Pan -> Post-Fader Sends.
+        
+        // For Antigravity Phase 3:
+        // We will render clips purely. No volume/pan applied to buffer here.
+        // Logic:
+        // Render Clips -> buffer.
+        
+        for (const auto& clip : track.clips) {
+            if (!clip.audioData || blockEnd <= clip.startSample || blockStart >= clip.endSample) {
+                continue;
+            }
+            
+            const uint64_t start = std::max(blockStart, clip.startSample);
+            const uint64_t end = std::min(blockEnd, clip.endSample);
+            const uint32_t localOffset = static_cast<uint32_t>(start - blockStart);
+            uint32_t framesToRender = static_cast<uint32_t>(end - start);
+            
+            // Sample rate ratio
+            const double outputRate = static_cast<double>(m_sampleRate.load(std::memory_order_relaxed));
+            const double srcRate = clip.sourceSampleRate > 0.0 ? clip.sourceSampleRate : outputRate;
+            const double ratio = srcRate / outputRate;
+            
+            // Source position
+            const double outputFrameOffset = static_cast<double>(start - clip.startSample);
+            double phase = static_cast<double>(clip.sampleOffset) + outputFrameOffset * ratio;
+
+            // Bounds
+            const int64_t totalFrames = static_cast<int64_t>(clip.totalFrames);
+            if (totalFrames > 0 && phase >= static_cast<double>(totalFrames)) {
+                continue;
+            }
+            if (totalFrames > 0) {
+                const double remaining = static_cast<double>(totalFrames) - phase;
+                const uint32_t maxFrames = static_cast<uint32_t>(remaining / ratio);
+                framesToRender = std::min(framesToRender, maxFrames);
+            }
+            if (framesToRender == 0) continue;
+
+            const float* data = clip.audioData;
+            double* dst = outputBuffer + static_cast<size_t>(localOffset) * 2;
+
+            const uint64_t fadeLen = CLIP_EDGE_FADE_SAMPLES;
+
+            // Fast path: matching sample rates - direct copy to double
+            if (std::abs(ratio - 1.0) < 1e-9) {
+                const uint64_t srcStart = static_cast<uint64_t>(phase);
+                const float* src = data + srcStart * 2;
+                const double clipGain = static_cast<double>(clip.gain);
+                for (uint32_t i = 0; i < framesToRender; ++i) {
+                    // Micro-fade at clip edges to avoid clicks/crackles.
+                    double fade = 1.0;
+                    const uint64_t projectSample = start + i;
+                    if (fadeLen > 0) {
+                        if (projectSample < clip.startSample + fadeLen) {
+                            fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) / static_cast<double>(fadeLen)));
+                        }
+                        if (projectSample + fadeLen > clip.endSample) {
+                            fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen)));
+                        }
+                    }
+                    dst[i * 2] += static_cast<double>(src[i * 2]) * clipGain * fade;
+                    dst[i * 2 + 1] += static_cast<double>(src[i * 2 + 1]) * clipGain * fade;
+                }
+            } else {
+                // Resampling - use selected quality, pre-compute end condition
+                const double phaseEnd = static_cast<double>(totalFrames);
+                
+                // Select interpolator at block level, not per-sample
+                switch (m_interpQuality.load(std::memory_order_relaxed)) {
+                    case Interpolators::InterpolationQuality::Cubic:
+                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                            float outL, outR;
+                            Interpolators::CubicInterpolator::interpolate(data, totalFrames, phase, outL, outR);
+                            double fade = 1.0;
+                            const uint64_t projectSample = start + i;
+                            if (fadeLen > 0) {
+                                if (projectSample < clip.startSample + fadeLen) {
+                                    fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) / static_cast<double>(fadeLen)));
+                                }
+                                if (projectSample + fadeLen > clip.endSample) {
+                                    fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen)));
+                                }
+                            }
+                            const double clipGain = static_cast<double>(clip.gain);
+                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                            phase += ratio;
+                        }
+                        break;
+                    case Interpolators::InterpolationQuality::Sinc8:
+                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                            float outL, outR;
+                            Interpolators::Sinc8Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+                            double fade = 1.0;
+                            const uint64_t projectSample = start + i;
+                            if (fadeLen > 0) {
+                                if (projectSample < clip.startSample + fadeLen) {
+                                    fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) / static_cast<double>(fadeLen)));
+                                }
+                                if (projectSample + fadeLen > clip.endSample) {
+                                    fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen)));
+                                }
+                            }
+                            const double clipGain = static_cast<double>(clip.gain);
+                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                            phase += ratio;
+                        }
+                        break;
+                    case Interpolators::InterpolationQuality::Sinc16:
+                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                            float outL, outR;
+                            Interpolators::Sinc16Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+                            double fade = 1.0;
+                            const uint64_t projectSample = start + i;
+                            if (fadeLen > 0) {
+                                if (projectSample < clip.startSample + fadeLen) {
+                                    fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) / static_cast<double>(fadeLen)));
+                                }
+                                if (projectSample + fadeLen > clip.endSample) {
+                                    fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen)));
+                                }
+                            }
+                            const double clipGain = static_cast<double>(clip.gain);
+                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                            phase += ratio;
+                        }
+                        break;
+                    case Interpolators::InterpolationQuality::Sinc32:
+                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                            float outL, outR;
+                            Interpolators::Sinc32Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+                            double fade = 1.0;
+                            const uint64_t projectSample = start + i;
+                            if (fadeLen > 0) {
+                                if (projectSample < clip.startSample + fadeLen) {
+                                    fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) / static_cast<double>(fadeLen)));
+                                }
+                                if (projectSample + fadeLen > clip.endSample) {
+                                    fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen)));
+                                }
+                            }
+                            const double clipGain = static_cast<double>(clip.gain);
+                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                            phase += ratio;
+                        }
+                        break;
+                    case Interpolators::InterpolationQuality::Sinc64:
+                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                            float outL, outR;
+                            Interpolators::Sinc64Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+                            double fade = 1.0;
+                            const uint64_t projectSample = start + i;
+                            if (fadeLen > 0) {
+                                if (projectSample < clip.startSample + fadeLen) {
+                                    fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) / static_cast<double>(fadeLen)));
+                                }
+                                if (projectSample + fadeLen > clip.endSample) {
+                                    fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen)));
+                                }
+                            }
+                            const double clipGain = static_cast<double>(clip.gain);
+                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                            phase += ratio;
+                        }
+                        break;
+                }
+            }
+        }
+    }
 
 } // namespace Audio
 } // namespace Nomad

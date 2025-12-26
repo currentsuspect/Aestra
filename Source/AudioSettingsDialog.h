@@ -15,6 +15,7 @@
 #include "../NomadUI/Widgets/NUICoreWidgets.h"
 #include "../NomadUI/Graphics/OpenGL/NUIRenderCache.h"
 #include "../NomadAudio/include/AudioDeviceManager.h"
+#include "../NomadAudio/include/MixerChannel.h"
 #include <memory>
 #include <functional>
 #include <vector>
@@ -51,10 +52,14 @@ public:
     
     // Get selected settings
     uint32_t getSelectedDeviceId() const { return m_selectedDeviceId; }
+    
+    // Accessors for Main.cpp to sync with AudioEngine
     uint32_t getSelectedSampleRate() const { return m_selectedSampleRate; }
     uint32_t getSelectedBufferSize() const { return m_selectedBufferSize; }
-    
-    // Test sound state (for audio callback)
+    Nomad::Audio::ResamplingMode getSelectedResamplingMode() const;
+    Nomad::Audio::DitheringMode getSelectedDitheringMode() const;
+
+    // Test sound state
     bool isPlayingTestSound() const { return m_isPlayingTestSound; }
     double& getTestSoundPhase() { return m_testSoundPhase; }
     

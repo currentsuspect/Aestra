@@ -10,10 +10,11 @@
 #include "MeterSnapshot.h"
 #include <cstdint>
 #include <cmath>
-#include <atomic>
-#include <array>
 #include <vector>
+#include <atomic>
 #include <memory>
+#include <mutex>
+#include <array>
 #include <string>
 
 namespace Nomad {
@@ -53,7 +54,10 @@ public:
     void setBufferConfig(uint32_t maxFrames, uint32_t numChannels);
     void setTransportPlaying(bool playing) { m_transportPlaying.store(playing, std::memory_order_relaxed); }
     bool isTransportPlaying() const { return m_transportPlaying.load(std::memory_order_relaxed); }
-    void setGraph(const AudioGraph& graph) { m_state.swapGraph(graph); }
+    void setGraph(const AudioGraph& graph) { 
+        m_state.swapGraph(graph); 
+        compileGraph();
+    }
 
     // RT-safe metering (written on audio thread, read on UI thread)
     void setMeterSnapshots(std::shared_ptr<MeterSnapshotBuffer> snapshots) {
@@ -140,10 +144,17 @@ private:
     };
 
     struct TrackRTState {
-        SmoothedParamD volume;
-        SmoothedParamD pan;
+        // Optimized: Store smoothed L/R gains directly to avoid per-sample sin/cos
+        SmoothedParamD gainL;
+        SmoothedParamD gainR;
+        
+        // Logical state for command updates (snapshot of last known values)
+        float currentVolume{1.0f};
+        float currentPan{0.0f};
+
         bool mute{false};
         bool solo{false};
+        bool soloSafe{false};
     };
 
     TrackRTState& ensureTrackState(uint32_t trackId);
@@ -187,12 +198,45 @@ private:
     std::vector<double> m_masterBufferD;               // Double precision master
     std::vector<TrackRTState> m_trackState;
     
+    // --- Antigravity Routing Engine (v3.1) ---
+    struct RuntimeConnection {
+        double* destinationBufferL{nullptr}; // Raw pointer to Target Left Buffer
+        double* destinationBufferR{nullptr}; // Raw pointer to Target Right Buffer
+        size_t stride{2};                    // Interleaved stride (2 for stereo)
+        double gainL{1.0};                   // Left Channel Gain (Linear)
+        double gainR{1.0};                   // Right Channel Gain (Linear)
+    };
+
+    struct RenderTrack {
+        uint32_t trackIndex{0};
+        double* selfBuffer{nullptr}; // Pointer to this track's output buffer (interleaved)
+        std::vector<RuntimeConnection> activeConnections; // Pre-resolved targets
+    };
+    
+    std::vector<RenderTrack> m_renderTracks[2];
+    std::atomic<int> m_activeRenderTrackIndex{0};
+    std::mutex m_graphMutex; // Protects graph compilation / swap
+    
+    /**
+     * @brief Compile the mix graph for the audio thread.
+     * 
+     * Topologically sorts tracks and swizzles pointers for zero-overhead routing.
+     * Must be called when routing changes (Main Thread).
+     */
+    void compileGraph(); 
+
+    // Helper for renderGraph
+    void renderClipAudio(double* outputBuffer, TrackRTState& state, uint32_t trackIndex, const AudioGraph& graph, uint32_t numFrames);
+
+    // -----------------------------------------
+
+    
     // Interpolation quality
     std::atomic<Interpolators::InterpolationQuality> m_interpQuality{Interpolators::InterpolationQuality::Cubic};
     
     // Master output processing (double precision)
     std::atomic<float> m_masterGainTarget{1.0f};
-    std::atomic<float> m_headroomLinear{0.5f};  // -6dB headroom
+    std::atomic<float> m_headroomLinear{1.0f};  // 0dB headroom (standard DAW behavior)
     SmoothedParamD m_smoothedMasterGain;
     DCBlockerD m_dcBlockerL;
     DCBlockerD m_dcBlockerR;

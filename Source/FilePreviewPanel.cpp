@@ -55,6 +55,20 @@ void FilePreviewPanel::setLoading(bool loading) {
     setDirty(true);
 }
 
+void FilePreviewPanel::setPlayheadPosition(double seconds) {
+    if (std::abs(playheadPosition_ - seconds) > 0.01) {
+        playheadPosition_ = seconds;
+        setDirty(true);
+    }
+}
+
+void FilePreviewPanel::setDuration(double seconds) {
+    if (std::abs(duration_ - seconds) > 0.01) {
+        duration_ = seconds;
+        setDirty(true);
+    }
+}
+
 void FilePreviewPanel::generateWaveform(const std::string& path, size_t fileSize) {
     // Generate placeholder waveform (simple sine pattern for demo)
     // Same logic as was in FileBrowser::selectFile
@@ -262,6 +276,19 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
                 );
             }
         }
+
+        // === PLAYHEAD RENDERING ===
+        if (duration_ > 0.0) {
+            float progress = static_cast<float>(playheadPosition_ / duration_);
+            progress = std::clamp(progress, 0.0f, 1.0f);
+            float playheadX = waveformBounds.x + (progress * waveformBounds.width);
+            
+            renderer.drawLine(
+                NUIPoint(playheadX, waveformBounds.y),
+                NUIPoint(playheadX, waveformBounds.y + waveformBounds.height),
+                2.0f, theme.getColor("accentLime")
+            );
+        }
     }
 }
 
@@ -275,6 +302,17 @@ bool FilePreviewPanel::onMouseEvent(const NUIMouseEvent& event) {
             } else {
                 if (onPlay_) onPlay_(*currentFile_);
             }
+            return true;
+        }
+
+        // Handle seeking on waveform click
+        NUIRect waveformBounds(getBounds().x + 8, getBounds().y + 32 + 4 + 6, getBounds().width - 16, getBounds().height - 32 - 14);
+        if (waveformBounds.contains(event.position) && duration_ > 0.0) {
+            float relativeX = event.position.x - waveformBounds.x;
+            float progress = std::clamp(relativeX / waveformBounds.width, 0.0f, 1.0f);
+            double seekTime = progress * duration_;
+            
+            if (onSeek_) onSeek_(seekTime);
             return true;
         }
     }

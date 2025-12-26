@@ -1379,6 +1379,7 @@ public:
     
     void updatePreviewPlayhead() {
         if (m_previewPanel && m_previewEngine) {
+            m_previewPanel->setDuration(m_previewEngine->getDuration());
             m_previewPanel->setPlayheadPosition(m_previewEngine->getPlaybackPosition());
         }
     }
@@ -1604,8 +1605,8 @@ public:
             // Enable debug logging for FBO cache (temporary for testing)
             #ifdef _DEBUG
             if (m_renderer->getRenderCache()) {
-                m_renderer->getRenderCache()->setDebugEnabled(true);
-                Log::info("FBO cache debug logging enabled");
+                // m_renderer->getRenderCache()->setDebugEnabled(true);
+                // Log::info("FBO cache debug logging enabled");
             }
             #endif
         }
@@ -2100,6 +2101,25 @@ public:
                     m_mainStreamConfig.bufferSize = actualBufferSize;
                     m_audioEngine->setBufferConfig(actualBufferSize, m_mainStreamConfig.numOutputChannels);
                     Log::info("AudioEngine buffer size synced to: " + std::to_string(actualBufferSize));
+                }
+                
+                // Sync Resampling Quality
+                if (m_audioSettingsDialog) {
+                    auto mode = m_audioSettingsDialog->getSelectedResamplingMode();
+                    Nomad::Audio::Interpolators::InterpolationQuality quality;
+                    
+                    switch (mode) {
+                        case Nomad::Audio::ResamplingMode::Fast:    quality = Nomad::Audio::Interpolators::InterpolationQuality::Cubic; break;
+                        case Nomad::Audio::ResamplingMode::Medium:  quality = Nomad::Audio::Interpolators::InterpolationQuality::Cubic; break;
+                        case Nomad::Audio::ResamplingMode::High:    quality = Nomad::Audio::Interpolators::InterpolationQuality::Sinc16; break;
+                        case Nomad::Audio::ResamplingMode::Ultra:   quality = Nomad::Audio::Interpolators::InterpolationQuality::Sinc32; break;
+                        case Nomad::Audio::ResamplingMode::Extreme: quality = Nomad::Audio::Interpolators::InterpolationQuality::Sinc64; break;
+                        case Nomad::Audio::ResamplingMode::Perfect: quality = Nomad::Audio::Interpolators::InterpolationQuality::Sinc64; break;
+                        default: quality = Nomad::Audio::Interpolators::InterpolationQuality::Cubic; break;
+                    }
+                    
+                    m_audioEngine->setInterpolationQuality(quality);
+                    Log::info("AudioEngine interpolation quality set to: " + std::to_string(static_cast<int>(quality)));
                 }
             }
             

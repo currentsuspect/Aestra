@@ -129,11 +129,11 @@ void WASAPIExclusiveDriver::shutdownCOM() {
     CoUninitialize();
 }
 
-std::vector<AudioDeviceInfo> WASAPIExclusiveDriver::getDevices() {
+std::vector<AudioDeviceInfo> WASAPIExclusiveDriver::getDevices() const {
     std::vector<AudioDeviceInfo> devices;
 
     if (!m_deviceEnumerator) {
-        setError(DriverError::INITIALIZATION_FAILED, "Device enumerator not initialized");
+        const_cast<WASAPIExclusiveDriver*>(this)->setError(DriverError::INITIALIZATION_FAILED, "Device enumerator not initialized");
         return devices;
     }
 
@@ -141,7 +141,7 @@ std::vector<AudioDeviceInfo> WASAPIExclusiveDriver::getDevices() {
     return devices;
 }
 
-bool WASAPIExclusiveDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devices) {
+bool WASAPIExclusiveDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devices) const {
     IMMDeviceCollection* deviceCollection = nullptr;
 
     HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->EnumAudioEndpoints(
@@ -211,7 +211,7 @@ uint32_t WASAPIExclusiveDriver::getDefaultInputDevice() {
     return 0;
 }
 
-bool WASAPIExclusiveDriver::isExclusiveModeAvailable(uint32_t deviceId) {
+bool WASAPIExclusiveDriver::isExclusiveModeAvailable(uint32_t deviceId) const {
     // Try to open the device and test exclusive mode
     IMMDevice* testDevice = nullptr;
     
@@ -265,6 +265,62 @@ bool WASAPIExclusiveDriver::isExclusiveModeAvailable(uint32_t deviceId) {
     return available;
 }
 
+std::vector<uint32_t> WASAPIExclusiveDriver::getSupportedExclusiveSampleRates(uint32_t deviceId) const {
+    std::vector<uint32_t> supportedRates;
+
+    IMMDevice* testDevice = nullptr;
+    if (!m_deviceEnumerator) {
+        return supportedRates;
+    }
+
+    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->GetDefaultAudioEndpoint(
+        eRender,
+        eConsole,
+        &testDevice
+    );
+
+    if (FAILED(hr)) {
+        return supportedRates;
+    }
+
+    IAudioClient* testClient = nullptr;
+    hr = testDevice->Activate(
+        IID_IAudioClient,
+        CLSCTX_ALL,
+        nullptr,
+        (void**)&testClient
+    );
+
+    if (SUCCEEDED(hr)) {
+        // Test each sample rate
+        for (uint32_t sampleRate : EXCLUSIVE_SAMPLE_RATES) {
+            WAVEFORMATEX format = {};
+            format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+            format.nChannels = 2;
+            format.nSamplesPerSec = sampleRate;
+            format.wBitsPerSample = 32;
+            format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
+            format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+            format.cbSize = 0;
+
+            WAVEFORMATEX* closestMatch = nullptr;
+            hr = testClient->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &closestMatch);
+            
+            if (hr == S_OK) {
+                supportedRates.push_back(sampleRate);
+            }
+
+            if (closestMatch) {
+                CoTaskMemFree(closestMatch);
+            }
+        }
+
+        testClient->Release();
+    }
+
+    testDevice->Release();
+    return supportedRates;
+}
 
 bool WASAPIExclusiveDriver::openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) {
     if (m_state == DriverState::STREAM_RUNNING) {
@@ -1072,89 +1128,6 @@ void WASAPIExclusiveDriver::updateStatistics(double callbackTimeUs) {
     }
 
     m_statistics.actualLatencyMs = getStreamLatency() * 1000.0;
-}
-
-
-std::vector<uint32_t> WASAPIExclusiveDriver::getSupportedExclusiveSampleRates(uint32_t deviceIndex) {
-    std::vector<uint32_t> supportedRates;
-    std::vector<uint32_t> testRates = { 44100, 48000, 88200, 96000, 176400, 192000 };
-    
-    IMMDeviceEnumerator* enumerator = nullptr;
-    IMMDeviceCollection* collection = nullptr;
-    IMMDevice* device = nullptr;
-    IAudioClient* client = nullptr;
-
-    HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&enumerator);
-    if (FAILED(hr)) return supportedRates;
-
-    hr = enumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &collection);
-    if (SUCCEEDED(hr)) {
-        hr = collection->Item(deviceIndex, &device);
-        if (SUCCEEDED(hr)) {
-             hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)&client);
-             if (SUCCEEDED(hr)) {
-                 for (uint32_t rate : testRates) {
-                     // Check 1. Float 32-bit (Preferred)
-                     WAVEFORMATEX* match = nullptr;
-                     WAVEFORMATEX format = {};
-                     format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-                     format.nChannels = 2;
-                     format.nSamplesPerSec = rate;
-                     format.wBitsPerSample = 32;
-                     format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
-                     format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-                     format.cbSize = 0;
-
-                     hr = client->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &match);
-                     if (match) CoTaskMemFree(match);
-                     
-                     if (hr == S_OK) {
-                         supportedRates.push_back(rate);
-                         continue; 
-                     }
-
-                     // Check 2. PCM 24-bit
-                     format.wFormatTag = WAVE_FORMAT_PCM;
-                     format.wBitsPerSample = 24;
-                     format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
-                     format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-                     
-                     match = nullptr;
-                     hr = client->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &match);
-                     if (match) CoTaskMemFree(match);
-
-                     if (hr == S_OK) {
-                         supportedRates.push_back(rate);
-                         continue;
-                     }
-
-                     // Check 3. PCM 16-bit
-                     format.wBitsPerSample = 16;
-                     format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
-                     format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-                     
-                     match = nullptr;
-                     hr = client->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &match);
-                     if (match) CoTaskMemFree(match);
-
-                     if (hr == S_OK) {
-                         supportedRates.push_back(rate);
-                     }
-                 }
-                 client->Release();
-             }
-             device->Release();
-        }
-        collection->Release();
-    }
-    enumerator->Release();
-
-    // If no specific exclusive rates found (rare), fallback to 48k at least to avoid empty list
-    if (supportedRates.empty()) {
-        supportedRates.push_back(48000);
-    }
-    
-    return supportedRates;
 }
 
 } // namespace Audio

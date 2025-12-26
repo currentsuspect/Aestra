@@ -35,9 +35,15 @@ void UIMixerMeter::cacheThemeColors()
 
 void UIMixerMeter::setLevels(float dbL, float dbR)
 {
-    // Clamp to valid range
     m_peakL = std::max(DB_MIN, std::min(DB_MAX, dbL));
     m_peakR = std::max(DB_MIN, std::min(DB_MAX, dbR));
+    repaint();
+}
+
+void UIMixerMeter::setRmsLevels(float dbL, float dbR)
+{
+    m_rmsL = std::max(DB_MIN, std::min(DB_MAX, dbL));
+    m_rmsR = std::max(DB_MIN, std::min(DB_MAX, dbR));
     repaint();
 }
 
@@ -99,21 +105,18 @@ NUIColor UIMixerMeter::getColorForLevel(float db) const
 }
 
 void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
-                                   float levelDb, float peakOverlayDb, float peakHoldDb, bool clip)
+                                   float peakDb, float rmsDb, float peakOverlayDb, float peakHoldDb, bool clip)
 {
     // Background ("Grey" - matching mixer panel interior)
     // User requested "inactive/nothing playing mode should be the grey"
-    renderer.fillRect(bounds, NUIColor(0.12f, 0.12f, 0.14f, 1.0f)); // #1e1e22
+    renderer.fillRect(bounds, m_colorBackground);
 
-    const NUIColor& green = m_dimmed ? m_colorGreenDim : m_colorGreen;
     const NUIColor& yellow = m_dimmed ? m_colorYellowDim : m_colorYellow;
     const NUIColor& red = m_dimmed ? m_colorRedDim : m_colorRed;
     const NUIColor& peakOverlay = m_dimmed ? m_colorPeakOverlayDim : m_colorPeakOverlay;
 
     // Calculate meter fill height
-    float normalizedLevel = dbToNormalized(levelDb);
     float meterAreaHeight = bounds.height - CLIP_HEIGHT;
-    float fillHeight = normalizedLevel * meterAreaHeight;
 
     // Meter bar area (below clip indicator)
     NUIRect meterArea = {
@@ -123,49 +126,82 @@ void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
         meterAreaHeight
     };
 
-    // Render meter fill (ANALOG GRADIENT)
-    if (fillHeight > 1.0f) {
-        float fillTopY = meterArea.y + meterArea.height - fillHeight;
-        NUIRect fillRect = {
+    // RMS Bar (Thick, Solid, Main Body)
+    // User: "RMS thick bar"
+    float normalizedRms = dbToNormalized(rmsDb);
+    float rmsFillHeight = normalizedRms * meterAreaHeight;
+
+    if (rmsFillHeight > 1.0f) {
+        float rmsFillTopY = meterArea.y + meterArea.height - rmsFillHeight;
+        NUIRect rmsFillRect = {
             meterArea.x,
-            fillTopY,
+            rmsFillTopY,
             meterArea.width,
-            fillHeight
+            rmsFillHeight
         };
-        
-        // Dynamic Gradient Colors
-        // Bottom is always Green. Top color shifts from Green -> Yellow -> Red based on level.
-        // This gives a nice "heating up" effect.
+
+        // Standard Gradient Colors for RMS
         NUIColor bottomColor = m_colorGreen;
         NUIColor topColor = m_colorGreen;
-        
-        if (normalizedLevel > 0.8f) { // High levels -> Red tip
+
+        if (normalizedRms > 0.8f) { // High levels -> Red tip
              topColor = m_colorRed;
-        } else if (normalizedLevel > 0.5f) { // Mid levels -> Yellow tip
+        } else if (normalizedRms > 0.5f) { // Mid levels -> Yellow tip
              topColor = m_colorYellow;
         } else {
-             topColor = m_colorGreen.lightened(0.2f); // Low levels -> Brighter green tip
+             topColor = m_colorGreen.lightened(0.2f);
         }
-        
-        // Apply Dimming if muted
+
         if (m_dimmed) {
             bottomColor = bottomColor.withSaturation(0.0f).withAlpha(0.5f);
             topColor = topColor.withSaturation(0.0f).withAlpha(0.5f);
         }
+
+        renderer.fillRectGradient(rmsFillRect, topColor, bottomColor, true);
+    }
+
+    // Peak Bar (Full Width, Transparent/Ghost Overlay)
+    // User: "peak the transparent bar"
+    // Renders ON TOP of RMS but transparent so you see the "headroom" between RMS and Peak.
+    float normalizedPeak = dbToNormalized(peakDb);
+    float peakFillHeight = normalizedPeak * meterAreaHeight;
+    
+    // Only render the part of the peak that EXTENDS above RMS to avoid double-blending color
+    // or render fully transparent if that's the desired look.
+    // Ableton approach: Peak is a lighter box surrounding RMS or extending above it.
+    
+    if (peakFillHeight > rmsFillHeight) {
+        float peakTopY = meterArea.y + meterArea.height - peakFillHeight;
+        float peakHeight = peakFillHeight - rmsFillHeight; 
         
-        // Draw Gradient Fill
-        renderer.fillRectGradient(fillRect, topColor, bottomColor, true); // true = vertical
+        // Draw the "excess" peak range as a transparent ghost
+        NUIRect peakRect = {
+            meterArea.x,
+            peakTopY,
+            meterArea.width,
+            peakHeight
+        };
+        
+        NUIColor peakColor = getColorForLevel(peakDb).withAlpha(0.35f); // 35% opacity
+        if (m_dimmed) peakColor = peakColor.withSaturation(0.0f);
+        
+        renderer.fillRect(peakRect, peakColor);
     }
 
-    // Fast peak overlay indicator (thin horizontal line).
-    if (peakOverlayDb > DB_MIN) {
-        float peakNorm = dbToNormalized(peakOverlayDb);
+    // Peak Hold indicator (white line that sticks)
+    if (peakHoldDb > DB_MIN) {
+        float peakNorm = dbToNormalized(peakHoldDb);
         float peakY = meterArea.y + meterArea.height * (1.0f - peakNorm);
+        
+        // Clamp to meter area
         peakY = std::max(meterArea.y, std::min(peakY, meterArea.y + meterArea.height - PEAK_OVERLAY_HEIGHT));
-        renderer.fillRect(NUIRect{meterArea.x, peakY, meterArea.width, PEAK_OVERLAY_HEIGHT}, peakOverlay);
+        
+        // Draw hold line (using the brighter 'textPrimary' color defined in cacheThemeColors)
+        const NUIColor& holdColor = m_dimmed ? m_colorPeakOverlayDim : m_colorPeakHold;
+        renderer.fillRect(NUIRect{meterArea.x, peakY, meterArea.width, PEAK_OVERLAY_HEIGHT}, holdColor);
     }
 
-    (void)peakHoldDb;
+    (void)peakOverlayDb; // Unused in this mode (bars are already showing fast peak)
 
     // Clip indicator at top
     NUIRect clipRect = {
@@ -185,23 +221,15 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
     float totalWidth = bounds.width;
     float barWidth = (totalWidth - METER_GAP) / 2.0f;
 
-    // Left bar
-    NUIRect leftBounds = {
-        bounds.x,
-        bounds.y,
-        barWidth,
-        bounds.height
-    };
-    renderMeterBar(renderer, leftBounds, m_peakL, m_peakOverlayL, m_peakHoldL, m_clipL);
+    // Left Meter
+    NUIRect leftBounds = bounds;
+    leftBounds.width = (bounds.width - METER_GAP) * 0.5f;
+    renderMeterBar(renderer, leftBounds, m_peakL, m_rmsL, m_peakOverlayL, m_peakHoldL, m_clipL);
 
-    // Right bar
-    NUIRect rightBounds = {
-        bounds.x + barWidth + METER_GAP,
-        bounds.y,
-        barWidth,
-        bounds.height
-    };
-    renderMeterBar(renderer, rightBounds, m_peakR, m_peakOverlayR, m_peakHoldR, m_clipR);
+    // Right Meter
+    NUIRect rightBounds = leftBounds;
+    rightBounds.x += leftBounds.width + METER_GAP;
+    renderMeterBar(renderer, rightBounds, m_peakR, m_rmsR, m_peakOverlayR, m_peakHoldR, m_clipR);
 
     // Render children
     renderChildren(renderer);
@@ -213,15 +241,15 @@ bool UIMixerMeter::onMouseEvent(const NUIMouseEvent& event)
     if (event.pressed && event.button == NUIMouseButton::Left) {
         auto bounds = getBounds();
 
-        // Check if click is in clip indicator area (top CLIP_HEIGHT pixels)
-        if (event.position.y >= bounds.y && event.position.y < bounds.y + CLIP_HEIGHT) {
-            if (event.position.x >= bounds.x && event.position.x < bounds.x + bounds.width) {
-                // Clear clip latch
-                if ((m_clipL || m_clipR) && onClipCleared) {
-                    onClipCleared();
-                }
-                return true;
+        // Check if click is within the meter bounds (anywhere)
+        // Improved UX: Allow clicking anywhere on the meter strip to clear clip latch, 
+        // not just the tiny indicator at the top.
+        if (bounds.contains(event.position)) {
+            // Clear clip latch
+            if ((m_clipL || m_clipR) && onClipCleared) {
+                onClipCleared();
             }
+            return true;
         }
     }
 

@@ -222,26 +222,19 @@ void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
         return energyEnvDb + peakWeight * (peakEnvDb - energyEnvDb);
     };
 
-    float targetDbL = channel.envPeakL;
-    float targetDbR = channel.envPeakR;
-    switch (m_meterMode) {
-        case MeterMode::Musical:
-            targetDbL = computeMusicalDb(channel.envPeakL, channel.envEnergyL, channel.envLowEnergyL);
-            targetDbR = computeMusicalDb(channel.envPeakR, channel.envEnergyR, channel.envLowEnergyR);
-            break;
-        case MeterMode::Hybrid:
-            targetDbL = channel.envEnergyL;
-            targetDbR = channel.envEnergyR;
-            break;
-        case MeterMode::Technical:
-            targetDbL = channel.envPeakL;
-            targetDbR = channel.envPeakR;
-            break;
-    }
+    // Dual-Bar Metering (Ableton Style):
+    // 1. Peak Bar (Fast/Technical): Targets pure peak envelope.
+    channel.smoothedPeakL = smoothDb(channel.smoothedPeakL, channel.envPeakL, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
+    channel.smoothedPeakR = smoothDb(channel.smoothedPeakR, channel.envPeakR, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
 
-    // Visual ballistics (meters with mass).
-    channel.smoothedPeakL = smoothDb(channel.smoothedPeakL, targetDbL, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
-    channel.smoothedPeakR = smoothDb(channel.smoothedPeakR, targetDbR, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
+    // 2. RMS Bar (Average/Body): Targets energy envelope.
+    channel.smoothedRmsL = smoothDb(channel.smoothedRmsL, channel.envEnergyL, ENERGY_ATTACK_MS, ENERGY_RELEASE_MS);
+    channel.smoothedRmsR = smoothDb(channel.smoothedRmsR, channel.envEnergyR, ENERGY_ATTACK_MS, ENERGY_RELEASE_MS);
+
+    channel.smoothedPeakL = std::max(channel.smoothedPeakL, MixerMath::DB_MIN);
+    channel.smoothedPeakR = std::max(channel.smoothedPeakR, MixerMath::DB_MIN);
+    channel.smoothedRmsL = std::max(channel.smoothedRmsL, MixerMath::DB_MIN);
+    channel.smoothedRmsR = std::max(channel.smoothedRmsR, MixerMath::DB_MIN);
 
     channel.smoothedPeakL = std::max(channel.smoothedPeakL, MixerMath::DB_MIN);
     channel.smoothedPeakR = std::max(channel.smoothedPeakR, MixerMath::DB_MIN);

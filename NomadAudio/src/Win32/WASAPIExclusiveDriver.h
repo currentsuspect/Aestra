@@ -59,7 +59,7 @@ public:
     bool supportsExclusiveMode() const override { return true; }
 
     // AudioDriver interface
-    virtual std::vector<AudioDeviceInfo> getDevices() const override;
+    virtual std::vector<AudioDeviceInfo> getDevices() override;
 
     // Native implementation details
     uint32_t getDefaultOutputDevice();
@@ -80,12 +80,12 @@ public:
     /**
      * @brief Check if exclusive mode is available for a device
      */
-    bool isExclusiveModeAvailable(uint32_t deviceId) const;
+    bool isExclusiveModeAvailable(uint32_t deviceId);
 
     /**
      * @brief Get supported sample rates in exclusive mode
      */
-    std::vector<uint32_t> getSupportedExclusiveSampleRates(uint32_t deviceId) const;
+    std::vector<uint32_t> getSupportedExclusiveSampleRates(uint32_t deviceIndex);
 
 private:
     // COM interfaces (opaque pointers - Windows-specific implementation)
@@ -131,7 +131,7 @@ private:
     // Internal methods
     bool initializeCOM();
     void shutdownCOM();
-    bool enumerateDevices(std::vector<AudioDeviceInfo>& devices) const;
+    bool enumerateDevices(std::vector<AudioDeviceInfo>& devices);
     bool openDevice(uint32_t deviceId);
     void closeDevice();
     bool initializeAudioClient();

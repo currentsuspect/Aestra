@@ -2,6 +2,8 @@
 #pragma once
 
 #include "MixerBus.h"
+#include "AudioProcessor.h"
+#include "AudioGraph.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -160,6 +162,8 @@ public:
     bool isMuted() const { return m_muted.load(); }
     void setSolo(bool solo);
     bool isSoloed() const { return m_soloed.load(); }
+    void setSoloSafe(bool safe);
+    bool isSoloSafe() const { return m_soloSafe.load(); }
 
     // Audio Processing
     // MixerChannel processes its input bus/buffer. Timeline clips are managed by PlaylistModel.
@@ -173,6 +177,12 @@ public:
     void setCommandSink(std::function<void(const AudioQueueCommand&)> cb) { m_commandSink = std::move(cb); }
     
     void setQualitySettings(const AudioQualitySettings&) {}
+    
+    // Routing Accessors
+    uint32_t getMainOutputId() const { return m_mainOutputId; }
+    const std::vector<AudioRoute>& getSends() const { return m_sends; }
+    void addSend(const AudioRoute& route) { m_sends.push_back(route); }
+    void setMainOutputId(uint32_t id) { m_mainOutputId = id; }
 
 private:
     std::string m_name;
@@ -181,15 +191,23 @@ private:
     uint32_t m_color;
 
     // Audio parameters (atomic for thread safety)
-    std::atomic<float> m_volume{1.0f};
+    std::atomic<float> m_volume{0.55f}; // Default: 78% (-5.2dB) to match FL/industry headroom standards
     std::atomic<float> m_pan{0.0f};
     std::atomic<bool> m_muted{false};
     std::atomic<bool> m_soloed{false};
+    std::atomic<bool> m_soloSafe{false};
 
     // Mixer integration
     std::unique_ptr<MixerBus> m_mixerBus;
 
     std::function<void(const AudioQueueCommand&)> m_commandSink;
+
+    // Routing (v3.1)
+    // Primary output (defaults to Master). 0xFFFFFFFF = Master.
+    uint32_t m_mainOutputId{0xFFFFFFFF};
+    
+    // Aux Sends / Direct Outs
+    std::vector<AudioRoute> m_sends;
 };
 
 using Track = MixerChannel;

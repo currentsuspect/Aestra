@@ -30,6 +30,17 @@ struct ClipRenderState {
 };
 
 /**
+ * @brief Represents a routing connection (User/UI Layer)
+ */
+struct AudioRoute {
+    uint32_t targetChannelId; // Destination ID (or SPECIAL_ID_MASTER)
+    float gain{1.0f};         // Send Level (Linear)
+    float pan{0.0f};          // Send Pan (-1.0 to 1.0)
+    bool postFader{true};     // Pre/Post Fader tap
+    bool mute{false};         // Mute this specific send
+};
+
+/**
  * @brief Render-time track state.
  */
 struct TrackRenderState {
@@ -40,7 +51,12 @@ struct TrackRenderState {
     float pan{0.0f};
     bool mute{false};
     bool solo{false};
+    bool isSoloSafe{false};
     std::vector<AutomationCurve> automationCurves;
+    
+    // Routing (v3.1)
+    uint32_t mainOutputId{0xFFFFFFFF}; // Master
+    std::vector<AudioRoute> sends;
 };
 
 /**
@@ -48,6 +64,7 @@ struct TrackRenderState {
  */
 struct AudioGraph {
     std::vector<TrackRenderState> tracks;
+    bool anySolo{false};
     // Precomputed max end sample across all clips (engine sample rate).
     // Used for transport looping without scanning clips on the RT thread.
     uint64_t timelineEndSample{0};

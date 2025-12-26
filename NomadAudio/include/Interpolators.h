@@ -133,29 +133,36 @@ struct Sinc8Interpolator {
         double phase,
         float& outL, float& outR)
     {
+        // Pre-calculated weights (Static Local Initialization - Thread Safe & One-Time)
+        static const std::array<double, TAPS> weights = [](){
+            std::array<double, TAPS> w;
+            for(int i=0; i<TAPS; ++i) w[i] = blackmanWindow(static_cast<double>(i), static_cast<double>(TAPS));
+            return w;
+        }();
+
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
         
-        // Double precision accumulation
         double sumL = 0.0;
         double sumR = 0.0;
-        double weightSum = 0.0;  // Track sum of applied filter weights
+        double weightSum = 0.0;
         
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
             const int64_t sampleIdx = idx + t;
             if (sampleIdx < 0 || sampleIdx >= totalFrames) continue;
             
             const double x = static_cast<double>(t) - frac;
-            const double windowPos = static_cast<double>(t + HALF_TAPS - 1);
-            const double w = blackmanWindow(windowPos, static_cast<double>(TAPS));
+            // Lookup window weight: map relative t to array index 0..7
+            const int tableIdx = t + HALF_TAPS - 1;
+            const double w = weights[tableIdx];
+            
             const double s = sinc(x) * w;
             
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
-            weightSum += s;  // Accumulate the weight for normalization
+            weightSum += s;
         }
         
-        // Normalize by weight sum to prevent gain loss at edges
         if (weightSum > 0.0) {
             sumL /= weightSum;
             sumR /= weightSum;
@@ -181,20 +188,27 @@ struct Sinc16Interpolator {
         double phase,
         float& outL, float& outR)
     {
+        static const std::array<double, TAPS> weights = [](){
+            std::array<double, TAPS> w;
+            for(int i=0; i<TAPS; ++i) w[i] = kaiserWindow(static_cast<double>(i), static_cast<double>(TAPS), KAISER_BETA);
+            return w;
+        }();
+
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
         
         double sumL = 0.0;
         double sumR = 0.0;
-        double weightSum = 0.0;  // Track sum of applied filter weights
+        double weightSum = 0.0;
         
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
             const int64_t sampleIdx = idx + t;
             if (sampleIdx < 0 || sampleIdx >= totalFrames) continue;
             
             const double x = static_cast<double>(t) - frac;
-            const double windowPos = static_cast<double>(t + HALF_TAPS - 1);
-            const double w = kaiserWindow(windowPos, static_cast<double>(TAPS), KAISER_BETA);
+            
+            const int tableIdx = t + HALF_TAPS - 1;
+            const double w = weights[tableIdx];
             const double s = sinc(x) * w;
             
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
@@ -228,20 +242,27 @@ struct Sinc32Interpolator {
         double phase,
         float& outL, float& outR)
     {
+        static const std::array<double, TAPS> weights = [](){
+            std::array<double, TAPS> w;
+            for(int i=0; i<TAPS; ++i) w[i] = kaiserWindow(static_cast<double>(i), static_cast<double>(TAPS), KAISER_BETA);
+            return w;
+        }();
+
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
         
         double sumL = 0.0;
         double sumR = 0.0;
-        double weightSum = 0.0;  // Track sum of applied filter weights
+        double weightSum = 0.0;
         
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
             const int64_t sampleIdx = idx + t;
             if (sampleIdx < 0 || sampleIdx >= totalFrames) continue;
             
             const double x = static_cast<double>(t) - frac;
-            const double windowPos = static_cast<double>(t + HALF_TAPS - 1);
-            const double w = kaiserWindow(windowPos, static_cast<double>(TAPS), KAISER_BETA);
+            
+            const int tableIdx = t + HALF_TAPS - 1;
+            const double w = weights[tableIdx];
             const double s = sinc(x) * w;
             
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
@@ -275,12 +296,18 @@ struct Sinc64Interpolator {
         double phase,
         float& outL, float& outR)
     {
+        static const std::array<double, TAPS> weights = [](){
+            std::array<double, TAPS> w;
+            for(int i=0; i<TAPS; ++i) w[i] = kaiserWindow(static_cast<double>(i), static_cast<double>(TAPS), KAISER_BETA);
+            return w;
+        }();
+
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
         
         double sumL = 0.0;
         double sumR = 0.0;
-        double weightSum = 0.0;  // Track sum of applied filter weights
+        double weightSum = 0.0;
         
         // Unrolled inner loop for better cache behavior
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
@@ -288,16 +315,16 @@ struct Sinc64Interpolator {
             if (sampleIdx < 0 || sampleIdx >= totalFrames) continue;
             
             const double x = static_cast<double>(t) - frac;
-            const double windowPos = static_cast<double>(t + HALF_TAPS - 1);
-            const double w = kaiserWindow(windowPos, static_cast<double>(TAPS), KAISER_BETA);
+            const int tableIdx = t + HALF_TAPS - 1;
+            const double w = weights[tableIdx];
+            
             const double s = sinc(x) * w;
             
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
-            weightSum += s;  // Accumulate the weight for normalization
+            weightSum += s;
         }
         
-        // Normalize by weight sum to prevent gain loss at edges
         if (weightSum > 0.0) {
             sumL /= weightSum;
             sumR /= weightSum;

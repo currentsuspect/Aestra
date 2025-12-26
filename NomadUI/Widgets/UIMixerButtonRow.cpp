@@ -174,7 +174,7 @@ bool UIMixerButtonRow::onMouseEvent(const NUIMouseEvent& event)
             } else if (wasPressed == 1) {
                 m_soloed = !m_soloed;
                 requestInvalidate();
-                if (onSoloToggled) onSoloToggled(m_soloed);
+                if (onSoloToggled) onSoloToggled(m_soloed, event.modifiers);
             } else if (wasPressed == 2) {
                 m_armed = !m_armed;
                 requestInvalidate();

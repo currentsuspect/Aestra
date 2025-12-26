@@ -135,6 +135,7 @@ void AudioSettingsDialog::createUI() {
     m_driverDropdown = std::make_shared<NomadUI::NUIDropdown>();
     m_driverDropdown->setPlaceholderText("Select Audio Driver");
     m_driverDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        if (m_suppressDirtyStateUpdates) return;
         Nomad::Log::info("Driver dropdown changed: index=" + std::to_string(index) + 
                         ", value=" + std::to_string(value) + ", text=" + text);
         m_selectedDriverType = static_cast<Audio::AudioDriverType>(value);
@@ -146,6 +147,7 @@ void AudioSettingsDialog::createUI() {
     m_deviceDropdown = std::make_shared<NomadUI::NUIDropdown>();
     m_deviceDropdown->setPlaceholderText("Select Audio Device");
     m_deviceDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        if (m_suppressDirtyStateUpdates) return;
         m_selectedDeviceId = static_cast<uint32_t>(value);
         markSettingsChanged();
     });
@@ -154,6 +156,7 @@ void AudioSettingsDialog::createUI() {
     m_sampleRateDropdown = std::make_shared<NomadUI::NUIDropdown>();
     m_sampleRateDropdown->setPlaceholderText("Select Sample Rate");
     m_sampleRateDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        if (m_suppressDirtyStateUpdates) return;
         m_selectedSampleRate = static_cast<uint32_t>(value);
         updateLatencyEstimate();
         markSettingsChanged();
@@ -163,6 +166,7 @@ void AudioSettingsDialog::createUI() {
     m_bufferSizeDropdown = std::make_shared<NomadUI::NUIDropdown>();
     m_bufferSizeDropdown->setPlaceholderText("Select Buffer Size");
     m_bufferSizeDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        if (m_suppressDirtyStateUpdates) return;
         m_selectedBufferSize = static_cast<uint32_t>(value);
         updateLatencyEstimate();
         markSettingsChanged();
@@ -1102,6 +1106,13 @@ void AudioSettingsDialog::applySettings() {
         // Get dithering mode from dropdown
         int ditheringValue = m_ditheringDropdown->getSelectedValue();
         qualitySettings.dithering = static_cast<Audio::DitheringMode>(ditheringValue);
+
+        if (m_audioManager) {
+            Audio::DitheringMode selectedDitheringMode = static_cast<Audio::DitheringMode>(m_ditheringDropdown->getSelectedValue());
+            // Only enable dithering if it's not None (implementation simplification for now)
+            // Future improvements: pass the actual mode (Triangular, NoiseShaped) to the driver
+            m_audioManager->setDitheringEnabled(selectedDitheringMode != Audio::DitheringMode::None);
+        }
         
         // Get toggle states
         qualitySettings.removeDCOffset = (m_dcRemovalToggle->getText() == "ON");
@@ -1558,12 +1569,17 @@ void AudioSettingsDialog::renderDialog(NomadUI::NUIRenderer& renderer) {
 	                          11.0f, headerTextColor);
 	    }
     
-    // Error message (if any) - displayed below subtitle with fade animation
+    // Error message (if any) - displayed at bottom left with fade animation
     if (m_errorMessageAlpha > 0.0f && !m_errorMessage.empty()) {
         NomadUI::NUIColor errorColor = NomadUI::NUIColor(1.0f, 0.3f, 0.2f, m_errorMessageAlpha); // Red with fade
-        float errorY = titleBar.bottom() + 27.0f; // Below subtitle
+        
+        float buttonHeight = 32.0f; // From layoutComponents
+        float padding = 20.0f;
+        float errorY = m_dialogBounds.y + m_dialogBounds.height - buttonHeight - padding + 8.0f; // Vertically center with buttons
+        float errorX = m_dialogBounds.x + padding;
+        
         renderer.drawText(m_errorMessage, 
-                         NomadUI::NUIPoint(titleX + 2, errorY), 12, errorColor);
+                         NomadUI::NUIPoint(errorX, errorY), 12, errorColor);
     }
 }
 
@@ -1604,6 +1620,21 @@ void AudioSettingsDialog::stopTestSound() {
     }
     m_cacheInvalidated = true; // Text changed, invalidate cache
     Nomad::Log::info("Test sound stopped - Flag set to FALSE");
+}
+
+
+Nomad::Audio::ResamplingMode AudioSettingsDialog::getSelectedResamplingMode() const {
+    if (m_resamplingDropdown) {
+        return static_cast<Nomad::Audio::ResamplingMode>(m_resamplingDropdown->getSelectedValue());
+    }
+    return Nomad::Audio::ResamplingMode::Medium;
+}
+
+Nomad::Audio::DitheringMode AudioSettingsDialog::getSelectedDitheringMode() const {
+    if (m_ditheringDropdown) {
+        return static_cast<Nomad::Audio::DitheringMode>(m_ditheringDropdown->getSelectedValue());
+    }
+    return Nomad::Audio::DitheringMode::None;
 }
 
 } // namespace Nomad

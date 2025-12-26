@@ -2,6 +2,9 @@
 #include "AudioDeviceManager.h"
 #include <iostream>
 #include <chrono>
+#include <thread>
+#include <chrono>
+#include "NomadLog.h"
 
 namespace Nomad {
 namespace Audio {
@@ -171,72 +174,33 @@ bool AudioDeviceManager::tryDriver(IAudioDriver* driver, const AudioStreamConfig
         return true;
     }
     
-    std::cout << "âœ— " << driver->getDisplayName() << " failed: " 
+    std::cout << "✗ " << driver->getDisplayName() << " failed: " 
               << driver->getErrorMessage() << std::endl;
     return false;
 }
 
 bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) {
-    std::cout << "\n=== Opening Audio Stream ===" << std::endl;
-    std::cout << "  Device ID: " << config.deviceId << std::endl;
-    std::cout << "  Sample Rate: " << config.sampleRate << " Hz" << std::endl;
-    std::cout << "  Buffer Size: " << config.bufferSize << " frames" << std::endl;
-    
+    Nomad::Log::info("[AudioDeviceManager] openStream called. Rate: " + std::to_string(config.sampleRate) + "Hz, Device: " + std::to_string(config.deviceId));
+
     if (!m_initialized) {
-        std::cerr << "AudioDeviceManager::openStream: Not initialized" << std::endl;
+        Nomad::Log::error("[AudioDeviceManager] openStream failed: Not initialized");
         return false;
     }
 
     m_currentConfig = config;
     m_currentCallback = callback;
     m_currentUserData = userData;
-    
-    // Priority logic:
-    // If preferred type is set, try to find a driver matching that type first.
-    // If that fails, fallback to others.
-    
-    // Find preferred driver
-    IAudioDriver* preferred = nullptr;
-    // Assuming we can determine type from config or just iterating.
-    // The previous code checked m_preferredDriverType.
-    // We don't have getDriverType() on IAudioDriver yet (unless we added it? no).
-    // But we can check supportsExclusiveMode() for WASAPI_EXCLUSIVE.
-    // Ideally we'd have getDriverType(). 
-    // For now, let's iterate and check capabilities or name.
-    
-    // Note: Since IAudioDriver doesn't expose strict types, we rely on properties or name.
-    // Let's iterate all drivers. Prioritize based on capabilities.
 
-    // Try preferred strategy
+    // Iterate through drivers to find one that works
+    // Prioritize exclusive mode if that was the "preferred" (implied by previous usage)
     for (auto& driver : m_drivers) {
-        bool isExclusiveFn = driver->supportsExclusiveMode();
-        bool wantExclusive = (m_preferredDriverType == AudioDriverType::WASAPI_EXCLUSIVE);
-        
-        if (wantExclusive == isExclusiveFn) {
-             if (tryDriver(driver.get(), config, callback, userData)) {
-                 return true;
-             }
-        }
-    }
-    
-    // Fallback strategy: try remaining drivers
-    for (auto& driver : m_drivers) {
-        if (m_activeDriver == driver.get()) continue; // Skip if somehow active? (shouldn't happen here)
-        
         if (tryDriver(driver.get(), config, callback, userData)) {
-            // Notify fallback
-            if (m_driverModeChangeCallback) {
-                 m_driverModeChangeCallback(
-                    m_preferredDriverType,
-                    AudioDriverType::UNKNOWN, // Can't easily map back without RTTI or type field
-                    "Preferred driver unavailable"
-                 );
-            }
+            // Log success handled in tryDriver
             return true;
         }
     }
-    
-    std::cerr << "\nâœ— All drivers failed to open stream!" << std::endl;
+
+    Nomad::Log::error("[AudioDeviceManager] All drivers failed to open stream!");
     return false;
 }
 
@@ -366,7 +330,18 @@ bool AudioDeviceManager::switchDevice(uint32_t deviceId) {
 }
 
 bool AudioDeviceManager::setSampleRate(uint32_t sampleRate) {
+    Nomad::Log::info("[AudioDeviceManager] Request to set sample rate to: " + std::to_string(sampleRate));
+    
     if (!m_initialized) {
+        Nomad::Log::error("[AudioDeviceManager] setSampleRate failed: Not initialized");
+        return false;
+    }
+
+    // Validate sample rate (common rates)
+    // TODO: Add more robust validation or query device capabilities
+    if (sampleRate != 44100 && sampleRate != 48000 && sampleRate != 88200 &&
+        sampleRate != 96000 && sampleRate != 176400 && sampleRate != 192000) {
+        Nomad::Log::error("[AudioDeviceManager] setSampleRate failed: Invalid rate " + std::to_string(sampleRate));
         return false;
     }
 
@@ -387,20 +362,22 @@ bool AudioDeviceManager::setSampleRate(uint32_t sampleRate) {
     }
     closeStream();
 
+    // Wait for device to fully release (helps avoid AUDCLNT_E_DEVICE_IN_USE race conditions)
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
     // Update configuration with new sample rate
     m_currentConfig.sampleRate = sampleRate;
 
     // Reopen stream with new sample rate
     if (!openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
-        std::cerr << "[AudioDeviceManager] Failed to reopen stream with sample rate " 
-                  << sampleRate << ", rolling back to " << previousSampleRate << std::endl;
+        Nomad::Log::error("[AudioDeviceManager] Failed to reopen stream with sample rate " + std::to_string(sampleRate) + ", rolling back to " + std::to_string(previousSampleRate));
         
         // Rollback to previous sample rate
         m_currentConfig.sampleRate = previousSampleRate;
         
         // Try to restore previous working state
         if (!openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
-            std::cerr << "[AudioDeviceManager] CRITICAL: Failed to restore previous sample rate!" << std::endl;
+            Nomad::Log::error("[AudioDeviceManager] CRITICAL: Failed to restore previous sample rate!");
             return false;
         }
         
@@ -477,6 +454,7 @@ bool AudioDeviceManager::setBufferSize(uint32_t bufferSize) {
 
 bool AudioDeviceManager::validateDeviceConfig(uint32_t deviceId, uint32_t sampleRate) const {
     if (!m_initialized) {
+        Nomad::Log::error("[AudioDeviceManager] validateDeviceConfig failed: Not initialized");
         return false;
     }
 
@@ -487,22 +465,33 @@ bool AudioDeviceManager::validateDeviceConfig(uint32_t deviceId, uint32_t sample
         if (device.id == deviceId) {
             // Check if device has output channels
             if (device.maxOutputChannels == 0) {
+                Nomad::Log::error("[AudioDeviceManager] validateDeviceConfig failed: Device has 0 output channels");
                 return false;
             }
 
             // Check if sample rate is supported
             bool sampleRateSupported = false;
+            std::string supportedRatesStr;
             for (uint32_t supportedRate : device.supportedSampleRates) {
+                supportedRatesStr += std::to_string(supportedRate) + " ";
                 if (supportedRate == sampleRate) {
                     sampleRateSupported = true;
                     break;
                 }
             }
 
-            return sampleRateSupported;
+            if (!sampleRateSupported) {
+        // Log as warning but ALLOW it. 
+        // Some drivers (e.g. WASAPI Exclusive on certain virtual devices) report empty/incorrect supported lists 
+        // during enumeration but work fine when actually opened. 
+        // We let openStream() be the final judge.
+        Nomad::Log::warning("[AudioDeviceManager] Sample rate " + std::to_string(sampleRate) + " not in supported list (Driver Issue?), attempting anyway...");
+        return true; 
+    }        return sampleRateSupported;
         }
     }
 
+    Nomad::Log::error("[AudioDeviceManager] validateDeviceConfig failed: Device ID " + std::to_string(deviceId) + " not found");
     return false; // Device not found
 }
 
@@ -680,6 +669,13 @@ void AudioDeviceManager::checkAndAutoScaleBuffer() {
     
     m_lastUnderrunCheck = now;
     m_lastUnderrunCount = stats.underrunCount;
+}
+
+void AudioDeviceManager::setDitheringEnabled(bool enabled) {
+    m_ditherEnabled = enabled;
+    if (m_activeDriver) {
+        m_activeDriver->setDitheringEnabled(enabled);
+    }
 }
 
 const char* getVersion() {

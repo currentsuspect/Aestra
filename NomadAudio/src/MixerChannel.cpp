@@ -51,6 +51,12 @@ void MixerChannel::setSolo(bool solo) {
     if (m_mixerBus) m_mixerBus->setSolo(solo);
 }
 
+void MixerChannel::setSoloSafe(bool safe) {
+    m_soloSafe.store(safe);
+    // Solo safe doesn't affect internal bus logic directly, 
+    // it's used by the AudioEngine to decide suppression.
+}
+
 void MixerChannel::processAudio(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate) {
     if (!outputBuffer || numFrames == 0) return;
     if (m_muted.load()) return;

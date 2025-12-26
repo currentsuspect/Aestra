@@ -24,6 +24,7 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackMan
     graph.tracks.reserve(channelCount);
     
     // Create track render states for all mixer channels
+    bool anySoloFound = false;
     for (size_t i = 0; i < channelCount; ++i) {
         auto channel = trackManager.getChannel(i);
         if (!channel) continue;
@@ -35,9 +36,16 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackMan
         trackState.pan = channel->getPan();
         trackState.mute = channel->isMuted();
         trackState.solo = channel->isSoloed();
+        if (trackState.solo) anySoloFound = true;
+        trackState.isSoloSafe = channel->isSoloSafe();
+        
+        // Copy Routing
+        trackState.mainOutputId = channel->getMainOutputId();
+        trackState.sends = channel->getSends();
         
         graph.tracks.push_back(std::move(trackState));
     }
+    graph.anySolo = anySoloFound;
 
     // Populate clips from PlaylistModel
     const auto& playlist = trackManager.getPlaylistModel();
