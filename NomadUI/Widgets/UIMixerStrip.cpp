@@ -196,6 +196,7 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     addChild(m_fader);
 
     m_footer = std::make_shared<UIMixerFooter>();
+    m_footer->onInvalidateRequested = [this]() { invalidateStaticCache(); };
     m_footer->setTrackNumber(m_trackNumber);
     addChild(m_footer);
 
@@ -247,6 +248,12 @@ void UIMixerStrip::layoutChildren()
         y += HEADER_H;
     }
 
+    const bool hasButtons = (m_buttons && m_buttons->isVisible());
+    if (hasButtons) {
+        m_buttons->setBounds(bounds.x, y, bounds.width, BUTTONS_H);
+        y += BUTTONS_H;
+    }
+
     if (m_trimKnob && m_trimKnob->isVisible()) {
         m_trimKnob->setBounds(bounds.x, y, bounds.width, KNOB_H);
         y += KNOB_H;
@@ -260,12 +267,6 @@ void UIMixerStrip::layoutChildren()
     if (m_panKnob && m_panKnob->isVisible()) {
         m_panKnob->setBounds(bounds.x, y, bounds.width, KNOB_H);
         y += KNOB_H;
-    }
-
-    const bool hasButtons = (m_buttons && m_buttons->isVisible());
-    if (hasButtons) {
-        m_buttons->setBounds(bounds.x, y, bounds.width, BUTTONS_H);
-        y += BUTTONS_H;
     }
 
     const bool hasFooter = (m_footer && m_footer->isVisible());
@@ -494,6 +495,9 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
         return;
     }
 
+    // Static caching Disabled due to HiDPI blurriness issues.
+    // The performance impact of redrawing vector UI is minimal on modern systems.
+    /*
     if (m_staticCacheInvalidated) {
         renderer.invalidateCache(m_staticCacheId);
         m_staticCacheInvalidated = false;
@@ -515,6 +519,7 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
         }
         return;
     }
+    */
 
     renderChildren(renderer);
     if (channel && channel->muted) {

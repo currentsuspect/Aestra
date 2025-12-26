@@ -179,9 +179,17 @@ public:
     void setQualitySettings(const AudioQualitySettings&) {}
     
     // Routing Accessors
+    // Routing Accessors
     uint32_t getMainOutputId() const { return m_mainOutputId; }
-    const std::vector<AudioRoute>& getSends() const { return m_sends; }
-    void addSend(const AudioRoute& route) { m_sends.push_back(route); }
+    
+    // Thread-safe Send Management
+    std::vector<AudioRoute> getSends() const; // Returns copy
+    void addSend(const AudioRoute& route);
+    void removeSend(int index);
+    void setSendLevel(int index, float level);
+    void setSendPan(int index, float pan);
+    void setSendDestination(int index, uint32_t destId);
+
     void setMainOutputId(uint32_t id) { m_mainOutputId = id; }
 
 private:
@@ -207,6 +215,8 @@ private:
     uint32_t m_mainOutputId{0xFFFFFFFF};
     
     // Aux Sends / Direct Outs
+    // Aux Sends / Direct Outs
+    mutable std::mutex m_sendMutex;
     std::vector<AudioRoute> m_sends;
 };
 

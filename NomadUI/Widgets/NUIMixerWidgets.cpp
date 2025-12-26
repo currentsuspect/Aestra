@@ -4,6 +4,7 @@
 #include "../Graphics/NUIRenderer.h"
 #include "../Core/NUIThemeSystem.h"
 #include <algorithm>
+#include <cmath>
 
 namespace NomadUI {
 
@@ -124,21 +125,129 @@ void InsertSlot::setOnActivate(std::function<void()> callback)
     onActivate_ = std::move(callback);
 }
 
-SendSlot::SendSlot()
-    : amount_(0.0f)
+
+UIMixerSend::UIMixerSend()
 {
+    destSelector_ = std::make_shared<UIItemSelector>();
+    
+    // Forward selection changes
+    destSelector_->setOnSelectionChanged([this](int index) {
+        if (onDestChanged_ && index >= 0 && index < static_cast<int>(destinations_.size())) {
+            onDestChanged_(destinations_[index].first);
+        }
+    });
+
+    levelKnob_ = std::make_shared<UIMixerKnob>(UIMixerKnobType::Send);
+    levelKnob_->setValue(0.7f); // Unity-ish
+    levelKnob_->onValueChanged = [this](float v) {
+        if (onLevelChanged_) onLevelChanged_(v);
+    };
+
+    deleteButton_ = std::make_shared<NUIButton>("");
+    deleteButton_->setStyle(NUIButton::Style::Secondary); // Visible border/bg
+    
+    auto trashIcon = NUIIcon::createTrashIcon();
+    trashIcon->setIconSize(14, 14); 
+    trashIcon->setBounds({3, 3, 14, 14});
+    trashIcon->setColor(NUIColor::white()); // Force white icon
+    
+    deleteButton_->addChild(trashIcon);
+    // Red-ish background for visibility/danger
+    deleteButton_->setBackgroundColor(NUIColor::fromHex(0x502020)); 
+    deleteButton_->setBorderEnabled(true);
+
+    deleteButton_->setOnClick([this]() {
+        if (onDelete_) onDelete_();
+    });
+
+    addChild(destSelector_);
+    addChild(levelKnob_);
+    addChild(deleteButton_);
 }
 
-void SendSlot::onRender(NUIRenderer& renderer)
+void UIMixerSend::onRender(NUIRenderer& renderer)
 {
-    (void)renderer;
+    // Layout: Knob on left, Selector on right
+    auto b = getBounds();
+    const float knobSize = b.height - 4.0f;
+    
+    NUIRect knobRect = {b.x + 2.0f, b.y + 2.0f, knobSize, knobSize};
+    
+    float comboX = b.x + knobSize + 8.0f;
+    float deleteBtnSize = 20.0f;
+    float maxComboWidth = 120.0f;
+    float availableWidth = b.width - (knobSize + 10.0f) - (deleteBtnSize + 4.0f); // Reserve space for delete button
+    float comboWidth = (availableWidth > maxComboWidth) ? maxComboWidth : availableWidth;
+    
+    NUIRect comboRect = {comboX, b.y + 2.0f, comboWidth, b.height - 4.0f};
+    // Ensure button has integer coordinates for crisp rendering
+    float delX = std::floor(comboX + comboWidth + 4.0f);
+    float delY = std::floor(b.y + (b.height - deleteBtnSize) * 0.5f);
+    NUIRect deleteRect = {delX, delY, deleteBtnSize, deleteBtnSize};
+
+    levelKnob_->setBounds(knobRect);
+    destSelector_->setBounds(comboRect);
+    deleteButton_->setBounds(deleteRect);
+
+    renderChildren(renderer);
 }
 
-void SendSlot::setAmount(float amount)
+void UIMixerSend::setDestination(uint32_t destId, const std::string& name)
 {
-    amount_ = std::clamp(amount, 0.0f, 1.0f);
-    repaint();
+    // Find index for destId
+    for (size_t i = 0; i < destinations_.size(); ++i) {
+        if (destinations_[i].first == destId) {
+            destSelector_->setSelectedIndex(static_cast<int>(i));
+            return;
+        }
+    }
 }
+
+uint32_t UIMixerSend::getDestinationId() const
+{
+    int idx = destSelector_->getSelectedIndex();
+    if (idx >= 0 && idx < static_cast<int>(destinations_.size())) {
+        return destinations_[idx].first;
+    }
+    return 0; // Default to 0? Or maybe verify valid?
+}
+
+void UIMixerSend::setLevel(float level)
+{
+    levelKnob_->setValue(level);
+}
+
+float UIMixerSend::getLevel() const
+{
+    return levelKnob_->getValue();
+}
+
+void UIMixerSend::setAvailableDestinations(const std::vector<std::pair<uint32_t, std::string>>& dests)
+{
+    destinations_ = dests;
+    std::vector<std::string> items;
+    items.reserve(dests.size());
+    for (const auto& p : dests) {
+        items.push_back(p.second);
+    }
+    destSelector_->setItems(items);
+}
+
+void UIMixerSend::setOnDestinationChanged(std::function<void(uint32_t)> cb)
+{
+    onDestChanged_ = std::move(cb);
+}
+
+void UIMixerSend::setOnLevelChanged(std::function<void(float)> cb)
+{
+    onLevelChanged_ = std::move(cb);
+}
+
+void UIMixerSend::setOnDelete(std::function<void()> cb)
+{
+    onDelete_ = std::move(cb);
+}
+
 
 MeterStrip::MeterStrip()
 {
@@ -178,7 +287,7 @@ void ChannelStrip::addInsert()
 
 void ChannelStrip::addSend()
 {
-    auto slot = std::make_shared<SendSlot>();
+    auto slot = std::make_shared<UIMixerSend>();
     sends_.push_back(slot);
     addChild(slot);
 }

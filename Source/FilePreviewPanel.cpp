@@ -7,7 +7,44 @@
 #include <filesystem>
 #include <iostream>
 
+#include "../NomadAudio/include/MiniAudioDecoder.h"
+#include "../NomadAudio/include/AudioFileValidator.h"
+
 namespace NomadUI {
+
+namespace {
+
+// Generate waveform overview from decoded audio samples
+std::vector<float> generateWaveformFromAudio(const std::vector<float>& samples, 
+                                              uint32_t numChannels, 
+                                              size_t targetSize = 256) {
+    std::vector<float> waveform(targetSize, 0.0f);
+    if (samples.empty() || numChannels == 0) return waveform;
+    
+    size_t totalFrames = samples.size() / numChannels;
+    float framesPerBin = static_cast<float>(totalFrames) / targetSize;
+    
+    for (size_t bin = 0; bin < targetSize; ++bin) {
+        size_t startFrame = static_cast<size_t>(bin * framesPerBin);
+        size_t endFrame = static_cast<size_t>((bin + 1) * framesPerBin);
+        endFrame = std::min(endFrame, totalFrames);
+        
+        float maxAmp = 0.0f;
+        for (size_t frame = startFrame; frame < endFrame; ++frame) {
+            // Mix all channels for mono-sum peak
+            float sum = 0.0f;
+            for (uint32_t ch = 0; ch < numChannels; ++ch) {
+                sum += std::abs(samples[frame * numChannels + ch]);
+            }
+            maxAmp = std::max(maxAmp, sum / numChannels);
+        }
+        waveform[bin] = std::min(1.0f, maxAmp);
+    }
+    
+    return waveform;
+}
+
+} // namespace
 
 FilePreviewPanel::FilePreviewPanel() {
     setId("FilePreviewPanel");
@@ -22,7 +59,13 @@ FilePreviewPanel::FilePreviewPanel() {
 
 void FilePreviewPanel::setFile(const FileItem* file) {
     currentFile_ = file;
-    waveformData_.clear();
+    {
+        std::lock_guard<std::mutex> lock(waveformMutex_);
+        waveformData_.clear();
+    }
+    
+    // Increment generation to invalidate pending tasks
+    currentGeneration_++;
 
     if (currentFile_ && !currentFile_->isDirectory) {
         std::string ext = std::filesystem::path(currentFile_->path).extension().string();
@@ -38,7 +81,11 @@ void FilePreviewPanel::setFile(const FileItem* file) {
 
 void FilePreviewPanel::clear() {
     currentFile_ = nullptr;
-    waveformData_.clear();
+    {
+        std::lock_guard<std::mutex> lock(waveformMutex_);
+        waveformData_.clear();
+    }
+    currentGeneration_++;
     setDirty(true);
 }
 
@@ -70,16 +117,43 @@ void FilePreviewPanel::setDuration(double seconds) {
 }
 
 void FilePreviewPanel::generateWaveform(const std::string& path, size_t fileSize) {
-    // Generate placeholder waveform (simple sine pattern for demo)
-    // Same logic as was in FileBrowser::selectFile
-    waveformData_.resize(256);
-    for (size_t s = 0; s < waveformData_.size(); ++s) {
-        // Create a pseudo-random pattern based on file size for variety
-        float t = static_cast<float>(s) / waveformData_.size();
-        float wave = std::sin(t * 20.0f + static_cast<float>(fileSize % 1000) * 0.01f);
-        float envelope = std::sin(t * 3.14159f); // Fade in/out
-        float noise = std::sin(t * 47.0f + t * 123.0f) * 0.3f; // Add variation
-        waveformData_[s] = std::abs(wave * envelope + noise) * 0.8f + 0.1f;
+    isLoading_ = true;
+    loadingAnimationTime_ = 0.0f;
+    uint64_t gen = currentGeneration_.load();
+
+    std::thread([this, path, gen]() {
+        waveformWorker(path, gen);
+    }).detach();
+}
+
+void FilePreviewPanel::waveformWorker(const std::string& path, uint64_t generation) {
+    // Check cancellation early
+    if (generation != currentGeneration_.load(std::memory_order_acquire)) return;
+
+    std::vector<float> audioData;
+    uint32_t sampleRate = 0;
+    uint32_t numChannels = 0;
+
+    // Decode audio file (blocking)
+    bool success = Nomad::Audio::decodeAudioFile(path, audioData, sampleRate, numChannels);
+
+    // Check cancellation after decode
+    if (generation != currentGeneration_.load(std::memory_order_acquire)) return;
+
+    if (success && !audioData.empty()) {
+        // Generate visualization data
+        std::vector<float> waveform = generateWaveformFromAudio(audioData, numChannels, 1024);
+        
+        std::lock_guard<std::mutex> lock(waveformMutex_);
+        if (generation == currentGeneration_.load(std::memory_order_acquire)) {
+            waveformData_ = std::move(waveform);
+            isLoading_ = false;
+        }
+    } else {
+        std::lock_guard<std::mutex> lock(waveformMutex_);
+        if (generation == currentGeneration_.load(std::memory_order_acquire)) {
+            isLoading_ = false;
+        }
     }
 }
 
@@ -220,7 +294,16 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     renderer.fillRoundedRect(waveformBounds, 4.0f, theme.getColor("waveformBackground"));
     
     // Draw waveform or loading state
-    if (isLoading_) {
+    // Draw waveform or loading state
+    bool loading = false;
+    bool hasData = false;
+    {
+        std::lock_guard<std::mutex> lock(waveformMutex_);
+        loading = isLoading_;
+        hasData = !waveformData_.empty();
+    }
+
+    if (loading) {
         // === LOADING SPINNER ===
         float centerX = waveformBounds.x + waveformBounds.width * 0.5f;
         float centerY = waveformBounds.y + waveformBounds.height * 0.5f;
@@ -245,8 +328,12 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
             );
         }
         
-    } else if (!waveformData_.empty() && waveformBounds.width > 0 && waveformBounds.height > 0) {
+    } else if (hasData && waveformBounds.width > 0 && waveformBounds.height > 0) {
         // === WAVEFORM RENDERING ===
+        std::lock_guard<std::mutex> lock(waveformMutex_);
+        // Double check data is still there
+        if (waveformData_.empty()) return;
+
         NUIColor waveformFill = theme.getColor("waveformFill");
         
         float centerY = waveformBounds.y + waveformBounds.height * 0.5f;

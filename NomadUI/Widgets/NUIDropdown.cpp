@@ -110,6 +110,15 @@ void NUIDropdown::setSelectedIndex(int index) {
     }
 }
 
+void NUIDropdown::setSelectedByValue(int value) {
+    for (int i = 0; i < static_cast<int>(items_.size()); ++i) {
+        if (items_[i]->getValue() == value) {
+            setSelectedIndex(i);
+            return;
+        }
+    }
+}
+
 void NUIDropdown::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
 

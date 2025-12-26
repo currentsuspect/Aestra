@@ -11,6 +11,15 @@ MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
     , m_trackManager(std::move(trackManager))
 {
     m_viewModel = std::make_shared<Nomad::MixerViewModel>();
+    
+    // Wire up callbacks to TrackManager
+    m_viewModel->setOnGraphDirty([this]() {
+        if (m_trackManager) m_trackManager->markGraphDirty();
+    });
+    m_viewModel->setOnProjectModified([this]() {
+        if (m_trackManager) m_trackManager->markModified();
+    });
+
     m_newMixer = std::make_shared<NomadUI::UIMixerPanel>(
         m_viewModel,
         m_trackManager ? m_trackManager->getMeterSnapshots() : nullptr,

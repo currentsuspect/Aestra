@@ -357,14 +357,14 @@ void TrackManager::processAudio(float* outputBuffer, uint32_t numFrames, double 
 void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate, const PlaylistRuntimeSnapshot* snapshot) {
     std::lock_guard<std::mutex> lock(m_channelMutex);
     
-    // PrepareStep Id Master Buffer
+    // === PASS 0: Clear all channel buffers ===
+    for (size_t i = 0; i < m_channels.size() && i < m_channelBuffers.size(); ++i) {
+        std::memset(m_channelBuffers[i].data(), 0, numFrames * 2 * sizeof(float));
+    }
     std::memset(outputBuffer, 0, numFrames * 2 * sizeof(float));
     
-    // === PATTERN PLAYBACK: Process RT events ===
-    // NOTE: For now, pattern engine just counts events. 
-    // TODO: Implement MixerChannel MIDI handling
+    // === PATTERN PLAYBACK ===
     if (!m_channels.empty()) {
-        // For MVP, just call with nullptr - we'll implement MIDI handling next
         m_patternEngine->processAudio(m_currentSampleFrame.load(), numFrames, nullptr, 0);
     }
     
@@ -372,47 +372,91 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
     SampleIndex winStart = static_cast<SampleIndex>(m_positionSeconds.load() * outputSampleRate);
     SampleIndex winEnd = winStart + numFrames;
 
-    // Process all lanes and clips in the snapshot
+    // === PASS 1: Mix clips into per-channel buffers ===
+    size_t laneIndex = 0;
     for (const auto& lane : snapshot->lanes) {
-        if (lane.muted) continue;
+        if (lane.muted || laneIndex >= m_channelBuffers.size()) {
+            laneIndex++;
+            continue;
+        }
+        
+        float* channelBuf = m_channelBuffers[laneIndex].data();
         
         for (const auto& clip : lane.clips) {
             if (clip.muted) continue;
             if (!clip.overlaps(winStart, winEnd)) continue;
-
-            // Resolve Mixer Channel (stub: for now we mix into master or assume 1:1)
-            // In full implementation, we'd lookup clip.mixerChannelId
             
-            // Render Audio Pattern component
             if (clip.isAudio()) {
-                // Calculate local offset into clip
                 SampleIndex clipOffset = std::max(SampleIndex(0), winStart - clip.startTime);
                 SampleIndex framesToProcess = std::min(SampleIndex(numFrames), clip.getEndTime() - winStart);
                 SampleIndex bufferOffset = std::max(SampleIndex(0), clip.startTime - winStart);
                 
-                // Mix into master outputBuffer
                 for (SampleIndex i = 0; i < framesToProcess; ++i) {
                     SampleIndex frameIdx = (clip.sourceStart + clipOffset + i) % clip.audioData->numFrames;
                     SampleIndex dstIdx = (bufferOffset + i) * 2;
                     
                     float gain = clip.getGainAt(winStart + bufferOffset + i);
-                    outputBuffer[dstIdx] += clip.audioData->getSample(frameIdx, 0) * gain;
+                    channelBuf[dstIdx] += clip.audioData->getSample(frameIdx, 0) * gain;
                     if (clip.sourceChannels > 1) {
-                        outputBuffer[dstIdx + 1] += clip.audioData->getSample(frameIdx, 1) * gain;
+                        channelBuf[dstIdx + 1] += clip.audioData->getSample(frameIdx, 1) * gain;
                     } else {
-                        outputBuffer[dstIdx + 1] += clip.audioData->getSample(frameIdx, 0) * gain;
+                        channelBuf[dstIdx + 1] += clip.audioData->getSample(frameIdx, 0) * gain;
                     }
                 }
             }
         }
+        laneIndex++;
     }
 
-    // Apply Master Metering (v3.0 simplified)
+    // === PASS 2: Apply Sends ===
+    // Build channel ID -> index map for fast lookup
+    std::unordered_map<uint32_t, size_t> channelIdToIndex;
+    for (size_t i = 0; i < m_channels.size(); ++i) {
+        channelIdToIndex[m_channels[i]->getChannelId()] = i;
+    }
+    
+    for (size_t srcIdx = 0; srcIdx < m_channels.size() && srcIdx < m_channelBuffers.size(); ++srcIdx) {
+        auto sends = m_channels[srcIdx]->getSends(); // Thread-safe copy
+        
+        for (const auto& send : sends) {
+            auto it = channelIdToIndex.find(send.targetChannelId);
+            if (it == channelIdToIndex.end()) continue;
+            
+            size_t dstIdx = it->second;
+            if (dstIdx >= m_channelBuffers.size()) continue;
+            
+            float* srcBuf = m_channelBuffers[srcIdx].data();
+            float* dstBuf = m_channelBuffers[dstIdx].data();
+            float sendGain = send.gain;
+            
+            for (uint32_t i = 0; i < numFrames * 2; ++i) {
+                dstBuf[i] += srcBuf[i] * sendGain;
+            }
+        }
+    }
+
+    // === PASS 3: Sum channels to master with volume/pan/mute ===
+    for (size_t i = 0; i < m_channels.size() && i < m_channelBuffers.size(); ++i) {
+        auto& channel = m_channels[i];
+        if (channel->isMuted()) continue;
+        
+        float vol = channel->getVolume();
+        float pan = channel->getPan(); // -1 to +1
+        float panL = std::min(1.0f, 1.0f - pan);
+        float panR = std::min(1.0f, 1.0f + pan);
+        
+        float* srcBuf = m_channelBuffers[i].data();
+        for (uint32_t j = 0; j < numFrames; ++j) {
+            outputBuffer[j * 2] += srcBuf[j * 2] * vol * panL;
+            outputBuffer[j * 2 + 1] += srcBuf[j * 2 + 1] * vol * panR;
+        }
+    }
+
+    // Metering and Transport Update
     if (m_meterSnapshotsRaw) {
         // Metering logic...
     }
 
-    // Transport Update
     if (m_isPlaying.load()) {
         double newPos = m_positionSeconds.load() + (numFrames / outputSampleRate);
         m_positionSeconds.store(newPos);

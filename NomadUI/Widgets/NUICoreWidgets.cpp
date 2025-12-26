@@ -435,5 +435,112 @@ int NUITabBar::hitTestTab(int x, int y) const
     return index;
 }
 
+
+NUIComboBox::NUIComboBox() = default;
+
+void NUIComboBox::onRender(NUIRenderer& renderer)
+{
+    if (!isVisible()) return;
+
+    const auto bounds = getBounds();
+    auto& theme = NUIThemeManager::getInstance();
+
+    const auto bg = active_ ? theme.getColor("surfaceRaised") : theme.getColor("inputBackground");
+    const auto border = active_ ? theme.getColor("primary") : theme.getColor("border");
+    const auto text = isEnabled() ? theme.getColor("textPrimary") : theme.getColor("textDisabled");
+
+    renderer.fillRoundedRect(bounds, 4.0f, bg);
+    renderer.strokeRoundedRect(bounds, 4.0f, 1.0f, border);
+
+    // Text
+    std::string label = getSelectedLabel();
+    if (label.empty()) label = placeholder_;
+    
+    // Reserve space for arrow
+    NUIRect textRect = bounds;
+    textRect.width -= 20.0f;
+    textRect.x += 8.0f;
+    
+    renderer.drawText(label, {textRect.x, textRect.y + (textRect.height - 14.0f) * 0.5f}, 12.0f, text);
+
+    // Arrow
+    NUIRect arrowRect = bounds;
+    arrowRect.x = bounds.right() - 20.0f;
+    arrowRect.width = 20.0f;
+    
+    // Simple down arrow geometry
+    float cy = arrowRect.center().y;
+    float cx = arrowRect.center().x;
+    renderer.drawLine({cx - 4.0f, cy - 2.0f}, {cx, cy + 2.0f}, 1.5f, text.withAlpha(0.7f));
+    renderer.drawLine({cx, cy + 2.0f}, {cx + 4.0f, cy - 2.0f}, 1.5f, text.withAlpha(0.7f));
+}
+
+bool NUIComboBox::onMouseEvent(const NUIMouseEvent& event)
+{
+    if (!isEnabled() || !isVisible()) return false;
+
+    if (getBounds().contains(event.position)) {
+        if (event.pressed && event.button == NUIMouseButton::Left) {
+            active_ = !active_;
+            if (active_) showPopup();
+            repaint();
+            return true;
+        }
+    }
+    return false;
+}
+
+void NUIComboBox::setItems(const std::vector<Item>& items)
+{
+    items_ = items;
+    // Validate selection
+    if (!selectedId_.empty()) {
+        bool found = false;
+        for (const auto& i : items_) if (i.id == selectedId_) found = true;
+        if (!found) selectedId_.clear();
+    }
+    repaint();
+}
+
+void NUIComboBox::setSelectedId(const std::string& id)
+{
+    if (selectedId_ == id) return;
+    selectedId_ = id;
+    repaint();
+    if (onSelectionChanged_) onSelectionChanged_(selectedId_);
+}
+
+std::string NUIComboBox::getSelectedLabel() const
+{
+    for (const auto& item : items_) {
+        if (item.id == selectedId_) return item.label;
+    }
+    return "";
+}
+
+void NUIComboBox::setOnSelectionChanged(std::function<void(const std::string&)> callback)
+{
+    onSelectionChanged_ = std::move(callback);
+}
+
+void NUIComboBox::showPopup()
+{
+    // For now, toggle simple cycling interactions or log because sophisticated windowing 
+    // overlays require access to a root layer not exposed here.
+    // In a real implementation, this would spawn a NUIPopupMenu at screen coordinates.
+    // Temporary simulation: Cycle through items for testing
+    if (items_.empty()) return;
+
+    auto it = std::find_if(items_.begin(), items_.end(), [&](const Item& i){ return i.id == selectedId_; });
+    size_t idx = 0;
+    if (it != items_.end()) {
+        idx = std::distance(items_.begin(), it) + 1;
+    }
+    if (idx >= items_.size()) idx = 0;
+    
+    setSelectedId(items_[idx].id);
+    active_ = false; // Auto-close
+}
+
 } // namespace NomadUI
 

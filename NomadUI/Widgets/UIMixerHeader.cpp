@@ -5,6 +5,7 @@
 #include "../Graphics/NUIRenderer.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace NomadUI {
 
@@ -90,13 +91,13 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     const float routeFont = m_isMaster ? 10.0f : 9.0f;
 
     // Name (top)
-    NUIRect nameRect{textRect.x, textRect.y + 2.0f, textRect.width, textRect.height * 0.6f};
+    NUIRect nameRect{textRect.x, std::floor(textRect.y + 2.0f), textRect.width, textRect.height * 0.6f};
     renderer.drawTextCentered(m_name, nameRect, nameFont, m_selected ? m_selectedText : m_text);
 
     // Route (bottom)
     if (!m_route.empty()) {
         const float routeH = m_isMaster ? 14.0f : 12.0f;
-        NUIRect routeRect{textRect.x, bounds.y + bounds.height - routeH, textRect.width, routeH};
+        NUIRect routeRect{textRect.x, std::floor(bounds.y + bounds.height - routeH), textRect.width, routeH};
         renderer.drawTextCentered(m_route, routeRect, routeFont, m_textSecondary);
     }
 }

@@ -1119,8 +1119,43 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
                  }
              }
              
-             // Note: Sends would be processed here similarly (AudioRoute logic)
-             // Phase 4 task.
+             // --- Process Sends ---
+             for (const auto& send : tr.sends) {
+                 if (send.mute) continue;
+
+                 double sendGainL = static_cast<double>(send.gain);
+                 double sendGainR = static_cast<double>(send.gain);
+                 
+                 // Apply Send Pan (Approximated if mono source, or balance if stereo)
+                 const double panClamped = clampD(static_cast<double>(send.pan), -1.0, 1.0);
+                 const double angle = (panClamped + 1.0) * QUARTER_PI_D;
+                 sendGainL *= std::cos(angle);
+                 sendGainR *= std::sin(angle);
+
+                 if (send.targetChannelId == 0xFFFFFFFF) {
+                     // Route to Master
+                     RuntimeConnection toMaster;
+                     toMaster.destinationBufferL = m_masterBufferD.data();
+                     toMaster.destinationBufferR = m_masterBufferD.data() + 1;
+                     toMaster.stride = 2;
+                     toMaster.gainL = sendGainL;
+                     toMaster.gainR = sendGainR;
+                     rt.activeConnections.push_back(toMaster);
+                 } else {
+                     if (slotMap) {
+                         uint32_t destSlot = slotMap->getSlotIndex(send.targetChannelId);
+                         if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < m_trackBuffersD.size()) {
+                             RuntimeConnection toTrack;
+                             toTrack.destinationBufferL = m_trackBuffersD[destSlot].data();
+                             toTrack.destinationBufferR = m_trackBuffersD[destSlot].data() + 1;
+                             toTrack.stride = 2;
+                             toTrack.gainL = sendGainL;
+                             toTrack.gainR = sendGainR;
+                             rt.activeConnections.push_back(toTrack);
+                         }
+                     }
+                 }
+             }
              
              targetOrder.push_back(rt);
         }
@@ -1267,28 +1302,29 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
                 double* destL = conn.destinationBufferL;
                 double* destR = conn.destinationBufferR;
                 const size_t stride = conn.stride;
-                
-                // Active connections are Unity Gain (1.0) because Post-Fader params
-                // were already applied to selfBuffer (Section B).
+                const double gainL = conn.gainL;
+                const double gainR = conn.gainR;
                 
                 // SIMD-friendly loop
                 // Buffer layout: Interleaved [L, R, L, R...]
                 for (uint32_t i = 0; i < numFrames; ++i) {
-                    destL[i * stride] += selfL[i * 2];
-                    destR[i * stride] += selfR[i * 2];
+                    destL[i * stride] += selfL[i * 2] * gainL;
+                    destR[i * stride] += selfR[i * 2] * gainR;
                 }
             }
+            
+            // D. Clear Buffer for next block (Latency/Loop Support)
+            std::memset(track.selfBuffer, 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
         }
     }
     
     // Helper to render clips for a specific track into its buffer
     // Extracted from original renderGraph logic
     void AudioEngine::renderClipAudio(double* outputBuffer, TrackRTState& state, uint32_t trackIndex, const AudioGraph& graph, uint32_t numFrames) {
-        // Clear track buffer first
-        std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
+        // NOTE: outputBuffer is NOT cleared here. It is cleared at start of renderGraph.
+        // This allows sends to accumulate into this buffer before we add clips.
         
         // Find the graph track corresponding to this RT state
-        // usage of passed trackIndex
         if (trackIndex >= graph.tracks.size()) return;
         const auto& track = graph.tracks[trackIndex];
         

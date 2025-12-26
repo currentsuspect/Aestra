@@ -79,6 +79,9 @@ void AudioVisualizer::onRender(NUIRenderer& renderer) {
         case AudioVisualizationMode::CompactWaveform:
             renderCompactWaveform(renderer);
             break;
+        case AudioVisualizationMode::ArrangementWaveform:
+            renderArrangementWaveform(renderer);
+            break;
     }
 }
 
@@ -296,6 +299,19 @@ void AudioVisualizer::setShowStereo(bool showStereo) {
 
 void AudioVisualizer::setShowPeakHold(bool showPeakHold) {
     showPeakHold_ = showPeakHold;
+    setDirty(true);
+}
+
+void AudioVisualizer::setArrangementWaveform(std::shared_ptr<Nomad::Audio::WaveformCache> cache, double duration, double clipStartTime, double sampleRate) {
+    arrangementWaveform_ = cache;
+    projectDuration_ = duration;
+    clipStartTime_ = clipStartTime;
+    waveformSampleRate_ = sampleRate;
+    setDirty(true);
+}
+
+void AudioVisualizer::setTransportPosition(double seconds) {
+    transportPosition_.store(seconds, std::memory_order_relaxed);
     setDirty(true);
 }
 
@@ -777,6 +793,99 @@ void AudioVisualizer::renderCompactWaveform(NUIRenderer& renderer) {
     }
 
     renderer.drawPolyline(points.data(), static_cast<int>(points.size()), 1.5f, waveColor);
+}
+
+void AudioVisualizer::renderArrangementWaveform(NUIRenderer& renderer) {
+    NUIRect bounds = getBounds();
+    if (bounds.isEmpty()) return;
+    
+    const float centerY = bounds.y + bounds.height * 0.5f;
+    
+    // Draw subtle center line
+    renderer.drawLine(NUIPoint(bounds.x, centerY),
+                      NUIPoint(bounds.x + bounds.width, centerY),
+                      1.0f, gridColor_.withAlpha(0.15f));
+    
+    // If no arrangement waveform, show placeholder animation
+    if (!arrangementWaveform_ || !arrangementWaveform_->isReady() || projectDuration_ <= 0.0) {
+        float t = 0.5f + 0.5f * std::sin(animationTime_ * 1.2f);
+        NUIColor lineColor = NUIColor::lerp(primaryColor_, secondaryColor_, t).withAlpha(0.3f);
+        renderer.drawLine(NUIPoint(bounds.x, centerY), 
+                         NUIPoint(bounds.x + bounds.width, centerY), 
+                         2.0f, lineColor);
+        return;
+    }
+    
+    // === SCROLLING WAVEFORM ===
+    // Shows the waveform scrolling left as playback advances.
+    
+    double position = transportPosition_.load(std::memory_order_relaxed);
+    
+    // Convert timeline position to clip-relative position
+    // The waveform cache is indexed from 0, but the clip may start at a later timeline position
+    double clipRelativePos = position - clipStartTime_;
+    
+    // Ultra-short window = super tight, immediate feel
+    double windowDuration = 0.5; // 0.5 seconds for tight scrolling
+    
+    // === Show PAST audio (clip-relative) ===
+    // Window shows what JUST PLAYED, with current position at the RIGHT edge.
+    double windowEnd = clipRelativePos;
+    double windowStart = clipRelativePos - windowDuration;
+    
+    // Clamp to valid clip range (0 to clip duration)
+    if (windowEnd < 0.0) return; // Haven't reached clip yet
+    windowStart = std::max(0.0, windowStart);
+    windowEnd = std::max(windowStart + 0.01, windowEnd);
+    
+    // Convert to samples using the actual waveform sample rate
+    Nomad::Audio::SampleIndex startSample = static_cast<Nomad::Audio::SampleIndex>(windowStart * waveformSampleRate_);
+    Nomad::Audio::SampleIndex endSample = static_cast<Nomad::Audio::SampleIndex>(windowEnd * waveformSampleRate_);
+    
+    if (endSample <= startSample) return;
+    
+    // Get peaks for the visible range
+    uint32_t numPixels = static_cast<uint32_t>(bounds.width);
+    std::vector<Nomad::Audio::WaveformPeak> peaks;
+    arrangementWaveform_->getPeaksForRange(0, startSample, endSample, numPixels, peaks);
+    
+    if (peaks.empty()) return;
+    
+    // Animated color blend (cyan/magenta gradient)
+    float t = 0.5f + 0.5f * std::sin(animationTime_ * 1.4f);
+    NUIColor waveColor = NUIColor::lerp(primaryColor_, secondaryColor_, t);
+    
+    // Energy-based glow from current audio output
+    float energy = (leftRMSSmoothed_.load() + rightRMSSmoothed_.load()) * 0.5f;
+    float glowIntensity = std::clamp(energy * 2.5f, 0.5f, 1.0f);
+    
+    const float halfH = bounds.height * 0.42f;
+    
+    // Render waveform bars - rightmost bars (newest audio) are brighter
+    for (size_t i = 0; i < peaks.size(); ++i) {
+        float x = bounds.x + static_cast<float>(i);
+        float minY = centerY - peaks[i].min * halfH;
+        float maxY = centerY - peaks[i].max * halfH;
+        
+        // Ensure min < max for drawing
+        if (minY > maxY) std::swap(minY, maxY);
+        
+        // Position-based intensity: right side (current) is brighter
+        float normalizedPos = static_cast<float>(i) / static_cast<float>(peaks.size());
+        float positionGlow = 0.4f + 0.6f * normalizedPos; // 40% to 100% based on position
+        float alpha = glowIntensity * positionGlow;
+        
+        // Glow layer for rightmost bars (current audio)
+        if (normalizedPos > 0.8f) {
+            float glowStrength = (normalizedPos - 0.8f) / 0.2f; // 0 to 1 in last 20%
+            renderer.drawLine(NUIPoint(x, minY), NUIPoint(x, maxY), 
+                             3.0f, waveColor.withAlpha(0.3f * glowStrength * glowIntensity));
+        }
+        
+        // Main waveform bar
+        renderer.drawLine(NUIPoint(x, minY), NUIPoint(x, maxY), 
+                         1.5f, waveColor.withAlpha(alpha));
+    }
 }
 
 void AudioVisualizer::renderLevelBar(NUIRenderer& renderer, const NUIRect& bounds, float level, float peak, const NUIColor& color) {

@@ -7,6 +7,9 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <mutex>
+#include <atomic>
+#include <thread>
 
 namespace NomadUI {
 
@@ -35,15 +38,20 @@ public:
 
 private:
     void generateWaveform(const std::string& path, size_t fileSize);
+    void waveformWorker(const std::string& path, uint64_t generation);
 
     const FileItem* currentFile_ = nullptr;
     std::vector<float> waveformData_;
+    mutable std::mutex waveformMutex_;
     
     bool isPlaying_ = false;
     bool isLoading_ = false;
     float loadingAnimationTime_ = 0.0f;
     double playheadPosition_ = 0.0;
     double duration_ = 0.0;
+    
+    // Async control
+    std::atomic<uint64_t> currentGeneration_{0};
     
     // Layout
     NUIRect playButtonBounds_;

@@ -26,6 +26,7 @@ public:
     explicit UIMixerInspector(Nomad::MixerViewModel* viewModel);
 
     void onRender(NUIRenderer& renderer) override;
+    void onUpdate(double deltaTime) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
@@ -57,6 +58,10 @@ private:
     bool m_addHovered{false};
     bool m_addPressed{false};
 
+    // Sends
+    std::vector<std::shared_ptr<class UIMixerSend>> m_sendWidgets;
+    void rebuildSendWidgets(const Nomad::ChannelViewModel* channel);
+
     // Cached header strings (updated only when selection changes)
     uint32_t m_cachedSelectedId{0xFFFFFFFFu};
     std::string m_cachedName;
@@ -64,6 +69,8 @@ private:
     std::string m_cachedHeaderTitle;
     std::string m_cachedHeaderSubtitle;
     int m_cachedTrackNumber{0};
+
+    std::vector<std::function<void()>> m_deferredActions; // Added m_deferredActions
 
     void cacheThemeColors();
     void layoutHitRects();

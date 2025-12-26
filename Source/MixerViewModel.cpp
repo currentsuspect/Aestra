@@ -1,6 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "MixerViewModel.h"
+#include "../NomadCore/include/NomadLog.h"
 
 namespace Nomad {
 
@@ -108,6 +109,38 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             channel->soloed = info.soloed;
             channel->armed = info.armed;
             newChannels.push_back(std::move(channel));
+        }
+        
+        // Sync Sends from Engine (Persistence Fix)
+        if (auto* ch = newChannels.back().get()) {
+            if (auto mc = ch->channel.lock()) {
+               auto engineSends = mc->getSends();
+               ch->sends.clear();
+               for (const auto& route : engineSends) {
+                   ChannelViewModel::SendViewModel uiSend;
+                   // Handle Legacy Master ID
+                   if (route.targetChannelId == 0xFFFFFFFF) {
+                       uiSend.targetId = 0;
+                       uiSend.targetName = "Master";
+                   } else {
+                       uiSend.targetId = route.targetChannelId;
+                       // Try to resolve name from current snapshot info
+                       auto targetIt = std::find_if(channelInfo.begin(), channelInfo.end(), 
+                           [&](const ChannelInfo& ci){ return ci.id == route.targetChannelId; });
+                       if (targetIt != channelInfo.end()) {
+                           uiSend.targetName = targetIt->name;
+                       } else if (route.targetChannelId == 0) {
+                           uiSend.targetName = "Master";
+                       } else {
+                           uiSend.targetName = "Unknown (" + std::to_string(route.targetChannelId) + ")";
+                       }
+                   }
+                   uiSend.gain = route.gain;
+                   uiSend.pan = route.pan;
+                   // uiSend.postFader = ... engine doesn't have this yet, assume true
+                   ch->sends.push_back(uiSend);
+               }
+            }
         }
     }
 
@@ -265,6 +298,104 @@ void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
     // Clip latch (sticky until cleared by user).
     if (snapshot.clipL) channel.clipLatchL = true;
     if (snapshot.clipR) channel.clipLatchR = true;
+}
+
+std::vector<MixerViewModel::Destination> MixerViewModel::getAvailableDestinations(uint32_t excludeId) const
+{
+    std::vector<Destination> dests;
+    
+    // Always add Master if we aren't Master
+    if (excludeId != 0) {
+        dests.push_back({0, "Master"});
+    }
+
+    // Add other channels (e.g. Buses/Returns/Tracks)
+    // Note: In a real matrix, might filter to only Buses, but Nomad allows Track-to-Track sends.
+    for (const auto& ch : m_channels) {
+        if (!ch) continue;
+        if (ch->id == excludeId) continue;
+        if (ch->id == 0) continue; // Handled above
+
+        dests.push_back({ch->id, ch->name});
+    }
+
+    return dests;
+}
+
+void MixerViewModel::addSend(uint32_t channelId) {
+    auto* ch = getChannelById(channelId);
+    if (!ch) return;
+    
+    // Create new SendViewModel
+    ChannelViewModel::SendViewModel send;
+    send.targetId = 0; // Default to Master
+    send.targetName = "Master";
+    send.gain = 1.0f; // 0dB
+    ch->sends.push_back(send);
+
+    // Update Engine
+    if (auto mc = ch->channel.lock()) {
+        Audio::AudioRoute route;
+        route.targetChannelId = 0xFFFFFFFF; // Master
+        route.gain = 1.0f;
+        mc->addSend(route);
+        
+        if (m_onGraphDirty) m_onGraphDirty();
+        if (m_onProjectModified) m_onProjectModified();
+    }
+}
+
+void MixerViewModel::removeSend(uint32_t channelId, int sendIndex) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
+
+    // Update Local Model
+    ch->sends.erase(ch->sends.begin() + sendIndex);
+
+    // Update Engine
+    if (auto mc = ch->channel.lock()) {
+        mc->removeSend(sendIndex);
+        
+        if (m_onGraphDirty) m_onGraphDirty();
+        if (m_onProjectModified) m_onProjectModified();
+    }
+}
+
+void MixerViewModel::setSendLevel(uint32_t channelId, int sendIndex, float linearGain) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
+
+    ch->sends[sendIndex].gain = linearGain;
+
+    // Update Engine
+    if (auto mc = ch->channel.lock()) {
+        mc->setSendLevel(sendIndex, linearGain);
+    }
+}
+
+void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint32_t targetId) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
+
+    ch->sends[sendIndex].targetId = targetId;
+    
+    // Resolve name
+    if (targetId == 0) {
+        ch->sends[sendIndex].targetName = "Master";
+    } else {
+        auto* target = getChannelById(targetId);
+        ch->sends[sendIndex].targetName = target ? target->name : "Unknown";
+    }
+
+    // Update Engine
+    if (auto mc = ch->channel.lock()) {
+        // Normalize 0 to 0xFFFFFFFF for engine master
+        uint32_t engineId = (targetId == 0) ? 0xFFFFFFFF : targetId;
+        mc->setSendDestination(sendIndex, engineId);
+        
+        if (m_onGraphDirty) m_onGraphDirty();
+        if (m_onProjectModified) m_onProjectModified();
+    }
 }
 
 } // namespace Nomad

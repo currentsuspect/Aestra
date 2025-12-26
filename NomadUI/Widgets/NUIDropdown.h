@@ -59,6 +59,7 @@ public:
 
     // Selection state
     int getSelectedIndex() const { return selectedIndex_; }
+    void setSelectedByValue(int value);
     int getSelectedValue() const;
     std::string getSelectedText() const;
     bool isOpen() const { return isOpen_; }

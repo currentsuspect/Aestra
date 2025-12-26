@@ -110,6 +110,8 @@ list(APPEND NOMADUI_CORE_SOURCES
     Widgets/UIMixerInspector.cpp
     Widgets/UnitRow.h
     Widgets/UnitRow.cpp
+    Widgets/UIItemSelector.h
+    Widgets/UIItemSelector.cpp
 )
 
 set(NOMADUI_GRAPHICS_SOURCES

@@ -63,6 +63,16 @@ struct ChannelViewModel {
     bool clipLatchL{false};                  ///< Left channel clip latch
     bool clipLatchR{false};                  ///< Right channel clip latch
 
+    struct SendViewModel {
+        uint32_t targetId{0};
+        std::string targetName;
+        float gain{1.0f};           // Linear gain
+        float pan{0.0f};
+        bool postFader{true};
+        bool muted{false};
+    };
+    std::vector<SendViewModel> sends;
+
     /**
      * @brief Reset meter state to silence.
      */
@@ -214,7 +224,25 @@ public:
     void setMeterMode(MeterMode mode) { m_meterMode = mode; }
     MeterMode getMeterMode() const { return m_meterMode; }
 
+    struct Destination {
+        uint32_t id;
+        std::string name;
+    };
+    std::vector<Destination> getAvailableDestinations(uint32_t excludeId) const;
+
+    // Send Management
+    void addSend(uint32_t channelId);
+    void removeSend(uint32_t channelId, int sendIndex);
+    void setSendLevel(uint32_t channelId, int sendIndex, float linearGain);
+    void setSendDestination(uint32_t channelId, int sendIndex, uint32_t targetId);
+
+    void setOnGraphDirty(std::function<void()> cb) { m_onGraphDirty = std::move(cb); }
+    void setOnProjectModified(std::function<void()> cb) { m_onProjectModified = std::move(cb); }
+
 private:
+    std::function<void()> m_onGraphDirty;
+    std::function<void()> m_onProjectModified;
+
     /// Stable storage - pointers remain valid across add/remove
     std::vector<std::unique_ptr<ChannelViewModel>> m_channels;
 

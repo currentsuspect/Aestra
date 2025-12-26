@@ -35,6 +35,7 @@
 #include "../NomadCore/include/NomadProfiler.h"
 #include "../NomadAudio/include/MiniAudioDecoder.h"
 #include "../NomadAudio/include/ClipSource.h"
+#include "../NomadAudio/include/WaveformCache.h"
 #include "MixerViewModel.h"
 #include "TransportBar.h"
 #include "AudioSettingsDialog.h"
@@ -440,7 +441,7 @@ public:
 
         // Create compact master meters inside transport bar (add to overlay)
         m_waveformVisualizer = std::make_shared<NomadUI::AudioVisualizer>();
-        m_waveformVisualizer->setMode(NomadUI::AudioVisualizationMode::CompactWaveform);
+        m_waveformVisualizer->setMode(NomadUI::AudioVisualizationMode::ArrangementWaveform);
         m_waveformVisualizer->setShowStereo(true);
         m_overlayLayer->addChild(m_waveformVisualizer);
 
@@ -496,6 +497,12 @@ public:
              }
              // Consume modified flag
              tm->setModified(false);
+        }
+        
+        // Poll transport position for waveform visualizer (UI-thread safe)
+        if (tm && m_waveformVisualizer) {
+            double pos = tm->getUIPosition();
+            m_waveformVisualizer->setTransportPosition(pos);
         }
         
         NomadUI::NUIComponent::onUpdate(dt);
@@ -1989,6 +1996,51 @@ public:
                         m_audioEngine->commandQueue().push(cmd);
                         
                         Log::info("Transport: Graph rebuilt with " + std::to_string(graph.tracks.size()) + " tracks");
+                        
+                        // Build arrangement waveform for scrolling display
+                        if (m_content->getWaveformVisualizer()) {
+                            auto& playlist = m_content->getTrackManager()->getPlaylistModel();
+                            auto& sourceManager = m_content->getTrackManager()->getSourceManager();
+                            double totalBeats = playlist.getTotalDurationBeats();
+                            double projectDuration = playlist.beatToSeconds(totalBeats);
+                            
+                            // Find the first audio clip with valid data
+                            ClipSource* firstSource = nullptr;
+                            double clipStartTime = 0.0;
+                            for (size_t laneIdx = 0; laneIdx < playlist.getLaneCount() && !firstSource; ++laneIdx) {
+                                PlaylistLaneID laneId = playlist.getLaneId(laneIdx);
+                                auto* lane = playlist.getLane(laneId);
+                                if (!lane) continue;
+                                for (const auto& clip : lane->clips) {
+                                    if (!clip.patternId.isValid()) continue;
+                                    auto pattern = m_content->getTrackManager()->getPatternManager().getPattern(clip.patternId);
+                                    if (!pattern || !pattern->isAudio()) continue;
+                                    const auto* audioPayload = std::get_if<AudioSlicePayload>(&pattern->payload);
+                                    if (!audioPayload) continue;
+                                    firstSource = sourceManager.getSource(audioPayload->audioSourceId);
+                                    if (firstSource && firstSource->isReady()) {
+                                        // Get clip start time in seconds
+                                        clipStartTime = playlist.beatToSeconds(clip.startBeat);
+                                        break;
+                                    }
+                                    firstSource = nullptr;
+                                }
+                            }
+                            
+                            if (firstSource && firstSource->isReady()) {
+                                auto cache = std::make_shared<WaveformCache>();
+                                auto buffer = firstSource->getBuffer();
+                                if (buffer && buffer->numFrames > 0) {
+                                    cache->buildFromBuffer(*buffer);
+                                    double sampleRate = static_cast<double>(buffer->sampleRate);
+                                    m_content->getWaveformVisualizer()->setArrangementWaveform(cache, projectDuration, clipStartTime, sampleRate);
+                                    Log::info("Arrangement waveform built: " + std::to_string(buffer->numFrames) + " frames at " + std::to_string(clipStartTime) + "s");
+                                }
+                            } else {
+                                // No clips with audio - just set duration for placeholder display
+                                m_content->getWaveformVisualizer()->setArrangementWaveform(nullptr, projectDuration, 0.0, 48000.0);
+                            }
+                        }
                     }
                 }
             });
@@ -2063,8 +2115,13 @@ public:
             // Keep transport time in sync for scrubbing and playback
             if (m_content->getTrackManagerUI() && m_content->getTrackManagerUI()->getTrackManager()) {
                 auto trackManager = m_content->getTrackManagerUI()->getTrackManager();
-                trackManager->setOnPositionUpdate([transport](double pos) {
+                auto waveformVis = m_content->getWaveformVisualizer();
+                trackManager->setOnPositionUpdate([transport, waveformVis](double pos) {
                     transport->setPosition(pos);
+                    // Update scrolling waveform display
+                    if (waveformVis) {
+                        waveformVis->setTransportPosition(pos);
+                    }
                 });
             }
         }

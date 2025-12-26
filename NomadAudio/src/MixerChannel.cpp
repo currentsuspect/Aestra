@@ -70,5 +70,43 @@ void MixerChannel::processAudio(float* outputBuffer, uint32_t numFrames, double 
 
 
 
+std::vector<AudioRoute> MixerChannel::getSends() const {
+    std::lock_guard<std::mutex> lock(m_sendMutex);
+    return m_sends;
+}
+
+void MixerChannel::addSend(const AudioRoute& route) {
+    std::lock_guard<std::mutex> lock(m_sendMutex);
+    m_sends.push_back(route);
+}
+
+void MixerChannel::removeSend(int index) {
+    std::lock_guard<std::mutex> lock(m_sendMutex);
+    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
+        m_sends.erase(m_sends.begin() + index);
+    }
+}
+
+void MixerChannel::setSendLevel(int index, float level) {
+    std::lock_guard<std::mutex> lock(m_sendMutex);
+    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
+        m_sends[index].gain = level;
+    }
+}
+
+void MixerChannel::setSendPan(int index, float pan) {
+    std::lock_guard<std::mutex> lock(m_sendMutex);
+    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
+        m_sends[index].pan = pan;
+    }
+}
+
+void MixerChannel::setSendDestination(int index, uint32_t destId) {
+    std::lock_guard<std::mutex> lock(m_sendMutex);
+    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
+        m_sends[index].targetChannelId = destId;
+    }
+}
+
 } // namespace Audio
 } // namespace Nomad
