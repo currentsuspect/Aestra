@@ -379,6 +379,8 @@ public:
         m_pianoRollPanel->setOnDragStart([this](const NomadUI::NUIPoint& pos) { beginPanelDrag(ViewType::PianoRoll, pos); });
         m_pianoRollPanel->setOnDragMove([this](const NomadUI::NUIPoint& pos) { updatePanelDrag(ViewType::PianoRoll, pos); });
         m_pianoRollPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::PianoRoll); });
+        m_overlayLayer->addChild(m_pianoRollPanel);  // FIX: Add to component tree so it can be shown!
+        
         // Create Arsenal panel (The Arsenal - FL Studio style pattern editor)
         m_sequencerPanel = std::make_shared<ArsenalPanel>(m_trackManager);
         m_sequencerPanel->setPatternBrowser(m_patternBrowser.get()); // Wire bidirectional communication
