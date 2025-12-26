@@ -52,11 +52,12 @@ void MuteButton::onRender(NUIRenderer& renderer)
     auto& theme = NUIThemeManager::getInstance();
     auto b = getBounds();
     
-    NUIColor bg = isOn() ? NUIColor(0.8f, 0.2f, 0.2f, 1.0f) : theme.getColor("backgroundSecondary");
-    NUIColor text = isOn() ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : theme.getColor("textPrimary");
+    float radius = 6.0f;
+    NUIColor bg = isOn() ? theme.getColor("primary") : theme.getColor("backgroundSecondary");
+    NUIColor text = isOn() ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : theme.getColor("textSecondary");
     
-    renderer.fillRect(b, bg);
-    renderer.strokeRect(b, 1, theme.getColor("border"));
+    renderer.fillRoundedRect(b, radius, bg);
+    renderer.strokeRoundedRect(b, radius, 1.0f, theme.getColor("border"));
     renderer.drawTextCentered("M", b, 13.0f, text);
 }
 
@@ -70,11 +71,12 @@ void SoloButton::onRender(NUIRenderer& renderer)
     auto& theme = NUIThemeManager::getInstance();
     auto b = getBounds();
     
-    NUIColor bg = isOn() ? NUIColor(0.9f, 0.8f, 0.2f, 1.0f) : theme.getColor("backgroundSecondary");
-    NUIColor text = isOn() ? NUIColor(0.0f, 0.0f, 0.0f, 1.0f) : theme.getColor("textPrimary");
+    float radius = 6.0f;
+    NUIColor bg = isOn() ? theme.getColor("primary") : theme.getColor("backgroundSecondary");
+    NUIColor text = isOn() ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : theme.getColor("textSecondary");
     
-    renderer.fillRect(b, bg);
-    renderer.strokeRect(b, 1, theme.getColor("border"));
+    renderer.fillRoundedRect(b, radius, bg);
+    renderer.strokeRoundedRect(b, radius, 1.0f, theme.getColor("border"));
     renderer.drawTextCentered("S", b, 13.0f, text);
 }
 
@@ -88,11 +90,12 @@ void ArmButton::onRender(NUIRenderer& renderer)
     auto& theme = NUIThemeManager::getInstance();
     auto b = getBounds();
     
-    NUIColor bg = isOn() ? NUIColor(0.8f, 0.2f, 0.2f, 1.0f) : theme.getColor("backgroundSecondary");
-    NUIColor text = isOn() ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : theme.getColor("textPrimary");
+    float radius = 6.0f;
+    NUIColor bg = isOn() ? theme.getColor("error") : theme.getColor("backgroundSecondary");
+    NUIColor text = isOn() ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : theme.getColor("textSecondary");
     
-    renderer.fillRect(b, bg);
-    renderer.strokeRect(b, 1, theme.getColor("border"));
+    renderer.fillRoundedRect(b, radius, bg);
+    renderer.strokeRoundedRect(b, radius, 1.0f, theme.getColor("border"));
     renderer.drawTextCentered("R", b, 13.0f, text);
 }
 

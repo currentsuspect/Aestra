@@ -382,8 +382,8 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
         if (m_metronomeActive) {
             // Active: cyan highlight
             renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassActive"));
-            renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("accentCyan").withAlpha(0.4f));
-            m_metronomeIcon->setColorFromTheme("accentCyan");
+            renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("primary").withAlpha(0.4f));
+            m_metronomeIcon->setColorFromTheme("primary");
         } else if (m_metronomeButton->isHovered()) {
             renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassHover"));
             renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("glassBorder"));
@@ -407,13 +407,13 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
             if (isActive) {
                 // Background highlight for active state: Luminous Glass
                 renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassActive"));
-                renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("accentCyan").withAlpha(0.4f));
-                icon->setColorFromTheme("accentCyan"); 
+                renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("primary").withAlpha(0.4f));
+                icon->setColorFromTheme("primary"); 
             } else if (btn->isHovered()) {
                 // Hover state: True Glass (neutral)
                 renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassHover"));
                 renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("glassBorder"));
-                icon->setColorFromTheme("accentCyan"); 
+                icon->setColorFromTheme("primary"); 
             } else {
                 icon->setColorFromTheme("textSecondary"); // Dimmer default for non-active
             }
@@ -533,15 +533,15 @@ void TransportBar::onRender(NomadUI::NUIRenderer& renderer) {
         NomadUI::NUIColor::white().withAlpha(0.05f)
     );
     
-    // Add vertical separator between file browser and track area
-    auto& layout = themeManager.getLayoutDimensions();
-    float fileBrowserWidth = layout.fileBrowserWidth;
-    renderer.drawLine(
-        NomadUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y),
-        NomadUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y + bounds.height),
-        1.0f,
-        borderColor.withAlpha(0.8f)
-    );
+    // REMOVED: Vertical separator was slicing through Arsenal/Timeline buttons
+    // auto& layout = themeManager.getLayoutDimensions();
+    // float fileBrowserWidth = layout.fileBrowserWidth;
+    // renderer.drawLine(
+    //     NomadUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y),
+    //     NomadUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y + bounds.height),
+    //     1.0f,
+    //     borderColor.withAlpha(0.8f)
+    // );
     
     // Add horizontal divider at bottom to separate transport from track area
     // REMOVED: Causing gap/double-border with playlist view

@@ -254,6 +254,7 @@ FileBrowser::FileBrowser()
     });
     searchInput_->setMaxLength(512); 
     searchInput_->setTextColor(themeManager.getColor("textPrimary")); 
+    searchInput_->setBorderRadius(18.0f); // Pill shape for search bar
 
     // Initialize icons with improved visibility for Liminal Dark v2.0
     // Use inline SVG content for reliable icon loading
@@ -2952,7 +2953,6 @@ void FileBrowser::applyFilter() {
                 
                 if (matchesSearch) {
                     // Simple fuzzy score calculation re-pass or simplification
-                    // Let's refine the score based on the successful match
                     // Since the above verification loop is greedy, it might not find optimal alignment.
                     // For UI responsiveness, greedy is usually fine.
                     
@@ -3068,7 +3068,6 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
     const float separatorPad = 8.0f;
     const float separatorW = separatorSize.width + separatorPad;
 
-    // Chip sizing
     const float chipPadX = 10.0f;
     const float chipRadius = 6.0f;
 

@@ -15,11 +15,11 @@ namespace NomadUI {
 namespace {
     constexpr float PAD = 10.0f;
     constexpr float TAB_H = 26.0f;
-    constexpr float TAB_RADIUS = 6.0f;
+    constexpr float TAB_RADIUS = 12.0f;
     constexpr float SECTION_GAP = 10.0f;
     constexpr float HEADER_H = 44.0f;
     constexpr float ROW_H = 26.0f;
-    constexpr float ROW_RADIUS = 6.0f;
+    constexpr float ROW_RADIUS = 12.0f;
 }
 
 UIMixerInspector::UIMixerInspector(Nomad::MixerViewModel* viewModel)

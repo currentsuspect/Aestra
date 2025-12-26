@@ -93,6 +93,9 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     
     // Draw window controls
     drawWindowControls(renderer);
+    
+    // Render custom children (buttons, etc.)
+    renderChildren(renderer);
 }
 
 void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {

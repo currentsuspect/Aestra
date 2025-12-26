@@ -488,8 +488,14 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
                 
                 // Top 32 pixels are the title bar drag area
                 // BUT exclude the right 150 pixels for window control buttons
-                if (pt.y >= 0 && pt.y < 32 && pt.x < m_width - 150) {
-                    return HTCAPTION;  // Allow dragging
+                // AND exclude the center area for the new focus toggle buttons
+                if (pt.y >= 0 && pt.y < 32) {
+                    bool inRightControls = pt.x >= m_width - 150;
+                    bool inCenterButtons = std::abs(pt.x - (m_width / 2)) < 100;
+                    
+                    if (!inRightControls && !inCenterButtons) {
+                        return HTCAPTION;  // Allow dragging only in non-interactive parts
+                    }
                 }
                 
                 return HTCLIENT;

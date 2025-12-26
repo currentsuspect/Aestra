@@ -60,9 +60,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     m_muteButton->setPressedColor(NomadUI::NUIThemeManager::getInstance().getColor("accentAmber")); 
     m_muteButton->setTextColor(NomadUI::NUIColor::white());
     m_muteButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
-    m_muteButton->setOnToggle([this](bool) {
-        onMuteToggled();
-    });
+    m_muteButton->setCornerRadius(13.0f);
     addChild(m_muteButton);
 
     // Create solo button
@@ -75,9 +73,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     m_soloButton->setPressedColor(NomadUI::NUIThemeManager::getInstance().getColor("accentCyan"));
     m_soloButton->setTextColor(NomadUI::NUIColor::white());
     m_soloButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
-    m_soloButton->setOnToggle([this](bool) {
-        onSoloToggled();
-    });
+    m_soloButton->setCornerRadius(13.0f);
     addChild(m_soloButton);
 
     // Create record button
@@ -89,9 +85,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     // Active state: Red
     m_recordButton->setPressedColor(NomadUI::NUIThemeManager::getInstance().getColor("error"));
     m_recordButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
-    m_recordButton->setOnToggle([this](bool) {
-        onRecordToggled();
-    });
+    m_recordButton->setCornerRadius(13.0f);
     addChild(m_recordButton);
 
     updateUI();

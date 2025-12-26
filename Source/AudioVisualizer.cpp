@@ -24,8 +24,8 @@ AudioVisualizer::AudioVisualizer()
     , mode_(AudioVisualizationMode::Waveform)
     , sensitivity_(0.8f)
     , decayRate_(0.95f)
-    , primaryColor_(NUIColor(0.0f, 0.737f, 0.831f)) // #00bcd4 - Accent Cyan
-    , secondaryColor_(NUIColor(1.0f, 0.251f, 0.506f)) // #ff4081 - Accent Magenta
+    , primaryColor_(NUIColor::fromHex(0xbb86fc))    // Nomad Purple
+    , secondaryColor_(NUIColor::fromHex(0xd1b3ff))  // Lighter complementary purple
     , showStereo_(true)
     , showPeakHold_(true)
     , displayBufferSize_(1024)

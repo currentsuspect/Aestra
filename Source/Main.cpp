@@ -413,23 +413,30 @@ public:
         // Create Focus Toggle Buttons (Arsenal / Timeline)
         auto& theme = NomadUI::NUIThemeManager::getInstance();
         
-        m_arsenalFocusBtn = std::make_shared<NomadUI::NUIButton>("🎹 Arsenal");
-        m_arsenalFocusBtn->setBackgroundColor(theme.getColor("accentPrimary"));
-        m_arsenalFocusBtn->setHoverColor(theme.getColor("accentPrimary"));
-        m_arsenalFocusBtn->setTextColor(theme.getColor("textPrimary"));
+        // Colors matching FileBrowser's Nomad purple and glassy hover
+        NomadUI::NUIColor nomadPurple(0.733f, 0.525f, 0.988f, 1.0f);  // #bb86fc - Active purple
+        NomadUI::NUIColor glassyGrey(1.0f, 1.0f, 1.0f, 0.08f);         // Glassy hover grey - Inactive
+        NomadUI::NUIColor glassyGreyHover(1.0f, 1.0f, 1.0f, 0.12f);    // Slightly lighter on hover
+        
+        m_arsenalFocusBtn = std::make_shared<NomadUI::NUIButton>("Arsenal");
+        m_arsenalFocusBtn->setBackgroundColor(nomadPurple);
+        m_arsenalFocusBtn->setHoverColor(nomadPurple.withAlpha(0.85f));
+        m_arsenalFocusBtn->setTextColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+        m_arsenalFocusBtn->setCornerRadius(11.0f); // Pill shape (half of 22px height)
         m_arsenalFocusBtn->setOnClick([this]() {
             setViewFocus(::ViewFocus::Arsenal);
         });
-        m_overlayLayer->addChild(m_arsenalFocusBtn);
+        // Buttons added later to title bar in setCustomWindow()
         
-        m_timelineFocusBtn = std::make_shared<NomadUI::NUIButton>("📊 Timeline");
-        m_timelineFocusBtn->setBackgroundColor(theme.getColor("surfaceSecondary"));
-        m_timelineFocusBtn->setHoverColor(theme.getColor("surfaceSecondary"));
+        m_timelineFocusBtn = std::make_shared<NomadUI::NUIButton>("Timeline");
+        m_timelineFocusBtn->setBackgroundColor(glassyGrey);
+        m_timelineFocusBtn->setHoverColor(glassyGreyHover);
         m_timelineFocusBtn->setTextColor(theme.getColor("textSecondary"));
+        m_timelineFocusBtn->setCornerRadius(11.0f); // Pill shape (half of 22px height)
         m_timelineFocusBtn->setOnClick([this]() {
             setViewFocus(::ViewFocus::Timeline);
         });
-        m_overlayLayer->addChild(m_timelineFocusBtn);
+        // Buttons added later to title bar in setCustomWindow()
         
         // Initialize focus state (sync button appearance with m_viewFocus default)
         setViewFocus(::ViewFocus::Arsenal);
@@ -778,12 +785,16 @@ public:
         
         auto& theme = NomadUI::NUIThemeManager::getInstance();
         
+        // Colors matching button initialization
+        NomadUI::NUIColor nomadPurple(0.733f, 0.525f, 0.988f, 1.0f);  // #bb86fc
+        NomadUI::NUIColor glassyGrey(1.0f, 1.0f, 1.0f, 0.08f);
+        
         // Update button styles based on focus
         if (focus == ::ViewFocus::Arsenal) {
-            m_arsenalFocusBtn->setBackgroundColor(theme.getColor("accentPrimary"));
-            m_arsenalFocusBtn->setTextColor(theme.getColor("textPrimary"));
+            m_arsenalFocusBtn->setBackgroundColor(nomadPurple);
+            m_arsenalFocusBtn->setTextColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
             
-            m_timelineFocusBtn->setBackgroundColor(theme.getColor("surfaceSecondary"));
+            m_timelineFocusBtn->setBackgroundColor(glassyGrey);
             m_timelineFocusBtn->setTextColor(theme.getColor("textSecondary"));
             
             // Show Arsenal panel with fade-in
@@ -797,11 +808,11 @@ public:
                 m_viewState.sequencerOpen = true; // Sync internal state
             }
         } else {
-            m_arsenalFocusBtn->setBackgroundColor(theme.getColor("surfaceSecondary"));
+            m_arsenalFocusBtn->setBackgroundColor(glassyGrey);
             m_arsenalFocusBtn->setTextColor(theme.getColor("textSecondary"));
             
-            m_timelineFocusBtn->setBackgroundColor(theme.getColor("accentPrimary"));
-            m_timelineFocusBtn->setTextColor(theme.getColor("textPrimary"));
+            m_timelineFocusBtn->setBackgroundColor(nomadPurple);
+            m_timelineFocusBtn->setTextColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
             
             // Hide Arsenal panel with fade-out
             if (m_sequencerPanel) {
@@ -858,6 +869,10 @@ public:
     std::shared_ptr<TrackManagerUI> getTrackManagerUI() const {
         return m_trackManagerUI;
     }
+    
+    // Focus toggle button getters (for adding to title bar)
+    std::shared_ptr<NomadUI::NUIButton> getArsenalFocusBtn() const { return m_arsenalFocusBtn; }
+    std::shared_ptr<NomadUI::NUIButton> getTimelineFocusBtn() const { return m_timelineFocusBtn; }
     
     // Focus-based playback getters
     ::ViewFocus getViewFocus() const {
@@ -1235,20 +1250,20 @@ public:
                 contentBounds.width, 60.0f));
         }
         
-        // Position focus toggle buttons (stacked vertically next to timecode)
+        // Position focus toggle buttons (horizontal in title bar area)
         if (m_arsenalFocusBtn && m_timelineFocusBtn) {
-            float btnWidth = 80.0f;
-            float btnHeight = 20.0f;
-            float xOffset = 280.0f; // Right after timecode display
-            float yTop = 10.0f;     // Top button
-            float spacing = 2.0f;   // Vertical spacing between buttons
+            auto rootBounds = getBounds();  // Use full window bounds
+            float btnWidth = 70.0f;
+            float btnHeight = 22.0f;
+            float yPos = 4.0f;  // Top of window (title bar area)
+            float spacing = 4.0f; // Horizontal spacing between buttons
+            float centerX = rootBounds.width / 2.0f;
+            float totalWidth = btnWidth * 2 + spacing;
+            float startX = centerX - totalWidth / 2.0f;
             
-            // Arsenal button on top
-            m_arsenalFocusBtn->setBounds(NomadUI::NUIAbsolute(contentBounds, 
-                xOffset, yTop, btnWidth, btnHeight));
-            // Timeline button below
-            m_timelineFocusBtn->setBounds(NomadUI::NUIAbsolute(contentBounds, 
-                xOffset, yTop + btnHeight + spacing, btnWidth, btnHeight));
+            // Arsenal button on left, Timeline on right (absolute positioning from root)
+            m_arsenalFocusBtn->setBounds(NomadUI::NUIRect(startX, yPos, btnWidth, btnHeight));
+            m_timelineFocusBtn->setBounds(NomadUI::NUIRect(startX + btnWidth + spacing, yPos, btnWidth, btnHeight));
         }
         
         // Position scope indicator label (right of focus buttons)
@@ -1802,6 +1817,16 @@ public:
         m_content->setPlatformBridge(m_window.get());
         m_content->setAudioStatus(m_audioInitialized);
         m_customWindow->setContent(m_content.get());
+        
+        // Add focus toggle buttons to title bar (for proper click handling)
+        if (auto titleBar = m_customWindow->getTitleBar()) {
+            if (m_content->getArsenalFocusBtn()) {
+                titleBar->addChild(m_content->getArsenalFocusBtn());
+            }
+            if (m_content->getTimelineFocusBtn()) {
+                titleBar->addChild(m_content->getTimelineFocusBtn());
+            }
+        }
         
         // Pass platform window to TrackManagerUI for cursor control (Task: Selection Tool Enhancements)
         if (m_content->getTrackManagerUI()) {

@@ -65,7 +65,7 @@ void NUIButton::onRender(NUIRenderer& renderer) {
     }
     
     auto bounds = getBounds();
-    float radius = theme ? theme->getBorderRadius() : 4.0f;
+    float radius = cornerRadius_ >= 0.0f ? cornerRadius_ : (theme ? theme->getBorderRadius() : 4.0f);
 
     // ANIMATION: "Squish" effect on press
     if (pressed_) {
