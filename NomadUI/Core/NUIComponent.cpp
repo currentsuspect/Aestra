@@ -1,6 +1,8 @@
 // Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIComponent.h"
 #include "NUITheme.h"
+#include "NUIThemeSystem.h"
+#include "../Graphics/NUIRenderer.h"
 #include <algorithm>
 #include <iostream>
 
@@ -14,6 +16,11 @@ namespace NomadUI {
 namespace {
     NUIComponent* g_focusedComponent = nullptr;
 }
+
+// Define static tooltip state
+TooltipState NUIComponent::s_tooltipState;
+
+
 
 NUIComponent::NUIComponent() {
 }
@@ -98,7 +105,16 @@ bool NUIComponent::onMouseEvent(const NUIMouseEvent& event) {
 
     // Update hover state if it changed
     if (wasHovered != shouldBeHovered) {
+        // Store the mouse position when hover state changes for tooltip positioning
+        if (shouldBeHovered && !tooltipText_.empty()) {
+            s_tooltipState.hoverPos = event.position;
+        }
         setHovered(shouldBeHovered);
+    }
+    
+    // Update hover position continuously while hovering (for accurate tooltip placement)
+    if (hovered_ && !tooltipText_.empty() && s_tooltipState.text == tooltipText_) {
+        s_tooltipState.hoverPos = event.position;
     }
 
     return eventHandledByChild || eventHandledBySelf;
@@ -133,11 +149,34 @@ void NUIComponent::onFocusLost() {
 
 void NUIComponent::onMouseEnter() {
     hovered_ = true;
+    
+    // Trigger global tooltip if text is set
+    if (!tooltipText_.empty()) {
+        s_tooltipState.text = tooltipText_;
+        
+        // Get global position for tooltip using localToGlobal for accurate transformation
+        // Calculate center-bottom of this component in local coords, then convert to global
+        NUIPoint localCenter(bounds_.width * 0.5f, bounds_.height + 6.0f);
+        NUIPoint globalPos = localToGlobal(localCenter);
+        s_tooltipState.position = globalPos;
+        
+        s_tooltipState.active = true;
+        s_tooltipState.delayTimer = 0.0f; // Reset delay
+        s_tooltipState.alpha = 0.0f; // Start faded out
+    }
+    
     setDirty();
 }
 
 void NUIComponent::onMouseLeave() {
     hovered_ = false;
+    
+    // Hide tooltip if this component was the source (simple check)
+    // In a complex system we might check if s_tooltipState.text == tooltipText_
+    if (!tooltipText_.empty() && s_tooltipState.text == tooltipText_) {
+        s_tooltipState.active = false;
+    }
+    
     setDirty();
 }
 
@@ -168,19 +207,13 @@ void NUIComponent::setSize(float width, float height) {
 
 NUIRect NUIComponent::getGlobalBounds() const {
     NUIRect r = getBounds();
-    std::cout << "[getGlobalBounds] Starting with local bounds: (" << r.x << "," << r.y << "," << r.width << "," << r.height << ")" << std::endl;
     const NUIComponent* p = getParent();
-    int depth = 0;
     while (p) {
         const NUIRect& pb = p->getBounds();
-        std::cout << "[getGlobalBounds] Depth " << depth << " - Parent bounds: (" << pb.x << "," << pb.y << "," << pb.width << "," << pb.height << ")" << std::endl;
         r.x += pb.x;
         r.y += pb.y;
-        std::cout << "[getGlobalBounds] After adding parent, global so far: (" << r.x << "," << r.y << ")" << std::endl;
         p = p->getParent();
-        depth++;
     }
-    std::cout << "[getGlobalBounds] Final global bounds: (" << r.x << "," << r.y << "," << r.width << "," << r.height << ")" << std::endl;
     return r;
 }
 
@@ -411,4 +444,77 @@ std::shared_ptr<NUIComponent> NUIComponent::findChildAt(const NUIPoint& point) {
     return nullptr;
 }
 
+
+
+// ============================================================================
+// Tooltip Implementation
+// ============================================================================
+
+void NUIComponent::setTooltip(const std::string& text) {
+    tooltipText_ = text;
+}
+
+void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& position) {
+    s_tooltipState.text = text;
+    s_tooltipState.position = position;
+    s_tooltipState.hoverPos = position;  // Set both for manual tooltip calls
+    s_tooltipState.active = true;
+    s_tooltipState.delayTimer = 0.0f;
+    s_tooltipState.alpha = 0.0f;
+}
+
+void NUIComponent::hideRemoteTooltip() {
+    s_tooltipState.active = false;
+}
+
+void NUIComponent::updateGlobalTooltip(double deltaTime) {
+    if (s_tooltipState.active) {
+        // Fade in
+        const float FADE_SPEED = 5.0f;
+        s_tooltipState.alpha = std::min(1.0f, s_tooltipState.alpha + static_cast<float>(deltaTime * FADE_SPEED));
+    } else {
+         s_tooltipState.alpha = 0.0f; // Instant hide for responsiveness
+    }
+}
+
+void NUIComponent::renderGlobalTooltip(NUIRenderer& renderer) {
+    if (!s_tooltipState.active || s_tooltipState.alpha <= 0.01f) return;
+    
+    // Reuse minimap tooltip pattern - position relative to hoverPos (actual mouse position)
+    constexpr float kTooltipPadX = 6.0f;
+    constexpr float kTooltipPadY = 3.0f;
+    constexpr float kTooltipRadius = 4.0f;
+    
+    const float fontSize = 10.0f;
+    const auto size = renderer.measureText(s_tooltipState.text, fontSize);
+    
+    const float w = size.width + kTooltipPadX * 2.0f;
+    const float h = size.height + kTooltipPadY * 2.0f;
+    
+    // Position: offset from mouse cursor (like minimap tooltip)
+    float x = s_tooltipState.hoverPos.x + 10.0f;
+    float y = s_tooltipState.hoverPos.y - h - 6.0f;
+    
+    // If tooltip would go above screen, show below cursor instead
+    if (y < 4.0f) {
+        y = s_tooltipState.hoverPos.y + 16.0f;
+    }
+    
+    // Clamp to reasonable screen bounds
+    if (x < 4.0f) x = 4.0f;
+    
+    const NUIRect tipRect(x, y, w, h);
+    
+    // Theme colors (matching minimap style)
+    const NUIColor bg = NUIColor(0.12f, 0.12f, 0.15f, 0.92f * s_tooltipState.alpha);
+    const NUIColor border = NUIColor(0.4f, 0.4f, 0.45f, 0.65f * s_tooltipState.alpha);
+    const NUIColor text = NUIColor(0.95f, 0.95f, 0.95f, 0.92f * s_tooltipState.alpha);
+    
+    renderer.fillRoundedRect(tipRect, kTooltipRadius, bg);
+    renderer.strokeRoundedRect(tipRect, kTooltipRadius, 1.0f, border);
+    renderer.drawTextCentered(s_tooltipState.text, tipRect, fontSize, text);
+}
+
 } // namespace NomadUI
+
+

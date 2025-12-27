@@ -235,6 +235,10 @@ void UIMixerStrip::cacheThemeColors()
     m_selectedTopHighlight = theme.getColor("accentPrimary").withAlpha(0.55f);
     m_masterBackground = theme.getColor("backgroundSecondary").withAlpha(0.35f);
     m_mutedOverlay = NUIColor(0.0f, 0.0f, 0.0f, 0.22f);
+    
+    // New tokens (Global colors)
+    m_stripBg = theme.getColor("mixerStripBg"); 
+    m_masterBorder = theme.getColor("mixerMasterBorder");
 }
 
 void UIMixerStrip::layoutChildren()
@@ -453,16 +457,12 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     const bool selected = m_viewModel && (m_viewModel->getSelectedChannelId() == static_cast<int32_t>(m_channelId));
 
     // Unified "Deep Black" background for ALL strips.
-    // Increasing opacity to near-solid and deepening the tone to stand out against #1e1e22.
-    
-    // Almost pure black, high opacity. distinct card look.
-    NUIColor stripBg = NUIColor(0.01f, 0.01f, 0.01f, 0.95f); 
-    renderer.fillRect(bounds, stripBg);
+    renderer.fillRect(bounds, m_stripBg);
 
     // Master gets a slightly different tone to distinguish it (optional, but good for hierarchy)
     if (m_channelId == 0) {
         // Subtle highlight for master
-        renderer.strokeRect(bounds, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.08f)); 
+        renderer.strokeRect(bounds, 1.0f, m_masterBorder); 
     }
 
     if (selected) {

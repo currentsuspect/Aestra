@@ -64,6 +64,8 @@ private:
     // Icons
     std::shared_ptr<NUIIcon> folderIcon_;
     std::shared_ptr<NUIIcon> fileIcon_;
+    std::shared_ptr<NUIIcon> playIcon_;
+    std::shared_ptr<NUIIcon> stopIcon_;
 };
 
 } // namespace NomadUI

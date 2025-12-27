@@ -136,6 +136,49 @@ void TransportBar::createIcons() {
     m_metronomeIcon->setIconSize(NomadUI::NUIIconSize::Medium);
     m_metronomeIcon->setColorFromTheme("textSecondary");
 
+    // Count-In icon (3-2-1 dots style)
+    const char* countInSvg = R"(
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <text x="12" y="17" font-family="Arial" font-size="14" font-weight="900" text-anchor="middle">3</text>
+            <circle cx="12" cy="5" r="1.5"/>
+            <circle cx="7" cy="5" r="1.5"/>
+            <circle cx="17" cy="5" r="1.5"/>
+        </svg>
+    )";
+    m_countInIcon = std::make_shared<NomadUI::NUIIcon>(countInSvg);
+    m_countInIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_countInIcon->setColorFromTheme("textSecondary");
+
+    // Wait for Input icon (Pause bars + Play Triangle combo or Hourglass)
+    // Let's use a "Signal" style (Keyboard key + Wave) or just a simple "Wait" hand?
+    // User requested "Wait". Let's use a nice Clock/Hourglass or Key input style.
+    // Going with "Keyboard Key with Input Arrow" style for interaction wait.
+    const char* waitSvg = R"(
+        <svg viewBox="0 0 24 24" fill="currentColor">
+             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+        </svg>
+    )";
+    // Use an actual Hourglass/Clock might be better for "Wait".
+    const char* waitRealSvg = R"(
+        <svg viewBox="0 0 24 24" fill="currentColor">
+             <path d="M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6zm10 14.5V20H8v-3.5l4-4 4 4z"/>
+        </svg>
+    )";
+    m_waitIcon = std::make_shared<NomadUI::NUIIcon>(waitRealSvg);
+    m_waitIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_waitIcon->setColorFromTheme("textSecondary");
+
+    // Loop Record icon (Ouroboros / Cycle arrow with Dot)
+    const char* loopRecordSvg = R"(
+        <svg viewBox="0 0 24 24" fill="currentColor">
+             <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+             <circle cx="12" cy="12" r="3"/>
+        </svg>
+    )";
+    m_loopRecordIcon = std::make_shared<NomadUI::NUIIcon>(loopRecordSvg);
+    m_loopRecordIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_loopRecordIcon->setColorFromTheme("textSecondary");
+
 }
 
 void TransportBar::createButtons() {
@@ -151,8 +194,13 @@ void TransportBar::createButtons() {
     };
 
     createBtn(m_playButton, [this]() { togglePlayPause(); });
+    m_playButton->setTooltip("Play/Pause (Space)");
+
     createBtn(m_stopButton, [this]() { stop(); });
+    m_stopButton->setTooltip("Stop (Space)");
+
     createBtn(m_recordButton, [](){});
+    m_recordButton->setTooltip("Record (R)");
     m_recordButton->setEnabled(false);
     
     // Metronome toggle button
@@ -163,6 +211,29 @@ void TransportBar::createButtons() {
         }
         setDirty(true);
     });
+    m_metronomeButton->setTooltip("Metronome");
+
+    // Transport Extras
+    createBtn(m_countInButton, [this]() {
+        m_countInActive = !m_countInActive;
+        if (m_onCountInToggle) m_onCountInToggle(m_countInActive);
+        setDirty(true);
+    });
+    m_countInButton->setTooltip("Count-In");
+    
+    createBtn(m_waitButton, [this]() {
+        m_waitActive = !m_waitActive;
+        if (m_onWaitToggle) m_onWaitToggle(m_waitActive);
+        setDirty(true);
+    });
+    m_waitButton->setTooltip("Wait for Input");
+    
+    createBtn(m_loopRecordButton, [this]() {
+        m_loopRecordActive = !m_loopRecordActive;
+        if (m_onLoopRecordToggle) m_onLoopRecordToggle(m_loopRecordActive);
+        setDirty(true);
+    });
+    m_loopRecordButton->setTooltip("Loop Record");
 
     // View Toggles
     auto createViewButton = [&](std::shared_ptr<NomadUI::NUIButton>& btn, std::function<void()> onClick) {
@@ -170,9 +241,16 @@ void TransportBar::createButtons() {
     };
 
     createViewButton(m_mixerButton, [this]() { if (m_onToggleView) m_onToggleView(Audio::ViewType::Mixer); });
+    if(m_mixerButton) m_mixerButton->setTooltip("Mixer (F3)");
+
     createViewButton(m_sequencerButton, [this]() { if (m_onToggleView) m_onToggleView(Audio::ViewType::Sequencer); });
+    if(m_sequencerButton) m_sequencerButton->setTooltip("Channel Rack (F6)");
+
     createViewButton(m_pianoRollButton, [this]() { if (m_onToggleView) m_onToggleView(Audio::ViewType::PianoRoll); });
+    if(m_pianoRollButton) m_pianoRollButton->setTooltip("Piano Roll (F7)");
+
     createViewButton(m_playlistButton, [this]() { if (m_onToggleView) m_onToggleView(Audio::ViewType::Playlist); });
+    if(m_playlistButton) m_playlistButton->setTooltip("Playlist (F5)");
     
     // Add Dropdowns LAST to ensure Z-ordering
 
@@ -288,8 +366,19 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     // Get layout dimensions from theme
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
+    
+    // Colors
+    // "Frosted Glass" - Grey tint to distinguish from dark displays
+    NomadUI::NUIColor glassBg = themeManager.getColor("textSecondary").withAlpha(0.15f); 
+    NomadUI::NUIColor glassBorder = themeManager.getColor("glassBorder");
+    NomadUI::NUIColor glassHover = themeManager.getColor("textSecondary").withAlpha(0.25f); // Brighter grey on hover
+    NomadUI::NUIColor glassActive = themeManager.getColor("glassActive"); // Purple tint
+    
+    NomadUI::NUIColor iconGrey = themeManager.getColor("textSecondary");
+    NomadUI::NUIColor iconPurple = themeManager.getColor("accentPrimary");
+    NomadUI::NUIColor iconRed = themeManager.getColor("error");
 
-    // Calculate button positions (same as layoutComponents)
+    // Calculate button positions
     float padding = layout.panelMargin;
     float buttonSize = layout.transportButtonSize;
     float spacing = layout.transportButtonSpacing;
@@ -300,136 +389,83 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     float iconPadding = (buttonSize - iconSize) * 0.5f;
     if (iconPadding < 0.0f) iconPadding = 0.0f;
 
-    // Play/Pause button icon
-    if (m_playButton && m_playIcon && m_pauseIcon) {
-        NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize);
+    // Helper to render universal Glass Box button
+    auto renderGlassButton = [&](std::shared_ptr<NomadUI::NUIButton>& btn, std::shared_ptr<NomadUI::NUIIcon>& icon, bool isActive, bool isRecording = false) {
+        if (!btn || !icon) return;
+
+        NomadUI::NUIRect buttonRect = btn->getBounds(); // Use bounds set in layoutComponents
+        bool isHovered = btn->isHovered() && btn->isEnabled();
         
-        // Draw True Glass highlight on hover
-        if (m_playButton->isHovered()) {
-             renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassHover"));
-             renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("glassBorder"));
-        }
-
-        auto icon = (m_state == TransportState::Playing) ? m_pauseIcon : m_playIcon;
-        if (icon) {
-            // CRITICAL: Green when playing, grey on hover, purple otherwise
-            if (m_state == TransportState::Playing) {
-                // Bright green when actively playing
-                icon->setColor(themeManager.getColor("success"));
-            } else if (m_playButton->isHovered()) {
-                icon->setColor(themeManager.getColor("textSecondary"));
-            } else {
-                icon->setColor(themeManager.getColor("primary"));
-            }
-            
-            NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
-            icon->setBounds(iconRect);
-            icon->onRender(renderer);
-        }
-    }
-    x += buttonSize + spacing;
-
-    // Stop button icon
-    if (m_stopButton && m_stopIcon) {
-        NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize);
-
-        // Draw True Glass highlight on hover
-        if (m_stopButton->isHovered() && m_stopButton->isEnabled()) {
-             renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassHover"));
-             renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("glassBorder"));
-        }
-
-        if (!m_stopButton->isEnabled()) {
-            m_stopIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.35f));
-        } else if (m_stopButton->isHovered()) {
-            m_stopIcon->setColor(themeManager.getColor("textSecondary"));
-        } else {
-            m_stopIcon->setColor(themeManager.getColor("primary"));
+        // Setup Colors
+        NomadUI::NUIColor currentBg = glassBg;
+        NomadUI::NUIColor currentBorder = glassBorder;
+        NomadUI::NUIColor iconColor = iconGrey;
+        
+        // LOGIC: Glassy Look (Reverted per user request)
+        // Active = Purple Tint Glass + Purple Icon
+        // Inactive = Grey Tint Glass + Grey Icon
+        
+        if (isRecording) {
+             // Recording Active: Red Tint Glass + Red Icon
+             currentBg = iconRed.withAlpha(0.15f); // Red Glass
+             currentBorder = iconRed.withAlpha(0.5f);
+             iconColor = iconRed;
+             if (isHovered) currentBg = iconRed.withAlpha(0.25f);
+        } else if (isActive) {
+             // Normal Active: Purple Haze
+             currentBg = glassActive; 
+             currentBorder = iconPurple.withAlpha(0.5f);
+             iconColor = iconPurple;
+        } else if (isHovered) {
+             // Hover (Inactive): Brighter Grey Glass + Purple Icon
+             currentBg = glassHover;
+             currentBorder = iconPurple.withAlpha(0.3f);
+             iconColor = iconPurple;
         }
         
+        // Draw Button Background
+        renderer.fillRoundedRect(buttonRect, 4.0f, currentBg);
+        renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, currentBorder);
+        
+        if (!btn->isEnabled()) {
+            iconColor = iconColor.withAlpha(0.3f);
+        }
+
+        // Render Icon
         NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
-        m_stopIcon->setBounds(iconRect);
-        m_stopIcon->onRender(renderer);
-    }
-    x += buttonSize + spacing;
-
-    if (m_recordButton && m_recordIcon) {
-        NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize);
-
-        if (!m_recordButton->isEnabled()) {
-            m_recordIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.35f));
-        } else {
-            m_recordIcon->setColorFromTheme("error");  // #ff4d4d - Red
-        }
-        
-        NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
-        m_recordIcon->setBounds(iconRect);
-        m_recordIcon->onRender(renderer);
-    }
-    x += buttonSize + spacing;
-
-    // Tools
-
-    // Calculate position for view toggles and metronome
-    // Move to the right of the center (BPM display)
-    float centerX = bounds.width / 2.0f;
-    
-    // Metronome button icon - positioned to the LEFT of BPM display
-    float metronomeX = centerX - 120.0f - buttonSize;
-    if (m_metronomeButton && m_metronomeIcon) {
-        NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, metronomeX, centerOffsetY, buttonSize, buttonSize);
-        
-        if (m_metronomeActive) {
-            // Active: cyan highlight
-            renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassActive"));
-            renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("primary").withAlpha(0.4f));
-            m_metronomeIcon->setColorFromTheme("primary");
-        } else if (m_metronomeButton->isHovered()) {
-            renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassHover"));
-            renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("glassBorder"));
-            m_metronomeIcon->setColorFromTheme("textSecondary");
-        } else {
-            m_metronomeIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.5f));
-        }
-        
-        NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
-        m_metronomeIcon->setBounds(iconRect);
-        m_metronomeIcon->onRender(renderer);
-    }
-    
-    float viewButtonsX = centerX + 120.0f; // Offset from center to avoid BPM
-    
-    // Helper to render view icons
-    auto renderViewIcon = [&](std::shared_ptr<NomadUI::NUIButton>& btn, std::shared_ptr<NomadUI::NUIIcon>& icon, bool isActive) {
-        if (btn && icon) {
-            NomadUI::NUIRect buttonRect = NUIAbsolute(bounds, viewButtonsX, centerOffsetY, buttonSize, buttonSize);
-            
-            if (isActive) {
-                // Background highlight for active state: Luminous Glass
-                renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassActive"));
-                renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("primary").withAlpha(0.4f));
-                icon->setColorFromTheme("primary"); 
-            } else if (btn->isHovered()) {
-                // Hover state: True Glass (neutral)
-                renderer.fillRoundedRect(buttonRect, 4.0f, themeManager.getColor("glassHover"));
-                renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, themeManager.getColor("glassBorder"));
-                icon->setColorFromTheme("primary"); 
-            } else {
-                icon->setColorFromTheme("textSecondary"); // Dimmer default for non-active
-            }
-            
-            NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
-            icon->setBounds(iconRect);
-            icon->onRender(renderer);
-            
-            viewButtonsX += buttonSize + spacing;
-        }
+        icon->setBounds(iconRect);
+        icon->setColor(iconColor);
+        icon->onRender(renderer);
     };
 
-    renderViewIcon(m_mixerButton, m_mixerIcon, m_mixerActive);
-    renderViewIcon(m_sequencerButton, m_sequencerIcon, m_sequencerActive);
-    renderViewIcon(m_pianoRollButton, m_pianoRollIcon, m_pianoRollActive);
-    renderViewIcon(m_playlistButton, m_playlistIcon, m_playlistActive);
+    // --- Transport Controls (Left) ---
+
+    // Play/Pause
+    if (m_playButton) {
+        bool isPlaying = (m_state == TransportState::Playing);
+        auto currentIcon = isPlaying ? m_pauseIcon : m_playIcon;
+        renderGlassButton(m_playButton, currentIcon, isPlaying);
+    }
+
+    // Stop
+    renderGlassButton(m_stopButton, m_stopIcon, false);
+
+    // Record (Special Red handling inside helper)
+    renderGlassButton(m_recordButton, m_recordIcon, m_state == TransportState::Recording, true);
+
+    // --- Transport Extras (Left of Metronome) ---
+    renderGlassButton(m_countInButton, m_countInIcon, m_countInActive);
+    renderGlassButton(m_waitButton, m_waitIcon, m_waitActive);
+    renderGlassButton(m_loopRecordButton, m_loopRecordIcon, m_loopRecordActive);
+    
+    // --- Metronome (Left of Center) ---
+    renderGlassButton(m_metronomeButton, m_metronomeIcon, m_metronomeActive);
+
+    // --- View Toggles (Right) ---
+    renderGlassButton(m_mixerButton, m_mixerIcon, m_mixerActive);
+    renderGlassButton(m_sequencerButton, m_sequencerIcon, m_sequencerActive);
+    renderGlassButton(m_pianoRollButton, m_pianoRollIcon, m_pianoRollActive);
+    renderGlassButton(m_playlistButton, m_playlistIcon, m_playlistActive);
 }
 
 void TransportBar::layoutComponents() {
@@ -465,17 +501,39 @@ void TransportBar::layoutComponents() {
     // Center of the transport bar (BPM display area)
     float centerX = bounds.width / 2.0f;
     
-    // Metronome button - positioned to the LEFT of BPM display (mirroring mixer position on right)
-    float metronomeX = centerX - 120.0f - buttonSize;  // Same offset as mixer from center, minus button width
+    // Metronome button: Positioned to the LEFT of BPM display
+    // New Balance: [Count] [Wait] [Loop] [Metronome] ---> [BPM]
+    
+    // Start metronome at old position (Center - 180 - buttonSize)
+    // Then stack others to the left of it.
+    
+    float metronomeRightGap = 180.0f; // Gap from center to Right edge of Metronome
+    float metronomeX = centerX - metronomeRightGap - buttonSize;
     m_metronomeButton->setBounds(NUIAbsolute(bounds, metronomeX, centerOffsetY, buttonSize, buttonSize));
+    
+    // Stack Extras to the left of Metronome
+    float currentX = metronomeX;
+    
+    // Loop Record
+    currentX -= (buttonSize + spacing);
+    m_loopRecordButton->setBounds(NUIAbsolute(bounds, currentX, centerOffsetY, buttonSize, buttonSize));
+    
+    // Wait
+    currentX -= (buttonSize + spacing);
+    m_waitButton->setBounds(NUIAbsolute(bounds, currentX, centerOffsetY, buttonSize, buttonSize));
+    
+    // Count In
+    currentX -= (buttonSize + spacing);
+    m_countInButton->setBounds(NUIAbsolute(bounds, currentX, centerOffsetY, buttonSize, buttonSize));
 
     
     // Calculate position for view toggles (Right side)
     float rightEdge = bounds.width;
     // View toggle buttons
     // Position to the right of center (BPM display) - centerX already declared above
-    if (x > centerX - 100) { 
-        // If our tools encroach on center, shift center or rely on manual absolute
+    if (x > currentX - 20) { 
+        // If main transport buttons encroach on extras, we might need adjustments.
+        // But main transport is far left, so unlikely overlap.
     }
     
     float viewButtonsX = centerX + 120.0f; // Offset from center to avoid BPM

@@ -53,7 +53,7 @@ BPMDisplay::BPMDisplay()
     )";
     m_downArrow = std::make_shared<NomadUI::NUIIcon>(downArrowSvg);
     m_downArrow->setIconSize(NomadUI::NUIIconSize::Small);
-    m_downArrow->setColorFromTheme("textSecondary"); 	// #9a9aa3 - Inactive by default
+    m_downArrow->setColorFromTheme("textSecondary");
 }
 
 void BPMDisplay::setBPM(float bpm) {
@@ -77,25 +77,16 @@ void BPMDisplay::decrementBPM(float amount) {
 }
 
 NomadUI::NUIRect BPMDisplay::getUpArrowBounds() const {
+    if (m_cachedUpArrowBounds.width > 0) return m_cachedUpArrowBounds;
+    // Fallback if not rendered yet
     NomadUI::NUIRect bounds = getBounds();
-    float arrowSize = 16.0f;
-    float spacing = 6.0f;
-    
-    // Position arrows at the right edge of the component, vertically stacked
-    float x = bounds.x + bounds.width - arrowSize - 5.0f; // 5px from right edge
-    float totalArrowHeight = arrowSize * 2 + spacing; // Both arrows + gap
-    float y = bounds.y + (bounds.height - totalArrowHeight) / 2.0f; // Vertically centered as a group
-    
-    return NomadUI::NUIRect(x, y, arrowSize, arrowSize);
+    return NomadUI::NUIRect(bounds.x + bounds.width - 20, bounds.y, 12, 12);
 }
 
 NomadUI::NUIRect BPMDisplay::getDownArrowBounds() const {
+    if (m_cachedDownArrowBounds.width > 0) return m_cachedDownArrowBounds;
     NomadUI::NUIRect bounds = getBounds();
-    float arrowSize = 16.0f;
-    float spacing = 6.0f;
-    // Position down arrow below up arrow
-    NomadUI::NUIRect upBounds = getUpArrowBounds();
-    return NomadUI::NUIRect(upBounds.x, upBounds.y + arrowSize + spacing, arrowSize, arrowSize);
+    return NomadUI::NUIRect(bounds.x + bounds.width - 20, bounds.y + 15, 12, 12);
 }
 
 void BPMDisplay::onUpdate(double deltaTime) {
@@ -142,17 +133,16 @@ void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     
     // Get colors
-    NomadUI::NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.5f); // Glass!
+    NomadUI::NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.5f); // Semi-glass
     NomadUI::NUIColor borderColor = themeManager.getColor("glassBorder");
-    NomadUI::NUIColor accentColor = themeManager.getColor("accent");
+    NomadUI::NUIColor accentColor = themeManager.getColor("accentPrimary"); // Nomad Purple
     NomadUI::NUIColor textPrimary = themeManager.getColor("textPrimary");
     NomadUI::NUIColor textSecondary = themeManager.getColor("textSecondary");
     
     const float radius = themeManager.getRadius("m");
     
-    // Hover glow effect - subtle accent border when hovered
+    // Hover glow effect
     if (m_isHovered) {
-        // Draw outer glow
         NomadUI::NUIRect glowBounds = bounds;
         glowBounds.x -= 1.0f;
         glowBounds.y -= 1.0f;
@@ -166,69 +156,78 @@ void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     // Draw Dark Pill Background
     renderer.fillRoundedRect(bounds, radius, bgColor);
     
-    // Border: accent when hovered, normal otherwise
+    // Border
     NomadUI::NUIColor currentBorder = m_isHovered ? accentColor : borderColor;
     if (m_isHovered) currentBorder.a = 0.6f;
     renderer.strokeRoundedRect(bounds, radius, 1.0f, currentBorder);
     
-    // Pulse effect - flash accent color when BPM changes
+    // Pulse effect
     if (m_pulseAnimation > 0.0f) {
         NomadUI::NUIColor pulseColor = accentColor;
         pulseColor.a = m_pulseAnimation * 0.4f;
         renderer.fillRoundedRect(bounds, radius, pulseColor);
     }
     
-    // Text color: pulse accent briefly when changing
+    // Text color
     NomadUI::NUIColor textColor = textPrimary;
     if (m_pulseAnimation > 0.5f) {
         textColor = accentColor;
     }
     
     float fontSize = themeManager.getFontSize("l");
-    
-    // Calculate text position - offset left to make room for arrows
     std::stringstream ss;
     ss << std::fixed << std::setprecision(1) << m_displayBPM << " BPM";
     std::string bpmText = ss.str();
     
+    // === CENTERED CLUSTER LAYOUT ===
     NomadUI::NUISize textSize = renderer.measureText(bpmText, fontSize);
+    
+    float arrowSize = 12.0f;  // Balanced size (not too small, fits container)
+    float arrowGap = 1.0f;    // Tight spacing between arrows
+    float textArrowGap = 8.0f; // Comfortable gap between text and arrows
+    
+    float arrowBlockWidth = arrowSize;
+    float arrowBlockHeight = (arrowSize * 2) + arrowGap;
+    
+    float totalContentWidth = textSize.width + textArrowGap + arrowBlockWidth;
+    
+    // Center the entire cluster (Text + Arrows) within the component
+    float startX = bounds.x + (bounds.width - totalContentWidth) * 0.5f;
+    float textX = std::round(startX);
     float textY = std::round(renderer.calculateTextY(bounds, fontSize));
-    // Offset text left to make room for arrows on right
-    float textX = std::round(bounds.x + (bounds.width - textSize.width - 20.0f) * 0.5f);
+    
+    float arrowX = std::round(startX + textSize.width + textArrowGap);
+    float arrowY = bounds.y + (bounds.height - arrowBlockHeight) * 0.5f;
+    
+    // Update Cached Bounds for Hit Testing
+    m_cachedUpArrowBounds = NomadUI::NUIRect(arrowX, arrowY, arrowSize, arrowSize);
+    m_cachedDownArrowBounds = NomadUI::NUIRect(arrowX, arrowY + arrowSize + arrowGap, arrowSize, arrowSize);
     
     // Draw text
     renderer.drawText(bpmText, NomadUI::NUIPoint(textX, textY), fontSize, textColor);
     
     // Draw arrow buttons
-    NomadUI::NUIRect upBounds = getUpArrowBounds();
-    NomadUI::NUIRect downBounds = getDownArrowBounds();
     
-    // Up arrow color based on state
+    // Up arrow color
     NomadUI::NUIColor upColor = textSecondary;
-    if (m_upArrowPressed) {
-        upColor = accentColor;
-    } else if (m_upArrowHovered) {
-        upColor = textPrimary;
-    }
+    if (m_upArrowPressed) upColor = accentColor;
+    else if (m_upArrowHovered) upColor = textPrimary;
     
-    // Down arrow color based on state
+    // Down arrow color
     NomadUI::NUIColor downColor = textSecondary;
-    if (m_downArrowPressed) {
-        downColor = accentColor;
-    } else if (m_downArrowHovered) {
-        downColor = textPrimary;
-    }
+    if (m_downArrowPressed) downColor = accentColor;
+    else if (m_downArrowHovered) downColor = textPrimary;
     
-    // Draw up arrow using NUIIcon
+    // Draw up arrow
     if (m_upArrow) {
-        m_upArrow->setBounds(upBounds);
+        m_upArrow->setBounds(m_cachedUpArrowBounds);
         m_upArrow->setColor(upColor);
         m_upArrow->onRender(renderer);
     }
     
-    // Draw down arrow using NUIIcon
+    // Draw down arrow
     if (m_downArrow) {
-        m_downArrow->setBounds(downBounds);
+        m_downArrow->setBounds(m_cachedDownArrowBounds);
         m_downArrow->setColor(downColor);
         m_downArrow->onRender(renderer);
     }
@@ -344,7 +343,7 @@ void TimerDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     
     // CRITICAL: Green when playing, white when stopped
     NomadUI::NUIColor textColor = m_isPlaying 
-        ? themeManager.getColor("success") 	// Vibrant green when playing
+        ? themeManager.getColor("accentPrimary") 	// Vibrant purple when playing
         : themeManager.getColor("textPrimary"); 	 	// White when stopped
     
     float fontSize = themeManager.getFontSize("l");
@@ -401,25 +400,46 @@ void TimeSignatureDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIRect bounds = getBounds();
     
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-    NomadUI::NUIColor textColor = themeManager.getColor("textPrimary");
-    NomadUI::NUIColor accentCyan = themeManager.getColor("accentCyan");
-    NomadUI::NUIColor bgColor = themeManager.getColor("backgroundSecondary");
     
-    // Subtle background when hovered
+    // Consistent Glass styling
+    const float radius = themeManager.getRadius("m");
+    NomadUI::NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.5f);
+    NomadUI::NUIColor borderColor = themeManager.getColor("glassBorder");
+    NomadUI::NUIColor accentColor = themeManager.getColor("accentPrimary");
+    
+    // Hover glow
     if (m_isHovered) {
-        renderer.fillRoundedRect(bounds, 4.0f, bgColor.withAlpha(0.5f));
+        NomadUI::NUIRect glowBounds = bounds;
+        glowBounds.x -= 1.0f;
+        glowBounds.y -= 1.0f;
+        glowBounds.width += 2.0f;
+        glowBounds.height += 2.0f;
+        NomadUI::NUIColor glowColor = accentColor;
+        glowColor.a = 0.3f; // Glow opacity
+        renderer.strokeRoundedRect(glowBounds, radius + 1.0f, 2.0f, glowColor);
     }
     
-    // Draw time signature text - centered
-    std::string text = getDisplayText();
-    float fontSize = 14.0f;
-    NomadUI::NUISize textSize = renderer.measureText(text, fontSize);
-    float textX = std::round(bounds.x + (bounds.width - textSize.width) * 0.5f);
-    float textY = std::round(renderer.calculateTextY(bounds, fontSize));
+    // Background
+    renderer.fillRoundedRect(bounds, radius, bgColor);
     
-    NomadUI::NUIColor displayColor = m_isHovered ? accentCyan : textColor;
-    renderer.drawText(text, NomadUI::NUIPoint(textX, textY), fontSize, displayColor);
+    // Border
+    NomadUI::NUIColor currentBorder = m_isHovered ? accentColor : borderColor;
+    if (m_isHovered) currentBorder.a = 0.6f;
+    renderer.strokeRoundedRect(bounds, radius, 1.0f, currentBorder);
+    
+    // Text
+    NomadUI::NUIColor textColor = m_isHovered ? accentColor : themeManager.getColor("textPrimary");
+    
+    float fontSize = themeManager.getFontSize("l");
+    std::string text = getDisplayText();
+    
+    NomadUI::NUISize textSize = renderer.measureText(text, fontSize);
+    float textY = std::round(renderer.calculateTextY(bounds, fontSize));
+    float textX = std::round(bounds.x + (bounds.width - textSize.width) * 0.5f);
+    
+    renderer.drawText(text, NomadUI::NUIPoint(textX, textY), fontSize, textColor);
 }
+
 
 bool TimeSignatureDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     NomadUI::NUIRect bounds = getBounds();
@@ -491,8 +511,8 @@ void TransportInfoContainer::layoutComponents() {
     m_bpmDisplay->setBounds(NomadUI::NUIRect(bounds.x + bpmOffsetX, bounds.y + bpmOffsetY, bpmWidth, bpmHeight));
     
     // Time signature to the left of BPM display (between metronome button and BPM)
-    float timeSigWidth = 40.0f;
-    float timeSigHeight = 24.0f;
+    float timeSigWidth = 50.0f;  // Increased from 40.0f
+    float timeSigHeight = 30.0f; // Increased from 24.0f to match BPM
     float timeSigOffsetX = bpmOffsetX - timeSigWidth - 10.0f;  // 10px gap from BPM
     float timeSigOffsetY = (bounds.height - timeSigHeight) / 2.0f;
     

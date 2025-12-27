@@ -166,15 +166,51 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
             }
         }
 
-        const float norm = logNorm(value, maxValue);
-        const float base = 0.05f;
-        const float vis = base + (1.0f - base) * norm;
-        const float alpha = lerp(0.03f, 0.65f, vis);
-        const float h = lerp(minH, maxH, vis);
+        // Render as stacked "Track Lines" (Discrete size) to match user request
+        // Render as True Track Map (Position = Track Index)
+        const float trackH = 3.0f; // Small fixed height per track
+        const float gap = 1.0f;
+        const float rowH = trackH + gap;
+        
+        static const std::vector<NUIColor> brightColors = {
+            NUIColor(1.0f, 0.8f, 0.2f, 1.0f),   // Yellow
+            NUIColor(0.2f, 1.0f, 0.8f, 1.0f),   // Cyan
+            NUIColor(1.0f, 0.4f, 0.8f, 1.0f),   // Pink
+            NUIColor(0.6f, 1.0f, 0.2f, 1.0f),   // Lime
+            NUIColor(1.0f, 0.6f, 0.2f, 1.0f),   // Orange
+            NUIColor(0.4f, 0.8f, 1.0f, 1.0f),   // Blue
+            NUIColor(1.0f, 0.2f, 0.4f, 1.0f),   // Red
+            NUIColor(0.8f, 0.4f, 1.0f, 1.0f),   // Purple
+            NUIColor(1.0f, 0.9f, 0.1f, 1.0f),   // Yellow
+            NUIColor(0.1f, 0.9f, 0.6f, 1.0f)    // Teal
+        };
 
         const float x = map.x + static_cast<float>(px);
-        const NUIRect colRect(x, barBottom - h, 1.0f, h);
-        renderer.fillRect(colRect, withAlphaClamp(tint, alpha));
+        
+        // Loop through supported track slots (up to 64)
+        for (int i = 0; i < 64; ++i) {
+             bool isPresent = false;
+             // Check presence in any bucket covering this pixel
+             for (int k = a; k <= b; ++k) {
+                if (buckets[k].trackCounts[i] > 0) {
+                    isPresent = true;
+                    break;
+                }
+             }
+             
+             if (isPresent) {
+                 float currentY = barTop + (static_cast<float>(i) * rowH);
+                 
+                 // Stop drawing if out of bounds (culling)
+                 if (currentY + trackH > barBottom) break; 
+                 
+                 // Use bright palette color consistent with track index
+                 NUIColor lineTint = brightColors[i % brightColors.size()].withAlpha(0.9f);
+
+                 NUIRect lineRect(x, currentY, 1.0f, trackH);
+                 renderer.fillRect(lineRect, lineTint);
+             }
+        }
     }
 
     // Overlays: selection + loop under viewport.

@@ -69,6 +69,8 @@ private:
     NUIColor m_selectedTopHighlight;
     NUIColor m_masterBackground;
     NUIColor m_mutedOverlay;
+    NUIColor m_stripBg;
+    NUIColor m_masterBorder;
 
     // Static-layer cache (header + fader). The meter stays live.
     uint64_t m_staticCacheId{0};

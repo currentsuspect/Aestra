@@ -49,12 +49,18 @@ std::vector<float> generateWaveformFromAudio(const std::vector<float>& samples,
 FilePreviewPanel::FilePreviewPanel() {
     setId("FilePreviewPanel");
 
-    // Initialize SVG Icons
-    // Folder Icon (Material Design)
-    folderIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24'><path d='M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z'/></svg>");
-    
+    // Folder Icon (Material Design / Mac Style)
+    // Use the same high-quality path as FileBrowser for consistency
+    folderIcon_ = std::make_shared<NUIIcon>(R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-2.06 11L15 10l.94-2H21v9h-3.06z" opacity="0.8"/><path d="M20,6H12L10,4H4A2,2,0,0,0,2,6V18A2,2,0,0,0,4,20H20A2,2,0,0,0,22,18V8A2,2,0,0,0,20,6Z"/></svg>)");
+
     // File Icon (Text Snippet style)
-    fileIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24'><path d='M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z'/></svg>");
+    fileIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24' fill='currentColor'><path d='M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z'/></svg>");
+    
+    // Play Icon (Solid Triangle)
+    playIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24' fill='currentColor'><path d='M8 5v14l11-7z'/></svg>");
+    
+    // Stop Icon (Solid Square)
+    stopIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24' fill='currentColor'><path d='M6 6h12v12H6z'/></svg>");
 }
 
 void FilePreviewPanel::setFile(const FileItem* file) {
@@ -206,8 +212,7 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
             
             // Purple Color (Matching sidebar selection)
             // Using a vibrant purple accent
-            NUIColor purpleAccent(0.6f, 0.3f, 0.9f, 1.0f);
-            folderIcon_->setColor(purpleAccent);
+            folderIcon_->setColor(theme.getColor("accentPrimary"));
             
             folderIcon_->onRender(renderer);
         }
@@ -280,12 +285,24 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     
     // Play Button (Right side of top row)
     playButtonBounds_ = NUIRect(playX, topRowY + 2, playBtnWidth, 26);
-    
-    NUIColor btnColor = isPlaying_ ? theme.getColor("accentLime") : theme.getColor("primary");
+
+    NUIColor btnColor = isPlaying_ ? theme.getColor("accentPrimary") : theme.getColor("primary");
+    // Button background
     renderer.fillRoundedRect(playButtonBounds_, 4.0f, btnColor.withAlpha(0.3f));
     
-    std::string iconStr = isPlaying_ ? "■" : "▶";
-    renderer.drawText(iconStr, NUIPoint(playButtonBounds_.x + 10, playButtonBounds_.y + 5), 14.0f, btnColor);
+    // Icon
+    auto& icon = isPlaying_ ? stopIcon_ : playIcon_;
+    if (icon) {
+        float iconSize = 14.0f;
+        // Pixel snap positions
+        float iconX = std::floor(playButtonBounds_.x + (playButtonBounds_.width - iconSize) * 0.5f + (isPlaying_ ? 0.0f : 1.0f)); 
+        // Nudge Stop icon down 1px
+        float iconY = std::floor(playButtonBounds_.y + (playButtonBounds_.height - iconSize) * 0.5f + (isPlaying_ ? 1.0f : 0.0f)); 
+        
+        icon->setBounds(NUIRect(iconX, iconY, iconSize, iconSize));
+        icon->setColor(theme.getColor("textPrimary")); // White/Bright
+        icon->onRender(renderer);
+    }
     
     // === BOTTOM ROW: Waveform (Full Width) ===
     NUIRect waveformBounds(bounds.x + 8, waveformY, bounds.width - 16, waveformHeight);
@@ -334,7 +351,8 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         // Double check data is still there
         if (waveformData_.empty()) return;
 
-        NUIColor waveformFill = theme.getColor("waveformFill");
+        // Use primary accent (Purple) for waveform to match theme
+        NUIColor waveformFill = theme.getColor("accentPrimary").withAlpha(0.7f);
         
         float centerY = waveformBounds.y + waveformBounds.height * 0.5f;
         float maxAmplitude = waveformBounds.height * 0.45f;
@@ -373,7 +391,7 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
             renderer.drawLine(
                 NUIPoint(playheadX, waveformBounds.y),
                 NUIPoint(playheadX, waveformBounds.y + waveformBounds.height),
-                2.0f, theme.getColor("accentLime")
+                2.0f, theme.getColor("accentPrimary")
             );
         }
     }

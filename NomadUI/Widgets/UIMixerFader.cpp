@@ -30,8 +30,8 @@ void UIMixerFader::cacheThemeColors()
     auto& theme = NUIThemeManager::getInstance();
     m_trackBg = theme.getColor("backgroundSecondary");
     m_trackFg = theme.getColor("accentPrimary");
-    m_handle = theme.getColor("textPrimary");
-    m_handleHover = theme.getColor("accentPrimary");
+    m_handle = theme.getColor("sliderHandle");
+    m_handleHover = theme.getColor("sliderHandleHover");
     m_text = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary");
 }

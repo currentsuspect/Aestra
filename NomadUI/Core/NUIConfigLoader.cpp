@@ -221,10 +221,20 @@ void NUIConfigLoader::applyColors(const Nomad::JSON& colors) {
     if (colors.has("success")) theme.success = parseColor(colors["success"].asString());
     if (colors.has("warning")) theme.warning = parseColor(colors["warning"].asString());
 
+    // Meter tokens
+    if (colors.has("meterSafe")) theme.meterSafe = parseColor(colors["meterSafe"].asString());
+    if (colors.has("meterWarn")) theme.meterWarn = parseColor(colors["meterWarn"].asString());
+    if (colors.has("meterCrit")) theme.meterCrit = parseColor(colors["meterCrit"].asString());
+
     // Glass Aesthetic tokens
     if (colors.has("glassHover")) theme.glassHover = parseColor(colors["glassHover"].asString());
     if (colors.has("glassBorder")) theme.glassBorder = parseColor(colors["glassBorder"].asString());
+    if (colors.has("glassBorder")) theme.glassBorder = parseColor(colors["glassBorder"].asString());
     if (colors.has("glassActive")) theme.glassActive = parseColor(colors["glassActive"].asString());
+
+    // Mixer tokens
+    if (colors.has("mixerStripBg")) theme.mixerStripBg = parseColor(colors["mixerStripBg"].asString());
+    if (colors.has("mixerMasterBorder")) theme.mixerMasterBorder = parseColor(colors["mixerMasterBorder"].asString());
 }
 
 void NUIConfigLoader::applyLayout(const Nomad::JSON& layout) {

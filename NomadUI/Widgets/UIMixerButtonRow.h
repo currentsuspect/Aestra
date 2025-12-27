@@ -21,6 +21,7 @@ public:
     void onRender(NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    void onMouseLeave() override;
 
     void setMuted(bool muted);
     void setSoloed(bool soloed);

@@ -270,7 +270,8 @@ FileBrowser::FileBrowser()
     const char* fileSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>)";
     unknownFileIcon_->loadSVG(fileSvg);
     unknownFileIcon_->setIconSize(20, 20);
-    unknownFileIcon_->setColor(themeManager.getColor("textSecondary"));
+    // Increased visibility for dark theme
+    unknownFileIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(0.9f));
 
     // Generic Audio Icon -> audioFileIcon_ (Standard Music Note)
     audioFileIcon_ = std::make_shared<NUIIcon>();
@@ -360,8 +361,8 @@ FileBrowser::FileBrowser()
     backgroundColor_ = themeManager.getColor("backgroundSecondary");  // #1b1b1f - Panels, sidebars, file browser
     textColor_ = themeManager.getColor("textPrimary");                // #e6e6eb - Soft white
     
-    // Use a refined purple accent to match the icons
-    selectedColor_ = NUIColor(0.733f, 0.525f, 0.988f, 1.0f);          // #bb86fc - Matching the folder icons
+    // Use theme accent for selection (consistent with the rest of the app)
+    selectedColor_ = themeManager.getColor("accentPrimary");
     
     hoverColor_ = NUIColor(1.0f, 1.0f, 1.0f, 0.02f); // Glass hover (ultra-clear)
     borderColor_ = themeManager.getColor("interfaceBorder");          // #2e2e35 - Subtle separation lines
@@ -1057,8 +1058,20 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     }
     
 	    // Check if click is in file list area
-	    if (event.position.x >= listX && event.position.x <= listX + listW &&
-	        event.position.y >= listY && event.position.y <= listY + listHeight) {
+        bool isInsideList = (event.position.x >= listX && event.position.x <= listX + listW &&
+                             event.position.y >= listY && event.position.y <= listY + listHeight);
+
+        if (!isInsideList) {
+            // Outside list area - clear hover and tooltip
+            if (hoveredIndex_ != -1) {
+                hoveredIndex_ = -1;
+                NUIComponent::hideRemoteTooltip();
+                setDirty(true);
+            }
+        }
+
+	    if (isInsideList) {
+
 
         // Calculate which item is being hovered
         float relativeY = event.position.y - listY;
@@ -1068,6 +1081,25 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	        int newHoveredIndex = (itemIndex >= 0 && itemIndex < static_cast<int>(view.size())) ? itemIndex : -1;
 	        if (newHoveredIndex != hoveredIndex_) {
 	            hoveredIndex_ = newHoveredIndex;
+                
+                // Tooltip Logic for Truncated Items
+                if (hoveredIndex_ >= 0 && hoveredIndex_ < static_cast<int>(view.size())) {
+                    const FileItem* item = view[hoveredIndex_];
+                    if (item && item->isTruncated) {
+                        // Position tooltip at the mouse or right of the text
+                        // For simply following mouse:
+                        NUIPoint tooltipPos = event.position;
+                        tooltipPos.x += 16.0f; // Offset
+                        tooltipPos.y += 16.0f;
+                        
+                        NUIComponent::showRemoteTooltip(item->name, tooltipPos);
+                    } else {
+                        NUIComponent::hideRemoteTooltip();
+                    }
+                } else {
+                    NUIComponent::hideRemoteTooltip();
+                }
+
 	            setDirty(true); // Trigger redraw when hover state changes
 	        }
 
@@ -1398,6 +1430,15 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
     return false;
 }
 
+void FileBrowser::onMouseLeave() {
+    // Hide any active tooltip when leaving the file browser
+    if (hoveredIndex_ >= 0) {
+        hoveredIndex_ = -1;
+        NUIComponent::hideRemoteTooltip();
+        setDirty(true);
+    }
+    NUIComponent::onMouseLeave();
+}
 void FileBrowser::setCurrentPath(const std::string& path) {
     std::string targetPath = path;
     if (!rootPath_.empty()) {
@@ -1960,12 +2001,12 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         const FileItem* item = view[i];
 
         // Background styling
+        // Background styling
         if (selected) {
-            // Selected state: Richer background + Left accent bar
-            renderer.fillRoundedRect(itemRect, 4, selectedColor_.withAlpha(0.2f));
-            // Left accent bar - slightly thicker and more rounded
-            NUIRect accentRect(itemRect.x, itemRect.y + 3, 4.0f, itemRect.height - 6);
-            renderer.fillRoundedRect(accentRect, 2.0f, selectedColor_);
+            // Selected state: Full width pill (Glass Aesthetic)
+            renderer.fillRoundedRect(itemRect, 6, selectedColor_.withAlpha(0.20f));
+            // Optional: Very subtle border to define edges
+            renderer.strokeRoundedRect(itemRect, 6, 1.0f, selectedColor_.withAlpha(0.3f));
         } else if (hovered) {
             // Hover state: Glass effect (Light overlay + subtle border from theme)
             renderer.fillRoundedRect(itemRect, 4, themeManager.getColor("glassHover")); 
@@ -2067,6 +2108,9 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             if (nameTextSize.width > maxTextWidth) {
                 // Truncate with middle ellipsis (keeps extensions / suffixes readable)
                 item->cachedDisplayName = ellipsizeMiddle(renderer, item->name, labelFont, maxTextWidth);
+                item->isTruncated = true;
+            } else {
+                item->isTruncated = false;
             }
             
             item->cacheValid = true;
@@ -2146,21 +2190,29 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     // === PREPARE ===
     
     // Helper lambda for button drawing
+
     auto drawButton = [&](const NUIRect& rect, const std::string& text, bool hovered, bool active = false) {
-        NUIColor bg = themeManager.getColor("surfaceRaised").withAlpha(hovered ? 0.32f : 0.20f);
-        if (active) bg = themeManager.getColor("accentPrimary").withAlpha(0.2f);
+        // Glass Aesthetic Polish
+        NUIColor bg = themeManager.getColor("surfaceTertiary").withAlpha(hovered ? 0.35f : 0.15f);
+        NUIColor border = themeManager.getColor("glassBorder");
         
+        if (active) {
+            bg = themeManager.getColor("accentPrimary").withAlpha(0.25f);
+            border = themeManager.getColor("accentPrimary").withAlpha(0.5f);
+        } else if (hovered) {
+            border = themeManager.getColor("textSecondary").withAlpha(0.4f);
+        }
+
         renderer.fillRoundedRect(rect, buttonRadius, bg);
-        renderer.strokeRoundedRect(rect, buttonRadius, 1.0f, 
-                                   active ? themeManager.getColor("accentPrimary").withAlpha(0.5f) : 
-                                   borderColor_.withAlpha(hovered ? 0.45f : 0.25f));
+        renderer.strokeRoundedRect(rect, buttonRadius, 1.0f, border);
         
         if (!text.empty()) {
             float tY = std::round(renderer.calculateTextY(rect, toolbarFont));
             renderer.drawText(text, NUIPoint(rect.x + buttonPadX, tY), 
-                              toolbarFont, textColor_.withAlpha(hovered ? 0.95f : 0.85f));
+                              toolbarFont, textColor_.withAlpha(hovered ? 1.0f : 0.85f));
         }
     };
+
 
     // Sort Button (Compact)
     std::string sortText = "Sort";

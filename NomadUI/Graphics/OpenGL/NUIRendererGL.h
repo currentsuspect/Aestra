@@ -80,6 +80,8 @@ public:
     void drawLine(const NUIPoint& start, const NUIPoint& end, float thickness, const NUIColor& color) override;
     void drawPolyline(const NUIPoint* points, int count, float thickness, const NUIColor& color) override;
     void fillWaveform(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, const NUIColor& color) override;
+    void fillWaveformGradient(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, 
+                               const NUIColor& colorTop, const NUIColor& colorBottom) override;
     
     // ========================================================================
     // Gradient Drawing

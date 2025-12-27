@@ -72,6 +72,7 @@ struct FileItem {
     mutable std::string cachedDisplayName;
     mutable std::string cachedSizeStr;
     mutable bool cacheValid = false;
+    mutable bool isTruncated = false;
     mutable int searchScore = 0;
     
     FileItem(const std::string& n, const std::string& p, FileType t, bool isDir, size_t s = 0, const std::string& modified = "")
@@ -97,6 +98,7 @@ public:
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
+    void onMouseLeave() override;
     
     // File browser functionality
     void setCurrentPath(const std::string& path);

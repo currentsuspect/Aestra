@@ -51,6 +51,7 @@
 #include "ViewTypes.h"
 #include "PatternBrowserPanel.h"
 #include "ArsenalPanel.h"
+#include "../NomadUI/Widgets/NUISegmentedControl.h"
 #include <memory>
 #include <iostream>
 #include <chrono>
@@ -412,41 +413,20 @@ public:
         
         // Create Focus Toggle Buttons (Arsenal / Timeline)
         auto& theme = NomadUI::NUIThemeManager::getInstance();
-        
-        // Colors matching FileBrowser's Nomad purple and glassy hover
-        NomadUI::NUIColor nomadPurple(0.733f, 0.525f, 0.988f, 1.0f);  // #bb86fc - Active purple
-        NomadUI::NUIColor glassyGrey(1.0f, 1.0f, 1.0f, 0.08f);         // Glassy hover grey - Inactive
-        NomadUI::NUIColor glassyGreyHover(1.0f, 1.0f, 1.0f, 0.12f);    // Slightly lighter on hover
-        
-        m_arsenalFocusBtn = std::make_shared<NomadUI::NUIButton>("Arsenal");
-        m_arsenalFocusBtn->setBackgroundColor(nomadPurple);
-        m_arsenalFocusBtn->setHoverColor(nomadPurple.withAlpha(0.85f));
-        m_arsenalFocusBtn->setTextColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
-        m_arsenalFocusBtn->setCornerRadius(11.0f); // Pill shape (half of 22px height)
-        m_arsenalFocusBtn->setOnClick([this]() {
-            setViewFocus(::ViewFocus::Arsenal);
+        // === View Focus Toggle: Modern Segmented Control with sliding indicator ===
+        m_viewToggle = std::make_shared<NomadUI::NUISegmentedControl>(
+            std::vector<std::string>{"Arsenal", "Timeline"}
+        );
+        m_viewToggle->setCornerRadius(12.0f);
+        m_viewToggle->setOnSelectionChanged([this](size_t index) {
+            setViewFocus(index == 0 ? ::ViewFocus::Arsenal : ::ViewFocus::Timeline);
         });
-        // Buttons added later to title bar in setCustomWindow()
+        // Segmented control added to title bar in setCustomWindow()
         
-        m_timelineFocusBtn = std::make_shared<NomadUI::NUIButton>("Timeline");
-        m_timelineFocusBtn->setBackgroundColor(glassyGrey);
-        m_timelineFocusBtn->setHoverColor(glassyGreyHover);
-        m_timelineFocusBtn->setTextColor(theme.getColor("textSecondary"));
-        m_timelineFocusBtn->setCornerRadius(11.0f); // Pill shape (half of 22px height)
-        m_timelineFocusBtn->setOnClick([this]() {
-            setViewFocus(::ViewFocus::Timeline);
-        });
-        // Buttons added later to title bar in setCustomWindow()
-        
-        // Initialize focus state (sync button appearance with m_viewFocus default)
+        // Initialize focus state
         setViewFocus(::ViewFocus::Arsenal);
         
-        // Create scope indicator label (use Geometry-based label for robust Play icon)
-        // Initial text includes the hex char, but our class strips it and draws geometry.
-        m_scopeLabel = std::make_shared<ScopeIndicatorLabel>("\xE2\x96\xB6 Pattern");
-        m_scopeLabel->setTextColor(theme.getColor("accentPrimary"));
-        m_scopeLabel->setFontSize(12);
-        m_overlayLayer->addChild(m_scopeLabel);
+        // REMOVED: m_scopeLabel ("Pattern" / "Arrangement" indicator) per user request
 
         // Create compact master meters inside transport bar (add to overlay)
         m_waveformVisualizer = std::make_shared<NomadUI::AudioVisualizer>();
@@ -743,12 +723,24 @@ public:
     }
 
     void toggleView(Audio::ViewType view) {
+        // SPECIAL CASE: Sequencer (Arsenal) is linked to ViewFocus for consistent state
+        if (view == Audio::ViewType::Sequencer) {
+            // Toggle ViewFocus instead of just panel visibility
+            if (m_viewFocus == ::ViewFocus::Arsenal) {
+                setViewFocus(::ViewFocus::Timeline);
+            } else {
+                setViewFocus(::ViewFocus::Arsenal);
+            }
+            return;
+        }
+        
+        // Standard toggle for other views
         bool current = false;
         switch (view) {
             case Audio::ViewType::Mixer: current = m_viewState.mixerOpen; break;
             case Audio::ViewType::PianoRoll: current = m_viewState.pianoRollOpen; break;
-            case Audio::ViewType::Sequencer: current = m_viewState.sequencerOpen; break;
             case Audio::ViewType::Playlist: current = m_viewState.playlistActive; break;
+            default: break;
         }
         setViewOpen(view, !current);
     }
@@ -785,39 +777,24 @@ public:
         
         auto& theme = NomadUI::NUIThemeManager::getInstance();
         
-        // Colors matching button initialization
-        NomadUI::NUIColor nomadPurple(0.733f, 0.525f, 0.988f, 1.0f);  // #bb86fc
-        NomadUI::NUIColor glassyGrey(1.0f, 1.0f, 1.0f, 0.08f);
-        
-        // Update button styles based on focus
+        // Segmented control handles its own indicator animation
+        // Just update the panel visibility based on focus
         if (focus == ::ViewFocus::Arsenal) {
-            m_arsenalFocusBtn->setBackgroundColor(nomadPurple);
-            m_arsenalFocusBtn->setTextColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
-            
-            m_timelineFocusBtn->setBackgroundColor(glassyGrey);
-            m_timelineFocusBtn->setTextColor(theme.getColor("textSecondary"));
-            
             // Show Arsenal panel with fade-in
             if (m_sequencerPanel) {
                 if (!m_sequencerPanel->isVisible()) {
                     m_sequencerPanel->setOpacity(0.0f); // Start invisible
                 }
                 m_sequencerPanel->setVisible(true);
-                // Fade in over 250ms
                 m_sequencerPanel->setOpacity(1.0f);
-                m_viewState.sequencerOpen = true; // Sync internal state
+                m_viewState.sequencerOpen = true;
             }
         } else {
-            m_arsenalFocusBtn->setBackgroundColor(glassyGrey);
-            m_arsenalFocusBtn->setTextColor(theme.getColor("textSecondary"));
-            
-            m_timelineFocusBtn->setBackgroundColor(nomadPurple);
-            m_timelineFocusBtn->setTextColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
-            
-            // Hide Arsenal panel with fade-out
+            // FULLY HIDE Arsenal panel (not just dim) to sync with Transport button
             if (m_sequencerPanel) {
-                m_sequencerPanel->setOpacity(0.7f); // Dim when not focused
-                m_viewState.sequencerOpen = false; // Sync internal state
+                m_sequencerPanel->setVisible(false);
+                m_sequencerPanel->setOpacity(1.0f);
+                m_viewState.sequencerOpen = false;
             }
         }
         
@@ -826,14 +803,7 @@ public:
             m_transportBar->setViewToggled(Audio::ViewType::Sequencer, focus == ::ViewFocus::Arsenal);
         }
         
-        // Update scope indicator label
-        if (m_scopeLabel) {
-            if (focus == ::ViewFocus::Arsenal) {
-                m_scopeLabel->setText("\xE2\x96\xB6 Pattern");
-            } else {
-                m_scopeLabel->setText("\xE2\x96\xB6 Arrangement");
-            }
-        }
+        // REMOVED: m_scopeLabel update per user request
         
         // Hot-swap: If playing, stop and restart in new mode
         if (wasPlaying && m_transportBar) {
@@ -870,9 +840,8 @@ public:
         return m_trackManagerUI;
     }
     
-    // Focus toggle button getters (for adding to title bar)
-    std::shared_ptr<NomadUI::NUIButton> getArsenalFocusBtn() const { return m_arsenalFocusBtn; }
-    std::shared_ptr<NomadUI::NUIButton> getTimelineFocusBtn() const { return m_timelineFocusBtn; }
+    // View focus toggle getter (for adding to title bar)
+    std::shared_ptr<NomadUI::NUISegmentedControl> getViewToggle() const { return m_viewToggle; }
     
     // Focus-based playback getters
     ::ViewFocus getViewFocus() const {
@@ -1250,20 +1219,16 @@ public:
                 contentBounds.width, 60.0f));
         }
         
-        // Position focus toggle buttons (horizontal in title bar area)
-        if (m_arsenalFocusBtn && m_timelineFocusBtn) {
+        // Position view toggle segmented control (centered in title bar area)
+        if (m_viewToggle) {
             auto rootBounds = getBounds();  // Use full window bounds
-            float btnWidth = 70.0f;
-            float btnHeight = 22.0f;
-            float yPos = 4.0f;  // Top of window (title bar area)
-            float spacing = 4.0f; // Horizontal spacing between buttons
+            float toggleWidth = 160.0f;     // Width for both segments
+            float toggleHeight = 24.0f;     // Fits in 32px title bar
+            float yPos = 4.0f;              // Centered: (32-24)/2 = 4
             float centerX = rootBounds.width / 2.0f;
-            float totalWidth = btnWidth * 2 + spacing;
-            float startX = centerX - totalWidth / 2.0f;
+            float startX = centerX - toggleWidth / 2.0f;
             
-            // Arsenal button on left, Timeline on right (absolute positioning from root)
-            m_arsenalFocusBtn->setBounds(NomadUI::NUIRect(startX, yPos, btnWidth, btnHeight));
-            m_timelineFocusBtn->setBounds(NomadUI::NUIRect(startX + btnWidth + spacing, yPos, btnWidth, btnHeight));
+            m_viewToggle->setBounds(NomadUI::NUIRect(startX, yPos, toggleWidth, toggleHeight));
         }
         
         // Position scope indicator label (right of focus buttons)
@@ -1414,9 +1379,8 @@ private:
 
     std::shared_ptr<TransportBar> m_transportBar;
     
-    // Focus toggle buttons
-    std::shared_ptr<NomadUI::NUIButton> m_arsenalFocusBtn;
-    std::shared_ptr<NomadUI::NUIButton> m_timelineFocusBtn;
+    // View focus toggle (Arsenal/Timeline segmented control)
+    std::shared_ptr<NomadUI::NUISegmentedControl> m_viewToggle;
     std::shared_ptr<NomadUI::NUILabel> m_scopeLabel; // "▶ Pattern" or "▶ Arrangement"
     
     std::shared_ptr<NomadUI::FileBrowser> m_fileBrowser;
@@ -1476,12 +1440,20 @@ public:
         return m_performanceHUD;
     }
     
+    void onUpdate(double deltaTime) override {
+        NUIComponent::updateGlobalTooltip(deltaTime);
+        NUIComponent::onUpdate(deltaTime);
+    }
+
     void onRender(NUIRenderer& renderer) override {
         // Don't draw background here - let custom window handle it
         // Just render children (custom window and audio settings dialog)
         renderChildren(renderer);
         
         // Audio settings dialog is handled by its own render method
+        
+        // Fix: Render global tooltips last so they appear on top of everything
+        NUIComponent::renderGlobalTooltip(renderer);
     }
     
     void onResize(int width, int height) override {
@@ -1818,13 +1790,10 @@ public:
         m_content->setAudioStatus(m_audioInitialized);
         m_customWindow->setContent(m_content.get());
         
-        // Add focus toggle buttons to title bar (for proper click handling)
+        // Add view focus toggle to title bar (for proper click handling)
         if (auto titleBar = m_customWindow->getTitleBar()) {
-            if (m_content->getArsenalFocusBtn()) {
-                titleBar->addChild(m_content->getArsenalFocusBtn());
-            }
-            if (m_content->getTimelineFocusBtn()) {
-                titleBar->addChild(m_content->getTimelineFocusBtn());
+            if (m_content->getViewToggle()) {
+                titleBar->addChild(m_content->getViewToggle());
             }
         }
         

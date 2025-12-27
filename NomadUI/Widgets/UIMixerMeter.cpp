@@ -17,10 +17,10 @@ void UIMixerMeter::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
 
-    // Meter colors from design spec
-    m_colorGreen = theme.getColor("success");       // #5BD896
-    m_colorYellow = theme.getColor("warning");      // #FFD86B
-    m_colorRed = theme.getColor("error");           // #FF5E5E
+    // Meter colors from design spec (Nomad Heat Gradient)
+    m_colorGreen = theme.getColor("meterSafe");     // Purple (Bottom)
+    m_colorYellow = theme.getColor("meterWarn");    // Pink (Mid)
+    m_colorRed = theme.getColor("meterCrit");       // Red (Top)
     // Muted style: monochrome, slightly reduced alpha.
     m_colorGreenDim = m_colorGreen.withSaturation(0.0f).withAlpha(0.55f);
     m_colorYellowDim = m_colorYellow.withSaturation(0.0f).withAlpha(0.55f);

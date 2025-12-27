@@ -148,6 +148,22 @@ bool UIMixerButtonRow::onMouseEvent(const NUIMouseEvent& event)
         if (hit != m_hovered) {
             m_hovered = hit;
             requestInvalidate();
+            
+            // Tooltip Logic
+            if (m_hovered != -1) {
+                std::string text;
+                if (m_hovered == 0) text = "Mute";
+                else if (m_hovered == 1) text = "Solo";
+                else if (m_hovered == 2) text = "Record Arm";
+                
+                const auto& rect = m_buttonBounds[m_hovered];
+                NUIPoint center(rect.x + rect.width * 0.5f, rect.y + rect.height + 8.0f);
+                NUIPoint globalPos = localToGlobal(center);
+                
+                NUIComponent::showRemoteTooltip(text, globalPos);
+            } else {
+                NUIComponent::hideRemoteTooltip();
+            }
         }
     }
 
@@ -185,6 +201,16 @@ bool UIMixerButtonRow::onMouseEvent(const NUIMouseEvent& event)
     }
 
     return false;
+}
+
+void UIMixerButtonRow::onMouseLeave()
+{
+    if (m_hovered != -1) {
+        m_hovered = -1;
+        requestInvalidate();
+        NUIComponent::hideRemoteTooltip();
+    }
+    NUIComponent::onMouseLeave();
 }
 
 } // namespace NomadUI

@@ -48,7 +48,19 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
     m_addTrackIcon = std::make_shared<NomadUI::NUIIcon>(addTrackSvg);
     m_addTrackIcon->setIconSize(16.0f, 16.0f);
     m_addTrackIcon->setColorFromTheme("textPrimary");
+    m_addTrackIcon->setColorFromTheme("textPrimary");
     m_addTrackIcon->setVisible(true);
+    
+    // Create Follow Playhead icon (Right Arrow in box)
+    const char* followSvg = R"(
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+    )";
+    m_followPlayheadIcon = std::make_shared<NomadUI::NUIIcon>(followSvg);
+    m_followPlayheadIcon->setIconSize(16.0f, 16.0f);
+    m_followPlayheadIcon->setVisible(true);
+    m_followPlayheadIcon->setColorFromTheme("textSecondary"); // Default off state
     
     // Create scrollbar
     m_scrollbar = std::make_shared<NomadUI::NUIScrollbar>(NomadUI::NUIScrollbar::Orientation::Vertical);
@@ -81,6 +93,8 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
 
     // Register as observer of the playlist model to handle dynamic changes (FL Studio style)
     m_trackManager->getPlaylistModel().addChangeObserver([this]() {
+        if (m_suppressPlaylistRefresh) return;
+        
         Log::info("[TrackManagerUI] Playlist model changed, refreshing UI...");
         refreshTracks();
         invalidateCache();
@@ -123,70 +137,8 @@ void TrackManagerUI::createToolIcons() {
     const char* multiSelectSvg = R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="6" width="16" height="12" fill="none" stroke="#4FC3F7" stroke-width="2" stroke-dasharray="3,2"/></svg>)";
     m_multiSelectToolIcon = std::make_shared<NomadUI::NUIIcon>(multiSelectSvg);
     
-    // Loop Dropdown (replaces loop tool icon)
-    m_loopDropdown = std::make_shared<NomadUI::NUIDropdown>();
-    m_loopDropdown->addItem("Off", 0);
-    m_loopDropdown->addItem("1 Bar", 1);
-    m_loopDropdown->addItem("2 Bars", 2);
-    m_loopDropdown->addItem("4 Bars", 3);
-    m_loopDropdown->addItem("8 Bars", 4);
-    m_loopDropdown->addItem("Selection", 5);
-    m_loopDropdown->setSelectedIndex(1);  // FL Studio mode: 1 Bar by default
-    m_loopDropdown->setOnSelectionChanged([this](int idx, int id, const std::string& txt) {
-        m_loopPreset = id;
-        
-        // Calculate loop region and propagate to TrackUIComponents for visual rendering
-        bool loopEnabled = (id != 0);
-        double loopStartBeat = 0.0;
-        double loopEndBeat = 4.0;  // Default 1 bar
-        
-        if (id >= 1 && id <= 4) {
-            double loopBars = (id == 1) ? 1.0 : (id == 2) ? 2.0 : (id == 3) ? 4.0 : 8.0;
-            loopEndBeat = loopBars * m_beatsPerBar;
-        } else if (id == 5) {
-            // Selection: Use calculated selection range
-            auto selection = getSelectionBeatRange();
-            if (selection.second > selection.first) {
-                loopStartBeat = selection.first;
-                loopEndBeat = selection.second;
-                loopEnabled = true; // Ensure enabled even if id != 0
-            } else {
-                loopEnabled = false; // Disable if no valid selection
-                Log::warning("Loop Selection: No valid selection found");
-            }
-        }
-        
-        // Propagate loop state to all track components
-        for (auto& trackUI : m_trackUIComponents) {
-            if (trackUI) {
-                trackUI->setLoopEnabled(loopEnabled);
-                trackUI->setLoopRegion(loopStartBeat, loopEndBeat);
-            }
-        }
-        
-        // Trigger external callback (for AudioEngine)
-        if (m_onLoopPresetChanged) {
-            m_onLoopPresetChanged(id);
-        }
-        
-        invalidateCache();
-        Log::info("Loop preset changed to: " + txt);
-    });
-    m_loopDropdown->setMaxVisibleItems(6);
-    addChild(m_loopDropdown);
-
-    // Snap Dropdown
-    m_snapDropdown = std::make_shared<NomadUI::NUIDropdown>();
-    auto snaps = NomadUI::MusicTheory::getSnapOptions();
-    for(size_t i=0; i<snaps.size(); ++i) {
-         m_snapDropdown->addItem(NomadUI::MusicTheory::getSnapName(snaps[i]), static_cast<int>(snaps[i]));
-    }
-    m_snapDropdown->setSelectedIndex(1); // Beat
-    m_snapDropdown->setOnSelectionChanged([this](int idx, int id, const std::string& txt){
-        setSnapSetting(static_cast<NomadUI::SnapGrid>(id));
-    });
-    m_snapDropdown->setMaxVisibleItems(12);
-    addChild(m_snapDropdown);
+    // === MENU ICON (Down Arrow) ===
+    m_menuIcon = NomadUI::NUIIcon::createChevronRightIcon();
     
     Log::info("Tool icons created");
 }
@@ -234,15 +186,24 @@ void TrackManagerUI::updateToolbarBounds() {
 
     // Toolbar is docked inside the header, to the right of the + button.
     const float plusSize = headerHeight - themeManager.getSpacing("xs") * 2.0f; // 30px
-    const float plusX = bounds.x + innerPad;
-    const float plusY = bounds.y + (headerHeight - plusSize) * 0.5f;
-    m_addTrackBounds = NomadUI::NUIRect(plusX, plusY, plusSize, plusSize);
-
     const float iconSize = plusSize; // Keep all toolbar buttons consistent with +
-    float toolbarX = plusX + plusSize + innerPad;
-    float toolbarY = plusY;
+    
+    // Menu Icon (Far Left)
+    float currentX = bounds.x + innerPad;
+    float currentY = bounds.y + (headerHeight - plusSize) * 0.5f;
+    
+    m_menuIconBounds = NomadUI::NUIRect(currentX, currentY, plusSize, plusSize);
+    currentX += plusSize + iconSpacing;
 
-    const int numTools = 3;  // Select, Split, MultiSelect (dropdown replaces Loop icon)
+    // Add Track Button
+    m_addTrackBounds = NomadUI::NUIRect(currentX, currentY, plusSize, plusSize);
+    currentX += plusSize + innerPad; // Extra padding after Add Track
+
+    // Tools
+    float toolbarX = currentX;
+    float toolbarY = currentY;
+
+    const int numTools = 3;  // Select, Split, MultiSelect
     float toolbarWidth = (iconSize * numTools) + (iconSpacing * (numTools - 1));
     float toolbarHeight = iconSize;
 
@@ -256,18 +217,12 @@ void TrackManagerUI::updateToolbarBounds() {
     m_splitToolBounds = NomadUI::NUIRect(iconX, iconY, iconSize, iconSize);
     iconX += iconSize + iconSpacing;
     m_multiSelectToolBounds = NomadUI::NUIRect(iconX, iconY, iconSize, iconSize);
+    iconX += iconSize + iconSpacing;
+
+    // Follow Playhead (Toggle)
+    m_followPlayheadBounds = NomadUI::NUIRect(iconX, iconY, iconSize, iconSize);
     
-    // Loop Dropdown (after tool icons)
-    iconX += iconSize + iconSpacing + 8.0f;
-    float loopDropdownW = 70.0f;
-    m_loopDropdownBounds = NomadUI::NUIRect(iconX, iconY, loopDropdownW, iconSize);
-    if (m_loopDropdown) m_loopDropdown->setBounds(m_loopDropdownBounds);
-    
-    // Snap Dropdown (after loop dropdown)
-    iconX += loopDropdownW + iconSpacing + 4.0f;
-    float dropdownW = 100.0f;
-    m_snapDropdownBounds = NomadUI::NUIRect(iconX, iconY, dropdownW, iconSize);
-    if(m_snapDropdown) m_snapDropdown->setBounds(m_snapDropdownBounds);
+    // Dropdowns removed -> Moved to Context Menu
 }
 
 void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
@@ -279,7 +234,42 @@ void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
     const auto activeBg = themeManager.getColor("primary").withAlpha(0.25f);
     const auto hoverBg = themeManager.getColor("hover").withAlpha(0.6f);
 
-    // Add-track button (left)
+    // Menu Button (leftmost)
+    if (m_menuHovered) {
+        // True Glass Hover
+        renderer.fillRoundedRect(m_menuIconBounds, radius, themeManager.getColor("glassHover"));
+        renderer.strokeRoundedRect(m_menuIconBounds, radius, 1.0f, themeManager.getColor("glassBorder"));
+    }
+    if (m_menuIcon) {
+        // Animate Rotation
+        float targetRot = m_activeContextMenu ? 90.0f : 0.0f;
+        float diff = targetRot - m_menuIconRotation;
+        
+        // Use a fixed step for consistency or larger lerp factor
+        if (std::abs(diff) > 0.5f) {
+            m_menuIconRotation += diff * 0.35f; // Faster lerp
+            setDirty(true); // Ensure next frame is rendered
+        } else {
+            m_menuIconRotation = targetRot;
+        }
+
+        const float iconSz = 16.0f;
+        NomadUI::NUIPoint center = m_menuIconBounds.center();
+        
+        // Save current state
+        // Rotate around the center of the icon
+        renderer.pushTransform(center.x, center.y, m_menuIconRotation, 1.0f);
+        
+        // Draw centered at local (0,0) - renderer handles the translation to 'center' via pushTransform
+        // Note: We use a temporary rect centered at 0,0
+        m_menuIcon->setBounds(NomadUI::NUIRect(-iconSz * 0.5f, -iconSz * 0.5f, iconSz, iconSz));
+        m_menuIcon->setColorFromTheme("textPrimary");
+        m_menuIcon->onRender(renderer);
+        
+        renderer.popTransform();
+    }
+
+    // Add-track button (next to menu)
     if (m_addTrackHovered) {
         // True Glass Hover
         renderer.fillRoundedRect(m_addTrackBounds, radius, themeManager.getColor("glassHover"));
@@ -330,28 +320,128 @@ void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
     drawToolIcon(m_splitToolIcon, m_splitToolBounds, PlaylistTool::Split, m_splitToolHovered);
     drawToolIcon(m_multiSelectToolIcon, m_multiSelectToolBounds, PlaylistTool::MultiSelect, m_multiSelectToolHovered);
 
-    // Render Loop Dropdown
-    if (m_loopDropdown) {
-        m_loopDropdown->setBounds(m_loopDropdownBounds);
-        m_loopDropdown->onRender(renderer);
+    // Render Follow Playhead Toggle
+    bool followActive = m_followPlayhead;
+    if (followActive) {
+         // Active state
+         renderer.fillRoundedRect(m_followPlayheadBounds, radius, themeManager.getColor("glassActive"));
+         renderer.strokeRoundedRect(m_followPlayheadBounds, radius, 1.0f, themeManager.getColor("primary").withAlpha(0.4f));
+    } else if (m_followPlayheadHovered) {
+         renderer.fillRoundedRect(m_followPlayheadBounds, radius, themeManager.getColor("glassHover"));
+         renderer.strokeRoundedRect(m_followPlayheadBounds, radius, 1.0f, themeManager.getColor("glassBorder"));
+    }
+    
+    if (m_followPlayheadIcon) {
+        const float iconSz = 16.0f;
+        NomadUI::NUIRect iconRect(
+            std::round(m_followPlayheadBounds.x + (m_followPlayheadBounds.width - iconSz) * 0.5f),
+            std::round(m_followPlayheadBounds.y + (m_followPlayheadBounds.height - iconSz) * 0.5f),
+            iconSz, iconSz
+        );
+        m_followPlayheadIcon->setBounds(iconRect);
+        
+        if (followActive) {
+            m_followPlayheadIcon->setColorFromTheme("accentPrimary");
+        } else {
+            m_followPlayheadIcon->setColorFromTheme("textSecondary");
+        }
+        m_followPlayheadIcon->onRender(renderer);
     }
 
-    // Render Snap Dropdown
-    if (m_snapDropdown) {
-        m_snapDropdown->setBounds(m_snapDropdownBounds);
-        m_snapDropdown->onRender(renderer);
-    }
-
-    // Render Popup Lists (Manual Z-order correction if needed)
-    if (m_loopDropdown && m_loopDropdown->isOpen()) {
-        m_loopDropdown->renderDropdownList(renderer);
-    }
-    if (m_snapDropdown && m_snapDropdown->isOpen()) {
-        m_snapDropdown->renderDropdownList(renderer);
-    }
+    // Render Loop Dropdown (moved to menu)
+    // Render Snap Dropdown (moved to menu)
+    // Render Popup Lists (moved to menu)
 }
 
 bool TrackManagerUI::handleToolbarClick(const NomadUI::NUIPoint& position) {
+    if (m_menuIconBounds.contains(position)) {
+        // Cleanup previous menu if exists
+        if (m_activeContextMenu) {
+            removeChild(m_activeContextMenu);
+            m_activeContextMenu = nullptr;
+        }
+
+        // Create context menu
+        m_activeContextMenu = std::make_shared<NomadUI::NUIContextMenu>();
+        auto menu = m_activeContextMenu;
+        
+        // === SNAP SUBMENU ===
+        auto snapMenu = std::make_shared<NomadUI::NUIContextMenu>();
+        auto snaps = NomadUI::MusicTheory::getSnapOptions();
+        for (auto snap : snaps) {
+            bool isSelected = (snap == m_snapSetting);
+            snapMenu->addRadioItem(NomadUI::MusicTheory::getSnapName(snap), "SnapGroup", isSelected, [this, snap]() {
+                setSnapSetting(snap);
+            });
+        }
+        menu->addSubmenu("Snap", snapMenu);
+        
+        // === LOOP SUBMENU ===
+        auto loopMenu = std::make_shared<NomadUI::NUIContextMenu>();
+        auto addLoopItem = [&](const std::string& name, int id) {
+            bool isSelected = (m_loopPreset == id);
+            loopMenu->addRadioItem(name, "LoopGroup", isSelected, [this, id, name]() {
+                m_loopPreset = id;
+                bool loopEnabled = (id != 0);
+                double loopStartBeat = 0.0;
+                double loopEndBeat = 4.0;
+                
+                if (id >= 1 && id <= 4) {
+                    double loopBars = (id == 1) ? 1.0 : (id == 2) ? 2.0 : (id == 3) ? 4.0 : 8.0;
+                    loopEndBeat = loopBars * m_beatsPerBar;
+                } else if (id == 5) {
+                    auto selection = getSelectionBeatRange();
+                    if (selection.second > selection.first) {
+                        loopStartBeat = selection.first;
+                        loopEndBeat = selection.second;
+                        loopEnabled = true;
+                    } else {
+                        loopEnabled = false;
+                        Log::warning("Loop Selection: No valid selection found");
+                    }
+                }
+                
+                for (auto& trackUI : m_trackUIComponents) {
+                    if (trackUI) {
+                        trackUI->setLoopEnabled(loopEnabled);
+                        trackUI->setLoopRegion(loopStartBeat, loopEndBeat);
+                    }
+                }
+                
+                if (m_onLoopPresetChanged) m_onLoopPresetChanged(id);
+                invalidateCache();
+                Log::info("Loop preset changed to: " + name);
+            });
+        };
+        
+        addLoopItem("Off", 0);
+        addLoopItem("1 Bar", 1);
+        addLoopItem("2 Bars", 2);
+        addLoopItem("4 Bars", 3);
+        addLoopItem("8 Bars", 4);
+        addLoopItem("Selection", 5);
+        menu->addSubmenu("Loop", loopMenu);
+
+        // Show menu below the icon
+        menu->showAt(m_menuIconBounds.x, m_menuIconBounds.y + m_menuIconBounds.height);
+        
+        // Add to parent for rendering (NUIContextMenu handles internal popup management, 
+        // but typically needs to be added to a root or managed by a popup manager. 
+        // Assuming showAt handles standard NUI popup logic, but usually we need to retain reference 
+        // or add it to a layer. If NUIContextMenu destroys itself on close, we are good.
+        // For safety in this codebase, adding to children is often required unless using global overlay).
+        if (auto parent = getParent()) {
+             // Often context menus are added to the root window. 
+             // We'll trust the NUIContextMenu implementation for now or add it to specific layer if needed.
+             // If showAt creates a popup window/component, great. 
+             // If it sets visible, we might need to addChild(menu).
+             // Based on NUIContextMenu.h, it is a Component. Let's add it.
+             addChild(menu);
+        }
+        
+        return true;
+    }
+
     if (m_addTrackBounds.contains(position)) {
         onAddTrackClicked();
         return true;
@@ -368,7 +458,15 @@ bool TrackManagerUI::handleToolbarClick(const NomadUI::NUIPoint& position) {
         setCurrentTool(PlaylistTool::MultiSelect);
         return true;
     }
-    // Loop dropdown handles its own click events
+    
+    if (m_followPlayheadBounds.contains(position)) {
+        setFollowPlayhead(!isFollowPlayhead());
+        Log::info("Follow Playhead toggled: " + std::string(isFollowPlayhead() ? "ON" : "OFF"));
+        setDirty(true);
+        return true;
+    }
+
+    // Dropdowns handled via menu now
 
     return false;
 }
@@ -556,22 +654,71 @@ void TrackManagerUI::performSplitAtPosition(int laneIndex, double timeSeconds) {
 }
 
 // === INSTANT CLIP DRAGGING ===
-void TrackManagerUI::startInstantClipDrag(TrackUIComponent* clip, const NomadUI::NUIPoint& clickPos) {
-    if (!clip) return;
+void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInstanceID clipId, const NomadUI::NUIPoint& clickPos) {
+    if (!trackComp || !clipId.isValid() || !m_trackManager) return;
     
     m_isDraggingClipInstant = true;
-    m_draggedClipTrack = clip;
-    m_clipDragOffsetX = clickPos.x - clip->getBounds().x;
+    m_draggedClipTrack = trackComp;
+    m_draggedClipId = clipId;
+    m_suppressPlaylistRefresh = true; // Suppress full rebuilds for smoothness
+    
+    auto& playlist = m_trackManager->getPlaylistModel();
+    if (const auto* clip = playlist.getClip(clipId)) {
+        m_clipOriginalStartTime = clip->startBeat;
+        
+        // Calculate offset (Cursor Beat - Clip Start Beat)
+        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
+        float gridStartX = getBounds().x + controlAreaWidth + 5.0f;
+        
+        double cursorBeat = (clickPos.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
+        m_clipDragOffsetBeats = cursorBeat - clip->startBeat;
+    }
     
     Log::info("Started instant clip drag");
 }
 
 void TrackManagerUI::updateInstantClipDrag(const NomadUI::NUIPoint& currentPos) {
-    if (!m_isDraggingClipInstant || !m_draggedClipTrack) return;
+    if (!m_isDraggingClipInstant || !m_trackManager) return;
     
-    // TODO: Implement actual clip position update when Track API supports it
-    // For now just invalidate cache to show we're handling it
-    m_cacheInvalidated = true;
+    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
+    float gridStartX = getBounds().x + controlAreaWidth + 5.0f;
+    
+    double cursorBeat = (currentPos.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
+    
+    // Apply relative offset
+    double newStartBeat = cursorBeat - m_clipDragOffsetBeats;
+    
+    // Snap (optional, or always on)
+    newStartBeat = snapBeatToGrid(newStartBeat);
+    newStartBeat = std::max(0.0, newStartBeat);
+
+    // Live update model
+    auto& playlist = m_trackManager->getPlaylistModel();
+    
+    // Determine target track from Y position
+    int targetTrackIndex = getTrackAtPosition(currentPos.y);
+    int trackCount = static_cast<int>(m_trackUIComponents.size());
+    
+    // Clamp to valid tracks
+    if (trackCount > 0) {
+        targetTrackIndex = std::clamp(targetTrackIndex, 0, trackCount - 1);
+        
+        auto targetLaneId = playlist.getLaneId(targetTrackIndex);
+        if (targetLaneId.isValid()) {
+            playlist.moveClip(m_draggedClipId, targetLaneId, newStartBeat);
+        }
+    } else {
+        // Fallback if no tracks? (Unlikely)
+        auto laneId = playlist.findClipLane(m_draggedClipId);
+        if (laneId.isValid()) {
+            playlist.moveClip(m_draggedClipId, laneId, newStartBeat);
+        }
+    }
+    
+    // Redraw immediately (GPU cache handles the rest)
+    invalidateCache();
 }
 
 void TrackManagerUI::finishInstantClipDrag() {
@@ -581,19 +728,36 @@ void TrackManagerUI::finishInstantClipDrag() {
     
     m_isDraggingClipInstant = false;
     m_draggedClipTrack = nullptr;
-    m_clipOriginalTrackIndex = -1;
-    m_cacheInvalidated = true;
+    m_draggedClipId = ClipInstanceID{};
+    m_suppressPlaylistRefresh = false; // Restore normal behavior
+    
+    // Final refresh to ensure everything is consistent
+    refreshTracks();
+    invalidateCache();
+    scheduleTimelineMinimapRebuild();
 }
 
 void TrackManagerUI::cancelInstantClipDrag() {
-    if (!m_isDraggingClipInstant || !m_draggedClipTrack) return;
+    if (!m_isDraggingClipInstant) return;
     
     Log::info("Cancelled instant clip drag");
     
+    // Revert position
+    if (m_trackManager) {
+        auto& playlist = m_trackManager->getPlaylistModel();
+        auto laneId = playlist.findClipLane(m_draggedClipId);
+        if (laneId.isValid()) {
+            playlist.moveClip(m_draggedClipId, laneId, m_clipOriginalStartTime);
+        }
+    }
+    
     m_isDraggingClipInstant = false;
     m_draggedClipTrack = nullptr;
-    m_clipOriginalTrackIndex = -1;
-    m_cacheInvalidated = true;
+    m_draggedClipId = ClipInstanceID{};
+    m_suppressPlaylistRefresh = false;
+    
+    refreshTracks();
+    invalidateCache();
 }
 
 void TrackManagerUI::addTrack(const std::string& name) {
@@ -954,14 +1118,15 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
             renderer.clearClipRect();
         }
     }
-    
-    // Render playhead OUTSIDE cache (it moves every frame during playback)
-    renderPlayhead(renderer);
-    
     // Render drop preview OUTSIDE cache (dynamic during drag)
     if (m_showDropPreview) {
         renderDropPreview(renderer);
     }
+    
+    // Render playhead OUTSIDE cache (it moves every frame during playback)
+    renderPlayhead(renderer);
+
+    // Render drag drop preview
     
     // Render delete animations OUTSIDE cache (FL Studio ripple effect)
     renderDeleteAnimations(renderer);
@@ -1056,15 +1221,20 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
             renderer.fillRect(NomadUI::NUIRect(clipR - cornerThick, clipB - cornerLen, cornerThick, cornerLen), cornerColor);
         }
     }
+
+    // Render Context Menu LAST (Topmost Z-order, not clipped)
+    if (m_activeContextMenu && m_activeContextMenu->isVisible()) {
+        m_activeContextMenu->onRender(renderer);
+    }
 }
 
 // Helper method: Direct rendering (used both for fallback and cache rebuild)
 void TrackManagerUI::renderTrackManagerDirect(NomadUI::NUIRenderer& renderer) {
+    NomadUI::NUIRenderer& r = renderer; // alias for ease if needed
+
     NomadUI::NUIRect bounds = getBounds();
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
-    
-    // Calculate where the grid/background should end
     
     // Calculate where the grid/background should end
     float controlAreaWidth = layout.trackControlsWidth;
@@ -1244,7 +1414,7 @@ void TrackManagerUI::renderChildren(NomadUI::NUIRenderer& renderer) {
         if (!child->isVisible()) continue;
         
         // Always render UI controls (scrollbars)
-        if (child == m_scrollbar || child == m_timelineMinimap) {
+        if (child == m_scrollbar || child == m_timelineMinimap || child == m_activeContextMenu) {
             // Skip - these are rendered explicitly in onRender()
             continue;
         }
@@ -1326,6 +1496,46 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         setDirty(true);
     }
 
+    // === Follow Playhead Logic (Page & Continuous) ===
+    if (m_followPlayhead && m_trackManager && m_trackManager->isPlaying()) {
+        if (!NomadUI::NUIDragDropManager::getInstance().isDragging() && 
+            !m_isDraggingPlayhead && !m_isDraggingRulerSelection && 
+            !m_isDraggingLoopStart && !m_isDraggingLoopEnd) {
+            
+            double currentBeat = secondsToBeats(m_trackManager->getUIPosition());
+            float gridWidth = getTimelineGridWidthPixels();
+            
+            if (gridWidth > 0 && m_pixelsPerBeat > 0) {
+                double viewStartBeat = m_timelineScrollOffset / m_pixelsPerBeat;
+                double viewWidthBeats = gridWidth / m_pixelsPerBeat;
+                double viewEndBeat = viewStartBeat + viewWidthBeats;
+                
+                if (m_followMode == FollowMode::Page) {
+                    // === PAGE SCROLLING ===
+                    // If playhead reaches 95% of the screen, scroll to next page
+                    double rightMargin = viewWidthBeats * 0.05;
+                    
+                    if (currentBeat >= viewEndBeat - rightMargin) {
+                        double newStart = currentBeat - rightMargin;
+                        setTimelineViewStartBeat(newStart, true);
+                    } else if (currentBeat < viewStartBeat) {
+                        // Loop jump back
+                        double newStart = currentBeat - rightMargin;
+                        setTimelineViewStartBeat(std::max(0.0, newStart), true);
+                    }
+                } else {
+                    // === CONTINUOUS SCROLLING ===
+                    // Keep playhead centered
+                    double targetStart = currentBeat - (viewWidthBeats * 0.5);
+                    
+                    // Smooth lerp for continuous follow (optional, but direct set is more responsive)
+                    // Directly setting it creates the "locked" feel
+                    setTimelineViewStartBeat(std::max(0.0, targetStart), true);
+                }
+            }
+        }
+    }
+
     updateTimelineMinimap(deltaTime);
 }
 
@@ -1374,54 +1584,96 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     updateToolbarBounds();
     
     // Update toolbar hover states
+    bool oldMenuHovered = m_menuHovered;
     bool oldAddHovered = m_addTrackHovered;
     bool oldSelectHovered = m_selectToolHovered;
     bool oldSplitHovered = m_splitToolHovered;
     bool oldMultiSelectHovered = m_multiSelectToolHovered;
+    bool oldFollowHovered = m_followPlayheadHovered;
     
+    m_menuHovered = m_menuIconBounds.contains(event.position);
     m_addTrackHovered = m_addTrackBounds.contains(event.position);
     m_selectToolHovered = m_selectToolBounds.contains(event.position);
     m_splitToolHovered = m_splitToolBounds.contains(event.position);
     m_multiSelectToolHovered = m_multiSelectToolBounds.contains(event.position);
-    // Loop dropdown handles its own hover state
+    m_followPlayheadHovered = m_followPlayheadBounds.contains(event.position);
+    
+    // Toolbar Tooltips
+    bool anyToolbarHovered = m_menuHovered || m_addTrackHovered || m_selectToolHovered || 
+                             m_splitToolHovered || m_multiSelectToolHovered || m_followPlayheadHovered;
+    bool anyOldHovered = oldMenuHovered || oldAddHovered || oldSelectHovered || 
+                         oldSplitHovered || oldMultiSelectHovered || oldFollowHovered;
+    
+    if (anyToolbarHovered) {
+        std::string tooltipText;
+        if (m_menuHovered && !oldMenuHovered) tooltipText = "Menu";
+        else if (m_addTrackHovered && !oldAddHovered) tooltipText = "Add Track";
+        else if (m_selectToolHovered && !oldSelectHovered) tooltipText = "Select Tool (V)";
+        else if (m_splitToolHovered && !oldSplitHovered) tooltipText = "Split Tool (B)";
+        else if (m_multiSelectToolHovered && !oldMultiSelectHovered) tooltipText = "Multi-Select Tool";
+        else if (m_followPlayheadHovered && !oldFollowHovered) tooltipText = "Follow Playhead";
+        
+        if (!tooltipText.empty()) {
+            NomadUI::NUIComponent::showRemoteTooltip(tooltipText, event.position);
+        }
+    } else if (anyOldHovered && !anyToolbarHovered) {
+        NomadUI::NUIComponent::hideRemoteTooltip();
+    }
     
     // Toolbar is rendered outside the playlist cache; don't invalidate the cache on hover.
-    if (m_addTrackHovered != oldAddHovered ||
+    if (m_menuHovered != oldMenuHovered || m_addTrackHovered != oldAddHovered ||
         m_selectToolHovered != oldSelectHovered || m_splitToolHovered != oldSplitHovered ||
-        m_multiSelectToolHovered != oldMultiSelectHovered) {
+        m_multiSelectToolHovered != oldMultiSelectHovered || m_followPlayheadHovered != oldFollowHovered) {
         setDirty(true);
     }
     
-    // === DROPDOWNS FIRST: Give dropdowns absolute priority over other UI ===
-    // Loop dropdown - check if it's open or if click is within its bounds
-    if (m_loopDropdown) {
-        // If dropdown is open, forward ALL events to it (to handle outside clicks and selection)
-        if (m_loopDropdown->isOpen()) {
-            if (m_loopDropdown->onMouseEvent(event)) {
-                return true;
-            }
+    // === CONTEXT MENU Handling ===
+    // Special handling for Right-Click on Follow Button
+    if (event.pressed && event.button == NomadUI::NUIMouseButton::Right && m_followPlayheadBounds.contains(event.position)) {
+        
+        if (m_activeContextMenu) {
+             removeChild(m_activeContextMenu);
+             m_activeContextMenu = nullptr;
         }
-        // If click is on the dropdown button area, forward the event
-        if (m_loopDropdownBounds.contains(event.position)) {
-            if (m_loopDropdown->onMouseEvent(event)) {
-                return true;
-            }
-        }
+
+        m_activeContextMenu = std::make_shared<NomadUI::NUIContextMenu>();
+        auto menu = m_activeContextMenu;
+        
+        // Add Modes
+        menu->addRadioItem("Page", "FollowMode", m_followMode == FollowMode::Page, [this]() {
+            setFollowMode(FollowMode::Page);
+            setFollowPlayhead(true); // Auto-enable on selection
+        });
+        
+        menu->addRadioItem("Continuous", "FollowMode", m_followMode == FollowMode::Continuous, [this]() {
+            setFollowMode(FollowMode::Continuous);
+            setFollowPlayhead(true);
+        });
+        
+        menu->showAt(m_followPlayheadBounds.x, m_followPlayheadBounds.y + m_followPlayheadBounds.height);
+        addChild(menu);
+        return true;
+    }
+
+    // If context menu is active, give it priority.
+    if (m_activeContextMenu) {
+         // Forward event to menu (handles interactions in menu AND submenus)
+         // onMouseEvent returns true if the event was handled (clicked inside menu/submenu)
+         bool handled = m_activeContextMenu->onMouseEvent(event);
+         
+         // If click was NOT handled by the menu (i.e. clicked outside), close it.
+         if (!handled && event.pressed) {
+             removeChild(m_activeContextMenu);
+             m_activeContextMenu = nullptr;
+             // Let execution continue so the click can interact with whatever is underneath
+             // (e.g. Stop button, Track header, etc.)
+         } else if (handled) {
+             // Menu handled the event, consume it.
+             return true;
+         }
     }
     
-    // Snap dropdown
-    if (m_snapDropdown) {
-        if (m_snapDropdown->isOpen()) {
-            if (m_snapDropdown->onMouseEvent(event)) {
-                return true;
-            }
-        }
-        if (m_snapDropdownBounds.contains(event.position)) {
-            if (m_snapDropdown->onMouseEvent(event)) {
-                return true;
-            }
-        }
-    }
+    // === DROPDOWNS removed (now via Context Menu) ===
     
     // Handle toolbar clicks (icons only, not dropdowns - they handled themselves above)
     if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
@@ -1748,11 +2000,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                 // Don't update minimap selection - only use ruler/grid blue highlight
                 
                 // Update loop dropdown to "Selection" mode
-                if (m_loopDropdown) {
-                    m_loopDropdown->setSelectedIndex(5);  // Select "Selection" item
-                }
-                
-                // Trigger loop preset to "Selection" mode
+                // Update loop preset to "Selection" mode
                 if (m_onLoopPresetChanged) {
                     m_onLoopPresetChanged(5); // 5 = Selection preset
                 }
@@ -1764,10 +2012,6 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                 // Click without drag - clear selection and reset to 1 Bar
                 m_hasRulerSelection = false;
                 
-                // Reset dropdown to "1 Bar"
-                if (m_loopDropdown) {
-                    m_loopDropdown->setSelectedIndex(1);
-                }
                 // Trigger 1-bar loop callback
                 if (m_onLoopPresetChanged) {
                     m_onLoopPresetChanged(1);
@@ -2145,7 +2389,9 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime)
     if (m_minimapNeedsRebuild) {
         std::vector<NomadUI::TimelineMinimapClipSpan> spans;
 
-        for (const auto& laneId : playlist.getLaneIDs()) {
+        const auto& laneIds = playlist.getLaneIDs();
+        for (size_t i = 0; i < laneIds.size(); ++i) {
+            const auto& laneId = laneIds[i];
             if (const auto* lane = playlist.getLane(laneId)) {
                 for (const auto& clip : lane->clips) {
                     NomadUI::TimelineMinimapClipSpan span;
@@ -2154,6 +2400,8 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime)
 
                     span.startBeat = clip.startBeat;
                     span.endBeat = clip.startBeat + clip.durationBeats;
+                    span.trackIndex = static_cast<uint32_t>(i); // Track index for minimap matching
+
                     if (!(span.endBeat > span.startBeat)) continue;
 
                     spans.push_back(span);
@@ -2223,9 +2471,12 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
     auto borderColor = themeManager.getColor("borderColor");
     auto textColor = themeManager.getColor("textSecondary");
     auto accentColor = themeManager.getColor("accentPrimary");
-    // Ruler Render: "Mature" Playlist Style
-    // Darker, more professional background
-    auto bg = NomadUI::NUIColor(0.08f, 0.08f, 0.10f, 1.0f); 
+    
+    // === GLASS BACKGROUND (subtle dark glass like transport bar displays) ===
+    // Use a subtle dark glass - NOT the purple "glass" token which is too bright
+    auto glassBg = NomadUI::NUIColor(0.12f, 0.12f, 0.14f, 0.85f);  // Subtle dark grey glass
+    auto glassHighlight = NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.04f);  // Very subtle top highlight
+    
     auto textCol = NomadUI::NUIColor(0.7f, 0.7f, 0.75f, 1.0f);
     auto tickCol = NomadUI::NUIColor(0.35f, 0.35f, 0.40f, 1.0f);
     auto borderCol = NomadUI::NUIColor(0.0f, 0.0f, 0.0f, 0.5f);
@@ -2233,27 +2484,32 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
     // Restore layout definition
     const auto& layout = themeManager.getLayoutDimensions();
 
-    // Draw full ruler background
-    renderer.fillRect(rulerBounds, bg);
-    
-    // Calculate grid start EXACTLY like TrackUIComponent
+    // Calculate grid bounds FIRST (before drawing)
     float controlAreaWidth = layout.trackControlsWidth;
     float gridStartX = rulerBounds.x + controlAreaWidth + 5.0f;
     
-    // Calculate gridWidth EXACTLY like TrackUIComponent
-    // Track uses: gridWidth = bounds.width - (buttonX + layout.controlButtonWidth + 10)
-    // But tracks have scrollbar subtracted from their bounds.width
     float scrollbarWidth = 15.0f;
-    float trackWidth = rulerBounds.width - scrollbarWidth; // Match track width (subtract scrollbar)
-    float gridWidth = trackWidth - controlAreaWidth - 10.0f; // Match TrackUIComponent grid width
-    gridWidth = std::max(0.0f, gridWidth);
+    float trackWidth = rulerBounds.width - scrollbarWidth;
+    float gridWidth = std::max(0.0f, trackWidth - controlAreaWidth - 10.0f);
     
-    // Grid area background (same as ruler bg for unity, or slightly darker if desired)
     NomadUI::NUIRect gridRulerRect(gridStartX, rulerBounds.y, gridWidth, rulerBounds.height);
-    renderer.fillRect(gridRulerRect, bg);
     
-    // Draw border
-    renderer.strokeRect(rulerBounds, 1, borderColor);
+    // 1. Draw glass background on grid area (timeline portion)
+    float cornerRadius = 4.0f;
+    renderer.fillRoundedRect(gridRulerRect, cornerRadius, glassBg);
+    
+    // Subtle top highlight on grid area only
+    NomadUI::NUIRect highlightRect(gridRulerRect.x, gridRulerRect.y, gridRulerRect.width, 1.0f);
+    renderer.fillRect(highlightRect, glassHighlight);
+    
+    // Draw subtle glass border on grid area
+    renderer.strokeRoundedRect(gridRulerRect, cornerRadius, 1.0f, borderColor.withAlpha(0.4f));
+    
+    // 2. Draw SOLID background for CONTROL AREA (left side - DRAWN LAST to fully cover any bleed)
+    //    Use backgroundPrimary to match minimap's left section exactly
+    auto controlBg = themeManager.getColor("backgroundPrimary");
+    NomadUI::NUIRect controlRect(rulerBounds.x, rulerBounds.y, controlAreaWidth + 5.0f, rulerBounds.height);
+    renderer.fillRect(controlRect, controlBg);
 
     // Dedicated "corner" panel where track controls meet the ruler.
     // It draws its own right-hand separator so nothing feels like it bleeds across panels.
@@ -2342,6 +2598,7 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
         );
         
         // Beat ticks within the bar (only if zoomed in enough)
+        // DOWNBEATS (1, 2, 3, 4) are BRIGHTER and TALLER for visibility
         if (m_pixelsPerBeat >= 15.0f) {
             for (int beat = 1; beat < beatsPerBar; ++beat) {
                 float beatX = x + (beat * m_pixelsPerBeat);
@@ -2351,11 +2608,15 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
                     continue;
                 }
                 
+                // Downbeats (main beats 1,2,3,4) get brighter, taller ticks
+                float beatTickHeight = rulerBounds.height * 0.35f;  // Taller than before
+                NomadUI::NUIColor beatTickColor = accentColor.withAlpha(0.65f);  // Bright purple
+                
                 renderer.drawLine(
-                    NomadUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height * 0.75f), // Short tick
+                    NomadUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height - beatTickHeight),
                     NomadUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height),
                     1.0f,
-                    tickCol.withAlpha(0.6f)
+                    beatTickColor
                 );
             }
         }
@@ -2643,11 +2904,37 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
     // Draw if playhead center is within the visible timeline bounds
     // Allow triangle to extend outside as long as center line is visible
     if (playheadX >= gridStartX && playheadX <= playheadEndX) {
-        // Playhead color - White/Cyan for contrast against dark UI
-        NomadUI::NUIColor playheadColor = NomadUI::NUIColor::white(); // Crisp white
-        // Alternative: themeManager.getColor("accentCyan");
+        // Playhead color - Nomad Purple for consistency
+        auto& themeManager = NomadUI::NUIThemeManager::getInstance(); // ensure themeManager is available (it was declared above but check scope)
+        // Redefine/Reuse themeManager? It's declared at line 2731 in the function scope (based on previous view).
+        // Let's use the one from outside if available, or just get it.
+        // The visible snippet starts at 2761, check context. 
+        // In the previous view_code_item, text was "auto& themeManager = NomadUI::NUIThemeManager::getInstance();" at line 2731.
+        NomadUI::NUIColor playheadColor = themeManager.getColor("accentPrimary"); 
 
-        // Draw playhead line (Thinner 1px, no glow)
+        // GLOW EFFECT (BG) - Only when playing
+        if (m_trackManager->isPlaying()) {
+             // Manual Gradient Glow for smoother look
+             float glowWidth = 6.0f; // Width of glow on each side
+             float lineH = playheadEndY - playheadStartY;
+             
+             NomadUI::NUIColor glowColorCenter = playheadColor.withAlpha(0.25f); // Soft center
+             NomadUI::NUIColor glowColorEdge = playheadColor.withAlpha(0.0f);    // Transparent edge
+             
+             // Left side glow (Transparent -> Color)
+             renderer.fillRectGradient(
+                 NomadUI::NUIRect(playheadX - glowWidth, playheadStartY, glowWidth, lineH),
+                 glowColorEdge, glowColorCenter, false // false = horizontal
+             );
+             
+             // Right side glow (Color -> Transparent)
+             renderer.fillRectGradient(
+                 NomadUI::NUIRect(playheadX, playheadStartY, glowWidth, lineH),
+                 glowColorCenter, glowColorEdge, false // false = horizontal
+             );
+        }
+
+        // Draw playhead line (Thinner 1px, simple)
         renderer.drawLine(
             NomadUI::NUIPoint(playheadX, playheadStartY),
             NomadUI::NUIPoint(playheadX, playheadEndY),
@@ -2656,18 +2943,20 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
         );
 
         // Draw playhead Triangle Cap (In Ruler)
-        // Triangle pointing down
-        NomadUI::NUIPoint p1(playheadX, playheadStartY + triangleSize);  // Bottom center
-        NomadUI::NUIPoint p2(playheadX - triangleSize, playheadStartY);  // Top left
-        NomadUI::NUIPoint p3(playheadX + triangleSize, playheadStartY);  // Top right
-        
-        // Fill triangle (fallback to lines)
-        renderer.drawLine(p1, p2, 1.0f, playheadColor);
-        renderer.drawLine(p2, p3, 1.0f, playheadColor);
-        renderer.drawLine(p3, p1, 1.0f, playheadColor);
-        
-        // Draw a small "Jewel" at the top center
-        renderer.fillRoundedRect(NomadUI::NUIRect(playheadX - 2.0f, playheadStartY - 2.0f, 4.0f, 4.0f), 2.0f, NomadUI::NUIColor::white());
+        // Triangle pointing down - Filled
+        // Manual rasterization using vertical lines since NUIRenderer lacks fillTriangle
+        for (float dx = -triangleSize; dx <= triangleSize; dx += 1.0f) {
+            float ratio = 1.0f - (std::abs(dx) / triangleSize); // 1.0 at center, 0.0 at edges
+            float h = triangleSize * ratio;
+            if (h < 1.0f) h = 1.0f; // Ensure at least 1px
+            
+            renderer.drawLine(
+                NomadUI::NUIPoint(playheadX + dx, playheadStartY),
+                NomadUI::NUIPoint(playheadX + dx, playheadStartY + h),
+                1.0f,
+                playheadColor
+            );
+        }
     }
 }
 

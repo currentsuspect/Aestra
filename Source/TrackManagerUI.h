@@ -22,6 +22,7 @@
 #include <memory>
 #include <vector>
 #include <unordered_set>
+#include "../NomadUI/Core/NUIContextMenu.h"
 
 namespace NomadUI { class NUIPlatformBridge; }
 
@@ -118,6 +119,18 @@ public:
     void setSnapDivision(int division) { m_snapDivision = division; } // 1=bar, 4=beat, 16=16th
     int getSnapDivision() const { return m_snapDivision; }
     
+    // Follow Playhead
+    enum class FollowMode {
+        Page,       // Jump to next page when playhead reaches edge
+        Continuous  // Smooth scrolling keeping playhead centered
+    };
+    
+    void setFollowPlayhead(bool enabled) { m_followPlayhead = enabled; }
+    bool isFollowPlayhead() const { return m_followPlayhead; }
+    
+    void setFollowMode(FollowMode mode) { m_followMode = mode; }
+    FollowMode getFollowMode() const { return m_followMode; }
+    
     // New Snap System
     void setSnapSetting(::NomadUI::SnapGrid snap);
     ::NomadUI::SnapGrid getSnapSetting() const { return m_snapSetting; }
@@ -130,6 +143,12 @@ public:
     void duplicateSelectedClip();        // Duplicate selected clip immediately after
     void deleteSelectedClip();           // Delete selected clip
     TrackUIComponent* getSelectedTrackUI() const;  // Get currently selected track UI
+
+    // Instant clip dragging
+    void startInstantClipDrag(TrackUIComponent* trackComp, ClipInstanceID clipId, const ::NomadUI::NUIPoint& clickPos);
+    void updateInstantClipDrag(const ::NomadUI::NUIPoint& currentPos);
+    void finishInstantClipDrag();
+    void cancelInstantClipDrag();
     
     // === IDropTarget Interface ===
     ::NomadUI::DropFeedback onDragEnter(const ::NomadUI::DragData& data, const ::NomadUI::NUIPoint& position) override;
@@ -214,20 +233,29 @@ private:
     ::NomadUI::TimelineRange m_minimapSelectionBeatRange{};
     
     // Tool icons (toolbar)
+    std::shared_ptr<::NomadUI::NUIIcon> m_menuIcon;       // Menu dropdown icon (down arrow)
     std::shared_ptr<::NomadUI::NUIIcon> m_selectToolIcon;
     std::shared_ptr<::NomadUI::NUIIcon> m_splitToolIcon;
     std::shared_ptr<::NomadUI::NUIIcon> m_multiSelectToolIcon;
-    std::shared_ptr<::NomadUI::NUIDropdown> m_loopDropdown;  // Loop preset dropdown
-    std::shared_ptr<::NomadUI::NUIDropdown> m_snapDropdown;  // Snap Dropdown
+    
+    std::shared_ptr<::NomadUI::NUIContextMenu> m_activeContextMenu; // Keep track for cleanup
+    
+    // Animation state
+    float m_menuIconRotation = 0.0f;
+    float m_menuIconTargetRotation = 0.0f;
+    
+    ::NomadUI::NUIRect m_menuIconBounds;
     ::NomadUI::NUIRect m_selectToolBounds;
     ::NomadUI::NUIRect m_splitToolBounds;
     ::NomadUI::NUIRect m_multiSelectToolBounds;
-    ::NomadUI::NUIRect m_loopDropdownBounds;
-    ::NomadUI::NUIRect m_snapDropdownBounds; // Bounds
+    ::NomadUI::NUIRect m_followPlayheadBounds; // Toggle button bounds
     ::NomadUI::NUIRect m_toolbarBounds;
+
+    bool m_menuHovered = false;
     bool m_selectToolHovered = false;
     bool m_splitToolHovered = false;
     bool m_multiSelectToolHovered = false;
+    bool m_followPlayheadHovered = false;
     
     // Loop state
     int m_loopPreset{0};  // 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection
@@ -243,6 +271,10 @@ private:
     // Instant clip dragging (no ghost)
     bool m_isDraggingClipInstant = false;
     TrackUIComponent* m_draggedClipTrack = nullptr;
+    ClipInstanceID m_draggedClipId;
+    double m_clipDragOffsetBeats = 0.0;
+    bool m_suppressPlaylistRefresh = false;
+
     float m_clipDragOffsetX = 0.0f;  // Offset from clip start to mouse
     double m_clipOriginalStartTime = 0.0;  // Original position before drag
     int m_clipOriginalTrackIndex = -1;  // Original track before drag
@@ -328,6 +360,10 @@ private:
     // === SNAP-TO-GRID (Legacy - preserved for compatibility but shadowed by m_snapSetting) ===
     // bool m_snapEnabled = true;           // Snap to grid enabled by default
     // int m_snapDivision = 4;              // Snap to beats (1=bar, 4=beat, 16=16th, etc.)
+
+    bool m_followPlayhead = false;          // Whether timeline automatically scrolls to follow playhead
+    FollowMode m_followMode = FollowMode::Page; // Default logic
+    std::shared_ptr<::NomadUI::NUIIcon> m_followPlayheadIcon; // Icon for the toggle button
     
     // === CLIPBOARD for copy/paste (v3.0) ===
     struct ClipboardData {
@@ -408,11 +444,7 @@ private:
     void renderSplitCursor(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIPoint& position);
     void renderMinimapResizeCursor(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIPoint& position);
     
-    // Instant clip dragging
-    void startInstantClipDrag(TrackUIComponent* clip, const ::NomadUI::NUIPoint& clickPos);
-    void updateInstantClipDrag(const ::NomadUI::NUIPoint& currentPos);
-    void finishInstantClipDrag();
-    void cancelInstantClipDrag();
+
     
     // Split tool
     void performSplitAtPosition(int trackIndex, double timeSeconds);

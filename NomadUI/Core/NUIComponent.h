@@ -25,6 +25,18 @@ enum class NUILayer {
 };
 
 /**
+ * Global Tooltip State
+ */
+struct TooltipState {
+    std::string text;
+    NUIPoint position;
+    NUIPoint hoverPos;  // Actual mouse position when tooltip was triggered
+    bool active = false;
+    float alpha = 0.0f;
+    float delayTimer = 0.0f;
+};
+
+/**
  * Base class for all UI components in the Nomad UI framework.
  */
 class NUIComponent : public std::enable_shared_from_this<NUIComponent> {
@@ -140,7 +152,24 @@ private:
     bool hitTestVisible_ = true;
     NUILayer layer_ = NUILayer::Content;
     
+    std::string tooltipText_;
+    
+    // Static Global Tooltip State
+    static TooltipState s_tooltipState;
+    
     std::shared_ptr<NUITheme> theme_;
+    
+public:
+    // Tooltips
+    void setTooltip(const std::string& text);
+    std::string getTooltip() const { return tooltipText_; }
+    
+    // Global Tooltip Management
+    static void showRemoteTooltip(const std::string& text, const NUIPoint& position);
+    static void hideRemoteTooltip();
+    static void renderGlobalTooltip(NUIRenderer& renderer);
+    static void updateGlobalTooltip(double deltaTime);
+
 };
 
 } // namespace NomadUI

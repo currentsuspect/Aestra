@@ -279,9 +279,14 @@ void PatternBrowserPanel::renderPatternItem(NomadUI::NUIRenderer& renderer,
     
     // Background (Use standard theme colors)
     if (selected) {
-        // Selection style matching FileBrowser
-        renderer.fillRoundedRect(itemRect, 4, theme.getColor("primary").withAlpha(0.25f));
-        renderer.strokeRoundedRect(itemRect, 4, 1, theme.getColor("primary").withAlpha(0.5f));
+        // === ACTIVE PATTERN: More obvious highlight ===
+        // Stronger fill (40% alpha instead of 25%)
+        renderer.fillRoundedRect(itemRect, 4, theme.getColor("primary").withAlpha(0.40f));
+        // Thicker, brighter border (2px, 70% alpha)
+        renderer.strokeRoundedRect(itemRect, 4, 2.0f, theme.getColor("primary").withAlpha(0.70f));
+        // Left accent bar for extra visibility (4px wide)
+        NomadUI::NUIRect accentBar(itemRect.x, itemRect.y + 2, 4.0f, itemRect.height - 4);
+        renderer.fillRoundedRect(accentBar, 2, theme.getColor("primary"));
     } else if (hovered) {
         // Hover style
         renderer.fillRoundedRect(itemRect, 4, theme.getColor("hover").withAlpha(0.1f));

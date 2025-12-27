@@ -537,9 +537,16 @@ void NUIRendererGL::fillCircle(const NUIPoint& center, float radius, const NUICo
         float angle1 = i * angleStep;
         float angle2 = (i + 1) * angleStep;
         
+        uint32_t base = static_cast<uint32_t>(vertices_.size());
+        
         addVertex(center.x, center.y, 0.5f, 0.5f, color);
         addVertex(center.x + std::cos(angle1) * radius, center.y + std::sin(angle1) * radius, 0, 0, color);
         addVertex(center.x + std::cos(angle2) * radius, center.y + std::sin(angle2) * radius, 1, 1, color);
+        
+        // Add indices for this triangle
+        indices_.push_back(base + 0);
+        indices_.push_back(base + 1);
+        indices_.push_back(base + 2);
     }
 }
 
@@ -627,6 +634,46 @@ void NUIRendererGL::fillWaveform(const NUIPoint* topPoints, const NUIPoint* bott
     
     // Build triangle strip indices
     // For each quad between columns: 4 vertices -> 2 triangles
+    for (int i = 0; i < count - 1; ++i) {
+        uint32_t topLeft = baseIndex + i * 2;
+        uint32_t bottomLeft = baseIndex + i * 2 + 1;
+        uint32_t topRight = baseIndex + (i + 1) * 2;
+        uint32_t bottomRight = baseIndex + (i + 1) * 2 + 1;
+        
+        // Triangle 1: topLeft, bottomLeft, topRight
+        indices_.push_back(topLeft);
+        indices_.push_back(bottomLeft);
+        indices_.push_back(topRight);
+        
+        // Triangle 2: topRight, bottomLeft, bottomRight
+        indices_.push_back(topRight);
+        indices_.push_back(bottomLeft);
+        indices_.push_back(bottomRight);
+    }
+}
+
+void NUIRendererGL::fillWaveformGradient(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, 
+                                          const NUIColor& colorTop, const NUIColor& colorBottom) {
+    if (count < 2) return;
+    
+    ensureBasicPrimitive();
+
+    // Ensure we are not using a texture (batch breaking)
+    if (currentTextureId_ != 0) {
+        flush();
+        currentTextureId_ = 0;
+    }
+    
+    // Build triangle strip with gradient colors (bright at top, darker at bottom)
+    uint32_t baseIndex = static_cast<uint32_t>(vertices_.size());
+    
+    // Add vertices with different colors for top and bottom edges
+    for (int i = 0; i < count; ++i) {
+        addVertex(topPoints[i].x, topPoints[i].y, 0, 0, colorTop);
+        addVertex(bottomPoints[i].x, bottomPoints[i].y, 0, 1, colorBottom);
+    }
+    
+    // Build triangle strip indices
     for (int i = 0; i < count - 1; ++i) {
         uint32_t topLeft = baseIndex + i * 2;
         uint32_t bottomLeft = baseIndex + i * 2 + 1;

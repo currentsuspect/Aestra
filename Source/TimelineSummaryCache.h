@@ -27,6 +27,7 @@ struct TimelineMinimapClipSpan
     TimelineMinimapClipType type = TimelineMinimapClipType::Audio;
     double startBeat = 0.0;
     double endBeat = 0.0; // exclusive
+    uint32_t trackIndex = 0; // Added for track-specific rendering
 
     float energyApprox = 0.0f;
     float peakApprox = 0.0f;
@@ -46,6 +47,9 @@ struct TimelineSummaryBucket
     int32_t audioCount = 0;
     int32_t midiCount = 0;
     int32_t automationCount = 0;
+    
+    // Per-track active clip reference counts (supports up to 64 tracks for minimap viz)
+    uint8_t trackCounts[64] = {0};
 
     float energySum = 0.0f;
     float peakSum = 0.0f;
@@ -98,6 +102,7 @@ private:
         int i0 = 0;
         int i1 = 0;
         TimelineMinimapClipType type = TimelineMinimapClipType::Audio;
+        uint32_t trackIndex = 0;
     };
 
     enum class TaskKind
