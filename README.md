@@ -17,7 +17,7 @@
 
 Nomad combines:
 
-- **Ultra-low latency audio engine** powered by WASAPI multi-tier processing
+- **Ultra-low latency audio engine** powered by a dual-tier ASIO/WASAPI system
 - **Custom GPU-accelerated UI framework** (NomadUI) for buttery-smooth 60 FPS performance
 - **FL Studio-inspired timeline** with intuitive pattern and playlist sequencing
 - **Professional-grade 64-bit audio processing** with multi-threaded architecture
@@ -31,7 +31,8 @@ Whether you're producing electronic music, scoring films, or recording live inst
 
 ### 🎵 Audio Engine
 
-- **WASAPI Integration** — Exclusive and Shared mode with automatic fallback
+- **ASIO Driver Support** — Professional, super-low latency audio with native COM integration
+- **WASAPI Integration** — Seamless fallback for consumer audio hardware
 - **Multi-threaded Processing** — 64-bit audio pipeline for maximum performance
 - **Sample-accurate Timing** — Professional-grade playback precision
 - **Low-latency Design** — Optimized for real-time audio with <10ms latency
@@ -74,7 +75,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 - CPU: Intel Core i7/i9 or AMD Ryzen 7/9
 - RAM: 16 GB or more
 - GPU: Dedicated graphics card with 2+ GB VRAM
-- Audio: Low-latency audio interface (ASIO support optional)
+- Audio: Low-latency audio interface (ASIO recommended for best performance)
 - Storage: SSD for project files and sample libraries
 
 ### Future Platform Support
