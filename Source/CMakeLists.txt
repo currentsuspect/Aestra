@@ -9,6 +9,9 @@ cmake_minimum_required(VERSION 3.22)
 # Create executable
 set(NOMAD_DAW_SOURCES
 	Main.cpp
+	NomadContent.h
+	NomadContent.cpp
+	OverlayLayer.h
 	ConfirmationDialog.h
 	ConfirmationDialog.cpp
 	TransportBar.h

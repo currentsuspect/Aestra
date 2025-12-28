@@ -7,7 +7,7 @@
 #pragma once
 
 #include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUIMouseEvent.h"
+#include "../NomadUI/Core/NUITypes.h"
 
 /**
  * @brief Layer for overlays (Mixer, Piano Roll, etc.) with pass-through hit-testing
