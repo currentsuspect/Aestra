@@ -18,6 +18,10 @@
 namespace Nomad {
 namespace Audio {
 
+// =============================================================================
+// SECTION: Construction & Destruction
+// =============================================================================
+
 TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerChannel> channel, TrackManager* trackManager)
     : m_laneId(laneId)
     , m_channel(channel)
@@ -107,7 +111,10 @@ TrackUIComponent::~TrackUIComponent() {
     Log::info("TrackUIComponent destroyed for lane: " + m_laneId.toString());
 }
 
-// UI Callbacks
+// =============================================================================
+// SECTION: UI Callbacks
+// =============================================================================
+
 void TrackUIComponent::onVolumeChanged(float volume) {
     if (m_channel) {
         m_channel->setVolume(volume);
@@ -296,6 +303,10 @@ void TrackUIComponent::updateTrackNameColors() {
 void TrackUIComponent::generateWaveformCache(int, int) {
     // Waveform caching for entire track is deprecated in v3.0 (clips have their own caching)
 }
+
+// =============================================================================
+// SECTION: Waveform & Clip Drawing
+// =============================================================================
 
 // Draw waveform for a specific clip
 void TrackUIComponent::drawWaveformForClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds,
@@ -857,7 +868,10 @@ void TrackUIComponent::drawPatternClipForClip(NomadUI::NUIRenderer& renderer, co
 }
 
 
-// UI Rendering
+// =============================================================================
+// SECTION: Main Render Entry
+// =============================================================================
+
 void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIRect bounds = getBounds();
     
@@ -1490,6 +1504,10 @@ void TrackUIComponent::onResize(int width, int height) {
 
     NomadUI::NUIComponent::onResize(width, height);
 }
+
+// =============================================================================
+// SECTION: Event Handling
+// =============================================================================
 
 bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // 1. Invalidate Cache on mouse movement in control area (for button hover feedback)
