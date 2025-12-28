@@ -321,7 +321,7 @@ Thank you to all contributors and the open-source community for making Nomad pos
 
 **Q1 2025:**
 
-- ✅ Core audio engine with WASAPI
+- ✅ Core audio engine with WASAPI/ASIO support
 - ✅ NomadUI framework with OpenGL rendering
 - ✅ FL Studio-inspired timeline
 - 🚧 Sample manipulation (drag-and-drop, editing)

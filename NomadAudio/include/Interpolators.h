@@ -5,6 +5,12 @@
 #include <cstdint>
 #include <array>
 #include <cassert>
+#include <immintrin.h>  // AVX2 Support
+#include <memory>
+#include "CPUDetection.h"  // Runtime SIMD dispatch
+#include "SincAVX2.h"      // AVX2 dot product
+#include "SincSSE41.h"     // SSE4.1 fallback
+#include "SincNEON.h"      // ARM NEON support
 
 namespace Nomad {
 namespace Audio {
@@ -339,7 +345,119 @@ struct Sinc32Interpolator {
 // Sinc64 (Perfect) - 64 point optimized Kaiser, ~144dB SNR
 // =============================================================================
 
+// =============================================================================
+// Sinc64Turbo (The "Weapon") - 64 point Polyphase Filter Bank
+// 2048 phases, 144dB SNR, AVX2 Accelerated
+// =============================================================================
+
+struct Sinc64Turbo {
+    static constexpr int TAPS = 64;
+    static constexpr int PHASES = 2048;
+    static constexpr int HALF_PHASES = 1024;  // Only store half!
+    static constexpr double KAISER_BETA = 12.0;
+
+    // Polyphase Table with Symmetry Optimization
+    // Only stores first half of phases (256KB instead of 512KB)
+    struct Table {
+        float coeffs[HALF_PHASES][TAPS];
+
+        Table() {
+            // Only compute phases [0, HALF_PHASES)
+            for (int p = 0; p < HALF_PHASES; ++p) {
+                double frac = static_cast<double>(p) / static_cast<double>(PHASES);
+                for (int t = -31; t <= 32; ++t) {
+                    double x = static_cast<double>(t) - frac;
+                    double s = (std::abs(x) < 1e-10) ? 1.0 : std::sin(PI * x) / (PI * x);
+                    double w = kaiserWindow(static_cast<double>(t + 31), 64.0, KAISER_BETA);
+                    coeffs[p][t + 31] = static_cast<float>(s * w);
+                }
+                
+                double sum = 0.0;
+                for(int i=0; i<TAPS; ++i) sum += coeffs[p][i];
+                if (sum > 0.0) {
+                    float invSum = static_cast<float>(1.0 / sum);
+                    for(int i=0; i<TAPS; ++i) coeffs[p][i] *= invSum;
+                }
+            }
+        }
+    };
+
+    static inline void interpolate(
+        const float* data,
+        int64_t totalFrames,
+        double phase,
+        float& outL, float& outR)
+    {
+        static const auto table = std::make_unique<Table>();
+        static const auto& cpu = Nomad::Core::CPUDetection::get();
+        static const bool useAVX2 = cpu.hasAVX2();
+        static const bool useSSE41 = cpu.hasSSE41() && !useAVX2;
+        static const bool useNEON = cpu.hasNEON();
+        
+        const int64_t idx = static_cast<int64_t>(phase);
+        const double frac = phase - static_cast<double>(idx);
+        
+        // Map frac to discrete phase index
+        int phaseIdx = static_cast<int>(frac * (PHASES - 1) + 0.5);
+        
+        // SYMMETRY: If phaseIdx >= HALF_PHASES, use reversed coeffs
+        bool reversed = (phaseIdx >= HALF_PHASES);
+        int lutIdx = reversed ? (PHASES - 1 - phaseIdx) : phaseIdx;
+        const float* c = table->coeffs[lutIdx];
+        
+        const int64_t startIdx = idx - 31;
+        
+        float sumL = 0.0f;
+        float sumR = 0.0f;
+        
+        // SIMD path: Use when we have valid contiguous access
+        bool validRange = (startIdx >= 0 && startIdx + 64 <= totalFrames);
+        
+        if (validRange && !reversed) {
+            const float* samples = &data[startIdx * 2];
+            
+            if (useAVX2) {
+                sincDotProductAVX2(c, samples, sumL, sumR);
+            } else if (useSSE41) {
+                sincDotProductSSE41(c, samples, sumL, sumR);
+            } else if (useNEON) {
+                sincDotProductNEON(c, samples, sumL, sumR);
+            } else {
+                // Scalar fallback
+                for (int t = 0; t < 64; ++t) {
+                    sumL += samples[t * 2] * c[t];
+                    sumR += samples[t * 2 + 1] * c[t];
+                }
+            }
+        } else if (reversed) {
+            // Scalar path with symmetry reversal (edge cases)
+            for (int t = 0; t < 64; ++t) {
+                int64_t sIdx = startIdx + t;
+                if (sIdx < 0 || sIdx >= totalFrames) continue;
+                
+                float coeff = c[63 - t];  // Reversed!
+                sumL += data[sIdx * 2] * coeff;
+                sumR += data[sIdx * 2 + 1] * coeff;
+            }
+        } else {
+            // Scalar path for boundary cases
+            for (int t = 0; t < 64; ++t) {
+                int64_t sIdx = startIdx + t;
+                if (sIdx < 0 || sIdx >= totalFrames) continue;
+                
+                float coeff = c[t];
+                sumL += data[sIdx * 2] * coeff;
+                sumR += data[sIdx * 2 + 1] * coeff;
+            }
+        }
+        
+        outL = sumL;
+        outR = sumR;
+    }
+};
+
 struct Sinc64Interpolator {
+    // Legacy implementation kept for benchmark comparison
     static constexpr int TAPS = 64;
     static constexpr int HALF_TAPS = 32;
     static constexpr double KAISER_BETA = 12.0;
@@ -438,7 +556,7 @@ inline void interpolateSample(
             Sinc32Interpolator::interpolate(data, totalFrames, phase, outL, outR);
             break;
         case InterpolationQuality::Sinc64:
-            Sinc64Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+            Sinc64Turbo::interpolate(data, totalFrames, phase, outL, outR);
             break;
         default:
             // Defensive handling for unknown/added enum values

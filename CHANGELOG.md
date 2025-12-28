@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] - 2025-12-26
+## [Unreleased] - 2025-12-28
 
 ### Added
 - **ASIO Driver Support** (Professional Audio):
