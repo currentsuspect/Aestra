@@ -153,6 +153,10 @@ if (NOMAD_USE_MINIAUDIO)
     target_compile_definitions(NomadAudioCore PRIVATE NOMAD_USE_MINIAUDIO)
 endif()
 
+# AVX2/FMA: Enabled per-TU via #pragma in SincAVX2.h for safe runtime dispatch.
+# IMPORTANT: Do NOT add global /arch:AVX2 here - it causes VEX-encoded scalar ops
+# that crash on non-AVX2 CPUs even in the fallback path.
+
 target_include_directories(NomadAudioCore
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -376,6 +380,20 @@ target_link_libraries(NomadAudioPerformanceTest
 if(WIN32)
     target_link_libraries(NomadAudioPerformanceTest PRIVATE avrt)
 endif()
+
+# Sinc Interpolator Benchmark
+add_executable(NomadSincBenchmark
+    test/SincBenchmark.cpp
+)
+
+target_link_libraries(NomadSincBenchmark
+    PRIVATE
+        NomadAudio
+        NomadCore
+)
+
+# Per-TU AVX2 for benchmark (only the SincAVX2.h code uses intrinsics)
+# For now, rely on runtime dispatch; SIMD code is guarded by CPUDetection.
 
 # =============================================================================
 # Status

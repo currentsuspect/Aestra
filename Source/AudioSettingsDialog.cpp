@@ -97,8 +97,8 @@ void AudioSettingsDialog::createUI() {
         "• High-Fidelity - Better quality, higher CPU\n"
         "• Mastering - Maximum quality for final export\n\n"
         "Resampling Quality:\n\n"
-        "Controls interpolation when changing playback speed or pitch.\n"
-        "Higher quality = better sound but more CPU usage.\n\n"
+        "Standardized to Sinc64 (Extreme Quality).\n"
+        "Zero aliasing, perfect phase response, negligible CPU cost.\n\n"
         "Dithering:\n\n"
         "Adds controlled noise to reduce quantization artifacts.\n"
         "Use Triangular or Noise-Shaped for best results.\n\n"
@@ -211,7 +211,7 @@ void AudioSettingsDialog::createUI() {
             
             // Update UI to match preset
             m_isApplyingQualityPreset = true;
-            m_resamplingDropdown->setSelectedIndex(static_cast<int>(settings.resampling));
+            // Resampling is now always Sinc64 (Extreme) - no UI update needed
             m_ditheringDropdown->setSelectedIndex(static_cast<int>(settings.dithering));
             m_isApplyingQualityPreset = false;
             m_dcRemovalToggle->setText(settings.removeDCOffset ? "ON" : "OFF");
@@ -221,42 +221,7 @@ void AudioSettingsDialog::createUI() {
     });
     addChild(m_qualityPresetDropdown);
     
-    // Resampling quality dropdown
-    m_resamplingLabel = std::make_shared<NomadUI::NUILabel>();
-    m_resamplingLabel->setText("Resampling:");
-    addChild(m_resamplingLabel);
-    
-    m_resamplingDropdown = std::make_shared<NomadUI::NUIDropdown>();
-    m_resamplingDropdown->setPlaceholderText("Select Resampling Mode");
-    m_resamplingDropdown->addItem("Fast (Cubic 4pt)", static_cast<int>(Audio::ResamplingMode::Fast));
-    m_resamplingDropdown->addItem("Medium (Sinc 8pt)", static_cast<int>(Audio::ResamplingMode::Medium));
-    m_resamplingDropdown->addItem("High (Sinc 16pt)", static_cast<int>(Audio::ResamplingMode::High));
-    m_resamplingDropdown->addItem("Ultra (Sinc 32pt)", static_cast<int>(Audio::ResamplingMode::Ultra));
-    m_resamplingDropdown->addItem("Extreme (Sinc 64pt - Heavy)", static_cast<int>(Audio::ResamplingMode::Extreme));
-    m_resamplingDropdown->addItem("Perfect (512pt) - OFFLINE ONLY", static_cast<int>(Audio::ResamplingMode::Perfect));
-    m_resamplingDropdown->setSelectedIndex(1); // Default to Medium
-    m_resamplingDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
-        if (m_isApplyingQualityPreset || m_suppressDirtyStateUpdates) {
-            return;
-        }
-
-        // Switch to Custom preset when manually changing settings
-        m_qualityPresetDropdown->setSelectedIndex(4); // Custom
-        
-        // Warn about Perfect mode CPU usage
-        auto mode = static_cast<Audio::ResamplingMode>(value);
-        if (mode == Audio::ResamplingMode::Perfect) {
-            Nomad::Log::warning("Perfect mode (512pt) is EXTREMELY CPU intensive!");
-            Nomad::Log::warning("   Recommended ONLY for offline rendering/export.");
-            Nomad::Log::warning("   Real-time playback may stutter or drop out.");
-            Nomad::Log::warning("   Use Extreme (64pt) for real-time mastering.");
-        } else if (mode == Audio::ResamplingMode::Extreme) {
-            Nomad::Log::info("Extreme mode (64pt) - Mastering grade quality");
-            Nomad::Log::info("  Real-time safe on modern CPUs");
-        }
-        markSettingsChanged();
-    });
-    addChild(m_resamplingDropdown);
+    // Resampling dropdown removed - standardized to Sinc64
     
     // Dithering mode dropdown
     m_ditheringLabel = std::make_shared<NomadUI::NUILabel>();
@@ -564,9 +529,7 @@ void AudioSettingsDialog::onRender(NomadUI::NUIRenderer& renderer) {
     if (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) {
         m_qualityPresetDropdown->renderDropdownList(renderer);
     }
-    if (m_resamplingDropdown && m_resamplingDropdown->isOpen()) {
-        m_resamplingDropdown->renderDropdownList(renderer);
-    }
+
     if (m_ditheringDropdown && m_ditheringDropdown->isOpen()) {
         m_ditheringDropdown->renderDropdownList(renderer);
     }
@@ -627,7 +590,9 @@ bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                                      (m_sampleRateDropdown && m_sampleRateDropdown->isOpen()) ||
                                      (m_bufferSizeDropdown && m_bufferSizeDropdown->isOpen()) ||
                                      (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) ||
-                                     (m_resamplingDropdown && m_resamplingDropdown->isOpen()) ||
+                                     (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) ||
+//                                     (m_resamplingDropdown && m_resamplingDropdown->isOpen()) ||
+                                     (m_ditheringDropdown && m_ditheringDropdown->isOpen()) ||
                                      (m_ditheringDropdown && m_ditheringDropdown->isOpen()) ||
                                      (m_threadCountDropdown && m_threadCountDropdown->isOpen()) ||
                                      (m_nomadModeDropdown && m_nomadModeDropdown->isOpen());
@@ -658,9 +623,7 @@ bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         if (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) {
             handled = m_qualityPresetDropdown->onMouseEvent(event) || handled;
         }
-        if (m_resamplingDropdown && m_resamplingDropdown->isOpen()) {
-            handled = m_resamplingDropdown->onMouseEvent(event) || handled;
-        }
+
         if (m_ditheringDropdown && m_ditheringDropdown->isOpen()) {
             handled = m_ditheringDropdown->onMouseEvent(event) || handled;
         }
@@ -910,7 +873,7 @@ void AudioSettingsDialog::loadCurrentSettings() {
 
 void AudioSettingsDialog::captureOriginalQualityStateFromUi() {
     m_originalQualityPresetIndex = m_qualityPresetDropdown ? m_qualityPresetDropdown->getSelectedIndex() : -1;
-    m_originalResamplingIndex = m_resamplingDropdown ? m_resamplingDropdown->getSelectedIndex() : -1;
+    // Resampling is standardized, no UI state to capture
     m_originalDitheringIndex = m_ditheringDropdown ? m_ditheringDropdown->getSelectedIndex() : -1;
     m_originalDCRemoval = m_dcRemovalToggle && (m_dcRemovalToggle->getText() == "ON");
     m_originalSoftClipping = m_softClippingToggle && (m_softClippingToggle->getText() == "ON");
@@ -930,10 +893,7 @@ bool AudioSettingsDialog::hasUnsavedChanges() const {
         m_qualityPresetDropdown->getSelectedIndex() != m_originalQualityPresetIndex) {
         return true;
     }
-    if (m_resamplingDropdown && m_originalResamplingIndex != -1 &&
-        m_resamplingDropdown->getSelectedIndex() != m_originalResamplingIndex) {
-        return true;
-    }
+    // Resampling check removed
     if (m_ditheringDropdown && m_originalDitheringIndex != -1 &&
         m_ditheringDropdown->getSelectedIndex() != m_originalDitheringIndex) {
         return true;
@@ -999,9 +959,7 @@ void AudioSettingsDialog::restoreOriginalUiState() {
         (m_qualityPresetDropdown->getSelectedValue() == static_cast<int>(Audio::QualityPreset::Custom));
 
     if (presetIsCustom) {
-        if (m_resamplingDropdown && m_originalResamplingIndex != -1) {
-            m_resamplingDropdown->setSelectedIndex(m_originalResamplingIndex);
-        }
+        // Resampling restore removed
         if (m_ditheringDropdown && m_originalDitheringIndex != -1) {
             m_ditheringDropdown->setSelectedIndex(m_originalDitheringIndex);
         }
@@ -1115,9 +1073,8 @@ void AudioSettingsDialog::applySettings() {
         int presetValue = m_qualityPresetDropdown->getSelectedValue();
         qualitySettings.preset = static_cast<Audio::QualityPreset>(presetValue);
         
-        // Get resampling mode from dropdown
-        int resamplingValue = m_resamplingDropdown->getSelectedValue();
-        qualitySettings.resampling = static_cast<Audio::ResamplingMode>(resamplingValue);
+        // Get resampling mode - STANDARDIZED TO EXTREME (Sinc64)
+        qualitySettings.resampling = Audio::ResamplingMode::Extreme;
         
         // Get dithering mode from dropdown
         int ditheringValue = m_ditheringDropdown->getSelectedValue();
@@ -1164,14 +1121,14 @@ void AudioSettingsDialog::applySettings() {
         
         // Log quality settings
         const char* presetNames[] = {"Custom", "Economy", "Balanced", "High-Fidelity", "Mastering"};
-        const char* resamplingNames[] = {"Fast", "Medium", "High", "Ultra", "Extreme", "Perfect"};
+        // Resampling is fixed to Sinc64 (Extreme)
         const char* ditheringNames[] = {"None", "Triangular", "High-Pass", "Noise-Shaped"};
         const char* nomadModeNames[] = {"Off", "Transparent", "Euphoric"};
         const char* precisionNames[] = {"32-bit Float", "64-bit Float"};
         
         Log::info("Applied audio quality settings:");
         Log::info("  Preset: " + std::string(presetNames[static_cast<int>(qualitySettings.preset)]));
-        Log::info("  Resampling: " + std::string(resamplingNames[static_cast<int>(qualitySettings.resampling)]));
+        Log::info("  Resampling: Extreme (Sinc64) [Standardized]");
         Log::info("  Dithering: " + std::string(ditheringNames[static_cast<int>(qualitySettings.dithering)]));
         Log::info("  Precision: " + std::string(precisionNames[static_cast<int>(qualitySettings.precision)]));
         Log::info("  DC Removal: " + std::string(qualitySettings.removeDCOffset ? "ON" : "OFF"));
@@ -1276,8 +1233,7 @@ void AudioSettingsDialog::layoutComponents() {
         m_qualitySectionLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
         m_qualityPresetLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
         m_qualityPresetDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_resamplingLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_resamplingDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
+        // Resampling UI hidden
         m_ditheringLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
         m_ditheringDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
         m_dcRemovalLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
@@ -1356,10 +1312,7 @@ void AudioSettingsDialog::layoutComponents() {
         m_qualityPresetLabel->setBounds(NomadUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
         m_qualityPresetDropdown->setBounds(NomadUI::NUIRect(middleDropdownX, middleY, dropdownWidth, dropdownHeight));
         
-        // Resampling mode dropdown
-        middleY += dropdownHeight + verticalSpacing;
-        m_resamplingLabel->setBounds(NomadUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
-        m_resamplingDropdown->setBounds(NomadUI::NUIRect(middleDropdownX, middleY, dropdownWidth, dropdownHeight));
+        // Resampling dropdown removed
         
         // Dithering mode dropdown
         middleY += dropdownHeight + verticalSpacing;
@@ -1640,10 +1593,8 @@ void AudioSettingsDialog::stopTestSound() {
 
 
 Nomad::Audio::ResamplingMode AudioSettingsDialog::getSelectedResamplingMode() const {
-    if (m_resamplingDropdown) {
-        return static_cast<Nomad::Audio::ResamplingMode>(m_resamplingDropdown->getSelectedValue());
-    }
-    return Nomad::Audio::ResamplingMode::Medium;
+    // Sinc64 is now the global standard
+    return Nomad::Audio::ResamplingMode::Extreme;
 }
 
 Nomad::Audio::DitheringMode AudioSettingsDialog::getSelectedDitheringMode() const {
