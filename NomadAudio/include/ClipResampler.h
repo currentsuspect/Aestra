@@ -14,8 +14,9 @@ namespace Audio {
  */
 enum class ClipResamplingQuality {
     Fast,       // Linear interpolation (low CPU, audible artifacts on pitch shift)
-    Standard,   // Cubic Hermite (good balance)
-    High        // Sinc64Turbo (mastering quality, highest CPU)
+    Draft,      // Sinc32Turbo (mixing quality, ~100dB SNR, 2x faster than High)
+    Standard,   // Cubic Hermite (good balance, no LUT overhead)
+    High        // Sinc64Turbo (mastering quality, ~144dB SNR)
 };
 
 /**
@@ -69,6 +70,9 @@ public:
         switch (m_quality) {
             case ClipResamplingQuality::Fast:
                 return sampleLinear(data, numFrames, numChannels, position, channel);
+            
+            case ClipResamplingQuality::Draft:
+                return sampleSinc32(data, numFrames, numChannels, position, channel);
                 
             case ClipResamplingQuality::Standard:
                 return sampleCubic(data, numFrames, numChannels, position, channel);
@@ -98,13 +102,16 @@ public:
             case ClipResamplingQuality::Fast:
                 sampleLinearStereo(data, numFrames, position, outL, outR);
                 break;
+            
+            case ClipResamplingQuality::Draft:
+                Interpolators::Sinc32Turbo::interpolate(data, numFrames, position, outL, outR);
+                break;
                 
             case ClipResamplingQuality::Standard:
                 sampleCubicStereo(data, numFrames, position, outL, outR);
                 break;
                 
             case ClipResamplingQuality::High:
-                // Sinc64Turbo already handles stereo natively
                 Interpolators::Sinc64Turbo::interpolate(data, numFrames, position, outL, outR);
                 break;
         }
@@ -204,6 +211,26 @@ private:
     {
         // Use the existing CubicInterpolator from Interpolators.h
         Interpolators::CubicInterpolator::interpolate(data, numFrames, position, outL, outR);
+    }
+    
+    // =========================================================================
+    // Sinc32 Turbo Interpolation (Draft/Mixing Quality)
+    // =========================================================================
+    
+    inline float sampleSinc32(
+        const float* data,
+        int64_t numFrames,
+        uint32_t numChannels,
+        double position,
+        uint32_t channel) const noexcept
+    {
+        float outL, outR;
+        if (numChannels >= 2) {
+            Interpolators::Sinc32Turbo::interpolate(data, numFrames, position, outL, outR);
+            return (channel == 0) ? outL : outR;
+        } else {
+            return sampleCubic(data, numFrames, numChannels, position, channel);
+        }
     }
     
     // =========================================================================
