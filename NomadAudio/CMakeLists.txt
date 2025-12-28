@@ -188,6 +188,7 @@ if(WIN32)
         src/Win32/WASAPIExclusiveDriver.cpp
         src/Win32/ASIODriverInfo.cpp
         src/Win32/RtAudioBackend.cpp
+        src/ASIODriver.cpp  # Added Phase 6
     )
     
     set(NOMAD_AUDIO_WIN_HEADERS
@@ -196,6 +197,8 @@ if(WIN32)
         src/Win32/ASIODriverInfo.h
         src/Win32/RtAudioBackend.h
         include/NativeAudioDriver.h
+        include/ASIODriver.h     # Added Phase 6
+        include/ASIOInterface.h  # Added Phase 6
         ${RTAUDIO_HEADERS} # RtAudio headers needed for backend compilation
     )
 

@@ -3,6 +3,7 @@
 #include "../../include/AudioDeviceManager.h"
 #include "WASAPIExclusiveDriver.h"
 #include "WASAPISharedDriver.h"
+#include "../../include/ASIODriver.h"
 #include "RtAudioBackend.h"
 #include <iostream>
 
@@ -12,6 +13,16 @@ namespace Audio {
 void RegisterPlatformDrivers(AudioDeviceManager& manager) {
     std::cout << "[AudioDriverRegistry] Registering Windows drivers..." << std::endl;
     
+    // Register ASIO Drivers (Phase 6)
+    try {
+        auto asio = std::make_unique<ASIODriver>();
+        if (asio->isAvailable()) {
+            manager.addDriver(std::move(asio));
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "[AudioDriverRegistry] ASIO exception: " << e.what() << std::endl;
+    }
+
     // Register WASAPI Exclusive
     try {
         auto exclusive = std::make_unique<WASAPIExclusiveDriver>();
