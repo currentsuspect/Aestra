@@ -8,6 +8,18 @@
 #include <cstring>
 #include <filesystem>
 
+// Cache prefetch support
+#if defined(_MSC_VER) || defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+    #include <xmmintrin.h>  // _mm_prefetch
+    #define NOMAD_HAS_PREFETCH 1
+    #define NOMAD_PREFETCH(addr) _mm_prefetch(reinterpret_cast<const char*>(addr), _MM_HINT_T0)
+#elif defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
+    #define NOMAD_HAS_PREFETCH 1
+    #define NOMAD_PREFETCH(addr) __builtin_prefetch(addr, 0, 3)
+#else
+    #define NOMAD_PREFETCH(addr) ((void)0)
+#endif
+
 namespace Nomad {
 namespace Audio {
 
@@ -67,8 +79,16 @@ size_t AudioRingBuffer::read(float* samples, size_t numFrames) {
     
     // Read in up to two parts (may wrap around)
     size_t firstPart = std::min(toRead, m_capacityFrames - readIdx);
+    
+    // Prefetch: Prime the cache before memcpy (reduces latency on large buffers)
+    const size_t prefetchStride = 64; // Cache line size
+    const float* srcPtr = &m_buffer[readIdx * samplesPerFrame];
+    for (size_t offset = 0; offset < firstPart * samplesPerFrame * sizeof(float); offset += prefetchStride) {
+        NOMAD_PREFETCH(reinterpret_cast<const char*>(srcPtr) + offset);
+    }
+    
     std::memcpy(samples, 
-                &m_buffer[readIdx * samplesPerFrame],
+                srcPtr,
                 firstPart * samplesPerFrame * sizeof(float));
     
     if (toRead > firstPart) {
