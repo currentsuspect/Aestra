@@ -1334,7 +1334,10 @@ void AudioSettingsDialog::layoutComponents() {
         m_qualityPresetLabel->setBounds(NomadUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
         m_qualityPresetDropdown->setBounds(NomadUI::NUIRect(middleDropdownX, middleY, dropdownWidth, dropdownHeight));
         
-        // Resampling dropdown removed
+        // Resampling dropdown
+        middleY += dropdownHeight + verticalSpacing;
+        m_resamplingLabel->setBounds(NomadUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
+        m_resamplingDropdown->setBounds(NomadUI::NUIRect(middleDropdownX, middleY, dropdownWidth, dropdownHeight));
         
         // Dithering mode dropdown
         middleY += dropdownHeight + verticalSpacing;
