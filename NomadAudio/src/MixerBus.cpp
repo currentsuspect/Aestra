@@ -1,5 +1,6 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "MixerBus.h"
+#include "FastMath.h"
 #include <cmath>
 #include <cstring>
 #include <algorithm>
@@ -181,14 +182,8 @@ void MixerBus::setSolo(bool solo)
 
 void MixerBus::calculatePanGains(float pan, float& leftGain, float& rightGain) const
 {
-    // Constant power panning law
-    // pan: -1.0 (left) to 1.0 (right)
-    // Uses sin/cos for constant power
-    
-    const float angle = (pan + 1.0f) * 0.25f * PI; // Map [-1, 1] to [0, PI/2]
-    
-    leftGain = std::cos(angle);
-    rightGain = std::sin(angle);
+    // Fast constant power panning using polynomial approximation (~5x faster)
+    FastMath::fastPan(pan, leftGain, rightGain);
 }
 
 // SimpleMixer implementation
