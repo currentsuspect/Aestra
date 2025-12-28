@@ -1,5 +1,6 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioEngine.h"
+#include "FastMath.h"
 #include <cmath>
 #include <algorithm>
 #include <cstring>
@@ -25,7 +26,16 @@ namespace {
     inline double dbToLinearD(double db) {
         // UI uses -90 dB as "silence"
         if (db <= -90.0) return 0.0;
-        return std::pow(10.0, db / 20.0);
+        // FastMath polynomial approximation (~5x faster than std::pow)
+        return static_cast<double>(FastMath::fastDbToLinear(static_cast<float>(db)));
+    }
+    
+    // Fast constant-power pan gains (replaces std::sin/cos)
+    inline void fastPanGainsD(double pan, double vol, double& gainL, double& gainR) {
+        float fL, fR;
+        FastMath::fastPan(static_cast<float>(pan), fL, fR);
+        gainL = static_cast<double>(fL) * vol;
+        gainR = static_cast<double>(fR) * vol;
     }
 }
 
@@ -52,26 +62,26 @@ void AudioEngine::applyPendingCommands() {
                 auto& state = ensureTrackState(cmd.trackIndex);
                 state.currentVolume = cmd.value1;
                 
-                // Recalculate Targets
+                // Recalculate Targets using FastMath
                 const double panClamped = clampD(static_cast<double>(state.currentPan), -1.0, 1.0);
-                const double angle = (panClamped + 1.0) * QUARTER_PI_D;
                 const double vol = static_cast<double>(state.currentVolume);
-                
-                state.gainL.setTarget(vol * std::cos(angle));
-                state.gainR.setTarget(vol * std::sin(angle));
+                double gainL, gainR;
+                fastPanGainsD(panClamped, vol, gainL, gainR);
+                state.gainL.setTarget(gainL);
+                state.gainR.setTarget(gainR);
                 break;
             }
             case AudioQueueCommandType::SetTrackPan: {
                 auto& state = ensureTrackState(cmd.trackIndex);
                 state.currentPan = cmd.value1;
                 
-                // Recalculate Targets
+                // Recalculate Targets using FastMath
                 const double panClamped = clampD(static_cast<double>(state.currentPan), -1.0, 1.0);
-                const double angle = (panClamped + 1.0) * QUARTER_PI_D;
                 const double vol = static_cast<double>(state.currentVolume);
-                
-                state.gainL.setTarget(vol * std::cos(angle));
-                state.gainR.setTarget(vol * std::sin(angle));
+                double gainL, gainR;
+                fastPanGainsD(panClamped, vol, gainL, gainR);
+                state.gainL.setTarget(gainL);
+                state.gainR.setTarget(gainR);
                 break;
             }
             case AudioQueueCommandType::SetTrackMute: {
