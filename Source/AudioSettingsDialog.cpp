@@ -228,11 +228,11 @@ void AudioSettingsDialog::createUI() {
     
     m_resamplingDropdown = std::make_shared<NomadUI::NUIDropdown>();
     m_resamplingDropdown->setPlaceholderText("Select Resampling Mode");
-    m_resamplingDropdown->addItem("Fast (Linear 2pt)", static_cast<int>(Audio::ResamplingMode::Fast));
-    m_resamplingDropdown->addItem("Medium (Cubic 4pt)", static_cast<int>(Audio::ResamplingMode::Medium));
-    m_resamplingDropdown->addItem("High (Sinc 8pt)", static_cast<int>(Audio::ResamplingMode::High));
-    m_resamplingDropdown->addItem("Ultra (Sinc 16pt)", static_cast<int>(Audio::ResamplingMode::Ultra));
-    m_resamplingDropdown->addItem("Extreme (Sinc 64pt)", static_cast<int>(Audio::ResamplingMode::Extreme));
+    m_resamplingDropdown->addItem("Fast (Cubic 4pt)", static_cast<int>(Audio::ResamplingMode::Fast));
+    m_resamplingDropdown->addItem("Medium (Sinc 8pt)", static_cast<int>(Audio::ResamplingMode::Medium));
+    m_resamplingDropdown->addItem("High (Sinc 16pt)", static_cast<int>(Audio::ResamplingMode::High));
+    m_resamplingDropdown->addItem("Ultra (Sinc 32pt)", static_cast<int>(Audio::ResamplingMode::Ultra));
+    m_resamplingDropdown->addItem("Extreme (Sinc 64pt - Heavy)", static_cast<int>(Audio::ResamplingMode::Extreme));
     m_resamplingDropdown->addItem("Perfect (512pt) - OFFLINE ONLY", static_cast<int>(Audio::ResamplingMode::Perfect));
     m_resamplingDropdown->setSelectedIndex(1); // Default to Medium
     m_resamplingDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {

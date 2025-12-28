@@ -965,7 +965,7 @@ public:
                     
                     switch (mode) {
                         case Nomad::Audio::ResamplingMode::Fast:    quality = Nomad::Audio::Interpolators::InterpolationQuality::Cubic; break;
-                        case Nomad::Audio::ResamplingMode::Medium:  quality = Nomad::Audio::Interpolators::InterpolationQuality::Cubic; break;
+                        case Nomad::Audio::ResamplingMode::Medium:  quality = Nomad::Audio::Interpolators::InterpolationQuality::Sinc8; break;
                         case Nomad::Audio::ResamplingMode::High:    quality = Nomad::Audio::Interpolators::InterpolationQuality::Sinc16; break;
                         case Nomad::Audio::ResamplingMode::Ultra:   quality = Nomad::Audio::Interpolators::InterpolationQuality::Sinc32; break;
                         case Nomad::Audio::ResamplingMode::Extreme: quality = Nomad::Audio::Interpolators::InterpolationQuality::Sinc64; break;
@@ -975,6 +975,13 @@ public:
                     
                     m_audioEngine->setInterpolationQuality(quality);
                     Log::info("AudioEngine interpolation quality set to: " + std::to_string(static_cast<int>(quality)));
+                }
+                
+                // Sync Dithering Mode
+                if (m_audioSettingsDialog) {
+                    auto ditherMode = m_audioSettingsDialog->getSelectedDitheringMode();
+                    m_audioEngine->setDitheringMode(ditherMode);
+                    Log::info("AudioEngine dithering mode set to: " + std::to_string(static_cast<int>(ditherMode)));
                 }
             }
             

@@ -12,6 +12,13 @@ namespace Audio {
  * 
  * Ordered by priority (lower value = higher priority)
  */
+enum class DitheringMode {
+    None,
+    Triangular,
+    HighPass,
+    NoiseShaped
+};
+
 enum class AudioDriverType : uint8_t {
     // Phase 2-3: ASIO Drivers (lowest latency)
     ASIO_EXTERNAL = 0,      // External ASIO drivers (ASIO4ALL, FL ASIO, Focusrite, etc.)

@@ -133,7 +133,6 @@ struct Sinc8Interpolator {
         double phase,
         float& outL, float& outR)
     {
-        // Pre-calculated weights (Static Local Initialization - Thread Safe & One-Time)
         static const std::array<double, TAPS> weights = [](){
             std::array<double, TAPS> w;
             for(int i=0; i<TAPS; ++i) w[i] = blackmanWindow(static_cast<double>(i), static_cast<double>(TAPS));
@@ -143,20 +142,50 @@ struct Sinc8Interpolator {
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
         
+        // OPTIMIZATION: Trig Reduction
+        // sin(pi * (t - frac)) = (-1)^t * -sin(pi * frac)
+        // We compute sin(pi*frac) once instead of 8 times.
+        const double pix = PI * frac;
+        const double sin_pi_frac = std::sin(pix);
+        const double neg_sin_pi_frac = -sin_pi_frac;
+        
         double sumL = 0.0;
         double sumR = 0.0;
         double weightSum = 0.0;
         
+        // Pre-calculate signs: t ranges -3 to 4.
+        // t=-3: (-1)^-3 = -1
+        // t=-2: +1
+        // ...
+        // Sequence starting at t=-3: -1, 1, -1, 1, -1, 1, -1, 1
+        
+        // Loop t from -3 to 4 (8 taps)
+        // We can unroll this fully for Sinc8
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
             const int64_t sampleIdx = idx + t;
             if (sampleIdx < 0 || sampleIdx >= totalFrames) continue;
             
             const double x = static_cast<double>(t) - frac;
-            // Lookup window weight: map relative t to array index 0..7
-            const int tableIdx = t + HALF_TAPS - 1;
-            const double w = weights[tableIdx];
             
-            const double s = sinc(x) * w;
+            // Sinc calculation with optimization
+            double s;
+            if (std::abs(x) < 1e-9) {
+                s = 1.0;
+            } else {
+                // Denominator
+                const double denom = PI * x;
+                // Numerator sign flip based on t
+                // t is even: -sin(pi*frac) -> neg_sin_pi_frac
+                // t is odd:  +sin(pi*frac) -> sin_pi_frac
+                // Note: Logic derived: sin(pi*(t-f)) = (-1)^t * sin(-pi*f) = (-1)^t * -sin(pi*f)
+                // If t is even -> -sin
+                // If t is odd  -> +sin
+                double numerator = (t % 2 == 0) ? neg_sin_pi_frac : sin_pi_frac;
+                s = numerator / denom;
+            }
+            
+            const int tableIdx = t + HALF_TAPS - 1;
+            s *= weights[tableIdx];
             
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
@@ -164,8 +193,9 @@ struct Sinc8Interpolator {
         }
         
         if (weightSum > 0.0) {
-            sumL /= weightSum;
-            sumR /= weightSum;
+            const double invW = 1.0 / weightSum;
+            sumL *= invW;
+            sumR *= invW;
         }
         
         outL = static_cast<float>(sumL);
@@ -197,6 +227,11 @@ struct Sinc16Interpolator {
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
         
+        // OPTIMIZATION: Trig Reduction
+        const double pix = PI * frac;
+        const double sin_pi_frac = std::sin(pix);
+        const double neg_sin_pi_frac = -sin_pi_frac;
+        
         double sumL = 0.0;
         double sumR = 0.0;
         double weightSum = 0.0;
@@ -207,19 +242,26 @@ struct Sinc16Interpolator {
             
             const double x = static_cast<double>(t) - frac;
             
+            double s;
+            if (std::abs(x) < 1e-9) {
+                s = 1.0;
+            } else {
+                double numerator = (t % 2 == 0) ? neg_sin_pi_frac : sin_pi_frac;
+                s = numerator / (PI * x);
+            }
+            
             const int tableIdx = t + HALF_TAPS - 1;
-            const double w = weights[tableIdx];
-            const double s = sinc(x) * w;
+            s *= weights[tableIdx];
             
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
-            weightSum += s;  // Accumulate the weight for normalization
+            weightSum += s;
         }
         
-        // Normalize by weight sum to prevent gain loss at edges
         if (weightSum > 0.0) {
-            sumL /= weightSum;
-            sumR /= weightSum;
+            const double invW = 1.0 / weightSum;
+            sumL *= invW;
+            sumR *= invW;
         }
         
         outL = static_cast<float>(sumL);
@@ -250,6 +292,11 @@ struct Sinc32Interpolator {
 
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
+
+        // OPTIMIZATION: Trig Reduction
+        const double pix = PI * frac;
+        const double sin_pi_frac = std::sin(pix);
+        const double neg_sin_pi_frac = -sin_pi_frac;
         
         double sumL = 0.0;
         double sumR = 0.0;
@@ -261,19 +308,26 @@ struct Sinc32Interpolator {
             
             const double x = static_cast<double>(t) - frac;
             
+            double s;
+            if (std::abs(x) < 1e-9) {
+                s = 1.0;
+            } else {
+                double numerator = (t % 2 == 0) ? neg_sin_pi_frac : sin_pi_frac;
+                s = numerator / (PI * x);
+            }
+            
             const int tableIdx = t + HALF_TAPS - 1;
-            const double w = weights[tableIdx];
-            const double s = sinc(x) * w;
+            s *= weights[tableIdx];
             
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
-            weightSum += s;  // Accumulate the weight for normalization
+            weightSum += s;
         }
         
-        // Normalize by weight sum to prevent gain loss at edges
         if (weightSum > 0.0) {
-            sumL /= weightSum;
-            sumR /= weightSum;
+            const double invW = 1.0 / weightSum;
+            sumL *= invW;
+            sumR *= invW;
         }
         
         outL = static_cast<float>(sumL);
@@ -288,7 +342,7 @@ struct Sinc32Interpolator {
 struct Sinc64Interpolator {
     static constexpr int TAPS = 64;
     static constexpr int HALF_TAPS = 32;
-    static constexpr double KAISER_BETA = 12.0;  // Maximum quality
+    static constexpr double KAISER_BETA = 12.0;
     
     static inline void interpolate(
         const float* data,
@@ -304,21 +358,35 @@ struct Sinc64Interpolator {
 
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
+
+        // OPTIMIZATION: Massive reduction (1 sin vs 64 sins)
+        const double pix = PI * frac;
+        const double sin_pi_frac = std::sin(pix);
+        const double neg_sin_pi_frac = -sin_pi_frac;
         
         double sumL = 0.0;
         double sumR = 0.0;
         double weightSum = 0.0;
         
-        // Unrolled inner loop for better cache behavior
+        // Main loop - Auto-vectorizes well
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
             const int64_t sampleIdx = idx + t;
+            // Check bounds (rare branch inside loop, effectively predicted usually, or use padding)
+            // For extreme quality, we clamp or zero. Here we skip.
             if (sampleIdx < 0 || sampleIdx >= totalFrames) continue;
             
             const double x = static_cast<double>(t) - frac;
-            const int tableIdx = t + HALF_TAPS - 1;
-            const double w = weights[tableIdx];
             
-            const double s = sinc(x) * w;
+            double s;
+            if (std::abs(x) < 1e-9) {
+                s = 1.0;
+            } else {
+                double numerator = (t % 2 == 0) ? neg_sin_pi_frac : sin_pi_frac;
+                s = numerator / (PI * x);
+            }
+            
+            const int tableIdx = t + HALF_TAPS - 1;
+            s *= weights[tableIdx];
             
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
@@ -326,8 +394,9 @@ struct Sinc64Interpolator {
         }
         
         if (weightSum > 0.0) {
-            sumL /= weightSum;
-            sumR /= weightSum;
+            const double invW = 1.0 / weightSum;
+            sumL *= invW;
+            sumR *= invW;
         }
         
         outL = static_cast<float>(sumL);

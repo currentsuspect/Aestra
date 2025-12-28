@@ -477,6 +477,8 @@ void NUIComponent::updateGlobalTooltip(double deltaTime) {
     }
 }
 
+
+
 void NUIComponent::renderGlobalTooltip(NUIRenderer& renderer) {
     if (!s_tooltipState.active || s_tooltipState.alpha <= 0.01f) return;
     

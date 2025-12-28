@@ -173,23 +173,35 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
     float arrowSize = 6.0f;
     float centerY = bounds.y + bounds.height / 2;
     float arrowX = bounds.x + bounds.width - padding - arrowSize - 4.0f;
+    float arrowCenterX = arrowX + arrowSize / 2;
     
-    // Smooth rotation animation
-    float rotationAngle = isOpen_ ? 180.0f : 0.0f;
+    // Use animated rotation (0 = pointing down, 180 = pointing up)
+    // Convert rotation to radians for math
+    float rotationRad = chevronRotation_ * 3.14159f / 180.0f;
     
-    // Chevron pointing down (flips up when open)
-    NUIPoint p1, p2, p3;
-    if (isOpen_) {
-        // Point up
-        p1 = NUIPoint(arrowX, centerY + arrowSize / 3);
-        p2 = NUIPoint(arrowX + arrowSize, centerY + arrowSize / 3);
-        p3 = NUIPoint(arrowX + arrowSize / 2, centerY - arrowSize / 3);
-    } else {
-        // Point down
-        p1 = NUIPoint(arrowX, centerY - arrowSize / 3);
-        p2 = NUIPoint(arrowX + arrowSize, centerY - arrowSize / 3);
-        p3 = NUIPoint(arrowX + arrowSize / 2, centerY + arrowSize / 3);
-    }
+    // Calculate chevron points with rotation
+    // Base chevron points (pointing down): left-top, right-top, center-bottom
+    float halfWidth = arrowSize / 2;
+    float halfHeight = arrowSize / 3;
+    
+    // Rotate the chevron around its center
+    float cosR = std::cos(rotationRad);
+    float sinR = std::sin(rotationRad);
+    
+    // Left point (relative to center: -halfWidth, -halfHeight)
+    float lx = -halfWidth;
+    float ly = -halfHeight;
+    NUIPoint p1(arrowCenterX + lx * cosR - ly * sinR, centerY + lx * sinR + ly * cosR);
+    
+    // Right point (relative to center: +halfWidth, -halfHeight)
+    float rx = halfWidth;
+    float ry = -halfHeight;
+    NUIPoint p2(arrowCenterX + rx * cosR - ry * sinR, centerY + rx * sinR + ry * cosR);
+    
+    // Bottom point (relative to center: 0, +halfHeight)
+    float bx = 0;
+    float by = halfHeight;
+    NUIPoint p3(arrowCenterX + bx * cosR - by * sinR, centerY + bx * sinR + by * cosR);
     
     // Draw thicker, smoother chevron lines
     float lineWidth = 1.5f;
@@ -328,7 +340,22 @@ void NUIDropdown::closeDropdown() {
     setDirty(true);
 }
 
-void NUIDropdown::updateAnimations() {
+void NUIDropdown::onUpdate(double deltaTime) {
+    NUIComponent::onUpdate(deltaTime);
+    
+    // Animate chevron rotation
+    float targetRotation = isOpen_ ? 180.0f : 0.0f;
+    float diff = targetRotation - chevronRotation_;
+    
+    // Smooth lerp toward target
+    if (std::abs(diff) > 0.5f) {
+        chevronRotation_ += diff * 0.25f;  // Adjust speed here (higher = faster)
+        setDirty(true);
+    } else {
+        chevronRotation_ = targetRotation;
+    }
+    
+    // Also update dropdown animation progress
     float targetProgress = isOpen_ ? 1.0f : 0.0f;
     dropdownAnimProgress_ += (targetProgress - dropdownAnimProgress_) * 0.15f;
 }

@@ -11,6 +11,7 @@
 #include <mutex>
 #include <functional>
 #include "AudioCommandQueue.h"
+#include "AudioDriverTypes.h"
 
 #include "NomadUUID.h"
 
@@ -66,12 +67,7 @@ enum class ResamplingMode {
     Perfect
 };
 
-enum class DitheringMode {
-    None,
-    Triangular,
-    HighPass,
-    NoiseShaped
-};
+
 
 enum class NomadMode {
     Off,
