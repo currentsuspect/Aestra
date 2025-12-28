@@ -11,6 +11,10 @@
 
 namespace Nomad {
 
+// =============================================================================
+// SECTION: Construction & Setup
+// =============================================================================
+
 TransportBar::TransportBar()
     : NomadUI::NUIComponent()
     , m_state(TransportState::Stopped)
@@ -256,6 +260,10 @@ void TransportBar::createButtons() {
 
 }
 
+// =============================================================================
+// SECTION: Transport Controls
+// =============================================================================
+
 void TransportBar::play() {
     if (m_state != TransportState::Playing) {
         m_state = TransportState::Playing;
@@ -359,6 +367,10 @@ void TransportBar::updateButtonStates() {
         m_recordButton->setEnabled(false);
     }
 }
+
+// =============================================================================
+// SECTION: Rendering
+// =============================================================================
 
 void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIRect bounds = getBounds();
@@ -467,6 +479,10 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     renderGlassButton(m_pianoRollButton, m_pianoRollIcon, m_pianoRollActive);
     renderGlassButton(m_playlistButton, m_playlistIcon, m_playlistActive);
 }
+
+// =============================================================================
+// SECTION: Layout
+// =============================================================================
 
 void TransportBar::layoutComponents() {
     NomadUI::NUIRect bounds = getBounds();

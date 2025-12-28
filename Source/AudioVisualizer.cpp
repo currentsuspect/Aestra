@@ -9,6 +9,10 @@
 
 namespace NomadUI {
 
+// =============================================================================
+// SECTION: Construction
+// =============================================================================
+
 AudioVisualizer::AudioVisualizer()
     : NUIComponent()
     , leftPeak_(0.0f)
@@ -46,6 +50,10 @@ AudioVisualizer::AudioVisualizer()
     gridColor_ = themeManager.getColor("border");                   // #2e2e35 - Grid lines
     textColor_ = themeManager.getColor("textPrimary");              // #e6e6eb - Soft white
 }
+
+// =============================================================================
+// SECTION: Component Lifecycle
+// =============================================================================
 
 void AudioVisualizer::onRender(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
@@ -186,6 +194,10 @@ void AudioVisualizer::onResize(int width, int height) {
     displayBuffer_.resize(displayBufferSize_ * 2);
     currentSample_ = 0;
 }
+
+// =============================================================================
+// SECTION: Audio Data Input
+// =============================================================================
 
 void AudioVisualizer::setAudioData(const float* leftChannel, const float* rightChannel, size_t numSamples, double sampleRate) {
     std::lock_guard<std::mutex> lock(audioDataMutex_);
@@ -353,6 +365,10 @@ void AudioVisualizer::updatePeakMeters() {
     // This is called from the audio callback
     // Peak values are updated in processAudioData
 }
+
+// =============================================================================
+// SECTION: Visualization Rendering
+// =============================================================================
 
 void AudioVisualizer::renderWaveform(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
