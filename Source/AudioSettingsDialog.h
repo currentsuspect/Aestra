@@ -152,7 +152,7 @@ private:
     
     // Audio Quality Settings
     std::shared_ptr<NomadUI::NUIDropdown> m_qualityPresetDropdown;
-    // Resampling dropdown removed
+    std::shared_ptr<NomadUI::NUIDropdown> m_resamplingDropdown;  // Resampling Quality
     std::shared_ptr<NomadUI::NUIDropdown> m_ditheringDropdown;
     // Legacy members removed (m_interpolationDropdown, m_ditheringToggle)
     std::shared_ptr<NomadUI::NUIButton> m_dcRemovalToggle;
@@ -171,7 +171,7 @@ private:
     std::shared_ptr<NomadUI::NUILabel> m_asioInfoLabel;
     std::shared_ptr<NomadUI::NUILabel> m_qualitySectionLabel;
     std::shared_ptr<NomadUI::NUILabel> m_qualityPresetLabel;
-    // Resampling label removed
+    std::shared_ptr<NomadUI::NUILabel> m_resamplingLabel;  // Resampling Quality
     std::shared_ptr<NomadUI::NUILabel> m_ditheringLabel;
     // Legacy m_interpolationLabel removed
     std::shared_ptr<NomadUI::NUILabel> m_dcRemovalLabel;
@@ -194,7 +194,7 @@ private:
 
     // Original quality/UI state (for dirty/cancel)
     int m_originalQualityPresetIndex = -1;
-    // Resampling index removed
+    int m_originalResamplingIndex = -1;  // Resampling Quality
     int m_originalDitheringIndex = -1;
     bool m_originalDCRemoval = false;
     bool m_originalSoftClipping = false;

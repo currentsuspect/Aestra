@@ -46,6 +46,16 @@ public:
     /// Global resampling quality for clip playback (thread-safe atomic)
     static inline ClipResamplingQuality s_resamplingQuality = ClipResamplingQuality::High;
     
+    /// Set global resampling quality (called from AudioSettingsDialog)
+    static void setResamplingQuality(ClipResamplingQuality quality) noexcept {
+        s_resamplingQuality = quality;
+    }
+    
+    /// Get current resampling quality
+    static ClipResamplingQuality getResamplingQuality() noexcept {
+        return s_resamplingQuality;
+    }
+    
     /**
      * @brief Process a buffer using the playlist snapshot
      * 
