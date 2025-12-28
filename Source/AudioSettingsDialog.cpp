@@ -13,6 +13,8 @@
 #include "../NomadAudio/include/AudioDriverTypes.h"
 #include "../NomadAudio/include/TrackManager.h"
 #include "../NomadAudio/include/MixerChannel.h"
+#include "../NomadAudio/include/PlaylistMixer.h"
+#include "../NomadAudio/include/ClipResampler.h"
 
 #include <iostream>
 #include <thread>
@@ -221,7 +223,27 @@ void AudioSettingsDialog::createUI() {
     });
     addChild(m_qualityPresetDropdown);
     
-    // Resampling dropdown removed - standardized to Sinc64
+    // Resampling Quality dropdown (linked to PlaylistMixer::s_resamplingQuality)
+    m_resamplingLabel = std::make_shared<NomadUI::NUILabel>();
+    m_resamplingLabel->setText("Resampling:");
+    addChild(m_resamplingLabel);
+    
+    m_resamplingDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_resamplingDropdown->setPlaceholderText("Select Resampling Quality");
+    m_resamplingDropdown->addItem("Fast (Linear)", static_cast<int>(Audio::ClipResamplingQuality::Fast));
+    m_resamplingDropdown->addItem("Draft (Sinc32 ~100dB)", static_cast<int>(Audio::ClipResamplingQuality::Draft));
+    m_resamplingDropdown->addItem("Standard (Cubic)", static_cast<int>(Audio::ClipResamplingQuality::Standard));
+    m_resamplingDropdown->addItem("High (Sinc64 ~144dB)", static_cast<int>(Audio::ClipResamplingQuality::High));
+    m_resamplingDropdown->setSelectedIndex(3); // Default to High
+    m_resamplingDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        if (m_isApplyingQualityPreset || m_suppressDirtyStateUpdates) return;
+        // Update global resampling quality
+        Audio::PlaylistMixer::setResamplingQuality(static_cast<Audio::ClipResamplingQuality>(value));
+        m_qualityPresetDropdown->setSelectedIndex(4); // Custom
+        Nomad::Log::info("Resampling quality changed to: " + text);
+        markSettingsChanged();
+    });
+    addChild(m_resamplingDropdown);
     
     // Dithering mode dropdown
     m_ditheringLabel = std::make_shared<NomadUI::NUILabel>();
