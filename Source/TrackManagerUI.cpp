@@ -28,6 +28,10 @@
 namespace Nomad {
 namespace Audio {
 
+// =============================================================================
+// SECTION: Construction & Destruction
+// =============================================================================
+
 TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
     : m_trackManager(trackManager)
     , m_cacheId(reinterpret_cast<uint64_t>(this))
@@ -123,6 +127,10 @@ TrackManagerUI::~TrackManagerUI() {
 void TrackManagerUI::setPlatformWindow(NomadUI::NUIPlatformBridge* window) {
     m_window = window;
 }
+
+// =============================================================================
+// SECTION: Toolbar & Tools
+// =============================================================================
 
 void TrackManagerUI::createToolIcons() {
     // === POINTER/SELECT TOOL ICON (Simple arrow) ===
@@ -225,6 +233,10 @@ void TrackManagerUI::updateToolbarBounds() {
     // Dropdowns removed -> Moved to Context Menu
 }
 
+// =============================================================================
+// SECTION: Rendering
+// =============================================================================
+
 void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
     // Update bounds before rendering
     updateToolbarBounds();
@@ -241,18 +253,6 @@ void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
         renderer.strokeRoundedRect(m_menuIconBounds, radius, 1.0f, themeManager.getColor("glassBorder"));
     }
     if (m_menuIcon) {
-        // Animate Rotation
-        float targetRot = m_activeContextMenu ? 90.0f : 0.0f;
-        float diff = targetRot - m_menuIconRotation;
-        
-        // Use a fixed step for consistency or larger lerp factor
-        if (std::abs(diff) > 0.5f) {
-            m_menuIconRotation += diff * 0.35f; // Faster lerp
-            setDirty(true); // Ensure next frame is rendered
-        } else {
-            m_menuIconRotation = targetRot;
-        }
-
         const float iconSz = 16.0f;
         NomadUI::NUIPoint center = m_menuIconBounds.center();
         
@@ -354,15 +354,29 @@ void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
 }
 
 bool TrackManagerUI::handleToolbarClick(const NomadUI::NUIPoint& position) {
+    // Log click attempt
+    // Log::info("TrackManagerUI::handleToolbarClick at " + std::to_string(position.x) + ", " + std::to_string(position.y));
+
     if (m_menuIconBounds.contains(position)) {
+        Log::info("TrackManagerUI: Menu Icon Clicked! Bounds: " + 
+                  std::to_string(m_menuIconBounds.x) + "," + std::to_string(m_menuIconBounds.y));
+
         // Cleanup previous menu if exists
         if (m_activeContextMenu) {
+            Log::info("TrackManagerUI: Closing existing menu");
             removeChild(m_activeContextMenu);
             m_activeContextMenu = nullptr;
+        } else {
+             Log::info("TrackManagerUI: Creating new context menu");
+            // Create context menu
+            m_activeContextMenu = std::make_shared<NomadUI::NUIContextMenu>();
+            // ... capture rest of logic ...
         }
 
-        // Create context menu
-        m_activeContextMenu = std::make_shared<NomadUI::NUIContextMenu>();
+        // Create context menu (RE-ADDING MISSING LOGIC because I am replacing the block)
+        if (!m_activeContextMenu) {
+            m_activeContextMenu = std::make_shared<NomadUI::NUIContextMenu>();
+        }
         auto menu = m_activeContextMenu;
         
         // === SNAP SUBMENU ===
@@ -653,7 +667,10 @@ void TrackManagerUI::performSplitAtPosition(int laneIndex, double timeSeconds) {
     }
 }
 
-// === INSTANT CLIP DRAGGING ===
+// =============================================================================
+// SECTION: Clip Dragging & Operations
+// =============================================================================
+
 void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInstanceID clipId, const NomadUI::NUIPoint& clickPos) {
     if (!trackComp || !clipId.isValid() || !m_trackManager) return;
     
@@ -1030,6 +1047,10 @@ void TrackManagerUI::layoutTracks() {
 void TrackManagerUI::updateTrackPositions() {
     layoutTracks();
 }
+
+// =============================================================================
+// SECTION: Main Render Entry
+// =============================================================================
 
 void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
     rmt_ScopedCPUSample(TrackMgrUI_Render, 0);
@@ -1463,6 +1484,29 @@ void TrackManagerUI::onUpdate(double deltaTime) {
     }
 
     NUIComponent::onUpdate(deltaTime);
+
+    // Animate Menu Icon Rotation
+    float targetRot = m_activeContextMenu ? 90.0f : 0.0f;
+    float diff = targetRot - m_menuIconRotation;
+
+    // Debug logging (throttled)
+    static double logTimer = 0.0;
+    logTimer += deltaTime;
+    if (logTimer > 1.0) {
+        if (m_activeContextMenu) {
+             Log::info("TrackManagerUI::onUpdate - Menu Active. Rot: " + std::to_string(m_menuIconRotation));
+        }
+        logTimer = 0.0;
+    }
+    
+    // Smooth lerp toward target
+    if (std::abs(diff) > 0.5f) {
+        // Adjust speed here (higher = faster)
+        m_menuIconRotation += diff * 10.0f * static_cast<float>(deltaTime); 
+        setDirty(true);
+    } else {
+        m_menuIconRotation = targetRot;
+    }
     
     // Smooth zoom animation (FL Studio style)
     if (std::abs(m_targetPixelsPerBeat - m_pixelsPerBeat) > 0.01f) {
@@ -1555,6 +1599,10 @@ void TrackManagerUI::onResize(int width, int height) {
     }
     NomadUI::NUIComponent::onResize(width, height);
 }
+
+// =============================================================================
+// SECTION: Event Handling
+// =============================================================================
 
 bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     NomadUI::NUIRect bounds = getBounds();

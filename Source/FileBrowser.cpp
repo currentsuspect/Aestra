@@ -150,6 +150,10 @@ std::vector<float> generateWaveformFromAudio(const std::vector<float>& samples,
 
 } // namespace
 
+// =============================================================================
+// SECTION: Construction & Initialization
+// =============================================================================
+
 FileBrowser::FileBrowser()
     : NUIComponent()
     , selectedFile_(nullptr)
@@ -379,6 +383,10 @@ FileBrowser::FileBrowser()
 FileBrowser::~FileBrowser() {
     stopScanWorker();
 }
+
+// =============================================================================
+// SECTION: Directory Scanning (Background Thread)
+// =============================================================================
 
 void FileBrowser::ensureScanWorker() {
     if (scanWorkerStarted_) return;
@@ -631,6 +639,10 @@ void FileBrowser::processScanResults() {
     }
 }
 
+// =============================================================================
+// SECTION: Rendering
+// =============================================================================
+
 void FileBrowser::onRender(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
     if (bounds.isEmpty()) return;
@@ -819,6 +831,10 @@ void FileBrowser::invalidateAllItemCaches() {
         }
     }
 }
+
+// =============================================================================
+// SECTION: Event Handling
+// =============================================================================
 
 bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     lastMousePos_ = event.position;
