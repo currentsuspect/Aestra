@@ -456,6 +456,73 @@ struct Sinc64Turbo {
     }
 };
 
+// =============================================================================
+// Sinc32Turbo (Fast) - 32 point Polyphase Filter Bank
+// 1024 phases, ~100dB SNR, L1 Cache Friendly (64KB table)
+// Ideal for: mixing, muted tracks, preview playback
+// =============================================================================
+
+struct Sinc32Turbo {
+    static constexpr int TAPS = 32;
+    static constexpr int PHASES = 1024;
+    static constexpr int HALF_PHASES = 512;
+    static constexpr double KAISER_BETA = 9.0;
+
+    struct alignas(64) Table {
+        float coeffs[HALF_PHASES][TAPS];  // 64KB - fits L1
+
+        Table() {
+            for (int p = 0; p < HALF_PHASES; ++p) {
+                double frac = static_cast<double>(p) / static_cast<double>(PHASES);
+                for (int t = -15; t <= 16; ++t) {
+                    double x = static_cast<double>(t) - frac;
+                    double s = (std::abs(x) < 1e-10) ? 1.0 : std::sin(PI * x) / (PI * x);
+                    double w = kaiserWindow(static_cast<double>(t + 15), 32.0, KAISER_BETA);
+                    coeffs[p][t + 15] = static_cast<float>(s * w);
+                }
+                double sum = 0.0;
+                for(int i=0; i<TAPS; ++i) sum += coeffs[p][i];
+                if (sum > 0.0) {
+                    float invSum = static_cast<float>(1.0 / sum);
+                    for(int i=0; i<TAPS; ++i) coeffs[p][i] *= invSum;
+                }
+            }
+        }
+    };
+
+    static inline void interpolate(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
+        static const auto table = std::make_unique<Table>();
+        
+        const int64_t idx = static_cast<int64_t>(phase);
+        const double frac = phase - static_cast<double>(idx);
+        int phaseIdx = static_cast<int>(frac * (PHASES - 1) + 0.5);
+        bool reversed = (phaseIdx >= HALF_PHASES);
+        int lutIdx = reversed ? (PHASES - 1 - phaseIdx) : phaseIdx;
+        const float* c = table->coeffs[lutIdx];
+        
+        const int64_t startIdx = idx - 15;
+        float sumL = 0.0f, sumR = 0.0f;
+        
+        if (startIdx >= 0 && startIdx + 32 <= totalFrames && !reversed) {
+            const float* samples = &data[startIdx * 2];
+            for (int t = 0; t < 32; ++t) {
+                sumL += samples[t * 2] * c[t];
+                sumR += samples[t * 2 + 1] * c[t];
+            }
+        } else {
+            for (int t = 0; t < 32; ++t) {
+                int64_t sIdx = startIdx + t;
+                if (sIdx < 0 || sIdx >= totalFrames) continue;
+                float coeff = reversed ? c[31 - t] : c[t];
+                sumL += data[sIdx * 2] * coeff;
+                sumR += data[sIdx * 2 + 1] * coeff;
+            }
+        }
+        outL = sumL;
+        outR = sumR;
+    }
+};
+
 struct Sinc64Interpolator {
     // Legacy implementation kept for benchmark comparison
     static constexpr int TAPS = 64;
