@@ -61,6 +61,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <filesystem>
+#include <objbase.h>
 
 // Windows-specific includes removed - use NomadPlat abstraction instead
 
@@ -2061,6 +2062,10 @@ private:
  * @brief Application entry point
  */
 int main(int argc, char* argv[]) {
+    // Initialize COM as STA (Single-Threaded Apartment) for ASIO support
+    // This MUST be done before any other library (like RtAudio/WASAPI) initializes it as MTA.
+    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+
     // Initialize logging with console logger
     Log::init(std::make_shared<ConsoleLogger>(LogLevel::Info));
     Log::setLevel(LogLevel::Info);
