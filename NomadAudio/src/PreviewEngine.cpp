@@ -3,6 +3,7 @@
 #include "NomadLog.h"
 #include "MiniAudioDecoder.h"
 #include "PathUtils.h"
+#include "FastMath.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -44,7 +45,8 @@ PreviewEngine::~PreviewEngine() {
 }
 
 float PreviewEngine::dbToLinear(float db) const {
-    return std::pow(10.0f, db / 20.0f);
+    // Fast polynomial approximation instead of std::pow (~5x faster)
+    return FastMath::fastDbToLinear(db);
 }
 
 std::shared_ptr<AudioBuffer> PreviewEngine::loadBuffer(const std::string& path, uint32_t& sampleRate, uint32_t& channels) {
