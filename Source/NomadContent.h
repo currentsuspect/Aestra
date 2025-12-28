@@ -13,11 +13,12 @@
 #pragma once
 
 #include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUIRect.h"
-#include "../NomadUI/Core/NUIPoint.h"
-#include "../NomadUI/Core/NUISegmentedControl.h"
-#include "../NomadUI/Widgets/NUILabel.h"
+#include "../NomadUI/Core/NUIThemeSystem.h"
+#include "../NomadUI/Widgets/NUISegmentedControl.h"
+#include "../NomadUI/Core/NUILabel.h"
 #include "ViewTypes.h"
+#include "TransportBar.h"
+#include "../NomadAudio/include/PatternSource.h"
 #include "OverlayLayer.h"
 #include <memory>
 #include <string>
@@ -33,21 +34,17 @@ namespace NomadUI {
     class AudioVisualizer;
 }
 
-// Forward declarations - Nomad::Audio
+// Forward declarations - Nomad::Audio (includes panel classes)
 namespace Nomad::Audio {
     class TrackManager;
     class TrackManagerUI;
     class PreviewEngine;
+    class MixerPanel;
+    class PianoRollPanel;
+    class ArsenalPanel;
+    class PatternBrowserPanel;
+    class WindowPanel;
 }
-
-// Forward declarations - Local
-class TransportBar;
-class MixerPanel;
-class PianoRollPanel;
-class ArsenalPanel;
-class PatternBrowserPanel;
-class OverlayLayer;
-struct PatternID;
 
 /**
  * @brief View focus - which part of the UI is emphasized
@@ -120,14 +117,14 @@ public:
 
     // Getters
     void setAudioStatus(bool active);
-    TransportBar* getTransportBar();
+    Nomad::TransportBar* getTransportBar();
     std::shared_ptr<NomadUI::AudioVisualizer> getAudioVisualizer();
     std::shared_ptr<NomadUI::AudioVisualizer> getWaveformVisualizer();
     Nomad::Audio::PreviewEngine* getPreviewEngine();
     std::shared_ptr<Nomad::Audio::TrackManager> getTrackManager();
     std::shared_ptr<Nomad::Audio::TrackManagerUI> getTrackManagerUI();
     std::shared_ptr<NomadUI::NUISegmentedControl> getViewToggle();
-    PatternID getActivePatternID() const;
+    Nomad::Audio::PatternID getActivePatternID() const;
     std::shared_ptr<NomadUI::FileBrowser> getFileBrowser() const;
 
     // Platform
@@ -150,7 +147,7 @@ private:
     std::shared_ptr<NomadUI::NUIComponent> m_workspaceLayer;
     std::shared_ptr<OverlayLayer> m_overlayLayer;
 
-    std::shared_ptr<TransportBar> m_transportBar;
+    std::shared_ptr<Nomad::TransportBar> m_transportBar;
     
     // View focus toggle (Arsenal/Timeline segmented control)
     std::shared_ptr<NomadUI::NUISegmentedControl> m_viewToggle;
@@ -158,16 +155,16 @@ private:
     
     std::shared_ptr<NomadUI::FileBrowser> m_fileBrowser;
     std::shared_ptr<NomadUI::FilePreviewPanel> m_previewPanel;
-    std::shared_ptr<PatternBrowserPanel> m_patternBrowser;
+    std::shared_ptr<Nomad::Audio::PatternBrowserPanel> m_patternBrowser;
     std::shared_ptr<NomadUI::AudioVisualizer> m_audioVisualizer;
     std::shared_ptr<NomadUI::AudioVisualizer> m_waveformVisualizer;
     std::shared_ptr<Nomad::Audio::TrackManager> m_trackManager;
     std::shared_ptr<Nomad::Audio::TrackManagerUI> m_trackManagerUI;
     NomadUI::NUIPlatformBridge* m_platformBridge = nullptr;
     
-    std::shared_ptr<MixerPanel> m_mixerPanel;
-    std::shared_ptr<PianoRollPanel> m_pianoRollPanel;
-    std::shared_ptr<ArsenalPanel> m_sequencerPanel;
+    std::shared_ptr<Nomad::Audio::MixerPanel> m_mixerPanel;
+    std::shared_ptr<Nomad::Audio::PianoRollPanel> m_pianoRollPanel;
+    std::shared_ptr<Nomad::Audio::ArsenalPanel> m_sequencerPanel;
 
     std::unique_ptr<Nomad::Audio::PreviewEngine> m_previewEngine;
     bool m_audioActive = false;
