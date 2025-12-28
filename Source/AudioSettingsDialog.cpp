@@ -551,7 +551,9 @@ void AudioSettingsDialog::onRender(NomadUI::NUIRenderer& renderer) {
     if (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) {
         m_qualityPresetDropdown->renderDropdownList(renderer);
     }
-
+    if (m_resamplingDropdown && m_resamplingDropdown->isOpen()) {
+        m_resamplingDropdown->renderDropdownList(renderer);
+    }
     if (m_ditheringDropdown && m_ditheringDropdown->isOpen()) {
         m_ditheringDropdown->renderDropdownList(renderer);
     }
@@ -613,8 +615,7 @@ bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                                      (m_bufferSizeDropdown && m_bufferSizeDropdown->isOpen()) ||
                                      (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) ||
                                      (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) ||
-//                                     (m_resamplingDropdown && m_resamplingDropdown->isOpen()) ||
-                                     (m_ditheringDropdown && m_ditheringDropdown->isOpen()) ||
+                                     (m_resamplingDropdown && m_resamplingDropdown->isOpen()) ||
                                      (m_ditheringDropdown && m_ditheringDropdown->isOpen()) ||
                                      (m_threadCountDropdown && m_threadCountDropdown->isOpen()) ||
                                      (m_nomadModeDropdown && m_nomadModeDropdown->isOpen());
@@ -645,7 +646,9 @@ bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         if (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) {
             handled = m_qualityPresetDropdown->onMouseEvent(event) || handled;
         }
-
+        if (m_resamplingDropdown && m_resamplingDropdown->isOpen()) {
+            handled = m_resamplingDropdown->onMouseEvent(event) || handled;
+        }
         if (m_ditheringDropdown && m_ditheringDropdown->isOpen()) {
             handled = m_ditheringDropdown->onMouseEvent(event) || handled;
         }
