@@ -90,6 +90,10 @@ uint64_t estimateCycleHz() {
 }
 } // namespace
 
+// =============================================================================
+// SECTION: Key Code Conversion
+// =============================================================================
+
 /**
  * @brief Convert Nomad::KeyCode to NomadUI::NUIKeyCode
  * 
@@ -135,11 +139,10 @@ NomadUI::NUIKeyCode convertToNUIKeyCode(int key) {
     return NUIKC::Unknown;
 }
 
-/**
- * @brief Main application class
- * 
- * Manages the lifecycle of all NOMAD subsystems and the main event loop.
- */
+// =============================================================================
+// SECTION: Helper UI Components
+// =============================================================================
+
 /**
  * @brief Custom label for the Scope Indicator that manually draws the Play icon via NUIIcon (SVG).
  * This ensures consistent vector rendering matching the Transport Bar.
@@ -249,6 +252,10 @@ enum class PlaybackScope {
     Selection,    // Future: play selected clips
     LoopRegion    // Future: play loop region
 };
+
+// =============================================================================
+// SECTION: Main Application Content
+// =============================================================================
 
 /**
  * @brief Main content area for NOMAD DAW

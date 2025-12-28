@@ -68,6 +68,10 @@ AudioSettingsDialog::AudioSettingsDialog(Audio::AudioDeviceManager* audioManager
     loadCurrentSettings();
 }
 
+// =============================================================================
+// SECTION: UI Creation
+// =============================================================================
+
 void AudioSettingsDialog::createUI() {
     // Tab bar (segmented control style)
     m_tabBar = std::make_shared<NomadUI::NUITabBar>();
@@ -471,6 +475,10 @@ void AudioSettingsDialog::createUI() {
     updateBufferSizeList();
 }
 
+// =============================================================================
+// SECTION: Dialog Visibility
+// =============================================================================
+
 void AudioSettingsDialog::show() {
     m_visible = true;
     setVisible(true);
@@ -516,6 +524,10 @@ void AudioSettingsDialog::setVisible(bool visible) {
     m_visible = visible;
     NomadUI::NUIComponent::setVisible(visible);
 }
+
+// =============================================================================
+// SECTION: Rendering
+// =============================================================================
 
 void AudioSettingsDialog::onRender(NomadUI::NUIRenderer& renderer) {
     if (!m_visible) return;
@@ -757,6 +769,10 @@ bool AudioSettingsDialog::onKeyEvent(const NomadUI::NUIKeyEvent& event) {
 
     return false;
 }
+
+// =============================================================================
+// SECTION: Settings Management
+// =============================================================================
 
 void AudioSettingsDialog::updateDriverList() {
     if (!m_audioManager) return;
