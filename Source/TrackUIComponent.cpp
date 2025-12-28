@@ -11,7 +11,6 @@
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
 #include <algorithm>
-#include <algorithm>
 #include <cmath>
 #include <chrono>
 
@@ -99,12 +98,6 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
 
     updateUI();
 }
-
-// ...
-
-
-
-
 
 
 TrackUIComponent::~TrackUIComponent() {
@@ -1418,9 +1411,6 @@ void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const No
         }
     }
 }
-
-// UI Rendering (kept from previous code)
-// ...
 
 void TrackUIComponent::onMouseEnter() {
     // Ensure parent knows we need updates (if any)
