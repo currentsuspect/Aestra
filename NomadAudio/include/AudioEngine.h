@@ -2,6 +2,7 @@
 #pragma once
 
 #include "AudioCommandQueue.h"
+#include "AudioDriverTypes.h"
 #include "AudioTelemetry.h"
 #include "ChannelSlotMap.h"
 #include "ContinuousParamBuffer.h"
@@ -119,6 +120,10 @@ public:
     float getPeakR() const { return m_peakR.load(std::memory_order_relaxed); }
     float getRmsL() const { return m_rmsL.load(std::memory_order_relaxed); }
     float getRmsR() const { return m_rmsR.load(std::memory_order_relaxed); }
+    
+    // Dithering control
+    void setDitheringMode(DitheringMode mode) { m_ditheringMode.store(mode, std::memory_order_relaxed); }
+    DitheringMode getDitheringMode() const { return m_ditheringMode.load(std::memory_order_relaxed); }
 
     // Waveform history (interleaved stereo), safe to read on UI thread.
     uint32_t getWaveformHistoryCapacity() const { return m_waveformHistoryFrames.load(std::memory_order_relaxed); }
@@ -127,6 +132,26 @@ public:
 private:
     static constexpr size_t kMaxTracks = 4096;
     static constexpr uint32_t kWaveformHistoryFramesDefault = 2048;
+
+    // Fast Xorshift32 RNG for dither
+    struct FastRNG {
+        uint32_t state = 2463534242;
+        inline uint32_t next() {
+            uint32_t x = state;
+            x ^= x << 13;
+            x ^= x >> 17;
+            x ^= x << 5;
+            state = x;
+            return x;
+        }
+        // Returns uniform float [0, 1)
+        inline float nextFloat() {
+            return (next() & 0xFFFFFF) * (1.0f / 16777216.0f);
+        }
+    };
+    mutable FastRNG m_ditherRng;
+    std::atomic<DitheringMode> m_ditheringMode{DitheringMode::Triangular}; // Default TPDF
+
 
     // Double-precision smoothed parameter for zero-zipper automation
     struct SmoothedParamD {
@@ -158,7 +183,7 @@ private:
     };
 
     TrackRTState& ensureTrackState(uint32_t trackId);
-    void renderGraph(const AudioGraph& graph, uint32_t numFrames);
+    void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset = 0);
     void applyPendingCommands();
     
     // Soft clipper (transparent below unity)
@@ -226,7 +251,7 @@ private:
     void compileGraph(); 
 
     // Helper for renderGraph
-    void renderClipAudio(double* outputBuffer, TrackRTState& state, uint32_t trackIndex, const AudioGraph& graph, uint32_t numFrames);
+    void renderClipAudio(double* outputBuffer, TrackRTState& state, uint32_t trackIndex, const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset);
 
     // -----------------------------------------
 

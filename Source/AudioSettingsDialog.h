@@ -15,6 +15,7 @@
 #include "../NomadUI/Widgets/NUICoreWidgets.h"
 #include "../NomadUI/Graphics/OpenGL/NUIRenderCache.h"
 #include "../NomadAudio/include/AudioDeviceManager.h"
+#include "../NomadAudio/include/AudioDriverTypes.h"
 #include "../NomadAudio/include/MixerChannel.h"
 #include <memory>
 #include <functional>
