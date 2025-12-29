@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include <string>
@@ -43,6 +43,23 @@ public:
     double asNumber() const { return numberValue_; }
     int asInt() const { return static_cast<int>(numberValue_); }
     const std::string& asString() const { return stringValue_; }
+
+    std::vector<JSON>& asArray() {
+        if (type_ != Type::Array) { static std::vector<JSON> e; return e; }
+        return *arrayValue_;
+    }
+    const std::vector<JSON>& asArray() const {
+        if (type_ != Type::Array) { static std::vector<JSON> e; return e; }
+        return *arrayValue_;
+    }
+    std::map<std::string, JSON>& asObject() {
+        if (type_ != Type::Object) { static std::map<std::string, JSON> e; return e; }
+        return *objectValue_;
+    }
+    const std::map<std::string, JSON>& asObject() const {
+        if (type_ != Type::Object) { static std::map<std::string, JSON> e; return e; }
+        return *objectValue_;
+    }
 
     // Array operations
     static JSON array() {

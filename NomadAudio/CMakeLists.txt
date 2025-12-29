@@ -162,6 +162,7 @@ set(NOMAD_AUDIO_CORE_SOURCES
     src/PatternPlaybackEngine.cpp
     src/TimelineClock.cpp
     src/StreamingDecoder.cpp
+    src/DummyAudioDriver.cpp
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp
     src/Plugin/PluginManager.cpp
@@ -229,6 +230,7 @@ set(NOMAD_AUDIO_CORE_HEADERS
     include/ArsenalUnit.h
     include/UnitManager.h
     include/StreamingDecoder.h
+    src/DummyAudioDriver.h
     # Plugin hosting system
     include/PluginHost.h
     include/PluginScanner.h
@@ -505,6 +507,35 @@ target_link_libraries(NomadSincBenchmark
         NomadAudio
         NomadCore
 )
+
+# Watchdog Verification Test
+add_executable(NomadWatchdogTest
+    test/WatchdogTest.cpp
+)
+target_include_directories(NomadWatchdogTest PRIVATE ${VST3_INCLUDE_DIRS})
+target_link_libraries(NomadWatchdogTest PRIVATE NomadAudio NomadCore)
+
+# Crash Protection Verification Test (SEH)
+add_executable(NomadCrashTest
+    test/CrashTest.cpp
+)
+target_include_directories(NomadCrashTest PRIVATE ${VST3_INCLUDE_DIRS})
+target_link_libraries(NomadCrashTest PRIVATE NomadAudio NomadCore)
+
+# Waveform Isolation Verification Test
+add_executable(NomadWaveformLockTest
+    test/WaveformLockTest.cpp
+    src/WaveformCache.cpp
+)
+target_link_libraries(NomadWaveformLockTest PRIVATE NomadAudio NomadCore)
+
+# Atomic Autosave Verification Test
+add_executable(NomadAtomicSaveTest
+    test/AtomicSaveTest.cpp
+    src/PlaylistModel.cpp
+    src/ClipSource.cpp
+)
+target_link_libraries(NomadAtomicSaveTest PRIVATE NomadAudio NomadCore)
 
 # Per-TU AVX2 for benchmark (only the SincAVX2.h code uses intrinsics)
 # For now, rely on runtime dispatch; SIMD code is guarded by CPUDetection.

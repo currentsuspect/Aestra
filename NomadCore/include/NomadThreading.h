@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include <atomic>
@@ -91,9 +91,9 @@ public:
     }
 
 private:
-    T buffer[Size];
-    std::atomic<size_t> writeIndex;
-    std::atomic<size_t> readIndex;
+    alignas(64) T buffer[Size];
+    alignas(64) std::atomic<size_t> writeIndex;
+    alignas(64) std::atomic<size_t> readIndex;
 };
 
 // =============================================================================
@@ -170,6 +170,131 @@ private:
 };
 
 // =============================================================================
+// Synchronization Barrier (Lightweight using atomics)
+// =============================================================================
+class Barrier {
+public:
+    explicit Barrier(int count) : counter(count) {}
+
+    // Reset barrier for N expected signals
+    void reset(int count) {
+        counter.store(count, std::memory_order_release);
+    }
+
+    // Signal completion of one task
+    void signal() {
+        counter.fetch_sub(1, std::memory_order_acq_rel);
+    }
+
+    // Wait for all tasks to complete (Spin-wait optimized for low-latency audio)
+    void wait() {
+        while (counter.load(std::memory_order_acquire) > 0) {
+            // In a real-time thread, we prefer spinning over sleeping for short waits.
+            // But yielding prevents hogging the core if tasks are long.
+            // For audio graph, tasks should be micro-second scale. 
+             std::this_thread::yield(); 
+        }
+    }
+
+private:
+    std::atomic<int> counter;
+};
+
+// =============================================================================
+// Real-Time Thread Pool (Lock-Free Task Dispatch)
+// =============================================================================
+// Designed for parallel DSP where the RT thread dispatches a batch of tasks
+// and waits for them to complete. No mutexes or allocations in dispatch.
+class RealTimeThreadPool {
+public:
+    using TaskFunc = void(*)(void* context, void* taskData);
+
+    RealTimeThreadPool(size_t numThreads) : m_stop(false), m_taskCount(0), m_activeTasks(0) {
+        m_taskCounter.store(0);
+        for (size_t i = 0; i < numThreads; ++i) {
+            m_workers.emplace_back([this, i] {
+                workerLoop(static_cast<uint32_t>(i));
+            });
+            
+#ifdef _WIN32
+            SetThreadPriority(m_workers.back().native_handle(), 2); // THREAD_PRIORITY_HIGHEST
+#endif
+        }
+    }
+
+    ~RealTimeThreadPool() {
+        m_stop = true;
+        m_signal.notify_all();
+        for (auto& w : m_workers) {
+            if (w.joinable()) w.join();
+        }
+    }
+
+    // Prepare a batch of tasks. Call from RT thread.
+    void dispatch(uint32_t count, void* context, void** taskDataArray, TaskFunc func, Barrier* syncBarrier) {
+        m_taskFunc = func;
+        m_context = context;
+        m_taskData = taskDataArray;
+        m_taskCount = count;
+        m_taskCounter.store(0, std::memory_order_release);
+        m_syncBarrier = syncBarrier;
+        
+        m_activeTasks.store(count, std::memory_order_release);
+        m_signal.notify_all();
+    }
+
+    size_t size() const { return m_workers.size(); }
+
+private:
+    void workerLoop(uint32_t threadIdx) {
+        (void)threadIdx;
+        while (!m_stop) {
+            m_signal.wait([this] { return m_stop || m_taskCounter.load(std::memory_order_acquire) < m_taskCount; });
+            
+            if (m_stop) return;
+
+            while (true) {
+                int idx = m_taskCounter.fetch_add(1, std::memory_order_acq_rel);
+                if (idx >= (int)m_taskCount) break;
+
+                m_taskFunc(m_context, m_taskData[idx]);
+                
+                if (m_syncBarrier) {
+                    m_syncBarrier->signal();
+                }
+                
+                m_activeTasks.fetch_sub(1, std::memory_order_acq_rel);
+            }
+        }
+    }
+
+    struct Signal {
+        std::mutex mtx;
+        std::condition_variable cv;
+        void notify_all() { cv.notify_all(); }
+        template<typename F>
+        void wait(F&& cond) {
+            std::unique_lock<std::mutex> lock(mtx);
+            cv.wait(lock, std::forward<F>(cond));
+        }
+    };
+
+    std::vector<std::thread> m_workers;
+    std::atomic<bool> m_stop;
+    
+    // Shared task state
+    TaskFunc m_taskFunc{nullptr};
+    void* m_context{nullptr};
+    void** m_taskData{nullptr};
+    uint32_t m_taskCount{0};
+    std::atomic<int> m_taskCounter;
+    std::atomic<int> m_activeTasks;
+    Barrier* m_syncBarrier{nullptr};
+
+    Signal m_signal;
+};
+
+// =============================================================================
 // Atomic Utilities
 // =============================================================================
 
@@ -222,37 +347,6 @@ public:
 
 private:
     std::atomic<bool> flag;
-};
-
-// =============================================================================
-// Synchronization Barrier (Lightweight using atomics)
-// =============================================================================
-class Barrier {
-public:
-    explicit Barrier(int count) : counter(count) {}
-
-    // Reset barrier for N expected signals
-    void reset(int count) {
-        counter.store(count, std::memory_order_release);
-    }
-
-    // Signal completion of one task
-    void signal() {
-        counter.fetch_sub(1, std::memory_order_acq_rel);
-    }
-
-    // Wait for all tasks to complete (Spin-wait optimized for low-latency audio)
-    void wait() {
-        while (counter.load(std::memory_order_acquire) > 0) {
-            // In a real-time thread, we prefer spinning over sleeping for short waits.
-            // But yielding prevents hogging the core if tasks are long.
-            // For audio graph, tasks should be micro-second scale. 
-             std::this_thread::yield(); 
-        }
-    }
-
-private:
-    std::atomic<int> counter;
 };
 
 } // namespace Nomad

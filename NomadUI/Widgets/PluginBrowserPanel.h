@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <mutex>
 
 namespace NomadUI {
 
@@ -210,6 +211,8 @@ private:
     bool m_scanning = false;
     float m_scanProgress = 0.0f;
     std::string m_scanStatus;
+    
+    mutable std::mutex m_uiMutex; // Safe UI updates from background threads
     
     // Tab state
     int m_activeTab = 0;

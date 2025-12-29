@@ -94,6 +94,12 @@ public:
     uint32_t getLatencySamples() const override;
     uint32_t getTailSamples() const override;
 
+    // Watchdog stubs (not yet implemented for CLAP)
+    WatchdogStats getWatchdogStats() const override { return {}; }
+    void resetWatchdog() override {}
+    bool isBypassedByWatchdog() const override { return false; }
+    bool isCrashed() const override { return false; }
+
 private:
     bool m_loaded = false;
     bool m_active = false;
