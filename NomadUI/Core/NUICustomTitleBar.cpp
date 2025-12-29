@@ -2,8 +2,8 @@
 #include "NUICustomTitleBar.h"
 #include "../Graphics/NUIRenderer.h"
 #include "../Core/NUIThemeSystem.h"
-#include <iostream>
 #include <cmath>
+#include <string>
 
 namespace NomadUI {
 
@@ -69,39 +69,27 @@ void NUICustomTitleBar::setHeight(float height) {
 void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
     
-    
     // Get theme colors
     auto& themeManager = NUIThemeManager::getInstance();
     NUIColor bgColor = themeManager.getColor("background"); // Use background color for flush look
-    NUIColor textColor = themeManager.getColor("text");
     
     // Draw title bar background - flush with window background
     renderer.fillRect(bounds, bgColor);
     
     // No separator line for clean, flush appearance
-    
-    // Minimal left-aligned menu labels (Ableton-style)
-    float fontSize = 12.0f;
-    std::vector<std::string> menuItems = {"File", "Edit", "View"};
-    float x = bounds.x + 10.0f;
-    for (const auto& item : menuItems) {
-        NUISize sz = renderer.measureText(item, fontSize);
-        float textY = std::round(renderer.calculateTextY(bounds, fontSize));
-        renderer.drawText(item, NUIPoint(x, textY), fontSize, textColor);
-        x += sz.width + 14.0f; // spacing between menu items
-    }
+    // Menu items are now handled by NUIMenuBar child component
     
     // Draw window controls
     drawWindowControls(renderer);
     
-    // Render custom children (buttons, etc.)
+    // Render custom children (NUIMenuBar, view toggle, etc.)
     renderChildren(renderer);
 }
 
 void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     auto& themeManager = NUIThemeManager::getInstance();
     // Use config colors for hover states
-    NUIColor hoverBgColor = themeManager.getColor("surfaceRaised"); // Subtle hover
+    NUIColor hoverBgColor = themeManager.getColor("primary").withAlpha(0.2f); // Nomad Purple hover
     NUIColor closeHoverBg = themeManager.getColor("error"); // Red for close button
     
     // Draw minimize button
@@ -143,9 +131,14 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
 }
 
 bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
-    NUIPoint mousePos(event.position.x, event.position.y);
+    // Let children handle events first (NUIMenuBar, view toggle, etc.)
+    if (NUIComponent::onMouseEvent(event)) {
+        return true;
+    }
     
-    // Update hover state
+    NUIPoint mousePos = event.position;
+    
+    // Update hover state for window controls
     HoverButton previousHover = hoveredButton_;
     hoveredButton_ = HoverButton::None;
     
@@ -180,10 +173,9 @@ bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
         // Window dragging is now handled by Windows via WM_NCHITTEST
-        // No need to handle it here
     }
     
-    return NUIComponent::onMouseEvent(event);
+    return false;
 }
 
 void NUICustomTitleBar::onResize(int width, int height) {

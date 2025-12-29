@@ -98,6 +98,7 @@ void NUIPlatformBridge::setupEventBridges() {
             if (m_window) {
                 event.modifiers = convertModifiers(m_window->getCurrentModifiers());
             }
+            
             m_rootComponent->onMouseEvent(event);
         }
     });
