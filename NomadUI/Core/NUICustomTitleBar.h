@@ -32,6 +32,11 @@ public:
     void setOnClose(std::function<void()> callback) { onClose_ = callback; }
     void setOnDrag(std::function<void(int, int)> callback) { onDrag_ = callback; }
     
+    // Menu callbacks
+    void setOnFileMenu(std::function<void()> callback) { onFileMenu_ = callback; }
+    void setOnEditMenu(std::function<void()> callback) { onEditMenu_ = callback; }
+    void setOnViewMenu(std::function<void()> callback) { onViewMenu_ = callback; }
+    
     // Window state
     void setMaximized(bool maximized);
     bool isMaximized() const { return isMaximized_; }
@@ -51,6 +56,12 @@ private:
     NUIRect minimizeButtonRect_;
     NUIRect maximizeButtonRect_;
     NUIRect closeButtonRect_;
+    
+    // Menu item rects (for hit testing)
+    NUIRect menuFileRect_;
+    NUIRect menuEditRect_;
+    NUIRect menuViewRect_;
+    int hoveredMenuIndex_ = -1;  // -1 = none, 0 = File, 1 = Edit, 2 = View
     
     // Window control icons
     std::shared_ptr<NUIIcon> minimizeIcon_;
@@ -79,6 +90,11 @@ private:
     std::function<void()> onMaximize_;
     std::function<void()> onClose_;
     std::function<void(int, int)> onDrag_;
+    
+    // Menu callbacks
+    std::function<void()> onFileMenu_;
+    std::function<void()> onEditMenu_;
+    std::function<void()> onViewMenu_;
     
     // Helper methods
     void updateButtonRects();

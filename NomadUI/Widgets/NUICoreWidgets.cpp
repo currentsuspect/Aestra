@@ -13,8 +13,45 @@ NUIToggle::NUIToggle()
 
 void NUIToggle::onRender(NUIRenderer& renderer)
 {
-    (void)renderer;
-    // Rendering handled by theme system when available
+    if (!isVisible()) return;
+
+    auto bounds = getBounds();
+    auto& theme = NUIThemeManager::getInstance();
+
+    // Dimensions
+    float width = 40.0f;
+    float height = 24.0f;
+    // Centered vertically in the allocated bounds
+    float x = bounds.x; 
+    float y = bounds.y + (bounds.height - height) / 2.0f;
+    
+    NUIRect toggleRect(x, y, width, height);
+    float radius = height / 2.0f;
+
+    bool on = (state_ == State::On);
+    
+    // Colors
+    auto bgOff = theme.getColor("surfaceRaised"); // Darker/Off
+    auto bgOn = theme.getColor("primary");       // Brand Color/On
+    auto knobColor = theme.getColor("textPrimary");
+    
+    // Draw Track
+    renderer.fillRoundedRect(toggleRect, radius, on ? bgOn : bgOff);
+    renderer.strokeRoundedRect(toggleRect, radius, 1.0f, theme.getColor("border").withAlpha(0.5f));
+
+    // Draw Knob
+    float knobPadding = 3.0f;
+    float knobSize = height - (knobPadding * 2.0f);
+    
+    float knobXOff = x + knobPadding;
+    float knobXOn = x + width - knobSize - knobPadding;
+    
+    // Simple animation interpolation could be done here if we had an animation timer
+    // For now, just snap or use simplistic logic
+    float knobX = on ? knobXOn : knobXOff;
+    
+    NUIRect knobRect(knobX, y + knobPadding, knobSize, knobSize);
+    renderer.fillRoundedRect(knobRect, knobSize / 2.0f, knobColor);
 }
 
 bool NUIToggle::onMouseEvent(const NUIMouseEvent& event)

@@ -9,6 +9,7 @@
 #include "EngineState.h"
 #include "Interpolators.h"
 #include "MeterSnapshot.h"
+#include "../../NomadCore/include/NomadThreading.h"
 #include <cstdint>
 #include <cmath>
 #include <vector>
@@ -128,6 +129,11 @@ public:
     // Waveform history (interleaved stereo), safe to read on UI thread.
     uint32_t getWaveformHistoryCapacity() const { return m_waveformHistoryFrames.load(std::memory_order_relaxed); }
     uint32_t copyWaveformHistory(float* outInterleaved, uint32_t maxFrames) const;
+
+    // Multi-threading
+    void setThreadCount(int count);
+    void setMultiThreadingEnabled(bool enabled) { m_multiThreadingEnabled.store(enabled, std::memory_order_relaxed); }
+    bool isMultiThreadingEnabled() const { return m_multiThreadingEnabled.load(std::memory_order_relaxed); }
 
 private:
     static constexpr size_t kMaxTracks = 4096;
@@ -323,6 +329,11 @@ private:
     std::atomic<bool> m_loopEnabled{false};
     std::atomic<double> m_loopStartBeat{0.0};
     std::atomic<double> m_loopEndBeat{4.0};         // Default: 1 bar (4 beats)
+
+    // Parallel Processing
+    std::unique_ptr<Nomad::ThreadPool> m_threadPool;
+    std::unique_ptr<Nomad::Barrier> m_syncBarrier;
+    std::atomic<bool> m_multiThreadingEnabled{false};
 };
 
 } // namespace Audio

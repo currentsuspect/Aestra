@@ -66,6 +66,15 @@ void MixerChannel::processAudio(float* outputBuffer, uint32_t numFrames, double 
     if (m_mixerBus) {
         m_mixerBus->process(outputBuffer, numFrames);
     }
+    
+    // Process through insert effect chain (if any plugins loaded)
+    if (m_effectChain.getActiveSlotCount() > 0) {
+        // Convert interleaved buffer to channel pointers for effect processing
+        // For now, process in-place assuming stereo interleaved data
+        // TODO: Use proper de-interleaving for multi-channel support
+        float* channels[2] = { outputBuffer, outputBuffer + numFrames };
+        m_effectChain.process(channels, 2, numFrames);
+    }
 }
 
 

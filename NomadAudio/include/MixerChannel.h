@@ -4,6 +4,7 @@
 #include "MixerBus.h"
 #include "AudioProcessor.h"
 #include "AudioGraph.h"
+#include "EffectChain.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -174,6 +175,10 @@ public:
     
     void setQualitySettings(const AudioQualitySettings&) {}
     
+    // Effect Chain (insert effects)
+    EffectChain& getEffectChain() { return m_effectChain; }
+    const EffectChain& getEffectChain() const { return m_effectChain; }
+    
     // Routing Accessors
     // Routing Accessors
     uint32_t getMainOutputId() const { return m_mainOutputId; }
@@ -203,6 +208,9 @@ private:
 
     // Mixer integration
     std::unique_ptr<MixerBus> m_mixerBus;
+    
+    // Effect chain for insert effects
+    EffectChain m_effectChain;
 
     std::function<void(const AudioQueueCommand&)> m_commandSink;
 

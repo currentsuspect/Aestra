@@ -230,13 +230,25 @@ bool NUIDropdown::onMouseEvent(const NUIMouseEvent& event) {
     if (event.pressed && event.button == NUIMouseButton::Left) {
         // If dropdown is open, check for clicks on list items first
         if (isOpen_) {
-            int clickedIndex = getItemUnderMouse(event.position);
-            if (clickedIndex >= 0 && clickedIndex < static_cast<int>(items_.size())) {
-                auto item = items_[clickedIndex];
-                if (item->isEnabled() && item->isVisible()) {
-                    setSelectedIndex(clickedIndex);
+            // Calculate list bounds independently to catch clicks in the list area
+            // that might miss an item (padding, shadow, etc) or if list is empty
+            float itemHeight = 36.0f; 
+            int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
+            float listHeight = itemHeight * visibleItems;
+            
+            // Should match renderDropdownList logic
+            NUIRect listBounds(bounds.x, bounds.y + bounds.height + 2.0f, bounds.width, listHeight);
+            
+            if (listBounds.contains(event.position)) {
+                int clickedIndex = getItemUnderMouse(event.position);
+                if (clickedIndex >= 0 && clickedIndex < static_cast<int>(items_.size())) {
+                    auto item = items_[clickedIndex];
+                    if (item->isEnabled() && item->isVisible()) {
+                        setSelectedIndex(clickedIndex);
+                    }
+                    closeDropdown();
                 }
-                closeDropdown();
+                // ALWAYS return true if clicked inside list bounds to prevent fall-through
                 return true;
             }
         }
@@ -247,6 +259,10 @@ bool NUIDropdown::onMouseEvent(const NUIMouseEvent& event) {
             if (!isOpen_ && s_openDropdown != nullptr && s_openDropdown != this) {
                 return false;
             }
+            
+            // Bring to front on interaction to ensure we stay on top
+            bringToFront();
+            
             toggleDropdown();
             return true;
         }

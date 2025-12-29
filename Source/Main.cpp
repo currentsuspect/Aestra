@@ -22,6 +22,8 @@
 #include "../NomadUI/Core/NUIAdaptiveFPS.h"
 #include "../NomadUI/Core/NUIFrameProfiler.h"
 #include "../NomadUI/Core/NUIDragDrop.h"
+#include "../NomadUI/Core/NUIContextMenu.h"
+#include "../NomadUI/Widgets/NUIMenuBar.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadUI/Graphics/OpenGL/NUIRendererGL.h"
 #include "../NomadUI/Platform/NUIPlatformBridge.h"
@@ -38,7 +40,10 @@
 #include "../NomadAudio/include/WaveformCache.h"
 #include "MixerViewModel.h"
 #include "TransportBar.h"
-#include "AudioSettingsDialog.h"
+#include "SettingsDialog.h"
+#include "AudioSettingsPage.h"
+#include "GeneralSettingsPage.h"
+#include "AppearanceSettingsPage.h"
 #include "FileBrowser.h"
 #include "FilePreviewPanel.h"
 #include "AudioVisualizer.h"
@@ -224,9 +229,8 @@ public:
         addChild(m_customWindow);
     }
     
-    void setAudioSettingsDialog(std::shared_ptr<AudioSettingsDialog> dialog) {
-        // Store reference to dialog for debugging
-        m_audioSettingsDialog = dialog;
+    void setSettingsDialog(std::shared_ptr<SettingsDialog> dialog) {
+        m_settingsDialog = dialog;
     }
     
     void setFPSDisplay(std::shared_ptr<FPSDisplay> fpsDisplay) {
@@ -276,7 +280,7 @@ public:
     
 private:
     std::shared_ptr<NUICustomWindow> m_customWindow;
-    std::shared_ptr<AudioSettingsDialog> m_audioSettingsDialog;
+    std::shared_ptr<SettingsDialog> m_settingsDialog;
     std::shared_ptr<FPSDisplay> m_fpsDisplay;
     std::shared_ptr<PerformanceHUD> m_performanceHUD;
 };
@@ -598,6 +602,23 @@ public:
             if (m_content->getViewToggle()) {
                 titleBar->addChild(m_content->getViewToggle());
             }
+            
+            // Create menu bar and add as child (like Arsenal/Timeline toggle)
+            m_menuBar = std::make_shared<NomadUI::NUIMenuBar>();
+            m_menuBar->addItem("File", [this]() {
+                Log::info("File menu clicked");
+                showFileMenu();
+            });
+            m_menuBar->addItem("Edit", [this]() {
+                Log::info("Edit menu clicked");
+                showEditMenu();
+            });
+            m_menuBar->addItem("View", [this]() {
+                Log::info("View menu clicked");
+                showViewMenu();
+            });
+            m_menuBar->setBounds(NomadUI::NUIRect(10.0f, 4.0f, 120.0f, 24.0f));
+            titleBar->addChild(m_menuBar);
         }
         
         // Pass platform window to TrackManagerUI for cursor control (Task: Selection Tool Enhancements)
@@ -927,131 +948,51 @@ public:
         
         // Create audio settings dialog (pass TrackManager so test sound can be added as a track)
         auto trackManager = m_content->getTrackManagerUI() ? m_content->getTrackManagerUI()->getTrackManager() : nullptr;
-        m_audioSettingsDialog = std::make_shared<AudioSettingsDialog>(m_audioManager.get(), trackManager);
-        m_audioSettingsDialog->setBounds(NUIRect(0, 0, desc.width, desc.height));
-        m_audioSettingsDialog->setOnApply([this]() {
-            Log::info("Audio settings applied");
-            
-            // Sync buffer size and sample rate from actual driver to AudioEngine
-            // Use actual values from driver (may differ from requested)
-            if (m_audioManager && m_audioEngine) {
-                uint32_t actualSampleRate = m_audioManager->getStreamSampleRate();
-                uint32_t actualBufferSize = m_audioManager->getStreamBufferSize();
-                
-                // Fallback to dialog values if driver reports 0
-                if (actualSampleRate == 0 && m_audioSettingsDialog) {
-                    actualSampleRate = m_audioSettingsDialog->getSelectedSampleRate();
-                }
-                if (actualBufferSize == 0 && m_audioSettingsDialog) {
-                    actualBufferSize = m_audioSettingsDialog->getSelectedBufferSize();
-                }
-                
-                // Always update AudioEngine with actual driver values
-                if (actualSampleRate > 0) {
-                    m_mainStreamConfig.sampleRate = actualSampleRate;
-                    m_audioEngine->setSampleRate(actualSampleRate);
-                    Log::info("AudioEngine sample rate synced to: " + std::to_string(actualSampleRate));
-                }
-                
-                if (actualBufferSize > 0) {
-                    m_mainStreamConfig.bufferSize = actualBufferSize;
-                    m_audioEngine->setBufferConfig(actualBufferSize, m_mainStreamConfig.numOutputChannels);
-                    Log::info("AudioEngine buffer size synced to: " + std::to_string(actualBufferSize));
-                }
-                
-                // Sync Resampling Quality
-                if (m_audioSettingsDialog) {
-                    auto mode = m_audioSettingsDialog->getSelectedResamplingMode();
-                    Nomad::Audio::Interpolators::InterpolationQuality quality;
-                    
-                    switch (mode) {
-                        case Nomad::Audio::ResamplingMode::Fast:    quality = Nomad::Audio::Interpolators::InterpolationQuality::Cubic; break;
-                        case Nomad::Audio::ResamplingMode::Medium:  quality = Nomad::Audio::Interpolators::InterpolationQuality::Sinc8; break;
-                        case Nomad::Audio::ResamplingMode::High:    quality = Nomad::Audio::Interpolators::InterpolationQuality::Sinc16; break;
-                        case Nomad::Audio::ResamplingMode::Ultra:   quality = Nomad::Audio::Interpolators::InterpolationQuality::Sinc32; break;
-                        case Nomad::Audio::ResamplingMode::Extreme: quality = Nomad::Audio::Interpolators::InterpolationQuality::Sinc64; break;
-                        case Nomad::Audio::ResamplingMode::Perfect: quality = Nomad::Audio::Interpolators::InterpolationQuality::Sinc64; break;
-                        default: quality = Nomad::Audio::Interpolators::InterpolationQuality::Cubic; break;
-                    }
-                    
-                    m_audioEngine->setInterpolationQuality(quality);
-                    Log::info("AudioEngine interpolation quality set to: " + std::to_string(static_cast<int>(quality)));
-                }
-                
-                // Sync Dithering Mode
-                if (m_audioSettingsDialog) {
-                    auto ditherMode = m_audioSettingsDialog->getSelectedDitheringMode();
-                    m_audioEngine->setDitheringMode(ditherMode);
-                    Log::info("AudioEngine dithering mode set to: " + std::to_string(static_cast<int>(ditherMode)));
-                }
-            }
-            
-            // Update audio status
-            if (m_content) {
-                bool trackManagerActive = m_content->getTrackManagerUI() &&
-                                        m_content->getTrackManagerUI()->getTrackManager() &&
-                                        (m_content->getTrackManagerUI()->getTrackManager()->isPlaying() ||
-                                         m_content->getTrackManagerUI()->getTrackManager()->isRecording());
-                m_content->setAudioStatus(m_audioInitialized || trackManagerActive);
-            }
-        });
-        m_audioSettingsDialog->setOnCancel([this]() {
-            Log::info("Audio settings cancelled");
-        });
-        m_audioSettingsDialog->setOnStreamRestore([this]() {
-            // Restore main audio stream after test sound
+        // Create Unified Settings Dialog
+        m_settingsDialog = std::make_shared<SettingsDialog>();
+        
+        // Add pages
+        m_settingsDialog->addPage(std::make_shared<GeneralSettingsPage>());
+        
+        // Audio page needs dependencies
+        auto audioPage = std::make_shared<AudioSettingsPage>(m_audioManager.get(), m_audioEngine.get());
+        m_audioSettingsPage = audioPage; // Store for callback access
+        
+        // Wire stream restore callback for test sound
+        audioPage->setOnStreamRestore([this]() {
             Log::info("Restoring main audio stream...");
-            
-            // Get fresh device list to avoid stale device IDs
+             // Get fresh device list to avoid stale device IDs
             auto devices = m_audioManager->getDevices();
-            if (devices.empty()) {
-                Log::error("No audio devices available for stream restore");
-                return;
-            }
-            
-            // Find first output device
+            if (devices.empty()) return;
+
+             // Find first output device
             uint32_t deviceId = 0;
             for (const auto& dev : devices) {
                 if (dev.maxOutputChannels > 0) {
                     deviceId = dev.id;
-                    Log::info("Using device for restore: " + dev.name + " (ID: " + std::to_string(dev.id) + ")");
                     break;
                 }
             }
+            if (deviceId == 0) return;
             
-            if (deviceId == 0) {
-                Log::error("No output device found for stream restore");
-                return;
-            }
-            
-            // Update config with fresh device ID
             m_mainStreamConfig.deviceId = deviceId;
             if (m_audioEngine) {
-                m_audioEngine->setSampleRate(m_mainStreamConfig.sampleRate);
-                m_audioEngine->setBufferConfig(m_mainStreamConfig.bufferSize, m_mainStreamConfig.numOutputChannels);
+                 m_audioEngine->setSampleRate(m_mainStreamConfig.sampleRate);
+                 m_audioEngine->setBufferConfig(m_mainStreamConfig.bufferSize, m_mainStreamConfig.numOutputChannels);
             }
-            
-            if (m_audioManager->openStream(m_mainStreamConfig, audioCallback, this)) {
-                if (m_audioManager->startStream()) {
-                    Log::info("Main audio stream restored successfully");
-                    m_audioInitialized = true;
-                    double actualRate = static_cast<double>(m_audioManager->getStreamSampleRate());
-                    if (actualRate <= 0.0) actualRate = static_cast<double>(m_mainStreamConfig.sampleRate);
-                    if (m_content && m_content->getTrackManager()) {
-                        m_content->getTrackManager()->setOutputSampleRate(actualRate);
-                    }
-                    if (m_content && m_content->getTrackManagerUI() && m_content->getTrackManagerUI()->getTrackManager()) {
-                        m_content->getTrackManagerUI()->getTrackManager()->setOutputSampleRate(actualRate);
-                    }
-                } else {
-                    Log::error("Failed to start restored audio stream");
-                    m_audioInitialized = false;
-                }
-            } else {
-                Log::error("Failed to open restored audio stream");
-                m_audioInitialized = false;
-            }
+             if (m_audioManager->openStream(m_mainStreamConfig, audioCallback, this)) {
+                 if (m_audioManager->startStream()) {
+                     Log::info("Restored stream");
+                     m_audioInitialized = true;
+                 }
+             }
         });
+        
+        m_settingsDialog->addPage(audioPage);
+        m_settingsDialog->addPage(std::make_shared<AppearanceSettingsPage>());
+        
+        m_settingsDialog->setBounds(NUIRect(0, 0, 950, 600));
+        Log::info("Unified Settings dialog created");
         // Add dialog to root component AFTER custom window so it renders on top
         Log::info("Audio settings dialog created");
         
@@ -1064,8 +1005,8 @@ public:
         m_rootComponent->setCustomWindow(m_customWindow);
         
         // Add audio settings dialog to root component (after custom window for proper z-ordering)
-        m_rootComponent->addChild(m_audioSettingsDialog);
-        m_rootComponent->setAudioSettingsDialog(m_audioSettingsDialog);
+        m_rootComponent->addChild(m_settingsDialog);
+        m_rootComponent->setSettingsDialog(m_settingsDialog);
         
         // Add confirmation dialog (on top of everything except FPS display)
         m_rootComponent->addChild(m_confirmationDialog);
@@ -1086,7 +1027,7 @@ public:
         
         // Debug: Verify dialog was added
         std::stringstream ss2;
-        ss2 << "Dialog added to root component, pointer: " << m_audioSettingsDialog.get();
+        ss2 << "Dialog added to root component, pointer: " << m_settingsDialog.get();
         Log::info(ss2.str());
         
         // Connect window and renderer to bridge
@@ -1636,9 +1577,9 @@ private:
                 event.released = !pressed;
                 event.modifiers = m_keyModifiers;
  	            
- 	            // First, try to handle key events in the audio settings dialog if it's visible
- 	            if (m_audioSettingsDialog && m_audioSettingsDialog->isVisible()) {
-                 if (m_audioSettingsDialog->onKeyEvent(event)) {
+ 	            // First, try to handle key events in the settings dialog if it's visible
+ 	            if (m_settingsDialog && m_settingsDialog->isVisible()) {
+                 if (m_settingsDialog->onKeyEvent(event)) {
                      return; // Dialog handled the event
                  }
              }
@@ -1684,8 +1625,8 @@ private:
                     return; // Already handled above
                 }
                 // If audio settings dialog is open, close it
-                if (m_audioSettingsDialog && m_audioSettingsDialog->isVisible()) {
-                    m_audioSettingsDialog->hide();
+                if (m_settingsDialog && m_settingsDialog->isVisible()) {
+                    m_settingsDialog->hide();
                 } else if (m_customWindow && m_customWindow->isFullScreen()) {
                     Log::info("Escape key pressed - exiting fullscreen");
                     m_customWindow->exitFullScreen();
@@ -1710,8 +1651,12 @@ private:
                 }
             } else if (key == static_cast<int>(KeyCode::P) && pressed && !hasModifiers) {
                 // P key to open audio settings (Preferences)
-                if (m_audioSettingsDialog) {
-                    m_audioSettingsDialog->show();
+                if (m_settingsDialog) {
+                    if (m_settingsDialog->isVisible()) {
+                        m_settingsDialog->hide();
+                    } else {
+                        m_settingsDialog->show();
+                    }
                 }
             } else if (key == static_cast<int>(KeyCode::M) && pressed && !hasModifiers) {
                 // M key to toggle Mixer
@@ -1876,7 +1821,6 @@ private:
             m_adaptiveFPS->signalActivity(NomadUI::NUIAdaptiveFPS::ActivityType::Scroll);
         });
         
-        // Mouse button and move callbacks are handled by NUIPlatformBridge
         // Events will be forwarded to root component and its children
 
         // DPI change callback
@@ -1929,6 +1873,203 @@ private:
         m_renderer->endFrame();
     }
 
+    // ==============================
+    // Title Bar Menu Actions
+    // ==============================
+    
+    /**
+     * @brief Show File menu dropdown
+     */
+    void showFileMenu() {
+        auto menu = std::make_shared<NomadUI::NUIContextMenu>();
+        
+        menu->addItem("New Project", [this]() {
+            Log::info("File > New Project");
+            // Close current project and start fresh
+            if (m_content && m_content->getTrackManager()) {
+                // TODO: Check for unsaved changes first
+                m_content->getTrackManager()->stop();
+                // Clear tracks would go here
+            }
+        });
+        
+        menu->addItem("Open Project...", [this]() {
+            Log::info("File > Open Project");
+            // TODO: Show file dialog
+        });
+        
+        menu->addSeparator();
+        
+        menu->addItem("Save", [this]() {
+            Log::info("File > Save");
+            saveCurrentProject();
+        });
+        
+        menu->addItem("Save As...", [this]() {
+            Log::info("File > Save As");
+            // TODO: Show save dialog
+        });
+        
+        menu->addSeparator();
+        
+        menu->addItem("Export Audio...", [this]() {
+            Log::info("File > Export Audio");
+            // TODO: Show export dialog
+        });
+        
+        menu->addSeparator();
+        
+        menu->addItem("Settings...", [this]() {
+            Log::info("File > Settings");
+            if (m_settingsDialog) {
+                m_settingsDialog->show();
+            }
+        });
+        
+        menu->addSeparator();
+        
+        menu->addItem("Exit", [this]() {
+            Log::info("File > Exit");
+            m_running = false;
+        });
+        
+        // Position menu below File label (left-aligned)
+        showDropdownMenu(menu, 10.0f);
+    }
+    
+    /**
+     * @brief Show Edit menu dropdown
+     */
+    void showEditMenu() {
+        auto menu = std::make_shared<NomadUI::NUIContextMenu>();
+        
+        menu->addItem("Undo", [this]() {
+            Log::info("Edit > Undo");
+            // TODO: Implement undo system
+        });
+        
+        menu->addItem("Redo", [this]() {
+            Log::info("Edit > Redo");
+            // TODO: Implement redo system
+        });
+        
+        menu->addSeparator();
+        
+        menu->addItem("Cut", []() {
+            Log::info("Edit > Cut");
+            // TODO: Implement cut (Ctrl+X)
+        });
+        
+        menu->addItem("Copy", []() {
+            Log::info("Edit > Copy");
+            // TODO: Implement copy (Ctrl+C)
+        });
+        
+        menu->addItem("Paste", []() {
+            Log::info("Edit > Paste");
+            // TODO: Implement paste (Ctrl+V)
+        });
+        
+        menu->addItem("Delete", []() {
+            Log::info("Edit > Delete");
+            // TODO: Implement delete (Del)
+        });
+        
+        menu->addSeparator();
+        
+        menu->addItem("Select All", []() {
+            Log::info("Edit > Select All");
+            // TODO: Implement select all (Ctrl+A)
+        });
+        
+        // Position menu below Edit label
+        showDropdownMenu(menu, 55.0f);
+    }
+    
+    /**
+     * @brief Show View menu dropdown
+     */
+    void showViewMenu() {
+        auto menu = std::make_shared<NomadUI::NUIContextMenu>();
+        
+        // View toggle items - using addItem since mixer/piano roll toggle state is complex
+        menu->addItem("Show Mixer", [this]() {
+            Log::info("View > Mixer");
+            // Mixer visibility is typically handled by TransportBar button
+        });
+        
+        menu->addItem("Show Piano Roll", [this]() {
+            Log::info("View > Piano Roll");
+            if (m_content && m_content->getTrackManagerUI()) {
+                // Open piano roll for selected pattern
+            }
+        });
+        
+        menu->addSeparator();
+        
+        // Performance HUD checkbox
+        bool perfVisible = m_performanceHUD && m_performanceHUD->isVisible();
+        menu->addCheckbox("Performance Stats (F12)", perfVisible, [this](bool) {
+            Log::info("View > Performance Stats toggled");
+            if (m_performanceHUD) {
+                m_performanceHUD->setVisible(!m_performanceHUD->isVisible());
+            }
+        });
+        
+        // FPS Counter checkbox
+        bool fpsVisible = m_fpsDisplay && m_fpsDisplay->isVisible();
+        menu->addCheckbox("FPS Counter", fpsVisible, [this](bool) {
+            Log::info("View > FPS Counter toggled");
+            if (m_fpsDisplay) {
+                m_fpsDisplay->setVisible(!m_fpsDisplay->isVisible());
+            }
+        });
+        
+        // Position menu below View label
+        showDropdownMenu(menu, 105.0f);
+    }
+    
+    /**
+     * @brief Helper to show a dropdown menu at the titlebar
+     */
+    void showDropdownMenu(std::shared_ptr<NomadUI::NUIContextMenu> menu, float xOffset) {
+        if (!menu || !m_rootComponent || !m_customWindow) return;
+        
+        // Position below titlebar
+        float titleBarHeight = 32.0f;
+        menu->setPosition(xOffset, titleBarHeight);
+        
+        // Add to root component for proper layering
+        m_rootComponent->addChild(menu);
+        
+        // Store reference to close when clicking outside
+        m_activeMenu = menu;
+    }
+    
+    /**
+     * @brief Save the current project
+     */
+    void saveCurrentProject() {
+        if (!m_content || !m_content->getTrackManager()) {
+            Log::warning("Cannot save: No project data");
+            return;
+        }
+        
+        std::string savePath = getAutosavePath();
+        double tempo = 120.0;
+        if (m_content->getTransportBar()) {
+            tempo = static_cast<double>(m_content->getTransportBar()->getTempo());
+        }
+        double playhead = m_content->getTrackManager()->getPosition();
+        
+        // Pass shared_ptr directly (not raw pointer)
+        if (ProjectSerializer::save(savePath, m_content->getTrackManager(), tempo, playhead)) {
+            Log::info("Project saved to: " + savePath);
+        } else {
+            Log::error("Failed to save project");
+        }
+    }
+
     /**
      * @brief Audio callback function
      * 
@@ -1964,7 +2105,7 @@ private:
         }
         
         // Generate test sound if active (directly in callback, no track needed)
-        if (app->m_audioSettingsDialog && app->m_audioSettingsDialog->isPlayingTestSound()) {
+        if (app->m_audioSettingsPage && app->m_audioSettingsPage->isPlayingTestSound()) {
             // Use cached stream sample rate (do not query drivers from RT thread).
             const double sampleRate = actualRate;
             const double frequency = 440.0; // A4
@@ -1972,7 +2113,7 @@ private:
             const double twoPi = 2.0 * 3.14159265358979323846;
             const double phaseIncrement = twoPi * frequency / sampleRate;
             
-            double& phase = app->m_audioSettingsDialog->getTestSoundPhase();
+            double& phase = app->m_audioSettingsPage->getTestSoundPhase();
             
             // Safety check: reset phase if it's corrupted
             if (phase < 0.0 || phase > twoPi || std::isnan(phase) || std::isinf(phase)) {
@@ -2040,7 +2181,8 @@ private:
     std::shared_ptr<NomadRootComponent> m_rootComponent;
     std::shared_ptr<NUICustomWindow> m_customWindow;
     std::shared_ptr<NomadContent> m_content;
-    std::shared_ptr<AudioSettingsDialog> m_audioSettingsDialog;
+    std::shared_ptr<SettingsDialog> m_settingsDialog;
+    std::shared_ptr<AudioSettingsPage> m_audioSettingsPage; // Accessed by audio callback
     std::shared_ptr<ConfirmationDialog> m_confirmationDialog;
     std::shared_ptr<FPSDisplay> m_fpsDisplay;
     std::shared_ptr<PerformanceHUD> m_performanceHUD;
@@ -2056,6 +2198,12 @@ private:
     // Mouse tracking for global drag-and-drop handling
     int m_lastMouseX{0};
     int m_lastMouseY{0};
+    
+    // Active dropdown menu (for closing when clicking outside)
+    std::shared_ptr<NomadUI::NUIContextMenu> m_activeMenu;
+    
+    // Menu bar (File/Edit/View)
+    std::shared_ptr<NomadUI::NUIMenuBar> m_menuBar;
 };
 
 /**

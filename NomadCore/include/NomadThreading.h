@@ -10,6 +10,12 @@
 #include <condition_variable>
 #include <memory>
 
+#ifdef _WIN32
+extern "C" {
+    __declspec(dllimport) int __stdcall SetThreadPriority(void*, int);
+}
+#endif
+
 namespace Nomad {
 
 // =============================================================================
@@ -117,6 +123,13 @@ public:
                     task();
                 }
             });
+            
+#ifdef _WIN32
+            // Set thread priority to HIGHEST to ensure audio processing isn't starved
+            // by UI or background tasks. Using extern defs to avoid windows.h pollution.
+            // THREAD_PRIORITY_HIGHEST = 2
+            SetThreadPriority(workers.back().native_handle(), 2);
+#endif
         }
     }
 
@@ -209,6 +222,37 @@ public:
 
 private:
     std::atomic<bool> flag;
+};
+
+// =============================================================================
+// Synchronization Barrier (Lightweight using atomics)
+// =============================================================================
+class Barrier {
+public:
+    explicit Barrier(int count) : counter(count) {}
+
+    // Reset barrier for N expected signals
+    void reset(int count) {
+        counter.store(count, std::memory_order_release);
+    }
+
+    // Signal completion of one task
+    void signal() {
+        counter.fetch_sub(1, std::memory_order_acq_rel);
+    }
+
+    // Wait for all tasks to complete (Spin-wait optimized for low-latency audio)
+    void wait() {
+        while (counter.load(std::memory_order_acquire) > 0) {
+            // In a real-time thread, we prefer spinning over sleeping for short waits.
+            // But yielding prevents hogging the core if tasks are long.
+            // For audio graph, tasks should be micro-second scale. 
+             std::this_thread::yield(); 
+        }
+    }
+
+private:
+    std::atomic<int> counter;
 };
 
 } // namespace Nomad

@@ -57,14 +57,19 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
     int startPitch = 127 - static_cast<int>((scrollY_) / keyHeight_);
     int endPitch = 127 - static_cast<int>((scrollY_ + b.height) / keyHeight_);
     
-    startPitch = std::clamp(startPitch + 1, 0, 127);
-    endPitch = std::clamp(endPitch - 1, 0, 127);
+    // Expand range for safety margin (2 extra keys on each end)
+    startPitch = std::clamp(startPitch + 2, 0, 127);
+    endPitch = std::clamp(endPitch - 2, 0, 127);
 
     // Render Backing first
     renderer.fillRect(b, NUIColor(0.2f, 0.2f, 0.2f, 1.0f));
 
     for (int p = startPitch; p >= endPitch; --p) {
-        float y = b.y + (127 - p) * keyHeight_ - scrollY_;
+        // Calculate screen Y position
+        float worldY = (127 - p) * keyHeight_;
+        float y = b.y + worldY - scrollY_;
+        
+        // Let clip rect handle the clipping - no skip logic needed
         NUIRect keyRect(b.x, y, b.width, keyHeight_);
 
         bool isBlack = isBlackKey(p);
@@ -511,23 +516,31 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     // CLIP TO BOUNDS to prevent bleeding
     renderer.setClipRect(b);
 
-    // Colors (FL-ish Dark Theme)
-    auto bgWhiteRow = NUIColor(0.16f, 0.16f, 0.18f, 1.0f); // Lighter row for white keys
-    auto bgBlackRow = NUIColor(0.13f, 0.13f, 0.15f, 1.0f); // Darker row for black keys
+    // Colors (FL-ish Dark Theme) - Improved visibility
+    auto bgWhiteRow = NUIColor(0.18f, 0.18f, 0.20f, 1.0f); // Lighter row for white keys
+    auto bgBlackRow = NUIColor(0.12f, 0.12f, 0.14f, 1.0f); // Darker row for black keys
     
-    // New Grid Colors
-    auto gridBeat = NUIColor(0.3f, 0.3f, 0.3f, 0.3f);
-    auto gridBar = NUIColor(0.5f, 0.5f, 0.5f, 0.5f);
+    // Grid Colors - Increased visibility
+    auto gridBeat = NUIColor(0.4f, 0.4f, 0.4f, 0.5f);  // More visible beat lines
+    auto gridBar = NUIColor(0.6f, 0.6f, 0.6f, 0.7f);   // Prominent bar lines
     // 1. Draw Rows (Matching Keys)
     int startPitch = 127 - static_cast<int>((scrollY_) / keyHeight_);
     int endPitch = 127 - static_cast<int>((scrollY_ + b.height) / keyHeight_);
+    
+    // Expand range for safety margin (2 extra rows on each end)
+    startPitch = std::clamp(startPitch + 2, 0, 127);
+    endPitch = std::clamp(endPitch - 2, 0, 127);
     // Scale Highlight Colors
     auto bgInScale = NUIColor(0.18f, 0.18f, 0.20f, 1.0f); // Slightly lighter
     auto bgRoot = NUIColor(0.22f, 0.22f, 0.25f, 1.0f); // Root key highlight
     auto bgOutOfScale = NUIColor(0.08f, 0.08f, 0.10f, 1.0f); // Darker / Dimmed
     
     for (int p = startPitch; p >= endPitch; --p) {
-        float y = b.y + (127 - p) * keyHeight_ - scrollY_;
+        // Calculate screen Y position
+        float worldY = (127 - p) * keyHeight_;
+        float y = b.y + worldY - scrollY_;
+        
+        // Let clip rect handle the clipping - no skip logic needed
         NUIRect rowRect(b.x, y, b.width, keyHeight_);
         
         NUIColor rowColor;
@@ -543,16 +556,7 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
             // Scale Highlighting Logic
             if (inScale) {
                 if (isRoot) rowColor = bgRoot;
-                else rowColor = isBlackKey(p) ? bgBlackRow : bgInScale; // Keep piano pattern somewhat visible or override?
-                // Let's override to make scale obvious.
-                // Actually, FL keeps black/white pattern but TINTS in-scale vs out-of-scale?
-                // Or user wants "In Scale" vs "Out".
-                // Let's use:
-                // Root: Highlight
-                // In Scale: Standard (or Light)
-                // Out Scale: Dark
-                if (isRoot) rowColor = bgRoot;
-                else rowColor = isBlackKey(p) ? bgBlackRow : bgWhiteRow; // Keep natural pattern for in-scale
+                else rowColor = isBlackKey(p) ? bgBlackRow : bgWhiteRow;
             } else {
                 rowColor = bgOutOfScale;
             }
@@ -588,8 +592,10 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
         bool isBar = (std::fmod(std::abs(current), (double)beatsPerBar_) < 0.001);
         bool isBeat = (std::fmod(std::abs(current), 1.0) < 0.001);
         
-        NUIColor col = isBar ? gridBar : (isBeat ? gridBeat : gridBeat.withAlpha(0.15f));
-        renderer.drawLine(NUIPoint(x, b.y), NUIPoint(x, b.y + b.height), 1.0f, col);
+        // More visible grid lines
+        float lineWidth = isBar ? 2.0f : 1.0f;
+        NUIColor col = isBar ? gridBar : (isBeat ? gridBeat : gridBeat.withAlpha(0.25f));
+        renderer.drawLine(NUIPoint(x, b.y), NUIPoint(x, b.y + b.height), lineWidth, col);
     }
     
     renderer.clearClipRect();
@@ -647,7 +653,27 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         }
     }
     
-    for (const auto& n : notes_) {
+    // --- CULLING: Efficient note rendering using binary search ---
+    // Notes are sorted by startBeat in commitNotes/setNotes.
+    // Calculate visible beat range.
+    double visibleStartBeat = scrollX_ / pixelsPerBeat_;
+    double visibleEndBeat = (scrollX_ + b.width) / pixelsPerBeat_;
+    
+    // Find the first note that *could* be visible (startBeat + durationBeats >= visibleStartBeat).
+    // Since notes are sorted by startBeat, we find the first note where startBeat >= visibleStartBeat - maxNoteDuration.
+    // For simplicity, assume max note duration is 16 beats (4 bars). Adjust if needed.
+    const double maxNoteDuration = 16.0;
+    double searchBeat = std::max(0.0, visibleStartBeat - maxNoteDuration);
+    
+    auto it = std::lower_bound(notes_.begin(), notes_.end(), searchBeat, 
+        [](const MidiNote& n, double beat) { return n.startBeat < beat; });
+    
+    for (; it != notes_.end(); ++it) {
+        const auto& n = *it;
+        
+        // Early exit: If startBeat is past visible end, no more notes can be visible.
+        if (n.startBeat > visibleEndBeat) break;
+        
         // Double precision relative X subtraction
         double relX = (n.startBeat * pixelsPerBeat_) - static_cast<double>(scrollX_);
         float x = b.x + static_cast<float>(relX);
@@ -656,23 +682,23 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         float w = static_cast<float>(n.durationBeats * pixelsPerBeat_);
         float h = keyHeight_;
         
-        if (x + w < b.x || x > b.x + b.width || y + h < b.y || y > b.y + b.height) continue;
+        // Additional culling for Y and note end
+        if (x + w < b.x || y + h < b.y || y > b.y + b.height) continue;
         
-        // Animation Logic: Delete (Scale Down)
         if (n.isDeleted) {
             n.animationScale -= 0.20f; // Fast shrink
             if (n.animationScale < 0.0f) n.animationScale = 0.0f;
             repaint(); // Keep animating
         }
         else {
-            // Ensure idle notes are full scale (if we ever reuse this note)
-            if (n.animationScale < 1.0f) n.animationScale = 1.0f;
+            // Force full scale instantly (No ease-in)
+            n.animationScale = 1.0f;
         }
 
         // Skip drawing if invisible
         if (n.isDeleted && n.animationScale <= 0.001f) continue;
         
-        bool isInteracting = (state_ == State::Moving || state_ == State::Resizing || state_ == State::Painting);
+        bool isInteracting = (state_ == State::Moving || state_ == State::Resizing); // Removed Painting to keep new notes full size
         
         NUIRect r(x + 1, y + 1, std::max(4.0f, w - 2), h - 2);
         
@@ -696,20 +722,14 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         auto border = noteBorder;
         
         if (n.selected && !n.isDeleted) {
+            // Note: Visual "shrink" removed per user request for solid animation.
+            // Just tint color slightly for selection feedback.
             if (isInteracting) {
-                // ... (Interaction visuals)
-                float inset = 2.0f;
-                r.x += inset;
-                r.y += inset;
-                r.width = std::max(0.0f, r.width - (inset * 2.0f));
-                r.height = std::max(0.0f, r.height - (inset * 2.0f));
-                
                 color.r *= 0.7f;
                 color.g *= 0.7f;
                 color.b *= 0.7f;
                 border = NUIColor(1.0f, 1.0f, 1.0f, 0.5f);
             } else {
-                // ... (Idle visuals)
                 color.r = std::min(1.0f, color.r * 1.1f);
                 color.g = std::min(1.0f, color.g * 1.1f);
                 color.b = std::min(1.0f, color.b * 1.1f);
@@ -720,7 +740,8 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         renderer.fillRoundedRect(r, 3.0f, color);
         renderer.strokeRoundedRect(r, 3.0f, 1.0f, border);
         
-        if ((!isInteracting || !n.selected) && !n.isDeleted) {
+        // Highlight line
+        if (!n.selected && !n.isDeleted) {
              renderer.drawLine(NUIPoint(r.x + 2, r.y + 1), NUIPoint(r.x + r.width - 2, r.y + 1), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.3f));
         }
     }
@@ -771,7 +792,19 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
 
     // --- RIGHT CLICK / ERASER (FAST ERASE) ---
     if (event.button == NUIMouseButton::Right) {
-        if (event.pressed) state_ = State::Erasing;
+        if (event.pressed) {
+             state_ = State::Erasing;
+             
+             // Delete immediately on press
+             int idx = findNoteAt(localX, localY);
+             if (idx != -1) {
+                 auto oldNotes = notes_;
+                 notes_.erase(notes_.begin() + idx);
+                 pushUndo("Delete Note", oldNotes, notes_);
+                 commitNotes();
+                 repaint();
+             }
+        }
         if (event.released) state_ = State::None;
     }
     
@@ -790,6 +823,43 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     // --- LEFT CLICK HANDLING ---
     if (event.pressed && event.button == NUIMouseButton::Left) {
         int clickedIndex = findNoteAt(localX, localY);
+        
+        // DOUBLE CLICK: Add / Delete
+        if (event.doubleClick) {
+            auto oldNotes = notes_;
+            if (clickedIndex != -1) {
+                 // Delete existing note
+                 notes_.erase(notes_.begin() + clickedIndex);
+                 pushUndo("Delete Note", oldNotes, notes_);
+                 commitNotes();
+                 repaint();
+            } else {
+                 // Create New Note
+                 double beat = std::max(0.0, static_cast<double>(localX / pixelsPerBeat_));
+                 beat = snapToGrid(beat);
+                 
+                 int pitch = 127 - static_cast<int>(localY / keyHeight_);
+                 pitch = std::clamp(pitch, 0, 127);
+                 
+                 MidiNote newNote;
+                 newNote.pitch = pitch;
+                 newNote.startBeat = beat;
+                 newNote.durationBeats = lastNoteDuration_; 
+                 newNote.velocity = lastNoteVelocity_;
+                 newNote.selected = true; 
+                 newNote.animationScale = 1.0f; // Instant appearance 
+                 
+                 if (!(event.modifiers & NUIModifiers::Shift)) {
+                    for(auto& n : notes_) n.selected = false;
+                 }
+                 
+                 notes_.push_back(newNote);
+                 pushUndo("Add Note", oldNotes, notes_);
+                 commitNotes();
+                 repaint();
+            }
+            return true;
+        }
         
         // 1. Eraser Tool
         if (tool_ == GlobalTool::Eraser) {
@@ -830,6 +900,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             newNote.durationBeats = lastNoteDuration_; 
             newNote.velocity = lastNoteVelocity_;
             newNote.selected = true;
+            newNote.animationScale = 1.0f; // Instant appearance
             
             notes_.push_back(newNote);
             paintingNoteIndex_ = static_cast<int>(notes_.size()) - 1;
@@ -843,24 +914,30 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         if (clickedIndex != -1) {
             bool wasSelected = notes_[clickedIndex].selected;
             
-            // Shift Select Logic
-            if (event.modifiers & NUIModifiers::Shift) {
-                notes_[clickedIndex].selected = true; // Add to Selection
-                // Even if already selected, we keep it selected for group move
+            // Shift = Add Range (or just Add for now)
+            // Ctrl = Toggle
+            if (event.modifiers & NUIModifiers::Ctrl) {
+                notes_[clickedIndex].selected = !wasSelected;
+                return true; // Toggle and return
+            }
+            else if (event.modifiers & NUIModifiers::Shift) {
+                notes_[clickedIndex].selected = true; 
             } else {
                 if (!wasSelected) {
+                    // Clicked unselected note without modifiers -> clear others and select this
                     for (auto& N : notes_) N.selected = false;
                     notes_[clickedIndex].selected = true;
                 }
-                // If clicking an already selected note without shift, KEEP other selected notes (Group Move)
-                // Unless we simply click and release (Deselct others logic handles at release? or MouseDown?)
-                // Standard: Click on selection -> Prepare group move. 
+                // If clicked selected note, keep others selected (for potential group move)
             }
 
             const auto& n = notes_[clickedIndex];
             float nx = static_cast<float>(n.startBeat * pixelsPerBeat_);
             float nw = static_cast<float>(n.durationBeats * pixelsPerBeat_);
-            bool isRightEdge = (localX >= nx + nw - 10.0f);
+            
+            // Smart Edge Detection
+            float edgeZone = std::min(10.0f, nw * 0.3f); 
+            bool isRightEdge = (localX >= nx + nw - edgeZone);
             
             state_ = isRightEdge ? State::Resizing : State::Moving;
             dragStartPos_ = event.position;
@@ -1145,6 +1222,11 @@ void PianoRollNoteLayer::redo() {
 }
 
 void PianoRollNoteLayer::commitNotes() {
+    // Sort logic to ensure efficient culling
+    std::sort(notes_.begin(), notes_.end(), [](const MidiNote& a, const MidiNote& b) {
+        return a.startBeat < b.startBeat;
+    });
+
     if (onNotesChanged_) {
         onNotesChanged_(notes_);
     }
@@ -1152,6 +1234,10 @@ void PianoRollNoteLayer::commitNotes() {
 
 void PianoRollNoteLayer::setNotes(const std::vector<MidiNote>& notes) {
     notes_ = notes;
+    // Ensure sorted as well
+    std::sort(notes_.begin(), notes_.end(), [](const MidiNote& a, const MidiNote& b) {
+        return a.startBeat < b.startBeat;
+    });
     repaint();
 }
 

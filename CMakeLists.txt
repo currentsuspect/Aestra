@@ -13,7 +13,7 @@ endif()
 
 project(NOMAD VERSION 0.1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # =============================================================================
@@ -92,6 +92,36 @@ add_subdirectory(NomadAudio)
 # NOMAD DAW - Main Application
 # =============================================================================
 add_subdirectory(Source)
+
+# =============================================================================
+# Test Executables
+# =============================================================================
+if(EXISTS "${CMAKE_SOURCE_DIR}/Tests/VST3PluginTest.cpp")
+    add_executable(VST3PluginTest Tests/VST3PluginTest.cpp)
+    target_link_libraries(VST3PluginTest PRIVATE
+        NomadAudioCore
+        NomadCore
+    )
+    target_include_directories(VST3PluginTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/NomadAudio/include
+        ${CMAKE_SOURCE_DIR}/NomadCore/include
+    )
+    # VST3 SDK integration
+    set(VST3_SDK_PATH "${CMAKE_SOURCE_DIR}/NomadAudio/External/vst3sdk")
+    if(EXISTS "${VST3_SDK_PATH}/pluginterfaces")
+        target_compile_definitions(VST3PluginTest PRIVATE NOMAD_HAS_VST3)
+        target_include_directories(VST3PluginTest PRIVATE
+            ${VST3_SDK_PATH}
+            ${VST3_SDK_PATH}/pluginterfaces
+            ${VST3_SDK_PATH}/public.sdk
+            ${VST3_SDK_PATH}/public.sdk/source
+            ${VST3_SDK_PATH}/base
+        )
+    endif()
+    if(WIN32)
+        target_link_libraries(VST3PluginTest PRIVATE ole32)
+    endif()
+endif()
 
 message(STATUS "")
 message(STATUS "=================================")

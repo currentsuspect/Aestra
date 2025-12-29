@@ -112,6 +112,10 @@ list(APPEND NOMADUI_CORE_SOURCES
     Widgets/UnitRow.cpp
     Widgets/UIItemSelector.h
     Widgets/UIItemSelector.cpp
+    Widgets/PluginBrowserPanel.h
+    Widgets/PluginBrowserPanel.cpp
+    Widgets/PluginUIController.h
+    Widgets/PluginUIController.cpp
 )
 
 set(NOMADUI_GRAPHICS_SOURCES

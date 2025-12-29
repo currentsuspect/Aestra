@@ -53,6 +53,79 @@ elseif(UNIX)
 endif()
 
 # =============================================================================
+# VST3 SDK Integration (MIT License)
+# =============================================================================
+
+set(VST3_SDK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/External/vst3sdk)
+
+if(EXISTS ${VST3_SDK_DIR}/pluginterfaces AND EXISTS ${VST3_SDK_DIR}/public.sdk)
+    set(NOMAD_HAS_VST3 ON)
+    message(STATUS "VST3 SDK: Found at ${VST3_SDK_DIR}")
+    
+    # VST3 SDK include directories
+    set(VST3_INCLUDE_DIRS
+        ${VST3_SDK_DIR}
+        ${VST3_SDK_DIR}/pluginterfaces
+        ${VST3_SDK_DIR}/public.sdk
+        ${VST3_SDK_DIR}/public.sdk/source
+        ${VST3_SDK_DIR}/base
+    )
+    
+    # VST3 hosting sources (minimal set for plugin hosting)
+    set(VST3_HOST_SOURCES
+        ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module.cpp
+        ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/hostclasses.cpp
+        ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/plugprovider.cpp
+        ${VST3_SDK_DIR}/public.sdk/source/common/memorystream.cpp
+        ${VST3_SDK_DIR}/public.sdk/source/vst/utility/stringconvert.cpp
+        ${VST3_SDK_DIR}/public.sdk/source/common/commonstringconvert.cpp
+        ${VST3_SDK_DIR}/public.sdk/source/vst/vstinitiids.cpp
+        ${VST3_SDK_DIR}/base/source/fdebug.cpp
+        ${VST3_SDK_DIR}/base/source/fobject.cpp
+        ${VST3_SDK_DIR}/base/source/fstring.cpp
+        ${VST3_SDK_DIR}/pluginterfaces/base/funknown.cpp
+        ${VST3_SDK_DIR}/pluginterfaces/base/ustring.cpp
+        ${VST3_SDK_DIR}/pluginterfaces/base/coreiids.cpp
+    )
+    
+    if(WIN32)
+        list(APPEND VST3_HOST_SOURCES
+            ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_win32.cpp
+        )
+    elseif(APPLE)
+        list(APPEND VST3_HOST_SOURCES
+            ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_mac.mm
+        )
+    else()
+        list(APPEND VST3_HOST_SOURCES
+            ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_linux.cpp
+        )
+    endif()
+else()
+    set(NOMAD_HAS_VST3 OFF)
+    message(STATUS "VST3 SDK: Not found - plugin hosting disabled")
+endif()
+
+# =============================================================================
+# CLAP SDK Integration (MIT License)
+# =============================================================================
+
+set(CLAP_SDK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/External/clap)
+
+if(EXISTS ${CLAP_SDK_DIR}/include/clap/clap.h)
+    set(NOMAD_HAS_CLAP ON)
+    message(STATUS "CLAP SDK: Found at ${CLAP_SDK_DIR}")
+    
+    # CLAP SDK is header-only, just need include path
+    set(CLAP_INCLUDE_DIRS
+        ${CLAP_SDK_DIR}/include
+    )
+else()
+    set(NOMAD_HAS_CLAP OFF)
+    message(STATUS "CLAP SDK: Not found")
+endif()
+
+# =============================================================================
 # NomadAudio Library
 # =============================================================================
 
@@ -89,7 +162,26 @@ set(NOMAD_AUDIO_CORE_SOURCES
     src/PatternPlaybackEngine.cpp
     src/TimelineClock.cpp
     src/StreamingDecoder.cpp
+    # Plugin hosting system
+    src/Plugin/PluginScanner.cpp
+    src/Plugin/PluginManager.cpp
+    src/Plugin/EffectChain.cpp
 )
+
+# Add VST3 host sources if SDK is available
+if(NOMAD_HAS_VST3)
+    list(APPEND NOMAD_AUDIO_CORE_SOURCES
+        src/Plugin/VST3Host.cpp
+        ${VST3_HOST_SOURCES}
+    )
+endif()
+
+# Add CLAP host sources if SDK is available
+if(NOMAD_HAS_CLAP)
+    list(APPEND NOMAD_AUDIO_CORE_SOURCES
+        src/Plugin/CLAPHost.cpp
+    )
+endif()
 
 
 # Core headers
@@ -137,6 +229,12 @@ set(NOMAD_AUDIO_CORE_HEADERS
     include/ArsenalUnit.h
     include/UnitManager.h
     include/StreamingDecoder.h
+    # Plugin hosting system
+    include/PluginHost.h
+    include/PluginScanner.h
+    include/PluginManager.h
+    include/EffectChain.h
+    include/Plugin/VST3Host.h
 )
 
 # Create NomadAudioCore library
@@ -169,6 +267,22 @@ if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio)
     target_include_directories(NomadAudioCore PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio
     )
+endif()
+
+# VST3 SDK includes (if available)
+if(NOMAD_HAS_VST3)
+    target_include_directories(NomadAudioCore PRIVATE
+        ${VST3_INCLUDE_DIRS}
+    )
+    target_compile_definitions(NomadAudioCore PRIVATE NOMAD_HAS_VST3)
+endif()
+
+# CLAP SDK includes (if available)
+if(NOMAD_HAS_CLAP)
+    target_include_directories(NomadAudioCore PRIVATE
+        ${CLAP_INCLUDE_DIRS}
+    )
+    target_compile_definitions(NomadAudioCore PRIVATE NOMAD_HAS_CLAP)
 endif()
 
 target_link_libraries(NomadAudioCore
