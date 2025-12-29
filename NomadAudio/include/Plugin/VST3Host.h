@@ -39,6 +39,8 @@ public:
     // Non-copyable
     VST3PluginInstance(const VST3PluginInstance&) = delete;
     VST3PluginInstance& operator=(const VST3PluginInstance&) = delete;
+
+    friend class VST3HostTestAccess;
     
     /**
      * @brief Load a VST3 plugin from file
@@ -98,10 +100,21 @@ public:
     uint32_t getLatencySamples() const override;
     uint32_t getTailSamples() const override;
 
+    // Watchdog implementation
+    WatchdogStats getWatchdogStats() const override { return m_watchdogStats; }
+    void resetWatchdog() override;
+    bool isBypassedByWatchdog() const override { return m_watchdogStats.isBypassed; }
+    bool isCrashed() const override { return m_crashed; }
+
 private:
     bool m_loaded = false;
     bool m_active = false;
     bool m_editorOpen = false;
+    bool m_crashed = false;
+    
+    // Watchdog state
+    WatchdogStats m_watchdogStats;
+    static constexpr uint64_t WATCHDOG_VIOLATION_LIMIT = 50; // Bypass after 50 violations
     
     PluginInfo m_info;
     
@@ -150,6 +163,16 @@ public:
      * @return Shared pointer to plugin instance, or nullptr on failure
      */
     static std::shared_ptr<VST3PluginInstance> createInstance(const PluginInfo& info);
+};
+
+// Expose for testing
+class VST3HostTestAccess {
+public:
+    static void setProcessor(VST3PluginInstance& instance, void* processor) {
+        instance.m_processor = processor;
+        instance.m_active = true; // Force active
+        instance.m_sampleRate = 48000.0;
+    }
 };
 
 } // namespace Audio

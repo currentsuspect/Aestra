@@ -2,6 +2,7 @@
 
 #include "Plugin/VST3Host.h"
 #include "NomadLog.h"
+#include <chrono>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -27,6 +28,22 @@ using namespace Steinberg::Vst;
 
 namespace Nomad {
 namespace Audio {
+
+// Helper function to isolate SEH from C++ object unwinding (C2712 fix)
+// This function must NOT contain any objects with destructors.
+static bool SafeProcessCall(IAudioProcessor* processor, ProcessData& data) {
+#ifdef _WIN32
+    __try {
+        processor->process(data);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false; // Crashed
+    }
+#else
+    processor->process(data);
+    return true;
+#endif
+}
 
 // ============================================================================
 // VST3PluginInstance Implementation
@@ -276,6 +293,17 @@ void VST3PluginInstance::process(
         // Pass-through or silence
         return;
     }
+
+    // Watchdog Check
+    if (m_watchdogStats.isBypassed || m_crashed) {
+        // Clear outputs to silence
+        for (uint32_t i = 0; i < numOutputChannels; ++i) {
+            if (outputs[i]) {
+                std::memset(outputs[i], 0, numFrames * sizeof(float));
+            }
+        }
+        return;
+    }
     
     auto processor = static_cast<IAudioProcessor*>(m_processor);
     
@@ -309,7 +337,57 @@ void VST3PluginInstance::process(
     (void)midiInput;
     (void)midiOutput;
     
-    processor->process(data);
+    auto startTime = std::chrono::high_resolution_clock::now();
+
+    // Call safe wrapper
+    bool success = SafeProcessCall(processor, data);
+
+    if (!success) {
+        m_crashed = true;
+#ifdef _WIN32
+        Log::error("VST3: CRASH DETECTED in " + m_info.name + "! (Access Violation trapped)");
+#else
+        Log::error("VST3: Crash detected (Signal trapped)"); 
+#endif
+        
+        // Silence output buffers immediately
+        for (uint32_t i = 0; i < numOutputChannels; ++i) {
+             if (outputs[i]) std::memset(outputs[i], 0, numFrames * sizeof(float));
+        }
+        return;
+    }
+
+    auto endTime = std::chrono::high_resolution_clock::now();
+    double durationNs = std::chrono::duration<double, std::nano>(endTime - startTime).count();
+
+    // Update stats
+    if (durationNs > m_watchdogStats.maxExecutionTimeNs) {
+        m_watchdogStats.maxExecutionTimeNs = durationNs;
+    }
+    // Exponential moving average (alpha ~ 0.01)
+    m_watchdogStats.avgExecutionTimeNs = m_watchdogStats.avgExecutionTimeNs * 0.99 + durationNs * 0.01;
+
+    // Check budget
+    // Budget is the duration of the audio block itself
+    double budgetNs = (static_cast<double>(numFrames) / m_sampleRate) * 1.0e9;
+    
+    // We allow a small margin (e.g. 100% CPU usage) but if it exceeds strict budget it's a violation
+    // A stricter budget might be 80% to leave room for other tracks.
+    // For now, let's use 100% of the block time.
+    if (durationNs > budgetNs) {
+        m_watchdogStats.violationCount++;
+        
+        if (m_watchdogStats.violationCount > WATCHDOG_VIOLATION_LIMIT) {
+            m_watchdogStats.isBypassed = true;
+            Log::error("VST3: Plugin " + m_info.name + " exceeded time budget " + 
+                       std::to_string(WATCHDOG_VIOLATION_LIMIT) + " times. Auto-bypassing.");
+        }
+    } else {
+        // Slowly decay violation count if behaving well (optional recovery)
+        if (m_watchdogStats.violationCount > 0) {
+            m_watchdogStats.violationCount--;
+        }
+    }
 }
 
 std::vector<PluginParameter> VST3PluginInstance::getParameters() const {
@@ -475,6 +553,12 @@ void VST3PluginInstance::buildParameterCache() const {
 
 void VST3PluginInstance::setupProcessing() {
     // Called after initialize to prepare buffers
+}
+
+void VST3PluginInstance::resetWatchdog() {
+    m_watchdogStats = WatchdogStats(); // Reset to zero
+    m_crashed = false;                 // Reset crash state
+    Log::info("VST3: Watchdog reset for " + m_info.name);
 }
 
 // ============================================================================

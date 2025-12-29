@@ -606,6 +606,8 @@ void AudioDeviceManager::setAutoBufferScaling(bool enable, uint32_t underrunsPer
 }
 
 void AudioDeviceManager::checkAndAutoScaleBuffer() {
+    checkDriverHealth();
+    
     if (!m_autoBufferScalingEnabled || !m_activeDriver || !isStreamRunning()) {
         return;
     }
@@ -669,6 +671,76 @@ void AudioDeviceManager::checkAndAutoScaleBuffer() {
     
     m_lastUnderrunCheck = now;
     m_lastUnderrunCount = stats.underrunCount;
+}
+
+void AudioDeviceManager::checkDriverHealth() {
+    if (!m_activeDriver || !isStreamRunning() || m_activeDriver->getDriverType() == AudioDriverType::DUMMY) {
+        return;
+    }
+    
+    DriverStatistics stats = m_activeDriver->getStatistics();
+    auto now = std::chrono::steady_clock::now();
+    
+    static uint64_t lastCount = 0;
+    static auto lastUpdateTime = now;
+    
+    if (stats.callbackCount != lastCount) {
+        lastCount = stats.callbackCount;
+        lastUpdateTime = now;
+    } else {
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdateTime).count();
+        // If we've had no callbacks for 2 seconds while running, it's a stall
+        if (elapsed > 2000) {
+            std::cerr << "[AudioDeviceManager] !!! DRIVER STALL DETECTED (" 
+                      << m_activeDriver->getDisplayName() << ") !!!" << std::endl;
+            switchToSafetyDriver();
+            lastUpdateTime = now; // Reset to avoid repeated triggers in same fallback window
+        }
+    }
+}
+
+bool AudioDeviceManager::switchToSafetyDriver() {
+    std::cout << "[AudioDeviceManager] Attempting emergency fallback to Dummy driver..." << std::endl;
+    
+    // 1. Find the dummy driver
+    IAudioDriver* dummy = nullptr;
+    for (auto& driver : m_drivers) {
+        if (driver->getDriverType() == AudioDriverType::DUMMY) {
+            dummy = driver.get();
+            break;
+        }
+    }
+    
+    if (!dummy) {
+        std::cerr << "[AudioDeviceManager] Critical failure: No dummy driver available for fallback!" << std::endl;
+        return false;
+    }
+    
+    // 2. Stop and close the current (likely broken) driver
+    if (m_activeDriver) {
+        // Use a try-catch or just be very careful here as the driver might be in a bad state
+        try {
+            m_activeDriver->stopStream();
+            m_activeDriver->closeStream();
+        } catch (...) {}
+        m_activeDriver = nullptr;
+    }
+    
+    // 3. Open dummy with existing configuration
+    if (dummy->openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
+        m_activeDriver = dummy;
+        if (dummy->startStream()) {
+            std::cout << "[AudioDeviceManager] Safety fallback ACTIVE. Audio engine is still running." << std::endl;
+            
+            if (m_driverModeChangeCallback) {
+                m_driverModeChangeCallback(m_preferredDriverType, AudioDriverType::DUMMY, 
+                                          "Hardware stall/disconnect: fallback to safety driver");
+            }
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 void AudioDeviceManager::setDitheringEnabled(bool enabled) {

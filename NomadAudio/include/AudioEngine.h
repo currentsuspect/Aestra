@@ -14,6 +14,11 @@
 #include <cmath>
 #include <vector>
 #include <atomic>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 #include <memory>
 #include <mutex>
 #include <array>
@@ -150,6 +155,9 @@ private:
             state = x;
             return x;
         }
+        inline void setSeed(uint32_t seed) {
+            state = (seed == 0) ? 0xDEADBEEF : seed; // Avoid 0 state for Xorshift
+        }
         // Returns uniform float [0, 1)
         inline float nextFloat() {
             return (next() & 0xFFFFFF) * (1.0f / 16777216.0f);
@@ -258,6 +266,14 @@ private:
 
     // Helper for renderGraph
     void renderClipAudio(double* outputBuffer, TrackRTState& state, uint32_t trackIndex, const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset);
+    void processTrackEffects(const RenderTrack& track, uint32_t numFrames, uint32_t bufferOffset);
+
+    // Parallel processing internal
+    uint32_t m_parallelNumFrames{0};
+    uint32_t m_parallelBufferOffset{0};
+    std::vector<void*> m_parallelTrackPointers;
+    static void parallelTrackDispatcher(void* context, void* taskData);
+    void parallelProcessTrack(const RenderTrack& track);
 
     // -----------------------------------------
 
@@ -331,7 +347,7 @@ private:
     std::atomic<double> m_loopEndBeat{4.0};         // Default: 1 bar (4 beats)
 
     // Parallel Processing
-    std::unique_ptr<Nomad::ThreadPool> m_threadPool;
+    std::unique_ptr<Nomad::RealTimeThreadPool> m_threadPool;
     std::unique_ptr<Nomad::Barrier> m_syncBarrier;
     std::atomic<bool> m_multiThreadingEnabled{false};
 };

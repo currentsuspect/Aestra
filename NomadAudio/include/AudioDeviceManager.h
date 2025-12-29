@@ -242,6 +242,16 @@ public:
     void checkAndAutoScaleBuffer();
 
     /**
+     * @brief Monitor active driver health and perform safety fallback if stalled.
+     */
+    void checkDriverHealth();
+    
+    /**
+     * @brief Force switch to the internal dummy driver (e.g. after a crash/disconnect).
+     */
+    bool switchToSafetyDriver();
+
+    /**
      * @brief Enable/Disable dithering for active driver
      */
     void setDitheringEnabled(bool enabled);

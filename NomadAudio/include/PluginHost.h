@@ -266,6 +266,40 @@ public:
      * @brief Get tail length in samples (for effects like reverb)
      */
     virtual uint32_t getTailSamples() const = 0;
+
+    // ==============================
+    // Watchdog (Real-Time Safety)
+    // ==============================
+
+    /**
+     * @brief Watchdog statistics
+     */
+    struct WatchdogStats {
+        double maxExecutionTimeNs = 0.0;     ///< Peak execution time in nanoseconds
+        double avgExecutionTimeNs = 0.0;     ///< Exponential moving average
+        uint64_t violationCount = 0;         ///< Number of budget violations
+        bool isBypassed = false;             ///< Automatically bypassed by watchdog
+    };
+
+    /**
+     * @brief Get current watchdog statistics
+     */
+    virtual WatchdogStats getWatchdogStats() const = 0;
+
+    /**
+     * @brief Reset watchdog statistics and re-enable plugin if bypassed
+     */
+    virtual void resetWatchdog() = 0;
+
+    /**
+     * @brief Check if plugin was bypassed by the watchdog
+     */
+    virtual bool isBypassedByWatchdog() const = 0;
+
+    /**
+     * @brief Check if plugin has crashed (fatal exception caught)
+     */
+    virtual bool isCrashed() const = 0;
 };
 
 /**
@@ -285,27 +319,36 @@ public:
     };
     
     void addEvent(uint32_t sampleOffset, const uint8_t* data, uint8_t size) {
-        if (size <= 3 && m_events.size() < MAX_EVENTS) {
-            Event e;
-            e.sampleOffset = sampleOffset;
-            e.size = size;
-            std::memcpy(e.data, data, size);
-            m_events.push_back(e);
+        if (size <= 3) {
+            uint32_t index = m_eventCount.fetch_add(1, std::memory_order_relaxed);
+            if (index < MAX_EVENTS) {
+                Event& e = m_events[index];
+                e.sampleOffset = sampleOffset;
+                e.size = size;
+                std::memcpy(e.data, data, size);
+            } else {
+                // Buffer full, rollback count (not strictly necessary but cleaner)
+                m_eventCount.store(MAX_EVENTS, std::memory_order_relaxed);
+            }
         }
     }
     
-    void clear() { m_events.clear(); }
-    bool isEmpty() const { return m_events.empty(); }
-    size_t getEventCount() const { return m_events.size(); }
+    void clear() { m_eventCount.store(0, std::memory_order_release); }
+    bool isEmpty() const { return m_eventCount.load(std::memory_order_acquire) == 0; }
+    size_t getEventCount() const { 
+        size_t count = m_eventCount.load(std::memory_order_acquire);
+        return count > MAX_EVENTS ? MAX_EVENTS : count;
+    }
     const Event& getEvent(size_t index) const { return m_events[index]; }
     
     // Iterator support
-    auto begin() const { return m_events.begin(); }
-    auto end() const { return m_events.end(); }
+    const Event* begin() const { return &m_events[0]; }
+    const Event* end() const { return &m_events[getEventCount()]; }
     
 private:
     static constexpr size_t MAX_EVENTS = 1024;
-    std::vector<Event> m_events;
+    Event m_events[MAX_EVENTS];
+    std::atomic<uint32_t> m_eventCount{0};
 };
 
 } // namespace Audio

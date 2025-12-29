@@ -1190,13 +1190,43 @@ void PianoRollNoteLayer::setTool(PianoRollTool tool) {
 }
 
 void PianoRollNoteLayer::pushUndo(const std::string& desc, const std::vector<MidiNote>& oldN, const std::vector<MidiNote>& newN) {
-    if (undoStack_.size() > 50) undoStack_.erase(undoStack_.begin()); // Limit
     PianoRollCommand cmd;
     cmd.description = desc;
     cmd.notesBefore = oldN;
     cmd.notesAfter = newN;
     undoStack_.push_back(cmd);
     redoStack_.clear();
+
+    // Enforce Limits (Count & Memory)
+    // 1. Hard count limit
+    if (undoStack_.size() > 50) {
+        undoStack_.erase(undoStack_.begin());
+    }
+
+    // 2. Memory Cap (100MB) - "Cockroach Chrysalis"
+    // Calculate total size and evict from front (LRU)
+    size_t totalBytes = 0;
+    const size_t kMaxBytes = 100 * 1024 * 1024; // 100MB
+
+    // Reverse iterate to count from newest (keep these)
+    // Actually simpler to just calc total and pop front.
+    for (const auto& c : undoStack_) {
+        totalBytes += c.description.capacity();
+        totalBytes += c.notesBefore.capacity() * sizeof(MidiNote);
+        totalBytes += c.notesAfter.capacity() * sizeof(MidiNote);
+    }
+
+    while (totalBytes > kMaxBytes && !undoStack_.empty()) {
+        const auto& c = undoStack_.front();
+        size_t cmdSize = c.description.capacity() + 
+                         c.notesBefore.capacity() * sizeof(MidiNote) + 
+                         c.notesAfter.capacity() * sizeof(MidiNote);
+        
+        if (totalBytes >= cmdSize) totalBytes -= cmdSize; 
+        else totalBytes = 0;
+
+        undoStack_.erase(undoStack_.begin());
+    }
 }
 
 void PianoRollNoteLayer::undo() {

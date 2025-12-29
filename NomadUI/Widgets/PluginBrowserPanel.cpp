@@ -35,6 +35,7 @@ PluginBrowserPanel::PluginBrowserPanel() {
 }
 
 void PluginBrowserPanel::onRender(NUIRenderer& renderer) {
+    std::lock_guard<std::mutex> lock(m_uiMutex);
     auto bounds = getBounds();
     
     renderer.fillRoundedRect(bounds, 8.0f, Colors::panelBackground);
@@ -182,6 +183,7 @@ void PluginBrowserPanel::renderScanProgress(NUIRenderer& renderer) {
 }
 
 bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
+    std::lock_guard<std::mutex> lock(m_uiMutex);
     auto bounds = getBounds();
     float mx = event.position.x;
     float my = event.position.y;
@@ -271,6 +273,7 @@ void PluginBrowserPanel::onUpdate(double deltaTime) {
 }
 
 void PluginBrowserPanel::setPluginList(const std::vector<PluginListItem>& plugins) {
+    std::lock_guard<std::mutex> lock(m_uiMutex);
     m_allPlugins = plugins;
     for (auto& p : m_allPlugins) {
         p.isFavorite = std::find(m_favorites.begin(), m_favorites.end(), p.id) != m_favorites.end();
@@ -405,11 +408,13 @@ void PluginBrowserPanel::setOnScanRequested(std::function<void()> callback) {
 }
 
 void PluginBrowserPanel::setScanning(bool scanning, float progress) {
+    std::lock_guard<std::mutex> lock(m_uiMutex);
     m_scanning = scanning;
     m_scanProgress = progress;
 }
 
 void PluginBrowserPanel::setScanStatus(const std::string& status) {
+    std::lock_guard<std::mutex> lock(m_uiMutex);
     m_scanStatus = status;
 }
 
