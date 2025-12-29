@@ -128,6 +128,16 @@ void AudioEngine::applyPendingCommands() {
     }
 }
 
+void AudioEngine::setThreadCount(int count) {
+    if (count < 1) count = 1;
+    if (count > 64) count = 64; 
+    
+    if (!m_threadPool || m_threadPool->size() != (size_t)count) {
+        m_threadPool = std::make_unique<Nomad::ThreadPool>(count);
+        m_syncBarrier = std::make_unique<Nomad::Barrier>(0);
+    }
+}
+
 void AudioEngine::processBlock(float* outputBuffer,
                                const float* inputBuffer,
                                uint32_t numFrames,
@@ -1252,17 +1262,9 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
     }
     
     void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset) {
-        (void)graph; // Unused in Antigravity mode (we use pre-compiled m_renderTracks)
+        (void)graph; 
         
-        // 0. The output buffers (Master/Busses) must be cleared externally before this? 
-        // Currently processBlock clears masterBufferD if not playing, but we rely on accumulation.
-        // renderGraph assumes buffers are ready to be accumulated INTO.
-        // Wait, processBlock clears masterBufferD at line 170 IF NOT PLAYING.
-        // But if playing, it calls renderGraph.
-        // We MUST clear the accumulation buffers at the start of the block.
-        // Since we are adding, we need to start from zero.
-        // We MUST clear the accumulation buffers at the start of the block.
-        // Since we are adding, we need to start from zero.
+        // 0. Clear Master Buffer
         std::fill(m_masterBufferD.begin() + static_cast<size_t>(bufferOffset) * m_outputChannels.load(std::memory_order_relaxed), 
                   m_masterBufferD.begin() + static_cast<size_t>(bufferOffset + numFrames) * m_outputChannels.load(std::memory_order_relaxed), 
                   0.0);
@@ -1271,32 +1273,27 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
         const int activeIdx = m_activeRenderTrackIndex.load(std::memory_order_acquire);
         const auto& tracks = m_renderTracks[activeIdx];
         
-        // 2. Iterate Sorted List
-        for (const auto& track : tracks) {
+        // Load snapshots once for consistency across all tracks in this block
+        auto* slotMap = m_channelSlotMapRaw.load(std::memory_order_acquire);
+        auto* params = m_continuousParamsRaw.load(std::memory_order_acquire);
+        
+        // ---------------------------------------------------------
+        // A. DSP Processing Lambda (Can be run in parallel)
+        // ---------------------------------------------------------
+        auto processTrackDSP = [&](const RenderTrack& track) {
             TrackRTState& state = m_trackState[track.trackIndex];
             
-            // A. Process Audio (Generate/Process)
-            // Render clips to track.selfBuffer (Pre-Fader)
-            // A. Process Audio (Generate/Process)
-            // Render clips to track.selfBuffer (Pre-Fader)
+            // 1. Render clips to track.selfBuffer (Pre-Fader)
             renderClipAudio(track.selfBuffer, state, track.trackIndex, graph, numFrames, bufferOffset);
-
-            // B. Apply Real-Time Fader & Pan (Post-Fader Processing)
-            // -----------------------------------------------------
-            // 1. Fetch live parameters
+            
+            // 2. Apply Real-Time Fader & Pan (Post-Fader Processing)
             float faderDb = 0.0f;
             float panParam = 0.0f;
             float trimDb = 0.0f;
             bool hasLiveParams = false;
             
-            // Note: We need the Track ID to find the slot. TrackRenderState has it.
-            // But 'RenderTrack' only has index. 'graph.tracks' has the ID.
             if (track.trackIndex < graph.tracks.size()) {
                 const auto& graphTrack = graph.tracks[track.trackIndex];
-                
-                auto* slotMap = m_channelSlotMapRaw.load(std::memory_order_acquire);
-                auto* params = m_continuousParamsRaw.load(std::memory_order_acquire);
-                
                 if (slotMap && params) {
                    uint32_t slot = slotMap->getSlotIndex(graphTrack.trackId);
                    if (slot != ChannelSlotMap::INVALID_SLOT) {
@@ -1306,27 +1303,19 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
                 }
             }
             
-            // 2. Update Smoothing Targets from RT Params (if available)
+            // Update Smoothing Targets from RT Params
             if (hasLiveParams) {
-                // Fader dB to Linear
                 const double userVol = (faderDb <= -90.0f) ? 0.0 : std::pow(10.0, static_cast<double>(faderDb) * 0.05);
-                
-                // Pan Law: -3dB Constant Power (DONE ONCE PER BLOCK)
                 const double panClamped = clampD(static_cast<double>(panParam), -1.0, 1.0);
                 const double angle = (panClamped + 1.0) * QUARTER_PI_D;
-                
-                // Effective L/R Gains
                 const double targetL = userVol * std::cos(angle);
                 const double targetR = userVol * std::sin(angle);
                 
-                // Set targets for smoothing
                 state.gainL.setTarget(targetL);
                 state.gainR.setTarget(targetR);
             } else if (track.trackIndex < graph.tracks.size()) {
-                // Fallback: No live params (e.g. unmapped track), use Track Snapshot
+                // Fallback
                 const auto& graphTrack = graph.tracks[track.trackIndex];
-                
-                // Consistently apply Pan Law here too
                 const double vol = static_cast<double>(graphTrack.volume);
                 const double panClamped = clampD(static_cast<double>(graphTrack.pan), -1.0, 1.0);
                 const double angle = (panClamped + 1.0) * QUARTER_PI_D;
@@ -1335,8 +1324,7 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
                 state.gainR.setTarget(vol * std::sin(angle));
             }
             
-            // 3. Apply to Buffer (In-Place) & Metering
-            // 3. Apply to Buffer (In-Place) & Metering
+            // Apply to Buffer & Metering
             double* selfL = track.selfBuffer + bufferOffset * 2;
             double* selfR = track.selfBuffer + bufferOffset * 2 + 1;
             
@@ -1345,90 +1333,48 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
             double sumSqL = 0.0;
             double sumSqR = 0.0;
             
-            // SIMD Optimization: AVX2 (4x double) Process 4 samples at once
-            // This is SIGNIFICANTLY faster than the scalar scalar loop
-            double* destL = selfL; // Aligned destination pointers
+            // SIMD Optimization (Scalar Unrolled)
+            double* destL = selfL; 
             double* destR = selfR;
             
             uint32_t i = 0;
-            // Process block in chunks of 4 (AVX2 = 256 bit = 4 doubles)
             if (numFrames >= 4) {
                  for (; i <= numFrames - 4; i += 4) {
-                    // 1. Compute Gains (Linear Ramp)
-                    // We can't vector-ramp easily without complex logic, so compute scalar into temp array
-                    // OR just do scalar ramp computation then load.
-                    // For "Surgical" precision, we'll keep the ramp precise.
                     alignas(32) double gL_buf[4];
                     alignas(32) double gR_buf[4];
-                    
                     for(int k=0; k<4; ++k) {
                         gL_buf[k] = state.gainL.next();
                         gR_buf[k] = state.gainR.next();
                     }
+                    
+                    double vL0 = destL[(i + 0) * 2] * gL_buf[0]; double vR0 = destR[(i + 0) * 2] * gR_buf[0];
+                    double vL1 = destL[(i + 1) * 2] * gL_buf[1]; double vR1 = destR[(i + 1) * 2] * gR_buf[1];
+                    double vL2 = destL[(i + 2) * 2] * gL_buf[2]; double vR2 = destR[(i + 2) * 2] * gR_buf[2];
+                    double vL3 = destL[(i + 3) * 2] * gL_buf[3]; double vR3 = destR[(i + 3) * 2] * gR_buf[3];
 
-                    // 2. Load Source (2 doubles per sample = interleaved L/R)
-                    // We need to deinterleave or just process L and R separately if we had separate buffers.
-                    // But here we have Interleaved [L, R, L, R, L, R, L, R].
-                    // AVX2 Load: pd_0 = [L0, R0, L1, R1]
-                    // AVX2 Load: pd_1 = [L2, R2, L3, R3]
-                    
-                    // Actually, simpler fallback to "Scalar Math, Vectorized Execution" 
-                    // or just highly optimized scalar loop with Unrolling to let the compiler autovectorize.
-                    // Explicit intrinsics for interleaved is messy.
-                    
-                    // Let's use 4x loop unrolling to help the compiler pipeline
-                    double vL0 = destL[(i + 0) * 2] * gL_buf[0];
-                    double vR0 = destR[(i + 0) * 2] * gR_buf[0];
-                    
-                    double vL1 = destL[(i + 1) * 2] * gL_buf[1];
-                    double vR1 = destR[(i + 1) * 2] * gR_buf[1];
-                    
-                    double vL2 = destL[(i + 2) * 2] * gL_buf[2];
-                    double vR2 = destR[(i + 2) * 2] * gR_buf[2];
-                    
-                    double vL3 = destL[(i + 3) * 2] * gL_buf[3];
-                    double vR3 = destR[(i + 3) * 2] * gR_buf[3];
-
-                    // Store back
                     destL[(i + 0) * 2] = vL0; destR[(i + 0) * 2] = vR0;
                     destL[(i + 1) * 2] = vL1; destR[(i + 1) * 2] = vR1;
                     destL[(i + 2) * 2] = vL2; destR[(i + 2) * 2] = vR2;
                     destL[(i + 3) * 2] = vL3; destR[(i + 3) * 2] = vR3;
 
-                    // Metering Stats (Scalar Accumulation is fine, cheap)
-                    // Unrolling helps here too
-                    if (std::abs(vL0) > peakL) peakL = std::abs(vL0);
-                    if (std::abs(vR0) > peakR) peakR = std::abs(vR0);
+                    if (std::abs(vL0) > peakL) peakL = std::abs(vL0); if (std::abs(vR0) > peakR) peakR = std::abs(vR0);
                     sumSqL += vL0 * vL0; sumSqR += vR0 * vR0;
-                    
-                    if (std::abs(vL1) > peakL) peakL = std::abs(vL1);
-                    if (std::abs(vR1) > peakR) peakR = std::abs(vR1);
+                    if (std::abs(vL1) > peakL) peakL = std::abs(vL1); if (std::abs(vR1) > peakR) peakR = std::abs(vR1);
                     sumSqL += vL1 * vL1; sumSqR += vR1 * vR1;
-                    
-                    if (std::abs(vL2) > peakL) peakL = std::abs(vL2);
-                    if (std::abs(vR2) > peakR) peakR = std::abs(vR2);
+                    if (std::abs(vL2) > peakL) peakL = std::abs(vL2); if (std::abs(vR2) > peakR) peakR = std::abs(vR2);
                     sumSqL += vL2 * vL2; sumSqR += vR2 * vR2;
-                    
-                    if (std::abs(vL3) > peakL) peakL = std::abs(vL3);
-                    if (std::abs(vR3) > peakR) peakR = std::abs(vR3);
+                    if (std::abs(vL3) > peakL) peakL = std::abs(vL3); if (std::abs(vR3) > peakR) peakR = std::abs(vR3);
                     sumSqL += vL3 * vL3; sumSqR += vR3 * vR3;
                  }
             }
 
             for (; i < numFrames; ++i) {
-                // Compute per-sample gains (Linear Ramp is cheap)
                 const double gL = state.gainL.next(); 
                 const double gR = state.gainR.next();
-                
-                // Apply
                 double valL = selfL[i * 2] * gL;
                 double valR = selfR[i * 2] * gR;
-                
-                // Store back (Post-Fader)
                 selfL[i * 2] = valL;
                 selfR[i * 2] = valR;
-                
-                // Metering stats
                 const double absL = std::abs(valL);
                 const double absR = std::abs(valR);
                 if (absL > peakL) peakL = absL;
@@ -1437,29 +1383,29 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
                 sumSqR += valR * valR;
             }
             
-            // 4. Publish Metering
+            // Metering
             auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
-            auto* slotMap = m_channelSlotMapRaw.load(std::memory_order_relaxed);
-            
             if (snaps && slotMap && track.trackIndex < graph.tracks.size()) {
                  const auto& graphTrack = graph.tracks[track.trackIndex];
                  uint32_t slot = slotMap->getSlotIndex(graphTrack.trackId);
-                 
                  if (slot != ChannelSlotMap::INVALID_SLOT) {
                      const float rmsL = static_cast<float>(std::sqrt(sumSqL / numFrames));
                      const float rmsR = static_cast<float>(std::sqrt(sumSqR / numFrames));
-                     
-                     // We don't have separate Low-Pass state per track here easily without looking it up.
-                     // For Phase 4, let's just write Peak/RMS. UI handles decay.
                      snaps->writeLevels(slot, static_cast<float>(peakL), static_cast<float>(peakR), rmsL, rmsR, rmsL, rmsR);
-                     
                      if (peakL >= 1.0 || peakR >= 1.0) {
                         snaps->setClip(slot, peakL >= 1.0, peakR >= 1.0);
                      }
                  }
             }
+        };
 
-            // C. Antigravity Mixing (Sum to Output)
+        // ---------------------------------------------------------
+        // B. Mixing Helper (Must be run sequentially or atomically)
+        // ---------------------------------------------------------
+        auto mixTrackToBus = [&](const RenderTrack& track) {
+            double* selfL = track.selfBuffer + bufferOffset * 2;
+            double* selfR = track.selfBuffer + bufferOffset * 2 + 1;
+            
             for (const auto& conn : track.activeConnections) {
                 double* destL = conn.destinationBufferL + bufferOffset * conn.stride;
                 double* destR = conn.destinationBufferR + bufferOffset * conn.stride;
@@ -1467,17 +1413,42 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
                 const double gainL = conn.gainL;
                 const double gainR = conn.gainR;
                 
-                // SIMD-friendly loop
-                // Buffer layout: Interleaved [L, R, L, R...]
                 for (uint32_t i = 0; i < numFrames; ++i) {
                     destL[i * stride] += selfL[i * 2] * gainL;
                     destR[i * stride] += selfR[i * 2] * gainR;
                 }
             }
             
-            // D. Clear Buffer for next block (Latency/Loop Support)
-            // D. Clear Buffer for next block (Latency/Loop Support)
+            // Clear Buffer for next block
             std::memset(track.selfBuffer + bufferOffset * 2, 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
+        };
+
+        // ---------------------------------------------------------
+        // Driver Loop (Parallel or Serial)
+        // ---------------------------------------------------------
+        if (m_multiThreadingEnabled.load(std::memory_order_relaxed) && m_threadPool && !tracks.empty()) {
+            // PARALLEL: Dispatch DSP
+            m_syncBarrier->reset(static_cast<int>(tracks.size()));
+            
+            for (const auto& track : tracks) {
+                m_threadPool->enqueue([&]() {
+                    processTrackDSP(track);
+                    m_syncBarrier->signal();
+                });
+            }
+            m_syncBarrier->wait();
+            
+            // SERIAL: Mix
+            for (const auto& track : tracks) {
+                mixTrackToBus(track);
+            }
+        } 
+        else {
+            // SERIAL FALLBACK
+            for (const auto& track : tracks) {
+                processTrackDSP(track);
+                mixTrackToBus(track);
+            }
         }
     }
     

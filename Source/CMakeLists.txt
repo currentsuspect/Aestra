@@ -18,8 +18,15 @@ set(NOMAD_DAW_SOURCES
 	TransportBar.cpp
 	TransportInfoContainer.h
 	TransportInfoContainer.cpp
-	AudioSettingsDialog.h
-	AudioSettingsDialog.cpp
+	SettingsDialog.h
+	SettingsDialog.cpp
+	ISettingsPage.h
+	AudioSettingsPage.h
+	AudioSettingsPage.cpp
+    GeneralSettingsPage.h
+    GeneralSettingsPage.cpp
+    AppearanceSettingsPage.h
+    AppearanceSettingsPage.cpp
 	FileBrowser.h
 	FileBrowser.cpp
 	FilePreviewPanel.h

@@ -78,6 +78,11 @@ public:
     void addChild(std::shared_ptr<NUIComponent> child);
     void removeChild(std::shared_ptr<NUIComponent> child);
     void removeAllChildren();
+
+    /**
+     * @brief Moves this component to the top of its parent's children list (rendered last, receives events first)
+     */
+    void bringToFront(); 
     
     NUIComponent* getParent() const { return parent_; }
     const std::vector<std::shared_ptr<NUIComponent>>& getChildren() const { return children_; }

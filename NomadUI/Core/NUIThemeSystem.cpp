@@ -186,6 +186,14 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "borderSubtle") return theme.borderSubtle;
     if (colorName == "borderActive") return theme.borderActive;
     if (colorName == "divider") return theme.divider;
+    if (colorName == "separator") return theme.divider; // Alias
+
+    // Window & Panel (Settings Dialog)
+    if (colorName == "window.background") return theme.backgroundPrimary;
+    if (colorName == "window.border") return theme.borderSubtle;
+    if (colorName == "panel.background") return theme.backgroundSecondary;
+    if (colorName == "list.hover") return theme.hover;
+    if (colorName == "textSelect") return theme.textPrimary;
     
     // Interactive States
     if (colorName == "hover") return theme.hover;

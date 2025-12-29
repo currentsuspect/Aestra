@@ -229,7 +229,8 @@ void NUIComponent::addChild(std::shared_ptr<NUIComponent> child) {
         child->parent_->removeChild(child);
     }
     
-    child->parent_ = this;
+    child->parent_ = this; // Raw pointer is safe because parent owns child (strong ref)
+    // No shared_from_this() needed unless we want weak_ptr parent, but here we use raw * for parent back-pointer
     children_.push_back(child);
     
     // Inherit theme if child doesn't have one
@@ -255,6 +256,24 @@ void NUIComponent::removeAllChildren() {
     }
     children_.clear();
     setDirty();
+}
+
+void NUIComponent::bringToFront() {
+    if (!parent_) return;
+    
+    auto& store = parent_->children_;
+    // Check if valid before searching
+    if (store.empty()) return;
+
+    // shared_from_this() is safe if we are managed by shared_ptr (which children usually are)
+    auto self = shared_from_this();
+
+    auto it = std::find(store.begin(), store.end(), self);
+    if (it != store.end() && it != std::prev(store.end())) {
+        store.erase(it);
+        store.push_back(self);
+        parent_->setDirty();
+    }
 }
 
 std::shared_ptr<NUIComponent> NUIComponent::findChildById(const std::string& id) {
