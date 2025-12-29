@@ -97,6 +97,7 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
         // Rounded hover effect
         renderer.fillRoundedRect(minimizeButtonRect_, 4.0f, hoverBgColor);
     }
+    minimizeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // White
     NUIPoint minCenter(minimizeButtonRect_.x + minimizeButtonRect_.width * 0.5f,
                        minimizeButtonRect_.y + minimizeButtonRect_.height * 0.5f);
     float iconOffset = 8.0f; // Center the 16px icon
@@ -111,8 +112,9 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     NUIPoint maxCenter(maximizeButtonRect_.x + maximizeButtonRect_.width * 0.5f,
                        maximizeButtonRect_.y + maximizeButtonRect_.height * 0.5f);
     
-    // Use appropriate icon based on maximized state
+    // Use appropriate icon based on maximized state and set to white
     auto& maxIcon = isMaximized_ ? restoreIcon_ : maximizeIcon_;
+    maxIcon->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // White
     maxIcon->setPosition(maxCenter.x - iconOffset, maxCenter.y - iconOffset);
     maxIcon->onRender(renderer);
     
@@ -120,10 +122,8 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     if (hoveredButton_ == HoverButton::Close) {
         // Rounded hover effect
         renderer.fillRoundedRect(closeButtonRect_, 4.0f, closeHoverBg);
-        closeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // White on red
-    } else {
-        closeIcon_->setColorFromTheme("textPrimary");
     }
+    closeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // Always white
     NUIPoint closeCenter(closeButtonRect_.x + closeButtonRect_.width * 0.5f,
                          closeButtonRect_.y + closeButtonRect_.height * 0.5f);
     closeIcon_->setPosition(closeCenter.x - iconOffset, closeCenter.y - iconOffset);
