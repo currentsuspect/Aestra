@@ -5,6 +5,7 @@
  */
 
 #include "TransportBar.h"
+#include "../NomadCore/include/NomadUnifiedProfiler.h"
 #include <sstream>
 #include <iomanip>
 #include <cmath>
@@ -579,6 +580,7 @@ void TransportBar::layoutComponents() {
 }
 
 void TransportBar::onRender(NomadUI::NUIRenderer& renderer) {
+    NOMAD_ZONE("Transport_Render");
     NomadUI::NUIRect bounds = getBounds();
     
     // Get Liminal Dark v2.0 theme colors

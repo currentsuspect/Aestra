@@ -5,6 +5,7 @@
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadUI/Core/NUIDragDrop.h"
 #include "../NomadCore/include/NomadLog.h"
+#include "../NomadCore/include/NomadUnifiedProfiler.h"
 #include <chrono>
 
 namespace Nomad {
@@ -162,6 +163,11 @@ void PatternBrowserPanel::onResize(int width, int height) {
 }
 
 void PatternBrowserPanel::onRender(NomadUI::NUIRenderer& renderer) {
+    NOMAD_ZONE("Arsenal_Render");
+    
+    // Skip rendering if not visible
+    if (!isVisible()) return;
+    
     auto b = getBounds();
     
     // Background - match file browser exactly

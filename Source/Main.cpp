@@ -34,7 +34,7 @@
 #include "../NomadAudio/include/AudioRT.h"
 #include "../NomadAudio/include/PreviewEngine.h"
 #include "../NomadCore/include/NomadLog.h"
-#include "../NomadCore/include/NomadProfiler.h"
+#include "../NomadCore/include/NomadUnifiedProfiler.h"
 #include "../NomadAudio/include/MiniAudioDecoder.h"
 #include "../NomadAudio/include/ClipSource.h"
 #include "../NomadAudio/include/WaveformCache.h"
@@ -48,9 +48,8 @@
 #include "FilePreviewPanel.h"
 #include "AudioVisualizer.h"
 #include "TrackUIComponent.h"
-#include "PerformanceHUD.h"
+#include "UnifiedHUD.h"
 #include "TrackManagerUI.h"
-#include "FPSDisplay.h"
 #include "ProjectSerializer.h"
 #include "ConfirmationDialog.h"
 #include "ViewTypes.h"
@@ -233,18 +232,13 @@ public:
         m_settingsDialog = dialog;
     }
     
-    void setFPSDisplay(std::shared_ptr<FPSDisplay> fpsDisplay) {
-        m_fpsDisplay = fpsDisplay;
-        addChild(m_fpsDisplay);
+    void setUnifiedHUD(std::shared_ptr<UnifiedHUD> hud) {
+        m_unifiedHUD = hud;
+        addChild(m_unifiedHUD);
     }
     
-    void setPerformanceHUD(std::shared_ptr<PerformanceHUD> perfHUD) {
-        m_performanceHUD = perfHUD;
-        addChild(m_performanceHUD);
-    }
-    
-    std::shared_ptr<PerformanceHUD> getPerformanceHUD() const {
-        return m_performanceHUD;
+    std::shared_ptr<UnifiedHUD> getUnifiedHUD() const {
+        return m_unifiedHUD;
     }
     
     void onUpdate(double deltaTime) override {
@@ -281,8 +275,7 @@ public:
 private:
     std::shared_ptr<NUICustomWindow> m_customWindow;
     std::shared_ptr<SettingsDialog> m_settingsDialog;
-    std::shared_ptr<FPSDisplay> m_fpsDisplay;
-    std::shared_ptr<PerformanceHUD> m_performanceHUD;
+    std::shared_ptr<UnifiedHUD> m_unifiedHUD;
 };
 
 /**
@@ -1008,22 +1001,16 @@ public:
         m_rootComponent->addChild(m_settingsDialog);
         m_rootComponent->setSettingsDialog(m_settingsDialog);
         
-        // Add confirmation dialog (on top of everything except FPS display)
+        // Add confirmation dialog (on top of everything except HUD)
         m_rootComponent->addChild(m_confirmationDialog);
         
-        // Create and add FPS display overlay (on top of everything)
-        auto fpsDisplay = std::make_shared<FPSDisplay>(m_adaptiveFPS.get());
-        m_rootComponent->setFPSDisplay(fpsDisplay);
-        m_fpsDisplay = fpsDisplay;
-        Log::info("FPS display overlay created");
-        
-        // Create and add Performance HUD (F12 to toggle)
-        auto perfHUD = std::make_shared<PerformanceHUD>();
-        perfHUD->setVisible(false); // Hidden by default
-        perfHUD->setAudioEngine(m_audioEngine.get());
-        m_rootComponent->setPerformanceHUD(perfHUD);
-        m_performanceHUD = perfHUD;
-        Log::info("Performance HUD created (press F12 to toggle)");
+        // Create and add Unified Performance HUD (F12 to toggle)
+        auto unifiedHUD = std::make_shared<UnifiedHUD>(m_adaptiveFPS.get());
+        unifiedHUD->setVisible(false); // Hidden by default
+        unifiedHUD->setAudioEngine(m_audioEngine.get());
+        m_rootComponent->setUnifiedHUD(unifiedHUD);
+        m_unifiedHUD = unifiedHUD;
+        Log::info("Unified Performance HUD created (press F12 to toggle)");
         
         // Debug: Verify dialog was added
         std::stringstream ss2;
@@ -1087,7 +1074,7 @@ public:
         
         while (m_running && m_window->processEvents()) {
             // Begin profiler frame
-            Profiler::getInstance().beginFrame();
+            UnifiedProfiler::getInstance().beginFrame();
             
             // Begin frame timing BEFORE any work
             auto frameStart = m_adaptiveFPS->beginFrame();
@@ -1312,7 +1299,7 @@ public:
                     if (m_content && m_content->getTrackManager()) {
                         m_content->getTrackManager()->setOutputSampleRate(actualRate);
                     }
-                    Profiler::getInstance().setAudioLoad(trackManager->getAudioLoadPercent());
+                    UnifiedProfiler::getInstance().setAudioLoad(trackManager->getAudioLoadPercent());
                 }
             }
             
@@ -1335,10 +1322,10 @@ public:
                 };
                 countWidgets(m_rootComponent.get());
             }
-            Profiler::getInstance().setWidgetCount(widgetCount);
+            UnifiedProfiler::getInstance().setWidgetCount(widgetCount);
             
             // End profiler frame
-            Profiler::getInstance().endFrame();
+            UnifiedProfiler::getInstance().endFrame();
         }
 
         Log::info("Exiting main loop");
@@ -1702,13 +1689,9 @@ private:
                 m_adaptiveFPS->setMode(newMode);
                 
             } else if (key == static_cast<int>(KeyCode::F12) && pressed && !hasModifiers) {
-                // F12 key to toggle FPS display overlay AND Performance HUD
-                if (m_fpsDisplay) {
-                    m_fpsDisplay->toggle();
-                }
-                
-                if (m_performanceHUD) {
-                    m_performanceHUD->toggle();
+                // F12 key to toggle Unified Performance HUD
+                if (m_unifiedHUD) {
+                    m_unifiedHUD->toggle();
                 }
             } else if (key == static_cast<int>(KeyCode::L) && pressed && !hasModifiers) {
                 // L key to toggle adaptive FPS logging
@@ -1732,7 +1715,7 @@ private:
                 }
             } else if (key == static_cast<int>(KeyCode::O) && pressed && !hasModifiers) {
                 // O key export profiler data to JSON
-                Profiler::getInstance().exportToJSON("nomad_profile.json");
+                UnifiedProfiler::getInstance().exportToJSON("nomad_profile.json");
             } else if (key == static_cast<int>(KeyCode::Tab) && pressed && !hasModifiers) {
                 // Tab key to toggle playlist visibility
                  if (m_content && m_content->getTrackManagerUI()) {
@@ -1860,17 +1843,32 @@ private:
             colorLogged = true;
         }
         
-        m_renderer->clear(bgColor);
+        {
+            NOMAD_ZONE("Render_Clear");
+            m_renderer->clear(bgColor);
+        }
 
-        m_renderer->beginFrame();
+        {
+            NOMAD_ZONE("Render_BeginFrame");
+            m_renderer->beginFrame();
+        }
 
-        // Render root component (which contains custom window)
-        m_rootComponent->onRender(*m_renderer);
+        {
+            NOMAD_ZONE("Render_UITree");
+            // Render root component (which contains custom window)
+            m_rootComponent->onRender(*m_renderer);
+        }
         
-        // Render drag ghost on top of everything (if dragging)
-        NUIDragDropManager::getInstance().renderDragGhost(*m_renderer);
+        {
+            NOMAD_ZONE("Render_DragDrop");
+            // Render drag ghost on top of everything (if dragging)
+            NUIDragDropManager::getInstance().renderDragGhost(*m_renderer);
+        }
 
-        m_renderer->endFrame();
+        {
+            NOMAD_ZONE("Render_EndFrame");
+            m_renderer->endFrame();
+        }
     }
 
     // ==============================
@@ -2007,21 +2005,21 @@ private:
         
         menu->addSeparator();
         
-        // Performance HUD checkbox
-        bool perfVisible = m_performanceHUD && m_performanceHUD->isVisible();
-        menu->addCheckbox("Performance Stats (F12)", perfVisible, [this](bool) {
+        // Unified Performance HUD checkbox
+        bool unifiedHudVisible = m_unifiedHUD && m_unifiedHUD->isVisible();
+        menu->addCheckbox("Performance Stats (F12)", unifiedHudVisible, [this](bool) {
             Log::info("View > Performance Stats toggled");
-            if (m_performanceHUD) {
-                m_performanceHUD->setVisible(!m_performanceHUD->isVisible());
+            if (m_unifiedHUD) {
+                m_unifiedHUD->toggle();
             }
         });
         
-        // FPS Counter checkbox
-        bool fpsVisible = m_fpsDisplay && m_fpsDisplay->isVisible();
-        menu->addCheckbox("FPS Counter", fpsVisible, [this](bool) {
-            Log::info("View > FPS Counter toggled");
-            if (m_fpsDisplay) {
-                m_fpsDisplay->setVisible(!m_fpsDisplay->isVisible());
+        // Performance HUD checkbox (FPS, Audio, Frame Timing)
+        bool hudVisible = m_unifiedHUD && m_unifiedHUD->isVisible();
+        menu->addCheckbox("Performance Stats (F12)", hudVisible, [this](bool) {
+            Log::info("View > Performance Stats toggled");
+            if (m_unifiedHUD) {
+                m_unifiedHUD->toggle();
             }
         });
         
@@ -2184,8 +2182,7 @@ private:
     std::shared_ptr<SettingsDialog> m_settingsDialog;
     std::shared_ptr<AudioSettingsPage> m_audioSettingsPage; // Accessed by audio callback
     std::shared_ptr<ConfirmationDialog> m_confirmationDialog;
-    std::shared_ptr<FPSDisplay> m_fpsDisplay;
-    std::shared_ptr<PerformanceHUD> m_performanceHUD;
+    std::shared_ptr<UnifiedHUD> m_unifiedHUD;
     std::unique_ptr<NomadUI::NUIAdaptiveFPS> m_adaptiveFPS;
     NomadUI::NUIFrameProfiler m_profiler;  // Legacy profiler (can be removed later)
     bool m_running;

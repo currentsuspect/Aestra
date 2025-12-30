@@ -114,6 +114,10 @@ public:
     void updateUI();
     void renderControlOverlay(NomadUI::NUIRenderer& renderer);
 
+    // Split rendering for optimization (Static = Cached, Dynamic = Real-time)
+    void renderStatic(NomadUI::NUIRenderer& renderer);
+    void renderDynamic(NomadUI::NUIRenderer& renderer);
+
 protected:
     void onRender(NomadUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;

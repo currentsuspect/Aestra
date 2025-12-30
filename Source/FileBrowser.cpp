@@ -10,6 +10,7 @@
 #include "../NomadAudio/include/MiniAudioDecoder.h"
 #include "../NomadPlat/include/NomadPlatform.h"
 #include "../NomadUI/Platform/NUIPlatformBridge.h"
+#include "../NomadCore/include/NomadUnifiedProfiler.h"
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
@@ -644,6 +645,11 @@ void FileBrowser::processScanResults() {
 // =============================================================================
 
 void FileBrowser::onRender(NUIRenderer& renderer) {
+    NOMAD_ZONE("FileBrowser_Render");
+    
+    // Skip rendering if not visible
+    if (!isVisible()) return;
+    
     NUIRect bounds = getBounds();
     if (bounds.isEmpty()) return;
     

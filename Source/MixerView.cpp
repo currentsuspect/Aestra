@@ -3,6 +3,7 @@
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
+#include "../NomadCore/include/NomadUnifiedProfiler.h"
 #include <algorithm>
 
 namespace Nomad {
@@ -73,6 +74,7 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
 }
 
 void ChannelStrip::onRender(NomadUI::NUIRenderer& renderer) {
+    NOMAD_ZONE("ChannelStrip_Render");
     auto& theme = NomadUI::NUIThemeManager::getInstance();
     auto bounds = getBounds();
     
@@ -188,6 +190,11 @@ MixerView::MixerView(std::shared_ptr<TrackManager> trackManager)
 }
 
 void MixerView::onRender(NomadUI::NUIRenderer& renderer) {
+    NOMAD_ZONE("Mixer_Render");
+    
+    // Skip rendering if not visible
+    if (!isVisible()) return;
+    
     auto& theme = NomadUI::NUIThemeManager::getInstance();
     auto bounds = getBounds();
     

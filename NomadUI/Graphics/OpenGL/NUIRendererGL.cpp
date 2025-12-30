@@ -89,9 +89,22 @@ static const char* vertexShaderSource = R"(
 layout(location = 0) in vec2 aPos;
 layout(location = 1) in vec2 aTexCoord;
 layout(location = 2) in vec4 aColor;
+// Batching Attributes
+layout(location = 3) in vec2 aRectSize;
+layout(location = 4) in vec2 aQuadSize;
+layout(location = 5) in float aRadius;
+layout(location = 6) in float aBlur;
+layout(location = 7) in float aStrokeWidth;
+layout(location = 8) in float aPrimitiveType;
 
 out vec2 vTexCoord;
 out vec4 vColor;
+out vec2 vRectSize;
+out vec2 vQuadSize;
+out float vRadius;
+out float vBlur;
+out float vStrokeWidth;
+out float vPrimitiveType;
 
 uniform mat4 uProjection;
 
@@ -99,6 +112,12 @@ void main() {
     gl_Position = uProjection * vec4(aPos, 0.0, 1.0);
     vTexCoord = aTexCoord;
     vColor = aColor;
+    vRectSize = aRectSize;
+    vQuadSize = aQuadSize;
+    vRadius = aRadius;
+    vBlur = aBlur;
+    vStrokeWidth = aStrokeWidth;
+    vPrimitiveType = aPrimitiveType;
 }
 )";
 
@@ -106,17 +125,16 @@ static const char* fragmentShaderSource = R"(
 #version 330 core
 in vec2 vTexCoord;
 in vec4 vColor;
+in vec2 vRectSize;
+in vec2 vQuadSize;
+in float vRadius;
+in float vBlur;
+in float vStrokeWidth;
+in float vPrimitiveType;
 
 out vec4 FragColor;
 
-uniform int uPrimitiveType;
-uniform float uRadius;
-uniform float uBlur;
-uniform float uRectWidth;
-uniform float uRectHeight;
-uniform float uQuadWidth;
-uniform float uQuadHeight;
-uniform float uStrokeWidth;
+// uniform int uPrimitiveType; // REMOVED: Now passed as vertex attribute
 uniform sampler2D uTexture;
 uniform bool uUseTexture;
 
@@ -129,11 +147,12 @@ float sdRoundedRect(vec2 p, vec2 size, float radius) {
 
 void main() {
     vec4 color = vColor;
+    int primitiveID = int(floor(vPrimitiveType + 0.5));
     
-    // Apply texture if enabled
-    if (uUseTexture) {
+    // Apply texture if enabled (Only for Image=0, SDFText=2, BitmapText=4)
+    if (uUseTexture && (primitiveID == 0 || primitiveID == 2 || primitiveID == 4)) {
         vec4 texColor = texture(uTexture, vTexCoord);
-        if (uPrimitiveType == 2) {
+        if (primitiveID == 2) {
              // SDF Text Rendering - ultra crisp
              float dist = texColor.r;
              
@@ -156,7 +175,7 @@ void main() {
              alpha = pow(alpha, 1.15); // Gamma correction-ish
              
              color.a *= alpha;
-        } else if (uPrimitiveType == 4) {
+        } else if (primitiveID == 4) {
                // Bitmap text rendering (coverage stored in alpha)
                float coverageAlpha = texColor.a;
                // We use standard (non-premultiplied) alpha blending: SRC_ALPHA, ONE_MINUS_SRC_ALPHA.
@@ -169,22 +188,22 @@ void main() {
         }
     }
     
-    if (uPrimitiveType == 1) {
+    if (primitiveID == 1) {
         // Filled rounded rectangle / Shadow
-        vec2 pos = (vTexCoord - 0.5) * vec2(uQuadWidth, uQuadHeight);
-        float dist = sdRoundedRect(pos, vec2(uRectWidth, uRectHeight) * 0.5, uRadius);
-        float alpha = 1.0 - smoothstep(-uBlur, uBlur, dist);
+        vec2 pos = (vTexCoord - 0.5) * vQuadSize;
+        float dist = sdRoundedRect(pos, vRectSize * 0.5, vRadius);
+        float alpha = 1.0 - smoothstep(-vBlur, vBlur, dist);
         color.a *= alpha;
     }
     
-    if (uPrimitiveType == 3) {
+    if (primitiveID == 3) {
         // Stroked rounded rectangle using SDF
-        vec2 pos = (vTexCoord - 0.5) * vec2(uQuadWidth, uQuadHeight);
-        float dist = sdRoundedRect(pos, vec2(uRectWidth, uRectHeight) * 0.5, uRadius);
+        vec2 pos = (vTexCoord - 0.5) * vQuadSize;
+        float dist = sdRoundedRect(pos, vRectSize * 0.5, vRadius);
         // Create stroke by checking if distance is near the edge
-        float halfStroke = uStrokeWidth * 0.5;
-        float outerAlpha = 1.0 - smoothstep(-uBlur, uBlur, dist - halfStroke);
-        float innerAlpha = 1.0 - smoothstep(-uBlur, uBlur, dist + halfStroke);
+        float halfStroke = vStrokeWidth * 0.5;
+        float outerAlpha = 1.0 - smoothstep(-vBlur, vBlur, dist - halfStroke);
+        float innerAlpha = 1.0 - smoothstep(-vBlur, vBlur, dist + halfStroke);
         float alpha = outerAlpha - innerAlpha;
         color.a *= alpha;
     }
@@ -376,6 +395,14 @@ void NUIRendererGL::resize(int width, int height) {
 // ============================================================================
 
 void NUIRendererGL::beginFrame() {
+    // Enforce 2D rendering state at the start of every frame
+    // This protects against state pollution from other renderers (e.g. plugins, 3D views)
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     vertices_.clear();
     indices_.clear();
     frameCounter_++;
@@ -433,19 +460,50 @@ void NUIRendererGL::popTransform() {
 }
 
 void NUIRendererGL::setClipRect(const NUIRect& rect) {
+    flush(); // Must flush before changing scissor state!
     glEnable(GL_SCISSOR_TEST);
+    scissorEnabled_ = true;
+    
+    // Transform the rect to global screen coordinates (pixels)
+    // Points: Top-Left and Bottom-Right
+    float x1 = rect.x;
+    float y1 = rect.y;
+    float x2 = rect.right();
+    float y2 = rect.bottom();
+    
+    // Apply transform stack manually
+    if (!transformStack_.empty()) {
+        struct Transform { float tx, ty, rot, scale; };
+        for (const auto& t : transformStack_) {
+            // Apply scale
+            x1 *= t.scale;
+            y1 *= t.scale;
+            x2 *= t.scale;
+            y2 *= t.scale;
+            
+            // Apply translation
+            x1 += t.tx;
+            y1 += t.ty;
+            x2 += t.tx;
+            y2 += t.ty;
+        }
+    }
+    
+    // Normalize if scale was negative (unlikely but safe)
+    if (x1 > x2) std::swap(x1, x2);
+    if (y1 > y2) std::swap(y1, y2);
     
     // Correct rounding to prevent shrinking (floor min, ceil max)
-    int glX = static_cast<int>(std::floor(rect.x));
-    int glRight = static_cast<int>(std::ceil(rect.x + rect.width));
+    int glX = static_cast<int>(std::floor(x1));
+    int glRight = static_cast<int>(std::ceil(x2));
     int glWidth = std::max(0, glRight - glX);
     
     // Convert to GL coords (bottom-up)
-    // Range in UI (y-down): [rect.y, rect.y + rect.height]
-    // Range in GL (y-up):   [height_ - (rect.y + rect.height), height_ - rect.y]
-    // We want to encompass this range fully.
-    float bottomGL = static_cast<float>(height_) - (rect.y + rect.height);
-    float topGL = static_cast<float>(height_) - rect.y;
+    // Range in UI (y-down): [y1, y2]
+    // Range in GL (y-up):   [height_ - y2, height_ - y1]
+    
+    float bottomGL = static_cast<float>(height_) - y2;
+    float topGL = static_cast<float>(height_) - y1;
     
     int glY = static_cast<int>(std::floor(bottomGL));
     int glTop = static_cast<int>(std::ceil(topGL));
@@ -459,6 +517,7 @@ void NUIRendererGL::setClipRect(const NUIRect& rect) {
 
 
 void NUIRendererGL::clearClipRect() {
+    flush(); // Must flush before changing scissor state to prevent spilling/ruined layout
     glDisable(GL_SCISSOR_TEST);
     scissorEnabled_ = false;
 }
@@ -477,54 +536,49 @@ void NUIRendererGL::fillRect(const NUIRect& rect, const NUIColor& color) {
 }
 
 void NUIRendererGL::fillRoundedRect(const NUIRect& rect, float radius, const NUIColor& color) {
-    // Check if we need to flush (state change or size change)
-    // Note: uQuadSize and uRectSize are uniforms, so we must flush if they change.
-    // For simple rounded rects, QuadSize == RectSize.
-    if (currentPrimitiveType_ != 1 || 
-        currentRadius_ != radius || 
-        currentBlur_ != 1.0f || 
-        currentSize_.width != rect.width || 
-        currentSize_.height != rect.height) {
-        flush();
-    }
+    // Batching enabled! We pass size and radius as vertex attributes.
+    // Dimensions for both Rect and Quad are the same for standard rounded rects.
+    float w = rect.width;
+    float h = rect.height;
     
-    currentPrimitiveType_ = 1;
-    currentRadius_ = radius;
-    currentBlur_ = 1.0f; // 1px blur for anti-aliasing
-    currentSize_ = {rect.width, rect.height};
-    currentQuadSize_ = {rect.width, rect.height};
-    
-    addQuad(rect, color);
+    // Blur is 1.0f for standard anti-aliasing
+    // Snap to integers for sharp filling without subpixel shifts
+    NomadUI::NUIRect snapped = rect;
+    snapped.x = std::floor(rect.x);
+    snapped.y = std::floor(rect.y);
+    snapped.width = std::round(rect.width);
+    snapped.height = std::round(rect.height);
+
+    // Standard behavior: Clamp radius to fit
+    float safeRadius = std::min(radius, std::min(snapped.width * 0.5f, snapped.height * 0.5f));
+    addQuad(snapped, color, snapped.width, snapped.height, snapped.width, snapped.height, safeRadius, 1.0f, 0.0f, 1.0f);
 }
 
 void NUIRendererGL::strokeRect(const NUIRect& rect, float thickness, const NUIColor& color) {
     // Draw 4 lines
-    drawLine(NUIPoint({rect.x, rect.y}), NUIPoint({rect.right(), rect.y}), thickness, color);
-    drawLine(NUIPoint({rect.right(), rect.y}), NUIPoint({rect.right(), rect.bottom()}), thickness, color);
-    drawLine(NUIPoint({rect.right(), rect.bottom()}), NUIPoint({rect.x, rect.bottom()}), thickness, color);
-    drawLine(NUIPoint({rect.x, rect.bottom()}), NUIPoint({rect.x, rect.y}), thickness, color);
+    // Inset the Right and Bottom lines by 1.0f so they stay INSIDE the clip rect (which is integer aligned)
+    // This prevents the "aggressive cutoff" where the stroke width causes it to cross the clip boundary.
+    drawLine(NUIPoint({rect.x, rect.y}), NUIPoint({rect.right() - 1.0f, rect.y}), thickness, color);
+    drawLine(NUIPoint({rect.right() - 1.0f, rect.y}), NUIPoint({rect.right() - 1.0f, rect.bottom() - 1.0f}), thickness, color);
+    drawLine(NUIPoint({rect.right() - 1.0f, rect.bottom() - 1.0f}), NUIPoint({rect.x, rect.bottom() - 1.0f}), thickness, color);
+    drawLine(NUIPoint({rect.x, rect.bottom() - 1.0f}), NUIPoint({rect.x, rect.y}), thickness, color);
 }
 
 void NUIRendererGL::strokeRoundedRect(const NUIRect& rect, float radius, float thickness, const NUIColor& color) {
-    // Use SDF-based shader for smooth anti-aliased strokes
-    // Check if we need to flush (state change)
-    if (currentPrimitiveType_ != 3 || 
-        currentRadius_ != radius || 
-        currentBlur_ != 1.0f || 
-        currentStrokeWidth_ != thickness ||
-        currentSize_.width != rect.width || 
-        currentSize_.height != rect.height) {
-        flush();
-    }
+    float w = rect.width;
+    float h = rect.height;
     
-    currentPrimitiveType_ = 3;  // Stroked rounded rect
-    currentRadius_ = radius;
-    currentBlur_ = 1.0f;  // 1px blur for anti-aliasing
-    currentStrokeWidth_ = thickness;
-    currentSize_ = {rect.width, rect.height};
-    currentQuadSize_ = {rect.width, rect.height};
-    
-    addQuad(rect, color);
+    // Blur 1.0f for AA
+    // Snap to pixel grid + 0.5f, BUT reduce width/height by 1.0f to keep stroke INSIDE integers
+    NomadUI::NUIRect snapped = rect;
+    snapped.x = std::floor(rect.x) + 0.5f;
+    snapped.y = std::floor(rect.y) + 0.5f;
+    snapped.width = std::round(rect.width) - 1.0f;
+    snapped.height = std::round(rect.height) - 1.0f;
+
+    // Standard behavior: Clamp radius to fit
+    float safeRadius = std::min(radius, std::min(snapped.width * 0.5f, snapped.height * 0.5f));
+    addQuad(snapped, color, snapped.width, snapped.height, snapped.width, snapped.height, safeRadius, 1.0f, thickness, 3.0f);
 }
 
 void NUIRendererGL::fillCircle(const NUIPoint& center, float radius, const NUIColor& color) {
@@ -582,18 +636,50 @@ void NUIRendererGL::drawLine(const NUIPoint& start, const NUIPoint& end, float t
     float len = std::sqrt(dx * dx + dy * dy);
     
     if (len < 0.001f) return;
+
+    // Sub-pixel Snapping for crisp 1px lines (Horizontal/Vertical only)
+    float x1 = start.x;
+    float y1 = start.y;
+    float x2 = end.x;
+    float y2 = end.y;
+
+    const float kSnapThreshold = 0.1f;
+    if (thickness < 1.5f) { // Only snap thin lines
+        if (std::abs(dx) < kSnapThreshold) { // Vertical
+            // Snap X to pixel center (N.5)
+            float snappedX = std::floor(x1) + 0.5f;
+            x1 = snappedX;
+            x2 = snappedX;
+            // Snap Y to nearest integer
+            y1 = std::round(y1);
+            y2 = std::round(y2);
+        } else if (std::abs(dy) < kSnapThreshold) { // Horizontal
+            // Snap Y to pixel center (N.5)
+            float snappedY = std::floor(y1) + 0.5f;
+            y1 = snappedY;
+            y2 = snappedY;
+            // Snap X to nearest integer
+            x1 = std::round(x1);
+            x2 = std::round(x2);
+        }
+    }
     
+    dx = x2 - x1;
+    dy = y2 - y1; // Recompute deltas
+    len = std::sqrt(dx * dx + dy * dy);
+    if (len < 0.001f) return;
+
     float nx = -dy / len * thickness * 0.5f;
     float ny = dx / len * thickness * 0.5f;
     
-    // Use UVs (0,0) to ensure texture sampling (if accidentally enabled) samples corner
-    // But more importantly, ensure we are not using texture in shader
-    // The flush() above handles the batch break, but we rely on flush() to update uniforms.
+    // Use Type 5 (Colored Geometry) for perfectly solid, non-aliased rendering when snapped
+    // SDF (Type 1) is too soft for 1px lines (alpha falloff causes "dotted" look)
+    // We pass 0 for UVs/Sizes as regular geometry doesn't need them
     
-    addVertex(start.x + nx, start.y + ny, 0, 0, color);
-    addVertex(start.x - nx, start.y - ny, 0, 0, color); // Fix UVs to be consistent 0,0
-    addVertex(end.x - nx, end.y - ny, 0, 0, color);
-    addVertex(end.x + nx, end.y + ny, 0, 0, color);
+    addVertex(x1 + nx, y1 + ny, 0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x1 - nx, y1 - ny, 0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f); 
+    addVertex(x2 - nx, y2 - ny, 0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x2 + nx, y2 + ny, 0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
     
     uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
     indices_.push_back(base + 0);
@@ -612,6 +698,9 @@ void NUIRendererGL::drawPolyline(const NUIPoint* points, int count, float thickn
 }
 
 void NUIRendererGL::fillWaveform(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, const NUIColor& color) {
+    // Flush previous batch if untyped or different type to ensure clean state
+    ensureBasicPrimitive();
+    
     if (count < 2) return;
     
     ensureBasicPrimitive();
@@ -627,9 +716,11 @@ void NUIRendererGL::fillWaveform(const NUIPoint* topPoints, const NUIPoint* bott
     uint32_t baseIndex = static_cast<uint32_t>(vertices_.size());
     
     // Add all vertices - addVertex handles transform internally
+    // Use Type 5 (Colored Geometry) for solid crisp rendering
+    // Arguments: x, y, u, v, color, rw, rh, qw, qh, radius, blur, strokeWidth, type
     for (int i = 0; i < count; ++i) {
-        addVertex(topPoints[i].x, topPoints[i].y, 0, 0, color);
-        addVertex(bottomPoints[i].x, bottomPoints[i].y, 0, 1, color);
+        addVertex(topPoints[i].x, topPoints[i].y, 0, 0, color, 0, 0, 0, 0, 0, 0, 0, 5.0f);
+        addVertex(bottomPoints[i].x, bottomPoints[i].y, 0, 1, color, 0, 0, 0, 0, 0, 0, 0, 5.0f);
     }
     
     // Build triangle strip indices
@@ -654,9 +745,10 @@ void NUIRendererGL::fillWaveform(const NUIPoint* topPoints, const NUIPoint* bott
 
 void NUIRendererGL::fillWaveformGradient(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, 
                                           const NUIColor& colorTop, const NUIColor& colorBottom) {
-    if (count < 2) return;
-    
+    // Flush previous batch if untyped or different type
     ensureBasicPrimitive();
+
+    if (count < 2) return;
 
     // Ensure we are not using a texture (batch breaking)
     if (currentTextureId_ != 0) {
@@ -668,9 +760,11 @@ void NUIRendererGL::fillWaveformGradient(const NUIPoint* topPoints, const NUIPoi
     uint32_t baseIndex = static_cast<uint32_t>(vertices_.size());
     
     // Add vertices with different colors for top and bottom edges
+    // Fixed: Use Type 5 (Colored Geometry) to prevent texture sampling
+    // Arguments: x, y, u, v, color, rw, rh, qw, qh, radius, blur, strokeWidth, type
     for (int i = 0; i < count; ++i) {
-        addVertex(topPoints[i].x, topPoints[i].y, 0, 0, colorTop);
-        addVertex(bottomPoints[i].x, bottomPoints[i].y, 0, 1, colorBottom);
+        addVertex(topPoints[i].x, topPoints[i].y, 0, 0, colorTop, 0, 0, 0, 0, 0, 0, 0, 5.0f);
+        addVertex(bottomPoints[i].x, bottomPoints[i].y, 0, 1, colorBottom, 0, 0, 0, 0, 0, 0, 0, 5.0f);
     }
     
     // Build triangle strip indices
@@ -764,25 +858,10 @@ void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY
     shadowQuad.width += spread * 2.0f;
     shadowQuad.height += spread * 2.0f;
     
-    // Flush if state changes
-    if (currentPrimitiveType_ != 1 || 
-        currentRadius_ != 8.0f || // Default radius for shadows
-        currentBlur_ != blur ||
-        currentSize_.width != rect.width || 
-        currentSize_.height != rect.height ||
-        currentQuadSize_.width != shadowQuad.width ||
-        currentQuadSize_.height != shadowQuad.height) {
-        flush();
-    }
-    
-    currentPrimitiveType_ = 1;
-    currentRadius_ = 8.0f;
-    currentBlur_ = blur;
-    currentSize_ = {rect.width, rect.height};
-    currentQuadSize_ = {shadowQuad.width, shadowQuad.height};
-    
-    // Use the passed color (alpha should be handled by caller or config)
-    addQuad(shadowQuad, color);
+    // Pass RectSize (logic size) and QuadSize (drawing size) separately
+    // Radius fixed at 8.0f for standard shadows for now, matching previous logic
+    // Type 1 = Filled Rect (Shadows use same SDF logic with blur)
+    addQuad(shadowQuad, color, rect.width, rect.height, shadowQuad.width, shadowQuad.height, 8.0f, blur, 0.0f, 1.0f);
 }
 
 // ============================================================================
@@ -791,19 +870,14 @@ void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY
 
 void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) {
     // Use FreeType atlas for ALL text - consistent rendering
-    // The atlas is rendered at 48px and scaled for all sizes
     
     if (fontInitialized_) {
-        // Choose atlas based on target size to avoid heavy minification (fragmentation) and keep
-        // common UI sizes (14–17px) crisp.
-        const bool useSmallAtlas = (fontSize <= 13.0f);
-        const bool useMediumAtlas = (!useSmallAtlas && fontSize <= 17.0f);
-        const int atlasSize = useSmallAtlas ? atlasFontSizeSmall_ : (useMediumAtlas ? atlasFontSizeMedium_ : atlasFontSize_);
-        const float ascent = useSmallAtlas ? fontAscentSmall_ : (useMediumAtlas ? fontAscentMedium_ : fontAscent_);
-
+        // Use centralized atlas selection
+        AtlasInfo atlas = selectAtlas(fontSize);
+        
         // Scale factor from baked atlas to requested fontSize
-        float scale = fontSize / static_cast<float>(atlasSize);
-        float scaledAscent = ascent * scale;
+        float scale = fontSize / static_cast<float>(atlas.atlasSize);
+        float scaledAscent = atlas.ascent * scale;
 
         renderTextWithFont(text, NUIPoint(position.x, position.y + scaledAscent), fontSize, color);
         return;
@@ -823,6 +897,7 @@ void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, 
     }
 }
 
+
 // ============================================================================
 // High-Quality Text Rendering Helpers
 // ============================================================================
@@ -837,6 +912,38 @@ float NUIRendererGL::getDPIScale() {
     }
 #endif
     return 1.0f; // Default scale
+}
+
+NUIRendererGL::AtlasInfo NUIRendererGL::selectAtlas(float fontSize) const {
+    AtlasInfo info;
+    
+    const bool useSmallAtlas = (fontSize <= 13.0f);
+    const bool useMediumAtlas = (!useSmallAtlas && fontSize <= 17.0f);
+    
+    if (useSmallAtlas && fontAtlasTextureIdSmall_ != 0 && atlasFontSizeSmall_ > 0) {
+        info.textureId = fontAtlasTextureIdSmall_;
+        info.atlasSize = atlasFontSizeSmall_;
+        info.ascent = fontAscentSmall_;
+        info.descent = fontDescentSmall_;
+        info.lineHeight = fontLineHeightSmall_;
+        info.cache = &fontCacheSmall_;
+    } else if (useMediumAtlas && fontAtlasTextureIdMedium_ != 0 && atlasFontSizeMedium_ > 0) {
+        info.textureId = fontAtlasTextureIdMedium_;
+        info.atlasSize = atlasFontSizeMedium_;
+        info.ascent = fontAscentMedium_;
+        info.descent = fontDescentMedium_;
+        info.lineHeight = fontLineHeightMedium_;
+        info.cache = &fontCacheMedium_;
+    } else {
+        info.textureId = fontAtlasTextureId_;
+        info.atlasSize = atlasFontSize_;
+        info.ascent = fontAscent_;
+        info.descent = fontDescent_;
+        info.lineHeight = fontLineHeight_;
+        info.cache = &fontCache_;
+    }
+    
+    return info;
 }
 
 void NUIRendererGL::drawCleanCharacter(char c, float x, float y, float width, float height, const NUIColor& color) {
@@ -1550,75 +1657,92 @@ NUIRenderer::FontMetrics NUIRendererGL::getFontMetrics(float fontSize) const {
 NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
     // IMPORTANT: drawText() renders via the FreeType atlas path; prefer matching metrics here
     // so layout (centering/truncation) matches what actually hits the screen.
+    
+    // Handle empty text quickly
     if (text.empty()) {
         if (fontInitialized_) {
-            const bool useSmallAtlas = (fontSize <= 13.0f);
-            const bool useMediumAtlas = (!useSmallAtlas && fontSize <= 17.0f);
-            const int atlasSize = useSmallAtlas ? atlasFontSizeSmall_ : (useMediumAtlas ? atlasFontSizeMedium_ : atlasFontSize_);
-            const float lineHeight = useSmallAtlas ? fontLineHeightSmall_ : (useMediumAtlas ? fontLineHeightMedium_ : fontLineHeight_);
-            if (atlasSize > 0) {
-                float scale = fontSize / static_cast<float>(atlasSize);
-                return {0.0f, lineHeight * scale};
+            AtlasInfo atlas = selectAtlas(fontSize);
+            if (atlas.atlasSize > 0) {
+                float scale = fontSize / static_cast<float>(atlas.atlasSize);
+                return {0.0f, atlas.lineHeight * scale};
             }
         }
         return {0.0f, fontSize};
     }
 
+    // Check measurement cache first (major performance optimization for repeated strings)
+    TextMeasurementKey cacheKey{text, fontSize};
+    auto cacheIt = textMeasurementCache_.find(cacheKey);
+    if (cacheIt != textMeasurementCache_.end()) {
+        return cacheIt->second;
+    }
+
+    NUISize result;
+
     if (fontInitialized_) {
         try {
-            float totalWidth = 0.0f;
-            const bool useSmallAtlas = (fontSize <= 13.0f);
-            const bool useMediumAtlas = (!useSmallAtlas && fontSize <= 17.0f);
-            const int atlasSize = useSmallAtlas ? atlasFontSizeSmall_ : (useMediumAtlas ? atlasFontSizeMedium_ : atlasFontSize_);
-            const float lineHeight = useSmallAtlas ? fontLineHeightSmall_ : (useMediumAtlas ? fontLineHeightMedium_ : fontLineHeight_);
-            const auto& cache = useSmallAtlas ? fontCacheSmall_ : (useMediumAtlas ? fontCacheMedium_ : fontCache_);
-            if (atlasSize <= 0) {
-                return {text.length() * fontSize * 0.6f, fontSize};
-            }
-            float scale = fontSize / static_cast<float>(atlasSize);
-            FT_UInt previousGlyph = 0;
+            AtlasInfo atlas = selectAtlas(fontSize);
+            if (atlas.atlasSize <= 0 || atlas.cache == nullptr) {
+                result = {text.length() * fontSize * 0.6f, fontSize};
+            } else {
+                float totalWidth = 0.0f;
+                float scale = fontSize / static_cast<float>(atlas.atlasSize);
+                FT_UInt previousGlyph = 0;
 
-            // UTF-8 decode loop
-            size_t index = 0;
-            while (index < text.length()) {
-                uint32_t codepoint = decodeUTF8(text, index);
-                if (codepoint == 0) break;
-                
-                auto it = cache.find(codepoint);
-                if (it == cache.end()) continue;
+                // UTF-8 decode loop
+                size_t index = 0;
+                while (index < text.length()) {
+                    uint32_t codepoint = decodeUTF8(text, index);
+                    if (codepoint == 0) break;
+                    
+                    auto it = atlas.cache->find(codepoint);
+                    if (it == atlas.cache->end()) continue;
 
-                const FontData& glyph = it->second;
+                    const FontData& glyph = it->second;
 
-                if (fontHasKerning_ && previousGlyph != 0 && glyph.glyphIndex != 0) {
-                    FT_Vector kerning = {0, 0};
-                    if (FT_Get_Kerning(ftFace_, previousGlyph, glyph.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
-                        totalWidth += (kerning.x / 64.0f) * scale; // Float precision
+                    if (fontHasKerning_ && previousGlyph != 0 && glyph.glyphIndex != 0) {
+                        FT_Vector kerning = {0, 0};
+                        if (FT_Get_Kerning(ftFace_, previousGlyph, glyph.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
+                            totalWidth += (kerning.x / 64.0f) * scale;
+                        }
                     }
+
+                    totalWidth += (glyph.advance / 64.0f) * scale;
+                    previousGlyph = glyph.glyphIndex;
                 }
 
-                totalWidth += (glyph.advance / 64.0f) * scale; // Float precision
-                previousGlyph = glyph.glyphIndex;
+                result = {totalWidth, atlas.lineHeight * scale};
             }
-
-            return {totalWidth, lineHeight * scale};
         } catch (...) {
             // Fallback to simple estimation
-            return {text.length() * fontSize * 0.6f, fontSize};
+            result = {text.length() * fontSize * 0.6f, fontSize};
+        }
+    } else {
+        // Fallback: SDF measurement (if atlas text isn't available).
+        if (!useSDFText_ && !triedSDFInit_ && sdfRenderer_ && !defaultFontPath_.empty()) {
+            useSDFText_ = sdfRenderer_->initialize(defaultFontPath_, 64.0f);
+            triedSDFInit_ = true;
+        }
+        if (useSDFText_ && sdfRenderer_ && sdfRenderer_->isInitialized()) {
+            result = sdfRenderer_->measureText(text, fontSize);
+        } else {
+            result = {text.length() * fontSize * 0.6f, fontSize};
         }
     }
-
-    // Fallback: SDF measurement (if atlas text isn't available).
-    if (!useSDFText_ && !triedSDFInit_ && sdfRenderer_ && !defaultFontPath_.empty()) {
-        useSDFText_ = sdfRenderer_->initialize(defaultFontPath_, 64.0f);
-        triedSDFInit_ = true;
-    }
-    if (useSDFText_ && sdfRenderer_ && sdfRenderer_->isInitialized()) {
-        // fontSize is in logical pixels - no DPI scaling
-        return sdfRenderer_->measureText(text, fontSize);
-    }
     
-    return {text.length() * fontSize * 0.6f, fontSize};
+    // Store in cache (with simple eviction if needed)
+    if (textMeasurementCache_.size() >= kTextMeasurementCacheMaxSize) {
+        // Simple eviction: clear half the cache when full
+        auto it = textMeasurementCache_.begin();
+        for (size_t i = 0; i < kTextMeasurementCacheMaxSize / 2 && it != textMeasurementCache_.end(); ++i) {
+            it = textMeasurementCache_.erase(it);
+        }
+    }
+    textMeasurementCache_[cacheKey] = result;
+    
+    return result;
 }
+
 
 // ============================================================================
 // Real Font Rendering with FreeType
@@ -1879,26 +2003,24 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         return; // Can't render without font
     }
 
-    const bool useSmallAtlas = (fontSize <= 13.0f);
-    const bool useMediumAtlas = (!useSmallAtlas && fontSize <= 17.0f);
-
-    const bool canUseSmall = useSmallAtlas && (fontAtlasTextureIdSmall_ != 0) && (atlasFontSizeSmall_ > 0);
-    const bool canUseMedium = useMediumAtlas && (fontAtlasTextureIdMedium_ != 0) && (atlasFontSizeMedium_ > 0);
-
-    const uint32_t atlasTextureId = canUseSmall ? fontAtlasTextureIdSmall_ : (canUseMedium ? fontAtlasTextureIdMedium_ : fontAtlasTextureId_);
-    const int atlasSize = canUseSmall ? atlasFontSizeSmall_ : (canUseMedium ? atlasFontSizeMedium_ : atlasFontSize_);
-    const auto& cache = canUseSmall ? fontCacheSmall_ : (canUseMedium ? fontCacheMedium_ : fontCache_);
+    // Use centralized atlas selection
+    AtlasInfo atlas = selectAtlas(fontSize);
     
-    // Ensure we are using the font atlas texture and text primitive type
-    if (currentTextureId_ != atlasTextureId || currentPrimitiveType_ != 4) {
+    // Ensure we are using the font atlas texture
+    if (currentTextureId_ != atlas.textureId) {
         flush();
-        currentTextureId_ = atlasTextureId;
-        currentPrimitiveType_ = 4; // Bitmap/LCD text
+        currentTextureId_ = atlas.textureId;
     }
     
+    // Pre-allocate vertex buffer space (4 vertices per glyph, 6 indices per glyph)
+    // This avoids repeated vector resizing for large text blocks
+    size_t estimatedGlyphs = text.length();
+    vertices_.reserve(vertices_.size() + estimatedGlyphs * 4);
+    indices_.reserve(indices_.size() + estimatedGlyphs * 6);
+    
     // fontSize is in logical pixels - no DPI scaling needed here
-    // Scale factor from 32px atlas to requested font size
-    float scale = fontSize / static_cast<float>(atlasSize);
+    // Scale factor from atlas size to requested font size
+    float scale = fontSize / static_cast<float>(atlas.atlasSize);
 
     // position.y is the BASELINE position (already adjusted by caller)
     // Pixel-align starting position for crisp text
@@ -1924,8 +2046,8 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
             continue; 
         }
 
-        auto it = cache.find(codepoint);
-        if (it == cache.end()) {
+        auto it = atlas.cache->find(codepoint);
+        if (it == atlas.cache->end()) {
              continue;
         }
         
@@ -1957,10 +2079,11 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         maxY = std::max(maxY, ypos + h);
 
         // Draw textured quad for character
-        addVertex(xpos,     ypos + h, ch.u0, ch.v1, color); 
-        addVertex(xpos + w, ypos + h, ch.u1, ch.v1, color); 
-        addVertex(xpos + w, ypos,     ch.u1, ch.v0, color); 
-        addVertex(xpos,     ypos,     ch.u0, ch.v0, color);
+        // Type 4 = Bitmap Text
+        addVertex(xpos,     ypos + h, ch.u0, ch.v1, color, 0,0,0,0, 0,0,0, 4.0f); 
+        addVertex(xpos + w, ypos + h, ch.u1, ch.v1, color, 0,0,0,0, 0,0,0, 4.0f); 
+        addVertex(xpos + w, ypos,     ch.u1, ch.v0, color, 0,0,0,0, 0,0,0, 4.0f); 
+        addVertex(xpos,     ypos,     ch.u0, ch.v0, color, 0,0,0,0, 0,0,0, 4.0f);
         
         // Add indices for quad
         uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
@@ -2388,24 +2511,12 @@ void NUIRendererGL::flush() {
     glUniform1i(primitiveShader_.useTextureLoc, 0);
     
     if (currentPrimitiveType_ == 1) {
-        glUniform1f(primitiveShader_.radiusLoc, currentRadius_);
-        glUniform1f(primitiveShader_.blurLoc, currentBlur_);
-        glUniform1f(primitiveShader_.rectWidthLoc, currentSize_.width);
-        glUniform1f(primitiveShader_.rectHeightLoc, currentSize_.height);
-        glUniform1f(primitiveShader_.quadWidthLoc, currentQuadSize_.width);
-        glUniform1f(primitiveShader_.quadHeightLoc, currentQuadSize_.height);
+        // Uniforms moved to attributes for batching
     } else if (currentPrimitiveType_ == 2) {
         // Text
         glUniform1f(primitiveShader_.smoothnessLoc, currentSmoothness_);
     } else if (currentPrimitiveType_ == 3) {
-        // Stroked rounded rectangle (SDF-based)
-        glUniform1f(primitiveShader_.radiusLoc, currentRadius_);
-        glUniform1f(primitiveShader_.blurLoc, currentBlur_);
-        glUniform1f(primitiveShader_.rectWidthLoc, currentSize_.width);
-        glUniform1f(primitiveShader_.rectHeightLoc, currentSize_.height);
-        glUniform1f(primitiveShader_.quadWidthLoc, currentQuadSize_.width);
-        glUniform1f(primitiveShader_.quadHeightLoc, currentQuadSize_.height);
-        glUniform1f(primitiveShader_.strokeWidthLoc, currentStrokeWidth_);
+        // Stroked rounded rect (Uniforms moved to attributes)
     } else {
         glUniform1i(primitiveShader_.useTextureLoc, 0);
     }
@@ -2494,16 +2605,9 @@ bool NUIRendererGL::loadShaders() {
     primitiveShader_.projectionLoc = glGetUniformLocation(primitiveShader_.id, "uProjection");
     // Note: opacity is baked into vertex colors, no uniform needed
     primitiveShader_.primitiveTypeLoc = glGetUniformLocation(primitiveShader_.id, "uPrimitiveType");
-    primitiveShader_.radiusLoc = glGetUniformLocation(primitiveShader_.id, "uRadius");
-    primitiveShader_.blurLoc = glGetUniformLocation(primitiveShader_.id, "uBlur");
-    primitiveShader_.rectWidthLoc = glGetUniformLocation(primitiveShader_.id, "uRectWidth");
-    primitiveShader_.rectHeightLoc = glGetUniformLocation(primitiveShader_.id, "uRectHeight");
-    primitiveShader_.quadWidthLoc = glGetUniformLocation(primitiveShader_.id, "uQuadWidth");
-    primitiveShader_.quadHeightLoc = glGetUniformLocation(primitiveShader_.id, "uQuadHeight");
     primitiveShader_.textureLoc = glGetUniformLocation(primitiveShader_.id, "uTexture");
     primitiveShader_.useTextureLoc = glGetUniformLocation(primitiveShader_.id, "uUseTexture");
     primitiveShader_.smoothnessLoc = glGetUniformLocation(primitiveShader_.id, "uSmoothness");
-    primitiveShader_.strokeWidthLoc = glGetUniformLocation(primitiveShader_.id, "uStrokeWidth");
 
     
     return true;
@@ -2529,6 +2633,30 @@ void NUIRendererGL::createBuffers() {
     // Color
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, r));
+
+    // Rect Size
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, rw));
+
+    // Quad Size
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, qw));
+
+    // Radius
+    glEnableVertexAttribArray(5);
+    glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, radius));
+
+    // Blur
+    glEnableVertexAttribArray(6);
+    glVertexAttribPointer(6, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, blur));
+
+    // Stroke Width
+    glEnableVertexAttribArray(7);
+    glVertexAttribPointer(7, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, strokeWidth));
+
+    // Primitive Type
+    glEnableVertexAttribArray(8);
+    glVertexAttribPointer(8, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, primitiveType));
     
     glBindVertexArray(0);
 }
@@ -2568,7 +2696,9 @@ uint32_t NUIRendererGL::linkProgram(uint32_t vertexShader, uint32_t fragmentShad
     return program;
 }
 
-void NUIRendererGL::addVertex(float x, float y, float u, float v, const NUIColor& color) {
+void NUIRendererGL::addVertex(float x, float y, float u, float v, const NUIColor& color,
+                             float rw, float rh, float qw, float qh, 
+                             float radius, float blur, float strokeWidth, float type) {
     applyTransform(x, y);
     
     Vertex vertex;
@@ -2580,21 +2710,35 @@ void NUIRendererGL::addVertex(float x, float y, float u, float v, const NUIColor
     vertex.g = color.g;
     vertex.b = color.b;
     vertex.a = color.a * globalOpacity_;
+    vertex.rw = rw;
+    vertex.rh = rh;
+    vertex.qw = qw;
+    vertex.qh = qh;
+    vertex.radius = radius;
+    vertex.blur = blur;
+    vertex.strokeWidth = strokeWidth;
+    vertex.primitiveType = type;
     
     vertices_.push_back(vertex);
 }
 
-void NUIRendererGL::addQuad(const NUIRect& rect, const NUIColor& color) {
-    // Check if we need to switch to non-textured mode (batch breaking)
-    if (currentTextureId_ != 0) {
+void NUIRendererGL::addQuad(const NUIRect& rect, const NUIColor& color,
+                             float rw, float rh, float qw, float qh, 
+                             float radius, float blur, float strokeWidth, float type) {
+    // Optimization: If Primitive Type is Rect (1) or Stroke (3), we IGNORE texture state!
+    // So we don't need to flush if currentTextureId_ != 0.
+    // Only flush if we are Type 0, 2, 4 AND texture mismatches.
+    bool textureMatters = (type == 0.0f || type == 2.0f || type == 4.0f);
+    
+    if (textureMatters && currentTextureId_ != 0) {
         flush();
         currentTextureId_ = 0;
     }
 
-    addVertex(rect.x, rect.y, 0.0f, 0.0f, color);
-    addVertex(rect.right(), rect.y, 1.0f, 0.0f, color);
-    addVertex(rect.right(), rect.bottom(), 1.0f, 1.0f, color);
-    addVertex(rect.x, rect.bottom(), 0.0f, 1.0f, color);
+    addVertex(rect.x, rect.y, 0.0f, 0.0f, color, rw, rh, qw, qh, radius, blur, strokeWidth, type);
+    addVertex(rect.right(), rect.y, 1.0f, 0.0f, color, rw, rh, qw, qh, radius, blur, strokeWidth, type);
+    addVertex(rect.right(), rect.bottom(), 1.0f, 1.0f, color, rw, rh, qw, qh, radius, blur, strokeWidth, type);
+    addVertex(rect.x, rect.bottom(), 0.0f, 1.0f, color, rw, rh, qw, qh, radius, blur, strokeWidth, type);
     
     uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
     indices_.push_back(base + 0);

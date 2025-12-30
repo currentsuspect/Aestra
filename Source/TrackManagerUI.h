@@ -23,6 +23,7 @@
 #include <vector>
 #include <unordered_set>
 #include "../NomadUI/Core/NUIContextMenu.h"
+#include "../NomadAudio/include/WaveformCache.h"
 
 namespace NomadUI { class NUIPlatformBridge; }
 
@@ -425,7 +426,8 @@ private:
     void renderPlayhead(::NomadUI::NUIRenderer& renderer);
     void renderDropPreview(::NomadUI::NUIRenderer& renderer); // Render drop zone highlight
     void renderDeleteAnimations(::NomadUI::NUIRenderer& renderer); // Render FL-style ripple delete
-    void renderTrackManagerDirect(::NomadUI::NUIRenderer& renderer);  // Direct rendering helper
+    void renderTrackManagerStatic(::NomadUI::NUIRenderer& renderer);  // Static content (cached)
+    void renderTrackManagerDynamic(::NomadUI::NUIRenderer& renderer); // Dynamic content (real-time)
     
     // Helper to convert mouse position to track/time
     int getTrackAtPosition(float y) const;
@@ -451,6 +453,9 @@ private:
     
     // Calculate maximum timeline extent based on samples
     double getMaxTimelineExtent() const;
+
+    // Async waveform builder
+    ::Nomad::Audio::WaveformCacheBuilder m_waveformBuilder;
 
     // (Duplicate methods removed)
 };

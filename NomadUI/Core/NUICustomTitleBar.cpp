@@ -2,6 +2,7 @@
 #include "NUICustomTitleBar.h"
 #include "../Graphics/NUIRenderer.h"
 #include "../Core/NUIThemeSystem.h"
+#include "../../NomadCore/include/NomadUnifiedProfiler.h"
 #include <cmath>
 #include <string>
 
@@ -67,6 +68,7 @@ void NUICustomTitleBar::setHeight(float height) {
 }
 
 void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
+    NOMAD_ZONE("TitleBar_Render");
     NUIRect bounds = getBounds();
     
     // Get theme colors
