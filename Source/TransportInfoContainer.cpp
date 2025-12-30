@@ -498,25 +498,39 @@ void TransportInfoContainer::layoutComponents() {
     float timerOffsetX = layout.transportButtonSize * 3 + layout.transportButtonSpacing * 4 + layout.panelMargin;
     float timerOffsetY = (bounds.height - timerHeight) / 2.0f; // Vertically centered in container
     
-    // Use absolute positioning (add bounds.x and bounds.y)
-    m_timerDisplay->setBounds(NomadUI::NUIRect(bounds.x + timerOffsetX, bounds.y + timerOffsetY, timerWidth, timerHeight));
+    // Use absolute positioning (add bounds.x and bounds.y) - SNAP TO INTEGERS
+    m_timerDisplay->setBounds(NomadUI::NUIRect(
+        std::floor(bounds.x + timerOffsetX), 
+        std::floor(bounds.y + timerOffsetY), 
+        std::round(timerWidth), 
+        std::round(timerHeight)
+    ));
     
     // BPM in the center (horizontally centered in transport bar) - also ABSOLUTE
     float bpmWidth = 100.0f;
-    float bpmHeight = 30.0f; 	// Increased from 24 to match timer height for better vertical centering
+    float bpmHeight = 30.0f;
     float bpmOffsetX = (bounds.width - bpmWidth) / 2.0f;
-    float bpmOffsetY = (bounds.height - bpmHeight) / 2.0f; // Vertically centered in container
+    float bpmOffsetY = (bounds.height - bpmHeight) / 2.0f;
     
-    // Use absolute positioning (add bounds.x and bounds.y)
-    m_bpmDisplay->setBounds(NomadUI::NUIRect(bounds.x + bpmOffsetX, bounds.y + bpmOffsetY, bpmWidth, bpmHeight));
+    m_bpmDisplay->setBounds(NomadUI::NUIRect(
+        std::floor(bounds.x + bpmOffsetX), 
+        std::floor(bounds.y + bpmOffsetY), 
+        std::round(bpmWidth), 
+        std::round(bpmHeight)
+    ));
     
     // Time signature to the left of BPM display (between metronome button and BPM)
-    float timeSigWidth = 50.0f;  // Increased from 40.0f
-    float timeSigHeight = 30.0f; // Increased from 24.0f to match BPM
-    float timeSigOffsetX = bpmOffsetX - timeSigWidth - 10.0f;  // 10px gap from BPM
+    float timeSigWidth = 50.0f;
+    float timeSigHeight = 30.0f;
+    float timeSigOffsetX = bpmOffsetX - timeSigWidth - 10.0f;
     float timeSigOffsetY = (bounds.height - timeSigHeight) / 2.0f;
     
-    m_timeSignatureDisplay->setBounds(NomadUI::NUIRect(bounds.x + timeSigOffsetX, bounds.y + timeSigOffsetY, timeSigWidth, timeSigHeight));
+    m_timeSignatureDisplay->setBounds(NomadUI::NUIRect(
+        std::floor(bounds.x + timeSigOffsetX), 
+        std::floor(bounds.y + timeSigOffsetY), 
+        std::round(timeSigWidth), 
+        std::round(timeSigHeight)
+    ));
 }
 
 void TransportInfoContainer::onRender(NomadUI::NUIRenderer& renderer) {

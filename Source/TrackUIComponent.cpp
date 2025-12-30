@@ -6,10 +6,12 @@
 #include "../NomadAudio/include/TrackManager.h"
 #include "../NomadAudio/include/PlaylistModel.h"
 #include "../NomadAudio/include/PatternManager.h"
+#include "../NomadAudio/include/WaveformCache.h"
 
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
+#include "../NomadCore/include/NomadUnifiedProfiler.h"
 #include <algorithm>
 #include <cmath>
 #include <chrono>
@@ -317,10 +319,14 @@ void TrackUIComponent::drawWaveformForClip(NomadUI::NUIRenderer& renderer, const
     if (!audioPayload) return;
     
     auto source = sourceMgr.getSource(audioPayload->audioSourceId);
-    if (!source || !source->isReady()) return;
+    if (!source || !source->isReady()) {
+        return;
+    }
     
     auto bufferPtr = source->getBuffer();
-    if (!bufferPtr || bufferPtr->numFrames == 0) return;
+    if (!bufferPtr || bufferPtr->numFrames == 0) {
+        return;
+    }
 
     const auto& audioData = *bufferPtr;
     const std::vector<float>& samples = audioData.interleavedData;
@@ -422,72 +428,119 @@ void TrackUIComponent::drawWaveformForClip(NomadUI::NUIRenderer& renderer, const
     const float halfHeight = height * 0.5f;
 
     // Fixed: Ensure hp variables are initialized outside the loop
+    // Fixed: Ensure hp variables are initialized outside the loop
     float hpX1L = 0, hpY1L = 0, hpX1R = 0, hpY1R = 0;
     const float hpA = 0.99f; // Simple DC blocker coefficient
-    
-    for (int x = 0; x < width; ++x) {
-        size_t frameIndex = startFrame + (static_cast<size_t>(x) * visibleFrames / width);
-        size_t frameEnd = startFrame + (static_cast<size_t>(x + 1) * visibleFrames / width);
-        frameEnd = std::min(frameEnd, totalFrames);
+
+    // ⚡ PERFORMANCE OPTIMIZATION: Use Waveform Cache if available
+    auto waveformCache = source->getWaveformCache();
+    if (waveformCache && waveformCache->isReady()) {
+        // Cached Path (O(1) relative to zoom)
+        std::vector<Nomad::Audio::WaveformPeak> peaksL;
+        waveformCache->getPeaksForRange(0, startFrame, startFrame + visibleFrames, width, peaksL);
         
-        float peak = 0.0f;
-        double sumSq = 0.0;
-        int count = 0;
+        std::vector<Nomad::Audio::WaveformPeak> peaksR;
+        if (numChannels > 1) {
+             waveformCache->getPeaksForRange(1, startFrame, startFrame + visibleFrames, width, peaksR);
+        }
 
-        for (size_t f = frameIndex; f < frameEnd; ++f) {
-            size_t base = f * numChannels;
-            if (base + (numChannels - 1) >= samples.size()) break;
+        for (int x = 0; x < width; ++x) {
+             float maxVal = 0.0f;
+             
+             if (x < peaksL.size()) {
+                 float absMin = std::abs(peaksL[x].min);
+                 float absMax = std::abs(peaksL[x].max);
+                 maxVal = std::max(absMin, absMax);
+             }
+             
+             if (numChannels > 1 && x < peaksR.size()) {
+                 float absMin = std::abs(peaksR[x].min);
+                 float absMax = std::abs(peaksR[x].max);
+                 maxVal = std::max(maxVal, std::max(absMin, absMax));
+             }
+             
+             // Apply same gamma curve as legacy path for visual consistency
+             float env = std::pow(std::min(1.0f, maxVal), 0.75f);
 
-            if (numChannels == 1) {
-                const float inL = samples[base];
-                const float hp = hpA * (hpY1L + inL - hpX1L);
-                hpX1L = inL;
-                hpY1L = hp;
-
-                const float visual = hp * 0.85f + inL * 0.15f;
-                peak = std::max(peak, std::abs(visual));
-                sumSq += static_cast<double>(visual) * static_cast<double>(visual);
-                ++count;
-            } else {
-                const float inL = samples[base];
-                const float inR = samples[base + 1];
-
-                const float hpL = hpA * (hpY1L + inL - hpX1L);
-                hpX1L = inL;
-                hpY1L = hpL;
-
-                const float hpR = hpA * (hpY1R + inR - hpX1R);
-                hpX1R = inR;
-                hpY1R = hpR;
-
-                const float visL = hpL * 0.85f + inL * 0.15f;
-                const float visR = hpR * 0.85f + inR * 0.15f;
-
-                peak = std::max(peak, std::max(std::abs(visL), std::abs(visR)));
-                sumSq += static_cast<double>(visL) * static_cast<double>(visL);
-                sumSq += static_cast<double>(visR) * static_cast<double>(visR);
-                count += 2;
+             // Calculate screen coordinates
+            float topY = static_cast<float>(centerY) - env * halfHeight;
+            float bottomY = static_cast<float>(centerY) + env * halfHeight;
+            
+            // Ensure silence is rendered as a 1px line
+            if (bottomY - topY < 1.0f) {
+                topY = static_cast<float>(centerY) - 0.5f;
+                bottomY = static_cast<float>(centerY) + 0.5f;
             }
+            
+            topPoints.push_back(NomadUI::NUIPoint(bounds.x + x, topY));
+            bottomPoints.push_back(NomadUI::NUIPoint(bounds.x + x, bottomY));
         }
-
-        const float rms = (count > 0) ? static_cast<float>(std::sqrt(sumSq / static_cast<double>(count))) : 0.0f;
-        rmsSmooth += (rms - rmsSmooth) * kRmsSmoothing;
-
-        float env = rmsSmooth * 0.65f + peak * 0.35f;
-        env = std::pow(std::min(1.0f, env), 0.75f);
-        
-        // Calculate screen coordinates
-        float topY = static_cast<float>(centerY) - env * halfHeight;
-        float bottomY = static_cast<float>(centerY) + env * halfHeight;
-        
-        // Ensure silence is rendered as a 1px line
-        if (bottomY - topY < 1.0f) {
-            topY = static_cast<float>(centerY) - 0.5f;
-            bottomY = static_cast<float>(centerY) + 0.5f;
+    } else {
+        // Legacy Brute-Force Path (Slow when zoomed out)
+        for (int x = 0; x < width; ++x) {
+            size_t frameIndex = startFrame + (static_cast<size_t>(x) * visibleFrames / width);
+            size_t frameEnd = startFrame + (static_cast<size_t>(x + 1) * visibleFrames / width);
+            frameEnd = std::min(frameEnd, totalFrames);
+            
+            float peak = 0.0f;
+            double sumSq = 0.0;
+            int count = 0;
+    
+            for (size_t f = frameIndex; f < frameEnd; ++f) {
+                size_t base = f * numChannels;
+                if (base + (numChannels - 1) >= samples.size()) break;
+    
+                if (numChannels == 1) {
+                    const float inL = samples[base];
+                    const float hp = hpA * (hpY1L + inL - hpX1L);
+                    hpX1L = inL;
+                    hpY1L = hp;
+    
+                    const float visual = hp * 0.85f + inL * 0.15f;
+                    peak = std::max(peak, std::abs(visual));
+                    sumSq += static_cast<double>(visual) * static_cast<double>(visual);
+                    ++count;
+                } else {
+                    const float inL = samples[base];
+                    const float inR = samples[base + 1];
+    
+                    const float hpL = hpA * (hpY1L + inL - hpX1L);
+                    hpX1L = inL;
+                    hpY1L = hpL;
+    
+                    const float hpR = hpA * (hpY1R + inR - hpX1R);
+                    hpX1R = inR;
+                    hpY1R = hpR;
+    
+                    const float visL = hpL * 0.85f + inL * 0.15f;
+                    const float visR = hpR * 0.85f + inR * 0.15f;
+    
+                    peak = std::max(peak, std::max(std::abs(visL), std::abs(visR)));
+                    sumSq += static_cast<double>(visL) * static_cast<double>(visL);
+                    sumSq += static_cast<double>(visR) * static_cast<double>(visR);
+                    count += 2;
+                }
+            }
+    
+            const float rms = (count > 0) ? static_cast<float>(std::sqrt(sumSq / static_cast<double>(count))) : 0.0f;
+            rmsSmooth += (rms - rmsSmooth) * kRmsSmoothing;
+    
+            float env = rmsSmooth * 0.65f + peak * 0.35f;
+            env = std::pow(std::min(1.0f, env), 0.75f);
+            
+            // Calculate screen coordinates
+            float topY = static_cast<float>(centerY) - env * halfHeight;
+            float bottomY = static_cast<float>(centerY) + env * halfHeight;
+            
+            // Ensure silence is rendered as a 1px line
+            if (bottomY - topY < 1.0f) {
+                topY = static_cast<float>(centerY) - 0.5f;
+                bottomY = static_cast<float>(centerY) + 0.5f;
+            }
+            
+            topPoints.push_back(NomadUI::NUIPoint(bounds.x + x, topY));
+            bottomPoints.push_back(NomadUI::NUIPoint(bounds.x + x, bottomY));
         }
-        
-        topPoints.push_back(NomadUI::NUIPoint(bounds.x + x, topY));
-        bottomPoints.push_back(NomadUI::NUIPoint(bounds.x + x, bottomY));
     }
     
     // Single draw call for entire waveform with GRADIENT (bright top, darker bottom)
@@ -744,12 +797,19 @@ void TrackUIComponent::drawClipAtPosition(NomadUI::NUIRenderer& renderer, const 
                     
                     // Draw waveform INSIDE the clip
                     float nameStripHeight = 16.0f;
-                    float waveformPadding = 4.0f;  // Increased from 2 for more breathing room
-                    float cornerPadding = 6.0f;    // Increased from 4 for bottom/side clearance
+                    float waveformPadding = 4.0f;  
+                    float cornerPadding = 6.0f;    
+                    
+                    // Dynamic padding for small clips to prevent negative width/disappearing waveform
+                    float effectivePadding = cornerPadding;
+                    if (visibleWidth < (cornerPadding * 2.0f + 2.0f)) {
+                        effectivePadding = std::max(0.0f, (visibleWidth - 2.0f) * 0.5f);
+                    }
+                    
                     NomadUI::NUIRect waveformInsideClip(
-                        visibleStartX + cornerPadding,  // Add left padding for rounded corners
+                        visibleStartX + effectivePadding,  // Add left padding for rounded corners
                         bounds.y + 2 + nameStripHeight + waveformPadding,
-                        visibleWidth - cornerPadding * 2,  // Shrink width for both corners
+                        std::max(1.0f, visibleWidth - effectivePadding * 2.0f),  // Shrink width
                         bounds.height - 4 - nameStripHeight - waveformPadding - cornerPadding  // Extra bottom padding
                     );
                     drawWaveformForClip(renderer, waveformInsideClip, clip, offsetRatio, visibleRatio);
@@ -865,7 +925,7 @@ void TrackUIComponent::drawPatternClipForClip(NomadUI::NUIRenderer& renderer, co
 // SECTION: Main Render Entry
 // =============================================================================
 
-void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
+void TrackUIComponent::renderStatic(NomadUI::NUIRenderer& renderer) {
     NomadUI::NUIRect bounds = getBounds();
     
     // Clear clip bounds map - will be repopulated during drawClipAtPosition
@@ -873,21 +933,15 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
     if (!m_trackManager) return;
     auto& playlist = m_trackManager->getPlaylistModel();
     auto lane = playlist.getLane(m_laneId);
-    if (!lane) return;
-
     // Get theme colors and layout
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     
-    // Zebra Striping Logic
-    NomadUI::NUIColor trackBgColor = NomadUI::NUIColor::transparent();
-    if (m_rowIndex % 2 == 0) {
-        // Even rows: slight overlay for separation (5% white opacity)
-        trackBgColor = NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.03f);
-    }
+    // Zebra striping moved to TrackManagerUI for guaranteed rendering order
     
-    // Selection Highlight
-    // Selection Highlight overrides zebra striping for now
+    NomadUI::NUIColor trackBgColor = NomadUI::NUIColor::transparent();
+
+    // Selection Highlight (Static base)
     if (isSelected()) {
          NomadUI::NUIColor selectedColor = themeManager.getColor("primary").withAlpha(0.12f);
          trackBgColor = selectedColor; 
@@ -905,16 +959,13 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
         // Control Area Polish: Darker Glassy Background
         NomadUI::NUIColor baseControlColor = themeManager.getColor("backgroundSecondary"); 
         
-        // Dynamic highlight logic (Selection, Solo, Mute)
+        // Static Control Area State
         if (m_channel) {
              if (m_selected) {
-                 // Selected: Primary Tint
                  baseControlColor = themeManager.getColor("accentPrimary").withAlpha(0.12f);
              } else if (m_channel->isSoloed()) {
-                 // Soloed: Subtle Cyan Tint
                  baseControlColor = themeManager.getColor("accentCyan").withAlpha(0.08f);
              } else if (m_channel->isMuted()) {
-                 // Muted: Darkened
                  baseControlColor = baseControlColor.darkened(0.2f);
              }
         }
@@ -923,11 +974,12 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
         renderer.fillRect(controlBounds, baseControlColor);
         
         // Separator Line (Glass Border) between Controls and Timeline
+        // Use drawLine for crisp SDF rendering with pixel snapping
         renderer.drawLine(
             NomadUI::NUIPoint(controlBounds.right(), controlBounds.y),
             NomadUI::NUIPoint(controlBounds.right(), controlBounds.bottom()),
             1.0f,
-            themeManager.getColor("glassBorder")
+            themeManager.getColor("glassBorder").withAlpha(0.5f)
         );
         
         // Top Separator (White)
@@ -935,59 +987,28 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
             NomadUI::NUIPoint(bounds.x, bounds.y),
             NomadUI::NUIPoint(bounds.right(), bounds.y),
             1.0f,
-            NomadUI::NUIColor::white().withAlpha(0.1f)
+            NomadUI::NUIColor::white().withAlpha(0.2f)
         );
 
         // Bottom Separator (White)
         renderer.drawLine(
-            NomadUI::NUIPoint(bounds.x, bounds.bottom() - 1),
-            NomadUI::NUIPoint(bounds.right(), bounds.bottom() - 1),
+            NomadUI::NUIPoint(bounds.x, bounds.bottom() - 1.0f),
+            NomadUI::NUIPoint(bounds.right(), bounds.bottom() - 1.0f),
             1.0f,
-            NomadUI::NUIColor::white().withAlpha(0.1f)
+            NomadUI::NUIColor::white().withAlpha(0.2f)
         );
 
-        // Inline Volume Meter (Behind Name)
-        if (m_channel && !m_channel->isMuted()) {
-            // Get meter level 
-            // Simulated meter level (replace with actual meter from bus when available)
-            static auto startTime = std::chrono::steady_clock::now();
-            auto now = std::chrono::steady_clock::now();
-            float time = std::chrono::duration<float>(now - startTime).count();
-            
-            float level = (sin(time * 5.0f + m_channel->getChannelId()) + 1.0f) * 0.5f * m_channel->getVolume();
-            if (level > 0.001f) {
-                // Clamp and map level
-                level = std::min(1.0f, std::max(0.0f, level));
-                // Non-linear mapping for better visual
-                float visualLevel = std::pow(level, 0.5f); 
-                
-                // Define meter location (Behind name label approx area)
-                // Name label usually starts around x=20, width=150
-                float meterX = bounds.x + 20.0f; 
-                float meterY = bounds.y + 10.0f; // Align with top part of track
-                float meterW = 140.0f * visualLevel;
-                float meterH = 28.0f; // Height of name label area
-                
-                NomadUI::NUIRect meterRect(meterX, meterY, meterW, meterH);
-                
-                // Meter Color Gradient (Green -> Yellow -> Red logic simulated)
-                NomadUI::NUIColor meterColor = themeManager.getColor("success").withAlpha(0.15f);
-                if (visualLevel > 0.8f) meterColor = themeManager.getColor("error").withAlpha(0.2f);
-                else if (visualLevel > 0.5f) meterColor = themeManager.getColor("warning").withAlpha(0.2f);
-                
-                renderer.fillRoundedRect(meterRect, 4.0f, meterColor);
-            }
-        }
-
         // Lane color strip (identity)
-        uint32_t argb = lane->colorRGBA;
-        float a = ((argb >> 24) & 0xFF) / 255.0f;
-        float r = ((argb >> 16) & 0xFF) / 255.0f;
-        float g = ((argb >> 8) & 0xFF) / 255.0f;
-        float b = (argb & 0xFF) / 255.0f;
-        NomadUI::NUIColor stripColor(r, g, b, a > 0.0f ? a : 1.0f);
-        const float stripWidth = 4.0f; // Slightly slimmer strip
-        renderer.fillRect(NomadUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
+        if (lane) {
+            uint32_t argb = lane->colorRGBA;
+            float a = ((argb >> 24) & 0xFF) / 255.0f;
+            float r = ((argb >> 16) & 0xFF) / 255.0f;
+            float g = ((argb >> 8) & 0xFF) / 255.0f;
+            float b = (argb & 0xFF) / 255.0f;
+            NomadUI::NUIColor stripColor(r, g, b, a > 0.0f ? a : 1.0f);
+            const float stripWidth = 4.0f; // Slightly slimmer strip
+            renderer.fillRect(NomadUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
+        }
         
         // Panel Separator (Right side of control area)
         renderer.drawLine(
@@ -1012,92 +1033,35 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
         drawPlaylistGrid(renderer, bounds);
     }
 
-    // Optimization: Cache grid and clips rendering
-    // If the bounds changed or cache is invalid, rebuild the texture.
-    uint64_t currentModId = playlist.getModificationCounter();
-    if (bounds.width != m_lastRenderBounds.width || bounds.height != m_lastRenderBounds.height || currentModId != m_lastModelModId) {
-        invalidateCache();
+    // Render Clips (Heavy part)
+    m_allClipBounds.clear();
+    // Use stored modId for caching check if needed later, but here we just draw
+    float clipOpacity = (m_playlistMode == PlaylistMode::Automation) ? 0.3f : 1.0f;
+    renderer.setOpacity(clipOpacity);
+    for (const auto& clip : lane->clips) {
+        drawClipAtPosition(renderer, clip, bounds, controlAreaWidth);
     }
-    m_lastRenderBounds = bounds;
-    m_lastModelModId = currentModId;
+    renderer.setOpacity(1.0f);
+}
 
-    // We only cache the playlist area (everything right of control area)
-    // Actually, drawClipAtPosition relies on full bounds logic.
-    // For simplicity, we cache the ENTIRE track content if possible, or just the clips layer.
-    
-    // PERMANENTLY DISABLED: Unresolved FBO/Scissor issues on user hardware.
-    // Performance relies on smart repaints, not texture caching.
-    bool canCache = false; 
-    
-    if (canCache) {
-        if (!m_backgroundValid) {
-            // Setup cache
-            if (m_backgroundTexture == 0) {
-                // Initial create or resize? renderToTextureBegin handles creation usually or we need createTexture?
-                // Assuming renderToTextureBegin(width, height) returns a valid ID or reuses.
-                // If implicit management, we store the ID.
-                m_backgroundTexture = renderer.renderToTextureBegin(static_cast<int>(bounds.width), static_cast<int>(bounds.height));
-            } else {
-                 // Re-use logic or delete/recreate?
-                 // For now assume renderToTextureBegin handles it.
-                 uint32_t newTex = renderer.renderToTextureBegin(static_cast<int>(bounds.width), static_cast<int>(bounds.height));
-                 if (newTex != m_backgroundTexture) {
-                     if (m_backgroundTexture != 0) renderer.deleteTexture(m_backgroundTexture);
-                     m_backgroundTexture = newTex;
-                 }
-            }
+// Render Dynamic Overlays (Grid Area Only: Mute/Solo dimming, Automation, Selection)
+void TrackUIComponent::renderDynamic(NomadUI::NUIRenderer& renderer) {
+    NomadUI::NUIRect bounds = getBounds();
+    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    const auto& layout = themeManager.getLayoutDimensions();
+    float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
 
-            if (m_backgroundTexture != 0) {
-                // Clear texture with transparent or background?
-                // We draw relative to (0,0) in the texture.
-                // So we need to offset drawing calls? 
-                // Or simply push a transform: -bounds.x, -bounds.y
-                renderer.pushTransform(-bounds.x, -bounds.y);
-                
-                // Clear hit buffer?
-                m_allClipBounds.clear();
-
-                float clipOpacity = (m_playlistMode == PlaylistMode::Automation) ? 0.3f : 1.0f;
-                renderer.setOpacity(clipOpacity);
-                for (const auto& clip : lane->clips) {
-                    drawClipAtPosition(renderer, clip, bounds, controlAreaWidth);
-                }
-                renderer.setOpacity(1.0f);
-                
-                renderer.popTransform();
-                renderer.renderToTextureEnd();
-                m_backgroundValid = true;
-            } else {
-                // Fallback if texture creation failed
-                canCache = false;
-            }
-        }
-        
-        if (canCache && m_backgroundValid) {
-            renderer.drawTexture(m_backgroundTexture, bounds, NomadUI::NUIRect(0, 0, bounds.width, bounds.height));
-        }
-    }
-    
-    if (!canCache) {
-        // Fallback: Immediate mode
-        m_allClipBounds.clear();
-        float clipOpacity = (m_playlistMode == PlaylistMode::Automation) ? 0.3f : 1.0f;
-        renderer.setOpacity(clipOpacity);
-        for (const auto& clip : lane->clips) {
-            drawClipAtPosition(renderer, clip, bounds, controlAreaWidth);
-        }
-        renderer.setOpacity(1.0f);
-    }
-
-    // Draw Automation Layer (v3.1)
+    // Automation Layer (v3.1)
     if (m_playlistMode == PlaylistMode::Automation) {
         renderAutomationLayer(renderer, bounds, bounds.x + controlAreaWidth);
     }
 
-    // Apply overlay for muted/solo state
+    // Apply overlay for muted/solo state (Grid Area Only)
     if (m_isPrimaryForLane) {
         bool anySoloed = false;
         if (m_trackManager) {
+            // Optimization: TrackManager should pass this state down? 
+            // For now, iterating 50 tracks is cheap.
             for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
                 if (m_trackManager->getChannel(i)->isSoloed()) {
                     anySoloed = true;
@@ -1108,7 +1072,6 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
 
         const bool soloSuppressed = anySoloed && m_channel && !m_channel->isSoloed();
 
-        // Overlay area matches the grid area (right of controls)
         NomadUI::NUIRect gridArea(
             bounds.x + controlAreaWidth,
             bounds.y,
@@ -1128,10 +1091,12 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
             renderer.fillRect(gridArea, NomadUI::NUIColor(0.0f, 0.0f, 0.0f, dimAlpha));
         }
     }
+}
 
-    if (m_isPrimaryForLane) {
-        renderChildren(renderer);
-    }
+void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
+    NOMAD_ZONE("TrackUI_Render");
+    renderStatic(renderer);
+    renderDynamic(renderer);
 }
 
 
@@ -1149,6 +1114,32 @@ void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
 
     // Initial fill to clear potential artifacts
     renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary"));
+
+    // Inline Volume Meter (Behind Name) - MOVED HERE so renderChildren (buttons) draws on top
+    if (m_channel && !m_channel->isMuted()) {
+        static auto startTime = std::chrono::steady_clock::now();
+        auto now = std::chrono::steady_clock::now();
+        float time = std::chrono::duration<float>(now - startTime).count();
+        
+        float level = (sin(time * 5.0f + m_channel->getChannelId()) + 1.0f) * 0.5f * m_channel->getVolume();
+        if (level > 0.001f) {
+            level = std::min(1.0f, std::max(0.0f, level));
+            float visualLevel = std::pow(level, 0.5f); 
+            
+            float meterX = bounds.x + 20.0f; 
+            float meterY = bounds.y + 10.0f; 
+            float meterW = 140.0f * visualLevel;
+            float meterH = 28.0f; 
+            
+            NomadUI::NUIRect meterRect(meterX, meterY, meterW, meterH);
+            
+            NomadUI::NUIColor meterColor = themeManager.getColor("success").withAlpha(0.15f);
+            if (visualLevel > 0.8f) meterColor = themeManager.getColor("error").withAlpha(0.2f);
+            else if (visualLevel > 0.5f) meterColor = themeManager.getColor("warning").withAlpha(0.2f);
+            
+            renderer.fillRoundedRect(meterRect, 4.0f, meterColor);
+        }
+    }
 
     // Apply highlight overlay (Selection / Solo / Mute)
     if (m_channel) {
@@ -1279,6 +1270,7 @@ void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
 
 // Draw playlist grid (beat/bar grid)
 void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds) {
+    NOMAD_ZONE("TrackUI_Grid");
     // Get layout dimensions from theme
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
