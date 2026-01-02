@@ -60,6 +60,9 @@ public:
     void setUnitRoute(UnitID id, MixerRouteID route);
     void setUnitAudioClip(UnitID id, const std::string& clipPath);
     void setUnitMixerChannel(UnitID id, int channelIndex); // Simplified setter for mixer routing
+    void setUnitName(UnitID id, const std::string& name);  // Rename unit
+    void setUnitColor(UnitID id, uint32_t color);          // Change unit color
+    void reorderUnit(UnitID id, size_t newIndex);          // Reorder unit in list
     
     // === Pattern Association (Main Thread) ===
     void setActivePattern(UnitID id, PatternID pid);

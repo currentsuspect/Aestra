@@ -37,10 +37,13 @@ struct ChannelViewModel {
     // Control state (reflects engine, optimistic updates allowed)
     float faderGainDb{0.0f};             ///< Fader position in dB
     float pan{0.0f};                     ///< Pan position (-1.0 to 1.0)
+    float width{1.0f};                   ///< Stereo Width (0.0 to 3.0)
     float trimDb{0.0f};                  ///< Trim/gain in dB
     bool muted{false};                   ///< Mute state
     bool soloed{false};                  ///< Solo state
     bool armed{false};                   ///< Record arm state
+    bool monitored{false};               ///< Input monitor state
+    int inputChannelIndex{-1};           ///< Input channel index (0-based, -1 = none)
 
     // FX state
     int fxCount{0};                      ///< Number of insert effects
@@ -56,6 +59,8 @@ struct ChannelViewModel {
     float smoothedPeakR{MixerMath::DB_MIN};  ///< Smoothed right peak (dB)
     float smoothedRmsL{MixerMath::DB_MIN};   ///< Smoothed left RMS (dB)
     float smoothedRmsR{MixerMath::DB_MIN};   ///< Smoothed right RMS (dB)
+    float correlation{0.0f};                 ///< Phase correlation (-1.0 to 1.0)
+    float integratedLufs{-144.0f};           ///< Integrated/Gated LUFS (dB)
     float peakHoldL{MixerMath::DB_MIN};      ///< Peak hold left (dB)
     float peakHoldR{MixerMath::DB_MIN};      ///< Peak hold right (dB)
     double peakHoldTimerL{0.0};              ///< Time since peak hold set (seconds)
@@ -132,6 +137,9 @@ public:
     MixerViewModel& operator=(const MixerViewModel&) = delete;
     MixerViewModel(MixerViewModel&&) = default;
     MixerViewModel& operator=(MixerViewModel&&) = default;
+
+    // Global State
+    std::vector<std::string> inputNames;
 
     /**
      * @brief Update meter values from snapshot buffer.

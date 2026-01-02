@@ -105,10 +105,23 @@ public:
     
     // Automation State Query for Parent (Global Drag Handling)
     bool isDraggingAutomation() const { return m_isDraggingPoint; }
+    
+    // Trim Edge Hover Query (for cursor icon)
+    bool isHoveringTrimEdge() const { return m_hoverTrimEdge != TrimEdge::None; }
+    bool isTrimming() const { return m_isTrimming; }
 
     // Accessors
     std::shared_ptr<MixerChannel> getChannel() const { return m_channel; }
     const std::map<ClipInstanceID, NomadUI::NUIRect>& getAllClipBounds() const { return m_allClipBounds; }
+
+    // Loading state for visual feedback
+    void setLoading(bool loading, float progress = 0.0f) { 
+        if (m_isLoading != loading || std::abs(m_loadProgress - progress) > 0.01f) {
+            m_isLoading = loading; 
+            m_loadProgress = progress; 
+            setDirty(true); 
+        } 
+    }
 
     // UI state update (public so parent can refresh after clearing solos)
     void updateUI();
@@ -130,6 +143,8 @@ private:
     TrackManager* m_trackManager; // For coordinating solo exclusivity
     bool m_selected = false; // Track selection state
     bool m_isPrimaryForLane = true; // Primary draws control area, secondary only draws clip
+    bool m_isLoading = false;
+    float m_loadProgress = 0.0f;
 
     
     // Callbacks
@@ -173,12 +188,17 @@ private:
     // Clip trimming state (edge resize)
     enum class TrimEdge { None, Left, Right };
     TrimEdge m_trimEdge = TrimEdge::None;     // Which edge is being dragged
+    TrimEdge m_hoverTrimEdge = TrimEdge::None; // Which edge is being hovered (for cursor)
     bool m_isTrimming = false;                // True during trim operation
     double m_trimOriginalStart = 0.0;         // Original trim start before drag
     double m_trimOriginalDuration = 0.0;      // Original trim duration before drag
     double m_trimOriginalEnd = 0.0;           // Original trim end before drag
     float m_trimDragStartX = 0.0f;            // Mouse X when trim started
     static constexpr float TRIM_EDGE_WIDTH = 8.0f;  // Pixels for edge hit detection
+    
+    // Snap helper for trimming
+    double snapBeatToGrid(double beat) const;
+    double getSnapGridSizeBeats() const;
  
     // Automation Interaction State (v3.1)
     bool m_isDraggingPoint = false;

@@ -110,6 +110,8 @@ list(APPEND NOMADUI_CORE_SOURCES
     Widgets/UIMixerInspector.cpp
     Widgets/UnitRow.h
     Widgets/UnitRow.cpp
+    Widgets/UnitColorPicker.h
+    Widgets/UnitColorPicker.cpp
     Widgets/UIItemSelector.h
     Widgets/UIItemSelector.cpp
     Widgets/PluginBrowserPanel.h
@@ -143,9 +145,9 @@ target_include_directories(NomadUI_Core PUBLIC
 # Keep this PRIVATE so NomadUI can still be consumed as a standalone library
 # when these widgets are not used.
 target_include_directories(NomadUI_Core PRIVATE
-    ${CMAKE_SOURCE_DIR}/NomadCore/include
-    ${CMAKE_SOURCE_DIR}/NomadAudio/include
-    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadCore/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadAudio/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Source
 )
 
 # FreeType dependency removed - handled by MSDF text renderer

@@ -142,8 +142,15 @@ void AudioEngine::processBlock(float* outputBuffer,
                                const float* inputBuffer,
                                uint32_t numFrames,
                                double streamTime) {
-    (void)inputBuffer;
     (void)streamTime;
+
+    // Process Input (Recording)
+    if (inputBuffer) {
+        auto cb = m_inputCallback.load(std::memory_order_relaxed);
+        if (cb) {
+            cb(inputBuffer, numFrames, m_inputCallbackData.load(std::memory_order_relaxed));
+        }
+    }
 
     if (!outputBuffer || numFrames == 0) {
         return;
@@ -303,6 +310,10 @@ void AudioEngine::processBlock(float* outputBuffer,
     double rmsAccR = 0.0;
     double lowAccL = 0.0;
     double lowAccR = 0.0;
+    // Correlation accumulators
+    double sumLR = 0.0;
+    double sumLL = 0.0;
+    double sumRR = 0.0;
     
     const double* src = m_masterBufferD.data();
     auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_acquire);
@@ -365,6 +376,11 @@ void AudioEngine::processBlock(float* outputBuffer,
             masterLfStateR = lpR;
             lowAccL += lpL * lpL;
             lowAccR += lpR * lpR;
+            
+            // Phase Correlation
+            sumLR += L * R;
+            sumLL += L * L;
+            sumRR += R * R;
         }
         
         // Dithering (Triangular Probability Density Function - TPDF)
@@ -385,6 +401,19 @@ void AudioEngine::processBlock(float* outputBuffer,
             R += noise;
         }
 
+        // --- LUFS Filtering (Per-Sample) ---
+        // Stage 1 (High Shelf)
+        double f1L = m_loudnessState.f1L.process(L, kKWeightPreFilter);
+        double f1R = m_loudnessState.f1R.process(R, kKWeightPreFilter);
+        
+        // Stage 2 (RLB High Pass)
+        double f2L = m_loudnessState.f2L.process(f1L, kKWeightRLB);
+        double f2R = m_loudnessState.f2R.process(f1R, kKWeightRLB);
+        
+        // Accumulate Energy
+        m_loudnessState.blockEnergySum += (f2L * f2L) + (f2R * f2R);
+        // -----------------------------------
+
         // Output as float
         outputBuffer[i * 2] = static_cast<float>(L);
         outputBuffer[i * 2 + 1] = static_cast<float>(R);
@@ -402,6 +431,8 @@ void AudioEngine::processBlock(float* outputBuffer,
     float masterRmsR = 0.0f;
     float masterLowL = 0.0f;
     float masterLowR = 0.0f;
+    float masterCorr = 0.0f;
+    
     if (numFrames > 0) {
         const double invN = 1.0 / static_cast<double>(numFrames);
         masterRmsL = static_cast<float>(std::sqrt(rmsAccL * invN));
@@ -411,22 +442,54 @@ void AudioEngine::processBlock(float* outputBuffer,
         if (publishMasterSnapshot) {
             masterLowL = static_cast<float>(std::sqrt(lowAccL * invN));
             masterLowR = static_cast<float>(std::sqrt(lowAccR * invN));
+            
+            // Calculate final correlation
+            const double den = std::sqrt(sumLL * sumRR);
+            if (den > 1e-9) {
+                masterCorr = static_cast<float>(sumLR / den);
+            } else if (sumLL < 1e-9 && sumRR < 1e-9) {
+                 masterCorr = 0.0f;
+            }
         }
     } else {
         m_rmsL.store(0.0f, std::memory_order_relaxed);
         m_rmsR.store(0.0f, std::memory_order_relaxed);
     }
 
-    // Publish master meter snapshot (post-gain, pre-fade; good enough for current UI checkpoint).
+    // Publish master meter snapshot (post-gain, pre-fade).
     if (publishMasterSnapshot) {
+        
+        // Publish snapshot
         const float masterPeakL = static_cast<float>(peakL);
         const float masterPeakR = static_cast<float>(peakR);
+        const float integratedLufs = m_loudnessState.integratedLufs.load(std::memory_order_relaxed);
+        
         snaps->writeLevels(ChannelSlotMap::MASTER_SLOT_INDEX,
                                          masterPeakL, masterPeakR,
                                          masterRmsL, masterRmsR,
-                                         masterLowL, masterLowR);
+                                         masterLowL, masterLowR,
+                                         masterCorr,
+                                         integratedLufs);
+        
         if (masterPeakL >= 1.0f || masterPeakR >= 1.0f) {
             snaps->setClip(ChannelSlotMap::MASTER_SLOT_INDEX, masterPeakL >= 1.0f, masterPeakR >= 1.0f);
+        }
+    }
+
+    // --- LUFS Block Push (Output) ---
+    m_loudnessState.blockSamples += numFrames;
+    if (m_loudnessState.blockSamples >= 19200) {
+        double avgBlockEnergy = m_loudnessState.blockEnergySum / static_cast<double>(m_loudnessState.blockSamples); // Use accumulated sample count
+        m_loudnessState.energyQueue.try_push(avgBlockEnergy);
+        m_loudnessState.blockEnergySum = 0.0;
+        m_loudnessState.blockSamples = 0;
+        
+        // Momentary (Short-term) readout for UI feedback
+        if (avgBlockEnergy > 1e-14) {
+           float m = -0.691f + 10.0f * std::log10(static_cast<float>(avgBlockEnergy));
+           m_loudnessState.momentaryLufs.store(m, std::memory_order_relaxed);
+        } else {
+           m_loudnessState.momentaryLufs.store(-144.0f, std::memory_order_relaxed);
         }
     }
 
@@ -679,29 +742,176 @@ uint32_t AudioEngine::copyWaveformHistory(float* outInterleaved, uint32_t maxFra
     return frames;
 }
 
-#if 0
-void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
+// --- Constants ---
+const AudioEngine::BiquadCoeff AudioEngine::kKWeightPreFilter = {
+    1.53512485958697, -2.69169618940638, 1.19839281085285, // b0, b1, b2
+    -1.69065929318241, 0.73248077421585 // a1, a2
+};
+
+const AudioEngine::BiquadCoeff AudioEngine::kKWeightRLB = {
+    1.0, -2.0, 1.0, // b0, b1, b2
+    -1.99004745483398, 0.99007225036621 // a1, a2
+};
+
+AudioEngine::AudioEngine() {
+    startLoudnessWorker();
+}
+
+AudioEngine::~AudioEngine() {
+    stopLoudnessWorker();
+}
+
+void AudioEngine::startLoudnessWorker() {
+    if (m_loudnessThreadRunning) return;
+    m_loudnessThreadRunning = true;
+    m_loudnessThread = std::thread(&AudioEngine::loudnessWorkerLoop, this);
+    
+    // Low priority for worker
+#ifdef _WIN32
+    SetThreadPriority(m_loudnessThread.native_handle(), THREAD_PRIORITY_BELOW_NORMAL);
+#endif
+}
+
+void AudioEngine::stopLoudnessWorker() {
+    m_loudnessThreadRunning = false;
+    if (m_loudnessThread.joinable()) {
+        m_loudnessThread.join();
+    }
+}
+
+void AudioEngine::loudnessWorkerLoop() {
+    while (m_loudnessThreadRunning) {
+        // 1. Process Accumulation Queue
+        double blockEnergy;
+        bool didWork = false;
+        
+        // Handling Reset
+        if (m_loudnessResetRequested.exchange(false)) {
+            m_loudnessState.historyWriteIdx = 0;
+            m_loudnessState.historyCount = 0;
+            m_loudnessState.gatedSum = 0.0;
+            m_loudnessState.gatedBlocks = 0;
+            m_loudnessState.integratedLufs.store(-144.0f);
+        }
+        
+        while (m_loudnessState.energyQueue.pop(blockEnergy)) {
+            didWork = true;
+            
+            // Validate: check for NaN/Inf from upstream
+            if (!std::isfinite(blockEnergy) || blockEnergy < 0.0) blockEnergy = 0.0;
+            
+            // Add to circular history
+            size_t idx = m_loudnessState.historyWriteIdx;
+            m_loudnessState.blockHistory[idx] = blockEnergy;
+            m_loudnessState.historyWriteIdx = (idx + 1) & (LoudnessState::kHistoryCapacity - 1);
+            if (m_loudnessState.historyCount < LoudnessState::kHistoryCapacity) {
+                m_loudnessState.historyCount++;
+            }
+        }
+        
+        if (didWork && m_loudnessState.historyCount > 0) {
+            // 2. Perform Gating (full scan of history)
+            // Optimization: We could maintain a "running histogram" but full scan of ~32k doubles is ~256KB read.
+            // Modern RAM bandwidth > 20GB/s. 256KB is < 0.1ms.
+            // This is "Cockroach" safe: re-calculating from source truth every time minimizes drift/state corruption.
+            
+            double sumUngated = 0.0;
+            size_t countUngated = 0;
+            
+            // Absolute Threshold: -70 LKFS
+            // 10 ^ (-70 / 10) = 1e-7
+            constexpr double kAbsThresholdEnergy = 1.0e-7;
+            
+            // Pass 1: Calc Ungated Loudness (blocks > Abs Threshold)
+            // Iterate valid history
+            size_t count = m_loudnessState.historyCount;
+            // To iterate circular buffer efficiently, just iterate 0..Capacity if full, or 0..Count if not wrapped?
+            // Actually, we can just iterate the used entries. 
+            // If full, iterate all. If not full, iterate 0..WriteIdx.
+            // Simplest: Iterate all 0..Capacity, check count? No, `blockHistory` is static size.
+            // If historyCount < Capacity, only use 0..historyCount-1 (assuming we fill linearly first).
+            // Wait, circular buffer writes wrap. If count < capacity, valid data is at [0..writeIdx-1]. Correct.
+            // If count == capacity, valid data is [0..Capacity-1].
+            
+            size_t validLimit = (m_loudnessState.historyCount < LoudnessState::kHistoryCapacity) 
+                                ? m_loudnessState.historyWriteIdx 
+                                : LoudnessState::kHistoryCapacity;
+
+            for (size_t i = 0; i < validLimit; ++i) {
+                double e = m_loudnessState.blockHistory[i];
+                if (e > kAbsThresholdEnergy) {
+                    sumUngated += e;
+                    countUngated++;
+                }
+            }
+            
+            if (countUngated > 0) {
+                double avgUngated = sumUngated / static_cast<double>(countUngated);
+                
+                // Pass 2: Calc Relative Threshold (-10 LU below Ungated)
+                // RelThreshold = UngatedEnergy * 10^(-10/10) = Ungated * 0.1
+                double relThreshold = avgUngated * 0.1;
+                
+                // Final Gated Sum
+                // Blocks must be > Abs AND > Rel
+                // (Since Rel is usually > Abs unless signal is very quiet, Rel dominates. But strict check is both).
+                double threshold = (relThreshold > kAbsThresholdEnergy) ? relThreshold : kAbsThresholdEnergy;
+                
+                double sumGated = 0.0;
+                size_t countGated = 0;
+                
+                for (size_t i = 0; i < validLimit; ++i) {
+                    double e = m_loudnessState.blockHistory[i];
+                    if (e > threshold) {
+                        sumGated += e;
+                        countGated++;
+                    }
+                }
+                
+                if (countGated > 0) {
+                     double finalEnergy = sumGated / static_cast<double>(countGated);
+                     // LUFS = -0.691 + 10 * log10(Energy)
+                     if (finalEnergy > 0.0) {
+                         double lufs = -0.691 + 10.0 * std::log10(finalEnergy);
+                         m_loudnessState.integratedLufs.store(static_cast<float>(lufs), std::memory_order_relaxed);
+                     } else {
+                         m_loudnessState.integratedLufs.store(-144.0f, std::memory_order_relaxed);
+                     }
+                } else {
+                     m_loudnessState.integratedLufs.store(-144.0f, std::memory_order_relaxed);
+                }
+            } else {
+                 m_loudnessState.integratedLufs.store(-144.0f, std::memory_order_relaxed);
+            }
+        }
+        
+        // Sleep to save CPU (update rate ~10Hz is plenty for Integrated)
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
+void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset) {
     bool srcActiveThisBlock = false;
+    const uint32_t numChannels = m_outputChannels.load(std::memory_order_relaxed);
 
     // Guard
-    if (numFrames > m_maxBufferFrames.load(std::memory_order_relaxed) || m_outputChannels.load(std::memory_order_relaxed) != 2) {
-        std::memset(m_masterBufferD.data(), 0, 
-                   static_cast<size_t>(numFrames) * m_outputChannels.load(std::memory_order_relaxed) * sizeof(double));
+    if (numFrames > m_maxBufferFrames.load(std::memory_order_relaxed) || numChannels != 2) {
        m_telemetry.incrementUnderruns();
        return;
     }
 
+    // Calc pointers
+    double* masterBuf = m_masterBufferD.data() + bufferOffset * numChannels;
+
     const size_t availableTracks = m_trackBuffersD.size();
     if (availableTracks == 0) {
-        std::memset(m_masterBufferD.data(), 0,
-                    static_cast<size_t>(numFrames) * m_outputChannels.load(std::memory_order_relaxed) * sizeof(double));
+        std::memset(masterBuf, 0, static_cast<size_t>(numFrames) * numChannels * sizeof(double));
         m_telemetry.incrementUnderruns();
         return;
     }
 
-    // Clear master with memset (faster than std::fill for POD)
-    std::memset(m_masterBufferD.data(), 0, 
-               static_cast<size_t>(numFrames) * m_outputChannels.load(std::memory_order_relaxed) * sizeof(double));
+    // Clear master
+    std::memset(masterBuf, 0, static_cast<size_t>(numFrames) * numChannels * sizeof(double));
 
     const uint64_t blockStart = m_globalSamplePos.load(std::memory_order_relaxed);
     const uint64_t blockEnd = blockStart + numFrames;
@@ -778,10 +988,12 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
         // Empty tracks should not touch RT buffers. Still keep param state updated
         // so automation is consistent when clips appear later.
         if (track.clips.empty()) {
-            state.volume.setTarget(volTarget);
-            state.pan.setTarget(panTarget);
-            state.volume.snap();
-            state.pan.snap();
+            double tL, tR;
+            fastPanGainsD(panTarget, volTarget, tL, tR);
+            state.gainL.setTarget(tL);
+            state.gainR.setTarget(tR);
+            state.gainL.snap();
+            state.gainR.snap();
             auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
             if (snaps && slot != ChannelSlotMap::INVALID_SLOT) {
                 snaps->writePeak(slot, 0.0f, 0.0f);
@@ -812,7 +1024,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
             
             // Source position
             const double outputFrameOffset = static_cast<double>(start - clip.startSample);
-            double phase = static_cast<double>(clip.sampleOffset) + outputFrameOffset * ratio;
+            double phase = clip.sampleOffset + outputFrameOffset * ratio;
 
             // Bounds
             const int64_t totalFrames = static_cast<int64_t>(clip.totalFrames);
@@ -826,6 +1038,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
             }
             if (framesToRender == 0) continue;
 
+            double* dstBase = buffer.data();
             const float* data = clip.audioData;
             double* dst = dstBase + static_cast<size_t>(localOffset) * 2;
 
@@ -962,32 +1175,12 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
             }
         }
 
-        // Mix track into master - PRE-COMPUTE gains per block to avoid per-sample trig
-        state.volume.setTarget(volTarget);
-        state.pan.setTarget(panTarget);
-        
-        // Get current smoothed values
-        const double vol = state.volume.current;
-        const double pan = state.pan.current;
-        const double volTargetNow = state.volume.target;
-        const double panTargetNow = state.pan.target;
-        
-        // Pre-compute start/end gains (linear interpolation across block)
-        const double panAngleStart = (pan + 1.0) * QUARTER_PI_D;
-        const double panAngleEnd = (panTargetNow + 1.0) * QUARTER_PI_D;
-        
-        const double leftGainStart = std::cos(panAngleStart) * vol;
-        const double rightGainStart = std::sin(panAngleStart) * vol;
-        const double leftGainEnd = std::cos(panAngleEnd) * volTargetNow;
-        const double rightGainEnd = std::sin(panAngleEnd) * volTargetNow;
-        
-        // Linear interpolation of gains across block (cheap, smooth)
-        const double leftGainDelta = (leftGainEnd - leftGainStart) / static_cast<double>(numFrames);
-        const double rightGainDelta = (rightGainEnd - rightGainStart) / static_cast<double>(numFrames);
-        
-        double leftGain = leftGainStart;
-        double rightGain = rightGainStart;
-        
+        // Mix track into master
+        double tL, tR;
+        fastPanGainsD(panTarget, volTarget, tL, tR);
+        state.gainL.setTarget(tL);
+        state.gainR.setTarget(tR);
+
         const double* trackData = buffer.data();
         double* master = m_masterBufferD.data();
         
@@ -1002,9 +1195,15 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
         const bool publishTrackSnapshot = (snaps && slot != ChannelSlotMap::INVALID_SLOT);
         double* lfStateL = publishTrackSnapshot ? &m_meterLfStateL[slot] : nullptr;
         double* lfStateR = publishTrackSnapshot ? &m_meterLfStateR[slot] : nullptr;
+
         for (uint32_t i = 0; i < numFrames; ++i) {
+            // Apply smoothed gain
+            const double leftGain = state.gainL.next();
+            const double rightGain = state.gainR.next();
+            
             const double outL = trackData[i * 2] * leftGain;
             const double outR = trackData[i * 2 + 1] * rightGain;
+
             if (!muted) {
                 master[i * 2] += outL;
                 master[i * 2 + 1] += outR;
@@ -1026,9 +1225,6 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
                 lowAccTrackL += lpL * lpL;
                 lowAccTrackR += lpR * lpR;
             }
-
-            leftGain += leftGainDelta;
-            rightGain += rightGainDelta;
         }
 
         if (publishTrackSnapshot && numFrames > 0) {
@@ -1047,15 +1243,15 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
         }
         
         // Snap smoothed params to target for next block
-        state.volume.snap();
-        state.pan.snap();
+        state.gainL.snap();
+        state.gainR.snap();
     }
 
     if (srcActiveThisBlock) {
         m_telemetry.incrementSrcActiveBlocks();
     }
 }
-#endif
+
 
 AudioEngine::TrackRTState& AudioEngine::ensureTrackState(uint32_t trackIndex) {
     if (m_trackState.empty()) {
@@ -1300,90 +1496,7 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
         m_activeRenderTrackIndex.store(inactiveIdx, std::memory_order_release);
     }
     
-    void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset) {
-        (void)graph; 
-        
-        // 0. Clear Master Buffer
-        std::fill(m_masterBufferD.begin() + static_cast<size_t>(bufferOffset) * m_outputChannels.load(std::memory_order_relaxed), 
-                  m_masterBufferD.begin() + static_cast<size_t>(bufferOffset + numFrames) * m_outputChannels.load(std::memory_order_relaxed), 
-                  0.0);
 
-        // 1. Get Active Graph (Wait-Free)
-        const int activeIdx = m_activeRenderTrackIndex.load(std::memory_order_acquire);
-        const auto& tracks = m_renderTracks[activeIdx];
-        
-        // Load snapshots once for consistency across all tracks in this block
-        auto* slotMap = m_channelSlotMapRaw.load(std::memory_order_acquire);
-        auto* params = m_continuousParamsRaw.load(std::memory_order_acquire);
-        
-
-
-        // ---------------------------------------------------------
-        // B. Mixing Helper (Must be run sequentially or atomically)
-        // ---------------------------------------------------------
-        auto mixTrackToBus = [&](const RenderTrack& track) {
-            double* selfL = track.selfBuffer + bufferOffset * 2;
-            double* selfR = track.selfBuffer + bufferOffset * 2 + 1;
-            
-            for (const auto& conn : track.activeConnections) {
-                double* destL = conn.destinationBufferL + bufferOffset * conn.stride;
-                double* destR = conn.destinationBufferR + bufferOffset * conn.stride;
-                const size_t stride = conn.stride;
-                const double gainL = conn.gainL;
-                const double gainR = conn.gainR;
-                
-                for (uint32_t i = 0; i < numFrames; ++i) {
-                    destL[i * stride] += selfL[i * 2] * gainL;
-                    destR[i * stride] += selfR[i * 2] * gainR;
-                }
-            }
-            
-            // Clear Buffer for next block
-            std::memset(track.selfBuffer + bufferOffset * 2, 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
-        };
-
-        // ---------------------------------------------------------
-        // Driver Loop (Parallel or Serial)
-        // ---------------------------------------------------------
-        if (m_multiThreadingEnabled.load(std::memory_order_relaxed) && m_threadPool && !tracks.empty()) {
-            // PARALLEL: Dispatch DSP
-            m_syncBarrier->reset(static_cast<int>(tracks.size()));
-            
-            // Set shared state for workers
-            m_parallelNumFrames = numFrames;
-            m_parallelBufferOffset = bufferOffset;
-            
-            // Collect pointers (lock-free pre-allocated buffer)
-            uint32_t trackCount = static_cast<uint32_t>(tracks.size());
-            if (trackCount > m_parallelTrackPointers.size()) {
-                trackCount = static_cast<uint32_t>(m_parallelTrackPointers.size());
-            }
-            
-            for (uint32_t i = 0; i < trackCount; ++i) {
-                m_parallelTrackPointers[i] = const_cast<RenderTrack*>(&tracks[i]);
-            }
-            
-            // Dispatch without locks or allocations
-            m_threadPool->dispatch(trackCount, this, m_parallelTrackPointers.data(), 
-                                  &AudioEngine::parallelTrackDispatcher, m_syncBarrier.get());
-            
-            m_syncBarrier->wait();
-            
-            // SERIAL: Mix
-            for (const auto& track : tracks) {
-                mixTrackToBus(track);
-            }
-        } 
-        else {
-            // SERIAL FALLBACK
-            for (const auto& track : tracks) {
-                renderClipAudio(track.selfBuffer, ensureTrackState(track.trackIndex), 
-                               track.trackIndex, graph, numFrames, bufferOffset);
-                processTrackEffects(track, numFrames, bufferOffset); // Optimized Fader/Pan
-                mixTrackToBus(track);
-            }
-        }
-    }
 
     void AudioEngine::parallelTrackDispatcher(void* context, void* taskData) {
         auto* engine = static_cast<AudioEngine*>(context);
@@ -1471,7 +1584,7 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
             
             // Source position
             const double outputFrameOffset = static_cast<double>(start - clip.startSample);
-            double phase = static_cast<double>(clip.sampleOffset) + outputFrameOffset * ratio;
+            double phase = clip.sampleOffset + outputFrameOffset * ratio;
 
             // Bounds
             const int64_t totalFrames = static_cast<int64_t>(clip.totalFrames);

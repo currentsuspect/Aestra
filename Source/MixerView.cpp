@@ -222,9 +222,11 @@ void MixerView::refreshChannels() {
     
     if (!m_trackManager) return;
     
+    // THREAD-SAFE: Get a snapshot of channels to avoid race with Audio Thread
+    auto channelsSnapshot = m_trackManager->getChannelsSnapshot();
+    
     // Create channel strip for each track, passing TrackManager for solo coordination
-    for (size_t i = 0; i < m_trackManager->getTrackCount(); ++i) {
-        auto track = m_trackManager->getTrack(i);
+    for (const auto& track : channelsSnapshot) {
         if (track && track->getName() != "Preview") {  // Skip preview track
             auto channelStrip = std::make_shared<ChannelStrip>(track, m_trackManager.get());
             m_channelStrips.push_back(channelStrip);

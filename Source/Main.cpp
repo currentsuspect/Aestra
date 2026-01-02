@@ -338,6 +338,11 @@ public:
     }
 
     /**
+     * @brief Access content manager (needed for audio callbacks)
+     */
+    std::shared_ptr<NomadContent> getNomadContent() const { return m_content; }
+
+    /**
      * @brief Initialize all subsystems
      */
     bool initialize() {
@@ -476,7 +481,7 @@ public:
                         // Shared mode will auto-adjust to a safe buffer size if 128 is too small
                         config.bufferSize = 256;  // Safe default - works well for both modes (5.3ms @ 48kHz)
                         
-                        config.numInputChannels = 0;
+                        config.numInputChannels = outputDevice.maxInputChannels;
                         config.numOutputChannels = 2;
                         
                         if (m_audioEngine) {
@@ -509,13 +514,55 @@ public:
                                 if (m_audioEngine) {
                                     m_audioEngine->setSampleRate(static_cast<uint32_t>(actualRate));
                                     m_audioEngine->setBufferConfig(config.bufferSize, config.numOutputChannels);
+
                                     if (m_content && m_content->getTrackManager()) {
                                         m_audioEngine->setMeterSnapshots(m_content->getTrackManager()->getMeterSnapshots());
                                         m_audioEngine->setContinuousParams(m_content->getTrackManager()->getContinuousParams());
-                                        m_audioEngine->setChannelSlotMap(m_content->getTrackManager()->getChannelSlotMapShared());
-                                        auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), actualRate);
-                                        m_audioEngine->setGraph(graph);
+                                    m_audioEngine->setChannelSlotMap(m_content->getTrackManager()->getChannelSlotMapShared());
+                                    
+                                    auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), actualRate);
+                                    m_audioEngine->setGraph(graph);
+                                }
+                                
+                                // Register input callback using 'this' as context to allow lazy resolution
+                                // This fixes the issue where TrackManager is null during initial audio setup
+                                m_audioEngine->setInputCallback([](const float* input, uint32_t n, void* user) {
+                                    auto* app = static_cast<NomadApp*>(user); 
+                                    // Use public accessor since m_content is private
+                                    if (app) {
+                                        auto content = app->getNomadContent();
+                                        if (content && content->getTrackManager()) {
+                                            content->getTrackManager()->processInput(input, n);
+                                        }
                                     }
+                                }, this);
+                                
+                                if (m_content && m_content->getTrackManager()) {
+                                    m_content->getTrackManager()->setInputChannelCount(config.numInputChannels);
+                                    
+                                    // Latency Compensation
+                                    // Currently using input + output latency.
+                                    // In future, we might want to allow user offset calibration.
+                                    double inLat = 0.0, outLat = 0.0;
+                                    m_audioManager->getLatencyCompensationValues(inLat, outLat);
+                                    // Convert ms to samples
+                                    double totalLatencyMs = inLat + outLat;
+                                    uint32_t latencySamples = static_cast<uint32_t>(totalLatencyMs / 1000.0 * actualRate);
+                                    m_content->getTrackManager()->setLatencySamples(latencySamples);
+                                    
+                                    Nomad::Log::info("Latency Compensation: " + std::to_string(totalLatencyMs) + " ms (" + std::to_string(latencySamples) + " samples)");
+
+                                    // Connect TrackManager command dispatch to AudioEngine queue (Fix for transport/metronome)
+                                    if (m_audioEngine) {
+                                        m_content->getTrackManager()->setCommandSink([this](const Nomad::Audio::AudioQueueCommand& cmd) {
+                                            if (m_audioEngine) {
+                                                m_audioEngine->commandQueue().push(cmd);
+                                            }
+                                        });
+                                    }
+                                }
+                                
+                                Nomad::Log::info("Audio Stream Opened: Input Channels = " + std::to_string(config.numInputChannels));
                                 }
                                 m_mainStreamConfig.sampleRate = static_cast<uint32_t>(actualRate);
                                 if (m_audioEngine) {
@@ -526,17 +573,25 @@ public:
                                 }
                                 if (m_content && m_content->getTrackManager()) {
                                     m_content->getTrackManager()->setOutputSampleRate(actualRate);
+                                    // If we are using WASAPI, we assume Input matches Stream Rate (Full Duplex).
+                                    // But if we could detect input rate separately, we would set it here.
+                                    // For now, set Input = Output (actualRate). 
+                                    // IF the user has a mismatch, they need to configure devices to match or rely on OS resampling.
+                                    // However, knowing the actual stream rate is better than the requested one (config.sampleRate).
+                                    m_content->getTrackManager()->setInputSampleRate(actualRate);
                                 }
                                 if (m_content && m_content->getTrackManagerUI() && m_content->getTrackManagerUI()->getTrackManager()) {
                                     m_content->getTrackManagerUI()->getTrackManager()->setOutputSampleRate(actualRate);
+                                    m_content->getTrackManagerUI()->getTrackManager()->setInputSampleRate(actualRate);
                                 }
                                 
                                 // Load metronome click sounds (low pitch for downbeat, high pitch for upbeats)
                                 if (m_audioEngine) {
-                                    // Paths relative to build/bin/Release, going up to project root
+                                    // Paths relative to project root (CWD)
+                                    // If CWD is project root:
                                     m_audioEngine->loadMetronomeClicks(
-                                        "../../../NomadAudio/assets/nomad_metronome.wav",      // Downbeat (low pitch)
-                                        "../../../NomadAudio/assets/nomad_metronome_up.wav"   // Upbeat (high pitch)
+                                        "NomadAudio/assets/nomad_metronome.wav",      // Downbeat (low pitch)
+                                        "NomadAudio/assets/nomad_metronome_up.wav"    // Upbeat (high pitch)
                                     );
                                     m_audioEngine->setBPM(120.0f);  // Default BPM
                                     // Metronome disabled by default - user enables via toggle button
@@ -568,6 +623,22 @@ public:
         auto& themeManager = NUIThemeManager::getInstance();
         themeManager.setActiveTheme("nomad-dark");
         Log::info("Theme system initialized");
+        
+        // Wire up TransportBar callbacks to AudioEngine
+        if (m_content && m_content->getTransportBar() && m_audioEngine) {
+            m_content->getTransportBar()->setOnMetronomeToggle([this](bool active) {
+                if (m_audioEngine) {
+                    m_audioEngine->setMetronomeEnabled(active);
+                    Nomad::Log::info("Metronome toggled: " + std::string(active ? "ON" : "OFF"));
+                }
+            });
+            m_content->getTransportBar()->setOnTempoChange([this](float bpm) {
+                if (m_audioEngine) m_audioEngine->setBPM(bpm);
+            });
+            m_content->getTransportBar()->setOnTimeSignatureChange([this](int beats) {
+                if (m_audioEngine) m_audioEngine->setBeatsPerBar(beats);
+            });
+        }
 
         // Load YAML configuration for pixel-perfect customization
         // Note: This would be implemented in the config loader
@@ -631,6 +702,13 @@ public:
             m_audioEngine->setChannelSlotMap(m_content->getTrackManager()->getChannelSlotMapShared());
             auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), m_mainStreamConfig.sampleRate);
             m_audioEngine->setGraph(graph);
+
+            // Sync input channel count that was likely missed during early audio init
+            // This is critical for recording to work, as the stream opens before TrackManager exists
+            if (m_audioInitialized) {
+                m_content->getTrackManager()->setInputChannelCount(m_mainStreamConfig.numInputChannels);
+                Log::info("Synced input channel count to TrackManager: " + std::to_string(m_mainStreamConfig.numInputChannels));
+            }
         }
         
         // Wire metronome toggle callback from TransportBar to AudioEngine
@@ -977,6 +1055,21 @@ public:
                  if (m_audioManager->startStream()) {
                      Log::info("Restored stream");
                      m_audioInitialized = true;
+                     
+                     // === CRITICAL FIX: Propagate sample rate to TrackManager for recording ===
+                     // This ensures ASIO/any driver changes are reflected in recording sample rate
+                     double actualRate = static_cast<double>(m_audioManager->getStreamSampleRate());
+                     if (actualRate > 0.0) {
+                         if (m_content && m_content->getTrackManager()) {
+                             m_content->getTrackManager()->setInputSampleRate(actualRate);
+                             m_content->getTrackManager()->setOutputSampleRate(actualRate);
+                             Log::info("TrackManager sample rate updated to: " + std::to_string(static_cast<int>(actualRate)) + " Hz");
+                         }
+                         if (m_content && m_content->getTrackManagerUI() && m_content->getTrackManagerUI()->getTrackManager()) {
+                             m_content->getTrackManagerUI()->getTrackManager()->setInputSampleRate(actualRate);
+                             m_content->getTrackManagerUI()->getTrackManager()->setOutputSampleRate(actualRate);
+                         }
+                     }
                  }
              }
         });
@@ -1029,10 +1122,23 @@ public:
         // Setup window callbacks
         setupCallbacks();
         
+        // Initialize custom software cursor system
+        if (m_useCustomCursor) {
+            initializeCustomCursors();
+            
+            // Always hide system cursor when custom cursor is enabled
+            if (m_window) {
+                m_window->setCursorVisible(false);
+            }
+        }
+        
         // Setup cursor visibility callback for TrackManagerUI (split tool hides cursor to show scissors)
+        // With custom cursor enabled, this callback is mostly unused but kept for compatibility
         if (m_content && m_content->getTrackManagerUI()) {
             m_content->getTrackManagerUI()->setOnCursorVisibilityChanged([this](bool visible) {
-                if (m_window) {
+                // With custom cursor, we always keep system cursor hidden
+                // Only restore if custom cursor is disabled
+                if (m_window && !m_useCustomCursor) {
                     m_window->setCursorVisible(visible);
                 }
             });
@@ -1733,14 +1839,14 @@ private:
                         trackManager->copySelectedClip();
                         Log::info("Clip copied to clipboard");
                     } else if (key == static_cast<int>(KeyCode::X)) {
-                        trackManager->cutSelectedClip();
-                        Log::info("Clip cut to clipboard");
+                        // trackManager->cutSelectedClip();
+                        Log::info("Clip cut (Not impl)");
                     } else if (key == static_cast<int>(KeyCode::V)) {
-                        trackManager->pasteClip();
+                        trackManager->pasteClipboardAtCursor();
                         Log::info("Clip pasted");
                     } else if (key == static_cast<int>(KeyCode::D)) {
-                        trackManager->duplicateSelectedClip();
-                        Log::info("Clip duplicated");
+                        // trackManager->duplicateSelectedClip();
+                        Log::info("Clip duplicated (Not impl)");
                     }
                 }
 
@@ -1813,9 +1919,17 @@ private:
             Log::info(ss.str());
         });
 
-        // Window focus callback (authoritative reset for modifiers + focus)
+        // Window focus callback (authoritative reset for modifiers + focus + cursor)
         m_window->setFocusCallback([this](bool focused) {
-            if (focused) return;
+            m_windowFocused = focused;
+            
+            if (focused) {
+                // Re-hide system cursor when window regains focus
+                if (m_useCustomCursor && m_window) {
+                    m_window->setCursorVisible(false);
+                }
+                return;
+            }
 
             m_keyModifiers = NomadUI::NUIModifiers::None;
             NomadUI::NUIComponent::clearFocusedComponent();
@@ -1865,9 +1979,156 @@ private:
             NUIDragDropManager::getInstance().renderDragGhost(*m_renderer);
         }
 
+        // Render custom software cursor on top of everything
+        if (m_useCustomCursor && m_windowFocused) {
+            NOMAD_ZONE("Render_CustomCursor");
+            renderCustomCursor();
+        }
+
         {
             NOMAD_ZONE("Render_EndFrame");
             m_renderer->endFrame();
+        }
+    }
+
+    // ==============================
+    // Custom Software Cursor
+    // ==============================
+    
+    /**
+     * @brief Initialize custom cursor icons
+     */
+    void initializeCustomCursors() {
+        // Arrow cursor (default pointer)
+        m_cursorArrow = std::make_shared<NomadUI::NUIIcon>(R"(
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 2L5 18L9 14L12 21L14 20L11 13L17 13L5 2Z" fill="white" stroke="black" stroke-width="1.5"/>
+            </svg>
+        )");
+        
+        // Hand cursor (for clickable elements)
+        m_cursorHand = std::make_shared<NomadUI::NUIIcon>(R"(
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 6V3C12 2.45 12.45 2 13 2C13.55 2 14 2.45 14 3V10H15V4C15 3.45 15.45 3 16 3C16.55 3 17 3.45 17 4V10H18V5C18 4.45 18.45 4 19 4C19.55 4 20 4.45 20 5V15C20 18.31 17.31 21 14 21H12C8.69 21 6 18.31 6 15V12C6 11.45 6.45 11 7 11C7.55 11 8 11.45 8 12V14H9V6C9 5.45 9.45 5 10 5C10.55 5 11 5.45 11 6V10H12V6Z" fill="white" stroke="black" stroke-width="1"/>
+            </svg>
+        )");
+        
+        // I-Beam cursor (for text input)
+        m_cursorIBeam = std::make_shared<NomadUI::NUIIcon>(R"(
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 4H11M15 4H13M11 4V20M13 4V20M11 4C11 4 11 4 12 4C13 4 13 4 13 4M11 20H9M15 20H13M11 20C11 20 11 20 12 20C13 20 13 20 13 20" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                <path d="M9 4H11M15 4H13M11 4V20M13 4V20M11 4C11 4 11 4 12 4C13 4 13 4 13 4M11 20H9M15 20H13M11 20C11 20 11 20 12 20C13 20 13 20 13 20" stroke="black" stroke-width="3" stroke-linecap="round" opacity="0.3"/>
+            </svg>
+        )");
+        
+        // Horizontal resize cursor
+        m_cursorResizeH = std::make_shared<NomadUI::NUIIcon>(R"(
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 12L22 12M22 12L19 9M22 12L19 15M6 12L2 12M2 12L5 9M2 12L5 15M12 6V18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18 12L22 12M22 12L19 9M22 12L19 15M6 12L2 12M2 12L5 9M2 12L5 15M12 6V18" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.3"/>
+            </svg>
+        )");
+        
+        // Vertical resize cursor
+        m_cursorResizeV = std::make_shared<NomadUI::NUIIcon>(R"(
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 6L12 2M12 2L9 5M12 2L15 5M12 18L12 22M12 22L9 19M12 22L15 19M6 12H18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 6L12 2M12 2L9 5M12 2L15 5M12 18L12 22M12 22L9 19M12 22L15 19M6 12H18" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.3"/>
+            </svg>
+        )");
+        
+        Log::info("Custom cursor icons initialized");
+    }
+    
+    /**
+     * @brief Render the custom software cursor
+     */
+    void renderCustomCursor() {
+        if (!m_renderer) return;
+        
+        // Get current cursor style from TrackManagerUI if Split/Paint tool active
+        NomadUI::NUICursorStyle style = NomadUI::NUICursorStyle::Arrow;
+        
+        if (m_content && m_content->getTrackManagerUI()) {
+            auto trackUI = m_content->getTrackManagerUI();
+            
+            // Check if minimap wants resize cursor - if so, let TrackManagerUI render it
+            if (trackUI->isMinimapResizeCursorActive()) {
+                return;
+            }
+            
+            Nomad::Audio::PlaylistTool tool = trackUI->getCurrentTool();
+            
+            // Split and Paint tools render their own cursors ONLY when inside the grid
+            // Outside the grid, we render the default arrow cursor
+            if (tool == Nomad::Audio::PlaylistTool::Split || 
+                tool == Nomad::Audio::PlaylistTool::Paint) {
+                // Check if mouse is inside the grid area
+                NomadUI::NUIRect trackBounds = trackUI->getBounds();
+                auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+                const auto& layout = themeManager.getLayoutDimensions();
+                const float controlAreaWidth = layout.trackControlsWidth;
+                const float gridStartX = trackBounds.x + controlAreaWidth + 5.0f;
+                const float headerHeight = 38.0f;
+                const float rulerHeight = 28.0f;
+                const float horizontalScrollbarHeight = 24.0f;
+                const float trackAreaTop = trackBounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+                
+                NomadUI::NUIRect gridBounds(gridStartX, trackAreaTop, 
+                                           trackBounds.width - controlAreaWidth - 20.0f,
+                                           trackBounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight);
+                
+                float mx = static_cast<float>(m_lastMouseX);
+                float my = static_cast<float>(m_lastMouseY);
+                
+                if (gridBounds.contains(NomadUI::NUIPoint(mx, my))) {
+                    // Inside grid - TrackManagerUI renders the tool cursor, skip default
+                    return;
+                }
+                // Outside grid - fall through to render default arrow cursor
+            }
+        }
+        
+        // Select cursor icon based on style
+        std::shared_ptr<NomadUI::NUIIcon> cursorIcon;
+        float offsetX = 0.0f, offsetY = 0.0f;
+        float size = 20.0f;
+        
+        switch (m_activeCursorStyle) {
+            case NomadUI::NUICursorStyle::Hand:
+            case NomadUI::NUICursorStyle::Grab:
+            case NomadUI::NUICursorStyle::Grabbing:
+                cursorIcon = m_cursorHand;
+                offsetX = -6.0f;
+                offsetY = -2.0f;
+                break;
+            case NomadUI::NUICursorStyle::IBeam:
+                cursorIcon = m_cursorIBeam;
+                offsetX = -size / 2.0f;
+                offsetY = -size / 2.0f;
+                break;
+            case NomadUI::NUICursorStyle::ResizeEW:
+                cursorIcon = m_cursorResizeH;
+                offsetX = -size / 2.0f;
+                offsetY = -size / 2.0f;
+                break;
+            case NomadUI::NUICursorStyle::ResizeNS:
+                cursorIcon = m_cursorResizeV;
+                offsetX = -size / 2.0f;
+                offsetY = -size / 2.0f;
+                break;
+            default:
+                cursorIcon = m_cursorArrow;
+                offsetX = 0.0f;
+                offsetY = 0.0f;
+                break;
+        }
+        
+        if (cursorIcon) {
+            float x = static_cast<float>(m_lastMouseX) + offsetX;
+            float y = static_cast<float>(m_lastMouseY) + offsetY;
+            cursorIcon->setBounds(NomadUI::NUIRect(x, y, size, size));
+            cursorIcon->onRender(*m_renderer);
         }
     }
 
@@ -2201,6 +2462,16 @@ private:
     
     // Menu bar (File/Edit/View)
     std::shared_ptr<NomadUI::NUIMenuBar> m_menuBar;
+    
+    // Custom software cursor system
+    bool m_useCustomCursor{true};
+    bool m_windowFocused{true};
+    std::shared_ptr<NomadUI::NUIIcon> m_cursorArrow;
+    std::shared_ptr<NomadUI::NUIIcon> m_cursorHand;
+    std::shared_ptr<NomadUI::NUIIcon> m_cursorIBeam;
+    std::shared_ptr<NomadUI::NUIIcon> m_cursorResizeH;
+    std::shared_ptr<NomadUI::NUIIcon> m_cursorResizeV;
+    NomadUI::NUICursorStyle m_activeCursorStyle{NomadUI::NUICursorStyle::Arrow};
 };
 
 /**

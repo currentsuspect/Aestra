@@ -2,6 +2,7 @@
 #include "NUIPianoRollWidgets.h"
 #include "NUIDropdown.h"
 #include "NUIButton.h"
+#include "../Core/NUIContextMenu.h"
 #include "../Core/NUIIcon.h"
 #include "../Graphics/NUIRenderer.h"
 #include "../Core/NUIThemeSystem.h"
@@ -328,40 +329,66 @@ PianoRollToolbar::PianoRollToolbar() {
 }
 
 void PianoRollToolbar::setupUI() {
-    // 0. Snap Dropdown
-    m_snapDropdown = std::make_shared<NUIDropdown>();
-    auto snaps = MusicTheory::getSnapOptions();
-    for (int i = 0; i < snaps.size(); ++i) {
-        m_snapDropdown->addItem(MusicTheory::getSnapName(snaps[i]), static_cast<int>(snaps[i]));
-    }
-    m_snapDropdown->setSelectedIndex(1); // Beat default
-    m_snapDropdown->setMaxVisibleItems(15);
-    m_snapDropdown->setOnSelectionChanged([this](int idx, int id, const std::string& text){
-        SnapGrid val = static_cast<SnapGrid>(id);
-        if (auto g = grid_.lock()) g->setSnap(val);
-        if (auto n = notes_.lock()) n->setSnap(val);
+    // 0. Menu Button (Scale, Snap, etc.)
+    m_menuBtn = std::make_shared<NUIButton>("");
+    m_menuBtn->setTooltip("Scale, Snap & Settings");
+    
+    const char* menuSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>)";
+    m_menuIcon = std::make_shared<NUIIcon>(menuSvg);
+    
+    m_menuBtn->setOnClick([this]() {
+        if (m_activeContextMenu) {
+            removeChild(m_activeContextMenu);
+            m_activeContextMenu = nullptr;
+            return;
+        }
+
+        auto menu = std::make_shared<NUIContextMenu>();
+        m_activeContextMenu = menu;
+        
+        // --- SNAP SUBMENU ---
+        auto snapMenu = std::make_shared<NUIContextMenu>();
+        auto snaps = MusicTheory::getSnapOptions();
+        for (auto snap : snaps) {
+            bool isSelected = false; // Need to track this
+            if (auto g = grid_.lock()) {
+                // We'll need a getter for snap in PianoRollGrid or track it here
+            }
+            snapMenu->addItem(MusicTheory::getSnapName(snap), [this, snap]() {
+                if (auto g = grid_.lock()) g->setSnap(snap);
+                if (auto n = notes_.lock()) n->setSnap(snap);
+            });
+        }
+        menu->addSubmenu("Snap", snapMenu);
+        
+        // --- ROOT KEY SUBMENU ---
+        auto rootMenu = std::make_shared<NUIContextMenu>();
+        auto roots = MusicTheory::getRootNames();
+        for (int i = 0; i < roots.size(); ++i) {
+            rootMenu->addItem(roots[i], [this, i]() {
+                if (auto g = grid_.lock()) g->setRootKey(i);
+            });
+        }
+        menu->addSubmenu("Root Key", rootMenu);
+        
+        // --- SCALE SUBMENU ---
+        auto scaleMenu = std::make_shared<NUIContextMenu>();
+        auto scales = MusicTheory::getScales();
+        for (int i = 0; i < scales.size(); ++i) {
+            scaleMenu->addItem(scales[i].name, [this, i]() {
+                if (auto g = grid_.lock()) g->setScaleType(static_cast<ScaleType>(i));
+            });
+        }
+        menu->addSubmenu("Scale Type", scaleMenu);
+
+        // Position menu below the button
+        auto b = m_menuBtn->getBounds();
+        menu->showAt(b.x, b.y + b.height + 2.0f);
+
+        addChild(menu);
     });
 
-    // 1. Root & Scale Dropdowns
-    m_rootDropdown = std::make_shared<NUIDropdown>();
-    auto roots = MusicTheory::getRootNames();
-    for (int i = 0; i < roots.size(); ++i) m_rootDropdown->addItem(roots[i], i);
-    m_rootDropdown->setSelectedIndex(0);
-    m_rootDropdown->setMaxVisibleItems(15);
-    m_rootDropdown->setOnSelectionChanged([this](int idx, int id, const std::string& text){
-        if (auto g = grid_.lock()) g->setRootKey(id);
-    });
-
-    m_scaleDropdown = std::make_shared<NUIDropdown>();
-    auto scales = MusicTheory::getScales();
-    for (int i = 0; i < scales.size(); ++i) m_scaleDropdown->addItem(scales[i].name, i);
-    m_scaleDropdown->setSelectedIndex(0); // Chromatic
-    m_scaleDropdown->setMaxVisibleItems(15);
-    m_scaleDropdown->setOnSelectionChanged([this](int idx, int id, const std::string& text){
-        if (auto g = grid_.lock()) g->setScaleType(static_cast<ScaleType>(id));
-    });
-
-    // 2. Tool Buttons
+    // 1. Tool Buttons
     m_ptrBtn = std::make_shared<NUIButton>("");
     m_ptrBtn->setOnClick([this](){ setActiveTool(GlobalTool::Pointer); });
 
@@ -381,9 +408,7 @@ void PianoRollToolbar::setupUI() {
     const char* eraserSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.14 3c-.51 0-1.02.2-1.41.59L2.59 14.73c-.78.78-.78 2.05 0 2.83L5.43 20.39c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l10.96-10.96c.78-.78.78-2.05 0-2.83l-2.66-2.67c-.39-.39-.9-.59-1.41-.59zM9 16l-3.37-3.37L15.14 3.1 19 6.9 9 16z"/></svg>)";
     m_eraserIcon = std::make_shared<NUIIcon>(eraserSvg);
 
-    addChild(m_snapDropdown); // Add Snap
-    addChild(m_rootDropdown);
-    addChild(m_scaleDropdown);
+    addChild(m_menuBtn);
     addChild(m_ptrBtn);
     addChild(m_pencilBtn);
     addChild(m_eraserBtn);
@@ -397,80 +422,85 @@ void PianoRollToolbar::setPatternName(const std::string& name) {
 
 void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     auto b = getBounds();
-    // Background
-    renderer.fillRect(b, NUIColor(0.12f, 0.12f, 0.14f, 1.0f));
-    renderer.drawLine(NUIPoint(b.x, b.y + b.height), NUIPoint(b.x + b.width, b.y + b.height), 1.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.5f));
-
-    // Layout
-    float x = b.x + 10.0f;
-    float y = b.y + 4.0f; // Center vertically in 30px height (h=22 -> 4px pad)
-    float h = 22.0f;
+    auto& themeManager = NUIThemeManager::getInstance();
     
-    // Snap
-    m_snapDropdown->setBounds(NUIRect(x, y, 90, h));
-    m_snapDropdown->onRender(renderer);
-    x += 95.0f;
+    // Background (Nomad Dark)
+    renderer.fillRect(b, themeManager.getColor("surfaceRaised"));
+    
+    // Bottom border (Standardized neutral)
+    renderer.drawLine(NUIPoint(b.x, b.y + b.height), NUIPoint(b.x + b.width, b.y + b.height), 1.0f, NUIColor::fromHex(0x2e2e35));
 
-    // Scale
-    m_rootDropdown->setBounds(NUIRect(x, y, 70, h));
-    m_rootDropdown->onRender(renderer);
-    x += 75.0f;
+    // Common layout constants
+    const float buttonSize = 24.0f;
+    const float buttonSpacing = 6.0f;
+    const float innerPad = 8.0f;
+    const float radius = 4.0f;
+    
+    float currentX = b.x + innerPad;
+    float currentY = b.y + (b.height - buttonSize) * 0.5f;
 
-    m_scaleDropdown->setBounds(NUIRect(x, y, 110, h));
-    m_scaleDropdown->onRender(renderer);
-    x += 120.0f;
+    auto idleBg = themeManager.getColor("textSecondary").withAlpha(0.15f); // glassBg
+    auto hoverBg = themeManager.getColor("textSecondary").withAlpha(0.25f);
+    auto activeBg = themeManager.getColor("glassActive");
+    auto borderCol = themeManager.getColor("glassBorder");
 
-    // Tools
-    float btnW = 32.0f;
-    auto renderBtn = [&](std::shared_ptr<NUIButton> btn, std::shared_ptr<NUIIcon> icon, GlobalTool t) {
-        btn->setBounds(NUIRect(x, y, btnW, h));
-        btn->setText("");
+    // Helper to render standardized buttons
+    auto renderButton = [&](std::shared_ptr<NUIButton> btn, std::shared_ptr<NUIIcon> icon, bool isActive) {
+        btn->setBounds(NUIRect(currentX, currentY, buttonSize, buttonSize));
+        btn->setText(""); // No text, just icon
         
-        // Active Highlight
-        if (activeTool_ == t) {
-             renderer.fillRoundedRect(btn->getBounds(), 4.0f, NUIColor(0.0f, 0.8f, 1.0f, 0.3f));
-             renderer.strokeRoundedRect(btn->getBounds(), 4.0f, 1.0f, NUIColor(0.0f, 0.8f, 1.0f, 1.0f));
-             icon->setColor(NUIColor(0.0f, 0.9f, 1.0f, 1.0f));
-        } else {
-             if (btn->isHovered()) {
-                 renderer.fillRoundedRect(btn->getBounds(), 4.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.1f));
-                 icon->setColor(NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
-             } else {
-                 icon->setColor(NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
-             }
+        NomadUI::NUIColor bg = idleBg;
+        NomadUI::NUIColor border = borderCol;
+        
+        if (isActive) {
+            bg = activeBg;
+            border = themeManager.getColor("primary").withAlpha(0.4f);
+        } else if (btn->isHovered()) {
+            bg = hoverBg;
+        }
+
+        renderer.fillRoundedRect(btn->getBounds(), radius, bg);
+        renderer.strokeRoundedRect(btn->getBounds(), radius, 1.0f, border);
+
+        if (icon) {
+            const float iconSz = 16.0f;
+            NUIRect iconRect(
+                std::round(currentX + (buttonSize - iconSz) * 0.5f),
+                std::round(currentY + (buttonSize - iconSz) * 0.5f),
+                iconSz, iconSz
+            );
+            icon->setBounds(iconRect);
+            icon->setColor(isActive ? themeManager.getColor("accentPrimary") : themeManager.getColor("textSecondary"));
+            icon->onRender(renderer);
         }
         
-        // Center Icon
-        float isz = 16.0f;
-        NUIRect r = btn->getBounds();
-        icon->setBounds(NUIRect(r.x + (r.width-isz)/2, r.y + (r.height-isz)/2, isz, isz)); // Fixed logic
-        
-        icon->onRender(renderer);
-        x += btnW + 5.0f;
+        currentX += buttonSize + buttonSpacing;
     };
 
-    renderBtn(m_ptrBtn, m_ptrIcon, GlobalTool::Pointer);
-    renderBtn(m_pencilBtn, m_pencilIcon, GlobalTool::Pencil);
-    renderBtn(m_eraserBtn, m_eraserIcon, GlobalTool::Eraser);
+    // 1. Menu Button
+    renderButton(m_menuBtn, m_menuIcon, false);
+    
+    // Separator after Menu
+    currentX += 4.0f;
+    renderer.drawLine(NUIPoint(currentX, currentY + 4), NUIPoint(currentX, currentY + buttonSize - 4), 1.0f, borderCol.withAlpha(0.3f));
+    currentX += 10.0f;
+
+    // 2. Tools
+    renderButton(m_ptrBtn, m_ptrIcon, activeTool_ == GlobalTool::Pointer);
+    renderButton(m_pencilBtn, m_pencilIcon, activeTool_ == GlobalTool::Pencil);
+    renderButton(m_eraserBtn, m_eraserIcon, activeTool_ == GlobalTool::Eraser);
 
     // Editing Pattern Label (Right Side)
     if (!m_patternName.empty()) {
         std::string labelStr = "Source: " + m_patternName;
-        float fontSize = 11.5f;
+        float fontSize = themeManager.getFontSize("s");
         auto size = renderer.measureText(labelStr, fontSize);
-        float lx = b.right() - size.width - 25.0f;
-        renderer.drawText(labelStr, NUIPoint(lx, y + 4.0f), fontSize, NUIColor(1.0f, 1.0f, 1.0f, 0.45f));
+        float lx = b.right() - size.width - innerPad - 4.0f;
+        renderer.drawText(labelStr, NUIPoint(lx, currentY + (buttonSize - size.height) * 0.5f + 2.0f), fontSize, themeManager.getColor("textSecondary").withAlpha(0.6f));
     }
 
-    // Popups Last (Render reverse order of add usually, or explicitly)
-    // Z-order: Last Added is Top.
-    // Dropdowns add popups to Overlay layer?
-    // NUIDropdown::renderDropdownList renders internal Overlay?
-    // Or does it render directly? 386 implies it renders directly.
-    // Render Open popups last.
-    if (m_snapDropdown->isOpen()) m_snapDropdown->renderDropdownList(renderer);
-    if (m_rootDropdown->isOpen()) m_rootDropdown->renderDropdownList(renderer);
-    if (m_scaleDropdown->isOpen()) m_scaleDropdown->renderDropdownList(renderer);
+    // 4. Context Menu (If active)
+    renderChildren(renderer);
 }
 
 void PianoRollToolbar::setGrid(std::shared_ptr<PianoRollGrid> grid) {
@@ -492,10 +522,18 @@ void PianoRollToolbar::setActiveTool(GlobalTool tool) {
 
 
 bool PianoRollToolbar::onMouseEvent(const NUIMouseEvent& event) {
-    if (m_snapDropdown->onMouseEvent(event)) return true;
-    if (m_rootDropdown->onMouseEvent(event)) return true;
-    if (m_scaleDropdown->onMouseEvent(event)) return true;
-    
+    if (m_activeContextMenu && m_activeContextMenu->isVisible()) {
+        if (m_activeContextMenu->onMouseEvent(event)) return true;
+        
+        // Auto-hide click-away
+        if (event.pressed) {
+            removeChild(m_activeContextMenu);
+            m_activeContextMenu = nullptr;
+            // fallthrough to check other things
+        }
+    }
+
+    if (m_menuBtn->onMouseEvent(event)) return true;
     if (m_ptrBtn->onMouseEvent(event)) return true;
     if (m_pencilBtn->onMouseEvent(event)) return true;
     if (m_eraserBtn->onMouseEvent(event)) return true;
@@ -1431,7 +1469,7 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     renderer.fillRect(b, NUIColor(0.10f, 0.10f, 0.12f, 1.0f));
     
     // Top border (Divider)
-    renderer.drawLine(NUIPoint(b.x, b.y), NUIPoint(b.x + b.width, b.y), 1.0f, NUIColor(0.3f, 0.3f, 0.3f, 1.0f));
+    renderer.drawLine(NUIPoint(b.x, b.y), NUIPoint(b.x + b.width, b.y), 1.0f, NUIColor::fromHex(0x2e2e35));
     
     // Sidebar Area (Left)
     float sidebarW = 60.0f; 
@@ -1442,7 +1480,8 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     renderer.strokeRect(sidebarRect, 1.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.3f));
     
     // Sidebar Text "Control | Velocity"
-    renderer.drawText("Control", NUIPoint(b.x + 5, b.y + 14), 11.0f, NUIColor(0.6f, 0.6f, 0.6f, 1.0f));
+    auto& themeManager = NUIThemeManager::getInstance();
+    renderer.drawText("Control", NUIPoint(b.x + 8, b.y + 14), themeManager.getFontSize("s"), themeManager.getColor("textSecondary").withAlpha(0.6f));
     
     auto layer = noteLayer_.lock();
     if (!layer || !isVisible()) return;
@@ -1625,8 +1664,8 @@ void PianoRollView::layoutChildren() {
     auto b = getBounds();
     float sbSize = 14.0f; 
     
-    // 0. Toolbar (Restored)
-    float toolbarH = 30.0f;
+    // 0. Toolbar (Standardized Nomad UI Height)
+    float toolbarH = 40.0f;
     if (m_toolbar) m_toolbar->setBounds(NUIRect(b.x, b.y, b.width, toolbarH));
     
     // 1. Scrollbar/Minimap Section (Below Toolbar)

@@ -153,27 +153,25 @@ void main() {
     if (uUseTexture && (primitiveID == 0 || primitiveID == 2 || primitiveID == 4)) {
         vec4 texColor = texture(uTexture, vTexCoord);
         if (primitiveID == 2) {
-             // SDF Text Rendering - ultra crisp
+             // Standard SDF rendering
              float dist = texColor.r;
              
-             // Screen-space derivative for pixel-perfect edge detection
+             // Screen-space derivative for sharp edges regardless of scale/zoom
+             // ddist is large for small text (dUV/dPixel is high), small for large text.
              float ddist = fwidth(dist);
              
-             // Very tight smoothing for crisp edges
-             // uSmoothness of 0.5 = ~0.5 pixel AA (very sharp)
-             // uSmoothness of 1.0 = ~1 pixel AA (balanced)
-             float edgeWidth = ddist * uSmoothness * 0.65; // Slightly softer than 0.5 for better anti-aliasing
+             // Softness factor: 0.7 gives a nice crisp edge without aliasing
+             float edgeWidth = ddist * 0.7;
              
-             // Dilation for "Medium" look (Standard Regular SDFs can look thin)
-             // 0.5 is neutral. 0.42 makes it BOLDER (dilates the shape).
-             // This gives Geist a premium "Inter Medium" feel on dark backgrounds.
-             float center = 0.44; 
+             // Adaptive Weighting:
+             // Thicken small text (high ddist) to prevent it looking spindly.
+             // ranges from 0.5 (large text) to ~0.42 (tiny text)
+             // smoothstep(0.1, 0.5, ddist) maps ddist range 0.1-0.5 to 0.0-1.0
+             float center = 0.5 - smoothstep(0.1, 0.5, ddist) * 0.08; 
 
              float alpha = smoothstep(center - edgeWidth, center + edgeWidth, dist);
              
-             // Boost contrast to reduce blur
-             alpha = pow(alpha, 1.15); // Gamma correction-ish
-             
+             // Standard alpha blending
              color.a *= alpha;
         } else if (primitiveID == 4) {
                // Bitmap text rendering (coverage stored in alpha)
@@ -1787,7 +1785,8 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         // We want Cap Center to match this.
         float expandedLineHeight = rawLineHeight + verticalPadding;
         
-        outAscent = (expandedLineHeight * 0.5f) + capHalfHeight;
+        // FIX: Ensure ascent is never smaller than raw font ascent to prevent top cutoff
+        outAscent = std::max((expandedLineHeight * 0.5f) + capHalfHeight, rawAscent);
         outDescent = expandedLineHeight - outAscent;
         outLineHeight = expandedLineHeight;
 
@@ -2070,8 +2069,9 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         float h = ch.height * scale;
         
         // Glyph positioning relative to baseline
-        float xpos = std::round(x + scaledBearingX);
-        float ypos = std::round(baseline - scaledBearingY); // Top of glyph
+        // Allow sub-pixel positioning for smooth baseline alignment
+        float xpos = x + scaledBearingX;
+        float ypos = baseline - scaledBearingY; // Top of glyph
 
         minX = std::min(minX, xpos);
         minY = std::min(minY, ypos);

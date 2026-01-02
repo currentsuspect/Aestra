@@ -67,6 +67,7 @@ struct KeyModifiers {
     bool control = false;
     bool alt = false;
     bool super = false;  // Windows key / Command key
+    bool capsLock = false;
 };
 
 // =============================================================================

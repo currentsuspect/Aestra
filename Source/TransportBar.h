@@ -65,6 +65,7 @@ public:
     double getPosition() const { return m_position; }
     
     // Callbacks
+    void setOnRecord(std::function<void(bool)> callback) { m_onRecord = callback; }
     void setOnPlay(std::function<void()> callback) { m_onPlay = callback; }
     void setOnPause(std::function<void()> callback) { m_onPause = callback; }
     void setOnStop(std::function<void()> callback) { m_onStop = callback; }
@@ -138,6 +139,7 @@ private:
     std::shared_ptr<NomadUI::NUIIcon> m_playlistIcon;
     
     std::function<void()> m_onPlay;
+    std::function<void(bool)> m_onRecord;
     std::function<void()> m_onPause;
     std::function<void()> m_onStop;
     std::function<void(float)> m_onTempoChange;

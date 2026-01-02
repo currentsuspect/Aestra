@@ -324,8 +324,9 @@ namespace NomadUI {
     glEnable(GL_BLEND);
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-    glClearColor(0.f, 0.f, 0.f, 0.f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    // Note: Initial clear removed - the callback is expected to clear with proper color
+    // glClearColor(0.f, 0.f, 0.f, 0.f);
+    // glClear(GL_COLOR_BUFFER_BIT);
         glCheckLog("beginCacheRender", m_debug);
 
         // Ensure renderer uses an orthographic projection matching the FBO size

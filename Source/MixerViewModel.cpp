@@ -41,11 +41,18 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                                      const Audio::ChannelSlotMap& slotMap) {
     // Build set of current track IDs for quick lookup
     std::unordered_map<uint32_t, size_t> existingIds;
+    
+    // Sync Global State
+    inputNames = trackManager.getInputChannelNames();
+
     for (size_t i = 0; i < m_channels.size(); ++i) {
         if (m_channels[i]) {
             existingIds[m_channels[i]->id] = i;
         }
     }
+
+    // Sync Global State
+    inputNames = trackManager.getInputChannelNames();
 
     // Collect channel info from engine
     struct ChannelInfo {
@@ -57,6 +64,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
         bool muted{false};
         bool soloed{false};
         bool armed{false};
+        bool monitored{false};
     };
     std::vector<ChannelInfo> channelInfo;
     auto channels = trackManager.getChannelsSnapshot();
@@ -74,7 +82,8 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             info.channel = channel;
             info.muted = channel->isMuted();
             info.soloed = channel->isSoloed();
-            info.armed = false; // Stubbed for v3.0 Mixer separation
+            info.armed = channel->isArmed();
+            info.monitored = channel->isMonitoringEnabled();
             channelInfo.push_back(std::move(info));
         }
     }
@@ -96,6 +105,13 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             existing->muted = info.muted;
             existing->soloed = info.soloed;
             existing->armed = info.armed;
+            existing->monitored = info.monitored;
+            if (auto mc = info.channel.lock()) {
+                existing->inputChannelIndex = mc->getInputChannelIndex();
+            }
+            if (auto mc = info.channel.lock()) {
+                existing->inputChannelIndex = mc->getInputChannelIndex();
+            }
             newChannels.push_back(std::move(existing));
         } else {
             // Create new channel
@@ -108,6 +124,13 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             channel->muted = info.muted;
             channel->soloed = info.soloed;
             channel->armed = info.armed;
+            channel->monitored = info.monitored;
+            if (auto mc = info.channel.lock()) {
+                channel->inputChannelIndex = mc->getInputChannelIndex();
+            }
+            if (auto mc = info.channel.lock()) {
+                channel->inputChannelIndex = mc->getInputChannelIndex();
+            }
             newChannels.push_back(std::move(channel));
         }
         
@@ -258,6 +281,11 @@ void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
     // Dual-Bar Metering (Ableton Style):
     // 1. Peak Bar (Fast/Technical): Targets pure peak envelope.
     channel.smoothedPeakL = smoothDb(channel.smoothedPeakL, channel.envPeakL, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
+    
+    // Correlation and LUFS (already computed/smoothed in audio engine)
+    channel.correlation = snapshot.correlation;
+    channel.integratedLufs = snapshot.integratedLufs;
+    
     channel.smoothedPeakR = smoothDb(channel.smoothedPeakR, channel.envPeakR, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
 
     // 2. RMS Bar (Average/Body): Targets energy envelope.
@@ -328,15 +356,34 @@ void MixerViewModel::addSend(uint32_t channelId) {
     
     // Create new SendViewModel
     ChannelViewModel::SendViewModel send;
-    send.targetId = 0; // Default to Master
-    send.targetName = "Master";
+    
+    // Auto-select a meaningful destination (Avoid Master if it's already the main Output)
+    uint32_t defaultTarget = 0; // Fallback to Master
+    std::string defaultName = "Master";
+    
+    auto available = getAvailableDestinations(channelId);
+    bool foundBetter = false;
+    for (const auto& dest : available) {
+        // Pick the first available Send that isn't Master (0).
+        // e.g., a Reverb Bus or Group Channel
+        if (dest.id != 0) {
+            defaultTarget = dest.id;
+            defaultName = dest.name;
+            foundBetter = true;
+            break;
+        }
+    }
+
+    send.targetId = defaultTarget; 
+    send.targetName = defaultName;
     send.gain = 1.0f; // 0dB
     ch->sends.push_back(send);
 
     // Update Engine
     if (auto mc = ch->channel.lock()) {
         Audio::AudioRoute route;
-        route.targetChannelId = 0xFFFFFFFF; // Master
+        // Map 0 -> 0xFFFFFFFF for engine
+        route.targetChannelId = (defaultTarget == 0) ? 0xFFFFFFFF : defaultTarget; 
         route.gain = 1.0f;
         mc->addSend(route);
         

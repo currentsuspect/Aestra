@@ -6,6 +6,7 @@
 
 #include "TransportBar.h"
 #include "../NomadCore/include/NomadUnifiedProfiler.h"
+#include "../NomadCore/include/NomadLog.h"
 #include <sstream>
 #include <iomanip>
 #include <cmath>
@@ -23,12 +24,15 @@ TransportBar::TransportBar()
     , m_position(0.0)
 {
     createIcons();
-    createButtons();
+    createIcons();
     
-    // Create modular info container
+    // Create modular info container FIRST so it's behind the buttons (Z-order)
+    // This fixed the issue where InfoContainer blocked clicks to Transport buttons
     m_infoContainer = std::make_shared<TransportInfoContainer>();
     addChild(m_infoContainer);
     
+    createButtons();
+
     // Wire up BPM change callback from arrows
     if (m_infoContainer && m_infoContainer->getBPMDisplay()) {
         m_infoContainer->getBPMDisplay()->setOnBPMChange([this](float newBPM) {
@@ -206,6 +210,7 @@ void TransportBar::createButtons() {
 
     createBtn(m_recordButton, [](){});
     m_recordButton->setTooltip("Record (R)");
+    m_recordButton->setToggleable(true); // Enable toggle behavior so setOnToggle works
     m_recordButton->setEnabled(false);
     
     // Metronome toggle button
@@ -250,6 +255,14 @@ void TransportBar::createButtons() {
 
     createViewButton(m_sequencerButton, [this]() { if (m_onToggleView) m_onToggleView(Audio::ViewType::Sequencer); });
     if(m_sequencerButton) m_sequencerButton->setTooltip("Channel Rack (F6)");
+    
+    // Wire Record button
+    if (m_recordButton) {
+        m_recordButton->setOnToggle([this](bool armed) {
+            Nomad::Log::info("Transport: Record Button Toggled: " + std::string(armed ? "ON" : "OFF"));
+            if (m_onRecord) m_onRecord(armed);
+        });
+    }
 
     createViewButton(m_pianoRollButton, [this]() { if (m_onToggleView) m_onToggleView(Audio::ViewType::PianoRoll); });
     if(m_pianoRollButton) m_pianoRollButton->setTooltip("Piano Roll (F7)");
@@ -309,6 +322,11 @@ void TransportBar::stop() {
             m_infoContainer->getTimerDisplay()->setPlaying(false);
         }
         
+        // Ensure Record button is untoggled visually when stopping
+        if (m_recordButton) {
+            m_recordButton->setToggled(false);
+        }
+        
         if (m_onStop) {
             m_onStop();
         }
@@ -364,8 +382,8 @@ void TransportBar::updateButtonStates() {
 
     if (m_recordButton) {
         m_recordButton->setText("");
-        // Keep record disabled until recording is implemented
-        m_recordButton->setEnabled(false);
+        // Enable record button now that backend is implemented
+        m_recordButton->setEnabled(true);
     }
 }
 
@@ -463,8 +481,10 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     // Stop
     renderGlassButton(m_stopButton, m_stopIcon, false);
 
-    // Record (Special Red handling inside helper)
-    renderGlassButton(m_recordButton, m_recordIcon, m_state == TransportState::Recording, true);
+    // Use isToggled() for immediate visual feedback. 
+    // 3rd arg (isActive): Controls pressed look. 4th arg (isRecording): Controls RED color.
+    // We want RED only when toggled.
+    renderGlassButton(m_recordButton, m_recordIcon, m_recordButton->isToggled(), m_recordButton->isToggled());
 
     // --- Transport Extras (Left of Metronome) ---
     renderGlassButton(m_countInButton, m_countInIcon, m_countInActive);
@@ -620,15 +640,12 @@ void TransportBar::onRender(NomadUI::NUIRenderer& renderer) {
     // );
     
     // Add horizontal divider at bottom to separate transport from track area
-    // REMOVED: Causing gap/double-border with playlist view
-    /*
     renderer.drawLine(
         NomadUI::NUIPoint(bounds.x, bounds.y + bounds.height - 1),
         NomadUI::NUIPoint(bounds.x + bounds.width, bounds.y + bounds.height - 1),
         1.0f,
-        borderColor.withAlpha(0.8f)
+        borderColor  // Full opacity for visibility
     );
-    */
     
     // Render children (buttons and labels)
     renderChildren(renderer);
@@ -650,15 +667,9 @@ void TransportBar::onResize(int width, int height) {
 }
 
 bool TransportBar::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
-    // Explicitly forward to info container first (for BPM scroll, arrow clicks)
-    if (m_infoContainer && m_infoContainer->getBounds().contains(event.position)) {
-        if (m_infoContainer->onMouseEvent(event)) {
-            return true;
-        }
-    }
-    
-    // Let other children handle mouse events
+    // Standard event dispatch to children (respects Z-order: Buttons are on Top)
     return NomadUI::NUIComponent::onMouseEvent(event);
+
 }
 
 } // namespace Nomad

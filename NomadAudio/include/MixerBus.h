@@ -63,18 +63,23 @@ public:
     // Parameter setters (thread-safe)
     void setGain(float gain);
     void setPan(float pan);
+    void setWidth(float width); // Stereo width (0.0=mono, 1.0=stereo, >1.0=wide)
     void setMute(bool mute);
     void setSolo(bool solo);
 
     // Parameter getters (thread-safe)
     float getGain() const { return m_gain.load(std::memory_order_acquire); }
     float getPan() const { return m_pan.load(std::memory_order_acquire); }
+    float getWidth() const { return m_width.load(std::memory_order_acquire); }
     bool isMuted() const { return m_muted.load(std::memory_order_acquire); }
     bool isSoloed() const { return m_soloed.load(std::memory_order_acquire); }
 
     // Bus info
     const char* getName() const { return m_name; }
     uint32_t getNumChannels() const { return m_numChannels; }
+    
+    // Metering
+    float getLastCorrelation() const { return m_lastCorrelation.load(std::memory_order_relaxed); }
 
 private:
     /**
@@ -92,12 +97,17 @@ private:
     // Atomic parameters for thread-safe access
     std::atomic<float> m_gain;      // Linear gain (target)
     std::atomic<float> m_pan;       // Pan (target)
+    std::atomic<float> m_width{1.0f}; // Stereo width (target), default 1.0
     std::atomic<bool> m_muted;      // Mute state
     std::atomic<bool> m_soloed;     // Solo state
 
     // Smoothing state
     float m_currentGain{1.0f};
     float m_currentPan{0.0f};
+    float m_currentWidth{1.0f};
+    
+    // Metering state
+    std::atomic<float> m_lastCorrelation{0.0f};
 };
 
 /**

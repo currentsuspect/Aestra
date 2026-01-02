@@ -22,7 +22,7 @@ struct ClipRenderState {
     const float* audioData{nullptr};    // Interleaved stereo (engine format)
     uint64_t startSample{0};            // Absolute project sample (engine rate)
     uint64_t endSample{0};              // Exclusive end
-    uint64_t sampleOffset{0};           // Offset into audioData in frames
+    double sampleOffset{0.0};           // Offset into audioData in frames (double for sub-sample precision)
     uint64_t totalFrames{0};            // Bounds for audioData to guard OOB
     double sourceSampleRate{48000.0};   // Original clip sample rate
     float gain{1.0f};

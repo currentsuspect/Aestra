@@ -3,6 +3,7 @@
 #include "../Core/NUIComponent.h"
 #include "../Graphics/NUIRenderer.h"
 #include "../Core/NUITypes.h"
+#include "../Core/NUIThemeSystem.h"
 #include <vector>
 #include <string>
 #include <functional>

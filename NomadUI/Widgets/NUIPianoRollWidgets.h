@@ -104,6 +104,7 @@ class NUIDropdown;
 class NUIButton;
 class NUIIcon;
 class NUILabel;
+class NUIContextMenu; // Forward declaration
 
 // -----------------------------------------------------------------------------
 // PianoRollToolbar: Internal Toolbar (Tools + Scale)
@@ -123,9 +124,7 @@ public:
     // void setOnToolChanged... -> Now we might just call NoteLayer directly
     
 private:
-    std::shared_ptr<NUIDropdown> m_rootDropdown;
-    std::shared_ptr<NUIDropdown> m_scaleDropdown;
-    std::shared_ptr<NUIDropdown> m_snapDropdown;
+    std::shared_ptr<NUIButton> m_menuBtn;
     
     // Tool Buttons
     std::shared_ptr<NUIButton> m_ptrBtn;
@@ -135,12 +134,15 @@ private:
     GlobalTool activeTool_ = GlobalTool::Pointer;
     
     // Icons
+    std::shared_ptr<NomadUI::NUIIcon> m_menuIcon;
     std::shared_ptr<NomadUI::NUIIcon> m_ptrIcon;
     std::shared_ptr<NomadUI::NUIIcon> m_pencilIcon;
     std::shared_ptr<NomadUI::NUIIcon> m_eraserIcon;
 
     std::weak_ptr<PianoRollGrid> grid_;
     std::weak_ptr<PianoRollNoteLayer> notes_;
+    
+    std::shared_ptr<NUIContextMenu> m_activeContextMenu;
     
     void setupUI();
     void setActiveTool(GlobalTool tool);
