@@ -8,6 +8,7 @@
 #include "PlaylistRuntimeSnapshot.h"
 #include "PatternPlaybackEngine.h"
 #include "TimelineClock.h"
+#include "Commands/CommandHistory.h"
 
 #include "ContinuousParamBuffer.h"
 #include "MeterSnapshot.h"
@@ -20,8 +21,10 @@
 #include <condition_variable>
 #include <queue>
 #include <functional>
+#include <functional>
 #include <unordered_map>
 #include <array>
+#include <chrono>
 
 namespace Nomad {
 namespace Audio {
@@ -97,12 +100,20 @@ public:
     const PlaylistSnapshotManager& getSnapshotManager() const { return m_snapshotManager; }
 
 
+    
+    CommandHistory& getCommandHistory() { return m_commandHistory; }
+    const CommandHistory& getCommandHistory() const { return m_commandHistory; }
+
     // Transport Control
     void play();
     void pause();
     void stop();
     void record();
-
+    void finishRecording();
+    void processInput(const float* inputBuffer, uint32_t numFrames); // Called from RT thread
+    void setInputChannelCount(uint32_t count) { m_inputChannelCount = count; }
+    void setLatencySamples(uint32_t samples);
+    std::vector<std::string> getInputChannelNames() const;
     bool isPlaying() const { return m_isPlaying.load(); }
     bool isRecording() const { return m_isRecording.load(); }
     
@@ -129,8 +140,11 @@ public:
 
     // Audio Processing (Top-level entry point from AudioDeviceManager)
     void processAudio(float* outputBuffer, uint32_t numFrames, double streamTime, const SourceManager& sourceManager);
+
+    void setOutputSampleRate(double rate);
+    void setInputSampleRate(double rate) { m_inputSampleRate.store(rate); }
     
-    void setOutputSampleRate(double sampleRate);
+
     double getOutputSampleRate() const { return m_outputSampleRate.load(); }
     
     // Multi-threading control
@@ -178,6 +192,7 @@ private:
     UnitManager m_unitManager;
     PlaylistModel m_playlistModel;
     PlaylistSnapshotManager m_snapshotManager;
+    CommandHistory m_commandHistory;
     
     // Pattern Playback
     TimelineClock m_clock;
@@ -218,6 +233,7 @@ private:
     std::atomic<bool> m_graphDirty{true};
     std::function<void(const AudioQueueCommand&)> m_commandSink;
     std::atomic<double> m_outputSampleRate{48000.0};
+    std::atomic<double> m_inputSampleRate{48000.0};
     
     std::shared_ptr<const ChannelSlotMap> m_channelSlotMapOwned;
     const ChannelSlotMap* m_channelSlotMapRaw{nullptr};
@@ -248,7 +264,46 @@ private:
     // Internal helpers
     void rebuildChannelSlotMapLocked();
     void processAudioSingleThreaded(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate, const PlaylistRuntimeSnapshot* snapshot);
+
     void processAudioMultiThreaded(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate, const PlaylistRuntimeSnapshot* snapshot);
+    
+    // Recording Implementation
+    struct RecordingBuffer {
+        std::vector<float> data;
+        double startBeat{0.0};
+        uint32_t trackId{0};     // Which track is this for
+        int inputChannelIndex{0}; // Which input channel (0=Left, 1=Right)
+        PlaylistLaneID targetLane;
+        bool active{false};
+        
+        void append(const float* input, uint32_t numFrames, uint32_t stride, int channelOffset) {
+            size_t currentSize = data.size();
+            data.resize(currentSize + numFrames);
+            
+            if (channelOffset < 0) {
+                // Input "None" or invalid -> Record silence
+                std::fill(data.begin() + currentSize, data.end(), 0.0f);
+            } else {
+                for (uint32_t i = 0; i < numFrames; ++i) {
+                    // Interleaved input: [L R L R ...]
+                    data[currentSize + i] = input[i * stride + channelOffset];
+                }
+            }
+        }
+    };
+    
+    std::vector<RecordingBuffer> m_recordingBuffers;
+    std::mutex m_recordingMutex;
+    
+    // Wall-Clock Rate Detection
+    std::chrono::high_resolution_clock::time_point m_recordingStartTime;
+    uint64_t m_recordingFramesCaptured{0};
+    
+    // Monitoring
+    std::mutex m_monitorMutex; // Protects access to monitor buffer
+    std::vector<float> m_monitorBuffer;
+    uint32_t m_inputChannelCount{0};
+    uint32_t m_latencySamples{0};
     
 public:
     bool isModified() const { return m_isModified.load(); }

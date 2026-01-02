@@ -141,8 +141,8 @@ NomadContent::NomadContent() {
     m_mixerPanel = std::make_shared<MixerPanel>(m_trackManager);
     m_mixerPanel->setVisible(false);
     m_mixerPanel->setOnClose([this]() { toggleView(Audio::ViewType::Mixer); });
-    m_mixerPanel->setOnMaximizeToggle([this](bool) { 
-        onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); 
+    m_mixerPanel->setOnMaximizeToggle([this](bool) {
+        onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
     });
     m_mixerPanel->setOnDragStart([this](const NomadUI::NUIPoint& pos) { beginPanelDrag(ViewType::Mixer, pos); });
     m_mixerPanel->setOnDragMove([this](const NomadUI::NUIPoint& pos) { updatePanelDrag(ViewType::Mixer, pos); });
@@ -169,7 +169,7 @@ NomadContent::NomadContent() {
     m_patternBrowser->refreshPatterns();
     
     m_sequencerPanel->setVisible(true);
-    m_sequencerPanel->setOnClose([this]() { setViewOpen(Audio::ViewType::Sequencer, false); });
+    m_sequencerPanel->setOnClose([this]() { setViewFocus(ViewFocus::Timeline); });
     m_sequencerPanel->setOnMaximizeToggle([this](bool) { 
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); 
     });
@@ -182,6 +182,22 @@ NomadContent::NomadContent() {
     m_transportBar = std::make_shared<Nomad::TransportBar>();
     m_transportBar->setOnToggleView([this](Audio::ViewType view) {
         toggleView(view);
+    });
+    
+    // Wire Transport to TrackManager
+    m_transportBar->setOnPlay([this]() { if(m_trackManager) m_trackManager->play(); });
+    m_transportBar->setOnPause([this]() { if(m_trackManager) m_trackManager->pause(); });
+    m_transportBar->setOnStop([this]() { if(m_trackManager) m_trackManager->stop(); });
+    m_transportBar->setOnRecord([this](bool recording) { 
+        if(m_trackManager) {
+            // Robust toggle: Check backend state to prevent accidental restarts or desync
+            bool isEngineRecording = m_trackManager->isRecording();
+            
+            // Only trigger action if the requested UI state differs from Engine state
+            if (recording != isEngineRecording) {
+                m_trackManager->record();
+            }
+        }
     });
     m_overlayLayer->addChild(m_transportBar);
     
@@ -640,7 +656,7 @@ void NomadContent::beginPanelDrag(Audio::ViewType view, const NomadUI::NUIPoint&
 }
 
 void NomadContent::updatePanelDrag(Audio::ViewType view, const NomadUI::NUIPoint& mouseScreen) {
-    if (!m_viewState.isDragging || !m_overlayLayer) return;
+    if (!m_viewState.isDragging || !m_overlayLayer || view != m_viewState.draggingView) return;
     
     NomadUI::NUIPoint currentMouseOverlay = m_overlayLayer->globalToLocal(mouseScreen);
     NomadUI::NUIPoint delta = currentMouseOverlay - m_viewState.dragStartMouseOverlay;

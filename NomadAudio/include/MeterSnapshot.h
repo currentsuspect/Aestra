@@ -45,6 +45,8 @@ struct alignas(64) ChannelMeterSnapshot {
         uint32_t rmsR_bits{0};   // float as uint32_t bitcast (LINEAR 0..1) - energy/RMS-like
         uint32_t lowL_bits{0};   // float as uint32_t bitcast (LINEAR 0..1) - LF energy (<~150Hz)
         uint32_t lowR_bits{0};   // float as uint32_t bitcast (LINEAR 0..1) - LF energy (<~150Hz)
+        uint32_t correlation_bits{0}; // float as uint32_t bitcast (-1.0..1.0)
+        uint32_t integratedLufs_bits{0}; // float as uint32_t bitcast
         uint8_t clipFlags{0};    // bit 0 = L clip, bit 1 = R clip
     };
 
@@ -86,7 +88,9 @@ public:
     void writeLevels(uint32_t slotIndex,
                      float peakL, float peakR,
                      float rmsL, float rmsR,
-                     float lowL, float lowR) {
+                     float lowL, float lowR,
+                     float correlation = 0.0f,
+                     float integratedLufs = -144.0f) {
         if (slotIndex >= MAX_CHANNELS) return;
         auto& snap = m_snapshots[slotIndex];
         uint8_t writeIdx = snap.writeIndex.load(std::memory_order_relaxed);
@@ -97,12 +101,14 @@ public:
         buf.rmsR_bits = MeterBitcast::floatToU32(rmsR);
         buf.lowL_bits = MeterBitcast::floatToU32(lowL);
         buf.lowR_bits = MeterBitcast::floatToU32(lowR);
+        buf.correlation_bits = MeterBitcast::floatToU32(correlation);
+        buf.integratedLufs_bits = MeterBitcast::floatToU32(integratedLufs);
         // Swap buffer index with release semantics
         snap.writeIndex.store(1 - writeIdx, std::memory_order_release);
     }
 
     void writePeak(uint32_t slotIndex, float peakL, float peakR) {
-        writeLevels(slotIndex, peakL, peakR, 0.0f, 0.0f, 0.0f, 0.0f);
+        writeLevels(slotIndex, peakL, peakR, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -144.0f);
     }
 
     /**
@@ -136,6 +142,8 @@ public:
         float rmsR{0.0f};
         float lowL{0.0f};
         float lowR{0.0f};
+        float correlation{0.0f};
+        float integratedLufs{-144.0f};
         bool clipL{false};
         bool clipR{false};
     };
@@ -163,6 +171,8 @@ public:
         out.rmsR = MeterBitcast::u32ToFloat(buf.rmsR_bits);
         out.lowL = MeterBitcast::u32ToFloat(buf.lowL_bits);
         out.lowR = MeterBitcast::u32ToFloat(buf.lowR_bits);
+        out.correlation = MeterBitcast::u32ToFloat(buf.correlation_bits);
+        out.integratedLufs = MeterBitcast::u32ToFloat(buf.integratedLufs_bits);
         out.clipL = (buf.clipFlags & ChannelMeterSnapshot::CLIP_L) != 0;
         out.clipR = (buf.clipFlags & ChannelMeterSnapshot::CLIP_R) != 0;
         return out;
@@ -195,6 +205,8 @@ public:
             snap.buffers[0].rmsR_bits = 0;
             snap.buffers[0].lowL_bits = 0;
             snap.buffers[0].lowR_bits = 0;
+            snap.buffers[0].correlation_bits = 0;
+            snap.buffers[0].integratedLufs_bits = MeterBitcast::floatToU32(-144.0f);
             snap.buffers[0].clipFlags = 0;
             snap.buffers[1].peakL_bits = 0;
             snap.buffers[1].peakR_bits = 0;
@@ -202,6 +214,8 @@ public:
             snap.buffers[1].rmsR_bits = 0;
             snap.buffers[1].lowL_bits = 0;
             snap.buffers[1].lowR_bits = 0;
+            snap.buffers[1].correlation_bits = 0;
+            snap.buffers[1].integratedLufs_bits = MeterBitcast::floatToU32(-144.0f);
             snap.buffers[1].clipFlags = 0;
             snap.writeIndex.store(0, std::memory_order_relaxed);
         }

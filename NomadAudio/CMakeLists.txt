@@ -158,11 +158,18 @@ set(NOMAD_AUDIO_CORE_SOURCES
     # src/SelectionModel.cpp  # TODO: Fix API mismatches (PlaylistClip.h, etc)
     src/WaveformCache.cpp
     src/PatternManager.cpp
+
     src/UnitManager.cpp
     src/PatternPlaybackEngine.cpp
     src/TimelineClock.cpp
     src/StreamingDecoder.cpp
     src/DummyAudioDriver.cpp
+    # Undo/Redo
+    # Undo/Redo
+    src/Commands/CommandHistory.cpp
+    src/Commands/SplitClipCommand.cpp
+    src/Commands/AddClipCommand.cpp
+    # Plugin hosting system
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp
     src/Plugin/PluginManager.cpp
@@ -229,7 +236,16 @@ set(NOMAD_AUDIO_CORE_HEADERS
     include/MultiClipPlaylist.h
     include/ArsenalUnit.h
     include/UnitManager.h
+
     include/StreamingDecoder.h
+    # Undo/Redo
+    include/Commands/ICommand.h
+    include/Commands/CommandHistory.h
+    include/Commands/SplitClipCommand.h
+    include/Commands/AddClipCommand.h
+    
+    src/DummyAudioDriver.h
+    
     src/DummyAudioDriver.h
     # Plugin hosting system
     include/PluginHost.h

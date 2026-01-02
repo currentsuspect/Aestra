@@ -167,9 +167,43 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     NUIRect bounds = getBounds();
     
-    // Panel background
-    renderer.fillRoundedRect(bounds, 6.0f, theme.getColor("surfaceRaised"));
-    renderer.strokeRoundedRect(bounds, 6.0f, 1.0f, theme.getColor("borderSubtle"));
+    const float cornerRadius = 6.0f;
+    NUIColor bgColor = theme.getColor("surfaceRaised");
+    NUIColor borderColor = theme.getColor("borderSubtle");
+    
+    // === SOLID BASE FILL ===
+    // First, fill the entire bounds with background color to ensure no gaps
+    renderer.fillRect(bounds, bgColor);
+    
+    // === CLIPPED BORDER RENDERING ===
+    
+    // 1. Draw the TOP portion (square corners) - only the top 6px
+    {
+        NUIRect topClip = bounds;
+        topClip.height = cornerRadius;
+        renderer.setClipRect(topClip);
+        
+        // Draw simple filled rect for the top (no rounded corners)
+        renderer.fillRect(topClip, bgColor);
+        
+        // Draw side borders and top separator line
+        renderer.drawLine(NUIPoint(topClip.x, topClip.y), NUIPoint(topClip.x, topClip.bottom()), 1.0f, borderColor);
+        renderer.drawLine(NUIPoint(topClip.right(), topClip.y), NUIPoint(topClip.right(), topClip.bottom()), 1.0f, borderColor);
+        renderer.drawLine(NUIPoint(bounds.x, bounds.y), NUIPoint(bounds.right(), bounds.y), 1.0f, borderColor);
+        
+        renderer.clearClipRect();
+    }
+    
+    // 2. Draw the BOTTOM portion (with rounded corners) - clip out top 6px
+    {
+        NUIRect bottomClip = bounds;
+        bottomClip.y += cornerRadius;
+        bottomClip.height -= cornerRadius;
+        renderer.setClipRect(bottomClip);
+        renderer.fillRoundedRect(bounds, cornerRadius, bgColor);
+        renderer.strokeRoundedRect(bounds, cornerRadius, 1.0f, borderColor);
+        renderer.clearClipRect();
+    }
     
     // === EMPTY STATE ===
     if (!currentFile_) {

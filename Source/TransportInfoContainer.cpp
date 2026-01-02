@@ -185,14 +185,18 @@ void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     float arrowSize = 12.0f;  // Balanced size (not too small, fits container)
     float arrowGap = 1.0f;    // Tight spacing between arrows
     float textArrowGap = 8.0f; // Comfortable gap between text and arrows
+    float horizontalPadding = 6.0f; // Internal padding from edges
     
     float arrowBlockWidth = arrowSize;
     float arrowBlockHeight = (arrowSize * 2) + arrowGap;
     
     float totalContentWidth = textSize.width + textArrowGap + arrowBlockWidth;
     
-    // Center the entire cluster (Text + Arrows) within the component
-    float startX = bounds.x + (bounds.width - totalContentWidth) * 0.5f;
+    // Calculate available width with padding
+    float availableWidth = bounds.width - (horizontalPadding * 2);
+    
+    // Center the entire cluster (Text + Arrows) within the padded area
+    float startX = bounds.x + horizontalPadding + (availableWidth - totalContentWidth) * 0.5f;
     float textX = std::round(startX);
     float textY = std::round(renderer.calculateTextY(bounds, fontSize));
     
@@ -507,7 +511,7 @@ void TransportInfoContainer::layoutComponents() {
     ));
     
     // BPM in the center (horizontally centered in transport bar) - also ABSOLUTE
-    float bpmWidth = 100.0f;
+    float bpmWidth = 120.0f;  // Increased to fit content with padding
     float bpmHeight = 30.0f;
     float bpmOffsetX = (bounds.width - bpmWidth) / 2.0f;
     float bpmOffsetY = (bounds.height - bpmHeight) / 2.0f;

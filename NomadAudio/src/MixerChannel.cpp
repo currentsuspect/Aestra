@@ -36,9 +36,15 @@ void MixerChannel::setVolume(float volume) {
     if (m_mixerBus) m_mixerBus->setGain(volume);
 }
 
+
 void MixerChannel::setPan(float pan) {
     m_pan.store(pan);
     if (m_mixerBus) m_mixerBus->setPan(pan);
+}
+
+void MixerChannel::setWidth(float width) {
+    m_width.store(width);
+    if (m_mixerBus) m_mixerBus->setWidth(width);
 }
 
 void MixerChannel::setMute(bool mute) {

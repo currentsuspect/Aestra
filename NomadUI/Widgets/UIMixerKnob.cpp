@@ -41,20 +41,24 @@ void UIMixerKnob::cacheThemeColors()
     m_tooltipText = theme.getColor("textPrimary");
 }
 
+
 float UIMixerKnob::minValue() const
 {
     if (m_type == UIMixerKnobType::Send) return 0.0f;
+    if (m_type == UIMixerKnobType::Width) return 0.0f; // Mono
     return (m_type == UIMixerKnobType::Trim) ? -24.0f : -1.0f;
 }
 
 float UIMixerKnob::maxValue() const
 {
     if (m_type == UIMixerKnobType::Send) return 1.0f;
+    if (m_type == UIMixerKnobType::Width) return 4.0f; // 400%
     return (m_type == UIMixerKnobType::Trim) ? 24.0f : 1.0f;
 }
 
 float UIMixerKnob::defaultValue() const
 {
+    if (m_type == UIMixerKnobType::Width) return 1.0f; // Normal Stereo
     return 0.0f;
 }
 
@@ -84,6 +88,22 @@ void UIMixerKnob::updateCachedText()
         return;
     }
 
+    if (m_type == UIMixerKnobType::Width) {
+        int pct = static_cast<int>(std::round(m_value * 100.0f));
+        if (pct == 0) m_cachedText = "Mono";
+        else if (pct == 100) m_cachedText = "Width 100%";
+        else if (pct > 100) {
+            char buf[24];
+            std::snprintf(buf, sizeof(buf), "Wide %d%%", pct);
+            m_cachedText = buf;
+        } else {
+            char buf[24];
+            std::snprintf(buf, sizeof(buf), "Width %d%%", pct);
+            m_cachedText = buf;
+        }
+        return;
+    }
+
     // Pan (-1..1) -> -100..+100
     const int pct = static_cast<int>(std::round(m_value * 100.0f));
     if (pct == 0) {
@@ -102,6 +122,7 @@ void UIMixerKnob::updateCachedText()
 const char* UIMixerKnob::label() const
 {
     if (m_type == UIMixerKnobType::Send) return "SEND";
+    if (m_type == UIMixerKnobType::Width) return "WIDTH"; // Or "SEP"
     return (m_type == UIMixerKnobType::Trim) ? "TRIM" : "PAN";
 }
 
@@ -212,6 +233,8 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
             delta = dragDelta * 0.15f; // dB per px
         } else if (m_type == UIMixerKnobType::Send) {
             delta = dragDelta * 0.005f; // Linear 0-1
+        } else if (m_type == UIMixerKnobType::Width) {
+            delta = dragDelta * 0.01f; // 1% per px (approx)
         } else {
             delta = dragDelta * 0.006f; // pan per px (~166px full range)
         }

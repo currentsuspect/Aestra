@@ -22,6 +22,8 @@
 #include <memory>
 #include <vector>
 #include <unordered_set>
+#include <mutex>
+#include <functional>
 #include "../NomadUI/Core/NUIContextMenu.h"
 #include "../NomadAudio/include/WaveformCache.h"
 
@@ -37,6 +39,7 @@ enum class PlaylistTool {
     Select,     // Default - select/move clips  
     Split,      // Blade tool - click to split clips
     MultiSelect,// Rectangle selection for multiple clips
+    Paint,      // Paint tool - left-click to stamp clipboard clip
     Loop,       // Loop region tool
     Draw,       // Draw automation/MIDI
     Erase,      // Erase clips/notes
@@ -78,6 +81,14 @@ public:
     // Clip splitting (split tool)
     void onSplitRequested(TrackUIComponent* trackComp, double splitBeat);
 
+    // Clipboard & Paint Tool
+    void copySelectedClip();
+    void pasteClipboardAtCursor(); // Paste at playhead
+    void pasteClipToRight();       // Ctrl+B: Paste at end of selected clip, select new clip
+    void onPaintClip(TrackUIComponent* trackComp, double beat);
+    const Audio::ClipInstance& getClipboardClip() const { return m_clipboardClip; }
+    bool hasClipboardClip() const { return m_clipboardClip.id.isValid(); }
+
     // Playlist View
     void togglePlaylist() { if (m_onTogglePlaylist) m_onTogglePlaylist(); }
     void setPlaylistVisible(bool visible);
@@ -95,6 +106,7 @@ public:
     
     // Cursor visibility callback (for custom cursor support)
     void setOnCursorVisibilityChanged(std::function<void(bool)> callback) { m_onCursorVisibilityChanged = callback; }
+    bool isMinimapResizeCursorActive() const;
     
     // View Toggle Callbacks (v3.1)
     void setOnToggleMixer(std::function<void()> cb) { m_onToggleMixer = cb; }
@@ -138,9 +150,10 @@ public:
     
     // === CLIP MANIPULATION ===
     void splitSelectedClipAtPlayhead();  // Split clip at current playhead position
-    void copySelectedClip();             // Copy selected clip to clipboard
+    // copySelectedClip moved to line 85
     void cutSelectedClip();              // Cut selected clip (copy + delete)
-    void pasteClip();                    // Paste clipboard at playhead position
+    // pasteClip replaced by pasteClipboardAtCursor
+    // stampClipAtCursor replaced by onPaintClip
     void duplicateSelectedClip();        // Duplicate selected clip immediately after
     void deleteSelectedClip();           // Delete selected clip
     TrackUIComponent* getSelectedTrackUI() const;  // Get currently selected track UI
@@ -238,9 +251,14 @@ private:
     std::shared_ptr<::NomadUI::NUIIcon> m_selectToolIcon;
     std::shared_ptr<::NomadUI::NUIIcon> m_splitToolIcon;
     std::shared_ptr<::NomadUI::NUIIcon> m_multiSelectToolIcon;
+    std::shared_ptr<::NomadUI::NUIIcon> m_paintToolIcon;  // Paint/stamp tool icon
+    std::shared_ptr<::NomadUI::NUIIcon> m_moveCursorIcon; // Move (4-way arrow) cursor for Paint tool hovering clips
     
     std::shared_ptr<::NomadUI::NUIContextMenu> m_activeContextMenu; // Keep track for cleanup
     
+    // Clipboard
+    Audio::ClipInstance m_clipboardClip;
+
     // Animation state
     float m_menuIconRotation = 0.0f;
     float m_menuIconTargetRotation = 0.0f;
@@ -249,6 +267,7 @@ private:
     ::NomadUI::NUIRect m_selectToolBounds;
     ::NomadUI::NUIRect m_splitToolBounds;
     ::NomadUI::NUIRect m_multiSelectToolBounds;
+    ::NomadUI::NUIRect m_paintToolBounds;
     ::NomadUI::NUIRect m_followPlayheadBounds; // Toggle button bounds
     ::NomadUI::NUIRect m_toolbarBounds;
 
@@ -256,6 +275,7 @@ private:
     bool m_selectToolHovered = false;
     bool m_splitToolHovered = false;
     bool m_multiSelectToolHovered = false;
+    bool m_paintToolHovered = false;
     bool m_followPlayheadHovered = false;
     
     // Loop state
@@ -434,6 +454,7 @@ private:
     double getTimeAtPosition(float x) const;
     void clearDropPreview(); // Clear drop preview state
     double snapBeatToGrid(double beat) const; // Snap beat to nearest grid line
+    double snapBeatToGridForward(double beat) const; // Snap beat to next grid line (paste-to-right)
     
     // Grid helper
     void drawGrid(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIRect& bounds, float gridStartX, float gridWidth, float timelineScrollOffset);
@@ -443,7 +464,7 @@ private:
     void updateToolbarBounds();
     void renderToolbar(::NomadUI::NUIRenderer& renderer);
     bool handleToolbarClick(const ::NomadUI::NUIPoint& position);
-    void renderSplitCursor(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIPoint& position);
+    void renderToolCursor(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIPoint& position);
     void renderMinimapResizeCursor(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIPoint& position);
     
 
@@ -457,6 +478,22 @@ private:
     // Async waveform builder
     ::Nomad::Audio::WaveformCacheBuilder m_waveformBuilder;
 
+    // Async Task Queue (for main thread callbacks)
+    std::mutex m_pendingTasksMutex;
+    std::vector<std::function<void()>> m_pendingTasks;
+
+    // === IMPORT ANIMATION ===
+    struct PendingImport {
+        std::string displayName;
+        PlaylistLaneID laneId;
+        double startBeat;
+        double estimatedDurationBeats = 16.0; // Default placeholder width
+        float animationTime = 0.0f;
+        float progress = 0.0f; // 0.0 to 1.0
+    };
+    std::vector<PendingImport> m_pendingImports;
+    void renderPendingImports(NomadUI::NUIRenderer& renderer);
+    
     // (Duplicate methods removed)
 };
 

@@ -20,6 +20,7 @@ namespace Audio {
 class PlaylistRuntimeSnapshot;
 class SourceManager;
 class PatternManager;
+class TimeTypes;
 
 // =============================================================================
 // PlaylistLaneID - Unique track/lane identity
@@ -199,8 +200,18 @@ public:
     bool setClipDuration(ClipInstanceID clipId, double newDurationBeats);
     
     // === Split & Duplicate ===
+    /**
+     * @brief Smart split: creates two unique, independent clips
+     * 
+     * Each resulting clip has its own PatternID but shares the same
+     * ClipSource (audio data) via shared_ptr for memory efficiency.
+     * The second clip's sourceStart offset is calculated automatically.
+     */
     ClipInstanceID splitClip(ClipInstanceID clipId, double splitBeat);
     ClipInstanceID duplicateClip(ClipInstanceID clipId);
+    
+    /// Set PatternManager for smart split (enables pattern cloning)
+    void setPatternManager(PatternManager* pm) { m_patternManager = pm; }
     
     // === Queries ===
     std::vector<const ClipInstance*> getClipsInRange(PlaylistLaneID laneId,
@@ -219,11 +230,16 @@ public:
         const SourceManager& sourceManager) const;
     
     void clear();
+    // === Pattern Usage Safety ===
+    bool isPatternUsed(PatternID patternId) const;
+    int purgeUnusedPatterns();
+
     uint64_t getModificationCounter() const;
 
 private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;
+    PatternManager* m_patternManager = nullptr;
     
     void notifyChange();
     int findLaneIndex(PlaylistLaneID laneId) const;

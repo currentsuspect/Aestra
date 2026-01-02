@@ -87,7 +87,7 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     // Text area
     NUIRect textRect{bounds.x + CHIP_W + PAD_X, bounds.y, bounds.width - CHIP_W - PAD_X, bounds.height};
 
-    const float nameFont = m_isMaster ? 13.0f : 11.0f;
+    const float nameFont = m_isMaster ? 13.0f : 12.0f;  // Increased regular track font for readability
     const float routeFont = m_isMaster ? 10.0f : 9.0f;
 
     // Name (top)
@@ -100,6 +100,11 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
         NUIRect routeRect{textRect.x, std::floor(bounds.y + bounds.height - routeH), textRect.width, routeH};
         renderer.drawTextCentered(m_route, routeRect, routeFont, m_textSecondary);
     }
+    
+    // Thin colored accent line at bottom of header (matching track color)
+    constexpr float ACCENT_LINE_H = 2.0f;
+    NUIRect accentLine{bounds.x, bounds.y + bounds.height - ACCENT_LINE_H, bounds.width, ACCENT_LINE_H};
+    renderer.fillRect(accentLine, colorFromARGB(m_trackColorArgb));
 }
 
 } // namespace NomadUI

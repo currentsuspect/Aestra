@@ -155,6 +155,8 @@ public:
     float getVolume() const { return m_volume.load(); }
     void setPan(float pan);
     float getPan() const { return m_pan.load(); }
+    void setWidth(float width);
+    float getWidth() const { return m_width.load(); }
     void setMute(bool mute);
     bool isMuted() const { return m_muted.load(); }
     void setSolo(bool solo);
@@ -162,9 +164,23 @@ public:
     void setSoloSafe(bool safe);
     bool isSoloSafe() const { return m_soloSafe.load(); }
 
+    // Recording State
+    void setArmed(bool armed) { m_isArmed.store(armed); }
+    bool isArmed() const { return m_isArmed.load(); }
+    void setMonitoringEnabled(bool enabled) { m_monitorInput.store(enabled); }
+    bool isMonitoringEnabled() const { return m_monitorInput.load(); }
+    void setInputChannelIndex(int index) { m_inputChannelIndex.store(index); }
+    int getInputChannelIndex() const { return m_inputChannelIndex.load(); }
+
     // Audio Processing
     // MixerChannel processes its input bus/buffer. Timeline clips are managed by PlaylistModel.
     void processAudio(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate);
+
+    // Metering
+    float getLastCorrelation() const {
+        // Return 0 if no bus (e.g. inactive)
+        return m_mixerBus ? m_mixerBus->getLastCorrelation() : 0.0f;
+    }
 
     // Mixer Integration
     MixerBus* getMixerBus() { return m_mixerBus.get(); }
@@ -202,9 +218,15 @@ private:
     // Audio parameters (atomic for thread safety)
     std::atomic<float> m_volume{0.55f}; // Default: 78% (-5.2dB) to match FL/industry headroom standards
     std::atomic<float> m_pan{0.0f};
+    std::atomic<float> m_width{1.0f};
     std::atomic<bool> m_muted{false};
     std::atomic<bool> m_soloed{false};
     std::atomic<bool> m_soloSafe{false};
+    
+    // Recording
+    std::atomic<bool> m_isArmed{false};
+    std::atomic<bool> m_monitorInput{true};
+    std::atomic<int> m_inputChannelIndex{0}; // 0 = Input 1, 1 = Input 2, -1 = None
 
     // Mixer integration
     std::unique_ptr<MixerBus> m_mixerBus;

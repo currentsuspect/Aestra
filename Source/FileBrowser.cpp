@@ -4,6 +4,7 @@
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Core/NUIDragDrop.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
+#include "../NomadUI/Graphics/OpenGL/NUIRenderCache.h"
 #include "../NomadUI/Core/NUITextInput.h"
 #include "../NomadCore/include/NomadLog.h"
 #include "../NomadAudio/include/AudioFileValidator.h"
@@ -39,44 +40,58 @@ std::string ellipsizeMiddle(NUIRenderer& renderer, const std::string& text, floa
     if (text.empty()) return text;
     if (maxWidth <= 0.0f) return "";
 
-    const float ellipsisW = renderer.measureText(kEllipsis, fontSize).width;
-    if (ellipsisW >= maxWidth) return std::string(kEllipsis);
-
+    // Check full string first (common case)
     if (renderer.measureText(text, fontSize).width <= maxWidth) {
         return text;
     }
 
+    const float ellipsisW = renderer.measureText(kEllipsis, fontSize).width;
+    if (ellipsisW >= maxWidth) return std::string(kEllipsis);
+
+    // Identifying suffix (extension)
     const size_t extPos = text.find_last_of('.');
-    const size_t extLen = (extPos != std::string::npos) ? (text.size() - extPos) : 0;
-    const size_t suffixMin = (extLen > 0 && extPos > 0 && extLen <= 8) ? extLen : 1;
+    const size_t extLen = (extPos != std::string::npos && extPos > 0) ? (text.size() - extPos) : 0;
+    const size_t suffixMin = (extLen > 0 && extLen <= 8) ? extLen : 1;
 
-    size_t leftKeep = std::max<size_t>(1, text.size() / 2);
-    size_t rightKeep = std::max<size_t>(suffixMin, text.size() - leftKeep);
+    // Binary search for maximum number of characters to keep
+    // Range: We need at least 1 char on left and 1 on right -> 2 total
+    int low = 2;
+    int high = static_cast<int>(text.size()) - 1;
+    std::string bestStr = std::string(kEllipsis);
+    
+    // If text is too short, return ellipsis
+    if (high < low) return bestStr;
 
-    if (leftKeep + rightKeep >= text.size()) {
-        rightKeep = std::min(rightKeep, text.size() - 1);
-        leftKeep = std::max<size_t>(1, text.size() - rightKeep);
-    }
+    while (low <= high) {
+        int mid = low + (high - low) / 2; // Total characters to keep (approx)
+        
+        // Distribution strategy: Try to keep roughly half, but preserve suffix
+        size_t rightKeep = mid / 2;
+        if (rightKeep < suffixMin) rightKeep = suffixMin;
+        if (rightKeep > static_cast<size_t>(mid)) rightKeep = mid - 1; // Ensure 1 char for left
+        if (rightKeep == 0) rightKeep = 1; 
 
-    for (size_t iter = 0; iter < text.size(); ++iter) {
+        size_t leftKeep = mid - rightKeep;
+        if (leftKeep == 0) { leftKeep = 1; rightKeep = mid - 1; } // Ensure left has something
+        
+        // Safety check boundaries
+        if (leftKeep + rightKeep >= text.size()) {
+             // Should not happen if high < text.size()
+             high = mid - 1;
+             continue;
+        }
+
         std::string candidate = text.substr(0, leftKeep) + kEllipsis + text.substr(text.size() - rightKeep);
+        
         if (renderer.measureText(candidate, fontSize).width <= maxWidth) {
-            return candidate;
-        }
-
-        const bool canTrimLeft = leftKeep > 1;
-        const bool canTrimRight = rightKeep > suffixMin;
-        if (!canTrimLeft && !canTrimRight) break;
-
-        // Prefer trimming the longer side while preserving the extension suffix.
-        if (canTrimLeft && (!canTrimRight || leftKeep > rightKeep)) {
-            --leftKeep;
-        } else if (canTrimRight) {
-            --rightKeep;
+            bestStr = candidate;
+            low = mid + 1; // Try to squeeze more characters
+        } else {
+            high = mid - 1; // Too wide, reduce chars
         }
     }
 
-	return std::string(kEllipsis);
+    return bestStr;
 }
 
 std::filesystem::path canonicalOrNormalized(const std::filesystem::path& p) {
@@ -190,6 +205,9 @@ FileBrowser::FileBrowser()
 	    , hoveredBreadcrumbIndex_(-1)
     , navHistoryIndex_(-1)
     , isNavigatingHistory_(false)
+    , m_cacheId(reinterpret_cast<uint64_t>(this))
+    , m_cacheInvalidated(true)
+    , m_isRenderingToCache(false)
 {
     // Set default size from theme
     // ... (theme logic handled in onResize)
@@ -370,7 +388,7 @@ FileBrowser::FileBrowser()
     selectedColor_ = themeManager.getColor("accentPrimary");
     
     hoverColor_ = NUIColor(1.0f, 1.0f, 1.0f, 0.02f); // Glass hover (ultra-clear)
-    borderColor_ = themeManager.getColor("interfaceBorder");          // #2e2e35 - Subtle separation lines
+    borderColor_ = themeManager.getColor("border");          // Use standard border for consistency
     
     // Perform initial layout now that all members (icons, search input) are initialized
     // This initializes scrollbarTrackHeight_ and other layout vars needed by updateScrollbarVisibility
@@ -607,7 +625,7 @@ void FileBrowser::processScanResults() {
                     clearSelection();
                 }
                 updateScrollbarVisibility();
-                setDirty(true);
+                invalidateCache();
             }
 
             didUpdate = true;
@@ -628,7 +646,7 @@ void FileBrowser::processScanResults() {
                     applyFilter();
                 } else {
                     updateScrollbarVisibility();
-                    setDirty(true);
+                    invalidateCache();
                 }
                 didUpdate = true;
             }
@@ -644,14 +662,12 @@ void FileBrowser::processScanResults() {
 // SECTION: Rendering
 // =============================================================================
 
-void FileBrowser::onRender(NUIRenderer& renderer) {
-    NOMAD_ZONE("FileBrowser_Render");
-    
-    // Skip rendering if not visible
-    if (!isVisible()) return;
-    
-    NUIRect bounds = getBounds();
-    if (bounds.isEmpty()) return;
+// =============================================================================
+// SECTION: Rendering with FBO Caching
+// =============================================================================
+
+void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& bounds) {
+    auto& themeManager = NUIThemeManager::getInstance();
     
     // Adjust bounds if preview panel is visible (bottom panel)
     float fileBrowserHeight = bounds.height;
@@ -661,7 +677,6 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     
     // Update scrollbar track height to match current visible area
     // This ensures drag and scroll clamping work correctly
-    auto& themeManager = NUIThemeManager::getInstance();
     // Re-calculate header height (must match onMouseEvent/onResize logic)
     const float buttonsRowHeight = 40.0f;
     const float breadcrumbRowHeight = 32.0f;
@@ -674,15 +689,39 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     
     NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, fileBrowserHeight);
     
-    // Render background with enhanced borders
-    renderer.fillRoundedRect(fileBrowserBounds, 8, backgroundColor_);
+    // === SOLID BASE FILL ===
+    // First, fill the entire bounds with background color to ensure no gaps
+    renderer.fillRect(fileBrowserBounds, backgroundColor_);
     
-    // Main border
-    renderer.strokeRoundedRect(fileBrowserBounds, 8, 1, borderColor_);
+    // === CLIPPED BACKGROUND RENDERING ===
+    // To achieve rounded-top, square-bottom corners WITH proper borders,
+    // we use clipping to draw borders in the correct regions.
     
-    // Inner black border for cleaner look
-    NUIRect innerBounds(fileBrowserBounds.x + 1, fileBrowserBounds.y + 1, fileBrowserBounds.width - 2, fileBrowserBounds.height - 2);
-    renderer.strokeRoundedRect(innerBounds, 7, 1, NUIColor(0.0f, 0.0f, 0.0f, 0.4f));
+    // Help: setClipRect now handles FBO transform stack automatically
+    const float cornerRadius = 8.0f;
+    
+    // 1. Draw the TOP border (with rounded corners) - clip out bottom 8px
+    {
+        NUIRect topClip = fileBrowserBounds;
+        topClip.height -= cornerRadius;
+        renderer.setClipRect(topClip);
+        renderer.strokeRoundedRect(fileBrowserBounds, cornerRadius, 1.0f, borderColor_);
+        renderer.clearClipRect();
+    }
+    
+    // 2. Draw the BOTTOM border (square corners) - only the bottom 8px
+    {
+        NUIRect bottomClip = fileBrowserBounds;
+        bottomClip.y = fileBrowserBounds.bottom() - cornerRadius;
+        bottomClip.height = cornerRadius;
+        renderer.setClipRect(bottomClip);
+        
+        // Draw side borders only (no top/bottom border in this region)
+        renderer.drawLine(NUIPoint(fileBrowserBounds.x, bottomClip.y), NUIPoint(fileBrowserBounds.x, bottomClip.bottom()), 1.0f, borderColor_);
+        renderer.drawLine(NUIPoint(fileBrowserBounds.right(), bottomClip.y), NUIPoint(fileBrowserBounds.right(), bottomClip.bottom()), 1.0f, borderColor_);
+        
+        renderer.clearClipRect();
+    }
     
     // Render toolbar with search box
     renderToolbar(renderer);
@@ -692,14 +731,69 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     
     // Render scrollbar
     renderScrollbar(renderer);
+}
+
+void FileBrowser::onRender(NUIRenderer& renderer) {
+    NOMAD_ZONE("FileBrowser_Render");
     
+    if (!isVisible()) return;
+    
+    NUIRect bounds = getBounds();
+    if (bounds.isEmpty()) return;
 
+    // FBO Caching Logic
+    auto* renderCache = renderer.getRenderCache();
+    if (!renderCache) {
+        // Fallback: Immediate render
+        renderStaticContent(renderer, bounds);
+        renderChildren(renderer);
+        return;
+    }
 
-	    // Popup menus / overlays
-	    renderChildren(renderer);
-	    
-	    // Loading spinner removed - now handled by FilePreviewPanel
-	}
+    // Cache size matches the component bounds
+    NomadUI::NUISize cacheSize(static_cast<int>(bounds.width), static_cast<int>(bounds.height));
+    
+    // Get/Create Cache
+    // We use a shared_ptr<void> member to hold the cache reference if NUI supports it, 
+    // or just look it up. TrackManagerUI uses getOrCreateCache returning SharedRenderCache.
+    // Assuming getOrCreateCache returns a shared_ptr we can store (or ignore if internal).
+    // Let's rely on m_cacheId lookup for now as TrackManagerUI did.
+    auto* cache = renderCache->getOrCreateCache(m_cacheId, cacheSize);
+    m_cachedRender = cache;
+
+    // Invalidate if requested
+    if (m_cacheInvalidated && cache) {
+        renderCache->invalidate(m_cacheId);
+        m_cacheInvalidated = false;
+    }
+
+    // Render Cache
+    if (cache) {
+        renderCache->renderCachedOrUpdate(cache, bounds, [&]() {
+            m_isRenderingToCache = true;
+            
+            // Clear FBO with background color BEFORE any transforms to ensure full coverage
+            renderer.clear(backgroundColor_);
+            
+            // FBO is 0,0 based, so we must push a transform to negated bounds
+            renderer.pushTransform(-bounds.x, -bounds.y);
+            
+            // Render content
+            renderStaticContent(renderer, bounds);
+            
+            renderer.popTransform();
+            m_isRenderingToCache = false;
+        });
+    } else {
+        renderStaticContent(renderer, bounds);
+    }
+
+    // Render interactive children (Search Input, Popup Menus) ON TOP of the cache
+    // These handle their own dirtiness and shouldn't trigger full cache rebuilds
+    renderChildren(renderer);
+    
+    // Loading spinner removed - now handled by FilePreviewPanel
+}
 
 void FileBrowser::onUpdate(double deltaTime) {
 	    NUIComponent::onUpdate(deltaTime);
@@ -720,7 +814,7 @@ void FileBrowser::onUpdate(double deltaTime) {
         // Keep scrollbar visible while scrolling
         scrollbarFadeTimer_ = 0.0f;
         scrollbarOpacity_ = 1.0f;
-        setDirty(true);
+        invalidateCache();
     } else {
         scrollOffset_ = targetScrollOffset_;
     }
@@ -729,7 +823,7 @@ void FileBrowser::onUpdate(double deltaTime) {
     // ALWAYS repaint if scroll position changed at all
     if (std::abs(scrollOffset_ - lastRenderedOffset_) > 0.01f) {
         lastRenderedOffset_ = scrollOffset_;
-        setDirty(true);
+        invalidateCache();
     }
     
     // Update scrollbar thumb position based on current scroll
@@ -751,7 +845,7 @@ void FileBrowser::onUpdate(double deltaTime) {
                 float newOpacity = std::max(0.0f, 1.0f - std::min(1.0f, t));
                 if (std::abs(newOpacity - scrollbarOpacity_) > 0.001f) {
                     scrollbarOpacity_ = newOpacity;
-                    setDirty(true);
+                    invalidateCache();
 	            }
 	        }
 	    }
@@ -798,6 +892,7 @@ void FileBrowser::onResize(int width, int height) {
     itemHeight_ = themeManager.getComponentDimension("fileBrowser", "itemHeight");
     
     // FIX: Calculate list height taking preview panel into account, consistent with onMouseEvent
+    // FIX: Calculate list height taking preview panel into account, consistent with onMouseEvent
     float availableHeight = height;
 
     const float listYOffset = (searchY - getBounds().y) + searchRowHeight + rowSpacing;
@@ -808,7 +903,7 @@ void FileBrowser::onResize(int width, int height) {
 
     // Update scrollbar dimensions
     float scrollbarWidth = themeManager.getComponentDimension("fileBrowser", "scrollbarWidth");
-    scrollbarTrackHeight_ = listHeight; 
+    scrollbarTrackHeight_ = listHeight - 6.0f; 
     scrollbarWidth_ = scrollbarWidth;
 
     // Update caches
@@ -860,6 +955,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     // Calculate header total height
     float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
     
+    // FIX: Calculate list height taking preview panel into account
     // FIX: Calculate list height taking preview panel into account
     float availableHeight = bounds.height;
 
@@ -983,7 +1079,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         // Clamp target scroll offset
         targetScrollOffset_ = std::max(0.0f, std::min(targetScrollOffset_, maxScroll));
 
-        setDirty(true);
+        invalidateCache();
         return true;  // Consume the wheel event
     }
 
@@ -1001,7 +1097,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             sortHovered_ = false;
             dirty = true;
         }
-        if (dirty) setDirty(true);
+        if (dirty) invalidateCache();
         return false;
     }
 
@@ -1016,7 +1112,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         favoritesHovered_ = newFavoritesHovered;
         tagsHovered_ = newTagsHovered;
         sortHovered_ = newSortHovered;
-        setDirty(true);
+        invalidateCache();
     }
     
     // Handle scrollbar mouse events first - check if scrollbar should be visible
@@ -1060,11 +1156,11 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         }
         if (newHovered != hoveredBreadcrumbIndex_) {
             hoveredBreadcrumbIndex_ = newHovered;
-            setDirty(true);
+            invalidateCache();
         }
     } else if (hoveredBreadcrumbIndex_ != -1) {
         hoveredBreadcrumbIndex_ = -1;
-        setDirty(true);
+        invalidateCache();
     }
 
     // Breadcrumb interaction
@@ -1088,7 +1184,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             if (hoveredIndex_ != -1) {
                 hoveredIndex_ = -1;
                 NUIComponent::hideRemoteTooltip();
-                setDirty(true);
+                invalidateCache();
             }
         }
 
@@ -1122,7 +1218,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                     NUIComponent::hideRemoteTooltip();
                 }
 
-	            setDirty(true); // Trigger redraw when hover state changes
+	            invalidateCache(); // Trigger redraw when hover state changes
 	        }
 
 	        // Context menu (right-click)
@@ -1295,7 +1391,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                     }
                 }
                 
-                setDirty(true);
+                invalidateCache();
                 return true;
             }
         }
@@ -1381,7 +1477,7 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
                         onSoundPreview_(*selectedFile_);
                     }
                 }
-                setDirty(true);
+                invalidateCache();
                 return true;
             }
             break;
@@ -1405,7 +1501,7 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
                         onSoundPreview_(*selectedFile_);
                     }
                 }
-                setDirty(true);
+                invalidateCache();
                 return true;
             }
             break;
@@ -1457,7 +1553,7 @@ void FileBrowser::onMouseLeave() {
     if (hoveredIndex_ >= 0) {
         hoveredIndex_ = -1;
         NUIComponent::hideRemoteTooltip();
-        setDirty(true);
+        invalidateCache();
     }
     NUIComponent::onMouseLeave();
 }
@@ -1493,7 +1589,7 @@ void FileBrowser::setCurrentPath(const std::string& path) {
     if (onPathChanged_) {
         onPathChanged_(currentPath_);
     }
-    setDirty(true);
+    invalidateCache();
 }
 
 void FileBrowser::pushToHistory(const std::string& path) {
@@ -1526,7 +1622,7 @@ void FileBrowser::navigateForward() {
 
 void FileBrowser::refresh() {
     loadDirectoryContents();
-    setDirty(true);
+    invalidateCache();
 }
 
 void FileBrowser::navigateUp() {
@@ -1573,7 +1669,7 @@ void FileBrowser::selectFile(const std::string& path) {
             if (onFileSelected_) {
                 onFileSelected_(*selectedFile_);
             }
-            setDirty(true);
+            invalidateCache();
             return;
         }
     }
@@ -1588,7 +1684,7 @@ void FileBrowser::selectFile(const std::string& path) {
             if (onFileSelected_) {
                 onFileSelected_(*selectedFile_);
             }
-            setDirty(true);
+            invalidateCache();
             return;
         }
     }
@@ -1638,7 +1734,7 @@ void FileBrowser::toggleFavorite(const std::string& path) {
     } else {
         addToFavorites(path);
     }
-    setDirty(true);
+    invalidateCache();
 }
 
 void FileBrowser::setSortMode(SortMode mode) {
@@ -1689,7 +1785,7 @@ void FileBrowser::setSortMode(SortMode mode) {
         }
     }
 
-    setDirty(true);
+    invalidateCache();
 }
 
 void FileBrowser::setSortAscending(bool ascending) {
@@ -1740,7 +1836,7 @@ void FileBrowser::setSortAscending(bool ascending) {
         }
     }
 
-    setDirty(true);
+    invalidateCache();
 }
 
 void FileBrowser::loadDirectoryContents() {
@@ -1768,7 +1864,7 @@ void FileBrowser::loadDirectoryContents() {
     enqueueScan(ScanKind::Root, currentPath_, 0);
     updateScrollbarVisibility();
     viewDirty_ = true;
-    setDirty(true);
+    invalidateCache();
 }
 
 void FileBrowser::loadFolderContents(FileItem* item) {
@@ -1785,7 +1881,7 @@ void FileBrowser::loadFolderContents(FileItem* item) {
     item->children.push_back(std::move(placeholder));
 
     enqueueScan(ScanKind::Folder, item->path, item->depth + 1);
-    setDirty(true);
+    invalidateCache();
 }
 
 void FileBrowser::updateDisplayList() {
@@ -1823,7 +1919,7 @@ void FileBrowser::toggleFolder(const FileItem* item) {
         nonConstItem->isExpanded = true;
     }
     updateDisplayList();
-	    setDirty(true);
+	    invalidateCache();
 	}
 
 	bool FileBrowser::compareFileItems(const FileItem& a, const FileItem& b) const {
@@ -1944,6 +2040,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
     
     // FIX: Subtract preview panel height from list height for correct clipping
+    // FIX: Subtract preview panel height from list height for correct clipping
     float availableHeight = bounds.height;
     // Preview panel moved to FilePreviewPanel
     // if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
@@ -1963,6 +2060,9 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     const float listW = effectiveW - 2 * layout.panelMargin - scrollbarGutter;
     NUIRect listClip(listX, listY, listW, listHeight);
 
+    // CRITICAL FIX: The renderer's setClipRect already handles the transform stack.
+    // Manual offsetting here was causing double-offsetting in FBO mode.
+    
     // CRITICAL: Cache invalidation moved to onResize to prevent frame spikes.
     // if (std::abs(lastCachedWidth_ - listW) > 1.0f) ...
 
@@ -1988,6 +2088,10 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
     // Clip file items to the list area to prevent bleed
     renderer.setClipRect(listClip);
+    
+    // Ensure the list area has a solid background (prevents FBO transparency leaks)
+    NUIRect listFillRect(listX, listY, listW, listHeight);
+    renderer.fillRect(listFillRect, backgroundColor_);
 
     const float labelFont = 14.0f;   // +3px for better legibility
     const float metaFont = 12.0f;    // +2px for metadata
@@ -2012,6 +2116,12 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
         // CRITICAL: Skip rendering if item would bleed above the list area (into path bar)
         if (itemY < listY) {
+            continue;
+        }
+
+        // CULLING OPTIMIZATION:
+        // Allow partial items but skip if completely out of view
+        if (itemY > listY + listHeight) {
             continue;
         }
 
@@ -2187,22 +2297,26 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     // Use component background color for the header area
     renderer.fillRoundedRect(toolbarRect, 0.0f, backgroundColor_); 
     
-    // Draw separator
+    // Draw separator below buttons row (before breadcrumbs)
+    float buttonRowSepY = toolbarRect.y + buttonsRowHeight;
+    renderer.drawLine(NUIPoint(bounds.x, buttonRowSepY), NUIPoint(bounds.x + effectiveW, buttonRowSepY), 1.0f, borderColor_);
+    
+    // Draw separator below entire header (after breadcrumbs) 
     float sepY = toolbarRect.bottom(); 
-    renderer.drawLine(NUIPoint(bounds.x, sepY), NUIPoint(bounds.x + effectiveW, sepY), 1.0f, borderColor_.withAlpha(0.5f));
+    renderer.drawLine(NUIPoint(bounds.x, sepY), NUIPoint(bounds.x + effectiveW, sepY), 1.0f, borderColor_);
 
     // Common sizes
     // Common sizes
     const float toolbarFont = themeManager.getFontSize("s");
-    const float buttonRadius = 14.0f; // Pill shape radius
-    const float buttonPadX = 10.0f;    // Balanced padding
-    const float buttonH = 28.0f; 
+    const float buttonRadius = 6.0f; // More squared-off Nomad UI look (matching 24px height)
+    const float buttonPadX = 8.0f;    
+    const float buttonH = 24.0f; // Standardized Nomad UI toolbar height
     
     // Center buttons in the TOP row (0 to buttonsRowHeight)
     const float buttonY = toolbarRect.y + (buttonsRowHeight - buttonH) / 2.0f;
     const float iconSize = 14.0f;     
-    const float iconGap = 8.0f;       
-    const float clusterGap = 12.0f;   // Standard gap (restored from 20)
+    const float iconGap = 6.0f;       
+    const float clusterGap = 6.0f;   // Standardized Nomad UI gap
 
     // === MEASURE layout from edges ===
     
@@ -2352,7 +2466,7 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 		        popupMenu_->hide();
 		        popupMenuTargetPath_.clear();
 		        popupMenuTargetIsDirectory_ = false;
-		        setDirty(true);
+		        invalidateCache();
 		    }
 		}
 
@@ -2387,7 +2501,7 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 		    if (isFilterActive()) {
 		        applyFilter();
 		    } else {
-		        setDirty(true);
+		        invalidateCache();
 		    }
 		}
 
@@ -2453,14 +2567,14 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 		        popupMenu_->addSeparator();
 		        popupMenu_->addItem("Clear Favorites", [this]() {
 		            favoritesPaths_.clear();
-		            setDirty(true);
+		            invalidateCache();
 		        });
 		    }
 
 		    const float menuX = favoritesButtonBounds_.x;
 		    const float menuY = favoritesButtonBounds_.bottom() + 6.0f;
 		    popupMenu_->showAt(static_cast<int>(menuX), static_cast<int>(menuY));
-		    setDirty(true);
+		    invalidateCache();
 		}
 
 		void FileBrowser::showSortMenu() {
@@ -2480,7 +2594,7 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 	    const float menuX = sortButtonBounds_.x;
 	    const float menuY = sortButtonBounds_.bottom() + 6.0f;
 		    popupMenu_->showAt(static_cast<int>(menuX), static_cast<int>(menuY));
-		    setDirty(true);
+		    invalidateCache();
 		}
 
 		void FileBrowser::showTagFilterMenu() {
@@ -2509,7 +2623,7 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 		    const float menuX = tagsButtonBounds_.isEmpty() ? (sortButtonBounds_.x - 150.0f) : tagsButtonBounds_.x;
 		    const float menuY = (tagsButtonBounds_.isEmpty() ? sortButtonBounds_.bottom() : tagsButtonBounds_.bottom()) + 6.0f;
 		    popupMenu_->showAt(static_cast<int>(menuX), static_cast<int>(menuY));
-		    setDirty(true);
+		    invalidateCache();
 		}
 
 		void FileBrowser::showItemContextMenu(const FileItem& item, const NUIPoint& position) {
@@ -2535,14 +2649,14 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 	            popupMenu_->addItem("Clear Root", [this]() {
 	                rootPath_.clear();
 	                updateBreadcrumbs();
-	                setDirty(true);
+	                invalidateCache();
 	            });
 	        }
 	        popupMenu_->addSeparator();
 
 		        const bool fav = isFavorite(item.path);
 		        popupMenu_->addItem(fav ? "Remove from Favorites" : "Add to Favorites",
-		                            [this, path = item.path]() { toggleFavorite(path); setDirty(true); });
+		                            [this, path = item.path]() { toggleFavorite(path); invalidateCache(); });
 		        // Tags submenu
 		        {
 		            auto tagsMenu = std::make_shared<NUIContextMenu>();
@@ -2602,7 +2716,7 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 		    }
 
 	    popupMenu_->showAt(position);
-	    setDirty(true);
+	    invalidateCache();
 	}
 
 void FileBrowser::updateScrollPosition() {
@@ -2746,7 +2860,7 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
         scrollOffset_ = std::max(0.0f, std::min(scrollOffset_, maxScroll));
         targetScrollOffset_ = scrollOffset_;
         
-        // Let onUpdate handle thumb position and dirty flag
+        invalidateCache();
         return true;
     }
 
@@ -2758,7 +2872,7 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
 
     if (scrollbarHovered_ != inScrollbarArea) {
         scrollbarHovered_ = inScrollbarArea;
-        setDirty(true);
+        invalidateCache();
     }
 
     // Hovering the scrollbar should reveal it (auto-hide UX)
@@ -2766,7 +2880,7 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
         scrollbarFadeTimer_ = 0.0f;
         if (scrollbarOpacity_ < 1.0f) {
             scrollbarOpacity_ = 1.0f;
-            setDirty(true);
+            invalidateCache();
         }
     }
 
@@ -2800,7 +2914,7 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
             scrollOffset_ = std::max(0.0f, std::min(scrollOffset_, maxScroll));
             targetScrollOffset_ = scrollOffset_;
             
-            // Let onUpdate handle thumb position and dirty flag
+            invalidateCache();
         }
         return true;
     } else if (!event.pressed && event.button == NUIMouseButton::Left) {
@@ -2923,7 +3037,7 @@ void FileBrowser::applyFilter() {
         selectedIndex_ = -1;
         selectedIndices_.clear();
         updateScrollbarVisibility();
-        setDirty(true);
+        invalidateCache();
         return;
     }
 
@@ -3056,7 +3170,7 @@ void FileBrowser::applyFilter() {
     selectedIndices_.clear();
     updateScrollbarVisibility();
     viewDirty_ = true;
-    setDirty(true);
+    invalidateCache();
 }
 
 void FileBrowser::updateBreadcrumbs() {
@@ -3432,7 +3546,7 @@ void FileBrowser::setPreviewPanelVisible(bool visible) {
     // Trigger layout update and ensuring scrolling is clamped
     NUIRect b = getBounds();
     onResize(b.width, b.height); 
-    setDirty(true);
+    invalidateCache();
 }
 */
 

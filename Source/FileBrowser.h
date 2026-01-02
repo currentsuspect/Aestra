@@ -216,11 +216,11 @@ public:
 		    bool isFilterActive() const;
 		    const std::vector<const FileItem*>& getActiveView() const;
 		    void invalidateAllItemCaches();
+            void renderStaticContent(NUIRenderer& renderer, const NUIRect& bounds);
 		    void renderFileList(NUIRenderer& renderer);
 		    void renderInteractiveBreadcrumbs(NUIRenderer& renderer);
 		    void renderToolbar(NUIRenderer& renderer);
 	    void renderScrollbar(NUIRenderer& renderer);
-	    void renderPreviewPanel(NUIRenderer& renderer);
     void renderSearchBox(NUIRenderer& renderer);
     void updateScrollPosition();
 	    void updateBreadcrumbs();
@@ -266,6 +266,13 @@ public:
     // View Cache
     mutable std::vector<const FileItem*> cachedView_;
     mutable bool viewDirty_ = true;
+
+    // FBO Caching
+    uint64_t m_cacheId;
+    bool m_cacheInvalidated;
+    bool m_isRenderingToCache;
+    void invalidateCache() { m_cacheInvalidated = true; setDirty(true); }
+    void* m_cachedRender = nullptr; // Opaque pointer to CachedRenderData
     
     // Scrollbar state
     bool scrollbarVisible_;

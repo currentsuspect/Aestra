@@ -40,9 +40,10 @@ namespace Audio {
  */
 class AudioEngine {
 public:
-    AudioEngine() = default;
+    AudioEngine();
+    ~AudioEngine();
 
-    /**
+     /**
      * @brief Process a single audio block (driver callback entry).
      * Must remain lock-free, allocation-free.
      */
@@ -50,6 +51,13 @@ public:
                       const float* inputBuffer,
                       uint32_t numFrames,
                       double streamTime);
+
+    // Recording Callback (called on RT thread)
+    using InputCallback = void (*)(const float* inputBuffer, uint32_t numFrames, void* userData);
+    void setInputCallback(InputCallback callback, void* userData) {
+        m_inputCallback.store(callback);
+        m_inputCallbackData.store(userData);
+    }
 
     AudioCommandQueue& commandQueue() { return m_commandQueue; }
     AudioTelemetry& telemetry() { return m_telemetry; }
@@ -139,6 +147,10 @@ public:
     void setThreadCount(int count);
     void setMultiThreadingEnabled(bool enabled) { m_multiThreadingEnabled.store(enabled, std::memory_order_relaxed); }
     bool isMultiThreadingEnabled() const { return m_multiThreadingEnabled.load(std::memory_order_relaxed); }
+
+    // Input callback state
+    std::atomic<InputCallback> m_inputCallback{nullptr};
+    std::atomic<void*> m_inputCallbackData{nullptr};
 
 private:
     static constexpr size_t kMaxTracks = 4096;
@@ -350,6 +362,115 @@ private:
     std::unique_ptr<Nomad::RealTimeThreadPool> m_threadPool;
     std::unique_ptr<Nomad::Barrier> m_syncBarrier;
     std::atomic<bool> m_multiThreadingEnabled{false};
+    
+    // --- Cockroach-Grade LUFS Metering ---
+    struct BiquadCoeff {
+        double b0{0.0}, b1{0.0}, b2{0.0}, a1{0.0}, a2{0.0};
+    };
+    
+    struct BiquadState {
+        double z1{0.0}, z2{0.0};
+        
+        inline double process(double x, const BiquadCoeff& c) {
+            double v = x - c.a1 * z1 - c.a2 * z2;
+            double y = c.b0 * v + c.b1 * z1 + c.b2 * z2;
+            z2 = z1;
+            z1 = v;
+            return y;
+        }
+    };
+    
+    // Lock-free queue for passing block energies to worker
+    // Fixed size ring buffer, power of 2 for fast wrapping
+    static constexpr size_t kLoudnessQueueSize = 1024;
+    struct BlockEnergyQueue {
+        std::atomic<size_t> writeIdx{0};
+        std::atomic<size_t> readIdx{0};
+        std::array<double, kLoudnessQueueSize> data;
+        
+        bool try_push(double val) {
+            size_t currentWrite = writeIdx.load(std::memory_order_relaxed);
+            size_t nextWrite = (currentWrite + 1) & (kLoudnessQueueSize - 1);
+            if (nextWrite == readIdx.load(std::memory_order_acquire)) {
+                return false; // Full
+            }
+            data[currentWrite] = val;
+            writeIdx.store(nextWrite, std::memory_order_release);
+            return true;
+        }
+        
+        bool pop(double& val) {
+            size_t currentRead = readIdx.load(std::memory_order_relaxed);
+            if (currentRead == writeIdx.load(std::memory_order_acquire)) {
+                return false; // Empty
+            }
+            val = data[currentRead];
+            readIdx.store((currentRead + 1) & (kLoudnessQueueSize - 1), std::memory_order_release);
+            return true;
+        }
+    };
+
+    struct alignas(64) LoudnessState {
+        // Audio Thread (Write Only)
+        BiquadState f1L, f1R; // Stage 1 (Shelf)
+        BiquadState f2L, f2R; // Stage 2 (HPF)
+        double blockEnergySum{0.0};
+        uint32_t blockSamples{0};
+        
+        // Inter-thread Queue
+        BlockEnergyQueue energyQueue;
+        
+        // Worker Thread (Read/Write)
+        double gatedSum{0.0};
+        uint64_t gatedBlocks{0}; // Count of blocks included in integrated measure
+        
+        // "Cockroach" Precision/Safety
+        // We store a circular buffer of recent block energies to support the relative gate scanning
+        // EBU R128 requires scanning ALL blocks to re-gate. For robust infinite runtime without infinite RAM:
+        // We will maintain a histogram or just a "good enough" approximation?
+        // Actually, the standard strictly essentially requires 2 passes. 
+        // Real-time meters often use a "running" approximation or just store finite history.
+        // We will store last 3 hours of blocks (~27000 blocks) -> ~200KB. Cheap.
+        static constexpr size_t kHistoryCapacity = 32768; // Power of 2
+        std::vector<double> blockHistory; // Worker thread only
+        size_t historyWriteIdx{0};
+        size_t historyCount{0};
+        
+        // UI Thread (Read Only - Atomic)
+        std::atomic<float> integratedLufs{-144.0f}; // Init to silence
+        std::atomic<float> momentaryLufs{-144.0f};  // Short term readout
+        
+        LoudnessState() {
+            blockHistory.resize(kHistoryCapacity, 0.0);
+        }
+    };
+    
+    LoudnessState m_loudnessState;
+    std::thread m_loudnessThread;
+    std::atomic<bool> m_loudnessThreadRunning{false};
+    
+    void startLoudnessWorker();
+    void stopLoudnessWorker();
+    void loudnessWorkerLoop();
+
+public:
+    // Reset metering (e.g. on transport start if configured)
+    void resetLoudness() {
+        // Reset atoms (UI sees it immediately)
+        m_loudnessState.integratedLufs.store(-144.0f);
+        m_loudnessState.momentaryLufs.store(-144.0f);
+        
+        // Request reset in worker (via queue? or just a flag?)
+        // Simple flag is enough since exact sample accuracy of reset isn't critical for metering start
+        m_loudnessResetRequested.store(true);
+    }
+
+private:
+    std::atomic<bool> m_loudnessResetRequested{false};
+    // Pre-computed filter coefficients (static)
+    static const BiquadCoeff kKWeightPreFilter; // HS
+    static const BiquadCoeff kKWeightRLB;       // HPF
+
 };
 
 } // namespace Audio

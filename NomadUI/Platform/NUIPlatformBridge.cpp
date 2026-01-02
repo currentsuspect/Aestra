@@ -231,6 +231,7 @@ NUIModifiers NUIPlatformBridge::convertModifiers(const Nomad::KeyModifiers& mods
     if (mods.control) result = result | NUIModifiers::Ctrl;
     if (mods.alt) result = result | NUIModifiers::Alt;
     if (mods.super) result = result | NUIModifiers::Super;
+    if (mods.capsLock) result = result | NUIModifiers::CapsLock;
     return result;
 }
 

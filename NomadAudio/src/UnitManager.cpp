@@ -118,6 +118,44 @@ void UnitManager::setUnitMixerChannel(UnitID id, int channelIndex) {
     }
 }
 
+void UnitManager::setUnitName(UnitID id, const std::string& name) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_units.count(id)) {
+        m_units[id].name = name;
+        // No audio snapshot update needed (UI data)
+    }
+}
+
+void UnitManager::setUnitColor(UnitID id, uint32_t color) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_units.count(id)) {
+        m_units[id].color = color;
+        // No audio snapshot update needed (UI data)
+    }
+}
+
+void UnitManager::reorderUnit(UnitID id, size_t newIndex) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    
+    // Find current position
+    auto it = std::find(m_unitOrder.begin(), m_unitOrder.end(), id);
+    if (it == m_unitOrder.end()) return;
+    
+    // Remove from current position
+    m_unitOrder.erase(it);
+    
+    // Clamp new index
+    if (newIndex > m_unitOrder.size()) {
+        newIndex = m_unitOrder.size();
+    }
+    
+    // Insert at new position
+    m_unitOrder.insert(m_unitOrder.begin() + newIndex, id);
+    
+    // Update snapshot (order may affect processing)
+    updateAudioSnapshot();
+}
+
 void UnitManager::setActivePattern(UnitID id, PatternID pid) {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (m_units.count(id)) {

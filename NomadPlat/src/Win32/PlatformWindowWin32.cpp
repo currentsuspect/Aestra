@@ -376,25 +376,26 @@ void PlatformWindowWin32::setVSync(bool enabled) {
 
 void PlatformWindowWin32::setCursorVisible(bool visible) {
     assertWindowThread();
-    if (m_cursorVisible != visible) {
-        m_cursorVisible = visible;
-        if (visible) {
-            // Increment cursor count until it's visible (>= 0)
-            int attempts = 0;
-            while (ShowCursor(TRUE) < 0) {
-                if (++attempts >= 50) {
-                    NOMAD_LOG_WARNING("setCursorVisible: Failed to show cursor after " + std::to_string(attempts) + " attempts");
-                    break;
-                }
+    // Always enforce cursor state, do not rely on cached m_cursorVisible 
+    // because external systems (or DefWindowProc) might have altered the ShowCursor count.
+    m_cursorVisible = visible;
+    
+    if (visible) {
+        // Increment cursor count until it's visible (>= 0)
+        int attempts = 0;
+        while (ShowCursor(TRUE) < 0) {
+            if (++attempts >= 50) {
+                NOMAD_LOG_WARNING("setCursorVisible: Failed to show cursor after " + std::to_string(attempts) + " attempts");
+                break;
             }
-        } else {
-            // Decrement cursor count until it's hidden (< 0)
-            int attempts = 0;
-            while (ShowCursor(FALSE) >= 0) {
-                if (++attempts >= 50) {
-                    NOMAD_LOG_WARNING("setCursorVisible: Failed to hide cursor after " + std::to_string(attempts) + " attempts");
-                    break;
-                }
+        }
+    } else {
+        // Decrement cursor count until it's hidden (< 0)
+        int attempts = 0;
+        while (ShowCursor(FALSE) >= 0) {
+            if (++attempts >= 50) {
+                NOMAD_LOG_WARNING("setCursorVisible: Failed to hide cursor after " + std::to_string(attempts) + " attempts");
+                break;
             }
         }
     }
@@ -661,6 +662,17 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
                 m_charCallback(static_cast<unsigned int>(wParam));
             }
             return 0;
+        }
+
+        case WM_SETCURSOR: {
+            // Handle cursor visibility explicitly
+            if (LOWORD(lParam) == HTCLIENT) {
+                if (!m_cursorVisible) {
+                    SetCursor(NULL);
+                    return TRUE; // Prevent DefWindowProc from resetting to Arrow
+                }
+            }
+            break; // Fall through for default behavior (Arrow/Resize/etc)
         }
 
         case WM_SETFOCUS:
@@ -934,6 +946,7 @@ KeyModifiers PlatformWindowWin32::getKeyModifiers() const {
     mods.control = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     mods.alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
     mods.super = (GetKeyState(VK_LWIN) & 0x8000) != 0 || (GetKeyState(VK_RWIN) & 0x8000) != 0;
+    mods.capsLock = (GetKeyState(VK_CAPITAL) & 0x0001) != 0;
     return mods;
 }
 

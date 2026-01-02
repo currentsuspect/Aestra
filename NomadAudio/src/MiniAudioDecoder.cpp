@@ -130,7 +130,7 @@ namespace {
     }
 
 #ifdef _WIN32
-    bool loadWithMediaFoundation(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate, uint32_t& numChannels) {
+    bool loadWithMediaFoundation(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate, uint32_t& numChannels, std::function<void(float)> progressCallback) {
         // Each decode is independent - Media Foundation is thread-safe
         // Stale decodes are discarded at the PreviewEngine level via generation counter
         
@@ -165,6 +165,13 @@ namespace {
         curType->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &ch);
         sampleRate = sr; numChannels = ch;
 
+        LONGLONG duration = 0;
+        PROPVARIANT var;
+        if (SUCCEEDED(reader->GetPresentationAttribute(MF_SOURCE_READER_MEDIASOURCE, MF_PD_DURATION, &var))) {
+            duration = var.hVal.QuadPart;
+            PropVariantClear(&var);
+        }
+
         audioData.clear();
         while (true) {
             DWORD flags = 0;
@@ -180,8 +187,15 @@ namespace {
                 audioData.resize(prev + (len / sizeof(float)));
                 std::memcpy(audioData.data() + prev, data, len);
                 buf->Unlock();
+
+                if (progressCallback && duration > 0) {
+                    LONGLONG timestamp = 0;
+                    sample->GetSampleTime(&timestamp);
+                    progressCallback(static_cast<float>(timestamp) / static_cast<float>(duration));
+                }
             }
         }
+        if (progressCallback) progressCallback(1.0f);
         return !audioData.empty();
     }
 #endif
@@ -205,7 +219,7 @@ void forceStereo(std::vector<float>& buffer, uint32_t& channelCount) {
     }
 }
 
-bool loadWithMiniAudio(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate, uint32_t& numChannels) {
+bool loadWithMiniAudio(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate, uint32_t& numChannels, std::function<void(float)> progressCallback) {
 #if defined(NOMAD_USE_MINIAUDIO)
     ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 0, 0);
     ma_decoder decoder;
@@ -217,28 +231,47 @@ bool loadWithMiniAudio(const std::string& filePath, std::vector<float>& audioDat
     ma_uint64 len;
     ma_decoder_get_length_in_pcm_frames(&decoder, &len);
     audioData.resize(static_cast<size_t>(len) * decoder.outputChannels);
-    ma_uint64 read = ma_decoder_read_pcm_frames(&decoder, audioData.data(), len, nullptr);
+    
+    ma_uint64 totalRead = 0;
+    const ma_uint64 chunkSize = 4096 * 4; // Read in chunks to report progress
+    
+    while (totalRead < len) {
+        ma_uint64 toRead = std::min(chunkSize, len - totalRead);
+        ma_uint64 framesRead = 0;
+        if (ma_decoder_read_pcm_frames(&decoder, audioData.data() + (totalRead * decoder.outputChannels), toRead, &framesRead) != MA_SUCCESS) break;
+        if (framesRead == 0) break;
+        
+        totalRead += framesRead;
+        if (progressCallback && len > 0) {
+            progressCallback(static_cast<float>(totalRead) / static_cast<float>(len));
+        }
+    }
+    
     sampleRate = decoder.outputSampleRate;
     numChannels = decoder.outputChannels;
     ma_decoder_uninit(&decoder);
-    if (read != len) audioData.resize(static_cast<size_t>(read) * numChannels);
-    return read > 0;
+    if (totalRead != len) audioData.resize(static_cast<size_t>(totalRead) * numChannels);
+    if (progressCallback) progressCallback(1.0f);
+    return totalRead > 0;
 #else
     return false;
 #endif
 }
 
-bool decodeAudioFile(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate, uint32_t& numChannels) {
+bool decodeAudioFile(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate, uint32_t& numChannels, std::function<void(float)> progressCallback) {
     std::string ext = filePath.substr(filePath.find_last_of('.') + 1);
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
     bool ok = false;
-    if (ext == "wav") ok = loadWav(filePath, audioData, sampleRate, numChannels);
+    if (ext == "wav") {
+        ok = loadWav(filePath, audioData, sampleRate, numChannels);
+        if (ok && progressCallback) progressCallback(1.0f);
+    }
     
-    if (!ok) ok = loadWithMiniAudio(filePath, audioData, sampleRate, numChannels);
+    if (!ok) ok = loadWithMiniAudio(filePath, audioData, sampleRate, numChannels, progressCallback);
     
 #ifdef _WIN32
-    if (!ok) ok = loadWithMediaFoundation(filePath, audioData, sampleRate, numChannels);
+    if (!ok) ok = loadWithMediaFoundation(filePath, audioData, sampleRate, numChannels, progressCallback);
 #endif
 
     if (ok) forceStereo(audioData, numChannels);

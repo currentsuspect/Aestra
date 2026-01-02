@@ -81,7 +81,16 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackMan
                 
                 clip.startSample = clipInfo.startTime;
                 clip.endSample = clipInfo.getEndTime();
-                clip.sampleOffset = clipInfo.sourceStart;
+                
+                // Convert sourceStart (Project Rate) to sampleOffset (Source Rate)
+                // Use double precision to prevent audio popping due to sub-sample drift
+                double projectSampleRate = playlist.getProjectSampleRate();
+                if (projectSampleRate > 0.0 && clip.sourceSampleRate > 0.0) {
+                     clip.sampleOffset = static_cast<double>(clipInfo.sourceStart) * (clip.sourceSampleRate / projectSampleRate);
+                } else {
+                    clip.sampleOffset = static_cast<double>(clipInfo.sourceStart);
+                }
+                
                 clip.gain = clipInfo.gainLinear;
                 clip.pan = clipInfo.pan;
                 

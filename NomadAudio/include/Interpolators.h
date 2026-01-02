@@ -430,14 +430,19 @@ struct Sinc64Turbo {
                 }
             }
         } else if (reversed) {
-            // Scalar path with symmetry reversal (edge cases)
-            for (int t = 0; t < 64; ++t) {
-                int64_t sIdx = startIdx + t;
-                if (sIdx < 0 || sIdx >= totalFrames) continue;
-                
-                float coeff = c[63 - t];  // Reversed!
-                sumL += data[sIdx * 2] * coeff;
-                sumR += data[sIdx * 2 + 1] * coeff;
+            if (useAVX2) {
+                // AVX2 Optimized Reversed Path to enable SIMD for the mirrored 50% of phases
+                sincDotProductAVX2_Reversed(c, &data[startIdx * 2], sumL, sumR);
+            } else {
+                // Scalar path with symmetry reversal (edge cases or non-AVX)
+                for (int t = 0; t < 64; ++t) {
+                    int64_t sIdx = startIdx + t;
+                    if (sIdx < 0 || sIdx >= totalFrames) continue;
+                    
+                    float coeff = c[63 - t];  // Reversed!
+                    sumL += data[sIdx * 2] * coeff;
+                    sumR += data[sIdx * 2 + 1] * coeff;
+                }
             }
         } else {
             // Scalar path for boundary cases

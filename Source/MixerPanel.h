@@ -3,7 +3,10 @@
 
 #include "WindowPanel.h"
 #include "../NomadAudio/include/TrackManager.h"
+#include "../NomadUI/Core/NUIComponent.h"
+#include "../NomadUI/Widgets/NUIButton.h"
 #include <memory>
+#include <functional>
 
 namespace Nomad {
 class MixerViewModel;
@@ -18,8 +21,7 @@ namespace Audio {
 
 /**
  * @brief Mixer Panel - Multi-track audio mixer
- * 
- * Wraps either the legacy MixerView or the new UIMixerPanel in a WindowPanel.
+ * Standardized as a native NUIComponent (v3.1)
  */
 class MixerPanel : public WindowPanel {
 public:
