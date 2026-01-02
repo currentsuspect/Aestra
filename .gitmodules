@@ -1,3 +1,6 @@
 [submodule "NomadAudio/External/vst3sdk"]
 	path = NomadAudio/External/vst3sdk
 	url = https://github.com/steinbergmedia/vst3sdk.git
+[submodule "NomadPlugins"]
+	path = NomadPlugins
+	url = git@github.com:currentsuspect/NomadPlugins.git
