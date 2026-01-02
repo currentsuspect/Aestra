@@ -25,6 +25,7 @@ struct ClipRenderState {
     double sampleOffset{0.0};           // Offset into audioData in frames (double for sub-sample precision)
     uint64_t totalFrames{0};            // Bounds for audioData to guard OOB
     double sourceSampleRate{48000.0};   // Original clip sample rate
+    uint32_t channels{2};               // Source channels (1=mono, 2=stereo)
     float gain{1.0f};
     float pan{0.0f};
 };
