@@ -419,6 +419,15 @@ std::unique_ptr<PlaylistRuntimeSnapshot> PlaylistModel::buildRuntimeSnapshot(
                         clipInfo.sourceSampleRate = source->getSampleRate();
                         clipInfo.sourceChannels = source->getNumChannels();
                         clipInfo.sourceStart = clip.edits.sourceStart;
+                        
+                        // DEBUG: Log sample rate at snapshot build time
+                        static bool logOnce = false;
+                        if (!logOnce) {
+                            Log::info("SNAPSHOT: sourceSampleRate=" + std::to_string(clipInfo.sourceSampleRate) + 
+                                     " sourceChannels=" + std::to_string(clipInfo.sourceChannels) +
+                                     " frames=" + std::to_string(source->getNumFrames()));
+                            logOnce = true;
+                        }
                     }
                 }
             }, pattern.payload);

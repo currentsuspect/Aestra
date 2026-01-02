@@ -161,6 +161,9 @@ public:
     void clearAllSolos();
     void markGraphDirty() { m_graphDirty.store(true, std::memory_order_release); }
     bool consumeGraphDirty() { return m_graphDirty.exchange(false, std::memory_order_acq_rel); }
+    
+    /// Rebuild the playlist runtime snapshot and push to audio thread
+    void rebuildAndPushSnapshot();
 
     std::string generateTrackName() const;
     double getMaxTimelineExtent() const;

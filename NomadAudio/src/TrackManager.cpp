@@ -866,6 +866,14 @@ void TrackManager::updateMixer() {
     }
 }
 
+void TrackManager::rebuildAndPushSnapshot() {
+    // Build a new runtime snapshot from the current PlaylistModel state
+    auto snapshot = m_playlistModel.buildRuntimeSnapshot(m_patternManager, m_sourceManager);
+    if (snapshot) {
+        m_snapshotManager.pushSnapshot(std::move(snapshot));
+    }
+}
+
 void TrackManager::clearAllSolos() {
     std::lock_guard<std::mutex> lock(m_channelMutex);
     for (auto& channel : m_channels) {

@@ -77,6 +77,7 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackMan
                     clip.audioData = clipInfo.audioData->interleavedData.data();
                     clip.totalFrames = clipInfo.audioData->numFrames;
                     clip.sourceSampleRate = static_cast<double>(clipInfo.sourceSampleRate);
+                    clip.channels = clipInfo.sourceChannels;
                 }
                 
                 clip.startSample = clipInfo.startTime;

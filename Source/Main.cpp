@@ -1307,6 +1307,10 @@ public:
                     m_audioEngine->setChannelSlotMap(m_content->getTrackManager()->getChannelSlotMapShared());
                     auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), graphSampleRate);
                     m_audioEngine->setGraph(graph);
+                    
+                    // CRITICAL: Push the snapshot to the audio thread for direct playback
+                    m_content->getTrackManager()->rebuildAndPushSnapshot();
+                    
                     const bool playing = m_content->getTrackManager()->isPlaying();
                     if (!playing) {
                         // When stopped, keep engine position aligned to UI position.

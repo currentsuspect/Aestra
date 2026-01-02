@@ -1,5 +1,6 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioEngine.h"
+#include "NomadLog.h"
 #include "FastMath.h"
 #include <cmath>
 #include <algorithm>
@@ -1037,6 +1038,9 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                 framesToRender = std::min(framesToRender, maxFrames);
             }
             if (framesToRender == 0) continue;
+            
+            const uint32_t channels = clip.channels;
+            const uint32_t stride = channels;
 
             double* dstBase = buffer.data();
             const float* data = clip.audioData;
@@ -1047,7 +1051,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             // Fast path: matching sample rates - direct copy to double
             if (std::abs(ratio - 1.0) < 1e-9) {
                 const uint64_t srcStart = static_cast<uint64_t>(phase);
-                const float* src = data + srcStart * 2;
+                const float* src = data + srcStart * stride;
                 const double clipGain = static_cast<double>(clip.gain);
                 for (uint32_t i = 0; i < framesToRender; ++i) {
                     // Micro-fade at clip edges to avoid clicks/crackles.
@@ -1061,13 +1065,54 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                             fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen)));
                         }
                     }
-                    dst[i * 2] = static_cast<double>(src[i * 2]) * clipGain * fade;
-                    dst[i * 2 + 1] = static_cast<double>(src[i * 2 + 1]) * clipGain * fade;
+                    
+                    double sL, sR;
+                    if (channels == 1) {
+                        sL = static_cast<double>(src[i]);
+                        sR = sL;
+                    } else {
+                        sL = static_cast<double>(src[i * 2]);
+                        sR = static_cast<double>(src[i * 2 + 1]);
+                    }
+
+                    dst[i * 2] = sL * clipGain * fade;
+                    dst[i * 2 + 1] = sR * clipGain * fade;
                 }
             } else {
                 srcActiveThisBlock = true;
                 // Resampling - use selected quality, pre-compute end condition
                 const double phaseEnd = static_cast<double>(totalFrames);
+                
+                if (channels == 1) {
+                     // Mono Resampling (Linear fallback)
+                     // Note: We avoid calling stereo interpolators on mono data to prevent OOB access.
+                     for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                         uint64_t idx = static_cast<uint64_t>(phase);
+                         double frac = phase - static_cast<double>(idx);
+                         
+                         float s0 = data[idx];
+                         float s1 = (idx + 1 < static_cast<uint64_t>(totalFrames)) ? data[idx + 1] : s0;
+                         
+                         double val = static_cast<double>(s0) + frac * static_cast<double>(s1 - s0);
+                         
+                         double fade = 1.0;
+                         const uint64_t projectSample = start + i;
+                         if (fadeLen > 0) {
+                             if (projectSample < clip.startSample + fadeLen) {
+                                  fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) / static_cast<double>(fadeLen)));
+                             }
+                             if (projectSample + fadeLen > clip.endSample) {
+                                  fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen)));
+                             }
+                         }
+                         double clipGain = static_cast<double>(clip.gain);
+                         dst[i*2] = val * clipGain * fade;
+                         dst[i*2+1] = val * clipGain * fade;
+                         
+                         phase += ratio;
+                     }
+                     continue; // Skip stereo switch
+                }
                 
                 // Select interpolator at block level, not per-sample
                 switch (m_interpQuality.load(std::memory_order_relaxed)) {
