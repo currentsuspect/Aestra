@@ -98,7 +98,7 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
     // Create UI components for existing tracks
     refreshTracks();
 
-    // Register as observer of the playlist model to handle dynamic changes (FL Studio style)
+    // Register as observer of the playlist model to handle dynamic changes
     m_trackManager->getPlaylistModel().addChangeObserver([this]() {
         if (m_suppressPlaylistRefresh) return;
         
@@ -1286,7 +1286,7 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
 
     // Render drag drop preview
     
-    // Render delete animations OUTSIDE cache (FL Studio ripple effect)
+    // Render delete animations OUTSIDE cache (Ripple effect)
     renderDeleteAnimations(renderer);
     
     // Render scrollbars OUTSIDE cache (they interact with mouse)
@@ -1723,7 +1723,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         m_menuIconRotation = targetRot;
     }
     
-    // Smooth zoom animation (FL Studio style)
+    // Smooth zoom animation
     if (std::abs(m_targetPixelsPerBeat - m_pixelsPerBeat) > 0.01f) {
         // Get control area width for zoom pivot calculation
         auto& themeManager = NomadUI::NUIThemeManager::getInstance();
@@ -2008,7 +2008,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
 
     // Allow children (clips) to handle right-click press first.
-    // FL Studio style: right-click on a clip deletes it; only start selection
+    // Right-click on a clip deletes it; only start selection
     // box if nothing underneath handled the event.
     if (event.pressed && event.button == NomadUI::NUIMouseButton::Right) {
         if (NomadUI::NUIComponent::onMouseEvent(event)) {
@@ -2145,7 +2145,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             // Current beat at mouse position
             double mouseBeat = (mouseRelX + m_timelineScrollOffset) / m_pixelsPerBeat;
             
-            // FL Studio style exponential zoom
+            // Exponential zoom
             float zoomMultiplier = event.wheelDelta > 0 ? 1.15f : 0.87f;
             float newPixelsPerBeat = std::clamp(m_targetPixelsPerBeat * zoomMultiplier, 8.0f, 300.0f);
             
@@ -3019,7 +3019,7 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
         int barNum = bar + 1;
         std::string barText = std::to_string(barNum);
         
-        // FL Studio style: Bigger text for major bars (1, 5, 9, etc.), smaller for others
+        // Bigger text for major bars (1, 5, 9, etc.), smaller for others
         // At low zoom, only show major bar numbers; at high zoom show all
         bool isMajorBar = (barNum == 1) || ((barNum - 1) % 4 == 0); // 1, 5, 9, 13...
         float fontSize = isMajorBar ? 11.0f : 9.0f;  // Compact ruler text
@@ -3099,7 +3099,7 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
             if (selectionWidth > 0.0f) {
                 NomadUI::NUIRect selectionRect(visibleStartX, rulerBounds.y, selectionWidth, rulerBounds.height);
                 
-                // Fill with semi-transparent accent color (FL Studio style)
+                // Fill with semi-transparent accent color
                 auto accentColor = themeManager.getColor("accentPrimary");
                 renderer.fillRect(selectionRect, accentColor.withAlpha(0.25f));
                 
@@ -3149,7 +3149,7 @@ void TrackManagerUI::setLoopRegion(double startBeat, double endBeat, bool enable
     m_cacheInvalidated = true;  // Redraw to show updated markers
 }
 
-// Render FL Studio-style loop markers on ruler
+// Render loop markers on ruler
 void TrackManagerUI::renderLoopMarkers(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& rulerBounds) {
     // Only show markers when there's an active ruler selection
     if (!m_hasRulerSelection) return;
@@ -4248,7 +4248,7 @@ void TrackManagerUI::renderDeleteAnimations(NomadUI::NUIRenderer& renderer) {
             continue;
         }
         
-        // FL Studio style: Subtle red ripple expanding from click point
+        // Subtle red ripple expanding from click point
         
         // Calculate ripple radius (smaller, more subtle)
         float maxRadius = 50.0f;

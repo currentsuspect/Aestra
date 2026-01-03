@@ -7,7 +7,7 @@ This quickstart guide will walk you through your first session with NOMAD DAW.
 After building NOMAD, you'll learn:
 
 - How to launch NOMAD and navigate the UI
-- Understanding the FL Studio-inspired timeline
+- Understanding the pattern-based timeline
 - Loading and playing audio samples
 - Basic mixing controls
 - Saving and loading projects
@@ -45,7 +45,7 @@ NOMAD's interface consists of several key areas:
 ├─────────────────────────────────────────────────┤
 │                                                 │
 │  Timeline / Pattern Editor                      │
-│  (FL Studio-inspired sequencer)                 │
+│  (Pattern-based sequencer)                      │
 │                                                 │
 ├─────────────────────────────────────────────────┤
 │  Mixer / Channel Rack                           │
@@ -91,7 +91,7 @@ NOMAD's interface consists of several key areas:
 
 ### Step 4: Use the Timeline
 
-The timeline in NOMAD is inspired by FL Studio's workflow:
+The timeline in NOMAD uses a pattern-based workflow:
 
 - **Pattern Mode** — Create and edit individual patterns
 - **Playlist Mode** — Arrange patterns on the timeline

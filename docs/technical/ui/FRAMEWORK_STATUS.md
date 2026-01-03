@@ -5,7 +5,7 @@
 ### Core Framework (100%)
 - ✅ **NUITypes.h** - All basic types (Point, Rect, Color, Events)
 - ✅ **NUIComponent** - Full component hierarchy system
-- ✅ **NUITheme** - Complete theme system with FL Studio dark theme
+- ✅ **NUITheme** - Complete theme system with modern dark theme
 - ✅ **NUIApp** - Application lifecycle with render loop
 
 ### Graphics Backend (95%)

@@ -10,7 +10,7 @@ namespace NomadUI {
 /**
  * @brief A popup color picker with preset colors for Arsenal units.
  * 
- * Displays a grid of 16 color swatches inspired by FL Studio / Ableton palettes.
+ * Displays a grid of 16 color swatches inspired by modern DAW palettes.
  * Right-click on a unit's color strip to show this picker.
  */
 class UnitColorPicker : public NUIComponent {

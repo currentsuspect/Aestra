@@ -200,10 +200,10 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "pressed") return theme.pressed;
     if (colorName == "focused") return theme.focused;
     
-    // FL Studio-inspired dropdown theme tokens
+    // Dropdown theme tokens
     if (colorName == "dropdown.background") return theme.surfaceTertiary.withAlpha(0.95f);
     if (colorName == "dropdown.border") return NUIColor(0, 0, 0, 1.0f); // Black border
-    if (colorName == "dropdown.hover") return NUIColor(0.471f, 0.353f, 1.0f, 0.15f); // FL Studio lavender hover
+    if (colorName == "dropdown.hover") return NUIColor(0.471f, 0.353f, 1.0f, 0.15f); // Lavender hover
     if (colorName == "dropdown.focus") return theme.primary.withAlpha(0.8f);
     if (colorName == "dropdown.text") return theme.textPrimary;
     if (colorName == "dropdown.arrow") return theme.textSecondary;

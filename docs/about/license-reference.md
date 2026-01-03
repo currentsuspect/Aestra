@@ -35,7 +35,7 @@ Comprehensive reference for Nomad DAW licensing, including the source-available 
 - ❌ Source code is **NOT open-source** (cannot be used in other projects)
 - ✅ Contributions are **welcomed and credited**
 - 🤖 Premium features (Muse AI, plugins) will require paid licenses
-- 📜 Full license text available in [LICENSE](../../LICENSE)
+- 📜 Full license text available in [LICENSE](../LICENSE)
 
 ## 🔒 Hybrid Licensing Model
 
@@ -111,7 +111,7 @@ Unauthorized use, copying, or distribution of Nomad DAW will be prosecuted to th
 **Ownership:**
 All title, ownership rights, and intellectual property rights in and to the Software, including all source code, documentation, designs, and associated materials, remain the exclusive property of Dylan Makori and Nomad Studios.
 
-**For the complete legal text, see:** [LICENSE](../../LICENSE)
+**For the complete legal text, see:** [LICENSE](../LICENSE)
 
 ### Third-Party Dependencies
 
@@ -277,7 +277,7 @@ While you grant full rights, we value contributions:
 
 **For contribution questions:**
 - 💬 GitHub Issues: Technical questions
-- 📖 Contributing Guide: [CONTRIBUTING.md](../developer/contributing.md)
+- 📖 Contributing Guide: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 🌍 Jurisdiction
 
@@ -292,14 +292,14 @@ While you grant full rights, we value contributions:
 
 ## 📚 Additional Resources
 
-- [Full License Text](../../LICENSE) - Complete NSSAL license terms
-- [Licensing Details](../../LICENSING.md) - Original licensing document
-- [Contributing Guide](../developer/contributing.md) - How to contribute
-- [FAQ](../FAQ.md) - General questions
+- [Full License Text](../LICENSE) - Complete NSSAL license terms
+- [Licensing Details](../LICENSING.md) - Original licensing document
+- [Contributing Guide](CONTRIBUTING.md) - How to contribute
+- [FAQ](FAQ.md) - General questions
 
 ## ⚠️ Legal Disclaimer
 
-This document provides a summary and reference for Nomad DAW licensing. The complete legal terms are in the [LICENSE](../../LICENSE) and [LICENSING.md](../../LICENSING.md) files. In case of conflict, the official license documents take precedence.
+This document provides a summary and reference for Nomad DAW licensing. The complete legal terms are in the [LICENSE](../LICENSE) and [LICENSING.md](../LICENSING.md) files. In case of conflict, the official license documents take precedence.
 
 **Not legal advice**: This document is for informational purposes only and does not constitute legal advice. Consult an attorney for legal questions.
 
@@ -311,4 +311,4 @@ This document provides a summary and reference for Nomad DAW licensing. The comp
 
 ---
 
-[← Return to Nomad Docs Index](../README.md)
+[← Return to Nomad Docs Index](README.md)

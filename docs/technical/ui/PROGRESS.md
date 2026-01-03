@@ -7,7 +7,7 @@
 #### Core Framework
 - [x] **NUITypes.h** - Basic types (Point, Rect, Color, Events, Enums)
 - [x] **NUIComponent.h/cpp** - Base component class with full hierarchy system
-- [x] **NUITheme.h/cpp** - Theme system with FL Studio dark theme
+- [x] **NUITheme.h/cpp** - Theme system with modern dark theme
 - [x] **NUIApp.h/cpp** - Application lifecycle with render loop ✨ NEW
 - [x] **NUIRenderer.h** - Abstract renderer interface
 - [x] **NUIRenderer.cpp** - Renderer factory function ✨ NEW
@@ -365,7 +365,7 @@ The codebase is clean and well-structured. We're building it right from the star
 - learnopengl.com - OpenGL tutorials
 - Win32 API documentation
 - JUCE source code (for reference)
-- FL Studio (for design inspiration)
+- Modern design inspiration
 
 ### Tools
 - Visual Studio 2022
