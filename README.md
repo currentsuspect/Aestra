@@ -317,32 +317,15 @@ Thank you to all contributors and the open-source community for making Nomad pos
 
 ---
 
-## 🗺️ Roadmap Highlights
+## 🗺️ Roadmap
 
-**Q1 2025:**
+The strategic roadmap is maintained in [`docs/meta/ROADMAP_V1_BETA.md`](docs/meta/ROADMAP_V1_BETA.md).
+We are currently executing the **"One Year Convergence"** plan targeting a Windows-only Beta by Dec 2026.
 
-- ✅ Core audio engine with WASAPI/ASIO support
-- ✅ NomadUI framework with OpenGL rendering
-- ✅ Advanced pattern-based timeline
-- 🚧 Sample manipulation (drag-and-drop, editing)
-- 🚧 Mixing controls (volume, pan, mute, solo)
-- 🚧 Project save/load system
-
-**Q2 2025:**
-
-- 📅 VST3 plugin hosting
-- 📅 MIDI support and piano roll
-- 📅 Undo/redo system
-- 📅 Cross-platform support (Linux, macOS)
-
-**Q3-Q4 2025:**
-
-- 📅 Advanced automation
-- 📅 Effects and mixing console
-- 📅 Muse AI integration (premium)
-- 📅 Official v1.0 release
-
-See the full **[Roadmap →](docs/ROADMAP.md)** for detailed milestones.
+**Current Priorities (Phase 1):**
+1.  **Kill the Monolith:** Refactoring `Main.cpp` into a proper application controller.
+2.  **Plugin Truth:** Integrating `VST3Host` deeply into the audio graph and lifecycle.
+3.  **Foundation:** Establishing the Command Pattern for Undo/Redo.
 
 ---
 

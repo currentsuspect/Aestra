@@ -1,4 +1,8 @@
-# NOMAD DAW Core Implementation Plan
+# [ARCHIVED] NOMAD DAW Core Implementation Plan
+
+> **⚠️ DEPRECATED:** This document has been superseded by [ROADMAP_V1_BETA.md](./ROADMAP_V1_BETA.md) as of Early 2026.
+> It is preserved here for historical context only. Do not use this for active planning.
+
 **Version**: 1.0  
 **Date**: November 28, 2025  
 **Author**: Kilo Code (Architect Mode)
