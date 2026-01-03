@@ -174,7 +174,15 @@ set(NOMAD_AUDIO_CORE_SOURCES
     src/Plugin/PluginScanner.cpp
     src/Plugin/PluginManager.cpp
     src/Plugin/EffectChain.cpp
+    src/SincAVX512.cpp
 )
+
+# Set per-file compile flags for AVX-512
+if(MSVC)
+    set_source_files_properties(src/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "/arch:AVX512")
+else()
+    set_source_files_properties(src/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "-mavx512f -mavx512dq")
+endif()
 
 # Add VST3 host sources if SDK is available
 if(NOMAD_HAS_VST3)
