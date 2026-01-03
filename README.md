@@ -153,18 +153,18 @@ For comprehensive build instructions including troubleshooting, see **[Building 
 
 Explore our beautiful, searchable documentation built with MkDocs Material:
 
-- **🚀 [Getting Started](https://currentsuspect.github.io/NOMAD/getting-started/)** — Setup guides and quickstart tutorials
-- **🏗️ [Architecture](https://currentsuspect.github.io/NOMAD/architecture/overview/)** — System design with interactive diagrams
-- **👨‍💻 [Developer Guide](https://currentsuspect.github.io/NOMAD/developer/contributing/)** — Contributing, coding standards, debugging
-- **📖 [Technical Reference](https://currentsuspect.github.io/NOMAD/technical/faq/)** — FAQ, glossary, roadmap
-- **🔌 [API Reference](https://currentsuspect.github.io/NOMAD/api/)** — Complete API documentation
-- **🤝 [Community](https://currentsuspect.github.io/NOMAD/community/code-of-conduct/)** — Code of conduct, support, security
+- **🚀 [Getting Started](docs/getting-started/index.md)** — Setup guides and quickstart tutorials
+- **🏗️ [Architecture](docs/architecture/overview.md)** — System design with interactive diagrams
+- **👨‍💻 [Developer Guide](docs/developer/contributing.md)** — Contributing, coding standards, debugging
+- **📖 [Technical Reference](docs/technical/faq.md)** — FAQ, glossary, roadmap
+- **🔌 [API Reference](docs/api/index.md)** — Complete API documentation
+- **🤝 [Community](docs/community/code-of-conduct.md)** — Code of conduct, support, security
 
 ### Quick Links
 
-- [Building NOMAD](https://currentsuspect.github.io/NOMAD/getting-started/building/) — Detailed build instructions
-- [Contributing Guide](https://currentsuspect.github.io/NOMAD/developer/contributing/) — How to contribute
-- [Architecture Overview](https://currentsuspect.github.io/NOMAD/architecture/overview/) — Understanding NOMAD's design
+- [Building NOMAD](docs/getting-started/building.md) — Detailed build instructions
+- [Contributing Guide](docs/developer/contributing.md) — How to contribute
+- [Architecture Overview](docs/architecture/overview.md) — Understanding NOMAD's design
 
 ### 📚 API Documentation Generation
 
@@ -387,7 +387,7 @@ See **[SECURITY.md](SECURITY.md)** for our full security policy.
 Join the conversation:
 
 - **Discord** — [Invite Link](https://discord.gg/nomad-studios)
-- **GitHub Discussions** — [Open Discussions](https://github.com/NomadStudios/Nomad/discussions)
+- **GitHub Discussions** — [Open Discussions](https://github.com/currentsuspect/NOMAD/discussions)
 - **Twitter/X** — [@NomadStudios](https://twitter.com/NomadStudios)
 
 ---
@@ -410,9 +410,9 @@ For commercial licensing inquiries, contact: [makoridylan@gmail.com](mailto:mako
 
 If you enjoy using Nomad, consider supporting its development:
 
-- **GitHub Sponsors** — [Sponsor Nomad](https://github.com/sponsors/NomadStudios)
+- **GitHub Sponsors** — [Sponsor Nomad](https://github.com/sponsors/currentsuspect)
 - **Ko-fi** — [Buy Me a Coffee](https://ko-fi.com/nomadstudios)
-- **Patreon** — [Become a Patron](https://patreon.com/Nomad_Studios?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink)
+- **Patreon** — [Become a Patron](https://www.patreon.com/nomadstudios)
 
 ---
 

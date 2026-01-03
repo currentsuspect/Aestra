@@ -5,6 +5,11 @@
 // NOMAD Configuration
 // =============================================================================
 
+/**
+ * @file NomadConfig.h
+ * @brief Global configuration, platform detection, and compiler macros.
+ */
+
 namespace Nomad {
 
 // =============================================================================
