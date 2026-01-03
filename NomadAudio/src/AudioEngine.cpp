@@ -163,6 +163,13 @@ void AudioEngine::processBlock(float* outputBuffer,
     // Enable Denormals protection (Flush-to-Zero)
     DISABLE_DENORMALS
 
+    // Safety: If buffers aren't allocated (setBufferConfig not called), silence and return.
+    if (m_masterBufferD.empty()) {
+        std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * m_outputChannels.load(std::memory_order_relaxed) * sizeof(float));
+        RESTORE_DENORMALS
+        return;
+    }
+
     // Update meter analysis coefficients if the (RT-provided) sample rate changed.
     uint32_t currentSampleRate = m_sampleRate.load(std::memory_order_relaxed);
     if (m_meterAnalysisSampleRate != currentSampleRate) {
@@ -533,9 +540,6 @@ void AudioEngine::processBlock(float* outputBuffer,
     if (m_metronomeEnabled.load(std::memory_order_relaxed) && 
         m_transportPlaying.load(std::memory_order_relaxed)) {
         
-        // Lazy-init
-        if (m_synthClickLow.empty()) generateMetronomeSounds();
-
         // Constants
         const float bpm = m_bpm.load(std::memory_order_relaxed);
         const float clickVol = m_metronomeVolume.load(std::memory_order_relaxed);
@@ -800,6 +804,7 @@ const AudioEngine::BiquadCoeff AudioEngine::kKWeightRLB = {
 };
 
 AudioEngine::AudioEngine() {
+    generateMetronomeSounds();
     startLoudnessWorker();
 }
 

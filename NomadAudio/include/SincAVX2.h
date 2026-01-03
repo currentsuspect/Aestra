@@ -15,6 +15,9 @@ namespace Audio {
  * The code is isolated in this TU to prevent VEX-encoded scalar ops from
  * polluting the main codebase.
  */
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((target("avx2,fma")))
+#endif
 inline void sincDotProductAVX2(
     const float* coeffs,
     const float* samples, // Interleaved L/R stereo
@@ -53,6 +56,9 @@ inline void sincDotProductAVX2(
  * @brief Reversed coefficient AVX2 dot product.
  * Handles the symmetry: data is forward, coeffs are read backwards.
  */
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((target("avx2,fma")))
+#endif
 inline void sincDotProductAVX2_Reversed(
     const float* coeffs,
     const float* samples,
