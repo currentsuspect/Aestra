@@ -54,13 +54,13 @@ No. Nomad uses the **NSSAL (Nomad Studios Source-Available License)** - a source
 - ❌ You cannot distribute modified versions
 - 📜 All contributions become property of the project
 
-See [License Reference](../LICENSE_REFERENCE.md) for complete details.
+See [License Reference](LICENSE_REFERENCE.md) for complete details.
 
 ## 🔨 Building and Setup
 
 ### How do I build Nomad from source?
 
-Follow our comprehensive [Building Guide](../BUILDING.md):
+Follow our comprehensive [Building Guide](BUILDING.md):
 
 **Quick start (Windows):**
 ```powershell
@@ -107,13 +107,13 @@ cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
 
 ### How do I set up my development environment?
 
-1. **Install prerequisites** - See [Building Guide](../BUILDING.md)
+1. **Install prerequisites** - See [Building Guide](BUILDING.md)
 2. **Clone the repository** - Fork and clone from GitHub
 3. **Install Git hooks** - `pwsh -File scripts/install-hooks.ps1`
 4. **Build the project** - Follow build instructions
 5. **Configure your IDE** - Use `.clang-format` for code formatting
 
-See [Contributing Guide](../CONTRIBUTING.md) for detailed setup.
+See [Contributing Guide](CONTRIBUTING.md) for detailed setup.
 
 ## 🤝 Contributing
 
@@ -126,7 +126,7 @@ Several ways to contribute:
 4. **Improve documentation** - Help make docs better
 5. **Test and provide feedback** - Try new features and report issues
 
-See [Contributing Guide](../CONTRIBUTING.md) for details.
+See [Contributing Guide](CONTRIBUTING.md) for details.
 
 ### Do I need to sign a CLA?
 
@@ -135,7 +135,7 @@ Yes. By submitting a pull request, you agree that:
 - You grant full rights to use, modify, and distribute your contributions
 - You waive ownership claims to your contributions
 
-This is necessary because Nomad is commercial software. See [Contributing Guide](../CONTRIBUTING.md) for details.
+This is necessary because Nomad is commercial software. See [Contributing Guide](CONTRIBUTING.md) for details.
 
 ### What kind of contributions are accepted?
 
@@ -167,7 +167,7 @@ This is necessary because Nomad is commercial software. See [Contributing Guide]
 
 ### What code style should I follow?
 
-Follow our [Coding Style Guide](../developer/coding-style.md):
+Follow our [Coding Style Guide](developer/coding-style.md):
 - **clang-format** for automatic formatting
 - **PascalCase** for classes
 - **camelCase** for functions and variables
@@ -220,7 +220,7 @@ NomadUI uses a custom immediate-mode rendering system:
 - **GPU-accelerated** for smooth 60+ FPS
 - **Cache-friendly** widget tree
 
-See [Architecture Overview](../ARCHITECTURE.md) for details.
+See [Architecture Overview](ARCHITECTURE.md) for details.
 
 ### What's the threading model?
 
@@ -229,7 +229,7 @@ Nomad uses multiple threads:
 - **Audio Thread**: Real-time audio processing (lock-free)
 - **Loader Thread**: Async file I/O and caching
 
-See [Architecture Overview](../ARCHITECTURE.md) for threading details.
+See [Architecture Overview](ARCHITECTURE.md) for threading details.
 
 ### Can I use Nomad in my commercial projects?
 
@@ -248,7 +248,7 @@ Only premium add-ons (Muse AI, premium plugins - future releases) will require p
 
 ### What license is Nomad under?
 
-Nomad DAW is **proprietary commercial software**. The source code is visible but not open-source. See [License Reference](../LICENSE_REFERENCE.md) for complete terms.
+Nomad DAW is **proprietary commercial software**. The source code is visible but not open-source. See [License Reference](LICENSE_REFERENCE.md) for complete terms.
 
 ### Can I fork Nomad?
 
@@ -346,11 +346,11 @@ cmake --build build --config Release
 
 Still have questions? Check these resources:
 
-- [Building Guide](../BUILDING.md) - Detailed build instructions
-- [Contributing Guide](../CONTRIBUTING.md) - How to contribute
-- [Architecture Overview](../ARCHITECTURE.md) - Technical deep dive
-- [Coding Style Guide](../developer/coding-style.md) - Code conventions
-- [Glossary](../GLOSSARY.md) - Technical terminology
+- [Building Guide](BUILDING.md) - Detailed build instructions
+- [Contributing Guide](CONTRIBUTING.md) - How to contribute
+- [Architecture Overview](ARCHITECTURE.md) - Technical deep dive
+- [Coding Style Guide](developer/coding-style.md) - Code conventions
+- [Glossary](GLOSSARY.md) - Technical terminology
 
 ## 💬 Getting Help
 
@@ -363,4 +363,4 @@ Still have questions? Check these resources:
 
 ---
 
-[← Return to Nomad Docs Index](../README.md)
+[← Return to Nomad Docs Index](README.md)

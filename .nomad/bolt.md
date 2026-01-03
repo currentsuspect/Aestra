@@ -14,3 +14,4 @@
 - Added `scripts/docs-check.sh` to CI to validate docs (links, doxygen, spelling).
 - Fixed broken links in `README.md`.
 - Removed references to "FL Studio" throughout documentation and source comments to align with professional branding.
+- Consolidated disparate documentation (`NomadAudio/docs`, `NomadUI/docs`, root `*.md`) into a structured `docs/` hierarchy (`technical/`, `getting-started/`, `developer/`) to improve discoverability and organization.
