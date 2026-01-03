@@ -5,6 +5,28 @@
 
 #include <immintrin.h>
 
+/**
+ * Compute an AVX2-accelerated stereo dot product of 64 coefficients with 64 interleaved samples.
+ *
+ * Must only be called when CPUDetection::hasAVX2() is true.
+ *
+ * @param coeffs Pointer to 64 filter coefficients stored in forward order.
+ * @param samples Pointer to 128 interleaved stereo samples in L,R,L,R... order (64 stereo pairs).
+ * @param sumL Output accumulator that receives the resulting dot product for the left channel.
+ * @param sumR Output accumulator that receives the resulting dot product for the right channel.
+ */
+
+/**
+ * Compute an AVX2-accelerated stereo dot product of 64 coefficients with 64 interleaved samples,
+ * reading the coefficients in reverse order.
+ *
+ * Must only be called when CPUDetection::hasAVX2() is true.
+ *
+ * @param coeffs Pointer to 64 filter coefficients; this function reads them in reverse (highest index first).
+ * @param samples Pointer to 128 interleaved stereo samples in L,R,L,R... order (64 stereo pairs).
+ * @param sumL Output accumulator that receives the resulting dot product for the left channel.
+ * @param sumR Output accumulator that receives the resulting dot product for the right channel.
+ */
 namespace Nomad {
 namespace Audio {
 
@@ -15,6 +37,9 @@ namespace Audio {
  * The code is isolated in this TU to prevent VEX-encoded scalar ops from
  * polluting the main codebase.
  */
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((target("avx2,fma")))
+#endif
 inline void sincDotProductAVX2(
     const float* coeffs,
     const float* samples, // Interleaved L/R stereo
@@ -53,6 +78,9 @@ inline void sincDotProductAVX2(
  * @brief Reversed coefficient AVX2 dot product.
  * Handles the symmetry: data is forward, coeffs are read backwards.
  */
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((target("avx2,fma")))
+#endif
 inline void sincDotProductAVX2_Reversed(
     const float* coeffs,
     const float* samples,

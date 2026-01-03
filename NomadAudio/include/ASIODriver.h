@@ -11,6 +11,12 @@
 namespace Nomad {
 namespace Audio {
 
+/**
+ * @brief ASIO Driver implementation for low-latency professional audio.
+ *
+ * Handles COM interaction, buffer switching, and format conversion between
+ * ASIO planar buffers and AudioEngine interleaved buffers.
+ */
 class ASIODriver : public IAudioDriver {
 public:
     ASIODriver();
