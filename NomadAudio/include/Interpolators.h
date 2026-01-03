@@ -11,6 +11,7 @@
 #include "SincAVX2.h"      // AVX2 dot product
 #include "SincSSE41.h"     // SSE4.1 fallback
 #include "SincNEON.h"      // ARM NEON support
+#include "SincAVX512.h"    // AVX-512 dot product
 
 namespace Nomad {
 namespace Audio {
@@ -390,8 +391,9 @@ struct Sinc64Turbo {
     {
         static const auto table = std::make_unique<Table>();
         static const auto& cpu = Nomad::Core::CPUDetection::get();
+        static const bool useAVX512 = cpu.hasAVX512F();
         static const bool useAVX2 = cpu.hasAVX2();
-        static const bool useSSE41 = cpu.hasSSE41() && !useAVX2;
+        static const bool useSSE41 = cpu.hasSSE41() && !useAVX2 && !useAVX512;
         static const bool useNEON = cpu.hasNEON();
         
         const int64_t idx = static_cast<int64_t>(phase);
@@ -413,10 +415,15 @@ struct Sinc64Turbo {
         // SIMD path: Use when we have valid contiguous access
         bool validRange = (startIdx >= 0 && startIdx + 64 <= totalFrames);
         
+        // EXPERIMENTAL: Prefetch next likely coefficients?
+        // _mm_prefetch(table->coeffs[lutIdx + 1], _MM_HINT_T0);
+
         if (validRange && !reversed) {
             const float* samples = &data[startIdx * 2];
             
-            if (useAVX2) {
+            if (useAVX512) {
+                sincDotProductAVX512(c, samples, sumL, sumR);
+            } else if (useAVX2) {
                 sincDotProductAVX2(c, samples, sumL, sumR);
             } else if (useSSE41) {
                 sincDotProductSSE41(c, samples, sumL, sumR);
@@ -430,7 +437,9 @@ struct Sinc64Turbo {
                 }
             }
         } else if (reversed) {
-            if (useAVX2) {
+            if (useAVX512) {
+                sincDotProductAVX512_Reversed(c, &data[startIdx * 2], sumL, sumR);
+            } else if (useAVX2) {
                 // AVX2 Optimized Reversed Path to enable SIMD for the mirrored 50% of phases
                 sincDotProductAVX2_Reversed(c, &data[startIdx * 2], sumL, sumR);
             } else {

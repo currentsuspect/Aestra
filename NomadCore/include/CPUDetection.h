@@ -29,6 +29,8 @@ public:
     bool hasAVX2() const { return m_hasAVX2; }
     bool hasFMA() const { return m_hasFMA; }
     bool hasSSE41() const { return m_hasSSE41; }
+    bool hasAVX512F() const { return m_hasAVX512F; }
+    bool hasAVX512DQ() const { return m_hasAVX512DQ; }
     
     // ARM NEON detection (compile-time on ARM, always false on x86)
 #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
@@ -58,6 +60,8 @@ private:
         if (nIds >= 7) {
             __cpuidex(info, 7, 0);
             m_hasAVX2 = (info[1] & (1 << 5)) != 0;
+            m_hasAVX512F = (info[1] & (1 << 16)) != 0;
+            m_hasAVX512DQ = (info[1] & (1 << 17)) != 0;
         }
 #else
         unsigned int eax, ebx, ecx, edx;
@@ -73,6 +77,8 @@ private:
             if (nIds >= 7) {
                 __get_cpuid_count(7, 0, &eax, &ebx, &ecx, &edx);
                 m_hasAVX2 = (ebx & (1 << 5)) != 0;
+                m_hasAVX512F = (ebx & (1 << 16)) != 0;
+                m_hasAVX512DQ = (ebx & (1 << 17)) != 0;
             }
         }
 #endif
@@ -81,6 +87,8 @@ private:
     bool m_hasAVX2 = false;
     bool m_hasFMA = false;
     bool m_hasSSE41 = false;
+    bool m_hasAVX512F = false;
+    bool m_hasAVX512DQ = false;
 };
 
 } // namespace Core

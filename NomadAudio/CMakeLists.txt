@@ -279,6 +279,7 @@ target_include_directories(NomadAudioCore
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/../NomadCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../NomadPlat/include
 )
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio)
@@ -305,9 +306,15 @@ endif()
 
 target_link_libraries(NomadAudioCore
     PUBLIC
-        NomadCore
-        NomadPlat # For strict thread priority API (Platform::setCurrentThreadPriority)
 )
+
+if(TARGET NomadCore)
+    target_link_libraries(NomadAudioCore PUBLIC NomadCore)
+endif()
+
+if(TARGET NomadPlat)
+    target_link_libraries(NomadAudioCore PUBLIC NomadPlat)
+endif()
 
 # =============================================================================
 # Premium Plugins Integration (Optional)
@@ -532,8 +539,15 @@ add_executable(NomadSincBenchmark
 
 target_link_libraries(NomadSincBenchmark
     PRIVATE
-        NomadAudio
-        NomadCore
+        NomadAudioCore
+)
+
+if(TARGET NomadCore)
+    target_link_libraries(NomadSincBenchmark PRIVATE NomadCore)
+endif()
+
+target_include_directories(NomadSincBenchmark PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadCore/include
 )
 
 # Watchdog Verification Test

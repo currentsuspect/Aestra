@@ -9,6 +9,7 @@
 #include <thread>
 #include <mutex>
 #include <optional>
+#include <condition_variable>
 
 namespace Nomad {
 namespace Audio {

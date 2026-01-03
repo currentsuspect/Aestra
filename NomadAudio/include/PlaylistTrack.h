@@ -8,6 +8,7 @@
 #include <atomic>
 #include <mutex>
 #include <random>
+#include <algorithm>
 
 namespace Nomad {
 namespace Audio {

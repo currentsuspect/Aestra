@@ -86,6 +86,7 @@ int main() {
     results.push_back(runBenchmark<Sinc64Interpolator>("Sinc64 (Original Opt)", input.data(), kInputSize, output.data(), 0));
     std::cout << "Testing Sinc64 TURBO...\n";
     std::cout << "  CPU Features:\n";
+    std::cout << "    AVX512F:" << (Nomad::Core::CPUDetection::get().hasAVX512F() ? "YES" : "NO") << "\n";
     std::cout << "    AVX2:   " << (Nomad::Core::CPUDetection::get().hasAVX2() ? "YES" : "NO") << "\n";
     std::cout << "    FMA:    " << (Nomad::Core::CPUDetection::get().hasFMA() ? "YES" : "NO") << "\n";
     std::cout << "    SSE4.1: " << (Nomad::Core::CPUDetection::get().hasSSE41() ? "YES" : "NO") << "\n";
