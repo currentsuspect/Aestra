@@ -5,6 +5,28 @@
 
 #include <immintrin.h>
 
+/**
+ * Compute an AVX2-accelerated stereo dot product of 64 coefficients with 64 interleaved samples.
+ *
+ * Must only be called when CPUDetection::hasAVX2() is true.
+ *
+ * @param coeffs Pointer to 64 filter coefficients stored in forward order.
+ * @param samples Pointer to 128 interleaved stereo samples in L,R,L,R... order (64 stereo pairs).
+ * @param sumL Output accumulator that receives the resulting dot product for the left channel.
+ * @param sumR Output accumulator that receives the resulting dot product for the right channel.
+ */
+
+/**
+ * Compute an AVX2-accelerated stereo dot product of 64 coefficients with 64 interleaved samples,
+ * reading the coefficients in reverse order.
+ *
+ * Must only be called when CPUDetection::hasAVX2() is true.
+ *
+ * @param coeffs Pointer to 64 filter coefficients; this function reads them in reverse (highest index first).
+ * @param samples Pointer to 128 interleaved stereo samples in L,R,L,R... order (64 stereo pairs).
+ * @param sumL Output accumulator that receives the resulting dot product for the left channel.
+ * @param sumR Output accumulator that receives the resulting dot product for the right channel.
+ */
 namespace Nomad {
 namespace Audio {
 
