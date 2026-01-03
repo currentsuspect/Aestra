@@ -7,7 +7,7 @@
 ![Core](https://img.shields.io/badge/Core-Source--Available-blue)
 
 > **A modern, professional digital audio workstation built from the ground up with intention.**  
-> Featuring ultra-low latency audio, GPU-accelerated UI, and an FL Studio-inspired workflow.
+> Featuring ultra-low latency audio, GPU-accelerated UI, and a pattern-based workflow.
 
 ---
 
@@ -19,7 +19,7 @@ Nomad combines:
 
 - **Ultra-low latency audio engine** powered by a dual-tier ASIO/WASAPI system
 - **Custom GPU-accelerated UI framework** (NomadUI) for buttery-smooth 60 FPS performance
-- **FL Studio-inspired timeline** with intuitive pattern and playlist sequencing
+- **Modern pattern-based timeline** with intuitive pattern and playlist sequencing
 - **Professional-grade 64-bit audio processing** with multi-threaded architecture
 - **Source-available transparency** — see exactly how your DAW works under the hood
 
@@ -42,7 +42,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 
 - **NomadUI Framework** — Custom OpenGL 3.3+ renderer with MSAA anti-aliasing
 - **Adaptive FPS System** — Intelligent rendering optimization (24-60 FPS)
-- **FL Studio-inspired Timeline** — Familiar workflow with adaptive grid and waveform visualization
+- **Advanced Timeline** — Familiar workflow with adaptive grid and waveform visualization
 - **Theme System** — Dark/light modes with customizable color schemes
 - **SVG Icon System** — Crisp, scalable vector icons with dynamic color tinting
 - **Smooth Animations** — Hardware-accelerated transitions and effects
@@ -323,7 +323,7 @@ Thank you to all contributors and the open-source community for making Nomad pos
 
 - ✅ Core audio engine with WASAPI/ASIO support
 - ✅ NomadUI framework with OpenGL rendering
-- ✅ FL Studio-inspired timeline
+- ✅ Advanced pattern-based timeline
 - 🚧 Sample manipulation (drag-and-drop, editing)
 - 🚧 Mixing controls (volume, pan, mute, solo)
 - 🚧 Project save/load system

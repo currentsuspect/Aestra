@@ -104,7 +104,7 @@ NomadContent::NomadContent() {
         if (m_previewPanel) m_previewPanel->setFile(&file);
     });
 
-    // Create pattern browser panel (add to workspace, FL Studio style side panel)
+    // Create pattern browser panel (add to workspace, side panel)
     m_patternBrowser = std::make_shared<PatternBrowserPanel>(m_trackManager.get());
     m_patternBrowser->setOnPatternSelected([this](PatternID patternId) {
         Log::info("Pattern selected: " + std::to_string(patternId.value));

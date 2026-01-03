@@ -186,7 +186,7 @@ zIndex:
 
 # Component-Specific Settings
 components:
-  # Dropdown styling - Modern FL Studio inspired
+  # Dropdown styling
   dropdown:
     background: "#28282d"           # Dropdown background (surfaceTertiary)
     border: "#000000"               # Black border for modern look

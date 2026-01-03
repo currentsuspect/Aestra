@@ -76,6 +76,12 @@ See [Building Guide](docs/BUILDING.md) for detailed instructions.
 - ✅ Write self-documenting code with clear names
 - ✅ Include documentation updates
 
+### Documentation
+- ✅ **API Docs**: Add `/** @brief ... */` comments to all public headers in `NomadAudio`, `NomadCore`, and `NomadUI`.
+- ✅ **Validation**: Run `./scripts/docs-check.sh` locally to verify Doxygen and link integrity.
+- ✅ **Changelog**: Add an entry to the `[Unreleased]` section of `CHANGELOG.md` for notable changes.
+- ✅ **No Dead Links**: Ensure all relative links in Markdown files are valid.
+
 ### Pull Requests
 - ✅ One feature/fix per PR
 - ✅ Clear, descriptive title
