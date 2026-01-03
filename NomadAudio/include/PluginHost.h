@@ -7,6 +7,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <atomic>
+#include <cstring>
 
 namespace Nomad {
 namespace Audio {
