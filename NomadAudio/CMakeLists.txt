@@ -174,7 +174,15 @@ set(NOMAD_AUDIO_CORE_SOURCES
     src/Plugin/PluginScanner.cpp
     src/Plugin/PluginManager.cpp
     src/Plugin/EffectChain.cpp
+    src/SincAVX512.cpp
 )
+
+# Set per-file compile flags for AVX-512
+if(MSVC)
+    set_source_files_properties(src/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "/arch:AVX512")
+else()
+    set_source_files_properties(src/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "-mavx512f -mavx512dq")
+endif()
 
 # Add VST3 host sources if SDK is available
 if(NOMAD_HAS_VST3)
@@ -279,6 +287,7 @@ target_include_directories(NomadAudioCore
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/../NomadCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../NomadPlat/include
 )
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio)
@@ -305,9 +314,15 @@ endif()
 
 target_link_libraries(NomadAudioCore
     PUBLIC
-        NomadCore
-        NomadPlat # For strict thread priority API (Platform::setCurrentThreadPriority)
 )
+
+if(TARGET NomadCore)
+    target_link_libraries(NomadAudioCore PUBLIC NomadCore)
+endif()
+
+if(TARGET NomadPlat)
+    target_link_libraries(NomadAudioCore PUBLIC NomadPlat)
+endif()
 
 # =============================================================================
 # Premium Plugins Integration (Optional)
@@ -532,8 +547,15 @@ add_executable(NomadSincBenchmark
 
 target_link_libraries(NomadSincBenchmark
     PRIVATE
-        NomadAudio
-        NomadCore
+        NomadAudioCore
+)
+
+if(TARGET NomadCore)
+    target_link_libraries(NomadSincBenchmark PRIVATE NomadCore)
+endif()
+
+target_include_directories(NomadSincBenchmark PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadCore/include
 )
 
 # Watchdog Verification Test
