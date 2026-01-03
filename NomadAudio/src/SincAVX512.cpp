@@ -25,7 +25,7 @@ void sincDotProductAVX512(
     // Indices for de-interleaving:
     // We load 32 floats (16 pairs).
     // Evens go to L, Odds go to R.
-    // _mm512_permutex2var_ps(idx, a, b) selects from concatenated pair (b, a).
+    // _mm512_permutex2var_ps(a, idx, b) selects from concatenated pair (a, b).
     // Note: The intrinsic signature is _mm512_permutex2var_ps(a, idx, b).
 
     // Pattern to extract Even elements (0, 2, 4...) from two registers

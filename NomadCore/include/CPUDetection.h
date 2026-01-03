@@ -78,7 +78,7 @@ private:
                 bool osAvxSupport = (xcr0 & 0x6) == 0x6;
 
                 // AVX-512 requires OpMask (5), ZMM_Hi256 (6), Hi16_ZMM (7)
-                // (Masks 0x20 | 0x40 | 0x80 = 0xE0)
+                // (XMM+YMM: 0x6) | (OpMask+ZMM_Hi256+Hi16_ZMM: 0xE0) = 0xE6
                 bool osAvx512Support = (xcr0 & 0xE6) == 0xE6; // Checks 1, 2, 5, 6, 7
 
                 if (nIds >= 7) {

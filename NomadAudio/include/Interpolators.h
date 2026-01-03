@@ -436,7 +436,7 @@ struct Sinc64Turbo {
                     sumR += samples[t * 2 + 1] * c[t];
                 }
             }
-        } else if (reversed) {
+        } else if (validRange && reversed) {
             if (useAVX512) {
                 sincDotProductAVX512_Reversed(c, &data[startIdx * 2], sumL, sumR);
             } else if (useAVX2) {
