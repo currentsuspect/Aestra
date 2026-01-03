@@ -143,7 +143,7 @@ We're building the DAW we wish existed — powerful yet approachable, profession
 
 ### Detailed Build Instructions
 
-For comprehensive build instructions including troubleshooting, see **[Building Guide →](docs/BUILDING.md)**
+For comprehensive build instructions including troubleshooting, see **[Building Guide →](docs/getting-started/building.md)**
 
 ---
 

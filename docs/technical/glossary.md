@@ -9,7 +9,7 @@ Comprehensive glossary of technical terms, acronyms, and concepts used in Nomad 
 - [Audio Terms](#-audio-terms)
 - [Programming Concepts](#-programming-concepts)
 - [Nomad-Specific Terms](#-nomad-specific-terms)
-- [UI/UX Terms](#-uiux-terms)
+- [UI/UX Terms](#%EF%B8%8F-uiux-terms)
 - [Acronyms](#-acronyms)
 
 ## 🎵 Audio Terms
@@ -284,7 +284,7 @@ Rendering order of overlapping UI elements. Higher z-order renders on top.
 ## 📚 Related Terms
 
 ### Branching Strategy
-Git workflow defining how branches are created, named, and merged. See [Contributing Guide](../CONTRIBUTING.md).
+Git workflow defining how branches are created, named, and merged. See [Contributing Guide](CONTRIBUTING.md).
 
 ### Code Review
 Process of examining code changes before merging. Ensures quality and maintainability.
@@ -324,11 +324,11 @@ Test that verifies a single component in isolation. Helps catch bugs early.
 
 ## 📚 Additional Resources
 
-- [Architecture Overview](../ARCHITECTURE.md) - Detailed system design
-- [Building Guide](../BUILDING.md) - Build instructions
-- [Coding Style Guide](../developer/coding-style.md) - Code conventions
-- [FAQ](../FAQ.md) - Common questions
+- [Architecture Overview](ARCHITECTURE.md) - Detailed system design
+- [Building Guide](BUILDING.md) - Build instructions
+- [Coding Style Guide](developer/coding-style.md) - Code conventions
+- [FAQ](FAQ.md) - Common questions
 
 ---
 
-[← Return to Nomad Docs Index](../README.md)
+[← Return to Nomad Docs Index](README.md)
