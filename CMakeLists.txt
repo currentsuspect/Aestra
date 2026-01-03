@@ -89,6 +89,18 @@ add_subdirectory(NomadUI)
 add_subdirectory(NomadAudio)
 
 # =============================================================================
+# NomadPlugins - Premium Plugins (Optional Private Submodule)
+# =============================================================================
+if(EXISTS "${CMAKE_SOURCE_DIR}/NomadPlugins/CMakeLists.txt")
+    message(STATUS "Found NomadPlugins - including premium plugins")
+    add_subdirectory(NomadPlugins)
+    set(NOMAD_HAS_PLUGINS ON)
+else()
+    message(STATUS "NomadPlugins not found - skipping premium plugins")
+    set(NOMAD_HAS_PLUGINS OFF)
+endif()
+
+# =============================================================================
 # NOMAD DAW - Main Application
 # =============================================================================
 add_subdirectory(Source)

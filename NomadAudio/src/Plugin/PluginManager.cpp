@@ -11,6 +11,10 @@
 #include "Plugin/CLAPHost.h"
 #endif
 
+#ifdef NOMAD_HAS_PLUGINS
+#include <RumbleInstance.h>
+#endif
+
 #ifdef _WIN32
 #include <objbase.h>  // For COM initialization (VST3)
 #endif
@@ -195,8 +199,14 @@ PluginInstancePtr PluginManager::createCLAPInstance(const PluginInfo& info) {
 }
 
 PluginInstancePtr PluginManager::createInternalInstance(const PluginInfo& info) {
-    // TODO: Create built-in NOMAD plugins
-    // These are internal implementations that don't require external loading
+    // Create built-in NOMAD plugins
+    
+#ifdef NOMAD_HAS_PLUGINS
+    // Nomad Rumble 808 Bass Synthesizer
+    if (info.id == "com.nomadstudios.rumble") {
+        return std::make_shared<Nomad::Plugins::RumbleInstance>();
+    }
+#endif
     
     (void)info;
     return nullptr;

@@ -116,6 +116,9 @@ public:
     std::vector<std::string> getInputChannelNames() const;
     bool isPlaying() const { return m_isPlaying.load(); }
     bool isRecording() const { return m_isRecording.load(); }
+    bool isRecordArmed() const { return m_isRecordArmed.load(); }
+    void enableMetronome(bool enable);
+    bool isMetronomeEnabled() const { return m_metronomeEnabled.load(); }
     
     // Pattern Playback Control
     void playPatternInArsenal(PatternID patternId); // Arsenal direct playback mode
@@ -173,6 +176,9 @@ public:
     std::vector<std::shared_ptr<MixerChannel>> getChannelsSnapshot() const;
     std::shared_ptr<const ChannelSlotMap> getChannelSlotMapShared() const { return m_channelSlotMapOwned; }
 
+    // Recording Access for UI
+    bool getRecordingDataSnapshot(uint32_t trackId, std::vector<float>& outBuffer, double& outStartBeat);
+
     // Audio source management
     SourceManager& getSourceManager() { return m_sourceManager; }
     const SourceManager& getSourceManager() const { return m_sourceManager; }
@@ -212,9 +218,11 @@ private:
     // Transport state
     std::atomic<bool> m_isPlaying{false};
     std::atomic<bool> m_isRecording{false};
+    std::atomic<bool> m_isRecordArmed{false};
     std::atomic<double> m_positionSeconds{0.0};
     std::atomic<double> m_uiPositionSeconds{0.0}; // Thread-safe exchange for UI
     std::atomic<bool> m_userScrubbing{false};
+    std::atomic<bool> m_metronomeEnabled{false};
 
     // Callbacks
     std::function<void(double)> m_onPositionUpdate;
@@ -240,6 +248,8 @@ private:
     
     std::shared_ptr<const ChannelSlotMap> m_channelSlotMapOwned;
     const ChannelSlotMap* m_channelSlotMapRaw{nullptr};
+    
+    void startRecordingProcess(); // Decoupled capture logic
 
 public:
     const ChannelSlotMap* getChannelSlotMapRaw() const { return m_channelSlotMapRaw; }

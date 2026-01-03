@@ -1087,6 +1087,9 @@ void TrackUIComponent::renderStatic(NomadUI::NUIRenderer& renderer) {
     for (const auto& clip : lane->clips) {
         drawClipAtPosition(renderer, clip, bounds, controlAreaWidth);
     }
+    
+    // Live Recording Waveform moved to renderDynamic for real-time updates
+    
     renderer.setOpacity(1.0f);
 }
 
@@ -1101,6 +1104,9 @@ void TrackUIComponent::renderDynamic(NomadUI::NUIRenderer& renderer) {
     if (m_playlistMode == PlaylistMode::Automation) {
         renderAutomationLayer(renderer, bounds, bounds.x + controlAreaWidth);
     }
+
+    // Live Recording Waveform (v3.0.2) - Dynamic real-time update
+    drawLiveWaveform(renderer, bounds, controlAreaWidth);
 
     // Apply overlay for muted/solo state (Grid Area Only)
     if (m_isPrimaryForLane) {
@@ -2215,5 +2221,93 @@ void TrackUIComponent::renderAutomationLayer(NomadUI::NUIRenderer& renderer, con
     }
 }
 
+
+void TrackUIComponent::drawLiveWaveform(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds, float controlAreaWidth) {
+    if (!m_trackManager->isRecording()) return;
+    if (!m_channel->isArmed()) return;
+
+    std::vector<float> recordingData;
+    double startBeat = 0.0;
+    bool gotSnapshot = m_trackManager->getRecordingDataSnapshot(m_channel->getChannelId(), recordingData, startBeat);
+    
+    if (!gotSnapshot || recordingData.empty()) return;
+
+    // Layout parameters
+    const float gridStartX = bounds.x + controlAreaWidth + 5.0f; // + gap
+    const float centerY = bounds.y + bounds.height * 0.5f;
+    const float halfHeight = bounds.height * 0.5f; // Use full height for live wave
+    
+    double bpm = m_trackManager->getPlaylistModel().getBPM();
+    double sampleRate = m_trackManager->getOutputSampleRate(); // Usage of Output Rate is safe here as recording is captured at this rate
+    if (sampleRate <= 0.0) sampleRate = 48000.0;
+    
+    // Map samples to pixels
+    // pixels_per_sample = pixels_per_beat * beats_per_second / samples_per_second
+    // beats_per_second = bpm / 60
+    double bitsPerSecond = bpm / 60.0;
+    double samplesPerPixel = sampleRate / (bitsPerSecond * m_pixelsPerBeat);
+    
+    // Calculate start X in screen coordinates
+    float startX = gridStartX + (static_cast<float>(startBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
+    
+    size_t totalSamples = recordingData.size();
+    float endX = startX + (totalSamples / static_cast<float>(samplesPerPixel));
+    
+    if (endX < gridStartX || startX > bounds.right()) return;
+
+    // Drawing Loop (Decimated)
+    NomadUI::NUIColor waveColor = NomadUI::NUIThemeManager::getInstance().getColor("error"); // Red for recording
+    
+    std::vector<NomadUI::NUIPoint> topPoints;
+    std::vector<NomadUI::NUIPoint> bottomPoints;
+    
+    float visibleStartPixel = std::max(gridStartX, startX) - startX;
+    float visibleEndPixel = std::min(bounds.right(), endX) - startX;
+    
+    if (visibleEndPixel <= visibleStartPixel) return;
+    
+    int startPixelInt = static_cast<int>(visibleStartPixel);
+    int endPixelInt = static_cast<int>(visibleEndPixel);
+    
+    size_t numPoints = endPixelInt - startPixelInt;
+    topPoints.reserve(numPoints);
+    bottomPoints.reserve(numPoints);
+    
+    for (int p = startPixelInt; p < endPixelInt; ++p) {
+        size_t sampleIndex = static_cast<size_t>(p * samplesPerPixel);
+        size_t nextSampleIndex = static_cast<size_t>((p + 1) * samplesPerPixel);
+        
+        if (sampleIndex >= totalSamples) break;
+        if (nextSampleIndex > totalSamples) nextSampleIndex = totalSamples;
+        
+        float peak = 0.0f;
+        for (size_t i = sampleIndex; i < nextSampleIndex; ++i) {
+            float val = std::abs(recordingData[i]);
+            if (val > peak) peak = val;
+        }
+        
+        float env = std::pow(std::min(1.0f, peak), 0.75f);
+        
+        float screenX = startX + p;
+        float topY = centerY - env * halfHeight;
+        float bottomY = centerY + env * halfHeight;
+        
+        if (bottomY - topY < 1.0f) {
+            topY = centerY - 0.5f;
+            bottomY = centerY + 0.5f;
+        }
+        
+        topPoints.push_back(NomadUI::NUIPoint(screenX, topY));
+        bottomPoints.push_back(NomadUI::NUIPoint(screenX, bottomY));
+    }
+    
+    if (!topPoints.empty()) {
+        renderer.fillWaveform(topPoints.data(), bottomPoints.data(), static_cast<int>(topPoints.size()), waveColor.withAlpha(0.6f));
+        renderer.drawPolyline(topPoints.data(), static_cast<int>(topPoints.size()), 1.0f, waveColor);
+        renderer.drawPolyline(bottomPoints.data(), static_cast<int>(bottomPoints.size()), 1.0f, waveColor);
+    }
+}
+
 } // namespace Audio
 } // namespace Nomad
+

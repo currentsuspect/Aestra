@@ -309,6 +309,18 @@ target_link_libraries(NomadAudioCore
         NomadPlat # For strict thread priority API (Platform::setCurrentThreadPriority)
 )
 
+# =============================================================================
+# Premium Plugins Integration (Optional)
+# =============================================================================
+if(EXISTS "${CMAKE_SOURCE_DIR}/NomadPlugins/NomadRumble/CMakeLists.txt")
+    message(STATUS "NomadRumble: Linking premium 808 synthesizer")
+    target_link_libraries(NomadAudioCore PRIVATE NomadRumble)
+    target_compile_definitions(NomadAudioCore PRIVATE NOMAD_HAS_PLUGINS)
+    target_include_directories(NomadAudioCore PRIVATE 
+        ${CMAKE_SOURCE_DIR}/NomadPlugins/NomadRumble/include
+    )
+endif()
+
 # ENFORCEMENT: NomadAudioCore MUST NOT link Windows libraries
 # We can check this by property retrieval (not easy at config time for implicit libs)
 # But we ensure we DO NOT call target_link_libraries with avrt, advapi32 etc.
