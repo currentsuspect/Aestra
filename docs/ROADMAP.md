@@ -16,7 +16,7 @@ High-level milestones and feature plans for Nomad DAW's development and releases
 ## 🌟 Vision
 
 **Mission**: Build a professional digital audio workstation that combines:
-- **Intuitive workflow** inspired by FL Studio
+- **Intuitive workflow** based on pattern sequencing
 - **Professional audio quality** with ultra-low latency
 - **AI-powered assistance** to enhance creativity
 - **Modern architecture** built with C++17
@@ -45,7 +45,7 @@ High-level milestones and feature plans for Nomad DAW's development and releases
 **User Interface** (85% complete)
 - ✅ Custom NomadUI framework
 - ✅ OpenGL rendering with adaptive FPS
-- ✅ FL Studio-style timeline
+- ✅ Modern pattern-based timeline
 - ✅ Piano roll editor with keyboard
 - ✅ Step sequencer implementation
 - ✅ Transport controls (play, pause, stop)
@@ -238,7 +238,7 @@ High-level milestones and feature plans for Nomad DAW's development and releases
 - ✅ Step sequencer implementation
 - ✅ Audio graph routing system
 - ✅ MixerBus with gain/pan/mute/solo
-- ✅ FL Studio-style timeline features
+- ✅ Advanced timeline features
 - ✅ Adaptive FPS system
 - ✅ Critical bug fixes and UI polish
 

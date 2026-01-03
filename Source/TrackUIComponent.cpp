@@ -2100,7 +2100,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
     }
     
-    // Handle right-click to delete clip (FL Studio style) - check all clips
+    // Handle right-click to delete clip - check all clips
     if (event.pressed && event.button == NomadUI::NUIMouseButton::Right && isInsideBounds) {
         // Find which clip was right-clicked
         for (const auto& [clipId, clipBounds] : m_allClipBounds) {

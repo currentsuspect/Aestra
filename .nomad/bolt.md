@@ -13,3 +13,4 @@
 - Enforced header doc presence (`@brief`) for public headers in `NomadAudio`, `NomadCore`, and `NomadUI`.
 - Added `scripts/docs-check.sh` to CI to validate docs (links, doxygen, spelling).
 - Fixed broken links in `README.md`.
+- Removed references to "FL Studio" throughout documentation and source comments to align with professional branding.

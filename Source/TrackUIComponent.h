@@ -235,12 +235,12 @@ private:
 
     void generateWaveformCache(int width, int height);
     
-    // Sample clip container (FL Studio style)
+    // Sample clip container
     void drawSampleClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds);
     void drawSampleClipForClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds,
                                 const NomadUI::NUIRect& fullClipBounds, const ClipInstance& clip);
 
-    // Pattern clip rendering (FL Studio style)
+    // Pattern clip rendering
     void drawPatternClipForClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds,
                                  const NomadUI::NUIRect& fullClipBounds, const ClipInstance& clip);
 

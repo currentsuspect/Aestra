@@ -16,7 +16,7 @@ namespace Nomad {
 namespace Audio {
 
 /**
- * @brief WindowPanel - A dockable window panel with title bar (FL Studio style)
+ * @brief WindowPanel - A dockable window panel with title bar
  * 
  * Features:
  * - Title bar with minimize/maximize buttons

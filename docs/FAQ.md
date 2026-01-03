@@ -20,7 +20,7 @@ Common questions and answers for contributors, developers, and users of Nomad DA
 Nomad DAW is a modern digital audio workstation built with C++17, featuring:
 - Ultra-low latency audio engine with WASAPI support
 - GPU-accelerated custom UI framework (NomadUI)
-- FL Studio-inspired workflow
+- Pattern-based workflow
 - Professional-grade audio processing
 - Planned AI integration (Muse)
 

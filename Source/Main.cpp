@@ -758,7 +758,7 @@ public:
                     double loopBars = (preset == 1) ? 1.0 : (preset == 2) ? 2.0 : (preset == 3) ? 4.0 : 8.0;
                     double loopBeats = loopBars * beatsPerBar;
                     
-                    // FL Studio-style: loop from beat 0 (not current position)
+                    // Loop from beat 0 (not current position)
                     m_audioEngine->setLoopRegion(0.0, loopBeats);
                     m_audioEngine->setLoopEnabled(true);
                     if (auto trackManagerUI = m_content->getTrackManagerUI()) {
@@ -766,7 +766,7 @@ public:
                     }
                     Log::info("Loop enabled: 0.0 - " + std::to_string(loopBeats) + " beats (" + std::to_string(static_cast<int>(loopBars)) + " bars)");
                 } else if (preset == 5) {
-                    // Selection-based loop (FL Studio: selection overrides bar looping)
+                    // Selection-based loop (selection overrides bar looping)
                     if (auto trackManagerUI = m_content->getTrackManagerUI()) {
                         auto selection = trackManagerUI->getSelectionBeatRange();
                         if (selection.second > selection.first) {
@@ -797,12 +797,12 @@ public:
                 }
             });
             
-            // FL Studio-style: Enable 1-bar loop by default on startup
+            // Enable 1-bar loop by default on startup
             if (m_audioEngine) {
                 int beatsPerBar = m_audioEngine->getBeatsPerBar();
                 m_audioEngine->setLoopRegion(0.0, static_cast<double>(beatsPerBar));
                 m_audioEngine->setLoopEnabled(true);
-                Log::info("Default 1-bar loop enabled (FL Studio mode)");
+                Log::info("Default 1-bar loop enabled (Pattern mode)");
             }
         }
         
