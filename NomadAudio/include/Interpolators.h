@@ -415,8 +415,8 @@ struct Sinc64Turbo {
         // SIMD path: Use when we have valid contiguous access
         bool validRange = (startIdx >= 0 && startIdx + 64 <= totalFrames);
         
-        // EXPERIMENTAL: Prefetch next likely coefficients?
-        // _mm_prefetch(table->coeffs[lutIdx + 1], _MM_HINT_T0);
+        // Note: Experimental prefetching showed no consistent gain and potential cache
+        // pollution on tested platforms. Removed to keep implementation clean.
 
         if (validRange && !reversed) {
             const float* samples = &data[startIdx * 2];
