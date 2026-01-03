@@ -142,6 +142,31 @@ void AudioEngine::setThreadCount(int count) {
     }
 }
 
+/**
+ * @brief Real-time audio processing entry point for a single block.
+ *
+ * Processes input (recording callback), renders the audio graph into an internal
+ * double-precision master buffer, applies master gain smoothing, optional safety
+ * processing (DC blocking, soft clip), per-sample LUFS filtering and dithering,
+ * fades, metronome mixing, and writes the final interleaved stereo float output
+ * to outputBuffer. Also updates metering (peak/RMS/low-frequency energy/correlation),
+ * accumulates loudness energy for background LUFS calculation, advances the
+ * global sample position (with sample-accurate looping support), and captures
+ * recent output into the waveform history.
+ *
+ * Parameters:
+ * @param outputBuffer Interleaved stereo output buffer to fill (must be non-null and sized for numFrames * output channels).
+ * @param inputBuffer Optional interleaved input buffer; if provided and an input callback is registered, the callback is invoked with this buffer.
+ * @param numFrames Number of frames to process in this block.
+ * @param streamTime Unused (present for API compatibility).
+ *
+ * Notes:
+ * - If internal buffers are not configured, the function silences the provided outputBuffer and returns.
+ * - Handles fade-in/fade-out state transitions and will set the engine to Silent when fading completes.
+ * - Performs sample-accurate looping by splitting the block if a loop boundary is crossed.
+ * - Meter snapshots are published if a snapshot buffer is available; clipping flags are set when peaks >= 1.0.
+ * - Dithering mode, safety processing, metronome, and LUFS accumulation are all controlled by engine state flags.
+ */
 void AudioEngine::processBlock(float* outputBuffer,
                                const float* inputBuffer,
                                uint32_t numFrames,
@@ -803,6 +828,12 @@ const AudioEngine::BiquadCoeff AudioEngine::kKWeightRLB = {
     -1.99004745483398, 0.99007225036621 // a1, a2
 };
 
+/**
+ * @brief Initialize AudioEngine runtime state.
+ *
+ * Generates the metronome click samples and starts the background loudness worker
+ * used for integrated LUFS calculation.
+ */
 AudioEngine::AudioEngine() {
     generateMetronomeSounds();
     startLoudnessWorker();
