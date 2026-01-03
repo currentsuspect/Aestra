@@ -262,6 +262,9 @@ private:
     void drawClipAtPosition(NomadUI::NUIRenderer& renderer, const ClipInstance& clip,
                            const NomadUI::NUIRect& bounds, float controlAreaWidth);
 
+    // Live Waveform (v3.0.2)
+    void drawLiveWaveform(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds, float controlAreaWidth);
+
     // Automation Layer (v3.1)
     void renderAutomationLayer(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds, float gridStartX);
 

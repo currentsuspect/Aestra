@@ -244,8 +244,11 @@ ChannelSlotMap TrackManager::getChannelSlotMapSnapshot() const {
 // Transport Control
 void TrackManager::play() {
     m_isPlaying.store(true);
-    // DO NOT clear recording here! record() calls play(), so this would cancel it.
-    // m_isRecording.store(false); 
+    
+    // Decoupled Recording: Start capture if armed
+    if (m_isRecordArmed.load()) {
+        startRecordingProcess();
+    }
     
     if (m_commandSink) {
         AudioQueueCommand cmd;
@@ -283,6 +286,8 @@ void TrackManager::pause() {
 
 void TrackManager::stop() {
     m_isPlaying.store(false);
+    m_isRecordArmed.store(false); // Clear arm on stop
+    
     if (m_isRecording.load()) {
         m_isRecording.store(false);
         finishRecording();
@@ -331,61 +336,64 @@ void TrackManager::stopArsenalPlayback() {
 }
 
 void TrackManager::record() {
-     bool wasRecording = m_isRecording.load();
-     if (wasRecording) {
-         m_isRecording.store(false);
-         finishRecording();
-         Log::info("Recording stopped");
-     } else {
-         // Start Recording
-         {
-             std::lock_guard<std::mutex> lock(m_recordingMutex);
-             m_recordingBuffers.clear();
-             std::lock_guard<std::mutex> chanLock(m_channelMutex);
-             
-             double currentBeat = m_positionSeconds.load() * (m_clock.getCurrentTempo() / 60.0);
-             
+    if (m_isRecording.load()) {
+        // Stop recording
+        m_isRecording.store(false);
+        m_isRecordArmed.store(false);
+        finishRecording();
+        Log::info("Recording stopped manually");
+        return;
+    }
 
-
-             // Use PlaylistModel directly since we are on the UI thread
-             // const auto* snapshot = m_snapshotManager.peekCurrentSnapshot();
-
-             for (const auto& channel : m_channels) {
-                 if (channel->isArmed()) {
-                     RecordingBuffer buf;
-                     buf.trackId = channel->getChannelId();
-                     buf.startBeat = currentBeat;
-                     buf.inputChannelIndex = channel->getInputChannelIndex();
-                     Log::info("Track " + std::to_string(buf.trackId) + " Armed. Input: " + std::to_string(buf.inputChannelIndex));
-                     buf.active = true;
-                     
-                     // Target corresponding lane index (assuming 1:1 map)
-                     // Find channel index
-                     auto it = std::find(m_channels.begin(), m_channels.end(), channel);
-                     if (it != m_channels.end()) {
-                         size_t idx = std::distance(m_channels.begin(), it);
-                         if (idx < m_playlistModel.getLaneCount()) {
-                             buf.targetLane = m_playlistModel.getLaneId(idx);
-                         }
-                     }
-                     
-                     if (buf.trackId > 0) // Valid track
-                        m_recordingBuffers.push_back(std::move(buf));
-                 }
-             }
-         }
-         
-         if (!m_recordingBuffers.empty()) {
-             m_isRecording.store(true);
-             Log::info("Recording started - Armed tracks: " + std::to_string(m_recordingBuffers.size()));
-             if (!isPlaying()) {
-                 play();
-             }
-         } else {
-             Log::warning("Recording not started - No tracks armed");
-         }
-     }
+    if (m_isPlaying.load()) {
+        // Punch-in: Start immediately if already playing
+        startRecordingProcess();
+    } else {
+        // Stop state: Toggle Arm
+        bool armed = !m_isRecordArmed.load();
+        m_isRecordArmed.store(armed);
+        Log::info(armed ? "Recording ARMED" : "Recording UNARMED");
+    }
 }
+
+void TrackManager::startRecordingProcess() {
+    std::lock_guard<std::mutex> lock(m_recordingMutex);
+    m_recordingBuffers.clear();
+    std::lock_guard<std::mutex> chanLock(m_channelMutex);
+    
+    double currentBeat = m_positionSeconds.load() * (m_clock.getCurrentTempo() / 60.0);
+    
+    for (const auto& channel : m_channels) {
+        if (channel->isArmed()) {
+            RecordingBuffer buf;
+            buf.trackId = channel->getChannelId();
+            buf.startBeat = currentBeat;
+            buf.inputChannelIndex = channel->getInputChannelIndex();
+            buf.active = true;
+            
+            auto it = std::find(m_channels.begin(), m_channels.end(), channel);
+            if (it != m_channels.end()) {
+                size_t idx = std::distance(m_channels.begin(), it);
+                if (idx < m_playlistModel.getLaneCount()) {
+                    buf.targetLane = m_playlistModel.getLaneId(idx);
+                }
+            }
+            
+            if (buf.trackId > 0)
+                m_recordingBuffers.push_back(std::move(buf));
+        }
+    }
+    
+    if (!m_recordingBuffers.empty()) {
+        m_isRecording.store(true);
+        Log::info("Recording started - Armed tracks: " + std::to_string(m_recordingBuffers.size()));
+    } else {
+        Log::warning("Cannot start recording - No tracks are armed");
+        m_isRecordArmed.store(false);
+    }
+}
+
+
 
 void TrackManager::processInput(const float* inputBuffer, uint32_t numFrames) {
     static int cbCount = 0;
@@ -835,8 +843,66 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
     }
 
     // Metering and Transport Update
-    if (m_meterSnapshotsRaw) {
-        // Metering logic...
+    // Metering and Transport Update
+    if (m_meterSnapshotsRaw && m_channelSlotMapRaw) {
+        // 1. Meter Individual Tracks
+        for (size_t i = 0; i < m_channels.size() && i < m_channelBuffers.size(); ++i) {
+            auto& channel = m_channels[i];
+            if (!channel) continue;
+
+            uint32_t slot = m_channelSlotMapRaw->getSlotIndex(channel->getChannelId());
+            if (slot == Audio::ChannelSlotMap::INVALID_SLOT) continue;
+
+            const float* src = m_channelBuffers[i].data();
+            float peakL = 0.0f;
+            float peakR = 0.0f;
+            float sumSqL = 0.0f;
+            float sumSqR = 0.0f;
+
+            for (uint32_t f = 0; f < numFrames; ++f) {
+                float l = std::abs(src[f * 2]);
+                float r = std::abs(src[f * 2 + 1]);
+                if (l > peakL) peakL = l;
+                if (r > peakR) peakR = r;
+                sumSqL += l * l;
+                sumSqR += r * r;
+            }
+
+            float rmsL = std::sqrt(sumSqL / numFrames);
+            float rmsR = std::sqrt(sumSqR / numFrames);
+
+            m_meterSnapshotsRaw->writeLevels(slot, peakL, peakR, rmsL, rmsR, 0.0f, 0.0f);
+            
+            if (peakL > 1.0f || peakR > 1.0f) {
+                m_meterSnapshotsRaw->setClip(slot, peakL > 1.0f, peakR > 1.0f);
+            }
+        }
+
+        // 2. Meter Master Output
+        const uint32_t masterSlot = Audio::ChannelSlotMap::MASTER_SLOT_INDEX;
+        float peakL = 0.0f;
+        float peakR = 0.0f;
+        float sumSqL = 0.0f;
+        float sumSqR = 0.0f;
+
+        for (uint32_t f = 0; f < numFrames; ++f) {
+            float l = std::abs(outputBuffer[f * 2]);
+            float r = std::abs(outputBuffer[f * 2 + 1]);
+            if (l > peakL) peakL = l;
+            if (r > peakR) peakR = r;
+            sumSqL += l * l;
+            sumSqR += r * r;
+        }
+
+        float rmsL = std::sqrt(sumSqL / numFrames);
+        float rmsR = std::sqrt(sumSqR / numFrames);
+        
+        // TODO: Calc proper correlation and LUFS
+        m_meterSnapshotsRaw->writeLevels(masterSlot, peakL, peakR, rmsL, rmsR, 0.0f, 0.0f);
+
+        if (peakL > 1.0f || peakR > 1.0f) {
+            m_meterSnapshotsRaw->setClip(masterSlot, peakL > 1.0f, peakR > 1.0f);
+        }
     }
 
     if (m_isPlaying.load()) {
@@ -916,6 +982,34 @@ void TrackManager::setLatencySamples(uint32_t samples) {
     m_latencySamples = samples;
     // Optional: Log latency update? 
     // Log::info("TrackManager: Latency compensation set to " + std::to_string(samples) + " samples");
+}
+
+void TrackManager::enableMetronome(bool enable) {
+    m_metronomeEnabled.store(enable);
+    AudioQueueCommand cmd;
+    cmd.type = AudioQueueCommandType::SetMetronomeEnabled;
+    cmd.value1 = static_cast<float>(enable);
+    if (m_commandSink) {
+        m_commandSink(cmd);
+    }
+}
+
+
+
+bool TrackManager::getRecordingDataSnapshot(uint32_t trackId, std::vector<float>& outBuffer, double& outStartBeat) {
+    std::lock_guard<std::mutex> lock(m_recordingMutex);
+    
+    // Find active recording buffer for this track
+    for (const auto& buffer : m_recordingBuffers) {
+        if (buffer.active && buffer.trackId == trackId) {
+            // Copy data to output buffer
+            outBuffer = buffer.data; 
+            outStartBeat = buffer.startBeat;
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 } // namespace Audio

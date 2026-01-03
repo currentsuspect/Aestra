@@ -199,6 +199,11 @@ NomadContent::NomadContent() {
             }
         }
     });
+    
+    m_transportBar->setOnMetronomeToggle([this](bool enabled) {
+        if(m_trackManager) m_trackManager->enableMetronome(enabled);
+    });
+
     m_overlayLayer->addChild(m_transportBar);
     
     // Create Focus Toggle Buttons

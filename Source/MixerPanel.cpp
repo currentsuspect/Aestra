@@ -13,7 +13,9 @@ MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
 {
     // Create view model and modern mixer
     m_viewModel = std::make_shared<Nomad::MixerViewModel>();
-    m_newMixer = std::make_shared<UIMixerPanel>(m_viewModel, nullptr, nullptr);
+    m_newMixer = std::make_shared<UIMixerPanel>(m_viewModel, 
+                                                m_trackManager->getMeterSnapshots(),
+                                                m_trackManager->getContinuousParams());
     m_newMixer->setId("UIMixerPanel_Inner");
     
     // Set as content of WindowPanel

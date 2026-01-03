@@ -341,6 +341,11 @@ private:
     // Metronome state
     std::atomic<bool> m_metronomeEnabled{false};
     std::atomic<float> m_metronomeVolume{0.7f};
+    
+    // Synthesized Metronome
+    std::vector<float> m_synthClickLow;  // Downbeat (800Hz)
+    std::vector<float> m_synthClickHigh; // Upbeat (1600Hz)
+    void generateMetronomeSounds();
     std::atomic<float> m_bpm{120.0f};
     std::atomic<int> m_beatsPerBar{4};              // Time signature numerator (4 for 4/4)
     std::vector<float> m_clickSamplesDown;          // Mono click for downbeat (low pitch)

@@ -59,6 +59,9 @@ void AudioEngine::applyPendingCommands() {
         switch (cmd.type) {
             case AudioQueueCommandType::None:
                 break;
+            case AudioQueueCommandType::SetMetronomeEnabled:
+            setMetronomeEnabled(static_cast<bool>(cmd.value1));
+            break;
             case AudioQueueCommandType::SetTrackVolume: {
                 auto& state = ensureTrackState(cmd.trackIndex);
                 state.currentVolume = cmd.value1;
@@ -528,65 +531,107 @@ void AudioEngine::processBlock(float* outputBuffer,
 
     // === Metronome Click Mixing ===
     if (m_metronomeEnabled.load(std::memory_order_relaxed) && 
-        m_transportPlaying.load(std::memory_order_relaxed) && (!m_clickSamplesDown.empty() || !m_clickSamplesUp.empty())) {
+        m_transportPlaying.load(std::memory_order_relaxed)) {
         
+        // Lazy-init
+        if (m_synthClickLow.empty()) generateMetronomeSounds();
+
+        // Constants
         const float bpm = m_bpm.load(std::memory_order_relaxed);
         const float clickVol = m_metronomeVolume.load(std::memory_order_relaxed);
         const int beatsPerBar = m_beatsPerBar.load(std::memory_order_relaxed);
         
-        // Samples per beat = sampleRate * 60 / BPM
         const uint64_t samplesPerBeat = static_cast<uint64_t>(
             (static_cast<double>(m_sampleRate) * 60.0) / static_cast<double>(bpm));
+            
+        // Reset tracking on jumps (Backwards Seek/Loop Safety)
+        // Only reset if we jumped BEHIND the start of the current beat interval.
+        uint64_t prevBeatSample = (m_nextBeatSample >= samplesPerBeat) ? m_nextBeatSample - samplesPerBeat : 0;
         
-        // Reset beat tracking if we jumped backwards (loop or seek)
-        if (m_globalSamplePos < m_nextBeatSample && m_nextBeatSample > samplesPerBeat) {
+        if (m_globalSamplePos < prevBeatSample) {
             m_nextBeatSample = (m_globalSamplePos / samplesPerBeat) * samplesPerBeat;
             m_currentBeat = static_cast<int>((m_globalSamplePos / samplesPerBeat) % beatsPerBar);
             m_clickPlaying = false;
-            m_clickPlayhead = 0;
         }
         
-        // Initialize next beat position if needed
+        // Init first beat
         if (m_nextBeatSample == 0 && m_globalSamplePos == 0) {
-            m_nextBeatSample = 0;  // First beat at position 0
-            m_currentBeat = 0;     // Start on downbeat
-            m_activeClickSamples = &m_clickSamplesDown;  // First beat uses downbeat sample
-            m_currentClickGain = 1.0f;
-            m_clickPlaying = true;
-            m_clickPlayhead = 0;
+            m_nextBeatSample = 0;
+            m_currentBeat = 0;
         }
+
+        // 1. Calculate Block Boundaries
+        const uint64_t blockStart = m_globalSamplePos;
+        const uint64_t blockEnd = blockStart + numFrames;
         
-        // Check if a new beat starts in this block
-        const uint64_t blockEnd = m_globalSamplePos + numFrames;
+        // 2. Identify if a NEW beat triggers in this block
+        bool newBeatTriggers = false;
+        uint32_t triggerOffset = numFrames; // Default to end (no trigger)
+
         while (m_nextBeatSample < blockEnd && samplesPerBeat > 0) {
-            if (m_nextBeatSample >= m_globalSamplePos) {
-                // Start new click - select correct sample based on beat position
-                m_clickPlaying = true;
-                m_clickPlayhead = 0;
-                // Beat 0 = downbeat (low pitch), others = upbeat (high pitch)
-                m_activeClickSamples = (m_currentBeat == 0) ? &m_clickSamplesDown : &m_clickSamplesUp;
-                m_currentClickGain = 1.0f;
-                // Advance beat counter AFTER selecting sample
-                m_currentBeat = (m_currentBeat + 1) % beatsPerBar;
-            } else {
-                // Beat already passed, just advance counter
-                m_currentBeat = (m_currentBeat + 1) % beatsPerBar;
+            if (m_nextBeatSample >= blockStart) {
+                // Found a trigger in this block!
+                newBeatTriggers = true;
+                triggerOffset = static_cast<uint32_t>(m_nextBeatSample - blockStart);
+                break; 
             }
-            m_nextBeatSample += samplesPerBeat;
+             m_nextBeatSample += samplesPerBeat;
+        }
+
+        // 3. Mix TAIL (From 0 to triggerOffset)
+        // If we were already playing, continue until the new beat kicks in (or block ends)
+        if (m_clickPlaying && m_activeClickSamples && !m_activeClickSamples->empty()) {
+             size_t clickLen = m_activeClickSamples->size();
+             uint32_t tailFrames = std::min(numFrames, triggerOffset);
+             
+             /*
+             if (m_clickPlayhead < clickLen) {
+                 // Log::info("Meta Tail: " + std::to_string(tailFrames) + " Playhead: " + std::to_string(m_clickPlayhead));
+             }
+             */
+
+             for (uint32_t i = 0; i < tailFrames && m_clickPlayhead < clickLen; ++i) {
+                 float sample = (*m_activeClickSamples)[m_clickPlayhead] * clickVol * m_currentClickGain;
+                 outputBuffer[i * 2] += sample;
+                 outputBuffer[i * 2 + 1] += sample;
+                 ++m_clickPlayhead;
+             }
+             
+             if (m_clickPlayhead >= clickLen) {
+                 m_clickPlaying = false;
+             }
         }
         
-        // Mix click samples into output
-        if (m_clickPlaying && m_activeClickSamples && !m_activeClickSamples->empty()) {
-            const size_t clickLen = m_activeClickSamples->size();
-            for (uint32_t i = 0; i < numFrames && m_clickPlayhead < clickLen; ++i) {
-                float sample = (*m_activeClickSamples)[m_clickPlayhead] * clickVol * m_currentClickGain;
-                outputBuffer[i * 2] += sample;      // Left
-                outputBuffer[i * 2 + 1] += sample;  // Right (mono click to stereo)
-                ++m_clickPlayhead;
-            }
-            if (m_clickPlayhead >= clickLen) {
-                m_clickPlaying = false;
-            }
+        // 4. Start NEW Click (From triggerOffset to numFrames)
+        if (newBeatTriggers) {
+             m_clickPlaying = true;
+             m_clickPlayhead = 0;
+             m_activeClickSamples = (m_currentBeat == 0) ? &m_synthClickLow : &m_synthClickHigh;
+             m_currentClickGain = 1.0f;
+             
+             m_activeClickSamples = (m_currentBeat == 0) ? &m_synthClickLow : &m_synthClickHigh;
+             m_currentClickGain = 1.0f;
+
+
+             // Advance Beat Counter
+             m_currentBeat = (m_currentBeat + 1) % beatsPerBar;
+             m_nextBeatSample += samplesPerBeat;
+             
+             // Mix New Click
+             if (m_activeClickSamples && !m_activeClickSamples->empty()) {
+                 size_t clickLen = m_activeClickSamples->size();
+                 uint32_t remainingFrames = numFrames - triggerOffset;
+                 uint32_t framesToMix = std::min(remainingFrames, (uint32_t)clickLen);
+
+                 for (uint32_t i = 0; i < framesToMix; ++i) {
+                     float sample = (*m_activeClickSamples)[m_clickPlayhead] * clickVol * m_currentClickGain;
+                     uint32_t dstIdx = triggerOffset + i;
+                     outputBuffer[dstIdx * 2] += sample;
+                     outputBuffer[dstIdx * 2 + 1] += sample;
+                     ++m_clickPlayhead;
+                 }
+                 // Log::info("Meta New Mix: " + std::to_string(framesToMix));
+             }
         }
     }
 
@@ -1818,6 +1863,38 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
              }
         }
     }
+
+void AudioEngine::generateMetronomeSounds() {
+    // Generate 50ms beeps at 48kHz
+    // High: 1600Hz, Low: 800Hz
+    const size_t sampleRate = 48000;
+    const size_t durationSamples = static_cast<size_t>(0.10 * sampleRate); // 100ms
+    
+    // Resize is safe here as this is called lazily from RT thread ONCE, 
+    // or (ideally) from non-RT. 
+    // Since we call it from processBlock lazily, this IS an allocation on RT thread.
+    // BUT it only happens ONCE, so it's a minor "start-up glitch" risk acceptable for this fix.
+    // Ideally should be called from SetMetronomeEnabled if empty.
+    
+    if (m_synthClickLow.empty()) {
+        m_synthClickLow.resize(durationSamples);
+        m_synthClickHigh.resize(durationSamples);
+        
+        const double freqLow = 800.0;
+        const double freqHigh = 1600.0;
+        const double decayRate = 5.0; // Exponential decay
+        const double kPi = 3.14159265358979323846;
+        
+        for (size_t i = 0; i < durationSamples; ++i) {
+            double t = static_cast<double>(i) / sampleRate;
+            // Short, sharp ping
+            double env = std::pow(1.0 - static_cast<double>(i)/durationSamples, 4.0);
+    
+            m_synthClickLow[i] = static_cast<float>(std::sin(2.0 * kPi * freqLow * t) * env);
+            m_synthClickHigh[i] = static_cast<float>(std::sin(2.0 * kPi * freqHigh * t) * env);
+        }
+    }
+}
 
 } // namespace Audio
 } // namespace Nomad
