@@ -20,6 +20,12 @@ enum class PreviewResult {
     Failed     // Decode error or invalid file
 };
 
+/**
+ * @brief Handles file auditioning and previewing.
+ *
+ * Manages asynchronous decoding, sample rate conversion, and playback
+ * of audio files for browser preview and scrubbing.
+ */
 class PreviewEngine {
 public:
     PreviewEngine();

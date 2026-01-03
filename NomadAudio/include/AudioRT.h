@@ -16,8 +16,12 @@ namespace Nomad {
 namespace Audio {
 namespace RT {
 
-// Enable flush-to-zero (FTZ) + denormals-are-zero (DAZ) on x86/x64.
-// Call once per audio thread (cheap, RT-safe).
+/**
+ * @brief Enables flush-to-zero (FTZ) and denormals-are-zero (DAZ) modes.
+ *
+ * Prevents performance degradation when processing very small floating point numbers.
+ * Safe to call from real-time threads.
+ */
 inline void enableDenormalProtection() noexcept {
 #if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
     // MXCSR bits: FTZ (bit 15), DAZ (bit 6).

@@ -33,7 +33,7 @@ namespace Nomad {
 namespace Audio {
 
 /**
- * @brief Tool modes for playlist editing (FL Studio style)
+ * @brief Tool modes for playlist editing
  */
 enum class PlaylistTool {
     Select,     // Default - select/move clips  
@@ -171,7 +171,7 @@ public:
     ::NomadUI::DropResult onDrop(const ::NomadUI::DragData& data, const ::NomadUI::NUIPoint& position) override;
     ::NomadUI::NUIRect getDropBounds() const override { return getBounds(); }
     
-    // Loop markers (FL Studio-style visual feedback)
+    // Loop markers (Visual feedback)
     void setLoopRegion(double startBeat, double endBeat, bool enabled);
 
     bool onMouseEvent(const ::NomadUI::NUIMouseEvent& event) override;
@@ -329,7 +329,7 @@ private:
     ::NomadUI::NUIPoint m_selectionBoxStart;
     ::NomadUI::NUIPoint m_selectionBoxEnd;
     
-    // === SMOOTH ZOOM ANIMATION (FL Studio style) ===
+    // === SMOOTH ZOOM ANIMATION ===
     float m_targetPixelsPerBeat = 50.0f;   // Target zoom level for animation (match initial m_pixelsPerBeat)
     float m_zoomVelocity = 0.0f;           // Current zoom velocity for momentum
     float m_lastMouseZoomX = 0.0f;         // Mouse X position during zoom for pivot
@@ -400,7 +400,7 @@ private:
     ClipInstanceID m_selectedClipId; // Track single selected clip for manipulation
 
     
-    // === DELETE ANIMATION (FL Studio ripple effect) ===
+    // === DELETE ANIMATION (Ripple effect) ===
     struct DeleteAnimation {
         PlaylistLaneID laneId;            // Lane being deleted from
         ClipInstanceID clipId;            // Clip ID (for reference during animation if needed)
