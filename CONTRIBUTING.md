@@ -6,7 +6,7 @@ Thank you for your interest in contributing to Nomad DAW! We welcome contributio
 
 ## 📚 Before You Start
 
-Please read our comprehensive [Contributing Guide](docs/CONTRIBUTING.md) for detailed information about:
+Please read our comprehensive [Contributing Guide](docs/developer/contributing.md) for detailed information about:
 - Development workflow
 - Code style guidelines
 - Pull request process
@@ -42,19 +42,19 @@ cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 ```
 
-See [Building Guide](docs/BUILDING.md) for detailed instructions.
+See [Building Guide](docs/getting-started/building.md) for detailed instructions.
 
 ### 2. Find Something to Work On
 
 - Browse [open issues](https://github.com/currentsuspect/NOMAD/issues)
 - Check [good first issue](https://github.com/currentsuspect/NOMAD/labels/good%20first%20issue) label
-- Review [Roadmap](docs/ROADMAP.md) for planned features
+- Review [Roadmap](docs/technical/roadmap.md) for planned features
 
 ### 3. Make Your Changes
 
 - Create a new branch: `git checkout -b feature/my-feature`
-- Follow [Coding Style Guide](docs/CODING_STYLE.md)
-- Write clear commit messages (see [Style Guide](docs/STYLE_GUIDE.md))
+- Follow [Coding Style Guide](docs/developer/coding-style.md)
+- Write clear commit messages (see [Style Guide](docs/developer/style-guide.md))
 - Add tests if applicable
 - Ensure code compiles and passes existing tests
 
@@ -70,11 +70,17 @@ See [Building Guide](docs/BUILDING.md) for detailed instructions.
 ## 📋 Contribution Guidelines
 
 ### Code Quality
-- ✅ Follow [Coding Style Guide](docs/CODING_STYLE.md)
+- ✅ Follow [Coding Style Guide](docs/developer/coding-style.md)
 - ✅ Use clang-format for consistent formatting
 - ✅ Add comments for complex logic
 - ✅ Write self-documenting code with clear names
 - ✅ Include documentation updates
+
+### Documentation
+- ✅ **API Docs**: Add `/** @brief ... */` comments to all public headers in `NomadAudio`, `NomadCore`, and `NomadUI`.
+- ✅ **Validation**: Run `./scripts/docs-check.sh` locally to verify Doxygen and link integrity.
+- ✅ **Changelog**: Add an entry to the `[Unreleased]` section of `CHANGELOG.md` for notable changes.
+- ✅ **No Dead Links**: Ensure all relative links in Markdown files are valid.
 
 ### Pull Requests
 - ✅ One feature/fix per PR
@@ -103,7 +109,7 @@ Reduces latency from 20ms to 5ms.
 Closes #42
 ```
 
-See [Style Guide](docs/STYLE_GUIDE.md#-commit-messages) for details.
+See [Style Guide](docs/developer/style-guide.md#-commit-messages) for details.
 
 ---
 
@@ -132,7 +138,7 @@ Found a bug? Please report it!
    - System information (OS, audio driver, etc.)
    - Logs or screenshots if applicable
 
-See [Bug Reports Guide](docs/BUG_REPORTS.md) for detailed instructions.
+See [Bug Reports Guide](docs/developer/bug-reports.md) for detailed instructions.
 
 ---
 
@@ -140,7 +146,7 @@ See [Bug Reports Guide](docs/BUG_REPORTS.md) for detailed instructions.
 
 Have an idea for a new feature?
 
-1. Check [Roadmap](docs/ROADMAP.md) to see if it's already planned
+1. Check [Roadmap](docs/technical/roadmap.md) to see if it's already planned
 2. Search [existing issues](https://github.com/currentsuspect/NOMAD/issues) for similar requests
 3. Open a new issue with:
    - Clear description of the feature
@@ -153,15 +159,15 @@ Have an idea for a new feature?
 ## 🎓 Learning Resources
 
 ### For New Contributors
-- **[Building Guide](docs/BUILDING.md)** — Set up your development environment
-- **[Architecture Overview](docs/ARCHITECTURE.md)** — Understand system design
-- **[Glossary](docs/GLOSSARY.md)** — Learn technical terminology
-- **[FAQ](docs/FAQ.md)** — Common questions answered
+- **[Building Guide](docs/getting-started/building.md)** — Set up your development environment
+- **[Architecture Overview](docs/architecture/overview.md)** — Understand system design
+- **[Glossary](docs/technical/glossary.md)** — Learn technical terminology
+- **[FAQ](docs/technical/faq.md)** — Common questions answered
 
 ### For Experienced Developers
 - **[Debugging Guide](docs/developer/debugging.md)** — Use Nomad profiler and debugging tools
-- **[Performance Tuning](docs/PERFORMANCE_TUNING.md)** — Optimize code for speed
-- **[Style Guide](docs/STYLE_GUIDE.md)** — Write good documentation
+- **[Performance Tuning](docs/developer/performance-tuning.md)** — Optimize code for speed
+- **[Style Guide](docs/developer/style-guide.md)** — Write good documentation
 
 ---
 
@@ -218,6 +224,6 @@ Every contribution helps make Nomad better. Whether you're fixing typos, reporti
 
 ---
 
-**For detailed contribution guidelines, see [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)**
+**For detailed contribution guidelines, see [docs/developer/contributing.md](docs/developer/contributing.md)**
 
 *Last updated: January 2025*

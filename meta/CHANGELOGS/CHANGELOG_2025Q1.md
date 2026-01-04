@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### UI & Workflow
+
+- Mixer: muted channels keep showing VU activity (rendered in a monochrome/dim style)
+- Mixer: Trim/Pan controls now show on selection/drag only (no hover pop-in)
+- Playlist: improved mute/solo readability (muted dims; solo highlights + suppresses other lanes)
+- Playlist: lane-group mute/solo toggles now propagate to all clips sharing the lane
+
+### Audio & Transport
+
+- Transport: when the project is empty, playback loops over bar 1 instead of running off forever
+- Transport: deleting the last clip during playback snaps playhead back to bar 1
+
 ## [1.1.0] - 2025-12-14
 
 ### 🎯 Major Features Added

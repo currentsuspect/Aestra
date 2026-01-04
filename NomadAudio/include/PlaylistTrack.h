@@ -7,7 +7,9 @@
 #include <string>
 #include <atomic>
 #include <mutex>
+#include <algorithm>
 #include <random>
+#include <algorithm>
 
 namespace Nomad {
 namespace Audio {

@@ -5,12 +5,17 @@
  */
 
 #include "AudioSettingsDialog.h"
+#include "../NomadUI/Widgets/NUIButton.h"
+#include "../NomadUI/Widgets/NUICoreWidgets.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
 #include "../NomadAudio/include/AudioDriverTypes.h"
 #include "../NomadAudio/include/TrackManager.h"
-#include "../NomadAudio/include/Track.h"
+#include "../NomadAudio/include/MixerChannel.h"
+#include "../NomadAudio/include/PlaylistMixer.h"
+#include "../NomadAudio/include/ClipResampler.h"
+
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -65,6 +70,10 @@ AudioSettingsDialog::AudioSettingsDialog(Audio::AudioDeviceManager* audioManager
     loadCurrentSettings();
 }
 
+// =============================================================================
+// SECTION: UI Creation
+// =============================================================================
+
 void AudioSettingsDialog::createUI() {
     // Tab bar (segmented control style)
     m_tabBar = std::make_shared<NomadUI::NUITabBar>();
@@ -90,8 +99,8 @@ void AudioSettingsDialog::createUI() {
         "• High-Fidelity - Better quality, higher CPU\n"
         "• Mastering - Maximum quality for final export\n\n"
         "Resampling Quality:\n\n"
-        "Controls interpolation when changing playback speed or pitch.\n"
-        "Higher quality = better sound but more CPU usage.\n\n"
+        "Standardized to Sinc64 (Extreme Quality).\n"
+        "Zero aliasing, perfect phase response, negligible CPU cost.\n\n"
         "Dithering:\n\n"
         "Adds controlled noise to reduce quantization artifacts.\n"
         "Use Triangular or Noise-Shaped for best results.\n\n"
@@ -132,6 +141,7 @@ void AudioSettingsDialog::createUI() {
     m_driverDropdown = std::make_shared<NomadUI::NUIDropdown>();
     m_driverDropdown->setPlaceholderText("Select Audio Driver");
     m_driverDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        if (m_suppressDirtyStateUpdates) return;
         Nomad::Log::info("Driver dropdown changed: index=" + std::to_string(index) + 
                         ", value=" + std::to_string(value) + ", text=" + text);
         m_selectedDriverType = static_cast<Audio::AudioDriverType>(value);
@@ -143,6 +153,7 @@ void AudioSettingsDialog::createUI() {
     m_deviceDropdown = std::make_shared<NomadUI::NUIDropdown>();
     m_deviceDropdown->setPlaceholderText("Select Audio Device");
     m_deviceDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        if (m_suppressDirtyStateUpdates) return;
         m_selectedDeviceId = static_cast<uint32_t>(value);
         markSettingsChanged();
     });
@@ -151,6 +162,7 @@ void AudioSettingsDialog::createUI() {
     m_sampleRateDropdown = std::make_shared<NomadUI::NUIDropdown>();
     m_sampleRateDropdown->setPlaceholderText("Select Sample Rate");
     m_sampleRateDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        if (m_suppressDirtyStateUpdates) return;
         m_selectedSampleRate = static_cast<uint32_t>(value);
         updateLatencyEstimate();
         markSettingsChanged();
@@ -160,6 +172,7 @@ void AudioSettingsDialog::createUI() {
     m_bufferSizeDropdown = std::make_shared<NomadUI::NUIDropdown>();
     m_bufferSizeDropdown->setPlaceholderText("Select Buffer Size");
     m_bufferSizeDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        if (m_suppressDirtyStateUpdates) return;
         m_selectedBufferSize = static_cast<uint32_t>(value);
         updateLatencyEstimate();
         markSettingsChanged();
@@ -200,7 +213,7 @@ void AudioSettingsDialog::createUI() {
             
             // Update UI to match preset
             m_isApplyingQualityPreset = true;
-            m_resamplingDropdown->setSelectedIndex(static_cast<int>(settings.resampling));
+            // Resampling is now always Sinc64 (Extreme) - no UI update needed
             m_ditheringDropdown->setSelectedIndex(static_cast<int>(settings.dithering));
             m_isApplyingQualityPreset = false;
             m_dcRemovalToggle->setText(settings.removeDCOffset ? "ON" : "OFF");
@@ -210,39 +223,24 @@ void AudioSettingsDialog::createUI() {
     });
     addChild(m_qualityPresetDropdown);
     
-    // Resampling quality dropdown
+    // Resampling Quality dropdown (linked to PlaylistMixer::s_resamplingQuality)
     m_resamplingLabel = std::make_shared<NomadUI::NUILabel>();
     m_resamplingLabel->setText("Resampling:");
     addChild(m_resamplingLabel);
     
     m_resamplingDropdown = std::make_shared<NomadUI::NUIDropdown>();
-    m_resamplingDropdown->setPlaceholderText("Select Resampling Mode");
-    m_resamplingDropdown->addItem("Fast (Linear 2pt)", static_cast<int>(Audio::ResamplingMode::Fast));
-    m_resamplingDropdown->addItem("Medium (Cubic 4pt)", static_cast<int>(Audio::ResamplingMode::Medium));
-    m_resamplingDropdown->addItem("High (Sinc 8pt)", static_cast<int>(Audio::ResamplingMode::High));
-    m_resamplingDropdown->addItem("Ultra (Sinc 16pt)", static_cast<int>(Audio::ResamplingMode::Ultra));
-    m_resamplingDropdown->addItem("Extreme (Sinc 64pt)", static_cast<int>(Audio::ResamplingMode::Extreme));
-    m_resamplingDropdown->addItem("Perfect (512pt) - OFFLINE ONLY", static_cast<int>(Audio::ResamplingMode::Perfect));
-    m_resamplingDropdown->setSelectedIndex(1); // Default to Medium
+    m_resamplingDropdown->setPlaceholderText("Select Resampling Quality");
+    m_resamplingDropdown->addItem("Fast (Linear)", static_cast<int>(Audio::ClipResamplingQuality::Fast));
+    m_resamplingDropdown->addItem("Draft (Sinc32 ~100dB)", static_cast<int>(Audio::ClipResamplingQuality::Draft));
+    m_resamplingDropdown->addItem("Standard (Cubic)", static_cast<int>(Audio::ClipResamplingQuality::Standard));
+    m_resamplingDropdown->addItem("High (Sinc64 ~144dB)", static_cast<int>(Audio::ClipResamplingQuality::High));
+    m_resamplingDropdown->setSelectedIndex(3); // Default to High
     m_resamplingDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
-        if (m_isApplyingQualityPreset || m_suppressDirtyStateUpdates) {
-            return;
-        }
-
-        // Switch to Custom preset when manually changing settings
+        if (m_isApplyingQualityPreset || m_suppressDirtyStateUpdates) return;
+        // Update global resampling quality
+        Audio::PlaylistMixer::setResamplingQuality(static_cast<Audio::ClipResamplingQuality>(value));
         m_qualityPresetDropdown->setSelectedIndex(4); // Custom
-        
-        // Warn about Perfect mode CPU usage
-        auto mode = static_cast<Audio::ResamplingMode>(value);
-        if (mode == Audio::ResamplingMode::Perfect) {
-            Nomad::Log::warning("Perfect mode (512pt) is EXTREMELY CPU intensive!");
-            Nomad::Log::warning("   Recommended ONLY for offline rendering/export.");
-            Nomad::Log::warning("   Real-time playback may stutter or drop out.");
-            Nomad::Log::warning("   Use Extreme (64pt) for real-time mastering.");
-        } else if (mode == Audio::ResamplingMode::Extreme) {
-            Nomad::Log::info("Extreme mode (64pt) - Mastering grade quality");
-            Nomad::Log::info("  Real-time safe on modern CPUs");
-        }
+        Nomad::Log::info("Resampling quality changed to: " + text);
         markSettingsChanged();
     });
     addChild(m_resamplingDropdown);
@@ -276,6 +274,7 @@ void AudioSettingsDialog::createUI() {
     m_dcRemovalToggle = std::make_shared<NomadUI::NUIButton>();
     m_dcRemovalToggle->setText("ON");
     m_dcRemovalToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_dcRemovalToggle->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
     m_dcRemovalToggle->setOnClick([this]() {
         std::string oldText = m_dcRemovalToggle->getText();
         if (oldText == "ON") {
@@ -300,6 +299,7 @@ void AudioSettingsDialog::createUI() {
     m_softClippingToggle = std::make_shared<NomadUI::NUIButton>();
     m_softClippingToggle->setText("OFF");
     m_softClippingToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_softClippingToggle->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
     m_softClippingToggle->setOnClick([this]() {
         if (m_softClippingToggle->getText() == "ON") {
             m_softClippingToggle->setText("OFF");
@@ -320,6 +320,7 @@ void AudioSettingsDialog::createUI() {
     m_precision64BitToggle = std::make_shared<NomadUI::NUIButton>();
     m_precision64BitToggle->setText("OFF");
     m_precision64BitToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_precision64BitToggle->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
     m_precision64BitToggle->setOnClick([this]() {
         if (m_precision64BitToggle->getText() == "ON") {
             m_precision64BitToggle->setText("OFF");
@@ -342,6 +343,7 @@ void AudioSettingsDialog::createUI() {
     m_multiThreadingToggle = std::make_shared<NomadUI::NUIButton>();
     m_multiThreadingToggle->setText("ON");
     m_multiThreadingToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_multiThreadingToggle->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
     m_multiThreadingToggle->setOnClick([this]() {
         if (m_multiThreadingToggle->getText() == "ON") {
             m_multiThreadingToggle->setText("OFF");
@@ -417,16 +419,19 @@ void AudioSettingsDialog::createUI() {
     // Create buttons
     m_applyButton = std::make_shared<NomadUI::NUIButton>();
     m_applyButton->setText("Apply");
-    m_applyButton->setStyle(NomadUI::NUIButton::Style::Primary); // Primary action
+    m_applyButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Default to Secondary (inactive)
+    m_applyButton->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f)); // Stronger Bright hover
     m_applyButton->setOnClick([this]() {
         applySettings();
     });
     m_applyButton->setEnabled(false);
     addChild(m_applyButton);
     
-    m_cancelButton = std::make_shared<NomadUI::NUIButton>();
+    // m_cancelButton = std::make_shared<NomadUI::NUIButton>();
+    m_cancelButton.reset(new NomadUI::NUIButton());
     m_cancelButton->setText("Cancel");
     m_cancelButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Secondary style
+    m_cancelButton->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f)); // Stronger Bright hover
     m_cancelButton->setOnClick([this]() {
         cancelSettings();
     });
@@ -435,6 +440,7 @@ void AudioSettingsDialog::createUI() {
     m_testSoundButton = std::make_shared<NomadUI::NUIButton>();
     m_testSoundButton->setText("Test Sound");
     m_testSoundButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Secondary style
+    m_testSoundButton->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
     m_testSoundButton->setOnClick([this]() {
         if (m_isPlayingTestSound) {
             stopTestSound();
@@ -455,6 +461,10 @@ void AudioSettingsDialog::createUI() {
     updateSampleRateList();
     updateBufferSizeList();
 }
+
+// =============================================================================
+// SECTION: Dialog Visibility
+// =============================================================================
 
 void AudioSettingsDialog::show() {
     m_visible = true;
@@ -501,6 +511,10 @@ void AudioSettingsDialog::setVisible(bool visible) {
     m_visible = visible;
     NomadUI::NUIComponent::setVisible(visible);
 }
+
+// =============================================================================
+// SECTION: Rendering
+// =============================================================================
 
 void AudioSettingsDialog::onRender(NomadUI::NUIRenderer& renderer) {
     if (!m_visible) return;
@@ -600,6 +614,7 @@ bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                                      (m_sampleRateDropdown && m_sampleRateDropdown->isOpen()) ||
                                      (m_bufferSizeDropdown && m_bufferSizeDropdown->isOpen()) ||
                                      (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) ||
+                                     (m_qualityPresetDropdown && m_qualityPresetDropdown->isOpen()) ||
                                      (m_resamplingDropdown && m_resamplingDropdown->isOpen()) ||
                                      (m_ditheringDropdown && m_ditheringDropdown->isOpen()) ||
                                      (m_threadCountDropdown && m_threadCountDropdown->isOpen()) ||
@@ -680,8 +695,42 @@ bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
     }
     
+    // Manual Hover Handling for Buttons to ensure repaints
+    // Standard dispatch sometimes misses the invalidation needed for instant feedback
+    bool anyHoverChanged = false;
+    
+    auto updateButtonHover = [&](std::shared_ptr<NomadUI::NUIButton> btn) {
+        if (!btn) return;
+        bool isOver = btn->getBounds().contains(event.position);
+        if (btn->isHovered() != isOver) {
+            btn->setHovered(isOver);
+            anyHoverChanged = true;
+        }
+    };
+    
+    updateButtonHover(m_applyButton);
+    updateButtonHover(m_cancelButton);
+    updateButtonHover(m_testSoundButton);
+    updateButtonHover(m_dcRemovalToggle);
+    updateButtonHover(m_softClippingToggle);
+    updateButtonHover(m_precision64BitToggle);
+    updateButtonHover(m_multiThreadingToggle);
+
+    if (anyHoverChanged) {
+        setDirty(true);
+        // Force repaint immediately
+    }
+
     // Let children handle events (buttons will handle their own clicks)
-    return NomadUI::NUIComponent::onMouseEvent(event);
+    if (NomadUI::NUIComponent::onMouseEvent(event)) {
+        return true;
+    }
+
+    // BLOCK CLICKTHROUGH:
+    // Since we are a modal dialog overlay, we must consume ALL mouse events
+    // that occur within our bounds (which is the entire screen/window).
+    // This prevents clicks from passing through to the playlist/tracks behind.
+    return true;
 }
 
 bool AudioSettingsDialog::onKeyEvent(const NomadUI::NUIKeyEvent& event) {
@@ -708,6 +757,10 @@ bool AudioSettingsDialog::onKeyEvent(const NomadUI::NUIKeyEvent& event) {
 
     return false;
 }
+
+// =============================================================================
+// SECTION: Settings Management
+// =============================================================================
 
 void AudioSettingsDialog::updateDriverList() {
     if (!m_audioManager) return;
@@ -845,7 +898,7 @@ void AudioSettingsDialog::loadCurrentSettings() {
 
 void AudioSettingsDialog::captureOriginalQualityStateFromUi() {
     m_originalQualityPresetIndex = m_qualityPresetDropdown ? m_qualityPresetDropdown->getSelectedIndex() : -1;
-    m_originalResamplingIndex = m_resamplingDropdown ? m_resamplingDropdown->getSelectedIndex() : -1;
+    // Resampling is standardized, no UI state to capture
     m_originalDitheringIndex = m_ditheringDropdown ? m_ditheringDropdown->getSelectedIndex() : -1;
     m_originalDCRemoval = m_dcRemovalToggle && (m_dcRemovalToggle->getText() == "ON");
     m_originalSoftClipping = m_softClippingToggle && (m_softClippingToggle->getText() == "ON");
@@ -865,10 +918,7 @@ bool AudioSettingsDialog::hasUnsavedChanges() const {
         m_qualityPresetDropdown->getSelectedIndex() != m_originalQualityPresetIndex) {
         return true;
     }
-    if (m_resamplingDropdown && m_originalResamplingIndex != -1 &&
-        m_resamplingDropdown->getSelectedIndex() != m_originalResamplingIndex) {
-        return true;
-    }
+    // Resampling check removed
     if (m_ditheringDropdown && m_originalDitheringIndex != -1 &&
         m_ditheringDropdown->getSelectedIndex() != m_originalDitheringIndex) {
         return true;
@@ -893,7 +943,16 @@ bool AudioSettingsDialog::hasUnsavedChanges() const {
 
 void AudioSettingsDialog::updateApplyButtonState() {
     if (!m_applyButton) return;
-    m_applyButton->setEnabled(hasUnsavedChanges());
+    
+    bool hasChanges = hasUnsavedChanges();
+    m_applyButton->setEnabled(hasChanges);
+    
+    // Dynamic styling: Light up when there are changes
+    if (hasChanges) {
+        m_applyButton->setStyle(NomadUI::NUIButton::Style::Primary);
+    } else {
+        m_applyButton->setStyle(NomadUI::NUIButton::Style::Secondary);
+    }
 }
 
 void AudioSettingsDialog::markSettingsChanged() {
@@ -925,9 +984,7 @@ void AudioSettingsDialog::restoreOriginalUiState() {
         (m_qualityPresetDropdown->getSelectedValue() == static_cast<int>(Audio::QualityPreset::Custom));
 
     if (presetIsCustom) {
-        if (m_resamplingDropdown && m_originalResamplingIndex != -1) {
-            m_resamplingDropdown->setSelectedIndex(m_originalResamplingIndex);
-        }
+        // Resampling restore removed
         if (m_ditheringDropdown && m_originalDitheringIndex != -1) {
             m_ditheringDropdown->setSelectedIndex(m_originalDitheringIndex);
         }
@@ -1041,13 +1098,19 @@ void AudioSettingsDialog::applySettings() {
         int presetValue = m_qualityPresetDropdown->getSelectedValue();
         qualitySettings.preset = static_cast<Audio::QualityPreset>(presetValue);
         
-        // Get resampling mode from dropdown
-        int resamplingValue = m_resamplingDropdown->getSelectedValue();
-        qualitySettings.resampling = static_cast<Audio::ResamplingMode>(resamplingValue);
+        // Get resampling mode - STANDARDIZED TO EXTREME (Sinc64)
+        qualitySettings.resampling = Audio::ResamplingMode::Extreme;
         
         // Get dithering mode from dropdown
         int ditheringValue = m_ditheringDropdown->getSelectedValue();
         qualitySettings.dithering = static_cast<Audio::DitheringMode>(ditheringValue);
+
+        if (m_audioManager) {
+            Audio::DitheringMode selectedDitheringMode = static_cast<Audio::DitheringMode>(m_ditheringDropdown->getSelectedValue());
+            // Only enable dithering if it's not None (implementation simplification for now)
+            // Future improvements: pass the actual mode (Triangular, NoiseShaped) to the driver
+            m_audioManager->setDitheringEnabled(selectedDitheringMode != Audio::DitheringMode::None);
+        }
         
         // Get toggle states
         qualitySettings.removeDCOffset = (m_dcRemovalToggle->getText() == "ON");
@@ -1083,14 +1146,14 @@ void AudioSettingsDialog::applySettings() {
         
         // Log quality settings
         const char* presetNames[] = {"Custom", "Economy", "Balanced", "High-Fidelity", "Mastering"};
-        const char* resamplingNames[] = {"Fast", "Medium", "High", "Ultra", "Extreme", "Perfect"};
+        // Resampling is fixed to Sinc64 (Extreme)
         const char* ditheringNames[] = {"None", "Triangular", "High-Pass", "Noise-Shaped"};
         const char* nomadModeNames[] = {"Off", "Transparent", "Euphoric"};
         const char* precisionNames[] = {"32-bit Float", "64-bit Float"};
         
         Log::info("Applied audio quality settings:");
         Log::info("  Preset: " + std::string(presetNames[static_cast<int>(qualitySettings.preset)]));
-        Log::info("  Resampling: " + std::string(resamplingNames[static_cast<int>(qualitySettings.resampling)]));
+        Log::info("  Resampling: Extreme (Sinc64) [Standardized]");
         Log::info("  Dithering: " + std::string(ditheringNames[static_cast<int>(qualitySettings.dithering)]));
         Log::info("  Precision: " + std::string(precisionNames[static_cast<int>(qualitySettings.precision)]));
         Log::info("  DC Removal: " + std::string(qualitySettings.removeDCOffset ? "ON" : "OFF"));
@@ -1195,8 +1258,7 @@ void AudioSettingsDialog::layoutComponents() {
         m_qualitySectionLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
         m_qualityPresetLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
         m_qualityPresetDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_resamplingLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_resamplingDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
+        // Resampling UI hidden
         m_ditheringLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
         m_ditheringDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
         m_dcRemovalLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
@@ -1275,7 +1337,7 @@ void AudioSettingsDialog::layoutComponents() {
         m_qualityPresetLabel->setBounds(NomadUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
         m_qualityPresetDropdown->setBounds(NomadUI::NUIRect(middleDropdownX, middleY, dropdownWidth, dropdownHeight));
         
-        // Resampling mode dropdown
+        // Resampling dropdown
         middleY += dropdownHeight + verticalSpacing;
         m_resamplingLabel->setBounds(NomadUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
         m_resamplingDropdown->setBounds(NomadUI::NUIRect(middleDropdownX, middleY, dropdownWidth, dropdownHeight));
@@ -1504,12 +1566,17 @@ void AudioSettingsDialog::renderDialog(NomadUI::NUIRenderer& renderer) {
 	                          11.0f, headerTextColor);
 	    }
     
-    // Error message (if any) - displayed below subtitle with fade animation
+    // Error message (if any) - displayed at bottom left with fade animation
     if (m_errorMessageAlpha > 0.0f && !m_errorMessage.empty()) {
         NomadUI::NUIColor errorColor = NomadUI::NUIColor(1.0f, 0.3f, 0.2f, m_errorMessageAlpha); // Red with fade
-        float errorY = titleBar.bottom() + 27.0f; // Below subtitle
+        
+        float buttonHeight = 32.0f; // From layoutComponents
+        float padding = 20.0f;
+        float errorY = m_dialogBounds.y + m_dialogBounds.height - buttonHeight - padding + 8.0f; // Vertically center with buttons
+        float errorX = m_dialogBounds.x + padding;
+        
         renderer.drawText(m_errorMessage, 
-                         NomadUI::NUIPoint(titleX + 2, errorY), 12, errorColor);
+                         NomadUI::NUIPoint(errorX, errorY), 12, errorColor);
     }
 }
 
@@ -1550,6 +1617,19 @@ void AudioSettingsDialog::stopTestSound() {
     }
     m_cacheInvalidated = true; // Text changed, invalidate cache
     Nomad::Log::info("Test sound stopped - Flag set to FALSE");
+}
+
+
+Nomad::Audio::ResamplingMode AudioSettingsDialog::getSelectedResamplingMode() const {
+    // Sinc64 is now the global standard
+    return Nomad::Audio::ResamplingMode::Extreme;
+}
+
+Nomad::Audio::DitheringMode AudioSettingsDialog::getSelectedDitheringMode() const {
+    if (m_ditheringDropdown) {
+        return static_cast<Nomad::Audio::DitheringMode>(m_ditheringDropdown->getSelectedValue());
+    }
+    return Nomad::Audio::DitheringMode::None;
 }
 
 } // namespace Nomad

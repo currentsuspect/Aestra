@@ -61,7 +61,7 @@ public:
 
 
     // AudioDriver interface
-    virtual std::vector<AudioDeviceInfo> getDevices() const override;
+    virtual std::vector<AudioDeviceInfo> getDevices() override;
 
     // Native implementation details
     uint32_t getDefaultOutputDevice();
@@ -77,6 +77,10 @@ public:
         return isStreamRunning() ? m_bufferFrameCount : 0;
     }
 
+    // Dithering support
+    void setDitheringEnabled(bool enabled) override { m_ditherEnabled = enabled; }
+    bool isDitheringEnabled() const override { return m_ditherEnabled; }
+
 private:
     // COM interfaces (opaque pointers - Windows-specific implementation)
     void* m_deviceEnumerator = nullptr;  // IMMDeviceEnumerator*
@@ -91,6 +95,10 @@ private:
     std::atomic<bool> m_isRunning{ false };
     std::atomic<bool> m_shouldStop{ false };
     void* m_audioEvent = nullptr;  // HANDLE (opaque)
+
+    // Dither State
+    std::atomic<bool> m_ditherEnabled{ false };
+    uint32_t m_ditherState = 123456789;
 
     // State
     DriverState m_state = DriverState::UNINITIALIZED;
@@ -116,7 +124,7 @@ private:
     // Internal methods
     bool initializeCOM();
     void shutdownCOM();
-    bool enumerateDevices(std::vector<AudioDeviceInfo>& devices) const;
+    bool enumerateDevices(std::vector<AudioDeviceInfo>& devices);
     bool openDevice(uint32_t deviceId);
     void closeDevice();
     bool initializeAudioClient();

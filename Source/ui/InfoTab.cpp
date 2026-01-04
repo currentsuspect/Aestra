@@ -8,9 +8,9 @@
 #include "../../NomadCore/include/NomadLog.h"
 
 // NomadUI includes
-#include "NUILabel.h"
-#include "NUIButton.h"
-#include "NUIIcon.h"
+#include "../../NomadUI/Core/NUILabel.h"
+#include "../../NomadUI/Widgets/NUIButton.h"
+#include "../../NomadUI/Core/NUIIcon.h"
 
 using namespace NomadUI;
 

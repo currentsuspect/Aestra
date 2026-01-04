@@ -1,7 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "PlaylistClip.h"
+#include "ClipInstance.h" // For ClipInstanceID
 #include "PlaylistModel.h"
 #include "TimeTypes.h"
 #include <functional>
@@ -11,6 +11,9 @@
 
 namespace Nomad {
 namespace Audio {
+
+// Alias for backwards compatibility
+using PlaylistClipID = ClipInstanceID;
 
 // =============================================================================
 // SelectionModel - Manages clip and lane selection state

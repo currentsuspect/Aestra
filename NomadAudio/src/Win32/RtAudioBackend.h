@@ -23,7 +23,7 @@ public:
     bool isAvailable() const override { return true; } // RtAudio usually always available (wrapper)
 
     // Device Enumeration
-    std::vector<AudioDeviceInfo> getDevices() const override;
+    std::vector<AudioDeviceInfo> getDevices() override;
 
     // Stream Management
     bool openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) override;
@@ -45,6 +45,10 @@ public:
 
     // Get the actual API being used
     RtAudio::Api getCurrentApi() const { return m_rtAudio ? m_rtAudio->getCurrentApi() : RtAudio::UNSPECIFIED; }
+
+    // Dithering support (Not supported in RtAudio backend for now)
+    void setDitheringEnabled(bool enabled) override {}
+    bool isDitheringEnabled() const override { return false; }
 
 private:
     std::unique_ptr<RtAudio> m_rtAudio;

@@ -336,7 +336,7 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg, co
     int h = static_cast<int>(bounds.height);
     
     if (w <= 0 || h <= 0) {
-        std::cerr << "NanoSVG: Invalid render dimensions: " << w << "x" << h << std::endl;
+        // std::cerr << "NanoSVG: Invalid render dimensions: " << w << "x" << h << std::endl;
         return;
     }
     
@@ -344,11 +344,18 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg, co
     NUISVGCache::CacheKey key{&svg, w, h, tintColor};
     
     // Check cache for existing entry before rasterizing
-    const auto* cached = svgCache.get(key);
+    auto* cached = svgCache.get(key);
     
     if (cached) {
-        // If cache hit, use cached RGBA data and skip rasterization
-        renderer.drawTexture(bounds, cached->rgba.data(), cached->width, cached->height);
+        // Check if texture is already uploaded
+        if (cached->textureId == 0) {
+             cached->textureId = renderer.createTexture(cached->rgba.data(), cached->width, cached->height);
+        }
+        
+        // Draw using persistent texture
+        if (cached->textureId != 0) {
+            renderer.drawTexture(cached->textureId, bounds, NUIRect(0, 0, cached->width, cached->height));
+        }
         return;
     }
     
@@ -388,13 +395,16 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg, co
         }
     }
     
-    // Store result in cache
-    svgCache.put(key, std::move(rgba), w, h);
+    // Store result in cache (pass renderer for potential eviction cleanup)
+    svgCache.put(key, std::move(rgba), w, h, &renderer);
     
-    // Retrieve entry from cache after storing and render
-    const auto* entry = svgCache.get(key);
+    // Retrieve entry from cache after storing to create texture immediately
+    auto* entry = svgCache.get(key);
     if (entry) {
-        renderer.drawTexture(bounds, entry->rgba.data(), entry->width, entry->height);
+        entry->textureId = renderer.createTexture(entry->rgba.data(), entry->width, entry->height);
+        if (entry->textureId != 0) {
+            renderer.drawTexture(entry->textureId, bounds, NUIRect(0, 0, entry->width, entry->height));
+        }
     }
 }
 

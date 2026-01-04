@@ -219,21 +219,46 @@ NUISize NUITextRendererModern::measureText(const std::string& text) {
     float height = static_cast<float>(atlas_.fontSize);
     float currentHeight = height;
     
+    float currentX = 0;
+    
     for (char ch : text) {
         if (ch == '\n') {
             maxWidth = std::max(maxWidth, width);
             width = 0;
+            currentX = 0;
             currentHeight += height;
             continue;
         }
         
         auto it = atlas_.glyphs.find(ch);
         if (it != atlas_.glyphs.end()) {
-            width += it->second.ax;
+            // Add advance to current pen position
+            float advance = it->second.ax;
+            // Calculate visual extent of this glyph
+            float visualRight = currentX + it->second.bl + it->second.bw;
+            
+            // Advance pen
+            width += advance;
+            currentX += advance;
+            
+            if (visualRight > width) {
+                // Determine how much this glyph overhangs the current accumulated width
+                float overhang = visualRight - width;
+                // We don't change 'width' (pen position), but we need to ensure the returned size covers it.
+                // We'll use a separate 'maxVisualWidth' to track this.
+                maxWidth = std::max(maxWidth, visualRight);
+            }
         } else {
             width += atlas_.fontSize * 0.5f;
+            currentX += atlas_.fontSize * 0.5f;
         }
     }
+    
+    // Safety padding for SDF/texture filtering
+    width += 2.0f;
+    
+    // Ensure we return the largest of (pen position) or (visual extent)
+    maxWidth = std::max(maxWidth, width);
     
     maxWidth = std::max(maxWidth, width);
     return {maxWidth, currentHeight};

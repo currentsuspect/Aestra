@@ -1,20 +1,20 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "ChannelSlotMap.h"
-#include "Track.h"
+#include "MixerChannel.h"
 
 namespace Nomad {
 namespace Audio {
 
-void ChannelSlotMap::rebuild(const std::vector<std::shared_ptr<Track>>& tracks) {
+void ChannelSlotMap::rebuild(const std::vector<std::shared_ptr<MixerChannel>>& channels) {
     m_idToSlot.clear();
     m_slotToId.clear();
     m_channelCount = 0;
 
     uint32_t slot = 0;
-    for (const auto& track : tracks) {
-        if (track && slot < MAX_CHANNEL_SLOTS) {
-            uint32_t channelId = track->getTrackId();
+    for (const auto& channel : channels) {
+        if (channel && slot < MAX_CHANNEL_SLOTS) {
+            uint32_t channelId = channel->getChannelId();
             m_idToSlot[channelId] = slot;
             m_slotToId[slot] = channelId;
             ++slot;
@@ -22,6 +22,7 @@ void ChannelSlotMap::rebuild(const std::vector<std::shared_ptr<Track>>& tracks) 
     }
     m_channelCount = slot;
 }
+
 
 uint32_t ChannelSlotMap::getSlotIndex(uint32_t channelId) const {
     auto it = m_idToSlot.find(channelId);

@@ -10,7 +10,7 @@ namespace Nomad {
 namespace Audio {
 
 // Forward declaration
-class Track;
+class MixerChannel;
 
 /**
  * @brief Maps channel IDs to dense slot indices for lock-free buffer access.
@@ -41,9 +41,9 @@ public:
     ChannelSlotMap() = default;
     ~ChannelSlotMap() = default;
 
-    // Non-copyable, movable
-    ChannelSlotMap(const ChannelSlotMap&) = delete;
-    ChannelSlotMap& operator=(const ChannelSlotMap&) = delete;
+    // Copyable (UI snapshots) and movable
+    ChannelSlotMap(const ChannelSlotMap&) = default;
+    ChannelSlotMap& operator=(const ChannelSlotMap&) = default;
     ChannelSlotMap(ChannelSlotMap&&) = default;
     ChannelSlotMap& operator=(ChannelSlotMap&&) = default;
 
@@ -60,7 +60,7 @@ public:
      *
      * @param tracks Vector of track pointers (order determines slot assignment)
      */
-    void rebuild(const std::vector<std::shared_ptr<Track>>& tracks);
+    void rebuild(const std::vector<std::shared_ptr<MixerChannel>>& channels);
 
     /**
      * @brief Get the dense slot index for a channel ID.

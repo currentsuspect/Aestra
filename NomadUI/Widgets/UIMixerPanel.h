@@ -4,6 +4,8 @@
 #include "../Core/NUIComponent.h"
 #include "../Core/NUITypes.h"
 #include "UIMixerMeter.h"
+#include "UIMixerStrip.h"
+#include "UIMixerInspector.h"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -12,6 +14,7 @@
 namespace Nomad {
     class MixerViewModel;
     namespace Audio {
+        class ContinuousParamBuffer;
         class MeterSnapshotBuffer;
     }
 }
@@ -36,7 +39,8 @@ public:
      * @param meterSnapshots Lock-free meter snapshot buffer for reading peaks
      */
     UIMixerPanel(std::shared_ptr<Nomad::MixerViewModel> viewModel,
-                 std::shared_ptr<Nomad::Audio::MeterSnapshotBuffer> meterSnapshots);
+                 std::shared_ptr<Nomad::Audio::MeterSnapshotBuffer> meterSnapshots,
+                 std::shared_ptr<Nomad::Audio::ContinuousParamBuffer> continuousParams);
 
     ~UIMixerPanel() override = default;
 
@@ -60,21 +64,27 @@ public:
 private:
     std::shared_ptr<Nomad::MixerViewModel> m_viewModel;
     std::shared_ptr<Nomad::Audio::MeterSnapshotBuffer> m_meterSnapshots;
+    std::shared_ptr<Nomad::Audio::ContinuousParamBuffer> m_continuousParams;
 
-    /// Meter widgets for each channel
-    std::vector<std::shared_ptr<UIMixerMeter>> m_meters;
+    /// Channel strips (header + meter + fader)
+    std::vector<std::shared_ptr<UIMixerStrip>> m_strips;
 
-    /// Master meter widget
-    std::shared_ptr<UIMixerMeter> m_masterMeter;
+    /// Master strip (pinned on the right)
+    std::shared_ptr<UIMixerStrip> m_masterStrip;
+
+    /// Inspector panel (pinned on the right, before master)
+    std::shared_ptr<UIMixerInspector> m_inspector;
+
+    // Horizontal scroll offset for channel strips (pixels).
+    float m_scrollX{0.0f};
 
     // Layout constants (from design spec)
     static constexpr float STRIP_WIDTH = 104.0f;
     static constexpr float STRIP_SPACING = 2.0f;
-    static constexpr float METER_WIDTH = 26.0f;  // 12px per bar + 2px gap
     static constexpr float HEADER_HEIGHT = 28.0f;
-    static constexpr float FOOTER_HEIGHT = 20.0f;
     static constexpr float PADDING = 8.0f;
     static constexpr float MASTER_STRIP_WIDTH = 140.0f;
+    static constexpr float INSPECTOR_WIDTH = 220.0f;
 
     // Cached theme colors
     NUIColor m_backgroundColor;
@@ -91,19 +101,9 @@ private:
     void renderSeparators(NUIRenderer& renderer);
 
     /**
-     * @brief Render channel labels above meters.
-     */
-    void renderLabels(NUIRenderer& renderer);
-
-    /**
      * @brief Cache theme colors.
      */
     void cacheThemeColors();
-
-    /**
-     * @brief Update meter widgets with smoothed values from view model.
-     */
-    void updateMeterWidgets();
 };
 
 } // namespace NomadUI

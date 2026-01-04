@@ -3,6 +3,7 @@
 
 #include "TimeTypes.h"
 #include "ClipSource.h"
+#include "AutomationCurve.h"
 #include <atomic>
 #include <cstdint>
 #include <vector>
@@ -14,37 +15,32 @@ namespace Audio {
 // ClipRuntimeInfo - POD struct for RT thread
 // =============================================================================
 
-/**
- * @brief Flattened clip data for real-time audio processing
- * 
- * This is a POD-like struct that the audio thread can safely read.
- * Contains resolved pointers and cached values - no shared_ptr, no virtual calls.
- * 
- * CRITICAL: This struct must remain simple and cache-friendly.
- * The audio thread loops over arrays of these, so they should be contiguous.
- */
 struct ClipRuntimeInfo {
-    // === Audio Data (raw pointer, lifetime managed by engine thread) ===
-    const AudioBufferData* audioData = nullptr;  ///< Raw pointer to audio buffer
+    // === Identity & Versioning ===
+    uint64_t patternId = 0;
+    uint64_t patternVersion = 0;
     
-    // === Source Properties ===
-    uint32_t sourceSampleRate = 0;               ///< Source sample rate for SRC
-    uint32_t sourceChannels = 0;                 ///< Source channel count
+    // === Audio Payload (if applicable) ===
+    const AudioBufferData* audioData = nullptr;
+    uint32_t sourceSampleRate = 0;
+    uint32_t sourceChannels = 0;
+    
+    // === MIDI Payload (if applicable) ===
+    const void* midiData = nullptr; // Pointer to MidiPayload or note vector
+    uint32_t midiNoteCount = 0;
     
     // === Timeline Position (project sample rate) ===
-    SampleIndex startTime = 0;                   ///< Start on timeline
-    SampleIndex length = 0;                      ///< Duration on timeline
+    SampleIndex startTime = 0;
+    SampleIndex length = 0;
     
-    // === Source Offset ===
-    SampleIndex sourceStart = 0;                 ///< Offset into source audio
+    // === Clip window / Source Offset ===
+    SampleIndex sourceStart = 0;
     
     // === Playback Properties ===
-    float gainLinear = 1.0f;                     ///< Volume
-    float pan = 0.0f;                            ///< Pan position
-    bool muted = false;                          ///< Skip during playback
-    
-    // === Time-Stretch / SRC ===
-    double playbackRate = 1.0;                   ///< Rate multiplier
+    float gainLinear = 1.0f;
+    float pan = 0.0f;
+    bool muted = false;
+    double playbackRate = 1.0;
     
     // === Fades ===
     SampleIndex fadeInLength = 0;
@@ -54,37 +50,34 @@ struct ClipRuntimeInfo {
     uint32_t flags = 0;
     
     // === Helper Methods ===
-    
     SampleIndex getEndTime() const { return startTime + length; }
     
+    bool isAudio() const { return audioData != nullptr; }
+    bool isMidi() const { return midiData != nullptr; }
+    
     bool isValid() const { 
-        return audioData != nullptr && audioData->isValid() && length > 0; 
+        return (audioData != nullptr || midiData != nullptr) && length > 0; 
     }
     
     bool overlaps(SampleIndex bufferStart, SampleIndex bufferEnd) const {
         return !(getEndTime() <= bufferStart || startTime >= bufferEnd);
     }
     
-    /// Calculate gain at position including fades
     float getGainAt(SampleIndex timelinePos) const {
         if (timelinePos < startTime || timelinePos >= getEndTime()) return 0.0f;
-        
         SampleIndex offsetFromStart = timelinePos - startTime;
         SampleIndex offsetFromEnd = getEndTime() - timelinePos;
-        
         float fadeGain = 1.0f;
-        
         if (fadeInLength > 0 && offsetFromStart < fadeInLength) {
             fadeGain *= static_cast<float>(offsetFromStart) / static_cast<float>(fadeInLength);
         }
-        
         if (fadeOutLength > 0 && offsetFromEnd < fadeOutLength) {
             fadeGain *= static_cast<float>(offsetFromEnd) / static_cast<float>(fadeOutLength);
         }
-        
         return gainLinear * fadeGain;
     }
 };
+
 
 // =============================================================================
 // LaneRuntimeInfo - POD struct for RT thread
@@ -102,6 +95,8 @@ struct LaneRuntimeInfo {
     float pan = 0.0f;
     bool muted = false;
     bool solo = false;
+    
+    std::vector<AutomationCurve> automationCurves;
     
     /// Find clips overlapping a buffer range using binary search
     std::pair<size_t, size_t> getClipRangeForBuffer(SampleIndex bufferStart, 
@@ -163,6 +158,7 @@ struct PlaylistRuntimeSnapshot {
     std::vector<LaneRuntimeInfo> lanes;
     
     double projectSampleRate = 48000.0;
+    double bpm = 120.0;
     uint64_t modificationId = 0;                 ///< For tracking version
     
     /// Check if any lane has solo enabled
@@ -341,6 +337,16 @@ public:
         
         return m_currentSnapshot.load(std::memory_order_acquire);
     }
+    
+    /**
+     * @brief Peek at the current snapshot without triggering swap logic
+     * 
+     * Safe to call from UI/Engine thread while RT thread is processing.
+     */
+    const PlaylistRuntimeSnapshot* peekCurrentSnapshot() const {
+        return m_currentSnapshot.load(std::memory_order_acquire);
+    }
+
     
     /**
      * @brief Collect garbage (delete old snapshots)

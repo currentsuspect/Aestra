@@ -71,11 +71,10 @@ bool NUITextRendererSDF::generateMesh(const std::string& text,
                                       uint32_t vertexOffset) {
     if (!initialized_) return false;
 
-    // Incoming position.y is the baseline (matches FreeType path)
     float scale = fontSize / atlasFontSize_;
-    // Snap positions to pixel grid to keep edges crisp
-    float penX = std::floor(position.x + 0.5f);
-    float baseline = std::floor(position.y + 0.5f);
+    // Enable sub-pixel positioning for smooth animation and accurate layout
+    float penX = position.x;
+    float baseline = position.y;
 
     bool addedAny = false;
 
@@ -144,6 +143,9 @@ NUISize NUITextRendererSDF::measureText(const std::string& text, float fontSize)
     if (!initialized_) return {0, 0};
     float scale = fontSize / atlasFontSize_;
     float width = 0.0f;
+    // Use consistent font metrics for height (ascent - descent), NOT per-glyph max
+    // This ensures all strings have the same height regardless of characters,
+    // preventing vertical "sinking" of short characters like 'e'.
     float height = (ascent_ - descent_) * scale;
     for (char c : text) {
         if (c == ' ') {
@@ -166,8 +168,9 @@ NUISize NUITextRendererSDF::measureText(const std::string& text, float fontSize)
         }
         
         width += it->second.advance * scale;
-        height = std::max(height, it->second.height * scale);
+        // Do NOT override height with glyph-specific height; keep font metric height.
     }
+    // Standard flush measurement - no arbitrary padding
     return {width, height};
 }
 
@@ -209,15 +212,14 @@ bool NUITextRendererSDF::loadFontAtlas(const std::string& fontPath, float fontSi
     int padding = 8;  // Adequate padding for SDF spread without waste
     
     // SDF parameters tuned for CRISP text rendering
-    // onedge_value: 180 = ~0.7 normalized, makes edge detection more robust
+    // onedge_value: 128 = 0.5 normalized (Standard)
     // pixel_dist_scale: higher values = more precision in the distance field
-    //   For crisp text, we want a well-defined gradient around edges
-    float onedge_value = 180.0f;     // Slightly above 0.5 for robust edges
+    float onedge_value = 128.0f;     // Standard midpoint
     float pixel_dist_scale = 255.0f / 4.0f;  // ~64 - good balance of precision
     
     // For very large fonts, we can use even tighter values
     if (fontSize > 128.0f) {
-        pixel_dist_scale = 255.0f / 5.0f;  // ~51 - tighter for huge text
+        pixel_dist_scale = 48.0f;
     }
     
     std::cout << "SDF params: onedge=" << onedge_value << ", dist_scale=" << pixel_dist_scale 

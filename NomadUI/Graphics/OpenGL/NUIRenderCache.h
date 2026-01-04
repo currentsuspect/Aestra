@@ -100,6 +100,14 @@ namespace NomadUI {
     float m_previousClearColor[4]{0.f, 0.f, 0.f, 0.f};
     bool m_restoreClearColor{false};
     int m_previousDrawBuffer{0};
+
+    // Preserve caller blend state; caches render into transparent targets.
+    bool m_previousBlendEnabled{false};
+    int m_previousBlendSrcRGB{0};
+    int m_previousBlendDstRGB{0};
+    int m_previousBlendSrcAlpha{0};
+    int m_previousBlendDstAlpha{0};
+    bool m_restoreBlend{false};
         CachedRenderData* m_activeCache;
         bool m_renderInProgress;
         NUIRendererGL* m_renderer;

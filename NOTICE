@@ -1,18 +1,51 @@
 NOMAD DAW - Digital Audio Workstation
-Copyright (c) 2025 Dylan Makori. All rights reserved.
+Copyright © 2024-2025 Dylan Makori (Nomad Studios). All rights reserved.
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the Nomad Studios Source-Available License (NSSAL) Version 1.1 — see the LICENSE file for details.
+
+This is NOT an Open Source License as defined by the Open Source Initiative (OSI). 
+While the source code is publicly visible ("source-available"), it does not grant 
+the freedoms typically associated with open source licenses (e.g., MIT, GPL, Apache).
+
+**IMPORTANT: You own 100% of the music you create with Nomad DAW - ALWAYS!**
 
 Third-Party Components:
-- FreeType (SIL Open Font License)
-- GLAD (MIT License)
+- FreeType (SIL Open Font License, Version 2.13.1)
+- GLAD (MIT License) 
 - NanoSVG (MIT License)
+- MiniAudio (MIT License)
+- RtAudio (MIT License)
+- VST3 SDK (Proprietary License from Steinberg)
+- Various SIMD optimizations and mathematical libraries
 
 Portions of this software may utilize the following third-party components:
 - OpenGL® and the oval logo are trademarks or registered trademarks of Silicon Graphics, Inc.
 - VST is a trademark of Steinberg Media Technologies GmbH
+- ASIO is a trademark of Steinberg Media Technologies GmbH
 
-Nomad and the Nomad logo are trademarks of Dylan Makori.
+Nomad and the Nomad logo are trademarks of Dylan Makori / Nomad Studios.
+
+Usage Rights:
+✅ **You MAY use Nomad DAW for:**
+- Personal music production and learning
+- Commercial music production, beats, and freelance work
+- Educational purposes and studying the code
+- Reporting bugs and suggesting improvements
+- Submitting contributions under the Contributor License Agreement
+
+❌ **You MAY NOT use the software to:**
+- Create competing DAWs or music production software
+- Commercialize or redistribute the software itself
+- Build derivative products that compete with Nomad
+- Remove or modify copyright notices and attributions
+
+**Your Music, Your Business:**
+Whether you create music for personal enjoyment, commercial release, client work, or 
+freelance projects - you own 100% of your creative output. Nomad protects the product, 
+not your artistic creations.
+
+Commercial Licensing:
+For licensing the technology for commercial products or services, contact: makoridylan@gmail.com
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -21,3 +54,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+For complete license terms, attribution requirements, and contributor guidelines,
+see the LICENSE file and LICENSING.md documentation.
+
+Nomad Studios - Democratizing Music Production
+Built with transparency, protected for sustainability.

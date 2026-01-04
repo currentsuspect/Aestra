@@ -376,33 +376,43 @@ void PlatformWindowWin32::setVSync(bool enabled) {
 
 void PlatformWindowWin32::setCursorVisible(bool visible) {
     assertWindowThread();
-    if (m_cursorVisible != visible) {
-        m_cursorVisible = visible;
-        if (visible) {
-            // Increment cursor count until it's visible (>= 0)
-            int attempts = 0;
-            while (ShowCursor(TRUE) < 0) {
-                if (++attempts >= 50) {
-                    NOMAD_LOG_WARNING("setCursorVisible: Failed to show cursor after " + std::to_string(attempts) + " attempts");
-                    break;
-                }
+    // Always enforce cursor state, do not rely on cached m_cursorVisible 
+    // because external systems (or DefWindowProc) might have altered the ShowCursor count.
+    m_cursorVisible = visible;
+    
+    if (visible) {
+        // Increment cursor count until it's visible (>= 0)
+        int attempts = 0;
+        while (ShowCursor(TRUE) < 0) {
+            if (++attempts >= 50) {
+                NOMAD_LOG_WARNING("setCursorVisible: Failed to show cursor after " + std::to_string(attempts) + " attempts");
+                break;
             }
-        } else {
-            // Decrement cursor count until it's hidden (< 0)
-            int attempts = 0;
-            while (ShowCursor(FALSE) >= 0) {
-                if (++attempts >= 50) {
-                    NOMAD_LOG_WARNING("setCursorVisible: Failed to hide cursor after " + std::to_string(attempts) + " attempts");
-                    break;
-                }
+        }
+    } else {
+        // Decrement cursor count until it's hidden (< 0)
+        int attempts = 0;
+        while (ShowCursor(FALSE) >= 0) {
+            if (++attempts >= 50) {
+                NOMAD_LOG_WARNING("setCursorVisible: Failed to hide cursor after " + std::to_string(attempts) + " attempts");
+                break;
             }
         }
     }
 }
 
 // =============================================================================
-// Event Processing
+// Mouse Capture
 // =============================================================================
+
+void PlatformWindowWin32::setMouseCapture(bool captured) {
+    if (captured) {
+        SetCapture(m_hwnd);
+    } else {
+        ReleaseCapture();
+    }
+}
+
 
 bool PlatformWindowWin32::pollEvents() {
     MSG msg;
@@ -479,8 +489,16 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
                 
                 // Top 32 pixels are the title bar drag area
                 // BUT exclude the right 150 pixels for window control buttons
-                if (pt.y >= 0 && pt.y < 32 && pt.x < m_width - 150) {
-                    return HTCAPTION;  // Allow dragging
+                // AND exclude the center area for the new focus toggle buttons
+                // AND exclude the left area for the MenuBar
+                if (pt.y >= 0 && pt.y < 32) {
+                    bool inLeftControls = pt.x < 200; // Exclude MenuBar area
+                    bool inRightControls = pt.x >= m_width - 150;
+                    bool inCenterButtons = std::abs(pt.x - (m_width / 2)) < 100;
+                    
+                    if (!inRightControls && !inCenterButtons && !inLeftControls) {
+                        return HTCAPTION;  // Allow dragging only in non-interactive parts
+                    }
                 }
                 
                 return HTCLIENT;
@@ -609,6 +627,16 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
             return 0;
         }
 
+        case WM_MOUSEHWHEEL: {
+            // Horizontal scroll (trackpads often send this)
+            // Convert to vertical for now since most UI expects vertical
+            float delta = -GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+            if (m_mouseWheelCallback) {
+                m_mouseWheelCallback(delta);
+            }
+            return 0;
+        }
+
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN: {
             KeyCode key = translateKeyCode(wParam, lParam);
@@ -634,6 +662,17 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
                 m_charCallback(static_cast<unsigned int>(wParam));
             }
             return 0;
+        }
+
+        case WM_SETCURSOR: {
+            // Handle cursor visibility explicitly
+            if (LOWORD(lParam) == HTCLIENT) {
+                if (!m_cursorVisible) {
+                    SetCursor(NULL);
+                    return TRUE; // Prevent DefWindowProc from resetting to Arrow
+                }
+            }
+            break; // Fall through for default behavior (Arrow/Resize/etc)
         }
 
         case WM_SETFOCUS:
@@ -716,6 +755,10 @@ void PlatformWindowWin32::getPosition(int& x, int& y) const {
     GetWindowRect(m_hwnd, &rect);
     x = rect.left;
     y = rect.top;
+}
+
+void PlatformWindowWin32::setCursorPosition(int x, int y) {
+    SetCursorPos(x, y);
 }
 
 // =============================================================================
@@ -903,6 +946,7 @@ KeyModifiers PlatformWindowWin32::getKeyModifiers() const {
     mods.control = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     mods.alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
     mods.super = (GetKeyState(VK_LWIN) & 0x8000) != 0 || (GetKeyState(VK_RWIN) & 0x8000) != 0;
+    mods.capsLock = (GetKeyState(VK_CAPITAL) & 0x0001) != 0;
     return mods;
 }
 

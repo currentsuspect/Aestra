@@ -1,6 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "MixerViewModel.h"
+#include "../NomadCore/include/NomadLog.h"
 
 namespace Nomad {
 
@@ -9,7 +10,8 @@ MixerViewModel::MixerViewModel() {
     m_master = std::make_unique<ChannelViewModel>();
     m_master->id = 0;
     m_master->slotIndex = Audio::ChannelSlotMap::MASTER_SLOT_INDEX;
-    m_master->name = "Master";
+    m_master->name = "MASTER";
+    m_master->routeName = "Output";
     m_master->trackColor = 0xFF8B7FFF; // Nomad purple
 }
 
@@ -18,18 +20,20 @@ void MixerViewModel::updateMeters(const Audio::MeterSnapshotBuffer& snapshots, d
     for (auto& channel : m_channels) {
         if (!channel) continue;
 
-        float linearL, linearR;
-        bool clipL, clipR;
-        snapshots.readSnapshot(channel->slotIndex, linearL, linearR, clipL, clipR);
-        smoothMeterChannel(*channel, linearL, linearR, clipL, clipR, deltaTime);
+        if (auto mc = channel->channel.lock()) {
+            channel->muted = mc->isMuted();
+            channel->soloed = mc->isSoloed();
+            // channel->armed = mc->isRecording(); // MixerChannel has no recording state
+        }
+
+        const auto snapshot = snapshots.readSnapshot(channel->slotIndex);
+        smoothMeterChannel(*channel, snapshot, deltaTime);
     }
 
     // Update master meter
     if (m_master) {
-        float linearL, linearR;
-        bool clipL, clipR;
-        snapshots.readSnapshot(m_master->slotIndex, linearL, linearR, clipL, clipR);
-        smoothMeterChannel(*m_master, linearL, linearR, clipL, clipR, deltaTime);
+        const auto snapshot = snapshots.readSnapshot(m_master->slotIndex);
+        smoothMeterChannel(*m_master, snapshot, deltaTime);
     }
 }
 
@@ -37,46 +41,129 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                                      const Audio::ChannelSlotMap& slotMap) {
     // Build set of current track IDs for quick lookup
     std::unordered_map<uint32_t, size_t> existingIds;
+    
+    // Sync Global State
+    inputNames = trackManager.getInputChannelNames();
+
     for (size_t i = 0; i < m_channels.size(); ++i) {
         if (m_channels[i]) {
             existingIds[m_channels[i]->id] = i;
         }
     }
 
-    // Collect track info from engine
-    std::vector<std::tuple<uint32_t, std::string, uint32_t, uint32_t>> trackInfo;
-    for (size_t i = 0; i < trackManager.getTrackCount(); ++i) {
-        auto track = trackManager.getTrack(i);
-        if (track) {
-            uint32_t id = track->getTrackId();
-            uint32_t slot = slotMap.getSlotIndex(id);
-            if (slot != Audio::ChannelSlotMap::INVALID_SLOT) {
-                trackInfo.emplace_back(id, track->getName(), track->getColor(), slot);
-            }
+    // Sync Global State
+    inputNames = trackManager.getInputChannelNames();
+
+    // Collect channel info from engine
+    struct ChannelInfo {
+        uint32_t id{0};
+        std::string name;
+        uint32_t color{0};
+        uint32_t slot{0};
+        std::weak_ptr<Audio::MixerChannel> channel;
+        bool muted{false};
+        bool soloed{false};
+        bool armed{false};
+        bool monitored{false};
+    };
+    std::vector<ChannelInfo> channelInfo;
+    auto channels = trackManager.getChannelsSnapshot();
+    for (const auto& channel : channels) {
+        if (!channel) continue;
+
+        uint32_t id = channel->getChannelId();
+        uint32_t slot = slotMap.getSlotIndex(id);
+        if (slot != Audio::ChannelSlotMap::INVALID_SLOT) {
+            ChannelInfo info;
+            info.id = id;
+            info.name = channel->getName();
+            info.color = channel->getColor();
+            info.slot = slot;
+            info.channel = channel;
+            info.muted = channel->isMuted();
+            info.soloed = channel->isSoloed();
+            info.armed = channel->isArmed();
+            info.monitored = channel->isMonitoringEnabled();
+            channelInfo.push_back(std::move(info));
         }
     }
 
     // Rebuild channel list to match tracks
     std::vector<std::unique_ptr<ChannelViewModel>> newChannels;
-    newChannels.reserve(trackInfo.size());
+    newChannels.reserve(channelInfo.size());
 
-    for (const auto& [id, name, color, slot] : trackInfo) {
-        auto it = existingIds.find(id);
+    for (const auto& info : channelInfo) {
+        const auto it = existingIds.find(info.id);
         if (it != existingIds.end() && m_channels[it->second]) {
             // Reuse existing channel (preserves meter state)
             auto& existing = m_channels[it->second];
-            existing->name = name;
-            existing->trackColor = color;
-            existing->slotIndex = slot;
+            existing->id = info.id;
+            existing->name = info.name;
+            existing->trackColor = info.color;
+            existing->slotIndex = info.slot;
+            existing->channel = info.channel;
+            existing->muted = info.muted;
+            existing->soloed = info.soloed;
+            existing->armed = info.armed;
+            existing->monitored = info.monitored;
+            if (auto mc = info.channel.lock()) {
+                existing->inputChannelIndex = mc->getInputChannelIndex();
+            }
+            if (auto mc = info.channel.lock()) {
+                existing->inputChannelIndex = mc->getInputChannelIndex();
+            }
             newChannels.push_back(std::move(existing));
         } else {
             // Create new channel
             auto channel = std::make_unique<ChannelViewModel>();
-            channel->id = id;
-            channel->slotIndex = slot;
-            channel->name = name;
-            channel->trackColor = color;
+            channel->id = info.id;
+            channel->slotIndex = info.slot;
+            channel->channel = info.channel;
+            channel->name = info.name;
+            channel->trackColor = info.color;
+            channel->muted = info.muted;
+            channel->soloed = info.soloed;
+            channel->armed = info.armed;
+            channel->monitored = info.monitored;
+            if (auto mc = info.channel.lock()) {
+                channel->inputChannelIndex = mc->getInputChannelIndex();
+            }
+            if (auto mc = info.channel.lock()) {
+                channel->inputChannelIndex = mc->getInputChannelIndex();
+            }
             newChannels.push_back(std::move(channel));
+        }
+        
+        // Sync Sends from Engine (Persistence Fix)
+        if (auto* ch = newChannels.back().get()) {
+            if (auto mc = ch->channel.lock()) {
+               auto engineSends = mc->getSends();
+               ch->sends.clear();
+               for (const auto& route : engineSends) {
+                   ChannelViewModel::SendViewModel uiSend;
+                   // Handle Legacy Master ID
+                   if (route.targetChannelId == 0xFFFFFFFF) {
+                       uiSend.targetId = 0;
+                       uiSend.targetName = "Master";
+                   } else {
+                       uiSend.targetId = route.targetChannelId;
+                       // Try to resolve name from current snapshot info
+                       auto targetIt = std::find_if(channelInfo.begin(), channelInfo.end(), 
+                           [&](const ChannelInfo& ci){ return ci.id == route.targetChannelId; });
+                       if (targetIt != channelInfo.end()) {
+                           uiSend.targetName = targetIt->name;
+                       } else if (route.targetChannelId == 0) {
+                           uiSend.targetName = "Master";
+                       } else {
+                           uiSend.targetName = "Unknown (" + std::to_string(route.targetChannelId) + ")";
+                       }
+                   }
+                   uiSend.gain = route.gain;
+                   uiSend.pan = route.pan;
+                   // uiSend.postFader = ... engine doesn't have this yet, assume true
+                   ch->sends.push_back(uiSend);
+               }
+            }
         }
     }
 
@@ -90,6 +177,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
 }
 
 ChannelViewModel* MixerViewModel::getChannelById(uint32_t id) {
+    if (id == 0) return m_master.get();
     auto it = m_idToIndex.find(id);
     if (it == m_idToIndex.end() || it->second >= m_channels.size()) {
         return nullptr;
@@ -98,6 +186,7 @@ ChannelViewModel* MixerViewModel::getChannelById(uint32_t id) {
 }
 
 const ChannelViewModel* MixerViewModel::getChannelById(uint32_t id) const {
+    if (id == 0) return m_master.get();
     auto it = m_idToIndex.find(id);
     if (it == m_idToIndex.end() || it->second >= m_channels.size()) {
         return nullptr;
@@ -151,66 +240,209 @@ void MixerViewModel::rebuildIdMap() {
 
 
 void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
-                                         float linearL, float linearR,
-                                         bool clipL, bool clipR,
-                                         double deltaTime) {
-    // Convert LINEAR to dB
-    float dbL = MixerMath::linearToDb(linearL);
-    float dbR = MixerMath::linearToDb(linearR);
+                                        const Audio::MeterSnapshotBuffer::MeterReadout& snapshot,
+                                        double deltaTime) {
+    // Convert LINEAR to dB (UI mapping is log-space).
+    const float peakDbL = MixerMath::linearToDb(snapshot.peakL);
+    const float peakDbR = MixerMath::linearToDb(snapshot.peakR);
+    const float energyDbL = MixerMath::linearToDb(snapshot.rmsL);
+    const float energyDbR = MixerMath::linearToDb(snapshot.rmsR);
+    const float lowDbL = MixerMath::linearToDb(snapshot.lowL);
+    const float lowDbR = MixerMath::linearToDb(snapshot.lowR);
 
-    // Calculate smoothing coefficients
-    // coeff = 1 - exp(-deltaTime / tau), where tau = time_ms / 1000
-    float attackCoeff = 1.0f - std::exp(static_cast<float>(-deltaTime * 1000.0 / METER_ATTACK_MS));
-    float releaseCoeff = 1.0f - std::exp(static_cast<float>(-deltaTime * 1000.0 / METER_RELEASE_MS));
+    auto smoothDb = [&](float current, float target, float attackMs, float releaseMs) -> float {
+        const float ms = static_cast<float>(deltaTime * 1000.0);
+        const float tau = (target > current) ? attackMs : releaseMs;
+        const float coeff = 1.0f - std::exp(-ms / std::max(1e-3f, tau));
+        return current + (target - current) * coeff;
+    };
 
-    // Apply attack/release smoothing (in dB space)
-    // Attack: fast rise to new peak
-    // Release: slow decay to new level
-    if (dbL > channel.smoothedPeakL) {
-        channel.smoothedPeakL += (dbL - channel.smoothedPeakL) * attackCoeff;
-    } else {
-        channel.smoothedPeakL += (dbL - channel.smoothedPeakL) * releaseCoeff;
-    }
+    // Analysis envelopes (never drawn directly).
+    channel.envPeakL = smoothDb(channel.envPeakL, peakDbL, PEAK_ATTACK_MS, PEAK_RELEASE_MS);
+    channel.envPeakR = smoothDb(channel.envPeakR, peakDbR, PEAK_ATTACK_MS, PEAK_RELEASE_MS);
+    channel.envEnergyL = smoothDb(channel.envEnergyL, energyDbL, ENERGY_ATTACK_MS, ENERGY_RELEASE_MS);
+    channel.envEnergyR = smoothDb(channel.envEnergyR, energyDbR, ENERGY_ATTACK_MS, ENERGY_RELEASE_MS);
+    channel.envLowEnergyL = smoothDb(channel.envLowEnergyL, lowDbL, LOW_ATTACK_MS, LOW_RELEASE_MS);
+    channel.envLowEnergyR = smoothDb(channel.envLowEnergyR, lowDbR, LOW_ATTACK_MS, LOW_RELEASE_MS);
 
-    if (dbR > channel.smoothedPeakR) {
-        channel.smoothedPeakR += (dbR - channel.smoothedPeakR) * attackCoeff;
-    } else {
-        channel.smoothedPeakR += (dbR - channel.smoothedPeakR) * releaseCoeff;
-    }
+    // Perceptual mapping (Musical meters are interpretive, not purely peak).
+    auto computeMusicalDb = [&](float peakEnvDb, float energyEnvDb, float lowEnvDb) -> float {
+        // Transient strength: how much peak stands above energy (in dB).
+        const float transientDb = std::max(0.0f, peakEnvDb - energyEnvDb);
+        float peakWeight = std::clamp(transientDb / 12.0f, 0.0f, 1.0f);
 
-    // Clamp to valid range
+        // Bass-heavy material shouldn't visually "spike" like transients.
+        const float bassProximity = std::clamp((lowEnvDb - (energyEnvDb - 6.0f)) / 12.0f, 0.0f, 1.0f);
+        peakWeight *= (1.0f - 0.65f * bassProximity);
+
+        return energyEnvDb + peakWeight * (peakEnvDb - energyEnvDb);
+    };
+
+    // Dual-Bar Metering (Ableton Style):
+    // 1. Peak Bar (Fast/Technical): Targets pure peak envelope.
+    channel.smoothedPeakL = smoothDb(channel.smoothedPeakL, channel.envPeakL, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
+    
+    // Correlation and LUFS (already computed/smoothed in audio engine)
+    channel.correlation = snapshot.correlation;
+    channel.integratedLufs = snapshot.integratedLufs;
+    
+    channel.smoothedPeakR = smoothDb(channel.smoothedPeakR, channel.envPeakR, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
+
+    // 2. RMS Bar (Average/Body): Targets energy envelope.
+    channel.smoothedRmsL = smoothDb(channel.smoothedRmsL, channel.envEnergyL, ENERGY_ATTACK_MS, ENERGY_RELEASE_MS);
+    channel.smoothedRmsR = smoothDb(channel.smoothedRmsR, channel.envEnergyR, ENERGY_ATTACK_MS, ENERGY_RELEASE_MS);
+
+    channel.smoothedPeakL = std::max(channel.smoothedPeakL, MixerMath::DB_MIN);
+    channel.smoothedPeakR = std::max(channel.smoothedPeakR, MixerMath::DB_MIN);
+    channel.smoothedRmsL = std::max(channel.smoothedRmsL, MixerMath::DB_MIN);
+    channel.smoothedRmsR = std::max(channel.smoothedRmsR, MixerMath::DB_MIN);
+
     channel.smoothedPeakL = std::max(channel.smoothedPeakL, MixerMath::DB_MIN);
     channel.smoothedPeakR = std::max(channel.smoothedPeakR, MixerMath::DB_MIN);
 
-    // Update peak hold (left)
-    if (dbL > channel.peakHoldL) {
-        channel.peakHoldL = dbL;
+    // Peak hold uses true peak (for gain-staging confidence).
+    if (peakDbL > channel.peakHoldL) {
+        channel.peakHoldL = peakDbL;
         channel.peakHoldTimerL = 0.0;
     } else {
         channel.peakHoldTimerL += deltaTime;
         if (channel.peakHoldTimerL > PEAK_HOLD_MS / 1000.0) {
-            // Decay peak hold
             float decayCoeff = 1.0f - std::exp(static_cast<float>(-deltaTime * 1000.0 / PEAK_DECAY_MS));
             channel.peakHoldL += (MixerMath::DB_MIN - channel.peakHoldL) * decayCoeff;
         }
     }
 
-    // Update peak hold (right)
-    if (dbR > channel.peakHoldR) {
-        channel.peakHoldR = dbR;
+    if (peakDbR > channel.peakHoldR) {
+        channel.peakHoldR = peakDbR;
         channel.peakHoldTimerR = 0.0;
     } else {
         channel.peakHoldTimerR += deltaTime;
         if (channel.peakHoldTimerR > PEAK_HOLD_MS / 1000.0) {
-            // Decay peak hold
             float decayCoeff = 1.0f - std::exp(static_cast<float>(-deltaTime * 1000.0 / PEAK_DECAY_MS));
             channel.peakHoldR += (MixerMath::DB_MIN - channel.peakHoldR) * decayCoeff;
         }
     }
 
-    // Update clip latch (sticky until cleared by user)
-    if (clipL) channel.clipLatchL = true;
-    if (clipR) channel.clipLatchR = true;
+    // Clip latch (sticky until cleared by user).
+    if (snapshot.clipL) channel.clipLatchL = true;
+    if (snapshot.clipR) channel.clipLatchR = true;
+}
+
+std::vector<MixerViewModel::Destination> MixerViewModel::getAvailableDestinations(uint32_t excludeId) const
+{
+    std::vector<Destination> dests;
+    
+    // Always add Master if we aren't Master
+    if (excludeId != 0) {
+        dests.push_back({0, "Master"});
+    }
+
+    // Add other channels (e.g. Buses/Returns/Tracks)
+    // Note: In a real matrix, might filter to only Buses, but Nomad allows Track-to-Track sends.
+    for (const auto& ch : m_channels) {
+        if (!ch) continue;
+        if (ch->id == excludeId) continue;
+        if (ch->id == 0) continue; // Handled above
+
+        dests.push_back({ch->id, ch->name});
+    }
+
+    return dests;
+}
+
+void MixerViewModel::addSend(uint32_t channelId) {
+    auto* ch = getChannelById(channelId);
+    if (!ch) return;
+    
+    // Create new SendViewModel
+    ChannelViewModel::SendViewModel send;
+    
+    // Auto-select a meaningful destination (Avoid Master if it's already the main Output)
+    uint32_t defaultTarget = 0; // Fallback to Master
+    std::string defaultName = "Master";
+    
+    auto available = getAvailableDestinations(channelId);
+    bool foundBetter = false;
+    for (const auto& dest : available) {
+        // Pick the first available Send that isn't Master (0).
+        // e.g., a Reverb Bus or Group Channel
+        if (dest.id != 0) {
+            defaultTarget = dest.id;
+            defaultName = dest.name;
+            foundBetter = true;
+            break;
+        }
+    }
+
+    send.targetId = defaultTarget; 
+    send.targetName = defaultName;
+    send.gain = 1.0f; // 0dB
+    ch->sends.push_back(send);
+
+    // Update Engine
+    if (auto mc = ch->channel.lock()) {
+        Audio::AudioRoute route;
+        // Map 0 -> 0xFFFFFFFF for engine
+        route.targetChannelId = (defaultTarget == 0) ? 0xFFFFFFFF : defaultTarget; 
+        route.gain = 1.0f;
+        mc->addSend(route);
+        
+        if (m_onGraphDirty) m_onGraphDirty();
+        if (m_onProjectModified) m_onProjectModified();
+    }
+}
+
+void MixerViewModel::removeSend(uint32_t channelId, int sendIndex) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
+
+    // Update Local Model
+    ch->sends.erase(ch->sends.begin() + sendIndex);
+
+    // Update Engine
+    if (auto mc = ch->channel.lock()) {
+        mc->removeSend(sendIndex);
+        
+        if (m_onGraphDirty) m_onGraphDirty();
+        if (m_onProjectModified) m_onProjectModified();
+    }
+}
+
+void MixerViewModel::setSendLevel(uint32_t channelId, int sendIndex, float linearGain) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
+
+    ch->sends[sendIndex].gain = linearGain;
+
+    // Update Engine
+    if (auto mc = ch->channel.lock()) {
+        mc->setSendLevel(sendIndex, linearGain);
+    }
+}
+
+void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint32_t targetId) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
+
+    ch->sends[sendIndex].targetId = targetId;
+    
+    // Resolve name
+    if (targetId == 0) {
+        ch->sends[sendIndex].targetName = "Master";
+    } else {
+        auto* target = getChannelById(targetId);
+        ch->sends[sendIndex].targetName = target ? target->name : "Unknown";
+    }
+
+    // Update Engine
+    if (auto mc = ch->channel.lock()) {
+        // Normalize 0 to 0xFFFFFFFF for engine master
+        uint32_t engineId = (targetId == 0) ? 0xFFFFFFFF : targetId;
+        mc->setSendDestination(sendIndex, engineId);
+        
+        if (m_onGraphDirty) m_onGraphDirty();
+        if (m_onProjectModified) m_onProjectModified();
+    }
 }
 
 } // namespace Nomad

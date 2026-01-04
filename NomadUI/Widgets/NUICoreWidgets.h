@@ -2,7 +2,7 @@
 #pragma once
 
 #include "../Core/NUIComponent.h"
-#include "../Core/NUIButton.h"
+#include "NUIButton.h"
 #include "../Core/NUITextInput.h"
 #include "../Core/NUIIcon.h"
 #include "../Core/NUITypes.h"
@@ -201,6 +201,41 @@ private:
     std::string activeTabId_;
     std::function<void(const std::string&)> onTabChanged_;
     int hoveredIndex_ = -1;
+};
+
+class NUIComboBox : public NUIComponent {
+public:
+    struct Item {
+        std::string id;
+        std::string label;
+        bool enabled = true;
+    };
+
+    NUIComboBox();
+
+    void onRender(NUIRenderer& renderer) override;
+    bool onMouseEvent(const NUIMouseEvent& event) override;
+
+    void setItems(const std::vector<Item>& items);
+    const std::vector<Item>& getItems() const { return items_; }
+
+    void setSelectedId(const std::string& id);
+    std::string getSelectedId() const { return selectedId_; }
+    std::string getSelectedLabel() const;
+
+    void setOnSelectionChanged(std::function<void(const std::string&)> callback);
+
+    void setPlaceholder(const std::string& text) { placeholder_ = text; }
+
+private:
+    void showPopup();
+
+    std::vector<Item> items_;
+    std::string selectedId_;
+    std::string placeholder_ = "Select...";
+    std::function<void(const std::string&)> onSelectionChanged_;
+    bool hovered_ = false;
+    bool active_ = false; // Popup open
 };
 
 } // namespace NomadUI

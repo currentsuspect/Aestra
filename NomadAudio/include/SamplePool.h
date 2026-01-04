@@ -101,6 +101,26 @@ public:
     size_t getMemoryBudget() const { return m_memoryBudget; }
     
     /**
+     * @brief Fast cache lookup (path-only, no filesystem stat)
+     * 
+     * Checks if a buffer for the given path is already cached, without
+     * performing any filesystem operations. Returns nullptr on cache miss.
+     * This is much faster than acquire() for checking cache hits.
+     * 
+     * @param path Filesystem path to audio file
+     * @return shared_ptr to AudioBuffer if cached, nullptr otherwise
+     */
+    std::shared_ptr<AudioBuffer> tryGetCached(const std::string& path);
+    
+    /**
+     * @brief Generate a fast cache key (path-only, no mod time)
+     * 
+     * Returns a key based only on the normalized path, without checking
+     * the file's modification time. Useful for quick cache lookups.
+     */
+    static SampleKey makeKeyFast(const std::string& path);
+    
+    /**
      * @brief Get current total memory usage (bytes)
      * 
      * Thread-safe read of memory used by all managed buffers (cached + active).

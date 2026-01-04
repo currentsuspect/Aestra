@@ -9,16 +9,28 @@ cmake_minimum_required(VERSION 3.22)
 # Create executable
 set(NOMAD_DAW_SOURCES
 	Main.cpp
+	NomadContent.h
+	NomadContent.cpp
+	OverlayLayer.h
 	ConfirmationDialog.h
 	ConfirmationDialog.cpp
 	TransportBar.h
 	TransportBar.cpp
 	TransportInfoContainer.h
 	TransportInfoContainer.cpp
-	AudioSettingsDialog.h
-	AudioSettingsDialog.cpp
+	SettingsDialog.h
+	SettingsDialog.cpp
+	ISettingsPage.h
+	AudioSettingsPage.h
+	AudioSettingsPage.cpp
+    GeneralSettingsPage.h
+    GeneralSettingsPage.cpp
+    AppearanceSettingsPage.h
+    AppearanceSettingsPage.cpp
 	FileBrowser.h
 	FileBrowser.cpp
+	FilePreviewPanel.h
+	FilePreviewPanel.cpp
 	AudioVisualizer.h
 	AudioVisualizer.cpp
 	TrackUIComponent.h
@@ -34,6 +46,8 @@ set(NOMAD_DAW_SOURCES
 	PianoRollPanel.cpp
 	MixerPanel.h
 	MixerPanel.cpp
+	ArsenalPanel.h
+	ArsenalPanel.cpp
 	StepSequencerPanel.h
 	StepSequencerPanel.cpp
 	ui/InfoTab.h
@@ -42,16 +56,32 @@ set(NOMAD_DAW_SOURCES
 	license/LicenseVerifier.cpp
 	PerformanceHUD.h
 	PerformanceHUD.cpp
+	UnifiedHUD.h
+	UnifiedHUD.cpp
 	MixerMath.h
 	MixerViewModel.h
 	MixerViewModel.cpp
+	TimelineMinimapModel.h
+	TimelineSummaryCache.h
+	TimelineSummaryCache.cpp
+	TimelineMinimapRenderer.h
+	TimelineMinimapRenderer.cpp
+	TimelineMinimapBar.h
+	TimelineMinimapBar.cpp
+	PatternBrowserPanel.h
+	PatternBrowserPanel.cpp
 )
 
 
 
 add_executable(NOMAD_DAW ${NOMAD_DAW_SOURCES})
 
-# Set C++ standard
+# Enable UTF-8 encoding for source files (fixes Unicode character rendering)
+if(MSVC)
+    target_compile_options(NOMAD_DAW PRIVATE /utf-8)
+endif()
+
+# Output to bin directoryandard
 set_target_properties(NOMAD_DAW PROPERTIES
 	CXX_STANDARD 17
 	CXX_STANDARD_REQUIRED ON

@@ -2,17 +2,26 @@
 #pragma once
 
 #include "WindowPanel.h"
-#include "MixerView.h"
 #include "../NomadAudio/include/TrackManager.h"
+#include "../NomadUI/Core/NUIComponent.h"
+#include "../NomadUI/Widgets/NUIButton.h"
 #include <memory>
+#include <functional>
+
+namespace Nomad {
+class MixerViewModel;
+}
+
+namespace NomadUI {
+class UIMixerPanel;
+}
 
 namespace Nomad {
 namespace Audio {
 
 /**
  * @brief Mixer Panel - Multi-track audio mixer
- * 
- * Wraps MixerView in a WindowPanel for docking/maximizing
+ * Standardized as a native NUIComponent (v3.1)
  */
 class MixerPanel : public WindowPanel {
 public:
@@ -21,12 +30,14 @@ public:
 
     // Mixer operations
     void refreshChannels();
-    
-    std::shared_ptr<MixerView> getMixer() const { return m_mixer; }
+    std::shared_ptr<MixerViewModel> getViewModel() const { return m_viewModel; }
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;
-    std::shared_ptr<MixerView> m_mixer;
+
+    // New mixer implementation (meters-only for now)
+    std::shared_ptr<Nomad::MixerViewModel> m_viewModel;
+    std::shared_ptr<NomadUI::UIMixerPanel> m_newMixer;
 };
 
 } // namespace Audio
