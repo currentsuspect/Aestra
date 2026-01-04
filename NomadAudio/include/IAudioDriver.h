@@ -23,8 +23,10 @@ public:
     virtual AudioDriverType getDriverType() const = 0;
     virtual bool isAvailable() const = 0;
 
-    // Device Enumeration
-    virtual std::vector<AudioDeviceInfo> getDevices() const = 0;
+    /**
+     * @brief Get list of available output devices
+     */
+    virtual std::vector<AudioDeviceInfo> getDevices() = 0;
 
     // Stream Management
     virtual bool openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) = 0;
@@ -39,6 +41,19 @@ public:
     virtual uint32_t getStreamBufferSize() const = 0;
     virtual DriverStatistics getStatistics() const = 0;
     virtual std::string getErrorMessage() const = 0;
+
+    /**
+     * @brief Enable/Disable dithering for output
+     * 
+     * Dithering mitigates quantization distortion when converting float audio
+     * to lower bit-depths (e.g. 16-bit or 24-bit integer) for the hardware.
+     */
+    virtual void setDitheringEnabled(bool enabled) = 0;
+
+    /**
+     * @brief Check if dithering is enabled
+     */
+    virtual bool isDitheringEnabled() const = 0;
 
     // Capabilities (Optional)
     virtual bool supportsExclusiveMode() const { return false; }

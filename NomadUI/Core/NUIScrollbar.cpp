@@ -540,7 +540,7 @@ void NUIScrollbar::drawThumb(NUIRenderer& renderer)
     NUIRect thumbRect = getThumbRect();
     
     if (style_ == Style::Timeline) {
-        // Enhanced FL Studio style thumb with hover feedback on edges
+        // Enhanced modern style thumb with hover feedback on edges
         NUIColor thumbColor = thumbColor_;
         bool isThumbHovered = (hoveredPart_ == Part::Thumb);
         bool isStartEdgeHovered = (hoveredPart_ == Part::ThumbStartEdge);

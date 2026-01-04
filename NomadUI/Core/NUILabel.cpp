@@ -37,7 +37,9 @@ void NUILabel::onRender(NUIRenderer& renderer)
         
         // OPTIMIZATION: Cache text measurements - only measure when text or size changes
         if (!textSizeValid_) {
+            // Standard flush measurement - trust the renderer
             cachedTextSize_ = renderer.measureText(text_, fontSize);
+            
             textSizeValid_ = true;
         }
         
@@ -95,7 +97,9 @@ void NUILabel::onRender(NUIRenderer& renderer)
                 break;
         }
         
-        renderer.drawText(displayText, NUIPoint(std::round(textX), std::round(textY)), fontSize, textColor_);
+        // Sub-pixel positioning for smooth text rendering
+        // We pass floating point coordinates directly to the renderer
+        renderer.drawText(displayText, NUIPoint(textX, textY), fontSize, textColor_);
     }
 }
 

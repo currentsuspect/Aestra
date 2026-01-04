@@ -210,4 +210,20 @@ std::shared_ptr<NUIIcon> NUIIcon::createChevronDownIcon() {
     return icon;
 }
 
+std::shared_ptr<NUIIcon> NUIIcon::createTrashIcon() {
+    const char* svg = R"(
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/>
+            <rect x="5" y="6" width="14" height="15" rx="2" />
+            <line x1="10" y1="11" x2="10" y2="17"/>
+            <line x1="14" y1="11" x2="14" y2="17"/>
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+    )";
+    
+    auto icon = std::make_shared<NUIIcon>(svg);
+    icon->setColorFromTheme("textSecondary");
+    return icon;
+}
+
 } // namespace NomadUI

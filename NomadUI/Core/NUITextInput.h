@@ -222,7 +222,6 @@ private:
     float scrollPosition_ = 0.0f;
 
     // Interaction state
-    bool isFocused_ = false;
     bool isHovered_ = false;
     bool isPressed_ = false;
     bool showCaret_ = true;
@@ -235,6 +234,8 @@ private:
     // Text layout cache
     std::vector<std::string> lines_;
     std::vector<float> lineHeights_;
+    std::vector<float> charWidths_; // Cache for hit testing and cursor positioning
+    mutable bool needsLayoutUpdate_ = true;
     float totalTextHeight_ = 0.0f;
 
     // Callbacks

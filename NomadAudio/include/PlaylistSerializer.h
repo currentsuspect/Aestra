@@ -5,6 +5,8 @@
 #include "ClipSource.h"
 #include "NomadJSON.h"
 #include <string>
+#include <filesystem>
+#include <fstream>
 
 namespace Nomad {
 namespace Audio {
@@ -105,16 +107,16 @@ private:
     static std::string gridSubdivisionToString(GridSubdivision grid);
     static GridSubdivision stringToGridSubdivision(const std::string& str);
     
-    static JSON::Object serializeLane(const PlaylistLane& lane, 
+    static JSON serializeLane(const PlaylistLane& lane, 
                                        const SourceManager& sourceManager);
-    static JSON::Object serializeClip(const PlaylistClip& clip,
+    static JSON serializeClip(const ClipInstance& clip,
                                        const SourceManager& sourceManager);
     
-    static bool deserializeLane(const JSON::Object& obj, 
+    static bool deserializeLane(const JSON& obj, 
                                 PlaylistModel& model,
                                 SourceManager& sourceManager,
                                 AudioLoaderFunc audioLoader);
-    static bool deserializeClip(const JSON::Object& obj,
+    static bool deserializeClip(const JSON& obj,
                                 PlaylistLaneID laneId,
                                 PlaylistModel& model,
                                 SourceManager& sourceManager,
@@ -151,74 +153,66 @@ inline GridSubdivision PlaylistSerializer::stringToGridSubdivision(const std::st
 
 inline std::string PlaylistSerializer::serialize(const PlaylistModel& model,
                                                    const SourceManager& sourceManager) {
-    JSON::Object root;
+    JSON root = JSON::object();
     
-    root["projectSampleRate"] = JSON::Value(model.getProjectSampleRate());
-    root["bpm"] = JSON::Value(model.getBPM());
-    root["gridSubdivision"] = JSON::Value(gridSubdivisionToString(model.getGridSubdivision()));
-    root["snapEnabled"] = JSON::Value(model.isSnapEnabled());
+    root.set("projectSampleRate", JSON(model.getProjectSampleRate()));
+    root.set("bpm", JSON(model.getBPM()));
     
-    JSON::Array lanesArray;
+    JSON lanesArray = JSON::array();
     auto laneIds = model.getLaneIDs();
     
     for (const auto& laneId : laneIds) {
         const PlaylistLane* lane = model.getLane(laneId);
         if (lane) {
-            lanesArray.push_back(JSON::Value(serializeLane(*lane, sourceManager)));
+            lanesArray.push(serializeLane(*lane, sourceManager));
         }
     }
     
-    root["lanes"] = JSON::Value(std::move(lanesArray));
+    root.set("lanes", lanesArray);
     
-    return JSON::stringify(JSON::Value(std::move(root)), true);
+    return root.toString(4);
 }
 
-inline JSON::Object PlaylistSerializer::serializeLane(const PlaylistLane& lane,
+inline JSON PlaylistSerializer::serializeLane(const PlaylistLane& lane,
                                                         const SourceManager& sourceManager) {
-    JSON::Object obj;
+    JSON obj = JSON::object();
     
-    obj["id"] = JSON::Value(lane.id.toString());
-    obj["name"] = JSON::Value(lane.name);
-    obj["color"] = JSON::Value(static_cast<double>(lane.colorRGBA));
-    obj["volume"] = JSON::Value(static_cast<double>(lane.volume));
-    obj["pan"] = JSON::Value(static_cast<double>(lane.pan));
-    obj["muted"] = JSON::Value(lane.muted);
-    obj["solo"] = JSON::Value(lane.solo);
-    obj["height"] = JSON::Value(static_cast<double>(lane.height));
-    obj["collapsed"] = JSON::Value(lane.collapsed);
+    obj.set("id", JSON(lane.id.toString()));
+    obj.set("name", JSON(lane.name));
+    obj.set("color", JSON(static_cast<double>(lane.colorRGBA)));
+    obj.set("volume", JSON(static_cast<double>(lane.volume)));
+    obj.set("pan", JSON(static_cast<double>(lane.pan)));
+    obj.set("muted", JSON(lane.muted));
+    obj.set("solo", JSON(lane.solo));
+    obj.set("height", JSON(static_cast<double>(lane.height)));
+    obj.set("collapsed", JSON(lane.collapsed));
     
-    JSON::Array clipsArray;
+    JSON clipsArray = JSON::array();
     for (const auto& clip : lane.clips) {
-        clipsArray.push_back(JSON::Value(serializeClip(clip, sourceManager)));
+        clipsArray.push(serializeClip(clip, sourceManager));
     }
-    obj["clips"] = JSON::Value(std::move(clipsArray));
+    obj.set("clips", clipsArray);
     
     return obj;
 }
 
-inline JSON::Object PlaylistSerializer::serializeClip(const PlaylistClip& clip,
+inline JSON PlaylistSerializer::serializeClip(const ClipInstance& clip,
                                                         const SourceManager& sourceManager) {
-    JSON::Object obj;
+    JSON obj = JSON::object();
     
-    obj["id"] = JSON::Value(clip.id.toString());
+    obj.set("id", JSON(clip.id.toString()));
     
-    // Resolve source file path
-    const ClipSource* source = sourceManager.getSource(clip.sourceId);
-    std::string sourcePath = source ? source->getFilePath() : "";
-    obj["sourceFile"] = JSON::Value(sourcePath);
-    
-    obj["startTime"] = JSON::Value(static_cast<double>(clip.startTime));
-    obj["length"] = JSON::Value(static_cast<double>(clip.length));
-    obj["sourceStart"] = JSON::Value(static_cast<double>(clip.sourceStart));
-    obj["gain"] = JSON::Value(static_cast<double>(clip.gainLinear));
-    obj["pan"] = JSON::Value(static_cast<double>(clip.pan));
-    obj["muted"] = JSON::Value(clip.muted);
-    obj["playbackRate"] = JSON::Value(clip.playbackRate);
-    obj["fadeInLength"] = JSON::Value(static_cast<double>(clip.fadeInLength));
-    obj["fadeOutLength"] = JSON::Value(static_cast<double>(clip.fadeOutLength));
-    obj["flags"] = JSON::Value(static_cast<double>(clip.flags));
-    obj["color"] = JSON::Value(static_cast<double>(clip.colorRGBA));
-    obj["name"] = JSON::Value(clip.name);
+    obj.set("startBeat", JSON(clip.startBeat));
+    obj.set("durationBeats", JSON(clip.durationBeats));
+    obj.set("sourceStart", JSON(static_cast<double>(clip.edits.sourceStart)));
+    obj.set("gain", JSON(static_cast<double>(clip.edits.gainLinear)));
+    obj.set("pan", JSON(static_cast<double>(clip.edits.pan)));
+    obj.set("muted", JSON(clip.muted));
+    obj.set("playbackRate", JSON(clip.edits.playbackRate));
+    obj.set("fadeInBeats", JSON(clip.edits.fadeInBeats));
+    obj.set("fadeOutBeats", JSON(clip.edits.fadeOutBeats));
+    obj.set("color", JSON(static_cast<double>(clip.colorRGBA)));
+    obj.set("name", JSON(clip.name));
     
     return obj;
 }
@@ -227,35 +221,27 @@ inline bool PlaylistSerializer::deserialize(const std::string& json,
                                               PlaylistModel& model,
                                               SourceManager& sourceManager,
                                               AudioLoaderFunc audioLoader) {
-    auto result = JSON::parse(json);
-    if (!result.has_value() || !result->isObject()) {
+    auto root = JSON::parse(json);
+    if (!root.isObject()) {
         return false;
     }
     
     model.clear();
     
-    const JSON::Object& root = result->asObject();
-    
     // Load project settings
-    if (root.count("projectSampleRate")) {
-        model.setProjectSampleRate(root.at("projectSampleRate").asNumber());
+    if (root.has("projectSampleRate")) {
+        model.setProjectSampleRate(root["projectSampleRate"].asNumber());
     }
-    if (root.count("bpm")) {
-        model.setBPM(root.at("bpm").asNumber());
-    }
-    if (root.count("gridSubdivision")) {
-        model.setGridSubdivision(stringToGridSubdivision(root.at("gridSubdivision").asString()));
-    }
-    if (root.count("snapEnabled")) {
-        model.setSnapEnabled(root.at("snapEnabled").asBool());
+    if (root.has("bpm")) {
+        model.setBPM(root["bpm"].asNumber());
     }
     
     // Load lanes
-    if (root.count("lanes") && root.at("lanes").isArray()) {
-        const JSON::Array& lanesArray = root.at("lanes").asArray();
-        for (const auto& laneValue : lanesArray) {
+    if (root.has("lanes") && root["lanes"].isArray()) {
+        const auto& vec = root["lanes"].asArray(); 
+        for (const auto& laneValue : vec) {
             if (laneValue.isObject()) {
-                deserializeLane(laneValue.asObject(), model, sourceManager, audioLoader);
+                deserializeLane(laneValue, model, sourceManager, audioLoader);
             }
         }
     }
@@ -263,30 +249,30 @@ inline bool PlaylistSerializer::deserialize(const std::string& json,
     return true;
 }
 
-inline bool PlaylistSerializer::deserializeLane(const JSON::Object& obj,
+inline bool PlaylistSerializer::deserializeLane(const JSON& obj,
                                                   PlaylistModel& model,
                                                   SourceManager& sourceManager,
                                                   AudioLoaderFunc audioLoader) {
-    std::string name = obj.count("name") ? obj.at("name").asString() : "Track";
+    std::string name = obj.has("name") ? obj["name"].asString() : "Track";
     PlaylistLaneID laneId = model.createLane(name);
     
     PlaylistLane* lane = model.getLane(laneId);
     if (!lane) return false;
     
-    if (obj.count("color")) lane->colorRGBA = static_cast<uint32_t>(obj.at("color").asNumber());
-    if (obj.count("volume")) lane->volume = static_cast<float>(obj.at("volume").asNumber());
-    if (obj.count("pan")) lane->pan = static_cast<float>(obj.at("pan").asNumber());
-    if (obj.count("muted")) lane->muted = obj.at("muted").asBool();
-    if (obj.count("solo")) lane->solo = obj.at("solo").asBool();
-    if (obj.count("height")) lane->height = static_cast<float>(obj.at("height").asNumber());
-    if (obj.count("collapsed")) lane->collapsed = obj.at("collapsed").asBool();
+    if (obj.has("color")) lane->colorRGBA = static_cast<uint32_t>(obj["color"].asNumber());
+    if (obj.has("volume")) lane->volume = static_cast<float>(obj["volume"].asNumber());
+    if (obj.has("pan")) lane->pan = static_cast<float>(obj["pan"].asNumber());
+    if (obj.has("muted")) lane->muted = obj["muted"].asBool();
+    if (obj.has("solo")) lane->solo = obj["solo"].asBool();
+    if (obj.has("height")) lane->height = static_cast<float>(obj["height"].asNumber());
+    if (obj.has("collapsed")) lane->collapsed = obj["collapsed"].asBool();
     
     // Load clips
-    if (obj.count("clips") && obj.at("clips").isArray()) {
-        const JSON::Array& clipsArray = obj.at("clips").asArray();
-        for (const auto& clipValue : clipsArray) {
+    if (obj.has("clips") && obj["clips"].isArray()) {
+        const auto& vec = obj["clips"].asArray();
+        for (const auto& clipValue : vec) {
             if (clipValue.isObject()) {
-                deserializeClip(clipValue.asObject(), laneId, model, sourceManager, audioLoader);
+                deserializeClip(clipValue, laneId, model, sourceManager, audioLoader);
             }
         }
     }
@@ -294,69 +280,78 @@ inline bool PlaylistSerializer::deserializeLane(const JSON::Object& obj,
     return true;
 }
 
-inline bool PlaylistSerializer::deserializeClip(const JSON::Object& obj,
+inline bool PlaylistSerializer::deserializeClip(const JSON& obj,
                                                   PlaylistLaneID laneId,
                                                   PlaylistModel& model,
                                                   SourceManager& sourceManager,
                                                   AudioLoaderFunc audioLoader) {
-    // Get source file path
-    std::string sourceFile = obj.count("sourceFile") ? obj.at("sourceFile").asString() : "";
-    if (sourceFile.empty()) {
-        return false;
-    }
+    ClipInstance clip;
     
-    // Get or create source
-    ClipSourceID sourceId = sourceManager.getOrCreateSource(sourceFile);
-    ClipSource* source = sourceManager.getSource(sourceId);
-    
-    // Load audio if not already loaded
-    if (source && !source->isReady() && audioLoader) {
-        auto buffer = audioLoader(sourceFile);
-        if (buffer) {
-            source->setBuffer(buffer);
-        }
-    }
-    
-    // Create clip
-    PlaylistClip clip(sourceId);
-    
-    if (obj.count("id")) {
-        clip.id = PlaylistClipID::fromString(obj.at("id").asString());
+    if (obj.has("id")) {
+        clip.id = ClipInstanceID::fromString(obj["id"].asString());
         if (!clip.id.isValid()) {
-            clip.id = PlaylistClipID::generate();
+            clip.id = ClipInstanceID::generate();
         }
     }
     
-    if (obj.count("startTime")) clip.startTime = static_cast<SampleIndex>(obj.at("startTime").asNumber());
-    if (obj.count("length")) clip.length = static_cast<SampleIndex>(obj.at("length").asNumber());
-    if (obj.count("sourceStart")) clip.sourceStart = static_cast<SampleIndex>(obj.at("sourceStart").asNumber());
-    if (obj.count("gain")) clip.gainLinear = static_cast<float>(obj.at("gain").asNumber());
-    if (obj.count("pan")) clip.pan = static_cast<float>(obj.at("pan").asNumber());
-    if (obj.count("muted")) clip.muted = obj.at("muted").asBool();
-    if (obj.count("playbackRate")) clip.playbackRate = obj.at("playbackRate").asNumber();
-    if (obj.count("fadeInLength")) clip.fadeInLength = static_cast<SampleIndex>(obj.at("fadeInLength").asNumber());
-    if (obj.count("fadeOutLength")) clip.fadeOutLength = static_cast<SampleIndex>(obj.at("fadeOutLength").asNumber());
-    if (obj.count("flags")) clip.flags = static_cast<uint32_t>(obj.at("flags").asNumber());
-    if (obj.count("color")) clip.colorRGBA = static_cast<uint32_t>(obj.at("color").asNumber());
-    if (obj.count("name")) clip.name = obj.at("name").asString();
+    if (obj.has("startBeat")) clip.startBeat = obj["startBeat"].asNumber();
+    if (obj.has("durationBeats")) clip.durationBeats = obj["durationBeats"].asNumber();
+    if (obj.has("sourceStart")) clip.edits.sourceStart = static_cast<SampleIndex>(obj["sourceStart"].asNumber());
+    if (obj.has("gain")) clip.edits.gainLinear = static_cast<float>(obj["gain"].asNumber());
+    if (obj.has("pan")) clip.edits.pan = static_cast<float>(obj["pan"].asNumber());
+    if (obj.has("muted")) clip.muted = obj["muted"].asBool();
+    if (obj.has("playbackRate")) clip.edits.playbackRate = obj["playbackRate"].asNumber();
+    if (obj.has("fadeInBeats")) clip.edits.fadeInBeats = obj["fadeInBeats"].asNumber();
+    if (obj.has("fadeOutBeats")) clip.edits.fadeOutBeats = obj["fadeOutBeats"].asNumber();
+    if (obj.has("color")) clip.colorRGBA = static_cast<uint32_t>(obj["color"].asNumber());
+    if (obj.has("name")) clip.name = obj["name"].asString();
     
     model.addClip(laneId, clip);
     
     return true;
 }
 
+
 inline bool PlaylistSerializer::saveToFile(const std::string& filepath,
                                             const PlaylistModel& model,
                                             const SourceManager& sourceManager) {
     std::string json = serialize(model, sourceManager);
+    std::string tempPath = filepath + ".tmp";
     
-    std::ofstream file(filepath);
-    if (!file.is_open()) {
-        return false;
+    // 1. Write to temporary file
+    {
+        std::ofstream file(tempPath, std::ios::out | std::ios::trunc);
+        if (!file.is_open()) {
+            return false;
+        }
+        
+        file << json;
+        
+        // Check for write errors
+        if (file.fail()) {
+            file.close();
+            std::filesystem::remove(tempPath);
+            return false;
+        }
+        
+        // Ensure flush to disk
+        file.flush();
+        file.close();
     }
     
-    file << json;
-    return file.good();
+    // 2. Atomic Rename (Replace existing)
+    try {
+        // std::filesystem::rename is atomic on POSIX.
+        // On Windows it typically uses MoveFileEx(MOVEFILE_REPLACE_EXISTING).
+        std::filesystem::rename(tempPath, filepath);
+        return true;
+    } catch (const std::filesystem::filesystem_error&) {
+        // Log error (needs logger access, but for now just cleanup)
+        // If rename fails, we MUST remove the temp file
+        std::error_code ec;
+        std::filesystem::remove(tempPath, ec);
+        return false;
+    }
 }
 
 inline bool PlaylistSerializer::loadFromFile(const std::string& filepath,

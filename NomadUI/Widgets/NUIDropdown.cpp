@@ -110,6 +110,15 @@ void NUIDropdown::setSelectedIndex(int index) {
     }
 }
 
+void NUIDropdown::setSelectedByValue(int value) {
+    for (int i = 0; i < static_cast<int>(items_.size()); ++i) {
+        if (items_[i]->getValue() == value) {
+            setSelectedIndex(i);
+            return;
+        }
+    }
+}
+
 void NUIDropdown::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
 
@@ -164,23 +173,35 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
     float arrowSize = 6.0f;
     float centerY = bounds.y + bounds.height / 2;
     float arrowX = bounds.x + bounds.width - padding - arrowSize - 4.0f;
+    float arrowCenterX = arrowX + arrowSize / 2;
     
-    // Smooth rotation animation
-    float rotationAngle = isOpen_ ? 180.0f : 0.0f;
+    // Use animated rotation (0 = pointing down, 180 = pointing up)
+    // Convert rotation to radians for math
+    float rotationRad = chevronRotation_ * 3.14159f / 180.0f;
     
-    // Chevron pointing down (flips up when open)
-    NUIPoint p1, p2, p3;
-    if (isOpen_) {
-        // Point up
-        p1 = NUIPoint(arrowX, centerY + arrowSize / 3);
-        p2 = NUIPoint(arrowX + arrowSize, centerY + arrowSize / 3);
-        p3 = NUIPoint(arrowX + arrowSize / 2, centerY - arrowSize / 3);
-    } else {
-        // Point down
-        p1 = NUIPoint(arrowX, centerY - arrowSize / 3);
-        p2 = NUIPoint(arrowX + arrowSize, centerY - arrowSize / 3);
-        p3 = NUIPoint(arrowX + arrowSize / 2, centerY + arrowSize / 3);
-    }
+    // Calculate chevron points with rotation
+    // Base chevron points (pointing down): left-top, right-top, center-bottom
+    float halfWidth = arrowSize / 2;
+    float halfHeight = arrowSize / 3;
+    
+    // Rotate the chevron around its center
+    float cosR = std::cos(rotationRad);
+    float sinR = std::sin(rotationRad);
+    
+    // Left point (relative to center: -halfWidth, -halfHeight)
+    float lx = -halfWidth;
+    float ly = -halfHeight;
+    NUIPoint p1(arrowCenterX + lx * cosR - ly * sinR, centerY + lx * sinR + ly * cosR);
+    
+    // Right point (relative to center: +halfWidth, -halfHeight)
+    float rx = halfWidth;
+    float ry = -halfHeight;
+    NUIPoint p2(arrowCenterX + rx * cosR - ry * sinR, centerY + rx * sinR + ry * cosR);
+    
+    // Bottom point (relative to center: 0, +halfHeight)
+    float bx = 0;
+    float by = halfHeight;
+    NUIPoint p3(arrowCenterX + bx * cosR - by * sinR, centerY + bx * sinR + by * cosR);
     
     // Draw thicker, smoother chevron lines
     float lineWidth = 1.5f;
@@ -209,13 +230,25 @@ bool NUIDropdown::onMouseEvent(const NUIMouseEvent& event) {
     if (event.pressed && event.button == NUIMouseButton::Left) {
         // If dropdown is open, check for clicks on list items first
         if (isOpen_) {
-            int clickedIndex = getItemUnderMouse(event.position);
-            if (clickedIndex >= 0 && clickedIndex < static_cast<int>(items_.size())) {
-                auto item = items_[clickedIndex];
-                if (item->isEnabled() && item->isVisible()) {
-                    setSelectedIndex(clickedIndex);
+            // Calculate list bounds independently to catch clicks in the list area
+            // that might miss an item (padding, shadow, etc) or if list is empty
+            float itemHeight = 36.0f; 
+            int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
+            float listHeight = itemHeight * visibleItems;
+            
+            // Should match renderDropdownList logic
+            NUIRect listBounds(bounds.x, bounds.y + bounds.height + 2.0f, bounds.width, listHeight);
+            
+            if (listBounds.contains(event.position)) {
+                int clickedIndex = getItemUnderMouse(event.position);
+                if (clickedIndex >= 0 && clickedIndex < static_cast<int>(items_.size())) {
+                    auto item = items_[clickedIndex];
+                    if (item->isEnabled() && item->isVisible()) {
+                        setSelectedIndex(clickedIndex);
+                    }
+                    closeDropdown();
                 }
-                closeDropdown();
+                // ALWAYS return true if clicked inside list bounds to prevent fall-through
                 return true;
             }
         }
@@ -226,6 +259,10 @@ bool NUIDropdown::onMouseEvent(const NUIMouseEvent& event) {
             if (!isOpen_ && s_openDropdown != nullptr && s_openDropdown != this) {
                 return false;
             }
+            
+            // Bring to front on interaction to ensure we stay on top
+            bringToFront();
+            
             toggleDropdown();
             return true;
         }
@@ -319,7 +356,22 @@ void NUIDropdown::closeDropdown() {
     setDirty(true);
 }
 
-void NUIDropdown::updateAnimations() {
+void NUIDropdown::onUpdate(double deltaTime) {
+    NUIComponent::onUpdate(deltaTime);
+    
+    // Animate chevron rotation
+    float targetRotation = isOpen_ ? 180.0f : 0.0f;
+    float diff = targetRotation - chevronRotation_;
+    
+    // Smooth lerp toward target
+    if (std::abs(diff) > 0.5f) {
+        chevronRotation_ += diff * 0.25f;  // Adjust speed here (higher = faster)
+        setDirty(true);
+    } else {
+        chevronRotation_ = targetRotation;
+    }
+    
+    // Also update dropdown animation progress
     float targetProgress = isOpen_ ? 1.0f : 0.0f;
     dropdownAnimProgress_ += (targetProgress - dropdownAnimProgress_) * 0.15f;
 }
@@ -425,19 +477,19 @@ void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bo
     }
 
     NUIColor curText = item->isEnabled() ? textColor_ : textColor_.withAlpha(0.5f);
-    float padding = 12.0f;
+    float padding = 8.0f; // Reduced from 12.0f
     
     NUIRect textBounds = bounds;
     textBounds.x += padding;
-    textBounds.width -= (padding * 2 + 20.0f); // Large safety margin on right
+    textBounds.width -= (padding * 2 + 4.0f); // Reduced safety margin from 20.0f to 4.0f
     textBounds.y += 2.0f;
     textBounds.height -= 4.0f;
 
     float fontSize = 14.0f;
     if (auto th = getTheme()) fontSize = th->getFontSize("large");
 
-        // Truncate text with ellipsis if too long. Use cached measured width and a simple heuristic to reduce measureText calls.
-        if (textBounds.width > 20.0f && textBounds.height > 0) {
+    // Truncate text with ellipsis if too long. Use cached measured width and a simple heuristic to reduce measureText calls.
+    if (textBounds.width > 2.0f && textBounds.height > 0) {
             float maxWidth = textBounds.width - 10.0f; // Extra safety margin
             std::string displayText = item->getText();
             float measuredFull = 0.0f;

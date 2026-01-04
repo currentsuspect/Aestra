@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
+#include <functional>
 
 namespace Nomad {
 namespace Audio {
@@ -20,6 +20,7 @@ namespace Audio {
  *                  Data is normalized to [-1.0, 1.0] range and ready for audio processing
  * @param sampleRate Output parameter: sample rate in Hz (e.g., 44100, 48000)
  * @param numChannels Output parameter: number of channels (1=mono, 2=stereo, etc.)
+ * @param progressCallback Optional callback function that receives progress as a float [0.0, 1.0]
  * @return true if successful, false if file could not be decoded
  *
  * @warning The audioData vector is resized to contain the decoded samples.
@@ -30,7 +31,25 @@ namespace Audio {
 [[nodiscard]] bool loadWithMiniAudio(const std::string& filePath,
                                      std::vector<float>& audioData,
                                      uint32_t& sampleRate,
-                                     uint32_t& numChannels);
+                                     uint32_t& numChannels,
+                                     std::function<void(float)> progressCallback = nullptr);
+
+/**
+ * @brief Unified audio file decoder that tries multiple paths:
+ * 1. Native WAV loader (fast, handles PCM/Float WAV)
+ * 2. MiniAudio (compressed formats like MP3/FLAC/OGG)
+ * 3. Platform decoder (Media Foundation on Windows)
+ */
+[[nodiscard]] bool decodeAudioFile(const std::string& filePath,
+                                   std::vector<float>& audioData,
+                                   uint32_t& sampleRate,
+                                   uint32_t& numChannels,
+                                   std::function<void(float)> progressCallback = nullptr);
+
+/**
+ * @brief Ensures audio data is stereo by upmixing or downmixing.
+ */
+void forceStereo(std::vector<float>& buffer, uint32_t& channelCount);
 
 } // namespace Audio
 } // namespace Nomad

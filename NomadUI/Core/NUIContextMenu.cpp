@@ -118,6 +118,12 @@ void NUIContextMenu::onRender(NUIRenderer& renderer)
             }
         }
     }
+
+    // Render active submenu on top
+    if (activeSubmenu_ && activeSubmenu_->isVisible())
+    {
+        activeSubmenu_->onRender(renderer);
+    }
 }
 
 bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
@@ -125,6 +131,16 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
     if (!isVisible()) return false;
 
     NUIRect bounds = getBounds();
+    
+    // Give priority to submenu
+    if (activeSubmenu_ && activeSubmenu_->isVisible())
+    {
+        if (activeSubmenu_->onMouseEvent(event))
+        {
+            return true;
+        }
+    }
+
     if (!bounds.contains(event.position)) return false;
 
     int itemIndex = getItemAtPosition(event.position);
@@ -237,6 +253,18 @@ void NUIContextMenu::addSubmenu(const std::string& text, std::shared_ptr<NUICont
 {
     auto item = std::make_shared<NUIContextMenuItem>(text, NUIContextMenuItem::Type::Submenu);
     item->setSubmenu(submenu);
+    
+    // Chain Close: If an item in the submenu is clicked, close this parent menu too.
+    submenu->setOnItemClick([this](std::shared_ptr<NUIContextMenuItem> clickedItem) {
+        if (closeOnSelection_) {
+            hide();
+        }
+        // Propagate the click event up if needed (optional, logic usually handled by leaf callback)
+        if (onItemClickCallback_) {
+            onItemClickCallback_(clickedItem);
+        }
+    });
+    
     addItem(item);
 }
 
@@ -284,24 +312,36 @@ void NUIContextMenu::showAt(int x, int y)
     float posX = x;
     float posY = y;
     
-    // Get parent window bounds (the actual window the menu should stay within)
-    NUIRect parentBounds = getParent() ? getParent()->getBounds() : NUIRect(0, 0, 800, 600);
-    float windowRight = parentBounds.x + parentBounds.width;
-    float windowBottom = parentBounds.y + parentBounds.height;
-    
-    // Check if menu would go off the right edge of the window - move it left
-    if (posX + menuWidth > windowRight) {
-        posX = windowRight - menuWidth - 10; // 10px margin from window edge
+    // Get window bounds by traversing up to find the root parent
+    // This ensures submenus use the actual window bounds, not parent menu bounds
+    NUIRect windowBounds(0, 0, 1920, 1080);  // Larger default fallback
+    bool foundParent = false;
+    NUIComponent* current = getParent();
+    while (current) {
+        windowBounds = current->getBounds();
+        foundParent = true;
+        current = current->getParent();
     }
     
-    // Check if menu would go off the bottom edge of the window - move it up
-    if (posY + menuHeight > windowBottom) {
-        posY = windowBottom - menuHeight - 10; // 10px margin from window edge
+    // Only apply clamping if we found valid parent bounds
+    if (foundParent && windowBounds.width > 0 && windowBounds.height > 0) {
+        float windowRight = windowBounds.x + windowBounds.width;
+        float windowBottom = windowBounds.y + windowBounds.height;
+        
+        // Check if menu would go off the right edge of the window - move it left
+        if (posX + menuWidth > windowRight) {
+            posX = windowRight - menuWidth - 10; // 10px margin from window edge
+        }
+        
+        // Check if menu would go off the bottom edge of the window - move it up
+        if (posY + menuHeight > windowBottom) {
+            posY = windowBottom - menuHeight - 10; // 10px margin from window edge
+        }
+        
+        // Ensure menu doesn't go off the left or top edges of the window
+        if (posX < windowBounds.x) posX = windowBounds.x + 10; // 10px margin from window edge
+        if (posY < windowBounds.y) posY = windowBounds.y + 10; // 10px margin from window edge
     }
-    
-    // Ensure menu doesn't go off the left or top edges of the window
-    if (posX < parentBounds.x) posX = parentBounds.x + 10; // 10px margin from window edge
-    if (posY < parentBounds.y) posY = parentBounds.y + 10; // 10px margin from window edge
     
     setPosition(posX, posY);
     isVisible_ = true;
@@ -525,14 +565,19 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
         }
         else
         {
-            // Radio - circle
+            // Radio - "Dotted" style (Selected = Solid Dot, Unselected = Empty Ring)
             NUIPoint center = indicatorRect.center();
-            renderer.strokeCircle(center, indicatorSize * 0.5f, 1.0f, themeManager.getColor("borderSubtle"));
             
             if (item->isChecked())
             {
-                // Fill inner circle with purple
-                renderer.fillCircle(center, indicatorSize * 0.35f, themeManager.getColor("primary"));
+                // Selected: Solid filled "dot" in Nomad Purple
+                NUIColor radioFill = themeManager.getColor("accentPrimary");
+                renderer.fillCircle(center, indicatorSize * 0.4f, radioFill);
+            }
+            else
+            {
+                // Unselected: Empty ring (faint)
+                renderer.strokeCircle(center, indicatorSize * 0.5f, 1.0f, themeManager.getColor("borderSubtle").withAlpha(0.5f));
             }
         }
         
@@ -741,9 +786,15 @@ void NUIContextMenu::showSubmenu(int itemIndex)
     submenuItemIndex_ = itemIndex;
     
     // Position submenu to the right of the current menu
+    // getItemRect returns rect in parent coords (includes menu's position)
     NUIRect itemRect = getItemRect(itemIndex);
-    NUIPoint submenuPos(itemRect.x + itemRect.width, itemRect.y);
-    activeSubmenu_->showAt(submenuPos);
+    NUIRect myBounds = getBounds();
+    
+    // Calculate position: right edge of menu + gap, same Y as the item
+    float targetX = myBounds.x + myBounds.width + 2.0f;
+    float targetY = itemRect.y;
+    
+    activeSubmenu_->showAt(static_cast<int>(targetX), static_cast<int>(targetY));
 }
 
 void NUIContextMenu::hideSubmenu()

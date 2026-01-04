@@ -3,6 +3,9 @@
 
 #include "PlaylistRuntimeSnapshot.h"
 #include "TimeTypes.h"
+#include "MixerSIMD.h"
+#include "ClipResampler.h"
+#include "FastMath.h"
 #include <cmath>
 #include <cstring>
 
@@ -39,6 +42,19 @@ public:
     
     /// Maximum supported channel count
     static constexpr uint32_t MAX_CHANNELS = 8;
+    
+    /// Global resampling quality for clip playback (thread-safe atomic)
+    static inline ClipResamplingQuality s_resamplingQuality = ClipResamplingQuality::High;
+    
+    /// Set global resampling quality (called from AudioSettingsDialog)
+    static void setResamplingQuality(ClipResamplingQuality quality) noexcept {
+        s_resamplingQuality = quality;
+    }
+    
+    /// Get current resampling quality
+    static ClipResamplingQuality getResamplingQuality() noexcept {
+        return s_resamplingQuality;
+    }
     
     /**
      * @brief Process a buffer using the playlist snapshot
@@ -100,9 +116,9 @@ inline void PlaylistMixer::process(const PlaylistRuntimeSnapshot* snapshot,
                                     SampleCount numFrames,
                                     float* trackBuffer,
                                     float* clipBuffer) {
-    // Clear output
-    std::memset(outputLeft, 0, numFrames * sizeof(float));
-    std::memset(outputRight, 0, numFrames * sizeof(float));
+    // Clear output (SIMD-accelerated)
+    MixerSIMD::clearBuffer(outputLeft, numFrames);
+    MixerSIMD::clearBuffer(outputRight, numFrames);
     
     if (!snapshot || snapshot->lanes.empty()) {
         return;
@@ -120,11 +136,11 @@ inline void PlaylistMixer::process(const PlaylistRuntimeSnapshot* snapshot,
             continue;
         }
         
-        // Clear track buffer
+        // Clear track buffer (SIMD-accelerated)
         float* trackL = trackBuffer;
         float* trackR = trackBuffer + MAX_BUFFER_SIZE;
-        std::memset(trackL, 0, numFrames * sizeof(float));
-        std::memset(trackR, 0, numFrames * sizeof(float));
+        MixerSIMD::clearBuffer(trackL, numFrames);
+        MixerSIMD::clearBuffer(trackR, numFrames);
         
         // Get clips that overlap this buffer (using binary search)
         auto [firstClip, lastClip] = lane.getClipRangeForBuffer(bufferStartTime, bufferEndTime);
@@ -146,16 +162,14 @@ inline void PlaylistMixer::process(const PlaylistRuntimeSnapshot* snapshot,
                               bufferStartTime, snapshot->projectSampleRate);
         }
         
-        // Apply lane volume and pan, mix into output
+        // Apply lane volume and pan, mix into output (SIMD-accelerated)
         float leftGain, rightGain;
         applyPan(lane.pan, leftGain, rightGain);
         leftGain *= lane.volume;
         rightGain *= lane.volume;
         
-        for (SampleCount i = 0; i < numFrames; ++i) {
-            outputLeft[i] += trackL[i] * leftGain;
-            outputRight[i] += trackR[i] * rightGain;
-        }
+        MixerSIMD::mixStereoWithGain(trackL, trackR, outputLeft, outputRight,
+                                      leftGain, rightGain, numFrames);
     }
 }
 
@@ -223,6 +237,10 @@ inline void PlaylistMixer::mixClipIntoBuffer(const ClipRuntimeInfo& clip,
     uint32_t srcChannels = clip.sourceChannels;
     SampleIndex srcFrames = clip.audioData->numFrames;
     
+    // Use ClipResampler for high-quality interpolation
+    static thread_local ClipResampler resampler;
+    resampler.setQuality(s_resamplingQuality);
+    
     // Process each frame
     for (SampleCount i = 0; i < mixFrames; ++i) {
         SampleIndex bufferIdx = bufferOffset + i;
@@ -232,16 +250,15 @@ inline void PlaylistMixer::mixClipIntoBuffer(const ClipRuntimeInfo& clip,
         SampleIndex timelinePos = mixStart + i;
         float gain = clip.getGainAt(timelinePos);
         
-        // Fetch samples with interpolation
+        // Fetch samples with high-quality interpolation
         float sampleL, sampleR;
         
         if (srcChannels >= 2) {
-            sampleL = sampleWithInterpolation(srcData, sourceIdx, 0, srcChannels, srcFrames);
-            sampleR = sampleWithInterpolation(srcData, sourceIdx, 1, srcChannels, srcFrames);
+            // Stereo: use optimized stereo path
+            resampler.getSampleStereo(srcData, srcFrames, sourceIdx, sampleL, sampleR);
         } else {
-            // Mono source
-            float mono = sampleWithInterpolation(srcData, sourceIdx, 0, srcChannels, srcFrames);
-            sampleL = sampleR = mono;
+            // Mono source: duplicate to stereo
+            sampleL = sampleR = resampler.getSample(srcData, srcFrames, srcChannels, sourceIdx, 0);
         }
         
         // Apply gain and pan
@@ -251,11 +268,9 @@ inline void PlaylistMixer::mixClipIntoBuffer(const ClipRuntimeInfo& clip,
 }
 
 inline void PlaylistMixer::applyPan(float pan, float& leftGain, float& rightGain) {
-    // Constant power panning
-    // pan: -1 = full left, 0 = center, 1 = full right
-    float panAngle = (pan + 1.0f) * 0.25f * 3.14159265f;  // 0 to PI/2
-    leftGain = std::cos(panAngle);
-    rightGain = std::sin(panAngle);
+    // Fast constant power panning using polynomial approximation
+    // Avoids expensive std::sin/cos calls in inner loop
+    FastMath::fastPan(pan, leftGain, rightGain);
 }
 
 inline float PlaylistMixer::sampleWithInterpolation(const float* data,

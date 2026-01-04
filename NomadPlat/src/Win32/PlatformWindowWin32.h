@@ -50,6 +50,12 @@ public:
     
     void setCursorVisible(bool visible) override;
     
+    // Set cursor position (screen coordinates)
+    void setCursorPosition(int x, int y) override;
+    
+    // Mouse Capture
+    void setMouseCapture(bool captured) override;
+    
     KeyModifiers getCurrentModifiers() const override { return getKeyModifiers(); }
 
     void setMouseMoveCallback(std::function<void(int, int)> callback) override { m_mouseMoveCallback = callback; }

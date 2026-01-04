@@ -4,31 +4,35 @@
 #include "../Graphics/NUIRenderer.h"
 #include "../Core/NUIThemeSystem.h"
 #include "../../Source/MixerViewModel.h"
-#include "MeterSnapshot.h"
+#include "../../NomadAudio/include/MeterSnapshot.h"
 #include <algorithm>
 
 namespace NomadUI {
 
 UIMixerPanel::UIMixerPanel(std::shared_ptr<Nomad::MixerViewModel> viewModel,
-                           std::shared_ptr<Nomad::Audio::MeterSnapshotBuffer> meterSnapshots)
+                           std::shared_ptr<Nomad::Audio::MeterSnapshotBuffer> meterSnapshots,
+                           std::shared_ptr<Nomad::Audio::ContinuousParamBuffer> continuousParams)
     : m_viewModel(std::move(viewModel))
     , m_meterSnapshots(std::move(meterSnapshots))
+    , m_continuousParams(std::move(continuousParams))
 {
     cacheThemeColors();
 
-    // Create master meter
-    m_masterMeter = std::make_shared<UIMixerMeter>();
-    addChild(m_masterMeter);
+    // Inspector (pinned on right, before master).
+    m_inspector = std::make_shared<UIMixerInspector>(m_viewModel.get());
+    addChild(m_inspector);
 
-    // Set up clip clear callback for master
-    m_masterMeter->onClipCleared = [this]() {
+    // Create master strip (pinned on right, does not scroll with channels).
+    m_masterStrip = std::make_shared<UIMixerStrip>(0, 0, m_viewModel.get(), m_meterSnapshots, m_continuousParams);
+    m_masterStrip->onFXClicked = [this](uint32_t channelId) {
         if (m_viewModel) {
-            m_viewModel->clearMasterClipLatch();
+            m_viewModel->setSelectedChannelId(static_cast<int32_t>(channelId));
         }
-        if (m_meterSnapshots) {
-            m_meterSnapshots->clearClip(Nomad::Audio::ChannelSlotMap::MASTER_SLOT_INDEX);
+        if (m_inspector) {
+            m_inspector->setActiveTab(UIMixerInspector::Tab::Inserts);
         }
     };
+    addChild(m_masterStrip);
 
     // Initial channel refresh
     refreshChannels();
@@ -37,7 +41,9 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Nomad::MixerViewModel> viewModel,
 void UIMixerPanel::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
-    m_backgroundColor = theme.getColor("backgroundPrimary");  // #181819
+    // User requested "the inside of the mixer should be the grey"
+    // Since we unified primary/secondary to black, we hardcode the desired grey here
+    m_backgroundColor = NomadUI::NUIColor(0.12f, 0.12f, 0.14f, 1.0f);  // "The Grey"
     m_separatorColor = theme.getColor("borderSubtle");        // #2c2c2f
 }
 
@@ -47,32 +53,36 @@ void UIMixerPanel::refreshChannels()
 
     size_t channelCount = m_viewModel->getChannelCount();
 
-    // Remove excess meters
-    while (m_meters.size() > channelCount) {
-        removeChild(m_meters.back());
-        m_meters.pop_back();
+    for (auto& strip : m_strips) {
+        removeChild(strip);
     }
+    m_strips.clear();
 
-    // Add new meters
-    while (m_meters.size() < channelCount) {
-        auto meter = std::make_shared<UIMixerMeter>();
-        size_t index = m_meters.size();
-
-        // Set up clip clear callback
-        meter->onClipCleared = [this, index]() {
-            if (index < m_viewModel->getChannelCount()) {
-                auto* channel = m_viewModel->getChannelByIndex(index);
-                if (channel) {
-                    m_viewModel->clearClipLatch(channel->id);
-                    if (m_meterSnapshots) {
-                        m_meterSnapshots->clearClip(channel->slotIndex);
-                    }
-                }
+    m_strips.reserve(channelCount);
+    for (size_t i = 0; i < channelCount; ++i) {
+        auto* channel = m_viewModel->getChannelByIndex(i);
+        if (!channel) continue;
+        auto strip = std::make_shared<UIMixerStrip>(channel->id, static_cast<int>(i + 1), m_viewModel.get(), m_meterSnapshots, m_continuousParams);
+        strip->onFXClicked = [this](uint32_t channelId) {
+            if (m_viewModel) {
+                m_viewModel->setSelectedChannelId(static_cast<int32_t>(channelId));
+            }
+            if (m_inspector) {
+                m_inspector->setActiveTab(UIMixerInspector::Tab::Inserts);
             }
         };
+        m_strips.push_back(strip);
+        addChild(strip);
+    }
 
-        m_meters.push_back(meter);
-        addChild(meter);
+    // Ensure fixed panels stay on top for hit-testing/rendering.
+    if (m_inspector) {
+        removeChild(m_inspector);
+        addChild(m_inspector);
+    }
+    if (m_masterStrip) {
+        removeChild(m_masterStrip);
+        addChild(m_masterStrip);
     }
 
     layoutMeters();
@@ -81,24 +91,38 @@ void UIMixerPanel::refreshChannels()
 void UIMixerPanel::layoutMeters()
 {
     auto bounds = getBounds();
-    float x = bounds.x + PADDING;
-    float y = bounds.y + HEADER_HEIGHT + PADDING;
-    float meterHeight = bounds.height - HEADER_HEIGHT - FOOTER_HEIGHT - PADDING * 2;
+    const float stripY = bounds.y + PADDING;
+    const float stripHeight = std::max(1.0f, bounds.height - PADDING * 2);
 
-    // Layout channel meters
-    for (size_t i = 0; i < m_meters.size(); ++i) {
-        float stripX = x + i * (STRIP_WIDTH + STRIP_SPACING);
-        // Center meter within strip width
-        float meterX = stripX + (STRIP_WIDTH - METER_WIDTH) / 2.0f;
-
-        m_meters[i]->setBounds(meterX, y, METER_WIDTH, meterHeight);
+    // Layout master strip on the right.
+    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH - PADDING;
+    if (m_masterStrip) {
+        m_masterStrip->setBounds(masterX, stripY, MASTER_STRIP_WIDTH, stripHeight);
+        m_masterStrip->setVisible(true);
     }
 
-    // Layout master meter on the right
-    if (m_masterMeter) {
-        float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH - PADDING;
-        float masterMeterX = masterX + (MASTER_STRIP_WIDTH - METER_WIDTH * 1.5f) / 2.0f;
-        m_masterMeter->setBounds(masterMeterX, y, METER_WIDTH * 1.5f, meterHeight);
+    // Layout inspector just to the left of master.
+    const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    if (m_inspector) {
+        m_inspector->setBounds(inspectorX, stripY, INSPECTOR_WIDTH, stripHeight);
+        m_inspector->setVisible(true);
+        m_inspector->onResize(static_cast<int>(INSPECTOR_WIDTH), static_cast<int>(stripHeight));
+    }
+
+    // Layout channel strips to the left, keeping them out of the inspector/master area.
+    const float left = bounds.x + PADDING;
+    const float right = inspectorX - STRIP_SPACING;
+    const float visibleW = std::max(0.0f, right - left);
+    const float contentW = m_strips.empty() ? 0.0f : (m_strips.size() * (STRIP_WIDTH + STRIP_SPACING) - STRIP_SPACING);
+    const float maxScroll = std::max(0.0f, contentW - visibleW);
+    m_scrollX = std::clamp(m_scrollX, 0.0f, maxScroll);
+
+    float x = left - m_scrollX;
+    for (size_t i = 0; i < m_strips.size(); ++i) {
+        float stripX = x + i * (STRIP_WIDTH + STRIP_SPACING);
+        const bool visible = (stripX + STRIP_WIDTH) >= left && stripX <= right;
+        m_strips[i]->setVisible(visible);
+        m_strips[i]->setBounds(stripX, stripY, STRIP_WIDTH, stripHeight);
     }
 }
 
@@ -115,95 +139,37 @@ void UIMixerPanel::onUpdate(double deltaTime)
         m_viewModel->updateMeters(*m_meterSnapshots, deltaTime);
     }
 
-    // Pass smoothed values to meter widgets
-    updateMeterWidgets();
-
     // Update children
     updateChildren(deltaTime);
-}
-
-void UIMixerPanel::updateMeterWidgets()
-{
-    if (!m_viewModel) return;
-
-    // Update channel meters
-    for (size_t i = 0; i < m_meters.size(); ++i) {
-        auto* channel = m_viewModel->getChannelByIndex(i);
-        if (channel) {
-            m_meters[i]->setLevels(channel->smoothedPeakL, channel->smoothedPeakR);
-            m_meters[i]->setPeakHold(channel->peakHoldL, channel->peakHoldR);
-            m_meters[i]->setClipLatch(channel->clipLatchL, channel->clipLatchR);
-        }
-    }
-
-    // Update master meter
-    if (m_masterMeter) {
-        auto* master = m_viewModel->getMaster();
-        if (master) {
-            m_masterMeter->setLevels(master->smoothedPeakL, master->smoothedPeakR);
-            m_masterMeter->setPeakHold(master->peakHoldL, master->peakHoldR);
-            m_masterMeter->setClipLatch(master->clipLatchL, master->clipLatchR);
-        }
-    }
 }
 
 void UIMixerPanel::renderSeparators(NUIRenderer& renderer)
 {
     auto bounds = getBounds();
-    float y1 = bounds.y + HEADER_HEIGHT;
-    float y2 = bounds.y + bounds.height - FOOTER_HEIGHT;
+    float y1 = bounds.y + PADDING;
+    float y2 = bounds.y + bounds.height - PADDING;
 
-    // Draw separators between channel strips
-    for (size_t i = 1; i < m_meters.size(); ++i) {
-        float x = bounds.x + PADDING + i * (STRIP_WIDTH + STRIP_SPACING) - STRIP_SPACING / 2.0f;
+    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH - PADDING;
+    const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float left = bounds.x + PADDING;
+    const float right = inspectorX - STRIP_SPACING;
+
+    // Draw separators between visible channel strips.
+    for (size_t i = 1; i < m_strips.size(); ++i) {
+        if (!m_strips[i] || !m_strips[i]->isVisible()) continue;
+        const float x = m_strips[i]->getBounds().x - STRIP_SPACING / 2.0f;
+        if (x < left || x > right) continue;
         renderer.drawLine({x, y1}, {x, y2}, 1.0f, m_separatorColor);
     }
 
+    // Draw separator before inspector
+    if (m_inspector && m_inspector->isVisible()) {
+        renderer.drawLine({inspectorX - STRIP_SPACING, y1}, {inspectorX - STRIP_SPACING, y2}, 1.0f, m_separatorColor);
+    }
+
     // Draw separator before master strip
-    if (!m_meters.empty() && m_masterMeter) {
-        float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH - PADDING;
+    if (m_masterStrip && m_masterStrip->isVisible()) {
         renderer.drawLine({masterX - STRIP_SPACING, y1}, {masterX - STRIP_SPACING, y2}, 1.0f, m_separatorColor);
-    }
-}
-
-void UIMixerPanel::renderLabels(NUIRenderer& renderer)
-{
-    if (!m_viewModel) return;
-
-    auto bounds = getBounds();
-    auto& theme = NUIThemeManager::getInstance();
-    NUIColor textColor = theme.getColor("textPrimary");
-    NUIColor textSecondary = theme.getColor("textSecondary");
-    float fontSize = 11.0f;
-
-    // Render channel labels
-    for (size_t i = 0; i < m_meters.size(); ++i) {
-        auto* channel = m_viewModel->getChannelByIndex(i);
-        if (!channel) continue;
-
-        float stripX = bounds.x + PADDING + i * (STRIP_WIDTH + STRIP_SPACING);
-        NUIRect labelRect = {stripX, bounds.y + 4.0f, STRIP_WIDTH, HEADER_HEIGHT - 8.0f};
-
-        // Truncate name if too long
-        std::string displayName = channel->name;
-        NUISize textSize = renderer.measureText(displayName, fontSize);
-        if (textSize.width > STRIP_WIDTH - 8.0f) {
-            // Simple truncation with ellipsis
-            while (displayName.length() > 3 && textSize.width > STRIP_WIDTH - 16.0f) {
-                displayName = displayName.substr(0, displayName.length() - 1);
-                textSize = renderer.measureText(displayName + "...", fontSize);
-            }
-            displayName += "...";
-        }
-
-        renderer.drawTextCentered(displayName, labelRect, fontSize, textColor);
-    }
-
-    // Render master label
-    if (m_masterMeter) {
-        float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH - PADDING;
-        NUIRect masterLabelRect = {masterX, bounds.y + 4.0f, MASTER_STRIP_WIDTH, HEADER_HEIGHT - 8.0f};
-        renderer.drawTextCentered("MASTER", masterLabelRect, fontSize, textColor);
     }
 }
 
@@ -217,31 +183,58 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
     // Separators
     renderSeparators(renderer);
 
-    // Labels
-    renderLabels(renderer);
+    // Render channel strips with a clip so they never draw into the inspector/master area.
+    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH - PADDING;
+    const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float channelW = std::max(0.0f, (inspectorX - STRIP_SPACING) - (bounds.x + PADDING));
+    const NUIRect channelClip(bounds.x + PADDING, bounds.y, channelW, bounds.height);
 
-    // Render children (meters)
-    renderChildren(renderer);
+    bool clipEnabled = false;
+    if (!channelClip.isEmpty()) {
+        renderer.setClipRect(channelClip);
+        clipEnabled = true;
+    }
+
+    for (const auto& strip : m_strips) {
+        if (strip && strip->isVisible()) {
+            strip->onRender(renderer);
+        }
+    }
+
+    if (clipEnabled) {
+        renderer.clearClipRect();
+    }
+
+    if (m_inspector && m_inspector->isVisible()) {
+        m_inspector->onRender(renderer);
+    }
+
+    // Master strip renders on top / outside the clip.
+    if (m_masterStrip && m_masterStrip->isVisible()) {
+        m_masterStrip->onRender(renderer);
+    }
 }
 
 bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
 {
-    // Let children handle mouse events first
-    for (auto& meter : m_meters) {
-        if (meter->containsPoint(event.position)) {
-            if (meter->onMouseEvent(event)) {
-                return true;
-            }
-        }
-    }
+    if (event.wheelDelta != 0.0f) {
+        auto bounds = getBounds();
+        const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH - PADDING;
+        const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+        const float visibleW = std::max(0.0f, (inspectorX - STRIP_SPACING) - (bounds.x + PADDING));
+        const float contentW = m_strips.empty() ? 0.0f : (m_strips.size() * (STRIP_WIDTH + STRIP_SPACING) - STRIP_SPACING);
+        const float maxScroll = std::max(0.0f, contentW - visibleW);
 
-    if (m_masterMeter && m_masterMeter->containsPoint(event.position)) {
-        if (m_masterMeter->onMouseEvent(event)) {
+        const NUIRect channelClip(bounds.x + PADDING, bounds.y, visibleW, bounds.height);
+        if (maxScroll > 0.0f && channelClip.contains(event.position)) {
+            constexpr float SCROLL_PX = 60.0f;
+            m_scrollX = std::clamp(m_scrollX - static_cast<float>(event.wheelDelta) * SCROLL_PX, 0.0f, maxScroll);
+            layoutMeters();
             return true;
         }
     }
 
-    return false;
+    return NUIComponent::onMouseEvent(event);
 }
 
 } // namespace NomadUI

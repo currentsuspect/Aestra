@@ -3,6 +3,7 @@
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
+#include "../NomadCore/include/NomadUnifiedProfiler.h"
 #include <algorithm>
 
 namespace Nomad {
@@ -73,6 +74,7 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
 }
 
 void ChannelStrip::onRender(NomadUI::NUIRenderer& renderer) {
+    NOMAD_ZONE("ChannelStrip_Render");
     auto& theme = NomadUI::NUIThemeManager::getInstance();
     auto bounds = getBounds();
     
@@ -188,6 +190,11 @@ MixerView::MixerView(std::shared_ptr<TrackManager> trackManager)
 }
 
 void MixerView::onRender(NomadUI::NUIRenderer& renderer) {
+    NOMAD_ZONE("Mixer_Render");
+    
+    // Skip rendering if not visible
+    if (!isVisible()) return;
+    
     auto& theme = NomadUI::NUIThemeManager::getInstance();
     auto bounds = getBounds();
     
@@ -215,9 +222,11 @@ void MixerView::refreshChannels() {
     
     if (!m_trackManager) return;
     
+    // THREAD-SAFE: Get a snapshot of channels to avoid race with Audio Thread
+    auto channelsSnapshot = m_trackManager->getChannelsSnapshot();
+    
     // Create channel strip for each track, passing TrackManager for solo coordination
-    for (size_t i = 0; i < m_trackManager->getTrackCount(); ++i) {
-        auto track = m_trackManager->getTrack(i);
+    for (const auto& track : channelsSnapshot) {
         if (track && track->getName() != "Preview") {  // Skip preview track
             auto channelStrip = std::make_shared<ChannelStrip>(track, m_trackManager.get());
             m_channelStrips.push_back(channelStrip);

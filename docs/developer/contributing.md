@@ -17,14 +17,14 @@ Thank you for your interest in contributing to Nomad DAW! This guide will help y
 
 ## 📜 Code of Conduct
 
-We are committed to providing a welcoming and inclusive environment. Please read our [Code of Conduct](../community/code-of-conduct.md) before contributing.
+We are committed to providing a welcoming and inclusive environment. Please read our [Code of Conduct](../../CODE_OF_CONDUCT.md) before contributing.
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
 1. **Set up your development environment**
-   - Follow the [Building Guide](../BUILDING.md) to set up your system
+   - Follow the [Building Guide](../getting-started/building.md) to set up your system
    - Install Git, CMake, and a C++17 compatible compiler
    - Configure your IDE with the project settings
 
@@ -59,7 +59,7 @@ We are committed to providing a welcoming and inclusive environment. Please read
 ### 1. Find an Issue or Feature
 
 - Browse [open issues](https://github.com/currentsuspect/NOMAD/issues)
-- Check the [project roadmap](../ROADMAP.md) for planned features
+- Check the [project roadmap](../technical/roadmap.md) for planned features
 - Look for issues labeled `good first issue` or `help wanted`
 - Comment on an issue to express interest before starting work
 
@@ -78,7 +78,7 @@ git checkout -b fix/bug-description
 
 ### 3. Make Your Changes
 
-- Write clean, maintainable code following our [Coding Style Guide](../CODING_STYLE.md)
+- Write clean, maintainable code following our [Coding Style Guide](coding-style.md)
 - Add unit tests for new functionality
 - Update documentation as needed
 - Keep commits small and focused
@@ -159,7 +159,7 @@ main
 ### Before Creating a PR
 
 ✅ **Checklist:**
-- [ ] Code follows the [Coding Style Guide](../CODING_STYLE.md)
+- [ ] Code follows the [Coding Style Guide](coding-style.md)
 - [ ] All tests pass locally
 - [ ] No compiler warnings or errors
 - [ ] Documentation is updated
@@ -214,7 +214,7 @@ main
 
 ### Code Quality
 
-- **Follow the coding style**: Use clang-format (see [CODING_STYLE.md](../CODING_STYLE.md))
+- **Follow the coding style**: Use clang-format (see [CODING_STYLE.md](coding-style.md))
 - **Write clean code**: Clear variable names, proper indentation, minimal complexity
 - **Add comments**: Explain complex logic and algorithms
 - **Avoid code duplication**: Refactor common patterns into reusable functions
@@ -239,7 +239,7 @@ main
 - **No secrets in code**: Never commit API keys, passwords, or certificates
 - **Validate inputs**: Always validate user input and external data
 - **Follow best practices**: Use secure coding practices
-- **Report vulnerabilities**: See [SECURITY.md](../community/security.md)
+- **Report vulnerabilities**: See [SECURITY.md](../../SECURITY.md)
 
 ### What NOT to Commit
 
@@ -318,11 +318,11 @@ We value all contributors! Contributors are recognized:
 
 ## 📚 Additional Resources
 
-- [Building Guide](../BUILDING.md) - How to build Nomad
-- [Coding Style Guide](../CODING_STYLE.md) - Code formatting rules
-- [Architecture Overview](../ARCHITECTURE.md) - System design
-- [FAQ](../FAQ.md) - Common questions
-- [Glossary](../GLOSSARY.md) - Technical terms
+- [Building Guide](../getting-started/building.md) - How to build Nomad
+- [Coding Style Guide](coding-style.md) - Code formatting rules
+- [Architecture Overview](../architecture/overview.md) - System design
+- [FAQ](../technical/faq.md) - Common questions
+- [Glossary](../technical/glossary.md) - Technical terms
 
 ## 🆘 Getting Help
 
@@ -338,4 +338,4 @@ Your contributions help make Nomad DAW better for everyone. We appreciate your t
 
 ---
 
-[← Return to Nomad Docs Index](../README.md)
+[← Return to Nomad Docs Index](../index.md)

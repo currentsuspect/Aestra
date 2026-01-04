@@ -4,6 +4,7 @@
 #include "../Graphics/NUIRenderer.h"
 #include "../Core/NUIThemeSystem.h"
 #include <iostream>
+#include <string>
 
 // Windows-specific code removed - use NomadPlat abstraction instead
 

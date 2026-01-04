@@ -4,6 +4,7 @@
 
 #include "Filter.h"
 #include <cstring>
+#include <complex>
 
 #ifdef Filter
 #undef Filter

@@ -5,6 +5,10 @@
 #include "../Graphics/NUIRenderer.h"
 #include "../../NomadCore/include/NomadLog.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 namespace NomadUI {
 
 NUIPlatformBridge::NUIPlatformBridge()
@@ -91,6 +95,10 @@ void NUIPlatformBridge::setupEventBridges() {
             event.pressed = false;
             event.released = false;
             event.wheelDelta = 0.0f;
+            if (m_window) {
+                event.modifiers = convertModifiers(m_window->getCurrentModifiers());
+            }
+            
             m_rootComponent->onMouseEvent(event);
         }
     });
@@ -119,6 +127,9 @@ void NUIPlatformBridge::setupEventBridges() {
             event.pressed = pressed;
             event.released = !pressed;
             event.wheelDelta = 0.0f;
+            if (m_window) {
+                event.modifiers = convertModifiers(m_window->getCurrentModifiers());
+            }
             m_rootComponent->onMouseEvent(event);
         }
     });
@@ -193,6 +204,13 @@ void NUIPlatformBridge::setupEventBridges() {
             m_renderer->resize(width, height);
         }
     });
+
+    // Window focus
+    m_window->setFocusCallback([this](bool focused) {
+        if (m_focusCallback) {
+            m_focusCallback(focused);
+        }
+    });
 }
 
 // =============================================================================
@@ -213,6 +231,7 @@ NUIModifiers NUIPlatformBridge::convertModifiers(const Nomad::KeyModifiers& mods
     if (mods.control) result = result | NUIModifiers::Ctrl;
     if (mods.alt) result = result | NUIModifiers::Alt;
     if (mods.super) result = result | NUIModifiers::Super;
+    if (mods.capsLock) result = result | NUIModifiers::CapsLock;
     return result;
 }
 
@@ -356,6 +375,10 @@ void NUIPlatformBridge::setDPIChangeCallback(std::function<void(float)> callback
     m_dpiChangeCallback = callback;
 }
 
+void NUIPlatformBridge::setFocusCallback(std::function<void(bool)> callback) {
+    m_focusCallback = callback;
+}
+
 // =============================================================================
 // Native Handles
 // =============================================================================
@@ -386,6 +409,56 @@ void NUIPlatformBridge::setCursorVisible(bool visible) {
     if (m_window) {
         m_window->setCursorVisible(visible);
     }
+}
+
+void NUIPlatformBridge::setCursorPosition(int x, int y) {
+    if (m_window) {
+        m_window->setCursorPosition(x, y);
+    }
+}
+
+void NUIPlatformBridge::setMouseCapture(bool captured) {
+    if (m_window) {
+        m_window->setMouseCapture(captured);
+    }
+}
+
+void NUIPlatformBridge::setCursorStyle(NUICursorStyle style) {
+    m_currentCursorStyle = style;
+    
+#ifdef _WIN32
+    HCURSOR cursor = NULL;
+    
+    // Use system cursor IDs directly - LoadCursor auto-selects A/W
+    switch (style) {
+        case NUICursorStyle::Arrow:      cursor = ::LoadCursor(NULL, IDC_ARROW); break;
+        case NUICursorStyle::Hand:       cursor = ::LoadCursor(NULL, IDC_HAND); break;
+        case NUICursorStyle::IBeam:      cursor = ::LoadCursor(NULL, IDC_IBEAM); break;
+        case NUICursorStyle::Wait:       cursor = ::LoadCursor(NULL, IDC_WAIT); break;
+        case NUICursorStyle::WaitArrow:  cursor = ::LoadCursor(NULL, IDC_APPSTARTING); break;
+        case NUICursorStyle::Crosshair:  cursor = ::LoadCursor(NULL, IDC_CROSS); break;
+        case NUICursorStyle::ResizeNS:   cursor = ::LoadCursor(NULL, IDC_SIZENS); break;
+        case NUICursorStyle::ResizeEW:   cursor = ::LoadCursor(NULL, IDC_SIZEWE); break;
+        case NUICursorStyle::ResizeNESW: cursor = ::LoadCursor(NULL, IDC_SIZENESW); break;
+        case NUICursorStyle::ResizeNWSE: cursor = ::LoadCursor(NULL, IDC_SIZENWSE); break;
+        case NUICursorStyle::ResizeAll:  cursor = ::LoadCursor(NULL, IDC_SIZEALL); break;
+        case NUICursorStyle::NotAllowed: cursor = ::LoadCursor(NULL, IDC_NO); break;
+        case NUICursorStyle::Grab:       cursor = ::LoadCursor(NULL, IDC_HAND); break;
+        case NUICursorStyle::Grabbing:   cursor = ::LoadCursor(NULL, IDC_HAND); break;
+        case NUICursorStyle::Hidden:
+            ::SetCursor(NULL);
+            return;
+        default: cursor = ::LoadCursor(NULL, IDC_ARROW); break;
+    }
+    
+    if (cursor) {
+        ::SetCursor(cursor);
+    }
+#endif
+}
+
+NUICursorStyle NUIPlatformBridge::getCursorStyle() const {
+    return m_currentCursorStyle;
 }
 
 } // namespace NomadUI

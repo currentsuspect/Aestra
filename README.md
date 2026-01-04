@@ -7,7 +7,7 @@
 ![Core](https://img.shields.io/badge/Core-Source--Available-blue)
 
 > **A modern, professional digital audio workstation built from the ground up with intention.**  
-> Featuring ultra-low latency audio, GPU-accelerated UI, and an FL Studio-inspired workflow.
+> Featuring ultra-low latency audio, GPU-accelerated UI, and a pattern-based workflow.
 
 ---
 
@@ -17,9 +17,9 @@
 
 Nomad combines:
 
-- **Ultra-low latency audio engine** powered by WASAPI multi-tier processing
+- **Ultra-low latency audio engine** powered by a dual-tier ASIO/WASAPI system
 - **Custom GPU-accelerated UI framework** (NomadUI) for buttery-smooth 60 FPS performance
-- **FL Studio-inspired timeline** with intuitive pattern and playlist sequencing
+- **Modern pattern-based timeline** with intuitive pattern and playlist sequencing
 - **Professional-grade 64-bit audio processing** with multi-threaded architecture
 - **Source-available transparency** — see exactly how your DAW works under the hood
 
@@ -31,7 +31,8 @@ Whether you're producing electronic music, scoring films, or recording live inst
 
 ### 🎵 Audio Engine
 
-- **WASAPI Integration** — Exclusive and Shared mode with automatic fallback
+- **ASIO Driver Support** — Professional, super-low latency audio with native COM integration
+- **WASAPI Integration** — Seamless fallback for consumer audio hardware
 - **Multi-threaded Processing** — 64-bit audio pipeline for maximum performance
 - **Sample-accurate Timing** — Professional-grade playback precision
 - **Low-latency Design** — Optimized for real-time audio with <10ms latency
@@ -41,7 +42,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 
 - **NomadUI Framework** — Custom OpenGL 3.3+ renderer with MSAA anti-aliasing
 - **Adaptive FPS System** — Intelligent rendering optimization (24-60 FPS)
-- **FL Studio-inspired Timeline** — Familiar workflow with adaptive grid and waveform visualization
+- **Advanced Timeline** — Familiar workflow with adaptive grid and waveform visualization
 - **Theme System** — Dark/light modes with customizable color schemes
 - **SVG Icon System** — Crisp, scalable vector icons with dynamic color tinting
 - **Smooth Animations** — Hardware-accelerated transitions and effects
@@ -74,7 +75,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 - CPU: Intel Core i7/i9 or AMD Ryzen 7/9
 - RAM: 16 GB or more
 - GPU: Dedicated graphics card with 2+ GB VRAM
-- Audio: Low-latency audio interface (ASIO support optional)
+- Audio: Low-latency audio interface (ASIO recommended for best performance)
 - Storage: SSD for project files and sample libraries
 
 ### Future Platform Support
@@ -142,7 +143,7 @@ We're building the DAW we wish existed — powerful yet approachable, profession
 
 ### Detailed Build Instructions
 
-For comprehensive build instructions including troubleshooting, see **[Building Guide →](docs/BUILDING.md)**
+For comprehensive build instructions including troubleshooting, see **[Building Guide →](docs/getting-started/building.md)**
 
 ---
 
@@ -152,18 +153,18 @@ For comprehensive build instructions including troubleshooting, see **[Building 
 
 Explore our beautiful, searchable documentation built with MkDocs Material:
 
-- **🚀 [Getting Started](https://currentsuspect.github.io/NOMAD/getting-started/)** — Setup guides and quickstart tutorials
-- **🏗️ [Architecture](https://currentsuspect.github.io/NOMAD/architecture/overview/)** — System design with interactive diagrams
-- **👨‍💻 [Developer Guide](https://currentsuspect.github.io/NOMAD/developer/contributing/)** — Contributing, coding standards, debugging
-- **📖 [Technical Reference](https://currentsuspect.github.io/NOMAD/technical/faq/)** — FAQ, glossary, roadmap
-- **🔌 [API Reference](https://currentsuspect.github.io/NOMAD/api/)** — Complete API documentation
-- **🤝 [Community](https://currentsuspect.github.io/NOMAD/community/code-of-conduct/)** — Code of conduct, support, security
+- **🚀 [Getting Started](docs/getting-started/index.md)** — Setup guides and quickstart tutorials
+- **🏗️ [Architecture](docs/architecture/overview.md)** — System design with interactive diagrams
+- **👨‍💻 [Developer Guide](docs/developer/contributing.md)** — Contributing, coding standards, debugging
+- **📖 [Technical Reference](docs/technical/faq.md)** — FAQ, glossary, roadmap
+- **🔌 [API Reference](docs/api/index.md)** — Complete API documentation
+- **🤝 [Community](docs/community/code-of-conduct.md)** — Code of conduct, support, security
 
 ### Quick Links
 
-- [Building NOMAD](https://currentsuspect.github.io/NOMAD/getting-started/building/) — Detailed build instructions
-- [Contributing Guide](https://currentsuspect.github.io/NOMAD/developer/contributing/) — How to contribute
-- [Architecture Overview](https://currentsuspect.github.io/NOMAD/architecture/overview/) — Understanding NOMAD's design
+- [Building NOMAD](docs/getting-started/building.md) — Detailed build instructions
+- [Contributing Guide](docs/developer/contributing.md) — How to contribute
+- [Architecture Overview](docs/architecture/overview.md) — Understanding NOMAD's design
 
 ### 📚 API Documentation Generation
 
@@ -320,9 +321,9 @@ Thank you to all contributors and the open-source community for making Nomad pos
 
 **Q1 2025:**
 
-- ✅ Core audio engine with WASAPI
+- ✅ Core audio engine with WASAPI/ASIO support
 - ✅ NomadUI framework with OpenGL rendering
-- ✅ FL Studio-inspired timeline
+- ✅ Advanced pattern-based timeline
 - 🚧 Sample manipulation (drag-and-drop, editing)
 - 🚧 Mixing controls (volume, pan, mute, solo)
 - 🚧 Project save/load system
@@ -386,7 +387,7 @@ See **[SECURITY.md](SECURITY.md)** for our full security policy.
 Join the conversation:
 
 - **Discord** — [Invite Link](https://discord.gg/nomad-studios)
-- **GitHub Discussions** — [Open Discussions](https://github.com/NomadStudios/Nomad/discussions)
+- **GitHub Discussions** — [Open Discussions](https://github.com/currentsuspect/NOMAD/discussions)
 - **Twitter/X** — [@NomadStudios](https://twitter.com/NomadStudios)
 
 ---
@@ -409,9 +410,9 @@ For commercial licensing inquiries, contact: [makoridylan@gmail.com](mailto:mako
 
 If you enjoy using Nomad, consider supporting its development:
 
-- **GitHub Sponsors** — [Sponsor Nomad](https://github.com/sponsors/NomadStudios)
+- **GitHub Sponsors** — [Sponsor Nomad](https://github.com/sponsors/currentsuspect)
 - **Ko-fi** — [Buy Me a Coffee](https://ko-fi.com/nomadstudios)
-- **Patreon** — [Become a Patron](https://patreon.com/Nomad_Studios?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink)
+- **Patreon** — [Become a Patron](https://www.patreon.com/nomadstudios)
 
 ---
 
