@@ -5,6 +5,7 @@
 #include "../NomadUI/Core/NUILabel.h"
 #include "../NomadUI/Core/NUITextInput.h"
 #include "../NomadUI/Widgets/NUIButton.h"
+#include <functional>
 
 namespace Nomad {
 
@@ -22,10 +23,14 @@ public:
 
     void onRender(NomadUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
+
+    void setOnAutoSaveToggled(std::function<void(bool)> callback) { m_onAutoSaveToggled = std::move(callback); }
     
 private:
     void createUI();
     void layoutComponents();
+
+    void syncAutoSaveLabel();
 
     bool m_dirty = false;
     
@@ -34,7 +39,9 @@ private:
     std::shared_ptr<NomadUI::NUIButton> m_browseButton;
     
     std::shared_ptr<NomadUI::NUILabel> m_autoSaveLabel;
-    std::shared_ptr<NomadUI::NUIButton> m_autoSaveToggle; // Mock
+    std::shared_ptr<NomadUI::NUIButton> m_autoSaveToggle;
+
+    std::function<void(bool)> m_onAutoSaveToggled;
 };
 
 } // namespace Nomad

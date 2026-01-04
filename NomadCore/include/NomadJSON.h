@@ -156,6 +156,22 @@ private:
     std::shared_ptr<std::vector<JSON>> arrayValue_;
     std::shared_ptr<std::map<std::string, JSON>> objectValue_;
 
+    static std::string escapeString(const std::string& in) {
+        std::string out;
+        out.reserve(in.size());
+        for (char ch : in) {
+            switch (ch) {
+                case '\\': out += "\\\\"; break;
+                case '"': out += "\\\""; break;
+                case '\n': out += "\\n"; break;
+                case '\r': out += "\\r"; break;
+                case '\t': out += "\\t"; break;
+                default: out += ch; break;
+            }
+        }
+        return out;
+    }
+
     void serialize(std::stringstream& ss, int indent, int depth) const {
         std::string indentStr(depth * indent, ' ');
         std::string nextIndentStr((depth + 1) * indent, ' ');
@@ -171,7 +187,7 @@ private:
                 ss << numberValue_;
                 break;
             case Type::String:
-                ss << "\"" << stringValue_ << "\"";
+                ss << "\"" << escapeString(stringValue_) << "\"";
                 break;
             case Type::Array:
                 ss << "[";
@@ -191,7 +207,7 @@ private:
                 size_t count = 0;
                 for (const auto& pair : *objectValue_) {
                     if (indent > 0) ss << nextIndentStr;
-                    ss << "\"" << pair.first << "\":";
+                    ss << "\"" << escapeString(pair.first) << "\":";
                     if (indent > 0) ss << " ";
                     pair.second.serialize(ss, indent, depth + 1);
                     if (count < objectValue_->size() - 1) ss << ",";
@@ -315,8 +331,21 @@ private:
     static JSON parseNumber(const std::string& str, size_t& pos) {
         size_t start = pos;
         if (str[pos] == '-') pos++;
+
+        // Integer/fractional part
         while (pos < str.size() && (std::isdigit(str[pos]) || str[pos] == '.')) {
             pos++;
+        }
+
+        // Optional exponent part (e.g. 1e9, 1.2E-3)
+        if (pos < str.size() && (str[pos] == 'e' || str[pos] == 'E')) {
+            pos++;
+            if (pos < str.size() && (str[pos] == '+' || str[pos] == '-')) {
+                pos++;
+            }
+            while (pos < str.size() && std::isdigit(str[pos])) {
+                pos++;
+            }
         }
         double value = std::stod(str.substr(start, pos - start));
         return JSON(value);

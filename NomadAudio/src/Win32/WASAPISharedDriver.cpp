@@ -667,6 +667,8 @@ void WASAPISharedDriver::audioThreadProc() {
             std::fill(userBuffer.begin(), userBuffer.end(), 0.0f);
         }
 
+        m_statistics.callbackCount++;
+
         // Convert float to WASAPI format
         if (wf->wFormatTag == WAVE_FORMAT_IEEE_FLOAT ||
             (wf->wFormatTag == WAVE_FORMAT_EXTENSIBLE && 

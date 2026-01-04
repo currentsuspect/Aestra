@@ -50,6 +50,9 @@ public:
     float getTitleBarHeight() const { return m_titleBarHeight; }
     bool isUserPositioned() const { return m_userPositioned; }
 
+    float getExpandedHeight() const { return m_expandedHeight; }
+    void setUserPositioned(bool positioned) { m_userPositioned = positioned; }
+
     // Component overrides
     void onRender(NomadUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
