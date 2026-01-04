@@ -135,6 +135,33 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Tests/VST3PluginTest.cpp")
     endif()
 endif()
 
+  # Project roundtrip smoke test (create -> save -> load -> verify)
+  if(EXISTS "${CMAKE_SOURCE_DIR}/Tests/ProjectRoundTripTest.cpp")
+    add_executable(ProjectRoundTripTest
+      Tests/ProjectRoundTripTest.cpp
+      Source/ProjectSerializer.cpp
+    )
+    target_link_libraries(ProjectRoundTripTest PRIVATE
+      NomadAudio
+      NomadCore
+    )
+    target_include_directories(ProjectRoundTripTest PRIVATE
+      ${CMAKE_SOURCE_DIR}/NomadAudio/include
+      ${CMAKE_SOURCE_DIR}/NomadCore/include
+      ${CMAKE_SOURCE_DIR}/Source
+    )
+
+    # Optional load-stage tracing for debugging serializer issues.
+    target_compile_definitions(ProjectRoundTripTest PRIVATE
+      $<$<CONFIG:Debug>:NOMAD_ENABLE_PROJECT_LOAD_LOGS>
+    )
+
+    enable_testing()
+    add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
+    # Alias name to make autosave-path coverage obvious in CI output.
+    add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
+  endif()
+
 message(STATUS "")
 message(STATUS "=================================")
 message(STATUS "  NOMAD DAW - Pure Native")

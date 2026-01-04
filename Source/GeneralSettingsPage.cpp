@@ -26,10 +26,24 @@ void GeneralSettingsPage::createUI() {
     addChild(m_autoSaveLabel);
     
     m_autoSaveToggle = std::make_shared<NomadUI::NUIButton>();
-    m_autoSaveToggle->setText("Enabled (5 min)");
     m_autoSaveToggle->setToggleable(true);
-    m_autoSaveToggle->setToggled(true);
+        m_autoSaveToggle->setToggled(true); // default ON
+    syncAutoSaveLabel();
+    m_autoSaveToggle->setOnToggle([this](bool enabled) {
+        m_dirty = true;
+        syncAutoSaveLabel();
+        if (m_onAutoSaveToggled) m_onAutoSaveToggled(enabled);
+    });
     addChild(m_autoSaveToggle);
+}
+
+void GeneralSettingsPage::syncAutoSaveLabel() {
+    if (!m_autoSaveToggle) return;
+    if (m_autoSaveToggle->isToggled()) {
+        m_autoSaveToggle->setText("Enabled (5 min)");
+    } else {
+        m_autoSaveToggle->setText("Disabled");
+    }
 }
 
 void GeneralSettingsPage::applyChanges() {

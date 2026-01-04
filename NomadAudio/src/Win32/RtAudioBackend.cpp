@@ -215,13 +215,15 @@ int RtAudioBackend::rtAudioCallback(
     void* callbackUserData = backend->m_userData.load(std::memory_order_relaxed);
     
     if (userCallback) {
-        return userCallback(
+        int result = userCallback(
             static_cast<float*>(outputBuffer),
             static_cast<const float*>(inputBuffer),
             numFrames,
             streamTime,
             callbackUserData
         );
+        backend->m_stats.callbackCount++;
+        return result;
     }
     
     return 0;

@@ -154,6 +154,28 @@ struct PlaylistLane {
 class PlaylistModel {
 public:
     using ChangeCallback = std::function<void()>;
+
+    class ScopedBatchUpdate {
+    public:
+        explicit ScopedBatchUpdate(PlaylistModel& model) : m_model(&model) { m_model->beginBatchUpdate(); }
+        ~ScopedBatchUpdate() { if (m_model) m_model->endBatchUpdate(); }
+
+        ScopedBatchUpdate(const ScopedBatchUpdate&) = delete;
+        ScopedBatchUpdate& operator=(const ScopedBatchUpdate&) = delete;
+
+        ScopedBatchUpdate(ScopedBatchUpdate&& other) noexcept : m_model(other.m_model) { other.m_model = nullptr; }
+        ScopedBatchUpdate& operator=(ScopedBatchUpdate&& other) noexcept {
+            if (this != &other) {
+                if (m_model) m_model->endBatchUpdate();
+                m_model = other.m_model;
+                other.m_model = nullptr;
+            }
+            return *this;
+        }
+
+    private:
+        PlaylistModel* m_model;
+    };
     
     PlaylistModel();
     ~PlaylistModel();
@@ -223,6 +245,10 @@ public:
     // === Observer Pattern ===
     void addChangeObserver(ChangeCallback callback);
     void clearChangeObservers();
+
+    // Suppress change notifications during bulk updates (e.g., deserialization).
+    // Observers will be notified once when the outermost batch ends.
+    ScopedBatchUpdate scopedBatchUpdate() { return ScopedBatchUpdate(*this); }
     
     // === Snapshot Generation ===
     std::unique_ptr<PlaylistRuntimeSnapshot> buildRuntimeSnapshot(
@@ -242,6 +268,8 @@ private:
     PatternManager* m_patternManager = nullptr;
     
     void notifyChange();
+    void beginBatchUpdate();
+    void endBatchUpdate();
     int findLaneIndex(PlaylistLaneID laneId) const;
     std::pair<int, int> findClipLocation(ClipInstanceID clipId) const;
 };

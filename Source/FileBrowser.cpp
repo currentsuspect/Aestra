@@ -1990,7 +1990,7 @@ FileType FileBrowser::getFileTypeFromExtension(const std::string& extension) con
     if (extension == ".mp3") return FileType::Mp3File;
     if (extension == ".flac") return FileType::FlacFile;
     if (extension == ".aiff" || extension == ".aif") return FileType::AudioFile;
-    if (extension == ".nomad" || extension == ".nmd") return FileType::ProjectFile;
+    if (extension == ".nomad" || extension == ".nmd" || extension == ".nomadproj") return FileType::ProjectFile;
     if (extension == ".mid" || extension == ".midi") return FileType::MusicFile;
     
     return FileType::Unknown;

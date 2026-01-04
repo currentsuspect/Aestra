@@ -937,6 +937,8 @@ void WASAPIExclusiveDriver::audioThreadProc() {
             std::fill(userBuffer.begin(), userBuffer.end(), 0.0f);
         }
         
+        m_statistics.callbackCount++;
+
         // Apply soft-start ramp to prevent harsh audio on startup
         if (m_isRamping) {
             for (uint32_t frame = 0; frame < m_bufferFrameCount; ++frame) {

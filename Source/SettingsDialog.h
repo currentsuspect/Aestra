@@ -26,6 +26,8 @@ public:
     void addPage(std::shared_ptr<ISettingsPage> page);
     void setActivePage(const std::string& pageID);
 
+    const std::string& getActivePageID() const { return m_activePageId; }
+
     // NUIComponent overrides
     void onRender(NomadUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
@@ -59,6 +61,8 @@ private:
     std::vector<SidebarItem> m_sidebarItems;
     std::map<std::string, std::shared_ptr<ISettingsPage>> m_pages;
     std::shared_ptr<ISettingsPage> m_activePage;
+
+    std::string m_activePageId;
 
     // Footer buttons
     std::shared_ptr<NomadUI::NUIButton> m_applyButton;

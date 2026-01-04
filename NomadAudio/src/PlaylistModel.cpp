@@ -24,6 +24,9 @@ struct PlaylistModel::Impl {
     std::atomic<uint64_t> modificationCounter{0};
     mutable std::recursive_mutex mutex;
     uint32_t nextLaneNumber = 1;
+
+    int notifySuppressionDepth = 0;
+    bool pendingNotify = false;
 };
 
 PlaylistModel::PlaylistModel()
@@ -350,6 +353,23 @@ void PlaylistModel::clearChangeObservers() {
     m_impl->observers.clear();
 }
 
+void PlaylistModel::beginBatchUpdate() {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
+    m_impl->notifySuppressionDepth++;
+}
+
+void PlaylistModel::endBatchUpdate() {
+    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
+    if (m_impl->notifySuppressionDepth > 0) {
+        m_impl->notifySuppressionDepth--;
+    }
+
+    if (m_impl->notifySuppressionDepth == 0 && m_impl->pendingNotify) {
+        m_impl->pendingNotify = false;
+        notifyChange();
+    }
+}
+
 std::unique_ptr<PlaylistRuntimeSnapshot> PlaylistModel::buildRuntimeSnapshot(
     const PatternManager& patternManager,
     const SourceManager& sourceManager) const {
@@ -454,6 +474,11 @@ uint64_t PlaylistModel::getModificationCounter() const {
 }
 
 void PlaylistModel::notifyChange() {
+    if (m_impl->notifySuppressionDepth > 0) {
+        m_impl->pendingNotify = true;
+        return;
+    }
+
     m_impl->modificationCounter.fetch_add(1);
     for (const auto& callback : m_impl->observers) {
         if (callback) callback();

@@ -382,6 +382,7 @@ ASIO::ASIOTime* ASIODriver::asioBufferSwitch(long doubleBufferIndex, long direct
     
     // 2. Call Engine
     m_callback(m_interleavedOutput.data(), m_interleavedInput.data(), m_bufferSize, 0.0, m_callbackUserData);
+    m_stats.callbackCount++;
     
     // 3. Interleave Output (Interleaved Float -> ASIO)
     int outStart = m_inputChannels;

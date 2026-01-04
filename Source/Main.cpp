@@ -41,6 +41,7 @@
 #include "MixerViewModel.h"
 #include "TransportBar.h"
 #include "SettingsDialog.h"
+#include "WindowPanel.h"
 #include "AudioSettingsPage.h"
 #include "GeneralSettingsPage.h"
 #include "AppearanceSettingsPage.h"
@@ -60,7 +61,10 @@
 #include <memory>
 #include <iostream>
 #include <chrono>
+#include <future>
+#include <unordered_map>
 #include <thread>
+#include <atomic>
 #include <cmath>
 #include <cstring>
 #include <cstdlib>
@@ -306,6 +310,10 @@ std::string getAppDataPath() {
  * @brief Get the autosave file path
  */
 std::string getAutosavePath() {
+    return (std::filesystem::path(getAppDataPath()) / "autosave.nmd").string();
+}
+
+std::string getLegacyAutosavePath() {
     return (std::filesystem::path(getAppDataPath()) / "autosave.nomadproj").string();
 }
 
@@ -1023,7 +1031,13 @@ public:
         m_settingsDialog = std::make_shared<SettingsDialog>();
         
         // Add pages
-        m_settingsDialog->addPage(std::make_shared<GeneralSettingsPage>());
+        auto generalPage = std::make_shared<GeneralSettingsPage>();
+        m_generalSettingsPage = generalPage;
+        generalPage->setOnAutoSaveToggled([this](bool enabled) {
+            m_autoSaveEnabled.store(enabled, std::memory_order_relaxed);
+            Log::info(std::string("[AutoSave] ") + (enabled ? "Enabled" : "Disabled"));
+        });
+        m_settingsDialog->addPage(generalPage);
         
         // Audio page needs dependencies
         auto audioPage = std::make_shared<AudioSettingsPage>(m_audioManager.get(), m_audioEngine.get());
@@ -1173,10 +1187,10 @@ public:
         }
 
         // Main event loop
-	        double deltaTime = 0.0; // Declare outside so it's visible in all zones
-	        double autoSaveTimer = 0.0; // Timer for auto-save (in seconds)
-	        const double autoSaveInterval = 60.0; // Auto-save every 60 seconds
-	        double underrunCheckTimer = 0.0; // Periodic underrun check
+        double deltaTime = 0.0; // Declare outside so it's visible in all zones
+        double autoSaveTimer = 0.0; // Timer for auto-save (in seconds)
+        const double autoSaveInterval = 300.0; // Auto-save every 5 minutes
+        double underrunCheckTimer = 0.0; // Periodic underrun check
         
         while (m_running && m_window->processEvents()) {
             // Begin profiler frame
@@ -1322,40 +1336,18 @@ public:
                         m_audioEngine->commandQueue().push(cmd);
                     }
                 }
-                
-	                // Auto-save check (only when modified and not playing to avoid audio glitches)
-	                autoSaveTimer += deltaTime;
-	                if (autoSaveTimer >= autoSaveInterval) {
-                    autoSaveTimer = 0.0;
-                    
-                    if (m_content && m_content->getTrackManager()) {
-                        bool isModified = m_content->getTrackManager()->isModified();
-                        bool isPlaying = m_content->getTrackManager()->isPlaying();
-                        bool isRecording = m_content->getTrackManager()->isRecording();
-                        
-                        // Only auto-save if modified and not in active audio operation
-                        if (isModified && !isPlaying && !isRecording) {
-                            Log::info("[AutoSave] Saving project...");
-                            if (saveProject()) {
-                                Log::info("[AutoSave] Project saved successfully");
-                            } else {
-                                Log::warning("[AutoSave] Failed to save project");
-	                }
-	                
-	                // Periodically check driver underruns and auto-scale buffer if needed.
-	                underrunCheckTimer += deltaTime;
-	                if (underrunCheckTimer >= 1.0) {
-	                    underrunCheckTimer = 0.0;
-	                    if (m_audioManager) {
-	                        m_audioManager->checkAndAutoScaleBuffer();
-	                    }
-	                }
-	            }
+
+                // Periodically check driver underruns and auto-scale buffer if needed.
+                underrunCheckTimer += deltaTime;
+                if (underrunCheckTimer >= 1.0) {
+                    underrunCheckTimer = 0.0;
+                    if (m_audioManager) {
+                        m_audioManager->checkAndAutoScaleBuffer();
                     }
                 }
             }
 
-            {
+		{
                 NOMAD_ZONE("Render_Prep");
                 
                 // Poll Preview Position if needed
@@ -1364,6 +1356,80 @@ public:
                 }
                 
                 render();
+            }
+
+            // Auto-save bookkeeping and trigger.
+            // Kept post-render so it doesn't block UI_Update/animations.
+            if (m_autoSaveFuture.valid()) {
+                if (m_autoSaveFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+                    bool ok = false;
+                    try {
+                        ok = m_autoSaveFuture.get();
+                    } catch (...) {
+                        ok = false;
+                    }
+                    m_autoSaveInFlight.store(false, std::memory_order_relaxed);
+                    if (!ok) {
+                        // Restore modified flag so we keep trying.
+                        if (m_content && m_content->getTrackManager()) {
+                            m_content->getTrackManager()->setModified(true);
+                        }
+                    }
+                }
+            }
+
+            if (m_autoSaveEnabled.load(std::memory_order_relaxed)) {
+                autoSaveTimer += deltaTime;
+                if (autoSaveTimer >= autoSaveInterval) {
+                    if (m_autoSaveInFlight.load(std::memory_order_relaxed)) {
+                        // Don't reset the timer if a save is in-flight; retry soon.
+                        autoSaveTimer = autoSaveInterval;
+                    } else if (m_content && m_content->getTrackManager()) {
+                        auto trackManager = m_content->getTrackManager();
+                        const bool isModified = trackManager->isModified();
+                        const bool isPlaying = trackManager->isPlaying();
+                        const bool isRecording = trackManager->isRecording();
+
+                        if (isModified && !isPlaying && !isRecording) {
+                            autoSaveTimer = 0.0;
+                            const std::string savePath = getAutosavePath();
+                            double tempo = 120.0;
+                            if (m_content->getTransportBar()) {
+                                tempo = static_cast<double>(m_content->getTransportBar()->getTempo());
+                            }
+                            const double playhead = trackManager->getPosition();
+
+                            auto uiState = captureUIState();
+                            const auto t0 = std::chrono::steady_clock::now();
+                            auto ser = ProjectSerializer::serialize(trackManager, tempo, playhead, 0, &uiState);
+                            const auto t1 = std::chrono::steady_clock::now();
+                            const auto serializeMs = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+
+                            if (!ser.ok) {
+                                Log::warning("[AutoSave] Serialize failed");
+                            } else {
+                                trackManager->setModified(false);
+
+                                m_autoSaveInFlight.store(true, std::memory_order_relaxed);
+                                const size_t bytes = ser.contents.size();
+                                std::string payload = std::move(ser.contents);
+                                m_autoSaveFuture = std::async(
+                                    std::launch::async,
+                                    [savePath, payload = std::move(payload), serializeMs, bytes]() mutable {
+                                        const auto w0 = std::chrono::steady_clock::now();
+                                        const bool ok = ProjectSerializer::writeAtomically(savePath, payload);
+                                        const auto w1 = std::chrono::steady_clock::now();
+                                        const auto writeMs = std::chrono::duration_cast<std::chrono::milliseconds>(w1 - w0).count();
+                                        Log::info("[AutoSave] serialize=" + std::to_string(serializeMs) +
+                                                  "ms write=" + std::to_string(writeMs) +
+                                                  "ms bytes=" + std::to_string(bytes) +
+                                                  (ok ? " ok" : " FAIL"));
+                                        return ok;
+                                    });
+                            }
+                        }
+                    }
+                }
             }
             
             // End frame timing BEFORE swapBuffers (to exclude VSync wait)
@@ -1446,6 +1512,15 @@ public:
      */
     void shutdown() {
         Log::info("[SHUTDOWN] Entering shutdown function...");
+
+        // Avoid racing the autosave writer during shutdown save.
+        if (m_autoSaveFuture.valid()) {
+            try {
+                m_autoSaveFuture.wait();
+            } catch (...) {
+                // ignore
+            }
+        }
         
         // Note: m_running is already false when we exit the main loop
         // Use a separate flag to prevent double-shutdown
@@ -1518,15 +1593,25 @@ public:
             return {};
         }
         
-        // Check if autosave file exists before attempting to load
-        if (!std::filesystem::exists(m_projectPath)) {
-            Log::info("[loadProject] No previous project file found at: " + m_projectPath);
-            return {};  // Return empty result, not an error
+        // Check if autosave file exists before attempting to load (support legacy extension).
+        std::string loadPath = m_projectPath;
+        if (!std::filesystem::exists(loadPath)) {
+            const std::string legacy = getLegacyAutosavePath();
+            if (std::filesystem::exists(legacy)) {
+                loadPath = legacy;
+            } else {
+                Log::info("[loadProject] No previous project file found at: " + m_projectPath);
+                return {};  // Return empty result, not an error
+            }
         }
         
         try {
-            Log::info("[loadProject] Loading from: " + m_projectPath);
-            return ProjectSerializer::load(m_projectPath, m_content->getTrackManager());
+            Log::info("[loadProject] Loading from: " + loadPath);
+            auto res = ProjectSerializer::load(loadPath, m_content->getTrackManager());
+            if (res.ok && res.ui.has_value()) {
+                applyUIState(res.ui.value());
+            }
+            return res;
         } catch (const std::exception& e) {
             Log::error("[loadProject] Exception: " + std::string(e.what()));
             return {};
@@ -1543,7 +1628,8 @@ public:
         if (m_content->getTransportBar()) {
             tempo = m_content->getTransportBar()->getTempo();
         }
-        bool saved = ProjectSerializer::save(m_projectPath, m_content->getTrackManager(), tempo, playhead);
+        auto uiState = captureUIState();
+        bool saved = ProjectSerializer::save(m_projectPath, m_content->getTrackManager(), tempo, playhead, &uiState);
         if (saved && m_content->getTrackManager()) {
             m_content->getTrackManager()->setModified(false);
         }
@@ -1604,6 +1690,103 @@ public:
             Log::warning("[requestClose] No confirmation dialog, closing immediately");
             m_running = false;
         }
+    }
+
+    ProjectSerializer::UIState captureUIState() const {
+        ProjectSerializer::UIState state;
+
+        if (m_settingsDialog) {
+            state.settingsDialogVisible = m_settingsDialog->isVisible();
+            state.settingsDialogActivePage = m_settingsDialog->getActivePageID();
+        }
+
+        if (m_rootComponent) {
+            std::function<void(NomadUI::NUIComponent*)> walk = [&](NomadUI::NUIComponent* comp) {
+                if (!comp) return;
+
+                if (auto* panel = dynamic_cast<Nomad::Audio::WindowPanel*>(comp)) {
+                    auto b = panel->getBounds();
+                    ProjectSerializer::PanelState ps;
+                    ps.title = panel->getTitle();
+                    ps.x = static_cast<double>(b.x);
+                    ps.y = static_cast<double>(b.y);
+                    ps.width = static_cast<double>(b.width);
+                    ps.height = static_cast<double>(b.height);
+                    ps.expandedHeight = static_cast<double>(panel->getExpandedHeight());
+                    ps.minimized = panel->isMinimized();
+                    ps.maximized = panel->isMaximized();
+                    ps.userPositioned = panel->isUserPositioned();
+                    state.panels.push_back(std::move(ps));
+                }
+
+                for (const auto& child : comp->getChildren()) {
+                    walk(child.get());
+                }
+            };
+
+            walk(m_rootComponent.get());
+        }
+
+        return state;
+    }
+
+    void applyUIState(const ProjectSerializer::UIState& state) {
+        if (m_settingsDialog) {
+            if (!state.settingsDialogActivePage.empty()) {
+                m_settingsDialog->setActivePage(state.settingsDialogActivePage);
+            }
+            if (state.settingsDialogVisible) {
+                m_settingsDialog->show();
+            } else {
+                m_settingsDialog->hide();
+            }
+        }
+
+        if (!m_rootComponent) return;
+
+        std::unordered_map<std::string, const ProjectSerializer::PanelState*> byTitle;
+        for (const auto& p : state.panels) {
+            byTitle[p.title] = &p;
+        }
+
+        std::function<void(NomadUI::NUIComponent*)> walk = [&](NomadUI::NUIComponent* comp) {
+            if (!comp) return;
+
+            if (auto* panel = dynamic_cast<Nomad::Audio::WindowPanel*>(comp)) {
+                auto it = byTitle.find(panel->getTitle());
+                if (it != byTitle.end() && it->second) {
+                    const auto& ps = *it->second;
+
+                    // Persisted state takes precedence; mark user-positioned to keep it stable.
+                    panel->setUserPositioned(ps.userPositioned);
+
+                    // If minimized, restore expanded height by setting expanded bounds first.
+                    if (ps.minimized && ps.expandedHeight > 0.0) {
+                        panel->setBounds(NomadUI::NUIRect(
+                            static_cast<float>(ps.x),
+                            static_cast<float>(ps.y),
+                            static_cast<float>(ps.width),
+                            static_cast<float>(ps.expandedHeight)));
+                        panel->setMinimized(true);
+                    } else {
+                        panel->setBounds(NomadUI::NUIRect(
+                            static_cast<float>(ps.x),
+                            static_cast<float>(ps.y),
+                            static_cast<float>(ps.width),
+                            static_cast<float>(ps.height)));
+                        panel->setMinimized(false);
+                    }
+
+                    panel->setMaximized(ps.maximized);
+                }
+            }
+
+            for (const auto& child : comp->getChildren()) {
+                walk(child.get());
+            }
+        };
+
+        walk(m_rootComponent.get());
     }
 
 private:
@@ -2324,9 +2507,11 @@ private:
             tempo = static_cast<double>(m_content->getTransportBar()->getTempo());
         }
         double playhead = m_content->getTrackManager()->getPosition();
+
+        auto uiState = captureUIState();
         
         // Pass shared_ptr directly (not raw pointer)
-        if (ProjectSerializer::save(savePath, m_content->getTrackManager(), tempo, playhead)) {
+        if (ProjectSerializer::save(savePath, m_content->getTrackManager(), tempo, playhead, &uiState)) {
             Log::info("Project saved to: " + savePath);
         } else {
             Log::error("Failed to save project");
@@ -2446,6 +2631,7 @@ private:
     std::shared_ptr<NomadContent> m_content;
     std::shared_ptr<SettingsDialog> m_settingsDialog;
     std::shared_ptr<AudioSettingsPage> m_audioSettingsPage; // Accessed by audio callback
+    std::shared_ptr<GeneralSettingsPage> m_generalSettingsPage;
     std::shared_ptr<ConfirmationDialog> m_confirmationDialog;
     std::shared_ptr<UnifiedHUD> m_unifiedHUD;
     std::unique_ptr<NomadUI::NUIAdaptiveFPS> m_adaptiveFPS;
@@ -2455,6 +2641,11 @@ private:
     bool m_pendingClose{false};  // Set when user requested close but awaiting dialog response
     AudioStreamConfig m_mainStreamConfig;  // Store main audio stream configuration
     std::string m_projectPath{getAutosavePath()};
+
+    // Auto-save (default ON). Serialize on main thread, write on background thread.
+    std::atomic<bool> m_autoSaveEnabled{true};
+    std::atomic<bool> m_autoSaveInFlight{false};
+    std::future<bool> m_autoSaveFuture;
     NomadUI::NUIModifiers m_keyModifiers{NomadUI::NUIModifiers::None};
     
     // Mouse tracking for global drag-and-drop handling

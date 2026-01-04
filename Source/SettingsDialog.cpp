@@ -100,6 +100,7 @@ void SettingsDialog::setActivePage(const std::string& pageID) {
         if (m_activePage) m_activePage->onHide();
         
         m_activePage = it->second;
+        m_activePageId = pageID;
         m_activePage->onShow();
         
         // Update selection state
