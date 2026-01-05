@@ -61,6 +61,11 @@ public:
      */
     Nomad::MixerViewModel* getViewModel() { return m_viewModel.get(); }
 
+    /**
+     * @brief Get the inspector.
+     */
+    UIMixerInspector* getInspector() { return m_inspector.get(); }
+
 private:
     std::shared_ptr<Nomad::MixerViewModel> m_viewModel;
     std::shared_ptr<Nomad::Audio::MeterSnapshotBuffer> m_meterSnapshots;

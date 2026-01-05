@@ -31,6 +31,7 @@ public:
     // Mixer operations
     void refreshChannels();
     std::shared_ptr<MixerViewModel> getViewModel() const { return m_viewModel; }
+    std::shared_ptr<NomadUI::UIMixerPanel> getMixerUI() const { return m_newMixer; }
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;

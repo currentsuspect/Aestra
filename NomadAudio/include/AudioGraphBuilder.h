@@ -21,7 +21,7 @@ public:
      * @param trackManager Source track manager (UI/engine thread)
      * @param outputSampleRate Target sample rate for rendering (engine/device rate)
      */
-    static AudioGraph buildFromTrackManager(const TrackManager& trackManager, double outputSampleRate);
+    static AudioGraph buildFromTrackManager(TrackManager& trackManager, double outputSampleRate);
 };
 
 } // namespace Audio

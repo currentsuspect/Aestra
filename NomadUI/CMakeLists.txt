@@ -118,6 +118,10 @@ list(APPEND NOMADUI_CORE_SOURCES
     Widgets/PluginBrowserPanel.cpp
     Widgets/PluginUIController.h
     Widgets/PluginUIController.cpp
+    Widgets/PluginSelectorMenu.h
+    Widgets/PluginSelectorMenu.cpp
+    Widgets/GenericPluginEditor.h
+    Widgets/GenericPluginEditor.cpp
 )
 
 set(NOMADUI_GRAPHICS_SOURCES

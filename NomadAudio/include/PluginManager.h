@@ -12,6 +12,8 @@
 namespace Nomad {
 namespace Audio {
 
+class IPluginFactory; // [NEW] Forward declaration
+
 /**
  * @brief Central manager for plugin lifecycle and instances
  * 
@@ -171,6 +173,23 @@ public:
     void setDefaultBlockSize(uint32_t blockSize) { m_defaultBlockSize = blockSize; }
     uint32_t getDefaultBlockSize() const { return m_defaultBlockSize; }
     
+    // ==============================
+    // Factory Management
+    // ==============================
+
+    /**
+     * @brief Create a new plugin instance asynchronously (or pseudo-async)
+     * 
+     * @param info Plugin info from scanner
+     * @param callback Callback to receive the instance
+     */
+    void createInstanceAsync(const PluginInfo& info, std::function<void(PluginInstancePtr)> callback);
+
+    /**
+     * @brief Create instance by plugin ID asynchronously
+     */
+    void createInstanceByIdAsync(const std::string& pluginId, std::function<void(PluginInstancePtr)> callback);
+
 private:
     PluginManager();
     ~PluginManager();
@@ -184,14 +203,10 @@ private:
     
     PluginScanner m_scanner;
     std::vector<std::weak_ptr<IPluginInstance>> m_activeInstances;
-    
+    std::unique_ptr<IPluginFactory> m_factory; // [NEW] Abstract factory
+
     double m_defaultSampleRate = 44100.0;
     uint32_t m_defaultBlockSize = 512;
-    
-    // Format-specific factory methods
-    PluginInstancePtr createVST3Instance(const PluginInfo& info);
-    PluginInstancePtr createCLAPInstance(const PluginInfo& info);
-    PluginInstancePtr createInternalInstance(const PluginInfo& info);
     
     // Cleanup expired weak_ptrs
     void cleanupExpiredInstances();

@@ -10,6 +10,8 @@ namespace Nomad {
 namespace Audio {
 
 struct AudioBuffer; // Forward declaration (defined in SamplePool.h)
+class EffectChain;  // Forward declaration
+
 
 /**
  * @brief Render-time clip state used by the audio thread.
@@ -58,6 +60,7 @@ struct TrackRenderState {
     // Routing (v3.1)
     uint32_t mainOutputId{0xFFFFFFFF}; // Master
     std::vector<AudioRoute> sends;
+    EffectChain* effectChain{nullptr};
 };
 
 /**

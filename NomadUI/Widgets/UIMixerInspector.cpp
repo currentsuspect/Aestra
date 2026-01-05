@@ -5,6 +5,7 @@
 #include "../../NomadCore/include/NomadLog.h"
 #include "../Graphics/NUIRenderer.h"
 #include "NUIMixerWidgets.h"
+#include "PluginBrowserPanel.h"
 #include "../../Source/MixerViewModel.h"
 
 #include <algorithm>
@@ -26,6 +27,9 @@ UIMixerInspector::UIMixerInspector(Nomad::MixerViewModel* viewModel)
     : m_viewModel(viewModel)
 {
     cacheThemeColors();
+
+    m_effectRack = std::make_shared<EffectChainRack>();
+    addChild(m_effectRack);
 }
 
 void UIMixerInspector::cacheThemeColors()
@@ -47,6 +51,15 @@ void UIMixerInspector::setActiveTab(Tab tab)
 {
     if (m_activeTab == tab) return;
     m_activeTab = tab;
+
+    // Update child visibility
+    if (m_effectRack) {
+        m_effectRack->setVisible(m_activeTab == Tab::Inserts);
+    }
+    for (auto& w : m_sendWidgets) {
+        w->setVisible(m_activeTab == Tab::Sends);
+    }
+
     repaint();
 }
 
@@ -79,6 +92,13 @@ void UIMixerInspector::onResize(int width, int height)
 {
     NUIComponent::onResize(width, height);
     layoutHitRects();
+
+    const auto b = getBounds();
+    const float contentTop = PAD + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
+    if (m_effectRack) {
+        float rackH = std::max(0.0f, b.height - contentTop - 18.0f - PAD);
+        m_effectRack->setBounds(b.x + PAD, b.y + contentTop + 18.0f, b.width - PAD * 2.0f, rackH);
+    }
 }
 
 int UIMixerInspector::findTrackNumber(uint32_t channelId) const
@@ -251,12 +271,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         }
         renderer.drawText(buf, {contentRect.x, contentRect.y}, 11.0f, m_textSecondary);
 
-        // "Add FX" placeholder button
-        NUIColor addBg = m_addPressed ? m_addHover : (m_addHovered ? m_addHover : m_addBg);
-        renderer.fillRoundedRect(m_addFxRect, ROW_RADIUS, addBg);
-        renderer.strokeRoundedRect(m_addFxRect, ROW_RADIUS, 1.0f, m_border);
-        renderer.drawTextCentered("Add FX", m_addFxRect, 11.0f, m_addText);
-        renderer.drawTextCentered("Add FX", m_addFxRect, 11.0f, m_addText);
+        // Rack is rendered by renderChildren() if visible
     } else if (m_activeTab == Tab::Sends) {
         // Sends Tab
         const int sendCount = static_cast<int>(m_sendWidgets.size());
@@ -287,8 +302,6 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         renderer.drawTextCentered("Add Send", m_addFxRect, 11.0f, m_addText);
 
     } else {
-        // Hide send widgets if not on sends tab
-        for (auto& w : m_sendWidgets) w->setVisible(false);
         renderer.drawTextCentered("Coming soon", contentRect, 11.0f, m_textSecondary);
     }
 
@@ -313,12 +326,15 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || !isEnabled()) return false;
 
-    // 1. Allow children (UIMixerSend widgets) to handle events
-    if (NUIComponent::onMouseEvent(event)) return true;
-
     const auto b = getBounds();
-    // Optimization: if outside bounds and not a drag/release (which might originate inside), ignore.
-    if (!b.contains(event.position) && event.button != NUIMouseButton::None) return false;
+    
+    // Early exit if event is outside our bounds (except for drags that might have started inside)
+    if (!b.contains(event.position) && event.button != NUIMouseButton::None) {
+        return false;
+    }
+
+    // 1. Allow children (UIMixerSend widgets, EffectChainRack) to handle events
+    if (NUIComponent::onMouseEvent(event)) return true;
 
     if (event.button == NUIMouseButton::None) {
         const int tab = hitTestTab(event.position);
@@ -332,7 +348,7 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
             m_addHovered = addHover;
             repaint();
         }
-        // Consume hover if inside bounds to prevent hover-through
+        // Consume hover if inside bounds to prevent hover-through to components behind
         return b.contains(event.position);
     }
 
@@ -369,12 +385,8 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
         }
     }
 
-    // Block click-through: Consume any mouse event that occurred within our bounds
-    if (b.contains(event.position)) {
-        return true;
-    }
-
-    return false;
+    // Consume events within our visual bounds to prevent clickthrough
+    return b.contains(event.position);
 }
 
 } // namespace NomadUI

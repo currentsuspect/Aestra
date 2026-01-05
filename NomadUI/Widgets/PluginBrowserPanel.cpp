@@ -2,7 +2,9 @@
 
 #include "PluginBrowserPanel.h"
 #include "../Graphics/NUIRenderer.h"
+#include "../Core/NUIDragDrop.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstring>
 
@@ -35,7 +37,7 @@ PluginBrowserPanel::PluginBrowserPanel() {
 }
 
 void PluginBrowserPanel::onRender(NUIRenderer& renderer) {
-    std::lock_guard<std::mutex> lock(m_uiMutex);
+    std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
     auto bounds = getBounds();
     
     renderer.fillRoundedRect(bounds, 8.0f, Colors::panelBackground);
@@ -58,8 +60,15 @@ void PluginBrowserPanel::renderHeader(NUIRenderer& renderer) {
     renderer.drawText("Plugins", {bounds.x + 16, y + 12}, 16.0f, Colors::textPrimary);
     
     NUIRect scanBtn = {bounds.x + bounds.width - 80, y + 8, 64, 24};
-    renderer.fillRoundedRect(scanBtn, 4.0f, Colors::buttonBackground);
-    renderer.drawText("Scan", {scanBtn.x + 16, scanBtn.y + 5}, 12.0f, Colors::textPrimary);
+    
+    // Show different button state when scanning
+    if (m_scanning) {
+        renderer.fillRoundedRect(scanBtn, 4.0f, Colors::panelBorder); // Dimmed
+        renderer.drawText("...", {scanBtn.x + 24, scanBtn.y + 5}, 12.0f, Colors::textDisabled);
+    } else {
+        renderer.fillRoundedRect(scanBtn, 4.0f, Colors::buttonBackground);
+        renderer.drawText("Scan", {scanBtn.x + 16, scanBtn.y + 5}, 12.0f, Colors::textPrimary);
+    }
 }
 
 void PluginBrowserPanel::renderTabs(NUIRenderer& renderer) {
@@ -183,7 +192,10 @@ void PluginBrowserPanel::renderScanProgress(NUIRenderer& renderer) {
 }
 
 bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
-    std::lock_guard<std::mutex> lock(m_uiMutex);
+    // Early exit if not visible - don't lock mutex or consume events
+    if (!isVisible()) return false;
+    
+    std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
     auto bounds = getBounds();
     float mx = event.position.x;
     float my = event.position.y;
@@ -211,27 +223,85 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
             }
         }
         
-        // Plugin list clicks
+        // Plugin list clicks (Press down)
         float listTop = bounds.y + HEADER_HEIGHT + TAB_HEIGHT + SEARCH_HEIGHT;
         if (my >= listTop) {
             int rowIndex = hitTestRow(static_cast<int>(my));
             if (rowIndex >= 0 && rowIndex < static_cast<int>(m_filteredPlugins.size())) {
-                m_selectedIndex = rowIndex;
-                if (m_onPluginSelected) {
-                    m_onPluginSelected(m_filteredPlugins[rowIndex]);
-                }
+                // Initiate potential drag or click
+                m_isPressed = true;
+                m_pressedIndex = rowIndex;
+                m_dragStartPos = event.position;
                 return true;
             }
         }
         
-        // Scan button
+        // Scan button (ignore if already scanning)
         NUIRect scanBtn = {bounds.x + bounds.width - 80, bounds.y + 8, 64, 24};
         if (mx >= scanBtn.x && mx < scanBtn.x + scanBtn.width &&
             my >= scanBtn.y && my < scanBtn.y + scanBtn.height) {
-            if (m_onScanRequested) {
+            if (!m_scanning && m_onScanRequested) {
                 m_onScanRequested();
             }
             return true;
+        }
+    }
+    // Handle Release (Click)
+    else if (event.released && event.button == NUIMouseButton::Left) {
+        if (m_isPressed) {
+            // Was a click
+            if (m_pressedIndex >= 0 && m_pressedIndex < static_cast<int>(m_filteredPlugins.size())) {
+                // Check for double-click (same index within 300ms)
+                auto now = std::chrono::steady_clock::now();
+                double elapsed = std::chrono::duration<double>(now.time_since_epoch()).count() - m_lastClickTime;
+                
+                if (m_pressedIndex == m_lastClickIndex && elapsed < 0.3) {
+                    // Double-click detected - trigger load
+                    if (m_onPluginLoadRequested) {
+                        m_onPluginLoadRequested(m_filteredPlugins[m_pressedIndex]);
+                    }
+                    m_lastClickIndex = -1; // Reset to prevent triple-click triggering
+                    m_lastClickTime = 0.0;
+                } else {
+                    // Single click - select and record for double-click detection
+                    m_selectedIndex = m_pressedIndex;
+                    if (m_onPluginSelected) {
+                        m_onPluginSelected(m_filteredPlugins[m_pressedIndex]);
+                    }
+                    m_lastClickIndex = m_pressedIndex;
+                    m_lastClickTime = std::chrono::duration<double>(now.time_since_epoch()).count();
+                }
+            }
+            m_isPressed = false;
+            m_pressedIndex = -1;
+            return true;
+        }
+    }
+    // Handle Drag
+    else if (!event.pressed && !event.released) { // Mouse Move
+        if (m_isPressed) {
+            float dx = event.position.x - m_dragStartPos.x;
+            float dy = event.position.y - m_dragStartPos.y;
+            float dist = std::sqrt(dx*dx + dy*dy);
+            
+            if (dist > 5.0f) {
+                // Start Drag
+                if (m_pressedIndex >= 0 && m_pressedIndex < static_cast<int>(m_filteredPlugins.size())) {
+                    const auto& plugin = m_filteredPlugins[m_pressedIndex];
+                    
+                    NomadUI::DragData data;
+                    data.type = NomadUI::DragDataType::Plugin;
+                    data.displayName = plugin.name;
+                    data.sourceClipIdString = plugin.id;
+                    
+                    NomadUI::NUIDragDropManager::getInstance().beginDrag(data, m_dragStartPos, this);
+                    
+                    // Consume interaction
+                    m_isPressed = false;
+                    m_pressedIndex = -1;
+                    return true;
+                }
+            }
         }
     }
     
@@ -255,7 +325,8 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
     
-    return false;
+    // Consume event if mouse is within our bounds to prevent click-through
+    return bounds.contains(event.position);
 }
 
 bool PluginBrowserPanel::onKeyEvent(const NUIKeyEvent& event) {
@@ -273,7 +344,7 @@ void PluginBrowserPanel::onUpdate(double deltaTime) {
 }
 
 void PluginBrowserPanel::setPluginList(const std::vector<PluginListItem>& plugins) {
-    std::lock_guard<std::mutex> lock(m_uiMutex);
+    std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
     m_allPlugins = plugins;
     for (auto& p : m_allPlugins) {
         p.isFavorite = std::find(m_favorites.begin(), m_favorites.end(), p.id) != m_favorites.end();
@@ -408,13 +479,13 @@ void PluginBrowserPanel::setOnScanRequested(std::function<void()> callback) {
 }
 
 void PluginBrowserPanel::setScanning(bool scanning, float progress) {
-    std::lock_guard<std::mutex> lock(m_uiMutex);
+    std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
     m_scanning = scanning;
     m_scanProgress = progress;
 }
 
 void PluginBrowserPanel::setScanStatus(const std::string& status) {
-    std::lock_guard<std::mutex> lock(m_uiMutex);
+    std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
     m_scanStatus = status;
 }
 
@@ -436,7 +507,7 @@ int PluginBrowserPanel::hitTestRow(int y) const {
 // ============================================================================
 
 EffectChainRack::EffectChainRack() {
-    setSize(200, MAX_SLOTS * SLOT_HEIGHT + 10);
+    setId("EffectChainRack");
     
     for (auto& slot : m_slots) {
         slot.name = "Empty";
@@ -451,9 +522,14 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
     renderer.fillRoundedRect(bounds, 6.0f, Colors::panelBackground);
     renderer.strokeRoundedRect(bounds, 6.0f, 1.0f, Colors::panelBorder);
     
+    // Enable clipping
+    renderer.setClipRect(bounds);
+    
     for (int i = 0; i < MAX_SLOTS; ++i) {
-        renderSlot(renderer, i, bounds.y + 5 + i * SLOT_HEIGHT);
+        renderSlot(renderer, i, bounds.y + 5 + i * SLOT_HEIGHT - m_scrollOffset);
     }
+    
+    renderer.clearClipRect();
 }
 
 void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset) {
@@ -488,28 +564,66 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
 }
 
 bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
+    if (!isVisible()) return false;
+
+    auto bounds = getBounds();
+    
+    // Early exit if mouse is outside our bounds
+    if (!bounds.contains(event.position)) {
+        // Clear hover state if mouse leaves
+        if (m_hoveredSlot != -1) {
+            m_hoveredSlot = -1;
+            repaint();
+        }
+        return false;
+    }
+
+    // Wheel support - only handle if mouse is over the rack
+    if (event.wheelDelta != 0) {
+        m_scrollOffset -= event.wheelDelta * 20.0f;
+        
+        // Clamp scroll
+        float contentHeight = MAX_SLOTS * SLOT_HEIGHT + 10;
+        float viewHeight = getBounds().height;
+        m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, std::max(0.0f, contentHeight - viewHeight));
+        
+        repaint();
+        return true;
+    }
+
     float my = event.position.y;
     
     // Update hover
-    m_hoveredSlot = hitTestSlot(static_cast<int>(my));
+    m_hoveredSlot = hitTestSlot(my);
     
     // Handle click
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        int slot = hitTestSlot(static_cast<int>(my));
+        int slot = hitTestSlot(my);
         if (slot >= 0 && slot < MAX_SLOTS) {
-            if (m_slots[slot].isEmpty) {
+            auto now = std::chrono::steady_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastClickTime).count();
+            
+            bool isDoubleClick = (slot == m_lastClickSlot && elapsed < 300);
+            
+            if (isDoubleClick) {
                 if (m_onAddPluginRequested) {
                     m_onAddPluginRequested(slot);
                 }
+                m_lastClickSlot = -1; // Reset
             } else {
-                if (m_onSlotClicked) {
-                    m_onSlotClicked(slot);
+                if (!m_slots[slot].isEmpty) {
+                    if (m_onSlotClicked) {
+                        m_onSlotClicked(slot);
+                    }
                 }
+                m_lastClickTime = now;
+                m_lastClickSlot = slot;
             }
             return true;
         }
     }
     
+    // Don't consume events we didn't handle - let them pass through
     return false;
 }
 
@@ -543,12 +657,17 @@ void EffectChainRack::setOnAddPluginRequested(std::function<void(int)> callback)
     m_onAddPluginRequested = std::move(callback);
 }
 
-int EffectChainRack::hitTestSlot(int y) const {
+int EffectChainRack::hitTestSlot(float y) const {
     auto bounds = getBounds();
-    if (y < bounds.y + 5 || y > bounds.y + bounds.height - 5) {
+    if (!bounds.contains({bounds.x + 10, y})) {
         return -1;
     }
-    return static_cast<int>((y - bounds.y - 5) / SLOT_HEIGHT);
+    
+    int index = static_cast<int>((y - bounds.y - 5 + m_scrollOffset) / SLOT_HEIGHT);
+    if (index >= 0 && index < MAX_SLOTS) {
+        return index;
+    }
+    return -1;
 }
 
 } // namespace NomadUI

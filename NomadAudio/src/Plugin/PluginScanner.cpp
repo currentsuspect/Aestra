@@ -137,10 +137,16 @@ void PluginScanner::scanAsync(ScanProgressCallback progressCallback,
         
         m_scanning.store(false);
         
-        // Call completion callback
-        if (completeCallback) {
+        // Call completion callback OUTSIDE the mutex lock to prevent deadlock
+        // when the callback tries to update UI that has its own mutex
+        std::vector<PluginInfo> resultsCopy;
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
-            completeCallback(m_scannedPlugins, success);
+            resultsCopy = m_scannedPlugins;
+        }
+        
+        if (completeCallback) {
+            completeCallback(resultsCopy, success);
         }
     });
 }

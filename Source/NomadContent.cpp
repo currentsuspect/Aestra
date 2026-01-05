@@ -11,6 +11,12 @@
 #include "PatternBrowserPanel.h"
 
 #include "NomadContent.h"
+#include "../NomadUI/Widgets/PluginBrowserPanel.h"
+#include "../NomadUI/Widgets/PluginUIController.h"
+#include "../NomadUI/Widgets/UIMixerPanel.h"
+#include "../NomadUI/Widgets/UIMixerInspector.h"
+#include "../NomadAudio/include/PluginManager.h"
+#include "../NomadAudio/include/MixerChannel.h"
 
 // NomadUI includes
 #include "../NomadUI/Graphics/NUIRenderer.h"
@@ -48,6 +54,13 @@ using namespace Nomad::Audio;
 // SECTION: Construction
 // =============================================================================
 
+NomadContent::~NomadContent() {
+    // Cancel any running plugin scan to prevent callbacks from accessing dead pointers
+    auto& pm = Nomad::Audio::PluginManager::getInstance();
+    pm.getScanner().cancelScan();
+    // Note: PluginManager's destructor will join the scan thread
+}
+
 NomadContent::NomadContent() {
     // Create layers
     m_workspaceLayer = std::make_shared<NomadUI::NUIComponent>();
@@ -56,6 +69,16 @@ NomadContent::NomadContent() {
 
     m_overlayLayer = std::make_shared<OverlayLayer>();
     addChild(m_overlayLayer);
+
+    // Create Plugin Controller
+    m_pluginController = std::make_shared<PluginUIController>();
+    m_pluginController->setPluginManager(&PluginManager::getInstance());
+    m_pluginController->setPluginScanner(&PluginManager::getInstance().getScanner());
+    m_pluginController->setPopupLayer(m_overlayLayer.get());
+
+    m_pluginController->setOnPluginLoaded([this](const std::string&, int) {
+        if (m_trackManager) m_trackManager->markModified();
+    });
 
     // Create track manager for multi-track functionality
     m_trackManager = std::make_shared<TrackManager>();
@@ -72,6 +95,23 @@ NomadContent::NomadContent() {
     
     m_workspaceLayer->addChild(m_trackManagerUI);
 
+    // Create Browser Toggle (Files | Plugins)
+    m_browserToggle = std::make_shared<NomadUI::NUISegmentedControl>(
+        std::vector<std::string>{"Files", "Plugins"}
+    );
+    m_browserToggle->setCornerRadius(8.0f);
+    m_browserToggle->setOnSelectionChanged([this](size_t index) {
+        bool showFiles = (index == 0);
+        if (m_fileBrowser) m_fileBrowser->setVisible(showFiles);
+        if (m_pluginBrowser) m_pluginBrowser->setVisible(!showFiles);
+        // Preview panel only relevant for files currently
+        if (m_previewPanel) m_previewPanel->setVisible(showFiles);
+        
+        // Re-layout
+        onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
+    });
+    m_workspaceLayer->addChild(m_browserToggle);
+
     // Create file browser (add to workspace)
     m_fileBrowser = std::make_shared<NomadUI::FileBrowser>();
     m_fileBrowser->setOnFileOpened([this](const NomadUI::FileItem& file) {
@@ -84,6 +124,99 @@ NomadContent::NomadContent() {
     });
 
     m_workspaceLayer->addChild(m_fileBrowser);
+    
+    // Create Plugin Browser
+    m_pluginBrowser = std::make_shared<NomadUI::PluginBrowserPanel>();
+    m_pluginBrowser->setVisible(false); // Hidden by default
+    
+    // Populate initial list
+    auto& pm = Nomad::Audio::PluginManager::getInstance();
+    std::vector<NomadUI::PluginListItem> uiPlugins;
+    // Map internal PluginInfo to UI item
+    for (const auto& p : pm.getScanner().getScannedPlugins()) {
+        NomadUI::PluginListItem item;
+        item.id = p.id;
+        item.name = p.name;
+        item.vendor = p.vendor;
+        item.version = p.version;
+        item.category = p.category;
+        item.formatStr = (p.format == Nomad::Audio::PluginFormat::VST3) ? "VST3" : "CLAP";
+        item.typeName = (p.type == Nomad::Audio::PluginType::Instrument) ? "Instrument" : "Effect";
+        uiPlugins.push_back(item);
+    }
+    m_pluginBrowser->setPluginList(uiPlugins);
+    
+    // Scan callback
+    m_pluginBrowser->setOnScanRequested([this]() {
+        auto& pm = Nomad::Audio::PluginManager::getInstance();
+        
+        // Prevent spam-clicking: don't start a new scan if one is already running
+        if (pm.getScanner().isScanning()) {
+            Log::info("Scan already in progress, ignoring request.");
+            return;
+        }
+        
+        Log::info("Scan requested by user.");
+        
+        // Set UI to scanning state
+        if (m_pluginBrowser) {
+            m_pluginBrowser->setScanning(true, 0.0f);
+            m_pluginBrowser->setScanStatus("Scanning...");
+        }
+        
+        pm.getScanner().scanAsync([this](const std::string& path, int current, int total) {
+             // Update progress
+             if (m_pluginBrowser && total > 0) {
+                 float progress = static_cast<float>(current) / static_cast<float>(total);
+                 m_pluginBrowser->setScanning(true, progress);
+                 m_pluginBrowser->setScanStatus("Scanning: " + path);
+             }
+        }, [this](const std::vector<Nomad::Audio::PluginInfo>& results, bool success) {
+            // Clear scanning state
+            if (m_pluginBrowser) {
+                m_pluginBrowser->setScanning(false, 0.0f);
+                m_pluginBrowser->setScanStatus("");
+            }
+            
+            if (success) {
+                // Map results to UI items
+                std::vector<NomadUI::PluginListItem> uiPlugins;
+                for (const auto& p : results) {
+                    NomadUI::PluginListItem item;
+                    item.id = p.id;
+                    item.name = p.name;
+                    item.vendor = p.vendor;
+                    item.version = p.version;
+                    item.category = p.category;
+                    item.formatStr = (p.format == Nomad::Audio::PluginFormat::VST3) ? "VST3" : "CLAP";
+                    item.typeName = (p.type == Nomad::Audio::PluginType::Instrument) ? "Instrument" : "Effect";
+                    uiPlugins.push_back(item);
+                }
+                
+                if (m_pluginBrowser) {
+                    m_pluginBrowser->setPluginList(uiPlugins);
+                }
+                Log::info("Scan complete. UI updated with " + std::to_string(results.size()) + " plugins.");
+            } else {
+                Log::error("Plugin scan failed or cancelled.");
+            }
+        });
+    });
+
+    // Plugin load callback (double-click)
+    m_pluginBrowser->setOnPluginLoadRequested([this](const NomadUI::PluginListItem& plugin) {
+        Log::info("Plugin load requested: " + plugin.name + " (" + plugin.typeName + ")");
+        if (plugin.typeName == "Effect") {
+            loadEffectToSelectedTrack(plugin.id);
+        } else if (plugin.typeName == "Instrument") {
+            loadInstrumentToArsenal(plugin.id);
+        }
+    });
+    
+    // Bind browser to controller
+    m_pluginController->bindBrowser(m_pluginBrowser.get());
+
+    m_workspaceLayer->addChild(m_pluginBrowser);
 
     // Create file preview panel (add to workspace, below browser)
     m_previewPanel = std::make_shared<NomadUI::FilePreviewPanel>();
@@ -253,10 +386,62 @@ void NomadContent::onUpdate(double dt) {
                     viewModel->syncFromEngine(*tm, *slotMap);
                     m_mixerPanel->refreshChannels();
                     Log::info("Refreshed mixer channels from engine update");
+                    
+                    // Force refresh the rack display if we have one bound
+                    if (m_pluginController) {
+                        auto mixerUI = m_mixerPanel->getMixerUI();
+                        if (mixerUI) {
+                            auto inspector = mixerUI->getInspector();
+                            if (inspector && inspector->getEffectRack()) {
+                                m_pluginController->refreshRackDisplay(inspector->getEffectRack().get());
+                            }
+                        }
+                    }
                  }
              }
          }
          tm->setModified(false);
+    }
+    
+    // Update Plugin UI Binding (Effect Rack in Inspector)
+    if (m_mixerPanel && m_pluginController) {
+        auto viewModel = m_mixerPanel->getViewModel();
+        if (viewModel) {
+            auto selectedCh = viewModel->getSelectedChannel();
+            uint32_t selectedId = selectedCh ? selectedCh->id : 0xFFFFFFFFu;
+            
+            if (selectedId != m_lastSelectedChannelId) {
+                m_lastSelectedChannelId = selectedId;
+                
+                // Unbind previous if any
+                // (bindEffectRack currently handles one rack at a time if we reuse the pointer,
+                // but let's be safe and assume we need to manage it)
+                
+                if (selectedCh) {
+                    auto channel = selectedCh->channel.lock();
+                    if (channel) {
+                        auto mixerUI = m_mixerPanel->getMixerUI();
+                        if (mixerUI) {
+                            auto inspector = mixerUI->getInspector();
+                            if (inspector && inspector->getEffectRack()) {
+                                m_pluginController->bindEffectRack(inspector->getEffectRack().get(), &channel->getEffectChain());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Update Mixer Meters (Real-time)
+    if (tm && m_mixerPanel && m_mixerPanel->isVisible()) {
+        auto viewModel = m_mixerPanel->getViewModel();
+        if (viewModel) {
+            auto snapshots = tm->getMeterSnapshots();
+            if (snapshots) {
+                viewModel->updateMeters(*snapshots, dt);
+            }
+        }
     }
     
     // Poll transport position for waveform visualizer
@@ -326,20 +511,41 @@ void NomadContent::onResize(int width, int height) {
     float sidebarHeight = height - layout.transportBarHeight;
     float patternBrowserWidth = 0;
     
+    if (m_browserToggle) {
+        // Toggle bar above browser
+        float toggleHeight = 30.0f;
+        float toggleY = layout.transportBarHeight;
+        float browserWidth = std::min(layout.fileBrowserWidth, width * 0.20f);
+        
+        m_browserToggle->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, toggleY, browserWidth, toggleHeight));
+    }
+
     if (m_fileBrowser) {
         fileBrowserWidth = std::min(layout.fileBrowserWidth, width * 0.20f);
-        float fbHeight = sidebarHeight;
+        float toggleHeight = 30.0f;
+        float fbTop = layout.transportBarHeight + toggleHeight;
+        float fbHeight = sidebarHeight - toggleHeight;
         
-        if (m_previewPanel) {
+        if (m_previewPanel && m_previewPanel->isVisible()) {
            float previewHeight = 90.0f;
            fbHeight -= previewHeight;
            
-           m_previewPanel->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, layout.transportBarHeight + fbHeight,
+           m_previewPanel->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, fbTop + fbHeight,
                fileBrowserWidth, previewHeight));
         }
         
-        m_fileBrowser->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, layout.transportBarHeight,
+        m_fileBrowser->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, fbTop,
                                                    fileBrowserWidth, fbHeight));
+    }
+    
+    if (m_pluginBrowser) {
+        // Occupies same space as file browser + preview panel
+        float toggleHeight = 30.0f;
+        float pbTop = layout.transportBarHeight + toggleHeight;
+        float pbHeight = sidebarHeight - toggleHeight;
+        float pbWidth = std::min(layout.fileBrowserWidth, width * 0.20f);
+        
+        m_pluginBrowser->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, pbTop, pbWidth, pbHeight));
     }
     
     if (m_patternBrowser) {
@@ -1043,4 +1249,68 @@ void NomadContent::updatePreviewPlayhead() {
         m_previewPanel->setDuration(m_previewEngine->getDuration());
         m_previewPanel->setPlayheadPosition(m_previewEngine->getPlaybackPosition());
     }
+}
+
+// =============================================================================
+// SECTION: Plugin Loading
+// =============================================================================
+
+void NomadContent::loadEffectToSelectedTrack(const std::string& pluginId) {
+    // 1. Get TrackManager
+    if (!m_trackManager) return;
+    
+    // 2. Get first MixerChannel (track selection not implemented yet)
+    // TODO: Add track selection UI and pass selected index here
+    size_t trackIndex = 0;
+    auto channel = m_trackManager->getChannel(trackIndex);
+    if (!channel) {
+        Log::error("Cannot load effect: No mixer channel at index " + std::to_string(trackIndex));
+        return;
+    }
+    
+    // 3. Create plugin instance via PluginManager
+    auto& pm = Nomad::Audio::PluginManager::getInstance();
+    auto instance = pm.createInstanceById(pluginId);
+    if (!instance) {
+        Log::error("Failed to create plugin instance for: " + pluginId);
+        return;
+    }
+    
+    // 4. Insert into first available effect chain slot
+    auto& chain = channel->getEffectChain();
+    size_t slot = chain.getFirstEmptySlot();
+    if (slot < Nomad::Audio::EffectChain::MAX_SLOTS) {
+        chain.insertPlugin(slot, std::move(instance));
+        m_trackManager->markModified();
+        Log::info("Loaded effect to Track " + std::to_string(trackIndex + 1) + " slot " + std::to_string(slot));
+    } else {
+        Log::warning("No empty effect slots on Track " + std::to_string(trackIndex + 1));
+    }
+}
+
+void NomadContent::loadInstrumentToArsenal(const std::string& pluginId) {
+    // 1. Get UnitManager from TrackManager
+    if (!m_trackManager) return;
+    auto& unitManager = m_trackManager->getUnitManager();
+    
+    // 2. Find plugin info to get the name
+    auto& pm = Nomad::Audio::PluginManager::getInstance();
+    const auto* pluginInfo = pm.findPlugin(pluginId);
+    std::string unitName = "Plugin Synth";
+    if (pluginInfo) {
+        unitName = pluginInfo->name;
+    }
+    
+    // 3. Create new Unit with the plugin name
+    UnitID newUnit = unitManager.createUnit(unitName);
+    
+    // TODO: Future - attach plugin instance to unit for audio processing
+    // For now, just create the unit placeholder
+    
+    // 4. Refresh Arsenal UI
+    if (m_sequencerPanel) {
+        m_sequencerPanel->refreshUnits();
+    }
+    
+    Log::info("Loaded instrument '" + unitName + "' to Arsenal as Unit " + std::to_string(newUnit));
 }

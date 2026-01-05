@@ -130,6 +130,13 @@ public:
      * @brief Clear all slots
      */
     void clear();
+
+    /**
+     * @brief Reset all plugins in the chain (Panic/Double-Stop)
+     * 
+     * Calls deactivate() then activate() on all plugins to clear internal buffers.
+     */
+    void reset();
     
     // ==============================
     // Bypass Control

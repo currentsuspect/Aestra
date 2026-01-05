@@ -65,6 +65,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
         bool soloed{false};
         bool armed{false};
         bool monitored{false};
+        int fxCount{0};
     };
     std::vector<ChannelInfo> channelInfo;
     auto channels = trackManager.getChannelsSnapshot();
@@ -84,6 +85,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             info.soloed = channel->isSoloed();
             info.armed = channel->isArmed();
             info.monitored = channel->isMonitoringEnabled();
+            info.fxCount = static_cast<int>(channel->getEffectChain().getActiveSlotCount());
             channelInfo.push_back(std::move(info));
         }
     }
@@ -106,6 +108,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             existing->soloed = info.soloed;
             existing->armed = info.armed;
             existing->monitored = info.monitored;
+            existing->fxCount = info.fxCount;
             if (auto mc = info.channel.lock()) {
                 existing->inputChannelIndex = mc->getInputChannelIndex();
             }
@@ -125,6 +128,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             channel->soloed = info.soloed;
             channel->armed = info.armed;
             channel->monitored = info.monitored;
+            channel->fxCount = info.fxCount;
             if (auto mc = info.channel.lock()) {
                 channel->inputChannelIndex = mc->getInputChannelIndex();
             }

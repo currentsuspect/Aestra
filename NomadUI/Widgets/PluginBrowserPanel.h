@@ -212,7 +212,7 @@ private:
     float m_scanProgress = 0.0f;
     std::string m_scanStatus;
     
-    mutable std::mutex m_uiMutex; // Safe UI updates from background threads
+    mutable std::recursive_mutex m_uiMutex; // Safe UI updates from background threads (recursive for callback calls)
     
     // Tab state
     int m_activeTab = 0;
@@ -225,6 +225,11 @@ private:
     // Double-click detection
     double m_lastClickTime = 0.0;
     int m_lastClickIndex = -1;
+    
+    // Drag initiation
+    bool m_isPressed = false;
+    int m_pressedIndex = -1;
+    NUIPoint m_dragStartPos;
     
     // Layout constants
     static constexpr float ROW_HEIGHT = 32.0f;
@@ -272,12 +277,22 @@ public:
     void setOnSlotRemoveRequested(std::function<void(int slot)> callback);
     void setOnAddPluginRequested(std::function<void(int slot)> callback);
     
+    /**
+     * @brief Get current scroll offset
+     */
+    float getScrollOffset() const { return m_scrollOffset; }
+    
 private:
-    void renderSlot(NUIRenderer& renderer, int index, float yOffset);
-    int hitTestSlot(int y) const;
+    void renderSlot(NUIRenderer& renderer, int index, float slotY);
+    int hitTestSlot(float y) const;
     
     std::array<EffectSlotInfo, MAX_SLOTS> m_slots;
     int m_hoveredSlot = -1;
+    float m_scrollOffset = 0.0f;
+    
+    // Double-click detection
+    std::chrono::steady_clock::time_point m_lastClickTime{};
+    int m_lastClickSlot = -1;
     
     std::function<void(int)> m_onSlotClicked;
     std::function<void(int, bool)> m_onSlotBypassToggled;

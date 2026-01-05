@@ -1,19 +1,11 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PluginManager.h"
+#include "PluginFactory.h" // [NEW]
 #include <algorithm>
+#include <future> // For sync wrapper
 
-#ifdef NOMAD_HAS_VST3
-#include "Plugin/VST3Host.h"
-#endif
-
-#ifdef NOMAD_HAS_CLAP
-#include "Plugin/CLAPHost.h"
-#endif
-
-#ifdef NOMAD_HAS_PLUGINS
-#include <RumbleInstance.h>
-#endif
+// NOTE: Individual Host headers (VST3Host.h etc) moved to PluginFactory.cpp
 
 #ifdef _WIN32
 #include <objbase.h>  // For COM initialization (VST3)
@@ -55,6 +47,9 @@ bool PluginManager::initialize() {
     // Add default search paths
     m_scanner.addDefaultSearchPaths();
     
+    // Initialize default factory (In-Process)
+    m_factory = std::make_unique<InProcessPluginFactory>();
+    
     m_initialized = true;
     return true;
 }
@@ -85,28 +80,26 @@ void PluginManager::shutdown() {
 // ==============================
 
 PluginInstancePtr PluginManager::createInstance(const PluginInfo& info) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    
-    if (!m_initialized) {
+    if (!m_initialized || !m_factory) {
         return nullptr;
     }
+
+    // Adapt Async Factory to Synchronous API (Blocking)
+    // This allows gradual migration while using the new abstraction
+    std::promise<PluginInstancePtr> promise;
+    auto future = promise.get_future();
     
-    PluginInstancePtr instance;
+    m_factory->createPluginAsync(info, [&](PluginInstancePtr instance) {
+        promise.set_value(instance);
+    });
     
-    switch (info.format) {
-        case PluginFormat::VST3:
-            instance = createVST3Instance(info);
-            break;
-        case PluginFormat::CLAP:
-            instance = createCLAPInstance(info);
-            break;
-        case PluginFormat::Internal:
-            instance = createInternalInstance(info);
-            break;
-    }
+    // Block until complete (In-Process factory is synchronous anyway, so this is safe)
+    // For true async factories, this would hang the UI, which is why we must migrate consumers.
+    PluginInstancePtr instance = future.get();
     
     if (instance) {
         // Track the instance
+        std::lock_guard<std::mutex> lock(m_mutex);
         cleanupExpiredInstances();
         m_activeInstances.push_back(instance);
     }
@@ -120,6 +113,31 @@ PluginInstancePtr PluginManager::createInstanceById(const std::string& pluginId)
         return nullptr;
     }
     return createInstance(*info);
+}
+
+void PluginManager::createInstanceAsync(const PluginInfo& info, std::function<void(PluginInstancePtr)> callback) {
+    if (!m_initialized || !m_factory) {
+        if (callback) callback(nullptr);
+        return;
+    }
+
+    m_factory->createPluginAsync(info, [this, callback](PluginInstancePtr instance) {
+        if (instance) {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            cleanupExpiredInstances();
+            m_activeInstances.push_back(instance);
+        }
+        if (callback) callback(instance);
+    });
+}
+
+void PluginManager::createInstanceByIdAsync(const std::string& pluginId, std::function<void(PluginInstancePtr)> callback) {
+    const PluginInfo* info = findPlugin(pluginId);
+    if (!info) {
+        if (callback) callback(nullptr);
+        return;
+    }
+    createInstanceAsync(*info, callback);
 }
 
 void PluginManager::destroyInstance(PluginInstancePtr instance) {
@@ -176,41 +194,11 @@ std::vector<PluginInfo> PluginManager::getPluginsByFormat(PluginFormat format) c
 // Factory Methods (Stubs for now)
 // ==============================
 
-PluginInstancePtr PluginManager::createVST3Instance(const PluginInfo& info) {
-#ifdef NOMAD_HAS_VST3
-    auto instance = VST3PluginFactory::createInstance(info);
-    if (instance) {
-        return instance;
-    }
-#endif
-    (void)info;
-    return nullptr;
-}
+// ==============================
+// Factory Methods (Delegated)
+// ==============================
 
-PluginInstancePtr PluginManager::createCLAPInstance(const PluginInfo& info) {
-#ifdef NOMAD_HAS_CLAP
-    auto instance = CLAPPluginFactory::createInstance(info);
-    if (instance) {
-        return instance;
-    }
-#endif
-    (void)info;
-    return nullptr;
-}
-
-PluginInstancePtr PluginManager::createInternalInstance(const PluginInfo& info) {
-    // Create built-in NOMAD plugins
-    
-#ifdef NOMAD_HAS_PLUGINS
-    // Nomad Rumble 808 Bass Synthesizer
-    if (info.id == "com.nomadstudios.rumble") {
-        return std::make_shared<Nomad::Plugins::RumbleInstance>();
-    }
-#endif
-    
-    (void)info;
-    return nullptr;
-}
+// Helper methods removed, delegated to InProcessPluginFactory
 
 void PluginManager::cleanupExpiredInstances() {
     // Remove expired weak_ptrs
