@@ -4,6 +4,7 @@
 #include "../Core/NUIComponent.h"
 #include "../Core/NUITypes.h"
 #include "PluginBrowserPanel.h"
+#include "GenericPluginEditor.h"
 
 // NomadAudio includes
 #include <PluginHost.h>
@@ -17,6 +18,7 @@
 #include <vector>
 
 namespace NomadUI {
+class PluginSelectorMenu;
 
 /**
  * @brief Controller that bridges plugin UI widgets to NomadAudio backend
@@ -53,6 +55,11 @@ public:
      * @brief Set the plugin manager (for loading instances)
      */
     void setPluginManager(Nomad::Audio::PluginManager* manager);
+    
+    /**
+     * @brief Set the component to use as a layer for popups (menus, etc)
+     */
+    void setPopupLayer(NUIComponent* layer);
     
     // ==============================
     // Browser Binding
@@ -166,6 +173,11 @@ private:
     // Callbacks
     std::function<void(const std::string&, int)> m_onPluginLoaded;
     std::function<void(int)> m_onScanComplete;
+    
+    // UI components for popups
+    NUIComponent* m_popupLayer = nullptr;
+    std::shared_ptr<PluginSelectorMenu> m_activeMenu;
+    std::vector<std::shared_ptr<GenericPluginEditor>> m_activeEditors;
 };
 
 /**

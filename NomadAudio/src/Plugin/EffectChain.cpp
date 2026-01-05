@@ -1,5 +1,3 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
-
 #include "EffectChain.h"
 #include "PluginManager.h"
 #include <algorithm>
@@ -10,6 +8,8 @@ namespace Audio {
 
 EffectChain::EffectChain() = default;
 EffectChain::~EffectChain() = default;
+
+
 
 // ==============================
 // Slot Management
@@ -193,8 +193,13 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
         }
         
         auto& plugin = slot.plugin;
-        if (!plugin || !plugin->isActive()) {
-            continue;
+        if (!plugin) {
+             continue;
+        }
+        
+        if (!plugin->isActive()) {
+             // printf("[EffectChain] Plugin exists but inactive!\n");
+             continue;
         }
         
         float dryWet = slot.dryWetMix.load(std::memory_order_acquire);
@@ -203,6 +208,7 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
         if (dryWet >= 0.999f) {
             // Process in-place
             plugin->process(buffer, buffer, numChannels, numChannels, numFrames);
+            // printf("[EffectChain] Processed plugin %s (Wet)\n", plugin->getInfo().name.c_str());
         }
         // If not fully wet, need to blend
         else if (dryWet > 0.001f) {
@@ -380,6 +386,25 @@ uint32_t EffectChain::getTotalLatency() const {
     }
     
     return total;
+}
+
+void EffectChain::reset() {
+    // 1. Temporarily bypass the chain to silence audio input
+    bool wasBypassed = m_chainBypassed.exchange(true);
+
+    // 2. Reboot each plugin to clear internal buffers (delay lines, etc.)
+    for (auto& slot : m_slots) {
+        if (slot.plugin) {
+            // Check if active before resetting? 
+            if (slot.plugin->isActive()) {
+                slot.plugin->deactivate();
+                slot.plugin->activate();
+            }
+        }
+    }
+
+    // 3. Restore original bypass state
+    m_chainBypassed.store(wasBypassed);
 }
 
 } // namespace Audio

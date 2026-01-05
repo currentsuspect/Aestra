@@ -1,5 +1,6 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioEngine.h"
+#include "EffectChain.h"
 #include "NomadLog.h"
 #include "FastMath.h"
 #include <cmath>
@@ -217,16 +218,22 @@ void AudioEngine::processBlock(float* outputBuffer,
 
     // State transitions
     bool isPlaying = m_transportPlaying.load(std::memory_order_relaxed);
-    if (wasPlaying && !isPlaying &&
-        m_fadeState != FadeState::FadingOut && m_fadeState != FadeState::Silent) {
-        m_fadeState = FadeState::FadingOut;
-        m_fadeSamplesRemaining = FADE_OUT_SAMPLES;
-    }
+    // [CHANGED] Disable global fade-out to allow effects tails to ring out.
+    // if (wasPlaying && !isPlaying &&
+    //     m_fadeState != FadeState::FadingOut && m_fadeState != FadeState::Silent) {
+    //     m_fadeState = FadeState::FadingOut;
+    //     m_fadeSamplesRemaining = FADE_OUT_SAMPLES;
+    // }
     // When starting playback, always ensure we're fading in (or already fading in)
     // This prevents the audio from jumping to full volume instantly → no clicks
-    if (!wasPlaying && isPlaying && m_fadeState != FadeState::FadingIn) {
-        m_fadeState = FadeState::FadingIn;
-        m_fadeSamplesRemaining = FADE_IN_SAMPLES;
+    // When starting playback, always ensure we're fading in (or already fading in)
+    // This prevents the audio from jumping to full volume instantly → no clicks
+    // [FIX] Also critical for recovering from Panic (Silent) state
+    if (isPlaying) {
+        if (m_fadeState == FadeState::Silent || (!wasPlaying && m_fadeState != FadeState::FadingIn)) {
+            m_fadeState = FadeState::FadingIn;
+            m_fadeSamplesRemaining = FADE_IN_SAMPLES;
+        }
     }
 
     // Fast path: silent
@@ -286,7 +293,7 @@ void AudioEngine::processBlock(float* outputBuffer,
         }
     }
 
-    if (!m_masterBufferD.empty() && (playing || m_fadeState == FadeState::FadingOut)) {
+    if (!m_masterBufferD.empty()) {
         if (loopSplitFrame < numFrames) {
             // Split Render Strategy for Sample-Accurate Looping
             
@@ -728,6 +735,12 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
 
     if (needAlloc) {
         m_masterBufferD.resize(requiredSize);
+        
+        // Resize plugin scratch buffers (mono size)
+        size_t monoSize = static_cast<size_t>(m_maxBufferFrames.load(std::memory_order_relaxed));
+        if (m_scratchL.size() < monoSize) m_scratchL.resize(monoSize);
+        if (m_scratchR.size() < monoSize) m_scratchR.resize(monoSize);
+
         std::memset(m_masterBufferD.data(), 0, requiredSize * sizeof(double));
 
         m_trackBuffersD.clear();
@@ -997,6 +1010,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
     const uint64_t blockStart = m_globalSamplePos.load(std::memory_order_relaxed);
     const uint64_t blockEnd = blockStart + numFrames;
+    const bool isPlaying = m_transportPlaying.load(std::memory_order_relaxed); // [NEW] Check transport
 
     // Solo detection (single pass)
     bool anySolo = false;
@@ -1069,27 +1083,12 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
         // Empty tracks should not touch RT buffers. Still keep param state updated
         // so automation is consistent when clips appear later.
-        if (track.clips.empty()) {
-            double tL, tR;
-            fastPanGainsD(panTarget, volTarget, tL, tR);
-            state.gainL.setTarget(tL);
-            state.gainR.setTarget(tR);
-            state.gainL.snap();
-            state.gainR.snap();
-            auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
-            if (snaps && slot != ChannelSlotMap::INVALID_SLOT) {
-                snaps->writePeak(slot, 0.0f, 0.0f);
-            }
-            continue;
-        }
-        
         auto& buffer = m_trackBuffersD[trackIdx];
-        
-        // Clear track buffer with memset
         std::memset(buffer.data(), 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
 
-        // Render clips
+        // Check isPlaying inside loop to avoid brace wrapping issues
         for (const auto& clip : track.clips) {
+            if (!isPlaying) continue;
             if (!clip.audioData || blockEnd <= clip.startSample || blockStart >= clip.endSample) {
                 continue;
             }
@@ -1298,8 +1297,43 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                         }
                         break;
                 }
+        }
+            }
+
+
+        // === Plugin Processing (EffectChain) ===
+        if (track.effectChain && track.effectChain->getActiveSlotCount() > 0) {
+            // Check if scratches are large enough (should be from setBufferConfig)
+            if (m_scratchL.size() >= numFrames && m_scratchR.size() >= numFrames) {
+                // 1. De-interleave Double -> Float
+                const double* dBuf = buffer.data();
+                float* fL = m_scratchL.data();
+                float* fR = m_scratchR.data();
+                
+                // Allow vectorization
+                for (uint32_t k = 0; k < numFrames; ++k) {
+                    fL[k] = static_cast<float>(dBuf[k * 2]);
+                    fR[k] = static_cast<float>(dBuf[k * 2 + 1]);
+                }
+
+                // 2. Process
+                // Ensure chain is prepared for current rate
+                track.effectChain->prepare(static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)), 
+                                           m_maxBufferFrames.load(std::memory_order_relaxed));
+                
+                float* channels[2] = { fL, fR };
+                track.effectChain->process(channels, 2, numFrames);
+
+                // 3. Re-interleave Float -> Double
+                double* dOut = buffer.data();
+                for (uint32_t k = 0; k < numFrames; ++k) {
+                    dOut[k * 2]     = static_cast<double>(fL[k]);
+                    dOut[k * 2 + 1] = static_cast<double>(fR[k]);
+                }
             }
         }
+
+
 
         // Mix track into master
         double tL, tR;
@@ -1689,15 +1723,18 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
         // - Channel Input (Clips) -> Inserts -> Pre-Fader Sends -> Fader/Pan -> Post-Fader Sends.
         
         // For Antigravity Phase 3:
-        // We will render clips purely. No volume/pan applied to buffer here.
-        // Logic:
-        // Render Clips -> buffer.
-        
-        for (const auto& clip : track.clips) {
-            if (!clip.audioData || blockEnd <= clip.startSample || blockStart >= clip.endSample) {
-                continue;
-            }
-            
+        // 1. Process Clips (Audio Sourcing)
+        // Only render clips if transport is playing or we are scrubbing (future)
+        bool isPlaying = m_transportPlaying.load(std::memory_order_relaxed);
+        if (isPlaying) {
+             const auto& clips = track.clips;
+             if (!clips.empty()) {
+                // double* buffer = m_trackBuffersD[trackIdx].data(); // This line was incorrect in the instruction, using outputBuffer
+                 
+                for (const auto& clip : clips) {
+                    if (!clip.audioData || blockEnd <= clip.startSample || blockStart >= clip.endSample) {
+                        continue;
+                    }          
             const uint64_t start = std::max(blockStart, clip.startSample);
             const uint64_t end = std::min(blockEnd, clip.endSample);
             const uint32_t localOffset = static_cast<uint32_t>(start - blockStart);
@@ -1822,6 +1859,8 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
             }
         }
     }
+}
+}
 
     void AudioEngine::processTrackEffects(const RenderTrack& track, uint32_t numFrames, uint32_t bufferOffset) {
         const AudioGraph& graph = m_state.activeGraph();
@@ -1928,6 +1967,25 @@ void AudioEngine::generateMetronomeSounds() {
     
             m_synthClickLow[i] = static_cast<float>(std::sin(2.0 * kPi * freqLow * t) * env);
             m_synthClickHigh[i] = static_cast<float>(std::sin(2.0 * kPi * freqHigh * t) * env);
+        }
+    }
+}
+
+void AudioEngine::panic() {
+    // 1. Force Silence (stops renderGraph calls and mutes output immediately)
+    m_fadeState = FadeState::Silent;
+
+    // 2. Reset all plugins (Main Thread)
+    // We lock the graph mutex to ensure we don't access a graph that's being swapped
+    std::lock_guard<std::mutex> lock(m_graphMutex);
+    
+    // Note: accessing activeGraph() from Main Thread is safe given we hold the mutex
+    // that protects the swap.
+    const AudioGraph& graph = m_state.activeGraph();
+    
+    for (const auto& track : graph.tracks) {
+        if (track.effectChain) {
+            track.effectChain->reset(); 
         }
     }
 }

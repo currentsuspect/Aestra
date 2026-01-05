@@ -12,6 +12,7 @@ struct ChannelViewModel;
 }
 
 namespace NomadUI {
+class EffectChainRack;
 
 /**
  * @brief Right-side inspector panel for the selected mixer channel.
@@ -33,6 +34,8 @@ public:
     void setViewModel(Nomad::MixerViewModel* viewModel) { m_viewModel = viewModel; }
     void setActiveTab(Tab tab);
     Tab getActiveTab() const { return m_activeTab; }
+
+    std::shared_ptr<EffectChainRack> getEffectRack() const { return m_effectRack; }
 
 private:
     Nomad::MixerViewModel* m_viewModel{nullptr};
@@ -57,6 +60,9 @@ private:
     int m_hoveredTab{-1};
     bool m_addHovered{false};
     bool m_addPressed{false};
+
+    // Inserts
+    std::shared_ptr<EffectChainRack> m_effectRack;
 
     // Sends
     std::vector<std::shared_ptr<class UIMixerSend>> m_sendWidgets;

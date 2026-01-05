@@ -51,6 +51,12 @@ public:
                       const float* inputBuffer,
                       uint32_t numFrames,
                       double streamTime);
+    
+    /**
+     * @brief Immediate panic/reset (Double Stop).
+     * Clears all buffers and resets plugin states. Main Thread.
+     */
+    void panic();
 
     // Recording Callback (called on RT thread)
     using InputCallback = void (*)(const float* inputBuffer, uint32_t numFrames, void* userData);
@@ -247,6 +253,8 @@ private:
     // Pre-allocated buffers - DOUBLE PRECISION for internal mixing
     std::vector<std::vector<double>> m_trackBuffersD;  // Double precision track buffers
     std::vector<double> m_masterBufferD;               // Double precision master
+    std::vector<float> m_scratchL;                     // Scratch L for plugins
+    std::vector<float> m_scratchR;                     // Scratch R for plugins
     std::vector<TrackRTState> m_trackState;
     
     // --- Antigravity Routing Engine (v3.1) ---

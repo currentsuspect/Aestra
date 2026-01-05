@@ -1,6 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PluginUIController.h"
+#include "PluginSelectorMenu.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -28,6 +29,10 @@ void PluginUIController::setPluginScanner(Nomad::Audio::PluginScanner* scanner) 
 
 void PluginUIController::setPluginManager(Nomad::Audio::PluginManager* manager) {
     m_manager = manager;
+}
+
+void PluginUIController::setPopupLayer(NUIComponent* layer) {
+    m_popupLayer = layer;
 }
 
 void PluginUIController::bindBrowser(PluginBrowserPanel* browser) {
@@ -125,9 +130,71 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
     });
     
     rack->setOnAddPluginRequested([this, rack, chain](int slot) {
-        // Need to show browser and handle selection...
-        // For now, just mark slot as pending
-        // In a full implementation, this would open a popup browser
+        if (!m_scanner || !m_manager) return;
+        
+        // Remove existing menu if any
+        if (m_activeMenu) {
+            if (auto parent = m_activeMenu->getParent()) {
+                parent->removeChild(m_activeMenu);
+            }
+            m_activeMenu.reset();
+        }
+
+        // Create new menu
+        m_activeMenu = std::make_shared<PluginSelectorMenu>();
+        
+        // Filter only effects for the rack
+        const auto& allPlugins = m_scanner->getScannedPlugins();
+        std::vector<PluginListItem> effects;
+        for (const auto& p : allPlugins) {
+            if (p.type == Nomad::Audio::PluginType::Effect) {
+                effects.push_back(convertToListItem(p));
+            }
+        }
+        
+        m_activeMenu->setPlugins(effects);
+        
+        // Position menu near the rack slot
+        auto rackBounds = rack->getBounds();
+        float scrollOffset = rack->getScrollOffset();
+        float slotYLocal = 5 + slot * 28.0f - scrollOffset;
+        
+        // Offset to the left of the rack
+        float menuWidth = 200.0f;
+        float menuX = rackBounds.x - menuWidth - 4.0f;
+        float menuY = rackBounds.y + slotYLocal;
+        
+        m_activeMenu->setBounds(menuX, menuY, menuWidth, m_activeMenu->getHeight());
+        
+        // Handle selection
+        m_activeMenu->setOnPluginSelected([this, chain, slot](const std::string& id) {
+            loadPluginToSlot(id, chain, slot);
+            
+            // Close menu
+            if (m_activeMenu) {
+                if (auto parent = m_activeMenu->getParent()) {
+                    parent->removeChild(m_activeMenu);
+                }
+                m_activeMenu.reset();
+            }
+        });
+        
+        // Handle closure
+        m_activeMenu->setOnClosed([this]() {
+            if (m_activeMenu) {
+                if (auto parent = m_activeMenu->getParent()) {
+                    parent->removeChild(m_activeMenu);
+                }
+                m_activeMenu.reset();
+            }
+        });
+
+        // Add to popup layer if available, otherwise fallback to rack's parent
+        if (m_popupLayer) {
+            m_popupLayer->addChild(m_activeMenu);
+        } else if (auto parent = rack->getParent()) {
+            parent->addChild(m_activeMenu);
+        }
     });
     
     rack->setOnSlotBypassToggled([chain](int slot, bool bypassed) {
@@ -206,6 +273,10 @@ bool PluginUIController::loadPluginToSlot(const std::string& pluginId,
         return false;
     }
     
+    // CRITICAL: Activate plugin so it can process audio
+    // Without this, isActive() returns false and EffectChain skips it
+    instance->activate();
+    
     // Insert into chain
     chain->insertPlugin(slot, instance);
     
@@ -233,11 +304,36 @@ void PluginUIController::openPluginEditor(
     std::shared_ptr<Nomad::Audio::IPluginInstance> instance,
     void* parentWindow) {
     
-    if (!instance || !instance->hasEditor()) return;
+    if (!instance) return;
     
-    // For now, open editor in a simple way
-    // Full implementation would create/manage PluginEditorWindow
-    instance->openEditor(parentWindow);
+    // For now, always use generic editor to avoid threading/freezing issues
+    auto genericEditor = std::make_shared<GenericPluginEditor>(instance);
+    
+    // Position editor in center of popup layer
+    if (m_popupLayer) {
+        auto layerBounds = m_popupLayer->getBounds();
+        float editorWidth = 400.0f;  // Fixed window size
+        float editorHeight = 400.0f;
+        float x = (layerBounds.width - editorWidth) * 0.5f;
+        float y = (layerBounds.height - editorHeight) * 0.5f;
+        
+        genericEditor->setBounds(x, y, editorWidth, editorHeight);
+        
+        // Set close callback to remove from UI
+        genericEditor->setOnClose([this, genericEditor]() {
+            if (m_popupLayer) {
+                m_popupLayer->removeChild(genericEditor);
+            }
+            // Remove from tracked editors
+            m_activeEditors.erase(
+                std::remove(m_activeEditors.begin(), m_activeEditors.end(), genericEditor),
+                m_activeEditors.end()
+            );
+        });
+        
+        m_popupLayer->addChild(genericEditor);
+        m_activeEditors.push_back(genericEditor);
+    }
 }
 
 void PluginUIController::setOnPluginLoaded(

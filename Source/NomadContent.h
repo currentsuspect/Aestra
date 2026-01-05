@@ -32,6 +32,7 @@ namespace NomadUI {
     class FilePreviewPanel;
     class FileItem;
     class AudioVisualizer;
+    class PluginUIController;
 }
 
 // Forward declarations - Nomad::Audio (includes panel classes)
@@ -42,8 +43,13 @@ namespace Nomad::Audio {
     class MixerPanel;
     class PianoRollPanel;
     class ArsenalPanel;
+    class ArsenalPanel;
     class PatternBrowserPanel;
     class WindowPanel;
+}
+
+namespace NomadUI {
+    class PluginBrowserPanel;
 }
 
 /**
@@ -72,6 +78,7 @@ enum class PlaybackScope {
 class NomadContent : public NomadUI::NUIComponent {
 public:
     NomadContent();
+    ~NomadContent();
     
     struct ViewState {
         bool mixerOpen = false;
@@ -142,6 +149,10 @@ public:
     void seekSoundPreview(double seconds);
     bool isPlayingPreview() const;
     void updatePreviewPlayhead();
+    
+    // Plugin Loading
+    void loadEffectToSelectedTrack(const std::string& pluginId);
+    void loadInstrumentToArsenal(const std::string& pluginId);
 
 private:
     std::shared_ptr<NomadUI::NUIComponent> m_workspaceLayer;
@@ -153,7 +164,12 @@ private:
     std::shared_ptr<NomadUI::NUISegmentedControl> m_viewToggle;
     std::shared_ptr<NomadUI::NUILabel> m_scopeLabel;
     
+
+    
+    // Browser section
+    std::shared_ptr<NomadUI::NUISegmentedControl> m_browserToggle;
     std::shared_ptr<NomadUI::FileBrowser> m_fileBrowser;
+    std::shared_ptr<NomadUI::PluginBrowserPanel> m_pluginBrowser;
     std::shared_ptr<NomadUI::FilePreviewPanel> m_previewPanel;
     std::shared_ptr<Nomad::Audio::PatternBrowserPanel> m_patternBrowser;
     std::shared_ptr<NomadUI::AudioVisualizer> m_audioVisualizer;
@@ -165,13 +181,15 @@ private:
     std::shared_ptr<Nomad::Audio::MixerPanel> m_mixerPanel;
     std::shared_ptr<Nomad::Audio::PianoRollPanel> m_pianoRollPanel;
     std::shared_ptr<Nomad::Audio::ArsenalPanel> m_sequencerPanel;
+    std::shared_ptr<NomadUI::PluginUIController> m_pluginController;
 
     std::unique_ptr<Nomad::Audio::PreviewEngine> m_previewEngine;
     bool m_audioActive = false;
     
     // View state
     ViewState m_viewState;
-    ViewFocus m_viewFocus = ViewFocus::Arsenal;
+    ViewFocus m_viewFocus = ViewFocus::Timeline;
+    uint32_t m_lastSelectedChannelId = 0xFFFFFFFFu;
     
     // Sound preview state
     bool m_previewIsPlaying = false;

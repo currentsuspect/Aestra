@@ -18,7 +18,7 @@ namespace {
     }
 }
 
-AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackManager, double outputSampleRate) {
+AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, double outputSampleRate) {
     AudioGraph graph;
     const size_t channelCount = trackManager.getChannelCount();
     graph.tracks.reserve(channelCount);
@@ -42,6 +42,7 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackMan
         // Copy Routing
         trackState.mainOutputId = channel->getMainOutputId();
         trackState.sends = channel->getSends();
+        trackState.effectChain = &channel->getEffectChain();
         
         graph.tracks.push_back(std::move(trackState));
     }

@@ -173,6 +173,7 @@ set(NOMAD_AUDIO_CORE_SOURCES
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp
     src/Plugin/PluginManager.cpp
+    src/Plugin/PluginFactory.cpp
     src/Plugin/EffectChain.cpp
     src/SincAVX512.cpp
 )
@@ -259,6 +260,7 @@ set(NOMAD_AUDIO_CORE_HEADERS
     include/PluginHost.h
     include/PluginScanner.h
     include/PluginManager.h
+    include/PluginFactory.h
     include/EffectChain.h
     include/Plugin/VST3Host.h
 )

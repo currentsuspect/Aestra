@@ -1,7 +1,9 @@
 // © 2025 Nomad Studios All Rights Reserved. Licensed for personal & educational use only.
 #include "TrackManagerUI.h"
 #include "../NomadAudio/include/MixerChannel.h"
+#include <memory>
 #include "../NomadAudio/include/TrackManager.h"
+#include "../NomadAudio/include/PluginManager.h"
 #include "../NomadUI/Platform/NUIPlatformBridge.h"
 
 #include "../NomadUI/Core/NUIThemeSystem.h"
@@ -3637,8 +3639,10 @@ void TrackManagerUI::deleteSelectedClip() {
 NomadUI::DropFeedback TrackManagerUI::onDragEnter(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
     Log::info("[TrackManagerUI] Drag entered");
     
-    // Accept file drops and audio clip moves
-    if (data.type != NomadUI::DragDataType::File && data.type != NomadUI::DragDataType::AudioClip) {
+    // Accept file drops, audio clip moves, and plugins
+    if (data.type != NomadUI::DragDataType::File && 
+        data.type != NomadUI::DragDataType::AudioClip &&
+        data.type != NomadUI::DragDataType::Plugin) {
         return NomadUI::DropFeedback::Invalid;
     }
 
@@ -3665,7 +3669,7 @@ NomadUI::DropFeedback TrackManagerUI::onDragEnter(const NomadUI::DragData& data,
     if (m_dropTargetTrack >= 0 && m_dropTargetTrack <= trackCount) {
         m_showDropPreview = true;
         setDirty(true);
-        // Move for clips, Copy for files
+        // Move for clips; Copy for files and plugins
         return data.type == NomadUI::DragDataType::AudioClip ? 
                NomadUI::DropFeedback::Move : NomadUI::DropFeedback::Copy;
     }
@@ -3722,7 +3726,7 @@ NomadUI::DropFeedback TrackManagerUI::onDragOver(const NomadUI::DragData& data, 
         if (m_dropTargetTrack >= 0 && m_dropTargetTrack <= trackCount) {
             m_showDropPreview = true;
             setDirty(true);
-            // Move for clips, Copy for files
+            // Move for clips; Copy for files and plugins
             return data.type == NomadUI::DragDataType::AudioClip ? 
                    NomadUI::DropFeedback::Move : NomadUI::DropFeedback::Copy;
         } else {
@@ -4021,6 +4025,80 @@ NomadUI::DropResult TrackManagerUI::onDrop(const NomadUI::DragData& data, const 
         } else {
             result.accepted = false;
             result.message = "Failed to create source";
+        }
+        
+        clearDropPreview();
+        clearDropPreview();
+        return result;
+    }
+    
+    // 5. Handle Plugin Drop
+    if (data.type == NomadUI::DragDataType::Plugin) {
+        Log::info("[TrackManagerUI] Plugin drop received: " + data.displayName);
+        
+        std::string pluginId = data.sourceClipIdString;
+        if (!pluginId.empty()) {
+            auto& pluginManager = Nomad::Audio::PluginManager::getInstance();
+            
+            // Validate target channel exists
+            int channelIndex = laneIndex;
+            auto channel = m_trackManager->getTrack(channelIndex);
+            
+            if (!channel) {
+                result.accepted = false;
+                result.message = "Target channel not found";
+                clearDropPreview();
+                return result;
+            }
+
+            // Check if chain has space (pre-check)
+            auto& chain = channel->getEffectChain();
+            if (chain.getFirstEmptySlot() >= Nomad::Audio::EffectChain::MAX_SLOTS) {
+                result.accepted = false;
+                result.message = "Effect chain full";
+                clearDropPreview();
+                return result;
+            }
+
+            // Request Plugin Creation (Async)
+            // Captured variables must be kept alive. m_trackManager is a shared_ptr.
+            std::string displayName = data.displayName;
+            auto trackManager = m_trackManager;
+            
+            pluginManager.createInstanceByIdAsync(pluginId, [trackManager, channelIndex, displayName, pluginId](Nomad::Audio::PluginInstancePtr instance) {
+                if (!instance) {
+                    Log::error("[TrackManagerUI] Plugin creation failed for ID: " + pluginId);
+                    return;
+                }
+
+                auto channel = trackManager->getTrack(channelIndex);
+                if (!channel) return;
+
+                auto& pluginManager = Nomad::Audio::PluginManager::getInstance();
+                if (instance->initialize(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize())) {
+                    instance->activate(); 
+                    
+                    auto& chain = channel->getEffectChain();
+                    size_t slot = chain.getFirstEmptySlot();
+                    
+                    if (slot < Nomad::Audio::EffectChain::MAX_SLOTS) {
+                        chain.insertPlugin(slot, instance);
+                        Log::info("[TrackManagerUI] Added plugin (Async): " + displayName);
+                    } else {
+                        Log::warning("[TrackManagerUI] Effect chain became full during async load");
+                    }
+                } else {
+                    Log::error("[TrackManagerUI] Plugin initialization failed for ID: " + pluginId);
+                }
+            });
+
+            // Return immediate acceptance
+            result.accepted = true;
+            result.message = "Loading " + data.displayName + "...";
+            
+        } else {
+            result.accepted = false;
+            result.message = "Invalid plugin ID";
         }
         
         clearDropPreview();

@@ -782,6 +782,17 @@ void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numF
         laneIndex++;
     }
 
+    // === PASS 1.5: Process Channel Inserts (Effects) ===
+    // This executes the MixerChannel::processAudio which runs the EffectChain
+    static bool logPass15 = false;
+    if (!logPass15) { Log::info("[TrackManager] Entering Pass 1.5 (Channel Inserts)"); logPass15 = true; }
+    
+    for (size_t i = 0; i < m_channels.size() && i < m_channelBuffers.size(); ++i) {
+        if (m_channels[i]) {
+            m_channels[i]->processAudio(m_channelBuffers[i].data(), numFrames, streamTime, outputSampleRate);
+        }
+    }
+
     // === PASS 2: Apply Sends ===
     // Build channel ID -> index map for fast lookup
     std::unordered_map<uint32_t, size_t> channelIdToIndex;

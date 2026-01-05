@@ -17,6 +17,20 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # =============================================================================
+# Build Options
+# =============================================================================
+
+# Headless-only mode is intended for CI/containers: configure & build without UI.
+option(NOMAD_HEADLESS_ONLY "Configure/build headless targets only (skips UI + app)" OFF)
+option(NOMAD_ENABLE_UI "Build the NOMAD_DAW UI application" ON)
+option(NOMAD_ENABLE_TESTS "Build test executables" ON)
+
+if(NOMAD_HEADLESS_ONLY)
+  set(NOMAD_ENABLE_UI OFF CACHE BOOL "Build the NOMAD_DAW UI application" FORCE)
+  set(NOMAD_ENABLE_TESTS OFF CACHE BOOL "Build test executables" FORCE)
+endif()
+
+# =============================================================================
 # Platform Detection & Flags
 # =============================================================================
 if(UNIX AND NOT APPLE)
@@ -74,19 +88,62 @@ endif()
 add_subdirectory(NomadCore)
 
 # =============================================================================
-# NomadPlat - Platform Abstraction
-# =============================================================================
-add_subdirectory(NomadPlat)
-
-# =============================================================================
-# NomadUI - UI Framework
-# =============================================================================
-add_subdirectory(NomadUI)
-
-# =============================================================================
 # NomadAudio - Audio Engine
 # =============================================================================
 add_subdirectory(NomadAudio)
+
+# =============================================================================
+# NomadHeadless - Offline engine smoke test (no UI/OpenGL)
+# =============================================================================
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/Source/HeadlessMain.cpp")
+  add_executable(NomadHeadless
+    Source/HeadlessMain.cpp
+    Source/ProjectSerializer.cpp
+  )
+
+  if(MSVC)
+    target_compile_options(NomadHeadless PRIVATE /utf-8)
+  endif()
+
+  set_target_properties(NomadHeadless PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+  )
+
+  target_link_libraries(NomadHeadless PRIVATE
+    NomadAudioCore
+    NomadCore
+  )
+
+  target_include_directories(NomadHeadless PRIVATE
+    ${CMAKE_SOURCE_DIR}/NomadAudio/include
+    ${CMAKE_SOURCE_DIR}/NomadCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+  )
+
+  if(WIN32)
+    target_compile_definitions(NomadHeadless PRIVATE
+      _CRT_SECURE_NO_WARNINGS
+      NOMINMAX
+    )
+  endif()
+
+  message(STATUS "NomadHeadless configured")
+endif()
+
+if(NOMAD_ENABLE_UI)
+  # =============================================================================
+  # NomadPlat - Platform Abstraction
+  # =============================================================================
+  add_subdirectory(NomadPlat)
+
+  # =============================================================================
+  # NomadUI - UI Framework
+  # =============================================================================
+  add_subdirectory(NomadUI)
+endif()
 
 # =============================================================================
 # NomadPlugins - Premium Plugins (Optional Private Submodule)
@@ -103,12 +160,14 @@ endif()
 # =============================================================================
 # NOMAD DAW - Main Application
 # =============================================================================
-add_subdirectory(Source)
+if(NOMAD_ENABLE_UI)
+  add_subdirectory(Source)
+endif()
 
 # =============================================================================
 # Test Executables
 # =============================================================================
-if(EXISTS "${CMAKE_SOURCE_DIR}/Tests/VST3PluginTest.cpp")
+if(NOMAD_ENABLE_TESTS AND EXISTS "${CMAKE_SOURCE_DIR}/Tests/VST3PluginTest.cpp")
     add_executable(VST3PluginTest Tests/VST3PluginTest.cpp)
     target_link_libraries(VST3PluginTest PRIVATE
         NomadAudioCore
@@ -136,7 +195,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Tests/VST3PluginTest.cpp")
 endif()
 
   # Project roundtrip smoke test (create -> save -> load -> verify)
-  if(EXISTS "${CMAKE_SOURCE_DIR}/Tests/ProjectRoundTripTest.cpp")
+  if(NOMAD_ENABLE_TESTS AND EXISTS "${CMAKE_SOURCE_DIR}/Tests/ProjectRoundTripTest.cpp")
     add_executable(ProjectRoundTripTest
       Tests/ProjectRoundTripTest.cpp
       Source/ProjectSerializer.cpp
@@ -160,6 +219,24 @@ endif()
     add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
     # Alias name to make autosave-path coverage obvious in CI output.
     add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
+  endif()
+
+  # Plugin Scanner verification test
+  if(NOMAD_ENABLE_TESTS AND EXISTS "${CMAKE_SOURCE_DIR}/Tests/PluginScanTest.cpp")
+    add_executable(NomadPluginScanTest
+      Tests/PluginScanTest.cpp
+    )
+    target_link_libraries(NomadPluginScanTest PRIVATE
+      NomadAudio
+      NomadCore
+    )
+    target_include_directories(NomadPluginScanTest PRIVATE
+      ${CMAKE_SOURCE_DIR}/NomadAudio/include
+      ${CMAKE_SOURCE_DIR}/NomadCore/include
+    )
+    if(WIN32)
+        target_link_libraries(NomadPluginScanTest PRIVATE ole32)
+    endif()
   endif()
 
 message(STATUS "")
