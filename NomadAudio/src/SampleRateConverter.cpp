@@ -1,9 +1,12 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "SampleRateConverter.h"
 #include "NomadLog.h"
+#include "../include/SampleRateConverterAVX512.h"
+#include "../../NomadCore/include/CPUDetection.h"
 
 #include <algorithm>
 #include <cstring>
+#include <mutex>
 
 namespace Nomad {
 namespace Audio {
@@ -13,6 +16,9 @@ namespace Audio {
 // =============================================================================
 
 namespace {
+
+// Runtime dispatched function pointer type
+using DotProductFunc = float(*)(const float*, const float*, uint32_t);
 
 #ifdef NOMAD_HAS_SSE
 // SSE dot product: processes 4 floats at a time
@@ -83,6 +89,40 @@ float dotProductScalar(const float* a, const float* b, uint32_t n) noexcept {
     return sum;
 }
 
+// Global function pointer for runtime dispatch
+static DotProductFunc g_dotProductFunc = dotProductScalar;
+static std::once_flag g_initFlag;
+
+void initSIMD() {
+    std::call_once(g_initFlag, []() {
+        auto& cpu = Nomad::System::CPUDetection::getInstance();
+
+        // Default to scalar
+        g_dotProductFunc = dotProductScalar;
+
+        // Check for AVX-512 (Highest priority)
+        if (cpu.hasAVX512F() && cpu.hasAVX512DQ()) {
+            g_dotProductFunc = dotProductAVX512;
+            Log::info("SampleRateConverter: Using AVX-512 path");
+        }
+#ifdef NOMAD_HAS_AVX
+        else if (cpu.hasAVX()) {
+            g_dotProductFunc = dotProductAVX;
+            Log::info("SampleRateConverter: Using AVX path");
+        }
+#endif
+#ifdef NOMAD_HAS_SSE
+        else if (cpu.hasSSE()) {
+            g_dotProductFunc = dotProductSSE;
+            Log::info("SampleRateConverter: Using SSE path");
+        }
+#endif
+        else {
+            Log::info("SampleRateConverter: Using Scalar path");
+        }
+    });
+}
+
 } // anonymous namespace
 
 // =============================================================================
@@ -113,6 +153,9 @@ void SampleRateConverter::configure(uint32_t srcRate, uint32_t dstRate,
     m_ratioSmoothFrames = 0;
     m_ratioSmoothTotal = 0;
     
+    // Initialize SIMD dispatch
+    initSIMD();
+
     // Check for passthrough mode (no conversion needed)
     m_isPassthrough = (srcRate == dstRate);
     
@@ -128,12 +171,18 @@ void SampleRateConverter::configure(uint32_t srcRate, uint32_t dstRate,
     
     m_configured = true;
     
+    std::string simdStatus;
+    if (g_dotProductFunc == dotProductAVX512) simdStatus = "AVX-512";
+    else if (g_dotProductFunc == dotProductAVX) simdStatus = "AVX";
+    else if (g_dotProductFunc == dotProductSSE) simdStatus = "SSE";
+    else simdStatus = "Scalar";
+
     Log::info("SampleRateConverter configured: " + std::to_string(srcRate) + 
               " -> " + std::to_string(dstRate) + " Hz, " +
               std::to_string(channels) + " channels, quality=" + 
               std::to_string(static_cast<int>(quality)) +
               (m_isPassthrough ? " (passthrough)" : "") +
-              (hasSIMD() ? " [SIMD]" : " [Scalar]"));
+              " [" + simdStatus + "]");
 }
 
 void SampleRateConverter::reset() noexcept {
@@ -357,30 +406,21 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames,
             ) % SRCConstants::POLYPHASE_PHASES;
             
             // Generate output for each channel
+
+            // Optimization: If using SIMD, dispatch the loop once per sample set if possible
+            // But since we have channel loop here, let's keep it simple for now and rely on
+            // the function pointer being low overhead.
+
+            // Cache the function pointer to avoid accessing global in loop?
+            // Compilers might optimize g_dotProductFunc access if it's static.
+            const DotProductFunc dotFunc = useSIMD ? g_dotProductFunc : dotProductScalar;
+
             for (uint32_t ch = 0; ch < m_channels; ++ch) {
                 const float* coeffs = m_filterBank.coeffs[phaseIndex];
                 const int32_t samplePos0 = static_cast<int32_t>(intPos) - static_cast<int32_t>(halfTaps);
                 const float* window = m_history.getWindow(ch, samplePos0);
-                float sum = 0.0f;
 
-#ifdef NOMAD_HAS_AVX
-                if (useSIMD) {
-                    sum = dotProductAVX(window, coeffs, numTaps);
-                } else {
-                    sum = dotProductScalar(window, coeffs, numTaps);
-                }
-#elif defined(NOMAD_HAS_SSE)
-                if (useSIMD) {
-                    sum = dotProductSSE(window, coeffs, numTaps);
-                } else {
-                    sum = dotProductScalar(window, coeffs, numTaps);
-                }
-#else
-                (void)useSIMD;
-                sum = dotProductScalar(window, coeffs, numTaps);
-#endif
-
-                output[outputFrames * m_channels + ch] = sum;
+                output[outputFrames * m_channels + ch] = dotFunc(window, coeffs, numTaps);
             }
             
             ++outputFrames;
@@ -399,15 +439,9 @@ float SampleRateConverter::interpolateSample(uint32_t channel, uint32_t phaseInd
     const int32_t samplePos0 = centerPos - static_cast<int32_t>(halfTaps);
     const float* window = m_history.getWindow(channel, samplePos0);
 
-#ifdef NOMAD_HAS_AVX
     if (m_simdEnabled.load(std::memory_order_relaxed) && hasSIMD()) {
-        return dotProductAVX(window, coeffs, numTaps);
+        return g_dotProductFunc(window, coeffs, numTaps);
     }
-#elif defined(NOMAD_HAS_SSE)
-    if (m_simdEnabled.load(std::memory_order_relaxed) && hasSIMD()) {
-        return dotProductSSE(window, coeffs, numTaps);
-    }
-#endif
 
     return dotProductScalar(window, coeffs, numTaps);
 }
