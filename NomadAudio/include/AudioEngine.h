@@ -9,6 +9,7 @@
 #include "EngineState.h"
 #include "Interpolators.h"
 #include "MeterSnapshot.h"
+#include "PluginHost.h" // For MidiBuffer [NEW]
 #include "../../NomadCore/include/NomadThreading.h"
 #include <cstdint>
 #include <cmath>
@@ -27,6 +28,13 @@
 namespace Nomad {
 namespace Audio {
 
+class UnitManager;
+class PatternPlaybackEngine;
+
+namespace Plugins {
+    class SamplerPlugin;  // Forward declare for RT cache
+}
+
 /**
  * @brief Real-time audio engine with 144dB dynamic range.
  *
@@ -42,6 +50,11 @@ class AudioEngine {
 public:
     AudioEngine();
     ~AudioEngine();
+
+     /**
+      * @brief Singleton Accessor (v3.1)
+      */
+    static AudioEngine& getInstance();
 
      /**
      * @brief Process a single audio block (driver callback entry).
@@ -73,7 +86,18 @@ public:
     uint32_t getSampleRate() const { return m_sampleRate.load(std::memory_order_relaxed); }
 
     void setBufferConfig(uint32_t maxFrames, uint32_t numChannels);
-    void setTransportPlaying(bool playing) { m_transportPlaying.store(playing, std::memory_order_relaxed); }
+    void setTransportPlaying(bool playing) {
+        // Update immediately for UI queries, but also enqueue a command so the audio thread
+        // can detect edges reliably (stop->play within one buffer, double-stop hard stop, etc.).
+        m_transportPlaying.exchange(playing, std::memory_order_relaxed);
+        uint64_t pos = m_globalSamplePos.load(std::memory_order_relaxed);
+
+        AudioQueueCommand cmd;
+        cmd.type = AudioQueueCommandType::SetTransportState;
+        cmd.value1 = playing ? 1.0f : 0.0f;
+        cmd.samplePos = pos;
+        m_commandQueue.push(cmd);
+    }
     bool isTransportPlaying() const { return m_transportPlaying.load(std::memory_order_relaxed); }
     void setGraph(const AudioGraph& graph) { 
         m_state.swapGraph(graph); 
@@ -135,6 +159,20 @@ public:
     double getLoopStartBeat() const { return m_loopStartBeat.load(std::memory_order_relaxed); }
     double getLoopEndBeat() const { return m_loopEndBeat.load(std::memory_order_relaxed); }
 
+    // Pattern Playback Mode (Overrides loop behavior for Arsenal)
+    void setPatternPlaybackMode(bool enabled, double lengthBeats) {
+        m_patternPlaybackMode.store(enabled, std::memory_order_relaxed);
+        m_patternLengthBeats.store(lengthBeats, std::memory_order_relaxed);
+    }
+    bool isPatternPlaybackMode() const { return m_patternPlaybackMode.load(std::memory_order_relaxed); }
+    
+    // Antigravity Dependencies (v3.1)
+    void setUnitManager(UnitManager* mgr) { m_unitManager.store(mgr, std::memory_order_release); }
+    void setPatternPlaybackEngine(PatternPlaybackEngine* engine) { m_patternEngine.store(engine, std::memory_order_release); }
+    
+    // Pattern change detection - reset voices when pattern ID changes (not on MIDI edits)
+    void requestVoiceResetOnPatternChange();
+
     // Metering (read on UI thread)
     float getPeakL() const { return m_peakL.load(std::memory_order_relaxed); }
     float getPeakR() const { return m_peakR.load(std::memory_order_relaxed); }
@@ -144,6 +182,11 @@ public:
     // Dithering control
     void setDitheringMode(DitheringMode mode) { m_ditheringMode.store(mode, std::memory_order_relaxed); }
     DitheringMode getDitheringMode() const { return m_ditheringMode.load(std::memory_order_relaxed); }
+
+    // Test Tone
+    void setTestToneEnabled(bool enabled) { m_testToneEnabled.store(enabled, std::memory_order_relaxed); }
+    bool isTestToneEnabled() const { return m_testToneEnabled.load(std::memory_order_relaxed); }
+
 
     // Waveform history (interleaved stereo), safe to read on UI thread.
     uint32_t getWaveformHistoryCapacity() const { return m_waveformHistoryFrames.load(std::memory_order_relaxed); }
@@ -217,6 +260,13 @@ private:
     TrackRTState& ensureTrackState(uint32_t trackId);
     void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset = 0);
     void applyPendingCommands();
+    void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame);
+    
+    // Pre-allocated buffers for Arsenal unit processing (RT-safe)
+    std::vector<double> m_unitBufferD;  // Stereo interleaved unit output
+    std::vector<MidiBuffer> m_unitMidiBuffers; // Per-unit MIDI buffers (max 32 units)
+    std::vector<float> m_pluginBufferF; // Stereo de-interleaved float buffer for plugin processing
+    std::vector<float> m_silentBufferF; // Zero buffer for inputs
     
     // Soft clipper (transparent below unity)
     static inline double softClipD(double x) {
@@ -248,6 +298,17 @@ private:
     std::atomic<uint32_t> m_maxBufferFrames{4096};  // Larger default for safety
     std::atomic<uint32_t> m_outputChannels{2};
     std::atomic<bool> m_transportPlaying{false};
+    // RT-side tracking of last known transport state (avoids race with UI atomic updates)
+    bool m_rtLastTransportPlaying{false};
+    uint64_t m_rtLastTransportPos{0};
+    // Transport edge flags (set in applyPendingCommands, consumed in processBlock)
+    std::atomic<bool> m_transportRestartRequested{false};
+    std::atomic<bool> m_transportStopRequested{false};
+    // Hard stop: immediate silence (e.g., stop pressed twice)
+    std::atomic<bool> m_transportHardStopRequested{false};
+
+    // Request MIDI panic (All Notes Off / All Sound Off) injection into unit MIDI buffers.
+    std::atomic<bool> m_transportMidiPanicRequested{false};
     std::atomic<uint64_t> m_globalSamplePos{0};
     
     // Pre-allocated buffers - DOUBLE PRECISION for internal mixing
@@ -255,6 +316,7 @@ private:
     std::vector<double> m_masterBufferD;               // Double precision master
     std::vector<float> m_scratchL;                     // Scratch L for plugins
     std::vector<float> m_scratchR;                     // Scratch R for plugins
+    std::vector<MidiBuffer> m_scratchMidiBuffers;      // [NEW] Scratch MIDI buffers for units
     std::vector<TrackRTState> m_trackState;
     
     // --- Antigravity Routing Engine (v3.1) ---
@@ -370,6 +432,34 @@ private:
     std::atomic<bool> m_loopEnabled{false};
     std::atomic<double> m_loopStartBeat{0.0};
     std::atomic<double> m_loopEndBeat{4.0};         // Default: 1 bar (4 beats)
+
+    // Pattern Playback Mode State
+    std::atomic<bool> m_patternPlaybackMode{false};
+    std::atomic<double> m_patternLengthBeats{4.0};
+
+    // Test Tone State
+    std::atomic<bool> m_testToneEnabled{false};
+    double m_testTonePhase{0.0};
+    
+    // Dependencies
+    std::atomic<UnitManager*> m_unitManager{nullptr};
+    std::atomic<PatternPlaybackEngine*> m_patternEngine{nullptr};
+    
+    // RT-safe sampler cache (refreshed from main thread when units change)
+    // Avoids dynamic_pointer_cast on RT thread during hard stop/restart
+    static constexpr size_t kMaxCachedSamplers = 64;
+    std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> m_cachedSamplers{};
+    std::atomic<size_t> m_cachedSamplerCount{0};
+    
+public:
+    /**
+     * @brief Refresh the sampler cache from UnitManager snapshot.
+     * Call from main thread after unit changes.
+     */
+    void refreshSamplerCache();
+
+private:
+
 
     // Parallel Processing
     std::unique_ptr<Nomad::RealTimeThreadPool> m_threadPool;

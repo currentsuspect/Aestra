@@ -7,6 +7,8 @@
 #include "../NomadAudio/include/PlaylistModel.h"
 #include "../NomadAudio/include/PatternManager.h"
 #include "../NomadAudio/include/WaveformCache.h"
+#include "../NomadAudio/include/MeterSnapshot.h"
+#include "../NomadAudio/include/ChannelSlotMap.h"
 
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
@@ -1167,29 +1169,39 @@ void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
     // Initial fill to clear potential artifacts
     renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary"));
 
-    // Inline Volume Meter (Behind Name) - MOVED HERE so renderChildren (buttons) draws on top
-    if (m_channel && !m_channel->isMuted()) {
-        static auto startTime = std::chrono::steady_clock::now();
-        auto now = std::chrono::steady_clock::now();
-        float time = std::chrono::duration<float>(now - startTime).count();
+    // Inline Volume Meter (Behind Name) - Uses real audio levels from MeterSnapshotBuffer
+    if (m_channel && !m_channel->isMuted() && m_trackManager) {
+        // Get meter data from MeterSnapshotBuffer via TrackManager
+        auto meterSnapshots = m_trackManager->getMeterSnapshots();
+        auto slotMapPtr = m_trackManager->getChannelSlotMapShared();
         
-        float level = (sin(time * 5.0f + m_channel->getChannelId()) + 1.0f) * 0.5f * m_channel->getVolume();
-        if (level > 0.001f) {
-            level = std::min(1.0f, std::max(0.0f, level));
-            float visualLevel = std::pow(level, 0.5f); 
-            
-            float meterX = bounds.x + 20.0f; 
-            float meterY = bounds.y + 10.0f; 
-            float meterW = 140.0f * visualLevel;
-            float meterH = 28.0f; 
-            
-            NomadUI::NUIRect meterRect(meterX, meterY, meterW, meterH);
-            
-            NomadUI::NUIColor meterColor = themeManager.getColor("success").withAlpha(0.15f);
-            if (visualLevel > 0.8f) meterColor = themeManager.getColor("error").withAlpha(0.2f);
-            else if (visualLevel > 0.5f) meterColor = themeManager.getColor("warning").withAlpha(0.2f);
-            
-            renderer.fillRoundedRect(meterRect, 4.0f, meterColor);
+        if (meterSnapshots && slotMapPtr) {
+            uint32_t slotIndex = slotMapPtr->getSlotIndex(m_channel->getChannelId());
+            if (slotIndex != ChannelSlotMap::INVALID_SLOT) {
+                auto readout = meterSnapshots->readSnapshot(slotIndex);
+                
+                // Use peak levels (linear 0..1+), average L/R for mono display
+                float level = (readout.peakL + readout.peakR) * 0.5f;
+                level = level * m_channel->getVolume(); // Scale by track volume
+                
+                if (level > 0.001f) {
+                    level = std::min(1.0f, std::max(0.0f, level));
+                    float visualLevel = std::pow(level, 0.5f); // Perceptual scaling
+                    
+                    float meterX = bounds.x + 20.0f; 
+                    float meterY = bounds.y + 10.0f; 
+                    float meterW = 140.0f * visualLevel;
+                    float meterH = 28.0f; 
+                    
+                    NomadUI::NUIRect meterRect(meterX, meterY, meterW, meterH);
+                    
+                    NomadUI::NUIColor meterColor = themeManager.getColor("success").withAlpha(0.15f);
+                    if (visualLevel > 0.8f) meterColor = themeManager.getColor("error").withAlpha(0.2f);
+                    else if (visualLevel > 0.5f) meterColor = themeManager.getColor("warning").withAlpha(0.2f);
+                    
+                    renderer.fillRoundedRect(meterRect, 4.0f, meterColor);
+                }
+            }
         }
     }
 
@@ -1506,6 +1518,13 @@ void TrackUIComponent::onMouseEnter() {
 
 void TrackUIComponent::onMouseLeave() {
     NUIComponent::onMouseLeave();
+    
+    // Reset trim hover state when mouse leaves track bounds
+    if (m_hoverTrimEdge != TrimEdge::None) {
+        m_hoverTrimEdge = TrimEdge::None;
+        repaint();
+    }
+    
     // Force cache invalidation immediately on leave
     if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
 }

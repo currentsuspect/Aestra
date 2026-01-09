@@ -1,5 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UnitManager.h"
+#include "PluginFactory.h" // [NEW]
+#include "Plugin/SamplerPlugin.h" // [NEW]
 #include <algorithm>
 
 namespace Nomad {
@@ -102,13 +104,29 @@ void UnitManager::setUnitRoute(UnitID id, MixerRouteID route) {
     }
 }
 
-void UnitManager::setUnitAudioClip(UnitID id, const std::string& clipPath) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_units.count(id)) {
-        m_units[id].audioClipPath = clipPath;
-        // No need to update audio snapshot for this (it's UI data)
+    void UnitManager::setUnitAudioClip(UnitID id, const std::string& clipPath) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_units.count(id)) {
+            m_units[id].audioClipPath = clipPath;
+            
+            // Check if plugin exists, if not create a Sampler
+            if (m_unitPlugins.find(id) == m_unitPlugins.end()) {
+                // Auto-create SamplerPlugin
+                auto sampler = std::make_shared<Plugins::SamplerPlugin>();
+                // Initialize with hardcoded defaults for now (should come from audio engine config)
+                sampler->initialize(48000.0, 256); 
+                sampler->activate();
+                
+                m_unitPlugins[id] = sampler;
+                updateAudioSnapshot(); // creating plugin changes the audio graph state
+            }
+            
+            // Propagate to plugin
+            if (auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(m_unitPlugins[id])) {
+                sampler->loadSample(clipPath);
+            }
+        }
     }
-}
 
 void UnitManager::setUnitMixerChannel(UnitID id, int channelIndex) {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -132,6 +150,40 @@ void UnitManager::setUnitColor(UnitID id, uint32_t color) {
         m_units[id].color = color;
         // No audio snapshot update needed (UI data)
     }
+}
+
+// [NEW] Plugin Assignment
+void UnitManager::setUnitPlugin(UnitID id, PluginInstancePtr plugin) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_unitPlugins[id] = plugin;
+    updateAudioSnapshot();
+}
+
+std::shared_ptr<IPluginInstance> UnitManager::getUnitPlugin(UnitID id) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = m_unitPlugins.find(id);
+    if (it != m_unitPlugins.end()) {
+        return it->second;
+    }
+    return nullptr;
+}
+
+void UnitManager::instantiatePlugin(UnitID id, const std::string& pluginId) {
+    // In-Process Sync Creation (Simplification)
+    InProcessPluginFactory factory;
+    PluginInfo info;
+    info.id = pluginId;
+    info.format = PluginFormat::Internal; // Assume internal for now
+    
+    // We use a latch to capture the result from the async-capable API
+    factory.createPluginAsync(info, [this, id](PluginInstancePtr plugin) {
+        if (plugin) {
+            // Need to initialize it
+            plugin->initialize(48000.0, 4096); // TODO: Get real rate/block size from Engine?
+            plugin->activate();
+            this->setUnitPlugin(id, plugin);
+        }
+    });
 }
 
 void UnitManager::reorderUnit(UnitID id, size_t newIndex) {
@@ -196,6 +248,13 @@ void UnitManager::updateAudioSnapshot() {
         state.solo = unit.isSolo;
         state.muted = unit.isMuted;
         state.routeId = unit.targetMixerRoute;
+        
+        // [NEW] Plugin
+        if (m_unitPlugins.find(id) != m_unitPlugins.end()) {
+            state.plugin = m_unitPlugins.at(id);
+        } else {
+            state.plugin = nullptr;
+        }
         
         newSnapshot->units.push_back(state);
     }

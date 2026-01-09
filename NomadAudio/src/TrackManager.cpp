@@ -2,6 +2,8 @@
 
 #include "TrackManager.h"
 #include "MixerChannel.h"
+#include "AudioCommandQueue.h" 
+#include "AudioEngine.h" // [NEW] Correct placement
 
 #include "NomadLog.h"
 #include <algorithm>
@@ -27,78 +29,27 @@ static constexpr size_t MAX_AUDIO_BUFFER_SIZE = 16384;
 // Helpers
 //==============================================================================
 
-static void reindexChannels(std::vector<std::shared_ptr<MixerChannel>>& channels) {
-    for (uint32_t idx = 0; idx < channels.size(); ++idx) {
-        if (channels[idx]) {
-            // MixerChannels don't strictly need index tracking for DSP, 
-            // but we keep metadata up to date.
-        }
-    }
-}
+
 
 //==============================================================================
 // AudioThreadPool Implementation
 //==============================================================================
 
-AudioThreadPool::AudioThreadPool(size_t numThreads) {
-    for (size_t i = 0; i < numThreads; ++i) {
-        m_workers.emplace_back([this] { workerThread(); });
-    }
-}
 
-AudioThreadPool::~AudioThreadPool() {
-    m_stop = true;
-    m_condition.notify_all();
-    for (auto& worker : m_workers) {
-        if (worker.joinable()) worker.join();
-    }
-}
-
-void AudioThreadPool::enqueue(std::function<void()> task) {
-    {
-        std::lock_guard<std::mutex> lock(m_queueMutex);
-        m_tasks.push(std::move(task));
-        m_activeTasks++;
-    }
-    m_condition.notify_one();
-}
-
-void AudioThreadPool::waitForCompletion() {
-    std::unique_lock<std::mutex> lock(m_queueMutex);
-    m_completionCondition.wait(lock, [this] { return m_tasks.empty() && m_activeTasks == 0; });
-}
-
-void AudioThreadPool::workerThread() {
-    while (!m_stop) {
-        std::function<void()> task;
-        {
-            std::unique_lock<std::mutex> lock(m_queueMutex);
-            m_condition.wait(lock, [this] { return m_stop || !m_tasks.empty(); });
-            if (m_stop && m_tasks.empty()) return;
-            task = std::move(m_tasks.front());
-            m_tasks.pop();
-        }
-        
-        if (task) {
-            task();
-            m_activeTasks--;
-            if (m_activeTasks == 0) {
-                m_completionCondition.notify_all();
-            }
-        }
-    }
-}
 
 
 //==============================================================================
 // TrackManager Implementation
 //==============================================================================
 
+// Check pattern mode via Engine
+bool TrackManager::isPatternMode() const {
+    return AudioEngine::getInstance().isPatternPlaybackMode();
+}
+
+// Force Rebuild
 TrackManager::TrackManager() {
-    size_t hwThreads = std::thread::hardware_concurrency();
-    size_t audioThreads = (std::max)(static_cast<size_t>(2), (std::min)(static_cast<size_t>(8), hwThreads > 0 ? hwThreads - 1 : 4));
-    
-    m_threadPool = std::make_unique<AudioThreadPool>(audioThreads);
+
     m_meterSnapshotsOwned = std::make_shared<MeterSnapshotBuffer>();
     m_meterSnapshotsRaw = m_meterSnapshotsOwned.get();
     m_continuousParamsOwned = std::make_shared<ContinuousParamBuffer>();
@@ -114,6 +65,9 @@ TrackManager::TrackManager() {
     
     // Initialize pattern playback engine
     m_patternEngine = std::make_unique<PatternPlaybackEngine>(&m_clock, &m_patternManager, &m_unitManager);
+    
+
+    
     m_clock.setTempo(120.0); // Default tempo
     
     Log::info("TrackManager v3.0 created");
@@ -121,17 +75,7 @@ TrackManager::TrackManager() {
 
 TrackManager::~TrackManager() {
     clearAllChannels();
-    m_threadPool.reset();
-    Log::info("TrackManager destroyed");
-}
-
-void TrackManager::setThreadCount(size_t count) {
-    count = std::max(size_t(1), std::min(size_t(16), count));
-    m_threadPool.reset();
-    m_threadPool = std::make_unique<AudioThreadPool>(count);
-}
-
-// Mixer Channel Management
+}// Mixer Channel Management
 std::shared_ptr<MixerChannel> TrackManager::addChannel(const std::string& name) {
     std::lock_guard<std::mutex> lock(m_channelMutex);
     std::string channelName = name.empty() ? "Channel " + std::to_string(m_channels.size() + 1) : name;
@@ -139,10 +83,7 @@ std::shared_ptr<MixerChannel> TrackManager::addChannel(const std::string& name) 
     auto channel = std::make_shared<MixerChannel>(channelName, m_nextChannelId++);
     m_channels.push_back(channel);
 
-    if (m_channelBuffers.size() < m_channels.size()) {
-        std::vector<float> newBuffer(MAX_AUDIO_BUFFER_SIZE * 2, 0.0f);
-        m_channelBuffers.resize(m_channels.size(), std::move(newBuffer));
-    }
+
 
     m_isModified.store(true);
     m_graphDirty.store(true, std::memory_order_release);
@@ -156,10 +97,7 @@ void TrackManager::addExistingChannel(std::shared_ptr<MixerChannel> channel) {
     if (!channel) return;
     std::lock_guard<std::mutex> lock(m_channelMutex);
     m_channels.push_back(channel);
-    if (m_channelBuffers.size() < m_channels.size()) {
-        std::vector<float> newBuffer(MAX_AUDIO_BUFFER_SIZE * 2, 0.0f);
-        m_channelBuffers.resize(m_channels.size(), std::move(newBuffer));
-    }
+
     m_graphDirty.store(true, std::memory_order_release);
     rebuildChannelSlotMapLocked();
 }
@@ -178,9 +116,9 @@ void TrackManager::removeChannel(size_t index) {
     std::lock_guard<std::mutex> lock(m_channelMutex);
     if (index < m_channels.size()) {
         m_channels.erase(m_channels.begin() + index);
-        if (index < m_channelBuffers.size()) {
-            m_channelBuffers.erase(m_channelBuffers.begin() + index);
-        }
+        // if (index < m_channelBuffers.size()) {
+        //     m_channelBuffers.erase(m_channelBuffers.begin() + index);
+        // }
         m_isModified.store(true);
         m_graphDirty.store(true, std::memory_order_release);
         rebuildChannelSlotMapLocked();
@@ -190,7 +128,7 @@ void TrackManager::removeChannel(size_t index) {
 void TrackManager::clearAllChannels() {
     std::lock_guard<std::mutex> lock(m_channelMutex);
     m_channels.clear();
-    m_channelBuffers.clear();
+    // m_channelBuffers.clear(); // Removed
     m_channelSlotMapOwned.reset();
     m_channelSlotMapRaw = nullptr;
     m_graphDirty.store(true, std::memory_order_release);
@@ -243,6 +181,9 @@ ChannelSlotMap TrackManager::getChannelSlotMapSnapshot() const {
 
 // Transport Control
 void TrackManager::play() {
+    // Save current position as play start (for return-on-stop behavior)
+    saveCurrentAsPlayStart();
+    
     m_isPlaying.store(true);
     
     // Decoupled Recording: Start capture if armed
@@ -311,9 +252,18 @@ void TrackManager::playPatternInArsenal(PatternID patternId) {
     // Arsenal mode: Schedule pattern at current position
     double currentBeat = m_positionSeconds.load() * (m_clock.getCurrentTempo() / 60.0);
     
+    // Check if pattern ID changed (distinguish from MIDI edits in same pattern)
+    bool patternChanged = (patternId != m_lastScheduledPatternId);
+    m_lastScheduledPatternId = patternId;
+    
     // Cancel previous Arsenal playback
     if (m_arsenalInstanceId > 0) {
         m_patternEngine->cancelPatternInstance(m_arsenalInstanceId);
+    }
+    
+    // Hard-reset voices only if pattern ID changed (not on MIDI edits within same pattern)
+    if (patternChanged) {
+        AudioEngine::getInstance().requestVoiceResetOnPatternChange();
     }
     
     // Use instance ID 0 for Arsenal (reserved)
@@ -363,6 +313,16 @@ void TrackManager::startRecordingProcess() {
     
     double currentBeat = m_positionSeconds.load() * (m_clock.getCurrentTempo() / 60.0);
     
+    // B-006: Pre-allocate recording buffers on main thread
+    // Use input sample rate if available, otherwise output rate
+    uint32_t sampleRate = static_cast<uint32_t>(m_inputSampleRate.load());
+    if (sampleRate == 0) {
+        sampleRate = static_cast<uint32_t>(m_outputSampleRate.load());
+    }
+    if (sampleRate == 0) {
+        sampleRate = 48000; // Safe fallback
+    }
+    
     for (const auto& channel : m_channels) {
         if (channel->isArmed()) {
             RecordingBuffer buf;
@@ -370,6 +330,10 @@ void TrackManager::startRecordingProcess() {
             buf.startBeat = currentBeat;
             buf.inputChannelIndex = channel->getInputChannelIndex();
             buf.active = true;
+            
+            // B-006: Pre-allocate buffer for MAX_RECORDING_SECONDS
+            // This eliminates all allocations on the audio thread during recording
+            buf.preallocate(MAX_RECORDING_SECONDS * sampleRate);
             
             auto it = std::find(m_channels.begin(), m_channels.end(), channel);
             if (it != m_channels.end()) {
@@ -386,7 +350,8 @@ void TrackManager::startRecordingProcess() {
     
     if (!m_recordingBuffers.empty()) {
         m_isRecording.store(true);
-        Log::info("Recording started - Armed tracks: " + std::to_string(m_recordingBuffers.size()));
+        Log::info("Recording started - Armed tracks: " + std::to_string(m_recordingBuffers.size()) + 
+                  ", Pre-allocated " + std::to_string(MAX_RECORDING_SECONDS) + "s per track");
     } else {
         Log::warning("Cannot start recording - No tracks are armed");
         m_isRecordArmed.store(false);
@@ -396,17 +361,22 @@ void TrackManager::startRecordingProcess() {
 
 
 void TrackManager::processInput(const float* inputBuffer, uint32_t numFrames) {
-    static int cbCount = 0;
-    if ((cbCount++ % 100) == 0) {
-       Log::info("processInput: " + std::to_string(numFrames) + " frames. InputChans: " + std::to_string(m_inputChannelCount));
-    }
-
     // Copy to monitor buffer (always update for monitoring)
+    // Uses lock-free spinlock with immediate fallback to avoid RT stalls
     if (inputBuffer && m_inputChannelCount > 0) {
-        std::lock_guard<std::mutex> monitorLock(m_monitorMutex); // <--- LOCK ADDED
         size_t totalSamples = numFrames * m_inputChannelCount;
-        if (m_monitorBuffer.size() < totalSamples) m_monitorBuffer.resize(totalSamples);
-        std::memcpy(m_monitorBuffer.data(), inputBuffer, totalSamples * sizeof(float));
+        
+        // Try to acquire spinlock (non-blocking)
+        // If another thread holds it, just skip this update (monitoring is non-critical)
+        if (!m_monitorSpinlock.test_and_set(std::memory_order_acquire)) {
+            // We got the lock - buffer was pre-allocated in setInputChannelCount
+            if (m_monitorBuffer.size() >= totalSamples) {
+                std::memcpy(m_monitorBuffer.data(), inputBuffer, totalSamples * sizeof(float));
+                m_monitorBufferSize.store(static_cast<uint32_t>(totalSamples), std::memory_order_release);
+            }
+            m_monitorSpinlock.clear(std::memory_order_release);
+        }
+        // If we couldn't acquire, skip update - UI will use stale data (acceptable)
     }
 
     if (!m_isRecording.load()) return;
@@ -418,7 +388,7 @@ void TrackManager::processInput(const float* inputBuffer, uint32_t numFrames) {
     if (m_recordingFramesCaptured == 0) {
         m_recordingStartTime = std::chrono::high_resolution_clock::now();
     }
-    m_recordingFramesCaptured += numFrames; // <--- ADDED THIS
+    m_recordingFramesCaptured += numFrames;
     
     uint32_t stride = (m_inputChannelCount > 0) ? m_inputChannelCount : 2;
     for (auto& buf : m_recordingBuffers) {
@@ -440,24 +410,29 @@ void TrackManager::finishRecording() {
     auto timeT = std::chrono::system_clock::to_time_t(now);
     
     for (auto& buf : m_recordingBuffers) {
-        if (buf.data.empty()) {
+        // B-006: Use getSampleCount() for pre-allocated buffer
+        size_t sampleCount = buf.getSampleCount();
+        if (sampleCount == 0) {
             Log::warning("Recording buffer empty for Track " + std::to_string(buf.trackId));
             continue;
         }
 
         // --- Latency Compensation ---
-        if (m_latencySamples > 0 && buf.data.size() > m_latencySamples) {
+        // B-006: Work with actual sample count, not buffer capacity
+        size_t startOffset = 0;
+        if (m_latencySamples > 0 && sampleCount > m_latencySamples) {
              Log::info("Compensating latency: Removing " + std::to_string(m_latencySamples) + " samples");
-             buf.data.erase(buf.data.begin(), buf.data.begin() + m_latencySamples);
+             startOffset = m_latencySamples;
+             sampleCount -= m_latencySamples;
         } else if (m_latencySamples > 0) {
              // Edge case: recording shorter than latency
              Log::warning("Recording shorter than latency compensation!");
-             buf.data.clear();
+             sampleCount = 0;
         }
 
-        if (buf.data.empty()) continue;
+        if (sampleCount == 0) continue;
 
-        Log::info("Saving recording for Track " + std::to_string(buf.trackId) + ". Samples: " + std::to_string(buf.data.size()));
+        Log::info("Saving recording for Track " + std::to_string(buf.trackId) + ". Samples: " + std::to_string(sampleCount));
         
         // Generate filename
         std::stringstream ss;
@@ -488,7 +463,8 @@ void TrackManager::finishRecording() {
         ma_encoder_config config = ma_encoder_config_init(ma_encoding_format_wav, ma_format_f32, 1, finalRate);
         ma_encoder encoder;
         if (ma_encoder_init_file(filePath.string().c_str(), &config, &encoder) == MA_SUCCESS) {
-            ma_encoder_write_pcm_frames(&encoder, buf.data.data(), buf.data.size(), nullptr);
+            // B-006: Write from pre-allocated buffer with latency offset
+            ma_encoder_write_pcm_frames(&encoder, buf.data.data() + startOffset, sampleCount, nullptr);
             ma_encoder_uninit(&encoder);
             
             Log::info("Saved recording to: " + filePath.string());
@@ -502,16 +478,18 @@ void TrackManager::finishRecording() {
                 auto audioData = std::make_shared<AudioBufferData>();
                 audioData->sampleRate = finalRate;
                 audioData->numChannels = 1;
-                audioData->numFrames = buf.data.size();
-                audioData->interleavedData = buf.data; // Copy
+                audioData->numFrames = sampleCount;
+                // B-006: Copy only the recorded samples (with latency offset applied)
+                audioData->interleavedData.assign(buf.data.begin() + startOffset, 
+                                                   buf.data.begin() + startOffset + sampleCount);
                 source->setBuffer(audioData);
                 
                 // Create Pattern (which ClipInstance uses)
                 AudioSlicePayload payload;
                 payload.audioSourceId = sourceId;
-                payload.slices.push_back({0.0, (double)buf.data.size()});
+                payload.slices.push_back({0.0, (double)sampleCount});
                 
-                double durationBeats = (double)buf.data.size() / (double)finalRate * (m_clock.getCurrentTempo() / 60.0);
+                double durationBeats = (double)sampleCount / (double)finalRate * (m_clock.getCurrentTempo() / 60.0);
                 PatternID patternId = m_patternManager.createAudioPattern(ss.str(), durationBeats, payload);
 
                 // Create Clip Instance
@@ -567,366 +545,10 @@ void TrackManager::syncPositionFromEngine(double seconds) {
 
 
 // Audio Processing
-void TrackManager::processAudio(float* outputBuffer, uint32_t numFrames, double streamTime, const SourceManager& sourceManager) {
-    if (!outputBuffer || numFrames == 0) return;
-    
-    // 1. Get current Playlist Snapshot
-    const PlaylistRuntimeSnapshot* snapshot = m_snapshotManager.getCurrentSnapshot();
-    if (!snapshot) {
-        // Fallback to silence or basic mixer bypass
-        std::memset(outputBuffer, 0, numFrames * 2 * sizeof(float));
-        return;
-    }
+// [LEGACY AUDIO PROCESSING REMOVED]
+// TrackManager no longer processes audio directly. 
+// Use AudioEngine::processBlock which consumes the AudioGraph built from TrackManager state.
 
-    auto startTime = std::chrono::high_resolution_clock::now();
-    double outputSampleRate = m_outputSampleRate.load();
-    if (outputSampleRate <= 0.0) outputSampleRate = 48000.0;
-    
-    // === PATTERN PLAYBACK: Refill lookahead window (scheduler work) ===
-    if (m_isPlaying.load()) {
-        m_patternEngine->refillWindow(m_currentSampleFrame.load(), static_cast<int>(outputSampleRate), 4096);
-    }
-    
-    // 2. Dispatch to processing implementation
-    // Protect m_channels from concurrent modification (Graph Rebuild)
-    std::unique_lock<std::mutex> channelLock(m_channelMutex, std::try_to_lock);
-    if (!channelLock.owns_lock()) {
-        // Graph is being rebuilt - output silence to avoid crash
-        std::memset(outputBuffer, 0, numFrames * 2 * sizeof(float));
-        return;
-    }
-
-    try {
-        if (m_multiThreadingEnabled && m_threadPool && m_channels.size() > 2) {
-            processAudioMultiThreaded(outputBuffer, numFrames, streamTime, outputSampleRate, snapshot);
-        } else {
-            processAudioSingleThreaded(outputBuffer, numFrames, streamTime, outputSampleRate, snapshot);
-        }
-    } catch (const std::exception& e) {
-        Log::error("CRITICAL EXCEPTION in processAudio: " + std::string(e.what()));
-        std::memset(outputBuffer, 0, numFrames * 2 * sizeof(float));
-    } catch (...) {
-        Log::error("CRITICAL EXCEPTION in processAudio: Unknown");
-        std::memset(outputBuffer, 0, numFrames * 2 * sizeof(float));
-    }
-    
-    // === PATTERN PLAYBACK: Process RT events (call happens inside single/multi-threaded) ===
-    // (Will be called from within process functions - see below)
-    
-    // Update sample frame counter
-    m_currentSampleFrame.fetch_add(numFrames, std::memory_order_relaxed);
-    
-    // 3. Performance tracking & UI Position Sync
-    auto endTime = std::chrono::high_resolution_clock::now();
-    double processingTimeUs = std::chrono::duration<double, std::micro>(endTime - startTime).count();
-    double availableTimeUs = (numFrames / outputSampleRate) * 1000000.0;
-    m_audioLoadPercent.store((processingTimeUs / availableTimeUs) * 100.0);
-    
-    // Smooth UI Position update (Exactly once per block)
-    m_uiPositionSeconds.store(m_positionSeconds.load());
-}
-
-void TrackManager::processAudioSingleThreaded(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate, const PlaylistRuntimeSnapshot* snapshot) {
-    // Lock is held by caller (processAudio)
-    // std::lock_guard<std::mutex> lock(m_channelMutex);
-    
-    // === PASS 0: Clear all channel buffers ===
-    for (size_t i = 0; i < m_channels.size() && i < m_channelBuffers.size(); ++i) {
-        std::memset(m_channelBuffers[i].data(), 0, numFrames * 2 * sizeof(float));
-    }
-    std::memset(outputBuffer, 0, numFrames * 2 * sizeof(float));
-    
-    // === PATTERN PLAYBACK ===
-    if (!m_channels.empty()) {
-        m_patternEngine->processAudio(m_currentSampleFrame.load(), numFrames, nullptr, 0);
-    }
-    
-    // Current timeline window in samples
-    SampleIndex winStart = static_cast<SampleIndex>(m_positionSeconds.load() * outputSampleRate);
-    SampleIndex winEnd = winStart + numFrames;
-
-    // === PASS 1: Mix clips into per-channel buffers ===
-    size_t laneIndex = 0;
-    for (const auto& lane : snapshot->lanes) {
-        if (lane.muted || laneIndex >= m_channelBuffers.size()) {
-            laneIndex++;
-            continue;
-        }
-        
-        float* channelBuf = m_channelBuffers[laneIndex].data();
-
-        // === INPUT MONITORING ===
-        // Tape-Style: Only monitor input if we are RECORDING.
-        // Monitoring while Stopped causes immediate feedback loops for users with hot mics/loopback ("Screeching").
-        // To be safe for "Just Works" users, verify recording is active.
-        bool monitoringAllowed = m_isRecording.load();
-        
-        if (monitoringAllowed && m_inputChannelCount > 0) {
-             std::lock_guard<std::mutex> monitorLock(m_monitorMutex); // <--- LOCK ADDED
-             if (!m_monitorBuffer.empty()) {
-                 if (laneIndex < m_channels.size()) {
-                     const auto& channel = m_channels[laneIndex];
-                     if (channel->isMonitoringEnabled()) {
-                         int inputChan = channel->getInputChannelIndex();
-                         if (inputChan >= 0 && inputChan < static_cast<int>(m_inputChannelCount)) {
-                             for (uint32_t f = 0; f < numFrames; ++f) {
-                                  // Bounds safety inside lock
-                                  if (f * m_inputChannelCount + inputChan < m_monitorBuffer.size()) {
-                                      float inSample = m_monitorBuffer[f * m_inputChannelCount + inputChan];
-                                      channelBuf[f * 2] += inSample;     // L
-                                      channelBuf[f * 2 + 1] += inSample; // R
-                                  }
-                             }
-                         }
-                     }
-                 }
-             }
-        }
-        
-        for (const auto& clip : lane.clips) {
-            if (clip.muted) continue;
-            if (!clip.overlaps(winStart, winEnd)) continue;
-            
-            if (clip.isAudio()) {
-                if (!clip.audioData) continue; // Safety check
-
-                SampleIndex clipOffset = std::max(SampleIndex(0), winStart - clip.startTime);
-                SampleIndex framesToProcess = std::min(SampleIndex(numFrames), clip.getEndTime() - winStart);
-                SampleIndex bufferOffset = std::max(SampleIndex(0), clip.startTime - winStart);
-                
-                // CRITICAL SAFETY: Ensure we don't write past the OUTPUT buffer
-                // dstIdx = (bufferOffset + i) * 2 must stay within numFrames * 2
-                if (bufferOffset >= SampleIndex(numFrames)) {
-                    continue; // Clip starts after this buffer, skip
-                }
-                if (bufferOffset + framesToProcess > SampleIndex(numFrames)) {
-                    framesToProcess = SampleIndex(numFrames) - bufferOffset;
-                }
-                if (framesToProcess <= 0) continue;
-                
-                // Resampling & Mixing Loop
-                // 1. Calculate Ratio (Source Speed)
-                double sourceSR = (clip.sourceSampleRate > 0) ? (double)clip.sourceSampleRate : outputSampleRate;
-                double ratio = sourceSR / outputSampleRate;
-                
-                // DEBUG LOGGING (Once per clip start/playback start?)
-                // Use a static counter to avoid spam, or check streamTime
-                static double lastLogTime = -999.0;
-                if (streamTime - lastLogTime > 2.0) {
-                     Log::info("Mixing Clip: " + std::to_string(clip.patternId) + 
-                               " SourceSR: " + std::to_string(sourceSR) + 
-                               " OutSR: " + std::to_string(outputSampleRate) + 
-                               " Ratio: " + std::to_string(ratio) +
-                               " Frames: " + std::to_string(clip.audioData->numFrames));
-                     lastLogTime = streamTime;
-                }
-
-                // Helper to safely get sample (Bounds Checked)
-                auto safeGetSample = [&](SampleIndex idx, int channel) -> float {
-                    if (!clip.audioData || clip.audioData->numFrames == 0) return 0.0f;
-                    if (idx >= clip.audioData->numFrames) idx = clip.audioData->numFrames - 1; 
-                    return clip.audioData->getSample(idx, channel); 
-                };
-
-                try {
-                    const SampleIndex maxFrame = (clip.audioData->numFrames > 0) ? clip.audioData->numFrames - 1 : 0;
-                    
-                    for (SampleIndex i = 0; i < framesToProcess; ++i) {
-                        SampleIndex dstIdx = (bufferOffset + i) * 2;
-                        
-                        double outputTimeAssumingStart = (double)(winStart + bufferOffset + i) - (double)clip.startTime;
-                        double sourcePosDouble = (double)clip.sourceStart + outputTimeAssumingStart * ratio;
-                        
-                        // SAFETY: Clamp to valid source range BEFORE any access
-                        if (sourcePosDouble < 0.0) sourcePosDouble = 0.0;
-                        
-                        SampleIndex idx0 = static_cast<SampleIndex>(sourcePosDouble);
-                        SampleIndex idx1 = idx0 + 1;
-                        
-                        // SAFETY: Exit loop if we've exhausted source audio (prevent crash)
-                        if (idx0 >= clip.audioData->numFrames) {
-                            break; // Source exhausted - stop playing this clip for this buffer
-                        }
-                        
-                        // Clamp idx1 to valid range (for interpolation at end of buffer)
-                        if (idx1 >= clip.audioData->numFrames) idx1 = maxFrame;
-                        
-                        float frac = static_cast<float>(sourcePosDouble - idx0);
-                        float gain = clip.getGainAt(winStart + bufferOffset + i);
-                        
-                        float s0_L, s1_L, s0_R, s1_R;
-                        
-                        if (clip.sourceChannels > 1) {
-                            s0_L = safeGetSample(idx0, 0);
-                            s0_R = safeGetSample(idx0, 1);
-                            s1_L = safeGetSample(idx1, 0);
-                            s1_R = safeGetSample(idx1, 1);
-                        } else {
-                            s0_L = s0_R = safeGetSample(idx0, 0);
-                            s1_L = s1_R = safeGetSample(idx1, 0);
-                        }
-                        
-                        float sampleL = s0_L + frac * (s1_L - s0_L);
-                        float sampleR = s0_R + frac * (s1_R - s0_R);
-                        
-                        channelBuf[dstIdx] += sampleL * gain;
-                        channelBuf[dstIdx + 1] += sampleR * gain;
-                    }
-                } catch (const std::exception& e) {
-                    Log::error("CRASH AVERTED in processing loop: " + std::string(e.what()));
-                } catch (...) {
-                    Log::error("CRASH AVERTED in processing loop: Unknown exception");
-                }
-            }
-        }
-        laneIndex++;
-    }
-
-    // === PASS 1.5: Process Channel Inserts (Effects) ===
-    // This executes the MixerChannel::processAudio which runs the EffectChain
-    static bool logPass15 = false;
-    if (!logPass15) { Log::info("[TrackManager] Entering Pass 1.5 (Channel Inserts)"); logPass15 = true; }
-    
-    for (size_t i = 0; i < m_channels.size() && i < m_channelBuffers.size(); ++i) {
-        if (m_channels[i]) {
-            m_channels[i]->processAudio(m_channelBuffers[i].data(), numFrames, streamTime, outputSampleRate);
-        }
-    }
-
-    // === PASS 2: Apply Sends ===
-    // Build channel ID -> index map for fast lookup
-    std::unordered_map<uint32_t, size_t> channelIdToIndex;
-    for (size_t i = 0; i < m_channels.size(); ++i) {
-        channelIdToIndex[m_channels[i]->getChannelId()] = i;
-    }
-    
-    for (size_t srcIdx = 0; srcIdx < m_channels.size() && srcIdx < m_channelBuffers.size(); ++srcIdx) {
-        auto sends = m_channels[srcIdx]->getSends(); // Thread-safe copy
-        
-        for (const auto& send : sends) {
-            auto it = channelIdToIndex.find(send.targetChannelId);
-            if (it == channelIdToIndex.end()) continue;
-            
-            size_t dstIdx = it->second;
-            if (dstIdx >= m_channelBuffers.size()) continue;
-            
-            float* srcBuf = m_channelBuffers[srcIdx].data();
-            float* dstBuf = m_channelBuffers[dstIdx].data();
-            float sendGain = send.gain;
-            
-            for (uint32_t i = 0; i < numFrames * 2; ++i) {
-                dstBuf[i] += srcBuf[i] * sendGain;
-            }
-        }
-    }
-
-    // === PASS 3: Sum channels to master with volume/pan/mute ===
-    for (size_t i = 0; i < m_channels.size() && i < m_channelBuffers.size(); ++i) {
-        auto& channel = m_channels[i];
-        if (channel->isMuted()) continue;
-        
-        float vol = channel->getVolume();
-        float pan = channel->getPan(); // -1 to +1
-        float panL = std::min(1.0f, 1.0f - pan);
-        float panR = std::min(1.0f, 1.0f + pan);
-        
-        float* srcBuf = m_channelBuffers[i].data();
-        for (uint32_t j = 0; j < numFrames; ++j) {
-            float L = srcBuf[j * 2] * vol * panL;
-            float R = srcBuf[j * 2 + 1] * vol * panR;
-            
-            outputBuffer[j * 2] += L;
-            outputBuffer[j * 2 + 1] += R;
-        }
-    }
-    
-    // === SAFETY RAIL: Hard Limiter & NaN Check ===
-    // Prevents Feedback Explosions from crashing the app or destroying speakers.
-    for (uint32_t j = 0; j < numFrames * 2; ++j) {
-        float s = outputBuffer[j];
-        if (std::isnan(s) || std::isinf(s)) {
-            outputBuffer[j] = 0.0f;
-        } else if (s > 2.0f) {
-            outputBuffer[j] = 2.0f;
-        } else if (s < -2.0f) {
-            outputBuffer[j] = -2.0f;
-        }
-    }
-
-    // Metering and Transport Update
-    // Metering and Transport Update
-    if (m_meterSnapshotsRaw && m_channelSlotMapRaw) {
-        // 1. Meter Individual Tracks
-        for (size_t i = 0; i < m_channels.size() && i < m_channelBuffers.size(); ++i) {
-            auto& channel = m_channels[i];
-            if (!channel) continue;
-
-            uint32_t slot = m_channelSlotMapRaw->getSlotIndex(channel->getChannelId());
-            if (slot == Audio::ChannelSlotMap::INVALID_SLOT) continue;
-
-            const float* src = m_channelBuffers[i].data();
-            float peakL = 0.0f;
-            float peakR = 0.0f;
-            float sumSqL = 0.0f;
-            float sumSqR = 0.0f;
-
-            for (uint32_t f = 0; f < numFrames; ++f) {
-                float l = std::abs(src[f * 2]);
-                float r = std::abs(src[f * 2 + 1]);
-                if (l > peakL) peakL = l;
-                if (r > peakR) peakR = r;
-                sumSqL += l * l;
-                sumSqR += r * r;
-            }
-
-            float rmsL = std::sqrt(sumSqL / numFrames);
-            float rmsR = std::sqrt(sumSqR / numFrames);
-
-            m_meterSnapshotsRaw->writeLevels(slot, peakL, peakR, rmsL, rmsR, 0.0f, 0.0f);
-            
-            if (peakL > 1.0f || peakR > 1.0f) {
-                m_meterSnapshotsRaw->setClip(slot, peakL > 1.0f, peakR > 1.0f);
-            }
-        }
-
-        // 2. Meter Master Output
-        const uint32_t masterSlot = Audio::ChannelSlotMap::MASTER_SLOT_INDEX;
-        float peakL = 0.0f;
-        float peakR = 0.0f;
-        float sumSqL = 0.0f;
-        float sumSqR = 0.0f;
-
-        for (uint32_t f = 0; f < numFrames; ++f) {
-            float l = std::abs(outputBuffer[f * 2]);
-            float r = std::abs(outputBuffer[f * 2 + 1]);
-            if (l > peakL) peakL = l;
-            if (r > peakR) peakR = r;
-            sumSqL += l * l;
-            sumSqR += r * r;
-        }
-
-        float rmsL = std::sqrt(sumSqL / numFrames);
-        float rmsR = std::sqrt(sumSqR / numFrames);
-        
-        // TODO: Calc proper correlation and LUFS
-        m_meterSnapshotsRaw->writeLevels(masterSlot, peakL, peakR, rmsL, rmsR, 0.0f, 0.0f);
-
-        if (peakL > 1.0f || peakR > 1.0f) {
-            m_meterSnapshotsRaw->setClip(masterSlot, peakL > 1.0f, peakR > 1.0f);
-        }
-    }
-
-    if (m_isPlaying.load()) {
-        double newPos = m_positionSeconds.load() + (numFrames / outputSampleRate);
-        m_positionSeconds.store(newPos);
-        if (m_onPositionUpdate) m_onPositionUpdate(newPos);
-    }
-}
-
-void TrackManager::processAudioMultiThreaded(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate, const PlaylistRuntimeSnapshot* snapshot) {
-    // Multi-threaded implementation follows same logic but parallelizes lane/channel processing
-    processAudioSingleThreaded(outputBuffer, numFrames, streamTime, outputSampleRate, snapshot);
-}
 
 // === Utility Methods ===
     

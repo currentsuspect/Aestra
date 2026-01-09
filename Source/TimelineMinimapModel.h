@@ -69,6 +69,7 @@ struct TimelineMinimapModel
     bool showLoop = true;
     bool showMarkers = true;
     bool showDiagnostics = true;
+    bool showPlayhead = true; // New visibility toggle
 };
 
 } // namespace NomadUI

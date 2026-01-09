@@ -3,6 +3,7 @@
 
 #include "NUIComponent.h"
 #include "NUITypes.h"
+#include "../../NomadPlat/include/NomadPlatform.h"
 #include "NUIIcon.h"
 #include <string>
 #include <functional>
@@ -37,9 +38,16 @@ public:
     void setOnEditMenu(std::function<void()> callback) { onEditMenu_ = callback; }
     void setOnViewMenu(std::function<void()> callback) { onViewMenu_ = callback; }
     
+    // Context Menu callback
+    using ContextCallback = std::function<void(const NUIPoint&)>;
+    void setOnContextRequested(ContextCallback callback) { onContextRequested_ = callback; }
+
     // Window state
     void setMaximized(bool maximized);
     bool isMaximized() const { return isMaximized_; }
+
+    // Hit Testing
+    Nomad::HitTestResult hitTest(const NUIPoint& point);
 
     // Component overrides
     void onRender(NUIRenderer& renderer) override;
@@ -95,6 +103,8 @@ private:
     std::function<void()> onFileMenu_;
     std::function<void()> onEditMenu_;
     std::function<void()> onViewMenu_;
+    ContextCallback onContextRequested_;
+
     
     // Helper methods
     void updateButtonRects();

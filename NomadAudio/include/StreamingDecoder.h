@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -188,9 +187,14 @@ private:
     std::atomic<uint64_t> m_decodedFrames{0};
     std::atomic<uint64_t> m_totalFrames{0};
     
-    // Ring buffer for streaming
-    std::unique_ptr<AudioRingBuffer> m_ringBuffer;
-    std::mutex m_bufferMutex;  // Protects ring buffer creation/destruction only
+    // Ring buffer for streaming (atomic for lock-free RT access)
+    // Decode thread creates and publishes via atomic store.
+    // Audio thread reads via atomic load - never blocks.
+    std::atomic<AudioRingBuffer*> m_ringBuffer{nullptr};
+    std::atomic<uint32_t> m_ringBufferChannels{2};  // Cached for RT fallback
+    
+    // Pending deletion (set by stop(), deleted after thread join)
+    AudioRingBuffer* m_pendingDelete{nullptr};
     
     // Decoder handle (platform-specific, opaque)
     void* m_decoderHandle{nullptr};

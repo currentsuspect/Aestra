@@ -174,6 +174,7 @@ set(NOMAD_AUDIO_CORE_SOURCES
     src/Plugin/PluginScanner.cpp
     src/Plugin/PluginManager.cpp
     src/Plugin/PluginFactory.cpp
+    src/Plugin/SamplerPlugin.cpp
     src/Plugin/EffectChain.cpp
     src/SincAVX512.cpp
 )
@@ -322,9 +323,7 @@ if(TARGET NomadCore)
     target_link_libraries(NomadAudioCore PUBLIC NomadCore)
 endif()
 
-if(TARGET NomadPlat)
-    target_link_libraries(NomadAudioCore PUBLIC NomadPlat)
-endif()
+target_link_libraries(NomadAudioCore PUBLIC NomadPlat)
 
 # =============================================================================
 # Premium Plugins Integration (Optional)
@@ -437,6 +436,12 @@ endif()
 # Test Applications
 # =============================================================================
 
+if(NOT NOMAD_ENABLE_TESTS)
+    message(STATUS "NomadAudio tests: disabled (NOMAD_ENABLE_TESTS=OFF)")
+else()
+    include(CTest)
+    enable_testing()
+
 # Basic audio test
 add_executable(NomadAudioTest
     test/AudioTest.cpp
@@ -447,6 +452,7 @@ target_link_libraries(NomadAudioTest
         NomadAudio
         NomadCore
 )
+add_test(NAME NomadAudioTest COMMAND NomadAudioTest)
 
 # Device manager test
 add_executable(NomadDeviceManagerTest
@@ -458,6 +464,7 @@ target_link_libraries(NomadDeviceManagerTest
         NomadAudio
         NomadCore
 )
+add_test(NAME NomadDeviceManagerTest COMMAND NomadDeviceManagerTest)
 
 # Audio callback test
 add_executable(NomadAudioCallbackTest
@@ -469,6 +476,7 @@ target_link_libraries(NomadAudioCallbackTest
         NomadAudio
         NomadCore
 )
+add_test(NAME NomadAudioCallbackTest COMMAND NomadAudioCallbackTest)
 
 # Mixer bus test
 add_executable(NomadMixerBusTest
@@ -480,6 +488,7 @@ target_link_libraries(NomadMixerBusTest
         NomadAudio
         NomadCore
 )
+add_test(NAME NomadMixerBusTest COMMAND NomadMixerBusTest)
 
 # Oscillator test
 add_executable(NomadOscillatorTest
@@ -491,6 +500,7 @@ target_link_libraries(NomadOscillatorTest
         NomadAudio
         NomadCore
 )
+add_test(NAME NomadOscillatorTest COMMAND NomadOscillatorTest)
 
 # WAV loader regression test
 add_executable(NomadWavLoaderTest
@@ -502,6 +512,7 @@ target_link_libraries(NomadWavLoaderTest
         NomadAudio
         NomadCore
 )
+add_test(NAME NomadWavLoaderTest COMMAND NomadWavLoaderTest)
 
 # Sample Rate Converter test
 add_executable(NomadSampleRateConverterTest
@@ -513,6 +524,7 @@ target_link_libraries(NomadSampleRateConverterTest
         NomadAudio
         NomadCore
 )
+add_test(NAME NomadSampleRateConverterTest COMMAND NomadSampleRateConverterTest)
 
 # Audio engine long-session soak test (no device required)
 add_executable(NomadAudioSoakTest
@@ -524,6 +536,7 @@ target_link_libraries(NomadAudioSoakTest
         NomadAudio
         NomadCore
 )
+add_test(NAME NomadAudioSoakTest COMMAND NomadAudioSoakTest)
 
 # Performance stress test suite
 add_executable(NomadAudioPerformanceTest
@@ -537,6 +550,7 @@ target_link_libraries(NomadAudioPerformanceTest
         NomadAudio
         NomadCore
 )
+add_test(NAME NomadAudioPerformanceTest COMMAND NomadAudioPerformanceTest)
 
 if(WIN32)
     target_link_libraries(NomadAudioPerformanceTest PRIVATE avrt)
@@ -559,6 +573,7 @@ endif()
 target_include_directories(NomadSincBenchmark PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../NomadCore/include
 )
+add_test(NAME NomadSincBenchmark COMMAND NomadSincBenchmark)
 
 # Watchdog Verification Test
 add_executable(NomadWatchdogTest
@@ -566,6 +581,7 @@ add_executable(NomadWatchdogTest
 )
 target_include_directories(NomadWatchdogTest PRIVATE ${VST3_INCLUDE_DIRS})
 target_link_libraries(NomadWatchdogTest PRIVATE NomadAudio NomadCore)
+add_test(NAME NomadWatchdogTest COMMAND NomadWatchdogTest)
 
 # Crash Protection Verification Test (SEH)
 add_executable(NomadCrashTest
@@ -573,6 +589,7 @@ add_executable(NomadCrashTest
 )
 target_include_directories(NomadCrashTest PRIVATE ${VST3_INCLUDE_DIRS})
 target_link_libraries(NomadCrashTest PRIVATE NomadAudio NomadCore)
+add_test(NAME NomadCrashTest COMMAND NomadCrashTest)
 
 # Waveform Isolation Verification Test
 add_executable(NomadWaveformLockTest
@@ -580,6 +597,7 @@ add_executable(NomadWaveformLockTest
     src/WaveformCache.cpp
 )
 target_link_libraries(NomadWaveformLockTest PRIVATE NomadAudio NomadCore)
+add_test(NAME NomadWaveformLockTest COMMAND NomadWaveformLockTest)
 
 # Atomic Autosave Verification Test
 add_executable(NomadAtomicSaveTest
@@ -588,6 +606,9 @@ add_executable(NomadAtomicSaveTest
     src/ClipSource.cpp
 )
 target_link_libraries(NomadAtomicSaveTest PRIVATE NomadAudio NomadCore)
+add_test(NAME NomadAtomicSaveTest COMMAND NomadAtomicSaveTest)
+
+endif()
 
 # Per-TU AVX2 for benchmark (only the SincAVX2.h code uses intrinsics)
 # For now, rely on runtime dispatch; SIMD code is guarded by CPUDetection.

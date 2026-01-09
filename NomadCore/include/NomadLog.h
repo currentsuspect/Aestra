@@ -233,6 +233,12 @@ public:
         return instance().logger_;
     }
 
+    static void shutdown() {
+        // Reset to basic console logger to allow AsyncLogger to clean up
+        // This must be called before static destruction to avoid hangs
+        instance().logger_ = std::make_shared<ConsoleLogger>();
+    }
+
 private:
     Log() {
         // Default to console logger

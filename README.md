@@ -317,32 +317,44 @@ Thank you to all contributors and the open-source community for making Nomad pos
 
 ---
 
-## 🗺️ Roadmap Highlights
+## 🗺️ Roadmap — v1 Beta (December 2026)
 
-**Q1 2025:**
+**Target:** Ship a credible, stable v1 Beta focused on **pattern-based Hip-Hop production**.
 
-- ✅ Core audio engine with WASAPI/ASIO support
-- ✅ NomadUI framework with OpenGL rendering
-- ✅ Advanced pattern-based timeline
-- 🚧 Sample manipulation (drag-and-drop, editing)
-- 🚧 Mixing controls (volume, pan, mute, solo)
-- 🚧 Project save/load system
+### ✅ Completed (Jan 2026)
+- Core audio engine (WASAPI/ASIO dual-tier)
+- NomadUI framework with OpenGL rendering
+- Pattern-based timeline/playlist
+- Drag-and-drop, clip editing, trimming
+- Mixing (volume, pan, mute, solo)
+- Project save/load
+- VST3/CLAP plugin scanner
 
-**Q2 2025:**
+### 🎯 Phase 1 — Foundation Lock (Jan–Mar 2026)
+- App structure refactor (reduce Main.cpp complexity)
+- Project loop reliability (open → edit → save → reopen)
+- Data model API freeze
 
-- 📅 VST3 plugin hosting
-- 📅 MIDI support and piano roll
-- 📅 Undo/redo system
-- 📅 Cross-platform support (Linux, macOS)
+### 🎯 Phase 2 — Project + Undo/Redo (Apr–Jun 2026)
+- Project format v1 spec with versioning
+- Undo/redo for core actions
+- Autosave + crash recovery
 
-**Q3-Q4 2025:**
+### 🎯 Phase 3 — Recording + Export (Jul–Sep 2026)
+- Recording workflow reliability
+- Offline render/export
+- Device stress testing
 
-- 📅 Advanced automation
-- 📅 Effects and mixing console
-- 📅 Muse AI integration (premium)
-- 📅 Official v1.0 release
+### 🎯 Phase 4 — Plugin Decision Gate (Sep 2026)
+- Option A: Ship with internal Arsenal only
+- Option B: Minimal VST3/CLAP MVP (if stable)
 
-See the full **[Roadmap →](docs/ROADMAP.md)** for detailed milestones.
+### 🎯 Phase 5–6 — Hardening + Release (Oct–Dec 2026)
+- Bug triage, performance budgets
+- Signed Windows installer
+- v1 Beta ship
+
+See **[docs/technical/roadmap.md](docs/technical/roadmap.md)** for the full execution plan.
 
 ---
 

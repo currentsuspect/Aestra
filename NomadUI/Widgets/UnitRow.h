@@ -2,10 +2,8 @@
 #pragma once
 
 #include "../Core/NUIComponent.h"
-#include "../../NomadAudio/include/UnitManager.h"
-#include <functional>
-#include "../Core/NUIComponent.h"
 #include "../Core/NUITextInput.h"
+#include "../Core/NUIDragDrop.h"
 #include "../../NomadAudio/include/UnitManager.h"
 #include <functional>
 #include <memory>
@@ -19,13 +17,21 @@ namespace Nomad {
 
 namespace NomadUI {
 
-class UnitRow : public NUIComponent {
+class UnitRow : public NUIComponent, public IDropTarget {
 public:
     UnitRow(std::shared_ptr<Nomad::Audio::TrackManager> trackManager, Nomad::Audio::UnitManager& manager, Nomad::Audio::UnitID unitId, Nomad::Audio::PatternID patternId);
+    ~UnitRow() override;
 
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
+
+    // IDropTarget interface
+    DropFeedback onDragEnter(const DragData& data, const NUIPoint& position) override;
+    DropFeedback onDragOver(const DragData& data, const NUIPoint& position) override;
+    void onDragLeave() override;
+    DropResult onDrop(const DragData& data, const NUIPoint& position) override;
+    NUIRect getDropBounds() const override;
 
     // Called by parent to refresh state reference
     void updateState();
@@ -34,10 +40,16 @@ public:
     std::function<void(Nomad::Audio::UnitID)> m_onDragStart;
     std::function<void(Nomad::Audio::UnitID, int)> m_onDrop;
     std::function<void()> m_onRequestColorPicker;
+    std::function<void(Nomad::Audio::UnitID)> m_onEditUnit;
+    std::function<void(Nomad::Audio::UnitID)> m_onLoadUnitSample;
+    std::function<void(Nomad::Audio::UnitID, const std::string&)> m_onSampleDropped; // Direct sample path
     
     void setOnDragStart(std::function<void(Nomad::Audio::UnitID)> cb) { m_onDragStart = cb; }
     void setOnDrop(std::function<void(Nomad::Audio::UnitID, int)> cb) { m_onDrop = cb; }
     void setOnRequestColorPicker(std::function<void()> cb) { m_onRequestColorPicker = cb; }
+    void setOnEditUnit(std::function<void(Nomad::Audio::UnitID)> cb) { m_onEditUnit = cb; }
+    void setOnLoadUnitSample(std::function<void(Nomad::Audio::UnitID)> cb) { m_onLoadUnitSample = cb; }
+    void setOnSampleDropped(std::function<void(Nomad::Audio::UnitID, const std::string&)> cb) { m_onSampleDropped = cb; }
     
     // Step count configuration
     void setStepCount(int count) { m_stepCount = count; invalidateVisuals(); }
@@ -92,6 +104,7 @@ private:
     bool m_isEditingName = false;
     std::string m_editBuffer;
     long long m_lastClickTimeMs = 0;
+    long long m_lastClipClickTimeMs = 0; // For double-click on clip/waveform area
     
     // === Helpers ===
     void drawContent(NUIRenderer& renderer); // Main drawing logic (cached)
@@ -107,6 +120,7 @@ private:
     void drawArmIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
     void drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
     void drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
+    void drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active); // [NEW]
     
     // Internal components
     std::shared_ptr<NUITextInput> m_nameInput;

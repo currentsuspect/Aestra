@@ -314,6 +314,36 @@ using PluginInstancePtr = std::shared_ptr<IPluginInstance>;
  */
 class MidiBuffer {
 public:
+    MidiBuffer() = default;
+    
+    // Explicit copy logic since atomic deletes default copy/move
+    MidiBuffer(const MidiBuffer& other) {
+        // Not strictly thread safe to copy other while it's being written, 
+        // but meaningful for vector resize if done from a safe thread.
+        // Copy events
+        uint32_t count = other.m_eventCount.load(std::memory_order_acquire);
+        m_eventCount.store(count, std::memory_order_release);
+        std::memcpy(m_events, other.m_events, sizeof(Event) * MAX_EVENTS);
+    }
+    
+    MidiBuffer& operator=(const MidiBuffer& other) {
+         if (this != &other) {
+            uint32_t count = other.m_eventCount.load(std::memory_order_acquire);
+            m_eventCount.store(count, std::memory_order_release);
+            std::memcpy(m_events, other.m_events, sizeof(Event) * MAX_EVENTS);
+         }
+         return *this;
+    }
+    
+    // Move is same as copy for atomic + POD array
+    MidiBuffer(MidiBuffer&& other) noexcept {
+        uint32_t count = other.m_eventCount.load(std::memory_order_acquire);
+        m_eventCount.store(count, std::memory_order_release);
+        std::memcpy(m_events, other.m_events, sizeof(Event) * MAX_EVENTS);
+        // Reset other not strictly needed but good practice
+        other.m_eventCount.store(0, std::memory_order_release); 
+    }
+    
     struct Event {
         uint32_t sampleOffset;  ///< Sample offset within buffer
         uint8_t data[4];        ///< MIDI data (3 bytes + padding)

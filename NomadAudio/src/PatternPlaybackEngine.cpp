@@ -66,6 +66,20 @@ uint16_t PatternPlaybackEngine::getChannelForUnit(UnitID unitId) const {
 void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, int lookaheadSamples) {
     uint64_t windowEnd = currentFrame + lookaheadSamples;
     
+    // Check for loop wrap (time moved backwards)
+    if (currentFrame < m_lastRefillFrame) {
+         // Reset all active instances to read from start
+         for (auto& inst : m_activeInstances) {
+             inst.nextEventIdx = 0;
+         }
+         // Optional: Clear queue? Generally not needed if timestamps are checked.
+    }
+    m_lastRefillFrame = currentFrame;
+    
+    // Debug log occassionally
+    static int refillCounter = 0;
+    bool shouldLog = (refillCounter++ % 100 == 0);
+
     for (auto& inst : m_activeInstances) {
         // Skip cancelled instances
         if (m_instanceCancelled[inst.instanceId].load(std::memory_order_acquire)) {
@@ -74,9 +88,43 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
         
         // Get pattern events
         auto* pattern = m_patternManager->getPattern(inst.patternId);
-        if (!pattern || !pattern->isMidi()) continue;
+        if (!pattern) {
+             if (shouldLog) Nomad::Log::info("[PatternPlayback] Pattern not found: " + std::to_string(inst.patternId.value));
+             continue;
+        }
+        if (!pattern->isMidi()) {
+             if (shouldLog) Nomad::Log::info("[PatternPlayback] Pattern is not MIDI: " + std::to_string(inst.patternId.value));
+             continue;
+        }
         
         auto& midi = std::get<MidiPayload>(pattern->payload);
+        if (shouldLog && !midi.notes.empty()) {
+             Nomad::Log::info("[PatternPlayback] Processing Pattern " + std::to_string(inst.patternId.value) + 
+                              " with " + std::to_string(midi.notes.size()) + " notes. NextEventIdx=" + std::to_string(inst.nextEventIdx));
+        }
+        
+        // [FIX] Ensure notes are sorted by beat position to handle out-of-order note insertion
+        // This is critical for correct playback when notes are added in reverse or random order
+        if (inst.nextEventIdx == 0 && !midi.notes.empty()) {
+            // Check if already sorted; if not, sort now
+            bool isSorted = true;
+            for (size_t i = 1; i < midi.notes.size(); ++i) {
+                if (midi.notes[i].startBeat < midi.notes[i-1].startBeat) {
+                    isSorted = false;
+                    break;
+                }
+            }
+            
+            if (!isSorted) {
+                // Make a mutable copy and sort it
+                auto notesCopy = midi.notes;
+                std::sort(notesCopy.begin(), notesCopy.end(), 
+                    [](const MidiNote& a, const MidiNote& b) { return a.startBeat < b.startBeat; });
+                
+                // Replace the pattern's notes with sorted version
+                const_cast<MidiPayload&>(midi).notes = std::move(notesCopy);
+            }
+        }
         
         // Schedule events in lookahead window
         while (inst.nextEventIdx < midi.notes.size()) {
@@ -96,6 +144,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
             ScheduledEvent onEvent{};
             onEvent.sampleFrame = noteFrame;
             onEvent.instanceId = inst.instanceId;
+            onEvent.unitId = note.unitId; // [NEW]
             onEvent.channelIdx = channelIdx;
             onEvent.statusByte = 0x90; // Note-on
             onEvent.data1 = note.pitch;
@@ -113,6 +162,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
             ScheduledEvent offEvent{};
             offEvent.sampleFrame = offFrame;
             offEvent.instanceId = inst.instanceId;
+            offEvent.unitId = note.unitId; // [NEW]
             offEvent.channelIdx = channelIdx;
             offEvent.statusByte = 0x80; // Note-off
             offEvent.data1 = note.pitch;
@@ -128,7 +178,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
     }
 }
 
-void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, MixerChannel* mixerChannels, int numChannels) {
+void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, std::map<UnitID, MidiBuffer*>& unitMidiBuffers) {
     ScheduledEvent ev;
     
     while (m_rtQueue.peek(ev)) {
@@ -147,13 +197,67 @@ void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, 
         int offset = static_cast<int>(ev.sampleFrame - currentFrame);
         offset = std::max(0, std::min(offset, bufferSize - 1));
         
-        // Enqueue MIDI to mixer channel
-        if (ev.channelIdx < static_cast<uint16_t>(numChannels)) {
-            // TODO: Call mixerChannels[ev.channelIdx].enqueueMidiAtOffset(offset, ev.statusByte, ev.data1, ev.data2);
-            // For now, just count processed events
-            m_processedCounter.fetch_add(1, std::memory_order_relaxed);
+        // Route to Unit
+        if (ev.unitId != 0) {
+            auto it = unitMidiBuffers.find(ev.unitId);
+            if (it != unitMidiBuffers.end() && it->second) {
+                uint8_t data[3] = { ev.statusByte, ev.data1, ev.data2 };
+                it->second->addEvent(static_cast<uint32_t>(offset), data, 3);
+                m_processedCounter.fetch_add(1, std::memory_order_relaxed);
+            }
         }
         
+        m_rtQueue.pop();
+    }
+}
+
+void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, const UnitMidiRoute* routes, size_t routeCount) noexcept {
+    if (!routes || routeCount == 0 || bufferSize <= 0) {
+        return;
+    }
+
+    ScheduledEvent ev;
+
+    while (m_rtQueue.peek(ev)) {
+        // Check if event is in current buffer
+        if (ev.sampleFrame >= currentFrame + static_cast<uint64_t>(bufferSize)) {
+            break; // Event is in the future
+        }
+
+        // Check cancellation flag (RT-safe)
+        if (ev.instanceId < 256 && m_instanceCancelled[ev.instanceId].load(std::memory_order_acquire)) {
+            m_rtQueue.pop();
+            continue;
+        }
+
+        // Calculate offset in buffer
+        int offset = static_cast<int>(ev.sampleFrame - currentFrame);
+        offset = std::max(0, std::min(offset, bufferSize - 1));
+
+        // Route to Unit
+        if (ev.unitId != 0) {
+            MidiBuffer* target = nullptr;
+            for (size_t i = 0; i < routeCount; ++i) {
+                if (routes[i].unitId == ev.unitId) {
+                    target = routes[i].midiBuffer;
+                    break;
+                }
+            }
+
+            if (target) {
+                uint8_t data[3] = { ev.statusByte, ev.data1, ev.data2 };
+                target->addEvent(static_cast<uint32_t>(offset), data, 3);
+                m_processedCounter.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
+
+        m_rtQueue.pop();
+    }
+}
+
+void PatternPlaybackEngine::flush() {
+    ScheduledEvent ev;
+    while (m_rtQueue.peek(ev)) {
         m_rtQueue.pop();
     }
 }

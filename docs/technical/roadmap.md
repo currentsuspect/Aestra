@@ -161,21 +161,24 @@ Dates are approximate; the key is sequencing and freeze points.
 Primary goal: stop the product from being “a demo held together by `Main.cpp`.”
 
 Deliverables:
-- App structure refactor: isolate initialization, event handling, audio wiring, UI wiring (reduce blast radius of changes).
-- Single “project loop” smoke test: open → edit → save → reopen → verify.
-- Unified logging + diagnostics (one place to look when things go wrong).
+- ✅ App structure refactor: isolate initialization, event handling, audio wiring, UI wiring (reduce blast radius of changes).
+- ✅ Single “project loop” smoke test: open → edit → save → reopen → verify.
+- ✅ Unified logging + diagnostics (one place to look when things go wrong).
 
 Freeze:
-- Data model API shapes (`PlaylistModel`, `PatternManager`, lane/clip IDs).
+- ✅ Data model API shapes (`PlaylistModel`, `PatternManager`, lane/clip IDs).
 
-### Phase 2 — Project + undo/redo become real (Apr–Jun 2026)
+### Phase 2 — Project + undo/redo become real (Apr–Jun 2026) ⏳ In Progress
 
 Primary goal: users can trust edits.
 
 Deliverables:
-- Project format v1 spec: versioning/migrations, validation, non-destructive load failures.
-- Undo/redo integrated into the main UX for core actions (clip edits, lane edits, pattern edits).
-- Autosave + recovery UX (minimal, reliable).
+- ✅ Dirty-state semantics + UI indicator (window title shows `*`)
+- ✅ Autosave tied to dirty state (only saves when modified)
+- ✅ Autosave recovery on startup (auto-loads if detected)
+- ✅ Crash-safe writes (atomic temp file + rename)
+- ✅ Project format v1 spec: versioning/migrations, validation, non-destructive load failures.
+- [ ] Undo/redo integrated into the main UX for core actions (clip edits, lane edits, pattern edits).
 
 Freeze:
 - Project file schema for Beta (allow forward-compatible additions only).

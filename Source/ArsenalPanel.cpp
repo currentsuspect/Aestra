@@ -80,10 +80,22 @@ void ArsenalPanel::refreshUnits() {
                 auto bounds = m_unitRows[i]->getBounds();
                 showColorPicker(unitIDs[i], NUIPoint(bounds.x + 30, bounds.y + bounds.height));
             }
+
+        });
+        
+        row->setOnEditUnit([this](UnitID id) {
+            if (m_onRequestEditor) m_onRequestEditor(id);
+        });
+
+        row->setOnLoadUnitSample([this](UnitID id) {
+            if (m_onRequestLoadSample) m_onRequestLoadSample(id);
         });
         
         m_listContainer->addChild(row);
         m_unitRows.push_back(row);
+        
+        // Register as drop target for file drag-drop
+        NomadUI::NUIDragDropManager::getInstance().registerDropTarget(row);
     }
     
     // Add "Add Unit" button
@@ -156,13 +168,21 @@ void ArsenalPanel::ensureDefaultPattern() {
 }
 
 void ArsenalPanel::onRender(NUIRenderer& renderer) {
-    // Custom rendering is now handled by the WindowPanel base class.
+    // The base WindowPanel::onRender will handle its own background, title, and children rendering.
+    WindowPanel::onRender(renderer);
+
+    // Render progress header (step indicators above grid)
+    if (m_listContainer && isVisible()) {
+        NUIRect containerBounds = m_listContainer->getBounds();
+        NUIRect headerBounds(containerBounds.x, containerBounds.y, 
+                            containerBounds.width, PROGRESS_HEADER_HEIGHT);
+        drawProgressHeader(renderer, headerBounds);
+    }
+    
     // Only render the color picker if it's visible.
     if (m_colorPicker && m_colorPicker->isShowing()) {
         m_colorPicker->onRender(renderer);
     }
-    // The base WindowPanel::onRender will handle its own background, title, and children rendering.
-    WindowPanel::onRender(renderer);
 }
 
 void ArsenalPanel::layoutUnits() {
@@ -172,8 +192,8 @@ void ArsenalPanel::layoutUnits() {
     float width = bounds.width;
     float startY = bounds.y;
     
-    // Units start with a small padding within the container
-    float yPos = startY + 6.0f - m_scrollY;
+    // Reserve space for progress header
+    float yPos = startY + PROGRESS_HEADER_HEIGHT + 6.0f - m_scrollY;
     float spacing = 4.0f;        // Increased from 2px
     float rowHeight = 42.0f;     // Increased from 28px - matches UnitRow::ROW_HEIGHT
     
@@ -201,6 +221,97 @@ void ArsenalPanel::onResize(int width, int height) {
     // We only need to ensure our internal content (m_listContainer) is laid out.
     WindowPanel::onResize(width, height); // Call base class first
     layoutUnits(); // Layout units within the content area
+}
+
+// === Pattern Progress Visualization ===
+
+int ArsenalPanel::calculateCurrentStep() {
+    if (!m_trackManager) return -1;
+    
+    // Check if playing using TrackManager's method
+    // Check if playing using TrackManager's method
+    if (!m_trackManager->isPlaying()) return -1;
+    
+    // [FIX] Freeze Arsenal Playhead in Timeline Mode (only animate in Pattern Mode)
+    if (!m_trackManager->isPatternMode()) return -1;
+    
+    // Get position in seconds, convert to beats
+    TimelineClock& clock = m_trackManager->getTimelineClock();
+    double positionSeconds = m_trackManager->getPosition();
+    double bpm = clock.getCurrentTempo();
+    double beatsPerSecond = bpm / 60.0;
+    double currentBeat = positionSeconds * beatsPerSecond;
+    
+    // Get pattern length (default 4 bars = 16 beats for 16 steps at 0.25 beat/step)
+    double patternLengthBeats = m_stepCount * 0.25; // Each step is a 16th note (0.25 beats)
+    
+    // Calculate position within pattern (looping)
+    double patternBeat = std::fmod(currentBeat, patternLengthBeats);
+    if (patternBeat < 0) patternBeat += patternLengthBeats;
+    
+    // Convert to step index
+    int step = static_cast<int>(patternBeat / 0.25);
+    return std::clamp(step, 0, m_stepCount - 1);
+}
+
+void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& bounds) {
+    auto& theme = NUIThemeManager::getInstance();
+    
+    // Calculate current step from clock
+    m_currentPlayStep = calculateCurrentStep();
+    
+    // Step layout (matches UnitRow grid layout)
+    float controlWidth = 280.0f; // Same as UnitRow::CONTROL_WIDTH
+    float gridStartX = bounds.x + controlWidth + 6.0f;
+    float availWidth = bounds.width - controlWidth - 12.0f;
+    
+    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
+    float indicatorHeight = PROGRESS_HEADER_HEIGHT - 6.0f;
+    float indicatorY = bounds.y + 3.0f;
+    
+    // Scanlines/Clipping: Clip to header bounds to prevent overflow
+    renderer.setClipRect(bounds);
+    
+    // Draw step indicators
+    for (int i = 0; i < m_stepCount; ++i) {
+        float stepX = gridStartX + (i * stepWidth) + 2.0f;
+        float indicatorWidth = stepWidth - 4.0f;
+        
+        NUIRect indicatorRect(stepX, indicatorY, indicatorWidth, indicatorHeight);
+        
+        // Base color: more visible background
+        NUIColor bgColor = theme.getColor("surfaceTertiary").withAlpha(0.5f);
+        
+        // Bar/beat markers
+        bool isBarStart = (i % 4 == 0);
+        if (isBarStart) {
+            bgColor = bgColor.lightened(0.1f);
+        }
+        
+        renderer.fillRoundedRect(indicatorRect, 2.0f, bgColor);
+        
+        // Highlight current playing step
+        if (i == m_currentPlayStep) {
+            NUIColor playColor = theme.getColor("accentPrimary");
+            renderer.fillRoundedRect(indicatorRect, 2.0f, playColor);
+            
+            // Glow effect
+            NUIRect glowRect(indicatorRect.x - 1, indicatorRect.y - 1, 
+                           indicatorRect.width + 2, indicatorRect.height + 2);
+            renderer.strokeRoundedRect(glowRect, 3.0f, 1.0f, playColor.withAlpha(0.6f));
+        }
+        // Show progress for steps already played in current loop
+        else if (m_currentPlayStep >= 0 && i < m_currentPlayStep) {
+            NUIColor playedColor = theme.getColor("accentPrimary").withAlpha(0.5f);
+            renderer.fillRoundedRect(indicatorRect, 2.0f, playedColor);
+        }
+        
+        // Subtle border
+        renderer.strokeRoundedRect(indicatorRect, 2.0f, 0.5f, 
+                                   theme.getColor("borderSubtle").withAlpha(0.6f));
+    }
+    
+    renderer.clearClipRect();
 }
 
 // === Drag-Drop Callbacks ===

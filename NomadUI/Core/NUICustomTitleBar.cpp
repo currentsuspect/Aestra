@@ -2,7 +2,9 @@
 #include "NUICustomTitleBar.h"
 #include "../Graphics/NUIRenderer.h"
 #include "../Core/NUIThemeSystem.h"
+#include "../../NomadCore/include/NomadLog.h"
 #include "../../NomadCore/include/NomadUnifiedProfiler.h"
+
 #include <cmath>
 #include <string>
 
@@ -133,12 +135,12 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
 }
 
 bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
+    NUIPoint mousePos = event.position;
+    
     // Let children handle events first (NUIMenuBar, view toggle, etc.)
     if (NUIComponent::onMouseEvent(event)) {
         return true;
     }
-    
-    NUIPoint mousePos = event.position;
     
     // Update hover state for window controls
     HoverButton previousHover = hoveredButton_;
@@ -176,6 +178,8 @@ bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
         }
         // Window dragging is now handled by Windows via WM_NCHITTEST
     }
+    
+    return false;
     
     return false;
 }
@@ -220,6 +224,28 @@ bool NUICustomTitleBar::isPointInButton(const NUIPoint& point, const NUIRect& bu
 void NUICustomTitleBar::handleButtonClick(const NUIRect& buttonRect) {
     // Visual feedback for button click
     setDirty(true);
+}
+
+Nomad::HitTestResult NUICustomTitleBar::hitTest(const NUIPoint& point) {
+    // 1. Check Window Controls
+    // We return Client because NUICustomTitleBar handles the clicks/hover itself in onMouseEvent.
+    // Returning Caption or HTCLOSE would trigger Windows default handling which we don't want for custom drawn buttons.
+    if (isPointInButton(point, minimizeButtonRect_)) return Nomad::HitTestResult::Client;
+    if (isPointInButton(point, maximizeButtonRect_)) return Nomad::HitTestResult::Client;
+    if (isPointInButton(point, closeButtonRect_)) return Nomad::HitTestResult::Client;
+    
+    // 2. Check Child Components (Menu Bar, Mode Toggle, etc.)
+    // Recursively check if point hits any interactive child
+    const auto& children = getChildren();
+    for (auto it = children.rbegin(); it != children.rend(); ++it) {
+        auto& child = *it;
+        if (child->isVisible() && child->getBounds().contains(point)) {
+            return Nomad::HitTestResult::Client;
+        }
+    }
+    
+    // 3. Fallback to Caption (Drag area)
+    return Nomad::HitTestResult::Caption;
 }
 
 } // namespace NomadUI

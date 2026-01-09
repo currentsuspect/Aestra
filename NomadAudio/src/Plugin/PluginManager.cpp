@@ -4,6 +4,9 @@
 #include "PluginFactory.h" // [NEW]
 #include <algorithm>
 #include <future> // For sync wrapper
+#include <filesystem>
+#include "NomadPlatform.h" // For getAppDataPath
+#include "NomadLog.h"
 
 // NOTE: Individual Host headers (VST3Host.h etc) moved to PluginFactory.cpp
 
@@ -50,6 +53,31 @@ bool PluginManager::initialize() {
     // Initialize default factory (In-Process)
     m_factory = std::make_unique<InProcessPluginFactory>();
     
+    // Load Plugin Cache
+    if (auto* utils = Platform::getUtils()) {
+        std::string appData = utils->getAppDataPath("NOMAD");
+        if (!appData.empty()) {
+            std::filesystem::path cachePath = std::filesystem::path(appData) / "plugin_cache.bin";
+            
+            // Ensure directory exists
+            std::error_code ec;
+            std::filesystem::create_directories(cachePath.parent_path(), ec);
+            
+            if (m_scanner.loadScanCache(cachePath)) {
+                Nomad::Log::info("Plugin cache loaded: " + std::to_string(m_scanner.getScannedPlugins().size()) + " plugins");
+            } else {
+                Nomad::Log::warning("Plugin cache not found or invalid. Triggering initial scan...");
+                m_scanner.scanAsync();
+            }
+        } else {
+            Nomad::Log::error("AppData path is empty in PluginManager::initialize");
+            m_scanner.scanAsync();
+        }
+    } else {
+        Nomad::Log::error("Platform::getUtils() returned null in PluginManager::initialize");
+        m_scanner.scanAsync();
+    }
+
     m_initialized = true;
     return true;
 }
@@ -63,6 +91,28 @@ void PluginManager::shutdown() {
     
     // Cancel any ongoing scan
     m_scanner.cancelScan();
+
+    // Save Plugin Cache
+    if (auto* utils = Platform::getUtils()) {
+        std::string appData = utils->getAppDataPath("NOMAD");
+        if (!appData.empty()) {
+            std::filesystem::path cachePath = std::filesystem::path(appData) / "plugin_cache.bin";
+            
+            // Ensure directory exists (just in case)
+            std::error_code ec;
+            std::filesystem::create_directories(cachePath.parent_path(), ec);
+
+            if (m_scanner.saveScanCache(cachePath)) {
+                 Nomad::Log::info("Plugin cache saved to: " + cachePath.string());
+            } else {
+                 Nomad::Log::error("Failed to save plugin cache to: " + cachePath.string());
+            }
+        } else {
+            Nomad::Log::error("AppData path is empty in PluginManager::shutdown");
+        }
+    } else {
+        Nomad::Log::error("Platform::getUtils() returned null in PluginManager::shutdown");
+    }
     
     // Clear all active instances
     m_activeInstances.clear();

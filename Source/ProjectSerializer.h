@@ -32,6 +32,8 @@ public:
         bool ok{false};
         double tempo{120.0};
         double playhead{0.0};
+        std::string errorMessage;  // Populated on failure
+        std::vector<std::string> missingAssets;  // Audio files that couldn't be found
 
         std::optional<UIState> ui;
     };

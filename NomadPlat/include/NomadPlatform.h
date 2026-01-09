@@ -70,6 +70,19 @@ struct KeyModifiers {
     bool capsLock = false;
 };
 
+    // Hit Test Result (Generic)
+    enum class HitTestResult {
+        Client,         // Client area (interactive)
+        Caption,        // Title bar (draggable, double-click to maximize)
+        ResizeTop, ResizeBottom, ResizeLeft, ResizeRight,
+        ResizeTopLeft, ResizeTopRight, ResizeBottomLeft, ResizeBottomRight,
+        CloseButton, MaxButton, MinButton, // (Optional: Platform handled buttons)
+        Nowhere,        // Transparent/Pass-through
+        Default         // Use platform default logic
+    };
+
+    using HitTestCallback = std::function<HitTestResult(int x, int y)>;
+
 // =============================================================================
 // Platform Window Interface
 // =============================================================================
@@ -134,7 +147,10 @@ public:
     // Modifier key state query (for wheel events that need modifier info)
     virtual KeyModifiers getCurrentModifiers() const = 0;
 
+
+
     // Event callbacks
+    virtual void setHitTestCallback(HitTestCallback callback) = 0;
     virtual void setMouseMoveCallback(std::function<void(int x, int y)> callback) = 0;
     virtual void setMouseButtonCallback(std::function<void(MouseButton button, bool pressed, int x, int y)> callback) = 0;
     virtual void setMouseWheelCallback(std::function<void(float delta)> callback) = 0;

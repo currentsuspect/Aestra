@@ -43,6 +43,10 @@ public:
     // Copy/paste operations
     void copySelectedPattern();
     void pastePattern();
+    
+    // Internal Integration
+    void setOnRequestEditor(std::function<void(UnitID)> cb) { m_onRequestEditor = cb; }
+    void setOnRequestLoadSample(std::function<void(UnitID)> cb) { m_onRequestLoadSample = cb; }
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;
@@ -67,6 +71,12 @@ private:
     float m_scrollY = 0.0f;
     int m_stepCount = 16; // Default step count
     void layoutUnits();
+    
+    // Pattern Progress Visualization
+    static constexpr float PROGRESS_HEADER_HEIGHT = 20.0f;
+    int m_currentPlayStep = -1;  // Current step for visualization (-1 = not playing)
+    void drawProgressHeader(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds);
+    int calculateCurrentStep(); // Calculate step from TrackManager clock
 
     // Pattern Management (driven by Pattern Browser)
     PatternID m_activePatternID = 0; // The pattern being edited
@@ -90,6 +100,9 @@ private:
     void showColorPicker(UnitID unitId, NomadUI::NUIPoint position);
     
     bool onKeyEvent(const NomadUI::NUIKeyEvent& event) override;
+    
+    std::function<void(UnitID)> m_onRequestEditor;
+    std::function<void(UnitID)> m_onRequestLoadSample;
 };
 
 } // namespace Audio

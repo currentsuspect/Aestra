@@ -37,6 +37,7 @@ namespace NomadUI {
 
 // Forward declarations - Nomad::Audio (includes panel classes)
 namespace Nomad::Audio {
+    class AudioEngine;
     class TrackManager;
     class TrackManagerUI;
     class PreviewEngine;
@@ -110,6 +111,10 @@ public:
     void syncViewState();
     void setViewFocus(ViewFocus focus);
     ViewFocus getViewFocus() const { return m_viewFocus; }
+    
+    // Arsenal Panel Visibility (independent of mode)
+    void setArsenalPanelVisible(bool visible);
+    void toggleArsenalPanel();
 
     // Panel Physics & Constraints
     NomadUI::NUIRect computeSafeRect() const;
@@ -136,10 +141,17 @@ public:
 
     // Platform
     void setPlatformBridge(NomadUI::NUIPlatformBridge* bridge);
+    void setAudioEngine(Nomad::Audio::AudioEngine* engine) { m_audioEngine = engine; }
 
+    // Project Management
+    void resetToDefaultProject();  // Clear and recreate default tracks
+    
     // Demo/Testing
     void addDemoTracks();
     bool generateTestWavFile(const std::string& filename, float frequency, double duration);
+
+    // Initial Plugin UI Population
+    void refreshPluginList();
 
     // Sound Preview
     void playSoundPreview(const NomadUI::FileItem& file);
@@ -177,6 +189,7 @@ private:
     std::shared_ptr<Nomad::Audio::TrackManager> m_trackManager;
     std::shared_ptr<Nomad::Audio::TrackManagerUI> m_trackManagerUI;
     NomadUI::NUIPlatformBridge* m_platformBridge = nullptr;
+    Nomad::Audio::AudioEngine* m_audioEngine = nullptr;
     
     std::shared_ptr<Nomad::Audio::MixerPanel> m_mixerPanel;
     std::shared_ptr<Nomad::Audio::PianoRollPanel> m_pianoRollPanel;
@@ -196,4 +209,7 @@ private:
     std::chrono::steady_clock::time_point m_previewStartTime{};
     double m_previewDuration = 300.0;
     std::string m_currentPreviewFile;
+    
+    // Playback state persistence
+    double m_savedTimelinePosition = 0.0;
 };
