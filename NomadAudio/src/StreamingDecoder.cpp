@@ -193,10 +193,16 @@ void StreamingDecoder::stop() {
         m_decodeThread.join();
     }
     
-    {
-        std::lock_guard<std::mutex> lock(m_bufferMutex);
-        m_ringBuffer.reset();
+    // Delete any pending buffer from previous stop
+    if (m_pendingDelete) {
+        delete m_pendingDelete;
+        m_pendingDelete = nullptr;
     }
+    
+    // Atomically swap out the current buffer and delete it
+    // Safe because thread is joined and no RT reads can happen in Idle state
+    AudioRingBuffer* old = m_ringBuffer.exchange(nullptr, std::memory_order_acq_rel);
+    delete old;
     
     m_state.store(State::Idle, std::memory_order_release);
 }
@@ -208,17 +214,20 @@ size_t StreamingDecoder::read(float* output, size_t numFrames) {
         return 0;
     }
     
-    std::lock_guard<std::mutex> lock(m_bufferMutex);
-    if (!m_ringBuffer) {
-        std::memset(output, 0, numFrames * 2 * sizeof(float));
+    // Lock-free: atomically load the ring buffer pointer
+    AudioRingBuffer* rb = m_ringBuffer.load(std::memory_order_acquire);
+    if (!rb) {
+        uint32_t channels = m_ringBufferChannels.load(std::memory_order_relaxed);
+        if (channels == 0) channels = 2;
+        std::memset(output, 0, numFrames * channels * sizeof(float));
         return 0;
     }
     
-    size_t framesRead = m_ringBuffer->read(output, numFrames);
+    size_t framesRead = rb->read(output, numFrames);
     
     // Fill remainder with silence if buffer underrun
     if (framesRead < numFrames) {
-        size_t channels = m_ringBuffer->channels();
+        size_t channels = rb->channels();
         // Zero out remaining frames * channels
         std::memset(output + framesRead * channels, 0, 
                     (numFrames - framesRead) * channels * sizeof(float));
@@ -252,15 +261,16 @@ void StreamingDecoder::decodeThreadFunc(const std::string& path, double targetLa
     
     m_sampleRate.store(sampleRate, std::memory_order_relaxed);
     m_channels.store(channels, std::memory_order_relaxed);
+    m_ringBufferChannels.store(channels, std::memory_order_relaxed);  // Cache for RT fallback
     m_duration.store(duration, std::memory_order_relaxed);
     m_totalFrames.store(lengthFrames, std::memory_order_relaxed);
     
     // Create ring buffer (2 seconds capacity)
     size_t bufferFrames = static_cast<size_t>(sampleRate * 2.0);
-    {
-        std::lock_guard<std::mutex> lock(m_bufferMutex);
-        m_ringBuffer = std::make_unique<AudioRingBuffer>(bufferFrames, channels);
-    }
+    AudioRingBuffer* newBuffer = new AudioRingBuffer(bufferFrames, channels);
+    
+    // Atomically publish to RT thread (release semantics ensure buffer is fully constructed)
+    m_ringBuffer.store(newBuffer, std::memory_order_release);
     
     // Determine pre-buffer amount based on latency target
     size_t preBufferFrames = static_cast<size_t>((targetLatencyMs / 1000.0) * sampleRate);
@@ -277,12 +287,9 @@ void StreamingDecoder::decodeThreadFunc(const std::string& path, double targetLa
     bool readySignaled = false;
     
     while (!m_stopRequested.load(std::memory_order_relaxed)) {
-        // Check available space
-        size_t availableWrite = 0;
-        {
-            std::lock_guard<std::mutex> lock(m_bufferMutex);
-            if (m_ringBuffer) availableWrite = m_ringBuffer->availableWrite();
-        }
+        // Check available space (lock-free)
+        AudioRingBuffer* rb = m_ringBuffer.load(std::memory_order_acquire);
+        size_t availableWrite = rb ? rb->availableWrite() : 0;
         
         if (availableWrite < chunkSize) {
             // Buffer full, sleep
@@ -310,9 +317,9 @@ void StreamingDecoder::decodeThreadFunc(const std::string& path, double targetLa
         }
         
         if (framesRead > 0) {
-            std::lock_guard<std::mutex> lock(m_bufferMutex);
-            if (m_ringBuffer) {
-                m_ringBuffer->write(chunkBuffer.data(), static_cast<size_t>(framesRead));
+            AudioRingBuffer* rb = m_ringBuffer.load(std::memory_order_acquire);
+            if (rb) {
+                rb->write(chunkBuffer.data(), static_cast<size_t>(framesRead));
             }
             
             totalDecoded += framesRead;

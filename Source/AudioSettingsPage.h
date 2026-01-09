@@ -59,15 +59,14 @@ private:
 class AudioSettingsPage : public ISettingsPage {
 public:
     AudioSettingsPage(Audio::AudioDeviceManager* audioManager, Audio::AudioEngine* engine);
-    ~AudioSettingsPage() override = default;
+    ~AudioSettingsPage() override;
     
     // Callbacks
     void setOnStreamRestore(std::function<void()> callback) { m_onStreamRestore = callback; }
 
     // Test Sound Access
-    bool isPlayingTestSound() const { return m_isPlayingTestSound; }
-    void setPlayingTestSound(bool playing) { m_isPlayingTestSound = playing; }
-    double& getTestSoundPhase() { return m_testSoundPhase; }
+    bool isPlayingTestSound() const;
+    void setPlayingTestSound(bool playing);
 
     // ISettingsPage overrides
     std::string getPageID() const override { return "audio"; }
@@ -142,8 +141,8 @@ private:
     std::shared_ptr<NomadUI::NUIButton> m_testSoundButton;
 
     // Test Sound State
-    bool m_isPlayingTestSound;
-    double m_testSoundPhase = 0.0;
+    // Managed by AudioEngine now
+
     
     // Original state for revert
     struct AudioState {
@@ -161,6 +160,30 @@ private:
     } m_originalState;
     
     bool m_dirty;
+    
+    // Async Loading Infrastructure
+    std::atomic<bool> m_isLoadingDevices{false};
+    std::thread m_deviceLoadThread;
+    std::mutex m_deviceDataMutex;
+    
+    // Cached device data (populated by background thread)
+    struct CachedDeviceData {
+        std::vector<std::pair<std::string, int>> driverTypes; // name, value
+        std::vector<std::pair<std::string, int>> devices;     // name, id
+        int currentDriverType = 0;
+        int currentDeviceId = 0;
+        int currentSampleRate = 48000;
+    };
+    CachedDeviceData m_cachedDevices;
+    bool m_deviceDataReady{false};
+    
+    // Loading indicator
+    std::shared_ptr<NomadUI::NUILabel> m_loadingLabel;
+    float m_loadingAnimTimer{0.0f};
+    
+    // Async loading helpers
+    void startAsyncDeviceLoad();
+    void onDeviceLoadComplete();
 };
 
 } // namespace Nomad

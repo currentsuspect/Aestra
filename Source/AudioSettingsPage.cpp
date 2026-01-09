@@ -163,32 +163,40 @@ bool ThreadCountDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
 AudioSettingsPage::AudioSettingsPage(AudioDeviceManager* audioManager, AudioEngine* engine)
     : m_audioManager(audioManager)
     , m_audioEngine(engine)
-    , m_isPlayingTestSound(false)
-    , m_testSoundPhase(0.0)
     , m_dirty(false)
 {
     Log::info("[AudioSettingsPage] Constructor started (with button init)");
     createUI(); // Create UI elements FIRST
     loadCurrentSettings(); // Load initial state
     
+    // Create loading indicator
+    m_loadingLabel = std::make_shared<NomadUI::NUILabel>();
+    m_loadingLabel->setText("Loading audio devices...");
+    m_loadingLabel->setVisible(false);
+    addChild(m_loadingLabel);
+    
     m_testSoundButton = std::make_shared<NomadUI::NUIButton>();
     m_testSoundButton->setText("Test Sound");
     m_testSoundButton->setOnClick([this]() {
-        m_isPlayingTestSound = !m_isPlayingTestSound;
-        m_testSoundButton->setText(m_isPlayingTestSound ? "Stop Test Sound" : "Test Sound");
-        m_testSoundPhase = 0.0;
+        bool playing = m_audioEngine->isTestToneEnabled();
+        playing = !playing;
+        m_audioEngine->setTestToneEnabled(playing);
         
-        // If stopping, restore stream logic
-        if (!m_isPlayingTestSound) {
-            // Restore stream
-            if (m_onStreamRestore) m_onStreamRestore();
-        }
+        m_testSoundButton->setText(playing ? "Stop Test Sound" : "Test Sound");
+        
+        // NOTE: No stream restore needed - test tone uses existing audio callback
     });
     addChild(m_testSoundButton);
     
-    // Initial Population
-    // Trigger update logic ONCE without recursion loop
-    updateDriverList();
+    // Start async device enumeration (non-blocking)
+    startAsyncDeviceLoad();
+}
+
+AudioSettingsPage::~AudioSettingsPage() {
+    // Ensure background device enumeration thread is stopped
+    if (m_deviceLoadThread.joinable()) {
+        m_deviceLoadThread.join();
+    }
 }
 
 void AudioSettingsPage::loadCurrentSettings() {
@@ -328,15 +336,13 @@ void AudioSettingsPage::createUI() {
     m_testSoundButton = std::make_shared<NomadUI::NUIButton>();
     m_testSoundButton->setText("Test Sound");
     m_testSoundButton->setOnClick([this]() {
-        m_isPlayingTestSound = !m_isPlayingTestSound;
-        m_testSoundButton->setText(m_isPlayingTestSound ? "Stop Test Sound" : "Test Sound");
-        m_testSoundPhase = 0.0;
+        bool playing = m_audioEngine->isTestToneEnabled();
+        playing = !playing;
+        m_audioEngine->setTestToneEnabled(playing);
         
-        // If stopping, restore stream logic
-        if (!m_isPlayingTestSound) {
-            // Restore stream
-            if (m_onStreamRestore) m_onStreamRestore();
-        }
+        m_testSoundButton->setText(playing ? "Stop Test Sound" : "Test Sound");
+        
+        // NOTE: No stream restore needed - test tone uses existing audio callback
     });
     addChild(m_testSoundButton);
     Log::info("[AudioSettingsPage] Test sound button created");
@@ -432,8 +438,8 @@ void AudioSettingsPage::onShow() {
 
 void AudioSettingsPage::onHide() {
     // Stop test sound if playing
-    if (m_isPlayingTestSound) {
-        m_isPlayingTestSound = false;
+    if (m_audioEngine->isTestToneEnabled()) {
+        m_audioEngine->setTestToneEnabled(false);
         m_testSoundButton->setText("Test Sound");
         if (m_onStreamRestore) m_onStreamRestore();
     }
@@ -550,6 +556,11 @@ void AudioSettingsPage::layoutComponents() {
     
     // Test Sound Button (below left column)
     m_testSoundButton->setBounds(NomadUI::NUIRect(x1, y, colWidth, 32));
+    
+    // Loading indicator (centered in left column)
+    if (m_loadingLabel) {
+        m_loadingLabel->setBounds(NomadUI::NUIRect(x1, y + 45, colWidth, 24));
+    }
 
     // Right Column: Processing (reset Y)
     y = b.y + padding;
@@ -602,6 +613,21 @@ void AudioSettingsPage::onResize(int width, int height) {
 
 void AudioSettingsPage::onUpdate(double deltaTime) {
     NomadUI::NUIComponent::onUpdate(deltaTime);
+    
+    // Check for async device load completion
+    if (m_deviceDataReady && !m_isLoadingDevices.load()) {
+        m_deviceDataReady = false; // Consume the flag
+        onDeviceLoadComplete();
+    }
+    
+    // Animate loading indicator
+    if (m_isLoadingDevices.load() && m_loadingLabel) {
+        m_loadingAnimTimer += static_cast<float>(deltaTime);
+        int dots = static_cast<int>(m_loadingAnimTimer * 2.0f) % 4;
+        std::string text = "Loading audio devices";
+        for (int i = 0; i < dots; ++i) text += ".";
+        m_loadingLabel->setText(text);
+    }
 }
 
 bool AudioSettingsPage::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
@@ -699,6 +725,157 @@ void AudioSettingsPage::loadSettings() {
     
     applyChanges();
     Log::info("[AudioSettingsPage] Settings loaded successfully.");
+}
+
+
+
+bool AudioSettingsPage::isPlayingTestSound() const {
+    if (m_audioEngine) return m_audioEngine->isTestToneEnabled();
+    return false;
+}
+
+void AudioSettingsPage::setPlayingTestSound(bool playing) {
+    if (m_audioEngine) {
+        m_audioEngine->setTestToneEnabled(playing);
+        if (m_testSoundButton) {
+            m_testSoundButton->setText(playing ? "Stop Test Sound" : "Test Sound");
+        }
+    }
+}
+
+//==============================================================================
+// Async Device Loading
+//==============================================================================
+
+void AudioSettingsPage::startAsyncDeviceLoad() {
+    // TODO: Async loading implemented but freeze still occurs. 
+    // Likely cause: AudioDeviceManager::getDevices() or getAvailableDriverTypes() 
+    // are blocking on the UI thread before we even get here (called from somewhere else?)
+    // Need to investigate initialization order and cache devices at app startup instead.
+    
+    // Don't start if already loading
+    if (m_isLoadingDevices.load()) {
+        return;
+    }
+    
+    m_isLoadingDevices.store(true);
+    m_deviceDataReady = false;
+    
+    // Show loading indicator
+    if (m_loadingLabel) {
+        m_loadingLabel->setVisible(true);
+    }
+    
+    // Disable dropdowns while loading
+    if (m_driverDropdown) m_driverDropdown->setEnabled(false);
+    if (m_deviceDropdown) m_deviceDropdown->setEnabled(false);
+    
+    Log::info("[AudioSettingsPage] Starting async device enumeration...");
+    
+    // Start background thread
+    if (m_deviceLoadThread.joinable()) {
+        m_deviceLoadThread.join();
+    }
+    
+    m_deviceLoadThread = std::thread([this]() {
+        CachedDeviceData data;
+        
+        // === Enumerate driver types ===
+        auto types = m_audioManager->getAvailableDriverTypes();
+        for (int i = 0; i < static_cast<int>(types.size()); ++i) {
+            std::string name = "Unknown";
+            if (types[i] == AudioDriverType::WASAPI_SHARED) name = "WASAPI Shared";
+            else if (types[i] == AudioDriverType::WASAPI_EXCLUSIVE) name = "WASAPI Exclusive";
+            else if (types[i] == AudioDriverType::ASIO_EXTERNAL) name = "ASIO (External)";
+            else if (types[i] == AudioDriverType::ASIO_NOMAD) name = "ASIO (Nomad)";
+            else if (types[i] == AudioDriverType::DIRECTSOUND) name = "DirectSound";
+            
+            data.driverTypes.push_back({ name, static_cast<int>(types[i]) });
+        }
+        
+        // Fallback
+        if (data.driverTypes.empty()) {
+            data.driverTypes.push_back({ "DirectSound", static_cast<int>(AudioDriverType::DIRECTSOUND) });
+        }
+        
+        data.currentDriverType = static_cast<int>(m_audioManager->getActiveDriverType());
+        
+        // === Enumerate devices ===
+        auto devices = m_audioManager->getDevices();
+        for (const auto& dev : devices) {
+            data.devices.push_back({ dev.name, static_cast<int>(dev.id) });
+        }
+        
+        if (data.devices.empty()) {
+            data.devices.push_back({ "No Devices Found", -1 });
+        }
+        
+        auto currentConfig = m_audioManager->getCurrentConfig();
+        data.currentDeviceId = static_cast<int>(currentConfig.deviceId);
+        data.currentSampleRate = static_cast<int>(currentConfig.sampleRate);
+        
+        // Store results thread-safely
+        {
+            std::lock_guard<std::mutex> lock(m_deviceDataMutex);
+            m_cachedDevices = std::move(data);
+            m_deviceDataReady = true;
+        }
+        
+        m_isLoadingDevices.store(false);
+        Log::info("[AudioSettingsPage] Async device enumeration complete!");
+    });
+}
+
+void AudioSettingsPage::onDeviceLoadComplete() {
+    // Apply cached data to UI (called from main thread)
+    std::lock_guard<std::mutex> lock(m_deviceDataMutex);
+    
+    // Populate driver dropdown
+    m_driverDropdown->clearItems();
+    for (const auto& [name, value] : m_cachedDevices.driverTypes) {
+        m_driverDropdown->addItem(name, value);
+    }
+    m_driverDropdown->setSelectedByValue(m_cachedDevices.currentDriverType);
+    
+    // Populate device dropdown
+    m_deviceDropdown->clearItems();
+    for (const auto& [name, id] : m_cachedDevices.devices) {
+        m_deviceDropdown->addItem(name, id);
+    }
+    m_deviceDropdown->setSelectedByValue(m_cachedDevices.currentDeviceId);
+    
+    // Populate sample rates
+    if (m_sampleRateDropdown->getItemCount() == 0) {
+        m_sampleRateDropdown->addItem("44100 Hz", 44100);
+        m_sampleRateDropdown->addItem("48000 Hz", 48000);
+        m_sampleRateDropdown->addItem("88200 Hz", 88200);
+        m_sampleRateDropdown->addItem("96000 Hz", 96000);
+        m_sampleRateDropdown->setSelectedByValue(m_cachedDevices.currentSampleRate);
+    }
+    
+    // Populate buffer sizes
+    if (m_bufferSizeDropdown->getItemCount() == 0) {
+        m_bufferSizeDropdown->addItem("64 samples", 64);
+        m_bufferSizeDropdown->addItem("128 samples", 128);
+        m_bufferSizeDropdown->addItem("256 samples", 256);
+        m_bufferSizeDropdown->addItem("512 samples", 512);
+        m_bufferSizeDropdown->addItem("1024 samples", 1024);
+        m_bufferSizeDropdown->addItem("2048 samples", 2048);
+        m_bufferSizeDropdown->setSelectedByValue(256);
+    }
+    
+    // Hide loading indicator
+    if (m_loadingLabel) {
+        m_loadingLabel->setVisible(false);
+    }
+    
+    // Re-enable dropdowns
+    if (m_driverDropdown) m_driverDropdown->setEnabled(true);
+    if (m_deviceDropdown) m_deviceDropdown->setEnabled(true);
+    
+    updateLatencyEstimate();
+    
+    Log::info("[AudioSettingsPage] UI populated with device data");
 }
 
 } // namespace Nomad

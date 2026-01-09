@@ -176,7 +176,11 @@ void EffectChain::prepare(double sampleRate, uint32_t maxBlockSize) {
     m_maxBlockSize = maxBlockSize;
     
     // Pre-allocate dry buffer for dry/wet mixing (stereo)
-    m_dryBuffer.resize(maxBlockSize * 2);
+    if (maxBlockSize == 0) return;
+    const size_t required = static_cast<size_t>(maxBlockSize) * 2;
+    if (m_dryBuffer.size() < required) {
+        m_dryBuffer.resize(required);
+    }
 }
 
 void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFrames) {
@@ -212,8 +216,17 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
         }
         // If not fully wet, need to blend
         else if (dryWet > 0.001f) {
+            const uint32_t blendChannels = (numChannels < 2) ? numChannels : 2;
+            const size_t requiredDry = static_cast<size_t>(numFrames) * static_cast<size_t>(blendChannels);
+            if (m_dryBuffer.size() < requiredDry) {
+                // Not prepared (or prepared for a smaller block). Stay RT-safe: no allocation.
+                // Fallback: process fully wet rather than crashing or dropping audio.
+                plugin->process(buffer, buffer, numChannels, numChannels, numFrames);
+                continue;
+            }
+
             // Save dry signal
-            for (uint32_t ch = 0; ch < numChannels && ch < 2; ++ch) {
+            for (uint32_t ch = 0; ch < blendChannels; ++ch) {
                 std::memcpy(m_dryBuffer.data() + ch * numFrames, 
                            buffer[ch], 
                            numFrames * sizeof(float));
@@ -226,7 +239,7 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
             float wetGain = dryWet;
             float dryGain = 1.0f - dryWet;
             
-            for (uint32_t ch = 0; ch < numChannels && ch < 2; ++ch) {
+            for (uint32_t ch = 0; ch < blendChannels; ++ch) {
                 const float* dry = m_dryBuffer.data() + ch * numFrames;
                 float* wet = buffer[ch];
                 

@@ -168,9 +168,35 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
 
         // Render as stacked "Track Lines" (Discrete size) to match user request
         // Render as True Track Map (Position = Track Index)
-        const float trackH = 3.0f; // Small fixed height per track
+        // Dynamically scale track rows to fit available height
+        
+        // Count how many tracks have content
+        int maxTrackWithContent = -1;
+        for (int i = 63; i >= 0; --i) {
+            for (int k = a; k <= b; ++k) {
+                if (buckets[k].trackCounts[i] > 0) {
+                    maxTrackWithContent = i;
+                    break;
+                }
+            }
+            if (maxTrackWithContent >= 0) break;
+        }
+        
+        // Calculate row height to fit all tracks with content
+        const int numTracksToShow = maxTrackWithContent + 1;
+        const float availableHeight = barBottom - barTop;
+        const float minTrackH = 2.0f;
+        const float maxTrackH = 4.0f;
         const float gap = 1.0f;
-        const float rowH = trackH + gap;
+        
+        float trackH, rowH;
+        if (numTracksToShow > 0) {
+            rowH = availableHeight / static_cast<float>(numTracksToShow);
+            trackH = std::max(minTrackH, std::min(maxTrackH, rowH - gap));
+        } else {
+            trackH = maxTrackH;
+            rowH = trackH + gap;
+        }
         
         static const std::vector<NUIColor> brightColors = {
             NUIColor(1.0f, 0.8f, 0.2f, 1.0f),   // Yellow
@@ -246,10 +272,12 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
     }
 
     // Playhead: collision-free outline (dark underlay + bright center).
-    const float phX = timeToX(model.playheadBeat, map, domainStart, domainEnd);
-    if (phX >= map.x - 1.0f && phX <= map.right() + 1.0f) {
-        renderer.drawLine(NUIPoint(phX, map.y), NUIPoint(phX, map.bottom()), 2.0f, colors.playheadDark);
-        renderer.drawLine(NUIPoint(phX, map.y), NUIPoint(phX, map.bottom()), 1.0f, colors.playheadBright);
+    if (model.showPlayhead) {
+        const float phX = timeToX(model.playheadBeat, map, domainStart, domainEnd);
+        if (phX >= map.x - 1.0f && phX <= map.right() + 1.0f) {
+            renderer.drawLine(NUIPoint(phX, map.y), NUIPoint(phX, map.bottom()), 2.0f, colors.playheadDark);
+            renderer.drawLine(NUIPoint(phX, map.y), NUIPoint(phX, map.bottom()), 1.0f, colors.playheadBright);
+        }
     }
 }
 

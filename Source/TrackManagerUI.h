@@ -104,9 +104,14 @@ public:
     void setPlaylistMode(PlaylistMode mode);
     PlaylistMode getPlaylistMode() const { return m_playlistMode; }
     
+    // Pattern Playback Mode (Arsenal) - Hides playhead/playline
+    void setPatternMode(bool enabled);
+    bool isPatternMode() const { return m_patternMode; }
+    
     // Cursor visibility callback (for custom cursor support)
     void setOnCursorVisibilityChanged(std::function<void(bool)> callback) { m_onCursorVisibilityChanged = callback; }
     bool isMinimapResizeCursorActive() const;
+    bool isCustomCursorActive() const;  // Returns true if any tool/resize cursor is active
     
     // View Toggle Callbacks (v3.1)
     void setOnToggleMixer(std::function<void()> cb) { m_onToggleMixer = cb; }
@@ -114,9 +119,16 @@ public:
     void setOnToggleSequencer(std::function<void()> cb) { m_onToggleSequencer = cb; }
     void setOnTogglePlaylist(std::function<void()> cb) { m_onTogglePlaylist = cb; }
     
-    // Loop control callback (preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection)
+    // Loop control callback (preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project)
     void setOnLoopPresetChanged(std::function<void(int preset)> cb) { m_onLoopPresetChanged = cb; }
     int getLoopPreset() const { return m_loopPreset; }
+    
+    // Selection made callback - called when ruler selection is finalized (startBeat, endBeat)
+    // This should jump playhead to start and set up the loop region
+    void setOnSelectionMade(std::function<void(double startBeat, double endBeat)> cb) { m_onSelectionMade = cb; }
+    
+    // Loop region update callback - called when loop region needs to change (for Project auto-update)
+    void setOnLoopRegionUpdate(std::function<void(double startBeat, double endBeat)> cb) { m_onLoopRegionUpdate = cb; }
     
     // === MULTI-SELECTION ===
     void selectTrack(TrackUIComponent* track, bool addToSelection = false);
@@ -216,6 +228,7 @@ private:
     int m_trackSpacing{4}; // 8px grid spacing scale (S1)
     float m_scrollOffset{0.0f};
     PlaylistMode m_playlistMode{PlaylistMode::Clips};
+    bool m_patternMode = false; // True when Pattern (Arsenal) playback is active
     
     // Timeline/Ruler settings
     float m_pixelsPerBeat{50.0f};      // Horizontal zoom level
@@ -242,7 +255,6 @@ private:
     ::NomadUI::TimelineMinimapAggregation m_minimapAggregation{::NomadUI::TimelineMinimapAggregation::MaxPresence};
     double m_minimapDomainStartBeat{0.0};
     double m_minimapDomainEndBeat{0.0};
-    double m_minimapShrinkCooldown{0.0};
     bool m_minimapNeedsRebuild{true};
     ::NomadUI::TimelineRange m_minimapSelectionBeatRange{};
     
@@ -315,7 +327,7 @@ private:
     bool m_hasRulerSelection = false;
     
     // === LOOP MARKERS (Visual feedback on ruler) ===
-    bool m_loopEnabled = true;  // Default enabled (1-bar loop)
+    bool m_loopEnabled = false;  // Default OFF - no loop until user makes selection
     double m_loopStartBeat = 0.0;
     double m_loopEndBeat = 4.0;
     bool m_isDraggingLoopStart = false;
@@ -418,6 +430,8 @@ private:
     std::function<void()> m_onToggleSequencer;
     std::function<void()> m_onTogglePlaylist;
     std::function<void(int)> m_onLoopPresetChanged;  // Called when loop preset dropdown changes
+    std::function<void(double, double)> m_onSelectionMade;  // Called when ruler selection finalized
+    std::function<void(double, double)> m_onLoopRegionUpdate;  // Called when loop region needs update (Project auto-update)
     
     void updateBackgroundCache(::NomadUI::NUIRenderer& renderer);
     void updateControlsCache(::NomadUI::NUIRenderer& renderer);

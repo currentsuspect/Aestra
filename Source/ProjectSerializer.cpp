@@ -1,6 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ProjectSerializer.h"
 #include "../NomadCore/include/NomadLog.h"
+#include "../NomadAudio/include/MiniAudioDecoder.h"
 #include <filesystem>
 #include <fstream>
 
@@ -8,7 +9,12 @@ using namespace Nomad;
 using namespace Nomad::Audio;
 
 namespace {
-    constexpr int PROJECT_VERSION = 1;
+    // Project file format versioning
+    // - Increment CURRENT when making breaking changes
+    // - MIN_SUPPORTED is the oldest version we can still load
+    // - Future migration code can handle MIN_SUPPORTED <= version <= CURRENT
+    constexpr int PROJECT_VERSION_CURRENT = 1;
+    constexpr int PROJECT_VERSION_MIN_SUPPORTED = 1;
 }
 
 static bool writeAtomicallyImpl(const std::string& path, const std::string& contents) {
@@ -66,7 +72,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
     if (!trackManager) return result;
 
     JSON root = JSON::object();
-    root.set("version", JSON(static_cast<double>(PROJECT_VERSION)));
+    root.set("version", JSON(static_cast<double>(PROJECT_VERSION_CURRENT)));
     root.set("tempo", JSON(tempo));
     root.set("playhead", JSON(playheadSeconds));
 
@@ -241,27 +247,105 @@ bool ProjectSerializer::save(const std::string& path,
 ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                                       const std::shared_ptr<TrackManager>& trackManager) {
     LoadResult result;
-    if (!trackManager) return result;
-    if (!std::filesystem::exists(path)) return result;
+    if (!trackManager) {
+        result.errorMessage = "Invalid track manager";
+        return result;
+    }
+    if (!std::filesystem::exists(path)) {
+        result.errorMessage = "File not found: " + path;
+        return result;
+    }
 
 #if defined(NOMAD_ENABLE_PROJECT_LOAD_LOGS)
     Log::info(std::string("[ProjectLoad] Begin: ") + path);
 #endif
 
+    // ========================================================================
+    // PHASE 1: Parse and validate JSON (non-destructive)
+    // ========================================================================
     std::ifstream in(path);
-    if (!in) return result;
+    if (!in) {
+        result.errorMessage = "Cannot open file: " + path;
+        return result;
+    }
     
     std::string contents((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    in.close();
+    
 #if defined(NOMAD_ENABLE_PROJECT_LOAD_LOGS)
     Log::info("[ProjectLoad] Read bytes=" + std::to_string(contents.size()));
 #endif
+
     JSON root = JSON::parse(contents);
-    if (!root.isObject()) return result;
+    if (!root.isObject()) {
+        result.errorMessage = "Invalid project file: not a valid JSON object";
+        Log::error("[ProjectLoad] " + result.errorMessage);
+        return result;
+    }
 #if defined(NOMAD_ENABLE_PROJECT_LOAD_LOGS)
     Log::info("[ProjectLoad] Parsed JSON ok");
 #endif
 
+    // Version check
+    int fileVersion = 0;
+    if (root.has("version")) {
+        fileVersion = static_cast<int>(root["version"].asNumber());
+    }
+    
+    if (fileVersion < PROJECT_VERSION_MIN_SUPPORTED) {
+        result.errorMessage = "Project file version " + std::to_string(fileVersion) + 
+                   " is too old. Minimum supported: " + std::to_string(PROJECT_VERSION_MIN_SUPPORTED);
+        Log::error("[ProjectLoad] " + result.errorMessage);
+        return result;
+    }
+    
+    if (fileVersion > PROJECT_VERSION_CURRENT) {
+        result.errorMessage = "Project file version " + std::to_string(fileVersion) + 
+                   " is newer than this version of NOMAD (" + std::to_string(PROJECT_VERSION_CURRENT) + 
+                   "). Please update NOMAD to open this project.";
+        Log::error("[ProjectLoad] " + result.errorMessage);
+        return result;
+    }
+    
+    Log::info("[ProjectLoad] Version " + std::to_string(fileVersion) + " (current: " + 
+              std::to_string(PROJECT_VERSION_CURRENT) + ")");
+
+    // ========================================================================
+    // PHASE 2: Validate structure and check assets (non-destructive)
+    // ========================================================================
+    
+    // Check for required sections
+    if (!root.has("lanes")) {
+        result.errorMessage = "Invalid project file: missing 'lanes' section";
+        Log::error("[ProjectLoad] " + result.errorMessage);
+        return result;
+    }
+    
+    // Validate and collect missing audio assets
+    if (root.has("sources")) {
+        const JSON& sj = root["sources"];
+        for (size_t i = 0; i < sj.size(); ++i) {
+            if (!sj[i].has("path")) continue;
+            std::string filePath = sj[i]["path"].asString();
+            if (!std::filesystem::exists(filePath)) {
+                result.missingAssets.push_back(filePath);
+                Log::warning("[ProjectLoad] Missing audio asset: " + filePath);
+            }
+        }
+    }
+    
+    // Log missing assets but don't fail - we'll load what we can
+    if (!result.missingAssets.empty()) {
+        Log::warning("[ProjectLoad] " + std::to_string(result.missingAssets.size()) + 
+                     " audio file(s) not found - clips will appear without waveforms");
+    }
+
+    // ========================================================================
+    // PHASE 3: Commit - clear existing state and load new data
+    // ========================================================================
+    
     result.tempo = root.has("tempo") ? root["tempo"].asNumber() : 120.0;
+    result.playhead = root.has("playhead") ? root["playhead"].asNumber() : 0.0;
     result.playhead = root.has("playhead") ? root["playhead"].asNumber() : 0.0;
 
     // Optional UI state
@@ -317,7 +401,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     sourceManager.clear();
     // patternManager.clear(); // TODO: If clear exists
 
-    // 1. Load Sources
+    // 1. Load Sources (and decode audio files)
     std::unordered_map<uint32_t, ClipSourceID> idMap;
     if (root.has("sources")) {
         const JSON& sj = root["sources"];
@@ -329,6 +413,29 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             std::string filePath = sj[i]["path"].asString();
             ClipSourceID newId = sourceManager.getOrCreateSource(filePath);
             idMap[oldId] = newId;
+            
+            // Actually decode the audio file and load into source
+            ClipSource* source = sourceManager.getSource(newId);
+            if (source && !source->isReady() && std::filesystem::exists(filePath)) {
+                std::vector<float> decodedData;
+                uint32_t sampleRate = 0;
+                uint32_t numChannels = 0;
+                
+                Log::info("[ProjectLoad] Decoding audio: " + filePath);
+                if (decodeAudioFile(filePath, decodedData, sampleRate, numChannels, nullptr)) {
+                    auto buffer = std::make_shared<AudioBufferData>();
+                    buffer->interleavedData = std::move(decodedData);
+                    buffer->sampleRate = sampleRate;
+                    buffer->numChannels = numChannels;
+                    buffer->numFrames = buffer->interleavedData.size() / numChannels;
+                    source->setBuffer(buffer);
+                    Log::info("[ProjectLoad] Loaded audio: " + filePath + 
+                              " (" + std::to_string(buffer->numFrames) + " frames, " + 
+                              std::to_string(sampleRate) + " Hz)");
+                } else {
+                    Log::warning("[ProjectLoad] Failed to decode: " + filePath);
+                }
+            }
         }
     }
 

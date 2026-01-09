@@ -13,7 +13,7 @@ endif()
 
 project(NOMAD VERSION 0.1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # =============================================================================
@@ -45,11 +45,6 @@ if(UNIX AND NOT APPLE)
     set(LINUX_DISTRO "Unknown")
   endif()
   message(STATUS "Detected Linux platform (${LINUX_DISTRO})")
-
-  target_compile_options(NomadCore PRIVATE
-    -Wall -Wextra -Wpedantic
-    -Wno-unused-parameter
-  )
   
   # PIC for libraries
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -86,6 +81,18 @@ endif()
 # NomadCore - Base Utilities
 # =============================================================================
 add_subdirectory(NomadCore)
+
+if(NOMAD_PLATFORM_LINUX AND TARGET NomadCore)
+  target_compile_options(NomadCore PRIVATE
+    -Wall -Wextra -Wpedantic
+    -Wno-unused-parameter
+  )
+endif()
+
+# =============================================================================
+# NomadPlat - Platform Abstraction (Must be before NomadAudio)
+# =============================================================================
+add_subdirectory(NomadPlat)
 
 # =============================================================================
 # NomadAudio - Audio Engine
@@ -134,11 +141,6 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Source/HeadlessMain.cpp")
 endif()
 
 if(NOMAD_ENABLE_UI)
-  # =============================================================================
-  # NomadPlat - Platform Abstraction
-  # =============================================================================
-  add_subdirectory(NomadPlat)
-
   # =============================================================================
   # NomadUI - UI Framework
   # =============================================================================

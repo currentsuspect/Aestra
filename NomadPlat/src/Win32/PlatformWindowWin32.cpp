@@ -47,8 +47,10 @@ PlatformWindowWin32::~PlatformWindowWin32() {
 
 bool PlatformWindowWin32::create(const WindowDesc& desc) {
     m_title = desc.title;
+    m_title = desc.title;
     m_width = desc.width;
     m_height = desc.height;
+    m_isBorderless = !desc.decorated;
 
     // Register window class
     if (!registerWindowClass()) {
@@ -56,22 +58,39 @@ bool PlatformWindowWin32::create(const WindowDesc& desc) {
         return false;
     }
 
-    // Calculate window size including borders
-    DWORD style = WS_OVERLAPPEDWINDOW; // Use standard window style for proper taskbar behavior
-    if (!desc.resizable) {
-        style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
-    }
-    if (!desc.decorated) {
-        // Use WS_POPUP for truly borderless window that works with taskbar
-        style = WS_POPUP;
+    // Calculate window style
+    DWORD style = 0;
+
+    if (m_isBorderless) {
+        // VS Code approach: Use standard OVERLAPPEDWINDOW but trick Windows
+        // into giving us the entire rectangle as client area via WM_NCCALCSIZE.
+        // This triggers all native behaviors (Snap Layouts, animations, taskbar previews)
+        // while still rendering our custom frame.
+        style = WS_OVERLAPPEDWINDOW;
+    } else {
+        // Standard window
+        style = WS_OVERLAPPEDWINDOW;
+        if (!desc.resizable) {
+            style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+        }
     }
 
+    // Calculate window size
     RECT rect = { 0, 0, m_width, m_height };
-    AdjustWindowRect(&rect, style, FALSE);
+    
+    // Only adjust for borders if we are NOT in our custom borderless mode.
+    // In borderless mode, Window Rect == Client Rect.
+    if (!m_isBorderless) {
+        AdjustWindowRect(&rect, style, FALSE);
+    }
 
     int windowWidth = rect.right - rect.left;
     int windowHeight = rect.bottom - rect.top;
-
+    
+    NOMAD_LOG_INFO("Creating Window: Borderless=" + std::to_string(m_isBorderless) + 
+                   ", Requested=" + std::to_string(m_width) + "x" + std::to_string(m_height) + 
+                   ", Calculated=" + std::to_string(windowWidth) + "x" + std::to_string(windowHeight));
+    
     // Calculate position
     int x = desc.x;
     int y = desc.y;
@@ -89,12 +108,8 @@ bool PlatformWindowWin32::create(const WindowDesc& desc) {
     MultiByteToWideChar(CP_UTF8, 0, m_title.c_str(), -1, wideTitle, titleLen);
 
     // Create window
-    DWORD exStyle = 0;
-    if (!desc.decorated) {
-        // Use WS_EX_APPWINDOW to make it appear in taskbar and Alt+Tab
-        exStyle = WS_EX_APPWINDOW;
-    }
-    
+    DWORD exStyle = WS_EX_APPWINDOW;
+
     m_hwnd = CreateWindowExW(
         exStyle,
         WINDOW_CLASS_NAME,
@@ -107,12 +122,55 @@ bool PlatformWindowWin32::create(const WindowDesc& desc) {
         GetModuleHandle(nullptr),
         this  // Pass 'this' pointer to WM_CREATE
     );
-
     delete[] wideTitle;
 
     if (!m_hwnd) {
         NOMAD_LOG_ERROR("Failed to create window");
         return false;
+    }
+
+    // Enable DWM Shadows and disable NC rendering using explicit linking
+    HMODULE hDwmapi = LoadLibraryA("dwmapi.dll");
+    if (hDwmapi && m_isBorderless) {
+        // DWMWA_NCRENDERING_POLICY constants
+        enum DWMWINDOWATTRIBUTE_LOCAL {
+            DWMWA_NCRENDERING_POLICY_LOCAL = 2
+        };
+        enum DWMNCRENDERINGPOLICY_LOCAL {
+            DWMNCRP_DISABLED_LOCAL = 1
+        };
+        
+        typedef HRESULT (WINAPI *DwmSetWindowAttributeFunc)(HWND, DWORD, LPCVOID, DWORD);
+        DwmSetWindowAttributeFunc setAttr = (DwmSetWindowAttributeFunc)GetProcAddress(hDwmapi, "DwmSetWindowAttribute");
+        
+        if (setAttr) {
+            // DEBUG: Disabling this because it causes black bar offset (Windows ignores NCCALCSIZE?)
+            // Disable DWM's non-client rendering - this prevents the caption bar from rendering
+            // DWORD policy = DWMNCRP_DISABLED_LOCAL;
+            // setAttr(m_hwnd, DWMWA_NCRENDERING_POLICY_LOCAL, &policy, sizeof(policy));
+            // NOMAD_LOG_INFO("DWM NC rendering disabled");
+        }
+        
+        typedef struct _MARGINS {
+            int cxLeftWidth;
+            int cxRightWidth;
+            int cyTopHeight;
+            int cyBottomHeight;
+        } MARGINS, *PMARGINS;
+        
+        typedef HRESULT (WINAPI *DwmExtendFrameIntoClientAreaFunc)(HWND, const MARGINS*);
+        DwmExtendFrameIntoClientAreaFunc proc = (DwmExtendFrameIntoClientAreaFunc)GetProcAddress(hDwmapi, "DwmExtendFrameIntoClientArea");
+        
+        if (proc) {
+            // Extend frame into client area (-1 = Sheet of Glass)
+            // This is arguably the "Correct" way for full borderless.
+            MARGINS margins = { -1 };
+            proc(m_hwnd, &margins);
+            NOMAD_LOG_INFO("DWM Shadows enabled (Sheet of Glass)");
+        }
+        FreeLibrary(hDwmapi);
+    } else if (hDwmapi) {
+        FreeLibrary(hDwmapi);
     }
 
     // Explicitly set the window icons via WM_SETICON. Load icons here so
@@ -149,15 +207,47 @@ bool PlatformWindowWin32::create(const WindowDesc& desc) {
     m_dpiScale = PlatformDPI::getDPIScale(m_hwnd);
     NOMAD_LOG_INFO("Window DPI scale: " + std::to_string(m_dpiScale));
 
-    // Show window
-    if (desc.startMaximized) {
-        ShowWindow(m_hwnd, SW_MAXIMIZE);
-    } else if (desc.startFullscreen) {
+    // Show window logic
+    if (desc.startFullscreen) {
         setFullscreen(true);
     } else {
+        // Always show normal first to establish the window
         ShowWindow(m_hwnd, SW_SHOW);
+        
+        if (desc.startMaximized) {
+            // Use PostMessage to trigger maximization ASYNCHRONOUSLY.
+            // This ensures the window is fully created, shown, and DWM is ready
+            // before we transition to maximized state. This effectively simulates
+            // a user clicking the maximize button, which we know works correctly.
+            PostMessageW(m_hwnd, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+        }
     }
     UpdateWindow(m_hwnd);
+    
+    // Force a frame recalculation to ensure the "Restored" state is also correct
+    // (Borderless with no title bar)
+    SetWindowPos(m_hwnd, nullptr, 0, 0, 0, 0, 
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+    // CRITICAL: After SWP_FRAMECHANGED, explicitly get the TRUE client rect size
+    // and update our internal state + notify renderer. This ensures the viewport
+    // uses the correct size after WM_NCCALCSIZE zeroed out the frame.
+    if (m_isBorderless) {
+        RECT clientRect;
+        GetClientRect(m_hwnd, &clientRect);
+        int trueWidth = clientRect.right - clientRect.left;
+        int trueHeight = clientRect.bottom - clientRect.top;
+        
+        NOMAD_LOG_INFO("Post-FRAMECHANGED client rect: " + std::to_string(trueWidth) + "x" + std::to_string(trueHeight));
+        
+        if (trueWidth != m_width || trueHeight != m_height) {
+            m_width = trueWidth;
+            m_height = trueHeight;
+            if (m_resizeCallback) {
+                m_resizeCallback(m_width, m_height);
+            }
+        }
+    }
 
     NOMAD_LOG_INFO("Window created successfully");
     return true;
@@ -436,10 +526,17 @@ void PlatformWindowWin32::swapBuffers() {
 LRESULT CALLBACK PlatformWindowWin32::WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     PlatformWindowWin32* window = nullptr;
 
-    if (msg == WM_CREATE) {
+    // CRITICAL: Use WM_NCCREATE instead of WM_CREATE.
+    // WM_NCCALCSIZE is sent *before* WM_CREATE. If we wait for WM_CREATE,
+    // the initial layout calculation will use the default handler (with caption),
+    // causing a permanent offset/black bar.
+    if (msg == WM_NCCREATE) {
         CREATESTRUCT* cs = reinterpret_cast<CREATESTRUCT*>(lParam);
         window = reinterpret_cast<PlatformWindowWin32*>(cs->lpCreateParams);
+        // Store 'window' in GWLP_USERDATA so subsequent messages can find it
         SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(window));
+        // Also set m_hwnd immediately so handleMessage can use it
+        window->m_hwnd = hwnd;
     } else {
         window = reinterpret_cast<PlatformWindowWin32*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
     }
@@ -453,116 +550,173 @@ LRESULT CALLBACK PlatformWindowWin32::WindowProc(HWND hwnd, UINT msg, WPARAM wPa
 
 LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
-        case WM_NCHITTEST: {
-            // For borderless windows, we need to handle hit testing manually
-            // This allows the window to be dragged and resized
-            DWORD style = GetWindowLong(m_hwnd, GWL_STYLE);
-            if (!(style & WS_CAPTION)) {
-                // Borderless window - enable dragging from the top area
-                POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-                ScreenToClient(m_hwnd, &pt);
+        case WM_GETMINMAXINFO: {
+            if (m_isBorderless) {
+                MINMAXINFO* mmi = (MINMAXINFO*)lParam;
+                MONITORINFO monitor = { sizeof(MONITORINFO) };
+                HMONITOR hMonitor = MonitorFromWindow(m_hwnd, MONITOR_DEFAULTTONEAREST);
+                GetMonitorInfo(hMonitor, &monitor);
+
+                RECT rcWork = monitor.rcWork;
+                RECT rcMonitor = monitor.rcMonitor;
+
+                // Maximize size = Work Area Size
+                mmi->ptMaxSize.x = std::abs(rcWork.right - rcWork.left);
+                mmi->ptMaxSize.y = std::abs(rcWork.bottom - rcWork.top);
+
+                // Maximize Position = Relative to Monitor
+                mmi->ptMaxPosition.x = std::abs(rcWork.left - rcMonitor.left);
+                mmi->ptMaxPosition.y = std::abs(rcWork.top - rcMonitor.top);
                 
-                // Don't allow resizing when maximized
-                if (!isMaximized()) {
-                    // Handle resize borders (8 pixel border)
-                    const int borderSize = 8;
-                    RECT rect;
-                    GetClientRect(m_hwnd, &rect);
+                // Track Size limits
+                mmi->ptMaxTrackSize.x = mmi->ptMaxSize.x;
+                mmi->ptMaxTrackSize.y = mmi->ptMaxSize.y;
+                
+                return 0;
+            }
+            break;
+        }
+
+        case WM_WINDOWPOSCHANGED: {
+            WINDOWPOS* wp = (WINDOWPOS*)lParam;
+            if (!(wp->flags & SWP_NOMOVE) || !(wp->flags & SWP_NOSIZE)) {
+                NOMAD_LOG_INFO("WM_WINDOWPOSCHANGED: x=" + std::to_string(wp->x) + 
+                               ", y=" + std::to_string(wp->y) + 
+                               ", w=" + std::to_string(wp->cx) + 
+                               ", h=" + std::to_string(wp->cy) + 
+                               ", flags=" + std::to_string(wp->flags));
+            }
+            break; // Pass to DefWindowProc
+        }
+
+        case WM_NCCALCSIZE: {
+            if (m_isBorderless) {
+                if (wParam == TRUE) {
+                    NCCALCSIZE_PARAMS* params = reinterpret_cast<NCCALCSIZE_PARAMS*>(lParam);
                     
-                    bool onLeft = pt.x < borderSize;
-                    bool onRight = pt.x >= rect.right - borderSize;
-                    bool onTop = pt.y < borderSize;
+                    if (IsZoomed(m_hwnd)) {
+                         // Maximize fix: Compensate for auto-hide taskbar borders
+                        int frameX = GetSystemMetrics(SM_CXFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
+                        int frameY = GetSystemMetrics(SM_CYFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
+                        
+                        params->rgrc[0].left   += frameX;
+                        params->rgrc[0].top    += frameY;
+                        params->rgrc[0].right  -= frameX;
+                        params->rgrc[0].bottom -= frameY;
+                    }
+                    return 0; // Return 0 to preserve the calculated area
+                } else {
+                    return 0;
+                }
+            }
+            break; 
+        }
+
+        case WM_NCHITTEST: {
+             if (m_isBorderless) {
+                POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+                
+                // 1. Get Application Feedback
+                HitTestResult appResult = HitTestResult::Default;
+                if (m_hitTestCallback) {
+                    POINT clientPt = pt;
+                    ScreenToClient(m_hwnd, &clientPt);
+                    appResult = m_hitTestCallback(clientPt.x, clientPt.y);
+                }
+
+                // 2. High Priority: Interactive UI Elements (Buttons) override everything
+                switch (appResult) {
+                    case HitTestResult::Client:      return HTCLIENT;
+                    case HitTestResult::MinButton:   return HTMINBUTTON;
+                    case HitTestResult::MaxButton:   return HTMAXBUTTON;
+                    case HitTestResult::CloseButton: return HTCLOSE;
+                    // Resize handles can be explicitly requested by app, though we usually let platform handle it
+                    case HitTestResult::ResizeTop:         return HTTOP;
+                    case HitTestResult::ResizeBottom:      return HTBOTTOM;
+                    case HitTestResult::ResizeLeft:        return HTLEFT;
+                    case HitTestResult::ResizeRight:       return HTRIGHT;
+                    case HitTestResult::ResizeTopLeft:     return HTTOPLEFT;
+                    case HitTestResult::ResizeTopRight:    return HTTOPRIGHT;
+                    case HitTestResult::ResizeBottomLeft:  return HTBOTTOMLEFT;
+                    case HitTestResult::ResizeBottomRight: return HTBOTTOMRIGHT;
+                    case HitTestResult::Nowhere:           return HTTRANSPARENT;
+                    default: break; 
+                }
+
+                // 3. Medium Priority: Window Resizing (Standard Edges)
+                // Only if NOT maximized and NOT already handled by specific UI controls
+                if (!IsZoomed(m_hwnd)) {
+                    const int borderSize = 8; // Adjust for easy grabbing
+                    RECT rect;
+                    GetWindowRect(m_hwnd, &rect);
+                    
+                    bool onLeft   = pt.x < rect.left + borderSize;
+                    bool onRight  = pt.x >= rect.right - borderSize;
+                    bool onTop    = pt.y < rect.top + borderSize;
                     bool onBottom = pt.y >= rect.bottom - borderSize;
                     
-                    // Corners
-                    if (onTop && onLeft) return HTTOPLEFT;
-                    if (onTop && onRight) return HTTOPRIGHT;
-                    if (onBottom && onLeft) return HTBOTTOMLEFT;
+                    if (onTop && onLeft)     return HTTOPLEFT;
+                    if (onTop && onRight)    return HTTOPRIGHT;
+                    if (onBottom && onLeft)  return HTBOTTOMLEFT;
                     if (onBottom && onRight) return HTBOTTOMRIGHT;
-                    
-                    // Edges
-                    if (onLeft) return HTLEFT;
-                    if (onRight) return HTRIGHT;
-                    if (onTop) return HTTOP;
-                    if (onBottom) return HTBOTTOM;
+                    if (onLeft)              return HTLEFT;
+                    if (onRight)             return HTRIGHT;
+                    if (onTop)               return HTTOP;
+                    if (onBottom)            return HTBOTTOM;
                 }
-                
-                // Top 32 pixels are the title bar drag area
-                // BUT exclude the right 150 pixels for window control buttons
-                // AND exclude the center area for the new focus toggle buttons
-                // AND exclude the left area for the MenuBar
-                if (pt.y >= 0 && pt.y < 32) {
-                    bool inLeftControls = pt.x < 200; // Exclude MenuBar area
-                    bool inRightControls = pt.x >= m_width - 150;
-                    bool inCenterButtons = std::abs(pt.x - (m_width / 2)) < 100;
-                    
-                    if (!inRightControls && !inCenterButtons && !inLeftControls) {
-                        return HTCAPTION;  // Allow dragging only in non-interactive parts
-                    }
+
+                // 4. Low Priority: Title Bar Dragging vs Client Content
+                if (appResult == HitTestResult::Caption) {
+                    return HTCAPTION;
                 }
-                
+
                 return HTCLIENT;
-            }
-            break;
+             }
+             break;
         }
-        
+
         case WM_NCPAINT: {
-            // For borderless windows (WS_POPUP), don't paint the non-client area
-            DWORD style = GetWindowLong(m_hwnd, GWL_STYLE);
-            if (!(style & WS_CAPTION)) {
-                // Don't paint the non-client area (no title bar)
+            // Prevent Windows from drawing the standard NC area
+            if (m_isBorderless) {
                 return 0;
             }
             break;
         }
-        
-        case WM_SYSCOMMAND: {
-            // Handle minimize/restore commands properly for borderless windows
-            DWORD style = GetWindowLong(m_hwnd, GWL_STYLE);
-            if (!(style & WS_CAPTION)) {
-                // Borderless window (WS_POPUP) - handle minimize/restore manually
-                if ((wParam & 0xFFF0) == SC_MINIMIZE) {
-                    // Handle minimize command
-                    ShowWindow(m_hwnd, SW_MINIMIZE);
-                    return 0;
-                }
-                else if ((wParam & 0xFFF0) == SC_RESTORE) {
-                    // Handle restore command
-                    ShowWindow(m_hwnd, SW_RESTORE);
-                    return 0;
-                }
-                else if ((wParam & 0xFFF0) == SC_MAXIMIZE) {
-                    // Custom maximize logic (existing code)
-                    MONITORINFO mi = { sizeof(mi) };
-                    GetMonitorInfo(MonitorFromWindow(m_hwnd, MONITOR_DEFAULTTONEAREST), &mi);
-                    SetWindowPos(m_hwnd, nullptr,
-                        mi.rcWork.left,
-                        mi.rcWork.top,
-                        mi.rcWork.right - mi.rcWork.left,
-                        mi.rcWork.bottom - mi.rcWork.top,
-                        SWP_NOZORDER | SWP_FRAMECHANGED);
-                    return 0;
-                }
+
+        case WM_NCACTIVATE: {
+            if (m_isBorderless) {
+                // Return TRUE to indicate we handled activation, but prevent
+                // Windows from drawing the default title bar by not calling
+                // DefWindowProc. Setting lParam to -1 prevents any NC painting.
+                // This is critical for preventing the white line at the top.
+                return TRUE;
             }
             break;
         }
-        
+
         case WM_CLOSE:
-            // Don't set m_shouldClose here - let the app decide via callback
-            // The app can call requestClose() which may show a dialog
-            // If the app wants to close, it will set its own m_running = false
             if (m_closeCallback) {
                 m_closeCallback();
-                // Don't close yet - the callback will decide
                 return 0;
             }
-            // No callback, allow default close behavior
             m_shouldClose = true;
             return 0;
 
         case WM_SIZE: {
             int width = LOWORD(lParam);
             int height = HIWORD(lParam);
+            
+            // For borderless windows with WS_OVERLAPPEDWINDOW, the lParam values
+            // may be incorrect during initial setup (before WM_NCCALCSIZE takes effect).
+            // Use GetClientRect to get the TRUE client area size.
+            if (m_isBorderless && m_hwnd) {
+                RECT clientRect;
+                if (GetClientRect(m_hwnd, &clientRect)) {
+                    width = clientRect.right - clientRect.left;
+                    height = clientRect.bottom - clientRect.top;
+                }
+            }
+            
             bool sizeChanged = (width != m_width || height != m_height);
             bool minimizedEvent = (wParam == SIZE_MINIMIZED);
             bool restoredEvent = (wParam == SIZE_RESTORED);
@@ -572,12 +726,20 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
                 m_height = height;
             }
 
-            // Notify resize callback even when minimized/restored so renderers can
-            // flush caches when the window hides/shows without a size delta.
             if (m_resizeCallback && (sizeChanged || minimizedEvent || restoredEvent)) {
                 m_resizeCallback(width, height);
             }
             return 0;
+        }
+
+        case WM_NCMOUSEMOVE: {
+            // Forward NC mouse moves to the app so software cursors don't freeze over Title Bar
+            POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+            ScreenToClient(m_hwnd, &pt);
+            if (m_mouseMoveCallback) {
+                m_mouseMoveCallback(pt.x, pt.y);
+            }
+            break; 
         }
 
         case WM_MOUSEMOVE: {
@@ -628,8 +790,6 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
         }
 
         case WM_MOUSEHWHEEL: {
-            // Horizontal scroll (trackpads often send this)
-            // Convert to vertical for now since most UI expects vertical
             float delta = -GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
             if (m_mouseWheelCallback) {
                 m_mouseWheelCallback(delta);
@@ -665,14 +825,31 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
         }
 
         case WM_SETCURSOR: {
-            // Handle cursor visibility explicitly
-            if (LOWORD(lParam) == HTCLIENT) {
+            WORD hitTest = LOWORD(lParam);
+
+            // Handle cursor visibility for Client area and Captions (if managed by UI)
+            if (hitTest == HTCLIENT || hitTest == HTCAPTION) {
                 if (!m_cursorVisible) {
                     SetCursor(NULL);
-                    return TRUE; // Prevent DefWindowProc from resetting to Arrow
+                    return TRUE; 
                 }
             }
-            break; // Fall through for default behavior (Arrow/Resize/etc)
+
+            // Force System Resize Cursors (Fixes invisible cursor issue)
+            // DefWindowProc sometimes gets overridden or ignored if capture is weird,
+            // so we set them explicitly here.
+            switch (hitTest) {
+                case HTLEFT:       
+                case HTRIGHT:      SetCursor(LoadCursor(NULL, IDC_SIZEWE)); return TRUE;
+                case HTTOP:        
+                case HTBOTTOM:     SetCursor(LoadCursor(NULL, IDC_SIZENS)); return TRUE;
+                case HTTOPLEFT:    
+                case HTBOTTOMRIGHT: SetCursor(LoadCursor(NULL, IDC_SIZENWSE)); return TRUE;
+                case HTTOPRIGHT:   
+                case HTBOTTOMLEFT:  SetCursor(LoadCursor(NULL, IDC_SIZENESW)); return TRUE;
+            }
+
+            break; 
         }
 
         case WM_SETFOCUS:
@@ -688,18 +865,11 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
             return 0;
 
         case WM_DPICHANGED: {
-            // Update DPI scale
             float oldScale = m_dpiScale;
             m_dpiScale = PlatformDPI::getDPIScale(m_hwnd);
-            
-            NOMAD_LOG_INFO("DPI changed: " + std::to_string(oldScale) + " -> " + std::to_string(m_dpiScale));
-            
-            // Notify callback
             if (m_dpiChangeCallback) {
                 m_dpiChangeCallback(m_dpiScale);
             }
-            
-            // Windows suggests a new window size/position in lParam
             RECT* suggestedRect = reinterpret_cast<RECT*>(lParam);
             SetWindowPos(m_hwnd, nullptr,
                         suggestedRect->left,
@@ -707,7 +877,6 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
                         suggestedRect->right - suggestedRect->left,
                         suggestedRect->bottom - suggestedRect->top,
                         SWP_NOZORDER | SWP_NOACTIVATE);
-            
             return 0;
         }
     }
@@ -734,7 +903,12 @@ void PlatformWindowWin32::setSize(int width, int height) {
     
     DWORD style = GetWindowLong(m_hwnd, GWL_STYLE);
     RECT rect = { 0, 0, width, height };
-    AdjustWindowRect(&rect, style, FALSE);
+    
+    // Only adjust for borders if we are NOT in our custom borderless mode.
+    // In "True Borderless" (WS_POPUP + Handling NCCALCSIZE), Window Rect == Client Rect.
+    if (!m_isBorderless) {
+        AdjustWindowRect(&rect, style, FALSE);
+    }
     
     SetWindowPos(m_hwnd, nullptr, 0, 0, 
                  rect.right - rect.left, rect.bottom - rect.top,

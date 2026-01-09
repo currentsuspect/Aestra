@@ -17,6 +17,7 @@
 #include "NomadContent.h"
 #include "SettingsDialog.h"
 #include "ConfirmationDialog.h"
+#include "RecoveryDialog.h"
 #include "AudioSettingsPage.h"
 #include "GeneralSettingsPage.h"
 #include "UnifiedHUD.h"
@@ -40,6 +41,7 @@ namespace NomadUI {
 namespace Nomad {
     class SettingsDialog;
     class ConfirmationDialog;
+    class RecoveryDialog;
     class AudioSettingsPage;
     class GeneralSettingsPage;
 }
@@ -60,8 +62,9 @@ public:
 
     /**
      * @brief Initialize all subsystems
+     * @param projectPath Optional path to project file to load on startup
      */
-    bool initialize();
+    bool initialize(const std::string& projectPath = "");
 
     /**
      * @brief Main application loop
@@ -77,6 +80,7 @@ public:
      * @brief Access content manager (needed for audio callbacks)
      */
     std::shared_ptr<NomadContent> getNomadContent() const { return m_content; }
+    Nomad::Audio::AudioEngine* getAudioEngine() const { return m_audioEngine.get(); }
 
     // Helpers exposed for easier refactoring (could be private if callback logic was internal)
     static std::string getAppDataPath();
@@ -102,6 +106,7 @@ private:
     bool saveProject();
     ProjectSerializer::UIState captureUIState() const;
     void applyUIState(const ProjectSerializer::UIState& state);
+    void updateWindowTitle();  // Updates title bar with project name and dirty indicator
     
     // Helpers
     void checkKeyModifiers(bool pressed, int key);
@@ -124,6 +129,7 @@ private:
     std::shared_ptr<Nomad::AudioSettingsPage> m_audioSettingsPage; // Accessed by audio callback
     std::shared_ptr<Nomad::GeneralSettingsPage> m_generalSettingsPage;
     std::shared_ptr<Nomad::ConfirmationDialog> m_confirmationDialog;
+    std::shared_ptr<Nomad::RecoveryDialog> m_recoveryDialog;
     std::shared_ptr<UnifiedHUD> m_unifiedHUD;
     
     std::unique_ptr<NomadUI::NUIAdaptiveFPS> m_adaptiveFPS;
@@ -146,8 +152,13 @@ private:
     int m_lastMouseX{0};
     int m_lastMouseY{0};
     
+    // Window title state (to avoid updating every frame)
+    std::string m_lastWindowTitle;
+    bool m_lastModifiedState{false};
+    
     // Active dropdown menu
     std::shared_ptr<NomadUI::NUIContextMenu> m_activeMenu;
+    float m_activeMenuXOffset{-1.0f};  // X position of active menu for toggle detection
     
     // Menu bar
     std::shared_ptr<NomadUI::NUIMenuBar> m_menuBar;

@@ -379,6 +379,12 @@ void NUIPlatformBridge::setFocusCallback(std::function<void(bool)> callback) {
     m_focusCallback = callback;
 }
 
+void NUIPlatformBridge::setHitTestCallback(Nomad::HitTestCallback callback) {
+    if (m_window) {
+        m_window->setHitTestCallback(callback);
+    }
+}
+
 // =============================================================================
 // Native Handles
 // =============================================================================

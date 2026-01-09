@@ -17,6 +17,8 @@ set(NOMAD_DAW_SOURCES
 	OverlayLayer.h
 	ConfirmationDialog.h
 	ConfirmationDialog.cpp
+	RecoveryDialog.h
+	RecoveryDialog.cpp
 	TransportBar.h
 	TransportBar.cpp
 	TransportInfoContainer.h
@@ -120,10 +122,10 @@ if(WIN32)
 		NOMINMAX
 	)
 	
-	# Use console subsystem for now (can switch to WIN32_EXECUTABLE later)
-	# set_target_properties(NOMAD_DAW PROPERTIES
-	#     WIN32_EXECUTABLE TRUE
-	# )
+	# Windows GUI application (no console window)
+	set_target_properties(NOMAD_DAW PROPERTIES
+	    WIN32_EXECUTABLE TRUE
+	)
 	
 	# Link Windows libraries
 	# Note: We don't explicitly link opengl32 here

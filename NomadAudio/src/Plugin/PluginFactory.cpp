@@ -12,8 +12,11 @@
 #include "Plugin/CLAPHost.h"
 #endif
 
+
+
 #ifdef NOMAD_HAS_PLUGINS
 #include <RumbleInstance.h>
+#include "Plugin/SamplerPlugin.h"
 #endif
 
 namespace Nomad {
@@ -82,6 +85,11 @@ PluginInstancePtr InProcessPluginFactory::createInternalInstance(const PluginInf
     // Nomad Rumble 808 Bass Synthesizer
     if (info.id == "com.nomadstudios.rumble") {
         return std::make_shared<Nomad::Plugins::RumbleInstance>();
+    }
+    
+    // Nomad Sampler
+    if (info.id == "com.nomadstudios.sampler") {
+        return std::make_shared<Nomad::Audio::Plugins::SamplerPlugin>();
     }
 #endif
     (void)info;

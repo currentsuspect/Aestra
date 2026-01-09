@@ -1,12 +1,16 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioEngine.h"
-#include "EffectChain.h"
-#include "NomadLog.h"
-#include "FastMath.h"
-#include <cmath>
+#include "../../NomadCore/include/NomadLog.h"
+#include "../../NomadCore/include/NomadMath.h"
+#include "EffectChain.h" // [NEW]
+#include "PluginHost.h"
+#include "Plugin/SamplerPlugin.h" // [NEW]
+#include "UnitManager.h"
+#include "PatternPlaybackEngine.h"
 #include <algorithm>
 #include <cstring>
 #include <cstdio>
+#include <map>
 #include <immintrin.h> // AVX/SSE for high-performance mixing
 
 // Denormal protection macros
@@ -28,17 +32,41 @@ namespace {
     inline double dbToLinearD(double db) {
         // UI uses -90 dB as "silence"
         if (db <= -90.0) return 0.0;
-        // FastMath polynomial approximation (~5x faster than std::pow)
-        return static_cast<double>(FastMath::fastDbToLinear(static_cast<float>(db)));
+        return static_cast<double>(Nomad::dbToGain(static_cast<float>(db)));
     }
     
     // Fast constant-power pan gains (replaces std::sin/cos)
     inline void fastPanGainsD(double pan, double vol, double& gainL, double& gainR) {
-        float fL, fR;
-        FastMath::fastPan(static_cast<float>(pan), fL, fR);
-        gainL = static_cast<double>(fL) * vol;
-        gainR = static_cast<double>(fR) * vol;
+        float p = (static_cast<float>(pan) + 1.0f) * 0.5f; // 0.0 to 1.0
+        gainL = static_cast<double>(std::cos(p * 1.57079632679f)) * vol;
+        gainR = static_cast<double>(std::sin(p * 1.57079632679f)) * vol;
     }
+
+    inline void addMidiPanic(Nomad::Audio::MidiBuffer& buf) {
+        // CC120: All Sound Off, CC123: All Notes Off, CC121: Reset All Controllers
+        // Send on all 16 MIDI channels at sampleOffset 0.
+        for (uint8_t ch = 0; ch < 16; ++ch) {
+            const uint8_t allSoundOff[3] = { static_cast<uint8_t>(0xB0u | ch), 120u, 0u };
+            const uint8_t resetControllers[3] = { static_cast<uint8_t>(0xB0u | ch), 121u, 0u };
+            const uint8_t allNotesOff[3] = { static_cast<uint8_t>(0xB0u | ch), 123u, 0u };
+            buf.addEvent(0, allSoundOff, 3);
+            buf.addEvent(0, resetControllers, 3);
+            buf.addEvent(0, allNotesOff, 3);
+        }
+    }
+}
+
+// Global pointer for singleton access
+static AudioEngine* g_audioEngineInstance = nullptr;
+
+AudioEngine& AudioEngine::getInstance() {
+    // Assert if null in debug builds
+    if (!g_audioEngineInstance) {
+        // Critical error - engine not created yet
+        static AudioEngine fallback; // Emergency fallback
+        return fallback;
+    }
+    return *g_audioEngineInstance;
 }
 
 void AudioEngine::applyPendingCommands() {
@@ -47,11 +75,40 @@ void AudioEngine::applyPendingCommands() {
     int cmdCount = 0;
     bool hasTransport = false;
     AudioQueueCommand lastTransport;
+
+    // Track transport transitions within this block even though we coalesce
+    // the final transport state (stop->play can otherwise be missed).
+    // [FIX] Use RT-side tracked state, NOT the atomic (which UI updates immediately).
+    // This avoids race condition where UI sets m_transportPlaying before RT reads it.
+    bool transportPlaying = m_rtLastTransportPlaying;
+    uint64_t transportPos = m_rtLastTransportPos;
+    bool sawRestartEdge = false;
+    bool sawStopEdge = false;
+    bool sawHardStopEdge = false;
     
     while (cmdCount < 16 && m_commandQueue.pop(cmd)) {
         ++cmdCount;
-        // Coalesce transport commands: keep only the latest per block.
+        // Transport commands: keep only the latest per block, but record edges.
         if (cmd.type == AudioQueueCommandType::SetTransportState) {
+            const bool nextPlaying = (cmd.value1 != 0.0f);
+            const uint64_t nextPos = cmd.samplePos;
+            const bool posChanged = (nextPos != transportPos);
+
+            if (nextPlaying && (!transportPlaying || posChanged)) {
+                sawRestartEdge = true;
+            }
+            if (!nextPlaying && (transportPlaying || posChanged)) {
+                sawStopEdge = true;
+            }
+
+            // If we are already stopped and receive another stop with no seek,
+            // interpret it as a "hard stop" request (e.g. stop pressed twice).
+            if (!nextPlaying && !transportPlaying && !posChanged) {
+                sawHardStopEdge = true;
+            }
+
+            transportPlaying = nextPlaying;
+            transportPos = nextPos;
             lastTransport = cmd;
             hasTransport = true;
             continue;
@@ -105,23 +162,32 @@ void AudioEngine::applyPendingCommands() {
     }
 
     if (hasTransport) {
-        const bool wasPlaying = m_transportPlaying.load(std::memory_order_relaxed);
-        const uint64_t oldPos = m_globalSamplePos.load(std::memory_order_relaxed);
-        const bool nextPlaying = (lastTransport.value1 != 0.0f);
-        const bool posChanged = (lastTransport.samplePos != oldPos);
+        if (sawRestartEdge) {
+            m_transportRestartRequested.store(true, std::memory_order_release);
+        }
+        if (sawStopEdge) {
+            m_transportStopRequested.store(true, std::memory_order_release);
+        }
+        if (sawHardStopEdge) {
+            m_transportHardStopRequested.store(true, std::memory_order_release);
+        }
 
-        m_transportPlaying.store(nextPlaying, std::memory_order_relaxed);
-        m_globalSamplePos.store(lastTransport.samplePos, std::memory_order_relaxed);
+        // Update RT-side state tracking (used for edge detection next block)
+        m_rtLastTransportPlaying = transportPlaying;
+        m_rtLastTransportPos = transportPos;
 
-        if (nextPlaying && (!wasPlaying || posChanged)) {
+        m_transportPlaying.store(transportPlaying, std::memory_order_relaxed);
+        m_globalSamplePos.store(transportPos, std::memory_order_relaxed);
+
+        if (transportPlaying && sawRestartEdge) {
             // Always fade-in when starting playback (prevents clicks/buzz)
             m_fadeState = FadeState::FadingIn;
             m_fadeSamplesRemaining = FADE_IN_SAMPLES;
-        } else if (nextPlaying && m_fadeState == FadeState::Silent) {
+        } else if (transportPlaying && m_fadeState == FadeState::Silent) {
             // Fade-in from silent state, don't jump to full volume
             m_fadeState = FadeState::FadingIn;
             m_fadeSamplesRemaining = FADE_IN_SAMPLES;
-        } else if (nextPlaying && m_fadeState == FadeState::FadingOut) {
+        } else if (transportPlaying && m_fadeState == FadeState::FadingOut) {
             // Interrupted fade-out: switch to fade-in immediately
             // Use remaining fade-out samples as starting point for fade-in
             // This creates a smooth crossfade effect
@@ -216,6 +282,41 @@ void AudioEngine::processBlock(float* outputBuffer,
     // Process commands FIRST (lock-free)
     applyPendingCommands();
 
+    // Consume transport edge flags (set inside applyPendingCommands)
+    const bool transportStop = m_transportStopRequested.exchange(false, std::memory_order_acq_rel);
+    const bool transportRestart = m_transportRestartRequested.exchange(false, std::memory_order_acq_rel);
+    const bool transportHardStop = m_transportHardStopRequested.exchange(false, std::memory_order_acq_rel);
+
+    // Pattern mode semantics: stop/restart always resets playhead to the pattern start.
+    const bool patternModeNow = m_patternPlaybackMode.load(std::memory_order_relaxed);
+    if (patternModeNow && (transportStop || transportRestart)) {
+        m_globalSamplePos.store(0, std::memory_order_relaxed);
+    }
+
+    // Restart/hard-stop should also send MIDI panic (helps for VST/CLAP instruments).
+    if (transportRestart || transportHardStop) {
+        m_transportMidiPanicRequested.store(true, std::memory_order_release);
+    }
+
+    // Hard stop: immediate silence + clear one-shots.
+    // This is intentionally stronger than normal stop (which allows tails to ring out).
+    if (transportHardStop) {
+        auto* pe = m_patternEngine.load(std::memory_order_relaxed);
+        if (pe) pe->flush();
+
+        // RT-safe: use pre-cached sampler pointers (no dynamic_pointer_cast)
+        size_t samplerCount = m_cachedSamplerCount.load(std::memory_order_acquire);
+        for (size_t i = 0; i < samplerCount; ++i) {
+            auto* sampler = m_cachedSamplers[i];
+            if (sampler) {
+                sampler->requestHardResetVoices();
+            }
+        }
+
+        // Force silence immediately.
+        m_fadeState = FadeState::Silent;
+    }
+
     // State transitions
     bool isPlaying = m_transportPlaying.load(std::memory_order_relaxed);
     // [CHANGED] Disable global fade-out to allow effects tails to ring out.
@@ -224,8 +325,33 @@ void AudioEngine::processBlock(float* outputBuffer,
     //     m_fadeState = FadeState::FadingOut;
     //     m_fadeSamplesRemaining = FADE_OUT_SAMPLES;
     // }
-    // When starting playback, always ensure we're fading in (or already fading in)
-    // This prevents the audio from jumping to full volume instantly → no clicks
+    
+    // Flush Pattern Engine on Stop to prevent stale events.
+    // NOTE: normal stop does NOT cut one-shots (tails are allowed).
+    if (transportStop) {
+        auto* pe = m_patternEngine.load(std::memory_order_relaxed);
+        if (pe) pe->flush();
+    }
+
+    // On transport restart (play start or seek):
+    // - flush pattern queue
+    // - in pattern mode, cut any still-playing one-shots so the loop restarts audibly
+    if (transportRestart) {
+        auto* pe = m_patternEngine.load(std::memory_order_relaxed);
+        if (pe) pe->flush();
+
+        if (patternModeNow) {
+            // RT-safe: use pre-cached sampler pointers (no dynamic_pointer_cast)
+            size_t samplerCount = m_cachedSamplerCount.load(std::memory_order_acquire);
+            for (size_t i = 0; i < samplerCount; ++i) {
+                auto* sampler = m_cachedSamplers[i];
+                if (sampler) {
+                    sampler->requestHardResetVoices();
+                }
+            }
+        }
+    }
+
     // When starting playback, always ensure we're fading in (or already fading in)
     // This prevents the audio from jumping to full volume instantly → no clicks
     // [FIX] Also critical for recovering from Panic (Silent) state
@@ -262,6 +388,18 @@ void AudioEngine::processBlock(float* outputBuffer,
     // Loop & Position Logic Loop Calculation
     bool playing = m_transportPlaying.load(std::memory_order_relaxed);
     bool loopEnabled = m_loopEnabled.load(std::memory_order_relaxed);
+    
+    // Pattern Mode Override
+    bool patternMode = m_patternPlaybackMode.load(std::memory_order_relaxed);
+    double loopStartBeat = m_loopStartBeat.load(std::memory_order_relaxed);
+    double loopEndBeat = m_loopEndBeat.load(std::memory_order_relaxed);
+    
+    if (patternMode) {
+        loopEnabled = true; // Force loop in pattern mode
+        loopStartBeat = 0.0;
+        loopEndBeat = m_patternLengthBeats.load(std::memory_order_relaxed);
+    }
+
     uint64_t currentGlobalPos = m_globalSamplePos.load(std::memory_order_relaxed);
     
     // We calculate the NEXT position here to handle looping correctly
@@ -273,8 +411,6 @@ void AudioEngine::processBlock(float* outputBuffer,
         nextGlobalPos += numFrames;
         
         if (loopEnabled) {
-            double loopEndBeat = m_loopEndBeat.load(std::memory_order_relaxed);
-            double loopStartBeat = m_loopStartBeat.load(std::memory_order_relaxed);
             float bpm = m_bpm.load(std::memory_order_relaxed);
             // Convert loop end beat to sample position
             double samplesPerBeat = (static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)) * 60.0) / static_cast<double>(bpm);
@@ -282,45 +418,123 @@ void AudioEngine::processBlock(float* outputBuffer,
             loopStartSample = static_cast<uint64_t>(loopStartBeat * samplesPerBeat);
             
             // Check for loop crossing
-            if (currentGlobalPos < loopEndSample && nextGlobalPos > loopEndSample && loopEndSample > loopStartSample) {
+            // Enhanced Logic: In Pattern Mode, we might start WAY past loop end (Timeline position).
+            // We must wrap if nextGlobalPos exceeds loopEndSample, regardless of where current started.
+            if (nextGlobalPos > loopEndSample && loopEndSample > loopStartSample) {
                 // Loop Triggered!
-                uint64_t framesUntilLoop = loopEndSample - currentGlobalPos;
-                loopSplitFrame = static_cast<uint32_t>(framesUntilLoop);
+                // Calculate wrap
+                // Case 1: Standard crossing (inside -> outside)
+                // Case 2: Way outside -> further outside (Pattern toggle)
                 
-                // Recalculate next position: LoopStart + (numFrames - framesUntilLoop)
-                nextGlobalPos = loopStartSample + (numFrames - framesUntilLoop);
+                uint64_t loopLength = loopEndSample - loopStartSample;
+                if (loopLength > 0) {
+                    // Normalize position to loop range
+                    // Calculate "linear" next pos relative to start
+                    uint64_t relativePos = nextGlobalPos - loopStartSample;
+                    uint64_t wrappedRelative = relativePos % loopLength;
+                    
+                    nextGlobalPos = loopStartSample + wrappedRelative;
+                    
+                    // For split-rendering, we need to know WHERE in the buffer the wrap happens.
+                    // If we were already outside, we should probably just jump immediately (split at 0).
+                    if (currentGlobalPos >= loopEndSample) {
+                         loopSplitFrame = 0; // Jump immediately
+                    } else {
+                         // Standard crossing
+                         uint64_t framesUntilLoop = loopEndSample - currentGlobalPos;
+                         if (framesUntilLoop < numFrames) {
+                             loopSplitFrame = static_cast<uint32_t>(framesUntilLoop);
+                         } else {
+                             // This shouldn't happen if nextGlobalPos > loopEndSample
+                             loopSplitFrame = 0;
+                         }
+                    }
+                }
             }
         }
     }
 
     if (!m_masterBufferD.empty()) {
-        if (loopSplitFrame < numFrames) {
-            // Split Render Strategy for Sample-Accurate Looping
-            
-            // Part A: Render up to the loop point
-            if (loopSplitFrame > 0) {
-                renderGraph(graph, loopSplitFrame, 0);
+        if (!patternMode) {
+            // === Timeline Mode: Render Graph ===
+            if (loopSplitFrame < numFrames) {
+                // Split Render
+                if (loopSplitFrame > 0) {
+                    renderGraph(graph, loopSplitFrame, 0);
+                }
+                
+                // Part B: Jump to loop start
+                // Flush pattern events on loop wrap so we don't double-trigger across the wrap.
+                if (isPlaying) {
+                    auto* pe = m_patternEngine.load(std::memory_order_relaxed);
+                    if (pe) pe->flush();
+                }
+                m_globalSamplePos.store(loopStartSample, std::memory_order_relaxed);
+                renderGraph(graph, numFrames - loopSplitFrame, loopSplitFrame);
+                m_globalSamplePos.store(currentGlobalPos, std::memory_order_relaxed);
+                
+            } else {
+                // Normal Render
+                renderGraph(graph, numFrames, 0);
             }
-            
-            // Part B: Jump to loop start and render the rest
-            // We temporarily update globalSamplePos so renderGraph sees the correct time
-            m_globalSamplePos.store(loopStartSample, std::memory_order_relaxed);
-            renderGraph(graph, numFrames - loopSplitFrame, loopSplitFrame);
-            
-            // Restore position for the rest of processBlock (Metronome/Fade assume continuous block)
-            // Note: This means Metronome might glitch at loop point until it is also split-aware,
-            // but audio clips will be perfectly tight.
-            m_globalSamplePos.store(currentGlobalPos, std::memory_order_relaxed);
-            
         } else {
-            // Normal Render
-            renderGraph(graph, numFrames, 0);
+            // === Pattern Mode: Clear Buffer ===
+            std::fill(m_masterBufferD.begin(), 
+                      m_masterBufferD.begin() + static_cast<size_t>(numFrames) * m_outputChannels.load(std::memory_order_relaxed), 
+                      0.0);
         }
     } else {
         // Zero the double buffer
         std::fill(m_masterBufferD.begin(), 
                   m_masterBufferD.begin() + static_cast<size_t>(numFrames) * m_outputChannels.load(std::memory_order_relaxed), 
                   0.0);
+    }
+
+    // === Arsenal Unit Processing (Pattern Playback) ===
+    // Process pattern MIDI events and mix sampler output into master buffer
+    // Must respect loop splitting similar to renderGraph
+    if (loopSplitFrame < numFrames) {
+        // Split Render
+        if (loopSplitFrame > 0) {
+            processArsenalUnits(loopSplitFrame, 0, currentGlobalPos);
+        }
+        // Flush pattern events on loop wrap so we don't accumulate duplicates.
+        if (isPlaying) {
+            auto* pe = m_patternEngine.load(std::memory_order_relaxed);
+            if (pe) pe->flush();
+        }
+        processArsenalUnits(numFrames - loopSplitFrame, loopSplitFrame, loopStartSample);
+    } else {
+        // Normal
+        processArsenalUnits(numFrames, 0, currentGlobalPos);
+    }
+
+    // === Test Tone Injection ===
+    if (m_testToneEnabled.load(std::memory_order_relaxed)) {
+        const double sampleRate = static_cast<double>(m_sampleRate.load(std::memory_order_relaxed));
+        if (sampleRate > 0.0) {
+            const double frequency = 440.0;
+            const double amplitude = 0.05; // -26dB
+            const double twoPi = 2.0 * PI_D;
+            const double phaseIncrement = twoPi * frequency / sampleRate;
+            
+            double phase = m_testTonePhase;
+            // Loop unrolling for stereo
+            for (uint32_t i = 0; i < numFrames; ++i) {
+                // Determine source index (might be different if we split-looped above, but test tone is global/overlay)
+                // Actually, since we write to m_masterBufferD, we just mix it in.
+                // Simple sin approximation or std::sin is fine for test tone.
+                double sample = amplitude * std::sin(phase);
+                
+                // Mix into master buffer (Post-Graph, Pre-Master Fader)
+                m_masterBufferD[i * 2]     += sample; // L
+                m_masterBufferD[i * 2 + 1] += sample; // R
+                
+                phase += phaseIncrement;
+                if (phase >= twoPi) phase -= twoPi;
+            }
+            m_testTonePhase = phase;
+        }
     }
 
     // === Final Output Stage (double -> float with processing) ===
@@ -716,6 +930,9 @@ void AudioEngine::processBlock(float* outputBuffer,
 
     // Telemetry (lightweight counter only on RT thread)
     m_telemetry.incrementBlocksProcessed();
+    
+    // B-009: Record stable block for underrun recovery tracking
+    m_telemetry.recordStableBlock();
 
     RESTORE_DENORMALS
 }
@@ -740,6 +957,28 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         size_t monoSize = static_cast<size_t>(m_maxBufferFrames.load(std::memory_order_relaxed));
         if (m_scratchL.size() < monoSize) m_scratchL.resize(monoSize);
         if (m_scratchR.size() < monoSize) m_scratchR.resize(monoSize);
+
+        // Pre-allocate per-unit MIDI scratch buffers so RT never resizes.
+        // Note: units are expected to be low-count; we cap to a reasonable maximum.
+        constexpr size_t kMaxUnitsRt = 256;
+        if (m_scratchMidiBuffers.size() < kMaxUnitsRt) {
+            m_scratchMidiBuffers.resize(kMaxUnitsRt);
+        }
+        if (m_unitMidiBuffers.size() < kMaxUnitsRt) {
+            m_unitMidiBuffers.resize(kMaxUnitsRt);
+        }
+
+        // Arsenal buffers (stereo interleaved and de-interleaved scratch)
+        const size_t stereoSamples = monoSize * 2;
+        if (m_unitBufferD.size() < stereoSamples) {
+            m_unitBufferD.resize(stereoSamples);
+        }
+        if (m_pluginBufferF.size() < stereoSamples) {
+            m_pluginBufferF.resize(stereoSamples);
+        }
+        if (m_silentBufferF.size() < monoSize) {
+            m_silentBufferF.resize(monoSize);
+        }
 
         std::memset(m_masterBufferD.data(), 0, requiredSize * sizeof(double));
 
@@ -806,6 +1045,16 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
     if (needAlloc) {
         compileGraph();
     }
+
+    // Prepare insert chains at a safe point (may allocate). This prevents RT prepare() calls.
+    const double sampleRate = static_cast<double>(m_sampleRate.load(std::memory_order_relaxed));
+    const uint32_t maxBlockSize = m_maxBufferFrames.load(std::memory_order_relaxed);
+    const auto& graph = m_state.activeGraph();
+    for (const auto& tr : graph.tracks) {
+        if (tr.effectChain && tr.effectChain->getActiveSlotCount() > 0) {
+            tr.effectChain->prepare(sampleRate, maxBlockSize);
+        }
+    }
 }
 
 uint32_t AudioEngine::copyWaveformHistory(float* outInterleaved, uint32_t maxFrames) const {
@@ -848,12 +1097,16 @@ const AudioEngine::BiquadCoeff AudioEngine::kKWeightRLB = {
  * used for integrated LUFS calculation.
  */
 AudioEngine::AudioEngine() {
+    g_audioEngineInstance = this; // [NEW] Register singleton
     generateMetronomeSounds();
     startLoudnessWorker();
 }
 
 AudioEngine::~AudioEngine() {
     stopLoudnessWorker();
+    if (g_audioEngineInstance == this) {
+        g_audioEngineInstance = nullptr; // [NEW] Clear singleton
+    }
 }
 
 void AudioEngine::startLoudnessWorker() {
@@ -1022,6 +1275,47 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         }
     }
 
+    // === ANTIGRAVITY UNIT PRE-PROCESSING (v3.1) ===
+    UnitManager* unitMgr = m_unitManager.load(std::memory_order_acquire);
+    std::shared_ptr<const AudioArsenalSnapshot> unitSnapshot;
+    std::array<PatternPlaybackEngine::UnitMidiRoute, 256> unitMidiRoutes{};
+    size_t unitMidiRouteCount = 0;
+    
+    if (unitMgr) {
+        unitSnapshot = unitMgr->getAudioSnapshot();
+        if (unitSnapshot && !unitSnapshot->units.empty()) {
+            // Map valid units to preallocated MIDI buffers (allocation-free)
+            size_t bufIdx = 0;
+            for (const auto& unit : unitSnapshot->units) {
+                if (unitMidiRouteCount >= unitMidiRoutes.size()) break;
+                if (bufIdx >= m_scratchMidiBuffers.size()) break;
+                if (unit.id != 0 && unit.plugin) {
+                    m_scratchMidiBuffers[bufIdx].clear();
+                    unitMidiRoutes[unitMidiRouteCount++] = { unit.id, &m_scratchMidiBuffers[bufIdx] };
+                    ++bufIdx;
+                }
+            }
+
+            // Optional: inject MIDI panic before pattern events are scheduled.
+            if (m_transportMidiPanicRequested.exchange(false, std::memory_order_acq_rel)) {
+                for (size_t r = 0; r < unitMidiRouteCount; ++r) {
+                    if (unitMidiRoutes[r].midiBuffer) {
+                        addMidiPanic(*unitMidiRoutes[r].midiBuffer);
+                    }
+                }
+            }
+            
+            // Pop MIDI from Pattern Engine (only while transport is playing)
+            auto* patEng = m_patternEngine.load(std::memory_order_acquire);
+            if (isPlaying && patEng && isPatternPlaybackMode()) {
+                // Use global position + offset? 
+                // Pattern engine expects Frame time.
+                // blockStart is appropriate.
+                patEng->processAudio(blockStart, static_cast<int>(numFrames), unitMidiRoutes.data(), unitMidiRouteCount);
+            }
+        }
+    }
+
     // Process tracks
     for (const auto& track : graph.tracks) {
         const uint32_t trackIdx = track.trackIndex;
@@ -1087,7 +1381,11 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         std::memset(buffer.data(), 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
 
         // Check isPlaying inside loop to avoid brace wrapping issues
-        for (const auto& clip : track.clips) {
+        // [FIX] Suppress timeline clips if in Pattern Mode (Audio Isolation)
+        bool patternMode = m_patternPlaybackMode.load(std::memory_order_relaxed);
+        
+        if (!patternMode) {
+            for (const auto& clip : track.clips) {
             if (!isPlaying) continue;
             if (!clip.audioData || blockEnd <= clip.startSample || blockStart >= clip.endSample) {
                 continue;
@@ -1298,7 +1596,46 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                         break;
                 }
         }
+        } // End pattern mode check
             }
+
+
+
+        // === ANTIGRAVITY UNIT RENDER (v3.1) ===
+        // Render any units routed to this track
+        if (unitSnapshot) {
+             for (const auto& unit : unitSnapshot->units) {
+                 if (static_cast<uint32_t>(unit.routeId) == trackIdx && unit.enabled && unit.plugin) {
+                      // Found unit for this track
+                      MidiBuffer* midiBuf = nullptr;
+                      for (size_t r = 0; r < unitMidiRouteCount; ++r) {
+                          if (unitMidiRoutes[r].unitId == unit.id) {
+                              midiBuf = unitMidiRoutes[r].midiBuffer;
+                              break;
+                          }
+                      }
+                      
+                      // Render to scratch
+                      // Note: Inputs are nullptr (Generator)
+                      if (m_scratchL.size() < numFrames || m_scratchR.size() < numFrames) {
+                          // Should not happen (pre-sized in setBufferConfig); fail-safe
+                          continue;
+                      }
+                      
+                      float* outputs[2] = { m_scratchL.data(), m_scratchR.data() };
+                      
+                      // Process Plugin
+                      unit.plugin->process(nullptr, outputs, 0, 2, numFrames, midiBuf, nullptr);
+                      
+                      // Mix to Track Buffer (Double Precision)
+                      double* dDst = buffer.data();
+                      for (uint32_t k = 0; k < numFrames; ++k) {
+                          dDst[k * 2]     += static_cast<double>(outputs[0][k]);
+                          dDst[k * 2 + 1] += static_cast<double>(outputs[1][k]);
+                      }
+                 }
+             }
+        }
 
 
         // === Plugin Processing (EffectChain) ===
@@ -1317,10 +1654,6 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                 }
 
                 // 2. Process
-                // Ensure chain is prepared for current rate
-                track.effectChain->prepare(static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)), 
-                                           m_maxBufferFrames.load(std::memory_order_relaxed));
-                
                 float* channels[2] = { fL, fR };
                 track.effectChain->process(channels, 2, numFrames);
 
@@ -1674,6 +2007,11 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
     // Helper to render clips for a specific track into its buffer
     // Extracted from original renderGraph logic
     void AudioEngine::renderClipAudio(double* outputBuffer, TrackRTState& state, uint32_t trackIndex, const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset) {
+        // Suppress clips in Pattern Mode
+        if (m_patternPlaybackMode.load(std::memory_order_relaxed)) {
+            return;
+        }
+
         // NOTE: outputBuffer is NOT cleared here. It is cleared at start of renderGraph.
         // This allows sends to accumulate into this buffer before we add clips.
         
@@ -1940,34 +2278,27 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
     }
 
 void AudioEngine::generateMetronomeSounds() {
-    // Generate 50ms beeps at 48kHz
+    // Generate 100ms beeps at 48kHz
     // High: 1600Hz, Low: 800Hz
+    // IMPORTANT: Always called from constructor - never from RT thread.
     const size_t sampleRate = 48000;
     const size_t durationSamples = static_cast<size_t>(0.10 * sampleRate); // 100ms
     
-    // Resize is safe here as this is called lazily from RT thread ONCE, 
-    // or (ideally) from non-RT. 
-    // Since we call it from processBlock lazily, this IS an allocation on RT thread.
-    // BUT it only happens ONCE, so it's a minor "start-up glitch" risk acceptable for this fix.
-    // Ideally should be called from SetMetronomeEnabled if empty.
+    // Pre-allocate for max quality (higher sample rates get truncated clicks, which is fine)
+    m_synthClickLow.resize(durationSamples);
+    m_synthClickHigh.resize(durationSamples);
     
-    if (m_synthClickLow.empty()) {
-        m_synthClickLow.resize(durationSamples);
-        m_synthClickHigh.resize(durationSamples);
-        
-        const double freqLow = 800.0;
-        const double freqHigh = 1600.0;
-        const double decayRate = 5.0; // Exponential decay
-        const double kPi = 3.14159265358979323846;
-        
-        for (size_t i = 0; i < durationSamples; ++i) {
-            double t = static_cast<double>(i) / sampleRate;
-            // Short, sharp ping
-            double env = std::pow(1.0 - static_cast<double>(i)/durationSamples, 4.0);
+    const double freqLow = 800.0;
+    const double freqHigh = 1600.0;
+    const double kPi = 3.14159265358979323846;
     
-            m_synthClickLow[i] = static_cast<float>(std::sin(2.0 * kPi * freqLow * t) * env);
-            m_synthClickHigh[i] = static_cast<float>(std::sin(2.0 * kPi * freqHigh * t) * env);
-        }
+    for (size_t i = 0; i < durationSamples; ++i) {
+        double t = static_cast<double>(i) / sampleRate;
+        // Short, sharp ping with exponential decay
+        double env = std::pow(1.0 - static_cast<double>(i)/durationSamples, 4.0);
+
+        m_synthClickLow[i] = static_cast<float>(std::sin(2.0 * kPi * freqLow * t) * env);
+        m_synthClickHigh[i] = static_cast<float>(std::sin(2.0 * kPi * freqHigh * t) * env);
     }
 }
 
@@ -1988,6 +2319,189 @@ void AudioEngine::panic() {
             track.effectChain->reset(); 
         }
     }
+    
+    // 3. [FIX] Reset all Arsenal unit samplers (kill playing voices)
+    auto* unitMgr = m_unitManager.load(std::memory_order_acquire);
+    if (unitMgr) {
+        auto snapshot = unitMgr->getAudioSnapshot();
+        if (snapshot) {
+            for (const auto& unitState : snapshot->units) {
+                if (unitState.plugin) {
+                    auto sampler = std::dynamic_pointer_cast<Nomad::Audio::Plugins::SamplerPlugin>(unitState.plugin);
+                    if (sampler) {
+                        sampler->requestHardResetVoices();
+                    }
+                }
+            }
+        }
+    }
+    
+    // 4. Flush pattern engine
+    auto* pe = m_patternEngine.load(std::memory_order_relaxed);
+    if (pe) pe->flush();
+}
+
+void AudioEngine::requestVoiceResetOnPatternChange() {
+    // Reset all Arsenal sampler voices when pattern ID changes
+    // This hard-cuts audio, making pattern selection audible
+    // (vs same-pattern MIDI edits which allow audio bleed for musical effect)
+    
+    auto* unitMgr = m_unitManager.load(std::memory_order_acquire);
+    if (unitMgr) {
+        auto snapshot = unitMgr->getAudioSnapshot();
+        if (snapshot) {
+            for (const auto& unitState : snapshot->units) {
+                if (unitState.plugin) {
+                    auto sampler = std::dynamic_pointer_cast<Nomad::Audio::Plugins::SamplerPlugin>(unitState.plugin);
+                    if (sampler) {
+                        sampler->requestHardResetVoices();
+                    }
+                }
+            }
+        }
+    }
+}
+
+//==============================================================================
+// Arsenal Unit Processing (Pattern Playback)
+//==============================================================================
+
+void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame) {
+    // [FIX] Only process Arsenal units in pattern/Arsenal mode
+    // In Timeline mode, skip entirely to prevent audio bleed with wrong sample rate
+    if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
+        return;
+    }
+    
+    // Get dependencies (RT-safe)
+    auto* patternEngine = m_patternEngine.load(std::memory_order_acquire);
+    auto* unitManager = m_unitManager.load(std::memory_order_acquire);
+    
+    if (!patternEngine || !unitManager) return;
+    
+    const uint32_t sampleRate = m_sampleRate.load(std::memory_order_relaxed);
+    if (sampleRate == 0) return;
+    
+    // Sync logic moved after snapshot retrieval
+
+    // Continue rendering even when transport is stopped (one-shot/tails behavior).
+    // But do not schedule new MIDI when stopped.
+    const bool transportPlaying = m_transportPlaying.load(std::memory_order_relaxed);
+    
+    const uint64_t currentFrame = startFrame;
+    
+    // Get Arsenal snapshot for RT-safe unit iteration
+    auto snapshot = unitManager->getAudioSnapshot();
+    if (!snapshot || snapshot->units.empty()) return;
+    
+    // Sync sample rate to units only when it changes (avoid per-block scans)
+    static uint32_t s_lastSyncedSampleRate = 0;
+    if (s_lastSyncedSampleRate != sampleRate) {
+        for (const auto& unitState : snapshot->units) {
+            if (unitState.plugin) {
+                auto sampler = std::dynamic_pointer_cast<Nomad::Audio::Plugins::SamplerPlugin>(unitState.plugin);
+                if (sampler) {
+                    sampler->setSampleRate((double)sampleRate);
+                }
+            }
+        }
+        s_lastSyncedSampleRate = sampleRate;
+    }
+    
+    const size_t requiredStereoSamples = static_cast<size_t>(numFrames) * 2;
+    // Buffers must be pre-sized in setBufferConfig()
+    if (m_unitBufferD.size() < requiredStereoSamples ||
+        m_pluginBufferF.size() < requiredStereoSamples ||
+        m_silentBufferF.size() < numFrames) {
+        return;
+    }
+    // Always zero the silent buffer (just in case)
+    std::fill(m_silentBufferF.begin(), m_silentBufferF.begin() + numFrames, 0.0f);
+    
+    // Build unit MIDI routes (allocation-free)
+    std::array<PatternPlaybackEngine::UnitMidiRoute, 256> unitMidiRoutes{};
+    size_t unitMidiRouteCount = 0;
+    size_t bufIdx = 0;
+    for (const auto& unit : snapshot->units) {
+        if (unitMidiRouteCount >= unitMidiRoutes.size()) break;
+        if (bufIdx >= m_unitMidiBuffers.size()) break;
+        m_unitMidiBuffers[bufIdx].clear();
+        unitMidiRoutes[unitMidiRouteCount++] = { unit.id, &m_unitMidiBuffers[bufIdx] };
+        ++bufIdx;
+    }
+    
+    // Refill and process pattern MIDI events only while playing
+    if (transportPlaying) {
+        constexpr int LOOKAHEAD_SAMPLES = 2048; // ~40ms at 48kHz
+        patternEngine->refillWindow(currentFrame, static_cast<int>(sampleRate), LOOKAHEAD_SAMPLES);
+        patternEngine->processAudio(currentFrame, static_cast<int>(numFrames), unitMidiRoutes.data(), unitMidiRouteCount);
+    }
+
+    // Process each unit plugin
+    bufIdx = 0;
+    
+    // Inputs (Stereo Silence)
+    const float* inputs[2] = { m_silentBufferF.data(), m_silentBufferF.data() };
+    
+    for (const auto& unit : snapshot->units) {
+        if (!unit.enabled || !unit.plugin) {
+            bufIdx++;
+            continue;
+        }
+        
+        // Clear plugin output buffer
+        std::fill(m_pluginBufferF.begin(), m_pluginBufferF.begin() + requiredStereoSamples, 0.0f);
+        
+        // Output Pointers (Non-Interleaved)
+        float* outputs[2] = { m_pluginBufferF.data(), m_pluginBufferF.data() + numFrames };
+        
+        // Process plugin with MIDI
+        MidiBuffer* midiIn = nullptr;
+        for (size_t r = 0; r < unitMidiRouteCount; ++r) {
+            if (unitMidiRoutes[r].unitId == unit.id) {
+                midiIn = unitMidiRoutes[r].midiBuffer;
+                break;
+            }
+        }
+        MidiBuffer midiOut; // Unused
+        
+        unit.plugin->process(inputs, outputs, 2, 2, numFrames, midiIn, &midiOut);
+        
+        // Mix plugin output into master buffer (mixing floats into double master)
+        double* masterD = m_masterBufferD.data() + static_cast<size_t>(bufferOffset) * 2;
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            masterD[i * 2 + 0] += static_cast<double>(outputs[0][i]); // Left
+            masterD[i * 2 + 1] += static_cast<double>(outputs[1][i]); // Right
+        }
+        
+        bufIdx++;
+    }
+}
+
+void AudioEngine::refreshSamplerCache() {
+    // Called from main thread when units change.
+    // Rebuilds the sampler cache for RT-safe access.
+    m_cachedSamplerCount.store(0, std::memory_order_relaxed);
+    
+    auto* unitMgr = m_unitManager.load(std::memory_order_acquire);
+    if (!unitMgr) return;
+    
+    auto snapshot = unitMgr->getAudioSnapshot();
+    if (!snapshot) return;
+    
+    size_t count = 0;
+    for (const auto& unit : snapshot->units) {
+        if (count >= kMaxCachedSamplers) break;
+        if (unit.plugin) {
+            auto sampler = std::dynamic_pointer_cast<Nomad::Audio::Plugins::SamplerPlugin>(unit.plugin);
+            if (sampler) {
+                m_cachedSamplers[count++] = sampler.get();
+            }
+        }
+    }
+    
+    // Publish with release semantics so RT thread sees complete array
+    m_cachedSamplerCount.store(count, std::memory_order_release);
 }
 
 } // namespace Audio

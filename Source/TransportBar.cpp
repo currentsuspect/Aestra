@@ -311,7 +311,11 @@ void TransportBar::pause() {
 }
 
 void TransportBar::stop() {
-    if (m_state != TransportState::Stopped) {
+    // Always call the callback - even when already stopped
+    // This enables "hard stop" (double-stop) to kill ring-outs
+    bool wasAlreadyStopped = (m_state == TransportState::Stopped);
+    
+    if (!wasAlreadyStopped) {
         m_state = TransportState::Stopped;
         m_position = 0.0;
         updateButtonStates();
@@ -326,10 +330,11 @@ void TransportBar::stop() {
         if (m_recordButton) {
             m_recordButton->setToggled(false);
         }
-        
-        if (m_onStop) {
-            m_onStop();
-        }
+    }
+    
+    // Always call callback (hard-stop when already stopped)
+    if (m_onStop) {
+        m_onStop();
     }
 }
 
@@ -377,7 +382,8 @@ void TransportBar::updateButtonStates() {
 
     if (m_stopButton) {
         m_stopButton->setText("");
-        m_stopButton->setEnabled(m_state != TransportState::Stopped);
+        // [FIX] Always enabled - allows hard-stop (double-stop) to kill ring-outs
+        m_stopButton->setEnabled(true);
     }
 
     if (m_recordButton) {

@@ -31,28 +31,7 @@ namespace Audio {
 
 class SourceManager;
 
-/**
- * @brief Thread pool for parallel audio processing
- */
-class AudioThreadPool {
-public:
-    AudioThreadPool(size_t numThreads);
-    ~AudioThreadPool();
-    
-    void enqueue(std::function<void()> task);
-    void waitForCompletion();
-    size_t getThreadCount() const { return m_workers.size(); }
-    
-private:
-    std::vector<std::thread> m_workers;
-    std::queue<std::function<void()>> m_tasks;
-    std::mutex m_queueMutex;
-    std::condition_variable m_condition;
-    std::condition_variable m_completionCondition;
-    std::atomic<bool> m_stop{false};
-    std::atomic<size_t> m_activeTasks{0};
-    void workerThread();
-};
+
 
 /**
  * @brief Manages MixerChannels and orchestrates real-time processing (v3.0)
@@ -111,7 +90,15 @@ public:
     void record();
     void finishRecording();
     void processInput(const float* inputBuffer, uint32_t numFrames); // Called from RT thread
-    void setInputChannelCount(uint32_t count) { m_inputChannelCount = count; }
+    void setInputChannelCount(uint32_t count) { 
+        m_inputChannelCount = count; 
+        // Pre-allocate monitor buffer for RT safety (assumes max 4096 frame buffers)
+        const size_t maxFrames = 4096;
+        const size_t totalSamples = maxFrames * count;
+        if (m_monitorBuffer.size() < totalSamples) {
+            m_monitorBuffer.resize(totalSamples);
+        }
+    }
     void setLatencySamples(uint32_t samples);
     std::vector<std::string> getInputChannelNames() const;
     bool isPlaying() const { return m_isPlaying.load(); }
@@ -123,6 +110,7 @@ public:
     // Pattern Playback Control
     void playPatternInArsenal(PatternID patternId); // Arsenal direct playback mode
     void stopArsenalPlayback();
+    bool isPatternMode() const; // [NEW] Check if in pattern playback mode
     PatternPlaybackEngine& getPatternPlaybackEngine() { return *m_patternEngine; }
     TimelineClock& getTimelineClock() { return m_clock; }
 
@@ -131,6 +119,11 @@ public:
     void syncPositionFromEngine(double seconds);
     double getPosition() const { return m_positionSeconds.load(); }
     double getUIPosition() const { return m_uiPositionSeconds.load(); }
+    
+    // Play start position (for return-on-stop behavior)
+    void setPlayStartPosition(double seconds) { m_playStartPosition.store(seconds); }
+    double getPlayStartPosition() const { return m_playStartPosition.load(); }
+    void saveCurrentAsPlayStart() { m_playStartPosition.store(m_positionSeconds.load()); }
 
     void setUserScrubbing(bool scrubbing) { m_userScrubbing.store(scrubbing, std::memory_order_release); }
     bool isUserScrubbing() const { return m_userScrubbing.load(std::memory_order_acquire); }
@@ -141,8 +134,7 @@ public:
         m_onAudioOutput = callback; 
     }
 
-    // Audio Processing (Top-level entry point from AudioDeviceManager)
-    void processAudio(float* outputBuffer, uint32_t numFrames, double streamTime, const SourceManager& sourceManager);
+
 
     void setOutputSampleRate(double rate);
     void setInputSampleRate(double rate) { m_inputSampleRate.store(rate); }
@@ -150,14 +142,7 @@ public:
 
     double getOutputSampleRate() const { return m_outputSampleRate.load(); }
     
-    // Multi-threading control
-    void setMultiThreadingEnabled(bool enabled) { m_multiThreadingEnabled = enabled; }
-    bool isMultiThreadingEnabled() const { return m_multiThreadingEnabled; }
-    void setThreadCount(size_t count);
-    size_t getThreadCount() const { return m_threadPool ? m_threadPool->getThreadCount() : 1; }
-
     void setCommandSink(std::function<void(const AudioQueueCommand&)> sink) { m_commandSink = std::move(sink); }
-    double getAudioLoadPercent() const { return m_audioLoadPercent.load(); }
 
     // Mixer Integration
     void updateMixer();
@@ -208,6 +193,7 @@ private:
     std::unique_ptr<PatternPlaybackEngine> m_patternEngine;
     uint32_t m_arsenalInstanceId = 0; // Instance ID for Arsenal mode playback
     std::atomic<uint64_t> m_currentSampleFrame{0};
+    PatternID m_lastScheduledPatternId{}; // Track pattern changes for voice reset
 
 
     
@@ -221,6 +207,7 @@ private:
     std::atomic<bool> m_isRecordArmed{false};
     std::atomic<double> m_positionSeconds{0.0};
     std::atomic<double> m_uiPositionSeconds{0.0}; // Thread-safe exchange for UI
+    std::atomic<double> m_playStartPosition{0.0}; // Position where playback started (for return-on-stop)
     std::atomic<bool> m_userScrubbing{false};
     std::atomic<bool> m_metronomeEnabled{false};
 
@@ -228,17 +215,7 @@ private:
     std::function<void(double)> m_onPositionUpdate;
     std::function<void(const float*, const float*, size_t, double)> m_onAudioOutput;
     
-    // Multi-threading
-    std::unique_ptr<AudioThreadPool> m_threadPool;
-    std::atomic<bool> m_multiThreadingEnabled{true};
-    
-    // Performance tracking
-    std::atomic<double> m_audioLoadPercent{0.0};
-    std::vector<float> m_leftScratch;
-    std::vector<float> m_rightScratch;
-    
-    // Per-channel temporary buffers for parallel processing
-    std::vector<std::vector<float>> m_channelBuffers;
+
     
     std::atomic<bool> m_isModified{false};
     std::atomic<bool> m_graphDirty{true};
@@ -276,34 +253,59 @@ private:
 
     // Internal helpers
     void rebuildChannelSlotMapLocked();
-    void processAudioSingleThreaded(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate, const PlaylistRuntimeSnapshot* snapshot);
 
-    void processAudioMultiThreaded(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate, const PlaylistRuntimeSnapshot* snapshot);
     
-    // Recording Implementation
+    // Recording Implementation (B-006: Pre-allocated ring buffer approach)
     struct RecordingBuffer {
         std::vector<float> data;
+        size_t writePos{0};           // Current write position (ring buffer style)
+        size_t capacity{0};           // Pre-allocated capacity
         double startBeat{0.0};
-        uint32_t trackId{0};     // Which track is this for
-        int inputChannelIndex{0}; // Which input channel (0=Left, 1=Right)
+        uint32_t trackId{0};          // Which track is this for
+        int inputChannelIndex{0};     // Which input channel (0=Left, 1=Right)
         PlaylistLaneID targetLane;
         bool active{false};
         
+        // Pre-allocate buffer for max recording time (call from main thread)
+        void preallocate(size_t maxSamples) {
+            data.resize(maxSamples);
+            capacity = maxSamples;
+            writePos = 0;
+        }
+        
+        // Reset for new recording (doesn't deallocate)
+        void reset() {
+            writePos = 0;
+            active = false;
+        }
+        
+        // Append audio (RT-safe if pre-allocated)
         void append(const float* input, uint32_t numFrames, uint32_t stride, int channelOffset) {
-            size_t currentSize = data.size();
-            data.resize(currentSize + numFrames);
+            if (writePos + numFrames > capacity) {
+                // Buffer full - this shouldn't happen with proper pre-allocation
+                // Just clamp to prevent overflow (will truncate recording)
+                numFrames = static_cast<uint32_t>(capacity > writePos ? capacity - writePos : 0);
+                if (numFrames == 0) return;
+            }
             
             if (channelOffset < 0) {
                 // Input "None" or invalid -> Record silence
-                std::fill(data.begin() + currentSize, data.end(), 0.0f);
+                std::fill(data.begin() + writePos, data.begin() + writePos + numFrames, 0.0f);
             } else {
                 for (uint32_t i = 0; i < numFrames; ++i) {
                     // Interleaved input: [L R L R ...]
-                    data[currentSize + i] = input[i * stride + channelOffset];
+                    data[writePos + i] = input[i * stride + channelOffset];
                 }
             }
+            writePos += numFrames;
         }
+        
+        // Get recorded samples (for finishRecording)
+        size_t getSampleCount() const { return writePos; }
     };
+    
+    // B-006: Max recording time in seconds (pre-allocated at record start)
+    static constexpr size_t MAX_RECORDING_SECONDS = 600; // 10 minutes
     
     std::vector<RecordingBuffer> m_recordingBuffers;
     std::mutex m_recordingMutex;
@@ -313,8 +315,9 @@ private:
     uint64_t m_recordingFramesCaptured{0};
     
     // Monitoring
-    std::mutex m_monitorMutex; // Protects access to monitor buffer
+    std::atomic_flag m_monitorSpinlock = ATOMIC_FLAG_INIT; // Lock-free spinlock for RT safety
     std::vector<float> m_monitorBuffer;
+    std::atomic<uint32_t> m_monitorBufferSize{0}; // Valid samples in buffer
     uint32_t m_inputChannelCount{0};
     uint32_t m_latencySamples{0};
     

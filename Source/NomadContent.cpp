@@ -31,6 +31,7 @@
 #include "TrackManagerUI.h"
 
 // Audio includes
+#include "../NomadAudio/include/AudioEngine.h"
 #include "../NomadAudio/include/TrackManager.h"
 #include "../NomadAudio/include/PreviewEngine.h"
 #include "../NomadAudio/include/MiniAudioDecoder.h"
@@ -62,6 +63,9 @@ NomadContent::~NomadContent() {
 }
 
 NomadContent::NomadContent() {
+    // Audio Engine Init
+    auto& audioEngine = Nomad::Audio::AudioEngine::getInstance();
+
     // Create layers
     m_workspaceLayer = std::make_shared<NomadUI::NUIComponent>();
     m_workspaceLayer->setId("WorkspaceLayer");
@@ -83,6 +87,13 @@ NomadContent::NomadContent() {
     // Create track manager for multi-track functionality
     m_trackManager = std::make_shared<TrackManager>();
     addDemoTracks();
+
+    // Antigravity Dependencies (v3.1) - Correctly wired in NomadContent
+    {
+        auto& audioEngine = Nomad::Audio::AudioEngine::getInstance();
+        audioEngine.setUnitManager(&m_trackManager->getUnitManager());
+        audioEngine.setPatternPlaybackEngine(&m_trackManager->getPatternPlaybackEngine());
+    }
 
     // Create track manager UI (add to workspace)
     m_trackManagerUI = std::make_shared<TrackManagerUI>(m_trackManager);
@@ -129,22 +140,8 @@ NomadContent::NomadContent() {
     m_pluginBrowser = std::make_shared<NomadUI::PluginBrowserPanel>();
     m_pluginBrowser->setVisible(false); // Hidden by default
     
-    // Populate initial list
-    auto& pm = Nomad::Audio::PluginManager::getInstance();
-    std::vector<NomadUI::PluginListItem> uiPlugins;
-    // Map internal PluginInfo to UI item
-    for (const auto& p : pm.getScanner().getScannedPlugins()) {
-        NomadUI::PluginListItem item;
-        item.id = p.id;
-        item.name = p.name;
-        item.vendor = p.vendor;
-        item.version = p.version;
-        item.category = p.category;
-        item.formatStr = (p.format == Nomad::Audio::PluginFormat::VST3) ? "VST3" : "CLAP";
-        item.typeName = (p.type == Nomad::Audio::PluginType::Instrument) ? "Instrument" : "Effect";
-        uiPlugins.push_back(item);
-    }
-    m_pluginBrowser->setPluginList(uiPlugins);
+    m_pluginBrowser->setPluginList({}); // Initialize empty, refresh called later
+    refreshPluginList();
     
     // Scan callback
     m_pluginBrowser->setOnScanRequested([this]() {
@@ -299,10 +296,48 @@ NomadContent::NomadContent() {
     // Create Arsenal panel
     m_sequencerPanel = std::make_shared<ArsenalPanel>(m_trackManager);
     m_sequencerPanel->setPatternBrowser(m_patternBrowser.get());
+    
+    // Antigravity Bindings (v3.1)
+    m_sequencerPanel->setOnRequestEditor([this](UnitID id) {
+        if (m_trackManager && m_pluginController) {
+            auto plugin = m_trackManager->getUnitManager().getUnitPlugin(id);
+            if (plugin) {
+                m_pluginController->openPluginEditor(plugin);
+            }
+        }
+    });
+
+    m_sequencerPanel->setOnRequestLoadSample([this](UnitID id) {
+        if (!m_fileBrowser) return;
+        
+        // Show browser if hidden
+        if (!m_fileBrowser->isVisible()) {
+            m_browserToggle->setSelectedIndex(0); // Select "Files" tab
+            m_fileBrowser->setVisible(true);
+            if (m_pluginBrowser) m_pluginBrowser->setVisible(false);
+            if (m_previewPanel) m_previewPanel->setVisible(true);
+            onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
+        }
+
+        // Set one-shot selection callback
+        m_fileBrowser->setOnFileSelected([this, id](const NomadUI::FileItem& file) {
+             // 1. Restore default behavior (Preview)
+             m_fileBrowser->setOnFileSelected([this](const NomadUI::FileItem& f) {
+                 stopSoundPreview();
+                 if (m_previewPanel) m_previewPanel->setFile(&f);
+             });
+             
+             // 2. Perform Load
+             Log::info("Loading sample into Unit " + std::to_string(id) + ": " + file.path);
+             if (m_trackManager) {
+                 m_trackManager->getUnitManager().setUnitAudioClip(id, file.path);
+             }
+        });
+    });
     m_patternBrowser->refreshPatterns();
     
     m_sequencerPanel->setVisible(true);
-    m_sequencerPanel->setOnClose([this]() { setViewFocus(ViewFocus::Timeline); });
+    m_sequencerPanel->setOnClose([this]() { setArsenalPanelVisible(false); });
     m_sequencerPanel->setOnMaximizeToggle([this](bool) { 
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); 
     });
@@ -346,10 +381,19 @@ NomadContent::NomadContent() {
     );
     m_viewToggle->setCornerRadius(12.0f);
     m_viewToggle->setOnSelectionChanged([this](size_t index) {
-        setViewFocus(index == 0 ? ViewFocus::Arsenal : ViewFocus::Timeline);
+        ViewFocus newFocus = (index == 0) ? ViewFocus::Arsenal : ViewFocus::Timeline;
+        setViewFocus(newFocus);
+        
+        // Auto-open Arsenal panel when switching TO Arsenal mode
+        if (newFocus == ViewFocus::Arsenal) {
+            setArsenalPanelVisible(true);
+        }
     });
     
-    setViewFocus(ViewFocus::Arsenal);
+    // Initialize with Timeline mode as default (panel closed)
+    m_viewToggle->setSelectedIndex(1);  // Select "Timeline"
+    setViewFocus(ViewFocus::Timeline);
+    setArsenalPanelVisible(false);
 
     // Create compact master meters
     m_waveformVisualizer = std::make_shared<NomadUI::AudioVisualizer>();
@@ -448,6 +492,11 @@ void NomadContent::onUpdate(double dt) {
     if (tm && m_waveformVisualizer) {
         double pos = tm->getUIPosition();
         m_waveformVisualizer->setTransportPosition(pos);
+    }
+    
+    // Update Arsenal panel progress (if visible and playing)
+    if (tm && tm->isPlaying() && m_sequencerPanel && m_sequencerPanel->isVisible()) {
+        m_sequencerPanel->repaint();
     }
     
     NomadUI::NUIComponent::onUpdate(dt);
@@ -693,11 +742,8 @@ void NomadContent::setViewOpen(Audio::ViewType view, bool open) {
 
 void NomadContent::toggleView(Audio::ViewType view) {
     if (view == Audio::ViewType::Sequencer) {
-        if (m_viewFocus == ViewFocus::Arsenal) {
-            setViewFocus(ViewFocus::Timeline);
-        } else {
-            setViewFocus(ViewFocus::Arsenal);
-        }
+        // Toggle panel visibility only, don't change mode
+        toggleArsenalPanel();
         return;
     }
     
@@ -734,32 +780,95 @@ void NomadContent::setViewFocus(ViewFocus focus) {
     
     m_viewFocus = focus;
     
-    if (focus == ViewFocus::Arsenal) {
-        if (m_sequencerPanel) {
-            if (!m_sequencerPanel->isVisible()) {
-                m_sequencerPanel->setOpacity(0.0f);
+    // Toggle Pattern Playback Mode
+    if (m_audioEngine) {
+        if (focus == ViewFocus::Arsenal) {
+            // Default to 4 bars (16 beats) if panel not ready
+            int stepCount = m_sequencerPanel ? m_sequencerPanel->getStepCount() : 16;
+            double lengthBeats = stepCount * 0.25;
+            
+            // Save current timeline position before switching context
+            if (m_trackManager) {
+                m_savedTimelinePosition = m_trackManager->getPosition();
             }
-            m_sequencerPanel->setVisible(true);
-            m_sequencerPanel->setOpacity(1.0f);
-            m_viewState.sequencerOpen = true;
-        }
-    } else {
-        if (m_sequencerPanel) {
-            m_sequencerPanel->setVisible(false);
-            m_sequencerPanel->setOpacity(1.0f);
-            m_viewState.sequencerOpen = false;
+            
+            m_audioEngine->setPatternPlaybackMode(true, lengthBeats);
+            
+            // UI: Hide timeline playhead and FREEZE usage
+            if (m_trackManagerUI) {
+                m_trackManagerUI->setPatternMode(true);
+                m_trackManagerUI->setFollowPlayhead(false); // Stop scrolling
+            }
+        } else {
+            // Switching FROM Arsenal TO Timeline
+            // [FIX] Stop playback and trigger panic to kill any playing Arsenal audio
+            if (m_trackManager && m_trackManager->isPlaying()) {
+                m_trackManager->stop();
+            }
+            if (m_audioEngine) {
+                m_audioEngine->panic(); // Kill all voices/ring-outs
+            }
+            
+            // Restore playback position (so we don't start at 0)
+            m_audioEngine->setPatternPlaybackMode(false, 4.0);
+            
+            if (m_trackManager) {
+                m_trackManager->setPosition(m_savedTimelinePosition);
+            }
+            
+            if (m_trackManagerUI) {
+                m_trackManagerUI->setPatternMode(false);
+                m_trackManagerUI->setFollowPlayhead(true); // Resume scrolling
+            }
         }
     }
     
+    // Update transport bar mode indicator (mode only, no panel visibility)
     if (m_transportBar) {
         m_transportBar->setViewToggled(Audio::ViewType::Sequencer, focus == ViewFocus::Arsenal);
     }
     
+    // Hot-swap playback if needed (switching between pattern/arrangement modes)
     if (wasPlaying && m_transportBar) {
         Log::info("[Focus] Hot-swapping playback mode");
         m_transportBar->stop();
         m_transportBar->play();
     }
+}
+
+void NomadContent::setArsenalPanelVisible(bool visible) {
+    if (!m_sequencerPanel) return;
+    
+    if (visible) {
+        // Calculate initial position on first show (if position is at origin)
+        if (m_viewState.sequencerRect.x == 0 && m_viewState.sequencerRect.y == 0) {
+            NomadUI::NUIRect safe = computeSafeRect();
+            // Position below title bar with some margin
+            float titleBarHeight = 35.0f;
+            float margin = 10.0f;
+            m_viewState.sequencerRect.x = margin;
+            m_viewState.sequencerRect.y = titleBarHeight + safe.y + margin;
+            
+            // Clamp to allowed area
+            NomadUI::NUIRect allowed = computeAllowedRectForPanels();
+            m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, allowed);
+        }
+        
+        if (!m_sequencerPanel->isVisible()) {
+            m_sequencerPanel->setOpacity(0.0f);
+        }
+        m_sequencerPanel->setVisible(true);
+        m_sequencerPanel->setOpacity(1.0f);
+        m_sequencerPanel->setBounds(m_viewState.sequencerRect);
+    } else {
+        m_sequencerPanel->setVisible(false);
+        m_sequencerPanel->setOpacity(1.0f);
+    }
+    m_viewState.sequencerOpen = visible;
+}
+
+void NomadContent::toggleArsenalPanel() {
+    setArsenalPanelVisible(!m_viewState.sequencerOpen);
 }
 
 // =============================================================================
@@ -960,6 +1069,29 @@ void NomadContent::setPlatformBridge(NomadUI::NUIPlatformBridge* bridge) {
 // =============================================================================
 // SECTION: Demo & Testing
 // =============================================================================
+
+void NomadContent::resetToDefaultProject() {
+    Log::info("resetToDefaultProject() - clearing and recreating default state");
+    
+    if (!m_trackManager) return;
+    
+    // Clear existing state
+    auto& playlist = m_trackManager->getPlaylistModel();
+    auto& sourceManager = m_trackManager->getSourceManager();
+    
+    // Suppress UI refresh during clear to avoid flicker
+    playlist.clear();
+    sourceManager.clear();
+    m_trackManager->clearAllChannels();
+    
+    // Recreate default tracks
+    addDemoTracks();
+    
+    // Reset modified flag
+    m_trackManager->setModified(false);
+    
+    Log::info("resetToDefaultProject() completed");
+}
 
 void NomadContent::addDemoTracks() {
     Log::info("addDemoTracks() called - starting demo track creation (v3.0)");
@@ -1314,3 +1446,25 @@ void NomadContent::loadInstrumentToArsenal(const std::string& pluginId) {
     
     Log::info("Loaded instrument '" + unitName + "' to Arsenal as Unit " + std::to_string(newUnit));
 }
+
+void NomadContent::refreshPluginList() {
+    if (!m_pluginBrowser) return;
+
+    auto& pm = Nomad::Audio::PluginManager::getInstance();
+    std::vector<NomadUI::PluginListItem> uiPlugins;
+    // Map internal PluginInfo to UI item
+    for (const auto& p : pm.getScanner().getScannedPlugins()) {
+        NomadUI::PluginListItem item;
+        item.id = p.id;
+        item.name = p.name;
+        item.vendor = p.vendor;
+        item.version = p.version;
+        item.category = p.category;
+        item.formatStr = (p.format == Nomad::Audio::PluginFormat::VST3) ? "VST3" : "CLAP";
+        item.typeName = (p.type == Nomad::Audio::PluginType::Instrument) ? "Instrument" : "Effect";
+        uiPlugins.push_back(item);
+    }
+    m_pluginBrowser->setPluginList(uiPlugins);
+    Nomad::Log::info("Refreshed plugin list UI: " + std::to_string(uiPlugins.size()) + " plugins found.");
+}
+

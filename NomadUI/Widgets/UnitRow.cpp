@@ -1,6 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UnitRow.h"
 #include <chrono>
+#include <algorithm>
 #include "../Core/NUIThemeSystem.h"
 #include "../Graphics/NUIRenderer.h"
 
@@ -217,6 +218,25 @@ void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
     renderer.drawTextCentered("S", bounds, 11.0f, textColor);
 }
 
+void UnitRow::drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
+    auto& theme = NUIThemeManager::getInstance();
+    
+    NUIColor color = active ? theme.getColor("accentPrimary") : theme.getColor("textSecondary");
+    if (!m_isHovered && !active) color = theme.getColor("textDisabled");
+    
+    float cx = bounds.x + bounds.width / 2.0f;
+    float cy = bounds.y + bounds.height / 2.0f;
+    float r = 6.0f;
+    
+    // Simple "Settings" cog visual
+    renderer.strokeCircle(NUIPoint(cx, cy), r, 1.5f, color);
+    renderer.fillCircle(NUIPoint(cx, cy), 2.0f, color);
+    
+    // Teeth (Cardinals)
+    renderer.drawLine(NUIPoint(cx, cy - r - 2), NUIPoint(cx, cy + r + 2), 2.0f, color);
+    renderer.drawLine(NUIPoint(cx - r - 2, cy), NUIPoint(cx + r + 2, cy), 2.0f, color);
+}
+
 void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
     float centerY = bounds.y + bounds.height * 0.5f;
@@ -240,7 +260,12 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     // === 4. Solo Button ===
     NUIRect soloRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
     drawSoloIcon(renderer, soloRect, m_isSolo);
-    x += BUTTON_SIZE + BUTTON_SPACING + 8.0f;
+    x += BUTTON_SIZE + BUTTON_SPACING;
+
+    // === 5. Edit Button (New) ===
+    NUIRect gearRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
+    drawGearIcon(renderer, gearRect, false); // Always "inactive" state unless toggled? Just use clickable style
+    x += BUTTON_SIZE + BUTTON_SPACING + 4.0f;
     
     // === 5. Unit Name ===
     // Dynamic width calculation to fill space up to mixer channel
@@ -249,12 +274,25 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     float nameWidth = std::max(50.0f, mixerBitStart - x);
 
     if (!m_isEditingName) {
-        // Precise partial-pixel centering for 13px font (optical alignment)
+        // Truncate long names to fit available space
+        std::string displayName = m_name;
+        float maxNameWidth = nameWidth - 10.0f; // Leave some padding
+        auto textSize = renderer.measureText(displayName, 13.0f);
+        
+        if (textSize.width > maxNameWidth && displayName.length() > 3) {
+            // Binary search for truncation point
+            while (textSize.width > maxNameWidth && displayName.length() > 3) {
+                displayName = displayName.substr(0, displayName.length() - 1);
+                textSize = renderer.measureText(displayName + "...", 13.0f);
+            }
+            displayName += "...";
+        }
+        
         float textY = centerY - (13.0f * 0.38f);
-        renderer.drawText(m_name, NUIPoint(x, textY), 13.0f, theme.getColor("textPrimary"));
+        renderer.drawText(displayName, NUIPoint(x, textY), 13.0f, theme.getColor("textPrimary"));
     }
     
-    // === Right-aligned info (Mixer Channel & Audio Clip) ===
+    // === Right-aligned info (Mixer Channel only - sample name is now the unit name) ===
     float rightX = bounds.x + bounds.width - 4.0f;
     
     // Mixer Channel Tag
@@ -268,22 +306,8 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         
         float textY = renderer.calculateTextY(tagRect, 10.0f);
         renderer.drawText(mixText, NUIPoint(tagRect.x + 5.0f, textY), 10.0f, theme.getColor("textSecondary"));
-        rightX -= (w + 8.0f);
     }
-    
-    // Audio Clip Name (truncated)
-    if (!m_audioClip.empty()) {
-        std::string clipText = m_audioClip;
-        if (clipText.length() > 12) {
-            clipText = clipText.substr(0, 10) + "...";
-        }
-        float w = renderer.measureText(clipText, 10.0f).width;
-        
-        NUIRect clipRect(rightX - w - 4.0f, centerY - 9.0f, w, 18.0f);
-        float textY = renderer.calculateTextY(clipRect, 10.0f);
-        
-        renderer.drawText(clipText, NUIPoint(rightX - w - 4.0f, textY), 10.0f, theme.getColor("accentCyan"));
-    }
+    // Note: Audio clip name display removed - the unit name already shows the loaded sample
 }
 
 void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -599,7 +623,14 @@ void UnitRow::handleControlClick(const NUIMouseEvent& event, const NUIRect& boun
         invalidateVisuals();
         return;
     }
-    btnStartX += BUTTON_SIZE + BUTTON_SPACING + 8.0f;
+    btnStartX += BUTTON_SIZE + BUTTON_SPACING;
+
+    // Edit: fifth button
+    if (relativeX >= btnStartX && relativeX < btnStartX + BUTTON_SIZE) {
+        if (m_onEditUnit) m_onEditUnit(m_unitId);
+        return;
+    }
+    btnStartX += BUTTON_SIZE + BUTTON_SPACING + 4.0f;
     
     // Name area: double-click to edit
     float mixerBitStart = bounds.width - DRAG_HANDLE_WIDTH - COLOR_STRIP_WIDTH - 8.0f - 50.0f; // Start of mixer channel area
@@ -626,6 +657,25 @@ void UnitRow::handleControlClick(const NUIMouseEvent& event, const NUIRect& boun
     
     // Mixer Channel (right side) - Click to cycle channels
     float rightBoundary = bounds.width - DRAG_HANDLE_WIDTH - COLOR_STRIP_WIDTH - 8.0f;
+    
+    // Clip Name / Waveform Area (Double-click to load sample)
+    if (relativeX >= rightBoundary - 120.0f && relativeX <= rightBoundary) {
+         float mixerStart = rightBoundary - 50.0f;
+         if (relativeX < mixerStart) {
+             // Double-click detection for sample loading
+             auto now = std::chrono::steady_clock::now();
+             long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+             bool isDoubleClick = (nowMs - m_lastClipClickTimeMs < 400);
+             m_lastClipClickTimeMs = nowMs;
+             
+             if (isDoubleClick || event.doubleClick) {
+                 // Trigger sample file picker
+                 if (m_onLoadUnitSample) m_onLoadUnitSample(m_unitId);
+             }
+             return;
+         }
+    }
+
     if (relativeX >= rightBoundary - 50.0f && relativeX <= rightBoundary - 10.0f) {
         int newChannel = (m_mixerChannel + 1) % 16;
         m_manager.setUnitMixerChannel(m_unitId, newChannel);
@@ -636,7 +686,19 @@ void UnitRow::handleControlClick(const NUIMouseEvent& event, const NUIRect& boun
 }
 
 void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& bounds) {
-    // Grid Interaction: Toggle Steps with Scroll support
+    // === Double-click to load sample ===
+    auto now = std::chrono::steady_clock::now();
+    long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    bool isDoubleClick = (nowMs - m_lastClipClickTimeMs < 400) || event.doubleClick;
+    m_lastClipClickTimeMs = nowMs;
+    
+    if (isDoubleClick) {
+        // Trigger sample file picker
+        if (m_onLoadUnitSample) m_onLoadUnitSample(m_unitId);
+        return;
+    }
+    
+    // === Single click: Grid Interaction - Toggle Steps ===
     float relativeX = event.position.x - bounds.x;
     float availWidth = bounds.width;
     float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
@@ -673,12 +735,87 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
 
 
 
+
 bool UnitRow::onKeyEvent(const NUIKeyEvent& event) {
     if (m_isEditingName && m_nameInput) {
         // Forward to input widget
         return m_nameInput->onKeyEvent(event);
     }
     return false;
+}
+
+//==============================================================================
+// IDropTarget Implementation
+//==============================================================================
+
+UnitRow::~UnitRow() {
+    // Unregister from drop targets
+    NUIDragDropManager::getInstance().unregisterDropTarget(this);
+}
+
+DropFeedback UnitRow::onDragEnter(const DragData& data, const NUIPoint& position) {
+    (void)position;
+    // Accept file drags (audio files)
+    if (data.type == DragDataType::File) {
+        // Check if it's an audio file
+        std::string path = data.filePath;
+        std::string ext = path.substr(path.find_last_of('.') + 1);
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        
+        if (ext == "wav" || ext == "mp3" || ext == "flac" || ext == "ogg" || ext == "aiff") {
+            invalidateVisuals();
+            return DropFeedback::Copy;
+        }
+    }
+    return DropFeedback::None;
+}
+
+DropFeedback UnitRow::onDragOver(const DragData& data, const NUIPoint& position) {
+    return onDragEnter(data, position);
+}
+
+void UnitRow::onDragLeave() {
+    invalidateVisuals();
+}
+
+DropResult UnitRow::onDrop(const DragData& data, const NUIPoint& position) {
+    (void)position;
+    DropResult result;
+    
+    if (data.type == DragDataType::File) {
+        std::string path = data.filePath;
+        std::string ext = path.substr(path.find_last_of('.') + 1);
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        
+        if (ext == "wav" || ext == "mp3" || ext == "flac" || ext == "ogg" || ext == "aiff") {
+            // Extract filename for unit name
+            std::string filename = path.substr(path.find_last_of("/\\") + 1);
+            // Remove extension
+            filename = filename.substr(0, filename.find_last_of('.'));
+            
+            // Update unit name and load sample
+            m_manager.setUnitName(m_unitId, filename);
+            m_manager.setUnitAudioClip(m_unitId, path);
+            
+            // Trigger callback if set
+            if (m_onSampleDropped) {
+                m_onSampleDropped(m_unitId, path);
+            }
+            
+            updateState();
+            invalidateVisuals();
+            
+            result.accepted = true;
+            result.message = "Sample loaded: " + filename;
+            Nomad::Log::info("[UnitRow] Sample dropped: " + filename);
+        }
+    }
+    
+    return result;
+}
+
+NUIRect UnitRow::getDropBounds() const {
+    return getBounds();
 }
 
 } // namespace NomadUI

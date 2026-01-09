@@ -37,7 +37,6 @@ set(NOMADUI_CORE_SOURCES
     Core/NUIFrameProfiler.cpp
     Core/NUIDragDrop.h
     Core/NUIDragDrop.cpp
-    Core/NUIDragDrop.cpp
     # Core/NUIButton.h and .cpp removed - using Widgets version
     Core/NUILabel.h
     Core/NUILabel.cpp
@@ -46,7 +45,6 @@ set(NOMADUI_CORE_SOURCES
     Core/NUICheckbox.h
     Core/NUICheckbox.cpp
     Core/NUITextInput.h
-    Core/NUITextInput.cpp
     Core/NUITextInput.cpp
     Core/NUIProgressBar.h
     Common/MusicHelpers.h

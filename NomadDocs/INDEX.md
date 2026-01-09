@@ -55,7 +55,9 @@
 - [Bug Reports/](Bug%20Reports/) - Historical bug tracking
 
 ## 🗺️ Vision & Planning
-- [Vision & Roadmap](Vision%20&%20Roadmap.md) - Long-term goals and direction
+- [**v1 Beta Roadmap**](../docs/technical/roadmap.md) - Official execution plan (Jan 2026)
+- [v1 Beta Task List](../docs/technical/v1_beta_task_list.md) - Detailed backlog
+- [Vision & Roadmap](Vision%20&%20Roadmap.md) - Legacy (redirects to above)
 
 ## 🏗️ Module READMEs
 - [`../NomadCore/README.md`](../NomadCore/README.md) - Core utilities
@@ -72,4 +74,4 @@
 ---
 
 **Organization**: Files are categorized into `architecture/`, `guides/`, `systems/`, and `status/` subdirectories.  
-**Last Updated**: December 2024
+**Last Updated**: January 2026

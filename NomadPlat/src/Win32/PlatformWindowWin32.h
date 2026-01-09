@@ -58,6 +58,7 @@ public:
     
     KeyModifiers getCurrentModifiers() const override { return getKeyModifiers(); }
 
+    void setHitTestCallback(HitTestCallback callback) override { m_hitTestCallback = callback; }
     void setMouseMoveCallback(std::function<void(int, int)> callback) override { m_mouseMoveCallback = callback; }
     void setMouseButtonCallback(std::function<void(MouseButton, bool, int, int)> callback) override { m_mouseButtonCallback = callback; }
     void setMouseWheelCallback(std::function<void(float)> callback) override { m_mouseWheelCallback = callback; }
@@ -95,6 +96,7 @@ private:
     int m_height;
     bool m_shouldClose;
     bool m_isFullscreen;
+    bool m_isBorderless{false}; // Track if we are in custom borderless mode
     float m_dpiScale;
 
     // Fullscreen restore state
@@ -108,6 +110,7 @@ private:
     bool m_cursorVisible = true;
 
     // Event callbacks
+    HitTestCallback m_hitTestCallback;
     std::function<void(int, int)> m_mouseMoveCallback;
     std::function<void(MouseButton, bool, int, int)> m_mouseButtonCallback;
     std::function<void(float)> m_mouseWheelCallback;
