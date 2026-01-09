@@ -228,9 +228,9 @@ For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRI
 
 ---
 
-## 🧾 License — NSSAL v1.0
+## 🧾 License — NSSAL v1.1
 
-**Nomad DAW** is licensed under the **Nomad Studios Source-Available License (NSSAL) v1.0**.
+**Nomad DAW** is licensed under the **Nomad Studios Source-Available License (NSSAL) v1.1**.
 
 ### License Summary
 
@@ -252,13 +252,13 @@ For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRI
 
 ```SPDX
 
-SPDX-License-Identifier: NSSAL
+SPDX-License-Identifier: NSSAL-1.1
 ```
 
 All source files include the following header:
 
 ```cpp
-// © 2025 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
+// © 2026 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
 ```
 
 ### Full License Text
@@ -330,15 +330,15 @@ Thank you to all contributors and the open-source community for making Nomad pos
 - Project save/load
 - VST3/CLAP plugin scanner
 
-### 🎯 Phase 1 — Foundation Lock (Jan–Mar 2026)
-- App structure refactor (reduce Main.cpp complexity)
-- Project loop reliability (open → edit → save → reopen)
-- Data model API freeze
+### 🎯 Phase 1 — Foundation Lock (COMPLETE) (Jan–Mar 2026)
+✅ App structure refactor (reduce Main.cpp complexity)
+✅ Project loop reliability (open → edit → save → reopen)
+✅ Data model API freeze
 
 ### 🎯 Phase 2 — Project + Undo/Redo (Apr–Jun 2026)
-- Project format v1 spec with versioning
-- Undo/redo for core actions
-- Autosave + crash recovery
+✅ Project format v1 spec with versioning
+✅ Undo/redo for core actions
+-[ ] Autosave + crash recovery
 
 ### 🎯 Phase 3 — Recording + Export (Jul–Sep 2026)
 - Recording workflow reliability
@@ -434,7 +434,7 @@ If you enjoy using Nomad, consider supporting its development:
 
 ⭐ **Star this repo** if you believe in transparent, professional audio software!
 
-*Copyright © 2025 Dylan Makori / Nomad Studios. All rights reserved.*  
+*Copyright © 2026 Dylan Makori / Nomad Studios. All rights reserved.*  
 *Licensed under NSSAL v1.1*
 
 </div>
