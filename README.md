@@ -1,13 +1,14 @@
 # 🧭 NOMAD DAW
 
-![License](https://img.shields.io/badge/License-NSSAL%20v1.0-blue)
+![License](https://img.shields.io/badge/License-NSSAL%20v1.1-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-lightgrey)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-orange)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
-![Core](https://img.shields.io/badge/Core-Source--Available-blue)
 
-> **A modern, professional digital audio workstation built from the ground up with intention.**  
+> **A modern, professional digital audio workstation built from the ground up with intention.**
 > Featuring ultra-low latency audio, GPU-accelerated UI, and a pattern-based workflow.
+
+![Nomad DAW Interface](NomadDocs/images/nomad_daw_interface.png)
 
 ---
 
