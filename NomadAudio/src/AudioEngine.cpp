@@ -1,5 +1,6 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioEngine.h"
+#include "NomadMath.h"
 #include <cmath>
 #include <algorithm>
 #include <cstring>
@@ -16,7 +17,7 @@ namespace {
     inline double dbToLinearD(double db) {
         // UI uses -90 dB as "silence"
         if (db <= -90.0) return 0.0;
-        return std::pow(10.0, db / 20.0);
+        return Nomad::dbToGain(db);
     }
 }
 
