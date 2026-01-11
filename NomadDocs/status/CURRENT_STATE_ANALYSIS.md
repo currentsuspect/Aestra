@@ -1,12 +1,16 @@
-# NOMAD DAW - Current State Analysis & Future Roadmap
+# NOMAD DAW - Current State Analysis
 
-## *December 2025*
+## *January 2026*
+
+> ⚠️ **Roadmap moved.** For the v1 Beta execution plan, see:
+> - **[docs/technical/roadmap.md](../../docs/technical/roadmap.md)** — Strategy & phases
+> - **[docs/technical/v1_beta_task_list.md](../../docs/technical/v1_beta_task_list.md)** — Task backlog
 
 ---
 
 ## 📊 Executive Summary
 
-NOMAD has evolved from a basic audio playback prototype to a **professional FL Studio-inspired DAW** with:
+NOMAD has evolved from a basic audio playback prototype to a **professional pattern-based DAW** with:
 
 - ✅ Working WASAPI multi-tier audio engine (Exclusive/Shared modes)
 - ✅ FL Studio-style adaptive timeline with dynamic grid
@@ -163,31 +167,35 @@ NOMAD has evolved from a basic audio playback prototype to a **professional FL S
 
 ## 🚧 Known Limitations
 
-### Technical Debt
+### Technical Debt (as of Dec 2025 — many now resolved)
 
-1. **Fixed BPM/Time Signature** - Hardcoded to 120 BPM, 4/4 time
-2. **No Undo/Redo** - Critical for production DAW
-3. **No Save/Load Projects** - All work is lost on exit
-4. **Single Track Type** - No MIDI, automation, or send/return tracks
-5. **No Mixing** - Volume, pan, mute, solo missing
-6. **No Effects** - No EQ, compression, reverb, etc.
+1. ~~**Fixed BPM/Time Signature**~~ ✅ Now configurable
+2. **No Undo/Redo** - P0 for v1 Beta
+3. ~~**No Save/Load Projects**~~ ✅ ProjectSerializer implemented
+4. **Single Track Type** - MIDI/automation post-Beta
+5. ~~**No Mixing**~~ ✅ Volume, pan, mute, solo implemented
+6. **No Effects** - Arsenal plugins in progress
 
 ### Performance Bottlenecks
 
-1. **No multi-threading for waveform rendering** - Could lag on large projects
+1. **No multi-threading for waveform rendering** - Waveform caching added
 2. **No GPU-accelerated waveforms** - Currently CPU-bound
-3. **Fixed cache size** - No adaptive quality based on zoom
+3. ~~**Fixed cache size**~~ ✅ Adaptive waveform caching
 
-### UX Gaps
+### UX Gaps (as of Dec 2025 — many now resolved)
 
-1. **No keyboard shortcuts** - Everything requires mouse clicks
-2. **No context menus** - Right-click does nothing
-3. **No track controls** - Can't mute, solo, or adjust volume per track
-4. **No sample editing** - Can't trim, fade, or normalize
+1. **No keyboard shortcuts** - P1 for v1 Beta
+2. ~~**No context menus**~~ ✅ Context menus added
+3. ~~**No track controls**~~ ✅ Mute, solo, record buttons
+4. ~~**No sample editing**~~ ✅ Trim, split, move implemented
 
 ---
 
 ## 🎯 Future Roadmap
+
+> **See the updated roadmap:** [docs/technical/roadmap.md](../../docs/technical/roadmap.md)
+>
+> The legacy feature list below is preserved for historical reference but is no longer maintained.
 
 ### Phase 1: Core DAW Functionality (High Priority)
 

@@ -15,6 +15,8 @@
 #include "../NomadUI/Widgets/NUICoreWidgets.h"
 #include "../NomadUI/Graphics/OpenGL/NUIRenderCache.h"
 #include "../NomadAudio/include/AudioDeviceManager.h"
+#include "../NomadAudio/include/AudioDriverTypes.h"
+#include "../NomadAudio/include/MixerChannel.h"
 #include <memory>
 #include <functional>
 #include <vector>
@@ -52,10 +54,14 @@ public:
     
     // Get selected settings
     uint32_t getSelectedDeviceId() const { return m_selectedDeviceId; }
+    
+    // Accessors for Main.cpp to sync with AudioEngine
     uint32_t getSelectedSampleRate() const { return m_selectedSampleRate; }
     uint32_t getSelectedBufferSize() const { return m_selectedBufferSize; }
-    
-    // Test sound state (for audio callback)
+    Nomad::Audio::ResamplingMode getSelectedResamplingMode() const;
+    Nomad::Audio::DitheringMode getSelectedDitheringMode() const;
+
+    // Test sound state
     bool isPlayingTestSound() const { return m_isPlayingTestSound; }
     double& getTestSoundPhase() { return m_testSoundPhase; }
     
@@ -147,10 +153,9 @@ private:
     
     // Audio Quality Settings
     std::shared_ptr<NomadUI::NUIDropdown> m_qualityPresetDropdown;
-    std::shared_ptr<NomadUI::NUIDropdown> m_resamplingDropdown;
+    std::shared_ptr<NomadUI::NUIDropdown> m_resamplingDropdown;  // Resampling Quality
     std::shared_ptr<NomadUI::NUIDropdown> m_ditheringDropdown;
-    std::shared_ptr<NomadUI::NUIDropdown> m_interpolationDropdown;  // Legacy
-    std::shared_ptr<NomadUI::NUIButton> m_ditheringToggle;  // Legacy
+    // Legacy members removed (m_interpolationDropdown, m_ditheringToggle)
     std::shared_ptr<NomadUI::NUIButton> m_dcRemovalToggle;
     std::shared_ptr<NomadUI::NUIButton> m_softClippingToggle;
     std::shared_ptr<NomadUI::NUIButton> m_precision64BitToggle;
@@ -167,9 +172,9 @@ private:
     std::shared_ptr<NomadUI::NUILabel> m_asioInfoLabel;
     std::shared_ptr<NomadUI::NUILabel> m_qualitySectionLabel;
     std::shared_ptr<NomadUI::NUILabel> m_qualityPresetLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_resamplingLabel;
+    std::shared_ptr<NomadUI::NUILabel> m_resamplingLabel;  // Resampling Quality
     std::shared_ptr<NomadUI::NUILabel> m_ditheringLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_interpolationLabel;  // Legacy
+    // Legacy m_interpolationLabel removed
     std::shared_ptr<NomadUI::NUILabel> m_dcRemovalLabel;
     std::shared_ptr<NomadUI::NUILabel> m_softClippingLabel;
     std::shared_ptr<NomadUI::NUILabel> m_precision64BitLabel;
@@ -197,7 +202,7 @@ private:
 
     // Original quality/UI state (for dirty/cancel)
     int m_originalQualityPresetIndex = -1;
-    int m_originalResamplingIndex = -1;
+    int m_originalResamplingIndex = -1;  // Resampling Quality
     int m_originalDitheringIndex = -1;
     bool m_originalDCRemoval = false;
     bool m_originalSoftClipping = false;

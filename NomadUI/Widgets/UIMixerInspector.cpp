@@ -2,7 +2,10 @@
 #include "UIMixerInspector.h"
 
 #include "../Core/NUIThemeSystem.h"
+#include "../../NomadCore/include/NomadLog.h"
 #include "../Graphics/NUIRenderer.h"
+#include "NUIMixerWidgets.h"
+#include "PluginBrowserPanel.h"
 #include "../../Source/MixerViewModel.h"
 
 #include <algorithm>
@@ -13,17 +16,20 @@ namespace NomadUI {
 namespace {
     constexpr float PAD = 10.0f;
     constexpr float TAB_H = 26.0f;
-    constexpr float TAB_RADIUS = 6.0f;
+    constexpr float TAB_RADIUS = 12.0f;
     constexpr float SECTION_GAP = 10.0f;
     constexpr float HEADER_H = 44.0f;
     constexpr float ROW_H = 26.0f;
-    constexpr float ROW_RADIUS = 6.0f;
+    constexpr float ROW_RADIUS = 12.0f;
 }
 
 UIMixerInspector::UIMixerInspector(Nomad::MixerViewModel* viewModel)
     : m_viewModel(viewModel)
 {
     cacheThemeColors();
+
+    m_effectRack = std::make_shared<EffectChainRack>();
+    addChild(m_effectRack);
 }
 
 void UIMixerInspector::cacheThemeColors()
@@ -45,6 +51,15 @@ void UIMixerInspector::setActiveTab(Tab tab)
 {
     if (m_activeTab == tab) return;
     m_activeTab = tab;
+
+    // Update child visibility
+    if (m_effectRack) {
+        m_effectRack->setVisible(m_activeTab == Tab::Inserts);
+    }
+    for (auto& w : m_sendWidgets) {
+        w->setVisible(m_activeTab == Tab::Sends);
+    }
+
     repaint();
 }
 
@@ -77,6 +92,13 @@ void UIMixerInspector::onResize(int width, int height)
 {
     NUIComponent::onResize(width, height);
     layoutHitRects();
+
+    const auto b = getBounds();
+    const float contentTop = PAD + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
+    if (m_effectRack) {
+        float rackH = std::max(0.0f, b.height - contentTop - 18.0f - PAD);
+        m_effectRack->setBounds(b.x + PAD, b.y + contentTop + 18.0f, b.width - PAD * 2.0f, rackH);
+    }
 }
 
 int UIMixerInspector::findTrackNumber(uint32_t channelId) const
@@ -130,6 +152,66 @@ void UIMixerInspector::updateHeaderCache(const Nomad::ChannelViewModel* channel)
         m_cachedHeaderSubtitle = "Audio → " + channel->routeName;
     } else {
         m_cachedHeaderSubtitle = "Audio";
+    }
+
+    rebuildSendWidgets(channel);
+}
+
+void UIMixerInspector::rebuildSendWidgets(const Nomad::ChannelViewModel* channel)
+{
+    // Remove old widgets
+    for (auto& w : m_sendWidgets) {
+        removeChild(w);
+    }
+    m_sendWidgets.clear();
+
+    if (!channel) return;
+
+    // Create new widgets
+    for (size_t i = 0; i < channel->sends.size(); ++i) {
+        auto& sendData = channel->sends[i];
+        auto widget = std::make_shared<UIMixerSend>();
+        
+        widget->setSendIndex(static_cast<int>(i));
+        widget->setLevel(sendData.gain);
+
+        // Bind Callbacks
+        uint32_t cid = channel->id;
+        int sIdx = static_cast<int>(i);
+
+        widget->setOnLevelChanged([this, cid, sIdx](float val) {
+            if (m_viewModel) m_viewModel->setSendLevel(cid, sIdx, val);
+        });
+
+        widget->setOnDestinationChanged([this, cid, sIdx](uint32_t dest) {
+            if (m_viewModel) m_viewModel->setSendDestination(cid, sIdx, dest);
+        });
+
+        // Set available destinations FIRST explicitly
+        if (m_viewModel) {
+            auto dests = m_viewModel->getAvailableDestinations(channel->id);
+            std::vector<std::pair<uint32_t, std::string>> uiDests;
+            for (const auto& d : dests) uiDests.push_back({d.id, d.name});
+            widget->setAvailableDestinations(uiDests);
+        }
+
+        widget->setOnDelete([this, cid, sIdx]() {
+            m_deferredActions.push_back([this, cid, sIdx]() {
+                if (m_viewModel) {
+                    m_viewModel->removeSend(cid, sIdx);
+                    // Refresh UI immediately
+                    Nomad::ChannelViewModel* ch = m_viewModel->getChannelById(cid);
+                    rebuildSendWidgets(ch);
+                    repaint();
+                }
+            });
+        });
+        
+        // NOW set current destination (requires items to be present)
+        widget->setDestination(sendData.targetId, sendData.targetName);
+
+        addChild(widget);
+        m_sendWidgets.push_back(widget);
     }
 }
 
@@ -189,14 +271,55 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         }
         renderer.drawText(buf, {contentRect.x, contentRect.y}, 11.0f, m_textSecondary);
 
-        // "Add FX" placeholder button
+        // Rack is rendered by renderChildren() if visible
+    } else if (m_activeTab == Tab::Sends) {
+        // Sends Tab
+        const int sendCount = static_cast<int>(m_sendWidgets.size());
+        
+        char buf[64];
+        std::snprintf(buf, sizeof(buf), "Sends: %d", sendCount);
+        renderer.drawText(buf, {contentRect.x, contentRect.y}, 11.0f, m_textSecondary);
+
+        float currentY = contentRect.y + 20.0f;
+        const float sendH = 26.0f;
+        const float gap = 4.0f;
+
+        for (auto& widget : m_sendWidgets) {
+            widget->setVisible(true);
+            widget->setBounds({contentRect.x, currentY, contentRect.width, sendH});
+            currentY += sendH + gap;
+        }
+
+        // Hide unused widgets (if any logic issue, though we rebuild)
+        // Note: rebuild clears them, so we are good.
+
+        // "Add Send" button
+        m_addFxRect = NUIRect{contentRect.x, currentY + 4.0f, contentRect.width, ROW_H};
+        
         NUIColor addBg = m_addPressed ? m_addHover : (m_addHovered ? m_addHover : m_addBg);
         renderer.fillRoundedRect(m_addFxRect, ROW_RADIUS, addBg);
         renderer.strokeRoundedRect(m_addFxRect, ROW_RADIUS, 1.0f, m_border);
-        renderer.drawTextCentered("Add FX", m_addFxRect, 11.0f, m_addText);
+        renderer.drawTextCentered("Add Send", m_addFxRect, 11.0f, m_addText);
+
     } else {
         renderer.drawTextCentered("Coming soon", contentRect, 11.0f, m_textSecondary);
     }
+
+    renderChildren(renderer);
+}
+
+void UIMixerInspector::onUpdate(double deltaTime)
+{
+    // Process deferred actions (like deletions)
+    if (!m_deferredActions.empty()) {
+        auto actions = std::move(m_deferredActions);
+        m_deferredActions.clear();
+        for (auto& action : actions) {
+            action();
+        }
+    }
+    
+    NUIComponent::onUpdate(deltaTime);
 }
 
 bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
@@ -204,7 +327,14 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
     if (!isVisible() || !isEnabled()) return false;
 
     const auto b = getBounds();
-    if (!b.contains(event.position) && event.button != NUIMouseButton::None) return false;
+    
+    // Early exit if event is outside our bounds (except for drags that might have started inside)
+    if (!b.contains(event.position) && event.button != NUIMouseButton::None) {
+        return false;
+    }
+
+    // 1. Allow children (UIMixerSend widgets, EffectChainRack) to handle events
+    if (NUIComponent::onMouseEvent(event)) return true;
 
     if (event.button == NUIMouseButton::None) {
         const int tab = hitTestTab(event.position);
@@ -218,7 +348,8 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
             m_addHovered = addHover;
             repaint();
         }
-        return false;
+        // Consume hover if inside bounds to prevent hover-through to components behind
+        return b.contains(event.position);
     }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
@@ -239,12 +370,23 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
         if (m_addPressed) {
             m_addPressed = false;
             repaint();
-            // Placeholder action (effect insertion is handled elsewhere).
+            
+            if (m_activeTab == Tab::Inserts) {
+                // Placeholder action (effect insertion is handled elsewhere).
+            } else if (m_activeTab == Tab::Sends) {
+                if (m_viewModel && m_viewModel->getSelectedChannel()) {
+                    m_viewModel->addSend(m_viewModel->getSelectedChannel()->id);
+                    // Rebuild UI immediately (optimistic)
+                    rebuildSendWidgets(m_viewModel->getSelectedChannel());
+                    repaint();
+                }
+            }
             return true;
         }
     }
 
-    return false;
+    // Consume events within our visual bounds to prevent clickthrough
+    return b.contains(event.position);
 }
 
 } // namespace NomadUI

@@ -43,7 +43,23 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
     m_header = std::make_shared<UIMixerHeader>();
     m_header->setIsMaster(m_channelId == 0);
+    m_header->setIsMaster(m_channelId == 0);
     addChild(m_header);
+
+    // Input Selector (New!)
+    m_inputDropdown = std::make_shared<NUIDropdown>();
+    m_inputDropdown->setVisible(false); // Hidden by default
+    m_inputDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        if (!m_viewModel) return;
+        auto* channel = m_viewModel->getChannelById(m_channelId);
+        if (!channel) return;
+        
+        // Pass to backend
+        if (auto mc = channel->channel.lock()) {
+             mc->setInputChannelIndex(value); 
+        }
+    });
+    addChild(m_inputDropdown);
 
     m_trimKnob = std::make_shared<UIMixerKnob>(UIMixerKnobType::Trim);
     // Reduce visual noise: show channel controls only when hovered/selected.
@@ -65,6 +81,7 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     };
     addChild(m_fxSummary);
 
+    // Pan Knob (Always visible)
     m_panKnob = std::make_shared<UIMixerKnob>(UIMixerKnobType::Pan);
     m_panKnob->setVisible(false);
     m_panKnob->onValueChanged = [this](float pan) {
@@ -76,6 +93,21 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         m_continuousParams->setPan(channel->slotIndex, pan);
     };
     addChild(m_panKnob);
+
+    // Width Knob (Always visible)
+    m_widthKnob = std::make_shared<UIMixerKnob>(UIMixerKnobType::Width);
+    m_widthKnob->setVisible(false);
+    m_widthKnob->onValueChanged = [this](float width) {
+        if (!m_viewModel) return; 
+        auto* channel = m_viewModel->getChannelById(m_channelId);
+        if (!channel) return;
+
+        channel->width = width;
+        if (auto mc = channel->channel.lock()) {
+             mc->setWidth(width);
+        }
+    };
+    addChild(m_widthKnob);
 
     m_buttons = std::make_shared<UIMixerButtonRow>();
     m_buttons->onInvalidateRequested = [this]() { invalidateStaticCache(); };
@@ -96,10 +128,36 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         }
 
     };
-    m_buttons->onSoloToggled = [this](bool soloed) {
+    m_buttons->onSoloToggled = [this](bool soloed, NUIModifiers modifiers) {
         if (!m_viewModel) return;
         auto* channel = m_viewModel->getChannelById(m_channelId);
         if (!channel || channel->id == 0) return;
+
+        // Solo Safe Logic (Ctrl + Click)
+        const bool isCtrl = (modifiers & NUIModifiers::Ctrl);
+        if (isCtrl) {
+            // Revert the local toggle because pure solo state shouldn't change
+            // But wait, the button row just toggled its internal visual state.
+            // For Solo Safe, we actually want to toggle a *different* visual state 
+            // (maybe different color or icon?), but for now let's just update the logic.
+            // NOTE: UIMixerButtonRow tracks 'soloed' boolean. If we are setting 'solo safe',
+            // we should probably revert the 'soloed' state on the button if it wasn't already soloed.
+            // Or, ideally, Solo Safe is an independent state.
+            // Given the button row is simple, let's treat it as:
+            // Ctrl+Click -> Toggle Safe. Restore Solo button state to what it was.
+            
+            // Revert button state visually (hacky but works for stateless widget)
+            m_buttons->setSoloed(!soloed); 
+            
+            // Toggle proper safe state
+            if (auto mc = channel->channel.lock()) {
+               bool newSafe = !mc->isSoloSafe();
+               mc->setSoloSafe(newSafe);
+               // Visual feedback? UIMixerStrip doesn't have a distinct 'Safe' icon yet.
+               // We might rely on the user knowing they did it, or add a small indicator later.
+            }
+            return;
+        }
 
         // Exclusive solo: clear other solos first (matches playlist behavior).
         if (soloed) {
@@ -111,7 +169,6 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
                     otherMC->setSolo(false);
                 }
                 other->soloed = false;
-
             }
         }
 
@@ -125,7 +182,6 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
                 channel->muted = false;
             }
         }
-
     };
     m_buttons->onArmToggled = [this](bool armed) {
         if (!m_viewModel) return;
@@ -136,10 +192,45 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         channel->armed = armed;
         invalidateStaticCache();
 
+        if (auto mc = channel->channel.lock()) {
+            mc->setArmed(armed);
+        }
+    };
+    m_buttons->onMonitorToggled = [this](bool monitored) {
+        if (!m_viewModel) return;
+        auto* channel = m_viewModel->getChannelById(m_channelId);
+        if (!channel || channel->id == 0) return;
+
+        channel->monitored = monitored;
+        invalidateStaticCache();
+
+        if (auto mc = channel->channel.lock()) {
+            mc->setMonitoringEnabled(monitored);
+        }
     };
     addChild(m_buttons);
 
     m_meter = std::make_shared<UIMixerMeter>();
+    // Enable phase correlation meter only for Master (ID 0)
+    if (m_channelId == 0) {
+        m_meter->setShowCorrelation(true);
+    }
+    m_meter->onClipCleared = [this]() {
+        if (!m_viewModel) return;
+        auto* channel = m_viewModel->getChannelById(m_channelId);
+        if (channel) {
+            channel->clipLatchL = false;
+            channel->clipLatchR = false;
+            // Also inform audio thread? The latch is arguably UI-side, 
+            // but if MeterSnapshot has clip bit set, it will re-latch next frame.
+            // For now, clearing UI latch logic is enough as snapshot only sends 'current' clip frame 
+            // OR we need to clear snapshot "sticky" bit if it exists.
+            // Analysis of MeterSnapshot.h shows it sends 'current' clip flags (CLIP_L, CLIP_R).
+            // Logic in MixerViewModel accumulates it into clipLatch.
+            // So simply setting channel->clipLatch = false here works, as long as audio isn't *currently* clipping.
+            invalidateStaticCache();
+        }
+    };
     addChild(m_meter);
 
     m_fader = std::make_shared<UIMixerFader>();
@@ -156,6 +247,7 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     addChild(m_fader);
 
     m_footer = std::make_shared<UIMixerFooter>();
+    m_footer->onInvalidateRequested = [this]() { invalidateStaticCache(); };
     m_footer->setTrackNumber(m_trackNumber);
     addChild(m_footer);
 
@@ -178,6 +270,11 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     if (m_channelId == 0 && m_panKnob) {
         m_panKnob->setVisible(false);
     }
+    // Also hide Width for master (typically mastering width is a separate plugin, or we can add it later if requested)
+    // For now, standard mixer master bus usually doesn't have per-strip width control unless explicitly added.
+    if (m_channelId == 0 && m_widthKnob) {
+        m_widthKnob->setVisible(false);
+    }
     if (m_channelId == 0 && m_footer) {
         m_footer->setVisible(false);
     }
@@ -194,6 +291,10 @@ void UIMixerStrip::cacheThemeColors()
     m_selectedTopHighlight = theme.getColor("accentPrimary").withAlpha(0.55f);
     m_masterBackground = theme.getColor("backgroundSecondary").withAlpha(0.35f);
     m_mutedOverlay = NUIColor(0.0f, 0.0f, 0.0f, 0.22f);
+    
+    // New tokens (Global colors)
+    m_stripBg = theme.getColor("mixerStripBg"); 
+    m_masterBorder = theme.getColor("mixerMasterBorder");
 }
 
 void UIMixerStrip::layoutChildren()
@@ -207,6 +308,19 @@ void UIMixerStrip::layoutChildren()
         y += HEADER_H;
     }
 
+    // New: Input Dropdown below header
+    if (m_inputDropdown && m_inputDropdown->isVisible()) {
+        float dropdownH = 18.0f;
+        m_inputDropdown->setBounds(bounds.x + PAD, y + 2.0f, bounds.width - PAD * 2, dropdownH); 
+        y += dropdownH + 4.0f; 
+    }
+
+    const bool hasButtons = (m_buttons && m_buttons->isVisible());
+    if (hasButtons) {
+        m_buttons->setBounds(bounds.x, y, bounds.width, BUTTONS_H);
+        y += BUTTONS_H;
+    }
+
     if (m_trimKnob && m_trimKnob->isVisible()) {
         m_trimKnob->setBounds(bounds.x, y, bounds.width, KNOB_H);
         y += KNOB_H;
@@ -217,15 +331,21 @@ void UIMixerStrip::layoutChildren()
         y += FX_H;
     }
 
-    if (m_panKnob && m_panKnob->isVisible()) {
+    // Side-by-side Pan and Width
+    const bool showPan = (m_panKnob && m_panKnob->isVisible());
+    const bool showWidth = (m_widthKnob && m_widthKnob->isVisible());
+    
+    if (showPan && showWidth) {
+        const float halfW = bounds.width * 0.5f;
+        m_panKnob->setBounds(bounds.x, y, halfW, KNOB_H);
+        m_widthKnob->setBounds(bounds.x + halfW, y, halfW, KNOB_H);
+        y += KNOB_H;
+    } else if (showPan) {
         m_panKnob->setBounds(bounds.x, y, bounds.width, KNOB_H);
         y += KNOB_H;
-    }
-
-    const bool hasButtons = (m_buttons && m_buttons->isVisible());
-    if (hasButtons) {
-        m_buttons->setBounds(bounds.x, y, bounds.width, BUTTONS_H);
-        y += BUTTONS_H;
+    } else if (showWidth) {
+        m_widthKnob->setBounds(bounds.x, y, bounds.width, KNOB_H);
+        y += KNOB_H;
     }
 
     const bool hasFooter = (m_footer && m_footer->isVisible());
@@ -238,10 +358,13 @@ void UIMixerStrip::layoutChildren()
     const float contentY = y;
     const float contentH = std::max(1.0f, footerY - y);
 
-    const float meterX = bounds.x + PAD;
-    const float meterY = contentY + PAD;
-    const float meterH = std::max(1.0f, contentH - PAD * 2);
     const float meterW = (m_channelId == 0) ? MASTER_METER_W : METER_W;
+
+    const float availableH = std::max(1.0f, contentH - PAD * 2);
+    // User requested "half their height positioned at the bottom"
+    const float meterH = availableH * 0.5f; 
+    const float meterY = footerY - PAD - meterH;
+    const float meterX = bounds.x + PAD;
 
     if (m_meter) {
         m_meter->setBounds(meterX, meterY, meterW, meterH);
@@ -283,16 +406,65 @@ void UIMixerStrip::onUpdate(double deltaTime)
 
     const bool draggingControls =
         (m_trimKnob && m_trimKnob->isDragging()) ||
-        (m_panKnob && m_panKnob->isDragging());
+        (m_panKnob && m_panKnob->isDragging()) ||
+        (m_widthKnob && m_widthKnob->isDragging());
 
-    // Reduce strip noise: show Trim/Pan only when selected or actively dragged (never for master).
+    // Reduce strip noise: show Trim/Pan/Width only when selected or actively dragged.
     const bool showChannelControls = (m_channelId != 0) && (selected || draggingControls);
     if (m_cachedShowChannelControls != showChannelControls) {
         m_cachedShowChannelControls = showChannelControls;
         if (m_trimKnob) m_trimKnob->setVisible(showChannelControls);
         if (m_panKnob) m_panKnob->setVisible(showChannelControls);
+        if (m_widthKnob) m_widthKnob->setVisible(showChannelControls);
+        if (m_panKnob) m_panKnob->setVisible(showChannelControls);
+        if (m_widthKnob) m_widthKnob->setVisible(showChannelControls);
         layoutChildren();
         invalidateStaticCache();
+    }
+
+    // Update Input Dropdown (Only for tracks, not master)
+    if (m_inputDropdown && m_channelId != 0 && m_viewModel) {
+        // Check availability
+        bool hasInputs = !m_viewModel->inputNames.empty();
+        // Show if inputs available AND (selected OR armed OR monitored) - or just always show for quick access?
+        // Let's hide it if no inputs exist at all.
+        if (m_inputDropdown->isVisible() != hasInputs) {
+             m_inputDropdown->setVisible(hasInputs);
+             layoutChildren();
+        }
+        
+        if (hasInputs) {
+            // Update items if count changed
+            size_t neededCount = m_viewModel->inputNames.size();
+            if (m_inputDropdown->getItemCount() != neededCount) {
+                 m_inputDropdown->clearItems();
+                 for (size_t i = 0; i < neededCount; ++i) {
+                      int val = static_cast<int>(i);
+                      // Last item is "None" -> value -1
+                      if (i == neededCount - 1) val = -1;
+                      m_inputDropdown->addItem(m_viewModel->inputNames[i], val);
+                 }
+            }
+            
+            // Sync Selection
+            // Map current inputChannelIndex to list index
+            // If -1 -> Last item
+            // Else -> index = value
+            int targetIndex = -1;
+            int currentVal = channel->inputChannelIndex;
+            
+            if (currentVal == -1) {
+                targetIndex = (int)m_inputDropdown->getItemCount() - 1;
+            } else {
+                targetIndex = currentVal;
+            }
+
+            if (targetIndex >= 0 && targetIndex < (int)m_inputDropdown->getItemCount()) {
+                if (m_inputDropdown->getSelectedIndex() != targetIndex) {
+                    m_inputDropdown->setSelectedIndex(targetIndex);
+                }
+            }
+        }
     }
 
     if (m_cachedMuted != channel->muted) {
@@ -308,6 +480,10 @@ void UIMixerStrip::onUpdate(double deltaTime)
     }
     if (m_cachedArmed != channel->armed) {
         m_cachedArmed = channel->armed;
+        invalidateStaticCache();
+    }
+    if (m_cachedMonitored != channel->monitored) {
+        m_cachedMonitored = channel->monitored;
         invalidateStaticCache();
     }
 
@@ -334,6 +510,7 @@ void UIMixerStrip::onUpdate(double deltaTime)
         m_buttons->setMuted(channel->muted);
         m_buttons->setSoloed(channel->soloed);
         m_buttons->setArmed(channel->armed);
+        m_buttons->setMonitored(channel->monitored);
     }
 
     if (m_trimKnob && m_trimKnob->isVisible() && !m_trimKnob->isDragging()) {
@@ -362,6 +539,19 @@ void UIMixerStrip::onUpdate(double deltaTime)
         m_panKnob->setValue(channel->pan);
     }
 
+    if (m_widthKnob && m_widthKnob->isVisible() && !m_widthKnob->isDragging()) {
+        const bool hovered = m_widthKnob->isHovered();
+        if (m_cachedWidthHovered != hovered) {
+            m_cachedWidthHovered = hovered;
+            invalidateStaticCache();
+        }
+        if (std::abs(m_cachedWidth - channel->width) > 1e-4f) {
+            m_cachedWidth = channel->width;
+            invalidateStaticCache();
+        }
+        m_widthKnob->setValue(channel->width);
+    }
+
     if (m_fxSummary && m_fxSummary->isVisible()) {
         if (m_cachedFxCount != channel->fxCount) {
             m_cachedFxCount = channel->fxCount;
@@ -376,8 +566,18 @@ void UIMixerStrip::onUpdate(double deltaTime)
 
     if (m_meter) {
         m_meter->setLevels(channel->smoothedPeakL, channel->smoothedPeakR);
+        m_meter->setRmsLevels(channel->smoothedRmsL, channel->smoothedRmsR);
         m_meter->setPeakOverlay(channel->envPeakL, channel->envPeakR);
+        m_meter->setPeakHold(channel->peakHoldL, channel->peakHoldR);
         m_meter->setClipLatch(channel->clipLatchL, channel->clipLatchR);
+        
+        // Pass correlation to meter (will only be drawn if enabled)
+        m_meter->setCorrelation(channel->correlation);
+        
+        // Pass LUFS only to master meter (ID 0)
+        if (m_channelId == 0) {
+            m_meter->setIntegratedLufs(channel->integratedLufs);
+        }
     }
 
     if (m_fader && !m_fader->isDragging()) {
@@ -410,16 +610,12 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     const bool selected = m_viewModel && (m_viewModel->getSelectedChannelId() == static_cast<int32_t>(m_channelId));
 
     // Unified "Deep Black" background for ALL strips.
-    // Increasing opacity to near-solid and deepening the tone to stand out against #1e1e22.
-    
-    // Almost pure black, high opacity. distinct card look.
-    NUIColor stripBg = NUIColor(0.01f, 0.01f, 0.01f, 0.95f); 
-    renderer.fillRect(bounds, stripBg);
+    renderer.fillRect(bounds, m_stripBg);
 
     // Master gets a slightly different tone to distinguish it (optional, but good for hierarchy)
     if (m_channelId == 0) {
         // Subtle highlight for master
-        renderer.strokeRect(bounds, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.08f)); 
+        renderer.strokeRect(bounds, 1.0f, m_masterBorder); 
     }
 
     if (selected) {
@@ -442,7 +638,8 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     const bool dragging =
         (m_fader && m_fader->isDragging()) ||
         (m_trimKnob && m_trimKnob->isDragging()) ||
-        (m_panKnob && m_panKnob->isDragging());
+        (m_panKnob && m_panKnob->isDragging()) ||
+        (m_widthKnob && m_widthKnob->isDragging());
     if (dragging) {
         invalidateStaticCache();
         renderChildren(renderer);
@@ -452,6 +649,9 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
         return;
     }
 
+    // Static caching Disabled due to HiDPI blurriness issues.
+    // The performance impact of redrawing vector UI is minimal on modern systems.
+    /*
     if (m_staticCacheInvalidated) {
         renderer.invalidateCache(m_staticCacheId);
         m_staticCacheInvalidated = false;
@@ -473,6 +673,7 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
         }
         return;
     }
+    */
 
     renderChildren(renderer);
     if (channel && channel->muted) {
@@ -512,6 +713,9 @@ void UIMixerStrip::renderStaticLayer(NUIRenderer& renderer)
     }
     if (m_panKnob && m_panKnob->isVisible()) {
         m_panKnob->onRender(renderer);
+    }
+    if (m_widthKnob && m_widthKnob->isVisible()) {
+        m_widthKnob->onRender(renderer);
     }
     if (m_buttons && m_buttons->isVisible()) {
         m_buttons->onRender(renderer);

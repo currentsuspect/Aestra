@@ -21,29 +21,34 @@ public:
     void onRender(NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    void onMouseLeave() override;
 
     void setMuted(bool muted);
     void setSoloed(bool soloed);
     void setArmed(bool armed);
+    void setMonitored(bool monitored);
 
     bool isMuted() const { return m_muted; }
     bool isSoloed() const { return m_soloed; }
     bool isArmed() const { return m_armed; }
+    bool isMonitored() const { return m_monitored; }
 
     // Callbacks fire after internal state changes.
     std::function<void(bool)> onMuteToggled;
-    std::function<void(bool)> onSoloToggled;
+    std::function<void(bool, NUIModifiers)> onSoloToggled;
     std::function<void(bool)> onArmToggled;
+    std::function<void(bool)> onMonitorToggled;
 
     // Used by cached parents to invalidate their static layer on hover/press changes.
     std::function<void()> onInvalidateRequested;
 
 private:
-    static constexpr int kButtonCount = 3;
+    static constexpr int kButtonCount = 4;
 
     bool m_muted{false};
     bool m_soloed{false};
     bool m_armed{false};
+    bool m_monitored{false};
 
     int m_hovered{-1};
     int m_pressed{-1};
@@ -61,6 +66,7 @@ private:
     NUIColor m_muteOn;
     NUIColor m_soloOn;
     NUIColor m_armOn;
+    NUIColor m_monitorOn;
 
     void cacheThemeColors();
     void layoutButtons();

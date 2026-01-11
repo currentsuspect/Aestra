@@ -2,8 +2,11 @@
 #include "NUICustomTitleBar.h"
 #include "../Graphics/NUIRenderer.h"
 #include "../Core/NUIThemeSystem.h"
-#include <iostream>
+#include "../../NomadCore/include/NomadLog.h"
+#include "../../NomadCore/include/NomadUnifiedProfiler.h"
+
 #include <cmath>
+#include <string>
 
 namespace NomadUI {
 
@@ -67,38 +70,30 @@ void NUICustomTitleBar::setHeight(float height) {
 }
 
 void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
+    NOMAD_ZONE("TitleBar_Render");
     NUIRect bounds = getBounds();
-    
     
     // Get theme colors
     auto& themeManager = NUIThemeManager::getInstance();
     NUIColor bgColor = themeManager.getColor("background"); // Use background color for flush look
-    NUIColor textColor = themeManager.getColor("text");
     
     // Draw title bar background - flush with window background
     renderer.fillRect(bounds, bgColor);
     
     // No separator line for clean, flush appearance
-    
-    // Minimal left-aligned menu labels (Ableton-style)
-    float fontSize = 12.0f;
-    std::vector<std::string> menuItems = {"File", "Edit", "View"};
-    float x = bounds.x + 10.0f;
-    for (const auto& item : menuItems) {
-        NUISize sz = renderer.measureText(item, fontSize);
-        float textY = std::round(renderer.calculateTextY(bounds, fontSize));
-        renderer.drawText(item, NUIPoint(x, textY), fontSize, textColor);
-        x += sz.width + 14.0f; // spacing between menu items
-    }
+    // Menu items are now handled by NUIMenuBar child component
     
     // Draw window controls
     drawWindowControls(renderer);
+    
+    // Render custom children (NUIMenuBar, view toggle, etc.)
+    renderChildren(renderer);
 }
 
 void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     auto& themeManager = NUIThemeManager::getInstance();
     // Use config colors for hover states
-    NUIColor hoverBgColor = themeManager.getColor("surfaceRaised"); // Subtle hover
+    NUIColor hoverBgColor = themeManager.getColor("primary").withAlpha(0.2f); // Nomad Purple hover
     NUIColor closeHoverBg = themeManager.getColor("error"); // Red for close button
     
     // Draw minimize button
@@ -106,6 +101,7 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
         // Rounded hover effect
         renderer.fillRoundedRect(minimizeButtonRect_, 4.0f, hoverBgColor);
     }
+    minimizeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // White
     NUIPoint minCenter(minimizeButtonRect_.x + minimizeButtonRect_.width * 0.5f,
                        minimizeButtonRect_.y + minimizeButtonRect_.height * 0.5f);
     float iconOffset = 8.0f; // Center the 16px icon
@@ -120,8 +116,9 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     NUIPoint maxCenter(maximizeButtonRect_.x + maximizeButtonRect_.width * 0.5f,
                        maximizeButtonRect_.y + maximizeButtonRect_.height * 0.5f);
     
-    // Use appropriate icon based on maximized state
+    // Use appropriate icon based on maximized state and set to white
     auto& maxIcon = isMaximized_ ? restoreIcon_ : maximizeIcon_;
+    maxIcon->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // White
     maxIcon->setPosition(maxCenter.x - iconOffset, maxCenter.y - iconOffset);
     maxIcon->onRender(renderer);
     
@@ -129,10 +126,8 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     if (hoveredButton_ == HoverButton::Close) {
         // Rounded hover effect
         renderer.fillRoundedRect(closeButtonRect_, 4.0f, closeHoverBg);
-        closeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // White on red
-    } else {
-        closeIcon_->setColorFromTheme("textPrimary");
     }
+    closeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // Always white
     NUIPoint closeCenter(closeButtonRect_.x + closeButtonRect_.width * 0.5f,
                          closeButtonRect_.y + closeButtonRect_.height * 0.5f);
     closeIcon_->setPosition(closeCenter.x - iconOffset, closeCenter.y - iconOffset);
@@ -140,9 +135,14 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
 }
 
 bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
-    NUIPoint mousePos(event.position.x, event.position.y);
+    NUIPoint mousePos = event.position;
     
-    // Update hover state
+    // Let children handle events first (NUIMenuBar, view toggle, etc.)
+    if (NUIComponent::onMouseEvent(event)) {
+        return true;
+    }
+    
+    // Update hover state for window controls
     HoverButton previousHover = hoveredButton_;
     hoveredButton_ = HoverButton::None;
     
@@ -177,10 +177,11 @@ bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
         // Window dragging is now handled by Windows via WM_NCHITTEST
-        // No need to handle it here
     }
     
-    return NUIComponent::onMouseEvent(event);
+    return false;
+    
+    return false;
 }
 
 void NUICustomTitleBar::onResize(int width, int height) {
@@ -223,6 +224,28 @@ bool NUICustomTitleBar::isPointInButton(const NUIPoint& point, const NUIRect& bu
 void NUICustomTitleBar::handleButtonClick(const NUIRect& buttonRect) {
     // Visual feedback for button click
     setDirty(true);
+}
+
+Nomad::HitTestResult NUICustomTitleBar::hitTest(const NUIPoint& point) {
+    // 1. Check Window Controls
+    // We return Client because NUICustomTitleBar handles the clicks/hover itself in onMouseEvent.
+    // Returning Caption or HTCLOSE would trigger Windows default handling which we don't want for custom drawn buttons.
+    if (isPointInButton(point, minimizeButtonRect_)) return Nomad::HitTestResult::Client;
+    if (isPointInButton(point, maximizeButtonRect_)) return Nomad::HitTestResult::Client;
+    if (isPointInButton(point, closeButtonRect_)) return Nomad::HitTestResult::Client;
+    
+    // 2. Check Child Components (Menu Bar, Mode Toggle, etc.)
+    // Recursively check if point hits any interactive child
+    const auto& children = getChildren();
+    for (auto it = children.rbegin(); it != children.rend(); ++it) {
+        auto& child = *it;
+        if (child->isVisible() && child->getBounds().contains(point)) {
+            return Nomad::HitTestResult::Client;
+        }
+    }
+    
+    // 3. Fallback to Caption (Drag area)
+    return Nomad::HitTestResult::Caption;
 }
 
 } // namespace NomadUI

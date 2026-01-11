@@ -46,6 +46,10 @@ inline float edgeHitPxForWidth(float viewRectWidthPx)
 
 } // namespace
 
+// =============================================================================
+// SECTION: Construction & Model
+// =============================================================================
+
 TimelineMinimapBar::TimelineMinimapBar()
 {
     cacheThemeColors_();
@@ -167,6 +171,10 @@ void TimelineMinimapBar::cacheThemeColors_()
 
     colors_.text = theme.getColor("textPrimary");
 }
+
+// =============================================================================
+// SECTION: Layout & Theme
+// =============================================================================
 
 TimelineMinimapLayout TimelineMinimapBar::computeLayout_() const
 {
@@ -310,6 +318,10 @@ void TimelineMinimapBar::renderTooltip_(NUIRenderer& renderer, const TimelineMin
     renderer.drawTextCentered(text, tipRect, fontSize, colors_.text.withAlpha(0.92f));
 }
 
+// =============================================================================
+// SECTION: Rendering
+// =============================================================================
+
 void TimelineMinimapBar::onRender(NUIRenderer& renderer)
 {
     cacheThemeColors_();
@@ -378,6 +390,10 @@ void TimelineMinimapBar::onMouseLeave()
     }
     NUIComponent::onMouseLeave();
 }
+
+// =============================================================================
+// SECTION: Event Handling
+// =============================================================================
 
 bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
 {

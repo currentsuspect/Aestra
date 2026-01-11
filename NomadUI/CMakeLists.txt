@@ -37,7 +37,6 @@ set(NOMADUI_CORE_SOURCES
     Core/NUIFrameProfiler.cpp
     Core/NUIDragDrop.h
     Core/NUIDragDrop.cpp
-    Core/NUIDragDrop.cpp
     # Core/NUIButton.h and .cpp removed - using Widgets version
     Core/NUILabel.h
     Core/NUILabel.cpp
@@ -46,7 +45,6 @@ set(NOMADUI_CORE_SOURCES
     Core/NUICheckbox.h
     Core/NUICheckbox.cpp
     Core/NUITextInput.h
-    Core/NUITextInput.cpp
     Core/NUITextInput.cpp
     Core/NUIProgressBar.h
     Common/MusicHelpers.h
@@ -110,6 +108,18 @@ list(APPEND NOMADUI_CORE_SOURCES
     Widgets/UIMixerInspector.cpp
     Widgets/UnitRow.h
     Widgets/UnitRow.cpp
+    Widgets/UnitColorPicker.h
+    Widgets/UnitColorPicker.cpp
+    Widgets/UIItemSelector.h
+    Widgets/UIItemSelector.cpp
+    Widgets/PluginBrowserPanel.h
+    Widgets/PluginBrowserPanel.cpp
+    Widgets/PluginUIController.h
+    Widgets/PluginUIController.cpp
+    Widgets/PluginSelectorMenu.h
+    Widgets/PluginSelectorMenu.cpp
+    Widgets/GenericPluginEditor.h
+    Widgets/GenericPluginEditor.cpp
 )
 
 set(NOMADUI_GRAPHICS_SOURCES
@@ -137,9 +147,9 @@ target_include_directories(NomadUI_Core PUBLIC
 # Keep this PRIVATE so NomadUI can still be consumed as a standalone library
 # when these widgets are not used.
 target_include_directories(NomadUI_Core PRIVATE
-    ${CMAKE_SOURCE_DIR}/NomadCore/include
-    ${CMAKE_SOURCE_DIR}/NomadAudio/include
-    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadCore/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadAudio/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Source
 )
 
 # FreeType dependency removed - handled by MSDF text renderer

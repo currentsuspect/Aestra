@@ -66,6 +66,10 @@ private:
     float m_holdTimer;           // For continuous increment when holding
     float m_holdDelay;           // Initial delay before repeat
     
+    // Cached bounds for dynamic centering
+    NomadUI::NUIRect m_cachedUpArrowBounds;
+    NomadUI::NUIRect m_cachedDownArrowBounds;
+    
     NomadUI::NUIRect getUpArrowBounds() const;
     NomadUI::NUIRect getDownArrowBounds() const;
 };

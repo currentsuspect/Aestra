@@ -1,5 +1,5 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "PlaylistTrack.h"
+#include "MiniAudioDecoder.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -8,13 +8,6 @@
 #include <cmath>
 
 namespace fs = std::filesystem;
-
-namespace Nomad {
-namespace Audio {
-    bool loadWavFile(const std::string& filePath, std::vector<float>& audioData,
-                     uint32_t& sampleRate, uint32_t& numChannels);
-}
-}
 
 using namespace Nomad::Audio;
 
@@ -106,15 +99,17 @@ bool runBasic16BitTest() {
     std::vector<float> audio;
     uint32_t sampleRate = 0;
     uint32_t channels = 0;
-    bool ok = loadWavFile(path, audio, sampleRate, channels);
+    bool ok = decodeAudioFile(path, audio, sampleRate, channels);
     fs::remove(path);
 
-    if (!ok || sampleRate != 44100 || channels != 1 || audio.size() != samples.size()) {
-        std::cout << " FAILED\n";
+    // Note: decodeAudioFile forces stereo, so channel count will be 2
+    if (!ok || sampleRate != 44100 || channels != 2 || audio.size() != samples.size() * 2) {
+        std::cout << " FAILED (Metadata mismatch) SR: " << sampleRate << " CH: " << channels << " Size: " << audio.size() << "\n";
         return false;
     }
 
-    if (!approxEqual(audio[1], 32767 / 32768.0f) || !approxEqual(audio[2], -1.0f, 1e-4f)) {
+    // Check first sample (left channel of first frame)
+    if (!approxEqual(audio[2], 32767 / 32768.0f) || !approxEqual(audio[4], -1.0f, 1e-4f)) {
         std::cout << " FAILED (sample mismatch)\n";
         return false;
     }
@@ -132,7 +127,7 @@ bool runJunkChunkTest() {
     std::vector<float> audio;
     uint32_t sampleRate = 0;
     uint32_t channels = 0;
-    bool ok = loadWavFile(path, audio, sampleRate, channels);
+    bool ok = decodeAudioFile(path, audio, sampleRate, channels);
     fs::remove(path);
 
     if (!ok || sampleRate != 48000 || channels != 2 || audio.size() != samples.size()) {
@@ -153,15 +148,16 @@ bool run24BitTest() {
     std::vector<float> audio;
     uint32_t sampleRate = 0;
     uint32_t channels = 0;
-    bool ok = loadWavFile(path, audio, sampleRate, channels);
+    bool ok = decodeAudioFile(path, audio, sampleRate, channels);
     fs::remove(path);
 
-    if (!ok || audio.size() != samples.size() || sampleRate != 44100 || channels != 1) {
+    // Forces stereo
+    if (!ok || audio.size() != samples.size() * 2 || sampleRate != 44100 || channels != 2) {
         std::cout << " FAILED\n";
         return false;
     }
 
-    if (!(audio[0] <= 1.0f && audio[0] > 0.99f) || !(audio[1] >= -1.0f && audio[1] < -0.99f)) {
+    if (!(audio[0] <= 1.0f && audio[0] > 0.99f) || !(audio[2] >= -1.0f && audio[2] < -0.99f)) {
         std::cout << " FAILED (24-bit values out of range)\n";
         return false;
     }

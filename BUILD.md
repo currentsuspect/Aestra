@@ -1,6 +1,6 @@
 # 🔨 Building Nomad DAW
 
-For complete build instructions, see **[docs/BUILDING.md](docs/BUILDING.md)**
+For complete build instructions, see **[docs/technical/ui/BUILD_AND_TEST.md](docs/technical/ui/BUILD_AND_TEST.md)**
 
 ---
 
@@ -14,12 +14,27 @@ cd NOMAD
 # Install Git hooks
 pwsh -File scripts/install-hooks.ps1
 
-# Configure build
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+# Configure + build (Full app)
+cmake --preset full
+cmake --build --preset full-release
 
-# Build
-cmake --build build --config Release --parallel
+# (Optional) Watch + rebuild on changes
+pwsh -File scripts/watch_build.ps1 -Preset full -Config Release
 ```
+
+---
+
+## Headless (Optional)
+
+Use this for CI/containers or DSP-only regression runs (no OpenGL/UI dependencies at configure time).
+
+```powershell
+cmake --preset headless
+cmake --build --preset headless-release
+pwsh -File scripts/watch_build.ps1 -Preset headless -Config Release
+```
+
+Important note: CMake preset build directories are generator-specific. If you previously configured `build/headless` (or `build/full`) with a different generator (e.g. Ninja vs Visual Studio), delete that preset folder and re-run `cmake --preset ...`.
 
 ---
 
@@ -29,4 +44,4 @@ cmake --build build --config Release --parallel
 - Build options and configurations
 - Cross-platform considerations
 
-**See the full guide:** **[docs/BUILDING.md](docs/BUILDING.md)**
+**See the full guide:** **[docs/technical/ui/BUILD_AND_TEST.md](docs/technical/ui/BUILD_AND_TEST.md)**

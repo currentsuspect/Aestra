@@ -9,14 +9,29 @@ cmake_minimum_required(VERSION 3.22)
 # Create executable
 set(NOMAD_DAW_SOURCES
 	Main.cpp
+	NomadApp.h
+	NomadApp.cpp
+	NomadRootComponent.h
+	NomadContent.h
+	NomadContent.cpp
+	OverlayLayer.h
 	ConfirmationDialog.h
 	ConfirmationDialog.cpp
+	RecoveryDialog.h
+	RecoveryDialog.cpp
 	TransportBar.h
 	TransportBar.cpp
 	TransportInfoContainer.h
 	TransportInfoContainer.cpp
-	AudioSettingsDialog.h
-	AudioSettingsDialog.cpp
+	SettingsDialog.h
+	SettingsDialog.cpp
+	ISettingsPage.h
+	AudioSettingsPage.h
+	AudioSettingsPage.cpp
+    GeneralSettingsPage.h
+    GeneralSettingsPage.cpp
+    AppearanceSettingsPage.h
+    AppearanceSettingsPage.cpp
 	FileBrowser.h
 	FileBrowser.cpp
 	FilePreviewPanel.h
@@ -46,6 +61,8 @@ set(NOMAD_DAW_SOURCES
 	license/LicenseVerifier.cpp
 	PerformanceHUD.h
 	PerformanceHUD.cpp
+	UnifiedHUD.h
+	UnifiedHUD.cpp
 	MixerMath.h
 	MixerViewModel.h
 	MixerViewModel.cpp
@@ -105,10 +122,10 @@ if(WIN32)
 		NOMINMAX
 	)
 	
-	# Use console subsystem for now (can switch to WIN32_EXECUTABLE later)
-	# set_target_properties(NOMAD_DAW PROPERTIES
-	#     WIN32_EXECUTABLE TRUE
-	# )
+	# Windows GUI application (no console window)
+	set_target_properties(NOMAD_DAW PROPERTIES
+	    WIN32_EXECUTABLE TRUE
+	)
 	
 	# Link Windows libraries
 	# Note: We don't explicitly link opengl32 here

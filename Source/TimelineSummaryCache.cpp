@@ -287,6 +287,7 @@ bool TimelineSummaryCache::computeBucketRange_(int& outI0, int& outI1, double st
 void TimelineSummaryCache::addSpan_(TimelineSummary& s, const TimelineMinimapClipSpan& span, ClipIndex& outIndex)
 {
     outIndex.type = span.type;
+    outIndex.trackIndex = span.trackIndex;
     outIndex.i0 = 0;
     outIndex.i1 = -1;
 
@@ -311,6 +312,13 @@ void TimelineSummaryCache::addSpan_(TimelineSummary& s, const TimelineMinimapCli
             case TimelineMinimapClipType::Automation:
                 b.automationCount += 1;
                 break;
+        }
+        
+        // Track presence
+        if (span.trackIndex < 64) {
+            if (b.trackCounts[span.trackIndex] < 255) {
+                b.trackCounts[span.trackIndex]++;
+            }
         }
 
         b.energySum += span.energyApprox;
@@ -339,6 +347,13 @@ void TimelineSummaryCache::removeSpan_(TimelineSummary& s, const ClipIndex& idx)
             case TimelineMinimapClipType::Automation:
                 b.automationCount -= 1;
                 break;
+        }
+        
+        // Track presence
+        if (idx.trackIndex < 64) {
+             if (b.trackCounts[idx.trackIndex] > 0) {
+                 b.trackCounts[idx.trackIndex]--;
+             }
         }
 
         // Energy/peak contribution removal is not yet tracked per-clip.

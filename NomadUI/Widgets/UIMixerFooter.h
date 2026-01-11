@@ -17,6 +17,10 @@ public:
     void onRender(NUIRenderer& renderer) override;
 
     void setTrackNumber(int number);
+
+    std::function<void()> onInvalidateRequested;
+
+protected:
     int getTrackNumber() const { return m_trackNumber; }
 
 private:

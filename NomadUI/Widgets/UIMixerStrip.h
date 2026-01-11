@@ -11,6 +11,7 @@
 #include "UIMixerButtonRow.h"
 #include "UIMixerFXSummary.h"
 #include "UIMixerFooter.h"
+#include "NUIDropdown.h"
 
 #include <memory>
 #include <string>
@@ -57,6 +58,8 @@ private:
     std::shared_ptr<UIMixerKnob> m_trimKnob;
     std::shared_ptr<UIMixerFXSummary> m_fxSummary;
     std::shared_ptr<UIMixerKnob> m_panKnob;
+    std::shared_ptr<UIMixerKnob> m_widthKnob; 
+    std::shared_ptr<NUIDropdown> m_inputDropdown; // Input Selector
     std::shared_ptr<UIMixerButtonRow> m_buttons;
     std::shared_ptr<UIMixerMeter> m_meter;
     std::shared_ptr<UIMixerFader> m_fader;
@@ -69,6 +72,8 @@ private:
     NUIColor m_selectedTopHighlight;
     NUIColor m_masterBackground;
     NUIColor m_mutedOverlay;
+    NUIColor m_stripBg;
+    NUIColor m_masterBorder;
 
     // Static-layer cache (header + fader). The meter stays live.
     uint64_t m_staticCacheId{0};
@@ -80,14 +85,17 @@ private:
     bool m_cachedMuted{false};
     bool m_cachedSoloed{false};
     bool m_cachedArmed{false};
+    bool m_cachedMonitored{false};
     bool m_cachedStripHovered{false};
     bool m_cachedShowChannelControls{true};
     bool m_cachedFaderHovered{false};
     bool m_cachedTrimHovered{false};
     bool m_cachedPanHovered{false};
+    bool m_cachedWidthHovered{false}; // New!
     float m_cachedFaderDb{0.0f};
     float m_cachedTrimDb{0.0f};
     float m_cachedPan{0.0f};
+    float m_cachedWidth{1.0f}; // New!
     int m_cachedFxCount{0};
 
     void cacheThemeColors();

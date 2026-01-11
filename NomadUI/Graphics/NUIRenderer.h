@@ -151,6 +151,13 @@ public:
      */
     virtual void fillWaveform(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, const NUIColor& color) = 0;
     
+    /**
+     * Draw a waveform with gradient fill (bright at top, darker at bottom).
+     * Creates a polished "3D" effect for audio visualization.
+     */
+    virtual void fillWaveformGradient(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, 
+                                       const NUIColor& colorTop, const NUIColor& colorBottom) = 0;
+    
     // ========================================================================
     // Gradient Drawing
     // ========================================================================

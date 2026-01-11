@@ -7,7 +7,7 @@
 using namespace Nomad::Audio;
 
 PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
-    : WindowPanel("Piano Roll")
+    : WindowPanel("PIANO ROLL")
     , m_trackManager(trackManager)
     , m_currentPatternId(0)  // Initialize as invalid
 {
@@ -19,9 +19,10 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     // Start with empty notes (will load when pattern is opened)
     m_pianoRoll->setNotes({});
     
-    // Set as content
+    // Set as content of WindowPanel
     setContent(m_pianoRoll);
 }
+
 
 void PianoRollPanel::setPixelsPerBeat(float ppb) {
     if (m_pianoRoll) {
@@ -62,7 +63,7 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
         }
         
         m_pianoRoll->setNotes(uiNotes);
-        setTitle("Piano Roll - " + pattern->name);
+        setTitle("PIANO ROLL - " + pattern->name);
         
         Log::info("[PianoRollPanel] Loaded pattern " + std::to_string(patternId.value) + 
                   " with " + std::to_string(uiNotes.size()) + " notes");

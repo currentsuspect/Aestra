@@ -16,7 +16,7 @@ namespace Nomad {
 namespace Audio {
 
 /**
- * @brief WindowPanel - A dockable window panel with title bar (FL Studio style)
+ * @brief WindowPanel - A dockable window panel with title bar
  * 
  * Features:
  * - Title bar with minimize/maximize buttons
@@ -49,6 +49,9 @@ public:
 
     float getTitleBarHeight() const { return m_titleBarHeight; }
     bool isUserPositioned() const { return m_userPositioned; }
+
+    float getExpandedHeight() const { return m_expandedHeight; }
+    void setUserPositioned(bool positioned) { m_userPositioned = positioned; }
 
     // Component overrides
     void onRender(NomadUI::NUIRenderer& renderer) override;

@@ -4,14 +4,16 @@
 #include "WindowPanel.h"
 #include "../NomadAudio/include/TrackManager.h"
 #include "../NomadUI/Widgets/UnitRow.h"
+#include "../NomadUI/Widgets/UnitColorPicker.h"
 #include "../NomadUI/Core/NUIComponent.h"
+#include <optional>
 
 namespace Nomad {
 namespace Audio {
 
 /**
  * @brief The Arsenal: Unit-Based Sequencer Window
- * Replaces the traditional Step Sequencer with a persistent "Rack" of Units.
+ * Standardized as a WindowPanel (v3.1)
  */
 class ArsenalPanel : public WindowPanel {
 public:
@@ -19,7 +21,9 @@ public:
     ~ArsenalPanel() override = default;
 
     void onRender(NomadUI::NUIRenderer& renderer) override;
-    
+    void onResize(int width, int height) override;
+    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
+
     // Rebuilds the UI from UnitManager state
     void refreshUnits();
     
@@ -31,11 +35,22 @@ public:
     
     // Get current active pattern
     PatternID getActivePatternID() const { return m_activePatternID; }
+    
+    // Step count configuration (16/32/64)
+    void setStepCount(int count);
+    int getStepCount() const { return m_stepCount; }
+    
+    // Copy/paste operations
+    void copySelectedPattern();
+    void pastePattern();
+    
+    // Internal Integration
+    void setOnRequestEditor(std::function<void(UnitID)> cb) { m_onRequestEditor = cb; }
+    void setOnRequestLoadSample(std::function<void(UnitID)> cb) { m_onRequestLoadSample = cb; }
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;
     
-    // Container for the scrollable list of units
     // Container for the scrollable list of units
     std::shared_ptr<NomadUI::NUIComponent> m_listContainer;
     std::vector<std::shared_ptr<NomadUI::UnitRow>> m_unitRows;
@@ -43,20 +58,51 @@ private:
     // Footer controls
     std::shared_ptr<NomadUI::NUIComponent> m_footer;
     
+    // Color picker popup
+    std::shared_ptr<NomadUI::UnitColorPicker> m_colorPicker;
+    UnitID m_colorPickerTargetUnit = 0;
+    
+    // Drag-drop state
+    bool m_isDragging = false;
+    UnitID m_draggedUnitId = 0;
+    int m_dropTargetIndex = -1;
+    
     // Layout & Scrolling
     float m_scrollY = 0.0f;
+    int m_stepCount = 16; // Default step count
     void layoutUnits();
+    
+    // Pattern Progress Visualization
+    static constexpr float PROGRESS_HEADER_HEIGHT = 20.0f;
+    int m_currentPlayStep = -1;  // Current step for visualization (-1 = not playing)
+    void drawProgressHeader(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds);
+    int calculateCurrentStep(); // Calculate step from TrackManager clock
 
     // Pattern Management (driven by Pattern Browser)
     PatternID m_activePatternID = 0; // The pattern being edited
     class PatternBrowserPanel* m_patternBrowser = nullptr; // For refresh
     void ensureDefaultPattern(); // Auto-create Pattern 1 if needed
+    
+    // Copy/paste clipboard
+    struct PatternClipboard {
+        std::vector<MidiNote> notes;
+        UnitID sourceUnitId;
+    };
+    std::optional<PatternClipboard> m_clipboard;
+    UnitID m_selectedUnitId = 0; // Currently selected unit for copy/paste
 
     void createLayout();
     void onAddUnit();
     
-    void onResize(int width, int height) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
+    // Drag-drop callbacks
+    void onUnitDragStart(UnitID unitId);
+    void onUnitDrop(UnitID unitId, int dropIndex);
+    void showColorPicker(UnitID unitId, NomadUI::NUIPoint position);
+    
+    bool onKeyEvent(const NomadUI::NUIKeyEvent& event) override;
+    
+    std::function<void(UnitID)> m_onRequestEditor;
+    std::function<void(UnitID)> m_onRequestLoadSample;
 };
 
 } // namespace Audio

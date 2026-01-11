@@ -31,6 +31,13 @@ public:
      * @param dbR Right channel level in dB
      */
     void setLevels(float dbL, float dbR);
+    
+    /**
+     * @brief Set RMS meter levels (in dB).
+     * @param dbL Left channel RMS in dB
+     * @param dbR Right channel RMS in dB
+     */
+    void setRmsLevels(float dbL, float dbR);
 
     /**
      * @brief Set fast peak overlay (in dB).
@@ -56,6 +63,23 @@ public:
     /// Render meters in a muted/monochrome style (levels still update).
     void setDimmed(bool dimmed);
 
+    /**
+     * @brief Set phase correlation value (-1.0 to 1.0).
+     */
+    void setCorrelation(float correlation);
+
+    /**
+     * @brief Show/Hide correlation meter.
+     */
+    void setShowCorrelation(bool show);
+
+    /**
+     * @brief Set integrated LUFS value (dB).
+     *
+     * @param lufs Integrated LUFS value (e.g., -14.0)
+     */
+    void setIntegratedLufs(float lufs);
+
     /// Callback when clip indicator is clicked (to clear clip latch)
     std::function<void()> onClipCleared;
 
@@ -63,13 +87,18 @@ private:
     // Current meter state (in dB)
     float m_peakL{-90.0f};
     float m_peakR{-90.0f};
+    float m_rmsL{-90.0f};
+    float m_rmsR{-90.0f};
     float m_peakOverlayL{-90.0f};
     float m_peakOverlayR{-90.0f};
     float m_peakHoldL{-90.0f};
     float m_peakHoldR{-90.0f};
+    float m_correlation{0.0f}; // -1 (180 out), 0 (90 deg), 1 (in phase)
+    float m_integratedLufs{-144.0f}; // LUFS
     bool m_clipL{false};
     bool m_clipR{false};
     bool m_dimmed{false};
+    bool m_showCorrelation{false};
 
     // Cached theme colors (avoid per-frame lookups)
     NUIColor m_colorGreen;
@@ -114,7 +143,7 @@ private:
      * @param clip Whether clip latch is active
      */
     void renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
-                        float levelDb, float peakOverlayDb, float peakHoldDb, bool clip);
+                        float peakDb, float rmsDb, float peakOverlayDb, float peakHoldDb, bool clip);
 
     /**
      * @brief Get the color for a given dB level.

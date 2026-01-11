@@ -1,6 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PlaylistTrack.h"
+#include "FastMath.h"
 #include "NomadLog.h"
 #include <algorithm>
 #include <cstring>
@@ -173,10 +174,11 @@ void PlaylistTrack::processAudio(float* outputBuffer, uint32_t numFrames, double
     float volume = m_volume.load();
     float pan = m_pan.load();
     
-    // Calculate pan gains (constant power)
-    float panAngle = (pan + 1.0f) * 0.25f * 3.14159265f;  // 0 to PI/2
-    float leftGain = std::cos(panAngle) * volume;
-    float rightGain = std::sin(panAngle) * volume;
+    // Calculate pan gains (fast constant power using FastMath)
+    float leftGain, rightGain;
+    FastMath::fastPan(pan, leftGain, rightGain);
+    leftGain *= volume;
+    rightGain *= volume;
     
     // Process each clip
     std::lock_guard<std::mutex> lock(m_clipMutex);

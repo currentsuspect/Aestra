@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "NUIComponent.h"
@@ -41,6 +41,9 @@ public:
     // Window state
     void setMaximized(bool maximized);
     bool isMaximized() const { return titleBar_->isMaximized(); }
+    
+    // Access title bar for adding custom components (like toggle buttons)
+    std::shared_ptr<NUICustomTitleBar> getTitleBar() const { return titleBar_; }
 
     // Component overrides
     void onRender(NUIRenderer& renderer) override;

@@ -41,40 +41,29 @@ private:
 
     const FileItem* currentFile_ = nullptr;
     std::vector<float> waveformData_;
+    mutable std::mutex waveformMutex_;
     
     bool isPlaying_ = false;
     bool isLoading_ = false;
     float loadingAnimationTime_ = 0.0f;
-
+    double playheadPosition_ = 0.0;
+    double duration_ = 0.0;
+    
+    // Async control
+    std::atomic<uint64_t> currentGeneration_{0};
+    
     // Layout
     NUIRect playButtonBounds_;
 
     std::function<void(const FileItem&)> onPlay_;
     std::function<void()> onStop_;
+    std::function<void(double)> onSeek_;
 
     // Icons
     std::shared_ptr<NUIIcon> folderIcon_;
     std::shared_ptr<NUIIcon> fileIcon_;
-
-    void onUpdate(double deltaTime) override;
-
-    // Mutex for async data transfer
-    std::mutex waveformMutex_;
-    std::vector<float> pendingWaveform_;
-    uint32_t loadedSampleRate_ = 0;
-    uint32_t loadedChannels_ = 0;
-    size_t loadedDurationMs_ = 0;
-    double loadedDurationSeconds_ = 0.0;
-    double playheadPosition_ = 0.0; // Current playback time in seconds
-    
-    // Callbacks
-    std::function<void(double)> onSeek_; 
-
-    // Async Loading
-    std::future<void> loadFuture_;
-    std::atomic<bool> cancelLoading_{false};
-    std::atomic<bool> waveformReady_{false};
-    std::string loadedFilePath_; // To verify completion matches current request
+    std::shared_ptr<NUIIcon> playIcon_;
+    std::shared_ptr<NUIIcon> stopIcon_;
 };
 
 } // namespace NomadUI

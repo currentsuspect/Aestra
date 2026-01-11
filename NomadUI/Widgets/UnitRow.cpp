@@ -1,5 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UnitRow.h"
+#include <chrono>
+#include <algorithm>
 #include "../Core/NUIThemeSystem.h"
 #include "../Graphics/NUIRenderer.h"
 
@@ -28,158 +30,313 @@ void UnitRow::updateState() {
                       unit->audioClipPath.substr(unit->audioClipPath.find_last_of("/\\") + 1);
         m_mixerChannel = unit->targetMixerRoute;
     }
+    invalidateVisuals();
 }
 
 void UnitRow::onRender(NUIRenderer& renderer) {
+    // Invalidate cache if flagged (e.g. state change or hover)
+    if (m_needsCacheUpdate) {
+        renderer.invalidateCache(reinterpret_cast<uint64_t>(this));
+        m_needsCacheUpdate = false;
+    }
+
+    auto bounds = getBounds();
+    
+    // Render utilizing the FBO cache for performance (prevents popping/flicker on click)
+    // The lambda is only executed if the cache is invalid.
+    bool usedCache = renderer.renderCachedOrUpdate(reinterpret_cast<uint64_t>(this), bounds, [this, &renderer, bounds]() {
+        // Transform absolute specific drawings to FBO-local space (0,0 based)
+        // This ensures drawing at 'bounds.x' works correctly within the FBO texture.
+        renderer.pushTransform(-bounds.x, -bounds.y);
+        this->drawContent(renderer);
+        renderer.popTransform();
+    });
+    
+    // If caching isn't supported by the renderer, fallback to direct draw
+    if (!usedCache) {
+        drawContent(renderer);
+    }
+    
+    // Render dynamic children (Input Widget, Context Menu) on top
+    // Push UnitRow position so children (relative coords) draw correctly
+    renderer.pushTransform(bounds.x, bounds.y);
+    renderChildren(renderer);
+    renderer.popTransform();
+}
+
+void UnitRow::drawContent(NUIRenderer& renderer) {
     auto bounds = getBounds();
     auto& theme = NUIThemeManager::getInstance();
     
-    // "Premium Card" Style
-    // Instead of a flat row, we draw a floating card with rounded corners.
-    // We shrink the bounds slightly to create spacing/gap between rows.
+    // === Premium Card Style v2 ===
     NUIRect cardBounds = bounds;
-    cardBounds.height -= 4.0f; // 4px gap at bottom
-    // cardBounds.x += 4.0f;
-    // cardBounds.width -= 8.0f; // Side margins
+    cardBounds.height -= 4.0f; // Gap at bottom for visual separation
     
-    // Background: Deep Dark Grey/Black Card
-    NUIColor cardBg = theme.getColor("surfaceRaised"); // slightly lighter than backgroundPrimary
+    // Background: Rich dark card with subtle depth
+    NUIColor cardBg = theme.getColor("surfaceRaised");
     if (m_isHovered) {
-        cardBg = cardBg.lightened(0.05f);
+        cardBg = cardBg.lightened(0.06f);
+    }
+    if (m_isDragging) {
+        cardBg = cardBg.lightened(0.10f);
     }
     
-    renderer.fillRoundedRect(cardBounds, 6.0f, cardBg);
-    renderer.strokeRoundedRect(cardBounds, 6.0f, 1.0f, theme.getColor("borderSubtle"));
+    renderer.fillRoundedRect(cardBounds, 8.0f, cardBg);
     
-    // Glowing Color Strip (Left Edge)
-    // Extract RGB from ARGB
+    // Subtle border
+    NUIColor borderColor = m_isHovered ? theme.getColor("borderSubtle").lightened(0.1f) 
+                                        : theme.getColor("borderSubtle");
+    renderer.strokeRoundedRect(cardBounds, 8.0f, 1.0f, borderColor);
+    
+    // === Unit Accent Color (from unit's color) ===
     float r = ((m_color >> 16) & 0xFF) / 255.0f;
     float g = ((m_color >> 8) & 0xFF) / 255.0f;
     float b = (m_color & 0xFF) / 255.0f;
     NUIColor accentColor(r, g, b, 1.0f);
     
-    // Draw a "Pill" strip on the left
-    NUIRect stripRect(cardBounds.x + 4.0f, cardBounds.y + 4.0f, 4.0f, cardBounds.height - 8.0f);
-    renderer.fillRoundedRect(stripRect, 2.0f, accentColor);
+    // === Drag Handle Area (left edge) ===
+    NUIRect dragRect(cardBounds.x, cardBounds.y, DRAG_HANDLE_WIDTH, cardBounds.height);
+    drawDragHandle(renderer, dragRect);
     
-    // Shadow/Glow from strip
+    // === Glowing Color Strip ===
+    float stripX = cardBounds.x + DRAG_HANDLE_WIDTH + 2.0f;
+    NUIRect stripRect(stripX, cardBounds.y + 6.0f, COLOR_STRIP_WIDTH, cardBounds.height - 12.0f);
+    renderer.fillRoundedRect(stripRect, 2.5f, accentColor);
+    
+    // Outer glow for enabled units
     if (m_isEnabled) {
-        renderer.strokeRoundedRect(stripRect, 2.0f, 2.0f, accentColor.withAlpha(0.3f));
+        NUIRect glowRect(stripRect.x - 2, stripRect.y - 2, stripRect.width + 4, stripRect.height + 4);
+        renderer.strokeRoundedRect(glowRect, 3.5f, 2.0f, accentColor.withAlpha(0.35f));
     }
     
-    // Divide into Control (Left) and Context (Right)
-    NUIRect controlRect(cardBounds.x + 12.0f, cardBounds.y, m_controlWidth - 8.0f, cardBounds.height);
-    NUIRect contextRect(cardBounds.x + m_controlWidth + 4.0f, cardBounds.y, cardBounds.width - m_controlWidth - 8.0f, cardBounds.height);
-    
+    // === Control Block (left side controls) ===
+    float controlStartX = stripX + COLOR_STRIP_WIDTH + 8.0f;
+    NUIRect controlRect(controlStartX, cardBounds.y, m_controlWidth - DRAG_HANDLE_WIDTH - COLOR_STRIP_WIDTH - 16.0f, cardBounds.height);
     drawControlBlock(renderer, controlRect);
     
-    // Separator (vertical line)
+    // === Vertical Separator ===
+    float separatorX = cardBounds.x + m_controlWidth;
     renderer.drawLine(
-        NUIPoint(contextRect.x - 2.0f, cardBounds.y + 6.0f),
-        NUIPoint(contextRect.x - 2.0f, cardBounds.y + cardBounds.height - 6.0f),
+        NUIPoint(separatorX, cardBounds.y + 8.0f),
+        NUIPoint(separatorX, cardBounds.y + cardBounds.height - 8.0f),
         1.0f, theme.getColor("borderSubtle")
     );
     
+    // === Context Block (step sequencer grid) ===
+    NUIRect contextRect(separatorX + 6.0f, cardBounds.y, cardBounds.width - m_controlWidth - 12.0f, cardBounds.height);
     drawContextBlock(renderer, contextRect);
+}
+
+void UnitRow::drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds) {
+    auto& theme = NUIThemeManager::getInstance();
+    
+    // Draw grip lines (3 horizontal lines)
+    float centerY = bounds.y + bounds.height / 2.0f;
+    float lineWidth = 8.0f;
+    float lineX = bounds.x + (bounds.width - lineWidth) / 2.0f;
+    float lineSpacing = 4.0f;
+    
+    NUIColor gripColor = m_isHovered ? theme.getColor("textSecondary") : theme.getColor("textDisabled");
+    
+    for (int i = -1; i <= 1; ++i) {
+        float y = centerY + (i * lineSpacing);
+        renderer.drawLine(
+            NUIPoint(lineX, y),
+            NUIPoint(lineX + lineWidth, y),
+            1.5f, gripColor
+        );
+    }
+}
+
+void UnitRow::drawPowerIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
+    auto& theme = NUIThemeManager::getInstance();
+    float cx = bounds.x + bounds.width / 2.0f;
+    float cy = bounds.y + bounds.height / 2.0f;
+    float radius = bounds.width / 2.0f - 2.0f;
+    
+    NUIColor color = active ? theme.getColor("accentPrimary") : theme.getColor("textDisabled");
+    
+    // Outer circle
+    renderer.strokeCircle(NUIPoint(cx, cy), radius, 1.5f, color);
+    
+    // Inner dot when active
+    if (active) {
+        renderer.fillCircle(NUIPoint(cx, cy), radius * 0.4f, color);
+        // Glow
+        renderer.strokeCircle(NUIPoint(cx, cy), radius + 2.0f, 1.5f, color.withAlpha(0.3f));
+    }
+}
+
+void UnitRow::drawArmIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
+    auto& theme = NUIThemeManager::getInstance();
+    float cx = bounds.x + bounds.width / 2.0f;
+    float cy = bounds.y + bounds.height / 2.0f;
+    float radius = bounds.width / 2.0f - 2.0f;
+    
+    NUIColor color = active ? theme.getColor("accentRed") : theme.getColor("textSecondary");
+    
+    // Outer circle (record button style)
+    renderer.strokeCircle(NUIPoint(cx, cy), radius, 1.5f, color);
+    
+    // Inner filled circle when armed
+    if (active) {
+        renderer.fillCircle(NUIPoint(cx, cy), radius * 0.6f, color);
+    }
+}
+
+void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
+    auto& theme = NUIThemeManager::getInstance();
+    
+    NUIColor bgColor = active ? NUIColor(1.0f, 0.6f, 0.2f, 1.0f) : theme.getColor("backgroundPrimary");
+    NUIColor textColor = active ? NUIColor(0.0f, 0.0f, 0.0f, 1.0f) : theme.getColor("textSecondary");
+    NUIColor borderColor = active ? bgColor : theme.getColor("textDisabled");
+    
+    // Rounded rectangle button
+    renderer.fillRoundedRect(bounds, 4.0f, bgColor);
+    if (!active) {
+        renderer.strokeRoundedRect(bounds, 4.0f, 1.0f, borderColor);
+    }
+    
+    // "M" label centered
+    renderer.drawTextCentered("M", bounds, 11.0f, textColor);
+}
+
+void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
+    auto& theme = NUIThemeManager::getInstance();
+    
+    NUIColor bgColor = active ? NUIColor(1.0f, 0.85f, 0.2f, 1.0f) : theme.getColor("backgroundPrimary");
+    NUIColor textColor = active ? NUIColor(0.0f, 0.0f, 0.0f, 1.0f) : theme.getColor("textSecondary");
+    NUIColor borderColor = active ? bgColor : theme.getColor("textDisabled");
+    
+    // Rounded rectangle button
+    renderer.fillRoundedRect(bounds, 4.0f, bgColor);
+    if (!active) {
+        renderer.strokeRoundedRect(bounds, 4.0f, 1.0f, borderColor);
+    }
+    
+    // "S" label centered
+    renderer.drawTextCentered("S", bounds, 11.0f, textColor);
+}
+
+void UnitRow::drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
+    auto& theme = NUIThemeManager::getInstance();
+    
+    NUIColor color = active ? theme.getColor("accentPrimary") : theme.getColor("textSecondary");
+    if (!m_isHovered && !active) color = theme.getColor("textDisabled");
+    
+    float cx = bounds.x + bounds.width / 2.0f;
+    float cy = bounds.y + bounds.height / 2.0f;
+    float r = 6.0f;
+    
+    // Simple "Settings" cog visual
+    renderer.strokeCircle(NUIPoint(cx, cy), r, 1.5f, color);
+    renderer.fillCircle(NUIPoint(cx, cy), 2.0f, color);
+    
+    // Teeth (Cardinals)
+    renderer.drawLine(NUIPoint(cx, cy - r - 2), NUIPoint(cx, cy + r + 2), 2.0f, color);
+    renderer.drawLine(NUIPoint(cx - r - 2, cy), NUIPoint(cx + r + 2, cy), 2.0f, color);
 }
 
 void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
     float centerY = bounds.y + bounds.height * 0.5f;
-    
-    // Layout Cursor
     float x = bounds.x;
     
-    // 1. Power (Toggle Switch Style)
-    float iconSize = 14.0f;
-    // NUIColor powerColor = m_isEnabled ? theme.getColor("accentPrimary") : theme.getColor("textDisabled");
-    // renderer.fillCircle(NUIPoint(x + iconSize/2, centerY), 4.0f, powerColor);
-    // renderer.strokeCircle(NUIPoint(x + iconSize/2, centerY), iconSize/2 + 2.0f, 1.0f, powerColor.withAlpha(0.5f));
+    // === 1. Power Button ===
+    NUIRect pwrRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
+    drawPowerIcon(renderer, pwrRect, m_isEnabled);
+    x += BUTTON_SIZE + BUTTON_SPACING;
     
-    // Cleaner Power Icon
-    NUIRect pwrRect(x, centerY - iconSize/2, iconSize, iconSize);
-    NUIColor pwrColor = m_isEnabled ? theme.getColor("accentPrimary") : theme.getColor("textDisabled");
-    renderer.drawText("P", NUIPoint(x+3, pwrRect.y+2), 10.0f, pwrColor); // Placeholder for proper icon if needed, or simple circle?
-    // Let's stick to the filled circle for power, it's classic
-    renderer.fillCircle(NUIPoint(x + 6.0f, centerY), 4.0f, pwrColor);
-    if (m_isEnabled) renderer.strokeCircle(NUIPoint(x + 6.0f, centerY), 7.0f, 1.0f, pwrColor.withAlpha(0.4f));
+    // === 2. Arm Button ===
+    NUIRect armRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
+    drawArmIcon(renderer, armRect, m_isArmed);
+    x += BUTTON_SIZE + BUTTON_SPACING;
+    
+    // === 3. Mute Button ===
+    NUIRect muteRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
+    drawMuteIcon(renderer, muteRect, m_isMuted);
+    x += BUTTON_SIZE + BUTTON_SPACING;
+    
+    // === 4. Solo Button ===
+    NUIRect soloRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
+    drawSoloIcon(renderer, soloRect, m_isSolo);
+    x += BUTTON_SIZE + BUTTON_SPACING;
 
-    x += 24.0f; // Gap
+    // === 5. Edit Button (New) ===
+    NUIRect gearRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
+    drawGearIcon(renderer, gearRect, false); // Always "inactive" state unless toggled? Just use clickable style
+    x += BUTTON_SIZE + BUTTON_SPACING + 4.0f;
     
-    // 2. Arm (Record)
-    NUIRect armRect(x, centerY - 8.0f, 16.0f, 16.0f);
-    NUIColor armColor = m_isArmed ? theme.getColor("accentRed") : theme.getColor("textSecondary");
-    renderer.strokeCircle(NUIPoint(x + 8.0f, centerY), 6.0f, 1.5f, armColor);
-    if (m_isArmed) renderer.fillCircle(NUIPoint(x + 8.0f, centerY), 4.0f, armColor);
-    
-    x += 24.0f;
-    
-    // 3. Mute / Solo (Rounded Rect Buttons)
-    float btnSize = 18.0f;
-    
-    // Mute
-    NUIRect muteRect(x, centerY - btnSize/2, btnSize, btnSize);
-    bool muteActive = m_isMuted;
-    NUIColor muteBg = muteActive ? theme.getColor("accentOrange") : theme.getColor("backgroundPrimary");
-    NUIColor muteText = muteActive ? theme.getColor("textPrimary") : theme.getColor("textSecondary");
-    // renderer.fillRoundedRect(muteRect, 4.0f, muteBg);
-    // renderer.strokeRoundedRect(muteRect, 4.0f, 1.0f, theme.getColor("borderSubtle"));
-    if (muteActive) renderer.fillRoundedRect(muteRect, 4.0f, muteBg);
-    else renderer.strokeRoundedRect(muteRect, 4.0f, 1.0f, theme.getColor("textDisabled"));
-    
-    renderer.drawText("M", NUIPoint(x+4, muteRect.y+4), 10.0f, muteText);
-    
-    x += 24.0f;
-    
-    // Solo
-    NUIRect soloRect(x, centerY - btnSize/2, btnSize, btnSize);
-    bool soloActive = m_isSolo;
-    NUIColor soloBg = soloActive ? theme.getColor("accentYellow") : theme.getColor("backgroundPrimary");
-    NUIColor soloText = soloActive ? NUIColor(0,0,0,1) : theme.getColor("textSecondary"); // Black text on yellow active
-    
-    if (soloActive) renderer.fillRoundedRect(soloRect, 4.0f, soloBg);
-    else renderer.strokeRoundedRect(soloRect, 4.0f, 1.0f, theme.getColor("textDisabled"));
+    // === 5. Unit Name ===
+    // Dynamic width calculation to fill space up to mixer channel
+    float mixerRight = bounds.width - DRAG_HANDLE_WIDTH - COLOR_STRIP_WIDTH - 8.0f;
+    float mixerBitStart = mixerRight - 50.0f; 
+    float nameWidth = std::max(50.0f, mixerBitStart - x);
 
-    renderer.drawText("S", NUIPoint(x+5, soloRect.y+4), 10.0f, soloText);
+    if (!m_isEditingName) {
+        // Truncate long names to fit available space
+        std::string displayName = m_name;
+        float maxNameWidth = nameWidth - 10.0f; // Leave some padding
+        auto textSize = renderer.measureText(displayName, 13.0f);
+        
+        if (textSize.width > maxNameWidth && displayName.length() > 3) {
+            // Binary search for truncation point
+            while (textSize.width > maxNameWidth && displayName.length() > 3) {
+                displayName = displayName.substr(0, displayName.length() - 1);
+                textSize = renderer.measureText(displayName + "...", 13.0f);
+            }
+            displayName += "...";
+        }
+        
+        float textY = centerY - (13.0f * 0.38f);
+        renderer.drawText(displayName, NUIPoint(x, textY), 13.0f, theme.getColor("textPrimary"));
+    }
     
-    x += 28.0f;
-    
-    // 4. Name Label (Stronger Font)
-    renderer.drawText(m_name, NUIPoint(x, centerY - 7.0f), 14.0f, theme.getColor("textPrimary"));
-    
-    // 5. Info (Right Aligned in Control Block)
+    // === Right-aligned info (Mixer Channel only - sample name is now the unit name) ===
     float rightX = bounds.x + bounds.width - 4.0f;
     
     // Mixer Channel Tag
     if (m_mixerChannel >= 0) {
         std::string mixText = "CH " + std::to_string(m_mixerChannel + 1);
-        float w = renderer.measureText(mixText, 9.0f).width + 8.0f;
-        NUIRect tagRect(rightX - w, centerY - 8.0f, w, 16.0f);
-        renderer.fillRoundedRect(tagRect, 3.0f, theme.getColor("backgroundSecondary"));
-        renderer.strokeRoundedRect(tagRect, 3.0f, 1.0f, theme.getColor("borderSubtle"));
-        renderer.drawText(mixText, NUIPoint(tagRect.x + 4.0f, centerY - 5.0f), 9.0f, theme.getColor("textSecondary"));
-        rightX -= (w + 6.0f);
+        float w = renderer.measureText(mixText, 10.0f).width + 10.0f;
+        
+        NUIRect tagRect(rightX - w, centerY - 9.0f, w, 18.0f);
+        renderer.fillRoundedRect(tagRect, 4.0f, theme.getColor("backgroundSecondary"));
+        renderer.strokeRoundedRect(tagRect, 4.0f, 1.0f, theme.getColor("borderSubtle"));
+        
+        float textY = renderer.calculateTextY(tagRect, 10.0f);
+        renderer.drawText(mixText, NUIPoint(tagRect.x + 5.0f, textY), 10.0f, theme.getColor("textSecondary"));
     }
-    
-    // Audio Clip Name
-    if (!m_audioClip.empty()) {
-        std::string clipText = m_audioClip;
-        float w = renderer.measureText(clipText, 10.0f).width; // approximate
-        // truncation logic omitted for brevity
-        renderer.drawText(clipText, NUIPoint(rightX - w - 10.0f, centerY - 6.0f), 10.0f, theme.getColor("accentCyan"));
-    }
+    // Note: Audio clip name display removed - the unit name already shows the loaded sample
 }
 
 void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
     
-    // "LED Pad" Grid - 16 Steps
-    float stepWidth = bounds.width / 16.0f;
-    // Center the pads vertically
-    float padSize = std::min(stepWidth - 4.0f, bounds.height - 8.0f);
+    // === Extract unit's accent color for active steps ===
+    float r = ((m_color >> 16) & 0xFF) / 255.0f;
+    float g = ((m_color >> 8) & 0xFF) / 255.0f;
+    float b = (m_color & 0xFF) / 255.0f;
+    NUIColor unitAccent(r, g, b, 1.0f);
+    
+    // === Step Grid Layout ===
+    // Use minimum step width to enable scrolling for high step counts
+    float availWidth = bounds.width;
+    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f); // Min 26px
+    float totalWidth = stepWidth * m_stepCount;
+    
+    // Clamp scroll
+    float maxScroll = std::max(0.0f, totalWidth - availWidth);
+    m_scrollX = std::max(0.0f, std::min(m_scrollX, maxScroll));
+    
+    float padSize = stepWidth - PAD_SPACING;
+    padSize = std::max(padSize, PAD_MIN_SIZE);
+    // Cap pad size to height (minus margins)
+    padSize = std::min(padSize, bounds.height - 10.0f);
+    
     float gridY = bounds.y + (bounds.height - padSize) / 2.0f;
     
-    // Fetch active steps from pattern
+    // === Fetch Active Steps ===
     std::vector<int> activeSteps;
     if (m_patternId.isValid()) {
         auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId);
@@ -189,151 +346,374 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 if (note.unitId != m_unitId && note.unitId != 0) continue;
                 if (note.pitch != 60) continue;
                 int step = static_cast<int>(std::floor(note.startBeat / 0.25 + 0.1));
-                if (step >= 0 && step < 16) activeSteps.push_back(step);
+                if (step >= 0 && step < m_stepCount) activeSteps.push_back(step);
             }
         }
     }
     
-    // Theme-based colors for step sequencer
+    // Theme colors
     NUIColor stepInactiveColor = theme.getColor("stepInactive");
-    NUIColor stepActiveColor = theme.getColor("stepActive");
-    NUIColor stepBeatMarkerColor = theme.getColor("stepBeatMarker");
-    NUIColor stepBarMarkerColor = theme.getColor("stepBarMarker");
-    NUIColor stepGlowColor = theme.getColor("stepTriggerGlow");
+    NUIColor stepActiveColor = unitAccent; 
+    NUIColor stepGlowColor = unitAccent.withAlpha(0.5f);
     
-    for (int i = 0; i < 16; ++i) {
-        float stepX = bounds.x + (i * stepWidth) + (stepWidth - padSize) / 2.0f;
+    // Clip to bounds to handle scrolling
+    // Note: If NUIRenderer doesn't support nested clip well, we manually clip logic below.
+    // We'll rely on manual visibility check.
+    
+    // === Render Each Step Pad ===
+    for (int i = 0; i < m_stepCount; ++i) {
+        float stepX = bounds.x + (i * stepWidth) + (stepWidth - padSize) / 2.0f - m_scrollX;
+        
+        // Visibility Culling
+        if (stepX + padSize < bounds.x) continue;
+        if (stepX > bounds.x + bounds.width) continue;
+        
         NUIRect padRect(stepX, gridY, padSize, padSize);
         
-        // Determine if this step is on a bar/beat boundary for visual hierarchy
-        bool isBarStart = (i == 0 || i == 4 || i == 8 || i == 12);  // Every 4 beats (1 bar in 4/4)
-        bool isBeatStart = (i % 4 == 0);
+        // Visual hierarchy: bar/beat markers
+        bool isBarStart = (i % 4 == 0);
+        bool isFirstBeat = (i == 0);
         
-        // Background for inactive pads - subtle hierarchy
+        // Inactive pad background
         NUIColor bgColor = stepInactiveColor;
-        if (isBarStart) {
-            bgColor = bgColor.lightened(0.08f);  // Bar markers slightly brighter
-        } else if (isBeatStart) {
-            bgColor = bgColor.lightened(0.04f);  // Beat markers subtle
+        if (isFirstBeat) {
+            bgColor = bgColor.lightened(0.10f);
+        } else if (isBarStart) {
+            bgColor = bgColor.lightened(0.05f);
         }
         
-        renderer.fillRoundedRect(padRect, 3.0f, bgColor);
+        // Hover effect
+        if (i == m_hoveredStep) {
+            bgColor = bgColor.lightened(0.2f);
+        }
         
-        // Border with hierarchy - bars get accent color border
-        NUIColor borderColor = isBarStart ? stepBarMarkerColor.withAlpha(0.4f) : 
-                               isBeatStart ? stepBeatMarkerColor : 
-                               theme.getColor("borderSubtle").withAlpha(0.3f);
-        renderer.strokeRoundedRect(padRect, 3.0f, 1.0f, borderColor);
+        // Draw pad base
+        renderer.fillRoundedRect(padRect, 4.0f, bgColor);
         
-        // Check if step is active
-        bool isActive = false;
-        for (int s : activeSteps) { if (s == i) { isActive = true; break; } }
-        
+        // Draw active state
+        bool isActive = std::find(activeSteps.begin(), activeSteps.end(), i) != activeSteps.end();
         if (isActive) {
-            // Glowing Active Pad - Premium Look
-            renderer.fillRoundedRect(padRect, 3.0f, stepActiveColor);
+            renderer.fillRoundedRect(padRect, 4.0f, stepActiveColor);
             
-            // Inner highlight (center shine)
-            NUIRect innerRect(padRect.x + 2, padRect.y + 2, padSize - 4, padSize - 4);
-            renderer.fillRoundedRect(innerRect, 2.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.25f));
+            NUIRect shineRect(padRect.x + 2, padRect.y + 2, padSize - 4, padSize / 3);
+            renderer.fillRoundedRect(shineRect, 2.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.25f));
             
-            // Outer glow effect
             NUIRect glowRect(padRect.x - 2, padRect.y - 2, padSize + 4, padSize + 4);
-            renderer.strokeRoundedRect(glowRect, 4.0f, 2.0f, stepGlowColor);
+            renderer.strokeRoundedRect(glowRect, 5.0f, 2.0f, stepGlowColor);
         }
+        
+        // Border with hierarchy
+        NUIColor borderColor = isBarStart ? theme.getColor("borderSubtle").lightened(0.15f)
+                                          : theme.getColor("borderSubtle").withAlpha(0.4f);
+        renderer.strokeRoundedRect(padRect, 4.0f, 1.0f, borderColor);
     }
 }
 
 bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
-    // Hover Logic
-    bool wasHovered = m_isHovered;
-    m_isHovered = getBounds().contains(event.position);
-    if (wasHovered != m_isHovered) repaint();
+    auto bounds = getBounds();
+
+    // Forward events to active input widget (convert to local space)
+    if (m_isEditingName && m_nameInput) {
+        NUIMouseEvent localEvent = event;
+        localEvent.position.x -= bounds.x;
+        localEvent.position.y -= bounds.y;
+        
+        // Let input widget handle the event (and potentially take focus)
+        if (m_nameInput->onMouseEvent(localEvent)) {
+            return true;
+        }
+    }
     
-    if (event.pressed && event.button == NUIMouseButton::Left) {
-        auto bounds = getBounds();
-        // Check if click is inside bounds
-        if (bounds.contains(event.position)) {
-            float relativeX = event.position.x - bounds.x;
+    // === Scroll Handling ===
+    if (std::abs(event.wheelDelta) > 0.0f) {
+        // Only scroll if hovering over step grid
+        if (bounds.contains(event.position) && (event.position.x - bounds.x > m_controlWidth)) {
+            // Log for debugging
+            std::cout << "[UnitRow] Scroll Delta: " << event.wheelDelta << std::endl;
+            // Adjust sensitivity (assuming 1.0 delta usually, but safety clamp)
+            float delta = event.wheelDelta;
+            if (delta > 10.0f) delta = 1.0f; // Fix for raw 120 vs normalized 1
+            if (delta < -10.0f) delta = -1.0f;
             
-            if (relativeX < m_controlWidth) {
-                handleControlClick(event, NUIRect(bounds.x, bounds.y, m_controlWidth, bounds.height));
-                return true;
-            } else {
-                handleContextClick(event, NUIRect(bounds.x + m_controlWidth, bounds.y, bounds.width - m_controlWidth, bounds.height));
-                return true;
+            m_scrollX -= delta * 40.0f; // 40px per 'tick'
+            invalidateVisuals();
+            return true;
+        }
+    }
+    
+    // === Hover Detection ===
+    bool wasHovered = m_isHovered;
+    m_isHovered = bounds.contains(event.position);
+    
+    // === Step Hover Detection (with Scroll) ===
+    int oldHoveredStep = m_hoveredStep;
+    m_hoveredStep = -1;
+    
+    if (m_isHovered) {
+        float relativeX = event.position.x - bounds.x;
+        if (relativeX > m_controlWidth) {
+            // In step grid area
+            float gridX = relativeX - m_controlWidth;
+            
+            // Calculate step metrics same as draw
+            float availWidth = bounds.width - m_controlWidth;
+            float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
+            
+            // gridX is relative to view start. 
+            // Pos in content = gridX + m_scrollX
+            float contentX = gridX + m_scrollX;
+            int stepIndex = static_cast<int>(contentX / stepWidth);
+            
+            if (stepIndex >= 0 && stepIndex < m_stepCount) {
+                m_hoveredStep = stepIndex;
             }
         }
+    }
+    
+    if (wasHovered != m_isHovered || oldHoveredStep != m_hoveredStep) {
+        invalidateVisuals();
+    }
+    
+    // === Click Handling ===
+    if (event.pressed) {
+        // Ensure focus
+        if (bounds.contains(event.position)) {
+             setFocused(true);
+        }
+    
+        if (event.button == NUIMouseButton::Left) {
+            // Note: NUITextInput handles its own focus loss/commit.
+            // We just handle clicks on other elements.
+
+            if (bounds.contains(event.position)) {
+                float relativeX = event.position.x - bounds.x;
+                
+                // Drag handle area
+                if (relativeX < DRAG_HANDLE_WIDTH) {
+                    m_isDragging = true;
+                    m_dragStartPos = event.position;
+                    if (m_onDragStart) m_onDragStart(m_unitId);
+                    invalidateVisuals();
+                    return true;
+                }
+                // Control block
+                else if (relativeX < m_controlWidth) {
+                    handleControlClick(event, NUIRect(bounds.x, bounds.y, m_controlWidth, bounds.height));
+                    return true;
+                }
+                // Step grid
+                else {
+                    handleContextClick(event, NUIRect(bounds.x + m_controlWidth, bounds.y, bounds.width - m_controlWidth, bounds.height));
+                    return true;
+                }
+            }
+        }
+        
+        // === Right-click ===
+        if (event.button == NUIMouseButton::Right) {
+            if (bounds.contains(event.position)) {
+                float relativeX = event.position.x - bounds.x;
+                // Color strip
+                if (relativeX >= DRAG_HANDLE_WIDTH && relativeX < DRAG_HANDLE_WIDTH + COLOR_STRIP_WIDTH + 20.0f) {
+                    if (m_onRequestColorPicker) m_onRequestColorPicker();
+                    return true;
+                }
+                // Step Grid - Cycle Steps
+                if (relativeX > m_controlWidth) {
+                    m_stepCount = (m_stepCount == 16) ? 32 : (m_stepCount == 32) ? 64 : 16;
+                    if (m_stepCount == 16) m_scrollX = 0; // Reset scroll for small count
+                    invalidateVisuals();
+                    return true;
+                }
+            }
+        }
+    }
+    
+    // === Release drag ===
+    if (!event.pressed && m_isDragging) {
+        m_isDragging = false;
+        invalidateVisuals();
     }
     
     return false;
 }
 
-void UnitRow::handleControlClick(const NUIMouseEvent& event, const NUIRect& bounds) {
-    float relativeX = event.position.x - bounds.x;
+void UnitRow::startEditing(const NUIRect& rect) {
+    if (m_isEditingName && m_nameInput) return;
     
-    // Simple hit testing based on fixed layout
-    // Power: 8-20px
-    if (relativeX >= 8.0f && relativeX <= 28.0f) {
+    m_isEditingName = true;
+    m_nameInput = std::make_shared<NUITextInput>(m_name);
+    m_nameInput->setBounds(rect);
+    // m_nameInput->setFontSize(13.0f); // Not supported
+    m_nameInput->setTextColor(NUIThemeManager::getInstance().getColor("textPrimary"));
+    m_nameInput->setBackgroundColor(NUIThemeManager::getInstance().getColor("inputBgDefault"));
+    m_nameInput->setBorderColor(NUIThemeManager::getInstance().getColor("inputBorderFocus"));
+    m_nameInput->setBorderWidth(1.0f);
+    m_nameInput->setBorderRadius(3.0f);
+    m_nameInput->setFocusedBorderColor(NUIThemeManager::getInstance().getColor("accentPrimary"));
+    
+    // Callbacks
+    m_nameInput->setOnReturnKey([this]() { stopEditing(true); });
+    m_nameInput->setOnEscapeKey([this]() { stopEditing(false); });
+    // Note: onFocusLost might trigger when clicking grid, handled safely
+    m_nameInput->setOnFocusLost([this]() { stopEditing(true); });
+    
+    addChild(m_nameInput);
+    m_nameInput->setFocused(true);
+    m_nameInput->setCaretPosition(static_cast<int>(m_name.length()));
+    m_nameInput->selectAll();
+    
+    invalidateVisuals();
+}
+
+void UnitRow::stopEditing(bool save) {
+    if (!m_nameInput) return;
+    
+    if (save) {
+        std::string newName = m_nameInput->getText();
+        if (newName != m_name) {
+            m_manager.setUnitName(m_unitId, newName);
+            updateState();
+        }
+    }
+    
+    removeChild(m_nameInput);
+    m_nameInput.reset();
+    m_isEditingName = false;
+    invalidateVisuals();
+}
+
+void UnitRow::handleControlClick(const NUIMouseEvent& event, const NUIRect& bounds) {
+    float relativeX = event.position.x - bounds.x - DRAG_HANDLE_WIDTH - COLOR_STRIP_WIDTH - 8.0f;
+    
+    // Button hit testing based on new layout
+    float btnStartX = 0.0f;
+    
+    // Power: first button
+    if (relativeX >= btnStartX && relativeX < btnStartX + BUTTON_SIZE) {
         m_manager.setUnitEnabled(m_unitId, !m_isEnabled);
         updateState();
-        repaint();
+        invalidateVisuals();
+        return;
     }
-    // Arm: 32-44px
-    else if (relativeX >= 32.0f && relativeX <= 52.0f) {
+    btnStartX += BUTTON_SIZE + BUTTON_SPACING;
+    
+    // Arm: second button
+    if (relativeX >= btnStartX && relativeX < btnStartX + BUTTON_SIZE) {
         m_manager.setUnitArmed(m_unitId, !m_isArmed);
         updateState();
-        repaint();
+        invalidateVisuals();
+        return;
     }
-    // Mute: 56-70px
-    else if (relativeX >= 56.0f && relativeX <= 70.0f) {
+    btnStartX += BUTTON_SIZE + BUTTON_SPACING;
+    
+    // Mute: third button
+    if (relativeX >= btnStartX && relativeX < btnStartX + BUTTON_SIZE) {
         m_manager.setUnitMute(m_unitId, !m_isMuted);
         updateState();
-        repaint();
+        invalidateVisuals();
+        return;
     }
-    // Solo: 74-88px
-    else if (relativeX >= 74.0f && relativeX <= 88.0f) {
+    btnStartX += BUTTON_SIZE + BUTTON_SPACING;
+    
+    // Solo: fourth button
+    if (relativeX >= btnStartX && relativeX < btnStartX + BUTTON_SIZE) {
         m_manager.setUnitSolo(m_unitId, !m_isSolo);
         updateState();
-        repaint();
+        invalidateVisuals();
+        return;
+    }
+    btnStartX += BUTTON_SIZE + BUTTON_SPACING;
+
+    // Edit: fifth button
+    if (relativeX >= btnStartX && relativeX < btnStartX + BUTTON_SIZE) {
+        if (m_onEditUnit) m_onEditUnit(m_unitId);
+        return;
+    }
+    btnStartX += BUTTON_SIZE + BUTTON_SPACING + 4.0f;
+    
+    // Name area: double-click to edit
+    float mixerBitStart = bounds.width - DRAG_HANDLE_WIDTH - COLOR_STRIP_WIDTH - 8.0f - 50.0f; // Start of mixer channel area
+    if (relativeX >= btnStartX && relativeX < mixerBitStart) {
+        // Manual double-click detection (fallback if OS event fails)
+        auto now = std::chrono::steady_clock::now();
+        long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+        bool manualDoubleClick = (nowMs - m_lastClickTimeMs < 500);
+        
+        // Update click time for next check
+        m_lastClickTimeMs = nowMs;
+
+        if (manualDoubleClick || event.doubleClick) {
+            // Calculate absolute position for input widget
+            float xOffset = DRAG_HANDLE_WIDTH + COLOR_STRIP_WIDTH + 8.0f;
+            float absoluteX = xOffset + btnStartX;
+            float width = mixerBitStart - btnStartX;
+            float absoluteY = (bounds.height - 24.0f) / 2.0f + 1.0f;
+            
+            startEditing(NUIRect(absoluteX, absoluteY, width, 24.0f));
+        }
         return;
     }
     
     // Mixer Channel (right side) - Click to cycle channels
-    if (relativeX >= m_controlWidth - 40.0f && relativeX <= m_controlWidth - 10.0f) {
+    float rightBoundary = bounds.width - DRAG_HANDLE_WIDTH - COLOR_STRIP_WIDTH - 8.0f;
+    
+    // Clip Name / Waveform Area (Double-click to load sample)
+    if (relativeX >= rightBoundary - 120.0f && relativeX <= rightBoundary) {
+         float mixerStart = rightBoundary - 50.0f;
+         if (relativeX < mixerStart) {
+             // Double-click detection for sample loading
+             auto now = std::chrono::steady_clock::now();
+             long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+             bool isDoubleClick = (nowMs - m_lastClipClickTimeMs < 400);
+             m_lastClipClickTimeMs = nowMs;
+             
+             if (isDoubleClick || event.doubleClick) {
+                 // Trigger sample file picker
+                 if (m_onLoadUnitSample) m_onLoadUnitSample(m_unitId);
+             }
+             return;
+         }
+    }
+
+    if (relativeX >= rightBoundary - 50.0f && relativeX <= rightBoundary - 10.0f) {
         int newChannel = (m_mixerChannel + 1) % 16;
         m_manager.setUnitMixerChannel(m_unitId, newChannel);
         updateState();
-        repaint();
-        return;
-    }
-    
-    // Audio Clip area - Click to clear
-    if (relativeX >= m_controlWidth - 160.0f && relativeX <= m_controlWidth - 50.0f && !m_audioClip.empty()) {
-        m_manager.setUnitAudioClip(m_unitId, "");
-        updateState();
-        repaint();
+        invalidateVisuals();
         return;
     }
 }
 
 void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& bounds) {
-    // Grid Interaction: Toggle Steps
-    float relativeX = event.position.x - bounds.x;
-    float stepWidth = bounds.width / 16.0f;
-    int stepIndex = static_cast<int>(relativeX / stepWidth);
+    // === Double-click to load sample ===
+    auto now = std::chrono::steady_clock::now();
+    long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    bool isDoubleClick = (nowMs - m_lastClipClickTimeMs < 400) || event.doubleClick;
+    m_lastClipClickTimeMs = nowMs;
     
-    if (stepIndex >= 0 && stepIndex < 16 && m_patternId.isValid()) {
-        Nomad::Log::info("Toggling Step: " + std::to_string(stepIndex));
-        
+    if (isDoubleClick) {
+        // Trigger sample file picker
+        if (m_onLoadUnitSample) m_onLoadUnitSample(m_unitId);
+        return;
+    }
+    
+    // === Single click: Grid Interaction - Toggle Steps ===
+    float relativeX = event.position.x - bounds.x;
+    float availWidth = bounds.width;
+    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
+    
+    float contentX = relativeX + m_scrollX;
+    int stepIndex = static_cast<int>(contentX / stepWidth);
+    
+    if (stepIndex >= 0 && stepIndex < m_stepCount && m_patternId.isValid()) {
         auto& pm = m_trackManager->getPatternManager();
         
-        // Modify the shared pattern
         pm.applyPatch(m_patternId, [this, stepIndex](Nomad::Audio::PatternSource& p) {
             if (!p.isMidi()) return;
             auto& midi = std::get<Nomad::Audio::MidiPayload>(p.payload);
             
-            // Look for existing note at this step for THIS unit
+            // Look for existing note
             double targetStart = stepIndex * 0.25;
             auto it = std::find_if(midi.notes.begin(), midi.notes.end(), 
                 [this, targetStart](const Nomad::Audio::MidiNote& n) {
@@ -343,16 +723,99 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
                 });
             
             if (it != midi.notes.end()) {
-                // Remove note
                 midi.notes.erase(it);
             } else {
-                // Add new note (C3 / pitch 60, tagged with this unit's ID)
                 midi.notes.push_back({targetStart, 0.25, 60, 100, m_unitId});
             }
         });
         
-        repaint();
+        invalidateVisuals();
     }
+}
+
+
+
+
+bool UnitRow::onKeyEvent(const NUIKeyEvent& event) {
+    if (m_isEditingName && m_nameInput) {
+        // Forward to input widget
+        return m_nameInput->onKeyEvent(event);
+    }
+    return false;
+}
+
+//==============================================================================
+// IDropTarget Implementation
+//==============================================================================
+
+UnitRow::~UnitRow() {
+    // Unregister from drop targets
+    NUIDragDropManager::getInstance().unregisterDropTarget(this);
+}
+
+DropFeedback UnitRow::onDragEnter(const DragData& data, const NUIPoint& position) {
+    (void)position;
+    // Accept file drags (audio files)
+    if (data.type == DragDataType::File) {
+        // Check if it's an audio file
+        std::string path = data.filePath;
+        std::string ext = path.substr(path.find_last_of('.') + 1);
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        
+        if (ext == "wav" || ext == "mp3" || ext == "flac" || ext == "ogg" || ext == "aiff") {
+            invalidateVisuals();
+            return DropFeedback::Copy;
+        }
+    }
+    return DropFeedback::None;
+}
+
+DropFeedback UnitRow::onDragOver(const DragData& data, const NUIPoint& position) {
+    return onDragEnter(data, position);
+}
+
+void UnitRow::onDragLeave() {
+    invalidateVisuals();
+}
+
+DropResult UnitRow::onDrop(const DragData& data, const NUIPoint& position) {
+    (void)position;
+    DropResult result;
+    
+    if (data.type == DragDataType::File) {
+        std::string path = data.filePath;
+        std::string ext = path.substr(path.find_last_of('.') + 1);
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        
+        if (ext == "wav" || ext == "mp3" || ext == "flac" || ext == "ogg" || ext == "aiff") {
+            // Extract filename for unit name
+            std::string filename = path.substr(path.find_last_of("/\\") + 1);
+            // Remove extension
+            filename = filename.substr(0, filename.find_last_of('.'));
+            
+            // Update unit name and load sample
+            m_manager.setUnitName(m_unitId, filename);
+            m_manager.setUnitAudioClip(m_unitId, path);
+            
+            // Trigger callback if set
+            if (m_onSampleDropped) {
+                m_onSampleDropped(m_unitId, path);
+            }
+            
+            updateState();
+            invalidateVisuals();
+            
+            result.accepted = true;
+            result.message = "Sample loaded: " + filename;
+            Nomad::Log::info("[UnitRow] Sample dropped: " + filename);
+        }
+    }
+    
+    return result;
+}
+
+NUIRect UnitRow::getDropBounds() const {
+    return getBounds();
 }
 
 } // namespace NomadUI

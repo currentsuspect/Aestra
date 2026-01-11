@@ -8,7 +8,8 @@
 
 namespace NomadUI {
 
-enum class UIMixerKnobType { Trim, Pan };
+
+enum class UIMixerKnobType { Trim, Pan, Width, Send };
 
 /**
  * @brief Compact trim/pan knob for the modern mixer UI.

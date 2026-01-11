@@ -10,6 +10,8 @@ namespace Nomad {
 namespace Audio {
 
 struct AudioBuffer; // Forward declaration (defined in SamplePool.h)
+class EffectChain;  // Forward declaration
+
 
 /**
  * @brief Render-time clip state used by the audio thread.
@@ -22,11 +24,23 @@ struct ClipRenderState {
     const float* audioData{nullptr};    // Interleaved stereo (engine format)
     uint64_t startSample{0};            // Absolute project sample (engine rate)
     uint64_t endSample{0};              // Exclusive end
-    uint64_t sampleOffset{0};           // Offset into audioData in frames
+    double sampleOffset{0.0};           // Offset into audioData in frames (double for sub-sample precision)
     uint64_t totalFrames{0};            // Bounds for audioData to guard OOB
     double sourceSampleRate{48000.0};   // Original clip sample rate
+    uint32_t channels{2};               // Source channels (1=mono, 2=stereo)
     float gain{1.0f};
     float pan{0.0f};
+};
+
+/**
+ * @brief Represents a routing connection (User/UI Layer)
+ */
+struct AudioRoute {
+    uint32_t targetChannelId; // Destination ID (or SPECIAL_ID_MASTER)
+    float gain{1.0f};         // Send Level (Linear)
+    float pan{0.0f};          // Send Pan (-1.0 to 1.0)
+    bool postFader{true};     // Pre/Post Fader tap
+    bool mute{false};         // Mute this specific send
 };
 
 /**
@@ -40,7 +54,13 @@ struct TrackRenderState {
     float pan{0.0f};
     bool mute{false};
     bool solo{false};
+    bool isSoloSafe{false};
     std::vector<AutomationCurve> automationCurves;
+    
+    // Routing (v3.1)
+    uint32_t mainOutputId{0xFFFFFFFF}; // Master
+    std::vector<AudioRoute> sends;
+    EffectChain* effectChain{nullptr};
 };
 
 /**
@@ -48,6 +68,7 @@ struct TrackRenderState {
  */
 struct AudioGraph {
     std::vector<TrackRenderState> tracks;
+    bool anySolo{false};
     // Precomputed max end sample across all clips (engine sample rate).
     // Used for transport looping without scanning clips on the RT thread.
     uint64_t timelineEndSample{0};

@@ -18,12 +18,13 @@ namespace {
     }
 }
 
-AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackManager, double outputSampleRate) {
+AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, double outputSampleRate) {
     AudioGraph graph;
     const size_t channelCount = trackManager.getChannelCount();
     graph.tracks.reserve(channelCount);
     
     // Create track render states for all mixer channels
+    bool anySoloFound = false;
     for (size_t i = 0; i < channelCount; ++i) {
         auto channel = trackManager.getChannel(i);
         if (!channel) continue;
@@ -35,9 +36,17 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackMan
         trackState.pan = channel->getPan();
         trackState.mute = channel->isMuted();
         trackState.solo = channel->isSoloed();
+        if (trackState.solo) anySoloFound = true;
+        trackState.isSoloSafe = channel->isSoloSafe();
+        
+        // Copy Routing
+        trackState.mainOutputId = channel->getMainOutputId();
+        trackState.sends = channel->getSends();
+        trackState.effectChain = &channel->getEffectChain();
         
         graph.tracks.push_back(std::move(trackState));
     }
+    graph.anySolo = anySoloFound;
 
     // Populate clips from PlaylistModel
     const auto& playlist = trackManager.getPlaylistModel();
@@ -69,11 +78,21 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(const TrackManager& trackMan
                     clip.audioData = clipInfo.audioData->interleavedData.data();
                     clip.totalFrames = clipInfo.audioData->numFrames;
                     clip.sourceSampleRate = static_cast<double>(clipInfo.sourceSampleRate);
+                    clip.channels = clipInfo.sourceChannels;
                 }
                 
                 clip.startSample = clipInfo.startTime;
                 clip.endSample = clipInfo.getEndTime();
-                clip.sampleOffset = clipInfo.sourceStart;
+                
+                // Convert sourceStart (Project Rate) to sampleOffset (Source Rate)
+                // Use double precision to prevent audio popping due to sub-sample drift
+                double projectSampleRate = playlist.getProjectSampleRate();
+                if (projectSampleRate > 0.0 && clip.sourceSampleRate > 0.0) {
+                     clip.sampleOffset = static_cast<double>(clipInfo.sourceStart) * (clip.sourceSampleRate / projectSampleRate);
+                } else {
+                    clip.sampleOffset = static_cast<double>(clipInfo.sourceStart);
+                }
+                
                 clip.gain = clipInfo.gainLinear;
                 clip.pan = clipInfo.pan;
                 

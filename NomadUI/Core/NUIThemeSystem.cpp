@@ -186,16 +186,24 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "borderSubtle") return theme.borderSubtle;
     if (colorName == "borderActive") return theme.borderActive;
     if (colorName == "divider") return theme.divider;
+    if (colorName == "separator") return theme.divider; // Alias
+
+    // Window & Panel (Settings Dialog)
+    if (colorName == "window.background") return theme.backgroundPrimary;
+    if (colorName == "window.border") return theme.borderSubtle;
+    if (colorName == "panel.background") return theme.backgroundSecondary;
+    if (colorName == "list.hover") return theme.hover;
+    if (colorName == "textSelect") return theme.textPrimary;
     
     // Interactive States
     if (colorName == "hover") return theme.hover;
     if (colorName == "pressed") return theme.pressed;
     if (colorName == "focused") return theme.focused;
     
-    // FL Studio-inspired dropdown theme tokens
+    // Dropdown theme tokens
     if (colorName == "dropdown.background") return theme.surfaceTertiary.withAlpha(0.95f);
     if (colorName == "dropdown.border") return NUIColor(0, 0, 0, 1.0f); // Black border
-    if (colorName == "dropdown.hover") return NUIColor(0.471f, 0.353f, 1.0f, 0.15f); // FL Studio lavender hover
+    if (colorName == "dropdown.hover") return NUIColor(0.471f, 0.353f, 1.0f, 0.15f); // Lavender hover
     if (colorName == "dropdown.focus") return theme.primary.withAlpha(0.8f);
     if (colorName == "dropdown.text") return theme.textPrimary;
     if (colorName == "dropdown.arrow") return theme.textSecondary;
@@ -237,10 +245,19 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     
     if (colorName == "highlightGlow") return theme.highlightGlow;
     
+    // Meter tokens
+    if (colorName == "meterSafe") return theme.meterSafe;
+    if (colorName == "meterWarn") return theme.meterWarn;
+    if (colorName == "meterCrit") return theme.meterCrit;
+    
     // Glass Aesthetic tokens
     if (colorName == "glassHover") return theme.glassHover;
     if (colorName == "glassBorder") return theme.glassBorder;
     if (colorName == "glassActive") return theme.glassActive;
+    
+    // Mixer tokens
+    if (colorName == "mixerStripBg") return theme.mixerStripBg;
+    if (colorName == "mixerMasterBorder") return theme.mixerMasterBorder;
     
     // === Arsenal / Step Sequencer Tokens ===
     // Step Grid Colors
@@ -512,9 +529,9 @@ NUIThemeProperties NUIThemePresets::createNomadDark() {
     theme.glassActive = theme.primary.withAlpha(0.15f);                  // Clearer active state
     
     // Accent & Branding
-    theme.primary = NUIColor(0.471f, 0.353f, 1.0f, 1.0f);                // #785aff - Vibrant purple
-    theme.primaryHover = NUIColor(0.549f, 0.451f, 1.0f, 1.0f);           // #8c73ff - Lighter purple
-    theme.primaryPressed = NUIColor(0.392f, 0.275f, 0.863f, 1.0f);       // #6446dc - Darker purple
+    theme.primary = NUIColor(0.733f, 0.525f, 0.988f, 1.0f);                // #bb86fc - Nomad Purple (Official)
+    theme.primaryHover = NUIColor(0.796f, 0.631f, 0.992f, 1.0f);           // Lighter variant
+    theme.primaryPressed = NUIColor(0.570f, 0.380f, 0.825f, 1.0f);         // Darker variant
     theme.primaryVariant = theme.primaryPressed;
     
     theme.secondary = NUIColor(0.0f, 0.831f, 0.737f, 1.0f);              // #00d4bc - Teal accent
@@ -576,6 +593,11 @@ NUIThemeProperties NUIThemePresets::createNomadDark() {
     // Highlight glow
     theme.highlightGlow = NUIColor(0.471f, 0.353f, 1.0f, 0.25f);
     
+    // Meter Colors (Nomad Heat Defaults)
+    theme.meterSafe = NUIColor(0.733f, 0.525f, 0.988f, 1.0f); // #bb86fc
+    theme.meterWarn = NUIColor(1.0f, 0.0f, 0.8f, 1.0f);       // #ff00cc
+    theme.meterCrit = NUIColor(1.0f, 0.2f, 0.4f, 1.0f);       // #ff3366
+    
     // Shadows
     theme.shadowXS = NUIThemeProperties::Shadow(0, 1, 2, 0, NUIColor::black(), 0.1f);
     theme.shadowS = NUIThemeProperties::Shadow(0, 2, 4, 0, NUIColor::black(), 0.15f);
@@ -588,6 +610,10 @@ NUIThemeProperties NUIThemePresets::createNomadDark() {
     theme.glassBorder = NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
     theme.glassActive = theme.primary.withAlpha(0.20f);
     
+    // Mixer
+    theme.mixerStripBg = NUIColor(0.01f, 0.01f, 0.01f, 0.95f);
+    theme.mixerMasterBorder = NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
+
     return theme;
 }
 
@@ -632,10 +658,19 @@ NUIThemeProperties NUIThemePresets::createNomadLight() {
     theme.shadowL = NUIThemeProperties::Shadow(0, 8, 16, 0, NUIColor::black(), 0.15f);
     theme.shadowXL = NUIThemeProperties::Shadow(0, 16, 32, 0, NUIColor::black(), 0.2f);
 
+    // Meter Colors (Nomad Heat Defaults)
+    theme.meterSafe = NUIColor(0.733f, 0.525f, 0.988f, 1.0f);
+    theme.meterWarn = NUIColor(1.0f, 0.0f, 0.8f, 1.0f);
+    theme.meterCrit = NUIColor(1.0f, 0.2f, 0.4f, 1.0f);
+
     // Glass Aesthetic (v9.0 Systematic)
     theme.glassHover = NUIColor(0.0f, 0.0f, 0.0f, 0.05f);
     theme.glassBorder = NUIColor(0.0f, 0.0f, 0.0f, 0.12f);
     theme.glassActive = theme.primary.withAlpha(0.12f);
+
+    // Mixer
+    theme.mixerStripBg = NUIColor(0.95f, 0.95f, 0.95f, 0.95f);
+    theme.mixerMasterBorder = NUIColor(0.0f, 0.0f, 0.0f, 0.08f);
     
     return theme;
 }

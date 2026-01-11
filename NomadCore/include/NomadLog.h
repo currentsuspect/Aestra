@@ -10,6 +10,10 @@
 #include <sstream>
 #include <ctime>
 #include <iomanip>
+#include "NomadThreading.h"
+#include <thread>
+#include <atomic>
+#include <cstring>
 
 namespace Nomad {
 
@@ -229,6 +233,12 @@ public:
         return instance().logger_;
     }
 
+    static void shutdown() {
+        // Reset to basic console logger to allow AsyncLogger to clean up
+        // This must be called before static destruction to avoid hangs
+        instance().logger_ = std::make_shared<ConsoleLogger>();
+    }
+
 private:
     Log() {
         // Default to console logger
@@ -279,4 +289,75 @@ private:
     std::stringstream stream_;
 };
 
+// =============================================================================
+// Async Logger (Audio-Thread Safe)
+// =============================================================================
+struct LogMessage {
+    LogLevel level;
+    char message[256]; // Fixed size for ring buffer
+};
+
+class AsyncLogger : public ILogger {
+public:
+    AsyncLogger(std::shared_ptr<ILogger> target) 
+        : target_(target), running_(true) {
+        worker_ = std::thread(&AsyncLogger::processQueue, this);
+    }
+
+    ~AsyncLogger() {
+        running_ = false;
+        if (worker_.joinable()) {
+            worker_.join();
+        }
+        // Drain remaining
+        processQueueSinglePass();
+    }
+
+    void log(LogLevel level, const std::string& message) override {
+        // Truncate if necessary
+        LogMessage msg;
+        msg.level = level;
+        
+        size_t len = message.length();
+        if (len >= sizeof(msg.message)) len = sizeof(msg.message) - 1;
+        
+        std::memcpy(msg.message, message.c_str(), len);
+        msg.message[len] = '\0';
+
+        if (!queue_.push(msg)) {
+            // Drop or fallback? For audio thread safety, we drop.
+            // printf("Log dropped!\n"); 
+        }
+    }
+
+    void setLevel(LogLevel level) override {
+        if (target_) target_->setLevel(level);
+    }
+
+    LogLevel getLevel() const override {
+        return target_ ? target_->getLevel() : LogLevel::Info;
+    }
+
+private:
+    std::shared_ptr<ILogger> target_;
+    Nomad::LockFreeRingBuffer<LogMessage, 1024> queue_;
+    std::thread worker_;
+    std::atomic<bool> running_;
+
+    void processQueue() {
+        while (running_) {
+            processQueueSinglePass();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    }
+
+    void processQueueSinglePass() {
+        LogMessage msg;
+        while (queue_.pop(msg)) {
+            if (target_) {
+                target_->log(msg.level, msg.message);
+            }
+        }
+    }
+};
 } // namespace Nomad

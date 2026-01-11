@@ -110,10 +110,19 @@ struct NUIThemeProperties {
     NUIColor backdrop;
     NUIColor highlightGlow;          // rgba(139, 127, 255, 0.3)
     
+    // Meter Colors
+    NUIColor meterSafe;
+    NUIColor meterWarn;
+    NUIColor meterCrit;
+    
     // Glass Aesthetic tokens
     NUIColor glassHover;             // Neutral clear glass highlighting
     NUIColor glassBorder;            // Subtle white border for glass
     NUIColor glassActive;            // Colored luminous glass (usually derived from accent)
+
+    // Mixer tokens
+    NUIColor mixerStripBg;
+    NUIColor mixerMasterBorder;
     
     // Spacing
     float spacingXS = 4.0f;

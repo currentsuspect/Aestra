@@ -98,6 +98,7 @@ void NUIPlatformBridge::setupEventBridges() {
             if (m_window) {
                 event.modifiers = convertModifiers(m_window->getCurrentModifiers());
             }
+            
             m_rootComponent->onMouseEvent(event);
         }
     });
@@ -230,6 +231,7 @@ NUIModifiers NUIPlatformBridge::convertModifiers(const Nomad::KeyModifiers& mods
     if (mods.control) result = result | NUIModifiers::Ctrl;
     if (mods.alt) result = result | NUIModifiers::Alt;
     if (mods.super) result = result | NUIModifiers::Super;
+    if (mods.capsLock) result = result | NUIModifiers::CapsLock;
     return result;
 }
 
@@ -375,6 +377,12 @@ void NUIPlatformBridge::setDPIChangeCallback(std::function<void(float)> callback
 
 void NUIPlatformBridge::setFocusCallback(std::function<void(bool)> callback) {
     m_focusCallback = callback;
+}
+
+void NUIPlatformBridge::setHitTestCallback(Nomad::HitTestCallback callback) {
+    if (m_window) {
+        m_window->setHitTestCallback(callback);
+    }
 }
 
 // =============================================================================

@@ -4,64 +4,77 @@
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadUI/Core/NUIDragDrop.h"
+#include "../NomadUI/Widgets/NUISegmentedControl.h"
+#include "../NomadUI/Widgets/NUIButton.h"
+#include "../NomadUI/Core/NUIIcon.h"
 #include "../NomadCore/include/NomadLog.h"
+#include "../NomadCore/include/NomadUnifiedProfiler.h"
+// #include "../NomadAudio/include/SourceManager.h" // Removed, inside ClipSource.h
 #include <chrono>
+#include <iomanip>
+#include <sstream>
 
 namespace Nomad {
 namespace Audio {
 
 PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     : m_trackManager(trackManager)
-    , m_headerHeight(40.0f) // Standard header height
-    , m_itemHeight(32.0f)   // Standard item height
+    , m_headerHeight(40.0f) 
+    , m_itemHeight(32.0f)
 {
     setId("PatternBrowserPanel");
     
     auto& themeManager = NomadUI::NUIThemeManager::getInstance();
     
-    // Cache theme colors (matching FileBrowser color scheme)
-    m_backgroundColor = themeManager.getColor("backgroundSecondary");  // #1b1b1f
-    m_textColor = themeManager.getColor("textPrimary");                // #e6e6eb
-    m_borderColor = themeManager.getColor("interfaceBorder");          // #2e2e35
-    m_selectedColor = themeManager.getColor("primary");                // Use Theme Primary!
+    // Cache theme colors
+    m_backgroundColor = themeManager.getColor("backgroundSecondary");
+    m_textColor = themeManager.getColor("textPrimary");
+    m_borderColor = themeManager.getColor("border");
+    m_selectedColor = themeManager.getColor("primary");
+    
+    // Initialize Toggle Switch
+    m_modeToggle = std::make_shared<NomadUI::NUISegmentedControl>(
+        std::vector<std::string>{"Clips", "Patterns"}
+    );
+    m_modeToggle->setSelectedIndex(static_cast<size_t>(m_mode), false);
+    m_modeToggle->setOnSelectionChanged([this](size_t index) {
+        switchMode(static_cast<BrowserMode>(index));
+    });
+    // Toggle bounds set in onResize
+    addChild(m_modeToggle);
     
     // Initialize SVG icons
     m_addIcon = std::make_shared<NomadUI::NUIIcon>();
-    // Modern Boxed Plus
     const char* addSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" ry="4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>)";
     m_addIcon->loadSVG(addSvg);
     m_addIcon->setIconSize(16, 16);
     m_addIcon->setColor(m_textColor);
     
     m_copyIcon = std::make_shared<NomadUI::NUIIcon>();
-    // Modern Duplicate (Offset layers)
     const char* copySvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>)";
     m_copyIcon->loadSVG(copySvg);
     m_copyIcon->setIconSize(16, 16);
     m_copyIcon->setColor(m_textColor);
     
     m_trashIcon = std::make_shared<NomadUI::NUIIcon>();
-    // Modern Trash (Lid separated)
     const char* trashSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>)";
     m_trashIcon->loadSVG(trashSvg);
     m_trashIcon->setIconSize(16, 16);
     m_trashIcon->setColor(themeManager.getColor("error").withAlpha(0.9f));
     
     m_midiIcon = std::make_shared<NomadUI::NUIIcon>();
-    // Modern MIDI (Piano Roll / Note representation)
     const char* midiSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>)";
     m_midiIcon->loadSVG(midiSvg);
     m_midiIcon->setIconSize(16, 16);
     m_midiIcon->setColor(m_selectedColor);
     
     m_audioIcon = std::make_shared<NomadUI::NUIIcon>();
-    // Modern Audio Waveform
     const char* audioSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3l3-6 4 12 4-8 3 4h3"/></svg>)";
     m_audioIcon->loadSVG(audioSvg);
     m_audioIcon->setIconSize(16, 16);
     m_audioIcon->setColor(m_selectedColor);
     
-    // Create icon-based buttons (empty labels - we render icons on top)
+    // Create icon-based buttons
     m_createButton = std::make_shared<NomadUI::NUIButton>("");
     m_createButton->setOnClick([this]() {
         if (m_trackManager) {
@@ -85,11 +98,15 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     });
     addChild(m_duplicateButton);
     
-    addChild(m_duplicateButton);
-    
     m_deleteButton = std::make_shared<NomadUI::NUIButton>("");
     m_deleteButton->setOnClick([this]() {
         if (m_trackManager && m_selectedPatternId.isValid()) {
+             // Safety Check: Is it used?
+            if (m_trackManager->getPlaylistModel().isPatternUsed(m_selectedPatternId)) {
+                Nomad::Log::warning("Cannot delete pattern: Is currently used on timeline");
+                return;
+            }
+
             m_trackManager->getPatternManager().removePattern(m_selectedPatternId);
             m_selectedPatternId = PatternID();
             refreshPatterns();
@@ -97,37 +114,33 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     });
     addChild(m_deleteButton);
     
-    // Make toolbar buttons transparent to match professional DAW style
-    // Use Icon style AND explicitly disable border/bg to override any defaults
+    // Make toolbar buttons transparent
     NomadUI::NUIColor transparent(0, 0, 0, 0);
     
-    m_createButton->setStyle(NomadUI::NUIButton::Style::Icon);
-    m_createButton->setBorderEnabled(false);
-    m_createButton->setBackgroundColor(transparent);
-    
-    m_duplicateButton->setStyle(NomadUI::NUIButton::Style::Icon);
-    m_duplicateButton->setBorderEnabled(false);
-    m_duplicateButton->setBackgroundColor(transparent);
-
-    m_deleteButton->setStyle(NomadUI::NUIButton::Style::Icon);
-    m_deleteButton->setBorderEnabled(false);
-    m_deleteButton->setBackgroundColor(transparent);
-
-    // Force parent repaint on mouse move to ensure manual icon rendering updates instantly
-    // NUIButton handles internal hover state, we just need to trigger a redraw of the panel.
-    auto bindHover = [this](std::shared_ptr<NomadUI::NUIButton> btn) {
+    auto styleButton = [&](std::shared_ptr<NomadUI::NUIButton> btn) {
+        btn->setStyle(NomadUI::NUIButton::Style::Icon);
+        btn->setBorderEnabled(false);
+        btn->setBackgroundColor(transparent);
         btn->onMouseMove = [this](const NomadUI::NUIMouseEvent&) { repaint(); };
     };
-    bindHover(m_createButton);
-    bindHover(m_duplicateButton);
-    bindHover(m_deleteButton);
+
+    styleButton(m_createButton);
+    styleButton(m_duplicateButton);
+    styleButton(m_deleteButton);
     
     refreshPatterns();
+    refreshClips();
+    
+    // Initial state setup
+    switchMode(BrowserMode::Clips);
+}
+
+PatternBrowserPanel::~PatternBrowserPanel() {
+    NomadUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
 }
 
 void PatternBrowserPanel::refreshPatterns() {
     m_patterns.clear();
-    
     if (!m_trackManager) return;
     
     auto allPatterns = m_trackManager->getPatternManager().getAllPatterns();
@@ -140,148 +153,186 @@ void PatternBrowserPanel::refreshPatterns() {
         entry.mixerChannel = p->getMixerChannel();
         m_patterns.push_back(entry);
     }
-    
-    repaint();
+    setDirty(true);
 }
 
-void PatternBrowserPanel::onResize(int width, int height) {
-    NUIComponent::onResize(width, height);
+void PatternBrowserPanel::refreshClips() {
+    m_clips.clear();
+    if (!m_trackManager) return;
+
+    auto& sourceManager = m_trackManager->getSourceManager();
+    std::vector<ClipSourceID> sourceIds = sourceManager.getAllSourceIDs();
     
-    auto b = getBounds();
-    float bw = 28.0f;  // Square icon buttons
-    float bh = 24.0f;
-    float spacing = 4.0f;
-    float y = 4.0f;
-    float x = b.x + spacing;
+    for (const auto& id : sourceIds) {
+        auto* source = sourceManager.getSource(id);
+        if (source) {
+            ClipEntry entry;
+            entry.id = source->getID();
+            entry.name = source->getName();
+            entry.filename = source->getFilePath();
+            entry.sampleRate = source->getSampleRate();
+            entry.numChannels = source->getNumChannels();
+            entry.duration = source->getDurationSeconds();
+            m_clips.push_back(entry);
+        }
+    }
+    setDirty(true);
+}
+
+void PatternBrowserPanel::switchMode(BrowserMode mode) {
+    m_mode = mode;
+    bool showPatternControls = (m_mode == BrowserMode::Patterns);
     
-    m_createButton->setBounds(NomadUI::NUIRect(x, b.y + y, bw, bh));
-    x += bw + spacing;
-    m_duplicateButton->setBounds(NomadUI::NUIRect(x, b.y + y, bw, bh));
-    x += bw + spacing;
-    m_deleteButton->setBounds(NomadUI::NUIRect(x, b.y + y, bw, bh));
+    if (m_createButton) m_createButton->setVisible(showPatternControls);
+    if (m_duplicateButton) m_duplicateButton->setVisible(showPatternControls);
+    if (m_deleteButton) m_deleteButton->setVisible(showPatternControls);
+    
+    // Refresh content for new mode
+    if (m_mode == BrowserMode::Patterns) refreshPatterns();
+    else refreshClips();
+    
+    // Force layout update next resize
+    int w = static_cast<int>(getBounds().width);
+    int h = static_cast<int>(getBounds().height);
+    if (w > 0 && h > 0) onResize(w, h); // Manually trigger layout update
+    
+    setDirty(true);
 }
 
 void PatternBrowserPanel::onRender(NomadUI::NUIRenderer& renderer) {
-    auto b = getBounds();
+    if (!isVisible()) return;
+
+    auto bounds = getBounds();
     
-    // Background - match file browser exactly
-    renderer.fillRoundedRect(b, 8, m_backgroundColor);
+    // Background
+    renderer.fillRect(bounds, m_backgroundColor);
     
-    // Header
+    // Border (right side)
+    renderer.drawLine(
+        NomadUI::NUIPoint(bounds.x + bounds.width - 1, bounds.y),
+        NomadUI::NUIPoint(bounds.x + bounds.width - 1, bounds.y + bounds.height),
+        1.0f, m_borderColor
+    );
+    
+    // Drag Over Feedback
+    if (m_isDragOver) {
+        renderer.fillRoundedRect(bounds, 0.0f, m_selectedColor.withAlpha(0.1f));
+        renderer.strokeRect(bounds, 2.0f, m_selectedColor);
+    }
+
     renderHeader(renderer);
+    renderContent(renderer);
     
-    // Pattern list
-    renderPatternList(renderer);
-    
-    // Main border
-    renderer.strokeRoundedRect(b, 8, 1, m_borderColor);
-    
-    // Inner black border for cleaner look (matching FileBrowser)
-    NomadUI::NUIRect innerBounds(b.x + 1, b.y + 1, b.width - 2, b.height - 2);
-    renderer.strokeRoundedRect(innerBounds, 7, 1, NomadUI::NUIColor(0.0f, 0.0f, 0.0f, 0.4f));
-    
-    NUIComponent::onRender(renderer);
+    NomadUI::NUIComponent::onRender(renderer);
 }
 
 void PatternBrowserPanel::renderHeader(NomadUI::NUIRenderer& renderer) {
-    auto b = getBounds();
-    auto& theme = NomadUI::NUIThemeManager::getInstance();
+    auto bounds = getBounds();
+    NomadUI::NUIRect headerRect(bounds.x, bounds.y, bounds.width, m_headerHeight);
     
-    // Standard header background (Darker, reliable)
-    NomadUI::NUIRect headerRect(b.x, b.y, b.width, m_headerHeight);
-    renderer.fillRoundedRect(headerRect, 8, theme.getColor("backgroundSecondary").darkened(0.2f));
+    renderer.drawLine(
+        NomadUI::NUIPoint(bounds.x, bounds.y + m_headerHeight),
+        NomadUI::NUIPoint(bounds.x + bounds.width, bounds.y + m_headerHeight),
+        1.0f, m_borderColor
+    );
+
+    // Render footer background and separator
+    NomadUI::NUIRect footerRect(bounds.x, bounds.bottom() - m_footerHeight, bounds.width, m_footerHeight);
+    renderer.fillRect(footerRect, m_backgroundColor);
+    renderer.drawLine(
+        NomadUI::NUIPoint(bounds.x, footerRect.y),
+        NomadUI::NUIPoint(bounds.x + bounds.width, footerRect.y),
+        1.0f, m_borderColor
+    );
     
-    // Bottom separator for header
-    renderer.fillRect(NomadUI::NUIRect(b.x, b.y + m_headerHeight - 1, b.width, 1), 
-                     theme.getColor("borderSubtle"));
+    // Mode toggle is rendered by addChild mechanism automatically
+    // The buttons are also rendered by addChild mechanism
     
-    // Render icons on top of buttons
-    // Render icons - Force center vertically in the header
-    float iconSize = 14.0f;
-    // Precisely center icon in the header (e.g. 40px height)
-    float iconY = b.y + (m_headerHeight - iconSize) * 0.5f;
-    
-    // For X, center in the button's allotted width (assuming 28px width buttons)
-    // Buttons are at specific X positions managed by layout, we can trust btnBounds.x
-    // but we use the button width from bounds.
-    
-    if (m_createButton) {
-        auto btnBounds = m_createButton->getBounds();
-        float iconX = btnBounds.x + (btnBounds.width - iconSize) * 0.5f;
-        m_addIcon->setBounds(NomadUI::NUIRect(iconX, iconY, iconSize, iconSize));
-        // Boosted hover: Use very bright version of accent
-        m_addIcon->setColor(m_createButton->isHovered() ? theme.getColor("accentPrimary").lightened(0.2f) : theme.getColor("textSecondary").withAlpha(0.8f));
-        m_addIcon->onRender(renderer);
+    // If in Patterns mode, render button icons manually for crisp SVG
+    if (m_mode == BrowserMode::Patterns) {
+        // We need to render the icons at the positions of the invisible buttons
+        if (m_createButton->isVisible()) {
+            auto btnBounds = m_createButton->getBounds();
+            m_addIcon->setBounds(NomadUI::NUIRect(btnBounds.center().x - 8, btnBounds.center().y - 8, 16, 16));
+            m_addIcon->onRender(renderer);
+        }
+        if (m_duplicateButton->isVisible()) {
+            auto btnBounds = m_duplicateButton->getBounds();
+            m_copyIcon->setBounds(NomadUI::NUIRect(btnBounds.center().x - 8, btnBounds.center().y - 8, 16, 16));
+            m_copyIcon->onRender(renderer);
+        }
+        if (m_deleteButton->isVisible()) {
+            auto btnBounds = m_deleteButton->getBounds();
+            m_trashIcon->setBounds(NomadUI::NUIRect(btnBounds.center().x - 8, btnBounds.center().y - 8, 16, 16));
+            m_trashIcon->onRender(renderer);
+        }
     }
-    if (m_duplicateButton) {
-        auto btnBounds = m_duplicateButton->getBounds();
-        float iconX = btnBounds.x + (btnBounds.width - iconSize) * 0.5f;
-        m_copyIcon->setBounds(NomadUI::NUIRect(iconX, iconY, iconSize, iconSize));
-        m_copyIcon->setColor(m_duplicateButton->isHovered() ? theme.getColor("accentPrimary").lightened(0.2f) : theme.getColor("textSecondary").withAlpha(0.8f));
-        m_copyIcon->onRender(renderer);
+}
+
+void PatternBrowserPanel::renderContent(NomadUI::NUIRenderer& renderer) {
+    auto bounds = getBounds();
+    NomadUI::NUIRect listRect(bounds.x, bounds.y + m_headerHeight, bounds.width, bounds.height - m_headerHeight - m_footerHeight);
+    
+    // Check if empty
+    bool isEmpty = (m_mode == BrowserMode::Patterns) ? m_patterns.empty() : m_clips.empty();
+    
+    if (isEmpty) {
+        std::string emptyText = (m_mode == BrowserMode::Patterns) 
+            ? "No patterns" 
+            : "No clips loaded\nDrop files here";
+        renderer.drawTextCentered(emptyText, listRect, 12.0f, m_textColor.withAlpha(0.5f));
+        return;
     }
-    if (m_deleteButton) {
-        auto btnBounds = m_deleteButton->getBounds();
-        float iconX = btnBounds.x + (btnBounds.width - iconSize) * 0.5f;
-        m_trashIcon->setBounds(NomadUI::NUIRect(iconX, iconY, iconSize, iconSize));
-        // Delete button flashes bright solid red
-        m_trashIcon->setColor(m_deleteButton->isHovered() ? theme.getColor("error").lightened(0.1f) : theme.getColor("error").withAlpha(0.5f));
-        m_trashIcon->onRender(renderer);
+    
+    // Render list
+    renderer.setClipRect(listRect);
+    
+    if (m_mode == BrowserMode::Patterns) {
+        renderPatternList(renderer);
+    } else {
+        renderClipList(renderer);
     }
     
-    // standard Title - Uppercase, 12px, vertically centered
-    // Buttons end at: 4 + 28 + 4 + 28 + 4 + 28 = 96px relative to x.
-    float titleX = b.x + 104.0f; 
-    
-    // Vertically center (Header 40, Font 12).
-    // Use renderer's robust centering logic AND round to nearest pixel for sharp text
-    // Borrowed exact math from FileBrowser::drawButton
-    float titleY = std::round(renderer.calculateTextY(NomadUI::NUIRect(0, b.y, 0, m_headerHeight), 12.0f));
-    
-    renderer.drawText("PATTERNS", NomadUI::NUIPoint(titleX, titleY), 
-                     12.0f, theme.getColor("textSecondary"));
+    renderer.clearClipRect();
 }
 
 void PatternBrowserPanel::renderPatternList(NomadUI::NUIRenderer& renderer) {
-    auto b = getBounds();
+    auto bounds = getBounds();
+    float y = bounds.y + m_headerHeight - m_scrollOffset;
     
-    float listStartY = b.y + m_headerHeight;
-    float listHeight = b.height - m_headerHeight;
-    
-    // Render list items (manual culling since no clipping available)
-    float y = listStartY - m_scrollOffset;
     for (const auto& entry : m_patterns) {
-        if (y + m_itemHeight > listStartY && y < listStartY + listHeight) {
-            bool selected = (entry.id == m_selectedPatternId);
-            bool hovered = (entry.id == m_hoveredPatternId);
-            renderPatternItem(renderer, entry, y, selected, hovered);
-        }
+        if (y + m_itemHeight < bounds.y + m_headerHeight) { y += m_itemHeight; continue; } 
+        if (y > bounds.y + bounds.height) break;
+        
+        bool selected = (entry.id == m_selectedPatternId);
+        bool hovered = (entry.id == m_hoveredPatternId);
+        
+        renderPatternItem(renderer, entry, y, selected, hovered);
         y += m_itemHeight;
-    }
-
-    
-    // Empty state
-    if (m_patterns.empty()) {
-        renderer.drawText("No patterns", 
-                         NomadUI::NUIPoint(b.x + 10.0f, listStartY + 10.0f), 
-                         11.0f, m_textColor.withAlpha(0.5f));
     }
 }
 
-void PatternBrowserPanel::renderPatternItem(NomadUI::NUIRenderer& renderer, 
-                                            const PatternEntry& entry, float y, 
-                                            bool selected, bool hovered) {
-    auto b = getBounds();
+void PatternBrowserPanel::renderClipList(NomadUI::NUIRenderer& renderer) {
+    auto bounds = getBounds();
+    float y = bounds.y + m_headerHeight - m_scrollOffset;
+    
+    for (const auto& entry : m_clips) {
+        if (y + m_itemHeight < bounds.y + m_headerHeight) { y += m_itemHeight; continue; }
+        if (y > bounds.y + bounds.height) break;
+        
+        renderClipItem(renderer, entry, y, false);
+        y += m_itemHeight;
+    }
+}
+
+void PatternBrowserPanel::renderPatternItem(NomadUI::NUIRenderer& renderer, const PatternEntry& entry, float y, bool selected, bool hovered) {
+    auto bounds = getBounds();
+    NomadUI::NUIRect itemRect(bounds.x, y, bounds.width, m_itemHeight);
     auto& theme = NomadUI::NUIThemeManager::getInstance();
     
-    // Stretch full width, no padding gap
-    NomadUI::NUIRect itemRect(b.x, y, b.width, m_itemHeight);
-    
-    // Background (Use standard theme colors)
     if (selected) {
-        // Selection style matching FileBrowser
-        renderer.fillRoundedRect(itemRect, 4, theme.getColor("primary").withAlpha(0.25f));
-        renderer.strokeRoundedRect(itemRect, 4, 1, theme.getColor("primary").withAlpha(0.5f));
+        renderer.fillRect(itemRect, m_selectedColor.withAlpha(0.2f));
+        renderer.fillRect(NomadUI::NUIRect(bounds.x, y, 2, m_itemHeight), m_selectedColor);
     } else if (hovered) {
         // Hover style
         renderer.fillRoundedRect(itemRect, 4, theme.getColor("hover").withAlpha(0.1f));
@@ -337,7 +388,7 @@ bool PatternBrowserPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // Check if in list area
     // Robust check: Compare event Y relative to panel Y
     float relativeY = event.position.y - b.y;
-    bool inListArea = relativeY > m_headerHeight;
+    bool inListArea = relativeY > m_headerHeight && relativeY < (b.height - m_footerHeight);
     
     // Ensure we are horizontally within bounds too
     if (event.position.x < b.x || event.position.x > b.x + b.width) {
@@ -423,6 +474,19 @@ bool PatternBrowserPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
     }
     
+    // Mouse Wheel - Scroll Handling
+    if (std::abs(event.wheelDelta) > 0.001f && getBounds().contains(event.position)) {
+        float listHeight = (m_mode == BrowserMode::Patterns) ? m_patterns.size() * m_itemHeight : m_clips.size() * m_itemHeight;
+        float viewportHeight = b.height - m_headerHeight - m_footerHeight;
+        float maxScroll = std::max(0.0f, listHeight - viewportHeight);
+        
+        m_scrollOffset -= event.wheelDelta * 40.0f;
+        m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, maxScroll);
+        
+        repaint();
+        return true;
+    }
+
     // Mouse Release
     if (!event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
         m_dragPotential = false;
@@ -430,6 +494,106 @@ bool PatternBrowserPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     
     repaint();
     return NUIComponent::onMouseEvent(event);
+}
+
+void PatternBrowserPanel::renderClipItem(NomadUI::NUIRenderer& renderer, const ClipEntry& entry, float y, bool hovered) {
+    auto bounds = getBounds();
+    NomadUI::NUIRect itemRect(bounds.x, y, bounds.width, m_itemHeight);
+    auto& theme = NomadUI::NUIThemeManager::getInstance();
+
+    if (hovered) {
+        // Use darker hover for contrast
+        renderer.fillRoundedRect(itemRect, 4, theme.getColor("hover").withAlpha(0.1f));
+    }
+
+    // Icon
+    float iconX = itemRect.x + 8;
+    float iconY = y + (m_itemHeight - 16) / 2;
+    if (m_audioIcon) {
+        m_audioIcon->setBounds(NomadUI::NUIRect(iconX, iconY, 16, 16));
+        m_audioIcon->setColor(theme.getColor("textSecondary"));
+        m_audioIcon->onRender(renderer);
+    }
+
+    // Name truncation logic
+    std::string displayName = entry.name;
+    float maxNameWidth = itemRect.width - 32 - 50; // icon + padding + duration
+    if (displayName.length() > 25) { // Simple char count heuristic for now
+        displayName = displayName.substr(0, 22) + "...";
+    }
+
+    renderer.drawText(displayName, NomadUI::NUIPoint(itemRect.x + 32, y + 9), 12.0f, theme.getColor("textPrimary"));
+    
+    // Duration
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(1) << entry.duration << "s";
+    std::string durStr = ss.str();
+    renderer.drawText(durStr, NomadUI::NUIPoint(itemRect.x + itemRect.width - 40, y + 9), 11.0f, theme.getColor("textDisabled"));
+}
+
+void PatternBrowserPanel::onResize(int width, int height) {
+    auto bounds = getBounds();
+    float padding = 8.0f;
+    float toggleWidth = 140.0f;
+    
+    if (m_modeToggle) {
+        float toggleY = height - m_footerHeight + (m_footerHeight - 24) / 2.0f;
+        m_modeToggle->setBounds(NomadUI::NUIAbsolute(bounds, padding, toggleY, toggleWidth, 24));
+    }
+    
+    // Layout buttons (right aligned in header)
+    float btnSize = 24.0f;
+    float x_offset = width - padding - btnSize;
+    
+    if (m_deleteButton) m_deleteButton->setBounds(NomadUI::NUIAbsolute(bounds, x_offset, padding + 4, btnSize, btnSize));
+    x_offset -= (btnSize + 4);
+    if (m_duplicateButton) m_duplicateButton->setBounds(NomadUI::NUIAbsolute(bounds, x_offset, padding + 4, btnSize, btnSize));
+    x_offset -= (btnSize + 4);
+    if (m_createButton) m_createButton->setBounds(NomadUI::NUIAbsolute(bounds, x_offset, padding + 4, btnSize, btnSize));
+}
+
+void PatternBrowserPanel::onUpdate(double deltaTime) {
+    if (m_modeToggle) m_modeToggle->onUpdate(deltaTime);
+}
+
+// IDropTarget Implementation
+NomadUI::DropFeedback PatternBrowserPanel::onDragEnter(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
+    if (data.type == NomadUI::DragDataType::File) {
+        m_isDragOver = true;
+        return NomadUI::DropFeedback::Copy;
+    }
+    return NomadUI::DropFeedback::None;
+}
+
+NomadUI::DropFeedback PatternBrowserPanel::onDragOver(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
+    if (data.type == NomadUI::DragDataType::File) return NomadUI::DropFeedback::Copy;
+    return NomadUI::DropFeedback::None;
+}
+
+void PatternBrowserPanel::onDragLeave() {
+    m_isDragOver = false;
+}
+
+NomadUI::DropResult PatternBrowserPanel::onDrop(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
+     m_isDragOver = false;
+    if (data.type == NomadUI::DragDataType::File && !data.filePath.empty()) {
+        if (m_trackManager) {
+            auto& sourceManager = m_trackManager->getSourceManager();
+            sourceManager.getOrCreateSource(data.filePath);
+            
+            // Switch to clips and refresh
+            if (m_modeToggle) m_modeToggle->setSelectedIndex(0); // Clips is 0
+            refreshClips();
+            NomadUI::DropResult result;
+            result.accepted = true;
+            return result;
+        }
+    }
+    return NomadUI::DropResult(); // Default accepted=false
+}
+
+NomadUI::NUIRect PatternBrowserPanel::getDropBounds() const {
+    return getBounds();
 }
 
 } // namespace Audio
