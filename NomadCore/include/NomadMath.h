@@ -205,9 +205,19 @@ inline float map(float value, float inMin, float inMax, float outMin, float outM
     return outMin + (value - inMin) * (outMax - outMin) / (inMax - inMin);
 }
 
-// Decibels to linear gain
+// Constants for fast dB conversion
+constexpr float LN10_OVER_20 = 0.11512925464970228420089957273422f;
+constexpr double LN10_OVER_20_D = 0.11512925464970228420089957273422;
+
+// Decibels to linear gain (Optimized with exp)
 inline float dbToGain(float db) {
-    return std::pow(10.0f, db / 20.0f);
+    if (db <= -90.0f) return 0.0f;
+    return std::exp(db * LN10_OVER_20);
+}
+
+inline double dbToGainD(double db) {
+    if (db <= -90.0) return 0.0;
+    return std::exp(db * LN10_OVER_20_D);
 }
 
 // Linear gain to decibels

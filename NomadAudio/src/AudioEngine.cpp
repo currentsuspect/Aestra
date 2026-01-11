@@ -1,5 +1,6 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioEngine.h"
+#include "../NomadCore/include/NomadMath.h"
 #include <cmath>
 #include <algorithm>
 #include <cstring>
@@ -11,12 +12,6 @@ namespace Audio {
 namespace {
     inline double clampD(double v, double lo, double hi) {
         return (v < lo) ? lo : (v > hi) ? hi : v;
-    }
-
-    inline double dbToLinearD(double db) {
-        // UI uses -90 dB as "silence"
-        if (db <= -90.0) return 0.0;
-        return std::pow(10.0, db / 20.0);
     }
 }
 
@@ -183,7 +178,7 @@ void AudioEngine::processBlock(float* outputBuffer,
         (void)panParam;
         const double faderDbClamped = clampD(static_cast<double>(faderDb), -90.0, 6.0);
         const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
-        masterParamGain = dbToLinearD(faderDbClamped) * dbToLinearD(trimDbClamped);
+        masterParamGain = dbToGainD(faderDbClamped) * dbToGainD(trimDbClamped);
     }
 
     const double targetGain =
@@ -580,7 +575,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
 
         const double faderDbClamped = clampD(static_cast<double>(faderDb), -90.0, 6.0);
         const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
-        const double gain = dbToLinearD(faderDbClamped) * dbToLinearD(trimDbClamped);
+        const double gain = dbToGainD(faderDbClamped) * dbToGainD(trimDbClamped);
         
         double volTarget = static_cast<double>(track.volume) * gain;
         double panTarget = clampD(static_cast<double>(track.pan) + static_cast<double>(panParam), -1.0, 1.0);
