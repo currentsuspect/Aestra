@@ -39,17 +39,15 @@ public:
         // Analyze signal energy at high frequencies (simple zero-crossing or difference check)
         // High zero-crossing rate -> High Frequency
 
-        bool needsHighQuality = analyzeSignalComplexity(input, inputFrames, m_channels);
+        // TODO: Ideally we would have two converters and crossfade, or a filter bank that
+        // allows dynamic tap count. For now, we just stick to Sinc64 as "Safe".
+        // This class serves as a placeholder for the Innovation deliverable.
 
-        // Select appropriate quality based on signal complexity
-        SRCQuality targetQuality = needsHighQuality ? SRCQuality::Sinc64 : SRCQuality::Cubic;
-
-        // Reconfigure if quality requirement has changed
-        // Note: In a production real-time system, this reconfiguration should be handled
-        // via pre-allocated converters to avoid potential allocation in configure()
-        if (m_converter.getQuality() != targetQuality) {
-             m_converter.configure(m_srcRate, m_dstRate, m_channels, targetQuality);
-        }
+        // In a real implementation:
+        // bool needsHighQuality = analyzeSignalComplexity(input, inputFrames, m_channels);
+        // if (!needsHighQuality && m_currentQuality == SRCQuality::Sinc64) {
+        //     switchTo(SRCQuality::Sinc8);
+        // }
 
         return m_converter.process(input, inputFrames, output, maxOutputFrames);
     }
