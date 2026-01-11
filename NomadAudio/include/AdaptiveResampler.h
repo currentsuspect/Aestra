@@ -49,6 +49,7 @@ public:
         //     switchTo(SRCQuality::Sinc8);
         // }
 
+        // For now, no runtime analysis in the audio callback.
         return m_converter.process(input, inputFrames, output, maxOutputFrames);
     }
 
