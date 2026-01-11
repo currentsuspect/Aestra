@@ -80,8 +80,6 @@ public:
     void drawLine(const NUIPoint& start, const NUIPoint& end, float thickness, const NUIColor& color) override;
     void drawPolyline(const NUIPoint* points, int count, float thickness, const NUIColor& color) override;
     void fillWaveform(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, const NUIColor& color) override;
-    void fillWaveformGradient(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, 
-                               const NUIColor& colorTop, const NUIColor& colorBottom) override;
     
     // ========================================================================
     // Gradient Drawing
@@ -172,12 +170,6 @@ private:
         float x, y;
         float u, v;
         float r, g, b, a;
-        float rw, rh;       // Rect width/height
-        float qw, qh;       // Quad width/height
-        float radius;       // Corner radius
-        float blur;         // Blur amount
-        float strokeWidth;  // Stroke width
-        float primitiveType; // Batching Primitive ID (0=Img, 1=Rect, 2=SDFText, 3=Stroke, 4=BitmapText)
     };
     
     // Shader program
@@ -187,11 +179,16 @@ private:
         int32_t transformLoc = -1;
         int32_t opacityLoc = -1;
         int32_t primitiveTypeLoc = -1;
-        // Removed radius/rect/quad/blur uniforms as they are now attributes
-        // Still keep textureLoc, useTextureLoc, smoothnessLoc
+        int32_t radiusLoc = -1;
+        int32_t rectWidthLoc = -1;
+        int32_t rectHeightLoc = -1;
+        int32_t quadWidthLoc = -1;
+        int32_t quadHeightLoc = -1;
         int32_t textureLoc = -1;
         int32_t useTextureLoc = -1;
+        int32_t blurLoc = -1;
         int32_t smoothnessLoc = -1; // Added for SDF text
+        int32_t strokeWidthLoc = -1; // Added for SDF strokes
     };
     
     // Transform stack
@@ -215,33 +212,6 @@ private:
     
     // High-quality text rendering helpers
     float getDPIScale();
-    
-    // FreeType text rendering (moved here so AtlasInfo can reference it)
-    struct FontData {
-        uint32_t textureId; // Atlas texture id
-        uint32_t glyphIndex = 0; // FreeType glyph index for kerning
-        int width = 0;
-        int height = 0;
-        int bearingX = 0;
-        int bearingY = 0;
-        int advance = 0;
-        // Atlas UV coordinates
-        float u0 = 0.0f;
-        float v0 = 0.0f;
-        float u1 = 0.0f;
-        float v1 = 0.0f;
-    };
-    
-    // Atlas selection helper (consolidates duplicated logic)
-    struct AtlasInfo {
-        uint32_t textureId;
-        int atlasSize;
-        float ascent;
-        float descent;
-        float lineHeight;
-        const std::unordered_map<uint32_t, FontData>* cache;
-    };
-    AtlasInfo selectAtlas(float fontSize) const;
 
     // REMOVED: renderCharacterImproved (replaced by atlas rendering)
     
@@ -251,14 +221,8 @@ private:
     
     // Drawing helpers
     void ensureBasicPrimitive();
-    void addVertex(float x, float y, float u, float v, const NUIColor& color,
-                  float rw = 0.0f, float rh = 0.0f, 
-                  float qw = 0.0f, float qh = 0.0f,
-                  float radius = 0.0f, float blur = 0.0f, float strokeWidth = 0.0f, float type = 0.0f);
-    void addQuad(const NUIRect& rect, const NUIColor& color,
-                 float rw = 0.0f, float rh = 0.0f, 
-                 float qw = 0.0f, float qh = 0.0f,
-                 float radius = 0.0f, float blur = 0.0f, float strokeWidth = 0.0f, float type = 0.0f);
+    void addVertex(float x, float y, float u, float v, const NUIColor& color);
+    void addQuad(const NUIRect& rect, const NUIColor& color);
     void applyTransform(float& x, float& y);
     void updateProjectionMatrix();
     
@@ -323,7 +287,21 @@ private:
     bool useSDFText_{false};
     bool triedSDFInit_{false};
     
-    // (FontData moved earlier in file for AtlasInfo reference)
+    // FreeType text rendering
+    struct FontData {
+        uint32_t textureId; // Atlas texture id
+        uint32_t glyphIndex = 0; // FreeType glyph index for kerning
+        int width = 0;
+        int height = 0;
+        int bearingX = 0;
+        int bearingY = 0;
+        int advance = 0;
+        // Atlas UV coordinates
+        float u0 = 0.0f;
+        float v0 = 0.0f;
+        float u1 = 0.0f;
+        float v1 = 0.0f;
+    };
 
     // Multiple atlases to avoid extreme minification artifacts:
     // - Large atlas (48px) for bigger UI text
@@ -362,24 +340,6 @@ private:
     int fontAtlasXSmall_ = 0;
     int fontAtlasYSmall_ = 0;
     int fontAtlasRowHeightSmall_ = 0;
-    
-    // Text measurement cache (LRU-style with max entries)
-    struct TextMeasurementKey {
-        std::string text;
-        float fontSize;
-        bool operator==(const TextMeasurementKey& o) const {
-            return text == o.text && std::abs(fontSize - o.fontSize) < 0.01f;
-        }
-    };
-    struct TextMeasurementKeyHash {
-        size_t operator()(const TextMeasurementKey& k) const {
-            size_t h1 = std::hash<std::string>{}(k.text);
-            size_t h2 = std::hash<float>{}(k.fontSize);
-            return h1 ^ (h2 << 1);
-        }
-    };
-    mutable std::unordered_map<TextMeasurementKey, NUISize, TextMeasurementKeyHash> textMeasurementCache_;
-    static constexpr size_t kTextMeasurementCacheMaxSize = 256;
 
     FT_Library ftLibrary_;
     FT_Face ftFace_;

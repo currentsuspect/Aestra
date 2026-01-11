@@ -1,7 +1,6 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "MixerViewModel.h"
-#include "../NomadCore/include/NomadLog.h"
 
 namespace Nomad {
 
@@ -41,18 +40,11 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                                      const Audio::ChannelSlotMap& slotMap) {
     // Build set of current track IDs for quick lookup
     std::unordered_map<uint32_t, size_t> existingIds;
-    
-    // Sync Global State
-    inputNames = trackManager.getInputChannelNames();
-
     for (size_t i = 0; i < m_channels.size(); ++i) {
         if (m_channels[i]) {
             existingIds[m_channels[i]->id] = i;
         }
     }
-
-    // Sync Global State
-    inputNames = trackManager.getInputChannelNames();
 
     // Collect channel info from engine
     struct ChannelInfo {
@@ -64,8 +56,6 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
         bool muted{false};
         bool soloed{false};
         bool armed{false};
-        bool monitored{false};
-        int fxCount{0};
     };
     std::vector<ChannelInfo> channelInfo;
     auto channels = trackManager.getChannelsSnapshot();
@@ -83,9 +73,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             info.channel = channel;
             info.muted = channel->isMuted();
             info.soloed = channel->isSoloed();
-            info.armed = channel->isArmed();
-            info.monitored = channel->isMonitoringEnabled();
-            info.fxCount = static_cast<int>(channel->getEffectChain().getActiveSlotCount());
+            info.armed = false; // Stubbed for v3.0 Mixer separation
             channelInfo.push_back(std::move(info));
         }
     }
@@ -107,14 +95,6 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             existing->muted = info.muted;
             existing->soloed = info.soloed;
             existing->armed = info.armed;
-            existing->monitored = info.monitored;
-            existing->fxCount = info.fxCount;
-            if (auto mc = info.channel.lock()) {
-                existing->inputChannelIndex = mc->getInputChannelIndex();
-            }
-            if (auto mc = info.channel.lock()) {
-                existing->inputChannelIndex = mc->getInputChannelIndex();
-            }
             newChannels.push_back(std::move(existing));
         } else {
             // Create new channel
@@ -127,47 +107,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             channel->muted = info.muted;
             channel->soloed = info.soloed;
             channel->armed = info.armed;
-            channel->monitored = info.monitored;
-            channel->fxCount = info.fxCount;
-            if (auto mc = info.channel.lock()) {
-                channel->inputChannelIndex = mc->getInputChannelIndex();
-            }
-            if (auto mc = info.channel.lock()) {
-                channel->inputChannelIndex = mc->getInputChannelIndex();
-            }
             newChannels.push_back(std::move(channel));
-        }
-        
-        // Sync Sends from Engine (Persistence Fix)
-        if (auto* ch = newChannels.back().get()) {
-            if (auto mc = ch->channel.lock()) {
-               auto engineSends = mc->getSends();
-               ch->sends.clear();
-               for (const auto& route : engineSends) {
-                   ChannelViewModel::SendViewModel uiSend;
-                   // Handle Legacy Master ID
-                   if (route.targetChannelId == 0xFFFFFFFF) {
-                       uiSend.targetId = 0;
-                       uiSend.targetName = "Master";
-                   } else {
-                       uiSend.targetId = route.targetChannelId;
-                       // Try to resolve name from current snapshot info
-                       auto targetIt = std::find_if(channelInfo.begin(), channelInfo.end(), 
-                           [&](const ChannelInfo& ci){ return ci.id == route.targetChannelId; });
-                       if (targetIt != channelInfo.end()) {
-                           uiSend.targetName = targetIt->name;
-                       } else if (route.targetChannelId == 0) {
-                           uiSend.targetName = "Master";
-                       } else {
-                           uiSend.targetName = "Unknown (" + std::to_string(route.targetChannelId) + ")";
-                       }
-                   }
-                   uiSend.gain = route.gain;
-                   uiSend.pan = route.pan;
-                   // uiSend.postFader = ... engine doesn't have this yet, assume true
-                   ch->sends.push_back(uiSend);
-               }
-            }
         }
     }
 
@@ -282,24 +222,26 @@ void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
         return energyEnvDb + peakWeight * (peakEnvDb - energyEnvDb);
     };
 
-    // Dual-Bar Metering (Ableton Style):
-    // 1. Peak Bar (Fast/Technical): Targets pure peak envelope.
-    channel.smoothedPeakL = smoothDb(channel.smoothedPeakL, channel.envPeakL, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
-    
-    // Correlation and LUFS (already computed/smoothed in audio engine)
-    channel.correlation = snapshot.correlation;
-    channel.integratedLufs = snapshot.integratedLufs;
-    
-    channel.smoothedPeakR = smoothDb(channel.smoothedPeakR, channel.envPeakR, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
+    float targetDbL = channel.envPeakL;
+    float targetDbR = channel.envPeakR;
+    switch (m_meterMode) {
+        case MeterMode::Musical:
+            targetDbL = computeMusicalDb(channel.envPeakL, channel.envEnergyL, channel.envLowEnergyL);
+            targetDbR = computeMusicalDb(channel.envPeakR, channel.envEnergyR, channel.envLowEnergyR);
+            break;
+        case MeterMode::Hybrid:
+            targetDbL = channel.envEnergyL;
+            targetDbR = channel.envEnergyR;
+            break;
+        case MeterMode::Technical:
+            targetDbL = channel.envPeakL;
+            targetDbR = channel.envPeakR;
+            break;
+    }
 
-    // 2. RMS Bar (Average/Body): Targets energy envelope.
-    channel.smoothedRmsL = smoothDb(channel.smoothedRmsL, channel.envEnergyL, ENERGY_ATTACK_MS, ENERGY_RELEASE_MS);
-    channel.smoothedRmsR = smoothDb(channel.smoothedRmsR, channel.envEnergyR, ENERGY_ATTACK_MS, ENERGY_RELEASE_MS);
-
-    channel.smoothedPeakL = std::max(channel.smoothedPeakL, MixerMath::DB_MIN);
-    channel.smoothedPeakR = std::max(channel.smoothedPeakR, MixerMath::DB_MIN);
-    channel.smoothedRmsL = std::max(channel.smoothedRmsL, MixerMath::DB_MIN);
-    channel.smoothedRmsR = std::max(channel.smoothedRmsR, MixerMath::DB_MIN);
+    // Visual ballistics (meters with mass).
+    channel.smoothedPeakL = smoothDb(channel.smoothedPeakL, targetDbL, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
+    channel.smoothedPeakR = smoothDb(channel.smoothedPeakR, targetDbR, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
 
     channel.smoothedPeakL = std::max(channel.smoothedPeakL, MixerMath::DB_MIN);
     channel.smoothedPeakR = std::max(channel.smoothedPeakR, MixerMath::DB_MIN);
@@ -330,123 +272,6 @@ void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
     // Clip latch (sticky until cleared by user).
     if (snapshot.clipL) channel.clipLatchL = true;
     if (snapshot.clipR) channel.clipLatchR = true;
-}
-
-std::vector<MixerViewModel::Destination> MixerViewModel::getAvailableDestinations(uint32_t excludeId) const
-{
-    std::vector<Destination> dests;
-    
-    // Always add Master if we aren't Master
-    if (excludeId != 0) {
-        dests.push_back({0, "Master"});
-    }
-
-    // Add other channels (e.g. Buses/Returns/Tracks)
-    // Note: In a real matrix, might filter to only Buses, but Nomad allows Track-to-Track sends.
-    for (const auto& ch : m_channels) {
-        if (!ch) continue;
-        if (ch->id == excludeId) continue;
-        if (ch->id == 0) continue; // Handled above
-
-        dests.push_back({ch->id, ch->name});
-    }
-
-    return dests;
-}
-
-void MixerViewModel::addSend(uint32_t channelId) {
-    auto* ch = getChannelById(channelId);
-    if (!ch) return;
-    
-    // Create new SendViewModel
-    ChannelViewModel::SendViewModel send;
-    
-    // Auto-select a meaningful destination (Avoid Master if it's already the main Output)
-    uint32_t defaultTarget = 0; // Fallback to Master
-    std::string defaultName = "Master";
-    
-    auto available = getAvailableDestinations(channelId);
-    bool foundBetter = false;
-    for (const auto& dest : available) {
-        // Pick the first available Send that isn't Master (0).
-        // e.g., a Reverb Bus or Group Channel
-        if (dest.id != 0) {
-            defaultTarget = dest.id;
-            defaultName = dest.name;
-            foundBetter = true;
-            break;
-        }
-    }
-
-    send.targetId = defaultTarget; 
-    send.targetName = defaultName;
-    send.gain = 1.0f; // 0dB
-    ch->sends.push_back(send);
-
-    // Update Engine
-    if (auto mc = ch->channel.lock()) {
-        Audio::AudioRoute route;
-        // Map 0 -> 0xFFFFFFFF for engine
-        route.targetChannelId = (defaultTarget == 0) ? 0xFFFFFFFF : defaultTarget; 
-        route.gain = 1.0f;
-        mc->addSend(route);
-        
-        if (m_onGraphDirty) m_onGraphDirty();
-        if (m_onProjectModified) m_onProjectModified();
-    }
-}
-
-void MixerViewModel::removeSend(uint32_t channelId, int sendIndex) {
-    auto* ch = getChannelById(channelId);
-    if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
-
-    // Update Local Model
-    ch->sends.erase(ch->sends.begin() + sendIndex);
-
-    // Update Engine
-    if (auto mc = ch->channel.lock()) {
-        mc->removeSend(sendIndex);
-        
-        if (m_onGraphDirty) m_onGraphDirty();
-        if (m_onProjectModified) m_onProjectModified();
-    }
-}
-
-void MixerViewModel::setSendLevel(uint32_t channelId, int sendIndex, float linearGain) {
-    auto* ch = getChannelById(channelId);
-    if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
-
-    ch->sends[sendIndex].gain = linearGain;
-
-    // Update Engine
-    if (auto mc = ch->channel.lock()) {
-        mc->setSendLevel(sendIndex, linearGain);
-    }
-}
-
-void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint32_t targetId) {
-    auto* ch = getChannelById(channelId);
-    if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
-
-    ch->sends[sendIndex].targetId = targetId;
-    
-    // Resolve name
-    if (targetId == 0) {
-        ch->sends[sendIndex].targetName = "Master";
-    } else {
-        auto* target = getChannelById(targetId);
-        ch->sends[sendIndex].targetName = target ? target->name : "Unknown";
-    }
-
-    // Update Engine
-    if (auto mc = ch->channel.lock()) {
-        // Normalize 0 to 0xFFFFFFFF for engine master
-        uint32_t engineId = (targetId == 0) ? 0xFFFFFFFF : targetId;
-        mc->setSendDestination(sendIndex, engineId);
-        
-        if (m_onGraphDirty) m_onGraphDirty();
-        if (m_onProjectModified) m_onProjectModified();
-    }
 }
 
 } // namespace Nomad

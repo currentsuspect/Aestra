@@ -76,13 +76,6 @@ using PatternPayload = std::variant<MidiPayload, AudioSlicePayload>;
 // PatternSource - The "Template"
 // =============================================================================
 
-/**
- * @brief Represents a reusable musical pattern (MIDI notes or Audio slices).
- *
- * PatternSource is the "template" or content definition.
- * ClipInstances on the timeline reference a PatternSource.
- * Changes to a PatternSource propagate to all linked ClipInstances.
- */
 class PatternSource {
 public:
     PatternID id;

@@ -81,10 +81,7 @@ struct AudioBufferData {
     /// Get sample value at specific frame and channel
     float getSample(SampleIndex frame, uint32_t channel) const {
         if (frame < 0 || frame >= numFrames || channel >= numChannels) return 0.0f;
-        // SAFETY: Direct bounds check against actual vector size
-        size_t idx = static_cast<size_t>(frame * numChannels + channel);
-        if (idx >= interleavedData.size()) return 0.0f;
-        return interleavedData[idx];
+        return interleavedData[static_cast<size_t>(frame * numChannels + channel)];
     }
 };
 

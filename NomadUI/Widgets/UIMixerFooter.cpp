@@ -23,7 +23,6 @@ void UIMixerFooter::setTrackNumber(int number)
     m_trackNumber = number;
     m_cachedText = (m_trackNumber > 0) ? std::to_string(m_trackNumber) : std::string();
     repaint();
-    if (onInvalidateRequested) onInvalidateRequested();
 }
 
 void UIMixerFooter::onRender(NUIRenderer& renderer)
@@ -33,7 +32,7 @@ void UIMixerFooter::onRender(NUIRenderer& renderer)
 
     if (m_cachedText.empty()) return;
 
-    renderer.drawTextCentered(m_cachedText, b, 10.0f, m_textSecondary);
+    renderer.drawTextCentered(m_cachedText, b, 9.0f, m_textSecondary);
 }
 
 } // namespace NomadUI

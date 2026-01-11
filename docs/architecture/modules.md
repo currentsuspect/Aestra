@@ -208,7 +208,7 @@ graph TB
 **Dependencies:** All framework modules (NomadUI, NomadAudio, NomadSDK)
 
 **Key Components:**
-- Timeline/Sequencer (Pattern-based)
+- Timeline/Sequencer (FL Studio-inspired)
 - Mixer console
 - Pattern editor
 - Project management

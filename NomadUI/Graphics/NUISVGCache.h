@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "../Core/NUITypes.h"
@@ -10,7 +10,6 @@ namespace NomadUI {
 
 // Forward declaration
 class NUISVGDocument;
-class NUIRenderer;
 
 /**
  * Cache for rasterized SVG images to avoid redundant rasterization.
@@ -67,7 +66,6 @@ public:
         std::vector<unsigned char> rgba;
         int width;
         int height;
-        uint32_t textureId = 0; // GPU Texture ID (0 if not created yet)
         std::chrono::steady_clock::time_point lastUsed;
     };
     
@@ -82,23 +80,23 @@ public:
      * Get cached rasterization or nullptr if not cached.
      * Updates lastUsed timestamp on cache hit.
      */
-    CacheEntry* get(const CacheKey& key);
+    const CacheEntry* get(const CacheKey& key);
     
     /**
      * Store rasterization in cache.
      * If cache is full, removes oldest entry first.
      */
-    void put(const CacheKey& key, std::vector<unsigned char>&& rgba, int w, int h, NUIRenderer* renderer = nullptr);
+    void put(const CacheKey& key, std::vector<unsigned char>&& rgba, int w, int h);
     
     /**
      * Remove entries older than specified age.
      */
-    void cleanup(NUIRenderer* renderer, std::chrono::seconds maxAge = std::chrono::seconds(60));
+    void cleanup(std::chrono::seconds maxAge = std::chrono::seconds(60));
     
     /**
      * Clear all cached entries.
      */
-    void clear(NUIRenderer* renderer = nullptr);
+    void clear();
     
     /**
      * Get current cache size.

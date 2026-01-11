@@ -12,7 +12,6 @@ struct ChannelViewModel;
 }
 
 namespace NomadUI {
-class EffectChainRack;
 
 /**
  * @brief Right-side inspector panel for the selected mixer channel.
@@ -27,15 +26,12 @@ public:
     explicit UIMixerInspector(Nomad::MixerViewModel* viewModel);
 
     void onRender(NUIRenderer& renderer) override;
-    void onUpdate(double deltaTime) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
     void setViewModel(Nomad::MixerViewModel* viewModel) { m_viewModel = viewModel; }
     void setActiveTab(Tab tab);
     Tab getActiveTab() const { return m_activeTab; }
-
-    std::shared_ptr<EffectChainRack> getEffectRack() const { return m_effectRack; }
 
 private:
     Nomad::MixerViewModel* m_viewModel{nullptr};
@@ -61,13 +57,6 @@ private:
     bool m_addHovered{false};
     bool m_addPressed{false};
 
-    // Inserts
-    std::shared_ptr<EffectChainRack> m_effectRack;
-
-    // Sends
-    std::vector<std::shared_ptr<class UIMixerSend>> m_sendWidgets;
-    void rebuildSendWidgets(const Nomad::ChannelViewModel* channel);
-
     // Cached header strings (updated only when selection changes)
     uint32_t m_cachedSelectedId{0xFFFFFFFFu};
     std::string m_cachedName;
@@ -75,8 +64,6 @@ private:
     std::string m_cachedHeaderTitle;
     std::string m_cachedHeaderSubtitle;
     int m_cachedTrackNumber{0};
-
-    std::vector<std::function<void()>> m_deferredActions; // Added m_deferredActions
 
     void cacheThemeColors();
     void layoutHitRects();

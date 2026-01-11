@@ -72,7 +72,6 @@ struct FileItem {
     mutable std::string cachedDisplayName;
     mutable std::string cachedSizeStr;
     mutable bool cacheValid = false;
-    mutable bool isTruncated = false;
     mutable int searchScore = 0;
     
     FileItem(const std::string& n, const std::string& p, FileType t, bool isDir, size_t s = 0, const std::string& modified = "")
@@ -98,7 +97,6 @@ public:
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
-    void onMouseLeave() override;
     
     // File browser functionality
     void setCurrentPath(const std::string& path);
@@ -215,11 +213,11 @@ public:
 		    bool isFilterActive() const;
 		    const std::vector<const FileItem*>& getActiveView() const;
 		    void invalidateAllItemCaches();
-            void renderStaticContent(NUIRenderer& renderer, const NUIRect& bounds);
 		    void renderFileList(NUIRenderer& renderer);
 		    void renderInteractiveBreadcrumbs(NUIRenderer& renderer);
 		    void renderToolbar(NUIRenderer& renderer);
 	    void renderScrollbar(NUIRenderer& renderer);
+	    // void renderPreviewPanel(NUIRenderer& renderer); // Moved to FilePreviewPanel
     void renderSearchBox(NUIRenderer& renderer);
     void updateScrollPosition();
 	    void updateBreadcrumbs();
@@ -265,13 +263,6 @@ public:
     // View Cache
     mutable std::vector<const FileItem*> cachedView_;
     mutable bool viewDirty_ = true;
-
-    // FBO Caching
-    uint64_t m_cacheId;
-    bool m_cacheInvalidated;
-    bool m_isRenderingToCache;
-    void invalidateCache() { m_cacheInvalidated = true; setDirty(true); }
-    void* m_cachedRender = nullptr; // Opaque pointer to CachedRenderData
     
     // Scrollbar state
     bool scrollbarVisible_;

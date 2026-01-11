@@ -9,7 +9,6 @@
 #include <thread>
 #include <mutex>
 #include <optional>
-#include <condition_variable>
 
 namespace Nomad {
 namespace Audio {
@@ -20,12 +19,6 @@ enum class PreviewResult {
     Failed     // Decode error or invalid file
 };
 
-/**
- * @brief Handles file auditioning and previewing.
- *
- * Manages asynchronous decoding, sample rate conversion, and playback
- * of audio files for browser preview and scrubbing.
- */
 class PreviewEngine {
 public:
     PreviewEngine();
@@ -46,7 +39,6 @@ public:
     void setGlobalPreviewVolume(float gainDb);
     float getGlobalPreviewVolume() const;
     double getPlaybackPosition() const; // New method
-    double getDuration() const;
 
 private:
     struct PreviewVoice {

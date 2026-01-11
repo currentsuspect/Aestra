@@ -3,7 +3,6 @@
 #include "../Graphics/NUIRenderer.h"
 #include <algorithm>
 #include <cmath>
-#include <vector>
 
 namespace NomadUI {
 

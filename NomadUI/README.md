@@ -4,7 +4,7 @@ A modern, GPU-accelerated UI framework built from scratch for the Nomad DAW.
 
 ## Vision
 
-Replace JUCE's component system with a fully custom, lightweight, and ultra-responsive UI engine that feels fast and responsive, but more modular and artistically fluid.
+Replace JUCE's component system with a fully custom, lightweight, and ultra-responsive UI engine that feels like FL Studio, but more modular and artistically fluid.
 
 ## Features
 
@@ -16,7 +16,7 @@ Replace JUCE's component system with a fully custom, lightweight, and ultra-resp
 - **Texture caching** - Static elements cached as textures
 
 ### 🎨 Visual Design
-- **Modern dark theme** - Professional aesthetics
+- **Modern dark theme** - FL Studio inspired aesthetics
 - **Smooth animations** - Easing curves and transitions
 - **Glow effects** - Shader-based visual feedback
 - **Vector-based** - Crisp at any resolution
@@ -315,7 +315,7 @@ TBD
 ## Credits
 
 Inspired by:
-- **Modern Workflow** - Visual design and workflow
+- **FL Studio** - Visual design and workflow
 - **Dear ImGui** - Immediate mode concepts
 - **Skia** - 2D graphics rendering
 - **NanoVG** - Vector graphics API

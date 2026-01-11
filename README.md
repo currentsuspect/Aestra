@@ -1,14 +1,13 @@
 # 🧭 NOMAD DAW
 
-![License](https://img.shields.io/badge/License-NSSAL%20v1.1-blue)
+![License](https://img.shields.io/badge/License-NSSAL%20v1.0-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-lightgrey)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-orange)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
+![Core](https://img.shields.io/badge/Core-Source--Available-blue)
 
 > **A modern, professional digital audio workstation built from the ground up with intention.**
-> Featuring ultra-low latency audio, GPU-accelerated UI, and a pattern-based workflow.
-
-![Nomad DAW Interface](NomadDocs/images/nomad_daw_interface.png)
+> Featuring ultra-low latency audio, GPU-accelerated UI, and an FL Studio-inspired workflow.
 
 ---
 
@@ -18,9 +17,9 @@
 
 Nomad combines:
 
-- **Ultra-low latency audio engine** powered by a dual-tier ASIO/WASAPI system
+- **Ultra-low latency audio engine** powered by WASAPI multi-tier processing
 - **Custom GPU-accelerated UI framework** (NomadUI) for buttery-smooth 60 FPS performance
-- **Modern pattern-based timeline** with intuitive pattern and playlist sequencing
+- **FL Studio-inspired timeline** with intuitive pattern and playlist sequencing
 - **Professional-grade 64-bit audio processing** with multi-threaded architecture
 - **Source-available transparency** — see exactly how your DAW works under the hood
 
@@ -32,8 +31,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 
 ### 🎵 Audio Engine
 
-- **ASIO Driver Support** — Professional, super-low latency audio with native COM integration
-- **WASAPI Integration** — Seamless fallback for consumer audio hardware
+- **WASAPI Integration** — Exclusive and Shared mode with automatic fallback
 - **Multi-threaded Processing** — 64-bit audio pipeline for maximum performance
 - **Sample-accurate Timing** — Professional-grade playback precision
 - **Low-latency Design** — Optimized for real-time audio with <10ms latency
@@ -43,7 +41,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 
 - **NomadUI Framework** — Custom OpenGL 3.3+ renderer with MSAA anti-aliasing
 - **Adaptive FPS System** — Intelligent rendering optimization (24-60 FPS)
-- **Advanced Timeline** — Familiar workflow with adaptive grid and waveform visualization
+- **FL Studio-inspired Timeline** — Familiar workflow with adaptive grid and waveform visualization
 - **Theme System** — Dark/light modes with customizable color schemes
 - **SVG Icon System** — Crisp, scalable vector icons with dynamic color tinting
 - **Smooth Animations** — Hardware-accelerated transitions and effects
@@ -76,7 +74,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 - CPU: Intel Core i7/i9 or AMD Ryzen 7/9
 - RAM: 16 GB or more
 - GPU: Dedicated graphics card with 2+ GB VRAM
-- Audio: Low-latency audio interface (ASIO recommended for best performance)
+- Audio: Low-latency audio interface (ASIO support optional)
 - Storage: SSD for project files and sample libraries
 
 ### Future Platform Support
@@ -144,7 +142,7 @@ We're building the DAW we wish existed — powerful yet approachable, profession
 
 ### Detailed Build Instructions
 
-For comprehensive build instructions including troubleshooting, see **[Building Guide →](docs/getting-started/building.md)**
+For comprehensive build instructions including troubleshooting, see **[Building Guide →](docs/BUILDING.md)**
 
 ---
 
@@ -154,18 +152,18 @@ For comprehensive build instructions including troubleshooting, see **[Building 
 
 Explore our beautiful, searchable documentation built with MkDocs Material:
 
-- **🚀 [Getting Started](docs/getting-started/index.md)** — Setup guides and quickstart tutorials
-- **🏗️ [Architecture](docs/architecture/overview.md)** — System design with interactive diagrams
-- **👨‍💻 [Developer Guide](docs/developer/contributing.md)** — Contributing, coding standards, debugging
-- **📖 [Technical Reference](docs/technical/faq.md)** — FAQ, glossary, roadmap
-- **🔌 [API Reference](docs/api/index.md)** — Complete API documentation
-- **🤝 [Community](docs/community/code-of-conduct.md)** — Code of conduct, support, security
+- **🚀 [Getting Started](https://currentsuspect.github.io/NOMAD/getting-started/)** — Setup guides and quickstart tutorials
+- **🏗️ [Architecture](https://currentsuspect.github.io/NOMAD/architecture/overview/)** — System design with interactive diagrams
+- **👨‍💻 [Developer Guide](https://currentsuspect.github.io/NOMAD/developer/contributing/)** — Contributing, coding standards, debugging
+- **📖 [Technical Reference](https://currentsuspect.github.io/NOMAD/technical/faq/)** — FAQ, glossary, roadmap
+- **🔌 [API Reference](https://currentsuspect.github.io/NOMAD/api/)** — Complete API documentation
+- **🤝 [Community](https://currentsuspect.github.io/NOMAD/community/code-of-conduct/)** — Code of conduct, support, security
 
 ### Quick Links
 
-- [Building NOMAD](docs/getting-started/building.md) — Detailed build instructions
-- [Contributing Guide](docs/developer/contributing.md) — How to contribute
-- [Architecture Overview](docs/architecture/overview.md) — Understanding NOMAD's design
+- [Building NOMAD](https://currentsuspect.github.io/NOMAD/getting-started/building/) — Detailed build instructions
+- [Contributing Guide](https://currentsuspect.github.io/NOMAD/developer/contributing/) — How to contribute
+- [Architecture Overview](https://currentsuspect.github.io/NOMAD/architecture/overview/) — Understanding NOMAD's design
 
 ### 📚 API Documentation Generation
 
@@ -229,9 +227,9 @@ For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRI
 
 ---
 
-## 🧾 License — NSSAL v1.1
+## 🧾 License — NSSAL v1.0
 
-**Nomad DAW** is licensed under the **Nomad Studios Source-Available License (NSSAL) v1.1**.
+**Nomad DAW** is licensed under the **Nomad Studios Source-Available License (NSSAL) v1.0**.
 
 ### License Summary
 
@@ -253,13 +251,13 @@ For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRI
 
 ```SPDX
 
-SPDX-License-Identifier: NSSAL-1.1
+SPDX-License-Identifier: NSSAL
 ```
 
 All source files include the following header:
 
 ```cpp
-// © 2026 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
 ```
 
 ### Full License Text
@@ -318,44 +316,32 @@ Thank you to all contributors and the open-source community for making Nomad pos
 
 ---
 
-## 🗺️ Roadmap — v1 Beta (December 2026)
+## 🗺️ Roadmap Highlights
 
-**Target:** Ship a credible, stable v1 Beta focused on **pattern-based Hip-Hop production**.
+**Q1 2025:**
 
-### ✅ Completed (Jan 2026)
-- Core audio engine (WASAPI/ASIO dual-tier)
-- NomadUI framework with OpenGL rendering
-- Pattern-based timeline/playlist
-- Drag-and-drop, clip editing, trimming
-- Mixing (volume, pan, mute, solo)
-- Project save/load
-- VST3/CLAP plugin scanner
+- ✅ Core audio engine with WASAPI
+- ✅ NomadUI framework with OpenGL rendering
+- ✅ FL Studio-inspired timeline
+- 🚧 Sample manipulation (drag-and-drop, editing)
+- 🚧 Mixing controls (volume, pan, mute, solo)
+- 🚧 Project save/load system
 
-### 🎯 Phase 1 — Foundation Lock (COMPLETE) (Jan–Mar 2026)
-✅ App structure refactor (reduce Main.cpp complexity)
-✅ Project loop reliability (open → edit → save → reopen)
-✅ Data model API freeze
+**Q2 2025:**
 
-### 🎯 Phase 2 — Project + Undo/Redo (Apr–Jun 2026)
-✅ Project format v1 spec with versioning
-✅ Undo/redo for core actions
--[ ] Autosave + crash recovery
+- 📅 VST3 plugin hosting
+- 📅 MIDI support and piano roll
+- 📅 Undo/redo system
+- 📅 Cross-platform support (Linux, macOS)
 
-### 🎯 Phase 3 — Recording + Export (Jul–Sep 2026)
-- Recording workflow reliability
-- Offline render/export
-- Device stress testing
+**Q3-Q4 2025:**
 
-### 🎯 Phase 4 — Plugin Decision Gate (Sep 2026)
-- Option A: Ship with internal Arsenal only
-- Option B: Minimal VST3/CLAP MVP (if stable)
+- 📅 Advanced automation
+- 📅 Effects and mixing console
+- 📅 Muse AI integration (premium)
+- 📅 Official v1.0 release
 
-### 🎯 Phase 5–6 — Hardening + Release (Oct–Dec 2026)
-- Bug triage, performance budgets
-- Signed Windows installer
-- v1 Beta ship
-
-See **[docs/technical/roadmap.md](docs/technical/roadmap.md)** for the full execution plan.
+See the full **[Roadmap →](docs/ROADMAP.md)** for detailed milestones.
 
 ---
 
@@ -400,7 +386,7 @@ See **[SECURITY.md](SECURITY.md)** for our full security policy.
 Join the conversation:
 
 - **Discord** — [Invite Link](https://discord.gg/nomad-studios)
-- **GitHub Discussions** — [Open Discussions](https://github.com/currentsuspect/NOMAD/discussions)
+- **GitHub Discussions** — [Open Discussions](https://github.com/NomadStudios/Nomad/discussions)
 - **Twitter/X** — [@NomadStudios](https://twitter.com/NomadStudios)
 
 ---
@@ -423,9 +409,9 @@ For commercial licensing inquiries, contact: [makoridylan@gmail.com](mailto:mako
 
 If you enjoy using Nomad, consider supporting its development:
 
-- **GitHub Sponsors** — [Sponsor Nomad](https://github.com/sponsors/currentsuspect)
+- **GitHub Sponsors** — [Sponsor Nomad](https://github.com/sponsors/NomadStudios)
 - **Ko-fi** — [Buy Me a Coffee](https://ko-fi.com/nomadstudios)
-- **Patreon** — [Become a Patron](https://www.patreon.com/nomadstudios)
+- **Patreon** — [Become a Patron](https://patreon.com/Nomad_Studios?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink)
 
 ---
 
@@ -435,7 +421,7 @@ If you enjoy using Nomad, consider supporting its development:
 
 ⭐ **Star this repo** if you believe in transparent, professional audio software!
 
-*Copyright © 2026 Dylan Makori / Nomad Studios. All rights reserved.*  
+*Copyright © 2025 Dylan Makori / Nomad Studios. All rights reserved.*
 *Licensed under NSSAL v1.1*
 
 </div>

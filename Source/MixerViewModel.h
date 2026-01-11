@@ -37,13 +37,10 @@ struct ChannelViewModel {
     // Control state (reflects engine, optimistic updates allowed)
     float faderGainDb{0.0f};             ///< Fader position in dB
     float pan{0.0f};                     ///< Pan position (-1.0 to 1.0)
-    float width{1.0f};                   ///< Stereo Width (0.0 to 3.0)
     float trimDb{0.0f};                  ///< Trim/gain in dB
     bool muted{false};                   ///< Mute state
     bool soloed{false};                  ///< Solo state
     bool armed{false};                   ///< Record arm state
-    bool monitored{false};               ///< Input monitor state
-    int inputChannelIndex{-1};           ///< Input channel index (0-based, -1 = none)
 
     // FX state
     int fxCount{0};                      ///< Number of insert effects
@@ -57,26 +54,12 @@ struct ChannelViewModel {
     float envLowEnergyR{MixerMath::DB_MIN};  ///< Low-frequency energy envelope (dB)
     float smoothedPeakL{MixerMath::DB_MIN};  ///< Smoothed left peak (dB)
     float smoothedPeakR{MixerMath::DB_MIN};  ///< Smoothed right peak (dB)
-    float smoothedRmsL{MixerMath::DB_MIN};   ///< Smoothed left RMS (dB)
-    float smoothedRmsR{MixerMath::DB_MIN};   ///< Smoothed right RMS (dB)
-    float correlation{0.0f};                 ///< Phase correlation (-1.0 to 1.0)
-    float integratedLufs{-144.0f};           ///< Integrated/Gated LUFS (dB)
     float peakHoldL{MixerMath::DB_MIN};      ///< Peak hold left (dB)
     float peakHoldR{MixerMath::DB_MIN};      ///< Peak hold right (dB)
     double peakHoldTimerL{0.0};              ///< Time since peak hold set (seconds)
     double peakHoldTimerR{0.0};              ///< Time since peak hold set (seconds)
     bool clipLatchL{false};                  ///< Left channel clip latch
     bool clipLatchR{false};                  ///< Right channel clip latch
-
-    struct SendViewModel {
-        uint32_t targetId{0};
-        std::string targetName;
-        float gain{1.0f};           // Linear gain
-        float pan{0.0f};
-        bool postFader{true};
-        bool muted{false};
-    };
-    std::vector<SendViewModel> sends;
 
     /**
      * @brief Reset meter state to silence.
@@ -121,7 +104,7 @@ public:
     static constexpr float PEAK_ATTACK_MS = 5.0f;
     static constexpr float PEAK_RELEASE_MS = 80.0f;
     static constexpr float ENERGY_ATTACK_MS = 35.0f;
-    static constexpr float ENERGY_RELEASE_MS = 300.0f;
+    static constexpr float ENERGY_RELEASE_MS = 260.0f;
     static constexpr float LOW_ATTACK_MS = 50.0f;
     static constexpr float LOW_RELEASE_MS = 450.0f;
     static constexpr float DISPLAY_ATTACK_MS = 5.0f;
@@ -137,9 +120,6 @@ public:
     MixerViewModel& operator=(const MixerViewModel&) = delete;
     MixerViewModel(MixerViewModel&&) = default;
     MixerViewModel& operator=(MixerViewModel&&) = default;
-
-    // Global State
-    std::vector<std::string> inputNames;
 
     /**
      * @brief Update meter values from snapshot buffer.
@@ -232,25 +212,7 @@ public:
     void setMeterMode(MeterMode mode) { m_meterMode = mode; }
     MeterMode getMeterMode() const { return m_meterMode; }
 
-    struct Destination {
-        uint32_t id;
-        std::string name;
-    };
-    std::vector<Destination> getAvailableDestinations(uint32_t excludeId) const;
-
-    // Send Management
-    void addSend(uint32_t channelId);
-    void removeSend(uint32_t channelId, int sendIndex);
-    void setSendLevel(uint32_t channelId, int sendIndex, float linearGain);
-    void setSendDestination(uint32_t channelId, int sendIndex, uint32_t targetId);
-
-    void setOnGraphDirty(std::function<void()> cb) { m_onGraphDirty = std::move(cb); }
-    void setOnProjectModified(std::function<void()> cb) { m_onProjectModified = std::move(cb); }
-
 private:
-    std::function<void()> m_onGraphDirty;
-    std::function<void()> m_onProjectModified;
-
     /// Stable storage - pointers remain valid across add/remove
     std::vector<std::unique_ptr<ChannelViewModel>> m_channels;
 
@@ -264,7 +226,7 @@ private:
     int32_t m_selectedChannelId{-1};
 
     // Default: FL-style body (energy) + peak overlay line (UI draws peak separately).
-    MeterMode m_meterMode{MeterMode::Technical};
+    MeterMode m_meterMode{MeterMode::Hybrid};
 
     /**
      * @brief Rebuild id→index map after channel list changes.

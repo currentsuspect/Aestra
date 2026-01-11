@@ -1,0 +1,509 @@
+{
+  "lanes": [
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "515728c7-040b-4b16-8dbd-7ee52ad7f787",
+      "mute": false,
+      "name": "Track 1",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "7571bd01-d78a-4807-8ffe-aa23ebc5feb4",
+      "mute": false,
+      "name": "Track 2",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "8dd97960-b49e-4a3b-ad00-f2e7cfc6f504",
+      "mute": false,
+      "name": "Track 3",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "eed19d5e-3f94-480d-bd11-108cd65dcea7",
+      "mute": false,
+      "name": "Track 4",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "eed27864-aab0-4285-9e26-24803f32da7d",
+      "mute": false,
+      "name": "Track 5",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "812dbf9d-01c6-4042-8882-7a1aad399769",
+      "mute": false,
+      "name": "Track 6",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "01a2f1d3-7bec-45b1-9154-b524efe1ba2f",
+      "mute": false,
+      "name": "Track 7",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "32ac319f-785c-4f4f-895c-65183057e83b",
+      "mute": false,
+      "name": "Track 8",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "2b1b4811-256d-406e-a1c6-4561dd2d34eb",
+      "mute": false,
+      "name": "Track 9",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "d63bd117-7cb8-49d4-a6df-de803c9731e4",
+      "mute": false,
+      "name": "Track 10",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "c677dbb0-74fd-451f-b43b-c314c73b2670",
+      "mute": false,
+      "name": "Track 11",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "1ad3e755-fd46-450e-9c22-58e052a4464e",
+      "mute": false,
+      "name": "Track 12",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "7118e77a-44be-49f7-957f-c215eb3cbcbd",
+      "mute": false,
+      "name": "Track 13",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "db0c9c51-09b4-4c99-8e35-707f49e4e76a",
+      "mute": false,
+      "name": "Track 14",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "56da4e10-b214-4fda-b82f-240c872dfc36",
+      "mute": false,
+      "name": "Track 15",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "3d256370-80da-4a16-a036-5ffa95d3a9c4",
+      "mute": false,
+      "name": "Track 16",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "dbc4dee4-af83-41c7-b613-cfa778115704",
+      "mute": false,
+      "name": "Track 17",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "91396fe4-fedf-4eef-b92e-068291cc6de9",
+      "mute": false,
+      "name": "Track 18",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "78ec19b4-a3ae-4bee-bad3-e6d5a53ff7d5",
+      "mute": false,
+      "name": "Track 19",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "47d44d2c-5743-4593-a6fd-157dc53d0d48",
+      "mute": false,
+      "name": "Track 20",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "4c7a51a4-243e-404a-9f96-134c062b71bb",
+      "mute": false,
+      "name": "Track 21",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "9102ea24-cf0d-4d92-a224-445fcc4f2586",
+      "mute": false,
+      "name": "Track 22",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "c3b0b13e-b95d-49b6-b183-cf98110818d2",
+      "mute": false,
+      "name": "Track 23",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "8b4c3da2-3361-40b0-a3c7-25e5d1ad6ee7",
+      "mute": false,
+      "name": "Track 24",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "030d2aab-ae6c-4fac-acfd-ffe01a609fbe",
+      "mute": false,
+      "name": "Track 25",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "5de489fc-7141-4ae1-bb57-6a0d490ed616",
+      "mute": false,
+      "name": "Track 26",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "d00a6519-3f72-4752-a04b-90cb9585cf41",
+      "mute": false,
+      "name": "Track 27",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "3b86af22-d768-4384-9659-2f18e3e2bce7",
+      "mute": false,
+      "name": "Track 28",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "23fbd958-a288-48c6-b031-4113f0687cb9",
+      "mute": false,
+      "name": "Track 29",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "ff575851-bc18-4244-b488-05cc4227ea69",
+      "mute": false,
+      "name": "Track 30",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "263a4363-a156-485f-b49c-d1bc657925e8",
+      "mute": false,
+      "name": "Track 31",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "ba6ca972-b011-4f6d-8e76-e0510e6141a9",
+      "mute": false,
+      "name": "Track 32",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "c52a975c-7b15-48a5-a8c3-85a7d52b819c",
+      "mute": false,
+      "name": "Track 33",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "95fe574e-3d3e-4d1c-b7ca-f5c4d7de3b85",
+      "mute": false,
+      "name": "Track 34",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "ed426a09-7dc9-45cc-a1e7-023aba2e1930",
+      "mute": false,
+      "name": "Track 35",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "b27e9529-9c8d-4172-872c-5f2c64378a59",
+      "mute": false,
+      "name": "Track 36",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "fca182ba-c845-44d8-b9dd-4611bd857fb5",
+      "mute": false,
+      "name": "Track 37",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "5ab0608c-737d-4259-87d7-e03691ab1d50",
+      "mute": false,
+      "name": "Track 38",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "8b3fc552-a126-4ee5-a714-915cecc8936b",
+      "mute": false,
+      "name": "Track 39",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "5ecf2ff4-71c4-4148-b078-b68fbc53f4c8",
+      "mute": false,
+      "name": "Track 40",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "86428b45-c4e4-4ef5-b13b-825cba199340",
+      "mute": false,
+      "name": "Track 41",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "f3ce4239-04f8-4478-950b-12ee6105a2f9",
+      "mute": false,
+      "name": "Track 42",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "42985c06-a6e0-4af4-9323-e72870578b5f",
+      "mute": false,
+      "name": "Track 43",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "c6c25079-31ce-4c56-a2f8-4137af055be5",
+      "mute": false,
+      "name": "Track 44",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "dcade0ee-c61d-41b2-a181-1206a3ac1f91",
+      "mute": false,
+      "name": "Track 45",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "d048dcf6-8fc3-4b08-a6bd-155c5b073fea",
+      "mute": false,
+      "name": "Track 46",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "b7cfd51c-357a-4b29-a10e-5f19edabfd7e",
+      "mute": false,
+      "name": "Track 47",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.28832e+09,
+      "id": "aad7f5d1-9cb9-47a2-af6b-ce40a1e22354",
+      "mute": false,
+      "name": "Track 48",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.29048e+09,
+      "id": "f2ba1c03-85ef-4846-a288-2471535155d4",
+      "mute": false,
+      "name": "Track 49",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    },
+    {
+      "clips": [],
+      "color": 4.27824e+09,
+      "id": "83cce8d7-0e84-4226-9fbc-9c6179ce8275",
+      "mute": false,
+      "name": "Track 50",
+      "pan": 0,
+      "solo": false,
+      "volume": 1
+    }
+  ],
+  "patterns": [],
+  "playhead": 0,
+  "sources": [],
+  "tempo": 120,
+  "version": 1
+}

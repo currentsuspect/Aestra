@@ -4,8 +4,6 @@
 #include "../Core/NUIComponent.h"
 #include "../Core/NUISlider.h"
 #include "NUICoreWidgets.h"
-#include "UIItemSelector.h"
-#include "UIMixerKnob.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -75,40 +73,17 @@ private:
     std::function<void()> onActivate_;
 };
 
-class UIMixerSend : public NUIComponent {
+class SendSlot : public NUIComponent {
 public:
-    UIMixerSend();
+    SendSlot();
 
     void onRender(NUIRenderer& renderer) override;
-    
-    void setSendIndex(int index) { index_ = index; }
-    int getSendIndex() const { return index_; }
 
-    void setDestination(uint32_t destId, const std::string& name);
-    uint32_t getDestinationId() const;
-    
-    void setLevel(float level);
-    float getLevel() const;
-
-    void setAvailableDestinations(const std::vector<std::pair<uint32_t, std::string>>& dests);
-    
-    // Callbacks
-    void setOnDestinationChanged(std::function<void(uint32_t)> cb);
-    void setOnLevelChanged(std::function<void(float)> cb);
-    void setOnDelete(std::function<void()> cb);
+    void setAmount(float amount);
+    float getAmount() const { return amount_; }
 
 private:
-    int index_ = -1;
-    std::shared_ptr<UIItemSelector> destSelector_;
-    std::shared_ptr<UIMixerKnob> levelKnob_;
-    std::shared_ptr<NUIButton> deleteButton_;
-    
-    // Store mapping from index to ID
-    std::vector<std::pair<uint32_t, std::string>> destinations_;
-    
-    std::function<void(uint32_t)> onDestChanged_;
-    std::function<void(float)> onLevelChanged_;
-    std::function<void()> onDelete_;
+    float amount_;
 };
 
 class MeterStrip : public NUIMeter {
@@ -131,7 +106,7 @@ public:
     MeterStrip& getMeterStrip() { return *meterStrip_; }
 
     std::vector<std::shared_ptr<InsertSlot>>& getInserts() { return inserts_; }
-    std::vector<std::shared_ptr<UIMixerSend>>& getSends() { return sends_; }
+    std::vector<std::shared_ptr<SendSlot>>& getSends() { return sends_; }
 
     void addInsert();
     void addSend();
@@ -145,7 +120,7 @@ private:
     std::shared_ptr<ArmButton> armButton_;
     std::shared_ptr<MeterStrip> meterStrip_;
     std::vector<std::shared_ptr<InsertSlot>> inserts_;
-    std::vector<std::shared_ptr<UIMixerSend>> sends_;
+    std::vector<std::shared_ptr<SendSlot>> sends_;
 };
 
 class MixerPanel : public NUIComponent {

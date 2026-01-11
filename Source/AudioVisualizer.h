@@ -3,7 +3,6 @@
 
 #include "../NomadUI/Core/NUIComponent.h"
 #include "../NomadAudio/include/NomadAudio.h"
-#include "../NomadAudio/include/WaveformCache.h"
 #include <vector>
 #include <memory>
 #include <atomic>
@@ -21,8 +20,7 @@ enum class AudioVisualizationMode {
     VU,
     Oscilloscope,
     CompactMeter,  // New compact mode for FL-style positioning
-    CompactWaveform,
-    ArrangementWaveform  // Scrolling pre-rendered project waveform
+    CompactWaveform
 };
 
 /**
@@ -57,10 +55,6 @@ public:
     void setShowStereo(bool showStereo);
     void setShowPeakHold(bool showPeakHold);
     
-    // Arrangement waveform (scrolling transport display)
-    void setArrangementWaveform(std::shared_ptr<Nomad::Audio::WaveformCache> cache, double duration, double clipStartTime = 0.0, double sampleRate = 48000.0);
-    void setTransportPosition(double seconds);
-    
     // Properties
     AudioVisualizationMode getMode() const { return mode_; }
     float getSensitivity() const { return sensitivity_; }
@@ -84,7 +78,6 @@ private:
     void renderOscilloscope(NUIRenderer& renderer);
     void renderCompactMeter(NUIRenderer& renderer);
     void renderCompactWaveform(NUIRenderer& renderer);
-    void renderArrangementWaveform(NUIRenderer& renderer);
     
     void renderLevelBar(NUIRenderer& renderer, const NUIRect& bounds, float level, float peak, const NUIColor& color);
     void renderSpectrumBar(NUIRenderer& renderer, const NUIRect& bounds, float magnitude, const NUIColor& color);
@@ -141,13 +134,6 @@ private:
     NUIColor backgroundColor_;
     NUIColor gridColor_;
     NUIColor textColor_;
-    
-    // Arrangement waveform (scrolling transport)
-    std::shared_ptr<Nomad::Audio::WaveformCache> arrangementWaveform_;
-    std::atomic<double> transportPosition_{0.0};
-    double projectDuration_{0.0};
-    double clipStartTime_{0.0};      // When the clip starts on timeline (seconds)
-    double waveformSampleRate_{48000.0}; // Sample rate of the waveform cache
 };
 
 } // namespace NomadUI

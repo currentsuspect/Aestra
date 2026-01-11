@@ -11,7 +11,7 @@
 namespace NomadUI {
 
 /**
- * @brief Main application class for the Nomad UI framework.
+ * Main application class for the Nomad UI framework.
  * 
  * Manages the render loop, event processing, and root component.
  */

@@ -285,40 +285,13 @@ public:
      * @brief Check underrun rate and auto-scale buffer if needed
      * Call this periodically (e.g., every second) to monitor performance
      */
-    /**
-     * @brief Check underrun rate and auto-scale buffer if needed
-     * Call this periodically (e.g., every second) to monitor performance
-     */
     void checkAndAutoScaleBuffer();
-
-    /**
-     * @brief Monitor active driver health and perform safety fallback if stalled.
-     */
-    void checkDriverHealth();
-    
-    /**
-     * @brief Force switch to the internal dummy driver (e.g. after a crash/disconnect).
-     */
-    bool switchToSafetyDriver();
-
-    /**
-     * @brief Enable/Disable dithering for active driver
-     */
-    void setDitheringEnabled(bool enabled);
-    
-    /**
-     * @brief Check if dithering is enabled (preference)
-     */
-    bool isDitheringEnabled() const { return m_ditherEnabled; }
 
 private:
     // Driver management
     std::vector<std::unique_ptr<IAudioDriver>> m_drivers;
     IAudioDriver* m_activeDriver = nullptr;
     AudioDriverType m_preferredDriverType = AudioDriverType::WASAPI_EXCLUSIVE;  // Prefer Exclusive, auto-fallback to Shared if blocked
-    
-    // Preferences
-    bool m_ditherEnabled = false;
     
     AudioStreamConfig m_currentConfig;
     AudioCallback m_currentCallback;

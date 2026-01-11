@@ -2,31 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-
-### TODO
-- Add entry for PR #...
-
-## v0.1.1 - 2025-12-28
-
-### Added
-- **ASIO Driver Support** (Professional Audio):
-    - **Dual-Tier Driver System**: Seamless startup with automatic failover between ASIO (via `ASIODriver`) and WASAPI/DirectSound (via `RtAudioBackend`).
-    - **Native COM Integration**: implemented a clean-room `ASIODriver` class handling safe COM loading (`QueryInterface`), binary compatibility (`__stdcall`, 4-byte packing), and STA threading enforcement.
-    - **Low-Latency Streaming**: Verified sample-accurate callback loop (`bufferSwitch`) with zero allocations and lock-free processing.
-    - **Robust Diagnosis**: Added detailed error reporting for COM (`HRESULT`) and ASIO initialization failures.
-
-### Optimized
-- **Audio Engine Performance**:
-    - **Pan Law**: Replaced expensive per-sample trigonometry (`sin`/`cos`) with per-block gain smoothing (`gainL`/`gainR`), significantly reducing CPU overhead in the mixing loop.
-    - **Resampling**: Implemented pre-calculated window tables for all Sinc Interpolators (8, 16, 32, 64-point), removing iterative Bessel function calculations from the audio callback.
-
-### Fixed
-- **Audio Engine Stability**:
-    - Fixed "Master Silence" bug where buffer reallocation invalidated routing pointers (added `compileGraph` to `setBufferConfig`).
-    - Restored missing audio summing loop in `renderGraph`.
-    - Added Safety Fallback for unmapped tracks to ensure consistent gain behavior if UI parameters are missing.
-
 ## [Unreleased] - 2025-12-23
 
 ### Added

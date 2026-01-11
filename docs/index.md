@@ -7,7 +7,7 @@
 **Create Like Silence Is Watching**
 
 A modern, professional digital audio workstation built from the ground up with intention.  
-Featuring ultra-low latency audio, GPU-accelerated UI, and a pattern-based workflow.
+Featuring ultra-low latency audio, GPU-accelerated UI, and an FL Studio-inspired workflow.
 
 <div class="cta-buttons" markdown="1">
 [Get Started](getting-started/index.md){ .cta-button }
@@ -164,7 +164,7 @@ For detailed build instructions, see the [Building Guide](getting-started/buildi
     <tr>
       <td><strong>Timeline</strong></td>
       <td><span class="status-icon success"></span>Complete</td>
-      <td>Pattern-based sequencer</td>
+      <td>FL Studio-inspired sequencer</td>
     </tr>
     <tr>
       <td><strong>Mixing</strong></td>

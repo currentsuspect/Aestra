@@ -54,6 +54,17 @@ public:
     }
 
 private:
+    /**
+     * @brief Analyze signal complexity to determine resampling quality.
+     *
+     * Uses a simple heuristic based on the average absolute difference between adjacent samples.
+     * High frequency content (e.g., transients) will have large differences.
+     *
+     * @param input Interleaved audio input buffer.
+     * @param frames Number of frames to analyze.
+     * @param channels Number of channels.
+     * @return true if high quality (Sinc64) is recommended, false otherwise.
+     */
     bool analyzeSignalComplexity(const float* input, uint32_t frames, uint32_t channels) {
         // Simple heuristic: sum of absolute differences (high freq proxy)
         if (frames < 2) return false;
@@ -71,8 +82,9 @@ private:
 
         float avgDiff = totalDiff / (limit * channels);
 
-        // If average sample-to-sample jump is large, we have high frequency content
-        // Threshold would need tuning.
+        // If average sample-to-sample jump is large, we have high frequency content.
+        // Threshold of 0.1f implies an average change of 10% full scale per sample.
+        // This effectively detects sharp transients or high frequency signals.
         return avgDiff > 0.1f;
     }
 

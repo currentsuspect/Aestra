@@ -60,7 +60,6 @@ public:
     static std::shared_ptr<NUIIcon> createCheckIcon();
     static std::shared_ptr<NUIIcon> createChevronRightIcon();
     static std::shared_ptr<NUIIcon> createChevronDownIcon();
-    static std::shared_ptr<NUIIcon> createTrashIcon();
     
 private:
     void updateBounds();

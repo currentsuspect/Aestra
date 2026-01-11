@@ -153,32 +153,29 @@ void WindowPanel::onRender(NomadUI::NUIRenderer& renderer) {
     // We draw ONE rounded rect for the whole window if possible, or composed rects.
     // Since WindowPanel is a floating window, let's treat the whole thing as one glass pane.
     
-    // Consistent corner radius matching child components
-    const float windowRadius = theme.getRadius("m");  // Use theme's medium radius
-    
     // Draw content background (if expanded) - Unified with Title Bar in Glass Mode
     if (!m_minimized) {
         // Draw one large glass pane for the whole window
         auto glassColor = theme.getColor("surfaceTertiary"); // Now 0.85 alpha
-        auto borderColor = theme.getColor("border");  // Use standard border for consistency
+        auto glassBorder = theme.getColor("glassBorder");
         
-        // Full window body with rounded corners
-        renderer.fillRoundedRect(bounds, windowRadius, glassColor);
-        renderer.strokeRoundedRect(bounds, windowRadius, 1.0f, borderColor);
+        // Full window body
+        renderer.fillRect(bounds, glassColor);
+        renderer.strokeRect(bounds, 1.0f, glassBorder);
         
         // Separator for title bar (subtle)
         renderer.drawLine(
-            NomadUI::NUIPoint(bounds.x + 4, bounds.y + m_titleBarHeight),
-            NomadUI::NUIPoint(bounds.x + bounds.width - 4, bounds.y + m_titleBarHeight),
+            NomadUI::NUIPoint(bounds.x, bounds.y + m_titleBarHeight),
+            NomadUI::NUIPoint(bounds.x + bounds.width, bounds.y + m_titleBarHeight),
             1.0f, 
-            borderColor.withAlpha(0.5f)
+            glassBorder.withAlpha(0.05f)
         );
     } else {
-        // Minimized: Just title bar with rounded corners
+        // Minimized: Just title bar
         auto glassColor = theme.getColor("surfaceTertiary");
-        auto borderColor = theme.getColor("border");
-        renderer.fillRoundedRect(titleBarRect, windowRadius, glassColor);
-        renderer.strokeRoundedRect(titleBarRect, windowRadius, 1.0f, borderColor);
+        auto glassBorder = theme.getColor("glassBorder");
+        renderer.fillRect(titleBarRect, glassColor);
+        renderer.strokeRect(titleBarRect, 1.0f, glassBorder);
     }
     
     // Draw title text

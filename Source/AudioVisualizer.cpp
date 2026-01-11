@@ -9,10 +9,6 @@
 
 namespace NomadUI {
 
-// =============================================================================
-// SECTION: Construction
-// =============================================================================
-
 AudioVisualizer::AudioVisualizer()
     : NUIComponent()
     , leftPeak_(0.0f)
@@ -28,8 +24,8 @@ AudioVisualizer::AudioVisualizer()
     , mode_(AudioVisualizationMode::Waveform)
     , sensitivity_(0.8f)
     , decayRate_(0.95f)
-    , primaryColor_(NUIColor::fromHex(0xbb86fc))    // Nomad Purple
-    , secondaryColor_(NUIColor::fromHex(0xd1b3ff))  // Lighter complementary purple
+    , primaryColor_(NUIColor(0.0f, 0.737f, 0.831f)) // #00bcd4 - Accent Cyan
+    , secondaryColor_(NUIColor(1.0f, 0.251f, 0.506f)) // #ff4081 - Accent Magenta
     , showStereo_(true)
     , showPeakHold_(true)
     , displayBufferSize_(1024)
@@ -50,10 +46,6 @@ AudioVisualizer::AudioVisualizer()
     gridColor_ = themeManager.getColor("border");                   // #2e2e35 - Grid lines
     textColor_ = themeManager.getColor("textPrimary");              // #e6e6eb - Soft white
 }
-
-// =============================================================================
-// SECTION: Component Lifecycle
-// =============================================================================
 
 void AudioVisualizer::onRender(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
@@ -86,9 +78,6 @@ void AudioVisualizer::onRender(NUIRenderer& renderer) {
             break;
         case AudioVisualizationMode::CompactWaveform:
             renderCompactWaveform(renderer);
-            break;
-        case AudioVisualizationMode::ArrangementWaveform:
-            renderArrangementWaveform(renderer);
             break;
     }
 }
@@ -194,10 +183,6 @@ void AudioVisualizer::onResize(int width, int height) {
     displayBuffer_.resize(displayBufferSize_ * 2);
     currentSample_ = 0;
 }
-
-// =============================================================================
-// SECTION: Audio Data Input
-// =============================================================================
 
 void AudioVisualizer::setAudioData(const float* leftChannel, const float* rightChannel, size_t numSamples, double sampleRate) {
     std::lock_guard<std::mutex> lock(audioDataMutex_);
@@ -314,19 +299,6 @@ void AudioVisualizer::setShowPeakHold(bool showPeakHold) {
     setDirty(true);
 }
 
-void AudioVisualizer::setArrangementWaveform(std::shared_ptr<Nomad::Audio::WaveformCache> cache, double duration, double clipStartTime, double sampleRate) {
-    arrangementWaveform_ = cache;
-    projectDuration_ = duration;
-    clipStartTime_ = clipStartTime;
-    waveformSampleRate_ = sampleRate;
-    setDirty(true);
-}
-
-void AudioVisualizer::setTransportPosition(double seconds) {
-    transportPosition_.store(seconds, std::memory_order_relaxed);
-    setDirty(true);
-}
-
 void AudioVisualizer::processAudioData(const float* leftChannel, const float* rightChannel, size_t numSamples) {
     // Calculate peak and RMS values from current audio buffer only
     float leftPeak = 0.0f;
@@ -365,10 +337,6 @@ void AudioVisualizer::updatePeakMeters() {
     // This is called from the audio callback
     // Peak values are updated in processAudioData
 }
-
-// =============================================================================
-// SECTION: Visualization Rendering
-// =============================================================================
 
 void AudioVisualizer::renderWaveform(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
@@ -809,99 +777,6 @@ void AudioVisualizer::renderCompactWaveform(NUIRenderer& renderer) {
     }
 
     renderer.drawPolyline(points.data(), static_cast<int>(points.size()), 1.5f, waveColor);
-}
-
-void AudioVisualizer::renderArrangementWaveform(NUIRenderer& renderer) {
-    NUIRect bounds = getBounds();
-    if (bounds.isEmpty()) return;
-    
-    const float centerY = bounds.y + bounds.height * 0.5f;
-    
-    // Draw subtle center line
-    renderer.drawLine(NUIPoint(bounds.x, centerY),
-                      NUIPoint(bounds.x + bounds.width, centerY),
-                      1.0f, gridColor_.withAlpha(0.15f));
-    
-    // If no arrangement waveform, show placeholder animation
-    if (!arrangementWaveform_ || !arrangementWaveform_->isReady() || projectDuration_ <= 0.0) {
-        float t = 0.5f + 0.5f * std::sin(animationTime_ * 1.2f);
-        NUIColor lineColor = NUIColor::lerp(primaryColor_, secondaryColor_, t).withAlpha(0.3f);
-        renderer.drawLine(NUIPoint(bounds.x, centerY), 
-                         NUIPoint(bounds.x + bounds.width, centerY), 
-                         2.0f, lineColor);
-        return;
-    }
-    
-    // === SCROLLING WAVEFORM ===
-    // Shows the waveform scrolling left as playback advances.
-    
-    double position = transportPosition_.load(std::memory_order_relaxed);
-    
-    // Convert timeline position to clip-relative position
-    // The waveform cache is indexed from 0, but the clip may start at a later timeline position
-    double clipRelativePos = position - clipStartTime_;
-    
-    // Ultra-short window = super tight, immediate feel
-    double windowDuration = 0.5; // 0.5 seconds for tight scrolling
-    
-    // === Show PAST audio (clip-relative) ===
-    // Window shows what JUST PLAYED, with current position at the RIGHT edge.
-    double windowEnd = clipRelativePos;
-    double windowStart = clipRelativePos - windowDuration;
-    
-    // Clamp to valid clip range (0 to clip duration)
-    if (windowEnd < 0.0) return; // Haven't reached clip yet
-    windowStart = std::max(0.0, windowStart);
-    windowEnd = std::max(windowStart + 0.01, windowEnd);
-    
-    // Convert to samples using the actual waveform sample rate
-    Nomad::Audio::SampleIndex startSample = static_cast<Nomad::Audio::SampleIndex>(windowStart * waveformSampleRate_);
-    Nomad::Audio::SampleIndex endSample = static_cast<Nomad::Audio::SampleIndex>(windowEnd * waveformSampleRate_);
-    
-    if (endSample <= startSample) return;
-    
-    // Get peaks for the visible range
-    uint32_t numPixels = static_cast<uint32_t>(bounds.width);
-    std::vector<Nomad::Audio::WaveformPeak> peaks;
-    arrangementWaveform_->getPeaksForRange(0, startSample, endSample, numPixels, peaks);
-    
-    if (peaks.empty()) return;
-    
-    // Animated color blend (cyan/magenta gradient)
-    float t = 0.5f + 0.5f * std::sin(animationTime_ * 1.4f);
-    NUIColor waveColor = NUIColor::lerp(primaryColor_, secondaryColor_, t);
-    
-    // Energy-based glow from current audio output
-    float energy = (leftRMSSmoothed_.load() + rightRMSSmoothed_.load()) * 0.5f;
-    float glowIntensity = std::clamp(energy * 2.5f, 0.5f, 1.0f);
-    
-    const float halfH = bounds.height * 0.42f;
-    
-    // Render waveform bars - rightmost bars (newest audio) are brighter
-    for (size_t i = 0; i < peaks.size(); ++i) {
-        float x = bounds.x + static_cast<float>(i);
-        float minY = centerY - peaks[i].min * halfH;
-        float maxY = centerY - peaks[i].max * halfH;
-        
-        // Ensure min < max for drawing
-        if (minY > maxY) std::swap(minY, maxY);
-        
-        // Position-based intensity: right side (current) is brighter
-        float normalizedPos = static_cast<float>(i) / static_cast<float>(peaks.size());
-        float positionGlow = 0.4f + 0.6f * normalizedPos; // 40% to 100% based on position
-        float alpha = glowIntensity * positionGlow;
-        
-        // Glow layer for rightmost bars (current audio)
-        if (normalizedPos > 0.8f) {
-            float glowStrength = (normalizedPos - 0.8f) / 0.2f; // 0 to 1 in last 20%
-            renderer.drawLine(NUIPoint(x, minY), NUIPoint(x, maxY), 
-                             3.0f, waveColor.withAlpha(0.3f * glowStrength * glowIntensity));
-        }
-        
-        // Main waveform bar
-        renderer.drawLine(NUIPoint(x, minY), NUIPoint(x, maxY), 
-                         1.5f, waveColor.withAlpha(alpha));
-    }
 }
 
 void AudioVisualizer::renderLevelBar(NUIRenderer& renderer, const NUIRect& bounds, float level, float peak, const NUIColor& color) {

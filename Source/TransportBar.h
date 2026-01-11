@@ -65,7 +65,6 @@ public:
     double getPosition() const { return m_position; }
     
     // Callbacks
-    void setOnRecord(std::function<void(bool)> callback) { m_onRecord = callback; }
     void setOnPlay(std::function<void()> callback) { m_onPlay = callback; }
     void setOnPause(std::function<void()> callback) { m_onPause = callback; }
     void setOnStop(std::function<void()> callback) { m_onStop = callback; }
@@ -78,9 +77,6 @@ public:
     
     // View Toggle Callbacks
     void setOnToggleView(std::function<void(Audio::ViewType)> callback) { m_onToggleView = callback; }
-    void setOnCountInToggle(std::function<void(bool)> callback) { m_onCountInToggle = callback; }
-    void setOnWaitToggle(std::function<void(bool)> callback) { m_onWaitToggle = callback; }
-    void setOnLoopRecordToggle(std::function<void(bool)> callback) { m_onLoopRecordToggle = callback; }
     
     // Access to info container for time signature callback wiring
     TransportInfoContainer* getInfoContainer() const { return m_infoContainer.get(); }
@@ -103,11 +99,6 @@ private:
     std::shared_ptr<NomadUI::NUIButton> m_recordButton;
     std::shared_ptr<NomadUI::NUIButton> m_metronomeButton;
     
-    // Transport Extras
-    std::shared_ptr<NomadUI::NUIButton> m_countInButton;
-    std::shared_ptr<NomadUI::NUIButton> m_waitButton;
-    std::shared_ptr<NomadUI::NUIButton> m_loopRecordButton;
-    
 
 
     // View Toggle Buttons
@@ -124,11 +115,6 @@ private:
     std::shared_ptr<NomadUI::NUIIcon> m_stopIcon;
     std::shared_ptr<NomadUI::NUIIcon> m_recordIcon;
     std::shared_ptr<NomadUI::NUIIcon> m_metronomeIcon;
-    
-    // Transport Extras Icons
-    std::shared_ptr<NomadUI::NUIIcon> m_countInIcon;
-    std::shared_ptr<NomadUI::NUIIcon> m_waitIcon;
-    std::shared_ptr<NomadUI::NUIIcon> m_loopRecordIcon;
 
 
     
@@ -139,7 +125,6 @@ private:
     std::shared_ptr<NomadUI::NUIIcon> m_playlistIcon;
     
     std::function<void()> m_onPlay;
-    std::function<void(bool)> m_onRecord;
     std::function<void()> m_onPause;
     std::function<void()> m_onStop;
     std::function<void(float)> m_onTempoChange;
@@ -153,11 +138,6 @@ private:
     // View Toggle Callbacks
     std::function<void(Audio::ViewType)> m_onToggleView;
     
-    // Extra Transport Callbacks
-    std::function<void(bool)> m_onCountInToggle;
-    std::function<void(bool)> m_onWaitToggle;
-    std::function<void(bool)> m_onLoopRecordToggle;
-    
     // Internal state
     TransportState m_state;
     float m_tempo;
@@ -169,12 +149,6 @@ private:
     bool m_pianoRollActive{false};
     bool m_playlistActive{true}; // Always on by default
     bool m_metronomeActive{false};
-    
-    // Transport Extras
-    bool m_countInActive{false};
-    bool m_waitActive{false};
-    bool m_loopRecordActive{false};
-
     int m_beatsPerBar{4};  // Time signature numerator (4 for 4/4)
     
     void createIcons();

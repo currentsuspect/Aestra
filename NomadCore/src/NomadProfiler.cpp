@@ -1,10 +1,7 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file NomadProfiler.cpp
- * @brief Legacy performance profiler implementation (for backward compatibility)
- * 
- * Note: ScopedTimer is now implemented in NomadUnifiedProfiler.cpp
- * This file is kept for backward compatibility with direct Profiler class usage.
+ * @brief Performance profiler implementation
  */
 
 #include "NomadProfiler.h"
@@ -16,7 +13,22 @@
 namespace Nomad {
 
 //==============================================================================
-// Profiler Implementation (Legacy - prefer UnifiedProfiler)
+// ScopedTimer Implementation
+//==============================================================================
+
+ScopedTimer::ScopedTimer(const char* name)
+    : m_name(name)
+    , m_start(std::chrono::steady_clock::now())
+{
+    Profiler::getInstance().beginZone(name);
+}
+
+ScopedTimer::~ScopedTimer() {
+    Profiler::getInstance().endZone(m_name);
+}
+
+//==============================================================================
+// Profiler Implementation
 //==============================================================================
 
 Profiler& Profiler::getInstance() {
@@ -67,7 +79,8 @@ void Profiler::endZone(const char* name) {
                 m_currentFrame.inputPollUs += durationUs;
             }
             
-            // Record the finished zone into the current frame's zone list
+            // Remove from stack
+            // Record the finished zone into the current frame's zone list so it can be exported
             ZoneEntry finished = *it;
             finished.endUs = endUs;
             if (m_currentFrame.zones.size() < 10000) // safety cap
@@ -87,6 +100,7 @@ void Profiler::beginFrame() {
     
     // Reset current frame
     m_currentFrame = FrameStats();
+    // capture absolute frame-start timestamp for later JSON export
     m_currentFrame.frameStartUs = getMicroseconds();
 }
 

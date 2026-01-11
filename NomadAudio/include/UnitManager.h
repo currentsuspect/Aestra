@@ -2,7 +2,6 @@
 #pragma once
 
 #include "ArsenalUnit.h"
-#include "PluginHost.h" // [NEW] For PluginInstancePtr
 #include <mutex>
 #include <map>
 #include <vector>
@@ -25,7 +24,6 @@ struct AudioArsenalSnapshot {
         bool solo;
         bool muted;
         MixerRouteID routeId;
-        PluginInstancePtr plugin; // [NEW] associated plugin (RT-safe shared_ptr)
     };
     
     // Order matches the UI order (for consistent processing if needed)
@@ -62,14 +60,6 @@ public:
     void setUnitRoute(UnitID id, MixerRouteID route);
     void setUnitAudioClip(UnitID id, const std::string& clipPath);
     void setUnitMixerChannel(UnitID id, int channelIndex); // Simplified setter for mixer routing
-    void setUnitName(UnitID id, const std::string& name);  // Rename unit
-    void setUnitColor(UnitID id, uint32_t color);          // Change unit color
-    void reorderUnit(UnitID id, size_t newIndex);          // Reorder unit in list
-    
-    // [NEW] Plugin Assignment
-    void setUnitPlugin(UnitID id, PluginInstancePtr plugin);
-    std::shared_ptr<IPluginInstance> getUnitPlugin(UnitID id);
-    void instantiatePlugin(UnitID id, const std::string& pluginId); // Helper using Factory
     
     // === Pattern Association (Main Thread) ===
     void setActivePattern(UnitID id, PatternID pid);
@@ -88,7 +78,6 @@ private:
     
     // Primary storage
     std::map<UnitID, ArsenalUnit> m_units;
-    std::map<UnitID, PluginInstancePtr> m_unitPlugins; // [NEW] Plugins
     std::vector<UnitID> m_unitOrder; // Preserves UI order
     
     UnitID m_nextId = 1;

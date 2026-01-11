@@ -95,24 +95,6 @@ struct GPUStats {
 };
 
 /**
- * @brief Zone timing entry with threading support
- * Note: Defined before AdvancedFrameStats because it's used in a vector there
- */
-struct UnifiedZoneEntry {
-    const char* name{nullptr};
-    uint64_t startUs{0};
-    uint64_t endUs{0};
-    uint32_t threadId{0};
-    std::string threadName;
-    uint64_t durationUs{0};
-    
-    // For nested zones
-    uint32_t parentZoneId{0};
-    uint32_t zoneId{0};
-    static std::atomic<uint32_t> s_nextZoneId;
-};
-
-/**
  * @brief Thread-specific profiling
  */
 struct ThreadStats {
@@ -164,9 +146,23 @@ struct AdvancedFrameStats {
     double renderPrepUs{0.0};
     double gpuSubmitUs{0.0};
     double inputPollUs{0.0};
+};
+
+/**
+ * @brief Zone timing entry with threading support
+ */
+struct UnifiedZoneEntry {
+    const char* name{nullptr};
+    uint64_t startUs{0};
+    uint64_t endUs{0};
+    uint32_t threadId{0};
+    std::string threadName;
+    uint64_t durationUs{0};
     
-    // Per-frame zone entries (for JSON export)
-    std::vector<UnifiedZoneEntry> zones;
+    // For nested zones
+    uint32_t parentZoneId{0};
+    uint32_t zoneId{0};
+    static std::atomic<uint32_t> s_nextZoneId;
 };
 
 /**
@@ -226,16 +222,6 @@ public:
     // History (extended capacity)
     const std::vector<AdvancedFrameStats>& getHistory() const { return m_history; }
     size_t getHistorySize() const { return m_history.size(); }
-    
-    // Get the last completed frame (from history, not current which gets reset)
-    const AdvancedFrameStats& getLastCompletedFrame() const {
-        if (m_history.empty()) {
-            return m_currentFrame;  // Fallback
-        }
-        // m_historyIndex points to the NEXT slot to write, so previous is the last written
-        size_t lastIdx = (m_historyIndex == 0) ? m_history.size() - 1 : m_historyIndex - 1;
-        return m_history[lastIdx];
-    }
     
     // Performance alerts
     bool hasActiveAlerts() const { return !m_activeAlerts.empty(); }

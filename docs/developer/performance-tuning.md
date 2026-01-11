@@ -511,7 +511,9 @@ target_precompile_headers(NOMAD PRIVATE
 
 ## 📊 Profiling Tools
 
+### Nomad Profiler
 
+**See:** [Debugging Guide → Nomad Profiler](debugging.md#-nomad-profiler)
 
 ### Visual Studio Profiler
 
@@ -656,9 +658,9 @@ std::vector<float> largeBuffer = std::move(createBuffer());  // No copy
 
 ## 📚 Additional Resources
 
-- **[Debugging Guide](developer/debugging.md)** — Profiling and debugging tools
-- **[Architecture Overview](ARCHITECTURE.md)** — System design
-- **[Coding Style Guide](developer/coding-style.md)** — Code conventions
+- **[Debugging Guide](debugging.md)** — Profiling and debugging tools
+- **[Architecture Overview](../ARCHITECTURE.md)** — System design
+- **[Coding Style Guide](../CODING_STYLE.md)** — Code conventions
 
 ---
 

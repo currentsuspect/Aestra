@@ -22,10 +22,6 @@
 #include <memory>
 #include <vector>
 #include <unordered_set>
-#include <mutex>
-#include <functional>
-#include "../NomadUI/Core/NUIContextMenu.h"
-#include "../NomadAudio/include/WaveformCache.h"
 
 namespace NomadUI { class NUIPlatformBridge; }
 
@@ -33,13 +29,12 @@ namespace Nomad {
 namespace Audio {
 
 /**
- * @brief Tool modes for playlist editing
+ * @brief Tool modes for playlist editing (FL Studio style)
  */
 enum class PlaylistTool {
     Select,     // Default - select/move clips  
     Split,      // Blade tool - click to split clips
     MultiSelect,// Rectangle selection for multiple clips
-    Paint,      // Paint tool - left-click to stamp clipboard clip
     Loop,       // Loop region tool
     Draw,       // Draw automation/MIDI
     Erase,      // Erase clips/notes
@@ -81,14 +76,6 @@ public:
     // Clip splitting (split tool)
     void onSplitRequested(TrackUIComponent* trackComp, double splitBeat);
 
-    // Clipboard & Paint Tool
-    void copySelectedClip();
-    void pasteClipboardAtCursor(); // Paste at playhead
-    void pasteClipToRight();       // Ctrl+B: Paste at end of selected clip, select new clip
-    void onPaintClip(TrackUIComponent* trackComp, double beat);
-    const Audio::ClipInstance& getClipboardClip() const { return m_clipboardClip; }
-    bool hasClipboardClip() const { return m_clipboardClip.id.isValid(); }
-
     // Playlist View
     void togglePlaylist() { if (m_onTogglePlaylist) m_onTogglePlaylist(); }
     void setPlaylistVisible(bool visible);
@@ -104,14 +91,8 @@ public:
     void setPlaylistMode(PlaylistMode mode);
     PlaylistMode getPlaylistMode() const { return m_playlistMode; }
     
-    // Pattern Playback Mode (Arsenal) - Hides playhead/playline
-    void setPatternMode(bool enabled);
-    bool isPatternMode() const { return m_patternMode; }
-    
     // Cursor visibility callback (for custom cursor support)
     void setOnCursorVisibilityChanged(std::function<void(bool)> callback) { m_onCursorVisibilityChanged = callback; }
-    bool isMinimapResizeCursorActive() const;
-    bool isCustomCursorActive() const;  // Returns true if any tool/resize cursor is active
     
     // View Toggle Callbacks (v3.1)
     void setOnToggleMixer(std::function<void()> cb) { m_onToggleMixer = cb; }
@@ -119,16 +100,9 @@ public:
     void setOnToggleSequencer(std::function<void()> cb) { m_onToggleSequencer = cb; }
     void setOnTogglePlaylist(std::function<void()> cb) { m_onTogglePlaylist = cb; }
     
-    // Loop control callback (preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project)
+    // Loop control callback (preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection)
     void setOnLoopPresetChanged(std::function<void(int preset)> cb) { m_onLoopPresetChanged = cb; }
     int getLoopPreset() const { return m_loopPreset; }
-    
-    // Selection made callback - called when ruler selection is finalized (startBeat, endBeat)
-    // This should jump playhead to start and set up the loop region
-    void setOnSelectionMade(std::function<void(double startBeat, double endBeat)> cb) { m_onSelectionMade = cb; }
-    
-    // Loop region update callback - called when loop region needs to change (for Project auto-update)
-    void setOnLoopRegionUpdate(std::function<void(double startBeat, double endBeat)> cb) { m_onLoopRegionUpdate = cb; }
     
     // === MULTI-SELECTION ===
     void selectTrack(TrackUIComponent* track, bool addToSelection = false);
@@ -144,37 +118,18 @@ public:
     void setSnapDivision(int division) { m_snapDivision = division; } // 1=bar, 4=beat, 16=16th
     int getSnapDivision() const { return m_snapDivision; }
     
-    // Follow Playhead
-    enum class FollowMode {
-        Page,       // Jump to next page when playhead reaches edge
-        Continuous  // Smooth scrolling keeping playhead centered
-    };
-    
-    void setFollowPlayhead(bool enabled) { m_followPlayhead = enabled; }
-    bool isFollowPlayhead() const { return m_followPlayhead; }
-    
-    void setFollowMode(FollowMode mode) { m_followMode = mode; }
-    FollowMode getFollowMode() const { return m_followMode; }
-    
     // New Snap System
     void setSnapSetting(::NomadUI::SnapGrid snap);
     ::NomadUI::SnapGrid getSnapSetting() const { return m_snapSetting; }
     
     // === CLIP MANIPULATION ===
     void splitSelectedClipAtPlayhead();  // Split clip at current playhead position
-    // copySelectedClip moved to line 85
+    void copySelectedClip();             // Copy selected clip to clipboard
     void cutSelectedClip();              // Cut selected clip (copy + delete)
-    // pasteClip replaced by pasteClipboardAtCursor
-    // stampClipAtCursor replaced by onPaintClip
+    void pasteClip();                    // Paste clipboard at playhead position
     void duplicateSelectedClip();        // Duplicate selected clip immediately after
     void deleteSelectedClip();           // Delete selected clip
     TrackUIComponent* getSelectedTrackUI() const;  // Get currently selected track UI
-
-    // Instant clip dragging
-    void startInstantClipDrag(TrackUIComponent* trackComp, ClipInstanceID clipId, const ::NomadUI::NUIPoint& clickPos);
-    void updateInstantClipDrag(const ::NomadUI::NUIPoint& currentPos);
-    void finishInstantClipDrag();
-    void cancelInstantClipDrag();
     
     // === IDropTarget Interface ===
     ::NomadUI::DropFeedback onDragEnter(const ::NomadUI::DragData& data, const ::NomadUI::NUIPoint& position) override;
@@ -183,7 +138,7 @@ public:
     ::NomadUI::DropResult onDrop(const ::NomadUI::DragData& data, const ::NomadUI::NUIPoint& position) override;
     ::NomadUI::NUIRect getDropBounds() const override { return getBounds(); }
     
-    // Loop markers (Visual feedback)
+    // Loop markers (FL Studio-style visual feedback)
     void setLoopRegion(double startBeat, double endBeat, bool enabled);
 
     bool onMouseEvent(const ::NomadUI::NUIMouseEvent& event) override;
@@ -228,7 +183,6 @@ private:
     int m_trackSpacing{4}; // 8px grid spacing scale (S1)
     float m_scrollOffset{0.0f};
     PlaylistMode m_playlistMode{PlaylistMode::Clips};
-    bool m_patternMode = false; // True when Pattern (Arsenal) playback is active
     
     // Timeline/Ruler settings
     float m_pixelsPerBeat{50.0f};      // Horizontal zoom level
@@ -255,40 +209,25 @@ private:
     ::NomadUI::TimelineMinimapAggregation m_minimapAggregation{::NomadUI::TimelineMinimapAggregation::MaxPresence};
     double m_minimapDomainStartBeat{0.0};
     double m_minimapDomainEndBeat{0.0};
+    double m_minimapShrinkCooldown{0.0};
     bool m_minimapNeedsRebuild{true};
     ::NomadUI::TimelineRange m_minimapSelectionBeatRange{};
     
     // Tool icons (toolbar)
-    std::shared_ptr<::NomadUI::NUIIcon> m_menuIcon;       // Menu dropdown icon (down arrow)
     std::shared_ptr<::NomadUI::NUIIcon> m_selectToolIcon;
     std::shared_ptr<::NomadUI::NUIIcon> m_splitToolIcon;
     std::shared_ptr<::NomadUI::NUIIcon> m_multiSelectToolIcon;
-    std::shared_ptr<::NomadUI::NUIIcon> m_paintToolIcon;  // Paint/stamp tool icon
-    std::shared_ptr<::NomadUI::NUIIcon> m_moveCursorIcon; // Move (4-way arrow) cursor for Paint tool hovering clips
-    
-    std::shared_ptr<::NomadUI::NUIContextMenu> m_activeContextMenu; // Keep track for cleanup
-    
-    // Clipboard
-    Audio::ClipInstance m_clipboardClip;
-
-    // Animation state
-    float m_menuIconRotation = 0.0f;
-    float m_menuIconTargetRotation = 0.0f;
-    
-    ::NomadUI::NUIRect m_menuIconBounds;
+    std::shared_ptr<::NomadUI::NUIDropdown> m_loopDropdown;  // Loop preset dropdown
+    std::shared_ptr<::NomadUI::NUIDropdown> m_snapDropdown;  // Snap Dropdown
     ::NomadUI::NUIRect m_selectToolBounds;
     ::NomadUI::NUIRect m_splitToolBounds;
     ::NomadUI::NUIRect m_multiSelectToolBounds;
-    ::NomadUI::NUIRect m_paintToolBounds;
-    ::NomadUI::NUIRect m_followPlayheadBounds; // Toggle button bounds
+    ::NomadUI::NUIRect m_loopDropdownBounds;
+    ::NomadUI::NUIRect m_snapDropdownBounds; // Bounds
     ::NomadUI::NUIRect m_toolbarBounds;
-
-    bool m_menuHovered = false;
     bool m_selectToolHovered = false;
     bool m_splitToolHovered = false;
     bool m_multiSelectToolHovered = false;
-    bool m_paintToolHovered = false;
-    bool m_followPlayheadHovered = false;
     
     // Loop state
     int m_loopPreset{0};  // 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection
@@ -304,10 +243,6 @@ private:
     // Instant clip dragging (no ghost)
     bool m_isDraggingClipInstant = false;
     TrackUIComponent* m_draggedClipTrack = nullptr;
-    ClipInstanceID m_draggedClipId;
-    double m_clipDragOffsetBeats = 0.0;
-    bool m_suppressPlaylistRefresh = false;
-
     float m_clipDragOffsetX = 0.0f;  // Offset from clip start to mouse
     double m_clipOriginalStartTime = 0.0;  // Original position before drag
     int m_clipOriginalTrackIndex = -1;  // Original track before drag
@@ -327,7 +262,7 @@ private:
     bool m_hasRulerSelection = false;
     
     // === LOOP MARKERS (Visual feedback on ruler) ===
-    bool m_loopEnabled = false;  // Default OFF - no loop until user makes selection
+    bool m_loopEnabled = true;  // Default enabled (1-bar loop)
     double m_loopStartBeat = 0.0;
     double m_loopEndBeat = 4.0;
     bool m_isDraggingLoopStart = false;
@@ -341,7 +276,7 @@ private:
     ::NomadUI::NUIPoint m_selectionBoxStart;
     ::NomadUI::NUIPoint m_selectionBoxEnd;
     
-    // === SMOOTH ZOOM ANIMATION ===
+    // === SMOOTH ZOOM ANIMATION (FL Studio style) ===
     float m_targetPixelsPerBeat = 50.0f;   // Target zoom level for animation (match initial m_pixelsPerBeat)
     float m_zoomVelocity = 0.0f;           // Current zoom velocity for momentum
     float m_lastMouseZoomX = 0.0f;         // Mouse X position during zoom for pivot
@@ -393,10 +328,6 @@ private:
     // === SNAP-TO-GRID (Legacy - preserved for compatibility but shadowed by m_snapSetting) ===
     // bool m_snapEnabled = true;           // Snap to grid enabled by default
     // int m_snapDivision = 4;              // Snap to beats (1=bar, 4=beat, 16=16th, etc.)
-
-    bool m_followPlayhead = false;          // Whether timeline automatically scrolls to follow playhead
-    FollowMode m_followMode = FollowMode::Page; // Default logic
-    std::shared_ptr<::NomadUI::NUIIcon> m_followPlayheadIcon; // Icon for the toggle button
     
     // === CLIPBOARD for copy/paste (v3.0) ===
     struct ClipboardData {
@@ -412,7 +343,7 @@ private:
     ClipInstanceID m_selectedClipId; // Track single selected clip for manipulation
 
     
-    // === DELETE ANIMATION (Ripple effect) ===
+    // === DELETE ANIMATION (FL Studio ripple effect) ===
     struct DeleteAnimation {
         PlaylistLaneID laneId;            // Lane being deleted from
         ClipInstanceID clipId;            // Clip ID (for reference during animation if needed)
@@ -430,8 +361,6 @@ private:
     std::function<void()> m_onToggleSequencer;
     std::function<void()> m_onTogglePlaylist;
     std::function<void(int)> m_onLoopPresetChanged;  // Called when loop preset dropdown changes
-    std::function<void(double, double)> m_onSelectionMade;  // Called when ruler selection finalized
-    std::function<void(double, double)> m_onLoopRegionUpdate;  // Called when loop region needs update (Project auto-update)
     
     void updateBackgroundCache(::NomadUI::NUIRenderer& renderer);
     void updateControlsCache(::NomadUI::NUIRenderer& renderer);
@@ -460,15 +389,13 @@ private:
     void renderPlayhead(::NomadUI::NUIRenderer& renderer);
     void renderDropPreview(::NomadUI::NUIRenderer& renderer); // Render drop zone highlight
     void renderDeleteAnimations(::NomadUI::NUIRenderer& renderer); // Render FL-style ripple delete
-    void renderTrackManagerStatic(::NomadUI::NUIRenderer& renderer);  // Static content (cached)
-    void renderTrackManagerDynamic(::NomadUI::NUIRenderer& renderer); // Dynamic content (real-time)
+    void renderTrackManagerDirect(::NomadUI::NUIRenderer& renderer);  // Direct rendering helper
     
     // Helper to convert mouse position to track/time
     int getTrackAtPosition(float y) const;
     double getTimeAtPosition(float x) const;
     void clearDropPreview(); // Clear drop preview state
     double snapBeatToGrid(double beat) const; // Snap beat to nearest grid line
-    double snapBeatToGridForward(double beat) const; // Snap beat to next grid line (paste-to-right)
     
     // Grid helper
     void drawGrid(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIRect& bounds, float gridStartX, float gridWidth, float timelineScrollOffset);
@@ -478,10 +405,14 @@ private:
     void updateToolbarBounds();
     void renderToolbar(::NomadUI::NUIRenderer& renderer);
     bool handleToolbarClick(const ::NomadUI::NUIPoint& position);
-    void renderToolCursor(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIPoint& position);
+    void renderSplitCursor(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIPoint& position);
     void renderMinimapResizeCursor(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIPoint& position);
     
-
+    // Instant clip dragging
+    void startInstantClipDrag(TrackUIComponent* clip, const ::NomadUI::NUIPoint& clickPos);
+    void updateInstantClipDrag(const ::NomadUI::NUIPoint& currentPos);
+    void finishInstantClipDrag();
+    void cancelInstantClipDrag();
     
     // Split tool
     void performSplitAtPosition(int trackIndex, double timeSeconds);
@@ -489,25 +420,6 @@ private:
     // Calculate maximum timeline extent based on samples
     double getMaxTimelineExtent() const;
 
-    // Async waveform builder
-    ::Nomad::Audio::WaveformCacheBuilder m_waveformBuilder;
-
-    // Async Task Queue (for main thread callbacks)
-    std::mutex m_pendingTasksMutex;
-    std::vector<std::function<void()>> m_pendingTasks;
-
-    // === IMPORT ANIMATION ===
-    struct PendingImport {
-        std::string displayName;
-        PlaylistLaneID laneId;
-        double startBeat;
-        double estimatedDurationBeats = 16.0; // Default placeholder width
-        float animationTime = 0.0f;
-        float progress = 0.0f; // 0.0 to 1.0
-    };
-    std::vector<PendingImport> m_pendingImports;
-    void renderPendingImports(NomadUI::NUIRenderer& renderer);
-    
     // (Duplicate methods removed)
 };
 

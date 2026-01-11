@@ -13,7 +13,7 @@ Welcome to the **Nomad DAW Documentation Portal**! This is your comprehensive gu
 Nomad DAW is a professional digital audio workstation featuring:
 - **Ultra-low latency audio engine** — WASAPI multi-tier processing
 - **GPU-accelerated custom UI** — Built with NomadUI framework
-- **Pattern-based workflow** — Intuitive pattern and playlist sequencer
+- **FL Studio-inspired workflow** — Intuitive pattern and playlist sequencer
 - **Professional audio quality** — 64-bit multi-threaded processing
 - **Modern C++ architecture** — Clean separation of concerns
 - **Source-available** — Transparent codebase under NSSAL v1.0
@@ -89,7 +89,7 @@ Nomad DAW is a professional digital audio workstation featuring:
 ### User Interface
 - **NomadUI Framework** - Custom GPU-accelerated UI system
 - **Adaptive FPS Rendering** - Efficient resource usage
-- **Modern Timeline** - Familiar and intuitive workflow
+- **FL Studio-inspired Timeline** - Familiar and intuitive workflow
 - **Professional Polish** - Smooth animations and visual feedback
 
 ### Development

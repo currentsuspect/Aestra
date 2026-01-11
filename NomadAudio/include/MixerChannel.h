@@ -2,9 +2,6 @@
 #pragma once
 
 #include "MixerBus.h"
-#include "AudioProcessor.h"
-#include "AudioGraph.h"
-#include "EffectChain.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -12,7 +9,6 @@
 #include <mutex>
 #include <functional>
 #include "AudioCommandQueue.h"
-#include "AudioDriverTypes.h"
 
 #include "NomadUUID.h"
 
@@ -68,7 +64,12 @@ enum class ResamplingMode {
     Perfect
 };
 
-
+enum class DitheringMode {
+    None,
+    Triangular,
+    HighPass,
+    NoiseShaped
+};
 
 enum class NomadMode {
     Off,
@@ -155,32 +156,14 @@ public:
     float getVolume() const { return m_volume.load(); }
     void setPan(float pan);
     float getPan() const { return m_pan.load(); }
-    void setWidth(float width);
-    float getWidth() const { return m_width.load(); }
     void setMute(bool mute);
     bool isMuted() const { return m_muted.load(); }
     void setSolo(bool solo);
     bool isSoloed() const { return m_soloed.load(); }
-    void setSoloSafe(bool safe);
-    bool isSoloSafe() const { return m_soloSafe.load(); }
-
-    // Recording State
-    void setArmed(bool armed) { m_isArmed.store(armed); }
-    bool isArmed() const { return m_isArmed.load(); }
-    void setMonitoringEnabled(bool enabled) { m_monitorInput.store(enabled); }
-    bool isMonitoringEnabled() const { return m_monitorInput.load(); }
-    void setInputChannelIndex(int index) { m_inputChannelIndex.store(index); }
-    int getInputChannelIndex() const { return m_inputChannelIndex.load(); }
 
     // Audio Processing
     // MixerChannel processes its input bus/buffer. Timeline clips are managed by PlaylistModel.
     void processAudio(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate);
-
-    // Metering
-    float getLastCorrelation() const {
-        // Return 0 if no bus (e.g. inactive)
-        return m_mixerBus ? m_mixerBus->getLastCorrelation() : 0.0f;
-    }
 
     // Mixer Integration
     MixerBus* getMixerBus() { return m_mixerBus.get(); }
@@ -190,24 +173,6 @@ public:
     void setCommandSink(std::function<void(const AudioQueueCommand&)> cb) { m_commandSink = std::move(cb); }
     
     void setQualitySettings(const AudioQualitySettings&) {}
-    
-    // Effect Chain (insert effects)
-    EffectChain& getEffectChain() { return m_effectChain; }
-    const EffectChain& getEffectChain() const { return m_effectChain; }
-    
-    // Routing Accessors
-    // Routing Accessors
-    uint32_t getMainOutputId() const { return m_mainOutputId; }
-    
-    // Thread-safe Send Management
-    std::vector<AudioRoute> getSends() const; // Returns copy
-    void addSend(const AudioRoute& route);
-    void removeSend(int index);
-    void setSendLevel(int index, float level);
-    void setSendPan(int index, float pan);
-    void setSendDestination(int index, uint32_t destId);
-
-    void setMainOutputId(uint32_t id) { m_mainOutputId = id; }
 
 private:
     std::string m_name;
@@ -216,34 +181,15 @@ private:
     uint32_t m_color;
 
     // Audio parameters (atomic for thread safety)
-    std::atomic<float> m_volume{0.55f}; // Default: 78% (-5.2dB) to match FL/industry headroom standards
+    std::atomic<float> m_volume{1.0f};
     std::atomic<float> m_pan{0.0f};
-    std::atomic<float> m_width{1.0f};
     std::atomic<bool> m_muted{false};
     std::atomic<bool> m_soloed{false};
-    std::atomic<bool> m_soloSafe{false};
-    
-    // Recording
-    std::atomic<bool> m_isArmed{false};
-    std::atomic<bool> m_monitorInput{true};
-    std::atomic<int> m_inputChannelIndex{0}; // 0 = Input 1, 1 = Input 2, -1 = None
 
     // Mixer integration
     std::unique_ptr<MixerBus> m_mixerBus;
-    
-    // Effect chain for insert effects
-    EffectChain m_effectChain;
 
     std::function<void(const AudioQueueCommand&)> m_commandSink;
-
-    // Routing (v3.1)
-    // Primary output (defaults to Master). 0xFFFFFFFF = Master.
-    uint32_t m_mainOutputId{0xFFFFFFFF};
-    
-    // Aux Sends / Direct Outs
-    // Aux Sends / Direct Outs
-    mutable std::mutex m_sendMutex;
-    std::vector<AudioRoute> m_sends;
 };
 
 using Track = MixerChannel;

@@ -59,7 +59,6 @@ public:
 
     // Selection state
     int getSelectedIndex() const { return selectedIndex_; }
-    void setSelectedByValue(int value);
     int getSelectedValue() const;
     std::string getSelectedText() const;
     bool isOpen() const { return isOpen_; }
@@ -77,7 +76,6 @@ public:
     bool onKeyEvent(const NUIKeyEvent& event) override;
     void onFocusGained() override;
     void onFocusLost() override;
-    void onUpdate(double deltaTime) override;
 
 protected:
     void toggleDropdown();
@@ -93,7 +91,6 @@ private:
     int selectedIndex_ = -1;
     bool isOpen_ = false;
     float dropdownAnimProgress_ = 0.0f;
-    float chevronRotation_ = 0.0f;  // Current rotation angle (0 = down, 180 = up)
     std::string placeholderText_ = "Select an item...";
     int maxVisibleItems_ = 5;
     int hoveredIndex_ = -1;

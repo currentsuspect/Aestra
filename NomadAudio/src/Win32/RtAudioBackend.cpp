@@ -33,7 +33,7 @@ RtAudioBackend::~RtAudioBackend() {
     closeStream();
 }
 
-std::vector<AudioDeviceInfo> RtAudioBackend::getDevices() {
+std::vector<AudioDeviceInfo> RtAudioBackend::getDevices() const {
     std::vector<AudioDeviceInfo> devices;
     
     try {
@@ -215,15 +215,13 @@ int RtAudioBackend::rtAudioCallback(
     void* callbackUserData = backend->m_userData.load(std::memory_order_relaxed);
     
     if (userCallback) {
-        int result = userCallback(
+        return userCallback(
             static_cast<float*>(outputBuffer),
             static_cast<const float*>(inputBuffer),
             numFrames,
             streamTime,
             callbackUserData
         );
-        backend->m_stats.callbackCount++;
-        return result;
     }
     
     return 0;

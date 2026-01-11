@@ -37,9 +37,15 @@ void NUILabel::onRender(NUIRenderer& renderer)
         
         // OPTIMIZATION: Cache text measurements - only measure when text or size changes
         if (!textSizeValid_) {
-            // Standard flush measurement - trust the renderer
             cachedTextSize_ = renderer.measureText(text_, fontSize);
             
+            // FIX: Add padding to account for visual overhangs and descenders
+            // The renderer's measureText often returns tight typographic bounds (ascent-to-baseline-to-descent).
+            // This causes clipping when glyphs visually extend beyond these bounds (e.g. anti-aliasing spread).
+            // Adding +2.0f width and +4.0f height ensures the layout allocates enough space.
+            cachedTextSize_.width += 2.0f;
+            cachedTextSize_.height += 4.0f;
+
             textSizeValid_ = true;
         }
         
@@ -97,9 +103,7 @@ void NUILabel::onRender(NUIRenderer& renderer)
                 break;
         }
         
-        // Sub-pixel positioning for smooth text rendering
-        // We pass floating point coordinates directly to the renderer
-        renderer.drawText(displayText, NUIPoint(textX, textY), fontSize, textColor_);
+        renderer.drawText(displayText, NUIPoint(std::round(textX), std::round(textY)), fontSize, textColor_);
     }
 }
 

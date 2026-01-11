@@ -11,11 +11,6 @@ namespace Nomad {
 // Assertion System
 // =============================================================================
 
-/**
- * @file NomadAssert.h
- * @brief Defines assertion macros and handlers for runtime checks.
- */
-
 #if NOMAD_ENABLE_ASSERTS
 
 // Internal assertion handler

@@ -9,7 +9,7 @@ NUITheme::NUITheme() {
 std::shared_ptr<NUITheme> NUITheme::createDefault() {
     auto theme = std::make_shared<NUITheme>();
     
-    // Nomad Dark Theme
+    // Nomad Dark Theme - FL Studio inspired
     theme->setColor("background", NUIColor::fromHex(0x0d0d0d));
     theme->setColor("surface", NUIColor::fromHex(0x1a1a1a));
     theme->setColor("surfaceLight", NUIColor::fromHex(0x2a2a2a));

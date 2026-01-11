@@ -8,7 +8,6 @@
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include <vector>
 
 namespace Nomad {
@@ -212,7 +211,7 @@ private:
     uint32_t m_numChannels = 0;
     SampleIndex m_sourceFrames = 0;
     std::atomic<bool> m_ready{false};
-    mutable std::shared_mutex m_mutex;
+    mutable std::mutex m_mutex;
     
     void buildLevel(const float* data, SampleIndex numFrames, uint32_t numChannels,
                    uint32_t samplesPerPeak, WaveformMipLevel& outLevel);

@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUITextInput.h"
 #include "NUIThemeSystem.h"
 #include "../Graphics/NUIRenderer.h"
@@ -20,29 +20,6 @@ NUITextInput::NUITextInput(const std::string& text)
 void NUITextInput::onRender(NUIRenderer& renderer)
 {
     if (!isVisible()) return;
-
-    // Calculate layout if needed (requires renderer)
-    if (needsLayoutUpdate_) {
-        // Clear and rebuild char positions (cumulative widths)
-        charWidths_.clear();
-        std::string displayText = text_;
-        if (inputType_ == InputType::Password) {
-            displayText = std::string(text_.length(), passwordCharacter_);
-        }
-
-        auto& themeManager = NUIThemeManager::getInstance();
-        float fontSize = themeManager.getFontSize("m");
-        
-        charWidths_.push_back(0.0f); // Position of char 0
-        
-        // Measure character by character to build cumulative positions
-        for (int i = 1; i <= static_cast<int>(displayText.length()); ++i) {
-            auto size = renderer.measureText(displayText.substr(0, i), fontSize);
-            charWidths_.push_back(size.width);
-        }
-        
-        needsLayoutUpdate_ = false;
-    }
 
     // Enhanced background with inner shadows and focus glow
     drawEnhancedBackground(renderer);
@@ -187,7 +164,6 @@ void NUITextInput::setText(const std::string& text)
 void NUITextInput::setPlaceholderText(const std::string& placeholder)
 {
     placeholderText_ = placeholder;
-    needsLayoutUpdate_ = true;
     setDirty(true);
 }
 
@@ -499,35 +475,18 @@ void NUITextInput::drawText(NUIRenderer& renderer)
 
 void NUITextInput::drawSelection(NUIRenderer& renderer)
 {
-    if (!hasSelection_ || charWidths_.empty()) return;
+    if (!hasSelection_) return;
     
-    NUIRect bounds = getBounds();
-    NUIRect textRect(bounds.x + padding_, bounds.y + padding_, 
-                    bounds.width - padding_ * 2, bounds.height - padding_ * 2);
-    
-    int start = std::max(0, std::min(selectionStart_, selectionEnd_));
-    int end = std::max(0, std::max(selectionStart_, selectionEnd_));
-    
-    // Clamp to available metrics
-    if (start >= static_cast<int>(charWidths_.size())) start = static_cast<int>(charWidths_.size()) - 1;
-    if (end >= static_cast<int>(charWidths_.size())) end = static_cast<int>(charWidths_.size()) - 1;
-    
-    float startX = charWidths_[start];
-    float endX = charWidths_[end];
-    
-    NUIRect selectionRect = textRect;
-    selectionRect.x += startX;
-    selectionRect.width = endX - startX;
-    
-    // Draw selection highlight
-    renderer.fillRoundedRect(selectionRect, 2.0f, selectionColor_.withAlpha(0.4f));
+    // TODO: Implement selection rendering
+    // This would draw a highlighted rectangle over the selected text
 }
 
 void NUITextInput::drawCaret(NUIRenderer& renderer)
 {
     if (!isFocused() || !showCaret_) return;
     
-    // TODO: Implement caret rendering if distinct from animated caret
+    // TODO: Implement caret rendering
+    // This would draw a blinking vertical line at the caret position
 }
 
 void NUITextInput::drawPlaceholder(NUIRenderer& renderer)
@@ -548,14 +507,17 @@ void NUITextInput::drawPlaceholder(NUIRenderer& renderer)
 
 void NUITextInput::updateTextLayout()
 {
-    // Basic text sizing fallback (cleared by onRender)
+    // TODO: Implement text layout calculation
+    // This would break text into lines, calculate line heights, etc.
     lines_.clear();
     lineHeights_.clear();
     
     if (multiline_)
     {
+        // Split text into lines
+        // For now, just put everything in one line
         lines_.push_back(text_);
-        lineHeights_.push_back(20.0f);
+        lineHeights_.push_back(20.0f); // Default line height
     }
     else
     {
@@ -568,37 +530,20 @@ void NUITextInput::updateTextLayout()
     {
         totalTextHeight_ += height;
     }
-    needsLayoutUpdate_ = true;
 }
 
 NUIPoint NUITextInput::getTextPosition(int characterIndex) const
 {
-    return NUIPoint(0, 0); // Not implemented yet
+    // TODO: Implement text position calculation
+    // This would return the screen position of a character
+    return NUIPoint(0, 0);
 }
 
 int NUITextInput::getCharacterIndexAtPosition(const NUIPoint& position) const
 {
-    // If we haven't calculated layout yet, we can't accurately hit test.
-    // Fallback or use approximating. Since this is usually called after render or on click (after first render),
-    // we should rely on cached charWidths_.
-    if (charWidths_.empty()) return 0;
-    
-    NUIRect bounds = getBounds();
-    float relativeX = position.x - (bounds.x + padding_);
-    
-    // Find closest character index
-    int bestIndex = 0;
-    float minDiff = std::abs(relativeX - charWidths_[0]);
-    
-    for (size_t i = 1; i < charWidths_.size(); ++i) {
-        float diff = std::abs(relativeX - charWidths_[i]);
-        if (diff < minDiff) {
-            minDiff = diff;
-            bestIndex = static_cast<int>(i);
-        }
-    }
-    
-    return bestIndex;
+    // TODO: Implement character index calculation
+    // This would return the character index at a given screen position
+    return 0;
 }
 
 bool NUITextInput::isValidCharacter(char character) const
@@ -628,11 +573,13 @@ bool NUITextInput::isValidText(const std::string& text) const
 
 void NUITextInput::updateCaretPosition()
 {
+    // TODO: Implement caret position update
     setDirty(true);
 }
 
 void NUITextInput::updateSelection()
 {
+    // TODO: Implement selection update
     setDirty(true);
 }
 
@@ -755,9 +702,7 @@ void NUITextInput::handleKeyInput(const NUIKeyEvent& event)
             if (c == 0) {
                 if (event.keyCode >= NUIKeyCode::A && event.keyCode <= NUIKeyCode::Z) {
                      c = 'a' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::A));
-                     bool shift = (event.modifiers & NUIModifiers::Shift);
-                     bool caps = (event.modifiers & NUIModifiers::CapsLock);
-                     if (shift != caps) c = std::toupper(c);
+                     if (event.modifiers & NUIModifiers::Shift) c = std::toupper(c); // Simple shift handling
                 }
                 else if (event.keyCode >= NUIKeyCode::Num0 && event.keyCode <= NUIKeyCode::Num9) {
                      c = '0' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::Num0));
@@ -949,13 +894,7 @@ void NUITextInput::drawAnimatedCaret(NUIRenderer& renderer)
     // Match caret X to the rendered text width rather than a fixed monospace advance.
     const float textX = std::round(textRect.x);
     float caretX = textX;
-    
-    // Use cached widths if available
-    if (!charWidths_.empty()) {
-        const int caretIndex = std::clamp(caretPosition_, 0, static_cast<int>(charWidths_.size()) - 1);
-        caretX = std::round(textX + charWidths_[caretIndex]);
-    }
-    else if (!text_.empty()) {
+    if (!text_.empty()) {
         std::string displayText = text_;
         if (inputType_ == InputType::Password) {
             displayText = std::string(text_.length(), passwordCharacter_);

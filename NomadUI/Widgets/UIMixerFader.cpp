@@ -30,8 +30,8 @@ void UIMixerFader::cacheThemeColors()
     auto& theme = NUIThemeManager::getInstance();
     m_trackBg = theme.getColor("backgroundSecondary");
     m_trackFg = theme.getColor("accentPrimary");
-    m_handle = theme.getColor("sliderHandle");
-    m_handleHover = theme.getColor("sliderHandleHover");
+    m_handle = theme.getColor("textPrimary");
+    m_handleHover = theme.getColor("accentPrimary");
     m_text = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary");
 }
@@ -114,22 +114,6 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
     NUIRect handleRect{handleX, handleY, handleW, HANDLE_HEIGHT};
     renderer.fillRoundedRect(handleRect, HANDLE_RADIUS, isHovered() ? m_handleHover : m_handle);
-
-    // Drag Value Tooltip
-    if (m_dragging) {
-        const float tipW = 32.0f;
-        const float tipH = 14.0f;
-        float tipX = handleX + (handleW - tipW) * 0.5f;
-        float tipY = handleY - tipH - 2.0f;
-        
-        // Flip to bottom if near top edge
-        if (tipY < bounds.y) {
-            tipY = handleY + HANDLE_HEIGHT + 2.0f;
-        }
-
-        renderer.fillRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, m_trackBg.withAlpha(0.95f));
-        renderer.drawTextCentered(m_cachedText, {tipX, tipY, tipW, tipH}, 9.0f, m_text);
-    }
 
     // Value readout (bottom)
     const float fontSize = 10.0f;

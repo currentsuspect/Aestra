@@ -91,13 +91,6 @@ public:
     float getFontSize() const { return fontSize_; }
 
     /**
-     * Set corner radius.
-     * -1.0f = use theme/default radius.
-     */
-    void setCornerRadius(float radius) { cornerRadius_ = radius; setDirty(); }
-    float getCornerRadius() const { return cornerRadius_; }
-
-    /**
      * Check if button is currently pressed.
      */
     bool isPressed() const { return pressed_; }
@@ -126,7 +119,6 @@ private:
     // Text
     std::string text_;
     float fontSize_ = 0.0f; // 0 = use theme default
-    float cornerRadius_ = -1.0f; // -1 = use theme default
     
     // Colors
     // Granular flags to allow mixing custom and theme colors

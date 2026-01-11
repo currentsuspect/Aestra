@@ -12,13 +12,6 @@ namespace Audio {
  * 
  * Ordered by priority (lower value = higher priority)
  */
-enum class DitheringMode {
-    None,
-    Triangular,
-    HighPass,
-    NoiseShaped
-};
-
 enum class AudioDriverType : uint8_t {
     // Phase 2-3: ASIO Drivers (lowest latency)
     ASIO_EXTERNAL = 0,      // External ASIO drivers (ASIO4ALL, FL ASIO, Focusrite, etc.)
@@ -31,9 +24,6 @@ enum class AudioDriverType : uint8_t {
     
     // Legacy RtAudio
     RTAUDIO = 5,            // RtAudio backend (legacy fallback)
-    
-    // Safety Fallback
-    DUMMY = 6,              // Silent dummy driver for cable-yank survival
     
     // Future: Cross-platform
     COREAUDIO = 10,         // macOS
@@ -66,7 +56,6 @@ inline const DriverPriority* GetWindowsDriverPriorities() {
         { AudioDriverType::WASAPI_EXCLUSIVE,  2, "WASAPI Exclusive",   "Low-latency exclusive mode",                 false, 5.0f },
         { AudioDriverType::WASAPI_SHARED,     3, "WASAPI Shared",      "Default safe mode",                          false, 15.0f },
         { AudioDriverType::DIRECTSOUND,       4, "DirectSound",        "Legacy fallback",                            false, 30.0f },
-        { AudioDriverType::DUMMY,             5, "Dummy Driver",       "Silent safety fallback",                     false, 1.0f },
         { AudioDriverType::UNKNOWN,         255, "Unknown",            "Unknown driver",                             false, 100.0f }
     };
     return priorities;
@@ -76,7 +65,7 @@ inline const DriverPriority* GetWindowsDriverPriorities() {
  * @brief Get number of Windows driver priorities
  */
 inline size_t GetWindowsDriverPriorityCount() {
-    return 7;
+    return 6;
 }
 
 /**

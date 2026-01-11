@@ -4,25 +4,9 @@
 #include "PathUtils.h"
 #include "MiniAudioDecoder.h"
 
-#if defined(NOMAD_USE_MINIAUDIO)
-#include "miniaudio.h"
-#endif
-
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
-
-// Cache prefetch support
-#if defined(_MSC_VER) || defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
-    #include <xmmintrin.h>  // _mm_prefetch
-    #define NOMAD_HAS_PREFETCH 1
-    #define NOMAD_PREFETCH(addr) _mm_prefetch(reinterpret_cast<const char*>(addr), _MM_HINT_T0)
-#elif defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
-    #define NOMAD_HAS_PREFETCH 1
-    #define NOMAD_PREFETCH(addr) __builtin_prefetch(addr, 0, 3)
-#else
-    #define NOMAD_PREFETCH(addr) ((void)0)
-#endif
 
 namespace Nomad {
 namespace Audio {
@@ -83,16 +67,8 @@ size_t AudioRingBuffer::read(float* samples, size_t numFrames) {
     
     // Read in up to two parts (may wrap around)
     size_t firstPart = std::min(toRead, m_capacityFrames - readIdx);
-    
-    // Prefetch: Prime the cache before memcpy (reduces latency on large buffers)
-    const size_t prefetchStride = 64; // Cache line size
-    const float* srcPtr = &m_buffer[readIdx * samplesPerFrame];
-    for (size_t offset = 0; offset < firstPart * samplesPerFrame * sizeof(float); offset += prefetchStride) {
-        NOMAD_PREFETCH(reinterpret_cast<const char*>(srcPtr) + offset);
-    }
-    
     std::memcpy(samples, 
-                srcPtr,
+                &m_buffer[readIdx * samplesPerFrame],
                 firstPart * samplesPerFrame * sizeof(float));
     
     if (toRead > firstPart) {
@@ -155,10 +131,6 @@ void AudioRingBuffer::clear() {
 // StreamingDecoder Implementation
 // ============================================================================
 
-// ============================================================================
-// StreamingDecoder Implementation
-// ============================================================================
-
 StreamingDecoder::StreamingDecoder() = default;
 
 StreamingDecoder::~StreamingDecoder() {
@@ -169,12 +141,6 @@ bool StreamingDecoder::start(const std::string& path, double bufferSizeSeconds, 
     // Stop any existing stream
     stop();
     
-    // Check file existence
-    if (!std::filesystem::exists(makeUnicodePath(path))) {
-        if (m_onError) m_onError("File not found: " + path);
-        return false;
-    }
-
     m_state.store(State::Starting, std::memory_order_release);
     m_stopRequested.store(false, std::memory_order_relaxed);
     m_decodedFrames.store(0, std::memory_order_relaxed);
@@ -193,16 +159,10 @@ void StreamingDecoder::stop() {
         m_decodeThread.join();
     }
     
-    // Delete any pending buffer from previous stop
-    if (m_pendingDelete) {
-        delete m_pendingDelete;
-        m_pendingDelete = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(m_bufferMutex);
+        m_ringBuffer.reset();
     }
-    
-    // Atomically swap out the current buffer and delete it
-    // Safe because thread is joined and no RT reads can happen in Idle state
-    AudioRingBuffer* old = m_ringBuffer.exchange(nullptr, std::memory_order_acq_rel);
-    delete old;
     
     m_state.store(State::Idle, std::memory_order_release);
 }
@@ -210,25 +170,21 @@ void StreamingDecoder::stop() {
 size_t StreamingDecoder::read(float* output, size_t numFrames) {
     if (!isReady()) {
         // Not ready - output silence
-        std::memset(output, 0, numFrames * 2 * sizeof(float));  // Assume stereo safety
+        std::memset(output, 0, numFrames * 2 * sizeof(float));  // Assume stereo
         return 0;
     }
     
-    // Lock-free: atomically load the ring buffer pointer
-    AudioRingBuffer* rb = m_ringBuffer.load(std::memory_order_acquire);
-    if (!rb) {
-        uint32_t channels = m_ringBufferChannels.load(std::memory_order_relaxed);
-        if (channels == 0) channels = 2;
-        std::memset(output, 0, numFrames * channels * sizeof(float));
+    std::lock_guard<std::mutex> lock(m_bufferMutex);
+    if (!m_ringBuffer) {
+        std::memset(output, 0, numFrames * 2 * sizeof(float));
         return 0;
     }
     
-    size_t framesRead = rb->read(output, numFrames);
+    size_t framesRead = m_ringBuffer->read(output, numFrames);
     
     // Fill remainder with silence if buffer underrun
     if (framesRead < numFrames) {
-        size_t channels = rb->channels();
-        // Zero out remaining frames * channels
+        size_t channels = m_ringBuffer->channels();
         std::memset(output + framesRead * channels, 0, 
                     (numFrames - framesRead) * channels * sizeof(float));
     }
@@ -237,162 +193,106 @@ size_t StreamingDecoder::read(float* output, size_t numFrames) {
 }
 
 void StreamingDecoder::decodeThreadFunc(const std::string& path, double targetLatencyMs) {
-#if defined(NOMAD_USE_MINIAUDIO)
-    if (!openDecoder(path)) {
+    // Use existing decoder infrastructure (full decode, then stream from buffer)
+    // This is a simpler approach that reuses the existing decode logic
+    // For true progressive decode, we'd need a streaming decoder API
+
+    std::vector<float> audioData;
+    uint32_t sampleRate = 0;
+    uint32_t channels = 0;
+
+    // Decode entire file (using existing infrastructure)
+    bool success = decodeAudioFile(path, audioData, sampleRate, channels);
+
+    if (!success || audioData.empty()) {
         m_state.store(State::Error, std::memory_order_release);
         if (m_onError) {
-            m_onError("Failed to open decoder for: " + path);
+            m_onError("Failed to decode audio file: " + path);
         }
         return;
     }
     
-    auto* decoder = static_cast<ma_decoder*>(m_decoderHandle);
-    
-    // Get format info
-    uint32_t sampleRate = decoder->outputSampleRate;
-    uint32_t channels = decoder->outputChannels;
-    ma_uint64 lengthFrames = 0;
-    if (ma_decoder_get_length_in_pcm_frames(decoder, &lengthFrames) != MA_SUCCESS) {
-        lengthFrames = 0; // Unknown length
+    // Check for cancellation
+    if (m_stopRequested.load(std::memory_order_relaxed)) {
+        return;
     }
     
-    double duration = (sampleRate > 0 && lengthFrames > 0) ? 
-                      static_cast<double>(lengthFrames) / sampleRate : 0.0;
+    uint64_t totalFrames = audioData.size() / channels;
+    double duration = static_cast<double>(totalFrames) / sampleRate;
     
     m_sampleRate.store(sampleRate, std::memory_order_relaxed);
     m_channels.store(channels, std::memory_order_relaxed);
-    m_ringBufferChannels.store(channels, std::memory_order_relaxed);  // Cache for RT fallback
     m_duration.store(duration, std::memory_order_relaxed);
-    m_totalFrames.store(lengthFrames, std::memory_order_relaxed);
+    m_totalFrames.store(totalFrames, std::memory_order_relaxed);
     
     // Create ring buffer (2 seconds capacity)
     size_t bufferFrames = static_cast<size_t>(sampleRate * 2.0);
-    AudioRingBuffer* newBuffer = new AudioRingBuffer(bufferFrames, channels);
+    {
+        std::lock_guard<std::mutex> lock(m_bufferMutex);
+        m_ringBuffer = std::make_unique<AudioRingBuffer>(bufferFrames, channels);
+    }
     
-    // Atomically publish to RT thread (release semantics ensure buffer is fully constructed)
-    m_ringBuffer.store(newBuffer, std::memory_order_release);
+    // Signal ready for playback immediately (we have all the data)
+    m_state.store(State::Complete, std::memory_order_release);
+    m_decodedFrames.store(totalFrames, std::memory_order_relaxed);
     
-    // Determine pre-buffer amount based on latency target
-    size_t preBufferFrames = static_cast<size_t>((targetLatencyMs / 1000.0) * sampleRate);
-    if (preBufferFrames < 1024) preBufferFrames = 1024; // Minimum start threshold
+    if (m_onReady) {
+        m_onReady(sampleRate, channels, duration);
+    }
     
-    m_state.store(State::Streaming, std::memory_order_release);
+    Log::info("StreamingDecoder: Decode complete, " +
+              std::to_string(totalFrames) + " frames (" +
+              std::to_string(duration) + " sec)");
     
-    // Notify ready once we have format info
-    // Ideally we might wait until we have some data, but format is known now.
-    // Let's pre-buffer a bit first to ensure smooth start.
-    
+    // Fill ring buffer progressively from decoded data
+    size_t writePos = 0;
     const size_t chunkSize = kDecodeChunkFrames;
-    size_t totalDecoded = 0;
-    bool readySignaled = false;
     
-    while (!m_stopRequested.load(std::memory_order_relaxed)) {
-        // Check available space (lock-free)
-        AudioRingBuffer* rb = m_ringBuffer.load(std::memory_order_acquire);
-        size_t availableWrite = rb ? rb->availableWrite() : 0;
+    while (writePos < totalFrames && !m_stopRequested.load(std::memory_order_relaxed)) {
+        size_t framesToWrite = std::min(chunkSize, totalFrames - writePos);
         
-        if (availableWrite < chunkSize) {
-            // Buffer full, sleep
+        // Check how much space is available
+        size_t availableWrite = 0;
+        {
+            std::lock_guard<std::mutex> lock(m_bufferMutex);
+            if (m_ringBuffer) {
+                availableWrite = m_ringBuffer->availableWrite();
+            }
+        }
+        
+        if (availableWrite < framesToWrite) {
+            // Buffer is full, wait for consumer to read
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
             continue;
         }
         
-        // Decode chunk
-        // We decode directly into a temp buffer then write to ring buffer
-        // Or we could try to decode directly to ring buffer pointer if we exposed it, 
-        // but AudioRingBuffer wraps. Simpler to use temp buffer.
-        
-        // Use stack buffer for chunk (4096 frames * max 8 channels * float) ~ 128KB
-        // Should be fine on stack or use thread_local vector
-        static thread_local std::vector<float> chunkBuffer;
-        if (chunkBuffer.size() < chunkSize * channels) chunkBuffer.resize(chunkSize * channels);
-        
-        // Decode into temp buffer
-        ma_uint64 framesRead = 0;
-        ma_result result = ma_decoder_read_pcm_frames(decoder, chunkBuffer.data(), chunkSize, &framesRead);
-        
-        if (result != MA_SUCCESS && result != MA_AT_END) {
-             // Error reading
-             break; 
-        }
-        
-        if (framesRead > 0) {
-            AudioRingBuffer* rb = m_ringBuffer.load(std::memory_order_acquire);
-            if (rb) {
-                rb->write(chunkBuffer.data(), static_cast<size_t>(framesRead));
+        // Write to ring buffer
+        {
+            std::lock_guard<std::mutex> lock(m_bufferMutex);
+            if (m_ringBuffer) {
+                m_ringBuffer->write(&audioData[writePos * channels], framesToWrite);
             }
-            
-            totalDecoded += framesRead;
-            m_decodedFrames.store(totalDecoded, std::memory_order_relaxed);
         }
         
-        // Signal ready if we crossed pre-buffer threshold
-        if (!readySignaled && totalDecoded >= preBufferFrames) {
-            readySignaled = true;
-            if (m_onReady) m_onReady(sampleRate, channels, duration);
-        }
-        
-        if (result == MA_AT_END || framesRead == 0) {
-            // EOF
-            break;
-        }
+        writePos += framesToWrite;
     }
     
-    // Ensure we signal ready if file was shorter than pre-buffer
-    if (!readySignaled) {
-        readySignaled = true;
-        if (m_onReady) m_onReady(sampleRate, channels, duration);
+    if (m_onComplete) {
+        m_onComplete();
     }
-    
-    m_state.store(State::Complete, std::memory_order_release);
-    
-    if (m_onComplete) m_onComplete();
-    
-    closeDecoder();
-    
-#else
-    // Fallback if miniaudio disabled
-    m_state.store(State::Error, std::memory_order_release);
-    if (m_onError) m_onError("Miniaudio disabled, cannot stream.");
-#endif
 }
 
-bool StreamingDecoder::openDecoder(const std::string& path) {
-#if defined(NOMAD_USE_MINIAUDIO)
-    auto* decoder = new ma_decoder;
-    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 0, 0);
-    
-#ifdef _WIN32
-    ma_result result = ma_decoder_init_file_w(pathStringToWide(path).c_str(), &config, decoder);
-#else
-    ma_result result = ma_decoder_init_file(path.c_str(), &config, decoder);
-#endif
-
-    if (result != MA_SUCCESS) {
-        delete decoder;
-        return false;
-    }
-    
-    m_decoderHandle = decoder;
-    return true;
-#else
+bool StreamingDecoder::openDecoder(const std::string& /*path*/) {
+    // Not used in this simplified implementation
     return false;
-#endif
 }
 
 void StreamingDecoder::closeDecoder() {
-#if defined(NOMAD_USE_MINIAUDIO)
-    if (m_decoderHandle) {
-        auto* decoder = static_cast<ma_decoder*>(m_decoderHandle);
-        ma_decoder_uninit(decoder);
-        delete decoder;
-        m_decoderHandle = nullptr;
-    }
-#endif
+    // Not used in this simplified implementation
 }
 
 size_t StreamingDecoder::decodeChunk(size_t /*targetFrames*/) {
-    // Helper moved inside thread func for simplified logic with stack buffer
+    // Not used in this simplified implementation
     return 0;
 }
 

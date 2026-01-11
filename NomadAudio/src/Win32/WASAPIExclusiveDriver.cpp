@@ -24,8 +24,6 @@
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "avrt.lib")
 
-#include "NomadLog.h"
-
 namespace Nomad {
 namespace Audio {
 
@@ -79,7 +77,6 @@ bool WASAPIExclusiveDriver::initialize() {
     m_errorMessage.clear();
 
     std::cout << "[WASAPI Exclusive] Driver initialized successfully" << std::endl;
-    Nomad::Log::info("[WASAPI Exclusive] Driver initialized successfully");
     return true;
 }
 
@@ -129,11 +126,11 @@ void WASAPIExclusiveDriver::shutdownCOM() {
     CoUninitialize();
 }
 
-std::vector<AudioDeviceInfo> WASAPIExclusiveDriver::getDevices() {
+std::vector<AudioDeviceInfo> WASAPIExclusiveDriver::getDevices() const {
     std::vector<AudioDeviceInfo> devices;
 
     if (!m_deviceEnumerator) {
-        setError(DriverError::INITIALIZATION_FAILED, "Device enumerator not initialized");
+        const_cast<WASAPIExclusiveDriver*>(this)->setError(DriverError::INITIALIZATION_FAILED, "Device enumerator not initialized");
         return devices;
     }
 
@@ -141,7 +138,7 @@ std::vector<AudioDeviceInfo> WASAPIExclusiveDriver::getDevices() {
     return devices;
 }
 
-bool WASAPIExclusiveDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devices) {
+bool WASAPIExclusiveDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devices) const {
     IMMDeviceCollection* deviceCollection = nullptr;
 
     HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->EnumAudioEndpoints(
@@ -211,7 +208,7 @@ uint32_t WASAPIExclusiveDriver::getDefaultInputDevice() {
     return 0;
 }
 
-bool WASAPIExclusiveDriver::isExclusiveModeAvailable(uint32_t deviceId) {
+bool WASAPIExclusiveDriver::isExclusiveModeAvailable(uint32_t deviceId) const {
     // Try to open the device and test exclusive mode
     IMMDevice* testDevice = nullptr;
     
@@ -265,6 +262,62 @@ bool WASAPIExclusiveDriver::isExclusiveModeAvailable(uint32_t deviceId) {
     return available;
 }
 
+std::vector<uint32_t> WASAPIExclusiveDriver::getSupportedExclusiveSampleRates(uint32_t deviceId) const {
+    std::vector<uint32_t> supportedRates;
+
+    IMMDevice* testDevice = nullptr;
+    if (!m_deviceEnumerator) {
+        return supportedRates;
+    }
+
+    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->GetDefaultAudioEndpoint(
+        eRender,
+        eConsole,
+        &testDevice
+    );
+
+    if (FAILED(hr)) {
+        return supportedRates;
+    }
+
+    IAudioClient* testClient = nullptr;
+    hr = testDevice->Activate(
+        IID_IAudioClient,
+        CLSCTX_ALL,
+        nullptr,
+        (void**)&testClient
+    );
+
+    if (SUCCEEDED(hr)) {
+        // Test each sample rate
+        for (uint32_t sampleRate : EXCLUSIVE_SAMPLE_RATES) {
+            WAVEFORMATEX format = {};
+            format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+            format.nChannels = 2;
+            format.nSamplesPerSec = sampleRate;
+            format.wBitsPerSample = 32;
+            format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
+            format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+            format.cbSize = 0;
+
+            WAVEFORMATEX* closestMatch = nullptr;
+            hr = testClient->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &closestMatch);
+
+            if (hr == S_OK) {
+                supportedRates.push_back(sampleRate);
+            }
+
+            if (closestMatch) {
+                CoTaskMemFree(closestMatch);
+            }
+        }
+
+        testClient->Release();
+    }
+
+    testDevice->Release();
+    return supportedRates;
+}
 
 bool WASAPIExclusiveDriver::openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) {
     if (m_state == DriverState::STREAM_RUNNING) {
@@ -289,9 +342,9 @@ bool WASAPIExclusiveDriver::openStream(const AudioStreamConfig& config, AudioCal
 
     m_state = DriverState::STREAM_OPEN;
     if (m_usingSharedFallback) {
-        Nomad::Log::info("[WASAPI] Stream opened in shared fallback mode");
+        std::cout << "[WASAPI] Stream opened in shared fallback mode" << std::endl;
     } else {
-        Nomad::Log::info("[WASAPI Exclusive] Stream opened successfully");
+        std::cout << "[WASAPI Exclusive] Stream opened successfully" << std::endl;
     }
     return true;
 }
@@ -374,14 +427,12 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
     m_actualSampleRate = wf->nSamplesPerSec;
     
     // Log format details for diagnostics
-    // Log format details for diagnostics
-    std::stringstream ss;
-    ss << "[WASAPI Exclusive] Requested format: "
-       << m_actualSampleRate << " Hz, "
-       << wf->nChannels << " channels, "
-       << wf->wBitsPerSample << " bits, "
-       << (wf->wFormatTag == WAVE_FORMAT_IEEE_FLOAT ? "Float32" : "PCM");
-    Nomad::Log::info(ss.str());
+    std::cout << "[WASAPI Exclusive] Requested format: "
+              << m_actualSampleRate << " Hz, "
+              << wf->nChannels << " channels, "
+              << wf->wBitsPerSample << " bits, "
+              << (wf->wFormatTag == WAVE_FORMAT_IEEE_FLOAT ? "Float32" : "PCM")
+              << std::endl;
 
     // Pre-flight check: Test if exclusive mode is available
     // This helps detect if another application is already using the device
@@ -400,7 +451,7 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
         setError(DriverError::DEVICE_IN_USE, 
                 "Device is in use by another application in Exclusive mode. "
                 "Please close other audio applications or switch to Shared mode.");
-        Nomad::Log::error("[WASAPI Exclusive] Device busy (AUDCLNT_E_DEVICE_IN_USE)");
+        std::cerr << "[WASAPI Exclusive] Device busy (AUDCLNT_E_DEVICE_IN_USE)" << std::endl;
         return false;
     }
     
@@ -408,7 +459,7 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
         setError(DriverError::EXCLUSIVE_MODE_UNAVAILABLE,
                 "Exclusive mode is not allowed for this device. "
                 "Windows may have disabled exclusive access in device properties.");
-        Nomad::Log::error("[WASAPI Exclusive] Exclusive mode not allowed (AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED)");
+        std::cerr << "[WASAPI Exclusive] Exclusive mode not allowed (AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED)" << std::endl;
         return false;
     }
 
@@ -485,7 +536,8 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
 
     // Enhanced error handling with specific diagnostics
     if (hr == AUDCLNT_E_DEVICE_IN_USE || hr == AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED) {
-        Nomad::Log::error("[WASAPI Exclusive] Exclusive unavailable (" + HResultToString(hr) + "), attempting shared fallback");
+        std::cerr << "[WASAPI Exclusive] Exclusive unavailable (" << HResultToString(hr)
+                  << "), attempting shared fallback" << std::endl;
         // Clean up exclusive client resources before retrying shared
         if (m_audioClient) { reinterpret_cast<IAudioClient*>(m_audioClient)->Release(); m_audioClient = nullptr; }
         if (m_renderClient) { reinterpret_cast<IAudioRenderClient*>(m_renderClient)->Release(); m_renderClient = nullptr; }
@@ -502,14 +554,14 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
                 std::to_string(reinterpret_cast<WAVEFORMATEX*>(m_waveFormat)->nChannels) + " channels, " +
                 std::to_string(reinterpret_cast<WAVEFORMATEX*>(m_waveFormat)->wBitsPerSample) + " bits. "
                 "HRESULT: " + HResultToString(hr));
-        Nomad::Log::error("[WASAPI Exclusive] Initialize failed: AUDCLNT_E_UNSUPPORTED_FORMAT");
+        std::cerr << "[WASAPI Exclusive] Initialize failed: AUDCLNT_E_UNSUPPORTED_FORMAT" << std::endl;
         return false;
     }
 
     if (FAILED(hr)) {
         setError(DriverError::STREAM_OPEN_FAILED, 
                 "Failed to initialize exclusive mode. HRESULT: " + HResultToString(hr));
-        Nomad::Log::error("[WASAPI Exclusive] Initialize failed: " + HResultToString(hr));
+        std::cerr << "[WASAPI Exclusive] Initialize failed: " << HResultToString(hr) << std::endl;
         return false;
     }
 
@@ -541,13 +593,12 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
         3.0  // Conservative RTL estimate: 3x buffer period
     );
     
-    std::stringstream logSS;
-    logSS << "[WASAPI Exclusive] Initialized - "
-          << "Sample Rate: " << m_actualSampleRate << " Hz, "
-          << "Buffer: " << m_bufferFrameCount << " frames\n"
-          << "  Buffer Period: " << std::fixed << std::setprecision(2) << latencyInfo.bufferPeriodMs << "ms (one-way)\n"
-          << "  Estimated RTL: " << latencyInfo.estimatedRTL_Ms << "ms (round-trip, device-dependent)";
-    Nomad::Log::info(logSS.str());
+    std::cout << "[WASAPI Exclusive] Initialized - "
+              << "Sample Rate: " << m_actualSampleRate << " Hz, "
+              << "Buffer: " << m_bufferFrameCount << " frames\n"
+              << "  Buffer Period: " << std::fixed << std::setprecision(2) << latencyInfo.bufferPeriodMs << "ms (one-way)\n"
+              << "  Estimated RTL: " << latencyInfo.estimatedRTL_Ms << "ms (round-trip, device-dependent)"
+              << std::endl;
 
     return true;
 }
@@ -559,19 +610,22 @@ bool WASAPIExclusiveDriver::findBestExclusiveFormat(void** format) {
     
     // Try 16-bit PCM first (most compatible)
     if (testExclusiveFormatPCM(m_config.sampleRate, m_config.numOutputChannels, 16, reinterpret_cast<void**>(wfFormat))) {
-        Nomad::Log::info("[WASAPI Exclusive] Using 16-bit PCM at " + std::to_string(m_config.sampleRate) + " Hz");
+        std::cout << "[WASAPI Exclusive] Using 16-bit PCM at "
+                  << m_config.sampleRate << " Hz" << std::endl;
         return true;
     }
     
     // Try 24-bit PCM
     if (testExclusiveFormatPCM(m_config.sampleRate, m_config.numOutputChannels, 24, reinterpret_cast<void**>(wfFormat))) {
-        Nomad::Log::info("[WASAPI Exclusive] Using 24-bit PCM at " + std::to_string(m_config.sampleRate) + " Hz");
+        std::cout << "[WASAPI Exclusive] Using 24-bit PCM at "
+                  << m_config.sampleRate << " Hz" << std::endl;
         return true;
     }
     
     // Try 32-bit float
     if (testExclusiveFormat(m_config.sampleRate, m_config.numOutputChannels, reinterpret_cast<void**>(wfFormat))) {
-        Nomad::Log::info("[WASAPI Exclusive] Using 32-bit float at " + std::to_string(m_config.sampleRate) + " Hz");
+        std::cout << "[WASAPI Exclusive] Using 32-bit float at "
+                  << m_config.sampleRate << " Hz" << std::endl;
         return true;
     }
 
@@ -613,11 +667,6 @@ bool WASAPIExclusiveDriver::testExclusiveFormat(uint32_t sampleRate, uint32_t ch
         &testFormat,
         &closestMatch
     );
-    
-    // Log failure reasons
-    if (hr != S_OK) {
-        Nomad::Log::warning("[WASAPI Exclusive] Float format not supported: " + std::to_string(sampleRate) + "Hz. HR=" + HResultToString(hr));
-    }
 
     if (hr == S_OK) {
         // Exact match - allocate and copy
@@ -712,8 +761,6 @@ bool WASAPIExclusiveDriver::startStream() {
         m_isRunning = false;
         return false;
     }
-
-    Nomad::Log::info("[WASAPI Exclusive] Stream started successfully at " + std::to_string(m_config.sampleRate) + " Hz");
 
     // Start audio thread
     m_audioThread = std::thread(&WASAPIExclusiveDriver::audioThreadProc, this);
@@ -937,8 +984,6 @@ void WASAPIExclusiveDriver::audioThreadProc() {
             std::fill(userBuffer.begin(), userBuffer.end(), 0.0f);
         }
         
-        m_statistics.callbackCount++;
-
         // Apply soft-start ramp to prevent harsh audio on startup
         if (m_isRamping) {
             for (uint32_t frame = 0; frame < m_bufferFrameCount; ++frame) {
@@ -1011,13 +1056,15 @@ void WASAPIExclusiveDriver::audioThreadProc() {
             }
             else {
                 // Unknown bit depth - zero the buffer and log warning
-                Nomad::Log::warning("[WASAPI Exclusive] Unknown PCM bit depth: " + std::to_string(wf->wBitsPerSample) + " bits. Outputting silence.");
+                std::cerr << "[WASAPI Exclusive] Unknown PCM bit depth: "
+                          << wf->wBitsPerSample << " bits. Outputting silence." << std::endl;
                 std::memset(reinterpret_cast<void*>(data), 0, m_bufferFrameCount * wf->nBlockAlign);
             }
         }
         else {
             // Unknown format - zero the buffer and log warning
-            Nomad::Log::warning("[WASAPI Exclusive] Unknown format tag: " + std::to_string(wf->wFormatTag) + ". Outputting silence.");
+            std::cerr << "[WASAPI Exclusive] Unknown format tag: "
+                      << wf->wFormatTag << ". Outputting silence." << std::endl;
             std::memset(reinterpret_cast<void*>(data), 0, m_bufferFrameCount * wf->nBlockAlign);
         }
 
@@ -1050,7 +1097,7 @@ void WASAPIExclusiveDriver::setError(DriverError error, const std::string& messa
     m_errorMessage = message;
     m_state = DriverState::DRIVER_ERROR;
 
-    Nomad::Log::error("[WASAPI Exclusive] Error: " + message);
+    std::cerr << "[WASAPI Exclusive] Error: " << message << std::endl;
 
     if (m_errorCallback) {
         m_errorCallback(error, message);
@@ -1074,89 +1121,6 @@ void WASAPIExclusiveDriver::updateStatistics(double callbackTimeUs) {
     }
 
     m_statistics.actualLatencyMs = getStreamLatency() * 1000.0;
-}
-
-
-std::vector<uint32_t> WASAPIExclusiveDriver::getSupportedExclusiveSampleRates(uint32_t deviceIndex) {
-    std::vector<uint32_t> supportedRates;
-    std::vector<uint32_t> testRates = { 44100, 48000, 88200, 96000, 176400, 192000 };
-    
-    IMMDeviceEnumerator* enumerator = nullptr;
-    IMMDeviceCollection* collection = nullptr;
-    IMMDevice* device = nullptr;
-    IAudioClient* client = nullptr;
-
-    HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&enumerator);
-    if (FAILED(hr)) return supportedRates;
-
-    hr = enumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &collection);
-    if (SUCCEEDED(hr)) {
-        hr = collection->Item(deviceIndex, &device);
-        if (SUCCEEDED(hr)) {
-             hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)&client);
-             if (SUCCEEDED(hr)) {
-                 for (uint32_t rate : testRates) {
-                     // Check 1. Float 32-bit (Preferred)
-                     WAVEFORMATEX* match = nullptr;
-                     WAVEFORMATEX format = {};
-                     format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-                     format.nChannels = 2;
-                     format.nSamplesPerSec = rate;
-                     format.wBitsPerSample = 32;
-                     format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
-                     format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-                     format.cbSize = 0;
-
-                     hr = client->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &match);
-                     if (match) CoTaskMemFree(match);
-                     
-                     if (hr == S_OK) {
-                         supportedRates.push_back(rate);
-                         continue; 
-                     }
-
-                     // Check 2. PCM 24-bit
-                     format.wFormatTag = WAVE_FORMAT_PCM;
-                     format.wBitsPerSample = 24;
-                     format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
-                     format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-                     
-                     match = nullptr;
-                     hr = client->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &match);
-                     if (match) CoTaskMemFree(match);
-
-                     if (hr == S_OK) {
-                         supportedRates.push_back(rate);
-                         continue;
-                     }
-
-                     // Check 3. PCM 16-bit
-                     format.wBitsPerSample = 16;
-                     format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
-                     format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-                     
-                     match = nullptr;
-                     hr = client->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &match);
-                     if (match) CoTaskMemFree(match);
-
-                     if (hr == S_OK) {
-                         supportedRates.push_back(rate);
-                     }
-                 }
-                 client->Release();
-             }
-             device->Release();
-        }
-        collection->Release();
-    }
-    enumerator->Release();
-
-    // If no specific exclusive rates found (rare), fallback to 48k at least to avoid empty list
-    if (supportedRates.empty()) {
-        supportedRates.push_back(48000);
-    }
-    
-    return supportedRates;
 }
 
 } // namespace Audio

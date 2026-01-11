@@ -11,7 +11,7 @@ colors:
   surfaceRaised: "#2a2a30"          # Cards, hover surface, active elements
 
   # 💡 Accent & Branding - Modern Professional
-  primary: "#BB86FC"               # Nomad Purple (Official)
+  primary: "#8A2BE2"               # Electric Purple (FL Studio inspired)
   primaryHover: "#9D44FF"          # Lighter purple for hover
   primaryPressed: "#6A1B9A"        # Darker purple for pressed
   secondary: "#00FFCC"             # Neon Teal accent
@@ -25,16 +25,6 @@ colors:
   warning: "#FFCC00"               # Amber warning
   error: "#FF3366"                 # Vibrant red for errors
   info: "#8A2BE2"                  # Purple (matches primary)
-
-  # 📊 Meter Colors - Nomad Heat Gradient
-  meterSafe: "#bb86fc"             # Light Purple (Bottom)
-  meterWarn: "#ff00cc"             # Neon Pink (Mid)
-  meterCrit: "#ff3366"             # Vibrant Red (Top)
-
-  # 🎚️ Mixer Colors
-  # Format: AARRGGBB (Alpha first!)
-  mixerStripBg: "#F2030303"        # Deep Black (0.95 alpha)
-  mixerMasterBorder: "#14FFFFFF"   # White (0.08 alpha)
 
   # 🪟 Glass Aesthetic (v9.0 Systematic)
   glassHover: "#0DFFFFFF"          # white @ 0.05 alpha
@@ -186,7 +176,7 @@ zIndex:
 
 # Component-Specific Settings
 components:
-  # Dropdown styling
+  # Dropdown styling - Modern FL Studio inspired
   dropdown:
     background: "#28282d"           # Dropdown background (surfaceTertiary)
     border: "#000000"               # Black border for modern look
@@ -216,7 +206,6 @@ components:
     searchBoxWidth: 180.0          # Default search box width
     favoriteStarSize: 16.0         # Size of favorite star icon
     waveformHeight: 80.0           # Height of waveform preview
-
 
   # Track Controls
   trackControls:

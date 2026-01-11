@@ -1,6 +1,5 @@
 // Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "WASAPISharedDriver.h"
-#include "DitherUtils.h"
 
 // Windows-specific includes (only in .cpp file)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -124,11 +123,11 @@ void WASAPISharedDriver::shutdownCOM() {
     CoUninitialize();
 }
 
-std::vector<AudioDeviceInfo> WASAPISharedDriver::getDevices() {
+std::vector<AudioDeviceInfo> WASAPISharedDriver::getDevices() const {
     std::vector<AudioDeviceInfo> devices;
 
     if (!m_deviceEnumerator) {
-        setError(DriverError::INITIALIZATION_FAILED, "Device enumerator not initialized");
+        const_cast<WASAPISharedDriver*>(this)->setError(DriverError::INITIALIZATION_FAILED, "Device enumerator not initialized");
         return devices;
     }
 
@@ -136,7 +135,7 @@ std::vector<AudioDeviceInfo> WASAPISharedDriver::getDevices() {
     return devices;
 }
 
-bool WASAPISharedDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devices) {
+bool WASAPISharedDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devices) const {
     IMMDeviceCollection* deviceCollection = nullptr;
 
     // Enumerate output devices
@@ -680,8 +679,6 @@ void WASAPISharedDriver::audioThreadProc() {
             std::fill(userBuffer.begin(), userBuffer.end(), 0.0f);
         }
 
-        m_statistics.callbackCount++;
-
         // Convert float to WASAPI format
         if (wf->wFormatTag == WAVE_FORMAT_IEEE_FLOAT ||
             (wf->wFormatTag == WAVE_FORMAT_EXTENSIBLE && 
@@ -696,16 +693,8 @@ void WASAPISharedDriver::audioThreadProc() {
             if (wf->wBitsPerSample == 16) {
                 // 16-bit PCM
                 int16_t* pcmData = reinterpret_cast<int16_t*>(data);
-                const float ditherScale = 1.0f / 32768.0f;
-                
                 for (uint32_t i = 0; i < availableFrames * m_config.numOutputChannels; ++i) {
                     float sample = userBuffer[i];
-                    
-                    // Apply TPDF Dither
-                    if (m_ditherEnabled) {
-                        sample += DitherUtils::generateTPDF(m_ditherState) * ditherScale;
-                    }
-                    
                     if (sample > 1.0f) sample = 1.0f;
                     if (sample < -1.0f) sample = -1.0f;
                     pcmData[i] = static_cast<int16_t>(sample * 32767.0f);
@@ -714,16 +703,8 @@ void WASAPISharedDriver::audioThreadProc() {
             else if (wf->wBitsPerSample == 24) {
                 // 24-bit PCM
                 uint8_t* pcmData = data;
-                const float ditherScale = 1.0f / 8388608.0f;
-                
                 for (uint32_t i = 0; i < availableFrames * m_config.numOutputChannels; ++i) {
                     float sample = userBuffer[i];
-                    
-                    // Apply TPDF Dither
-                    if (m_ditherEnabled.load(std::memory_order_relaxed)) {
-                        sample += DitherUtils::generateTPDF(m_ditherState) * ditherScale;
-                    }
-                    
                     if (sample > 1.0f) sample = 1.0f;
                     if (sample < -1.0f) sample = -1.0f;
                     int32_t pcmValue = static_cast<int32_t>(sample * 8388607.0f);

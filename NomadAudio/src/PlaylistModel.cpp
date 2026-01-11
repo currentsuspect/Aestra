@@ -24,9 +24,6 @@ struct PlaylistModel::Impl {
     std::atomic<uint64_t> modificationCounter{0};
     mutable std::recursive_mutex mutex;
     uint32_t nextLaneNumber = 1;
-
-    int notifySuppressionDepth = 0;
-    bool pendingNotify = false;
 };
 
 PlaylistModel::PlaylistModel()
@@ -255,47 +252,12 @@ ClipInstanceID PlaylistModel::splitClip(ClipInstanceID clipId, double splitBeat)
     if (splitBeat <= clip.startBeat || splitBeat >= clip.startBeat + clip.durationBeats) return ClipInstanceID();
     
     double firstPartDur = splitBeat - clip.startBeat;
-    double secondPartDur = clip.durationBeats - firstPartDur;
-    
-    // === SMART SPLIT: Create unique independent clips ===
     ClipInstance nextPart = clip;
     nextPart.id = ClipInstanceID::generate();
     nextPart.startBeat = splitBeat;
-    nextPart.durationBeats = secondPartDur;
+    nextPart.durationBeats = clip.durationBeats - firstPartDur;
     
-    // Clone pattern for the second clip if PatternManager available
-    // This makes both clips truly independent (unique PatternIDs)
-    // while sharing the same underlying ClipSource (memory efficient)
-    if (m_patternManager && clip.patternId.isValid()) {
-        PatternID clonedPatternId = m_patternManager->clonePattern(clip.patternId);
-        if (clonedPatternId.isValid()) {
-            nextPart.patternId = clonedPatternId;
-            
-            // Calculate sample offset for second clip's sourceStart
-            // This ensures playback continues from the correct position
-            // CRITICAL: specific calculation to match playback engine's absolute timing
-            SampleIndex splitPointSamples = beatsToSamples(splitBeat, m_impl->bpm, m_impl->projectSampleRate);
-            SampleIndex clipStartSamples = beatsToSamples(clip.startBeat, m_impl->bpm, m_impl->projectSampleRate);
-            SampleIndex splitOffsetSamples = splitPointSamples - clipStartSamples;
-            
-            // Add to existing sourceStart (in case original was already offset)
-            nextPart.edits.sourceStart = clip.edits.sourceStart + splitOffsetSamples;
-            
-            // Clear fadeIn on second clip - it should continue seamlessly from split point
-            // (the original fadeIn was at the start of the ORIGINAL clip, not the split)
-            nextPart.edits.fadeInBeats = 0.0;
-            
-            Log::info("Smart split: Created unique pattern " + std::to_string(clonedPatternId.value) + 
-                      " with sourceStart offset " + std::to_string(nextPart.edits.sourceStart));
-        }
-    }
-    
-    // Clear fadeOut on first clip at split point - it continues into the second clip
-    clip.edits.fadeOutBeats = 0.0;
-    
-    // Trim first clip's duration
     clip.durationBeats = firstPartDur;
-    
     m_impl->lanes[laneIdx].clips.push_back(nextPart);
     m_impl->lanes[laneIdx].sortClips();
     notifyChange();
@@ -351,23 +313,6 @@ void PlaylistModel::addChangeObserver(ChangeCallback callback) {
 void PlaylistModel::clearChangeObservers() {
     std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
     m_impl->observers.clear();
-}
-
-void PlaylistModel::beginBatchUpdate() {
-    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
-    m_impl->notifySuppressionDepth++;
-}
-
-void PlaylistModel::endBatchUpdate() {
-    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
-    if (m_impl->notifySuppressionDepth > 0) {
-        m_impl->notifySuppressionDepth--;
-    }
-
-    if (m_impl->notifySuppressionDepth == 0 && m_impl->pendingNotify) {
-        m_impl->pendingNotify = false;
-        notifyChange();
-    }
 }
 
 std::unique_ptr<PlaylistRuntimeSnapshot> PlaylistModel::buildRuntimeSnapshot(
@@ -439,15 +384,6 @@ std::unique_ptr<PlaylistRuntimeSnapshot> PlaylistModel::buildRuntimeSnapshot(
                         clipInfo.sourceSampleRate = source->getSampleRate();
                         clipInfo.sourceChannels = source->getNumChannels();
                         clipInfo.sourceStart = clip.edits.sourceStart;
-                        
-                        // DEBUG: Log sample rate at snapshot build time
-                        static bool logOnce = false;
-                        if (!logOnce) {
-                            Log::info("SNAPSHOT: sourceSampleRate=" + std::to_string(clipInfo.sourceSampleRate) + 
-                                     " sourceChannels=" + std::to_string(clipInfo.sourceChannels) +
-                                     " frames=" + std::to_string(source->getNumFrames()));
-                            logOnce = true;
-                        }
                     }
                 }
             }, pattern.payload);
@@ -474,11 +410,6 @@ uint64_t PlaylistModel::getModificationCounter() const {
 }
 
 void PlaylistModel::notifyChange() {
-    if (m_impl->notifySuppressionDepth > 0) {
-        m_impl->pendingNotify = true;
-        return;
-    }
-
     m_impl->modificationCounter.fetch_add(1);
     for (const auto& callback : m_impl->observers) {
         if (callback) callback();
@@ -498,36 +429,6 @@ std::pair<int, int> PlaylistModel::findClipLocation(ClipInstanceID clipId) const
         if (clipIdx >= 0) return {static_cast<int>(i), clipIdx};
     }
     return {-1, -1};
-}
-
-// === Pattern Usage Safety ===
-
-bool PlaylistModel::isPatternUsed(PatternID patternId) const {
-    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
-    for (const auto& lane : m_impl->lanes) {
-        for (const auto& clip : lane.clips) {
-             if (clip.patternId == patternId) return true;
-        }
-    }
-    return false;
-}
-
-int PlaylistModel::purgeUnusedPatterns() {
-    std::lock_guard<std::recursive_mutex> lock(m_impl->mutex);
-    if (!m_patternManager) return 0;
-
-    auto allPatterns = m_patternManager->getAllPatterns();
-    int removedCount = 0;
-    
-    for (const auto& p : allPatterns) {
-        if (!isPatternUsed(p->id)) {
-             m_patternManager->removePattern(p->id);
-             removedCount++;
-        }
-    }
-    
-    if (removedCount > 0) notifyChange();
-    return removedCount;
 }
 
 } // namespace Audio

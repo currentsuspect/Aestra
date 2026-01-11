@@ -4,26 +4,21 @@
 #include "MixerViewModel.h"
 #include "../NomadUI/Widgets/UIMixerPanel.h"
 
-using namespace NomadUI;
 using namespace Nomad::Audio;
 
 MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
-    : WindowPanel("MIXER")
+    : WindowPanel("Mixer")
     , m_trackManager(std::move(trackManager))
 {
-    // Create view model and modern mixer
     m_viewModel = std::make_shared<Nomad::MixerViewModel>();
-    m_newMixer = std::make_shared<UIMixerPanel>(m_viewModel, 
-                                                m_trackManager->getMeterSnapshots(),
-                                                m_trackManager->getContinuousParams());
-    m_newMixer->setId("UIMixerPanel_Inner");
-    
-    // Set as content of WindowPanel
+    m_newMixer = std::make_shared<NomadUI::UIMixerPanel>(
+        m_viewModel,
+        m_trackManager ? m_trackManager->getMeterSnapshots() : nullptr,
+        m_trackManager ? m_trackManager->getContinuousParams() : nullptr);
     setContent(m_newMixer);
 
     refreshChannels();
 }
-
 
 void MixerPanel::refreshChannels()
 {

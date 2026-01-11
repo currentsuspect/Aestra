@@ -36,8 +36,6 @@ void UIMixerButtonRow::cacheThemeColors()
     m_muteOn = theme.getColor("accentAmber");
     m_soloOn = theme.getColor("accentCyan");
     m_armOn = theme.getColor("error");
-    m_monitorOn = theme.getColor("accentSuccess"); 
-    if (m_monitorOn.a == 0.0f) m_monitorOn = NUIColor(0.2f, 0.8f, 0.2f, 1.0f); // Fallback
 }
 
 void UIMixerButtonRow::layoutButtons()
@@ -87,14 +85,6 @@ void UIMixerButtonRow::setArmed(bool armed)
 {
     if (m_armed == armed) return;
     m_armed = armed;
-    m_armed = armed;
-    requestInvalidate();
-}
-
-void UIMixerButtonRow::setMonitored(bool monitored)
-{
-    if (m_monitored == monitored) return;
-    m_monitored = monitored;
     requestInvalidate();
 }
 
@@ -106,7 +96,7 @@ void UIMixerButtonRow::onResize(int width, int height)
 
 void UIMixerButtonRow::onRender(NUIRenderer& renderer)
 {
-    static constexpr const char* labels[kButtonCount] = {"M", "S", "R", "I"};
+    static constexpr const char* labels[kButtonCount] = {"M", "S", "R"};
 
     for (int i = 0; i < kButtonCount; ++i) {
         const bool hovered = (i == m_hovered);
@@ -128,10 +118,6 @@ void UIMixerButtonRow::onRender(NUIRenderer& renderer)
             active = m_armed;
             activeBg = m_armOn;
             if (active) textColor = m_textOnRed;
-        } else if (i == 3) {
-            active = m_monitored;
-            activeBg = m_monitorOn;
-            if (active) textColor = m_textOnBright;
         }
 
         NUIColor bg = active ? activeBg : m_bg;
@@ -162,23 +148,6 @@ bool UIMixerButtonRow::onMouseEvent(const NUIMouseEvent& event)
         if (hit != m_hovered) {
             m_hovered = hit;
             requestInvalidate();
-            
-            // Tooltip Logic
-            if (m_hovered != -1) {
-                std::string text;
-                if (m_hovered == 0) text = "Mute";
-                else if (m_hovered == 1) text = "Solo";
-                else if (m_hovered == 2) text = "Record Arm";
-                else if (m_hovered == 3) text = "Input Monitor";
-                
-                const auto& rect = m_buttonBounds[m_hovered];
-                NUIPoint center(rect.x + rect.width * 0.5f, rect.y + rect.height + 8.0f);
-                NUIPoint globalPos = localToGlobal(center);
-                
-                NUIComponent::showRemoteTooltip(text, globalPos);
-            } else {
-                NUIComponent::hideRemoteTooltip();
-            }
         }
     }
 
@@ -205,31 +174,17 @@ bool UIMixerButtonRow::onMouseEvent(const NUIMouseEvent& event)
             } else if (wasPressed == 1) {
                 m_soloed = !m_soloed;
                 requestInvalidate();
-                if (onSoloToggled) onSoloToggled(m_soloed, event.modifiers);
+                if (onSoloToggled) onSoloToggled(m_soloed);
             } else if (wasPressed == 2) {
                 m_armed = !m_armed;
                 requestInvalidate();
                 if (onArmToggled) onArmToggled(m_armed);
-            } else if (wasPressed == 3) {
-                m_monitored = !m_monitored;
-                requestInvalidate();
-                if (onMonitorToggled) onMonitorToggled(m_monitored);
             }
             return true;
         }
     }
 
     return false;
-}
-
-void UIMixerButtonRow::onMouseLeave()
-{
-    if (m_hovered != -1) {
-        m_hovered = -1;
-        requestInvalidate();
-        NUIComponent::hideRemoteTooltip();
-    }
-    NUIComponent::onMouseLeave();
 }
 
 } // namespace NomadUI

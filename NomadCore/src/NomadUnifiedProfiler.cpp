@@ -89,7 +89,7 @@ void UnifiedProfiler::pushZone(const char* name, uint32_t threadId, const char* 
     entry.startUs = getMicroseconds();
     entry.threadId = threadId;
     entry.threadName = threadName ? threadName : "";
-    entry.zoneId = UnifiedZoneEntry::s_nextZoneId.fetch_add(1);
+    entry.zoneId = s_nextZoneId.fetch_add(1);
     
     // Set parent zone ID if we have a current zone
     if (!m_zoneStack.empty()) {
@@ -298,12 +298,15 @@ void UnifiedProfiler::setAudioEngine(Audio::AudioEngine* engine) {
 }
 
 void UnifiedProfiler::syncAudioTelemetry() {
-    // Note: Actual telemetry sync is handled in UnifiedHUD which has access to AudioEngine
-    // This function is a placeholder for future direct audio integration
     if (!m_enabled || !m_audioEngine) return;
     
-    // Audio metrics are set via setAudioLoad() and setXruns() from the caller
-    // No direct AudioEngine access here to avoid circular dependency
+    auto& telemetry = m_audioEngine->telemetry();
+
+    // Sync audio metrics from AudioTelemetry
+    m_currentFrame.audioXruns = telemetry.xruns.load(std::memory_order_relaxed);
+
+    // Audio load is already set via setAudioLoad from TrackManager
+    // This sync is for additional audio-specific metrics
 }
 
 ThreadStats& UnifiedProfiler::getOrCreateThreadStats(uint32_t threadId, const char* threadName) {

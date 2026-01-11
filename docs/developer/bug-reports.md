@@ -6,15 +6,15 @@ This guide explains how to report bugs effectively for Nomad DAW, ensuring issue
 
 ## 📋 Table of Contents
 
-- [Before You Report](#before-you-report)
-- [How to Report a Bug](#how-to-report-a-bug)
-- [Bug Report Template](#bug-report-template)
-- [Reproduction Steps](#reproduction-steps)
-- [Gathering System Information](#gathering-system-information)
-- [Log Files and Debugging](#log-files-and-debugging)
-- [Visual Bugs and Screenshots](#visual-bugs-and-screenshots)
-- [Audio Bugs and Recordings](#audio-bugs-and-recordings)
-- [What Happens Next](#what-happens-next)
+- [Before You Report](#-before-you-report)
+- [How to Report a Bug](#-how-to-report-a-bug)
+- [Bug Report Template](#-bug-report-template)
+- [Reproduction Steps](#-reproduction-steps)
+- [Gathering System Information](#-gathering-system-information)
+- [Log Files and Debugging](#-log-files-and-debugging)
+- [Visual Bugs and Screenshots](#-visual-bugs-and-screenshots)
+- [Audio Bugs and Recordings](#-audio-bugs-and-recordings)
+- [What Happens Next](#-what-happens-next)
 
 ---
 
@@ -433,8 +433,8 @@ Before submitting, verify:
 
 ## 📚 Related Resources
 
-- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute to Nomad
-- **[Debugging Guide](developer/debugging.md)** — Advanced debugging techniques
+- **[Contributing Guide](../CONTRIBUTING.md)** — How to contribute to Nomad
+- **[Debugging Guide](debugging.md)** — Advanced debugging techniques
 - **[GitHub Issues](https://github.com/currentsuspect/NOMAD/issues)** — Browse existing bugs
 
 ---

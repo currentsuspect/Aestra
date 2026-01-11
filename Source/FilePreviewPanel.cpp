@@ -9,60 +9,17 @@
 #include <iostream>
 #include <mutex>
 
-#include "../NomadAudio/include/MiniAudioDecoder.h"
-#include "../NomadAudio/include/AudioFileValidator.h"
-
 namespace NomadUI {
-
-namespace {
-
-// Generate waveform overview from decoded audio samples
-std::vector<float> generateWaveformFromAudio(const std::vector<float>& samples, 
-                                              uint32_t numChannels, 
-                                              size_t targetSize = 256) {
-    std::vector<float> waveform(targetSize, 0.0f);
-    if (samples.empty() || numChannels == 0) return waveform;
-    
-    size_t totalFrames = samples.size() / numChannels;
-    float framesPerBin = static_cast<float>(totalFrames) / targetSize;
-    
-    for (size_t bin = 0; bin < targetSize; ++bin) {
-        size_t startFrame = static_cast<size_t>(bin * framesPerBin);
-        size_t endFrame = static_cast<size_t>((bin + 1) * framesPerBin);
-        endFrame = std::min(endFrame, totalFrames);
-        
-        float maxAmp = 0.0f;
-        for (size_t frame = startFrame; frame < endFrame; ++frame) {
-            // Mix all channels for mono-sum peak
-            float sum = 0.0f;
-            for (uint32_t ch = 0; ch < numChannels; ++ch) {
-                sum += std::abs(samples[frame * numChannels + ch]);
-            }
-            maxAmp = std::max(maxAmp, sum / numChannels);
-        }
-        waveform[bin] = std::min(1.0f, maxAmp);
-    }
-    
-    return waveform;
-}
-
-} // namespace
 
 FilePreviewPanel::FilePreviewPanel() {
     setId("FilePreviewPanel");
 
-    // Folder Icon (Material Design / Mac Style)
-    // Use the same high-quality path as FileBrowser for consistency
-    folderIcon_ = std::make_shared<NUIIcon>(R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-2.06 11L15 10l.94-2H21v9h-3.06z" opacity="0.8"/><path d="M20,6H12L10,4H4A2,2,0,0,0,2,6V18A2,2,0,0,0,4,20H20A2,2,0,0,0,22,18V8A2,2,0,0,0,20,6Z"/></svg>)");
-
+    // Initialize SVG Icons
+    // Folder Icon (Material Design)
+    folderIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24'><path d='M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z'/></svg>");
+    
     // File Icon (Text Snippet style)
-    fileIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24' fill='currentColor'><path d='M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z'/></svg>");
-    
-    // Play Icon (Solid Triangle)
-    playIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24' fill='currentColor'><path d='M8 5v14l11-7z'/></svg>");
-    
-    // Stop Icon (Solid Square)
-    stopIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24' fill='currentColor'><path d='M6 6h12v12H6z'/></svg>");
+    fileIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24'><path d='M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z'/></svg>");
 }
 
 FilePreviewPanel::~FilePreviewPanel() {
@@ -90,13 +47,8 @@ void FilePreviewPanel::setFile(const FileItem* file) {
     }
     
     currentFile_ = file;
-    {
-        std::lock_guard<std::mutex> lock(waveformMutex_);
-        waveformData_.clear();
-    }
-    
-    // Increment generation to invalidate pending tasks
-    currentGeneration_++;
+    waveformData_.clear();
+    setLoading(false);
 
     if (currentFile_ && !currentFile_->isDirectory) {
         std::string ext = std::filesystem::path(currentFile_->path).extension().string();
@@ -185,11 +137,7 @@ void FilePreviewPanel::onUpdate(double deltaTime) {
 
 void FilePreviewPanel::clear() {
     currentFile_ = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(waveformMutex_);
-        waveformData_.clear();
-    }
-    currentGeneration_++;
+    waveformData_.clear();
     setDirty(true);
 }
 
@@ -206,102 +154,15 @@ void FilePreviewPanel::setLoading(bool loading) {
     setDirty(true);
 }
 
-void FilePreviewPanel::setPlayheadPosition(double seconds) {
-    if (std::abs(playheadPosition_ - seconds) > 0.01) {
-        playheadPosition_ = seconds;
-        setDirty(true);
-    }
-}
-
-void FilePreviewPanel::setDuration(double seconds) {
-    if (std::abs(duration_ - seconds) > 0.01) {
-        duration_ = seconds;
-        setDirty(true);
-    }
-}
-
-void FilePreviewPanel::generateWaveform(const std::string& path, size_t fileSize) {
-    isLoading_ = true;
-    loadingAnimationTime_ = 0.0f;
-    uint64_t gen = currentGeneration_.load();
-
-    std::thread([this, path, gen]() {
-        waveformWorker(path, gen);
-    }).detach();
-}
-
-void FilePreviewPanel::waveformWorker(const std::string& path, uint64_t generation) {
-    // Check cancellation early
-    if (generation != currentGeneration_.load(std::memory_order_acquire)) return;
-
-    std::vector<float> audioData;
-    uint32_t sampleRate = 0;
-    uint32_t numChannels = 0;
-
-    // Decode audio file (blocking)
-    bool success = Nomad::Audio::decodeAudioFile(path, audioData, sampleRate, numChannels);
-
-    // Check cancellation after decode
-    if (generation != currentGeneration_.load(std::memory_order_acquire)) return;
-
-    if (success && !audioData.empty()) {
-        // Generate visualization data
-        std::vector<float> waveform = generateWaveformFromAudio(audioData, numChannels, 1024);
-        
-        std::lock_guard<std::mutex> lock(waveformMutex_);
-        if (generation == currentGeneration_.load(std::memory_order_acquire)) {
-            waveformData_ = std::move(waveform);
-            isLoading_ = false;
-        }
-    } else {
-        std::lock_guard<std::mutex> lock(waveformMutex_);
-        if (generation == currentGeneration_.load(std::memory_order_acquire)) {
-            isLoading_ = false;
-        }
-    }
-}
+// void FilePreviewPanel::generateWaveform... Removed
 
 void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     NUIRect bounds = getBounds();
     
-    const float cornerRadius = 6.0f;
-    NUIColor bgColor = theme.getColor("surfaceRaised");
-    NUIColor borderColor = theme.getColor("borderSubtle");
-    
-    // === SOLID BASE FILL ===
-    // First, fill the entire bounds with background color to ensure no gaps
-    renderer.fillRect(bounds, bgColor);
-    
-    // === CLIPPED BORDER RENDERING ===
-    
-    // 1. Draw the TOP portion (square corners) - only the top 6px
-    {
-        NUIRect topClip = bounds;
-        topClip.height = cornerRadius;
-        renderer.setClipRect(topClip);
-        
-        // Draw simple filled rect for the top (no rounded corners)
-        renderer.fillRect(topClip, bgColor);
-        
-        // Draw side borders and top separator line
-        renderer.drawLine(NUIPoint(topClip.x, topClip.y), NUIPoint(topClip.x, topClip.bottom()), 1.0f, borderColor);
-        renderer.drawLine(NUIPoint(topClip.right(), topClip.y), NUIPoint(topClip.right(), topClip.bottom()), 1.0f, borderColor);
-        renderer.drawLine(NUIPoint(bounds.x, bounds.y), NUIPoint(bounds.right(), bounds.y), 1.0f, borderColor);
-        
-        renderer.clearClipRect();
-    }
-    
-    // 2. Draw the BOTTOM portion (with rounded corners) - clip out top 6px
-    {
-        NUIRect bottomClip = bounds;
-        bottomClip.y += cornerRadius;
-        bottomClip.height -= cornerRadius;
-        renderer.setClipRect(bottomClip);
-        renderer.fillRoundedRect(bounds, cornerRadius, bgColor);
-        renderer.strokeRoundedRect(bounds, cornerRadius, 1.0f, borderColor);
-        renderer.clearClipRect();
-    }
+    // Panel background
+    renderer.fillRoundedRect(bounds, 6.0f, theme.getColor("surfaceRaised"));
+    renderer.strokeRoundedRect(bounds, 6.0f, 1.0f, theme.getColor("borderSubtle"));
     
     // === EMPTY STATE ===
     if (!currentFile_) {
@@ -338,11 +199,8 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         if (folderIcon_) {
             NUIRect iconRect(bounds.x + startX, centerY - iconSize * 0.5f, iconSize, iconSize);
             folderIcon_->setBounds(iconRect);
-            
-            // Purple Color (Matching sidebar selection)
-            // Using a vibrant purple accent
-            folderIcon_->setColor(theme.getColor("accentPrimary"));
-            
+            NUIColor purpleAccent(0.6f, 0.3f, 0.9f, 1.0f);
+            folderIcon_->setColor(purpleAccent);
             folderIcon_->onRender(renderer);
         }
         
@@ -382,24 +240,10 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     
     // Play Button
     playButtonBounds_ = NUIRect(playX, topRowY + 2, playBtnWidth, 26);
-
-    NUIColor btnColor = isPlaying_ ? theme.getColor("accentPrimary") : theme.getColor("primary");
-    // Button background
+    NUIColor btnColor = isPlaying_ ? theme.getColor("accentLime") : theme.getColor("primary");
     renderer.fillRoundedRect(playButtonBounds_, 4.0f, btnColor.withAlpha(0.3f));
-    
-    // Icon
-    auto& icon = isPlaying_ ? stopIcon_ : playIcon_;
-    if (icon) {
-        float iconSize = 14.0f;
-        // Pixel snap positions
-        float iconX = std::floor(playButtonBounds_.x + (playButtonBounds_.width - iconSize) * 0.5f + (isPlaying_ ? 0.0f : 1.0f)); 
-        // Nudge Stop icon down 1px
-        float iconY = std::floor(playButtonBounds_.y + (playButtonBounds_.height - iconSize) * 0.5f + (isPlaying_ ? 1.0f : 0.0f)); 
-        
-        icon->setBounds(NUIRect(iconX, iconY, iconSize, iconSize));
-        icon->setColor(theme.getColor("textPrimary")); // White/Bright
-        icon->onRender(renderer);
-    }
+    std::string iconStr = isPlaying_ ? "■" : "▶";
+    renderer.drawText(iconStr, NUIPoint(playButtonBounds_.x + 10, playButtonBounds_.y + 5), 14.0f, btnColor);
     
     // 2. Waveform
     NUIRect waveBounds(bounds.x + 8, waveformY, bounds.width - 16, waveformHeight);
@@ -444,90 +288,22 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
          }
     }
     
-    // Draw waveform or loading state
-    // Draw waveform or loading state
-    bool loading = false;
-    bool hasData = false;
-    {
-        std::lock_guard<std::mutex> lock(waveformMutex_);
-        loading = isLoading_;
-        hasData = !waveformData_.empty();
+    // 3. Metadata (Bottom)
+    std::string metaText;
+    if (loadedSampleRate_ > 0) {
+        int totalSec = static_cast<int>(loadedDurationSeconds_);
+        int min = totalSec / 60;
+        int sec = totalSec % 60;
+        char durBuf[16];
+        snprintf(durBuf, sizeof(durBuf), "%d:%02d", min, sec);
+        
+        std::string chans = (loadedChannels_ == 1) ? "Mono" : (loadedChannels_ == 2) ? "Stereo" : (std::to_string(loadedChannels_) + " Ch");
+        metaText = std::string(durBuf) + " • " + std::to_string(loadedSampleRate_) + " Hz • " + chans;
     }
 
-    if (loading) {
-        // === LOADING SPINNER ===
-        float centerX = waveformBounds.x + waveformBounds.width * 0.5f;
-        float centerY = waveformBounds.y + waveformBounds.height * 0.5f;
-        float spinnerRadius = std::min(waveformBounds.width, waveformBounds.height) * 0.3f;
-        
-        // Animated arc (spinning)
-        float angle = loadingAnimationTime_ * 4.0f; // Rotation speed
-        int segments = 8;
-        for (int i = 0; i < segments; ++i) {
-            float segmentAngle = angle + (i * 2.0f * 3.14159f / segments);
-            float alpha = (1.0f - static_cast<float>(i) / segments) * 0.8f;
-            
-            float x1 = centerX + std::cos(segmentAngle) * (spinnerRadius - 3);
-            float y1 = centerY + std::sin(segmentAngle) * (spinnerRadius - 3);
-            float x2 = centerX + std::cos(segmentAngle) * (spinnerRadius + 3);
-            float y2 = centerY + std::sin(segmentAngle) * (spinnerRadius + 3);
-            
-            renderer.drawLine(
-                NUIPoint(x1, y1), NUIPoint(x2, y2),
-                2.0f,
-                theme.getColor("primary").withAlpha(alpha)
-            );
-        }
-        
-    } else if (hasData && waveformBounds.width > 0 && waveformBounds.height > 0) {
-        // === WAVEFORM RENDERING ===
-        std::lock_guard<std::mutex> lock(waveformMutex_);
-        // Double check data is still there
-        if (waveformData_.empty()) return;
-
-        // Use primary accent (Purple) for waveform to match theme
-        NUIColor waveformFill = theme.getColor("accentPrimary").withAlpha(0.7f);
-        
-        float centerY = waveformBounds.y + waveformBounds.height * 0.5f;
-        float maxAmplitude = waveformBounds.height * 0.45f;
-        float samplesPerPixel = static_cast<float>(waveformData_.size()) / waveformBounds.width;
-        
-        if (samplesPerPixel > 0.0f) {
-            for (float x = 0; x < waveformBounds.width; x += 1.0f) {
-                int startSample = static_cast<int>(x * samplesPerPixel);
-                int endSample = static_cast<int>((x + 1.0f) * samplesPerPixel);
-                startSample = std::clamp(startSample, 0, (int)waveformData_.size() - 1);
-                endSample = std::clamp(endSample, startSample + 1, (int)waveformData_.size());
-                
-                float amplitude = 0.0f;
-                // Find max amplitude in this pixel's range
-                for (int i = startSample; i < endSample; ++i) {
-                    amplitude = std::max(amplitude, waveformData_[i]);
-                }
-                
-                float barHeight = std::max(1.0f, amplitude * maxAmplitude * 2.0f);
-                float yStart = centerY - barHeight * 0.5f;
-                
-                renderer.drawLine(
-                    NUIPoint(waveformBounds.x + x, yStart), 
-                    NUIPoint(waveformBounds.x + x, yStart + barHeight), 
-                    1.0f, waveformFill
-                );
-            }
-        }
-
-        // === PLAYHEAD RENDERING ===
-        if (duration_ > 0.0) {
-            float progress = static_cast<float>(playheadPosition_ / duration_);
-            progress = std::clamp(progress, 0.0f, 1.0f);
-            float playheadX = waveformBounds.x + (progress * waveformBounds.width);
-            
-            renderer.drawLine(
-                NUIPoint(playheadX, waveformBounds.y),
-                NUIPoint(playheadX, waveformBounds.y + waveformBounds.height),
-                2.0f, theme.getColor("accentPrimary")
-            );
-        }
+    if (!metaText.empty()) {
+        float metaY = bounds.y + bounds.height - 18.0f;
+        renderer.drawText(metaText, NUIPoint(bounds.x + 12, metaY), theme.getFontSize("xs"), theme.getColor("textSecondary"));
     }
 }
 
@@ -572,17 +348,6 @@ bool FilePreviewPanel::onMouseEvent(const NUIMouseEvent& event) {
                 }
                 return true; 
             }
-        }
-
-        // Handle seeking on waveform click
-        NUIRect waveformBounds(getBounds().x + 8, getBounds().y + 32 + 4 + 6, getBounds().width - 16, getBounds().height - 32 - 14);
-        if (waveformBounds.contains(event.position) && duration_ > 0.0) {
-            float relativeX = event.position.x - waveformBounds.x;
-            float progress = std::clamp(relativeX / waveformBounds.width, 0.0f, 1.0f);
-            double seekTime = progress * duration_;
-            
-            if (onSeek_) onSeek_(seekTime);
-            return true;
         }
     }
     

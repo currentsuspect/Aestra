@@ -25,7 +25,6 @@ enum class AudioQueueCommandType : uint8_t {
     UpdateClipState,
     StartPreview,
     StopPreview,
-    SetMetronomeEnabled,
 };
 
 // Ensure cache-friendly alignment for RT path

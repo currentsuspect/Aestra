@@ -331,21 +331,21 @@ Muse AI is part of **Nomad Premium**:
 
 ## 📚 Additional Resources
 
-- [Architecture Overview](ARCHITECTURE.md) - Nomad system design
-- [Roadmap](ROADMAP.md) - Feature timeline
-- [FAQ](FAQ.md) - Common questions about Muse
-- [License Reference](LICENSE_REFERENCE.md) - Licensing terms
+- [Architecture Overview](../ARCHITECTURE.md) - Nomad system design
+- [Roadmap](../ROADMAP.md) - Feature timeline
+- [FAQ](../FAQ.md) - Common questions about Muse
+- [License Reference](../LICENSE_REFERENCE.md) - Licensing terms
 
 ## 💬 Feedback and Requests
 
 **Have ideas for Muse AI features?**
 
 - 💡 Open a feature request on GitHub
-- 📧 Email: [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
+- 📧 Email: makoridylan@gmail.com
 - 💬 Join our community discussions
 
 We're actively gathering input during development. Your feedback helps shape Muse!
 
 ---
 
-[← Return to Nomad Docs Index](README.md)
+[← Return to Nomad Docs Index](../README.md)

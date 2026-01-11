@@ -355,8 +355,7 @@ enum class NUIModifiers {
     Shift = 1 << 0,
     Ctrl = 1 << 1,
     Alt = 1 << 2,
-    Super = 1 << 3,  // Windows key / Command key
-    CapsLock = 1 << 4
+    Super = 1 << 3  // Windows key / Command key
 };
 
 inline NUIModifiers operator|(NUIModifiers a, NUIModifiers b) {

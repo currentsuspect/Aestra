@@ -1,459 +1,375 @@
-# 🧭 Nomad DAW Architecture Overview
+# NOMAD Architecture Overview
 
-![Architecture](https://img.shields.io/badge/Architecture-Modular-blue)
-![C++17](https://img.shields.io/badge/C%2B%2B-17-orange)
+NOMAD DAW is built on a clean, modular architecture that separates concerns and promotes maintainability.
 
-Comprehensive overview of Nomad DAW's modular architecture, covering Core, UI, Audio, and Muse AI systems.
+## 🏗️ High-Level Architecture
 
-## 📋 Table of Contents
+NOMAD follows a layered architecture pattern where each layer builds upon the previous one:
 
-- [System Overview](#-system-overview)
-- [Core Modules](#-core-modules)
-- [Architecture Principles](#-architecture-principles)
-- [Data Flow](#-data-flow)
-- [Threading Model](#-threading-model)
+```mermaid
+graph TB
+    subgraph "Application Layer"
+        DAW[NOMAD DAW Application]
+    end
+    subgraph "Framework Layer"
+        UI[NomadUI<br/>GPU-Accelerated Renderer]
+        Audio[NomadAudio<br/>Audio Engine]
+        SDK[NomadSDK<br/>Plugin System]
+    end
+    subgraph "Platform Layer"
+        Plat[NomadPlat<br/>OS Abstraction]
+    end
+    subgraph "Core Layer"
+        Core[NomadCore<br/>Utilities & Foundation]
+    end
 
-## 🏗️ System Overview
+    DAW --> UI
+    DAW --> Audio
+    DAW --> SDK
+    UI --> Plat
+    Audio --> Plat
+    SDK --> Plat
+    Plat --> Core
 
-Nomad DAW is built with a clean, modular architecture that separates concerns into distinct subsystems:
+    style DAW fill:#5c6bc0,color:#fff
+    style UI fill:#00d9ff,color:#000
+    style Audio fill:#00d9ff,color:#000
+    style SDK fill:#00d9ff,color:#000
+    style Plat fill:#7e57c2,color:#fff
+    style Core fill:#9575cd,color:#fff
+```
+
+## 📦 Module Hierarchy
+
+### Layer Dependencies
+
+Each layer only depends on layers below it, never above:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Nomad Application                     │
-└─────────────────────────────────────────────────────────┘
-           │                 │                │
-     ┌─────┴─────┐     ┌─────┴─────┐    ┌────┴────┐
-     │  NomadUI  │     │ NomadAudio│    │  Muse   │
-     │ Framework │     │   Engine  │    │   AI    │
-     └─────┬─────┘     └─────┬─────┘    └────┬────┘
-           │                 │                │
-     ┌─────┴─────────────────┴────────────────┴─────┐
-     │              NomadCore                        │
-     │  (Platform abstraction, utilities, types)    │
-     └──────────────────────────────────────────────┘
-           │                 │                │
-     ┌─────┴─────┐     ┌─────┴─────┐    ┌────┴────┐
-     │  Windows  │     │   Linux   │    │  macOS  │
-     │  Platform │     │  Platform │    │ Platform│
-     └───────────┘     └───────────┘    └─────────┘
+┌─────────────────────────────────────┐
+│     NOMAD DAW (Application)         │
+├─────────────────────────────────────┤
+│  NomadUI │ NomadAudio │ NomadSDK    │  ← Framework Layer
+├─────────────────────────────────────┤
+│          NomadPlat                   │  ← Platform Layer
+├─────────────────────────────────────┤
+│          NomadCore                   │  ← Core Layer
+└─────────────────────────────────────┘
 ```
+
+This strict hierarchy ensures:
+
+- **Clean dependencies** — No circular dependencies
+- **Platform portability** — Easy to add new platforms
+- **Testability** — Each layer can be tested independently
+- **Maintainability** — Changes in one layer don't break others
 
 ## 🧩 Core Modules
 
-### NomadCore
+### NomadCore — Foundation
 
-**Purpose**: Foundation layer providing platform abstraction, utilities, and common types.
+The lowest layer providing fundamental utilities:
 
-**Location**: `nomad-core/`, `NomadCore/`
-
-**Key Components:**
-- **Platform Abstraction** - OS-specific functionality (file I/O, threading, memory)
-- **Math Utilities** - Vector math, coordinate transformations
-- **Data Structures** - Custom containers optimized for audio processing
-- **Type Definitions** - Common types used across all modules
-- **Memory Management** - Custom allocators for real-time audio
-
-**Public API:**
-```cpp
-namespace nomad {
-    namespace core {
-        // Platform abstraction
-        class FileSystem;
-        class Thread;
-        class Mutex;
-
-        // Utilities
-        class Logger;
-        class Timer;
-    }
-}
-```
-
-### NomadUI
-
-**Purpose**: GPU-accelerated custom UI framework with immediate-mode rendering.
-
-**Location**: `NomadUI/`
-
-**Key Components:**
-- **Rendering Engine** - OpenGL-based rendering with adaptive FPS
-- **Widget System** - Buttons, sliders, text fields, dropdowns
-- **Layout Engine** - Flexible layout with absolute and relative positioning
-- **Event System** - Mouse, keyboard, and custom events
-- **Coordinate System** - Hierarchical coordinate transformations
-
-**Architecture:**
-```cpp
-NomadUI/
-├── Core/           # Core UI framework
-│   ├── NUIWidget   # Base widget class
-│   ├── NUIWindow   # Window management
-│   └── NUIRenderer # OpenGL rendering
-├── Widgets/        # Standard UI widgets
-│   ├── NUIButton
-│   ├── NUISlider
-│   ├── NUITextBox
-│   └── NUIDropdown
-└── Layout/         # Layout system
-    ├── NUILayout
-    └── NUIConstraints
-```
+- **Math Library** — Vector/matrix operations, interpolation
+- **Threading** — Lock-free queues, thread pools
+- **File I/O** — Cross-platform file operations
+- **Logging** — Structured logging system
+- **Memory Management** — Allocators and pools
+- **String Utilities** — UTF-8 handling, formatting
 
 **Key Features:**
-- **Adaptive FPS**: Dynamically adjusts frame rate (1-120 FPS) based on activity
-- **GPU Acceleration**: Hardware-accelerated rendering for smooth 60+ FPS
-- **Immediate Mode**: Simplified widget state management
-- **Custom Drawing**: Direct OpenGL access for custom visualizations
+- Zero dependencies on external libraries
+- Header-only where possible for easy integration
+- Platform-agnostic implementations
 
-### NomadAudio
+[Learn more about NomadCore →](nomad-core.md)
 
-**Purpose**: Professional audio engine with ultra-low latency processing.
+### NomadPlat — Platform Abstraction
 
-**Location**: `NomadAudio/`
+Provides a unified API for platform-specific operations:
 
-**Key Components:**
-- **Audio Driver System** - WASAPI (Windows), ALSA (Linux), CoreAudio (macOS)
-- **Track Management** - Multi-track audio with sample-accurate timing
-- **Buffer Management** - Lock-free ring buffers for real-time audio
-- **Sample Loading** - Lazy-loading with waveform caching
-- **Mixing Engine** - 64-bit floating-point audio mixing
+- **Window Management** — Create, resize, event handling
+- **Input Handling** — Keyboard, mouse, touch
+- **File Dialogs** — Open/save dialogs
+- **System Info** — CPU, memory, OS details
+- **High-Resolution Timers** — Precise timing for audio
 
-**Architecture:**
-```cpp
-NomadAudio/
-├── Drivers/
-│   ├── AudioDriver         # Abstract driver interface
-│   ├── WASAPIDriver        # Windows WASAPI implementation
-│   └── ALSADriver          # Linux ALSA implementation
-├── Core/
-│   ├── AudioEngine         # Main audio engine
-│   ├── Track               # Individual audio track
-│   ├── AudioBuffer         # Lock-free buffer
-│   └── SampleCache         # Waveform caching
-└── Processing/
-    ├── Mixer               # Audio mixing
-    └── Effects             # Audio effects (future)
-```
+**Supported Platforms:**
+- ✅ Windows 10/11 (Win32)
+- 🚧 Linux (X11, Wayland planned)
+- 📅 macOS (Cocoa planned)
 
-**Key Features:**
-- **WASAPI Integration**: Exclusive and Shared mode support
-- **Multi-tier Fallback**: Automatic driver selection for compatibility
-- **Sample-accurate Timing**: Precise audio playback and synchronization
-- **Lock-free Audio Thread**: Zero-latency audio processing
-- **64-bit Processing**: High-quality 64-bit floating-point audio
+[Learn more about NomadPlat →](nomad-plat.md)
 
-### Muse AI (Future Integration)
+### NomadUI — GPU-Accelerated Renderer
 
-**Purpose**: AI-powered music generation and assistance.
+Custom OpenGL-based UI framework:
 
-**Location**: `nomad-premium/muse/` (private)
+- **OpenGL 3.3+ Renderer** — Hardware-accelerated graphics
+- **NanoVG Integration** — Smooth vector graphics
+- **Layout System** — Flexbox-inspired layout engine
+- **Widget Library** — Buttons, sliders, text inputs
+- **Theme System** — Dark/light modes, customizable colors
+- **SVG Icon System** — Scalable vector icons
+- **Animation System** — Smooth transitions
 
-**Planned Components:**
-- **Model Loading** - AI model management and inference
-- **Pattern Generation** - Automatic melody and rhythm generation
-- **Smart Suggestions** - Context-aware musical suggestions
-- **Audio Enhancement** - AI-powered mixing and mastering
+**Performance Features:**
+- Adaptive FPS (24-60 FPS based on activity)
+- MSAA anti-aliasing for smooth edges
+- Texture atlasing for efficient rendering
+- Dirty rectangle optimization
 
-**Integration Points:**
-```cpp
-namespace nomad {
-    namespace muse {
-        // Public API for Muse integration
-        class MuseEngine;
-        class PatternGenerator;
-        class MixAssistant;
-    }
-}
-```
+[Learn more about NomadUI →](nomad-ui.md)
 
-**Status**: 🚧 Planned for future release (private development)
+### NomadAudio — Audio Engine
 
-### NomadPlat
+Professional audio processing system:
 
-**Purpose**: Platform-specific implementations and windowing.
+- **WASAPI Integration** (Windows) — Exclusive/shared mode
+- **RtAudio Backend** — Cross-platform audio I/O
+- **64-bit Audio Pipeline** — Professional quality processing
+- **Multi-threaded DSP** — Parallel audio processing
+- **Sample-accurate Timing** — Precise audio scheduling
+- **Low-latency Design** — <10ms round-trip latency
 
-**Location**: `NomadPlat/`
+**Audio Features:**
+- Sample rate: 44.1kHz - 192kHz
+- Buffer sizes: 64 - 4096 samples
+- Bit depth: 16, 24, 32-bit integer and float
+- Multi-channel support (up to 32 channels)
 
-**Key Components:**
-- **Window Management** - Native window creation and handling
-- **Input Handling** - Keyboard, mouse, and touch input
-- **System Integration** - System dialogs, notifications
-- **OpenGL Context** - Graphics context creation
+[Learn more about NomadAudio →](nomad-audio.md)
 
-## 🎯 Architecture Principles
+### NomadSDK — Plugin System (Planned)
 
-### 1. Separation of Concerns
+Future plugin and extension system:
 
-Each module has a clear, focused responsibility:
-- **NomadCore**: Platform abstraction and utilities
-- **NomadUI**: User interface rendering and interaction
-- **NomadAudio**: Audio processing and I/O
-- **NomadPlat**: Platform-specific implementations
+- **VST3 Hosting** — Load VST3 plugins
+- **Effect Processing** — Insert and send effects
+- **Automation** — Parameter automation system
+- **MIDI Routing** — MIDI device management
 
-### 2. Dependency Hierarchy
+**Status:** Planned for Q2 2025
 
-```
-Application
-    ↓
-NomadUI + NomadAudio + Muse
-    ↓
-NomadCore
-    ↓
-NomadPlat (Platform Layer)
-    ↓
-OS APIs (Windows, Linux, macOS)
-```
-
-**Rules:**
-- Higher layers depend on lower layers
-- Lower layers never depend on higher layers
-- Core has minimal dependencies
-- Platform layer is the only one touching OS APIs
-
-### 3. Interface-based Design
-
-**Abstract interfaces** allow for multiple implementations:
-
-```cpp
-// Abstract audio driver interface
-class AudioDriver {
-public:
-    virtual bool initialize(int sampleRate, int bufferSize) = 0;
-    virtual void start() = 0;
-    virtual void stop() = 0;
-    virtual ~AudioDriver() = default;
-};
-
-// Concrete implementations
-class WASAPIDriver : public AudioDriver { ... };
-class ALSADriver : public AudioDriver { ... };
-```
-
-### 4. Real-time Constraints
-
-**Audio thread is lock-free:**
-- No memory allocations in audio callback
-- No mutexes or blocking operations
-- Lock-free data structures for communication
-- Fixed-size buffers allocated upfront
-
-### 5. Data-Oriented Design
-
-**Cache-friendly data layouts** for performance:
-- Contiguous arrays for batch processing
-- Struct-of-arrays (SoA) where beneficial
-- Minimal pointer chasing
-- Hot/cold data separation
-
-## 🔄 Data Flow
+## 🔄 Data Flow Architecture
 
 ### Audio Processing Pipeline
 
-```
-[Audio Files]
-     ↓
-[Sample Loader] → [Sample Cache]
-     ↓                    ↓
-[Track Manager] → [Waveform Cache]
-     ↓
-[Audio Mixer]
-     ↓
-[Audio Driver] → [WASAPI/ALSA]
-     ↓
-[Hardware Output]
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant Engine as Audio Engine
+    participant Driver as Audio Driver
+    participant Hardware as Audio Hardware
+
+    App->>Engine: Initialize(config)
+    Engine->>Driver: Open Device
+    Driver->>Hardware: Configure
+
+    loop Audio Callback (every ~10ms)
+        Hardware->>Driver: Request Buffer
+        Driver->>Engine: Process(buffer, samples)
+        Engine->>Engine: Apply Effects
+        Engine->>Engine: Mix Tracks
+        Engine-->>Driver: Return Audio
+        Driver-->>Hardware: Send to Output
+    end
+
+    App->>Engine: Stop()
+    Engine->>Driver: Close Device
 ```
 
 ### UI Rendering Pipeline
 
-```
-[User Input]
-     ↓
-[Event Handler]
-     ↓
-[Widget Tree] → [Layout Engine]
-     ↓
-[OpenGL Renderer]
-     ↓
-[Display Output]
+```mermaid
+flowchart LR
+    A[Input Events] --> B[Event Queue]
+    B --> C[Layout Engine]
+    C --> D[Widget Tree]
+    D --> E[OpenGL Renderer]
+    E --> F[Screen Buffer]
+
+    G[Animations] --> D
+    H[Theme Data] --> E
+
+    style A fill:#5c6bc0,color:#fff
+    style F fill:#00d9ff,color:#000
 ```
 
-### Complete System Flow
+### Event Flow
 
-```
-┌────────────┐     ┌─────────────┐     ┌──────────────┐
-│   User     │────→│   NomadUI   │────→│ Application  │
-│   Input    │     │   Events    │     │   Logic      │
-└────────────┘     └─────────────┘     └──────┬───────┘
-                                              │
-                   ┌──────────────────────────┘
-                   │
-        ┌──────────┴──────────┐
-        ↓                     ↓
-┌───────────────┐     ┌──────────────┐
-│  UI Updates   │     │ Audio Engine │
-│  (Main Thread)│     │(Audio Thread)│
-└───────┬───────┘     └──────┬───────┘
-        │                    │
-        ↓                    ↓
-┌───────────────┐     ┌──────────────┐
-│   Renderer    │     │ Audio Driver │
-└───────────────┘     └──────────────┘
+```mermaid
+flowchart TB
+    A[User Input] --> B{Event Type}
+    B -->|Mouse| C[Mouse Handler]
+    B -->|Keyboard| D[Keyboard Handler]
+    B -->|Window| E[Window Handler]
+
+    C --> F[Widget Hit Test]
+    D --> G[Focus Manager]
+    E --> H[Layout Manager]
+
+    F --> I[Event Dispatch]
+    G --> I
+    H --> I
+
+    I --> J[Application Logic]
+    J --> K[Update UI State]
+    K --> L[Render Frame]
+
+    style A fill:#5c6bc0,color:#fff
+    style L fill:#00d9ff,color:#000
 ```
 
 ## 🧵 Threading Model
 
-### Thread Architecture
+NOMAD uses a multi-threaded architecture for optimal performance:
 
-Nomad uses a **multi-threaded architecture** with strict thread separation:
+```mermaid
+graph TB
+    subgraph "Main Thread"
+        UI[UI Event Loop<br/>60 FPS]
+        Render[OpenGL Rendering]
+    end
 
-```
-┌─────────────────┐
-│   Main Thread   │  UI, event handling, application logic
-├─────────────────┤
-│  Audio Thread   │  Real-time audio processing (lock-free)
-├─────────────────┤
-│  Loader Thread  │  Async file I/O, sample loading
-├─────────────────┤
-│  Render Thread  │  GPU rendering (optional, future)
-└─────────────────┘
+    subgraph "Audio Thread (Real-time)"
+        Audio[Audio Callback<br/>48kHz/512 samples]
+        DSP[DSP Processing]
+    end
+
+    subgraph "Worker Threads"
+        File[File I/O]
+        Plugin[Plugin Scanning]
+        Compute[Heavy Computation]
+    end
+
+    UI --> Render
+    Audio --> DSP
+    UI -.Lock-free Queue.-> Audio
+    Audio -.Lock-free Queue.-> UI
+    UI --> File
+    UI --> Plugin
+    UI --> Compute
+
+    style Audio fill:#ff6b6b,color:#fff
+    style DSP fill:#ff6b6b,color:#fff
 ```
 
 ### Thread Responsibilities
 
-#### Main Thread (UI Thread)
-- **UI rendering and events**
-- **User input handling**
-- **Application state management**
-- **Non-realtime operations**
-
-**Priority**: Normal
-
-#### Audio Thread
-- **Audio buffer processing**
-- **Mixing and effects**
-- **Driver I/O**
-- **Sample-accurate timing**
-
-**Priority**: Real-time (highest)
-**Constraints**: Lock-free, no allocations, no blocking
-
-#### Loader Thread
-- **File I/O** (loading samples)
-- **Waveform caching**
-- **Background processing**
-- **Resource management**
-
-**Priority**: Background (low)
+| Thread | Priority | Purpose | Typical Load |
+|--------|----------|---------|--------------|
+| **Main/UI Thread** | Normal | User input, rendering, layout | ~20-30% CPU |
+| **Audio Thread** | Real-time | Audio callback, DSP processing | ~10-40% CPU |
+| **File I/O Thread** | Low | Loading samples, saving projects | Variable |
+| **Worker Threads** | Low-Normal | Plugin scanning, analysis | Variable |
 
 ### Thread Communication
 
-**Lock-free communication** between threads:
+NOMAD uses **lock-free data structures** for thread communication:
 
-```cpp
-// Main → Audio: Commands via lock-free queue
-LockFreeQueue<AudioCommand> commandQueue;
+- **Lock-free Ring Buffer** — Audio ↔ UI communication
+- **Message Queue** — UI ↔ Worker threads
+- **Atomic Operations** — Shared state synchronization
 
-// Audio → Main: State updates via atomic flags
-std::atomic<bool> isPlaying;
-std::atomic<int> currentPosition;
+This ensures:
+- ✅ No priority inversion
+- ✅ No blocking on real-time thread
+- ✅ Predictable latency
+- ✅ Crash safety
 
-// Example: Start playback
-commandQueue.push(AudioCommand::Start);  // Main thread
-// Audio thread processes command in callback
+## 🗂️ Project Structure
+
+```
+NOMAD/
+├── NomadCore/          # Core utilities (math, threading, I/O)
+│   ├── include/        # Public headers
+│   ├── src/            # Implementation
+│   └── CMakeLists.txt
+│
+├── NomadPlat/          # Platform abstraction layer
+│   ├── include/        # Platform APIs
+│   ├── src/
+│   │   ├── win32/      # Windows implementation
+│   │   ├── x11/        # Linux X11 implementation
+│   │   └── cocoa/      # macOS implementation (planned)
+│   └── CMakeLists.txt
+│
+├── NomadUI/            # GPU-accelerated UI framework
+│   ├── include/        # UI components
+│   ├── src/            # Renderer, widgets, layout
+│   └── CMakeLists.txt
+│
+├── NomadAudio/         # Audio engine
+│   ├── include/        # Audio APIs
+│   ├── src/
+│   │   ├── wasapi/     # WASAPI implementation
+│   │   ├── rtaudio/    # RtAudio backend
+│   │   └── engine/     # Core audio engine
+│   └── CMakeLists.txt
+│
+├── Source/             # Main DAW application
+│   ├── Timeline/       # Sequencer and timeline
+│   ├── Mixer/          # Mixing console
+│   ├── UI/             # Application UI
+│   └── main.cpp
+│
+└── docs/               # Documentation (you are here!)
 ```
 
-### Synchronization Primitives
+## 🎯 Design Principles
 
-- **std::atomic**: For simple flags and counters
-- **Lock-free queues**: For command passing
-- **Ring buffers**: For audio data
-- **Mutexes**: Only in non-realtime paths
+NOMAD's architecture follows these key principles:
+
+### 1. Separation of Concerns
+Each module has a single, well-defined responsibility.
+
+### 2. Dependency Inversion
+High-level modules don't depend on low-level modules. Both depend on abstractions.
+
+### 3. Open/Closed Principle
+Modules are open for extension but closed for modification.
+
+### 4. Real-time Safety
+Audio code avoids allocations, locks, and system calls.
+
+### 5. Zero-Copy Where Possible
+Data is passed by reference or pointer to avoid copies.
+
+### 6. Cache-Friendly Design
+Data structures are designed for CPU cache efficiency.
 
 ## 📊 Performance Characteristics
 
-### NomadUI
-- **Frame rate**: Adaptive 1-120 FPS
-- **Typical rate**: 60 FPS during interaction, 1 FPS idle
-- **Render time**: ~1-2ms per frame at 1080p
+### Audio Engine
+- **Latency:** 10-20ms (512 samples @ 48kHz)
+- **CPU Usage:** 10-40% (single core) during playback
+- **Sample Rate:** Up to 192kHz supported
+- **Channel Count:** Up to 32 channels
 
-### NomadAudio
-- **Latency**: ~5-10ms (WASAPI Exclusive)
-- **Buffer size**: 256-512 samples (typical)
-- **CPU usage**: ~5-10% per track (64-bit processing)
-- **Jitter**: <0.1ms (sample-accurate)
+### UI Renderer
+- **Frame Rate:** Adaptive 24-60 FPS
+- **CPU Usage:** 5-15% (single core) when idle
+- **GPU Usage:** Minimal (< 10% on integrated GPUs)
+- **Memory:** ~50-100 MB for UI framework
 
-### Memory
-- **Waveform cache**: 4096 samples per visible region
-- **Audio buffers**: Fixed-size, pre-allocated
-- **UI widgets**: Dynamic allocation on creation only
+### Memory Footprint
+- **Base Application:** ~100 MB
+- **Per Audio Track:** ~1-5 MB
+- **Plugin Hosting:** Variable (depends on plugins)
 
-## 🔐 Security Considerations
+## 🔍 Next Steps
 
-### Public vs Private Code
+Dive deeper into specific modules:
 
-**Public (`nomad-core/`):**
-- Core audio engine
-- UI framework
-- Platform abstractions
-- Build with mock assets
+- [NomadCore Architecture →](nomad-core.md)
+- [NomadPlat Architecture →](nomad-plat.md)
+- [NomadUI Architecture →](nomad-ui.md)
+- [NomadAudio Architecture →](nomad-audio.md)
+- [Module Hierarchy →](modules.md)
 
-**Private (not in public repo):**
-- Premium plugins
-- AI models (Muse internals)
-- Licensing system
-- Code signing
+Or explore other documentation:
 
-### Security Measures
-
-- **Git hooks**: Prevent committing secrets
-- **Gitleaks**: Scan for exposed credentials
-- **`.gitignore`**: Block sensitive files
-- **Pre-commit validation**: Check for private folders
-
-## 📚 Module Dependencies
-
-```
-┌──────────────────────────────────────────────┐
-│              Source/ (Application)           │
-└──────────────────────────────────────────────┘
-        ↓                ↓              ↓
-┌──────────────┐  ┌──────────────┐  ┌──────────┐
-│   NomadUI    │  │  NomadAudio  │  │   Muse   │
-└──────────────┘  └──────────────┘  └──────────┘
-        ↓                ↓              ↓
-┌──────────────────────────────────────────────┐
-│              NomadCore / nomad-core          │
-└──────────────────────────────────────────────┘
-        ↓                ↓              ↓
-┌──────────────┐  ┌──────────────┐  ┌──────────┐
-│  NomadPlat   │  │  Windows API │  │ Linux API│
-│ (Win/Linux)  │  │   (WASAPI)   │  │  (ALSA)  │
-└──────────────┘  └──────────────┘  └──────────┘
-```
-
-## 🔮 Future Architecture Plans
-
-### Planned Enhancements
-
-1. **Plugin System** - VST3 and AU plugin hosting
-2. **MIDI Support** - Full MIDI I/O and routing
-3. **Recording** - Multi-track audio recording
-4. **Automation** - Parameter automation system
-5. **Muse Integration** - AI-powered music generation
-
-### Scalability
-
-- **Multi-core audio** - Parallel track processing
-- **GPU compute** - GPU-accelerated effects
-- **Distributed rendering** - Network rendering (future)
-
-## 📚 Additional Resources
-
-- [Building Guide](BUILDING.md) - How to build Nomad
-- [Coding Style](CODING_STYLE.md) - Code conventions
-- [Contributing](CONTRIBUTING.md) - How to contribute
-- [Glossary](GLOSSARY.md) - Technical terms
-
----
-
-[← Return to Nomad Docs Index](README.md)
+- [Developer Guide →](../developer/contributing.md)
+- [API Reference →](../api/index.md)
+- [Performance Tuning →](../developer/performance-tuning.md)

@@ -10,16 +10,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # =============================================================================
 add_library(NomadCore STATIC
     src/NomadProfiler.cpp
-    src/NomadUnifiedProfiler.cpp
 )
 
 target_include_directories(NomadCore PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# Enable profiling in all build types (lightweight enough for Release)
+# Enable profiling by default in Debug builds
 target_compile_definitions(NomadCore PUBLIC
-    NOMAD_ENABLE_PROFILING
+    $<$<CONFIG:Debug>:NOMAD_ENABLE_PROFILING>
+    $<$<CONFIG:RelWithDebInfo>:NOMAD_ENABLE_PROFILING>
 )
 
 # =============================================================================

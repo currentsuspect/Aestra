@@ -86,7 +86,6 @@ public:
     void setCloseCallback(std::function<void()> callback);
     void setDPIChangeCallback(std::function<void(float)> callback);
     void setFocusCallback(std::function<void(bool focused)> callback);
-    void setHitTestCallback(Nomad::HitTestCallback callback);
     
     // NomadUI-specific: Root component
     void setRootComponent(NUIComponent* root) { m_rootComponent = root; }

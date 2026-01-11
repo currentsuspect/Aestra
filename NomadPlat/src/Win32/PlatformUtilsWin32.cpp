@@ -38,16 +38,10 @@ void PlatformUtilsWin32::sleep(int milliseconds) const {
 std::string PlatformUtilsWin32::openFileDialog(const std::string& title, const std::string& filter) const {
     OPENFILENAMEA ofn = {};
     char filename[MAX_PATH] = "";
-    
-    // Windows filter format: "Description\0*.ext\0Description2\0*.ext2\0\0"
-    // If filter is empty or doesn't contain embedded nulls, use a default
-    // The filter string must contain the full null-separated format
-    const char* defaultFilter = "All Files\0*.*\0";
-    const char* filterPtr = filter.empty() ? defaultFilter : filter.data();
 
     ofn.lStructSize = sizeof(OPENFILENAMEA);
     ofn.hwndOwner = nullptr;
-    ofn.lpstrFilter = filterPtr;
+    ofn.lpstrFilter = filter.empty() ? "All Files\0*.*\0" : filter.c_str();
     ofn.lpstrFile = filename;
     ofn.nMaxFile = MAX_PATH;
     ofn.lpstrTitle = title.c_str();
@@ -64,16 +58,12 @@ std::string PlatformUtilsWin32::saveFileDialog(const std::string& title, const s
     OPENFILENAMEA ofn = {};
     char filename[MAX_PATH] = "";
 
-    const char* defaultFilter = "All Files\0*.*\0";
-    const char* filterPtr = filter.empty() ? defaultFilter : filter.data();
-
     ofn.lStructSize = sizeof(OPENFILENAMEA);
     ofn.hwndOwner = nullptr;
-    ofn.lpstrFilter = filterPtr;
+    ofn.lpstrFilter = filter.empty() ? "All Files\0*.*\0" : filter.c_str();
     ofn.lpstrFile = filename;
     ofn.nMaxFile = MAX_PATH;
     ofn.lpstrTitle = title.c_str();
-    ofn.lpstrDefExt = "nmd";  // Default extension for save
     ofn.Flags = OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
 
     if (GetSaveFileNameA(&ofn)) {

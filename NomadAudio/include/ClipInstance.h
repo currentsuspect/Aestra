@@ -122,12 +122,6 @@ struct LocalEdits {
 // ClipInstance - Atomic playlist object (v3.0)
 // =============================================================================
 
-/**
- * @brief Represents a single instance of a clip on the playlist.
- *
- * A clip instance refers to a PatternSource (audio or midi) and defines
- * its placement in time, duration, and local overrides (gain, fade, etc.).
- */
 struct ClipInstance {
     ClipInstanceID id;
     

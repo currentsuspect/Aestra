@@ -20,7 +20,6 @@ namespace Audio {
 class PlaylistRuntimeSnapshot;
 class SourceManager;
 class PatternManager;
-class TimeTypes;
 
 // =============================================================================
 // PlaylistLaneID - Unique track/lane identity
@@ -154,28 +153,6 @@ struct PlaylistLane {
 class PlaylistModel {
 public:
     using ChangeCallback = std::function<void()>;
-
-    class ScopedBatchUpdate {
-    public:
-        explicit ScopedBatchUpdate(PlaylistModel& model) : m_model(&model) { m_model->beginBatchUpdate(); }
-        ~ScopedBatchUpdate() { if (m_model) m_model->endBatchUpdate(); }
-
-        ScopedBatchUpdate(const ScopedBatchUpdate&) = delete;
-        ScopedBatchUpdate& operator=(const ScopedBatchUpdate&) = delete;
-
-        ScopedBatchUpdate(ScopedBatchUpdate&& other) noexcept : m_model(other.m_model) { other.m_model = nullptr; }
-        ScopedBatchUpdate& operator=(ScopedBatchUpdate&& other) noexcept {
-            if (this != &other) {
-                if (m_model) m_model->endBatchUpdate();
-                m_model = other.m_model;
-                other.m_model = nullptr;
-            }
-            return *this;
-        }
-
-    private:
-        PlaylistModel* m_model;
-    };
     
     PlaylistModel();
     ~PlaylistModel();
@@ -222,18 +199,8 @@ public:
     bool setClipDuration(ClipInstanceID clipId, double newDurationBeats);
     
     // === Split & Duplicate ===
-    /**
-     * @brief Smart split: creates two unique, independent clips
-     * 
-     * Each resulting clip has its own PatternID but shares the same
-     * ClipSource (audio data) via shared_ptr for memory efficiency.
-     * The second clip's sourceStart offset is calculated automatically.
-     */
     ClipInstanceID splitClip(ClipInstanceID clipId, double splitBeat);
     ClipInstanceID duplicateClip(ClipInstanceID clipId);
-    
-    /// Set PatternManager for smart split (enables pattern cloning)
-    void setPatternManager(PatternManager* pm) { m_patternManager = pm; }
     
     // === Queries ===
     std::vector<const ClipInstance*> getClipsInRange(PlaylistLaneID laneId,
@@ -245,10 +212,6 @@ public:
     // === Observer Pattern ===
     void addChangeObserver(ChangeCallback callback);
     void clearChangeObservers();
-
-    // Suppress change notifications during bulk updates (e.g., deserialization).
-    // Observers will be notified once when the outermost batch ends.
-    ScopedBatchUpdate scopedBatchUpdate() { return ScopedBatchUpdate(*this); }
     
     // === Snapshot Generation ===
     std::unique_ptr<PlaylistRuntimeSnapshot> buildRuntimeSnapshot(
@@ -256,20 +219,13 @@ public:
         const SourceManager& sourceManager) const;
     
     void clear();
-    // === Pattern Usage Safety ===
-    bool isPatternUsed(PatternID patternId) const;
-    int purgeUnusedPatterns();
-
     uint64_t getModificationCounter() const;
 
 private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;
-    PatternManager* m_patternManager = nullptr;
     
     void notifyChange();
-    void beginBatchUpdate();
-    void endBatchUpdate();
     int findLaneIndex(PlaylistLaneID laneId) const;
     std::pair<int, int> findClipLocation(ClipInstanceID clipId) const;
 };

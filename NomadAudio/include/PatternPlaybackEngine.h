@@ -1,15 +1,12 @@
 // © 2025 Nomad Studios — All Rights Reserved.
 #pragma once
 
-#include "PluginHost.h" // [NEW] For MidiBuffer
 #include "PatternSource.h"
 #include "TimelineClock.h"
 #include "UnitManager.h"
 #include "PatternManager.h"
 #include <cstdint>
 #include <atomic>
-#include <cstddef>
-#include <map>
 #include <vector>
 #include <array>
 
@@ -24,14 +21,13 @@ class MixerChannel;
  */
 struct ScheduledEvent {
     uint64_t sampleFrame;     // 8 bytes
-    UnitID unitId;            // 8 bytes (Moved)
     uint32_t instanceId;      // 4 bytes
     uint16_t channelIdx;      // 2 bytes
     uint8_t statusByte;       // 1 byte (MIDI status)
     uint8_t data1;            // 1 byte (note number)
     uint8_t data2;            // 1 byte (velocity)
     uint8_t priority;         // 1 byte (0=note-off first, 1=note-on second)
-    uint8_t _padding[6];      // 6 bytes -> Total 32. 
+    uint8_t _padding[14];     // 14 bytes → total 32 bytes
 };
 static_assert(sizeof(ScheduledEvent) == 32, "ScheduledEvent must be 32 bytes");
 
@@ -93,11 +89,6 @@ private:
 class PatternPlaybackEngine {
 public:
     PatternPlaybackEngine(TimelineClock* clock, PatternManager* patternMgr, UnitManager* unitMgr);
-
-    struct UnitMidiRoute {
-        UnitID unitId{0};
-        MidiBuffer* midiBuffer{nullptr};
-    };
     
     /**
      * Schedule new pattern instance (non-RT thread)
@@ -118,16 +109,7 @@ public:
     /**
      * Process audio callback (RT-safe, audio thread only)
      */
-    void processAudio(uint64_t currentFrame, int bufferSize, std::map<UnitID, MidiBuffer*>& unitMidiBuffers);
-
-    /**
-     * Process audio callback (RT-safe, audio thread only)
-     * Allocation-free alternative to std::map routing.
-     */
-    void processAudio(uint64_t currentFrame, int bufferSize, const UnitMidiRoute* routes, size_t routeCount) noexcept;
-    
-    // [NEW] Flush queue (Hard Kill)
-    void flush();
+    void processAudio(uint64_t currentFrame, int bufferSize, MixerChannel* mixerChannels, int numChannels);
     
     // Diagnostics
     uint32_t getOverflowCount() const { return m_overflowCounter.load(std::memory_order_relaxed); }
@@ -158,7 +140,6 @@ private:
     // Diagnostics (atomic counters)
     std::atomic<uint32_t> m_overflowCounter;
     std::atomic<uint32_t> m_processedCounter;
-    uint64_t m_lastRefillFrame{0}; // [NEW] Detect loop wraps
     
     // Helpers
     uint16_t getChannelForUnit(UnitID unitId) const;

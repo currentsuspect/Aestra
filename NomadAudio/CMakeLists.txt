@@ -53,79 +53,6 @@ elseif(UNIX)
 endif()
 
 # =============================================================================
-# VST3 SDK Integration (MIT License)
-# =============================================================================
-
-set(VST3_SDK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/External/vst3sdk)
-
-if(EXISTS ${VST3_SDK_DIR}/pluginterfaces AND EXISTS ${VST3_SDK_DIR}/public.sdk)
-    set(NOMAD_HAS_VST3 ON)
-    message(STATUS "VST3 SDK: Found at ${VST3_SDK_DIR}")
-    
-    # VST3 SDK include directories
-    set(VST3_INCLUDE_DIRS
-        ${VST3_SDK_DIR}
-        ${VST3_SDK_DIR}/pluginterfaces
-        ${VST3_SDK_DIR}/public.sdk
-        ${VST3_SDK_DIR}/public.sdk/source
-        ${VST3_SDK_DIR}/base
-    )
-    
-    # VST3 hosting sources (minimal set for plugin hosting)
-    set(VST3_HOST_SOURCES
-        ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module.cpp
-        ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/hostclasses.cpp
-        ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/plugprovider.cpp
-        ${VST3_SDK_DIR}/public.sdk/source/common/memorystream.cpp
-        ${VST3_SDK_DIR}/public.sdk/source/vst/utility/stringconvert.cpp
-        ${VST3_SDK_DIR}/public.sdk/source/common/commonstringconvert.cpp
-        ${VST3_SDK_DIR}/public.sdk/source/vst/vstinitiids.cpp
-        ${VST3_SDK_DIR}/base/source/fdebug.cpp
-        ${VST3_SDK_DIR}/base/source/fobject.cpp
-        ${VST3_SDK_DIR}/base/source/fstring.cpp
-        ${VST3_SDK_DIR}/pluginterfaces/base/funknown.cpp
-        ${VST3_SDK_DIR}/pluginterfaces/base/ustring.cpp
-        ${VST3_SDK_DIR}/pluginterfaces/base/coreiids.cpp
-    )
-    
-    if(WIN32)
-        list(APPEND VST3_HOST_SOURCES
-            ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_win32.cpp
-        )
-    elseif(APPLE)
-        list(APPEND VST3_HOST_SOURCES
-            ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_mac.mm
-        )
-    else()
-        list(APPEND VST3_HOST_SOURCES
-            ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_linux.cpp
-        )
-    endif()
-else()
-    set(NOMAD_HAS_VST3 OFF)
-    message(STATUS "VST3 SDK: Not found - plugin hosting disabled")
-endif()
-
-# =============================================================================
-# CLAP SDK Integration (MIT License)
-# =============================================================================
-
-set(CLAP_SDK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/External/clap)
-
-if(EXISTS ${CLAP_SDK_DIR}/include/clap/clap.h)
-    set(NOMAD_HAS_CLAP ON)
-    message(STATUS "CLAP SDK: Found at ${CLAP_SDK_DIR}")
-    
-    # CLAP SDK is header-only, just need include path
-    set(CLAP_INCLUDE_DIRS
-        ${CLAP_SDK_DIR}/include
-    )
-else()
-    set(NOMAD_HAS_CLAP OFF)
-    message(STATUS "CLAP SDK: Not found")
-endif()
-
-# =============================================================================
 # NomadAudio Library
 # =============================================================================
 
@@ -158,48 +85,11 @@ set(NOMAD_AUDIO_CORE_SOURCES
     # src/SelectionModel.cpp  # TODO: Fix API mismatches (PlaylistClip.h, etc)
     src/WaveformCache.cpp
     src/PatternManager.cpp
-
     src/UnitManager.cpp
     src/PatternPlaybackEngine.cpp
     src/TimelineClock.cpp
     src/StreamingDecoder.cpp
-    src/DummyAudioDriver.cpp
-    # Undo/Redo
-    # Undo/Redo
-    src/Commands/CommandHistory.cpp
-    src/Commands/SplitClipCommand.cpp
-    src/Commands/AddClipCommand.cpp
-    # Plugin hosting system
-    # Plugin hosting system
-    src/Plugin/PluginScanner.cpp
-    src/Plugin/PluginManager.cpp
-    src/Plugin/PluginFactory.cpp
-    src/Plugin/SamplerPlugin.cpp
-    src/Plugin/EffectChain.cpp
-    src/SincAVX512.cpp
 )
-
-# Set per-file compile flags for AVX-512
-if(MSVC)
-    set_source_files_properties(src/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "/arch:AVX512")
-else()
-    set_source_files_properties(src/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "-mavx512f -mavx512dq")
-endif()
-
-# Add VST3 host sources if SDK is available
-if(NOMAD_HAS_VST3)
-    list(APPEND NOMAD_AUDIO_CORE_SOURCES
-        src/Plugin/VST3Host.cpp
-        ${VST3_HOST_SOURCES}
-    )
-endif()
-
-# Add CLAP host sources if SDK is available
-if(NOMAD_HAS_CLAP)
-    list(APPEND NOMAD_AUDIO_CORE_SOURCES
-        src/Plugin/CLAPHost.cpp
-    )
-endif()
 
 
 # Core headers
@@ -246,24 +136,7 @@ set(NOMAD_AUDIO_CORE_HEADERS
     include/MultiClipPlaylist.h
     include/ArsenalUnit.h
     include/UnitManager.h
-
     include/StreamingDecoder.h
-    # Undo/Redo
-    include/Commands/ICommand.h
-    include/Commands/CommandHistory.h
-    include/Commands/SplitClipCommand.h
-    include/Commands/AddClipCommand.h
-    
-    src/DummyAudioDriver.h
-    
-    src/DummyAudioDriver.h
-    # Plugin hosting system
-    include/PluginHost.h
-    include/PluginScanner.h
-    include/PluginManager.h
-    include/PluginFactory.h
-    include/EffectChain.h
-    include/Plugin/VST3Host.h
 )
 
 # Create NomadAudioCore library
@@ -280,17 +153,12 @@ if (NOMAD_USE_MINIAUDIO)
     target_compile_definitions(NomadAudioCore PRIVATE NOMAD_USE_MINIAUDIO)
 endif()
 
-# AVX2/FMA: Enabled per-TU via #pragma in SincAVX2.h for safe runtime dispatch.
-# IMPORTANT: Do NOT add global /arch:AVX2 here - it causes VEX-encoded scalar ops
-# that crash on non-AVX2 CPUs even in the fallback path.
-
 target_include_directories(NomadAudioCore
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/../NomadCore/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../NomadPlat/include
+        ${CMAKE_SOURCE_DIR}/NomadCore/include
 )
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio)
@@ -299,43 +167,11 @@ if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio)
     )
 endif()
 
-# VST3 SDK includes (if available)
-if(NOMAD_HAS_VST3)
-    target_include_directories(NomadAudioCore PRIVATE
-        ${VST3_INCLUDE_DIRS}
-    )
-    target_compile_definitions(NomadAudioCore PRIVATE NOMAD_HAS_VST3)
-endif()
-
-# CLAP SDK includes (if available)
-if(NOMAD_HAS_CLAP)
-    target_include_directories(NomadAudioCore PRIVATE
-        ${CLAP_INCLUDE_DIRS}
-    )
-    target_compile_definitions(NomadAudioCore PRIVATE NOMAD_HAS_CLAP)
-endif()
-
 target_link_libraries(NomadAudioCore
     PUBLIC
+        NomadCore
+        NomadPlat # For strict thread priority API (Platform::setCurrentThreadPriority)
 )
-
-if(TARGET NomadCore)
-    target_link_libraries(NomadAudioCore PUBLIC NomadCore)
-endif()
-
-target_link_libraries(NomadAudioCore PUBLIC NomadPlat)
-
-# =============================================================================
-# Premium Plugins Integration (Optional)
-# =============================================================================
-if(EXISTS "${CMAKE_SOURCE_DIR}/NomadPlugins/NomadRumble/CMakeLists.txt")
-    message(STATUS "NomadRumble: Linking premium 808 synthesizer")
-    target_link_libraries(NomadAudioCore PRIVATE NomadRumble)
-    target_compile_definitions(NomadAudioCore PRIVATE NOMAD_HAS_PLUGINS)
-    target_include_directories(NomadAudioCore PRIVATE 
-        ${CMAKE_SOURCE_DIR}/NomadPlugins/NomadRumble/include
-    )
-endif()
 
 # ENFORCEMENT: NomadAudioCore MUST NOT link Windows libraries
 # We can check this by property retrieval (not easy at config time for implicit libs)
@@ -352,7 +188,6 @@ if(WIN32)
         src/Win32/WASAPIExclusiveDriver.cpp
         src/Win32/ASIODriverInfo.cpp
         src/Win32/RtAudioBackend.cpp
-        src/ASIODriver.cpp  # Added Phase 6
     )
     
     set(NOMAD_AUDIO_WIN_HEADERS
@@ -361,8 +196,6 @@ if(WIN32)
         src/Win32/ASIODriverInfo.h
         src/Win32/RtAudioBackend.h
         include/NativeAudioDriver.h
-        include/ASIODriver.h     # Added Phase 6
-        include/ASIOInterface.h  # Added Phase 6
         ${RTAUDIO_HEADERS} # RtAudio headers needed for backend compilation
     )
 
@@ -436,12 +269,6 @@ endif()
 # Test Applications
 # =============================================================================
 
-if(NOT NOMAD_ENABLE_TESTS)
-    message(STATUS "NomadAudio tests: disabled (NOMAD_ENABLE_TESTS=OFF)")
-else()
-    include(CTest)
-    enable_testing()
-
 # Basic audio test
 add_executable(NomadAudioTest
     test/AudioTest.cpp
@@ -452,7 +279,6 @@ target_link_libraries(NomadAudioTest
         NomadAudio
         NomadCore
 )
-add_test(NAME NomadAudioTest COMMAND NomadAudioTest)
 
 # Device manager test
 add_executable(NomadDeviceManagerTest
@@ -464,7 +290,6 @@ target_link_libraries(NomadDeviceManagerTest
         NomadAudio
         NomadCore
 )
-add_test(NAME NomadDeviceManagerTest COMMAND NomadDeviceManagerTest)
 
 # Audio callback test
 add_executable(NomadAudioCallbackTest
@@ -476,7 +301,6 @@ target_link_libraries(NomadAudioCallbackTest
         NomadAudio
         NomadCore
 )
-add_test(NAME NomadAudioCallbackTest COMMAND NomadAudioCallbackTest)
 
 # Mixer bus test
 add_executable(NomadMixerBusTest
@@ -488,7 +312,6 @@ target_link_libraries(NomadMixerBusTest
         NomadAudio
         NomadCore
 )
-add_test(NAME NomadMixerBusTest COMMAND NomadMixerBusTest)
 
 # Oscillator test
 add_executable(NomadOscillatorTest
@@ -500,7 +323,6 @@ target_link_libraries(NomadOscillatorTest
         NomadAudio
         NomadCore
 )
-add_test(NAME NomadOscillatorTest COMMAND NomadOscillatorTest)
 
 # WAV loader regression test
 add_executable(NomadWavLoaderTest
@@ -512,7 +334,6 @@ target_link_libraries(NomadWavLoaderTest
         NomadAudio
         NomadCore
 )
-add_test(NAME NomadWavLoaderTest COMMAND NomadWavLoaderTest)
 
 # Sample Rate Converter test
 add_executable(NomadSampleRateConverterTest
@@ -524,7 +345,6 @@ target_link_libraries(NomadSampleRateConverterTest
         NomadAudio
         NomadCore
 )
-add_test(NAME NomadSampleRateConverterTest COMMAND NomadSampleRateConverterTest)
 
 # Audio engine long-session soak test (no device required)
 add_executable(NomadAudioSoakTest
@@ -536,7 +356,6 @@ target_link_libraries(NomadAudioSoakTest
         NomadAudio
         NomadCore
 )
-add_test(NAME NomadAudioSoakTest COMMAND NomadAudioSoakTest)
 
 # Performance stress test suite
 add_executable(NomadAudioPerformanceTest
@@ -550,68 +369,10 @@ target_link_libraries(NomadAudioPerformanceTest
         NomadAudio
         NomadCore
 )
-add_test(NAME NomadAudioPerformanceTest COMMAND NomadAudioPerformanceTest)
 
 if(WIN32)
     target_link_libraries(NomadAudioPerformanceTest PRIVATE avrt)
 endif()
-
-# Sinc Interpolator Benchmark
-add_executable(NomadSincBenchmark
-    test/SincBenchmark.cpp
-)
-
-target_link_libraries(NomadSincBenchmark
-    PRIVATE
-        NomadAudioCore
-)
-
-if(TARGET NomadCore)
-    target_link_libraries(NomadSincBenchmark PRIVATE NomadCore)
-endif()
-
-target_include_directories(NomadSincBenchmark PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadCore/include
-)
-add_test(NAME NomadSincBenchmark COMMAND NomadSincBenchmark)
-
-# Watchdog Verification Test
-add_executable(NomadWatchdogTest
-    test/WatchdogTest.cpp
-)
-target_include_directories(NomadWatchdogTest PRIVATE ${VST3_INCLUDE_DIRS})
-target_link_libraries(NomadWatchdogTest PRIVATE NomadAudio NomadCore)
-add_test(NAME NomadWatchdogTest COMMAND NomadWatchdogTest)
-
-# Crash Protection Verification Test (SEH)
-add_executable(NomadCrashTest
-    test/CrashTest.cpp
-)
-target_include_directories(NomadCrashTest PRIVATE ${VST3_INCLUDE_DIRS})
-target_link_libraries(NomadCrashTest PRIVATE NomadAudio NomadCore)
-add_test(NAME NomadCrashTest COMMAND NomadCrashTest)
-
-# Waveform Isolation Verification Test
-add_executable(NomadWaveformLockTest
-    test/WaveformLockTest.cpp
-    src/WaveformCache.cpp
-)
-target_link_libraries(NomadWaveformLockTest PRIVATE NomadAudio NomadCore)
-add_test(NAME NomadWaveformLockTest COMMAND NomadWaveformLockTest)
-
-# Atomic Autosave Verification Test
-add_executable(NomadAtomicSaveTest
-    test/AtomicSaveTest.cpp
-    src/PlaylistModel.cpp
-    src/ClipSource.cpp
-)
-target_link_libraries(NomadAtomicSaveTest PRIVATE NomadAudio NomadCore)
-add_test(NAME NomadAtomicSaveTest COMMAND NomadAtomicSaveTest)
-
-endif()
-
-# Per-TU AVX2 for benchmark (only the SincAVX2.h code uses intrinsics)
-# For now, rely on runtime dispatch; SIMD code is guarded by CPUDetection.
 
 # =============================================================================
 # Status
