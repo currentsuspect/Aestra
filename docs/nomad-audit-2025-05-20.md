@@ -1,4 +1,3 @@
-
 # Nomad Audit Report - 2025-05-20
 
 ## Executive Summary

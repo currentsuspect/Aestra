@@ -50,6 +50,7 @@ public:
         // }
 
         // For now, no runtime analysis in the audio callback.
+        // Adaptive switching logic is deferred to a future PR (Performance Prototype).
         return m_converter.process(input, inputFrames, output, maxOutputFrames);
     }
 

@@ -156,9 +156,9 @@ endif()
 target_include_directories(NomadAudioCore
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/NomadCore/include
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/NomadCore/include
 )
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio)
