@@ -1,6 +1,6 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioEngine.h"
-#include "../NomadCore/include/NomadMath.h"
+#include "../../NomadCore/include/NomadMath.h"
 #include <cmath>
 #include <algorithm>
 #include <cstring>

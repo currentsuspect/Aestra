@@ -28,10 +28,11 @@ class AdaptiveResampler {
 public:
     AdaptiveResampler() = default;
 
-    void configure(uint32_t srcRate, uint32_t dstRate, uint32_t channels) {
-        m_converter.configure(srcRate, dstRate, channels, SRCQuality::Sinc64); // Default to max
+    void configure(uint32_t srcRate, uint32_t dstRate, uint32_t channels, SRCQuality initialQuality = SRCQuality::Sinc64) {
         m_srcRate = srcRate;
+        m_dstRate = dstRate;
         m_channels = channels;
+        m_converter.configure(srcRate, dstRate, channels, initialQuality);
     }
 
     uint32_t process(const float* input, uint32_t inputFrames, float* output, uint32_t maxOutputFrames) {
@@ -40,14 +41,15 @@ public:
 
         bool needsHighQuality = analyzeSignalComplexity(input, inputFrames, m_channels);
 
-        // TODO: Ideally we would have two converters and crossfade, or a filter bank that
-        // allows dynamic tap count. For now, we just stick to Sinc64 as "Safe".
-        // This class serves as a placeholder for the Innovation deliverable.
+        // Select appropriate quality based on signal complexity
+        SRCQuality targetQuality = needsHighQuality ? SRCQuality::Sinc64 : SRCQuality::Cubic;
 
-        // In a real implementation:
-        // if (!needsHighQuality && m_currentQuality == SRCQuality::Sinc64) {
-        //     switchTo(SRCQuality::Sinc8);
-        // }
+        // Reconfigure if quality requirement has changed
+        // Note: In a production real-time system, this reconfiguration should be handled
+        // via pre-allocated converters to avoid potential allocation in configure()
+        if (m_converter.getQuality() != targetQuality) {
+             m_converter.configure(m_srcRate, m_dstRate, m_channels, targetQuality);
+        }
 
         return m_converter.process(input, inputFrames, output, maxOutputFrames);
     }
@@ -77,6 +79,7 @@ private:
 
     SampleRateConverter m_converter;
     uint32_t m_srcRate{0};
+    uint32_t m_dstRate{0};
     uint32_t m_channels{0};
 };
 
