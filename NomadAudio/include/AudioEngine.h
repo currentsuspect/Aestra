@@ -45,6 +45,9 @@ namespace Plugins {
  * - Multiple interpolation quality modes
  * - Proper headroom management
  * - Soft limiting to prevent digital clipping
+ *
+ * TODO: Future Architecture "Hybrid Engine" (See NOMAD_HYBRID_ENGINE_DESIGN.md)
+ * Goal: Decouple rendering logic to support concurrent "Draft" (RT) and "Master" (Background) graphs.
  */
 class AudioEngine {
 public:
