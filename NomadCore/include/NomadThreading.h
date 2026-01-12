@@ -11,13 +11,11 @@
 #include <memory>
 
 #ifdef _WIN32
-extern "C" {
-    __declspec(dllimport) int __stdcall SetThreadPriority(void*, int);
-    __declspec(dllimport) void* __stdcall GetCurrentThread();
-    __declspec(dllimport) void* __stdcall LoadLibraryA(const char*);
-    __declspec(dllimport) void* __stdcall GetProcAddress(void*, const char*);
-    __declspec(dllimport) int __stdcall FreeLibrary(void*);
-}
+#define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #endif
 
 namespace Nomad {
@@ -31,12 +29,12 @@ public:
     static void setProAudio() {
 #ifdef _WIN32
         static auto impl = []() {
-            void* hAvrt = LoadLibraryA("Avrt.dll");
+            HMODULE hAvrt = LoadLibraryA("Avrt.dll");
             if (hAvrt) {
-                typedef void* (__stdcall *AvSetMmThreadCharacteristicsA_t)(const char*, unsigned long*);
+                typedef HANDLE (WINAPI *AvSetMmThreadCharacteristicsA_t)(LPCSTR, LPDWORD);
                 auto pFunc = (AvSetMmThreadCharacteristicsA_t)GetProcAddress(hAvrt, "AvSetMmThreadCharacteristicsA");
                 if (pFunc) {
-                    unsigned long taskIndex = 0;
+                    DWORD taskIndex = 0;
                     pFunc("Pro Audio", &taskIndex);
                     // We knowingly leak the handle return/don't revert for this thread's lifetime 
                     // (typical for dedicated audio threads).
@@ -48,7 +46,7 @@ public:
         (void)impl;
         
         // Also boost Win32 priority
-        SetThreadPriority(GetCurrentThread(), 15); // THREAD_PRIORITY_TIME_CRITICAL
+        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 #endif
     }
 };
