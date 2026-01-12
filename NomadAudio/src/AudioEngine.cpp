@@ -1585,7 +1585,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     case Interpolators::InterpolationQuality::Sinc64:
                         for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
                             float outL, outR;
-                            Interpolators::Sinc64Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+                            // [OPTIMIZATION] Use Turbo path (AVX512/Static Dispatch)
+                            Interpolators::Sinc64Turbo::interpolate(data, totalFrames, phase, outL, outR);
                             double fade = 1.0;
                             const uint64_t projectSample = start + i;
                             if (fadeLen > 0) {
