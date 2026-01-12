@@ -354,16 +354,13 @@ struct Sinc32Interpolator {
 struct Sinc64Turbo {
     static constexpr int TAPS = 64;
     static constexpr int PHASES = 2048;
-    static constexpr int HALF_PHASES = 1024;  // Only store half!
+    static constexpr int HALF_PHASES = 1024;
     static constexpr double KAISER_BETA = 12.0;
 
-    // Polyphase Table with Symmetry Optimization
-    // Only stores first half of phases (256KB instead of 512KB)
-    struct Table {
+    struct alignas(64) Table {
         float coeffs[HALF_PHASES][TAPS];
 
         Table() {
-            // Only compute phases [0, HALF_PHASES)
             for (int p = 0; p < HALF_PHASES; ++p) {
                 double frac = static_cast<double>(p) / static_cast<double>(PHASES);
                 for (int t = -31; t <= 32; ++t) {
@@ -372,7 +369,6 @@ struct Sinc64Turbo {
                     double w = kaiserWindow(static_cast<double>(t + 31), 64.0, KAISER_BETA);
                     coeffs[p][t + 31] = static_cast<float>(s * w);
                 }
-                
                 double sum = 0.0;
                 for(int i=0; i<TAPS; ++i) sum += coeffs[p][i];
                 if (sum > 0.0) {
@@ -383,90 +379,142 @@ struct Sinc64Turbo {
         }
     };
 
+    static inline Table& getTable() {
+        static Table table;
+        return table;
+    }
+
+    // Function pointer type for dispatch
+    using InterpolateFunc = void(*)(const float*, int64_t, double, float&, float&);
+
+    // -------------------------------------------------------------------------
+    // Implementation Generators
+    // -------------------------------------------------------------------------
+    
+    // Core logic template to avoid code duplication across SIMD variants
+    // SimdOp: Lambda/Functor for the dot product
+    template<typename SimdOp, typename SimdRevOp>
+    static inline void interpolateImpl(
+        const float* data, int64_t totalFrames, double phase, 
+        float& outL, float& outR, 
+        SimdOp op, SimdRevOp revOp) 
+    {
+        const int64_t idx = static_cast<int64_t>(phase);
+        const double frac = phase - static_cast<double>(idx);
+        int phaseIdx = static_cast<int>(frac * (PHASES - 1) + 0.5);
+        bool reversed = (phaseIdx >= HALF_PHASES);
+        int lutIdx = reversed ? (PHASES - 1 - phaseIdx) : phaseIdx;
+        
+        // Fast access to static table
+        const float* c = getTable().coeffs[lutIdx];
+        
+        const int64_t startIdx = idx - 31;
+        float sumL = 0.0f;
+        float sumR = 0.0f;
+        
+        bool validRange = (startIdx >= 0 && startIdx + 64 <= totalFrames);
+
+        if (validRange && !reversed) {
+            op(c, &data[startIdx * 2], sumL, sumR);
+        } else if (validRange && reversed) {
+            revOp(c, &data[startIdx * 2], sumL, sumR);
+        } else {
+            // Scalar fallback for boundaries
+            for (int t = 0; t < 64; ++t) {
+                int64_t sIdx = startIdx + t;
+                if (sIdx < 0 || sIdx >= totalFrames) continue;
+                float coeff = reversed ? c[63 - t] : c[t];
+                sumL += data[sIdx * 2] * coeff;
+                sumR += data[sIdx * 2 + 1] * coeff;
+            }
+        }
+        outL = sumL;
+        outR = sumR;
+    }
+
+    // -------------------------------------------------------------------------
+    // Specific Implementations
+    // -------------------------------------------------------------------------
+
+    static void implAVX512(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
+        interpolateImpl(data, totalFrames, phase, outL, outR, sincDotProductAVX512, sincDotProductAVX512_Reversed);
+    }
+
+    static void implAVX2(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
+        interpolateImpl(data, totalFrames, phase, outL, outR, sincDotProductAVX2, sincDotProductAVX2_Reversed);
+    }
+    
+    static void implSSE41(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
+        // SSE4.1 usually doesn't have a specialized reversed kernel in this codebase, assume fallback or standard
+        // If SincSSE41.h doesn't have reversed, using scalar fallback logic for reversed part inside template is fine
+        // providing a dummy lambda for reversed if it doesn't exist?
+        // Checking SincSSE41.h would be ideal, but for now let's map to the standard scalar-loop-reversed or a scalar-shim
+        auto scalarRev = [](const float* c, const float* s, float& l, float& r) {
+             // We shouldn't hit this often in validRange+reversed if we pass the scalar loop in 'else' 
+             // BUT `interpolateImpl` calls `revOp`.
+             // If SincSSE41.h lacks reversed, we must provide one.
+             // Let's use scalar for reversed path on SSE4.1 for safety/simplicity unless we verified SincSSE41_Reversed exists.
+             // For safety: simply use scalar loop here.
+             float sl = 0, sr = 0;
+             for(int t=0; t<64; ++t) { 
+                 float coeff = c[63-t]; 
+                 sl += s[t*2]*coeff; sr += s[t*2+1]*coeff; 
+             }
+             l=sl; r=sr;
+        };
+        interpolateImpl(data, totalFrames, phase, outL, outR, sincDotProductSSE41, scalarRev);
+    }
+
+    static void implNEON(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
+        // Assume optimized NEON
+        interpolateImpl(data, totalFrames, phase, outL, outR, sincDotProductNEON, [](const float* c, const float* s, float& l, float& r){
+             float sl = 0, sr = 0;
+             for(int t=0; t<64; ++t) { float coeff = c[63-t]; sl += s[t*2]*coeff; sr += s[t*2+1]*coeff; }
+             l=sl; r=sr;
+        });
+    }
+
+    static void implScalar(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
+        auto scalarOp = [](const float* c, const float* s, float& l, float& r) {
+            float sl = 0, sr = 0;
+            for(int t=0; t<64; ++t) { sl += s[t*2]*c[t]; sr += s[t*2+1]*c[t]; }
+            l=sl; r=sr;
+        };
+         auto scalarRev = [](const float* c, const float* s, float& l, float& r) {
+             float sl = 0, sr = 0;
+             for(int t=0; t<64; ++t) { float coeff = c[63-t]; sl += s[t*2]*coeff; sr += s[t*2+1]*coeff; }
+             l=sl; r=sr;
+        };
+        interpolateImpl(data, totalFrames, phase, outL, outR, scalarOp, scalarRev);
+    }
+
+    // -------------------------------------------------------------------------
+    // Dispatcher
+    // -------------------------------------------------------------------------
+
+    static InterpolateFunc resolve() {
+        // Force table initialization on first call (startup)
+        getTable(); 
+        
+        const auto& cpu = Nomad::Core::CPUDetection::get();
+        if (cpu.hasAVX512F()) return implAVX512;
+        if (cpu.hasAVX2()) return implAVX2;
+        if (cpu.hasSSE41()) return implSSE41;
+        if (cpu.hasNEON()) return implNEON;
+        return implScalar;
+    }
+
+    static inline InterpolateFunc pImpl = resolve();
+
+public:
+    // The Hot Path: Indirect function call, ZERO branches, ZERO checks.
     static inline void interpolate(
         const float* data,
         int64_t totalFrames,
         double phase,
         float& outL, float& outR)
     {
-        static const auto table = std::make_unique<Table>();
-        static const auto& cpu = Nomad::Core::CPUDetection::get();
-        static const bool useAVX512 = cpu.hasAVX512F();
-        static const bool useAVX2 = cpu.hasAVX2();
-        static const bool useSSE41 = cpu.hasSSE41() && !useAVX2 && !useAVX512;
-        static const bool useNEON = cpu.hasNEON();
-        
-        const int64_t idx = static_cast<int64_t>(phase);
-        const double frac = phase - static_cast<double>(idx);
-        
-        // Map frac to discrete phase index
-        int phaseIdx = static_cast<int>(frac * (PHASES - 1) + 0.5);
-        
-        // SYMMETRY: If phaseIdx >= HALF_PHASES, use reversed coeffs
-        bool reversed = (phaseIdx >= HALF_PHASES);
-        int lutIdx = reversed ? (PHASES - 1 - phaseIdx) : phaseIdx;
-        const float* c = table->coeffs[lutIdx];
-        
-        const int64_t startIdx = idx - 31;
-        
-        float sumL = 0.0f;
-        float sumR = 0.0f;
-        
-        // SIMD path: Use when we have valid contiguous access
-        bool validRange = (startIdx >= 0 && startIdx + 64 <= totalFrames);
-        
-        // Note: Experimental prefetching showed no consistent gain and potential cache
-        // pollution on tested platforms. Removed to keep implementation clean.
-
-        if (validRange && !reversed) {
-            const float* samples = &data[startIdx * 2];
-            
-            if (useAVX512) {
-                sincDotProductAVX512(c, samples, sumL, sumR);
-            } else if (useAVX2) {
-                sincDotProductAVX2(c, samples, sumL, sumR);
-            } else if (useSSE41) {
-                sincDotProductSSE41(c, samples, sumL, sumR);
-            } else if (useNEON) {
-                sincDotProductNEON(c, samples, sumL, sumR);
-            } else {
-                // Scalar fallback
-                for (int t = 0; t < 64; ++t) {
-                    sumL += samples[t * 2] * c[t];
-                    sumR += samples[t * 2 + 1] * c[t];
-                }
-            }
-        } else if (validRange && reversed) {
-            if (useAVX512) {
-                sincDotProductAVX512_Reversed(c, &data[startIdx * 2], sumL, sumR);
-            } else if (useAVX2) {
-                // AVX2 Optimized Reversed Path to enable SIMD for the mirrored 50% of phases
-                sincDotProductAVX2_Reversed(c, &data[startIdx * 2], sumL, sumR);
-            } else {
-                // Scalar path with symmetry reversal (edge cases or non-AVX)
-                for (int t = 0; t < 64; ++t) {
-                    int64_t sIdx = startIdx + t;
-                    if (sIdx < 0 || sIdx >= totalFrames) continue;
-                    
-                    float coeff = c[63 - t];  // Reversed!
-                    sumL += data[sIdx * 2] * coeff;
-                    sumR += data[sIdx * 2 + 1] * coeff;
-                }
-            }
-        } else {
-            // Scalar path for boundary cases
-            for (int t = 0; t < 64; ++t) {
-                int64_t sIdx = startIdx + t;
-                if (sIdx < 0 || sIdx >= totalFrames) continue;
-                
-                float coeff = c[t];
-                sumL += data[sIdx * 2] * coeff;
-                sumR += data[sIdx * 2 + 1] * coeff;
-            }
-        }
-        
-        outL = sumL;
-        outR = sumR;
+        pImpl(data, totalFrames, phase, outL, outR);
     }
 };
 
