@@ -13,18 +13,25 @@
 #include <map>
 #include <immintrin.h> // AVX/SSE for high-performance mixing
 
-// Denormal protection macros
-#define DISABLE_DENORMALS \
-    int oldMXCSR = _mm_getcsr(); \
-    _mm_setcsr(oldMXCSR | 0x8040); // Set DAZ and FTZ flags
-
-#define RESTORE_DENORMALS \
-    _mm_setcsr(oldMXCSR);
+// Denormal protection macros removed in favor of ScopedDenormals RAII wrapper
 
 namespace Nomad {
 namespace Audio {
 
 namespace {
+    // Denormal protection: RAII Wrapper for DAZ/FTZ
+    struct ScopedDenormals {
+        int oldMXCSR;
+        ScopedDenormals() {
+            oldMXCSR = _mm_getcsr();
+            // Set DAZ (0x0040) and FTZ (0x8000)
+            _mm_setcsr(oldMXCSR | 0x8040); 
+        }
+        ~ScopedDenormals() {
+            _mm_setcsr(oldMXCSR);
+        }
+    };
+
     inline double clampD(double v, double lo, double hi) {
         return (v < lo) ? lo : (v > hi) ? hi : v;
     }
@@ -234,10 +241,15 @@ void AudioEngine::setThreadCount(int count) {
  * - Meter snapshots are published if a snapshot buffer is available; clipping flags are set when peaks >= 1.0.
  * - Dithering mode, safety processing, metronome, and LUFS accumulation are all controlled by engine state flags.
  */
+
+
 void AudioEngine::processBlock(float* outputBuffer,
                                const float* inputBuffer,
                                uint32_t numFrames,
                                double streamTime) {
+    // CRITICAL: Protect against denormal float performance spikes (10x CPU load)
+    ScopedDenormals denormalGuard;
+
     (void)streamTime;
 
     // Process Input (Recording)
@@ -252,13 +264,11 @@ void AudioEngine::processBlock(float* outputBuffer,
         return;
     }
 
-    // Enable Denormals protection (Flush-to-Zero)
-    DISABLE_DENORMALS
+    // Enable Denormals protection (Flush-to-Zero) is now handled by ScopedDenormals RAII at function start
 
     // Safety: If buffers aren't allocated (setBufferConfig not called), silence and return.
     if (m_masterBufferD.empty()) {
         std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * m_outputChannels.load(std::memory_order_relaxed) * sizeof(float));
-        RESTORE_DENORMALS
         return;
     }
 
@@ -933,8 +943,6 @@ void AudioEngine::processBlock(float* outputBuffer,
     
     // B-009: Record stable block for underrun recovery tracking
     m_telemetry.recordStableBlock();
-
-    RESTORE_DENORMALS
 }
 
 void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
