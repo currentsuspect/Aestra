@@ -5,6 +5,7 @@
 #include <iostream>
 #include <algorithm>
 #include <Windows.h>
+#include "../../NomadCore/include/NomadThreading.h"
 
 namespace Nomad {
 namespace Audio {
@@ -347,6 +348,14 @@ void ASIODriver::convertInput(long asioChannelIndex, float* destInterleaved, siz
 ASIO::ASIOTime* ASIODriver::asioBufferSwitch(long doubleBufferIndex, long directProcess) {
     if (!m_isRunning || !m_callback) return nullptr;
     
+    // "Black Magic": Ensure ASIO Driver thread runs at Real-Time Priority
+    // This is safe to call repeatedly but checking a static flag is faster
+    static thread_local bool s_threadPrioritySet = false;
+    if (!s_threadPrioritySet) {
+        MMCSS::setProAudio();
+        s_threadPrioritySet = true;
+    }
+
     // 1. De-interleave Input (ASIO -> Interleaved Float)
     for (int i=0; i < m_inputChannels; ++i) {
         ASIO::ASIOChannelInfo& chInfo = m_channelInfos[i];

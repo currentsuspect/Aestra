@@ -13,10 +13,45 @@
 #ifdef _WIN32
 extern "C" {
     __declspec(dllimport) int __stdcall SetThreadPriority(void*, int);
+    __declspec(dllimport) void* __stdcall GetCurrentThread();
+    __declspec(dllimport) void* __stdcall LoadLibraryA(const char*);
+    __declspec(dllimport) void* __stdcall GetProcAddress(void*, const char*);
+    __declspec(dllimport) int __stdcall FreeLibrary(void*);
 }
 #endif
 
 namespace Nomad {
+
+// =============================================================================
+// MMCSS (Multimedia Class Scheduler Service) - "Pro Audio" Priority
+// =============================================================================
+// Dynamically loads Avrt.dll to avoid linker dependencies.
+class MMCSS {
+public:
+    static void setProAudio() {
+#ifdef _WIN32
+        static auto impl = []() {
+            void* hAvrt = LoadLibraryA("Avrt.dll");
+            if (hAvrt) {
+                typedef void* (__stdcall *AvSetMmThreadCharacteristicsA_t)(const char*, unsigned long*);
+                auto pFunc = (AvSetMmThreadCharacteristicsA_t)GetProcAddress(hAvrt, "AvSetMmThreadCharacteristicsA");
+                if (pFunc) {
+                    unsigned long taskIndex = 0;
+                    pFunc("Pro Audio", &taskIndex);
+                    // We knowingly leak the handle return/don't revert for this thread's lifetime 
+                    // (typical for dedicated audio threads).
+                    // Also leak lib handle to keep function pointer valid.
+                }
+            }
+            return 0;
+        }();
+        (void)impl;
+        
+        // Also boost Win32 priority
+        SetThreadPriority(GetCurrentThread(), 15); // THREAD_PRIORITY_TIME_CRITICAL
+#endif
+    }
+};
 
 // =============================================================================
 // Lock-Free Ring Buffer (Single Producer, Single Consumer)
@@ -213,11 +248,13 @@ public:
         m_taskCounter.store(0);
         for (size_t i = 0; i < numThreads; ++i) {
             m_workers.emplace_back([this, i] {
+                // "Black Magic": Register as System Pro Audio Task
+                MMCSS::setProAudio();
                 workerLoop(static_cast<uint32_t>(i));
             });
             
 #ifdef _WIN32
-            SetThreadPriority(m_workers.back().native_handle(), 2); // THREAD_PRIORITY_HIGHEST
+            // SetThreadPriority(m_workers.back().native_handle(), 2); // Handled by MMCSS wrapper now
 #endif
         }
     }
