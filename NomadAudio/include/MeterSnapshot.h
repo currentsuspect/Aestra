@@ -46,7 +46,7 @@ struct alignas(64) ChannelMeterSnapshot {
         uint32_t lowL_bits{0};   // float as uint32_t bitcast (LINEAR 0..1) - LF energy (<~150Hz)
         uint32_t lowR_bits{0};   // float as uint32_t bitcast (LINEAR 0..1) - LF energy (<~150Hz)
         uint32_t correlation_bits{0}; // float as uint32_t bitcast (-1.0..1.0)
-        uint32_t integratedLufs_bits{0}; // float as uint32_t bitcast
+        uint32_t integratedLufs_bits{0xC3100000}; // float as uint32_t bitcast (-144.0f)
         uint8_t clipFlags{0};    // bit 0 = L clip, bit 1 = R clip
     };
 

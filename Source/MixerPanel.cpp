@@ -1,4 +1,4 @@
-// ¶¸ 2025 Nomad Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "MixerPanel.h"
 
 #include "MixerViewModel.h"
@@ -13,9 +13,7 @@ MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
 {
     // Create view model and modern mixer
     m_viewModel = std::make_shared<Nomad::MixerViewModel>();
-    m_newMixer = std::make_shared<UIMixerPanel>(m_viewModel, 
-                                                m_trackManager->getMeterSnapshots(),
-                                                m_trackManager->getContinuousParams());
+    m_newMixer = std::make_shared<UIMixerPanel>(m_viewModel, m_trackManager);
     m_newMixer->setId("UIMixerPanel_Inner");
     
     // Set as content of WindowPanel

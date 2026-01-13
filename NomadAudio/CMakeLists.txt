@@ -177,6 +177,9 @@ set(NOMAD_AUDIO_CORE_SOURCES
     src/Plugin/SamplerPlugin.cpp
     src/Plugin/EffectChain.cpp
     src/SincAVX512.cpp
+    src/AudioRenderer.cpp
+    src/AuditionEngine.cpp
+    src/MetadataParser.cpp
 )
 
 # Set per-file compile flags for AVX-512
@@ -264,6 +267,7 @@ set(NOMAD_AUDIO_CORE_HEADERS
     include/PluginFactory.h
     include/EffectChain.h
     include/Plugin/VST3Host.h
+    include/AuditionEngine.h
 )
 
 # Create NomadAudioCore library

@@ -9,6 +9,8 @@
 #include "PianoRollPanel.h"
 #include "ArsenalPanel.h"
 #include "PatternBrowserPanel.h"
+#include "AuditionPanel.h"                              // Audition Mode UI
+#include "../NomadAudio/include/AuditionEngine.h"       // Audition Mode backend
 
 #include "NomadContent.h"
 #include "../NomadUI/Widgets/PluginBrowserPanel.h"
@@ -60,6 +62,16 @@ NomadContent::~NomadContent() {
     auto& pm = Nomad::Audio::PluginManager::getInstance();
     pm.getScanner().cancelScan();
     // Note: PluginManager's destructor will join the scan thread
+
+    // Clean up temporary audition files
+    for (const auto& file : m_tempFiles) {
+        try {
+            if (std::filesystem::exists(file)) {
+                std::filesystem::remove(file);
+                Log::info("[NomadContent] Deleted temp audition file: " + file);
+            }
+        } catch (...) {}
+    }
 }
 
 NomadContent::NomadContent() {
@@ -103,6 +115,72 @@ NomadContent::NomadContent() {
     m_trackManagerUI->setOnTogglePianoRoll([this]() { toggleView(Audio::ViewType::PianoRoll); });
     m_trackManagerUI->setOnToggleSequencer([this]() { toggleView(Audio::ViewType::Sequencer); });
     m_trackManagerUI->setOnTogglePlaylist([this]() { toggleView(Audio::ViewType::Playlist); });
+    
+    // Audition Mode integration - sends track to Audition queue and switches mode
+    m_trackManagerUI->setOnSendToAudition([this](uint32_t trackId, const std::string& trackName) {
+        // 1. Ensure Audition engine exists
+        if (!m_auditionEngine) {
+            m_auditionEngine = std::make_shared<Audio::AuditionEngine>();
+        }
+        
+        // 2. Determine project duration for full track bounce
+        double projectDurationBeats = m_trackManager->getPlaylistModel().getTotalDurationBeats();
+        if (projectDurationBeats < 0.1) projectDurationBeats = 16.0; // Default if empty
+        
+        // 3. Generate temporary file path
+        auto tempDir = std::filesystem::temp_directory_path();
+        auto tempFile = tempDir / ("NomadAudition_Track_" + std::to_string(trackId) + "_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count()) + ".wav");
+        std::string tempPath = tempFile.string();
+        
+        // 4. Perform bounce (Offline rendering)
+        Log::info("[NomadContent] Bouncing track " + std::to_string(trackId) + " to " + tempPath);
+        bool success = m_audioEngine->bounceRangeToWav(0.0, projectDurationBeats, tempPath, static_cast<int32_t>(trackId));
+        
+        if (success) {
+            m_tempFiles.push_back(tempPath);
+            
+            // 5. Add to queue, select it, play it and switch view
+            m_auditionEngine->addToQueue(tempPath);
+            
+            size_t newIdx = m_auditionEngine->getQueue().size() - 1;
+            m_auditionEngine->jumpToTrack(newIdx);
+            m_auditionEngine->play();
+            
+            setViewFocus(ViewFocus::Audition);
+        } else {
+            Log::error("[NomadContent] Failed to bounce track to Audition.");
+        }
+    });
+
+    m_trackManagerUI->setOnSendSelectionToAudition([this](double startBeat, double endBeat) {
+        if (!m_auditionEngine) {
+            m_auditionEngine = std::make_shared<Audio::AuditionEngine>();
+        }
+        
+        // 1. Generate path
+        auto tempDir = std::filesystem::temp_directory_path();
+        auto tempFile = tempDir / ("NomadAudition_Selection_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count()) + ".wav");
+        std::string tempPath = tempFile.string();
+        
+        // 2. Perform bounce (trackId -1 means Master Output)
+        Log::info("[NomadContent] Bouncing selection to " + tempPath);
+        bool success = m_audioEngine->bounceRangeToWav(startBeat, endBeat, tempPath, -1);
+        
+        if (success) {
+            m_tempFiles.push_back(tempPath);
+            
+            // 3. Add to queue, select it, play it and switch view
+            m_auditionEngine->addToQueue(tempPath);
+            
+            size_t newIdx = m_auditionEngine->getQueue().size() - 1;
+            m_auditionEngine->jumpToTrack(newIdx);
+            m_auditionEngine->play();
+            
+            setViewFocus(ViewFocus::Audition);
+        } else {
+            Log::error("[NomadContent] Failed to bounce selection to Audition.");
+        }
+    });
     
     m_workspaceLayer->addChild(m_trackManagerUI);
 
@@ -352,10 +430,22 @@ NomadContent::NomadContent() {
         toggleView(view);
     });
     
+    // Helper: Stop preview when Audition Queue changes (drop)
+    if (m_auditionEngine) {
+        m_auditionEngine->setOnQueueUpdated([this]() {
+            stopSoundPreview();
+        });
+    }
+    
     // Wire Transport to TrackManager
     m_transportBar->setOnPlay([this]() { if(m_trackManager) m_trackManager->play(); });
     m_transportBar->setOnPause([this]() { if(m_trackManager) m_trackManager->pause(); });
-    m_transportBar->setOnStop([this]() { if(m_trackManager) m_trackManager->stop(); });
+    m_transportBar->setOnStop([this]() { 
+        if(m_trackManager) m_trackManager->stop();
+        if(m_auditionEngine && m_viewFocus == ViewFocus::Audition) m_auditionEngine->stop();
+        stopSoundPreview();
+        m_audioEngine->panic(); // Ensure silence
+    });
     m_transportBar->setOnRecord([this](bool recording) { 
         if(m_trackManager) {
             // Robust toggle: Check backend state to prevent accidental restarts or desync
@@ -377,11 +467,17 @@ NomadContent::NomadContent() {
     // Create Focus Toggle Buttons
     auto& theme = NomadUI::NUIThemeManager::getInstance();
     m_viewToggle = std::make_shared<NomadUI::NUISegmentedControl>(
-        std::vector<std::string>{"Arsenal", "Timeline"}
+        std::vector<std::string>{"Arsenal", "Timeline", "Audition"}
     );
     m_viewToggle->setCornerRadius(12.0f);
     m_viewToggle->setOnSelectionChanged([this](size_t index) {
-        ViewFocus newFocus = (index == 0) ? ViewFocus::Arsenal : ViewFocus::Timeline;
+        ViewFocus newFocus;
+        switch (index) {
+            case 0: newFocus = ViewFocus::Arsenal; break;
+            case 1: newFocus = ViewFocus::Timeline; break;
+            case 2: newFocus = ViewFocus::Audition; break;
+            default: newFocus = ViewFocus::Timeline; break;
+        }
         setViewFocus(newFocus);
         
         // Auto-open Arsenal panel when switching TO Arsenal mode
@@ -478,7 +574,7 @@ void NomadContent::onUpdate(double dt) {
     }
     
     // Update Mixer Meters (Real-time)
-    if (tm && m_mixerPanel && m_mixerPanel->isVisible()) {
+    if (tm && m_mixerPanel) {
         auto viewModel = m_mixerPanel->getViewModel();
         if (viewModel) {
             auto snapshots = tm->getMeterSnapshots();
@@ -533,9 +629,23 @@ void NomadContent::onResize(int width, int height) {
     if (m_workspaceLayer) m_workspaceLayer->setBounds(contentBounds);
     if (m_overlayLayer) m_overlayLayer->setBounds(contentBounds);
 
+    // DYNAMIC LAYOUT: Calculate effective top margin
+    float effectiveTransportHeight = layout.transportBarHeight;
+    bool isAuditionMode = (m_viewFocus == ViewFocus::Audition);
+    
+    if (isAuditionMode) {
+        effectiveTransportHeight = 0.0f;
+    }
+
+    // Transport Bar Positioning
     if (m_transportBar) {
-        m_transportBar->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, 0,
-            contentBounds.width, 60.0f));
+        if (isAuditionMode) {
+            // Hide transport bar physically (prevent mouse hits)
+            m_transportBar->setBounds(NomadUI::NUIRect(0, -100, 0, 0));
+        } else {
+            m_transportBar->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, 0,
+                contentBounds.width, layout.transportBarHeight));
+        }
     }
     
     if (m_viewToggle) {
@@ -543,6 +653,7 @@ void NomadContent::onResize(int width, int height) {
         float toggleWidth = 160.0f;
         float toggleHeight = 24.0f;
         float yPos = 4.0f;
+        
         float centerX = rootBounds.width / 2.0f;
         float startX = centerX - toggleWidth / 2.0f;
         
@@ -557,13 +668,13 @@ void NomadContent::onResize(int width, int height) {
     }
 
     float fileBrowserWidth = 0;
-    float sidebarHeight = height - layout.transportBarHeight;
+    float sidebarHeight = height - effectiveTransportHeight;
     float patternBrowserWidth = 0;
     
     if (m_browserToggle) {
         // Toggle bar above browser
         float toggleHeight = 30.0f;
-        float toggleY = layout.transportBarHeight;
+        float toggleY = effectiveTransportHeight;
         float browserWidth = std::min(layout.fileBrowserWidth, width * 0.20f);
         
         m_browserToggle->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, toggleY, browserWidth, toggleHeight));
@@ -572,7 +683,7 @@ void NomadContent::onResize(int width, int height) {
     if (m_fileBrowser) {
         fileBrowserWidth = std::min(layout.fileBrowserWidth, width * 0.20f);
         float toggleHeight = 30.0f;
-        float fbTop = layout.transportBarHeight + toggleHeight;
+        float fbTop = effectiveTransportHeight + toggleHeight;
         float fbHeight = sidebarHeight - toggleHeight;
         
         if (m_previewPanel && m_previewPanel->isVisible()) {
@@ -590,17 +701,23 @@ void NomadContent::onResize(int width, int height) {
     if (m_pluginBrowser) {
         // Occupies same space as file browser + preview panel
         float toggleHeight = 30.0f;
-        float pbTop = layout.transportBarHeight + toggleHeight;
+        float pbTop = effectiveTransportHeight + toggleHeight;
         float pbHeight = sidebarHeight - toggleHeight;
+        // recalculate width locally just in case
         float pbWidth = std::min(layout.fileBrowserWidth, width * 0.20f);
         
         m_pluginBrowser->setBounds(NomadUI::NUIAbsolute(contentBounds, 0, pbTop, pbWidth, pbHeight));
     }
     
+    // Ensure fileBrowserWidth is consistent even if m_fileBrowser is mysteriously absent (unlikely but safe)
+    if (fileBrowserWidth <= 0.1f) {
+        fileBrowserWidth = std::min(layout.fileBrowserWidth, width * 0.20f);
+    }
+    
     if (m_patternBrowser) {
         patternBrowserWidth = std::min(layout.fileBrowserWidth * 0.8f, width * 0.15f);
         float patternBrowserX = fileBrowserWidth;
-        m_patternBrowser->setBounds(NomadUI::NUIAbsolute(contentBounds, patternBrowserX, layout.transportBarHeight,
+        m_patternBrowser->setBounds(NomadUI::NUIAbsolute(contentBounds, patternBrowserX, effectiveTransportHeight,
                                                         patternBrowserWidth, sidebarHeight));
     }
 
@@ -629,6 +746,32 @@ void NomadContent::onResize(int width, int height) {
         float trackAreaWidth = width - trackAreaX;
         float trackAreaHeight = height - layout.transportBarHeight;
         m_trackManagerUI->setBounds(NomadUI::NUIAbsolute(contentBounds, trackAreaX, layout.transportBarHeight, trackAreaWidth, trackAreaHeight));
+        
+        // AuditionPanel uses the same content area BUT ignores transport height
+        if (m_auditionPanel) {
+            float auditionTop = 0; // Full height
+            float auditionHeight = height;
+            
+            // Keep file browser visible (it's on the left)
+            // But Audition panel should probably start AFTER file browser
+            
+            // IMPORTANT: If PatternBrowser is hidden (width=0), fileBrowserWidth is the only offset.
+            // patternBrowserWidth is calculated above as 0 if m_patternBrowser is nullptr or hidden?
+            // Wait, lines 634 checks 'if (m_patternBrowser)'. I need to ensure it accounts for visibility.
+            
+            // Let's rely on the previous calculations. If I hid PatternBrowser in setViewFocus, 
+            // does onResize know?
+            // Lines 634-639 calculate patternBrowserWidth based on m_patternBrowser existence, NOT visibility.
+            // I should modify that block first or override here.
+            
+            // Overriding for Audition Mode
+            if (m_viewFocus == ViewFocus::Audition) {
+                 m_auditionPanel->setBounds(NomadUI::NUIAbsolute(contentBounds, fileBrowserWidth, 0, 
+                    width - fileBrowserWidth, height));
+            } else {
+                 m_auditionPanel->setBounds(NomadUI::NUIAbsolute(contentBounds, trackAreaX, layout.transportBarHeight, trackAreaWidth, trackAreaHeight));
+            }
+        }
     }
 
     NomadUI::NUIRect allowed = computeAllowedRectForPanels();
@@ -776,12 +919,19 @@ void NomadContent::syncViewState() {
 }
 
 void NomadContent::setViewFocus(ViewFocus focus) {
+    // Guard against re-entrancy (setSelectedIndex triggers callback which calls setViewFocus)
+    static bool isUpdating = false;
+    if (isUpdating) return;
+    isUpdating = true;
+    
     bool wasPlaying = (m_transportBar && m_transportBar->getState() == TransportState::Playing);
+    ViewFocus previousFocus = m_viewFocus;
     
     m_viewFocus = focus;
     
-    // Toggle Pattern Playback Mode
+    // Handle mode transitions
     if (m_audioEngine) {
+        // === ENTERING ARSENAL ===
         if (focus == ViewFocus::Arsenal) {
             // Default to 4 bars (16 beats) if panel not ready
             int stepCount = m_sequencerPanel ? m_sequencerPanel->getStepCount() : 16;
@@ -793,24 +943,31 @@ void NomadContent::setViewFocus(ViewFocus focus) {
             }
             
             m_audioEngine->setPatternPlaybackMode(true, lengthBeats);
+            m_audioEngine->setAuditionModeEnabled(false);
             
             // UI: Hide timeline playhead and FREEZE usage
             if (m_trackManagerUI) {
                 m_trackManagerUI->setPatternMode(true);
                 m_trackManagerUI->setFollowPlayhead(false); // Stop scrolling
             }
-        } else {
-            // Switching FROM Arsenal TO Timeline
-            // [FIX] Stop playback and trigger panic to kill any playing Arsenal audio
-            if (m_trackManager && m_trackManager->isPlaying()) {
-                m_trackManager->stop();
-            }
-            if (m_audioEngine) {
+            
+            // Hide Audition panel if it exists (returning from Audition)
+            if (m_auditionPanel) m_auditionPanel->setVisible(false);
+            if (m_trackManagerUI) m_trackManagerUI->setVisible(true);
+        }
+        // === ENTERING TIMELINE ===
+        else if (focus == ViewFocus::Timeline) {
+            // Stop any running playback from previous mode
+            if (previousFocus == ViewFocus::Arsenal) {
+                if (m_trackManager && m_trackManager->isPlaying()) {
+                    m_trackManager->stop();
+                }
                 m_audioEngine->panic(); // Kill all voices/ring-outs
             }
             
-            // Restore playback position (so we don't start at 0)
+            // Restore playback position
             m_audioEngine->setPatternPlaybackMode(false, 4.0);
+            m_audioEngine->setAuditionModeEnabled(false);
             
             if (m_trackManager) {
                 m_trackManager->setPosition(m_savedTimelinePosition);
@@ -820,7 +977,97 @@ void NomadContent::setViewFocus(ViewFocus focus) {
                 m_trackManagerUI->setPatternMode(false);
                 m_trackManagerUI->setFollowPlayhead(true); // Resume scrolling
             }
+            
+            // Hide Audition panel if it exists (returning from Audition)
+            if (m_auditionPanel) m_auditionPanel->setVisible(false);
+            if (m_trackManagerUI) m_trackManagerUI->setVisible(true);
         }
+        // === ENTERING AUDITION ===
+        else if (focus == ViewFocus::Audition) {
+            // Stop main DAW playback - Audition has its own engine
+            if (m_trackManager && m_trackManager->isPlaying()) {
+                m_trackManager->stop();
+            }
+            m_audioEngine->panic(); // Silence all DAW audio
+            m_audioEngine->setPatternPlaybackMode(false, 4.0);
+            
+            // Stop any file browser preview
+            stopSoundPreview();
+            if (m_previewEngine) m_previewEngine->stop();
+            
+            // Save timeline position for when we return
+            if (m_trackManager && previousFocus == ViewFocus::Timeline) {
+                m_savedTimelinePosition = m_trackManager->getPosition();
+            }
+            
+            if (m_trackManagerUI) {
+                m_trackManagerUI->setPatternMode(false);
+                m_trackManagerUI->setFollowPlayhead(false); // Freeze timeline
+            }
+            
+            // === CREATE AUDITION PANEL (lazy init) ===
+            if (!m_auditionEngine) {
+                m_auditionEngine = std::make_shared<Audio::AuditionEngine>();
+            }
+            
+            // ALWAYS ensure it's registered with the main engine
+            m_audioEngine->setAuditionEngine(m_auditionEngine.get());
+            
+            // Enable Exclusive Audition Mode (bypasses main DAW graph)
+            m_audioEngine->setAuditionModeEnabled(true);
+            
+            if (!m_auditionPanel) {
+                m_auditionPanel = std::make_shared<AuditionPanel>(m_auditionEngine);
+                // Fix Z-Order: Add to workspace layer (below overlay/transport), not root
+                if (m_workspaceLayer) {
+                     m_workspaceLayer->addChild(m_auditionPanel);
+                } else {
+                     addChild(m_auditionPanel);
+                }
+            }
+            
+            // Show the Audition panel, hide DAW panels
+            m_auditionPanel->setVisible(true);
+            if (m_trackManagerUI) m_trackManagerUI->setVisible(false);
+            if (m_sequencerPanel) m_sequencerPanel->setVisible(false);
+            
+            // POLISH: Hide Transport, Pattern Browser, and Visualizers for immersion
+            if (m_transportBar) m_transportBar->setVisible(false);
+            if (m_patternBrowser) m_patternBrowser->setVisible(false);
+            if (m_waveformVisualizer) m_waveformVisualizer->setVisible(false);
+            if (m_audioVisualizer) m_audioVisualizer->setVisible(false);
+            
+            Log::info("[ViewFocus] Entering Audition Mode");
+        } 
+        
+        // GLOBAL VISIBILITY STATE MANAGEMENT
+        // Ensure UI elements are correctly shown/hidden based on mode
+        bool isAudition = (focus == ViewFocus::Audition);
+        
+        if (m_auditionPanel) m_auditionPanel->setVisible(isAudition);
+        
+        if (!isAudition) {
+             // Returning to DAW Mode - Restore UI
+             if (m_transportBar) m_transportBar->setVisible(true);
+             if (m_patternBrowser) m_patternBrowser->setVisible(true);
+             if (m_waveformVisualizer) m_waveformVisualizer->setVisible(true);
+             if (m_audioVisualizer) m_audioVisualizer->setVisible(true);
+        } else {
+             // Audition Mode - Hide Distractions
+             if (m_transportBar) m_transportBar->setVisible(false);
+             if (m_patternBrowser) m_patternBrowser->setVisible(false);
+             if (m_waveformVisualizer) m_waveformVisualizer->setVisible(false);
+             if (m_audioVisualizer) m_audioVisualizer->setVisible(false);
+        }
+        
+        // Sync segment control to reflect the new focus
+        if (m_viewToggle) {
+            size_t idx = (focus == ViewFocus::Arsenal) ? 0 : (focus == ViewFocus::Timeline) ? 1 : 2;
+            m_viewToggle->setSelectedIndex(idx);
+        }
+        
+        // Force layout update immediately to apply new visibility and margins
+        onResize(getBounds().width, getBounds().height);
     }
     
     // Update transport bar mode indicator (mode only, no panel visibility)
@@ -828,12 +1075,14 @@ void NomadContent::setViewFocus(ViewFocus focus) {
         m_transportBar->setViewToggled(Audio::ViewType::Sequencer, focus == ViewFocus::Arsenal);
     }
     
-    // Hot-swap playback if needed (switching between pattern/arrangement modes)
-    if (wasPlaying && m_transportBar) {
+    // Hot-swap playback if needed (only for Arsenal/Timeline swap, not Audition)
+    if (wasPlaying && m_transportBar && focus != ViewFocus::Audition && previousFocus != ViewFocus::Audition) {
         Log::info("[Focus] Hot-swapping playback mode");
         m_transportBar->stop();
         m_transportBar->play();
     }
+    
+    isUpdating = false;
 }
 
 void NomadContent::setArsenalPanelVisible(bool visible) {

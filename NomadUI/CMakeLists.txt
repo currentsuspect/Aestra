@@ -60,6 +60,7 @@ set(NOMADUI_CORE_SOURCES
 	    Core/NUIIcon.cpp
 	    Core/NUIContextMenu.h
 	    Core/NUIContextMenu.cpp
+	    Core/stb_image_impl.cpp       # stb_image decoder
 	    # Core/NUIApp.h  # Requires renderer
 	    # Core/NUIApp.cpp
 	)

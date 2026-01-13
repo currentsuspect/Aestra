@@ -13,6 +13,7 @@
 #include "../NomadCore/include/NomadLog.h"
 #include "../NomadAudio/include/PluginManager.h"
 #include "../NomadCore/include/NomadUnifiedProfiler.h"
+#include "../NomadCore/include/PointerRegistry.h"
 #include "../NomadAudio/include/WaveformCache.h"
 #include "../NomadAudio/include/ClipSource.h"
 #include "AppearanceSettingsPage.h"
@@ -557,7 +558,6 @@ bool NomadApp::initialize(const std::string& projectPath) {
                 m_audioEngine->setChannelSlotMap(slotMap);
             }
             
-            Nomad::Log::info("MeterSnapshotBuffer allocated and connected");
             
             // Register core services with ServiceLocator (B-003)
             Nomad::ServiceLocator::provide<Nomad::Audio::AudioEngine>(m_audioEngine.get());
@@ -573,6 +573,12 @@ bool NomadApp::initialize(const std::string& projectPath) {
                 }
             });
             Log::info("CommandHistory wired to dirty-state tracking");
+            
+            // Validate critical pointer wiring (catches null pointers early)
+            Nomad::PointerRegistry::expectNotNull("AudioEngine", m_audioEngine.get());
+            Nomad::PointerRegistry::expectNotNull("TrackManager", trackMgr.get());
+            Nomad::PointerRegistry::expectNotNull("MeterSnapshotBuffer", meterBuffer.get());
+            Nomad::PointerRegistry::validateAll();
         }
     }
     

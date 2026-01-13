@@ -77,6 +77,9 @@ public:
     // Callback for track selection
     void setOnTrackSelected(std::function<void(TrackUIComponent*, bool)> callback) { m_onTrackSelectedCallback = callback; }
 
+    // Audition integration
+    void setOnSendToAudition(std::function<void()> callback) { m_onSendToAuditionCallback = callback; }
+
     
     // Selection state
     void setSelected(bool selected) { m_selected = selected; }
@@ -156,6 +159,7 @@ private:
     std::function<void(TrackUIComponent*, double)> m_onSplitRequestedCallback;
     std::function<void(TrackUIComponent*, ClipInstanceID)> m_onClipSelectedCallback;
     std::function<void(TrackUIComponent*, bool)> m_onTrackSelectedCallback;
+    std::function<void()> m_onSendToAuditionCallback;
 
     
     

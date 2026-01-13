@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(NomadCore STATIC
     src/NomadProfiler.cpp
     src/NomadUnifiedProfiler.cpp
+    src/PointerRegistry.cpp
 )
 
 target_include_directories(NomadCore PUBLIC

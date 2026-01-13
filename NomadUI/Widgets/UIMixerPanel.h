@@ -16,6 +16,7 @@ namespace Nomad {
     namespace Audio {
         class ContinuousParamBuffer;
         class MeterSnapshotBuffer;
+        class TrackManager;
     }
 }
 
@@ -39,8 +40,7 @@ public:
      * @param meterSnapshots Lock-free meter snapshot buffer for reading peaks
      */
     UIMixerPanel(std::shared_ptr<Nomad::MixerViewModel> viewModel,
-                 std::shared_ptr<Nomad::Audio::MeterSnapshotBuffer> meterSnapshots,
-                 std::shared_ptr<Nomad::Audio::ContinuousParamBuffer> continuousParams);
+                 std::shared_ptr<Nomad::Audio::TrackManager> trackManager);
 
     ~UIMixerPanel() override = default;
 
@@ -68,8 +68,7 @@ public:
 
 private:
     std::shared_ptr<Nomad::MixerViewModel> m_viewModel;
-    std::shared_ptr<Nomad::Audio::MeterSnapshotBuffer> m_meterSnapshots;
-    std::shared_ptr<Nomad::Audio::ContinuousParamBuffer> m_continuousParams;
+    std::shared_ptr<Nomad::Audio::TrackManager> m_trackManager;
 
     /// Channel strips (header + meter + fader)
     std::vector<std::shared_ptr<UIMixerStrip>> m_strips;

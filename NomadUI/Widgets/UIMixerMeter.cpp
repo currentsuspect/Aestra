@@ -7,6 +7,7 @@
 #include <cmath>
 #include <string> // Added for std::to_string
 #include <cstdio> // Added for snprintf, though std::to_string is used
+#include "../../NomadCore/include/NomadLog.h"
 
 namespace NomadUI {
 
@@ -102,8 +103,7 @@ void UIMixerMeter::setIntegratedLufs(float lufs)
 {
     if (std::abs(m_integratedLufs - lufs) > 0.05f) {
         m_integratedLufs = lufs;
-        // Repaint if visible (threshold ~ -100 dB)
-        if (m_integratedLufs > -140.0f) repaint();
+        repaint();
     }
 }
 float UIMixerMeter::dbToNormalized(float db) const
@@ -283,12 +283,12 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         };
         
         // Background (distinct from main meter)
-        // Use a slightly lighter gray to define the "track"
-        renderer.fillRect(corrBounds, m_colorBackground.lightened(0.1f));
+        // Use a visible gray track (0.25f)
+        renderer.fillRect(corrBounds, NUIColor(0.25f, 0.25f, 0.25f, 1.0f));
         
-        // Center line (white/bright)
+        // Center line (white/bright) - 2px width
         float centerX = corrBounds.x + corrBounds.width * 0.5f;
-        renderer.drawLine({centerX, corrBounds.y}, {centerX, corrBounds.y + corrBounds.height}, 1.0f, m_colorPeakHold);
+        renderer.fillRect({centerX - 1.0f, corrBounds.y, 2.0f, corrBounds.height}, m_colorPeakHold);
         
         // Bar
         float val = m_correlation; // -1 to 1
@@ -324,7 +324,8 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
     }
     
     bool hasPeak = (peak > -90.0f);
-    bool hasLufs = (m_integratedLufs > -140.0f);
+    // Show LUFS if we have a valid reading (ignore start-up silence -144.0)
+    bool hasLufs = (m_integratedLufs > -100.0f);
     
     if (hasLufs && hasPeak) {
         // Master channel: Show LUFS on top, dB below
