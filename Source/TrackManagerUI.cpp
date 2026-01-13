@@ -4416,7 +4416,6 @@ NomadUI::DropResult TrackManagerUI::onDrop(const NomadUI::DragData& data, const 
         }
         
         clearDropPreview();
-        clearDropPreview();
         return result;
     }
     
