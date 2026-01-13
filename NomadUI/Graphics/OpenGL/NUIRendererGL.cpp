@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIRendererGL.h"
 #include <cstring>
 #include <cmath>
@@ -2520,7 +2520,6 @@ void NUIRendererGL::flush() {
     } else {
         glUniform1i(primitiveShader_.useTextureLoc, 0);
     }
-
     
     // Bind current texture if needed
     if (currentTextureId_ != 0) {

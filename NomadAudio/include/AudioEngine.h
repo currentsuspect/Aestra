@@ -25,11 +25,15 @@
 #include <array>
 #include <string>
 
+#include "AudioGraphState.h"
+#include "AudioRenderer.h"
+
 namespace Nomad {
 namespace Audio {
 
 class UnitManager;
 class PatternPlaybackEngine;
+class AuditionEngine;
 
 namespace Plugins {
     class SamplerPlugin;  // Forward declare for RT cache
@@ -50,6 +54,7 @@ namespace Plugins {
  * Goal: Decouple rendering logic to support concurrent "Draft" (RT) and "Master" (Background) graphs.
  */
 class AudioEngine {
+    friend class AudioRenderer; // Allow access to private members during hybrid engine transition
 public:
     AudioEngine();
     ~AudioEngine();
@@ -200,6 +205,23 @@ public:
     void setMultiThreadingEnabled(bool enabled) { m_multiThreadingEnabled.store(enabled, std::memory_order_relaxed); }
     bool isMultiThreadingEnabled() const { return m_multiThreadingEnabled.load(std::memory_order_relaxed); }
 
+    // Audition Mode
+    void setAuditionEngine(AuditionEngine* engine) { m_auditionEngine.store(engine, std::memory_order_relaxed); }
+    void setAuditionModeEnabled(bool enabled) { m_auditionModeEnabled.store(enabled, std::memory_order_relaxed); }
+    bool isAuditionModeEnabled() const { return m_auditionModeEnabled.load(std::memory_order_relaxed); }
+    
+    /**
+     * @brief Render a range of the timeline (or a specific track) to a WAV file.
+     * 
+     * Uses miniaudio encoder and AudioRenderer for offline rendering.
+     * @param startBeat Start position in beats
+     * @param endBeat End position in beats
+     * @param outputPath Path to save the WAV file
+     * @param trackId Specific track ID to bounce, or -1 for Master output
+     * @return true if successful
+     */
+    bool bounceRangeToWav(double startBeat, double endBeat, const std::string& outputPath, int32_t trackId = -1);
+
     // Input callback state
     std::atomic<InputCallback> m_inputCallback{nullptr};
     std::atomic<void*> m_inputCallbackData{nullptr};
@@ -231,34 +253,6 @@ private:
     std::atomic<DitheringMode> m_ditheringMode{DitheringMode::Triangular}; // Default TPDF
 
 
-    // Double-precision smoothed parameter for zero-zipper automation
-    struct SmoothedParamD {
-        double current{1.0};
-        double target{1.0};
-        double coeff{0.001};  // Per-sample coefficient
-        
-        inline double next() {
-            current += coeff * (target - current);
-            return current;
-        }
-        
-        void setTarget(double t) { target = t; }
-        void snap() { current = target; }  // Instant change
-    };
-
-    struct TrackRTState {
-        // Optimized: Store smoothed L/R gains directly to avoid per-sample sin/cos
-        SmoothedParamD gainL;
-        SmoothedParamD gainR;
-        
-        // Logical state for command updates (snapshot of last known values)
-        float currentVolume{1.0f};
-        float currentPan{0.0f};
-
-        bool mute{false};
-        bool solo{false};
-        bool soloSafe{false};
-    };
 
     TrackRTState& ensureTrackState(uint32_t trackId);
     void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset = 0);
@@ -320,24 +314,65 @@ private:
     std::vector<float> m_scratchL;                     // Scratch L for plugins
     std::vector<float> m_scratchR;                     // Scratch R for plugins
     std::vector<MidiBuffer> m_scratchMidiBuffers;      // [NEW] Scratch MIDI buffers for units
+    // std::vector<TrackRTState> m_trackState; <-- Moved to m_rtGraphState (actually m_graphStates)
+    // But we need persistent state across swaps?
+    // TrackRTState contains current Volume/Pan/SmoothedParams.
+    // If we move it to AudioGraphState, and we double buffer AudioGraphState,
+    // we have SPLIT state. (Frame A has Vol=0.5, Frame B has Vol=0.5).
+    // This is GOOD for threading, but bad for persistence if we don't sync them.
+    // For now, let's keep m_trackState in AudioEngine as the "Golden State" and just reference it?
+    // AudioGraphState has "std::vector<TrackRTState> trackStates".
+    // If we duplicate it, we duplicate the SmoothedParams.
+    // This implies we need to update BOTH or sync them.
+    
+    // DECISION: To avoid complexity in Phase 1, let's KEEP m_trackState in AudioEngine
+    // and let AudioGraphState just REFERENCE it via index (which it does).
+    // AudioGraphState definition has: std::vector<TrackRTState> trackStates;
+    // We should probably NOT include trackStates in AudioGraphState yet if we want a shared state model.
+    // OR we move m_trackState entirely to the GraphState and ensure we copy it on swap.
+    
+    // Let's modify AudioGraphState.h to NOT own the state yet?
+    // No, Hybrid Engine requires OWNED state for background thread.
+    // So AudioGraphState MUST own it.
+    
+    // Implementation: AudioEngine holds m_trackState (The "Master" State).
+    // AudioRenderer uses `state.trackStates`.
+    // We must populate `state.trackStates` from `AudioEngine::m_trackState` during compile/update?
+    // Or just use AudioEngine's vector for now?
+    
+    // Let's use AudioEngine's vector for Phase 1.
+    // I will COMMENT OUT the vector in AudioGraphState.h (mentally) or ignore it,
+    // and have AudioEngine keep m_trackState.
+    // Wait, I define AudioGraphState to have it.
+    // Let's use AudioEngine::m_trackState.
     std::vector<TrackRTState> m_trackState;
     
     // --- Antigravity Routing Engine (v3.1) ---
-    struct RuntimeConnection {
-        double* destinationBufferL{nullptr}; // Raw pointer to Target Left Buffer
-        double* destinationBufferR{nullptr}; // Raw pointer to Target Right Buffer
-        size_t stride{2};                    // Interleaved stride (2 for stereo)
-        double gainL{1.0};                   // Left Channel Gain (Linear)
-        double gainR{1.0};                   // Right Channel Gain (Linear)
-    };
-
-    struct RenderTrack {
-        uint32_t trackIndex{0};
-        double* selfBuffer{nullptr}; // Pointer to this track's output buffer (interleaved)
-        std::vector<RuntimeConnection> activeConnections; // Pre-resolved targets
-    };
+    // Moved struct definitions to AudioGraphState.h
     
-    std::vector<RenderTrack> m_renderTracks[2];
+    // [HYBRID ENGINE] State & Renderer
+    AudioGraphState m_rtGraphState;         // The Real-Time Graph State
+    // AudioGraphState m_bgGraphState;      // The Background Graph State (Future)
+    
+    AudioRenderer m_rtRenderer;             // The Real-Time Renderer
+    
+    // Legacy support for AudioEngine::compileGraph populating the state
+    // We map m_renderTracks logic to m_rtGraphState.renderTracks
+    // For now, keep the member variable name if useful, or refactor usage.
+    // Let's refactor usage to use m_rtGraphState.renderTracks.
+    // But RenderTrack is now in namespace spec.
+    
+    // std::vector<RenderTrack> m_renderTracks[2];  <-- Removed, now in m_rtGraphState
+    // But wait, compileGraph uses double buffering of the vector itself?
+    // "m_renderTracks[2]"
+    // AudioGraphState currently just has "std::vector<RenderTrack> renderTracks;".
+    // We should probably keep the double buffering logic here for safety?
+    // Or does AudioGraphState handle it?
+    // AudioGraphState is a snapshot.
+    // AudioEngine needs to hold the "Pending" and "Active" state.
+    
+    // To minimize breakage, let's keep the double buffer logic but change type
+    AudioGraphState m_graphStates[2]; 
     std::atomic<int> m_activeRenderTrackIndex{0};
     std::mutex m_graphMutex; // Protects graph compilation / swap
     
@@ -349,16 +384,19 @@ private:
      */
     void compileGraph(); 
 
-    // Helper for renderGraph
-    void renderClipAudio(double* outputBuffer, TrackRTState& state, uint32_t trackIndex, const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset);
-    void processTrackEffects(const RenderTrack& track, uint32_t numFrames, uint32_t bufferOffset);
+    // Helper for AudioRenderer (Legacy Bridge)
+    // void renderClipAudio(...) - Moved
+    // void processTrackEffects(...) - Moved
 
     // Parallel processing internal
+    // [HYBRID ENGINE] Parallel dispatch temporarily disabled during refactor
+    /*
     uint32_t m_parallelNumFrames{0};
     uint32_t m_parallelBufferOffset{0};
     std::vector<void*> m_parallelTrackPointers;
     static void parallelTrackDispatcher(void* context, void* taskData);
     void parallelProcessTrack(const RenderTrack& track);
+    */
 
     // -----------------------------------------
 
@@ -387,6 +425,11 @@ private:
     std::atomic<ContinuousParamBuffer*> m_continuousParamsRaw{nullptr};
     std::shared_ptr<const ChannelSlotMap> m_channelSlotMapOwned;
     std::atomic<const ChannelSlotMap*> m_channelSlotMapRaw{nullptr};
+
+    // Audition Mode (Exclusive Bypass)
+    std::atomic<AuditionEngine*> m_auditionEngine{nullptr};
+    std::atomic<bool> m_auditionModeEnabled{false};
+
 
     // Recent output ring buffer for oscilloscope/mini-waveform displays.
     std::vector<float> m_waveformHistory;
@@ -577,6 +620,7 @@ private:
     static const BiquadCoeff kKWeightPreFilter; // HS
     static const BiquadCoeff kKWeightRLB;       // HPF
 
+    TrackRTState m_dummyTrackState; // [FIX] Replaces static local to remove priority inversion risk
 };
 
 } // namespace Audio

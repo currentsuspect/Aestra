@@ -1,0 +1,25 @@
+MSBuild version 17.14.23+b0019275e for .NET Framework
+
+  NomadCore.vcxproj -> C:\Users\Current\Documents\Projects\NOMAD\build\NomadCore\Release\NomadCore.lib
+  NomadPlat.vcxproj -> C:\Users\Current\Documents\Projects\NOMAD\build\NomadPlat\Release\NomadPlat.lib
+  NomadRumble.vcxproj -> C:\Users\Current\Documents\Projects\NOMAD\build\NomadPlugins\NomadRumble\Release\NomadRumble.lib
+  NomadAudioWin.vcxproj -> C:\Users\Current\Documents\Projects\NOMAD\build\NomadAudio\Release\NomadAudioWin.lib
+  AudioEngine.cpp
+C:\Users\Current\Documents\Projects\NOMAD\NomadAudio\src\AudioEngine.cpp(515,30): error C2248: 'Nomad::Audio::AudioRenderer::processArsenalUnits': cannot access private member declared in class 'Nomad::Audio::AudioRenderer' [C:\Users\Current\Documents\Projects\NOMAD\build\NomadAudio\NomadAudioCore.vcxproj]
+      C:\Users\Current\Documents\Projects\NOMAD\NomadAudio\include\AudioRenderer.h(67,14):
+      see declaration of 'Nomad::Audio::AudioRenderer::processArsenalUnits'
+      C:\Users\Current\Documents\Projects\NOMAD\NomadAudio\include\AudioRenderer.h(22,11):
+      see declaration of 'Nomad::Audio::AudioRenderer'
+  
+C:\Users\Current\Documents\Projects\NOMAD\NomadAudio\src\AudioEngine.cpp(528,26): error C2248: 'Nomad::Audio::AudioRenderer::processArsenalUnits': cannot access private member declared in class 'Nomad::Audio::AudioRenderer' [C:\Users\Current\Documents\Projects\NOMAD\build\NomadAudio\NomadAudioCore.vcxproj]
+      C:\Users\Current\Documents\Projects\NOMAD\NomadAudio\include\AudioRenderer.h(67,14):
+      see declaration of 'Nomad::Audio::AudioRenderer::processArsenalUnits'
+      C:\Users\Current\Documents\Projects\NOMAD\NomadAudio\include\AudioRenderer.h(22,11):
+      see declaration of 'Nomad::Audio::AudioRenderer'
+  
+C:\Users\Current\Documents\Projects\NOMAD\NomadAudio\src\AudioEngine.cpp(536,26): error C2248: 'Nomad::Audio::AudioRenderer::processArsenalUnits': cannot access private member declared in class 'Nomad::Audio::AudioRenderer' [C:\Users\Current\Documents\Projects\NOMAD\build\NomadAudio\NomadAudioCore.vcxproj]
+      C:\Users\Current\Documents\Projects\NOMAD\NomadAudio\include\AudioRenderer.h(67,14):
+      see declaration of 'Nomad::Audio::AudioRenderer::processArsenalUnits'
+      C:\Users\Current\Documents\Projects\NOMAD\NomadAudio\include\AudioRenderer.h(22,11):
+      see declaration of 'Nomad::Audio::AudioRenderer'
+  

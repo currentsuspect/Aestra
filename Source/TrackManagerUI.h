@@ -130,6 +130,10 @@ public:
     // Loop region update callback - called when loop region needs to change (for Project auto-update)
     void setOnLoopRegionUpdate(std::function<void(double startBeat, double endBeat)> cb) { m_onLoopRegionUpdate = cb; }
     
+    // Audition Mode integration - called when user wants to send track/clip to Audition
+    void setOnSendToAudition(std::function<void(uint32_t trackId, const std::string& trackName)> cb) { m_onSendToAudition = cb; }
+    void setOnSendSelectionToAudition(std::function<void(double startBeat, double endBeat)> cb) { m_onSendSelectionToAudition = cb; }
+    
     // === MULTI-SELECTION ===
     void selectTrack(TrackUIComponent* track, bool addToSelection = false);
     void deselectTrack(TrackUIComponent* track);
@@ -137,6 +141,9 @@ public:
     void clearSelection();
     const std::unordered_set<TrackUIComponent*>& getSelectedTracks() const { return m_selectedTracks; }
     bool isTrackSelected(TrackUIComponent* track) const;
+    
+    // Context Menu Helpers (v4.0)
+    void openTrackContextMenu(const ::NomadUI::NUIPoint& position, std::function<void()> onSendToAudition);
     
     // Snap-to-Grid control
     void setSnapEnabled(bool enabled) { m_snapEnabled = enabled; }
@@ -432,6 +439,8 @@ private:
     std::function<void(int)> m_onLoopPresetChanged;  // Called when loop preset dropdown changes
     std::function<void(double, double)> m_onSelectionMade;  // Called when ruler selection finalized
     std::function<void(double, double)> m_onLoopRegionUpdate;  // Called when loop region needs update (Project auto-update)
+    std::function<void(uint32_t, const std::string&)> m_onSendToAudition;  // Called for "Send to Audition"
+    std::function<void(double, double)> m_onSendSelectionToAudition;  // Called for "Send Selection to Audition"
     
     void updateBackgroundCache(::NomadUI::NUIRenderer& renderer);
     void updateControlsCache(::NomadUI::NUIRenderer& renderer);

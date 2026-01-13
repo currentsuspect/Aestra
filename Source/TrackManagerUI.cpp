@@ -573,6 +573,36 @@ bool TrackManagerUI::handleToolbarClick(const NomadUI::NUIPoint& position) {
         addLoopItem("Selection", 5);
         addLoopItem("Project", 6);
         menu->addSubmenu("Loop", loopMenu);
+        
+        // === AUDITION MODE ===
+        menu->addSeparator();
+        menu->addItem("Send to Audition", [this]() {
+            // Get selected track or first track
+            if (m_onSendToAudition && m_trackManager) {
+                auto& playlist = m_trackManager->getPlaylistModel();
+                int trackIndex = 0;
+                
+                // If we have a selected track, use it
+                if (!m_selectedTracks.empty()) {
+                    auto* selectedTrack = *m_selectedTracks.begin();
+                    for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
+                        if (m_trackUIComponents[i].get() == selectedTrack) {
+                            trackIndex = static_cast<int>(i);
+                            break;
+                        }
+                    }
+                }
+                
+                PlaylistLaneID laneId = playlist.getLaneId(trackIndex);
+                if (laneId.isValid()) {
+                    const PlaylistLane* lane = playlist.getLane(laneId);
+                    std::string trackName = lane ? lane->name : ("Track " + std::to_string(trackIndex + 1));
+                    // Pass track index instead of lane ID internal value
+                    m_onSendToAudition(static_cast<uint32_t>(trackIndex), trackName);
+                    Log::info("Sending track to Audition: " + trackName);
+                }
+            }
+        });
 
         // Show menu below the icon
         menu->showAt(m_menuIconBounds.x, m_menuIconBounds.y + m_menuIconBounds.height);
@@ -1094,6 +1124,12 @@ void TrackManagerUI::refreshTracks() {
 
         trackUI->setOnTrackSelected([this](TrackUIComponent* trackComp, bool addToSelection) {
             this->selectTrack(trackComp, addToSelection);
+        });
+
+        trackUI->setOnSendToAudition([this, i, lane]() {
+            if (this->m_onSendToAudition) {
+                this->m_onSendToAudition(static_cast<uint32_t>(i), lane->name);
+            }
         });
 
         
@@ -2524,6 +2560,9 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                 // Click without drag - clear selection and disable loop
                 m_hasRulerSelection = false;
                 m_loopEnabled = false;
+
+                // SPECIAL: If we clicked on an EXISTNG range on ruler, show menu
+                // (Wait, this is handled in the isInRuler block if it's an instant click)
                 
                 // Trigger loop OFF callback
                 if (m_onLoopPresetChanged) {
@@ -2535,6 +2574,38 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
         
         return true;
+    }
+
+    // === RULER SELECTION CONTEXT MENU (Click on active range) ===
+    if (isInRuler && event.pressed && event.button == NomadUI::NUIMouseButton::Left && 
+        m_hasRulerSelection && !m_hoveringLoopStart && !m_hoveringLoopEnd) 
+    {
+        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        const auto& layout = themeManager.getLayoutDimensions();
+        float gridStartX = layout.trackControlsWidth + 5;
+        
+        float loopStartX = gridStartX + (static_cast<float>(m_loopStartBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
+        float loopEndX = gridStartX + (static_cast<float>(m_loopEndBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
+        float minX = std::min(loopStartX, loopEndX);
+        float maxX = std::max(loopStartX, loopEndX);
+        
+        if (localPos.x >= minX && localPos.x <= maxX) {
+            if (m_activeContextMenu) {
+                removeChild(m_activeContextMenu);
+            }
+            m_activeContextMenu = std::make_shared<NomadUI::NUIContextMenu>();
+            auto menu = m_activeContextMenu;
+            
+            menu->addItem("Send Selection to Audition", [this]() {
+                if (m_onSendSelectionToAudition) {
+                    m_onSendSelectionToAudition(m_loopStartBeat, m_loopEndBeat);
+                }
+            });
+            
+            menu->showAt(event.position.x, event.position.y);
+            addChild(menu);
+            return true;
+        }
     }
     
     // Handle loop marker dragging
@@ -4769,6 +4840,22 @@ std::pair<double, double> TrackManagerUI::getSelectionBeatRange() const {
     // For now, if no clip is selected, return invalid range
     
     return {0.0, 0.0};
+}
+
+void TrackManagerUI::openTrackContextMenu(const ::NomadUI::NUIPoint& position, std::function<void()> onSendToAudition) {
+    if (m_activeContextMenu) {
+        removeChild(m_activeContextMenu);
+    }
+
+    m_activeContextMenu = std::make_shared<NomadUI::NUIContextMenu>();
+    auto menu = m_activeContextMenu;
+
+    menu->addItem("Send Track to Audition", [onSendToAudition]() {
+        if (onSendToAudition) onSendToAudition();
+    });
+
+    menu->showAt(position.x, position.y);
+    addChild(menu);
 }
 
 } // namespace Audio

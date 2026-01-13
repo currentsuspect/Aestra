@@ -1706,6 +1706,19 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             }
             return true;
         }
+
+        // === TRACK CONTEXT MENU (Right Click on Header/Control Area) ===
+        if (event.pressed && event.button == NomadUI::NUIMouseButton::Right && event.position.x <= controlAreaEndX) {
+            // Select track on right-click too
+            if (m_onTrackSelectedCallback) {
+                m_onTrackSelectedCallback(this, false);
+            }
+
+            if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
+                parentMgr->openTrackContextMenu(event.position, m_onSendToAuditionCallback);
+                return true;
+            }
+        }
     }
 
     // PRIORITY 3: Automation Layer (v3.1)

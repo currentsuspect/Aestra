@@ -5,6 +5,9 @@
 #include <atomic>
 #include <cstdint>
 #include <cmath>
+#include <memory>
+#include <map>
+#include <mutex>
 
 // SIMD detection
 #if defined(_MSC_VER)
@@ -399,6 +402,21 @@ private:
     double m_targetRatio{1.0};       // Target ratio to smooth toward
     uint32_t m_ratioSmoothFrames{0}; // Frames remaining in transition
     uint32_t m_ratioSmoothTotal{0};  // Total frames for current transition
+    
+    // [FIX] Persistent phase tracking: tracks the source position for the NEXT output sample 
+    // across process() blocks. Prevents audible clicks for non-integer ratios.
+    double m_nextOutputSrcPos{0.0};
+
+    // Shared Cache Support
+    std::shared_ptr<const PolyphaseFilterBank> m_sharedFilterBank;
+    PolyphaseFilterBank m_localFilterBank;
+
+    static std::shared_ptr<const PolyphaseFilterBank> getSharedFilterBank(SRCQuality quality);
+    
+    // Pointer to active bank (either shared or local)
+    const PolyphaseFilterBank* getFilterBank() const noexcept {
+        return m_sharedFilterBank ? m_sharedFilterBank.get() : &m_localFilterBank;
+    }
 
     // SIMD enable toggle (mostly for tests / debugging)
     std::atomic<bool> m_simdEnabled{true};

@@ -1,12 +1,56 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "SampleRateConverter.h"
-#include "NomadLog.h"
+#include "../../NomadCore/include/NomadLog.h"
 
 #include <algorithm>
 #include <cstring>
+#include <mutex>
+#include <map>
 
 namespace Nomad {
 namespace Audio {
+
+// =============================================================================
+// Shared Filter Bank Cache
+// =============================================================================
+
+namespace {
+    struct FilterCache {
+        std::mutex mutex;
+        std::map<SRCQuality, std::weak_ptr<const PolyphaseFilterBank>> entries;
+    };
+    
+    FilterCache& getFilterCache() {
+        static FilterCache cache;
+        return cache;
+    }
+}
+
+std::shared_ptr<const PolyphaseFilterBank> SampleRateConverter::getSharedFilterBank(SRCQuality quality) {
+    auto& cache = getFilterCache();
+    std::lock_guard<std::mutex> lock(cache.mutex);
+    
+    auto it = cache.entries.find(quality);
+    if (it != cache.entries.end()) {
+        if (auto shared = it->second.lock()) {
+            return shared;
+        }
+    }
+    
+    // Not in cache or expired, create new
+    auto newBank = std::make_shared<PolyphaseFilterBank>();
+    
+    // We use a temporary SRC instance to generate the bank with a standard upsampling cutoff (0.98)
+    SampleRateConverter temp;
+    temp.m_ratio = 1.01; // Fake upsampling ratio to trigger standard cutoff
+    temp.generateFilterBank(quality);
+    
+    // Copy generated coeffs to the shared bank
+    *newBank = temp.m_localFilterBank;
+    
+    cache.entries[quality] = newBank;
+    return newBank;
+}
 
 // =============================================================================
 // SIMD Helper Functions
@@ -120,10 +164,20 @@ void SampleRateConverter::configure(uint32_t srcRate, uint32_t dstRate,
     m_history.init(channels);
     m_historyFilled = 0;
     m_srcPosition = 0.0;
+    m_nextOutputSrcPos = 0.0; // [FIX] Init phase
     
-    // Generate filter coefficients
+    // Generate/Fetch Filter Bank
     if (!m_isPassthrough) {
-        generateFilterBank(quality);
+        if (m_ratio >= 1.0) {
+            // Upsampling: use shared cache (fixed cutoff)
+            m_sharedFilterBank = getSharedFilterBank(quality);
+        } else {
+            // Downsampling: need instance-owned filter with specific cutoff
+            m_sharedFilterBank = nullptr;
+            generateFilterBank(quality);
+        }
+    } else {
+        m_sharedFilterBank = nullptr;
     }
     
     m_configured = true;
@@ -138,14 +192,15 @@ void SampleRateConverter::configure(uint32_t srcRate, uint32_t dstRate,
 
 void SampleRateConverter::reset() noexcept {
     // Clear history buffer
-    for (auto& chBuf : m_history.data) {
-        for (float& s : chBuf) s = 0.0f;
+    for (uint32_t ch = 0; ch < m_channels; ++ch) {
+        for (float& s : m_history.data[ch]) s = 0.0f;
     }
     m_history.writePos = 0;
     m_historyFilled = 0;
     
     // Reset position accumulator
     m_srcPosition = 0.0;
+    m_nextOutputSrcPos = 0.0; // [FIX] Reset phase
     
     // Reset ratio smoothing
     m_currentRatio = m_ratio;
@@ -159,7 +214,7 @@ void SampleRateConverter::reset() noexcept {
 // =============================================================================
 
 void SampleRateConverter::generateFilterBank(SRCQuality quality) {
-    m_filterBank.clear();
+    m_localFilterBank.clear();
     
     // Determine number of taps based on quality
     uint32_t numTaps = 0;
@@ -188,8 +243,8 @@ void SampleRateConverter::generateFilterBank(SRCQuality quality) {
             break;
     }
     
-    m_filterBank.numTaps = numTaps;
-    m_filterBank.halfTaps = numTaps / 2;
+    m_localFilterBank.numTaps = numTaps;
+    m_localFilterBank.halfTaps = numTaps / 2;
     
     const double halfTaps = static_cast<double>(numTaps) / 2.0;
     
@@ -234,7 +289,7 @@ void SampleRateConverter::generateFilterBank(SRCQuality quality) {
             
             // Coefficient is sinc * window (cutoff already incorporated)
             const double coeff = sinc * window;
-            m_filterBank.coeffs[phase][tap] = static_cast<float>(coeff);
+            m_localFilterBank.coeffs[phase][tap] = static_cast<float>(coeff);
             sumWeight += coeff;
         }
         
@@ -242,7 +297,7 @@ void SampleRateConverter::generateFilterBank(SRCQuality quality) {
         if (sumWeight > 1e-10) {
             const float invSum = static_cast<float>(1.0 / sumWeight);
             for (uint32_t tap = 0; tap < numTaps; ++tap) {
-                m_filterBank.coeffs[phase][tap] *= invSum;
+                m_localFilterBank.coeffs[phase][tap] *= invSum;
             }
         }
     }
@@ -298,8 +353,11 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames,
         return copyFrames;
     }
     
-    const uint32_t numTaps = m_filterBank.numTaps;
-    const uint32_t halfTaps = m_filterBank.halfTaps;
+    const PolyphaseFilterBank* bank = getFilterBank();
+    if (!bank) return 0;
+
+    const uint32_t numTaps = bank->numTaps;
+    const uint32_t halfTaps = bank->halfTaps;
     uint32_t outputFrames = 0;
 
     const bool useSIMD = m_simdEnabled.load(std::memory_order_relaxed) && hasSIMD();
@@ -322,43 +380,45 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames,
     
     // Process input samples
     for (uint32_t inFrame = 0; inFrame < inputFrames; ++inFrame) {
-        // Push input frame to history
+        // Push input frame into history
         m_history.push(input + inFrame * m_channels);
         m_historyFilled = std::min(m_historyFilled + 1, m_history.size);
         
+        // Logical "now" position in source stream (in samples)
+        // [FIX] Use cumulative position relative to Start of History, but track it across blocks.
+        // We use m_srcPosition to track how many input samples we've processed in total.
+        m_srcPosition += 1.0;
+
         // Generate output samples while we have enough history
-        // srcPosition tracks where we are in the input stream
-        // Each output sample is at dstPosition = outputFrames
-        // The corresponding srcPosition = outputFrames / ratio
-        
         while (outputFrames < maxOutputFrames) {
-            // What input position does this output sample correspond to?
-            const double targetSrcPos = static_cast<double>(outputFrames) / effectiveRatio;
+            // [FIX] Phase correctness: m_nextOutputSrcPos tracks the exact source sample index
+            // where the NEXT output sample should be taken from.
             
-            // How far are we from that position?
-            // We've consumed (inFrame + 1) input frames so far
-            const double currentSrcPos = static_cast<double>(inFrame + 1);
-            
-            // If we need more input to produce this output, break
-            if (targetSrcPos > currentSrcPos - static_cast<double>(halfTaps)) {
+            // If the next sample is ahead of our current history window (accounting for filter tail), wait.
+            if (m_nextOutputSrcPos > m_srcPosition - static_cast<double>(halfTaps)) {
                 break;
             }
             
-            // Calculate fractional position within history
-            const double historyPos = static_cast<double>(m_history.size - 1) - 
-                                     (currentSrcPos - targetSrcPos);
+            // Re-check: If next sample is WAY behind (seek?), reset it to a safe "current" position.
+            if (m_nextOutputSrcPos < m_srcPosition - static_cast<double>(m_history.size - halfTaps)) {
+                m_nextOutputSrcPos = m_srcPosition - static_cast<double>(halfTaps);
+            }
+
+            // Calculate fractional position within history ring
+            // history.size-1 is where the latest sample (m_srcPosition) was just written.
+            const double historyPos = static_cast<double>(m_history.size - 1) - (m_srcPosition - m_nextOutputSrcPos);
             
             const uint32_t intPos = static_cast<uint32_t>(historyPos);
             const double fracPos = historyPos - static_cast<double>(intPos);
             
             // Quantize fractional position to polyphase index
             const uint32_t phaseIndex = static_cast<uint32_t>(
-                fracPos * static_cast<double>(SRCConstants::POLYPHASE_PHASES)
+                fracPos * static_cast<double>(SRCConstants::POLYPHASE_PHASES) + 0.5
             ) % SRCConstants::POLYPHASE_PHASES;
             
             // Generate output for each channel
             for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                const float* coeffs = m_filterBank.coeffs[phaseIndex];
+                const float* coeffs = bank->coeffs[phaseIndex];
                 const int32_t samplePos0 = static_cast<int32_t>(intPos) - static_cast<int32_t>(halfTaps);
                 const float* window = m_history.getWindow(ch, samplePos0);
                 float sum = 0.0f;
@@ -379,11 +439,11 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames,
                 (void)useSIMD;
                 sum = dotProductScalar(window, coeffs, numTaps);
 #endif
-
                 output[outputFrames * m_channels + ch] = sum;
             }
             
             ++outputFrames;
+            m_nextOutputSrcPos += (1.0 / effectiveRatio); // [FIX] Precise phase step
         }
     }
     
@@ -392,12 +452,15 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames,
 
 float SampleRateConverter::interpolateSample(uint32_t channel, uint32_t phaseIndex,
                                              int32_t centerPos) const noexcept {
-    const float* coeffs = m_filterBank.coeffs[phaseIndex];
-    const uint32_t numTaps = m_filterBank.numTaps;
-    const uint32_t halfTaps = m_filterBank.halfTaps;
+    const PolyphaseFilterBank* bank = getFilterBank();
+    if (!bank) return 0.0f; // Should not happen if configured
+
+    const uint32_t numTaps = bank->numTaps;
+    const uint32_t halfTaps = bank->halfTaps;
 
     const int32_t samplePos0 = centerPos - static_cast<int32_t>(halfTaps);
     const float* window = m_history.getWindow(channel, samplePos0);
+    const float* coeffs = bank->coeffs[phaseIndex];
 
 #ifdef NOMAD_HAS_AVX
     if (m_simdEnabled.load(std::memory_order_relaxed) && hasSIMD()) {

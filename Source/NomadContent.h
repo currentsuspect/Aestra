@@ -44,9 +44,13 @@ namespace Nomad::Audio {
     class MixerPanel;
     class PianoRollPanel;
     class ArsenalPanel;
-    class ArsenalPanel;
     class PatternBrowserPanel;
     class WindowPanel;
+    class AuditionEngine;  // For Audition Mode
+}
+
+namespace Nomad {
+    class AuditionPanel;   // For Audition Mode UI
 }
 
 namespace NomadUI {
@@ -55,11 +59,12 @@ namespace NomadUI {
 
 /**
  * @brief View focus - which part of the UI is emphasized
- * Arsenal and Timeline coexist; one is focused, the other is backgrounded
+ * Arsenal, Timeline, and Audition are the three main modes
  */
 enum class ViewFocus {
     Arsenal,   // Pattern construction/sound design
-    Timeline   // Arrangement/composition
+    Timeline,  // Arrangement/composition
+    Audition   // Album listening/reference/DSP preview
 };
 
 /**
@@ -195,6 +200,13 @@ private:
     std::shared_ptr<Nomad::Audio::PianoRollPanel> m_pianoRollPanel;
     std::shared_ptr<Nomad::Audio::ArsenalPanel> m_sequencerPanel;
     std::shared_ptr<NomadUI::PluginUIController> m_pluginController;
+    
+    // Temp files for Audition (v4.0)
+    std::vector<std::string> m_tempFiles;
+    
+    // Audition Mode
+    std::shared_ptr<Nomad::Audio::AuditionEngine> m_auditionEngine;
+    std::shared_ptr<Nomad::AuditionPanel> m_auditionPanel;
 
     std::unique_ptr<Nomad::Audio::PreviewEngine> m_previewEngine;
     bool m_audioActive = false;

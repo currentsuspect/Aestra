@@ -172,9 +172,22 @@ std::shared_ptr<IDropTarget> NUIDragDropManager::findTargetAt(const NUIPoint& po
     auto it = m_dropTargets.begin();
     while (it != m_dropTargets.end()) {
         if (auto target = it->lock()) {
-            NUIRect bounds = target->getDropBounds();
             
+            // DEBUG LOGGING
+            auto component = std::dynamic_pointer_cast<NUIComponent>(target);
+            bool isVisible = component ? component->isVisible() : true;
+            
+            if (component && !isVisible) {
+                Nomad::Log::info("[DragDrop] Skipping invisible target");
+                ++it;
+                continue;
+            }
+            
+            auto bounds = target->getDropBounds();
             if (bounds.contains(position)) {
+                if (component) {
+                     Nomad::Log::info("[DragDrop] Hit target (Visible=" + std::to_string(isVisible) + ")");
+                }
                 return target;
             }
             ++it;

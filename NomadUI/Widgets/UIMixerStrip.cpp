@@ -211,10 +211,7 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     addChild(m_buttons);
 
     m_meter = std::make_shared<UIMixerMeter>();
-    // Enable phase correlation meter only for Master (ID 0)
-    if (m_channelId == 0) {
-        m_meter->setShowCorrelation(true);
-    }
+    m_meter->setShowCorrelation(true);
     m_meter->onClipCleared = [this]() {
         if (!m_viewModel) return;
         auto* channel = m_viewModel->getChannelById(m_channelId);

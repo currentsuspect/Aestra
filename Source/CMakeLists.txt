@@ -75,6 +75,8 @@ set(NOMAD_DAW_SOURCES
 	TimelineMinimapBar.cpp
 	PatternBrowserPanel.h
 	PatternBrowserPanel.cpp
+	AuditionPanel.h
+	AuditionPanel.cpp
 )
 
 

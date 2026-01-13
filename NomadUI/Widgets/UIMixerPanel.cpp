@@ -4,17 +4,16 @@
 #include "../Graphics/NUIRenderer.h"
 #include "../Core/NUIThemeSystem.h"
 #include "../../Source/MixerViewModel.h"
-#include "../../NomadAudio/include/MeterSnapshot.h"
+#include "MeterSnapshot.h"
+#include "../../NomadAudio/include/TrackManager.h"
 #include <algorithm>
 
 namespace NomadUI {
 
 UIMixerPanel::UIMixerPanel(std::shared_ptr<Nomad::MixerViewModel> viewModel,
-                           std::shared_ptr<Nomad::Audio::MeterSnapshotBuffer> meterSnapshots,
-                           std::shared_ptr<Nomad::Audio::ContinuousParamBuffer> continuousParams)
+                           std::shared_ptr<Nomad::Audio::TrackManager> trackManager)
     : m_viewModel(std::move(viewModel))
-    , m_meterSnapshots(std::move(meterSnapshots))
-    , m_continuousParams(std::move(continuousParams))
+    , m_trackManager(std::move(trackManager))
 {
     cacheThemeColors();
 
@@ -23,7 +22,10 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Nomad::MixerViewModel> viewModel,
     addChild(m_inspector);
 
     // Create master strip (pinned on right, does not scroll with channels).
-    m_masterStrip = std::make_shared<UIMixerStrip>(0, 0, m_viewModel.get(), m_meterSnapshots, m_continuousParams);
+    // Create master strip (pinned on right, does not scroll with channels).
+    m_masterStrip = std::make_shared<UIMixerStrip>(0, 0, m_viewModel.get(), 
+                                                   m_trackManager->getMeterSnapshots(), 
+                                                   m_trackManager->getContinuousParams());
     m_masterStrip->onFXClicked = [this](uint32_t channelId) {
         if (m_viewModel) {
             m_viewModel->setSelectedChannelId(static_cast<int32_t>(channelId));
@@ -62,7 +64,10 @@ void UIMixerPanel::refreshChannels()
     for (size_t i = 0; i < channelCount; ++i) {
         auto* channel = m_viewModel->getChannelByIndex(i);
         if (!channel) continue;
-        auto strip = std::make_shared<UIMixerStrip>(channel->id, static_cast<int>(i + 1), m_viewModel.get(), m_meterSnapshots, m_continuousParams);
+        auto strip = std::make_shared<UIMixerStrip>(channel->id, static_cast<int>(i + 1), 
+                                                    m_viewModel.get(), 
+                                                    m_trackManager->getMeterSnapshots(), 
+                                                    m_trackManager->getContinuousParams());
         strip->onFXClicked = [this](uint32_t channelId) {
             if (m_viewModel) {
                 m_viewModel->setSelectedChannelId(static_cast<int32_t>(channelId));
@@ -135,8 +140,13 @@ void UIMixerPanel::onResize(int width, int height)
 void UIMixerPanel::onUpdate(double deltaTime)
 {
     // Update meters from snapshot buffer via view model
-    if (m_viewModel && m_meterSnapshots) {
-        m_viewModel->updateMeters(*m_meterSnapshots, deltaTime);
+
+
+    if (m_viewModel && m_trackManager) {
+        auto snapshots = m_trackManager->getMeterSnapshots();
+        if (snapshots) {
+            m_viewModel->updateMeters(*snapshots, deltaTime);
+        }
     }
 
     // Update children
