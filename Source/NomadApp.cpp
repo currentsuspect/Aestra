@@ -1040,9 +1040,8 @@ void NomadApp::shutdown() {
     Nomad::AppLifecycle::instance().transitionTo(Nomad::AppState::ShuttingDown);
     
     // Clear ServiceLocator before destroying services
-    // Clear ServiceLocator before destroying services
     Nomad::ServiceLocator::clear();
-    Log::info("[SHUTDOWN] ServiceLocator cleared");;
+    Log::info("[SHUTDOWN] ServiceLocator cleared");
     
     // Wait for any pending autosave to complete before we tear down
     if (m_autoSaveFuture.valid()) {
