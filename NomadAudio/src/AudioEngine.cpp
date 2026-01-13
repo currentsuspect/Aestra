@@ -893,17 +893,24 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames) {
 
 AudioEngine::TrackRTState& AudioEngine::ensureTrackState(uint32_t trackIndex) {
     if (m_trackState.empty()) {
-        static TrackRTState dummy;
-        return dummy;
+        return m_dummyTrackState;
     }
     if (trackIndex >= m_trackState.size()) {
-        static TrackRTState dummy;
-        return dummy;
+        return m_dummyTrackState;
     }
     return m_trackState[trackIndex];
 }
 
 void AudioEngine::loadMetronomeClicks(const std::string& downbeatPath, const std::string& upbeatPath) {
+    // Safety check: Cannot load during playback
+    if (m_transportPlaying.load(std::memory_order_relaxed)) {
+        // Log error would be nice here but we don't have Log header.
+        // Assuming user knows not to do this, or we fail silently to protect RT thread.
+        // Ideally we should return a success/fail bool.
+        // For now, simple guard.
+        return;
+    }
+
     // Helper to load a single WAV file into a sample vector
     auto loadWav = [](const std::string& wavPath, std::vector<float>& samples) -> bool {
         FILE* file = fopen(wavPath.c_str(), "rb");

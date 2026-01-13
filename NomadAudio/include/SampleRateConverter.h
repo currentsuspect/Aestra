@@ -290,7 +290,7 @@ public:
      * 
      * @return Latency in output frames (depends on filter size)
      */
-    uint32_t getLatency() const noexcept { return m_filterBank.halfTaps; }
+    uint32_t getLatency() const noexcept { return m_activeBank ? m_activeBank->halfTaps : 0; }
     
     /**
      * @brief Check if configured and ready to process
@@ -355,7 +355,7 @@ private:
     // =========================================================================
     
     // Generate polyphase filter coefficients for given quality
-    void generateFilterBank(SRCQuality quality);
+    static void fillFilterBank(PolyphaseFilterBank& bank, SRCQuality quality, double cutoff = 0.95);
     
     // Calculate Kaiser window value
     static double kaiserWindow(double n, double N, double beta) noexcept;
@@ -385,8 +385,11 @@ private:
     // Fractional position accumulator (maintains phase between calls)
     double m_srcPosition{0.0};
     
-    // Precomputed polyphase filter bank
-    PolyphaseFilterBank m_filterBank;
+    // Precomputed polyphase filter bank (shared/cached)
+    const PolyphaseFilterBank* m_activeBank{nullptr};
+
+    // Owned filter bank for downsampling (custom cutoff)
+    PolyphaseFilterBank m_localBank;
     
     // Input sample history (ring buffer)
     SampleHistory m_history;

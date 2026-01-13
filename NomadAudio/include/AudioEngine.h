@@ -254,6 +254,9 @@ private:
     std::atomic<bool> m_loopEnabled{false};
     std::atomic<double> m_loopStartBeat{0.0};
     std::atomic<double> m_loopEndBeat{4.0};         // Default: 1 bar (4 beats)
+
+    // Fallback track state (member instead of static local for thread safety)
+    TrackRTState m_dummyTrackState;
 };
 
 } // namespace Audio

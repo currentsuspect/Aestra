@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <mutex>
 
 namespace Nomad {
 namespace Audio {
@@ -121,9 +122,34 @@ void SampleRateConverter::configure(uint32_t srcRate, uint32_t dstRate,
     m_historyFilled = 0;
     m_srcPosition = 0.0;
     
-    // Generate filter coefficients
+    // Setup filter bank
+    m_activeBank = nullptr;
     if (!m_isPassthrough) {
-        generateFilterBank(quality);
+        // Handle Downsampling vs Upsampling
+        // For downsampling, we need a custom cutoff (ratio * 0.95) to prevent aliasing.
+        // We cannot use the shared cache which assumes cutoff ~0.95 (for upsampling).
+        if (m_ratio < 1.0) {
+            // Downsampling: Use local bank with custom cutoff
+            double cutoff = m_ratio * 0.95;
+            fillFilterBank(m_localBank, quality, cutoff);
+            m_activeBank = &m_localBank;
+        } else {
+            // Upsampling: Use shared cache
+            static PolyphaseFilterBank cache[5]; // Linear, Cubic, Sinc8, Sinc16, Sinc64
+            static std::once_flag initFlag;
+
+            std::call_once(initFlag, [](){
+                fillFilterBank(cache[static_cast<int>(SRCQuality::Linear)], SRCQuality::Linear);
+                fillFilterBank(cache[static_cast<int>(SRCQuality::Cubic)], SRCQuality::Cubic);
+                fillFilterBank(cache[static_cast<int>(SRCQuality::Sinc8)], SRCQuality::Sinc8);
+                fillFilterBank(cache[static_cast<int>(SRCQuality::Sinc16)], SRCQuality::Sinc16);
+                fillFilterBank(cache[static_cast<int>(SRCQuality::Sinc64)], SRCQuality::Sinc64);
+            });
+
+            int qIdx = static_cast<int>(quality);
+            if (qIdx < 0 || qIdx > 4) qIdx = 3; // Default Sinc16
+            m_activeBank = &cache[qIdx];
+        }
     }
     
     m_configured = true;
@@ -158,8 +184,8 @@ void SampleRateConverter::reset() noexcept {
 // Filter Generation
 // =============================================================================
 
-void SampleRateConverter::generateFilterBank(SRCQuality quality) {
-    m_filterBank.clear();
+void SampleRateConverter::fillFilterBank(PolyphaseFilterBank& bank, SRCQuality quality, double cutoff) {
+    bank.clear();
     
     // Determine number of taps based on quality
     uint32_t numTaps = 0;
@@ -188,24 +214,15 @@ void SampleRateConverter::generateFilterBank(SRCQuality quality) {
             break;
     }
     
-    m_filterBank.numTaps = numTaps;
-    m_filterBank.halfTaps = numTaps / 2;
+    bank.numTaps = numTaps;
+    bank.halfTaps = numTaps / 2;
     
     const double halfTaps = static_cast<double>(numTaps) / 2.0;
     
     // Cutoff frequency for anti-aliasing:
-    // When downsampling (ratio < 1): limit to output Nyquist = ratio * Nyquist
-    // When upsampling (ratio > 1): no limiting needed (already below output Nyquist)
-    // Apply 0.95 factor for transition band (prevents ringing at Nyquist)
-    double cutoff = 1.0;
-    if (m_ratio < 1.0) {
-        // Downsampling: need to filter out frequencies above output Nyquist
-        cutoff = m_ratio * 0.95;
-    } else {
-        // Upsampling: full bandwidth, slight rolloff for smoothness
-        cutoff = 0.98;
-    }
-    
+    // If cutoff is passed as argument, use it.
+    // Otherwise it defaults to 0.95 (for upsampling).
+
     // Generate coefficients for each fractional phase
     for (uint32_t phase = 0; phase < SRCConstants::POLYPHASE_PHASES; ++phase) {
         // Fractional offset for this phase (0.0 to 1.0)
@@ -234,7 +251,7 @@ void SampleRateConverter::generateFilterBank(SRCQuality quality) {
             
             // Coefficient is sinc * window (cutoff already incorporated)
             const double coeff = sinc * window;
-            m_filterBank.coeffs[phase][tap] = static_cast<float>(coeff);
+            bank.coeffs[phase][tap] = static_cast<float>(coeff);
             sumWeight += coeff;
         }
         
@@ -242,14 +259,10 @@ void SampleRateConverter::generateFilterBank(SRCQuality quality) {
         if (sumWeight > 1e-10) {
             const float invSum = static_cast<float>(1.0 / sumWeight);
             for (uint32_t tap = 0; tap < numTaps; ++tap) {
-                m_filterBank.coeffs[phase][tap] *= invSum;
+                bank.coeffs[phase][tap] *= invSum;
             }
         }
     }
-    
-    Log::info("SampleRateConverter: Generated " + std::to_string(numTaps) + 
-              "-tap filter with " + std::to_string(SRCConstants::POLYPHASE_PHASES) + 
-              " phases, cutoff=" + std::to_string(cutoff));
 }
 
 // =============================================================================
@@ -298,8 +311,12 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames,
         return copyFrames;
     }
     
-    const uint32_t numTaps = m_filterBank.numTaps;
-    const uint32_t halfTaps = m_filterBank.halfTaps;
+    // Verify we have a bank
+    if (!m_activeBank) return 0;
+    const auto& bank = *m_activeBank;
+
+    const uint32_t numTaps = bank.numTaps;
+    const uint32_t halfTaps = bank.halfTaps;
     uint32_t outputFrames = 0;
 
     const bool useSIMD = m_simdEnabled.load(std::memory_order_relaxed) && hasSIMD();
@@ -327,26 +344,24 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames,
         m_historyFilled = std::min(m_historyFilled + 1, m_history.size);
         
         // Generate output samples while we have enough history
-        // srcPosition tracks where we are in the input stream
-        // Each output sample is at dstPosition = outputFrames
-        // The corresponding srcPosition = outputFrames / ratio
+        // m_srcPosition tracks the required input position relative to the START of the current block.
+        // It wraps around to negative values relative to the NEXT block at the end.
         
         while (outputFrames < maxOutputFrames) {
-            // What input position does this output sample correspond to?
-            const double targetSrcPos = static_cast<double>(outputFrames) / effectiveRatio;
-            
-            // How far are we from that position?
-            // We've consumed (inFrame + 1) input frames so far
+            // We need input at m_srcPosition.
+            // We have valid input up to currentSrcPos (inclusive, 1-based index).
             const double currentSrcPos = static_cast<double>(inFrame + 1);
             
-            // If we need more input to produce this output, break
-            if (targetSrcPos > currentSrcPos - static_cast<double>(halfTaps)) {
+            // Check if we have enough future data (right-side taps)
+            // Need data up to: m_srcPosition + halfTaps
+            // Available data up to: currentSrcPos
+            if (m_srcPosition + static_cast<double>(halfTaps) > currentSrcPos) {
                 break;
             }
             
             // Calculate fractional position within history
-            const double historyPos = static_cast<double>(m_history.size - 1) - 
-                                     (currentSrcPos - targetSrcPos);
+            const double distFromNewest = static_cast<double>(inFrame) - m_srcPosition;
+            const double historyPos = static_cast<double>(m_history.size - 1) - distFromNewest;
             
             const uint32_t intPos = static_cast<uint32_t>(historyPos);
             const double fracPos = historyPos - static_cast<double>(intPos);
@@ -358,7 +373,7 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames,
             
             // Generate output for each channel
             for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                const float* coeffs = m_filterBank.coeffs[phaseIndex];
+                const float* coeffs = bank.coeffs[phaseIndex];
                 const int32_t samplePos0 = static_cast<int32_t>(intPos) - static_cast<int32_t>(halfTaps);
                 const float* window = m_history.getWindow(ch, samplePos0);
                 float sum = 0.0f;
@@ -383,18 +398,26 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames,
                 output[outputFrames * m_channels + ch] = sum;
             }
             
+            // Advance target position for next output
+            m_srcPosition += 1.0 / effectiveRatio;
             ++outputFrames;
         }
     }
     
+    // Shift position base to the start of the next block
+    m_srcPosition -= static_cast<double>(inputFrames);
+
     return outputFrames;
 }
 
 float SampleRateConverter::interpolateSample(uint32_t channel, uint32_t phaseIndex,
                                              int32_t centerPos) const noexcept {
-    const float* coeffs = m_filterBank.coeffs[phaseIndex];
-    const uint32_t numTaps = m_filterBank.numTaps;
-    const uint32_t halfTaps = m_filterBank.halfTaps;
+    if (!m_activeBank) return 0.0f;
+    const auto& bank = *m_activeBank;
+
+    const float* coeffs = bank.coeffs[phaseIndex];
+    const uint32_t numTaps = bank.numTaps;
+    const uint32_t halfTaps = bank.halfTaps;
 
     const int32_t samplePos0 = centerPos - static_cast<int32_t>(halfTaps);
     const float* window = m_history.getWindow(channel, samplePos0);
