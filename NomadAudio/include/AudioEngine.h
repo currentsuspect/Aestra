@@ -621,6 +621,9 @@ private:
     static const BiquadCoeff kKWeightRLB;       // HPF
 
     TrackRTState m_dummyTrackState; // [FIX] Replaces static local to remove priority inversion risk
+
+    // Guard for resource loading (e.g., metronome samples)
+    std::atomic<bool> m_resourcesLoading{false};
 };
 
 } // namespace Audio

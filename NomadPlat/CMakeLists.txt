@@ -32,17 +32,20 @@ if(WIN32)
         src/Win32/PlatformDPIWin32.h
     )
 elseif(UNIX AND NOT APPLE)
-    list(APPEND NOMAD_PLAT_SOURCES
-        src/Linux/PlatformWindowLinux.cpp
-        src/Linux/PlatformUtilsLinux.cpp
-        src/Linux/PlatformThreadLinux.cpp
-        src/Linux/PlatformFileSystemLinux.cpp
-    )
-    list(APPEND NOMAD_PLAT_HEADERS
-        src/Linux/PlatformWindowLinux.h
-    )
-    # TODO: macOS Cocoa implementation
-    message(WARNING "macOS platform not yet implemented")
+    if(SDL2_FOUND OR TARGET SDL2::SDL2)
+        list(APPEND NOMAD_PLAT_SOURCES
+            src/Linux/PlatformWindowLinux.cpp
+            src/Linux/PlatformUtilsLinux.cpp
+            src/Linux/PlatformThreadLinux.cpp
+            src/Linux/PlatformFileSystemLinux.cpp
+        )
+        list(APPEND NOMAD_PLAT_HEADERS
+            src/Linux/PlatformWindowLinux.h
+        )
+        target_compile_definitions(NomadPlat PRIVATE NOMAD_HAS_SDL2)
+    else()
+        message(WARNING "SDL2 not found. NomadPlat Linux windowing disabled.")
+    endif()
 endif()
 
 # Create library
@@ -72,11 +75,17 @@ if(WIN32)
         shell32
     )
 elseif(UNIX AND NOT APPLE)
-    target_link_libraries(NomadPlat PRIVATE
-        SDL2::SDL2
-        ${CMAKE_DL_LIBS}
-        padding_pthread # cmake usually handles -lpthread via CXX flags but sometimes explicit needed
-    )
+    if(SDL2_FOUND OR TARGET SDL2::SDL2)
+        target_link_libraries(NomadPlat PRIVATE
+            SDL2::SDL2
+            ${CMAKE_DL_LIBS}
+            padding_pthread
+        )
+    else()
+        target_link_libraries(NomadPlat PRIVATE
+            ${CMAKE_DL_LIBS}
+        )
+    endif()
 elseif(APPLE)
     # TODO: macOS frameworks (Cocoa, OpenGL, etc.)
 endif()

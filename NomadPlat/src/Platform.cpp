@@ -9,9 +9,11 @@
     #include "Win32/PlatformUtilsWin32.h"
     #include "Win32/PlatformDPIWin32.h"
 #elif NOMAD_PLATFORM_LINUX
+    #ifdef NOMAD_HAS_SDL2
     #include "Linux/PlatformWindowLinux.h"
     #include "Linux/PlatformUtilsLinux.h"
     #include <SDL2/SDL.h>
+    #endif
 #elif NOMAD_PLATFORM_MACOS
     // TODO: macOS implementation
     #error "macOS platform not yet implemented"
@@ -30,7 +32,11 @@ IPlatformWindow* Platform::createWindow() {
 #if NOMAD_PLATFORM_WINDOWS
     return new PlatformWindowWin32();
 #elif NOMAD_PLATFORM_LINUX
+    #ifdef NOMAD_HAS_SDL2
     return new PlatformWindowLinux();
+    #else
+    return nullptr;
+    #endif
 #elif NOMAD_PLATFORM_MACOS
     return nullptr;  // TODO
 #endif
@@ -55,6 +61,7 @@ bool Platform::initialize() {
     s_utils = new PlatformUtilsWin32();
     NOMAD_LOG_INFO("Windows platform initialized");
 #elif NOMAD_PLATFORM_LINUX
+    #ifdef NOMAD_HAS_SDL2
     // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) != 0) {
          NOMAD_LOG_ERROR("SDL_Init failed: " << SDL_GetError());
@@ -63,6 +70,10 @@ bool Platform::initialize() {
     
     s_utils = new PlatformUtilsLinux();
     NOMAD_LOG_INFO("Linux platform initialized (SDL2)");
+    #else
+    NOMAD_LOG_ERROR("Linux platform not supported without SDL2");
+    return false;
+    #endif
 #elif NOMAD_PLATFORM_MACOS
     // TODO: macOS initialization
     NOMAD_LOG_ERROR("macOS platform not yet implemented");
@@ -76,7 +87,7 @@ void Platform::shutdown() {
     if (s_utils) {
         delete s_utils;
         s_utils = nullptr;
-        #if NOMAD_PLATFORM_LINUX
+        #if NOMAD_PLATFORM_LINUX && defined(NOMAD_HAS_SDL2)
         SDL_Quit();
         #endif
         NOMAD_LOG_INFO("Platform shutdown");
