@@ -226,4 +226,22 @@ The key innovations:
 
 ---
 
+## Appendix A: 2025-05-24 Benchmark Update
+
+**Test Configuration:**
+- Platform: Linux (x86_64, AVX2 enabled)
+- Source: 44.1kHz -> 48kHz (Upsampling)
+
+| Algorithm | Speed (ns/sample) | Throughput (MFrame/sec) | Relative |
+|-----------|-------------------|-------------------------|----------|
+| Linear    | 34.20 ns          | ~29.2 MHz               | 1.0x     |
+| Cubic     | 33.51 ns          | ~29.8 MHz               | 1.02x    |
+| Sinc16    | 39.82 ns          | ~25.1 MHz               | 0.86x    |
+| Sinc64Turbo | 71.91 ns        | ~13.9 MHz               | 0.48x    |
+
+**Analysis:**
+On modern AVX2 hardware, `Sinc64Turbo` achieves nearly 14 million stereo samples per second, providing massive headroom (approx 290x real-time at 48kHz). The cost of "Mastering Grade" resampling is now negligible for typical track counts.
+
+---
+
 *© 2025 Nomad Studios. This research is part of the NOMAD Digital Audio Workstation project.*

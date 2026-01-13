@@ -27,7 +27,7 @@ option(NOMAD_ENABLE_TESTS "Build test executables" ON)
 
 if(NOMAD_HEADLESS_ONLY)
   set(NOMAD_ENABLE_UI OFF CACHE BOOL "Build the NOMAD_DAW UI application" FORCE)
-  set(NOMAD_ENABLE_TESTS OFF CACHE BOOL "Build test executables" FORCE)
+  # Tests should be allowed in headless mode (e.g. for CI)
 endif()
 
 # =============================================================================
@@ -238,6 +238,25 @@ endif()
     )
     if(WIN32)
         target_link_libraries(NomadPluginScanTest PRIVATE ole32)
+    endif()
+  endif()
+
+  # Resampler Benchmark
+  if(NOMAD_ENABLE_TESTS AND EXISTS "${CMAKE_SOURCE_DIR}/Tests/ResamplerBenchmark.cpp")
+    add_executable(ResamplerBenchmark Tests/ResamplerBenchmark.cpp)
+    target_link_libraries(ResamplerBenchmark PRIVATE NomadAudioCore NomadCore)
+    target_include_directories(ResamplerBenchmark PRIVATE
+      ${CMAKE_SOURCE_DIR}/NomadAudio/include
+      ${CMAKE_SOURCE_DIR}/NomadCore/include
+    )
+    if(WIN32)
+        target_link_libraries(ResamplerBenchmark PRIVATE ole32)
+    endif()
+    # Enable AVX2 if available
+    if(MSVC)
+      target_compile_options(ResamplerBenchmark PRIVATE /arch:AVX2)
+    else()
+      target_compile_options(ResamplerBenchmark PRIVATE -mavx2 -mfma)
     endif()
   endif()
 

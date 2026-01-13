@@ -841,7 +841,9 @@ void AudioEngine::processBlock(float* outputBuffer,
     }
 
     // === Metronome Click Mixing ===
-    if (m_metronomeEnabled.load(std::memory_order_relaxed) && 
+    // [FIX] Check m_resourcesLoading to avoid race with main thread IO/resize
+    if (!m_resourcesLoading.load(std::memory_order_acquire) &&
+        m_metronomeEnabled.load(std::memory_order_relaxed) &&
         m_transportPlaying.load(std::memory_order_relaxed)) {
         
         // Constants
@@ -1175,6 +1177,9 @@ AudioEngine::AudioEngine() {
     m_loudnessState.integratedLufs.store(-144.0f); // Force silence init
     m_loudnessState.momentaryLufs.store(-144.0f);
 
+    // [FIX] Pre-compute heavy interpolator tables to prevent RT glitches on first use
+    Interpolators::precomputeTables();
+
     generateMetronomeSounds();
     startLoudnessWorker();
 }
@@ -1360,6 +1365,10 @@ void AudioEngine::loadMetronomeClicks(const std::string& downbeatPath, const std
         Nomad::Log::warning("[AudioEngine] loadMetronomeClicks ignored while playing.");
         return;
     }
+
+    // Indicate resources are being modified (protects against race if transport starts mid-load)
+    m_resourcesLoading.store(true);
+
     // Helper to load a single WAV file into a sample vector
     auto loadWav = [](const std::string& wavPath, std::vector<float>& samples) -> bool {
         FILE* file = fopen(wavPath.c_str(), "rb");
@@ -1470,6 +1479,8 @@ void AudioEngine::loadMetronomeClicks(const std::string& downbeatPath, const std
     
     // Start pointing to downbeat
     m_activeClickSamples = &m_clickSamplesDown;
+
+    m_resourcesLoading.store(false);
 }
 
 void AudioEngine::setLoopRegion(double startBeat, double endBeat) {

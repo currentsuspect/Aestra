@@ -552,15 +552,20 @@ struct Sinc32Turbo {
         }
     };
 
+    static inline const Table& getTable() {
+        static const Table table;
+        return table;
+    }
+
     static inline void interpolate(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
-        static const auto table = std::make_unique<Table>();
+        const Table& table = getTable();
         
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
         int phaseIdx = static_cast<int>(frac * (PHASES - 1) + 0.5);
         bool reversed = (phaseIdx >= HALF_PHASES);
         int lutIdx = reversed ? (PHASES - 1 - phaseIdx) : phaseIdx;
-        const float* c = table->coeffs[lutIdx];
+        const float* c = table.coeffs[lutIdx];
         
         const int64_t startIdx = idx - 15;
         float sumL = 0.0f, sumR = 0.0f;
@@ -696,6 +701,17 @@ inline void interpolateSample(
             CubicInterpolator::interpolate(data, totalFrames, phase, outL, outR);
             break;
     }
+}
+
+// Force pre-computation of static tables (call from Main Thread at startup)
+inline void precomputeTables() {
+    Sinc64Turbo::getTable();
+    Sinc32Turbo::getTable();
+    // Ensure all variants are touched if they have statics (Sinc8, Sinc16, Sinc32, Sinc64 have static weights inside interpolate)
+    // We can't easily force-init function-local statics without running the function.
+    // However, Sinc8/16/32/64 use std::array initialized with lambda.
+    // Ideally we'd move those out too, but they are small (8-64 doubles).
+    // The "Turbo" ones are the heavy ones (Megabytes).
 }
 
 } // namespace Interpolators

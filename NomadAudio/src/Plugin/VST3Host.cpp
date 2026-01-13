@@ -22,12 +22,36 @@
 #include "public.sdk/source/vst/hosting/plugprovider.h"
 
 #include <cstring>
+#include <codecvt>
+#include <locale>
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
 
 namespace Nomad {
 namespace Audio {
+
+// Helper for UTF-16 (VST3) to UTF-8 (Nomad) conversion
+static std::string utf16_to_utf8(const Steinberg::Vst::TChar* str) {
+    if (!str) return "";
+    try {
+        // VST3 strings are always UTF-16, regardless of platform wchar_t size
+        std::u16string u16str(reinterpret_cast<const char16_t*>(str));
+        // Suppress C++17 deprecation warning for codecvt
+        #if defined(__GNUC__) || defined(__clang__)
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        #endif
+        std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+        std::string result = convert.to_bytes(u16str);
+        #if defined(__GNUC__) || defined(__clang__)
+        #pragma GCC diagnostic pop
+        #endif
+        return result;
+    } catch (...) {
+        return "";
+    }
+}
 
 // Helper function to isolate SEH from C++ object unwinding (C2712 fix)
 // This function must NOT contain any objects with destructors.
@@ -421,11 +445,7 @@ std::string VST3PluginInstance::getParameterDisplay(uint32_t id) const {
     
     String128 display;
     if (ctrl->getParamStringByValue(id, ctrl->getParamNormalized(id), display) == kResultOk) {
-        // Convert from UTF-16 to UTF-8
-        char utf8[256];
-        WideCharToMultiByte(CP_UTF8, 0, reinterpret_cast<wchar_t*>(display), -1, 
-                           utf8, sizeof(utf8), nullptr, nullptr);
-        return utf8;
+        return utf16_to_utf8(display);
     }
     return "";
 }
@@ -522,19 +542,9 @@ void VST3PluginInstance::buildParameterCache() const {
             PluginParameter param;
             param.id = info.id;
             
-            // Convert UTF-16 to UTF-8
-            char utf8[256];
-            WideCharToMultiByte(CP_UTF8, 0, reinterpret_cast<wchar_t*>(info.title), -1,
-                               utf8, sizeof(utf8), nullptr, nullptr);
-            param.name = utf8;
-            
-            WideCharToMultiByte(CP_UTF8, 0, reinterpret_cast<wchar_t*>(info.shortTitle), -1,
-                               utf8, sizeof(utf8), nullptr, nullptr);
-            param.shortName = utf8;
-            
-            WideCharToMultiByte(CP_UTF8, 0, reinterpret_cast<wchar_t*>(info.units), -1,
-                               utf8, sizeof(utf8), nullptr, nullptr);
-            param.unit = utf8;
+            param.name = utf16_to_utf8(info.title);
+            param.shortName = utf16_to_utf8(info.shortTitle);
+            param.unit = utf16_to_utf8(info.units);
             
             param.defaultValue = static_cast<float>(info.defaultNormalizedValue);
             param.minValue = 0.0f;

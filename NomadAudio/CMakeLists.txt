@@ -41,8 +41,13 @@ elseif(APPLE)
 elseif(UNIX)
     # Linux: ALSA (primary), JACK (optional), PulseAudio (optional)
     add_definitions(-D__LINUX_ALSA__)
-    find_package(ALSA REQUIRED)
-    set(RTAUDIO_LIBS ${ALSA_LIBRARIES} pthread)
+    find_package(ALSA QUIET)
+
+    if(ALSA_FOUND)
+        set(RTAUDIO_LIBS ${ALSA_LIBRARIES} pthread)
+    else()
+        message(WARNING "ALSA not found. Audio backend will not function.")
+    endif()
 
     # Optional JACK support
     # add_definitions(-D__UNIX_JACK__)
@@ -399,40 +404,46 @@ if(WIN32)
 
 elseif(UNIX)
     # Non-Windows (Linux)
-    set(NOMAD_AUDIO_LINUX_SOURCES
-        src/Linux/LinuxDriverRegistry.cpp
-        src/Linux/RtAudioDriver.cpp
-    )
-    
-    set(NOMAD_AUDIO_LINUX_HEADERS
-        src/Linux/RtAudioDriver.h
-        include/AudioPlatformRegistry.h
-        ${RTAUDIO_HEADERS}
-    )
+    if(ALSA_FOUND)
+        set(NOMAD_AUDIO_LINUX_SOURCES
+            src/Linux/LinuxDriverRegistry.cpp
+            src/Linux/RtAudioDriver.cpp
+        )
 
-    add_library(NomadAudioLinux STATIC
-        ${NOMAD_AUDIO_LINUX_SOURCES}
-        ${NOMAD_AUDIO_LINUX_HEADERS}
-        ${RTAUDIO_SOURCES}
-    )
-    
-    target_include_directories(NomadAudioLinux
-        PUBLIC
-            # Nothing public
-        PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}/include
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/Linux
-            ${RTAUDIO_DIR}
-    )
-    
-    target_link_libraries(NomadAudioLinux
-        PUBLIC
-            NomadAudioCore
-        PRIVATE
-            ${RTAUDIO_LIBS}
-    )
-    
-    add_library(NomadAudio ALIAS NomadAudioLinux)
+        set(NOMAD_AUDIO_LINUX_HEADERS
+            src/Linux/RtAudioDriver.h
+            include/AudioPlatformRegistry.h
+            ${RTAUDIO_HEADERS}
+        )
+
+        add_library(NomadAudioLinux STATIC
+            ${NOMAD_AUDIO_LINUX_SOURCES}
+            ${NOMAD_AUDIO_LINUX_HEADERS}
+            ${RTAUDIO_SOURCES}
+        )
+
+        target_include_directories(NomadAudioLinux
+            PUBLIC
+                # Nothing public
+            PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/include
+                ${CMAKE_CURRENT_SOURCE_DIR}/src/Linux
+                ${RTAUDIO_DIR}
+        )
+
+        target_link_libraries(NomadAudioLinux
+            PUBLIC
+                NomadAudioCore
+            PRIVATE
+                ${RTAUDIO_LIBS}
+        )
+
+        add_library(NomadAudio ALIAS NomadAudioLinux)
+    else()
+        # Create a dummy target so tests don't fail configuration
+        add_library(NomadAudio INTERFACE)
+        target_link_libraries(NomadAudio INTERFACE NomadAudioCore)
+    endif()
 endif()
 
 
