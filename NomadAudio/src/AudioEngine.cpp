@@ -841,107 +841,14 @@ void AudioEngine::processBlock(float* outputBuffer,
     }
 
     // === Metronome Click Mixing ===
-    if (m_metronomeEnabled.load(std::memory_order_relaxed) && 
-        m_transportPlaying.load(std::memory_order_relaxed)) {
-        
-        // Constants
-        const float bpm = m_bpm.load(std::memory_order_relaxed);
-        const float clickVol = m_metronomeVolume.load(std::memory_order_relaxed);
-        const int beatsPerBar = m_beatsPerBar.load(std::memory_order_relaxed);
-        
-        const uint64_t samplesPerBeat = static_cast<uint64_t>(
-            (static_cast<double>(m_sampleRate) * 60.0) / static_cast<double>(bpm));
-            
-        // Reset tracking on jumps (Backwards Seek/Loop Safety)
-        // Only reset if we jumped BEHIND the start of the current beat interval.
-        uint64_t prevBeatSample = (m_nextBeatSample >= samplesPerBeat) ? m_nextBeatSample - samplesPerBeat : 0;
-        
-        if (m_globalSamplePos < prevBeatSample) {
-            m_nextBeatSample = (m_globalSamplePos / samplesPerBeat) * samplesPerBeat;
-            m_currentBeat = static_cast<int>((m_globalSamplePos / samplesPerBeat) % beatsPerBar);
-            m_clickPlaying = false;
-        }
-        
-        // Init first beat
-        if (m_nextBeatSample == 0 && m_globalSamplePos == 0) {
-            m_nextBeatSample = 0;
-            m_currentBeat = 0;
-        }
-
-        // 1. Calculate Block Boundaries
-        const uint64_t blockStart = m_globalSamplePos;
-        const uint64_t blockEnd = blockStart + numFrames;
-        
-        // 2. Identify if a NEW beat triggers in this block
-        bool newBeatTriggers = false;
-        uint32_t triggerOffset = numFrames; // Default to end (no trigger)
-
-        while (m_nextBeatSample < blockEnd && samplesPerBeat > 0) {
-            if (m_nextBeatSample >= blockStart) {
-                // Found a trigger in this block!
-                newBeatTriggers = true;
-                triggerOffset = static_cast<uint32_t>(m_nextBeatSample - blockStart);
-                break; 
-            }
-             m_nextBeatSample += samplesPerBeat;
-        }
-
-        // 3. Mix TAIL (From 0 to triggerOffset)
-        // If we were already playing, continue until the new beat kicks in (or block ends)
-        if (m_clickPlaying && m_activeClickSamples && !m_activeClickSamples->empty()) {
-             size_t clickLen = m_activeClickSamples->size();
-             uint32_t tailFrames = std::min(numFrames, triggerOffset);
-             
-             /*
-             if (m_clickPlayhead < clickLen) {
-                 // Log::info("Meta Tail: " + std::to_string(tailFrames) + " Playhead: " + std::to_string(m_clickPlayhead));
-             }
-             */
-
-             for (uint32_t i = 0; i < tailFrames && m_clickPlayhead < clickLen; ++i) {
-                 float sample = (*m_activeClickSamples)[m_clickPlayhead] * clickVol * m_currentClickGain;
-                 outputBuffer[i * 2] += sample;
-                 outputBuffer[i * 2 + 1] += sample;
-                 ++m_clickPlayhead;
-             }
-             
-             if (m_clickPlayhead >= clickLen) {
-                 m_clickPlaying = false;
-             }
-        }
-        
-        // 4. Start NEW Click (From triggerOffset to numFrames)
-        if (newBeatTriggers) {
-             m_clickPlaying = true;
-             m_clickPlayhead = 0;
-             m_activeClickSamples = (m_currentBeat == 0) ? &m_synthClickLow : &m_synthClickHigh;
-             m_currentClickGain = 1.0f;
-             
-             m_activeClickSamples = (m_currentBeat == 0) ? &m_synthClickLow : &m_synthClickHigh;
-             m_currentClickGain = 1.0f;
-
-
-             // Advance Beat Counter
-             m_currentBeat = (m_currentBeat + 1) % beatsPerBar;
-             m_nextBeatSample += samplesPerBeat;
-             
-             // Mix New Click
-             if (m_activeClickSamples && !m_activeClickSamples->empty()) {
-                 size_t clickLen = m_activeClickSamples->size();
-                 uint32_t remainingFrames = numFrames - triggerOffset;
-                 uint32_t framesToMix = std::min(remainingFrames, (uint32_t)clickLen);
-
-                 for (uint32_t i = 0; i < framesToMix; ++i) {
-                     float sample = (*m_activeClickSamples)[m_clickPlayhead] * clickVol * m_currentClickGain;
-                     uint32_t dstIdx = triggerOffset + i;
-                     outputBuffer[dstIdx * 2] += sample;
-                     outputBuffer[dstIdx * 2 + 1] += sample;
-                     ++m_clickPlayhead;
-                 }
-                 // Log::info("Meta New Mix: " + std::to_string(framesToMix));
-             }
-        }
-    }
+    m_metronomeEngine.process(
+        outputBuffer,
+        numFrames,
+        m_outputChannels.load(std::memory_order_relaxed),
+        m_globalSamplePos.load(std::memory_order_relaxed),
+        static_cast<uint32_t>(m_sampleRate.load(std::memory_order_relaxed)),
+        m_transportPlaying.load(std::memory_order_relaxed)
+    );
 
     // Capture recent output for compact waveform displays (post-fade).
     uint32_t historyCap = m_waveformHistoryFrames.load(std::memory_order_relaxed);
@@ -970,19 +877,8 @@ void AudioEngine::processBlock(float* outputBuffer,
         m_globalSamplePos.store(nextGlobalPos, std::memory_order_relaxed);
         
         // Handle Loop Metronome Reset
-        // If we split-looped, we need to reset the internal metronome counters to match the jump
         if (loopSplitFrame < numFrames) {
-             int beatsPerBar = m_beatsPerBar.load(std::memory_order_relaxed);
-             float bpm = m_bpm.load(std::memory_order_relaxed);
-             double samplesPerBeat = (static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)) * 60.0) / static_cast<double>(bpm);
-             uint64_t samplesPerBeatInt = static_cast<uint64_t>(samplesPerBeat);
-             
-             if (samplesPerBeatInt > 0) {
-                 m_nextBeatSample = (nextGlobalPos / samplesPerBeatInt) * samplesPerBeatInt;
-                 m_currentBeat = static_cast<int>((nextGlobalPos / samplesPerBeatInt) % beatsPerBar);
-                 m_clickPlaying = false;
-                 m_clickPlayhead = 0;
-             }
+            m_metronomeEngine.reset(nextGlobalPos, static_cast<uint32_t>(m_sampleRate.load(std::memory_order_relaxed)));
         }
     }
 
@@ -1175,7 +1071,7 @@ AudioEngine::AudioEngine() {
     m_loudnessState.integratedLufs.store(-144.0f); // Force silence init
     m_loudnessState.momentaryLufs.store(-144.0f);
 
-    generateMetronomeSounds();
+    // Metronome sounds generated in MetronomeEngine constructor
     startLoudnessWorker();
 }
 
@@ -1352,124 +1248,6 @@ TrackRTState& AudioEngine::ensureTrackState(uint32_t trackIndex) {
         return m_dummyTrackState;
     }
     return m_trackState[trackIndex];
-}
-
-void AudioEngine::loadMetronomeClicks(const std::string& downbeatPath, const std::string& upbeatPath) {
-    // [FIX] Guard: Never perform file I/O if audio is running to prevent dropouts
-    if (isTransportPlaying()) {
-        Nomad::Log::warning("[AudioEngine] loadMetronomeClicks ignored while playing.");
-        return;
-    }
-    // Helper to load a single WAV file into a sample vector
-    auto loadWav = [](const std::string& wavPath, std::vector<float>& samples) -> bool {
-        FILE* file = fopen(wavPath.c_str(), "rb");
-        if (!file) {
-            return false;
-        }
-        
-        // Read RIFF header
-        char riff[4];
-        fread(riff, 1, 4, file);
-        if (memcmp(riff, "RIFF", 4) != 0) {
-            fclose(file);
-            return false;
-        }
-        
-        uint32_t chunkSize;
-        fread(&chunkSize, 4, 1, file);
-        
-        char wave[4];
-        fread(wave, 1, 4, file);
-        if (memcmp(wave, "WAVE", 4) != 0) {
-            fclose(file);
-            return false;
-        }
-        
-        // Find fmt and data chunks
-        uint16_t audioFormat = 0;
-        uint16_t numChannels = 0;
-        uint32_t sampleRate = 0;
-        uint16_t bitsPerSample = 0;
-        
-        while (true) {
-            char chunkId[4];
-            uint32_t chunkLen;
-            if (fread(chunkId, 1, 4, file) != 4) break;
-            if (fread(&chunkLen, 4, 1, file) != 1) break;
-            
-            if (memcmp(chunkId, "fmt ", 4) == 0) {
-                fread(&audioFormat, 2, 1, file);
-                fread(&numChannels, 2, 1, file);
-                fread(&sampleRate, 4, 1, file);
-                fseek(file, 6, SEEK_CUR);
-                fread(&bitsPerSample, 2, 1, file);
-                if (chunkLen > 16) {
-                    fseek(file, chunkLen - 16, SEEK_CUR);
-                }
-            } else if (memcmp(chunkId, "data", 4) == 0) {
-                if (audioFormat != 1 || (bitsPerSample != 16 && bitsPerSample != 24)) {
-                    fclose(file);
-                    return false;
-                }
-                
-                const uint32_t bytesPerSample = bitsPerSample / 8;
-                const uint32_t numSamples = chunkLen / (numChannels * bytesPerSample);
-                
-                samples.resize(numSamples);
-                
-                if (bitsPerSample == 16) {
-                    std::vector<int16_t> rawData(numSamples * numChannels);
-                    fread(rawData.data(), 2, numSamples * numChannels, file);
-                    
-                    for (uint32_t i = 0; i < numSamples; ++i) {
-                        float sample = 0.0f;
-                        for (uint16_t ch = 0; ch < numChannels; ++ch) {
-                            sample += static_cast<float>(rawData[i * numChannels + ch]) / 32768.0f;
-                        }
-                        samples[i] = sample / static_cast<float>(numChannels);
-                    }
-                } else if (bitsPerSample == 24) {
-                    std::vector<uint8_t> rawData(numSamples * numChannels * 3);
-                    fread(rawData.data(), 1, numSamples * numChannels * 3, file);
-                    
-                    for (uint32_t i = 0; i < numSamples; ++i) {
-                        float sample = 0.0f;
-                        for (uint16_t ch = 0; ch < numChannels; ++ch) {
-                            size_t byteIdx = (i * numChannels + ch) * 3;
-                            int32_t val = rawData[byteIdx] | (rawData[byteIdx + 1] << 8) | (rawData[byteIdx + 2] << 16);
-                            if (val & 0x800000) val |= 0xFF000000;
-                            sample += static_cast<float>(val) / 8388608.0f;
-                        }
-                        samples[i] = sample / static_cast<float>(numChannels);
-                    }
-                }
-                
-                fclose(file);
-                return true;
-            } else {
-                fseek(file, chunkLen, SEEK_CUR);
-            }
-        }
-        
-        fclose(file);
-        return false;
-    };
-    
-    // Load both click sounds
-    loadWav(downbeatPath, m_clickSamplesDown);
-    loadWav(upbeatPath, m_clickSamplesUp);
-    
-    // Default to downbeat sample if upbeat failed
-    if (m_clickSamplesUp.empty() && !m_clickSamplesDown.empty()) {
-        m_clickSamplesUp = m_clickSamplesDown;
-    }
-    // Default to upbeat sample if downbeat failed
-    if (m_clickSamplesDown.empty() && !m_clickSamplesUp.empty()) {
-        m_clickSamplesDown = m_clickSamplesUp;
-    }
-    
-    // Start pointing to downbeat
-    m_activeClickSamples = &m_clickSamplesDown;
 }
 
 void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
@@ -1810,30 +1588,6 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
     // [HYBRID ENGINE] Moved to AudioRenderer
 
 
-void AudioEngine::generateMetronomeSounds() {
-    // Generate 100ms beeps at 48kHz
-    // High: 1600Hz, Low: 800Hz
-    // IMPORTANT: Always called from constructor - never from RT thread.
-    const size_t sampleRate = 48000;
-    const size_t durationSamples = static_cast<size_t>(0.10 * sampleRate); // 100ms
-    
-    // Pre-allocate for max quality (higher sample rates get truncated clicks, which is fine)
-    m_synthClickLow.resize(durationSamples);
-    m_synthClickHigh.resize(durationSamples);
-    
-    const double freqLow = 800.0;
-    const double freqHigh = 1600.0;
-    const double kPi = 3.14159265358979323846;
-    
-    for (size_t i = 0; i < durationSamples; ++i) {
-        double t = static_cast<double>(i) / sampleRate;
-        // Short, sharp ping with exponential decay
-        double env = std::pow(1.0 - static_cast<double>(i)/durationSamples, 4.0);
-
-        m_synthClickLow[i] = static_cast<float>(std::sin(2.0 * kPi * freqLow * t) * env);
-        m_synthClickHigh[i] = static_cast<float>(std::sin(2.0 * kPi * freqHigh * t) * env);
-    }
-}
 
 void AudioEngine::panic() {
     // 1. Force Silence (stops renderGraph calls and mutes output immediately)
