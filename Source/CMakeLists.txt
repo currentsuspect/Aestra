@@ -11,6 +11,10 @@ set(NOMAD_DAW_SOURCES
 	Main.cpp
 	NomadApp.h
 	NomadApp.cpp
+	NomadAudioController.h
+	NomadAudioController.cpp
+	NomadWindowManager.h
+	NomadWindowManager.cpp
 	NomadRootComponent.h
 	NomadContent.h
 	NomadContent.cpp
