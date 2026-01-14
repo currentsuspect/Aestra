@@ -11,9 +11,6 @@
 #include "../NomadAudio/include/AudioDeviceManager.h"
 
 // Forward declarations
-namespace Nomad {
-    class NomadApp; // For callback context
-}
 class NomadContent;
 
 class NomadAudioController {

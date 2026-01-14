@@ -16,6 +16,7 @@
 #include "RecoveryDialog.h"
 #include "ConfirmationDialog.h"
 #include "../NomadAudio/include/PluginManager.h"
+#include "../NomadAudio/include/AudioGraphBuilder.h"
 
 #include <iostream>
 #include <chrono>
