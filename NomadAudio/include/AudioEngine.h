@@ -27,6 +27,7 @@
 
 #include "AudioGraphState.h"
 #include "AudioRenderer.h"
+#include "MetronomeEngine.h" // [NEW]
 
 namespace Nomad {
 namespace Audio {
@@ -150,15 +151,21 @@ public:
     bool isSafetyProcessingEnabled() const { return m_safetyProcessingEnabled.load(std::memory_order_relaxed); }
     
     // Metronome control
-    void setMetronomeEnabled(bool enabled) { m_metronomeEnabled.store(enabled, std::memory_order_relaxed); }
-    bool isMetronomeEnabled() const { return m_metronomeEnabled.load(std::memory_order_relaxed); }
-    void setMetronomeVolume(float vol) { m_metronomeVolume.store(vol, std::memory_order_relaxed); }
-    float getMetronomeVolume() const { return m_metronomeVolume.load(std::memory_order_relaxed); }
-    void setBPM(float bpm) { m_bpm.store(bpm, std::memory_order_relaxed); }
-    float getBPM() const { return m_bpm.load(std::memory_order_relaxed); }
-    void setBeatsPerBar(int beats) { m_beatsPerBar.store(beats, std::memory_order_relaxed); m_currentBeat = 0; }
-    int getBeatsPerBar() const { return m_beatsPerBar.load(std::memory_order_relaxed); }
-    void loadMetronomeClicks(const std::string& downbeatPath, const std::string& upbeatPath);
+    void setMetronomeEnabled(bool enabled) { m_metronomeEngine.setEnabled(enabled); }
+    bool isMetronomeEnabled() const { return m_metronomeEngine.isEnabled(); }
+    void setMetronomeVolume(float vol) { m_metronomeEngine.setVolume(vol); }
+    float getMetronomeVolume() const { return m_metronomeEngine.getVolume(); }
+    void setBPM(float bpm) { m_metronomeEngine.setBPM(bpm); }
+    float getBPM() const { return m_metronomeEngine.getBPM(); }
+    void setBeatsPerBar(int beats) { m_metronomeEngine.setBeatsPerBar(beats); }
+    int getBeatsPerBar() const { return m_metronomeEngine.getBeatsPerBar(); }
+    void loadMetronomeClicks(const std::string& downbeatPath, const std::string& upbeatPath) {
+        if (isTransportPlaying()) {
+             // Avoid I/O during playback to prevent dropouts
+             return;
+        }
+        m_metronomeEngine.loadClickSounds(downbeatPath, upbeatPath);
+    }
 
     // Loop control
     void setLoopEnabled(bool enabled) { m_loopEnabled.store(enabled, std::memory_order_relaxed); }
@@ -454,25 +461,8 @@ private:
     std::array<double, MeterSnapshotBuffer::MAX_CHANNELS> m_meterLfStateL{};
     std::array<double, MeterSnapshotBuffer::MAX_CHANNELS> m_meterLfStateR{};
     
-    // Metronome state
-    std::atomic<bool> m_metronomeEnabled{false};
-    std::atomic<float> m_metronomeVolume{0.7f};
-    
-    // Synthesized Metronome
-    std::vector<float> m_synthClickLow;  // Downbeat (800Hz)
-    std::vector<float> m_synthClickHigh; // Upbeat (1600Hz)
-    void generateMetronomeSounds();
-    std::atomic<float> m_bpm{120.0f};
-    std::atomic<int> m_beatsPerBar{4};              // Time signature numerator (4 for 4/4)
-    std::vector<float> m_clickSamplesDown;          // Mono click for downbeat (low pitch)
-    std::vector<float> m_clickSamplesUp;            // Mono click for upbeat (high pitch)
-    uint32_t m_clickSampleRate{48000};              // Sample rate of loaded click
-    size_t m_clickPlayhead{0};                      // Current position in click
-    bool m_clickPlaying{false};                     // Currently playing a click
-    uint64_t m_nextBeatSample{0};                   // Sample position of next beat
-    int m_currentBeat{0};                           // Current beat in bar (0-based, 0=downbeat)
-    float m_currentClickGain{1.0f};                 // Gain for current click
-    const std::vector<float>* m_activeClickSamples{nullptr};  // Points to down or up samples
+    // Metronome Engine (Refactored)
+    MetronomeEngine m_metronomeEngine;
 
     // Loop state
     std::atomic<bool> m_loopEnabled{false};
