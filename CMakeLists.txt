@@ -103,10 +103,10 @@ add_subdirectory(NomadAudio)
 # NomadHeadless - Offline engine smoke test (no UI/OpenGL)
 # =============================================================================
 
-if(EXISTS "${CMAKE_SOURCE_DIR}/Source/HeadlessMain.cpp")
+if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessMain.cpp")
   add_executable(NomadHeadless
-    Source/HeadlessMain.cpp
-    Source/ProjectSerializer.cpp
+    Source/App/HeadlessMain.cpp
+    Source/Core/ProjectSerializer.cpp
   )
 
   if(MSVC)
@@ -200,7 +200,7 @@ endif()
   if(NOMAD_ENABLE_TESTS AND EXISTS "${CMAKE_SOURCE_DIR}/Tests/ProjectRoundTripTest.cpp")
     add_executable(ProjectRoundTripTest
       Tests/ProjectRoundTripTest.cpp
-      Source/ProjectSerializer.cpp
+      Source/Core/ProjectSerializer.cpp
     )
     target_link_libraries(ProjectRoundTripTest PRIVATE
       NomadAudio
