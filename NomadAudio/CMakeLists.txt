@@ -149,6 +149,7 @@ set(NOMAD_AUDIO_CORE_SOURCES
     src/ChannelSlotMap.cpp
     src/MixerBus.cpp
     src/Oscillator.cpp
+    src/MetronomeEngine.cpp
     src/PreviewEngine.cpp
     src/SamplePool.cpp
     src/SampleRateConverter.cpp
@@ -229,6 +230,7 @@ set(NOMAD_AUDIO_CORE_HEADERS
     include/MeterSnapshot.h
     include/MixerBus.h
     include/Oscillator.h
+    include/MetronomeEngine.h
     include/PathUtils.h
     include/PreviewEngine.h
     include/SamplePool.h
