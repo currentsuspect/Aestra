@@ -105,6 +105,12 @@ NomadContent::NomadContent() {
         auto& audioEngine = Nomad::Audio::AudioEngine::getInstance();
         audioEngine.setUnitManager(&m_trackManager->getUnitManager());
         audioEngine.setPatternPlaybackEngine(&m_trackManager->getPatternPlaybackEngine());
+
+        // [FIX] Wire command sink so TrackManager's transport calls (play/pause/stop) 
+        // actually reach the AudioEngine's real-time queue.
+        m_trackManager->setCommandSink([&audioEngine](const AudioQueueCommand& cmd) {
+            audioEngine.commandQueue().push(cmd);
+        });
     }
 
     // Create track manager UI (add to workspace)
@@ -590,8 +596,8 @@ void NomadContent::onUpdate(double dt) {
         m_waveformVisualizer->setTransportPosition(pos);
     }
     
-    // Update Arsenal panel progress (if visible and playing)
-    if (tm && tm->isPlaying() && m_sequencerPanel && m_sequencerPanel->isVisible()) {
+    // Update Arsenal panel progress (if visible)
+    if (tm && m_sequencerPanel && m_sequencerPanel->isVisible()) {
         m_sequencerPanel->repaint();
     }
     

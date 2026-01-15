@@ -19,7 +19,7 @@ UnitID UnitManager::createUnit(const std::string& name, UnitGroup group) {
     unit.name = name;
     unit.group = group;
     unit.color = 0xFF00A8E8; // Default teal
-    unit.targetMixerRoute = 0; // Default to mixer channel 0
+    unit.targetMixerRoute = -1; // Default to Master
     unit.runtimeEnabled.store(true, std::memory_order_relaxed);
     
     m_units[unit.id] = unit;

@@ -58,6 +58,34 @@ void ArsenalPanel::refreshUnits() {
     // Clear previous children
     m_listContainer->removeAllChildren();
     m_unitRows.clear();
+
+    // Add Play Button (Top Left of Header)
+    {
+        m_playBtn = std::make_shared<NUIButton>("PLAY");
+        m_playBtn->setId("ArsenalPlayBtn");
+        m_playBtn->setBackgroundColor(theme.getColor("accentPrimary"));
+        m_playBtn->setTextColor(theme.getColor("textOnAccent"));
+        
+        // Initial State
+        if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
+            m_playBtn->setText("STOP");
+            m_playBtn->setBackgroundColor(theme.getColor("error"));
+        }
+        
+        std::weak_ptr<NUIButton> weakBtn = m_playBtn;
+        m_playBtn->setOnClick([this, weakBtn]() {
+             if (auto btn = weakBtn.lock()) {
+                 if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
+                     m_trackManager->stopArsenalPlayback(true);
+                 } else {
+                     m_trackManager->playPatternInArsenal(m_activePatternID);
+                 }
+             }
+        });
+        m_listContainer->addChild(m_playBtn);
+    }
+    
+
     
     // Build unit rows
     auto& unitMgr = m_trackManager->getUnitManager();
@@ -192,6 +220,8 @@ void ArsenalPanel::layoutUnits() {
     float width = bounds.width;
     float startY = bounds.y;
     
+
+    
     // Reserve space for progress header
     float yPos = startY + PROGRESS_HEADER_HEIGHT + 6.0f - m_scrollY;
     float spacing = 4.0f;        // Increased from 2px
@@ -223,6 +253,27 @@ void ArsenalPanel::onResize(int width, int height) {
     layoutUnits(); // Layout units within the content area
 }
 
+void ArsenalPanel::onUpdate(double dt) {
+    WindowPanel::onUpdate(dt);
+    
+    // Sync Play/Stop button text and color with actual engine state
+    if (m_playBtn && m_trackManager) {
+        bool playingNow = m_trackManager->isPlaying() && m_trackManager->isPatternMode();
+        bool btnStatePlaying = (m_playBtn->getText() == "STOP");
+        
+        if (playingNow != btnStatePlaying) {
+            auto& theme = NUIThemeManager::getInstance();
+            if (playingNow) {
+                m_playBtn->setText("STOP");
+                m_playBtn->setBackgroundColor(theme.getColor("error"));
+            } else {
+                m_playBtn->setText("PLAY");
+                m_playBtn->setBackgroundColor(theme.getColor("accentPrimary"));
+            }
+        }
+    }
+}
+
 // === Pattern Progress Visualization ===
 
 int ArsenalPanel::calculateCurrentStep() {
@@ -230,7 +281,8 @@ int ArsenalPanel::calculateCurrentStep() {
     
     // Check if playing using TrackManager's method
     // Check if playing using TrackManager's method
-    if (!m_trackManager->isPlaying()) return -1;
+    // Note: We allow visualization while paused if in pattern mode to show current position
+    // if (!m_trackManager->isPlaying()) return -1;
     
     // [FIX] Freeze Arsenal Playhead in Timeline Mode (only animate in Pattern Mode)
     if (!m_trackManager->isPatternMode()) return -1;
@@ -467,6 +519,23 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
     // Ctrl+V: Paste
     if (isCtrl && (event.keyCode == NUIKeyCode::V)) {
         pastePattern();
+        return true;
+    }
+
+
+    
+    // Space: Play/Stop Arsenal
+    if (event.keyCode == NUIKeyCode::Space) {
+        if (event.repeat) return true; // Ignore auto-repeat for transport toggle
+        
+        if (m_trackManager) {
+            Log::info("[ArsenalPanel] Space pressed. playing=" + std::string(m_trackManager->isPlaying() ? "true" : "false") + ", mode=" + std::string(m_trackManager->isPatternMode() ? "pattern" : "timeline"));
+            if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
+                m_trackManager->stopArsenalPlayback(true);
+            } else {
+                m_trackManager->playPatternInArsenal(m_activePatternID);
+            }
+        }
         return true;
     }
     

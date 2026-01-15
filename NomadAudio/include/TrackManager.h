@@ -87,6 +87,7 @@ public:
     void play();
     void pause();
     void stop();
+
     void record();
     void finishRecording();
     void processInput(const float* inputBuffer, uint32_t numFrames); // Called from RT thread
@@ -109,7 +110,7 @@ public:
     
     // Pattern Playback Control
     void playPatternInArsenal(PatternID patternId); // Arsenal direct playback mode
-    void stopArsenalPlayback();
+    void stopArsenalPlayback(bool keepMode = false);
     bool isPatternMode() const; // [NEW] Check if in pattern playback mode
     PatternPlaybackEngine& getPatternPlaybackEngine() { return *m_patternEngine; }
     TimelineClock& getTimelineClock() { return m_clock; }

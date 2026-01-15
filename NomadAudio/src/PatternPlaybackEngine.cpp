@@ -28,14 +28,17 @@ void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startB
     // Reset cancellation flag
     m_instanceCancelled[instanceId].store(false, std::memory_order_release);
     
-    // Add to active instances
-    PatternInstance inst;
-    inst.patternId = pid;
-    inst.startBeat = startBeat;
-    inst.instanceId = instanceId;
-    inst.nextEventIdx = 0;
-    
-    m_activeInstances.push_back(inst);
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        // Add to active instances
+        PatternInstance inst;
+        inst.patternId = pid;
+        inst.startBeat = startBeat;
+        inst.instanceId = instanceId;
+        inst.nextEventIdx = 0;
+        
+        m_activeInstances.push_back(inst);
+    }
     
     Nomad::Log::info("[PatternPlayback] Scheduled instance " + std::to_string(instanceId) + 
                      " pattern " + std::to_string(pid.value) + " at beat " + std::to_string(startBeat));
@@ -47,12 +50,15 @@ void PatternPlaybackEngine::cancelPatternInstance(uint32_t instanceId) {
     // Set cancellation flag (RT-safe)
     m_instanceCancelled[instanceId].store(true, std::memory_order_release);
     
-    // Remove from active instances (non-RT)
-    m_activeInstances.erase(
-        std::remove_if(m_activeInstances.begin(), m_activeInstances.end(),
-            [instanceId](const PatternInstance& inst) { return inst.instanceId == instanceId; }),
-        m_activeInstances.end()
-    );
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        // Remove from active instances (non-RT)
+        m_activeInstances.erase(
+            std::remove_if(m_activeInstances.begin(), m_activeInstances.end(),
+                [instanceId](const PatternInstance& inst) { return inst.instanceId == instanceId; }),
+            m_activeInstances.end()
+        );
+    }
 }
 
 uint16_t PatternPlaybackEngine::getChannelForUnit(UnitID unitId) const {
@@ -80,6 +86,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
     static int refillCounter = 0;
     bool shouldLog = (refillCounter++ % 100 == 0);
 
+    std::lock_guard<std::mutex> lock(m_mutex);
     for (auto& inst : m_activeInstances) {
         // Skip cancelled instances
         if (m_instanceCancelled[inst.instanceId].load(std::memory_order_acquire)) {
@@ -256,10 +263,12 @@ void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, 
 }
 
 void PatternPlaybackEngine::flush() {
+    std::lock_guard<std::mutex> lock(m_mutex);
     ScheduledEvent ev;
     while (m_rtQueue.peek(ev)) {
         m_rtQueue.pop();
     }
+    m_lastRefillFrame = 0;
 }
 
 } // namespace Audio

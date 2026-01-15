@@ -6,33 +6,55 @@
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "SettingsDialog.h"
 #include "UnifiedHUD.h"
+#include "../NomadPlat/include/NomadPlatform.h"
 #include <memory>
+#include <functional>
 
 using namespace NomadUI;
+
+class NomadContent;
 
 /**
  * @brief Root component that contains the custom window
  */
 class NomadRootComponent : public NUIComponent {
 public:
+    enum class TransportAction { Stop, Play, Pause };
+
+private:
+    std::shared_ptr<NUICustomWindow> m_rootCustomWindow;
+    std::shared_ptr<Nomad::SettingsDialog> m_rootSettingsDialog;
+    std::shared_ptr<UnifiedHUD> m_rootUnifiedHUD;
+    class NomadContent* m_rootContent{nullptr};
+    std::function<void(TransportAction)> m_rootTransportCallback;
+
+public:
     NomadRootComponent() = default;
     
+    void setTransportCallback(std::function<void(TransportAction)> cb) {
+        m_rootTransportCallback = cb;
+    }
+    
+    void setContent(class NomadContent* content) {
+        m_rootContent = content;
+    }
+    
     void setCustomWindow(std::shared_ptr<NUICustomWindow> window) {
-        m_customWindow = window;
-        addChild(m_customWindow);
+        m_rootCustomWindow = window;
+        addChild(m_rootCustomWindow);
     }
     
     void setSettingsDialog(std::shared_ptr<Nomad::SettingsDialog> dialog) {
-        m_settingsDialog = dialog;
+        m_rootSettingsDialog = dialog;
     }
     
     void setUnifiedHUD(std::shared_ptr<UnifiedHUD> hud) {
-        m_unifiedHUD = hud;
-        addChild(m_unifiedHUD);
+        m_rootUnifiedHUD = hud;
+        addChild(m_rootUnifiedHUD);
     }
     
     std::shared_ptr<UnifiedHUD> getUnifiedHUD() const {
-        return m_unifiedHUD;
+        return m_rootUnifiedHUD;
     }
     
     void onUpdate(double deltaTime) override {
@@ -51,9 +73,11 @@ public:
         NUIComponent::renderGlobalTooltip(renderer);
     }
     
+    bool onKeyEvent(const NUIKeyEvent& event) override;
+    
     void onResize(int width, int height) override {
-        if (m_customWindow) {
-            m_customWindow->setBounds(NUIRect(0, 0, width, height));
+        if (m_rootCustomWindow) {
+            m_rootCustomWindow->setBounds(NUIRect(0, 0, width, height));
         }
         
         // Resize all children (including audio settings dialog)
@@ -65,9 +89,4 @@ public:
         
         NUIComponent::onResize(width, height);
     }
-    
-private:
-    std::shared_ptr<NUICustomWindow> m_customWindow;
-    std::shared_ptr<Nomad::SettingsDialog> m_settingsDialog;
-    std::shared_ptr<UnifiedHUD> m_unifiedHUD;
 };

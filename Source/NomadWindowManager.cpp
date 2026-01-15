@@ -183,6 +183,87 @@ bool NomadWindowManager::initialize(const WindowConfig& config) {
     m_window->setRenderer(m_renderer.get());
     m_customWindow->setWindowHandle(m_window.get());
 
+    // Input Callbacks
+    m_window->setMouseMoveCallback([this](float x, float y) {
+        m_lastMouseX = static_cast<int>(x);
+        m_lastMouseY = static_cast<int>(y);
+        
+        // Drag & Drop
+        if (m_content) {
+            NomadUI::NUIDragDropManager::getInstance().updateDrag(NomadUI::NUIPoint(x, y));
+        }
+    });
+
+    m_window->setMouseButtonCallback([this](int button, bool pressed) { // Fixed signature
+        if (!pressed) { // Release
+            if (m_content) {
+                NomadUI::NUIDragDropManager::getInstance().endDrag(NomadUI::NUIPoint((float)m_lastMouseX, (float)m_lastMouseY)); // Fixed arg
+            }
+        }
+        if (pressed) { // Press
+             this->hideActiveMenu(); // Fixed method
+        }
+    });
+
+    m_window->setKeyCallback([this](int key, bool pressed) {
+        // Track Modifiers
+        using NM = NomadUI::NUIModifiers;
+        int currentMods = static_cast<int>(m_keyModifiers);
+        
+        // Use Nomad::KeyCode matching Platform constants
+        
+        // Use Nomad::KeyCode matching Platform constants
+        if (key == static_cast<int>(Nomad::KeyCode::Shift)) { // 16
+            if (pressed) currentMods |= static_cast<int>(NM::Shift);
+            else currentMods &= ~static_cast<int>(NM::Shift);
+        }
+        if (key == static_cast<int>(Nomad::KeyCode::Control)) { // 17
+            if (pressed) currentMods |= static_cast<int>(NM::Ctrl);
+            else currentMods &= ~static_cast<int>(NM::Ctrl);
+        }
+        
+        m_keyModifiers = static_cast<NM>(currentMods);
+
+        if (pressed) { // Press
+             // Space: Play/Stop
+             if (key == static_cast<int>(Nomad::KeyCode::Space)) { // 32
+                 if (m_content && m_content->getTrackManager()) {
+                     if (m_content->getTrackManager()->isPlaying()) {
+                         if (m_transportCallback) m_transportCallback(TransportAction::Stop);
+                     } else {
+                         if (m_transportCallback) m_transportCallback(TransportAction::Play);
+                     }
+                 }
+             }
+             // F12: HUD
+             if (key == static_cast<int>(Nomad::KeyCode::F12)) { // 123
+                 if (m_unifiedHUD) m_unifiedHUD->setVisible(!m_unifiedHUD->isVisible());
+             }
+             // Esc
+             if (key == static_cast<int>(Nomad::KeyCode::Escape)) { // 27
+                 if (m_unifiedHUD && m_unifiedHUD->isVisible()) m_unifiedHUD->setVisible(false);
+                 this->hideActiveMenu();
+             }
+             
+             // Shortcuts (Undo/Redo)
+             bool ctrl = (currentMods & static_cast<int>(NM::Ctrl));
+             if (ctrl) {
+                 if (key == static_cast<int>(Nomad::KeyCode::Z) && m_content && m_content->getTrackManager()) { // Z
+                     m_content->getTrackManager()->getCommandHistory().undo();
+                 }
+                 if (key == static_cast<int>(Nomad::KeyCode::Y) && m_content && m_content->getTrackManager()) { // Y
+                     m_content->getTrackManager()->getCommandHistory().redo();
+                 }
+             }
+        }
+    });
+
+    m_window->setFocusCallback([this](bool focused) {
+         if (m_useCustomCursor && m_window) {
+             m_window->setCursorVisible(!focused); // Hide if focused (drawn manually)
+         }
+    });
+
     return true;
 }
 
@@ -417,6 +498,8 @@ void NomadWindowManager::initializeCustomCursors() {
     )");
 
     Log::info("Custom cursor icons initialized");
+    m_useCustomCursor = true;
+    if (m_window) m_window->setCursorVisible(false);
 }
 
 void NomadWindowManager::renderCustomCursor() {

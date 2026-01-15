@@ -86,6 +86,8 @@ private:
     
     long m_inputChannels = 0;
     long m_outputChannels = 0;
+    long m_configuredInputChannels = 0;
+    long m_configuredOutputChannels = 0;
     long m_bufferSize = 0;
     double m_sampleRate = 44100.0;
     
