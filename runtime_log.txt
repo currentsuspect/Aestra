@@ -888,3 +888,193 @@
 [2026-01-13 23:01:19] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
 [2026-01-13 23:01:19] [INFO]  ========================================
 [2026-01-13 23:01:19] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 14:33:11] [INFO]  ========================================
+[2026-01-14 14:33:11] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 14:33:11] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 14:33:11] [INFO]  ========================================
+[2026-01-14 14:33:11] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 15:01:14] [INFO]  ========================================
+[2026-01-14 15:01:14] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 15:01:14] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 15:01:14] [INFO]  ========================================
+[2026-01-14 15:01:14] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 15:08:35] [INFO]  ========================================
+[2026-01-14 15:08:35] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 15:08:35] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 15:08:35] [INFO]  ========================================
+[2026-01-14 15:08:35] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 15:12:00] [INFO]  ========================================
+[2026-01-14 15:12:00] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 15:12:00] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 15:12:00] [INFO]  ========================================
+[2026-01-14 15:12:00] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 15:15:10] [INFO]  ========================================
+[2026-01-14 15:15:10] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 15:15:10] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 15:15:10] [INFO]  ========================================
+[2026-01-14 15:15:10] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 15:18:26] [INFO]  ========================================
+[2026-01-14 15:18:26] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 15:18:26] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 15:18:26] [INFO]  ========================================
+[2026-01-14 15:18:26] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 15:20:20] [INFO]  ========================================
+[2026-01-14 15:20:20] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 15:20:20] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 15:20:20] [INFO]  ========================================
+[2026-01-14 15:20:20] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 15:24:09] [INFO]  ========================================
+[2026-01-14 15:24:09] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 15:24:09] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 15:24:09] [INFO]  ========================================
+[2026-01-14 15:24:09] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 15:29:02] [INFO]  ========================================
+[2026-01-14 15:29:02] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 15:29:02] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 15:29:02] [INFO]  ========================================
+[2026-01-14 15:29:02] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 15:30:30] [INFO]  ========================================
+[2026-01-14 15:30:30] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 15:30:30] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 15:30:30] [INFO]  ========================================
+[2026-01-14 15:30:30] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 15:55:22] [INFO]  ========================================
+[2026-01-14 15:55:22] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 15:55:22] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 15:55:22] [INFO]  ========================================
+[2026-01-14 15:55:22] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 15:56:20] [INFO]  ========================================
+[2026-01-14 15:56:20] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 15:56:20] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 15:56:20] [INFO]  ========================================
+[2026-01-14 15:56:20] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 15:56:46] [INFO]  ========================================
+[2026-01-14 15:56:46] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 15:56:46] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 15:56:46] [INFO]  ========================================
+[2026-01-14 15:56:46] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 16:01:11] [INFO]  ========================================
+[2026-01-14 16:01:11] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 16:01:11] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 16:01:11] [INFO]  ========================================
+[2026-01-14 16:01:11] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 16:03:59] [INFO]  ========================================
+[2026-01-14 16:03:59] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 16:03:59] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 16:03:59] [INFO]  ========================================
+[2026-01-14 16:03:59] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 16:07:52] [INFO]  ========================================
+[2026-01-14 16:07:52] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 16:07:52] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 16:07:52] [INFO]  ========================================
+[2026-01-14 16:07:52] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 16:16:01] [INFO]  ========================================
+[2026-01-14 16:16:01] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 16:16:01] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 16:16:01] [INFO]  ========================================
+[2026-01-14 16:16:01] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 16:20:45] [INFO]  ========================================
+[2026-01-14 16:20:45] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 16:20:45] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 16:20:45] [INFO]  ========================================
+[2026-01-14 16:20:45] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 16:31:49] [INFO]  ========================================
+[2026-01-14 16:31:49] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 16:31:49] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 16:31:49] [INFO]  ========================================
+[2026-01-14 16:31:49] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 16:33:42] [INFO]  ========================================
+[2026-01-14 16:33:42] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 16:33:42] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 16:33:42] [INFO]  ========================================
+[2026-01-14 16:33:42] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 16:38:10] [INFO]  ========================================
+[2026-01-14 16:38:10] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 16:38:10] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 16:38:10] [INFO]  ========================================
+[2026-01-14 16:38:10] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 16:48:10] [INFO]  ========================================
+[2026-01-14 16:48:10] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 16:48:10] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 16:48:10] [INFO]  ========================================
+[2026-01-14 16:48:10] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 16:50:38] [INFO]  ========================================
+[2026-01-14 16:50:38] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 16:50:38] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 16:50:38] [INFO]  ========================================
+[2026-01-14 16:50:38] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 16:51:16] [INFO]  ========================================
+[2026-01-14 16:51:16] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 16:51:16] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 16:51:16] [INFO]  ========================================
+[2026-01-14 16:51:16] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 16:57:17] [INFO]  ========================================
+[2026-01-14 16:57:17] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 16:57:17] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 16:57:17] [INFO]  ========================================
+[2026-01-14 16:57:17] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 17:02:23] [INFO]  ========================================
+[2026-01-14 17:02:23] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 17:02:23] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 17:02:23] [INFO]  ========================================
+[2026-01-14 17:02:23] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 17:04:53] [INFO]  ========================================
+[2026-01-14 17:04:53] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 17:04:53] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 17:04:53] [INFO]  ========================================
+[2026-01-14 17:04:53] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 17:14:24] [INFO]  ========================================
+[2026-01-14 17:14:24] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 17:14:24] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 17:14:24] [INFO]  ========================================
+[2026-01-14 17:14:24] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 17:18:53] [INFO]  ========================================
+[2026-01-14 17:18:53] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 17:18:53] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 17:18:53] [INFO]  ========================================
+[2026-01-14 17:18:53] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 17:28:37] [INFO]  ========================================
+[2026-01-14 17:28:37] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 17:28:37] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 17:28:37] [INFO]  ========================================
+[2026-01-14 17:28:37] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 17:36:53] [INFO]  ========================================
+[2026-01-14 17:36:53] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 17:36:53] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 17:36:53] [INFO]  ========================================
+[2026-01-14 17:36:53] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 17:42:31] [INFO]  ========================================
+[2026-01-14 17:42:31] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 17:42:31] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 17:42:31] [INFO]  ========================================
+[2026-01-14 17:42:31] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 18:01:08] [INFO]  ========================================
+[2026-01-14 18:01:08] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 18:01:08] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 18:01:08] [INFO]  ========================================
+[2026-01-14 18:01:08] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 18:13:34] [INFO]  ========================================
+[2026-01-14 18:13:34] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 18:13:34] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 18:13:34] [INFO]  ========================================
+[2026-01-14 18:13:34] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 18:26:12] [INFO]  ========================================
+[2026-01-14 18:26:12] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 18:26:12] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 18:26:12] [INFO]  ========================================
+[2026-01-14 18:26:12] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 18:42:00] [INFO]  ========================================
+[2026-01-14 18:42:00] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 18:42:00] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 18:42:00] [INFO]  ========================================
+[2026-01-14 18:42:00] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-14 19:03:04] [INFO]  ========================================
+[2026-01-14 19:03:04] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-14 19:03:04] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-14 19:03:04] [INFO]  ========================================
+[2026-01-14 19:03:04] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-15 14:46:06] [INFO]  ========================================
+[2026-01-15 14:46:06] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-15 14:46:06] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-15 14:46:06] [INFO]  ========================================
+[2026-01-15 14:46:06] [ERROR] Platform not initialized! Call Platform::initialize() first.

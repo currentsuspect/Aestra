@@ -49,14 +49,26 @@ namespace Audio {
          * @param state The graph state (tracks, params).
          * @param engineRef Helper ref to engine for accessing EffectChains/Clips (Legacy bridge).
          */
+        /**
+         * @brief Pass 1: Handle MIDI timing and pattern scheduling
+         */
+        void processArsenalMidi(const Context& ctx, AudioEngine& engineRef);
+
+        /**
+         * @brief Pass 2: Main graph render (Clips + Plugins + Effects)
+         */
         void renderBlock(const Context& ctx, AudioGraphState& state, AudioEngine& engineRef);
 
         /**
-         * @brief Process Arsenal units (Pattern/Sampler playback)
-         * @param ctx Execution context
-         * @param engineRef Access to pattern engine and unit manager
+         * @brief Pass 3: Process Arsenal units routed to Master
          */
         void processArsenalUnits(const Context& ctx, AudioEngine& engineRef);
+
+    private:
+        /**
+         * @brief Helper to render Arsenal units assigned to a specific track
+         */
+        void renderArsenalUnitsForTrack(uint32_t trackIndex, double* trackBuffer, const Context& ctx, AudioEngine& engineRef);
 
     private:
         // Helper methods (Moved from AudioEngine)

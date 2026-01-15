@@ -12,6 +12,7 @@
 #include <map>
 #include <vector>
 #include <array>
+#include <mutex>
 
 namespace Nomad {
 namespace Audio {
@@ -146,8 +147,9 @@ private:
     PatternManager* m_patternManager;
     UnitManager* m_unitManager;
     
-    // Active instances (scheduler thread only)
+    // Active instances (scheduler thread only - LOCK REQUIRED if called from RT)
     std::vector<PatternInstance> m_activeInstances;
+    mutable std::mutex m_mutex;
     
     // RT event queue
     LockFreeSPSCQueue<ScheduledEvent, 8192> m_rtQueue;

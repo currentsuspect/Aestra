@@ -145,54 +145,71 @@ bool NomadAudioController::openDefaultStream(void* userData) {
 
 bool NomadAudioController::startStream() {
     if (!m_initialized || !m_audioManager) return false;
+    if (m_isAudioRunning) return true;
 
-    if (m_audioManager->startStream()) {
-        Log::info("Audio stream started");
+    // 1. Get Actual Rate/Buffer from Driver (if any) BEFORE starting thread
+    double actualRate = static_cast<double>(m_audioManager->getStreamSampleRate());
+    if (actualRate <= 0.0) {
+        actualRate = static_cast<double>(m_streamConfig.sampleRate);
+    }
+    
+    uint32_t actualBuffer = m_audioManager->getStreamBufferSize();
+    if (actualBuffer == 0) actualBuffer = m_streamConfig.bufferSize;
 
-        m_audioManager->setAutoBufferScaling(true, 5);
+    // Update config locally
+    m_streamConfig.sampleRate = static_cast<uint32_t>(actualRate);
+    m_streamConfig.bufferSize = actualBuffer;
 
-        double actualRate = static_cast<double>(m_audioManager->getStreamSampleRate());
-        if (actualRate <= 0.0) {
-            actualRate = static_cast<double>(m_streamConfig.sampleRate);
-        }
+    Log::info("NomadAudioController: Stream Config Target - Rate: " + std::to_string(actualRate) + 
+              ", Buffer: " + std::to_string(actualBuffer));
 
-        if (m_audioEngine) {
-            m_audioEngine->setSampleRate(static_cast<uint32_t>(actualRate));
-            m_audioEngine->setBufferConfig(m_streamConfig.bufferSize, m_streamConfig.numOutputChannels);
-
-            // Register input callback wrapper
-            // We need a way to get back to Controller or Content from userData.
-            // If userData is NomadAudioController*, we can use it.
-            // Note: m_inputCallbackData in Engine is void*.
-
-            m_audioEngine->setInputCallback([](const float* input, uint32_t n, void* user) {
-                auto* controller = static_cast<NomadAudioController*>(user);
-                if (controller) {
-                    if (auto content = controller->m_content.lock()) {
-                        if (content->getTrackManager()) {
-                            content->getTrackManager()->processInput(input, n);
-                        }
+    if (m_audioEngine) {
+        m_audioEngine->setSampleRate(m_streamConfig.sampleRate);
+        m_audioEngine->setBufferConfig(m_streamConfig.bufferSize, m_streamConfig.numOutputChannels);
+        
+        // Register input callback wrapper
+        m_audioEngine->setInputCallback([](const float* input, uint32_t n, void* user) {
+            auto* controller = static_cast<NomadAudioController*>(user);
+            if (controller) {
+                if (auto content = controller->m_content.lock()) {
+                    if (content->getTrackManager()) {
+                        content->getTrackManager()->processInput(input, n);
                     }
                 }
-            }, this);
-        }
-
-        Nomad::Log::info("Audio Stream Opened: Input Channels = " + std::to_string(m_streamConfig.numInputChannels));
-
-        m_streamConfig.sampleRate = static_cast<uint32_t>(actualRate);
-        if (m_audioEngine) {
-            const uint64_t hz = estimateCycleHz();
-            if (hz > 0) {
-                m_audioEngine->telemetry().cycleHz.store(hz, std::memory_order_relaxed);
             }
+        }, this);
 
-            // Load metronome click sounds
-            m_audioEngine->loadMetronomeClicks(
-                "NomadAudio/assets/nomad_metronome.wav",
-                "NomadAudio/assets/nomad_metronome_up.wav"
-            );
-            m_audioEngine->setBPM(120.0f);
+        // Setup Telemetry
+        const uint64_t hz = estimateCycleHz();
+        if (hz > 0) {
+            m_audioEngine->telemetry().cycleHz.store(hz, std::memory_order_relaxed);
         }
+
+        m_audioEngine->loadMetronomeClicks(
+            "NomadAudio/assets/nomad_metronome.wav",
+            "NomadAudio/assets/nomad_metronome_up.wav"
+        );
+        m_audioEngine->setBPM(120.0f);
+    }
+
+    // [FIX] Update Content Managers to ensure AudioGraph is rebuilt with correct rate!
+    if (auto content = m_content.lock()) {
+        if (auto tm = content->getTrackManager()) {
+            tm->setOutputSampleRate(static_cast<double>(m_streamConfig.sampleRate));
+            tm->setInputSampleRate(static_cast<double>(m_streamConfig.sampleRate));
+            Log::info("NomadAudioController: Updated TrackManager Sample Rate to " + std::to_string(m_streamConfig.sampleRate));
+        }
+        if (auto pe = content->getPreviewEngine()) {
+            pe->setOutputSampleRate(static_cast<double>(m_streamConfig.sampleRate));
+        }
+    }
+
+    m_audioManager->setAutoBufferScaling(true, 5);
+
+    // 2. Start the stream (Thread starts here)
+    if (m_audioManager->startStream()) {
+        Log::info("Audio stream started successfully");
+        m_isAudioRunning = true;
         return true;
     }
 

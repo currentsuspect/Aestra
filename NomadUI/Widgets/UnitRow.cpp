@@ -6,6 +6,7 @@
 #include "../Graphics/NUIRenderer.h"
 
 #include "../../NomadAudio/include/TrackManager.h"
+#include "../../NomadAudio/include/AudioEngine.h"
 #include "../../NomadCore/include/NomadLog.h"
 
 namespace NomadUI {
@@ -726,6 +727,14 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
                 midi.notes.erase(it);
             } else {
                 midi.notes.push_back({targetStart, 0.25, 60, 100, m_unitId});
+                
+                // [NEW] Audition Sound
+                auto& engine = Nomad::Audio::AudioEngine::getInstance();
+                Nomad::Audio::AudioQueueCommand audCmd;
+                audCmd.type = Nomad::Audio::AudioQueueCommandType::AuditionUnit;
+                audCmd.trackIndex = m_unitId;
+                audCmd.value1 = 0.8f; // Velocity
+                engine.commandQueue().push(audCmd);
             }
         });
         

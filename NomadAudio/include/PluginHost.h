@@ -373,6 +373,22 @@ public:
     }
     const Event& getEvent(size_t index) const { return m_events[index]; }
     
+    /**
+     * @brief Helper to add a Note On event
+     */
+    void addNoteOn(uint8_t channel, uint8_t pitch, uint8_t velocity, uint32_t sampleOffset) {
+        uint8_t data[3] = { static_cast<uint8_t>(0x90 | ((channel - 1) & 0x0F)), pitch, velocity };
+        addEvent(sampleOffset, data, 3);
+    }
+
+    /**
+     * @brief Helper to add a Note Off event
+     */
+    void addNoteOff(uint8_t channel, uint8_t pitch, uint8_t velocity, uint32_t sampleOffset) {
+        uint8_t data[3] = { static_cast<uint8_t>(0x80 | ((channel - 1) & 0x0F)), pitch, velocity };
+        addEvent(sampleOffset, data, 3);
+    }
+
     // Iterator support
     const Event* begin() const { return &m_events[0]; }
     const Event* end() const { return &m_events[getEventCount()]; }

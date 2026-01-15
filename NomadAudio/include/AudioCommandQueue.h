@@ -26,6 +26,7 @@ enum class AudioQueueCommandType : uint8_t {
     StartPreview,
     StopPreview,
     SetMetronomeEnabled,
+    AuditionUnit,        // trackIndex = unitId, value1 = velocity
 };
 
 // Ensure cache-friendly alignment for RT path

@@ -50,6 +50,7 @@ private:
 
     Nomad::Audio::AudioStreamConfig m_streamConfig;
     bool m_initialized{false};
+    bool m_isAudioRunning{false};
 
     // Weak reference to content for callback routing
     std::weak_ptr<NomadContent> m_content;

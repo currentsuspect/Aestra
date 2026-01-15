@@ -38,6 +38,8 @@ public:
         bool fullscreen;
     };
 
+    enum class TransportAction { Stop, Play, Pause };
+
     bool initialize(const WindowConfig& config);
     void shutdown();
     bool processEvents();
@@ -79,6 +81,7 @@ public:
     // Callbacks setters (forwarded to Bridge)
     void setCloseCallback(std::function<void()> cb) { if (m_window) m_window->setCloseCallback(cb); }
     void setResizeCallback(std::function<void(int, int)> cb) { if (m_window) m_window->setResizeCallback(cb); }
+    void setTransportCallback(std::function<void(TransportAction)> cb) { m_transportCallback = cb; }
     // ... others handled internally or exposed as needed
 
     // Mouse Tracking
@@ -128,6 +131,7 @@ private:
     NomadUI::NUICursorStyle m_activeCursorStyle{NomadUI::NUICursorStyle::Arrow};
 
     // Input State
+    std::function<void(TransportAction)> m_transportCallback;
     int m_lastMouseX{0};
     int m_lastMouseY{0};
     NomadUI::NUIModifiers m_keyModifiers{NomadUI::NUIModifiers::None};

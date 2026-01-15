@@ -191,6 +191,21 @@ void TrackManager::play() {
         startRecordingProcess();
     }
     
+    // [FIX] Re-schedule pattern if we're in pattern mode (was cancelled on stop/pause)
+    auto& engine = AudioEngine::getInstance();
+    bool isPatMode = engine.isPatternPlaybackMode();
+    bool hasEngine = (m_patternEngine != nullptr);
+    uint64_t lastPatId = m_lastScheduledPatternId.value;
+    
+    Log::info("[TrackManager] play() called. EnginePatMode=" + std::string(isPatMode ? "YES" : "NO") + 
+              ", HasPatEngine=" + std::string(hasEngine ? "YES" : "NO") + 
+              ", LastPatID=" + std::to_string(lastPatId));
+
+    if (isPatMode && hasEngine && lastPatId != 0) {
+        m_patternEngine->schedulePatternInstance(m_lastScheduledPatternId, 0.0, 0);
+        Log::info("[TrackManager] Re-scheduled pattern " + std::to_string(m_lastScheduledPatternId.value) + " on play");
+    }
+    
     if (m_commandSink) {
         AudioQueueCommand cmd;
         cmd.type = AudioQueueCommandType::SetTransportState;
@@ -249,39 +264,73 @@ void TrackManager::stop() {
 }
 
 void TrackManager::playPatternInArsenal(PatternID patternId) {
-    // Arsenal mode: Schedule pattern at current position
-    double currentBeat = m_positionSeconds.load() * (m_clock.getCurrentTempo() / 60.0);
+    if (!m_patternEngine) return;
+    Log::info("[TrackManager] playPatternInArsenal: id=" + std::to_string(patternId.value));
     
-    // Check if pattern ID changed (distinguish from MIDI edits in same pattern)
-    bool patternChanged = (patternId != m_lastScheduledPatternId);
+    auto* pattern = m_patternManager.getPattern(patternId);
+    if (!pattern) {
+        Log::info("WARNING: TrackManager: Cannot play Arsenal - Pattern not found");
+        return;
+    }
+    
+    double lengthBeats = pattern->lengthBeats;
+    if (lengthBeats <= 0.0) lengthBeats = 4.0;
+    
+    // Configure Engine to Pattern Mode (Loops position 0..Length)
+    auto& engine = AudioEngine::getInstance();
+    engine.setPatternPlaybackMode(true, lengthBeats);
+    
+    // Cancel previous instance
+    // Use instance ID 0 for Arsenal
+    m_patternEngine->cancelPatternInstance(0);
+    
+    // Request voice reset to avoid hung notes from previous pattern
+    engine.requestVoiceResetOnPatternChange();
+    
+    m_arsenalInstanceId = 0;
     m_lastScheduledPatternId = patternId;
     
-    // Cancel previous Arsenal playback
-    if (m_arsenalInstanceId > 0) {
-        m_patternEngine->cancelPatternInstance(m_arsenalInstanceId);
-    }
+    // Schedule at Beat 0.0 (Since Engine loops 0..Length)
+    m_patternEngine->schedulePatternInstance(patternId, 0.0, 0);
     
-    // Hard-reset voices only if pattern ID changed (not on MIDI edits within same pattern)
-    if (patternChanged) {
-        AudioEngine::getInstance().requestVoiceResetOnPatternChange();
-    }
-    
-    // Use instance ID 0 for Arsenal (reserved)
-    m_arsenalInstanceId = 0;
-    m_patternEngine->schedulePatternInstance(patternId, currentBeat, m_arsenalInstanceId);
-    
-    // Start playing if not already
+    setPosition(0.0);
+
+    // Start Transport
     if (!isPlaying()) {
         play();
     }
     
-    Log::info("[Arsenal] Playing pattern " + std::to_string(patternId.value));
+    Log::info("[TrackManager] Arsenal Play triggered");
 }
 
-void TrackManager::stopArsenalPlayback() {
-    if (m_arsenalInstanceId > 0) {
-        m_patternEngine->cancelPatternInstance(m_arsenalInstanceId);
-        m_arsenalInstanceId = 0;
+void TrackManager::stopArsenalPlayback(bool keepMode) {
+    auto& engine = AudioEngine::getInstance();
+    Log::info("[TrackManager] stopArsenalPlayback: keepMode=" + std::string(keepMode ? "true" : "false"));
+    
+    // [FIX] Reset position to 0.0 (Stop behavior vs Pause)
+    m_isPlaying.store(false);
+    setPosition(0.0);
+    
+    if (m_commandSink) {
+        AudioQueueCommand cmd;
+        cmd.type = AudioQueueCommandType::SetTransportState;
+        cmd.value1 = 0.0f; // Stopped
+        cmd.samplePos = 0; // Reset to start
+        m_commandSink(cmd);
+    }
+    
+    // [FIX] ALWAYS flush the pattern engine when stopping to ensure a clean "Stop at 0" state.
+    if (m_patternEngine) {
+        m_patternEngine->cancelPatternInstance(0);
+        m_patternEngine->flush(); // Clear queue and reset refill frame
+    }
+
+    // [FIX] Kill ringing voices to provide immediate "Hard Stop" feedback in Arsenal.
+    engine.requestVoiceResetOnPatternChange();
+    
+    // Disable Pattern Mode ONLY if not keeping mode (e.g. for pause/retrigger)
+    if (!keepMode) {
+        engine.setPatternPlaybackMode(false, 4.0);
     }
 }
 
@@ -539,6 +588,8 @@ void TrackManager::setPosition(double seconds) {
 }
 
 void TrackManager::syncPositionFromEngine(double seconds) {
+    if (!m_isPlaying.load()) return;
+    
     m_positionSeconds.store(std::max(0.0, seconds));
     m_uiPositionSeconds.store(std::max(0.0, seconds)); // Keep in sync
 }

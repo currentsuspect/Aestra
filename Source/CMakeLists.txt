@@ -16,6 +16,7 @@ set(NOMAD_DAW_SOURCES
 	NomadWindowManager.h
 	NomadWindowManager.cpp
 	NomadRootComponent.h
+	NomadRootComponent.cpp
 	NomadContent.h
 	NomadContent.cpp
 	OverlayLayer.h

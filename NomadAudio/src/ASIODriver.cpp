@@ -270,9 +270,11 @@ bool ASIODriver::openStream(const AudioStreamConfig& config, AudioCallback callb
     m_callbackUserData = userData;
     m_inputChannels = activeIn;
     m_outputChannels = activeOut;
+    m_configuredInputChannels = config.numInputChannels;
+    m_configuredOutputChannels = config.numOutputChannels;
     
-    m_interleavedInput.resize(m_bufferSize * activeIn);
-    m_interleavedOutput.resize(m_bufferSize * activeOut);
+    m_interleavedInput.resize(m_bufferSize * m_configuredInputChannels);
+    m_interleavedOutput.resize(m_bufferSize * m_configuredOutputChannels);
     
     // Set Sample Rate
     double currentRate = 0;
@@ -357,6 +359,11 @@ ASIO::ASIOTime* ASIODriver::asioBufferSwitch(long doubleBufferIndex, long direct
     }
 
     // 1. De-interleave Input (ASIO -> Interleaved Float)
+    // Zero out the entire buffer first (handles channels that are in config but not in device)
+    if (!m_interleavedInput.empty()) {
+        memset(m_interleavedInput.data(), 0, m_interleavedInput.size() * sizeof(float));
+    }
+
     for (int i=0; i < m_inputChannels; ++i) {
         ASIO::ASIOChannelInfo& chInfo = m_channelInfos[i];
         void* src = m_bufferInfos[i].buffers[doubleBufferIndex];
@@ -365,26 +372,26 @@ ASIO::ASIOTime* ASIODriver::asioBufferSwitch(long doubleBufferIndex, long direct
             case ASIO::ASIOSTInt32LSB: {
                 int32_t* src32 = static_cast<int32_t*>(src);
                 for(long f=0; f<m_bufferSize; ++f) {
-                    m_interleavedInput[f * m_inputChannels + i] = static_cast<float>(src32[f]) * (1.0f / 2147483648.0f);
+                    m_interleavedInput[f * m_configuredInputChannels + i] = static_cast<float>(src32[f]) * (1.0f / 2147483648.0f);
                 }
                 break;
             }
             case ASIO::ASIOSTInt16LSB: {
                 int16_t* src16 = static_cast<int16_t*>(src);
                 for(long f=0; f<m_bufferSize; ++f) {
-                    m_interleavedInput[f * m_inputChannels + i] = static_cast<float>(src16[f]) * (1.0f / 32768.0f);
+                    m_interleavedInput[f * m_configuredInputChannels + i] = static_cast<float>(src16[f]) * (1.0f / 32768.0f);
                 }
                 break;
             }
             case ASIO::ASIOSTFloat32LSB: {
                 float* srcFloat = static_cast<float*>(src);
                 for(long f=0; f<m_bufferSize; ++f) {
-                    m_interleavedInput[f * m_inputChannels + i] = srcFloat[f];
+                    m_interleavedInput[f * m_configuredInputChannels + i] = srcFloat[f];
                 }
                 break;
             }
             default: 
-                for(long f=0; f<m_bufferSize; ++f) m_interleavedInput[f * m_inputChannels + i] = 0.0f; 
+                // Buffer already zeroed
                 break;
         }
     }
@@ -403,7 +410,7 @@ ASIO::ASIOTime* ASIODriver::asioBufferSwitch(long doubleBufferIndex, long direct
             case ASIO::ASIOSTInt32LSB: {
                 int32_t* dest32 = static_cast<int32_t*>(dest);
                 for(long f=0; f<m_bufferSize; ++f) {
-                    float v = m_interleavedOutput[f * m_outputChannels + i];
+                    float v = m_interleavedOutput[f * m_configuredOutputChannels + i];
                     if (v > 1.0f) v = 1.0f; else if (v < -1.0f) v = -1.0f;
                     dest32[f] = static_cast<int32_t>(v * 2147483647.0f);
                 }
@@ -412,7 +419,7 @@ ASIO::ASIOTime* ASIODriver::asioBufferSwitch(long doubleBufferIndex, long direct
             case ASIO::ASIOSTInt16LSB: {
                 int16_t* dest16 = static_cast<int16_t*>(dest);
                 for(long f=0; f<m_bufferSize; ++f) {
-                    float v = m_interleavedOutput[f * m_outputChannels + i];
+                    float v = m_interleavedOutput[f * m_configuredOutputChannels + i];
                     if (v > 1.0f) v = 1.0f; else if (v < -1.0f) v = -1.0f;
                     dest16[f] = static_cast<int16_t>(v * 32767.0f);
                 }
@@ -421,7 +428,7 @@ ASIO::ASIOTime* ASIODriver::asioBufferSwitch(long doubleBufferIndex, long direct
             case ASIO::ASIOSTFloat32LSB: {
                 float* destFloat = static_cast<float*>(dest);
                 for(long f=0; f<m_bufferSize; ++f) {
-                    destFloat[f] = m_interleavedOutput[f * m_outputChannels + i];
+                    destFloat[f] = m_interleavedOutput[f * m_configuredOutputChannels + i];
                 }
                 break;
             }

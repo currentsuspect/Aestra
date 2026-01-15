@@ -184,8 +184,34 @@ bool NomadApp::initialize(const std::string& projectPath) {
         
         m_windowManager->showDropdownMenu(menu, 10.0f);
     });
-    // ... Edit, View
-    menuBar->setBounds(NomadUI::NUIRect(10.0f, 4.0f, 120.0f, 24.0f));
+    // Edit Menu
+    menuBar->addItem("Edit", [this]() {
+        auto menu = std::make_shared<NomadUI::NUIContextMenu>();
+        menu->addItem("Undo", [this]() {
+            if (m_content && m_content->getTrackManager()) {
+                m_content->getTrackManager()->getCommandHistory().undo();
+            }
+        });
+        menu->addItem("Redo", [this]() {
+            if (m_content && m_content->getTrackManager()) {
+                m_content->getTrackManager()->getCommandHistory().redo();
+            }
+        });
+        m_windowManager->showDropdownMenu(menu, 55.0f);
+    });
+    
+    // View Menu
+    menuBar->addItem("View", [this]() {
+        auto menu = std::make_shared<NomadUI::NUIContextMenu>();
+        menu->addItem("Performance Stats", [this]() {
+            if (auto hud = m_windowManager->getUnifiedHUD()) {
+                hud->setVisible(!hud->isVisible());
+            }
+        });
+        m_windowManager->showDropdownMenu(menu, 100.0f);
+    });
+
+    menuBar->setBounds(NomadUI::NUIRect(10.0f, 4.0f, 180.0f, 24.0f));
     m_windowManager->setMenuBar(menuBar);
 
     // Callbacks
@@ -290,17 +316,44 @@ void NomadApp::connectAudioToUI() {
                     trackMgr->setPosition(0.0);
                     trackMgr->setPlayStartPosition(0.0);
                 } else {
-                    double playStartPos = trackMgr->getPlayStartPosition();
-                    double sr = engine->getSampleRate();
-                    uint64_t samplePos = static_cast<uint64_t>(playStartPos * sr);
-                    trackMgr->stop();
-                    engine->setGlobalSamplePos(samplePos);
-                    trackMgr->setPosition(playStartPos);
-                    engine->setTransportPlaying(false);
+                    if (trackMgr->isPatternMode()) {
+                        trackMgr->stopArsenalPlayback(true);
+                    } else {
+                        double playStartPos = trackMgr->getPlayStartPosition();
+                        double sr = engine->getSampleRate();
+                        uint64_t samplePos = static_cast<uint64_t>(playStartPos * sr);
+                        trackMgr->stop();
+                        engine->setGlobalSamplePos(samplePos);
+                        trackMgr->setPosition(playStartPos);
+                        engine->setTransportPlaying(false);
+                    }
                 }
             }
         });
-        // Record, Metronome, Tempo callbacks... (Forwarding similarly)
+        
+        // Record (Todo)
+        
+        // Metronome toggle
+        m_content->getTransportBar()->setOnMetronomeToggle([this, engine](bool active) {
+            if (engine) {
+                engine->setMetronomeEnabled(active);
+                Log::info(std::string("Metronome toggled: ") + (active ? "ON" : "OFF"));
+            }
+        });
+        
+        // Tempo change
+        m_content->getTransportBar()->setOnTempoChange([this, engine](float bpm) {
+            if (engine) {
+                engine->setBPM(bpm);
+            }
+        });
+        
+        // Load metronome click sounds (Redundant but safe fallback if Controller update missed it)
+        engine->loadMetronomeClicks(
+            "NomadAudio/assets/nomad_metronome.wav",
+            "NomadAudio/assets/nomad_metronome_up.wav"
+        );
+        engine->setBPM(120.0f);
     }
 }
 
@@ -308,6 +361,42 @@ void NomadApp::setupCallbacks() {
     m_windowManager->setCloseCallback([this]() {
         requestClose();
     });
+    
+    m_windowManager->setTransportCallback([this](NomadWindowManager::TransportAction action) {
+        if (!m_audioController || !m_audioController->getEngine()) return;
+        auto engine = m_audioController->getEngine();
+        using Action = NomadWindowManager::TransportAction;
+        
+        if (action == Action::Play) {
+            if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->play();
+            engine->setTransportPlaying(true);
+        }
+        else if (action == Action::Pause) {
+             if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->pause();
+             engine->setTransportPlaying(false);
+        }
+        else if (action == Action::Stop) {
+             if (m_content && m_content->getTrackManager()) {
+                 auto trackMgr = m_content->getTrackManager();
+                 
+                 // [FIX] If in pattern mode, we want to stay in pattern mode on stop
+                 if (trackMgr->isPatternMode()) {
+                     trackMgr->stopArsenalPlayback(true);
+                     Log::info("[Arsenal] Global Stop (keeping mode)");
+                 } else {
+                     double playStartPos = trackMgr->getPlayStartPosition();
+                     double sr = engine->getSampleRate();
+                     uint64_t samplePos = static_cast<uint64_t>(playStartPos * sr);
+                     
+                     trackMgr->stop();
+                     engine->setGlobalSamplePos(samplePos);
+                     trackMgr->setPosition(playStartPos);
+                     engine->setTransportPlaying(false);
+                 }
+             }
+        }
+    });
+    
     // Other callbacks handled by WindowManager internally
 }
 

@@ -22,6 +22,7 @@ public:
 
     void onRender(NomadUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
+    void onUpdate(double dt) override;
     bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
 
     // Rebuilds the UI from UnitManager state
@@ -57,6 +58,7 @@ private:
     
     // Footer controls
     std::shared_ptr<NomadUI::NUIComponent> m_footer;
+    std::shared_ptr<NomadUI::NUIButton> m_playBtn; // Play/Stop Button
     
     // Color picker popup
     std::shared_ptr<NomadUI::UnitColorPicker> m_colorPicker;
