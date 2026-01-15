@@ -184,13 +184,13 @@ bool NomadWindowManager::initialize(const WindowConfig& config) {
     m_customWindow->setWindowHandle(m_window.get());
 
     // Input Callbacks
-    m_window->setMouseMoveCallback([this](float x, float y) {
-        m_lastMouseX = static_cast<int>(x);
-        m_lastMouseY = static_cast<int>(y);
+    m_window->setMouseMoveCallback([this](int x, int y) {
+        m_lastMouseX = x;
+        m_lastMouseY = y;
         
-        // Drag & Drop
+        // Drag & Drop (convert to float for NUI)
         if (m_content) {
-            NomadUI::NUIDragDropManager::getInstance().updateDrag(NomadUI::NUIPoint(x, y));
+            NomadUI::NUIDragDropManager::getInstance().updateDrag(NomadUI::NUIPoint(static_cast<float>(x), static_cast<float>(y)));
         }
     });
 

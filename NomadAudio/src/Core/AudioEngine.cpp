@@ -1,3 +1,4 @@
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioEngine.h"
 #include "../../NomadCore/include/NomadLog.h"
 #include "../../NomadCore/include/NomadMath.h"

@@ -8,80 +8,95 @@ cmake_minimum_required(VERSION 3.22)
 
 # Create executable
 set(NOMAD_DAW_SOURCES
-	Main.cpp
-	NomadApp.h
-	NomadApp.cpp
-	NomadAudioController.h
-	NomadAudioController.cpp
-	NomadWindowManager.h
-	NomadWindowManager.cpp
-	NomadRootComponent.h
-	NomadRootComponent.cpp
-	NomadContent.h
-	NomadContent.cpp
+	# App
+	App/Main.cpp
+	App/NomadApp.h
+	App/NomadApp.cpp
+	
+	# Core
+	Core/NomadAudioController.h
+	Core/NomadAudioController.cpp
+	Core/NomadWindowManager.h
+	Core/NomadWindowManager.cpp
+	Core/NomadRootComponent.h
+	Core/NomadRootComponent.cpp
+	Core/NomadContent.h
+	Core/NomadContent.cpp
+	Core/ProjectSerializer.cpp
+	
+	# Panels
+	Panels/TransportBar.h
+	Panels/TransportBar.cpp
+	Panels/WindowPanel.h
+	Panels/WindowPanel.cpp
+	Panels/PianoRollPanel.h
+	Panels/PianoRollPanel.cpp
+	Panels/MixerPanel.h
+	Panels/MixerPanel.cpp
+	Panels/ArsenalPanel.h
+	Panels/ArsenalPanel.cpp
+	Panels/StepSequencerPanel.h
+	Panels/StepSequencerPanel.cpp
+	Panels/PatternBrowserPanel.h
+	Panels/PatternBrowserPanel.cpp
+	Panels/AuditionPanel.h
+	Panels/AuditionPanel.cpp
+	
+	# Settings
+	Settings/ConfirmationDialog.h
+	Settings/ConfirmationDialog.cpp
+	Settings/RecoveryDialog.h
+	Settings/RecoveryDialog.cpp
+	Settings/SettingsDialog.h
+	Settings/SettingsDialog.cpp
+	Settings/ISettingsPage.h
+	Settings/AudioSettingsPage.h
+	Settings/AudioSettingsPage.cpp
+	Settings/GeneralSettingsPage.h
+	Settings/GeneralSettingsPage.cpp
+	Settings/AppearanceSettingsPage.h
+	Settings/AppearanceSettingsPage.cpp
+	
+	# Components
+	Components/TransportInfoContainer.h
+	Components/TransportInfoContainer.cpp
+	Components/FileBrowser.h
+	Components/FileBrowser.cpp
+	Components/FilePreviewPanel.h
+	Components/FilePreviewPanel.cpp
+	Components/AudioVisualizer.h
+	Components/AudioVisualizer.cpp
+	Components/TrackUIComponent.h
+	Components/TrackUIComponent.cpp
+	Components/TrackManagerUI.h
+	Components/TrackManagerUI.cpp
+	Components/MixerView.h
+	Components/MixerView.cpp
+	Components/MixerMath.h
+	Components/MixerViewModel.h
+	Components/MixerViewModel.cpp
+	Components/TimelineMinimapModel.h
+	Components/TimelineSummaryCache.h
+	Components/TimelineSummaryCache.cpp
+	Components/TimelineMinimapRenderer.h
+	Components/TimelineMinimapRenderer.cpp
+	Components/TimelineMinimapBar.h
+	Components/TimelineMinimapBar.cpp
+	
+	# HUD
+	HUD/PerformanceHUD.h
+	HUD/PerformanceHUD.cpp
+	HUD/UnifiedHUD.h
+	HUD/UnifiedHUD.cpp
+	
+	# Root-level (not moved)
 	OverlayLayer.h
-	ConfirmationDialog.h
-	ConfirmationDialog.cpp
-	RecoveryDialog.h
-	RecoveryDialog.cpp
-	TransportBar.h
-	TransportBar.cpp
-	TransportInfoContainer.h
-	TransportInfoContainer.cpp
-	SettingsDialog.h
-	SettingsDialog.cpp
-	ISettingsPage.h
-	AudioSettingsPage.h
-	AudioSettingsPage.cpp
-    GeneralSettingsPage.h
-    GeneralSettingsPage.cpp
-    AppearanceSettingsPage.h
-    AppearanceSettingsPage.cpp
-	FileBrowser.h
-	FileBrowser.cpp
-	FilePreviewPanel.h
-	FilePreviewPanel.cpp
-	AudioVisualizer.h
-	AudioVisualizer.cpp
-	TrackUIComponent.h
-	TrackUIComponent.cpp
-	TrackManagerUI.h
-    TrackManagerUI.cpp
-    ProjectSerializer.cpp
-	MixerView.h
-	MixerView.cpp
-	WindowPanel.h
-	WindowPanel.cpp
-	PianoRollPanel.h
-	PianoRollPanel.cpp
-	MixerPanel.h
-	MixerPanel.cpp
-	ArsenalPanel.h
-	ArsenalPanel.cpp
-	StepSequencerPanel.h
-	StepSequencerPanel.cpp
+	
+	# Other
 	ui/InfoTab.h
 	ui/InfoTab.cpp
 	license/LicenseVerifier.h
 	license/LicenseVerifier.cpp
-	PerformanceHUD.h
-	PerformanceHUD.cpp
-	UnifiedHUD.h
-	UnifiedHUD.cpp
-	MixerMath.h
-	MixerViewModel.h
-	MixerViewModel.cpp
-	TimelineMinimapModel.h
-	TimelineSummaryCache.h
-	TimelineSummaryCache.cpp
-	TimelineMinimapRenderer.h
-	TimelineMinimapRenderer.cpp
-	TimelineMinimapBar.h
-	TimelineMinimapBar.cpp
-	PatternBrowserPanel.h
-	PatternBrowserPanel.cpp
-	AuditionPanel.h
-	AuditionPanel.cpp
 )
 
 
@@ -110,6 +125,8 @@ target_link_libraries(NOMAD_DAW PRIVATE
 )
 
 # Include directories
+# Add all subdirectories so headers can be included without relative paths
+# This makes the codebase reorganization-proof - #include "ViewTypes.h" works from anywhere
 target_include_directories(NOMAD_DAW PRIVATE
 	${CMAKE_SOURCE_DIR}/NomadCore/include
 	${CMAKE_SOURCE_DIR}/NomadPlat/include
@@ -117,6 +134,14 @@ target_include_directories(NOMAD_DAW PRIVATE
 	${CMAKE_SOURCE_DIR}/NomadUI/Core
 	${CMAKE_SOURCE_DIR}/NomadAudio/include
 	${CMAKE_CURRENT_SOURCE_DIR}/license
+	# Add all Source subdirectories to include path
+	${CMAKE_CURRENT_SOURCE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/App
+	${CMAKE_CURRENT_SOURCE_DIR}/Core
+	${CMAKE_CURRENT_SOURCE_DIR}/Panels
+	${CMAKE_CURRENT_SOURCE_DIR}/Settings
+	${CMAKE_CURRENT_SOURCE_DIR}/Components
+	${CMAKE_CURRENT_SOURCE_DIR}/HUD
 )
 
 

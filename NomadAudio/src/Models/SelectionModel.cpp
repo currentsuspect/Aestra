@@ -1,9 +1,12 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "SelectionModel.h"
-#include "NomadLog.h"
+#include "PlaylistModel.h"  // For PlaylistClip, PlaylistLane, etc.
+#include "../../NomadCore/include/NomadLog.h"
 #include <mutex>
 #include <unordered_set>
+#include <algorithm>  // for std::min, std::max
+#include <cstdint>   // for INT64_MAX
 
 namespace Nomad {
 namespace Audio {
@@ -298,10 +301,10 @@ SampleRange SelectionModel::getSelectedClipsBounds(const PlaylistModel& model) c
     SampleIndex maxEnd = 0;
     
     for (const auto& clipId : m_impl->selectedClips) {
-        const PlaylistClip* clip = model.getClip(clipId);
+        const ClipInstance* clip = model.getClipInstance(clipId);
         if (clip) {
-            minStart = std::min(minStart, clip->startTime);
-            maxEnd = std::max(maxEnd, clip->getEndTime());
+            minStart = std::min(minStart, clip->startBeat);
+            maxEnd = std::max(maxEnd, clip->startBeat + clip->lengthBeats);
         }
     }
     
@@ -329,10 +332,11 @@ bool SelectionModel::canDeleteSelection(const PlaylistModel& model) const {
     std::lock_guard<std::mutex> lock(m_impl->mutex);
     
     for (const auto& clipId : m_impl->selectedClips) {
-        const PlaylistClip* clip = model.getClip(clipId);
-        if (!clip || clip->isLocked()) {
+        const ClipInstance* clip = model.getClipInstance(clipId);
+        if (!clip) {
             return false;
         }
+        // TODO: Add isLocked() check if ClipInstance supports it
     }
     
     return !m_impl->selectedClips.empty();

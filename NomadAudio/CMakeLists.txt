@@ -139,60 +139,72 @@ endif()
 # =============================================================================
 
 # Core sources (NO platform-specific code)
+# Organized into subdirectories for maintainability
 set(NOMAD_AUDIO_CORE_SOURCES
-    src/Filter.cpp
+    # Core
+    src/Core/AudioEngine.cpp
+    src/Core/AudioDeviceManager.cpp
+    src/Core/MixerBus.cpp
+    src/Core/MixerChannel.cpp
+    
+    # Playback
+    src/Playback/AuditionEngine.cpp
+    src/Playback/PreviewEngine.cpp
+    src/Playback/PatternPlaybackEngine.cpp
+    src/Playback/MetronomeEngine.cpp
+    src/Playback/TimelineClock.cpp
+    
+    # Models
+    src/Models/TrackManager.cpp
+    src/Models/PlaylistModel.cpp
+    # src/Models/SelectionModel.cpp  # TODO: Rewrite for new PlaylistModel API (uses obsolete getAllClipsInRange, etc.)
+    src/Models/UnitManager.cpp
+    src/Models/PatternManager.cpp
+    src/Models/ClipSource.cpp
+    src/Models/AudioClip.cpp
+    src/Models/PlaylistTrack.cpp
+    
+    # DSP
+    src/DSP/AudioProcessor.cpp
+    src/DSP/Filter.cpp
+    src/DSP/Oscillator.cpp
+    src/DSP/SincAVX512.cpp
+    src/DSP/SampleRateConverter.cpp
+    
+    # IO
+    src/IO/MiniAudioDecoder.cpp
+    src/IO/StreamingDecoder.cpp
+    src/IO/WaveformCache.cpp
+    src/IO/PathUtils.cpp
+    src/IO/MetadataParser.cpp
+    
+    # Drivers
+    src/Drivers/DummyAudioDriver.cpp
+    
+    # Other (root-level for now)
     src/AudioGraphBuilder.cpp
-    src/PathUtils.cpp
-    src/AudioEngine.cpp
-    src/AudioDeviceManager.cpp
-    src/AudioProcessor.cpp
     src/ChannelSlotMap.cpp
-    src/MixerBus.cpp
-    src/Oscillator.cpp
-    src/MetronomeEngine.cpp
-    src/PreviewEngine.cpp
     src/SamplePool.cpp
-    src/SampleRateConverter.cpp
-    src/MixerChannel.cpp
-    src/TrackManager.cpp
-    src/AudioClip.cpp
-    src/MiniAudioDecoder.cpp
-    src/PlaylistTrack.cpp
-    # Multi-clip playlist system
-    src/ClipSource.cpp
-    src/PlaylistModel.cpp
-    # src/SelectionModel.cpp  # TODO: Fix API mismatches (PlaylistClip.h, etc)
-    src/WaveformCache.cpp
-    src/PatternManager.cpp
-
-    src/UnitManager.cpp
-    src/PatternPlaybackEngine.cpp
-    src/TimelineClock.cpp
-    src/StreamingDecoder.cpp
-    src/DummyAudioDriver.cpp
-    # Undo/Redo
-    # Undo/Redo
+    src/AudioRenderer.cpp
+    
+    # Commands
     src/Commands/CommandHistory.cpp
     src/Commands/SplitClipCommand.cpp
     src/Commands/AddClipCommand.cpp
-    # Plugin hosting system
+    
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp
     src/Plugin/PluginManager.cpp
     src/Plugin/PluginFactory.cpp
     src/Plugin/SamplerPlugin.cpp
     src/Plugin/EffectChain.cpp
-    src/SincAVX512.cpp
-    src/AudioRenderer.cpp
-    src/AuditionEngine.cpp
-    src/MetadataParser.cpp
 )
 
 # Set per-file compile flags for AVX-512
 if(MSVC)
-    set_source_files_properties(src/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "/arch:AVX512")
+    set_source_files_properties(src/DSP/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "/arch:AVX512")
 else()
-    set_source_files_properties(src/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "-mavx512f -mavx512dq")
+    set_source_files_properties(src/DSP/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "-mavx512f -mavx512dq")
 endif()
 
 # Add VST3 host sources if SDK is available
@@ -302,6 +314,15 @@ target_include_directories(NomadAudioCore
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/../NomadCore/include
         ${CMAKE_CURRENT_SOURCE_DIR}/../NomadPlat/include
+        # Add all src subdirectories for reorganization-proof includes
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Core
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Playback
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Models
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/DSP
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/IO
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Drivers
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Plugin
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Commands
 )
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio)
@@ -363,7 +384,7 @@ if(WIN32)
         src/Win32/WASAPIExclusiveDriver.cpp
         src/Win32/ASIODriverInfo.cpp
         src/Win32/RtAudioBackend.cpp
-        src/ASIODriver.cpp  # Added Phase 6
+        src/Drivers/ASIODriver.cpp  # Added Phase 6
     )
     
     set(NOMAD_AUDIO_WIN_HEADERS
@@ -558,8 +579,8 @@ add_test(NAME NomadAudioSoakTest COMMAND NomadAudioSoakTest)
 # Performance stress test suite
 add_executable(NomadAudioPerformanceTest
     test/PerformanceStressTest.cpp
-    src/Filter.cpp  # Need to compile Filter directly if not exposed via library public headers effectively or just to be safe
-    src/Oscillator.cpp
+    src/DSP/Filter.cpp  # Need to compile Filter directly if not exposed via library public headers effectively or just to be safe
+    src/DSP/Oscillator.cpp
 )
 
 target_link_libraries(NomadAudioPerformanceTest
@@ -611,7 +632,7 @@ add_test(NAME NomadCrashTest COMMAND NomadCrashTest)
 # Waveform Isolation Verification Test
 add_executable(NomadWaveformLockTest
     test/WaveformLockTest.cpp
-    src/WaveformCache.cpp
+    src/IO/WaveformCache.cpp
 )
 target_link_libraries(NomadWaveformLockTest PRIVATE NomadAudio NomadCore)
 add_test(NAME NomadWaveformLockTest COMMAND NomadWaveformLockTest)
@@ -619,8 +640,8 @@ add_test(NAME NomadWaveformLockTest COMMAND NomadWaveformLockTest)
 # Atomic Autosave Verification Test
 add_executable(NomadAtomicSaveTest
     test/AtomicSaveTest.cpp
-    src/PlaylistModel.cpp
-    src/ClipSource.cpp
+    src/Models/PlaylistModel.cpp
+    src/Models/ClipSource.cpp
 )
 target_link_libraries(NomadAtomicSaveTest PRIVATE NomadAudio NomadCore)
 add_test(NAME NomadAtomicSaveTest COMMAND NomadAtomicSaveTest)
