@@ -167,98 +167,11 @@ if(NOMAD_ENABLE_UI)
 endif()
 
 # =============================================================================
-# Test Executables
+# Tests - Centralized in Tests/ directory
 # =============================================================================
-if(NOMAD_ENABLE_TESTS AND EXISTS "${CMAKE_SOURCE_DIR}/Tests/VST3PluginTest.cpp")
-    add_executable(VST3PluginTest Tests/VST3PluginTest.cpp)
-    target_link_libraries(VST3PluginTest PRIVATE
-        NomadAudioCore
-        NomadCore
-    )
-    target_include_directories(VST3PluginTest PRIVATE
-        ${CMAKE_SOURCE_DIR}/NomadAudio/include
-        ${CMAKE_SOURCE_DIR}/NomadCore/include
-    )
-    # VST3 SDK integration
-    set(VST3_SDK_PATH "${CMAKE_SOURCE_DIR}/NomadAudio/External/vst3sdk")
-    if(EXISTS "${VST3_SDK_PATH}/pluginterfaces")
-        target_compile_definitions(VST3PluginTest PRIVATE NOMAD_HAS_VST3)
-        target_include_directories(VST3PluginTest PRIVATE
-            ${VST3_SDK_PATH}
-            ${VST3_SDK_PATH}/pluginterfaces
-            ${VST3_SDK_PATH}/public.sdk
-            ${VST3_SDK_PATH}/public.sdk/source
-            ${VST3_SDK_PATH}/base
-        )
-    endif()
-    if(WIN32)
-        target_link_libraries(VST3PluginTest PRIVATE ole32)
-    endif()
+if(NOMAD_ENABLE_TESTS)
+    add_subdirectory(Tests)
 endif()
-
-  # Project roundtrip smoke test (create -> save -> load -> verify)
-  if(NOMAD_ENABLE_TESTS AND EXISTS "${CMAKE_SOURCE_DIR}/Tests/ProjectRoundTripTest.cpp")
-    add_executable(ProjectRoundTripTest
-      Tests/ProjectRoundTripTest.cpp
-      Source/Core/ProjectSerializer.cpp
-    )
-    target_link_libraries(ProjectRoundTripTest PRIVATE
-      NomadAudio
-      NomadCore
-    )
-    target_include_directories(ProjectRoundTripTest PRIVATE
-      ${CMAKE_SOURCE_DIR}/NomadAudio/include
-      ${CMAKE_SOURCE_DIR}/NomadCore/include
-      ${CMAKE_SOURCE_DIR}/Source
-    )
-
-    # Optional load-stage tracing for debugging serializer issues.
-    target_compile_definitions(ProjectRoundTripTest PRIVATE
-      $<$<CONFIG:Debug>:NOMAD_ENABLE_PROJECT_LOAD_LOGS>
-    )
-
-    enable_testing()
-    add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
-    # Alias name to make autosave-path coverage obvious in CI output.
-    add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
-  endif()
-
-  # Plugin Scanner verification test
-  if(NOMAD_ENABLE_TESTS AND EXISTS "${CMAKE_SOURCE_DIR}/Tests/PluginScanTest.cpp")
-    add_executable(NomadPluginScanTest
-      Tests/PluginScanTest.cpp
-    )
-    target_link_libraries(NomadPluginScanTest PRIVATE
-      NomadAudio
-      NomadCore
-    )
-    target_include_directories(NomadPluginScanTest PRIVATE
-      ${CMAKE_SOURCE_DIR}/NomadAudio/include
-      ${CMAKE_SOURCE_DIR}/NomadCore/include
-    )
-    if(WIN32)
-        target_link_libraries(NomadPluginScanTest PRIVATE ole32)
-    endif()
-  endif()
-
-  # Resampler Benchmark
-  if(NOMAD_ENABLE_TESTS AND EXISTS "${CMAKE_SOURCE_DIR}/Tests/ResamplerBenchmark.cpp")
-    add_executable(ResamplerBenchmark Tests/ResamplerBenchmark.cpp)
-    target_link_libraries(ResamplerBenchmark PRIVATE NomadAudioCore NomadCore)
-    target_include_directories(ResamplerBenchmark PRIVATE
-      ${CMAKE_SOURCE_DIR}/NomadAudio/include
-      ${CMAKE_SOURCE_DIR}/NomadCore/include
-    )
-    if(WIN32)
-        target_link_libraries(ResamplerBenchmark PRIVATE ole32)
-    endif()
-    # Enable AVX2 if available
-    if(MSVC)
-      target_compile_options(ResamplerBenchmark PRIVATE /arch:AVX2)
-    else()
-      target_compile_options(ResamplerBenchmark PRIVATE -mavx2 -mfma)
-    endif()
-  endif()
 
 message(STATUS "")
 message(STATUS "=================================")

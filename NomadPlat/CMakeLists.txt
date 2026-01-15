@@ -93,6 +93,8 @@ endif()
 # =============================================================================
 # Tests
 # =============================================================================
+# Tests moved to Tests/ directory - see Tests/CMakeLists.txt
+if(FALSE)  # Legacy tests - now centralized in Tests/
 option(NOMAD_BUILD_PLAT_TESTS "Build NomadPlat tests" ON)
 
 if(NOMAD_BUILD_PLAT_TESTS)
@@ -108,5 +110,6 @@ if(NOMAD_BUILD_PLAT_TESTS)
     add_test(NAME PlatformWindowTest COMMAND PlatformWindowTest)
     add_test(NAME PlatformDPITest COMMAND PlatformDPITest)
 endif()
+endif()  # End legacy tests
 
 message(STATUS "NomadPlat configured for ${CMAKE_SYSTEM_NAME}")
