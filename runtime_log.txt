@@ -1078,3 +1078,28 @@
 [2026-01-15 14:46:06] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
 [2026-01-15 14:46:06] [INFO]  ========================================
 [2026-01-15 14:46:06] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-15 15:51:43] [INFO]  ========================================
+[2026-01-15 15:51:43] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-15 15:51:43] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-15 15:51:43] [INFO]  ========================================
+[2026-01-15 15:51:43] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-15 16:00:57] [INFO]  ========================================
+[2026-01-15 16:00:57] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-15 16:00:57] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-15 16:00:57] [INFO]  ========================================
+[2026-01-15 16:00:57] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-15 16:01:38] [INFO]  ========================================
+[2026-01-15 16:01:38] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-15 16:01:38] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-15 16:01:38] [INFO]  ========================================
+[2026-01-15 16:01:38] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-15 16:02:46] [INFO]  ========================================
+[2026-01-15 16:02:46] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-15 16:02:46] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-15 16:02:46] [INFO]  ========================================
+[2026-01-15 16:02:46] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-15 16:09:01] [INFO]  ========================================
+[2026-01-15 16:09:01] [INFO]  NOMAD DAW Starting - Nomad-2025-Core
+[2026-01-15 16:09:01] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\NOMAD
+[2026-01-15 16:09:01] [INFO]  ========================================
+[2026-01-15 16:09:01] [ERROR] Platform not initialized! Call Platform::initialize() first.

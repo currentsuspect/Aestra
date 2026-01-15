@@ -172,17 +172,8 @@ target_include_directories(glad PUBLIC External/glad/include)
 # FreeType - Text Rendering
 # =============================================================================
 
-include(FetchContent)
-
-message(STATUS "Fetching FreeType...")
-
-FetchContent_Declare(
-    freetype
-    GIT_REPOSITORY https://github.com/freetype/freetype.git
-    GIT_TAG VER-2-13-3  # Latest stable version with CMake 4.x support
-    GIT_SHALLOW TRUE
-    SYSTEM # Treat as system dependency to suppress warnings
-)
+# Use local freetype (manual download fallback)
+message(STATUS "Using local FreeType from External/freetype_local...")
 
 # Disable unnecessary FreeType features
 set(FT_DISABLE_ZLIB ON CACHE BOOL "" FORCE)
@@ -193,7 +184,7 @@ set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
 
 # Suppress deprecation warnings from the dependency's CMakeLists
 set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(freetype)
+add_subdirectory(External/freetype_local)
 set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
 
 message(STATUS "✓ FreeType loaded")
