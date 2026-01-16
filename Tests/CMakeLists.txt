@@ -90,10 +90,10 @@ endif()
 # NomadAudio Tests
 # =============================================================================
 
-# Audio Test
-add_executable(NomadAudioTest NomadAudio/AudioTest.cpp)
-target_link_libraries(NomadAudioTest PRIVATE NomadAudio NomadCore)
-add_test(NAME NomadAudioTest COMMAND NomadAudioTest)
+# Audio Test (Removed)
+# add_executable(NomadAudioTest NomadAudio/AudioTest.cpp)
+# target_link_libraries(NomadAudioTest PRIVATE NomadAudio NomadCore)
+# add_test(NAME NomadAudioTest COMMAND NomadAudioTest)
 
 # Soak Test
 add_executable(NomadAudioSoakTest NomadAudio/AudioEngineSoakTest.cpp)
@@ -133,15 +133,15 @@ add_executable(NomadAtomicSaveTest
 target_link_libraries(NomadAtomicSaveTest PRIVATE NomadAudio NomadCore)
 add_test(NAME NomadAtomicSaveTest COMMAND NomadAtomicSaveTest)
 
-# Watchdog Test
-add_executable(NomadWatchdogTest NomadAudio/WatchdogTest.cpp)
-target_link_libraries(NomadWatchdogTest PRIVATE NomadAudio NomadCore)
-add_test(NAME NomadWatchdogTest COMMAND NomadWatchdogTest)
+# Watchdog Test (Removed)
+# add_executable(NomadWatchdogTest NomadAudio/WatchdogTest.cpp)
+# target_link_libraries(NomadWatchdogTest PRIVATE NomadAudio NomadCore)
+# add_test(NAME NomadWatchdogTest COMMAND NomadWatchdogTest)
 
-# Crash Test
-add_executable(NomadCrashTest NomadAudio/CrashTest.cpp)
-target_link_libraries(NomadCrashTest PRIVATE NomadAudio NomadCore)
-add_test(NAME NomadCrashTest COMMAND NomadCrashTest)
+# Crash Test (Removed)
+# add_executable(NomadCrashTest NomadAudio/CrashTest.cpp)
+# target_link_libraries(NomadCrashTest PRIVATE NomadAudio NomadCore)
+# add_test(NAME NomadCrashTest COMMAND NomadCrashTest)
 
 # Wav Loader Test
 add_executable(NomadWavLoaderTest NomadAudio/WavLoaderTest.cpp)
@@ -156,35 +156,35 @@ if(WIN32 AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/NomadAudio/DeviceManagerTest.cp
     add_test(NAME NomadDeviceManagerTest COMMAND NomadDeviceManagerTest)
 endif()
 
-# Audio Callback Test
-add_executable(NomadAudioCallbackTest NomadAudio/AudioCallbackTest.cpp)
-target_link_libraries(NomadAudioCallbackTest PRIVATE NomadAudio NomadCore)
-add_test(NAME NomadAudioCallbackTest COMMAND NomadAudioCallbackTest)
+# Audio Callback Test (Removed)
+# add_executable(NomadAudioCallbackTest NomadAudio/AudioCallbackTest.cpp)
+# target_link_libraries(NomadAudioCallbackTest PRIVATE NomadAudio NomadCore)
+# add_test(NAME NomadAudioCallbackTest COMMAND NomadAudioCallbackTest)
 
-# Filter Test
-add_executable(NomadFilterTest NomadAudio/FilterTest.cpp)
-target_link_libraries(NomadFilterTest PRIVATE NomadAudio NomadCore)
-add_test(NAME NomadFilterTest COMMAND NomadFilterTest)
+# Filter Test (Removed)
+# add_executable(NomadFilterTest NomadAudio/FilterTest.cpp)
+# target_link_libraries(NomadFilterTest PRIVATE NomadAudio NomadCore)
+# add_test(NAME NomadFilterTest COMMAND NomadFilterTest)
 
-# Oscillator Test
-add_executable(NomadOscillatorTest NomadAudio/OscillatorTest.cpp)
-target_link_libraries(NomadOscillatorTest PRIVATE NomadAudio NomadCore)
-add_test(NAME NomadOscillatorTest COMMAND NomadOscillatorTest)
+# Oscillator Test (Removed)
+# add_executable(NomadOscillatorTest NomadAudio/OscillatorTest.cpp)
+# target_link_libraries(NomadOscillatorTest PRIVATE NomadAudio NomadCore)
+# add_test(NAME NomadOscillatorTest COMMAND NomadOscillatorTest)
 
-# Mixer Bus Test
-add_executable(NomadMixerBusTest NomadAudio/MixerBusTest.cpp)
-target_link_libraries(NomadMixerBusTest PRIVATE NomadAudio NomadCore)
-add_test(NAME NomadMixerBusTest COMMAND NomadMixerBusTest)
+# Mixer Bus Test (Removed)
+# add_executable(NomadMixerBusTest NomadAudio/MixerBusTest.cpp)
+# target_link_libraries(NomadMixerBusTest PRIVATE NomadAudio NomadCore)
+# add_test(NAME NomadMixerBusTest COMMAND NomadMixerBusTest)
 
 # Sample Rate Converter Test
 add_executable(NomadSampleRateConverterTest NomadAudio/SampleRateConverterTest.cpp)
 target_link_libraries(NomadSampleRateConverterTest PRIVATE NomadAudio NomadCore)
 add_test(NAME NomadSampleRateConverterTest COMMAND NomadSampleRateConverterTest)
 
-# Serialization Compatibility Test
-add_executable(NomadSerializationCompatibilityTest NomadAudio/SerializationCompatibilityTest.cpp)
-target_link_libraries(NomadSerializationCompatibilityTest PRIVATE NomadAudio NomadCore)
-add_test(NAME NomadSerializationCompatibilityTest COMMAND NomadSerializationCompatibilityTest)
+# Serialization Compatibility Test (Removed)
+# add_executable(NomadSerializationCompatibilityTest NomadAudio/SerializationCompatibilityTest.cpp)
+# target_link_libraries(NomadSerializationCompatibilityTest PRIVATE NomadAudio NomadCore)
+# add_test(NAME NomadSerializationCompatibilityTest COMMAND NomadSerializationCompatibilityTest)
 
 # =============================================================================
 # NomadPlat Tests

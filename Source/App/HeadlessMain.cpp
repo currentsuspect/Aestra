@@ -7,7 +7,7 @@
 #include "SamplePool.h"
 #include "TrackManager.h"
 
-#include "ProjectSerializer.h"
+#include "../Core/ProjectSerializer.h"
 
 #include "../NomadCore/include/NomadJSON.h"
 

@@ -1,6 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "TrackManager.h"
+#include "GarbageCollector.h"
 #include "MixerChannel.h"
 #include "AudioCommandQueue.h" 
 #include "AudioEngine.h" // [NEW] Correct placement
@@ -356,14 +357,13 @@ void TrackManager::record() {
 }
 
 void TrackManager::startRecordingProcess() {
-    std::lock_guard<std::mutex> lock(m_recordingMutex);
-    m_recordingBuffers.clear();
+    auto newContext = std::make_shared<RecordingContext>();
+
     std::lock_guard<std::mutex> chanLock(m_channelMutex);
     
     double currentBeat = m_positionSeconds.load() * (m_clock.getCurrentTempo() / 60.0);
     
     // B-006: Pre-allocate recording buffers on main thread
-    // Use input sample rate if available, otherwise output rate
     uint32_t sampleRate = static_cast<uint32_t>(m_inputSampleRate.load());
     if (sampleRate == 0) {
         sampleRate = static_cast<uint32_t>(m_outputSampleRate.load());
@@ -381,7 +381,6 @@ void TrackManager::startRecordingProcess() {
             buf.active = true;
             
             // B-006: Pre-allocate buffer for MAX_RECORDING_SECONDS
-            // This eliminates all allocations on the audio thread during recording
             buf.preallocate(MAX_RECORDING_SECONDS * sampleRate);
             
             auto it = std::find(m_channels.begin(), m_channels.end(), channel);
@@ -393,13 +392,15 @@ void TrackManager::startRecordingProcess() {
             }
             
             if (buf.trackId > 0)
-                m_recordingBuffers.push_back(std::move(buf));
+                newContext->buffers.push_back(std::move(buf));
         }
     }
     
-    if (!m_recordingBuffers.empty()) {
+    if (!newContext->buffers.empty()) {
+        std::lock_guard<std::mutex> lock(m_recordingMutex);
+        std::atomic_store(&m_activeRecordingContext, newContext);
         m_isRecording.store(true);
-        Log::info("Recording started - Armed tracks: " + std::to_string(m_recordingBuffers.size()) + 
+        Log::info("Recording started - Armed tracks: " + std::to_string(newContext->buffers.size()) +
                   ", Pre-allocated " + std::to_string(MAX_RECORDING_SECONDS) + "s per track");
     } else {
         Log::warning("Cannot start recording - No tracks are armed");
@@ -407,31 +408,30 @@ void TrackManager::startRecordingProcess() {
     }
 }
 
-
-
 void TrackManager::processInput(const float* inputBuffer, uint32_t numFrames) {
     // Copy to monitor buffer (always update for monitoring)
-    // Uses lock-free spinlock with immediate fallback to avoid RT stalls
     if (inputBuffer && m_inputChannelCount > 0) {
         size_t totalSamples = numFrames * m_inputChannelCount;
         
-        // Try to acquire spinlock (non-blocking)
-        // If another thread holds it, just skip this update (monitoring is non-critical)
         if (!m_monitorSpinlock.test_and_set(std::memory_order_acquire)) {
-            // We got the lock - buffer was pre-allocated in setInputChannelCount
             if (m_monitorBuffer.size() >= totalSamples) {
                 std::memcpy(m_monitorBuffer.data(), inputBuffer, totalSamples * sizeof(float));
                 m_monitorBufferSize.store(static_cast<uint32_t>(totalSamples), std::memory_order_release);
             }
             m_monitorSpinlock.clear(std::memory_order_release);
         }
-        // If we couldn't acquire, skip update - UI will use stale data (acceptable)
     }
 
-    if (!m_isRecording.load()) return;
+    if (!m_isRecording.load(std::memory_order_acquire)) return;
     
-    std::unique_lock<std::mutex> lock(m_recordingMutex, std::try_to_lock);
-    if (!lock.owns_lock()) return;
+    // LOCK-FREE ACCESS
+    auto context = std::atomic_load(&m_activeRecordingContext);
+    if (!context) return;
+
+    // RT Deallocation Safety
+    if (context.use_count() == 1) {
+        GarbageCollector::getInstance().deferDelete(context);
+    }
 
     // Initialize time on first callback
     if (m_recordingFramesCaptured == 0) {
@@ -440,7 +440,7 @@ void TrackManager::processInput(const float* inputBuffer, uint32_t numFrames) {
     m_recordingFramesCaptured += numFrames;
     
     uint32_t stride = (m_inputChannelCount > 0) ? m_inputChannelCount : 2;
-    for (auto& buf : m_recordingBuffers) {
+    for (auto& buf : context->buffers) {
         if (buf.active) {
             buf.append(inputBuffer, numFrames, stride, buf.inputChannelIndex);
         }
@@ -448,7 +448,14 @@ void TrackManager::processInput(const float* inputBuffer, uint32_t numFrames) {
 }
 
 void TrackManager::finishRecording() {
-    std::lock_guard<std::mutex> lock(m_recordingMutex);
+    // Atomic Swap to null (stops RT access)
+    std::shared_ptr<RecordingContext> context;
+    {
+        std::lock_guard<std::mutex> lock(m_recordingMutex);
+        context = std::atomic_exchange(&m_activeRecordingContext, std::shared_ptr<RecordingContext>(nullptr));
+    }
+
+    if (!context) return;
     
     // Ensure Recordings dir exists
     std::filesystem::path recDir = "Recordings";
@@ -458,7 +465,7 @@ void TrackManager::finishRecording() {
     auto now = std::chrono::system_clock::now();
     auto timeT = std::chrono::system_clock::to_time_t(now);
     
-    for (auto& buf : m_recordingBuffers) {
+    for (auto& buf : context->buffers) {
         // B-006: Use getSampleCount() for pre-allocated buffer
         size_t sampleCount = buf.getSampleCount();
         if (sampleCount == 0) {
@@ -488,19 +495,12 @@ void TrackManager::finishRecording() {
         ss << "Rec_Track" << buf.trackId << "_" << std::put_time(std::localtime(&timeT), "%Y%m%d_%H%M%S") << ".wav";
         std::filesystem::path filePath = recDir / ss.str();
         
-        // === SAMPLE RATE: Use the ACTUAL input sample rate from WASAPI ===
-        // The old "smart detection" (frames/time) was unreliable due to timing jitter.
-        // Main.cpp sets m_inputSampleRate from WASAPI's actual device rate.
-        // This is THE SOURCE OF TRUTH for what rate the samples were captured at.
-        
         uint32_t finalRate = static_cast<uint32_t>(m_inputSampleRate.load());
         
-        // Fallback to output rate if input rate not set
         if (finalRate == 0) {
             finalRate = static_cast<uint32_t>(m_outputSampleRate.load());
         }
         
-        // Debug: Log what the old "smart detection" would have guessed (for comparison)
         auto stopTime = std::chrono::high_resolution_clock::now();
         double durationSec = std::chrono::duration<double>(stopTime - m_recordingStartTime).count();
         double detectedRate = (durationSec > 0.5) ? (double)m_recordingFramesCaptured / durationSec : 0.0;
@@ -512,13 +512,11 @@ void TrackManager::finishRecording() {
         ma_encoder_config config = ma_encoder_config_init(ma_encoding_format_wav, ma_format_f32, 1, finalRate);
         ma_encoder encoder;
         if (ma_encoder_init_file(filePath.string().c_str(), &config, &encoder) == MA_SUCCESS) {
-            // B-006: Write from pre-allocated buffer with latency offset
             ma_encoder_write_pcm_frames(&encoder, buf.data.data() + startOffset, sampleCount, nullptr);
             ma_encoder_uninit(&encoder);
             
             Log::info("Saved recording to: " + filePath.string());
 
-            // Register Source
             ClipSourceID sourceId = m_sourceManager.createSource(ss.str());
             ClipSource* source = m_sourceManager.getSource(sourceId);
             if (source) {
@@ -528,12 +526,10 @@ void TrackManager::finishRecording() {
                 audioData->sampleRate = finalRate;
                 audioData->numChannels = 1;
                 audioData->numFrames = sampleCount;
-                // B-006: Copy only the recorded samples (with latency offset applied)
                 audioData->interleavedData.assign(buf.data.begin() + startOffset, 
                                                    buf.data.begin() + startOffset + sampleCount);
                 source->setBuffer(audioData);
                 
-                // Create Pattern (which ClipInstance uses)
                 AudioSlicePayload payload;
                 payload.audioSourceId = sourceId;
                 payload.slices.push_back({0.0, (double)sampleCount});
@@ -541,20 +537,17 @@ void TrackManager::finishRecording() {
                 double durationBeats = (double)sampleCount / (double)finalRate * (m_clock.getCurrentTempo() / 60.0);
                 PatternID patternId = m_patternManager.createAudioPattern(ss.str(), durationBeats, payload);
 
-                // Create Clip Instance
                 ClipInstance newClip;
                 newClip.id = ClipInstanceID::generate();
                 newClip.patternId = patternId;
                 newClip.startBeat = buf.startBeat;
                 newClip.durationBeats = durationBeats;
                 newClip.name = ss.str();
-                newClip.mixerChannelId = MixerChannelID(buf.trackId); // Assuming TrackID matches MixerChannelID value
+                newClip.mixerChannelId = MixerChannelID(buf.trackId);
                 
-                // Add to Playlist
                 if (buf.targetLane.isValid()) {
                     m_playlistModel.addClip(buf.targetLane, newClip);
                 } else {
-                    // Create new lane? For now just log warning.
                     Log::warning("Recorded clip not added: No target lane found");
                 }
             }
@@ -562,7 +555,6 @@ void TrackManager::finishRecording() {
              Log::error("Failed to save recording: " + filePath.string());
         }
     }
-    m_recordingBuffers.clear();
     m_isModified.store(true);
     m_graphDirty.store(true);
 }
@@ -681,10 +673,11 @@ void TrackManager::enableMetronome(bool enable) {
 
 
 bool TrackManager::getRecordingDataSnapshot(uint32_t trackId, std::vector<float>& outBuffer, double& outStartBeat) {
-    std::lock_guard<std::mutex> lock(m_recordingMutex);
+    auto context = std::atomic_load(&m_activeRecordingContext);
+    if (!context) return false;
     
     // Find active recording buffer for this track
-    for (const auto& buffer : m_recordingBuffers) {
+    for (const auto& buffer : context->buffers) {
         if (buffer.active && buffer.trackId == trackId) {
             // Copy data to output buffer
             outBuffer = buffer.data; 

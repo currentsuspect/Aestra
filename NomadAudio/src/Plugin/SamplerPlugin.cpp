@@ -1,4 +1,5 @@
 #include "Plugin/SamplerPlugin.h"
+#include "GarbageCollector.h"
 #include "MiniAudioDecoder.h"
 #include <filesystem>
 #include <cmath>
@@ -59,20 +60,20 @@ const PluginInfo& SamplerPlugin::getInfo() const {
 bool SamplerPlugin::loadSample(const std::string& path) {
     if (!std::filesystem::exists(path)) return false;
 
-    std::vector<float> data;
-    uint32_t rate = 0;
-    uint32_t channels = 0;
+    auto newResource = std::make_shared<SampleResource>();
+    newResource->path = path;
 
     // Use Nomad's unified decoder
-    if (!decodeAudioFile(path, data, rate, channels)) {
+    if (!decodeAudioFile(path, newResource->data, newResource->sampleRate, newResource->channels)) {
         return false;
     }
 
-    // Update State safely
-    std::lock_guard<std::mutex> lock(m_sampleMutex);
-    m_sampleData = std::move(data);
-    m_sampleRateSource = rate;
-    m_sampleChannels = channels;
+    // Atomic Swap protected by mutex (only for write contention with other UI threads, not RT)
+    // The shared_ptr swap is atomic, but we lock to ensure sequential updates from UI
+    std::lock_guard<std::mutex> lock(m_resourceMutex);
+    // Explicitly cast to const shared_ptr to match the target type of m_sampleResource
+    std::shared_ptr<const SampleResource> constResource = newResource;
+    std::atomic_store(&m_sampleResource, constResource);
     
     return true;
 }
@@ -100,8 +101,26 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
         }
     }
     
-    std::unique_lock<std::mutex> lock(m_sampleMutex, std::try_to_lock);
-    if (!lock.owns_lock() || m_sampleData.empty()) return;
+    // Lock-free access: atomically load the shared_ptr
+    std::shared_ptr<const SampleResource> resource = std::atomic_load(&m_sampleResource);
+
+    // Defer destruction to avoid calling free() on RT thread
+    // Only push if we are likely the last owner (optimization: use_count() == 1 hint)
+    // Note: use_count is relaxed, but false negative (we think we are last but aren't) is safe (just redundant defer).
+    // False positive (we think we aren't, but we become last during destruction) -> risk free().
+    // So we should err on side of deferring.
+    // For this prototype, we defer if unique.
+    if (resource.use_count() == 1) {
+        GarbageCollector::getInstance().deferDelete(resource);
+    }
+
+    if (!resource || resource->data.empty()) return;
+
+    // Cache resource fields locally for speed
+    const float* sampleData = resource->data.data();
+    size_t sampleSize = resource->data.size();
+    uint32_t sampleChannels = resource->channels;
+    uint32_t sampleRateSource = resource->sampleRate;
 
     // Parameters
     float pitchParam = m_params[kParamPitch].load(std::memory_order_relaxed);
@@ -109,7 +128,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
     float pitchRatio = std::pow(2.0f, semitones / 12.0f);
     
     // Source Rate correction
-    double baseRate = (double)m_sampleRateSource / m_sampleRate;
+    double baseRate = (double)sampleRateSource / m_sampleRate;
     double rate = baseRate * pitchRatio;
 
     // Events
@@ -145,7 +164,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
             }
             
             // Sample Lookup
-            if (v.position >= m_sampleData.size() / m_sampleChannels) {
+            if (v.position >= sampleSize / sampleChannels) {
                 v.active = false;
                 continue;
             }
@@ -155,15 +174,15 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
             uint64_t idx = (uint64_t)pos;
             double frac = pos - idx;
             
-            if (idx * m_sampleChannels + 1 < m_sampleData.size()) {
-                float sL = m_sampleData[idx * m_sampleChannels];
-                float sR = (m_sampleChannels > 1) ? m_sampleData[idx * m_sampleChannels + 1] : sL;
+            if (idx * sampleChannels + 1 < sampleSize) {
+                float sL = sampleData[idx * sampleChannels];
+                float sR = (sampleChannels > 1) ? sampleData[idx * sampleChannels + 1] : sL;
                 
                 // Next sample
                 float nL = 0.0f, nR = 0.0f;
-                if ((idx + 1) * m_sampleChannels + 1 < m_sampleData.size()) {
-                    nL = m_sampleData[(idx + 1) * m_sampleChannels];
-                    nR = (m_sampleChannels > 1) ? m_sampleData[(idx + 1) * m_sampleChannels + 1] : nL;
+                if ((idx + 1) * sampleChannels + 1 < sampleSize) {
+                    nL = sampleData[(idx + 1) * sampleChannels];
+                    nR = (sampleChannels > 1) ? sampleData[(idx + 1) * sampleChannels + 1] : nL;
                 }
                 
                 float outL = sL + frac * (nL - sL);
@@ -344,10 +363,9 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
      
      // Sample
      {
-         // Access mutable mutex in const function
-         std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_sampleMutex));
-         if (!m_loadedSamplePath.empty()) {
-             json.set("samplePath", Nomad::JSON(m_loadedSamplePath));
+         std::shared_ptr<const SampleResource> res = std::atomic_load(&m_sampleResource);
+         if (res && !res->path.empty()) {
+             json.set("samplePath", Nomad::JSON(res->path));
          }
      }
      

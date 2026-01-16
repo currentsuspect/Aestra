@@ -74,11 +74,14 @@ private:
     double m_sampleRate = 44100.0;
     
     // Sample Data
-    std::vector<float> m_sampleData; // Interleaved
-    uint32_t m_sampleChannels = 2;
-    uint32_t m_sampleRateSource = 44100;
-    std::string m_loadedSamplePath; // [NEW] Persist path
-    std::mutex m_sampleMutex;
+    struct SampleResource {
+        std::vector<float> data;
+        uint32_t channels = 2;
+        uint32_t sampleRate = 44100;
+        std::string path;
+    };
+    std::shared_ptr<const SampleResource> m_sampleResource;
+    std::mutex m_resourceMutex; // Protects swap of m_sampleResource
 
     // Parameters
     enum ParamID {

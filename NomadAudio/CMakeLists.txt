@@ -467,6 +467,11 @@ elseif(UNIX)
         add_library(NomadAudio INTERFACE)
         target_link_libraries(NomadAudio INTERFACE NomadAudioCore)
     endif()
+
+    # [FIX] Always add Linux driver registry source even if ALSA not found (it handles stubs)
+    list(APPEND NOMAD_AUDIO_CORE_SOURCES
+        src/Linux/LinuxDriverRegistry.cpp
+    )
 endif()
 
 

@@ -6,6 +6,7 @@
 #include <fstream>
 #include <memory>
 #include <cstdint>
+#include <cstring>
 
 namespace Nomad {
 

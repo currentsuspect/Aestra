@@ -307,9 +307,13 @@ private:
     
     // B-006: Max recording time in seconds (pre-allocated at record start)
     static constexpr size_t MAX_RECORDING_SECONDS = 600; // 10 minutes
-    
-    std::vector<RecordingBuffer> m_recordingBuffers;
-    std::mutex m_recordingMutex;
+
+    // Lock-Free Recording Context
+    struct RecordingContext {
+        std::vector<RecordingBuffer> buffers;
+    };
+    std::shared_ptr<RecordingContext> m_activeRecordingContext;
+    std::mutex m_recordingMutex; // Only protects swapping of contexts, not RT access
     
     // Wall-Clock Rate Detection
     std::chrono::high_resolution_clock::time_point m_recordingStartTime;
