@@ -7,8 +7,8 @@
 #include <filesystem>
 #include <iostream>
 
-#include "../NomadAudio/include/MiniAudioDecoder.h"
-#include "../NomadAudio/include/AudioFileValidator.h"
+#include "MiniAudioDecoder.h"
+#include "AudioFileValidator.h"
 
 namespace NomadUI {
 

@@ -8,7 +8,7 @@
 #include <vector>
 #include <memory>
 #include <atomic>
-#include "../../NomadCore/include/NomadJSON.h"
+#include "NomadJSON.h"
 
 namespace Nomad {
 namespace Audio {

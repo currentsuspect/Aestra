@@ -1,9 +1,9 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
-#include "../../include/AudioDriverRegistry.h"
-#include "../../include/AudioDeviceManager.h"
+#include "AudioDriverRegistry.h"
+#include "AudioDeviceManager.h"
 #include "WASAPIExclusiveDriver.h"
 #include "WASAPISharedDriver.h"
-#include "../../include/ASIODriver.h"
+#include "ASIODriver.h"
 #include "RtAudioBackend.h"
 #include "../DummyAudioDriver.h"
 #include <iostream>

@@ -2,7 +2,7 @@
 #include "NUIComponent.h"
 #include "NUITheme.h"
 #include "NUIThemeSystem.h"
-#include "../Graphics/NUIRenderer.h"
+#include "NUIRenderer.h"
 #include <algorithm>
 #include <iostream>
 

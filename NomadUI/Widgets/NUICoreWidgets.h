@@ -1,11 +1,11 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+﻿// Ã‚Â© 2025 Nomad Studios Ã¢â‚¬â€ All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../Core/NUIComponent.h"
+#include "NUIComponent.h"
 #include "NUIButton.h"
-#include "../Core/NUITextInput.h"
-#include "../Core/NUIIcon.h"
-#include "../Core/NUITypes.h"
+#include "NUITextInput.h"
+#include "NUIIcon.h"
+#include "NUITypes.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -239,3 +239,4 @@ private:
 };
 
 } // namespace NomadUI
+

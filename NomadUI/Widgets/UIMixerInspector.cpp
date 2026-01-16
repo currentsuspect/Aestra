@@ -1,12 +1,12 @@
 // ¶¸ 2025 Nomad Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerInspector.h"
 
-#include "../Core/NUIThemeSystem.h"
+#include "NUIThemeSystem.h"
 #include "../../NomadCore/include/NomadLog.h"
-#include "../Graphics/NUIRenderer.h"
+#include "NUIRenderer.h"
 #include "NUIMixerWidgets.h"
 #include "PluginBrowserPanel.h"
-#include "../../Source/MixerViewModel.h"
+#include "MixerViewModel.h"
 
 #include <algorithm>
 #include <cstdio>

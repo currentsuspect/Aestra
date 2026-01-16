@@ -1,6 +1,6 @@
 // © 2025 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
 #include "PianoRollPanel.h"
-#include "../NomadAudio/include/PatternManager.h"
+#include "PatternManager.h"
 #include "../NomadCore/include/NomadLog.h"
 #include <random>
 

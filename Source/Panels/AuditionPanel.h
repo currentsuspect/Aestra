@@ -27,10 +27,10 @@
  */
 
 #include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUILabel.h"
-#include "../NomadUI/Widgets/NUIButton.h"   // Buttons are in Widgets/
-#include "../NomadUI/Core/NUISlider.h"      // Slider is in Core/
-#include "../NomadAudio/include/AuditionEngine.h"
+#include "NUILabel.h"
+#include "NUIButton.h"   // Buttons are in Widgets/
+#include "NUISlider.h"      // Slider is in Core/
+#include "AuditionEngine.h"
 #include "../NomadUI/Core/NUIDragDrop.h"    // Added for drag and drop support
 #include "../NomadUI/Graphics/NUISVGParser.h" // For SVG Icons
 

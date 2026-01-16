@@ -11,15 +11,16 @@
  * - Filter stability
  */
 
-#include "Filter.h"
-#include "Oscillator.h"
-#include "AudioDeviceManager.h"
+#include "DSP/Filter.h"
+#include "DSP/Oscillator.h"
+#include "Core/AudioDeviceManager.h"
 #include <iostream>
 #include <cmath>
 #include <vector>
 #include <algorithm>
 
 using namespace Nomad::Audio;
+using namespace Nomad::Audio::DSP;
 
 // Test configuration
 constexpr float SAMPLE_RATE = 44100.0f;
@@ -327,7 +328,7 @@ void interactiveAudioTest() {
                 break;
             case 'r':
             case 'R':
-                filter.setResonance(std::min(filter.getResonance() + 1.0f, 10.0f));
+                filter.setResonance(std::min<float>(filter.getResonance() + 1.0f, 10.0f));
                 std::cout << "Resonance: " << filter.getResonance() << std::endl;
                 break;
             case 'q':

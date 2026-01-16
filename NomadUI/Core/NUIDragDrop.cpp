@@ -1,7 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIDragDrop.h"
 #include "NUIComponent.h"
-#include "../Graphics/NUIRenderer.h"
+#include "NUIRenderer.h"
 #include "../../NomadCore/include/NomadLog.h"
 #include <cmath>
 #include <algorithm>

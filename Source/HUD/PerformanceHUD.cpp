@@ -7,7 +7,7 @@
 #include "PerformanceHUD.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadAudio/include/AudioEngine.h"
+#include "AudioEngine.h"
 #include "../NomadCore/include/NomadLog.h"
 #include <sstream>
 #include <iomanip>

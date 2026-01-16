@@ -11,13 +11,13 @@
 
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Widgets/NUIButton.h"
-#include "../NomadUI/Widgets/NUIDropdown.h"
-#include "../NomadUI/Common/MusicHelpers.h"
-#include "../NomadUI/Core/NUILabel.h"
-#include "../NomadUI/Core/NUIIcon.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
+#include "NUIComponent.h"
+#include "NUIButton.h"
+#include "NUIDropdown.h"
+#include "MusicHelpers.h"
+#include "NUILabel.h"
+#include "NUIIcon.h"
+#include "NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "ViewTypes.h"
 #include "TransportInfoContainer.h"

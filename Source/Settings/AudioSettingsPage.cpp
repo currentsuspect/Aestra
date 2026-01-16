@@ -1,8 +1,8 @@
 #include "AudioSettingsPage.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadCore/include/NomadLog.h"
-#include "../NomadAudio/include/PlaylistMixer.h"
-#include "../NomadAudio/include/ClipResampler.h"
+#include "PlaylistMixer.h"
+#include "ClipResampler.h"
 #include <sstream>
 #include <fstream>
 #include <string>

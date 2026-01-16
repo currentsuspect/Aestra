@@ -1,7 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ProjectSerializer.h"
 #include "../NomadCore/include/NomadLog.h"
-#include "../NomadAudio/include/MiniAudioDecoder.h"
+#include "MiniAudioDecoder.h"
 #include <filesystem>
 #include <fstream>
 

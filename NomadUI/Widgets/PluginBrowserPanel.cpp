@@ -1,8 +1,8 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PluginBrowserPanel.h"
-#include "../Graphics/NUIRenderer.h"
-#include "../Core/NUIDragDrop.h"
+#include "NUIRenderer.h"
+#include "NUIDragDrop.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>

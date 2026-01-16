@@ -2,8 +2,8 @@
 #pragma once
 
 #include "ISettingsPage.h"
-#include "../NomadUI/Core/NUILabel.h"
-#include "../NomadUI/Widgets/NUIDropdown.h"
+#include "NUILabel.h"
+#include "NUIDropdown.h"
 
 namespace Nomad {
 

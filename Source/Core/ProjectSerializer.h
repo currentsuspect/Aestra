@@ -1,7 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadAudio/include/TrackManager.h"
+#include "TrackManager.h"
 #include "../NomadCore/include/NomadJSON.h"
 #include <string>
 #include <memory>

@@ -1,35 +1,33 @@
 // Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../Core/NUIComponent.h"
-#include "../Core/NUITypes.h"
-#include "../Graphics/NUIRenderer.h"
+#include "NUIComponent.h"
+#include "NUITypes.h"
+#include "NUIRenderer.h"
 #include <memory>
 #include <string>
 #include <vector>
 #include <functional>
+#include <optional>
 
 namespace NomadUI {
 
 
-class NUIDropdownItem {
-public:
-    NUIDropdownItem(const std::string& text, int value)
-        : text_(text), value_(value), visible_(true), enabled_(true) {}
+struct SelectionChangedEvent {
+    size_t index;
+    int value;
+    std::string text;
+};
 
-    const std::string& getText() const { return text_; }
-    int getValue() const { return value_; }
-    bool isVisible() const { return visible_; }
-    bool isEnabled() const { return enabled_; }
-    
-    void setVisible(bool visible) { visible_ = visible; }
-    void setEnabled(bool enabled) { enabled_ = enabled; }
+struct DropdownItem {
+    std::string text;
+    int value = 0;
+    bool enabled = true;
+    bool visible = true;
+    std::function<void()> callback;
 
-private:
-    std::string text_;
-    int value_;
-    bool visible_;
-    bool enabled_;
+    DropdownItem() = default;
+    DropdownItem(const std::string& t, int v = 0) : text(t), value(v) {}
 };
 
 class NUIDropdown : public NUIComponent {
@@ -38,8 +36,11 @@ public:
     ~NUIDropdown();
 
     // Item management
-    void addItem(const std::string& text, int value);
-    void addItem(std::shared_ptr<NUIDropdownItem> item);
+    void addItem(const std::string& text, int value = 0);
+    void addItem(const std::string& text, const std::function<void()>& callback);
+    void addItem(const std::string& text, int value, const std::function<void()>& callback);
+    void addItem(const DropdownItem& item);
+    
     void setItemVisible(int index, bool visible);
     void setItemEnabled(int index, bool enabled);
     void clearItems();
@@ -47,6 +48,7 @@ public:
     // Visual configuration
     void setPlaceholderText(const std::string& text) { placeholderText_ = text; setDirty(true); }
     void setMaxVisibleItems(int count) { maxVisibleItems_ = count; setDirty(true); }
+    void setItemHeight(float height) { itemHeight_ = height; setDirty(true); }
     
     // Render dropdown list separately for proper z-order
     void renderDropdownList(NUIRenderer& renderer);
@@ -62,6 +64,8 @@ public:
     void setSelectedByValue(int value);
     int getSelectedValue() const;
     std::string getSelectedText() const;
+    std::optional<DropdownItem> getSelectedItem() const;
+    
     bool isOpen() const { return isOpen_; }
     size_t getItemCount() const { return items_.size(); }
     void setSelectedIndex(int index);
@@ -69,7 +73,9 @@ public:
     // Event callbacks
     void setOnOpen(std::function<void()> callback) { onOpen_ = callback; }
     void setOnClose(std::function<void()> callback) { onClose_ = callback; }
+    void setOnSelectionChanged(std::function<void(int)> callback) { onSelectionChangedIndex_ = callback; }
     void setOnSelectionChanged(std::function<void(int, int, const std::string&)> callback) { onSelectionChanged_ = callback; }
+    void setOnSelectionChangedEx(std::function<void(const SelectionChangedEvent&)> callback) { onSelectionChangedEx_ = callback; }
 
     // Overridden methods from NUIComponent
     void onRender(NUIRenderer& renderer) override;
@@ -88,14 +94,16 @@ protected:
 private:
     void renderItem(NUIRenderer& renderer, int index, const NUIRect& bounds, bool isSelected, bool isHovered);
     int getItemUnderMouse(const NUIPoint& mousePos) const;
+    void notifySelectionChanged();
 
-    std::vector<std::shared_ptr<NUIDropdownItem>> items_;
+    std::vector<DropdownItem> items_;
     int selectedIndex_ = -1;
     bool isOpen_ = false;
     float dropdownAnimProgress_ = 0.0f;
     float chevronRotation_ = 0.0f;  // Current rotation angle (0 = down, 180 = up)
     std::string placeholderText_ = "Select an item...";
     int maxVisibleItems_ = 5;
+    float itemHeight_ = 28.0f;
     int hoveredIndex_ = -1;
 
     // Colors
@@ -109,7 +117,9 @@ private:
     // Callbacks
     std::function<void()> onOpen_;
     std::function<void()> onClose_;
+    std::function<void(int)> onSelectionChangedIndex_;
     std::function<void(int, int, const std::string&)> onSelectionChanged_;
+    std::function<void(const SelectionChangedEvent&)> onSelectionChangedEx_;
     
     // Text measurement cache to avoid repeated expensive measureText() calls
     std::vector<float> itemTextWidthCache_;

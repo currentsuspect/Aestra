@@ -1,5 +1,5 @@
 #include "NUIButton.h"
-#include "../Core/NUITheme.h"
+#include "NUITheme.h"
 #include <algorithm>
 
 namespace NomadUI {

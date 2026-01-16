@@ -1,7 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ArsenalPanel.h"
 #include "PatternBrowserPanel.h" // For m_patternBrowser
-#include "../NomadUI/Widgets/NUIButton.h"
+#include "NUIButton.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadCore/include/NomadLog.h"
 

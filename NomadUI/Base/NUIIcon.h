@@ -3,7 +3,7 @@
 
 #include "NUIComponent.h"
 #include "NUITypes.h"
-#include "../Graphics/NUISVGParser.h"
+#include "NUISVGParser.h"
 #include <string>
 #include <memory>
 

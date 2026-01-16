@@ -10,11 +10,11 @@
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
-#include "../NomadAudio/include/AudioDriverTypes.h"
-#include "../NomadAudio/include/TrackManager.h"
-#include "../NomadAudio/include/MixerChannel.h"
-#include "../NomadAudio/include/PlaylistMixer.h"
-#include "../NomadAudio/include/ClipResampler.h"
+#include "AudioDriverTypes.h"
+#include "TrackManager.h"
+#include "MixerChannel.h"
+#include "PlaylistMixer.h"
+#include "ClipResampler.h"
 
 #include <iostream>
 #include <thread>

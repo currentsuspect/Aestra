@@ -1,7 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../Core/NUIComponent.h"
+#include "NUIComponent.h"
 #include "PluginBrowserPanel.h"
 #include <vector>
 #include <functional>

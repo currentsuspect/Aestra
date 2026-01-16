@@ -1,8 +1,8 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Widgets/NUICoreWidgets.h"
+#include "NUIComponent.h"
+#include "NUICoreWidgets.h"
 #include <functional>
 #include <string>
 

@@ -2,10 +2,10 @@
 #include "NomadAudioController.h"
 #include "NomadContent.h"
 #include "AudioThreadConstraints.h"
-#include "../NomadAudio/include/AudioRT.h"
-#include "../NomadAudio/include/AudioTelemetry.h"
-#include "../NomadAudio/include/PreviewEngine.h"
-#include "../NomadAudio/include/TrackManager.h"
+#include "AudioRT.h"
+#include "AudioTelemetry.h"
+#include "PreviewEngine.h"
+#include "TrackManager.h"
 #include "../NomadCore/include/NomadLog.h"
 
 #include <algorithm>

@@ -225,51 +225,51 @@ endif()
 
 # Core headers
 set(NOMAD_AUDIO_CORE_HEADERS
-    include/AudioGraphBuilder.h
-    include/AudioEngine.h
-    include/AudioCommandQueue.h
-    include/AudioTelemetry.h
-    include/AudioGraph.h
-    include/ChannelSlotMap.h
-    include/EngineState.h
-    include/NomadAudio.h
-    include/AudioDeviceManager.h
-    include/IAudioDriver.h
-    include/AudioDriver.h           # Legacy/Base types
-    include/AudioDriverTypes.h
-    include/AudioDriverRegistry.h   # Registry interface
-    include/AudioProcessor.h
-    include/MeterSnapshot.h
-    include/MixerBus.h
-    include/Oscillator.h
-    include/MetronomeEngine.h
-    include/PathUtils.h
-    include/PreviewEngine.h
-    include/SamplePool.h
-    include/SampleRateConverter.h
-    include/MixerChannel.h
-    include/TrackManager.h
-    include/PatternSource.h
-    include/ClipInstance.h
-    include/PatternManager.h
-    include/AudioClip.h
-    include/MiniAudioDecoder.h
-    include/PlaylistTrack.h
+    include/Core/AudioGraphBuilder.h
+    include/Core/AudioEngine.h
+    include/Core/AudioCommandQueue.h
+    include/Core/AudioTelemetry.h
+    include/Core/AudioGraph.h
+    include/Core/ChannelSlotMap.h
+    include/Core/EngineState.h
+    include/Core/NomadAudio.h
+    include/Core/AudioDeviceManager.h
+    include/Drivers/IAudioDriver.h
+    include/Drivers/AudioDriver.h           # Legacy/Base types
+    include/Drivers/AudioDriverTypes.h
+    include/Drivers/AudioDriverRegistry.h   # Registry interface
+    include/DSP/AudioProcessor.h
+    include/Models/MeterSnapshot.h
+    include/Core/MixerBus.h
+    include/DSP/Oscillator.h
+    include/Playback/MetronomeEngine.h
+    include/IO/PathUtils.h
+    include/Playback/PreviewEngine.h
+    include/IO/SamplePool.h
+    include/DSP/SampleRateConverter.h
+    include/Core/MixerChannel.h
+    include/Models/TrackManager.h
+    include/Models/PatternSource.h
+    include/Models/ClipInstance.h
+    include/Models/PatternManager.h
+    include/Models/AudioClip.h
+    include/IO/MiniAudioDecoder.h
+    include/Models/PlaylistTrack.h
     # Multi-clip playlist system
-    include/TimeTypes.h
-    include/ClipSource.h
-    include/PlaylistModel.h
-    include/PlaylistRuntimeSnapshot.h
-    include/PlaylistMixer.h
-    # include/SelectionModel.h  # TODO: Fix - references non-existent PlaylistClip.h
-    include/WaveformCache.h
-    include/PlaylistGeometry.h
-    include/PlaylistSerializer.h
-    include/MultiClipPlaylist.h
-    include/ArsenalUnit.h
-    include/UnitManager.h
+    include/Models/TimeTypes.h
+    include/Models/ClipSource.h
+    include/Models/PlaylistModel.h
+    include/Models/PlaylistRuntimeSnapshot.h
+    include/Models/PlaylistMixer.h
+    # include/Models/SelectionModel.h  # TODO: Fix - references non-existent PlaylistClip.h
+    include/IO/WaveformCache.h
+    include/Models/PlaylistGeometry.h
+    include/Models/PlaylistSerializer.h
+    include/Models/MultiClipPlaylist.h
+    include/Models/ArsenalUnit.h
+    include/Models/UnitManager.h
 
-    include/StreamingDecoder.h
+    include/IO/StreamingDecoder.h
     # Undo/Redo
     include/Commands/ICommand.h
     include/Commands/CommandHistory.h
@@ -280,13 +280,13 @@ set(NOMAD_AUDIO_CORE_HEADERS
     
     src/DummyAudioDriver.h
     # Plugin hosting system
-    include/PluginHost.h
-    include/PluginScanner.h
-    include/PluginManager.h
-    include/PluginFactory.h
-    include/EffectChain.h
+    include/Plugin/PluginHost.h
+    include/Plugin/PluginScanner.h
+    include/Plugin/PluginManager.h
+    include/Plugin/PluginFactory.h
+    include/Plugin/EffectChain.h
     include/Plugin/VST3Host.h
-    include/AuditionEngine.h
+    include/Playback/AuditionEngine.h
 )
 
 # Create NomadAudioCore library
@@ -310,6 +310,15 @@ endif()
 target_include_directories(NomadAudioCore
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        # Add all include subdirectories for reorganization-proof headers
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/Core
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/DSP
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/Models
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/Playback
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/IO
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/Drivers
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/Plugin
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/Commands
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/../NomadCore/include
@@ -392,9 +401,9 @@ if(WIN32)
         src/Win32/WASAPIExclusiveDriver.h
         src/Win32/ASIODriverInfo.h
         src/Win32/RtAudioBackend.h
-        include/NativeAudioDriver.h
-        include/ASIODriver.h     # Added Phase 6
-        include/ASIOInterface.h  # Added Phase 6
+        include/Drivers/NativeAudioDriver.h
+        include/Drivers/ASIODriver.h     # Added Phase 6
+        include/Drivers/ASIOInterface.h  # Added Phase 6
         ${RTAUDIO_HEADERS} # RtAudio headers needed for backend compilation
     )
 

@@ -2,9 +2,9 @@
 #pragma once
 
 #include "ISettingsPage.h"
-#include "../NomadUI/Core/NUILabel.h"
-#include "../NomadUI/Core/NUITextInput.h"
-#include "../NomadUI/Widgets/NUIButton.h"
+#include "NUILabel.h"
+#include "NUITextInput.h"
+#include "NUIButton.h"
 #include <functional>
 
 namespace Nomad {

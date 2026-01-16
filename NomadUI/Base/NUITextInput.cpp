@@ -1,7 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUITextInput.h"
 #include "NUIThemeSystem.h"
-#include "../Graphics/NUIRenderer.h"
+#include "NUIRenderer.h"
 #include <algorithm>
 #include <cmath>
 #include <chrono>

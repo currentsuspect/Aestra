@@ -1,6 +1,8 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIApp.h"
 #include "NUIAdaptiveFPS.h"
+#include "NUITheme.h"
+#include "NUIRenderer.h"
 #include <algorithm>
 #include <thread>
 

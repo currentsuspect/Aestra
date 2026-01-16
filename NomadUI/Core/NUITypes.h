@@ -399,11 +399,24 @@ enum class NUITextAlignment {
     Justified
 };
 
+enum class NUIMouseEventType {
+    None,
+    Move,
+    Down,
+    Up,
+    Drag,
+    Scroll,
+    Enter,
+    Leave,
+    DoubleClick
+};
+
 // ============================================================================
 // Event Structures
 // ============================================================================
 
 struct NUIMouseEvent {
+    NUIMouseEventType type = NUIMouseEventType::None;
     NUIPoint position;
     NUIPoint delta;  // For drag events
     NUIMouseButton button = NUIMouseButton::None;

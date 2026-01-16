@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include "../NomadAudio/include/NomadAudio.h"
-#include "../NomadAudio/include/AudioEngine.h"
-#include "../NomadAudio/include/AudioDeviceManager.h"
+#include "NomadAudio.h"
+#include "AudioEngine.h"
+#include "AudioDeviceManager.h"
 
 // Forward declarations
 class NomadContent;

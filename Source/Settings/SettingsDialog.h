@@ -1,9 +1,9 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Widgets/NUIButton.h"
-#include "../NomadUI/Core/NUILabel.h"
+#include "NUIComponent.h"
+#include "NUIButton.h"
+#include "NUILabel.h"
 #include "ISettingsPage.h"
 #include <memory>
 #include <map>

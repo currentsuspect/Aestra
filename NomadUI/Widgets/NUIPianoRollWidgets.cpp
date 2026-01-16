@@ -2,10 +2,10 @@
 #include "NUIPianoRollWidgets.h"
 #include "NUIDropdown.h"
 #include "NUIButton.h"
-#include "../Core/NUIContextMenu.h"
-#include "../Core/NUIIcon.h"
-#include "../Graphics/NUIRenderer.h"
-#include "../Core/NUIThemeSystem.h"
+#include "NUIContextMenu.h"
+#include "NUIIcon.h"
+#include "NUIRenderer.h"
+#include "NUIThemeSystem.h"
 #include <algorithm>
 #include <cmath>
 #include <iomanip> // For string formatting

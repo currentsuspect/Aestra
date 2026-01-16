@@ -1,8 +1,8 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NomadRootComponent.h"
 #include "NomadContent.h"
-#include "../NomadAudio/include/TrackManager.h"
-#include "../NomadAudio/include/AudioEngine.h"
+#include "TrackManager.h"
+#include "AudioEngine.h"
 #include "../NomadCore/include/NomadLog.h"
 
 bool NomadRootComponent::onKeyEvent(const NUIKeyEvent& event) {

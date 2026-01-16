@@ -1,10 +1,10 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../Core/NUIComponent.h"
-#include "../Core/NUIIcon.h"
-#include "../Graphics/NUIRenderer.h"
-#include "../Core/NUITextInput.h"
+#include "NUIComponent.h"
+#include "NUIIcon.h"
+#include "NUIRenderer.h"
+#include "NUITextInput.h"
 #include <vector>
 #include <string>
 #include <functional>

@@ -2,8 +2,8 @@
 #pragma once
 
 #include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadAudio/include/NomadAudio.h"
-#include "../NomadAudio/include/WaveformCache.h"
+#include "NomadAudio.h"
+#include "WaveformCache.h"
 #include <vector>
 #include <memory>
 #include <atomic>

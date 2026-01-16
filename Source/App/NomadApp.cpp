@@ -15,8 +15,8 @@
 #include "UnifiedHUD.h"
 #include "RecoveryDialog.h"
 #include "ConfirmationDialog.h"
-#include "../NomadAudio/include/PluginManager.h"
-#include "../NomadAudio/include/AudioGraphBuilder.h"
+#include "PluginManager.h"
+#include "AudioGraphBuilder.h"
 
 #include <iostream>
 #include <chrono>

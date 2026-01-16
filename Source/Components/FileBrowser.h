@@ -2,7 +2,7 @@
 #pragma once
 
 #include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUIIcon.h"
+#include "NUIIcon.h"
 #include "../NomadUI/Core/NUIDragDrop.h"
 #include <string>
 #include <vector>

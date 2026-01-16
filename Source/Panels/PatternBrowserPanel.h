@@ -8,8 +8,8 @@
 
 #include "../NomadUI/Core/NUIComponent.h"
 #include "../NomadUI/Core/NUIDragDrop.h"
-#include "../NomadAudio/include/PatternSource.h"
-#include "../NomadAudio/include/ClipSource.h"
+#include "PatternSource.h"
+#include "ClipSource.h"
 
 // Forward declarations to avoid circular deps and build errors
 namespace NomadUI {

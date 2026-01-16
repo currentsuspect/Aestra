@@ -1,20 +1,20 @@
 // © 2025 Nomad Studios All Rights Reserved. Licensed for personal & educational use only.
 #include "TrackManagerUI.h"
-#include "../NomadAudio/include/MixerChannel.h"
+#include "MixerChannel.h"
 #include <memory>
-#include "../NomadAudio/include/TrackManager.h"
-#include "../NomadAudio/include/PluginManager.h"
+#include "TrackManager.h"
+#include "PluginManager.h"
 #include "../NomadUI/Platform/NUIPlatformBridge.h"
 
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Core/NUIDragDrop.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadLog.h"
-#include "../NomadAudio/include/AudioFileValidator.h"
-#include "../NomadAudio/include/MiniAudioDecoder.h"
-#include "../NomadAudio/include/ClipSource.h"
-#include "../NomadAudio/include/Commands/SplitClipCommand.h"
-#include "../NomadAudio/include/Commands/AddClipCommand.h"
+#include "AudioFileValidator.h"
+#include "MiniAudioDecoder.h"
+#include "ClipSource.h"
+#include "Commands/SplitClipCommand.h"
+#include "Commands/AddClipCommand.h"
 #include "../NomadCore/include/NomadUnifiedProfiler.h"
 #include <algorithm>
 #include <cmath>

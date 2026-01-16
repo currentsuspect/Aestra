@@ -10,7 +10,7 @@
 #include "Interpolators.h"
 #include "MeterSnapshot.h"
 #include "PluginHost.h" // For MidiBuffer [NEW]
-#include "../../NomadCore/include/NomadThreading.h"
+#include "NomadThreading.h"
 #include <cstdint>
 #include <cmath>
 #include <vector>
