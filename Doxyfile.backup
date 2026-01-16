@@ -1,11 +1,11 @@
 # ========================================
-# 🧭 NOMAD DAW - Doxygen Configuration
+# 🧭 Aestra - Doxygen Configuration
 # ========================================
 # Built by Dylan Makori / Nomad Studios
 # ----------------------------------------
 
 # Project Information
-PROJECT_NAME           = "NOMAD DAW"
+PROJECT_NAME           = "Aestra"
 PROJECT_NUMBER         = "v0.1.0-alpha"
 PROJECT_BRIEF          = "Next-generation Digital Audio Workstation with ultra-low latency and GPU-accelerated UI"
 PROJECT_LOGO           = 
@@ -23,16 +23,16 @@ EXTRACT_LOCAL_CLASSES  = YES
 EXTRACT_ANON_NSPACES   = NO
 
 # Input Configuration
-INPUT                  = NomadCore/include \
-                         NomadCore/src \
-                         NomadAudio/include \
-                         NomadAudio/src \
-                         NomadPlat/include \
-                         NomadPlat/src \
-                         NomadUI/Core \
-                         NomadUI/Graphics \
-                         NomadUI/Platform \
-                         NomadUI/Widgets \
+INPUT                  = AestraCore/include \
+                         AestraCore/src \
+                         AestraAudio/include \
+                         AestraAudio/src \
+                         AestraPlat/include \
+                         AestraPlat/src \
+                         AestraUI/Core \
+                         AestraUI/Graphics \
+                         AestraUI/Platform \
+                         AestraUI/Widgets \
                          Source
 
 FILE_PATTERNS          = *.cpp \
@@ -104,15 +104,15 @@ ENABLE_PREPROCESSING   = YES
 MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = NO
 SEARCH_INCLUDES        = YES
-INCLUDE_PATH           = NomadCore/include \
-                         NomadAudio/include \
-                         NomadPlat/include \
-                         NomadUI
+INCLUDE_PATH           = AestraCore/include \
+                         AestraAudio/include \
+                         AestraPlat/include \
+                         AestraUI
 
 INCLUDE_FILE_PATTERNS  = 
-PREDEFINED             = NOMAD_API= \
-                         NOMAD_EXPORT= \
-                         NOMAD_INLINE=inline \
+PREDEFINED             = Aestra_API= \
+                         Aestra_EXPORT= \
+                         Aestra_INLINE=inline \
                          _WIN32 \
                          UNICODE \
                          _UNICODE

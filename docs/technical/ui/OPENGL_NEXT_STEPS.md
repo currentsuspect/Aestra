@@ -69,7 +69,7 @@ if (!gladLoadGL()) {
 
 ### Quick Fix (5 minutes)
 1. Download GLAD from https://glad.dav1d.de/
-2. Add `glad.h` and `glad.c` to `NomadUI/External/glad/`
+2. Add `glad.h` and `glad.c` to `AestraUI/External/glad/`
 3. Update CMakeLists.txt to include GLAD
 4. Add `gladLoadGL()` call in renderer initialization
 5. Build and test!
@@ -86,16 +86,16 @@ add_library(glad STATIC ${GLAD_SOURCES})
 target_include_directories(glad PUBLIC External/glad/include)
 
 # Link to OpenGL renderer
-target_link_libraries(NomadUI_OpenGL PUBLIC
-    NomadUI_Core
+target_link_libraries(AestraUI_OpenGL PUBLIC
+    AestraUI_Core
     OpenGL::GL
     glad  # Add this
 )
 ```
 
-## Alternative: Use Existing NOMAD OpenGL Setup
+## Alternative: Use Existing Aestra OpenGL Setup
 
-Since NOMAD already uses JUCE which handles OpenGL, we could:
+Since Aestra already uses JUCE which handles OpenGL, we could:
 
 1. **Reuse JUCE's OpenGL context** (temporary)
 2. **Extract JUCE's OpenGL headers** (if available)
@@ -123,7 +123,7 @@ Even without compiling, we've proven:
 ### Path B: Use JUCE Bridge (Quick Test)
 1. Create JUCE OpenGL window
 2. Get OpenGL context
-3. Test NomadUI renderer in JUCE window
+3. Test AestraUI renderer in JUCE window
 4. **ETA: 15 minutes**
 
 ### Path C: Continue Without Renderer
@@ -149,7 +149,7 @@ The renderer code is **production quality** - it just needs the right headers!
 **Use Path B (JUCE Bridge)** for immediate testing:
 - We already have JUCE in the project
 - JUCE handles OpenGL setup
-- We can test NomadUI renderer immediately
+- We can test AestraUI renderer immediately
 - Later, we add GLAD for standalone builds
 
 This gives us the best of both worlds:
@@ -163,7 +163,7 @@ This gives us the best of both worlds:
 1. **Either:** Add GLAD and compile renderer
 2. **Or:** Create JUCE bridge and test renderer
 3. **Then:** Implement Windows platform layer
-4. **Finally:** See our first NomadUI window! 🎉
+4. **Finally:** See our first AestraUI window! 🎉
 
 ---
 

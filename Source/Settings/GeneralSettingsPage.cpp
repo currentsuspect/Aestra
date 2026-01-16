@@ -1,31 +1,31 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "GeneralSettingsPage.h"
 
-namespace Nomad {
+namespace Aestra {
 
 GeneralSettingsPage::GeneralSettingsPage() {
     createUI();
 }
 
 void GeneralSettingsPage::createUI() {
-    m_projectsPathLabel = std::make_shared<NomadUI::NUILabel>();
+    m_projectsPathLabel = std::make_shared<AestraUI::NUILabel>();
     m_projectsPathLabel->setText("Projects Folder:");
     addChild(m_projectsPathLabel);
 
-    m_projectsPathInput = std::make_shared<NomadUI::NUITextInput>();
+    m_projectsPathInput = std::make_shared<AestraUI::NUITextInput>();
     // Truncated for better UI presentation
-    m_projectsPathInput->setText("C:/.../Projects/NOMAD_Projects");
+    m_projectsPathInput->setText("C:/.../Projects/AESTRA_Projects");
     addChild(m_projectsPathInput);
 
-    m_browseButton = std::make_shared<NomadUI::NUIButton>();
+    m_browseButton = std::make_shared<AestraUI::NUIButton>();
     m_browseButton->setText("Browse...");
     addChild(m_browseButton);
     
-    m_autoSaveLabel = std::make_shared<NomadUI::NUILabel>();
+    m_autoSaveLabel = std::make_shared<AestraUI::NUILabel>();
     m_autoSaveLabel->setText("Auto-Save:");
     addChild(m_autoSaveLabel);
     
-    m_autoSaveToggle = std::make_shared<NomadUI::NUIButton>();
+    m_autoSaveToggle = std::make_shared<AestraUI::NUIButton>();
     m_autoSaveToggle->setToggleable(true);
         m_autoSaveToggle->setToggled(true); // default ON
     syncAutoSaveLabel();
@@ -52,16 +52,16 @@ void GeneralSettingsPage::applyChanges() {
 
 void GeneralSettingsPage::cancelChanges() {
     // Revert
-    m_projectsPathInput->setText("C:/Users/Current/Documents/Projects/NOMAD_Projects");
+    m_projectsPathInput->setText("C:/Users/Current/Documents/Projects/AESTRA_Projects");
     m_dirty = false;
 }
 
-void GeneralSettingsPage::onRender(NomadUI::NUIRenderer& renderer) {
+void GeneralSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
     renderChildren(renderer);
 }
 
 void GeneralSettingsPage::onResize(int width, int height) {
-    NomadUI::NUIComponent::onResize(width, height); // Store bounds
+    AestraUI::NUIComponent::onResize(width, height); // Store bounds
     layoutComponents();
 }
 
@@ -74,15 +74,15 @@ void GeneralSettingsPage::layoutComponents() {
     float y = b.y + padding;
     
     // Row 1: Path
-    m_projectsPathLabel->setBounds(NomadUI::NUIRect(x, y, 120, rowHeight));
-    m_projectsPathInput->setBounds(NomadUI::NUIRect(x + 130, y, 300, rowHeight));
-    m_browseButton->setBounds(NomadUI::NUIRect(x + 440, y, 100, rowHeight));
+    m_projectsPathLabel->setBounds(AestraUI::NUIRect(x, y, 120, rowHeight));
+    m_projectsPathInput->setBounds(AestraUI::NUIRect(x + 130, y, 300, rowHeight));
+    m_browseButton->setBounds(AestraUI::NUIRect(x + 440, y, 100, rowHeight));
     
     y += rowHeight + gap;
     
     // Row 2: Auto-Save
-    m_autoSaveLabel->setBounds(NomadUI::NUIRect(x, y, 120, rowHeight));
-    m_autoSaveToggle->setBounds(NomadUI::NUIRect(x + 130, y, 150, rowHeight));
+    m_autoSaveLabel->setBounds(AestraUI::NUIRect(x, y, 120, rowHeight));
+    m_autoSaveToggle->setBounds(AestraUI::NUIRect(x + 130, y, 150, rowHeight));
 }
 
-} // namespace Nomad
+} // namespace Aestra

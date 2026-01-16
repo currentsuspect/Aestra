@@ -1,12 +1,12 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ProjectSerializer.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraCore/include/AestraLog.h"
 #include "MiniAudioDecoder.h"
 #include <filesystem>
 #include <fstream>
 
-using namespace Nomad;
-using namespace Nomad::Audio;
+using namespace Aestra;
+using namespace Aestra::Audio;
 
 namespace {
     // Project file format versioning
@@ -132,7 +132,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             JSON ljs = JSON::object();
             ljs.set("id", JSON(lane->id.toString()));
             ljs.set("name", JSON(lane->name));
-            // Store colors as strings to avoid scientific notation (NomadJSON parser can't parse exponent form).
+            // Store colors as strings to avoid scientific notation (AestraJSON parser can't parse exponent form).
             ljs.set("color", JSON(std::to_string(lane->colorRGBA)));
             ljs.set("volume", JSON(lane->volume));
             ljs.set("pan", JSON(lane->pan));
@@ -256,7 +256,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         return result;
     }
 
-#if defined(NOMAD_ENABLE_PROJECT_LOAD_LOGS)
+#if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
     Log::info(std::string("[ProjectLoad] Begin: ") + path);
 #endif
 
@@ -272,7 +272,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     std::string contents((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
     in.close();
     
-#if defined(NOMAD_ENABLE_PROJECT_LOAD_LOGS)
+#if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
     Log::info("[ProjectLoad] Read bytes=" + std::to_string(contents.size()));
 #endif
 
@@ -282,7 +282,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         Log::error("[ProjectLoad] " + result.errorMessage);
         return result;
     }
-#if defined(NOMAD_ENABLE_PROJECT_LOAD_LOGS)
+#if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
     Log::info("[ProjectLoad] Parsed JSON ok");
 #endif
 
@@ -301,8 +301,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     
     if (fileVersion > PROJECT_VERSION_CURRENT) {
         result.errorMessage = "Project file version " + std::to_string(fileVersion) + 
-                   " is newer than this version of NOMAD (" + std::to_string(PROJECT_VERSION_CURRENT) + 
-                   "). Please update NOMAD to open this project.";
+                   " is newer than this version of AESTRA (" + std::to_string(PROJECT_VERSION_CURRENT) + 
+                   "). Please update AESTRA to open this project.";
         Log::error("[ProjectLoad] " + result.errorMessage);
         return result;
     }
@@ -393,7 +393,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 
     auto batch = playlist.scopedBatchUpdate();
 
-#if defined(NOMAD_ENABLE_PROJECT_LOAD_LOGS)
+#if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
     Log::info("[ProjectLoad] Clearing existing state");
 #endif
 
@@ -405,7 +405,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     std::unordered_map<uint32_t, ClipSourceID> idMap;
     if (root.has("sources")) {
         const JSON& sj = root["sources"];
-    #if defined(NOMAD_ENABLE_PROJECT_LOAD_LOGS)
+    #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
         Log::info("[ProjectLoad] Loading sources count=" + std::to_string(sj.size()));
     #endif
         for (size_t i = 0; i < sj.size(); ++i) {
@@ -443,7 +443,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     std::unordered_map<uint64_t, PatternID> patternMap;
     if (root.has("patterns")) {
         const JSON& pj = root["patterns"];
-    #if defined(NOMAD_ENABLE_PROJECT_LOAD_LOGS)
+    #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
         Log::info("[ProjectLoad] Loading patterns count=" + std::to_string(pj.size()));
     #endif
         for (size_t i = 0; i < pj.size(); ++i) {
@@ -475,11 +475,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     // 3. Load Lanes and Clips
     if (root.has("lanes")) {
         const JSON& lj = root["lanes"];
-    #if defined(NOMAD_ENABLE_PROJECT_LOAD_LOGS)
+    #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
         Log::info("[ProjectLoad] Loading lanes count=" + std::to_string(lj.size()));
     #endif
         for (size_t i = 0; i < lj.size(); ++i) {
-    #if defined(NOMAD_ENABLE_PROJECT_LOAD_LOGS)
+    #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
             Log::info("[ProjectLoad] Lane[" + std::to_string(i) + "] name='" + lj[i]["name"].asString() + "'");
     #endif
             PlaylistLaneID laneId = playlist.createLane(lj[i]["name"].asString());
@@ -515,7 +515,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 
                 if (lj[i].has("clips")) {
                     const JSON& cj = lj[i]["clips"];
-#if defined(NOMAD_ENABLE_PROJECT_LOAD_LOGS)
+#if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
                     Log::info("[ProjectLoad]  clips count=" + std::to_string(cj.size()));
 #endif
                     for (size_t c = 0; c < cj.size(); ++c) {

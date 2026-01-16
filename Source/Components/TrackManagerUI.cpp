@@ -4,24 +4,24 @@
 #include <memory>
 #include "TrackManager.h"
 #include "PluginManager.h"
-#include "../NomadUI/Platform/NUIPlatformBridge.h"
+#include "../AestraUI/Platform/NUIPlatformBridge.h"
 
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Core/NUIDragDrop.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Core/NUIDragDrop.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraCore/include/AestraLog.h"
 #include "AudioFileValidator.h"
 #include "MiniAudioDecoder.h"
 #include "ClipSource.h"
 #include "Commands/SplitClipCommand.h"
 #include "Commands/AddClipCommand.h"
-#include "../NomadCore/include/NomadUnifiedProfiler.h"
+#include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
 
 // Remotery profiling (conditionally enabled via CMake)
-#ifdef NOMAD_ENABLE_REMOTERY
+#ifdef AESTRA_ENABLE_REMOTERY
     #include "Remotery.h"
 #else
     // Stub macros when Remotery is disabled
@@ -30,7 +30,7 @@
     #define rmt_EndCPUSample() ((void)0)
 #endif
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 // =============================================================================
@@ -54,7 +54,7 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
             <path d="M12 5v14M5 12h14"/>
         </svg>
     )";
-    m_addTrackIcon = std::make_shared<NomadUI::NUIIcon>(addTrackSvg);
+    m_addTrackIcon = std::make_shared<AestraUI::NUIIcon>(addTrackSvg);
     m_addTrackIcon->setIconSize(16.0f, 16.0f);
     m_addTrackIcon->setColorFromTheme("textPrimary");
     m_addTrackIcon->setColorFromTheme("textPrimary");
@@ -66,32 +66,32 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
             <path d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
     )";
-    m_followPlayheadIcon = std::make_shared<NomadUI::NUIIcon>(followSvg);
+    m_followPlayheadIcon = std::make_shared<AestraUI::NUIIcon>(followSvg);
     m_followPlayheadIcon->setIconSize(16.0f, 16.0f);
     m_followPlayheadIcon->setVisible(true);
     m_followPlayheadIcon->setColorFromTheme("textSecondary"); // Default off state
     
     // Create scrollbar
-    m_scrollbar = std::make_shared<NomadUI::NUIScrollbar>(NomadUI::NUIScrollbar::Orientation::Vertical);
+    m_scrollbar = std::make_shared<AestraUI::NUIScrollbar>(AestraUI::NUIScrollbar::Orientation::Vertical);
     m_scrollbar->setOnScroll([this](double position) {
         onScroll(position);
     });
     addChild(m_scrollbar);
     
     // Timeline minimap (replaces top horizontal scrollbar).
-    m_timelineMinimap = std::make_shared<NomadUI::TimelineMinimapBar>();
+    m_timelineMinimap = std::make_shared<AestraUI::TimelineMinimapBar>();
     m_timelineMinimap->onRequestCenterView = [this](double centerBeat) { centerTimelineViewAtBeat(centerBeat); };
     m_timelineMinimap->onRequestSetViewStart = [this](double viewStartBeat, bool isFinal) {
         setTimelineViewStartBeat(viewStartBeat, isFinal);
     };
     m_timelineMinimap->onRequestResizeViewEdge =
-        [this](NomadUI::TimelineMinimapResizeEdge edge, double anchorBeat, double edgeBeat, bool isFinal) {
+        [this](AestraUI::TimelineMinimapResizeEdge edge, double anchorBeat, double edgeBeat, bool isFinal) {
             resizeTimelineViewEdgeFromMinimap(edge, anchorBeat, edgeBeat, isFinal);
         };
     m_timelineMinimap->onRequestZoomAround = [this](double anchorBeat, float zoomMultiplier) {
         zoomTimelineAroundBeat(anchorBeat, zoomMultiplier);
     };
-    m_timelineMinimap->onModeChanged = [this](NomadUI::TimelineMinimapMode mode) {
+    m_timelineMinimap->onModeChanged = [this](AestraUI::TimelineMinimapMode mode) {
         m_minimapMode = mode;
         setDirty(true);
     };
@@ -134,12 +134,12 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
     
     // Register as drop target for drag-and-drop
     // Moved to onUpdate to allow shared_from_this() to work
-    // NomadUI::NUIDragDropManager::getInstance().registerDropTarget(this);
+    // AestraUI::NUIDragDropManager::getInstance().registerDropTarget(this);
 }
 
 TrackManagerUI::~TrackManagerUI() {
     // Unregister from drag-drop manager
-    NomadUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
+    AestraUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
     
     // ⚡ Texture cleanup handled by renderer shutdown
     // Note: NUIRenderer is not a singleton, so manual texture cleanup in destructor
@@ -147,7 +147,7 @@ TrackManagerUI::~TrackManagerUI() {
     Log::info("TrackManagerUI destroyed");
 }
 
-void TrackManagerUI::setPlatformWindow(NomadUI::NUIPlatformBridge* window) {
+void TrackManagerUI::setPlatformWindow(AestraUI::NUIPlatformBridge* window) {
     m_window = window;
 }
 
@@ -158,27 +158,27 @@ void TrackManagerUI::setPlatformWindow(NomadUI::NUIPlatformBridge* window) {
 void TrackManagerUI::createToolIcons() {
     // === POINTER/SELECT TOOL ICON (Simple arrow) ===
     const char* selectSvg = R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 3 L5 17 L9 13 L12 19 L14 18 L11 12 L16 12 Z" fill="#AAAAAA" stroke="#666666" stroke-width="0.5"/></svg>)";
-    m_selectToolIcon = std::make_shared<NomadUI::NUIIcon>(selectSvg);
+    m_selectToolIcon = std::make_shared<AestraUI::NUIIcon>(selectSvg);
     
     // === SPLIT TOOL ICON (Scissors) ===
     const char* splitSvg = R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="3" fill="none" stroke="#FF6B6B" stroke-width="1.5"/><circle cx="6" cy="18" r="3" fill="none" stroke="#FF6B6B" stroke-width="1.5"/><line x1="8" y1="8" x2="18" y2="16" stroke="#AAAAAA" stroke-width="2"/><line x1="8" y1="16" x2="18" y2="8" stroke="#AAAAAA" stroke-width="2"/></svg>)";
-    m_splitToolIcon = std::make_shared<NomadUI::NUIIcon>(splitSvg);
+    m_splitToolIcon = std::make_shared<AestraUI::NUIIcon>(splitSvg);
     
     // === MULTI-SELECT TOOL ICON (Dashed box) ===
     const char* multiSelectSvg = R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="6" width="16" height="12" fill="none" stroke="#4FC3F7" stroke-width="2" stroke-dasharray="3,2"/></svg>)";
-    m_multiSelectToolIcon = std::make_shared<NomadUI::NUIIcon>(multiSelectSvg);
+    m_multiSelectToolIcon = std::make_shared<AestraUI::NUIIcon>(multiSelectSvg);
     
     // === PAINT/STAMP TOOL ICON (Brush/stamp) ===
     const char* paintSvg = R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 00-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 000-1.41z" fill="#BB86FC"/></svg>)";
-    m_paintToolIcon = std::make_shared<NomadUI::NUIIcon>(paintSvg);
+    m_paintToolIcon = std::make_shared<AestraUI::NUIIcon>(paintSvg);
     
     // === MENU ICON (Hamburger) ===
     const char* menuSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>)";
-    m_menuIcon = std::make_shared<NomadUI::NUIIcon>(menuSvg);
+    m_menuIcon = std::make_shared<AestraUI::NUIIcon>(menuSvg);
     
     // === VISUAL MOVE CURSOR (4-way arrow) ===
     const char* moveSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" xmlns="http://www.w3.org/2000/svg"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M19 9l3 3-3 3M9 19l3 3 3-3M2 12h20M12 2v20" stroke="#FFFFFF" stroke-opacity="0.9"/></svg>)";
-    m_moveCursorIcon = std::make_shared<NomadUI::NUIIcon>(moveSvg);
+    m_moveCursorIcon = std::make_shared<AestraUI::NUIIcon>(moveSvg);
 
     Log::info("Tool icons created");
 }
@@ -205,7 +205,7 @@ void TrackManagerUI::setCurrentTool(PlaylistTool tool) {
 
 bool TrackManagerUI::isMinimapResizeCursorActive() const {
     return m_timelineMinimap && m_timelineMinimap->isVisible() &&
-           m_timelineMinimap->getCursorHint() == NomadUI::TimelineMinimapCursorHint::ResizeHorizontal;
+           m_timelineMinimap->getCursorHint() == AestraUI::TimelineMinimapCursorHint::ResizeHorizontal;
 }
 
 bool TrackManagerUI::isCustomCursorActive() const {
@@ -221,8 +221,8 @@ bool TrackManagerUI::isCustomCursorActive() const {
     
     // 2. Split or Paint tool in grid area
     if (m_currentTool == PlaylistTool::Split || m_currentTool == PlaylistTool::Paint) {
-        NomadUI::NUIRect bounds = getBounds();
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        AestraUI::NUIRect bounds = getBounds();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         const float controlAreaWidth = layout.trackControlsWidth;
         const float gridStartX = bounds.x + controlAreaWidth + 5.0f;
@@ -231,7 +231,7 @@ bool TrackManagerUI::isCustomCursorActive() const {
         const float horizontalScrollbarHeight = 24.0f;
         const float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
 
-        NomadUI::NUIRect gridBounds(gridStartX, trackAreaTop, bounds.width - controlAreaWidth - 20.0f,
+        AestraUI::NUIRect gridBounds(gridStartX, trackAreaTop, bounds.width - controlAreaWidth - 20.0f,
                                      bounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight);
         if (gridBounds.contains(m_lastMousePos)) {
             return true;
@@ -240,9 +240,9 @@ bool TrackManagerUI::isCustomCursorActive() const {
     
     // 3. Minimap resize cursor
     if (m_timelineMinimap && m_timelineMinimap->isVisible()) {
-        NomadUI::NUIRect minimapBounds = m_timelineMinimap->getBounds();
+        AestraUI::NUIRect minimapBounds = m_timelineMinimap->getBounds();
         if (minimapBounds.contains(m_lastMousePos) &&
-            m_timelineMinimap->getCursorHint() == NomadUI::TimelineMinimapCursorHint::ResizeHorizontal) {
+            m_timelineMinimap->getCursorHint() == AestraUI::TimelineMinimapCursorHint::ResizeHorizontal) {
             return true;
         }
     }
@@ -250,7 +250,7 @@ bool TrackManagerUI::isCustomCursorActive() const {
     return false;
 }
 
-void TrackManagerUI::setSnapSetting(NomadUI::SnapGrid snap) {
+void TrackManagerUI::setSnapSetting(AestraUI::SnapGrid snap) {
     if (m_snapSetting == snap) return;
     
     m_snapSetting = snap;
@@ -264,19 +264,19 @@ void TrackManagerUI::setSnapSetting(NomadUI::SnapGrid snap) {
     m_backgroundNeedsUpdate = true;
     invalidateCache();
     
-    Log::info("TrackManager Snap set to: " + NomadUI::MusicTheory::getSnapName(snap));
+    Log::info("TrackManager Snap set to: " + AestraUI::MusicTheory::getSnapName(snap));
 }
 
 void TrackManagerUI::updateToolbarBounds() {
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
-    NomadUI::NUIRect bounds = getBounds();
+    AestraUI::NUIRect bounds = getBounds();
 
     constexpr float headerHeight = 40.0f; // Unified playlist header strip (Standardized)
     const float innerPad = themeManager.getSpacing("s"); // 8px from edge
-    const float buttonSpacing = 6.0f; // Standardized gap for Nomad UI philosophy
+    const float buttonSpacing = 6.0f; // Standardized gap for Aestra UI philosophy
 
-    // NOMAD UI Philosophy: Standardized 24px toolbar buttons in 40px headers
+    // AESTRA UI Philosophy: Standardized 24px toolbar buttons in 40px headers
     const float buttonSize = 24.0f; 
     const float iconSize = buttonSize;
     
@@ -285,11 +285,11 @@ void TrackManagerUI::updateToolbarBounds() {
     float currentY = bounds.y + (headerHeight - buttonSize) * 0.5f;
     
     // 1. Menu Icon (Far Left)
-    m_menuIconBounds = NomadUI::NUIRect(currentX, currentY, buttonSize, buttonSize);
-    currentX += buttonSize + 14.0f; // Extra gap for separator (Nomad UI update)
+    m_menuIconBounds = AestraUI::NUIRect(currentX, currentY, buttonSize, buttonSize);
+    currentX += buttonSize + 14.0f; // Extra gap for separator (Aestra UI update)
 
     // 2. Add Track Button
-    m_addTrackBounds = NomadUI::NUIRect(currentX, currentY, buttonSize, buttonSize);
+    m_addTrackBounds = AestraUI::NUIRect(currentX, currentY, buttonSize, buttonSize);
     currentX += buttonSize + (innerPad * 1.5f); // Slightly larger gap to separate major modules
 
     // 3. Tools Module
@@ -300,23 +300,23 @@ void TrackManagerUI::updateToolbarBounds() {
     float toolbarWidth = (iconSize * numTools) + (buttonSpacing * (numTools - 1));
     float toolbarHeight = iconSize;
 
-    m_toolbarBounds = NomadUI::NUIRect(toolbarX, toolbarY, toolbarWidth, toolbarHeight);
+    m_toolbarBounds = AestraUI::NUIRect(toolbarX, toolbarY, toolbarWidth, toolbarHeight);
 
     float iconX = toolbarX;
     float iconY = toolbarY;
 
-    m_selectToolBounds = NomadUI::NUIRect(iconX, iconY, iconSize, iconSize);
+    m_selectToolBounds = AestraUI::NUIRect(iconX, iconY, iconSize, iconSize);
     iconX += iconSize + buttonSpacing;
-    m_splitToolBounds = NomadUI::NUIRect(iconX, iconY, iconSize, iconSize);
+    m_splitToolBounds = AestraUI::NUIRect(iconX, iconY, iconSize, iconSize);
     iconX += iconSize + buttonSpacing;
-    m_multiSelectToolBounds = NomadUI::NUIRect(iconX, iconY, iconSize, iconSize);
+    m_multiSelectToolBounds = AestraUI::NUIRect(iconX, iconY, iconSize, iconSize);
     iconX += iconSize + buttonSpacing;
-    m_paintToolBounds = NomadUI::NUIRect(iconX, iconY, iconSize, iconSize);
+    m_paintToolBounds = AestraUI::NUIRect(iconX, iconY, iconSize, iconSize);
     iconX += iconSize + (innerPad * 1.5f); // Gap before extras
 
     // 4. Extras Module
     // Follow Playhead (Toggle)
-    m_followPlayheadBounds = NomadUI::NUIRect(iconX, iconY, iconSize, iconSize);
+    m_followPlayheadBounds = AestraUI::NUIRect(iconX, iconY, iconSize, iconSize);
     
     // Dropdowns removed -> Moved to Context Menu
 }
@@ -325,11 +325,11 @@ void TrackManagerUI::updateToolbarBounds() {
 // SECTION: Rendering
 // =============================================================================
 
-void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
+void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     // Update bounds before rendering
     updateToolbarBounds();
 
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const float radius = themeManager.getRadius("m"); // 8px buttons
     const auto activeBg = themeManager.getColor("primary").withAlpha(0.25f);
     const auto hoverBg = themeManager.getColor("hover").withAlpha(0.6f);
@@ -351,7 +351,7 @@ void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
     }
     if (m_menuIcon) {
         const float iconSz = 16.0f;
-        NomadUI::NUIPoint center = m_menuIconBounds.center();
+        AestraUI::NUIPoint center = m_menuIconBounds.center();
         
         // Save current state
         // Rotate around the center of the icon
@@ -359,7 +359,7 @@ void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
         
         // Draw centered at local (0,0) - renderer handles the translation to 'center' via pushTransform
         // Note: We use a temporary rect centered at 0,0
-        m_menuIcon->setBounds(NomadUI::NUIRect(-iconSz * 0.5f, -iconSz * 0.5f, iconSz, iconSz));
+        m_menuIcon->setBounds(AestraUI::NUIRect(-iconSz * 0.5f, -iconSz * 0.5f, iconSz, iconSz));
         m_menuIcon->setColorFromTheme("textPrimary");
         m_menuIcon->onRender(renderer);
         
@@ -370,8 +370,8 @@ void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
     {
         float sepX = m_menuIconBounds.right() + 7.0f; // Center in 14px gap
         renderer.drawLine(
-            NomadUI::NUIPoint(sepX, m_menuIconBounds.y + 4), 
-            NomadUI::NUIPoint(sepX, m_menuIconBounds.bottom() - 4), 
+            AestraUI::NUIPoint(sepX, m_menuIconBounds.y + 4), 
+            AestraUI::NUIPoint(sepX, m_menuIconBounds.bottom() - 4), 
             1.0f, idleBorder.withAlpha(0.3f)
         );
     }
@@ -389,7 +389,7 @@ void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
     }
     if (m_addTrackIcon) {
         const float iconSz = 16.0f;
-        NomadUI::NUIRect iconRect(
+        AestraUI::NUIRect iconRect(
             std::round(m_addTrackBounds.x + (m_addTrackBounds.width - iconSz) * 0.5f),
             std::round(m_addTrackBounds.y + (m_addTrackBounds.height - iconSz) * 0.5f),
             iconSz, iconSz
@@ -400,7 +400,7 @@ void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
     }
 
     // Helper lambda to draw icon with selection state
-    auto drawToolIcon = [&](std::shared_ptr<NomadUI::NUIIcon>& icon, const NomadUI::NUIRect& bounds, PlaylistTool tool, bool hovered) {
+    auto drawToolIcon = [&](std::shared_ptr<AestraUI::NUIIcon>& icon, const AestraUI::NUIRect& bounds, PlaylistTool tool, bool hovered) {
         bool isActive = (m_currentTool == tool);
         
         // Always draw background - idle, hover, or active
@@ -423,7 +423,7 @@ void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
         // Draw icon
         if (icon) {
             const float iconSz = 16.0f;
-            NomadUI::NUIRect iconRect(
+            AestraUI::NUIRect iconRect(
                 std::round(bounds.x + (bounds.width - iconSz) * 0.5f),
                 std::round(bounds.y + (bounds.height - iconSz) * 0.5f),
                 iconSz, iconSz
@@ -457,7 +457,7 @@ void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
     
     if (m_followPlayheadIcon) {
         const float iconSz = 16.0f;
-        NomadUI::NUIRect iconRect(
+        AestraUI::NUIRect iconRect(
             std::round(m_followPlayheadBounds.x + (m_followPlayheadBounds.width - iconSz) * 0.5f),
             std::round(m_followPlayheadBounds.y + (m_followPlayheadBounds.height - iconSz) * 0.5f),
             iconSz, iconSz
@@ -477,7 +477,7 @@ void TrackManagerUI::renderToolbar(NomadUI::NUIRenderer& renderer) {
     // Render Popup Lists (moved to menu)
 }
 
-bool TrackManagerUI::handleToolbarClick(const NomadUI::NUIPoint& position) {
+bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
     // Log click attempt
     // Log::info("TrackManagerUI::handleToolbarClick at " + std::to_string(position.x) + ", " + std::to_string(position.y));
 
@@ -493,29 +493,29 @@ bool TrackManagerUI::handleToolbarClick(const NomadUI::NUIPoint& position) {
         } else {
              Log::info("TrackManagerUI: Creating new context menu");
             // Create context menu
-            m_activeContextMenu = std::make_shared<NomadUI::NUIContextMenu>();
+            m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
             // ... capture rest of logic ...
         }
 
         // Create context menu (RE-ADDING MISSING LOGIC because I am replacing the block)
         if (!m_activeContextMenu) {
-            m_activeContextMenu = std::make_shared<NomadUI::NUIContextMenu>();
+            m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
         }
         auto menu = m_activeContextMenu;
         
         // === SNAP SUBMENU ===
-        auto snapMenu = std::make_shared<NomadUI::NUIContextMenu>();
-        auto snaps = NomadUI::MusicTheory::getSnapOptions();
+        auto snapMenu = std::make_shared<AestraUI::NUIContextMenu>();
+        auto snaps = AestraUI::MusicTheory::getSnapOptions();
         for (auto snap : snaps) {
             bool isSelected = (snap == m_snapSetting);
-            snapMenu->addRadioItem(NomadUI::MusicTheory::getSnapName(snap), "SnapGroup", isSelected, [this, snap]() {
+            snapMenu->addRadioItem(AestraUI::MusicTheory::getSnapName(snap), "SnapGroup", isSelected, [this, snap]() {
                 setSnapSetting(snap);
             });
         }
         menu->addSubmenu("Snap", snapMenu);
         
         // === LOOP SUBMENU ===
-        auto loopMenu = std::make_shared<NomadUI::NUIContextMenu>();
+        auto loopMenu = std::make_shared<AestraUI::NUIContextMenu>();
         auto addLoopItem = [&](const std::string& name, int id) {
             bool isSelected = (m_loopPreset == id);
             loopMenu->addRadioItem(name, "LoopGroup", isSelected, [this, id, name]() {
@@ -657,7 +657,7 @@ bool TrackManagerUI::handleToolbarClick(const NomadUI::NUIPoint& position) {
     return false;
 }
 
-void TrackManagerUI::renderToolCursor(NomadUI::NUIRenderer& renderer, const NomadUI::NUIPoint& position) {
+void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const AestraUI::NUIPoint& position) {
     // Check if any track is hovering a trim edge - render horizontal resize cursor
     bool isHoveringTrimEdge = false;
     bool isTrimming = false;
@@ -672,10 +672,10 @@ void TrackManagerUI::renderToolCursor(NomadUI::NUIRenderer& renderer, const Noma
     
     if (isHoveringTrimEdge) {
         // Render horizontal resize cursor (⬌)
-        auto& theme = NomadUI::NUIThemeManager::getInstance();
-        NomadUI::NUIColor cursorColor = isTrimming 
+        auto& theme = AestraUI::NUIThemeManager::getInstance();
+        AestraUI::NUIColor cursorColor = isTrimming 
             ? theme.getColor("accentCyan") 
-            : NomadUI::NUIColor(255, 255, 255, 200);
+            : AestraUI::NUIColor(255, 255, 255, 200);
         
         // Draw left-right arrows (simple ⬌ shape)
         float cx = position.x;
@@ -705,8 +705,8 @@ void TrackManagerUI::renderToolCursor(NomadUI::NUIRenderer& renderer, const Noma
     }
     
     // Calculate grid bounds
-    NomadUI::NUIRect bounds = getBounds();
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    AestraUI::NUIRect bounds = getBounds();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     float controlAreaWidth = layout.trackControlsWidth;
     float gridStartX = bounds.x + controlAreaWidth + 5;
@@ -715,7 +715,7 @@ void TrackManagerUI::renderToolCursor(NomadUI::NUIRenderer& renderer, const Noma
     float horizontalScrollbarHeight = 24.0f;
     float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
     
-    NomadUI::NUIRect gridBounds(gridStartX, trackAreaTop, 
+    AestraUI::NUIRect gridBounds(gridStartX, trackAreaTop, 
                                  bounds.width - controlAreaWidth - 20.0f, 
                                  bounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight);
     
@@ -737,7 +737,7 @@ void TrackManagerUI::renderToolCursor(NomadUI::NUIRenderer& renderer, const Noma
         
         float lineX = snappedX;
         float lineY = position.y;
-        NomadUI::NUIColor splitColor(255, 107, 107, 200);
+        AestraUI::NUIColor splitColor(255, 107, 107, 200);
         float dashLength = 6.0f;
         float gapLength = 4.0f;
         
@@ -746,13 +746,13 @@ void TrackManagerUI::renderToolCursor(NomadUI::NUIRenderer& renderer, const Noma
             const auto& allClipBounds = trackUI->getAllClipBounds();
             for (auto it = allClipBounds.begin(); it != allClipBounds.end(); ++it) {
                 const auto& clipBounds = it->second;
-                if (clipBounds.contains(NomadUI::NUIPoint(position.x, lineY))) {
+                if (clipBounds.contains(AestraUI::NUIPoint(position.x, lineY))) {
                     float lineTop = clipBounds.y;
                     float lineBottom = clipBounds.y + clipBounds.height;
                     float y = lineTop;
                     while (y < lineBottom) {
                         float dashEnd = std::min(y + dashLength, lineBottom);
-                        renderer.drawLine(NomadUI::NUIPoint(lineX, y), NomadUI::NUIPoint(lineX, dashEnd), 2.0f, splitColor);
+                        renderer.drawLine(AestraUI::NUIPoint(lineX, y), AestraUI::NUIPoint(lineX, dashEnd), 2.0f, splitColor);
                         y = dashEnd + gapLength;
                     }
                     break;
@@ -761,7 +761,7 @@ void TrackManagerUI::renderToolCursor(NomadUI::NUIRenderer& renderer, const Noma
         }
         
         if (m_splitToolIcon) {
-            NomadUI::NUIRect iconRect(lineX - 10, position.y - 10, 20, 20);
+            AestraUI::NUIRect iconRect(lineX - 10, position.y - 10, 20, 20);
             m_splitToolIcon->setBounds(iconRect);
             m_splitToolIcon->onRender(renderer);
         }
@@ -787,7 +787,7 @@ void TrackManagerUI::renderToolCursor(NomadUI::NUIRenderer& renderer, const Noma
         if (hoveringClip) {
             // Render MOVE cursor
             if (m_moveCursorIcon) {
-                NomadUI::NUIRect iconRect(position.x - 10, position.y - 10, 20, 20);
+                AestraUI::NUIRect iconRect(position.x - 10, position.y - 10, 20, 20);
                 m_moveCursorIcon->setBounds(iconRect);
                 m_moveCursorIcon->onRender(renderer);
             }
@@ -795,7 +795,7 @@ void TrackManagerUI::renderToolCursor(NomadUI::NUIRenderer& renderer, const Noma
             // Render PAINT cursor
             if (m_paintToolIcon) {
                 // Offset slightly so tip is at cursor
-                NomadUI::NUIRect iconRect(position.x, position.y - 20, 20, 20);
+                AestraUI::NUIRect iconRect(position.x, position.y - 20, 20, 20);
                 m_paintToolIcon->setBounds(iconRect);
                 m_paintToolIcon->onRender(renderer);
             }
@@ -803,7 +803,7 @@ void TrackManagerUI::renderToolCursor(NomadUI::NUIRenderer& renderer, const Noma
     }
 }
 
-void TrackManagerUI::renderMinimapResizeCursor(NomadUI::NUIRenderer& renderer, const NomadUI::NUIPoint& position)
+void TrackManagerUI::renderMinimapResizeCursor(AestraUI::NUIRenderer& renderer, const AestraUI::NUIPoint& position)
 {
     // === EXCLUSION: Don't render minimap resize cursor if any other custom cursor is active ===
     
@@ -817,8 +817,8 @@ void TrackManagerUI::renderMinimapResizeCursor(NomadUI::NUIRenderer& renderer, c
     
     // 2. Split and Paint tools own the cursor while we're over the clip grid.
     if (m_currentTool == PlaylistTool::Split || m_currentTool == PlaylistTool::Paint) {
-        NomadUI::NUIRect bounds = getBounds();
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        AestraUI::NUIRect bounds = getBounds();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         const float controlAreaWidth = layout.trackControlsWidth;
         const float gridStartX = bounds.x + controlAreaWidth + 5.0f;
@@ -827,7 +827,7 @@ void TrackManagerUI::renderMinimapResizeCursor(NomadUI::NUIRenderer& renderer, c
         const float horizontalScrollbarHeight = 24.0f;
         const float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
 
-        NomadUI::NUIRect gridBounds(gridStartX, trackAreaTop, bounds.width - controlAreaWidth - 20.0f,
+        AestraUI::NUIRect gridBounds(gridStartX, trackAreaTop, bounds.width - controlAreaWidth - 20.0f,
                                      bounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight);
         if (gridBounds.contains(position)) {
             return;  // Tool cursor takes priority in grid area
@@ -840,13 +840,13 @@ void TrackManagerUI::renderMinimapResizeCursor(NomadUI::NUIRenderer& renderer, c
     }
     
     // Check if mouse is within minimap bounds
-    NomadUI::NUIRect minimapBounds = m_timelineMinimap->getBounds();
+    AestraUI::NUIRect minimapBounds = m_timelineMinimap->getBounds();
     if (!minimapBounds.contains(position)) {
         return;  // Mouse not over minimap - no minimap cursor
     }
 
     const bool wantsResizeCursor =
-        (m_timelineMinimap->getCursorHint() == NomadUI::TimelineMinimapCursorHint::ResizeHorizontal);
+        (m_timelineMinimap->getCursorHint() == AestraUI::TimelineMinimapCursorHint::ResizeHorizontal);
 
     if (!wantsResizeCursor) {
         // No resize cursor needed, Main.cpp renders default arrow
@@ -855,9 +855,9 @@ void TrackManagerUI::renderMinimapResizeCursor(NomadUI::NUIRenderer& renderer, c
     
     // Render custom resize cursor (system cursor always hidden by Main.cpp)
 
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-    const NomadUI::NUIColor active = themeManager.getColor("borderActive").withAlpha(0.95f);
-    const NomadUI::NUIColor shadow(0.0f, 0.0f, 0.0f, 0.70f);
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    const AestraUI::NUIColor active = themeManager.getColor("borderActive").withAlpha(0.95f);
+    const AestraUI::NUIColor shadow(0.0f, 0.0f, 0.0f, 0.70f);
 
     const float size = 18.0f;
     const float half = size * 0.5f;
@@ -867,25 +867,25 @@ void TrackManagerUI::renderMinimapResizeCursor(NomadUI::NUIRenderer& renderer, c
     const float y = std::floor(position.y) + 0.5f;
 
     // Crisp White
-    const NomadUI::NUIColor white(1.0f, 1.0f, 1.0f, 1.0f);
+    const AestraUI::NUIColor white(1.0f, 1.0f, 1.0f, 1.0f);
     // Dark shadow for contrast
-    const NomadUI::NUIColor arrowShadow(0.0f, 0.0f, 0.0f, 0.8f);
+    const AestraUI::NUIColor arrowShadow(0.0f, 0.0f, 0.0f, 0.8f);
 
     // Shadow (outline)
     constexpr float kShadowWidth = 4.0f;
-    renderer.drawLine(NomadUI::NUIPoint(x - half, y), NomadUI::NUIPoint(x + half, y), kShadowWidth, arrowShadow);
-    renderer.drawLine(NomadUI::NUIPoint(x - half, y), NomadUI::NUIPoint(x - half + a, y - a), kShadowWidth, arrowShadow);
-    renderer.drawLine(NomadUI::NUIPoint(x - half, y), NomadUI::NUIPoint(x - half + a, y + a), kShadowWidth, arrowShadow);
-    renderer.drawLine(NomadUI::NUIPoint(x + half, y), NomadUI::NUIPoint(x + half - a, y - a), kShadowWidth, arrowShadow);
-    renderer.drawLine(NomadUI::NUIPoint(x + half, y), NomadUI::NUIPoint(x + half - a, y + a), kShadowWidth, arrowShadow);
+    renderer.drawLine(AestraUI::NUIPoint(x - half, y), AestraUI::NUIPoint(x + half, y), kShadowWidth, arrowShadow);
+    renderer.drawLine(AestraUI::NUIPoint(x - half, y), AestraUI::NUIPoint(x - half + a, y - a), kShadowWidth, arrowShadow);
+    renderer.drawLine(AestraUI::NUIPoint(x - half, y), AestraUI::NUIPoint(x - half + a, y + a), kShadowWidth, arrowShadow);
+    renderer.drawLine(AestraUI::NUIPoint(x + half, y), AestraUI::NUIPoint(x + half - a, y - a), kShadowWidth, arrowShadow);
+    renderer.drawLine(AestraUI::NUIPoint(x + half, y), AestraUI::NUIPoint(x + half - a, y + a), kShadowWidth, arrowShadow);
 
     // Foreground (White)
     constexpr float kLineWidth = 2.0f;
-    renderer.drawLine(NomadUI::NUIPoint(x - half, y), NomadUI::NUIPoint(x + half, y), kLineWidth, white);
-    renderer.drawLine(NomadUI::NUIPoint(x - half, y), NomadUI::NUIPoint(x - half + a, y - a), kLineWidth, white);
-    renderer.drawLine(NomadUI::NUIPoint(x - half, y), NomadUI::NUIPoint(x - half + a, y + a), kLineWidth, white);
-    renderer.drawLine(NomadUI::NUIPoint(x + half, y), NomadUI::NUIPoint(x + half - a, y - a), kLineWidth, white);
-    renderer.drawLine(NomadUI::NUIPoint(x + half, y), NomadUI::NUIPoint(x + half - a, y + a), kLineWidth, white);
+    renderer.drawLine(AestraUI::NUIPoint(x - half, y), AestraUI::NUIPoint(x + half, y), kLineWidth, white);
+    renderer.drawLine(AestraUI::NUIPoint(x - half, y), AestraUI::NUIPoint(x - half + a, y - a), kLineWidth, white);
+    renderer.drawLine(AestraUI::NUIPoint(x - half, y), AestraUI::NUIPoint(x - half + a, y + a), kLineWidth, white);
+    renderer.drawLine(AestraUI::NUIPoint(x + half, y), AestraUI::NUIPoint(x + half - a, y - a), kLineWidth, white);
+    renderer.drawLine(AestraUI::NUIPoint(x + half, y), AestraUI::NUIPoint(x + half - a, y + a), kLineWidth, white);
 }
 
 void TrackManagerUI::performSplitAtPosition(int laneIndex, double timeSeconds) {
@@ -911,7 +911,7 @@ void TrackManagerUI::performSplitAtPosition(int laneIndex, double timeSeconds) {
     }
 
     if (targetClipId.isValid()) {
-        auto cmd = std::make_shared<Nomad::Audio::SplitClipCommand>(playlist, targetClipId, splitBeat);
+        auto cmd = std::make_shared<Aestra::Audio::SplitClipCommand>(playlist, targetClipId, splitBeat);
         m_trackManager->getCommandHistory().pushAndExecute(cmd);
         
         m_trackManager->markModified();
@@ -925,7 +925,7 @@ void TrackManagerUI::performSplitAtPosition(int laneIndex, double timeSeconds) {
 // SECTION: Clip Dragging & Operations
 // =============================================================================
 
-void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInstanceID clipId, const NomadUI::NUIPoint& clickPos) {
+void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInstanceID clipId, const AestraUI::NUIPoint& clickPos) {
     if (!trackComp || !clipId.isValid() || !m_trackManager) return;
     
     m_isDraggingClipInstant = true;
@@ -938,7 +938,7 @@ void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInsta
         m_clipOriginalStartTime = clip->startBeat;
         
         // Calculate offset (Cursor Beat - Clip Start Beat)
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
         float gridStartX = getBounds().x + controlAreaWidth + 5.0f;
         
@@ -949,13 +949,13 @@ void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInsta
     Log::info("Started instant clip drag");
 }
 
-void TrackManagerUI::updateInstantClipDrag(const NomadUI::NUIPoint& currentPos) {
+void TrackManagerUI::updateInstantClipDrag(const AestraUI::NUIPoint& currentPos) {
     if (!m_isDraggingClipInstant || !m_trackManager) return;
     
     // Track mouse position for edge-scrolling in onUpdate
     m_lastMousePos = currentPos;
     
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
     float gridStartX = getBounds().x + controlAreaWidth + 5.0f;
     
@@ -1056,7 +1056,7 @@ void TrackManagerUI::addTrack(const std::string& name) {
         });
         
         // Register callback for clip deletion with ripple animation
-        trackUI->setOnClipDeleted([this](TrackUIComponent* trackComp, ClipInstanceID clipId, NomadUI::NUIPoint ripplePos) {
+        trackUI->setOnClipDeleted([this](TrackUIComponent* trackComp, ClipInstanceID clipId, AestraUI::NUIPoint ripplePos) {
             this->onClipDeleted(trackComp, clipId, ripplePos);
         });
         
@@ -1102,7 +1102,7 @@ void TrackManagerUI::refreshTracks() {
             this->invalidateCache();
         });
         
-        trackUI->setOnClipDeleted([this](TrackUIComponent* trackComp, ClipInstanceID clipId, NomadUI::NUIPoint ripplePos) {
+        trackUI->setOnClipDeleted([this](TrackUIComponent* trackComp, ClipInstanceID clipId, AestraUI::NUIPoint ripplePos) {
             this->onClipDeleted(trackComp, clipId, ripplePos);
         });
 
@@ -1145,7 +1145,7 @@ void TrackManagerUI::refreshTracks() {
 
     layoutTracks();
     
-    // Mixer strips are now refreshed by NomadContent when syncing state
+    // Mixer strips are now refreshed by AestraContent when syncing state
     
     // Update scrollbar after tracks are refreshed (fixes initial glitch)
     scheduleTimelineMinimapRebuild();
@@ -1175,7 +1175,7 @@ void TrackManagerUI::onTrackSoloToggled(TrackUIComponent* soloedTrack) {
     Log::info("Solo coordination: Cleared other solos (Exclusive Mode)");
 }
 
-void TrackManagerUI::onClipDeleted(TrackUIComponent* trackComp, ClipInstanceID clipId, const NomadUI::NUIPoint& rippleCenter) {
+void TrackManagerUI::onClipDeleted(TrackUIComponent* trackComp, ClipInstanceID clipId, const AestraUI::NUIPoint& rippleCenter) {
     if (!trackComp || !m_trackManager || !clipId.isValid()) return;
     
     auto& playlist = m_trackManager->getPlaylistModel();
@@ -1183,7 +1183,7 @@ void TrackManagerUI::onClipDeleted(TrackUIComponent* trackComp, ClipInstanceID c
     if (!clip) return;
 
     // Get clip bounds for animation before we delete
-    NomadUI::NUIRect clipBounds = trackComp->getBounds(); 
+    AestraUI::NUIRect clipBounds = trackComp->getBounds(); 
 
     // Start delete animation
     DeleteAnimation anim;
@@ -1236,7 +1236,7 @@ void TrackManagerUI::onSplitRequested(TrackUIComponent* trackComp, double splitB
     }
     
     if (targetClipId.isValid()) {
-        auto cmd = std::make_shared<Nomad::Audio::SplitClipCommand>(playlist, targetClipId, snappedBeat);
+        auto cmd = std::make_shared<Aestra::Audio::SplitClipCommand>(playlist, targetClipId, snappedBeat);
         m_trackManager->getCommandHistory().pushAndExecute(cmd);
 
         refreshTracks();
@@ -1258,10 +1258,10 @@ void TrackManagerUI::onAddTrackClicked() {
 }
 
 void TrackManagerUI::layoutTracks() {
-    NomadUI::NUIRect bounds = getBounds();
+    AestraUI::NUIRect bounds = getBounds();
 
     // Get layout dimensions from theme
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 
     float headerHeight = 40.0f;
@@ -1278,7 +1278,7 @@ void TrackManagerUI::layoutTracks() {
     if (m_timelineMinimap) {
         float minimapWidth = bounds.width - scrollbarWidth;
         float minimapY = headerHeight;
-        m_timelineMinimap->setBounds(NomadUI::NUIAbsolute(bounds, 0, minimapY, minimapWidth, horizontalScrollbarHeight));
+        m_timelineMinimap->setBounds(AestraUI::NUIAbsolute(bounds, 0, minimapY, minimapWidth, horizontalScrollbarHeight));
         updateTimelineMinimap(0.0);
     }
     
@@ -1286,7 +1286,7 @@ void TrackManagerUI::layoutTracks() {
     if (m_scrollbar) {
         float scrollbarY = headerHeight + horizontalScrollbarHeight + rulerHeight;
         float scrollbarX = bounds.width - scrollbarWidth;
-        m_scrollbar->setBounds(NomadUI::NUIAbsolute(bounds, scrollbarX, scrollbarY, scrollbarWidth, viewportHeight));
+        m_scrollbar->setBounds(AestraUI::NUIAbsolute(bounds, scrollbarX, scrollbarY, scrollbarWidth, viewportHeight));
         updateScrollbar();
     }
 
@@ -1302,7 +1302,7 @@ void TrackManagerUI::layoutTracks() {
         float yPos = trackAreaTop + (i * (m_trackHeight + m_trackSpacing)) - m_scrollOffset;
         
         // Fix: Use absolute coordinates (bounds.x, yPos).
-        // NomadUI components use absolute screen coordinates.
+        // AestraUI components use absolute screen coordinates.
         float trackWidth = bounds.width - scrollbarWidth - 5.0f;
         trackUI->setBounds(bounds.x, yPos, trackWidth, m_trackHeight);
         trackUI->setVisible(m_playlistVisible);
@@ -1323,19 +1323,19 @@ void TrackManagerUI::updateTrackPositions() {
 // SECTION: Main Render Entry
 // =============================================================================
 
-void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
-    NOMAD_ZONE("TrackMgrUI_Render");
+void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
+    AESTRA_ZONE("TrackMgrUI_Render");
     rmt_ScopedCPUSample(TrackMgrUI_Render, 0);
     
     // Skip rendering if not visible (e.g., when user is on Mixer tab)
     if (!isVisible()) return;
     
-    NomadUI::NUIRect bounds = getBounds();
+    AestraUI::NUIRect bounds = getBounds();
     
     // Normal rendering with FBO CACHING for massive FPS boost! 🚀
     // Cache the entire playlist view except the playhead (which moves every frame)
     
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     
     auto* renderCache = renderer.getRenderCache();
@@ -1347,7 +1347,7 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
     
     // === FBO CACHING ENABLED ===
     // Get or create FBO cache (cache entire playlist view area)
-    NomadUI::NUISize cacheSize(
+    AestraUI::NUISize cacheSize(
         static_cast<int>(bounds.width),
         static_cast<int>(bounds.height)
     );
@@ -1365,7 +1365,7 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
             // Re-render playlist contents into the cache
             m_isRenderingToCache = true;
             
-            renderer.clear(NomadUI::NUIColor(0, 0, 0, 0));
+            renderer.clear(AestraUI::NUIColor(0, 0, 0, 0));
             renderer.pushTransform(-bounds.x, -bounds.y);
             renderTrackManagerStatic(renderer);
             renderer.popTransform();
@@ -1394,7 +1394,7 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
         const float viewportTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
         const float viewportHeight = std::max(0.0f, bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight);
         const float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth);
-        const NomadUI::NUIRect viewportClip(bounds.x, viewportTop, trackWidth, viewportHeight);
+        const AestraUI::NUIRect viewportClip(bounds.x, viewportTop, trackWidth, viewportHeight);
 
         bool clipEnabled = false;
         if (!viewportClip.isEmpty()) {
@@ -1447,10 +1447,10 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
         float minY = std::min(m_selectionBoxStart.y, m_selectionBoxEnd.y);
         float maxY = std::max(m_selectionBoxStart.y, m_selectionBoxEnd.y);
         
-        NomadUI::NUIRect selectionRect(minX, minY, maxX - minX, maxY - minY);
+        AestraUI::NUIRect selectionRect(minX, minY, maxX - minX, maxY - minY);
 
         // CLIPPING: Constrain selection to grid area (ignore headers/rulers)
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         
         float headerHeight = 38.0f;
@@ -1464,7 +1464,7 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
         float gridWidth = getBounds().width - (controlAreaWidth + 5.0f) - scrollbarWidth;
         float gridHeight = getBounds().height - (headerHeight + rulerHeight + horizontalScrollbarHeight);
 
-        NomadUI::NUIRect gridBounds(gridLeft, gridTop, gridWidth, gridHeight);
+        AestraUI::NUIRect gridBounds(gridLeft, gridTop, gridWidth, gridHeight);
         
         // Intersect selection with grid - if no intersection, don't draw
         if (gridBounds.intersects(selectionRect)) {
@@ -1474,43 +1474,43 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
             float clipR = std::min(selectionRect.right(), gridBounds.right());
             float clipB = std::min(selectionRect.bottom(), gridBounds.bottom());
             
-            NomadUI::NUIRect clippedRect(clipX, clipY, clipR - clipX, clipB - clipY);
+            AestraUI::NUIRect clippedRect(clipX, clipY, clipR - clipX, clipB - clipY);
 
             // "Glass Tech" Theme Style
-            NomadUI::NUIColor accent = themeManager.getColor("accentCyan");
+            AestraUI::NUIColor accent = themeManager.getColor("accentCyan");
             
             // 1. Vertical Gradient Fill for "Glass" depth
             // Top: Almost transparent (5/255 ~= 0.02)
             // Bottom: Slightly more visible (30/255 ~= 0.12)
-            NomadUI::NUIColor fillTop = accent.withAlpha(5.0f / 255.0f);
-            NomadUI::NUIColor fillBottom = accent.withAlpha(30.0f / 255.0f);
+            AestraUI::NUIColor fillTop = accent.withAlpha(5.0f / 255.0f);
+            AestraUI::NUIColor fillBottom = accent.withAlpha(30.0f / 255.0f);
             renderer.fillRectGradient(clippedRect, fillTop, fillBottom, true /* vertical */);
             
             // 2. Main Border: Solid, sharp line (200/255 ~= 0.78)
-            NomadUI::NUIColor borderColor = accent.withAlpha(200.0f / 255.0f);
+            AestraUI::NUIColor borderColor = accent.withAlpha(200.0f / 255.0f);
             renderer.strokeRect(clippedRect, 1.0f, borderColor);
             
             // 3. Tech Corner Accents (Solid 255/255 = 1.0) - Gives precision feel
             // Only draw corners if they weren't clipped away (simplified logic: just draw at clipped corners)
-            NomadUI::NUIColor cornerColor = accent.withAlpha(1.0f);
+            AestraUI::NUIColor cornerColor = accent.withAlpha(1.0f);
             float cornerLen = 6.0f;
             float cornerThick = 2.0f;
             
             // Top-Left
-            renderer.fillRect(NomadUI::NUIRect(clipX, clipY, cornerLen, cornerThick), cornerColor);
-            renderer.fillRect(NomadUI::NUIRect(clipX, clipY, cornerThick, cornerLen), cornerColor);
+            renderer.fillRect(AestraUI::NUIRect(clipX, clipY, cornerLen, cornerThick), cornerColor);
+            renderer.fillRect(AestraUI::NUIRect(clipX, clipY, cornerThick, cornerLen), cornerColor);
             
             // Top-Right
-            renderer.fillRect(NomadUI::NUIRect(clipR - cornerLen, clipY, cornerLen, cornerThick), cornerColor);
-            renderer.fillRect(NomadUI::NUIRect(clipR - cornerThick, clipY, cornerThick, cornerLen), cornerColor);
+            renderer.fillRect(AestraUI::NUIRect(clipR - cornerLen, clipY, cornerLen, cornerThick), cornerColor);
+            renderer.fillRect(AestraUI::NUIRect(clipR - cornerThick, clipY, cornerThick, cornerLen), cornerColor);
             
             // Bottom-Left
-            renderer.fillRect(NomadUI::NUIRect(clipX, clipB - cornerThick, cornerLen, cornerThick), cornerColor);
-            renderer.fillRect(NomadUI::NUIRect(clipX, clipB - cornerLen, cornerThick, cornerLen), cornerColor);
+            renderer.fillRect(AestraUI::NUIRect(clipX, clipB - cornerThick, cornerLen, cornerThick), cornerColor);
+            renderer.fillRect(AestraUI::NUIRect(clipX, clipB - cornerLen, cornerThick, cornerLen), cornerColor);
             
             // Bottom-Right
-            renderer.fillRect(NomadUI::NUIRect(clipR - cornerLen, clipB - cornerThick, cornerLen, cornerThick), cornerColor);
-            renderer.fillRect(NomadUI::NUIRect(clipR - cornerThick, clipB - cornerLen, cornerThick, cornerLen), cornerColor);
+            renderer.fillRect(AestraUI::NUIRect(clipR - cornerLen, clipB - cornerThick, cornerLen, cornerThick), cornerColor);
+            renderer.fillRect(AestraUI::NUIRect(clipR - cornerThick, clipB - cornerLen, cornerThick, cornerLen), cornerColor);
         }
     }
 
@@ -1521,11 +1521,11 @@ void TrackManagerUI::onRender(NomadUI::NUIRenderer& renderer) {
 }
 
 // Helper method: Static content (used for cache)
-void TrackManagerUI::renderTrackManagerStatic(NomadUI::NUIRenderer& renderer) {
-    NomadUI::NUIRenderer& r = renderer; 
+void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
+    AestraUI::NUIRenderer& r = renderer; 
 
-    NomadUI::NUIRect bounds = getBounds();
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    AestraUI::NUIRect bounds = getBounds();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     
     // Calculate where the grid/background should end
@@ -1533,21 +1533,21 @@ void TrackManagerUI::renderTrackManagerStatic(NomadUI::NUIRenderer& renderer) {
     float gridStartX = controlAreaWidth + 5;
     
     // Draw background (control area + full grid area - no bounds restriction)
-    NomadUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
+    AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
     
     if (m_playlistVisible) {
         // Background for control area (always visible)
-        NomadUI::NUIRect controlBg(bounds.x, bounds.y, controlAreaWidth, bounds.height);
+        AestraUI::NUIRect controlBg(bounds.x, bounds.y, controlAreaWidth, bounds.height);
         renderer.fillRect(controlBg, bgColor);
         
         // Background for grid area (match track background; zebra grid provides contrast)
         float scrollbarWidth = 15.0f;
         float gridWidth = bounds.width - controlAreaWidth - scrollbarWidth - 5;
-        NomadUI::NUIRect gridBg(bounds.x + gridStartX, bounds.y, gridWidth, bounds.height);
+        AestraUI::NUIRect gridBg(bounds.x + gridStartX, bounds.y, gridWidth, bounds.height);
         renderer.fillRect(gridBg, bgColor);
         
         // Draw border
-        NomadUI::NUIColor borderColor = themeManager.getColor("border");
+        AestraUI::NUIColor borderColor = themeManager.getColor("border");
         renderer.strokeRect(bounds, 1, borderColor);
         
         // Draw Grid (Restored and moved after background)
@@ -1574,12 +1574,12 @@ void TrackManagerUI::renderTrackManagerStatic(NomadUI::NUIRenderer& renderer) {
         }
 
         const float headerHeight = 38.0f;
-        const NomadUI::NUIRect headerBounds(bounds.x, bounds.y, headerAvailableWidth, headerHeight);
+        const AestraUI::NUIRect headerBounds(bounds.x, bounds.y, headerAvailableWidth, headerHeight);
         const float rightPad = layout.panelMargin + 18.0f;
         const float textX = std::max(headerBounds.x + margin, headerBounds.right() - infoSize.width - rightPad);
         const float textY = std::round(renderer.calculateTextY(headerBounds, infoFont));
 
-        renderer.drawText(infoText, NomadUI::NUIPoint(textX, textY), infoFont, themeManager.getColor("textSecondary"));
+        renderer.drawText(infoText, AestraUI::NUIPoint(textX, textY), infoFont, themeManager.getColor("textSecondary"));
     }
 
     // Render Static Track Content (with Viewport Culling AND Clipping)
@@ -1595,7 +1595,7 @@ void TrackManagerUI::renderTrackManagerStatic(NomadUI::NUIRenderer& renderer) {
     const float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth);
     
     // Set clip rect to prevent tracks from rendering behind ruler/header
-    NomadUI::NUIRect trackClipRect(bounds.x, viewportTop, trackWidth, viewportHeight);
+    AestraUI::NUIRect trackClipRect(bounds.x, viewportTop, trackWidth, viewportHeight);
     bool clipEnabled = false;
     if (!trackClipRect.isEmpty()) {
         renderer.setClipRect(trackClipRect);
@@ -1613,7 +1613,7 @@ void TrackManagerUI::renderTrackManagerStatic(NomadUI::NUIRenderer& renderer) {
         // Zebra Striping (Handled here for guaranteed ordering/visibility)
         if (i % 2 == 0) {
             // Even rows: overlay for separation (8% white opacity)
-            renderer.fillRect(trackBounds, NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+            renderer.fillRect(trackBounds, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
         }
 
         track->renderStatic(renderer);
@@ -1627,27 +1627,27 @@ void TrackManagerUI::renderTrackManagerStatic(NomadUI::NUIRenderer& renderer) {
     // Header Bar (Static overlay)
     float headerWidth = bounds.width;
     if (m_playlistVisible) {
-        NomadUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
-        NomadUI::NUIColor borderColor = themeManager.getColor("border");
+        AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
+        AestraUI::NUIColor borderColor = themeManager.getColor("border");
 
         float headerHeight = 38.0f;
-        NomadUI::NUIRect headerRect(bounds.x, bounds.y, headerWidth, headerHeight);
+        AestraUI::NUIRect headerRect(bounds.x, bounds.y, headerWidth, headerHeight);
         renderer.fillRect(headerRect, bgColor);
         renderer.strokeRect(headerRect, 1, borderColor);
         
         // Draw time ruler below header
         float rulerHeight = 28.0f;
         float horizontalScrollbarHeight = 24.0f;
-        NomadUI::NUIRect rulerRect(bounds.x, bounds.y + headerHeight + horizontalScrollbarHeight, headerWidth, rulerHeight);
+        AestraUI::NUIRect rulerRect(bounds.x, bounds.y + headerHeight + horizontalScrollbarHeight, headerWidth, rulerHeight);
         renderTimeRuler(renderer, rulerRect);
         renderLoopMarkers(renderer, rulerRect);
     }
 }
 
 // Helper method: Dynamic content (Meters, Overlays, Selection)
-void TrackManagerUI::renderTrackManagerDynamic(NomadUI::NUIRenderer& renderer) {
-    NomadUI::NUIRect bounds = getBounds();
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+void TrackManagerUI::renderTrackManagerDynamic(AestraUI::NUIRenderer& renderer) {
+    AestraUI::NUIRect bounds = getBounds();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 
     if (m_playlistVisible) {
@@ -1659,7 +1659,7 @@ void TrackManagerUI::renderTrackManagerDynamic(NomadUI::NUIRenderer& renderer) {
         const float viewportTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
         const float viewportHeight = std::max(0.0f, bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight);
         const float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth);
-        const NomadUI::NUIRect viewportClip(bounds.x, viewportTop, trackWidth, viewportHeight);
+        const AestraUI::NUIRect viewportClip(bounds.x, viewportTop, trackWidth, viewportHeight);
 
         bool clipEnabled = false;
         if (!viewportClip.isEmpty()) {
@@ -1722,15 +1722,15 @@ void TrackManagerUI::renderTrackManagerDynamic(NomadUI::NUIRenderer& renderer) {
             float selectionWidth = visibleEndX - visibleStartX;
             
             if (selectionWidth > 0.0f) {
-                NomadUI::NUIRect selectionRect(visibleStartX, trackAreaTop, selectionWidth, trackAreaHeight);
+                AestraUI::NUIRect selectionRect(visibleStartX, trackAreaTop, selectionWidth, trackAreaHeight);
                 auto accentColor = themeManager.getColor("accentPrimary");
                 renderer.fillRect(selectionRect, accentColor.withAlpha(0.10f));
                 
                 if (selStartX >= gridStartX && selStartX <= gridEndX) {
-                    renderer.drawLine(NomadUI::NUIPoint(selStartX, trackAreaTop), NomadUI::NUIPoint(selStartX, trackAreaTop + trackAreaHeight), 1.0f, accentColor.withAlpha(0.30f));
+                    renderer.drawLine(AestraUI::NUIPoint(selStartX, trackAreaTop), AestraUI::NUIPoint(selStartX, trackAreaTop + trackAreaHeight), 1.0f, accentColor.withAlpha(0.30f));
                 }
                 if (selEndX >= gridStartX && selEndX <= gridEndX) {
-                    renderer.drawLine(NomadUI::NUIPoint(selEndX, trackAreaTop), NomadUI::NUIPoint(selEndX, trackAreaTop + trackAreaHeight), 1.0f, accentColor.withAlpha(0.30f));
+                    renderer.drawLine(AestraUI::NUIPoint(selEndX, trackAreaTop), AestraUI::NUIPoint(selEndX, trackAreaTop + trackAreaHeight), 1.0f, accentColor.withAlpha(0.30f));
                 }
             }
         }
@@ -1754,11 +1754,11 @@ void TrackManagerUI::renderTrackManagerDynamic(NomadUI::NUIRenderer& renderer) {
     
 
 
-void TrackManagerUI::renderChildren(NomadUI::NUIRenderer& renderer) {
+void TrackManagerUI::renderChildren(AestraUI::NUIRenderer& renderer) {
     // ðŸ”¥ VIEWPORT CULLING: Only render visible tracks + always render controls
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
-    NomadUI::NUIRect bounds = getBounds();
+    AestraUI::NUIRect bounds = getBounds();
     
     const float headerHeight = 38.0f;
     const float rulerHeight = 28.0f;
@@ -1770,7 +1770,7 @@ void TrackManagerUI::renderChildren(NomadUI::NUIRenderer& renderer) {
     const float viewportBottomAbs = viewportTopAbs + viewportHeight;
     const float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth);
 
-    NomadUI::NUIRect viewportClip(bounds.x, viewportTopAbs, trackWidth, viewportHeight);
+    AestraUI::NUIRect viewportClip(bounds.x, viewportTopAbs, trackWidth, viewportHeight);
     // Note: setClipRect handles FBO transforms automatically.
     
     bool clipEnabled = false;
@@ -1836,9 +1836,9 @@ void TrackManagerUI::onUpdate(double deltaTime) {
     if (!m_dropTargetRegistered) {
         try {
             // Ensure we are managed by a shared_ptr before calling shared_from_this()
-            auto sharedThis = std::dynamic_pointer_cast<NomadUI::IDropTarget>(shared_from_this());
+            auto sharedThis = std::dynamic_pointer_cast<AestraUI::IDropTarget>(shared_from_this());
             if (sharedThis) {
-                NomadUI::NUIDragDropManager::getInstance().registerDropTarget(sharedThis);
+                AestraUI::NUIDragDropManager::getInstance().registerDropTarget(sharedThis);
                 m_dropTargetRegistered = true;
             }
         } catch (const std::bad_weak_ptr&) {
@@ -1875,7 +1875,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
     // Smooth zoom animation
     if (std::abs(m_targetPixelsPerBeat - m_pixelsPerBeat) > 0.01f) {
         // Get control area width for zoom pivot calculation
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
         float gridStartX = controlAreaWidth + 5;
@@ -1910,7 +1910,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
 
     // === Follow Playhead Logic (Page & Continuous) ===
     if (m_followPlayhead && m_trackManager && m_trackManager->isPlaying()) {
-        if (!NomadUI::NUIDragDropManager::getInstance().isDragging() && 
+        if (!AestraUI::NUIDragDropManager::getInstance().isDragging() && 
             !m_isDraggingPlayhead && !m_isDraggingRulerSelection && 
             !m_isDraggingLoopStart && !m_isDraggingLoopEnd) {
             
@@ -1979,12 +1979,12 @@ void TrackManagerUI::onUpdate(double deltaTime) {
     // === EDGE-SCROLLING DURING CLIP DRAG ===
     // When dragging a clip near the edges of the grid, auto-scroll the view
     if (m_isDraggingClipInstant && m_pixelsPerBeat > 0) {
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
         float scrollbarWidth = 15.0f;
         
-        NomadUI::NUIRect bounds = getBounds();
+        AestraUI::NUIRect bounds = getBounds();
         float gridStartX = bounds.x + controlAreaWidth + 5.0f;
         float gridEndX = bounds.x + bounds.width - scrollbarWidth;
         float gridWidth = gridEndX - gridStartX;
@@ -2042,20 +2042,20 @@ void TrackManagerUI::onResize(int width, int height) {
             m_trackUIComponents[i]->setRowIndex(static_cast<int>(i));
         }
     }
-    NomadUI::NUIComponent::onResize(width, height);
+    AestraUI::NUIComponent::onResize(width, height);
 }
 
 // =============================================================================
 // SECTION: Event Handling
 // =============================================================================
 
-bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
+bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // Track mouse position for tool cursors (Split/Paint)
     m_lastMousePos = event.position;
 
     // Handle hovering state updates for toolbar icons
-    NomadUI::NUIRect bounds = getBounds();
-    NomadUI::NUIPoint localPos(event.position.x - bounds.x, event.position.y - bounds.y);
+    AestraUI::NUIRect bounds = getBounds();
+    AestraUI::NUIPoint localPos(event.position.x - bounds.x, event.position.y - bounds.y);
     
     // Fix for "Sticky Drag": Route events to any track that is currently dragging automation
     // regardless of whether the mouse is inside its bounds.
@@ -2070,7 +2070,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
 
     // Claim keyboard focus on click so keyboard routing moves off the file browser.
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left && bounds.contains(event.position)) {
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && bounds.contains(event.position)) {
         setFocused(true);
     }
     
@@ -2108,10 +2108,10 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         else if (m_followPlayheadHovered && !oldFollowHovered) tooltipText = "Follow Playhead";
         
         if (!tooltipText.empty()) {
-            NomadUI::NUIComponent::showRemoteTooltip(tooltipText, event.position);
+            AestraUI::NUIComponent::showRemoteTooltip(tooltipText, event.position);
         }
     } else if (anyOldHovered && !anyToolbarHovered) {
-        NomadUI::NUIComponent::hideRemoteTooltip();
+        AestraUI::NUIComponent::hideRemoteTooltip();
     }
     
     // Toolbar is rendered outside the playlist cache; don't invalidate the cache on hover.
@@ -2123,14 +2123,14 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     
     // === CONTEXT MENU Handling ===
     // Special handling for Right-Click on Follow Button
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Right && m_followPlayheadBounds.contains(event.position)) {
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Right && m_followPlayheadBounds.contains(event.position)) {
         
         if (m_activeContextMenu) {
              removeChild(m_activeContextMenu);
              m_activeContextMenu = nullptr;
         }
 
-        m_activeContextMenu = std::make_shared<NomadUI::NUIContextMenu>();
+        m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
         auto menu = m_activeContextMenu;
         
         // Add Modes
@@ -2170,7 +2170,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // === DROPDOWNS removed (now via Context Menu) ===
     
     // Handle toolbar clicks (icons only, not dropdowns - they handled themselves above)
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         if (handleToolbarClick(event.position)) {
             return true;
         }
@@ -2196,12 +2196,12 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // If playlist is hidden, still allow toolbar toggles and panel interaction.
     // The playlist content itself should not consume events in this mode.
     if (!m_playlistVisible) {
-        return NomadUI::NUIComponent::onMouseEvent(event);
+        return AestraUI::NUIComponent::onMouseEvent(event);
     }
     
     // Handle instant clip dragging
     if (m_isDraggingClipInstant) {
-        if (event.released && event.button == NomadUI::NUIMouseButton::Left) {
+        if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
             finishInstantClipDrag();
             return true;
         }
@@ -2212,8 +2212,8 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // Allow children (clips) to handle right-click press first.
     // Right-click on a clip deletes it; only start selection
     // box if nothing underneath handled the event.
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Right) {
-        if (NomadUI::NUIComponent::onMouseEvent(event)) {
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Right) {
+        if (AestraUI::NUIComponent::onMouseEvent(event)) {
             return true;
         }
     }
@@ -2222,9 +2222,9 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     
     // === SELECTION BOX: Right-click drag or MultiSelect tool or Ctrl+LeftClick ===
     // Start selection box on right-click drag OR left-click with MultiSelect tool OR Ctrl+LeftClick
-    bool ctrlHeld = (event.modifiers & NomadUI::NUIModifiers::Ctrl);
-    bool startSelectionBox = (event.pressed && event.button == NomadUI::NUIMouseButton::Right) ||
-                             (event.pressed && event.button == NomadUI::NUIMouseButton::Left && 
+    bool ctrlHeld = (event.modifiers & AestraUI::NUIModifiers::Ctrl);
+    bool startSelectionBox = (event.pressed && event.button == AestraUI::NUIMouseButton::Right) ||
+                             (event.pressed && event.button == AestraUI::NUIMouseButton::Left && 
                               (m_currentTool == PlaylistTool::MultiSelect || ctrlHeld));
     
     if (startSelectionBox && !m_isDrawingSelectionBox) {
@@ -2248,7 +2248,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     if (m_isDrawingSelectionBox) {
         if (m_window) {
             // Calculate constrained cursor position
-            auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+            auto& themeManager = AestraUI::NUIThemeManager::getInstance();
             const auto& layout = themeManager.getLayoutDimensions();
             
             float headerHeight = 38.0f;
@@ -2257,7 +2257,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             float controlAreaWidth = layout.trackControlsWidth;
             float scrollbarWidth = 15.0f;
             
-            NomadUI::NUIRect globalBounds = getBounds();
+            AestraUI::NUIRect globalBounds = getBounds();
             
             int winX, winY;
             m_window->getPosition(winX, winY);
@@ -2283,8 +2283,8 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         
         // Check for release to finalize selection
         // Allow release of Left button even if tool isn't MultiSelect (e.g. Ctrl override case)
-        bool endSelectionBox = (event.released && event.button == NomadUI::NUIMouseButton::Right) ||
-                               (event.released && event.button == NomadUI::NUIMouseButton::Left);
+        bool endSelectionBox = (event.released && event.button == AestraUI::NUIMouseButton::Right) ||
+                               (event.released && event.button == AestraUI::NUIMouseButton::Left);
         
         if (endSelectionBox) {
             // Calculate selection rectangle
@@ -2293,7 +2293,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             float minY = std::min(m_selectionBoxStart.y, m_selectionBoxEnd.y);
             float maxY = std::max(m_selectionBoxStart.y, m_selectionBoxEnd.y);
             
-            NomadUI::NUIRect selectionRect(minX, minY, maxX - minX, maxY - minY);
+            AestraUI::NUIRect selectionRect(minX, minY, maxX - minX, maxY - minY);
             
             // Select all tracks that intersect with selection box
             clearSelection();
@@ -2319,11 +2319,11 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     float headerHeight = 38.0f;
     float rulerHeight = 28.0f;
     float horizontalScrollbarHeight = 24.0f;
-    NomadUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, bounds.width, rulerHeight);
+    AestraUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, bounds.width, rulerHeight);
     
     // Track area (below ruler)
     float trackAreaTop = headerHeight + horizontalScrollbarHeight + rulerHeight;
-    NomadUI::NUIRect trackArea(0, trackAreaTop, bounds.width, bounds.height - trackAreaTop);
+    AestraUI::NUIRect trackArea(0, trackAreaTop, bounds.width, bounds.height - trackAreaTop);
     
     bool isInRuler = rulerRect.contains(localPos);
     bool isInTrackArea = trackArea.contains(localPos);
@@ -2331,14 +2331,14 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // Mouse wheel handling
     if (event.wheelDelta != 0.0f && (isInRuler || isInTrackArea)) {
         // Check for Shift modifier - Shift+scroll = ZOOM
-        bool shiftHeld = (event.modifiers & NomadUI::NUIModifiers::Shift);
+        bool shiftHeld = (event.modifiers & AestraUI::NUIModifiers::Shift);
         
         if (shiftHeld || isInRuler) {
             // ZOOM: Shift+scroll anywhere OR scroll on ruler
             m_lastMouseZoomX = localPos.x;
             
             // Calculate mouse position in "content space" BEFORE zoom
-            auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+            auto& themeManager = AestraUI::NUIThemeManager::getInstance();
             float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
             float gridStartX = controlAreaWidth + 5.0f;
             float gridWidthPx = getTimelineGridWidthPixels();
@@ -2404,7 +2404,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
     // === RULER INTERACTION: Loop markers, Playhead scrubbing OR timeline selection ===
     if (isInRuler) {
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
         float gridStartX = controlAreaWidth + 5;
@@ -2430,7 +2430,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             }
             
             // Start dragging loop marker
-            if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+            if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
                 if (nearLoopStart) {
                     m_isDraggingLoopStart = true;
                     m_loopDragStartBeat = m_loopStartBeat;
@@ -2444,14 +2444,14 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
         
         // Right-click or Ctrl+Left-click starts ruler selection for looping
-        bool isSelectionClick = (event.pressed && event.button == NomadUI::NUIMouseButton::Right) ||
-                                (event.pressed && event.button == NomadUI::NUIMouseButton::Left && 
-                                 (event.modifiers & NomadUI::NUIModifiers::Ctrl));
+        bool isSelectionClick = (event.pressed && event.button == AestraUI::NUIMouseButton::Right) ||
+                                (event.pressed && event.button == AestraUI::NUIMouseButton::Left && 
+                                 (event.modifiers & AestraUI::NUIModifiers::Ctrl));
         
         // Regular left-click (without Ctrl) starts playhead scrubbing
         // BUT NOT if we're hovering over a loop marker!
-        bool isPlayheadClick = event.pressed && event.button == NomadUI::NUIMouseButton::Left && 
-                              !(event.modifiers & NomadUI::NUIModifiers::Ctrl) &&
+        bool isPlayheadClick = event.pressed && event.button == AestraUI::NUIMouseButton::Left && 
+                              !(event.modifiers & AestraUI::NUIModifiers::Ctrl) &&
                               !m_hoveringLoopStart && !m_hoveringLoopEnd;
         
         if (isSelectionClick) {
@@ -2483,7 +2483,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                 m_trackManager->setUserScrubbing(true);
                 
                 // IMMEDIATE CLICK: Move playhead to clicked position right away
-                auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+                auto& themeManager = AestraUI::NUIThemeManager::getInstance();
                 const auto& layout = themeManager.getLayoutDimensions();
                 float controlAreaWidth = layout.trackControlsWidth;
                 float gridStartX = controlAreaWidth + 5;
@@ -2505,7 +2505,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     
     // Handle ruler selection dragging
     if (m_isDraggingRulerSelection) {
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
         float gridStartX = controlAreaWidth + 5;
@@ -2528,8 +2528,8 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         invalidateCache();  // Selection dragging
         
         // Stop dragging on mouse release
-        if ((event.released && event.button == NomadUI::NUIMouseButton::Right) ||
-            (event.released && event.button == NomadUI::NUIMouseButton::Left)) {
+        if ((event.released && event.button == AestraUI::NUIMouseButton::Right) ||
+            (event.released && event.button == AestraUI::NUIMouseButton::Left)) {
             m_isDraggingRulerSelection = false;
             
             // Only keep selection if it has a valid range
@@ -2577,10 +2577,10 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
 
     // === RULER SELECTION CONTEXT MENU (Click on active range) ===
-    if (isInRuler && event.pressed && event.button == NomadUI::NUIMouseButton::Left && 
+    if (isInRuler && event.pressed && event.button == AestraUI::NUIMouseButton::Left && 
         m_hasRulerSelection && !m_hoveringLoopStart && !m_hoveringLoopEnd) 
     {
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float gridStartX = layout.trackControlsWidth + 5;
         
@@ -2593,7 +2593,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             if (m_activeContextMenu) {
                 removeChild(m_activeContextMenu);
             }
-            m_activeContextMenu = std::make_shared<NomadUI::NUIContextMenu>();
+            m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
             auto menu = m_activeContextMenu;
             
             menu->addItem("Send Selection to Audition", [this]() {
@@ -2610,13 +2610,13 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     
     // Handle loop marker dragging
     if (m_isDraggingLoopStart || m_isDraggingLoopEnd) {
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
         float gridStartX = controlAreaWidth + 5;
         
         // Stop dragging on mouse release
-        if (event.released && event.button == NomadUI::NUIMouseButton::Left) {
+        if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
             m_isDraggingLoopStart = false;
             m_isDraggingLoopEnd = false;
             
@@ -2661,7 +2661,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // IMPORTANT: Don't handle playhead if we're doing ruler selection!
     if (m_isDraggingPlayhead && !m_isDraggingRulerSelection) {
         // Stop dragging on mouse release
-        if (event.released && event.button == NomadUI::NUIMouseButton::Left) {
+        if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
             m_isDraggingPlayhead = false;
             if (m_trackManager) {
                 m_trackManager->setUserScrubbing(false);
@@ -2670,7 +2670,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
         
         // Update playhead position while dragging (even outside ruler bounds for smooth scrubbing)
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
         float gridStartX = controlAreaWidth + 5;
@@ -2696,13 +2696,13 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // (Vertical scroll handling moved to main wheel handler above)
     
     // First, let children handle the event
-    bool handled = NomadUI::NUIComponent::onMouseEvent(event);
+    bool handled = AestraUI::NUIComponent::onMouseEvent(event);
     if (handled) return true;
 
     // === SPLIT TOOL: Click to split track at position ===
-    if (m_currentTool == PlaylistTool::Split && event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+    if (m_currentTool == PlaylistTool::Split && event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         // Check if click is in track area
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
         float gridStartX = controlAreaWidth + 5;
@@ -2712,7 +2712,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         float horizontalScrollbarHeight = 24.0f;
         float trackAreaTop = headerHeight + horizontalScrollbarHeight + rulerHeight;
         
-        NomadUI::NUIRect gridBounds(bounds.x + gridStartX, bounds.y + trackAreaTop,
+        AestraUI::NUIRect gridBounds(bounds.x + gridStartX, bounds.y + trackAreaTop,
                                      bounds.width - controlAreaWidth - 20.0f,
                                      bounds.height - trackAreaTop);
         
@@ -2770,34 +2770,34 @@ void TrackManagerUI::setPatternMode(bool enabled) {
     }
 }
 
-bool TrackManagerUI::onKeyEvent(const NomadUI::NUIKeyEvent& event) {
+bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (event.pressed) {
         // Hotkey 'A' toggles Automation Mode (FL/Ableton style)
-        if (event.keyCode == NomadUI::NUIKeyCode::A && 
-            !(event.modifiers & NomadUI::NUIModifiers::Ctrl)) {
+        if (event.keyCode == AestraUI::NUIKeyCode::A && 
+            !(event.modifiers & AestraUI::NUIModifiers::Ctrl)) {
             setPlaylistMode(m_playlistMode == PlaylistMode::Clips ? 
                             PlaylistMode::Automation : PlaylistMode::Clips);
             return true;
         }
 
         // Tool shortcuts
-        if (event.keyCode == NomadUI::NUIKeyCode::Num1) { setCurrentTool(PlaylistTool::Select); return true; }
-        if (event.keyCode == NomadUI::NUIKeyCode::Num2) { setCurrentTool(PlaylistTool::Split); return true; }
+        if (event.keyCode == AestraUI::NUIKeyCode::Num1) { setCurrentTool(PlaylistTool::Select); return true; }
+        if (event.keyCode == AestraUI::NUIKeyCode::Num2) { setCurrentTool(PlaylistTool::Split); return true; }
         
         // Undo / Redo
-        if (event.modifiers & NomadUI::NUIModifiers::Ctrl) {
+        if (event.modifiers & AestraUI::NUIModifiers::Ctrl) {
             bool performed = false;
             
             // Redo: Ctrl+Shift+Z or Ctrl+Y
-            if ((event.keyCode == NomadUI::NUIKeyCode::Z && (event.modifiers & NomadUI::NUIModifiers::Shift)) ||
-                (event.keyCode == NomadUI::NUIKeyCode::Y)) {
+            if ((event.keyCode == AestraUI::NUIKeyCode::Z && (event.modifiers & AestraUI::NUIModifiers::Shift)) ||
+                (event.keyCode == AestraUI::NUIKeyCode::Y)) {
                 if (m_trackManager->getCommandHistory().redo()) {
                     performed = true;
                     Log::info("[TrackManagerUI] Redo performed");
                 }
             }
             // Undo: Ctrl+Z
-            else if (event.keyCode == NomadUI::NUIKeyCode::Z) {
+            else if (event.keyCode == AestraUI::NUIKeyCode::Z) {
                 if (m_trackManager->getCommandHistory().undo()) {
                     performed = true;
                     Log::info("[TrackManagerUI] Undo performed");
@@ -2813,16 +2813,16 @@ bool TrackManagerUI::onKeyEvent(const NomadUI::NUIKeyEvent& event) {
             }
             
             // Clipboard
-            if (event.keyCode == NomadUI::NUIKeyCode::C) {
+            if (event.keyCode == AestraUI::NUIKeyCode::C) {
                 copySelectedClip();
                 return true;
             }
-            if (event.keyCode == NomadUI::NUIKeyCode::V) {
+            if (event.keyCode == AestraUI::NUIKeyCode::V) {
                 pasteClipboardAtCursor();
                 return true;
             }
             // Ctrl+B: Paste-to-right (paste at end of selected clip, select new clip)
-            if (event.keyCode == NomadUI::NUIKeyCode::B) {
+            if (event.keyCode == AestraUI::NUIKeyCode::B) {
                 pasteClipToRight();
                 return true;
             }
@@ -2909,7 +2909,7 @@ void TrackManagerUI::pasteClipToRight() {
     newClip.startBeat = pastePosition;
     
     // Create Command
-    auto cmd = std::make_shared<Nomad::Audio::AddClipCommand>(
+    auto cmd = std::make_shared<Aestra::Audio::AddClipCommand>(
         m_trackManager->getPlaylistModel(), 
         targetLaneId, 
         newClip
@@ -2934,7 +2934,7 @@ void TrackManagerUI::onPaintClip(TrackUIComponent* trackComp, double beat) {
     newClip.startBeat = snapBeatToGrid(beat);
     
     // Create Command
-    auto cmd = std::make_shared<Nomad::Audio::AddClipCommand>(
+    auto cmd = std::make_shared<Aestra::Audio::AddClipCommand>(
         m_trackManager->getPlaylistModel(), 
         trackComp->getLaneId(), 
         newClip
@@ -2951,7 +2951,7 @@ void TrackManagerUI::onPaintClip(TrackUIComponent* trackComp, double beat) {
 void TrackManagerUI::updateScrollbar() {
     if (!m_scrollbar) return;
     
-    NomadUI::NUIRect bounds = getBounds();
+    AestraUI::NUIRect bounds = getBounds();
     float headerHeight = 38.0f;
     float rulerHeight = 28.0f;
     float horizontalScrollbarHeight = 24.0f;
@@ -2981,7 +2981,7 @@ void TrackManagerUI::scheduleTimelineMinimapRebuild()
 
 float TrackManagerUI::getTimelineGridWidthPixels() const
 {
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 
     const float controlAreaWidth = layout.trackControlsWidth;
@@ -3030,7 +3030,7 @@ void TrackManagerUI::setTimelineViewStartBeat(double viewStartBeat, bool isFinal
     }
 }
 
-void TrackManagerUI::resizeTimelineViewEdgeFromMinimap(NomadUI::TimelineMinimapResizeEdge edge, double anchorBeat,
+void TrackManagerUI::resizeTimelineViewEdgeFromMinimap(AestraUI::TimelineMinimapResizeEdge edge, double anchorBeat,
                                                        double edgeBeat, bool isFinal)
 {
     const float gridWidthPx = getTimelineGridWidthPixels();
@@ -3057,7 +3057,7 @@ void TrackManagerUI::resizeTimelineViewEdgeFromMinimap(NomadUI::TimelineMinimapR
         }
     };
 
-    if (edge == NomadUI::TimelineMinimapResizeEdge::Left) {
+    if (edge == AestraUI::TimelineMinimapResizeEdge::Left) {
         // Dragging the left edge: keep right edge anchored.
         const double clampedEdge =
             std::max(domainStart, std::min(edgeBeat, anchorBeat - std::max(1e-6, minWidthBeats)));
@@ -3207,16 +3207,16 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime)
     // else: domain unchanged, nothing to do
 
     if (m_minimapNeedsRebuild) {
-        std::vector<NomadUI::TimelineMinimapClipSpan> spans;
+        std::vector<AestraUI::TimelineMinimapClipSpan> spans;
 
         const auto& laneIds = playlist.getLaneIDs();
         for (size_t i = 0; i < laneIds.size(); ++i) {
             const auto& laneId = laneIds[i];
             if (const auto* lane = playlist.getLane(laneId)) {
                 for (const auto& clip : lane->clips) {
-                    NomadUI::TimelineMinimapClipSpan span;
-                    span.id = static_cast<NomadUI::TimelineMinimapClipId>(clip.id.high ^ clip.id.low);
-                    span.type = NomadUI::TimelineMinimapClipType::Audio;
+                    AestraUI::TimelineMinimapClipSpan span;
+                    span.id = static_cast<AestraUI::TimelineMinimapClipId>(clip.id.high ^ clip.id.low);
+                    span.type = AestraUI::TimelineMinimapClipType::Audio;
 
                     span.startBeat = clip.startBeat;
                     span.endBeat = clip.startBeat + clip.durationBeats;
@@ -3237,7 +3237,7 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime)
     m_timelineSummarySnapshot = m_timelineSummaryCache.getSnapshot();
 
     if (m_isDrawingSelectionBox) {
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         const float controlAreaWidth = layout.trackControlsWidth;
         const float gridStartXAbs = getBounds().x + controlAreaWidth + 5.0f;
@@ -3251,7 +3251,7 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime)
         m_minimapSelectionBeatRange.end = std::max(0.0, std::max(startBeat, endBeat));
     }
 
-    NomadUI::TimelineMinimapModel model;
+    AestraUI::TimelineMinimapModel model;
     model.summary = &m_timelineSummarySnapshot;
     model.view.start = viewStartBeat;
     model.view.end = viewEndBeat;
@@ -3287,20 +3287,20 @@ void TrackManagerUI::deselectAllTracks() {
     }
 }
 
-void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& rulerBounds) {
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& rulerBounds) {
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     auto borderColor = themeManager.getColor("borderColor");
     auto textColor = themeManager.getColor("textSecondary");
     auto accentColor = themeManager.getColor("accentPrimary");
     
     // === GLASS BACKGROUND (subtle dark glass like transport bar displays) ===
     // Use a subtle dark glass - NOT the purple "glass" token which is too bright
-    auto glassBg = NomadUI::NUIColor(0.12f, 0.12f, 0.14f, 0.85f);  // Subtle dark grey glass
-    auto glassHighlight = NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.04f);  // Very subtle top highlight
+    auto glassBg = AestraUI::NUIColor(0.12f, 0.12f, 0.14f, 0.85f);  // Subtle dark grey glass
+    auto glassHighlight = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.04f);  // Very subtle top highlight
     
-    auto textCol = NomadUI::NUIColor(0.7f, 0.7f, 0.75f, 1.0f);
-    auto tickCol = NomadUI::NUIColor(0.35f, 0.35f, 0.40f, 1.0f);
-    auto borderCol = NomadUI::NUIColor(0.0f, 0.0f, 0.0f, 0.5f);
+    auto textCol = AestraUI::NUIColor(0.7f, 0.7f, 0.75f, 1.0f);
+    auto tickCol = AestraUI::NUIColor(0.35f, 0.35f, 0.40f, 1.0f);
+    auto borderCol = AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.5f);
     
     // Restore layout definition
     const auto& layout = themeManager.getLayoutDimensions();
@@ -3313,14 +3313,14 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
     float trackWidth = rulerBounds.width - scrollbarWidth;
     float gridWidth = std::max(0.0f, trackWidth - controlAreaWidth - 10.0f);
     
-    NomadUI::NUIRect gridRulerRect(gridStartX, rulerBounds.y, gridWidth, rulerBounds.height);
+    AestraUI::NUIRect gridRulerRect(gridStartX, rulerBounds.y, gridWidth, rulerBounds.height);
     
     // 1. Draw glass background on grid area (timeline portion)
     float cornerRadius = 4.0f;
     renderer.fillRoundedRect(gridRulerRect, cornerRadius, glassBg);
     
     // Subtle top highlight on grid area only
-    NomadUI::NUIRect highlightRect(gridRulerRect.x, gridRulerRect.y, gridRulerRect.width, 1.0f);
+    AestraUI::NUIRect highlightRect(gridRulerRect.x, gridRulerRect.y, gridRulerRect.width, 1.0f);
     renderer.fillRect(highlightRect, glassHighlight);
     
     // Draw subtle glass border on grid area
@@ -3387,15 +3387,15 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
         
         // Draw text - clip rect handles edge clipping automatically
         renderer.drawText(barText, 
-                        NomadUI::NUIPoint(textX, textY),
+                        AestraUI::NUIPoint(textX, textY),
                         fontSize, textCol);
         
         // Bar tick line - major bars get full height, others half
         // Mature Style: Ticks bottom-up
         float tickHeight = isMajorBar ? rulerBounds.height * 0.5f : rulerBounds.height * 0.25f;
         renderer.drawLine(
-            NomadUI::NUIPoint(x, rulerBounds.y + rulerBounds.height - tickHeight),
-            NomadUI::NUIPoint(x, rulerBounds.y + rulerBounds.height),
+            AestraUI::NUIPoint(x, rulerBounds.y + rulerBounds.height - tickHeight),
+            AestraUI::NUIPoint(x, rulerBounds.y + rulerBounds.height),
             1.0f,
             isMajorBar ? tickCol : tickCol.withAlpha(0.7f)
         );
@@ -3408,11 +3408,11 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
                 
                 // Downbeats (main beats 1,2,3,4) get brighter, taller ticks
                 float beatTickHeight = rulerBounds.height * 0.35f;  // Taller than before
-                NomadUI::NUIColor beatTickColor = accentColor.withAlpha(0.65f);  // Bright purple
+                AestraUI::NUIColor beatTickColor = accentColor.withAlpha(0.65f);  // Bright purple
                 
                 renderer.drawLine(
-                    NomadUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height - beatTickHeight),
-                    NomadUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height),
+                    AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height - beatTickHeight),
+                    AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height),
                     1.0f,
                     beatTickColor
                 );
@@ -3433,21 +3433,21 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
         // Selection rendering - clip rect handles edge clipping
         float selectionWidth = selEndX - selStartX;
         if (selectionWidth > 0.0f) {
-            NomadUI::NUIRect selectionRect(selStartX, rulerBounds.y, selectionWidth, rulerBounds.height);
+            AestraUI::NUIRect selectionRect(selStartX, rulerBounds.y, selectionWidth, rulerBounds.height);
             
             // Fill with semi-transparent accent color
             renderer.fillRect(selectionRect, accentColor.withAlpha(0.25f));
             
             // Draw subtle borders at selection edges
             renderer.drawLine(
-                NomadUI::NUIPoint(selStartX, rulerBounds.y),
-                NomadUI::NUIPoint(selStartX, rulerBounds.bottom()),
+                AestraUI::NUIPoint(selStartX, rulerBounds.y),
+                AestraUI::NUIPoint(selStartX, rulerBounds.bottom()),
                 1.0f,
                 accentColor.withAlpha(0.6f)
             );
             renderer.drawLine(
-                NomadUI::NUIPoint(selEndX, rulerBounds.y),
-                NomadUI::NUIPoint(selEndX, rulerBounds.bottom()),
+                AestraUI::NUIPoint(selEndX, rulerBounds.y),
+                AestraUI::NUIPoint(selEndX, rulerBounds.bottom()),
                 1.0f,
                 accentColor.withAlpha(0.6f)
             );
@@ -3460,14 +3460,14 @@ void TrackManagerUI::renderTimeRuler(NomadUI::NUIRenderer& renderer, const Nomad
     // 2. Draw SOLID background for CONTROL AREA (left side - DRAWN LAST to fully cover any bleed)
     //    Use backgroundPrimary to match minimap's left section exactly
     auto controlBg = themeManager.getColor("backgroundPrimary");
-    NomadUI::NUIRect controlRect(rulerBounds.x, rulerBounds.y, controlAreaWidth + 5.0f, rulerBounds.height);
+    AestraUI::NUIRect controlRect(rulerBounds.x, rulerBounds.y, controlAreaWidth + 5.0f, rulerBounds.height);
     renderer.fillRect(controlRect, controlBg);
 
     // Dedicated "corner" panel where track controls meet the ruler.
-    const NomadUI::NUIRect cornerRect(rulerBounds.x, rulerBounds.y, controlAreaWidth, rulerBounds.height);
+    const AestraUI::NUIRect cornerRect(rulerBounds.x, rulerBounds.y, controlAreaWidth, rulerBounds.height);
     renderer.drawLine(
-        NomadUI::NUIPoint(cornerRect.right(), cornerRect.y),
-        NomadUI::NUIPoint(cornerRect.right(), cornerRect.bottom()),
+        AestraUI::NUIPoint(cornerRect.right(), cornerRect.y),
+        AestraUI::NUIPoint(cornerRect.right(), cornerRect.bottom()),
         1.0f,
         borderColor.withAlpha(0.5f)
     );
@@ -3483,13 +3483,13 @@ void TrackManagerUI::setLoopRegion(double startBeat, double endBeat, bool enable
 }
 
 // Render loop markers on ruler
-void TrackManagerUI::renderLoopMarkers(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& rulerBounds) {
+void TrackManagerUI::renderLoopMarkers(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& rulerBounds) {
     // Only show markers when there's an active ruler selection
     if (!m_hasRulerSelection) return;
     
     if (m_loopEndBeat <= m_loopStartBeat) return;  // Invalid loop region
     
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     
     // Calculate grid start (same as ruler)
@@ -3513,7 +3513,7 @@ void TrackManagerUI::renderLoopMarkers(NomadUI::NUIRenderer& renderer, const Nom
     
     // Color based on enabled state and hover
     auto accentColor = themeManager.getColor("accentPrimary");
-    NomadUI::NUIColor markerColor;
+    AestraUI::NUIColor markerColor;
     
     if (m_loopEnabled) {
         markerColor = accentColor.withAlpha(0.8f);  // Bright when active
@@ -3527,15 +3527,15 @@ void TrackManagerUI::renderLoopMarkers(NomadUI::NUIRenderer& renderer, const Nom
     
     // === RENDER LOOP START MARKER ===
     if (startVisible) {
-        NomadUI::NUIColor startColor = markerColor;
+        AestraUI::NUIColor startColor = markerColor;
         if (m_hoveringLoopStart || m_isDraggingLoopStart) {
             startColor = accentColor;  // Full brightness on hover/drag
         }
         
         // Draw triangle pointing down (using lines)
-        NomadUI::NUIPoint p1(loopStartX, rulerBounds.y + triangleHeight);  // Bottom center
-        NomadUI::NUIPoint p2(loopStartX - triangleWidth / 2, rulerBounds.y);  // Top left
-        NomadUI::NUIPoint p3(loopStartX + triangleWidth / 2, rulerBounds.y);  // Top right
+        AestraUI::NUIPoint p1(loopStartX, rulerBounds.y + triangleHeight);  // Bottom center
+        AestraUI::NUIPoint p2(loopStartX - triangleWidth / 2, rulerBounds.y);  // Top left
+        AestraUI::NUIPoint p3(loopStartX + triangleWidth / 2, rulerBounds.y);  // Top right
         
         // Draw filled triangle using lines
         renderer.drawLine(p1, p2, 2.0f, startColor);
@@ -3544,8 +3544,8 @@ void TrackManagerUI::renderLoopMarkers(NomadUI::NUIRenderer& renderer, const Nom
         
         // Draw vertical line from triangle to bottom
         renderer.drawLine(
-            NomadUI::NUIPoint(loopStartX, rulerBounds.y + triangleHeight),
-            NomadUI::NUIPoint(loopStartX, rulerBounds.y + rulerBounds.height),
+            AestraUI::NUIPoint(loopStartX, rulerBounds.y + triangleHeight),
+            AestraUI::NUIPoint(loopStartX, rulerBounds.y + rulerBounds.height),
             2.0f,
             startColor
         );
@@ -3553,15 +3553,15 @@ void TrackManagerUI::renderLoopMarkers(NomadUI::NUIRenderer& renderer, const Nom
     
     // === RENDER LOOP END MARKER ===
     if (endVisible) {
-        NomadUI::NUIColor endColor = markerColor;
+        AestraUI::NUIColor endColor = markerColor;
         if (m_hoveringLoopEnd || m_isDraggingLoopEnd) {
             endColor = accentColor;  // Full brightness on hover/drag
         }
         
         // Draw triangle pointing down (using lines)
-        NomadUI::NUIPoint p1(loopEndX, rulerBounds.y + triangleHeight);  // Bottom center
-        NomadUI::NUIPoint p2(loopEndX - triangleWidth / 2, rulerBounds.y);  // Top left
-        NomadUI::NUIPoint p3(loopEndX + triangleWidth / 2, rulerBounds.y);  // Top right
+        AestraUI::NUIPoint p1(loopEndX, rulerBounds.y + triangleHeight);  // Bottom center
+        AestraUI::NUIPoint p2(loopEndX - triangleWidth / 2, rulerBounds.y);  // Top left
+        AestraUI::NUIPoint p3(loopEndX + triangleWidth / 2, rulerBounds.y);  // Top right
         
         // Draw filled triangle using lines
         renderer.drawLine(p1, p2, 2.0f, endColor);
@@ -3570,8 +3570,8 @@ void TrackManagerUI::renderLoopMarkers(NomadUI::NUIRenderer& renderer, const Nom
         
         // Draw vertical line from triangle to bottom
         renderer.drawLine(
-            NomadUI::NUIPoint(loopEndX, rulerBounds.y + triangleHeight),
-            NomadUI::NUIPoint(loopEndX, rulerBounds.y + rulerBounds.height),
+            AestraUI::NUIPoint(loopEndX, rulerBounds.y + triangleHeight),
+            AestraUI::NUIPoint(loopEndX, rulerBounds.y + rulerBounds.height),
             2.0f,
             endColor
         );
@@ -3604,12 +3604,12 @@ double TrackManagerUI::getMaxTimelineExtent() const {
 
 
 // Shared Grid Drawing Helper
-void TrackManagerUI::drawGrid(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds, float gridStartX, float gridWidth, float timelineScrollOffset) {
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+void TrackManagerUI::drawGrid(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStartX, float gridWidth, float timelineScrollOffset) {
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // Draw Dynamic Snap Grid
-    double snapDur = NomadUI::MusicTheory::getSnapDuration(m_snapSetting);
-    if (m_snapSetting == NomadUI::SnapGrid::None) snapDur = 1.0;
+    double snapDur = AestraUI::MusicTheory::getSnapDuration(m_snapSetting);
+    if (m_snapSetting == AestraUI::SnapGrid::None) snapDur = 1.0;
     if (snapDur <= 0.0001) snapDur = 1.0;
 
     // Dynamic Density (Relaxed to 5px)
@@ -3670,9 +3670,9 @@ void TrackManagerUI::drawGrid(NomadUI::NUIRenderer& renderer, const NomadUI::NUI
     double current = std::floor(startBeat / strideBeats) * strideBeats;
     
     // Grid Lines - Using Theme Tokens
-    NomadUI::NUIColor barLineColor = themeManager.getColor("gridBar");
-    NomadUI::NUIColor beatLineColor = themeManager.getColor("gridBeat");
-    NomadUI::NUIColor subBeatLineColor = themeManager.getColor("gridSubdivision");
+    AestraUI::NUIColor barLineColor = themeManager.getColor("gridBar");
+    AestraUI::NUIColor beatLineColor = themeManager.getColor("gridBeat");
+    AestraUI::NUIColor subBeatLineColor = themeManager.getColor("gridSubdivision");
 
     // Draw grid lines with adaptive density
     for (; current <= endBeat + strideBeats; current += snapDur) {
@@ -3695,7 +3695,7 @@ void TrackManagerUI::drawGrid(NomadUI::NUIRenderer& renderer, const NomadUI::NUI
         float trackAreaTop = bounds.y;
         float trackAreaBottom = bounds.y + bounds.height;
         float height = trackAreaBottom - trackAreaTop;
-        NomadUI::NUIRect lineRect(xPos, trackAreaTop, 1.0f, height);
+        AestraUI::NUIRect lineRect(xPos, trackAreaTop, 1.0f, height);
         
         // Batching Friendly: fillRect uses Type 0 (Image/Color default) which works perfectly with Unified Batching
         if (isBar) {
@@ -3712,7 +3712,7 @@ void TrackManagerUI::drawGrid(NomadUI::NUIRenderer& renderer, const NomadUI::NUI
 
 // Draw playhead (vertical line showing current playback position)
 // Draw playhead (vertical line showing current playback position)
-void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
+void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     // If in Pattern Mode (Arsenal), hide the global timeline playhead to avoid confusion ("Time Segmentation")
     if (m_patternMode) return;
 
@@ -3730,11 +3730,11 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
     double relPositionX = (positionInBeats * m_pixelsPerBeat) - static_cast<double>(m_timelineScrollOffset);
     
     // Calculate playhead X position accounting for scroll offset
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     float controlAreaWidth = layout.trackControlsWidth;
     
-    NomadUI::NUIRect bounds = getBounds();
+    AestraUI::NUIRect bounds = getBounds();
     float gridStartX = bounds.x + controlAreaWidth + 5;
     float playheadX = gridStartX + static_cast<float>(relPositionX);
     
@@ -3766,13 +3766,13 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
     // Draw if playhead center is within the visible timeline bounds
     // Allow triangle to extend outside as long as center line is visible
     if (playheadX >= gridStartX && playheadX <= playheadEndX) {
-        // Playhead color - Nomad Purple for consistency
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance(); // ensure themeManager is available (it was declared above but check scope)
+        // Playhead color - Aestra Purple for consistency
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance(); // ensure themeManager is available (it was declared above but check scope)
         // Redefine/Reuse themeManager? It's declared at line 2731 in the function scope (based on previous view).
         // Let's use the one from outside if available, or just get it.
         // The visible snippet starts at 2761, check context. 
-        // In the previous view_code_item, text was "auto& themeManager = NomadUI::NUIThemeManager::getInstance();" at line 2731.
-        NomadUI::NUIColor playheadColor = themeManager.getColor("accentPrimary"); 
+        // In the previous view_code_item, text was "auto& themeManager = AestraUI::NUIThemeManager::getInstance();" at line 2731.
+        AestraUI::NUIColor playheadColor = themeManager.getColor("accentPrimary"); 
 
         // GLOW EFFECT (BG) - Only when playing
         if (m_trackManager->isPlaying()) {
@@ -3780,26 +3780,26 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
              float glowWidth = 6.0f; // Width of glow on each side
              float lineH = playheadEndY - playheadStartY;
              
-             NomadUI::NUIColor glowColorCenter = playheadColor.withAlpha(0.25f); // Soft center
-             NomadUI::NUIColor glowColorEdge = playheadColor.withAlpha(0.0f);    // Transparent edge
+             AestraUI::NUIColor glowColorCenter = playheadColor.withAlpha(0.25f); // Soft center
+             AestraUI::NUIColor glowColorEdge = playheadColor.withAlpha(0.0f);    // Transparent edge
              
              // Left side glow (Transparent -> Color)
              renderer.fillRectGradient(
-                 NomadUI::NUIRect(playheadX - glowWidth, playheadStartY, glowWidth, lineH),
+                 AestraUI::NUIRect(playheadX - glowWidth, playheadStartY, glowWidth, lineH),
                  glowColorEdge, glowColorCenter, false // false = horizontal
              );
              
              // Right side glow (Color -> Transparent)
              renderer.fillRectGradient(
-                 NomadUI::NUIRect(playheadX, playheadStartY, glowWidth, lineH),
+                 AestraUI::NUIRect(playheadX, playheadStartY, glowWidth, lineH),
                  glowColorCenter, glowColorEdge, false // false = horizontal
              );
         }
 
         // Draw playhead line (Thinner 1px, simple)
         renderer.drawLine(
-            NomadUI::NUIPoint(playheadX, playheadStartY),
-            NomadUI::NUIPoint(playheadX, playheadEndY),
+            AestraUI::NUIPoint(playheadX, playheadStartY),
+            AestraUI::NUIPoint(playheadX, playheadEndY),
             1.0f, 
             playheadColor
         );
@@ -3813,8 +3813,8 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
             if (h < 1.0f) h = 1.0f; // Ensure at least 1px
             
             renderer.drawLine(
-                NomadUI::NUIPoint(playheadX + dx, playheadStartY),
-                NomadUI::NUIPoint(playheadX + dx, playheadStartY + h),
+                AestraUI::NUIPoint(playheadX + dx, playheadStartY),
+                AestraUI::NUIPoint(playheadX + dx, playheadStartY + h),
                 1.0f,
                 playheadColor
             );
@@ -3824,7 +3824,7 @@ void TrackManagerUI::renderPlayhead(NomadUI::NUIRenderer& renderer) {
 
 // ⚡ MULTI-LAYER CACHING IMPLEMENTATION
 
-void TrackManagerUI::updateBackgroundCache(NomadUI::NUIRenderer& renderer) {
+void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     rmt_ScopedCPUSample(TrackMgr_UpdateBgCache, 0);
     
     int width = m_backgroundCachedWidth;
@@ -3840,7 +3840,7 @@ void TrackManagerUI::updateBackgroundCache(NomadUI::NUIRenderer& renderer) {
         return;
     }
     
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     
     // Calculate layout dimensions
@@ -3849,31 +3849,31 @@ void TrackManagerUI::updateBackgroundCache(NomadUI::NUIRenderer& renderer) {
     float scrollbarWidth = 15.0f;
     float gridWidth = width - controlAreaWidth - scrollbarWidth - 5;
     
-    NomadUI::NUIRect textureBounds(0, 0, static_cast<float>(width), static_cast<float>(height));
-    NomadUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
-    NomadUI::NUIColor borderColor = themeManager.getColor("border");
+    AestraUI::NUIRect textureBounds(0, 0, static_cast<float>(width), static_cast<float>(height));
+    AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
+    AestraUI::NUIColor borderColor = themeManager.getColor("border");
     
     // Draw background panels
-    NomadUI::NUIRect controlBg(0, 0, controlAreaWidth, static_cast<float>(height));
+    AestraUI::NUIRect controlBg(0, 0, controlAreaWidth, static_cast<float>(height));
     renderer.fillRect(controlBg, bgColor);
     
-    NomadUI::NUIRect gridBg(gridStartX, 0, gridWidth, static_cast<float>(height));
+    AestraUI::NUIRect gridBg(gridStartX, 0, gridWidth, static_cast<float>(height));
     // Grid Background: Deep Charcoal (Lifted from Void)
-    renderer.fillRect(gridBg, NomadUI::NUIColor(0.09f, 0.09f, 0.10f, 1.0f));
+    renderer.fillRect(gridBg, AestraUI::NUIColor(0.09f, 0.09f, 0.10f, 1.0f));
     
     // Draw borders
     renderer.strokeRect(textureBounds, 1, borderColor);
     
     // Draw header bar
     float headerHeight = 38.0f;
-    NomadUI::NUIRect headerRect(0, 0, static_cast<float>(width), headerHeight);
+    AestraUI::NUIRect headerRect(0, 0, static_cast<float>(width), headerHeight);
     renderer.fillRect(headerRect, bgColor);
     renderer.strokeRect(headerRect, 1, borderColor);
     
     // Draw time ruler
     float rulerHeight = 28.0f;
     float horizontalScrollbarHeight = 24.0f;
-    NomadUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, static_cast<float>(width), rulerHeight);
+    AestraUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, static_cast<float>(width), rulerHeight);
     
     // Render ruler ticks (static part only - no moving elements)
     double bpm = 120.0;
@@ -3882,9 +3882,9 @@ void TrackManagerUI::updateBackgroundCache(NomadUI::NUIRenderer& renderer) {
     double maxExtentInBeats = maxExtent / secondsPerBeat;
     
     // Ruler Render: "Mature" Playlist Style
-    auto bg = NomadUI::NUIColor(0.08f, 0.08f, 0.10f, 1.0f); 
-    auto textCol = NomadUI::NUIColor(0.7f, 0.7f, 0.75f, 1.0f);
-    auto tickCol = NomadUI::NUIColor(0.35f, 0.35f, 0.40f, 1.0f);
+    auto bg = AestraUI::NUIColor(0.08f, 0.08f, 0.10f, 1.0f); 
+    auto textCol = AestraUI::NUIColor(0.7f, 0.7f, 0.75f, 1.0f);
+    auto tickCol = AestraUI::NUIColor(0.35f, 0.35f, 0.40f, 1.0f);
     
     // Draw ruler background
     renderer.fillRect(rulerRect, bg);
@@ -3893,7 +3893,7 @@ void TrackManagerUI::updateBackgroundCache(NomadUI::NUIRenderer& renderer) {
     // Draw beat markers (grid lines)
     // USE SHARED HELPER
     float trackAreaTop = rulerRect.y + rulerRect.height;
-    NomadUI::NUIRect gridArea(0, trackAreaTop, static_cast<float>(width), static_cast<float>(height) - trackAreaTop);
+    AestraUI::NUIRect gridArea(0, trackAreaTop, static_cast<float>(width), static_cast<float>(height) - trackAreaTop);
     
     drawGrid(renderer, gridArea, gridStartX, gridWidth, m_timelineScrollOffset);
 
@@ -3916,7 +3916,7 @@ void TrackManagerUI::updateBackgroundCache(NomadUI::NUIRenderer& renderer) {
         float textX = std::floor(x - textSize.width * 0.5f);
 
         if (textX + textSize.width <= rulerRect.right() - 6.0f) {
-            renderer.drawText(barText, NomadUI::NUIPoint(textX, textY), barFontSize, textCol);
+            renderer.drawText(barText, AestraUI::NUIPoint(textX, textY), barFontSize, textCol);
         }
     }
     
@@ -3927,12 +3927,12 @@ void TrackManagerUI::updateBackgroundCache(NomadUI::NUIRenderer& renderer) {
     Log::info("✅ Background cache updated: " + std::to_string(width) + "×" + std::to_string(height));
 }
 
-void TrackManagerUI::updateControlsCache(NomadUI::NUIRenderer& renderer) {
+void TrackManagerUI::updateControlsCache(AestraUI::NUIRenderer& renderer) {
     // TODO: Cache static UI controls (buttons, labels) - not implemented yet
     m_controlsNeedsUpdate = false;
 }
 
-void TrackManagerUI::updateTrackCache(NomadUI::NUIRenderer& renderer, size_t trackIndex) {
+void TrackManagerUI::updateTrackCache(AestraUI::NUIRenderer& renderer, size_t trackIndex) {
     // TODO: Per-track FBO caching for waveforms - not implemented yet
     if (trackIndex < m_trackCaches.size()) {
         m_trackCaches[trackIndex].needsUpdate = false;
@@ -4024,22 +4024,22 @@ void TrackManagerUI::deleteSelectedClip() {
 // Drop Target Implementation (IDropTarget)
 // =============================================================================
 
-NomadUI::DropFeedback TrackManagerUI::onDragEnter(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
+AestraUI::DropFeedback TrackManagerUI::onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
     Log::info("[TrackManagerUI] Drag entered");
     
     // Accept file drops, audio clip moves, and plugins
-    if (data.type != NomadUI::DragDataType::File && 
-        data.type != NomadUI::DragDataType::AudioClip &&
-        data.type != NomadUI::DragDataType::Plugin) {
-        return NomadUI::DropFeedback::Invalid;
+    if (data.type != AestraUI::DragDataType::File && 
+        data.type != AestraUI::DragDataType::AudioClip &&
+        data.type != AestraUI::DragDataType::Plugin) {
+        return AestraUI::DropFeedback::Invalid;
     }
 
     // Early reject unsupported formats (cheap extension check; full validation happens on drop).
-    if (data.type == NomadUI::DragDataType::File &&
+    if (data.type == AestraUI::DragDataType::File &&
         !AudioFileValidator::hasValidAudioExtension(data.filePath)) {
         m_showDropPreview = false;
         setDirty(true);
-        return NomadUI::DropFeedback::Invalid;
+        return AestraUI::DropFeedback::Invalid;
     }
     
     // Calculate target track and time
@@ -4058,29 +4058,29 @@ NomadUI::DropFeedback TrackManagerUI::onDragEnter(const NomadUI::DragData& data,
         m_showDropPreview = true;
         setDirty(true);
         // Move for clips; Copy for files and plugins
-        return data.type == NomadUI::DragDataType::AudioClip ? 
-               NomadUI::DropFeedback::Move : NomadUI::DropFeedback::Copy;
+        return data.type == AestraUI::DragDataType::AudioClip ? 
+               AestraUI::DropFeedback::Move : AestraUI::DropFeedback::Copy;
     }
     
-    return NomadUI::DropFeedback::Invalid;
+    return AestraUI::DropFeedback::Invalid;
 }
 
-NomadUI::DropFeedback TrackManagerUI::onDragOver(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
+AestraUI::DropFeedback TrackManagerUI::onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
     // Keep feedback "Invalid" for unsupported formats while hovering.
-    if (data.type == NomadUI::DragDataType::File &&
+    if (data.type == AestraUI::DragDataType::File &&
         !AudioFileValidator::hasValidAudioExtension(data.filePath)) {
         if (m_showDropPreview) {
             m_showDropPreview = false;
             setDirty(true);
         }
-        return NomadUI::DropFeedback::Invalid;
+        return AestraUI::DropFeedback::Invalid;
     }
 
     // Update target track and time as mouse moves
     int newTrack = getTrackAtPosition(position.y);
     
     // Explicit mapping: Workspace -> Grid -> Beat
-    auto& theme = NomadUI::NUIThemeManager::getInstance();
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
     float controlWidth = theme.getLayoutDimensions().trackControlsWidth;
     float gridStartX = getBounds().x + controlWidth + 5.0f;
     
@@ -4091,7 +4091,7 @@ NomadUI::DropFeedback TrackManagerUI::onDragOver(const NomadUI::DragData& data, 
             setDirty(true);
             Log::info("[TrackManagerUI] Drag over rejected: Cursor in control area");
         }
-        return NomadUI::DropFeedback::Invalid;
+        return AestraUI::DropFeedback::Invalid;
     }
 
     double gridX = position.x - gridStartX;
@@ -4115,21 +4115,21 @@ NomadUI::DropFeedback TrackManagerUI::onDragOver(const NomadUI::DragData& data, 
             m_showDropPreview = true;
             setDirty(true);
             // Move for clips; Copy for files and plugins
-            return data.type == NomadUI::DragDataType::AudioClip ? 
-                   NomadUI::DropFeedback::Move : NomadUI::DropFeedback::Copy;
+            return data.type == AestraUI::DragDataType::AudioClip ? 
+                   AestraUI::DropFeedback::Move : AestraUI::DropFeedback::Copy;
         } else {
             m_showDropPreview = false;
             setDirty(true);
-            return NomadUI::DropFeedback::Invalid;
+            return AestraUI::DropFeedback::Invalid;
         }
     }
     
     // Return appropriate feedback based on preview state
     if (m_showDropPreview) {
-        return data.type == NomadUI::DragDataType::AudioClip ? 
-               NomadUI::DropFeedback::Move : NomadUI::DropFeedback::Copy;
+        return data.type == AestraUI::DragDataType::AudioClip ? 
+               AestraUI::DropFeedback::Move : AestraUI::DropFeedback::Copy;
     }
-    return NomadUI::DropFeedback::Invalid;
+    return AestraUI::DropFeedback::Invalid;
 }
 
 void TrackManagerUI::onDragLeave() {
@@ -4138,8 +4138,8 @@ void TrackManagerUI::onDragLeave() {
     setDirty(true);
 }
 
-NomadUI::DropResult TrackManagerUI::onDrop(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
-    NomadUI::DropResult result;
+AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    AestraUI::DropResult result;
     
     // 1. Calculate drop location
     int laneIndex = getTrackAtPosition(position.y);
@@ -4179,7 +4179,7 @@ NomadUI::DropResult TrackManagerUI::onDrop(const NomadUI::DragData& data, const 
 
     
     // 3. Handle AudioClip repositioning
-    if (data.type == NomadUI::DragDataType::AudioClip) {
+    if (data.type == AestraUI::DragDataType::AudioClip) {
         ClipInstanceID clipId = ClipInstanceID::fromString(data.sourceClipIdString);
         
         if (clipId.isValid()) {
@@ -4208,7 +4208,7 @@ NomadUI::DropResult TrackManagerUI::onDrop(const NomadUI::DragData& data, const 
     }
 
     // 4. Handle Pattern Drop
-    if (data.type == NomadUI::DragDataType::Pattern) {
+    if (data.type == AestraUI::DragDataType::Pattern) {
         PatternID pid;
         
         // Try to extract PatternID from customData
@@ -4248,7 +4248,7 @@ NomadUI::DropResult TrackManagerUI::onDrop(const NomadUI::DragData& data, const 
 
     
     // 4. Handle File Drop (New Audio Content)
-    if (data.type == NomadUI::DragDataType::File) {
+    if (data.type == AestraUI::DragDataType::File) {
         Log::info("[TrackManagerUI] File drop received: " + data.filePath);
         
         if (!AudioFileValidator::isValidAudioFile(data.filePath)) {
@@ -4378,7 +4378,7 @@ NomadUI::DropResult TrackManagerUI::onDrop(const NomadUI::DragData& data, const 
                                 Log::info("[TrackManagerUI] Async load complete for: " + filePath);
                                 
                                 // Trigger waveform cache build
-                                m_waveformBuilder.buildAsync(*src, [this, src](std::shared_ptr<Nomad::Audio::WaveformCache> cache) {
+                                m_waveformBuilder.buildAsync(*src, [this, src](std::shared_ptr<Aestra::Audio::WaveformCache> cache) {
                                      if (cache) {
                                          std::lock_guard<std::mutex> lock(m_pendingTasksMutex);
                                          m_pendingTasks.push_back([this, src, cache]() {
@@ -4420,12 +4420,12 @@ NomadUI::DropResult TrackManagerUI::onDrop(const NomadUI::DragData& data, const 
     }
     
     // 5. Handle Plugin Drop
-    if (data.type == NomadUI::DragDataType::Plugin) {
+    if (data.type == AestraUI::DragDataType::Plugin) {
         Log::info("[TrackManagerUI] Plugin drop received: " + data.displayName);
         
         std::string pluginId = data.sourceClipIdString;
         if (!pluginId.empty()) {
-            auto& pluginManager = Nomad::Audio::PluginManager::getInstance();
+            auto& pluginManager = Aestra::Audio::PluginManager::getInstance();
             
             // Validate target channel exists
             int channelIndex = laneIndex;
@@ -4440,7 +4440,7 @@ NomadUI::DropResult TrackManagerUI::onDrop(const NomadUI::DragData& data, const 
 
             // Check if chain has space (pre-check)
             auto& chain = channel->getEffectChain();
-            if (chain.getFirstEmptySlot() >= Nomad::Audio::EffectChain::MAX_SLOTS) {
+            if (chain.getFirstEmptySlot() >= Aestra::Audio::EffectChain::MAX_SLOTS) {
                 result.accepted = false;
                 result.message = "Effect chain full";
                 clearDropPreview();
@@ -4452,7 +4452,7 @@ NomadUI::DropResult TrackManagerUI::onDrop(const NomadUI::DragData& data, const 
             std::string displayName = data.displayName;
             auto trackManager = m_trackManager;
             
-            pluginManager.createInstanceByIdAsync(pluginId, [trackManager, channelIndex, displayName, pluginId](Nomad::Audio::PluginInstancePtr instance) {
+            pluginManager.createInstanceByIdAsync(pluginId, [trackManager, channelIndex, displayName, pluginId](Aestra::Audio::PluginInstancePtr instance) {
                 if (!instance) {
                     Log::error("[TrackManagerUI] Plugin creation failed for ID: " + pluginId);
                     return;
@@ -4461,14 +4461,14 @@ NomadUI::DropResult TrackManagerUI::onDrop(const NomadUI::DragData& data, const 
                 auto channel = trackManager->getTrack(channelIndex);
                 if (!channel) return;
 
-                auto& pluginManager = Nomad::Audio::PluginManager::getInstance();
+                auto& pluginManager = Aestra::Audio::PluginManager::getInstance();
                 if (instance->initialize(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize())) {
                     instance->activate(); 
                     
                     auto& chain = channel->getEffectChain();
                     size_t slot = chain.getFirstEmptySlot();
                     
-                    if (slot < Nomad::Audio::EffectChain::MAX_SLOTS) {
+                    if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
                         chain.insertPlugin(slot, instance);
                         Log::info("[TrackManagerUI] Added plugin (Async): " + displayName);
                     } else {
@@ -4506,11 +4506,11 @@ void TrackManagerUI::clearDropPreview() {
 }
 
 double TrackManagerUI::snapBeatToGrid(double beat) const {
-    if (!m_snapEnabled || m_snapSetting == NomadUI::SnapGrid::None) {
+    if (!m_snapEnabled || m_snapSetting == AestraUI::SnapGrid::None) {
         return beat;
     }
     
-    double grid = NomadUI::MusicTheory::getSnapDuration(m_snapSetting);
+    double grid = AestraUI::MusicTheory::getSnapDuration(m_snapSetting);
     if (grid <= 0.00001) return beat;
     
     // Round to nearest grid line
@@ -4520,11 +4520,11 @@ double TrackManagerUI::snapBeatToGrid(double beat) const {
 }
 
 double TrackManagerUI::snapBeatToGridForward(double beat) const {
-    if (!m_snapEnabled || m_snapSetting == NomadUI::SnapGrid::None) {
+    if (!m_snapEnabled || m_snapSetting == AestraUI::SnapGrid::None) {
         return beat;
     }
     
-    double grid = NomadUI::MusicTheory::getSnapDuration(m_snapSetting);
+    double grid = AestraUI::MusicTheory::getSnapDuration(m_snapSetting);
     if (grid <= 0.00001) return beat;
     
     // Snap forward to next grid line
@@ -4538,8 +4538,8 @@ double TrackManagerUI::snapBeatToGridForward(double beat) const {
 // =============================================================================
 
 int TrackManagerUI::getTrackAtPosition(float y) const {
-    NomadUI::NUIRect bounds = getBounds();
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    AestraUI::NUIRect bounds = getBounds();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // Get ruler height and track area start
     // MUST match renderTrackManagerDirect layout exactly:
@@ -4563,8 +4563,8 @@ int TrackManagerUI::getTrackAtPosition(float y) const {
 }
 
 double TrackManagerUI::getTimeAtPosition(float x) const {
-    NomadUI::NUIRect bounds = getBounds();
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    AestraUI::NUIRect bounds = getBounds();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // Get control area width (where track buttons are)
     float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
@@ -4587,13 +4587,13 @@ double TrackManagerUI::getTimeAtPosition(float x) const {
     return seconds;
 }
 
-void TrackManagerUI::renderDropPreview(NomadUI::NUIRenderer& renderer) {
+void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
     if (!m_showDropPreview || m_dropTargetTrack < 0) {
         return;
     }
     
-    NomadUI::NUIRect bounds = getBounds();
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    AestraUI::NUIRect bounds = getBounds();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // Calculate grid area
     float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
@@ -4613,13 +4613,13 @@ void TrackManagerUI::renderDropPreview(NomadUI::NUIRenderer& renderer) {
     float timeX = gridStartX + static_cast<float>(beats * m_pixelsPerBeat) - m_timelineScrollOffset;
     
     // Draw subtle track highlight (just a hint)
-    NomadUI::NUIRect trackHighlight(
+    AestraUI::NUIRect trackHighlight(
         gridStartX,
         trackY,
         bounds.width - controlAreaWidth - 20,
         static_cast<float>(m_trackHeight)
     );
-    NomadUI::NUIColor highlightColor(0.733f, 0.525f, 0.988f, 0.08f);  // Very subtle
+    AestraUI::NUIColor highlightColor(0.733f, 0.525f, 0.988f, 0.08f);  // Very subtle
     renderer.fillRect(trackHighlight, highlightColor);
     
     // Draw clip skeleton preview - EXACT same measurements as real clips
@@ -4628,7 +4628,7 @@ void TrackManagerUI::renderDropPreview(NomadUI::NUIRenderer& renderer) {
         float previewWidth = 150.0f;  // Reasonable preview width
         
         // Clip skeleton bounds - matches actual clip positioning exactly
-        NomadUI::NUIRect clipSkeleton(
+        AestraUI::NUIRect clipSkeleton(
             timeX,
             trackY + 2,  // Same as real clip: bounds.y + 2
             previewWidth,
@@ -4636,43 +4636,43 @@ void TrackManagerUI::renderDropPreview(NomadUI::NUIRenderer& renderer) {
         );
         
         // Semi-transparent fill
-        NomadUI::NUIColor skeletonFill(0.733f, 0.525f, 0.988f, 0.25f);
+        AestraUI::NUIColor skeletonFill(0.733f, 0.525f, 0.988f, 0.25f);
         renderer.fillRect(clipSkeleton, skeletonFill);
         
         // Border matching clip style
-        NomadUI::NUIColor skeletonBorder(0.733f, 0.525f, 0.988f, 0.7f);
+        AestraUI::NUIColor skeletonBorder(0.733f, 0.525f, 0.988f, 0.7f);
         
         // Top border (thicker, like real clip)
         renderer.drawLine(
-            NomadUI::NUIPoint(clipSkeleton.x, clipSkeleton.y),
-            NomadUI::NUIPoint(clipSkeleton.x + clipSkeleton.width, clipSkeleton.y),
+            AestraUI::NUIPoint(clipSkeleton.x, clipSkeleton.y),
+            AestraUI::NUIPoint(clipSkeleton.x + clipSkeleton.width, clipSkeleton.y),
             2.0f,
             skeletonBorder
         );
         
         // Other borders
         renderer.drawLine(
-            NomadUI::NUIPoint(clipSkeleton.x, clipSkeleton.y + clipSkeleton.height),
-            NomadUI::NUIPoint(clipSkeleton.x + clipSkeleton.width, clipSkeleton.y + clipSkeleton.height),
+            AestraUI::NUIPoint(clipSkeleton.x, clipSkeleton.y + clipSkeleton.height),
+            AestraUI::NUIPoint(clipSkeleton.x + clipSkeleton.width, clipSkeleton.y + clipSkeleton.height),
             1.0f,
             skeletonBorder.withAlpha(0.5f)
         );
         renderer.drawLine(
-            NomadUI::NUIPoint(clipSkeleton.x, clipSkeleton.y),
-            NomadUI::NUIPoint(clipSkeleton.x, clipSkeleton.y + clipSkeleton.height),
+            AestraUI::NUIPoint(clipSkeleton.x, clipSkeleton.y),
+            AestraUI::NUIPoint(clipSkeleton.x, clipSkeleton.y + clipSkeleton.height),
             1.0f,
             skeletonBorder.withAlpha(0.5f)
         );
         renderer.drawLine(
-            NomadUI::NUIPoint(clipSkeleton.x + clipSkeleton.width, clipSkeleton.y),
-            NomadUI::NUIPoint(clipSkeleton.x + clipSkeleton.width, clipSkeleton.y + clipSkeleton.height),
+            AestraUI::NUIPoint(clipSkeleton.x + clipSkeleton.width, clipSkeleton.y),
+            AestraUI::NUIPoint(clipSkeleton.x + clipSkeleton.width, clipSkeleton.y + clipSkeleton.height),
             1.0f,
             skeletonBorder.withAlpha(0.5f)
         );
         
         // Name strip at top (like real clips have)
         float nameStripHeight = 16.0f;
-        NomadUI::NUIRect nameStrip(
+        AestraUI::NUIRect nameStrip(
             clipSkeleton.x,
             clipSkeleton.y,
             clipSkeleton.width,
@@ -4681,20 +4681,20 @@ void TrackManagerUI::renderDropPreview(NomadUI::NUIRenderer& renderer) {
         renderer.fillRect(nameStrip, skeletonBorder.withAlpha(0.6f));
         
         // Get drag data for display name
-        auto& dragManager = NomadUI::NUIDragDropManager::getInstance();
+        auto& dragManager = AestraUI::NUIDragDropManager::getInstance();
         if (dragManager.isDragging()) {
             const auto& dragData = dragManager.getDragData();
             std::string displayName = dragData.displayName;
             if (displayName.length() > 18) {
                 displayName = displayName.substr(0, 15) + "...";
             }
-            NomadUI::NUIPoint textPos(clipSkeleton.x + 4, clipSkeleton.y + 2);
-            renderer.drawText(displayName, textPos, 11.0f, NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
+            AestraUI::NUIPoint textPos(clipSkeleton.x + 4, clipSkeleton.y + 2);
+            renderer.drawText(displayName, textPos, 11.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
         }
     }
 }
 
-void TrackManagerUI::renderDeleteAnimations(NomadUI::NUIRenderer& renderer) {
+void TrackManagerUI::renderDeleteAnimations(AestraUI::NUIRenderer& renderer) {
     if (m_deleteAnimations.empty()) {
         return;
     }
@@ -4724,7 +4724,7 @@ void TrackManagerUI::renderDeleteAnimations(NomadUI::NUIRenderer& renderer) {
         
         // Draw single subtle expanding ring
         if (currentRadius > 0) {
-            NomadUI::NUIColor ringColor(1.0f, 0.3f, 0.3f, rippleAlpha);
+            AestraUI::NUIColor ringColor(1.0f, 0.3f, 0.3f, rippleAlpha);
             
             // Draw a circle using lines
             const int segments = 24;
@@ -4732,11 +4732,11 @@ void TrackManagerUI::renderDeleteAnimations(NomadUI::NUIRenderer& renderer) {
                 float angle1 = (float)i / segments * 2.0f * 3.14159f;
                 float angle2 = (float)(i + 1) / segments * 2.0f * 3.14159f;
                 
-                NomadUI::NUIPoint p1(
+                AestraUI::NUIPoint p1(
                     anim.rippleCenter.x + std::cos(angle1) * currentRadius,
                     anim.rippleCenter.y + std::sin(angle1) * currentRadius
                 );
-                NomadUI::NUIPoint p2(
+                AestraUI::NUIPoint p2(
                     anim.rippleCenter.x + std::cos(angle2) * currentRadius,
                     anim.rippleCenter.y + std::sin(angle2) * currentRadius
                 );
@@ -4841,12 +4841,12 @@ std::pair<double, double> TrackManagerUI::getSelectionBeatRange() const {
     return {0.0, 0.0};
 }
 
-void TrackManagerUI::openTrackContextMenu(const ::NomadUI::NUIPoint& position, std::function<void()> onSendToAudition) {
+void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition) {
     if (m_activeContextMenu) {
         removeChild(m_activeContextMenu);
     }
 
-    m_activeContextMenu = std::make_shared<NomadUI::NUIContextMenu>();
+    m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
     auto menu = m_activeContextMenu;
 
     menu->addItem("Send Track to Audition", [onSendToAudition]() {
@@ -4858,12 +4858,12 @@ void TrackManagerUI::openTrackContextMenu(const ::NomadUI::NUIPoint& position, s
 }
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra
 
-void Nomad::Audio::TrackManagerUI::renderPendingImports(NomadUI::NUIRenderer& renderer) {
+void Aestra::Audio::TrackManagerUI::renderPendingImports(AestraUI::NUIRenderer& renderer) {
     if (m_pendingImports.empty() || !m_playlistVisible) return;
 
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     
     float headerHeight = 38.0f;
@@ -4874,9 +4874,9 @@ void Nomad::Audio::TrackManagerUI::renderPendingImports(NomadUI::NUIRenderer& re
     float trackAreaTop = getBounds().y + headerHeight + horizontalScrollbarHeight + rulerHeight;
     
     // Tech/Holo Colors
-    NomadUI::NUIColor cyan = themeManager.getColor("accentCyan");
-    NomadUI::NUIColor holoFill = cyan.withAlpha(0.1f);
-    NomadUI::NUIColor holoBorder = cyan.withAlpha(0.8f);
+    AestraUI::NUIColor cyan = themeManager.getColor("accentCyan");
+    AestraUI::NUIColor holoFill = cyan.withAlpha(0.1f);
+    AestraUI::NUIColor holoBorder = cyan.withAlpha(0.8f);
     
     for (auto& item : m_pendingImports) {
         // Find Y position based on Lane ID
@@ -4898,7 +4898,7 @@ void Nomad::Audio::TrackManagerUI::renderPendingImports(NomadUI::NUIRenderer& re
         float width = static_cast<float>(item.estimatedDurationBeats) * m_pixelsPerBeat;
         float height = static_cast<float>(m_trackHeight);
         
-        NomadUI::NUIRect rect(xPos, yPos, width, height);
+        AestraUI::NUIRect rect(xPos, yPos, width, height);
         
         // Clipping check (basic)
         if (rect.right() < gridStartX || rect.x > getBounds().right()) continue;
@@ -4912,13 +4912,13 @@ void Nomad::Audio::TrackManagerUI::renderPendingImports(NomadUI::NUIRenderer& re
         
         // PROGRESS BAR: Functional fill
         if (item.progress > 0.001f) {
-             NomadUI::NUIRect progressRect = rect;
+             AestraUI::NUIRect progressRect = rect;
              progressRect.width *= std::min(1.0f, item.progress);
              renderer.fillRect(progressRect, cyan.withAlpha(0.4f));
 
              // Highlight edge of progress
              float edgeX = progressRect.right();
-             renderer.drawLine(NomadUI::NUIPoint(edgeX, rect.y), NomadUI::NUIPoint(edgeX, rect.bottom()), 1.5f, cyan.withAlpha(0.8f));
+             renderer.drawLine(AestraUI::NUIPoint(edgeX, rect.y), AestraUI::NUIPoint(edgeX, rect.bottom()), 1.5f, cyan.withAlpha(0.8f));
         }
 
         renderer.strokeRect(rect, 1.5f, holoBorder.withAlpha(alphaMult));
@@ -4928,8 +4928,8 @@ void Nomad::Audio::TrackManagerUI::renderPendingImports(NomadUI::NUIRenderer& re
         if (scanAlpha > 0.01f) {
             float scanProgress = std::fmod(item.animationTime * 1.5f, 1.0f); // 0.0 to 1.0 loops
             float scanX = rect.x + (rect.width * scanProgress);
-            NomadUI::NUIColor scanColor = cyan.withAlpha(scanAlpha * (1.0f - std::abs(scanProgress - 0.5f))); 
-            renderer.drawLine(NomadUI::NUIPoint(scanX, rect.y), NomadUI::NUIPoint(scanX, rect.bottom()), 2.0f, scanColor);
+            AestraUI::NUIColor scanColor = cyan.withAlpha(scanAlpha * (1.0f - std::abs(scanProgress - 0.5f))); 
+            renderer.drawLine(AestraUI::NUIPoint(scanX, rect.y), AestraUI::NUIPoint(scanX, rect.bottom()), 2.0f, scanColor);
         }
         
         // Text
@@ -4951,10 +4951,10 @@ void Nomad::Audio::TrackManagerUI::renderPendingImports(NomadUI::NUIRenderer& re
              textX = visibleLeft + (visibleWidth - textSize.width) * 0.5f;
              
              // Draw text background for readability
-             NomadUI::NUIRect textBg(textX - 2, textY - fontSize, textSize.width + 4, fontSize + 2);
-             renderer.fillRect(textBg, NomadUI::NUIColor(0,0,0,0.6f));
+             AestraUI::NUIRect textBg(textX - 2, textY - fontSize, textSize.width + 4, fontSize + 2);
+             renderer.fillRect(textBg, AestraUI::NUIColor(0,0,0,0.6f));
              
-             renderer.drawText(text, NomadUI::NUIPoint(textX, textY), fontSize, cyan);
+             renderer.drawText(text, AestraUI::NUIPoint(textX, textY), fontSize, cyan);
         }
     }
 }

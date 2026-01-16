@@ -1,6 +1,6 @@
-# 🤝 Contributing to Nomad DAW
+# 🤝 Contributing to Aestra DAW
 
-Thank you for your interest in contributing to Nomad DAW! We welcome contributions from the community.
+Thank you for your interest in contributing to Aestra DAW! We welcome contributions from the community.
 
 ---
 
@@ -29,14 +29,14 @@ Please read our comprehensive [Contributing Guide](docs/developer/contributing.m
 **Clone and Build:**
 ```powershell
 # Clone the repository
-git clone https://github.com/currentsuspect/NOMAD.git
-cd NOMAD
+git clone https://github.com/currentsuspect/Aestra.git
+cd Aestra
 
 # Install Git hooks for code quality
 pwsh -File scripts/install-hooks.ps1
 
 # Configure build (core-only mode)
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
 
 # Build project
 cmake --build build --config Release --parallel
@@ -46,8 +46,8 @@ See [Building Guide](docs/getting-started/building.md) for detailed instructions
 
 ### 2. Find Something to Work On
 
-- Browse [open issues](https://github.com/currentsuspect/NOMAD/issues)
-- Check [good first issue](https://github.com/currentsuspect/NOMAD/labels/good%20first%20issue) label
+- Browse [open issues](https://github.com/currentsuspect/Aestra/issues)
+- Check [good first issue](https://github.com/currentsuspect/Aestra/labels/good%20first%20issue) label
 - Review [Roadmap](docs/technical/roadmap.md) for planned features
 
 ### 3. Make Your Changes
@@ -77,7 +77,7 @@ See [Building Guide](docs/getting-started/building.md) for detailed instructions
 - ✅ Include documentation updates
 
 ### Documentation
-- ✅ **API Docs**: Add `/** @brief ... */` comments to all public headers in `NomadAudio`, `NomadCore`, and `NomadUI`.
+- ✅ **API Docs**: Add `/** @brief ... */` comments to all public headers in `AestraAudio`, `AestraCore`, and `AestraUI`.
 - ✅ **Validation**: Run `./scripts/docs-check.sh` locally to verify Doxygen and link integrity.
 - ✅ **Changelog**: Add an entry to the `[Unreleased]` section of `CHANGELOG.md` for notable changes.
 - ✅ **No Dead Links**: Ensure all relative links in Markdown files are valid.
@@ -115,7 +115,7 @@ See [Style Guide](docs/developer/style-guide.md#-commit-messages) for details.
 
 ## ⚖️ Contributor License Agreement
 
-By contributing to Nomad DAW, you agree that:
+By contributing to Aestra DAW, you agree that:
 
 - ✅ All contributed code becomes property of Dylan Makori / Nomad Studios
 - ✅ You grant Nomad Studios full rights to use, modify, and distribute your contributions
@@ -130,7 +130,7 @@ This ensures Nomad Studios can maintain the project sustainably while keeping th
 
 Found a bug? Please report it!
 
-1. Search [existing issues](https://github.com/currentsuspect/NOMAD/issues) first
+1. Search [existing issues](https://github.com/currentsuspect/Aestra/issues) first
 2. Create a new issue with:
    - Clear title describing the bug
    - Steps to reproduce
@@ -147,7 +147,7 @@ See [Bug Reports Guide](docs/developer/bug-reports.md) for detailed instructions
 Have an idea for a new feature?
 
 1. Check [Roadmap](docs/technical/roadmap.md) to see if it's already planned
-2. Search [existing issues](https://github.com/currentsuspect/NOMAD/issues) for similar requests
+2. Search [existing issues](https://github.com/currentsuspect/Aestra/issues) for similar requests
 3. Open a new issue with:
    - Clear description of the feature
    - Use case and motivation
@@ -165,7 +165,7 @@ Have an idea for a new feature?
 - **[FAQ](docs/technical/faq.md)** — Common questions answered
 
 ### For Experienced Developers
-- **[Debugging Guide](docs/developer/debugging.md)** — Use Nomad profiler and debugging tools
+- **[Debugging Guide](docs/developer/debugging.md)** — Use Aestra profiler and debugging tools
 - **[Performance Tuning](docs/developer/performance-tuning.md)** — Optimize code for speed
 - **[Style Guide](docs/developer/style-guide.md)** — Write good documentation
 
@@ -189,7 +189,7 @@ Found a security vulnerability?
 
 **DO NOT** open a public issue. Instead:
 - Email: [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
-- Subject: "NOMAD Security Vulnerability"
+- Subject: "Aestra Security Vulnerability"
 - Include detailed description and reproduction steps
 
 See [SECURITY.md](SECURITY.md) for our security policy.
@@ -199,8 +199,8 @@ See [SECURITY.md](SECURITY.md) for our security policy.
 ## 📜 Scope & Licensing
 
 ### What's Public (Source-Available)
-- ✅ Nomad Core audio engine
-- ✅ NomadUI framework
+- ✅ Aestra Core audio engine
+- ✅ AestraUI framework
 - ✅ Platform abstraction layer
 - ✅ Build system and tools
 
@@ -218,7 +218,7 @@ See [LICENSING.md](LICENSING.md) for full details.
 
 ## 🙏 Thank You!
 
-Every contribution helps make Nomad better. Whether you're fixing typos, reporting bugs, or implementing features — thank you for being part of the Nomad community!
+Every contribution helps make Aestra better. Whether you're fixing typos, reporting bugs, or implementing features — thank you for being part of the Aestra community!
 
 **Built by musicians, for musicians. Crafted with intention.** 🎵
 

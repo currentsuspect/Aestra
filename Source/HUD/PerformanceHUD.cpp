@@ -5,17 +5,17 @@
  */
 
 #include "PerformanceHUD.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
 #include "AudioEngine.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraCore/include/AestraLog.h"
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
 
-namespace Nomad {
+namespace Aestra {
 
-using namespace NomadUI;
+using namespace AestraUI;
 
 PerformanceHUD::PerformanceHUD()
     : m_profiler(Profiler::getInstance())
@@ -169,7 +169,7 @@ void PerformanceHUD::renderStats(NUIRenderer& renderer) {
 
         const uint64_t qDrops = m_audioEngine->commandQueue().droppedCount();
         const uint32_t qMax = m_audioEngine->commandQueue().maxDepth();
-        const uint32_t qCap = Nomad::Audio::AudioCommandQueue::capacity();
+        const uint32_t qCap = Aestra::Audio::AudioCommandQueue::capacity();
 
         const double cbMaxMs = static_cast<double>(cbMaxNs) / 1e6;
         const double budgetMs = (lastSR > 0) ? (static_cast<double>(lastFrames) * 1000.0 / static_cast<double>(lastSR)) : 0.0;
@@ -273,4 +273,4 @@ void PerformanceHUD::renderGraph(NUIRenderer& renderer) {
     renderer.strokeRect(graphRect, 1.0f, theme.getColor("border"));
 }
 
-} // namespace Nomad
+} // namespace Aestra

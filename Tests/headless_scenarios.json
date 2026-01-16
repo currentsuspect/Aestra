@@ -18,7 +18,7 @@
       "frames": 256,
       "seconds": 10,
       "minPeak": 0.000001,
-      "project": "autosave.nmd"
+      "project": "autosave.aes"
     },
     {
       "name": "stress_graph_32_tracks",

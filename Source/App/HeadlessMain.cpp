@@ -9,7 +9,7 @@
 
 #include "../Core/ProjectSerializer.h"
 
-#include "../NomadCore/include/NomadJSON.h"
+#include "../AestraCore/include/AestraJSON.h"
 
 #include <algorithm>
 #include <chrono>
@@ -27,8 +27,8 @@
 #include <string>
 #include <vector>
 
-using namespace Nomad;
-using namespace Nomad::Audio;
+using namespace Aestra;
+using namespace Aestra::Audio;
 
 namespace {
 
@@ -565,7 +565,7 @@ struct Cli {
 
 static void printHelp() {
     std::cout
-        << "NomadHeadless\n"
+        << "AestraHeadless\n"
         << "\n"
         << "Scenario runner:\n"
         << "  --scenario-file <path>     JSON scenario file (default: Tests/headless_scenarios.json if present)\n"
@@ -575,7 +575,7 @@ static void printHelp() {
         << "  --human                    Print a compact summary to stderr\n"
         << "\n"
         << "Legacy single-run (project render):\n"
-        << "  --project <path>           Load .nmd/.nomadproj and render\n"
+        << "  --project <path>           Load .aes/.nomadproj and render\n"
         << "  --sr <hz>                  Sample rate\n"
         << "  --frames <n>               Buffer frames\n"
         << "  --seconds <n>              Duration\n"
@@ -625,7 +625,7 @@ static Cli parseCli(int argc, char** argv) {
         }
     }
 
-    if (const char* env = std::getenv("NOMAD_MIN_PEAK")) {
+    if (const char* env = std::getenv("AESTRA_MIN_PEAK")) {
         cli.minPeak = static_cast<float>(std::strtod(env, nullptr));
     }
 
@@ -657,7 +657,7 @@ int main(int argc, char** argv) {
     if (!cli.scenarioFile.empty()) {
         const std::vector<Scenario> scenarios = loadScenarioFile(cli.scenarioFile);
         if (scenarios.empty()) {
-            std::cerr << "NomadHeadless: scenario file empty or invalid: " << cli.scenarioFile << "\n";
+            std::cerr << "AestraHeadless: scenario file empty or invalid: " << cli.scenarioFile << "\n";
             return 2;
         }
 
@@ -676,13 +676,13 @@ int main(int argc, char** argv) {
 
             Scenario sc = sc0;
             // Environment override knobs for agents.
-            if (const char* env = std::getenv("NOMAD_MIN_PEAK")) {
+            if (const char* env = std::getenv("AESTRA_MIN_PEAK")) {
                 sc.minPeak = static_cast<float>(std::strtod(env, nullptr));
             }
 
             if (sc.type == ScenarioType::Project) {
                 // Allow overriding project path via env for container runs.
-                if (const char* envProj = std::getenv("NOMAD_PROJECT")) {
+                if (const char* envProj = std::getenv("AESTRA_PROJECT")) {
                     sc.projectPath = envProj;
                 }
             }
@@ -706,7 +706,7 @@ int main(int argc, char** argv) {
         }
 
         if (!ranAny) {
-            std::cerr << "NomadHeadless: scenario not found: " << cli.scenarioName << "\n";
+            std::cerr << "AestraHeadless: scenario not found: " << cli.scenarioName << "\n";
             return 2;
         }
 
@@ -714,7 +714,7 @@ int main(int argc, char** argv) {
         if (!cli.reportPath.empty()) {
             std::ofstream out(cli.reportPath, std::ios::binary | std::ios::trunc);
             if (!out) {
-                std::cerr << "NomadHeadless: failed to write report: " << cli.reportPath << "\n";
+                std::cerr << "AestraHeadless: failed to write report: " << cli.reportPath << "\n";
                 return 2;
             }
             out << outJson;

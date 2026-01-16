@@ -1,4 +1,4 @@
-# ✅ NOMAD Audio Driver System - COMPLETE
+# ✅ Aestra Audio Driver System - COMPLETE
 
 **Date**: October 27, 2025  
 **Status**: **Production Ready** 🚀  
@@ -155,7 +155,7 @@ If ASIO drivers found:
 │   • ASIO4ALL v2                             │
 │   • FL Studio ASIO                          │
 │                                             │
-│ NOMAD uses WASAPI Exclusive mode for        │
+│ Aestra uses WASAPI Exclusive mode for        │
 │ professional low-latency audio (3-5ms).     │
 │                                             │
 │ Your ASIO devices will work through their   │
@@ -233,13 +233,13 @@ ASIO Goals:
 1. **Add to CMakeLists.txt**
 
    ```cmake
-   set(NOMAD_AUDIO_SOURCES
+   set(Aestra_AUDIO_SOURCES
        src/WASAPISharedDriver.cpp
        src/WASAPIExclusiveDriver.cpp
        src/ASIODriverInfo.cpp
    )
    
-   set(NOMAD_AUDIO_HEADERS
+   set(Aestra_AUDIO_HEADERS
        include/AudioDriverTypes.h
        include/NativeAudioDriver.h
        include/WASAPISharedDriver.h
@@ -247,7 +247,7 @@ ASIO Goals:
        include/ASIODriverInfo.h
    )
    
-   target_link_libraries(NomadAudio PRIVATE
+   target_link_libraries(AestraAudio PRIVATE
        ole32      # COM
        avrt       # MMCSS
        advapi32   # Registry
@@ -309,7 +309,7 @@ ASIO Goals:
 
 ---
 
-## 🚀 What This Means for NOMAD
+## 🚀 What This Means for Aestra
 
 ### Professional Credibility ✨
 
@@ -391,8 +391,8 @@ The minimal ASIO detection:
 ## 📚 File Locations
 
 ```file
-NOMAD/
-└── NomadAudio/
+Aestra/
+└── AestraAudio/
     ├── include/
     │   ├── AudioDriverTypes.h               ✅
     │   ├── NativeAudioDriver.h              ✅

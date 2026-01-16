@@ -1,9 +1,9 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
+#include "../AestraUI/Core/NUIComponent.h"
 #include "NUIIcon.h"
-#include "../NomadUI/Core/NUIDragDrop.h"
+#include "../AestraUI/Core/NUIDragDrop.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -16,7 +16,7 @@
 #include <mutex>
 #include <thread>
 
-namespace NomadUI {
+namespace AestraUI {
 
 class NUIContextMenu;
 class NUITextInput;
@@ -85,7 +85,7 @@ struct FileItem {
  * File Browser Component
  * 
  * A modern file browser with icons, sorting, and navigation.
- * Integrates with NomadUI theme system for consistent styling.
+ * Integrates with AestraUI theme system for consistent styling.
  */
 class FileBrowser : public NUIComponent {
 public:
@@ -394,4 +394,4 @@ public:
     bool dragPotential_ = false;           // True when mouse down, waiting for threshold
 };
 
-} // namespace NomadUI
+} // namespace AestraUI

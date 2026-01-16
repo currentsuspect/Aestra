@@ -7,7 +7,7 @@
  * 
  * ARCHITECTURE OVERVIEW:
  * ----------------------
- * This panel is the visual layer for Audition Mode. It follows NOMAD's component pattern:
+ * This panel is the visual layer for Audition Mode. It follows AESTRA's component pattern:
  * 
  * 1. AuditionPanel (this file) - The UI container
  *    ├── Waveform display (top area)
@@ -17,7 +17,7 @@
  *    ├── Queue list (drag-to-reorder)
  *    └── DSP preset selector
  * 
- * 2. AuditionEngine (NomadAudio) - The audio backend
+ * 2. AuditionEngine (AestraAudio) - The audio backend
  *    - Handles actual playback
  *    - Manages queue state
  *    - Applies DSP chain
@@ -26,19 +26,19 @@
  * This separation keeps the UI responsive (audio never blocks).
  */
 
-#include "../NomadUI/Core/NUIComponent.h"
+#include "../AestraUI/Core/NUIComponent.h"
 #include "NUILabel.h"
 #include "NUIButton.h"   // Buttons are in Widgets/
 #include "NUISlider.h"      // Slider is in Core/
 #include "AuditionEngine.h"
-#include "../NomadUI/Core/NUIDragDrop.h"    // Added for drag and drop support
-#include "../NomadUI/Graphics/NUISVGParser.h" // For SVG Icons
+#include "../AestraUI/Core/NUIDragDrop.h"    // Added for drag and drop support
+#include "../AestraUI/Graphics/NUISVGParser.h" // For SVG Icons
 
 #include <memory>
 #include <functional>
 #include <vector>
 
-namespace Nomad {
+namespace Aestra {
 
 /**
  * @brief Audition Mode panel - immersive listening experience
@@ -49,7 +49,7 @@ namespace Nomad {
  * - Drag files from browser → queue
  * - Quick A/B comparison with DSP presets
  */
-class AuditionPanel : public NomadUI::NUIComponent, public NomadUI::IDropTarget {
+class AuditionPanel : public AestraUI::NUIComponent, public AestraUI::IDropTarget {
 public:
     explicit AuditionPanel(std::shared_ptr<Audio::AuditionEngine> engine);
     ~AuditionPanel() override;
@@ -57,18 +57,18 @@ public:
     // ===== NUIComponent Overrides =====
     // Note: Signatures must exactly match base class
     
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;  // Base uses double, not float
     void onResize(int width, int height) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
-    bool onKeyEvent(const NomadUI::NUIKeyEvent& event) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     
     // ===== IDropTarget Implementation =====
-    NomadUI::DropFeedback onDragEnter(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) override;
-    NomadUI::DropFeedback onDragOver(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) override;
+    AestraUI::DropFeedback onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
+    AestraUI::DropFeedback onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
     void onDragLeave() override;
-    NomadUI::DropResult onDrop(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) override;
-    NomadUI::NUIRect getDropBounds() const override;
+    AestraUI::DropResult onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
+    AestraUI::NUIRect getDropBounds() const override;
     
     // ===== Queue Management =====
     
@@ -87,25 +87,25 @@ private:
     // ===== Child Components =====
     
     // Track info
-    std::shared_ptr<NomadUI::NUILabel> m_trackTitle;
-    std::shared_ptr<NomadUI::NUILabel> m_trackArtist;
+    std::shared_ptr<AestraUI::NUILabel> m_trackTitle;
+    std::shared_ptr<AestraUI::NUILabel> m_trackArtist;
     
     // Transport
-    std::shared_ptr<NomadUI::NUIButton> m_playPauseButton;
-    std::shared_ptr<NomadUI::NUIButton> m_prevButton;
-    std::shared_ptr<NomadUI::NUIButton> m_nextButton;
-    std::shared_ptr<NomadUI::NUIButton> m_shuffleButton;
-    std::shared_ptr<NomadUI::NUIButton> m_repeatButton;
+    std::shared_ptr<AestraUI::NUIButton> m_playPauseButton;
+    std::shared_ptr<AestraUI::NUIButton> m_prevButton;
+    std::shared_ptr<AestraUI::NUIButton> m_nextButton;
+    std::shared_ptr<AestraUI::NUIButton> m_shuffleButton;
+    std::shared_ptr<AestraUI::NUIButton> m_repeatButton;
     
     // Progress/Seek
-    std::shared_ptr<NomadUI::NUISlider> m_progressSlider;
-    std::shared_ptr<NomadUI::NUILabel> m_currentTime;
-    std::shared_ptr<NomadUI::NUILabel> m_totalTime;
-    std::shared_ptr<NomadUI::NUISlider> m_volumeSlider;
+    std::shared_ptr<AestraUI::NUISlider> m_progressSlider;
+    std::shared_ptr<AestraUI::NUILabel> m_currentTime;
+    std::shared_ptr<AestraUI::NUILabel> m_totalTime;
+    std::shared_ptr<AestraUI::NUISlider> m_volumeSlider;
     
     // DSP
-    std::shared_ptr<NomadUI::NUIButton> m_dspPresetButton;
-    std::shared_ptr<NomadUI::NUIButton> m_abToggleButton;
+    std::shared_ptr<AestraUI::NUIButton> m_dspPresetButton;
+    std::shared_ptr<AestraUI::NUIButton> m_abToggleButton;
     
     // Engine Reference
     std::shared_ptr<Audio::AuditionEngine> m_engine;
@@ -123,7 +123,7 @@ private:
     int m_hoveredQueueIndex{-1};       // New: Queue hover state
     
     // Visuals
-    NomadUI::NUIColor m_currentHeaderColor{0.1f, 0.1f, 0.1f, 1.0f}; // Cached for waveform gradient
+    AestraUI::NUIColor m_currentHeaderColor{0.1f, 0.1f, 0.1f, 1.0f}; // Cached for waveform gradient
     
     // Cover Art
     uint32_t m_coverArtTextureId{0};       // OpenGL texture ID for current cover art
@@ -132,22 +132,22 @@ private:
     std::string m_currentTrackId;          // To detect track changes
     
     // SVGs (Icons)
-    std::shared_ptr<NomadUI::NUISVGDocument> m_svgPlay;
-    std::shared_ptr<NomadUI::NUISVGDocument> m_svgPause;
-    std::shared_ptr<NomadUI::NUISVGDocument> m_svgPrev;
-    std::shared_ptr<NomadUI::NUISVGDocument> m_svgNext;
+    std::shared_ptr<AestraUI::NUISVGDocument> m_svgPlay;
+    std::shared_ptr<AestraUI::NUISVGDocument> m_svgPause;
+    std::shared_ptr<AestraUI::NUISVGDocument> m_svgPrev;
+    std::shared_ptr<AestraUI::NUISVGDocument> m_svgNext;
     
     // Layout Logic
     void setupComponents();
     void layoutComponents();
     
     // Rendering Sub-routines
-    void renderWaveform(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& area);
-    void renderQueue(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& area);
+    void renderWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& area);
+    void renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& area);
     
     // Helpers
     void updateFromEngine();
     std::string formatTime(double seconds) const;
 };
 
-} // namespace Nomad
+} // namespace Aestra

@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace NomadUI {
+namespace AestraUI {
 
 using TimelineMinimapClipId = uint64_t;
 
@@ -153,5 +153,5 @@ private:
     std::unordered_map<TimelineMinimapClipId, ClipIndex> clipIndex_;
 };
 
-} // namespace NomadUI
+} // namespace AestraUI
 

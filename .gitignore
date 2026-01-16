@@ -67,8 +67,8 @@ test_*.log
 *.m4a
 
 # Exception: Essential bundled audio assets
-!NomadAudio/assets/nomad_metronome.wav
-!NomadAudio/assets/nomad_metronome_up.wav
+!AestraAudio/assets/nomad_metronome.wav
+!AestraAudio/assets/nomad_metronome_up.wav
 
 # Models and ML artifacts
 *.onnx
@@ -108,7 +108,7 @@ config/private/
 **/provisioning/
 keys/
 licenses/
-NomadCert.cer
+AestraCert.cer
 
 # Archives
 *.zip
@@ -127,8 +127,8 @@ assets/
 private_assets/
 assets_private/
 assets_premium/
-/NomadAssets/
-/NomadMuse/models/
+/AestraAssets/
+/AestraMuse/models/
 
 # Generated documentation
 docs/_site/
@@ -145,7 +145,7 @@ doxygen_output.log
 .gitleaks.toml.local
 
 # Proprietary SDKs
-NomadAudio/External/ASIOSDK/
+AestraAudio/External/ASIOSDK/
 
 # AI tools
 .kiro/

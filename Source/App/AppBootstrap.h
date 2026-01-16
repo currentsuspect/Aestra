@@ -20,12 +20,12 @@
 #include <functional>
 
 // Forward declarations
-namespace NomadUI {
+namespace AestraUI {
     class NUIPlatformBridge;
     class NUIRenderer;
 }
 
-namespace Nomad {
+namespace Aestra {
     class AsyncLogger;
     
     namespace Audio {
@@ -34,7 +34,7 @@ namespace Nomad {
     }
 }
 
-namespace Nomad {
+namespace Aestra {
 
 /**
  * @brief Bootstrap result with error information
@@ -95,7 +95,7 @@ namespace PlatformBootstrap {
  */
 namespace WindowBootstrap {
     struct WindowConfig {
-        std::string title = "NOMAD DAW";
+        std::string title = "Aestra";
         int width = 1280;
         int height = 720;
         bool resizable = true;
@@ -110,16 +110,16 @@ namespace WindowBootstrap {
      */
     BootstrapResult initialize(
         const WindowConfig& config,
-        std::unique_ptr<NomadUI::NUIPlatformBridge>& outWindow,
-        std::unique_ptr<NomadUI::NUIRenderer>& outRenderer
+        std::unique_ptr<AestraUI::NUIPlatformBridge>& outWindow,
+        std::unique_ptr<AestraUI::NUIRenderer>& outRenderer
     );
     
     /**
      * @brief Shutdown window and renderer
      */
     void shutdown(
-        std::unique_ptr<NomadUI::NUIPlatformBridge>& window,
-        std::unique_ptr<NomadUI::NUIRenderer>& renderer
+        std::unique_ptr<AestraUI::NUIPlatformBridge>& window,
+        std::unique_ptr<AestraUI::NUIRenderer>& renderer
     );
 }
 
@@ -165,16 +165,16 @@ namespace AudioBootstrap {
         const AudioConfig& config,
         AudioCallback callback,
         void* userData,
-        std::unique_ptr<Nomad::Audio::AudioDeviceManager>& outManager,
-        std::unique_ptr<Nomad::Audio::AudioEngine>& outEngine
+        std::unique_ptr<Aestra::Audio::AudioDeviceManager>& outManager,
+        std::unique_ptr<Aestra::Audio::AudioEngine>& outEngine
     );
     
     /**
      * @brief Shutdown audio (stops stream, releases devices)
      */
     void shutdown(
-        std::unique_ptr<Nomad::Audio::AudioDeviceManager>& manager,
-        std::unique_ptr<Nomad::Audio::AudioEngine>& engine
+        std::unique_ptr<Aestra::Audio::AudioDeviceManager>& manager,
+        std::unique_ptr<Aestra::Audio::AudioEngine>& engine
     );
 }
 
@@ -196,4 +196,4 @@ namespace COMBootstrap {
     void shutdown();
 }
 
-} // namespace Nomad
+} // namespace Aestra

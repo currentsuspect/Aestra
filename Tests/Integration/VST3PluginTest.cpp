@@ -3,16 +3,16 @@
 
 #include "PluginManager.h"
 #include "PluginScanner.h"
-#include "NomadLog.h"
+#include "AestraLog.h"
 
-#ifdef NOMAD_HAS_VST3
+#ifdef AESTRA_HAS_VST3
 #include "Plugin/VST3Host.h"
 #endif
 
 #include <iostream>
 #include <iomanip>
 
-using namespace Nomad::Audio;
+using namespace Aestra::Audio;
 
 void printPluginInfo(const PluginInfo& info) {
     std::cout << "  ID:       " << info.id << "\n";
@@ -29,11 +29,11 @@ void printPluginInfo(const PluginInfo& info) {
 
 int main() {
     std::cout << "========================================\n";
-    std::cout << "  NOMAD VST3 Plugin Loading Test\n";
+    std::cout << "  AESTRA VST3 Plugin Loading Test\n";
     std::cout << "========================================\n\n";
     
-#ifndef NOMAD_HAS_VST3
-    std::cout << "ERROR: NOMAD_HAS_VST3 not defined - VST3 SDK not integrated\n";
+#ifndef AESTRA_HAS_VST3
+    std::cout << "ERROR: AESTRA_HAS_VST3 not defined - VST3 SDK not integrated\n";
     return 1;
 #else
     // Initialize plugin manager

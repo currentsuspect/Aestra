@@ -4,13 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${BUILD_DIR:-"$ROOT_DIR/build"}"
 CONFIG="${CONFIG:-Release}"
-TARGET="NomadHeadless"
+TARGET="AestraHeadless"
 
 ARGS=()
 if [[ "${PROJECT:-}" != "" ]]; then
   ARGS+=("--project" "$PROJECT")
-elif [[ "${NOMAD_PROJECT:-}" != "" ]]; then
-  ARGS+=("--project" "$NOMAD_PROJECT")
+elif [[ "${Aestra_PROJECT:-}" != "" ]]; then
+  ARGS+=("--project" "$Aestra_PROJECT")
 fi
 
 SCENARIO_ARGS=()
@@ -39,7 +39,7 @@ fi
 
 # Configure if needed (important for containers/CI).
 if [[ ! -f "$BUILD_DIR/CMakeCache.txt" ]]; then
-  cmake -S "$ROOT_DIR" -B "$BUILD_DIR" -DNOMAD_HEADLESS_ONLY=ON
+  cmake -S "$ROOT_DIR" -B "$BUILD_DIR" -DAestra_HEADLESS_ONLY=ON
 fi
 
 cmake --build "$BUILD_DIR" --config "$CONFIG" --target "$TARGET"
@@ -70,7 +70,7 @@ for i in $(seq 1 "$RUNS"); do
   LOG="$BUILD_DIR/${TARGET}_run_${i}.log"
   set +e
   "$BIN" "${SCENARIO_ARGS[@]}" "${ARGS[@]}" >"$LOG" 2>&1
-  # If you need extra args, use PROJECT=/path/to/autosave.nmd ./run_stability_check.sh
+  # If you need extra args, use PROJECT=/path/to/autosave.aes ./run_stability_check.sh
   STATUS=$?
   set -e
 

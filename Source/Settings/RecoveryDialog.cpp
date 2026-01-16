@@ -1,13 +1,13 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "RecoveryDialog.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraCore/include/AestraLog.h"
 #include <chrono>
 #include <ctime>
 #include <iomanip>
 #include <sstream>
 
-namespace Nomad {
+namespace Aestra {
 
 RecoveryDialog::RecoveryDialog()
     : m_response(RecoveryResponse::None)
@@ -84,7 +84,7 @@ void RecoveryDialog::calculateLayout() {
     float dialogX = (bounds.width - dialogWidth) * 0.5f;
     float dialogY = (bounds.height - dialogHeight) * 0.5f;
     
-    m_dialogRect = NomadUI::NUIRect(dialogX, dialogY, dialogWidth, dialogHeight);
+    m_dialogRect = AestraUI::NUIRect(dialogX, dialogY, dialogWidth, dialogHeight);
     
     // Button layout
     float buttonWidth = 120.0f;
@@ -95,11 +95,11 @@ void RecoveryDialog::calculateLayout() {
     float totalButtonWidth = buttonWidth * 2 + buttonSpacing;
     float buttonStartX = dialogX + (dialogWidth - totalButtonWidth) * 0.5f;
     
-    m_recoverButtonRect = NomadUI::NUIRect(buttonStartX, buttonY, buttonWidth, buttonHeight);
-    m_discardButtonRect = NomadUI::NUIRect(buttonStartX + buttonWidth + buttonSpacing, buttonY, buttonWidth, buttonHeight);
+    m_recoverButtonRect = AestraUI::NUIRect(buttonStartX, buttonY, buttonWidth, buttonHeight);
+    m_discardButtonRect = AestraUI::NUIRect(buttonStartX + buttonWidth + buttonSpacing, buttonY, buttonWidth, buttonHeight);
 }
 
-void RecoveryDialog::onRender(NomadUI::NUIRenderer& renderer) {
+void RecoveryDialog::onRender(AestraUI::NUIRenderer& renderer) {
     if (!m_isVisible) return;
     
     calculateLayout();
@@ -107,57 +107,57 @@ void RecoveryDialog::onRender(NomadUI::NUIRenderer& renderer) {
     auto bounds = getBounds();
     
     // Semi-transparent overlay
-    renderer.fillRect(NomadUI::NUIRect(0, 0, bounds.width, bounds.height), 
-                     NomadUI::NUIColor(0.0f, 0.0f, 0.0f, 0.6f));
+    renderer.fillRect(AestraUI::NUIRect(0, 0, bounds.width, bounds.height), 
+                     AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.6f));
     
     // Dialog background
-    renderer.fillRoundedRect(m_dialogRect, 8.0f, NomadUI::NUIColor(0.15f, 0.15f, 0.18f, 1.0f));
-    renderer.strokeRoundedRect(m_dialogRect, 8.0f, 1.0f, NomadUI::NUIColor(0.3f, 0.3f, 0.35f, 1.0f));
+    renderer.fillRoundedRect(m_dialogRect, 8.0f, AestraUI::NUIColor(0.15f, 0.15f, 0.18f, 1.0f));
+    renderer.strokeRoundedRect(m_dialogRect, 8.0f, 1.0f, AestraUI::NUIColor(0.3f, 0.3f, 0.35f, 1.0f));
     
     // Title
     float titleY = m_dialogRect.y + 25.0f;
     renderer.drawText("Recover Unsaved Work?", 
-                     NomadUI::NUIPoint(m_dialogRect.x + 20.0f, titleY), 
-                     18.0f, NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+                     AestraUI::NUIPoint(m_dialogRect.x + 20.0f, titleY), 
+                     18.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
     
     // Message
     float messageY = titleY + 35.0f;
     renderer.drawText("An autosave was found from:", 
-                     NomadUI::NUIPoint(m_dialogRect.x + 20.0f, messageY), 
-                     14.0f, NomadUI::NUIColor(0.8f, 0.8f, 0.8f, 1.0f));
+                     AestraUI::NUIPoint(m_dialogRect.x + 20.0f, messageY), 
+                     14.0f, AestraUI::NUIColor(0.8f, 0.8f, 0.8f, 1.0f));
     
     // Timestamp
     float timestampY = messageY + 25.0f;
     renderer.drawText(m_autosaveTimestamp, 
-                     NomadUI::NUIPoint(m_dialogRect.x + 20.0f, timestampY), 
-                     14.0f, NomadUI::NUIColor(0.6f, 0.8f, 1.0f, 1.0f));
+                     AestraUI::NUIPoint(m_dialogRect.x + 20.0f, timestampY), 
+                     14.0f, AestraUI::NUIColor(0.6f, 0.8f, 1.0f, 1.0f));
     
     // Recover button (primary - green)
-    NomadUI::NUIColor recoverBg = m_recoverHovered ? 
-        NomadUI::NUIColor(0.2f, 0.6f, 0.3f, 1.0f) : 
-        NomadUI::NUIColor(0.15f, 0.5f, 0.25f, 1.0f);
+    AestraUI::NUIColor recoverBg = m_recoverHovered ? 
+        AestraUI::NUIColor(0.2f, 0.6f, 0.3f, 1.0f) : 
+        AestraUI::NUIColor(0.15f, 0.5f, 0.25f, 1.0f);
     renderer.fillRoundedRect(m_recoverButtonRect, 4.0f, recoverBg);
     
     auto recoverTextSize = renderer.measureText("Recover", 14.0f);
     float recoverTextX = m_recoverButtonRect.x + (m_recoverButtonRect.width - recoverTextSize.width) * 0.5f;
     float recoverTextY = m_recoverButtonRect.y + (m_recoverButtonRect.height - recoverTextSize.height) * 0.5f;
-    renderer.drawText("Recover", NomadUI::NUIPoint(recoverTextX, recoverTextY), 
-                     14.0f, NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+    renderer.drawText("Recover", AestraUI::NUIPoint(recoverTextX, recoverTextY), 
+                     14.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
     
     // Discard button (secondary - red-ish)
-    NomadUI::NUIColor discardBg = m_discardHovered ? 
-        NomadUI::NUIColor(0.5f, 0.25f, 0.25f, 1.0f) : 
-        NomadUI::NUIColor(0.4f, 0.2f, 0.2f, 1.0f);
+    AestraUI::NUIColor discardBg = m_discardHovered ? 
+        AestraUI::NUIColor(0.5f, 0.25f, 0.25f, 1.0f) : 
+        AestraUI::NUIColor(0.4f, 0.2f, 0.2f, 1.0f);
     renderer.fillRoundedRect(m_discardButtonRect, 4.0f, discardBg);
     
     auto discardTextSize = renderer.measureText("Discard", 14.0f);
     float discardTextX = m_discardButtonRect.x + (m_discardButtonRect.width - discardTextSize.width) * 0.5f;
     float discardTextY = m_discardButtonRect.y + (m_discardButtonRect.height - discardTextSize.height) * 0.5f;
-    renderer.drawText("Discard", NomadUI::NUIPoint(discardTextX, discardTextY), 
-                     14.0f, NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+    renderer.drawText("Discard", AestraUI::NUIPoint(discardTextX, discardTextY), 
+                     14.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
-bool RecoveryDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
+bool RecoveryDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!m_isVisible) return false;
     
     float mx = event.position.x;
@@ -167,7 +167,7 @@ bool RecoveryDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     m_recoverHovered = m_recoverButtonRect.contains(mx, my);
     m_discardHovered = m_discardButtonRect.contains(mx, my);
     
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         if (m_recoverHovered) {
             handleResponse(RecoveryResponse::Recover);
             return true;
@@ -182,16 +182,16 @@ bool RecoveryDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     return true;
 }
 
-bool RecoveryDialog::onKeyEvent(const NomadUI::NUIKeyEvent& event) {
+bool RecoveryDialog::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (!m_isVisible) return false;
     
     if (event.pressed) {
-        if (event.keyCode == NomadUI::NUIKeyCode::Escape) {
+        if (event.keyCode == AestraUI::NUIKeyCode::Escape) {
             // Escape = Recover (safe default)
             handleResponse(RecoveryResponse::Recover);
             return true;
         }
-        if (event.keyCode == NomadUI::NUIKeyCode::Enter) {
+        if (event.keyCode == AestraUI::NUIKeyCode::Enter) {
             // Enter = Recover (primary action)
             handleResponse(RecoveryResponse::Recover);
             return true;
@@ -211,4 +211,4 @@ void RecoveryDialog::handleResponse(RecoveryResponse response) {
     }
 }
 
-} // namespace Nomad
+} // namespace Aestra

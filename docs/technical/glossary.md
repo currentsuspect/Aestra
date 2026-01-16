@@ -1,14 +1,14 @@
-# 📖 Nomad DAW Glossary
+# 📖 Aestra DAW Glossary
 
 ![Glossary](https://img.shields.io/badge/Glossary-Technical%20Terms-blue)
 
-Comprehensive glossary of technical terms, acronyms, and concepts used in Nomad DAW development.
+Comprehensive glossary of technical terms, acronyms, and concepts used in Aestra DAW development.
 
 ## 📋 Table of Contents
 
 - [Audio Terms](#-audio-terms)
 - [Programming Concepts](#-programming-concepts)
-- [Nomad-Specific Terms](#-nomad-specific-terms)
+- [Aestra-Specific Terms](#-nomad-specific-terms)
 - [UI/UX Terms](#%EF%B8%8F-uiux-terms)
 - [Acronyms](#-acronyms)
 
@@ -21,7 +21,7 @@ A fixed-size block of audio samples processed together. Smaller buffers reduce l
 Software interface between application and audio hardware. Examples: WASAPI, ASIO, ALSA, CoreAudio.
 
 ### ASIO (Audio Stream Input/Output)
-Low-latency audio driver protocol developed by Steinberg. Widely used in professional audio applications (planned for Nomad).
+Low-latency audio driver protocol developed by Steinberg. Widely used in professional audio applications (planned for Aestra).
 
 ### Bit Depth
 Number of bits used to represent each audio sample. Common values:
@@ -36,7 +36,7 @@ Number of samples in an audio buffer. Affects latency and CPU usage:
 - **Large (512-1024+)**: High latency, low CPU
 
 ### DAW (Digital Audio Workstation)
-Software application for recording, editing, mixing, and producing audio content. Nomad is a DAW.
+Software application for recording, editing, mixing, and producing audio content. Aestra is a DAW.
 
 ### Exclusive Mode
 Audio driver mode with direct hardware access (WASAPI Exclusive). Provides lowest latency but prevents other applications from using audio device.
@@ -64,7 +64,7 @@ Audio driver mode that shares hardware access with other applications (WASAPI Sh
 Modern audio API for Windows Vista and later. Supports both Exclusive and Shared modes.
 
 ### Waveform
-Visual representation of audio amplitude over time. Nomad caches waveforms for efficient rendering.
+Visual representation of audio amplitude over time. Aestra caches waveforms for efficient rendering.
 
 ## 💻 Programming Concepts
 
@@ -75,13 +75,13 @@ Operation that completes without interruption. Used for lock-free thread communi
 Ensuring consistent data across CPU caches in multi-threaded programs. Important for audio thread communication.
 
 ### clang-format
-Tool for automatically formatting C++ code according to a style guide. Nomad uses clang-format for consistent code style.
+Tool for automatically formatting C++ code according to a style guide. Aestra uses clang-format for consistent code style.
 
 ### CMake
-Cross-platform build system generator. Nomad uses CMake for configuring and building the project.
+Cross-platform build system generator. Aestra uses CMake for configuring and building the project.
 
 ### Continuation Indent
-Indentation for line continuations (wrapped lines). Nomad uses 4 spaces.
+Indentation for line continuations (wrapped lines). Aestra uses 4 spaces.
 
 ### CRTP (Curiously Recurring Template Pattern)
 C++ template pattern where a derived class passes itself as a template parameter to its base class.
@@ -90,10 +90,10 @@ C++ template pattern where a derived class passes itself as a template parameter
 Programming approach that organizes data for cache efficiency. Focuses on data layout and access patterns.
 
 ### Immediate Mode
-UI paradigm where widgets are recreated each frame. Simplifies state management. Used in NomadUI.
+UI paradigm where widgets are recreated each frame. Simplifies state management. Used in AestraUI.
 
 ### Lock-Free Queue
-Thread-safe queue implementation without mutexes. Used for command passing between threads in Nomad.
+Thread-safe queue implementation without mutexes. Used for command passing between threads in Aestra.
 
 ### Move Semantics
 C++11 feature for transferring ownership of resources without copying. Uses `std::move()`.
@@ -119,28 +119,28 @@ C++ feature for generic programming. Allows functions and classes to work with a
 ### Thread Safety
 Property where code can be safely called from multiple threads without race conditions or data corruption.
 
-## 🎯 Nomad-Specific Terms
+## 🎯 Aestra-Specific Terms
 
 ### Adaptive FPS
-NomadUI feature that dynamically adjusts frame rate (1-120 FPS) based on user activity to conserve CPU.
+AestraUI feature that dynamically adjusts frame rate (1-120 FPS) based on user activity to conserve CPU.
 
 ### Core Mode
-Build configuration (`NOMAD_CORE_MODE=ON`) that excludes private/premium features. Required for public contributors.
+Build configuration (`Aestra_CORE_MODE=ON`) that excludes private/premium features. Required for public contributors.
 
 ### Muse
-Nomad's AI-powered music generation and production assistant (in private development).
+Aestra's AI-powered music generation and production assistant (in private development).
 
-### NomadAudio
-Nomad's audio engine module responsible for playback, recording, and processing.
+### AestraAudio
+Aestra's audio engine module responsible for playback, recording, and processing.
 
-### NomadCore
+### AestraCore
 Foundation module providing platform abstraction, utilities, and common types.
 
-### NomadPlat
+### AestraPlat
 Platform-specific implementations for Windows, Linux, and macOS.
 
-### NomadUI
-Custom GPU-accelerated UI framework built specifically for Nomad DAW.
+### AestraUI
+Custom GPU-accelerated UI framework built specifically for Aestra DAW.
 
 ### Premium Features
 Proprietary features available only in paid version (AI models, advanced effects, licensing).
@@ -163,10 +163,10 @@ UI component containing playback controls (play, pause, stop, record).
 Self-contained UI element with its own rendering and event handling. Examples: button, slider, dropdown.
 
 ### Coordinate System
-System for positioning UI elements. NomadUI uses hierarchical coordinates (parent-relative).
+System for positioning UI elements. AestraUI uses hierarchical coordinates (parent-relative).
 
 ### Culling
-Optimization technique that skips rendering elements outside visible area. Nomad uses 200px culling padding.
+Optimization technique that skips rendering elements outside visible area. Aestra uses 200px culling padding.
 
 ### Event Handling
 Process of responding to user input (mouse, keyboard). Events propagate through widget hierarchy.
@@ -175,13 +175,13 @@ Process of responding to user input (mouse, keyboard). Events propagate through 
 System for automatically positioning and sizing UI elements based on constraints.
 
 ### OpenGL
-Cross-platform graphics API used by NomadUI for GPU-accelerated rendering.
+Cross-platform graphics API used by AestraUI for GPU-accelerated rendering.
 
 ### Playhead
 Vertical line indicator showing current playback position on the timeline.
 
 ### Render Loop
-Continuous cycle that updates and draws UI. Nomad's adaptive FPS adjusts loop frequency.
+Continuous cycle that updates and draws UI. Aestra's adaptive FPS adjusts loop frequency.
 
 ### Ruler
 UI component showing time divisions (bars, beats) on the timeline.
@@ -243,10 +243,10 @@ Rendering order of overlapping UI elements. Higher z-order renders on top.
 **Input/Output** - Data transfer between system and external devices.
 
 ### JUCE
-**Jules' Utility Class Extensions** - C++ framework for audio applications (not used in Nomad, but referenced).
+**Jules' Utility Class Extensions** - C++ framework for audio applications (not used in Aestra, but referenced).
 
 ### MIDI
-**Musical Instrument Digital Interface** - Protocol for communicating musical data (planned for Nomad).
+**Musical Instrument Digital Interface** - Protocol for communicating musical data (planned for Aestra).
 
 ### ML
 **Machine Learning** - AI technique used in Muse.
@@ -276,7 +276,7 @@ Rendering order of overlapping UI elements. Higher z-order renders on top.
 **User Experience** - Overall experience of using software.
 
 ### VST
-**Virtual Studio Technology** - Plugin format for audio effects and instruments (planned for Nomad).
+**Virtual Studio Technology** - Plugin format for audio effects and instruments (planned for Aestra).
 
 ### WASAPI
 **Windows Audio Session API** - Modern Windows audio API.
@@ -290,13 +290,13 @@ Git workflow defining how branches are created, named, and merged. See [Contribu
 Process of examining code changes before merging. Ensures quality and maintainability.
 
 ### Commit Message
-Description of changes in a Git commit. Nomad uses conventional commit format (`feat:`, `fix:`, etc.).
+Description of changes in a Git commit. Aestra uses conventional commit format (`feat:`, `fix:`, etc.).
 
 ### Dependency Injection
 Design pattern where dependencies are provided to an object rather than created internally.
 
 ### Git Hook
-Script that runs automatically on Git events (e.g., pre-commit). Nomad uses hooks for code formatting.
+Script that runs automatically on Git events (e.g., pre-commit). Aestra uses hooks for code formatting.
 
 ### Integration Testing
 Testing multiple components together to verify they work correctly as a system.
@@ -319,7 +319,7 @@ Test that verifies a single component in isolation. Helps catch bugs early.
 - "Increase the **buffer size** to reduce CPU usage."
 - "Use **WASAPI Exclusive mode** for lowest **latency**."
 - "The **audio thread** must be **lock-free** for **real-time** performance."
-- "NomadUI uses **adaptive FPS** to conserve CPU when idle."
+- "AestraUI uses **adaptive FPS** to conserve CPU when idle."
 - "Public contributors build in **Core Mode** without **premium features**."
 
 ## 📚 Additional Resources
@@ -331,4 +331,4 @@ Test that verifies a single component in isolation. Helps catch bugs early.
 
 ---
 
-[← Return to Nomad Docs Index](README.md)
+[← Return to Aestra Docs Index](README.md)

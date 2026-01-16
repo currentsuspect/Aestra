@@ -1,9 +1,9 @@
 // ¶¸ 2025 Nomad Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadUI/Core/NUITypes.h"
+#include "../AestraUI/Core/NUITypes.h"
 
-namespace NomadUI {
+namespace AestraUI {
 
 class NUIRenderer;
 struct TimelineMinimapModel;
@@ -47,5 +47,5 @@ public:
     static double xToTime(float x, const NUIRect& mapRect, double domainStartBeat, double domainEndBeat);
 };
 
-} // namespace NomadUI
+} // namespace AestraUI
 

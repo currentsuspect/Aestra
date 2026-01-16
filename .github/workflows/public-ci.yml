@@ -1,4 +1,4 @@
-name: Public CI (Nomad Core)
+name: Public CI (Aestra Core)
 
 # Only run public CI on direct pushes to `main` to ensure the public build checks
 # verify the public repository state. Pull requests (which may originate from
@@ -29,7 +29,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path build | Out-Null
-          cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
       - name: Build
         shell: pwsh
         run: cmake --build build --config Release --parallel

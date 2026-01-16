@@ -11,12 +11,12 @@
 
 #include "AudioEngine.h"
 
-namespace Nomad {
+namespace Aestra {
 
 // ============================================================================
 // ThreadCountDisplay (Number Dragger)
 // ============================================================================
-class ThreadCountDisplay : public NomadUI::NUIComponent {
+class ThreadCountDisplay : public AestraUI::NUIComponent {
 public:
     ThreadCountDisplay();
     ~ThreadCountDisplay() = default;
@@ -27,8 +27,8 @@ public:
     
     void setOnChange(std::function<void(int)> callback) { m_onChange = callback; }
     
-    void onRender(NomadUI::NUIRenderer& renderer) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
     void onUpdate(double deltaTime) override;
 
 private:
@@ -40,11 +40,11 @@ private:
     // Visual state
     bool m_isHovered{false};
     bool m_isDragging{false};
-    NomadUI::NUIPoint m_dragStartPos;
+    AestraUI::NUIPoint m_dragStartPos;
     int m_dragStartValue;
     
-    std::shared_ptr<NomadUI::NUIIcon> m_upArrow;
-    std::shared_ptr<NomadUI::NUIIcon> m_downArrow;
+    std::shared_ptr<AestraUI::NUIIcon> m_upArrow;
+    std::shared_ptr<AestraUI::NUIIcon> m_downArrow;
     bool m_upArrowHovered{false};
     bool m_downArrowHovered{false};
     bool m_upArrowPressed{false};
@@ -52,8 +52,8 @@ private:
     float m_holdTimer{0.0f};
     
     // Cached bounds
-    NomadUI::NUIRect getUpArrowBounds() const;
-    NomadUI::NUIRect getDownArrowBounds() const;
+    AestraUI::NUIRect getUpArrowBounds() const;
+    AestraUI::NUIRect getDownArrowBounds() const;
 };
 
 class AudioSettingsPage : public ISettingsPage {
@@ -78,10 +78,10 @@ public:
     void onHide() override;
 
     // NUIComponent overrides
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     void onUpdate(double deltaTime) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
 private:
     void createUI();
@@ -102,43 +102,43 @@ private:
     std::function<void()> m_onStreamRestore;
     
     // UI Elements
-    std::shared_ptr<NomadUI::NUILabel> m_driverLabel;
-    std::shared_ptr<NomadUI::NUIDropdown> m_driverDropdown;
+    std::shared_ptr<AestraUI::NUILabel> m_driverLabel;
+    std::shared_ptr<AestraUI::NUIDropdown> m_driverDropdown;
     
-    std::shared_ptr<NomadUI::NUILabel> m_deviceLabel;
-    std::shared_ptr<NomadUI::NUIDropdown> m_deviceDropdown;
+    std::shared_ptr<AestraUI::NUILabel> m_deviceLabel;
+    std::shared_ptr<AestraUI::NUIDropdown> m_deviceDropdown;
     
-    std::shared_ptr<NomadUI::NUILabel> m_sampleRateLabel;
-    std::shared_ptr<NomadUI::NUIDropdown> m_sampleRateDropdown;
+    std::shared_ptr<AestraUI::NUILabel> m_sampleRateLabel;
+    std::shared_ptr<AestraUI::NUIDropdown> m_sampleRateDropdown;
     
-    std::shared_ptr<NomadUI::NUILabel> m_bufferSizeLabel;
-    std::shared_ptr<NomadUI::NUIDropdown> m_bufferSizeDropdown;
+    std::shared_ptr<AestraUI::NUILabel> m_bufferSizeLabel;
+    std::shared_ptr<AestraUI::NUIDropdown> m_bufferSizeDropdown;
     
-    std::shared_ptr<NomadUI::NUILabel> m_latencyLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_latencyLabel;
     
     // Quality Section
-    std::shared_ptr<NomadUI::NUILabel> m_qualityPresetLabel;
-    std::shared_ptr<NomadUI::NUIDropdown> m_qualityPresetDropdown;
+    std::shared_ptr<AestraUI::NUILabel> m_qualityPresetLabel;
+    std::shared_ptr<AestraUI::NUIDropdown> m_qualityPresetDropdown;
     
-    std::shared_ptr<NomadUI::NUILabel> m_resamplingLabel;
-    std::shared_ptr<NomadUI::NUIDropdown> m_resamplingDropdown;
+    std::shared_ptr<AestraUI::NUILabel> m_resamplingLabel;
+    std::shared_ptr<AestraUI::NUIDropdown> m_resamplingDropdown;
     
-    std::shared_ptr<NomadUI::NUILabel> m_ditheringLabel;
-    std::shared_ptr<NomadUI::NUIDropdown> m_ditheringDropdown;
+    std::shared_ptr<AestraUI::NUILabel> m_ditheringLabel;
+    std::shared_ptr<AestraUI::NUIDropdown> m_ditheringDropdown;
     
-    std::shared_ptr<NomadUI::NUILabel> m_dcRemovalLabel;
-    std::shared_ptr<NomadUI::NUIToggle> m_dcRemovalToggle; // Toggle button
+    std::shared_ptr<AestraUI::NUILabel> m_dcRemovalLabel;
+    std::shared_ptr<AestraUI::NUIToggle> m_dcRemovalToggle; // Toggle button
     
-    std::shared_ptr<NomadUI::NUILabel> m_softClippingLabel;
-    std::shared_ptr<NomadUI::NUIToggle> m_softClippingToggle;
+    std::shared_ptr<AestraUI::NUILabel> m_softClippingLabel;
+    std::shared_ptr<AestraUI::NUIToggle> m_softClippingToggle;
     
-    std::shared_ptr<NomadUI::NUILabel> m_multiThreadingLabel;
-    std::shared_ptr<NomadUI::NUIToggle> m_multiThreadingToggle;
+    std::shared_ptr<AestraUI::NUILabel> m_multiThreadingLabel;
+    std::shared_ptr<AestraUI::NUIToggle> m_multiThreadingToggle;
     
-    std::shared_ptr<NomadUI::NUILabel> m_threadCountLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_threadCountLabel;
     std::shared_ptr<ThreadCountDisplay> m_threadCountInput;
 
-    std::shared_ptr<NomadUI::NUIButton> m_testSoundButton;
+    std::shared_ptr<AestraUI::NUIButton> m_testSoundButton;
 
     // Test Sound State
     // Managed by AudioEngine now
@@ -178,7 +178,7 @@ private:
     bool m_deviceDataReady{false};
     
     // Loading indicator
-    std::shared_ptr<NomadUI::NUILabel> m_loadingLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_loadingLabel;
     float m_loadingAnimTimer{0.0f};
     
     // Async loading helpers
@@ -186,4 +186,4 @@ private:
     void onDeviceLoadComplete();
 };
 
-} // namespace Nomad
+} // namespace Aestra

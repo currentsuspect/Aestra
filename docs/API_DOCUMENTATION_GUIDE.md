@@ -1,6 +1,6 @@
 # 📘 API Documentation Guide
 
-This guide walks you through generating, customizing, and maintaining the NOMAD DAW API documentation using Doxygen.
+This guide walks you through generating, customizing, and maintaining the Aestra API documentation using Doxygen.
 
 ---
 
@@ -74,7 +74,7 @@ dot -V
 
 ### Step 2: Generate Documentation
 
-From the NOMAD project root directory:
+From the Aestra project root directory:
 
 ```bash
 # Generate API documentation
@@ -91,10 +91,10 @@ This will:
 **Expected output:**
 ```
 Searching for include files...
-Searching for files in directory c:/Users/Current/Documents/Projects/NOMAD/NomadCore
-Searching for files in directory c:/Users/Current/Documents/Projects/NOMAD/NomadAudio
+Searching for files in directory c:/Users/Current/Documents/Projects/Aestra/AestraCore
+Searching for files in directory c:/Users/Current/Documents/Projects/Aestra/AestraAudio
 ...
-Generating docs for class Nomad::Audio::AudioDeviceManager...
+Generating docs for class Aestra::Audio::AudioDeviceManager...
 ...
 lookup cache used 1234/65536 hits=5678 misses=90
 finished...
@@ -162,7 +162,7 @@ The Doxygen configuration is stored in `Doxyfile` at the project root.
 
 | Setting | Value | Description |
 |---------|-------|-------------|
-| `PROJECT_NAME` | "NOMAD DAW" | Project name in documentation |
+| `PROJECT_NAME` | "Aestra" | Project name in documentation |
 | `OUTPUT_DIRECTORY` | `docs/api-reference` | Where docs are generated |
 | `INPUT` | Multiple directories | Source directories to document |
 | `RECURSIVE` | `YES` | Parse subdirectories |
@@ -415,7 +415,7 @@ The GitHub Actions workflow (`.github/workflows/api-docs.yml`) automatically:
 
 Documentation will be available at:
 ```
-https://<username>.github.io/NOMAD/api/
+https://<username>.github.io/Aestra/api/
 ```
 
 ### Local Preview Server
@@ -546,7 +546,7 @@ If generation is slow:
   - OpenCV: https://docs.opencv.org/
   - Boost: https://www.boost.org/doc/libs/
 
-### NOMAD Specific
+### Aestra Specific
 - [Coding Style Guide](developer/coding-style.md)
 - [Contributing Guidelines](../CONTRIBUTING.md)
 - [Architecture Documentation](architecture/)
@@ -590,10 +590,10 @@ Track documentation coverage over time:
 
 ```bash
 # Count total classes
-find NomadCore NomadAudio NomadPlat NomadUI -name "*.h" | xargs grep -h "^class\|^struct" | wc -l
+find AestraCore AestraAudio AestraPlat AestraUI -name "*.h" | xargs grep -h "^class\|^struct" | wc -l
 
 # Count documented classes (with Doxygen comments)
-find NomadCore NomadAudio NomadPlat NomadUI -name "*.h" | xargs grep -B1 "^class\|^struct" | grep "/\*\*" | wc -l
+find AestraCore AestraAudio AestraPlat AestraUI -name "*.h" | xargs grep -B1 "^class\|^struct" | grep "/\*\*" | wc -l
 
 # Calculate coverage percentage
 # (documented / total) * 100
@@ -603,4 +603,4 @@ find NomadCore NomadAudio NomadPlat NomadUI -name "*.h" | xargs grep -B1 "^class
 
 **Happy Documenting! 📚✨**
 
-For questions or issues, see [SUPPORT.md](../SUPPORT.md) or open a [GitHub Discussion](https://github.com/currentsuspect/NOMAD/discussions).
+For questions or issues, see [SUPPORT.md](../SUPPORT.md) or open a [GitHub Discussion](https://github.com/currentsuspect/Aestra/discussions).

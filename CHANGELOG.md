@@ -43,7 +43,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - **Audio Engine**:
     - Fixed critical crash/silence issue when scrubbing short samples or performing rapid seek requests.
-    - Removed hardcoded 5-second duration limit in `NomadContent`.
+    - Removed hardcoded 5-second duration limit in `AestraContent`.
     - Fixed duplicate `seek` method implementation in `PreviewEngine`.
 - **UI**:
     - Fixed Folder name clipping/ellipsis behavior in the Preview Panel.

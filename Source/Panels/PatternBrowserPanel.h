@@ -6,24 +6,24 @@
 #include <functional>
 #include <string>
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUIDragDrop.h"
+#include "../AestraUI/Core/NUIComponent.h"
+#include "../AestraUI/Core/NUIDragDrop.h"
 #include "PatternSource.h"
 #include "ClipSource.h"
 
 // Forward declarations to avoid circular deps and build errors
-namespace NomadUI {
+namespace AestraUI {
     class NUISegmentedControl;
     class NUIButton;
     class NUIIcon;
 }
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 class TrackManager;
 
-class PatternBrowserPanel : public NomadUI::NUIComponent, public NomadUI::IDropTarget {
+class PatternBrowserPanel : public AestraUI::NUIComponent, public AestraUI::IDropTarget {
 public:
     PatternBrowserPanel(TrackManager* trackManager = nullptr);
     ~PatternBrowserPanel() override;
@@ -33,26 +33,26 @@ public:
     void refreshClips();
 
     // Callbacks
-    void setOnPatternSelected(std::function<void(Nomad::Audio::PatternID)> callback) { m_onPatternSelected = callback; }
-    void setOnPatternDragStart(std::function<void(Nomad::Audio::PatternID)> callback) { m_onPatternDragStart = callback; }
-    void setOnPatternDoubleClick(std::function<void(Nomad::Audio::PatternID)> callback) { m_onPatternDoubleClick = callback; }
+    void setOnPatternSelected(std::function<void(Aestra::Audio::PatternID)> callback) { m_onPatternSelected = callback; }
+    void setOnPatternDragStart(std::function<void(Aestra::Audio::PatternID)> callback) { m_onPatternDragStart = callback; }
+    void setOnPatternDoubleClick(std::function<void(Aestra::Audio::PatternID)> callback) { m_onPatternDoubleClick = callback; }
     
     // Clip callbacks
-    void setOnClipDragStart(std::function<void(Nomad::Audio::ClipSourceID)> callback) { m_onClipDragStart = callback; }
+    void setOnClipDragStart(std::function<void(Aestra::Audio::ClipSourceID)> callback) { m_onClipDragStart = callback; }
 
     // Currently selected item
-    Nomad::Audio::PatternID getSelectedPatternId() const { return m_selectedPatternId; }
+    Aestra::Audio::PatternID getSelectedPatternId() const { return m_selectedPatternId; }
 
     // IDropTarget Implementation
-    NomadUI::DropFeedback onDragEnter(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) override;
-    NomadUI::DropFeedback onDragOver(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) override;
+    AestraUI::DropFeedback onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
+    AestraUI::DropFeedback onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
     void onDragLeave() override;
-    NomadUI::DropResult onDrop(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) override;
-    NomadUI::NUIRect getDropBounds() const override;
+    AestraUI::DropResult onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
+    AestraUI::NUIRect getDropBounds() const override;
 
 protected:
-    void onRender(NomadUI::NUIRenderer& renderer) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
     void onResize(int width, int height) override;
     void onUpdate(double deltaTime) override;
 
@@ -65,11 +65,11 @@ private:
     };
     BrowserMode m_mode = BrowserMode::Clips; // Default to Clips
     
-    std::shared_ptr<NomadUI::NUISegmentedControl> m_modeToggle;
+    std::shared_ptr<AestraUI::NUISegmentedControl> m_modeToggle;
 
     // Pattern list
     struct PatternEntry {
-        Nomad::Audio::PatternID id;
+        Aestra::Audio::PatternID id;
         std::string name;
         bool isMidi;
         double lengthBeats;
@@ -79,7 +79,7 @@ private:
     
     // Clip list
     struct ClipEntry {
-        Nomad::Audio::ClipSourceID id;
+        Aestra::Audio::ClipSourceID id;
         std::string name;
         std::string filename;
         uint32_t sampleRate;
@@ -88,8 +88,8 @@ private:
     };
     std::vector<ClipEntry> m_clips;
     
-    Nomad::Audio::PatternID m_selectedPatternId;
-    Nomad::Audio::PatternID m_hoveredPatternId;
+    Aestra::Audio::PatternID m_selectedPatternId;
+    Aestra::Audio::PatternID m_hoveredPatternId;
     
     // UI Layout
     float m_headerHeight = 40.0f; // Header now contains Buttons
@@ -98,54 +98,54 @@ private:
     float m_scrollOffset = 0.0f;
     
     // Callbacks
-    std::function<void(Nomad::Audio::PatternID)> m_onPatternSelected;
-    std::function<void(Nomad::Audio::PatternID)> m_onPatternDragStart;
-    std::function<void(Nomad::Audio::PatternID)> m_onPatternDoubleClick;
-    std::function<void(Nomad::Audio::ClipSourceID)> m_onClipDragStart;
+    std::function<void(Aestra::Audio::PatternID)> m_onPatternSelected;
+    std::function<void(Aestra::Audio::PatternID)> m_onPatternDragStart;
+    std::function<void(Aestra::Audio::PatternID)> m_onPatternDoubleClick;
+    std::function<void(Aestra::Audio::ClipSourceID)> m_onClipDragStart;
     
     // Buttons (Patterns mode)
-    std::shared_ptr<NomadUI::NUIButton> m_createButton;
-    std::shared_ptr<NomadUI::NUIButton> m_duplicateButton;
-    std::shared_ptr<NomadUI::NUIButton> m_deleteButton;
+    std::shared_ptr<AestraUI::NUIButton> m_createButton;
+    std::shared_ptr<AestraUI::NUIButton> m_duplicateButton;
+    std::shared_ptr<AestraUI::NUIButton> m_deleteButton;
     
     // Icons
-    std::shared_ptr<NomadUI::NUIIcon> m_addIcon;
-    std::shared_ptr<NomadUI::NUIIcon> m_copyIcon;
-    std::shared_ptr<NomadUI::NUIIcon> m_trashIcon;
-    std::shared_ptr<NomadUI::NUIIcon> m_midiIcon;
-    std::shared_ptr<NomadUI::NUIIcon> m_audioIcon;
+    std::shared_ptr<AestraUI::NUIIcon> m_addIcon;
+    std::shared_ptr<AestraUI::NUIIcon> m_copyIcon;
+    std::shared_ptr<AestraUI::NUIIcon> m_trashIcon;
+    std::shared_ptr<AestraUI::NUIIcon> m_midiIcon;
+    std::shared_ptr<AestraUI::NUIIcon> m_audioIcon;
     
     // Theme colors
-    NomadUI::NUIColor m_backgroundColor;
-    NomadUI::NUIColor m_textColor;
-    NomadUI::NUIColor m_borderColor;
-    NomadUI::NUIColor m_selectedColor;
+    AestraUI::NUIColor m_backgroundColor;
+    AestraUI::NUIColor m_textColor;
+    AestraUI::NUIColor m_borderColor;
+    AestraUI::NUIColor m_selectedColor;
     
     // Drag state
     bool m_isDragging = false;
-    Nomad::Audio::PatternID m_dragPatternId;
+    Aestra::Audio::PatternID m_dragPatternId;
     
     // Improved drag logic
     bool m_dragPotential = false;
-    NomadUI::NUIPoint m_dragStartPos;
+    AestraUI::NUIPoint m_dragStartPos;
     
     // Double-click detection
     double m_lastClickTime = 0.0;
-    Nomad::Audio::PatternID m_lastClickedPatternId;
+    Aestra::Audio::PatternID m_lastClickedPatternId;
     
     // Drag visual feedback
     bool m_isDragOver = false;
     
-    void renderHeader(NomadUI::NUIRenderer& renderer);
-    void renderContent(NomadUI::NUIRenderer& renderer);
-    void renderPatternList(NomadUI::NUIRenderer& renderer);
-    void renderClipList(NomadUI::NUIRenderer& renderer);
+    void renderHeader(AestraUI::NUIRenderer& renderer);
+    void renderContent(AestraUI::NUIRenderer& renderer);
+    void renderPatternList(AestraUI::NUIRenderer& renderer);
+    void renderClipList(AestraUI::NUIRenderer& renderer);
     
-    void renderPatternItem(NomadUI::NUIRenderer& renderer, const PatternEntry& entry, float y, bool selected, bool hovered);
-    void renderClipItem(NomadUI::NUIRenderer& renderer, const ClipEntry& entry, float y, bool hovered);
+    void renderPatternItem(AestraUI::NUIRenderer& renderer, const PatternEntry& entry, float y, bool selected, bool hovered);
+    void renderClipItem(AestraUI::NUIRenderer& renderer, const ClipEntry& entry, float y, bool hovered);
     
     void switchMode(BrowserMode mode);
 };
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

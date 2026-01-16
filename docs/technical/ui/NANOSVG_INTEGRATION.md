@@ -2,7 +2,7 @@
 
 ## Status
 
-NanoSVG headers have been downloaded to `NomadUI/External/`:
+NanoSVG headers have been downloaded to `AestraUI/External/`:
 - `nanosvg.h` - SVG parser
 - `nanosvgrast.h` - SVG rasterizer
 

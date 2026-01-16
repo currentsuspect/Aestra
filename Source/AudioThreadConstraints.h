@@ -7,7 +7,7 @@
  *        B-007: Allocation tracking in debug builds
  * 
  * ═══════════════════════════════════════════════════════════════════════════
- * NOMAD THREADING MODEL (B-004)
+ * AESTRA THREADING MODEL (B-004)
  * ═══════════════════════════════════════════════════════════════════════════
  * 
  * THREAD TYPES:
@@ -16,7 +16,7 @@
  *    - Runs the event loop and renders UI
  *    - Handles user input, window events
  *    - Safe for: allocations, locks, file I/O, logging
- *    - Entry point: main() -> NomadApp::run()
+ *    - Entry point: main() -> AestraApp::run()
  * 
  * 2. AUDIO THREAD (Real-Time Thread)
  *    - Callback from OS audio subsystem (WASAPI/ASIO)
@@ -61,13 +61,13 @@
  * B-007: ALLOCATION TRACKING (DEBUG BUILDS ONLY)
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * In debug builds, NOMAD_TRACK_ALLOCATION() and NOMAD_TRACK_DEALLOCATION()
+ * In debug builds, AESTRA_TRACK_ALLOCATION() and AESTRA_TRACK_DEALLOCATION()
  * can be called to monitor memory usage patterns. When called from the audio
  * thread, these log violations and increment counters.
  * 
  * Integration with custom allocators:
- * 1. Wrap your allocator's allocate/deallocate with NOMAD_TRACK_ALLOCATION
- * 2. Use NOMAD_SCOPED_ALLOCATION_TRACKING for temporary tracking
+ * 1. Wrap your allocator's allocate/deallocate with AESTRA_TRACK_ALLOCATION
+ * 2. Use AESTRA_SCOPED_ALLOCATION_TRACKING for temporary tracking
  * 3. Check AudioThreadStats::instance().allocationViolations after testing
  * 
  * ═══════════════════════════════════════════════════════════════════════════
@@ -78,15 +78,15 @@
 #include <cstddef>
 
 // Compile-time configuration
-#ifndef NOMAD_AUDIO_DEBUG
+#ifndef AESTRA_AUDIO_DEBUG
     #ifdef NDEBUG
-        #define NOMAD_AUDIO_DEBUG 0
+        #define AESTRA_AUDIO_DEBUG 0
     #else
-        #define NOMAD_AUDIO_DEBUG 1
+        #define AESTRA_AUDIO_DEBUG 1
     #endif
 #endif
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 /**
@@ -163,24 +163,24 @@ struct AudioThreadStats {
 };
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra
 
 // =============================================================================
 // Debug Macros (B-005)
 // =============================================================================
 
-#if NOMAD_AUDIO_DEBUG
+#if AESTRA_AUDIO_DEBUG
 
 /**
  * @brief Assert that we're NOT on the audio thread
  * 
  * Use before operations that would violate audio thread constraints.
- * Example: NOMAD_ASSERT_NOT_AUDIO_THREAD(); // before new/malloc
+ * Example: AESTRA_ASSERT_NOT_AUDIO_THREAD(); // before new/malloc
  */
-#define NOMAD_ASSERT_NOT_AUDIO_THREAD() \
+#define AESTRA_ASSERT_NOT_AUDIO_THREAD() \
     do { \
-        if (Nomad::Audio::isAudioThread()) { \
-            Nomad::Audio::AudioThreadStats::instance().allocationViolations.fetch_add(1); \
+        if (Aestra::Audio::isAudioThread()) { \
+            Aestra::Audio::AudioThreadStats::instance().allocationViolations.fetch_add(1); \
             assert(false && "Audio thread constraint violation: forbidden operation"); \
         } \
     } while(0)
@@ -190,9 +190,9 @@ struct AudioThreadStats {
  * 
  * Use to verify code is running in the expected context.
  */
-#define NOMAD_ASSERT_AUDIO_THREAD() \
+#define AESTRA_ASSERT_AUDIO_THREAD() \
     do { \
-        assert(Nomad::Audio::isAudioThread() && "Expected to be on audio thread"); \
+        assert(Aestra::Audio::isAudioThread() && "Expected to be on audio thread"); \
     } while(0)
 
 /**
@@ -200,12 +200,12 @@ struct AudioThreadStats {
  * 
  * Documentation macro - no runtime effect, but signals intent.
  */
-#define NOMAD_AUDIO_THREAD_SAFE /* function is safe to call from audio thread */
+#define AESTRA_AUDIO_THREAD_SAFE /* function is safe to call from audio thread */
 
 /**
  * @brief Mark a function as NOT audio-thread-safe
  */
-#define NOMAD_NOT_AUDIO_THREAD_SAFE /* DO NOT call from audio thread */
+#define AESTRA_NOT_AUDIO_THREAD_SAFE /* DO NOT call from audio thread */
 
 /**
  * @brief B-007: Track an allocation (debug only)
@@ -216,12 +216,12 @@ struct AudioThreadStats {
  * @param size Size of allocation in bytes
  * @param source Optional string describing the source (file:line or function)
  */
-#define NOMAD_TRACK_ALLOCATION(size) \
+#define AESTRA_TRACK_ALLOCATION(size) \
     do { \
-        auto& stats = Nomad::Audio::AudioThreadStats::instance(); \
+        auto& stats = Aestra::Audio::AudioThreadStats::instance(); \
         stats.totalAllocations.fetch_add(1, std::memory_order_relaxed); \
         stats.updatePeak(size); \
-        if (Nomad::Audio::isAudioThread()) { \
+        if (Aestra::Audio::isAudioThread()) { \
             stats.allocationViolations.fetch_add(1, std::memory_order_relaxed); \
             /* Debug break in MSVC: __debugbreak(); */ \
         } \
@@ -230,9 +230,9 @@ struct AudioThreadStats {
 /**
  * @brief B-007: Track a deallocation (debug only)
  */
-#define NOMAD_TRACK_DEALLOCATION() \
+#define AESTRA_TRACK_DEALLOCATION() \
     do { \
-        Nomad::Audio::AudioThreadStats::instance().totalDeallocations.fetch_add(1, std::memory_order_relaxed); \
+        Aestra::Audio::AudioThreadStats::instance().totalDeallocations.fetch_add(1, std::memory_order_relaxed); \
     } while(0)
 
 /**
@@ -240,41 +240,41 @@ struct AudioThreadStats {
  * 
  * Call before acquiring a mutex. Logs violation if on audio thread.
  */
-#define NOMAD_TRACK_LOCK() \
+#define AESTRA_TRACK_LOCK() \
     do { \
-        if (Nomad::Audio::isAudioThread()) { \
-            Nomad::Audio::AudioThreadStats::instance().lockViolations.fetch_add(1, std::memory_order_relaxed); \
+        if (Aestra::Audio::isAudioThread()) { \
+            Aestra::Audio::AudioThreadStats::instance().lockViolations.fetch_add(1, std::memory_order_relaxed); \
         } \
     } while(0)
 
 /**
  * @brief B-007: Track a file I/O operation (debug only)
  */
-#define NOMAD_TRACK_FILE_IO() \
+#define AESTRA_TRACK_FILE_IO() \
     do { \
-        if (Nomad::Audio::isAudioThread()) { \
-            Nomad::Audio::AudioThreadStats::instance().ioViolations.fetch_add(1, std::memory_order_relaxed); \
+        if (Aestra::Audio::isAudioThread()) { \
+            Aestra::Audio::AudioThreadStats::instance().ioViolations.fetch_add(1, std::memory_order_relaxed); \
         } \
     } while(0)
 
-#else // !NOMAD_AUDIO_DEBUG
+#else // !AESTRA_AUDIO_DEBUG
 
-#define NOMAD_ASSERT_NOT_AUDIO_THREAD() ((void)0)
-#define NOMAD_ASSERT_AUDIO_THREAD() ((void)0)
-#define NOMAD_AUDIO_THREAD_SAFE
-#define NOMAD_NOT_AUDIO_THREAD_SAFE
-#define NOMAD_TRACK_ALLOCATION(size) ((void)0)
-#define NOMAD_TRACK_DEALLOCATION() ((void)0)
-#define NOMAD_TRACK_LOCK() ((void)0)
-#define NOMAD_TRACK_FILE_IO() ((void)0)
+#define AESTRA_ASSERT_NOT_AUDIO_THREAD() ((void)0)
+#define AESTRA_ASSERT_AUDIO_THREAD() ((void)0)
+#define AESTRA_AUDIO_THREAD_SAFE
+#define AESTRA_NOT_AUDIO_THREAD_SAFE
+#define AESTRA_TRACK_ALLOCATION(size) ((void)0)
+#define AESTRA_TRACK_DEALLOCATION() ((void)0)
+#define AESTRA_TRACK_LOCK() ((void)0)
+#define AESTRA_TRACK_FILE_IO() ((void)0)
 
-#endif // NOMAD_AUDIO_DEBUG
+#endif // AESTRA_AUDIO_DEBUG
 
 // =============================================================================
 // Lock-Free Utilities
 // =============================================================================
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 /**
@@ -341,4 +341,4 @@ private:
 };
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

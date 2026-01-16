@@ -10,7 +10,7 @@
 ## Quick Links
 
 - **Canonical Guide**: [developer/coding-style.md](developer/coding-style.md)
-- **GitHub**: [View on GitHub](https://github.com/currentsuspect/NOMAD/blob/develop/docs/developer/coding-style.md)
+- **GitHub**: [View on GitHub](https://github.com/currentsuspect/Aestra/blob/develop/docs/developer/coding-style.md)
 - **Contributing**: [developer/contributing.md](developer/contributing.md)
 
 ---

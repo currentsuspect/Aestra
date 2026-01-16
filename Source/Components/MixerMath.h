@@ -5,7 +5,7 @@
 #include <string>
 #include <cstdio>
 
-namespace Nomad {
+namespace Aestra {
 
 /**
  * @brief Math utilities for mixer UI dB/linear conversions and formatting.
@@ -87,4 +87,4 @@ inline float clampDb(float db) {
 }
 
 } // namespace MixerMath
-} // namespace Nomad
+} // namespace Aestra

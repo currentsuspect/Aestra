@@ -6,7 +6,7 @@
 #include <functional>
 #include <string>
 
-namespace Nomad {
+namespace Aestra {
 
 /**
  * @brief Dialog response options for user confirmation
@@ -26,7 +26,7 @@ enum class DialogResponse {
  * - Don't Save: Discard changes and proceed
  * - Cancel: Return to the application
  */
-class ConfirmationDialog : public NomadUI::NUIComponent {
+class ConfirmationDialog : public AestraUI::NUIComponent {
 public:
     using ResponseCallback = std::function<void(DialogResponse)>;
     
@@ -34,9 +34,9 @@ public:
     ~ConfirmationDialog() override = default;
     
     // NUIComponent interface
-    void onRender(NomadUI::NUIRenderer& renderer) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
-    bool onKeyEvent(const NomadUI::NUIKeyEvent& event) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     
     /**
      * @brief Show the dialog with a custom message
@@ -74,13 +74,13 @@ private:
     bool m_cancelHovered;
     
     // Button rectangles (calculated during render)
-    NomadUI::NUIRect m_saveButtonRect;
-    NomadUI::NUIRect m_dontSaveButtonRect;
-    NomadUI::NUIRect m_cancelButtonRect;
-    NomadUI::NUIRect m_dialogRect;
+    AestraUI::NUIRect m_saveButtonRect;
+    AestraUI::NUIRect m_dontSaveButtonRect;
+    AestraUI::NUIRect m_cancelButtonRect;
+    AestraUI::NUIRect m_dialogRect;
     
     void handleResponse(DialogResponse response);
     void calculateLayout();
 };
 
-} // namespace Nomad
+} // namespace Aestra

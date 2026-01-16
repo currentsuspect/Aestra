@@ -5,20 +5,20 @@
  */
 
 #include "TransportBar.h"
-#include "../NomadCore/include/NomadUnifiedProfiler.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraCore/include/AestraUnifiedProfiler.h"
+#include "../AestraCore/include/AestraLog.h"
 #include <sstream>
 #include <iomanip>
 #include <cmath>
 
-namespace Nomad {
+namespace Aestra {
 
 // =============================================================================
 // SECTION: Construction & Setup
 // =============================================================================
 
 TransportBar::TransportBar()
-    : NomadUI::NUIComponent()
+    : AestraUI::NUIComponent()
     , m_state(TransportState::Stopped)
     , m_tempo(120.0f)
     , m_position(0.0)
@@ -53,8 +53,8 @@ void TransportBar::createIcons() {
             <path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z"/>
         </svg>
     )";
-    m_playIcon = std::make_shared<NomadUI::NUIIcon>(playSvg);
-    m_playIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_playIcon = std::make_shared<AestraUI::NUIIcon>(playSvg);
+    m_playIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_playIcon->setColorFromTheme("primary");  // Use primary theme color
     
     // Pause icon (Thicker Bars)
@@ -63,8 +63,8 @@ void TransportBar::createIcons() {
             <path d="M8 19c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2v10c0 1.1.9 2 2 2zm6-12v10c0 1.1.9 2 2 2s2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2z"/>
         </svg>
     )";
-    m_pauseIcon = std::make_shared<NomadUI::NUIIcon>(pauseSvg);
-    m_pauseIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_pauseIcon = std::make_shared<AestraUI::NUIIcon>(pauseSvg);
+    m_pauseIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_pauseIcon->setColorFromTheme("primary");
     
     // Stop icon (Rounded Square)
@@ -73,8 +73,8 @@ void TransportBar::createIcons() {
             <path d="M8 6h8c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2z"/>
         </svg>
     )";
-    m_stopIcon = std::make_shared<NomadUI::NUIIcon>(stopSvg);
-    m_stopIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_stopIcon = std::make_shared<AestraUI::NUIIcon>(stopSvg);
+    m_stopIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_stopIcon->setColorFromTheme("primary");
     
     // Record icon (Solid Circle) - Vibrant Red
@@ -83,8 +83,8 @@ void TransportBar::createIcons() {
             <circle cx="12" cy="12" r="9"/>
         </svg>
     )";
-    m_recordIcon = std::make_shared<NomadUI::NUIIcon>(recordSvg);
-    m_recordIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_recordIcon = std::make_shared<AestraUI::NUIIcon>(recordSvg);
+    m_recordIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_recordIcon->setColorFromTheme("error");  // #ff4d4d - Clear red for recording
 
     // Mixer icon (Stylized Sliders)
@@ -93,8 +93,8 @@ void TransportBar::createIcons() {
             <path d="M5 15h2v4H5v-4zm0-10h2v8H5V5zm6 12h2v2h-2v-2zm0-12h2v10h-2V5zm6 8h2v6h-2v-6zm0-8h2v6h-2V5z"/>
         </svg>
     )";
-    m_mixerIcon = std::make_shared<NomadUI::NUIIcon>(mixerSvg);
-    m_mixerIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_mixerIcon = std::make_shared<AestraUI::NUIIcon>(mixerSvg);
+    m_mixerIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_mixerIcon->setColorFromTheme("textSecondary");
 
     // Sequencer icon (Grid)
@@ -103,8 +103,8 @@ void TransportBar::createIcons() {
             <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/>
         </svg>
     )";
-    m_sequencerIcon = std::make_shared<NomadUI::NUIIcon>(sequencerSvg);
-    m_sequencerIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_sequencerIcon = std::make_shared<AestraUI::NUIIcon>(sequencerSvg);
+    m_sequencerIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_sequencerIcon->setColorFromTheme("textSecondary");
 
     // Piano Roll icon (MIDI Grid + Vertical Keys)
@@ -120,8 +120,8 @@ void TransportBar::createIcons() {
             <rect x="9" y="14" width="8" height="3" rx="1" fill="currentColor"/>
         </svg>
     )";
-    m_pianoRollIcon = std::make_shared<NomadUI::NUIIcon>(pianoRollSvg);
-    m_pianoRollIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_pianoRollIcon = std::make_shared<AestraUI::NUIIcon>(pianoRollSvg);
+    m_pianoRollIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_pianoRollIcon->setColorFromTheme("textSecondary");
 
     // Playlist icon (tracks)
@@ -130,8 +130,8 @@ void TransportBar::createIcons() {
             <path d="M3 13h8v-2H3v2zm0 4h8v-2H3v2zm0-8h8V7H3v2zm10-6v18h8V3h-8zm6 16h-4V5h4v14z"/>
         </svg>
     )";
-    m_playlistIcon = std::make_shared<NomadUI::NUIIcon>(playlistSvg);
-    m_playlistIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_playlistIcon = std::make_shared<AestraUI::NUIIcon>(playlistSvg);
+    m_playlistIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_playlistIcon->setColorFromTheme("textSecondary");
 
     // Metronome icon (classic metronome shape)
@@ -141,8 +141,8 @@ void TransportBar::createIcons() {
             <circle cx="12" cy="18" r="2"/>
         </svg>
     )";
-    m_metronomeIcon = std::make_shared<NomadUI::NUIIcon>(metronomeSvg);
-    m_metronomeIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_metronomeIcon = std::make_shared<AestraUI::NUIIcon>(metronomeSvg);
+    m_metronomeIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_metronomeIcon->setColorFromTheme("textSecondary");
 
     // Count-In icon (3-2-1 dots style)
@@ -154,8 +154,8 @@ void TransportBar::createIcons() {
             <circle cx="17" cy="5" r="1.5"/>
         </svg>
     )";
-    m_countInIcon = std::make_shared<NomadUI::NUIIcon>(countInSvg);
-    m_countInIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_countInIcon = std::make_shared<AestraUI::NUIIcon>(countInSvg);
+    m_countInIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_countInIcon->setColorFromTheme("textSecondary");
 
     // Wait for Input icon (Pause bars + Play Triangle combo or Hourglass)
@@ -173,8 +173,8 @@ void TransportBar::createIcons() {
              <path d="M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6zm10 14.5V20H8v-3.5l4-4 4 4z"/>
         </svg>
     )";
-    m_waitIcon = std::make_shared<NomadUI::NUIIcon>(waitRealSvg);
-    m_waitIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_waitIcon = std::make_shared<AestraUI::NUIIcon>(waitRealSvg);
+    m_waitIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_waitIcon->setColorFromTheme("textSecondary");
 
     // Loop Record icon (Ouroboros / Cycle arrow with Dot)
@@ -184,20 +184,20 @@ void TransportBar::createIcons() {
              <circle cx="12" cy="12" r="3"/>
         </svg>
     )";
-    m_loopRecordIcon = std::make_shared<NomadUI::NUIIcon>(loopRecordSvg);
-    m_loopRecordIcon->setIconSize(NomadUI::NUIIconSize::Medium);
+    m_loopRecordIcon = std::make_shared<AestraUI::NUIIcon>(loopRecordSvg);
+    m_loopRecordIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_loopRecordIcon->setColorFromTheme("textSecondary");
 
 }
 
 void TransportBar::createButtons() {
     // Play/Pause/Stop/Record...
-    auto createBtn = [&](std::shared_ptr<NomadUI::NUIButton>& btn, std::function<void()> cb) {
-        btn = std::make_shared<NomadUI::NUIButton>();
+    auto createBtn = [&](std::shared_ptr<AestraUI::NUIButton>& btn, std::function<void()> cb) {
+        btn = std::make_shared<AestraUI::NUIButton>();
         btn->setText("");
-        btn->setStyle(NomadUI::NUIButton::Style::Icon);
+        btn->setStyle(AestraUI::NUIButton::Style::Icon);
         btn->setSize(40, 40);
-        btn->setBackgroundColor(NomadUI::NUIColor(0,0,0,0)); 
+        btn->setBackgroundColor(AestraUI::NUIColor(0,0,0,0)); 
         btn->setOnClick(cb);
         addChild(btn);
     };
@@ -246,7 +246,7 @@ void TransportBar::createButtons() {
     m_loopRecordButton->setTooltip("Loop Record");
 
     // View Toggles
-    auto createViewButton = [&](std::shared_ptr<NomadUI::NUIButton>& btn, std::function<void()> onClick) {
+    auto createViewButton = [&](std::shared_ptr<AestraUI::NUIButton>& btn, std::function<void()> onClick) {
         createBtn(btn, onClick);
     };
 
@@ -259,7 +259,7 @@ void TransportBar::createButtons() {
     // Wire Record button
     if (m_recordButton) {
         m_recordButton->setOnToggle([this](bool armed) {
-            Nomad::Log::info("Transport: Record Button Toggled: " + std::string(armed ? "ON" : "OFF"));
+            Aestra::Log::info("Transport: Record Button Toggled: " + std::string(armed ? "ON" : "OFF"));
             if (m_onRecord) m_onRecord(armed);
         });
     }
@@ -397,23 +397,23 @@ void TransportBar::updateButtonStates() {
 // SECTION: Rendering
 // =============================================================================
 
-void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
-    NomadUI::NUIRect bounds = getBounds();
+void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
+    AestraUI::NUIRect bounds = getBounds();
 
     // Get layout dimensions from theme
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     
     // Colors
     // "Frosted Glass" - Grey tint to distinguish from dark displays
-    NomadUI::NUIColor glassBg = themeManager.getColor("textSecondary").withAlpha(0.15f); 
-    NomadUI::NUIColor glassBorder = themeManager.getColor("glassBorder");
-    NomadUI::NUIColor glassHover = themeManager.getColor("textSecondary").withAlpha(0.25f); // Brighter grey on hover
-    NomadUI::NUIColor glassActive = themeManager.getColor("glassActive"); // Purple tint
+    AestraUI::NUIColor glassBg = themeManager.getColor("textSecondary").withAlpha(0.15f); 
+    AestraUI::NUIColor glassBorder = themeManager.getColor("glassBorder");
+    AestraUI::NUIColor glassHover = themeManager.getColor("textSecondary").withAlpha(0.25f); // Brighter grey on hover
+    AestraUI::NUIColor glassActive = themeManager.getColor("glassActive"); // Purple tint
     
-    NomadUI::NUIColor iconGrey = themeManager.getColor("textSecondary");
-    NomadUI::NUIColor iconPurple = themeManager.getColor("accentPrimary");
-    NomadUI::NUIColor iconRed = themeManager.getColor("error");
+    AestraUI::NUIColor iconGrey = themeManager.getColor("textSecondary");
+    AestraUI::NUIColor iconPurple = themeManager.getColor("accentPrimary");
+    AestraUI::NUIColor iconRed = themeManager.getColor("error");
 
     // Calculate button positions
     float padding = layout.panelMargin;
@@ -427,16 +427,16 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
     if (iconPadding < 0.0f) iconPadding = 0.0f;
 
     // Helper to render universal Glass Box button
-    auto renderGlassButton = [&](std::shared_ptr<NomadUI::NUIButton>& btn, std::shared_ptr<NomadUI::NUIIcon>& icon, bool isActive, bool isRecording = false) {
+    auto renderGlassButton = [&](std::shared_ptr<AestraUI::NUIButton>& btn, std::shared_ptr<AestraUI::NUIIcon>& icon, bool isActive, bool isRecording = false) {
         if (!btn || !icon) return;
 
-        NomadUI::NUIRect buttonRect = btn->getBounds(); // Use bounds set in layoutComponents
+        AestraUI::NUIRect buttonRect = btn->getBounds(); // Use bounds set in layoutComponents
         bool isHovered = btn->isHovered() && btn->isEnabled();
         
         // Setup Colors
-        NomadUI::NUIColor currentBg = glassBg;
-        NomadUI::NUIColor currentBorder = glassBorder;
-        NomadUI::NUIColor iconColor = iconGrey;
+        AestraUI::NUIColor currentBg = glassBg;
+        AestraUI::NUIColor currentBorder = glassBorder;
+        AestraUI::NUIColor iconColor = iconGrey;
         
         // LOGIC: Glassy Look (Reverted per user request)
         // Active = Purple Tint Glass + Purple Icon
@@ -469,7 +469,7 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
         }
 
         // Render Icon
-        NomadUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
+        AestraUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
         icon->setBounds(iconRect);
         icon->setColor(iconColor);
         icon->onRender(renderer);
@@ -512,10 +512,10 @@ void TransportBar::renderButtonIcons(NomadUI::NUIRenderer& renderer) {
 // =============================================================================
 
 void TransportBar::layoutComponents() {
-    NomadUI::NUIRect bounds = getBounds();
+    AestraUI::NUIRect bounds = getBounds();
 
     // Get layout dimensions from theme
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 
     // Use configurable dimensions
@@ -605,50 +605,50 @@ void TransportBar::layoutComponents() {
     }
 }
 
-void TransportBar::onRender(NomadUI::NUIRenderer& renderer) {
-    NOMAD_ZONE("Transport_Render");
-    NomadUI::NUIRect bounds = getBounds();
+void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
+    AESTRA_ZONE("Transport_Render");
+    AestraUI::NUIRect bounds = getBounds();
     
     // Get Liminal Dark v2.0 theme colors
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-    NomadUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");  // #19191c - Same black as title bar
-    NomadUI::NUIColor borderColor = themeManager.getColor("border");           // #2e2e35 - Subtle separation lines
-    NomadUI::NUIColor accentCyan = themeManager.getColor("accentCyan");        // #00bcd4 - Accent cyan
-    NomadUI::NUIColor accentMagenta = themeManager.getColor("accentMagenta");  // #ff4081 - Accent magenta
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");  // #19191c - Same black as title bar
+    AestraUI::NUIColor borderColor = themeManager.getColor("border");           // #2e2e35 - Subtle separation lines
+    AestraUI::NUIColor accentCyan = themeManager.getColor("accentCyan");        // #00bcd4 - Accent cyan
+    AestraUI::NUIColor accentMagenta = themeManager.getColor("accentMagenta");  // #ff4081 - Accent magenta
     
     // Solid background (no gradient) - same black as title bar
     renderer.fillRect(bounds, bgColor);
     
     // Enhanced border with subtle glow
     renderer.drawLine(
-        NomadUI::NUIPoint(bounds.x, bounds.y),
-        NomadUI::NUIPoint(bounds.x + bounds.width, bounds.y),
+        AestraUI::NUIPoint(bounds.x, bounds.y),
+        AestraUI::NUIPoint(bounds.x + bounds.width, bounds.y),
         1.0f,
         borderColor.withAlpha(0.6f)
     );
     
     // Add subtle inner highlight
     renderer.drawLine(
-        NomadUI::NUIPoint(bounds.x, bounds.y + 1),
-        NomadUI::NUIPoint(bounds.x + bounds.width, bounds.y + 1),
+        AestraUI::NUIPoint(bounds.x, bounds.y + 1),
+        AestraUI::NUIPoint(bounds.x + bounds.width, bounds.y + 1),
         1.0f,
-        NomadUI::NUIColor::white().withAlpha(0.05f)
+        AestraUI::NUIColor::white().withAlpha(0.05f)
     );
     
     // REMOVED: Vertical separator was slicing through Arsenal/Timeline buttons
     // auto& layout = themeManager.getLayoutDimensions();
     // float fileBrowserWidth = layout.fileBrowserWidth;
     // renderer.drawLine(
-    //     NomadUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y),
-    //     NomadUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y + bounds.height),
+    //     AestraUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y),
+    //     AestraUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y + bounds.height),
     //     1.0f,
     //     borderColor.withAlpha(0.8f)
     // );
     
     // Add horizontal divider at bottom to separate transport from track area
     renderer.drawLine(
-        NomadUI::NUIPoint(bounds.x, bounds.y + bounds.height - 1),
-        NomadUI::NUIPoint(bounds.x + bounds.width, bounds.y + bounds.height - 1),
+        AestraUI::NUIPoint(bounds.x, bounds.y + bounds.height - 1),
+        AestraUI::NUIPoint(bounds.x + bounds.width, bounds.y + bounds.height - 1),
         1.0f,
         borderColor  // Full opacity for visibility
     );
@@ -666,16 +666,16 @@ void TransportBar::onRender(NomadUI::NUIRenderer& renderer) {
 void TransportBar::onResize(int width, int height) {
     // Don't reset bounds here - parent has already set the correct position
     // Just update the size while preserving x,y position
-    NomadUI::NUIRect currentBounds = getBounds();
-    setBounds(NomadUI::NUIRect(currentBounds.x, currentBounds.y, width, height));
+    AestraUI::NUIRect currentBounds = getBounds();
+    setBounds(AestraUI::NUIRect(currentBounds.x, currentBounds.y, width, height));
     layoutComponents();
-    NomadUI::NUIComponent::onResize(width, height);
+    AestraUI::NUIComponent::onResize(width, height);
 }
 
-bool TransportBar::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
+bool TransportBar::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // Standard event dispatch to children (respects Z-order: Buttons are on Top)
-    return NomadUI::NUIComponent::onMouseEvent(event);
+    return AestraUI::NUIComponent::onMouseEvent(event);
 
 }
 
-} // namespace Nomad
+} // namespace Aestra

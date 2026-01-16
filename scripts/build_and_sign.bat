@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo =============================================
-echo NOMAD DAW Build and Sign Tool
+echo Aestra Build and Sign Tool
 echo =============================================
 
 :: Check if we're running as administrator (optional, for certificate generation)
@@ -24,7 +24,7 @@ if %ERRORLEVEL% NEQ 0 (
 
 :: Build the project
 echo.
-echo Building NOMAD DAW...
+echo Building Aestra...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0build.ps1"
 if %ERRORLEVEL% NEQ 0 (
     echo Build failed
@@ -35,7 +35,7 @@ if %ERRORLEVEL% NEQ 0 (
 :: Sign the executable
 echo.
 echo Signing the executable...
-signtool sign /a /v /n "Nomad Studios Dev Cert" /tr http://timestamp.digicert.com /td sha256 "build\Release\NomadDAW.exe"
+signtool sign /a /v /n "Nomad Studios Dev Cert" /tr http://timestamp.digicert.com /td sha256 "build\Release\AestraDAW.exe"
 if %ERRORLEVEL% NEQ 0 (
     echo Signing failed
     pause

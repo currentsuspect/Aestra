@@ -1,9 +1,9 @@
-void TrackManagerUI::drawGrid(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds, float gridStartX, float gridWidth, float timelineScrollOffset) {
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+void TrackManagerUI::drawGrid(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStartX, float gridWidth, float timelineScrollOffset) {
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // Draw Dynamic Snap Grid
-    double snapDur = NomadUI::MusicTheory::getSnapDuration(m_snapSetting);
-    if (m_snapSetting == NomadUI::SnapGrid::None) snapDur = 1.0;
+    double snapDur = AestraUI::MusicTheory::getSnapDuration(m_snapSetting);
+    if (m_snapSetting == AestraUI::SnapGrid::None) snapDur = 1.0;
     if (snapDur <= 0.0001) snapDur = 1.0;
 
     // Dynamic Density: DEBUG - DISABLED (Allow all densities)
@@ -34,28 +34,28 @@ void TrackManagerUI::drawGrid(NomadUI::NUIRenderer& renderer, const NomadUI::NUI
         if (isBar) {
             // Bar: White 50%
             renderer.drawLine(
-                NomadUI::NUIPoint(xPos, trackAreaTop),
-                NomadUI::NUIPoint(xPos, trackAreaBottom),
+                AestraUI::NUIPoint(xPos, trackAreaTop),
+                AestraUI::NUIPoint(xPos, trackAreaBottom),
                 1.0f,
-                NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.50f)
+                AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.50f)
             );
         }
         else if (isBeat) {
             // Beat: White 25%
             renderer.drawLine(
-                NomadUI::NUIPoint(xPos, trackAreaTop),
-                NomadUI::NUIPoint(xPos, trackAreaBottom),
+                AestraUI::NUIPoint(xPos, trackAreaTop),
+                AestraUI::NUIPoint(xPos, trackAreaBottom),
                 1.0f,
-                NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f)
+                AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f)
             );
         }
         else {
             // Subdivision: DEBUG RED and THICK (to verify it draws)
             renderer.drawLine(
-                NomadUI::NUIPoint(xPos, trackAreaTop),
-                NomadUI::NUIPoint(xPos, trackAreaBottom),
+                AestraUI::NUIPoint(xPos, trackAreaTop),
+                AestraUI::NUIPoint(xPos, trackAreaBottom),
                 2.0f, // Thicker line
-                NomadUI::NUIColor(1.0f, 0.0f, 0.0f, 0.70f) // Bright Red
+                AestraUI::NUIColor(1.0f, 0.0f, 0.0f, 0.70f) // Bright Red
             );
         }
     }

@@ -7,8 +7,8 @@ We have a **minimal test** that verifies the core classes work without needing O
 ### Windows (Visual Studio)
 
 ```powershell
-# Navigate to NomadUI directory
-cd NomadUI
+# Navigate to AestraUI directory
+cd AestraUI
 
 # Create build directory
 mkdir build
@@ -21,14 +21,14 @@ cmake ..
 cmake --build . --config Debug
 
 # Run tests
-.\bin\Debug\NomadUI_MinimalTest.exe
+.\bin\Debug\AestraUI_MinimalTest.exe
 ```
 
 ### Expected Output
 
 ```
 ========================================
-  Nomad UI - Minimal Core Tests
+  Aestra UI - Minimal Core Tests
 ========================================
 
 Testing NUITypes...
@@ -92,7 +92,7 @@ Next: Implement OpenGL renderer and platform layer.
 ### Build Errors
 
 **Error: "Cannot open include file"**
-- Make sure you're in the `NomadUI` directory
+- Make sure you're in the `AestraUI` directory
 - Check that all header files exist
 
 **Error: "Unresolved external symbol"**
@@ -133,9 +133,9 @@ cl /c /std:c++17 /I. Core/NUIComponent.cpp Core/NUITheme.cpp Core/NUIApp.cpp
 ### Use Visual Studio
 
 1. Open Visual Studio
-2. File → Open → CMake → Select `NomadUI/CMakeLists.txt`
+2. File → Open → CMake → Select `AestraUI/CMakeLists.txt`
 3. Build → Build All
-4. Run `NomadUI_MinimalTest`
+4. Run `AestraUI_MinimalTest`
 
 ## Continuous Integration (Future)
 

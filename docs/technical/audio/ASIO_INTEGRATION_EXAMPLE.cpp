@@ -1,11 +1,11 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 // Example: How to integrate ASIO detection into AudioSettingsDialog
 // Add this to AudioSettingsDialog.cpp
 
 #include "ASIODriverInfo.h"
 
 void AudioSettingsDialog::updateDriverInfo() {
-    using namespace Nomad::Audio;
+    using namespace Aestra::Audio;
     
     // === Show ASIO Detection Info ===
     std::string asioMessage = ASIODriverScanner::getAvailabilityMessage();
@@ -72,7 +72,7 @@ Audio Settings Dialog
 â”‚  â”‚   â€¢ ASIO4ALL v2                          â”‚   â”‚
 â”‚  â”‚   â€¢ FL Studio ASIO                       â”‚   â”‚
 â”‚  â”‚                                          â”‚   â”‚
-â”‚  â”‚ NOMAD uses WASAPI Exclusive mode for    â”‚   â”‚
+â”‚  â”‚ Aestra uses WASAPI Exclusive mode for    â”‚   â”‚
 â”‚  â”‚ professional low-latency audio (3-5ms). â”‚   â”‚
 â”‚  â”‚                                          â”‚   â”‚
 â”‚  â”‚ Your ASIO devices will work through     â”‚   â”‚
@@ -86,11 +86,11 @@ Audio Settings Dialog
 
 */
 
-// === NomadUI Widget Example ===
+// === AestraUI Widget Example ===
 /*
 
 void AudioSettingsDialog::render() {
-    using namespace NomadUI;
+    using namespace AestraUI;
     
     // ... existing UI code ...
     
@@ -129,7 +129,7 @@ void AudioSettingsDialog::showWASAPIExplanation() {
         "  â€¢ Built into Windows\n"
         "  â€¢ 100% stable and compatible\n\n"
         "Your ASIO-compatible audio interface will work perfectly "
-        "with NOMAD through its WASAPI endpoint.";
+        "with Aestra through its WASAPI endpoint.";
     
     // MessageBox::show("About WASAPI", explanation);
 }
@@ -152,10 +152,10 @@ void AudioDeviceManager::initialize() {
         for (const auto& driver : drivers) {
             std::cout << "  â€¢ " << driver.name << std::endl;
         }
-        std::cout << "\nNOMAD will use WASAPI for equivalent performance.\n" << std::endl;
+        std::cout << "\nAestra will use WASAPI for equivalent performance.\n" << std::endl;
     } else {
         std::cout << "No ASIO drivers detected (this is fine)." << std::endl;
-        std::cout << "NOMAD uses WASAPI for professional audio.\n" << std::endl;
+        std::cout << "Aestra uses WASAPI for professional audio.\n" << std::endl;
     }
     
     // Initialize WASAPI drivers

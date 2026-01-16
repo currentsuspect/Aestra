@@ -3,7 +3,7 @@ import os
 import re
 
 # Configuration
-SEARCH_DIRS = ["NomadAudio/src", "NomadAudio/include"]
+SEARCH_DIRS = ["AestraAudio/src", "AestraAudio/include"]
 CRITICAL_FUNCTIONS = ["processBlock", "process", "processInput"]
 FORBIDDEN_KEYWORDS = [
     (r"\bmalloc\b", "Memory allocation (malloc)"),

@@ -16,7 +16,7 @@
 #include "NUIButton.h"
 #include "NUIIcon.h"
 #include "NUIDragDrop.h"
-#include "../NomadUI/Graphics/OpenGL/NUIRenderCache.h"
+#include "../AestraUI/Graphics/OpenGL/NUIRenderCache.h"
 #include "MusicHelpers.h"
 #include "NUIDropdown.h" // Full type for shared_ptr usage
 #include <memory>
@@ -27,9 +27,9 @@
 #include "NUIContextMenu.h"
 #include "WaveformCache.h"
 
-namespace NomadUI { class NUIPlatformBridge; }
+namespace AestraUI { class NUIPlatformBridge; }
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 /**
@@ -56,13 +56,13 @@ enum class PlaylistTool {
  * - Visual timeline integration
  * - Drag-and-drop support for files and clips
  */
-class TrackManagerUI : public ::NomadUI::NUIComponent, public ::NomadUI::IDropTarget {
+class TrackManagerUI : public ::AestraUI::NUIComponent, public ::AestraUI::IDropTarget {
 public:
     TrackManagerUI(std::shared_ptr<TrackManager> trackManager);
     ~TrackManagerUI() override;
 
-    void setPlatformWindow(::NomadUI::NUIPlatformBridge* window);
-    ::NomadUI::NUIPlatformBridge* getPlatformWindow() const { return m_window; }
+    void setPlatformWindow(::AestraUI::NUIPlatformBridge* window);
+    ::AestraUI::NUIPlatformBridge* getPlatformWindow() const { return m_window; }
 
     std::shared_ptr<TrackManager> getTrackManager() const { return m_trackManager; }
 
@@ -76,7 +76,7 @@ public:
     // Solo coordination (exclusive solo behavior)
     void onTrackSoloToggled(TrackUIComponent* soloedTrack);
     
-    void onClipDeleted(TrackUIComponent* trackComp, ClipInstanceID clipId, const ::NomadUI::NUIPoint& rippleCenter);
+    void onClipDeleted(TrackUIComponent* trackComp, ClipInstanceID clipId, const ::AestraUI::NUIPoint& rippleCenter);
     
     // Clip splitting (split tool)
     void onSplitRequested(TrackUIComponent* trackComp, double splitBeat);
@@ -143,7 +143,7 @@ public:
     bool isTrackSelected(TrackUIComponent* track) const;
     
     // Context Menu Helpers (v4.0)
-    void openTrackContextMenu(const ::NomadUI::NUIPoint& position, std::function<void()> onSendToAudition);
+    void openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition);
     
     // Snap-to-Grid control
     void setSnapEnabled(bool enabled) { m_snapEnabled = enabled; }
@@ -164,8 +164,8 @@ public:
     FollowMode getFollowMode() const { return m_followMode; }
     
     // New Snap System
-    void setSnapSetting(::NomadUI::SnapGrid snap);
-    ::NomadUI::SnapGrid getSnapSetting() const { return m_snapSetting; }
+    void setSnapSetting(::AestraUI::SnapGrid snap);
+    ::AestraUI::SnapGrid getSnapSetting() const { return m_snapSetting; }
     
     // === CLIP MANIPULATION ===
     void splitSelectedClipAtPlayhead();  // Split clip at current playhead position
@@ -178,23 +178,23 @@ public:
     TrackUIComponent* getSelectedTrackUI() const;  // Get currently selected track UI
 
     // Instant clip dragging
-    void startInstantClipDrag(TrackUIComponent* trackComp, ClipInstanceID clipId, const ::NomadUI::NUIPoint& clickPos);
-    void updateInstantClipDrag(const ::NomadUI::NUIPoint& currentPos);
+    void startInstantClipDrag(TrackUIComponent* trackComp, ClipInstanceID clipId, const ::AestraUI::NUIPoint& clickPos);
+    void updateInstantClipDrag(const ::AestraUI::NUIPoint& currentPos);
     void finishInstantClipDrag();
     void cancelInstantClipDrag();
     
     // === IDropTarget Interface ===
-    ::NomadUI::DropFeedback onDragEnter(const ::NomadUI::DragData& data, const ::NomadUI::NUIPoint& position) override;
-    ::NomadUI::DropFeedback onDragOver(const ::NomadUI::DragData& data, const ::NomadUI::NUIPoint& position) override;
+    ::AestraUI::DropFeedback onDragEnter(const ::AestraUI::DragData& data, const ::AestraUI::NUIPoint& position) override;
+    ::AestraUI::DropFeedback onDragOver(const ::AestraUI::DragData& data, const ::AestraUI::NUIPoint& position) override;
     void onDragLeave() override;
-    ::NomadUI::DropResult onDrop(const ::NomadUI::DragData& data, const ::NomadUI::NUIPoint& position) override;
-    ::NomadUI::NUIRect getDropBounds() const override { return getBounds(); }
+    ::AestraUI::DropResult onDrop(const ::AestraUI::DragData& data, const ::AestraUI::NUIPoint& position) override;
+    ::AestraUI::NUIRect getDropBounds() const override { return getBounds(); }
     
     // Loop markers (Visual feedback)
     void setLoopRegion(double startBeat, double endBeat, bool enabled);
 
-    bool onMouseEvent(const ::NomadUI::NUIMouseEvent& event) override;
-    bool onKeyEvent(const ::NomadUI::NUIKeyEvent& event) override;
+    bool onMouseEvent(const ::AestraUI::NUIMouseEvent& event) override;
+    bool onKeyEvent(const ::AestraUI::NUIKeyEvent& event) override;
 
     // Selection query for looping
     std::pair<double, double> getSelectionBeatRange() const;
@@ -210,25 +210,25 @@ public:
     }
 
 protected:
-    void onRender(::NomadUI::NUIRenderer& renderer) override;
+    void onRender(::AestraUI::NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
     void onResize(int width, int height) override;
     
     // Hide setDirty to trigger cache invalidation (except during cache rendering)
     void setDirty(bool dirty = true) {
-        ::NomadUI::NUIComponent::setDirty(dirty);
+        ::AestraUI::NUIComponent::setDirty(dirty);
         if (dirty && !m_isRenderingToCache) {
             m_cacheInvalidated = true;
         }
     }
     
     // 🔥 VIEWPORT CULLING: Override to only render visible tracks
-    void renderChildren(::NomadUI::NUIRenderer& renderer);
+    void renderChildren(::AestraUI::NUIRenderer& renderer);
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;
     std::vector<std::shared_ptr<TrackUIComponent>> m_trackUIComponents;
-    ::NomadUI::NUIPlatformBridge* m_window = nullptr;
+    ::AestraUI::NUIPlatformBridge* m_window = nullptr;
 
     // UI Layout
     int m_trackHeight{48};
@@ -242,38 +242,38 @@ private:
     float m_timelineScrollOffset{0.0f}; // Horizontal scroll position
     int m_beatsPerBar{4};               // Time signature numerator
     int m_subdivision{4};               // Grid subdivision (4 = 16th notes)
-    ::NomadUI::SnapGrid m_snapSetting = ::NomadUI::SnapGrid::Bar;
+    ::AestraUI::SnapGrid m_snapSetting = ::AestraUI::SnapGrid::Bar;
     
     // Legacy Snap (Check if used)
     bool m_snapEnabled = true;
     int m_snapDivision = 4;
     
     // UI Components
-    std::shared_ptr<::NomadUI::NUIScrollbar> m_scrollbar;
-    std::shared_ptr<::NomadUI::TimelineMinimapBar> m_timelineMinimap;
-    std::shared_ptr<::NomadUI::NUIIcon> m_addTrackIcon;
-    ::NomadUI::NUIRect m_addTrackBounds;
+    std::shared_ptr<::AestraUI::NUIScrollbar> m_scrollbar;
+    std::shared_ptr<::AestraUI::TimelineMinimapBar> m_timelineMinimap;
+    std::shared_ptr<::AestraUI::NUIIcon> m_addTrackIcon;
+    ::AestraUI::NUIRect m_addTrackBounds;
     bool m_addTrackHovered = false;
 
     // Timeline minimap state (beats-domain)
-    ::NomadUI::TimelineSummaryCache m_timelineSummaryCache;
-    ::NomadUI::TimelineSummarySnapshot m_timelineSummarySnapshot;
-    ::NomadUI::TimelineMinimapMode m_minimapMode{::NomadUI::TimelineMinimapMode::Clips};
-    ::NomadUI::TimelineMinimapAggregation m_minimapAggregation{::NomadUI::TimelineMinimapAggregation::MaxPresence};
+    ::AestraUI::TimelineSummaryCache m_timelineSummaryCache;
+    ::AestraUI::TimelineSummarySnapshot m_timelineSummarySnapshot;
+    ::AestraUI::TimelineMinimapMode m_minimapMode{::AestraUI::TimelineMinimapMode::Clips};
+    ::AestraUI::TimelineMinimapAggregation m_minimapAggregation{::AestraUI::TimelineMinimapAggregation::MaxPresence};
     double m_minimapDomainStartBeat{0.0};
     double m_minimapDomainEndBeat{0.0};
     bool m_minimapNeedsRebuild{true};
-    ::NomadUI::TimelineRange m_minimapSelectionBeatRange{};
+    ::AestraUI::TimelineRange m_minimapSelectionBeatRange{};
     
     // Tool icons (toolbar)
-    std::shared_ptr<::NomadUI::NUIIcon> m_menuIcon;       // Menu dropdown icon (down arrow)
-    std::shared_ptr<::NomadUI::NUIIcon> m_selectToolIcon;
-    std::shared_ptr<::NomadUI::NUIIcon> m_splitToolIcon;
-    std::shared_ptr<::NomadUI::NUIIcon> m_multiSelectToolIcon;
-    std::shared_ptr<::NomadUI::NUIIcon> m_paintToolIcon;  // Paint/stamp tool icon
-    std::shared_ptr<::NomadUI::NUIIcon> m_moveCursorIcon; // Move (4-way arrow) cursor for Paint tool hovering clips
+    std::shared_ptr<::AestraUI::NUIIcon> m_menuIcon;       // Menu dropdown icon (down arrow)
+    std::shared_ptr<::AestraUI::NUIIcon> m_selectToolIcon;
+    std::shared_ptr<::AestraUI::NUIIcon> m_splitToolIcon;
+    std::shared_ptr<::AestraUI::NUIIcon> m_multiSelectToolIcon;
+    std::shared_ptr<::AestraUI::NUIIcon> m_paintToolIcon;  // Paint/stamp tool icon
+    std::shared_ptr<::AestraUI::NUIIcon> m_moveCursorIcon; // Move (4-way arrow) cursor for Paint tool hovering clips
     
-    std::shared_ptr<::NomadUI::NUIContextMenu> m_activeContextMenu; // Keep track for cleanup
+    std::shared_ptr<::AestraUI::NUIContextMenu> m_activeContextMenu; // Keep track for cleanup
     
     // Clipboard
     Audio::ClipInstance m_clipboardClip;
@@ -282,13 +282,13 @@ private:
     float m_menuIconRotation = 0.0f;
     float m_menuIconTargetRotation = 0.0f;
     
-    ::NomadUI::NUIRect m_menuIconBounds;
-    ::NomadUI::NUIRect m_selectToolBounds;
-    ::NomadUI::NUIRect m_splitToolBounds;
-    ::NomadUI::NUIRect m_multiSelectToolBounds;
-    ::NomadUI::NUIRect m_paintToolBounds;
-    ::NomadUI::NUIRect m_followPlayheadBounds; // Toggle button bounds
-    ::NomadUI::NUIRect m_toolbarBounds;
+    ::AestraUI::NUIRect m_menuIconBounds;
+    ::AestraUI::NUIRect m_selectToolBounds;
+    ::AestraUI::NUIRect m_splitToolBounds;
+    ::AestraUI::NUIRect m_multiSelectToolBounds;
+    ::AestraUI::NUIRect m_paintToolBounds;
+    ::AestraUI::NUIRect m_followPlayheadBounds; // Toggle button bounds
+    ::AestraUI::NUIRect m_toolbarBounds;
 
     bool m_menuHovered = false;
     bool m_selectToolHovered = false;
@@ -322,7 +322,7 @@ private:
     // Split tool cursor position
     float m_splitCursorX = 0.0f;
     bool m_showSplitCursor = false;
-    ::NomadUI::NUIPoint m_lastMousePos;  // Track mouse for split cursor rendering
+    ::AestraUI::NUIPoint m_lastMousePos;  // Track mouse for split cursor rendering
     
     // Playhead dragging state
     bool m_isDraggingPlayhead = false;
@@ -345,8 +345,8 @@ private:
     
     // === SELECTION BOX (Right-click drag or MultiSelect tool) ===
     bool m_isDrawingSelectionBox = false;
-    ::NomadUI::NUIPoint m_selectionBoxStart;
-    ::NomadUI::NUIPoint m_selectionBoxEnd;
+    ::AestraUI::NUIPoint m_selectionBoxStart;
+    ::AestraUI::NUIPoint m_selectionBoxEnd;
     
     // === SMOOTH ZOOM ANIMATION ===
     float m_targetPixelsPerBeat = 50.0f;   // Target zoom level for animation (match initial m_pixelsPerBeat)
@@ -356,7 +356,7 @@ private:
     bool m_dropTargetRegistered = false;   // Flag to ensure one-time registration
     
     // === FBO CACHING SYSTEM (like AudioSettingsDialog) ===
-    ::NomadUI::CachedRenderData* m_cachedRender = nullptr;
+    ::AestraUI::CachedRenderData* m_cachedRender = nullptr;
     uint64_t m_cacheId;
     bool m_cacheInvalidated = true;  // Start invalidated to force initial render
     bool m_isRenderingToCache = false;  // Guard flag to prevent invalidation loops
@@ -394,7 +394,7 @@ private:
     bool m_showDropPreview = false;      // True when drag is over timeline
     int m_dropTargetTrack = -1;          // Track index for drop preview
     double m_dropTargetTime = 0.0;       // Time position for drop preview
-    ::NomadUI::NUIRect m_dropPreviewRect;  // Visual preview rectangle
+    ::AestraUI::NUIRect m_dropPreviewRect;  // Visual preview rectangle
     
     // === SNAP-TO-GRID ===
     // === SNAP-TO-GRID (Legacy - preserved for compatibility but shadowed by m_snapSetting) ===
@@ -403,7 +403,7 @@ private:
 
     bool m_followPlayhead = false;          // Whether timeline automatically scrolls to follow playhead
     FollowMode m_followMode = FollowMode::Page; // Default logic
-    std::shared_ptr<::NomadUI::NUIIcon> m_followPlayheadIcon; // Icon for the toggle button
+    std::shared_ptr<::AestraUI::NUIIcon> m_followPlayheadIcon; // Icon for the toggle button
     
     // === CLIPBOARD for copy/paste (v3.0) ===
     struct ClipboardData {
@@ -423,9 +423,9 @@ private:
     struct DeleteAnimation {
         PlaylistLaneID laneId;            // Lane being deleted from
         ClipInstanceID clipId;            // Clip ID (for reference during animation if needed)
-        ::NomadUI::NUIPoint rippleCenter;   // Center of ripple effect
+        ::AestraUI::NUIPoint rippleCenter;   // Center of ripple effect
 
-        ::NomadUI::NUIRect clipBounds;      // Original clip bounds
+        ::AestraUI::NUIRect clipBounds;      // Original clip bounds
         float progress = 0.0f;            // Animation progress 0.0-1.0
         float duration = 0.25f;           // Animation duration in seconds
     };
@@ -442,9 +442,9 @@ private:
     std::function<void(uint32_t, const std::string&)> m_onSendToAudition;  // Called for "Send to Audition"
     std::function<void(double, double)> m_onSendSelectionToAudition;  // Called for "Send Selection to Audition"
     
-    void updateBackgroundCache(::NomadUI::NUIRenderer& renderer);
-    void updateControlsCache(::NomadUI::NUIRenderer& renderer);
-    void updateTrackCache(::NomadUI::NUIRenderer& renderer, size_t trackIndex);
+    void updateBackgroundCache(::AestraUI::NUIRenderer& renderer);
+    void updateControlsCache(::AestraUI::NUIRenderer& renderer);
+    void updateTrackCache(::AestraUI::NUIRenderer& renderer, size_t trackIndex);
 
     void syncViewToggleButtons();
     void layoutTracks();
@@ -459,18 +459,18 @@ private:
     void scheduleTimelineMinimapRebuild();
     void updateTimelineMinimap(double deltaTime);
     void setTimelineViewStartBeat(double viewStartBeat, bool isFinal);
-    void resizeTimelineViewEdgeFromMinimap(::NomadUI::TimelineMinimapResizeEdge edge, double anchorBeat, double edgeBeat, bool isFinal);
+    void resizeTimelineViewEdgeFromMinimap(::AestraUI::TimelineMinimapResizeEdge edge, double anchorBeat, double edgeBeat, bool isFinal);
     void centerTimelineViewAtBeat(double centerBeat);
     void zoomTimelineAroundBeat(double anchorBeat, float zoomMultiplier);
     float getTimelineGridWidthPixels() const;
     double secondsToBeats(double seconds) const;
-    void renderTimeRuler(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIRect& rulerBounds);
-    void renderLoopMarkers(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIRect& rulerBounds);
-    void renderPlayhead(::NomadUI::NUIRenderer& renderer);
-    void renderDropPreview(::NomadUI::NUIRenderer& renderer); // Render drop zone highlight
-    void renderDeleteAnimations(::NomadUI::NUIRenderer& renderer); // Render FL-style ripple delete
-    void renderTrackManagerStatic(::NomadUI::NUIRenderer& renderer);  // Static content (cached)
-    void renderTrackManagerDynamic(::NomadUI::NUIRenderer& renderer); // Dynamic content (real-time)
+    void renderTimeRuler(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIRect& rulerBounds);
+    void renderLoopMarkers(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIRect& rulerBounds);
+    void renderPlayhead(::AestraUI::NUIRenderer& renderer);
+    void renderDropPreview(::AestraUI::NUIRenderer& renderer); // Render drop zone highlight
+    void renderDeleteAnimations(::AestraUI::NUIRenderer& renderer); // Render FL-style ripple delete
+    void renderTrackManagerStatic(::AestraUI::NUIRenderer& renderer);  // Static content (cached)
+    void renderTrackManagerDynamic(::AestraUI::NUIRenderer& renderer); // Dynamic content (real-time)
     
     // Helper to convert mouse position to track/time
     int getTrackAtPosition(float y) const;
@@ -480,15 +480,15 @@ private:
     double snapBeatToGridForward(double beat) const; // Snap beat to next grid line (paste-to-right)
     
     // Grid helper
-    void drawGrid(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIRect& bounds, float gridStartX, float gridWidth, float timelineScrollOffset);
+    void drawGrid(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIRect& bounds, float gridStartX, float gridWidth, float timelineScrollOffset);
 
     // Tool icons initialization and rendering
     void createToolIcons();
     void updateToolbarBounds();
-    void renderToolbar(::NomadUI::NUIRenderer& renderer);
-    bool handleToolbarClick(const ::NomadUI::NUIPoint& position);
-    void renderToolCursor(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIPoint& position);
-    void renderMinimapResizeCursor(::NomadUI::NUIRenderer& renderer, const ::NomadUI::NUIPoint& position);
+    void renderToolbar(::AestraUI::NUIRenderer& renderer);
+    bool handleToolbarClick(const ::AestraUI::NUIPoint& position);
+    void renderToolCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
+    void renderMinimapResizeCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
     
 
     
@@ -499,7 +499,7 @@ private:
     double getMaxTimelineExtent() const;
 
     // Async waveform builder
-    ::Nomad::Audio::WaveformCacheBuilder m_waveformBuilder;
+    ::Aestra::Audio::WaveformCacheBuilder m_waveformBuilder;
 
     // Async Task Queue (for main thread callbacks)
     std::mutex m_pendingTasksMutex;
@@ -515,10 +515,10 @@ private:
         float progress = 0.0f; // 0.0 to 1.0
     };
     std::vector<PendingImport> m_pendingImports;
-    void renderPendingImports(NomadUI::NUIRenderer& renderer);
+    void renderPendingImports(AestraUI::NUIRenderer& renderer);
     
     // (Duplicate methods removed)
 };
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

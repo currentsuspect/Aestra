@@ -2,7 +2,7 @@
 #pragma once
 
 #include "TrackManager.h"
-#include "../NomadCore/include/NomadJSON.h"
+#include "../AestraCore/include/AestraJSON.h"
 #include <string>
 #include <memory>
 #include <optional>
@@ -44,14 +44,14 @@ public:
     };
 
     static bool save(const std::string& path,
-                     const std::shared_ptr<Nomad::Audio::TrackManager>& trackManager,
+                     const std::shared_ptr<Aestra::Audio::TrackManager>& trackManager,
                      double tempo,
                      double playheadSeconds,
                      const UIState* uiState = nullptr);
 
     // Serialize project state into a JSON string (used for async autosave).
     // indentSpaces=0 produces compact output (faster + smaller).
-    static SerializeResult serialize(const std::shared_ptr<Nomad::Audio::TrackManager>& trackManager,
+    static SerializeResult serialize(const std::shared_ptr<Aestra::Audio::TrackManager>& trackManager,
                                     double tempo,
                                     double playheadSeconds,
                                     int indentSpaces = 2,
@@ -61,5 +61,5 @@ public:
     static bool writeAtomically(const std::string& path, const std::string& contents);
 
     static LoadResult load(const std::string& path,
-                           const std::shared_ptr<Nomad::Audio::TrackManager>& trackManager);
+                           const std::shared_ptr<Aestra::Audio::TrackManager>& trackManager);
 };

@@ -1,13 +1,13 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Widgets/NUICoreWidgets.h"
+#include "../AestraUI/Core/NUIComponent.h"
+#include "../AestraUI/Widgets/NUICoreWidgets.h"
 #include <functional>
 #include <string>
 #include <filesystem>
 
-namespace Nomad {
+namespace Aestra {
 
 /**
  * @brief Response options for the recovery dialog
@@ -26,7 +26,7 @@ enum class RecoveryResponse {
  * - Recover: Load the autosave file
  * - Discard: Delete autosave and start with empty project
  */
-class RecoveryDialog : public NomadUI::NUIComponent {
+class RecoveryDialog : public AestraUI::NUIComponent {
 public:
     using ResponseCallback = std::function<void(RecoveryResponse)>;
     
@@ -34,9 +34,9 @@ public:
     ~RecoveryDialog() override = default;
     
     // NUIComponent interface
-    void onRender(NomadUI::NUIRenderer& renderer) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
-    bool onKeyEvent(const NomadUI::NUIKeyEvent& event) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     
     /**
      * @brief Show the dialog with autosave info
@@ -79,12 +79,12 @@ private:
     bool m_discardHovered;
     
     // Button rectangles (calculated during render)
-    NomadUI::NUIRect m_recoverButtonRect;
-    NomadUI::NUIRect m_discardButtonRect;
-    NomadUI::NUIRect m_dialogRect;
+    AestraUI::NUIRect m_recoverButtonRect;
+    AestraUI::NUIRect m_discardButtonRect;
+    AestraUI::NUIRect m_dialogRect;
     
     void handleResponse(RecoveryResponse response);
     void calculateLayout();
 };
 
-} // namespace Nomad
+} // namespace Aestra

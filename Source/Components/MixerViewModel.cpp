@@ -1,9 +1,9 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "MixerViewModel.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraCore/include/AestraLog.h"
 
-namespace Nomad {
+namespace Aestra {
 
 MixerViewModel::MixerViewModel() {
     // Create master channel
@@ -12,7 +12,7 @@ MixerViewModel::MixerViewModel() {
     m_master->slotIndex = Audio::ChannelSlotMap::MASTER_SLOT_INDEX;
     m_master->name = "MASTER";
     m_master->routeName = "Output";
-    m_master->trackColor = 0xFF8B7FFF; // Nomad purple
+    m_master->trackColor = 0xFF8B7FFF; // Aestra purple
 }
 
 void MixerViewModel::updateMeters(const Audio::MeterSnapshotBuffer& snapshots, double deltaTime) {
@@ -342,7 +342,7 @@ std::vector<MixerViewModel::Destination> MixerViewModel::getAvailableDestination
     }
 
     // Add other channels (e.g. Buses/Returns/Tracks)
-    // Note: In a real matrix, might filter to only Buses, but Nomad allows Track-to-Track sends.
+    // Note: In a real matrix, might filter to only Buses, but Aestra allows Track-to-Track sends.
     for (const auto& ch : m_channels) {
         if (!ch) continue;
         if (ch->id == excludeId) continue;
@@ -449,4 +449,4 @@ void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint3
     }
 }
 
-} // namespace Nomad
+} // namespace Aestra

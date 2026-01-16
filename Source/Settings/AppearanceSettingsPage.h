@@ -5,7 +5,7 @@
 #include "NUILabel.h"
 #include "NUIDropdown.h"
 
-namespace Nomad {
+namespace Aestra {
 
 class AppearanceSettingsPage : public ISettingsPage {
 public:
@@ -19,7 +19,7 @@ public:
     void cancelChanges() override { m_dirty = false; }
     bool hasUnsavedChanges() const override { return m_dirty; }
 
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     
 private:
@@ -28,8 +28,8 @@ private:
 
     bool m_dirty = false;
     
-    std::shared_ptr<NomadUI::NUILabel> m_themeLabel;
-    std::shared_ptr<NomadUI::NUIDropdown> m_themeDropdown;
+    std::shared_ptr<AestraUI::NUILabel> m_themeLabel;
+    std::shared_ptr<AestraUI::NUIDropdown> m_themeDropdown;
 };
 
-} // namespace Nomad
+} // namespace Aestra

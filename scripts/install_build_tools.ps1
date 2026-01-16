@@ -1,4 +1,4 @@
-# Script to install Visual Studio 2022 Build Tools for NOMAD Development
+# Script to install Visual Studio 2022 Build Tools for Aestra Development
 # Installs the minimal "Desktop development with C++" workload required for compiling native C++ apps.
 
 $InstallerUrl = "https://aka.ms/vs/17/release/vs_BuildTools.exe"
@@ -27,8 +27,10 @@ $ProcessIds.WaitForExit()
 if ($ProcessIds.ExitCode -eq 0) {
     Write-Host "Installation completed successfully!" -ForegroundColor Green
     Write-Host "You may need to restart your terminal (or computer) for the path changes to take effect." -ForegroundColor Green
-} elseif ($ProcessIds.ExitCode -eq 3010) {
+}
+elseif ($ProcessIds.ExitCode -eq 3010) {
     Write-Host "Installation completed, but a reboot is required." -ForegroundColor Yellow
-} else {
+}
+else {
     Write-Host "Installation failed with exit code: $($ProcessIds.ExitCode)" -ForegroundColor Red
 }

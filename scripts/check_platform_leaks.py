@@ -6,7 +6,7 @@ from pathlib import Path
 # Configuration
 PROJECT_ROOT = Path(__file__).parent.parent
 BANNED_INCLUDES = {
-    'NomadCore': [
+    'AestraCore': [
         r'#include\s+<windows\.h>',
         r'#include\s+<alsa/',
         r'#include\s+<jack/',
@@ -14,16 +14,16 @@ BANNED_INCLUDES = {
         r'#include\s+<X11/',
         r'#include\s+<Cocoa/',
     ],
-    'NomadAudioCore': [
+    'AestraAudioCore': [
         r'#include\s+<windows\.h>',
         r'#include\s+<alsa/',
         r'#include\s+<jack/',
-        r'#include\s+<RtAudio\.h>', # RtAudio should only be in NomadAudioLinux/Win/Mac wrapper
+        r'#include\s+<RtAudio\.h>', # RtAudio should only be in AestraAudioLinux/Win/Mac wrapper
     ],
-    'NomadPlat': [
-        # NomadPlat is interface only, implementations (NomadPlatWin, NomadPlatLinux) can have platform Includes
+    'AestraPlat': [
+        # AestraPlat is interface only, implementations (AestraPlatWin, AestraPlatLinux) can have platform Includes
         # But the common interface headers should not.
-        # We'll check the 'include' directory of NomadPlat.
+        # We'll check the 'include' directory of AestraPlat.
     ]
 }
 
@@ -74,23 +74,23 @@ def check_module(module_name, relative_path, banned_patterns, recursive=True):
 def main():
     total_leaks = 0
     
-    # Check NomadCore
-    leaks = check_module('NomadCore', 'NomadCore', BANNED_INCLUDES['NomadCore'])
+    # Check AestraCore
+    leaks = check_module('AestraCore', 'AestraCore', BANNED_INCLUDES['AestraCore'])
     if leaks:
-        print(f"VIOLATIONS in NomadCore:")
+        print(f"VIOLATIONS in AestraCore:")
         for leak in leaks:
             print(f"  {leak}")
         total_leaks += len(leaks)
         
-    # Check NomadAudio (Core parts only - headers and generic sources)
-    # We might need to be smart about excluding NomadAudio/src/Linux etc if they exist inside
-    # based on the folder structure "NomadAudio/src/Linux" they are separate.
-    # Assuming generic files are in NomadAudio/src and NomadAudio/include
+    # Check AestraAudio (Core parts only - headers and generic sources)
+    # We might need to be smart about excluding AestraAudio/src/Linux etc if they exist inside
+    # based on the folder structure "AestraAudio/src/Linux" they are separate.
+    # Assuming generic files are in AestraAudio/src and AestraAudio/include
     
     # We'll check include first
-    leaks = check_module('NomadAudio Headers', 'NomadAudio/include', BANNED_INCLUDES['NomadAudioCore'])
+    leaks = check_module('AestraAudio Headers', 'AestraAudio/include', BANNED_INCLUDES['AestraAudioCore'])
     if leaks:
-         print(f"VIOLATIONS in NomadAudio Includes:")
+         print(f"VIOLATIONS in AestraAudio Includes:")
          for leak in leaks:
              print(f"  {leak}")
          total_leaks += len(leaks)

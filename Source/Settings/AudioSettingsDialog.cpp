@@ -1,15 +1,15 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file AudioSettingsDialog.cpp
- * @brief Audio settings dialog for NOMAD DAW
+ * @brief Audio settings dialog for Aestra
  */
 
 #include "AudioSettingsDialog.h"
-#include "../NomadUI/Widgets/NUIButton.h"
-#include "../NomadUI/Widgets/NUICoreWidgets.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraUI/Widgets/NUIButton.h"
+#include "../AestraUI/Widgets/NUICoreWidgets.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraCore/include/AestraLog.h"
 #include "AudioDriverTypes.h"
 #include "TrackManager.h"
 #include "MixerChannel.h"
@@ -38,7 +38,7 @@ constexpr const char* kTestSoundStopSvg = R"(
 )";
 } // namespace
 
-namespace Nomad {
+namespace Aestra {
 
 AudioSettingsDialog::AudioSettingsDialog(Audio::AudioDeviceManager* audioManager,
                                         std::shared_ptr<Audio::TrackManager> trackManager)
@@ -76,7 +76,7 @@ AudioSettingsDialog::AudioSettingsDialog(Audio::AudioDeviceManager* audioManager
 
 void AudioSettingsDialog::createUI() {
     // Tab bar (segmented control style)
-    m_tabBar = std::make_shared<NomadUI::NUITabBar>();
+    m_tabBar = std::make_shared<AestraUI::NUITabBar>();
     m_tabBar->addTab({"settings", "Settings", false});
     m_tabBar->addTab({"info", "Info", false});
     m_tabBar->setActiveTab(m_activeTab);
@@ -87,11 +87,11 @@ void AudioSettingsDialog::createUI() {
     addChild(m_tabBar);
     
     // Create info tab content
-    m_infoTitle = std::make_shared<NomadUI::NUILabel>();
+    m_infoTitle = std::make_shared<AestraUI::NUILabel>();
     m_infoTitle->setText("Audio Settings Information");
     addChild(m_infoTitle);
     
-    m_infoContent = std::make_shared<NomadUI::NUILabel>();
+    m_infoContent = std::make_shared<AestraUI::NUILabel>();
     m_infoContent->setText(
         "Quality Presets:\n\n"
         "• Economy - Minimal CPU usage, suitable for tracking\n"
@@ -107,7 +107,7 @@ void AudioSettingsDialog::createUI() {
         "Multi-Threading:\n\n"
         "Enables parallel processing of tracks. Recommended to use\n"
         "hardware threads - 1 for optimal performance.\n\n"
-        "Nomad Mode:\n\n"
+        "Aestra Mode:\n\n"
         "• Off - Clean bypass\n"
         "• Transparent - Reference-grade precision\n"
         "• Euphoric - Warm analog character with harmonic richness"
@@ -117,40 +117,40 @@ void AudioSettingsDialog::createUI() {
     addChild(m_infoContent);
     
     // Create labels
-    m_driverLabel = std::make_shared<NomadUI::NUILabel>();
+    m_driverLabel = std::make_shared<AestraUI::NUILabel>();
     m_driverLabel->setText("Audio Driver:");
     addChild(m_driverLabel);
 
-    m_deviceLabel = std::make_shared<NomadUI::NUILabel>();
+    m_deviceLabel = std::make_shared<AestraUI::NUILabel>();
     m_deviceLabel->setText("Audio Device:");
     addChild(m_deviceLabel);
 
-    m_sampleRateLabel = std::make_shared<NomadUI::NUILabel>();
+    m_sampleRateLabel = std::make_shared<AestraUI::NUILabel>();
     m_sampleRateLabel->setText("Sample Rate:");
     addChild(m_sampleRateLabel);
 
-    m_bufferSizeLabel = std::make_shared<NomadUI::NUILabel>();
+    m_bufferSizeLabel = std::make_shared<AestraUI::NUILabel>();
     m_bufferSizeLabel->setText("Buffer Size:");
     addChild(m_bufferSizeLabel);
 
-    m_asioInfoLabel = std::make_shared<NomadUI::NUILabel>();
+    m_asioInfoLabel = std::make_shared<AestraUI::NUILabel>();
     m_asioInfoLabel->setText("");
     addChild(m_asioInfoLabel);
 
     // Create dropdowns
-    m_driverDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_driverDropdown = std::make_shared<AestraUI::NUIDropdown>();
     m_driverDropdown->setPlaceholderText("Select Audio Driver");
     m_driverDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
         if (m_suppressDirtyStateUpdates) return;
-        Nomad::Log::info("Driver dropdown changed: index=" + std::to_string(index) + 
+        Aestra::Log::info("Driver dropdown changed: index=" + std::to_string(index) + 
                         ", value=" + std::to_string(value) + ", text=" + text);
         m_selectedDriverType = static_cast<Audio::AudioDriverType>(value);
-        Nomad::Log::info("m_selectedDriverType now = " + std::to_string(static_cast<int>(m_selectedDriverType)));
+        Aestra::Log::info("m_selectedDriverType now = " + std::to_string(static_cast<int>(m_selectedDriverType)));
         markSettingsChanged();
     });
     addChild(m_driverDropdown);
 
-    m_deviceDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_deviceDropdown = std::make_shared<AestraUI::NUIDropdown>();
     m_deviceDropdown->setPlaceholderText("Select Audio Device");
     m_deviceDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
         if (m_suppressDirtyStateUpdates) return;
@@ -159,7 +159,7 @@ void AudioSettingsDialog::createUI() {
     });
     addChild(m_deviceDropdown);
 
-    m_sampleRateDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_sampleRateDropdown = std::make_shared<AestraUI::NUIDropdown>();
     m_sampleRateDropdown->setPlaceholderText("Select Sample Rate");
     m_sampleRateDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
         if (m_suppressDirtyStateUpdates) return;
@@ -169,7 +169,7 @@ void AudioSettingsDialog::createUI() {
     });
     addChild(m_sampleRateDropdown);
 
-    m_bufferSizeDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_bufferSizeDropdown = std::make_shared<AestraUI::NUIDropdown>();
     m_bufferSizeDropdown->setPlaceholderText("Select Buffer Size");
     m_bufferSizeDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
         if (m_suppressDirtyStateUpdates) return;
@@ -180,23 +180,23 @@ void AudioSettingsDialog::createUI() {
     addChild(m_bufferSizeDropdown);
 
     // Estimated latency helper text (computed from buffer size + sample rate)
-    m_latencyLabel = std::make_shared<NomadUI::NUILabel>();
+    m_latencyLabel = std::make_shared<AestraUI::NUILabel>();
     m_latencyLabel->setText("");
     m_latencyLabel->setFontSize(11.0f);
-    m_latencyLabel->setTextColor(NomadUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.75f));
+    m_latencyLabel->setTextColor(AestraUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.75f));
     addChild(m_latencyLabel);
     
     // === Audio Quality Settings Section ===
-    m_qualitySectionLabel = std::make_shared<NomadUI::NUILabel>();
+    m_qualitySectionLabel = std::make_shared<AestraUI::NUILabel>();
     m_qualitySectionLabel->setText("Audio Quality:");
     addChild(m_qualitySectionLabel);
     
     // Quality Preset dropdown
-    m_qualityPresetLabel = std::make_shared<NomadUI::NUILabel>();
+    m_qualityPresetLabel = std::make_shared<AestraUI::NUILabel>();
     m_qualityPresetLabel->setText("Quality Preset:");
     addChild(m_qualityPresetLabel);
     
-    m_qualityPresetDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_qualityPresetDropdown = std::make_shared<AestraUI::NUIDropdown>();
     m_qualityPresetDropdown->setPlaceholderText("Select Quality Preset");
     m_qualityPresetDropdown->addItem("Economy (Low CPU)", static_cast<int>(Audio::QualityPreset::Economy));
     m_qualityPresetDropdown->addItem("Balanced (Rec.)", static_cast<int>(Audio::QualityPreset::Balanced));
@@ -224,11 +224,11 @@ void AudioSettingsDialog::createUI() {
     addChild(m_qualityPresetDropdown);
     
     // Resampling Quality dropdown (linked to PlaylistMixer::s_resamplingQuality)
-    m_resamplingLabel = std::make_shared<NomadUI::NUILabel>();
+    m_resamplingLabel = std::make_shared<AestraUI::NUILabel>();
     m_resamplingLabel->setText("Resampling:");
     addChild(m_resamplingLabel);
     
-    m_resamplingDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_resamplingDropdown = std::make_shared<AestraUI::NUIDropdown>();
     m_resamplingDropdown->setPlaceholderText("Select Resampling Quality");
     m_resamplingDropdown->addItem("Fast (Linear)", static_cast<int>(Audio::ClipResamplingQuality::Fast));
     m_resamplingDropdown->addItem("Draft (Sinc32 ~100dB)", static_cast<int>(Audio::ClipResamplingQuality::Draft));
@@ -240,17 +240,17 @@ void AudioSettingsDialog::createUI() {
         // Update global resampling quality
         Audio::PlaylistMixer::setResamplingQuality(static_cast<Audio::ClipResamplingQuality>(value));
         m_qualityPresetDropdown->setSelectedIndex(4); // Custom
-        Nomad::Log::info("Resampling quality changed to: " + text);
+        Aestra::Log::info("Resampling quality changed to: " + text);
         markSettingsChanged();
     });
     addChild(m_resamplingDropdown);
     
     // Dithering mode dropdown
-    m_ditheringLabel = std::make_shared<NomadUI::NUILabel>();
+    m_ditheringLabel = std::make_shared<AestraUI::NUILabel>();
     m_ditheringLabel->setText("Dithering:");
     addChild(m_ditheringLabel);
     
-    m_ditheringDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_ditheringDropdown = std::make_shared<AestraUI::NUIDropdown>();
     m_ditheringDropdown->setPlaceholderText("Select Dithering Mode");
     m_ditheringDropdown->addItem("None", static_cast<int>(Audio::DitheringMode::None));
     m_ditheringDropdown->addItem("Triangular (TPDF)", static_cast<int>(Audio::DitheringMode::Triangular));
@@ -267,39 +267,39 @@ void AudioSettingsDialog::createUI() {
     addChild(m_ditheringDropdown);
     
     // DC Removal toggle
-    m_dcRemovalLabel = std::make_shared<NomadUI::NUILabel>();
+    m_dcRemovalLabel = std::make_shared<AestraUI::NUILabel>();
     m_dcRemovalLabel->setText("DC Removal:");
     addChild(m_dcRemovalLabel);
     
-    m_dcRemovalToggle = std::make_shared<NomadUI::NUIButton>();
+    m_dcRemovalToggle = std::make_shared<AestraUI::NUIButton>();
     m_dcRemovalToggle->setText("ON");
-    m_dcRemovalToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
-    m_dcRemovalToggle->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
+    m_dcRemovalToggle->setStyle(AestraUI::NUIButton::Style::Secondary);
+    m_dcRemovalToggle->setHoverColor(AestraUI::NUIColor::white().withAlpha(0.5f));
     m_dcRemovalToggle->setOnClick([this]() {
         std::string oldText = m_dcRemovalToggle->getText();
         if (oldText == "ON") {
             m_dcRemovalToggle->setText("OFF");
-            Nomad::Log::info("[DC Removal] Button clicked: ON -> OFF");
+            Aestra::Log::info("[DC Removal] Button clicked: ON -> OFF");
         } else {
             m_dcRemovalToggle->setText("ON");
-            Nomad::Log::info("[DC Removal] Button clicked: OFF -> ON");
+            Aestra::Log::info("[DC Removal] Button clicked: OFF -> ON");
         }
         m_qualityPresetDropdown->setSelectedIndex(4); // Custom
         m_cacheInvalidated = true; // Text changed, invalidate cache
-        Nomad::Log::info("[DC Removal] Cache invalidated, new text: " + m_dcRemovalToggle->getText());
+        Aestra::Log::info("[DC Removal] Cache invalidated, new text: " + m_dcRemovalToggle->getText());
         markSettingsChanged();
     });
     addChild(m_dcRemovalToggle);
     
     // Soft Clipping toggle
-    m_softClippingLabel = std::make_shared<NomadUI::NUILabel>();
+    m_softClippingLabel = std::make_shared<AestraUI::NUILabel>();
     m_softClippingLabel->setText("Soft Clipping:");
     addChild(m_softClippingLabel);
     
-    m_softClippingToggle = std::make_shared<NomadUI::NUIButton>();
+    m_softClippingToggle = std::make_shared<AestraUI::NUIButton>();
     m_softClippingToggle->setText("OFF");
-    m_softClippingToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
-    m_softClippingToggle->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
+    m_softClippingToggle->setStyle(AestraUI::NUIButton::Style::Secondary);
+    m_softClippingToggle->setHoverColor(AestraUI::NUIColor::white().withAlpha(0.5f));
     m_softClippingToggle->setOnClick([this]() {
         if (m_softClippingToggle->getText() == "ON") {
             m_softClippingToggle->setText("OFF");
@@ -313,21 +313,21 @@ void AudioSettingsDialog::createUI() {
     addChild(m_softClippingToggle);
     
     // 64-bit Processing toggle
-    m_precision64BitLabel = std::make_shared<NomadUI::NUILabel>();
+    m_precision64BitLabel = std::make_shared<AestraUI::NUILabel>();
     m_precision64BitLabel->setText("64-bit Float:");
     addChild(m_precision64BitLabel);
     
-    m_precision64BitToggle = std::make_shared<NomadUI::NUIButton>();
+    m_precision64BitToggle = std::make_shared<AestraUI::NUIButton>();
     m_precision64BitToggle->setText("OFF");
-    m_precision64BitToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
-    m_precision64BitToggle->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
+    m_precision64BitToggle->setStyle(AestraUI::NUIButton::Style::Secondary);
+    m_precision64BitToggle->setHoverColor(AestraUI::NUIColor::white().withAlpha(0.5f));
     m_precision64BitToggle->setOnClick([this]() {
         if (m_precision64BitToggle->getText() == "ON") {
             m_precision64BitToggle->setText("OFF");
-            Nomad::Log::info("64-bit processing: Disabled (32-bit float)");
+            Aestra::Log::info("64-bit processing: Disabled (32-bit float)");
         } else {
             m_precision64BitToggle->setText("ON");
-            Nomad::Log::info("64-bit processing: Enabled (mastering-grade precision)");
+            Aestra::Log::info("64-bit processing: Enabled (mastering-grade precision)");
         }
         m_qualityPresetDropdown->setSelectedIndex(4); // Custom
         m_cacheInvalidated = true; // Text changed, invalidate cache
@@ -336,21 +336,21 @@ void AudioSettingsDialog::createUI() {
     addChild(m_precision64BitToggle);
     
     // === MULTI-THREADING - Parallel Audio Processing ===
-    m_multiThreadingLabel = std::make_shared<NomadUI::NUILabel>();
+    m_multiThreadingLabel = std::make_shared<AestraUI::NUILabel>();
     m_multiThreadingLabel->setText("Multi-Threading:");
     addChild(m_multiThreadingLabel);
     
-    m_multiThreadingToggle = std::make_shared<NomadUI::NUIButton>();
+    m_multiThreadingToggle = std::make_shared<AestraUI::NUIButton>();
     m_multiThreadingToggle->setText("ON");
-    m_multiThreadingToggle->setStyle(NomadUI::NUIButton::Style::Secondary);
-    m_multiThreadingToggle->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
+    m_multiThreadingToggle->setStyle(AestraUI::NUIButton::Style::Secondary);
+    m_multiThreadingToggle->setHoverColor(AestraUI::NUIColor::white().withAlpha(0.5f));
     m_multiThreadingToggle->setOnClick([this]() {
         if (m_multiThreadingToggle->getText() == "ON") {
             m_multiThreadingToggle->setText("OFF");
-            Nomad::Log::info("Multi-threading: Disabled (single-threaded processing)");
+            Aestra::Log::info("Multi-threading: Disabled (single-threaded processing)");
         } else {
             m_multiThreadingToggle->setText("ON");
-            Nomad::Log::info("Multi-threading: Enabled (parallel track processing)");
+            Aestra::Log::info("Multi-threading: Enabled (parallel track processing)");
         }
         m_cacheInvalidated = true; // Text changed, invalidate cache
         markSettingsChanged();
@@ -358,11 +358,11 @@ void AudioSettingsDialog::createUI() {
     addChild(m_multiThreadingToggle);
     
     // Thread count dropdown
-    m_threadCountLabel = std::make_shared<NomadUI::NUILabel>();
+    m_threadCountLabel = std::make_shared<AestraUI::NUILabel>();
     m_threadCountLabel->setText("Thread Count:");
     addChild(m_threadCountLabel);
     
-    m_threadCountDropdown = std::make_shared<NomadUI::NUIDropdown>();
+    m_threadCountDropdown = std::make_shared<AestraUI::NUIDropdown>();
     m_threadCountDropdown->setPlaceholderText("Select Thread Count");
     
     // Detect hardware thread count
@@ -385,62 +385,62 @@ void AudioSettingsDialog::createUI() {
     m_threadCountDropdown->setSelectedIndex(static_cast<int>(recommendedThreads) - 2); // -2 because we start from 2 threads
     
     m_threadCountDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
-        Nomad::Log::info("Thread count changed to: " + std::to_string(value));
+        Aestra::Log::info("Thread count changed to: " + std::to_string(value));
         markSettingsChanged();
     });
     addChild(m_threadCountDropdown);
     
-    // === NOMAD MODE - Signature Audio Character ===
-    m_nomadModeLabel = std::make_shared<NomadUI::NUILabel>();
-    m_nomadModeLabel->setText("Nomad Mode:");
+    // === AESTRA MODE - Signature Audio Character ===
+    m_nomadModeLabel = std::make_shared<AestraUI::NUILabel>();
+    m_nomadModeLabel->setText("Aestra Mode:");
     addChild(m_nomadModeLabel);
     
-    m_nomadModeDropdown = std::make_shared<NomadUI::NUIDropdown>();
-    m_nomadModeDropdown->setPlaceholderText("Select Nomad Mode");
-    m_nomadModeDropdown->addItem("Off (Bypass)", static_cast<int>(Audio::NomadMode::Off));
-    m_nomadModeDropdown->addItem("Transparent (Reference)", static_cast<int>(Audio::NomadMode::Transparent));
-    m_nomadModeDropdown->addItem("Euphoric (Analog Soul)", static_cast<int>(Audio::NomadMode::Euphoric));
+    m_nomadModeDropdown = std::make_shared<AestraUI::NUIDropdown>();
+    m_nomadModeDropdown->setPlaceholderText("Select Aestra Mode");
+    m_nomadModeDropdown->addItem("Off (Bypass)", static_cast<int>(Audio::AestraMode::Off));
+    m_nomadModeDropdown->addItem("Transparent (Reference)", static_cast<int>(Audio::AestraMode::Transparent));
+    m_nomadModeDropdown->addItem("Euphoric (Analog Soul)", static_cast<int>(Audio::AestraMode::Euphoric));
     m_nomadModeDropdown->setSelectedIndex(0); // Default to Off
     m_nomadModeDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
-        // Nomad Mode is independent of quality presets
+        // Aestra Mode is independent of quality presets
         // Update status message to show what mode we're in
-        auto mode = static_cast<Audio::NomadMode>(value);
-        if (mode == Audio::NomadMode::Euphoric) {
-            Nomad::Log::info("Nomad Mode: Euphoric - Harmonic warmth, smooth transients, rich tails");
-        } else if (mode == Audio::NomadMode::Transparent) {
-            Nomad::Log::info("Nomad Mode: Transparent - Clinical precision, reference-grade");
+        auto mode = static_cast<Audio::AestraMode>(value);
+        if (mode == Audio::AestraMode::Euphoric) {
+            Aestra::Log::info("Aestra Mode: Euphoric - Harmonic warmth, smooth transients, rich tails");
+        } else if (mode == Audio::AestraMode::Transparent) {
+            Aestra::Log::info("Aestra Mode: Transparent - Clinical precision, reference-grade");
         } else {
-            Nomad::Log::info("Nomad Mode: Off - Bypassed");
+            Aestra::Log::info("Aestra Mode: Off - Bypassed");
         }
         markSettingsChanged();
     });
     addChild(m_nomadModeDropdown);
 
     // Create buttons
-    m_applyButton = std::make_shared<NomadUI::NUIButton>();
+    m_applyButton = std::make_shared<AestraUI::NUIButton>();
     m_applyButton->setText("Apply");
-    m_applyButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Default to Secondary (inactive)
-    m_applyButton->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f)); // Stronger Bright hover
+    m_applyButton->setStyle(AestraUI::NUIButton::Style::Secondary); // Default to Secondary (inactive)
+    m_applyButton->setHoverColor(AestraUI::NUIColor::white().withAlpha(0.5f)); // Stronger Bright hover
     m_applyButton->setOnClick([this]() {
         applySettings();
     });
     m_applyButton->setEnabled(false);
     addChild(m_applyButton);
     
-    // m_cancelButton = std::make_shared<NomadUI::NUIButton>();
-    m_cancelButton.reset(new NomadUI::NUIButton());
+    // m_cancelButton = std::make_shared<AestraUI::NUIButton>();
+    m_cancelButton.reset(new AestraUI::NUIButton());
     m_cancelButton->setText("Cancel");
-    m_cancelButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Secondary style
-    m_cancelButton->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f)); // Stronger Bright hover
+    m_cancelButton->setStyle(AestraUI::NUIButton::Style::Secondary); // Secondary style
+    m_cancelButton->setHoverColor(AestraUI::NUIColor::white().withAlpha(0.5f)); // Stronger Bright hover
     m_cancelButton->setOnClick([this]() {
         cancelSettings();
     });
     addChild(m_cancelButton);
     
-    m_testSoundButton = std::make_shared<NomadUI::NUIButton>();
+    m_testSoundButton = std::make_shared<AestraUI::NUIButton>();
     m_testSoundButton->setText("Test Sound");
-    m_testSoundButton->setStyle(NomadUI::NUIButton::Style::Secondary); // Secondary style
-    m_testSoundButton->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
+    m_testSoundButton->setStyle(AestraUI::NUIButton::Style::Secondary); // Secondary style
+    m_testSoundButton->setHoverColor(AestraUI::NUIColor::white().withAlpha(0.5f));
     m_testSoundButton->setOnClick([this]() {
         if (m_isPlayingTestSound) {
             stopTestSound();
@@ -451,8 +451,8 @@ void AudioSettingsDialog::createUI() {
     addChild(m_testSoundButton);
     
     // Create play icon for test button (SVG)
-    m_playIcon = std::make_shared<NomadUI::NUIIcon>(kTestSoundPlaySvg);
-    m_playIcon->setIconSize(NomadUI::NUIIconSize::Small);  // Small for compact button
+    m_playIcon = std::make_shared<AestraUI::NUIIcon>(kTestSoundPlaySvg);
+    m_playIcon->setIconSize(AestraUI::NUIIconSize::Small);  // Small for compact button
     m_playIcon->setColorFromTheme("primary");
     
     // Load lists
@@ -509,27 +509,27 @@ void AudioSettingsDialog::hide() {
 
 void AudioSettingsDialog::setVisible(bool visible) {
     m_visible = visible;
-    NomadUI::NUIComponent::setVisible(visible);
+    AestraUI::NUIComponent::setVisible(visible);
 }
 
 // =============================================================================
 // SECTION: Rendering
 // =============================================================================
 
-void AudioSettingsDialog::onRender(NomadUI::NUIRenderer& renderer) {
+void AudioSettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
     if (!m_visible) return;
 
     // Render directly to ensure hover/pressed states update reliably.
     renderBackground(renderer);
     renderDialog(renderer);
-    NomadUI::NUIComponent::onRender(renderer);
+    AestraUI::NUIComponent::onRender(renderer);
 
     if (m_testSoundButton && m_playIcon) {
         auto bounds = m_testSoundButton->getBounds();
         const float iconPadding = 10.0f;
         const float iconX = bounds.x + iconPadding;
         const float iconY = bounds.y + (bounds.height - m_playIcon->getSize().height) / 2.0f;
-        m_playIcon->setBounds(NomadUI::NUIRect(iconX, iconY,
+        m_playIcon->setBounds(AestraUI::NUIRect(iconX, iconY,
                                                m_playIcon->getSize().width,
                                                m_playIcon->getSize().height));
         m_playIcon->onRender(renderer);
@@ -567,7 +567,7 @@ void AudioSettingsDialog::onRender(NomadUI::NUIRenderer& renderer) {
 
 void AudioSettingsDialog::onResize(int width, int height) {
     // Update component bounds (represents the full window area)
-    setBounds(NomadUI::NUIRect(0, 0, static_cast<float>(width), static_cast<float>(height)));
+    setBounds(AestraUI::NUIRect(0, 0, static_cast<float>(width), static_cast<float>(height)));
     
     // Center the dialog within the new window size
     m_dialogBounds.x = (width - m_dialogBounds.width) / 2;
@@ -601,10 +601,10 @@ void AudioSettingsDialog::onUpdate(double deltaTime) {
     }
     
     // Call parent to update children
-    NomadUI::NUIComponent::onUpdate(deltaTime);
+    AestraUI::NUIComponent::onUpdate(deltaTime);
 }
 
-bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
+bool AudioSettingsDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!m_visible) return false;
     
     // Check if any dropdown is CURRENTLY open (real-time check, not cached flag)
@@ -680,7 +680,7 @@ bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
     
     // Check if click is on close button
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         if (m_closeButtonHovered) {
             cancelSettings();
             return true;
@@ -699,7 +699,7 @@ bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // Standard dispatch sometimes misses the invalidation needed for instant feedback
     bool anyHoverChanged = false;
     
-    auto updateButtonHover = [&](std::shared_ptr<NomadUI::NUIButton> btn) {
+    auto updateButtonHover = [&](std::shared_ptr<AestraUI::NUIButton> btn) {
         if (!btn) return;
         bool isOver = btn->getBounds().contains(event.position);
         if (btn->isHovered() != isOver) {
@@ -722,7 +722,7 @@ bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
 
     // Let children handle events (buttons will handle their own clicks)
-    if (NomadUI::NUIComponent::onMouseEvent(event)) {
+    if (AestraUI::NUIComponent::onMouseEvent(event)) {
         return true;
     }
 
@@ -733,22 +733,22 @@ bool AudioSettingsDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     return true;
 }
 
-bool AudioSettingsDialog::onKeyEvent(const NomadUI::NUIKeyEvent& event) {
+bool AudioSettingsDialog::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (!m_visible) return false;
 
     // Let focused children (e.g., dropdowns) consume keys first.
-    if (NomadUI::NUIComponent::onKeyEvent(event)) {
+    if (AestraUI::NUIComponent::onKeyEvent(event)) {
         return true;
     }
 
     if (!event.pressed) return false;
 
-    if (event.keyCode == NomadUI::NUIKeyCode::Escape) {
+    if (event.keyCode == AestraUI::NUIKeyCode::Escape) {
         cancelSettings();
         return true;
     }
 
-    if (event.keyCode == NomadUI::NUIKeyCode::Enter) {
+    if (event.keyCode == AestraUI::NUIKeyCode::Enter) {
         if (m_applyButton && m_applyButton->isEnabled()) {
             applySettings();
             return true;
@@ -905,7 +905,7 @@ void AudioSettingsDialog::captureOriginalQualityStateFromUi() {
     m_originalPrecision64Bit = m_precision64BitToggle && (m_precision64BitToggle->getText() == "ON");
     m_originalMultiThreading = m_multiThreadingToggle && (m_multiThreadingToggle->getText() == "ON");
     m_originalThreadCountIndex = m_threadCountDropdown ? m_threadCountDropdown->getSelectedIndex() : -1;
-    m_originalNomadModeIndex = m_nomadModeDropdown ? m_nomadModeDropdown->getSelectedIndex() : -1;
+    m_originalAestraModeIndex = m_nomadModeDropdown ? m_nomadModeDropdown->getSelectedIndex() : -1;
 }
 
 bool AudioSettingsDialog::hasUnsavedChanges() const {
@@ -933,8 +933,8 @@ bool AudioSettingsDialog::hasUnsavedChanges() const {
         m_threadCountDropdown->getSelectedIndex() != m_originalThreadCountIndex) {
         return true;
     }
-    if (m_nomadModeDropdown && m_originalNomadModeIndex != -1 &&
-        m_nomadModeDropdown->getSelectedIndex() != m_originalNomadModeIndex) {
+    if (m_nomadModeDropdown && m_originalAestraModeIndex != -1 &&
+        m_nomadModeDropdown->getSelectedIndex() != m_originalAestraModeIndex) {
         return true;
     }
 
@@ -949,9 +949,9 @@ void AudioSettingsDialog::updateApplyButtonState() {
     
     // Dynamic styling: Light up when there are changes
     if (hasChanges) {
-        m_applyButton->setStyle(NomadUI::NUIButton::Style::Primary);
+        m_applyButton->setStyle(AestraUI::NUIButton::Style::Primary);
     } else {
-        m_applyButton->setStyle(NomadUI::NUIButton::Style::Secondary);
+        m_applyButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     }
 }
 
@@ -997,8 +997,8 @@ void AudioSettingsDialog::restoreOriginalUiState() {
     if (m_threadCountDropdown && m_originalThreadCountIndex != -1) {
         m_threadCountDropdown->setSelectedIndex(m_originalThreadCountIndex);
     }
-    if (m_nomadModeDropdown && m_originalNomadModeIndex != -1) {
-        m_nomadModeDropdown->setSelectedIndex(m_originalNomadModeIndex);
+    if (m_nomadModeDropdown && m_originalAestraModeIndex != -1) {
+        m_nomadModeDropdown->setSelectedIndex(m_originalAestraModeIndex);
     }
 
     updateLatencyEstimate();
@@ -1121,9 +1121,9 @@ void AudioSettingsDialog::applySettings() {
             ? Audio::InternalPrecision::Float64 
             : Audio::InternalPrecision::Float32;
         
-        // Get Nomad Mode from dropdown
+        // Get Aestra Mode from dropdown
         int nomadModeValue = m_nomadModeDropdown->getSelectedValue();
-        qualitySettings.nomadMode = static_cast<Audio::NomadMode>(nomadModeValue);
+        qualitySettings.nomadMode = static_cast<Audio::AestraMode>(nomadModeValue);
         
         // Additional settings (future expansion)
         qualitySettings.oversampling = Audio::OversamplingMode::None;
@@ -1158,7 +1158,7 @@ void AudioSettingsDialog::applySettings() {
         Log::info("  Precision: " + std::string(precisionNames[static_cast<int>(qualitySettings.precision)]));
         Log::info("  DC Removal: " + std::string(qualitySettings.removeDCOffset ? "ON" : "OFF"));
         Log::info("  Soft Clipping: " + std::string(qualitySettings.enableSoftClipping ? "ON" : "OFF"));
-        Log::info("  Nomad Mode: " + std::string(nomadModeNames[static_cast<int>(qualitySettings.nomadMode)]));
+        Log::info("  Aestra Mode: " + std::string(nomadModeNames[static_cast<int>(qualitySettings.nomadMode)]));
         Log::info("  Multi-Threading: " + std::string(multiThreadingEnabled ? "ON" : "OFF"));
         Log::info("  Thread Count: " + std::to_string(threadCount));
     }
@@ -1218,7 +1218,7 @@ void AudioSettingsDialog::layoutComponents() {
     float tabButtonHeight = 36.0f;
     float tabBarWidth = 240.0f;
     if (m_tabBar) {
-        m_tabBar->setBounds(NomadUI::NUIRect(
+        m_tabBar->setBounds(AestraUI::NUIRect(
             m_dialogBounds.x + padding,
             tabBarY,
             tabBarWidth,
@@ -1245,47 +1245,47 @@ void AudioSettingsDialog::layoutComponents() {
     // Switch between tabs
     if (m_activeTab == "info") {
         // Hide all settings controls
-        m_driverLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_driverDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_deviceLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_deviceDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_sampleRateLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_sampleRateDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_bufferSizeLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_bufferSizeDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_latencyLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_testSoundButton->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_qualitySectionLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_qualityPresetLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_qualityPresetDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
+        m_driverLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_driverDropdown->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_deviceLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_deviceDropdown->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_sampleRateLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_sampleRateDropdown->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_bufferSizeLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_bufferSizeDropdown->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_latencyLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_testSoundButton->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_qualitySectionLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_qualityPresetLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_qualityPresetDropdown->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
         // Resampling UI hidden
-        m_ditheringLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_ditheringDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_dcRemovalLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_dcRemovalToggle->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_softClippingLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_softClippingToggle->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_precision64BitLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_precision64BitToggle->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_multiThreadingLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_multiThreadingToggle->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_threadCountLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_threadCountDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_nomadModeLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_nomadModeDropdown->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_asioInfoLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
+        m_ditheringLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_ditheringDropdown->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_dcRemovalLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_dcRemovalToggle->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_softClippingLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_softClippingToggle->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_precision64BitLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_precision64BitToggle->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_multiThreadingLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_multiThreadingToggle->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_threadCountLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_threadCountDropdown->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_nomadModeLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_nomadModeDropdown->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_asioInfoLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
         
         // Show info content
         float contentWidth = m_dialogBounds.width - padding * 2;
         float contentHeight = m_dialogBounds.height - startY - buttonHeight - padding * 3;
         
-        m_infoTitle->setBounds(NomadUI::NUIRect(leftColumnX, startY, contentWidth, 30.0f));
-        m_infoContent->setBounds(NomadUI::NUIRect(leftColumnX + 10.0f, startY + 40.0f, 
+        m_infoTitle->setBounds(AestraUI::NUIRect(leftColumnX, startY, contentWidth, 30.0f));
+        m_infoContent->setBounds(AestraUI::NUIRect(leftColumnX + 10.0f, startY + 40.0f, 
                                                    contentWidth - 20.0f, contentHeight - 40.0f));
     } else {
         // Hide info content
-        m_infoTitle->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
-        m_infoContent->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
+        m_infoTitle->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_infoContent->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
         
         // === LEFT COLUMN: Audio Device Settings ===
         float leftY = startY;
@@ -1293,28 +1293,28 @@ void AudioSettingsDialog::layoutComponents() {
         float leftDropdownX = leftColumnX + labelWidth + 16.0f;
         
         // Driver selector
-        m_driverLabel->setBounds(NomadUI::NUIRect(leftLabelX, leftY, labelWidth, dropdownHeight));
-        m_driverDropdown->setBounds(NomadUI::NUIRect(leftDropdownX, leftY, dropdownWidth, dropdownHeight));
+        m_driverLabel->setBounds(AestraUI::NUIRect(leftLabelX, leftY, labelWidth, dropdownHeight));
+        m_driverDropdown->setBounds(AestraUI::NUIRect(leftDropdownX, leftY, dropdownWidth, dropdownHeight));
         
         // Device selector
         leftY += dropdownHeight + verticalSpacing;
-        m_deviceLabel->setBounds(NomadUI::NUIRect(leftLabelX, leftY, labelWidth, dropdownHeight));
-        m_deviceDropdown->setBounds(NomadUI::NUIRect(leftDropdownX, leftY, dropdownWidth, dropdownHeight));
+        m_deviceLabel->setBounds(AestraUI::NUIRect(leftLabelX, leftY, labelWidth, dropdownHeight));
+        m_deviceDropdown->setBounds(AestraUI::NUIRect(leftDropdownX, leftY, dropdownWidth, dropdownHeight));
         
         // Sample rate selector
         leftY += dropdownHeight + sectionSpacing;
-        m_sampleRateLabel->setBounds(NomadUI::NUIRect(leftLabelX, leftY, labelWidth, dropdownHeight));
-        m_sampleRateDropdown->setBounds(NomadUI::NUIRect(leftDropdownX, leftY, dropdownWidth, dropdownHeight));
+        m_sampleRateLabel->setBounds(AestraUI::NUIRect(leftLabelX, leftY, labelWidth, dropdownHeight));
+        m_sampleRateDropdown->setBounds(AestraUI::NUIRect(leftDropdownX, leftY, dropdownWidth, dropdownHeight));
         
         // Buffer size selector
         leftY += dropdownHeight + verticalSpacing;
-        m_bufferSizeLabel->setBounds(NomadUI::NUIRect(leftLabelX, leftY, labelWidth, dropdownHeight));
-        m_bufferSizeDropdown->setBounds(NomadUI::NUIRect(leftDropdownX, leftY, dropdownWidth, dropdownHeight));
+        m_bufferSizeLabel->setBounds(AestraUI::NUIRect(leftLabelX, leftY, labelWidth, dropdownHeight));
+        m_bufferSizeDropdown->setBounds(AestraUI::NUIRect(leftDropdownX, leftY, dropdownWidth, dropdownHeight));
 
         // Estimated latency (uses the existing section gap, doesn't shift the next control)
         if (m_latencyLabel) {
             const float latencyY = leftY + dropdownHeight + 2.0f;
-            m_latencyLabel->setBounds(NomadUI::NUIRect(leftDropdownX, latencyY, dropdownWidth, 16.0f));
+            m_latencyLabel->setBounds(AestraUI::NUIRect(leftDropdownX, latencyY, dropdownWidth, 16.0f));
         }
         
         // Test sound button - centered in the column
@@ -1323,7 +1323,7 @@ void AudioSettingsDialog::layoutComponents() {
         float testButtonHeight = 36.0f;
         float columnTotalWidth = labelWidth + dropdownWidth + 16.0f; // Total width of the column
         float testButtonX = leftColumnX + (columnTotalWidth - testButtonWidth) / 2.0f;
-        m_testSoundButton->setBounds(NomadUI::NUIRect(testButtonX, leftY, testButtonWidth, testButtonHeight));
+        m_testSoundButton->setBounds(AestraUI::NUIRect(testButtonX, leftY, testButtonWidth, testButtonHeight));
         
         // === MIDDLE COLUMN: Audio Quality Settings (Part 1) ===
         float middleY = startY;
@@ -1331,32 +1331,32 @@ void AudioSettingsDialog::layoutComponents() {
         float middleDropdownX = middleColumnX + labelWidth + 16.0f;
         
         // Hide the quality section label
-        m_qualitySectionLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
+        m_qualitySectionLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
         
         // Quality Preset dropdown
-        m_qualityPresetLabel->setBounds(NomadUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
-        m_qualityPresetDropdown->setBounds(NomadUI::NUIRect(middleDropdownX, middleY, dropdownWidth, dropdownHeight));
+        m_qualityPresetLabel->setBounds(AestraUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
+        m_qualityPresetDropdown->setBounds(AestraUI::NUIRect(middleDropdownX, middleY, dropdownWidth, dropdownHeight));
         
         // Resampling dropdown
         middleY += dropdownHeight + verticalSpacing;
-        m_resamplingLabel->setBounds(NomadUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
-        m_resamplingDropdown->setBounds(NomadUI::NUIRect(middleDropdownX, middleY, dropdownWidth, dropdownHeight));
+        m_resamplingLabel->setBounds(AestraUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
+        m_resamplingDropdown->setBounds(AestraUI::NUIRect(middleDropdownX, middleY, dropdownWidth, dropdownHeight));
         
         // Dithering mode dropdown
         middleY += dropdownHeight + verticalSpacing;
-        m_ditheringLabel->setBounds(NomadUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
-        m_ditheringDropdown->setBounds(NomadUI::NUIRect(middleDropdownX, middleY, dropdownWidth, dropdownHeight));
+        m_ditheringLabel->setBounds(AestraUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
+        m_ditheringDropdown->setBounds(AestraUI::NUIRect(middleDropdownX, middleY, dropdownWidth, dropdownHeight));
         
         // DC Removal toggle
         middleY += dropdownHeight + sectionSpacing;
-        m_dcRemovalLabel->setBounds(NomadUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
+        m_dcRemovalLabel->setBounds(AestraUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
         float middleToggleX = middleDropdownX + dropdownWidth - toggleWidth;
-        m_dcRemovalToggle->setBounds(NomadUI::NUIRect(middleToggleX, middleY, toggleWidth, dropdownHeight));
+        m_dcRemovalToggle->setBounds(AestraUI::NUIRect(middleToggleX, middleY, toggleWidth, dropdownHeight));
         
         // Soft Clipping toggle
         middleY += dropdownHeight + verticalSpacing;
-        m_softClippingLabel->setBounds(NomadUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
-        m_softClippingToggle->setBounds(NomadUI::NUIRect(middleToggleX, middleY, toggleWidth, dropdownHeight));
+        m_softClippingLabel->setBounds(AestraUI::NUIRect(middleLabelX, middleY, labelWidth, dropdownHeight));
+        m_softClippingToggle->setBounds(AestraUI::NUIRect(middleToggleX, middleY, toggleWidth, dropdownHeight));
         
         // === RIGHT COLUMN: Audio Quality Settings (Part 2) ===
         float rightY = startY;
@@ -1364,27 +1364,27 @@ void AudioSettingsDialog::layoutComponents() {
         float rightDropdownX = rightColumnX + labelWidth + 16.0f;
         
         // 64-bit Processing toggle
-        m_precision64BitLabel->setBounds(NomadUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+        m_precision64BitLabel->setBounds(AestraUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
         float rightToggleX = rightDropdownX + dropdownWidth - toggleWidth;
-        m_precision64BitToggle->setBounds(NomadUI::NUIRect(rightToggleX, rightY, toggleWidth, dropdownHeight));
+        m_precision64BitToggle->setBounds(AestraUI::NUIRect(rightToggleX, rightY, toggleWidth, dropdownHeight));
         
         // Multi-Threading toggle
         rightY += dropdownHeight + verticalSpacing;
-        m_multiThreadingLabel->setBounds(NomadUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
-        m_multiThreadingToggle->setBounds(NomadUI::NUIRect(rightToggleX, rightY, toggleWidth, dropdownHeight));
+        m_multiThreadingLabel->setBounds(AestraUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+        m_multiThreadingToggle->setBounds(AestraUI::NUIRect(rightToggleX, rightY, toggleWidth, dropdownHeight));
         
         // Thread Count dropdown
         rightY += dropdownHeight + verticalSpacing;
-        m_threadCountLabel->setBounds(NomadUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
-        m_threadCountDropdown->setBounds(NomadUI::NUIRect(rightDropdownX, rightY, dropdownWidth, dropdownHeight));
+        m_threadCountLabel->setBounds(AestraUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+        m_threadCountDropdown->setBounds(AestraUI::NUIRect(rightDropdownX, rightY, dropdownWidth, dropdownHeight));
         
-        // Nomad Mode dropdown (signature feature)
+        // Aestra Mode dropdown (signature feature)
         rightY += dropdownHeight + sectionSpacing;
-        m_nomadModeLabel->setBounds(NomadUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
-        m_nomadModeDropdown->setBounds(NomadUI::NUIRect(rightDropdownX, rightY, dropdownWidth, dropdownHeight));
+        m_nomadModeLabel->setBounds(AestraUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+        m_nomadModeDropdown->setBounds(AestraUI::NUIRect(rightDropdownX, rightY, dropdownWidth, dropdownHeight));
         
         // Hide ASIO info label
-        m_asioInfoLabel->setBounds(NomadUI::NUIRect(0, 0, 0, 0));
+        m_asioInfoLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
     }
     
 	    // Position buttons at bottom right with consistent padding
@@ -1392,35 +1392,35 @@ void AudioSettingsDialog::layoutComponents() {
 	    float buttonX = m_dialogBounds.x + m_dialogBounds.width - (buttonWidth * 2 + buttonSpacing) - padding;
     
     // Apply button
-    m_applyButton->setBounds(NomadUI::NUIRect(buttonX, buttonY, buttonWidth, buttonHeight));
+    m_applyButton->setBounds(AestraUI::NUIRect(buttonX, buttonY, buttonWidth, buttonHeight));
     
     // Cancel button
-    m_cancelButton->setBounds(NomadUI::NUIRect(buttonX + buttonWidth + buttonSpacing, buttonY, buttonWidth, buttonHeight));
+    m_cancelButton->setBounds(AestraUI::NUIRect(buttonX + buttonWidth + buttonSpacing, buttonY, buttonWidth, buttonHeight));
 }
 
-void AudioSettingsDialog::renderBackground(NomadUI::NUIRenderer& renderer) {
+void AudioSettingsDialog::renderBackground(AestraUI::NUIRenderer& renderer) {
     // Render semi-transparent overlay (reduced from 0.8 to 0.6 for better FPS)
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-    NomadUI::NUIColor overlayColor = themeManager.getColor("backgroundPrimary");
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    AestraUI::NUIColor overlayColor = themeManager.getColor("backgroundPrimary");
     overlayColor = overlayColor.withAlpha(0.6f);
     
-    NomadUI::NUIRect overlay(0, 0,
+    AestraUI::NUIRect overlay(0, 0,
                              static_cast<float>(renderer.getWidth()),
                              static_cast<float>(renderer.getHeight()));
     renderer.fillRect(overlay, overlayColor);
 }
 
-void AudioSettingsDialog::renderDialog(NomadUI::NUIRenderer& renderer) {
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+void AudioSettingsDialog::renderDialog(AestraUI::NUIRenderer& renderer) {
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // Dialog background with subtle gradient
-    NomadUI::NUIColor bgColor = themeManager.getColor("backgroundSecondary");
+    AestraUI::NUIColor bgColor = themeManager.getColor("backgroundSecondary");
     renderer.fillRoundedRect(m_dialogBounds, 12, bgColor);
     
     // Accent border with blink effect - flashes ALERT RED when clicked outside
-    NomadUI::NUIColor accentColor = themeManager.getColor("accent");
-    NomadUI::NUIColor normalBorder = accentColor.withAlpha(0.3f);
-    NomadUI::NUIColor blinkBorder = NomadUI::NUIColor(1.0f, 0.0f, 0.0f, 0.5f); // Alert red at 50% opacity
+    AestraUI::NUIColor accentColor = themeManager.getColor("accent");
+    AestraUI::NUIColor normalBorder = accentColor.withAlpha(0.3f);
+    AestraUI::NUIColor blinkBorder = AestraUI::NUIColor(1.0f, 0.0f, 0.0f, 0.5f); // Alert red at 50% opacity
     
     // Create double blink effect with discrete pulses - always consistent
     float blinkValue = 0.0f;
@@ -1445,7 +1445,7 @@ void AudioSettingsDialog::renderDialog(NomadUI::NUIRenderer& renderer) {
     }
     
     // Interpolate between normal and blink color
-    NomadUI::NUIColor borderColor(
+    AestraUI::NUIColor borderColor(
         normalBorder.r + (blinkBorder.r - normalBorder.r) * blinkValue,
         normalBorder.g + (blinkBorder.g - normalBorder.g) * blinkValue,
         normalBorder.b + (blinkBorder.b - normalBorder.b) * blinkValue,
@@ -1456,11 +1456,11 @@ void AudioSettingsDialog::renderDialog(NomadUI::NUIRenderer& renderer) {
     renderer.strokeRoundedRect(m_dialogBounds, 12, borderWidth, borderColor);
     
     // Title bar area - INSIDE the dialog bounds with proper inset (more compact)
-    NomadUI::NUIRect titleBar(m_dialogBounds.x + 3, m_dialogBounds.y + 3, m_dialogBounds.width - 6, 42);
+    AestraUI::NUIRect titleBar(m_dialogBounds.x + 3, m_dialogBounds.y + 3, m_dialogBounds.width - 6, 42);
     renderer.fillRoundedRect(titleBar, 9, bgColor.lightened(0.05f));
     
     // Title + subtitle: use font metrics for consistent baseline alignment
-    NomadUI::NUIColor textColor = themeManager.getColor("textPrimary");
+    AestraUI::NUIColor textColor = themeManager.getColor("textPrimary");
     const float titleFontSize = 14.0f;
     const float subtitleFontSize = 10.0f;
     const float titleX = titleBar.x + 18.0f;
@@ -1469,19 +1469,19 @@ void AudioSettingsDialog::renderDialog(NomadUI::NUIRenderer& renderer) {
     const float titleSubtitleGap = 2.0f;
     const float titleLineHeight = 18.0f;
 
-    const NomadUI::NUIRect titleLineRect(titleX, titleBar.y + headerPadTop, titleBar.width, titleLineHeight);
+    const AestraUI::NUIRect titleLineRect(titleX, titleBar.y + headerPadTop, titleBar.width, titleLineHeight);
     const float titleY = std::round(renderer.calculateTextY(titleLineRect, titleFontSize));
-    renderer.drawText("Audio Settings", NomadUI::NUIPoint(titleX, titleY), titleFontSize, textColor);
+    renderer.drawText("Audio Settings", AestraUI::NUIPoint(titleX, titleY), titleFontSize, textColor);
     
     // Close button (X) - symmetrical cross
     float closeSize = 28.0f;
     float closeX = titleBar.x + titleBar.width - closeSize - 10;
     float closeY = titleBar.y + (titleBar.height - closeSize) / 2; // Vertically centered
-    m_closeButtonBounds = NomadUI::NUIRect(closeX, closeY, closeSize, closeSize);
+    m_closeButtonBounds = AestraUI::NUIRect(closeX, closeY, closeSize, closeSize);
     
     // Classic red hover effect
-    NomadUI::NUIColor closeColor = m_closeButtonHovered 
-        ? NomadUI::NUIColor(0.9f, 0.2f, 0.2f, 1.0f) // Classic red
+    AestraUI::NUIColor closeColor = m_closeButtonHovered 
+        ? AestraUI::NUIColor(0.9f, 0.2f, 0.2f, 1.0f) // Classic red
         : textColor.withAlpha(0.7f); // Normal gray
     
     // Draw symmetrical X with equal-length diagonal lines
@@ -1492,21 +1492,21 @@ void AudioSettingsDialog::renderDialog(NomadUI::NUIRenderer& renderer) {
     float y2 = closeY + closeSize - padding;
     
     // Draw two diagonal lines of equal length
-    NomadUI::NUIPoint p1(x1, y1);
-    NomadUI::NUIPoint p2(x2, y2);
-    NomadUI::NUIPoint p3(x2, y1);
-    NomadUI::NUIPoint p4(x1, y2);
+    AestraUI::NUIPoint p1(x1, y1);
+    AestraUI::NUIPoint p2(x2, y2);
+    AestraUI::NUIPoint p3(x2, y1);
+    AestraUI::NUIPoint p4(x1, y2);
     renderer.drawLine(p1, p2, 2.0f, closeColor); // Top-left to bottom-right
     renderer.drawLine(p3, p4, 2.0f, closeColor); // Top-right to bottom-left
     
     // Subtitle
-    NomadUI::NUIColor subtitleColor = themeManager.getColor("textSecondary");
+    AestraUI::NUIColor subtitleColor = themeManager.getColor("textSecondary");
     const float subtitleTop = titleLineRect.bottom() + titleSubtitleGap;
     const float subtitleHeight = std::max(0.0f, titleBar.bottom() - headerPadBottom - subtitleTop);
-    const NomadUI::NUIRect subtitleLineRect(titleX + 2.0f, subtitleTop, titleBar.width, subtitleHeight);
+    const AestraUI::NUIRect subtitleLineRect(titleX + 2.0f, subtitleTop, titleBar.width, subtitleHeight);
     const float subtitleY = std::round(renderer.calculateTextY(subtitleLineRect, subtitleFontSize));
     renderer.drawText("Configure your audio hardware and performance",
-                      NomadUI::NUIPoint(titleX + 2.0f, subtitleY), subtitleFontSize, subtitleColor);
+                      AestraUI::NUIPoint(titleX + 2.0f, subtitleY), subtitleFontSize, subtitleColor);
     
     // === Column Dividers + Headers (settings tab only) ===
     if (m_activeTab == "settings") {
@@ -1534,41 +1534,41 @@ void AudioSettingsDialog::renderDialog(NomadUI::NUIRenderer& renderer) {
         float dividerY1 = headerY - 6.0f; // Starts below the tab buttons
         float dividerY2 = m_dialogBounds.y + m_dialogBounds.height - 50.0f; // Above buttons
 
-        NomadUI::NUIColor dividerColor = themeManager.getColor("textSecondary").withAlpha(0.15f);
-        renderer.drawLine(NomadUI::NUIPoint(divider1X, dividerY1),
-                          NomadUI::NUIPoint(divider1X, dividerY2),
+        AestraUI::NUIColor dividerColor = themeManager.getColor("textSecondary").withAlpha(0.15f);
+        renderer.drawLine(AestraUI::NUIPoint(divider1X, dividerY1),
+                          AestraUI::NUIPoint(divider1X, dividerY2),
                           1.0f, dividerColor);
-        renderer.drawLine(NomadUI::NUIPoint(divider2X, dividerY1),
-                          NomadUI::NUIPoint(divider2X, dividerY2),
+        renderer.drawLine(AestraUI::NUIPoint(divider2X, dividerY1),
+                          AestraUI::NUIPoint(divider2X, dividerY2),
                           1.0f, dividerColor);
 
 	        // Column headers with subtle background
-	        NomadUI::NUIColor headerBgColor = bgColor.lightened(0.03f);
-	        NomadUI::NUIColor headerTextColor = themeManager.getColor("textSecondary").withAlpha(0.85f);
+	        AestraUI::NUIColor headerBgColor = bgColor.lightened(0.03f);
+	        AestraUI::NUIColor headerTextColor = themeManager.getColor("textSecondary").withAlpha(0.85f);
 	        float headerInset = 2.0f;
 
-	        NomadUI::NUIRect leftHeaderBg(leftColumnX + headerInset, headerY, columnWidth - headerInset * 2, headerHeight);
+	        AestraUI::NUIRect leftHeaderBg(leftColumnX + headerInset, headerY, columnWidth - headerInset * 2, headerHeight);
 	        renderer.fillRoundedRect(leftHeaderBg, 4, headerBgColor);
 	        renderer.drawText("Audio Device",
-	                          NomadUI::NUIPoint(leftHeaderBg.x + 8, std::round(renderer.calculateTextY(leftHeaderBg, 11.0f))),
+	                          AestraUI::NUIPoint(leftHeaderBg.x + 8, std::round(renderer.calculateTextY(leftHeaderBg, 11.0f))),
 	                          11.0f, headerTextColor);
 
-	        NomadUI::NUIRect middleHeaderBg(middleColumnX + headerInset, headerY, columnWidth - headerInset * 2, headerHeight);
+	        AestraUI::NUIRect middleHeaderBg(middleColumnX + headerInset, headerY, columnWidth - headerInset * 2, headerHeight);
 	        renderer.fillRoundedRect(middleHeaderBg, 4, headerBgColor);
 	        renderer.drawText("Quality",
-	                          NomadUI::NUIPoint(middleHeaderBg.x + 8, std::round(renderer.calculateTextY(middleHeaderBg, 11.0f))),
+	                          AestraUI::NUIPoint(middleHeaderBg.x + 8, std::round(renderer.calculateTextY(middleHeaderBg, 11.0f))),
 	                          11.0f, headerTextColor);
 
-	        NomadUI::NUIRect rightHeaderBg(rightColumnX + headerInset, headerY, columnWidth - headerInset * 2, headerHeight);
+	        AestraUI::NUIRect rightHeaderBg(rightColumnX + headerInset, headerY, columnWidth - headerInset * 2, headerHeight);
 	        renderer.fillRoundedRect(rightHeaderBg, 4, headerBgColor);
 	        renderer.drawText("Processing",
-	                          NomadUI::NUIPoint(rightHeaderBg.x + 8, std::round(renderer.calculateTextY(rightHeaderBg, 11.0f))),
+	                          AestraUI::NUIPoint(rightHeaderBg.x + 8, std::round(renderer.calculateTextY(rightHeaderBg, 11.0f))),
 	                          11.0f, headerTextColor);
 	    }
     
     // Error message (if any) - displayed at bottom left with fade animation
     if (m_errorMessageAlpha > 0.0f && !m_errorMessage.empty()) {
-        NomadUI::NUIColor errorColor = NomadUI::NUIColor(1.0f, 0.3f, 0.2f, m_errorMessageAlpha); // Red with fade
+        AestraUI::NUIColor errorColor = AestraUI::NUIColor(1.0f, 0.3f, 0.2f, m_errorMessageAlpha); // Red with fade
         
         float buttonHeight = 32.0f; // From layoutComponents
         float padding = 20.0f;
@@ -1576,22 +1576,22 @@ void AudioSettingsDialog::renderDialog(NomadUI::NUIRenderer& renderer) {
         float errorX = m_dialogBounds.x + padding;
         
         renderer.drawText(m_errorMessage, 
-                         NomadUI::NUIPoint(errorX, errorY), 12, errorColor);
+                         AestraUI::NUIPoint(errorX, errorY), 12, errorColor);
     }
 }
 
 void AudioSettingsDialog::playTestSound() {
     if (!m_audioManager) {
-        Nomad::Log::error("AudioManager is null, cannot play test sound");
+        Aestra::Log::error("AudioManager is null, cannot play test sound");
         return;
     }
     
     if (m_isPlayingTestSound) {
-        Nomad::Log::warning("Test sound already playing");
+        Aestra::Log::warning("Test sound already playing");
         return;
     }
     
-    Nomad::Log::info("Starting test sound playback...");
+    Aestra::Log::info("Starting test sound playback...");
     
     // Just set flag - tone will be generated in Main's audio callback
     m_isPlayingTestSound = true;
@@ -1603,7 +1603,7 @@ void AudioSettingsDialog::playTestSound() {
     }
     m_cacheInvalidated = true; // Text changed, invalidate cache
     
-    Nomad::Log::info("Test sound started! Flag set to TRUE");
+    Aestra::Log::info("Test sound started! Flag set to TRUE");
 }
 
 void AudioSettingsDialog::stopTestSound() {
@@ -1616,20 +1616,20 @@ void AudioSettingsDialog::stopTestSound() {
         m_playIcon->setColorFromTheme("primary");
     }
     m_cacheInvalidated = true; // Text changed, invalidate cache
-    Nomad::Log::info("Test sound stopped - Flag set to FALSE");
+    Aestra::Log::info("Test sound stopped - Flag set to FALSE");
 }
 
 
-Nomad::Audio::ResamplingMode AudioSettingsDialog::getSelectedResamplingMode() const {
+Aestra::Audio::ResamplingMode AudioSettingsDialog::getSelectedResamplingMode() const {
     // Sinc64 is now the global standard
-    return Nomad::Audio::ResamplingMode::Extreme;
+    return Aestra::Audio::ResamplingMode::Extreme;
 }
 
-Nomad::Audio::DitheringMode AudioSettingsDialog::getSelectedDitheringMode() const {
+Aestra::Audio::DitheringMode AudioSettingsDialog::getSelectedDitheringMode() const {
     if (m_ditheringDropdown) {
-        return static_cast<Nomad::Audio::DitheringMode>(m_ditheringDropdown->getSelectedValue());
+        return static_cast<Aestra::Audio::DitheringMode>(m_ditheringDropdown->getSelectedValue());
     }
-    return Nomad::Audio::DitheringMode::None;
+    return Aestra::Audio::DitheringMode::None;
 }
 
-} // namespace Nomad
+} // namespace Aestra

@@ -11,7 +11,7 @@
 #include <atomic>
 #include <thread>
 
-namespace NomadUI {
+namespace AestraUI {
 
 class FilePreviewPanel : public NUIComponent {
 public:
@@ -68,4 +68,4 @@ private:
     std::shared_ptr<NUIIcon> stopIcon_;
 };
 
-} // namespace NomadUI
+} // namespace AestraUI

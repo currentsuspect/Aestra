@@ -2,11 +2,11 @@
 #pragma once
 
 #include "WindowPanel.h"
-#include "../NomadUI/Widgets/NUIStepSequencer.h"
+#include "../AestraUI/Widgets/NUIStepSequencer.h"
 #include "TrackManager.h"
 #include <memory>
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 /**
@@ -17,12 +17,12 @@ public:
     StepSequencerPanel(std::shared_ptr<TrackManager> trackManager);
     ~StepSequencerPanel() override = default;
 
-    std::shared_ptr<NomadUI::StepSequencerView> getSequencer() const { return m_sequencer; }
+    std::shared_ptr<AestraUI::StepSequencerView> getSequencer() const { return m_sequencer; }
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;
-    std::shared_ptr<NomadUI::StepSequencerView> m_sequencer;
+    std::shared_ptr<AestraUI::StepSequencerView> m_sequencer;
 };
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

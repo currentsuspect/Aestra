@@ -1,14 +1,14 @@
 // ¶¸ 2025 Nomad Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
+#include "../AestraUI/Core/NUIComponent.h"
 #include "TimelineMinimapModel.h"
 #include "TimelineMinimapRenderer.h"
 
 #include <functional>
 #include <string>
 
-namespace NomadUI {
+namespace AestraUI {
 
 enum class TimelineMinimapResizeEdge
 {
@@ -88,4 +88,4 @@ private:
     NUIRect toggleBounds_[3]{};
 };
 
-} // namespace NomadUI
+} // namespace AestraUI

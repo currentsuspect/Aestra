@@ -1,31 +1,31 @@
-# NOMAD DAW Quickstart Tutorial
+# Aestra Quickstart Tutorial
 
-This quickstart guide will walk you through your first session with NOMAD DAW.
+This quickstart guide will walk you through your first session with Aestra.
 
 ## 🎯 Overview
 
-After building NOMAD, you'll learn:
+After building Aestra, you'll learn:
 
-- How to launch NOMAD and navigate the UI
+- How to launch Aestra and navigate the UI
 - Understanding the pattern-based timeline
 - Loading and playing audio samples
 - Basic mixing controls
 - Saving and loading projects
 
-## 🚀 Launching NOMAD
+## 🚀 Launching Aestra
 
 ### Windows
 ```powershell
 cd build/bin/Release
-./NOMAD.exe
+./Aestra.exe
 ```
 
 ### Linux/macOS
 ```bash
-./build/bin/NOMAD
+./build/bin/Aestra
 ```
 
-On first launch, NOMAD will:
+On first launch, Aestra will:
 
 1. Initialize the audio engine (WASAPI/ALSA/CoreAudio)
 2. Load the default theme
@@ -33,7 +33,7 @@ On first launch, NOMAD will:
 
 ## 🖥️ Understanding the Interface
 
-NOMAD's interface consists of several key areas:
+Aestra's interface consists of several key areas:
 
 ### Main Sections
 
@@ -91,7 +91,7 @@ NOMAD's interface consists of several key areas:
 
 ### Step 4: Use the Timeline
 
-The timeline in NOMAD uses a pattern-based workflow:
+The timeline in Aestra uses a pattern-based workflow:
 
 - **Pattern Mode** — Create and edit individual patterns
 - **Playlist Mode** — Arrange patterns on the timeline
@@ -118,7 +118,7 @@ The timeline in NOMAD uses a pattern-based workflow:
 
 ### Theme Selection
 
-NOMAD supports multiple themes:
+Aestra supports multiple themes:
 
 1. Open **View → Theme**
 2. Choose from:
@@ -142,7 +142,7 @@ Adjust the interface to your liking:
 3. Enter a project name
 4. Click **Save**
 
-NOMAD project files use the `.nomad` extension.
+Aestra project files use the `.nomad` extension.
 
 !!! tip "Save Often"
     Use `Ctrl+S` frequently to save your work.
@@ -150,7 +150,7 @@ NOMAD project files use the `.nomad` extension.
 
 ## 📊 Performance Monitoring
 
-NOMAD displays real-time performance metrics:
+Aestra displays real-time performance metrics:
 
 - **CPU Usage** — Shows DSP load percentage
 - **Audio Latency** — Current round-trip latency in milliseconds
@@ -202,8 +202,8 @@ Essential shortcuts to know:
 
 Now that you know the basics:
 
-1. **[Explore the Architecture](../architecture/overview.md)** — Understand how NOMAD works
-2. **[Read the Developer Guide](../developer/contributing.md)** — Contribute to NOMAD
+1. **[Explore the Architecture](../architecture/overview.md)** — Understand how Aestra works
+2. **[Read the Developer Guide](../developer/contributing.md)** — Contribute to Aestra
 3. **[Check the Roadmap](../technical/roadmap.md)** — See what's coming next
 4. **[Join the Community](../community/code-of-conduct.md)** — Connect with other users
 
@@ -218,4 +218,4 @@ Now that you know the basics:
 
 ---
 
-**Need help?** Check the [FAQ](../technical/faq.md) or ask in [GitHub Discussions](https://github.com/currentsuspect/NOMAD/discussions).
+**Need help?** Check the [FAQ](../technical/faq.md) or ask in [GitHub Discussions](https://github.com/currentsuspect/Aestra/discussions).

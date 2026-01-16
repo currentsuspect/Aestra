@@ -1,6 +1,6 @@
 #include "AudioSettingsPage.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraCore/include/AestraLog.h"
 #include "PlaylistMixer.h"
 #include "ClipResampler.h"
 #include <sstream>
@@ -9,9 +9,9 @@
 #include <thread>
 #include <iomanip>
 
-namespace Nomad {
+namespace Aestra {
 
-using namespace Nomad::Audio;
+using namespace Aestra::Audio;
 
 // ============================================================================
 // ThreadCountDisplay Implementation
@@ -21,12 +21,12 @@ ThreadCountDisplay::ThreadCountDisplay()
     : m_value(1), m_min(1), m_max(64), m_dragStartValue(0)
 {
     const char* upArrowSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14l5-5 5 5z"/></svg>)";
-    m_upArrow = std::make_shared<NomadUI::NUIIcon>(upArrowSvg);
-    m_upArrow->setIconSize(NomadUI::NUIIconSize::Small);
+    m_upArrow = std::make_shared<AestraUI::NUIIcon>(upArrowSvg);
+    m_upArrow->setIconSize(AestraUI::NUIIconSize::Small);
     
     const char* downArrowSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>)";
-    m_downArrow = std::make_shared<NomadUI::NUIIcon>(downArrowSvg);
-    m_downArrow->setIconSize(NomadUI::NUIIconSize::Small);
+    m_downArrow = std::make_shared<AestraUI::NUIIcon>(downArrowSvg);
+    m_downArrow->setIconSize(AestraUI::NUIIconSize::Small);
 }
 
 void ThreadCountDisplay::setValue(int val) {
@@ -40,14 +40,14 @@ void ThreadCountDisplay::setRange(int minVal, int maxVal) {
     setValue(m_value);
 }
 
-NomadUI::NUIRect ThreadCountDisplay::getUpArrowBounds() const {
-    NomadUI::NUIRect bounds = getBounds();
-    return NomadUI::NUIRect(bounds.x + bounds.width - 24, bounds.y + 2, 20, 12);
+AestraUI::NUIRect ThreadCountDisplay::getUpArrowBounds() const {
+    AestraUI::NUIRect bounds = getBounds();
+    return AestraUI::NUIRect(bounds.x + bounds.width - 24, bounds.y + 2, 20, 12);
 }
 
-NomadUI::NUIRect ThreadCountDisplay::getDownArrowBounds() const {
-    NomadUI::NUIRect bounds = getBounds();
-    return NomadUI::NUIRect(bounds.x + bounds.width - 24, bounds.y + 16, 20, 12);
+AestraUI::NUIRect ThreadCountDisplay::getDownArrowBounds() const {
+    AestraUI::NUIRect bounds = getBounds();
+    return AestraUI::NUIRect(bounds.x + bounds.width - 24, bounds.y + 16, 20, 12);
 }
 
 void ThreadCountDisplay::onUpdate(double deltaTime) {
@@ -61,28 +61,28 @@ void ThreadCountDisplay::onUpdate(double deltaTime) {
     }
 }
 
-void ThreadCountDisplay::onRender(NomadUI::NUIRenderer& renderer) {
-    NomadUI::NUIRect bounds = getBounds();
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+void ThreadCountDisplay::onRender(AestraUI::NUIRenderer& renderer) {
+    AestraUI::NUIRect bounds = getBounds();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const float radius = themeManager.getRadius("m");
     
     // Background (Dark Pill)
-    NomadUI::NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.5f);
+    AestraUI::NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.5f);
     renderer.fillRoundedRect(bounds, radius, bgColor);
     
     // Border
-    NomadUI::NUIColor borderColor = m_isHovered || m_isDragging ? themeManager.getColor("accentPrimary") : themeManager.getColor("glassBorder");
+    AestraUI::NUIColor borderColor = m_isHovered || m_isDragging ? themeManager.getColor("accentPrimary") : themeManager.getColor("glassBorder");
     renderer.strokeRoundedRect(bounds, radius, 1.0f, borderColor);
     
     // Text
     std::string text = std::to_string(m_value) + " Threads";
     float fontSize = themeManager.getFontSize("m");
-    NomadUI::NUIColor textColor = themeManager.getColor("textPrimary");
+    AestraUI::NUIColor textColor = themeManager.getColor("textPrimary");
     
-    NomadUI::NUISize textSize = renderer.measureText(text, fontSize);
+    AestraUI::NUISize textSize = renderer.measureText(text, fontSize);
     float textX = bounds.x + 10;
     float textY = std::round(renderer.calculateTextY(bounds, fontSize));
-    renderer.drawText(text, NomadUI::NUIPoint(textX, textY), fontSize, textColor);
+    renderer.drawText(text, AestraUI::NUIPoint(textX, textY), fontSize, textColor);
     
     // Arrows
     if (m_upArrow) {
@@ -97,8 +97,8 @@ void ThreadCountDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     }
 }
 
-bool ThreadCountDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
-    NomadUI::NUIRect bounds = getBounds();
+bool ThreadCountDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
+    AestraUI::NUIRect bounds = getBounds();
     
     // Update hover states
     if (!m_isDragging) {
@@ -114,7 +114,7 @@ bool ThreadCountDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
     
     // Handle Press
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         // Double click to reset
         if (event.doubleClick) {
              int def = (int)std::thread::hardware_concurrency();
@@ -170,12 +170,12 @@ AudioSettingsPage::AudioSettingsPage(AudioDeviceManager* audioManager, AudioEngi
     loadCurrentSettings(); // Load initial state
     
     // Create loading indicator
-    m_loadingLabel = std::make_shared<NomadUI::NUILabel>();
+    m_loadingLabel = std::make_shared<AestraUI::NUILabel>();
     m_loadingLabel->setText("Loading audio devices...");
     m_loadingLabel->setVisible(false);
     addChild(m_loadingLabel);
     
-    m_testSoundButton = std::make_shared<NomadUI::NUIButton>();
+    m_testSoundButton = std::make_shared<AestraUI::NUIButton>();
     m_testSoundButton->setText("Test Sound");
     m_testSoundButton->setOnClick([this]() {
         bool playing = m_audioEngine->isTestToneEnabled();
@@ -211,7 +211,7 @@ void AudioSettingsPage::createUI() {
     Log::info("[AudioSettingsPage] createUI started");
     // Labels
     auto createLabel = [&](const std::string& text) {
-        auto l = std::make_shared<NomadUI::NUILabel>();
+        auto l = std::make_shared<AestraUI::NUILabel>();
         l->setText(text);
         addChild(l);
         return l;
@@ -232,7 +232,7 @@ void AudioSettingsPage::createUI() {
     
     // Dropdowns
     auto createDropdown = [&](std::function<void(int)> onChange) {
-        auto d = std::make_shared<NomadUI::NUIDropdown>();
+        auto d = std::make_shared<AestraUI::NUIDropdown>();
         d->setOnSelectionChanged([onChange](int index, int, const std::string&) {
             onChange(index);
         });
@@ -320,7 +320,7 @@ void AudioSettingsPage::createUI() {
 
     // Toggles
     auto createCheck = [&](std::function<void(bool)> onChange) {
-        auto t = std::make_shared<NomadUI::NUIToggle>();
+        auto t = std::make_shared<AestraUI::NUIToggle>();
         t->setOnToggle(onChange);
         addChild(t);
         return t;
@@ -333,7 +333,7 @@ void AudioSettingsPage::createUI() {
         layoutComponents(); // Update layout to show/hide thread count
     });
 
-    m_testSoundButton = std::make_shared<NomadUI::NUIButton>();
+    m_testSoundButton = std::make_shared<AestraUI::NUIButton>();
     m_testSoundButton->setText("Test Sound");
     m_testSoundButton->setOnClick([this]() {
         bool playing = m_audioEngine->isTestToneEnabled();
@@ -363,23 +363,23 @@ void AudioSettingsPage::applyChanges() {
     // 1. Resampling Quality
     int qIdx = m_resamplingDropdown->getSelectedIndex();
     ClipResamplingQuality globalQ = ClipResamplingQuality::High;
-    Nomad::Audio::Interpolators::InterpolationQuality engineQ = Nomad::Audio::Interpolators::InterpolationQuality::Sinc16; // Default High
+    Aestra::Audio::Interpolators::InterpolationQuality engineQ = Aestra::Audio::Interpolators::InterpolationQuality::Sinc16; // Default High
     
     if (qIdx == 0) { 
         globalQ = ClipResamplingQuality::Fast; 
-        engineQ = Nomad::Audio::Interpolators::InterpolationQuality::Cubic;
+        engineQ = Aestra::Audio::Interpolators::InterpolationQuality::Cubic;
     }
     else if (qIdx == 1) { 
         globalQ = ClipResamplingQuality::Draft;
-        engineQ = Nomad::Audio::Interpolators::InterpolationQuality::Sinc32; 
+        engineQ = Aestra::Audio::Interpolators::InterpolationQuality::Sinc32; 
     }
     else if (qIdx == 2) { 
         globalQ = ClipResamplingQuality::Standard;
-        engineQ = Nomad::Audio::Interpolators::InterpolationQuality::Cubic; 
+        engineQ = Aestra::Audio::Interpolators::InterpolationQuality::Cubic; 
     }
     else if (qIdx == 3) { 
         globalQ = ClipResamplingQuality::High;
-        engineQ = Nomad::Audio::Interpolators::InterpolationQuality::Sinc64;
+        engineQ = Aestra::Audio::Interpolators::InterpolationQuality::Sinc64;
     }
     
     PlaylistMixer::setResamplingQuality(globalQ);
@@ -466,7 +466,7 @@ void AudioSettingsPage::updateDriverList() {
     m_driverDropdown->clearItems();
     
     // In a real scenario with multiple backends, we'd list them.
-    // Nomads AudioDeviceManager might handle WASAPI/ASIO as "Driver Types"
+    // Aestras AudioDeviceManager might handle WASAPI/ASIO as "Driver Types"
     // For now, let's query available driver types
     auto types = m_audioManager->getAvailableDriverTypes();
     
@@ -476,7 +476,7 @@ void AudioSettingsPage::updateDriverList() {
         if (types[i] == AudioDriverType::WASAPI_SHARED) name = "WASAPI Shared";
         else if (types[i] == AudioDriverType::WASAPI_EXCLUSIVE) name = "WASAPI Exclusive";
         else if (types[i] == AudioDriverType::ASIO_EXTERNAL) name = "ASIO (External)";
-        else if (types[i] == AudioDriverType::ASIO_NOMAD) name = "ASIO (Nomad)";
+        else if (types[i] == AudioDriverType::ASIO_Aestra) name = "ASIO (Aestra)";
         else if (types[i] == AudioDriverType::DIRECTSOUND) name = "DirectSound";
         
         m_driverDropdown->addItem(name, (int)types[i]);
@@ -543,8 +543,8 @@ void AudioSettingsPage::layoutComponents() {
     float y = b.y + padding;
     
     auto layRow = [&](auto& label, auto& comp, float x) {
-        label->setBounds(NomadUI::NUIRect(x, y, 100, rowHeight));
-        comp->setBounds(NomadUI::NUIRect(x + 110, y, colWidth - 110, rowHeight));
+        label->setBounds(AestraUI::NUIRect(x, y, 100, rowHeight));
+        comp->setBounds(AestraUI::NUIRect(x + 110, y, colWidth - 110, rowHeight));
     };
     
     // Left Column: Device
@@ -552,14 +552,14 @@ void AudioSettingsPage::layoutComponents() {
     layRow(m_deviceLabel, m_deviceDropdown, x1); y += rowHeight + gap;
     layRow(m_sampleRateLabel, m_sampleRateDropdown, x1); y += rowHeight + gap;
     layRow(m_bufferSizeLabel, m_bufferSizeDropdown, x1); y += rowHeight + gap;
-    m_latencyLabel->setBounds(NomadUI::NUIRect(x1 + 110, y, colWidth - 110, 20)); y += 30;
+    m_latencyLabel->setBounds(AestraUI::NUIRect(x1 + 110, y, colWidth - 110, 20)); y += 30;
     
     // Test Sound Button (below left column)
-    m_testSoundButton->setBounds(NomadUI::NUIRect(x1, y, colWidth, 32));
+    m_testSoundButton->setBounds(AestraUI::NUIRect(x1, y, colWidth, 32));
     
     // Loading indicator (centered in left column)
     if (m_loadingLabel) {
-        m_loadingLabel->setBounds(NomadUI::NUIRect(x1, y + 45, colWidth, 24));
+        m_loadingLabel->setBounds(AestraUI::NUIRect(x1, y + 45, colWidth, 24));
     }
 
     // Right Column: Processing (reset Y)
@@ -582,7 +582,7 @@ void AudioSettingsPage::layoutComponents() {
     }
 }
 
-void AudioSettingsPage::onRender(NomadUI::NUIRenderer& renderer) {
+void AudioSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
     // Render all children normally
     renderChildren(renderer);
     
@@ -591,7 +591,7 @@ void AudioSettingsPage::onRender(NomadUI::NUIRenderer& renderer) {
     for (const auto& child : getChildren()) {
         if (!child->isVisible()) continue;
         
-        if (auto dd = std::dynamic_pointer_cast<NomadUI::NUIDropdown>(child)) {
+        if (auto dd = std::dynamic_pointer_cast<AestraUI::NUIDropdown>(child)) {
             // Because getChildren returns const shared_ptrs, and renderDropdownList is non-const,
             // we might need to cast away constness or ensure renderDropdownList is const.
             // Actually getChildren returns vector of shared_ptrs. The pointers themselves are not const to the object.
@@ -607,12 +607,12 @@ void AudioSettingsPage::onRender(NomadUI::NUIRenderer& renderer) {
 }
 
 void AudioSettingsPage::onResize(int width, int height) {
-    NomadUI::NUIComponent::onResize(width, height);
+    AestraUI::NUIComponent::onResize(width, height);
     layoutComponents();
 }
 
 void AudioSettingsPage::onUpdate(double deltaTime) {
-    NomadUI::NUIComponent::onUpdate(deltaTime);
+    AestraUI::NUIComponent::onUpdate(deltaTime);
     
     // Check for async device load completion
     if (m_deviceDataReady && !m_isLoadingDevices.load()) {
@@ -630,8 +630,8 @@ void AudioSettingsPage::onUpdate(double deltaTime) {
     }
 }
 
-bool AudioSettingsPage::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
-    return NomadUI::NUIComponent::onMouseEvent(event);
+bool AudioSettingsPage::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
+    return AestraUI::NUIComponent::onMouseEvent(event);
 }
 
 
@@ -787,7 +787,7 @@ void AudioSettingsPage::startAsyncDeviceLoad() {
             if (types[i] == AudioDriverType::WASAPI_SHARED) name = "WASAPI Shared";
             else if (types[i] == AudioDriverType::WASAPI_EXCLUSIVE) name = "WASAPI Exclusive";
             else if (types[i] == AudioDriverType::ASIO_EXTERNAL) name = "ASIO (External)";
-            else if (types[i] == AudioDriverType::ASIO_NOMAD) name = "ASIO (Nomad)";
+            else if (types[i] == AudioDriverType::ASIO_Aestra) name = "ASIO (Aestra)";
             else if (types[i] == AudioDriverType::DIRECTSOUND) name = "DirectSound";
             
             data.driverTypes.push_back({ name, static_cast<int>(types[i]) });
@@ -878,4 +878,4 @@ void AudioSettingsPage::onDeviceLoadComplete() {
     Log::info("[AudioSettingsPage] UI populated with device data");
 }
 
-} // namespace Nomad
+} // namespace Aestra

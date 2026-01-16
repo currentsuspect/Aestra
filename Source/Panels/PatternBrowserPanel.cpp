@@ -1,20 +1,20 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "PatternBrowserPanel.h"
 #include "TrackManager.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
-#include "../NomadUI/Core/NUIDragDrop.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Core/NUIDragDrop.h"
 #include "NUISegmentedControl.h"
 #include "NUIButton.h"
 #include "NUIIcon.h"
-#include "../NomadCore/include/NomadLog.h"
-#include "../NomadCore/include/NomadUnifiedProfiler.h"
+#include "../AestraCore/include/AestraLog.h"
+#include "../AestraCore/include/AestraUnifiedProfiler.h"
 // #include "SourceManager.h" // Removed, inside ClipSource.h
 #include <chrono>
 #include <iomanip>
 #include <sstream>
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
@@ -24,7 +24,7 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
 {
     setId("PatternBrowserPanel");
     
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // Cache theme colors
     m_backgroundColor = themeManager.getColor("backgroundSecondary");
@@ -33,7 +33,7 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     m_selectedColor = themeManager.getColor("primary");
     
     // Initialize Toggle Switch
-    m_modeToggle = std::make_shared<NomadUI::NUISegmentedControl>(
+    m_modeToggle = std::make_shared<AestraUI::NUISegmentedControl>(
         std::vector<std::string>{"Clips", "Patterns"}
     );
     m_modeToggle->setSelectedIndex(static_cast<size_t>(m_mode), false);
@@ -44,38 +44,38 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     addChild(m_modeToggle);
     
     // Initialize SVG icons
-    m_addIcon = std::make_shared<NomadUI::NUIIcon>();
+    m_addIcon = std::make_shared<AestraUI::NUIIcon>();
     const char* addSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" ry="4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>)";
     m_addIcon->loadSVG(addSvg);
     m_addIcon->setIconSize(16, 16);
     m_addIcon->setColor(m_textColor);
     
-    m_copyIcon = std::make_shared<NomadUI::NUIIcon>();
+    m_copyIcon = std::make_shared<AestraUI::NUIIcon>();
     const char* copySvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>)";
     m_copyIcon->loadSVG(copySvg);
     m_copyIcon->setIconSize(16, 16);
     m_copyIcon->setColor(m_textColor);
     
-    m_trashIcon = std::make_shared<NomadUI::NUIIcon>();
+    m_trashIcon = std::make_shared<AestraUI::NUIIcon>();
     const char* trashSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>)";
     m_trashIcon->loadSVG(trashSvg);
     m_trashIcon->setIconSize(16, 16);
     m_trashIcon->setColor(themeManager.getColor("error").withAlpha(0.9f));
     
-    m_midiIcon = std::make_shared<NomadUI::NUIIcon>();
+    m_midiIcon = std::make_shared<AestraUI::NUIIcon>();
     const char* midiSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>)";
     m_midiIcon->loadSVG(midiSvg);
     m_midiIcon->setIconSize(16, 16);
     m_midiIcon->setColor(m_selectedColor);
     
-    m_audioIcon = std::make_shared<NomadUI::NUIIcon>();
+    m_audioIcon = std::make_shared<AestraUI::NUIIcon>();
     const char* audioSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3l3-6 4 12 4-8 3 4h3"/></svg>)";
     m_audioIcon->loadSVG(audioSvg);
     m_audioIcon->setIconSize(16, 16);
     m_audioIcon->setColor(m_selectedColor);
     
     // Create icon-based buttons
-    m_createButton = std::make_shared<NomadUI::NUIButton>("");
+    m_createButton = std::make_shared<AestraUI::NUIButton>("");
     m_createButton->setOnClick([this]() {
         if (m_trackManager) {
             MidiPayload payload;
@@ -87,7 +87,7 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     });
     addChild(m_createButton);
     
-    m_duplicateButton = std::make_shared<NomadUI::NUIButton>("");
+    m_duplicateButton = std::make_shared<AestraUI::NUIButton>("");
     m_duplicateButton->setOnClick([this]() {
         if (m_trackManager && m_selectedPatternId.isValid()) {
             auto id = m_trackManager->getPatternManager().clonePattern(m_selectedPatternId);
@@ -98,12 +98,12 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     });
     addChild(m_duplicateButton);
     
-    m_deleteButton = std::make_shared<NomadUI::NUIButton>("");
+    m_deleteButton = std::make_shared<AestraUI::NUIButton>("");
     m_deleteButton->setOnClick([this]() {
         if (m_trackManager && m_selectedPatternId.isValid()) {
              // Safety Check: Is it used?
             if (m_trackManager->getPlaylistModel().isPatternUsed(m_selectedPatternId)) {
-                Nomad::Log::warning("Cannot delete pattern: Is currently used on timeline");
+                Aestra::Log::warning("Cannot delete pattern: Is currently used on timeline");
                 return;
             }
 
@@ -115,13 +115,13 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     addChild(m_deleteButton);
     
     // Make toolbar buttons transparent
-    NomadUI::NUIColor transparent(0, 0, 0, 0);
+    AestraUI::NUIColor transparent(0, 0, 0, 0);
     
-    auto styleButton = [&](std::shared_ptr<NomadUI::NUIButton> btn) {
-        btn->setStyle(NomadUI::NUIButton::Style::Icon);
+    auto styleButton = [&](std::shared_ptr<AestraUI::NUIButton> btn) {
+        btn->setStyle(AestraUI::NUIButton::Style::Icon);
         btn->setBorderEnabled(false);
         btn->setBackgroundColor(transparent);
-        btn->onMouseMove = [this](const NomadUI::NUIMouseEvent&) { repaint(); };
+        btn->onMouseMove = [this](const AestraUI::NUIMouseEvent&) { repaint(); };
     };
 
     styleButton(m_createButton);
@@ -136,7 +136,7 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
 }
 
 PatternBrowserPanel::~PatternBrowserPanel() {
-    NomadUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
+    AestraUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
 }
 
 void PatternBrowserPanel::refreshPatterns() {
@@ -199,7 +199,7 @@ void PatternBrowserPanel::switchMode(BrowserMode mode) {
     setDirty(true);
 }
 
-void PatternBrowserPanel::onRender(NomadUI::NUIRenderer& renderer) {
+void PatternBrowserPanel::onRender(AestraUI::NUIRenderer& renderer) {
     if (!isVisible()) return;
 
     auto bounds = getBounds();
@@ -209,8 +209,8 @@ void PatternBrowserPanel::onRender(NomadUI::NUIRenderer& renderer) {
     
     // Border (right side)
     renderer.drawLine(
-        NomadUI::NUIPoint(bounds.x + bounds.width - 1, bounds.y),
-        NomadUI::NUIPoint(bounds.x + bounds.width - 1, bounds.y + bounds.height),
+        AestraUI::NUIPoint(bounds.x + bounds.width - 1, bounds.y),
+        AestraUI::NUIPoint(bounds.x + bounds.width - 1, bounds.y + bounds.height),
         1.0f, m_borderColor
     );
     
@@ -223,25 +223,25 @@ void PatternBrowserPanel::onRender(NomadUI::NUIRenderer& renderer) {
     renderHeader(renderer);
     renderContent(renderer);
     
-    NomadUI::NUIComponent::onRender(renderer);
+    AestraUI::NUIComponent::onRender(renderer);
 }
 
-void PatternBrowserPanel::renderHeader(NomadUI::NUIRenderer& renderer) {
+void PatternBrowserPanel::renderHeader(AestraUI::NUIRenderer& renderer) {
     auto bounds = getBounds();
-    NomadUI::NUIRect headerRect(bounds.x, bounds.y, bounds.width, m_headerHeight);
+    AestraUI::NUIRect headerRect(bounds.x, bounds.y, bounds.width, m_headerHeight);
     
     renderer.drawLine(
-        NomadUI::NUIPoint(bounds.x, bounds.y + m_headerHeight),
-        NomadUI::NUIPoint(bounds.x + bounds.width, bounds.y + m_headerHeight),
+        AestraUI::NUIPoint(bounds.x, bounds.y + m_headerHeight),
+        AestraUI::NUIPoint(bounds.x + bounds.width, bounds.y + m_headerHeight),
         1.0f, m_borderColor
     );
 
     // Render footer background and separator
-    NomadUI::NUIRect footerRect(bounds.x, bounds.bottom() - m_footerHeight, bounds.width, m_footerHeight);
+    AestraUI::NUIRect footerRect(bounds.x, bounds.bottom() - m_footerHeight, bounds.width, m_footerHeight);
     renderer.fillRect(footerRect, m_backgroundColor);
     renderer.drawLine(
-        NomadUI::NUIPoint(bounds.x, footerRect.y),
-        NomadUI::NUIPoint(bounds.x + bounds.width, footerRect.y),
+        AestraUI::NUIPoint(bounds.x, footerRect.y),
+        AestraUI::NUIPoint(bounds.x + bounds.width, footerRect.y),
         1.0f, m_borderColor
     );
     
@@ -253,25 +253,25 @@ void PatternBrowserPanel::renderHeader(NomadUI::NUIRenderer& renderer) {
         // We need to render the icons at the positions of the invisible buttons
         if (m_createButton->isVisible()) {
             auto btnBounds = m_createButton->getBounds();
-            m_addIcon->setBounds(NomadUI::NUIRect(btnBounds.center().x - 8, btnBounds.center().y - 8, 16, 16));
+            m_addIcon->setBounds(AestraUI::NUIRect(btnBounds.center().x - 8, btnBounds.center().y - 8, 16, 16));
             m_addIcon->onRender(renderer);
         }
         if (m_duplicateButton->isVisible()) {
             auto btnBounds = m_duplicateButton->getBounds();
-            m_copyIcon->setBounds(NomadUI::NUIRect(btnBounds.center().x - 8, btnBounds.center().y - 8, 16, 16));
+            m_copyIcon->setBounds(AestraUI::NUIRect(btnBounds.center().x - 8, btnBounds.center().y - 8, 16, 16));
             m_copyIcon->onRender(renderer);
         }
         if (m_deleteButton->isVisible()) {
             auto btnBounds = m_deleteButton->getBounds();
-            m_trashIcon->setBounds(NomadUI::NUIRect(btnBounds.center().x - 8, btnBounds.center().y - 8, 16, 16));
+            m_trashIcon->setBounds(AestraUI::NUIRect(btnBounds.center().x - 8, btnBounds.center().y - 8, 16, 16));
             m_trashIcon->onRender(renderer);
         }
     }
 }
 
-void PatternBrowserPanel::renderContent(NomadUI::NUIRenderer& renderer) {
+void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
     auto bounds = getBounds();
-    NomadUI::NUIRect listRect(bounds.x, bounds.y + m_headerHeight, bounds.width, bounds.height - m_headerHeight - m_footerHeight);
+    AestraUI::NUIRect listRect(bounds.x, bounds.y + m_headerHeight, bounds.width, bounds.height - m_headerHeight - m_footerHeight);
     
     // Check if empty
     bool isEmpty = (m_mode == BrowserMode::Patterns) ? m_patterns.empty() : m_clips.empty();
@@ -296,7 +296,7 @@ void PatternBrowserPanel::renderContent(NomadUI::NUIRenderer& renderer) {
     renderer.clearClipRect();
 }
 
-void PatternBrowserPanel::renderPatternList(NomadUI::NUIRenderer& renderer) {
+void PatternBrowserPanel::renderPatternList(AestraUI::NUIRenderer& renderer) {
     auto bounds = getBounds();
     float y = bounds.y + m_headerHeight - m_scrollOffset;
     
@@ -312,7 +312,7 @@ void PatternBrowserPanel::renderPatternList(NomadUI::NUIRenderer& renderer) {
     }
 }
 
-void PatternBrowserPanel::renderClipList(NomadUI::NUIRenderer& renderer) {
+void PatternBrowserPanel::renderClipList(AestraUI::NUIRenderer& renderer) {
     auto bounds = getBounds();
     float y = bounds.y + m_headerHeight - m_scrollOffset;
     
@@ -325,14 +325,14 @@ void PatternBrowserPanel::renderClipList(NomadUI::NUIRenderer& renderer) {
     }
 }
 
-void PatternBrowserPanel::renderPatternItem(NomadUI::NUIRenderer& renderer, const PatternEntry& entry, float y, bool selected, bool hovered) {
+void PatternBrowserPanel::renderPatternItem(AestraUI::NUIRenderer& renderer, const PatternEntry& entry, float y, bool selected, bool hovered) {
     auto bounds = getBounds();
-    NomadUI::NUIRect itemRect(bounds.x, y, bounds.width, m_itemHeight);
-    auto& theme = NomadUI::NUIThemeManager::getInstance();
+    AestraUI::NUIRect itemRect(bounds.x, y, bounds.width, m_itemHeight);
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
     
     if (selected) {
         renderer.fillRect(itemRect, m_selectedColor.withAlpha(0.2f));
-        renderer.fillRect(NomadUI::NUIRect(bounds.x, y, 2, m_itemHeight), m_selectedColor);
+        renderer.fillRect(AestraUI::NUIRect(bounds.x, y, 2, m_itemHeight), m_selectedColor);
     } else if (hovered) {
         // Hover style
         renderer.fillRoundedRect(itemRect, 4, theme.getColor("hover").withAlpha(0.1f));
@@ -343,40 +343,40 @@ void PatternBrowserPanel::renderPatternItem(NomadUI::NUIRenderer& renderer, cons
     float iconY = y + (m_itemHeight - 16) / 2;
     
     // Ensure icons use theme colors (white/secondary) unless selected
-    NomadUI::NUIColor iconColor = selected ? theme.getColor("primary") : theme.getColor("textSecondary");
+    AestraUI::NUIColor iconColor = selected ? theme.getColor("primary") : theme.getColor("textSecondary");
     m_midiIcon->setColor(iconColor);
     m_audioIcon->setColor(iconColor);
 
     if (entry.isMidi) {
-        m_midiIcon->setBounds(NomadUI::NUIRect(iconX, iconY, 16, 16));
+        m_midiIcon->setBounds(AestraUI::NUIRect(iconX, iconY, 16, 16));
         m_midiIcon->onRender(renderer);
     } else {
-        m_audioIcon->setBounds(NomadUI::NUIRect(iconX, iconY, 16, 16));
+        m_audioIcon->setBounds(AestraUI::NUIRect(iconX, iconY, 16, 16));
         m_audioIcon->onRender(renderer);
     }
     
     // Name (12px standard font)
-    NomadUI::NUIColor textColor = selected ? theme.getColor("textPrimary") : theme.getColor("textSecondary");
-    renderer.drawText(entry.name, NomadUI::NUIPoint(itemRect.x + 32, y + 9), 
+    AestraUI::NUIColor textColor = selected ? theme.getColor("textPrimary") : theme.getColor("textSecondary");
+    renderer.drawText(entry.name, AestraUI::NUIPoint(itemRect.x + 32, y + 9), 
                      12.0f, textColor); // Vertical center (32-12)/2 approx
     
     // Mixer routing indicator (if custom routing set)
     if (entry.mixerChannel >= 0) {
         std::string routeStr = ">" + std::to_string(entry.mixerChannel + 1);  // 1-based for display
         float routeX = itemRect.x + itemRect.width - 60;
-        renderer.drawText(routeStr, NomadUI::NUIPoint(routeX, y + 9), 
+        renderer.drawText(routeStr, AestraUI::NUIPoint(routeX, y + 9), 
                          11.0f, theme.getColor("accentCyan"));  // Use theme accent
     }
     
     // Length (right aligned)
     std::string lengthStr = std::to_string(static_cast<int>(entry.lengthBeats)) + "b";
-    renderer.drawText(lengthStr, NomadUI::NUIPoint(itemRect.x + itemRect.width - 25, y + 9), 
+    renderer.drawText(lengthStr, AestraUI::NUIPoint(itemRect.x + itemRect.width - 25, y + 9), 
                      11.0f, theme.getColor("textDisabled"));
 }
 
-bool PatternBrowserPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
+bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     auto b = getBounds();
-    auto& dragManager = NomadUI::NUIDragDropManager::getInstance();
+    auto& dragManager = AestraUI::NUIDragDropManager::getInstance();
     
     // 1. Handle active drag updates
     // 1. Handle active drag updates - DELEGATED TO GLOBAL MAIN LOOP
@@ -404,7 +404,7 @@ bool PatternBrowserPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             m_hoveredPatternId = m_patterns[itemIndex].id;
             
             // Mouse Press - Initialize Drag / Select
-            if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+            if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
                 // Get current time for double-click detection
                 auto now = std::chrono::steady_clock::now();
                 double currentTime = std::chrono::duration<double>(now.time_since_epoch()).count();
@@ -445,8 +445,8 @@ bool PatternBrowserPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
              
              if (dist >= dragManager.getDragThreshold()) {
                  // Start Drag!
-                 NomadUI::DragData dragData;
-                 dragData.type = NomadUI::DragDataType::Pattern;
+                 AestraUI::DragData dragData;
+                 dragData.type = AestraUI::DragDataType::Pattern;
                  
                  // Find pattern name and data
                  for(const auto& p : m_patterns) {
@@ -488,7 +488,7 @@ bool PatternBrowserPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
 
     // Mouse Release
-    if (!event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+    if (!event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         m_dragPotential = false;
     }
     
@@ -496,10 +496,10 @@ bool PatternBrowserPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     return NUIComponent::onMouseEvent(event);
 }
 
-void PatternBrowserPanel::renderClipItem(NomadUI::NUIRenderer& renderer, const ClipEntry& entry, float y, bool hovered) {
+void PatternBrowserPanel::renderClipItem(AestraUI::NUIRenderer& renderer, const ClipEntry& entry, float y, bool hovered) {
     auto bounds = getBounds();
-    NomadUI::NUIRect itemRect(bounds.x, y, bounds.width, m_itemHeight);
-    auto& theme = NomadUI::NUIThemeManager::getInstance();
+    AestraUI::NUIRect itemRect(bounds.x, y, bounds.width, m_itemHeight);
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
 
     if (hovered) {
         // Use darker hover for contrast
@@ -510,7 +510,7 @@ void PatternBrowserPanel::renderClipItem(NomadUI::NUIRenderer& renderer, const C
     float iconX = itemRect.x + 8;
     float iconY = y + (m_itemHeight - 16) / 2;
     if (m_audioIcon) {
-        m_audioIcon->setBounds(NomadUI::NUIRect(iconX, iconY, 16, 16));
+        m_audioIcon->setBounds(AestraUI::NUIRect(iconX, iconY, 16, 16));
         m_audioIcon->setColor(theme.getColor("textSecondary"));
         m_audioIcon->onRender(renderer);
     }
@@ -522,13 +522,13 @@ void PatternBrowserPanel::renderClipItem(NomadUI::NUIRenderer& renderer, const C
         displayName = displayName.substr(0, 22) + "...";
     }
 
-    renderer.drawText(displayName, NomadUI::NUIPoint(itemRect.x + 32, y + 9), 12.0f, theme.getColor("textPrimary"));
+    renderer.drawText(displayName, AestraUI::NUIPoint(itemRect.x + 32, y + 9), 12.0f, theme.getColor("textPrimary"));
     
     // Duration
     std::stringstream ss;
     ss << std::fixed << std::setprecision(1) << entry.duration << "s";
     std::string durStr = ss.str();
-    renderer.drawText(durStr, NomadUI::NUIPoint(itemRect.x + itemRect.width - 40, y + 9), 11.0f, theme.getColor("textDisabled"));
+    renderer.drawText(durStr, AestraUI::NUIPoint(itemRect.x + itemRect.width - 40, y + 9), 11.0f, theme.getColor("textDisabled"));
 }
 
 void PatternBrowserPanel::onResize(int width, int height) {
@@ -538,18 +538,18 @@ void PatternBrowserPanel::onResize(int width, int height) {
     
     if (m_modeToggle) {
         float toggleY = height - m_footerHeight + (m_footerHeight - 24) / 2.0f;
-        m_modeToggle->setBounds(NomadUI::NUIAbsolute(bounds, padding, toggleY, toggleWidth, 24));
+        m_modeToggle->setBounds(AestraUI::NUIAbsolute(bounds, padding, toggleY, toggleWidth, 24));
     }
     
     // Layout buttons (right aligned in header)
     float btnSize = 24.0f;
     float x_offset = width - padding - btnSize;
     
-    if (m_deleteButton) m_deleteButton->setBounds(NomadUI::NUIAbsolute(bounds, x_offset, padding + 4, btnSize, btnSize));
+    if (m_deleteButton) m_deleteButton->setBounds(AestraUI::NUIAbsolute(bounds, x_offset, padding + 4, btnSize, btnSize));
     x_offset -= (btnSize + 4);
-    if (m_duplicateButton) m_duplicateButton->setBounds(NomadUI::NUIAbsolute(bounds, x_offset, padding + 4, btnSize, btnSize));
+    if (m_duplicateButton) m_duplicateButton->setBounds(AestraUI::NUIAbsolute(bounds, x_offset, padding + 4, btnSize, btnSize));
     x_offset -= (btnSize + 4);
-    if (m_createButton) m_createButton->setBounds(NomadUI::NUIAbsolute(bounds, x_offset, padding + 4, btnSize, btnSize));
+    if (m_createButton) m_createButton->setBounds(AestraUI::NUIAbsolute(bounds, x_offset, padding + 4, btnSize, btnSize));
 }
 
 void PatternBrowserPanel::onUpdate(double deltaTime) {
@@ -557,26 +557,26 @@ void PatternBrowserPanel::onUpdate(double deltaTime) {
 }
 
 // IDropTarget Implementation
-NomadUI::DropFeedback PatternBrowserPanel::onDragEnter(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
-    if (data.type == NomadUI::DragDataType::File) {
+AestraUI::DropFeedback PatternBrowserPanel::onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    if (data.type == AestraUI::DragDataType::File) {
         m_isDragOver = true;
-        return NomadUI::DropFeedback::Copy;
+        return AestraUI::DropFeedback::Copy;
     }
-    return NomadUI::DropFeedback::None;
+    return AestraUI::DropFeedback::None;
 }
 
-NomadUI::DropFeedback PatternBrowserPanel::onDragOver(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
-    if (data.type == NomadUI::DragDataType::File) return NomadUI::DropFeedback::Copy;
-    return NomadUI::DropFeedback::None;
+AestraUI::DropFeedback PatternBrowserPanel::onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    if (data.type == AestraUI::DragDataType::File) return AestraUI::DropFeedback::Copy;
+    return AestraUI::DropFeedback::None;
 }
 
 void PatternBrowserPanel::onDragLeave() {
     m_isDragOver = false;
 }
 
-NomadUI::DropResult PatternBrowserPanel::onDrop(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
+AestraUI::DropResult PatternBrowserPanel::onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
      m_isDragOver = false;
-    if (data.type == NomadUI::DragDataType::File && !data.filePath.empty()) {
+    if (data.type == AestraUI::DragDataType::File && !data.filePath.empty()) {
         if (m_trackManager) {
             auto& sourceManager = m_trackManager->getSourceManager();
             sourceManager.getOrCreateSource(data.filePath);
@@ -584,17 +584,17 @@ NomadUI::DropResult PatternBrowserPanel::onDrop(const NomadUI::DragData& data, c
             // Switch to clips and refresh
             if (m_modeToggle) m_modeToggle->setSelectedIndex(0); // Clips is 0
             refreshClips();
-            NomadUI::DropResult result;
+            AestraUI::DropResult result;
             result.accepted = true;
             return result;
         }
     }
-    return NomadUI::DropResult(); // Default accepted=false
+    return AestraUI::DropResult(); // Default accepted=false
 }
 
-NomadUI::NUIRect PatternBrowserPanel::getDropBounds() const {
+AestraUI::NUIRect PatternBrowserPanel::getDropBounds() const {
     return getBounds();
 }
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

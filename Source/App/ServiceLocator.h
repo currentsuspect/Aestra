@@ -33,7 +33,7 @@
 #include <mutex>
 #include <memory>
 
-namespace Nomad {
+namespace Aestra {
 
 /**
  * @brief B-003: Minimal service locator
@@ -124,7 +124,7 @@ private:
 
 // NOTE: AppContext struct can be added later if explicit DI is needed.
 // For now, use ServiceLocator with fully-qualified types:
-//   ServiceLocator::provide<Nomad::Audio::AudioEngine>(engine);
-//   auto* engine = ServiceLocator::get<Nomad::Audio::AudioEngine>();
+//   ServiceLocator::provide<Aestra::Audio::AudioEngine>(engine);
+//   auto* engine = ServiceLocator::get<Aestra::Audio::AudioEngine>();
 
-} // namespace Nomad
+} // namespace Aestra

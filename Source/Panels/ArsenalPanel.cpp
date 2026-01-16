@@ -2,12 +2,12 @@
 #include "ArsenalPanel.h"
 #include "PatternBrowserPanel.h" // For m_patternBrowser
 #include "NUIButton.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraCore/include/AestraLog.h"
 
-using namespace NomadUI;
+using namespace AestraUI;
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
@@ -26,7 +26,7 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     }
 
     // Modern list container
-    m_listContainer = std::make_shared<NomadUI::NUIComponent>();
+    m_listContainer = std::make_shared<AestraUI::NUIComponent>();
     m_listContainer->setId("ArsenalListContainer");
     
     // Set as the content of the WindowPanel
@@ -123,7 +123,7 @@ void ArsenalPanel::refreshUnits() {
         m_unitRows.push_back(row);
         
         // Register as drop target for file drag-drop
-        NomadUI::NUIDragDropManager::getInstance().registerDropTarget(row);
+        AestraUI::NUIDragDropManager::getInstance().registerDropTarget(row);
     }
     
     // Add "Add Unit" button
@@ -186,7 +186,7 @@ void ArsenalPanel::ensureDefaultPattern() {
     }
     
     // Create Pattern 1 if it doesn't exist
-    Nomad::Audio::MidiPayload empty;
+    Aestra::Audio::MidiPayload empty;
     m_activePatternID = pm.createMidiPattern("Pattern 1", 4.0, empty);
     
     // Refresh Pattern Browser to show Pattern 1
@@ -543,4 +543,4 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
 }
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

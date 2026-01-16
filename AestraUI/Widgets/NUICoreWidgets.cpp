@@ -1,0 +1,583 @@
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+#include "NUICoreWidgets.h"
+
+#include "NUIRenderer.h"
+#include "NUIThemeSystem.h"
+#include <algorithm>
+#include <cmath>
+
+namespace AestraUI {
+
+NUIToggle::NUIToggle()
+    : state_(State::Off), animated_(true), hovered_(false) {}
+
+void NUIToggle::onRender(NUIRenderer& renderer)
+{
+    if (!isVisible()) return;
+
+    auto bounds = getBounds();
+    auto& theme = NUIThemeManager::getInstance();
+
+    // Dimensions
+    float width = 40.0f;
+    float height = 24.0f;
+    // Centered vertically in the allocated bounds
+    float x = bounds.x; 
+    float y = bounds.y + (bounds.height - height) / 2.0f;
+    
+    NUIRect toggleRect(x, y, width, height);
+    float radius = height / 2.0f;
+
+    bool on = (state_ == State::On);
+    
+    // Colors
+    auto bgOff = theme.getColor("surfaceRaised"); // Darker/Off
+    auto bgOn = theme.getColor("primary");       // Brand Color/On
+    auto knobColor = theme.getColor("textPrimary");
+    
+    // Draw Track
+    renderer.fillRoundedRect(toggleRect, radius, on ? bgOn : bgOff);
+    renderer.strokeRoundedRect(toggleRect, radius, 1.0f, theme.getColor("border").withAlpha(0.5f));
+
+    // Draw Knob
+    float knobPadding = 3.0f;
+    float knobSize = height - (knobPadding * 2.0f);
+    
+    float knobXOff = x + knobPadding;
+    float knobXOn = x + width - knobSize - knobPadding;
+    
+    // Simple animation interpolation could be done here if we had an animation timer
+    // For now, just snap or use simplistic logic
+    float knobX = on ? knobXOn : knobXOff;
+    
+    NUIRect knobRect(knobX, y + knobPadding, knobSize, knobSize);
+    renderer.fillRoundedRect(knobRect, knobSize / 2.0f, knobColor);
+}
+
+bool NUIToggle::onMouseEvent(const NUIMouseEvent& event)
+{
+    if (!isEnabled() || state_ == State::Disabled)
+        return false;
+
+    // Check if event is within bounds
+    if (!containsPoint(event.position)) {
+        return false;
+    }
+
+    // Old widget code used event.type/enum; map to current event fields
+    if (event.pressed && event.button == NUIMouseButton::Left)
+    {
+        setOn(!isOn());
+        if (onToggle_)
+        {
+            onToggle_(isOn());
+        }
+        return true;
+    }
+    return false;
+}
+
+void NUIToggle::onMouseEnter()
+{
+    hovered_ = true;
+    updateVisualState();
+}
+
+void NUIToggle::onMouseLeave()
+{
+    hovered_ = false;
+    updateVisualState();
+}
+
+void NUIToggle::setState(State state)
+{
+    if (state_ == state)
+        return;
+    state_ = state;
+    repaint();
+}
+
+void NUIToggle::setAnimated(bool animated)
+{
+    animated_ = animated;
+}
+
+void NUIToggle::setOnToggle(std::function<void(bool)> callback)
+{
+    onToggle_ = std::move(callback);
+}
+
+void NUIToggle::setOn(bool enabled)
+{
+    setState(enabled ? State::On : State::Off);
+}
+
+void NUIToggle::updateVisualState()
+{
+    repaint();
+}
+
+NUITextField::NUITextField()
+{
+    setPlaceholder("");
+}
+
+void NUITextField::setPlaceholder(const std::string& text)
+{
+    placeholder_ = text;
+    repaint();
+}
+
+void NUITextField::onRender(NUIRenderer& renderer)
+{
+    NUITextInput::onRender(renderer);
+    if (getText().empty() && !placeholder_.empty() && !isFocused())
+    {
+        (void)renderer;
+        // Placeholder text rendering to be implemented with text renderer
+    }
+}
+
+NUIMeter::NUIMeter()
+    : decayRate_(0.75f), holdEnabled_(false)
+{
+    setChannelCount(2);
+}
+
+void NUIMeter::onRender(NUIRenderer& renderer)
+{
+    (void)renderer;
+}
+
+void NUIMeter::onUpdate(double deltaTime)
+{
+    if (!holdEnabled_)
+    {
+        const float decayAmount = static_cast<float>(deltaTime) * decayRate_;
+        for (auto& channel : channels_)
+        {
+            channel.peak = std::max(0.0f, channel.peak - decayAmount);
+            channel.rms = std::max(0.0f, channel.rms - decayAmount);
+        }
+    }
+}
+
+void NUIMeter::setChannelCount(size_t count)
+{
+    channels_.resize(count);
+    repaint();
+}
+
+void NUIMeter::setLevels(size_t channel, float peak, float rms)
+{
+    if (channel >= channels_.size())
+        return;
+
+    channels_[channel].peak = std::clamp(peak, 0.0f, 1.0f);
+    channels_[channel].rms = std::clamp(rms, 0.0f, 1.0f);
+    repaint();
+}
+
+NUIMeter::ChannelLevel NUIMeter::getLevels(size_t channel) const
+{
+    if (channel >= channels_.size())
+        return {};
+    return channels_[channel];
+}
+
+void NUIMeter::setDecayRate(float rate)
+{
+    decayRate_ = std::max(0.0f, rate);
+}
+
+void NUIMeter::setHoldEnabled(bool enabled)
+{
+    holdEnabled_ = enabled;
+}
+
+NUIScrollView::NUIScrollView()
+    : contentSize_{0.0f, 0.0f}, scrollOffset_{0.0f, 0.0f}, direction_(Direction::Both)
+{
+}
+
+void NUIScrollView::onRender(NUIRenderer& renderer)
+{
+    (void)renderer;
+}
+
+bool NUIScrollView::onMouseEvent(const NUIMouseEvent& event)
+{
+    // Map legacy scroll fields: use wheelDelta as vertical scroll amount
+    if (event.wheelDelta != 0.0f)
+    {
+        NUIPoint newOffset = scrollOffset_;
+        newOffset.x -= 0.0f; // horizontal wheel not available in core event
+        newOffset.y -= event.wheelDelta;
+        setScrollOffset(newOffset);
+        return true;
+    }
+    return false;
+}
+
+void NUIScrollView::setContentSize(const NUISize& size)
+{
+    contentSize_ = size;
+    setScrollOffset(scrollOffset_);
+}
+
+void NUIScrollView::setScrollOffset(const NUIPoint& offset)
+{
+    scrollOffset_ = clampOffset(offset);
+    repaint();
+}
+
+void NUIScrollView::setDirection(Direction direction)
+{
+    direction_ = direction;
+}
+
+NUIPoint NUIScrollView::clampOffset(const NUIPoint& offset) const
+{
+    NUIPoint clamped = offset;
+    const float maxX = std::max(0.0f, contentSize_.width - getWidth());
+    const float maxY = std::max(0.0f, contentSize_.height - getHeight());
+
+    if (direction_ == Direction::Vertical)
+    {
+        clamped.x = 0.0f;
+    }
+    else
+    {
+        clamped.x = std::clamp(clamped.x, 0.0f, maxX);
+    }
+
+    if (direction_ == Direction::Horizontal)
+    {
+        clamped.y = 0.0f;
+    }
+    else
+    {
+        clamped.y = std::clamp(clamped.y, 0.0f, maxY);
+    }
+    return clamped;
+}
+
+NUIPanel::NUIPanel()
+    : backgroundColor_(NUIColor::fromHex(0x121216ff)),
+      borderColor_(NUIColor::fromHex(0x1e1e24ff)),
+      variant_(Variant::Plain)
+{
+}
+
+void NUIPanel::onRender(NUIRenderer& renderer)
+{
+    (void)renderer;
+}
+
+void NUIPanel::setBackgroundColor(const NUIColor& color)
+{
+    backgroundColor_ = color;
+    repaint();
+}
+
+void NUIPanel::setBorderColor(const NUIColor& color)
+{
+    borderColor_ = color;
+    repaint();
+}
+
+void NUIPanel::setVariant(Variant variant)
+{
+    variant_ = variant;
+    repaint();
+}
+
+NUIPopupMenu::NUIPopupMenu() = default;
+
+void NUIPopupMenu::onRender(NUIRenderer& renderer)
+{
+    (void)renderer;
+}
+
+bool NUIPopupMenu::onMouseEvent(const NUIMouseEvent& event)
+{
+    if (event.pressed && event.button == NUIMouseButton::Left)
+    {
+        const int index = static_cast<int>((event.position.y - getY()) / 24.0f);
+        if (index >= 0 && index < static_cast<int>(items_.size()))
+        {
+            const auto& item = items_[index];
+            if (item.enabled && onSelect_)
+            {
+                onSelect_(item);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+void NUIPopupMenu::setItems(std::vector<NUIPopupMenuItem> items)
+{
+    items_ = std::move(items);
+    repaint();
+}
+
+void NUIPopupMenu::setOnSelect(std::function<void(const NUIPopupMenuItem&)> callback)
+{
+    onSelect_ = std::move(callback);
+}
+
+NUITabBar::NUITabBar() = default;
+
+void NUITabBar::onRender(NUIRenderer& renderer)
+{
+    if (!isVisible()) return;
+
+    const auto bounds = getBounds();
+    if (bounds.isEmpty()) return;
+
+    auto& themeManager = NUIThemeManager::getInstance();
+
+    const auto bg = themeManager.getColor("backgroundSecondary");
+    const auto border = themeManager.getColor("border").withAlpha(0.6f);
+    const auto active = themeManager.getColor("primary").withAlpha(0.35f);
+    const auto hover = themeManager.getColor("surfaceRaised").withAlpha(0.55f);
+    const auto textActive = themeManager.getColor("textPrimary");
+    const auto textInactive = themeManager.getColor("textSecondary").withAlpha(0.9f);
+
+    const float radius = themeManager.getRadius("m");
+    renderer.fillRoundedRect(bounds, radius, bg);
+    renderer.strokeRoundedRect(bounds, radius, 1.0f, border);
+
+    if (tabs_.empty()) {
+        return;
+    }
+
+    const float tabW = bounds.width / static_cast<float>(tabs_.size());
+    const float tabH = bounds.height;
+
+    const float fontSize = themeManager.getFontSize("m");
+
+    for (size_t i = 0; i < tabs_.size(); ++i) {
+        const auto& tab = tabs_[i];
+        const bool isActive = (tab.id == activeTabId_);
+        const bool isHovered = (static_cast<int>(i) == hoveredIndex_) && !isActive;
+
+        NUIRect tabRect(bounds.x + tabW * static_cast<float>(i), bounds.y, tabW, tabH);
+
+        // Inset to avoid drawing over the outer stroke and create separation.
+        const float inset = 2.0f;
+        tabRect.x += inset;
+        tabRect.y += inset;
+        tabRect.width -= inset * 2.0f;
+        tabRect.height -= inset * 2.0f;
+
+        if (isActive) {
+            renderer.fillRoundedRect(tabRect, radius - inset, active);
+        } else if (isHovered) {
+            renderer.fillRoundedRect(tabRect, radius - inset, hover);
+        }
+
+        const auto textColor = isActive ? textActive : textInactive;
+        const auto textSize = renderer.measureText(tab.label, fontSize);
+        const float textX = std::round(tabRect.x + (tabRect.width - textSize.width) * 0.5f);
+        const float textY = std::round(tabRect.y + (tabRect.height - textSize.height) * 0.5f);
+        renderer.drawText(tab.label, NUIPoint(textX, textY), fontSize, textColor);
+    }
+}
+
+bool NUITabBar::onMouseEvent(const NUIMouseEvent& event)
+{
+    if (!isEnabled() || !isVisible()) {
+        return false;
+    }
+
+    const int index = hitTestTab(static_cast<int>(event.position.x), static_cast<int>(event.position.y));
+    if (index != hoveredIndex_) {
+        hoveredIndex_ = index;
+        repaint();
+    }
+
+    if (event.pressed && event.button == NUIMouseButton::Left) {
+        if (index >= 0 && index < static_cast<int>(tabs_.size())) {
+            setActiveTab(tabs_[index].id);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void NUITabBar::addTab(const Tab& tab)
+{
+    tabs_.push_back(tab);
+    if (activeTabId_.empty())
+    {
+        activeTabId_ = tab.id;
+    }
+    repaint();
+}
+
+void NUITabBar::removeTab(const std::string& id)
+{
+    tabs_.erase(std::remove_if(tabs_.begin(), tabs_.end(), [&](const Tab& t) { return t.id == id; }), tabs_.end());
+    if (activeTabId_ == id)
+    {
+        activeTabId_.clear();
+        if (!tabs_.empty())
+        {
+            activeTabId_ = tabs_.front().id;
+        }
+    }
+    repaint();
+}
+
+void NUITabBar::clearTabs()
+{
+    tabs_.clear();
+    activeTabId_.clear();
+    repaint();
+}
+
+void NUITabBar::setActiveTab(const std::string& id)
+{
+    if (activeTabId_ == id)
+        return;
+
+    activeTabId_ = id;
+    repaint();
+    if (onTabChanged_)
+    {
+        onTabChanged_(id);
+    }
+}
+
+void NUITabBar::setOnTabChanged(std::function<void(const std::string&)> callback)
+{
+    onTabChanged_ = std::move(callback);
+}
+
+int NUITabBar::hitTestTab(int x, int y) const
+{
+    if (!containsPoint(NUIPoint(static_cast<float>(x), static_cast<float>(y)))) {
+        return -1;
+    }
+    if (tabs_.empty())
+        return -1;
+    const float tabWidth = getWidth() / static_cast<float>(tabs_.size());
+    const int index = static_cast<int>((x - getX()) / tabWidth);
+    if (index < 0 || index >= static_cast<int>(tabs_.size()))
+        return -1;
+    return index;
+}
+
+
+NUIComboBox::NUIComboBox() = default;
+
+void NUIComboBox::onRender(NUIRenderer& renderer)
+{
+    if (!isVisible()) return;
+
+    const auto bounds = getBounds();
+    auto& theme = NUIThemeManager::getInstance();
+
+    const auto bg = active_ ? theme.getColor("surfaceRaised") : theme.getColor("inputBackground");
+    const auto border = active_ ? theme.getColor("primary") : theme.getColor("border");
+    const auto text = isEnabled() ? theme.getColor("textPrimary") : theme.getColor("textDisabled");
+
+    renderer.fillRoundedRect(bounds, 4.0f, bg);
+    renderer.strokeRoundedRect(bounds, 4.0f, 1.0f, border);
+
+    // Text
+    std::string label = getSelectedLabel();
+    if (label.empty()) label = placeholder_;
+    
+    // Reserve space for arrow
+    NUIRect textRect = bounds;
+    textRect.width -= 20.0f;
+    textRect.x += 8.0f;
+    
+    renderer.drawText(label, {textRect.x, textRect.y + (textRect.height - 14.0f) * 0.5f}, 12.0f, text);
+
+    // Arrow
+    NUIRect arrowRect = bounds;
+    arrowRect.x = bounds.right() - 20.0f;
+    arrowRect.width = 20.0f;
+    
+    // Simple down arrow geometry
+    float cy = arrowRect.center().y;
+    float cx = arrowRect.center().x;
+    renderer.drawLine({cx - 4.0f, cy - 2.0f}, {cx, cy + 2.0f}, 1.5f, text.withAlpha(0.7f));
+    renderer.drawLine({cx, cy + 2.0f}, {cx + 4.0f, cy - 2.0f}, 1.5f, text.withAlpha(0.7f));
+}
+
+bool NUIComboBox::onMouseEvent(const NUIMouseEvent& event)
+{
+    if (!isEnabled() || !isVisible()) return false;
+
+    if (getBounds().contains(event.position)) {
+        if (event.pressed && event.button == NUIMouseButton::Left) {
+            active_ = !active_;
+            if (active_) showPopup();
+            repaint();
+            return true;
+        }
+    }
+    return false;
+}
+
+void NUIComboBox::setItems(const std::vector<Item>& items)
+{
+    items_ = items;
+    // Validate selection
+    if (!selectedId_.empty()) {
+        bool found = false;
+        for (const auto& i : items_) if (i.id == selectedId_) found = true;
+        if (!found) selectedId_.clear();
+    }
+    repaint();
+}
+
+void NUIComboBox::setSelectedId(const std::string& id)
+{
+    if (selectedId_ == id) return;
+    selectedId_ = id;
+    repaint();
+    if (onSelectionChanged_) onSelectionChanged_(selectedId_);
+}
+
+std::string NUIComboBox::getSelectedLabel() const
+{
+    for (const auto& item : items_) {
+        if (item.id == selectedId_) return item.label;
+    }
+    return "";
+}
+
+void NUIComboBox::setOnSelectionChanged(std::function<void(const std::string&)> callback)
+{
+    onSelectionChanged_ = std::move(callback);
+}
+
+void NUIComboBox::showPopup()
+{
+    // For now, toggle simple cycling interactions or log because sophisticated windowing 
+    // overlays require access to a root layer not exposed here.
+    // In a real implementation, this would spawn a NUIPopupMenu at screen coordinates.
+    // Temporary simulation: Cycle through items for testing
+    if (items_.empty()) return;
+
+    auto it = std::find_if(items_.begin(), items_.end(), [&](const Item& i){ return i.id == selectedId_; });
+    size_t idx = 0;
+    if (it != items_.end()) {
+        idx = std::distance(items_.begin(), it) + 1;
+    }
+    if (idx >= items_.size()) idx = 0;
+    
+    setSelectedId(items_[idx].id);
+    active_ = false; // Auto-close
+}
+
+} // namespace AestraUI
+

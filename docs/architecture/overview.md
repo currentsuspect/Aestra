@@ -1,9 +1,9 @@
-# 🧭 Nomad DAW Architecture Overview
+# 🧭 Aestra DAW Architecture Overview
 
 ![Architecture](https://img.shields.io/badge/Architecture-Modular-blue)
 ![C++17](https://img.shields.io/badge/C%2B%2B-17-orange)
 
-Comprehensive overview of Nomad DAW's modular architecture, covering Core, UI, Audio, and Muse AI systems.
+Comprehensive overview of Aestra DAW's modular architecture, covering Core, UI, Audio, and Muse AI systems.
 
 ## 📋 Table of Contents
 
@@ -15,20 +15,20 @@ Comprehensive overview of Nomad DAW's modular architecture, covering Core, UI, A
 
 ## 🏗️ System Overview
 
-Nomad DAW is built with a clean, modular architecture that separates concerns into distinct subsystems:
+Aestra DAW is built with a clean, modular architecture that separates concerns into distinct subsystems:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Nomad Application                     │
+│                    Aestra Application                     │
 └─────────────────────────────────────────────────────────┘
            │                 │                │
      ┌─────┴─────┐     ┌─────┴─────┐    ┌────┴────┐
-     │  NomadUI  │     │ NomadAudio│    │  Muse   │
+     │  AestraUI  │     │ AestraAudio│    │  Muse   │
      │ Framework │     │   Engine  │    │   AI    │
      └─────┬─────┘     └─────┬─────┘    └────┬────┘
            │                 │                │
      ┌─────┴─────────────────┴────────────────┴─────┐
-     │              NomadCore                        │
+     │              AestraCore                        │
      │  (Platform abstraction, utilities, types)    │
      └──────────────────────────────────────────────┘
            │                 │                │
@@ -40,11 +40,11 @@ Nomad DAW is built with a clean, modular architecture that separates concerns in
 
 ## 🧩 Core Modules
 
-### NomadCore
+### AestraCore
 
 **Purpose**: Foundation layer providing platform abstraction, utilities, and common types.
 
-**Location**: `nomad-core/`, `NomadCore/`
+**Location**: `nomad-core/`, `AestraCore/`
 
 **Key Components:**
 - **Platform Abstraction** - OS-specific functionality (file I/O, threading, memory)
@@ -69,11 +69,11 @@ namespace nomad {
 }
 ```
 
-### NomadUI
+### AestraUI
 
 **Purpose**: GPU-accelerated custom UI framework with immediate-mode rendering.
 
-**Location**: `NomadUI/`
+**Location**: `AestraUI/`
 
 **Key Components:**
 - **Rendering Engine** - OpenGL-based rendering with adaptive FPS
@@ -84,7 +84,7 @@ namespace nomad {
 
 **Architecture:**
 ```cpp
-NomadUI/
+AestraUI/
 ├── Core/           # Core UI framework
 │   ├── NUIWidget   # Base widget class
 │   ├── NUIWindow   # Window management
@@ -105,11 +105,11 @@ NomadUI/
 - **Immediate Mode**: Simplified widget state management
 - **Custom Drawing**: Direct OpenGL access for custom visualizations
 
-### NomadAudio
+### AestraAudio
 
 **Purpose**: Professional audio engine with ultra-low latency processing.
 
-**Location**: `NomadAudio/`
+**Location**: `AestraAudio/`
 
 **Key Components:**
 - **Audio Driver System** - WASAPI (Windows), ALSA (Linux), CoreAudio (macOS)
@@ -120,7 +120,7 @@ NomadUI/
 
 **Architecture:**
 ```cpp
-NomadAudio/
+AestraAudio/
 ├── Drivers/
 │   ├── AudioDriver         # Abstract driver interface
 │   ├── WASAPIDriver        # Windows WASAPI implementation
@@ -168,11 +168,11 @@ namespace nomad {
 
 **Status**: 🚧 Planned for future release (private development)
 
-### NomadPlat
+### AestraPlat
 
 **Purpose**: Platform-specific implementations and windowing.
 
-**Location**: `NomadPlat/`
+**Location**: `AestraPlat/`
 
 **Key Components:**
 - **Window Management** - Native window creation and handling
@@ -185,21 +185,21 @@ namespace nomad {
 ### 1. Separation of Concerns
 
 Each module has a clear, focused responsibility:
-- **NomadCore**: Platform abstraction and utilities
-- **NomadUI**: User interface rendering and interaction
-- **NomadAudio**: Audio processing and I/O
-- **NomadPlat**: Platform-specific implementations
+- **AestraCore**: Platform abstraction and utilities
+- **AestraUI**: User interface rendering and interaction
+- **AestraAudio**: Audio processing and I/O
+- **AestraPlat**: Platform-specific implementations
 
 ### 2. Dependency Hierarchy
 
 ```
 Application
     ↓
-NomadUI + NomadAudio + Muse
+AestraUI + AestraAudio + Muse
     ↓
-NomadCore
+AestraCore
     ↓
-NomadPlat (Platform Layer)
+AestraPlat (Platform Layer)
     ↓
 OS APIs (Windows, Linux, macOS)
 ```
@@ -281,7 +281,7 @@ class ALSADriver : public AudioDriver { ... };
 
 ```
 ┌────────────┐     ┌─────────────┐     ┌──────────────┐
-│   User     │────→│   NomadUI   │────→│ Application  │
+│   User     │────→│   AestraUI   │────→│ Application  │
 │   Input    │     │   Events    │     │   Logic      │
 └────────────┘     └─────────────┘     └──────┬───────┘
                                               │
@@ -304,7 +304,7 @@ class ALSADriver : public AudioDriver { ... };
 
 ### Thread Architecture
 
-Nomad uses a **multi-threaded architecture** with strict thread separation:
+Aestra uses a **multi-threaded architecture** with strict thread separation:
 
 ```
 ┌─────────────────┐
@@ -371,12 +371,12 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 
 ## 📊 Performance Characteristics
 
-### NomadUI
+### AestraUI
 - **Frame rate**: Adaptive 1-120 FPS
 - **Typical rate**: 60 FPS during interaction, 1 FPS idle
 - **Render time**: ~1-2ms per frame at 1080p
 
-### NomadAudio
+### AestraAudio
 - **Latency**: ~5-10ms (WASAPI Exclusive)
 - **Buffer size**: 256-512 samples (typical)
 - **CPU usage**: ~5-10% per track (64-bit processing)
@@ -418,15 +418,15 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 └──────────────────────────────────────────────┘
         ↓                ↓              ↓
 ┌──────────────┐  ┌──────────────┐  ┌──────────┐
-│   NomadUI    │  │  NomadAudio  │  │   Muse   │
+│   AestraUI    │  │  AestraAudio  │  │   Muse   │
 └──────────────┘  └──────────────┘  └──────────┘
         ↓                ↓              ↓
 ┌──────────────────────────────────────────────┐
-│              NomadCore / nomad-core          │
+│              AestraCore / nomad-core          │
 └──────────────────────────────────────────────┘
         ↓                ↓              ↓
 ┌──────────────┐  ┌──────────────┐  ┌──────────┐
-│  NomadPlat   │  │  Windows API │  │ Linux API│
+│  AestraPlat   │  │  Windows API │  │ Linux API│
 │ (Win/Linux)  │  │   (WASAPI)   │  │  (ALSA)  │
 └──────────────┘  └──────────────┘  └──────────┘
 ```
@@ -449,11 +449,11 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 
 ## 📚 Additional Resources
 
-- [Building Guide](BUILDING.md) - How to build Nomad
+- [Building Guide](BUILDING.md) - How to build Aestra
 - [Coding Style](CODING_STYLE.md) - Code conventions
 - [Contributing](CONTRIBUTING.md) - How to contribute
 - [Glossary](GLOSSARY.md) - Technical terms
 
 ---
 
-[← Return to Nomad Docs Index](README.md)
+[← Return to Aestra Docs Index](README.md)

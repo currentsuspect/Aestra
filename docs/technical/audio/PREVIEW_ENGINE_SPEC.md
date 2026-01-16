@@ -13,7 +13,7 @@
 
 ## Architecture
 
-### PreviewEngine (singleton owned by NomadApp)
+### PreviewEngine (singleton owned by AestraApp)
 
 #### State Structure
 

@@ -2,7 +2,7 @@
 Safe wrapper to run git-filter-repo on a mirror clone. This script makes a mirror copy first and runs the filter there to avoid accidental damage.
 
 USAGE (example):
-  .\scripts\run-filter-repo.ps1 -PathsToRemove "NomadMuse/models,NomadAssets" -OutputDir "../nomad-cleaned"
+  .\scripts\run-filter-repo.ps1 -PathsToRemove "AestraMuse/models,AestraAssets" -OutputDir "../nomad-cleaned"
 
 This script DOES NOT push changes to any remote. It creates a cleaned repo in the `-OutputDir` location for verification.
 #>

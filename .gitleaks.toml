@@ -1,5 +1,5 @@
 # gitleaks config to detect common secrets and private key patterns
-title = "Nomad gitleaks config"
+title = "Aestra gitleaks config"
 
 [allowlist]
   description = "Allowed false positives"

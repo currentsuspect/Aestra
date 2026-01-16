@@ -1,15 +1,15 @@
-# NOMAD Threading Model (B-004)
+# Aestra Threading Model (B-004)
 
-This document describes the threading architecture of NOMAD DAW.
+This document describes the threading architecture of Aestra.
 
 ## Thread Overview
 
-NOMAD uses a multi-threaded architecture with three main thread types:
+Aestra uses a multi-threaded architecture with three main thread types:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                          MAIN THREAD                                │
-│  • Event loop (NomadApp::run)                                       │
+│  • Event loop (AestraApp::run)                                       │
 │  • UI rendering (NUIRenderer)                                       │
 │  • User input handling                                              │
 │  • Non-real-time audio commands                                     │
@@ -39,7 +39,7 @@ NOMAD uses a multi-threaded architecture with three main thread types:
 
 ### 1. Main Thread (UI Thread)
 
-**Entry Point:** `main()` → `NomadApp::initialize()` → `NomadApp::run()`
+**Entry Point:** `main()` → `AestraApp::initialize()` → `AestraApp::run()`
 
 **Responsibilities:**
 - Application lifecycle management
@@ -58,7 +58,7 @@ NOMAD uses a multi-threaded architecture with three main thread types:
 - ✅ Exception handling
 
 **Key Classes:**
-- `NomadApp` - Application lifecycle
+- `AestraApp` - Application lifecycle
 - `NUIRenderer` - UI rendering
 - `NUIPlatformBridge` - Window/input abstraction
 - `TrackManagerUI` - Track UI components
@@ -112,7 +112,7 @@ NOMAD uses a multi-threaded architecture with three main thread types:
 - ✅ Network operations
 
 **Key Classes:**
-- Autosave tasks in `NomadApp`
+- Autosave tasks in `AestraApp`
 - `WaveformCache` background loading
 - `PluginManager` scanning
 
@@ -175,13 +175,13 @@ In debug builds, use these macros to catch threading violations:
 
 ```cpp
 // Before any allocation
-NOMAD_ASSERT_NOT_AUDIO_THREAD();
+Aestra_ASSERT_NOT_AUDIO_THREAD();
 
 // At start of audio callback
 AudioThreadGuard guard;  // Sets thread-local flag
 
 // Check thread context
-if (Nomad::Audio::isAudioThread()) {
+if (Aestra::Audio::isAudioThread()) {
     // We're on the audio thread
 }
 ```

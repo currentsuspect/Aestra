@@ -2,14 +2,14 @@
 #pragma once
 
 #include "WindowPanel.h"
-#include "../NomadUI/Widgets/NUIPianoRollWidgets.h"
+#include "../AestraUI/Widgets/NUIPianoRollWidgets.h"
 #include "TrackManager.h"
-#include "../NomadUI/Core/NUIComponent.h"
+#include "../AestraUI/Core/NUIComponent.h"
 #include "NUIButton.h"
 #include <memory>
 #include <functional>
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 /**
@@ -34,9 +34,9 @@ private:
     void updateGhostChannels();
 
     std::shared_ptr<TrackManager> m_trackManager;
-    std::shared_ptr<NomadUI::PianoRollView> m_pianoRoll;
+    std::shared_ptr<AestraUI::PianoRollView> m_pianoRoll;
     PatternID m_currentPatternId;
 };
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

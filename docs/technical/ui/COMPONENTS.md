@@ -2,7 +2,7 @@
 
 ## NUIButton
 
-The cornerstone of the NomadUI interaction system.
+The cornerstone of the AestraUI interaction system.
 
 ### Styles
 
@@ -152,7 +152,7 @@ struct NUIMouseEvent {
 
 Run the component tests:
 ```bash
-cmake --build build --config Release --target NomadUI_ComponentTests
+cmake --build build --config Release --target AestraUI_ComponentTests
 ```
 
 ## Examples

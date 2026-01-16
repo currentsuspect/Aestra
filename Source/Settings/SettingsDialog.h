@@ -10,9 +10,9 @@
 #include <string>
 #include <vector>
 
-namespace Nomad {
+namespace Aestra {
 
-class SettingsDialog : public NomadUI::NUIComponent {
+class SettingsDialog : public AestraUI::NUIComponent {
 public:
     SettingsDialog();
     ~SettingsDialog() override = default;
@@ -29,11 +29,11 @@ public:
     const std::string& getActivePageID() const { return m_activePageId; }
 
     // NUIComponent overrides
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     void onUpdate(double deltaTime) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
-    bool onKeyEvent(const NomadUI::NUIKeyEvent& event) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     
     // Callbacks
     void setOnClose(std::function<void()> callback) { m_onClose = callback; }
@@ -44,10 +44,10 @@ private:
     void updateSidebar();
 
     bool m_visible;
-    NomadUI::NUIRect m_dialogBounds;
-    NomadUI::NUIRect m_sidebarBounds;
-    NomadUI::NUIRect m_contentBounds;
-    NomadUI::NUIRect m_closeButtonBounds; 
+    AestraUI::NUIRect m_dialogBounds;
+    AestraUI::NUIRect m_sidebarBounds;
+    AestraUI::NUIRect m_contentBounds;
+    AestraUI::NUIRect m_closeButtonBounds; 
     bool m_closeButtonHovered;
 
     // Sidebar
@@ -56,7 +56,7 @@ private:
         std::string title;
         bool hovered;
         bool active;
-        NomadUI::NUIRect bounds;
+        AestraUI::NUIRect bounds;
     };
     std::vector<SidebarItem> m_sidebarItems;
     std::map<std::string, std::shared_ptr<ISettingsPage>> m_pages;
@@ -65,13 +65,13 @@ private:
     std::string m_activePageId;
 
     // Footer buttons
-    std::shared_ptr<NomadUI::NUIButton> m_applyButton;
-    std::shared_ptr<NomadUI::NUIButton> m_cancelButton;
-    std::shared_ptr<NomadUI::NUIButton> m_okButton;
+    std::shared_ptr<AestraUI::NUIButton> m_applyButton;
+    std::shared_ptr<AestraUI::NUIButton> m_cancelButton;
+    std::shared_ptr<AestraUI::NUIButton> m_okButton;
 
     // State
     std::function<void()> m_onClose;
     float m_blinkAnimation; // For clicking outside
 };
 
-} // namespace Nomad
+} // namespace Aestra

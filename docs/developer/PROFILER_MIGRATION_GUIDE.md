@@ -7,9 +7,9 @@ This document describes how to migrate from the old duplicate profiler systems t
 ## Old System Issues
 
 ### Duplicate Profiler Systems
-1. **NomadProfiler** (NomadCore) - Zone timing, frame stats, Chrome trace export
-2. **NUIFrameProfiler** (NomadUI) - UI frame timing, console output
-3. **PerformanceHUD** - Visual overlay using NomadProfiler data
+1. **AestraProfiler** (AestraCore) - Zone timing, frame stats, Chrome trace export
+2. **NUIFrameProfiler** (AestraUI) - UI frame timing, console output
+3. **PerformanceHUD** - Visual overlay using AestraProfiler data
 
 ### Problems Identified
 - ❌ Duplicate FPS calculations
@@ -43,13 +43,13 @@ This document describes how to migrate from the old duplicate profiler systems t
 
 **Old:**
 ```cpp
-#include "NomadProfiler.h"        // NomadCore version
-#include "NUIFrameProfiler.h"     // NomadUI version
+#include "AestraProfiler.h"        // AestraCore version
+#include "NUIFrameProfiler.h"     // AestraUI version
 ```
 
 **New:**
 ```cpp
-#include "NomadUnifiedProfiler.h" // Single unified profiler
+#include "AestraUnifiedProfiler.h" // Single unified profiler
 ```
 
 ### Step 2: Update Main Application Loop
@@ -63,17 +63,17 @@ Profiler::getInstance().beginFrame();
 auto frameStart = m_adaptiveFPS->beginFrame();
 
 {
-    NOMAD_ZONE("Input_Poll");
+    Aestra_ZONE("Input_Poll");
     // ... input handling ...
 }
 
 {
-    NOMAD_ZONE("UI_Update");
+    Aestra_ZONE("UI_Update");
     // ... UI updates ...
 }
 
 {
-    NOMAD_ZONE("Render_Prep");
+    Aestra_ZONE("Render_Prep");
     render();
 }
 
@@ -81,7 +81,7 @@ auto frameStart = m_adaptiveFPS->beginFrame();
 double sleepTime = m_adaptiveFPS->endFrame(frameStart, deltaTime);
 
 {
-    NOMAD_ZONE("GPU_Submit");
+    Aestra_ZONE("GPU_Submit");
     // SwapBuffers (may block on VSync)
     m_window->swapBuffers();
 }
@@ -93,46 +93,46 @@ Profiler::getInstance().endFrame();
 **New Main.cpp:**
 ```cpp
 // Begin unified profiler frame
-Nomad::UnifiedProfiler::getInstance().beginFrame();
+Aestra::UnifiedProfiler::getInstance().beginFrame();
 
 // Begin frame timing BEFORE any work
 auto frameStart = m_adaptiveFPS->beginFrame();
 
 {
-    NOMAD_ZONE("Input_Poll");
+    Aestra_ZONE("Input_Poll");
     // ... input handling ...
 }
 
 {
-    NOMAD_ZONE("UI_Update");
+    Aestra_ZONE("UI_Update");
     // ... UI updates ...
 }
 
 {
-    NOMAD_ZONE("Render_Prep");
+    Aestra_ZONE("Render_Prep");
     render();
 }
 
 // Mark render end for breakdown timing
-Nomad::UnifiedProfiler::getInstance().markRenderEnd();
+Aestra::UnifiedProfiler::getInstance().markRenderEnd();
 
 // End frame timing BEFORE swapBuffers (to exclude VSync wait)
 double sleepTime = m_adaptiveFPS->endFrame(frameStart, deltaTime);
 
 {
-    NOMAD_ZONE("GPU_Submit");
+    Aestra_ZONE("GPU_Submit");
     // SwapBuffers (may block on VSync)
     m_window->swapBuffers();
 }
 
 // Mark swap end for breakdown timing
-Nomad::UnifiedProfiler::getInstance().markSwapEnd();
+Aestra::UnifiedProfiler::getInstance().markSwapEnd();
 
 // Sync audio telemetry
-Nomad::UnifiedProfiler::getInstance().syncAudioTelemetry();
+Aestra::UnifiedProfiler::getInstance().syncAudioTelemetry();
 
 // End unified profiler frame
-Nomad::UnifiedProfiler::getInstance().endFrame();
+Aestra::UnifiedProfiler::getInstance().endFrame();
 ```
 
 ### Step 3: Update PerformanceHUD Integration
@@ -174,7 +174,7 @@ void PerformanceHUD::update() {
 **Remove from Main.cpp (around line 2145):**
 ```cpp
 // REMOVE THIS LINE:
-NomadUI::NUIFrameProfiler m_profiler;  // Legacy profiler (can be removed later)
+AestraUI::NUIFrameProfiler m_profiler;  // Legacy profiler (can be removed later)
 ```
 
 ### Step 5: Add Memory Profiling Hooks
@@ -183,11 +183,11 @@ NomadUI::NUIFrameProfiler m_profiler;  // Legacy profiler (can be removed later)
 ```cpp
 // Add memory tracking for major allocations
 void* ptr = malloc(size);
-NOMAD_MEMORY_ALLOC(size);
+Aestra_MEMORY_ALLOC(size);
 
 // Later when freeing:
 free(ptr);
-NOMAD_MEMORY_FREE(size);
+Aestra_MEMORY_FREE(size);
 ```
 
 ### Step 6: Configure Performance Baselines
@@ -195,7 +195,7 @@ NOMAD_MEMORY_FREE(size);
 **In application initialization:**
 ```cpp
 // Set performance baselines for regression detection
-auto& profiler = Nomad::UnifiedProfiler::getInstance();
+auto& profiler = Aestra::UnifiedProfiler::getInstance();
 profiler.setPerformanceBaseline("frameTimeMs", 16.7);  // Target 60fps
 profiler.setPerformanceBaseline("audioLoadPercent", 50.0);  // Target audio load
 
@@ -211,7 +211,7 @@ profiler.setAlertThresholds(20.0, 85.0);  // 20ms frame time, 85% audio load
 Profiler::getInstance().exportToJSON("nomad_profile.json");
 
 // New:
-auto& profiler = Nomad::UnifiedProfiler::getInstance();
+auto& profiler = Aestra::UnifiedProfiler::getInstance();
 profiler.exportPerformanceReport("nomad_performance_report");  // Exports both JSON and HTML
 ```
 
@@ -235,7 +235,7 @@ if (trackManager) {
 }
 
 // New unified profiler version:
-auto& profiler = Nomad::UnifiedProfiler::getInstance();
+auto& profiler = Aestra::UnifiedProfiler::getInstance();
 profiler.setAudioLoad(trackManager->getAudioLoadPercent());
 profiler.syncAudioTelemetry();  // Additional audio metrics from AudioTelemetry
 ```
@@ -266,7 +266,7 @@ The unified profiler automatically detects:
       "cat": "metadata", 
       "ph": "i",
       "args": {
-        "buildInfo": "NOMAD-2025-Core",
+        "buildInfo": "Aestra-2025-Core",
         "totalFrames": 15000,
         "systemInfo": "Windows 10, Intel i7, RTX 3080"
       }
@@ -309,7 +309,7 @@ The unified profiler automatically detects:
 ```cpp
 // Test script - add to development builds
 void validateProfilerPerformance() {
-    auto& profiler = Nomad::UnifiedProfiler::getInstance();
+    auto& profiler = Aestra::UnifiedProfiler::getInstance();
     
     // Run for 1000 frames
     for (int i = 0; i < 1000; ++i) {

@@ -8,9 +8,9 @@
 #include <numeric>
 
 #include "SampleRateConverter.h"
-#include "NomadLog.h"
+#include "AestraLog.h"
 
-using namespace Nomad::Audio;
+using namespace Aestra::Audio;
 
 // Simple scoped timer
 class ScopedTimer {
@@ -79,8 +79,8 @@ void runBenchmark(const std::string& name, uint32_t srcRate, uint32_t dstRate, S
 }
 
 int main() {
-    Nomad::Log::init(std::make_shared<Nomad::ConsoleLogger>(Nomad::LogLevel::Info));
-    Nomad::Log::info("Starting Resampler Benchmark...");
+    Aestra::Log::init(std::make_shared<Aestra::ConsoleLogger>(Aestra::LogLevel::Info));
+    Aestra::Log::info("Starting Resampler Benchmark...");
 
     // Force SIMD check log
     SampleRateConverter::hasAVX();

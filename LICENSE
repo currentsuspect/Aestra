@@ -13,7 +13,7 @@ All rights reserved.
 
 ## Preamble
 
-Nomad DAW is a free, professional-grade Digital Audio Workstation built to democratize music production. This license allows you to view, study, and contribute to the codebase while protecting Nomad Studios' ability to sustain development and maintain the product's mission.
+Aestra DAW is a free, professional-grade Digital Audio Workstation built to democratize music production. This license allows you to view, study, and contribute to the codebase while protecting Nomad Studios' ability to sustain development and maintain the product's mission.
 
 **Philosophy:** We believe in transparency and community contribution, but we also believe creators deserve to be compensated for their work. This license balances both.
 
@@ -21,7 +21,7 @@ Nomad DAW is a free, professional-grade Digital Audio Workstation built to democ
 
 ## 1. Definitions
 
-**"Software"** means the Nomad DAW source code, binaries, documentation, assets, and associated materials available in this repository.
+**"Software"** means the Aestra DAW source code, binaries, documentation, assets, and associated materials available in this repository.
 
 **"You"** or **"Your"** means any individual or legal entity exercising rights under this License.
 
@@ -41,11 +41,11 @@ Nomad DAW is a free, professional-grade Digital Audio Workstation built to democ
 - Using the Software in a business or for-profit entity
 
 **“Commercial Use”** does not include selling, licensing, publishing, or distributing music, audio files, sound recordings, or artistic content created with the Software.
-You own 100% of the music you make with Nomad DAW. ALWAYS!
+You own 100% of the music you make with Aestra DAW. ALWAYS!
 
 *This exception applies regardless of whether the music was created for personal use, commercial release, client work, or any other artistic purpose.*
 
-**"Competing Product"** means any Digital Audio Workstation (DAW), music production software, or audio editing tool that directly competes with Nomad DAW in functionality or target market.
+**"Competing Product"** means any Digital Audio Workstation (DAW), music production software, or audio editing tool that directly competes with Aestra DAW in functionality or target market.
 
 ---
 
@@ -59,7 +59,7 @@ Subject to the terms and conditions of this License, Dylan Makori (Nomad Studios
 
 ✅ **View and Study** — Examine the source code for educational purposes, learning, and research.
 
-✅ **Personal Use** — Use unmodified binaries of Nomad DAW for personal, non-commercial music production.
+✅ **Personal Use** — Use unmodified binaries of Aestra DAW for personal, non-commercial music production.
 
 ✅ **Educational Use** — Use the Software in academic settings, tutorials, or courses, provided proper attribution is given.
 
@@ -83,7 +83,7 @@ Subject to the terms and conditions of this License, Dylan Makori (Nomad Studios
 
 ❌ **Commercial Use Without Permission** — Use the Software for commercial purposes without explicit written consent from Nomad Studios.
 
-❌ **Create Competing Products** — Create, distribute, or sell Derivative Works that compete with Nomad DAW, including but not limited to:
+❌ **Create Competing Products** — Create, distribute, or sell Derivative Works that compete with Aestra DAW, including but not limited to:
 
 - Other DAWs or music production software
 - Audio editing tools
@@ -117,24 +117,24 @@ All title, ownership rights, and intellectual property rights in and to the Soft
 - Documentation and specifications
 - Algorithms and architectures
 - User interfaces and designs
-- Trademarks and branding ("Nomad," "Nomad DAW," "Muse," "Nomad Studios")
+- Trademarks and branding ("Aestra," "Aestra DAW," "Muse," "Nomad Studios")
 - Associated research papers and publications
 
 ...remain the **exclusive property of Dylan Makori and Nomad Studios**.
 
 ### 3.2 Trademarks
 
-The names "Nomad," "Nomad DAW," "Nomad Studios," and "Muse," along with associated logos and branding, are trademarks of Nomad Studios. You may not use these trademarks in any manner that suggests endorsement, affiliation, or sponsorship without prior written permission.
+The names "Aestra," "Aestra DAW," "Nomad Studios," and "Muse," along with associated logos and branding, are trademarks of Nomad Studios. You may not use these trademarks in any manner that suggests endorsement, affiliation, or sponsorship without prior written permission.
 
-**Permitted:** "Built for Nomad DAW" (with attribution)  
-**Not Permitted:** "Nomad Pro" or "MyDAW based on Nomad"
+**Permitted:** "Built for Aestra DAW" (with attribution)  
+**Not Permitted:** "Aestra Pro" or "MyDAW based on Aestra"
 
 ### 3.3 Attribution Requirements
 
 If You reference, discuss, or use the Software in educational materials, blog posts, videos, or publications, You must:
 
 - Clearly attribute the Software to "Dylan Makori / Nomad Studios"
-- Include a link to the official repository: [NOMAD](https://github.com/currentsuspect/NOMAD)
+- Include a link to the official repository: [Aestra](https://github.com/currentsuspect/Aestra)
 - Do not imply endorsement without permission
 
 ---
@@ -216,14 +216,14 @@ Feature requests are welcome, but acceptance is at the sole discretion of Nomad 
 
 ### 7.1 Free Use
 
-**The Nomad DAW base application is and will remain free for personal use.** This license applies to the source code repository, not the end-user application.
+**The Aestra DAW base application is and will remain free for personal use.** This license applies to the source code repository, not the end-user application.
 
 ### 7.2 Commercial Inquiries
 
 If You wish to:
 
-- Incorporate Nomad DAW technology into a commercial product
-- Offer Nomad DAW as part of a paid service
+- Incorporate Aestra DAW technology into a commercial product
+- Offer Aestra DAW as part of a paid service
 - Create a Derivative Work for commercial purposes
 - Use the Software in a business or enterprise setting beyond personal use
 
@@ -243,11 +243,11 @@ Nomad Studios reserves the right to offer the Software under additional licenses
 
 THE SOFTWARE IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
 
-IN NO EVENT SHALL DYLAN MAKORI OR NOMAD STUDIOS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+IN NO EVENT SHALL DYLAN MAKORI OR Aestra STUDIOS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ### 8.2 Limitation of Liability
 
-TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL NOMAD STUDIOS BE LIABLE FOR:
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL Aestra STUDIOS BE LIABLE FOR:
 
 - Any direct, indirect, incidental, special, exemplary, or consequential damages
 - Loss of profits, data, or business opportunities
@@ -374,7 +374,7 @@ This License is written in English. Any translations are provided for convenienc
 **Nomad Studios**  
 Founder: Dylan Makori  
 Email: [makoridylan@gmail.com](mailto:makoridylan@gmail.com)  
-GitHub: [NOMAD](https://github.com/currentsuspect/NOMAD)  
+GitHub: [Aestra](https://github.com/currentsuspect/Aestra)  
 Website: [Coming Soon]
 
 **For:**
@@ -389,7 +389,7 @@ Website: [Coming Soon]
 
 ## 14. Acknowledgments
 
-Nomad DAW is built with the following principles:
+Aestra DAW is built with the following principles:
 
 - **Accessibility:** Professional tools should be free for personal use
 - **Transparency:** Source code visibility builds trust
@@ -406,7 +406,7 @@ Thank you for respecting these values and this license.
 | Action | Allowed? | Notes |
 |--------|----------|-------|
 | View source code | ✅ Yes | For learning and transparency |
-| Use Nomad DAW for personal music | ✅ Yes | Base app is free forever |
+| Use Aestra DAW for personal music | ✅ Yes | Base app is free forever |
 | Report bugs | ✅ Yes | Via GitHub Issues |
 | Submit pull requests | ✅ Yes | Must agree to CLA |
 | Fork for contributions | ✅ Yes | To prepare PRs only |

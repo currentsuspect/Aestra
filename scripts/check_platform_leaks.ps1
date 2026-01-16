@@ -1,5 +1,5 @@
 # Platform Abstraction Leak Detection Script
-# This script checks for Windows-specific code leaks outside NomadPlat/src/Win32/
+# This script checks for Windows-specific code leaks outside AestraPlat/src/Win32/
 
 param(
     [switch]$Fix = $false
@@ -8,11 +8,11 @@ param(
 $ErrorActionPreference = "Stop"
 $violations = @()
 $allowedPaths = @(
-    "NomadPlat\src\Win32",
-    "NomadPlat\src\Win32\WinHeaders.h",
-    "NomadAudio\src\Win32",
-    "NomadUI\External",  # External libraries (glad, rtaudio) may have Windows code
-    "NomadAudio\External"
+    "AestraPlat\src\Win32",
+    "AestraPlat\src\Win32\WinHeaders.h",
+    "AestraAudio\src\Win32",
+    "AestraUI\External",  # External libraries (glad, rtaudio) may have Windows code
+    "AestraAudio\External"
 )
 
 # Forbidden Windows includes

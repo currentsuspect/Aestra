@@ -21,7 +21,7 @@ $patterns = @(
     '\.p12$',
     '\.pem$',
     '\.key$',
-    'NomadCert',
+    'AestraCert',
     'AKIA[A-Z0-9]{16}', # AWS Access Key ID heuristic
     'ssh-rsa AAAA',
     'api_key',

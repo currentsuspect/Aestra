@@ -1,10 +1,10 @@
-# Support NOMAD Studios (2025-Launch)
+# Support Nomad Studios (2025-Launch)
 
-Thank you for considering supporting NOMAD Studios! Your contribution helps us continue developing NOMAD DAW and keeping its core features free for everyone.
+Thank you for considering supporting Nomad Studios! Your contribution helps us continue developing Aestra and keeping its core features free for everyone.
 
 ## Why Support Us?
 
-NOMAD DAW is built with a vision to make professional music production accessible to everyone. Your support helps us:
+Aestra is built with a vision to make professional music production accessible to everyone. Your support helps us:
 
 - Keep the core software free and open-source
 - Develop new features and improvements
@@ -30,7 +30,7 @@ NOMAD DAW is built with a vision to make professional music production accessibl
 ### 🎛️ Founder ($15/month)
 - All Pro benefits, plus:
 - Your name in the About box
-- Lifetime NOMAD Muse credits when released
+- Lifetime Aestra Muse credits when released
 - Priority support
 - Exclusive Founder role on Discord
 - Early access to all new features
@@ -49,7 +49,7 @@ Choose your preferred platform:
 - **No paywalls**: Core features will always be free
 - **Community-driven**: Your feedback directly influences development
 
-Thank you for being part of the NOMAD community!
+Thank you for being part of the Aestra community!
 
 ---
 *Last updated: October 30, 2025*

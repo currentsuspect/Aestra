@@ -110,28 +110,28 @@ Failed: 0/6
 ## Files Modified
 
 ### Headers
-- `NomadAudio/include/AudioDeviceManager.h`
+- `AestraAudio/include/AudioDeviceManager.h`
   - Added device switching methods
   - Added dynamic configuration methods
   - Added validation methods
   - Enhanced internal state tracking
 
 ### Implementation
-- `NomadAudio/src/AudioDeviceManager.cpp`
+- `AestraAudio/src/AudioDeviceManager.cpp`
   - Implemented device switching logic
   - Implemented dynamic configuration changes
   - Added configuration validation
   - Enhanced error handling
 
 ### Tests
-- `NomadAudio/test/DeviceManagerTest.cpp` (NEW)
+- `AestraAudio/test/DeviceManagerTest.cpp` (NEW)
   - Comprehensive test suite for all features
   - 6 test scenarios covering all requirements
   - Real-time audio testing with sine wave generator
 
 ### Build System
-- `NomadAudio/CMakeLists.txt`
-  - Added NomadDeviceManagerTest executable
+- `AestraAudio/CMakeLists.txt`
+  - Added AestraDeviceManagerTest executable
 
 ## Technical Highlights
 

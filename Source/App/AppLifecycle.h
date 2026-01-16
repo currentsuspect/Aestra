@@ -26,7 +26,7 @@
 #include <mutex>
 #include <string>
 
-namespace Nomad {
+namespace Aestra {
 
 /**
  * @brief Application lifecycle states (B-002)
@@ -252,4 +252,4 @@ private:
     bool m_completed;
 };
 
-} // namespace Nomad
+} // namespace Aestra

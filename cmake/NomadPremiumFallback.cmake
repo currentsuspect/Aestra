@@ -1,14 +1,14 @@
-# CMake helper: define NOMAD_CORE_ONLY when premium folders are absent
+# CMake helper: define Aestra_CORE_ONLY when premium folders are absent
 
-if(NOT DEFINED NOMAD_PREMIUM_DIR)
-    set(NOMAD_PREMIUM_DIR "${CMAKE_SOURCE_DIR}/NomadMuse" CACHE PATH "Path to Nomad premium modules")
+if(NOT DEFINED Aestra_PREMIUM_DIR)
+    set(Aestra_PREMIUM_DIR "${CMAKE_SOURCE_DIR}/AestraMuse" CACHE PATH "Path to Aestra premium modules")
 endif()
 
-if(NOT EXISTS "${NOMAD_PREMIUM_DIR}")
-    message(STATUS "Nomad premium directory not found; enabling NOMAD_CORE_ONLY fallback")
-    add_compile_definitions(NOMAD_CORE_ONLY)
+if(NOT EXISTS "${Aestra_PREMIUM_DIR}")
+    message(STATUS "Aestra premium directory not found; enabling Aestra_CORE_ONLY fallback")
+    add_compile_definitions(Aestra_CORE_ONLY)
     # Point to mock assets so builds still succeed
-    set(NOMAD_ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets_mock" CACHE PATH "Path to mock assets used when premium missing")
+    set(Aestra_ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets_mock" CACHE PATH "Path to mock assets used when premium missing")
 else()
-    message(STATUS "Nomad premium directory found: ${NOMAD_PREMIUM_DIR}")
+    message(STATUS "Aestra premium directory found: ${Aestra_PREMIUM_DIR}")
 endif()

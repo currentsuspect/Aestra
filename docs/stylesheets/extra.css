@@ -1,7 +1,7 @@
-/* Custom NOMAD DAW Branding and Styling */
+/* Custom Aestra Branding and Styling */
 
 :root {
-  /* NOMAD Brand Colors */
+  /* Aestra Brand Colors */
   --nomad-primary: #4338ca;
   --nomad-accent: #06b6d4;
   --nomad-bg: #0f172a;
@@ -177,15 +177,15 @@
     display: block;
     overflow-x: auto;
   }
-  
+
   .hero-section h1 {
     font-size: 2rem;
   }
-  
+
   .hero-section .tagline {
     font-size: 1.2rem;
   }
-  
+
   .feature-grid {
     grid-template-columns: 1fr;
   }
@@ -210,7 +210,7 @@
   transition: background 0.2s;
 }
 
-.tabbed-labels input:checked + label {
+.tabbed-labels input:checked+label {
   background: var(--nomad-primary);
   color: white;
 }

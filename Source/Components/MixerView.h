@@ -1,26 +1,26 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Widgets/NUIMixerWidgets.h"
+#include "../AestraUI/Core/NUIComponent.h"
+#include "../AestraUI/Widgets/NUIMixerWidgets.h"
 #include "TrackManager.h"
 #include <memory>
 #include <vector>
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 /**
  * @brief Channel strip component - represents one track in the mixer
  * Shows volume fader, pan control, mute/solo buttons, level meter
  */
-class ChannelStrip : public NomadUI::NUIComponent {
+class ChannelStrip : public AestraUI::NUIComponent {
 public:
     ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackManager = nullptr);
     
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
     
     void setTrack(std::shared_ptr<Track> track) { m_track = track; }
     std::shared_ptr<Track> getTrack() const { return m_track; }
@@ -30,10 +30,10 @@ private:
     TrackManager* m_trackManager; // For coordinating solo exclusivity
     
     // UI Controls
-    std::shared_ptr<NomadUI::Fader> m_volumeFader;
-    std::shared_ptr<NomadUI::PanKnob> m_panKnob;
-    std::shared_ptr<NomadUI::MuteButton> m_muteButton;
-    std::shared_ptr<NomadUI::SoloButton> m_soloButton;
+    std::shared_ptr<AestraUI::Fader> m_volumeFader;
+    std::shared_ptr<AestraUI::PanKnob> m_panKnob;
+    std::shared_ptr<AestraUI::MuteButton> m_muteButton;
+    std::shared_ptr<AestraUI::SoloButton> m_soloButton;
     
     // Level meter state
     float m_peakLevel{0.0f};
@@ -46,11 +46,11 @@ private:
  * @brief Mixer view - shows all tracks as channel strips
  * Similar to a traditional mixing console
  */
-class MixerView : public NomadUI::NUIComponent {
+class MixerView : public AestraUI::NUIComponent {
 public:
     MixerView(std::shared_ptr<TrackManager> trackManager);
     
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     
     void refreshChannels();  // Rebuild channel strips when tracks change
@@ -66,4 +66,4 @@ private:
 };
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

@@ -3,7 +3,7 @@
 ![Status](https://img.shields.io/badge/Status-Planned-yellow)
 ![AI](https://img.shields.io/badge/AI-Muse-purple)
 
-Documentation for Nomad's Muse AI integration — intelligent music generation and production assistance.
+Documentation for Aestra's Muse AI integration — intelligent music generation and production assistance.
 
 ## 📋 Table of Contents
 
@@ -15,7 +15,7 @@ Documentation for Nomad's Muse AI integration — intelligent music generation a
 
 ## 🌟 Overview
 
-**Muse** is Nomad DAW's AI-powered music generation and production assistant. It leverages machine learning models to help producers create, enhance, and refine their music with intelligent suggestions and automation.
+**Muse** is Aestra DAW's AI-powered music generation and production assistant. It leverages machine learning models to help producers create, enhance, and refine their music with intelligent suggestions and automation.
 
 > **Note**: Muse is currently in private development and not yet available in the public build. This documentation serves as a reference for future integration.
 
@@ -40,7 +40,7 @@ Muse aims to:
 
 ```
 ┌─────────────────────────────────────────────┐
-│         Nomad DAW Application               │
+│         Aestra DAW Application               │
 └─────────────────┬───────────────────────────┘
                   │
         ┌─────────┴──────────┐
@@ -201,7 +201,7 @@ public:
 
 ### Application Integration
 
-**Where Muse connects to Nomad DAW:**
+**Where Muse connects to Aestra DAW:**
 
 1. **Pattern Editor** - Generate patterns on demand
 2. **Mixer View** - Real-time mix analysis and suggestions
@@ -293,7 +293,7 @@ musePa tternGen->generateMelodyAsync(
 - **PyTorch** - Model training and inference
 - **ONNX Runtime** - Optimized inference in C++
 - **TorchScript** - Export models for production
-- **C++ API** - Native integration with Nomad
+- **C++ API** - Native integration with Aestra
 
 **Model Types:**
 - **Transformer models** - For sequential music generation
@@ -323,15 +323,15 @@ musePa tternGen->generateMelodyAsync(
 
 ## 🛡️ Licensing
 
-Muse AI is part of **Nomad Premium**:
-- Included with paid Nomad DAW license
+Muse AI is part of **Aestra Premium**:
+- Included with paid Aestra DAW license
 - Models and code are proprietary
 - Generated content is user's property
 - Commercial use allowed with valid license
 
 ## 📚 Additional Resources
 
-- [Architecture Overview](ARCHITECTURE.md) - Nomad system design
+- [Architecture Overview](ARCHITECTURE.md) - Aestra system design
 - [Roadmap](ROADMAP.md) - Feature timeline
 - [FAQ](FAQ.md) - Common questions about Muse
 - [License Reference](LICENSE_REFERENCE.md) - Licensing terms
@@ -348,4 +348,4 @@ We're actively gathering input during development. Your feedback helps shape Mus
 
 ---
 
-[← Return to Nomad Docs Index](README.md)
+[← Return to Aestra Docs Index](README.md)

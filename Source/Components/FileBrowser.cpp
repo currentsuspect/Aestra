@@ -6,12 +6,12 @@
 #include "Graphics/NUIRenderer.h"
 #include "Graphics/OpenGL/NUIRenderCache.h"
 #include "NUITextInput.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraCore/include/AestraLog.h"
 #include "AudioFileValidator.h"
 #include "MiniAudioDecoder.h"
-#include "../NomadPlat/include/NomadPlatform.h"
+#include "../AestraPlat/include/AestraPlatform.h"
 #include "Platform/NUIPlatformBridge.h"
-#include "../NomadCore/include/NomadUnifiedProfiler.h"
+#include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
@@ -26,9 +26,9 @@
 #include <Windows.h>
 #endif
 
-using namespace Nomad;
+using namespace Aestra;
 
-namespace NomadUI {
+namespace AestraUI {
 
 namespace {
 
@@ -213,7 +213,7 @@ FileBrowser::FileBrowser()
     // ... (theme logic handled in onResize)
 
     // DEFAULT PATH & SANDBOX LOGIC
-    // User requested "/Documents/Nomad" as the root.
+    // User requested "/Documents/Aestra" as the root.
     std::string userProfile = "";
 #if defined(_WIN32)
     const char* profileEnv = std::getenv("USERPROFILE");
@@ -225,10 +225,10 @@ FileBrowser::FileBrowser()
 
     std::string targetRoot = "";
     if (!userProfile.empty()) {
-        targetRoot = (std::filesystem::path(userProfile) / "Documents" / "Nomad").string();
+        targetRoot = (std::filesystem::path(userProfile) / "Documents" / "Aestra").string();
     } else {
         // Fallback for this specific environment if env var fails
-        targetRoot = "C:/Users/Current/Documents/Nomad";
+        targetRoot = "C:/Users/Current/Documents/Aestra";
     }
 
     std::filesystem::path docsPath(targetRoot);
@@ -243,12 +243,12 @@ FileBrowser::FileBrowser()
     if (std::filesystem::exists(docsPath, ec)) {
         rootPath_ = docsPath.string();
         currentPath_ = rootPath_;
-        Nomad::Log::info("[FileBrowser] Set root to: " + rootPath_);
+        Aestra::Log::info("[FileBrowser] Set root to: " + rootPath_);
     } else {
          // Final Fallback to CWD if creation fails
          rootPath_ = std::filesystem::current_path().string();
          currentPath_ = rootPath_;
-         Nomad::Log::warning("[FileBrowser] Failed to set default root, fallback to CWD: " + rootPath_);
+         Aestra::Log::warning("[FileBrowser] Failed to set default root, fallback to CWD: " + rootPath_);
     }
     
     // Initial scan happens in onUpdate/onResize or explicit load?
@@ -324,7 +324,7 @@ FileBrowser::FileBrowser()
     flacFileIcon_->setIconSize(20, 20);
     flacFileIcon_->setColor(themeManager.getColor("textSecondary"));
 
-    // Project Icon (Nomad Diamond)
+    // Project Icon (Aestra Diamond)
     projectFileIcon_ = std::make_shared<NUIIcon>();
     const char* projectSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 12l8 10 8-10-8-10zm0 3.75l5 6.25-5 6.25-5-6.25 5-6.25z"/></svg>)";
     projectFileIcon_->loadSVG(projectSvg);
@@ -396,7 +396,7 @@ FileBrowser::FileBrowser()
 
     // NOW start the scan, strictly after layout is ready
     loadDirectoryContents();
-    // Nomad::Log::info("[FileBrowser] Constructor complete.");
+    // Aestra::Log::info("[FileBrowser] Constructor complete.");
 }
 
 FileBrowser::~FileBrowser() {
@@ -734,7 +734,7 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
 }
 
 void FileBrowser::onRender(NUIRenderer& renderer) {
-    NOMAD_ZONE("FileBrowser_Render");
+    AESTRA_ZONE("FileBrowser_Render");
     
     if (!isVisible()) return;
     
@@ -751,7 +751,7 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     }
 
     // Cache size matches the component bounds
-    NomadUI::NUISize cacheSize(static_cast<int>(bounds.width), static_cast<int>(bounds.height));
+    AestraUI::NUISize cacheSize(static_cast<int>(bounds.width), static_cast<int>(bounds.height));
     
     // Get/Create Cache
     // We use a shared_ptr<void> member to hold the cache reference if NUI supports it, 
@@ -914,13 +914,13 @@ void FileBrowser::onResize(int width, int height) {
 }
 
 void FileBrowser::invalidateAllItemCaches() {
-    std::vector<NomadUI::FileItem*> stack;
+    std::vector<AestraUI::FileItem*> stack;
     for (auto& item : rootItems_) {
         stack.push_back(&item);
     }
     
     while (!stack.empty()) {
-        NomadUI::FileItem* item = stack.back();
+        AestraUI::FileItem* item = stack.back();
         stack.pop_back();
         
         item->cacheValid = false;
@@ -1025,8 +1025,8 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	            
 	            // Only drag allowed files (using Smart Filter whitelist)
 	            if (!dragFile->isDirectory && FileFilter::isAllowed(dragFile->path)) {
-	                NomadUI::DragData dragData;
-	                dragData.type = NomadUI::DragDataType::File;
+	                AestraUI::DragData dragData;
+	                dragData.type = AestraUI::DragDataType::File;
 	                dragData.filePath = dragFile->path;
 	                dragData.displayName = dragFile->name;
 	                dragData.accentColor = NUIColor(0.733f, 0.525f, 0.988f, 1.0f); // Purple accent
@@ -1331,7 +1331,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	                                uint32_t numChannels = 0;
 	                                
 	                                // Decode audio file
-	                                bool success = Nomad::Audio::decodeAudioFile(
+	                                bool success = Aestra::Audio::decodeAudioFile(
 	                                    filePath, audioData, sampleRate, numChannels);
 	                                
 	                                // Generate waveform from decoded data
@@ -1990,7 +1990,7 @@ FileType FileBrowser::getFileTypeFromExtension(const std::string& extension) con
     if (extension == ".mp3") return FileType::Mp3File;
     if (extension == ".flac") return FileType::FlacFile;
     if (extension == ".aiff" || extension == ".aif") return FileType::AudioFile;
-    if (extension == ".nomad" || extension == ".nmd" || extension == ".nomadproj") return FileType::ProjectFile;
+    if (extension == ".nomad" || extension == ".aes" || extension == ".nomadproj") return FileType::ProjectFile;
     if (extension == ".mid" || extension == ".midi") return FileType::MusicFile;
     
     return FileType::Unknown;
@@ -2308,15 +2308,15 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     // Common sizes
     // Common sizes
     const float toolbarFont = themeManager.getFontSize("s");
-    const float buttonRadius = 6.0f; // More squared-off Nomad UI look (matching 24px height)
+    const float buttonRadius = 6.0f; // More squared-off Aestra UI look (matching 24px height)
     const float buttonPadX = 8.0f;    
-    const float buttonH = 24.0f; // Standardized Nomad UI toolbar height
+    const float buttonH = 24.0f; // Standardized Aestra UI toolbar height
     
     // Center buttons in the TOP row (0 to buttonsRowHeight)
     const float buttonY = toolbarRect.y + (buttonsRowHeight - buttonH) / 2.0f;
     const float iconSize = 14.0f;     
     const float iconGap = 6.0f;       
-    const float clusterGap = 6.0f;   // Standardized Nomad UI gap
+    const float clusterGap = 6.0f;   // Standardized Aestra UI gap
 
     // === MEASURE layout from edges ===
     
@@ -2634,7 +2634,7 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 	    popupMenuTargetIsDirectory_ = item.isDirectory;
 
 	    const auto copyToClipboard = [](const std::string& text) {
-	        if (auto* utils = Nomad::Platform::getUtils()) {
+	        if (auto* utils = Aestra::Platform::getUtils()) {
 	            utils->setClipboardText(text);
 	        }
 	    };
@@ -3565,7 +3565,7 @@ bool FileBrowser::isSearchBoxFocused() const {
 void FileBrowser::saveState(const std::string& filePath) {
     std::ofstream file(filePath);
     if (!file.is_open()) {
-        Nomad::Log::warning("[FileBrowser] Failed to save state to: " + filePath);
+        Aestra::Log::warning("[FileBrowser] Failed to save state to: " + filePath);
         return;
     }
     
@@ -3619,13 +3619,13 @@ void FileBrowser::saveState(const std::string& filePath) {
     file << "\n";
     
     file.close();
-    Nomad::Log::info("[FileBrowser] State saved to: " + filePath);
+    Aestra::Log::info("[FileBrowser] State saved to: " + filePath);
 }
 
 void FileBrowser::loadState(const std::string& filePath) {
     std::ifstream file(filePath);
     if (!file.is_open()) {
-        Nomad::Log::info("[FileBrowser] No saved state found at: " + filePath);
+        Aestra::Log::info("[FileBrowser] No saved state found at: " + filePath);
         return;
     }
     
@@ -3806,7 +3806,7 @@ void FileBrowser::loadState(const std::string& filePath) {
         lastRenderedOffset_ = scrollOffset_;
         updateScrollbarVisibility();
     }
-    Nomad::Log::info("[FileBrowser] State loaded from: " + filePath);
+    Aestra::Log::info("[FileBrowser] State loaded from: " + filePath);
 }
 
 
@@ -3834,4 +3834,4 @@ void FileBrowser::showHiddenBreadcrumbMenu(const std::vector<std::string>& hidde
 
 
 
-} // namespace NomadUI
+} // namespace AestraUI

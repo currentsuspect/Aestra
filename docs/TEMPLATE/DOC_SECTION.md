@@ -207,7 +207,7 @@ code goes here
 
 **Need more assistance?**
 
-- 💬 [GitHub Issues](https://github.com/currentsuspect/NOMAD/issues) - Report problems or ask questions
+- 💬 [GitHub Issues](https://github.com/currentsuspect/Aestra/issues) - Report problems or ask questions
 - 📧 Email: makoridylan@gmail.com
 - 📖 [FAQ](../FAQ.md) - Check frequently asked questions
 
@@ -225,4 +225,4 @@ All contributions are welcome and credited!
 
 **Last updated:** [Month Year]
 
-[← Return to Nomad Docs Index](../README.md)
+[← Return to Aestra Docs Index](../README.md)

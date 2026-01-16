@@ -13,7 +13,7 @@
 #include <cmath>
 #include <algorithm>
 
-namespace Nomad {
+namespace Aestra {
 
 /**
  * @brief Per-channel UI state for the mixer.
@@ -286,4 +286,4 @@ private:
                             double deltaTime);
 };
 
-} // namespace Nomad
+} // namespace Aestra

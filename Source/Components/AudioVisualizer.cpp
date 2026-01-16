@@ -1,13 +1,13 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioVisualizer.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
 #include <algorithm>
 #include <cmath>
 #include <numeric>
 #include <iostream>
 
-namespace NomadUI {
+namespace AestraUI {
 
 // =============================================================================
 // SECTION: Construction
@@ -28,7 +28,7 @@ AudioVisualizer::AudioVisualizer()
     , mode_(AudioVisualizationMode::Waveform)
     , sensitivity_(0.8f)
     , decayRate_(0.95f)
-    , primaryColor_(NUIColor::fromHex(0xbb86fc))    // Nomad Purple
+    , primaryColor_(NUIColor::fromHex(0xbb86fc))    // Aestra Purple
     , secondaryColor_(NUIColor::fromHex(0xd1b3ff))  // Lighter complementary purple
     , showStereo_(true)
     , showPeakHold_(true)
@@ -281,7 +281,7 @@ void AudioVisualizer::setInterleavedWaveform(const float* interleavedStereo, siz
     setDirty(true);
 }
 
-void AudioVisualizer::setAudioManager(Nomad::Audio::AudioDeviceManager* manager) {
+void AudioVisualizer::setAudioManager(Aestra::Audio::AudioDeviceManager* manager) {
     audioManager_ = manager;
 }
 
@@ -314,7 +314,7 @@ void AudioVisualizer::setShowPeakHold(bool showPeakHold) {
     setDirty(true);
 }
 
-void AudioVisualizer::setArrangementWaveform(std::shared_ptr<Nomad::Audio::WaveformCache> cache, double duration, double clipStartTime, double sampleRate) {
+void AudioVisualizer::setArrangementWaveform(std::shared_ptr<Aestra::Audio::WaveformCache> cache, double duration, double clipStartTime, double sampleRate) {
     arrangementWaveform_ = cache;
     projectDuration_ = duration;
     clipStartTime_ = clipStartTime;
@@ -855,14 +855,14 @@ void AudioVisualizer::renderArrangementWaveform(NUIRenderer& renderer) {
     windowEnd = std::max(windowStart + 0.01, windowEnd);
     
     // Convert to samples using the actual waveform sample rate
-    Nomad::Audio::SampleIndex startSample = static_cast<Nomad::Audio::SampleIndex>(windowStart * waveformSampleRate_);
-    Nomad::Audio::SampleIndex endSample = static_cast<Nomad::Audio::SampleIndex>(windowEnd * waveformSampleRate_);
+    Aestra::Audio::SampleIndex startSample = static_cast<Aestra::Audio::SampleIndex>(windowStart * waveformSampleRate_);
+    Aestra::Audio::SampleIndex endSample = static_cast<Aestra::Audio::SampleIndex>(windowEnd * waveformSampleRate_);
     
     if (endSample <= startSample) return;
     
     // Get peaks for the visible range
     uint32_t numPixels = static_cast<uint32_t>(bounds.width);
-    std::vector<Nomad::Audio::WaveformPeak> peaks;
+    std::vector<Aestra::Audio::WaveformPeak> peaks;
     arrangementWaveform_->getPeaksForRange(0, startSample, endSample, numPixels, peaks);
     
     if (peaks.empty()) return;
@@ -986,4 +986,4 @@ void AudioVisualizer::renderSpectrumBar(NUIRenderer& renderer, const NUIRect& bo
     renderer.fillRoundedRect(barRect, 2, color);
 }
 
-} // namespace NomadUI
+} // namespace AestraUI

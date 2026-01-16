@@ -1,15 +1,15 @@
 // ¶¸ 2025 Nomad Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
 #include "TimelineMinimapRenderer.h"
 
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
 #include "TimelineMinimapModel.h"
 #include "TimelineSummaryCache.h"
 
 #include <algorithm>
 #include <cmath>
 
-namespace NomadUI {
+namespace AestraUI {
 
 namespace {
 
@@ -297,5 +297,5 @@ double TimelineMinimapRenderer::xToTime(float x, const NUIRect& mapRect, double 
     return domainStartBeat + u * denom;
 }
 
-} // namespace NomadUI
+} // namespace AestraUI
 

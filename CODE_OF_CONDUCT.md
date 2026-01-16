@@ -6,7 +6,7 @@
 
 ## 🌍 Our Pledge
 
-We, as members, contributors, and leaders of the **Nomad Studios** community, pledge to make participation in the Nomad ecosystem — including **Nomad DAW**, its repositories, forums, and chat spaces — a safe, open, and welcoming experience for everyone.
+We, as members, contributors, and leaders of the **Nomad Studios** community, pledge to make participation in the Aestra ecosystem — including **Aestra DAW**, its repositories, forums, and chat spaces — a safe, open, and welcoming experience for everyone.
 
 We commit to fostering an environment built on **respect, curiosity, and creativity**, regardless of:
 
@@ -68,5 +68,5 @@ Portions of this document were inspired by the [Contributor Covenant](https://ww
 
 ## ❤️ Final Note
 
-Nomad exists to bring **freedom and artistry** back to music creation.
+Aestra exists to bring **freedom and artistry** back to music creation.
 We’re all here to build something bigger than ourselves — so let’s treat each other with the same care and respect we give to our art.

@@ -8,7 +8,7 @@
 
 ## 🎯 Objective
 
-Implement an **adaptive frame pacing system** for the Nomad DAW that intelligently switches between 30 FPS (idle) and 60 FPS (active) based on user activity and system performance, providing a smooth user experience while maintaining thermal and CPU efficiency.
+Implement an **adaptive frame pacing system** for the Aestra DAW that intelligently switches between 30 FPS (idle) and 60 FPS (active) based on user activity and system performance, providing a smooth user experience while maintaining thermal and CPU efficiency.
 
 ---
 
@@ -16,7 +16,7 @@ Implement an **adaptive frame pacing system** for the Nomad DAW that intelligent
 
 ### Core Components
 
-#### 1. **NUIAdaptiveFPS Class** (`NomadUI/Core/NUIAdaptiveFPS.h/.cpp`)
+#### 1. **NUIAdaptiveFPS Class** (`AestraUI/Core/NUIAdaptiveFPS.h/.cpp`)
 
 **Features Implemented:**
 - ✅ Dynamic FPS switching (30 ↔ 60 FPS)
@@ -53,7 +53,7 @@ canSustain60FPS()
 getStats()
 ```
 
-#### 2. **NUIApp Integration** (`NomadUI/Core/NUIApp.h/.cpp`)
+#### 2. **NUIApp Integration** (`AestraUI/Core/NUIApp.h/.cpp`)
 
 **Changes:**
 - ✅ Added `NUIAdaptiveFPS` member variable
@@ -73,10 +73,10 @@ getStats()
   - **F Key**: Cycle FPS modes (Auto → 30 → 60 → Auto)
   - **L Key**: Toggle adaptive FPS logging
 
-#### 4. **Build System** (`NomadUI/CMakeLists.txt`)
+#### 4. **Build System** (`AestraUI/CMakeLists.txt`)
 
 **Changes:**
-- ✅ Added `NUIAdaptiveFPS.h` and `NUIAdaptiveFPS.cpp` to NomadUI_Core sources
+- ✅ Added `NUIAdaptiveFPS.h` and `NUIAdaptiveFPS.cpp` to AestraUI_Core sources
 - ✅ Successfully compiled and linked
 
 ---
@@ -86,7 +86,7 @@ getStats()
 ### Default Settings (Main.cpp)
 
 ```cpp
-NomadUI::NUIAdaptiveFPS::Config fpsConfig;
+AestraUI::NUIAdaptiveFPS::Config fpsConfig;
 fpsConfig.fps30 = 30.0;                    // Idle: 30 FPS (~33.3ms/frame)
 fpsConfig.fps60 = 60.0;                    // Active: 60 FPS (~16.6ms/frame)
 fpsConfig.idleTimeout = 2.0;               // 2s idle before lowering FPS
@@ -152,7 +152,7 @@ AUTO-REVERT to 30 FPS
 
 ## 🎮 User Controls
 
-### Keyboard Shortcuts (NOMAD DAW)
+### Keyboard Shortcuts (Aestra)
 
 - **F**: Cycle FPS modes
   - Auto (Adaptive) → Locked 30 FPS → Locked 60 FPS → Auto
@@ -188,19 +188,19 @@ std::cout << "Current FPS: " << stats.currentTargetFPS << std::endl;
 
 ### New Files
 ```
-NomadUI/Core/NUIAdaptiveFPS.h          (240 lines)
-NomadUI/Core/NUIAdaptiveFPS.cpp        (290 lines)
-NomadDocs/ADAPTIVE_FPS_GUIDE.md        (Full documentation)
-NomadUI/docs/ADAPTIVE_FPS_QUICKREF.md  (Quick reference)
-NomadDocs/ADAPTIVE_FPS_SUMMARY.md      (This file)
+AestraUI/Core/NUIAdaptiveFPS.h          (240 lines)
+AestraUI/Core/NUIAdaptiveFPS.cpp        (290 lines)
+AestraDocs/ADAPTIVE_FPS_GUIDE.md        (Full documentation)
+AestraUI/docs/ADAPTIVE_FPS_QUICKREF.md  (Quick reference)
+AestraDocs/ADAPTIVE_FPS_SUMMARY.md      (This file)
 ```
 
 ### Modified Files
 ```
-NomadUI/Core/NUIApp.h                  (+10 lines)
-NomadUI/Core/NUIApp.cpp                (+30 lines)
+AestraUI/Core/NUIApp.h                  (+10 lines)
+AestraUI/Core/NUIApp.cpp                (+30 lines)
 Source/Main.cpp                        (+50 lines)
-NomadUI/CMakeLists.txt                 (+2 lines)
+AestraUI/CMakeLists.txt                 (+2 lines)
 ```
 
 **Total Lines Added**: ~650+ lines
@@ -214,11 +214,11 @@ NomadUI/CMakeLists.txt                 (+2 lines)
 **Compiler**: MSVC 17.14  
 **Configuration**: Debug  
 **Platform**: Windows x64  
-**Target**: NOMAD_DAW.exe
+**Target**: Aestra_DAW.exe
 
 **Build Output:**
 ```
-NOMAD_DAW.vcxproj -> C:\Users\Current\Documents\Projects\NOMAD\build\bin\Debug\NOMAD_DAW.exe
+Aestra_DAW.vcxproj -> C:\Users\Current\Documents\Projects\Aestra\build\bin\Debug\Aestra_DAW.exe
 ```
 
 **Compilation Errors**: 0  
@@ -249,7 +249,7 @@ NOMAD_DAW.vcxproj -> C:\Users\Current\Documents\Projects\NOMAD\build\bin\Debug\N
 ## 📚 Documentation
 
 ### Full Guide
-**File**: `NomadDocs/ADAPTIVE_FPS_GUIDE.md`
+**File**: `AestraDocs/ADAPTIVE_FPS_GUIDE.md`
 - Overview and features
 - Usage and configuration
 - API reference
@@ -259,7 +259,7 @@ NOMAD_DAW.vcxproj -> C:\Users\Current\Documents\Projects\NOMAD\build\bin\Debug\N
 - Architecture
 
 ### Quick Reference
-**File**: `NomadUI/docs/ADAPTIVE_FPS_QUICKREF.md`
+**File**: `AestraUI/docs/ADAPTIVE_FPS_QUICKREF.md`
 - At-a-glance overview
 - Quick start
 - Configuration snippets
@@ -345,7 +345,7 @@ Potential improvements for future versions:
 **Ready for Testing**: **YES** ✅  
 
 **Next Steps**:
-1. Run NOMAD DAW and test FPS transitions
+1. Run Aestra and test FPS transitions
 2. Monitor CPU usage idle vs. active
 3. Verify audio playback unaffected
 4. Test keyboard shortcuts (F and L keys)
@@ -355,6 +355,6 @@ Potential improvements for future versions:
 
 **Implemented by**: GitHub Copilot  
 **Date**: October 28, 2025  
-**Project**: NOMAD DAW  
-**Component**: NomadUI Adaptive FPS System  
+**Project**: Aestra  
+**Component**: AestraUI Adaptive FPS System  
 **Version**: 1.0.0  

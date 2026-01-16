@@ -1,8 +1,8 @@
 // ¶¸ 2025 Nomad Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
 #include "TimelineMinimapBar.h"
 
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
 #include "TimelineSummaryCache.h"
 
 #include <algorithm>
@@ -13,7 +13,7 @@
 #include <Windows.h>
 #endif
 
-namespace NomadUI {
+namespace AestraUI {
 
 namespace {
 
@@ -636,4 +636,4 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
     return true;
 }
 
-} // namespace NomadUI
+} // namespace AestraUI

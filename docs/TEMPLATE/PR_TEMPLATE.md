@@ -123,10 +123,10 @@ Before requesting review:
 
 ---
 
-**Thank you for contributing to Nomad documentation!** 🎉
+**Thank you for contributing to Aestra documentation!** 🎉
 
-Your improvements help make Nomad more accessible and easier to use for everyone.
+Your improvements help make Aestra more accessible and easier to use for everyone.
 
 ---
 
-[← Return to Nomad Docs Index](../README.md)
+[← Return to Aestra Docs Index](../README.md)

@@ -2,17 +2,17 @@
 #include "MixerPanel.h"
 
 #include "MixerViewModel.h"
-#include "../NomadUI/Widgets/UIMixerPanel.h"
+#include "../AestraUI/Widgets/UIMixerPanel.h"
 
-using namespace NomadUI;
-using namespace Nomad::Audio;
+using namespace AestraUI;
+using namespace Aestra::Audio;
 
 MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
     : WindowPanel("MIXER")
     , m_trackManager(std::move(trackManager))
 {
     // Create view model and modern mixer
-    m_viewModel = std::make_shared<Nomad::MixerViewModel>();
+    m_viewModel = std::make_shared<Aestra::MixerViewModel>();
     m_newMixer = std::make_shared<UIMixerPanel>(m_viewModel, m_trackManager);
     m_newMixer->setId("UIMixerPanel_Inner");
     

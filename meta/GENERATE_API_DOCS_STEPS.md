@@ -1,4 +1,4 @@
-# 🎯 Steps to Generate NOMAD API Documentation
+# 🎯 Steps to Generate Aestra API Documentation
 
 ## ✅ Current Status
 - ✅ Pulled latest changes from origin/develop
@@ -266,11 +266,11 @@ Documentation is automatically published when you push to the `main` branch:
    ```
 
 4. **Wait for GitHub Actions** (takes ~5 minutes)
-   - Check: https://github.com/currentsuspect/NOMAD/actions
+   - Check: https://github.com/currentsuspect/Aestra/actions
 
 5. **Access published docs at:**
    ```
-   https://currentsuspect.github.io/NOMAD/api/
+   https://currentsuspect.github.io/Aestra/api/
    ```
 
 ### Manual Deployment Trigger
@@ -486,10 +486,10 @@ You now have:
 
 **Need Help?**
 - 📖 Read: `docs/API_DOCUMENTATION_GUIDE.md`
-- 🐛 Report: [GitHub Issues](https://github.com/currentsuspect/NOMAD/issues)
-- 💬 Discuss: [GitHub Discussions](https://github.com/currentsuspect/NOMAD/discussions)
+- 🐛 Report: [GitHub Issues](https://github.com/currentsuspect/Aestra/issues)
+- 💬 Discuss: [GitHub Discussions](https://github.com/currentsuspect/Aestra/discussions)
 
 ---
 
 *Generated on: November 2, 2025*  
-*NOMAD DAW © 2025 Nomad Studios*
+*Aestra © 2025 Nomad Studios*

@@ -1,11 +1,11 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUIAdaptiveFPS.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
-#include "../NomadCore/include/NomadUnifiedProfiler.h"
+#include "../AestraUI/Core/NUIComponent.h"
+#include "../AestraUI/Core/NUIAdaptiveFPS.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "AudioEngine.h"
 #include "AudioCommandQueue.h"
 #include <memory>
@@ -26,7 +26,7 @@
  * - Collapsible sections
  * - Dual-layer performance graph
  */
-class UnifiedHUD : public NomadUI::NUIComponent {
+class UnifiedHUD : public AestraUI::NUIComponent {
 public:
     static constexpr float HUD_WIDTH = 360.0f;
     static constexpr float HUD_HEIGHT = 400.0f;
@@ -37,7 +37,7 @@ public:
     static constexpr float SECTION_SPACING = 6.0f;
     static constexpr float LINE_HEIGHT = 13.0f;
 
-    UnifiedHUD(NomadUI::NUIAdaptiveFPS* adaptiveFPS)
+    UnifiedHUD(AestraUI::NUIAdaptiveFPS* adaptiveFPS)
         : m_adaptiveFPS(adaptiveFPS)
         , m_visible(false)
         , m_audioEngine(nullptr)
@@ -46,12 +46,12 @@ public:
         m_audioCallbackGraph.resize(GRAPH_SAMPLES, 0.0f);
         m_fpsSparkline.fill(0.0f);
         m_audioLoadSparkline.fill(0.0f);
-        setBounds(NomadUI::NUIRect(0, 0, HUD_WIDTH, HUD_HEIGHT));
+        setBounds(AestraUI::NUIRect(0, 0, HUD_WIDTH, HUD_HEIGHT));
     }
 
-    void setAudioEngine(Nomad::Audio::AudioEngine* engine) {
+    void setAudioEngine(Aestra::Audio::AudioEngine* engine) {
         m_audioEngine = engine;
-        Nomad::UnifiedProfiler::getInstance().setAudioEngine(engine);
+        Aestra::UnifiedProfiler::getInstance().setAudioEngine(engine);
     }
 
     void toggle() { m_visible = !m_visible; }
@@ -110,11 +110,11 @@ public:
             auto parentBounds = getParent()->getBounds();
             float x = parentBounds.width - HUD_WIDTH - 10.0f;
             float y = 35.0f;
-            setBounds(NomadUI::NUIRect(x, y, HUD_WIDTH, HUD_HEIGHT));
+            setBounds(AestraUI::NUIRect(x, y, HUD_WIDTH, HUD_HEIGHT));
         }
     }
 
-    void onRender(NomadUI::NUIRenderer& renderer) override {
+    void onRender(AestraUI::NUIRenderer& renderer) override {
         if (!m_visible) return;
         
         renderBackground(renderer);
@@ -134,8 +134,8 @@ public:
     }
 
 private:
-    NomadUI::NUIAdaptiveFPS* m_adaptiveFPS;
-    Nomad::Audio::AudioEngine* m_audioEngine;
+    AestraUI::NUIAdaptiveFPS* m_adaptiveFPS;
+    Aestra::Audio::AudioEngine* m_audioEngine;
     bool m_visible;
     
     // Graphs
@@ -161,7 +161,7 @@ private:
 
     void updateZoneHotspots() {
         // Get zone timings from profiler - use LAST COMPLETED frame, not current (which is reset)
-        const auto& stats = Nomad::UnifiedProfiler::getInstance().getLastCompletedFrame();
+        const auto& stats = Aestra::UnifiedProfiler::getInstance().getLastCompletedFrame();
         
         // Aggregate zones by name from the zones vector
         std::unordered_map<std::string, float> zoneAggregate;
@@ -202,27 +202,27 @@ private:
         }
     }
 
-    void renderBackground(NomadUI::NUIRenderer& renderer) {
-        auto& theme = NomadUI::NUIThemeManager::getInstance();
+    void renderBackground(AestraUI::NUIRenderer& renderer) {
+        auto& theme = AestraUI::NUIThemeManager::getInstance();
         
-        NomadUI::NUIColor bgColor(0.02f, 0.02f, 0.05f, 0.94f);
+        AestraUI::NUIColor bgColor(0.02f, 0.02f, 0.05f, 0.94f);
         renderer.fillRoundedRect(getBounds(), 8.0f, bgColor);
         
-        NomadUI::NUIColor borderColor = theme.getColor("accentPrimary").withAlpha(0.6f);
+        AestraUI::NUIColor borderColor = theme.getColor("accentPrimary").withAlpha(0.6f);
         renderer.strokeRoundedRect(getBounds(), 8.0f, 1.5f, borderColor);
     }
 
-    void renderTitle(NomadUI::NUIRenderer& renderer, float& y) {
+    void renderTitle(AestraUI::NUIRenderer& renderer, float& y) {
         float x = getBounds().x + PADDING;
         
         // Rocket emoji effect with gradient title
-        NomadUI::NUIColor titleColor(0.3f, 0.9f, 1.0f, 1.0f);
-        renderer.drawText("🚀 PERFORMANCE MONITOR", NomadUI::NUIPoint(x, y), 11.0f, titleColor);
+        AestraUI::NUIColor titleColor(0.3f, 0.9f, 1.0f, 1.0f);
+        renderer.drawText("🚀 PERFORMANCE MONITOR", AestraUI::NUIPoint(x, y), 11.0f, titleColor);
         y += 16.0f;
     }
 
-    void renderSparkline(NomadUI::NUIRenderer& renderer, float x, float y, float width, float height,
-                         const std::array<float, SPARKLINE_SAMPLES>& data, float maxVal, NomadUI::NUIColor color) {
+    void renderSparkline(AestraUI::NUIRenderer& renderer, float x, float y, float width, float height,
+                         const std::array<float, SPARKLINE_SAMPLES>& data, float maxVal, AestraUI::NUIColor color) {
         if (maxVal <= 0.0f) return;
         
         float barWidth = width / SPARKLINE_SAMPLES;
@@ -235,12 +235,12 @@ private:
             float barX = x + i * barWidth;
             float barY = y + height - barHeight;
             
-            renderer.fillRect(NomadUI::NUIRect(barX, barY, barWidth - 1.0f, barHeight), color.withAlpha(0.6f));
+            renderer.fillRect(AestraUI::NUIRect(barX, barY, barWidth - 1.0f, barHeight), color.withAlpha(0.6f));
         }
     }
 
-    void renderFrameStats(NomadUI::NUIRenderer& renderer, float& y) {
-        auto& theme = NomadUI::NUIThemeManager::getInstance();
+    void renderFrameStats(AestraUI::NUIRenderer& renderer, float& y) {
+        auto& theme = AestraUI::NUIThemeManager::getInstance();
         float x = getBounds().x + PADDING;
         float rightX = getBounds().x + HUD_WIDTH - PADDING;
         
@@ -257,49 +257,49 @@ private:
         }
         
         // FPS with color
-        NomadUI::NUIColor fpsColor = theme.getColor("success");
+        AestraUI::NUIColor fpsColor = theme.getColor("success");
         if (fps < 30.0) fpsColor = theme.getColor("error");
         else if (fps < 55.0) fpsColor = theme.getColor("warning");
         
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(1) << fps << " FPS";
-        renderer.drawText(oss.str(), NomadUI::NUIPoint(x, y), 14.0f, fpsColor);
+        renderer.drawText(oss.str(), AestraUI::NUIPoint(x, y), 14.0f, fpsColor);
         
         // Frame time
         oss.str("");
         oss << std::fixed << std::setprecision(2) << frameTimeMs << " ms";
-        NomadUI::NUIColor ftColor = (frameTimeMs > 33.3) ? theme.getColor("error") : 
+        AestraUI::NUIColor ftColor = (frameTimeMs > 33.3) ? theme.getColor("error") : 
                                      (frameTimeMs > 16.7) ? theme.getColor("warning") : theme.getColor("textPrimary");
-        renderer.drawText(oss.str(), NomadUI::NUIPoint(x + 90, y), 11.0f, ftColor);
+        renderer.drawText(oss.str(), AestraUI::NUIPoint(x + 90, y), 11.0f, ftColor);
         
         // FPS Sparkline
         renderSparkline(renderer, rightX - 70, y, 60, 12, m_fpsSparkline, 70.0f, fpsColor);
         y += LINE_HEIGHT + 2;
         
         // Mode info
-        NomadUI::NUIColor labelColor(0.55f, 0.55f, 0.6f, 1.0f);
+        AestraUI::NUIColor labelColor(0.55f, 0.55f, 0.6f, 1.0f);
         oss.str("");
         oss << "Target: " << std::fixed << std::setprecision(0) << targetFps 
             << "  Active: " << (userActive ? "YES" : "NO")
             << "  60OK: " << (canSustain60 ? "YES" : "NO");
-        renderer.drawText(oss.str(), NomadUI::NUIPoint(x, y), 9.0f, labelColor);
+        renderer.drawText(oss.str(), AestraUI::NUIPoint(x, y), 9.0f, labelColor);
         
         // Mode
         oss.str("");
         oss << "Mode: ";
         if (m_adaptiveFPS) {
             switch (m_adaptiveFPS->getMode()) {
-                case NomadUI::NUIAdaptiveFPS::Mode::Auto: oss << "Auto"; break;
-                case NomadUI::NUIAdaptiveFPS::Mode::Locked30: oss << "Locked30"; break;
-                case NomadUI::NUIAdaptiveFPS::Mode::Locked60: oss << "Locked60"; break;
+                case AestraUI::NUIAdaptiveFPS::Mode::Auto: oss << "Auto"; break;
+                case AestraUI::NUIAdaptiveFPS::Mode::Locked30: oss << "Locked30"; break;
+                case AestraUI::NUIAdaptiveFPS::Mode::Locked60: oss << "Locked60"; break;
             }
         }
-        renderer.drawText(oss.str(), NomadUI::NUIPoint(rightX - 70, y), 9.0f, labelColor);
+        renderer.drawText(oss.str(), AestraUI::NUIPoint(rightX - 70, y), 9.0f, labelColor);
         y += LINE_HEIGHT + SECTION_SPACING;
     }
 
-    void renderAudioSection(NomadUI::NUIRenderer& renderer, float& y) {
-        auto& theme = NomadUI::NUIThemeManager::getInstance();
+    void renderAudioSection(AestraUI::NUIRenderer& renderer, float& y) {
+        auto& theme = AestraUI::NUIThemeManager::getInstance();
         float x = getBounds().x + PADDING;
         float rightX = getBounds().x + HUD_WIDTH - PADDING;
         
@@ -317,7 +317,7 @@ private:
         
         uint32_t qMax = cmdQueue.maxDepth();
         uint64_t qDrops = cmdQueue.droppedCount();
-        uint32_t qCap = Nomad::Audio::AudioCommandQueue::capacity();
+        uint32_t qCap = Aestra::Audio::AudioCommandQueue::capacity();
         
         double budgetMs = (sampleRate > 0 && bufFrames > 0) 
             ? (static_cast<double>(bufFrames) * 1000.0 / static_cast<double>(sampleRate)) : 0.0;
@@ -327,8 +327,8 @@ private:
         double srcPercent = (blocks > 0) ? (100.0 * srcBlocks / blocks) : 0.0;
         
         // Section header
-        NomadUI::NUIColor headerColor(0.3f, 0.75f, 1.0f, 1.0f);
-        renderer.drawText("AUDIO ENGINE", NomadUI::NUIPoint(x, y), 10.0f, headerColor);
+        AestraUI::NUIColor headerColor(0.3f, 0.75f, 1.0f, 1.0f);
+        renderer.drawText("AUDIO ENGINE", AestraUI::NUIPoint(x, y), 10.0f, headerColor);
         
         // Audio load sparkline
         renderSparkline(renderer, rightX - 70, y - 2, 60, 10, m_audioLoadSparkline, 100.0f, 
@@ -340,52 +340,52 @@ private:
         float barHeight = 6.0f;
         float barX = x + 50;
         
-        NomadUI::NUIColor barBg(0.08f, 0.08f, 0.1f, 1.0f);
-        renderer.fillRect(NomadUI::NUIRect(barX, y, barWidth, barHeight), barBg);
+        AestraUI::NUIColor barBg(0.08f, 0.08f, 0.1f, 1.0f);
+        renderer.fillRect(AestraUI::NUIRect(barX, y, barWidth, barHeight), barBg);
         
         float fillWidth = std::min(static_cast<float>(loadPercent / 100.0) * barWidth, barWidth);
-        NomadUI::NUIColor barFill = (loadPercent > 90) ? theme.getColor("error") :
+        AestraUI::NUIColor barFill = (loadPercent > 90) ? theme.getColor("error") :
                                      (loadPercent > 70) ? theme.getColor("warning") : theme.getColor("success");
-        renderer.fillRect(NomadUI::NUIRect(barX, y, fillWidth, barHeight), barFill);
+        renderer.fillRect(AestraUI::NUIRect(barX, y, fillWidth, barHeight), barFill);
         
         std::ostringstream oss;
         oss << "Load: " << std::fixed << std::setprecision(0) << loadPercent << "%";
-        NomadUI::NUIColor labelColor(0.6f, 0.6f, 0.65f, 1.0f);
-        renderer.drawText(oss.str(), NomadUI::NUIPoint(x, y - 1), 9.0f, labelColor);
+        AestraUI::NUIColor labelColor(0.6f, 0.6f, 0.65f, 1.0f);
+        renderer.drawText(oss.str(), AestraUI::NUIPoint(x, y - 1), 9.0f, labelColor);
         y += barHeight + 3;
         
         // Callback timing
         oss.str("");
         oss << "CB: " << std::fixed << std::setprecision(3) << lastCbMs << "ms / " 
             << std::setprecision(2) << budgetMs << "ms  WCET: " << std::setprecision(3) << maxCbMs << "ms";
-        renderer.drawText(oss.str(), NomadUI::NUIPoint(x, y), 9.0f, labelColor);
+        renderer.drawText(oss.str(), AestraUI::NUIPoint(x, y), 9.0f, labelColor);
         y += LINE_HEIGHT;
         
         // XRuns
-        NomadUI::NUIColor xrunColor = (xruns > 0) ? theme.getColor("error") : theme.getColor("success");
+        AestraUI::NUIColor xrunColor = (xruns > 0) ? theme.getColor("error") : theme.getColor("success");
         oss.str("");
         oss << "XRuns: " << xruns << "  Underruns: " << underruns 
             << "  Qmax: " << qMax << "/" << qCap << "  SRC: " << std::fixed << std::setprecision(0) << srcPercent << "%";
-        renderer.drawText(oss.str(), NomadUI::NUIPoint(x, y), 9.0f, xrunColor);
+        renderer.drawText(oss.str(), AestraUI::NUIPoint(x, y), 9.0f, xrunColor);
         y += LINE_HEIGHT;
         
         // Buffer config
         oss.str("");
         oss << "Buffer: " << bufFrames << " @ " << sampleRate << " Hz";
         if (qDrops > 0) oss << "  Drops: " << qDrops;
-        renderer.drawText(oss.str(), NomadUI::NUIPoint(x, y), 9.0f, labelColor);
+        renderer.drawText(oss.str(), AestraUI::NUIPoint(x, y), 9.0f, labelColor);
         y += LINE_HEIGHT + SECTION_SPACING;
     }
 
-    void renderZoneHotspots(NomadUI::NUIRenderer& renderer, float& y) {
-        auto& theme = NomadUI::NUIThemeManager::getInstance();
+    void renderZoneHotspots(AestraUI::NUIRenderer& renderer, float& y) {
+        auto& theme = AestraUI::NUIThemeManager::getInstance();
         float x = getBounds().x + PADDING;
         
-        NomadUI::NUIColor headerColor(1.0f, 0.6f, 0.2f, 1.0f);
-        renderer.drawText("🔥 ZONE HOTSPOTS", NomadUI::NUIPoint(x, y), 10.0f, headerColor);
+        AestraUI::NUIColor headerColor(1.0f, 0.6f, 0.2f, 1.0f);
+        renderer.drawText("🔥 ZONE HOTSPOTS", AestraUI::NUIPoint(x, y), 10.0f, headerColor);
         y += LINE_HEIGHT;
         
-        NomadUI::NUIColor labelColor(0.6f, 0.6f, 0.65f, 1.0f);
+        AestraUI::NUIColor labelColor(0.6f, 0.6f, 0.65f, 1.0f);
         float barMaxWidth = 80.0f;
         
         for (const auto& zone : m_zoneHotspots) {
@@ -394,12 +394,12 @@ private:
             // Zone name
             std::ostringstream oss;
             oss << zone.name;
-            renderer.drawText(oss.str(), NomadUI::NUIPoint(x, y), 9.0f, labelColor);
+            renderer.drawText(oss.str(), AestraUI::NUIPoint(x, y), 9.0f, labelColor);
             
             // Time
             oss.str("");
             oss << std::fixed << std::setprecision(2) << zone.timeMs << "ms";
-            renderer.drawText(oss.str(), NomadUI::NUIPoint(x + 85, y), 9.0f, theme.getColor("textPrimary"));
+            renderer.drawText(oss.str(), AestraUI::NUIPoint(x + 85, y), 9.0f, theme.getColor("textPrimary"));
             
             // Bar
             float barWidth = (zone.percentage / 100.0f) * barMaxWidth;
@@ -407,17 +407,17 @@ private:
             float barY = y + 2;
             float barHeight = 6.0f;
             
-            NomadUI::NUIColor barBg(0.1f, 0.1f, 0.12f, 1.0f);
-            renderer.fillRect(NomadUI::NUIRect(barX, barY, barMaxWidth, barHeight), barBg);
+            AestraUI::NUIColor barBg(0.1f, 0.1f, 0.12f, 1.0f);
+            renderer.fillRect(AestraUI::NUIRect(barX, barY, barMaxWidth, barHeight), barBg);
             
-            NomadUI::NUIColor barFill = (zone.percentage > 50) ? theme.getColor("error") :
+            AestraUI::NUIColor barFill = (zone.percentage > 50) ? theme.getColor("error") :
                                          (zone.percentage > 30) ? theme.getColor("warning") : headerColor;
-            renderer.fillRect(NomadUI::NUIRect(barX, barY, barWidth, barHeight), barFill);
+            renderer.fillRect(AestraUI::NUIRect(barX, barY, barWidth, barHeight), barFill);
             
             // Percentage
             oss.str("");
             oss << std::fixed << std::setprecision(0) << zone.percentage << "%";
-            renderer.drawText(oss.str(), NomadUI::NUIPoint(barX + barMaxWidth + 5, y), 9.0f, labelColor);
+            renderer.drawText(oss.str(), AestraUI::NUIPoint(barX + barMaxWidth + 5, y), 9.0f, labelColor);
             
             y += LINE_HEIGHT;
         }
@@ -425,44 +425,44 @@ private:
         y += SECTION_SPACING;
     }
 
-    void renderRenderingStats(NomadUI::NUIRenderer& renderer, float& y) {
-        auto& theme = NomadUI::NUIThemeManager::getInstance();
+    void renderRenderingStats(AestraUI::NUIRenderer& renderer, float& y) {
+        auto& theme = AestraUI::NUIThemeManager::getInstance();
         float x = getBounds().x + PADDING;
         
-        const auto& stats = Nomad::UnifiedProfiler::getInstance().getAverageStats();
+        const auto& stats = Aestra::UnifiedProfiler::getInstance().getAverageStats();
         
-        NomadUI::NUIColor headerColor(0.4f, 0.9f, 0.5f, 1.0f);
-        renderer.drawText("RENDERING", NomadUI::NUIPoint(x, y), 10.0f, headerColor);
+        AestraUI::NUIColor headerColor(0.4f, 0.9f, 0.5f, 1.0f);
+        renderer.drawText("RENDERING", AestraUI::NUIPoint(x, y), 10.0f, headerColor);
         y += LINE_HEIGHT;
         
-        NomadUI::NUIColor labelColor(0.6f, 0.6f, 0.65f, 1.0f);
+        AestraUI::NUIColor labelColor(0.6f, 0.6f, 0.65f, 1.0f);
         std::ostringstream oss;
         oss << "Draws: " << stats.drawCalls << "  Widgets: " << stats.widgetCount << "  Tris: " << stats.triangles;
-        renderer.drawText(oss.str(), NomadUI::NUIPoint(x, y), 9.0f, labelColor);
+        renderer.drawText(oss.str(), AestraUI::NUIPoint(x, y), 9.0f, labelColor);
         y += LINE_HEIGHT + SECTION_SPACING;
     }
 
-    void renderGraph(NomadUI::NUIRenderer& renderer) {
-        auto& theme = NomadUI::NUIThemeManager::getInstance();
+    void renderGraph(AestraUI::NUIRenderer& renderer) {
+        auto& theme = AestraUI::NUIThemeManager::getInstance();
         
         float graphY = getBounds().y + getBounds().height - GRAPH_HEIGHT - PADDING;
-        NomadUI::NUIRect graphRect(getBounds().x + PADDING, graphY, HUD_WIDTH - PADDING * 2, GRAPH_HEIGHT);
+        AestraUI::NUIRect graphRect(getBounds().x + PADDING, graphY, HUD_WIDTH - PADDING * 2, GRAPH_HEIGHT);
         
         // Background
-        NomadUI::NUIColor graphBg(0.01f, 0.01f, 0.03f, 0.85f);
+        AestraUI::NUIColor graphBg(0.01f, 0.01f, 0.03f, 0.85f);
         renderer.fillRect(graphRect, graphBg);
         
         float maxMs = 40.0f;
         
         // Reference lines
         float y60 = graphRect.y + graphRect.height - (16.7f / maxMs) * graphRect.height;
-        renderer.drawLine(NomadUI::NUIPoint(graphRect.x, y60), 
-                          NomadUI::NUIPoint(graphRect.x + graphRect.width, y60),
+        renderer.drawLine(AestraUI::NUIPoint(graphRect.x, y60), 
+                          AestraUI::NUIPoint(graphRect.x + graphRect.width, y60),
                           1.0f, theme.getColor("success").withAlpha(0.25f));
         
         float y30 = graphRect.y + graphRect.height - (33.3f / maxMs) * graphRect.height;
-        renderer.drawLine(NomadUI::NUIPoint(graphRect.x, y30), 
-                          NomadUI::NUIPoint(graphRect.x + graphRect.width, y30),
+        renderer.drawLine(AestraUI::NUIPoint(graphRect.x, y30), 
+                          AestraUI::NUIPoint(graphRect.x + graphRect.width, y30),
                           1.0f, theme.getColor("warning").withAlpha(0.25f));
         
         float barWidth = graphRect.width / GRAPH_SAMPLES;
@@ -478,17 +478,17 @@ private:
             float ftHeight = std::min(frameTime / maxMs, 1.0f) * graphRect.height;
             float ftY = graphRect.y + graphRect.height - ftHeight;
             
-            NomadUI::NUIColor ftColor = (frameTime > 33.3f) ? theme.getColor("error").withAlpha(0.7f) :
+            AestraUI::NUIColor ftColor = (frameTime > 33.3f) ? theme.getColor("error").withAlpha(0.7f) :
                                          (frameTime > 16.7f) ? theme.getColor("warning").withAlpha(0.6f) :
                                          theme.getColor("accentCyan").withAlpha(0.5f);
-            renderer.fillRect(NomadUI::NUIRect(barX, ftY, barWidth - 1.0f, ftHeight), ftColor);
+            renderer.fillRect(AestraUI::NUIRect(barX, ftY, barWidth - 1.0f, ftHeight), ftColor);
             
             // Audio callback overlay
             if (audioTime > 0.01f) {
                 float atHeight = std::min(audioTime / maxMs, 1.0f) * graphRect.height;
                 float atY = graphRect.y + graphRect.height - atHeight;
-                renderer.fillRect(NomadUI::NUIRect(barX, atY, barWidth - 1.0f, 2.0f), 
-                                  NomadUI::NUIColor(1.0f, 0.3f, 0.5f, 0.9f));
+                renderer.fillRect(AestraUI::NUIRect(barX, atY, barWidth - 1.0f, 2.0f), 
+                                  AestraUI::NUIColor(1.0f, 0.3f, 0.5f, 0.9f));
             }
         }
         
@@ -497,11 +497,11 @@ private:
         
         // Legend
         float legendY = graphRect.y - 10.0f;
-        renderer.drawText("Frame", NomadUI::NUIPoint(graphRect.x, legendY), 8.0f, 
+        renderer.drawText("Frame", AestraUI::NUIPoint(graphRect.x, legendY), 8.0f, 
                           theme.getColor("accentCyan").withAlpha(0.7f));
-        renderer.drawText("Audio", NomadUI::NUIPoint(graphRect.x + 45, legendY), 8.0f, 
-                          NomadUI::NUIColor(1.0f, 0.3f, 0.5f, 0.8f));
-        renderer.drawText("16.7ms", NomadUI::NUIPoint(graphRect.x + graphRect.width - 35, y60 - 3), 7.0f, 
+        renderer.drawText("Audio", AestraUI::NUIPoint(graphRect.x + 45, legendY), 8.0f, 
+                          AestraUI::NUIColor(1.0f, 0.3f, 0.5f, 0.8f));
+        renderer.drawText("16.7ms", AestraUI::NUIPoint(graphRect.x + graphRect.width - 35, y60 - 3), 7.0f, 
                           theme.getColor("success").withAlpha(0.5f));
     }
 };

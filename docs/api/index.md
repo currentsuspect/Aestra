@@ -1,6 +1,6 @@
 # API Reference
 
-Welcome to the NOMAD DAW API reference. This section provides detailed documentation for all public APIs.
+Welcome to the Aestra API reference. This section provides detailed documentation for all public APIs.
 
 !!! tip "🚀 Full API Reference"
     **[Browse the Complete Doxygen API Reference →](../api-reference/html/index.html)**
@@ -9,11 +9,11 @@ Welcome to the NOMAD DAW API reference. This section provides detailed documenta
 
 ## 📚 Module APIs
 
-NOMAD's API is organized by module. Each module provides a focused set of functionality:
+Aestra's API is organized by module. Each module provides a focused set of functionality:
 
 ### Core Foundation
 
-#### NomadCore API
+#### AestraCore API
 Foundation utilities and data structures.
 
 **Key APIs:**
@@ -31,7 +31,7 @@ Foundation utilities and data structures.
 
 ### Platform Abstraction
 
-#### NomadPlat API
+#### AestraPlat API
 Platform-specific functionality with unified interface.
 
 **Key APIs:**
@@ -48,7 +48,7 @@ Platform-specific functionality with unified interface.
 
 ### User Interface
 
-#### NomadUI API
+#### AestraUI API
 GPU-accelerated UI framework.
 
 **Key APIs:**
@@ -67,7 +67,7 @@ GPU-accelerated UI framework.
 
 ### Audio Engine
 
-#### NomadAudio API
+#### AestraAudio API
 Professional audio processing system.
 
 **Key APIs:**
@@ -84,7 +84,7 @@ Professional audio processing system.
 
 ### Plugin System (Planned)
 
-#### NomadSDK API
+#### AestraSDK API
 Plugin hosting and extension system.
 
 **Status:** 📅 Planned for Q2 2025
@@ -102,7 +102,7 @@ Plugin hosting and extension system.
 ### Creating a Window
 
 ```cpp
-#include "NomadPlat/Window.h"
+#include "AestraPlat/Window.h"
 
 nomad::WindowConfig config;
 config.title = "My Application";
@@ -121,7 +121,7 @@ while (window->isOpen()) {
 ### Initializing Audio
 
 ```cpp
-#include "NomadAudio/AudioEngine.h"
+#include "AestraAudio/AudioEngine.h"
 
 nomad::AudioEngine engine;
 
@@ -142,8 +142,8 @@ if (engine.initialize(config)) {
 ### Creating UI
 
 ```cpp
-#include "NomadUI/Renderer.h"
-#include "NomadUI/Widgets/Button.h"
+#include "AestraUI/Renderer.h"
+#include "AestraUI/Widgets/Button.h"
 
 nomad::Renderer renderer;
 renderer.initialize(window->getContext());
@@ -194,7 +194,7 @@ namespace nomad { }       // lowercase
 
 ### Error Handling
 
-NOMAD uses return values for error handling (no exceptions in real-time code):
+Aestra uses return values for error handling (no exceptions in real-time code):
 
 ```cpp
 // Boolean success/failure
@@ -224,7 +224,7 @@ if (error != ErrorCode::Success) {
 
 ### Memory Management
 
-NOMAD uses RAII and smart pointers:
+Aestra uses RAII and smart pointers:
 
 ```cpp
 // Unique ownership
@@ -258,29 +258,29 @@ void AudioBuffer::read(float* buffer, int samples);
 
 Looking for specific functionality? See the architecture documentation:
 
-- **Window Management** → [NomadPlat Architecture](../architecture/nomad-plat.md)
-- **Rendering** → [NomadUI Architecture](../architecture/nomad-ui.md)
-- **Audio I/O** → [NomadAudio Architecture](../architecture/nomad-audio.md)
-- **File Operations** → [NomadCore Architecture](../architecture/nomad-core.md)
+- **Window Management** → [AestraPlat Architecture](../architecture/nomad-plat.md)
+- **Rendering** → [AestraUI Architecture](../architecture/nomad-ui.md)
+- **Audio I/O** → [AestraAudio Architecture](../architecture/nomad-audio.md)
+- **File Operations** → [AestraCore Architecture](../architecture/nomad-core.md)
 
 ### By Module
 
 Exploring a specific module? See architecture docs:
 
-- [NomadCore Architecture](../architecture/nomad-core.md)
-- [NomadPlat Architecture](../architecture/nomad-plat.md)
-- [NomadUI Architecture](../architecture/nomad-ui.md)
-- [NomadAudio Architecture](../architecture/nomad-audio.md)
+- [AestraCore Architecture](../architecture/nomad-core.md)
+- [AestraPlat Architecture](../architecture/nomad-plat.md)
+- [AestraUI Architecture](../architecture/nomad-ui.md)
+- [AestraAudio Architecture](../architecture/nomad-audio.md)
 
 ## 📝 Documentation Status
 
 | Module | API Docs | Examples | Coverage |
 |--------|----------|----------|----------|
-| NomadCore | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 80% |
-| NomadPlat | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 75% |
-| NomadUI | ✅ [Complete](../api-reference/html/index.html) | 🚧 Partial | 60% |
-| NomadAudio | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 85% |
-| NomadSDK | 📅 Planned | 📅 Planned | 0% |
+| AestraCore | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 80% |
+| AestraPlat | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 75% |
+| AestraUI | ✅ [Complete](../api-reference/html/index.html) | 🚧 Partial | 60% |
+| AestraAudio | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 85% |
+| AestraSDK | 📅 Planned | 📅 Planned | 0% |
 
 !!! success "Full API Reference Available"
     Complete API documentation is now available via [Doxygen API Reference](../api-reference/html/index.html). Additional resources:
@@ -288,13 +288,13 @@ Exploring a specific module? See architecture docs:
     - [Architecture documentation](../architecture/overview.md) for high-level design concepts
     - [Getting Started Guide](../getting-started/index.md) for quick setup
     - Example code in the repository
-    - [GitHub Discussions](https://github.com/currentsuspect/NOMAD/discussions) for questions
+    - [GitHub Discussions](https://github.com/currentsuspect/Aestra/discussions) for questions
 
 ## 🤝 Contributing to API Docs
 
-Help improve NOMAD's API documentation:
+Help improve Aestra's API documentation:
 
-1. **Report Issues** — Found incorrect or missing docs? [Open an issue](https://github.com/currentsuspect/NOMAD/issues)
+1. **Report Issues** — Found incorrect or missing docs? [Open an issue](https://github.com/currentsuspect/Aestra/issues)
 2. **Submit Examples** — Share your code examples
 3. **Improve Clarity** — Suggest clearer explanations
 4. **Add Diagrams** — Visual aids help understanding
@@ -306,8 +306,8 @@ See the [Contributing Guide](../developer/contributing.md) for details.
 - [Architecture Overview](../architecture/overview.md)
 - [Getting Started Guide](../getting-started/index.md)
 - [Developer Guide](../developer/contributing.md)
-- [Code Examples](https://github.com/currentsuspect/NOMAD/tree/main/examples)
+- [Code Examples](https://github.com/currentsuspect/Aestra/tree/main/examples)
 
 ---
 
-**Need help?** Ask in [GitHub Discussions](https://github.com/currentsuspect/NOMAD/discussions) or check the [FAQ](../technical/faq.md).
+**Need help?** Ask in [GitHub Discussions](https://github.com/currentsuspect/Aestra/discussions) or check the [FAQ](../technical/faq.md).

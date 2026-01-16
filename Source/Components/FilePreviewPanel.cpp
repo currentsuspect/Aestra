@@ -1,7 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "FilePreviewPanel.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
 #include <cmath>
 #include <algorithm>
 #include <filesystem>
@@ -10,7 +10,7 @@
 #include "MiniAudioDecoder.h"
 #include "AudioFileValidator.h"
 
-namespace NomadUI {
+namespace AestraUI {
 
 namespace {
 
@@ -141,7 +141,7 @@ void FilePreviewPanel::waveformWorker(const std::string& path, uint64_t generati
     uint32_t numChannels = 0;
 
     // Decode audio file (blocking)
-    bool success = Nomad::Audio::decodeAudioFile(path, audioData, sampleRate, numChannels);
+    bool success = Aestra::Audio::decodeAudioFile(path, audioData, sampleRate, numChannels);
 
     // Check cancellation after decode
     if (generation != currentGeneration_.load(std::memory_order_acquire)) return;
@@ -458,4 +458,4 @@ bool FilePreviewPanel::onMouseEvent(const NUIMouseEvent& event) {
     return false;
 }
 
-} // namespace NomadUI
+} // namespace AestraUI

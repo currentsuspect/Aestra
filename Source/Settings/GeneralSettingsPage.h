@@ -7,7 +7,7 @@
 #include "NUIButton.h"
 #include <functional>
 
-namespace Nomad {
+namespace Aestra {
 
 class GeneralSettingsPage : public ISettingsPage {
 public:
@@ -21,7 +21,7 @@ public:
     void cancelChanges() override;
     bool hasUnsavedChanges() const override { return m_dirty; }
 
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
 
     void setOnAutoSaveToggled(std::function<void(bool)> callback) { m_onAutoSaveToggled = std::move(callback); }
@@ -34,14 +34,14 @@ private:
 
     bool m_dirty = false;
     
-    std::shared_ptr<NomadUI::NUILabel> m_projectsPathLabel;
-    std::shared_ptr<NomadUI::NUITextInput> m_projectsPathInput;
-    std::shared_ptr<NomadUI::NUIButton> m_browseButton;
+    std::shared_ptr<AestraUI::NUILabel> m_projectsPathLabel;
+    std::shared_ptr<AestraUI::NUITextInput> m_projectsPathInput;
+    std::shared_ptr<AestraUI::NUIButton> m_browseButton;
     
-    std::shared_ptr<NomadUI::NUILabel> m_autoSaveLabel;
-    std::shared_ptr<NomadUI::NUIButton> m_autoSaveToggle;
+    std::shared_ptr<AestraUI::NUILabel> m_autoSaveLabel;
+    std::shared_ptr<AestraUI::NUIButton> m_autoSaveToggle;
 
     std::function<void(bool)> m_onAutoSaveToggled;
 };
 
-} // namespace Nomad
+} // namespace Aestra

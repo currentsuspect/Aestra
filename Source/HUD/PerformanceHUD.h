@@ -6,11 +6,11 @@
 
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadCore/include/NomadProfiler.h"
+#include "../AestraUI/Core/NUIComponent.h"
+#include "../AestraCore/include/AestraProfiler.h"
 #include <memory>
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 class AudioEngine;
 }
@@ -25,7 +25,7 @@ class AudioEngine;
  * - Audio thread load
  * - Frame time graph
  */
-class PerformanceHUD : public NomadUI::NUIComponent {
+class PerformanceHUD : public AestraUI::NUIComponent {
 public:
     PerformanceHUD();
     ~PerformanceHUD() override = default;
@@ -34,22 +34,22 @@ public:
     void toggle();
     
     // Optional: attach AudioEngine for RT health telemetry readout (UI thread only).
-    void setAudioEngine(Nomad::Audio::AudioEngine* engine) { m_audioEngine = engine; }
+    void setAudioEngine(Aestra::Audio::AudioEngine* engine) { m_audioEngine = engine; }
 
     // Update stats
     void update();
     
     // NUIComponent overrides
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
     
 private:
-    void renderBackground(NomadUI::NUIRenderer& renderer);
-    void renderStats(NomadUI::NUIRenderer& renderer);
-    void renderGraph(NomadUI::NUIRenderer& renderer);
+    void renderBackground(AestraUI::NUIRenderer& renderer);
+    void renderStats(AestraUI::NUIRenderer& renderer);
+    void renderGraph(AestraUI::NUIRenderer& renderer);
     
     Profiler& m_profiler;
-    Nomad::Audio::AudioEngine* m_audioEngine{nullptr};
+    Aestra::Audio::AudioEngine* m_audioEngine{nullptr};
     
     // Graph data (rolling buffer of frame times)
     static constexpr size_t GRAPH_SAMPLES = 120; // 2 seconds at 60fps
@@ -67,4 +67,4 @@ private:
     static constexpr float PADDING = 8.0f;
 };
 
-} // namespace Nomad
+} // namespace Aestra

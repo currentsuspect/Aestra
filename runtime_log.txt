@@ -1,0 +1,5 @@
+[2026-01-16 12:30:58] [INFO]  ========================================
+[2026-01-16 12:30:58] [INFO]  Aestra Starting - Aestra-2025-Core
+[2026-01-16 12:30:58] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\Aestra
+[2026-01-16 12:30:58] [INFO]  ========================================
+[2026-01-16 12:30:58] [ERROR] Platform not initialized! Call Platform::initialize() first.
