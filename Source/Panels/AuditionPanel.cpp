@@ -3,7 +3,7 @@
 #include "AuditionPanel.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadCore/include/NomadLog.h"
-#include "../NomadAudio/include/ClipSource.h"
+#include "ClipSource.h"
 
 #include <cmath>
 #include <iomanip>

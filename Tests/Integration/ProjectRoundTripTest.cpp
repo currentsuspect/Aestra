@@ -1,10 +1,10 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 
-#include "../Source/ProjectSerializer.h"
+#include "../../Source/Core/ProjectSerializer.h"
 
-#include "../NomadAudio/include/TrackManager.h"
-#include "../NomadAudio/include/ClipSource.h"
-#include "../NomadAudio/include/PatternSource.h"
+#include "Models/TrackManager.h"
+#include "Models/ClipSource.h"
+#include "Models/PatternSource.h"
 
 #include "../NomadCore/include/NomadLog.h"
 

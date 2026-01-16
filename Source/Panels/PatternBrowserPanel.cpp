@@ -4,12 +4,12 @@
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadUI/Core/NUIDragDrop.h"
-#include "../NomadUI/Widgets/NUISegmentedControl.h"
-#include "../NomadUI/Widgets/NUIButton.h"
-#include "../NomadUI/Core/NUIIcon.h"
+#include "NUISegmentedControl.h"
+#include "NUIButton.h"
+#include "NUIIcon.h"
 #include "../NomadCore/include/NomadLog.h"
 #include "../NomadCore/include/NomadUnifiedProfiler.h"
-// #include "../NomadAudio/include/SourceManager.h" // Removed, inside ClipSource.h
+// #include "SourceManager.h" // Removed, inside ClipSource.h
 #include <chrono>
 #include <iomanip>
 #include <sstream>

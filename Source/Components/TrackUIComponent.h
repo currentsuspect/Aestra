@@ -1,16 +1,16 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadAudio/include/MixerChannel.h"
-#include "../NomadAudio/include/ClipInstance.h"
-#include "../NomadAudio/include/PlaylistModel.h"
+#include "MixerChannel.h"
+#include "ClipInstance.h"
+#include "PlaylistModel.h"
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Common/MusicHelpers.h"
-#include "../NomadUI/Core/NUILabel.h"
-#include "../NomadUI/Widgets/NUIButton.h"
-#include "../NomadUI/Core/NUISlider.h"
-#include "../NomadUI/Core/NUIDragDrop.h"
+#include "NUIComponent.h"
+#include "MusicHelpers.h"
+#include "NUILabel.h"
+#include "NUIButton.h"
+#include "NUISlider.h"
+#include "NUIDragDrop.h"
 #include <memory>
 #include <map>
 

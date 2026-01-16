@@ -1,8 +1,8 @@
 // Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../Core/NUIComponent.h"
-#include "../Core/NUISlider.h"
+#include "NUIComponent.h"
+#include "NUISlider.h"
 #include "NUICoreWidgets.h"
 #include "UIItemSelector.h"
 #include "UIMixerKnob.h"

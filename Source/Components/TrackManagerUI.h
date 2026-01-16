@@ -1,9 +1,9 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadAudio/include/TrackManager.h"
-#include "../NomadAudio/include/ClipInstance.h"
-#include "../NomadAudio/include/PlaylistModel.h"
+#include "TrackManager.h"
+#include "ClipInstance.h"
+#include "PlaylistModel.h"
 #include "TrackUIComponent.h"
 #include "PianoRollPanel.h"
 #include "MixerPanel.h"
@@ -11,21 +11,21 @@
 #include "TimelineMinimapBar.h"
 #include "TimelineMinimapModel.h"
 #include "TimelineSummaryCache.h"
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUIScrollbar.h"
-#include "../NomadUI/Widgets/NUIButton.h"
-#include "../NomadUI/Core/NUIIcon.h"
-#include "../NomadUI/Core/NUIDragDrop.h"
+#include "NUIComponent.h"
+#include "NUIScrollbar.h"
+#include "NUIButton.h"
+#include "NUIIcon.h"
+#include "NUIDragDrop.h"
 #include "../NomadUI/Graphics/OpenGL/NUIRenderCache.h"
-#include "../NomadUI/Common/MusicHelpers.h"
-#include "../NomadUI/Widgets/NUIDropdown.h" // Full type for shared_ptr usage
+#include "MusicHelpers.h"
+#include "NUIDropdown.h" // Full type for shared_ptr usage
 #include <memory>
 #include <vector>
 #include <unordered_set>
 #include <mutex>
 #include <functional>
-#include "../NomadUI/Core/NUIContextMenu.h"
-#include "../NomadAudio/include/WaveformCache.h"
+#include "NUIContextMenu.h"
+#include "WaveformCache.h"
 
 namespace NomadUI { class NUIPlatformBridge; }
 

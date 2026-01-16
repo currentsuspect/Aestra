@@ -2,9 +2,9 @@
 #pragma once
 
 #include "MixerMath.h"
-#include "../NomadAudio/include/MeterSnapshot.h"
-#include "../NomadAudio/include/ChannelSlotMap.h"
-#include "../NomadAudio/include/TrackManager.h"
+#include "MeterSnapshot.h"
+#include "ChannelSlotMap.h"
+#include "TrackManager.h"
 #include <memory>
 #include <vector>
 #include <string>

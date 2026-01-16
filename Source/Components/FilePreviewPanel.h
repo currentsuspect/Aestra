@@ -1,8 +1,8 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUIIcon.h"
+#include "NUIComponent.h"
+#include "NUIIcon.h"
 #include "FileBrowser.h" // For FileItem definition
 #include <vector>
 #include <string>

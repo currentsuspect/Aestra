@@ -1,6 +1,6 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
-#include "../../include/NomadPlatform.h"
-#include "../../../NomadCore/include/NomadLog.h"
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+#include "NomadPlatform.h"
+#include "NomadLog.h"
 #include <iostream>
 
 using namespace Nomad;

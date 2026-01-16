@@ -1,7 +1,7 @@
 // ¶¸ 2025 Nomad Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../Core/NUIComponent.h"
+#include "NUIComponent.h"
 
 #include <string>
 

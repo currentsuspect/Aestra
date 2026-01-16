@@ -1,7 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../Core/NUITypes.h"
+#include "NUITypes.h"
 #include <vector>
 #include <unordered_map>
 #include <chrono>

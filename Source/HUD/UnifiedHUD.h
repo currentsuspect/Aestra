@@ -6,8 +6,8 @@
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadCore/include/NomadUnifiedProfiler.h"
-#include "../NomadAudio/include/AudioEngine.h"
-#include "../NomadAudio/include/AudioCommandQueue.h"
+#include "AudioEngine.h"
+#include "AudioCommandQueue.h"
 #include <memory>
 #include <sstream>
 #include <iomanip>

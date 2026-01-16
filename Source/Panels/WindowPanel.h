@@ -1,8 +1,8 @@
 // © 2025 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Widgets/NUIButton.h"
+#include "NUIComponent.h"
+#include "NUIButton.h"
 #include <string>
 #include <memory>
 #include <functional>

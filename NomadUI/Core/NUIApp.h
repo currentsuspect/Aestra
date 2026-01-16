@@ -4,7 +4,7 @@
 #include "NUITypes.h"
 #include "NUIComponent.h"
 #include "NUIAdaptiveFPS.h"
-#include "../Graphics/NUIRenderer.h"
+#include "NUIRenderer.h"
 #include <memory>
 #include <chrono>
 

@@ -37,37 +37,48 @@ set(NOMADUI_CORE_SOURCES
     Core/NUIFrameProfiler.cpp
     Core/NUIDragDrop.h
     Core/NUIDragDrop.cpp
-    # Core/NUIButton.h and .cpp removed - using Widgets version
-    Core/NUILabel.h
-    Core/NUILabel.cpp
-    Core/NUISlider.h
-    Core/NUISlider.cpp
-    Core/NUICheckbox.h
-    Core/NUICheckbox.cpp
-    Core/NUITextInput.h
-    Core/NUITextInput.cpp
-    Core/NUIProgressBar.h
+    Core/NUIConfigLoader.h
+    Core/NUIConfigLoader.cpp
+    Core/NUITitleBarConfig.h
+    Core/NUITitleBarConfig.cpp
+    Core/NUIApp.h
+    Core/NUIApp.cpp
+    Core/stb_image_impl.cpp
+    Core/NUISliderConfig.cpp
     Common/MusicHelpers.h
     Common/MusicHelpers.cpp
-    Core/NUIProgressBar.cpp
-    Core/NUIScrollbar.h
-    Core/NUIScrollbar.cpp
-    Core/NUICustomTitleBar.h
-    Core/NUICustomTitleBar.cpp
-    Core/NUICustomWindow.h
-    Core/NUICustomWindow.cpp
-	    Core/NUIIcon.h
-	    Core/NUIIcon.cpp
-	    Core/NUIContextMenu.h
-	    Core/NUIContextMenu.cpp
-	    Core/stb_image_impl.cpp       # stb_image decoder
-	    # Core/NUIApp.h  # Requires renderer
-	    # Core/NUIApp.cpp
-	)
+
+    # Base generic widgets
+    Base/NUIButton.h
+    Base/NUIButton.cpp
+    Base/NUICheckbox.h
+    Base/NUICheckbox.cpp
+    Base/NUIDropdown.h
+    Base/NUIDropdown.cpp
+    Base/NUISlider.h
+    Base/NUISlider.cpp
+    Base/NUITextInput.h
+    Base/NUITextInput.cpp
+    Base/NUILabel.h
+    Base/NUILabel.cpp
+    Base/NUIProgressBar.h
+    Base/NUIProgressBar.cpp
+    Base/NUIScrollbar.h
+    Base/NUIScrollbar.cpp
+    Base/NUIIcon.h
+    Base/NUIIcon.cpp
+    Base/NUIContextMenu.h
+    Base/NUIContextMenu.cpp
+    Base/NUICustomWindow.h
+    Base/NUICustomWindow.cpp
+    Base/NUICustomTitleBar.h
+    Base/NUICustomTitleBar.cpp
+    Base/NUIMenuBar.h
+    Base/NUISegmentedControl.h
+)
 
 # Widget implementations (compile into core library)
 list(APPEND NOMADUI_CORE_SOURCES
-    Widgets/NUIDropdown.cpp
     Widgets/NUICoreWidgets.h
     Widgets/NUICoreWidgets.cpp
     Widgets/NUITransportWidgets.h
@@ -82,7 +93,6 @@ list(APPEND NOMADUI_CORE_SOURCES
     Widgets/NUIVisualWidgets.cpp
     Widgets/NUIUtilityWidgets.h
     Widgets/NUIUtilityWidgets.cpp
-    Widgets/NUIButton.cpp
     Widgets/NUIThematicWidgets.h
     Widgets/NUIThematicWidgets.cpp
     Widgets/NUIStepSequencer.h
@@ -142,6 +152,11 @@ add_library(NomadUI_Core STATIC
 
 target_include_directories(NomadUI_Core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core
+    ${CMAKE_CURRENT_SOURCE_DIR}/Base
+    ${CMAKE_CURRENT_SOURCE_DIR}/Widgets
+    ${CMAKE_CURRENT_SOURCE_DIR}/Graphics
+    ${CMAKE_CURRENT_SOURCE_DIR}/Common
 )
 
 # The main application mixer widgets depend on NomadAudio + NomadCore headers.
@@ -150,7 +165,21 @@ target_include_directories(NomadUI_Core PUBLIC
 target_include_directories(NomadUI_Core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../NomadCore/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../NomadAudio/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadAudio/include/Core
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadAudio/include/DSP
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadAudio/include/Models
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadAudio/include/Playback
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadAudio/include/IO
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadAudio/include/Drivers
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadAudio/include/Plugin
+    ${CMAKE_CURRENT_SOURCE_DIR}/../NomadAudio/include/Commands
     ${CMAKE_CURRENT_SOURCE_DIR}/../Source
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Source/App
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Source/Core
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Source/Panels
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Source/Settings
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Source/Components
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Source/HUD
 )
 
 # FreeType dependency removed - handled by MSDF text renderer

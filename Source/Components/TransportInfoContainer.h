@@ -12,8 +12,8 @@
 #pragma once
 
 #include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUILabel.h"
-#include "../NomadUI/Core/NUIIcon.h"
+#include "NUILabel.h"
+#include "NUIIcon.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 

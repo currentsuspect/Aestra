@@ -1,12 +1,12 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerStrip.h"
 
-#include "../Core/NUIThemeSystem.h"
-#include "../Graphics/NUIRenderer.h"
-#include "../../Source/MixerViewModel.h"
-#include "../../NomadAudio/include/ContinuousParamBuffer.h"
-#include "../../NomadAudio/include/ChannelSlotMap.h"
-#include "../../NomadAudio/include/MeterSnapshot.h"
+#include "NUIThemeSystem.h"
+#include "NUIRenderer.h"
+#include "MixerViewModel.h"
+#include "ContinuousParamBuffer.h"
+#include "ChannelSlotMap.h"
+#include "MeterSnapshot.h"
 
 #include <algorithm>
 #include <cmath>

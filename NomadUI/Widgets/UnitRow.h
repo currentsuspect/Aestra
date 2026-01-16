@@ -1,10 +1,10 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../Core/NUIComponent.h"
-#include "../Core/NUITextInput.h"
-#include "../Core/NUIDragDrop.h"
-#include "../../NomadAudio/include/UnitManager.h"
+#include "NUIComponent.h"
+#include "NUITextInput.h"
+#include "NUIDragDrop.h"
+#include "UnitManager.h"
 #include <functional>
 #include <memory>
 

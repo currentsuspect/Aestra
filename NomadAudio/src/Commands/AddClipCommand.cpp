@@ -1,5 +1,5 @@
 #include "Commands/AddClipCommand.h"
-#include "../../include/NomadAudio.h"
+#include "NomadAudio.h"
 
 namespace Nomad {
 namespace Audio {

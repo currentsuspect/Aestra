@@ -2,7 +2,7 @@
 #pragma once
 
 #include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUICustomWindow.h"
+#include "NUICustomWindow.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "SettingsDialog.h"
 #include "UnifiedHUD.h"

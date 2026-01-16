@@ -1,6 +1,6 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIItemSelector.h"
-#include "../Core/NUIThemeSystem.h"
+#include "NUIThemeSystem.h"
 #include <cmath>
 #include <algorithm>
 #include <chrono>

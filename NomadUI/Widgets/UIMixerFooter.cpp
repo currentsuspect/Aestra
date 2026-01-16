@@ -1,8 +1,8 @@
 // ¶¸ 2025 Nomad Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerFooter.h"
 
-#include "../Core/NUIThemeSystem.h"
-#include "../Graphics/NUIRenderer.h"
+#include "NUIThemeSystem.h"
+#include "NUIRenderer.h"
 
 namespace NomadUI {
 

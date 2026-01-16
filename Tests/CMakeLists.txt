@@ -137,11 +137,21 @@ add_test(NAME NomadAtomicSaveTest COMMAND NomadAtomicSaveTest)
 add_executable(NomadWatchdogTest NomadAudio/WatchdogTest.cpp)
 target_link_libraries(NomadWatchdogTest PRIVATE NomadAudio NomadCore)
 add_test(NAME NomadWatchdogTest COMMAND NomadWatchdogTest)
+if(EXISTS "${CMAKE_SOURCE_DIR}/NomadAudio/External/vst3sdk/pluginterfaces")
+    target_include_directories(NomadWatchdogTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/NomadAudio/External/vst3sdk
+    )
+endif()
 
 # Crash Test
 add_executable(NomadCrashTest NomadAudio/CrashTest.cpp)
 target_link_libraries(NomadCrashTest PRIVATE NomadAudio NomadCore)
 add_test(NAME NomadCrashTest COMMAND NomadCrashTest)
+if(EXISTS "${CMAKE_SOURCE_DIR}/NomadAudio/External/vst3sdk/pluginterfaces")
+    target_include_directories(NomadCrashTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/NomadAudio/External/vst3sdk
+    )
+endif()
 
 # Wav Loader Test
 add_executable(NomadWavLoaderTest NomadAudio/WavLoaderTest.cpp)
@@ -181,10 +191,10 @@ add_executable(NomadSampleRateConverterTest NomadAudio/SampleRateConverterTest.c
 target_link_libraries(NomadSampleRateConverterTest PRIVATE NomadAudio NomadCore)
 add_test(NAME NomadSampleRateConverterTest COMMAND NomadSampleRateConverterTest)
 
-# Serialization Compatibility Test
-add_executable(NomadSerializationCompatibilityTest NomadAudio/SerializationCompatibilityTest.cpp)
-target_link_libraries(NomadSerializationCompatibilityTest PRIVATE NomadAudio NomadCore)
-add_test(NAME NomadSerializationCompatibilityTest COMMAND NomadSerializationCompatibilityTest)
+# Serialization Compatibility Test (Requires GTest)
+# add_executable(NomadSerializationCompatibilityTest NomadAudio/SerializationCompatibilityTest.cpp)
+# target_link_libraries(NomadSerializationCompatibilityTest PRIVATE NomadAudio NomadCore)
+# add_test(NAME NomadSerializationCompatibilityTest COMMAND NomadSerializationCompatibilityTest)
 
 # =============================================================================
 # NomadPlat Tests

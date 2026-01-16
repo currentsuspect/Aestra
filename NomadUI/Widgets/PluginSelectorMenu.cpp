@@ -1,7 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "PluginSelectorMenu.h"
-#include "../Core/NUIThemeSystem.h"
-#include "../Graphics/NUIRenderer.h"
+#include "NUIThemeSystem.h"
+#include "NUIRenderer.h"
 #include <algorithm>
 
 namespace NomadUI {

@@ -1,9 +1,9 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../Core/NUIComponent.h"
-#include "../Core/NUITypes.h"
-#include <PluginHost.h>
+#include "NUIComponent.h"
+#include "NUITypes.h"
+#include "PluginHost.h"
 #include <memory>
 #include <vector>
 #include <string>

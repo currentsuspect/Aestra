@@ -2,14 +2,14 @@
 #pragma once
 
 #include "ISettingsPage.h"
-#include "../NomadAudio/include/AudioDeviceManager.h"
-#include "../NomadAudio/include/TrackManager.h"
-#include "../NomadUI/Widgets/NUIButton.h"
-#include "../NomadUI/Widgets/NUIDropdown.h"
-#include "../NomadUI/Core/NUILabel.h"
-#include "../NomadUI/Widgets/NUICoreWidgets.h" // For NUIToggle
+#include "AudioDeviceManager.h"
+#include "TrackManager.h"
+#include "NUIButton.h"
+#include "NUIDropdown.h"
+#include "NUILabel.h"
+#include "NUICoreWidgets.h" // For NUIToggle
 
-#include "../NomadAudio/include/AudioEngine.h"
+#include "AudioEngine.h"
 
 namespace Nomad {
 

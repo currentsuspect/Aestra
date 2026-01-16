@@ -2,7 +2,7 @@
 #pragma once
 
 #include "../../NomadPlat/include/NomadPlatform.h"
-#include "../Core/NUITypes.h"
+#include "NUITypes.h"
 #include <functional>
 
 namespace NomadUI {

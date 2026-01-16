@@ -2,10 +2,10 @@
 #pragma once
 
 #include "WindowPanel.h"
-#include "../NomadAudio/include/TrackManager.h"
+#include "TrackManager.h"
 #include "../NomadUI/Widgets/UnitRow.h"
 #include "../NomadUI/Widgets/UnitColorPicker.h"
-#include "../NomadUI/Core/NUIComponent.h"
+#include "NUIComponent.h"
 #include <optional>
 
 namespace Nomad {

@@ -3,7 +3,7 @@
 
 #include "../NomadUI/Core/NUIComponent.h"
 #include "../NomadUI/Widgets/NUIMixerWidgets.h"
-#include "../NomadAudio/include/TrackManager.h"
+#include "TrackManager.h"
 #include <memory>
 #include <vector>
 

@@ -1,7 +1,8 @@
-// Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUISliderConfig.h"
 #include <algorithm>
 #include <cctype>
+#include <fstream>
 
 namespace NomadUI {
 
@@ -106,5 +107,3 @@ std::string NUISliderConfig::trim(const std::string& str) const {
 }
 
 } // namespace NomadUI
-
-

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ICommand.h"
-#include "../PlaylistModel.h"
+#include "PlaylistModel.h"
 
 namespace Nomad {
 namespace Audio {

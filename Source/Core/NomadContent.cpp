@@ -10,15 +10,15 @@
 #include "ArsenalPanel.h"
 #include "PatternBrowserPanel.h"
 #include "AuditionPanel.h"                              // Audition Mode UI
-#include "../NomadAudio/include/AuditionEngine.h"       // Audition Mode backend
+#include "AuditionEngine.h"       // Audition Mode backend
 
 #include "NomadContent.h"
 #include "../NomadUI/Widgets/PluginBrowserPanel.h"
 #include "../NomadUI/Widgets/PluginUIController.h"
 #include "../NomadUI/Widgets/UIMixerPanel.h"
 #include "../NomadUI/Widgets/UIMixerInspector.h"
-#include "../NomadAudio/include/PluginManager.h"
-#include "../NomadAudio/include/MixerChannel.h"
+#include "PluginManager.h"
+#include "MixerChannel.h"
 
 // NomadUI includes
 #include "../NomadUI/Graphics/NUIRenderer.h"
@@ -33,12 +33,12 @@
 #include "TrackManagerUI.h"
 
 // Audio includes
-#include "../NomadAudio/include/AudioEngine.h"
-#include "../NomadAudio/include/TrackManager.h"
-#include "../NomadAudio/include/PreviewEngine.h"
-#include "../NomadAudio/include/MiniAudioDecoder.h"
+#include "AudioEngine.h"
+#include "TrackManager.h"
+#include "PreviewEngine.h"
+#include "MiniAudioDecoder.h"
 #include "MixerViewModel.h"
-#include "../NomadAudio/include/ClipSource.h"
+#include "ClipSource.h"
 #include "../NomadCore/include/NomadLog.h"
 
 #include <cmath>

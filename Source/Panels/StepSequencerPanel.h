@@ -3,7 +3,7 @@
 
 #include "WindowPanel.h"
 #include "../NomadUI/Widgets/NUIStepSequencer.h"
-#include "../NomadAudio/include/TrackManager.h"
+#include "TrackManager.h"
 #include <memory>
 
 namespace Nomad {

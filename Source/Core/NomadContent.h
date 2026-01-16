@@ -14,11 +14,11 @@
 
 #include "../NomadUI/Core/NUIComponent.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Widgets/NUISegmentedControl.h"
-#include "../NomadUI/Core/NUILabel.h"
+#include "NUISegmentedControl.h"
+#include "NUILabel.h"
 #include "ViewTypes.h"
 #include "TransportBar.h"
-#include "../NomadAudio/include/PatternSource.h"
+#include "PatternSource.h"
 #include "OverlayLayer.h"
 #include <memory>
 #include <string>

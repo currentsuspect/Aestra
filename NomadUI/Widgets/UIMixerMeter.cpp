@@ -1,8 +1,8 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerMeter.h"
 
-#include "../Graphics/NUIRenderer.h"
-#include "../Core/NUIThemeSystem.h"
+#include "NUIRenderer.h"
+#include "NUIThemeSystem.h"
 #include <algorithm>
 #include <cmath>
 #include <string> // Added for std::to_string

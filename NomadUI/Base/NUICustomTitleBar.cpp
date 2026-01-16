@@ -1,7 +1,7 @@
 // Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUICustomTitleBar.h"
-#include "../Graphics/NUIRenderer.h"
-#include "../Core/NUIThemeSystem.h"
+#include "NUIRenderer.h"
+#include "NUIThemeSystem.h"
 #include "../../NomadCore/include/NomadLog.h"
 #include "../../NomadCore/include/NomadUnifiedProfiler.h"
 

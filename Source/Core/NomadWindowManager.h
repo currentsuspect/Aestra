@@ -8,13 +8,13 @@
 
 #include "../NomadPlat/include/NomadPlatform.h"
 #include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUICustomWindow.h"
+#include "NUICustomWindow.h"
 #include "../NomadUI/Core/NUIThemeSystem.h"
 #include "../NomadUI/Core/NUIAdaptiveFPS.h"
 #include "../NomadUI/Graphics/NUIRenderer.h"
 #include "../NomadUI/Platform/NUIPlatformBridge.h"
-#include "../NomadUI/Widgets/NUIMenuBar.h"
-#include "../NomadUI/Core/NUIContextMenu.h"
+#include "NUIMenuBar.h"
+#include "NUIContextMenu.h"
 
 // Forward declarations
 namespace Nomad {

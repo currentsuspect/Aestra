@@ -3,9 +3,9 @@
 
 #include "WindowPanel.h"
 #include "../NomadUI/Widgets/NUIPianoRollWidgets.h"
-#include "../NomadAudio/include/TrackManager.h"
+#include "TrackManager.h"
 #include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Widgets/NUIButton.h"
+#include "NUIButton.h"
 #include <memory>
 #include <functional>
 

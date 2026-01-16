@@ -1,6 +1,6 @@
 // Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIProgressBar.h"
-#include "../Graphics/NUIRenderer.h"
+#include "NUIRenderer.h"
 #include <algorithm>
 #include <cmath>
 #include <sstream>

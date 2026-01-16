@@ -1,8 +1,8 @@
 // Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../Core/NUIComponent.h"
-#include "../Graphics/NUIRenderer.h"
+#include "NUIComponent.h"
+#include "NUIRenderer.h"
 #include <string>
 #include <functional>
 

@@ -1,11 +1,11 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerPanel.h"
 
-#include "../Graphics/NUIRenderer.h"
-#include "../Core/NUIThemeSystem.h"
-#include "../../Source/MixerViewModel.h"
+#include "NUIRenderer.h"
+#include "NUIThemeSystem.h"
+#include "MixerViewModel.h"
 #include "MeterSnapshot.h"
-#include "../../NomadAudio/include/TrackManager.h"
+#include "TrackManager.h"
 #include <algorithm>
 
 namespace NomadUI {

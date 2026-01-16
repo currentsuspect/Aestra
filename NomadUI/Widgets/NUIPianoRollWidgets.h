@@ -1,14 +1,14 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+﻿// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../Core/NUIComponent.h"
-#include "../Core/NUIScrollbar.h" // Include Scrollbar
+#include "NUIComponent.h"
+#include "NUIScrollbar.h" // Include Scrollbar
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "../Common/MusicHelpers.h"
+#include "MusicHelpers.h"
 
 namespace NomadUI {
 

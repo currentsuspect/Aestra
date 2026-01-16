@@ -1,8 +1,8 @@
 // Â© 2025 Nomad Studios â€” All Rights Reserved. Licensed for personal & educational use only.
 #include "NUICoreWidgets.h"
 
-#include "../Graphics/NUIRenderer.h"
-#include "../Core/NUIThemeSystem.h"
+#include "NUIRenderer.h"
+#include "NUIThemeSystem.h"
 #include <algorithm>
 #include <cmath>
 

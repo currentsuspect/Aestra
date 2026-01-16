@@ -132,7 +132,14 @@ target_include_directories(NOMAD_DAW PRIVATE
 	${CMAKE_SOURCE_DIR}/NomadPlat/include
 	${CMAKE_SOURCE_DIR}/NomadUI/Graphics
 	${CMAKE_SOURCE_DIR}/NomadUI/Core
-	${CMAKE_SOURCE_DIR}/NomadAudio/include
+	${CMAKE_SOURCE_DIR}/NomadAudio/include/Core
+	${CMAKE_SOURCE_DIR}/NomadAudio/include/DSP
+	${CMAKE_SOURCE_DIR}/NomadAudio/include/Models
+	${CMAKE_SOURCE_DIR}/NomadAudio/include/Playback
+	${CMAKE_SOURCE_DIR}/NomadAudio/include/IO
+	${CMAKE_SOURCE_DIR}/NomadAudio/include/Drivers
+	${CMAKE_SOURCE_DIR}/NomadAudio/include/Plugin
+	${CMAKE_SOURCE_DIR}/NomadAudio/include/Commands
 	${CMAKE_CURRENT_SOURCE_DIR}/license
 	# Add all Source subdirectories to include path
 	${CMAKE_CURRENT_SOURCE_DIR}

@@ -2,11 +2,11 @@
 #include "UnitRow.h"
 #include <chrono>
 #include <algorithm>
-#include "../Core/NUIThemeSystem.h"
-#include "../Graphics/NUIRenderer.h"
+#include "NUIThemeSystem.h"
+#include "NUIRenderer.h"
 
-#include "../../NomadAudio/include/TrackManager.h"
-#include "../../NomadAudio/include/AudioEngine.h"
+#include "TrackManager.h"
+#include "AudioEngine.h"
 #include "../../NomadCore/include/NomadLog.h"
 
 namespace NomadUI {
