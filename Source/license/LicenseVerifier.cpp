@@ -31,7 +31,7 @@ namespace {
 }
 
 std::string getLicenseFilePath() {
-	std::filesystem::path p = std::filesystem::path(getHomeDir()) / ".nomad" / "user_info.json";
+	std::filesystem::path p = std::filesystem::path(getHomeDir()) / ".Aestra" / "user_info.json";
 	return p.string();
 }
 

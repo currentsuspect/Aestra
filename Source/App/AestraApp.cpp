@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraApp.h"
 #include "AppLifecycle.h"
 #include "ServiceLocator.h"
@@ -75,7 +75,7 @@ std::string AestraApp::getAutosavePath() {
 }
 
 std::string AestraApp::getLegacyAutosavePath() {
-    return (std::filesystem::path(getAppDataPath()) / "autosave.nomadproj").string();
+    return (std::filesystem::path(getAppDataPath()) / "autosave.Aestraproj").string();
 }
 
 bool AestraApp::initialize(const std::string& projectPath) {
@@ -350,8 +350,8 @@ void AestraApp::connectAudioToUI() {
         
         // Load metronome click sounds (Redundant but safe fallback if Controller update missed it)
         engine->loadMetronomeClicks(
-            "AestraAudio/assets/nomad_metronome.wav",
-            "AestraAudio/assets/nomad_metronome_up.wav"
+            "AestraAudio/assets/Aestra_metronome.wav",
+            "AestraAudio/assets/Aestra_metronome_up.wav"
         );
         engine->setBPM(120.0f);
     }

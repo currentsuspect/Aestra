@@ -1381,7 +1381,7 @@ private:
     ConfigValue<bool> m_vsyncEnabled{true};
     
     // Theme settings
-    std::string m_themeName = "nomad-dark";
+    std::string m_themeName = "Aestra-dark";
     
     // File paths
     std::string m_lastProjectPath;
@@ -1413,7 +1413,7 @@ private:
     std::function<void(const std::string&)> m_onConfigChanged;
     std::chrono::steady_clock::time_point m_lastModified;
     
-    static constexpr auto DEFAULT_CONFIG_FILE = "config/nomad_config.json";
+    static constexpr auto DEFAULT_CONFIG_FILE = "config/Aestra_config.json";
 };
 
 // ConfigManager.cpp
@@ -2404,7 +2404,7 @@ void operator delete(void* ptr, size_t size) noexcept {
         "windowWidth": 1280,
         "windowHeight": 720,
         "fullscreen": false,
-        "theme": "nomad-dark",
+        "theme": "Aestra-dark",
         "showFPS": true,
         "adaptiveFPS": true
     },

@@ -170,7 +170,7 @@ currentY = 80.0f; // After 30px button (total 80px from top)
 
 ## Layout Dimensions System
 
-### Core Dimensions (from `nomad_ui_config.yaml`)
+### Core Dimensions (from `Aestra_ui_config.yaml`)
 ```yaml
 layout:
   # Panel widths
@@ -280,7 +280,7 @@ m_panel2->setBounds(NUIRect(contentBounds.x + w1, contentBounds.y + layout.trans
 
 ### Adding New Layout Dimensions
 
-1. **Update `nomad_ui_config.yaml`**:
+1. **Update `Aestra_ui_config.yaml`**:
 ```yaml
 layout:
   newPanelWidth: 300.0

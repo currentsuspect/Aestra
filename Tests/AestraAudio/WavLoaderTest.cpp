@@ -93,7 +93,7 @@ bool approxEqual(float a, float b, float epsilon = 1e-5f) {
 bool runBasic16BitTest() {
     std::cout << "Test 1: Basic 16-bit PCM...";
     std::vector<int32_t> samples = {0, 32767, -32768, 16384};
-    std::string path = makeTempPath("nomad_basic16.wav");
+    std::string path = makeTempPath("Aestra_basic16.wav");
     writeTestWav(path, 16, 44100, 1, samples, false);
 
     std::vector<float> audio;
@@ -121,7 +121,7 @@ bool runBasic16BitTest() {
 bool runJunkChunkTest() {
     std::cout << "Test 2: 16-bit PCM with JUNK chunk...";
     std::vector<int32_t> samples = {1000, -1000, 2000, -2000};
-    std::string path = makeTempPath("nomad_junk16.wav");
+    std::string path = makeTempPath("Aestra_junk16.wav");
     writeTestWav(path, 16, 48000, 2, samples, true);
 
     std::vector<float> audio;
@@ -142,7 +142,7 @@ bool runJunkChunkTest() {
 bool run24BitTest() {
     std::cout << "Test 3: 24-bit PCM conversion...";
     std::vector<int32_t> samples = {0x7FFFFF, -0x800000};
-    std::string path = makeTempPath("nomad_24bit.wav");
+    std::string path = makeTempPath("Aestra_24bit.wav");
     writeTestWav(path, 24, 44100, 1, samples, false);
 
     std::vector<float> audio;

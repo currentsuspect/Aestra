@@ -8,7 +8,7 @@ Comprehensive glossary of technical terms, acronyms, and concepts used in Aestra
 
 - [Audio Terms](#-audio-terms)
 - [Programming Concepts](#-programming-concepts)
-- [Aestra-Specific Terms](#-nomad-specific-terms)
+- [Aestra-Specific Terms](#-Aestra-specific-terms)
 - [UI/UX Terms](#%EF%B8%8F-uiux-terms)
 - [Acronyms](#-acronyms)
 

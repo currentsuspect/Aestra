@@ -39,9 +39,9 @@ void SamplerPlugin::deactivate() {
 const PluginInfo& SamplerPlugin::getInfo() const {
     static PluginInfo info;
     if (info.id.empty()) {
-        info.id = "com.nomadstudios.sampler";
+        info.id = "com.Aestrastudios.sampler";
         info.name = "Aestra Sampler";
-        info.vendor = "Nomad Studios";
+        info.vendor = "Aestra Studios";
         info.version = "1.0.0";
         info.category = "Instrument";
         info.format = PluginFormat::Internal;

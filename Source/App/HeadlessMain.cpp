@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "AudioCommandQueue.h"
 #include "AudioEngine.h"
@@ -575,7 +575,7 @@ static void printHelp() {
         << "  --human                    Print a compact summary to stderr\n"
         << "\n"
         << "Legacy single-run (project render):\n"
-        << "  --project <path>           Load .aes/.nomadproj and render\n"
+        << "  --project <path>           Load .aes/.Aestraproj and render\n"
         << "  --sr <hz>                  Sample rate\n"
         << "  --frames <n>               Buffer frames\n"
         << "  --seconds <n>              Duration\n"

@@ -1,6 +1,6 @@
 # 🧭 AESTRA
 
-![License](https://img.shields.io/badge/License-NSSAL%20v1.1-blue)
+![License](https://img.shields.io/badge/License-ASSAL%20v1.1-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-lightgrey)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-orange)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
@@ -88,7 +88,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 
 ## 🧭 Philosophy & Vision — Aestra's "True North"
 
-At Nomad Studios, we believe software should feel like art — light, native, and human.
+At Aestra Studios, we believe software should feel like art — light, native, and human.
 
 **Our Core Values:**
 
@@ -212,10 +212,10 @@ We welcome contributions from the community! Whether you're fixing bugs, adding 
 
 By contributing to Aestra, you agree that:
 
-- All contributed code becomes property of Dylan Makori / Nomad Studios
-- You grant Nomad Studios full rights to use, modify, and distribute your contributions
+- All contributed code becomes property of Dylan Makori / Aestra Studios
+- You grant Aestra Studios full rights to use, modify, and distribute your contributions
 - You waive ownership claims to your contributions
-- Contributions are made under the NSSAL v1.0 license terms
+- Contributions are made under the ASSAL v1.0 license terms
 
 For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRIBUTING.md)**
 
@@ -231,7 +231,7 @@ For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRI
 
 ## 🧾 License — ASSAL v1.1
 
-**Aestra** is licensed under the **Nomad Studios Source-Available License (ASSAL) v1.1**.
+**Aestra** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**.
 
 ### License Summary
 
@@ -240,7 +240,7 @@ For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRI
 - ✅ View and study the source code for educational purposes
 - ✅ Report bugs and security vulnerabilities
 - ✅ Suggest features and improvements
-- ✅ Submit pull requests (contributors grant all rights to Nomad Studios)
+- ✅ Submit pull requests (contributors grant all rights to Aestra Studios)
 
 **You MAY NOT:**
 
@@ -259,7 +259,7 @@ SPDX-License-Identifier: ASSAL-1.1
 All source files include the following header:
 
 ```cpp
-// © 2026 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
+// © 2026 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
 ```
 
 ### Full License Text
@@ -267,13 +267,13 @@ All source files include the following header:
 - **[View LICENSE →](LICENSE)** — Full legal license text
 - **[License Reference →](docs/LICENSE_REFERENCE.md)** — Detailed breakdown and FAQ
 
-**Important:** The source code is publicly visible for transparency, but is **NOT open-source**. All rights reserved by Dylan Makori / Nomad Studios.
+**Important:** The source code is publicly visible for transparency, but is **NOT open-source**. All rights reserved by Dylan Makori / Aestra Studios.
 
 ---
 
-## 🧠 About Nomad Studios
+## 🧠 About Aestra Studios
 
-**Nomad Studios** was founded by **Dylan Makori** in Kenya with a simple mission: make professional music tools accessible to everyone, without compromise.
+**Aestra Studios** was founded by **Dylan Makori** in Kenya with a simple mission: make professional music tools accessible to everyone, without compromise.
 
 ### Our Story
 
@@ -323,6 +323,7 @@ Thank you to all contributors and the open-source community for making Aestra po
 **Target:** Ship a credible, stable v1 Beta focused on **pattern-based Hip-Hop production**.
 
 ### ✅ Completed (Jan 2026)
+
 - Core audio engine (WASAPI/ASIO dual-tier)
 - AestraUI framework with OpenGL rendering
 - Pattern-based timeline/playlist
@@ -332,25 +333,30 @@ Thank you to all contributors and the open-source community for making Aestra po
 - VST3/CLAP plugin scanner
 
 ### 🎯 Phase 1 — Foundation Lock (COMPLETE) (Jan–Mar 2026)
+
 ✅ App structure refactor (reduce Main.cpp complexity)
 ✅ Project loop reliability (open → edit → save → reopen)
 ✅ Data model API freeze
 
 ### 🎯 Phase 2 — Project + Undo/Redo (Apr–Jun 2026)
+
 ✅ Project format v1 spec with versioning
 ✅ Undo/redo for core actions
 -[ ] Autosave + crash recovery
 
 ### 🎯 Phase 3 — Recording + Export (Jul–Sep 2026)
+
 - Recording workflow reliability
 - Offline render/export
 - Device stress testing
 
 ### 🎯 Phase 4 — Plugin Decision Gate (Sep 2026)
+
 - Option A: Ship with internal Arsenal only
 - Option B: Minimal VST3/CLAP MVP (if stable)
 
 ### 🎯 Phase 5–6 — Hardening + Release (Oct–Dec 2026)
+
 - Bug triage, performance budgets
 - Signed Windows installer
 - v1 Beta ship
@@ -374,7 +380,7 @@ Aestra/
 │   ├── CHANGELOGS/     # Historical changelogs
 │   └── BUG_REPORTS/    # Bug fix documentation
 ├── cmake/              # CMake modules
-└── LICENSE             # NSSAL v1.1 license
+└── LICENSE             # ASSAL v1.1 license
 
 - **Gitleaks Scanning** — Automated secret detection on all commits
 - **Pre-commit Hooks** — Prevents accidental secret commits
@@ -399,7 +405,7 @@ Join the conversation:
 
 ## 📜 License
 
-Aestra is distributed under the **Nomad Studios Software Agreement License (NSSAL) v1.1**. See **[LICENSE](LICENSE)** for full terms.
+Aestra is distributed under the **Aestra Studios Software Agreement License (ASSAL) v1.1**. See **[LICENSE](LICENSE)** for full terms.
 
 **Key Terms:**
 
@@ -421,14 +427,9 @@ If you enjoy using Aestra, consider supporting its development:
 
 ---
 
-<div align="center">
-
 **Built by musicians, for musicians. Crafted with intention.** 🎵
 
 ⭐ **Star this repo** if you believe in transparent, professional audio software!
 
-*Copyright © 2026 Dylan Makori / Nomad Studios. All rights reserved.*  
-*Licensed under NSSAL v1.1*
-
-</div>
-</html>
+*Copyright © 2026 Dylan Makori / Aestra Studios. All rights reserved.*  
+*Licensed under ASSAL v1.1*

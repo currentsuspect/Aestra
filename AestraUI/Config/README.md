@@ -4,12 +4,12 @@ This directory contains YAML configuration files that control all visual aspects
 
 ## Files
 
-- `nomad_ui_config.yaml` - Main configuration file controlling colors, layout, spacing, and typography
+- `Aestra_ui_config.yaml` - Main configuration file controlling colors, layout, spacing, and typography
 
 ## How to Customize
 
 ### 1. Edit Configuration
-Open `nomad_ui_config.yaml` and modify any values:
+Open `Aestra_ui_config.yaml` and modify any values:
 
 ```yaml
 # Change track height
@@ -139,4 +139,4 @@ themes:
 
 ## Examples
 
-See the included `nomad_ui_config.yaml` for a complete example with all available options and detailed comments.
+See the included `Aestra_ui_config.yaml` for a complete example with all available options and detailed comments.

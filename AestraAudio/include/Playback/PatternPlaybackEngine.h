@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved.
+// © 2025 Aestra Studios — All Rights Reserved.
 #pragma once
 
 #include "PluginHost.h" // [NEW] For MidiBuffer

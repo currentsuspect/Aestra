@@ -1,11 +1,11 @@
 ## Contributing to Aestra Core (public)
 
-This document explains how to build and contribute to the `nomad-core` public repository.
+This document explains how to build and contribute to the `Aestra-core` public repository.
 
 Key points:
 
-- `nomad-core` should contain all non-sensitive code: AestraCore, AestraPlat, AestraUI, build scripts for the core, tests, and small mock assets.
-- Premium assets, trained models, and private signing pipelines must live in private repositories (e.g., `nomad-premium`, `nomad-build`).
+- `Aestra-core` should contain all non-sensitive code: AestraCore, AestraPlat, AestraUI, build scripts for the core, tests, and small mock assets.
+- Premium assets, trained models, and private signing pipelines must live in private repositories (e.g., `Aestra-premium`, `Aestra-build`).
 
 Local setup to build core when private repos are not present:
 
@@ -25,7 +25,7 @@ Local setup to build core when private repos are not present:
 
 4. If you have access to private repos, add them as submodules:
 
-   git submodule add git@github.com:YourOrg/nomad-premium.git AestraMuse
+   git submodule add git@github.com:YourOrg/Aestra-premium.git AestraMuse
    git submodule update --init --recursive
 
 Pre-commit checks

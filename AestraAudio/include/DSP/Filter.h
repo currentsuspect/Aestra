@@ -1,5 +1,5 @@
 // ============================================================================
-// © 2025 Nomad Studios — Professional Audio DSP Filter Library
+// © 2025 Aestra Studios — Professional Audio DSP Filter Library
 // 
 // Features:
 // - 8 filter types with proper analog modeling

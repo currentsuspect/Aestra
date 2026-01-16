@@ -37,7 +37,7 @@ Hardware-accelerated 2D rendering engine.
 ```cpp
 #include "AestraUI/Renderer.h"
 
-nomad::Renderer renderer;
+Aestra::Renderer renderer;
 renderer.initialize(window->getContext());
 renderer.setMSAA(4);  // 4x anti-aliasing
 
@@ -356,7 +356,7 @@ stateDiagram-v2
 #include "AestraUI/Widgets/Slider.h"
 
 // Initialize
-nomad::Renderer renderer;
+Aestra::Renderer renderer;
 renderer.initialize(window->getContext());
 
 Theme darkTheme = Theme::dark();
@@ -439,4 +439,4 @@ Load themes from JSON:
 
 ---
 
-**Next:** [AestraAudio Architecture →](nomad-audio.md)
+**Next:** [AestraAudio Architecture →](Aestra-audio.md)

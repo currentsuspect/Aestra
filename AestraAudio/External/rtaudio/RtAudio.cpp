@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 /************************************************************************/
 /*! \class RtAudio
     \brief Realtime audio i/o C++ classes.

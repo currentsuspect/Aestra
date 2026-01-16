@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIThemeSystem.h"
 #include <algorithm>
 #include <cmath>
@@ -13,19 +13,19 @@ NUIThemeManager& NUIThemeManager::getInstance() {
 
 NUIThemeManager::NUIThemeManager() 
     : currentVariant_(NUIThemeVariant::Dark)
-    , activeTheme_("nomad-dark")
+    , activeTheme_("Aestra-dark")
     , isTransitioning_(false) {
     initializeDefaultThemes();
 }
 
 void NUIThemeManager::initializeDefaultThemes() {
     // Aestra Dark Theme
-    NUIThemeProperties nomadDark = NUIThemePresets::createAestraDark();
-    themes_["nomad-dark"] = nomadDark;
+    NUIThemeProperties AestraDark = NUIThemePresets::createAestraDark();
+    themes_["Aestra-dark"] = AestraDark;
     
     // Aestra Light Theme
-    NUIThemeProperties nomadLight = NUIThemePresets::createAestraLight();
-    themes_["nomad-light"] = nomadLight;
+    NUIThemeProperties AestraLight = NUIThemePresets::createAestraLight();
+    themes_["Aestra-light"] = AestraLight;
     
     // Material Themes
     themes_["material-light"] = NUIThemePresets::createMaterialLight();
@@ -67,7 +67,7 @@ const NUIThemeProperties& NUIThemeManager::getCurrentTheme() const {
     if (it != themes_.end()) {
         return it->second;
     }
-    return themes_.at("nomad-dark");
+    return themes_.at("Aestra-dark");
 }
 
 NUIThemeProperties& NUIThemeManager::getCurrentThemeMutable() {
@@ -121,14 +121,14 @@ void NUIThemeManager::switchThemeVariant(NUIThemeVariant variant, float duration
     std::string targetTheme;
     switch (variant) {
         case NUIThemeVariant::Light:
-            targetTheme = "nomad-light";
+            targetTheme = "Aestra-light";
             break;
         case NUIThemeVariant::Dark:
-            targetTheme = "nomad-dark";
+            targetTheme = "Aestra-dark";
             break;
         case NUIThemeVariant::Auto:
             // TODO: Detect system preference
-            targetTheme = "nomad-dark";
+            targetTheme = "Aestra-dark";
             break;
     }
     
@@ -461,9 +461,9 @@ void NUIThemeManager::updateSystemTheme() {
     // TODO: Implement system theme detection
     // For now, just switch to appropriate theme
     if (currentVariant_ == NUIThemeVariant::Light) {
-        setActiveTheme("nomad-light");
+        setActiveTheme("Aestra-light");
     } else {
-        setActiveTheme("nomad-dark");
+        setActiveTheme("Aestra-dark");
     }
 }
 

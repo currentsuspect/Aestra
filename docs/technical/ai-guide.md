@@ -61,7 +61,7 @@ Muse aims to:
 ### Module Structure
 
 ```
-nomad-premium/muse/          # Private repository
+Aestra-premium/muse/          # Private repository
 ├── Core/
 │   ├── MuseEngine.h/cpp     # Main AI engine
 │   ├── ModelLoader.h/cpp    # ML model management

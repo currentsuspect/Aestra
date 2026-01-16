@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
 #include "WindowPanel.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"

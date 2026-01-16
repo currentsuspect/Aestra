@@ -124,8 +124,8 @@ double startTime = utils->getTime();
 double elapsed = utils->getTime() - startTime;
 
 // File dialogs
-std::string filename = utils->openFileDialog("Open Project", "Project Files\0*.nomad\0");
-std::string savePath = utils->saveFileDialog("Save Project", "Project Files\0*.nomad\0");
+std::string filename = utils->openFileDialog("Open Project", "Project Files\0*.Aestra\0");
+std::string savePath = utils->saveFileDialog("Save Project", "Project Files\0*.Aestra\0");
 std::string folder = utils->selectFolderDialog("Select Samples Folder");
 
 // Clipboard

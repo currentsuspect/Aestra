@@ -1,13 +1,13 @@
 # ========================================
 # 🧭 Aestra – Official Documentation
 # ========================================
-# Built by Dylan Makori / Nomad Studios
+# Built by Dylan Makori / Aestra Studios
 # Design philosophy: clarity, intention, and performance.
 # ----------------------------------------
 
 site_name: Aestra
 site_url: https://currentsuspect.github.io/Aestra
-site_author: Dylan Makori / Nomad Studios
+site_author: Dylan Makori / Aestra Studios
 site_description: >-
   Aestra is a next-generation Digital Audio Workstation built from scratch with precision,
   fusing ultra-low latency audio with a GPU-accelerated UI and intentional workflow design.
@@ -17,7 +17,7 @@ repo_url: https://github.com/currentsuspect/Aestra
 edit_uri: edit/main/docs/
 
 copyright: >
-  Copyright © 2025 <strong>Nomad Studios</strong>.
+  Copyright © 2025 <strong>Aestra Studios</strong>.
   Crafted with precision by <a href="https://github.com/currentsuspect">Dylan Makori</a>.
 
 # ----------------------------------------
@@ -195,10 +195,10 @@ nav:
   - 🧩 Architecture:
       - System Overview: architecture/overview.md
       - Module Hierarchy: architecture/modules.md
-      - AestraCore: architecture/nomad-core.md
-      - AestraPlat: architecture/nomad-plat.md
-      - AestraUI: architecture/nomad-ui.md
-      - AestraAudio: architecture/nomad-audio.md
+      - AestraCore: architecture/Aestra-core.md
+      - AestraPlat: architecture/Aestra-plat.md
+      - AestraUI: architecture/Aestra-ui.md
+      - AestraAudio: architecture/Aestra-audio.md
   - 👨‍💻 Developer Guide:
       - Contributing: developer/contributing.md
       - Coding Style: developer/coding-style.md

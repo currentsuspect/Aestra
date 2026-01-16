@@ -15,7 +15,7 @@ title = "Aestra gitleaks config"
 # Rely on default gitleaks rules; custom additions below
 
 [[rules]]
-  id = "nomad-private-key-block"
+  id = "Aestra-private-key-block"
   description = "Private key block"
   regex = '''-----BEGIN (RSA|OPENSSH|EC) PRIVATE KEY-----'''
   entropy = 0

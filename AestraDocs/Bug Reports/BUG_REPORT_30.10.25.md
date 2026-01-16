@@ -324,9 +324,9 @@
     src/PianoRoll.cpp
     src/NoteGrid.cpp
     src/Selection.cpp
-    include/nomad/pianoroll/PianoRoll.hpp
-    include/nomad/pianoroll/NoteGrid.hpp
-    include/nomad/pianoroll/Selection.hpp
+    include/Aestra/pianoroll/PianoRoll.hpp
+    include/Aestra/pianoroll/NoteGrid.hpp
+    include/Aestra/pianoroll/Selection.hpp
   )
   target_include_directories(AestraPianoRoll PUBLIC include)
   target_link_libraries(AestraPianoRoll

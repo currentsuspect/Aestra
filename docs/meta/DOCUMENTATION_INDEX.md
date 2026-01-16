@@ -47,10 +47,10 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 ### 🏗️ **Architecture**
 - **[System Overview](architecture/overview.md)** - High-level architecture
 - **[Core Modules](architecture/modules.md)** - Module dependencies
-- **[AestraCore](architecture/nomad-core.md)** - Foundation layer
-- **[AestraUI](architecture/nomad-ui.md)** - UI framework
-- **[AestraAudio](architecture/nomad-audio.md)** - Audio engine
-- **[AestraPlat](architecture/nomad-plat.md)** - Platform layer
+- **[AestraCore](architecture/Aestra-core.md)** - Foundation layer
+- **[AestraUI](architecture/Aestra-ui.md)** - UI framework
+- **[AestraAudio](architecture/Aestra-audio.md)** - Audio engine
+- **[AestraPlat](architecture/Aestra-plat.md)** - Platform layer
 
 ### 👨‍💻 **Development**
 - **[Contributing Guide](developer/contributing.md)** - How to contribute
@@ -82,7 +82,7 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 
 ### 🧠 **About**
 - **[Philosophy](about/philosophy.md)** - Design principles
-- **[Licensing](about/licensing.md)** - NSSAL license
+- **[Licensing](about/licensing.md)** - ASSAL license
 - **[License Reference](about/license-reference.md)** - Legal details
 
 ## 🎯 Learning Paths
@@ -155,6 +155,6 @@ This documentation is actively maintained and updated:
 
 **Last Updated**: December 2025  
 **Version**: 1.1.0  
-**Maintainer**: Dylan Makori / Nomad Studios
+**Maintainer**: Dylan Makori / Aestra Studios
 
 *For questions about this documentation, please open an issue or contact us directly.*

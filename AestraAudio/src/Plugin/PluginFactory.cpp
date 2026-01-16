@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PluginFactory.h"
 #include "AestraLog.h"
@@ -83,12 +83,12 @@ PluginInstancePtr InProcessPluginFactory::createCLAPInstance(const PluginInfo& i
 PluginInstancePtr InProcessPluginFactory::createInternalInstance(const PluginInfo& info) {
 #ifdef AESTRA_HAS_PLUGINS
     // Aestra Rumble 808 Bass Synthesizer
-    if (info.id == "com.nomadstudios.rumble") {
+    if (info.id == "com.Aestrastudios.rumble") {
         return std::make_shared<Aestra::Plugins::RumbleInstance>();
     }
     
     // Aestra Sampler
-    if (info.id == "com.nomadstudios.sampler") {
+    if (info.id == "com.Aestrastudios.sampler") {
         return std::make_shared<Aestra::Audio::Plugins::SamplerPlugin>();
     }
 #endif

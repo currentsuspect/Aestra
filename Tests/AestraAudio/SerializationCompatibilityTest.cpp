@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include <gtest/gtest.h>
 #include "../AestraAudio/include/PlaylistSerializer.h"
 #include "../AestraCore/include/AestraJSON.h"

@@ -67,8 +67,8 @@ test_*.log
 *.m4a
 
 # Exception: Essential bundled audio assets
-!AestraAudio/assets/nomad_metronome.wav
-!AestraAudio/assets/nomad_metronome_up.wav
+!AestraAudio/assets/Aestra_metronome.wav
+!AestraAudio/assets/Aestra_metronome_up.wav
 
 # Models and ML artifacts
 *.onnx

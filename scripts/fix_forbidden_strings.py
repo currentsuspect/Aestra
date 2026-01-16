@@ -2,7 +2,7 @@
 import os
 import re
 
-ROOT_DIR = r"C:\Users\Current\Documents\Projects\NOMAD"
+ROOT_DIR = r"C:\Users\Current\Documents\Projects\Aestra"
 
 def fix_forbidden_strings(path):
     try:
@@ -14,16 +14,16 @@ def fix_forbidden_strings(path):
     
     original_content = content
     
-    # 1. Nomad Studios -> Nomad Studios (Copyright/Ownership)
-    content = content.replace("Nomad Studios", "Nomad Studios")
+    # 1. Aestra Studios -> Aestra Studios (Copyright/Ownership)
+    content = content.replace("Aestra Studios", "Aestra Studios")
     
     # 2. Aestra Plus -> Aestra Plus (Product name)
     content = content.replace("Aestra Plus", "Aestra Plus")
     
-    # 3. Nomad Studios -> Nomad Studios (Catch-all for entity, ONLY if not part of Aestra Plus)
-    # But since we replaced Aestra Plus first, "Nomad Studios" remaining is likely the entity.
-    # But wait, "Nomad Studios" is forbidden.
-    content = content.replace("Nomad Studios", "Nomad Studios")
+    # 3. Aestra Studios -> Aestra Studios (Catch-all for entity, ONLY if not part of Aestra Plus)
+    # But since we replaced Aestra Plus first, "Aestra Studios" remaining is likely the entity.
+    # But wait, "Aestra Studios" is forbidden.
+    content = content.replace("Aestra Studios", "Aestra Studios")
 
     if content != original_content:
         print(f"Fixing forbidden strings in: {path}")

@@ -1,6 +1,6 @@
-# Support Nomad Studios (2025-Launch)
+# Support Aestra Studios (2025-Launch)
 
-Thank you for considering supporting Nomad Studios! Your contribution helps us continue developing Aestra and keeping its core features free for everyone.
+Thank you for considering supporting Aestra Studios! Your contribution helps us continue developing Aestra and keeping its core features free for everyone.
 
 ## Why Support Us?
 
@@ -39,9 +39,9 @@ Aestra is built with a vision to make professional music production accessible t
 
 Choose your preferred platform:
 
-- [Patreon](https://patreon.com/nomad-daw)
+- [Patreon](https://patreon.com/Aestra-daw)
 - [GitHub Sponsors](https://github.com/sponsors/currentsuspect)
-- [Ko-fi](https://ko-fi.com/nomaddaw)
+- [Ko-fi](https://ko-fi.com/Aestradaw)
 
 ## Our Promise
 

@@ -208,11 +208,11 @@ profiler.setAlertThresholds(20.0, 85.0);  // 20ms frame time, 85% audio load
 **Replace old export calls:**
 ```cpp
 // Old:
-Profiler::getInstance().exportToJSON("nomad_profile.json");
+Profiler::getInstance().exportToJSON("Aestra_profile.json");
 
 // New:
 auto& profiler = Aestra::UnifiedProfiler::getInstance();
-profiler.exportPerformanceReport("nomad_performance_report");  // Exports both JSON and HTML
+profiler.exportPerformanceReport("Aestra_performance_report");  // Exports both JSON and HTML
 ```
 
 ## Audio Integration Enhancements

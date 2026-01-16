@@ -36,12 +36,12 @@ Create and manage application windows with event handling.
 ```cpp
 #include "AestraPlat/Window.h"
 
-nomad::WindowConfig config;
+Aestra::WindowConfig config;
 config.title = "Aestra";
 config.width = 1920;
 config.height = 1080;
 
-auto window = nomad::Window::create(config);
+auto window = Aestra::Window::create(config);
 window->show();
 
 while (window->isOpen()) {
@@ -90,9 +90,9 @@ Native file open/save dialogs.
 ```cpp
 #include "AestraPlat/FileDialog.h"
 
-auto path = nomad::FileDialog::open({
+auto path = Aestra::FileDialog::open({
     .title = "Open Project",
-    .filters = {{"Aestra Project", "*.nomad"}},
+    .filters = {{"Aestra Project", "*.Aestra"}},
     .multiSelect = false
 });
 
@@ -116,7 +116,7 @@ Query system capabilities and resources.
 ```cpp
 #include "AestraPlat/SystemInfo.h"
 
-auto info = nomad::SystemInfo::get();
+auto info = Aestra::SystemInfo::get();
 Aestra_LOG_INFO("CPU: {} cores, {} threads", 
                info.cpuCores, info.cpuThreads);
 Aestra_LOG_INFO("RAM: {} MB total, {} MB available",
@@ -137,9 +137,9 @@ Precise timing for audio and animation.
 ```cpp
 #include "AestraPlat/Timer.h"
 
-auto start = nomad::Timer::now();
+auto start = Aestra::Timer::now();
 processAudio();
-auto elapsed = nomad::Timer::elapsed(start);
+auto elapsed = Aestra::Timer::elapsed(start);
 
 Aestra_LOG_DEBUG("Audio processing took {:.2f}ms", elapsed * 1000.0);
 ```
@@ -434,4 +434,4 @@ struct MouseEvent {
 
 ---
 
-**Next:** [AestraUI Architecture →](nomad-ui.md)
+**Next:** [AestraUI Architecture →](Aestra-ui.md)

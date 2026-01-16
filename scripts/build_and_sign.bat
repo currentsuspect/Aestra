@@ -15,7 +15,7 @@ if %ERRORLEVEL% == 0 (
 )
 
 :: Generate a self-signed certificate if it doesn't exist in the store
-powershell -Command "$cert = Get-ChildItem -Path Cert:\CurrentUser\My | Where-Object {$_.Subject -eq 'CN=Nomad Studios Dev Cert'}; if (-not $cert) { New-SelfSignedCertificate -Subject 'CN=Nomad Studios Dev Cert' -CertStoreLocation 'Cert:\CurrentUser\My' -KeyAlgorithm RSA -KeyLength 2048 -HashAlgorithm SHA256 -Type CodeSigningCert; Write-Host 'Certificate generated successfully' } else { Write-Host 'Using existing certificate' }"
+powershell -Command "$cert = Get-ChildItem -Path Cert:\CurrentUser\My | Where-Object {$_.Subject -eq 'CN=Aestra Studios Dev Cert'}; if (-not $cert) { New-SelfSignedCertificate -Subject 'CN=Aestra Studios Dev Cert' -CertStoreLocation 'Cert:\CurrentUser\My' -KeyAlgorithm RSA -KeyLength 2048 -HashAlgorithm SHA256 -Type CodeSigningCert; Write-Host 'Certificate generated successfully' } else { Write-Host 'Using existing certificate' }"
 if %ERRORLEVEL% NEQ 0 (
     echo Failed to generate or find certificate
     pause
@@ -35,7 +35,7 @@ if %ERRORLEVEL% NEQ 0 (
 :: Sign the executable
 echo.
 echo Signing the executable...
-signtool sign /a /v /n "Nomad Studios Dev Cert" /tr http://timestamp.digicert.com /td sha256 "build\Release\AestraDAW.exe"
+signtool sign /a /v /n "Aestra Studios Dev Cert" /tr http://timestamp.digicert.com /td sha256 "build\Release\AestraDAW.exe"
 if %ERRORLEVEL% NEQ 0 (
     echo Signing failed
     pause

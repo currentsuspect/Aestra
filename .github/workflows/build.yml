@@ -33,7 +33,7 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: nomad-windows-x64
+        name: Aestra-windows-x64
         path: build/AestraUI/Release/AestraUI_Core.lib
 
   build-linux:
@@ -73,7 +73,7 @@ jobs:
       if: false
       uses: actions/upload-artifact@v4
       with:
-        name: nomad-linux-x64
+        name: Aestra-linux-x64
         path: build/AestraUI/libAestraUI_Core.a
 
   build-macos:
@@ -107,5 +107,5 @@ jobs:
       if: false
       uses: actions/upload-artifact@v4
       with:
-        name: nomad-macos-universal
+        name: Aestra-macos-universal
         path: build/AestraUI/libAestraUI_Core.a

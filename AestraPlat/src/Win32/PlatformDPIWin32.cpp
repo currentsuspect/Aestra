@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "PlatformDPIWin32.h"
 #include "../../../AestraCore/include/AestraLog.h"
 #include <ShellScalingApi.h>

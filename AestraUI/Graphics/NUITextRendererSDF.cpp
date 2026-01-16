@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUITextRendererSDF.h"
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN

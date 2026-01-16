@@ -1,14 +1,14 @@
 ; =========================================================
 ;  Aestra – Windows Installer
-;  Author: Dylan Makori / Nomad Studios
+;  Author: Dylan Makori / Aestra Studios
 ;  Date: 2025-10-30
 ;  Free distribution installer – no paid features used
 ; =========================================================
 
 #define MyAppName        "Aestra"
 #define MyAppVersion     "1.1.0"
-#define MyAppPublisher   "Nomad Studios"
-#define MyAppURL         "https://nomad-daw.com"
+#define MyAppPublisher   "Aestra Studios"
+#define MyAppURL         "https://Aestra-daw.com"
 #define MyAppExeName     "AestraDAW.exe"
 
 [Setup]

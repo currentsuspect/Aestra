@@ -117,12 +117,12 @@ See [Style Guide](docs/developer/style-guide.md#-commit-messages) for details.
 
 By contributing to Aestra DAW, you agree that:
 
-- ✅ All contributed code becomes property of Dylan Makori / Nomad Studios
-- ✅ You grant Nomad Studios full rights to use, modify, and distribute your contributions
+- ✅ All contributed code becomes property of Dylan Makori / Aestra Studios
+- ✅ You grant Aestra Studios full rights to use, modify, and distribute your contributions
 - ✅ You waive all ownership claims to your contributions
-- ✅ Contributions are made under NSSAL v1.0 license terms
+- ✅ Contributions are made under ASSAL v1.0 license terms
 
-This ensures Nomad Studios can maintain the project sustainably while keeping the code source-available.
+This ensures Aestra Studios can maintain the project sustainably while keeping the code source-available.
 
 ---
 
@@ -210,7 +210,7 @@ See [SECURITY.md](SECURITY.md) for our security policy.
 - ❌ Build signing and distribution
 
 ### License
-All contributions are licensed under **NSSAL v1.0** (Nomad Studios Source-Available License).
+All contributions are licensed under **ASSAL v1.0** (Aestra Studios Source-Available License).
 
 See [LICENSING.md](LICENSING.md) for full details.
 

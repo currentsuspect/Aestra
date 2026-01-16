@@ -37,9 +37,9 @@ Core audio processing system.
 ```cpp
 #include "AestraAudio/AudioEngine.h"
 
-nomad::AudioEngine engine;
+Aestra::AudioEngine engine;
 
-nomad::AudioConfig config;
+Aestra::AudioConfig config;
 config.sampleRate = 48000;
 config.bufferSize = 512;  // ~10ms at 48kHz
 config.channels = 2;
@@ -122,7 +122,7 @@ Lock-free audio buffer system.
 
 **Example:**
 ```cpp
-nomad::AudioBuffer buffer(samples, channels);
+Aestra::AudioBuffer buffer(samples, channels);
 
 // Write to buffer (UI thread)
 buffer.write(audioData, samples);
@@ -241,7 +241,7 @@ Use lock-free queues for thread communication:
 
 ```cpp
 // UI → Audio communication
-nomad::LockFreeQueue<AudioCommand> commandQueue;
+Aestra::LockFreeQueue<AudioCommand> commandQueue;
 
 // UI thread: send command
 commandQueue.push(PlayCommand{});
@@ -368,14 +368,14 @@ Stereo:        [L, R]
 #include "AestraAudio/AudioEngine.h"
 
 class MyDAW {
-    nomad::AudioEngine engine;
+    Aestra::AudioEngine engine;
     std::vector<float> samples;
     size_t playPosition = 0;
     
 public:
     void initialize() {
         // Configure audio
-        nomad::AudioConfig config;
+        Aestra::AudioConfig config;
         config.sampleRate = 48000;
         config.bufferSize = 512;
         config.channels = 2;
@@ -414,7 +414,7 @@ public:
 
 ```cpp
 // Request exclusive mode for lowest latency
-nomad::AudioConfig config;
+Aestra::AudioConfig config;
 config.sampleRate = 48000;
 config.bufferSize = 128;  // 2.7ms
 config.exclusive = true;

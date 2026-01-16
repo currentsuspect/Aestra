@@ -1,6 +1,6 @@
-# Validate nomad-core build (quick smoke test)
+# Validate Aestra-core build (quick smoke test)
 
-This document explains how to confirm the `nomad-core` subset builds locally without private assets.
+This document explains how to confirm the `Aestra-core` subset builds locally without private assets.
 
 Steps:
 
@@ -28,5 +28,5 @@ Steps:
 6) If you encounter missing files during compile/link, inspect error message for references to `AestraMuse` or `AestraAssets` and ensure the build uses `assets_mock` (see `AestraPremiumFallback.cmake`).
 
 Notes:
-- This validation ensures the public `nomad-core` code is buildable; it does not exercise premium features.
+- This validation ensures the public `Aestra-core` code is buildable; it does not exercise premium features.
 - For CI, the public workflow `public-ci.yml` should run these steps on push/PR.

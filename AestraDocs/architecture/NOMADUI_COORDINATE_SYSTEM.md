@@ -454,7 +454,7 @@ typography:
 
 #### Usage
 
-1. **Modify Configuration**: Edit `AestraUI/Config/nomad_ui_config.yaml`
+1. **Modify Configuration**: Edit `AestraUI/Config/Aestra_ui_config.yaml`
 2. **Rebuild Application**: Changes take effect after compilation
 3. **Runtime Loading**: Configuration is loaded at startup
 

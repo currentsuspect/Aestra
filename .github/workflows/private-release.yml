@@ -20,7 +20,7 @@ jobs:
       - name: Ensure premium/build present
         shell: pwsh
         run: |
-          $req = @('nomad-premium','nomad-build')
+          $req = @('Aestra-premium','Aestra-build')
           foreach ($r in $req) { if (-not (Test-Path $r)) { Write-Error "Missing private folder: $r"; exit 1 } }
       - name: Setup CMake
         uses: lukka/get-cmake@latest

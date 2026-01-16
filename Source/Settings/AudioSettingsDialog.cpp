@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file AudioSettingsDialog.cpp
  * @brief Audio settings dialog for Aestra
@@ -391,17 +391,17 @@ void AudioSettingsDialog::createUI() {
     addChild(m_threadCountDropdown);
     
     // === AESTRA MODE - Signature Audio Character ===
-    m_nomadModeLabel = std::make_shared<AestraUI::NUILabel>();
-    m_nomadModeLabel->setText("Aestra Mode:");
-    addChild(m_nomadModeLabel);
+    m_AestraModeLabel = std::make_shared<AestraUI::NUILabel>();
+    m_AestraModeLabel->setText("Aestra Mode:");
+    addChild(m_AestraModeLabel);
     
-    m_nomadModeDropdown = std::make_shared<AestraUI::NUIDropdown>();
-    m_nomadModeDropdown->setPlaceholderText("Select Aestra Mode");
-    m_nomadModeDropdown->addItem("Off (Bypass)", static_cast<int>(Audio::AestraMode::Off));
-    m_nomadModeDropdown->addItem("Transparent (Reference)", static_cast<int>(Audio::AestraMode::Transparent));
-    m_nomadModeDropdown->addItem("Euphoric (Analog Soul)", static_cast<int>(Audio::AestraMode::Euphoric));
-    m_nomadModeDropdown->setSelectedIndex(0); // Default to Off
-    m_nomadModeDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+    m_AestraModeDropdown = std::make_shared<AestraUI::NUIDropdown>();
+    m_AestraModeDropdown->setPlaceholderText("Select Aestra Mode");
+    m_AestraModeDropdown->addItem("Off (Bypass)", static_cast<int>(Audio::AestraMode::Off));
+    m_AestraModeDropdown->addItem("Transparent (Reference)", static_cast<int>(Audio::AestraMode::Transparent));
+    m_AestraModeDropdown->addItem("Euphoric (Analog Soul)", static_cast<int>(Audio::AestraMode::Euphoric));
+    m_AestraModeDropdown->setSelectedIndex(0); // Default to Off
+    m_AestraModeDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
         // Aestra Mode is independent of quality presets
         // Update status message to show what mode we're in
         auto mode = static_cast<Audio::AestraMode>(value);
@@ -414,7 +414,7 @@ void AudioSettingsDialog::createUI() {
         }
         markSettingsChanged();
     });
-    addChild(m_nomadModeDropdown);
+    addChild(m_AestraModeDropdown);
 
     // Create buttons
     m_applyButton = std::make_shared<AestraUI::NUIButton>();
@@ -560,8 +560,8 @@ void AudioSettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
     if (m_threadCountDropdown && m_threadCountDropdown->isOpen()) {
         m_threadCountDropdown->renderDropdownList(renderer);
     }
-    if (m_nomadModeDropdown && m_nomadModeDropdown->isOpen()) {
-        m_nomadModeDropdown->renderDropdownList(renderer);
+    if (m_AestraModeDropdown && m_AestraModeDropdown->isOpen()) {
+        m_AestraModeDropdown->renderDropdownList(renderer);
     }
 }
 
@@ -618,7 +618,7 @@ bool AudioSettingsDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                                      (m_resamplingDropdown && m_resamplingDropdown->isOpen()) ||
                                      (m_ditheringDropdown && m_ditheringDropdown->isOpen()) ||
                                      (m_threadCountDropdown && m_threadCountDropdown->isOpen()) ||
-                                     (m_nomadModeDropdown && m_nomadModeDropdown->isOpen());
+                                     (m_AestraModeDropdown && m_AestraModeDropdown->isOpen());
     
     // If PRESSED event occurs while dropdown is open, set blocking flag
     // This flag persists until RELEASED to prevent click-through
@@ -655,8 +655,8 @@ bool AudioSettingsDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         if (m_threadCountDropdown && m_threadCountDropdown->isOpen()) {
             handled = m_threadCountDropdown->onMouseEvent(event) || handled;
         }
-        if (m_nomadModeDropdown && m_nomadModeDropdown->isOpen()) {
-            handled = m_nomadModeDropdown->onMouseEvent(event) || handled;
+        if (m_AestraModeDropdown && m_AestraModeDropdown->isOpen()) {
+            handled = m_AestraModeDropdown->onMouseEvent(event) || handled;
         }
         
         // Clear blocking flag when RELEASED event completes the sequence
@@ -905,7 +905,7 @@ void AudioSettingsDialog::captureOriginalQualityStateFromUi() {
     m_originalPrecision64Bit = m_precision64BitToggle && (m_precision64BitToggle->getText() == "ON");
     m_originalMultiThreading = m_multiThreadingToggle && (m_multiThreadingToggle->getText() == "ON");
     m_originalThreadCountIndex = m_threadCountDropdown ? m_threadCountDropdown->getSelectedIndex() : -1;
-    m_originalAestraModeIndex = m_nomadModeDropdown ? m_nomadModeDropdown->getSelectedIndex() : -1;
+    m_originalAestraModeIndex = m_AestraModeDropdown ? m_AestraModeDropdown->getSelectedIndex() : -1;
 }
 
 bool AudioSettingsDialog::hasUnsavedChanges() const {
@@ -933,8 +933,8 @@ bool AudioSettingsDialog::hasUnsavedChanges() const {
         m_threadCountDropdown->getSelectedIndex() != m_originalThreadCountIndex) {
         return true;
     }
-    if (m_nomadModeDropdown && m_originalAestraModeIndex != -1 &&
-        m_nomadModeDropdown->getSelectedIndex() != m_originalAestraModeIndex) {
+    if (m_AestraModeDropdown && m_originalAestraModeIndex != -1 &&
+        m_AestraModeDropdown->getSelectedIndex() != m_originalAestraModeIndex) {
         return true;
     }
 
@@ -997,8 +997,8 @@ void AudioSettingsDialog::restoreOriginalUiState() {
     if (m_threadCountDropdown && m_originalThreadCountIndex != -1) {
         m_threadCountDropdown->setSelectedIndex(m_originalThreadCountIndex);
     }
-    if (m_nomadModeDropdown && m_originalAestraModeIndex != -1) {
-        m_nomadModeDropdown->setSelectedIndex(m_originalAestraModeIndex);
+    if (m_AestraModeDropdown && m_originalAestraModeIndex != -1) {
+        m_AestraModeDropdown->setSelectedIndex(m_originalAestraModeIndex);
     }
 
     updateLatencyEstimate();
@@ -1122,8 +1122,8 @@ void AudioSettingsDialog::applySettings() {
             : Audio::InternalPrecision::Float32;
         
         // Get Aestra Mode from dropdown
-        int nomadModeValue = m_nomadModeDropdown->getSelectedValue();
-        qualitySettings.nomadMode = static_cast<Audio::AestraMode>(nomadModeValue);
+        int AestraModeValue = m_AestraModeDropdown->getSelectedValue();
+        qualitySettings.AestraMode = static_cast<Audio::AestraMode>(AestraModeValue);
         
         // Additional settings (future expansion)
         qualitySettings.oversampling = Audio::OversamplingMode::None;
@@ -1148,7 +1148,7 @@ void AudioSettingsDialog::applySettings() {
         const char* presetNames[] = {"Custom", "Economy", "Balanced", "High-Fidelity", "Mastering"};
         // Resampling is fixed to Sinc64 (Extreme)
         const char* ditheringNames[] = {"None", "Triangular", "High-Pass", "Noise-Shaped"};
-        const char* nomadModeNames[] = {"Off", "Transparent", "Euphoric"};
+        const char* AestraModeNames[] = {"Off", "Transparent", "Euphoric"};
         const char* precisionNames[] = {"32-bit Float", "64-bit Float"};
         
         Log::info("Applied audio quality settings:");
@@ -1158,7 +1158,7 @@ void AudioSettingsDialog::applySettings() {
         Log::info("  Precision: " + std::string(precisionNames[static_cast<int>(qualitySettings.precision)]));
         Log::info("  DC Removal: " + std::string(qualitySettings.removeDCOffset ? "ON" : "OFF"));
         Log::info("  Soft Clipping: " + std::string(qualitySettings.enableSoftClipping ? "ON" : "OFF"));
-        Log::info("  Aestra Mode: " + std::string(nomadModeNames[static_cast<int>(qualitySettings.nomadMode)]));
+        Log::info("  Aestra Mode: " + std::string(AestraModeNames[static_cast<int>(qualitySettings.AestraMode)]));
         Log::info("  Multi-Threading: " + std::string(multiThreadingEnabled ? "ON" : "OFF"));
         Log::info("  Thread Count: " + std::to_string(threadCount));
     }
@@ -1271,8 +1271,8 @@ void AudioSettingsDialog::layoutComponents() {
         m_multiThreadingToggle->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
         m_threadCountLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
         m_threadCountDropdown->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
-        m_nomadModeLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
-        m_nomadModeDropdown->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_AestraModeLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
+        m_AestraModeDropdown->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
         m_asioInfoLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));
         
         // Show info content
@@ -1380,8 +1380,8 @@ void AudioSettingsDialog::layoutComponents() {
         
         // Aestra Mode dropdown (signature feature)
         rightY += dropdownHeight + sectionSpacing;
-        m_nomadModeLabel->setBounds(AestraUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
-        m_nomadModeDropdown->setBounds(AestraUI::NUIRect(rightDropdownX, rightY, dropdownWidth, dropdownHeight));
+        m_AestraModeLabel->setBounds(AestraUI::NUIRect(rightLabelX, rightY, labelWidth, dropdownHeight));
+        m_AestraModeDropdown->setBounds(AestraUI::NUIRect(rightDropdownX, rightY, dropdownWidth, dropdownHeight));
         
         // Hide ASIO info label
         m_asioInfoLabel->setBounds(AestraUI::NUIRect(0, 0, 0, 0));

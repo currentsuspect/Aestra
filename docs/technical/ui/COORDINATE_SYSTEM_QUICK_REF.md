@@ -126,7 +126,7 @@ if (NUIRectsIntersect(rectA, rectB)) {
 
 ## YAML Configuration System
 
-Customize all UI dimensions and colors by editing `AestraUI/Config/nomad_ui_config.yaml`:
+Customize all UI dimensions and colors by editing `AestraUI/Config/Aestra_ui_config.yaml`:
 
 ```yaml
 # Example: Adjust track height and colors

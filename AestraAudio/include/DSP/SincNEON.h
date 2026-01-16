@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved.
+// © 2025 Aestra Studios — All Rights Reserved.
 // This file provides ARM NEON optimized Sinc interpolation for Apple Silicon and ARM Linux.
 // It is only compiled and used on ARM platforms.
 #pragma once

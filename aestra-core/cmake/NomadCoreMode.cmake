@@ -1,11 +1,11 @@
 # AestraCoreMode.cmake
 # Include from your root CMakeLists.txt early:
-#   include(${CMAKE_SOURCE_DIR}/nomad-core/cmake/AestraCoreMode.cmake)
+#   include(${CMAKE_SOURCE_DIR}/Aestra-core/cmake/AestraCoreMode.cmake)
 
 option(Aestra_CORE_MODE "Build without premium modules and private assets" ON)
 
 # Detect premium directory adjacent to core
-set(Aestra_PREMIUM_DIR "${CMAKE_SOURCE_DIR}/../nomad-premium")
+set(Aestra_PREMIUM_DIR "${CMAKE_SOURCE_DIR}/../Aestra-premium")
 if(EXISTS "${Aestra_PREMIUM_DIR}/CMakeLists.txt")
 	set(HAVE_Aestra_PREMIUM ON)
 else()

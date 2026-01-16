@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved.
+// © 2025 Aestra Studios — All Rights Reserved.
 #include "TimelineClock.h"
 #include <algorithm>
 #include <cmath>

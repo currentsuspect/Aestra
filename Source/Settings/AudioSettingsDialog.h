@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file AudioSettingsDialog.h
  * @brief Audio settings dialog for Aestra
@@ -160,7 +160,7 @@ private:
     std::shared_ptr<AestraUI::NUIButton> m_precision64BitToggle;
     std::shared_ptr<AestraUI::NUIButton> m_multiThreadingToggle;
     std::shared_ptr<AestraUI::NUIDropdown> m_threadCountDropdown;
-    std::shared_ptr<AestraUI::NUIDropdown> m_nomadModeDropdown;  // Aestra Mode toggle
+    std::shared_ptr<AestraUI::NUIDropdown> m_AestraModeDropdown;  // Aestra Mode toggle
     
     // Labels
     std::shared_ptr<AestraUI::NUILabel> m_driverLabel;
@@ -179,7 +179,7 @@ private:
     std::shared_ptr<AestraUI::NUILabel> m_precision64BitLabel;
     std::shared_ptr<AestraUI::NUILabel> m_multiThreadingLabel;
     std::shared_ptr<AestraUI::NUILabel> m_threadCountLabel;
-    std::shared_ptr<AestraUI::NUILabel> m_nomadModeLabel;  // Aestra Mode label
+    std::shared_ptr<AestraUI::NUILabel> m_AestraModeLabel;  // Aestra Mode label
     
     // Callbacks
     std::function<void()> m_onApply;

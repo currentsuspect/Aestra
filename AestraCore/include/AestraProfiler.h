@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// Â© 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file AestraProfiler.h
  * @brief Lightweight performance profiler for AESTRA
@@ -148,7 +148,7 @@ private:
 
 // Macro for easy zone timing
 #ifdef AESTRA_ENABLE_PROFILING
-#define AESTRA_ZONE(name) Aestra::ScopedTimer __nomad_zone_##__LINE__(name)
+#define AESTRA_ZONE(name) Aestra::ScopedTimer __Aestra_zone_##__LINE__(name)
 #else
 #define AESTRA_ZONE(name) ((void)0)
 #endif

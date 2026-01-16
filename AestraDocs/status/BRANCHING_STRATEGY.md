@@ -34,34 +34,34 @@ feature/audio ────●──●────▶
 
 ### Feature Branches
 
-#### `feature/nomad-core`
+#### `feature/Aestra-core`
 
 - **Purpose:** Build AestraCore layer (math, file I/O, threading, logging)
 - **Base:** `develop`
 - **Merge to:** `develop` when complete
 
-#### `feature/nomad-plat`
+#### `feature/Aestra-plat`
 
 - **Purpose:** Extract and perfect platform abstraction layer
 - **Base:** `develop`
 - **Dependencies:** None
 - **Merge to:** `develop` when Win32/X11/Cocoa abstraction complete
 
-#### `feature/nomad-audio`
+#### `feature/Aestra-audio`
 
 - **Purpose:** Integrate RtAudio + build AestraAudio engine
 - **Base:** `develop`
-- **Dependencies:** `feature/nomad-core`
+- **Dependencies:** `feature/Aestra-core`
 - **Merge to:** `develop` when audio I/O working
 
-#### `feature/nomad-dsp`
+#### `feature/Aestra-dsp`
 
 - **Purpose:** DSP modules (filters, oscillators, envelopes)
 - **Base:** `develop`
-- **Dependencies:** `feature/nomad-audio`
+- **Dependencies:** `feature/Aestra-audio`
 - **Merge to:** `develop` for v1.5
 
-#### `feature/nomad-sdk`
+#### `feature/Aestra-sdk`
 
 - **Purpose:** Plugin system and extension API
 - **Base:** `develop`

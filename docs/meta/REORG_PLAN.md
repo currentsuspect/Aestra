@@ -2,13 +2,13 @@
 
 Goal: split the current repository into three logical repos with clear public/private boundaries:
 
-- `nomad-core` (public): Core engine, UI, platform abstraction, tests, docs, small mock assets. Buildable by contributors without private assets.
-- `nomad-premium` (private): AI models, trained weights, premium plugins, large sample libraries, and other paid assets.
-- `nomad-build` (private): Signing keys and build+sign packaging pipeline (scripts, certificates, installer packaging assets, release automation).
+- `Aestra-core` (public): Core engine, UI, platform abstraction, tests, docs, small mock assets. Buildable by contributors without private assets.
+- `Aestra-premium` (private): AI models, trained weights, premium plugins, large sample libraries, and other paid assets.
+- `Aestra-build` (private): Signing keys and build+sign packaging pipeline (scripts, certificates, installer packaging assets, release automation).
 
 High-level mapping (what to move)
 
-- nomad-core (public)
+- Aestra-core (public)
   - AestraCore/
   - AestraPlat/
   - AestraUI/
@@ -17,12 +17,12 @@ High-level mapping (what to move)
   - docs/, AestraDocs/
   - build scripts that don't embed secrets, `cmake/`, `assets_mock/`, `.github/workflows/public-ci.yml`
 
-- nomad-premium (private)
+- Aestra-premium (private)
   - AestraMuse/ (models, research, trained weights)
   - AestraAssets/ (fonts, icons, shaders, sounds) — if these contain paid assets
   - Any large sample libraries and exclusive plugins
 
-- nomad-build (private)
+- Aestra-build (private)
   - build_and_sign.bat, build.ps1 (signed/cert usage only)
   - installer.iss (if it packages private assets)
   - Signing certs/keystores (never in git; store in secret vault)
@@ -32,22 +32,22 @@ Recommended split process (safe, high level)
 
 1) Back up: create a mirror backup of the current repo:
 
-   git clone --mirror /path/to/Aestra nomad-backup.git
+   git clone --mirror /path/to/Aestra Aestra-backup.git
 
 2) Create a working clone for public-core extraction (non-destructive):
 
-   git clone --branch develop /path/to/Aestra nomad-working
-   cd nomad-working
+   git clone --branch develop /path/to/Aestra Aestra-working
+   cd Aestra-working
 
-3) Extract `nomad-core` history using `git subtree split` or `git filter-repo`:
+3) Extract `Aestra-core` history using `git subtree split` or `git filter-repo`:
 
    # subtree (keeps history for the prefix)
-   git subtree split --prefix=AestraCore -b nomad-core-only
+   git subtree split --prefix=AestraCore -b Aestra-core-only
 
    # Or git-filter-repo approach to remove private paths (recommended for removing blobs)
    See docs/HISTORY_REWRITE.md for filter-repo steps.
 
-4) Create new remote and push the extracted branch to `nomad-core` repo (do not force-push to existing remotes until verified).
+4) Create new remote and push the extracted branch to `Aestra-core` repo (do not force-push to existing remotes until verified).
 
 5) Extract private directories into their own repositories (AestraMuse, AestraAssets) similarly.
 
@@ -60,8 +60,8 @@ Recommended split process (safe, high level)
 
 CI/CD & secrets
 
-- Public repo (`nomad-core`) should have a slim `public-ci.yml` that builds only core and runs secret scans (gitleaks). It must not contain steps that require private secrets.
-- Private repo (`nomad-build`) will host the signing pipeline and run on a self-hosted runner with access to signing keys and hardware.
+- Public repo (`Aestra-core`) should have a slim `public-ci.yml` that builds only core and runs secret scans (gitleaks). It must not contain steps that require private secrets.
+- Private repo (`Aestra-build`) will host the signing pipeline and run on a self-hosted runner with access to signing keys and hardware.
 - Use GitHub Secrets / Azure Key Vault / HashiCorp Vault for signing certs; never check .pfx/.p12 into git.
 
 Developer experience

@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved.
+// © 2025 Aestra Studios — All Rights Reserved.
 // This header declares AVX-512 optimized functions.
 // The implementation is in src/SincAVX512.cpp to allow per-file compiler flags.
 #pragma once

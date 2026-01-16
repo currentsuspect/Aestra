@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraAudioController.h"
 #include "AestraContent.h"
 #include "AudioThreadConstraints.h"
@@ -186,8 +186,8 @@ bool AestraAudioController::startStream() {
         }
 
         m_audioEngine->loadMetronomeClicks(
-            "AestraAudio/assets/nomad_metronome.wav",
-            "AestraAudio/assets/nomad_metronome_up.wav"
+            "AestraAudio/assets/Aestra_metronome.wav",
+            "AestraAudio/assets/Aestra_metronome_up.wav"
         );
         m_audioEngine->setBPM(120.0f);
     }

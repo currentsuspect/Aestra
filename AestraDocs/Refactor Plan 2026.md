@@ -380,7 +380,7 @@ Bitwig Studio (10 years)
 │   │   ├── roboto.ttf
 │   │   └── jetbrains_mono.ttf
 │   └── 📂 icons/                    # UI icons
-│       └── nomad_icon.svg
+│       └── Aestra_icon.svg
 │
 ├── 📂 extern/                       # Third-party dependencies
 │   ├── 📂 rtaudio/                  # Audio I/O
