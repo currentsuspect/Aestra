@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace NomadUI {
+namespace AestraUI {
 
 struct TimelineSummarySnapshot;
 
@@ -72,5 +72,5 @@ struct TimelineMinimapModel
     bool showPlayhead = true; // New visibility toggle
 };
 
-} // namespace NomadUI
+} // namespace AestraUI
 

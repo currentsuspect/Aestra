@@ -14,7 +14,7 @@
 #include <memory>
 #include <map>
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 // Forward declaration
@@ -34,7 +34,7 @@ enum class PlaylistMode {
  * Provides UI interface for a Track, including controls for
  * volume, pan, mute, solo, and record functionality.
  */
-class TrackUIComponent : public NomadUI::NUIComponent {
+class TrackUIComponent : public AestraUI::NUIComponent {
     friend class TrackManagerUI; // Allow parent to access protected event handlers for global drag routing
 public:
     TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerChannel> channel, TrackManager* trackManager = nullptr);
@@ -62,7 +62,7 @@ public:
     void setOnCacheInvalidationNeeded(std::function<void()> callback) { m_onCacheInvalidationCallback = callback; }
     
     // Callback for clip deletion (clip identity and ripple position for animation)
-    void setOnClipDeleted(std::function<void(TrackUIComponent*, ClipInstanceID, NomadUI::NUIPoint)> callback) { m_onClipDeletedCallback = callback; }
+    void setOnClipDeleted(std::function<void(TrackUIComponent*, ClipInstanceID, AestraUI::NUIPoint)> callback) { m_onClipDeletedCallback = callback; }
 
     
     // Callback to check if split tool is active
@@ -100,7 +100,7 @@ public:
     void setBeatsPerBar(int bpb) { m_beatsPerBar = bpb; }
     void setTimelineScrollOffset(float offset) { m_timelineScrollOffset = offset; }
     void setMaxTimelineExtent(double extent) { m_maxTimelineExtent = extent; }
-    void setSnapSetting(NomadUI::SnapGrid snap) { m_snapSetting = snap; }
+    void setSnapSetting(AestraUI::SnapGrid snap) { m_snapSetting = snap; }
     
     // Loop state for visual rendering
     void setLoopEnabled(bool enabled) { m_loopEnabled = enabled; }
@@ -115,7 +115,7 @@ public:
 
     // Accessors
     std::shared_ptr<MixerChannel> getChannel() const { return m_channel; }
-    const std::map<ClipInstanceID, NomadUI::NUIRect>& getAllClipBounds() const { return m_allClipBounds; }
+    const std::map<ClipInstanceID, AestraUI::NUIRect>& getAllClipBounds() const { return m_allClipBounds; }
 
     // Loading state for visual feedback
     void setLoading(bool loading, float progress = 0.0f) { 
@@ -128,16 +128,16 @@ public:
 
     // UI state update (public so parent can refresh after clearing solos)
     void updateUI();
-    void renderControlOverlay(NomadUI::NUIRenderer& renderer);
+    void renderControlOverlay(AestraUI::NUIRenderer& renderer);
 
     // Split rendering for optimization (Static = Cached, Dynamic = Real-time)
-    void renderStatic(NomadUI::NUIRenderer& renderer);
-    void renderDynamic(NomadUI::NUIRenderer& renderer);
+    void renderStatic(AestraUI::NUIRenderer& renderer);
+    void renderDynamic(AestraUI::NUIRenderer& renderer);
 
 protected:
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
     void onMouseEnter();
     void onMouseLeave();
     void onUpdate(double deltaTime);
@@ -153,7 +153,7 @@ private:
     // Callbacks
     std::function<void(TrackUIComponent*)> m_onSoloToggledCallback;
     std::function<void()> m_onCacheInvalidationCallback;
-    std::function<void(TrackUIComponent*, ClipInstanceID, NomadUI::NUIPoint)> m_onClipDeletedCallback;
+    std::function<void(TrackUIComponent*, ClipInstanceID, AestraUI::NUIPoint)> m_onClipDeletedCallback;
 
     std::function<bool()> m_isSplitToolActiveCallback;
     std::function<void(TrackUIComponent*, double)> m_onSplitRequestedCallback;
@@ -171,7 +171,7 @@ private:
     double m_maxTimelineExtent = 0.0; // Maximum timeline extent in seconds
     
     // Snap Setting
-    NomadUI::SnapGrid m_snapSetting = NomadUI::SnapGrid::Bar;
+    AestraUI::SnapGrid m_snapSetting = AestraUI::SnapGrid::Bar;
     
     // Loop state for visual rendering
     bool m_loopEnabled = false;
@@ -181,11 +181,11 @@ private:
     // Clip dragging state
     bool m_clipDragPotential = false;     // Potential drag detected (mousedown on clip)
     bool m_isDraggingClip = false;        // Active drag in progress
-    NomadUI::NUIPoint m_clipDragStartPos; // Where drag started
-    NomadUI::NUIRect m_clipBounds;        // Cached clip bounds for hit testing (primary track)
+    AestraUI::NUIPoint m_clipDragStartPos; // Where drag started
+    AestraUI::NUIRect m_clipBounds;        // Cached clip bounds for hit testing (primary track)
     
     // Multi-clip bounds for hit testing (maps ClipInstanceID to its rendered bounds)
-    std::map<ClipInstanceID, NomadUI::NUIRect> m_allClipBounds;
+    std::map<ClipInstanceID, AestraUI::NUIRect> m_allClipBounds;
     ClipInstanceID m_activeClipId;  // Currently clicked/dragged clip id
 
     
@@ -208,22 +208,22 @@ private:
     bool m_isDraggingPoint = false;
     int m_draggedPointIndex = -1;
     int m_draggedCurveIndex = -1;
-    NomadUI::NUIPoint m_lastAutomationMousePos;
+    AestraUI::NUIPoint m_lastAutomationMousePos;
 
     // Optimization
     uint32_t m_backgroundTexture = 0;
     bool m_backgroundValid = false;
-    NomadUI::NUIRect m_lastRenderBounds;
+    AestraUI::NUIRect m_lastRenderBounds;
     uint64_t m_lastModelModId = 0;
     void invalidateCache() { m_backgroundValid = false; }
  
     PlaylistMode m_playlistMode = PlaylistMode::Clips;
 
 	    // UI Components
-	    std::shared_ptr<NomadUI::NUILabel> m_nameLabel;
-	    std::shared_ptr<NomadUI::NUIButton> m_muteButton;
-	    std::shared_ptr<NomadUI::NUIButton> m_soloButton;
-	    std::shared_ptr<NomadUI::NUIButton> m_recordButton;
+	    std::shared_ptr<AestraUI::NUILabel> m_nameLabel;
+	    std::shared_ptr<AestraUI::NUIButton> m_muteButton;
+	    std::shared_ptr<AestraUI::NUIButton> m_soloButton;
+	    std::shared_ptr<AestraUI::NUIButton> m_recordButton;
 
     // UI callbacks
     void onVolumeChanged(float volume);
@@ -232,21 +232,21 @@ private:
     void onSoloToggled();
     void onRecordToggled();
 
-    void drawWaveform(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds, 
+    void drawWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, 
                      float offsetRatio = 0.0f, float visibleRatio = 1.0f);
-    void drawWaveformForClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds,
+    void drawWaveformForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
                               const ClipInstance& clip, float offsetRatio = 0.0f, float visibleRatio = 1.0f);
 
     void generateWaveformCache(int width, int height);
     
     // Sample clip container
-    void drawSampleClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds);
-    void drawSampleClipForClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds,
-                                const NomadUI::NUIRect& fullClipBounds, const ClipInstance& clip);
+    void drawSampleClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds);
+    void drawSampleClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
+                                const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip);
 
     // Pattern clip rendering
-    void drawPatternClipForClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds,
-                                 const NomadUI::NUIRect& fullClipBounds, const ClipInstance& clip);
+    void drawPatternClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
+                                 const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip);
 
     
     // Waveform cache (regenerate only when audio data or size changes)
@@ -260,17 +260,17 @@ private:
 
     
     // Playlist grid rendering
-    void drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds);
+    void drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
     
     // Helper to draw a single clip (waveform + container) at calculated position
-    void drawClipAtPosition(NomadUI::NUIRenderer& renderer, const ClipInstance& clip,
-                           const NomadUI::NUIRect& bounds, float controlAreaWidth);
+    void drawClipAtPosition(AestraUI::NUIRenderer& renderer, const ClipInstance& clip,
+                           const AestraUI::NUIRect& bounds, float controlAreaWidth);
 
     // Live Waveform (v3.0.2)
-    void drawLiveWaveform(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds, float controlAreaWidth);
+    void drawLiveWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float controlAreaWidth);
 
     // Automation Layer (v3.1)
-    void renderAutomationLayer(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds, float gridStartX);
+    void renderAutomationLayer(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStartX);
 
 
     // UI state
@@ -278,4 +278,4 @@ private:
 };
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

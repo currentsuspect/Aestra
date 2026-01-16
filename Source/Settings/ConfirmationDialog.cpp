@@ -1,10 +1,10 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ConfirmationDialog.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraCore/include/AestraLog.h"
 
-namespace Nomad {
+namespace Aestra {
 
 ConfirmationDialog::ConfirmationDialog()
     : m_response(DialogResponse::None)
@@ -53,7 +53,7 @@ void ConfirmationDialog::handleResponse(DialogResponse response) {
 }
 
 void ConfirmationDialog::calculateLayout() {
-    NomadUI::NUIRect parentBounds = getBounds();
+    AestraUI::NUIRect parentBounds = getBounds();
     
 	    // Dialog dimensions - wider for better button spacing
 	    const float dialogWidth = 420.0f;
@@ -79,7 +79,7 @@ void ConfirmationDialog::calculateLayout() {
     m_cancelButtonRect = {buttonsStartX + 2 * (buttonWidth + buttonSpacing), buttonY, buttonWidth, buttonHeight};
 }
 
-void ConfirmationDialog::onRender(NomadUI::NUIRenderer& renderer) {
+void ConfirmationDialog::onRender(AestraUI::NUIRenderer& renderer) {
     if (!m_isVisible) {
         return;
     }
@@ -87,30 +87,30 @@ void ConfirmationDialog::onRender(NomadUI::NUIRenderer& renderer) {
     calculateLayout();
     
     // Modern dark theme colors
-    NomadUI::NUIColor overlayColor(0.0f, 0.0f, 0.0f, 0.7f);
-    NomadUI::NUIColor dialogBg(0.12f, 0.12f, 0.14f, 1.0f);       // Dark gray
-    NomadUI::NUIColor dialogBorder(0.25f, 0.25f, 0.28f, 1.0f);   // Subtle border
-    NomadUI::NUIColor titleColor(1.0f, 1.0f, 1.0f, 1.0f);        // White
-    NomadUI::NUIColor messageColor(0.7f, 0.7f, 0.72f, 1.0f);     // Light gray
+    AestraUI::NUIColor overlayColor(0.0f, 0.0f, 0.0f, 0.7f);
+    AestraUI::NUIColor dialogBg(0.12f, 0.12f, 0.14f, 1.0f);       // Dark gray
+    AestraUI::NUIColor dialogBorder(0.25f, 0.25f, 0.28f, 1.0f);   // Subtle border
+    AestraUI::NUIColor titleColor(1.0f, 1.0f, 1.0f, 1.0f);        // White
+    AestraUI::NUIColor messageColor(0.7f, 0.7f, 0.72f, 1.0f);     // Light gray
     
     // Button colors
-    NomadUI::NUIColor saveBgNormal(0.4f, 0.6f, 1.0f, 1.0f);      // Blue accent
-    NomadUI::NUIColor saveBgHover(0.5f, 0.7f, 1.0f, 1.0f);       // Lighter blue
-    NomadUI::NUIColor buttonBgNormal(0.2f, 0.2f, 0.22f, 1.0f);   // Dark button
-    NomadUI::NUIColor buttonBgHover(0.3f, 0.3f, 0.33f, 1.0f);    // Hover state
-    NomadUI::NUIColor buttonBorder(0.35f, 0.35f, 0.38f, 1.0f);   // Button border
-    NomadUI::NUIColor textWhite(1.0f, 1.0f, 1.0f, 1.0f);
-    NomadUI::NUIColor textLight(0.9f, 0.9f, 0.92f, 1.0f);
+    AestraUI::NUIColor saveBgNormal(0.4f, 0.6f, 1.0f, 1.0f);      // Blue accent
+    AestraUI::NUIColor saveBgHover(0.5f, 0.7f, 1.0f, 1.0f);       // Lighter blue
+    AestraUI::NUIColor buttonBgNormal(0.2f, 0.2f, 0.22f, 1.0f);   // Dark button
+    AestraUI::NUIColor buttonBgHover(0.3f, 0.3f, 0.33f, 1.0f);    // Hover state
+    AestraUI::NUIColor buttonBorder(0.35f, 0.35f, 0.38f, 1.0f);   // Button border
+    AestraUI::NUIColor textWhite(1.0f, 1.0f, 1.0f, 1.0f);
+    AestraUI::NUIColor textLight(0.9f, 0.9f, 0.92f, 1.0f);
     
     // Draw semi-transparent overlay
-    NomadUI::NUIRect parentBounds = getBounds();
+    AestraUI::NUIRect parentBounds = getBounds();
     renderer.fillRect(parentBounds, overlayColor);
     
     // Draw dialog shadow (offset dark rectangle)
-    NomadUI::NUIRect shadowRect = m_dialogRect;
+    AestraUI::NUIRect shadowRect = m_dialogRect;
     shadowRect.x += 4.0f;
     shadowRect.y += 4.0f;
-    renderer.fillRoundedRect(shadowRect, 8.0f, NomadUI::NUIColor(0.0f, 0.0f, 0.0f, 0.4f));
+    renderer.fillRoundedRect(shadowRect, 8.0f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.4f));
     
     // Draw dialog background with rounded corners
     renderer.fillRoundedRect(m_dialogRect, 8.0f, dialogBg);
@@ -119,22 +119,22 @@ void ConfirmationDialog::onRender(NomadUI::NUIRenderer& renderer) {
     // Draw title (larger, bold-ish)
     float titleX = m_dialogRect.x + 24.0f;
     float titleY = m_dialogRect.y + 28.0f;
-    renderer.drawText(m_title, NomadUI::NUIPoint(titleX, titleY), 14.0f, titleColor);
+    renderer.drawText(m_title, AestraUI::NUIPoint(titleX, titleY), 14.0f, titleColor);
     
     // Draw message
     float messageX = m_dialogRect.x + 24.0f;
     float messageY = m_dialogRect.y + 58.0f;
-    renderer.drawText(m_message, NomadUI::NUIPoint(messageX, messageY), 13.0f, messageColor);
+    renderer.drawText(m_message, AestraUI::NUIPoint(messageX, messageY), 13.0f, messageColor);
     
     // === SAVE BUTTON (Primary - Blue) ===
-    NomadUI::NUIColor saveBg = m_saveHovered ? saveBgHover : saveBgNormal;
+    AestraUI::NUIColor saveBg = m_saveHovered ? saveBgHover : saveBgNormal;
     renderer.fillRoundedRect(m_saveButtonRect, 6.0f, saveBg);
     
     // Center "Save" text using drawTextCentered
     renderer.drawTextCentered("Save", m_saveButtonRect, 13.0f, textWhite);
     
     // === DON'T SAVE BUTTON ===
-    NomadUI::NUIColor dontSaveBg = m_dontSaveHovered ? buttonBgHover : buttonBgNormal;
+    AestraUI::NUIColor dontSaveBg = m_dontSaveHovered ? buttonBgHover : buttonBgNormal;
     renderer.fillRoundedRect(m_dontSaveButtonRect, 6.0f, dontSaveBg);
     renderer.strokeRoundedRect(m_dontSaveButtonRect, 6.0f, 1.0f, buttonBorder);
     
@@ -142,7 +142,7 @@ void ConfirmationDialog::onRender(NomadUI::NUIRenderer& renderer) {
     renderer.drawTextCentered("Don't Save", m_dontSaveButtonRect, 13.0f, textLight);
     
     // === CANCEL BUTTON ===
-    NomadUI::NUIColor cancelBg = m_cancelHovered ? buttonBgHover : buttonBgNormal;
+    AestraUI::NUIColor cancelBg = m_cancelHovered ? buttonBgHover : buttonBgNormal;
     renderer.fillRoundedRect(m_cancelButtonRect, 6.0f, cancelBg);
     renderer.strokeRoundedRect(m_cancelButtonRect, 6.0f, 1.0f, buttonBorder);
     
@@ -150,7 +150,7 @@ void ConfirmationDialog::onRender(NomadUI::NUIRenderer& renderer) {
     renderer.drawTextCentered("Cancel", m_cancelButtonRect, 13.0f, textLight);
 }
 
-bool ConfirmationDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
+bool ConfirmationDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!m_isVisible) {
         return false;
     }
@@ -166,7 +166,7 @@ bool ConfirmationDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     m_cancelHovered = m_cancelButtonRect.contains(mouseX, mouseY);
     
     // Handle clicks (pressed == true and button is Left)
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         if (m_saveHovered) {
             handleResponse(DialogResponse::Save);
             return true;
@@ -191,20 +191,20 @@ bool ConfirmationDialog::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     return true;
 }
 
-bool ConfirmationDialog::onKeyEvent(const NomadUI::NUIKeyEvent& event) {
+bool ConfirmationDialog::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (!m_isVisible) {
         return false;
     }
     
     if (event.pressed) {
         // Escape = Cancel
-        if (event.keyCode == NomadUI::NUIKeyCode::Escape) {
+        if (event.keyCode == AestraUI::NUIKeyCode::Escape) {
             handleResponse(DialogResponse::Cancel);
             return true;
         }
         
         // Enter = Save (primary action)
-        if (event.keyCode == NomadUI::NUIKeyCode::Enter) {
+        if (event.keyCode == AestraUI::NUIKeyCode::Enter) {
             handleResponse(DialogResponse::Save);
             return true;
         }
@@ -214,4 +214,4 @@ bool ConfirmationDialog::onKeyEvent(const NomadUI::NUIKeyEvent& event) {
     return true;
 }
 
-} // namespace Nomad
+} // namespace Aestra

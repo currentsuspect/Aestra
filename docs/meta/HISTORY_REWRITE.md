@@ -9,17 +9,17 @@ Follow these steps locally — DO NOT attempt to force-push to origin until you 
 2) Identify files/paths to remove from history
 
    Common candidates in this repo:
-   - NomadMuse/models/**
-   - NomadAssets/**  (if assets are private)
+   - AestraMuse/models/**
+   - AestraAssets/**  (if assets are private)
    - Any *.p12, *.pfx, *.pem files accidentally committed
 
 3) Use git-filter-repo to remove paths (recommended)
 
    # install git-filter-repo (follow upstream docs)
-   git filter-repo --path NomadMuse/models --invert-paths --force
+   git filter-repo --path AestraMuse/models --invert-paths --force
 
    # remove multiple paths
-   git filter-repo --path NomadMuse/models --path NomadAssets --invert-paths --force
+   git filter-repo --path AestraMuse/models --path AestraAssets --invert-paths --force
 
 4) Verify the cleaned repo locally:
    - Inspect file history: git log --stat -- path

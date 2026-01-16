@@ -1,8 +1,8 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "AuditionPanel.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraCore/include/AestraLog.h"
 #include "ClipSource.h"
 
 #include <cmath>
@@ -10,13 +10,13 @@
 #include <sstream>
 #include <algorithm>
 
-// Forward declare stb_image functions (implementation in NomadUI)
+// Forward declare stb_image functions (implementation in AestraUI)
 extern "C" {
     unsigned char* stbi_load_from_memory(const unsigned char* buffer, int len, int* x, int* y, int* comp, int req_comp);
     void stbi_image_free(void* retval_from_stbi_load);
 }
 
-namespace Nomad {
+namespace Aestra {
 
 // ============================================================================
 // SVG ICONS
@@ -57,7 +57,7 @@ AuditionPanel::AuditionPanel(std::shared_ptr<Audio::AuditionEngine> engine)
 }
 
 AuditionPanel::~AuditionPanel() {
-    NomadUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
+    AestraUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
 }
 
 // ============================================================================
@@ -66,63 +66,63 @@ AuditionPanel::~AuditionPanel() {
 
 void AuditionPanel::setupComponents() {
     // 1. Text Labels
-    m_trackTitle = std::make_shared<NomadUI::NUILabel>("No Track Selected");
+    m_trackTitle = std::make_shared<AestraUI::NUILabel>("No Track Selected");
     m_trackTitle->setFontSize(28.0f);
-    m_trackTitle->setAlignment(NomadUI::NUILabel::Alignment::Left);
-    m_trackTitle->setTextColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+    m_trackTitle->setAlignment(AestraUI::NUILabel::Alignment::Left);
+    m_trackTitle->setTextColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
     addChild(m_trackTitle);
     
-    m_trackArtist = std::make_shared<NomadUI::NUILabel>("Drag files to start");
+    m_trackArtist = std::make_shared<AestraUI::NUILabel>("Drag files to start");
     m_trackArtist->setFontSize(16.0f);
-    m_trackArtist->setTextColor(NomadUI::NUIColor(0.7f, 0.7f, 0.7f, 1.0f));
-    m_trackArtist->setAlignment(NomadUI::NUILabel::Alignment::Left);
+    m_trackArtist->setTextColor(AestraUI::NUIColor(0.7f, 0.7f, 0.7f, 1.0f));
+    m_trackArtist->setAlignment(AestraUI::NUILabel::Alignment::Left);
     addChild(m_trackArtist);
     
-    m_currentTime = std::make_shared<NomadUI::NUILabel>("0:00");
+    m_currentTime = std::make_shared<AestraUI::NUILabel>("0:00");
     m_currentTime->setFontSize(12.0f);
-    m_currentTime->setTextColor(NomadUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f));
+    m_currentTime->setTextColor(AestraUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f));
     addChild(m_currentTime);
     
-    m_totalTime = std::make_shared<NomadUI::NUILabel>("0:00");
+    m_totalTime = std::make_shared<AestraUI::NUILabel>("0:00");
     m_totalTime->setFontSize(12.0f);
-    m_totalTime->setAlignment(NomadUI::NUILabel::Alignment::Right);
-    m_totalTime->setTextColor(NomadUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f));
+    m_totalTime->setAlignment(AestraUI::NUILabel::Alignment::Right);
+    m_totalTime->setTextColor(AestraUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f));
     addChild(m_totalTime);
     
     // 2. Transport Buttons (Text cleared for SVG overlap)
-    m_playPauseButton = std::make_shared<NomadUI::NUIButton>(""); 
-    m_playPauseButton->setStyle(NomadUI::NUIButton::Style::Primary);
+    m_playPauseButton = std::make_shared<AestraUI::NUIButton>(""); 
+    m_playPauseButton->setStyle(AestraUI::NUIButton::Style::Primary);
     m_playPauseButton->setCornerRadius(28.0f);
     m_playPauseButton->setOnClick([this]() {
         if (m_engine) m_engine->togglePlayPause();
     });
     addChild(m_playPauseButton);
     
-    m_prevButton = std::make_shared<NomadUI::NUIButton>("");
-    m_prevButton->setStyle(NomadUI::NUIButton::Style::Icon);
+    m_prevButton = std::make_shared<AestraUI::NUIButton>("");
+    m_prevButton->setStyle(AestraUI::NUIButton::Style::Icon);
     m_prevButton->setOnClick([this]() { if (m_engine) m_engine->previousTrack(); });
     addChild(m_prevButton);
     
-    m_nextButton = std::make_shared<NomadUI::NUIButton>("");
-    m_nextButton->setStyle(NomadUI::NUIButton::Style::Icon);
+    m_nextButton = std::make_shared<AestraUI::NUIButton>("");
+    m_nextButton->setStyle(AestraUI::NUIButton::Style::Icon);
     m_nextButton->setOnClick([this]() { if (m_engine) m_engine->nextTrack(); });
     addChild(m_nextButton);
     
     // 3. DSP Buttons
-    m_dspPresetButton = std::make_shared<NomadUI::NUIButton>("Studio Reference");
-    m_dspPresetButton->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_dspPresetButton = std::make_shared<AestraUI::NUIButton>("Studio Reference");
+    m_dspPresetButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     m_dspPresetButton->setOnClick([this]() { 
         if (!m_engine) return;
         
         // Define cycling order
-        static const std::vector<Nomad::Audio::AuditionDSPPreset> presets = {
-            Nomad::Audio::AuditionDSPPreset::Bypass(),
-            Nomad::Audio::AuditionDSPPreset::Spotify(),
-            Nomad::Audio::AuditionDSPPreset::AppleMusic(),
-            Nomad::Audio::AuditionDSPPreset::YouTube(),
-            Nomad::Audio::AuditionDSPPreset::SoundCloud(),
-            Nomad::Audio::AuditionDSPPreset::CarSpeakers(),
-            Nomad::Audio::AuditionDSPPreset::AirPods()
+        static const std::vector<Aestra::Audio::AuditionDSPPreset> presets = {
+            Aestra::Audio::AuditionDSPPreset::Bypass(),
+            Aestra::Audio::AuditionDSPPreset::Spotify(),
+            Aestra::Audio::AuditionDSPPreset::AppleMusic(),
+            Aestra::Audio::AuditionDSPPreset::YouTube(),
+            Aestra::Audio::AuditionDSPPreset::SoundCloud(),
+            Aestra::Audio::AuditionDSPPreset::CarSpeakers(),
+            Aestra::Audio::AuditionDSPPreset::AirPods()
         };
         
         // Find current and set next
@@ -144,8 +144,8 @@ void AuditionPanel::setupComponents() {
     });
     addChild(m_dspPresetButton);
     
-    m_abToggleButton = std::make_shared<NomadUI::NUIButton>("A/B");
-    m_abToggleButton->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_abToggleButton = std::make_shared<AestraUI::NUIButton>("A/B");
+    m_abToggleButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     m_abToggleButton->setToggleable(true);
     m_abToggleButton->setOnToggle([this](bool active) {
         if (m_engine) m_engine->setABMode(active);
@@ -153,10 +153,10 @@ void AuditionPanel::setupComponents() {
     addChild(m_abToggleButton);
     
     // 4. Sliders
-    m_progressSlider = std::make_shared<NomadUI::NUISlider>();
+    m_progressSlider = std::make_shared<AestraUI::NUISlider>();
     // We do NOT add m_progressSlider as child anymore - Waveform is the scrubber!
     
-    m_volumeSlider = std::make_shared<NomadUI::NUISlider>();
+    m_volumeSlider = std::make_shared<AestraUI::NUISlider>();
     m_volumeSlider->setValue(1.0f);
     m_volumeSlider->setOnValueChange([this](double val) { // Fixed: setOnValueChange, double
         if (m_engine) m_engine->setVolume(static_cast<float>(val));
@@ -164,10 +164,10 @@ void AuditionPanel::setupComponents() {
     addChild(m_volumeSlider);
     
     // 5. Parse SVGs
-    m_svgPlay = NomadUI::NUISVGParser::parse(SVG_PLAY);
-    m_svgPause = NomadUI::NUISVGParser::parse(SVG_PAUSE);
-    m_svgPrev = NomadUI::NUISVGParser::parse(SVG_PREV);
-    m_svgNext = NomadUI::NUISVGParser::parse(SVG_NEXT);
+    m_svgPlay = AestraUI::NUISVGParser::parse(SVG_PLAY);
+    m_svgPause = AestraUI::NUISVGParser::parse(SVG_PAUSE);
+    m_svgPrev = AestraUI::NUISVGParser::parse(SVG_PREV);
+    m_svgNext = AestraUI::NUISVGParser::parse(SVG_NEXT);
     
     // Registrations
     if (m_engine) {
@@ -182,20 +182,20 @@ void AuditionPanel::setupComponents() {
 // QUEUE RENDERING (WITH HOVER)
 // ============================================================================
 
-void AuditionPanel::renderQueue(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& area) {
+void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& area) {
     if (!m_engine) return;
     
     // Headers
     float headerH = 30.0f;
-    NomadUI::NUIColor headerTxtColor(0.7f, 0.7f, 0.7f, 1.0f);
+    AestraUI::NUIColor headerTxtColor(0.7f, 0.7f, 0.7f, 1.0f);
     float colNo = area.x + 10.0f;
     float colTitle = area.x + 50.0f;
     float colTime = area.x + area.width - 60.0f;
     
-    renderer.drawText("#", NomadUI::NUIPoint(colNo, area.y + 10.0f), 12.0f, headerTxtColor);
-    renderer.drawText("Title", NomadUI::NUIPoint(colTitle, area.y + 10.0f), 12.0f, headerTxtColor);
-    renderer.drawText("Time", NomadUI::NUIPoint(colTime, area.y + 10.0f), 12.0f, headerTxtColor);
-    renderer.drawLine(NomadUI::NUIPoint(area.x, area.y + headerH), NomadUI::NUIPoint(area.x + area.width, area.y + headerH), 1.0f, NomadUI::NUIColor(1.0f,1.0f,1.0f,0.1f));
+    renderer.drawText("#", AestraUI::NUIPoint(colNo, area.y + 10.0f), 12.0f, headerTxtColor);
+    renderer.drawText("Title", AestraUI::NUIPoint(colTitle, area.y + 10.0f), 12.0f, headerTxtColor);
+    renderer.drawText("Time", AestraUI::NUIPoint(colTime, area.y + 10.0f), 12.0f, headerTxtColor);
+    renderer.drawLine(AestraUI::NUIPoint(area.x, area.y + headerH), AestraUI::NUIPoint(area.x + area.width, area.y + headerH), 1.0f, AestraUI::NUIColor(1.0f,1.0f,1.0f,0.1f));
     
     // Items
     const auto& queue = m_engine->getQueue();
@@ -213,33 +213,33 @@ void AuditionPanel::renderQueue(NomadUI::NUIRenderer& renderer, const NomadUI::N
         
         // Selection/Hover bg
         if (isCurrent || isHovered) {
-             NomadUI::NUIColor hlColor = isCurrent ? 
-                NomadUI::NUIColor(0.55f, 0.35f, 0.85f, 0.2f) : 
-                NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.05f);
-             renderer.fillRoundedRect(NomadUI::NUIRect(area.x + 5.0f, y, area.width - 10.0f, rowH - 2.0f), 4.0f, hlColor);
+             AestraUI::NUIColor hlColor = isCurrent ? 
+                AestraUI::NUIColor(0.55f, 0.35f, 0.85f, 0.2f) : 
+                AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.05f);
+             renderer.fillRoundedRect(AestraUI::NUIRect(area.x + 5.0f, y, area.width - 10.0f, rowH - 2.0f), 4.0f, hlColor);
         }
 
         // Icon Column Logic:
         // Hover -> Play Icon
         // Not Hover -> Number (Green if current, Grey if not)
         if (isHovered) {
-             renderer.drawText("▶", NomadUI::NUIPoint(colNo - 5.0f, y + 10.0f), 12.0f, NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+             renderer.drawText("▶", AestraUI::NUIPoint(colNo - 5.0f, y + 10.0f), 12.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
         } else {
-             NomadUI::NUIColor numColor = isCurrent ? 
-                NomadUI::NUIColor(0.1f, 0.8f, 0.3f, 1.0f) : 
-                NomadUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f);
-             renderer.drawText(std::to_string(i + 1), NomadUI::NUIPoint(colNo, y + 10.0f), 12.0f, numColor);
+             AestraUI::NUIColor numColor = isCurrent ? 
+                AestraUI::NUIColor(0.1f, 0.8f, 0.3f, 1.0f) : 
+                AestraUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f);
+             renderer.drawText(std::to_string(i + 1), AestraUI::NUIPoint(colNo, y + 10.0f), 12.0f, numColor);
         }
         
         // Title
-        NomadUI::NUIColor titleColor = isCurrent ? 
-            NomadUI::NUIColor(0.1f, 0.8f, 0.3f, 1.0f) : 
-            NomadUI::NUIColor(0.9f, 0.9f, 0.9f, 1.0f);
-        renderer.drawText(item.title, NomadUI::NUIPoint(colTitle, y + 10.0f), 13.0f, titleColor);
+        AestraUI::NUIColor titleColor = isCurrent ? 
+            AestraUI::NUIColor(0.1f, 0.8f, 0.3f, 1.0f) : 
+            AestraUI::NUIColor(0.9f, 0.9f, 0.9f, 1.0f);
+        renderer.drawText(item.title, AestraUI::NUIPoint(colTitle, y + 10.0f), 13.0f, titleColor);
         
         // Time
         std::string timeStr = (item.durationSeconds > 0.0) ? formatTime(item.durationSeconds) : "--:--";
-        renderer.drawText(timeStr, NomadUI::NUIPoint(colTime, y + 10.0f), 12.0f, NomadUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f));
+        renderer.drawText(timeStr, AestraUI::NUIPoint(colTime, y + 10.0f), 12.0f, AestraUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f));
         
         y += rowH;
     }
@@ -266,20 +266,20 @@ void AuditionPanel::layoutComponents() {
     
     // Title (Big!)
     m_trackTitle->setFontSize(48.0f); // Huge font
-    m_trackTitle->setAlignment(NomadUI::NUILabel::Alignment::Left); // Left align
-    m_trackTitle->setBounds(NomadUI::NUIAbsolute(bounds, infoX, infoStartY, infoWidth, 60.0f));
+    m_trackTitle->setAlignment(AestraUI::NUILabel::Alignment::Left); // Left align
+    m_trackTitle->setBounds(AestraUI::NUIAbsolute(bounds, infoX, infoStartY, infoWidth, 60.0f));
     
     // Artist (Medium)
     m_trackArtist->setFontSize(24.0f);
-    m_trackArtist->setAlignment(NomadUI::NUILabel::Alignment::Left);
-    m_trackArtist->setBounds(NomadUI::NUIAbsolute(bounds, infoX, infoStartY + 60.0f, infoWidth, 30.0f));
+    m_trackArtist->setAlignment(AestraUI::NUILabel::Alignment::Left);
+    m_trackArtist->setBounds(AestraUI::NUIAbsolute(bounds, infoX, infoStartY + 60.0f, infoWidth, 30.0f));
     
     // Controls (Below Artist)
     float controlsY = infoStartY + 60.0f + 30.0f + 20.0f;
     
     // Play Button (Big and prominent)
     float playSize = 64.0f;
-    m_playPauseButton->setBounds(NomadUI::NUIAbsolute(bounds, infoX, controlsY, playSize, playSize));
+    m_playPauseButton->setBounds(AestraUI::NUIAbsolute(bounds, infoX, controlsY, playSize, playSize));
     m_playPauseButton->setCornerRadius(playSize / 2.0f); // Circle
     
     // Transport Neighbors
@@ -288,17 +288,17 @@ void AuditionPanel::layoutComponents() {
     float txX = infoX + playSize + 20.0f;
     float txY = controlsY + (playSize - btnSize) / 2.0f;
     
-    m_prevButton->setBounds(NomadUI::NUIAbsolute(bounds, txX, txY, btnSize, btnSize));
-    m_nextButton->setBounds(NomadUI::NUIAbsolute(bounds, txX + btnSize + gap, txY, btnSize, btnSize));
+    m_prevButton->setBounds(AestraUI::NUIAbsolute(bounds, txX, txY, btnSize, btnSize));
+    m_nextButton->setBounds(AestraUI::NUIAbsolute(bounds, txX + btnSize + gap, txY, btnSize, btnSize));
 
     // DSP / Volume (Next to transport or new row?)
     // Let's put DSP next to transport
     float dspX = txX + (btnSize + gap) * 2 + 20.0f;
-    m_dspPresetButton->setBounds(NomadUI::NUIAbsolute(bounds, dspX, txY + 5.0f, 100.0f, 30.0f)); 
-    m_abToggleButton->setBounds(NomadUI::NUIAbsolute(bounds, dspX + 110.0f, txY + 5.0f, 50.0f, 30.0f));
+    m_dspPresetButton->setBounds(AestraUI::NUIAbsolute(bounds, dspX, txY + 5.0f, 100.0f, 30.0f)); 
+    m_abToggleButton->setBounds(AestraUI::NUIAbsolute(bounds, dspX + 110.0f, txY + 5.0f, 50.0f, 30.0f));
     
     // Volume (Far right or right of DSP)
-    m_volumeSlider->setBounds(NomadUI::NUIAbsolute(bounds, dspX + 180.0f, txY + 17.0f, 100.0f, 6.0f));
+    m_volumeSlider->setBounds(AestraUI::NUIAbsolute(bounds, dspX + 180.0f, txY + 17.0f, 100.0f, 6.0f));
     
     
     // === 2. Waveform Area (Middle Strip 20%) ===
@@ -309,12 +309,12 @@ void AuditionPanel::layoutComponents() {
     // Let's put it at the bottom of the Header for "Timeline" feel?
     // Or just top of Waveform.
     float progressY = waveformY - 10.0f; // Overlap slightly or just above
-    // m_progressSlider->setBounds(NomadUI::NUIAbsolute(bounds, padding, progressY, bounds.width - padding*2, 6.0f));
+    // m_progressSlider->setBounds(AestraUI::NUIAbsolute(bounds, padding, progressY, bounds.width - padding*2, 6.0f));
     
     // Time Labels
     float timeY = waveformY + waveformHeight - 20.0f;
-    m_currentTime->setBounds(NomadUI::NUIAbsolute(bounds, padding + 5.0f, timeY, 60.0f, 16.0f));
-    m_totalTime->setBounds(NomadUI::NUIAbsolute(bounds, bounds.width - padding - 65.0f, timeY, 60.0f, 16.0f));
+    m_currentTime->setBounds(AestraUI::NUIAbsolute(bounds, padding + 5.0f, timeY, 60.0f, 16.0f));
+    m_totalTime->setBounds(AestraUI::NUIAbsolute(bounds, bounds.width - padding - 65.0f, timeY, 60.0f, 16.0f));
     
     
     // === 3. Queue Area (Bottom Rest) ===
@@ -337,9 +337,9 @@ void AuditionPanel::onUpdate(double deltaTime) {
     // Drops
     if (!m_dropTargetRegistered) {
         try {
-            auto sharedThis = std::dynamic_pointer_cast<NomadUI::IDropTarget>(shared_from_this());
+            auto sharedThis = std::dynamic_pointer_cast<AestraUI::IDropTarget>(shared_from_this());
             if (sharedThis) {
-                NomadUI::NUIDragDropManager::getInstance().registerDropTarget(sharedThis);
+                AestraUI::NUIDragDropManager::getInstance().registerDropTarget(sharedThis);
                 m_dropTargetRegistered = true;
             }
         } catch (const std::bad_weak_ptr&) {}
@@ -356,19 +356,19 @@ void AuditionPanel::onUpdate(double deltaTime) {
     NUIComponent::onUpdate(deltaTime);
 }
 
-void AuditionPanel::onRender(NomadUI::NUIRenderer& renderer) {
+void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
     auto bounds = getBounds();
     
     // === 1. Base Background (Black-ish) ===
-    NomadUI::NUIColor bgColor(0.05f, 0.05f, 0.05f, 1.0f); // Deep dark
+    AestraUI::NUIColor bgColor(0.05f, 0.05f, 0.05f, 1.0f); // Deep dark
     renderer.fillRect(bounds, bgColor);
     
     // === 2. Adaptive Header Gradient ===
     float headerHeight = bounds.height * 0.35f;
-    NomadUI::NUIRect headerRect(bounds.x, bounds.y, bounds.width, headerHeight);
+    AestraUI::NUIRect headerRect(bounds.x, bounds.y, bounds.width, headerHeight);
     
     // Dynamic color from track title hash (inspo: Spotify adaptive header)
-    m_currentHeaderColor = NomadUI::NUIColor(0.2f, 0.1f, 0.1f, 1.0f); // Fallback: Dark Red
+    m_currentHeaderColor = AestraUI::NUIColor(0.2f, 0.1f, 0.1f, 1.0f); // Fallback: Dark Red
     if (m_engine) {
         auto item = m_engine->getCurrentItem();
         if (item && !item->title.empty()) {
@@ -376,7 +376,7 @@ void AuditionPanel::onRender(NomadUI::NUIRenderer& renderer) {
             float r = 0.2f + ((hash & 0xFF) / 255.0f) * 0.3f;
             float g = 0.1f + (((hash >> 8) & 0xFF) / 255.0f) * 0.2f;
             float b = 0.1f + (((hash >> 16) & 0xFF) / 255.0f) * 0.2f;
-            m_currentHeaderColor = NomadUI::NUIColor(r, g, b, 1.0f);
+            m_currentHeaderColor = AestraUI::NUIColor(r, g, b, 1.0f);
         }
     }
     
@@ -388,10 +388,10 @@ void AuditionPanel::onRender(NomadUI::NUIRenderer& renderer) {
     float artSize = headerHeight - (padding * 2);
     if (artSize > 250.0f) artSize = 250.0f;
     
-    NomadUI::NUIRect artRect(bounds.x + padding, bounds.y + padding, artSize, artSize);
+    AestraUI::NUIRect artRect(bounds.x + padding, bounds.y + padding, artSize, artSize);
     
     // Shadow
-    renderer.drawShadow(artRect, 0.0f, 10.0f, 20.0f, NomadUI::NUIColor(0.0f, 0.0f, 0.0f, 0.5f));
+    renderer.drawShadow(artRect, 0.0f, 10.0f, 20.0f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.5f));
     
     // Check if we need to load new cover art
     bool hasCoverArt = false;
@@ -429,7 +429,7 @@ void AuditionPanel::onRender(NomadUI::NUIRenderer& renderer) {
                     float g = rgba[idx + 1] / 255.0f;
                     float b = rgba[idx + 2] / 255.0f;
                     // Darken for better gradient
-                    m_currentHeaderColor = NomadUI::NUIColor(r * 0.5f, g * 0.5f, b * 0.5f, 1.0f);
+                    m_currentHeaderColor = AestraUI::NUIColor(r * 0.5f, g * 0.5f, b * 0.5f, 1.0f);
                     
                     stbi_image_free(rgba);
                     Log::info("[AuditionPanel] Loaded cover art: " + std::to_string(w) + "x" + std::to_string(h));
@@ -442,13 +442,13 @@ void AuditionPanel::onRender(NomadUI::NUIRenderer& renderer) {
     // Draw Cover Art
     if (hasCoverArt) {
         // Draw the loaded texture
-        NomadUI::NUIRect srcRect(0, 0, static_cast<float>(m_coverArtWidth), static_cast<float>(m_coverArtHeight));
+        AestraUI::NUIRect srcRect(0, 0, static_cast<float>(m_coverArtWidth), static_cast<float>(m_coverArtHeight));
         renderer.drawTexture(m_coverArtTextureId, artRect, srcRect);
     } else {
         // Placeholder Art Fill
-        NomadUI::NUIColor artFill(m_currentHeaderColor.r * 1.2f, m_currentHeaderColor.g * 1.2f, m_currentHeaderColor.b * 1.2f, 1.0f);
+        AestraUI::NUIColor artFill(m_currentHeaderColor.r * 1.2f, m_currentHeaderColor.g * 1.2f, m_currentHeaderColor.b * 1.2f, 1.0f);
         renderer.fillRoundedRect(artRect, 4.0f, artFill);
-        renderer.drawText("NOMAD", NomadUI::NUIPoint(artRect.x + artSize/2.0f - 20.0f, artRect.y + artSize/2.0f), 12.0f, NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.3f));
+        renderer.drawText("AESTRA", AestraUI::NUIPoint(artRect.x + artSize/2.0f - 20.0f, artRect.y + artSize/2.0f), 12.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.3f));
     }
 
     
@@ -456,14 +456,14 @@ void AuditionPanel::onRender(NomadUI::NUIRenderer& renderer) {
     // === 4. Waveform Area ===
     float waveformY = headerHeight;
     float waveformHeight = bounds.height * 0.20f;
-    NomadUI::NUIRect waveformArea(bounds.x + padding, bounds.y + waveformY + 20.0f, bounds.width - padding*2, waveformHeight - 40.0f);
+    AestraUI::NUIRect waveformArea(bounds.x + padding, bounds.y + waveformY + 20.0f, bounds.width - padding*2, waveformHeight - 40.0f);
     
     renderWaveform(renderer, waveformArea);
     
     // === 5. Queue Area ===
     float queueY = waveformY + waveformHeight;
     float queueHeight = bounds.height - queueY;
-    NomadUI::NUIRect queueArea(bounds.x + padding, bounds.y + queueY, bounds.width - padding*2, queueHeight - padding);
+    AestraUI::NUIRect queueArea(bounds.x + padding, bounds.y + queueY, bounds.width - padding*2, queueHeight - padding);
     
     renderQueue(renderer, queueArea);
     
@@ -471,7 +471,7 @@ void AuditionPanel::onRender(NomadUI::NUIRenderer& renderer) {
     NUIComponent::onRender(renderer);
 
     // === Overlay SVGs on Buttons ===
-    NomadUI::NUIColor iconColor(1.0f, 1.0f, 1.0f, 1.0f);
+    AestraUI::NUIColor iconColor(1.0f, 1.0f, 1.0f, 1.0f);
     
     // Play/Pause
     bool isPlaying = m_engine && m_engine->isPlaying();
@@ -479,36 +479,36 @@ void AuditionPanel::onRender(NomadUI::NUIRenderer& renderer) {
     if (playIcon) {
         auto btnBounds = m_playPauseButton->getBounds();
         float iconSize = btnBounds.width * 0.5f;
-        NomadUI::NUIRect iconRect(
+        AestraUI::NUIRect iconRect(
             btnBounds.x + (btnBounds.width - iconSize)/2,
             btnBounds.y + (btnBounds.height - iconSize)/2,
             iconSize, iconSize
         );
-        NomadUI::NUISVGRenderer::render(renderer, *playIcon, iconRect, iconColor);
+        AestraUI::NUISVGRenderer::render(renderer, *playIcon, iconRect, iconColor);
     }
     
     // Prev
     if (m_svgPrev) {
         auto btnBounds = m_prevButton->getBounds();
         float iconSize = btnBounds.width * 0.5f;
-        NomadUI::NUIRect iconRect(
+        AestraUI::NUIRect iconRect(
             btnBounds.x + (btnBounds.width - iconSize)/2,
             btnBounds.y + (btnBounds.height - iconSize)/2,
             iconSize, iconSize
         );
-        NomadUI::NUISVGRenderer::render(renderer, *m_svgPrev, iconRect, iconColor);
+        AestraUI::NUISVGRenderer::render(renderer, *m_svgPrev, iconRect, iconColor);
     }
     
     // Next
     if (m_svgNext) {
         auto btnBounds = m_nextButton->getBounds();
         float iconSize = btnBounds.width * 0.5f;
-        NomadUI::NUIRect iconRect(
+        AestraUI::NUIRect iconRect(
             btnBounds.x + (btnBounds.width - iconSize)/2,
             btnBounds.y + (btnBounds.height - iconSize)/2,
             iconSize, iconSize
         );
-        NomadUI::NUISVGRenderer::render(renderer, *m_svgNext, iconRect, iconColor);
+        AestraUI::NUISVGRenderer::render(renderer, *m_svgNext, iconRect, iconColor);
     }
 }
 
@@ -516,12 +516,12 @@ void AuditionPanel::onRender(NomadUI::NUIRenderer& renderer) {
 // WAVEFORM (SOUNDCLOUD SCRUB)
 // ============================================================================
 
-void AuditionPanel::renderWaveform(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& area) {
+void AuditionPanel::renderWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& area) {
     if (!m_engine) return;
     
     auto source = m_engine->getCurrentSource();
     if (!source || !source->isReady()) {
-        renderer.drawText("Load track to see waveform", NomadUI::NUIPoint(area.x + area.width/2 - 60, area.y + area.height/2), 12.0f, NomadUI::NUIColor(0.5f, 0.5f, 0.5f, 0.5f));
+        renderer.drawText("Load track to see waveform", AestraUI::NUIPoint(area.x + area.width/2 - 60, area.y + area.height/2), 12.0f, AestraUI::NUIColor(0.5f, 0.5f, 0.5f, 0.5f));
         return;
     }
     
@@ -529,9 +529,9 @@ void AuditionPanel::renderWaveform(NomadUI::NUIRenderer& renderer, const NomadUI
     if (!buffer) return;
 
     // Gradient Colors
-    NomadUI::NUIColor playedColor = m_currentHeaderColor; 
-    playedColor = NomadUI::NUIColor(playedColor.r + 0.2f, playedColor.g + 0.2f, playedColor.b + 0.2f, 1.0f);
-    NomadUI::NUIColor unplayedColor(0.4f, 0.4f, 0.45f, 0.5f);
+    AestraUI::NUIColor playedColor = m_currentHeaderColor; 
+    playedColor = AestraUI::NUIColor(playedColor.r + 0.2f, playedColor.g + 0.2f, playedColor.b + 0.2f, 1.0f);
+    AestraUI::NUIColor unplayedColor(0.4f, 0.4f, 0.45f, 0.5f);
 
     const float pixelStride = 3.0f; // More spacing
     const uint32_t numBars = static_cast<uint32_t>(area.width / pixelStride);
@@ -567,8 +567,8 @@ void AuditionPanel::renderWaveform(NomadUI::NUIRenderer& renderer, const NomadUI
             if (h > halfHeight) h = halfHeight;
             
             float x = area.x + (i * pixelStride);
-            NomadUI::NUIColor barColor = (x < playheadX) ? playedColor : unplayedColor;
-            renderer.fillRoundedRect(NomadUI::NUIRect(x, centerY - h, 2.0f, h * 2.0f), 1.0f, barColor);
+            AestraUI::NUIColor barColor = (x < playheadX) ? playedColor : unplayedColor;
+            renderer.fillRoundedRect(AestraUI::NUIRect(x, centerY - h, 2.0f, h * 2.0f), 1.0f, barColor);
         }
     }
 }
@@ -579,7 +579,7 @@ void AuditionPanel::renderWaveform(NomadUI::NUIRenderer& renderer, const NomadUI
 // MOUSE HANDLING
 // ============================================================================
 
-bool AuditionPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
+bool AuditionPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     auto bounds = getBounds();
     
     // Early exit if mouse is outside our bounds entirely
@@ -592,7 +592,7 @@ bool AuditionPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     float headerHeight = bounds.height * 0.35f;
     float waveformY = headerHeight;
     float waveformHeight = bounds.height * 0.20f;
-    NomadUI::NUIRect waveformArea(bounds.x + padding, bounds.y + waveformY + 20.0f, bounds.width - padding*2, waveformHeight - 40.0f);
+    AestraUI::NUIRect waveformArea(bounds.x + padding, bounds.y + waveformY + 20.0f, bounds.width - padding*2, waveformHeight - 40.0f);
     
     // 1. Scrubbing
     if (event.pressed) {
@@ -618,7 +618,7 @@ bool AuditionPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     float startY = bounds.y + queueY + headerH + 10.0f;
     
     // Define queue area with proper X bounds
-    NomadUI::NUIRect queueArea(bounds.x + padding, startY, bounds.width - padding * 2, bounds.height - (queueY + headerH + 10.0f) - padding);
+    AestraUI::NUIRect queueArea(bounds.x + padding, startY, bounds.width - padding * 2, bounds.height - (queueY + headerH + 10.0f) - padding);
     
     if (queueArea.contains(event.position)) {
         float relY = event.position.y - startY;
@@ -627,7 +627,7 @@ bool AuditionPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             m_hoveredQueueIndex = index;
             
             // Click to play
-            if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+            if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
                 m_engine->jumpToTrack(static_cast<size_t>(index));
                 m_engine->play();
                 Log::info("[AuditionPanel] Clicked queue item: " + std::to_string(index));
@@ -691,19 +691,19 @@ std::string AuditionPanel::formatTime(double seconds) const {
 // KEYBOARD HANDLING
 // ============================================================================
 
-bool AuditionPanel::onKeyEvent(const NomadUI::NUIKeyEvent& event) {
+bool AuditionPanel::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (event.pressed) {
-        if (event.keyCode == NomadUI::NUIKeyCode::Space) {
+        if (event.keyCode == AestraUI::NUIKeyCode::Space) {
             if (m_engine) {
                 m_engine->togglePlayPause();
                 return true;
             }
         }
-        else if (event.keyCode == NomadUI::NUIKeyCode::Left) {
+        else if (event.keyCode == AestraUI::NUIKeyCode::Left) {
             if (m_engine) m_engine->previousTrack();
             return true;
         }
-        else if (event.keyCode == NomadUI::NUIKeyCode::Right) {
+        else if (event.keyCode == AestraUI::NUIKeyCode::Right) {
             if (m_engine) m_engine->nextTrack();
             return true;
         }
@@ -715,19 +715,19 @@ bool AuditionPanel::onKeyEvent(const NomadUI::NUIKeyEvent& event) {
 // DRAG AND DROP
 // ============================================================================
 
-NomadUI::DropFeedback AuditionPanel::onDragEnter(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
-    if (data.type == NomadUI::DragDataType::File) {
+AestraUI::DropFeedback AuditionPanel::onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    if (data.type == AestraUI::DragDataType::File) {
         m_isHoveringQueue = true; // Force queue hover effect
-        return NomadUI::DropFeedback::Copy;
+        return AestraUI::DropFeedback::Copy;
     }
-    return NomadUI::DropFeedback::None;
+    return AestraUI::DropFeedback::None;
 }
 
-NomadUI::DropFeedback AuditionPanel::onDragOver(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
-    if (data.type == NomadUI::DragDataType::File) {
-        return NomadUI::DropFeedback::Copy;
+AestraUI::DropFeedback AuditionPanel::onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    if (data.type == AestraUI::DragDataType::File) {
+        return AestraUI::DropFeedback::Copy;
     }
-    return NomadUI::DropFeedback::None;
+    return AestraUI::DropFeedback::None;
 }
 
 void AuditionPanel::onDragLeave() {
@@ -737,9 +737,9 @@ void AuditionPanel::onDragLeave() {
     }
 }
 
-NomadUI::DropResult AuditionPanel::onDrop(const NomadUI::DragData& data, const NomadUI::NUIPoint& position) {
-    NomadUI::DropResult result;
-    if (data.type == NomadUI::DragDataType::File) {
+AestraUI::DropResult AuditionPanel::onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    AestraUI::DropResult result;
+    if (data.type == AestraUI::DragDataType::File) {
         Log::info("[AuditionPanel] Dropped file: " + data.filePath);
         addFileToQueue(data.filePath);
         result.accepted = true;
@@ -749,8 +749,8 @@ NomadUI::DropResult AuditionPanel::onDrop(const NomadUI::DragData& data, const N
     return result;
 }
 
-NomadUI::NUIRect AuditionPanel::getDropBounds() const {
+AestraUI::NUIRect AuditionPanel::getDropBounds() const {
     return getBounds();
 }
 
-} // namespace Nomad
+} // namespace Aestra

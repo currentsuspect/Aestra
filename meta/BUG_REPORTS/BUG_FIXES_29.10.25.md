@@ -1,4 +1,4 @@
-# NOMAD DAW – Bug Fixes Implementation Guide (29.10.25)
+# Aestra – Bug Fixes Implementation Guide (29.10.25)
 
 **Version:** v1.0  
 **Platform:** Windows  
@@ -27,8 +27,8 @@ Timer does not reset to `0.0.0` when looping samples (sample audio loops actuall
 The `TransportBar` and `TrackManager` don't implement loop boundary detection. When audio playback reaches the end of a sample with looping enabled, there's no logic to reset the position back to 0.
 
 ### **Files to Modify**
-1. `NomadAudio/include/TrackManager.h` - Add loop support
-2. `NomadAudio/src/TrackManager.cpp` - Implement loop logic
+1. `AestraAudio/include/TrackManager.h` - Add loop support
+2. `AestraAudio/src/TrackManager.cpp` - Implement loop logic
 3. `Source/TransportBar.h` - Add loop state management
 4. `Source/TransportBar.cpp` - Handle loop UI feedback
 
@@ -36,7 +36,7 @@ The `TransportBar` and `TrackManager` don't implement loop boundary detection. W
 
 #### Step 1: Add Loop Detection in TrackManager
 ```cpp
-// In NomadAudio/src/TrackManager.cpp - processAudio() method
+// In AestraAudio/src/TrackManager.cpp - processAudio() method
 
 void TrackManager::processAudio(float* outputBuffer, uint32_t numFrames, double streamTime) {
     // ... existing code ...
@@ -107,13 +107,13 @@ The `AudioVisualizer` component (CompactMeter mode) is created but never receive
 
 ### **Files to Modify**
 1. `Source/Main.cpp` - Wire up VU meter to audio callback
-2. `NomadAudio/src/TrackManager.cpp` - Expose master output buffer
+2. `AestraAudio/src/TrackManager.cpp` - Expose master output buffer
 
 ### **Implementation Steps**
 
 #### Step 1: Add Master Output Monitoring
 ```cpp
-// In NomadAudio/include/TrackManager.h
+// In AestraAudio/include/TrackManager.h
 
 class TrackManager {
 public:
@@ -130,7 +130,7 @@ private:
 ```
 
 ```cpp
-// In NomadAudio/src/TrackManager.cpp - processAudio()
+// In AestraAudio/src/TrackManager.cpp - processAudio()
 
 void TrackManager::processAudio(float* outputBuffer, uint32_t numFrames, double streamTime) {
     // ... existing mixing code ...
@@ -198,7 +198,7 @@ Opening the settings panel causes FPS drop from 24–29 → 12–17.
 ```cpp
 // In Source/AudioSettingsDialog.h
 
-class AudioSettingsDialog : public NomadUI::NUIComponent {
+class AudioSettingsDialog : public AestraUI::NUIComponent {
 private:
     bool m_needsFullRedraw = true; // Dirty flag
 };
@@ -207,7 +207,7 @@ private:
 ```cpp
 // In Source/AudioSettingsDialog.cpp - onRender()
 
-void AudioSettingsDialog::onRender(NomadUI::NUIRenderer& renderer) {
+void AudioSettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
     if (!m_visible) return;
     
     // Only render background and dialog frame if dirty
@@ -218,7 +218,7 @@ void AudioSettingsDialog::onRender(NomadUI::NUIRenderer& renderer) {
     }
     
     // Render all children (buttons, dropdowns)
-    NomadUI::NUIComponent::onRender(renderer);
+    AestraUI::NUIComponent::onRender(renderer);
     
     // ... existing code ...
 }
@@ -251,12 +251,12 @@ void AudioSettingsDialog::updateDeviceList() {
 ```cpp
 // In renderBackground() - reduce alpha for less expensive blending
 
-void AudioSettingsDialog::renderBackground(NomadUI::NUIRenderer& renderer) {
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
-    NomadUI::NUIColor overlayColor = themeManager.getColor("backgroundPrimary");
+void AudioSettingsDialog::renderBackground(AestraUI::NUIRenderer& renderer) {
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    AestraUI::NUIColor overlayColor = themeManager.getColor("backgroundPrimary");
     overlayColor = overlayColor.withAlpha(0.6f); // Reduced from 0.8f
     
-    NomadUI::NUIRect overlay(0, 0, 2000, 2000);
+    AestraUI::NUIRect overlay(0, 0, 2000, 2000);
     renderer.fillRect(overlay, overlayColor);
 }
 ```
@@ -287,17 +287,17 @@ void AudioSettingsDialog::renderBackground(NomadUI::NUIRenderer& renderer) {
 ```cpp
 // In Source/FPSDisplay.h - onRender() method
 
-void onRender(NomadUI::NUIRenderer& renderer) override {
+void onRender(AestraUI::NUIRenderer& renderer) override {
     if (!m_visible || !m_adaptiveFPS) return;
 
     auto stats = m_adaptiveFPS->getStats();
     auto bounds = getBounds();
 
     // Background panel
-    NomadUI::NUIColor bgColor(0.0f, 0.0f, 0.0f, 0.75f);
+    AestraUI::NUIColor bgColor(0.0f, 0.0f, 0.0f, 0.75f);
     renderer.fillRect(bounds, bgColor);
     
-    NomadUI::NUIColor borderColor(0.3f, 0.3f, 0.3f, 0.9f);
+    AestraUI::NUIColor borderColor(0.3f, 0.3f, 0.3f, 0.9f);
     renderer.strokeRect(bounds, 1.0f, borderColor);
 
     float textX = bounds.x + 10;
@@ -305,10 +305,10 @@ void onRender(NomadUI::NUIRenderer& renderer) override {
     float lineHeight = 18.0f;
 
     // Title with proper baseline alignment
-    NomadUI::NUIColor titleColor(0.4f, 0.8f, 1.0f, 1.0f);
+    AestraUI::NUIColor titleColor(0.4f, 0.8f, 1.0f, 1.0f);
     float titleFontSize = 14.0f;
     float titleY = textY + titleFontSize * 0.75f; // FIXED: Add baseline offset
-    renderer.drawText("ADAPTIVE FPS MONITOR", NomadUI::NUIPoint(textX, titleY), titleFontSize, titleColor);
+    renderer.drawText("ADAPTIVE FPS MONITOR", AestraUI::NUIPoint(textX, titleY), titleFontSize, titleColor);
     textY += lineHeight + 5;
     
     // ... rest of rendering code ...
@@ -338,7 +338,7 @@ if (key == static_cast<int>(KeyCode::F12) && pressed) {
 ```cpp
 // In Source/FPSDisplay.h
 
-class FPSDisplay : public NomadUI::NUIComponent {
+class FPSDisplay : public AestraUI::NUIComponent {
 public:
     enum class DisplayMode {
         Full,       // All stats
@@ -352,14 +352,14 @@ private:
 };
 
 // In onRender(), add conditional rendering:
-void onRender(NomadUI::NUIRenderer& renderer) override {
+void onRender(AestraUI::NUIRenderer& renderer) override {
     // ... existing code ...
     
     if (m_displayMode == DisplayMode::Lightweight) {
         // Only show FPS
         std::stringstream ss;
         ss << "FPS: " << std::fixed << std::setprecision(1) << stats.currentFPS;
-        renderer.drawText(ss.str(), NomadUI::NUIPoint(textX, textY), 14.0f, valueColor);
+        renderer.drawText(ss.str(), AestraUI::NUIPoint(textX, textY), 14.0f, valueColor);
     } else {
         // Show all stats (existing code)
     }
@@ -416,13 +416,13 @@ void AudioSettingsDialog::layoutComponents() {
     float dropdownX = labelX + labelWidth + 16.0f;
     
     // Driver selector
-    m_driverLabel->setBounds(NomadUI::NUIRect(labelX, startY, labelWidth, dropdownHeight));
-    m_driverDropdown->setBounds(NomadUI::NUIRect(dropdownX, startY, dropdownWidth, dropdownHeight));
+    m_driverLabel->setBounds(AestraUI::NUIRect(labelX, startY, labelWidth, dropdownHeight));
+    m_driverDropdown->setBounds(AestraUI::NUIRect(dropdownX, startY, dropdownWidth, dropdownHeight));
     startY += dropdownHeight + verticalSpacing;
     
     // Device selector
-    m_deviceLabel->setBounds(NomadUI::NUIRect(labelX, startY, labelWidth, dropdownHeight));
-    m_deviceDropdown->setBounds(NomadUI::NUIRect(dropdownX, startY, dropdownWidth, dropdownHeight));
+    m_deviceLabel->setBounds(AestraUI::NUIRect(labelX, startY, labelWidth, dropdownHeight));
+    m_deviceDropdown->setBounds(AestraUI::NUIRect(dropdownX, startY, dropdownWidth, dropdownHeight));
     startY += dropdownHeight + sectionSpacing;
     
     // ... rest of layout code ...
@@ -506,14 +506,14 @@ Mouse wheel does not scroll vertically through tracks in the grid.
 ```cpp
 // In Source/TrackManagerUI.cpp - onMouseEvent()
 
-bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
-    NomadUI::NUIRect bounds = getBounds();
-    NomadUI::NUIPoint localPos(event.position.x - bounds.x, event.position.y - bounds.y);
+bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
+    AestraUI::NUIRect bounds = getBounds();
+    AestraUI::NUIPoint localPos(event.position.x - bounds.x, event.position.y - bounds.y);
     
     float headerHeight = 30.0f;
     float rulerHeight = 20.0f;
     float horizontalScrollbarHeight = 15.0f;
-    NomadUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, bounds.width, rulerHeight);
+    AestraUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, bounds.width, rulerHeight);
     
     // Mouse wheel zoom on ruler (existing code)
     if (event.wheelDelta != 0.0f && rulerRect.contains(localPos)) {
@@ -523,7 +523,7 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     
     // NEW: Mouse wheel vertical scroll on track grid area
     float trackAreaY = headerHeight + horizontalScrollbarHeight + rulerHeight;
-    NomadUI::NUIRect trackAreaRect(0, trackAreaY, bounds.width, bounds.height - trackAreaY);
+    AestraUI::NUIRect trackAreaRect(0, trackAreaY, bounds.width, bounds.height - trackAreaY);
     
     if (event.wheelDelta != 0.0f && trackAreaRect.contains(localPos)) {
         // Vertical scrolling
@@ -574,9 +574,9 @@ bool TrackManagerUI::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
 ```cpp
 // In Source/TrackUIComponent.cpp - onRender()
 
-void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
-    NomadUI::NUIRect bounds = getBounds();
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+void TrackUIComponent::onRender(AestraUI::NUIRenderer& renderer) {
+    AestraUI::NUIRect bounds = getBounds();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // ... existing code ...
     
@@ -593,7 +593,7 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
     // Apply greyscale overlay for muted/non-soloed tracks
     if (shouldGreyOut) {
         // Render a semi-transparent grey overlay over entire track
-        NomadUI::NUIColor greyOverlay(0.5f, 0.5f, 0.5f, 0.6f);
+        AestraUI::NUIColor greyOverlay(0.5f, 0.5f, 0.5f, 0.6f);
         renderer.fillRect(bounds, greyOverlay.withAlpha(0.4f));
         
         // Desaturate waveform rendering (modify waveform color)
@@ -608,16 +608,16 @@ void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
 ```cpp
 // In drawWaveform() - add greyscale mode
 
-void TrackUIComponent::drawWaveform(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds,
+void TrackUIComponent::drawWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
                                      float offsetRatio, float visibleRatio) {
     // ... existing code ...
     
     // Determine waveform color based on mute/solo state
-    NomadUI::NUIColor waveformColor = NomadUI::NUIColor(0.0f, 0.737f, 0.831f); // Cyan
+    AestraUI::NUIColor waveformColor = AestraUI::NUIColor(0.0f, 0.737f, 0.831f); // Cyan
     
     if (m_track && m_track->isMuted()) {
         // Greyscale for muted tracks
-        waveformColor = NomadUI::NUIColor(0.5f, 0.5f, 0.5f, 0.6f);
+        waveformColor = AestraUI::NUIColor(0.5f, 0.5f, 0.5f, 0.6f);
     }
     
     // ... use waveformColor in rendering ...
@@ -646,7 +646,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
 
 // In TrackUIComponent.cpp - render with solo awareness
 
-void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
+void TrackUIComponent::onRender(AestraUI::NUIRenderer& renderer) {
     // ... existing code ...
     
     bool shouldGreyOut = false;
@@ -681,13 +681,13 @@ Pausing playback halts audio permanently; resumes only after full stop/reset.
 `Track::pause()` sets state to `Paused`, but `Track::play()` only plays from `Loaded` or `Stopped` states, not `Paused`.
 
 ### **Files to Modify**
-1. `NomadAudio/src/Track.cpp` - Allow resume from pause
+1. `AestraAudio/src/Track.cpp` - Allow resume from pause
 
 ### **Implementation Steps**
 
 #### Step 1: Fix Track Play Logic
 ```cpp
-// In NomadAudio/src/Track.cpp - play()
+// In AestraAudio/src/Track.cpp - play()
 
 void Track::play() {
     TrackState currentState = getState();
@@ -713,7 +713,7 @@ void Track::play() {
 
 #### Step 2: Fix TrackManager Pause Logic
 ```cpp
-// In NomadAudio/src/TrackManager.cpp - pause()
+// In AestraAudio/src/TrackManager.cpp - pause()
 
 void TrackManager::pause() {
     m_isPlaying.store(false);
@@ -899,17 +899,17 @@ void FileBrowser::navigateTo(const std::string& path) {
 Track scrollbars use placeholder icons (pixelated/low quality).
 
 ### **Root Cause**
-Scrollbar rendering in `NomadUI/Core/NUIScrollbar.cpp` uses basic geometric shapes instead of SVG icons.
+Scrollbar rendering in `AestraUI/Core/NUIScrollbar.cpp` uses basic geometric shapes instead of SVG icons.
 
 ### **Files to Modify**
-1. `NomadUI/Core/NUIScrollbar.cpp` - Use SVG icons for arrows
+1. `AestraUI/Core/NUIScrollbar.cpp` - Use SVG icons for arrows
 2. `Source/TrackManagerUI.cpp` - Apply icon-based scrollbars
 
 ### **Implementation Steps**
 
 #### Step 1: Add SVG Icons to Scrollbar
 ```cpp
-// In NomadUI/Core/NUIScrollbar.h
+// In AestraUI/Core/NUIScrollbar.h
 
 #include "../Core/NUIIcon.h"
 
@@ -923,7 +923,7 @@ private:
 ```
 
 ```cpp
-// In NomadUI/Core/NUIScrollbar.cpp - constructor
+// In AestraUI/Core/NUIScrollbar.cpp - constructor
 
 NUIScrollbar::NUIScrollbar(Orientation orientation)
     : NUIComponent()
@@ -932,22 +932,22 @@ NUIScrollbar::NUIScrollbar(Orientation orientation)
     setSize(orientation == Orientation::Vertical ? 16 : 200, 
             orientation == Orientation::Vertical ? 200 : 16);
     
-    // Load SVG icons from NomadAssets
+    // Load SVG icons from AestraAssets
     if (orientation == Orientation::Vertical) {
         m_upArrowIcon = std::make_shared<NUIIcon>();
-        m_upArrowIcon->loadSVGFromFile("NomadAssets/icons/arrow_up.svg");
+        m_upArrowIcon->loadSVGFromFile("AestraAssets/icons/arrow_up.svg");
         m_upArrowIcon->setIconSize(12, 12);
         
         m_downArrowIcon = std::make_shared<NUIIcon>();
-        m_downArrowIcon->loadSVGFromFile("NomadAssets/icons/arrow_down.svg");
+        m_downArrowIcon->loadSVGFromFile("AestraAssets/icons/arrow_down.svg");
         m_downArrowIcon->setIconSize(12, 12);
     } else {
         m_leftArrowIcon = std::make_shared<NUIIcon>();
-        m_leftArrowIcon->loadSVGFromFile("NomadAssets/icons/arrow_left.svg");
+        m_leftArrowIcon->loadSVGFromFile("AestraAssets/icons/arrow_left.svg");
         m_leftArrowIcon->setIconSize(12, 12);
         
         m_rightArrowIcon = std::make_shared<NUIIcon>();
-        m_rightArrowIcon->loadSVGFromFile("NomadAssets/icons/arrow_right.svg");
+        m_rightArrowIcon->loadSVGFromFile("AestraAssets/icons/arrow_right.svg");
         m_rightArrowIcon->setIconSize(12, 12);
     }
     
@@ -998,22 +998,22 @@ void NUIScrollbar::drawArrows(NUIRenderer& renderer) const
 
 #### Step 3: Create Arrow SVG Icons (if not exists)
 ```xml
-<!-- Save as NomadAssets/icons/arrow_up.svg -->
+<!-- Save as AestraAssets/icons/arrow_up.svg -->
 <svg viewBox="0 0 24 24" fill="currentColor">
     <path d="M7 14l5-5 5 5z"/>
 </svg>
 
-<!-- Save as NomadAssets/icons/arrow_down.svg -->
+<!-- Save as AestraAssets/icons/arrow_down.svg -->
 <svg viewBox="0 0 24 24" fill="currentColor">
     <path d="M7 10l5 5 5-5z"/>
 </svg>
 
-<!-- Save as NomadAssets/icons/arrow_left.svg -->
+<!-- Save as AestraAssets/icons/arrow_left.svg -->
 <svg viewBox="0 0 24 24" fill="currentColor">
     <path d="M14 7l-5 5 5 5z"/>
 </svg>
 
-<!-- Save as NomadAssets/icons/arrow_right.svg -->
+<!-- Save as AestraAssets/icons/arrow_right.svg -->
 <svg viewBox="0 0 24 24" fill="currentColor">
     <path d="M10 7l5 5-5 5z"/>
 </svg>
@@ -1060,7 +1060,7 @@ After implementing all fixes:
 2. **Run Tests**
    ```powershell
    cd bin/Debug
-   ./NOMAD.exe
+   ./Aestra.exe
    ```
 
 3. **Validate Fixes**

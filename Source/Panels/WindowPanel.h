@@ -8,11 +8,11 @@
 #include <functional>
 
 // Forward declarations
-namespace NomadUI {
+namespace AestraUI {
     class NUIRenderer;
 }
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 /**
@@ -24,14 +24,14 @@ namespace Audio {
  * - When maximized, shows full content
  * - Draggable by title bar for future docking
  */
-class WindowPanel : public NomadUI::NUIComponent {
+class WindowPanel : public AestraUI::NUIComponent {
 public:
     WindowPanel(const std::string& title);
     ~WindowPanel() override = default;
 
     // Set the content component (piano roll, mixer, etc.)
-    void setContent(std::shared_ptr<NomadUI::NUIComponent> content);
-    std::shared_ptr<NomadUI::NUIComponent> getContent() const { return m_content; }
+    void setContent(std::shared_ptr<AestraUI::NUIComponent> content);
+    std::shared_ptr<AestraUI::NUIComponent> getContent() const { return m_content; }
 
     // Window state
     void setMinimized(bool minimized);
@@ -54,9 +54,9 @@ public:
     void setUserPositioned(bool positioned) { m_userPositioned = positioned; }
 
     // Component overrides
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
     // Callbacks
     void setOnMinimizeToggle(std::function<void(bool)> callback) { m_onMinimizeToggle = callback; }
@@ -64,14 +64,14 @@ public:
     void setOnClose(std::function<void()> callback) { m_onClose = callback; }
     
     // Drag events (forwarded to parent controller)
-    using DragCallback = std::function<void(const NomadUI::NUIPoint&)>;
+    using DragCallback = std::function<void(const AestraUI::NUIPoint&)>;
     void setOnDragStart(DragCallback callback) { m_onDragStart = callback; }
     void setOnDragMove(DragCallback callback) { m_onDragMove = callback; }
     void setOnDragEnd(std::function<void()> callback) { m_onDragEnd = callback; }
 
 private:
     std::string m_title;
-    std::shared_ptr<NomadUI::NUIComponent> m_content;
+    std::shared_ptr<AestraUI::NUIComponent> m_content;
     
     // Window state
     bool m_minimized{false};
@@ -80,19 +80,19 @@ private:
     float m_expandedHeight{300.0f}; // Remember height when expanded
     
     // Title bar buttons
-    std::shared_ptr<NomadUI::NUIButton> m_minimizeButton;
-    std::shared_ptr<NomadUI::NUIButton> m_maximizeButton;
-    std::shared_ptr<NomadUI::NUIButton> m_closeButton;
+    std::shared_ptr<AestraUI::NUIButton> m_minimizeButton;
+    std::shared_ptr<AestraUI::NUIButton> m_maximizeButton;
+    std::shared_ptr<AestraUI::NUIButton> m_closeButton;
     
     // Dragging state (for future docking)
     bool m_draggingTitleBar{false};
-    NomadUI::NUIPoint m_dragStartPos;
-    NomadUI::NUIRect m_dragStartBounds;
+    AestraUI::NUIPoint m_dragStartPos;
+    AestraUI::NUIRect m_dragStartBounds;
     bool m_userPositioned{false};
     
     // Hover states
     bool m_titleBarHovered{false};
-    NomadUI::NUIRect m_titleBarBounds;
+    AestraUI::NUIRect m_titleBarBounds;
     
     // Callbacks
     std::function<void(bool)> m_onMinimizeToggle;
@@ -110,4 +110,4 @@ private:
 };
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

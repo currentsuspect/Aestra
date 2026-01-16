@@ -1,7 +1,7 @@
 # Security Policy
 **Nomad Studios** – *Last Updated: 2025-10-30*
 
-Thank you for helping keep **Nomad DAW** safe and secure.
+Thank you for helping keep **Aestra DAW** safe and secure.
 
 ---
 
@@ -14,7 +14,7 @@ Thank you for helping keep **Nomad DAW** safe and secure.
 ---
 
 ## 🔒 Reporting a Vulnerability
-If you discover a security issue or exploit in Nomad DAW:
+If you discover a security issue or exploit in Aestra DAW:
 
 1. **Do not** publicly disclose the details.
 2. Email **makoridylan@gmail.com** with the subject line  
@@ -37,9 +37,9 @@ Reports will be acknowledged within **72 hours**.
 ---
 
 ## 🧠 Helpful Notes
-- Nomad DAW runs **locally**; it does not connect to the internet except for optional update checks.  
+- Aestra DAW runs **locally**; it does not connect to the internet except for optional update checks.  
 - Please also report potential data-loss bugs, crash loops, or performance regressions — we treat those as high-priority.
 
 ---
 
-Thank you for helping make Nomad DAW a trustworthy tool for creators worldwide.
+Thank you for helping make Aestra DAW a trustworthy tool for creators worldwide.

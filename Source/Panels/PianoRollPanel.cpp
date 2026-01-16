@@ -1,10 +1,10 @@
 // © 2025 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
 #include "PianoRollPanel.h"
 #include "PatternManager.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraCore/include/AestraLog.h"
 #include <random>
 
-using namespace Nomad::Audio;
+using namespace Aestra::Audio;
 
 PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     : WindowPanel("PIANO ROLL")
@@ -12,7 +12,7 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     , m_currentPatternId(0)  // Initialize as invalid
 {
     // Create piano roll view
-    m_pianoRoll = std::make_shared<NomadUI::PianoRollView>();
+    m_pianoRoll = std::make_shared<AestraUI::PianoRollView>();
     m_pianoRoll->setBeatsPerBar(4);
     m_pianoRoll->setPixelsPerBeat(50.0f);
     
@@ -47,10 +47,10 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
         
         // Convert backend notes to UI notes
         const auto& midiPayload = std::get<MidiPayload>(pattern->payload);
-        std::vector<NomadUI::MidiNote> uiNotes;
+        std::vector<AestraUI::MidiNote> uiNotes;
         
         for (const auto& vn : midiPayload.notes) {
-            NomadUI::MidiNote uiNote;
+            AestraUI::MidiNote uiNote;
             uiNote.pitch = vn.pitch;
             uiNote.startBeat = vn.startBeat;
             uiNote.durationBeats = vn.durationBeats;
@@ -115,7 +115,7 @@ void PianoRollPanel::updateGhostChannels() {
     auto& pm = m_trackManager->getPatternManager();
     auto allPatterns = pm.getAllPatterns();
 
-    std::vector<NomadUI::PianoRollNoteLayer::GhostPattern> ghosts;
+    std::vector<AestraUI::PianoRollNoteLayer::GhostPattern> ghosts;
     
     // Simple RNG for consistent colors
     std::mt19937 rng(12345); 
@@ -126,7 +126,7 @@ void PianoRollPanel::updateGhostChannels() {
         // Skip the current pattern being edited (it's already shown as foreground)
         if (p->id == m_currentPatternId) continue;
         
-        NomadUI::PianoRollNoteLayer::GhostPattern gp;
+        AestraUI::PianoRollNoteLayer::GhostPattern gp;
         
         // Generate Color from ID
         uint64_t h = p->id;
@@ -134,11 +134,11 @@ void PianoRollPanel::updateGhostChannels() {
         float g = ((h * 134775813 + 12345) & 0xFF) / 255.0f;
         float b = ((h * 1103515245 + 12345) >> 8 & 0xFF) / 255.0f;
         
-        gp.color = NomadUI::NUIColor(r * 0.8f + 0.2f, g * 0.8f + 0.2f, b * 0.8f + 0.2f, 1.0f);
+        gp.color = AestraUI::NUIColor(r * 0.8f + 0.2f, g * 0.8f + 0.2f, b * 0.8f + 0.2f, 1.0f);
 
         const auto& midiPayload = std::get<MidiPayload>(p->payload);
         for (const auto& vn : midiPayload.notes) {
-            NomadUI::MidiNote uiNote;
+            AestraUI::MidiNote uiNote;
             uiNote.pitch = vn.pitch;
             uiNote.startBeat = vn.startBeat;
             uiNote.durationBeats = vn.durationBeats;

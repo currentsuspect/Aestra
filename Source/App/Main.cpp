@@ -1,16 +1,16 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
-#define NOMAD_BUILD_ID "Nomad-2025-Core"
+#define AESTRA_BUILD_ID "Aestra-2025-Core"
 
 /**
  * @file Main.cpp
- * @brief NOMAD DAW - Main Application Entry Point
+ * @brief Aestra - Main Application Entry Point
  * 
  * Uses WinMain for Windows GUI subsystem (no console window).
  * All logging goes to runtime_log.txt in the working directory.
  */
 
-#include "NomadApp.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "AestraApp.h"
+#include "../AestraCore/include/AestraLog.h"
 #include <iostream>
 #include <cstdlib>
 #include <objbase.h>
@@ -21,7 +21,7 @@
 #include <windows.h>
 #endif
 
-using namespace Nomad;
+using namespace Aestra;
 
 // =============================================================================
 // Initialize Logging to File
@@ -45,7 +45,7 @@ static void initializeFileLogging() {
     
     Log::init(multiLogger);
     Log::info("========================================");
-    Log::info("NOMAD DAW Starting - " NOMAD_BUILD_ID);
+    Log::info("Aestra Starting - " AESTRA_BUILD_ID);
     Log::info("Working Directory: " + std::filesystem::current_path().string());
     Log::info("========================================");
 }
@@ -71,7 +71,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     int exitCode = 0;
     
-    // Parse command line for project file (e.g. double-clicking .nmd file)
+    // Parse command line for project file (e.g. double-clicking .aes file)
     std::string projectPath;
     if (lpCmdLine && lpCmdLine[0] != '\0') {
         projectPath = lpCmdLine;
@@ -79,9 +79,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         if (projectPath.front() == '"' && projectPath.back() == '"') {
             projectPath = projectPath.substr(1, projectPath.size() - 2);
         }
-        // Validate it's a .nmd file
+        // Validate it's a .aes file
         if (projectPath.size() >= 4 && 
-            projectPath.substr(projectPath.size() - 4) == ".nmd") {
+            projectPath.substr(projectPath.size() - 4) == ".aes") {
             Log::info("Opening project: " + projectPath);
         } else {
             projectPath.clear(); // Not a project file, ignore
@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
     if (argc > 1) {
         projectPath = argv[1];
         if (projectPath.size() >= 4 && 
-            projectPath.substr(projectPath.size() - 4) == ".nmd") {
+            projectPath.substr(projectPath.size() - 4) == ".aes") {
             Log::info("Opening project: " + projectPath);
         } else {
             projectPath.clear();
@@ -105,10 +105,10 @@ int main(int argc, char* argv[]) {
 #endif
     
     try {
-        NomadApp app;
+        AestraApp app;
         
         if (!app.initialize(projectPath)) {
-            Log::error("Failed to initialize NOMAD DAW");
+            Log::error("Failed to initialize Aestra");
             exitCode = 1;
         } else {
             app.run();
@@ -128,11 +128,11 @@ int main(int argc, char* argv[]) {
     CoUninitialize();
 #endif
     
-    Log::info("NOMAD DAW Exiting with code: " + std::to_string(exitCode));
+    Log::info("Aestra Exiting with code: " + std::to_string(exitCode));
     
     // TODO: [P2] Investigate shutdown hang - static singleton destructors (PluginManager,
     // AudioEngine) or ASIO/COM cleanup order causes process to hang after all explicit
     // cleanup completes. Using quick_exit to bypass, but root cause still unknown.
-    // See: NomadApp::shutdown() for explicit cleanup that runs successfully.
+    // See: AestraApp::shutdown() for explicit cleanup that runs successfully.
     std::quick_exit(exitCode);
 }

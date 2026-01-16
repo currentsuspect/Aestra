@@ -9,7 +9,7 @@ This script only adds submodules locally. It does not push or change remotes.
 param(
     [Parameter(Mandatory=$true)]
     [string] $PremiumRepoUrl,
-    [string] $PremiumPath = "NomadMuse"
+    [string] $PremiumPath = "AestraMuse"
 )
 
 Write-Host "Adding premium submodule: $PremiumRepoUrl -> $PremiumPath" -ForegroundColor Cyan

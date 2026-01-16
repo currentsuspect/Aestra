@@ -2,11 +2,11 @@
 
 #include <string>
 
-namespace Nomad {
+namespace Aestra {
 
 struct UserProfile {
 	std::string username;
-	std::string tier;     // "Nomad Core", "Nomad Studio+", "Nomad Founder", "Nomad Campus"
+	std::string tier;     // "Aestra Core", "Aestra Plus", "Aestra Founder", "Aestra Campus"
 	std::string serial;
 	std::string signature;
 	bool verified = false;
@@ -25,4 +25,4 @@ bool verifyLicense(UserProfile& profile);
 // Returns absolute path to the license file used by load/save.
 std::string getLicenseFilePath();
 
-} // namespace Nomad
+} // namespace Aestra

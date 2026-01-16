@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Nomad custom window now supports Windows Snap functionality, allowing users to quickly arrange windows by dragging them to screen edges.
+The Aestra custom window now supports Windows Snap functionality, allowing users to quickly arrange windows by dragging them to screen edges.
 
 ## Features
 
@@ -201,7 +201,7 @@ When a snapped window is dragged:
 
 ## Comparison with Windows
 
-| Feature | Windows 10/11 | Nomad |
+| Feature | Windows 10/11 | Aestra |
 |---------|--------------|-------|
 | Drag to top → Maximize | ✅ | ✅ |
 | Drag to left/right → Half | ✅ | ✅ |
@@ -331,4 +331,4 @@ int main() {
 
 ## Summary
 
-Windows Snap is now fully integrated into the Nomad custom window system, providing users with familiar and efficient window management. The implementation matches Windows 10/11 behavior while leaving room for future enhancements like snap previews and custom layouts.
+Windows Snap is now fully integrated into the Aestra custom window system, providing users with familiar and efficient window management. The implementation matches Windows 10/11 behavior while leaving room for future enhancements like snap previews and custom layouts.

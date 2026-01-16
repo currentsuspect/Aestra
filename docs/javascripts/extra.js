@@ -1,12 +1,12 @@
-// Custom JavaScript for NOMAD DAW Documentation
+// Custom JavaScript for Aestra Documentation
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   // Add smooth scrolling for anchor links
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
       const href = this.getAttribute('href');
       if (href === '#') return;
-      
+
       const target = document.querySelector(href);
       if (target) {
         e.preventDefault();
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Add copy button feedback
   document.querySelectorAll('.md-clipboard').forEach(button => {
     let timeoutId = null;
-    button.addEventListener('click', function() {
+    button.addEventListener('click', function () {
       const icon = this.querySelector('.md-clipboard__icon');
       if (icon) {
         if (timeoutId) clearTimeout(timeoutId);
@@ -36,8 +36,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Enhance external links
   document.querySelectorAll('a[href^="http"]').forEach(link => {
-    if (!link.hostname.includes('currentsuspect.github.io') && 
-        !link.hostname.includes('github.com/currentsuspect')) {
+    if (!link.hostname.includes('currentsuspect.github.io') &&
+      !link.hostname.includes('github.com/currentsuspect')) {
       link.setAttribute('target', '_blank');
       link.setAttribute('rel', 'noopener noreferrer');
     }
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Add loading animation for images
   document.querySelectorAll('img').forEach(img => {
-    img.addEventListener('load', function() {
+    img.addEventListener('load', function () {
       this.style.opacity = '1';
     });
     img.style.opacity = '0';
@@ -61,10 +61,10 @@ document.addEventListener('DOMContentLoaded', function() {
 function initFeatureCards() {
   const cards = document.querySelectorAll('.feature-card');
   cards.forEach(card => {
-    card.addEventListener('mouseenter', function() {
+    card.addEventListener('mouseenter', function () {
       this.style.transform = 'translateY(-4px)';
     });
-    card.addEventListener('mouseleave', function() {
+    card.addEventListener('mouseleave', function () {
       this.style.transform = 'translateY(0)';
     });
   });
@@ -89,6 +89,6 @@ style.textContent = `
 document.head.appendChild(style);
 
 // Console message for developers
-console.log('%c🧭 NOMAD DAW Documentation', 'font-size: 24px; font-weight: bold; color: #5c6bc0;');
+console.log('%c🧭 Aestra Documentation', 'font-size: 24px; font-weight: bold; color: #5c6bc0;');
 console.log('%cBuilt with intention. Create like silence is watching.', 'font-size: 14px; color: #00d9ff;');
-console.log('%cSource: https://github.com/currentsuspect/NOMAD', 'font-size: 12px; color: #888;');
+console.log('%cSource: https://github.com/currentsuspect/Aestra', 'font-size: 12px; color: #888;');

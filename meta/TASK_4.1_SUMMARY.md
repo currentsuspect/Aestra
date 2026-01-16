@@ -13,16 +13,16 @@
 
 ### 1. RtAudio Library Integration
 - Downloaded RtAudio v6.0.1 (MIT License)
-- Added to `NomadAudio/External/rtaudio/`
+- Added to `AestraAudio/External/rtaudio/`
 - Files: `RtAudio.h`, `RtAudio.cpp`, `LICENSE`
 
 ### 2. CMake Build System
-Created `NomadAudio/CMakeLists.txt` with:
+Created `AestraAudio/CMakeLists.txt` with:
 - RtAudio source integration
 - Platform-specific audio API selection (WASAPI for Windows)
 - Library dependencies (dsound, ole32, winmm, ksuser, mfplat, mfuuid, wmcodecdspuuid)
-- NomadAudio static library target
-- NomadAudioTest executable target
+- AestraAudio static library target
+- AestraAudioTest executable target
 
 ### 3. Core Audio Interfaces
 
@@ -37,7 +37,7 @@ Created `NomadAudio/CMakeLists.txt` with:
 - Device selection and configuration
 - Stream lifecycle management
 
-#### `NomadAudio.h`
+#### `AestraAudio.h`
 - Main library header
 - Version and backend information
 
@@ -71,15 +71,15 @@ Created `NomadAudio/CMakeLists.txt` with:
 ### Compilation
 ```bash
 cmake -B build -S . -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release --target NomadAudio
-cmake --build build --config Release --target NomadAudioTest
+cmake --build build --config Release --target AestraAudio
+cmake --build build --config Release --target AestraAudioTest
 ```
 
 **Result**: ✅ All targets build successfully
 
 ### Test Execution
 ```bash
-./build/NomadAudio/Release/NomadAudioTest.exe
+./build/AestraAudio/Release/AestraAudioTest.exe
 ```
 
 **Result**: ✅ Test passes
@@ -146,23 +146,23 @@ The foundation is now ready for:
 ## Files Modified/Created
 
 ### Created
-- `NomadAudio/CMakeLists.txt`
-- `NomadAudio/External/rtaudio/RtAudio.h`
-- `NomadAudio/External/rtaudio/RtAudio.cpp`
-- `NomadAudio/External/rtaudio/LICENSE`
-- `NomadAudio/include/AudioDriver.h`
-- `NomadAudio/include/AudioDeviceManager.h`
-- `NomadAudio/include/NomadAudio.h`
-- `NomadAudio/src/RtAudioBackend.h`
-- `NomadAudio/src/RtAudioBackend.cpp`
-- `NomadAudio/src/AudioDeviceManager.cpp`
-- `NomadAudio/test/AudioTest.cpp`
-- `NomadAudio/RTAUDIO_INTEGRATION.md`
-- `NomadAudio/TASK_4.1_SUMMARY.md`
+- `AestraAudio/CMakeLists.txt`
+- `AestraAudio/External/rtaudio/RtAudio.h`
+- `AestraAudio/External/rtaudio/RtAudio.cpp`
+- `AestraAudio/External/rtaudio/LICENSE`
+- `AestraAudio/include/AudioDriver.h`
+- `AestraAudio/include/AudioDeviceManager.h`
+- `AestraAudio/include/AestraAudio.h`
+- `AestraAudio/src/RtAudioBackend.h`
+- `AestraAudio/src/RtAudioBackend.cpp`
+- `AestraAudio/src/AudioDeviceManager.cpp`
+- `AestraAudio/test/AudioTest.cpp`
+- `AestraAudio/RTAUDIO_INTEGRATION.md`
+- `AestraAudio/TASK_4.1_SUMMARY.md`
 
 ### Modified
-- `CMakeLists.txt` - Added NomadAudio subdirectory
-- `NomadAudio/README.md` - Updated status
+- `CMakeLists.txt` - Added AestraAudio subdirectory
+- `AestraAudio/README.md` - Updated status
 
 ---
 

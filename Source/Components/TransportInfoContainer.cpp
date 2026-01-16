@@ -9,7 +9,7 @@
 #include <iomanip>
 #include <cmath>
 
-namespace Nomad {
+namespace Aestra {
 
 // Define a constant for the text baseline adjustment factor, as text rendering
 // APIs often place y at the baseline, not the top of the glyph.
@@ -22,7 +22,7 @@ const float TEXT_BASELINE_COMPENSATION_FACTOR = 0.8f;
 // ============================================================================
 
 BPMDisplay::BPMDisplay()
-    : NomadUI::NUIComponent()
+    : AestraUI::NUIComponent()
     , m_currentBPM(120.0f)
     , m_targetBPM(120.0f)
     , m_displayBPM(120.0f)
@@ -41,8 +41,8 @@ BPMDisplay::BPMDisplay()
             <path d="M7 14l5-5 5 5z"/>
         </svg>
     )";
-    m_upArrow = std::make_shared<NomadUI::NUIIcon>(upArrowSvg);
-    m_upArrow->setIconSize(NomadUI::NUIIconSize::Small);
+    m_upArrow = std::make_shared<AestraUI::NUIIcon>(upArrowSvg);
+    m_upArrow->setIconSize(AestraUI::NUIIconSize::Small);
     m_upArrow->setColorFromTheme("textSecondary"); 	// #9a9aa3 - Inactive by default
     
     // Create down arrow icon (small triangle pointing down)
@@ -51,8 +51,8 @@ BPMDisplay::BPMDisplay()
             <path d="M7 10l5 5 5-5z"/>
         </svg>
     )";
-    m_downArrow = std::make_shared<NomadUI::NUIIcon>(downArrowSvg);
-    m_downArrow->setIconSize(NomadUI::NUIIconSize::Small);
+    m_downArrow = std::make_shared<AestraUI::NUIIcon>(downArrowSvg);
+    m_downArrow->setIconSize(AestraUI::NUIIconSize::Small);
     m_downArrow->setColorFromTheme("textSecondary");
 }
 
@@ -76,17 +76,17 @@ void BPMDisplay::decrementBPM(float amount) {
     }
 }
 
-NomadUI::NUIRect BPMDisplay::getUpArrowBounds() const {
+AestraUI::NUIRect BPMDisplay::getUpArrowBounds() const {
     if (m_cachedUpArrowBounds.width > 0) return m_cachedUpArrowBounds;
     // Fallback if not rendered yet
-    NomadUI::NUIRect bounds = getBounds();
-    return NomadUI::NUIRect(bounds.x + bounds.width - 20, bounds.y, 12, 12);
+    AestraUI::NUIRect bounds = getBounds();
+    return AestraUI::NUIRect(bounds.x + bounds.width - 20, bounds.y, 12, 12);
 }
 
-NomadUI::NUIRect BPMDisplay::getDownArrowBounds() const {
+AestraUI::NUIRect BPMDisplay::getDownArrowBounds() const {
     if (m_cachedDownArrowBounds.width > 0) return m_cachedDownArrowBounds;
-    NomadUI::NUIRect bounds = getBounds();
-    return NomadUI::NUIRect(bounds.x + bounds.width - 20, bounds.y + 15, 12, 12);
+    AestraUI::NUIRect bounds = getBounds();
+    return AestraUI::NUIRect(bounds.x + bounds.width - 20, bounds.y + 15, 12, 12);
 }
 
 void BPMDisplay::onUpdate(double deltaTime) {
@@ -123,32 +123,32 @@ void BPMDisplay::onUpdate(double deltaTime) {
         }
     }
     
-    NomadUI::NUIComponent::onUpdate(deltaTime);
+    AestraUI::NUIComponent::onUpdate(deltaTime);
 }
 
-void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
-    NomadUI::NUIRect bounds = getBounds();
+void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
+    AestraUI::NUIRect bounds = getBounds();
     
     // Get theme for rendering
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // Get colors
-    NomadUI::NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.5f); // Semi-glass
-    NomadUI::NUIColor borderColor = themeManager.getColor("glassBorder");
-    NomadUI::NUIColor accentColor = themeManager.getColor("accentPrimary"); // Nomad Purple
-    NomadUI::NUIColor textPrimary = themeManager.getColor("textPrimary");
-    NomadUI::NUIColor textSecondary = themeManager.getColor("textSecondary");
+    AestraUI::NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.5f); // Semi-glass
+    AestraUI::NUIColor borderColor = themeManager.getColor("glassBorder");
+    AestraUI::NUIColor accentColor = themeManager.getColor("accentPrimary"); // Aestra Purple
+    AestraUI::NUIColor textPrimary = themeManager.getColor("textPrimary");
+    AestraUI::NUIColor textSecondary = themeManager.getColor("textSecondary");
     
     const float radius = themeManager.getRadius("m");
     
     // Hover glow effect
     if (m_isHovered) {
-        NomadUI::NUIRect glowBounds = bounds;
+        AestraUI::NUIRect glowBounds = bounds;
         glowBounds.x -= 1.0f;
         glowBounds.y -= 1.0f;
         glowBounds.width += 2.0f;
         glowBounds.height += 2.0f;
-        NomadUI::NUIColor glowColor = accentColor;
+        AestraUI::NUIColor glowColor = accentColor;
         glowColor.a = 0.3f;
         renderer.strokeRoundedRect(glowBounds, radius + 1.0f, 2.0f, glowColor);
     }
@@ -157,19 +157,19 @@ void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     renderer.fillRoundedRect(bounds, radius, bgColor);
     
     // Border
-    NomadUI::NUIColor currentBorder = m_isHovered ? accentColor : borderColor;
+    AestraUI::NUIColor currentBorder = m_isHovered ? accentColor : borderColor;
     if (m_isHovered) currentBorder.a = 0.6f;
     renderer.strokeRoundedRect(bounds, radius, 1.0f, currentBorder);
     
     // Pulse effect
     if (m_pulseAnimation > 0.0f) {
-        NomadUI::NUIColor pulseColor = accentColor;
+        AestraUI::NUIColor pulseColor = accentColor;
         pulseColor.a = m_pulseAnimation * 0.4f;
         renderer.fillRoundedRect(bounds, radius, pulseColor);
     }
     
     // Text color
-    NomadUI::NUIColor textColor = textPrimary;
+    AestraUI::NUIColor textColor = textPrimary;
     if (m_pulseAnimation > 0.5f) {
         textColor = accentColor;
     }
@@ -180,7 +180,7 @@ void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     std::string bpmText = ss.str();
     
     // === CENTERED CLUSTER LAYOUT ===
-    NomadUI::NUISize textSize = renderer.measureText(bpmText, fontSize);
+    AestraUI::NUISize textSize = renderer.measureText(bpmText, fontSize);
     
     float arrowSize = 12.0f;  // Balanced size (not too small, fits container)
     float arrowGap = 1.0f;    // Tight spacing between arrows
@@ -204,21 +204,21 @@ void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     float arrowY = bounds.y + (bounds.height - arrowBlockHeight) * 0.5f;
     
     // Update Cached Bounds for Hit Testing
-    m_cachedUpArrowBounds = NomadUI::NUIRect(arrowX, arrowY, arrowSize, arrowSize);
-    m_cachedDownArrowBounds = NomadUI::NUIRect(arrowX, arrowY + arrowSize + arrowGap, arrowSize, arrowSize);
+    m_cachedUpArrowBounds = AestraUI::NUIRect(arrowX, arrowY, arrowSize, arrowSize);
+    m_cachedDownArrowBounds = AestraUI::NUIRect(arrowX, arrowY + arrowSize + arrowGap, arrowSize, arrowSize);
     
     // Draw text
-    renderer.drawText(bpmText, NomadUI::NUIPoint(textX, textY), fontSize, textColor);
+    renderer.drawText(bpmText, AestraUI::NUIPoint(textX, textY), fontSize, textColor);
     
     // Draw arrow buttons
     
     // Up arrow color
-    NomadUI::NUIColor upColor = textSecondary;
+    AestraUI::NUIColor upColor = textSecondary;
     if (m_upArrowPressed) upColor = accentColor;
     else if (m_upArrowHovered) upColor = textPrimary;
     
     // Down arrow color
-    NomadUI::NUIColor downColor = textSecondary;
+    AestraUI::NUIColor downColor = textSecondary;
     if (m_downArrowPressed) downColor = accentColor;
     else if (m_downArrowHovered) downColor = textPrimary;
     
@@ -237,10 +237,10 @@ void BPMDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     }
 }
 
-bool BPMDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
-    NomadUI::NUIRect bounds = getBounds();
-    NomadUI::NUIRect upBounds = getUpArrowBounds();
-    NomadUI::NUIRect downBounds = getDownArrowBounds();
+bool BPMDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
+    AestraUI::NUIRect bounds = getBounds();
+    AestraUI::NUIRect upBounds = getUpArrowBounds();
+    AestraUI::NUIRect downBounds = getDownArrowBounds();
     
     bool inBounds = bounds.contains(event.position);
     bool inUp = upBounds.contains(event.position);
@@ -256,9 +256,9 @@ bool BPMDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     if (event.wheelDelta != 0.0f && inBounds) {
         // Modifier keys: Shift = 5x faster, Ctrl = 0.1x for fine control
         float increment = 1.0f;
-        if (event.modifiers & NomadUI::NUIModifiers::Shift) {
+        if (event.modifiers & AestraUI::NUIModifiers::Shift) {
             increment = 5.0f;
-        } else if (event.modifiers & NomadUI::NUIModifiers::Ctrl) {
+        } else if (event.modifiers & AestraUI::NUIModifiers::Ctrl) {
             increment = 0.1f;
         }
         
@@ -272,7 +272,7 @@ bool BPMDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
     
     // Handle mouse button for arrow clicks
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         if (inUp) {
             m_upArrowPressed = true;
             m_holdDelay = 0.3f;  // 300ms before repeat starts
@@ -292,7 +292,7 @@ bool BPMDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
     
     // Handle mouse button release
-    if (event.released && event.button == NomadUI::NUIMouseButton::Left) {
+    if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
         m_upArrowPressed = false;
         m_downArrowPressed = false;
     }
@@ -302,7 +302,7 @@ bool BPMDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         return true; // Consume event to trigger redraw
     }
     
-    return NomadUI::NUIComponent::onMouseEvent(event);
+    return AestraUI::NUIComponent::onMouseEvent(event);
 }
 
 // ============================================================================
@@ -310,7 +310,7 @@ bool BPMDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
 // ============================================================================
 
 TimerDisplay::TimerDisplay()
-    : NomadUI::NUIComponent()
+    : AestraUI::NUIComponent()
     , m_currentTime(0.0)
     , m_isPlaying(false)
 {
@@ -333,11 +333,11 @@ std::string TimerDisplay::formatTime(double seconds) const {
     return ss.str();
 }
 
-void TimerDisplay::onRender(NomadUI::NUIRenderer& renderer) {
-    NomadUI::NUIRect bounds = getBounds();
+void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
+    AestraUI::NUIRect bounds = getBounds();
     
     // Get theme for rendering
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // Draw Dark Pill Background (Glass)
     const float radius = themeManager.getRadius("m");
@@ -346,7 +346,7 @@ void TimerDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     renderer.strokeRoundedRect(bounds, radius, 1.0f, themeManager.getColor("glassBorder"));
     
     // CRITICAL: Green when playing, white when stopped
-    NomadUI::NUIColor textColor = m_isPlaying 
+    AestraUI::NUIColor textColor = m_isPlaying 
         ? themeManager.getColor("accentPrimary") 	// Vibrant purple when playing
         : themeManager.getColor("textPrimary"); 	 	// White when stopped
     
@@ -354,11 +354,11 @@ void TimerDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     std::string timeText = formatTime(m_currentTime);
     
     // Perfectly center text in the pill
-    NomadUI::NUISize textSize = renderer.measureText(timeText, fontSize);
+    AestraUI::NUISize textSize = renderer.measureText(timeText, fontSize);
     float textY = std::round(renderer.calculateTextY(bounds, fontSize));
     float textX = std::round(bounds.x + (bounds.width - textSize.width) * 0.5f);
     
-    renderer.drawText(timeText, NomadUI::NUIPoint(textX, textY), fontSize, textColor);
+    renderer.drawText(timeText, AestraUI::NUIPoint(textX, textY), fontSize, textColor);
 }
 
 // ============================================================================
@@ -366,7 +366,7 @@ void TimerDisplay::onRender(NomadUI::NUIRenderer& renderer) {
 // ============================================================================
 
 TimeSignatureDisplay::TimeSignatureDisplay()
-    : NomadUI::NUIComponent()
+    : AestraUI::NUIComponent()
     , m_beatsPerBar(4)
     , m_isHovered(false)
 {
@@ -400,25 +400,25 @@ std::string TimeSignatureDisplay::getDisplayText() const {
     return std::to_string(m_beatsPerBar) + "/" + std::to_string(denominator);
 }
 
-void TimeSignatureDisplay::onRender(NomadUI::NUIRenderer& renderer) {
-    NomadUI::NUIRect bounds = getBounds();
+void TimeSignatureDisplay::onRender(AestraUI::NUIRenderer& renderer) {
+    AestraUI::NUIRect bounds = getBounds();
     
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // Consistent Glass styling
     const float radius = themeManager.getRadius("m");
-    NomadUI::NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.5f);
-    NomadUI::NUIColor borderColor = themeManager.getColor("glassBorder");
-    NomadUI::NUIColor accentColor = themeManager.getColor("accentPrimary");
+    AestraUI::NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.5f);
+    AestraUI::NUIColor borderColor = themeManager.getColor("glassBorder");
+    AestraUI::NUIColor accentColor = themeManager.getColor("accentPrimary");
     
     // Hover glow
     if (m_isHovered) {
-        NomadUI::NUIRect glowBounds = bounds;
+        AestraUI::NUIRect glowBounds = bounds;
         glowBounds.x -= 1.0f;
         glowBounds.y -= 1.0f;
         glowBounds.width += 2.0f;
         glowBounds.height += 2.0f;
-        NomadUI::NUIColor glowColor = accentColor;
+        AestraUI::NUIColor glowColor = accentColor;
         glowColor.a = 0.3f; // Glow opacity
         renderer.strokeRoundedRect(glowBounds, radius + 1.0f, 2.0f, glowColor);
     }
@@ -427,26 +427,26 @@ void TimeSignatureDisplay::onRender(NomadUI::NUIRenderer& renderer) {
     renderer.fillRoundedRect(bounds, radius, bgColor);
     
     // Border
-    NomadUI::NUIColor currentBorder = m_isHovered ? accentColor : borderColor;
+    AestraUI::NUIColor currentBorder = m_isHovered ? accentColor : borderColor;
     if (m_isHovered) currentBorder.a = 0.6f;
     renderer.strokeRoundedRect(bounds, radius, 1.0f, currentBorder);
     
     // Text
-    NomadUI::NUIColor textColor = m_isHovered ? accentColor : themeManager.getColor("textPrimary");
+    AestraUI::NUIColor textColor = m_isHovered ? accentColor : themeManager.getColor("textPrimary");
     
     float fontSize = themeManager.getFontSize("l");
     std::string text = getDisplayText();
     
-    NomadUI::NUISize textSize = renderer.measureText(text, fontSize);
+    AestraUI::NUISize textSize = renderer.measureText(text, fontSize);
     float textY = std::round(renderer.calculateTextY(bounds, fontSize));
     float textX = std::round(bounds.x + (bounds.width - textSize.width) * 0.5f);
     
-    renderer.drawText(text, NomadUI::NUIPoint(textX, textY), fontSize, textColor);
+    renderer.drawText(text, AestraUI::NUIPoint(textX, textY), fontSize, textColor);
 }
 
 
-bool TimeSignatureDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
-    NomadUI::NUIRect bounds = getBounds();
+bool TimeSignatureDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
+    AestraUI::NUIRect bounds = getBounds();
     bool inside = bounds.contains(event.position);
     
     // Track hover state
@@ -454,7 +454,7 @@ bool TimeSignatureDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     m_isHovered = inside;
     
     // Handle click to cycle time signature
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         if (inside) {
             cycleNext();
             return true;
@@ -475,7 +475,7 @@ bool TimeSignatureDisplay::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
 // ============================================================================
 
 TransportInfoContainer::TransportInfoContainer()
-    : NomadUI::NUIComponent()
+    : AestraUI::NUIComponent()
 {
     m_timerDisplay = std::make_shared<TimerDisplay>();
     addChild(m_timerDisplay);
@@ -490,10 +490,10 @@ TransportInfoContainer::TransportInfoContainer()
 }
 
 void TransportInfoContainer::layoutComponents() {
-    NomadUI::NUIRect bounds = getBounds();
+    AestraUI::NUIRect bounds = getBounds();
     
     // Get layout dimensions from theme
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     
     // Timer on the left - position using ABSOLUTE coordinates (bounds.x + offset)
@@ -503,7 +503,7 @@ void TransportInfoContainer::layoutComponents() {
     float timerOffsetY = (bounds.height - timerHeight) / 2.0f; // Vertically centered in container
     
     // Use absolute positioning (add bounds.x and bounds.y) - SNAP TO INTEGERS
-    m_timerDisplay->setBounds(NomadUI::NUIRect(
+    m_timerDisplay->setBounds(AestraUI::NUIRect(
         std::floor(bounds.x + timerOffsetX), 
         std::floor(bounds.y + timerOffsetY), 
         std::round(timerWidth), 
@@ -516,7 +516,7 @@ void TransportInfoContainer::layoutComponents() {
     float bpmOffsetX = (bounds.width - bpmWidth) / 2.0f;
     float bpmOffsetY = (bounds.height - bpmHeight) / 2.0f;
     
-    m_bpmDisplay->setBounds(NomadUI::NUIRect(
+    m_bpmDisplay->setBounds(AestraUI::NUIRect(
         std::floor(bounds.x + bpmOffsetX), 
         std::floor(bounds.y + bpmOffsetY), 
         std::round(bpmWidth), 
@@ -529,7 +529,7 @@ void TransportInfoContainer::layoutComponents() {
     float timeSigOffsetX = bpmOffsetX - timeSigWidth - 10.0f;
     float timeSigOffsetY = (bounds.height - timeSigHeight) / 2.0f;
     
-    m_timeSignatureDisplay->setBounds(NomadUI::NUIRect(
+    m_timeSignatureDisplay->setBounds(AestraUI::NUIRect(
         std::floor(bounds.x + timeSigOffsetX), 
         std::floor(bounds.y + timeSigOffsetY), 
         std::round(timeSigWidth), 
@@ -537,19 +537,19 @@ void TransportInfoContainer::layoutComponents() {
     ));
 }
 
-void TransportInfoContainer::onRender(NomadUI::NUIRenderer& renderer) {
+void TransportInfoContainer::onRender(AestraUI::NUIRenderer& renderer) {
     // No background rendering - just render children
     renderChildren(renderer);
 }
 
 void TransportInfoContainer::onResize(int width, int height) {
-    NomadUI::NUIRect currentBounds = getBounds();
-    setBounds(NomadUI::NUIRect(currentBounds.x, currentBounds.y, width, height));
+    AestraUI::NUIRect currentBounds = getBounds();
+    setBounds(AestraUI::NUIRect(currentBounds.x, currentBounds.y, width, height));
     layoutComponents();
-    NomadUI::NUIComponent::onResize(width, height);
+    AestraUI::NUIComponent::onResize(width, height);
 }
 
-bool TransportInfoContainer::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
+bool TransportInfoContainer::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // Forward mouse events to children
     if (m_timeSignatureDisplay && m_timeSignatureDisplay->getBounds().contains(event.position)) {
         if (m_timeSignatureDisplay->onMouseEvent(event)) {
@@ -569,7 +569,7 @@ bool TransportInfoContainer::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
     }
     
-    return NomadUI::NUIComponent::onMouseEvent(event);
+    return AestraUI::NUIComponent::onMouseEvent(event);
 }
 
-} // namespace Nomad
+} // namespace Aestra

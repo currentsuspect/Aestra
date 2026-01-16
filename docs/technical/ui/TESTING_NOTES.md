@@ -1,4 +1,4 @@
-# Testing Notes - NomadUI Text Rendering
+# Testing Notes - AestraUI Text Rendering
 
 ## ⚠️ Testing Status
 
@@ -40,7 +40,7 @@
 ### Build Steps
 ```bash
 # Clone and navigate
-cd NomadUI
+cd AestraUI
 mkdir build
 cd build
 
@@ -205,7 +205,7 @@ Before considering it production-ready:
 1. **Test on real Windows system** with Visual Studio
 2. **Visual verification** of text rendering quality
 3. **Memory profiling** with AddressSanitizer
-4. **Performance profiling** with Nomad profiler
+4. **Performance profiling** with Aestra profiler
 5. **Add unit tests** for font loading/rendering
 6. **Add integration tests** for full pipeline
 7. **Test edge cases** systematically
@@ -214,7 +214,7 @@ Before considering it production-ready:
 ```cpp
 // Minimal test program
 int main() {
-    // 1. Initialize NomadUI
+    // 1. Initialize AestraUI
     auto window = createWindow(800, 600);
     auto renderer = createRenderer();
     

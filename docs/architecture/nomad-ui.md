@@ -1,6 +1,6 @@
-# NomadUI Architecture
+# AestraUI Architecture
 
-NomadUI is NOMAD's custom GPU-accelerated UI framework, delivering buttery-smooth 60 FPS performance.
+AestraUI is Aestra's custom GPU-accelerated UI framework, delivering buttery-smooth 60 FPS performance.
 
 ## 📋 Overview
 
@@ -8,9 +8,9 @@ NomadUI is NOMAD's custom GPU-accelerated UI framework, delivering buttery-smoot
 
 **Status:** ✅ Complete
 
-**Dependencies:** NomadCore, NomadPlat
+**Dependencies:** AestraCore, AestraPlat
 
-**Location:** `/NomadUI/`
+**Location:** `/AestraUI/`
 
 ## 🎯 Design Goals
 
@@ -35,7 +35,7 @@ Hardware-accelerated 2D rendering engine.
 
 **Example:**
 ```cpp
-#include "NomadUI/Renderer.h"
+#include "AestraUI/Renderer.h"
 
 nomad::Renderer renderer;
 renderer.initialize(window->getContext());
@@ -174,10 +174,10 @@ flowchart LR
 ```mermaid
 graph TB
     subgraph "Application"
-        App[NOMAD DAW]
+        App[Aestra]
     end
     
-    subgraph "NomadUI"
+    subgraph "AestraUI"
         UI[UI Manager]
         Renderer[OpenGL Renderer]
         Widgets[Widget System]
@@ -203,9 +203,9 @@ graph TB
 ### Directory Structure
 
 ```
-NomadUI/
+AestraUI/
 ├── include/
-│   └── NomadUI/
+│   └── AestraUI/
 │       ├── Renderer.h      # OpenGL renderer
 │       ├── Widget.h        # Base widget class
 │       ├── Widgets/        # Concrete widgets
@@ -231,7 +231,7 @@ NomadUI/
 
 ### Vertex Batching
 
-NomadUI batches draw calls for efficiency:
+AestraUI batches draw calls for efficiency:
 
 ```cpp
 // Instead of many small draws:
@@ -278,7 +278,7 @@ renderer.setMSAA(4);
 
 ### Adaptive Frame Rate
 
-NomadUI adjusts frame rate based on activity:
+AestraUI adjusts frame rate based on activity:
 
 | Activity | FPS | Use Case |
 |----------|-----|----------|
@@ -351,9 +351,9 @@ stateDiagram-v2
 ### Complete UI Application
 
 ```cpp
-#include "NomadUI/Renderer.h"
-#include "NomadUI/Widgets/Button.h"
-#include "NomadUI/Widgets/Slider.h"
+#include "AestraUI/Renderer.h"
+#include "AestraUI/Widgets/Button.h"
+#include "AestraUI/Widgets/Slider.h"
 
 // Initialize
 nomad::Renderer renderer;
@@ -439,4 +439,4 @@ Load themes from JSON:
 
 ---
 
-**Next:** [NomadAudio Architecture →](nomad-audio.md)
+**Next:** [AestraAudio Architecture →](nomad-audio.md)

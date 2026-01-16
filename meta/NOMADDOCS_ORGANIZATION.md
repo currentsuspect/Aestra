@@ -1,8 +1,8 @@
-# NomadDocs Organization Summary
+# AestraDocs Organization Summary
 
 **Date**: December 2024  
 **Commit**: `8965326`  
-**Task**: Organize legacy NomadDocs directory structure
+**Task**: Organize legacy AestraDocs directory structure
 
 ## Overview
 
@@ -11,7 +11,7 @@ Reorganized 25 documentation files from flat structure into logical subdirectori
 ## New Directory Structure
 
 ```
-NomadDocs/
+AestraDocs/
 ├── INDEX.md                    # Quick navigation by topic
 ├── README.md                   # Directory overview (updated)
 ├── Vision & Roadmap.md        # Project vision (root level)
@@ -19,8 +19,8 @@ NomadDocs/
 ├── architecture/              # Design & architectural decisions
 │   ├── ADAPTIVE_FPS_ARCHITECTURE.md
 │   ├── DROPDOWN_ARCHITECTURE.md
-│   ├── NOMAD_MODE_IMPLEMENTATION.md
-│   └── NOMADUI_COORDINATE_SYSTEM.md  # ⚠️ CRITICAL reference
+│   ├── Aestra_MODE_IMPLEMENTATION.md
+│   └── AestraUI_COORDINATE_SYSTEM.md  # ⚠️ CRITICAL reference
 │
 ├── guides/                    # How-to guides & references
 │   ├── DEVELOPER_GUIDE.md
@@ -97,7 +97,7 @@ NomadDocs/
 - Complete directory structure overview
 - Description of each category
 - Links to all files within categories
-- Integration with overall NOMAD documentation structure
+- Integration with overall Aestra documentation structure
 
 ## Benefits
 
@@ -143,10 +143,10 @@ This organization complements recent documentation improvements:
 ## Next Steps
 
 Consider:
-1. Merging some NomadDocs content into `/docs` for unified structure
+1. Merging some AestraDocs content into `/docs` for unified structure
 2. Creating similar organization for module-specific docs
 3. Adding auto-generated TOC to INDEX.md
-4. Cross-linking between NomadDocs and Doxygen API reference
+4. Cross-linking between AestraDocs and Doxygen API reference
 
 ## Statistics
 

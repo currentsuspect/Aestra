@@ -3,12 +3,12 @@
 
 #include "WindowPanel.h"
 #include "TrackManager.h"
-#include "../NomadUI/Widgets/UnitRow.h"
-#include "../NomadUI/Widgets/UnitColorPicker.h"
+#include "../AestraUI/Widgets/UnitRow.h"
+#include "../AestraUI/Widgets/UnitColorPicker.h"
 #include "NUIComponent.h"
 #include <optional>
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 /**
@@ -20,10 +20,10 @@ public:
     ArsenalPanel(std::shared_ptr<TrackManager> trackManager);
     ~ArsenalPanel() override = default;
 
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     void onUpdate(double dt) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
     // Rebuilds the UI from UnitManager state
     void refreshUnits();
@@ -53,15 +53,15 @@ private:
     std::shared_ptr<TrackManager> m_trackManager;
     
     // Container for the scrollable list of units
-    std::shared_ptr<NomadUI::NUIComponent> m_listContainer;
-    std::vector<std::shared_ptr<NomadUI::UnitRow>> m_unitRows;
+    std::shared_ptr<AestraUI::NUIComponent> m_listContainer;
+    std::vector<std::shared_ptr<AestraUI::UnitRow>> m_unitRows;
     
     // Footer controls
-    std::shared_ptr<NomadUI::NUIComponent> m_footer;
-    std::shared_ptr<NomadUI::NUIButton> m_playBtn; // Play/Stop Button
+    std::shared_ptr<AestraUI::NUIComponent> m_footer;
+    std::shared_ptr<AestraUI::NUIButton> m_playBtn; // Play/Stop Button
     
     // Color picker popup
-    std::shared_ptr<NomadUI::UnitColorPicker> m_colorPicker;
+    std::shared_ptr<AestraUI::UnitColorPicker> m_colorPicker;
     UnitID m_colorPickerTargetUnit = 0;
     
     // Drag-drop state
@@ -77,7 +77,7 @@ private:
     // Pattern Progress Visualization
     static constexpr float PROGRESS_HEADER_HEIGHT = 20.0f;
     int m_currentPlayStep = -1;  // Current step for visualization (-1 = not playing)
-    void drawProgressHeader(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds);
+    void drawProgressHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
     int calculateCurrentStep(); // Calculate step from TrackManager clock
 
     // Pattern Management (driven by Pattern Browser)
@@ -99,13 +99,13 @@ private:
     // Drag-drop callbacks
     void onUnitDragStart(UnitID unitId);
     void onUnitDrop(UnitID unitId, int dropIndex);
-    void showColorPicker(UnitID unitId, NomadUI::NUIPoint position);
+    void showColorPicker(UnitID unitId, AestraUI::NUIPoint position);
     
-    bool onKeyEvent(const NomadUI::NUIKeyEvent& event) override;
+    bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     
     std::function<void(UnitID)> m_onRequestEditor;
     std::function<void(UnitID)> m_onRequestLoadSample;
 };
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

@@ -20,7 +20,7 @@ However, the initial implementation had critical bugs where button interactions 
 
 ### Core Components
 
-1. **`NUIRenderCache`** (`NomadUI/Graphics/OpenGL/NUIRenderCache.h/cpp`)
+1. **`NUIRenderCache`** (`AestraUI/Graphics/OpenGL/NUIRenderCache.h/cpp`)
    - Manages FBO lifecycle (create, bind, cleanup)
    - Tracks cache validity per widget
    - Provides API for invalidation and rendering
@@ -555,15 +555,15 @@ The FBO caching system is now **fully functional and stable**. All buttons anima
 
 ### Core System
 
-- `NomadUI/Graphics/OpenGL/NUIRenderCache.h` - Cache manager declarations
-- `NomadUI/Graphics/OpenGL/NUIRenderCache.cpp` - Cache implementation
-- `NomadUI/Graphics/OpenGL/NUIRendererGL.h` - Offscreen rendering helpers
-- `NomadUI/Graphics/OpenGL/NUIRendererGL.cpp` - Flip texture implementation
+- `AestraUI/Graphics/OpenGL/NUIRenderCache.h` - Cache manager declarations
+- `AestraUI/Graphics/OpenGL/NUIRenderCache.cpp` - Cache implementation
+- `AestraUI/Graphics/OpenGL/NUIRendererGL.h` - Offscreen rendering helpers
+- `AestraUI/Graphics/OpenGL/NUIRendererGL.cpp` - Flip texture implementation
 
 ### GLAD Loader
 
-- `NomadUI/External/glad/include/glad/glad.h` - Added draw/read buffer functions
-- `NomadUI/External/glad/src/glad.c` - Added function loaders
+- `AestraUI/External/glad/include/glad/glad.h` - Added draw/read buffer functions
+- `AestraUI/External/glad/src/glad.c` - Added function loaders
 
 ### Example Usage
 

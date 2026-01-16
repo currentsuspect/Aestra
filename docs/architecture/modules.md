@@ -1,27 +1,27 @@
 # Module Hierarchy
 
-This page details the complete module hierarchy and dependencies in NOMAD DAW.
+This page details the complete module hierarchy and dependencies in Aestra.
 
 ## 🏗️ Dependency Graph
 
 ```mermaid
 graph TB
     subgraph Application
-        DAW[NOMAD DAW]
+        DAW[Aestra]
     end
     
     subgraph Framework
-        UI[NomadUI]
-        Audio[NomadAudio]
-        SDK[NomadSDK]
+        UI[AestraUI]
+        Audio[AestraAudio]
+        SDK[AestraSDK]
     end
     
     subgraph Platform
-        Plat[NomadPlat]
+        Plat[AestraPlat]
     end
     
     subgraph Core
-        Core[NomadCore]
+        Core[AestraCore]
     end
     
     DAW --> UI
@@ -44,9 +44,9 @@ graph TB
 
 ## 📦 Module Details
 
-### Layer 0: NomadCore (Foundation)
+### Layer 0: AestraCore (Foundation)
 
-**Purpose:** Provides fundamental utilities and data structures used throughout NOMAD.
+**Purpose:** Provides fundamental utilities and data structures used throughout Aestra.
 
 **Status:** ✅ Complete
 
@@ -62,23 +62,23 @@ graph TB
 
 **Public API:**
 ```cpp
-#include "NomadCore/Math/Vector.h"
-#include "NomadCore/Threading/ThreadPool.h"
-#include "NomadCore/IO/File.h"
-#include "NomadCore/Logging/Logger.h"
+#include "AestraCore/Math/Vector.h"
+#include "AestraCore/Threading/ThreadPool.h"
+#include "AestraCore/IO/File.h"
+#include "AestraCore/Logging/Logger.h"
 ```
 
-[View NomadCore Details →](nomad-core.md)
+[View AestraCore Details →](nomad-core.md)
 
 ---
 
-### Layer 1: NomadPlat (Platform Abstraction)
+### Layer 1: AestraPlat (Platform Abstraction)
 
 **Purpose:** Provides unified API for platform-specific operations.
 
 **Status:** ✅ Complete (Windows), 🚧 In Progress (Linux), 📅 Planned (macOS)
 
-**Dependencies:** NomadCore
+**Dependencies:** AestraCore
 
 **Key Components:**
 - Window management (create, resize, event handling)
@@ -96,24 +96,24 @@ graph TB
 
 **Public API:**
 ```cpp
-#include "NomadPlat/Window.h"
-#include "NomadPlat/Input.h"
-#include "NomadPlat/FileDialog.h"
+#include "AestraPlat/Window.h"
+#include "AestraPlat/Input.h"
+#include "AestraPlat/FileDialog.h"
 ```
 
-[View NomadPlat Details →](nomad-plat.md)
+[View AestraPlat Details →](nomad-plat.md)
 
 ---
 
 ### Layer 2: Framework Modules
 
-#### NomadUI (GPU-Accelerated Renderer)
+#### AestraUI (GPU-Accelerated Renderer)
 
 **Purpose:** Custom OpenGL-based UI framework with modern features.
 
 **Status:** ✅ Complete
 
-**Dependencies:** NomadCore, NomadPlat
+**Dependencies:** AestraCore, AestraPlat
 
 **Key Components:**
 - OpenGL 3.3+ renderer
@@ -132,23 +132,23 @@ graph TB
 
 **Public API:**
 ```cpp
-#include "NomadUI/Renderer.h"
-#include "NomadUI/Widget.h"
-#include "NomadUI/Layout.h"
-#include "NomadUI/Theme.h"
+#include "AestraUI/Renderer.h"
+#include "AestraUI/Widget.h"
+#include "AestraUI/Layout.h"
+#include "AestraUI/Theme.h"
 ```
 
-[View NomadUI Details →](nomad-ui.md)
+[View AestraUI Details →](nomad-ui.md)
 
 ---
 
-#### NomadAudio (Audio Engine)
+#### AestraAudio (Audio Engine)
 
 **Purpose:** Professional audio processing with ultra-low latency.
 
 **Status:** ✅ Complete
 
-**Dependencies:** NomadCore, NomadPlat
+**Dependencies:** AestraCore, AestraPlat
 
 **Key Components:**
 - WASAPI integration (Windows)
@@ -166,22 +166,22 @@ graph TB
 
 **Public API:**
 ```cpp
-#include "NomadAudio/AudioEngine.h"
-#include "NomadAudio/AudioDevice.h"
-#include "NomadAudio/AudioBuffer.h"
+#include "AestraAudio/AudioEngine.h"
+#include "AestraAudio/AudioDevice.h"
+#include "AestraAudio/AudioBuffer.h"
 ```
 
-[View NomadAudio Details →](nomad-audio.md)
+[View AestraAudio Details →](nomad-audio.md)
 
 ---
 
-#### NomadSDK (Plugin System)
+#### AestraSDK (Plugin System)
 
 **Purpose:** Plugin hosting and extension system.
 
 **Status:** 📅 Planned Q2 2025
 
-**Dependencies:** NomadCore, NomadPlat
+**Dependencies:** AestraCore, AestraPlat
 
 **Planned Features:**
 - VST3 plugin hosting
@@ -192,20 +192,20 @@ graph TB
 
 **Planned API:**
 ```cpp
-#include "NomadSDK/PluginHost.h"
-#include "NomadSDK/Effect.h"
-#include "NomadSDK/Automation.h"
+#include "AestraSDK/PluginHost.h"
+#include "AestraSDK/Effect.h"
+#include "AestraSDK/Automation.h"
 ```
 
 ---
 
-### Layer 3: NOMAD DAW (Application)
+### Layer 3: Aestra (Application)
 
 **Purpose:** Main digital audio workstation application.
 
 **Status:** 🚧 Active Development
 
-**Dependencies:** All framework modules (NomadUI, NomadAudio, NomadSDK)
+**Dependencies:** All framework modules (AestraUI, AestraAudio, AestraSDK)
 
 **Key Components:**
 - Timeline/Sequencer (Pattern-based)
@@ -235,9 +235,9 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant App as Application
-    participant UI as NomadUI
-    participant Audio as NomadAudio
-    participant Plat as NomadPlat
+    participant UI as AestraUI
+    participant Audio as AestraAudio
+    participant Plat as AestraPlat
     
     App->>UI: Create Window
     UI->>Plat: Platform Create Window
@@ -295,11 +295,11 @@ while (app.running) {
 
 | Module | Lines of Code | Header Files | Source Files | Dependencies |
 |--------|--------------|--------------|--------------|--------------|
-| NomadCore | ~5,000 | 25 | 20 | 0 |
-| NomadPlat | ~8,000 | 15 | 35 | 1 (Core) |
-| NomadUI | ~12,000 | 45 | 60 | 2 (Core, Plat) |
-| NomadAudio | ~10,000 | 30 | 50 | 2 (Core, Plat) |
-| NomadSDK | ~0 (planned) | - | - | 2 (Core, Plat) |
+| AestraCore | ~5,000 | 25 | 20 | 0 |
+| AestraPlat | ~8,000 | 15 | 35 | 1 (Core) |
+| AestraUI | ~12,000 | 45 | 60 | 2 (Core, Plat) |
+| AestraAudio | ~10,000 | 30 | 50 | 2 (Core, Plat) |
+| AestraSDK | ~0 (planned) | - | - | 2 (Core, Plat) |
 | Application | ~15,000 | 60 | 80 | 4 (All) |
 | **Total** | **~50,000** | **175** | **245** | - |
 
@@ -307,10 +307,10 @@ while (app.running) {
 
 | Module | Full Build | Incremental |
 |--------|-----------|-------------|
-| NomadCore | ~15s | ~3s |
-| NomadPlat | ~25s | ~5s |
-| NomadUI | ~45s | ~8s |
-| NomadAudio | ~35s | ~7s |
+| AestraCore | ~15s | ~3s |
+| AestraPlat | ~25s | ~5s |
+| AestraUI | ~45s | ~8s |
+| AestraAudio | ~35s | ~7s |
 | Application | ~60s | ~10s |
 | **Total** | **~3 min** | **~30s** |
 
@@ -340,7 +340,7 @@ while (app.running) {
 
 ### Adding New Modules
 
-When adding a new module to NOMAD:
+When adding a new module to Aestra:
 
 1. **Determine Layer**
    - Identify which layer the module belongs to
@@ -366,10 +366,10 @@ When adding a new module to NOMAD:
 
 Dive deeper into each module:
 
-- [NomadCore Details →](nomad-core.md)
-- [NomadPlat Details →](nomad-plat.md)
-- [NomadUI Details →](nomad-ui.md)
-- [NomadAudio Details →](nomad-audio.md)
+- [AestraCore Details →](nomad-core.md)
+- [AestraPlat Details →](nomad-plat.md)
+- [AestraUI Details →](nomad-ui.md)
+- [AestraAudio Details →](nomad-audio.md)
 
 Or return to:
 - [Architecture Overview →](overview.md)

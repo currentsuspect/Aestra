@@ -6,7 +6,7 @@
 #include "Models/ClipSource.h"
 #include "Models/PatternSource.h"
 
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraCore/include/AestraLog.h"
 
 #include <cassert>
 #include <cstdint>
@@ -91,12 +91,12 @@ void require(bool cond, const char* msg) {
 } // namespace
 
 int main() {
-    using namespace Nomad::Audio;
+    using namespace Aestra::Audio;
 
     const auto tempDir = makeTempDir();
     const auto wavPath = tempDir / "test.wav";
-    const auto projectPath = tempDir / "project.nmd";
-    const auto autosavePath = tempDir / "autosave.nmd";
+    const auto projectPath = tempDir / "project.aes";
+    const auto autosavePath = tempDir / "autosave.aes";
 
     std::cout << "[INFO] TempDir: " << tempDir.string() << "\n";
     std::cout << "[INFO] Writing WAV...\n";

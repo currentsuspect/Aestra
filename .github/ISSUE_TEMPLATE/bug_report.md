@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report an issue to help improve NOMAD
+about: Report an issue to help improve Aestra
 title: '[BUG] '
 labels: 'bug'
 assignees: ''
@@ -16,7 +16,7 @@ A clear description of what's broken.
 **Platform:**
 - OS: [e.g., Windows 11, macOS 14, Ubuntu 22.04]
 - Architecture: [e.g., x64, ARM64]
-- NOMAD Version: [e.g., v1.0.0]
+- Aestra Version: [e.g., v1.0.0]
 - Build Type: [Release/Debug]
 
 **Hardware:**
@@ -47,11 +47,11 @@ If applicable, add screenshots.
 ## Additional Context
 
 **Affected Layer:**
-- [ ] NomadCore
-- [ ] NomadPlat
-- [ ] NomadUI
-- [ ] NomadAudio
-- [ ] NomadSDK
+- [ ] AestraCore
+- [ ] AestraPlat
+- [ ] AestraUI
+- [ ] AestraAudio
+- [ ] AestraSDK
 - [ ] Build System
 - [ ] Other: ___________
 

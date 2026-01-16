@@ -1,15 +1,15 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "NomadAudio.h"
+#include "../AestraUI/Core/NUIComponent.h"
+#include "AestraAudio.h"
 #include "WaveformCache.h"
 #include <vector>
 #include <memory>
 #include <atomic>
 #include <mutex>
 
-namespace NomadUI {
+namespace AestraUI {
 
 /**
  * Audio visualization modes
@@ -29,7 +29,7 @@ enum class AudioVisualizationMode {
  * Audio Visualizer Component
  * 
  * Real-time audio visualization with multiple display modes.
- * Integrates with NomadAudio for live audio data.
+ * Integrates with AestraAudio for live audio data.
  */
 class AudioVisualizer : public NUIComponent {
 public:
@@ -47,7 +47,7 @@ public:
     void setPeakLevels(float leftPeak, float rightPeak, float leftRMS = -1.0f, float rightRMS = -1.0f);
     // Interleaved stereo waveform path (safe to call from main thread).
     void setInterleavedWaveform(const float* interleavedStereo, size_t numFrames);
-    void setAudioManager(Nomad::Audio::AudioDeviceManager* manager);
+    void setAudioManager(Aestra::Audio::AudioDeviceManager* manager);
     
     // Visualization settings
     void setMode(AudioVisualizationMode mode);
@@ -58,7 +58,7 @@ public:
     void setShowPeakHold(bool showPeakHold);
     
     // Arrangement waveform (scrolling transport display)
-    void setArrangementWaveform(std::shared_ptr<Nomad::Audio::WaveformCache> cache, double duration, double clipStartTime = 0.0, double sampleRate = 48000.0);
+    void setArrangementWaveform(std::shared_ptr<Aestra::Audio::WaveformCache> cache, double duration, double clipStartTime = 0.0, double sampleRate = 48000.0);
     void setTransportPosition(double seconds);
     
     // Properties
@@ -135,7 +135,7 @@ private:
     float rightClipIndicator_{0.0f};
     
     // Audio manager reference
-    Nomad::Audio::AudioDeviceManager* audioManager_;
+    Aestra::Audio::AudioDeviceManager* audioManager_;
     
     // Theme colors
     NUIColor backgroundColor_;
@@ -143,11 +143,11 @@ private:
     NUIColor textColor_;
     
     // Arrangement waveform (scrolling transport)
-    std::shared_ptr<Nomad::Audio::WaveformCache> arrangementWaveform_;
+    std::shared_ptr<Aestra::Audio::WaveformCache> arrangementWaveform_;
     std::atomic<double> transportPosition_{0.0};
     double projectDuration_{0.0};
     double clipStartTime_{0.0};      // When the clip starts on timeline (seconds)
     double waveformSampleRate_{48000.0}; // Sample rate of the waveform cache
 };
 
-} // namespace NomadUI
+} // namespace AestraUI

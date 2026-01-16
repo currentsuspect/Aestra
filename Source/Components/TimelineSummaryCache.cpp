@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace NomadUI {
+namespace AestraUI {
 
 namespace {
 
@@ -361,5 +361,5 @@ void TimelineSummaryCache::removeSpan_(TimelineSummary& s, const ClipIndex& idx)
     }
 }
 
-} // namespace NomadUI
+} // namespace AestraUI
 

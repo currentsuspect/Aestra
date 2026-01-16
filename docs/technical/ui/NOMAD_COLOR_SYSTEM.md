@@ -1,6 +1,6 @@
-# 🎨 NOMAD COLOR SYSTEM — v1.0
+# 🎨 Aestra COLOR SYSTEM — v1.0
 
-Complete color palette and theming guide for NomadUI.
+Complete color palette and theming guide for AestraUI.
 
 ## 🧱 1. Core Structure
 
@@ -26,11 +26,11 @@ NUIColor card = themeManager.getColor("surfaceRaised");
 
 ## 💡 2. Accent & Branding
 
-Core Nomad purple — use sparingly for highlights, active states, and selection glow.
+Core Aestra purple — use sparingly for highlights, active states, and selection glow.
 
 | Role | Color | Hex | Description |
 |------|-------|-----|-------------|
-| **Accent / Brand** | `primary` | `#8B7FFF` | Core Nomad purple |
+| **Accent / Brand** | `primary` | `#8B7FFF` | Core Aestra purple |
 | **Accent Hover / Light** | `primaryHover` | `#A79EFF` | Hover or glow variant |
 | **Accent Deep / Pressed** | `primaryPressed` | `#665AD9` | Pressed or focused button state |
 
@@ -149,7 +149,7 @@ NUIColor glow = themeManager.getColor("highlightGlow");
 
 ## 🌈 6. Functional Colors (Status Feedback)
 
-Make Nomad readable even under heavy interface layers like meters, automation graphs, and waveform views.
+Make Aestra readable even under heavy interface layers like meters, automation graphs, and waveform views.
 
 | State | Color | Hex | Description |
 |-------|-------|-----|-------------|

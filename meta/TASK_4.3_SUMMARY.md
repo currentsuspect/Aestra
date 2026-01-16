@@ -2,7 +2,7 @@
 
 ## Overview
 
-Implemented a comprehensive audio callback system with lock-free UI→Audio communication and buffer management for NomadAudio.
+Implemented a comprehensive audio callback system with lock-free UI→Audio communication and buffer management for AestraAudio.
 
 ## Implementation Details
 
@@ -21,7 +21,7 @@ Implemented a comprehensive audio callback system with lock-free UI→Audio comm
 ### 2. Lock-Free UI→Audio Communication
 
 **Implementation:**
-- Uses `LockFreeRingBuffer` from NomadCore (single producer, single consumer)
+- Uses `LockFreeRingBuffer` from AestraCore (single producer, single consumer)
 - Command queue size: 256 messages
 - Zero-allocation command passing
 - Non-blocking command submission from UI thread
@@ -68,7 +68,7 @@ Implemented a comprehensive audio callback system with lock-free UI→Audio comm
 
 ## Testing
 
-### Test Application: `NomadAudioCallbackTest`
+### Test Application: `AestraAudioCallbackTest`
 
 **Test Coverage:**
 
@@ -202,18 +202,18 @@ bool muted = generator.isMuted();
 ## Files Modified
 
 ### New Files
-- `NomadAudio/include/AudioProcessor.h`
-- `NomadAudio/src/AudioProcessor.cpp`
-- `NomadAudio/test/AudioCallbackTest.cpp`
-- `NomadAudio/TASK_4.3_SUMMARY.md`
+- `AestraAudio/include/AudioProcessor.h`
+- `AestraAudio/src/AudioProcessor.cpp`
+- `AestraAudio/test/AudioCallbackTest.cpp`
+- `AestraAudio/TASK_4.3_SUMMARY.md`
 
 ### Modified Files
-- `NomadAudio/CMakeLists.txt` - Added AudioProcessor sources and test
-- `NomadAudio/include/NomadAudio.h` - Added AudioProcessor.h include
+- `AestraAudio/CMakeLists.txt` - Added AudioProcessor sources and test
+- `AestraAudio/include/AestraAudio.h` - Added AudioProcessor.h include
 
 ## Dependencies
 
-- **NomadCore**: Uses `LockFreeRingBuffer` for command queue
+- **AestraCore**: Uses `LockFreeRingBuffer` for command queue
 - **RtAudio**: Audio backend (already integrated)
 - **Standard Library**: `<atomic>`, `<cmath>`, `<algorithm>`
 
@@ -221,10 +221,10 @@ bool muted = generator.isMuted();
 
 ```bash
 # Build the callback test
-cmake --build build --config Release --target NomadAudioCallbackTest
+cmake --build build --config Release --target AestraAudioCallbackTest
 
 # Run the test
-./build/NomadAudio/Release/NomadAudioCallbackTest.exe
+./build/AestraAudio/Release/AestraAudioCallbackTest.exe
 ```
 
 ## Next Steps

@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Propose a new feature for NOMAD
+about: Propose a new feature for Aestra
 title: '[FEATURE] '
 labels: 'enhancement'
 assignees: ''
@@ -20,11 +20,11 @@ Describe your vision for how this should work.
 ## Design Considerations
 
 **Affected Layer:**
-- [ ] NomadCore
-- [ ] NomadPlat
-- [ ] NomadUI
-- [ ] NomadAudio
-- [ ] NomadSDK
+- [ ] AestraCore
+- [ ] AestraPlat
+- [ ] AestraUI
+- [ ] AestraAudio
+- [ ] AestraSDK
 - [ ] Other: ___________
 
 **User Experience:**
@@ -42,7 +42,7 @@ If applicable, add sketches or mockups.
 ## Implementation Notes
 If you have technical ideas, share them here.
 
-## Alignment with NOMAD Philosophy
+## Alignment with Aestra Philosophy
 
 Does this feature align with:
 - [ ] Intentional Minimalism

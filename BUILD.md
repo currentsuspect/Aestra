@@ -1,4 +1,4 @@
-# 🔨 Building Nomad DAW
+# 🔨 Building Aestra
 
 For complete build instructions, see **[docs/technical/ui/BUILD_AND_TEST.md](docs/technical/ui/BUILD_AND_TEST.md)**
 
@@ -8,8 +8,8 @@ For complete build instructions, see **[docs/technical/ui/BUILD_AND_TEST.md](doc
 
 ```powershell
 # Clone repository
-git clone https://github.com/currentsuspect/NOMAD.git
-cd NOMAD
+git clone https://github.com/currentsuspect/Aestra.git
+cd Aestra
 
 # Install Git hooks
 pwsh -File scripts/install-hooks.ps1

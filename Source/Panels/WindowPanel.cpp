@@ -1,60 +1,60 @@
 // © 2025 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
 #include "WindowPanel.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
-#include "../NomadCore/include/NomadLog.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraCore/include/AestraLog.h"
 
 #include <algorithm>
 #include <cmath>
 
-using namespace Nomad::Audio;
+using namespace Aestra::Audio;
 
 WindowPanel::WindowPanel(const std::string& title)
     : m_title(title)
 {
     // Create close button (X)
-    m_closeButton = std::make_shared<NomadUI::NUIButton>();
+    m_closeButton = std::make_shared<AestraUI::NUIButton>();
     m_closeButton->setText("X");
-    m_closeButton->setStyle(NomadUI::NUIButton::Style::Text);
+    m_closeButton->setStyle(AestraUI::NUIButton::Style::Text);
     // NOTE: NUIButton::Style::Icon intentionally does not draw text.
     // These titlebar controls use text + transparent background.
-    m_closeButton->setBackgroundColor(NomadUI::NUIColor::transparent());
-    m_closeButton->setHoverColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f)); // Increased from 0.08
-    m_closeButton->setPressedColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.14f));
-    m_closeButton->setTextColor(NomadUI::NUIColor(0.92f, 0.92f, 0.96f, 0.9f));
+    m_closeButton->setBackgroundColor(AestraUI::NUIColor::transparent());
+    m_closeButton->setHoverColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f)); // Increased from 0.08
+    m_closeButton->setPressedColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.14f));
+    m_closeButton->setTextColor(AestraUI::NUIColor(0.92f, 0.92f, 0.96f, 0.9f));
     m_closeButton->setOnClick([this]() {
         onCloseClicked();
     });
     addChild(m_closeButton);
     
     // Create maximize button ([] when normal, [ ] when maximized)
-    m_maximizeButton = std::make_shared<NomadUI::NUIButton>();
+    m_maximizeButton = std::make_shared<AestraUI::NUIButton>();
     m_maximizeButton->setText("[]");
-    m_maximizeButton->setStyle(NomadUI::NUIButton::Style::Text);
-    m_maximizeButton->setBackgroundColor(NomadUI::NUIColor::transparent());
-    m_maximizeButton->setHoverColor(NomadUI::NUIColor::white().withAlpha(0.5f));
-    m_maximizeButton->setPressedColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.14f));
-    m_maximizeButton->setTextColor(NomadUI::NUIColor(0.92f, 0.92f, 0.96f, 0.9f));
+    m_maximizeButton->setStyle(AestraUI::NUIButton::Style::Text);
+    m_maximizeButton->setBackgroundColor(AestraUI::NUIColor::transparent());
+    m_maximizeButton->setHoverColor(AestraUI::NUIColor::white().withAlpha(0.5f));
+    m_maximizeButton->setPressedColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.14f));
+    m_maximizeButton->setTextColor(AestraUI::NUIColor(0.92f, 0.92f, 0.96f, 0.9f));
     m_maximizeButton->setOnClick([this]() {
         onMaximizeClicked();
     });
     addChild(m_maximizeButton);
     
     // Create minimize button (_)
-    m_minimizeButton = std::make_shared<NomadUI::NUIButton>();
+    m_minimizeButton = std::make_shared<AestraUI::NUIButton>();
     m_minimizeButton->setText("_");
-    m_minimizeButton->setStyle(NomadUI::NUIButton::Style::Text);
-    m_minimizeButton->setBackgroundColor(NomadUI::NUIColor::transparent());
-    m_minimizeButton->setHoverColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f)); // Increased
-    m_minimizeButton->setPressedColor(NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.14f));
-    m_minimizeButton->setTextColor(NomadUI::NUIColor(0.92f, 0.92f, 0.96f, 0.9f));
+    m_minimizeButton->setStyle(AestraUI::NUIButton::Style::Text);
+    m_minimizeButton->setBackgroundColor(AestraUI::NUIColor::transparent());
+    m_minimizeButton->setHoverColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f)); // Increased
+    m_minimizeButton->setPressedColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.14f));
+    m_minimizeButton->setTextColor(AestraUI::NUIColor(0.92f, 0.92f, 0.96f, 0.9f));
     m_minimizeButton->setOnClick([this]() {
         onMinimizeClicked();
     });
     addChild(m_minimizeButton);
 }
 
-void WindowPanel::setContent(std::shared_ptr<NomadUI::NUIComponent> content) {
+void WindowPanel::setContent(std::shared_ptr<AestraUI::NUIComponent> content) {
     // Remove old content if exists
     if (m_content) {
         removeChild(m_content);
@@ -141,12 +141,12 @@ void WindowPanel::setTitle(const std::string& title) {
     m_title = title;
 }
 
-void WindowPanel::onRender(NomadUI::NUIRenderer& renderer) {
-    auto& theme = NomadUI::NUIThemeManager::getInstance();
+void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
     auto bounds = getBounds();
     
     // Draw title bar
-    NomadUI::NUIRect titleBarRect(bounds.x, bounds.y, bounds.width, m_titleBarHeight);
+    AestraUI::NUIRect titleBarRect(bounds.x, bounds.y, bounds.width, m_titleBarHeight);
     m_titleBarBounds = titleBarRect;
     
     // GLASS DESIGN: Unified semi-transparent background + border
@@ -168,8 +168,8 @@ void WindowPanel::onRender(NomadUI::NUIRenderer& renderer) {
         
         // Separator for title bar (subtle)
         renderer.drawLine(
-            NomadUI::NUIPoint(bounds.x + 4, bounds.y + m_titleBarHeight),
-            NomadUI::NUIPoint(bounds.x + bounds.width - 4, bounds.y + m_titleBarHeight),
+            AestraUI::NUIPoint(bounds.x + 4, bounds.y + m_titleBarHeight),
+            AestraUI::NUIPoint(bounds.x + bounds.width - 4, bounds.y + m_titleBarHeight),
             1.0f, 
             borderColor.withAlpha(0.5f)
         );
@@ -187,7 +187,7 @@ void WindowPanel::onRender(NomadUI::NUIRenderer& renderer) {
     auto titleSize = renderer.measureText(m_title, fontSize);
     float textX = bounds.x + 8.0f;
     float textY = bounds.y + (m_titleBarHeight - titleSize.height) * 0.5f;
-    renderer.drawText(m_title, NomadUI::NUIPoint(textX, textY), fontSize, textColor);
+    renderer.drawText(m_title, AestraUI::NUIPoint(textX, textY), fontSize, textColor);
     
     // Render children (content + buttons)
     renderChildren(renderer);
@@ -197,7 +197,7 @@ void WindowPanel::onResize(int width, int height) {
     layoutContent();
 }
 
-bool WindowPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
+bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!isVisible() || !isEnabled()) return false;
 
     // DEBUG: Trace mouse events for Piano Roll
@@ -210,7 +210,7 @@ bool WindowPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
 
     // Title-bar drag handling (panels can float independently of the playlist layout).
     if (m_draggingTitleBar) {
-        if (event.released && event.button == NomadUI::NUIMouseButton::Left) {
+        if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
             m_draggingTitleBar = false;
 
             if (m_onDragEnd) {
@@ -220,7 +220,7 @@ bool WindowPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
 
         // Dragging (mouse move events set button = None)
-        if (event.button == NomadUI::NUIMouseButton::None) {
+        if (event.button == AestraUI::NUIMouseButton::None) {
             if (m_onDragMove) {
                 m_onDragMove(event.position);
             }
@@ -228,7 +228,7 @@ bool WindowPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
     }
 
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         // Double-click the title bar to toggle maximize (excluding buttons).
         bool insideTitle = m_titleBarBounds.contains(event.position);
         if (debugTrace) {
@@ -280,7 +280,7 @@ bool WindowPanel::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                       << " Contains: " << (contains ? "YES" : "NO") << std::endl;
         }
     }
-    const bool handledByChildren = NomadUI::NUIComponent::onMouseEvent(event);
+    const bool handledByChildren = AestraUI::NUIComponent::onMouseEvent(event);
     if (debugTrace && event.pressed) std::cout << "  Handled by Children: " << (handledByChildren ? "YES" : "NO") << std::endl;
     if (handledByChildren) return true;
 
