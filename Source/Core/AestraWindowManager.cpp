@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraWindowManager.h"
 #include "AestraRootComponent.h"
 #include "AestraContent.h"
@@ -145,7 +145,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
 
     // Initialize Aestra theme
     auto& themeManager = NUIThemeManager::getInstance();
-    themeManager.setActiveTheme("nomad-dark");
+    themeManager.setActiveTheme("Aestra-dark");
     Log::info("Theme system initialized");
 
     // Create root component

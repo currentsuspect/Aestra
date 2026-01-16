@@ -1,4 +1,4 @@
-﻿// Ã‚© 2025 Nomad Studios Ã¢â‚¬â€ All Rights Reserved. Licensed for personal & educational use only.
+﻿// Ã‚© 2025 Aestra Studios Ã¢â‚¬â€ All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "NUIComponent.h"

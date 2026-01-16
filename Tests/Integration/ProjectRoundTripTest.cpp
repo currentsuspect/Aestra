@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "../../Source/Core/ProjectSerializer.h"
 
@@ -18,7 +18,7 @@
 namespace {
 
 std::filesystem::path makeTempDir() {
-    auto base = std::filesystem::temp_directory_path() / "nomad_tests";
+    auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
     std::filesystem::create_directories(base);
 
     // Ensure uniqueness without relying on high-resolution clocks.

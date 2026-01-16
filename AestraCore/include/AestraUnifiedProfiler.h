@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file AestraUnifiedProfiler.h
  * @brief Unified performance profiler for AESTRA - Consolidates multiple profiler systems
@@ -348,10 +348,10 @@ private:
 
 // Macro for easy zone timing (enhanced from original)
 #ifdef AESTRA_ENABLE_PROFILING
-    #define AESTRA_ZONE(name) Aestra::ScopedTimer __nomad_zone_##__LINE__(name)
+    #define AESTRA_ZONE(name) Aestra::ScopedTimer __Aestra_zone_##__LINE__(name)
     #define AESTRA_ZONE_THREAD(name, threadName) \
         Aestra::UnifiedProfiler::getInstance().beginZone(name, 0, threadName); \
-        Aestra::ScopedTimer __nomad_zone_thread_##__LINE__(name)
+        Aestra::ScopedTimer __Aestra_zone_thread_##__LINE__(name)
 #else
     #define AESTRA_ZONE(name) ((void)0)
     #define AESTRA_ZONE_THREAD(name, threadName) ((void)0)

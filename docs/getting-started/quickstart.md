@@ -142,7 +142,7 @@ Adjust the interface to your liking:
 3. Enter a project name
 4. Click **Save**
 
-Aestra project files use the `.nomad` extension.
+Aestra project files use the `.Aestra` extension.
 
 !!! tip "Save Often"
     Use `Ctrl+S` frequently to save your work.

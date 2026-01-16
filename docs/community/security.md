@@ -1,5 +1,5 @@
 # Security Policy
-**Nomad Studios** – *Last Updated: 2025-10-30*
+**Aestra Studios** – *Last Updated: 2025-10-30*
 
 Thank you for helping keep **Aestra DAW** safe and secure.
 

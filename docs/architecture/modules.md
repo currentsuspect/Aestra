@@ -68,7 +68,7 @@ graph TB
 #include "AestraCore/Logging/Logger.h"
 ```
 
-[View AestraCore Details →](nomad-core.md)
+[View AestraCore Details →](Aestra-core.md)
 
 ---
 
@@ -101,7 +101,7 @@ graph TB
 #include "AestraPlat/FileDialog.h"
 ```
 
-[View AestraPlat Details →](nomad-plat.md)
+[View AestraPlat Details →](Aestra-plat.md)
 
 ---
 
@@ -138,7 +138,7 @@ graph TB
 #include "AestraUI/Theme.h"
 ```
 
-[View AestraUI Details →](nomad-ui.md)
+[View AestraUI Details →](Aestra-ui.md)
 
 ---
 
@@ -171,7 +171,7 @@ graph TB
 #include "AestraAudio/AudioBuffer.h"
 ```
 
-[View AestraAudio Details →](nomad-audio.md)
+[View AestraAudio Details →](Aestra-audio.md)
 
 ---
 
@@ -366,10 +366,10 @@ When adding a new module to Aestra:
 
 Dive deeper into each module:
 
-- [AestraCore Details →](nomad-core.md)
-- [AestraPlat Details →](nomad-plat.md)
-- [AestraUI Details →](nomad-ui.md)
-- [AestraAudio Details →](nomad-audio.md)
+- [AestraCore Details →](Aestra-core.md)
+- [AestraPlat Details →](Aestra-plat.md)
+- [AestraUI Details →](Aestra-ui.md)
+- [AestraAudio Details →](Aestra-audio.md)
 
 Or return to:
 - [Architecture Overview →](overview.md)

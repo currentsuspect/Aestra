@@ -194,10 +194,10 @@ Here's a glimpse of Aestra's clean, modern C++ architecture:
 
 int main() {
     // Create audio engine with WASAPI backend
-    nomad::AudioEngine engine;
+    Aestra::AudioEngine engine;
     
     // Configure for ultra-low latency
-    nomad::AudioConfig config;
+    Aestra::AudioConfig config;
     config.sampleRate = 48000;
     config.bufferSize = 512;  // ~10ms latency
     config.exclusiveMode = true;
@@ -219,11 +219,11 @@ int main() {
 ## 🧭 Our Philosophy
 
 <div class="philosophy-quote" markdown="1">
-At Nomad Studios, we believe software should feel like art — light, native, and human.
+At Aestra Studios, we believe software should feel like art — light, native, and human.
 
 Every line of code in Aestra is written with intention. No shortcuts, no legacy cruft, just clean, modern C++ designed for the future of music production.
 
-<footer>— Dylan Makori, Founder of Nomad Studios</footer>
+<footer>— Dylan Makori, Founder of Aestra Studios</footer>
 </div>
 
 **Core Values:**
@@ -300,9 +300,9 @@ Aestra is built by musicians, for musicians. Your feedback, contributions, and s
 
 ## 📜 License
 
-Aestra is licensed under the **Nomad Studios Source-Available License (NSSAL) v1.0**.
+Aestra is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.0**.
 
-The source code is publicly visible for transparency and education, but is **NOT open-source**. All rights reserved by Dylan Makori / Nomad Studios.
+The source code is publicly visible for transparency and education, but is **NOT open-source**. All rights reserved by Dylan Makori / Aestra Studios.
 
 [Learn More About Licensing →](about/licensing.md)
 
@@ -312,6 +312,6 @@ The source code is publicly visible for transparency and education, but is **NOT
 
 **Built by musicians, for musicians. Crafted with intention.** 🎵
 
-*Copyright © 2025 Dylan Makori / Nomad Studios. All rights reserved.*
+*Copyright © 2025 Dylan Makori / Aestra Studios. All rights reserved.*
 
 </div>

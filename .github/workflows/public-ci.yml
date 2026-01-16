@@ -19,7 +19,7 @@ jobs:
       - name: Ensure no private folders
         shell: pwsh
         run: |
-          $blocked = @('nomad-premium','nomad-build','assets_premium','assets_private','models','weights')
+          $blocked = @('Aestra-premium','Aestra-build','assets_premium','assets_private','models','weights')
           foreach ($b in $blocked) {
             if (Test-Path $b) { Write-Error "Private folder present in public CI: $b"; exit 1 }
           }

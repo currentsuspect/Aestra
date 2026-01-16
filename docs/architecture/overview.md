@@ -44,7 +44,7 @@ Aestra DAW is built with a clean, modular architecture that separates concerns i
 
 **Purpose**: Foundation layer providing platform abstraction, utilities, and common types.
 
-**Location**: `nomad-core/`, `AestraCore/`
+**Location**: `Aestra-core/`, `AestraCore/`
 
 **Key Components:**
 - **Platform Abstraction** - OS-specific functionality (file I/O, threading, memory)
@@ -55,7 +55,7 @@ Aestra DAW is built with a clean, modular architecture that separates concerns i
 
 **Public API:**
 ```cpp
-namespace nomad {
+namespace Aestra {
     namespace core {
         // Platform abstraction
         class FileSystem;
@@ -146,7 +146,7 @@ AestraAudio/
 
 **Purpose**: AI-powered music generation and assistance.
 
-**Location**: `nomad-premium/muse/` (private)
+**Location**: `Aestra-premium/muse/` (private)
 
 **Planned Components:**
 - **Model Loading** - AI model management and inference
@@ -156,7 +156,7 @@ AestraAudio/
 
 **Integration Points:**
 ```cpp
-namespace nomad {
+namespace Aestra {
     namespace muse {
         // Public API for Muse integration
         class MuseEngine;
@@ -391,7 +391,7 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 
 ### Public vs Private Code
 
-**Public (`nomad-core/`):**
+**Public (`Aestra-core/`):**
 - Core audio engine
 - UI framework
 - Platform abstractions
@@ -422,7 +422,7 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 └──────────────┘  └──────────────┘  └──────────┘
         ↓                ↓              ↓
 ┌──────────────────────────────────────────────┐
-│              AestraCore / nomad-core          │
+│              AestraCore / Aestra-core          │
 └──────────────────────────────────────────────┘
         ↓                ↓              ↓
 ┌──────────────┐  ┌──────────────┐  ┌──────────┐

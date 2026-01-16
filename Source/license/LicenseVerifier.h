@@ -12,10 +12,10 @@ struct UserProfile {
 	bool verified = false;
 };
 
-// Loads profile from %USERPROFILE%/.nomad/user_info.json; returns default Core profile if missing.
+// Loads profile from %USERPROFILE%/.Aestra/user_info.json; returns default Core profile if missing.
 UserProfile loadProfile();
 
-// Saves profile to %USERPROFILE%/.nomad/user_info.json.
+// Saves profile to %USERPROFILE%/.Aestra/user_info.json.
 bool saveProfile(const UserProfile& profile);
 
 // Offline verification using baked-in public key (stub in public repo).

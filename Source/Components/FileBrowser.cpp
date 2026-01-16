@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "FileBrowser.h"
 #include "NUIContextMenu.h"
 #include "NUIThemeSystem.h"
@@ -490,7 +490,7 @@ const std::unordered_set<std::string> FileFilter::audioExtensions = {
 };
 
 const std::unordered_set<std::string> FileFilter::projectExtensions = {
-    ".madproj", ".nomad"
+    ".madproj", ".Aestra"
 };
 
 bool FileFilter::isAllowed(const std::string& path) {
@@ -1990,7 +1990,7 @@ FileType FileBrowser::getFileTypeFromExtension(const std::string& extension) con
     if (extension == ".mp3") return FileType::Mp3File;
     if (extension == ".flac") return FileType::FlacFile;
     if (extension == ".aiff" || extension == ".aif") return FileType::AudioFile;
-    if (extension == ".nomad" || extension == ".aes" || extension == ".nomadproj") return FileType::ProjectFile;
+    if (extension == ".Aestra" || extension == ".aes" || extension == ".Aestraproj") return FileType::ProjectFile;
     if (extension == ".mid" || extension == ".midi") return FileType::MusicFile;
     
     return FileType::Unknown;

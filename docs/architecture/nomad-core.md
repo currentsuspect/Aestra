@@ -36,8 +36,8 @@ Provides mathematical operations for audio and graphics processing.
 ```cpp
 #include "AestraCore/Math/Vector.h"
 
-nomad::Vec2 pos(100.0f, 200.0f);
-nomad::Vec2 vel(10.0f, -5.0f);
+Aestra::Vec2 pos(100.0f, 200.0f);
+Aestra::Vec2 vel(10.0f, -5.0f);
 pos = pos + vel * deltaTime;
 ```
 
@@ -55,7 +55,7 @@ Lock-free data structures and threading primitives for real-time audio.
 ```cpp
 #include "AestraCore/Threading/LockFreeQueue.h"
 
-nomad::LockFreeQueue<AudioEvent> queue(1024);
+Aestra::LockFreeQueue<AudioEvent> queue(1024);
 
 // Producer (UI thread)
 queue.push(event);
@@ -81,8 +81,8 @@ Cross-platform file operations with UTF-8 support.
 ```cpp
 #include "AestraCore/IO/File.h"
 
-std::string content = nomad::File::readText("project.nomad");
-nomad::File::writeText("backup.nomad", content);
+std::string content = Aestra::File::readText("project.Aestra");
+Aestra::File::writeText("backup.Aestra", content);
 ```
 
 ### Logging System
@@ -118,7 +118,7 @@ Custom allocators and memory utilities for performance-critical code.
 ```cpp
 #include "AestraCore/Memory/Arena.h"
 
-nomad::Arena arena(1024 * 1024);  // 1 MB
+Aestra::Arena arena(1024 * 1024);  // 1 MB
 void* ptr = arena.allocate(256);
 // Use memory...
 arena.reset();  // Free all at once
@@ -138,7 +138,7 @@ UTF-8 string handling and formatting.
 ```cpp
 #include "AestraCore/String/Format.h"
 
-std::string msg = nomad::format("Latency: {:.1f}ms", latency);
+std::string msg = Aestra::format("Latency: {:.1f}ms", latency);
 ```
 
 ## 🏗️ Architecture
@@ -241,7 +241,7 @@ struct AudioEvent {
 };
 
 // Lock-free queue for UI → Audio communication
-nomad::LockFreeQueue<AudioEvent> eventQueue(256);
+Aestra::LockFreeQueue<AudioEvent> eventQueue(256);
 
 // UI thread: send event
 void onParameterChange(float newValue) {
@@ -259,7 +259,7 @@ void audioCallback(float* buffer, int samples) {
     AudioEvent event;
     while (eventQueue.pop(event)) {
         // Smooth parameter change
-        float smoothed = nomad::lerp(currentValue, event.value, 0.1f);
+        float smoothed = Aestra::lerp(currentValue, event.value, 0.1f);
         currentValue = smoothed;
     }
     
@@ -371,4 +371,4 @@ public:
 
 ---
 
-**Next:** [AestraPlat Architecture →](nomad-plat.md)
+**Next:** [AestraPlat Architecture →](Aestra-plat.md)

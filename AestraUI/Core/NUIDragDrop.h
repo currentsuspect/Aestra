@@ -1,4 +1,4 @@
-// Copyright 2025 Nomad Studios - All Rights Reserved. Licensed for personal & educational use only.
+// Copyright 2025 Aestra Studios - All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "NUITypes.h"

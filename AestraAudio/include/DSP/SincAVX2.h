@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved.
+// © 2025 Aestra Studios — All Rights Reserved.
 // This file is compiled with /arch:AVX2 to enable SIMD intrinsics.
 // It is only called when CPUDetection confirms AVX2 support.
 #pragma once

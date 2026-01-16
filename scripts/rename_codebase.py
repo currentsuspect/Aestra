@@ -46,9 +46,9 @@ def replace_in_file(path):
 
     # 3. Macro replacements
     # Aestra_API -> AESTRA_API, etc.
-    # Exclude Aestra_STUDIOS if it exists? "Nomad Studios" string is safe. 
+    # Exclude Aestra_STUDIOS if it exists? "Aestra Studios" string is safe. 
     # But if there is a define Aestra_STUDIOS, we might want to keep it or rename it?
-    # User said: "No 'Nomad Studios'". So if Aestra_STUDIOS is used for company name logic, keep it?
+    # User said: "No 'Aestra Studios'". So if Aestra_STUDIOS is used for company name logic, keep it?
     # Or maybe Aestra_STUDIOS isn't a macro.
     # Let's generally replace Aestra_ with AESTRA_
     content = re.sub(r'\bAestra_', 'AESTRA_', content)

@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved.
+// © 2025 Aestra Studios — All Rights Reserved.
 // This file is compiled with SSE4.1 intrinsics for older x86 CPUs.
 // It is only called when CPUDetection confirms SSE4.1 support (and lacks AVX2).
 #pragma once

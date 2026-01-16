@@ -8,9 +8,9 @@
 #include "../../AestraCore/include/AestraLog.h"
 
 // AestraUI includes
-#include "../../AestraUI/Core/NUILabel.h"
-#include "../../AestraUI/Widgets/NUIButton.h"
-#include "../../AestraUI/Core/NUIIcon.h"
+#include "../../AestraUI/Base/NUILabel.h"
+#include "../../AestraUI/Base/NUIButton.h"
+#include "../../AestraUI/Base/NUIIcon.h"
 
 using namespace AestraUI;
 
@@ -22,8 +22,8 @@ static std::string g_cardSvgPath;
 
 static std::string getAssetsCardsDir() {
 	// Use mock assets location in public builds
-	// cards live in nomad-core/assets_mock/cards by default
-	return std::string("nomad-core/assets_mock/cards");
+	// cards live in Aestra-core/assets_mock/cards by default
+	return std::string("Aestra-core/assets_mock/cards");
 }
 
 static std::string svgForTier(const std::string& tier) {

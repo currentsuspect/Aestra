@@ -278,7 +278,7 @@ We value all contributors! Contributors are recognized:
 
 ## 💡 Scope of Contributions
 
-### Public Contributions (nomad-core)
+### Public Contributions (Aestra-core)
 
 ✅ **You can contribute to:**
 - Core audio engine improvements
@@ -298,7 +298,7 @@ We value all contributors! Contributors are recognized:
 - Commercial licensing system
 - Code signing and distribution
 
-**Note**: Public contributors work on `nomad-core/` with mock assets. Full builds with premium features are only available internally.
+**Note**: Public contributors work on `Aestra-core/` with mock assets. Full builds with premium features are only available internally.
 
 ## 🛠️ Development Tools
 

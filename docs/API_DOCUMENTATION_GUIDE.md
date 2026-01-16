@@ -435,7 +435,7 @@ python -m http.server 8000
 Link API docs from MkDocs markdown files:
 
 ```markdown
-See the [AudioDeviceManager API](../../api-reference/html/class_nomad_1_1_audio_1_1_audio_device_manager.html) for details.
+See the [AudioDeviceManager API](../../api-reference/html/class_Aestra_1_1_audio_1_1_audio_device_manager.html) for details.
 ```
 
 Or embed as iframe:

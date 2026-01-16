@@ -492,4 +492,4 @@ You now have:
 ---
 
 *Generated on: November 2, 2025*  
-*Aestra © 2025 Nomad Studios*
+*Aestra © 2025 Aestra Studios*

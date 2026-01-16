@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved.
+// © 2025 Aestra Studios — All Rights Reserved.
 // Fast math approximations for real-time audio.
 #pragma once
 

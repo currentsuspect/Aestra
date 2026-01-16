@@ -1,4 +1,4 @@
-# Nomad Studios Manifesto – 2025-10-30
+# Aestra Studios Manifesto – 2025-10-30
 
 Aestra exists to make professional music tools accessible to everyone.
 We believe software should feel like art — light, native, and human.
@@ -17,7 +17,7 @@ We envision a world where music creation is barrier-free, where the only limit i
 ## Join Us
 
 - **Discord**: [Join our community](https://discord.gg/your-invite-link)
-- **GitHub**: [Contribute to the project](https://github.com/yourusername/nomad-daw)
-- **Support Us**: [Patreon](https://patreon.com/nomad-daw) | [GitHub Sponsors](https://github.com/sponsors/yourusername) | [Ko-fi](https://ko-fi.com/nomaddaw)
+- **GitHub**: [Contribute to the project](https://github.com/yourusername/Aestra-daw)
+- **Support Us**: [Patreon](https://patreon.com/Aestra-daw) | [GitHub Sponsors](https://github.com/sponsors/yourusername) | [Ko-fi](https://ko-fi.com/Aestradaw)
 
 *Last updated: October 30, 2025*
