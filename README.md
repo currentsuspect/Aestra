@@ -361,7 +361,6 @@ See **[docs/technical/roadmap.md](docs/technical/roadmap.md)** for the full exec
 
 ## 📜 Repository Structure
 
-```FILESYSTEM
 NOMAD/
 ├── docs/               # Comprehensive documentation portal
 ├── NomadCore/          # Core utilities (math, threading, file I/O, logging)
@@ -375,14 +374,7 @@ NOMAD/
 │   ├── CHANGELOGS/     # Historical changelogs
 │   └── BUG_REPORTS/    # Bug fix documentation
 ├── cmake/              # CMake modules
-└── LICENSE             # NSSAL v1.0 license
-```
-
----
-
-## 🔒 Security
-
-We take security seriously at Nomad Studios:
+└── LICENSE             # NSSAL v1.1 license
 
 - **Gitleaks Scanning** — Automated secret detection on all commits
 - **Pre-commit Hooks** — Prevents accidental secret commits
