@@ -1,4 +1,4 @@
-// ¶¸ 2025 Nomad Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
+// ¶¸ 2025 Aestra Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "../AestraUI/Core/NUITypes.h"

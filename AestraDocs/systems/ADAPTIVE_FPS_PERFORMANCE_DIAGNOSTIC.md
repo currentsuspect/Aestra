@@ -191,7 +191,7 @@ The Exit Code: 1 suggests the application crashed. Check:
 
 ```powershell
 # Run with error output
-.\build\bin\Debug\Aestra_DAW.exe 2>&1 | Tee-Object -FilePath "nomad_error.log"
+.\build\bin\Debug\Aestra_DAW.exe 2>&1 | Tee-Object -FilePath "Aestra_error.log"
 ```
 
 Look for:

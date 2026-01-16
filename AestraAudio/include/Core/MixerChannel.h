@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "MixerBus.h"
@@ -96,7 +96,7 @@ struct AudioQualitySettings {
     OversamplingMode oversampling{OversamplingMode::None};
     bool removeDCOffset{true};
     bool enableSoftClipping{false};
-    AestraMode nomadMode{AestraMode::Off};
+    AestraMode AestraMode{AestraMode::Off};
 
     void applyPreset(QualityPreset p) {
         preset = p;

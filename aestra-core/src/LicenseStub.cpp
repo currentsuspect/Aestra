@@ -1,6 +1,6 @@
 #include "Aestra/License.h"
 
-namespace nomad {
+namespace Aestra {
 	bool verifyLicense(const std::string&) { return false; }
 	std::string licenseStatus() { return "Aestra Core (unlicensed for premium)"; }
 }

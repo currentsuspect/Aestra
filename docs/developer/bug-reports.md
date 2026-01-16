@@ -177,8 +177,8 @@ gcc --version  # For GCC
 
 ### Locating Log Files
 Aestra logs are typically saved to:
-- **Windows:** `%APPDATA%\Aestra\logs\nomad.log`
-- **Linux:** `~/.nomad/logs/nomad.log`
+- **Windows:** `%APPDATA%\Aestra\logs\Aestra.log`
+- **Linux:** `~/.Aestra/logs/Aestra.log`
 
 ### Including Logs in Reports
 1. Reproduce the bug

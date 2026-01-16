@@ -4,7 +4,7 @@ Follow these steps locally — DO NOT attempt to force-push to origin until you 
 
 1) Create a mirror backup of the repository
 
-   git clone --mirror "$(pwd)" ../nomad-backup.git
+   git clone --mirror "$(pwd)" ../Aestra-backup.git
 
 2) Identify files/paths to remove from history
 
@@ -28,7 +28,7 @@ Follow these steps locally — DO NOT attempt to force-push to origin until you 
 5) When satisfied: force-push cleaned branches to the new public remote
 
    # push main (replace origin-public with your target remote)
-   git remote add public git@github.com:YourOrg/nomad-core.git
+   git remote add public git@github.com:YourOrg/Aestra-core.git
    git push public --force --all
    git push public --force --tags
 
@@ -36,4 +36,4 @@ Follow these steps locally — DO NOT attempt to force-push to origin until you 
 
 Notes & alternatives:
 - If you prefer BFG for large-file removal, follow BFG instructions; BFG is simpler for removing large blobs but requires some git plumbing.
-- Always keep the mirror backup (`nomad-backup.git`) until you are 100% confident.
+- Always keep the mirror backup (`Aestra-backup.git`) until you are 100% confident.

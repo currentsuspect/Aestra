@@ -2,7 +2,7 @@
 import os
 import re
 
-ROOT_DIR = r"C:\Users\Current\Documents\Projects\NOMAD"
+ROOT_DIR = r"C:\Users\Current\Documents\Projects\Aestra"
 
 def replace_resources(path):
     try:

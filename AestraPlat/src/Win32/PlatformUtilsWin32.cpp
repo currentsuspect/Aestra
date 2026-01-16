@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios â€" All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios â€" All Rights Reserved. Licensed for personal & educational use only.
 #include "PlatformUtilsWin32.h"
 #include "PlatformWindowWin32.h"
 #include "../../../AestraCore/include/AestraLog.h"

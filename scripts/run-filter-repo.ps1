@@ -2,14 +2,14 @@
 Safe wrapper to run git-filter-repo on a mirror clone. This script makes a mirror copy first and runs the filter there to avoid accidental damage.
 
 USAGE (example):
-  .\scripts\run-filter-repo.ps1 -PathsToRemove "AestraMuse/models,AestraAssets" -OutputDir "../nomad-cleaned"
+  .\scripts\run-filter-repo.ps1 -PathsToRemove "AestraMuse/models,AestraAssets" -OutputDir "../Aestra-cleaned"
 
 This script DOES NOT push changes to any remote. It creates a cleaned repo in the `-OutputDir` location for verification.
 #>
 param(
     [Parameter(Mandatory=$true)]
     [string] $PathsToRemove,
-    [string] $OutputDir = "../nomad-cleaned"
+    [string] $OutputDir = "../Aestra-cleaned"
 )
 
 function Fail($msg){ Write-Error $msg; exit 1 }
@@ -18,7 +18,7 @@ if (-not (Get-Command git-filter-repo -ErrorAction SilentlyContinue)) {
     Write-Host "git-filter-repo not found in PATH. Install it: https://github.com/newren/git-filter-repo" -ForegroundColor Yellow
 }
 
-$mirrorDir = Join-Path -Path (Get-Location) -ChildPath "../nomad-mirror"
+$mirrorDir = Join-Path -Path (Get-Location) -ChildPath "../Aestra-mirror"
 if (Test-Path $mirrorDir) { Fail "Mirror dir already exists: $mirrorDir. Remove or rename it before running." }
 
 Write-Host "Creating bare mirror clone..." -ForegroundColor Cyan

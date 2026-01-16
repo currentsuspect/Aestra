@@ -35,9 +35,9 @@ struct AudioQualitySettings {
     // ... existing quality settings ...
     
     // Aestra Mode - Sonic Character
-    AestraMode nomadMode{AestraMode::Transparent};
+    AestraMode AestraMode{AestraMode::Transparent};
     
-    // Euphoria Engine Settings (active when nomadMode == Euphoric)
+    // Euphoria Engine Settings (active when AestraMode == Euphoric)
     struct EuphoriaSettings {
         bool tapeCircuit{true};         // Non-linear transient rounding + harmonic bloom
         bool airEnhancement{true};      // Psychoacoustic stereo widening (mid/side delay)
@@ -162,7 +162,7 @@ void Track::applyDrift(float* buffer, uint32_t numFrames)
 
 ### Audio Settings Dialog (Right Column)
 
-**Control:** `m_nomadModeDropdown`  
+**Control:** `m_AestraModeDropdown`  
 **Location:** Below Stereo Width slider  
 **Options:**
 - **Transparent (Reference)** - Clean, clinical precision
@@ -245,8 +245,8 @@ Audio Quality (Right Column)
    - Integrated Euphoria Engine into `copyAudioData()` pipeline
 
 3. **`Source/AudioSettingsDialog.h`**
-   - Added `m_nomadModeDropdown` UI component
-   - Added `m_nomadModeLabel` label
+   - Added `m_AestraModeDropdown` UI component
+   - Added `m_AestraModeLabel` label
 
 4. **`Source/AudioSettingsDialog.cpp`**
    - Created Aestra Mode dropdown with Transparent/Euphoric options
@@ -333,7 +333,7 @@ Audio::AudioQualitySettings settings;
 settings.applyPreset(Audio::QualityPreset::HighFidelity);
 
 // Enable Euphoric mode
-settings.nomadMode = Audio::AestraMode::Euphoric;
+settings.AestraMode = Audio::AestraMode::Euphoric;
 
 // Configure Euphoria Engine
 settings.euphoria.tapeCircuit = true;
@@ -353,7 +353,7 @@ track->setQualitySettings(settings);
 ```cpp
 auto settings = track->getQualitySettings();
 
-if (settings.nomadMode == Audio::AestraMode::Euphoric) {
+if (settings.AestraMode == Audio::AestraMode::Euphoric) {
     Log::info("Track is in Euphoric mode - analog character active");
 } else {
     Log::info("Track is in Transparent mode - reference quality");

@@ -13,7 +13,7 @@ meta/
 ├── BUG_REPORTS/             # Detailed bug fix documentation
 │   └── BUG_FIXES_29.10.25.md
 ├── SESSION_SUMMARY_DEC2024.md   # Development session summary
-├── MANIFESTO.md                  # Nomad Studios manifesto
+├── MANIFESTO.md                  # Aestra Studios manifesto
 └── [Various task summaries]      # Completed task documentation
 ```
 
@@ -34,7 +34,7 @@ meta/
   - Provides learning points and next steps
 
 ### Project Documents
-- **MANIFESTO.md** — Nomad Studios vision and manifesto
+- **MANIFESTO.md** — Aestra Studios vision and manifesto
 
 ### Task Summaries
 Various task summaries documenting completed features:

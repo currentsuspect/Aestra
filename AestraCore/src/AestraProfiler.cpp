@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file AestraProfiler.cpp
  * @brief Legacy performance profiler implementation (for backward compatibility)

@@ -1,7 +1,7 @@
 # 📘 Aestra DAW — Documentation Portal
 
 ![Aestra Version](https://img.shields.io/badge/Aestra-v1.0-blue)
-![License](https://img.shields.io/badge/License-NSSAL%20v1.0-blue)
+![License](https://img.shields.io/badge/License-ASSAL%20v1.0-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-orange)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
@@ -16,7 +16,7 @@ Aestra DAW is a professional digital audio workstation featuring:
 - **Pattern-based workflow** — Intuitive pattern and playlist sequencer
 - **Professional audio quality** — 64-bit multi-threaded processing
 - **Modern C++ architecture** — Clean separation of concerns
-- **Source-available** — Transparent codebase under NSSAL v1.0
+- **Source-available** — Transparent codebase under ASSAL v1.0
 
 ## 📚 Documentation Index
 
@@ -46,7 +46,7 @@ Aestra DAW is a professional digital audio workstation featuring:
 ### 📋 Project Management
 
 - **[Roadmap](ROADMAP.md)** — High-level milestones and future plans
-- **[License Reference](LICENSE_REFERENCE.md)** — Licensing information and NSSAL v1.0 details
+- **[License Reference](LICENSE_REFERENCE.md)** — Licensing information and ASSAL v1.0 details
 
 ### 📝 Templates
 
@@ -75,7 +75,7 @@ Aestra DAW is a professional digital audio workstation featuring:
 
 ### For Project Managers
 1. Review [Roadmap](ROADMAP.md) for project milestones
-2. Check [License Reference](LICENSE_REFERENCE.md) for NSSAL v1.0 details
+2. Check [License Reference](LICENSE_REFERENCE.md) for ASSAL v1.0 details
 3. Use [Issue Template](TEMPLATE/ISSUE_TEMPLATE.md) for documentation issues
 
 ## 🌟 Key Features
@@ -131,12 +131,12 @@ We welcome contributions from the community! Before contributing:
 
 ## ⚖️ License
 
-**Aestra DAW** is licensed under the **Nomad Studios Source-Available License (NSSAL) v1.0**. See [License Reference](LICENSE_REFERENCE.md) for full details.
+**Aestra DAW** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.0**. See [License Reference](LICENSE_REFERENCE.md) for full details.
 
 **Key Points:**
 - ✅ Source code is publicly visible for educational purposes
 - ✅ You can study, report bugs, and suggest improvements
-- ✅ You can submit pull requests (contributors grant all rights to Nomad Studios)
+- ✅ You can submit pull requests (contributors grant all rights to Aestra Studios)
 - ❌ You cannot use, copy, modify, or redistribute the code without permission
 
 The source code is publicly visible for transparency but is **NOT open-source**. All rights reserved.

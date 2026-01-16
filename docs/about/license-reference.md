@@ -1,6 +1,6 @@
 # ⚖️ Aestra DAW License Reference
 
-![License](https://img.shields.io/badge/License-NSSAL-blue)
+![License](https://img.shields.io/badge/License-ASSAL-blue)
 ![Core](https://img.shields.io/badge/Core-Free%20Forever-brightgreen)
 ![Premium](https://img.shields.io/badge/Premium-Paid-orange)
 
@@ -10,7 +10,7 @@ Comprehensive reference for Aestra DAW licensing, including the source-available
 
 - [Overview](#-overview)
 - [Proprietary License](#-proprietary-license)
-- [NSSAL License Details](#-nomad-studios-source-available-license-nssal)
+- [ASSAL License Details](#-Aestra-studios-source-available-license-ASSAL)
 - [Contributor License Agreement](#-contributor-license-agreement)
 - [Commercial Licensing](#-commercial-licensing)
 - [License FAQ](#-license-faq)
@@ -20,7 +20,7 @@ Comprehensive reference for Aestra DAW licensing, including the source-available
 **Aestra DAW uses a hybrid licensing model:**
 
 ### Aestra Core (Free Forever)
-- **Aestra Core** (this repository) uses the **Nomad Studios Source-Available License (NSSAL) v1.0**
+- **Aestra Core** (this repository) uses the **Aestra Studios Source-Available License (ASSAL) v1.0**
 - ✅ **Free to use forever** - No paid license required for the core DAW
 - 👁️ **Source-available** - Code is publicly visible for transparency and education
 - 🎵 **Full DAW functionality** - Complete digital audio workstation without restrictions
@@ -31,7 +31,7 @@ Comprehensive reference for Aestra DAW licensing, including the source-available
 - 💰 **Paid licenses** - Available separately when released
 
 **Key Points:**
-- 🆓 Aestra Core is **free forever** under NSSAL
+- 🆓 Aestra Core is **free forever** under ASSAL
 - ❌ Source code is **NOT open-source** (cannot be used in other projects)
 - ✅ Contributions are **welcomed and credited**
 - 🤖 Premium features (Muse AI, plugins) will require paid licenses
@@ -43,7 +43,7 @@ Comprehensive reference for Aestra DAW licensing, including the source-available
 
 **Copyright © 2025 Dylan Makori. All rights reserved.**
 
-Aestra Core is source-available software developed by Dylan Makori in Kenya, licensed under NSSAL v1.0.
+Aestra Core is source-available software developed by Dylan Makori in Kenya, licensed under ASSAL v1.0.
 
 ### What You Can Do with Aestra Core (No License Required)
 
@@ -85,11 +85,11 @@ Unauthorized use, copying, or distribution of Aestra DAW will be prosecuted to t
 - International copyright treaties
 - DMCA (Digital Millennium Copyright Act)
 
-## 📜 Nomad Studios Source-Available License (NSSAL)
+## 📜 Aestra Studios Source-Available License (ASSAL)
 
 ### Full License Details
 
-**License Name:** Nomad Studios Source-Available License (NSSAL)  
+**License Name:** Aestra Studios Source-Available License (ASSAL)  
 **Version:** 1.0  
 **Date:** October 30, 2025  
 **Copyright:** © 2025 Dylan Makori
@@ -100,7 +100,7 @@ Unauthorized use, copying, or distribution of Aestra DAW will be prosecuted to t
 - ✅ View and study the source code for educational purposes
 - ✅ Report bugs and security issues
 - ✅ Suggest features and improvements
-- ✅ Submit pull requests (contributors grant all rights to Nomad Studios)
+- ✅ Submit pull requests (contributors grant all rights to Aestra Studios)
 
 **Restrictions:**
 - ❌ Remove or alter any proprietary notices, labels, or marks
@@ -109,7 +109,7 @@ Unauthorized use, copying, or distribution of Aestra DAW will be prosecuted to t
 - ❌ Distribute or sublicense the software
 
 **Ownership:**
-All title, ownership rights, and intellectual property rights in and to the Software, including all source code, documentation, designs, and associated materials, remain the exclusive property of Dylan Makori and Nomad Studios.
+All title, ownership rights, and intellectual property rights in and to the Software, including all source code, documentation, designs, and associated materials, remain the exclusive property of Dylan Makori and Aestra Studios.
 
 **For the complete legal text, see:** [LICENSE](../LICENSE)
 
@@ -224,7 +224,7 @@ While you grant full rights, we value contributions:
 
 ### Q: Is Aestra open-source?
 
-**A:** No. Aestra uses a source-available license (NSSAL). The code is publicly visible for transparency and education, but it is NOT open-source and cannot be reused in other projects.
+**A:** No. Aestra uses a source-available license (ASSAL). The code is publicly visible for transparency and education, but it is NOT open-source and cannot be reused in other projects.
 
 ### Q: Can I use Aestra Core for free?
 
@@ -292,7 +292,7 @@ While you grant full rights, we value contributions:
 
 ## 📚 Additional Resources
 
-- [Full License Text](../LICENSE) - Complete NSSAL license terms
+- [Full License Text](../LICENSE) - Complete ASSAL license terms
 - [Licensing Details](../LICENSING.md) - Original licensing document
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute
 - [FAQ](FAQ.md) - General questions

@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved.
+// © 2025 Aestra Studios — All Rights Reserved.
 // This file uses AVX-512 intrinsics.
 // It is compiled with /arch:AVX512 (MSVC) or -mavx512f -mavx512dq (GCC/Clang) via CMake.
 

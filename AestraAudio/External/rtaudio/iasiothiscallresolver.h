@@ -1,4 +1,4 @@
-// Â© 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// Â© 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // ****************************************************************************
 //
 // Changed:         I have modified this file slightly (includes) to work  with

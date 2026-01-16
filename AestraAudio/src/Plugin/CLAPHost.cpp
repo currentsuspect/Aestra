@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "Plugin/CLAPHost.h"
 #include "AestraLog.h"
@@ -92,8 +92,8 @@ clap_host* CLAPPluginInstance::createHost() {
     host.clap_version = CLAP_VERSION;
     host.host_data = nullptr;
     host.name = "Aestra";
-    host.vendor = "Nomad Studios";
-    host.url = "https://nomad.audio";
+    host.vendor = "Aestra Studios";
+    host.url = "https://Aestra.audio";
     host.version = "1.0.0";
     host.get_extension = hostGetExtension;
     host.request_restart = hostRequestRestart;

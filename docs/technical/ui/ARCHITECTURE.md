@@ -30,13 +30,13 @@ A modern, GPU-accelerated UI framework built from scratch for the Aestra DAW. Ze
 ┌─────────────────────────────────────────────┐
 │         Application Layer (Aestra DAW)       │
 ├─────────────────────────────────────────────┤
-│      nomad_ui_widgets (Knobs, Sliders)      │
+│      Aestra_ui_widgets (Knobs, Sliders)      │
 ├─────────────────────────────────────────────┤
-│     nomad_ui_layout (Flexbox, Grid)         │
+│     Aestra_ui_layout (Flexbox, Grid)         │
 ├─────────────────────────────────────────────┤
-│   nomad_ui_core (Components, Events, Render)│
+│   Aestra_ui_core (Components, Events, Render)│
 ├─────────────────────────────────────────────┤
-│      nomad_ui_graphics (OpenGL/Vulkan)      │
+│      Aestra_ui_graphics (OpenGL/Vulkan)      │
 ├─────────────────────────────────────────────┤
 │         Platform Layer (Window, Input)      │
 └─────────────────────────────────────────────┘
@@ -44,7 +44,7 @@ A modern, GPU-accelerated UI framework built from scratch for the Aestra DAW. Ze
 
 ## Module Breakdown
 
-### 1. nomad_ui_graphics (Rendering Backend)
+### 1. Aestra_ui_graphics (Rendering Backend)
 **Purpose:** Low-level GPU rendering abstraction
 
 **Components:**
@@ -61,7 +61,7 @@ A modern, GPU-accelerated UI framework built from scratch for the Aestra DAW. Ze
 - SDF text rendering
 - Framebuffer effects
 
-### 2. nomad_ui_core (Component System)
+### 2. Aestra_ui_core (Component System)
 **Purpose:** Base component architecture and event system
 
 **Components:**
@@ -105,7 +105,7 @@ protected:
 };
 ```
 
-### 3. nomad_ui_layout (Layout Engine)
+### 3. Aestra_ui_layout (Layout Engine)
 **Purpose:** Flexbox-like layout system
 
 **Components:**
@@ -120,7 +120,7 @@ protected:
 - Margin/padding support
 - Alignment and justification
 
-### 4. nomad_ui_widgets (DAW Controls)
+### 4. Aestra_ui_widgets (DAW Controls)
 **Purpose:** Specialized widgets for music production
 
 **Widgets:**

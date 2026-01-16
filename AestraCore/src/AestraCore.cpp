@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file AestraCore.cpp
  * @brief AestraCore placeholder implementation
@@ -9,7 +9,7 @@
 
 namespace Aestra {
     // Placeholder to ensure library compilation
-    void nomadCoreInit() {
+    void AestraCoreInit() {
         // No-op function for library initialization if needed in the future
     }
 }

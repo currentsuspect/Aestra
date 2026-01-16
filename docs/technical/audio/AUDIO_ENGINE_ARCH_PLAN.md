@@ -2,7 +2,7 @@
 
 ## *A Next-Generation Audio Engine Architecture for Low-Spec and High-Spec Systems*
 
-By: Nomad Studios
+By: Aestra Studios
 Lead Architect: Dylan M.
 
 ---

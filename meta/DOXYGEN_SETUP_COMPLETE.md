@@ -228,8 +228,8 @@ docs/api-reference/
 │   ├── classes.html               # Class index
 │   ├── files.html                 # File list
 │   ├── namespaces.html            # Namespace list
-│   ├── class_nomad_*.html         # Individual class pages
-│   ├── namespace_nomad_*.html     # Namespace pages
+│   ├── class_Aestra_*.html         # Individual class pages
+│   ├── namespace_Aestra_*.html     # Namespace pages
 │   └── [many more HTML files]
 ├── xml/                           # XML output (for tools)
 │   └── *.xml
@@ -504,4 +504,4 @@ For questions or issues:
 **Happy Documenting! 📚✨**
 
 *Generated on: November 2, 2025*  
-*Aestra © 2025 Nomad Studios*
+*Aestra © 2025 Aestra Studios*

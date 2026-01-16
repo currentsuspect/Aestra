@@ -46,7 +46,7 @@ Aestra is developed by Dylan Makori in Kenya, with contributions from the open-s
 
 ### Is Aestra open-source?
 
-No. Aestra uses the **NSSAL (Nomad Studios Source-Available License)** - a source-available license, not open-source. This means:
+No. Aestra uses the **ASSAL (Aestra Studios Source-Available License)** - a source-available license, not open-source. This means:
 - ✅ **Aestra Core is free to use** for all purposes
 - 👁️ You can view and study the source code
 - 🤝 You can contribute improvements
@@ -139,7 +139,7 @@ This is necessary because Aestra is commercial software. See [Contributing Guide
 
 ### What kind of contributions are accepted?
 
-**Public contributions** (in `nomad-core/`):
+**Public contributions** (in `Aestra-core/`):
 - ✅ Core audio engine improvements
 - ✅ UI framework enhancements
 - ✅ Bug fixes and optimizations

@@ -244,4 +244,4 @@ On modern AVX2 hardware, `Sinc64Turbo` achieves nearly 14 million stereo samples
 
 ---
 
-*© 2025 Nomad Studios. This research is part of the Aestra Digital Audio Workstation project.*
+*© 2025 Aestra Studios. This research is part of the Aestra Digital Audio Workstation project.*

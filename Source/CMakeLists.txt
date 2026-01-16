@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.22)
 
 
 # Create executable
-set(AESTRA_DAW_SOURCES
+set(Aestra_SOURCES
 	# App
 	App/Main.cpp
 	App/AestraApp.h
@@ -101,21 +101,21 @@ set(AESTRA_DAW_SOURCES
 
 
 
-add_executable(AESTRA_DAW ${AESTRA_DAW_SOURCES})
+add_executable(Aestra ${Aestra_SOURCES})
 
 # Enable UTF-8 encoding for source files (fixes Unicode character rendering)
 if(MSVC)
-    target_compile_options(AESTRA_DAW PRIVATE /utf-8)
+    target_compile_options(Aestra PRIVATE /utf-8)
 endif()
 
 # Output to bin directoryandard
-set_target_properties(AESTRA_DAW PROPERTIES
+set_target_properties(Aestra PROPERTIES
 	CXX_STANDARD 17
 	CXX_STANDARD_REQUIRED ON
 )
 
 # Link against AESTRA libraries
-target_link_libraries(AESTRA_DAW PRIVATE
+target_link_libraries(Aestra PRIVATE
 	AestraCore
 	AestraPlat
 	AestraUI_Core
@@ -127,7 +127,7 @@ target_link_libraries(AESTRA_DAW PRIVATE
 # Include directories
 # Add all subdirectories so headers can be included without relative paths
 # This makes the codebase reorganization-proof - #include "ViewTypes.h" works from anywhere
-target_include_directories(AESTRA_DAW PRIVATE
+target_include_directories(Aestra PRIVATE
 	${CMAKE_SOURCE_DIR}/AestraCore/include
 	${CMAKE_SOURCE_DIR}/AestraPlat/include
 	${CMAKE_SOURCE_DIR}/AestraUI/Graphics
@@ -156,13 +156,13 @@ target_include_directories(AESTRA_DAW PRIVATE
 # Platform-specific settings
 if(WIN32)
 	# Windows-specific settings
-	target_compile_definitions(AESTRA_DAW PRIVATE
+	target_compile_definitions(Aestra PRIVATE
 		_CRT_SECURE_NO_WARNINGS
 		NOMINMAX
 	)
 	
 	# Windows GUI application (no console window)
-	set_target_properties(AESTRA_DAW PROPERTIES
+	set_target_properties(Aestra PROPERTIES
 	    WIN32_EXECUTABLE TRUE
 	)
 	
@@ -170,7 +170,7 @@ if(WIN32)
 	# Note: We don't explicitly link opengl32 here
 	# AestraPlat links it privately for WGL functions (context creation)
 	# GLAD provides all GL* functions dynamically
-	target_link_libraries(AESTRA_DAW PRIVATE
+	target_link_libraries(Aestra PRIVATE
 		gdi32
 		user32
 		shell32
@@ -180,7 +180,7 @@ if(WIN32)
 	
 	# Force GLAD symbols to take precedence over any opengl32 symbols
 	# This ensures GL functions come from GLAD, not opengl32
-	target_link_options(AESTRA_DAW PRIVATE
+	target_link_options(Aestra PRIVATE
 		"/WHOLEARCHIVE:$<TARGET_FILE:glad>"
 		"/IGNORE:4098"  # Ignore CRT mismatch warning (FreeType uses static CRT)
 	)
@@ -188,10 +188,10 @@ if(WIN32)
 	# Add the resource script so the icon is embedded into the executable
 	# Note: we expect Source/aestra.ico to be present in the repository. The
 	# automatic SVG->ICO conversion was removed to keep CI/tooling simple.
-	target_sources(AESTRA_DAW PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.rc")
+	target_sources(Aestra PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.rc")
 elseif(UNIX AND NOT APPLE)
 	# Linux-specific settings
-	target_link_libraries(AESTRA_DAW PRIVATE
+	target_link_libraries(Aestra PRIVATE
 		GL
 		X11
 		pthread
@@ -204,7 +204,7 @@ elseif(APPLE)
 	find_library(IOKIT_LIBRARY IOKit)
 	find_library(COREVIDEO_LIBRARY CoreVideo)
 	
-	target_link_libraries(AESTRA_DAW PRIVATE
+	target_link_libraries(Aestra PRIVATE
 		${COCOA_LIBRARY}
 		${OPENGL_LIBRARY}
 		${IOKIT_LIBRARY}
@@ -213,16 +213,16 @@ elseif(APPLE)
 endif()
 
 # Set output directory
-set_target_properties(AESTRA_DAW PROPERTIES
+set_target_properties(Aestra PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
 # Copy mock license file alongside binary for contributors
-add_custom_command(TARGET AESTRA_DAW POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:AESTRA_DAW>/data"
+add_custom_command(TARGET Aestra POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Aestra>/data"
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		"${CMAKE_CURRENT_SOURCE_DIR}/license/user_info.json"
-		"$<TARGET_FILE_DIR:AESTRA_DAW>/data/user_info.json"
+		"$<TARGET_FILE_DIR:Aestra>/data/user_info.json"
 )
 
 message(STATUS "Aestra application configured")

@@ -583,7 +583,7 @@ class Track {
 
 **Success Criteria:**
 
-- ✅ Can save project to .nomad file
+- ✅ Can save project to .Aestra file
 - ✅ Can load project and resume work
 - ✅ Auto-save prevents data loss
 
