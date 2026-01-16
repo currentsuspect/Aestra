@@ -1,4 +1,4 @@
-# Nomad repository reorganization plan
+# Aestra repository reorganization plan
 
 Goal: split the current repository into three logical repos with clear public/private boundaries:
 
@@ -9,17 +9,17 @@ Goal: split the current repository into three logical repos with clear public/pr
 High-level mapping (what to move)
 
 - nomad-core (public)
-  - NomadCore/
-  - NomadPlat/
-  - NomadUI/
-  - NomadAudio/ (core audio engine; keep only non-premium code)
-  - NomadSDK/ (public headers/interface only; move private plugins elsewhere)
-  - docs/, NomadDocs/
+  - AestraCore/
+  - AestraPlat/
+  - AestraUI/
+  - AestraAudio/ (core audio engine; keep only non-premium code)
+  - AestraSDK/ (public headers/interface only; move private plugins elsewhere)
+  - docs/, AestraDocs/
   - build scripts that don't embed secrets, `cmake/`, `assets_mock/`, `.github/workflows/public-ci.yml`
 
 - nomad-premium (private)
-  - NomadMuse/ (models, research, trained weights)
-  - NomadAssets/ (fonts, icons, shaders, sounds) — if these contain paid assets
+  - AestraMuse/ (models, research, trained weights)
+  - AestraAssets/ (fonts, icons, shaders, sounds) — if these contain paid assets
   - Any large sample libraries and exclusive plugins
 
 - nomad-build (private)
@@ -32,29 +32,29 @@ Recommended split process (safe, high level)
 
 1) Back up: create a mirror backup of the current repo:
 
-   git clone --mirror /path/to/NOMAD nomad-backup.git
+   git clone --mirror /path/to/Aestra nomad-backup.git
 
 2) Create a working clone for public-core extraction (non-destructive):
 
-   git clone --branch develop /path/to/NOMAD nomad-working
+   git clone --branch develop /path/to/Aestra nomad-working
    cd nomad-working
 
 3) Extract `nomad-core` history using `git subtree split` or `git filter-repo`:
 
    # subtree (keeps history for the prefix)
-   git subtree split --prefix=NomadCore -b nomad-core-only
+   git subtree split --prefix=AestraCore -b nomad-core-only
 
    # Or git-filter-repo approach to remove private paths (recommended for removing blobs)
    See docs/HISTORY_REWRITE.md for filter-repo steps.
 
 4) Create new remote and push the extracted branch to `nomad-core` repo (do not force-push to existing remotes until verified).
 
-5) Extract private directories into their own repositories (NomadMuse, NomadAssets) similarly.
+5) Extract private directories into their own repositories (AestraMuse, AestraAssets) similarly.
 
 6) Clean history where necessary: use `git-filter-repo` on a mirrored clone to permanently remove large blobs or secrets. Verify with `gitleaks` and largest object listing before pushing cleaned repos.
 
 7) Decide integration approach: submodule vs subtree vs package distribution
-   - Submodules: keep private repos as git submodules under NomadCore for devs with access. Pros: straightforward, preserves separate ACLs. Cons: extra git complexity for contributors.
+   - Submodules: keep private repos as git submodules under AestraCore for devs with access. Pros: straightforward, preserves separate ACLs. Cons: extra git complexity for contributors.
    - Subtrees: embed private code into core via subtree merges at release time. Pros: simpler for consumers. Cons: risk of accidental public push if not careful.
    - Binary distribution: keep premium models as separate artifact storage (S3, cloud storage) and fetch at build or runtime.
 
@@ -66,11 +66,11 @@ CI/CD & secrets
 
 Developer experience
 
-- Provide `assets_mock/` and `cmake/NomadPremiumFallback.cmake` (already added) so contributors can build core without premium assets.
+- Provide `assets_mock/` and `cmake/AestraPremiumFallback.cmake` (already added) so contributors can build core without premium assets.
 - Document submodule setup in `docs/CONTRIBUTING_CORE.md`.
 
 Checklist before public push
 
 - Run `.\tools\run_gitleaks.ps1` (or `gitleaks detect`) and clear any findings.
 - Ensure no private cert/key files exist in the working tree or history (use `scan_history.ps1` to list large objects and `gitleaks`).
-- Prepare the cleaned public repo mirror and verify that it builds locally in `NOMAD_CORE_ONLY` mode.
+- Prepare the cleaned public repo mirror and verify that it builds locally in `Aestra_CORE_ONLY` mode.

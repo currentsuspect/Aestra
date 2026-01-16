@@ -11,16 +11,16 @@
 
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
+#include "../AestraUI/Core/NUIComponent.h"
 #include "NUILabel.h"
 #include "NUIIcon.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
 
 #include <memory>
 #include <functional>
 
-namespace Nomad {
+namespace Aestra {
 
 /**
  * @brief BPM Display Component
@@ -28,7 +28,7 @@ namespace Nomad {
  * Shows current BPM with smooth scrolling animation when changed.
  * Includes arrow controls for adjusting BPM inline.
  */
-class BPMDisplay : public NomadUI::NUIComponent {
+class BPMDisplay : public AestraUI::NUIComponent {
 public:
     BPMDisplay();
     ~BPMDisplay() = default;
@@ -43,16 +43,16 @@ public:
     // Callback when BPM changes via arrows
     void setOnBPMChange(std::function<void(float)> callback) { m_onBPMChange = callback; }
     
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
 private:
     float m_currentBPM;
     float m_targetBPM;
     float m_displayBPM; // For smooth scrolling animation
-    std::shared_ptr<NomadUI::NUIIcon> m_upArrow;
-    std::shared_ptr<NomadUI::NUIIcon> m_downArrow;
+    std::shared_ptr<AestraUI::NUIIcon> m_upArrow;
+    std::shared_ptr<AestraUI::NUIIcon> m_downArrow;
     
     std::function<void(float)> m_onBPMChange;
     
@@ -67,11 +67,11 @@ private:
     float m_holdDelay;           // Initial delay before repeat
     
     // Cached bounds for dynamic centering
-    NomadUI::NUIRect m_cachedUpArrowBounds;
-    NomadUI::NUIRect m_cachedDownArrowBounds;
+    AestraUI::NUIRect m_cachedUpArrowBounds;
+    AestraUI::NUIRect m_cachedDownArrowBounds;
     
-    NomadUI::NUIRect getUpArrowBounds() const;
-    NomadUI::NUIRect getDownArrowBounds() const;
+    AestraUI::NUIRect getUpArrowBounds() const;
+    AestraUI::NUIRect getDownArrowBounds() const;
 };
 
 /**
@@ -79,7 +79,7 @@ private:
  * 
  * Shows current time signature (e.g., 4/4) with click-to-cycle functionality.
  */
-class TimeSignatureDisplay : public NomadUI::NUIComponent {
+class TimeSignatureDisplay : public AestraUI::NUIComponent {
 public:
     TimeSignatureDisplay();
     ~TimeSignatureDisplay() = default;
@@ -93,8 +93,8 @@ public:
     // Callback when time signature changes
     void setOnTimeSignatureChange(std::function<void(int)> callback) { m_onTimeSignatureChange = callback; }
     
-    void onRender(NomadUI::NUIRenderer& renderer) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
 private:
     int m_beatsPerBar{4};
@@ -109,7 +109,7 @@ private:
  * 
  * Shows current playback position in MM:SS:MS format.
  */
-class TimerDisplay : public NomadUI::NUIComponent {
+class TimerDisplay : public AestraUI::NUIComponent {
 public:
     TimerDisplay();
     ~TimerDisplay() = default;
@@ -121,7 +121,7 @@ public:
     void setPlaying(bool playing) { m_isPlaying = playing; }
     bool isPlaying() const { return m_isPlaying; }
     
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
 
 private:
     double m_currentTime;
@@ -136,7 +136,7 @@ private:
  * Parent container that houses BPM and Timer displays with proper alignment.
  * Maintains their visual position while providing modular structure.
  */
-class TransportInfoContainer : public NomadUI::NUIComponent {
+class TransportInfoContainer : public AestraUI::NUIComponent {
 public:
     TransportInfoContainer();
     ~TransportInfoContainer() = default;
@@ -146,9 +146,9 @@ public:
     TimerDisplay* getTimerDisplay() const { return m_timerDisplay.get(); }
     TimeSignatureDisplay* getTimeSignatureDisplay() const { return m_timeSignatureDisplay.get(); }
     
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
 private:
     std::shared_ptr<BPMDisplay> m_bpmDisplay;
@@ -158,4 +158,4 @@ private:
     void layoutComponents();
 };
 
-} // namespace Nomad
+} // namespace Aestra

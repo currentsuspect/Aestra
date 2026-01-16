@@ -6,10 +6,10 @@ Steps:
 
 1) Ensure `assets_mock/` exists in the repo root (it was added for this purpose).
 
-2) Ensure `cmake/NomadPremiumFallback.cmake` is included by the top-level `CMakeLists.txt`.
+2) Ensure `cmake/AestraPremiumFallback.cmake` is included by the top-level `CMakeLists.txt`.
    If not already present, add a line near the top of `CMakeLists.txt`:
 
-   include(${CMAKE_SOURCE_DIR}/cmake/NomadPremiumFallback.cmake)
+   include(${CMAKE_SOURCE_DIR}/cmake/AestraPremiumFallback.cmake)
 
 3) Configure CMake for a Release build (Windows example):
 
@@ -17,15 +17,15 @@ Steps:
 
 4) Build the core targets:
 
-   cmake --build build --config Release --target NOMAD_DAW --parallel
+   cmake --build build --config Release --target Aestra_DAW --parallel
 
 5) Run a quick smoke test (if executable produced):
 
-   if (Test-Path build\bin\Release\NOMAD_DAW.exe) {
+   if (Test-Path build\bin\Release\Aestra_DAW.exe) {
        echo "Executable exists — launch to confirm basic UI loads (no premium features)."
    }
 
-6) If you encounter missing files during compile/link, inspect error message for references to `NomadMuse` or `NomadAssets` and ensure the build uses `assets_mock` (see `NomadPremiumFallback.cmake`).
+6) If you encounter missing files during compile/link, inspect error message for references to `AestraMuse` or `AestraAssets` and ensure the build uses `assets_mock` (see `AestraPremiumFallback.cmake`).
 
 Notes:
 - This validation ensures the public `nomad-core` code is buildable; it does not exercise premium features.

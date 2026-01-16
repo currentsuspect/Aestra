@@ -6,7 +6,7 @@ param(
   [ValidateSet('Debug','Release','RelWithDebInfo','MinSizeRel')]
   [string]$Config = 'Release',
 
-  [string]$Target = 'NomadHeadless',
+  [string]$Target = 'AestraHeadless',
 
   [int]$DebounceMs = 750,
 
@@ -19,7 +19,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-function Invoke-NomadBuild {
+function Invoke-AestraBuild {
   $buildPreset = if ($Preset -eq 'headless') {
     if ($Config -eq 'Debug') { 'headless-debug' } else { 'headless-release' }
   } else {
@@ -47,14 +47,14 @@ function Invoke-HeadlessRun {
   }
 
   $exeCandidates = @(
-    (Join-Path $PSScriptRoot ("..\\build\\headless\\bin\\$Config\\NomadHeadless.exe")),
-    Join-Path $PSScriptRoot '..\build\headless\bin\Release\NomadHeadless.exe',
-    Join-Path $PSScriptRoot '..\build\headless\bin\Debug\NomadHeadless.exe'
+    (Join-Path $PSScriptRoot ("..\\build\\headless\\bin\\$Config\\AestraHeadless.exe")),
+    Join-Path $PSScriptRoot '..\build\headless\bin\Release\AestraHeadless.exe',
+    Join-Path $PSScriptRoot '..\build\headless\bin\Debug\AestraHeadless.exe'
   )
 
   $exe = $exeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
   if (-not $exe) {
-    Write-Host "[watch_build] NomadHeadless.exe not found for run" -ForegroundColor Yellow
+    Write-Host "[watch_build] AestraHeadless.exe not found for run" -ForegroundColor Yellow
     return
   }
 
@@ -63,7 +63,7 @@ function Invoke-HeadlessRun {
   if ($ScenarioName) { $args += @('--scenario', $ScenarioName) }
   if ($ReportPath) { $args += @('--report', $ReportPath) }
 
-  Write-Host "[watch_build] Running NomadHeadless..." -ForegroundColor Cyan
+  Write-Host "[watch_build] Running AestraHeadless..." -ForegroundColor Cyan
   & $exe @args
   $code = $LASTEXITCODE
   if ($code -ne 0) {
@@ -74,7 +74,7 @@ function Invoke-HeadlessRun {
 }
 
 # Initial build
-Invoke-NomadBuild
+Invoke-AestraBuild
 Invoke-HeadlessRun
 
 if ($Once) { exit 0 }
@@ -82,9 +82,9 @@ if ($Once) { exit 0 }
 $root = Resolve-Path (Join-Path $PSScriptRoot '..')
 $watchDirs = @(
   Join-Path $root 'Source',
-  Join-Path $root 'NomadAudio',
-  Join-Path $root 'NomadCore',
-  Join-Path $root 'NomadPlugins',
+  Join-Path $root 'AestraAudio',
+  Join-Path $root 'AestraCore',
+  Join-Path $root 'AestraPlugins',
   Join-Path $root 'Tests',
   Join-Path $root 'cmake'
 ) | Where-Object { Test-Path $_ }
@@ -132,7 +132,7 @@ try {
       if ($elapsed.TotalMilliseconds -ge $DebounceMs) {
         $script:pending = $false
         try {
-          Invoke-NomadBuild
+          Invoke-AestraBuild
           Invoke-HeadlessRun
         } catch {
           Write-Host "[watch_build] Build FAILED" -ForegroundColor Red

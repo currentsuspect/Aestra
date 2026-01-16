@@ -1,5 +1,5 @@
 # MkDocs Material Documentation System
-# Python dependencies for building NOMAD DAW documentation
+# Python dependencies for building Aestra documentation
 
 mkdocs>=1.5.3
 mkdocs-material>=9.5.0

@@ -1,16 +1,16 @@
-# NomadCore Architecture
+# AestraCore Architecture
 
-NomadCore is the foundation layer of NOMAD DAW, providing fundamental utilities and data structures.
+AestraCore is the foundation layer of Aestra, providing fundamental utilities and data structures.
 
 ## 📋 Overview
 
-**Purpose:** Zero-dependency foundation library for all NOMAD modules
+**Purpose:** Zero-dependency foundation library for all Aestra modules
 
 **Status:** ✅ Complete
 
 **Dependencies:** None
 
-**Location:** `/NomadCore/`
+**Location:** `/AestraCore/`
 
 ## 🎯 Design Goals
 
@@ -34,7 +34,7 @@ Provides mathematical operations for audio and graphics processing.
 
 **Example:**
 ```cpp
-#include "NomadCore/Math/Vector.h"
+#include "AestraCore/Math/Vector.h"
 
 nomad::Vec2 pos(100.0f, 200.0f);
 nomad::Vec2 vel(10.0f, -5.0f);
@@ -53,7 +53,7 @@ Lock-free data structures and threading primitives for real-time audio.
 
 **Example:**
 ```cpp
-#include "NomadCore/Threading/LockFreeQueue.h"
+#include "AestraCore/Threading/LockFreeQueue.h"
 
 nomad::LockFreeQueue<AudioEvent> queue(1024);
 
@@ -79,7 +79,7 @@ Cross-platform file operations with UTF-8 support.
 
 **Example:**
 ```cpp
-#include "NomadCore/IO/File.h"
+#include "AestraCore/IO/File.h"
 
 std::string content = nomad::File::readText("project.nomad");
 nomad::File::writeText("backup.nomad", content);
@@ -97,11 +97,11 @@ Structured logging with multiple severity levels and outputs.
 
 **Example:**
 ```cpp
-#include "NomadCore/Logging/Logger.h"
+#include "AestraCore/Logging/Logger.h"
 
-NOMAD_LOG_INFO("Loading project: {}", projectPath);
-NOMAD_LOG_WARNING("Buffer underrun detected");
-NOMAD_LOG_ERROR("Failed to open audio device: {}", errorCode);
+Aestra_LOG_INFO("Loading project: {}", projectPath);
+Aestra_LOG_WARNING("Buffer underrun detected");
+Aestra_LOG_ERROR("Failed to open audio device: {}", errorCode);
 ```
 
 ### Memory Management
@@ -116,7 +116,7 @@ Custom allocators and memory utilities for performance-critical code.
 
 **Example:**
 ```cpp
-#include "NomadCore/Memory/Arena.h"
+#include "AestraCore/Memory/Arena.h"
 
 nomad::Arena arena(1024 * 1024);  // 1 MB
 void* ptr = arena.allocate(256);
@@ -136,7 +136,7 @@ UTF-8 string handling and formatting.
 
 **Example:**
 ```cpp
-#include "NomadCore/String/Format.h"
+#include "AestraCore/String/Format.h"
 
 std::string msg = nomad::format("Latency: {:.1f}ms", latency);
 ```
@@ -147,7 +147,7 @@ std::string msg = nomad::format("Latency: {:.1f}ms", latency);
 
 ```mermaid
 graph TB
-    subgraph NomadCore
+    subgraph AestraCore
         Math[Math Library]
         Thread[Threading System]
         IO[File I/O]
@@ -172,9 +172,9 @@ graph TB
 ### Directory Structure
 
 ```
-NomadCore/
+AestraCore/
 ├── include/
-│   └── NomadCore/
+│   └── AestraCore/
 │       ├── Math/
 │       │   ├── Vector.h
 │       │   ├── Matrix.h
@@ -230,9 +230,9 @@ NomadCore/
 ### Complete Example: Audio Processing
 
 ```cpp
-#include "NomadCore/Threading/LockFreeQueue.h"
-#include "NomadCore/Math/Interpolation.h"
-#include "NomadCore/Logging/Logger.h"
+#include "AestraCore/Threading/LockFreeQueue.h"
+#include "AestraCore/Math/Interpolation.h"
+#include "AestraCore/Logging/Logger.h"
 
 // Audio event structure
 struct AudioEvent {
@@ -250,7 +250,7 @@ void onParameterChange(float newValue) {
     event.timestamp = getCurrentTime();
     
     if (!eventQueue.push(event)) {
-        NOMAD_LOG_WARNING("Event queue full!");
+        Aestra_LOG_WARNING("Event queue full!");
     }
 }
 
@@ -272,11 +272,11 @@ void audioCallback(float* buffer, int samples) {
 
 ## 🧪 Testing
 
-NomadCore includes comprehensive unit tests:
+AestraCore includes comprehensive unit tests:
 
 ```bash
 # Build and run tests
-cmake -S . -B build -DNOMAD_BUILD_TESTS=ON
+cmake -S . -B build -DAestra_BUILD_TESTS=ON
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
@@ -295,7 +295,7 @@ Most components are header-only for easy integration:
 
 ```cpp
 // No linking required
-#include "NomadCore/Math/Vector.h"
+#include "AestraCore/Math/Vector.h"
 ```
 
 ### 2. Const-Correctness
@@ -371,4 +371,4 @@ public:
 
 ---
 
-**Next:** [NomadPlat Architecture →](nomad-plat.md)
+**Next:** [AestraPlat Architecture →](nomad-plat.md)

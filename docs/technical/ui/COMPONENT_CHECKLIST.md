@@ -1,6 +1,6 @@
-# NomadUI Component Development Checklist
+# AestraUI Component Development Checklist
 
-Use this checklist when creating or modifying NomadUI components to avoid common pitfalls.
+Use this checklist when creating or modifying AestraUI components to avoid common pitfalls.
 
 ---
 
@@ -166,10 +166,10 @@ void MyComponent::onRender(NUIRenderer& renderer) {
 
 Before starting, read:
 - [COORDINATE_SYSTEM_QUICK_REF.md](COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
-- [NOMADUI_COORDINATE_SYSTEM.md](../../NomadDocs/NOMADUI_COORDINATE_SYSTEM.md) - Full guide
+- [AestraUI_COORDINATE_SYSTEM.md](../../AestraDocs/AestraUI_COORDINATE_SYSTEM.md) - Full guide
 
 When stuck, check:
-- [TRANSPORT_BAR_FIX_SUMMARY.md](../../NomadDocs/TRANSPORT_BAR_FIX_SUMMARY.md) - Real-world example
+- [TRANSPORT_BAR_FIX_SUMMARY.md](../../AestraDocs/TRANSPORT_BAR_FIX_SUMMARY.md) - Real-world example
 - [NUIComponent.h](../Core/NUIComponent.h) - Base class API
 
 ---
@@ -197,4 +197,4 @@ When stuck, check:
 
 ---
 
-*Keep this checklist open while developing NomadUI components!*
+*Keep this checklist open while developing AestraUI components!*

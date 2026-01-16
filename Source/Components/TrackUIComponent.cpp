@@ -1,7 +1,7 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "TrackUIComponent.h"
 #include "TrackManagerUI.h"
-#include "../NomadUI/Platform/NUIPlatformBridge.h"
+#include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "MixerChannel.h"
 #include "TrackManager.h"
 #include "PlaylistModel.h"
@@ -10,15 +10,15 @@
 #include "MeterSnapshot.h"
 #include "ChannelSlotMap.h"
 
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
-#include "../NomadCore/include/NomadLog.h"
-#include "../NomadCore/include/NomadUnifiedProfiler.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraCore/include/AestraLog.h"
+#include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include <algorithm>
 #include <cmath>
 #include <chrono>
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 // =============================================================================
@@ -37,7 +37,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     }
 
     // Create track name label
-    m_nameLabel = std::make_shared<NomadUI::NUILabel>();
+    m_nameLabel = std::make_shared<AestraUI::NUILabel>();
     
     std::string name = "Lane";
     if (m_trackManager) {
@@ -48,7 +48,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     m_nameLabel->setText(name.empty() ? m_channel->getName() : name);
 
     {
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         // Use large font for track names
         m_nameLabel->setFontSize(themeManager.getFontSize("l"));
     }
@@ -57,14 +57,14 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     addChild(m_nameLabel);
 
     // Create mute button
-    m_muteButton = std::make_shared<NomadUI::NUIButton>();
+    m_muteButton = std::make_shared<AestraUI::NUIButton>();
     m_muteButton->setText("M");
-    m_muteButton->setStyle(NomadUI::NUIButton::Style::Secondary); 
+    m_muteButton->setStyle(AestraUI::NUIButton::Style::Secondary); 
     m_muteButton->setToggleable(true);
-    m_muteButton->setHoverColor(NomadUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.4f));
-    m_muteButton->setPressedColor(NomadUI::NUIThemeManager::getInstance().getColor("accentAmber")); 
-    m_muteButton->setTextColor(NomadUI::NUIColor::white());
-    m_muteButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
+    m_muteButton->setHoverColor(AestraUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.4f));
+    m_muteButton->setPressedColor(AestraUI::NUIThemeManager::getInstance().getColor("accentAmber")); 
+    m_muteButton->setTextColor(AestraUI::NUIColor::white());
+    m_muteButton->setFontSize(AestraUI::NUIThemeManager::getInstance().getFontSize("m"));
     m_muteButton->setCornerRadius(13.0f);
     m_muteButton->setCornerRadius(13.0f);
     m_muteButton->setOnToggle([this](bool) { onMuteToggled(); });
@@ -72,14 +72,14 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     addChild(m_muteButton);
 
     // Create solo button
-    m_soloButton = std::make_shared<NomadUI::NUIButton>();
+    m_soloButton = std::make_shared<AestraUI::NUIButton>();
     m_soloButton->setText("S");
-    m_soloButton->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_soloButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     m_soloButton->setToggleable(true);
-    m_soloButton->setHoverColor(NomadUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.4f));
-    m_soloButton->setPressedColor(NomadUI::NUIThemeManager::getInstance().getColor("accentCyan"));
-    m_soloButton->setTextColor(NomadUI::NUIColor::white());
-    m_soloButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
+    m_soloButton->setHoverColor(AestraUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.4f));
+    m_soloButton->setPressedColor(AestraUI::NUIThemeManager::getInstance().getColor("accentCyan"));
+    m_soloButton->setTextColor(AestraUI::NUIColor::white());
+    m_soloButton->setFontSize(AestraUI::NUIThemeManager::getInstance().getFontSize("m"));
     m_soloButton->setCornerRadius(13.0f);
     m_soloButton->setCornerRadius(13.0f);
     m_soloButton->setOnToggle([this](bool) { onSoloToggled(); });
@@ -87,13 +87,13 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     addChild(m_soloButton);
 
     // Create record button
-    m_recordButton = std::make_shared<NomadUI::NUIButton>();
+    m_recordButton = std::make_shared<AestraUI::NUIButton>();
     m_recordButton->setText("R");
-    m_recordButton->setStyle(NomadUI::NUIButton::Style::Secondary);
+    m_recordButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     m_recordButton->setToggleable(true);
-    m_recordButton->setHoverColor(NomadUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.4f));
-    m_recordButton->setPressedColor(NomadUI::NUIThemeManager::getInstance().getColor("error"));
-    m_recordButton->setFontSize(NomadUI::NUIThemeManager::getInstance().getFontSize("m"));
+    m_recordButton->setHoverColor(AestraUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.4f));
+    m_recordButton->setPressedColor(AestraUI::NUIThemeManager::getInstance().getColor("error"));
+    m_recordButton->setFontSize(AestraUI::NUIThemeManager::getInstance().getFontSize("m"));
     m_recordButton->setCornerRadius(13.0f);
     m_recordButton->setCornerRadius(13.0f);
     m_recordButton->setOnToggle([this](bool) { onRecordToggled(); });
@@ -110,7 +110,7 @@ TrackUIComponent::~TrackUIComponent() {
 
 double TrackUIComponent::getSnapGridSizeBeats() const {
     // Delegate to MusicTheory which handles all snap types including Triplet
-    return NomadUI::MusicTheory::getSnapDuration(m_snapSetting);
+    return AestraUI::MusicTheory::getSnapDuration(m_snapSetting);
 }
 
 double TrackUIComponent::snapBeatToGrid(double beat) const {
@@ -202,12 +202,12 @@ void TrackUIComponent::updateUI() {
     // Update track name colors with bright colors based on number
     updateTrackNameColors();
 
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
 
     // Standard Glassy Look for Inactive State (Grey Glass)
-    NomadUI::NUIColor inactiveBg = themeManager.getColor("textSecondary").withAlpha(0.15f);
-    NomadUI::NUIColor inactiveHover = themeManager.getColor("textSecondary").withAlpha(0.25f);
-    NomadUI::NUIColor inactiveText = themeManager.getColor("textSecondary");
+    AestraUI::NUIColor inactiveBg = themeManager.getColor("textSecondary").withAlpha(0.15f);
+    AestraUI::NUIColor inactiveHover = themeManager.getColor("textSecondary").withAlpha(0.25f);
+    AestraUI::NUIColor inactiveText = themeManager.getColor("textSecondary");
 
     if (m_muteButton) {
         m_muteButton->setToggled(m_channel->isMuted());
@@ -215,7 +215,7 @@ void TrackUIComponent::updateUI() {
         if (m_channel->isMuted()) {
             // Active: Strong Neon Amber (Mute)
             m_muteButton->setBackgroundColor(themeManager.getColor("accentAmber").withAlpha(0.6f));
-            m_muteButton->setTextColor(NomadUI::NUIColor::white()); 
+            m_muteButton->setTextColor(AestraUI::NUIColor::white()); 
             m_muteButton->setHoverColor(themeManager.getColor("accentAmber").withAlpha(0.8f));
             m_muteButton->setBorderEnabled(true);
         } else {
@@ -233,7 +233,7 @@ void TrackUIComponent::updateUI() {
         if (m_channel->isSoloed()) {
             // Active: Strong Neon Cyan (Solo)
             m_soloButton->setBackgroundColor(themeManager.getColor("accentCyan").withAlpha(0.6f));
-            m_soloButton->setTextColor(NomadUI::NUIColor::white());
+            m_soloButton->setTextColor(AestraUI::NUIColor::white());
             m_soloButton->setHoverColor(themeManager.getColor("accentCyan").withAlpha(0.8f));
             m_soloButton->setBorderEnabled(true);
         } else {
@@ -265,17 +265,17 @@ void TrackUIComponent::updateTrackNameColors() {
     size_t spacePos = trackName.find(' ');
     if (spacePos != std::string::npos) {
         // Create bright colors for the track based on number
-        static const std::vector<NomadUI::NUIColor> brightColors = {
-            NomadUI::NUIColor(1.0f, 0.8f, 0.2f, 1.0f),   // Bright yellow/gold
-            NomadUI::NUIColor(0.2f, 1.0f, 0.8f, 1.0f),   // Bright cyan
-            NomadUI::NUIColor(1.0f, 0.4f, 0.8f, 1.0f),   // Bright pink/magenta
-            NomadUI::NUIColor(0.6f, 1.0f, 0.2f, 1.0f),   // Bright lime
-            NomadUI::NUIColor(1.0f, 0.6f, 0.2f, 1.0f),   // Bright orange
-            NomadUI::NUIColor(0.4f, 0.8f, 1.0f, 1.0f),   // Bright blue
-            NomadUI::NUIColor(1.0f, 0.2f, 0.4f, 1.0f),   // Bright red
-            NomadUI::NUIColor(0.8f, 0.4f, 1.0f, 1.0f),   // Bright purple
-            NomadUI::NUIColor(1.0f, 0.9f, 0.1f, 1.0f),   // Bright yellow
-            NomadUI::NUIColor(0.1f, 0.9f, 0.6f, 1.0f)    // Bright teal
+        static const std::vector<AestraUI::NUIColor> brightColors = {
+            AestraUI::NUIColor(1.0f, 0.8f, 0.2f, 1.0f),   // Bright yellow/gold
+            AestraUI::NUIColor(0.2f, 1.0f, 0.8f, 1.0f),   // Bright cyan
+            AestraUI::NUIColor(1.0f, 0.4f, 0.8f, 1.0f),   // Bright pink/magenta
+            AestraUI::NUIColor(0.6f, 1.0f, 0.2f, 1.0f),   // Bright lime
+            AestraUI::NUIColor(1.0f, 0.6f, 0.2f, 1.0f),   // Bright orange
+            AestraUI::NUIColor(0.4f, 0.8f, 1.0f, 1.0f),   // Bright blue
+            AestraUI::NUIColor(1.0f, 0.2f, 0.4f, 1.0f),   // Bright red
+            AestraUI::NUIColor(0.8f, 0.4f, 1.0f, 1.0f),   // Bright purple
+            AestraUI::NUIColor(1.0f, 0.9f, 0.1f, 1.0f),   // Bright yellow
+            AestraUI::NUIColor(0.1f, 0.9f, 0.6f, 1.0f)    // Bright teal
         };
 
         // Extract track number from name for consistent coloring
@@ -304,7 +304,7 @@ void TrackUIComponent::updateTrackNameColors() {
         float g = ((color >> 8) & 0xFF) / 255.0f * 0.8f;
         float b = (color & 0xFF) / 255.0f * 0.8f;
         float a = ((color >> 24) & 0xFF) / 255.0f;
-        m_nameLabel->setTextColor(NomadUI::NUIColor(r, g, b, a));
+        m_nameLabel->setTextColor(AestraUI::NUIColor(r, g, b, a));
     }
 }
 
@@ -317,7 +317,7 @@ void TrackUIComponent::generateWaveformCache(int, int) {
 // =============================================================================
 
 // Draw waveform for a specific clip
-void TrackUIComponent::drawWaveformForClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds,
+void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
                                           const ClipInstance& clip, float offsetRatio, float visibleRatio) {
     if (!m_trackManager) return;
 
@@ -348,7 +348,7 @@ void TrackUIComponent::drawWaveformForClip(NomadUI::NUIRenderer& renderer, const
     int height = static_cast<int>(bounds.height);
     
     // Get color from clip (v3.0) or Sync with Track (v3.1)
-    NomadUI::NUIColor waveformColor;
+    AestraUI::NUIColor waveformColor;
     
     // Sync with Track Bright Color logic
     bool determined = false;
@@ -357,17 +357,17 @@ void TrackUIComponent::drawWaveformForClip(NomadUI::NUIRenderer& renderer, const
         size_t spacePos = trackName.find(' ');
         bool foundBrightColor = false;
         
-        static const std::vector<NomadUI::NUIColor> brightColors = {
-            NomadUI::NUIColor(1.0f, 0.8f, 0.2f, 1.0f),   
-            NomadUI::NUIColor(0.2f, 1.0f, 0.8f, 1.0f),   
-            NomadUI::NUIColor(1.0f, 0.4f, 0.8f, 1.0f),   
-            NomadUI::NUIColor(0.6f, 1.0f, 0.2f, 1.0f),   
-            NomadUI::NUIColor(1.0f, 0.6f, 0.2f, 1.0f),   
-            NomadUI::NUIColor(0.4f, 0.8f, 1.0f, 1.0f),   
-            NomadUI::NUIColor(1.0f, 0.2f, 0.4f, 1.0f),   
-            NomadUI::NUIColor(0.8f, 0.4f, 1.0f, 1.0f),   
-            NomadUI::NUIColor(1.0f, 0.9f, 0.1f, 1.0f),   
-            NomadUI::NUIColor(0.1f, 0.9f, 0.6f, 1.0f)    
+        static const std::vector<AestraUI::NUIColor> brightColors = {
+            AestraUI::NUIColor(1.0f, 0.8f, 0.2f, 1.0f),   
+            AestraUI::NUIColor(0.2f, 1.0f, 0.8f, 1.0f),   
+            AestraUI::NUIColor(1.0f, 0.4f, 0.8f, 1.0f),   
+            AestraUI::NUIColor(0.6f, 1.0f, 0.2f, 1.0f),   
+            AestraUI::NUIColor(1.0f, 0.6f, 0.2f, 1.0f),   
+            AestraUI::NUIColor(0.4f, 0.8f, 1.0f, 1.0f),   
+            AestraUI::NUIColor(1.0f, 0.2f, 0.4f, 1.0f),   
+            AestraUI::NUIColor(0.8f, 0.4f, 1.0f, 1.0f),   
+            AestraUI::NUIColor(1.0f, 0.9f, 0.1f, 1.0f),   
+            AestraUI::NUIColor(0.1f, 0.9f, 0.6f, 1.0f)    
         };
 
         if (spacePos != std::string::npos) {
@@ -391,14 +391,14 @@ void TrackUIComponent::drawWaveformForClip(NomadUI::NUIRenderer& renderer, const
         
         if (!foundBrightColor) {
                uint32_t c = m_channel->getColor();
-               waveformColor = NomadUI::NUIColor((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF, (c >> 24) & 0xFF) / 255.0f;
+               waveformColor = AestraUI::NUIColor((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF, (c >> 24) & 0xFF) / 255.0f;
         }
         determined = true;
     } 
     
     if (!determined) {
         uint32_t color = clip.colorRGBA;
-        waveformColor = NomadUI::NUIColor(
+        waveformColor = AestraUI::NUIColor(
             (color >> 16) & 0xFF,
             (color >> 8) & 0xFF,
             color & 0xFF,
@@ -412,8 +412,8 @@ void TrackUIComponent::drawWaveformForClip(NomadUI::NUIRenderer& renderer, const
     
     // Draw center line
     renderer.drawLine(
-        NomadUI::NUIPoint(bounds.x, static_cast<float>(centerY)),
-        NomadUI::NUIPoint(bounds.x + bounds.width, static_cast<float>(centerY)),
+        AestraUI::NUIPoint(bounds.x, static_cast<float>(centerY)),
+        AestraUI::NUIPoint(bounds.x + bounds.width, static_cast<float>(centerY)),
         1.0f,
         waveformColor.withAlpha(0.3f)
     );
@@ -472,8 +472,8 @@ void TrackUIComponent::drawWaveformForClip(NomadUI::NUIRenderer& renderer, const
     if (visibleFrames == 0 || width <= 0) return;
     
     // Build waveform as points
-    std::vector<NomadUI::NUIPoint> topPoints;
-    std::vector<NomadUI::NUIPoint> bottomPoints;
+    std::vector<AestraUI::NUIPoint> topPoints;
+    std::vector<AestraUI::NUIPoint> bottomPoints;
     topPoints.reserve(width);
     bottomPoints.reserve(width);
     
@@ -490,10 +490,10 @@ void TrackUIComponent::drawWaveformForClip(NomadUI::NUIRenderer& renderer, const
     auto waveformCache = source->getWaveformCache();
     if (waveformCache && waveformCache->isReady()) {
         // Cached Path (O(1) relative to zoom)
-        std::vector<Nomad::Audio::WaveformPeak> peaksL;
+        std::vector<Aestra::Audio::WaveformPeak> peaksL;
         waveformCache->getPeaksForRange(0, startFrame, startFrame + visibleFrames, width, peaksL);
         
-        std::vector<Nomad::Audio::WaveformPeak> peaksR;
+        std::vector<Aestra::Audio::WaveformPeak> peaksR;
         if (numChannels > 1) {
              waveformCache->getPeaksForRange(1, startFrame, startFrame + visibleFrames, width, peaksR);
         }
@@ -526,8 +526,8 @@ void TrackUIComponent::drawWaveformForClip(NomadUI::NUIRenderer& renderer, const
                 bottomY = static_cast<float>(centerY) + 0.5f;
             }
             
-            topPoints.push_back(NomadUI::NUIPoint(bounds.x + x, topY));
-            bottomPoints.push_back(NomadUI::NUIPoint(bounds.x + x, bottomY));
+            topPoints.push_back(AestraUI::NUIPoint(bounds.x + x, topY));
+            bottomPoints.push_back(AestraUI::NUIPoint(bounds.x + x, bottomY));
         }
     } else {
         // Legacy Brute-Force Path (Slow when zoomed out)
@@ -592,28 +592,28 @@ void TrackUIComponent::drawWaveformForClip(NomadUI::NUIRenderer& renderer, const
                 bottomY = static_cast<float>(centerY) + 0.5f;
             }
             
-            topPoints.push_back(NomadUI::NUIPoint(bounds.x + x, topY));
-            bottomPoints.push_back(NomadUI::NUIPoint(bounds.x + x, bottomY));
+            topPoints.push_back(AestraUI::NUIPoint(bounds.x + x, topY));
+            bottomPoints.push_back(AestraUI::NUIPoint(bounds.x + x, bottomY));
         }
     }
     
     // Single draw call for entire waveform with GRADIENT (bright top, darker bottom)
     if (!topPoints.empty()) {
-        NomadUI::NUIColor colorTop = waveformColor.lightened(0.15f);   // Brighter at peaks
-        NomadUI::NUIColor colorBottom = waveformColor.darkened(0.25f);  // Darker at center
+        AestraUI::NUIColor colorTop = waveformColor.lightened(0.15f);   // Brighter at peaks
+        AestraUI::NUIColor colorBottom = waveformColor.darkened(0.25f);  // Darker at center
         renderer.fillWaveformGradient(topPoints.data(), bottomPoints.data(), static_cast<int>(topPoints.size()), colorTop, colorBottom);
     }
 }
 
-void TrackUIComponent::drawSampleClipForClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds,
-                                            const NomadUI::NUIRect& fullClipBounds, const ClipInstance& clip) {
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
+                                            const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip) {
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // Rounded corners for "pill" aesthetic
     const float clipRadius = 4.0f;
     
     // Get clip color from pattern via PatternManager
-    NomadUI::NUIColor clipColor = themeManager.getColor("primary");
+    AestraUI::NUIColor clipColor = themeManager.getColor("primary");
     std::string sampleName = "Clip";
     int patternRefCount = 1;  // How many clips share this pattern
     int patternInstanceIndex = 1;  // This clip's instance number
@@ -627,17 +627,17 @@ void TrackUIComponent::drawSampleClipForClip(NomadUI::NUIRenderer& renderer, con
                 bool foundBrightColor = false;
                 
                 // Bright Color Palette
-                static const std::vector<NomadUI::NUIColor> brightColors = {
-                    NomadUI::NUIColor(1.0f, 0.8f, 0.2f, 1.0f),   
-                    NomadUI::NUIColor(0.2f, 1.0f, 0.8f, 1.0f),   
-                    NomadUI::NUIColor(1.0f, 0.4f, 0.8f, 1.0f),   
-                    NomadUI::NUIColor(0.6f, 1.0f, 0.2f, 1.0f),   
-                    NomadUI::NUIColor(1.0f, 0.6f, 0.2f, 1.0f),   
-                    NomadUI::NUIColor(0.4f, 0.8f, 1.0f, 1.0f),   
-                    NomadUI::NUIColor(1.0f, 0.2f, 0.4f, 1.0f),   
-                    NomadUI::NUIColor(0.8f, 0.4f, 1.0f, 1.0f),   
-                    NomadUI::NUIColor(1.0f, 0.9f, 0.1f, 1.0f),   
-                    NomadUI::NUIColor(0.1f, 0.9f, 0.6f, 1.0f)    
+                static const std::vector<AestraUI::NUIColor> brightColors = {
+                    AestraUI::NUIColor(1.0f, 0.8f, 0.2f, 1.0f),   
+                    AestraUI::NUIColor(0.2f, 1.0f, 0.8f, 1.0f),   
+                    AestraUI::NUIColor(1.0f, 0.4f, 0.8f, 1.0f),   
+                    AestraUI::NUIColor(0.6f, 1.0f, 0.2f, 1.0f),   
+                    AestraUI::NUIColor(1.0f, 0.6f, 0.2f, 1.0f),   
+                    AestraUI::NUIColor(0.4f, 0.8f, 1.0f, 1.0f),   
+                    AestraUI::NUIColor(1.0f, 0.2f, 0.4f, 1.0f),   
+                    AestraUI::NUIColor(0.8f, 0.4f, 1.0f, 1.0f),   
+                    AestraUI::NUIColor(1.0f, 0.9f, 0.1f, 1.0f),   
+                    AestraUI::NUIColor(0.1f, 0.9f, 0.6f, 1.0f)    
                 };
 
                 if (spacePos != std::string::npos) {
@@ -663,11 +663,11 @@ void TrackUIComponent::drawSampleClipForClip(NomadUI::NUIRenderer& renderer, con
                 if (!foundBrightColor) {
                     // Fallback to channel color if not using bright palette
                     uint32_t c = m_channel->getColor();
-                    clipColor = NomadUI::NUIColor((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF, (c >> 24) & 0xFF) / 255.0f;
+                    clipColor = AestraUI::NUIColor((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF, (c >> 24) & 0xFF) / 255.0f;
                 }
             } else {
                 uint32_t color = clip.colorRGBA;
-                clipColor = NomadUI::NUIColor(
+                clipColor = AestraUI::NUIColor(
                     (color >> 16) & 0xFF,
                     (color >> 8) & 0xFF,
                     color & 0xFF,
@@ -698,14 +698,14 @@ void TrackUIComponent::drawSampleClipForClip(NomadUI::NUIRenderer& renderer, con
     }
     
     // Draw semi-transparent filled background (ROUNDED)
-    NomadUI::NUIColor bgColor = clipColor.withAlpha(0.15f);
+    AestraUI::NUIColor bgColor = clipColor.withAlpha(0.15f);
     renderer.fillRoundedRect(clipBounds, clipRadius, bgColor);
     
     // Draw border (ghost instances get a dashed-style different border)
     bool clipSelected = (clip.id == m_activeClipId);
     bool isGhostInstance = (patternRefCount > 1 && patternInstanceIndex > 1);
     
-    NomadUI::NUIColor borderColor = clipSelected ? NomadUI::NUIColor::white() : clipColor.withAlpha(0.6f);
+    AestraUI::NUIColor borderColor = clipSelected ? AestraUI::NUIColor::white() : clipColor.withAlpha(0.6f);
     if (isGhostInstance) {
         borderColor = clipColor.withAlpha(0.4f);  // Dimmer border for ghost instances
     }
@@ -716,10 +716,10 @@ void TrackUIComponent::drawSampleClipForClip(NomadUI::NUIRenderer& renderer, con
     // Draw name strip at top
     float nameStripHeight = 16.0f;
     if (clipBounds.height > nameStripHeight + 5) {
-        NomadUI::NUIRect nameStripBounds(clipBounds.x, clipBounds.y, clipBounds.width, nameStripHeight);
+        AestraUI::NUIRect nameStripBounds(clipBounds.x, clipBounds.y, clipBounds.width, nameStripHeight);
         
         // Ghost instances get a slightly different name strip color
-        NomadUI::NUIColor stripColor = isGhostInstance ? clipColor.withAlpha(0.65f) : clipColor.withAlpha(0.85f);
+        AestraUI::NUIColor stripColor = isGhostInstance ? clipColor.withAlpha(0.65f) : clipColor.withAlpha(0.85f);
         renderer.fillRect(nameStripBounds, stripColor);
         
         // ALWAYS draw name at VISIBLE clip start (not full clip bounds)
@@ -738,8 +738,8 @@ void TrackUIComponent::drawSampleClipForClip(NomadUI::NUIRenderer& renderer, con
         }
         
         if (!displayName.empty()) {
-            renderer.drawText(displayName, NomadUI::NUIPoint(nameX, clipBounds.y + 2.0f), 
-                             11.0f, NomadUI::NUIColor::white());
+            renderer.drawText(displayName, AestraUI::NUIPoint(nameX, clipBounds.y + 2.0f), 
+                             11.0f, AestraUI::NUIColor::white());
         }
         
         // Draw pattern instance indicator (e.g., "1/3") if pattern has multiple instances
@@ -750,21 +750,21 @@ void TrackUIComponent::drawSampleClipForClip(NomadUI::NUIRenderer& renderer, con
             
             // Only draw if there's room after the name
             if (indicatorX > nameX + displayName.length() * charWidth + 10.0f) {
-                renderer.drawText(instanceText, NomadUI::NUIPoint(indicatorX, clipBounds.y + 2.0f), 
-                                 10.0f, NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.7f));
+                renderer.drawText(instanceText, AestraUI::NUIPoint(indicatorX, clipBounds.y + 2.0f), 
+                                 10.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.7f));
             }
         }
     }
 }
 
-void TrackUIComponent::drawSampleClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds) {
+void TrackUIComponent::drawSampleClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds) {
     // Legacy stub - do nothing or implement if needed for backward compatibility
 }
 
 
 // Helper to draw a clip at its calculated position (for multi-clip lane support)
-void TrackUIComponent::drawClipAtPosition(NomadUI::NUIRenderer& renderer, const ClipInstance& clip,
-                                          const NomadUI::NUIRect& bounds, float controlAreaWidth) {
+void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const ClipInstance& clip,
+                                          const AestraUI::NUIRect& bounds, float controlAreaWidth) {
     
     // Calculate waveform position in timeline space
     double startBeat = clip.startBeat;
@@ -813,7 +813,7 @@ void TrackUIComponent::drawClipAtPosition(NomadUI::NUIRenderer& renderer, const 
             float clipWidth = clipEndX - clipStartX;
             
             if (clipWidth > 0) {
-                const NomadUI::NUIRect fullClipBounds(
+                const AestraUI::NUIRect fullClipBounds(
                     waveformStartX,
                     bounds.y + 2,
                     waveformWidthInPixels,
@@ -823,7 +823,7 @@ void TrackUIComponent::drawClipAtPosition(NomadUI::NUIRenderer& renderer, const 
                 // Store FULL clip bounds for hit testing
                 m_allClipBounds[clip.id] = fullClipBounds;
 
-                NomadUI::NUIRect clippedClipBounds(
+                AestraUI::NUIRect clippedClipBounds(
                     clipStartX,
                     bounds.y + 2,
                     clipWidth,
@@ -854,7 +854,7 @@ void TrackUIComponent::drawClipAtPosition(NomadUI::NUIRenderer& renderer, const 
                         effectivePadding = std::max(0.0f, (visibleWidth - 2.0f) * 0.5f);
                     }
                     
-                    NomadUI::NUIRect waveformInsideClip(
+                    AestraUI::NUIRect waveformInsideClip(
                         visibleStartX + effectivePadding,  // Add left padding for rounded corners
                         bounds.y + 2 + nameStripHeight + waveformPadding,
                         std::max(1.0f, visibleWidth - effectivePadding * 2.0f),  // Shrink width
@@ -867,12 +867,12 @@ void TrackUIComponent::drawClipAtPosition(NomadUI::NUIRenderer& renderer, const 
     }
 }
 
-void TrackUIComponent::drawPatternClipForClip(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& clipBounds,
-                                              const NomadUI::NUIRect& fullClipBounds, const ClipInstance& clip) {
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
+                                              const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip) {
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // 1. Draw Background (Pattern Color)
-    NomadUI::NUIColor baseColor = NomadUI::NUIColor::fromHex(clip.colorRGBA);
+    AestraUI::NUIColor baseColor = AestraUI::NUIColor::fromHex(clip.colorRGBA);
     
     // Selection state check
     bool isSelected = false;
@@ -892,7 +892,7 @@ void TrackUIComponent::drawPatternClipForClip(NomadUI::NUIRenderer& renderer, co
     
     // 2. Draw Name Strip
     float nameStripHeight = 16.0f;
-    NomadUI::NUIRect nameStripBounds = clipBounds;
+    AestraUI::NUIRect nameStripBounds = clipBounds;
     nameStripBounds.height = nameStripHeight;
     renderer.fillRect(nameStripBounds, baseColor); // Solid header
     
@@ -905,7 +905,7 @@ void TrackUIComponent::drawPatternClipForClip(NomadUI::NUIRenderer& renderer, co
         }
     }
 
-    renderer.drawText(clipName, NomadUI::NUIPoint(clipBounds.x + 4.0f, clipBounds.y + 2.0f), 
+    renderer.drawText(clipName, AestraUI::NUIPoint(clipBounds.x + 4.0f, clipBounds.y + 2.0f), 
                       10.0f, themeManager.getColor("textPrimary"));
                       
     // 3. Draw MIDI Notes
@@ -935,7 +935,7 @@ void TrackUIComponent::drawPatternClipForClip(NomadUI::NUIRenderer& renderer, co
             }
             int pitchRange = std::max(12, maxPitch - minPitch); // Ensure at least an octave
             
-            NomadUI::NUIColor noteColor = baseColor.lightened(0.2f).withAlpha(0.8f);
+            AestraUI::NUIColor noteColor = baseColor.lightened(0.2f).withAlpha(0.8f);
             
             for (const auto& n : midiPayload.notes) {
                 // Calculate note geometry relative to FULL clip
@@ -948,7 +948,7 @@ void TrackUIComponent::drawPatternClipForClip(NomadUI::NUIRenderer& renderer, co
                 float noteY = noteAreaY + noteAreaHeight * (1.0f - normalizedPitch) - (noteAreaHeight / pitchRange);
                 float noteHeight = (noteAreaHeight / pitchRange) - 1.0f; // 1px gap
                 
-                NomadUI::NUIRect noteRect(noteStartX, noteY, std::max(1.0f, noteWidth), std::max(1.0f, noteHeight));
+                AestraUI::NUIRect noteRect(noteStartX, noteY, std::max(1.0f, noteWidth), std::max(1.0f, noteHeight));
                 
                 // Optimization: Draw only if intersects visible clipped bounds
                 if (noteRect.x + noteRect.width > clipBounds.x && noteRect.x < clipBounds.x + clipBounds.width) {
@@ -973,8 +973,8 @@ void TrackUIComponent::drawPatternClipForClip(NomadUI::NUIRenderer& renderer, co
 // SECTION: Main Render Entry
 // =============================================================================
 
-void TrackUIComponent::renderStatic(NomadUI::NUIRenderer& renderer) {
-    NomadUI::NUIRect bounds = getBounds();
+void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
+    AestraUI::NUIRect bounds = getBounds();
     
     // Clear clip bounds map - will be repopulated during drawClipAtPosition
     // m_allClipBounds.clear(); // Handled in render logic now
@@ -982,30 +982,30 @@ void TrackUIComponent::renderStatic(NomadUI::NUIRenderer& renderer) {
     auto& playlist = m_trackManager->getPlaylistModel();
     auto lane = playlist.getLane(m_laneId);
     // Get theme colors and layout
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     
     // Zebra striping moved to TrackManagerUI for guaranteed rendering order
     
-    NomadUI::NUIColor trackBgColor = NomadUI::NUIColor::transparent();
+    AestraUI::NUIColor trackBgColor = AestraUI::NUIColor::transparent();
 
     // Selection Highlight (Static base)
     if (isSelected()) {
-         NomadUI::NUIColor selectedColor = themeManager.getColor("primary").withAlpha(0.12f);
+         AestraUI::NUIColor selectedColor = themeManager.getColor("primary").withAlpha(0.12f);
          trackBgColor = selectedColor; 
     }
     
     // Apply background
     renderer.fillRect(bounds, trackBgColor); 
-    NomadUI::NUIColor borderColor = themeManager.getColor("border");
+    AestraUI::NUIColor borderColor = themeManager.getColor("border");
     
     float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
     
     if (m_isPrimaryForLane) {
-        NomadUI::NUIRect controlBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
+        AestraUI::NUIRect controlBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
         
         // Control Area Polish: Darker Glassy Background
-        NomadUI::NUIColor baseControlColor = themeManager.getColor("backgroundSecondary"); 
+        AestraUI::NUIColor baseControlColor = themeManager.getColor("backgroundSecondary"); 
         
         // Static Control Area State
         if (m_channel) {
@@ -1024,26 +1024,26 @@ void TrackUIComponent::renderStatic(NomadUI::NUIRenderer& renderer) {
         // Separator Line (Glass Border) between Controls and Timeline
         // Use drawLine for crisp SDF rendering with pixel snapping
         renderer.drawLine(
-            NomadUI::NUIPoint(controlBounds.right(), controlBounds.y),
-            NomadUI::NUIPoint(controlBounds.right(), controlBounds.bottom()),
+            AestraUI::NUIPoint(controlBounds.right(), controlBounds.y),
+            AestraUI::NUIPoint(controlBounds.right(), controlBounds.bottom()),
             1.0f,
             themeManager.getColor("glassBorder").withAlpha(0.5f)
         );
         
         // Top Separator (White)
         renderer.drawLine(
-            NomadUI::NUIPoint(bounds.x, bounds.y),
-            NomadUI::NUIPoint(bounds.right(), bounds.y),
+            AestraUI::NUIPoint(bounds.x, bounds.y),
+            AestraUI::NUIPoint(bounds.right(), bounds.y),
             1.0f,
-            NomadUI::NUIColor::white().withAlpha(0.2f)
+            AestraUI::NUIColor::white().withAlpha(0.2f)
         );
 
         // Bottom Separator (White)
         renderer.drawLine(
-            NomadUI::NUIPoint(bounds.x, bounds.bottom() - 1.0f),
-            NomadUI::NUIPoint(bounds.right(), bounds.bottom() - 1.0f),
+            AestraUI::NUIPoint(bounds.x, bounds.bottom() - 1.0f),
+            AestraUI::NUIPoint(bounds.right(), bounds.bottom() - 1.0f),
             1.0f,
-            NomadUI::NUIColor::white().withAlpha(0.2f)
+            AestraUI::NUIColor::white().withAlpha(0.2f)
         );
 
         // Lane color strip (identity)
@@ -1053,29 +1053,29 @@ void TrackUIComponent::renderStatic(NomadUI::NUIRenderer& renderer) {
             float r = ((argb >> 16) & 0xFF) / 255.0f;
             float g = ((argb >> 8) & 0xFF) / 255.0f;
             float b = (argb & 0xFF) / 255.0f;
-            NomadUI::NUIColor stripColor(r, g, b, a > 0.0f ? a : 1.0f);
+            AestraUI::NUIColor stripColor(r, g, b, a > 0.0f ? a : 1.0f);
             const float stripWidth = 4.0f; // Slightly slimmer strip
-            renderer.fillRect(NomadUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
+            renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
         }
         
         // Panel Separator (Right side of control area)
         renderer.drawLine(
-            NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
-            NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y + bounds.height),
+            AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
+            AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y + bounds.height),
             1.0f,
             borderColor.withAlpha(0.3f)
         );
         // Add subtle shadow to the separator for depth
-        renderer.drawShadow(NomadUI::NUIRect(bounds.x + controlAreaWidth - 1, bounds.y, 2, bounds.height), 
+        renderer.drawShadow(AestraUI::NUIRect(bounds.x + controlAreaWidth - 1, bounds.y, 2, bounds.height), 
                             0.0f, 0.0f, 4.0f, themeManager.getColor("shadow"));
 
 
         float separatorY = bounds.y + bounds.height - 1.0f; // Draw inside bounds
         renderer.drawLine( // Bottom separator
-            NomadUI::NUIPoint(bounds.x, separatorY),
-            NomadUI::NUIPoint(bounds.x + bounds.width, separatorY),
+            AestraUI::NUIPoint(bounds.x, separatorY),
+            AestraUI::NUIPoint(bounds.x + bounds.width, separatorY),
             2.0f,
-            NomadUI::NUIColor(0.0f, 0.0f, 0.0f, 1.0f)
+            AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 1.0f)
         );
         
         drawPlaylistGrid(renderer, bounds);
@@ -1096,9 +1096,9 @@ void TrackUIComponent::renderStatic(NomadUI::NUIRenderer& renderer) {
 }
 
 // Render Dynamic Overlays (Grid Area Only: Mute/Solo dimming, Automation, Selection)
-void TrackUIComponent::renderDynamic(NomadUI::NUIRenderer& renderer) {
-    NomadUI::NUIRect bounds = getBounds();
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+void TrackUIComponent::renderDynamic(AestraUI::NUIRenderer& renderer) {
+    AestraUI::NUIRect bounds = getBounds();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
 
@@ -1126,7 +1126,7 @@ void TrackUIComponent::renderDynamic(NomadUI::NUIRenderer& renderer) {
 
         const bool soloSuppressed = anySoloed && m_channel && !m_channel->isSoloed();
 
-        NomadUI::NUIRect gridArea(
+        AestraUI::NUIRect gridArea(
             bounds.x + controlAreaWidth,
             bounds.y,
             bounds.width - controlAreaWidth,
@@ -1142,29 +1142,29 @@ void TrackUIComponent::renderDynamic(NomadUI::NUIRenderer& renderer) {
         if (m_channel && m_channel->isMuted()) dimAlpha = std::max(dimAlpha, 0.40f);
 
         if (dimAlpha > 0.0f) {
-            renderer.fillRect(gridArea, NomadUI::NUIColor(0.0f, 0.0f, 0.0f, dimAlpha));
+            renderer.fillRect(gridArea, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, dimAlpha));
         }
     }
 }
 
-void TrackUIComponent::onRender(NomadUI::NUIRenderer& renderer) {
-    NOMAD_ZONE("TrackUI_Render");
+void TrackUIComponent::onRender(AestraUI::NUIRenderer& renderer) {
+    AESTRA_ZONE("TrackUI_Render");
     renderStatic(renderer);
     renderDynamic(renderer);
 }
 
 
-void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
+void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     if (!m_isPrimaryForLane) return;
     
-    const NomadUI::NUIRect bounds = getBounds();
+    const AestraUI::NUIRect bounds = getBounds();
     if (bounds.isEmpty()) return;
 
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 
     const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
-    const NomadUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
+    const AestraUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
 
     // Initial fill to clear potential artifacts
     renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary"));
@@ -1193,9 +1193,9 @@ void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
                     float meterW = 140.0f * visualLevel;
                     float meterH = 28.0f; 
                     
-                    NomadUI::NUIRect meterRect(meterX, meterY, meterW, meterH);
+                    AestraUI::NUIRect meterRect(meterX, meterY, meterW, meterH);
                     
-                    NomadUI::NUIColor meterColor = themeManager.getColor("success").withAlpha(0.15f);
+                    AestraUI::NUIColor meterColor = themeManager.getColor("success").withAlpha(0.15f);
                     if (visualLevel > 0.8f) meterColor = themeManager.getColor("error").withAlpha(0.2f);
                     else if (visualLevel > 0.5f) meterColor = themeManager.getColor("warning").withAlpha(0.2f);
                     
@@ -1208,7 +1208,7 @@ void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
     // Holographic Loading Feedback (Tech Aesthetic)
     if (m_isLoading) {
         auto cyan = themeManager.getColor("accentCyan");
-        float time = static_cast<float>(Nomad::Platform::getUtils()->getTime());
+        float time = static_cast<float>(Aestra::Platform::getUtils()->getTime());
         
         // Background Glow
         renderer.fillRect(controlAreaBounds, cyan.withAlpha(0.05f));
@@ -1216,8 +1216,8 @@ void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
         // Scanning Bar
         float scanProgress = std::fmod(time * 1.2f, 1.0f);
         float scanX = controlAreaBounds.x + (controlAreaBounds.width * scanProgress);
-        renderer.drawLine(NomadUI::NUIPoint(scanX, controlAreaBounds.y), 
-                         NomadUI::NUIPoint(scanX, controlAreaBounds.bottom()), 
+        renderer.drawLine(AestraUI::NUIPoint(scanX, controlAreaBounds.y), 
+                         AestraUI::NUIPoint(scanX, controlAreaBounds.bottom()), 
                          2.0f, cyan.withAlpha(0.3f * (1.0f - std::abs(scanProgress - 0.5f) * 2.0f)));
 
         // Animated "IMPORTING..." Text
@@ -1229,7 +1229,7 @@ void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
         float fontSize = 11.0f;
         auto textSize = renderer.measureText(loadingText, fontSize);
         renderer.drawText(loadingText, 
-                         NomadUI::NUIPoint(controlAreaBounds.x + (controlAreaBounds.width - textSize.width) * 0.5f, 
+                         AestraUI::NUIPoint(controlAreaBounds.x + (controlAreaBounds.width - textSize.width) * 0.5f, 
                                           controlAreaBounds.y + controlAreaBounds.height - 12.0f), 
                          fontSize, cyan.withAlpha(0.8f));
     }
@@ -1254,9 +1254,9 @@ void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
         if (m_channel->isSoloed()) {
             renderer.fillRect(controlAreaBounds, themeManager.getColor("accentCyan").withAlpha(0.12f));
         } else if (m_channel->isMuted()) {
-            renderer.fillRect(controlAreaBounds, NomadUI::NUIColor(0,0,0,0.35f));
+            renderer.fillRect(controlAreaBounds, AestraUI::NUIColor(0,0,0,0.35f));
         } else if (soloSuppressed) {
-            renderer.fillRect(controlAreaBounds, NomadUI::NUIColor(0,0,0,0.25f));
+            renderer.fillRect(controlAreaBounds, AestraUI::NUIColor(0,0,0,0.25f));
         }
 
         // SELECTION OVERLAY
@@ -1267,12 +1267,12 @@ void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
 
     // Track color strip (identity)
     if (m_channel) {
-        NomadUI::NUIColor stripColor;
+        AestraUI::NUIColor stripColor;
         
         if (m_isLoading) {
             stripColor = themeManager.getColor("accentCyan");
             // Add a subtle pulse to the strip during loading
-            float pulse = (std::sin(static_cast<float>(Nomad::Platform::getUtils()->getTime()) * 8.0f) * 0.5f + 0.5f);
+            float pulse = (std::sin(static_cast<float>(Aestra::Platform::getUtils()->getTime()) * 8.0f) * 0.5f + 0.5f);
             stripColor = stripColor.withAlpha(0.6f + pulse * 0.4f);
         } else {
             // Exact same logic as updateTrackNameColors to ensure match
@@ -1281,17 +1281,17 @@ void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
             bool foundBrightColor = false;
 
             if (spacePos != std::string::npos) {
-                static const std::vector<NomadUI::NUIColor> brightColors = {
-                    NomadUI::NUIColor(1.0f, 0.8f, 0.2f, 1.0f),   
-                    NomadUI::NUIColor(0.2f, 1.0f, 0.8f, 1.0f),   
-                    NomadUI::NUIColor(1.0f, 0.4f, 0.8f, 1.0f),   
-                    NomadUI::NUIColor(0.6f, 1.0f, 0.2f, 1.0f),   
-                    NomadUI::NUIColor(1.0f, 0.6f, 0.2f, 1.0f),   
-                    NomadUI::NUIColor(0.4f, 0.8f, 1.0f, 1.0f),   
-                    NomadUI::NUIColor(1.0f, 0.2f, 0.4f, 1.0f),   
-                    NomadUI::NUIColor(0.8f, 0.4f, 1.0f, 1.0f),   
-                    NomadUI::NUIColor(1.0f, 0.9f, 0.1f, 1.0f),   
-                    NomadUI::NUIColor(0.1f, 0.9f, 0.6f, 1.0f)    
+                static const std::vector<AestraUI::NUIColor> brightColors = {
+                    AestraUI::NUIColor(1.0f, 0.8f, 0.2f, 1.0f),   
+                    AestraUI::NUIColor(0.2f, 1.0f, 0.8f, 1.0f),   
+                    AestraUI::NUIColor(1.0f, 0.4f, 0.8f, 1.0f),   
+                    AestraUI::NUIColor(0.6f, 1.0f, 0.2f, 1.0f),   
+                    AestraUI::NUIColor(1.0f, 0.6f, 0.2f, 1.0f),   
+                    AestraUI::NUIColor(0.4f, 0.8f, 1.0f, 1.0f),   
+                    AestraUI::NUIColor(1.0f, 0.2f, 0.4f, 1.0f),   
+                    AestraUI::NUIColor(0.8f, 0.4f, 1.0f, 1.0f),   
+                    AestraUI::NUIColor(1.0f, 0.9f, 0.1f, 1.0f),   
+                    AestraUI::NUIColor(0.1f, 0.9f, 0.6f, 1.0f)    
                 };
 
                 size_t numberPos = trackName.find_last_not_of("0123456789");
@@ -1319,52 +1319,52 @@ void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
                 const float r = ((argb >> 16) & 0xFF) / 255.0f;
                 const float g = ((argb >> 8) & 0xFF) / 255.0f;
                 const float b = (argb & 0xFF) / 255.0f;
-                stripColor = NomadUI::NUIColor(r, g, b, a > 0.0f ? a : 1.0f);
+                stripColor = AestraUI::NUIColor(r, g, b, a > 0.0f ? a : 1.0f);
             }
         }
         
         const float stripWidth = 4.0f;
         
         // Draw strip
-        renderer.fillRect(NomadUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
+        renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
         
         // If loading, draw a small progress bar on the strip itself
         if (m_isLoading && m_loadProgress > 0.0f) {
             float progressHeight = bounds.height * std::min(1.0f, m_loadProgress);
-            renderer.fillRect(NomadUI::NUIRect(bounds.x, bounds.bottom() - progressHeight, stripWidth, progressHeight), NomadUI::NUIColor::white().withAlpha(0.6f));
+            renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.bottom() - progressHeight, stripWidth, progressHeight), AestraUI::NUIColor::white().withAlpha(0.6f));
         }
 
         // Selection Highlight Line (Inner Glow)
         if (m_selected) {
             auto glowColor = themeManager.getColor("highlightGlow");
             // Top highlight line inside control area (skipping strip)
-            renderer.fillRect(NomadUI::NUIRect(bounds.x + stripWidth, bounds.y, controlAreaWidth - stripWidth, 1.0f), glowColor);
+            renderer.fillRect(AestraUI::NUIRect(bounds.x + stripWidth, bounds.y, controlAreaWidth - stripWidth, 1.0f), glowColor);
             // Bottom highlight
-            renderer.fillRect(NomadUI::NUIRect(bounds.x + stripWidth, bounds.y + bounds.height - 1.0f, controlAreaWidth - stripWidth, 1.0f), glowColor.withAlpha(0.5f));
+            renderer.fillRect(AestraUI::NUIRect(bounds.x + stripWidth, bounds.y + bounds.height - 1.0f, controlAreaWidth - stripWidth, 1.0f), glowColor.withAlpha(0.5f));
         }
     }
 
     // Explicit Separators for Control Area (ensures they are on top of background)
     // Top
     renderer.drawLine(
-        NomadUI::NUIPoint(bounds.x, bounds.y),
-        NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
+        AestraUI::NUIPoint(bounds.x, bounds.y),
+        AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
         1.0f,
-        NomadUI::NUIColor::white().withAlpha(0.1f)
+        AestraUI::NUIColor::white().withAlpha(0.1f)
     );
     // Bottom
     renderer.drawLine(
-        NomadUI::NUIPoint(bounds.x, bounds.bottom() - 1),
-        NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.bottom() - 1),
+        AestraUI::NUIPoint(bounds.x, bounds.bottom() - 1),
+        AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.bottom() - 1),
         1.0f,
-        NomadUI::NUIColor::white().withAlpha(0.1f)
+        AestraUI::NUIColor::white().withAlpha(0.1f)
     );
 
 
     // Draw vertical separator between control area and playlist area
     renderer.drawLine(
-        NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
-        NomadUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y + bounds.height),
+        AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
+        AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y + bounds.height),
         1.0f,
         themeManager.getColor("glassBorder")
     );
@@ -1374,10 +1374,10 @@ void TrackUIComponent::renderControlOverlay(NomadUI::NUIRenderer& renderer) {
 }
 
 // Draw playlist grid (beat/bar grid)
-void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds) {
-    NOMAD_ZONE("TrackUI_Grid");
+void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds) {
+    AESTRA_ZONE("TrackUI_Grid");
     // Get layout dimensions from theme
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
     
@@ -1417,8 +1417,8 @@ void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const No
              
              if (rectW > 0 && rectX < gridEndX) {
                  renderer.fillRect(
-                     NomadUI::NUIRect(rectX, bounds.y, rectW, bounds.height), 
-                     NomadUI::NUIColor(1.0f, 1.0f, 1.0f, 0.03f)
+                     AestraUI::NUIRect(rectX, bounds.y, rectW, bounds.height), 
+                     AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.03f)
                  );
              }
         }
@@ -1438,20 +1438,20 @@ void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const No
         
         if (loopWidth > 0 && drawStartX < gridEndX) {
             // Glass-colored loop region highlight
-            NomadUI::NUIColor loopFillColor = themeManager.getColor("accentCyan").withAlpha(0.08f);
+            AestraUI::NUIColor loopFillColor = themeManager.getColor("accentCyan").withAlpha(0.08f);
             renderer.fillRect(
-                NomadUI::NUIRect(drawStartX, bounds.y, loopWidth, bounds.height),
+                AestraUI::NUIRect(drawStartX, bounds.y, loopWidth, bounds.height),
                 loopFillColor
             );
             
             // Draw loop boundary markers (vertical lines at start and end)
-            NomadUI::NUIColor loopMarkerColor = themeManager.getColor("accentCyan").withAlpha(0.6f);
+            AestraUI::NUIColor loopMarkerColor = themeManager.getColor("accentCyan").withAlpha(0.6f);
             
             // Start marker (if visible)
             if (loopStartX >= gridStartX && loopStartX <= gridEndX) {
                 renderer.drawLine(
-                    NomadUI::NUIPoint(loopStartX, bounds.y),
-                    NomadUI::NUIPoint(loopStartX, bounds.y + bounds.height),
+                    AestraUI::NUIPoint(loopStartX, bounds.y),
+                    AestraUI::NUIPoint(loopStartX, bounds.y + bounds.height),
                     2.0f,
                     loopMarkerColor
                 );
@@ -1460,8 +1460,8 @@ void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const No
             // End marker (if visible)
             if (loopEndX >= gridStartX && loopEndX <= gridEndX) {
                 renderer.drawLine(
-                    NomadUI::NUIPoint(loopEndX, bounds.y),
-                    NomadUI::NUIPoint(loopEndX, bounds.y + bounds.height),
+                    AestraUI::NUIPoint(loopEndX, bounds.y),
+                    AestraUI::NUIPoint(loopEndX, bounds.y + bounds.height),
                     2.0f,
                     loopMarkerColor
                 );
@@ -1471,8 +1471,8 @@ void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const No
     */
 
     // 2. DYNAMIC SNAP GRID LINES
-    double snapDur = NomadUI::MusicTheory::getSnapDuration(m_snapSetting);
-    if (m_snapSetting == NomadUI::SnapGrid::None) snapDur = 1.0;
+    double snapDur = AestraUI::MusicTheory::getSnapDuration(m_snapSetting);
+    if (m_snapSetting == AestraUI::SnapGrid::None) snapDur = 1.0;
     else if (snapDur <= 0.0001) snapDur = 1.0;
 
     // Adjust density (Relaxed to 5px to ensure 1/16th notes are visible)
@@ -1483,9 +1483,9 @@ void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const No
     double current = std::floor(startBeat / snapDur) * snapDur;
 
     // Grid Lines - Using Theme Tokens
-    NomadUI::NUIColor barLineColor = themeManager.getColor("gridBar");
-    NomadUI::NUIColor beatLineColor = themeManager.getColor("gridBeat");
-    NomadUI::NUIColor subBeatLineColor = themeManager.getColor("gridSubdivision");
+    AestraUI::NUIColor barLineColor = themeManager.getColor("gridBar");
+    AestraUI::NUIColor beatLineColor = themeManager.getColor("gridBeat");
+    AestraUI::NUIColor subBeatLineColor = themeManager.getColor("gridSubdivision");
 
     for (; current <= endBeat + snapDur; current += snapDur) {
         // Double precision relative subtraction to avoid float jitter on large offsets
@@ -1499,12 +1499,12 @@ void TrackUIComponent::drawPlaylistGrid(NomadUI::NUIRenderer& renderer, const No
         bool isBeat = (std::fmod(std::abs(current), 1.0) < 0.001);
         
         if (isBar) {
-             renderer.drawLine(NomadUI::NUIPoint(x, bounds.y), NomadUI::NUIPoint(x, bounds.y + bounds.height), 1.0f, barLineColor);
+             renderer.drawLine(AestraUI::NUIPoint(x, bounds.y), AestraUI::NUIPoint(x, bounds.y + bounds.height), 1.0f, barLineColor);
         } else if (isBeat) {
-             renderer.drawLine(NomadUI::NUIPoint(x, bounds.y), NomadUI::NUIPoint(x, bounds.y + bounds.height), 1.0f, beatLineColor);
+             renderer.drawLine(AestraUI::NUIPoint(x, bounds.y), AestraUI::NUIPoint(x, bounds.y + bounds.height), 1.0f, beatLineColor);
         } else {
              // Subdivision: Standard subtle line
-             renderer.drawLine(NomadUI::NUIPoint(x, bounds.y), NomadUI::NUIPoint(x, bounds.y + bounds.height), 1.0f, subBeatLineColor);
+             renderer.drawLine(AestraUI::NUIPoint(x, bounds.y), AestraUI::NUIPoint(x, bounds.y + bounds.height), 1.0f, subBeatLineColor);
         }
     }
 }
@@ -1554,9 +1554,9 @@ void TrackUIComponent::onUpdate(double deltaTime) {
 }
 
 void TrackUIComponent::onResize(int width, int height) {
-    NomadUI::NUIRect bounds = getBounds();
+    AestraUI::NUIRect bounds = getBounds();
     
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 
     const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
@@ -1580,36 +1580,36 @@ void TrackUIComponent::onResize(int width, int height) {
 
     // Name label - use NUIAbsolute for global coordinate system
     if (m_nameLabel) {
-        m_nameLabel->setBounds(NomadUI::NUIRect(bounds.x + localLabelLeft, bounds.y + localCenterY, localLabelWidth, layout.trackLabelHeight));
+        m_nameLabel->setBounds(AestraUI::NUIRect(bounds.x + localLabelLeft, bounds.y + localCenterY, localLabelWidth, layout.trackLabelHeight));
     }
 
     float xCursor = localButtonsXStart;
     if (m_muteButton) {
-        m_muteButton->setBounds(NomadUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW, buttonH));
+        m_muteButton->setBounds(AestraUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW, buttonH));
         xCursor += buttonW + spacing;
     }
     if (m_soloButton) {
-        m_soloButton->setBounds(NomadUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW, buttonH));
+        m_soloButton->setBounds(AestraUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW, buttonH));
         xCursor += buttonW + spacing;
     }
     if (m_recordButton) {
-        m_recordButton->setBounds(NomadUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW, buttonH));
+        m_recordButton->setBounds(AestraUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW, buttonH));
     }
 
-    NomadUI::NUIComponent::onResize(width, height);
+    AestraUI::NUIComponent::onResize(width, height);
 }
 
 // =============================================================================
 // SECTION: Event Handling
 // =============================================================================
 
-bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
+bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // 1. Invalidate Cache on mouse movement in control area (for button hover feedback)
-    // NomadUI doesn't use event.type enum, so we infer from context.
+    // AestraUI doesn't use event.type enum, so we infer from context.
     // Any mouse event in the control area checks for invalidation.
     if (m_onCacheInvalidationCallback) {
         // Check if we are over the control area
-        auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlWidth = layout.trackControlsWidth;
         
@@ -1618,7 +1618,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
     }
 
-    NomadUI::NUIRect bounds = getBounds();
+    AestraUI::NUIRect bounds = getBounds();
     
     // Early exit: If event is outside our bounds and we're not in an active operation, don't handle it
     bool isInsideBounds = bounds.contains(event.position);
@@ -1636,7 +1636,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
     
     // Get theme to determine control area bounds
-    auto& themeManager = NomadUI::NUIThemeManager::getInstance();
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     float controlAreaWidth = layout.trackControlsWidth;
     float controlAreaEndX = bounds.x + controlAreaWidth;
@@ -1680,7 +1680,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // Keep button hover/press state accurate even when leaving the track row.
     // This is important for cached UIs (and prevents stuck hover/press visuals).
     if (isInsideBounds || controlsNeedEvents) {
-        auto routeControlButton = [&](const std::shared_ptr<NomadUI::NUIButton>& button) -> bool {
+        auto routeControlButton = [&](const std::shared_ptr<AestraUI::NUIButton>& button) -> bool {
             if (!button) return false;
             
             // Explicitly handle hover state since we are manually routing
@@ -1700,15 +1700,15 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
 
         if (handledByControls) {
             // Clicking controls should also select the track (v3.1)
-            if (event.pressed && event.button == NomadUI::NUIMouseButton::Left && m_onTrackSelectedCallback) {
-                bool shift = (event.modifiers & NomadUI::NUIModifiers::Shift);
+            if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && m_onTrackSelectedCallback) {
+                bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift);
                 m_onTrackSelectedCallback(this, shift);
             }
             return true;
         }
 
         // === TRACK CONTEXT MENU (Right Click on Header/Control Area) ===
-        if (event.pressed && event.button == NomadUI::NUIMouseButton::Right && event.position.x <= controlAreaEndX) {
+        if (event.pressed && event.button == AestraUI::NUIMouseButton::Right && event.position.x <= controlAreaEndX) {
             // Select track on right-click too
             if (m_onTrackSelectedCallback) {
                 m_onTrackSelectedCallback(this, false);
@@ -1725,7 +1725,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     // Handle Mouse Release for automation point dragging FIRST - before any bounds checks
     // This ensures release is processed even when mouse has moved far outside bounds
     if (m_playlistMode == PlaylistMode::Automation && m_isDraggingPoint) {
-        if (event.released && event.button == NomadUI::NUIMouseButton::Left) {
+        if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
             m_isDraggingPoint = false;
             m_draggedPointIndex = -1;
             m_draggedCurveIndex = -1;
@@ -1752,13 +1752,13 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                 auto& curve = lane->automationCurves[0]; // For now, automate first curve (Volume)
 
                 // Right Click -> Delete Point
-                if (event.pressed && event.button == NomadUI::NUIMouseButton::Right) {
+                if (event.pressed && event.button == AestraUI::NUIMouseButton::Right) {
                     auto& points = curve.getPoints();
                     for (int i = 0; i < (int)points.size(); ++i) {
                         float px = gridStartX + (static_cast<float>(points[i].beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
                         float py = bounds.y + (1.0f - static_cast<float>(points[i].value)) * bounds.height;
                         
-                        if (NomadUI::distance({px, py}, event.position) < 12.0f) {
+                        if (AestraUI::distance({px, py}, event.position) < 12.0f) {
                             curve.removePoint(i);
                             setDirty(true);
                             repaint();
@@ -1769,14 +1769,14 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                 }
 
                 // Left Click -> Select/Add Point
-                if (event.pressed && event.button == NomadUI::NUIMouseButton::Left && isInsideBounds) {
+                if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && isInsideBounds) {
                     int hitIndex = -1;
                     auto& points = curve.getPoints();
                     for (int i = 0; i < (int)points.size(); ++i) {
                         float px = gridStartX + (static_cast<float>(points[i].beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
                         float py = bounds.y + (1.0f - static_cast<float>(points[i].value)) * bounds.height;
                         
-                        if (NomadUI::distance({px, py}, event.position) < 12.0f) {
+                        if (AestraUI::distance({px, py}, event.position) < 12.0f) {
                             hitIndex = i;
                             break;
                         }
@@ -1853,9 +1853,9 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             }
             
             // Allow selecting track in automation mode if not interacting with points
-            if (event.pressed && event.button == NomadUI::NUIMouseButton::Left && isInsideBounds) {
+            if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && isInsideBounds) {
                 if (m_onTrackSelectedCallback) {
-                    m_onTrackSelectedCallback(this, (event.modifiers & NomadUI::NUIModifiers::Shift));
+                    m_onTrackSelectedCallback(this, (event.modifiers & AestraUI::NUIModifiers::Shift));
                 }
             }
             
@@ -1863,10 +1863,10 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         }
     }
     
-    auto& dragManager = NomadUI::NUIDragDropManager::getInstance();
+    auto& dragManager = AestraUI::NUIDragDropManager::getInstance();
     
     // Handle mouse release - always process to clear state
-    if (!event.pressed && event.button == NomadUI::NUIMouseButton::Left) {
+    if (!event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         bool wasActive = m_isTrimming || m_isDraggingClip || m_clipDragPotential;
         if (m_isTrimming) {
             Log::info("Finished trimming clip");
@@ -1896,7 +1896,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
     
     // PRIORITY 1.5: Instant Clip Dragging Update
-    if (m_isDraggingClip && !event.released && event.button == NomadUI::NUIMouseButton::Left) {
+    if (m_isDraggingClip && !event.released && event.button == AestraUI::NUIMouseButton::Left) {
          if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
              parentMgr->updateInstantClipDrag(event.position);
          }
@@ -1970,9 +1970,9 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
 
     
     // PRIORITY 4: Handle clip manipulation in the grid/playlist area only (mouse press)
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Left && isInsideBounds) {
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && isInsideBounds) {
         // Position relative to local component origin
-        NomadUI::NUIPoint localPos(event.position.x - bounds.x, event.position.y - bounds.y);
+        AestraUI::NUIPoint localPos(event.position.x - bounds.x, event.position.y - bounds.y);
 
         // Only process clip manipulation if click is in the grid area (not control area)
         if (localPos.x >= controlAreaWidth) {
@@ -1983,7 +1983,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             // === MULTI-CLIP HIT TESTING ===
             // Find which clip was clicked (check all clips in m_allClipBounds)
             ClipInstanceID clickedClipId = ClipInstanceID{};
-            NomadUI::NUIRect clickedClipBounds;
+            AestraUI::NUIRect clickedClipBounds;
             
             for (const auto& [clipId, clipBounds] : m_allClipBounds) {
                 if (clipBounds.contains(event.position)) {
@@ -2047,7 +2047,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                     }
                     
                     if (m_onTrackSelectedCallback) {
-                        bool shift = (event.modifiers & NomadUI::NUIModifiers::Shift);
+                        bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift);
                         m_onTrackSelectedCallback(this, shift);
                     } else {
                         m_selected = true;
@@ -2081,7 +2081,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                     }
                     
                     if (m_onTrackSelectedCallback) {
-                        bool shift = (event.modifiers & NomadUI::NUIModifiers::Shift);
+                        bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift);
                         m_onTrackSelectedCallback(this, shift);
                     } else {
                         m_selected = true;
@@ -2094,7 +2094,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
                 m_clipDragStartPos = event.position;
                 m_activeClipId = clickedClipId;
                 if (m_onTrackSelectedCallback) {
-                    bool shift = (event.modifiers & NomadUI::NUIModifiers::Shift);
+                    bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift);
                     m_onTrackSelectedCallback(this, shift);
                 } else {
                     m_selected = true;
@@ -2112,7 +2112,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
             
             // Grid area click (not on any clip) - select track
             if (m_onTrackSelectedCallback) {
-                bool shift = (event.modifiers & NomadUI::NUIModifiers::Shift);
+                bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift);
                 m_onTrackSelectedCallback(this, shift);
             } else {
                 m_selected = true;
@@ -2123,7 +2123,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
         // Click in control area (but not on a button) - just select the track
         if (event.position.x < controlAreaEndX) {
             if (m_onTrackSelectedCallback) {
-                bool shift = (event.modifiers & NomadUI::NUIModifiers::Shift);
+                bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift);
                 m_onTrackSelectedCallback(this, shift);
             } else {
                 m_selected = true;
@@ -2133,7 +2133,7 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
     }
     
     // Handle right-click to delete clip - check all clips
-    if (event.pressed && event.button == NomadUI::NUIMouseButton::Right && isInsideBounds) {
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Right && isInsideBounds) {
         // Find which clip was right-clicked
         for (const auto& [clipId, clipBounds] : m_allClipBounds) {
             if (clipBounds.contains(event.position)) {
@@ -2152,15 +2152,15 @@ bool TrackUIComponent::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
 }
 
 
-void TrackUIComponent::renderAutomationLayer(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds, float gridStartX) {
+void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStartX) {
     auto& playlist = m_trackManager->getPlaylistModel();
     auto lane = playlist.getLane(m_laneId);
     if (!lane) return;
 
-    auto& theme = NomadUI::NUIThemeManager::getInstance();
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
     
     // Automation Area bounds (exclude controls)
-    NomadUI::NUIRect gridArea(gridStartX, bounds.y, bounds.width - (gridStartX - bounds.x), bounds.height);
+    AestraUI::NUIRect gridArea(gridStartX, bounds.y, bounds.width - (gridStartX - bounds.x), bounds.height);
     
     // For now, if no curves exist, let's create a default volume curve for testing (DELEEME LATER)
     if (lane->automationCurves.empty()) {
@@ -2175,17 +2175,17 @@ void TrackUIComponent::renderAutomationLayer(NomadUI::NUIRenderer& renderer, con
         if (points.empty()) {
             // Draw a flat line at default value if no points
             float y = gridArea.y + (1.0f - static_cast<float>(curve.getDefaultValue())) * gridArea.height;
-            renderer.drawLine(NomadUI::NUIPoint(gridArea.x, y), 
-                              NomadUI::NUIPoint(gridArea.right(), y), 
+            renderer.drawLine(AestraUI::NUIPoint(gridArea.x, y), 
+                              AestraUI::NUIPoint(gridArea.right(), y), 
                               1.5f, theme.getColor("accentCyan").withAlpha(0.4f));
             continue;
         }
 
-        NomadUI::NUIColor curveColor = theme.getColor("accentCyan");
+        AestraUI::NUIColor curveColor = theme.getColor("accentCyan");
         
         // Draw lines between points
         // Draw lines between points
-        std::vector<NomadUI::NUIPoint> polyPoints;
+        std::vector<AestraUI::NUIPoint> polyPoints;
         polyPoints.reserve(1024);
 
         for (size_t i = 1; i < points.size(); ++i) {
@@ -2228,14 +2228,14 @@ void TrackUIComponent::renderAutomationLayer(NomadUI::NUIRenderer& renderer, con
             float fx = gridStartX + (static_cast<float>(first.beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
             float fy = gridArea.y + (1.0f - static_cast<float>(first.value)) * gridArea.height;
             if (fx > gridArea.x) {
-                renderer.drawLine(NomadUI::NUIPoint(gridArea.x, fy), NomadUI::NUIPoint(fx, fy), 1.5f, curveColor.withAlpha(0.5f));
+                renderer.drawLine(AestraUI::NUIPoint(gridArea.x, fy), AestraUI::NUIPoint(fx, fy), 1.5f, curveColor.withAlpha(0.5f));
             }
             
             const auto& last = points.back();
             float lx = gridStartX + (static_cast<float>(last.beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
             float ly = gridArea.y + (1.0f - static_cast<float>(last.value)) * gridArea.height;
             if (lx < gridArea.right()) {
-                renderer.drawLine(NomadUI::NUIPoint(lx, ly), NomadUI::NUIPoint(gridArea.right(), ly), 1.5f, curveColor.withAlpha(0.5f));
+                renderer.drawLine(AestraUI::NUIPoint(lx, ly), AestraUI::NUIPoint(gridArea.right(), ly), 1.5f, curveColor.withAlpha(0.5f));
             }
         }
 
@@ -2246,15 +2246,15 @@ void TrackUIComponent::renderAutomationLayer(NomadUI::NUIRenderer& renderer, con
             
             if (x < gridArea.x || x > gridArea.right()) continue;
             
-            NomadUI::NUIColor ptColor = p.selected ? theme.getColor("primary") : curveColor;
-            renderer.fillRect(NomadUI::NUIRect(x - 3, y - 3, 6, 6), ptColor);
-            renderer.strokeRect(NomadUI::NUIRect(x - 4, y - 4, 8, 8), 1.0f, theme.getColor("border"));
+            AestraUI::NUIColor ptColor = p.selected ? theme.getColor("primary") : curveColor;
+            renderer.fillRect(AestraUI::NUIRect(x - 3, y - 3, 6, 6), ptColor);
+            renderer.strokeRect(AestraUI::NUIRect(x - 4, y - 4, 8, 8), 1.0f, theme.getColor("border"));
         }
     }
 }
 
 
-void TrackUIComponent::drawLiveWaveform(NomadUI::NUIRenderer& renderer, const NomadUI::NUIRect& bounds, float controlAreaWidth) {
+void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float controlAreaWidth) {
     if (!m_trackManager->isRecording()) return;
     if (!m_channel->isArmed()) return;
 
@@ -2288,10 +2288,10 @@ void TrackUIComponent::drawLiveWaveform(NomadUI::NUIRenderer& renderer, const No
     if (endX < gridStartX || startX > bounds.right()) return;
 
     // Drawing Loop (Decimated)
-    NomadUI::NUIColor waveColor = NomadUI::NUIThemeManager::getInstance().getColor("error"); // Red for recording
+    AestraUI::NUIColor waveColor = AestraUI::NUIThemeManager::getInstance().getColor("error"); // Red for recording
     
-    std::vector<NomadUI::NUIPoint> topPoints;
-    std::vector<NomadUI::NUIPoint> bottomPoints;
+    std::vector<AestraUI::NUIPoint> topPoints;
+    std::vector<AestraUI::NUIPoint> bottomPoints;
     
     float visibleStartPixel = std::max(gridStartX, startX) - startX;
     float visibleEndPixel = std::min(bounds.right(), endX) - startX;
@@ -2329,8 +2329,8 @@ void TrackUIComponent::drawLiveWaveform(NomadUI::NUIRenderer& renderer, const No
             bottomY = centerY + 0.5f;
         }
         
-        topPoints.push_back(NomadUI::NUIPoint(screenX, topY));
-        bottomPoints.push_back(NomadUI::NUIPoint(screenX, bottomY));
+        topPoints.push_back(AestraUI::NUIPoint(screenX, topY));
+        bottomPoints.push_back(AestraUI::NUIPoint(screenX, bottomY));
     }
     
     if (!topPoints.empty()) {
@@ -2341,5 +2341,5 @@ void TrackUIComponent::drawLiveWaveform(NomadUI::NUIRenderer& renderer, const No
 }
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra
 

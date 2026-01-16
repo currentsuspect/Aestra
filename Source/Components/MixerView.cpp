@@ -1,12 +1,12 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "MixerView.h"
-#include "../NomadUI/Core/NUIThemeSystem.h"
-#include "../NomadUI/Graphics/NUIRenderer.h"
-#include "../NomadCore/include/NomadLog.h"
-#include "../NomadCore/include/NomadUnifiedProfiler.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraCore/include/AestraLog.h"
+#include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include <algorithm>
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 //=============================================================================
@@ -18,7 +18,7 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     , m_trackManager(trackManager)
 {
     // Create volume fader (vertical slider)
-    m_volumeFader = std::make_shared<NomadUI::Fader>();
+    m_volumeFader = std::make_shared<AestraUI::Fader>();
     m_volumeFader->setValue(m_track ? m_track->getVolume() : 0.8f);
     m_volumeFader->setOnValueChange([this](double value) {
         if (m_track) {
@@ -29,7 +29,7 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     addChild(m_volumeFader);
     
     // Create pan knob (horizontal slider for now)
-    m_panKnob = std::make_shared<NomadUI::PanKnob>();
+    m_panKnob = std::make_shared<AestraUI::PanKnob>();
     m_panKnob->setValue(0.0f);  // Center
     m_panKnob->setOnValueChange([this](double value) {
         if (m_track) {
@@ -40,7 +40,7 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     addChild(m_panKnob);
     
     // Create mute button
-    m_muteButton = std::make_shared<NomadUI::MuteButton>();
+    m_muteButton = std::make_shared<AestraUI::MuteButton>();
     m_muteButton->setOnToggle([this](bool toggled) {
         if (m_track) {
             m_track->setMute(toggled);
@@ -52,7 +52,7 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     addChild(m_muteButton);
     
     // Create solo button
-    m_soloButton = std::make_shared<NomadUI::SoloButton>();
+    m_soloButton = std::make_shared<AestraUI::SoloButton>();
     m_soloButton->setOnToggle([this](bool toggled) {
         if (m_track) {
             bool newSolo = toggled;
@@ -73,9 +73,9 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     layoutControls();
 }
 
-void ChannelStrip::onRender(NomadUI::NUIRenderer& renderer) {
-    NOMAD_ZONE("ChannelStrip_Render");
-    auto& theme = NomadUI::NUIThemeManager::getInstance();
+void ChannelStrip::onRender(AestraUI::NUIRenderer& renderer) {
+    AESTRA_ZONE("ChannelStrip_Render");
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
     auto bounds = getBounds();
     
     // Background
@@ -91,7 +91,7 @@ void ChannelStrip::onRender(NomadUI::NUIRenderer& renderer) {
         auto textColor = theme.getColor("accentPrimary");
         std::string trackName = m_track->getName();
         float textY = bounds.y + bounds.height - 30.0f;
-        renderer.drawText(trackName, NomadUI::NUIPoint(bounds.x + 5, textY), 12.0f, textColor);
+        renderer.drawText(trackName, AestraUI::NUIPoint(bounds.x + 5, textY), 12.0f, textColor);
     }
     
     // Level meter (simple bar for now) - positioned above track name
@@ -102,8 +102,8 @@ void ChannelStrip::onRender(NomadUI::NUIRenderer& renderer) {
         float meterHeight = bounds.height - 80.0f;  // Leave space for controls and name
         
         // Meter background
-        NomadUI::NUIRect meterBg(meterX, meterY, meterWidth, meterHeight);
-        renderer.fillRect(meterBg, NomadUI::NUIColor(0.1f, 0.1f, 0.1f, 1.0f));
+        AestraUI::NUIRect meterBg(meterX, meterY, meterWidth, meterHeight);
+        renderer.fillRect(meterBg, AestraUI::NUIColor(0.1f, 0.1f, 0.1f, 1.0f));
         renderer.strokeRect(meterBg, 1.0f, borderColor);
         
         // Get current level from track
@@ -113,16 +113,16 @@ void ChannelStrip::onRender(NomadUI::NUIRenderer& renderer) {
         // Draw level bar (bottom-up)
         if (level > 0.0f) {
             float levelHeight = level * meterHeight;
-            NomadUI::NUIRect levelBar(meterX + 1, meterY + meterHeight - levelHeight, meterWidth - 2, levelHeight);
+            AestraUI::NUIRect levelBar(meterX + 1, meterY + meterHeight - levelHeight, meterWidth - 2, levelHeight);
             
             // Color based on level (green -> yellow -> red)
-            NomadUI::NUIColor levelColor;
+            AestraUI::NUIColor levelColor;
             if (level < 0.7f) {
-                levelColor = NomadUI::NUIColor(0.2f, 0.8f, 0.2f, 1.0f);  // Green
+                levelColor = AestraUI::NUIColor(0.2f, 0.8f, 0.2f, 1.0f);  // Green
             } else if (level < 0.9f) {
-                levelColor = NomadUI::NUIColor(0.9f, 0.9f, 0.2f, 1.0f);  // Yellow
+                levelColor = AestraUI::NUIColor(0.9f, 0.9f, 0.2f, 1.0f);  // Yellow
             } else {
-                levelColor = NomadUI::NUIColor(0.9f, 0.2f, 0.2f, 1.0f);  // Red
+                levelColor = AestraUI::NUIColor(0.9f, 0.2f, 0.2f, 1.0f);  // Red
             }
             
             renderer.fillRect(levelBar, levelColor);
@@ -134,12 +134,12 @@ void ChannelStrip::onRender(NomadUI::NUIRenderer& renderer) {
 }
 
 void ChannelStrip::onResize(int width, int height) {
-    NomadUI::NUIComponent::onResize(width, height);
+    AestraUI::NUIComponent::onResize(width, height);
     layoutControls();
 }
 
-bool ChannelStrip::onMouseEvent(const NomadUI::NUIMouseEvent& event) {
-    return NomadUI::NUIComponent::onMouseEvent(event);
+bool ChannelStrip::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
+    return AestraUI::NUIComponent::onMouseEvent(event);
 }
 
 void ChannelStrip::layoutControls() {
@@ -158,24 +158,24 @@ void ChannelStrip::layoutControls() {
     float y = bounds.y + padding;
     
     if (m_muteButton) {
-        m_muteButton->setBounds(NomadUI::NUIRect(bounds.x + padding, y, controlWidth, buttonHeight));
+        m_muteButton->setBounds(AestraUI::NUIRect(bounds.x + padding, y, controlWidth, buttonHeight));
         y += buttonHeight + padding;
     }
     
     if (m_soloButton) {
-        m_soloButton->setBounds(NomadUI::NUIRect(bounds.x + padding, y, controlWidth, buttonHeight));
+        m_soloButton->setBounds(AestraUI::NUIRect(bounds.x + padding, y, controlWidth, buttonHeight));
         y += buttonHeight + padding;
     }
     
     if (m_panKnob) {
         float panHeight = 30.0f;
-        m_panKnob->setBounds(NomadUI::NUIRect(bounds.x + padding, y, controlWidth, panHeight));
+        m_panKnob->setBounds(AestraUI::NUIRect(bounds.x + padding, y, controlWidth, panHeight));
         y += panHeight + padding;
     }
     
     if (m_volumeFader) {
         float faderHeight = bounds.height - (y - bounds.y) - 30.0f;  // Leave space for track name
-        m_volumeFader->setBounds(NomadUI::NUIRect(bounds.x + padding, y, controlWidth - 15.0f, faderHeight));
+        m_volumeFader->setBounds(AestraUI::NUIRect(bounds.x + padding, y, controlWidth - 15.0f, faderHeight));
     }
 }
 
@@ -189,13 +189,13 @@ MixerView::MixerView(std::shared_ptr<TrackManager> trackManager)
     refreshChannels();
 }
 
-void MixerView::onRender(NomadUI::NUIRenderer& renderer) {
-    NOMAD_ZONE("Mixer_Render");
+void MixerView::onRender(AestraUI::NUIRenderer& renderer) {
+    AESTRA_ZONE("Mixer_Render");
     
     // Skip rendering if not visible
     if (!isVisible()) return;
     
-    auto& theme = NomadUI::NUIThemeManager::getInstance();
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
     auto bounds = getBounds();
     
     // Background
@@ -207,7 +207,7 @@ void MixerView::onRender(NomadUI::NUIRenderer& renderer) {
 }
 
 void MixerView::onResize(int width, int height) {
-    NomadUI::NUIComponent::onResize(width, height);
+    AestraUI::NUIComponent::onResize(width, height);
     layoutChannels();
 }
 
@@ -244,10 +244,10 @@ void MixerView::layoutChannels() {
     float x = bounds.x + padding - m_scrollOffset;
     
     for (auto& strip : m_channelStrips) {
-        strip->setBounds(NomadUI::NUIRect(x, bounds.y + padding, m_channelWidth, bounds.height - 2 * padding));
+        strip->setBounds(AestraUI::NUIRect(x, bounds.y + padding, m_channelWidth, bounds.height - 2 * padding));
         x += m_channelWidth + padding;
     }
 }
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

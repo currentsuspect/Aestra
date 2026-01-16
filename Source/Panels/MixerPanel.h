@@ -3,20 +3,20 @@
 
 #include "WindowPanel.h"
 #include "TrackManager.h"
-#include "../NomadUI/Core/NUIComponent.h"
+#include "../AestraUI/Core/NUIComponent.h"
 #include "NUIButton.h"
 #include <memory>
 #include <functional>
 
-namespace Nomad {
+namespace Aestra {
 class MixerViewModel;
 }
 
-namespace NomadUI {
+namespace AestraUI {
 class UIMixerPanel;
 }
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 /**
@@ -31,15 +31,15 @@ public:
     // Mixer operations
     void refreshChannels();
     std::shared_ptr<MixerViewModel> getViewModel() const { return m_viewModel; }
-    std::shared_ptr<NomadUI::UIMixerPanel> getMixerUI() const { return m_newMixer; }
+    std::shared_ptr<AestraUI::UIMixerPanel> getMixerUI() const { return m_newMixer; }
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;
 
     // New mixer implementation (meters-only for now)
-    std::shared_ptr<Nomad::MixerViewModel> m_viewModel;
-    std::shared_ptr<NomadUI::UIMixerPanel> m_newMixer;
+    std::shared_ptr<Aestra::MixerViewModel> m_viewModel;
+    std::shared_ptr<AestraUI::UIMixerPanel> m_newMixer;
 };
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

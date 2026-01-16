@@ -1,8 +1,8 @@
-# NomadUI Icon System Guide
+# AestraUI Icon System Guide
 
 ## Overview
 
-NomadUI features a powerful SVG-based icon system that integrates seamlessly with the Nomad theme. Icons are scalable, theme-aware, and easy to use.
+AestraUI features a powerful SVG-based icon system that integrates seamlessly with the Aestra theme. Icons are scalable, theme-aware, and easy to use.
 
 ## Features
 
@@ -63,7 +63,7 @@ icon->setIconSize(20.0f, 20.0f);
 
 ```cpp
 // Use a theme color
-icon->setColorFromTheme("primary");      // Nomad purple
+icon->setColorFromTheme("primary");      // Aestra purple
 icon->setColorFromTheme("success");      // Green
 icon->setColorFromTheme("error");        // Red
 icon->setColorFromTheme("textPrimary");  // Main text color
@@ -79,7 +79,7 @@ icon->clearColor();
 
 - `textPrimary` - Main text (#E5E5E8)
 - `textSecondary` - Muted text (#A6A6AA)
-- `primary` - Nomad purple (#8B7FFF)
+- `primary` - Aestra purple (#8B7FFF)
 - `success` - Green (#5BD896)
 - `warning` - Amber (#FFD86B)
 - `error` - Red (#FF5E5E)
@@ -264,6 +264,6 @@ Planned features:
 
 ## See Also
 
-- [NOMAD_COLOR_SYSTEM.md](NOMAD_COLOR_SYSTEM.md) - Theme colors
+- [Aestra_COLOR_SYSTEM.md](Aestra_COLOR_SYSTEM.md) - Theme colors
 - [THEME_DEMO_GUIDE.md](THEME_DEMO_GUIDE.md) - Theme integration
 - IconDemo.cpp - Complete example

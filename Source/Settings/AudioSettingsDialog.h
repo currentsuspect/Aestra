@@ -1,19 +1,19 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file AudioSettingsDialog.h
- * @brief Audio settings dialog for NOMAD DAW
+ * @brief Audio settings dialog for Aestra
  */
 
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Widgets/NUIButton.h"
-#include "../NomadUI/Core/NUILabel.h"
-#include "../NomadUI/Core/NUIIcon.h"
-#include "../NomadUI/Core/NUISlider.h"
-#include "../NomadUI/Widgets/NUIDropdown.h"
-#include "../NomadUI/Widgets/NUICoreWidgets.h"
-#include "../NomadUI/Graphics/OpenGL/NUIRenderCache.h"
+#include "../AestraUI/Core/NUIComponent.h"
+#include "../AestraUI/Widgets/NUIButton.h"
+#include "../AestraUI/Core/NUILabel.h"
+#include "../AestraUI/Core/NUIIcon.h"
+#include "../AestraUI/Core/NUISlider.h"
+#include "../AestraUI/Widgets/NUIDropdown.h"
+#include "../AestraUI/Widgets/NUICoreWidgets.h"
+#include "../AestraUI/Graphics/OpenGL/NUIRenderCache.h"
 #include "AudioDeviceManager.h"
 #include "AudioDriverTypes.h"
 #include "MixerChannel.h"
@@ -22,7 +22,7 @@
 #include <vector>
 #include <iostream>
 
-namespace Nomad {
+namespace Aestra {
 
 // Forward declarations
 namespace Audio {
@@ -35,9 +35,9 @@ namespace Audio {
  * 
  * Provides UI for configuring audio device, sample rate, and buffer size.
  */
-class AudioSettingsDialog : public NomadUI::NUIComponent {
+class AudioSettingsDialog : public AestraUI::NUIComponent {
 public:
-    AudioSettingsDialog(Nomad::Audio::AudioDeviceManager* audioManager, 
+    AudioSettingsDialog(Aestra::Audio::AudioDeviceManager* audioManager, 
                        std::shared_ptr<Audio::TrackManager> trackManager = nullptr);
     ~AudioSettingsDialog() override = default;
     
@@ -57,24 +57,24 @@ public:
     // Accessors for Main.cpp to sync with AudioEngine
     uint32_t getSelectedSampleRate() const { return m_selectedSampleRate; }
     uint32_t getSelectedBufferSize() const { return m_selectedBufferSize; }
-    Nomad::Audio::ResamplingMode getSelectedResamplingMode() const;
-    Nomad::Audio::DitheringMode getSelectedDitheringMode() const;
+    Aestra::Audio::ResamplingMode getSelectedResamplingMode() const;
+    Aestra::Audio::DitheringMode getSelectedDitheringMode() const;
 
     // Test sound state
     bool isPlayingTestSound() const { return m_isPlayingTestSound; }
     double& getTestSoundPhase() { return m_testSoundPhase; }
     
     // NUIComponent overrides
-    void onRender(NomadUI::NUIRenderer& renderer) override;
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     void onUpdate(double deltaTime) override;
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override;
-    bool onKeyEvent(const NomadUI::NUIKeyEvent& event) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     void setVisible(bool visible);
     
     // Override setDirty to invalidate FBO cache
     void setDirty(bool dirty = true) { 
-        NomadUI::NUIComponent::setDirty(dirty); 
+        AestraUI::NUIComponent::setDirty(dirty); 
         // Don't invalidate during cache rendering (prevents infinite loops)
         if (dirty && !m_isRenderingToCache) {
             #ifdef _DEBUG
@@ -109,16 +109,16 @@ private:
     void stopTestSound();
     
     // Rendering helpers
-    void renderBackground(NomadUI::NUIRenderer& renderer);
-    void renderDialog(NomadUI::NUIRenderer& renderer);
+    void renderBackground(AestraUI::NUIRenderer& renderer);
+    void renderDialog(AestraUI::NUIRenderer& renderer);
     
     Audio::AudioDeviceManager* m_audioManager;
     std::shared_ptr<Audio::TrackManager> m_trackManager;
     
     // UI state
     bool m_visible;
-    NomadUI::NUIRect m_dialogBounds;
-    NomadUI::NUIRect m_closeButtonBounds; // For click detection
+    AestraUI::NUIRect m_dialogBounds;
+    AestraUI::NUIRect m_closeButtonBounds; // For click detection
     bool m_closeButtonHovered; // For hover effect
     float m_blinkAnimation; // For "can't close" blink effect
     std::string m_errorMessage; // Error message to display
@@ -141,45 +141,45 @@ private:
     uint32_t m_selectedBufferSize;
     
     // UI Components
-    std::shared_ptr<NomadUI::NUIButton> m_applyButton;
-    std::shared_ptr<NomadUI::NUIButton> m_cancelButton;
-    std::shared_ptr<NomadUI::NUIButton> m_testSoundButton;
-    std::shared_ptr<NomadUI::NUIIcon> m_playIcon;  // SVG play icon for test button
-    std::shared_ptr<NomadUI::NUIDropdown> m_driverDropdown;
-    std::shared_ptr<NomadUI::NUIDropdown> m_deviceDropdown;
-    std::shared_ptr<NomadUI::NUIDropdown> m_sampleRateDropdown;
-    std::shared_ptr<NomadUI::NUIDropdown> m_bufferSizeDropdown;
+    std::shared_ptr<AestraUI::NUIButton> m_applyButton;
+    std::shared_ptr<AestraUI::NUIButton> m_cancelButton;
+    std::shared_ptr<AestraUI::NUIButton> m_testSoundButton;
+    std::shared_ptr<AestraUI::NUIIcon> m_playIcon;  // SVG play icon for test button
+    std::shared_ptr<AestraUI::NUIDropdown> m_driverDropdown;
+    std::shared_ptr<AestraUI::NUIDropdown> m_deviceDropdown;
+    std::shared_ptr<AestraUI::NUIDropdown> m_sampleRateDropdown;
+    std::shared_ptr<AestraUI::NUIDropdown> m_bufferSizeDropdown;
     
     // Audio Quality Settings
-    std::shared_ptr<NomadUI::NUIDropdown> m_qualityPresetDropdown;
-    std::shared_ptr<NomadUI::NUIDropdown> m_resamplingDropdown;  // Resampling Quality
-    std::shared_ptr<NomadUI::NUIDropdown> m_ditheringDropdown;
+    std::shared_ptr<AestraUI::NUIDropdown> m_qualityPresetDropdown;
+    std::shared_ptr<AestraUI::NUIDropdown> m_resamplingDropdown;  // Resampling Quality
+    std::shared_ptr<AestraUI::NUIDropdown> m_ditheringDropdown;
     // Legacy members removed (m_interpolationDropdown, m_ditheringToggle)
-    std::shared_ptr<NomadUI::NUIButton> m_dcRemovalToggle;
-    std::shared_ptr<NomadUI::NUIButton> m_softClippingToggle;
-    std::shared_ptr<NomadUI::NUIButton> m_precision64BitToggle;
-    std::shared_ptr<NomadUI::NUIButton> m_multiThreadingToggle;
-    std::shared_ptr<NomadUI::NUIDropdown> m_threadCountDropdown;
-    std::shared_ptr<NomadUI::NUIDropdown> m_nomadModeDropdown;  // Nomad Mode toggle
+    std::shared_ptr<AestraUI::NUIButton> m_dcRemovalToggle;
+    std::shared_ptr<AestraUI::NUIButton> m_softClippingToggle;
+    std::shared_ptr<AestraUI::NUIButton> m_precision64BitToggle;
+    std::shared_ptr<AestraUI::NUIButton> m_multiThreadingToggle;
+    std::shared_ptr<AestraUI::NUIDropdown> m_threadCountDropdown;
+    std::shared_ptr<AestraUI::NUIDropdown> m_nomadModeDropdown;  // Aestra Mode toggle
     
     // Labels
-    std::shared_ptr<NomadUI::NUILabel> m_driverLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_deviceLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_sampleRateLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_bufferSizeLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_latencyLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_asioInfoLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_qualitySectionLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_qualityPresetLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_resamplingLabel;  // Resampling Quality
-    std::shared_ptr<NomadUI::NUILabel> m_ditheringLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_driverLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_deviceLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_sampleRateLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_bufferSizeLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_latencyLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_asioInfoLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_qualitySectionLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_qualityPresetLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_resamplingLabel;  // Resampling Quality
+    std::shared_ptr<AestraUI::NUILabel> m_ditheringLabel;
     // Legacy m_interpolationLabel removed
-    std::shared_ptr<NomadUI::NUILabel> m_dcRemovalLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_softClippingLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_precision64BitLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_multiThreadingLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_threadCountLabel;
-    std::shared_ptr<NomadUI::NUILabel> m_nomadModeLabel;  // Nomad Mode label
+    std::shared_ptr<AestraUI::NUILabel> m_dcRemovalLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_softClippingLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_precision64BitLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_multiThreadingLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_threadCountLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_nomadModeLabel;  // Aestra Mode label
     
     // Callbacks
     std::function<void()> m_onApply;
@@ -201,7 +201,7 @@ private:
     bool m_originalPrecision64Bit = false;
     bool m_originalMultiThreading = false;
     int m_originalThreadCountIndex = -1;
-    int m_originalNomadModeIndex = -1;
+    int m_originalAestraModeIndex = -1;
 
     bool m_isApplyingQualityPreset = false;
     bool m_suppressDirtyStateUpdates = false;
@@ -220,18 +220,18 @@ private:
     bool m_blockingEventsForDropdown;
     
     // FBO caching for FPS optimization
-    NomadUI::CachedRenderData* m_cachedRender;
+    AestraUI::CachedRenderData* m_cachedRender;
     uint64_t m_cacheId;
     bool m_cacheInvalidated;
     bool m_isRenderingToCache; // Prevent invalidation loops during cache rendering
     
     // Tab system
-    std::shared_ptr<NomadUI::NUITabBar> m_tabBar;
+    std::shared_ptr<AestraUI::NUITabBar> m_tabBar;
     std::string m_activeTab; // "settings" or "info"
     
     // Info tab content
-    std::shared_ptr<NomadUI::NUILabel> m_infoTitle;
-    std::shared_ptr<NomadUI::NUILabel> m_infoContent;
+    std::shared_ptr<AestraUI::NUILabel> m_infoTitle;
+    std::shared_ptr<AestraUI::NUILabel> m_infoContent;
 };
 
-} // namespace Nomad
+} // namespace Aestra

@@ -1,15 +1,15 @@
 // © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
+#include "../AestraUI/Core/NUIComponent.h"
 #include <string>
 
-namespace Nomad {
+namespace Aestra {
 
 /**
  * @brief Interface for a settings page in the unified Settings Dialog
  */
-class ISettingsPage : public NomadUI::NUIComponent {
+class ISettingsPage : public AestraUI::NUIComponent {
 public:
     virtual ~ISettingsPage() = default;
 
@@ -54,4 +54,4 @@ public:
     virtual void onHide() {}
 };
 
-} // namespace Nomad
+} // namespace Aestra

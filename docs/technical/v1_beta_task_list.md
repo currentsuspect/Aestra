@@ -1,8 +1,8 @@
-# Nomad v1 Beta Task List (Near-Exhaustive)
+# Aestra v1 Beta Task List (Near-Exhaustive)
 
 Date: January 3, 2026
 
-This is the execution backlog for shipping **Nomad v1 Beta by December 2026**. It is intentionally biased toward **trust + finishability** over feature breadth.
+This is the execution backlog for shipping **Aestra v1 Beta by December 2026**. It is intentionally biased toward **trust + finishability** over feature breadth.
 
 ## Current repo status (quick reality check)
 
@@ -10,11 +10,11 @@ This section is here to prevent us from re-building things that already exist.
 
 - **Project save/load exists**: `ProjectSerializer` is implemented in `Source/ProjectSerializer.{h,cpp}`.
 	- Known gaps (still P0): non-destructive load, validation, and migration policy.
-- **Autosave exists (currently app-level)**: there is autosave plumbing inside `Source/Main.cpp` (timer + `autosave.nmd` path).
+- **Autosave exists (currently app-level)**: there is autosave plumbing inside `Source/Main.cpp` (timer + `autosave.aes` path).
 	- Known gaps (still P0): non-destructive writes, rotation, recovery UX, and tying autosave to actual “dirty” edits.
 - **Undo/redo exists (partially wired)**: `CommandHistory` is present and used for some clip operations in `Source/TrackManagerUI.cpp`.
 	- Known gaps (still P0): consistent integration across core edits + atomic transactions.
-- **Recording is present (at least partially)**: UI wiring exists (`TransportBar` → `NomadContent` → `TrackManager::record()`), and recording waveform snapshot rendering exists in `Source/TrackUIComponent.cpp`.
+- **Recording is present (at least partially)**: UI wiring exists (`TransportBar` → `AestraContent` → `TrackManager::record()`), and recording waveform snapshot rendering exists in `Source/TrackUIComponent.cpp`.
 	- Known gaps (still P0): end-to-end reliability/stress tests, file management rules, device edge cases.
 - **Export/offline render**: not confirmed in code yet (still treated as missing until we find the implementation).
 
@@ -269,7 +269,7 @@ Hard rule:
 
 **Done means:** users can finish a track and provide actionable bug reports.
 
-- [P0][P-001] “Finish a track in Nomad” guide (the supported workflow).
+- [P0][P-001] “Finish a track in Aestra” guide (the supported workflow).
 - [P0][P-002] Troubleshooting: audio device setup, buffer size guidance, known limitations.
 - [P0][P-003] Crash/reporting guide (where logs are, what to attach).
 - [P1][P-004] Shortcuts reference sheet.

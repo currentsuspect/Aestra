@@ -1,9 +1,9 @@
-# NomadUI Documentation
+# AestraUI Documentation
 
 ## 📚 Core Documentation
 
 ### Architecture & Design
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - NomadUI system architecture and design patterns
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - AestraUI system architecture and design patterns
 - **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Implementation guidelines and best practices
 
 ### Development
@@ -21,12 +21,12 @@
 
 ## 🚀 Quick Start
 
-See the main [README.md](../README.md) for getting started with NomadUI.
+See the main [README.md](../README.md) for getting started with AestraUI.
 
 ## 📁 Code Structure
 
 ```
-NomadUI/
+AestraUI/
 ├── Core/           # Core framework (App, Component, Theme, Types)
 ├── Widgets/        # UI widgets (Button, etc.)
 ├── Graphics/       # Rendering abstractions

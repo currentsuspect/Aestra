@@ -1,4 +1,4 @@
-# 🎨 NomadUI Framework - Current Status & Next Steps
+# 🎨 AestraUI Framework - Current Status & Next Steps
 
 ## ✅ What's Already Complete
 
@@ -57,8 +57,8 @@
 - Multi-line text support
 
 **Files to Create:**
-- `NomadUI/Graphics/NUITextRenderer.h/cpp`
-- `NomadUI/Graphics/NUIFont.h/cpp`
+- `AestraUI/Graphics/NUITextRenderer.h/cpp`
+- `AestraUI/Graphics/NUIFont.h/cpp`
 
 **Estimated Effort:** 2-3 days
 
@@ -96,11 +96,11 @@
    - Input validation
 
 **Files to Create:**
-- `NomadUI/Widgets/NUILabel.h/cpp`
-- `NomadUI/Widgets/NUIPanel.h/cpp`
-- `NomadUI/Widgets/NUISlider.h/cpp`
-- `NomadUI/Widgets/NUIKnob.h/cpp`
-- `NomadUI/Widgets/NUITextInput.h/cpp`
+- `AestraUI/Widgets/NUILabel.h/cpp`
+- `AestraUI/Widgets/NUIPanel.h/cpp`
+- `AestraUI/Widgets/NUISlider.h/cpp`
+- `AestraUI/Widgets/NUIKnob.h/cpp`
+- `AestraUI/Widgets/NUITextInput.h/cpp`
 
 **Estimated Effort:** 3-5 days total
 
@@ -115,10 +115,10 @@
 3. **StackLayout** - Simple stacking (vertical/horizontal)
 
 **Files to Create:**
-- `NomadUI/Layout/NUILayout.h` (base class)
-- `NomadUI/Layout/NUIFlexLayout.h/cpp`
-- `NomadUI/Layout/NUIGridLayout.h/cpp`
-- `NomadUI/Layout/NUIStackLayout.h/cpp`
+- `AestraUI/Layout/NUILayout.h` (base class)
+- `AestraUI/Layout/NUIFlexLayout.h/cpp`
+- `AestraUI/Layout/NUIGridLayout.h/cpp`
+- `AestraUI/Layout/NUIStackLayout.h/cpp`
 
 **Estimated Effort:** 4-6 days
 
@@ -134,8 +134,8 @@
 - Image caching
 
 **Files to Create:**
-- `NomadUI/Graphics/NUITexture.h/cpp`
-- `NomadUI/Graphics/NUIImage.h/cpp`
+- `AestraUI/Graphics/NUITexture.h/cpp`
+- `AestraUI/Graphics/NUIImage.h/cpp`
 
 **Estimated Effort:** 2-3 days
 
@@ -322,7 +322,7 @@
 ### Current Build Status
 ```bash
 # Windows Build (WORKS)
-cd NomadUI/build
+cd AestraUI/build
 cmake .. -G "Visual Studio 17 2022"
 cmake --build . --config Release
 
@@ -336,26 +336,26 @@ cmake --build . --config Release
 ### Key Files
 ```
 Core Framework:
-  ✅ NomadUI/Core/NUIComponent.h/cpp
-  ✅ NomadUI/Core/NUIApp.h/cpp
-  ✅ NomadUI/Core/NUITheme.h/cpp
-  ✅ NomadUI/Core/NUITypes.h
+  ✅ AestraUI/Core/NUIComponent.h/cpp
+  ✅ AestraUI/Core/NUIApp.h/cpp
+  ✅ AestraUI/Core/NUITheme.h/cpp
+  ✅ AestraUI/Core/NUITypes.h
 
 Graphics:
-  ✅ NomadUI/Graphics/NUIRenderer.h
-  ✅ NomadUI/Graphics/NUIRendererGL.h/cpp
-  ❌ NomadUI/Graphics/NUITextRenderer.h/cpp (TODO)
+  ✅ AestraUI/Graphics/NUIRenderer.h
+  ✅ AestraUI/Graphics/NUIRendererGL.h/cpp
+  ❌ AestraUI/Graphics/NUITextRenderer.h/cpp (TODO)
 
 Platform:
-  ✅ NomadUI/Platform/Windows/NUIWindowWin32.h/cpp
-  ❌ NomadUI/Platform/macOS/... (TODO)
-  ❌ NomadUI/Platform/Linux/... (TODO)
+  ✅ AestraUI/Platform/Windows/NUIWindowWin32.h/cpp
+  ❌ AestraUI/Platform/macOS/... (TODO)
+  ❌ AestraUI/Platform/Linux/... (TODO)
 
 Widgets:
-  ✅ NomadUI/Widgets/NUIButton.h/cpp
-  ❌ NomadUI/Widgets/NUILabel.h/cpp (TODO)
-  ❌ NomadUI/Widgets/NUISlider.h/cpp (TODO)
-  ❌ NomadUI/Widgets/NUIKnob.h/cpp (TODO)
+  ✅ AestraUI/Widgets/NUIButton.h/cpp
+  ❌ AestraUI/Widgets/NUILabel.h/cpp (TODO)
+  ❌ AestraUI/Widgets/NUISlider.h/cpp (TODO)
+  ❌ AestraUI/Widgets/NUIKnob.h/cpp (TODO)
 ```
 
 ---

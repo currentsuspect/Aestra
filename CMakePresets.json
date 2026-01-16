@@ -20,7 +20,7 @@
       "displayName": "Headless (no UI, container-friendly)",
       "inherits": "base",
       "cacheVariables": {
-        "NOMAD_HEADLESS_ONLY": "ON"
+        "Aestra_HEADLESS_ONLY": "ON"
       }
     },
     {
@@ -28,7 +28,7 @@
       "displayName": "Full app (UI + tests default)",
       "inherits": "base",
       "cacheVariables": {
-        "NOMAD_HEADLESS_ONLY": "OFF"
+        "Aestra_HEADLESS_ONLY": "OFF"
       }
     },
     {
@@ -36,26 +36,30 @@
       "displayName": "Full app (UI, tests OFF for faster/confident builds)",
       "inherits": "base",
       "cacheVariables": {
-        "NOMAD_HEADLESS_ONLY": "OFF",
-        "NOMAD_ENABLE_TESTS": "OFF"
+        "Aestra_HEADLESS_ONLY": "OFF",
+        "Aestra_ENABLE_TESTS": "OFF"
       }
     }
   ],
   "buildPresets": [
     {
       "name": "headless-release",
-      "displayName": "Build NomadHeadless (Release)",
+      "displayName": "Build AestraHeadless (Release)",
       "configurePreset": "headless",
       "configuration": "Release",
-      "targets": ["NomadHeadless"],
+      "targets": [
+        "AestraHeadless"
+      ],
       "jobs": 0
     },
     {
       "name": "headless-debug",
-      "displayName": "Build NomadHeadless (Debug)",
+      "displayName": "Build AestraHeadless (Debug)",
       "configurePreset": "headless",
       "configuration": "Debug",
-      "targets": ["NomadHeadless"],
+      "targets": [
+        "AestraHeadless"
+      ],
       "jobs": 0
     },
     {

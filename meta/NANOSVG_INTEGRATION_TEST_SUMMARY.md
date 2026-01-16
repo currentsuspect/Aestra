@@ -1,12 +1,12 @@
 # NanoSVG Integration Test Summary
 
 ## Overview
-This document summarizes the testing performed for the NanoSVG integration into NomadUI's icon system. All tests were completed successfully on 2025-10-21.
+This document summarizes the testing performed for the NanoSVG integration into AestraUI's icon system. All tests were completed successfully on 2025-10-21.
 
 ## Test Programs Created
 
 ### 1. IconDemo (Visual Test)
-**Location:** `NomadUI/Examples/IconDemo.cpp`
+**Location:** `AestraUI/Examples/IconDemo.cpp`
 **Purpose:** Visual verification of icon rendering
 **Features:**
 - Displays all 10 built-in icons in a grid
@@ -15,7 +15,7 @@ This document summarizes the testing performed for the NanoSVG integration into 
 - Tests multiple icon sizes
 
 ### 2. CustomSVGTest (Automated Test)
-**Location:** `NomadUI/test_custom_svg_loading.cpp`
+**Location:** `AestraUI/test_custom_svg_loading.cpp`
 **Purpose:** Automated testing of custom SVG file loading
 **Tests:**
 - SVG file loading via NUIIcon
@@ -25,7 +25,7 @@ This document summarizes the testing performed for the NanoSVG integration into 
 - Filled rectangle parsing (previously broken)
 
 ### 3. ColorTintingTest (Automated Test)
-**Location:** `NomadUI/test_color_tinting.cpp`
+**Location:** `AestraUI/test_color_tinting.cpp`
 **Purpose:** Automated testing of color tinting functionality
 **Tests:**
 - Theme color application (6 colors)
@@ -111,9 +111,9 @@ All 10 built-in icons render successfully:
 
 ### CMakeLists.txt Updates
 Added three new test targets:
-- `NomadUI_IconDemo` (updated with NUISVGCache.cpp)
-- `NomadUI_CustomSVGTest`
-- `NomadUI_ColorTintingTest`
+- `AestraUI_IconDemo` (updated with NUISVGCache.cpp)
+- `AestraUI_CustomSVGTest`
+- `AestraUI_ColorTintingTest`
 
 ## Requirements Coverage
 
@@ -134,7 +134,7 @@ To visually verify the integration:
 
 ```bash
 # Run IconDemo
-.\NomadUI\build\bin\Release\NomadUI_IconDemo.exe
+.\AestraUI\build\bin\Release\AestraUI_IconDemo.exe
 ```
 
 Expected results:
@@ -149,10 +149,10 @@ Expected results:
 
 ```bash
 # Run custom SVG loading test
-.\NomadUI\build\bin\Release\NomadUI_CustomSVGTest.exe
+.\AestraUI\build\bin\Release\AestraUI_CustomSVGTest.exe
 
 # Run color tinting test
-.\NomadUI\build\bin\Release\NomadUI_ColorTintingTest.exe
+.\AestraUI\build\bin\Release\AestraUI_ColorTintingTest.exe
 ```
 
 Both tests should output "All tests passed!" with checkmarks (✓) for each test.

@@ -1,0 +1,106 @@
+// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+#pragma once
+
+#include "SamplePool.h"
+#include <atomic>
+#include <functional>
+#include <memory>
+#include <string>
+#include <thread>
+#include <mutex>
+#include <optional>
+#include <condition_variable>
+
+namespace Aestra {
+namespace Audio {
+
+enum class PreviewResult {
+    Success,   // Playback started immediately (cache hit)
+    Pending,   // Decode in progress, playback will start when ready
+    Failed     // Decode error or invalid file
+};
+
+/**
+ * @brief Handles file auditioning and previewing.
+ *
+ * Manages asynchronous decoding, sample rate conversion, and playback
+ * of audio files for browser preview and scrubbing.
+ */
+class PreviewEngine {
+public:
+    PreviewEngine();
+    ~PreviewEngine();
+
+    // Non-copyable
+    PreviewEngine(const PreviewEngine&) = delete;
+    PreviewEngine& operator=(const PreviewEngine&) = delete;
+
+    PreviewResult play(const std::string& path, float gainDb = -6.0f, double maxSeconds = 30.0);
+    void stop();
+    void seek(double seconds); // New seek method
+    void setOutputSampleRate(double sr);
+    void process(float* interleavedOutput, uint32_t numFrames);
+    bool isPlaying() const;
+    bool isBufferReady() const;  // True when buffer is decoded and ready for playback
+    void setOnComplete(std::function<void(const std::string& path)> callback);
+    void setGlobalPreviewVolume(float gainDb);
+    float getGlobalPreviewVolume() const;
+    double getPlaybackPosition() const; // New method
+    double getDuration() const;
+
+private:
+    struct PreviewVoice {
+        std::shared_ptr<AudioBuffer> buffer;
+        std::string path;
+        double phaseFrames{0.0};
+        double sampleRate{48000.0};
+        uint32_t channels{2};
+        float gain{0.5f};
+        double durationSeconds{0.0};
+        double maxPlaySeconds{0.0};
+        double elapsedSeconds{0.0};
+        double fadeInPos{0.0};
+        double fadeOutPos{0.0};
+        std::atomic<bool> stopRequested{false};
+        std::atomic<double> seekRequestSeconds{-1.0}; // -1.0 = no seek
+        bool fadeOutActive{false};
+        std::atomic<bool> playing{false};
+        std::atomic<bool> bufferReady{false};  // True when buffer is decoded and ready
+    };
+
+    std::shared_ptr<AudioBuffer> loadBuffer(const std::string& path, uint32_t& sampleRate, uint32_t& channels);
+    void downmixToStereo(std::vector<float>& data, uint32_t inChannels);
+    float dbToLinear(float db) const;
+    
+    // Async decode support
+    void decodeAsync(const std::string& path, std::shared_ptr<PreviewVoice> voice);
+    PreviewResult startVoiceWithBuffer(std::shared_ptr<AudioBuffer> buffer, 
+                                        const std::string& path, float gainDb, double maxSeconds);
+
+    std::shared_ptr<PreviewVoice> m_activeVoice;
+    std::atomic<double> m_outputSampleRate;
+    std::atomic<float> m_globalGainDb;
+    std::function<void(const std::string&)> m_onComplete;
+    
+    // Decode Worker Thread
+    // Persistent thread to handle decode requests without spawn overhead
+    struct DecodeJob {
+        std::string path;
+        std::shared_ptr<PreviewVoice> voice;
+        uint64_t generation;
+    };
+
+    std::thread m_workerThread;
+    std::mutex m_workerMutex;
+    std::condition_variable m_workerCV;
+    std::optional<DecodeJob> m_pendingJob;
+    bool m_workerRunning{true};
+
+    void workerLoop();
+    
+    // Generation counter to handle rapid switching
+    std::atomic<uint64_t> m_decodeGeneration{0};
+};
+
+} // namespace Audio
+} // namespace Aestra

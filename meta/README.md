@@ -90,6 +90,6 @@ Documents are moved to this directory when they:
 
 ---
 
-*This directory preserves the history and evolution of Nomad DAW.*
+*This directory preserves the history and evolution of Aestra DAW.*
 
 *Last updated: January 2025*

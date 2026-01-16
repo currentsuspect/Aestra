@@ -1,0 +1,39 @@
+// ¶¸ 2025 Nomad Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
+#include "UIMixerFooter.h"
+
+#include "NUIThemeSystem.h"
+#include "NUIRenderer.h"
+
+namespace AestraUI {
+
+UIMixerFooter::UIMixerFooter()
+{
+    cacheThemeColors();
+}
+
+void UIMixerFooter::cacheThemeColors()
+{
+    auto& theme = NUIThemeManager::getInstance();
+    m_textSecondary = theme.getColor("textSecondary");
+}
+
+void UIMixerFooter::setTrackNumber(int number)
+{
+    if (m_trackNumber == number) return;
+    m_trackNumber = number;
+    m_cachedText = (m_trackNumber > 0) ? std::to_string(m_trackNumber) : std::string();
+    repaint();
+    if (onInvalidateRequested) onInvalidateRequested();
+}
+
+void UIMixerFooter::onRender(NUIRenderer& renderer)
+{
+    const auto b = getBounds();
+    if (b.isEmpty()) return;
+
+    if (m_cachedText.empty()) return;
+
+    renderer.drawTextCentered(m_cachedText, b, 10.0f, m_textSecondary);
+}
+
+} // namespace AestraUI

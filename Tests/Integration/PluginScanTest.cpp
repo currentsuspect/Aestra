@@ -5,11 +5,11 @@
 #include <chrono>
 #include "PluginManager.h"
 
-using namespace Nomad::Audio;
+using namespace Aestra::Audio;
 
 int main() {
     std::cout << "===========================================\n";
-    std::cout << "  Nomad PluginScanTest (VST3 Verification)\n";
+    std::cout << "  Aestra PluginScanTest (VST3 Verification)\n";
     std::cout << "===========================================\n\n";
 
     // Use PluginManager instead of raw Scanner
