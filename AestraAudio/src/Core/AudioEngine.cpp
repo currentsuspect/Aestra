@@ -1933,7 +1933,28 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
     
     // Get Arsenal snapshot for RT-safe unit iteration
     auto snapshot = unitManager->getAudioSnapshot();
-    if (!snapshot || snapshot->units.empty()) return;
+    if (!snapshot || snapshot->units.empty()) {
+        static int emptyCount = 0;
+        if (++emptyCount % 1000 == 0) {
+            Aestra::Log::info("[Arsenal] Snapshot empty or no units: " + 
+                std::to_string(snapshot ? snapshot->units.size() : 0));
+        }
+        return;
+    }
+    
+    // DEBUG: Log unit processing occasionally
+    static int arsenalDebug = 0;
+    if (++arsenalDebug % 500 == 0) {
+        int enabledCount = 0, pluginCount = 0;
+        for (const auto& u : snapshot->units) {
+            if (u.enabled) enabledCount++;
+            if (u.plugin) pluginCount++;
+        }
+        Aestra::Log::info("[Arsenal] Units: " + std::to_string(snapshot->units.size()) +
+            " enabled=" + std::to_string(enabledCount) + 
+            " hasPlugin=" + std::to_string(pluginCount) +
+            " playing=" + std::to_string(transportPlaying));
+    }
     
     // Sync sample rate to units only when it changes (avoid per-block scans)
     static uint32_t s_lastSyncedSampleRate = 0;

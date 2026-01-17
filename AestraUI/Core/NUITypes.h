@@ -338,10 +338,16 @@ enum class NUIMouseButton {
 };
 
 enum class NUIKeyCode {
-    Unknown,
-    Space, Enter, Escape, Tab, Backspace, Delete,
-    Left, Right, Up, Down, Home, End,
-    A, B, C, D, E, F, G, H, I, J, K, L, M,
+    Unknown = 0,
+    Space = 32,
+    Enter = 13,
+    Escape = 27,
+    Tab = 9,
+    Backspace = 8,
+    Delete = 46,
+    Left = 37, Right = 39, Up = 38, Down = 40, 
+    Home = 36, End = 35,
+    A = 65, B, C, D, E, F, G, H, I, J, K, L, M,
     N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
     Num0, Num1, Num2, Num3, Num4, Num5, Num6, Num7, Num8, Num9,
     F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,

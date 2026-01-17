@@ -94,7 +94,12 @@ void AuditionPanel::setupComponents() {
     m_playPauseButton->setStyle(AestraUI::NUIButton::Style::Primary);
     m_playPauseButton->setCornerRadius(28.0f);
     m_playPauseButton->setOnClick([this]() {
-        if (m_engine) m_engine->togglePlayPause();
+        if (m_engine) {
+             if (!m_engine->isPlaying()) {
+                 if (m_onPlayRequest) m_onPlayRequest(); // Stop external preview
+             }
+             m_engine->togglePlayPause();
+        }
     });
     addChild(m_playPauseButton);
     
@@ -579,6 +584,8 @@ void AuditionPanel::renderWaveform(AestraUI::NUIRenderer& renderer, const Aestra
 // MOUSE HANDLING
 // ============================================================================
 
+
+
 bool AuditionPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     auto bounds = getBounds();
     
@@ -695,6 +702,9 @@ bool AuditionPanel::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (event.pressed) {
         if (event.keyCode == AestraUI::NUIKeyCode::Space) {
             if (m_engine) {
+                if (!m_engine->isPlaying()) {
+                    if (m_onPlayRequest) m_onPlayRequest();
+                }
                 m_engine->togglePlayPause();
                 return true;
             }

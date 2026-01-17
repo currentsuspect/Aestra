@@ -43,3 +43,48 @@
 [2026-01-17 15:20:49] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\Aestra
 [2026-01-17 15:20:49] [INFO]  ========================================
 [2026-01-17 15:20:49] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-17 15:28:41] [INFO]  ========================================
+[2026-01-17 15:28:41] [INFO]  Aestra Starting - Aestra-2025-Core
+[2026-01-17 15:28:41] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\Aestra
+[2026-01-17 15:28:41] [INFO]  ========================================
+[2026-01-17 15:28:41] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-17 15:45:17] [INFO]  ========================================
+[2026-01-17 15:45:17] [INFO]  Aestra Starting - Aestra-2025-Core
+[2026-01-17 15:45:17] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\Aestra
+[2026-01-17 15:45:17] [INFO]  ========================================
+[2026-01-17 15:45:17] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-17 15:49:19] [INFO]  ========================================
+[2026-01-17 15:49:19] [INFO]  Aestra Starting - Aestra-2025-Core
+[2026-01-17 15:49:19] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\Aestra
+[2026-01-17 15:49:19] [INFO]  ========================================
+[2026-01-17 15:49:19] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-17 15:59:40] [INFO]  ========================================
+[2026-01-17 15:59:40] [INFO]  Aestra Starting - Aestra-2025-Core
+[2026-01-17 15:59:40] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\Aestra
+[2026-01-17 15:59:40] [INFO]  ========================================
+[2026-01-17 15:59:40] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-17 16:02:02] [INFO]  ========================================
+[2026-01-17 16:02:02] [INFO]  Aestra Starting - Aestra-2025-Core
+[2026-01-17 16:02:02] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\Aestra
+[2026-01-17 16:02:02] [INFO]  ========================================
+[2026-01-17 16:02:02] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-17 16:16:20] [INFO]  ========================================
+[2026-01-17 16:16:20] [INFO]  Aestra Starting - Aestra-2025-Core
+[2026-01-17 16:16:20] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\Aestra
+[2026-01-17 16:16:20] [INFO]  ========================================
+[2026-01-17 16:16:20] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-17 16:26:13] [INFO]  ========================================
+[2026-01-17 16:26:13] [INFO]  Aestra Starting - Aestra-2025-Core
+[2026-01-17 16:26:13] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\Aestra
+[2026-01-17 16:26:13] [INFO]  ========================================
+[2026-01-17 16:26:13] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-17 17:04:15] [INFO]  ========================================
+[2026-01-17 17:04:15] [INFO]  Aestra Starting - Aestra-2025-Core
+[2026-01-17 17:04:15] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\Aestra
+[2026-01-17 17:04:15] [INFO]  ========================================
+[2026-01-17 17:04:15] [ERROR] Platform not initialized! Call Platform::initialize() first.
+[2026-01-17 17:12:54] [INFO]  ========================================
+[2026-01-17 17:12:54] [INFO]  Aestra Starting - Aestra-2025-Core
+[2026-01-17 17:12:54] [INFO]  Working Directory: C:\Users\Current\Documents\Projects\Aestra
+[2026-01-17 17:12:54] [INFO]  ========================================
+[2026-01-17 17:12:54] [ERROR] Platform not initialized! Call Platform::initialize() first.
