@@ -377,27 +377,13 @@ void AudioEngine::processBlock(float* outputBuffer,
         }
     }
 
-    // Fast path: silent
-    if (m_fadeState == FadeState::Silent) {
-        std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * m_outputChannels.load(std::memory_order_relaxed) * sizeof(float));
-        // Clear meters so UI doesn't freeze on the last loud block.
-        m_peakL.store(0.0f, std::memory_order_relaxed);
-        m_peakR.store(0.0f, std::memory_order_relaxed);
-        m_rmsL.store(0.0f, std::memory_order_relaxed);
-        m_rmsR.store(0.0f, std::memory_order_relaxed);
-        auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
-        if (snaps) {
-            snaps->writePeak(ChannelSlotMap::MASTER_SLOT_INDEX, 0.0f, 0.0f);
-            // Also clears all track slots so they don't freeze
-            for (uint32_t i = 0; i < ChannelSlotMap::MAX_CHANNEL_SLOTS; ++i) {
-                snaps->writePeak(i, 0.0f, 0.0f);
-            }
-        }
-        m_telemetry.incrementBlocksProcessed();
-        return;
-    }
-
     // === Audition Mode Override (Exclusive) ===
+    // IMPORTANT: Check BEFORE Silent state so audition plays when DAW transport is stopped
+    // TODO: Investigate potential sound quality enhancements:
+    //       - Higher quality resampling (polyphase vs current Sinc64Turbo)
+    //       - Sample rate conversion improvements
+    //       - Anti-aliasing filter tuning
+    //       - Dithering options for audition playback
     if (m_auditionModeEnabled.load(std::memory_order_relaxed)) {
         auto* audition = m_auditionEngine.load(std::memory_order_relaxed);
         if (audition) {
@@ -415,8 +401,30 @@ void AudioEngine::processBlock(float* outputBuffer,
              m_peakR.store(audPeakR, std::memory_order_relaxed);
              
              m_telemetry.incrementBlocksProcessed();
+             RESTORE_DENORMALS
              return; 
         }
+    }
+
+    // Fast path: silent (only for normal DAW mode, not audition)
+    if (m_fadeState == FadeState::Silent) {
+        std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * m_outputChannels.load(std::memory_order_relaxed) * sizeof(float));
+        // Clear meters so UI doesn't freeze on the last loud block.
+        m_peakL.store(0.0f, std::memory_order_relaxed);
+        m_peakR.store(0.0f, std::memory_order_relaxed);
+        m_rmsL.store(0.0f, std::memory_order_relaxed);
+        m_rmsR.store(0.0f, std::memory_order_relaxed);
+        auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
+        if (snaps) {
+            snaps->writePeak(ChannelSlotMap::MASTER_SLOT_INDEX, 0.0f, 0.0f);
+            // Also clears all track slots so they don't freeze
+            for (uint32_t i = 0; i < ChannelSlotMap::MAX_CHANNEL_SLOTS; ++i) {
+                snaps->writePeak(i, 0.0f, 0.0f);
+            }
+        }
+        m_telemetry.incrementBlocksProcessed();
+        RESTORE_DENORMALS
+        return;
     }
 
     // Render to double-precision master buffer

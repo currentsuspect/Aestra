@@ -1019,6 +1019,9 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             // ALWAYS ensure it's registered with the main engine
             m_audioEngine->setAuditionEngine(m_auditionEngine.get());
             
+            // Sync sample rate from audio engine to audition engine
+            m_auditionEngine->setSampleRate(static_cast<double>(m_audioEngine->getSampleRate()));
+            
             // Enable Exclusive Audition Mode (bypasses main DAW graph)
             m_audioEngine->setAuditionModeEnabled(true);
             

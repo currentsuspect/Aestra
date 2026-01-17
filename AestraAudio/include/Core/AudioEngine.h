@@ -35,6 +35,7 @@ namespace Audio {
 class UnitManager;
 class PatternPlaybackEngine;
 class AuditionEngine;
+class PreviewEngine;
 
 namespace Plugins {
     class SamplerPlugin;  // Forward declare for RT cache
@@ -216,6 +217,9 @@ public:
     void setAuditionEngine(AuditionEngine* engine) { m_auditionEngine.store(engine, std::memory_order_relaxed); }
     void setAuditionModeEnabled(bool enabled) { m_auditionModeEnabled.store(enabled, std::memory_order_relaxed); }
     bool isAuditionModeEnabled() const { return m_auditionModeEnabled.load(std::memory_order_relaxed); }
+    
+    // File Browser Preview (mixes into main output)
+    void setPreviewEngine(PreviewEngine* engine) { m_previewEngine.store(engine, std::memory_order_relaxed); }
     
     /**
      * @brief Render a range of the timeline (or a specific track) to a WAV file.
@@ -436,6 +440,9 @@ private:
     // Audition Mode (Exclusive Bypass)
     std::atomic<AuditionEngine*> m_auditionEngine{nullptr};
     std::atomic<bool> m_auditionModeEnabled{false};
+    
+    // File Browser Preview Engine (additive mix into output)
+    std::atomic<PreviewEngine*> m_previewEngine{nullptr};
 
 
     // Recent output ring buffer for oscilloscope/mini-waveform displays.
