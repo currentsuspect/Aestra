@@ -63,6 +63,8 @@ public:
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
     bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     
+    void setOnPlayRequest(std::function<void()> callback) { m_onPlayRequest = std::move(callback); }
+    
     // ===== IDropTarget Implementation =====
     AestraUI::DropFeedback onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
     AestraUI::DropFeedback onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
@@ -135,7 +137,9 @@ private:
     std::shared_ptr<AestraUI::NUISVGDocument> m_svgPlay;
     std::shared_ptr<AestraUI::NUISVGDocument> m_svgPause;
     std::shared_ptr<AestraUI::NUISVGDocument> m_svgPrev;
-    std::shared_ptr<AestraUI::NUISVGDocument> m_svgNext;
+    std::shared_ptr<AestraUI::NUISVGDocument> m_svgNext; // Restored
+    // Callbacks
+    std::function<void()> m_onPlayRequest;
     
     // Layout Logic
     void setupComponents();

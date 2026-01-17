@@ -233,16 +233,17 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         m_keyModifiers = static_cast<NM>(currentMods);
 
         if (pressed) { // Press
-             // Space: Play/Stop
-             if (key == static_cast<int>(Aestra::KeyCode::Space)) { // 32
-                 if (m_content && m_content->getTrackManager()) {
-                     if (m_content->getTrackManager()->isPlaying()) {
-                         if (m_transportCallback) m_transportCallback(TransportAction::Stop);
-                     } else {
-                         if (m_transportCallback) m_transportCallback(TransportAction::Play);
-                     }
-                 }
+             // Dispatch to Content (Global handling)
+             if (m_content) {
+                 AestraUI::NUIKeyEvent event;
+                 event.keyCode = static_cast<AestraUI::NUIKeyCode>(key);
+                 event.pressed = pressed;
+                 // Note: Modifiers should be passed if struct supports it, checking focused component, etc.
+                 // For now, simple dispatch to root content handles our usage.
+                 if (m_content->onKeyEvent(event)) return;
              }
+
+             // F12: HUD
              // F12: HUD
              if (key == static_cast<int>(Aestra::KeyCode::F12)) { // 123
                  if (m_unifiedHUD) m_unifiedHUD->setVisible(!m_unifiedHUD->isVisible());
