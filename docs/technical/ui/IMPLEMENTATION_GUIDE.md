@@ -1,6 +1,6 @@
-# 🚀 Nomad UI Framework - Implementation Guide
+# 🚀 Aestra UI Framework - Implementation Guide
 
-This guide outlines the step-by-step implementation plan for building the Nomad UI framework from scratch.
+This guide outlines the step-by-step implementation plan for building the Aestra UI framework from scratch.
 
 ## Phase 1: Foundation (Week 1-2)
 
@@ -185,7 +185,7 @@ public:
         // Register window class
         WNDCLASSEX wc = {};
         wc.lpfnWndProc = WindowProc;
-        wc.lpszClassName = "NomadUIWindow";
+        wc.lpszClassName = "AestraUIWindow";
         RegisterClassEx(&wc);
         
         // Create window
@@ -519,11 +519,11 @@ Load resources on background threads.
 ## Migration from JUCE
 
 ### Strategy
-1. **Parallel development** - Build NomadUI alongside JUCE
+1. **Parallel development** - Build AestraUI alongside JUCE
 2. **Component by component** - Migrate one widget at a time
 3. **Hybrid mode** - Support both systems during transition
 4. **Feature parity** - Match JUCE functionality before switching
-5. **Performance validation** - Ensure NomadUI is faster
+5. **Performance validation** - Ensure AestraUI is faster
 
 ### Migration Order
 1. Simple widgets (Button, Label)
@@ -548,7 +548,7 @@ Load resources on background threads.
 
 ### Tools
 - **RenderDoc** - Graphics debugging
-- **Nomad Profiler** - Performance profiling
+- **Aestra Profiler** - Performance profiling
 - **Shader Playground** - Shader development
 
 ## Next Actions

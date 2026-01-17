@@ -50,7 +50,7 @@ All notable changes to this project will be documented in this file.
 - **Thread Safety** - Comprehensive atomic operations for real-time parameter changes
 - **Memory Management** - Optimized allocation patterns and cache-friendly data structures
 - **Error Handling** - Robust error recovery and graceful device-in-use handling
-- **Performance Profiling** - Integration with Nomad profiler for detailed performance analysis
+- **Performance Profiling** - Integration with Aestra profiler for detailed performance analysis
 
 ### 🐛 Critical Bug Fixes
 
@@ -140,9 +140,9 @@ All notable changes to this project will be documented in this file.
 
 ### 🎯 Foundation Complete
 
-- **NomadCore** - Complete math, threading, file I/O, and logging system
-- **NomadPlat** - Complete platform abstraction with DPI support
-- **NomadUI** - Complete OpenGL renderer and component system
+- **AestraCore** - Complete math, threading, file I/O, and logging system
+- **AestraPlat** - Complete platform abstraction with DPI support
+- **AestraUI** - Complete OpenGL renderer and component system
 - **Build System** - CMake-based cross-platform build configuration
 
 ### 🎨 UI Framework Features
@@ -163,7 +163,7 @@ All notable changes to this project will be documented in this file.
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](NomadDocs/DEVELOPER_GUIDE.md) for details.
+We welcome contributions! Please see our [Contributing Guidelines](AestraDocs/DEVELOPER_GUIDE.md) for details.
 
 ## License
 

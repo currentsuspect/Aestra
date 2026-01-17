@@ -1,6 +1,6 @@
-# NomadAudio Architecture
+# AestraAudio Architecture
 
-NomadAudio is NOMAD's professional audio engine, delivering ultra-low latency and high-quality sound.
+AestraAudio is Aestra's professional audio engine, delivering ultra-low latency and high-quality sound.
 
 ## 📋 Overview
 
@@ -8,9 +8,9 @@ NomadAudio is NOMAD's professional audio engine, delivering ultra-low latency an
 
 **Status:** ✅ Complete
 
-**Dependencies:** NomadCore, NomadPlat
+**Dependencies:** AestraCore, AestraPlat
 
-**Location:** `/NomadAudio/`
+**Location:** `/AestraAudio/`
 
 ## 🎯 Design Goals
 
@@ -35,11 +35,11 @@ Core audio processing system.
 
 **Example:**
 ```cpp
-#include "NomadAudio/AudioEngine.h"
+#include "AestraAudio/AudioEngine.h"
 
-nomad::AudioEngine engine;
+Aestra::AudioEngine engine;
 
-nomad::AudioConfig config;
+Aestra::AudioConfig config;
 config.sampleRate = 48000;
 config.bufferSize = 512;  // ~10ms at 48kHz
 config.channels = 2;
@@ -83,7 +83,7 @@ Cross-platform audio I/O abstraction.
 
 **Example:**
 ```cpp
-#include "NomadAudio/RtAudio.h"
+#include "AestraAudio/RtAudio.h"
 
 RtAudio audio;
 RtAudio::StreamParameters params;
@@ -122,7 +122,7 @@ Lock-free audio buffer system.
 
 **Example:**
 ```cpp
-nomad::AudioBuffer buffer(samples, channels);
+Aestra::AudioBuffer buffer(samples, channels);
 
 // Write to buffer (UI thread)
 buffer.write(audioData, samples);
@@ -185,9 +185,9 @@ graph TB
 ### Directory Structure
 
 ```
-NomadAudio/
+AestraAudio/
 ├── include/
-│   └── NomadAudio/
+│   └── AestraAudio/
 │       ├── AudioEngine.h    # Core engine
 │       ├── AudioDevice.h    # Device management
 │       ├── AudioBuffer.h    # Buffer management
@@ -241,7 +241,7 @@ Use lock-free queues for thread communication:
 
 ```cpp
 // UI → Audio communication
-nomad::LockFreeQueue<AudioCommand> commandQueue;
+Aestra::LockFreeQueue<AudioCommand> commandQueue;
 
 // UI thread: send command
 commandQueue.push(PlayCommand{});
@@ -365,17 +365,17 @@ Stereo:        [L, R]
 ### Complete Audio Application
 
 ```cpp
-#include "NomadAudio/AudioEngine.h"
+#include "AestraAudio/AudioEngine.h"
 
 class MyDAW {
-    nomad::AudioEngine engine;
+    Aestra::AudioEngine engine;
     std::vector<float> samples;
     size_t playPosition = 0;
     
 public:
     void initialize() {
         // Configure audio
-        nomad::AudioConfig config;
+        Aestra::AudioConfig config;
         config.sampleRate = 48000;
         config.bufferSize = 512;
         config.channels = 2;
@@ -387,7 +387,7 @@ public:
         
         // Start audio
         if (!engine.initialize(config)) {
-            NOMAD_LOG_ERROR("Failed to initialize audio");
+            Aestra_LOG_ERROR("Failed to initialize audio");
             return;
         }
         
@@ -414,13 +414,13 @@ public:
 
 ```cpp
 // Request exclusive mode for lowest latency
-nomad::AudioConfig config;
+Aestra::AudioConfig config;
 config.sampleRate = 48000;
 config.bufferSize = 128;  // 2.7ms
 config.exclusive = true;
 
 if (engine.initialize(config)) {
-    NOMAD_LOG_INFO("Exclusive mode: {}ms latency",
+    Aestra_LOG_INFO("Exclusive mode: {}ms latency",
                    (config.bufferSize * 1000.0) / config.sampleRate);
 }
 ```
@@ -430,7 +430,7 @@ if (engine.initialize(config)) {
 ### Enable Audio Logging
 
 ```cpp
-NOMAD_LOG_SET_LEVEL(LogLevel::Debug);
+Aestra_LOG_SET_LEVEL(LogLevel::Debug);
 engine.enableDebugLogging(true);
 ```
 
@@ -438,12 +438,12 @@ engine.enableDebugLogging(true);
 
 ```cpp
 auto stats = engine.getStats();
-NOMAD_LOG_INFO("CPU: {:.1f}%, Latency: {:.1f}ms",
+Aestra_LOG_INFO("CPU: {:.1f}%, Latency: {:.1f}ms",
                stats.cpuUsage * 100.0,
                stats.latencyMs);
 
 if (stats.underruns > 0) {
-    NOMAD_LOG_WARNING("Audio underruns detected: {}", stats.underruns);
+    Aestra_LOG_WARNING("Audio underruns detected: {}", stats.underruns);
 }
 ```
 

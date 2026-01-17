@@ -1,6 +1,6 @@
-# 🧾 Nomad DAW — Licensing Information
+# 🧾 Aestra DAW — Licensing Information
 
-**Nomad DAW** is licensed under the **Nomad Studios Source-Available License (NSSAL) v1.1**.
+**Aestra DAW** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**.
 
 This document provides an overview of the licensing terms and rights. For the complete legal text, see [LICENSE](LICENSE).
 
@@ -8,11 +8,11 @@ This document provides an overview of the licensing terms and rights. For the co
 
 ## 📋 Overview
 
-Nomad DAW uses a **source-available license**, which means:
+Aestra DAW uses a **source-available license**, which means:
 - ✅ The source code is **publicly visible** for transparency and education
 - ❌ The code is **NOT open-source** — you cannot use it freely
 
-This model allows developers and musicians to see exactly how Nomad works while protecting the intellectual property of Nomad Studios.
+This model allows developers and musicians to see exactly how Aestra works while protecting the intellectual property of Aestra Studios.
 
 ---
 
@@ -22,7 +22,7 @@ This model allows developers and musicians to see exactly how Nomad works while 
 You are free to:
 - Read and study the source code
 - Learn from the architecture and implementation
-- Use Nomad as an educational resource
+- Use Aestra as an educational resource
 - Analyze algorithms and design patterns
 
 **Use Case:** Students, researchers, and developers can study professional DAW architecture.
@@ -34,7 +34,7 @@ You are encouraged to:
 - Suggest improvements and optimizations
 - Participate in technical discussions
 
-**Use Case:** Help improve Nomad's quality and security.
+**Use Case:** Help improve Aestra's quality and security.
 
 ### 3. Suggest Features and Improvements
 You can:
@@ -43,7 +43,7 @@ You can:
 - Provide feedback on design decisions
 - Vote on community feature polls
 
-**Use Case:** Shape the future direction of Nomad DAW.
+**Use Case:** Shape the future direction of Aestra DAW.
 
 ### 4. Submit Pull Requests
 You may contribute code by:
@@ -52,7 +52,7 @@ You may contribute code by:
 - Improving documentation
 - Optimizing performance
 
-**Important:** By submitting a pull request, you grant all rights to Nomad Studios. See [Contributor License Agreement](#-contributor-license-agreement) below.
+**Important:** By submitting a pull request, you grant all rights to Aestra Studios. See [Contributor License Agreement](#-contributor-license-agreement) below.
 
 ---
 
@@ -60,11 +60,11 @@ You may contribute code by:
 
 ### 1. Use the Software Without Permission
 You may **NOT**:
-- Build and use Nomad DAW for personal or commercial projects without written consent
-- Deploy Nomad in production environments
+- Build and use Aestra DAW for personal or commercial projects without written consent
+- Deploy Aestra in production environments
 - Distribute compiled binaries to others
 
-**Exception:** Nomad Studios may grant usage rights in the future through a commercial license.
+**Exception:** Aestra Studios may grant usage rights in the future through a commercial license.
 
 ### 2. Create Derivative Works
 You may **NOT**:
@@ -73,35 +73,35 @@ You may **NOT**:
 - Extract components for use in other projects
 - Create plugins or extensions without permission
 
-**Why?** This protects Nomad's competitive advantage and intellectual property.
+**Why?** This protects Aestra's competitive advantage and intellectual property.
 
 ### 3. Redistribute or Sublicense
 You may **NOT**:
 - Share the source code with others (it's already public, but you can't redistribute it)
 - Grant licenses to third parties
 - Sell or monetize any part of the codebase
-- Package Nomad for distribution platforms
+- Package Aestra for distribution platforms
 
 ### 4. Remove or Alter Proprietary Notices
 You may **NOT**:
 - Remove copyright headers from source files
 - Alter the license text
-- Remove or modify the NSSAL identifier
+- Remove or modify the ASSAL identifier
 - Change author attribution
 
 **All source files must retain:**
 ```cpp
-// © 2025 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
 ```
 
 ---
 
 ## 🏷️ SPDX License Identifier
 
-Nomad DAW uses the following SPDX identifier:
+Aestra DAW uses the following SPDX identifier:
 
 ```
-SPDX-License-Identifier: NSSAL
+SPDX-License-Identifier: ASSAL
 ```
 
 This identifier should be included in:
@@ -111,11 +111,11 @@ This identifier should be included in:
 
 **Example Usage:**
 ```cpp
-// © 2025 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
-// SPDX-License-Identifier: NSSAL
+// © 2025 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
+// SPDX-License-Identifier: ASSAL
 
 #pragma once
-#include "NomadCore.h"
+#include "AestraCore.h"
 // ... rest of file
 ```
 
@@ -123,10 +123,10 @@ This identifier should be included in:
 
 ## 🤝 Contributor License Agreement
 
-By contributing to Nomad DAW (via pull requests, issues, or other means), you agree to the following terms:
+By contributing to Aestra DAW (via pull requests, issues, or other means), you agree to the following terms:
 
 ### 1. Grant of Rights
-You grant **Dylan Makori / Nomad Studios**:
+You grant **Dylan Makori / Aestra Studios**:
 - Full ownership of your contributed code
 - Perpetual, worldwide, exclusive license to use your contributions
 - The right to modify, distribute, and sublicense your contributions
@@ -134,10 +134,10 @@ You grant **Dylan Makori / Nomad Studios**:
 
 ### 2. Waiver of Ownership
 You agree that:
-- All contributed code becomes the property of Nomad Studios
+- All contributed code becomes the property of Aestra Studios
 - You waive all ownership claims to your contributions
-- You will not challenge Nomad Studios' ownership in the future
-- Your contributions will be licensed under NSSAL v1.0
+- You will not challenge Aestra Studios' ownership in the future
+- Your contributions will be licensed under ASSAL v1.0
 
 ### 3. Representation and Warranty
 You represent that:
@@ -150,7 +150,7 @@ You represent that:
 You understand that:
 - Contributions are voluntary and unpaid
 - You will not receive royalties or compensation
-- Nomad Studios has no obligation to use your contributions
+- Aestra Studios has no obligation to use your contributions
 - Recognition may be given via Git commit history and acknowledgments
 
 ---
@@ -162,7 +162,7 @@ You understand that:
 We chose a source-available model for several reasons:
 
 **1. Sustainability**
-- Allows Nomad Studios to build a sustainable business model
+- Allows Aestra Studios to build a sustainable business model
 - Enables funding for long-term development and support
 - Protects against commercial exploitation by larger companies
 
@@ -187,7 +187,7 @@ We chose a source-available model for several reasons:
 
 ## 💼 Future Commercial Licensing
 
-**Nomad DAW is currently in development.** Upon official release, we plan to offer:
+**Aestra DAW is currently in development.** Upon official release, we plan to offer:
 
 ### Planned License Tiers
 - **Personal License** — For individual producers and hobbyists
@@ -207,15 +207,15 @@ We are committed to supporting education and learning:
 
 ### For Students
 - ✅ Study the source code freely for educational purposes
-- ✅ Write papers and research based on Nomad's architecture
-- ✅ Use Nomad as a reference for academic projects
-- ❌ Cannot use Nomad code in your own projects without permission
+- ✅ Write papers and research based on Aestra's architecture
+- ✅ Use Aestra as a reference for academic projects
+- ❌ Cannot use Aestra code in your own projects without permission
 
 ### For Educators
-- ✅ Teach using Nomad's codebase as an example
-- ✅ Assign students to analyze Nomad's architecture
-- ✅ Compare Nomad to other DAW designs
-- ❌ Cannot distribute Nomad or derivative works to students
+- ✅ Teach using Aestra's codebase as an example
+- ✅ Assign students to analyze Aestra's architecture
+- ✅ Compare Aestra to other DAW designs
+- ❌ Cannot distribute Aestra or derivative works to students
 
 **Educational licensing** may be available in the future for verified students and institutions.
 
@@ -236,10 +236,10 @@ See **[docs/LICENSE_REFERENCE.md](docs/LICENSE_REFERENCE.md)** for the complete 
 ## ⚖️ Legal Information
 
 ### Copyright
-**Copyright © 2025 Dylan Makori / Nomad Studios. All rights reserved.**
+**Copyright © 2025 Dylan Makori / Aestra Studios. All rights reserved.**
 
 ### Trademarks
-- **NOMAD DAW** and the **NOMAD** logo are trademarks of Dylan Makori / Nomad Studios
+- **Aestra** and the **Aestra** logo are trademarks of Dylan Makori / Aestra Studios
 - Unauthorized use of trademarks is prohibited
 
 ### Jurisdiction
@@ -257,15 +257,15 @@ Any unauthorized use of this software will result in:
 
 ### For Licensing Questions
 - **Email:** [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
-- **Subject Line:** "NOMAD Licensing Inquiry"
+- **Subject Line:** "Aestra Licensing Inquiry"
 
 ### For Technical Questions
-- **GitHub Issues:** [Report bugs](https://github.com/currentsuspect/NOMAD/issues)
-- **GitHub Discussions:** [Community forum](https://github.com/currentsuspect/NOMAD/discussions)
+- **GitHub Issues:** [Report bugs](https://github.com/currentsuspect/Aestra/issues)
+- **GitHub Discussions:** [Community forum](https://github.com/currentsuspect/Aestra/discussions)
 
 ### For Partnership Opportunities
 - **Email:** [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
-- **Subject Line:** "NOMAD Partnership Inquiry"
+- **Subject Line:** "Aestra Partnership Inquiry"
 
 ---
 
@@ -273,18 +273,18 @@ Any unauthorized use of this software will result in:
 
 - **[Full LICENSE Text](LICENSE)** — Complete legal license document
 - **[License Reference Guide](docs/LICENSE_REFERENCE.md)** — Detailed FAQ and examples
-- **[Contributing Guide](docs/CONTRIBUTING.md)** — How to contribute to Nomad
+- **[Contributing Guide](docs/CONTRIBUTING.md)** — How to contribute to Aestra
 - **[Code of Conduct](CODE_OF_CONDUCT.md)** — Community guidelines
 
 ---
 
 <div align="center">
 
-**Thank you for respecting Nomad's license.** 🙏
+**Thank you for respecting Aestra's license.** 🙏
 
 We believe in building sustainable, transparent software that serves musicians worldwide.
 
-*Copyright © 2025 Dylan Makori / Nomad Studios*  
-*Licensed under NSSAL v1.0*
+*Copyright © 2025 Dylan Makori / Aestra Studios*  
+*Licensed under ASSAL v1.0*
 
 </div>

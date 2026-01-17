@@ -1,0 +1,237 @@
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+/**
+ * @file AudioSettingsDialog.h
+ * @brief Audio settings dialog for Aestra
+ */
+
+#pragma once
+
+#include "../AestraUI/Core/NUIComponent.h"
+#include "../AestraUI/Widgets/NUIButton.h"
+#include "../AestraUI/Core/NUILabel.h"
+#include "../AestraUI/Core/NUIIcon.h"
+#include "../AestraUI/Core/NUISlider.h"
+#include "../AestraUI/Widgets/NUIDropdown.h"
+#include "../AestraUI/Widgets/NUICoreWidgets.h"
+#include "../AestraUI/Graphics/OpenGL/NUIRenderCache.h"
+#include "AudioDeviceManager.h"
+#include "AudioDriverTypes.h"
+#include "MixerChannel.h"
+#include <memory>
+#include <functional>
+#include <vector>
+#include <iostream>
+
+namespace Aestra {
+
+// Forward declarations
+namespace Audio {
+    class TrackManager;  // Not used anymore but keep for potential future use
+}
+
+
+/**
+ * @brief Audio settings dialog
+ * 
+ * Provides UI for configuring audio device, sample rate, and buffer size.
+ */
+class AudioSettingsDialog : public AestraUI::NUIComponent {
+public:
+    AudioSettingsDialog(Aestra::Audio::AudioDeviceManager* audioManager, 
+                       std::shared_ptr<Audio::TrackManager> trackManager = nullptr);
+    ~AudioSettingsDialog() override = default;
+    
+    // Callbacks
+    void setOnApply(std::function<void()> callback) { m_onApply = callback; }
+    void setOnCancel(std::function<void()> callback) { m_onCancel = callback; }
+    void setOnStreamRestore(std::function<void()> callback) { m_onStreamRestore = callback; }
+    
+    // Show/hide
+    void show();
+    void hide();
+    bool isVisible() const { return m_visible; }
+    
+    // Get selected settings
+    uint32_t getSelectedDeviceId() const { return m_selectedDeviceId; }
+    
+    // Accessors for Main.cpp to sync with AudioEngine
+    uint32_t getSelectedSampleRate() const { return m_selectedSampleRate; }
+    uint32_t getSelectedBufferSize() const { return m_selectedBufferSize; }
+    Aestra::Audio::ResamplingMode getSelectedResamplingMode() const;
+    Aestra::Audio::DitheringMode getSelectedDitheringMode() const;
+
+    // Test sound state
+    bool isPlayingTestSound() const { return m_isPlayingTestSound; }
+    double& getTestSoundPhase() { return m_testSoundPhase; }
+    
+    // NUIComponent overrides
+    void onRender(AestraUI::NUIRenderer& renderer) override;
+    void onResize(int width, int height) override;
+    void onUpdate(double deltaTime) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
+    void setVisible(bool visible);
+    
+    // Override setDirty to invalidate FBO cache
+    void setDirty(bool dirty = true) { 
+        AestraUI::NUIComponent::setDirty(dirty); 
+        // Don't invalidate during cache rendering (prevents infinite loops)
+        if (dirty && !m_isRenderingToCache) {
+            #ifdef _DEBUG
+            if (!m_cacheInvalidated) {
+                std::cerr << "[AudioSettingsDialog::setDirty] Cache invalidation triggered" << std::endl;
+            }
+            #endif
+            m_cacheInvalidated = true;
+        }
+    }
+    
+private:
+    void createUI();
+    void layoutComponents();
+    void updateDriverList();
+    void updateDeviceList();
+    void updateSampleRateList();
+    void updateBufferSizeList();
+    void updateLatencyEstimate();
+    void loadCurrentSettings();
+    void applySettings();
+    void cancelSettings();
+
+    void captureOriginalQualityStateFromUi();
+    void restoreOriginalUiState();
+    bool hasUnsavedChanges() const;
+    void updateApplyButtonState();
+    void markSettingsChanged();
+    
+    // Test sound functionality
+    void playTestSound();
+    void stopTestSound();
+    
+    // Rendering helpers
+    void renderBackground(AestraUI::NUIRenderer& renderer);
+    void renderDialog(AestraUI::NUIRenderer& renderer);
+    
+    Audio::AudioDeviceManager* m_audioManager;
+    std::shared_ptr<Audio::TrackManager> m_trackManager;
+    
+    // UI state
+    bool m_visible;
+    AestraUI::NUIRect m_dialogBounds;
+    AestraUI::NUIRect m_closeButtonBounds; // For click detection
+    bool m_closeButtonHovered; // For hover effect
+    float m_blinkAnimation; // For "can't close" blink effect
+    std::string m_errorMessage; // Error message to display
+    float m_errorMessageAlpha; // Fade out animation for error
+    
+    // Device list
+    std::vector<Audio::AudioDeviceInfo> m_devices;
+    uint32_t m_selectedDeviceId;
+    
+    // Driver list
+    std::vector<Audio::AudioDriverType> m_drivers;
+    Audio::AudioDriverType m_selectedDriverType;
+    
+    // Sample rate list
+    std::vector<uint32_t> m_sampleRates;
+    uint32_t m_selectedSampleRate;
+    
+    // Buffer size list
+    std::vector<uint32_t> m_bufferSizes;
+    uint32_t m_selectedBufferSize;
+    
+    // UI Components
+    std::shared_ptr<AestraUI::NUIButton> m_applyButton;
+    std::shared_ptr<AestraUI::NUIButton> m_cancelButton;
+    std::shared_ptr<AestraUI::NUIButton> m_testSoundButton;
+    std::shared_ptr<AestraUI::NUIIcon> m_playIcon;  // SVG play icon for test button
+    std::shared_ptr<AestraUI::NUIDropdown> m_driverDropdown;
+    std::shared_ptr<AestraUI::NUIDropdown> m_deviceDropdown;
+    std::shared_ptr<AestraUI::NUIDropdown> m_sampleRateDropdown;
+    std::shared_ptr<AestraUI::NUIDropdown> m_bufferSizeDropdown;
+    
+    // Audio Quality Settings
+    std::shared_ptr<AestraUI::NUIDropdown> m_qualityPresetDropdown;
+    std::shared_ptr<AestraUI::NUIDropdown> m_resamplingDropdown;  // Resampling Quality
+    std::shared_ptr<AestraUI::NUIDropdown> m_ditheringDropdown;
+    // Legacy members removed (m_interpolationDropdown, m_ditheringToggle)
+    std::shared_ptr<AestraUI::NUIButton> m_dcRemovalToggle;
+    std::shared_ptr<AestraUI::NUIButton> m_softClippingToggle;
+    std::shared_ptr<AestraUI::NUIButton> m_precision64BitToggle;
+    std::shared_ptr<AestraUI::NUIButton> m_multiThreadingToggle;
+    std::shared_ptr<AestraUI::NUIDropdown> m_threadCountDropdown;
+    std::shared_ptr<AestraUI::NUIDropdown> m_AestraModeDropdown;  // Aestra Mode toggle
+    
+    // Labels
+    std::shared_ptr<AestraUI::NUILabel> m_driverLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_deviceLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_sampleRateLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_bufferSizeLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_latencyLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_asioInfoLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_qualitySectionLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_qualityPresetLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_resamplingLabel;  // Resampling Quality
+    std::shared_ptr<AestraUI::NUILabel> m_ditheringLabel;
+    // Legacy m_interpolationLabel removed
+    std::shared_ptr<AestraUI::NUILabel> m_dcRemovalLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_softClippingLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_precision64BitLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_multiThreadingLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_threadCountLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_AestraModeLabel;  // Aestra Mode label
+    
+    // Callbacks
+    std::function<void()> m_onApply;
+    std::function<void()> m_onCancel;
+    std::function<void()> m_onStreamRestore;
+    
+    // Original settings (for cancel)
+    Audio::AudioDriverType m_originalDriverType;
+    uint32_t m_originalDeviceId;
+    uint32_t m_originalSampleRate;
+    uint32_t m_originalBufferSize;
+
+    // Original quality/UI state (for dirty/cancel)
+    int m_originalQualityPresetIndex = -1;
+    int m_originalResamplingIndex = -1;  // Resampling Quality
+    int m_originalDitheringIndex = -1;
+    bool m_originalDCRemoval = false;
+    bool m_originalSoftClipping = false;
+    bool m_originalPrecision64Bit = false;
+    bool m_originalMultiThreading = false;
+    int m_originalThreadCountIndex = -1;
+    int m_originalAestraModeIndex = -1;
+
+    bool m_isApplyingQualityPreset = false;
+    bool m_suppressDirtyStateUpdates = false;
+    
+    // Test sound state (simple flag + phase, tone generated in audio callback)
+    bool m_isPlayingTestSound;
+    double m_testSoundPhase;
+    static constexpr double TEST_FREQUENCY = 440.0; // A4 note
+    
+    // FPS optimization - cache dropdown open states to avoid unnecessary re-renders
+    bool m_anyDropdownOpen;
+    
+    // Bug #5 fix: Track if we're blocking events due to dropdown interaction
+    // Set to true when PRESSED event occurs while dropdown is open
+    // Remains true until RELEASED event, preventing click-through to buttons
+    bool m_blockingEventsForDropdown;
+    
+    // FBO caching for FPS optimization
+    AestraUI::CachedRenderData* m_cachedRender;
+    uint64_t m_cacheId;
+    bool m_cacheInvalidated;
+    bool m_isRenderingToCache; // Prevent invalidation loops during cache rendering
+    
+    // Tab system
+    std::shared_ptr<AestraUI::NUITabBar> m_tabBar;
+    std::string m_activeTab; // "settings" or "info"
+    
+    // Info tab content
+    std::shared_ptr<AestraUI::NUILabel> m_infoTitle;
+    std::shared_ptr<AestraUI::NUILabel> m_infoContent;
+};
+
+} // namespace Aestra

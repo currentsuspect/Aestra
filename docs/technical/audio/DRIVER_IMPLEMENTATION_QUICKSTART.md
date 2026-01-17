@@ -1,4 +1,4 @@
-# 🎯 NOMAD Multi-Tier Audio Driver System - Quick Start
+# 🎯 Aestra Multi-Tier Audio Driver System - Quick Start
 
 ## ✅ What's Been Implemented (Phase 1 - 75% Complete)
 
@@ -35,7 +35,7 @@
 ## 🔧 Next Steps to Complete Phase 1
 
 ### 1. DirectSound Fallback Driver
-**File**: `NomadAudio/include/DirectSoundDriver.h`
+**File**: `AestraAudio/include/DirectSoundDriver.h`
 
 ```cpp
 class DirectSoundDriver : public NativeAudioDriver {
@@ -47,7 +47,7 @@ class DirectSoundDriver : public NativeAudioDriver {
 ```
 
 ### 2. AudioDriverManager
-**File**: `NomadAudio/include/AudioDriverManager.h`
+**File**: `AestraAudio/include/AudioDriverManager.h`
 
 ```cpp
 class AudioDriverManager {
@@ -73,7 +73,7 @@ public:
 **Priority Logic**:
 ```
 1. Try ASIO External (if available)     → ~2ms
-2. Try Nomad ASIO (if installed)        → ~3ms
+2. Try Aestra ASIO (if installed)        → ~3ms
 3. Try WASAPI Exclusive (if not in use) → ~5ms
 4. Try WASAPI Shared (always works)     → ~15ms
 5. Try DirectSound (legacy fallback)    → ~30ms
@@ -134,8 +134,8 @@ bool AudioDeviceManager::openStream(const AudioStreamConfig& config,
 - **ASIOExternalDriver** - Dynamic DLL loading for ASIO4ALL, FL ASIO, etc.
 - Compatible with existing pro audio interfaces
 
-### Phase 3: Nomad ASIO Wrapper
-- **NomadASIO.dll** - Standalone ASIO driver
+### Phase 3: Aestra ASIO Wrapper
+- **AestraASIO.dll** - Standalone ASIO driver
 - Bridges ASIO API → WASAPI Exclusive internally
 - Appears in all DAWs (FL Studio, Reaper, etc.)
 - Professional credibility
@@ -193,11 +193,11 @@ info += "\nUnderruns: " + std::to_string(activeDriver->getStatistics().underrunC
 
 ## 💾 CMakeLists.txt Updates
 
-Add new files to `NomadAudio/CMakeLists.txt`:
+Add new files to `AestraAudio/CMakeLists.txt`:
 
 ```cmake
 # Source files
-set(NOMAD_AUDIO_SOURCES
+set(Aestra_AUDIO_SOURCES
     # ... existing files ...
     src/WASAPISharedDriver.cpp
     src/WASAPIExclusiveDriver.cpp
@@ -206,7 +206,7 @@ set(NOMAD_AUDIO_SOURCES
 )
 
 # Header files
-set(NOMAD_AUDIO_HEADERS
+set(Aestra_AUDIO_HEADERS
     # ... existing files ...
     include/AudioDriverTypes.h
     include/NativeAudioDriver.h
@@ -218,7 +218,7 @@ set(NOMAD_AUDIO_HEADERS
 
 # Windows-specific libraries
 if(WIN32)
-    target_link_libraries(NomadAudio PRIVATE
+    target_link_libraries(AestraAudio PRIVATE
         ole32
         avrt
         dsound                          # Add for DirectSound
@@ -231,7 +231,7 @@ endif()
 | Driver            | Latency  | CPU Load | Compatibility | Use Case           |
 |-------------------|----------|----------|---------------|--------------------|
 | ASIO External     | 2-3ms    | Low      | Requires DLL  | Pro audio gear     |
-| Nomad ASIO        | 3-4ms    | Low      | Ships with app| Pro mode           |
+| Aestra ASIO        | 3-4ms    | Low      | Ships with app| Pro mode           |
 | WASAPI Exclusive  | 3-5ms    | Low      | Moderate      | Default pro mode   |
 | WASAPI Shared     | 10-20ms  | Medium   | High          | Default safe mode  |
 | DirectSound       | 25-40ms  | Higher   | Maximum       | Legacy fallback    |

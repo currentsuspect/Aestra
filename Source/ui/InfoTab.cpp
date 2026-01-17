@@ -5,16 +5,16 @@
 #include <filesystem>
 
 #include "LicenseVerifier.h"
-#include "../../NomadCore/include/NomadLog.h"
+#include "../../AestraCore/include/AestraLog.h"
 
-// NomadUI includes
-#include "../../NomadUI/Core/NUILabel.h"
-#include "../../NomadUI/Widgets/NUIButton.h"
-#include "../../NomadUI/Core/NUIIcon.h"
+// AestraUI includes
+#include "../../AestraUI/Base/NUILabel.h"
+#include "../../AestraUI/Base/NUIButton.h"
+#include "../../AestraUI/Base/NUIIcon.h"
 
-using namespace NomadUI;
+using namespace AestraUI;
 
-namespace Nomad {
+namespace Aestra {
 
 static std::atomic<bool> g_profileLoaded{false};
 static UserProfile g_profile;
@@ -22,21 +22,21 @@ static std::string g_cardSvgPath;
 
 static std::string getAssetsCardsDir() {
 	// Use mock assets location in public builds
-	// cards live in nomad-core/assets_mock/cards by default
-	return std::string("nomad-core/assets_mock/cards");
+	// cards live in Aestra-core/assets_mock/cards by default
+	return std::string("Aestra-core/assets_mock/cards");
 }
 
 static std::string svgForTier(const std::string& tier) {
-	if (tier == "Nomad Founder") return getAssetsCardsDir() + "/founder_card.svg";
-	if (tier == "Nomad Studio+") return getAssetsCardsDir() + "/studio_card.svg";
-	if (tier == "Nomad Campus")  return getAssetsCardsDir() + "/campus_card.svg";
+	if (tier == "Aestra Founder") return getAssetsCardsDir() + "/founder_card.svg";
+	if (tier == "Aestra Plus") return getAssetsCardsDir() + "/studio_card.svg";
+	if (tier == "Aestra Campus")  return getAssetsCardsDir() + "/campus_card.svg";
 	return getAssetsCardsDir() + "/core_card.svg";
 }
 
 static const char* tooltipForTier(const std::string& tier) {
-	if (tier == "Nomad Founder") return "Founding Access — Where it all began.";
-	if (tier == "Nomad Studio+") return "Full Suite Access — Muse Integration Active.";
-	if (tier == "Nomad Campus")  return "Educational / Enterprise Edition.";
+	if (tier == "Aestra Founder") return "Founding Access — Where it all began.";
+	if (tier == "Aestra Plus") return "Full Suite Access — Muse Integration Active.";
+	if (tier == "Aestra Campus")  return "Educational / Enterprise Edition.";
 	return "Essential Access — Free Tier.";
 }
 
@@ -55,7 +55,7 @@ static void ensureProfileLoadedOnce() {
 void RenderInfoTab() {
 	ensureProfileLoadedOnce();
 
-	// Minimal placeholder UI wiring using NomadUI components. Real layout integration
+	// Minimal placeholder UI wiring using AestraUI components. Real layout integration
 	// should add these elements to the active UI tree/panel.
 	NUILabel usernameLabel;
 	usernameLabel.setText("User: " + g_profile.username);
@@ -77,7 +77,7 @@ void RenderInfoTab() {
 		cardIcon.loadSVGFile(g_cardSvgPath);
 		
 		// Simple accent for verified tiers (placeholder: change icon tint)
-		if (g_profile.verified && g_profile.tier != "Nomad Core") {
+		if (g_profile.verified && g_profile.tier != "Aestra Core") {
 			// No glow API currently; tint the icon as a subtle verified accent
 			cardIcon.setColorFromTheme("accentPrimary");
 		}
@@ -93,4 +93,4 @@ void RenderInfoTab() {
 	// layout where panels are constructed.
 }
 
-} // namespace Nomad
+} // namespace Aestra

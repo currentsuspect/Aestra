@@ -1,4 +1,4 @@
-# NOMAD DAW Core Implementation Plan
+# Aestra Core Implementation Plan
 **Version**: 1.0  
 **Date**: November 28, 2025  
 **Author**: Kilo Code (Architect Mode)
@@ -21,9 +21,9 @@
 ## Executive Summary
 
 ### Current State Analysis
-NOMAD DAW has achieved significant milestones:
+Aestra has achieved significant milestones:
 - ✅ **Audio Engine**: 90% complete with WASAPI integration and multi-threading
-- ✅ **UI Framework**: 75% complete with custom NomadUI and OpenGL rendering
+- ✅ **UI Framework**: 75% complete with custom AestraUI and OpenGL rendering
 - ✅ **Core Infrastructure**: Platform abstraction, logging, profiling
 - 🚧 **Basic DAW Features**: 40% complete (transport, file browser, basic playback)
 
@@ -51,7 +51,7 @@ NOMAD DAW has achieved significant milestones:
 
 ```cpp
 // main.cpp - 1508 lines of monolithic code
-class NomadApp {
+class AestraApp {
     // 400+ lines of initialization
     // 300+ lines of event handling  
     // 200+ lines of audio callback
@@ -72,7 +72,7 @@ class NomadApp {
 #include "AudioController.h"
 #include "UIController.h"
 
-namespace Nomad {
+namespace Aestra {
 class AppController {
 public:
     AppController();
@@ -148,7 +148,7 @@ private:
 // EventHandler.cpp - ~200 lines
 void EventHandler::setupKeyCallbacks() {
     m_window->setKeyCallback([this](int key, bool pressed) {
-        if (key == NOMAD_KEY_ESCAPE && pressed) {
+        if (key == Aestra_KEY_ESCAPE && pressed) {
             m_appController->requestShutdown();
         }
         // ... other key handling
@@ -217,7 +217,7 @@ public:
     
 private:
     void onMouseDrop(const MouseDropEvent& event) override;
-    bool isPointInTimeline(const NomadUI::NUIPoint& point);
+    bool isPointInTimeline(const AestraUI::NUIPoint& point);
     
     std::function<void(const SampleDropInfo&)> m_onSampleDropped;
     NUIRect m_timelineBounds;
@@ -227,7 +227,7 @@ private:
 // SampleDropInfo.h
 struct SampleDropInfo {
     std::string filePath;
-    NomadUI::NUIPoint dropPosition;
+    AestraUI::NUIPoint dropPosition;
     double timelinePosition;
     int trackIndex;
     bool isValid = false;
@@ -241,13 +241,13 @@ struct SampleDropInfo {
 class DragDropVisualizer {
 public:
     void startDrag(const std::string& filePath);
-    void updateDrag(const NomadUI::NUIPoint& position);
+    void updateDrag(const AestraUI::NUIPoint& position);
     void endDrag();
     void render(NUIRenderer& renderer);
     
 private:
     std::string m_draggedFile;
-    NomadUI::NUIPoint m_currentPosition;
+    AestraUI::NUIPoint m_currentPosition;
     bool m_isDragging = false;
     float m_opacity = 1.0f;
 };
@@ -317,7 +317,7 @@ public:
     SampleClip(const std::string& filePath, double startTime, double duration);
     
     void render(NUIRenderer& renderer, const NUIRect& bounds);
-    bool containsPoint(const NomadUI::NUIPoint& point);
+    bool containsPoint(const AestraUI::NUIPoint& point);
     void setPosition(double position);
     void setDuration(double duration);
     
@@ -331,7 +331,7 @@ private:
     double m_startTime;
     double m_duration;
     std::unique_ptr<AudioBuffer> m_audioBuffer;
-    NomadUI::NUIColor m_color;
+    AestraUI::NUIColor m_color;
     bool m_selected = false;
 };
 ```
@@ -408,7 +408,7 @@ struct ProjectData {
 struct TrackData {
     std::string id;
     std::string name;
-    NomadUI::NUIColor color = NomadUI::NUIColor::Gray;
+    AestraUI::NUIColor color = AestraUI::NUIColor::Gray;
     float volume = 1.0f;
     float pan = 0.0f;
     bool muted = false;
@@ -430,7 +430,7 @@ struct SampleClipData {
 struct MarkerData {
     std::string name;
     double position;
-    NomadUI::NUIColor color = NomadUI::NUIColor::Yellow;
+    AestraUI::NUIColor color = AestraUI::NUIColor::Yellow;
 };
 ```
 
@@ -609,7 +609,7 @@ private:
 };
 
 // Integration in main application
-void NomadContent::initializeProjectManagement() {
+void AestraContent::initializeProjectManagement() {
     auto& projectManager = ProjectManager::getInstance();
     
     projectManager.setOnProjectChanged([this]() {
@@ -1139,9 +1139,9 @@ std::vector<NUIComponent*> ComponentCuller::cullInvisible(const std::vector<NUIC
 class RenderBatch {
 public:
     void addRect(const NUIRect& rect, const NUIColor& color, float radius = 0.0f);
-    void addText(const std::string& text, const NomadUI::NUIPoint& position, 
-                const NomadUI::NUIFont& font, const NUIColor& color);
-    void addLine(const NomadUI::NUIPoint& start, const NomadUI::NUIPoint& end, 
+    void addText(const std::string& text, const AestraUI::NUIPoint& position, 
+                const AestraUI::NUIFont& font, const NUIColor& color);
+    void addLine(const AestraUI::NUIPoint& start, const AestraUI::NUIPoint& end, 
                 const NUIColor& color, float width = 1.0f);
     
     void execute(NUIRenderer& renderer);
@@ -1381,7 +1381,7 @@ private:
     ConfigValue<bool> m_vsyncEnabled{true};
     
     // Theme settings
-    std::string m_themeName = "nomad-dark";
+    std::string m_themeName = "Aestra-dark";
     
     // File paths
     std::string m_lastProjectPath;
@@ -1413,7 +1413,7 @@ private:
     std::function<void(const std::string&)> m_onConfigChanged;
     std::chrono::steady_clock::time_point m_lastModified;
     
-    static constexpr auto DEFAULT_CONFIG_FILE = "config/nomad_config.json";
+    static constexpr auto DEFAULT_CONFIG_FILE = "config/Aestra_config.json";
 };
 
 // ConfigManager.cpp
@@ -1773,7 +1773,7 @@ private:
 **Step 1: Test Infrastructure**
 ```cpp
 // TestFramework.h
-#define NOMAD_TEST_CASE(name) \
+#define Aestra_TEST_CASE(name) \
     static void name(); \
     struct TestRegistrar_##name { \
         TestRegistrar_##name() { \
@@ -1783,14 +1783,14 @@ private:
     static TestRegistrar_##name registrar_##name; \
     static void name()
 
-#define NOMAD_TEST_ASSERT(condition) \
+#define Aestra_TEST_ASSERT(condition) \
     do { \
         if (!(condition)) { \
             throw TestFailure("Assertion failed: " #condition, __FILE__, __LINE__); \
         } \
     } while(0)
 
-#define NOMAD_TEST_ASSERT_EQ(expected, actual) \
+#define Aestra_TEST_ASSERT_EQ(expected, actual) \
     do { \
         if ((expected) != (actual)) { \
             std::stringstream ss; \
@@ -1828,29 +1828,29 @@ private:
 **Step 2: Audio Engine Tests**
 ```cpp
 // AudioEngineTests.cpp
-NOMAD_TEST_CASE(TestTrackManagerBasicOperations) {
+Aestra_TEST_CASE(TestTrackManagerBasicOperations) {
     auto trackManager = std::make_unique<TrackManager>();
     
     // Test track creation
     auto track1 = trackManager->addTrack("Test Track 1");
-    NOMAD_TEST_ASSERT(track1 != nullptr);
-    NOMAD_TEST_ASSERT_EQ(1, trackManager->getTrackCount());
+    Aestra_TEST_ASSERT(track1 != nullptr);
+    Aestra_TEST_ASSERT_EQ(1, trackManager->getTrackCount());
     
     auto track2 = trackManager->addTrack("Test Track 2");
-    NOMAD_TEST_ASSERT(track2 != nullptr);
-    NOMAD_TEST_ASSERT_EQ(2, trackManager->getTrackCount());
+    Aestra_TEST_ASSERT(track2 != nullptr);
+    Aestra_TEST_ASSERT_EQ(2, trackManager->getTrackCount());
     
     // Test track retrieval
     auto retrievedTrack = trackManager->getTrack(0);
-    NOMAD_TEST_ASSERT(retrievedTrack != nullptr);
-    NOMAD_TEST_ASSERT_EQ("Test Track 1", retrievedTrack->getName());
+    Aestra_TEST_ASSERT(retrievedTrack != nullptr);
+    Aestra_TEST_ASSERT_EQ("Test Track 1", retrievedTrack->getName());
     
     // Test track removal
     trackManager->removeTrack(0);
-    NOMAD_TEST_ASSERT_EQ(1, trackManager->getTrackCount());
+    Aestra_TEST_ASSERT_EQ(1, trackManager->getTrackCount());
 }
 
-NOMAD_TEST_CASE(TestTrackAudioProcessing) {
+Aestra_TEST_CASE(TestTrackAudioProcessing) {
     auto track = std::make_shared<Track>("Test Track", 0);
     
     // Load test audio data
@@ -1865,59 +1865,59 @@ NOMAD_TEST_CASE(TestTrackAudioProcessing) {
     
     // Verify output
     for (int i = 0; i < numFrames * 2; ++i) {
-        NOMAD_TEST_ASSERT(outputBuffer[i] > 0.0f); // Should have some audio
+        Aestra_TEST_ASSERT(outputBuffer[i] > 0.0f); // Should have some audio
     }
 }
 
-NOMAD_TEST_CASE(TestTrackVolumeAndPan) {
+Aestra_TEST_CASE(TestTrackVolumeAndPan) {
     auto track = std::make_shared<Track>("Test Track", 0);
     
     // Test volume control
     track->setVolume(0.5f);
-    NOMAD_TEST_ASSERT_EQ(0.5f, track->getVolume());
+    Aestra_TEST_ASSERT_EQ(0.5f, track->getVolume());
     
     // Test pan control
     track->setPan(-0.5f);
-    NOMAD_TEST_ASSERT_EQ(-0.5f, track->getPan());
+    Aestra_TEST_ASSERT_EQ(-0.5f, track->getPan());
     
     track->setPan(0.5f);
-    NOMAD_TEST_ASSERT_EQ(0.5f, track->getPan());
+    Aestra_TEST_ASSERT_EQ(0.5f, track->getPan());
     
     // Test mute
     track->setMuted(true);
-    NOMAD_TEST_ASSERT(track->isMuted());
+    Aestra_TEST_ASSERT(track->isMuted());
     
     track->setMuted(false);
-    NOMAD_TEST_ASSERT(!track->isMuted());
+    Aestra_TEST_ASSERT(!track->isMuted());
     
     // Test solo
     track->setSolo(true);
-    NOMAD_TEST_ASSERT(track->isSoloed());
+    Aestra_TEST_ASSERT(track->isSoloed());
     
     track->setSolo(false);
-    NOMAD_TEST_ASSERT(!track->isSoloed());
+    Aestra_TEST_ASSERT(!track->isSoloed());
 }
 ```
 
 **Step 3: Configuration Management Tests**
 ```cpp
 // ConfigTests.cpp
-NOMAD_TEST_CASE(TestConfigValueOperations) {
+Aestra_TEST_CASE(TestConfigValueOperations) {
     ConfigValue<int> configValue(100);
     
     // Test initial value
-    NOMAD_TEST_ASSERT_EQ(100, configValue.get());
+    Aestra_TEST_ASSERT_EQ(100, configValue.get());
     
     // Test value changes
     configValue.set(200);
-    NOMAD_TEST_ASSERT_EQ(200, configValue.get());
+    Aestra_TEST_ASSERT_EQ(200, configValue.get());
     
     // Test reset
     configValue.reset();
-    NOMAD_TEST_ASSERT_EQ(100, configValue.get());
+    Aestra_TEST_ASSERT_EQ(100, configValue.get());
 }
 
-NOMAD_TEST_CASE(TestConfigSerialization) {
+Aestra_TEST_CASE(TestConfigSerialization) {
     auto& config = AppConfig::getInstance();
     
     // Set some test values
@@ -1938,9 +1938,9 @@ NOMAD_TEST_CASE(TestConfigSerialization) {
     ConfigManager::getInstance().loadFromFile(tempPath);
     
     // Verify values
-    NOMAD_TEST_ASSERT_EQ(44100, config.sampleRate());
-    NOMAD_TEST_ASSERT_EQ(1920, config.windowWidth());
-    NOMAD_TEST_ASSERT_EQ("test-theme", config.themeName());
+    Aestra_TEST_ASSERT_EQ(44100, config.sampleRate());
+    Aestra_TEST_ASSERT_EQ(1920, config.windowWidth());
+    Aestra_TEST_ASSERT_EQ("test-theme", config.themeName());
     
     // Cleanup
     std::filesystem::remove(tempPath);
@@ -1972,7 +1972,7 @@ private:
     bool& m_undone;
 };
 
-NOMAD_TEST_CASE(TestCommandManager) {
+Aestra_TEST_CASE(TestCommandManager) {
     bool executed = false;
     bool undone = false;
     
@@ -1982,21 +1982,21 @@ NOMAD_TEST_CASE(TestCommandManager) {
     
     // Test command execution
     manager.executeCommand(std::move(command));
-    NOMAD_TEST_ASSERT(executed);
-    NOMAD_TEST_ASSERT(manager.canUndo());
+    Aestra_TEST_ASSERT(executed);
+    Aestra_TEST_ASSERT(manager.canUndo());
     
     // Test undo
     manager.undo();
-    NOMAD_TEST_ASSERT(undone);
-    NOMAD_TEST_ASSERT(manager.canRedo());
+    Aestra_TEST_ASSERT(undone);
+    Aestra_TEST_ASSERT(manager.canRedo());
     
     // Test redo
     manager.redo();
-    NOMAD_TEST_ASSERT(manager.canUndo());
-    NOMAD_TEST_ASSERT(!manager.canRedo());
+    Aestra_TEST_ASSERT(manager.canUndo());
+    Aestra_TEST_ASSERT(!manager.canRedo());
 }
 
-NOMAD_TEST_CASE(TestAddTrackCommand) {
+Aestra_TEST_CASE(TestAddTrackCommand) {
     auto trackManager = std::make_unique<TrackManager>();
     auto command = std::make_unique<AddTrackCommand>(trackManager.get(), "Test Track");
     
@@ -2004,13 +2004,13 @@ NOMAD_TEST_CASE(TestAddTrackCommand) {
     
     // Execute command
     bool success = command->execute();
-    NOMAD_TEST_ASSERT(success);
-    NOMAD_TEST_ASSERT_EQ(initialCount + 1, trackManager->getTrackCount());
+    Aestra_TEST_ASSERT(success);
+    Aestra_TEST_ASSERT_EQ(initialCount + 1, trackManager->getTrackCount());
     
     // Undo command
     success = command->undo();
-    NOMAD_TEST_ASSERT(success);
-    NOMAD_TEST_ASSERT_EQ(initialCount, trackManager->getTrackCount());
+    Aestra_TEST_ASSERT(success);
+    Aestra_TEST_ASSERT_EQ(initialCount, trackManager->getTrackCount());
 }
 ```
 
@@ -2020,17 +2020,17 @@ NOMAD_TEST_CASE(TestAddTrackCommand) {
 
 #### Implementation Plan
 
-**Step 1: Nomad Profiler Integration**
+**Step 1: Aestra Profiler Integration**
 ```cpp
 // ProfilerIntegration.h
 #ifdef TRACY_ENABLE
-    #define NOMAD_ZONE(name) ZoneScopedN(name)
-    #define NOMAD_ZONE_TEXT(text) ZoneText(text, strlen(text))
-    #define NOMAD_ZONE_COLOR(color) ZoneColor(color)
+    #define Aestra_ZONE(name) ZoneScopedN(name)
+    #define Aestra_ZONE_TEXT(text) ZoneText(text, strlen(text))
+    #define Aestra_ZONE_COLOR(color) ZoneColor(color)
 #else
-    #define NOMAD_ZONE(name) ((void)0)
-    #define NOMAD_ZONE_TEXT(text) ((void)0)
-    #define NOMAD_ZONE_COLOR(color) ((void)0)
+    #define Aestra_ZONE(name) ((void)0)
+    #define Aestra_ZONE_TEXT(text) ((void)0)
+    #define Aestra_ZONE_COLOR(color) ((void)0)
 #endif
 
 // PerformanceProfiler.h
@@ -2101,7 +2101,7 @@ void TrackManager::processAudio(float* outputBuffer, uint32_t numFrames, double 
     auto& profiler = PerformanceProfiler::getInstance();
     profiler.beginAudioBlock();
     
-    NOMAD_ZONE("Audio_Processing");
+    Aestra_ZONE("Audio_Processing");
     
     // ... existing processing code ...
     
@@ -2109,7 +2109,7 @@ void TrackManager::processAudio(float* outputBuffer, uint32_t numFrames, double 
 }
 
 // Enhanced main loop with profiling
-void NomadApp::run() {
+void AestraApp::run() {
     while (m_running && m_window->processEvents()) {
         auto& profiler = PerformanceProfiler::getInstance();
         profiler.beginUIFrame();
@@ -2340,7 +2340,7 @@ void operator delete(void* ptr, size_t size) noexcept {
 3. Establish development workflow and CI/CD pipeline
 4. Set up performance monitoring and testing infrastructure
 
-*This document serves as the technical blueprint for NOMAD DAW core improvements. Each phase builds upon previous achievements while maintaining stability and user experience.*
+*This document serves as the technical blueprint for Aestra core improvements. Each phase builds upon previous achievements while maintaining stability and user experience.*
                 AppConfig::getInstance().sampleRate().set(audio["sampleRate"]);
             }
             if (audio.contains("bufferSize")) {
@@ -2404,7 +2404,7 @@ void operator delete(void* ptr, size_t size) noexcept {
         "windowWidth": 1280,
         "windowHeight": 720,
         "fullscreen": false,
-        "theme": "nomad-dark",
+        "theme": "Aestra-dark",
         "showFPS": true,
         "adaptiveFPS": true
     },
@@ -2483,8 +2483,8 @@ void EventHandler::setupKeyboardShortcuts() {
         if (pressed) {
             auto& commandManager = CommandManager::getInstance();
             
-            if (key == NOMAD_KEY_CTRL_Z) {
-                if (key == NOMAD_KEY_SHIFT) {
+            if (key == Aestra_KEY_CTRL_Z) {
+                if (key == Aestra_KEY_SHIFT) {
                     commandManager.redo(); // Ctrl+Shift+Z or Ctrl+Y
                 } else {
                     commandManager.undo(); // Ctrl+Z

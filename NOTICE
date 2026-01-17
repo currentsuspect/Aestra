@@ -1,13 +1,13 @@
-NOMAD DAW - Digital Audio Workstation
-Copyright © 2024-2025 Dylan Makori (Nomad Studios). All rights reserved.
+Aestra - Digital Audio Workstation
+Copyright © 2024-2025 Dylan Makori (Aestra Studios). All rights reserved.
 
-This project is licensed under the Nomad Studios Source-Available License (NSSAL) Version 1.1 — see the LICENSE file for details.
+This project is licensed under the Aestra Studios Source-Available License (ASSAL) Version 1.1 — see the LICENSE file for details.
 
 This is NOT an Open Source License as defined by the Open Source Initiative (OSI). 
 While the source code is publicly visible ("source-available"), it does not grant 
 the freedoms typically associated with open source licenses (e.g., MIT, GPL, Apache).
 
-**IMPORTANT: You own 100% of the music you create with Nomad DAW - ALWAYS!**
+**IMPORTANT: You own 100% of the music you create with Aestra DAW - ALWAYS!**
 
 Third-Party Components:
 - FreeType (SIL Open Font License, Version 2.13.1)
@@ -23,10 +23,10 @@ Portions of this software may utilize the following third-party components:
 - VST is a trademark of Steinberg Media Technologies GmbH
 - ASIO is a trademark of Steinberg Media Technologies GmbH
 
-Nomad and the Nomad logo are trademarks of Dylan Makori / Nomad Studios.
+Aestra and the Aestra logo are trademarks of Dylan Makori / Aestra Studios.
 
 Usage Rights:
-✅ **You MAY use Nomad DAW for:**
+✅ **You MAY use Aestra DAW for:**
 - Personal music production and learning
 - Commercial music production, beats, and freelance work
 - Educational purposes and studying the code
@@ -36,12 +36,12 @@ Usage Rights:
 ❌ **You MAY NOT use the software to:**
 - Create competing DAWs or music production software
 - Commercialize or redistribute the software itself
-- Build derivative products that compete with Nomad
+- Build derivative products that compete with Aestra
 - Remove or modify copyright notices and attributions
 
 **Your Music, Your Business:**
 Whether you create music for personal enjoyment, commercial release, client work, or 
-freelance projects - you own 100% of your creative output. Nomad protects the product, 
+freelance projects - you own 100% of your creative output. Aestra protects the product, 
 not your artistic creations.
 
 Commercial Licensing:
@@ -59,5 +59,5 @@ SOFTWARE.
 For complete license terms, attribution requirements, and contributor guidelines,
 see the LICENSE file and LICENSING.md documentation.
 
-Nomad Studios - Democratizing Music Production
+Aestra Studios - Democratizing Music Production
 Built with transparency, protected for sustainability.

@@ -1,29 +1,30 @@
-# 🧭 NOMAD DAW
+# 🧭 AESTRA
 
-![License](https://img.shields.io/badge/License-NSSAL%20v1.0-blue)
+![License](https://img.shields.io/badge/License-ASSAL%20v1.1-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-lightgrey)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-orange)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
-![Core](https://img.shields.io/badge/Core-Source--Available-blue)
 
-> **A modern, professional digital audio workstation built from the ground up with intention.**  
+> **A modern, professional digital audio workstation built from the ground up with intention.**
 > Featuring ultra-low latency audio, GPU-accelerated UI, and a pattern-based workflow.
+
+![Aestra Interface](AestraDocs/images/aestra_interface.png)
 
 ---
 
-## 🌍 What is Nomad?
+## 🌍 What is Aestra?
 
-**Nomad DAW** is a next-generation digital audio workstation designed for musicians who demand professional quality without compromise. Built with modern C++17, Nomad delivers a clean, responsive experience with cutting-edge audio technology and a workflow that makes sense.
+**Aestra** is a next-generation digital audio workstation designed for musicians who demand professional quality without compromise. Built with modern C++17, Aestra delivers a clean, responsive experience with cutting-edge audio technology and a workflow that makes sense.
 
-Nomad combines:
+Aestra combines:
 
 - **Ultra-low latency audio engine** powered by a dual-tier ASIO/WASAPI system
-- **Custom GPU-accelerated UI framework** (NomadUI) for buttery-smooth 60 FPS performance
+- **Custom GPU-accelerated UI framework** (AestraUI) for buttery-smooth 60 FPS performance
 - **Modern pattern-based timeline** with intuitive pattern and playlist sequencing
 - **Professional-grade 64-bit audio processing** with multi-threaded architecture
 - **Source-available transparency** — see exactly how your DAW works under the hood
 
-Whether you're producing electronic music, scoring films, or recording live instruments, Nomad provides the tools and performance you need to create without limits.
+Whether you're producing electronic music, scoring films, or recording live instruments, Aestra provides the tools and performance you need to create without limits.
 
 ---
 
@@ -40,7 +41,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 
 ### 🎨 User Interface
 
-- **NomadUI Framework** — Custom OpenGL 3.3+ renderer with MSAA anti-aliasing
+- **AestraUI Framework** — Custom OpenGL 3.3+ renderer with MSAA anti-aliasing
 - **Adaptive FPS System** — Intelligent rendering optimization (24-60 FPS)
 - **Advanced Timeline** — Familiar workflow with adaptive grid and waveform visualization
 - **Theme System** — Dark/light modes with customizable color schemes
@@ -85,9 +86,9 @@ Whether you're producing electronic music, scoring films, or recording live inst
 
 ---
 
-## 🧭 Philosophy & Vision — Nomad's "True North"
+## 🧭 Philosophy & Vision — Aestra's "True North"
 
-At Nomad Studios, we believe software should feel like art — light, native, and human.
+At Aestra Studios, we believe software should feel like art — light, native, and human.
 
 **Our Core Values:**
 
@@ -97,7 +98,7 @@ At Nomad Studios, we believe software should feel like art — light, native, an
 - 🎨 **Beauty in Simplicity** — Clean UI that gets out of your way
 - 🤝 **Community-Driven** — Built by musicians, for musicians
 
-**Why Nomad is Different:**
+**Why Aestra is Different:**
 
 - Source code is publicly visible for educational transparency
 - Modern architecture designed for the future, not legacy constraints
@@ -121,24 +122,24 @@ We're building the DAW we wish existed — powerful yet approachable, profession
 2. **Clone and Build:**
 
    ```powershell
-   git clone https://github.com/currentsuspect/NOMAD.git
-   cd NOMAD
+   git clone https://github.com/currentsuspect/Aestra.git
+   cd Aestra
    
    # Install Git hooks for code quality
    pwsh -File scripts/install-hooks.ps1
    
    # Configure build
-   cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+   cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
    
    # Build project
    cmake --build build --config Release --parallel
    ```
 
-3. **Run Nomad:**
+3. **Run Aestra:**
 
    ```powershell
    cd build/bin/Release
-   ./NOMAD.exe
+   ./Aestra.exe
    ```
 
 ### Detailed Build Instructions
@@ -149,7 +150,7 @@ For comprehensive build instructions including troubleshooting, see **[Building 
 
 ## 📚 Documentation
 
-**[📘 Visit the Complete Documentation Site →](https://currentsuspect.github.io/NOMAD/)**
+**[📘 Visit the Complete Documentation Site →](https://currentsuspect.github.io/Aestra/)**
 
 Explore our beautiful, searchable documentation built with MkDocs Material:
 
@@ -162,9 +163,9 @@ Explore our beautiful, searchable documentation built with MkDocs Material:
 
 ### Quick Links
 
-- [Building NOMAD](docs/getting-started/building.md) — Detailed build instructions
+- [Building Aestra](docs/getting-started/building.md) — Detailed build instructions
 - [Contributing Guide](docs/developer/contributing.md) — How to contribute
-- [Architecture Overview](docs/architecture/overview.md) — Understanding NOMAD's design
+- [Architecture Overview](docs/architecture/overview.md) — Understanding Aestra's design
 
 ### 📚 API Documentation Generation
 
@@ -197,7 +198,7 @@ See **[API Documentation Guide →](docs/API_DOCUMENTATION_GUIDE.md)** for detai
 
 ## 🤝 How to Contribute
 
-We welcome contributions from the community! Whether you're fixing bugs, adding features, or improving documentation, your help makes Nomad better.
+We welcome contributions from the community! Whether you're fixing bugs, adding features, or improving documentation, your help makes Aestra better.
 
 ### Quick Contribution Guide
 
@@ -209,12 +210,12 @@ We welcome contributions from the community! Whether you're fixing bugs, adding 
 
 ### Contributor License Agreement
 
-By contributing to Nomad, you agree that:
+By contributing to Aestra, you agree that:
 
-- All contributed code becomes property of Dylan Makori / Nomad Studios
-- You grant Nomad Studios full rights to use, modify, and distribute your contributions
+- All contributed code becomes property of Dylan Makori / Aestra Studios
+- You grant Aestra Studios full rights to use, modify, and distribute your contributions
 - You waive ownership claims to your contributions
-- Contributions are made under the NSSAL v1.0 license terms
+- Contributions are made under the ASSAL v1.0 license terms
 
 For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRIBUTING.md)**
 
@@ -222,15 +223,15 @@ For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRI
 
 - 🐛 **Report Bugs** — Help us identify and fix issues
 - 💡 **Suggest Features** — Share ideas in GitHub Discussions
-- 📝 **Improve Documentation** — Help others understand Nomad
+- 📝 **Improve Documentation** — Help others understand Aestra
 - 🔧 **Submit Code** — Fix bugs or implement features
 - 🧪 **Test & Review** — Test builds and review pull requests
 
 ---
 
-## 🧾 License — NSSAL v1.0
+## 🧾 License — ASSAL v1.1
 
-**Nomad DAW** is licensed under the **Nomad Studios Source-Available License (NSSAL) v1.0**.
+**Aestra** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**.
 
 ### License Summary
 
@@ -239,7 +240,7 @@ For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRI
 - ✅ View and study the source code for educational purposes
 - ✅ Report bugs and security vulnerabilities
 - ✅ Suggest features and improvements
-- ✅ Submit pull requests (contributors grant all rights to Nomad Studios)
+- ✅ Submit pull requests (contributors grant all rights to Aestra Studios)
 
 **You MAY NOT:**
 
@@ -252,13 +253,13 @@ For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRI
 
 ```SPDX
 
-SPDX-License-Identifier: NSSAL
+SPDX-License-Identifier: ASSAL-1.1
 ```
 
 All source files include the following header:
 
 ```cpp
-// © 2025 Nomad Studios – All Rights Reserved. Licensed for personal & educational use only.
+// © 2026 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
 ```
 
 ### Full License Text
@@ -266,19 +267,19 @@ All source files include the following header:
 - **[View LICENSE →](LICENSE)** — Full legal license text
 - **[License Reference →](docs/LICENSE_REFERENCE.md)** — Detailed breakdown and FAQ
 
-**Important:** The source code is publicly visible for transparency, but is **NOT open-source**. All rights reserved by Dylan Makori / Nomad Studios.
+**Important:** The source code is publicly visible for transparency, but is **NOT open-source**. All rights reserved by Dylan Makori / Aestra Studios.
 
 ---
 
-## 🧠 About Nomad Studios
+## 🧠 About Aestra Studios
 
-**Nomad Studios** was founded by **Dylan Makori** in Kenya with a simple mission: make professional music tools accessible to everyone, without compromise.
+**Aestra Studios** was founded by **Dylan Makori** in Kenya with a simple mission: make professional music tools accessible to everyone, without compromise.
 
 ### Our Story
 
-Frustrated with bloated DAWs that prioritized features over performance, Dylan set out to build a modern audio workstation from scratch. Nomad is the result of that vision — a DAW that respects your time, your creativity, and your hardware.
+Frustrated with bloated DAWs that prioritized features over performance, Dylan set out to build a modern audio workstation from scratch. Aestra is the result of that vision — a DAW that respects your time, your creativity, and your hardware.
 
-Every line of code in Nomad is written with intention. No shortcuts, no legacy cruft, just clean, modern C++ designed for the future of music production.
+Every line of code in Aestra is written with intention. No shortcuts, no legacy cruft, just clean, modern C++ designed for the future of music production.
 
 ### Brand Values
 
@@ -297,79 +298,89 @@ Every line of code in Nomad is written with intention. No shortcuts, no legacy c
 
 **Support Channels:**
 
-- 🐛 [Report Issues](https://github.com/currentsuspect/NOMAD/issues) — Bug reports and feature requests
-- 💬 [GitHub Discussions](https://github.com/currentsuspect/NOMAD/discussions) — Community forum
+- 🐛 [Report Issues](https://github.com/currentsuspect/Aestra/issues) — Bug reports and feature requests
+- 💬 [GitHub Discussions](https://github.com/currentsuspect/Aestra/discussions) — Community forum
 - 📧 Direct Email — For partnerships and licensing inquiries
 
 ---
 
 ## 🙏 Acknowledgments
 
-Nomad wouldn't be possible without these incredible open-source projects:
+Aestra wouldn't be possible without these incredible open-source projects:
 
 - **RtAudio** — Cross-platform audio I/O
 - **nanovg** — Hardware-accelerated vector graphics
 - **stb_image** — Image loading utilities
-- **Nomad Profiler** — Performance profiling
+- **Aestra Profiler** — Performance profiling
 - **CMake** — Build system
 
-Thank you to all contributors and the open-source community for making Nomad possible.
+Thank you to all contributors and the open-source community for making Aestra possible.
 
 ---
 
-## 🗺️ Roadmap Highlights
+## 🗺️ Roadmap — v1 Beta (December 2026)
 
-**Q1 2025:**
+**Target:** Ship a credible, stable v1 Beta focused on **pattern-based Hip-Hop production**.
 
-- ✅ Core audio engine with WASAPI/ASIO support
-- ✅ NomadUI framework with OpenGL rendering
-- ✅ Advanced pattern-based timeline
-- 🚧 Sample manipulation (drag-and-drop, editing)
-- 🚧 Mixing controls (volume, pan, mute, solo)
-- 🚧 Project save/load system
+### ✅ Completed (Jan 2026)
 
-**Q2 2025:**
+- Core audio engine (WASAPI/ASIO dual-tier)
+- AestraUI framework with OpenGL rendering
+- Pattern-based timeline/playlist
+- Drag-and-drop, clip editing, trimming
+- Mixing (volume, pan, mute, solo)
+- Project save/load
+- VST3/CLAP plugin scanner
 
-- 📅 VST3 plugin hosting
-- 📅 MIDI support and piano roll
-- 📅 Undo/redo system
-- 📅 Cross-platform support (Linux, macOS)
+### 🎯 Phase 1 — Foundation Lock (COMPLETE) (Jan–Mar 2026)
 
-**Q3-Q4 2025:**
+✅ App structure refactor (reduce Main.cpp complexity)
+✅ Project loop reliability (open → edit → save → reopen)
+✅ Data model API freeze
 
-- 📅 Advanced automation
-- 📅 Effects and mixing console
-- 📅 Muse AI integration (premium)
-- 📅 Official v1.0 release
+### 🎯 Phase 2 — Project + Undo/Redo (Apr–Jun 2026)
 
-See the full **[Roadmap →](docs/ROADMAP.md)** for detailed milestones.
+✅ Project format v1 spec with versioning
+✅ Undo/redo for core actions
+-[ ] Autosave + crash recovery
+
+### 🎯 Phase 3 — Recording + Export (Jul–Sep 2026)
+
+- Recording workflow reliability
+- Offline render/export
+- Device stress testing
+
+### 🎯 Phase 4 — Plugin Decision Gate (Sep 2026)
+
+- Option A: Ship with internal Arsenal only
+- Option B: Minimal VST3/CLAP MVP (if stable)
+
+### 🎯 Phase 5–6 — Hardening + Release (Oct–Dec 2026)
+
+- Bug triage, performance budgets
+- Signed Windows installer
+- v1 Beta ship
+
+See **[docs/technical/roadmap.md](docs/technical/roadmap.md)** for the full execution plan.
 
 ---
 
 ## 📜 Repository Structure
 
-```FILESYSTEM
-NOMAD/
+Aestra/
 ├── docs/               # Comprehensive documentation portal
-├── NomadCore/          # Core utilities (math, threading, file I/O, logging)
-├── NomadPlat/          # Platform abstraction (Win32, X11, Cocoa)
-├── NomadUI/            # Custom OpenGL UI framework
-├── NomadAudio/         # Audio engine (WASAPI, RtAudio, mixing)
+├── AestraCore/          # Core utilities (math, threading, file I/O, logging)
+├── AestraPlat/          # Platform abstraction (Win32, X11, Cocoa)
+├── AestraUI/            # Custom OpenGL UI framework
+├── AestraAudio/         # Audio engine (WASAPI, RtAudio, mixing)
 ├── Source/             # Main DAW application
-├── NomadAssets/        # Icons, fonts, themes
+├── AestraAssets/        # Icons, fonts, themes
 ├── scripts/            # Build and utility scripts
 ├── meta/               # Project metadata, changelogs, summaries
 │   ├── CHANGELOGS/     # Historical changelogs
 │   └── BUG_REPORTS/    # Bug fix documentation
 ├── cmake/              # CMake modules
-└── LICENSE             # NSSAL v1.0 license
-```
-
----
-
-## 🔒 Security
-
-We take security seriously at Nomad Studios:
+└── LICENSE             # ASSAL v1.1 license
 
 - **Gitleaks Scanning** — Automated secret detection on all commits
 - **Pre-commit Hooks** — Prevents accidental secret commits
@@ -386,15 +397,15 @@ See **[SECURITY.md](SECURITY.md)** for our full security policy.
 
 Join the conversation:
 
-- **Discord** — [Invite Link](https://discord.gg/nomad-studios)
-- **GitHub Discussions** — [Open Discussions](https://github.com/currentsuspect/NOMAD/discussions)
-- **Twitter/X** — [@NomadStudios](https://twitter.com/NomadStudios)
+- **Discord** — [Invite Link](https://discord.gg/aestra-studios)
+- **GitHub Discussions** — [Open Discussions](https://github.com/currentsuspect/Aestra/discussions)
+- **Twitter/X** — [@AestraStudios](https://twitter.com/AestraStudios)
 
 ---
 
 ## 📜 License
 
-Nomad is distributed under the **Nomad Studios Software Agreement License (NSSAL) v1.1**. See **[LICENSE](LICENSE)** for full terms.
+Aestra is distributed under the **Aestra Studios Software Agreement License (ASSAL) v1.1**. See **[LICENSE](LICENSE)** for full terms.
 
 **Key Terms:**
 
@@ -406,24 +417,19 @@ For commercial licensing inquiries, contact: [makoridylan@gmail.com](mailto:mako
 
 ---
 
-## 🎵 Support Nomad
+## 🎵 Support Aestra
 
-If you enjoy using Nomad, consider supporting its development:
+If you enjoy using Aestra, consider supporting its development:
 
-- **GitHub Sponsors** — [Sponsor Nomad](https://github.com/sponsors/currentsuspect)
-- **Ko-fi** — [Buy Me a Coffee](https://ko-fi.com/nomadstudios)
-- **Patreon** — [Become a Patron](https://www.patreon.com/nomadstudios)
+- **GitHub Sponsors** — [Sponsor Aestra](https://github.com/sponsors/currentsuspect)
+- **Ko-fi** — [Buy Me a Coffee](https://ko-fi.com/aestrastudios)
+- **Patreon** — [Become a Patron](https://www.patreon.com/aestrastudios)
 
 ---
-
-<div align="center">
 
 **Built by musicians, for musicians. Crafted with intention.** 🎵
 
 ⭐ **Star this repo** if you believe in transparent, professional audio software!
 
-*Copyright © 2025 Dylan Makori / Nomad Studios. All rights reserved.*  
-*Licensed under NSSAL v1.1*
-
-</div>
-</html>
+*Copyright © 2026 Dylan Makori / Aestra Studios. All rights reserved.*  
+*Licensed under ASSAL v1.1*

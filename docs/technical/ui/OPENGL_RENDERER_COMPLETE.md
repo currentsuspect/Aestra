@@ -2,7 +2,7 @@
 
 ## What We Just Built
 
-A **fully functional OpenGL 3.3+ renderer** for Nomad UI! 🎉
+A **fully functional OpenGL 3.3+ renderer** for Aestra UI! 🎉
 
 ### File Created:
 - **`Graphics/OpenGL/NUIRendererGL.cpp`** - ~700 lines of production code
@@ -231,7 +231,7 @@ renderer->endFrame();
 
 ## Comparison to Other Renderers
 
-| Feature | NanoVG | Dear ImGui | Skia | NomadUI |
+| Feature | NanoVG | Dear ImGui | Skia | AestraUI |
 |---------|--------|------------|------|---------|
 | Primitives | ✅ | ✅ | ✅ | ✅ |
 | Text | ✅ | ✅ | ✅ | ⏳ |

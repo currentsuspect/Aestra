@@ -1,4 +1,4 @@
-name: NOMAD Build
+name: Aestra Build
 
 on:
   push:
@@ -27,14 +27,14 @@ jobs:
     - name: Configure CMake
       run: cmake -B build -G "Visual Studio 17 2022" -A x64
     
-    - name: Build NomadUI
-      run: cmake --build build --config Release --target NomadUI_Core
+    - name: Build AestraUI
+      run: cmake --build build --config Release --target AestraUI_Core
     
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: nomad-windows-x64
-        path: build/NomadUI/Release/NomadUI_Core.lib
+        name: Aestra-windows-x64
+        path: build/AestraUI/Release/AestraUI_Core.lib
 
   build-linux:
     name: Build on Linux
@@ -63,18 +63,18 @@ jobs:
     - name: Configure CMake
       if: false
       # Build only core components on CI when optional/audio modules are missing
-      run: cmake -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+      run: cmake -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
     
-    - name: Build NomadUI
+    - name: Build AestraUI
       if: false
-      run: cmake --build build --config Release --target NomadUI_Core
+      run: cmake --build build --config Release --target AestraUI_Core
     
     - name: Upload Artifacts
       if: false
       uses: actions/upload-artifact@v4
       with:
-        name: nomad-linux-x64
-        path: build/NomadUI/libNomadUI_Core.a
+        name: Aestra-linux-x64
+        path: build/AestraUI/libAestraUI_Core.a
 
   build-macos:
     name: Build on macOS
@@ -97,15 +97,15 @@ jobs:
     - name: Configure CMake
       if: false
       # Build only core components on CI when optional/audio modules are missing
-      run: cmake -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+      run: cmake -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
     
-    - name: Build NomadUI
+    - name: Build AestraUI
       if: false
-      run: cmake --build build --config Release --target NomadUI_Core
+      run: cmake --build build --config Release --target AestraUI_Core
     
     - name: Upload Artifacts
       if: false
       uses: actions/upload-artifact@v4
       with:
-        name: nomad-macos-universal
-        path: build/NomadUI/libNomadUI_Core.a
+        name: Aestra-macos-universal
+        path: build/AestraUI/libAestraUI_Core.a

@@ -1,18 +1,18 @@
-/* Custom NOMAD DAW Branding and Styling */
+/* Custom Aestra Branding and Styling */
 
 :root {
-  /* NOMAD Brand Colors */
-  --nomad-primary: #4338ca;
-  --nomad-accent: #06b6d4;
-  --nomad-bg: #0f172a;
-  --nomad-dark: #1a1a2e;
-  --nomad-gradient-start: #4338ca;
-  --nomad-gradient-end: #06b6d4;
+  /* Aestra Brand Colors */
+  --Aestra-primary: #4338ca;
+  --Aestra-accent: #06b6d4;
+  --Aestra-bg: #0f172a;
+  --Aestra-dark: #1a1a2e;
+  --Aestra-gradient-start: #4338ca;
+  --Aestra-gradient-end: #06b6d4;
 }
 
 /* Hero Section Styling */
 .hero-section {
-  background: linear-gradient(135deg, var(--nomad-gradient-start) 0%, var(--nomad-gradient-end) 100%);
+  background: linear-gradient(135deg, var(--Aestra-gradient-start) 0%, var(--Aestra-gradient-end) 100%);
   padding: 4rem 2rem;
   margin: -2rem -2rem 3rem -2rem;
   color: white;
@@ -45,7 +45,7 @@
 .hero-section .cta-button {
   padding: 0.75rem 2rem;
   background: white;
-  color: var(--nomad-primary);
+  color: var(--Aestra-primary);
   border-radius: 0.5rem;
   text-decoration: none;
   font-weight: 600;
@@ -80,7 +80,7 @@
 }
 
 .feature-card:hover {
-  border-color: var(--nomad-accent);
+  border-color: var(--Aestra-accent);
   box-shadow: 0 4px 12px rgba(92, 107, 192, 0.15);
   transform: translateY(-4px);
 }
@@ -93,7 +93,7 @@
 
 .feature-card h3 {
   margin-top: 0;
-  color: var(--nomad-primary);
+  color: var(--Aestra-primary);
   font-size: 1.25rem;
 }
 
@@ -125,7 +125,7 @@
 
 /* Philosophy Section */
 .philosophy-quote {
-  border-left: 4px solid var(--nomad-accent);
+  border-left: 4px solid var(--Aestra-accent);
   padding: 1.5rem 2rem;
   margin: 2rem 0;
   background: var(--md-code-bg-color);
@@ -138,7 +138,7 @@
   margin-top: 1rem;
   font-style: normal;
   font-weight: 600;
-  color: var(--nomad-primary);
+  color: var(--Aestra-primary);
 }
 
 /* Module Status Table */
@@ -158,7 +158,7 @@
 .module-status-table th {
   background: var(--md-code-bg-color);
   font-weight: 600;
-  color: var(--nomad-primary);
+  color: var(--Aestra-primary);
 }
 
 .module-status-table tr:hover {
@@ -177,15 +177,15 @@
     display: block;
     overflow-x: auto;
   }
-  
+
   .hero-section h1 {
     font-size: 2rem;
   }
-  
+
   .hero-section .tagline {
     font-size: 1.2rem;
   }
-  
+
   .feature-grid {
     grid-template-columns: 1fr;
   }
@@ -210,8 +210,8 @@
   transition: background 0.2s;
 }
 
-.tabbed-labels input:checked + label {
-  background: var(--nomad-primary);
+.tabbed-labels input:checked+label {
+  background: var(--Aestra-primary);
   color: white;
 }
 
@@ -225,7 +225,7 @@
 }
 
 .community-section h2 {
-  color: var(--nomad-primary);
+  color: var(--Aestra-primary);
   margin-bottom: 1rem;
 }
 
@@ -239,7 +239,7 @@
 
 .community-button {
   padding: 0.75rem 2rem;
-  background: var(--nomad-primary);
+  background: var(--Aestra-primary);
   color: white;
   border-radius: 0.5rem;
   text-decoration: none;
@@ -248,7 +248,7 @@
 }
 
 .community-button:hover {
-  background: var(--nomad-accent);
+  background: var(--Aestra-accent);
   transform: translateY(-2px);
 }
 
@@ -258,7 +258,7 @@
 }
 
 .admonition.tip {
-  border-left: 4px solid var(--nomad-accent);
+  border-left: 4px solid var(--Aestra-accent);
 }
 
 .admonition.warning {
@@ -272,7 +272,7 @@
 
 /* Footer Styling */
 .md-footer {
-  background: linear-gradient(90deg, var(--nomad-gradient-start) 0%, var(--nomad-gradient-end) 100%);
+  background: linear-gradient(90deg, var(--Aestra-gradient-start) 0%, var(--Aestra-gradient-end) 100%);
 }
 
 /* Quick Reference Cards */
@@ -299,7 +299,7 @@
 .quick-ref-card .number {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--nomad-primary);
+  color: var(--Aestra-primary);
   display: block;
   margin-bottom: 0.5rem;
 }

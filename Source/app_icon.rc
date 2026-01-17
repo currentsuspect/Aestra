@@ -1,6 +1,6 @@
-// Resource file for NOMAD_DAW application icon
-// This expects `nomad.ico` to be present in the same directory (static asset in repository)
+// Resource file for AESTRA_DAW application icon
+// This expects `aestra.ico` to be present in the same directory (static asset in repository)
 
 #include "resource.h"
 
-IDI_APP_ICON ICON "nomad.ico"
+IDI_APP_ICON ICON "aestra.ico"

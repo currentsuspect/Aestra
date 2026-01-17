@@ -2,7 +2,7 @@
 
 ## Overview
 
-Implemented a comprehensive mixer system with MixerBus class for audio routing and mixing in NomadAudio.
+Implemented a comprehensive mixer system with MixerBus class for audio routing and mixing in AestraAudio.
 
 ## Implementation Details
 
@@ -88,7 +88,7 @@ Input 3 → Bus 3 (gain/pan/mute) ┘
 
 ## Testing
 
-### Test Application: `NomadMixerBusTest`
+### Test Application: `AestraMixerBusTest`
 
 **Test Coverage:**
 
@@ -246,18 +246,18 @@ mixer.process(masterOutput, inputs, numFrames);
 ## Files Modified
 
 ### New Files
-- `NomadAudio/include/MixerBus.h`
-- `NomadAudio/src/MixerBus.cpp`
-- `NomadAudio/test/MixerBusTest.cpp`
-- `NomadAudio/TASK_4.4_SUMMARY.md`
+- `AestraAudio/include/MixerBus.h`
+- `AestraAudio/src/MixerBus.cpp`
+- `AestraAudio/test/MixerBusTest.cpp`
+- `AestraAudio/TASK_4.4_SUMMARY.md`
 
 ### Modified Files
-- `NomadAudio/CMakeLists.txt` - Added MixerBus sources and test
-- `NomadAudio/include/NomadAudio.h` - Added MixerBus.h include
+- `AestraAudio/CMakeLists.txt` - Added MixerBus sources and test
+- `AestraAudio/include/AestraAudio.h` - Added MixerBus.h include
 
 ## Dependencies
 
-- **NomadCore**: Uses atomic operations (C++ standard library)
+- **AestraCore**: Uses atomic operations (C++ standard library)
 - **Standard Library**: `<atomic>`, `<cmath>`, `<cstring>`, `<vector>`, `<memory>`
 - **No external dependencies**
 
@@ -265,10 +265,10 @@ mixer.process(masterOutput, inputs, numFrames);
 
 ```bash
 # Build the mixer test
-cmake --build build --config Release --target NomadMixerBusTest
+cmake --build build --config Release --target AestraMixerBusTest
 
 # Run the test
-./build/NomadAudio/Release/NomadMixerBusTest.exe
+./build/AestraAudio/Release/AestraMixerBusTest.exe
 ```
 
 ## Next Steps

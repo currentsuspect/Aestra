@@ -1,7 +1,7 @@
 # 64-Bit Precision & Multi-Threading Implementation Summary
 
 ## Overview
-Added professional-grade 64-bit floating-point processing and multi-threaded audio rendering to NOMAD DAW for enhanced precision and CPU load distribution.
+Added professional-grade 64-bit floating-point processing and multi-threaded audio rendering to Aestra for enhanced precision and CPU load distribution.
 
 ---
 
@@ -79,13 +79,13 @@ Thread 3: Track 3 → Buffer 3
 
 ### Files Modified
 
-#### `NomadAudio/include/TrackManager.h`
+#### `AestraAudio/include/TrackManager.h`
 - Added `AudioThreadPool` class (thread pool for parallel processing)
 - Added `m_threadPool`, `m_multiThreadingEnabled`, `m_trackBuffers`
 - Added methods: `setMultiThreadingEnabled()`, `setThreadCount()`, `getThreadCount()`
 - Added private helpers: `processAudioSingleThreaded()`, `processAudioMultiThreaded()`
 
-#### `NomadAudio/src/TrackManager.cpp`
+#### `AestraAudio/src/TrackManager.cpp`
 - Implemented `AudioThreadPool` with real-time thread priorities
 - Implemented `processAudioMultiThreaded()`:
   - Per-track buffer allocation
@@ -126,7 +126,7 @@ Thread 3: Track 3 → Buffer 3
 
 ## Usage
 
-### Audio Settings Dialog (Press `P` in NOMAD)
+### Audio Settings Dialog (Press `P` in Aestra)
 
 ```
 ╔═══════════════════════════════════════════════╗
@@ -141,7 +141,7 @@ Thread 3: Track 3 → Buffer 3
 ║                     │  64-bit: OFF             ║
 ║ [Test Sound]        │  Multi-Threading: ON ←   ║
 ║                     │  Thread Count: 7 thds ← ║
-║                     │  Nomad Mode: Off         ║
+║                     │  Aestra Mode: Off         ║
 ║                     │                          ║
 ║                [Apply] [Cancel]                ║
 ╚═══════════════════════════════════════════════╝
@@ -156,7 +156,7 @@ Applied audio quality settings:
   Precision: 32-bit Float
   DC Removal: ON
   Soft Clipping: OFF
-  Nomad Mode: Off
+  Aestra Mode: Off
   Multi-Threading: ON          ← New
   Thread Count: 7              ← New
 ```
@@ -305,11 +305,11 @@ class AudioThreadPool {
 
 ## Conclusion
 
-NOMAD now features:
+Aestra now features:
 - ✅ **64-bit precision** for mastering-grade numerical accuracy
 - ✅ **Multi-threaded audio processing** for CPU load distribution
 - ✅ **Professional-grade DSP** with 512-point sinc resampling
-- ✅ **Nomad Mode** for signature audio character
+- ✅ **Aestra Mode** for signature audio character
 - ✅ **Real-time optimized** thread pool architecture
 
 **Result**: World-class audio quality with scalable performance across modern multi-core CPUs.

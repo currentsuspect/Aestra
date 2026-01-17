@@ -1,7 +1,7 @@
-# 🎨 Nomad UI Framework - Architecture
+# 🎨 Aestra UI Framework - Architecture
 
 ## Vision
-A modern, GPU-accelerated UI framework built from scratch for the Nomad DAW. Zero dependencies on JUCE's component system - pure C++17+ with OpenGL/Vulkan rendering.
+A modern, GPU-accelerated UI framework built from scratch for the Aestra DAW. Zero dependencies on JUCE's component system - pure C++17+ with OpenGL/Vulkan rendering.
 
 ## Core Philosophy
 
@@ -28,15 +28,15 @@ A modern, GPU-accelerated UI framework built from scratch for the Nomad DAW. Zer
 
 ```
 ┌─────────────────────────────────────────────┐
-│         Application Layer (Nomad DAW)       │
+│         Application Layer (Aestra DAW)       │
 ├─────────────────────────────────────────────┤
-│      nomad_ui_widgets (Knobs, Sliders)      │
+│      Aestra_ui_widgets (Knobs, Sliders)      │
 ├─────────────────────────────────────────────┤
-│     nomad_ui_layout (Flexbox, Grid)         │
+│     Aestra_ui_layout (Flexbox, Grid)         │
 ├─────────────────────────────────────────────┤
-│   nomad_ui_core (Components, Events, Render)│
+│   Aestra_ui_core (Components, Events, Render)│
 ├─────────────────────────────────────────────┤
-│      nomad_ui_graphics (OpenGL/Vulkan)      │
+│      Aestra_ui_graphics (OpenGL/Vulkan)      │
 ├─────────────────────────────────────────────┤
 │         Platform Layer (Window, Input)      │
 └─────────────────────────────────────────────┘
@@ -44,7 +44,7 @@ A modern, GPU-accelerated UI framework built from scratch for the Nomad DAW. Zer
 
 ## Module Breakdown
 
-### 1. nomad_ui_graphics (Rendering Backend)
+### 1. Aestra_ui_graphics (Rendering Backend)
 **Purpose:** Low-level GPU rendering abstraction
 
 **Components:**
@@ -61,7 +61,7 @@ A modern, GPU-accelerated UI framework built from scratch for the Nomad DAW. Zer
 - SDF text rendering
 - Framebuffer effects
 
-### 2. nomad_ui_core (Component System)
+### 2. Aestra_ui_core (Component System)
 **Purpose:** Base component architecture and event system
 
 **Components:**
@@ -105,7 +105,7 @@ protected:
 };
 ```
 
-### 3. nomad_ui_layout (Layout Engine)
+### 3. Aestra_ui_layout (Layout Engine)
 **Purpose:** Flexbox-like layout system
 
 **Components:**
@@ -120,7 +120,7 @@ protected:
 - Margin/padding support
 - Alignment and justification
 
-### 4. nomad_ui_widgets (DAW Controls)
+### 4. Aestra_ui_widgets (DAW Controls)
 **Purpose:** Specialized widgets for music production
 
 **Widgets:**
@@ -228,7 +228,7 @@ public:
 ### Theme Definition (JSON)
 ```json
 {
-  "name": "Nomad Dark",
+  "name": "Aestra Dark",
   "colors": {
     "background": "#0d0d0d",
     "surface": "#1a1a1a",
@@ -324,7 +324,7 @@ Simplify rendering for small/distant elements
 ## File Structure
 
 ```
-NomadUI/
+AestraUI/
 ├── Core/
 │   ├── NUIComponent.h/cpp
 │   ├── NUIEvent.h/cpp
@@ -364,6 +364,6 @@ NomadUI/
 2. **Implement OpenGL renderer** with basic primitives
 3. **Build demo application** with sample window
 4. **Add first widget** (NUIButton)
-5. **Integrate with existing Nomad** (parallel to JUCE)
+5. **Integrate with existing Aestra** (parallel to JUCE)
 
-This architecture provides a solid foundation for a modern, performant UI framework that will give Nomad the visual and interactive quality it deserves! 🚀
+This architecture provides a solid foundation for a modern, performant UI framework that will give Aestra the visual and interactive quality it deserves! 🚀

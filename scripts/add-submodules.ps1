@@ -2,14 +2,14 @@
 Helper to add private repos as submodules for local development.
 
 Usage:
-  .\scripts\add-submodules.ps1 -PremiumRepoUrl git@github.com:Org/nomad-premium.git
+  .\scripts\add-submodules.ps1 -PremiumRepoUrl git@github.com:Org/Aestra-premium.git
 
 This script only adds submodules locally. It does not push or change remotes.
 #>
 param(
     [Parameter(Mandatory=$true)]
     [string] $PremiumRepoUrl,
-    [string] $PremiumPath = "NomadMuse"
+    [string] $PremiumPath = "AestraMuse"
 )
 
 Write-Host "Adding premium submodule: $PremiumRepoUrl -> $PremiumPath" -ForegroundColor Cyan

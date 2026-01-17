@@ -2,7 +2,7 @@
 
 ## 🎯 Philosophy: Detection Only, No Loading
 
-NOMAD implements a **safe, minimal ASIO detection system** that provides visibility without risk.
+Aestra implements a **safe, minimal ASIO detection system** that provides visibility without risk.
 
 ## ✅ What We Do (Read-Only Detection)
 
@@ -47,14 +47,14 @@ auto asioInfo = ASIODriverScanner::getAvailabilityMessage();
 
 // Display in info panel:
 // "ASIO drivers detected: ASIO4ALL v2, FL Studio ASIO.
-//  NOMAD uses WASAPI Exclusive mode for the same low latency.
+//  Aestra uses WASAPI Exclusive mode for the same low latency.
 //  Your ASIO devices will work through their WASAPI endpoints."
 ```
 
 ### Benefits for Users
 
 1. **Transparency**: "You have ASIO4ALL installed"
-2. **Education**: "NOMAD uses WASAPI instead, which gives the same performance"
+2. **Education**: "Aestra uses WASAPI instead, which gives the same performance"
 3. **Reassurance**: "Your ASIO interface will work fine"
 4. **Future-proof**: Easy to upgrade to full ASIO if needed
 
@@ -107,22 +107,22 @@ if (result != ERROR_SUCCESS) {
 **Message**:
 > "ASIO drivers detected: ASIO4ALL v2, FL Studio ASIO.
 > 
-> NOMAD uses **WASAPI Exclusive mode** for professional low-latency audio (3-5ms).
+> Aestra uses **WASAPI Exclusive mode** for professional low-latency audio (3-5ms).
 > This provides the same performance as ASIO without requiring special drivers.
 > 
-> Your ASIO-compatible audio interface will work perfectly with NOMAD through its WASAPI endpoint."
+> Your ASIO-compatible audio interface will work perfectly with Aestra through its WASAPI endpoint."
 
 ### If No ASIO Drivers Found
 
 **Message**:
 > "No ASIO drivers detected.
 > 
-> NOMAD uses **WASAPI** (Windows Audio Session API) for professional low-latency audio.
+> Aestra uses **WASAPI** (Windows Audio Session API) for professional low-latency audio.
 > WASAPI Exclusive mode provides 3-5ms latency - the same as ASIO."
 
 ### Why This Works
 
-1. **Sets expectations**: Users know NOMAD uses WASAPI
+1. **Sets expectations**: Users know Aestra uses WASAPI
 2. **Educates**: WASAPI = ASIO performance
 3. **Reassures**: Their hardware will work
 4. **Professional**: Shows we know what we're doing
@@ -132,7 +132,7 @@ if (result != ERROR_SUCCESS) {
 ### File Structure
 
 ```
-NomadAudio/
+AestraAudio/
 ├── include/
 │   └── ASIODriverInfo.h         ✅ Header with structs
 └── src/
@@ -143,7 +143,7 @@ NomadAudio/
 
 ```cpp
 // Simple, clean API
-namespace Nomad::Audio {
+namespace Aestra::Audio {
 
 struct ASIODriverInfo {
     std::string name;
@@ -170,7 +170,7 @@ public:
 #include "ASIODriverInfo.h"
 
 void AudioSettingsDialog::updateASIOInfo() {
-    using namespace Nomad::Audio;
+    using namespace Aestra::Audio;
     
     // Get user-friendly message
     std::string message = ASIODriverScanner::getAvailabilityMessage();
@@ -224,18 +224,18 @@ But honestly, **you probably won't need to**. WASAPI Exclusive is that good.
 
 ### What Success Looks Like
 
-✅ **Users understand**: "NOMAD uses WASAPI, which is great"  
+✅ **Users understand**: "Aestra uses WASAPI, which is great"  
 ✅ **No confusion**: "Why doesn't my ASIO driver show up?"  
-✅ **Professional image**: "NOMAD knows about ASIO but chose better"  
+✅ **Professional image**: "Aestra knows about ASIO but chose better"  
 ✅ **Zero crashes**: No external DLLs = No DLL crashes  
 ✅ **Zero maintenance**: No SDK updates, no driver testing  
 
 ### What Failure Would Look Like (Full ASIO)
 
-❌ "ASIO4ALL crashes NOMAD on my machine"  
-❌ "FL Studio ASIO doesn't work with NOMAD"  
+❌ "ASIO4ALL crashes Aestra on my machine"  
+❌ "FL Studio ASIO doesn't work with Aestra"  
 ❌ "Need to update Steinberg SDK"  
-❌ "Driver X works in FL but not NOMAD"  
+❌ "Driver X works in FL but not Aestra"  
 ❌ "Licensing issue with ASIO redistribution"  
 
 ## 🎯 Conclusion
@@ -243,7 +243,7 @@ But honestly, **you probably won't need to**. WASAPI Exclusive is that good.
 **Minimal ASIO Detection = Best of Both Worlds**
 
 ✅ Show users we're aware of ASIO  
-✅ Explain why WASAPI is better for NOMAD  
+✅ Explain why WASAPI is better for Aestra  
 ✅ Zero risk, zero maintenance  
 ✅ Professional appearance  
 ✅ Easy to upgrade if ever needed  

@@ -1,12 +1,12 @@
 # Code of Conduct
 
-**Nomad Studios Community**
+**Aestra Studios Community**
 
 ---
 
 ## 🌍 Our Pledge
 
-We, as members, contributors, and leaders of the **Nomad Studios** community, pledge to make participation in the Nomad ecosystem — including **Nomad DAW**, its repositories, forums, and chat spaces — a safe, open, and welcoming experience for everyone.
+We, as members, contributors, and leaders of the **Aestra Studios** community, pledge to make participation in the Aestra ecosystem — including **Aestra DAW**, its repositories, forums, and chat spaces — a safe, open, and welcoming experience for everyone.
 
 We commit to fostering an environment built on **respect, curiosity, and creativity**, regardless of:
 
@@ -16,7 +16,7 @@ We commit to fostering an environment built on **respect, curiosity, and creativ
 * Physical or mental ability
 * Beliefs or opinions
 
-Nomad Studios is a space where artists and developers can collaborate without fear of ridicule or harassment.
+Aestra Studios is a space where artists and developers can collaborate without fear of ridicule or harassment.
 
 ---
 
@@ -40,7 +40,7 @@ Examples of unacceptable behavior:
 
 ## 🛠 Enforcement
 
-* The Nomad Studios maintainers are responsible for enforcing this Code of Conduct.
+* The Aestra Studios maintainers are responsible for enforcing this Code of Conduct.
 * They have the right to **edit, remove, or block** comments, commits, code, issues, or accounts that violate these rules.
 * For serious or repeated violations, users may be banned from repositories, community spaces, or events.
 * Reports can be made confidentially via:
@@ -54,19 +54,19 @@ All reports will be reviewed and handled respectfully and fairly.
 
 This Code of Conduct applies:
 
-* To all official Nomad Studios spaces (GitHub, Discord, Reddit, etc.).
-* When representing Nomad Studios in public spaces.
+* To all official Aestra Studios spaces (GitHub, Discord, Reddit, etc.).
+* When representing Aestra Studios in public spaces.
 * To all contributors, regardless of title or role.
 
 ---
 
 ## 💡 Attribution
 
-Portions of this document were inspired by the [Contributor Covenant](https://www.contributor-covenant.org/) v2.1 and adapted for **Nomad Studios**.
+Portions of this document were inspired by the [Contributor Covenant](https://www.contributor-covenant.org/) v2.1 and adapted for **Aestra Studios**.
 
 ---
 
 ## ❤️ Final Note
 
-Nomad exists to bring **freedom and artistry** back to music creation.
+Aestra exists to bring **freedom and artistry** back to music creation.
 We’re all here to build something bigger than ourselves — so let’s treat each other with the same care and respect we give to our art.

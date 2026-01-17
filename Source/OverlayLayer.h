@@ -1,4 +1,4 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file OverlayLayer.h
  * @brief Layer for overlays with pass-through hit-testing
@@ -6,19 +6,19 @@
 
 #pragma once
 
-#include "../NomadUI/Core/NUIComponent.h"
-#include "../NomadUI/Core/NUITypes.h"
+#include "../AestraUI/Core/NUIComponent.h"
+#include "../AestraUI/Core/NUITypes.h"
 
 /**
  * @brief Layer for overlays (Mixer, Piano Roll, etc.) with pass-through hit-testing
  */
-class OverlayLayer : public NomadUI::NUIComponent {
+class OverlayLayer : public AestraUI::NUIComponent {
 public:
     OverlayLayer() {
         setId("OverlayLayer");
     }
 
-    bool onMouseEvent(const NomadUI::NUIMouseEvent& event) override {
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override {
         // Iterate children in reverse z-order for hit-testing
         auto children = getChildren();
         for (auto it = children.rbegin(); it != children.rend(); ++it) {

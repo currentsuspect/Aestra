@@ -32,8 +32,8 @@
 *.dylib filter=lfs diff=lfs merge=lfs -text
 
 # Prevent accidentally including private premium assets in source tarballs
-NomadMuse/models/** export-ignore
-NomadAssets/** export-ignore
+AestraMuse/models/** export-ignore
+AestraAssets/** export-ignore
 # Ensure line endings consistent for source
 *.cpp text eol=lf
 *.h text eol=lf

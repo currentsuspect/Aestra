@@ -1,4 +1,4 @@
-name: Private Release (Nomad Studio+)
+name: Private Release (Aestra Plus)
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ jobs:
       - name: Ensure premium/build present
         shell: pwsh
         run: |
-          $req = @('nomad-premium','nomad-build')
+          $req = @('Aestra-premium','Aestra-build')
           foreach ($r in $req) { if (-not (Test-Path $r)) { Write-Error "Missing private folder: $r"; exit 1 } }
       - name: Setup CMake
         uses: lukka/get-cmake@latest
@@ -28,7 +28,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path build | Out-Null
-          cmake -S . -B build -DNOMAD_CORE_MODE=OFF -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DAestra_CORE_MODE=OFF -DCMAKE_BUILD_TYPE=Release
       - name: Build
         shell: pwsh
         run: cmake --build build --config Release --parallel
@@ -49,14 +49,14 @@ jobs:
       - name: Package artifacts
         shell: pwsh
         run: |
-          $name = "NomadStudioPlus-${{ github.event.inputs.version }}.zip"
+          $name = "AestraStudioPlus-${{ github.event.inputs.version }}.zip"
           Compress-Archive -Path build\**\*.exe,build\**\*.dll -DestinationPath $name
           echo "PACKAGE_NAME=$name" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Upload Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.event.inputs.version }}
-          name: Nomad Studio+ v${{ github.event.inputs.version }}
+          name: Aestra Plus v${{ github.event.inputs.version }}
           draft: false
           prerelease: false
           files: |

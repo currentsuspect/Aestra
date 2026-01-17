@@ -4,9 +4,9 @@
 #include <sstream>
 #include <filesystem>
 
-#include "NomadJSON.h"
+#include "AestraJSON.h"
 
-namespace Nomad {
+namespace Aestra {
 
 namespace {
 	// Public key placeholder (Ed25519/ECDSA). Real verification implemented in private repo.
@@ -31,11 +31,11 @@ namespace {
 }
 
 std::string getLicenseFilePath() {
-	std::filesystem::path p = std::filesystem::path(getHomeDir()) / ".nomad" / "user_info.json";
+	std::filesystem::path p = std::filesystem::path(getHomeDir()) / ".Aestra" / "user_info.json";
 	return p.string();
 }
 
-static UserProfile parseProfile(const Nomad::JSON& j) {
+static UserProfile parseProfile(const Aestra::JSON& j) {
 	UserProfile p;
 	if (j.isObject()) {
 		if (j.has("username")) p.username = j["username"].asString();
@@ -46,8 +46,8 @@ static UserProfile parseProfile(const Nomad::JSON& j) {
 	return p;
 }
 
-static Nomad::JSON serializeProfile(const UserProfile& p) {
-	Nomad::JSON j = Nomad::JSON::object();
+static Aestra::JSON serializeProfile(const UserProfile& p) {
+	Aestra::JSON j = Aestra::JSON::object();
 	j.set("username",  p.username);
 	j.set("tier",      p.tier);
 	j.set("serial",    p.serial);
@@ -59,7 +59,7 @@ UserProfile loadProfile() {
 	UserProfile profile;
 	// Defaults for open-source builds
 	profile.username = "Guest";
-	profile.tier = "Nomad Core";
+	profile.tier = "Aestra Core";
 	profile.serial = "CORE-XXXXXXX";
 	profile.signature = "";
 	profile.verified = false;
@@ -71,7 +71,7 @@ UserProfile loadProfile() {
 	}
 	std::stringstream buffer; buffer << f.rdbuf();
 	try {
-		Nomad::JSON j = Nomad::JSON::parse(buffer.str());
+		Aestra::JSON j = Aestra::JSON::parse(buffer.str());
 		profile = parseProfile(j);
 	} catch (...) {
 		// ignore parse errors, keep defaults
@@ -85,7 +85,7 @@ bool saveProfile(const UserProfile& profile) {
 		std::filesystem::create_directories(p.parent_path());
 		std::ofstream f(p.string(), std::ios::out | std::ios::binary | std::ios::trunc);
 		if (!f.good()) return false;
-		Nomad::JSON j = serializeProfile(profile);
+		Aestra::JSON j = serializeProfile(profile);
 		f << j.toString(2);
 		return true;
 	} catch (...) {
@@ -96,15 +96,15 @@ bool saveProfile(const UserProfile& profile) {
 bool verifyLicense(UserProfile& profile) {
 	// Stubbed verifier for public repo:
 	// - If signature equals "MOCK-VALID", mark verified true
-	// - Otherwise unverified; force tier to Nomad Core
+	// - Otherwise unverified; force tier to Aestra Core
 	const std::string payload = profile.username + profile.serial + profile.tier;
 	(void)payload; (void)kPublicKeyPem; // placeholders for real verification
 	bool ok = (profile.signature == "MOCK-VALID");
 	profile.verified = ok;
 	if (!ok) {
-		profile.tier = "Nomad Core";
+		profile.tier = "Aestra Core";
 	}
 	return ok;
 }
 
-} // namespace Nomad
+} // namespace Aestra

@@ -1,20 +1,20 @@
-# NomadUI Widget Demo Catalog
+# AestraUI Widget Demo Catalog
 
-The `NomadUI_WidgetCatalogueDemo` console target instantiates every widget in the NomadUI catalogue and exercises its public configuration API. Use it as a smoke test and quick reference while developing new UI features.
+The `AestraUI_WidgetCatalogueDemo` console target instantiates every widget in the AestraUI catalogue and exercises its public configuration API. Use it as a smoke test and quick reference while developing new UI features.
 
 ## Building and running
 
-1. Configure the NomadUI project with examples enabled (default):
+1. Configure the AestraUI project with examples enabled (default):
    ```bash
    cmake -S . -B build
    ```
 2. Build the widget demo target:
    ```bash
-   cmake --build build --target NomadUI_WidgetCatalogueDemo
+   cmake --build build --target AestraUI_WidgetCatalogueDemo
    ```
 3. Execute the binary to print the widget demo summary:
    ```bash
-   ./build/bin/NomadUI_WidgetCatalogueDemo
+   ./build/bin/AestraUI_WidgetCatalogueDemo
    ```
 
 ## Demo coverage

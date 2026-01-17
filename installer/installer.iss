@@ -1,15 +1,15 @@
 ; =========================================================
-;  NOMAD DAW – Windows Installer
-;  Author: Dylan Makori / Nomad Studios
+;  Aestra – Windows Installer
+;  Author: Dylan Makori / Aestra Studios
 ;  Date: 2025-10-30
 ;  Free distribution installer – no paid features used
 ; =========================================================
 
-#define MyAppName        "NOMAD DAW"
+#define MyAppName        "Aestra"
 #define MyAppVersion     "1.1.0"
-#define MyAppPublisher   "Nomad Studios"
-#define MyAppURL         "https://nomad-daw.com"
-#define MyAppExeName     "NomadDAW.exe"
+#define MyAppPublisher   "Aestra Studios"
+#define MyAppURL         "https://Aestra-daw.com"
+#define MyAppExeName     "AestraDAW.exe"
 
 [Setup]
 ; ---- Identity ----
@@ -26,7 +26,7 @@ AppUpdatesURL={#MyAppURL}/updates
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir=dist\installers
-OutputBaseFilename=NOMAD-DAW-Setup
+OutputBaseFilename=Aestra-DAW-Setup
 DisableProgramGroupPage=yes
 
 ; ---- UI / Compression ----
@@ -50,7 +50,7 @@ Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescrip
 
 ; ---- Files ----
 [Files]
-Source: "build\Release\NomadDAW.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "build\Release\AestraDAW.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "assets\*"; DestDir: "{app}\assets"; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 ; Add optional data folders below
@@ -78,7 +78,7 @@ function InitializeSetup(): Boolean;
 begin
   if not IsWin64 then
   begin
-    MsgBox('Nomad DAW requires a 64-bit version of Windows.', mbError, MB_OK);
+    MsgBox('Aestra DAW requires a 64-bit version of Windows.', mbError, MB_OK);
     Result := False;
   end
   else
@@ -88,6 +88,6 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
-    MsgBox('Thank you for installing Nomad DAW!'#13#13 +
+    MsgBox('Thank you for installing Aestra DAW!'#13#13 +
            'You can start creating right away.', mbInformation, MB_OK);
 end;

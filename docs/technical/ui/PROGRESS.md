@@ -1,4 +1,4 @@
-# 🚀 Nomad UI Framework - Development Progress
+# 🚀 Aestra UI Framework - Development Progress
 
 ## Current Status: Foundation Complete + Core Implementation Started
 
@@ -97,7 +97,7 @@
 ✅ 64-bit enforcement (Windows, Linux)
 ✅ Universal binary support (macOS ARM64 + x64)
 ✅ Platform name detection
-✅ OpenGL backend flag (NOMADUI_OPENGL)
+✅ OpenGL backend flag (AestraUI_OPENGL)
 ✅ Proper architecture reporting
 ```
 

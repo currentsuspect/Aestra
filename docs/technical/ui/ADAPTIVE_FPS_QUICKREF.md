@@ -6,13 +6,13 @@
 
 ## 🚀 Quick Start
 
-Already integrated! Just build and run NOMAD DAW.
+Already integrated! Just build and run Aestra.
 
 ## ⚙️ Configuration
 
 ```cpp
-// In Source/Main.cpp - NomadApp constructor
-NomadUI::NUIAdaptiveFPS::Config fpsConfig;
+// In Source/Main.cpp - AestraApp constructor
+AestraUI::NUIAdaptiveFPS::Config fpsConfig;
 fpsConfig.fps30 = 30.0;                    // Idle FPS
 fpsConfig.fps60 = 60.0;                    // Active FPS
 fpsConfig.idleTimeout = 2.0;               // Seconds before lowering FPS
@@ -35,7 +35,7 @@ m_adaptiveFPS->setMode(NUIAdaptiveFPS::Mode::Locked30);
 m_adaptiveFPS->setMode(NUIAdaptiveFPS::Mode::Locked60);
 ```
 
-### Keyboard Shortcuts (NOMAD DAW)
+### Keyboard Shortcuts (Aestra)
 - **F**: Cycle FPS modes (Auto → 30 → 60 → Auto)
 - **L**: Toggle adaptive FPS logging
 
@@ -88,11 +88,11 @@ if (sleepTime > 0.0) {
 
 | File | Purpose |
 |------|---------|
-| `NomadUI/Core/NUIAdaptiveFPS.h` | Class definition |
-| `NomadUI/Core/NUIAdaptiveFPS.cpp` | Implementation |
-| `NomadUI/Core/NUIApp.h/.cpp` | Framework integration |
+| `AestraUI/Core/NUIAdaptiveFPS.h` | Class definition |
+| `AestraUI/Core/NUIAdaptiveFPS.cpp` | Implementation |
+| `AestraUI/Core/NUIApp.h/.cpp` | Framework integration |
 | `Source/Main.cpp` | DAW integration |
-| `NomadDocs/ADAPTIVE_FPS_GUIDE.md` | Full documentation |
+| `AestraDocs/ADAPTIVE_FPS_GUIDE.md` | Full documentation |
 
 ## ⚡ Performance
 

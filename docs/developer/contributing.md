@@ -1,9 +1,9 @@
-# 🤝 Contributing to Nomad DAW
+# 🤝 Contributing to Aestra DAW
 
 ![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-brightgreen)
 ![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-blue)
 
-Thank you for your interest in contributing to Nomad DAW! This guide will help you understand our development workflow and contribution process.
+Thank you for your interest in contributing to Aestra DAW! This guide will help you understand our development workflow and contribution process.
 
 ## 📋 Table of Contents
 
@@ -31,11 +31,11 @@ We are committed to providing a welcoming and inclusive environment. Please read
 2. **Fork and clone the repository**
    ```bash
    # Fork the repository on GitHub first, then:
-   git clone https://github.com/YOUR_USERNAME/NOMAD.git
-   cd NOMAD
+   git clone https://github.com/YOUR_USERNAME/Aestra.git
+   cd Aestra
    
    # Add upstream remote
-   git remote add upstream https://github.com/currentsuspect/NOMAD.git
+   git remote add upstream https://github.com/currentsuspect/Aestra.git
    ```
 
 3. **Install Git hooks**
@@ -50,7 +50,7 @@ We are committed to providing a welcoming and inclusive environment. Please read
 
 4. **Build the project**
    ```bash
-   cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+   cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
    cmake --build build --config RelWithDebInfo --parallel
    ```
 
@@ -58,7 +58,7 @@ We are committed to providing a welcoming and inclusive environment. Please read
 
 ### 1. Find an Issue or Feature
 
-- Browse [open issues](https://github.com/currentsuspect/NOMAD/issues)
+- Browse [open issues](https://github.com/currentsuspect/Aestra/issues)
 - Check the [project roadmap](../technical/roadmap.md) for planned features
 - Look for issues labeled `good first issue` or `help wanted`
 - Comment on an issue to express interest before starting work
@@ -89,7 +89,7 @@ git checkout -b fix/bug-description
 ```bash
 # Build and test
 cmake --build build --config RelWithDebInfo
-./build/NomadDAW  # Test manually
+./build/AestraDAW  # Test manually
 
 # Run unit tests (if available)
 ctest --test-dir build --config RelWithDebInfo
@@ -255,14 +255,14 @@ main
 
 **By submitting a pull request, you agree that:**
 
-1. All contributed code becomes property of Dylan Makori / Nomad DAW
+1. All contributed code becomes property of Dylan Makori / Aestra DAW
 2. Dylan Makori has full rights to use, modify, and distribute your contributions
 3. You waive all ownership claims to your contributions
 4. You grant Dylan Makori a perpetual, worldwide, exclusive license
-5. Your contributions can be used in the proprietary Nomad DAW product
+5. Your contributions can be used in the proprietary Aestra DAW product
 
 **Why this matters:**
-- Nomad DAW is proprietary commercial software
+- Aestra DAW is proprietary commercial software
 - We need clear ownership to maintain the product
 - Contributors are credited in the project
 - This allows us to build a sustainable business while being transparent
@@ -278,7 +278,7 @@ We value all contributors! Contributors are recognized:
 
 ## 💡 Scope of Contributions
 
-### Public Contributions (nomad-core)
+### Public Contributions (Aestra-core)
 
 ✅ **You can contribute to:**
 - Core audio engine improvements
@@ -298,7 +298,7 @@ We value all contributors! Contributors are recognized:
 - Commercial licensing system
 - Code signing and distribution
 
-**Note**: Public contributors work on `nomad-core/` with mock assets. Full builds with premium features are only available internally.
+**Note**: Public contributors work on `Aestra-core/` with mock assets. Full builds with premium features are only available internally.
 
 ## 🛠️ Development Tools
 
@@ -318,7 +318,7 @@ We value all contributors! Contributors are recognized:
 
 ## 📚 Additional Resources
 
-- [Building Guide](../getting-started/building.md) - How to build Nomad
+- [Building Guide](../getting-started/building.md) - How to build Aestra
 - [Coding Style Guide](coding-style.md) - Code formatting rules
 - [Architecture Overview](../architecture/overview.md) - System design
 - [FAQ](../technical/faq.md) - Common questions
@@ -330,12 +330,12 @@ We value all contributors! Contributors are recognized:
 
 - 💬 Comment on relevant GitHub issues
 - 📧 Email: makoridylan@gmail.com
-- 🐛 Report bugs: [GitHub Issues](https://github.com/currentsuspect/NOMAD/issues)
+- 🐛 Report bugs: [GitHub Issues](https://github.com/currentsuspect/Aestra/issues)
 
 ## 🙏 Thank You!
 
-Your contributions help make Nomad DAW better for everyone. We appreciate your time, effort, and passion for building great software!
+Your contributions help make Aestra DAW better for everyone. We appreciate your time, effort, and passion for building great software!
 
 ---
 
-[← Return to Nomad Docs Index](../index.md)
+[← Return to Aestra Docs Index](../index.md)

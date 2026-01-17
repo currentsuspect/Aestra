@@ -1,8 +1,8 @@
-# NOMAD Multi-Tier Audio Driver Implementation Plan
+# Aestra Multi-Tier Audio Driver Implementation Plan
 
 ## 📋 Overview
 
-This document outlines the complete implementation of NOMAD's professional-grade audio driver architecture, supporting multiple Windows audio APIs with intelligent fallback and ASIO integration.
+This document outlines the complete implementation of Aestra's professional-grade audio driver architecture, supporting multiple Windows audio APIs with intelligent fallback and ASIO integration.
 
 ## 🎯 Phase 1: Lock Down Stability (WASAPI + Legacy) ✅
 
@@ -68,8 +68,8 @@ This document outlines the complete implementation of NOMAD's professional-grade
 - **Target Latency**: ~30ms (acceptable for legacy systems)
 - **Priority**: Lowest (fallback only)
 - **Files to Create**:
-  - `NomadAudio/include/DirectSoundDriver.h`
-  - `NomadAudio/src/DirectSoundDriver.cpp`
+  - `AestraAudio/include/DirectSoundDriver.h`
+  - `AestraAudio/src/DirectSoundDriver.cpp`
 - **Key Features**:
   - DirectSound 8 API
   - Primary/Secondary buffer management
@@ -81,7 +81,7 @@ This document outlines the complete implementation of NOMAD's professional-grade
 
 ### **AudioDriverManager** (Priority System)
 
-**File**: `NomadAudio/include/AudioDriverManager.h/cpp`
+**File**: `AestraAudio/include/AudioDriverManager.h/cpp`
 
 **Responsibilities**:
 1. **Driver Registration**
@@ -114,7 +114,7 @@ This document outlines the complete implementation of NOMAD's professional-grade
 **Priority Order**:
 ```
 1. ASIO External  (if available)
-2. Nomad ASIO     (if no external ASIO)
+2. Aestra ASIO     (if no external ASIO)
 3. WASAPI Exclusive (if device not in use)
 4. WASAPI Shared    (default safe mode)
 5. DirectSound      (legacy fallback)
@@ -136,7 +136,7 @@ This document outlines the complete implementation of NOMAD's professional-grade
 
 ### **ASIODriverScanner**
 
-**File**: `NomadAudio/include/ASIODriverScanner.h/cpp`
+**File**: `AestraAudio/include/ASIODriverScanner.h/cpp`
 
 **Purpose**: Enumerate and load external ASIO drivers
 
@@ -164,7 +164,7 @@ This document outlines the complete implementation of NOMAD's professional-grade
 
 ### **ASIOExternalDriver**
 
-**File**: `NomadAudio/include/ASIOExternalDriver.h/cpp`
+**File**: `AestraAudio/include/ASIOExternalDriver.h/cpp`
 
 **Purpose**: Load and interface with external ASIO DLLs
 
@@ -192,9 +192,9 @@ This document outlines the complete implementation of NOMAD's professional-grade
    - Negotiate sample rate with driver
    - Handle buffer size changes
 
-## 🧠 Phase 4: Nomad ASIO (Your Own Wrapper)
+## 🧠 Phase 4: Aestra ASIO (Your Own Wrapper)
 
-### **NomadASIO.dll** (Standalone ASIO Driver)
+### **AestraASIO.dll** (Standalone ASIO Driver)
 
 **Purpose**: Ship a built-in ASIO driver that wraps WASAPI Exclusive
 
@@ -206,7 +206,7 @@ This document outlines the complete implementation of NOMAD's professional-grade
 └──────────┬──────────┘
            │ ASIO API
 ┌──────────▼──────────┐
-│   NomadASIO.dll     │ ← Implements Steinberg ASIO exports
+│   AestraASIO.dll     │ ← Implements Steinberg ASIO exports
 │                     │
 └──────────┬──────────┘
            │ Internal Bridge
@@ -221,10 +221,10 @@ This document outlines the complete implementation of NOMAD's professional-grade
 ```
 
 **Files**:
-- `NomadAudio/ASIO/NomadASIO/`
-  - `NomadASIO.cpp` (DLL exports)
-  - `NomadASIO.h`
-  - `NomadASIO.def` (export definitions)
+- `AestraAudio/ASIO/AestraASIO/`
+  - `AestraASIO.cpp` (DLL exports)
+  - `AestraASIO.h`
+  - `AestraASIO.def` (export definitions)
   - `CMakeLists.txt`
   - `installer/` (registry setup)
 
@@ -241,7 +241,7 @@ ASIOError ASIOStop();
 ```
 
 **Features**:
-- Register as "Nomad ASIO" in Windows Registry
+- Register as "Aestra ASIO" in Windows Registry
 - Appears in all DAWs' ASIO driver lists
 - Control panel UI (sample rate, buffer size)
 - Bidirectional routing to WASAPI Exclusive
@@ -249,16 +249,16 @@ ASIOError ASIOStop();
 
 **Installation**:
 ```registry
-[HKEY_LOCAL_MACHINE\SOFTWARE\ASIO\Nomad ASIO]
+[HKEY_LOCAL_MACHINE\SOFTWARE\ASIO\Aestra ASIO]
 "CLSID"="{...generated-guid...}"
-"Description"="NOMAD ASIO Driver"
+"Description"="Aestra ASIO Driver"
 ```
 
 ## 🧩 Phase 5: Polishing & UI Integration
 
 ### **Driver Benchmarking**
 
-**File**: `NomadAudio/include/DriverBenchmark.h/cpp`
+**File**: `AestraAudio/include/DriverBenchmark.h/cpp`
 
 **Metrics**:
 - Latency (round-trip, measured)
@@ -312,7 +312,7 @@ ASIOError ASIOStop();
 ## 📦 File Structure Summary
 
 ```
-NomadAudio/
+AestraAudio/
 ├── include/
 │   ├── AudioDriverTypes.h          ✅ Done
 │   ├── NativeAudioDriver.h         ✅ Done
@@ -333,10 +333,10 @@ NomadAudio/
 │   └── DriverBenchmark.cpp         ⏳ Phase 5
 ├── ASIO/
 │   ├── sdk/                        ⏳ Phase 3 (Steinberg SDK)
-│   └── NomadASIO/                  ⏳ Phase 4
-│       ├── NomadASIO.cpp
-│       ├── NomadASIO.h
-│       ├── NomadASIO.def
+│   └── AestraASIO/                  ⏳ Phase 4
+│       ├── AestraASIO.cpp
+│       ├── AestraASIO.h
+│       ├── AestraASIO.def
 │       ├── CMakeLists.txt
 │       └── installer/
 └── docs/
@@ -364,8 +364,8 @@ NomadAudio/
 - [ ] Testing with ASIO4ALL, FL ASIO
 - [ ] Error handling and fallback
 
-### **Week 7-8: Phase 4 Nomad ASIO**
-- [ ] NomadASIO.dll implementation
+### **Week 7-8: Phase 4 Aestra ASIO**
+- [ ] AestraASIO.dll implementation
 - [ ] ASIO→WASAPI bridge
 - [ ] Registry installer
 - [ ] Control panel UI
@@ -396,7 +396,7 @@ NomadAudio/
 4. ⏳ Sample rate change
 5. ⏳ Buffer size change while running
 6. ⏳ System sleep/resume
-7. ⏳ Multiple NOMAD instances
+7. ⏳ Multiple Aestra instances
 
 ## 💡 Pro Tips
 

@@ -1,5 +1,5 @@
 $copyrightHeader = @"
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 "@
 
@@ -10,7 +10,7 @@ foreach ($file in $files) {
     $content = Get-Content -Path $file.FullName -Raw
     
     # Skip if already has copyright
-    if ($content -match "© 2025 Nomad Studios") {
+    if ($content -match "© 2025 Aestra Studios") {
         Write-Host "Skipping (already has copyright): $($file.FullName)"
         continue
     }

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ========================================
-# 🧭 NOMAD DAW - Documentation Check Script
+# 🧭 Aestra - Documentation Check Script
 # ========================================
 # Validates Doxygen builds, markdown links, and spelling.
 # ----------------------------------------

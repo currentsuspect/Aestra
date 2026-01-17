@@ -1,15 +1,15 @@
-# **NOMAD DAW – Refined Implementation Report**
+# **Aestra – Refined Implementation Report**
 
 ## *A Next-Generation Audio Engine Architecture for Low-Spec and High-Spec Systems*
 
-By: Nomad Studios
+By: Aestra Studios
 Lead Architect: Dylan M.
 
 ---
 
 ## **0. Executive Summary**
 
-Nomad’s v1 audio engine already handles decoding, playback, and limited streaming, but as you scale to more tracks, more formats, and more heavy sessions, the current architecture will:
+Aestra’s v1 audio engine already handles decoding, playback, and limited streaming, but as you scale to more tracks, more formats, and more heavy sessions, the current architecture will:
 
 * duplicate audio buffers across tracks
 * allocate in the real-time callback
@@ -93,7 +93,7 @@ private:
 * Memory budget enforcement → potato-safe
 * Fast lookup → robin_hood hashing
 
-This turns Nomad into a memory-efficient DAW.
+This turns Aestra into a memory-efficient DAW.
 
 ---
 
@@ -295,7 +295,7 @@ struct EngineMetrics {
 * Reduce ahead-buffer on SSD
 * Increase ahead-buffer on HDD for low-seek latency
 
-This makes Nomad self-optimizing.
+This makes Aestra self-optimizing.
 
 ---
 
@@ -327,7 +327,7 @@ This makes Nomad self-optimizing.
 6. Migrate waveform building to new async system.
 7. Remove old subsystems only after new ones are stable.
 
-Nomad stays usable throughout.
+Aestra stays usable throughout.
 
 ---
 
