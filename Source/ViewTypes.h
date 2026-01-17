@@ -1,7 +1,7 @@
-// © 2025 Nomad Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-namespace Nomad {
+namespace Aestra {
 namespace Audio {
 
 /**
@@ -15,4 +15,4 @@ enum class ViewType {
 };
 
 } // namespace Audio
-} // namespace Nomad
+} // namespace Aestra

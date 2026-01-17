@@ -1,37 +1,37 @@
-# Platform Layer Migration - NomadUI to NomadPlat
+# Platform Layer Migration - AestraUI to AestraPlat
 
 ## Overview
 
-NomadUI has been successfully migrated from using its own Windows-specific platform code to using the unified **NomadPlat** platform abstraction layer. This provides better code organization, cross-platform support, and eliminates code duplication.
+AestraUI has been successfully migrated from using its own Windows-specific platform code to using the unified **AestraPlat** platform abstraction layer. This provides better code organization, cross-platform support, and eliminates code duplication.
 
 ## What Changed
 
 ### Removed Files
-The following Windows-specific files have been removed from NomadUI:
+The following Windows-specific files have been removed from AestraUI:
 
-- `NomadUI/Platform/Windows/NUIWindowWin32.h` - Old Windows window implementation
-- `NomadUI/Platform/Windows/NUIWindowWin32.cpp` - Old Windows window implementation
-- `NomadUI/Platform/Windows/NUIDPIHelper.h` - Old DPI helper (now in NomadPlat)
-- `NomadUI/Platform/Windows/NUIDPIHelper.cpp` - Old DPI helper (now in NomadPlat)
-- `NomadUI/Platform/Windows/NUIPlatformWindows.h` - Old platform header
-- `NomadUI/Platform/Windows/NUIWindowWin32_Compat.h` - Old compatibility header
+- `AestraUI/Platform/Windows/NUIWindowWin32.h` - Old Windows window implementation
+- `AestraUI/Platform/Windows/NUIWindowWin32.cpp` - Old Windows window implementation
+- `AestraUI/Platform/Windows/NUIDPIHelper.h` - Old DPI helper (now in AestraPlat)
+- `AestraUI/Platform/Windows/NUIDPIHelper.cpp` - Old DPI helper (now in AestraPlat)
+- `AestraUI/Platform/Windows/NUIPlatformWindows.h` - Old platform header
+- `AestraUI/Platform/Windows/NUIWindowWin32_Compat.h` - Old compatibility header
 
 ### New Architecture
 
 ```
 Before:
-NomadUI/Platform/Windows/NUIWindowWin32 → Win32 API directly
+AestraUI/Platform/Windows/NUIWindowWin32 → Win32 API directly
 
 After:
-NomadUI/Platform/NUIPlatformBridge → NomadPlat/IPlatformWindow → Win32/X11/Cocoa
+AestraUI/Platform/NUIPlatformBridge → AestraPlat/IPlatformWindow → Win32/X11/Cocoa
 ```
 
 ### Benefits
 
-1. **Unified Platform Layer**: All platform-specific code is now in NomadPlat
+1. **Unified Platform Layer**: All platform-specific code is now in AestraPlat
 2. **Cross-Platform Ready**: Easy to add Linux and macOS support
 3. **DPI Support**: Comprehensive DPI awareness built into the platform layer
-4. **Code Reuse**: Other projects can use NomadPlat without NomadUI
+4. **Code Reuse**: Other projects can use AestraPlat without AestraUI
 5. **Cleaner Separation**: UI code is separate from platform code
 
 ## Migration Guide for Existing Code
@@ -48,7 +48,7 @@ window.create("My App", 800, 600);
 ```cpp
 #include "Platform/NUIPlatformBridge.h"
 
-NomadUI::NUIPlatformBridge window;
+AestraUI::NUIPlatformBridge window;
 window.create("My App", 800, 600);
 ```
 
@@ -56,7 +56,7 @@ window.create("My App", 800, 600);
 For backward compatibility, you can use:
 ```cpp
 #include "Platform/NUIPlatformBridge.h"
-using NUIWindowWin32 = NomadUI::NUIPlatformBridge;  // Compatibility
+using NUIWindowWin32 = AestraUI::NUIPlatformBridge;  // Compatibility
 
 // Now old code works without changes
 NUIWindowWin32 window;
@@ -92,7 +92,7 @@ add_executable(MyApp
 )
 
 target_link_libraries(MyApp PRIVATE
-    NomadUI_Core
+    AestraUI_Core
     opengl32
 )
 ```
@@ -105,15 +105,15 @@ add_executable(MyApp
 )
 
 target_link_libraries(MyApp PRIVATE
-    NomadUI_Core
-    NomadUI_Platform  # Links to NomadPlat automatically
+    AestraUI_Core
+    AestraUI_Platform  # Links to AestraPlat automatically
     opengl32
 )
 ```
 
 ## Examples Updated
 
-All NomadUI examples have been updated to use the new platform layer:
+All AestraUI examples have been updated to use the new platform layer:
 
 - ✅ WindowDemo
 - ✅ ButtonLabelDemo
@@ -129,8 +129,8 @@ All examples build and run successfully with the new platform layer. No function
 
 ### Build Test
 ```bash
-cmake --build build --config Debug --target NomadUI_CustomWindowDemo
-cmake --build build --config Debug --target NomadUI_WindowDemo
+cmake --build build --config Debug --target AestraUI_CustomWindowDemo
+cmake --build build --config Debug --target AestraUI_WindowDemo
 ```
 
 Both build successfully without errors.
@@ -149,12 +149,12 @@ With the unified platform layer, we can now easily add:
 ## Notes
 
 - The old Windows directory is completely removed
-- All DPI functionality is now in `NomadPlat/src/Win32/PlatformDPIWin32`
+- All DPI functionality is now in `AestraPlat/src/Win32/PlatformDPIWin32`
 - Platform initialization happens automatically when creating a window
 - No breaking changes for existing code using the compatibility typedef
 
 ## Related Documentation
 
-- [DPI Support Guide](../../NomadPlat/docs/DPI_SUPPORT.md)
-- [NomadPlat Platform Interface](../../NomadPlat/include/NomadPlatform.h)
+- [DPI Support Guide](../../AestraPlat/docs/DPI_SUPPORT.md)
+- [AestraPlat Platform Interface](../../AestraPlat/include/AestraPlatform.h)
 - [NUIPlatformBridge API](../Platform/NUIPlatformBridge.h)

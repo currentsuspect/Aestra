@@ -1,7 +1,7 @@
-# NomadUI Button Customization Guide
+# AestraUI Button Customization Guide
 
 ## Overview
-The NomadUI button system provides extensive customization options for creating visually appealing and functional buttons. This guide demonstrates the available styles, colors, and behaviors.
+The AestraUI button system provides extensive customization options for creating visually appealing and functional buttons. This guide demonstrates the available styles, colors, and behaviors.
 
 ## Button Styles
 
@@ -116,7 +116,7 @@ Here's what the different button styles look like in our demo:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    NomadUI Button Styles Demo              │
+│                    AestraUI Button Styles Demo              │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────┐              │
@@ -133,9 +133,9 @@ Here's what the different button styles look like in our demo:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Integration with NOMAD
+## Integration with Aestra
 
-These buttons are designed to replace JUCE components in the main NOMAD application:
+These buttons are designed to replace JUCE components in the main Aestra application:
 
 - **Replace `juce::TextButton`** with `NUIButton` (Primary/Secondary styles)
 - **Replace `juce::Button`** with `NUIButton` (Icon style for custom buttons)

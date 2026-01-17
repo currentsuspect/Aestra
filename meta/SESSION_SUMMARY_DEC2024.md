@@ -1,4 +1,4 @@
-# 🎉 NOMAD Session Summary - December 2024
+# 🎉 Aestra Session Summary - December 2024
 
 ## ✅ What We Accomplished Today
 
@@ -40,7 +40,7 @@
 - Professional UI polish (no glitches)
 
 ### What's Next 🎯
-See `NomadDocs/CURRENT_STATE_ANALYSIS.md` for detailed roadmap.
+See `AestraDocs/CURRENT_STATE_ANALYSIS.md` for detailed roadmap.
 
 **Immediate priorities:**
 1. **Sample manipulation** - Drag-and-drop, repositioning, deletion (Week 1)
@@ -53,8 +53,8 @@ See `NomadDocs/CURRENT_STATE_ANALYSIS.md` for detailed roadmap.
 ## 📁 Key Files Modified
 
 ### Audio Engine
-- `NomadAudio/src/Track.cpp` - Fixed sample rate bug in position calculation
-- `NomadAudio/src/AudioDeviceManager.cpp` - WASAPI fallback logic
+- `AestraAudio/src/Track.cpp` - Fixed sample rate bug in position calculation
+- `AestraAudio/src/AudioDeviceManager.cpp` - WASAPI fallback logic
 
 ### UI & Timeline
 - `Source/TrackManagerUI.cpp/h` - Playhead, ruler fixes, zoom scrollbar
@@ -115,7 +115,7 @@ When you return in 2 days, start with:
 
 ## 📚 Resources
 
-- **Analysis:** `NomadDocs/CURRENT_STATE_ANALYSIS.md` (detailed roadmap)
+- **Analysis:** `AestraDocs/CURRENT_STATE_ANALYSIS.md` (detailed roadmap)
 - **README:** Updated with FL Studio features
 - **GitHub:** All changes pushed to `develop` and `main`
 
@@ -129,10 +129,10 @@ When you return in 2 days, start with:
 - ✅ Production-ready UI polish (green indicators, smooth scrolling)
 - ✅ Comprehensive documentation (README, analysis, roadmap)
 
-**NOMAD is now a functional DAW prototype!** 🎉
+**Aestra is now a functional DAW prototype!** 🎉
 
 The gap to production DAW is **sample manipulation** + **mixing** + **save/load**.
-Focus on these three features next, and NOMAD will be usable for real projects.
+Focus on these three features next, and Aestra will be usable for real projects.
 
 ---
 

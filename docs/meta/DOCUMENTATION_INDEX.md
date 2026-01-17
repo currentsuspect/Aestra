@@ -1,9 +1,9 @@
-# 📚 Nomad DAW Documentation Index
+# 📚 Aestra DAW Documentation Index
 
 ![Documentation](https://img.shields.io/badge/Documentation-Complete-brightgreen)
 ![Version](https://img.shields.io/badge/Version-1.1.0-blue)
 
-Welcome to the comprehensive documentation hub for **Nomad DAW**! This guide helps you navigate our extensive documentation and find exactly what you need.
+Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide helps you navigate our extensive documentation and find exactly what you need.
 
 ## 🎯 Quick Navigation
 
@@ -34,7 +34,7 @@ Welcome to the comprehensive documentation hub for **Nomad DAW**! This guide hel
 ## 📖 Documentation Sections
 
 ### 🏠 **Home & Overview**
-- **[Project Overview](index.md)** - What is Nomad DAW?
+- **[Project Overview](index.md)** - What is Aestra DAW?
 - **[Philosophy](about/philosophy.md)** - Our design principles
 - **[Features](index.md#key-features)** - Core capabilities
 
@@ -47,10 +47,10 @@ Welcome to the comprehensive documentation hub for **Nomad DAW**! This guide hel
 ### 🏗️ **Architecture**
 - **[System Overview](architecture/overview.md)** - High-level architecture
 - **[Core Modules](architecture/modules.md)** - Module dependencies
-- **[NomadCore](architecture/nomad-core.md)** - Foundation layer
-- **[NomadUI](architecture/nomad-ui.md)** - UI framework
-- **[NomadAudio](architecture/nomad-audio.md)** - Audio engine
-- **[NomadPlat](architecture/nomad-plat.md)** - Platform layer
+- **[AestraCore](architecture/Aestra-core.md)** - Foundation layer
+- **[AestraUI](architecture/Aestra-ui.md)** - UI framework
+- **[AestraAudio](architecture/Aestra-audio.md)** - Audio engine
+- **[AestraPlat](architecture/Aestra-plat.md)** - Platform layer
 
 ### 👨‍💻 **Development**
 - **[Contributing Guide](developer/contributing.md)** - How to contribute
@@ -82,7 +82,7 @@ Welcome to the comprehensive documentation hub for **Nomad DAW**! This guide hel
 
 ### 🧠 **About**
 - **[Philosophy](about/philosophy.md)** - Design principles
-- **[Licensing](about/licensing.md)** - NSSAL license
+- **[Licensing](about/licensing.md)** - ASSAL license
 - **[License Reference](about/license-reference.md)** - Legal details
 
 ## 🎯 Learning Paths
@@ -102,7 +102,7 @@ Welcome to the comprehensive documentation hub for **Nomad DAW**! This guide hel
 ### 🐛 **For Bug Reporters**
 1. Read [Bug Reports Guide](developer/bug-reports.md)
 2. Check [FAQ](technical/faq.md)
-3. Review existing [Issues](https://github.com/currentsuspect/NOMAD/issues)
+3. Review existing [Issues](https://github.com/currentsuspect/Aestra/issues)
 4. Submit new issue with template
 
 ### 📊 **For Project Managers**
@@ -113,20 +113,20 @@ Welcome to the comprehensive documentation hub for **Nomad DAW**! This guide hel
 
 ## 🔗 External Resources
 
-- **[GitHub Repository](https://github.com/currentsuspect/NOMAD)** - Source code
-- **[Issues Tracker](https://github.com/currentsuspect/NOMAD/issues)** - Bug reports
-- **[Discussions](https://github.com/currentsuspect/NOMAD/discussions)** - Community forum
-- **[Documentation Site](https://currentsuspect.github.io/NOMAD)** - Online docs
+- **[GitHub Repository](https://github.com/currentsuspect/Aestra)** - Source code
+- **[Issues Tracker](https://github.com/currentsuspect/Aestra/issues)** - Bug reports
+- **[Discussions](https://github.com/currentsuspect/Aestra/discussions)** - Community forum
+- **[Documentation Site](https://currentsuspect.github.io/Aestra)** - Online docs
 
 ## 📞 Getting Help
 
 ### 💬 **Community Support**
-- [GitHub Discussions](https://github.com/currentsuspect/NOMAD/discussions)
+- [GitHub Discussions](https://github.com/currentsuspect/Aestra/discussions)
 - [Community Support](community/support.md)
 
 ### 🐛 **Bug Reports**
 - [Bug Reports Guide](developer/bug-reports.md)
-- [GitHub Issues](https://github.com/currentsuspect/NOMAD/issues)
+- [GitHub Issues](https://github.com/currentsuspect/Aestra/issues)
 
 ### 📧 **Direct Contact**
 - **Email**: makoridylan@gmail.com
@@ -155,6 +155,6 @@ This documentation is actively maintained and updated:
 
 **Last Updated**: December 2025  
 **Version**: 1.1.0  
-**Maintainer**: Dylan Makori / Nomad Studios
+**Maintainer**: Dylan Makori / Aestra Studios
 
 *For questions about this documentation, please open an issue or contact us directly.*

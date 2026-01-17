@@ -1,6 +1,6 @@
 # API Reference
 
-Welcome to the NOMAD DAW API reference. This section provides detailed documentation for all public APIs.
+Welcome to the Aestra API reference. This section provides detailed documentation for all public APIs.
 
 !!! tip "🚀 Full API Reference"
     **[Browse the Complete Doxygen API Reference →](../api-reference/html/index.html)**
@@ -9,91 +9,91 @@ Welcome to the NOMAD DAW API reference. This section provides detailed documenta
 
 ## 📚 Module APIs
 
-NOMAD's API is organized by module. Each module provides a focused set of functionality:
+Aestra's API is organized by module. Each module provides a focused set of functionality:
 
 ### Core Foundation
 
-#### NomadCore API
+#### AestraCore API
 Foundation utilities and data structures.
 
 **Key APIs:**
-- `nomad::Vec2`, `nomad::Vec3`, `nomad::Vec4` — Vector mathematics
-- `nomad::Mat4` — Matrix operations
-- `nomad::LockFreeQueue<T>` — Lock-free thread communication
-- `nomad::ThreadPool` — Background task execution
-- `nomad::File` — Cross-platform file I/O
-- `nomad::Logger` — Structured logging
+- `Aestra::Vec2`, `Aestra::Vec3`, `Aestra::Vec4` — Vector mathematics
+- `Aestra::Mat4` — Matrix operations
+- `Aestra::LockFreeQueue<T>` — Lock-free thread communication
+- `Aestra::ThreadPool` — Background task execution
+- `Aestra::File` — Cross-platform file I/O
+- `Aestra::Logger` — Structured logging
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-core.md) for high-level design concepts.
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-core.md) for high-level design concepts.
 
 ---
 
 ### Platform Abstraction
 
-#### NomadPlat API
+#### AestraPlat API
 Platform-specific functionality with unified interface.
 
 **Key APIs:**
-- `nomad::Window` — Window creation and management
-- `nomad::Input` — Keyboard and mouse input
-- `nomad::FileDialog` — Native file dialogs
-- `nomad::SystemInfo` — System capabilities
-- `nomad::Timer` — High-resolution timing
+- `Aestra::Window` — Window creation and management
+- `Aestra::Input` — Keyboard and mouse input
+- `Aestra::FileDialog` — Native file dialogs
+- `Aestra::SystemInfo` — System capabilities
+- `Aestra::Timer` — High-resolution timing
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-plat.md) for high-level design concepts.
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-plat.md) for high-level design concepts.
 
 ---
 
 ### User Interface
 
-#### NomadUI API
+#### AestraUI API
 GPU-accelerated UI framework.
 
 **Key APIs:**
-- `nomad::Renderer` — OpenGL rendering
-- `nomad::Widget` — Base widget class
-- `nomad::Button` — Button widget
-- `nomad::Slider` — Slider widget
-- `nomad::TextBox` — Text input widget
-- `nomad::Layout` — Layout management
-- `nomad::Theme` — Theme system
+- `Aestra::Renderer` — OpenGL rendering
+- `Aestra::Widget` — Base widget class
+- `Aestra::Button` — Button widget
+- `Aestra::Slider` — Slider widget
+- `Aestra::TextBox` — Text input widget
+- `Aestra::Layout` — Layout management
+- `Aestra::Theme` — Theme system
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-ui.md) for high-level design concepts.
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-ui.md) for high-level design concepts.
 
 ---
 
 ### Audio Engine
 
-#### NomadAudio API
+#### AestraAudio API
 Professional audio processing system.
 
 **Key APIs:**
-- `nomad::AudioEngine` — Audio engine management
-- `nomad::AudioDevice` — Device enumeration
-- `nomad::AudioBuffer` — Audio buffer management
-- `nomad::DSP::Gain` — Gain processor
-- `nomad::DSP::EQ` — Equalizer processor
+- `Aestra::AudioEngine` — Audio engine management
+- `Aestra::AudioDevice` — Device enumeration
+- `Aestra::AudioBuffer` — Audio buffer management
+- `Aestra::DSP::Gain` — Gain processor
+- `Aestra::DSP::EQ` — Equalizer processor
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-audio.md) for high-level design concepts.
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-audio.md) for high-level design concepts.
 
 ---
 
 ### Plugin System (Planned)
 
-#### NomadSDK API
+#### AestraSDK API
 Plugin hosting and extension system.
 
 **Status:** 📅 Planned for Q2 2025
 
 **Planned APIs:**
-- `nomad::PluginHost` — VST3 plugin hosting
-- `nomad::Effect` — Audio effect interface
-- `nomad::Automation` — Parameter automation
-- `nomad::MIDIRouter` — MIDI routing
+- `Aestra::PluginHost` — VST3 plugin hosting
+- `Aestra::Effect` — Audio effect interface
+- `Aestra::Automation` — Parameter automation
+- `Aestra::MIDIRouter` — MIDI routing
 
 ---
 
@@ -102,14 +102,14 @@ Plugin hosting and extension system.
 ### Creating a Window
 
 ```cpp
-#include "NomadPlat/Window.h"
+#include "AestraPlat/Window.h"
 
-nomad::WindowConfig config;
+Aestra::WindowConfig config;
 config.title = "My Application";
 config.width = 1280;
 config.height = 720;
 
-auto window = nomad::Window::create(config);
+auto window = Aestra::Window::create(config);
 window->show();
 
 while (window->isOpen()) {
@@ -121,11 +121,11 @@ while (window->isOpen()) {
 ### Initializing Audio
 
 ```cpp
-#include "NomadAudio/AudioEngine.h"
+#include "AestraAudio/AudioEngine.h"
 
-nomad::AudioEngine engine;
+Aestra::AudioEngine engine;
 
-nomad::AudioConfig config;
+Aestra::AudioConfig config;
 config.sampleRate = 48000;
 config.bufferSize = 512;
 config.channels = 2;
@@ -142,13 +142,13 @@ if (engine.initialize(config)) {
 ### Creating UI
 
 ```cpp
-#include "NomadUI/Renderer.h"
-#include "NomadUI/Widgets/Button.h"
+#include "AestraUI/Renderer.h"
+#include "AestraUI/Widgets/Button.h"
 
-nomad::Renderer renderer;
+Aestra::Renderer renderer;
 renderer.initialize(window->getContext());
 
-auto button = std::make_shared<nomad::Button>("Click Me");
+auto button = std::make_shared<Aestra::Button>("Click Me");
 button->setBounds(100, 100, 200, 50);
 button->onClick([]() {
     std::cout << "Button clicked!" << std::endl;
@@ -189,12 +189,12 @@ const int MAX_CHANNELS = 32;  // SCREAMING_SNAKE_CASE
 
 **Namespaces:**
 ```cpp
-namespace nomad { }       // lowercase
+namespace Aestra { }       // lowercase
 ```
 
 ### Error Handling
 
-NOMAD uses return values for error handling (no exceptions in real-time code):
+Aestra uses return values for error handling (no exceptions in real-time code):
 
 ```cpp
 // Boolean success/failure
@@ -224,7 +224,7 @@ if (error != ErrorCode::Success) {
 
 ### Memory Management
 
-NOMAD uses RAII and smart pointers:
+Aestra uses RAII and smart pointers:
 
 ```cpp
 // Unique ownership
@@ -258,29 +258,29 @@ void AudioBuffer::read(float* buffer, int samples);
 
 Looking for specific functionality? See the architecture documentation:
 
-- **Window Management** → [NomadPlat Architecture](../architecture/nomad-plat.md)
-- **Rendering** → [NomadUI Architecture](../architecture/nomad-ui.md)
-- **Audio I/O** → [NomadAudio Architecture](../architecture/nomad-audio.md)
-- **File Operations** → [NomadCore Architecture](../architecture/nomad-core.md)
+- **Window Management** → [AestraPlat Architecture](../architecture/Aestra-plat.md)
+- **Rendering** → [AestraUI Architecture](../architecture/Aestra-ui.md)
+- **Audio I/O** → [AestraAudio Architecture](../architecture/Aestra-audio.md)
+- **File Operations** → [AestraCore Architecture](../architecture/Aestra-core.md)
 
 ### By Module
 
 Exploring a specific module? See architecture docs:
 
-- [NomadCore Architecture](../architecture/nomad-core.md)
-- [NomadPlat Architecture](../architecture/nomad-plat.md)
-- [NomadUI Architecture](../architecture/nomad-ui.md)
-- [NomadAudio Architecture](../architecture/nomad-audio.md)
+- [AestraCore Architecture](../architecture/Aestra-core.md)
+- [AestraPlat Architecture](../architecture/Aestra-plat.md)
+- [AestraUI Architecture](../architecture/Aestra-ui.md)
+- [AestraAudio Architecture](../architecture/Aestra-audio.md)
 
 ## 📝 Documentation Status
 
 | Module | API Docs | Examples | Coverage |
 |--------|----------|----------|----------|
-| NomadCore | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 80% |
-| NomadPlat | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 75% |
-| NomadUI | ✅ [Complete](../api-reference/html/index.html) | 🚧 Partial | 60% |
-| NomadAudio | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 85% |
-| NomadSDK | 📅 Planned | 📅 Planned | 0% |
+| AestraCore | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 80% |
+| AestraPlat | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 75% |
+| AestraUI | ✅ [Complete](../api-reference/html/index.html) | 🚧 Partial | 60% |
+| AestraAudio | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 85% |
+| AestraSDK | 📅 Planned | 📅 Planned | 0% |
 
 !!! success "Full API Reference Available"
     Complete API documentation is now available via [Doxygen API Reference](../api-reference/html/index.html). Additional resources:
@@ -288,13 +288,13 @@ Exploring a specific module? See architecture docs:
     - [Architecture documentation](../architecture/overview.md) for high-level design concepts
     - [Getting Started Guide](../getting-started/index.md) for quick setup
     - Example code in the repository
-    - [GitHub Discussions](https://github.com/currentsuspect/NOMAD/discussions) for questions
+    - [GitHub Discussions](https://github.com/currentsuspect/Aestra/discussions) for questions
 
 ## 🤝 Contributing to API Docs
 
-Help improve NOMAD's API documentation:
+Help improve Aestra's API documentation:
 
-1. **Report Issues** — Found incorrect or missing docs? [Open an issue](https://github.com/currentsuspect/NOMAD/issues)
+1. **Report Issues** — Found incorrect or missing docs? [Open an issue](https://github.com/currentsuspect/Aestra/issues)
 2. **Submit Examples** — Share your code examples
 3. **Improve Clarity** — Suggest clearer explanations
 4. **Add Diagrams** — Visual aids help understanding
@@ -306,8 +306,8 @@ See the [Contributing Guide](../developer/contributing.md) for details.
 - [Architecture Overview](../architecture/overview.md)
 - [Getting Started Guide](../getting-started/index.md)
 - [Developer Guide](../developer/contributing.md)
-- [Code Examples](https://github.com/currentsuspect/NOMAD/tree/main/examples)
+- [Code Examples](https://github.com/currentsuspect/Aestra/tree/main/examples)
 
 ---
 
-**Need help?** Ask in [GitHub Discussions](https://github.com/currentsuspect/NOMAD/discussions) or check the [FAQ](../technical/faq.md).
+**Need help?** Ask in [GitHub Discussions](https://github.com/currentsuspect/Aestra/discussions) or check the [FAQ](../technical/faq.md).

@@ -10,7 +10,7 @@
 ## Quick Links
 
 - **Canonical Guide**: [developer/debugging.md](developer/debugging.md)
-- **GitHub**: [View on GitHub](https://github.com/currentsuspect/NOMAD/blob/develop/docs/developer/debugging.md)
+- **GitHub**: [View on GitHub](https://github.com/currentsuspect/Aestra/blob/develop/docs/developer/debugging.md)
 - **Developer Docs**: [developer/](developer/)
 
 ---

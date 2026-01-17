@@ -1,9 +1,9 @@
-# 🔨 Building Nomad DAW
+# 🔨 Building Aestra DAW
 
 ![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey)
 
-Complete guide for building Nomad DAW from source on Windows and Linux.
+Complete guide for building Aestra DAW from source on Windows and Linux.
 
 ## 📋 Table of Contents
 
@@ -42,14 +42,14 @@ Complete guide for building Nomad DAW from source on Windows and Linux.
 
 ```powershell
 # 1. Clone the repository
-git clone https://github.com/currentsuspect/NOMAD.git
-cd NOMAD
+git clone https://github.com/currentsuspect/Aestra.git
+cd Aestra
 
 # 2. Install Git hooks (recommended)
 pwsh -File scripts/install-hooks.ps1
 
 # 3. Configure build (Core-only mode)
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
 
 # 4. Build the project
 cmake --build build --config Release --parallel
@@ -60,8 +60,8 @@ cmake --build build --config Release --parallel
 #### 1. Clone the Repository
 
 ```powershell
-git clone https://github.com/currentsuspect/NOMAD.git
-cd NOMAD
+git clone https://github.com/currentsuspect/Aestra.git
+cd Aestra
 ```
 
 #### 2. Install Git Hooks (Optional but Recommended)
@@ -76,7 +76,7 @@ pwsh -File scripts/install-hooks.ps1
 
 **Core-only build (public contributors):**
 ```powershell
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
 ```
 
 **Full build with Visual Studio generator:**
@@ -93,7 +93,7 @@ cmake --build build --config Release --parallel
 
 **Debug build with symbols:**
 ```powershell
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build --config RelWithDebInfo --parallel
 ```
 
@@ -101,7 +101,7 @@ cmake --build build --config RelWithDebInfo --parallel
 
 ```powershell
 cd build\Release
-.\NomadDAW.exe
+.\AestraDAW.exe
 ```
 
 ### Building with Inno Setup (Installer)
@@ -120,7 +120,7 @@ To create a distributable installer:
    "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
    ```
 
-The installer will be created as `Output\NOMAD-DAW-Setup.exe`.
+The installer will be created as `Output\Aestra-DAW-Setup.exe`.
 
 ## 🐧 Linux Build
 
@@ -134,11 +134,11 @@ sudo apt install build-essential cmake git \
                  libxinerama-dev libgl1-mesa-dev
 
 # 2. Clone the repository
-git clone https://github.com/currentsuspect/NOMAD.git
-cd NOMAD
+git clone https://github.com/currentsuspect/Aestra.git
+cd Aestra
 
 # 3. Configure build
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
 
 # 4. Build the project
 cmake --build build --parallel $(nproc)
@@ -174,14 +174,14 @@ sudo pacman -S base-devel cmake git \
 #### 2. Clone the Repository
 
 ```bash
-git clone https://github.com/currentsuspect/NOMAD.git
-cd NOMAD
+git clone https://github.com/currentsuspect/Aestra.git
+cd Aestra
 ```
 
 #### 3. Configure CMake
 
 ```bash
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
 ```
 
 #### 4. Build the Project
@@ -193,7 +193,7 @@ cmake --build build --parallel $(nproc)
 #### 5. Run the Application
 
 ```bash
-./build/NomadDAW
+./build/AestraDAW
 ```
 
 ## ⚙️ Build Options
@@ -202,7 +202,7 @@ cmake --build build --parallel $(nproc)
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `NOMAD_CORE_MODE` | Build only public core (no premium features) | `OFF` |
+| `Aestra_CORE_MODE` | Build only public core (no premium features) | `OFF` |
 | `CMAKE_BUILD_TYPE` | Build type (`Debug`, `Release`, `RelWithDebInfo`) | `Release` |
 | `CMAKE_INSTALL_PREFIX` | Installation directory | System default |
 | `BUILD_TESTS` | Build unit tests | `OFF` |
@@ -212,19 +212,19 @@ cmake --build build --parallel $(nproc)
 
 **Development build (with debug symbols):**
 ```bash
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build --config RelWithDebInfo
 ```
 
 **Debug build (full debugging):**
 ```bash
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Debug
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --config Debug
 ```
 
 **Release build (optimized):**
 ```bash
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 ```
 
@@ -278,8 +278,8 @@ Copy-Item -Path .githooks\* -Destination .git\hooks\ -Force
 
 **Solution**: This is expected in public CI. For local development:
 ```powershell
-# Use NOMAD_CORE_MODE to skip private folders
-cmake -S . -B build -DNOMAD_CORE_MODE=ON
+# Use Aestra_CORE_MODE to skip private folders
+cmake -S . -B build -DAestra_CORE_MODE=ON
 ```
 </details>
 
@@ -317,13 +317,13 @@ cmake --build build --parallel 8
 ```bash
 # Remove build directory and rebuild
 rm -rf build
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ```
 
 ## 📚 Additional Resources
 
-- [Architecture Overview](ARCHITECTURE.md) - Understand Nomad's structure
+- [Architecture Overview](ARCHITECTURE.md) - Understand Aestra's structure
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute code
 - [Coding Style](CODING_STYLE.md) - Code formatting guidelines
 - [FAQ](FAQ.md) - Frequently asked questions
@@ -333,7 +333,7 @@ cmake --build build --parallel
 If you encounter issues not covered here:
 
 1. Check [FAQ](FAQ.md) for common problems
-2. Search [GitHub Issues](https://github.com/currentsuspect/NOMAD/issues)
+2. Search [GitHub Issues](https://github.com/currentsuspect/Aestra/issues)
 3. Open a new issue with:
    - Operating system and version
    - CMake version (`cmake --version`)
@@ -342,4 +342,4 @@ If you encounter issues not covered here:
 
 ---
 
-[← Return to Nomad Docs Index](README.md)
+[← Return to Aestra Docs Index](README.md)

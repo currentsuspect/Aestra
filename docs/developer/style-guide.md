@@ -1,6 +1,6 @@
 # 📝 Documentation & Comment Style Guide
 
-This guide defines standards for writing documentation and code comments in Nomad DAW.
+This guide defines standards for writing documentation and code comments in Aestra DAW.
 
 ---
 
@@ -194,7 +194,7 @@ See [Building Guide](BUILDING.md) for instructions.
 
 **External Links:**
 ```markdown
-Download [Nomad Profiler] (internal profiler documentation).
+Download [Aestra Profiler] (internal profiler documentation).
 ```
 
 **Anchor Links (same page):**
@@ -525,8 +525,8 @@ double Track::getPosition() const {
 
 2. **Clone and Build:**
    \`\`\`powershell
-   git clone https://github.com/currentsuspect/NOMAD.git
-   cd NOMAD
+   git clone https://github.com/currentsuspect/Aestra.git
+   cd Aestra
    
    # Configure build
    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -535,10 +535,10 @@ double Track::getPosition() const {
    cmake --build build --config Release --parallel
    \`\`\`
 
-3. **Run Nomad:**
+3. **Run Aestra:**
    \`\`\`powershell
    cd build/bin/Release
-   ./NOMAD.exe
+   ./Aestra.exe
    \`\`\`
 
 ### Troubleshooting

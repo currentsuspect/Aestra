@@ -1,6 +1,6 @@
-# NomadUI Coordinate System - Quick Reference
+# AestraUI Coordinate System - Quick Reference
 
-⚠️ **CRITICAL:** NomadUI does NOT transform child coordinates!
+⚠️ **CRITICAL:** AestraUI does NOT transform child coordinates!
 
 ## The Golden Rules
 
@@ -126,7 +126,7 @@ if (NUIRectsIntersect(rectA, rectB)) {
 
 ## YAML Configuration System
 
-Customize all UI dimensions and colors by editing `NomadUI/Config/nomad_ui_config.yaml`:
+Customize all UI dimensions and colors by editing `AestraUI/Config/Aestra_ui_config.yaml`:
 
 ```yaml
 # Example: Adjust track height and colors
@@ -143,8 +143,8 @@ colors:
 
 ## Full Documentation
 
-See [NOMADUI_COORDINATE_SYSTEM.md](../../NomadDocs/NOMADUI_COORDINATE_SYSTEM.md) for complete guide with examples.
+See [AestraUI_COORDINATE_SYSTEM.md](../../AestraDocs/AestraUI_COORDINATE_SYSTEM.md) for complete guide with examples.
 
 ---
 
-*Keep this reference open when working with NomadUI components!*
+*Keep this reference open when working with AestraUI components!*

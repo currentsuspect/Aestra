@@ -1,13 +1,13 @@
-# NOMAD Polyphase Resampling: Adaptive Quality at Interactive Rates
+# Aestra Polyphase Resampling: Adaptive Quality at Interactive Rates
 
-**Technical Paper — NOMAD DAW Audio Engine**  
+**Technical Paper — Aestra Audio Engine**  
 *December 2025 — Revision 2.0*
 
 ---
 
 ## Abstract
 
-We present the **NOMAD Polyphase Resampling Engine**, a multi-tier interpolation system achieving **mastering-grade quality (144dB SNR) through real-time (4.32 MFrame/sec)** using polyphase filter banks with symmetry exploitation and multi-architecture SIMD dispatch. This revision introduces **Sinc32Turbo**, a cache-friendly 64KB tier enabling 2× throughput for mixing scenarios while maintaining 100dB SNR—sufficient for all practical listening environments.
+We present the **Aestra Polyphase Resampling Engine**, a multi-tier interpolation system achieving **mastering-grade quality (144dB SNR) through real-time (4.32 MFrame/sec)** using polyphase filter banks with symmetry exploitation and multi-architecture SIMD dispatch. This revision introduces **Sinc32Turbo**, a cache-friendly 64KB tier enabling 2× throughput for mixing scenarios while maintaining 100dB SNR—sufficient for all practical listening environments.
 
 ---
 
@@ -180,7 +180,7 @@ else /* scalar fallback */;
 
 ## 7. Intelligent Quality Switching
 
-The NOMAD audio engine supports **runtime quality selection**:
+The Aestra audio engine supports **runtime quality selection**:
 
 ```cpp
 // PlaylistMixer: Global quality setting
@@ -205,7 +205,7 @@ if (track.isSoloed() || isBouncing) {
 
 ## 8. Conclusion
 
-The NOMAD Polyphase Resampling Engine proves that **adaptive quality switching** combined with **cache-aware design** enables:
+The Aestra Polyphase Resampling Engine proves that **adaptive quality switching** combined with **cache-aware design** enables:
 
 - **Sinc64Turbo**: Mastering-grade (144dB) at 4.32 MFrame/sec
 - **Sinc32Turbo**: Mixing-grade (100dB) at ~8 MFrame/sec, 2× faster
@@ -226,4 +226,22 @@ The key innovations:
 
 ---
 
-*© 2025 Nomad Studios. This research is part of the NOMAD Digital Audio Workstation project.*
+## Appendix A: 2025-05-24 Benchmark Update
+
+**Test Configuration:**
+- Platform: Linux (x86_64, AVX2 enabled)
+- Source: 44.1kHz -> 48kHz (Upsampling)
+
+| Algorithm | Speed (ns/sample) | Throughput (MFrame/sec) | Relative |
+|-----------|-------------------|-------------------------|----------|
+| Linear    | 34.20 ns          | ~29.2 MHz               | 1.0x     |
+| Cubic     | 33.51 ns          | ~29.8 MHz               | 1.02x    |
+| Sinc16    | 39.82 ns          | ~25.1 MHz               | 0.86x    |
+| Sinc64Turbo | 71.91 ns        | ~13.9 MHz               | 0.48x    |
+
+**Analysis:**
+On modern AVX2 hardware, `Sinc64Turbo` achieves nearly 14 million stereo samples per second, providing massive headroom (approx 290x real-time at 48kHz). The cost of "Mastering Grade" resampling is now negligible for typical track counts.
+
+---
+
+*© 2025 Aestra Studios. This research is part of the Aestra Digital Audio Workstation project.*

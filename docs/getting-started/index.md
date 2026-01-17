@@ -1,6 +1,6 @@
-# Getting Started with NOMAD DAW
+# Getting Started with Aestra
 
-Welcome to NOMAD DAW! This guide will help you get up and running quickly.
+Welcome to Aestra! This guide will help you get up and running quickly.
 
 ## 🎯 Prerequisites
 
@@ -42,21 +42,21 @@ Choose your platform to get started:
 
 ```powershell
 # 1. Clone the repository
-git clone https://github.com/currentsuspect/NOMAD.git
-cd NOMAD
+git clone https://github.com/currentsuspect/Aestra.git
+cd Aestra
 
 # 2. Install Git hooks (recommended)
 pwsh -File scripts/install-hooks.ps1
 
 # 3. Configure build (Core-only mode for contributors)
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
 
 # 4. Build the project
 cmake --build build --config Release --parallel
 
-# 5. Run NOMAD
+# 5. Run Aestra
 cd build/bin/Release
-./NOMAD.exe
+./Aestra.exe
 ```
 
 ### Linux Quick Start
@@ -68,28 +68,28 @@ sudo apt install build-essential cmake git libasound2-dev \
                  libx11-dev libxrandr-dev libxinerama-dev libgl1-mesa-dev
 
 # 2. Clone the repository
-git clone https://github.com/currentsuspect/NOMAD.git
-cd NOMAD
+git clone https://github.com/currentsuspect/Aestra.git
+cd Aestra
 
 # 3. Install Git hooks
 bash scripts/install-hooks.sh
 
 # 4. Configure and build
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 
-# 5. Run NOMAD
-./build/bin/NOMAD
+# 5. Run Aestra
+./build/bin/Aestra
 ```
 
 ## 📖 What's Next?
 
-After successfully building NOMAD:
+After successfully building Aestra:
 
 1. **[Read the Full Building Guide](building.md)** — Detailed build instructions and troubleshooting
-2. **[Try the Quickstart Tutorial](quickstart.md)** — Learn NOMAD's basic workflow
-3. **[Explore the Architecture](../architecture/overview.md)** — Understand how NOMAD works
-4. **[Join the Community](../community/code-of-conduct.md)** — Connect with other NOMAD users
+2. **[Try the Quickstart Tutorial](quickstart.md)** — Learn Aestra's basic workflow
+3. **[Explore the Architecture](../architecture/overview.md)** — Understand how Aestra works
+4. **[Join the Community](../community/code-of-conduct.md)** — Connect with other Aestra users
 
 ## 🎵 System Requirements
 
@@ -109,11 +109,11 @@ After successfully building NOMAD:
 
 ## 🛠️ Build Modes
 
-NOMAD supports different build configurations:
+Aestra supports different build configurations:
 
 ### Core-Only Mode (Contributors)
 ```bash
-cmake -S . -B build -DNOMAD_CORE_MODE=ON
+cmake -S . -B build -DAestra_CORE_MODE=ON
 ```
 Builds only the publicly available source-available modules. Perfect for contributors and learning.
 
@@ -138,7 +138,7 @@ Optimized build with debug symbols for profiling.
 ## 📚 Additional Resources
 
 - **[Building Guide](building.md)** — Complete build instructions for all platforms
-- **[Contributing Guide](../developer/contributing.md)** — How to contribute to NOMAD
+- **[Contributing Guide](../developer/contributing.md)** — How to contribute to Aestra
 - **[FAQ](../technical/faq.md)** — Frequently asked questions
 - **[Troubleshooting](building.md#troubleshooting)** — Common build issues and solutions
 
@@ -148,8 +148,8 @@ If you encounter issues:
 
 1. Check the [Building Guide](building.md) for detailed instructions
 2. Review the [FAQ](../technical/faq.md) for common questions
-3. Search [GitHub Issues](https://github.com/currentsuspect/NOMAD/issues) for similar problems
-4. Join [GitHub Discussions](https://github.com/currentsuspect/NOMAD/discussions) to ask questions
+3. Search [GitHub Issues](https://github.com/currentsuspect/Aestra/issues) for similar problems
+4. Join [GitHub Discussions](https://github.com/currentsuspect/Aestra/discussions) to ask questions
 5. Email support: [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
 
 ---

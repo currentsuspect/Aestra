@@ -1,0 +1,396 @@
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+#pragma once
+
+#include "../NUIRenderer.h"
+#include "../NUIFont.h"
+#include "../NUITextRendererSDF.h"
+#include "../NUITextRenderer.h"
+#include "../NUITextRendererGDI.h"
+#include "../NUITextRendererModern.h"
+#include "NUIRenderBatch.h"
+#include "NUIDirtyRegion.h"
+#include "NUIRenderCache.h"
+#include <vector>
+#include <tuple>
+#include <cstdint>
+#include <unordered_map>
+#include <memory>
+#include <functional>
+
+// Forward declarations
+struct FT_Bitmap_;
+typedef struct FT_Bitmap_ FT_Bitmap;
+
+namespace AestraUI {
+
+/**
+ * OpenGL 3.3+ renderer implementation for Aestra UI.
+ * 
+ * Features:
+ * - Shader-based rendering
+ * - Batched draw calls
+ * - SDF text rendering
+ * - Post-processing effects
+ */
+class NUIRendererGL : public NUIRenderer {
+public:
+    NUIRendererGL();
+    ~NUIRendererGL() override;
+    
+    // ========================================================================
+    // Lifecycle
+    // ========================================================================
+    
+    bool initialize(int width, int height) override;
+    void shutdown() override;
+    void resize(int width, int height) override;
+    
+    // ========================================================================
+    // Frame Management
+    // ========================================================================
+    
+    void beginFrame() override;
+    void endFrame() override;
+    void clear(const NUIColor& color) override;
+    
+    // ========================================================================
+    // State Management
+    // ========================================================================
+    
+    void pushTransform(float tx, float ty, float rotation = 0.0f, float scale = 1.0f) override;
+    void popTransform() override;
+    void setClipRect(const NUIRect& rect) override;
+    void clearClipRect() override;
+    void setOpacity(float opacity) override;
+
+    // Debug
+    void setDebugTextBounds(bool enabled) override { debugTextBounds_ = enabled; }
+
+    
+    // ========================================================================
+    // Primitive Drawing
+    // ========================================================================
+    
+    void fillRect(const NUIRect& rect, const NUIColor& color) override;
+    void fillRoundedRect(const NUIRect& rect, float radius, const NUIColor& color) override;
+    void strokeRect(const NUIRect& rect, float thickness, const NUIColor& color) override;
+    void strokeRoundedRect(const NUIRect& rect, float radius, float thickness, const NUIColor& color) override;
+    void fillCircle(const NUIPoint& center, float radius, const NUIColor& color) override;
+    void strokeCircle(const NUIPoint& center, float radius, float thickness, const NUIColor& color) override;
+    void drawLine(const NUIPoint& start, const NUIPoint& end, float thickness, const NUIColor& color) override;
+    void drawPolyline(const NUIPoint* points, int count, float thickness, const NUIColor& color) override;
+    void fillWaveform(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, const NUIColor& color) override;
+    void fillWaveformGradient(const NUIPoint* topPoints, const NUIPoint* bottomPoints, int count, 
+                               const NUIColor& colorTop, const NUIColor& colorBottom) override;
+    
+    // ========================================================================
+    // Gradient Drawing
+    // ========================================================================
+    
+    void fillRectGradient(const NUIRect& rect, const NUIColor& colorStart, const NUIColor& colorEnd, bool vertical = true) override;
+    void fillCircleGradient(const NUIPoint& center, float radius, const NUIColor& colorInner, const NUIColor& colorOuter) override;
+    
+    // ========================================================================
+    // Effects
+    // ========================================================================
+    
+    void drawGlow(const NUIRect& rect, float radius, float intensity, const NUIColor& color) override;
+    void drawShadow(const NUIRect& rect, float offsetX, float offsetY, float blur, const NUIColor& color) override;
+    
+    // ========================================================================
+    // Text Rendering
+    // ========================================================================
+    
+    void drawText(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) override;
+    void drawTextCentered(const std::string& text, const NUIRect& rect, float fontSize, const NUIColor& color) override;
+    NUISize measureText(const std::string& text, float fontSize) override;
+    NUIRenderer::FontMetrics getFontMetrics(float fontSize) const override;
+    
+    // ========================================================================
+    // Texture/Image Drawing
+    // ========================================================================
+    
+    void drawTexture(uint32_t textureId, const NUIRect& destRect, const NUIRect& sourceRect) override;
+    // Helper to draw a texture flipped vertically (used when sampling FBOs rendered in GL origin space)
+    void drawTextureFlippedV(uint32_t textureId, const NUIRect& destRect, const NUIRect& sourceRect);
+    void drawTexture(const NUIRect& bounds, const unsigned char* rgba, 
+                    int width, int height) override;
+    uint32_t loadTexture(const std::string& filepath) override;
+    uint32_t createTexture(const uint8_t* data, int width, int height) override;
+    void deleteTexture(uint32_t textureId) override;
+    uint32_t getGLTextureId(uint32_t textureId) const;
+    
+    // Render-to-texture helpers (FBO)
+    uint32_t renderToTextureBegin(int width, int height);
+    uint32_t renderToTextureEnd();
+
+    // Temporary offscreen rendering (adjusts projection to target size)
+    void beginOffscreen(int width, int height);
+    void endOffscreen();
+    
+    // ========================================================================
+    // Batching
+    // ========================================================================
+    
+    void beginBatch() override;
+    void endBatch() override;
+    void flush() override;
+    
+    // ========================================================================
+    // Performance Optimizations
+    // ========================================================================
+    
+    void setBatchingEnabled(bool enabled) override;
+    void setDirtyRegionTrackingEnabled(bool enabled) override;
+    void setCachingEnabled(bool enabled) override;
+    void getOptimizationStats(size_t& batchedQuads, size_t& dirtyRegions, 
+                             size_t& cachedWidgets, size_t& cacheMemoryBytes) override;
+    NUIDirtyRegionManager* getDirtyRegionManager() override { return &dirtyRegionManager_; }
+    NUIRenderCache* getRenderCache() override { return &renderCache_; }
+    void invalidateCache(uint64_t widgetId) override;
+    bool renderCachedOrUpdate(uint64_t widgetId, const NUIRect& destRect,
+                              const std::function<void()>& renderCallback) override;
+    
+    // Performance stats
+    uint32_t getDrawCallCount() const { return drawCallCount_; }
+    void resetDrawCallCount() { drawCallCount_ = 0; }
+    
+    // ========================================================================
+    // Info
+    // ========================================================================
+    
+    int getWidth() const override { return width_; }
+    int getHeight() const override { return height_; }
+    const char* getBackendName() const override { return "OpenGL 3.3+"; }
+
+    // Query renderer state
+    bool isScissorEnabled() const { return scissorEnabled_; }
+    
+private:
+    // Vertex structure for batching
+    struct Vertex {
+        float x, y;
+        float u, v;
+        float r, g, b, a;
+        float rw, rh;       // Rect width/height
+        float qw, qh;       // Quad width/height
+        float radius;       // Corner radius
+        float blur;         // Blur amount
+        float strokeWidth;  // Stroke width
+        float primitiveType; // Batching Primitive ID (0=Img, 1=Rect, 2=SDFText, 3=Stroke, 4=BitmapText)
+    };
+    
+    // Shader program
+    struct ShaderProgram {
+        uint32_t id = 0;
+        int32_t projectionLoc = -1;
+        int32_t transformLoc = -1;
+        int32_t opacityLoc = -1;
+        int32_t primitiveTypeLoc = -1;
+        // Removed radius/rect/quad/blur uniforms as they are now attributes
+        // Still keep textureLoc, useTextureLoc, smoothnessLoc
+        int32_t textureLoc = -1;
+        int32_t useTextureLoc = -1;
+        int32_t smoothnessLoc = -1; // Added for SDF text
+    };
+    
+    // Transform stack
+    struct Transform {
+        float tx = 0.0f;
+        float ty = 0.0f;
+        float rotation = 0.0f;
+        float scale = 1.0f;
+    };
+    
+    // Initialize OpenGL resources
+    bool initializeGL();
+    bool loadShaders();
+    void createBuffers();
+    void initializeTextRendering();
+    bool loadFont(const std::string& fontPath);
+    void renderTextWithFont(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color);
+    void drawCharacterPixels(char c, float x, float y, float width, float height, const NUIColor& color, float scale);
+    void drawCleanCharacter(char c, float x, float y, float width, float height, const NUIColor& color);
+    void drawCharacter(char c, float x, float y, float width, float height, const NUIColor& color);
+    
+    // High-quality text rendering helpers
+    float getDPIScale();
+    
+    // FreeType text rendering (moved here so AtlasInfo can reference it)
+    struct FontData {
+        uint32_t textureId; // Atlas texture id
+        uint32_t glyphIndex = 0; // FreeType glyph index for kerning
+        int width = 0;
+        int height = 0;
+        int bearingX = 0;
+        int bearingY = 0;
+        int advance = 0;
+        // Atlas UV coordinates
+        float u0 = 0.0f;
+        float v0 = 0.0f;
+        float u1 = 0.0f;
+        float v1 = 0.0f;
+    };
+    
+    // Atlas selection helper (consolidates duplicated logic)
+    struct AtlasInfo {
+        uint32_t textureId;
+        int atlasSize;
+        float ascent;
+        float descent;
+        float lineHeight;
+        const std::unordered_map<uint32_t, FontData>* cache;
+    };
+    AtlasInfo selectAtlas(float fontSize) const;
+
+    // REMOVED: renderCharacterImproved (replaced by atlas rendering)
+    
+    // Shader helpers
+    uint32_t compileShader(const char* source, uint32_t type);
+    uint32_t linkProgram(uint32_t vertexShader, uint32_t fragmentShader);
+    
+    // Drawing helpers
+    void ensureBasicPrimitive();
+    void addVertex(float x, float y, float u, float v, const NUIColor& color,
+                  float rw = 0.0f, float rh = 0.0f, 
+                  float qw = 0.0f, float qh = 0.0f,
+                  float radius = 0.0f, float blur = 0.0f, float strokeWidth = 0.0f, float type = 0.0f);
+    void addQuad(const NUIRect& rect, const NUIColor& color,
+                 float rw = 0.0f, float rh = 0.0f, 
+                 float qw = 0.0f, float qh = 0.0f,
+                 float radius = 0.0f, float blur = 0.0f, float strokeWidth = 0.0f, float type = 0.0f);
+    void applyTransform(float& x, float& y);
+    void updateProjectionMatrix();
+    
+    // State
+    int width_ = 0;
+    int height_ = 0;
+    float globalOpacity_ = 1.0f;
+    bool batching_ = false;
+    uint32_t drawCallCount_ = 0;  // Draw call tracking
+    bool scissorEnabled_ = false;
+    bool debugTextBounds_ = false;
+
+    
+    // OpenGL objects
+    uint32_t vao_ = 0;
+    uint32_t vbo_ = 0;
+    uint32_t ebo_ = 0;
+    
+    // Shaders
+    ShaderProgram primitiveShader_;
+    
+    // Vertex batch
+    std::vector<Vertex> vertices_;
+    std::vector<uint32_t> indices_;
+    
+    // Transform stack
+    std::vector<Transform> transformStack_;
+    
+    // Textures
+    struct TextureData { uint32_t glId = 0; int width = 0; int height = 0; };
+    std::unordered_map<uint32_t, TextureData> textures_;
+    uint32_t nextTextureId_ = 1;
+
+    // Render-to-texture (FBO) support
+    uint32_t fbo_ = 0;
+    int fboPrevViewport_[4] = {0,0,0,0};
+    int fboWidth_ = 0;
+    int fboHeight_ = 0;
+    bool renderingToTexture_ = false;
+
+    uint32_t lastRenderTextureId_ = 0;
+
+    // Batching state
+    uint32_t currentTextureId_ = 0; // 0 = no texture (flat color)
+    int currentPrimitiveType_ = 0;
+    float currentRadius_ = 0.0f;
+    float currentBlur_ = 0.0f;
+    float currentSmoothness_ = 1.0f; // Added
+    float currentStrokeWidth_ = 1.0f; // Added for SDF strokes
+    NUISize currentSize_ = {0.0f, 0.0f};
+    NUISize currentQuadSize_ = {0.0f, 0.0f};
+    
+    // Optimization systems
+    NUIBatchManager batchManager_;
+    NUIDirtyRegionManager dirtyRegionManager_;
+    NUIRenderCache renderCache_;
+    uint64_t frameCounter_ = 0;
+    
+    // Text rendering support
+    std::string defaultFontPath_;
+    std::unique_ptr<NUITextRendererSDF> sdfRenderer_;
+    bool useSDFText_{false};
+    bool triedSDFInit_{false};
+    
+    // (FontData moved earlier in file for AtlasInfo reference)
+
+    // Multiple atlases to avoid extreme minification artifacts:
+    // - Large atlas (48px) for bigger UI text
+    // - Medium atlas (32px) for common 14–17px UI copy
+    // - Small atlas (24px) for <= ~13px labels (ruler, clip strips)
+    // Cache by Unicode codepoint (uint32_t) instead of char for full UTF-8 support
+    std::unordered_map<uint32_t, FontData> fontCache_;
+    std::unordered_map<uint32_t, FontData> fontCacheMedium_;
+    std::unordered_map<uint32_t, FontData> fontCacheSmall_;
+    bool fontInitialized_;
+    bool fontUseLCD_ = true;       // Enable subpixel LCD rendering when available
+    bool fontHasKerning_ = false;  // Kerning support advertised by the font
+    int atlasFontSize_ = 32;       // Pixel height of glyphs baked into the large atlas
+    int atlasFontSizeMedium_ = 32; // Pixel height of glyphs baked into the medium atlas
+    int atlasFontSizeSmall_ = 24;  // Pixel height of glyphs baked into the small atlas
+    float fontAscent_ = 0.0f;
+    float fontDescent_ = 0.0f;
+    float fontLineHeight_ = 0.0f;
+    float fontAscentMedium_ = 0.0f;
+    float fontDescentMedium_ = 0.0f;
+    float fontLineHeightMedium_ = 0.0f;
+    float fontAscentSmall_ = 0.0f;
+    float fontDescentSmall_ = 0.0f;
+    float fontLineHeightSmall_ = 0.0f;
+    uint32_t fontAtlasTextureId_ = 0;      // Large atlas texture
+    uint32_t fontAtlasTextureIdMedium_ = 0; // Medium atlas texture
+    uint32_t fontAtlasTextureIdSmall_ = 0; // Small atlas texture
+    int fontAtlasWidth_ = 2048;
+    int fontAtlasHeight_ = 2048;
+    int fontAtlasX_ = 0;
+    int fontAtlasY_ = 0;
+    int fontAtlasRowHeight_ = 0;
+    int fontAtlasXMedium_ = 0;
+    int fontAtlasYMedium_ = 0;
+    int fontAtlasRowHeightMedium_ = 0;
+    int fontAtlasXSmall_ = 0;
+    int fontAtlasYSmall_ = 0;
+    int fontAtlasRowHeightSmall_ = 0;
+    
+    // Text measurement cache (LRU-style with max entries)
+    struct TextMeasurementKey {
+        std::string text;
+        float fontSize;
+        bool operator==(const TextMeasurementKey& o) const {
+            return text == o.text && std::abs(fontSize - o.fontSize) < 0.01f;
+        }
+    };
+    struct TextMeasurementKeyHash {
+        size_t operator()(const TextMeasurementKey& k) const {
+            size_t h1 = std::hash<std::string>{}(k.text);
+            size_t h2 = std::hash<float>{}(k.fontSize);
+            return h1 ^ (h2 << 1);
+        }
+    };
+    mutable std::unordered_map<TextMeasurementKey, NUISize, TextMeasurementKeyHash> textMeasurementCache_;
+    static constexpr size_t kTextMeasurementCacheMaxSize = 256;
+
+    FT_Library ftLibrary_;
+    FT_Face ftFace_;
+    
+    // Projection matrix (orthographic)
+    float projectionMatrix_[16];
+
+    // Offscreen state backup
+    float projectionBackup_[16];
+    int widthBackup_ = 0;
+    int heightBackup_ = 0;
+};
+
+} // namespace AestraUI

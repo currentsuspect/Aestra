@@ -1,7 +1,7 @@
 # NUIIcon System Integration Summary
 
 ## Overview
-Successfully integrated the NUIIcon system (powered by NanoSVG) into three major NomadUI components: Custom Title Bar, Checkbox, and Context Menu. This replaces manual icon drawing with scalable, theme-aware SVG icons.
+Successfully integrated the NUIIcon system (powered by NanoSVG) into three major AestraUI components: Custom Title Bar, Checkbox, and Context Menu. This replaces manual icon drawing with scalable, theme-aware SVG icons.
 
 ## Date
 2025-10-21
@@ -10,8 +10,8 @@ Successfully integrated the NUIIcon system (powered by NanoSVG) into three major
 
 ### 1. Custom Title Bar (NUICustomTitleBar)
 **Files Modified:**
-- `NomadUI/Core/NUICustomTitleBar.h`
-- `NomadUI/Core/NUICustomTitleBar.cpp`
+- `AestraUI/Core/NUICustomTitleBar.h`
+- `AestraUI/Core/NUICustomTitleBar.cpp`
 
 **Changes:**
 - Added icon member variables for window controls:
@@ -33,8 +33,8 @@ Successfully integrated the NUIIcon system (powered by NanoSVG) into three major
 
 ### 2. Checkbox (NUICheckbox)
 **Files Modified:**
-- `NomadUI/Core/NUICheckbox.h`
-- `NomadUI/Core/NUICheckbox.cpp`
+- `AestraUI/Core/NUICheckbox.h`
+- `AestraUI/Core/NUICheckbox.cpp`
 
 **Changes:**
 - Added `checkIcon_` member variable for checkmark rendering
@@ -50,8 +50,8 @@ Successfully integrated the NUIIcon system (powered by NanoSVG) into three major
 
 ### 3. Context Menu (NUIContextMenu)
 **Files Modified:**
-- `NomadUI/Core/NUIContextMenu.h`
-- `NomadUI/Core/NUIContextMenu.cpp`
+- `AestraUI/Core/NUIContextMenu.h`
+- `AestraUI/Core/NUIContextMenu.cpp`
 
 **Changes:**
 - Added `icon_` member to `NUIContextMenuItem` class
@@ -98,10 +98,10 @@ Graphics/NUISVGCache.cpp
 
 ### Test Programs
 All existing test programs continue to work:
-- `NomadUI_IconDemo` - Visual icon showcase
-- `NomadUI_CustomSVGTest` - Custom SVG loading tests
-- `NomadUI_ColorTintingTest` - Color tinting tests
-- `NomadUI_CustomWindowDemo` - Full window with integrated icons
+- `AestraUI_IconDemo` - Visual icon showcase
+- `AestraUI_CustomSVGTest` - Custom SVG loading tests
+- `AestraUI_ColorTintingTest` - Color tinting tests
+- `AestraUI_CustomWindowDemo` - Full window with integrated icons
 
 ### Verification
 ✓ CustomWindowDemo builds successfully

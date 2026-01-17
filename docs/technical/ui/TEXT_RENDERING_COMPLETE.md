@@ -102,7 +102,7 @@ renderer.drawText("Hello, World!", {100, 100}, 16, NUIColor{1, 1, 1, 1});
 ### Centered Text
 ```cpp
 NUIRect rect{0, 0, 800, 600};
-renderer.drawTextCentered("Nomad UI", rect, 24, NUIColor{0.4f, 0.3f, 1.0f, 1.0f});
+renderer.drawTextCentered("Aestra UI", rect, 24, NUIColor{0.4f, 0.3f, 1.0f, 1.0f});
 ```
 
 ### Custom Font
@@ -154,7 +154,7 @@ textRenderer->drawTextWithShadow(
 
 ### New Files
 ```
-NomadUI/
+AestraUI/
 ├── Graphics/
 │   ├── NUIFont.h              (350 lines) ✨ NEW
 │   ├── NUIFont.cpp            (280 lines) ✨ NEW
@@ -167,7 +167,7 @@ NomadUI/
 
 ### Modified Files
 ```
-NomadUI/
+AestraUI/
 ├── CMakeLists.txt             - Added FreeType FetchContent
 ├── Graphics/OpenGL/
 │   ├── NUIRendererGL.h        - Added text renderer members
@@ -185,7 +185,7 @@ NomadUI/
 
 ### Build Test
 ```bash
-cd NomadUI/build
+cd AestraUI/build
 cmake .. -G "Visual Studio 17 2022"
 cmake --build . --config Release
 ```
@@ -248,7 +248,7 @@ Now that text rendering is complete, we can build:
 - ✅ Batched for performance
 - ✅ Cross-platform ready
 
-**The NomadUI framework now has:**
+**The AestraUI framework now has:**
 - Custom OpenGL renderer ✅
 - FreeType text rendering ✅
 - Windows platform layer ✅

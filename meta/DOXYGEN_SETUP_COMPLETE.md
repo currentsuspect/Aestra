@@ -1,8 +1,8 @@
-# 🎯 NOMAD DAW - API Documentation Setup Complete
+# 🎯 Aestra - API Documentation Setup Complete
 
 ## ✅ What Was Done
 
-The NOMAD DAW project has been fully prepared for Doxygen API documentation generation. Here's what was set up:
+The Aestra project has been fully prepared for Doxygen API documentation generation. Here's what was set up:
 
 ---
 
@@ -13,9 +13,9 @@ The NOMAD DAW project has been fully prepared for Doxygen API documentation gene
 #### `Doxyfile` (Project Root)
 - **Purpose**: Main Doxygen configuration file
 - **Key Settings**:
-  - Project name: NOMAD DAW
+  - Project name: Aestra
   - Output directory: `docs/api-reference/`
-  - Input directories: NomadCore, NomadAudio, NomadPlat, NomadUI, Source
+  - Input directories: AestraCore, AestraAudio, AestraPlat, AestraUI, Source
   - Excludes External dependencies and build artifacts
   - Generates HTML + XML output
   - Enables call graphs and class diagrams (requires Graphviz)
@@ -228,8 +228,8 @@ docs/api-reference/
 │   ├── classes.html               # Class index
 │   ├── files.html                 # File list
 │   ├── namespaces.html            # Namespace list
-│   ├── class_nomad_*.html         # Individual class pages
-│   ├── namespace_nomad_*.html     # Namespace pages
+│   ├── class_Aestra_*.html         # Individual class pages
+│   ├── namespace_Aestra_*.html     # Namespace pages
 │   └── [many more HTML files]
 ├── xml/                           # XML output (for tools)
 │   └── *.xml
@@ -253,7 +253,7 @@ docs/api-reference/
 
 ## 🎯 Modules Documented
 
-### NomadCore
+### AestraCore
 - Foundation utilities
 - Math (Vector2, Vector3, Vector4, Matrix4)
 - Threading (ThreadPool, LockFreeQueue)
@@ -261,7 +261,7 @@ docs/api-reference/
 - Logging
 - Profiling
 
-### NomadAudio
+### AestraAudio
 - Audio Device Manager
 - Audio Drivers (WASAPI Exclusive/Shared, Native)
 - Audio Processors
@@ -269,13 +269,13 @@ docs/api-reference/
 - Mixer Buses
 - Filters and Oscillators
 
-### NomadPlat
+### AestraPlat
 - Platform abstraction layer
 - Window management (Win32)
 - Input handling
 - File dialogs
 
-### NomadUI
+### AestraUI
 - Custom OpenGL UI framework
 - Widgets (Button, Slider, TextBox, etc.)
 - Rendering system
@@ -331,7 +331,7 @@ Documentation is automatically deployed to GitHub Pages when:
 
 **Live URL** (once deployed):
 ```
-https://currentsuspect.github.io/NOMAD/api/
+https://currentsuspect.github.io/Aestra/api/
 ```
 
 ### Manual Deployment Trigger
@@ -472,7 +472,7 @@ HTML_COLORSTYLE_GAMMA  = 80    # Brightness
 - **Doxygen Manual**: https://www.doxygen.nl/manual/
 - **Doxygen Command Reference**: https://www.doxygen.nl/manual/commands.html
 
-### NOMAD Specific
+### Aestra Specific
 - **API Documentation Guide**: `docs/API_DOCUMENTATION_GUIDE.md`
 - **Coding Style Guide**: `docs/developer/coding-style.md`
 - **Contributing Guide**: `CONTRIBUTING.md`
@@ -495,8 +495,8 @@ HTML_COLORSTYLE_GAMMA  = 80    # Brightness
 
 For questions or issues:
 - 📖 Read the [API Documentation Guide](docs/API_DOCUMENTATION_GUIDE.md)
-- 🐛 Open an [Issue](https://github.com/currentsuspect/NOMAD/issues)
-- 💬 Start a [Discussion](https://github.com/currentsuspect/NOMAD/discussions)
+- 🐛 Open an [Issue](https://github.com/currentsuspect/Aestra/issues)
+- 💬 Start a [Discussion](https://github.com/currentsuspect/Aestra/discussions)
 - 📧 Email: makoridylan@gmail.com
 
 ---
@@ -504,4 +504,4 @@ For questions or issues:
 **Happy Documenting! 📚✨**
 
 *Generated on: November 2, 2025*  
-*NOMAD DAW © 2025 Nomad Studios*
+*Aestra © 2025 Aestra Studios*

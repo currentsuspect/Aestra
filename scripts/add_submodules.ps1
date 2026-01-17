@@ -1,8 +1,8 @@
 param(
 	[string]$PremiumRemote,
 	[string]$BuildRemote,
-	[string]$PremiumPath = "nomad-premium",
-	[string]$BuildPath = "nomad-build",
+	[string]$PremiumPath = "Aestra-premium",
+	[string]$BuildPath = "Aestra-build",
 	[switch]$Update
 )
 

@@ -7,21 +7,35 @@ endif()
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # Optional: auto core-mode helper
-if(EXISTS "${CMAKE_SOURCE_DIR}/nomad-core/cmake/NomadCoreMode.cmake")
-	include(${CMAKE_SOURCE_DIR}/nomad-core/cmake/NomadCoreMode.cmake)
+if(EXISTS "${CMAKE_SOURCE_DIR}/aestra-core/cmake/AestraCoreMode.cmake")
+	include(${CMAKE_SOURCE_DIR}/aestra-core/cmake/AestraCoreMode.cmake)
 endif()
 
-project(NOMAD VERSION 0.1.0 LANGUAGES CXX)
+project(AESTRA VERSION 0.1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# =============================================================================
+# Build Options
+# =============================================================================
+
+# Headless-only mode is intended for CI/containers: configure & build without UI.
+option(AESTRA_HEADLESS_ONLY "Configure/build headless targets only (skips UI + app)" OFF)
+option(AESTRA_ENABLE_UI "Build the AESTRA_DAW UI application" ON)
+option(AESTRA_ENABLE_TESTS "Build test executables" ON)
+
+if(AESTRA_HEADLESS_ONLY)
+  set(AESTRA_ENABLE_UI OFF CACHE BOOL "Build the AESTRA_DAW UI application" FORCE)
+  # Tests should be allowed in headless mode (e.g. for CI)
+endif()
 
 # =============================================================================
 # Platform Detection & Flags
 # =============================================================================
 if(UNIX AND NOT APPLE)
-  set(NOMAD_PLATFORM_LINUX ON)
-  add_compile_definitions(NOMAD_PLATFORM_LINUX=1)
+  set(AESTRA_PLATFORM_LINUX ON)
+  add_compile_definitions(AESTRA_PLATFORM_LINUX=1)
 
   # Detect distribution for logging/diagnostics
   find_program(LSB_RELEASE lsb_release)
@@ -31,11 +45,6 @@ if(UNIX AND NOT APPLE)
     set(LINUX_DISTRO "Unknown")
   endif()
   message(STATUS "Detected Linux platform (${LINUX_DISTRO})")
-
-  target_compile_options(NomadCore PRIVATE
-    -Wall -Wextra -Wpedantic
-    -Wno-unused-parameter
-  )
   
   # PIC for libraries
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -55,7 +64,7 @@ if(NOT SDL2_FOUND)
 endif()
 
 # RtAudio
-if(NOMAD_PLATFORM_LINUX)
+if(AESTRA_PLATFORM_LINUX)
   option(RTAUDIO_API_ALSA "Compile with ALSA support" ON)
   option(RTAUDIO_API_PULSE "Compile with PulseAudio support" ON)
   option(RTAUDIO_API_JACK "Compile with JACK support" OFF)
@@ -69,105 +78,107 @@ if(NOMAD_PLATFORM_LINUX)
 endif()
 
 # =============================================================================
-# NomadCore - Base Utilities
+# AestraCore - Base Utilities
 # =============================================================================
-add_subdirectory(NomadCore)
+add_subdirectory(AestraCore)
 
-# =============================================================================
-# NomadPlat - Platform Abstraction
-# =============================================================================
-add_subdirectory(NomadPlat)
-
-# =============================================================================
-# NomadUI - UI Framework
-# =============================================================================
-add_subdirectory(NomadUI)
-
-# =============================================================================
-# NomadAudio - Audio Engine
-# =============================================================================
-add_subdirectory(NomadAudio)
-
-# =============================================================================
-# NomadPlugins - Premium Plugins (Optional Private Submodule)
-# =============================================================================
-if(EXISTS "${CMAKE_SOURCE_DIR}/NomadPlugins/CMakeLists.txt")
-    message(STATUS "Found NomadPlugins - including premium plugins")
-    add_subdirectory(NomadPlugins)
-    set(NOMAD_HAS_PLUGINS ON)
-else()
-    message(STATUS "NomadPlugins not found - skipping premium plugins")
-    set(NOMAD_HAS_PLUGINS OFF)
+if(AESTRA_PLATFORM_LINUX AND TARGET AestraCore)
+  target_compile_options(AestraCore PRIVATE
+    -Wall -Wextra -Wpedantic
+    -Wno-unused-parameter
+  )
 endif()
 
 # =============================================================================
-# NOMAD DAW - Main Application
+# AestraPlat - Platform Abstraction (Must be before AestraAudio)
 # =============================================================================
-add_subdirectory(Source)
+add_subdirectory(AestraPlat)
 
 # =============================================================================
-# Test Executables
+# AestraAudio - Audio Engine
 # =============================================================================
-if(EXISTS "${CMAKE_SOURCE_DIR}/Tests/VST3PluginTest.cpp")
-    add_executable(VST3PluginTest Tests/VST3PluginTest.cpp)
-    target_link_libraries(VST3PluginTest PRIVATE
-        NomadAudioCore
-        NomadCore
-    )
-    target_include_directories(VST3PluginTest PRIVATE
-        ${CMAKE_SOURCE_DIR}/NomadAudio/include
-        ${CMAKE_SOURCE_DIR}/NomadCore/include
-    )
-    # VST3 SDK integration
-    set(VST3_SDK_PATH "${CMAKE_SOURCE_DIR}/NomadAudio/External/vst3sdk")
-    if(EXISTS "${VST3_SDK_PATH}/pluginterfaces")
-        target_compile_definitions(VST3PluginTest PRIVATE NOMAD_HAS_VST3)
-        target_include_directories(VST3PluginTest PRIVATE
-            ${VST3_SDK_PATH}
-            ${VST3_SDK_PATH}/pluginterfaces
-            ${VST3_SDK_PATH}/public.sdk
-            ${VST3_SDK_PATH}/public.sdk/source
-            ${VST3_SDK_PATH}/base
-        )
-    endif()
-    if(WIN32)
-        target_link_libraries(VST3PluginTest PRIVATE ole32)
-    endif()
-endif()
+add_subdirectory(AestraAudio)
 
-  # Project roundtrip smoke test (create -> save -> load -> verify)
-  if(EXISTS "${CMAKE_SOURCE_DIR}/Tests/ProjectRoundTripTest.cpp")
-    add_executable(ProjectRoundTripTest
-      Tests/ProjectRoundTripTest.cpp
-      Source/ProjectSerializer.cpp
-    )
-    target_link_libraries(ProjectRoundTripTest PRIVATE
-      NomadAudio
-      NomadCore
-    )
-    target_include_directories(ProjectRoundTripTest PRIVATE
-      ${CMAKE_SOURCE_DIR}/NomadAudio/include
-      ${CMAKE_SOURCE_DIR}/NomadCore/include
-      ${CMAKE_SOURCE_DIR}/Source
-    )
+# =============================================================================
+# AestraHeadless - Offline engine smoke test (no UI/OpenGL)
+# =============================================================================
 
-    # Optional load-stage tracing for debugging serializer issues.
-    target_compile_definitions(ProjectRoundTripTest PRIVATE
-      $<$<CONFIG:Debug>:NOMAD_ENABLE_PROJECT_LOAD_LOGS>
-    )
+if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessMain.cpp")
+  add_executable(AestraHeadless
+    Source/App/HeadlessMain.cpp
+    Source/Core/ProjectSerializer.cpp
+  )
 
-    enable_testing()
-    add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
-    # Alias name to make autosave-path coverage obvious in CI output.
-    add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
+  if(MSVC)
+    target_compile_options(AestraHeadless PRIVATE /utf-8)
   endif()
+
+  set_target_properties(AestraHeadless PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+  )
+
+  target_link_libraries(AestraHeadless PRIVATE
+    AestraAudioCore
+    AestraCore
+  )
+
+  target_include_directories(AestraHeadless PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+  )
+
+  if(WIN32)
+    target_compile_definitions(AestraHeadless PRIVATE
+      _CRT_SECURE_NO_WARNINGS
+      NOMINMAX
+    )
+  endif()
+
+  message(STATUS "AestraHeadless configured")
+endif()
+
+if(AESTRA_ENABLE_UI)
+  # =============================================================================
+  # AestraUI - UI Framework
+  # =============================================================================
+  add_subdirectory(AestraUI)
+endif()
+
+# =============================================================================
+# AestraPlugins - Premium Plugins (Optional Private Submodule)
+# =============================================================================
+if(EXISTS "${CMAKE_SOURCE_DIR}/AestraPlugins/CMakeLists.txt")
+    message(STATUS "Found AestraPlugins - including premium plugins")
+    add_subdirectory(AestraPlugins)
+    set(AESTRA_HAS_PLUGINS ON)
+else()
+    message(STATUS "AestraPlugins not found - skipping premium plugins")
+    set(AESTRA_HAS_PLUGINS OFF)
+endif()
+
+# =============================================================================
+# Aestra - Main Application
+# =============================================================================
+if(AESTRA_ENABLE_UI)
+  add_subdirectory(Source)
+endif()
+
+# =============================================================================
+# Tests - Centralized in Tests/ directory
+# =============================================================================
+if(AESTRA_ENABLE_TESTS)
+    add_subdirectory(Tests)
+endif()
 
 message(STATUS "")
 message(STATUS "=================================")
-message(STATUS "  NOMAD DAW - Pure Native")
+message(STATUS "  Aestra - Pure Native")
 message(STATUS "=================================")
-message(STATUS "UI: NomadUI (OpenGL)")
-message(STATUS "Audio: NomadAudio (RtAudio)")
+message(STATUS "UI: AestraUI (OpenGL)")
+message(STATUS "Audio: AestraAudio (RtAudio)")
 message(STATUS "Platform: ${CMAKE_SYSTEM_NAME}")
 message(STATUS "=================================")
 message(STATUS "")

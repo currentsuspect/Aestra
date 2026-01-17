@@ -1,8 +1,8 @@
-# Welcome to NOMAD DAW
+# Welcome to Aestra
 
 <div class="hero-section" markdown="1">
 
-# 🧭 NOMAD DAW
+# 🧭 Aestra
 
 **Create Like Silence Is Watching**
 
@@ -11,7 +11,7 @@ Featuring ultra-low latency audio, GPU-accelerated UI, and a pattern-based workf
 
 <div class="cta-buttons" markdown="1">
 [Get Started](getting-started/index.md){ .cta-button }
-[View on GitHub](https://github.com/currentsuspect/NOMAD){ .cta-button .secondary }
+[View on GitHub](https://github.com/currentsuspect/Aestra){ .cta-button .secondary }
 </div>
 
 </div>
@@ -64,21 +64,21 @@ Every feature serves a purpose. No bloat, just professional tools that get out o
 
     ```powershell
     # Clone the repository
-    git clone https://github.com/currentsuspect/NOMAD.git
-    cd NOMAD
+    git clone https://github.com/currentsuspect/Aestra.git
+    cd Aestra
     
     # Install Git hooks
     pwsh -File scripts/install-hooks.ps1
     
     # Configure build (Core-only mode)
-    cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+    cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
     
     # Build the project
     cmake --build build --config Release --parallel
     
-    # Run NOMAD
+    # Run Aestra
     cd build/bin/Release
-    ./NOMAD.exe
+    ./Aestra.exe
     ```
 
 === "Linux"
@@ -90,18 +90,18 @@ Every feature serves a purpose. No bloat, just professional tools that get out o
                      libx11-dev libxrandr-dev libxinerama-dev libgl1-mesa-dev
     
     # Clone the repository
-    git clone https://github.com/currentsuspect/NOMAD.git
-    cd NOMAD
+    git clone https://github.com/currentsuspect/Aestra.git
+    cd Aestra
     
     # Install Git hooks
     bash scripts/install-hooks.sh
     
     # Configure build
-    cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+    cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
     
     # Build and run
     cmake --build build --config Release --parallel
-    ./build/bin/NOMAD
+    ./build/bin/Aestra
     ```
 
 === "macOS"
@@ -117,15 +117,15 @@ Every feature serves a purpose. No bloat, just professional tools that get out o
     brew install cmake git
     
     # Clone the repository
-    git clone https://github.com/currentsuspect/NOMAD.git
-    cd NOMAD
+    git clone https://github.com/currentsuspect/Aestra.git
+    cd Aestra
     
     # Configure and build
-    cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+    cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
     cmake --build build --config Release --parallel
     
-    # Run NOMAD
-    ./build/bin/NOMAD
+    # Run Aestra
+    ./build/bin/Aestra
     ```
 
 For detailed build instructions, see the [Building Guide](getting-started/building.md).
@@ -142,22 +142,22 @@ For detailed build instructions, see the [Building Guide](getting-started/buildi
   </thead>
   <tbody>
     <tr>
-      <td><strong>NomadCore</strong></td>
+      <td><strong>AestraCore</strong></td>
       <td><span class="status-icon success"></span>Complete</td>
       <td>Core utilities, math, threading, file I/O</td>
     </tr>
     <tr>
-      <td><strong>NomadPlat</strong></td>
+      <td><strong>AestraPlat</strong></td>
       <td><span class="status-icon success"></span>Complete</td>
       <td>Platform abstraction (Win32, X11)</td>
     </tr>
     <tr>
-      <td><strong>NomadUI</strong></td>
+      <td><strong>AestraUI</strong></td>
       <td><span class="status-icon success"></span>Complete</td>
       <td>OpenGL UI framework with theme system</td>
     </tr>
     <tr>
-      <td><strong>NomadAudio</strong></td>
+      <td><strong>AestraAudio</strong></td>
       <td><span class="status-icon success"></span>Complete</td>
       <td>WASAPI/RtAudio integration</td>
     </tr>
@@ -186,18 +186,18 @@ For detailed build instructions, see the [Building Guide](getting-started/buildi
 
 ## 🎵 Code Example
 
-Here's a glimpse of NOMAD's clean, modern C++ architecture:
+Here's a glimpse of Aestra's clean, modern C++ architecture:
 
 ```cpp
-// Initialize NOMAD Audio Engine
-#include "NomadAudio/AudioEngine.h"
+// Initialize Aestra Audio Engine
+#include "AestraAudio/AudioEngine.h"
 
 int main() {
     // Create audio engine with WASAPI backend
-    nomad::AudioEngine engine;
+    Aestra::AudioEngine engine;
     
     // Configure for ultra-low latency
-    nomad::AudioConfig config;
+    Aestra::AudioConfig config;
     config.sampleRate = 48000;
     config.bufferSize = 512;  // ~10ms latency
     config.exclusiveMode = true;
@@ -219,11 +219,11 @@ int main() {
 ## 🧭 Our Philosophy
 
 <div class="philosophy-quote" markdown="1">
-At Nomad Studios, we believe software should feel like art — light, native, and human.
+At Aestra Studios, we believe software should feel like art — light, native, and human.
 
-Every line of code in NOMAD is written with intention. No shortcuts, no legacy cruft, just clean, modern C++ designed for the future of music production.
+Every line of code in Aestra is written with intention. No shortcuts, no legacy cruft, just clean, modern C++ designed for the future of music production.
 
-<footer>— Dylan Makori, Founder of Nomad Studios</footer>
+<footer>— Dylan Makori, Founder of Aestra Studios</footer>
 </div>
 
 **Core Values:**
@@ -240,21 +240,21 @@ Every line of code in NOMAD is written with intention. No shortcuts, no legacy c
 
 <div class="feature-card" markdown="1">
 ### 🚀 Getting Started
-New to NOMAD? Start here for setup guides, build instructions, and quickstart tutorials.
+New to Aestra? Start here for setup guides, build instructions, and quickstart tutorials.
 
 [Explore →](getting-started/index.md)
 </div>
 
 <div class="feature-card" markdown="1">
 ### 🏗️ Architecture
-Deep dive into NOMAD's modular design, audio pipeline, and rendering system.
+Deep dive into Aestra's modular design, audio pipeline, and rendering system.
 
 [Learn More →](architecture/overview.md)
 </div>
 
 <div class="feature-card" markdown="1">
 ### 👨‍💻 Developer Guide
-Contributing to NOMAD? Find coding standards, debugging tips, and best practices here.
+Contributing to Aestra? Find coding standards, debugging tips, and best practices here.
 
 [Start Contributing →](developer/contributing.md)
 </div>
@@ -268,7 +268,7 @@ FAQ, glossary, AI integration guide, and project roadmap.
 
 <div class="feature-card" markdown="1">
 ### 🔌 API Reference
-Comprehensive API documentation for all NOMAD modules.
+Comprehensive API documentation for all Aestra modules.
 
 [View API →](api/index.md)
 </div>
@@ -286,13 +286,13 @@ Code of conduct, support channels, and security policy.
 
 <div class="community-section" markdown="1">
 
-## Help Shape NOMAD's Future
+## Help Shape Aestra's Future
 
-NOMAD is built by musicians, for musicians. Your feedback, contributions, and support make this project possible.
+Aestra is built by musicians, for musicians. Your feedback, contributions, and support make this project possible.
 
 <div class="community-buttons" markdown="1">
-[Report Bugs](https://github.com/currentsuspect/NOMAD/issues){ .community-button }
-[Join Discussions](https://github.com/currentsuspect/NOMAD/discussions){ .community-button }
+[Report Bugs](https://github.com/currentsuspect/Aestra/issues){ .community-button }
+[Join Discussions](https://github.com/currentsuspect/Aestra/discussions){ .community-button }
 [View Roadmap](technical/roadmap.md){ .community-button }
 </div>
 
@@ -300,9 +300,9 @@ NOMAD is built by musicians, for musicians. Your feedback, contributions, and su
 
 ## 📜 License
 
-NOMAD DAW is licensed under the **Nomad Studios Source-Available License (NSSAL) v1.0**.
+Aestra is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.0**.
 
-The source code is publicly visible for transparency and education, but is **NOT open-source**. All rights reserved by Dylan Makori / Nomad Studios.
+The source code is publicly visible for transparency and education, but is **NOT open-source**. All rights reserved by Dylan Makori / Aestra Studios.
 
 [Learn More About Licensing →](about/licensing.md)
 
@@ -312,6 +312,6 @@ The source code is publicly visible for transparency and education, but is **NOT
 
 **Built by musicians, for musicians. Crafted with intention.** 🎵
 
-*Copyright © 2025 Dylan Makori / Nomad Studios. All rights reserved.*
+*Copyright © 2025 Dylan Makori / Aestra Studios. All rights reserved.*
 
 </div>

@@ -1,14 +1,14 @@
-# Nomad Theme Demo Guide
+# Aestra Theme Demo Guide
 
 ## Overview
 
-The CustomWindowDemo now showcases the complete Nomad color system with an interactive context menu and visual color palette display.
+The CustomWindowDemo now showcases the complete Aestra color system with an interactive context menu and visual color palette display.
 
 ## What's New
 
 ### 1. Complete Color Palette Integration
 
-The demo now displays all major color categories from the Nomad color system:
+The demo now displays all major color categories from the Aestra color system:
 
 - **Core Structure** (4 layers):
   - Background Primary (#181819)
@@ -35,7 +35,7 @@ Right-click anywhere in the window to open a context menu that demonstrates:
 - **Hover Effect**: Purple highlight (#8B7FFF at 15% alpha) matching the theme system
 - **Text Colors**: Primary text (#E5E5E8) and secondary text (#A6A6AA) for shortcuts
 - **Menu Items**: Cut, Copy, Paste with keyboard shortcuts
-- **Submenus**: Theme switcher (Nomad Dark/Light)
+- **Submenus**: Theme switcher (Aestra Dark/Light)
 - **Checkboxes**: Show Grid, Snap to Grid
 - **Separators**: Using subtle border color (#2c2c2f)
 
@@ -55,7 +55,7 @@ Each swatch is labeled and bordered to show the color clearly.
 cmake --build build --target CustomWindowDemo
 
 # Run it
-./build/NomadUI/Examples/CustomWindowDemo
+./build/AestraUI/Examples/CustomWindowDemo
 ```
 
 ## Controls
@@ -116,7 +116,7 @@ NUIColor label = themeManager.getColor("textSecondary");
 ```cpp
 auto contextMenu = std::make_shared<NUIContextMenu>();
 
-// Apply Nomad theme
+// Apply Aestra theme
 auto& themeManager = NUIThemeManager::getInstance();
 contextMenu->setBackgroundColor(themeManager.getColor("surfaceTertiary"));
 contextMenu->setBorderColor(themeManager.getColor("borderActive"));
@@ -143,6 +143,6 @@ Try modifying the demo to:
 
 ## See Also
 
-- [NOMAD_COLOR_SYSTEM.md](NOMAD_COLOR_SYSTEM.md) - Complete color palette reference
+- [Aestra_COLOR_SYSTEM.md](Aestra_COLOR_SYSTEM.md) - Complete color palette reference
 - [CUSTOM_WINDOW_INTEGRATION.md](CUSTOM_WINDOW_INTEGRATION.md) - Custom window guide
 - NUIThemeSystem.h - Theme system API reference

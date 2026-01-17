@@ -1,19 +1,19 @@
 #!/usr/bin/env pwsh
 # ========================================
-# 🧭 NOMAD DAW - API Documentation Generator
+# 🧭 Aestra - API Documentation Generator
 # ========================================
 # Quick script to generate and view API docs
 # ----------------------------------------
 
 param(
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [ValidateSet("generate", "clean", "view", "stats", "help")]
     [string]$Action = "generate",
     
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [switch]$Open = $false,
     
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [switch]$Verbose = $false
 )
 
@@ -32,7 +32,7 @@ function Write-ColorOutput {
 }
 
 function Show-Help {
-    Write-ColorOutput "`n📚 NOMAD API Documentation Generator`n" $InfoColor
+    Write-ColorOutput "`n📚 Aestra API Documentation Generator`n" $InfoColor
     Write-ColorOutput "Usage: .\generate-api-docs.ps1 [Action] [-Open] [-Verbose]`n"
     Write-ColorOutput "Actions:" $InfoColor
     Write-ColorOutput "  generate  - Generate API documentation (default)" "White"
@@ -59,7 +59,8 @@ function Test-DoxygenInstalled {
             Write-ColorOutput "✓ Doxygen found: $version" $SuccessColor
             return $true
         }
-    } catch {
+    }
+    catch {
         Write-ColorOutput "✗ Doxygen not found!" $ErrorColor
         Write-ColorOutput "  Install with: choco install doxygen.install" $WarningColor
         Write-ColorOutput "  Or download from: https://www.doxygen.nl/download.html" $WarningColor
@@ -75,7 +76,8 @@ function Test-GraphvizInstalled {
             Write-ColorOutput "✓ Graphviz found: $version" $SuccessColor
             return $true
         }
-    } catch {
+    }
+    catch {
         Write-ColorOutput "⚠ Graphviz not found (optional - for diagrams)" $WarningColor
         Write-ColorOutput "  Install with: choco install graphviz" $InfoColor
         return $false
@@ -117,7 +119,7 @@ function Invoke-GenerateDocs {
     # Check if Doxyfile exists
     if (-not (Test-Path "Doxyfile")) {
         Write-ColorOutput "✗ Doxyfile not found!" $ErrorColor
-        Write-ColorOutput "  Make sure you're in the NOMAD project root directory." $WarningColor
+        Write-ColorOutput "  Make sure you're in the Aestra project root directory." $WarningColor
         return $false
     }
     
@@ -126,7 +128,8 @@ function Invoke-GenerateDocs {
     
     if ($Verbose) {
         & doxygen Doxyfile
-    } else {
+    }
+    else {
         & doxygen Doxyfile 2>&1 | Out-Null
     }
     
@@ -152,7 +155,8 @@ function Invoke-GenerateDocs {
                     Write-ColorOutput "  $_" "Gray"
                 }
             }
-        } else {
+        }
+        else {
             Write-ColorOutput "✓ No documentation warnings!`n" $SuccessColor
         }
     }
@@ -214,10 +218,12 @@ function Show-Stats {
         if ($undocumented -lt 50) {
             $quality = "Excellent ✨"
             $color = $SuccessColor
-        } elseif ($undocumented -lt 100) {
+        }
+        elseif ($undocumented -lt 100) {
             $quality = "Good ✓"
             $color = $InfoColor
-        } else {
+        }
+        else {
             $quality = "Needs Improvement ⚠"
             $color = $WarningColor
         }
