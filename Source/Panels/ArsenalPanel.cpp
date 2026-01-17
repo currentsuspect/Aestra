@@ -75,6 +75,9 @@ void ArsenalPanel::refreshUnits() {
         std::weak_ptr<NUIButton> weakBtn = m_playBtn;
         m_playBtn->setOnClick([this, weakBtn]() {
              if (auto btn = weakBtn.lock()) {
+                 Log::info("[ArsenalPanel] Play clicked. activePatternID=" + 
+                     std::to_string(m_activePatternID.value) + " isValid=" + 
+                     std::to_string(m_activePatternID.isValid()));
                  if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
                      m_trackManager->stopArsenalPlayback(true);
                  } else {
@@ -153,6 +156,12 @@ void ArsenalPanel::onAddUnit() {
 void ArsenalPanel::setActivePattern(PatternID patternId) {
     if (m_activePatternID == patternId) return;
     m_activePatternID = patternId;
+    
+    // [FIX] Pre-load pattern so Global Play button works immediately
+    if (m_trackManager) {
+        m_trackManager->preparePatternForArsenal(m_activePatternID);
+    }
+    
     refreshUnits(); // Rebuild UI with new pattern context
 }
 
@@ -181,6 +190,10 @@ void ArsenalPanel::ensureDefaultPattern() {
     for (const auto& p : patterns) {
         if (p->name == "Pattern 1") {
             m_activePatternID = p->id;
+            // [FIX] Pre-load pattern
+            if (m_trackManager) {
+                m_trackManager->preparePatternForArsenal(m_activePatternID);
+            }
             return;
         }
     }
@@ -188,6 +201,11 @@ void ArsenalPanel::ensureDefaultPattern() {
     // Create Pattern 1 if it doesn't exist
     Aestra::Audio::MidiPayload empty;
     m_activePatternID = pm.createMidiPattern("Pattern 1", 4.0, empty);
+    
+    // [FIX] Pre-load pattern
+    if (m_trackManager) {
+        m_trackManager->preparePatternForArsenal(m_activePatternID);
+    }
     
     // Refresh Pattern Browser to show Pattern 1
     if (m_patternBrowser) {

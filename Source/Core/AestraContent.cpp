@@ -98,6 +98,12 @@ AestraContent::AestraContent() {
 
     // Create track manager for multi-track functionality
     m_trackManager = std::make_shared<TrackManager>();
+    
+    // Link TrackManager stop preview callback
+    m_trackManager->setStopPreviewCallback([this]() {
+        stopSoundPreview();
+    });
+
     addDemoTracks();
 
     // Antigravity Dependencies (v3.1) - Correctly wired in AestraContent
@@ -973,6 +979,13 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             
             // Restore playback position
             m_audioEngine->setPatternPlaybackMode(false, 4.0);
+            // Link TrackManager stop preview callback
+            if (m_trackManager) {
+                m_trackManager->setStopPreviewCallback([this]() {
+                    stopSoundPreview();
+                });
+            }
+
             m_audioEngine->setAuditionModeEnabled(false);
             
             if (m_trackManager) {
@@ -1027,6 +1040,9 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             
             if (!m_auditionPanel) {
                 m_auditionPanel = std::make_shared<AuditionPanel>(m_auditionEngine);
+                m_auditionPanel->setOnPlayRequest([this]() {
+                     stopSoundPreview();
+                });
                 // Fix Z-Order: Add to workspace layer (below overlay/transport), not root
                 if (m_workspaceLayer) {
                      m_workspaceLayer->addChild(m_auditionPanel);
@@ -1324,6 +1340,13 @@ void AestraContent::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) {
     }
 }
 
+void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
+    m_audioEngine = engine;
+    Aestra::Log::info("AestraContent::setAudioEngine called - Initializing View State");
+    // Ensure correct initial state now that engine is valid
+    setViewFocus(ViewFocus::Timeline);
+}
+
 // =============================================================================
 // SECTION: Demo & Testing
 // =============================================================================
@@ -1497,17 +1520,18 @@ void AestraContent::playSoundPreview(const AestraUI::FileItem& file) {
 }
 
 void AestraContent::stopSoundPreview() {
+    Log::info("stopSoundPreview() called");
     if (m_previewPanel) {
         m_previewPanel->setLoading(false);
         m_previewPanel->setPlaying(false);
     }
     
-    if (m_previewEngine && m_previewIsPlaying) {
-        Log::info("stopSoundPreview called - wasPlaying: true");
+    if (m_previewEngine) {
+        if (m_previewIsPlaying) Log::info(" - Stopping preview engine...");
         m_previewEngine->stop();
-        m_previewIsPlaying = false;
-        Log::info("Sound preview stopped (file path preserved)");
     }
+    m_previewIsPlaying = false;
+    Log::info("Sound preview stopped (file path preserved)");
 }
 
 void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
@@ -1724,5 +1748,45 @@ void AestraContent::refreshPluginList() {
     }
     m_pluginBrowser->setPluginList(uiPlugins);
     Aestra::Log::info("Refreshed plugin list UI: " + std::to_string(uiPlugins.size()) + " plugins found.");
+}
+
+// Global Shortcuts
+bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
+    if (!event.pressed) return false;
+    
+    // Debug log
+    if (event.keyCode == AestraUI::NUIKeyCode::Space) {
+        Aestra::Log::info("[AestraContent] Spacebar pressed. ViewFocus: " + std::to_string(static_cast<int>(m_viewFocus)));
+    }
+    
+    // Spacebar: Play/Stop (Timeline/Arsenal) or Play/Pause (Audition handled by panel usually)
+    if (event.keyCode == AestraUI::NUIKeyCode::Space) {
+        
+        // If Audition Panel is focused, it handles space. But if we are here, it didn't consume it?
+        // Actually NUIComponent dispatch usually stops if consumed.
+        
+        if (m_viewFocus == ViewFocus::Audition) {
+            // If Audition Panel didn't handle it (maybe lost focus?), try to toggle play/pause on engine directly
+            if (m_auditionEngine) {
+                // Ensure preview stops
+                if (!m_auditionEngine->isPlaying()) stopSoundPreview(); 
+                m_auditionEngine->togglePlayPause();
+                return true;
+            }
+        }
+        else {
+            // Timeline / Arsenal Mode
+            if (m_trackManager) {
+                if (m_trackManager->isPlaying()) {
+                    m_trackManager->stop(); 
+                } else {
+                    m_trackManager->play();
+                }
+                return true;
+            }
+        }
+    }
+    
+    return false;
 }
 
