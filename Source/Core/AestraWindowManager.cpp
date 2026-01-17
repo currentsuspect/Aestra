@@ -200,8 +200,16 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
                 AestraUI::NUIDragDropManager::getInstance().endDrag(AestraUI::NUIPoint((float)m_lastMouseX, (float)m_lastMouseY)); // Fixed arg
             }
         }
-        if (pressed) { // Press
-             this->hideActiveMenu(); // Fixed method
+        if (pressed && button == 0) { // Left click
+            // Only hide the menu if clicking OUTSIDE of it
+            if (m_activeMenu && m_activeMenu->isVisible()) {
+                AestraUI::NUIPoint clickPos(static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY));
+                AestraUI::NUIRect menuBounds = m_activeMenu->getGlobalBounds();
+                if (!menuBounds.contains(clickPos)) {
+                    hideActiveMenu();
+                }
+                // If clicking inside the menu, let the event propagate to the menu component
+            }
         }
     });
 

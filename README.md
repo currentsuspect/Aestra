@@ -8,7 +8,7 @@
 > **A modern, professional digital audio workstation built from the ground up with intention.**
 > Featuring ultra-low latency audio, GPU-accelerated UI, and a pattern-based workflow.
 
-![Aestra Interface](AestraDocs/images/aestra_interface.png)
+![Aestra Interface](AestraDocs/images/aestra_daw_interface.png)
 
 ---
 

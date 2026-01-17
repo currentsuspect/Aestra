@@ -164,13 +164,9 @@ bool AestraApp::initialize(const std::string& projectPath) {
     // Menu Bar
     auto menuBar = std::make_shared<AestraUI::NUIMenuBar>();
     menuBar->addItem("File", [this]() {
-        // We need to implement showFileMenu here or in WindowManager?
-        // AestraApp owns Project logic, so it should handle File Menu actions.
-        // But WindowManager handles showing the menu UI.
-        // We can pass a callback to WindowManager to show a menu constructed here.
-        // Or construct the menu here and pass it to WindowManager::showDropdownMenu.
-        
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
+        
+        // Project actions
         menu->addItem("New Project", [this]() {
             if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->stop();
             if (m_content) m_content->resetToDefaultProject();
@@ -178,36 +174,137 @@ bool AestraApp::initialize(const std::string& projectPath) {
             m_lastWindowTitle.clear();
             Log::info("New project created");
         });
-        // ... (Open, Save, etc) - simplified for refactor
-        menu->addItem("Save", [this]() { saveCurrentProject(); });
-        menu->addItem("Exit", [this]() { m_running = false; });
+        
+        menu->addItem("Open Project...", [this]() {
+            // TODO: Implement proper file browser integration
+            Log::info("Open Project - Not yet fully implemented");
+            // When FileBrowser has openProjectDialog:
+            // if (m_content && m_content->getFileBrowser()) {
+            //     m_content->getFileBrowser()->openProjectDialog([this](const std::string& path) {
+            //         if (!path.empty() && std::filesystem::exists(path)) {
+            //             m_projectPath = path;
+            //             auto result = loadProject();
+            //             if (result.ok) {
+            //                 if (result.ui) applyUIState(*result.ui);
+            //                 Log::info("Project loaded: " + path);
+            //             } else {
+            //                 Log::error("Failed to load project: " + path);
+            //             }
+            //         }
+            //     });
+            // }
+        });
+        
+        menu->addSeparator();
+        
+        menu->addItem("Save", [this]() { 
+            saveCurrentProject(); 
+        });
+        
+        menu->addItem("Save As...", [this]() {
+            // TODO: Implement proper file browser integration
+            Log::info("Save As - Not yet fully implemented");
+            // When FileBrowser has saveProjectDialog:
+            // if (m_content && m_content->getFileBrowser()) {
+            //     m_content->getFileBrowser()->saveProjectDialog([this](const std::string& path) {
+            //         if (!path.empty()) {
+            //             m_projectPath = path;
+            //             saveProject();
+            //             Log::info("Project saved as: " + path);
+            //         }
+            //     });
+            // }
+        });
+        
+        menu->addSeparator();
+        
+        menu->addItem("Settings...", [this]() {
+            if (m_windowManager->getSettingsDialog()) {
+                m_windowManager->getSettingsDialog()->show();
+            }
+        });
+        
+        menu->addSeparator();
+        
+        menu->addItem("Exit", [this]() { 
+            m_running = false; 
+        });
         
         m_windowManager->showDropdownMenu(menu, 10.0f);
     });
     // Edit Menu
     menuBar->addItem("Edit", [this]() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
+        
         menu->addItem("Undo", [this]() {
             if (m_content && m_content->getTrackManager()) {
                 m_content->getTrackManager()->getCommandHistory().undo();
             }
         });
+        
         menu->addItem("Redo", [this]() {
             if (m_content && m_content->getTrackManager()) {
                 m_content->getTrackManager()->getCommandHistory().redo();
             }
         });
+        
+        menu->addSeparator();
+        
+        menu->addItem("Cut", [this]() {
+            // TODO: Implement Cut functionality
+            Log::info("Cut - Not yet implemented");
+        });
+        
+        menu->addItem("Copy", [this]() {
+            // TODO: Implement Copy functionality
+            Log::info("Copy - Not yet implemented");
+        });
+        
+        menu->addItem("Paste", [this]() {
+            // TODO: Implement Paste functionality
+            Log::info("Paste - Not yet implemented");
+        });
+        
+        menu->addSeparator();
+        
+        menu->addItem("Delete", [this]() {
+            // TODO: Implement Delete functionality
+            Log::info("Delete - Not yet implemented");
+        });
+        
         m_windowManager->showDropdownMenu(menu, 55.0f);
     });
     
     // View Menu
     menuBar->addItem("View", [this]() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
+        
         menu->addItem("Performance Stats", [this]() {
             if (auto hud = m_windowManager->getUnifiedHUD()) {
                 hud->setVisible(!hud->isVisible());
             }
         });
+        
+        menu->addSeparator();
+        
+        menu->addItem("Toggle Fullscreen", [this]() {
+            if (m_windowManager) {
+                m_windowManager->toggleFullScreen();
+            }
+        });
+        
+        menu->addSeparator();
+        
+        menu->addItem("Show Timeline", [this]() {
+            // TODO: Implement view switching
+            Log::info("Show Timeline - Not yet fully implemented");
+        });
+        
+        menu->addItem("Show Arsenal", [this]() {
+            // TODO: Implement view switching
+            Log::info("Show Arsenal - Not yet fully implemented");
+        });
+        
         m_windowManager->showDropdownMenu(menu, 100.0f);
     });
 
