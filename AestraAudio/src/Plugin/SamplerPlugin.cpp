@@ -171,15 +171,25 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
             uint64_t idx = (uint64_t)pos;
             double frac = pos - idx;
             
-            if (idx * channels + 1 < sampleVec.size()) {
+            // Safe sample fetching with Mono/Stereo support
+            // Check basic bounds for first channel
+            if (idx * channels < sampleVec.size()) {
                 float sL = sampleVec[idx * channels];
-                float sR = (channels > 1) ? sampleVec[idx * channels + 1] : sL;
+                float sR = (channels > 1 && (idx * channels + 1 < sampleVec.size()))
+                           ? sampleVec[idx * channels + 1]
+                           : sL;
                 
-                // Next sample
+                // Next sample (interpolating to)
                 float nL = 0.0f, nR = 0.0f;
-                if ((idx + 1) * channels + 1 < sampleVec.size()) {
+                if ((idx + 1) * channels < sampleVec.size()) {
                     nL = sampleVec[(idx + 1) * channels];
-                    nR = (channels > 1) ? sampleVec[(idx + 1) * channels + 1] : nL;
+                    nR = (channels > 1 && ((idx + 1) * channels + 1 < sampleVec.size()))
+                         ? sampleVec[(idx + 1) * channels + 1]
+                         : nL;
+                } else {
+                    // Boundary condition: hold last sample or loop? Here we hold/zero
+                    nL = 0.0f; // sL; // or zero?
+                    nR = 0.0f; // sR;
                 }
                 
                 float outL = sL + frac * (nL - sL);
