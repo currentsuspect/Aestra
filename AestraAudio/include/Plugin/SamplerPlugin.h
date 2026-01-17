@@ -7,6 +7,7 @@
 #include <mutex>
 #include <string>
 #include <array>
+#include <memory>
 
 namespace Aestra {
 namespace Audio {
@@ -73,12 +74,17 @@ private:
     std::atomic<bool> m_resetVoicesRequested{false};
     double m_sampleRate = 44100.0;
     
-    // Sample Data
-    std::vector<float> m_sampleData; // Interleaved
-    uint32_t m_sampleChannels = 2;
-    uint32_t m_sampleRateSource = 44100;
-    std::string m_loadedSamplePath; // [NEW] Persist path
-    std::mutex m_sampleMutex;
+    // Sample Data encapsulated for Atomic Swap
+    struct SampleData {
+        std::vector<float> data; // Interleaved
+        uint32_t channels = 2;
+        uint32_t rate = 44100;
+        std::string path;
+    };
+
+    // Shared Ptr accessed atomically (C++11/17 free functions)
+    // No mutex needed for access anymore!
+    std::shared_ptr<SampleData> m_data;
 
     // Parameters
     enum ParamID {
