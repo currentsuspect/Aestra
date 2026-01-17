@@ -1,19 +1,19 @@
 ---
 **INTERNAL MEMO**
 
-**To:** Nomad team (core contributors)
+**To:** Aestra team (core contributors)
 
 **From:** Engineering
 
 **Date:** January 3, 2026
 
-**Subject:** Nomad v1 Beta by Dec 2026 — Reality Check, Scope, and Execution Plan
+**Subject:** Aestra v1 Beta by Dec 2026 — Reality Check, Scope, and Execution Plan
 
 ---
 
 ### Why you’re reading this
 
-This memo replaces the prior roadmap assumptions and sets a single goal: ship a **credible, stable Nomad v1 Beta by December 2026**.
+This memo replaces the prior roadmap assumptions and sets a single goal: ship a **credible, stable Aestra v1 Beta by December 2026**.
 
 This is not a marketing doc and not a feature wish list. It’s a practical engineering plan that optimizes for:
 
@@ -26,7 +26,7 @@ All claims are based on repo state as of January 2026.
 
 ### Executive summary (what changes today)
 
-- We stop aiming for broad DAW parity. Nomad wins by being **intentional and stable**, not by being comprehensive.
+- We stop aiming for broad DAW parity. Aestra wins by being **intentional and stable**, not by being comprehensive.
 - The biggest Beta blockers are not “missing features”; they are **trust features**: save/load determinism, autosave/recovery, undo/redo consistency, export, and dropout resilience.
 - Plugin support is a deliberate decision gate (not an open-ended roadmap). If plugins threaten stability, we cut them for Beta.
 - We freeze aggressively in Q4 2026 and ship.
@@ -35,8 +35,8 @@ For the near-exhaustive execution backlog, see: `docs/technical/v1_beta_task_lis
 
 ### Non-negotiable product philosophy
 
-Nomad will not try to be Ableton, FL Studio, or Reaper.
-Nomad will do one workflow exceptionally well: **pattern-based Hip-Hop music production with rock-solid stability**.
+Aestra will not try to be Ableton, FL Studio, or Reaper.
+Aestra will do one workflow exceptionally well: **pattern-based Hip-Hop music production with rock-solid stability**.
 
 Principles:
 
@@ -65,7 +65,7 @@ This is not a feature list. It’s an engineering maturity assessment.
 
 These are subsystems that appear architecturally disciplined and already have the right “shape” for shipping:
 
-- **NomadAudio core engine**: real-time oriented architecture, explicit RT constraints, telemetry/meters, internal clocking, and extensive dedicated code.
+- **AestraAudio core engine**: real-time oriented architecture, explicit RT constraints, telemetry/meters, internal clocking, and extensive dedicated code.
 - **Multi-tier driver concept on Windows**: explicit WASAPI shared/exclusive drivers, fallback logic, and a safety dummy driver path.
 - **Pattern/playlist data model direction**: `TrackManager`, `PatternManager`, `PlaylistModel`, and snapshot mechanisms suggest a coherent core.
 - **Custom UI stack**: the app is not blocked on third-party UI frameworks and appears to have stable primitives.
@@ -98,9 +98,9 @@ These are the Beta blockers that determine whether users can trust the app:
 - **Audio drop-out strategy**: underrun handling, device disconnects, graceful fallback.
 - **A small but complete workflow** (defined below) that feels intentional.
 
-## Define “Nomad v1 Beta” (December 2026)
+## Define “Aestra v1 Beta” (December 2026)
 
-Nomad v1 Beta is not “everything a DAW should do.” It is:
+Aestra v1 Beta is not “everything a DAW should do.” It is:
 
 1) a complete core workflow that real musicians can finish tracks in,
 2) stable enough that projects don’t get lost,
@@ -113,7 +113,7 @@ Nomad v1 Beta is not “everything a DAW should do.” It is:
 
 ### Supported workflows (in)
 
-**Nomad’s v1 Beta is a pattern-first production DAW**, optimized for electronic music / sample-based production:
+**Aestra’s v1 Beta is a pattern-first production DAW**, optimized for electronic music / sample-based production:
 
 - Create a project, set tempo, and work in a playlist/pattern workflow.
 - Import audio samples and arrange them into clips/patterns.
@@ -161,21 +161,24 @@ Dates are approximate; the key is sequencing and freeze points.
 Primary goal: stop the product from being “a demo held together by `Main.cpp`.”
 
 Deliverables:
-- App structure refactor: isolate initialization, event handling, audio wiring, UI wiring (reduce blast radius of changes).
-- Single “project loop” smoke test: open → edit → save → reopen → verify.
-- Unified logging + diagnostics (one place to look when things go wrong).
+- ✅ App structure refactor: isolate initialization, event handling, audio wiring, UI wiring (reduce blast radius of changes).
+- ✅ Single “project loop” smoke test: open → edit → save → reopen → verify.
+- ✅ Unified logging + diagnostics (one place to look when things go wrong).
 
 Freeze:
-- Data model API shapes (`PlaylistModel`, `PatternManager`, lane/clip IDs).
+- ✅ Data model API shapes (`PlaylistModel`, `PatternManager`, lane/clip IDs).
 
-### Phase 2 — Project + undo/redo become real (Apr–Jun 2026)
+### Phase 2 — Project + undo/redo become real (Apr–Jun 2026) ⏳ In Progress
 
 Primary goal: users can trust edits.
 
 Deliverables:
-- Project format v1 spec: versioning/migrations, validation, non-destructive load failures.
-- Undo/redo integrated into the main UX for core actions (clip edits, lane edits, pattern edits).
-- Autosave + recovery UX (minimal, reliable).
+- ✅ Dirty-state semantics + UI indicator (window title shows `*`)
+- ✅ Autosave tied to dirty state (only saves when modified)
+- ✅ Autosave recovery on startup (auto-loads if detected)
+- ✅ Crash-safe writes (atomic temp file + rename)
+- ✅ Project format v1 spec: versioning/migrations, validation, non-destructive load failures.
+- [ ] Undo/redo integrated into the main UX for core actions (clip edits, lane edits, pattern edits).
 
 Freeze:
 - Project file schema for Beta (allow forward-compatible additions only).
@@ -231,20 +234,20 @@ Deliverables:
 
 ## Industry Reality Check (how to win without competing everywhere)
 
-### Where Nomad can be competitive
+### Where Aestra can be competitive
 
 - **Pattern-first workflow** (closest to FL Studio conceptually) with “fast hands” UI.
 - **Low-latency + stability discipline** (Reaper-level seriousness is the bar, not Ableton’s features).
 - **A coherent internal architecture** that doesn’t fight you when you debug performance.
 
-### Where Nomad should not try to compete (for Beta)
+### Where Aestra should not try to compete (for Beta)
 
 - Ableton: deep warping workflows, mature device ecosystem, performance/live features.
 - Bitwig: modulators + hybrid device graph UX.
 - FL Studio: decades of UI polish and plugin ecosystem expectations.
 - Reaper: breadth + stability + scripting ecosystem.
 
-Nomad’s edge is not “more features.” It’s:
+Aestra’s edge is not “more features.” It’s:
 - fewer workflows,
 - extremely stable,
 - extremely intentional,

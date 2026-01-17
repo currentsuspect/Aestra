@@ -12,7 +12,7 @@ The transport bar (with play/pause/stop controls) was rendering at screen positi
 
 ### Root Cause
 
-NomadUI's component system does **not** automatically transform child coordinates relative to their parent. When a component sets a child's bounds to `(0, 0, width, height)`, the child renders at absolute screen position `(0, 0)`, not relative to the parent.
+AestraUI's component system does **not** automatically transform child coordinates relative to their parent. When a component sets a child's bounds to `(0, 0, width, height)`, the child renders at absolute screen position `(0, 0)`, not relative to the parent.
 
 The specific issues were:
 
@@ -27,7 +27,7 @@ The specific issues were:
 ### 1. Main.cpp - Set Absolute Position
 
 ```cpp
-void NomadContent::onResize(int width, int height) {
+void AestraContent::onResize(int width, int height) {
     if (m_transportBar) {
         float transportHeight = 60.0f;
         NUIRect contentBounds = getBounds();  // Get absolute position (0, 32)
@@ -77,8 +77,8 @@ void TransportBar::layoutComponents() {
 ## Files Modified
 
 1. **Source/Main.cpp**
-   - Updated `NomadContent::onResize()` to use absolute coordinates
-   - Updated `NomadContent::onRender()` to use absolute coordinates
+   - Updated `AestraContent::onResize()` to use absolute coordinates
+   - Updated `AestraContent::onRender()` to use absolute coordinates
 
 2. **Source/TransportBar.cpp**
    - Fixed `onResize()` to preserve X,Y position
@@ -89,15 +89,15 @@ void TransportBar::layoutComponents() {
 ## Documentation Created
 
 ### Primary Documentation
-- **NomadDocs/NOMADUI_COORDINATE_SYSTEM.md** - Comprehensive guide with examples, debugging tips, and best practices
+- **AestraDocs/AestraUI_COORDINATE_SYSTEM.md** - Comprehensive guide with examples, debugging tips, and best practices
 
 ### Quick References
-- **NomadUI/docs/COORDINATE_SYSTEM_QUICK_REF.md** - Quick reference card for developers
-- **NomadUI/Core/NUIComponent.h** - Added warning comment in header file
+- **AestraUI/docs/COORDINATE_SYSTEM_QUICK_REF.md** - Quick reference card for developers
+- **AestraUI/Core/NUIComponent.h** - Added warning comment in header file
 
 ### Updated Documentation
-- **NomadDocs/README.md** - Added links to coordinate system guide
-- **NomadDocs/DEVELOPER_GUIDE.md** - Added architectural rule about coordinate system
+- **AestraDocs/README.md** - Added links to coordinate system guide
+- **AestraDocs/DEVELOPER_GUIDE.md** - Added architectural rule about coordinate system
 
 ---
 
@@ -105,12 +105,12 @@ void TransportBar::layoutComponents() {
 
 ### Build
 ```powershell
-cmake --build build --config Release --target NOMAD_DAW
+cmake --build build --config Release --target Aestra_DAW
 ```
 
 ### Run
 ```powershell
-.\build\bin\Release\NOMAD_DAW.exe
+.\build\bin\Release\Aestra_DAW.exe
 ```
 
 ### Verification
@@ -134,7 +134,7 @@ cmake --build build --config Release --target NOMAD_DAW
 
 ### Why This Matters
 
-This is a fundamental architectural pattern in NomadUI. Without understanding this, developers will repeatedly encounter positioning issues. The documentation ensures:
+This is a fundamental architectural pattern in AestraUI. Without understanding this, developers will repeatedly encounter positioning issues. The documentation ensures:
 
 - New developers learn the pattern immediately
 - Existing code can be audited for correctness
@@ -165,7 +165,7 @@ Potential enhancements to make this more intuitive:
 
 ## Related Issues
 
-This pattern affects all NomadUI components. Any component that:
+This pattern affects all AestraUI components. Any component that:
 - Has children
 - Is positioned by a parent
 - Implements custom layout
@@ -176,8 +176,8 @@ Must follow the absolute coordinate pattern documented here.
 
 ## References
 
-- [NOMADUI_COORDINATE_SYSTEM.md](NOMADUI_COORDINATE_SYSTEM.md) - Full documentation
-- [COORDINATE_SYSTEM_QUICK_REF.md](../NomadUI/docs/COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
+- [AestraUI_COORDINATE_SYSTEM.md](AestraUI_COORDINATE_SYSTEM.md) - Full documentation
+- [COORDINATE_SYSTEM_QUICK_REF.md](../AestraUI/docs/COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
 - [CUSTOM_WINDOW_INTEGRATION.md](CUSTOM_WINDOW_INTEGRATION.md) - Custom window setup
 - [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - Development guidelines
 

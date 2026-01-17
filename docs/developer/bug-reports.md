@@ -1,6 +1,6 @@
 # 🐛 Bug Reports Guide
 
-This guide explains how to report bugs effectively for Nomad DAW, ensuring issues can be reproduced and fixed quickly.
+This guide explains how to report bugs effectively for Aestra DAW, ensuring issues can be reproduced and fixed quickly.
 
 ---
 
@@ -24,7 +24,7 @@ Before creating a bug report, please:
 
 ### 1. Search Existing Issues
 Check if someone has already reported the bug:
-- Visit [GitHub Issues](https://github.com/currentsuspect/NOMAD/issues)
+- Visit [GitHub Issues](https://github.com/currentsuspect/Aestra/issues)
 - Search for keywords related to your bug
 - Check both open and closed issues
 
@@ -45,7 +45,7 @@ Ensure the behavior is actually a bug:
 ## 📝 How to Report a Bug
 
 ### Step 1: Open a New Issue
-1. Go to [GitHub Issues](https://github.com/currentsuspect/NOMAD/issues/new)
+1. Go to [GitHub Issues](https://github.com/currentsuspect/Aestra/issues/new)
 2. Choose "Bug Report" if a template is available
 3. Fill in all requested information
 
@@ -80,7 +80,7 @@ Include:
 - **Audio Device:** Focusrite Scarlett 2i2
 - **Sample Rate:** 48000 Hz
 - **Buffer Size:** 512 samples
-- **Nomad Version:** Commit SHA or date
+- **Aestra Version:** Commit SHA or date
 
 ## Expected Behavior
 <!-- What you expected to happen -->
@@ -89,7 +89,7 @@ Include:
 <!-- What actually happened -->
 
 ## Steps to Reproduce
-1. Launch Nomad DAW
+1. Launch Aestra DAW
 2. Load a 48kHz WAV file
 3. Press play
 4. Observe that audio cuts 7 seconds early
@@ -114,7 +114,7 @@ Clear reproduction steps are **critical** for fixing bugs. Follow this format:
 
 ```markdown
 ## Steps to Reproduce
-1. Launch NOMAD.exe
+1. Launch Aestra.exe
 2. Click "File" → "Open"
 3. Navigate to C:\Samples\
 4. Load "Kick_48kHz.wav" (1.5 MB, 10 seconds long)
@@ -164,7 +164,7 @@ git rev-parse HEAD
 
 # CMake configuration
 cmake --version
-cmake -LA build | grep -E "CMAKE_BUILD_TYPE|NOMAD"
+cmake -LA build | grep -E "CMAKE_BUILD_TYPE|Aestra"
 
 # Compiler version
 cl.exe /?  # For MSVC
@@ -176,13 +176,13 @@ gcc --version  # For GCC
 ## 📂 Log Files and Debugging
 
 ### Locating Log Files
-Nomad logs are typically saved to:
-- **Windows:** `%APPDATA%\Nomad\logs\nomad.log`
-- **Linux:** `~/.nomad/logs/nomad.log`
+Aestra logs are typically saved to:
+- **Windows:** `%APPDATA%\Aestra\logs\Aestra.log`
+- **Linux:** `~/.Aestra/logs/Aestra.log`
 
 ### Including Logs in Reports
 1. Reproduce the bug
-2. Immediately close Nomad
+2. Immediately close Aestra
 3. Copy the log file
 4. Attach to GitHub issue (or paste relevant sections)
 
@@ -241,7 +241,7 @@ For audio-related bugs, provide:
 
 ### 1. Audio Recordings
 - Record the buggy audio output using a screen recorder (OBS, ShareX)
-- Include both Nomad's audio output and system audio
+- Include both Aestra's audio output and system audio
 - Upload to a file host (Dropbox, Google Drive, GitHub)
 
 ### 2. Sample Files
@@ -287,12 +287,12 @@ Crackling does not occur on 48kHz samples.
 For performance bugs (lag, FPS drops):
 
 ### Profiling Data
-1. Enable Nomad profiler (if available):
+1. Enable Aestra profiler (if available):
    ```cpp
-   #define NOMAD_PROFILE_ENABLED 1
+   #define Aestra_PROFILE_ENABLED 1
    ```
 2. Reproduce the lag
-3. Export Nomad profiler trace: `File → Export JSON`
+3. Export Aestra profiler trace: `File → Export JSON`
 4. Attach to bug report
 
 ### FPS Display
@@ -331,8 +331,8 @@ For crashes (application closes unexpectedly):
 
 **Example Stack Trace:**
 ```
-NomadUI::NUIButton::onRender(NUIRenderer&) Line 142
-NomadUI::NUIComponent::render() Line 89
+AestraUI::NUIButton::onRender(NUIRenderer&) Line 142
+AestraUI::NUIComponent::render() Line 89
 Main::run() Line 256
 main() Line 45
 ```
@@ -349,7 +349,7 @@ Try to isolate the crash:
 ## Crash: NULL pointer dereference in TransportBar
 
 **Minimal Steps:**
-1. Launch Nomad (clean state, no samples loaded)
+1. Launch Aestra (clean state, no samples loaded)
 2. Click Play button
 3. Immediately click Stop button
 4. Application crashes
@@ -433,13 +433,13 @@ Before submitting, verify:
 
 ## 📚 Related Resources
 
-- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute to Nomad
+- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute to Aestra
 - **[Debugging Guide](developer/debugging.md)** — Advanced debugging techniques
-- **[GitHub Issues](https://github.com/currentsuspect/NOMAD/issues)** — Browse existing bugs
+- **[GitHub Issues](https://github.com/currentsuspect/Aestra/issues)** — Browse existing bugs
 
 ---
 
-**Thank you for helping improve Nomad DAW!** 🙏
+**Thank you for helping improve Aestra DAW!** 🙏
 
 Quality bug reports make a huge difference in fixing issues quickly and efficiently.
 

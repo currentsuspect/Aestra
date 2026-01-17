@@ -20,11 +20,11 @@ Right now, we have ~3,500 lines of code but **zero proof it actually compiles or
 
 **How to run:**
 ```bash
-cd NomadUI
+cd AestraUI
 mkdir build && cd build
 cmake ..
 cmake --build . --config Debug
-./bin/Debug/NomadUI_MinimalTest.exe
+./bin/Debug/AestraUI_MinimalTest.exe
 ```
 
 **Expected result:** All tests pass, proving core classes work
@@ -46,7 +46,7 @@ cmake --build . --config Debug
 
 **How to run:**
 ```bash
-./bin/Debug/NomadUI_RendererTest.exe
+./bin/Debug/AestraUI_RendererTest.exe
 ```
 
 **Expected result:** Window opens, primitives render correctly
@@ -68,7 +68,7 @@ cmake --build . --config Debug
 
 **How to run:**
 ```bash
-./bin/Debug/NomadUI_PlatformTest.exe
+./bin/Debug/AestraUI_PlatformTest.exe
 ```
 
 **Expected result:** Window opens, responds to mouse/keyboard
@@ -90,7 +90,7 @@ cmake --build . --config Debug
 
 **How to run:**
 ```bash
-./bin/Debug/NomadUI_WidgetTest.exe
+./bin/Debug/AestraUI_WidgetTest.exe
 ```
 
 **Expected result:** Interactive widgets work correctly
@@ -112,7 +112,7 @@ cmake --build . --config Debug
 
 **How to run:**
 ```bash
-./bin/Debug/NomadUI_SimpleDemo.exe
+./bin/Debug/AestraUI_SimpleDemo.exe
 ```
 
 **Expected result:** Beautiful demo app at 60 FPS
@@ -138,12 +138,12 @@ cmake --build . --config Debug
 Run this command to test the core classes:
 
 ```powershell
-cd NomadUI
+cd AestraUI
 mkdir build
 cd build
 cmake ..
 cmake --build . --config Debug
-.\bin\Debug\NomadUI_MinimalTest.exe
+.\bin\Debug\AestraUI_MinimalTest.exe
 ```
 
 This will verify:
@@ -221,9 +221,9 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
       - name: Test Core
-        run: ./build/bin/Release/NomadUI_MinimalTest.exe
+        run: ./build/bin/Release/AestraUI_MinimalTest.exe
       - name: Test Renderer
-        run: ./build/bin/Release/NomadUI_RendererTest.exe
+        run: ./build/bin/Release/AestraUI_RendererTest.exe
 ```
 
 ## Manual Testing Checklist
@@ -300,7 +300,7 @@ jobs:
 
 ### Minimum Viable Product (MVP)
 
-To consider Nomad UI "working", we need:
+To consider Aestra UI "working", we need:
 
 1. ✅ **Core classes compile and pass tests**
 2. ⏳ **Window opens and displays**
@@ -326,12 +326,12 @@ To consider it "production ready", we need:
 ### 🎯 **DO THIS NOW:**
 
 ```powershell
-cd NomadUI
+cd AestraUI
 mkdir build
 cd build
 cmake ..
 cmake --build . --config Debug
-.\bin\Debug\NomadUI_MinimalTest.exe
+.\bin\Debug\AestraUI_MinimalTest.exe
 ```
 
 If this works, we have **proof** the core is solid! 🎉

@@ -1,0 +1,35 @@
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+#pragma once
+
+#include "ISettingsPage.h"
+#include "NUILabel.h"
+#include "NUIDropdown.h"
+
+namespace Aestra {
+
+class AppearanceSettingsPage : public ISettingsPage {
+public:
+    AppearanceSettingsPage();
+    ~AppearanceSettingsPage() override = default;
+
+    std::string getPageID() const override { return "appearance"; }
+    std::string getTitle() const override { return "Appearance"; }
+
+    void applyChanges() override { m_dirty = false; }
+    void cancelChanges() override { m_dirty = false; }
+    bool hasUnsavedChanges() const override { return m_dirty; }
+
+    void onRender(AestraUI::NUIRenderer& renderer) override;
+    void onResize(int width, int height) override;
+    
+private:
+    void createUI();
+    void layoutComponents();
+
+    bool m_dirty = false;
+    
+    std::shared_ptr<AestraUI::NUILabel> m_themeLabel;
+    std::shared_ptr<AestraUI::NUIDropdown> m_themeDropdown;
+};
+
+} // namespace Aestra

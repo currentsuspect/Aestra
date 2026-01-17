@@ -1,8 +1,8 @@
-# Nomad Custom Window Integration Guide
+# Aestra Custom Window Integration Guide
 
 ## Overview
 
-The Nomad Custom Window provides a modern, borderless window experience with a custom title bar, similar to VS Code, Discord, and other modern applications.
+The Aestra Custom Window provides a modern, borderless window experience with a custom title bar, similar to VS Code, Discord, and other modern applications.
 
 ## Features
 
@@ -24,17 +24,17 @@ The Nomad Custom Window provides a modern, borderless window experience with a c
 #include "Platform/Windows/NUIWindowWin32.h"
 #include "Graphics/OpenGL/NUIRendererGL.h"
 
-using namespace NomadUI;
+using namespace AestraUI;
 
 int main() {
     // Create platform window (starts maximized by default - DAW behavior)
     NUIWindowWin32 window;
-    if (!window.create("My Nomad App", 1200, 800)) {
+    if (!window.create("My Aestra App", 1200, 800)) {
         return -1;
     }
     
     // Or start windowed:
-    // if (!window.create("My Nomad App", 1200, 800, false)) {
+    // if (!window.create("My Aestra App", 1200, 800, false)) {
     //     return -1;
     // }
     
@@ -46,7 +46,7 @@ int main() {
     
     // Create custom window with your content
     auto customWindow = std::make_shared<NUICustomWindow>();
-    customWindow->setTitle("My Nomad App");
+    customWindow->setTitle("My Aestra App");
     customWindow->setBounds(NUIRect(0, 0, 1200, 800));
     
     // Add your content
@@ -300,7 +300,7 @@ Planned:
 
 ## Examples
 
-See `NomadUI/Examples/CustomWindowDemo.cpp` for a complete working example.
+See `AestraUI/Examples/CustomWindowDemo.cpp` for a complete working example.
 
 ## API Reference
 
@@ -343,4 +343,4 @@ public:
 
 ## License
 
-Part of the NomadUI framework.
+Part of the AestraUI framework.

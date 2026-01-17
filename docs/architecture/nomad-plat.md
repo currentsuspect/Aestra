@@ -1,6 +1,6 @@
-# NomadPlat Architecture
+# AestraPlat Architecture
 
-NomadPlat provides platform abstraction for NOMAD DAW, enabling cross-platform support.
+AestraPlat provides platform abstraction for Aestra, enabling cross-platform support.
 
 ## 📋 Overview
 
@@ -8,9 +8,9 @@ NomadPlat provides platform abstraction for NOMAD DAW, enabling cross-platform s
 
 **Status:** ✅ Complete (Windows), 🚧 In Progress (Linux), 📅 Planned (macOS)
 
-**Dependencies:** NomadCore
+**Dependencies:** AestraCore
 
-**Location:** `/NomadPlat/`
+**Location:** `/AestraPlat/`
 
 ## 🎯 Supported Platforms
 
@@ -34,14 +34,14 @@ Create and manage application windows with event handling.
 
 **Example:**
 ```cpp
-#include "NomadPlat/Window.h"
+#include "AestraPlat/Window.h"
 
-nomad::WindowConfig config;
-config.title = "NOMAD DAW";
+Aestra::WindowConfig config;
+config.title = "Aestra";
 config.width = 1920;
 config.height = 1080;
 
-auto window = nomad::Window::create(config);
+auto window = Aestra::Window::create(config);
 window->show();
 
 while (window->isOpen()) {
@@ -88,11 +88,11 @@ Native file open/save dialogs.
 **Example:**
 {% raw %}
 ```cpp
-#include "NomadPlat/FileDialog.h"
+#include "AestraPlat/FileDialog.h"
 
-auto path = nomad::FileDialog::open({
+auto path = Aestra::FileDialog::open({
     .title = "Open Project",
-    .filters = {{"NOMAD Project", "*.nomad"}},
+    .filters = {{"Aestra Project", "*.Aestra"}},
     .multiSelect = false
 });
 
@@ -114,12 +114,12 @@ Query system capabilities and resources.
 
 **Example:**
 ```cpp
-#include "NomadPlat/SystemInfo.h"
+#include "AestraPlat/SystemInfo.h"
 
-auto info = nomad::SystemInfo::get();
-NOMAD_LOG_INFO("CPU: {} cores, {} threads", 
+auto info = Aestra::SystemInfo::get();
+Aestra_LOG_INFO("CPU: {} cores, {} threads", 
                info.cpuCores, info.cpuThreads);
-NOMAD_LOG_INFO("RAM: {} MB total, {} MB available",
+Aestra_LOG_INFO("RAM: {} MB total, {} MB available",
                info.totalMemoryMB, info.availableMemoryMB);
 ```
 
@@ -135,13 +135,13 @@ Precise timing for audio and animation.
 
 **Example:**
 ```cpp
-#include "NomadPlat/Timer.h"
+#include "AestraPlat/Timer.h"
 
-auto start = nomad::Timer::now();
+auto start = Aestra::Timer::now();
 processAudio();
-auto elapsed = nomad::Timer::elapsed(start);
+auto elapsed = Aestra::Timer::elapsed(start);
 
-NOMAD_LOG_DEBUG("Audio processing took {:.2f}ms", elapsed * 1000.0);
+Aestra_LOG_DEBUG("Audio processing took {:.2f}ms", elapsed * 1000.0);
 ```
 
 ## 🏗️ Architecture
@@ -151,10 +151,10 @@ NOMAD_LOG_DEBUG("Audio processing took {:.2f}ms", elapsed * 1000.0);
 ```mermaid
 graph TB
     subgraph "Application Code"
-        App[NOMAD DAW]
+        App[Aestra]
     end
     
-    subgraph "NomadPlat API"
+    subgraph "AestraPlat API"
         API[Platform Interface]
     end
     
@@ -179,9 +179,9 @@ graph TB
 ### Directory Structure
 
 ```
-NomadPlat/
+AestraPlat/
 ├── include/
-│   └── NomadPlat/
+│   └── AestraPlat/
 │       ├── Window.h        # Window management
 │       ├── Input.h         # Input handling
 │       ├── FileDialog.h    # File dialogs
@@ -210,13 +210,13 @@ Uses Win32 API with modern features:
 WNDCLASSEX wc = {};
 wc.lpfnWndProc = WindowProc;
 wc.hInstance = GetModuleHandle(nullptr);
-wc.lpszClassName = "NomadWindow";
+wc.lpszClassName = "AestraWindow";
 RegisterClassEx(&wc);
 
 HWND hwnd = CreateWindowEx(
     0,
-    "NomadWindow",
-    "NOMAD DAW",
+    "AestraWindow",
+    "Aestra",
     WS_OVERLAPPEDWINDOW,
     CW_USEDEFAULT, CW_USEDEFAULT,
     1920, 1080,
@@ -286,10 +286,10 @@ while (XPending(display)) {
 Platform-specific code is compiled conditionally:
 
 ```cpp
-#if defined(NOMAD_PLATFORM_WINDOWS)
+#if defined(Aestra_PLATFORM_WINDOWS)
     #include "win32/WindowWin32.h"
     using PlatformWindow = WindowWin32;
-#elif defined(NOMAD_PLATFORM_LINUX)
+#elif defined(Aestra_PLATFORM_LINUX)
     #include "x11/WindowX11.h"
     using PlatformWindow = WindowX11;
 #endif
@@ -340,12 +340,12 @@ public:
 
 ## 🧪 Testing
 
-NomadPlat includes platform-specific tests:
+AestraPlat includes platform-specific tests:
 
 ```bash
 # Run platform tests
 cmake --build build
-ctest --test-dir build -R "NomadPlat.*"
+ctest --test-dir build -R "AestraPlat.*"
 ```
 
 Test areas:
@@ -434,4 +434,4 @@ struct MouseEvent {
 
 ---
 
-**Next:** [NomadUI Architecture →](nomad-ui.md)
+**Next:** [AestraUI Architecture →](Aestra-ui.md)

@@ -1,0 +1,300 @@
+# Aestra UI Configuration
+# This file controls all visual aspects of the interface including colors, sizes, spacing, and layout
+# Modify these values and rebuild to customize the UI appearance
+
+# Color Scheme - Modern Professional Dark Theme (Ableton/FL Hybrid)
+colors:
+  # 🌌 Core Structure - Layered backgrounds (Modern Professional)
+  backgroundPrimary: "#121212"      # Deepest Charcoal - main canvas
+  backgroundSecondary: "#181818"    # Soft Gray - Panels, sidebars, file browser
+  surfaceTertiary: "#202024"        # Popups, transport bar, elevated surfaces
+  surfaceRaised: "#2a2a30"          # Cards, hover surface, active elements
+
+  # 💡 Accent & Branding - Modern Professional
+  primary: "#BB86FC"               # Aestra Purple (Official)
+  primaryHover: "#9D44FF"          # Lighter purple for hover
+  primaryPressed: "#6A1B9A"        # Darker purple for pressed
+  secondary: "#00FFCC"             # Neon Teal accent
+  accentCyan: "#00FFCC"            # Neon Teal
+  accentMagenta: "#FF00CC"         # Neon Pink accent
+  accentLime: "#CCFF00"            # Neon Lime green
+  accentAmber: "#FFCC00"           # Neon Amber (Mute)
+
+  # 🌈 Functional Colors - Modern Professional
+  success: "#00FF99"               # Neon green for success
+  warning: "#FFCC00"               # Amber warning
+  error: "#FF3366"                 # Vibrant red for errors
+  info: "#8A2BE2"                  # Purple (matches primary)
+
+  # 📊 Meter Colors - Aestra Heat Gradient
+  meterSafe: "#bb86fc"             # Light Purple (Bottom)
+  meterWarn: "#ff00cc"             # Neon Pink (Mid)
+  meterCrit: "#ff3366"             # Vibrant Red (Top)
+
+  # 🎚️ Mixer Colors
+  # Format: AARRGGBB (Alpha first!)
+  mixerStripBg: "#F2030303"        # Deep Black (0.95 alpha)
+  mixerMasterBorder: "#14FFFFFF"   # White (0.08 alpha)
+
+  # 🪟 Glass Aesthetic (v9.0 Systematic)
+  glassHover: "#0DFFFFFF"          # white @ 0.05 alpha
+  glassBorder: "#1FFFFFFF"         # white @ 0.12 alpha
+  glassActive: "#268A2BE2"         # primary (8A2BE2) @ 0.15 alpha
+
+  # 🧭 Text & Typography - Modern Professional
+  textPrimary: "#F0F0F2"           # Crisp white - excellent readability
+  textSecondary: "#A0A0A5"         # Secondary text, labels
+  textDisabled: "#606065"          # Disabled text
+  textLink: "#8A2BE2"              # Links/actions (purple)
+  textCritical: "#FF3366"          # Errors
+
+  # 🪞 Borders & Highlights - Modern Professional
+  borderSubtle: "#2a2a30"          # Subtle separation lines
+  borderActive: "#8A2BE2"          # Selected/focused (purple)
+  border: "#2a2a30"                # Default border
+
+  # 🖱️ Interactive Elements - Modern Professional
+  buttonBgDefault: "#252528"       # Button background (surfaceTertiary)
+  buttonBgHover: "#303035"         # Hovered buttons (surfaceRaised)
+  buttonBgActive: "#8A2BE2"        # Active state (purple)
+  buttonTextDefault: "#F0F0F2"     # White text
+  buttonTextActive: "#ffffff"      # Bright white
+
+  toggleDefault: "#303035"         # Toggle background
+  toggleHover: "#3a3a40"           # Toggle hover
+  toggleActive: "#8A2BE2"          # Purple active state
+
+  inputBgDefault: "#1e1e22"        # Input background
+  inputBgHover: "#28282d"          # Input hover
+  inputBorderFocus: "#785aff"      # Purple focus
+
+  sliderTrack: "#323238"           # Slider track
+  sliderHandle: "#785aff"          # Purple handle
+  sliderHandleHover: "#8c73ff"     # Lighter purple hover
+  sliderHandlePressed: "#6446dc"   # Darker purple pressed
+
+  # Shadows and overlays
+  shadow: "#000000"                # Shadow color
+  overlay: "#00000080"             # Semi-transparent overlay
+  backdrop: "#00000040"            # Backdrop blur
+  highlightGlow: "#785aff40"        # Purple highlight glow
+
+# Layout Dimensions - Pixel Perfect Sizing
+layout:
+  # Panel widths
+  fileBrowserWidth: 260.0          # Left sidebar width (increased for hierarchy)
+  trackControlsWidth: 200.0        # Track controls panel width
+  timelineAreaWidth: 800.0         # Main timeline area width
+
+  # Track dimensions
+  trackHeight: 80.0                # Height of each track row
+  trackSpacing: 5.0                # Space between tracks (currently 0 for touching)
+  trackLabelHeight: 28.0           # Height of track name label
+
+  # Transport bar dimensions
+  transportBarHeight: 60.0         # Height of transport controls
+  transportButtonSize: 40.0        # Size of play/pause/stop buttons
+  transportButtonSpacing: 8.0      # Space between transport buttons
+
+  # Control button dimensions (compact)
+  controlButtonWidth: 24.0         # Width of M/S/R buttons (Circle/Pill Size)
+  controlButtonHeight: 24.0        # Height of M/S/R buttons (Circle/Pill Size)
+  controlButtonSpacing: 4.0        # Space between control buttons
+  controlButtonStartX: 180.0       # X position where control buttons start
+
+  # Grid and timeline
+  gridLineSpacing: 50.0            # Distance between vertical grid lines
+  timelineHeight: 40.0             # Height of timeline ruler
+
+  # Margins and padding
+  panelMargin: 10.0                # Margin around panels
+  componentPadding: 8.0            # Padding inside components
+  buttonPadding: 4.0               # Padding inside buttons
+
+  # Window dimensions
+  minWindowWidth: 800.0            # Minimum window width
+  minWindowHeight: 600.0           # Minimum window height
+  defaultWindowWidth: 1200.0       # Default window width
+  defaultWindowHeight: 800.0       # Default window height
+
+# Spacing System
+spacing:
+  xs: 4.0                          # Extra small spacing
+  s: 8.0                           # Small spacing
+  m: 16.0                          # Medium spacing (default)
+  l: 24.0                          # Large spacing
+  xl: 32.0                         # Extra large spacing
+  xxl: 48.0                        # Double extra large spacing
+
+  # Specific spacing for UI elements
+  panelMargin: 10.0                # Panel margins
+  componentPadding: 8.0            # Component internal padding
+  buttonPadding: 4.0               # Button internal padding
+
+# Typography
+typography:
+  fontSizeXS: 10.0                 # Extra small text
+  fontSizeS: 12.0                  # Small text
+  fontSizeM: 14.0                  # Medium text (Reduced from 18 for sharper look)
+  fontSizeL: 18.0                  # Large text
+  fontSizeXL: 22.0                 # Extra large text
+  fontSizeXXL: 28.0                # Double extra large text
+  fontSizeH1: 34.0                 # Heading 1
+  fontSizeH2: 30.0                 # Heading 2
+  fontSizeH3: 26.0                 # Heading 3
+
+  lineHeightTight: 1.2             # Tight line spacing
+  lineHeightNormal: 1.4            # Normal line spacing
+  lineHeightRelaxed: 1.6           # Relaxed line spacing
+
+# Border Radius
+radius:
+  xs: 2.0                          # Extra small radius
+  s: 4.0                           # Small radius
+  m: 8.0                           # Medium radius (default)
+  l: 12.0                          # Large radius
+  xl: 16.0                         # Extra large radius
+  xxl: 24.0                        # Double extra large radius
+
+# Shadows
+shadows:
+  xs: [0, 1, 2, 0, "#000000", 0.1]    # Extra small shadow
+  s: [0, 2, 4, 0, "#000000", 0.15]    # Small shadow
+  m: [0, 4, 8, 0, "#000000", 0.4]     # Medium shadow (ambient)
+  l: [0, 8, 16, 0, "#000000", 0.6]    # Large shadow (floating UI)
+  xl: [0, 16, 32, 0, "#000000", 0.6]  # Extra large shadow
+
+# Animation Settings
+animations:
+  durationFast: 150.0              # Fast animations (ms)
+  durationNormal: 250.0            # Normal animations (ms)
+  durationSlow: 350.0              # Slow animations (ms)
+
+  easingStandard: "ease-out-cubic" # Standard easing
+  easingDecelerate: "ease-out-cubic" # Decelerate easing
+  easingAccelerate: "ease-in-cubic"  # Accelerate easing
+  easingSharp: "ease-in-out-cubic"   # Sharp easing
+
+# Z-Index Layers
+zIndex:
+  background: 0                    # Background layer
+  surface: 100                     # Surface layer
+  dropdown: 200                    # Dropdown layer
+  modal: 300                       # Modal layer
+  tooltip: 400                     # Tooltip layer
+  notification: 500                # Notification layer
+
+# Component-Specific Settings
+components:
+  # Dropdown styling
+  dropdown:
+    background: "#28282d"           # Dropdown background (surfaceTertiary)
+    border: "#000000"               # Black border for modern look
+    borderRadius: 8.0               # Modern rounded corners
+    padding: 8.0                    # Internal padding
+    itemHeight: 32.0                # Height of dropdown items
+    itemSpacing: 4.0                # Space between items
+    textColor: "#eeeeF2"            # Main text color
+    hoverBackground: "#785aff20"    # Purple hover with 20% opacity
+    selectedTextColor: "#785aff"    # Purple text for selected items
+    arrowColor: "#aaaab2"           # Arrow color
+    shadow: [0, 4, 12, 0, "#000000", 0.4]  # Modern shadow
+
+  # File Browser
+  fileBrowser:
+    itemHeight: 32.0               # Height of each file item
+    iconSize: 20.0                 # Size of file icons (Reduced slightly for crispness)
+    indentSize: 22.0               # Indentation for nested folders (Increased)
+    hoverOpacity: 0.1              # Hover effect opacity
+    scrollbarWidth: 8.0            # Width of scrollbar
+    headerHeight: 45.0             # Height of toolbar + path bar (more compact)
+    previewPanelWidth: 220.0       # Width of preview panel when visible
+    previewPanelMinHeight: 150.0   # Minimum height for preview panel
+    breadcrumbHeight: 28.0         # Height of breadcrumb bar
+    breadcrumbButtonSpacing: 4.0   # Space between breadcrumbs
+    searchBoxHeight: 30.0          # Search input height
+    searchBoxWidth: 180.0          # Default search box width
+    favoriteStarSize: 16.0         # Size of favorite star icon
+    waveformHeight: 80.0           # Height of waveform preview
+
+
+  # Track Controls
+  trackControls:
+    background: "#181818"           # Softer Gray
+    border: "#323238"               # Subtle border
+    padding: 8.0                    # Internal padding
+    buttonStartX: 180.0            # X position (aligned like add button)
+    buttonSpacing: 4.0             # Spacing between buttons
+    buttonWidth: 24.0              # Width of M/S/R buttons (Circle/Pill - matched global)
+    buttonHeight: 24.0             # Height of M/S/R buttons
+    buttonBackground: "#28282d"    # Same as transport buttons
+
+  # Transport Bar
+  transportBar:
+    background: "#19191c"           # Same black as title bar
+    border: "#323238"               # Subtle border
+    borderRadius: 8.0               # Modern rounded corners
+    padding: 8.0                    # Internal padding
+    playButtonSize: [40.0, 40.0]   # Play button dimensions
+    stopButtonSize: [40.0, 40.0]   # Stop button dimensions
+    recordButtonSize: [40.0, 40.0] # Record button dimensions
+    buttonSpacing: 8.0             # Space between transport buttons
+    buttonBackground: "#28282d"    # Same as track buttons
+    labelHeight: 30.0              # Height of time/BPM labels
+    shadow: [0, 4, 8, 0, "#000000", 0.3]  # Subtle shadow
+
+  # Timeline
+  timeline:
+    rulerHeight: 40.0              # Height of timeline ruler
+    gridLineWidth: 1.0             # Width of grid lines
+    playheadWidth: 2.0             # Width of playhead indicator
+    selectionOpacity: 0.2          # Opacity of time selection
+
+  # Scrollbars
+  scrollbar:
+    width: 12.0                    # Scrollbar width
+    minThumbSize: 20.0             # Minimum thumb size
+    trackOpacity: 0.3              # Track opacity
+    thumbOpacity: 0.8              # Thumb opacity (faded white)
+    thumbColor: "#cccccc"          # Faded white thumb color
+    thumbHoverColor: "#e6e6e6"     # Lighter white on hover
+    thumbPressedColor: "#b3b3b3"   # Darker white when pressed
+    arrowColor: "#cccccc"          # Light gray arrows
+    arrowHoverColor: "#ffffff"     # White on hover
+    arrowPressedColor: "#999999"   # Darker grey when pressed
+
+# Advanced Settings
+advanced:
+  # Performance
+  enableAnimations: true           # Enable/disable animations
+  enableShadows: true              # Enable/disable shadows
+  enableGlowEffects: true          # Enable/disable glow effects
+
+  # Visual Quality
+  antialiasing: true               # Enable antialiasing
+  subpixelRendering: true          # Enable subpixel text rendering
+  highDPI: true                    # Enable high DPI support
+
+  # Accessibility
+  highContrast: false              # High contrast mode
+  reducedMotion: false             # Reduced motion for accessibility
+  largeText: false                 # Larger text for accessibility
+
+# Theme Variants
+themes:
+  light:
+    extends: "default"             # Extend default theme
+    colors:
+      backgroundPrimary: "#ffffff"
+      backgroundSecondary: "#f5f5f5"
+      textPrimary: "#000000"
+      textSecondary: "#666666"
+
+  highContrast:
+    extends: "default"
+    colors:
+      backgroundPrimary: "#000000"
+      backgroundSecondary: "#111111"
+      textPrimary: "#ffffff"
+      textSecondary: "#cccccc"
+      primary: "#ffff00"           # High contrast yellow

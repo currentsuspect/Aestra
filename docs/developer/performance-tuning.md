@@ -1,6 +1,6 @@
 # ⚡ Performance Tuning Guide
 
-This guide covers optimization techniques for maximizing Nomad DAW's performance, reducing latency, and improving frame rates.
+This guide covers optimization techniques for maximizing Aestra DAW's performance, reducing latency, and improving frame rates.
 
 ---
 
@@ -129,7 +129,7 @@ public:
 Use lock-free ring buffers for audio thread communication:
 
 ```cpp
-// In NomadCore/LockFreeRingBuffer.h
+// In AestraCore/LockFreeRingBuffer.h
 template<typename T, size_t Size>
 class LockFreeRingBuffer {
     // Single producer, single consumer
@@ -226,7 +226,7 @@ public:
 
 ### Adaptive FPS System
 
-Nomad uses adaptive FPS to balance responsiveness and efficiency:
+Aestra uses adaptive FPS to balance responsiveness and efficiency:
 
 ```cpp
 class AdaptiveFPSController {
@@ -486,7 +486,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 Enable LTO for better performance:
 
 ```cmake
-set_property(TARGET NOMAD PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+set_property(TARGET Aestra PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 ```
 
 **Result:** 5-15% performance improvement
@@ -496,12 +496,12 @@ set_property(TARGET NOMAD PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 Speed up compilation:
 
 ```cmake
-target_precompile_headers(NOMAD PRIVATE
+target_precompile_headers(Aestra PRIVATE
     <vector>
     <string>
     <memory>
     <algorithm>
-    "NomadCore/NomadCore.h"
+    "AestraCore/AestraCore.h"
 )
 ```
 
@@ -534,7 +534,7 @@ Advanced system-level profiling:
 1. Record trace:
    ```cmd
    wpr -start GeneralProfile -filemode
-   # Run Nomad
+   # Run Aestra
    wpr -stop trace.etl
    ```
 

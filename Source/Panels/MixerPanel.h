@@ -1,0 +1,45 @@
+// © 2025 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
+#pragma once
+
+#include "WindowPanel.h"
+#include "TrackManager.h"
+#include "../AestraUI/Core/NUIComponent.h"
+#include "NUIButton.h"
+#include <memory>
+#include <functional>
+
+namespace Aestra {
+class MixerViewModel;
+}
+
+namespace AestraUI {
+class UIMixerPanel;
+}
+
+namespace Aestra {
+namespace Audio {
+
+/**
+ * @brief Mixer Panel - Multi-track audio mixer
+ * Standardized as a native NUIComponent (v3.1)
+ */
+class MixerPanel : public WindowPanel {
+public:
+    MixerPanel(std::shared_ptr<TrackManager> trackManager);
+    ~MixerPanel() override = default;
+
+    // Mixer operations
+    void refreshChannels();
+    std::shared_ptr<MixerViewModel> getViewModel() const { return m_viewModel; }
+    std::shared_ptr<AestraUI::UIMixerPanel> getMixerUI() const { return m_newMixer; }
+
+private:
+    std::shared_ptr<TrackManager> m_trackManager;
+
+    // New mixer implementation (meters-only for now)
+    std::shared_ptr<Aestra::MixerViewModel> m_viewModel;
+    std::shared_ptr<AestraUI::UIMixerPanel> m_newMixer;
+};
+
+} // namespace Audio
+} // namespace Aestra

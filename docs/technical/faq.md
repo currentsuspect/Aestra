@@ -2,7 +2,7 @@
 
 ![FAQ](https://img.shields.io/badge/FAQ-Updated-blue)
 
-Common questions and answers for contributors, developers, and users of Nomad DAW.
+Common questions and answers for contributors, developers, and users of Aestra DAW.
 
 ## 📋 Table of Contents
 
@@ -15,39 +15,39 @@ Common questions and answers for contributors, developers, and users of Nomad DA
 
 ## 🌍 General Questions
 
-### What is Nomad DAW?
+### What is Aestra DAW?
 
-Nomad DAW is a modern digital audio workstation built with C++17, featuring:
+Aestra DAW is a modern digital audio workstation built with C++17, featuring:
 - Ultra-low latency audio engine with WASAPI support
-- GPU-accelerated custom UI framework (NomadUI)
+- GPU-accelerated custom UI framework (AestraUI)
 - Pattern-based workflow
 - Professional-grade audio processing
 - Planned AI integration (Muse)
 
-### Who develops Nomad?
+### Who develops Aestra?
 
-Nomad is developed by Dylan Makori in Kenya, with contributions from the open-source community. While the source code is publicly visible for transparency, Nomad is proprietary commercial software.
+Aestra is developed by Dylan Makori in Kenya, with contributions from the open-source community. While the source code is publicly visible for transparency, Aestra is proprietary commercial software.
 
-### Is Nomad free to use?
+### Is Aestra free to use?
 
-**Yes! Nomad Core is free forever.** The hybrid model:
-- ✅ **Nomad Core**: Completely free - full DAW with all essential features
+**Yes! Aestra Core is free forever.** The hybrid model:
+- ✅ **Aestra Core**: Completely free - full DAW with all essential features
 - 💰 **Premium Add-ons** (future): Muse AI and premium plugins require paid licenses
 - 👁️ Source code is publicly visible for transparency
 - 🎓 Student discounts will apply to premium add-ons
 - 🤝 Contributing to development is free and welcomed
 
-### What platforms does Nomad support?
+### What platforms does Aestra support?
 
 **Current support:**
 - ✅ Windows 10/11 (64-bit) - Primary platform
 - 🚧 Linux - In development
 - 📋 macOS - Planned for future
 
-### Is Nomad open-source?
+### Is Aestra open-source?
 
-No. Nomad uses the **NSSAL (Nomad Studios Source-Available License)** - a source-available license, not open-source. This means:
-- ✅ **Nomad Core is free to use** for all purposes
+No. Aestra uses the **ASSAL (Aestra Studios Source-Available License)** - a source-available license, not open-source. This means:
+- ✅ **Aestra Core is free to use** for all purposes
 - 👁️ You can view and study the source code
 - 🤝 You can contribute improvements
 - ❌ You cannot reuse the code in other projects
@@ -58,15 +58,15 @@ See [License Reference](LICENSE_REFERENCE.md) for complete details.
 
 ## 🔨 Building and Setup
 
-### How do I build Nomad from source?
+### How do I build Aestra from source?
 
 Follow our comprehensive [Building Guide](BUILDING.md):
 
 **Quick start (Windows):**
 ```powershell
-git clone https://github.com/currentsuspect/NOMAD.git
-cd NOMAD
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+git clone https://github.com/currentsuspect/Aestra.git
+cd Aestra
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 ```
 
@@ -85,13 +85,13 @@ cmake --build build --config Release --parallel
 - GCC 9+ or Clang 10+
 - ALSA, X11, and OpenGL development libraries
 
-### What is NOMAD_CORE_MODE?
+### What is Aestra_CORE_MODE?
 
-`NOMAD_CORE_MODE=ON` builds only the public core without premium features. This is required for community contributors since premium modules are in private repositories.
+`Aestra_CORE_MODE=ON` builds only the public core without premium features. This is required for community contributors since premium modules are in private repositories.
 
 ```bash
 # Public build (community contributors)
-cmake -S . -B build -DNOMAD_CORE_MODE=ON
+cmake -S . -B build -DAestra_CORE_MODE=ON
 
 # Full build (requires private repos - internal only)
 cmake -S . -B build
@@ -99,10 +99,10 @@ cmake -S . -B build
 
 ### Build fails with "private folder present" error?
 
-This is expected in public CI. Use `NOMAD_CORE_MODE=ON` to skip private folders:
+This is expected in public CI. Use `Aestra_CORE_MODE=ON` to skip private folders:
 
 ```bash
-cmake -S . -B build -DNOMAD_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
 ```
 
 ### How do I set up my development environment?
@@ -117,7 +117,7 @@ See [Contributing Guide](CONTRIBUTING.md) for detailed setup.
 
 ## 🤝 Contributing
 
-### How can I contribute to Nomad?
+### How can I contribute to Aestra?
 
 Several ways to contribute:
 1. **Report bugs** - Open issues on GitHub
@@ -131,15 +131,15 @@ See [Contributing Guide](CONTRIBUTING.md) for details.
 ### Do I need to sign a CLA?
 
 Yes. By submitting a pull request, you agree that:
-- All contributed code becomes property of Dylan Makori / Nomad DAW
+- All contributed code becomes property of Dylan Makori / Aestra DAW
 - You grant full rights to use, modify, and distribute your contributions
 - You waive ownership claims to your contributions
 
-This is necessary because Nomad is commercial software. See [Contributing Guide](CONTRIBUTING.md) for details.
+This is necessary because Aestra is commercial software. See [Contributing Guide](CONTRIBUTING.md) for details.
 
 ### What kind of contributions are accepted?
 
-**Public contributions** (in `nomad-core/`):
+**Public contributions** (in `Aestra-core/`):
 - ✅ Core audio engine improvements
 - ✅ UI framework enhancements
 - ✅ Bug fixes and optimizations
@@ -163,7 +163,7 @@ This is necessary because Nomad is commercial software. See [Contributing Guide]
    - Steps to reproduce
    - Expected vs actual behavior
    - Screenshots or error messages
-   - Nomad version
+   - Aestra version
 
 ### What code style should I follow?
 
@@ -185,7 +185,7 @@ Reviews depend on maintainer availability and PR complexity.
 
 ## 💻 Technical Questions
 
-### What audio drivers does Nomad support?
+### What audio drivers does Aestra support?
 
 **Windows:**
 - ✅ WASAPI (Exclusive and Shared modes)
@@ -205,16 +205,16 @@ Reviews depend on maintainer availability and PR complexity.
 
 Latency depends on buffer size, sample rate, and hardware.
 
-### Does Nomad support plugins?
+### Does Aestra support plugins?
 
 Not yet. Plugin support is planned:
 - 📋 VST3 hosting
 - 📋 AU hosting (macOS)
-- 📋 Native Nomad plugin format
+- 📋 Native Aestra plugin format
 
 ### How does the UI rendering work?
 
-NomadUI uses a custom immediate-mode rendering system:
+AestraUI uses a custom immediate-mode rendering system:
 - **OpenGL-based** rendering
 - **Adaptive FPS** (1-120 FPS based on activity)
 - **GPU-accelerated** for smooth 60+ FPS
@@ -224,16 +224,16 @@ See [Architecture Overview](ARCHITECTURE.md) for details.
 
 ### What's the threading model?
 
-Nomad uses multiple threads:
+Aestra uses multiple threads:
 - **Main Thread**: UI and application logic
 - **Audio Thread**: Real-time audio processing (lock-free)
 - **Loader Thread**: Async file I/O and caching
 
 See [Architecture Overview](ARCHITECTURE.md) for threading details.
 
-### Can I use Nomad in my commercial projects?
+### Can I use Aestra in my commercial projects?
 
-**Yes! Nomad Core is free for all commercial use.** This includes:
+**Yes! Aestra Core is free for all commercial use.** This includes:
 - ✅ Commercial music production
 - ✅ Client work and studio projects
 - ✅ Released tracks and albums
@@ -246,22 +246,22 @@ Only premium add-ons (Muse AI, premium plugins - future releases) will require p
 
 ## ⚖️ Licensing
 
-### What license is Nomad under?
+### What license is Aestra under?
 
-Nomad DAW is **proprietary commercial software**. The source code is visible but not open-source. See [License Reference](LICENSE_REFERENCE.md) for complete terms.
+Aestra DAW is **proprietary commercial software**. The source code is visible but not open-source. See [License Reference](LICENSE_REFERENCE.md) for complete terms.
 
-### Can I fork Nomad?
+### Can I fork Aestra?
 
 No. You cannot create forks, derivative works, or distribute modified versions. However:
 - You can contribute via pull requests
 - You can suggest features and improvements
 - You can study the code for educational purposes
 
-### Can I use Nomad code in my project?
+### Can I use Aestra code in my project?
 
 No. The code is proprietary and cannot be used in other projects. Any use requires explicit written permission from Dylan Makori.
 
-### Why is Nomad not open-source?
+### Why is Aestra not open-source?
 
 We chose a proprietary model to:
 - **Fund development** - Sustainable business model
@@ -363,4 +363,4 @@ Still have questions? Check these resources:
 
 ---
 
-[← Return to Nomad Docs Index](README.md)
+[← Return to Aestra Docs Index](README.md)
