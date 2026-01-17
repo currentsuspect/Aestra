@@ -41,9 +41,6 @@ public:
         if (!ptr) return;
         std::lock_guard<std::mutex> lock(m_mutex);
         m_zombies.push_back(std::static_pointer_cast<void>(ptr));
-
-        // Opportunistic cleanup
-        internalCleanup();
     }
 
     /**
