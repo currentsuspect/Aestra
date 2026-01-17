@@ -61,6 +61,9 @@ public:
     void setRecoveryDialog(std::shared_ptr<Aestra::RecoveryDialog> dialog);
     void setUnifiedHUD(std::shared_ptr<UnifiedHUD> hud);
 
+    // Dialogs getters
+    std::shared_ptr<Aestra::SettingsDialog> getSettingsDialog() { return m_settingsDialog; }
+
     // Menus
     void setMenuBar(std::shared_ptr<AestraUI::NUIMenuBar> menuBar);
     void showDropdownMenu(std::shared_ptr<AestraUI::NUIContextMenu> menu, float xOffset);
