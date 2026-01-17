@@ -1,9 +1,10 @@
 #include "Plugin/SamplerPlugin.h"
-#include "MiniAudioDecoder.h"
+#include "IO/MiniAudioDecoder.h"
+#include "GarbageCollector.h"
 #include <filesystem>
 #include <cmath>
 #include <algorithm>
-#include "../../AestraCore/include/AestraJSON.h" // [NEW]
+#include "AestraJSON.h"
 
 namespace Aestra {
 namespace Audio {
@@ -25,6 +26,9 @@ bool SamplerPlugin::initialize(double sampleRate, uint32_t maxBlockSize) {
 
 void SamplerPlugin::shutdown() {
     m_active = false;
+    // Force release of data to ensure cleanup
+    auto old = std::atomic_exchange(&m_data, std::shared_ptr<SampleData>(nullptr));
+    GarbageCollector::instance().release(old);
 }
 
 void SamplerPlugin::activate() {
@@ -68,11 +72,19 @@ bool SamplerPlugin::loadSample(const std::string& path) {
         return false;
     }
 
-    // Update State safely
-    std::lock_guard<std::mutex> lock(m_sampleMutex);
-    m_sampleData = std::move(data);
-    m_sampleRateSource = rate;
-    m_sampleChannels = channels;
+    // Prepare new data container
+    auto newData = std::make_shared<SampleData>();
+    newData->data = std::move(data);
+    newData->rate = rate;
+    newData->channels = channels;
+    newData->path = path;
+
+    // Atomic Swap (Thread-Safe, Lock-Free-ish)
+    // std::atomic_exchange uses standard atomics for shared_ptr
+    auto oldData = std::atomic_exchange(&m_data, newData);
+
+    // Safely dispose of old data via Garbage Collector (avoids delete on Audio Thread)
+    GarbageCollector::instance().release(oldData);
     
     return true;
 }
@@ -100,8 +112,9 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
         }
     }
     
-    std::unique_lock<std::mutex> lock(m_sampleMutex, std::try_to_lock);
-    if (!lock.owns_lock() || m_sampleData.empty()) return;
+    // Thread-safe access to sample data
+    auto currentData = std::atomic_load(&m_data);
+    if (!currentData || currentData->data.empty()) return;
 
     // Parameters
     float pitchParam = m_params[kParamPitch].load(std::memory_order_relaxed);
@@ -109,12 +122,15 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
     float pitchRatio = std::pow(2.0f, semitones / 12.0f);
     
     // Source Rate correction
-    double baseRate = (double)m_sampleRateSource / m_sampleRate;
+    double baseRate = (double)currentData->rate / m_sampleRate;
     double rate = baseRate * pitchRatio;
 
     // Events
     uint32_t eventIdx = 0;
     size_t eventCount = midiInput ? midiInput->getEventCount() : 0;
+
+    const auto& sampleVec = currentData->data;
+    uint32_t channels = currentData->channels;
 
     for (uint32_t i = 0; i < numFrames; ++i) {
         // Handle MIDI
@@ -145,7 +161,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
             }
             
             // Sample Lookup
-            if (v.position >= m_sampleData.size() / m_sampleChannels) {
+            if (v.position >= sampleVec.size() / channels) {
                 v.active = false;
                 continue;
             }
@@ -155,15 +171,15 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
             uint64_t idx = (uint64_t)pos;
             double frac = pos - idx;
             
-            if (idx * m_sampleChannels + 1 < m_sampleData.size()) {
-                float sL = m_sampleData[idx * m_sampleChannels];
-                float sR = (m_sampleChannels > 1) ? m_sampleData[idx * m_sampleChannels + 1] : sL;
+            if (idx * channels + 1 < sampleVec.size()) {
+                float sL = sampleVec[idx * channels];
+                float sR = (channels > 1) ? sampleVec[idx * channels + 1] : sL;
                 
                 // Next sample
                 float nL = 0.0f, nR = 0.0f;
-                if ((idx + 1) * m_sampleChannels + 1 < m_sampleData.size()) {
-                    nL = m_sampleData[(idx + 1) * m_sampleChannels];
-                    nR = (m_sampleChannels > 1) ? m_sampleData[(idx + 1) * m_sampleChannels + 1] : nL;
+                if ((idx + 1) * channels + 1 < sampleVec.size()) {
+                    nL = sampleVec[(idx + 1) * channels];
+                    nR = (channels > 1) ? sampleVec[(idx + 1) * channels + 1] : nL;
                 }
                 
                 float outL = sL + frac * (nL - sL);
@@ -190,15 +206,12 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event) {
     uint8_t velocity = event.data[2];
 
     if (status == 0x90 && velocity > 0) { // Note On
-        // [FIX] Removed one-shot restriction - allow polyphonic playback
-        // Multiple notes can now play simultaneously
-
         // Find free voice
         Voice* freeVoice = nullptr;
         Voice* oldestRelease = nullptr;
         Voice* oldestActive = nullptr;
         double maxReleaseTime = -1.0;
-        double maxActiveTime = -1.0; // approximation via position
+        double maxActiveTime = -1.0;
 
         for (auto& v : m_voices) {
             if (!v.active) {
@@ -218,7 +231,6 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event) {
             }
         }
         
-        // Steal interaction (Released > Oldest Active)
         if (!freeVoice) {
             freeVoice = oldestRelease ? oldestRelease : oldestActive;
             if (!freeVoice) freeVoice = &m_voices[0]; // Fallback
@@ -255,7 +267,6 @@ float SamplerPlugin::getEnvelopeLevel(Voice& v, double dt) {
     float s = m_params[kParamSustain].load(std::memory_order_relaxed);
     float r = m_params[kParamRelease].load(std::memory_order_relaxed);
     
-    // Min constraints
     a = std::max(a, 0.001f);
     d = std::max(d, 0.001f);
     r = std::max(r, 0.001f);
@@ -297,14 +308,12 @@ float SamplerPlugin::getEnvelopeLevel(Voice& v, double dt) {
     return v.currentGain;
 }
 
-
 //==============================================================================
 // Parameter Management
 //==============================================================================
 
 std::vector<PluginParameter> SamplerPlugin::getParameters() const {
     std::vector<PluginParameter> params;
-    // Struct: id, name, shortName, unit, defaultValue, minValue, maxValue ...
     params.push_back({ kParamAttack,  "Attack",  "Att", "s",  0.01f, 0.0f,  2.0f });
     params.push_back({ kParamDecay,   "Decay",   "Dec", "s",  0.1f,  0.0f,  2.0f });
     params.push_back({ kParamSustain, "Sustain", "Sus", "",   1.0f,  0.0f,  1.0f });
@@ -329,7 +338,7 @@ void SamplerPlugin::setParameter(uint32_t id, float value) {
 std::string SamplerPlugin::getParameterDisplay(uint32_t id) const {
     if (id >= kParamCount) return "";
     float val = m_params[id].load();
-    return std::to_string(val); // Simple display
+    return std::to_string(val);
 }
 
 std::vector<uint8_t> SamplerPlugin::saveState() const {
@@ -342,12 +351,11 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
      }
      json.set("params", pArr);
      
-     // Sample
+     // Sample Path
      {
-         // Access mutable mutex in const function
-         std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_sampleMutex));
-         if (!m_loadedSamplePath.empty()) {
-             json.set("samplePath", Aestra::JSON(m_loadedSamplePath));
+         auto current = std::atomic_load(&m_data);
+         if (current && !current->path.empty()) {
+             json.set("samplePath", Aestra::JSON(current->path));
          }
      }
      
@@ -359,11 +367,9 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
     if (state.empty()) return false;
     std::string s(state.begin(), state.end());
     
-    // Simple JSON parsing
     Aestra::JSON json = Aestra::JSON::parse(s);
     if (!json.isObject()) return false;
     
-    // Params
     if (json["params"].isArray()) {
         const auto& pArr = json["params"];
         for (size_t i = 0; i < pArr.size() && i < kParamCount; ++i) {
@@ -371,12 +377,8 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
         }
     }
     
-    // Sample
     if (json.has("samplePath")) {
         std::string path = json["samplePath"].asString();
-        // Avoid reloading if same path to save IO
-        // Warning: Requires lock to read current path safely or just reload
-        // loadSample handles empty path checks
         if (!path.empty()) {
             loadSample(path);
         }
