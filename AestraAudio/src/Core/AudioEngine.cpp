@@ -1844,42 +1844,15 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
 
         
 void AudioEngine::panic() {
-    // 1. Force Silence (stops renderGraph calls and mutes output immediately)
+    // Aestra Panic Logic:
+    // Instead of locking mutexes (which can glitch audio thread) or iterating graphs unsafely,
+    // we simply request a Hard Stop. The audio thread (processBlock) will see this flag
+    // and perform the silence/reset/flush operations safely in the next block.
+    
+    m_transportHardStopRequested.store(true, std::memory_order_release);
+    
+    // We also set fade state to silent immediately for visual feedback / safety backup
     m_fadeState = FadeState::Silent;
-
-    // 2. Reset all plugins (Main Thread)
-    // We lock the graph mutex to ensure we don't access a graph that's being swapped
-    std::lock_guard<std::mutex> lock(m_graphMutex);
-    
-    // Note: accessing activeGraph() from Main Thread is safe given we hold the mutex
-    // that protects the swap.
-    const AudioGraph& graph = m_state.activeGraph();
-    
-    for (const auto& track : graph.tracks) {
-        if (track.effectChain) {
-            track.effectChain->reset(); 
-        }
-    }
-    
-    // 3. [FIX] Reset all Arsenal unit samplers (kill playing voices)
-    auto* unitMgr = m_unitManager.load(std::memory_order_acquire);
-    if (unitMgr) {
-        auto snapshot = unitMgr->getAudioSnapshot();
-        if (snapshot) {
-            for (const auto& unitState : snapshot->units) {
-                if (unitState.plugin) {
-                    auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(unitState.plugin);
-                    if (sampler) {
-                        sampler->requestHardResetVoices();
-                    }
-                }
-            }
-        }
-    }
-    
-    // 4. Flush pattern engine
-    auto* pe = m_patternEngine.load(std::memory_order_relaxed);
-    if (pe) pe->flush();
 }
 
 void AudioEngine::requestVoiceResetOnPatternChange() {

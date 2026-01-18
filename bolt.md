@@ -29,6 +29,22 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### GPU Audio Offloading
+
+- **Innovation**: Offload massive convolution reverbs and spectral processing to the GPU using Vulkan Compute or CUDA.
+- **Strategy**: Use a large ring-buffer to transfer audio blocks to GPU memory, process in parallel batches, and read back. Adds latency but enables thousands of convolution instances.
+- **Benefit**: Frees up CPU for low-latency synthesis and critical path processing.
+
+### Just-In-Time DSP Compilation
+
+- **Innovation**: Compile user-scripted DSP or modulation graphs into machine code at runtime using LLVM or a custom JIT.
+- **Benefit**: "Native" performance for user scripts (Lua/Python/Graph) without C++ recompilation.
+
+### Cloud Collaboration Sync
+
+- **Innovation**: Real-time project synchronization using operational transform (OT) or CRDTs (Conflict-free Replicated Data Types) for track states.
+- **Benefit**: Google Docs-style collaboration on DAW projects.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -39,9 +55,9 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 ### Lock-Free Garbage Collection
 
-- **Status**: Missing global GC for audio thread resources.
-- **Plan**: Implement a `GarbageCollector` singleton using the "Zombie Queue" pattern.
-- **Benefit**: Eliminates all mutexes from `processBlock` paths (specifically fixing `SamplerPlugin`).
+- **Status**: Implemented for `SamplerPlugin` sample data.
+- **Plan**: Extend `GarbageCollector` usage to all dynamic audio resources (EffectChains, TrackBuffers).
+- **Benefit**: Eliminates all mutexes from `processBlock` paths.
 
 ### Zero-Allocation UI
 
@@ -67,8 +83,10 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 ### Real-Time Safety
 
-- **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
-- **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
+- **Violation**: `SamplerPlugin` uses `std::atomic_exchange` on `std::shared_ptr` (potential lock).
+- **Fix**: Replaced with `std::atomic<SampleData*>` (raw pointer) + Deferred Reclamation (GC) + `std::shared_ptr` holder on main thread.
+- **Violation**: `AudioEngine::panic` locked `m_graphMutex` and iterated graph.
+- **Fix**: Replaced with `m_transportHardStopRequested` atomic flag. `processBlock` handles silence/flush safely.
 - **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
 
 ---

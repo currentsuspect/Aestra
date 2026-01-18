@@ -26,9 +26,15 @@ bool SamplerPlugin::initialize(double sampleRate, uint32_t maxBlockSize) {
 
 void SamplerPlugin::shutdown() {
     m_active = false;
+
+    // Clear RT pointer first
+    m_activeData.store(nullptr, std::memory_order_release);
+
     // Force release of data to ensure cleanup
-    auto old = std::atomic_exchange(&m_data, std::shared_ptr<SampleData>(nullptr));
-    GarbageCollector::instance().release(old);
+    auto old = std::atomic_exchange(&m_dataHolder, std::shared_ptr<SampleData>(nullptr));
+    if (old) {
+        GarbageCollector::instance().release(old);
+    }
 }
 
 void SamplerPlugin::activate() {
@@ -79,12 +85,19 @@ bool SamplerPlugin::loadSample(const std::string& path) {
     newData->channels = channels;
     newData->path = path;
 
-    // Atomic Swap (Thread-Safe, Lock-Free-ish)
-    // std::atomic_exchange uses standard atomics for shared_ptr
-    auto oldData = std::atomic_exchange(&m_data, newData);
+    // 1. Update RT pointer (atomic store)
+    m_activeData.store(newData.get(), std::memory_order_release);
+
+    // 2. Swap ownership in non-RT holder
+    // The previous shared_ptr is returned, and we pass it to GC.
+    // This ensures that if RT thread was using the old pointer, the object
+    // stays alive until GC (which runs later) destroys it.
+    auto oldData = std::atomic_exchange(&m_dataHolder, newData);
 
     // Safely dispose of old data via Garbage Collector (avoids delete on Audio Thread)
-    GarbageCollector::instance().release(oldData);
+    if (oldData) {
+        GarbageCollector::instance().release(oldData);
+    }
     
     return true;
 }
@@ -112,8 +125,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
         }
     }
     
-    // Thread-safe access to sample data
-    auto currentData = std::atomic_load(&m_data);
+    // Thread-safe access to sample data (raw pointer)
+    SampleData* currentData = m_activeData.load(std::memory_order_acquire);
     if (!currentData || currentData->data.empty()) return;
 
     // Parameters
@@ -361,9 +374,9 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
      }
      json.set("params", pArr);
      
-     // Sample Path
+     // Sample Path (from holder)
      {
-         auto current = std::atomic_load(&m_data);
+         auto current = std::atomic_load(&m_dataHolder);
          if (current && !current->path.empty()) {
              json.set("samplePath", Aestra::JSON(current->path));
          }
