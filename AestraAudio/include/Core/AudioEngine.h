@@ -452,7 +452,7 @@ private:
     
     // Fade state machine
     enum class FadeState { None, FadingIn, FadingOut, Silent };
-    FadeState m_fadeState{FadeState::None};
+    std::atomic<FadeState> m_fadeState{FadeState::None};
     uint32_t m_fadeSamplesRemaining{0};
     static constexpr uint32_t FADE_OUT_SAMPLES = 1024;
     static constexpr uint32_t FADE_IN_SAMPLES = 256;
@@ -621,6 +621,10 @@ private:
 
     // Guard for resource loading (e.g., metronome samples)
     std::atomic<bool> m_resourcesLoading{false};
+
+    // Flag indicating if the audio thread is currently inside the graph rendering block.
+    // Used by panic() to ensure it doesn't reset plugins while they are being processed.
+    std::atomic<bool> m_isRendering{false};
 };
 
 } // namespace Audio

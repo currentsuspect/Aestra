@@ -184,18 +184,18 @@ void AudioEngine::applyPendingCommands() {
 
         if (transportPlaying && sawRestartEdge) {
             // Always fade-in when starting playback (prevents clicks/buzz)
-            m_fadeState = FadeState::FadingIn;
+            m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
             m_fadeSamplesRemaining = FADE_IN_SAMPLES;
-        } else if (transportPlaying && m_fadeState == FadeState::Silent) {
+        } else if (transportPlaying && m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent) {
             // Fade-in from silent state, don't jump to full volume
-            m_fadeState = FadeState::FadingIn;
+            m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
             m_fadeSamplesRemaining = FADE_IN_SAMPLES;
-        } else if (transportPlaying && m_fadeState == FadeState::FadingOut) {
+        } else if (transportPlaying && m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
             // Interrupted fade-out: switch to fade-in immediately
             // Use remaining fade-out samples as starting point for fade-in
             // This creates a smooth crossfade effect
             uint32_t fadeProgress = FADE_OUT_SAMPLES - m_fadeSamplesRemaining;
-            m_fadeState = FadeState::FadingIn;
+            m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
             // Start fade-in from where fade-out left off (inverted progress)
             m_fadeSamplesRemaining = std::min(fadeProgress, FADE_IN_SAMPLES);
         }
@@ -323,15 +323,15 @@ void AudioEngine::processBlock(float* outputBuffer,
         }
 
         // Force silence immediately.
-        m_fadeState = FadeState::Silent;
+        m_fadeState.store(FadeState::Silent, std::memory_order_relaxed);
     }
 
     // State transitions
     bool isPlaying = m_transportPlaying.load(std::memory_order_relaxed);
     // [CHANGED] Disable global fade-out to allow effects tails to ring out.
     // if (wasPlaying && !isPlaying &&
-    //     m_fadeState != FadeState::FadingOut && m_fadeState != FadeState::Silent) {
-    //     m_fadeState = FadeState::FadingOut;
+    //     m_fadeState.load(std::memory_order_relaxed) != FadeState::FadingOut && m_fadeState.load(std::memory_order_relaxed) != FadeState::Silent) {
+    //     m_fadeState.store(FadeState::FadingOut, std::memory_order_relaxed);
     //     m_fadeSamplesRemaining = FADE_OUT_SAMPLES;
     // }
     
@@ -371,8 +371,9 @@ void AudioEngine::processBlock(float* outputBuffer,
     // This prevents the audio from jumping to full volume instantly → no clicks
     // [FIX] Also critical for recovering from Panic (Silent) state
     if (isPlaying) {
-        if (m_fadeState == FadeState::Silent || (!wasPlaying && m_fadeState != FadeState::FadingIn)) {
-            m_fadeState = FadeState::FadingIn;
+        FadeState s = m_fadeState.load(std::memory_order_relaxed);
+        if (s == FadeState::Silent || (!wasPlaying && s != FadeState::FadingIn)) {
+            m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
             m_fadeSamplesRemaining = FADE_IN_SAMPLES;
         }
     }
@@ -407,7 +408,7 @@ void AudioEngine::processBlock(float* outputBuffer,
     }
 
     // Fast path: silent (only for normal DAW mode, not audition)
-    if (m_fadeState == FadeState::Silent) {
+    if (m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent) {
         std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * m_outputChannels.load(std::memory_order_relaxed) * sizeof(float));
         // Clear meters so UI doesn't freeze on the last loud block.
         m_peakL.store(0.0f, std::memory_order_relaxed);
@@ -426,6 +427,9 @@ void AudioEngine::processBlock(float* outputBuffer,
         RESTORE_DENORMALS
         return;
     }
+
+    // Mark start of rendering section
+    m_isRendering.store(true, std::memory_order_release);
 
     // Render to double-precision master buffer
     const AudioGraph& graph = m_state.activeGraph();
@@ -452,7 +456,7 @@ void AudioEngine::processBlock(float* outputBuffer,
     uint32_t loopSplitFrame = numFrames; // Default: no split
     uint64_t loopStartSample = 0;
     
-    if (playing || m_fadeState == FadeState::FadingOut) {
+    if (playing || m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
         nextGlobalPos += numFrames;
         
         if (loopEnabled) {
@@ -553,6 +557,9 @@ void AudioEngine::processBlock(float* outputBuffer,
         // Normal
         processArsenalUnits(numFrames, 0, currentGlobalPos);
     }
+
+    // Mark end of rendering section
+    m_isRendering.store(false, std::memory_order_release);
 
     // === Test Tone Injection ===
     if (m_testToneEnabled.load(std::memory_order_relaxed)) {
@@ -796,11 +803,12 @@ void AudioEngine::processBlock(float* outputBuffer,
     }
 
     // Fade envelopes (short ramps prevent clicks on stop/seek)
-    if (m_fadeState == FadeState::FadingIn) {
+    FadeState s = m_fadeState.load(std::memory_order_relaxed);
+    if (s == FadeState::FadingIn) {
         const double fadeTotal = static_cast<double>(FADE_IN_SAMPLES);
         for (uint32_t i = 0; i < numFrames; ++i) {
             if (m_fadeSamplesRemaining == 0) {
-                m_fadeState = FadeState::None;
+                m_fadeState.store(FadeState::None, std::memory_order_relaxed);
                 break;
             }
             const double progress = 1.0 - (static_cast<double>(m_fadeSamplesRemaining) / fadeTotal);
@@ -809,13 +817,13 @@ void AudioEngine::processBlock(float* outputBuffer,
             outputBuffer[i * 2 + 1] *= static_cast<float>(fadeGain);
             --m_fadeSamplesRemaining;
         }
-    } else if (m_fadeState == FadeState::FadingOut) {
+    } else if (s == FadeState::FadingOut) {
         const double fadeTotal = static_cast<double>(FADE_OUT_SAMPLES);
         for (uint32_t i = 0; i < numFrames; ++i) {
             if (m_fadeSamplesRemaining == 0) {
                 std::memset(outputBuffer + i * 2, 0,
                             static_cast<size_t>(numFrames - i) * m_outputChannels.load(std::memory_order_relaxed) * sizeof(float));
-                m_fadeState = FadeState::Silent;
+                m_fadeState.store(FadeState::Silent, std::memory_order_relaxed);
                 break;
             }
             const double t = static_cast<double>(m_fadeSamplesRemaining) / fadeTotal;
@@ -859,7 +867,7 @@ void AudioEngine::processBlock(float* outputBuffer,
     }
 
     // Advance position (Atomic update to pre-calculated next position)
-    if (m_transportPlaying.load(std::memory_order_relaxed) || m_fadeState == FadeState::FadingOut) {
+    if (m_transportPlaying.load(std::memory_order_relaxed) || m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
         
         m_globalSamplePos.store(nextGlobalPos, std::memory_order_relaxed);
         
@@ -1041,6 +1049,9 @@ AudioEngine::AudioEngine() {
         g_audioEngineInstance = this;
     }
     Aestra::Log::info("[AudioEngine] Created (Original Ctor). Ptr: " + std::to_string(reinterpret_cast<uintptr_t>(this)));
+
+    // [FIX] Precompute interpolation tables to avoid RT allocation/locking
+    Interpolators::precomputeTables();
     
     // Initialize default buffer config
     m_outputChannels.store(2);
@@ -1844,24 +1855,37 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
 
         
 void AudioEngine::panic() {
-    // 1. Force Silence (stops renderGraph calls and mutes output immediately)
-    m_fadeState = FadeState::Silent;
+    // 1. Request Hard Stop (RT thread will handle silence and safe reset)
+    m_transportHardStopRequested.store(true, std::memory_order_release);
+    m_fadeState.store(FadeState::Silent, std::memory_order_release);
 
-    // 2. Reset all plugins (Main Thread)
-    // We lock the graph mutex to ensure we don't access a graph that's being swapped
+    // 2. Wait for RT thread to exit graph rendering
+    // This prevents race conditions where we might reset a plugin while it's processing.
+    // spin-wait is acceptable here as panic is an exceptional UI action.
+    int retries = 0;
+    while (m_isRendering.load(std::memory_order_acquire)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        if (++retries > 100) {
+            Aestra::Log::error("[AudioEngine] Panic timed out waiting for RT thread.");
+            break;
+        }
+    }
+
+    // 3. Safe Cleanup (Main Thread)
+    // Now that RT is confirmed out of the graph (or we timed out), we can do heavier cleanup.
+    // We lock the graph mutex to ensure we don't access a graph that's being swapped.
     std::lock_guard<std::mutex> lock(m_graphMutex);
     
-    // Note: accessing activeGraph() from Main Thread is safe given we hold the mutex
-    // that protects the swap.
     const AudioGraph& graph = m_state.activeGraph();
     
+    // We only reset if we successfully stopped RT, or forced it.
     for (const auto& track : graph.tracks) {
         if (track.effectChain) {
             track.effectChain->reset(); 
         }
     }
     
-    // 3. [FIX] Reset all Arsenal unit samplers (kill playing voices)
+    // Reset Arsenal unit samplers
     auto* unitMgr = m_unitManager.load(std::memory_order_acquire);
     if (unitMgr) {
         auto snapshot = unitMgr->getAudioSnapshot();
@@ -1877,7 +1901,7 @@ void AudioEngine::panic() {
         }
     }
     
-    // 4. Flush pattern engine
+    // Flush pattern engine
     auto* pe = m_patternEngine.load(std::memory_order_relaxed);
     if (pe) pe->flush();
 }

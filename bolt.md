@@ -29,6 +29,26 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### GPU Audio Offloading
+
+- **Innovation**: Use Vulkan Compute Shaders for massive parallel DSP tasks (Convolution Reverbs, Spectral Processing).
+- **Benefit**: Offload heavy lifting from CPU, enabling thousands of convolution channels.
+
+### JIT DSP Compilation
+
+- **Innovation**: Compile DSP graphs to machine code at runtime (using LLVM or similar) to eliminate virtual function overhead in `EffectChain`.
+- **Benefit**: 2-3x performance boost for complex chains by inlining processing calls.
+
+### Cloud Collaboration Sync
+
+- **Innovation**: CRDT-based real-time project synchronization.
+- **Benefit**: Google Docs-style multi-user editing for DAW projects.
+
+### Live Coding REPL
+
+- **Innovation**: Embed Lua or Python for real-time scripting of MIDI generation and audio routing.
+- **Benefit**: "Live Coding" performances and rapid prototyping of algorithmic composition.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -69,7 +89,10 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
 - **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
-- **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+- **Violation**: `AudioEngine::panic()` caused data race on `m_fadeState` and potentially reset active plugins concurrently with `processBlock`.
+- **Fix**: Implemented `m_transportHardStopRequested` flag, atomic `m_fadeState`, and `m_isRendering` synchronization flag to safely quiesce the audio thread before resetting state.
+- **Violation**: `AudioEngine` initialized `Interpolators` lazily, risking RT allocation.
+- **Fix**: Added explicit `Interpolators::precomputeTables()` in constructor.
 
 ---
 *Signed: Bolt*
