@@ -7,7 +7,7 @@
 #include "TrackUIComponent.h"
 #include "PianoRollPanel.h"
 #include "MixerPanel.h"
-#include "StepSequencerPanel.h"
+// Sequencer panel include removed (replaced by Arsenal)
 #include "TimelineMinimapBar.h"
 #include "TimelineMinimapModel.h"
 #include "TimelineSummaryCache.h"

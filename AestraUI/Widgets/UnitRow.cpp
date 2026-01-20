@@ -69,25 +69,35 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     auto bounds = getBounds();
     auto& theme = NUIThemeManager::getInstance();
     
-    // === Premium Card Style v2 ===
+    // === Premium Panel Style v3 (Deep Glass) ===
     NUIRect cardBounds = bounds;
-    cardBounds.height -= 4.0f; // Gap at bottom for visual separation
+    cardBounds.height -= 8.0f; // More spacing between rows
     
-    // Background: Rich dark card with subtle depth
-    NUIColor cardBg = theme.getColor("surfaceRaised");
-    if (m_isHovered) {
-        cardBg = cardBg.lightened(0.06f);
+    float radius = theme.getRadius("radiusL");
+
+    // Shadow/Glow behind the row
+    if (m_isHovered || m_isDragging) {
+        renderer.drawShadow(cardBounds, 0.0f, 4.0f, 16.0f, theme.getColor("primary").withAlpha(0.2f));
+    } else {
+        renderer.drawShadow(cardBounds, 0.0f, 2.0f, 8.0f, NUIColor::black().withAlpha(0.5f));
     }
-    if (m_isDragging) {
-        cardBg = cardBg.lightened(0.10f);
-    }
+
+    // Glass Background
+    // Glass Background
+    // Use 'surfaceTertiary' (Glass Surface) which is 0.15f grey, or 'glassHover' for transparency.
+    // For rows, we want them to feel like plates floating on the void.
+    // Let's use a custom glass color derived from panel background but with alpha.
+    NUIColor cardBg = theme.getColor("surfaceTertiary").withAlpha(0.6f); 
+    if (m_isHovered) cardBg = cardBg.lightened(0.1f).withAlpha(0.7f);
     
-    renderer.fillRoundedRect(cardBounds, 8.0f, cardBg);
+    renderer.fillRoundedRect(cardBounds, radius, cardBg);
     
-    // Subtle border
-    NUIColor borderColor = m_isHovered ? theme.getColor("borderSubtle").lightened(0.1f) 
-                                        : theme.getColor("borderSubtle");
-    renderer.strokeRoundedRect(cardBounds, 8.0f, 1.0f, borderColor);
+    // Glass Border
+    // Glass Border
+    NUIColor borderColor = theme.getColor("glassBorder"); // 0.09f white
+    if (m_isHovered) borderColor = theme.getColor("accentPrimary").withAlpha(0.5f);
+    
+    renderer.strokeRoundedRect(cardBounds, radius, 1.0f, borderColor);
     
     // === Unit Accent Color (from unit's color) ===
     float r = ((m_color >> 16) & 0xFF) / 255.0f;
@@ -99,15 +109,16 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     NUIRect dragRect(cardBounds.x, cardBounds.y, DRAG_HANDLE_WIDTH, cardBounds.height);
     drawDragHandle(renderer, dragRect);
     
-    // === Glowing Color Strip ===
-    float stripX = cardBounds.x + DRAG_HANDLE_WIDTH + 2.0f;
-    NUIRect stripRect(stripX, cardBounds.y + 6.0f, COLOR_STRIP_WIDTH, cardBounds.height - 12.0f);
-    renderer.fillRoundedRect(stripRect, 2.5f, accentColor);
+    // === Glowing Neon Strip ===
+    float stripX = cardBounds.x + DRAG_HANDLE_WIDTH + 4.0f;
+    NUIRect stripRect(stripX, cardBounds.y + 10.0f, 4.0f, cardBounds.height - 20.0f);
     
-    // Outer glow for enabled units
+    // Inner light
+    renderer.fillRoundedRect(stripRect, 2.0f, accentColor);
+    
+    // Outer neon glow
     if (m_isEnabled) {
-        NUIRect glowRect(stripRect.x - 2, stripRect.y - 2, stripRect.width + 4, stripRect.height + 4);
-        renderer.strokeRoundedRect(glowRect, 3.5f, 2.0f, accentColor.withAlpha(0.35f));
+        renderer.drawShadow(stripRect, 0, 0, 8.0f, accentColor.withAlpha(0.8f));
     }
     
     // === Control Block (left side controls) ===
@@ -192,14 +203,18 @@ void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
     NUIColor textColor = active ? NUIColor(0.0f, 0.0f, 0.0f, 1.0f) : theme.getColor("textSecondary");
     NUIColor borderColor = active ? bgColor : theme.getColor("textDisabled");
     
-    // Rounded rectangle button
-    renderer.fillRoundedRect(bounds, 4.0f, bgColor);
-    if (!active) {
-        renderer.strokeRoundedRect(bounds, 4.0f, 1.0f, borderColor);
+    // Circular Button
+    float radius = theme.getRadius("radiusXS") * 2.0f; 
+    renderer.fillRoundedRect(bounds, radius, bgColor);
+    // Glow if active
+    if (active) {
+        renderer.drawShadow(bounds, 0, 0, 8.0f, bgColor.withAlpha(0.6f));
+    } else {
+        renderer.strokeRoundedRect(bounds, radius, 1.0f, borderColor);
     }
     
     // "M" label centered
-    renderer.drawTextCentered("M", bounds, 11.0f, textColor);
+    renderer.drawTextCentered("M", bounds, 10.0f, textColor);
 }
 
 void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
@@ -209,14 +224,18 @@ void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
     NUIColor textColor = active ? NUIColor(0.0f, 0.0f, 0.0f, 1.0f) : theme.getColor("textSecondary");
     NUIColor borderColor = active ? bgColor : theme.getColor("textDisabled");
     
-    // Rounded rectangle button
-    renderer.fillRoundedRect(bounds, 4.0f, bgColor);
-    if (!active) {
-        renderer.strokeRoundedRect(bounds, 4.0f, 1.0f, borderColor);
+    // Circular Button
+    float radius = theme.getRadius("radiusXS") * 2.0f; 
+    renderer.fillRoundedRect(bounds, radius, bgColor);
+    // Glow if active
+    if (active) {
+        renderer.drawShadow(bounds, 0, 0, 8.0f, bgColor.withAlpha(0.6f));
+    } else {
+        renderer.strokeRoundedRect(bounds, radius, 1.0f, borderColor);
     }
     
     // "S" label centered
-    renderer.drawTextCentered("S", bounds, 11.0f, textColor);
+    renderer.drawTextCentered("S", bounds, 10.0f, textColor);
 }
 
 void UnitRow::drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
@@ -362,6 +381,9 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     // We'll rely on manual visibility check.
     
     // === Render Each Step Pad ===
+    // === Render Each Step Pad (Neon Grid) ===
+    float padRadius = theme.getRadius("radiusS");
+    
     for (int i = 0; i < m_stepCount; ++i) {
         float stepX = bounds.x + (i * stepWidth) + (stepWidth - padSize) / 2.0f - m_scrollX;
         
@@ -371,42 +393,42 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         
         NUIRect padRect(stepX, gridY, padSize, padSize);
         
-        // Visual hierarchy: bar/beat markers
+        // Visual hierarchy markers
         bool isBarStart = (i % 4 == 0);
-        bool isFirstBeat = (i == 0);
+        bool isHovered = (i == m_hoveredStep);
         
-        // Inactive pad background
-        NUIColor bgColor = stepInactiveColor;
-        if (isFirstBeat) {
-            bgColor = bgColor.lightened(0.10f);
-        } else if (isBarStart) {
-            bgColor = bgColor.lightened(0.05f);
-        }
-        
-        // Hover effect
-        if (i == m_hoveredStep) {
-            bgColor = bgColor.lightened(0.2f);
-        }
-        
-        // Draw pad base
-        renderer.fillRoundedRect(padRect, 4.0f, bgColor);
-        
-        // Draw active state
         bool isActive = std::find(activeSteps.begin(), activeSteps.end(), i) != activeSteps.end();
+
         if (isActive) {
-            renderer.fillRoundedRect(padRect, 4.0f, stepActiveColor);
+            // == ACTIVE PAD (ON) ==
+            // Filled Neon
+            renderer.fillRoundedRect(padRect, padRadius, unitAccent);
+            // Inner Highlight
+            renderer.fillRoundedRect(NUIAligned(padRect, 2,2,2, padRect.height/2), padRadius-1, 
+                                     NUIColor::white().withAlpha(0.3f));
+            // Glow
+            renderer.drawShadow(padRect, 0, 0, 10.0f, unitAccent.withAlpha(0.6f));
+        } else {
+            // == INACTIVE PAD (OFF) ==
+            // Empty Glass Style
+            NUIColor padBg = theme.getColor("surfaceLight").withAlpha(0.3f);
             
-            NUIRect shineRect(padRect.x + 2, padRect.y + 2, padSize - 4, padSize / 3);
-            renderer.fillRoundedRect(shineRect, 2.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.25f));
+            if (isHovered) {
+                padBg = unitAccent.withAlpha(0.2f);
+                renderer.drawShadow(padRect, 0, 0, 4.0f, unitAccent.withAlpha(0.2f));
+            } else if (isBarStart) {
+                padBg = theme.getColor("surfaceLight").withAlpha(0.5f);
+            }
             
-            NUIRect glowRect(padRect.x - 2, padRect.y - 2, padSize + 4, padSize + 4);
-            renderer.strokeRoundedRect(glowRect, 5.0f, 2.0f, stepGlowColor);
+            renderer.fillRoundedRect(padRect, padRadius, padBg);
+            
+            // Border
+            NUIColor borderColor = theme.getColor("border");
+            if (isBarStart) borderColor = borderColor.withAlpha(0.3f);
+            if (isHovered) borderColor = unitAccent.withAlpha(0.5f);
+            
+            renderer.strokeRoundedRect(padRect, padRadius, 1.0f, borderColor);
         }
-        
-        // Border with hierarchy
-        NUIColor borderColor = isBarStart ? theme.getColor("borderSubtle").lightened(0.15f)
-                                          : theme.getColor("borderSubtle").withAlpha(0.4f);
-        renderer.strokeRoundedRect(padRect, 4.0f, 1.0f, borderColor);
     }
 }
 

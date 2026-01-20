@@ -204,13 +204,14 @@ void TrackUIComponent::updateUI() {
 
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
 
-    // Standard Glassy Look for Inactive State (Grey Glass)
-    AestraUI::NUIColor inactiveBg = themeManager.getColor("textSecondary").withAlpha(0.15f);
-    AestraUI::NUIColor inactiveHover = themeManager.getColor("textSecondary").withAlpha(0.25f);
+    // Standard Glassy Look for Inactive State (Pure White Glass - no grey contamination)
+    AestraUI::NUIColor inactiveBg = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.04f);
+    AestraUI::NUIColor inactiveHover = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
     AestraUI::NUIColor inactiveText = themeManager.getColor("textSecondary");
 
     if (m_muteButton) {
         m_muteButton->setToggled(m_channel->isMuted());
+        m_muteButton->setGlowEnabled(true); // Enable Neon Glow
         
         if (m_channel->isMuted()) {
             // Active: Strong Neon Amber (Mute)
@@ -219,16 +220,19 @@ void TrackUIComponent::updateUI() {
             m_muteButton->setHoverColor(themeManager.getColor("accentAmber").withAlpha(0.8f));
             m_muteButton->setBorderEnabled(true);
         } else {
-            // Inactive: Grey Glass (Better visibility than black)
-            m_muteButton->setBackgroundColor(inactiveBg);
+            // Inactive: Grey Glass (Better visibility, clear glass)
+            m_muteButton->setBackgroundColor(themeManager.getColor("backgroundSecondary").withAlpha(0.0f)); // Transparent
+            m_muteButton->setBorderColor(AestraUI::NUIColor(1,1,1,0.15f));
             m_muteButton->setTextColor(inactiveText);
             m_muteButton->setHoverColor(inactiveHover);
             m_muteButton->setBorderEnabled(true);
+            m_muteButton->setBorderWidth(1.0f);
         }
     }
 
     if (m_soloButton) {
         m_soloButton->setToggled(m_channel->isSoloed());
+        m_soloButton->setGlowEnabled(true); // Enable Neon Glow
         
         if (m_channel->isSoloed()) {
             // Active: Strong Neon Cyan (Solo)
@@ -238,20 +242,24 @@ void TrackUIComponent::updateUI() {
             m_soloButton->setBorderEnabled(true);
         } else {
             // Inactive: Grey Glass
-            m_soloButton->setBackgroundColor(inactiveBg);
+            m_soloButton->setBackgroundColor(themeManager.getColor("backgroundSecondary").withAlpha(0.0f));
+            m_soloButton->setBorderColor(AestraUI::NUIColor(1,1,1,0.15f));
             m_soloButton->setTextColor(inactiveText);
             m_soloButton->setHoverColor(inactiveHover);
             m_soloButton->setBorderEnabled(true);
+            m_soloButton->setBorderWidth(1.0f);
         }
     }
 
     if (m_recordButton) {
+        m_recordButton->setGlowEnabled(true);
         // Record state styling
-        // Assuming inactive for now, but styling for consistency
-        m_recordButton->setBackgroundColor(inactiveBg);
+        m_recordButton->setBackgroundColor(themeManager.getColor("backgroundSecondary").withAlpha(0.0f));
+        m_recordButton->setBorderColor(AestraUI::NUIColor(1,1,1,0.15f));
         m_recordButton->setTextColor(inactiveText);
         m_recordButton->setHoverColor(inactiveHover);
         m_recordButton->setBorderEnabled(true);
+        m_recordButton->setBorderWidth(1.0f);
     }
 }
 
@@ -286,10 +294,23 @@ void TrackUIComponent::updateTrackNameColors() {
             try {
                 uint32_t trackNumber = std::stoul(numberStr);
                 size_t colorIndex = (trackNumber - 1) % brightColors.size();
-                m_nameLabel->setTextColor(brightColors[colorIndex]);
+                AestraUI::NUIColor autoColor = brightColors[colorIndex];
+                
+                m_nameLabel->setTextColor(autoColor);
+                
+                // [FIX] Persist this visual color to the model so Mixer can see it!
+                if (m_trackManager && m_laneId.isValid()) {
+                    auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
+                    if (lane && lane->colorRGBA != autoColor.toHex()) {
+                        lane->colorRGBA = autoColor.toHex();
+                        // Also update MixerChannel for good measure
+                        if (m_channel) m_channel->setColor(autoColor.toHex());
+                    }
+                }
+                
                 return; // Successfully set color, exit
             } catch (const std::exception&) {
-                // Fall through to fallback if number parsing fails
+                // Fall through
             }
         }
 
@@ -697,19 +718,32 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
         }
     }
     
-    // Draw semi-transparent filled background (ROUNDED)
-    AestraUI::NUIColor bgColor = clipColor.withAlpha(0.15f);
+    // Draw semi-transparent filled background (Glass Pill)
+    bool clipSelected = (clip.id == m_activeClipId); 
+    AestraUI::NUIColor bgColor = clipColor.withAlpha(0.2f); // Slightly more opaque for visibility
+    if (clipSelected) {
+        bgColor = clipColor.withAlpha(0.3f);
+    }
     renderer.fillRoundedRect(clipBounds, clipRadius, bgColor);
     
-    // Draw border (ghost instances get a dashed-style different border)
-    bool clipSelected = (clip.id == m_activeClipId);
-    bool isGhostInstance = (patternRefCount > 1 && patternInstanceIndex > 1);
+    // Draw Border (NEON GLOW)
+    // Selected = White/Cyan Hot Border, Unselected = Clip Color Border
+    AestraUI::NUIColor borderColor = clipColor; // Full saturation
+    float borderWidth = 1.0f;
     
-    AestraUI::NUIColor borderColor = clipSelected ? AestraUI::NUIColor::white() : clipColor.withAlpha(0.6f);
-    if (isGhostInstance) {
-        borderColor = clipColor.withAlpha(0.4f);  // Dimmer border for ghost instances
+    if (clipSelected) {
+        borderColor = AestraUI::NUIColor::white(); // Pop when selected
+        borderWidth = 1.5f;
     }
-    float borderWidth = clipSelected ? 2.0f : 1.0f;
+    
+    // Ghost instance check
+    bool isGhostInstance = (patternRefCount > 1 && patternInstanceIndex > 1);
+
+    if (isGhostInstance) {
+        // Ghost instances: Dimmer border
+        borderColor = borderColor.withAlpha(0.4f);
+        // Dashed border? For now just dim.
+    }
     
     renderer.strokeRoundedRect(clipBounds, clipRadius, borderWidth, borderColor);
     
@@ -871,30 +905,38 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
                                               const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
-    // 1. Draw Background (Pattern Color)
+    // 1. Draw Background (Glass Pattern)
     AestraUI::NUIColor baseColor = AestraUI::NUIColor::fromHex(clip.colorRGBA);
     
     // Selection state check
-    bool isSelected = false;
-    // TODO: Connect to SelectionModel (likely via TrackManagerUI or similar)
-    // if (m_trackManager) {
-    //     isSelected = m_trackManager->getSelectionModel().isClipSelected(clip.id);
-    // }
+    bool isSelected = false; // TODO: Connect to selection model
     
     // Mute state
     if (clip.muted) {
         baseColor = baseColor.withAlpha(0.4f);
     }
     
-    // Background fill
-    renderer.fillRect(clipBounds, baseColor.withAlpha(0.3f)); // Semi-transparent body
+    // Background fill (Glassy)
+    renderer.fillRect(clipBounds, baseColor.withAlpha(0.15f)); 
+    
+    // Border (Neon)
     renderer.strokeRect(clipBounds, 1.0f, isSelected ? themeManager.getColor("accentCyan") : baseColor);
     
-    // 2. Draw Name Strip
+    // 2. Draw Name Strip (Solid Neon)
+    // Create a "pill cap" effect
     float nameStripHeight = 16.0f;
     AestraUI::NUIRect nameStripBounds = clipBounds;
     nameStripBounds.height = nameStripHeight;
-    renderer.fillRect(nameStripBounds, baseColor); // Solid header
+    
+    renderer.fillRect(nameStripBounds, baseColor.withAlpha(0.8f)); // Solid-ish header
+    
+    // Separator line under header
+    renderer.drawLine(
+        AestraUI::NUIPoint(clipBounds.x, clipBounds.y + nameStripHeight),
+        AestraUI::NUIPoint(clipBounds.right(), clipBounds.y + nameStripHeight),
+        1.0f,
+        baseColor
+    );
     
     // Clip Name
     std::string clipName = clip.name;
@@ -1004,49 +1046,50 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
     if (m_isPrimaryForLane) {
         AestraUI::NUIRect controlBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
         
-        // Control Area Polish: Darker Glassy Background
-        AestraUI::NUIColor baseControlColor = themeManager.getColor("backgroundSecondary"); 
+        // Control Area Polish: Deep Glass Header (Darker than transport)
+        // Use "glassBg" (approx #1e1e1e @ 85%) for that integrated look
+        AestraUI::NUIColor baseControlColor = themeManager.getColor("textSecondary").withAlpha(0.12f); 
         
         // Static Control Area State
         if (m_channel) {
              if (m_selected) {
-                 baseControlColor = themeManager.getColor("accentPrimary").withAlpha(0.12f);
+                 // Selected: Brighter Glass Highlight
+                 baseControlColor = themeManager.getColor("accentPrimary").withAlpha(0.18f); // Increased visibility
              } else if (m_channel->isSoloed()) {
-                 baseControlColor = themeManager.getColor("accentCyan").withAlpha(0.08f);
+                 baseControlColor = themeManager.getColor("accentCyan").withAlpha(0.12f);
              } else if (m_channel->isMuted()) {
-                 baseControlColor = baseControlColor.darkened(0.2f);
+                 baseControlColor = baseControlColor.darkened(0.4f); // Much darker when muted
              }
         }
         
         // Render Control Area Background
         renderer.fillRect(controlBounds, baseControlColor);
         
-        // Separator Line (Glass Border) between Controls and Timeline
-        // Use drawLine for crisp SDF rendering with pixel snapping
+        // Separator Line (Bright Glass Border) between Controls and Timeline
         renderer.drawLine(
             AestraUI::NUIPoint(controlBounds.right(), controlBounds.y),
             AestraUI::NUIPoint(controlBounds.right(), controlBounds.bottom()),
             1.0f,
-            themeManager.getColor("glassBorder").withAlpha(0.5f)
+            themeManager.getColor("glassBorder") // Stronger border
         );
         
-        // Top Separator (White)
+        // Top Separator (Subtle)
         renderer.drawLine(
             AestraUI::NUIPoint(bounds.x, bounds.y),
             AestraUI::NUIPoint(bounds.right(), bounds.y),
             1.0f,
-            AestraUI::NUIColor::white().withAlpha(0.2f)
+            themeManager.getColor("glassBorder").withAlpha(0.3f)
         );
 
-        // Bottom Separator (White)
+        // Bottom Separator (Subtle)
         renderer.drawLine(
             AestraUI::NUIPoint(bounds.x, bounds.bottom() - 1.0f),
             AestraUI::NUIPoint(bounds.right(), bounds.bottom() - 1.0f),
             1.0f,
-            AestraUI::NUIColor::white().withAlpha(0.2f)
+            themeManager.getColor("glassBorder").withAlpha(0.3f)
         );
 
-        // Lane color strip (identity)
+        // Lane color strip (identity) - Thicker "Neon Bar"
         if (lane) {
             uint32_t argb = lane->colorRGBA;
             float a = ((argb >> 24) & 0xFF) / 255.0f;
@@ -1054,30 +1097,18 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
             float g = ((argb >> 8) & 0xFF) / 255.0f;
             float b = (argb & 0xFF) / 255.0f;
             AestraUI::NUIColor stripColor(r, g, b, a > 0.0f ? a : 1.0f);
-            const float stripWidth = 4.0f; // Slightly slimmer strip
+            
+            // Neon Glow effect (simulated by layering)
+            const float stripWidth = 4.0f;
             renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
+            // Edge highlight
+             renderer.fillRect(AestraUI::NUIRect(bounds.x + stripWidth, bounds.y, 1.0f, bounds.height), stripColor.withAlpha(0.3f));
         }
-        
-        // Panel Separator (Right side of control area)
-        renderer.drawLine(
-            AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
-            AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y + bounds.height),
-            1.0f,
-            borderColor.withAlpha(0.3f)
-        );
-        // Add subtle shadow to the separator for depth
-        renderer.drawShadow(AestraUI::NUIRect(bounds.x + controlAreaWidth - 1, bounds.y, 2, bounds.height), 
-                            0.0f, 0.0f, 4.0f, themeManager.getColor("shadow"));
 
+        // Separator Shadow (Depth)
+        renderer.drawShadow(AestraUI::NUIRect(controlBounds.right() - 2, bounds.y, 4, bounds.height), 
+                            0.0f, 0.0f, 8.0f, AestraUI::NUIColor(0,0,0,0.4f));
 
-        float separatorY = bounds.y + bounds.height - 1.0f; // Draw inside bounds
-        renderer.drawLine( // Bottom separator
-            AestraUI::NUIPoint(bounds.x, separatorY),
-            AestraUI::NUIPoint(bounds.x + bounds.width, separatorY),
-            2.0f,
-            AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 1.0f)
-        );
-        
         drawPlaylistGrid(renderer, bounds);
     }
 
@@ -1089,11 +1120,9 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
     for (const auto& clip : lane->clips) {
         drawClipAtPosition(renderer, clip, bounds, controlAreaWidth);
     }
-    
-    // Live Recording Waveform moved to renderDynamic for real-time updates
-    
     renderer.setOpacity(1.0f);
 }
+
 
 // Render Dynamic Overlays (Grid Area Only: Mute/Solo dimming, Automation, Selection)
 void TrackUIComponent::renderDynamic(AestraUI::NUIRenderer& renderer) {
@@ -1166,8 +1195,29 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
     const AestraUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
 
-    // Initial fill to clear potential artifacts
-    renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary"));
+    // === GLASS HEADER 2.0 ===
+    // More transparent, "frosted" glass feel
+    AestraUI::NUIColor baseTint = AestraUI::NUIColor(0.25f, 0.25f, 0.32f, 0.2f); // Blue-grey tint, semi-transparent
+    
+    // Draw stacked gradient layers for depth
+    // Top is lighter, Bottom is darker
+    for(int i = 0; i < 6; ++i) { // Smoother gradient
+        float factor = static_cast<float>(i) / 5.0f;
+        AestraUI::NUIColor layerColor = baseTint.lightened(0.1f * (1.0f - factor)).darkened(0.2f * factor);
+        AestraUI::NUIRect layerRect = controlAreaBounds;
+        layerRect.y += i * 0.5f;
+        layerRect.height -= i * 0.5f;
+        renderer.fillRect(layerRect, layerColor);
+    }
+    
+    // Inner Top Highlight (Stronger Glass Edge)
+    AestraUI::NUIRect highlightRect = controlAreaBounds;
+    highlightRect.height = 1.0f;
+    renderer.fillRect(highlightRect, AestraUI::NUIColor::white().withAlpha(0.15f)); // Boosted from 0.08f
+    
+    // Right Border (Separator)
+    AestraUI::NUIRect borderRect(controlAreaBounds.right() - 1.0f, controlAreaBounds.y, 1.0f, controlAreaBounds.height);
+    renderer.fillRect(borderRect, AestraUI::NUIColor::black().withAlpha(0.2f));
 
     // Inline Volume Meter (Behind Name) - Uses real audio levels from MeterSnapshotBuffer
     if (m_channel && !m_channel->isMuted() && m_trackManager) {
@@ -1418,7 +1468,7 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
              if (rectW > 0 && rectX < gridEndX) {
                  renderer.fillRect(
                      AestraUI::NUIRect(rectX, bounds.y, rectW, bounds.height), 
-                     AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.03f)
+                     AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.015f) // Ultra-subtle (1.5%) - Reduced visual noise
                  );
              }
         }
@@ -1482,9 +1532,10 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
     double endBeat = startBeat + (gridWidth / m_pixelsPerBeat);
     double current = std::floor(startBeat / snapDur) * snapDur;
 
-    // Grid Lines - Using Theme Tokens
-    AestraUI::NUIColor barLineColor = themeManager.getColor("gridBar");
-    AestraUI::NUIColor beatLineColor = themeManager.getColor("gridBeat");
+    // Grid Lines - Using Theme Tokens (Deep Glass Grid)
+    // Use glassBorder for main lines to blend with spacing
+    AestraUI::NUIColor barLineColor = themeManager.getColor("glassBorder").withAlpha(0.4f); 
+    AestraUI::NUIColor beatLineColor = themeManager.getColor("glassBorder").withAlpha(0.15f);
     AestraUI::NUIColor subBeatLineColor = themeManager.getColor("gridSubdivision");
 
     for (; current <= endBeat + snapDur; current += snapDur) {

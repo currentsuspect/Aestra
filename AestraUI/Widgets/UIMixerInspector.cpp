@@ -29,7 +29,69 @@ UIMixerInspector::UIMixerInspector(Aestra::MixerViewModel* viewModel)
     cacheThemeColors();
 
     m_effectRack = std::make_shared<EffectChainRack>();
+    
+    // Bind Callbacks
+    m_effectRack->setOnSlotBypassToggled([this](int slot, bool bypassed) {
+        if (m_viewModel) {
+            auto* ch = m_viewModel->getSelectedChannel();
+            if (ch) m_viewModel->setInsertBypass(ch->id, slot, bypassed);
+        }
+    });
+
+    m_effectRack->setOnSlotMixChanged([this](int slot, float mix) {
+        if (m_viewModel) {
+             auto* ch = m_viewModel->getSelectedChannel();
+             if (ch) m_viewModel->setInsertMix(ch->id, slot, mix);
+        }
+    });
+
+    m_effectRack->setOnSlotMoveRequested([this](int from, int to) {
+        if (m_viewModel) {
+             auto* ch = m_viewModel->getSelectedChannel();
+             if (ch) {
+                 m_viewModel->moveInsert(ch->id, from, to);
+                 rebuildInsertRack(ch);
+             }
+        }
+    });
+
+    m_effectRack->setOnSlotRemoveRequested([this](int slot) {
+        Aestra::Log::info("[Inspector] Slot Remove callback triggered.");
+        if (m_viewModel) {
+             Aestra::Log::info("[Inspector] m_viewModel is valid.");
+             auto* ch = m_viewModel->getSelectedChannel();
+             if (ch) {
+                 char logBuf[128];
+                 std::snprintf(logBuf, sizeof(logBuf), "[Inspector] Calling removeInsert(ch=%u, slot=%d)", ch->id, slot);
+                 Aestra::Log::info(logBuf);
+                 m_viewModel->removeInsert(ch->id, slot);
+             } else {
+                 Aestra::Log::warning("[Inspector] getSelectedChannel() returned NULL!");
+             }
+        } else {
+            Aestra::Log::warning("[Inspector] m_viewModel is NULL!");
+        }
+    });
+
+    m_effectRack->setVisible(true);
     addChild(m_effectRack);
+
+    // I/O Input Selector
+    m_ioInputDropdown = std::make_shared<NUIDropdown>();
+    m_ioInputDropdown->setVisible(false);
+    m_ioInputDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
+        if (!m_viewModel) return;
+        auto* ch = m_viewModel->getSelectedChannel();
+        if (ch) {
+            // Update engine
+            if (auto mc = ch->channel.lock()) {
+                mc->setInputChannelIndex(value); 
+            }
+            // Update ViewModel for UI sync
+            ch->inputChannelIndex = value;
+        }
+    });
+    addChild(m_ioInputDropdown);
 }
 
 void UIMixerInspector::cacheThemeColors()
@@ -59,6 +121,9 @@ void UIMixerInspector::setActiveTab(Tab tab)
     for (auto& w : m_sendWidgets) {
         w->setVisible(m_activeTab == Tab::Sends);
     }
+    if (m_ioInputDropdown) {
+        m_ioInputDropdown->setVisible(m_activeTab == Tab::IO);
+    }
 
     repaint();
 }
@@ -77,7 +142,17 @@ void UIMixerInspector::layoutHitRects()
     }
 
     const float contentY = y + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
-    m_addFxRect = NUIRect{x, contentY + 18.0f, w, ROW_H};
+    if (m_activeTab == Tab::Sends) {
+        m_addFxRect = NUIRect{x, contentY + 18.0f, w, ROW_H};
+    } else {
+        m_addFxRect = NUIRect{0,0,0,0};
+    }
+
+    if (m_ioInputDropdown) {
+        // Label takes approx 20px height, so position dropdown below it
+        float currentY = contentY + 20.0f;
+        m_ioInputDropdown->setBounds(x, currentY, w, 22.0f);
+    }
 }
 
 int UIMixerInspector::hitTestTab(const NUIPoint& p) const
@@ -96,8 +171,10 @@ void UIMixerInspector::onResize(int width, int height)
     const auto b = getBounds();
     const float contentTop = PAD + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
     if (m_effectRack) {
-        float rackH = std::max(0.0f, b.height - contentTop - 18.0f - PAD);
-        m_effectRack->setBounds(b.x + PAD, b.y + contentTop + 18.0f, b.width - PAD * 2.0f, rackH);
+        // Reduced padding from 18.0f to 12.0f to extend hit test area upwards
+        const float topPad = 12.0f;
+        float rackH = std::max(0.0f, b.height - contentTop - topPad - PAD);
+        m_effectRack->setBounds(b.x + PAD, b.y + contentTop + topPad, b.width - PAD * 2.0f, rackH);
     }
 }
 
@@ -155,6 +232,51 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
     }
 
     rebuildSendWidgets(channel);
+    rebuildInsertRack(channel); // Sync inserts
+}
+
+void UIMixerInspector::rebuildInsertRack(const Aestra::ChannelViewModel* channel)
+{
+    if (!m_effectRack) return;
+
+    if (!channel) {
+        // Clear rack
+        for (int i = 0; i < EffectChainRack::MAX_SLOTS; ++i) {
+             EffectChainRack::EffectSlotInfo info;
+             info.isEmpty = true;
+             info.name = "Empty";
+             m_effectRack->setSlot(i, info);
+        }
+        return;
+    }
+
+    // Sync from ViewModel
+    for (size_t i = 0; i < EffectChainRack::MAX_SLOTS; ++i) {
+        EffectChainRack::EffectSlotInfo info;
+        
+        if (i < channel->inserts.size()) {
+            const auto& vmInsert = channel->inserts[i];
+            
+            // Copy pendingRemoval state for visual debugging
+            info.pendingRemoval = vmInsert.pendingRemoval;
+            
+            if (!vmInsert.isEmpty && !vmInsert.pendingRemoval) {
+                info.isEmpty = false;
+                info.name = vmInsert.name.empty() ? "Plugin" : vmInsert.name;
+                info.bypassed = vmInsert.bypassed;
+                info.dryWet = vmInsert.mix;
+            } else {
+                // Mark as empty if actually empty OR if pending removal
+                info.isEmpty = true;
+                info.name = vmInsert.pendingRemoval ? "Removing..." : "Empty";
+            }
+        } else {
+            info.isEmpty = true;
+            info.name = "Empty";
+        }
+        m_effectRack->setSlot(static_cast<int>(i), info);
+    }
+    m_effectRack->repaint();
 }
 
 void UIMixerInspector::rebuildSendWidgets(const Aestra::ChannelViewModel* channel)
@@ -227,6 +349,11 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
 
     const auto* channel = m_viewModel ? m_viewModel->getSelectedChannel() : nullptr;
     updateHeaderCache(channel);
+    
+    // Continuous sync for knobs to reflect automation/backend changes
+    if (m_activeTab == Tab::Inserts && channel) {
+        rebuildInsertRack(channel);
+    }
 
     // Tabs
     static constexpr const char* tabLabels[3] = {"Inserts", "Sends", "I/O"};
@@ -302,7 +429,18 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         renderer.drawTextCentered("Add Send", m_addFxRect, 11.0f, m_addText);
 
     } else {
-        renderer.drawTextCentered("Coming soon", contentRect, 11.0f, m_textSecondary);
+        // I/O Tab or Inserts
+        // Clear the add rect so it doesn't capture clicks in other tabs
+        m_addFxRect = NUIRect{0,0,0,0};
+        
+        bool isMaster = (channel && channel->id == 0);
+        if (isMaster) {
+             renderer.drawTextCentered("Master Output is fixed to Hardware Output 1/2", contentRect, 11.0f, m_textSecondary);
+        } else if (m_activeTab == Tab::IO) {
+             renderer.drawText("Audio Input:", {contentRect.x, contentRect.y}, 11.0f, m_textSecondary);
+             
+             // Dropdown renders itself via renderChildren
+        }
     }
 
     renderChildren(renderer);
@@ -320,6 +458,46 @@ void UIMixerInspector::onUpdate(double deltaTime)
     }
     
     NUIComponent::onUpdate(deltaTime);
+    
+    // Sync I/O Dropdown
+    if (m_activeTab == Tab::IO && m_ioInputDropdown && m_viewModel) {
+        auto* ch = m_viewModel->getSelectedChannel();
+        if (ch && ch->id != 0) { // Not for Master
+             m_ioInputDropdown->setVisible(true);
+             
+             // Update Items using device IDs
+             const auto& inputs = m_viewModel->inputNames;
+             const auto& deviceIds = m_viewModel->inputDeviceIds;
+             
+             if (m_ioInputDropdown->getItemCount() != inputs.size()) {
+                 m_ioInputDropdown->clearItems();
+                 for (size_t i = 0; i < inputs.size(); ++i) {
+                     // Use actual device ID as the value
+                     int deviceId = (i < deviceIds.size()) ? deviceIds[i] : -1;
+                     m_ioInputDropdown->addItem(inputs[i], deviceId);
+                 }
+             }
+             
+             // Sync Selection
+             int currentDeviceId = ch->inputChannelIndex;
+             // Find item index with matching device ID
+             int targetIndex = 0; // Default to "None"
+             for (size_t i = 0; i < deviceIds.size(); ++i) {
+                 if (deviceIds[i] == currentDeviceId) {
+                     targetIndex = static_cast<int>(i);
+                     break;
+                 }
+             }
+             
+             if (targetIndex >= 0 && targetIndex < (int)m_ioInputDropdown->getItemCount()) {
+                 if (m_ioInputDropdown->getSelectedIndex() != targetIndex) {
+                      m_ioInputDropdown->setSelectedIndex(targetIndex);
+                 }
+             }
+        } else {
+             m_ioInputDropdown->setVisible(false);
+        }
+    }
 }
 
 bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
@@ -334,7 +512,17 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
     }
 
     // 1. Allow children (UIMixerSend widgets, EffectChainRack) to handle events
-    if (NUIComponent::onMouseEvent(event)) return true;
+    // We manually iterate children to ensure the EffectRack gets events even if slightly out of bounds
+    // (Standard NUIComponent::onMouseEvent transforms coordinates and enforces strict bounds, which was failing here)
+    const auto& kids = getChildren();
+    for (auto it = kids.rbegin(); it != kids.rend(); ++it) {
+        auto& child = *it;
+        if (child->isVisible()) {
+             // Try to handle event without transforming coordinates (Raw dispatch)
+             if (child->onMouseEvent(event)) return true;
+        }
+    }
+    // if (NUIComponent::onMouseEvent(event)) return true; // Disabled standard dispatch
 
     if (event.button == NUIMouseButton::None) {
         const int tab = hitTestTab(event.position);
@@ -359,7 +547,7 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
             return true;
         }
 
-        if ((m_viewModel && m_viewModel->getSelectedChannel()) && m_addFxRect.contains(event.position)) {
+        if (m_activeTab == Tab::Sends && (m_viewModel && m_viewModel->getSelectedChannel()) && m_addFxRect.contains(event.position)) {
             m_addPressed = true;
             repaint();
             return true;

@@ -101,14 +101,21 @@ void NUIButton::onRender(NUIRenderer& renderer) {
     
     // Draw border
     if (borderEnabled_) {
-        // Adjust border color if theme is present
-        if (theme) {
+        // Adjust border color
+        if (hasCustomBorderColor_) {
+             borderColor = borderColor_;
+             // Optionally brighten on interaction if desired, but custom usually implies "exact"
+             if (pressed_) borderColor = borderColor.lightened(0.2f);
+             else if (isHovered()) borderColor = borderColor.lightened(0.1f);
+        } else if (theme) {
              borderColor = theme->getPrimary();
              if (pressed_) borderColor = borderColor.withBrightness(1.2f);
              else if (isHovered()) borderColor = borderColor.withBrightness(1.1f);
+        } else {
+             borderColor = NUIColor::fromHex(0x555555);
         }
         
-        float borderWidth = theme ? theme->getBorderWidth() : 1.0f;
+        float borderWidth = hasCustomBorderWidth_ ? borderWidth_ : (theme ? theme->getBorderWidth() : 1.0f);
         // Inset stroke
         NUIRect strokeRect = bounds;
         strokeRect.x += borderWidth * 0.5f;
@@ -209,6 +216,15 @@ NUIColor NUIButton::getCurrentBackgroundColor() const {
     if (!theme) return NUIColor::fromHex(0x333333);
     
     if (!isEnabled()) return theme->getDisabled();
+    
+    // Style-specific colors
+    if (style_ == Style::Primary) {
+        if (pressed_) return theme->getColor("primaryPressed", theme->getPrimary().darkened(0.1f));
+        if (isHovered()) return theme->getColor("primaryHover", theme->getPrimary().lightened(0.1f));
+        return theme->getPrimary();
+    }
+    
+    // Default / Secondary Styles
     if (pressed_) return theme->getActive();
     if (isHovered()) return theme->getHover();
     return theme->getSurface();

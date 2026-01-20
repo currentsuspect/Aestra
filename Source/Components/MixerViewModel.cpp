@@ -2,6 +2,10 @@
 
 #include "MixerViewModel.h"
 #include "../AestraCore/include/AestraLog.h"
+#include "AudioDeviceManager.h"
+#include "../App/ServiceLocator.h"
+#include "../Core/AestraAudioController.h"
+#include <cstdio>
 
 namespace Aestra {
 
@@ -13,6 +17,25 @@ MixerViewModel::MixerViewModel() {
     m_master->name = "MASTER";
     m_master->routeName = "Output";
     m_master->trackColor = 0xFF8B7FFF; // Aestra purple
+}
+
+void MixerViewModel::refreshInputs(const Aestra::Audio::AudioDeviceManager& deviceManager) {
+    inputNames.clear();
+    inputDeviceIds.clear();
+    
+    // Add "None" option
+    inputNames.push_back("None");
+    inputDeviceIds.push_back(-1);
+
+    // Get input channel count from current config
+    const auto& config = deviceManager.getCurrentConfig();
+    int numInputs = config.numInputChannels;
+
+    // Generate channel-based names (Input 1, Input 2, etc.)
+    for (int i = 0; i < numInputs; ++i) {
+        inputNames.push_back("Input " + std::to_string(i + 1));
+        inputDeviceIds.push_back(i); // Channel index
+    }
 }
 
 void MixerViewModel::updateMeters(const Audio::MeterSnapshotBuffer& snapshots, double deltaTime) {
@@ -42,17 +65,14 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
     // Build set of current track IDs for quick lookup
     std::unordered_map<uint32_t, size_t> existingIds;
     
-    // Sync Global State
-    inputNames = trackManager.getInputChannelNames();
+    // NOTE: inputNames is now managed by refreshInputs() from AudioDeviceManager
+    // DO NOT overwrite here with trackManager.getInputChannelNames()
 
     for (size_t i = 0; i < m_channels.size(); ++i) {
         if (m_channels[i]) {
             existingIds[m_channels[i]->id] = i;
         }
     }
-
-    // Sync Global State
-    inputNames = trackManager.getInputChannelNames();
 
     // Collect channel info from engine
     struct ChannelInfo {
@@ -167,6 +187,106 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                    // uiSend.postFader = ... engine doesn't have this yet, assume true
                    ch->sends.push_back(uiSend);
                }
+            }
+        }
+        
+        // Sync Inserts (New)
+        if (auto* ch = newChannels.back().get()) {
+            if (auto mc = ch->channel.lock()) {
+                auto& chain = mc->getEffectChain();
+                
+                // Ensure size matches
+                if (ch->inserts.size() != Audio::EffectChain::MAX_SLOTS) {
+                    ch->inserts.resize(Audio::EffectChain::MAX_SLOTS);
+                }
+
+                // PRESERVE UI STATE (Fix for Delete Persistence)
+                const ChannelViewModel* oldCh = nullptr;
+                if (ch->id == 0) {
+                     oldCh = m_master.get();
+                } else {
+                     oldCh = getChannelById(ch->id);
+                }
+
+                // DEBUG LOGGING START
+                if (oldCh) {
+                     // Verify if we are finding the old channel
+                     // Aestra::Log::info("[MixerVM] Found oldCh for sync.");
+                } else {
+                     // Aestra::Log::warning("[MixerVM] Sync could not find oldCh! UI state may be lost.");
+                }
+                // DEBUG LOGGING END
+
+                for (size_t i = 0; i < Audio::EffectChain::MAX_SLOTS; ++i) {
+                    const auto* slot = chain.getSlot(i);
+                    auto& vm = ch->inserts[i];
+
+                    // Restore flags from old state
+                    if (oldCh && i < oldCh->inserts.size()) {
+                        vm.pendingRemoval = oldCh->inserts[i].pendingRemoval;
+                        vm.bypassDirty = oldCh->inserts[i].bypassDirty;
+                        
+                        // Trace specifically for pending removal restoration
+                        if (vm.pendingRemoval) {
+                            char logBuf[128];
+                            std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] RESTORED pendingRemoval for Ch %u Slot %zu", info.id, i);
+                            Aestra::Log::info(logBuf);
+                        }
+                    }
+
+                    const auto* slotptr = slot; // alias for clarity if needed
+
+                    bool hasPlugin = (slot && !slot->isEmpty() && slot->plugin);
+                    
+                     if (vm.pendingRemoval) {
+                          // TRACE LOG
+                          char logBuf[128];
+                          std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] Sync Ch %u Slot %zu: Pending Removal. HasPlugin? %d", info.id, i, hasPlugin ? 1 : 0);
+                          Aestra::Log::info(logBuf);
+
+                          if (!hasPlugin) {
+                              // Engine finally removed it
+                              char logBuf[128];
+                              std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] Ch %u Slot %zu: Engine confirmed removal. Clearing pending flag.", info.id, i);
+                              Aestra::Log::info(logBuf);
+                              
+                              vm.pendingRemoval = false;
+                              vm.isEmpty = true;
+                              vm.name.clear();
+                          } else {
+                              // Still waiting for engine, force empty UI
+                              std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] Ch %u Slot %zu: Engine still has plugin. Forcing UI empty.", info.id, i);
+                              Aestra::Log::info(logBuf);
+                              
+                              vm.isEmpty = true;
+                              vm.name.clear(); // Optional: show "Removing..."
+                          }
+                    } else {
+                        // Normal Sync
+                        bool engineBypassed = hasPlugin ? slot->bypassed.load() : false;
+                        float engineMix = hasPlugin ? slot->dryWetMix.load() : 1.0f;
+
+                        if (hasPlugin) {
+                             vm.isEmpty = false;
+                             vm.name = slot->plugin->getInfo().name;
+                             if (vm.name.empty()) vm.name = "Plugin"; 
+                        } else {
+                             vm.isEmpty = true;
+                             vm.name.clear();
+                        }
+
+                        // Sync Bypass (Optimistic)
+                        if (vm.bypassDirty) {
+                            if (vm.bypassed == engineBypassed) {
+                                vm.bypassDirty = false; 
+                            }
+                        } else {
+                            vm.bypassed = engineBypassed;
+                        }
+
+                        vm.mix = engineMix;
+                    }
+                }
             }
         }
     }
@@ -446,6 +566,113 @@ void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint3
         
         if (m_onGraphDirty) m_onGraphDirty();
         if (m_onProjectModified) m_onProjectModified();
+    }
+}
+
+
+
+void MixerViewModel::setInsertBypass(uint32_t channelId, int slotIndex, bool bypassed) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || slotIndex < 0 || slotIndex >= static_cast<int>(ch->inserts.size())) return;
+
+    // Update Local
+    ch->inserts[slotIndex].bypassed = bypassed;
+    ch->inserts[slotIndex].bypassDirty = true; // Mark as pending sync
+
+    // Update Engine
+    if (auto mc = ch->channel.lock()) {
+        mc->getEffectChain().setSlotBypassed(slotIndex, bypassed);
+        if (m_onProjectModified) m_onProjectModified();
+    }
+}
+
+void MixerViewModel::setInsertMix(uint32_t channelId, int slotIndex, float mix) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || slotIndex < 0 || slotIndex >= static_cast<int>(ch->inserts.size())) return;
+
+    // Update Local
+    ch->inserts[slotIndex].mix = mix;
+
+    // Update Engine
+    if (auto mc = ch->channel.lock()) {
+        mc->getEffectChain().setSlotDryWetMix(slotIndex, mix);
+         // Often mix changes don't need project dirty flag every frame, 
+         // but for now we can trigger it or handle throttling elsewhere.
+    }
+}
+
+void MixerViewModel::moveInsert(uint32_t channelId, int fromSlot, int toSlot) {
+    auto* ch = getChannelById(channelId);
+    if (!ch) return;
+
+    // Validate bounds
+    if (fromSlot < 0 || fromSlot >= (int)ch->inserts.size() || 
+        toSlot < 0 || toSlot >= (int)ch->inserts.size()) return;
+    
+    if (fromSlot == toSlot) return;
+
+    // Update Local (Swap/Move)
+    std::swap(ch->inserts[fromSlot], ch->inserts[toSlot]);
+
+    // Update Engine
+    if (auto mc = ch->channel.lock()) {
+        auto& chain = mc->getEffectChain();
+        const auto* targetSlotPtr = chain.getSlot(toSlot);
+        
+        // Since we already swapped locally, we assume engine handles it.
+        // We check target slot state *before* logic if possible, but weak ptr makes it tricky.
+        // Let's assume we want to swap if target has plugin, move if empty.
+        
+        // However, EffectChain API is locked.
+        // If we call movePlugin(from, to) and it fails (occupied), we should try swapPlugins.
+        // But checking `isEmpty()` first is safer.
+        
+        bool targetEmpty = (!targetSlotPtr || targetSlotPtr->isEmpty());
+        
+        if (targetEmpty) {
+            chain.movePlugin(fromSlot, toSlot);
+        } else {
+            chain.swapPlugins(fromSlot, toSlot);
+        }
+        
+        if (m_onProjectModified) m_onProjectModified();
+    }
+}
+
+// ... inside removeInsert ...
+
+void MixerViewModel::removeInsert(uint32_t channelId, int slot) {
+    // auto wrapper = Aestra::ServiceLocator::get<AestraAudioController>();
+    // if (!wrapper) return; // REMOVED: This was blocking the delete!
+    
+    char logBuf[128];
+    std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] removeInsert requested for Ch %u Slot %d", channelId, slot);
+    Aestra::Log::info(logBuf); 
+
+    if (auto* ch = getChannelById(channelId)) {
+        // Validate bounds
+        if (slot < 0 || slot >= static_cast<int>(ch->inserts.size())) {
+            std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] removeInsert: Invalid slot %d for Ch %u", slot, channelId);
+            Aestra::Log::warning(logBuf);
+            return;
+        }
+
+        // Optimistic update
+        ch->inserts[slot] = ChannelViewModel::InsertViewModel{};
+        
+        // Mark as pending removal so sync doesn't overwrite it immediately
+        ch->inserts[slot].pendingRemoval = true;
+        ch->inserts[slot].isEmpty = true; 
+        
+        std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] Ch %u Slot %d marked PENDING REMOVAL", channelId, slot);
+        Aestra::Log::info(logBuf); 
+        
+        if (auto mc = ch->channel.lock()) {
+            auto& chain = mc->getEffectChain();
+            chain.removePlugin(slot);
+            
+            if (m_onProjectModified) m_onProjectModified();
+        }
     }
 }
 

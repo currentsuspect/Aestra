@@ -240,6 +240,8 @@ if(AESTRAUI_BUILD_OPENGL)
         Graphics/OpenGL/NUIRenderCache.cpp
         Graphics/NUITextRendererSDF.h
         Graphics/NUITextRendererSDF.cpp
+        Graphics/GlassmorphismPass.h
+        Graphics/GlassmorphismPass.cpp
     )
     
     add_library(AestraUI_OpenGL STATIC

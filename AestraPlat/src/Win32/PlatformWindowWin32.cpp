@@ -62,11 +62,10 @@ bool PlatformWindowWin32::create(const WindowDesc& desc) {
     DWORD style = 0;
 
     if (m_isBorderless) {
-        // VS Code approach: Use standard OVERLAPPEDWINDOW but trick Windows
-        // into giving us the entire rectangle as client area via WM_NCCALCSIZE.
-        // This triggers all native behaviors (Snap Layouts, animations, taskbar previews)
-        // while still rendering our custom frame.
-        style = WS_OVERLAPPEDWINDOW;
+        // Pure WS_POPUP - no frame at all. Resize is handled via WM_NCHITTEST.
+        // WS_MAXIMIZEBOX/MINIMIZEBOX = Taskbar integration (right-click menu)
+        // This eliminates all Windows-imposed gaps/borders.
+        style = WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_MAXIMIZEBOX | WS_MINIMIZEBOX;
     } else {
         // Standard window
         style = WS_OVERLAPPEDWINDOW;
@@ -144,11 +143,23 @@ bool PlatformWindowWin32::create(const WindowDesc& desc) {
         DwmSetWindowAttributeFunc setAttr = (DwmSetWindowAttributeFunc)GetProcAddress(hDwmapi, "DwmSetWindowAttribute");
         
         if (setAttr) {
-            // DEBUG: Disabling this because it causes black bar offset (Windows ignores NCCALCSIZE?)
-            // Disable DWM's non-client rendering - this prevents the caption bar from rendering
-            // DWORD policy = DWMNCRP_DISABLED_LOCAL;
-            // setAttr(m_hwnd, DWMWA_NCRENDERING_POLICY_LOCAL, &policy, sizeof(policy));
-            // AESTRA_LOG_INFO("DWM NC rendering disabled");
+            // DWMWA_USE_IMMERSIVE_DARK_MODE = 20 (Windows 10 20H1+)
+            // DWMWA_CAPTION_COLOR = 35 (Windows 11)
+            // DWMWA_BORDER_COLOR = 34 (Windows 11)
+            // DWMWA_COLOR_NONE = 0xFFFFFFFE (disables the border/caption completely)
+            
+            // Enable immersive dark mode to prevent white caption remnants
+            BOOL darkMode = TRUE;
+            setAttr(m_hwnd, 20, &darkMode, sizeof(darkMode));  // DWMWA_USE_IMMERSIVE_DARK_MODE
+            
+            // Set caption color to NONE (disable drawing)
+            DWORD colorNone = 0xFFFFFFFE;  // DWMWA_COLOR_NONE
+            setAttr(m_hwnd, 35, &colorNone, sizeof(colorNone));  // DWMWA_CAPTION_COLOR
+            
+            // Set border color to NONE (disable drawing)
+            setAttr(m_hwnd, 34, &colorNone, sizeof(colorNone));  // DWMWA_BORDER_COLOR
+            
+            AESTRA_LOG_INFO("DWM dark mode enabled, caption/border disabled");
         }
         
         typedef struct _MARGINS {
@@ -162,11 +173,11 @@ bool PlatformWindowWin32::create(const WindowDesc& desc) {
         DwmExtendFrameIntoClientAreaFunc proc = (DwmExtendFrameIntoClientAreaFunc)GetProcAddress(hDwmapi, "DwmExtendFrameIntoClientArea");
         
         if (proc) {
-            // Extend frame into client area (-1 = Sheet of Glass)
-            // This is arguably the "Correct" way for full borderless.
-            MARGINS margins = { -1 };
+            // Set margins to 0 - completely disable DWM frame extension.
+            // This eliminates the black exterior. No DWM shadow, but clean edges.
+            MARGINS margins = { 0, 0, 0, 0 };
             proc(m_hwnd, &margins);
-            AESTRA_LOG_INFO("DWM Shadows enabled (Sheet of Glass)");
+            AESTRA_LOG_INFO("DWM frame extension disabled (margins = 0)");
         }
         FreeLibrary(hDwmapi);
     } else if (hDwmapi) {
@@ -591,23 +602,10 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
 
         case WM_NCCALCSIZE: {
             if (m_isBorderless) {
-                if (wParam == TRUE) {
-                    NCCALCSIZE_PARAMS* params = reinterpret_cast<NCCALCSIZE_PARAMS*>(lParam);
-                    
-                    if (IsZoomed(m_hwnd)) {
-                         // Maximize fix: Compensate for auto-hide taskbar borders
-                        int frameX = GetSystemMetrics(SM_CXFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
-                        int frameY = GetSystemMetrics(SM_CYFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
-                        
-                        params->rgrc[0].left   += frameX;
-                        params->rgrc[0].top    += frameY;
-                        params->rgrc[0].right  -= frameX;
-                        params->rgrc[0].bottom -= frameY;
-                    }
-                    return 0; // Return 0 to preserve the calculated area
-                } else {
-                    return 0;
-                }
+                // With pure WS_POPUP, there's no non-client area.
+                // WM_GETMINMAXINFO handles work area constraints for maximize.
+                // Simply return 0 = whole window is client area.
+                return 0;
             }
             break; 
         }
