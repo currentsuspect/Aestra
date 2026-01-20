@@ -177,7 +177,7 @@ FileBrowser::FileBrowser()
     , scrollOffset_(0.0f)
     , targetScrollOffset_(0.0f)   // Initialize lerp target
     , scrollVelocity_(0.0f)
-    , itemHeight_(36.0f)           // Initialize to default theme value (matches theme)
+    , itemHeight_(22.0f)           // Reduced for compact look (was 36.0f)
     , visibleItems_(0)
     , showHiddenFiles_(false)
     , lastCachedWidth_(0.0f)       // Initialize cache width tracker
@@ -380,15 +380,16 @@ FileBrowser::FileBrowser()
     navHistory_.push_back(currentPath_);
     navHistoryIndex_ = 0;
     
-    // Load Liminal Dark v2.0 theme colors
-    backgroundColor_ = themeManager.getColor("backgroundSecondary");  // #1b1b1f - Panels, sidebars, file browser
-    textColor_ = themeManager.getColor("textPrimary");                // #e6e6eb - Soft white
+    // Load Theme Colors (Consistent with AestraTheme)
+    backgroundColor_ = themeManager.getColor("backgroundPrimary"); // Deep Void from theme
+    textColor_ = themeManager.getColor("textPrimary");             
     
     // Use theme accent for selection (consistent with the rest of the app)
     selectedColor_ = themeManager.getColor("accentPrimary");
     
-    hoverColor_ = NUIColor(1.0f, 1.0f, 1.0f, 0.02f); // Glass hover (ultra-clear)
-    borderColor_ = themeManager.getColor("border");          // Use standard border for consistency
+    // Pure white glass for hover (matches transport buttons now)
+    hoverColor_ = NUIColor(1.0f, 1.0f, 1.0f, 0.04f);
+    borderColor_ = themeManager.getColor("glassBorder");
     
     // Perform initial layout now that all members (icons, search input) are initialized
     // This initializes scrollbarTrackHeight_ and other layout vars needed by updateScrollbarVisibility
@@ -678,10 +679,10 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     // Update scrollbar track height to match current visible area
     // This ensures drag and scroll clamping work correctly
     // Re-calculate header height (must match onMouseEvent/onResize logic)
-    const float buttonsRowHeight = 40.0f;
-    const float breadcrumbRowHeight = 32.0f;
-    const float searchRowHeight = 36.0f; 
-    const float rowSpacing = 8.0f;
+    const float buttonsRowHeight = 28.0f;
+    const float breadcrumbRowHeight = 24.0f;
+    const float searchRowHeight = 26.0f; 
+    const float rowSpacing = 4.0f;
     float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
     
     // Store for other methods to use
@@ -690,8 +691,11 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, fileBrowserHeight);
     
     // === SOLID BASE FILL ===
-    // First, fill the entire bounds with background color to ensure no gaps
-    renderer.fillRect(fileBrowserBounds, backgroundColor_);
+    // USE GLASS BACKGROUND (Deep Transparency)
+    // First, fill with "Deep Space" base (Explicit Opaque Float)
+    renderer.fillRect(fileBrowserBounds, AestraUI::NUIColor(0.02f, 0.02f, 0.03f, 1.0f));
+    // Then apply the Glass overlay (Hardcoded to avoid missing token magenta)
+    renderer.fillRect(fileBrowserBounds, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.02f));
     
     // === CLIPPED BACKGROUND RENDERING ===
     // To achieve rounded-top, square-bottom corners WITH proper borders,
@@ -1252,6 +1256,9 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	        }
 
 	        if (event.pressed && event.button == NUIMouseButton::Left) {
+	            // Request focus when clicking the list
+                if (!isFocused()) setFocused(true);
+
 	            // Calculate which file was clicked
 	            float relativeY = event.position.y - listY;
 	            int itemIndex = static_cast<int>((relativeY + scrollOffset_) / itemHeight);
@@ -1397,6 +1404,12 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
     
+    // If we reached here, and the click was inside the list area but on no item,
+    // we MUST consume it to prevent focus from resetting to Root.
+    if (isInsideList && event.pressed && event.button == NUIMouseButton::Left) {
+        return true;
+    }
+
     return false;
 }
 
@@ -1450,7 +1463,32 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
             case NUIKeyCode::Enter:
             case NUIKeyCode::Backspace:
                 return true; // consume
+
             default:
+                // Type-to-Search: if printable character, focus search and pass event
+                char c = event.character;
+                if (c == 0) {
+                     if (event.keyCode >= NUIKeyCode::A && event.keyCode <= NUIKeyCode::Z) {
+                          c = 'a' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::A));
+                          bool shift = (event.modifiers & NUIModifiers::Shift);
+                          bool caps = (event.modifiers & NUIModifiers::CapsLock);
+                          if (shift != caps) c = std::toupper(c);
+                     }
+                     else if (event.keyCode >= NUIKeyCode::Num0 && event.keyCode <= NUIKeyCode::Num9) {
+                          c = '0' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::Num0));
+                     }
+                }
+
+                if (c >= 32 && c <= 126 && searchInput_) {
+                    searchInput_->setFocused(true);
+                    
+                    // Construct a new event with the resolved character to ensure NUITextInput handles it
+                    NUIKeyEvent resolvedEvent = event;
+                    resolvedEvent.character = c;
+                    
+                    searchInput_->onKeyEvent(resolvedEvent);
+                    return true;
+                }
                 return false;
         }
     }
@@ -2090,8 +2128,23 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     renderer.setClipRect(listClip);
     
     // Ensure the list area has a solid background (prevents FBO transparency leaks)
-    NUIRect listFillRect(listX, listY, listW, listHeight);
-    renderer.fillRect(listFillRect, backgroundColor_);
+    // Frosted Glass Gradient Background
+    // Top: Slightly lighter/transparent (Glass) -> Bottom: Darker/Depeer
+    AestraUI::NUIColor glassTop = AestraUI::NUIColor(0.14f, 0.14f, 0.20f, 0.4f);
+    AestraUI::NUIColor glassBottom = AestraUI::NUIColor(0.06f, 0.06f, 0.10f, 0.7f);
+    
+    // Draw vertical gradient
+    int steps = 20;
+    float stepH = listClip.height / static_cast<float>(steps);
+    for(int i = 0; i < steps; ++i) {
+        float factor = static_cast<float>(i) / static_cast<float>(steps - 1);
+        AestraUI::NUIColor stepColor = AestraUI::NUIColor::lerp(glassTop, glassBottom, factor);
+        AestraUI::NUIRect stepRect(listClip.x, listClip.y + i * stepH, listClip.width, stepH + 1.0f); // +1 overlap
+        renderer.fillRect(stepRect, stepColor);
+    }
+    
+    // Add subtle noise/texture scaling if renderer supported it, but for now just a border highlight
+    renderer.strokeRoundedRect(listClip, 0.0f, 1.0f, AestraUI::NUIColor(1.0f,1.0f,1.0f,0.05f)); // Inner faint border
 
     const float labelFont = 14.0f;   // +3px for better legibility
     const float metaFont = 12.0f;    // +2px for metadata
@@ -2135,18 +2188,19 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         // Background styling
         // Background styling
         if (selected) {
-            // Selected state: Full width pill (Glass Aesthetic)
-            renderer.fillRoundedRect(itemRect, 6, selectedColor_.withAlpha(0.20f));
-            // Optional: Very subtle border to define edges
-            renderer.strokeRoundedRect(itemRect, 6, 1.0f, selectedColor_.withAlpha(0.3f));
+            // Selected state: Neon Glass Pill
+            // Background: Semi-transparent primary/cyan
+            renderer.fillRoundedRect(itemRect, 6, themeManager.getColor("accentPrimary").withAlpha(0.2f));
+            // Border: Hot Neon Glow
+            renderer.strokeRoundedRect(itemRect, 6, 1.5f, themeManager.getColor("accentCyan"));
         } else if (hovered) {
-            // Hover state: Glass effect (Light overlay + subtle border from theme)
+            // Hover state: Subtle Glass Interaction
+            // Background: Very faint white/glass
             renderer.fillRoundedRect(itemRect, 4, themeManager.getColor("glassHover")); 
+            // Border: Crisp glass edge
             renderer.strokeRoundedRect(itemRect, 4, 1.0f, themeManager.getColor("glassBorder"));
-        } else if (i % 2 == 1) {
-            // Alternating rows: Extremely subtle
-            renderer.fillRect(itemRect, NUIColor(1.0f, 1.0f, 1.0f, 0.02f));
-        }
+        } 
+        // Note: Alternating rows removed for cleaner "Deep Space" look
         
         // Indentation & Tree Lines (clamped so deep trees don't destroy name readability)
         const int depth = item->depth;
@@ -2154,19 +2208,20 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         float contentX = itemRect.x + layout.panelMargin + indent;
         const int guideDepth = std::min(depth, maxGuideDepth);
         
-	        // Draw vertical guide lines for tree structure
-	        if (guideDepth > 0) {
-	            float lineX = std::round(itemRect.x + layout.panelMargin + rowIndentStep * 0.5f) + 0.5f;
-	            const NUIColor guideColor = borderColor_.withAlpha(0.18f);
-	            const float yPad = 1.0f;
-	            for (int d = 0; d < guideDepth; ++d) {
-	                // Draw vertical line segment
-	                renderer.drawLine(NUIPoint(lineX, itemRect.y + yPad),
-	                                  NUIPoint(lineX, itemRect.y + itemRect.height - yPad),
-	                                  1.0f, guideColor);
-	                lineX += rowIndentStep;
-	            }
-	        }
+        // Draw vertical guide lines for tree structure
+        if (guideDepth > 0) {
+            float lineX = std::round(itemRect.x + layout.panelMargin + rowIndentStep * 0.5f) + 0.5f;
+            // More subtle guide lines
+            const NUIColor guideColor = themeManager.getColor("glassBorder").withAlpha(0.12f);
+            const float yPad = 1.0f;
+            for (int d = 0; d < guideDepth; ++d) {
+                // Draw vertical line segment
+                renderer.drawLine(NUIPoint(lineX, itemRect.y + yPad),
+                                  NUIPoint(lineX, itemRect.y + itemRect.height - yPad),
+                                  1.0f, guideColor);
+                lineX += rowIndentStep;
+            }
+        }
 
         // Expander arrow
         if (item->isDirectory) {
@@ -2292,14 +2347,19 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     NUIRect toolbarRect(bounds.x, bounds.y, effectiveW, totalHeaderHeight);
     
     // Background
-    // Use component background color to ensure it matches the dark theme and isn't accent-colored
-    // Background
-    // Use component background color for the header area
-    renderer.fillRoundedRect(toolbarRect, 0.0f, backgroundColor_); 
+    // Glass Toolbar Header
+    // Gradient for toolbar too
+    AestraUI::NUIColor toolbarTop = themeManager.getColor("surfaceTertiary").withAlpha(0.25f);
+    AestraUI::NUIColor toolbarBottom = themeManager.getColor("surfaceTertiary").withAlpha(0.15f);
+    
+    // Simple 2-pass gradient for toolbar
+    renderer.fillRect(toolbarRect, toolbarTop);
+    renderer.fillRect(AestraUI::NUIRect(toolbarRect.x, toolbarRect.y + toolbarRect.height * 0.5f, toolbarRect.width, toolbarRect.height * 0.5f), 
+                      AestraUI::NUIColor(0,0,0,0.1f)); // Darken bottom half slightly
     
     // Draw separator below buttons row (before breadcrumbs)
     float buttonRowSepY = toolbarRect.y + buttonsRowHeight;
-    renderer.drawLine(NUIPoint(bounds.x, buttonRowSepY), NUIPoint(bounds.x + effectiveW, buttonRowSepY), 1.0f, borderColor_);
+    renderer.drawLine(NUIPoint(bounds.x, buttonRowSepY), NUIPoint(bounds.x + effectiveW, buttonRowSepY), 1.0f, themeManager.getColor("glassBorder").withAlpha(0.6f));
     
     // Draw separator below entire header (after breadcrumbs) 
     float sepY = toolbarRect.bottom(); 
@@ -2805,19 +2865,105 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
     const float hoverGrow = hot ? 2.0f : 0.0f;
     const float trackWidth = scrollbarWidth_ + hoverGrow;
 
-    // Track
-    const float trackAlpha = (hot ? 0.08f : 0.05f) * opacity;
-    NUIColor trackColor = themeManager.getColor("border").withAlpha(trackAlpha);
-    renderer.fillRoundedRect(NUIRect(scrollbarX, scrollbarY, trackWidth, scrollbarHeight),
-                             radius, trackColor);
+    // === GLASS/PRO SCROLLBAR STYLE ===
+    // Adapted from NUIScrollbar::drawEnhancedTrack & drawEnhancedThumb
+    
+    // 1. Draw Track (Subtle Gradient)
+    const float trackAlphaMul = (hot ? 0.18f : 0.08f) * opacity;
+    NUIColor trackBase = themeManager.getColor("border").withAlpha(std::clamp(trackAlphaMul, 0.0f, 1.0f));
+    NUIColor trackTop = trackBase.lightened(0.03f);
+    NUIColor trackBottom = trackBase.darkened(0.06f);
+    
+    NUIRect trackRect(scrollbarX, scrollbarY, trackWidth, scrollbarHeight);
+    
+    // Draw gradient track background
+    for (int i = 0; i < 4; ++i) {
+        float factor = static_cast<float>(i) / 3.0f;
+        NUIColor gradientColor = AestraUI::NUIColor::lerp(trackTop, trackBottom, factor);
+        NUIRect gradientRect = trackRect;
+        gradientRect.y += i * 0.5f;
+        gradientRect.height -= i * 0.5f;
+        renderer.fillRoundedRect(gradientRect, radius, gradientColor);
+    }
+    
+    // Track Inner Highlight
+    NUIRect highlightRect = trackRect;
+    highlightRect.x += 1.0f;
+    highlightRect.y += 1.0f;
+    highlightRect.width -= 2.0f;
+    highlightRect.height = trackRect.height * 0.3f;
+    const float highlightAlphaMul = (hot ? 0.35f : 0.25f);
+    renderer.fillRoundedRect(highlightRect, std::max(0.0f, radius - 1.0f),
+                             trackTop.withAlpha(trackTop.a * highlightAlphaMul));
 
-    // Thumb (quiet by default; brighter on hover/drag)
-    const float thumbAlpha = (isDraggingScrollbar_ ? 0.55f : (scrollbarHovered_ ? 0.32f : 0.22f)) * opacity;
-    NUIColor thumbColor = themeManager.getColor("textSecondary").withAlpha(thumbAlpha);
+
+    // 2. Draw Thumb (Glass w/ Gradient & Markers)
     float thumbY = scrollbarY + scrollbarThumbY_;
     NUIRect thumbRect(scrollbarX, thumbY, trackWidth, scrollbarThumbHeight_);
-    renderer.fillRoundedRect(thumbRect, radius, thumbColor);
-    renderer.strokeRoundedRect(thumbRect, radius, 1.0f, themeManager.getColor("border").withAlpha(0.12f * opacity));
+    
+    // Determine thumb base color
+    const bool thumbPressed = isDraggingScrollbar_;
+    const bool thumbHot = thumbPressed || scrollbarHovered_;
+    
+    // Use textSecondary as base (neutral grey/white)
+    NUIColor thumbBase = themeManager.getColor("textSecondary");
+    if (thumbPressed) {
+        thumbBase = themeManager.getColor("textPrimary"); // Brighter when dragging
+    } else if (thumbHot) {
+        thumbBase = thumbBase.lightened(0.2f);
+    }
+    // Apply opacity base
+    thumbBase = thumbBase.withAlpha((thumbHot ? 0.55f : 0.35f) * opacity);
+
+    NUIColor thumbTopColor = thumbBase.lightened(0.06f);
+    NUIColor thumbBottomColor = thumbBase.darkened(0.06f);
+
+    // Thumb Thickness Affordance
+    NUIRect visualThumb = thumbRect;
+    const float inset = thumbHot ? 1.0f : 2.0f;
+    visualThumb.x += inset;
+    visualThumb.width = std::max(0.0f, visualThumb.width - inset * 2.0f);
+    const float thumbRadius = std::min(visualThumb.width, visualThumb.height) * 0.5f;
+
+    // Draw Gradient Thumb
+    for (int i = 0; i < 4; ++i) {
+        float factor = static_cast<float>(i) / 3.0f;
+        NUIColor gradientColor = AestraUI::NUIColor::lerp(thumbTopColor, thumbBottomColor, factor);
+        NUIRect gradientRect = visualThumb;
+        gradientRect.y += i * 0.5f;
+        gradientRect.height -= i * 0.5f;
+        renderer.fillRoundedRect(gradientRect, thumbRadius, gradientColor);
+    }
+
+    // Draw Markers (Horizontal Lines)
+    if (visualThumb.height > 12.0f) {
+        float markerHeight = 2.0f;
+        float markerSpacing = 3.0f;
+        float totalMarkerHeight = (markerHeight * 2) + markerSpacing;
+        float markerY = visualThumb.y + (visualThumb.height - totalMarkerHeight) * 0.5f;
+        
+        NUIColor markerColor = AestraUI::NUIColor::white().withAlpha((thumbHot ? 0.4f : 0.2f) * opacity);
+        
+        // Top marker
+        renderer.fillRoundedRect(NUIRect(visualThumb.x + 3.0f, markerY, visualThumb.width - 6.0f, markerHeight), 
+                                 1.0f, markerColor);
+        // Bottom marker
+        renderer.fillRoundedRect(NUIRect(visualThumb.x + 3.0f, markerY + markerHeight + markerSpacing, visualThumb.width - 6.0f, markerHeight), 
+                                 1.0f, markerColor);
+    }
+
+    // Thumb Inner Highlight
+    NUIRect thumbHighlight = visualThumb;
+    thumbHighlight.x += 1.0f;
+    thumbHighlight.y += 1.0f;
+    thumbHighlight.width -= 2.0f;
+    thumbHighlight.height = visualThumb.height * 0.4f;
+    renderer.fillRoundedRect(thumbHighlight, std::max(0.0f, thumbRadius - 1.0f),
+                             thumbTopColor.withAlpha(thumbTopColor.a * 0.3f));
+
+    // Thumb Border (Subtle)
+    renderer.strokeRoundedRect(visualThumb, thumbRadius, 1.0f,
+        thumbBase.lightened(0.1f).withAlpha(std::clamp(thumbBase.a * 0.8f, 0.0f, 1.0f)));
 }
 
 bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {

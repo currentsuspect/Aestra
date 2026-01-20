@@ -191,20 +191,26 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
 
         // Add to popup layer if available, otherwise fallback to rack's parent
         if (m_popupLayer) {
-            m_popupLayer->addChild(m_activeMenu);
+            m_popupLayer->addChild(std::static_pointer_cast<NUIComponent>(m_activeMenu));
         } else if (auto parent = rack->getParent()) {
-            parent->addChild(m_activeMenu);
+            parent->addChild(std::static_pointer_cast<NUIComponent>(m_activeMenu));
         }
+        
+        // Auto-focus the menu for immediate search
+        m_activeMenu->setFocused(true);
     });
     
     rack->setOnSlotBypassToggled([chain](int slot, bool bypassed) {
         chain->setSlotBypassed(slot, bypassed);
     });
     
-    rack->setOnSlotRemoveRequested([this, rack, chain](int slot) {
-        removePluginFromSlot(chain, slot);
-        refreshRackDisplay(rack);
-    });
+    // NOTE: Do NOT bind setOnSlotRemoveRequested here!
+    // UIMixerInspector already binds this callback and handles deletion via MixerViewModel.
+    // Binding it here would OVERWRITE that handler, causing the ViewModel to never know about deletions.
+    // rack->setOnSlotRemoveRequested([this, rack, chain](int slot) {
+    //     removePluginFromSlot(chain, slot);
+    //     refreshRackDisplay(rack);
+    // });
     
     // Initial refresh
     refreshRackDisplay(rack);

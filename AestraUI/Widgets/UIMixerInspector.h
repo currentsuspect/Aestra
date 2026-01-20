@@ -2,6 +2,7 @@
 #pragma once
 
 #include "NUIComponent.h"
+#include "NUIDropdown.h"
 
 #include <cstdint>
 #include <string>
@@ -64,9 +65,13 @@ private:
     // Inserts
     std::shared_ptr<EffectChainRack> m_effectRack;
 
+    // I/O
+    std::shared_ptr<NUIDropdown> m_ioInputDropdown;
+
     // Sends
     std::vector<std::shared_ptr<class UIMixerSend>> m_sendWidgets;
     void rebuildSendWidgets(const Aestra::ChannelViewModel* channel);
+    void rebuildInsertRack(const Aestra::ChannelViewModel* channel);
 
     // Cached header strings (updated only when selection changes)
     uint32_t m_cachedSelectedId{0xFFFFFFFFu};

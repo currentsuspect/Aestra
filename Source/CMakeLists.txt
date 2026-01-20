@@ -35,8 +35,7 @@ set(Aestra_SOURCES
 	Panels/MixerPanel.cpp
 	Panels/ArsenalPanel.h
 	Panels/ArsenalPanel.cpp
-	Panels/StepSequencerPanel.h
-	Panels/StepSequencerPanel.cpp
+	# Panels/StepSequencerPanel removed
 	Panels/PatternBrowserPanel.h
 	Panels/PatternBrowserPanel.cpp
 	Panels/AuditionPanel.h

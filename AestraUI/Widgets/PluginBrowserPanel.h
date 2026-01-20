@@ -13,6 +13,9 @@
 
 namespace AestraUI {
 
+// Forward declarations
+class NUIContextMenu;
+
 /**
  * @brief Plugin list item for display in the browser
  */
@@ -255,6 +258,8 @@ public:
         std::string name;       ///< Plugin name or "Empty"
         bool bypassed = false;  ///< Slot bypass state
         bool isEmpty = true;    ///< No plugin loaded
+        float dryWet = 1.0f;    ///< Dry/Wet mix (0.0 - 1.0), default 1.0 (Wet)
+        bool pendingRemoval = false; ///< UI is waiting for engine to confirm removal
     };
     
     EffectChainRack();
@@ -276,6 +281,8 @@ public:
     void setOnSlotBypassToggled(std::function<void(int slot, bool bypassed)> callback);
     void setOnSlotRemoveRequested(std::function<void(int slot)> callback);
     void setOnAddPluginRequested(std::function<void(int slot)> callback);
+    void setOnSlotMixChanged(std::function<void(int slot, float mix)> callback);
+    void setOnSlotMoveRequested(std::function<void(int from, int to)> callback);
     
     /**
      * @brief Get current scroll offset
@@ -287,6 +294,7 @@ private:
     int hitTestSlot(float y) const;
     
     std::array<EffectSlotInfo, MAX_SLOTS> m_slots;
+    std::array<int, MAX_SLOTS> m_bypassOverride; // -1=None, 0=Active, 1=Bypassed
     int m_hoveredSlot = -1;
     float m_scrollOffset = 0.0f;
     
@@ -294,10 +302,26 @@ private:
     std::chrono::steady_clock::time_point m_lastClickTime{};
     int m_lastClickSlot = -1;
     
+    // Drag Interaction State
+    int m_activeKnobSlot = -1;
+    NUIPoint m_dragStartPos{};
+    float m_dragStartValue = 0.0f;
+    
     std::function<void(int)> m_onSlotClicked;
     std::function<void(int, bool)> m_onSlotBypassToggled;
     std::function<void(int)> m_onSlotRemoveRequested;
     std::function<void(int)> m_onAddPluginRequested;
+    std::function<void(int, float)> m_onSlotMixChanged;
+    std::function<void(int, int)> m_onSlotMoveRequested; // from, to
+    
+    // Drag Reorder State
+    int m_draggingSlotIndex = -1;
+    bool m_isDraggingReorder = false;
+    NUIPoint m_currentMousePos{};
+    
+    // Context Menu State
+    std::shared_ptr<NUIContextMenu> m_contextMenu;
+    int m_contextMenuSlot = -1;
     
     static constexpr float SLOT_HEIGHT = 28.0f;
 };

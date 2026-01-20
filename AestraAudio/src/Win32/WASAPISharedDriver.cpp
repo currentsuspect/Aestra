@@ -138,8 +138,9 @@ std::vector<AudioDeviceInfo> WASAPISharedDriver::getDevices() {
 
 bool WASAPISharedDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devices) {
     IMMDeviceCollection* deviceCollection = nullptr;
+    UINT deviceIdCounter = 0;
 
-    // Enumerate output devices
+    // 1. Enumerate OUTPUT devices (eRender)
     HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->EnumAudioEndpoints(
         eRender,
         DEVICE_STATE_ACTIVE,
@@ -154,13 +155,65 @@ bool WASAPISharedDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devices)
             IMMDevice* device = nullptr;
             if (SUCCEEDED(deviceCollection->Item(i, &device))) {
                 AudioDeviceInfo info;
-                info.id = i;
+                info.id = deviceIdCounter++;
                 info.maxOutputChannels = 2; // Default to stereo
                 info.maxInputChannels = 0;
                 info.preferredSampleRate = 48000;
                 info.supportedSampleRates = { 44100, 48000, 96000 };
                 info.isDefaultOutput = (i == 0); // First device is default
                 info.isDefaultInput = false;
+
+                // Get device name
+                LPWSTR deviceId = nullptr;
+                if (SUCCEEDED(device->GetId(&deviceId))) {
+                    IPropertyStore* propertyStore = nullptr;
+                    if (SUCCEEDED(device->OpenPropertyStore(STGM_READ, &propertyStore))) {
+                        PROPVARIANT varName;
+                        PropVariantInit(&varName);
+                        if (SUCCEEDED(propertyStore->GetValue(PKEY_Device_FriendlyName, &varName))) {
+                            // Convert wide string to narrow
+                            int len = WideCharToMultiByte(CP_UTF8, 0, varName.pwszVal, -1, nullptr, 0, nullptr, nullptr);
+                            if (len > 0) {
+                                std::string name(len - 1, '\0');
+                                WideCharToMultiByte(CP_UTF8, 0, varName.pwszVal, -1, &name[0], len, nullptr, nullptr);
+                                info.name = name;
+                            }
+                            PropVariantClear(&varName);
+                        }
+                        propertyStore->Release();
+                    }
+                    CoTaskMemFree(deviceId);
+                }
+
+                devices.push_back(info);
+                device->Release();
+            }
+        }
+        deviceCollection->Release();
+    }
+
+    // 2. Enumerate INPUT devices (eCapture)
+    hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->EnumAudioEndpoints(
+        eCapture,
+        DEVICE_STATE_ACTIVE,
+        &deviceCollection
+    );
+
+    if (SUCCEEDED(hr)) {
+        UINT count = 0;
+        deviceCollection->GetCount(&count);
+
+        for (UINT i = 0; i < count; ++i) {
+            IMMDevice* device = nullptr;
+            if (SUCCEEDED(deviceCollection->Item(i, &device))) {
+                AudioDeviceInfo info;
+                info.id = deviceIdCounter++;
+                info.maxOutputChannels = 0;
+                info.maxInputChannels = 2; // Default to stereo input
+                info.preferredSampleRate = 48000;
+                info.supportedSampleRates = { 44100, 48000, 96000 };
+                info.isDefaultOutput = false;
+                info.isDefaultInput = (i == 0); // First capture device is default
 
                 // Get device name
                 LPWSTR deviceId = nullptr;

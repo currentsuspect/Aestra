@@ -14,6 +14,9 @@
 #include <algorithm>
 
 namespace Aestra {
+namespace Audio {
+    class AudioDeviceManager;
+}
 
 /**
  * @brief Per-channel UI state for the mixer.
@@ -46,6 +49,16 @@ struct ChannelViewModel {
     int inputChannelIndex{-1};           ///< Input channel index (0-based, -1 = none)
 
     // FX state
+    struct InsertViewModel {
+        std::string name;
+        std::string id;
+        bool bypassed{false};
+        bool bypassDirty{false}; // UI has pending change not yet synced
+        bool pendingRemoval{false}; // UI has requested removal, waiting for engine
+        float mix{1.0f};
+        bool isEmpty{true};
+    };
+    std::vector<InsertViewModel> inserts; // Fixed size usually, or dynamic
     int fxCount{0};                      ///< Number of insert effects
 
     // Meter state (UI-side smoothing, stored in dB)
@@ -67,7 +80,7 @@ struct ChannelViewModel {
     double peakHoldTimerR{0.0};              ///< Time since peak hold set (seconds)
     bool clipLatchL{false};                  ///< Left channel clip latch
     bool clipLatchR{false};                  ///< Right channel clip latch
-
+    
     struct SendViewModel {
         uint32_t targetId{0};
         std::string targetName;
@@ -140,6 +153,12 @@ public:
 
     // Global State
     std::vector<std::string> inputNames;
+    std::vector<int> inputDeviceIds; // Device IDs corresponding to inputNames (-1 = None)
+
+    /**
+     * @brief Refresh available inputs from device manager.
+     */
+    void refreshInputs(const Audio::AudioDeviceManager& deviceManager);
 
     /**
      * @brief Update meter values from snapshot buffer.
@@ -243,6 +262,12 @@ public:
     void removeSend(uint32_t channelId, int sendIndex);
     void setSendLevel(uint32_t channelId, int sendIndex, float linearGain);
     void setSendDestination(uint32_t channelId, int sendIndex, uint32_t targetId);
+
+    // Insert Management
+    void setInsertBypass(uint32_t channelId, int slotIndex, bool bypassed);
+    void setInsertMix(uint32_t channelId, int slotIndex, float mix);
+    void moveInsert(uint32_t channelId, int fromSlot, int toSlot);
+    void removeInsert(uint32_t channelId, int slot);
 
     void setOnGraphDirty(std::function<void()> cb) { m_onGraphDirty = std::move(cb); }
     void setOnProjectModified(std::function<void()> cb) { m_onProjectModified = std::move(cb); }

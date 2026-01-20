@@ -81,6 +81,8 @@ public:
         hasCustomText_ = false; 
         hasCustomHover_ = false; 
         hasCustomPressed_ = false; 
+        hasCustomBorderColor_ = false;
+        hasCustomBorderWidth_ = false;
         setDirty(); 
     }
     
@@ -113,6 +115,16 @@ public:
      */
     void setGlowEnabled(bool enabled) { glowEnabled_ = enabled; setDirty(); }
     bool isGlowEnabled() const { return glowEnabled_; }
+
+    /**
+     * Set custom border color.
+     */
+    void setBorderColor(const NUIColor& color) { borderColor_ = color; hasCustomBorderColor_ = true; setDirty(); }
+    
+    /**
+     * Set custom border width.
+     */
+    void setBorderWidth(float width) { borderWidth_ = width; hasCustomBorderWidth_ = true; setDirty(); }
     
     // ========================================================================
     // Component Overrides
@@ -139,6 +151,11 @@ private:
     NUIColor textColor_;
     NUIColor hoverColor_;
     NUIColor pressedColor_;
+    NUIColor borderColor_;
+    
+    bool hasCustomBorderColor_ = false;
+    bool hasCustomBorderWidth_ = false;
+    float borderWidth_ = 1.0f;
     
     // State
     bool pressed_ = false;

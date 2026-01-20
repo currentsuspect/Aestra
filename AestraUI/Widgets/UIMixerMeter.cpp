@@ -28,8 +28,8 @@ void UIMixerMeter::cacheThemeColors()
     m_colorGreenDim = m_colorGreen.withSaturation(0.0f).withAlpha(0.55f);
     m_colorYellowDim = m_colorYellow.withSaturation(0.0f).withAlpha(0.55f);
     m_colorRedDim = m_colorRed.withSaturation(0.0f).withAlpha(0.55f);
-    // Match fader track background so meters feel integrated with the strip.
-    m_colorBackground = theme.getColor("backgroundSecondary"); // #1e1e1f
+    // Match fader track background (Dark Glass)
+    m_colorBackground = AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.3f);
     m_colorPeakHold = theme.getColor("textPrimary"); // #E5E5E8
     m_colorPeakOverlay = m_colorPeakHold.withAlpha(0.8f);
     m_colorPeakOverlayDim = m_colorPeakOverlay.withSaturation(0.0f).withAlpha(0.6f);
