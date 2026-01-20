@@ -306,6 +306,7 @@ private:
     std::atomic<uint32_t> m_maxBufferFrames{4096};  // Larger default for safety
     std::atomic<uint32_t> m_outputChannels{2};
     std::atomic<bool> m_transportPlaying{false};
+    std::atomic<bool> m_isRendering{false}; // [NEW] Tracks if processBlock is active
     // RT-side tracking of last known transport state (avoids race with UI atomic updates)
     bool m_rtLastTransportPlaying{false};
     uint64_t m_rtLastTransportPos{0};

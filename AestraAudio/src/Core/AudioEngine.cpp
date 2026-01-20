@@ -7,6 +7,7 @@
 #include "EffectChain.h" // [NEW]
 #include "PluginHost.h"
 #include "Plugin/SamplerPlugin.h" // [NEW]
+#include "GarbageCollector.h" // [NEW]
 #include "UnitManager.h"
 #include "PatternPlaybackEngine.h"
 #include <algorithm>
@@ -242,6 +243,13 @@ void AudioEngine::processBlock(float* outputBuffer,
                                uint32_t numFrames,
                                double streamTime) {
     (void)streamTime;
+
+    // [FIX] Signal rendering state for panic synchronization
+    struct ScopedRendering {
+        std::atomic<bool>& flag;
+        ScopedRendering(std::atomic<bool>& f) : flag(f) { flag.store(true, std::memory_order_release); }
+        ~ScopedRendering() { flag.store(false, std::memory_order_release); }
+    } renderScope(m_isRendering);
 
     // Process Input (Recording)
     if (inputBuffer) {
@@ -1049,6 +1057,9 @@ AudioEngine::AudioEngine() {
     // Initialize telemetry
     m_telemetry.cycleHz.store(0);
 
+    // [FIX] Precompute tables to prevent lazy init in RT thread
+    Interpolators::precomputeTables();
+
     m_loudnessState.integratedLufs.store(-144.0f); // Force silence init
     m_loudnessState.momentaryLufs.store(-144.0f);
 
@@ -1083,6 +1094,9 @@ void AudioEngine::stopLoudnessWorker() {
 
 void AudioEngine::loudnessWorkerLoop() {
     while (m_loudnessThreadRunning) {
+        // [FIX] Perform garbage collection for resources released by RT thread
+        GarbageCollector::instance().collect();
+
         // 1. Process Accumulation Queue
         double blockEnergy;
         bool didWork = false;
@@ -1846,6 +1860,11 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
 void AudioEngine::panic() {
     // 1. Force Silence (stops renderGraph calls and mutes output immediately)
     m_fadeState = FadeState::Silent;
+
+    // [FIX] Wait for RT thread to exit graph rendering
+    while (m_isRendering.load(std::memory_order_acquire)) {
+         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
 
     // 2. Reset all plugins (Main Thread)
     // We lock the graph mutex to ensure we don't access a graph that's being swapped

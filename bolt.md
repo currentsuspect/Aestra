@@ -29,6 +29,21 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### GPU Audio Offloading (CUDA/OpenCL)
+
+- **Innovation**: Offload massive convolution reverbs and spectral processing to the GPU.
+- **Benefit**: Frees up CPU for low-latency synthesis and mixing.
+
+### Cloud Collaboration Sync
+
+- **Innovation**: Real-time project synchronization using CRDTs (Conflict-free Replicated Data Types).
+- **Benefit**: Multi-user editing sessions without file locking.
+
+### JIT DSP Compilation
+
+- **Innovation**: Compile audio graph nodes into a single optimized machine code block at runtime using LLVM or AsmJit.
+- **Benefit**: Eliminates virtual function overhead for effect chains.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -39,8 +54,8 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 ### Lock-Free Garbage Collection
 
-- **Status**: Missing global GC for audio thread resources.
-- **Plan**: Implement a `GarbageCollector` singleton using the "Zombie Queue" pattern.
+- **Status**: **Implemented** (Active in `AudioEngine::loudnessWorkerLoop`).
+- **Plan**: Maintain `GarbageCollector` singleton using the "Zombie Queue" pattern.
 - **Benefit**: Eliminates all mutexes from `processBlock` paths (specifically fixing `SamplerPlugin`).
 
 ### Zero-Allocation UI
@@ -68,8 +83,13 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 ### Real-Time Safety
 
 - **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
-- **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
-- **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+- **Fix**: **Fixed**. Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
+- **Violation**: `AudioEngine::panic()` race condition with `processBlock`.
+- **Fix**: **Fixed**. Implemented `m_isRendering` atomic flag and spin-wait synchronization in `panic()`.
+- **Violation**: `Interpolators` lazy initialization in RT thread.
+- **Fix**: **Fixed**. Added explicit `Interpolators::precomputeTables()` call in `AudioEngine` constructor.
+- **Violation**: `GarbageCollector` memory leak (never collected).
+- **Fix**: **Fixed**. Added periodic `collect()` call in `AudioEngine` background worker.
 
 ---
 *Signed: Bolt*
