@@ -46,20 +46,10 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     m_header->setIsMaster(m_channelId == 0);
     addChild(m_header);
 
-    // Input Selector (New!)
-    m_inputDropdown = std::make_shared<NUIDropdown>();
-    m_inputDropdown->setVisible(false); // Hidden by default
-    m_inputDropdown->setOnSelectionChanged([this](int index, int value, const std::string& text) {
-        if (!m_viewModel) return;
-        auto* channel = m_viewModel->getChannelById(m_channelId);
-        if (!channel) return;
-        
-        // Pass to backend
-        if (auto mc = channel->channel.lock()) {
-             mc->setInputChannelIndex(value); 
-        }
-    });
-    addChild(m_inputDropdown);
+    m_header->setIsMaster(m_channelId == 0);
+    addChild(m_header);
+
+    // Input Selector REMOVED (Moved to Inspector)
 
     m_trimKnob = std::make_shared<UIMixerKnob>(UIMixerKnobType::Trim);
     // Reduce visual noise: show channel controls only when hovered/selected.
@@ -196,18 +186,6 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
             mc->setArmed(armed);
         }
     };
-    m_buttons->onMonitorToggled = [this](bool monitored) {
-        if (!m_viewModel) return;
-        auto* channel = m_viewModel->getChannelById(m_channelId);
-        if (!channel || channel->id == 0) return;
-
-        channel->monitored = monitored;
-        invalidateStaticCache();
-
-        if (auto mc = channel->channel.lock()) {
-            mc->setMonitoringEnabled(monitored);
-        }
-    };
     addChild(m_buttons);
 
     m_meter = std::make_shared<UIMixerMeter>();
@@ -282,16 +260,23 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 void UIMixerStrip::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
-    m_selectedTint = theme.getColor("accentPrimary").withAlpha(0.12f);
-    m_selectedOutline = theme.getColor("accentPrimary").withAlpha(0.65f);
-    m_selectedGlow = theme.getColor("accentPrimary").withAlpha(0.22f);
-    m_selectedTopHighlight = theme.getColor("accentPrimary").withAlpha(0.55f);
-    m_masterBackground = theme.getColor("backgroundSecondary").withAlpha(0.35f);
-    m_mutedOverlay = NUIColor(0.0f, 0.0f, 0.0f, 0.22f);
+    // Selection: Neon Purple (Glassy)
+    m_selectedTint = theme.getColor("accentPrimary").withAlpha(0.08f);
+    m_selectedOutline = theme.getColor("accentPrimary").withAlpha(0.5f);
+    m_selectedGlow = theme.getColor("accentPrimary").withAlpha(0.3f);
+    m_selectedTopHighlight = theme.getColor("accentPrimary").withAlpha(0.8f);
     
-    // New tokens (Global colors)
-    m_stripBg = theme.getColor("mixerStripBg"); 
-    m_masterBorder = theme.getColor("mixerMasterBorder");
+    // Master: Distinct Dark Glass
+    m_masterBackground = AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.3f);
+    m_mutedOverlay = NUIColor(0.0f, 0.0f, 0.0f, 0.4f);
+    
+    // Standard Strip: Use Theme Glass Border/Hover for consistency
+    // m_stripBg = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.02f); 
+    // Use theme.glassHover (0.04f) or similar. Let's use a custom weak glass for strips.
+    m_stripBg = theme.getColor("glassBorder").withAlpha(0.04f);
+    
+    // Master Border
+    m_masterBorder = theme.getColor("glassBorder");
 }
 
 void UIMixerStrip::layoutChildren()
@@ -305,12 +290,7 @@ void UIMixerStrip::layoutChildren()
         y += HEADER_H;
     }
 
-    // New: Input Dropdown below header
-    if (m_inputDropdown && m_inputDropdown->isVisible()) {
-        float dropdownH = 18.0f;
-        m_inputDropdown->setBounds(bounds.x + PAD, y + 2.0f, bounds.width - PAD * 2, dropdownH); 
-        y += dropdownH + 4.0f; 
-    }
+    // Input Dropdown Removed from Strip Layout
 
     const bool hasButtons = (m_buttons && m_buttons->isVisible());
     if (hasButtons) {
@@ -419,50 +399,7 @@ void UIMixerStrip::onUpdate(double deltaTime)
         invalidateStaticCache();
     }
 
-    // Update Input Dropdown (Only for tracks, not master)
-    if (m_inputDropdown && m_channelId != 0 && m_viewModel) {
-        // Check availability
-        bool hasInputs = !m_viewModel->inputNames.empty();
-        // Show if inputs available AND (selected OR armed OR monitored) - or just always show for quick access?
-        // Let's hide it if no inputs exist at all.
-        if (m_inputDropdown->isVisible() != hasInputs) {
-             m_inputDropdown->setVisible(hasInputs);
-             layoutChildren();
-        }
-        
-        if (hasInputs) {
-            // Update items if count changed
-            size_t neededCount = m_viewModel->inputNames.size();
-            if (m_inputDropdown->getItemCount() != neededCount) {
-                 m_inputDropdown->clearItems();
-                 for (size_t i = 0; i < neededCount; ++i) {
-                      int val = static_cast<int>(i);
-                      // Last item is "None" -> value -1
-                      if (i == neededCount - 1) val = -1;
-                      m_inputDropdown->addItem(m_viewModel->inputNames[i], val);
-                 }
-            }
-            
-            // Sync Selection
-            // Map current inputChannelIndex to list index
-            // If -1 -> Last item
-            // Else -> index = value
-            int targetIndex = -1;
-            int currentVal = channel->inputChannelIndex;
-            
-            if (currentVal == -1) {
-                targetIndex = (int)m_inputDropdown->getItemCount() - 1;
-            } else {
-                targetIndex = currentVal;
-            }
-
-            if (targetIndex >= 0 && targetIndex < (int)m_inputDropdown->getItemCount()) {
-                if (m_inputDropdown->getSelectedIndex() != targetIndex) {
-                    m_inputDropdown->setSelectedIndex(targetIndex);
-                }
-            }
-        }
-    }
+    // Input Dropdown Logic Removed
 
     if (m_cachedMuted != channel->muted) {
         m_cachedMuted = channel->muted;
@@ -507,7 +444,6 @@ void UIMixerStrip::onUpdate(double deltaTime)
         m_buttons->setMuted(channel->muted);
         m_buttons->setSoloed(channel->soloed);
         m_buttons->setArmed(channel->armed);
-        m_buttons->setMonitored(channel->monitored);
     }
 
     if (m_trimKnob && m_trimKnob->isVisible() && !m_trimKnob->isDragging()) {
@@ -607,16 +543,18 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     const bool selected = m_viewModel && (m_viewModel->getSelectedChannelId() == static_cast<int32_t>(m_channelId));
 
     // Unified "Deep Black" background for ALL strips.
-    renderer.fillRect(bounds, m_stripBg);
+    // Use Squircle (Rounded Rect) for standard Apple-like look
+    float radius = NUIThemeManager::getInstance().getRadius("radiusM");
+    renderer.fillRoundedRect(bounds, radius, m_stripBg);
 
     // Master gets a slightly different tone to distinguish it (optional, but good for hierarchy)
     if (m_channelId == 0) {
         // Subtle highlight for master
-        renderer.strokeRect(bounds, 1.0f, m_masterBorder); 
+        renderer.strokeRoundedRect(bounds, radius, 1.0f, m_masterBorder); 
     }
 
     if (selected) {
-        renderer.fillRect(bounds, m_selectedTint);
+        renderer.fillRoundedRect(bounds, radius, m_selectedTint);
 
         // Top highlight "edge" (gives instant selection scent without heavy borders).
         renderer.fillRect(NUIRect{bounds.x, bounds.y, bounds.width, SELECT_TOP_H}, m_selectedTopHighlight);
@@ -625,10 +563,10 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
         // Outer glow
         auto glowColor = m_selectedGlow;
         glowColor.a = 0.4f; // Brighter glow
-        renderer.strokeRect(NUIRect{bounds.x - 2.0f, bounds.y - 2.0f, bounds.width + 4.0f, bounds.height + 4.0f}, 2.0f, glowColor);
+        renderer.strokeRoundedRect(NUIRect{bounds.x - 2.0f, bounds.y - 2.0f, bounds.width + 4.0f, bounds.height + 4.0f}, radius + 2.0f, 2.0f, glowColor);
         
         // Sharp Outline
-        renderer.strokeRect(bounds, 1.5f, m_selectedOutline);
+        renderer.strokeRoundedRect(bounds, radius, 1.5f, m_selectedOutline);
     }
 
     // While dragging, render live (no caching) so interactive controls update every frame.
@@ -674,7 +612,7 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
 
     renderChildren(renderer);
     if (channel && channel->muted) {
-        renderer.fillRect(getBounds(), m_mutedOverlay);
+        renderer.fillRoundedRect(getBounds(), radius, m_mutedOverlay);
     }
 }
 

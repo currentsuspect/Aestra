@@ -39,7 +39,13 @@ private:
     float m_peakLevel{0.0f};
     float m_peakDecay{0.0f};
     
+    // Visual mapping
+    PlaylistLaneID m_laneId; 
+    
     void layoutControls();
+    
+public:
+    void setPlaylistLaneID(PlaylistLaneID id) { m_laneId = id; }
 };
 
 /**

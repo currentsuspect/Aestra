@@ -196,6 +196,48 @@ AestraContent::AestraContent() {
     
     m_workspaceLayer->addChild(m_trackManagerUI);
 
+    // Create transport bar (Moved to Workspace Layer and Early Init for correct Z-Order behind Sidebars)
+    m_transportBar = std::make_shared<Aestra::TransportBar>();
+    m_transportBar->setOnToggleView([this](Audio::ViewType view) {
+        toggleView(view);
+    });
+    
+    // Wire Transport to TrackManager (Pre-definition allows wiring)
+    // Note: TrackManager exists since Line 100
+    m_transportBar->setOnPlay([this]() { if(m_trackManager) m_trackManager->play(); });
+    m_transportBar->setOnPause([this]() { if(m_trackManager) m_trackManager->pause(); });
+    m_transportBar->setOnStop([this]() { 
+        if(m_trackManager) m_trackManager->stop();
+        if(m_auditionEngine && m_viewFocus == ViewFocus::Audition) m_auditionEngine->stop();
+        stopSoundPreview();
+        m_audioEngine->panic(); 
+    });
+    m_transportBar->setOnRecord([this](bool recording) { 
+        if(m_trackManager) {
+            bool isEngineRecording = m_trackManager->isRecording();
+            if (recording != isEngineRecording) {
+                m_trackManager->record();
+            }
+        }
+    });
+    m_transportBar->setOnMetronomeToggle([this](bool enabled) {
+        if(m_trackManager) m_trackManager->enableMetronome(enabled);
+    });
+    
+    // Helper: Stop preview when Audition Queue changes (drop)
+    if (m_auditionEngine) {
+        m_auditionEngine->setOnQueueUpdated([this]() {
+            stopSoundPreview();
+        });
+    }
+
+    // Add to WORKSPACE layer but we want it ON TOP of sidebars if it's an island?
+    // User says "filebrowser hiding the transport".
+    // Browsers are added to workspace too.
+    // If we want Transport ON TOP, add it LAST.
+    // m_workspaceLayer->addChild(m_transportBar); // Deferred to end
+
+    
     // Create Browser Toggle (Files | Plugins)
     m_browserToggle = std::make_shared<AestraUI::NUISegmentedControl>(
         std::vector<std::string>{"Files", "Plugins"}
@@ -436,45 +478,8 @@ AestraContent::AestraContent() {
     m_sequencerPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::Sequencer); });
     m_overlayLayer->addChild(m_sequencerPanel);
 
-    // Create transport bar
-    m_transportBar = std::make_shared<Aestra::TransportBar>();
-    m_transportBar->setOnToggleView([this](Audio::ViewType view) {
-        toggleView(view);
-    });
-    
-    // Helper: Stop preview when Audition Queue changes (drop)
-    if (m_auditionEngine) {
-        m_auditionEngine->setOnQueueUpdated([this]() {
-            stopSoundPreview();
-        });
-    }
-    
-    // Wire Transport to TrackManager
-    m_transportBar->setOnPlay([this]() { if(m_trackManager) m_trackManager->play(); });
-    m_transportBar->setOnPause([this]() { if(m_trackManager) m_trackManager->pause(); });
-    m_transportBar->setOnStop([this]() { 
-        if(m_trackManager) m_trackManager->stop();
-        if(m_auditionEngine && m_viewFocus == ViewFocus::Audition) m_auditionEngine->stop();
-        stopSoundPreview();
-        m_audioEngine->panic(); // Ensure silence
-    });
-    m_transportBar->setOnRecord([this](bool recording) { 
-        if(m_trackManager) {
-            // Robust toggle: Check backend state to prevent accidental restarts or desync
-            bool isEngineRecording = m_trackManager->isRecording();
-            
-            // Only trigger action if the requested UI state differs from Engine state
-            if (recording != isEngineRecording) {
-                m_trackManager->record();
-            }
-        }
-    });
-    
-    m_transportBar->setOnMetronomeToggle([this](bool enabled) {
-        if(m_trackManager) m_trackManager->enableMetronome(enabled);
-    });
-
-    m_overlayLayer->addChild(m_transportBar);
+    // Transport Bar moved to early initialization (above) for Z-order fix
+    // m_transportBar added to m_workspaceLayer there.
     
     // Create Focus Toggle Buttons
     auto& theme = AestraUI::NUIThemeManager::getInstance();
@@ -518,6 +523,11 @@ AestraContent::AestraContent() {
     m_previewEngine = std::make_unique<PreviewEngine>();
     m_previewIsPlaying = false;
     m_previewDuration = 8.0;
+    
+    // Add Transport Bar LAST to ensure it renders on top of sidebars (Z-Order Fix)
+    if (m_transportBar) {
+        m_workspaceLayer->addChild(m_transportBar);
+    }
     
     syncViewState();
 }
@@ -643,10 +653,13 @@ void AestraContent::onResize(int width, int height) {
 
     // DYNAMIC LAYOUT: Calculate effective top margin
     float effectiveTransportHeight = layout.transportBarHeight;
+    float sidebarTopY = 0.0f; // Sidebars go to the top (behind floating transport)
+
     bool isAuditionMode = (m_viewFocus == ViewFocus::Audition);
     
     if (isAuditionMode) {
         effectiveTransportHeight = 0.0f;
+        sidebarTopY = 0.0f; 
     }
 
     // Transport Bar Positioning
@@ -680,13 +693,13 @@ void AestraContent::onResize(int width, int height) {
     }
 
     float fileBrowserWidth = 0;
-    float sidebarHeight = height - effectiveTransportHeight;
+    float sidebarHeight = height - sidebarTopY; // Use sidebarTopY
     float patternBrowserWidth = 0;
     
     if (m_browserToggle) {
         // Toggle bar above browser
-        float toggleHeight = 30.0f;
-        float toggleY = effectiveTransportHeight;
+        float toggleHeight = 24.0f; // Compact toggle
+        float toggleY = sidebarTopY;
         float browserWidth = std::min(layout.fileBrowserWidth, width * 0.20f);
         
         m_browserToggle->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, toggleY, browserWidth, toggleHeight));
@@ -694,8 +707,8 @@ void AestraContent::onResize(int width, int height) {
 
     if (m_fileBrowser) {
         fileBrowserWidth = std::min(layout.fileBrowserWidth, width * 0.20f);
-        float toggleHeight = 30.0f;
-        float fbTop = effectiveTransportHeight + toggleHeight;
+        float toggleHeight = 24.0f; // Matching above
+        float fbTop = sidebarTopY + toggleHeight;
         float fbHeight = sidebarHeight - toggleHeight;
         
         if (m_previewPanel && m_previewPanel->isVisible()) {
@@ -712,8 +725,8 @@ void AestraContent::onResize(int width, int height) {
     
     if (m_pluginBrowser) {
         // Occupies same space as file browser + preview panel
-        float toggleHeight = 30.0f;
-        float pbTop = effectiveTransportHeight + toggleHeight;
+        float toggleHeight = 24.0f;
+        float pbTop = sidebarTopY + toggleHeight;
         float pbHeight = sidebarHeight - toggleHeight;
         // recalculate width locally just in case
         float pbWidth = std::min(layout.fileBrowserWidth, width * 0.20f);
@@ -729,8 +742,14 @@ void AestraContent::onResize(int width, int height) {
     if (m_patternBrowser) {
         patternBrowserWidth = std::min(layout.fileBrowserWidth * 0.8f, width * 0.15f);
         float patternBrowserX = fileBrowserWidth;
-        m_patternBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, patternBrowserX, effectiveTransportHeight,
-                                                        patternBrowserWidth, sidebarHeight));
+        
+        // DECOUPLED: Pattern Browser starts BELOW transport (unless in Audition Mode)
+        // User request: "move the pattern browser down... so the top is where the file browser was before"
+        float pbY = isAuditionMode ? 0.0f : layout.transportBarHeight;
+        float pbHeight = height - pbY;
+        
+        m_patternBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, patternBrowserX, pbY,
+                                                        patternBrowserWidth, pbHeight));
     }
 
     if (m_audioVisualizer || m_waveformVisualizer) {

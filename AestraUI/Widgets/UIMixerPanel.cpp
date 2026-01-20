@@ -43,10 +43,10 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
 void UIMixerPanel::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
-    // User requested "the inside of the mixer should be the grey"
-    // Since we unified primary/secondary to black, we hardcode the desired grey here
-    m_backgroundColor = AestraUI::NUIColor(0.12f, 0.12f, 0.14f, 1.0f);  // "The Grey"
-    m_separatorColor = theme.getColor("borderSubtle");        // #2c2c2f
+    // Deep Void Background from Theme
+    m_backgroundColor = theme.getColor("backgroundPrimary");
+    // Subtle Glass Separator
+    m_separatorColor = theme.getColor("divider");
 }
 
 void UIMixerPanel::refreshChannels()
@@ -96,26 +96,27 @@ void UIMixerPanel::refreshChannels()
 void UIMixerPanel::layoutMeters()
 {
     auto bounds = getBounds();
-    const float stripY = bounds.y + PADDING;
-    const float stripHeight = std::max(1.0f, bounds.height - PADDING * 2);
+    // User requested "push strips up to the top". Reducing top padding to 0.
+    const float stripY = bounds.y; 
+    const float stripHeight = std::max(1.0f, bounds.height - PADDING); // Only bottom padding remains
 
     // Layout master strip on the right.
-    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH - PADDING;
+    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH; // No padding
     if (m_masterStrip) {
-        m_masterStrip->setBounds(masterX, stripY, MASTER_STRIP_WIDTH, stripHeight);
+        m_masterStrip->setBounds(masterX, bounds.y, MASTER_STRIP_WIDTH, bounds.height); // Full height
         m_masterStrip->setVisible(true);
     }
 
     // Layout inspector just to the left of master.
     const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
     if (m_inspector) {
-        m_inspector->setBounds(inspectorX, stripY, INSPECTOR_WIDTH, stripHeight);
+        m_inspector->setBounds(inspectorX, bounds.y, INSPECTOR_WIDTH, bounds.height); // Full height
         m_inspector->setVisible(true);
-        m_inspector->onResize(static_cast<int>(INSPECTOR_WIDTH), static_cast<int>(stripHeight));
+        m_inspector->onResize(static_cast<int>(INSPECTOR_WIDTH), static_cast<int>(bounds.height));
     }
 
     // Layout channel strips to the left, keeping them out of the inspector/master area.
-    const float left = bounds.x + PADDING;
+    const float left = bounds.x; // Start at 0, no padding
     const float right = inspectorX - STRIP_SPACING;
     const float visibleW = std::max(0.0f, right - left);
     const float contentW = m_strips.empty() ? 0.0f : (m_strips.size() * (STRIP_WIDTH + STRIP_SPACING) - STRIP_SPACING);
@@ -127,7 +128,7 @@ void UIMixerPanel::layoutMeters()
         float stripX = x + i * (STRIP_WIDTH + STRIP_SPACING);
         const bool visible = (stripX + STRIP_WIDTH) >= left && stripX <= right;
         m_strips[i]->setVisible(visible);
-        m_strips[i]->setBounds(stripX, stripY, STRIP_WIDTH, stripHeight);
+        m_strips[i]->setBounds(stripX, bounds.y, STRIP_WIDTH, bounds.height); // Full height
     }
 }
 
@@ -156,12 +157,12 @@ void UIMixerPanel::onUpdate(double deltaTime)
 void UIMixerPanel::renderSeparators(NUIRenderer& renderer)
 {
     auto bounds = getBounds();
-    float y1 = bounds.y + PADDING;
-    float y2 = bounds.y + bounds.height - PADDING;
+    float y1 = bounds.y; // Top
+    float y2 = bounds.y + bounds.height; // Bottom (Full height)
 
-    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH - PADDING;
+    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
     const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
-    const float left = bounds.x + PADDING;
+    const float left = bounds.x;
     const float right = inspectorX - STRIP_SPACING;
 
     // Draw separators between visible channel strips.
@@ -194,10 +195,10 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
     renderSeparators(renderer);
 
     // Render channel strips with a clip so they never draw into the inspector/master area.
-    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH - PADDING;
+    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
     const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
-    const float channelW = std::max(0.0f, (inspectorX - STRIP_SPACING) - (bounds.x + PADDING));
-    const NUIRect channelClip(bounds.x + PADDING, bounds.y, channelW, bounds.height);
+    const float channelW = std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
+    const NUIRect channelClip(bounds.x, bounds.y, channelW, bounds.height);
 
     bool clipEnabled = false;
     if (!channelClip.isEmpty()) {
@@ -229,13 +230,13 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
 {
     if (event.wheelDelta != 0.0f) {
         auto bounds = getBounds();
-        const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH - PADDING;
+        const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
         const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
-        const float visibleW = std::max(0.0f, (inspectorX - STRIP_SPACING) - (bounds.x + PADDING));
+        const float visibleW = std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
         const float contentW = m_strips.empty() ? 0.0f : (m_strips.size() * (STRIP_WIDTH + STRIP_SPACING) - STRIP_SPACING);
         const float maxScroll = std::max(0.0f, contentW - visibleW);
 
-        const NUIRect channelClip(bounds.x + PADDING, bounds.y, visibleW, bounds.height);
+        const NUIRect channelClip(bounds.x, bounds.y, visibleW, bounds.height);
         if (maxScroll > 0.0f && channelClip.contains(event.position)) {
             constexpr float SCROLL_PX = 60.0f;
             m_scrollX = std::clamp(m_scrollX - static_cast<float>(event.wheelDelta) * SCROLL_PX, 0.0f, maxScroll);

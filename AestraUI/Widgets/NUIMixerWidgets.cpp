@@ -52,13 +52,36 @@ void MuteButton::onRender(NUIRenderer& renderer)
     auto& theme = NUIThemeManager::getInstance();
     auto b = getBounds();
     
-    float radius = 6.0f;
-    NUIColor bg = isOn() ? theme.getColor("primary") : theme.getColor("backgroundSecondary");
-    NUIColor text = isOn() ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : theme.getColor("textSecondary");
+    // Mute: Amber/Orange Neon
+    NUIColor base = theme.getColor("warning"); // Amber-ish
+    NUIColor bg, border, text;
+    float glowAlpha = 0.0f;
+
+    if (isOn()) {
+        bg = base.withAlpha(0.25f);
+        border = base.withAlpha(0.8f);
+        text = base; // Glowing text
+        glowAlpha = 0.4f;
+    } else {
+        bg = AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.0f); // Transparent
+        border = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.2f); // Subtle
+        text = theme.getColor("textSecondary");
+        
+        if (isHovered()) {
+            bg = base.withAlpha(0.1f);
+            border = base.withAlpha(0.4f);
+            text = AestraUI::NUIColor::white();
+        }
+    }
     
-    renderer.fillRoundedRect(b, radius, bg);
-    renderer.strokeRoundedRect(b, radius, 1.0f, theme.getColor("border"));
-    renderer.drawTextCentered("M", b, 13.0f, text);
+    // Glow
+    if (glowAlpha > 0.01f) {
+        renderer.fillRoundedRect(NUIRect(b.x-2, b.y-2, b.width+4, b.height+4), 6.0f, base.withAlpha(glowAlpha * 0.5f));
+    }
+    
+    renderer.fillRoundedRect(b, 4.0f, bg);
+    renderer.strokeRoundedRect(b, 4.0f, 1.0f, border);
+    renderer.drawTextCentered("M", b, 12.0f, text);
 }
 
 SoloButton::SoloButton()
@@ -71,13 +94,35 @@ void SoloButton::onRender(NUIRenderer& renderer)
     auto& theme = NUIThemeManager::getInstance();
     auto b = getBounds();
     
-    float radius = 6.0f;
-    NUIColor bg = isOn() ? theme.getColor("primary") : theme.getColor("backgroundSecondary");
-    NUIColor text = isOn() ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : theme.getColor("textSecondary");
+    // Solo: Cyan Neon
+    NUIColor base = theme.getColor("accentCyan"); 
+    NUIColor bg, border, text;
+    float glowAlpha = 0.0f;
+
+    if (isOn()) {
+        bg = base.withAlpha(0.25f);
+        border = base.withAlpha(0.8f);
+        text = base;
+        glowAlpha = 0.4f;
+    } else {
+        bg = AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.0f);
+        border = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.2f);
+        text = theme.getColor("textSecondary");
+        
+        if (isHovered()) {
+            bg = base.withAlpha(0.1f);
+            border = base.withAlpha(0.4f);
+            text = AestraUI::NUIColor::white();
+        }
+    }
     
-    renderer.fillRoundedRect(b, radius, bg);
-    renderer.strokeRoundedRect(b, radius, 1.0f, theme.getColor("border"));
-    renderer.drawTextCentered("S", b, 13.0f, text);
+    if (glowAlpha > 0.01f) {
+        renderer.fillRoundedRect(NUIRect(b.x-2, b.y-2, b.width+4, b.height+4), 6.0f, base.withAlpha(glowAlpha * 0.5f));
+    }
+    
+    renderer.fillRoundedRect(b, 4.0f, bg);
+    renderer.strokeRoundedRect(b, 4.0f, 1.0f, border);
+    renderer.drawTextCentered("S", b, 12.0f, text);
 }
 
 ArmButton::ArmButton()
@@ -90,13 +135,44 @@ void ArmButton::onRender(NUIRenderer& renderer)
     auto& theme = NUIThemeManager::getInstance();
     auto b = getBounds();
     
-    float radius = 6.0f;
-    NUIColor bg = isOn() ? theme.getColor("error") : theme.getColor("backgroundSecondary");
-    NUIColor text = isOn() ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : theme.getColor("textSecondary");
+    // Arm: Red Neon
+    NUIColor base = theme.getColor("error"); // Red
+    NUIColor bg, border, text;
+    float glowAlpha = 0.0f;
+
+    if (isOn()) {
+        bg = base.withAlpha(0.25f);
+        border = base.withAlpha(0.8f);
+        text = base;
+        glowAlpha = 0.4f;
+    } else {
+        bg = AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.0f);
+        border = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.2f);
+        text = theme.getColor("textSecondary");
+        
+        if (isHovered()) {
+            bg = base.withAlpha(0.1f);
+            border = base.withAlpha(0.4f);
+            text = AestraUI::NUIColor::white();
+        }
+    }
     
-    renderer.fillRoundedRect(b, radius, bg);
-    renderer.strokeRoundedRect(b, radius, 1.0f, theme.getColor("border"));
-    renderer.drawTextCentered("R", b, 13.0f, text);
+    if (glowAlpha > 0.01f) {
+        renderer.fillRoundedRect(NUIRect(b.x-2, b.y-2, b.width+4, b.height+4), 6.0f, base.withAlpha(glowAlpha * 0.5f));
+    }
+    
+    renderer.fillRoundedRect(b, 4.0f, bg);
+    renderer.strokeRoundedRect(b, 4.0f, 1.0f, border);
+    
+    // Circle or icon for Record? Keeping "R" for consistency but could be circle
+    // Let's use a small filled circle for R to look like a rec light
+    if (isOn()) {
+        float cx = b.x + b.width * 0.5f;
+        float cy = b.y + b.height * 0.5f;
+        renderer.fillCircle({cx, cy}, 4.0f, base);
+    } else {
+        renderer.drawTextCentered("R", b, 12.0f, text);
+    }
 }
 
 InsertSlot::InsertSlot() = default;

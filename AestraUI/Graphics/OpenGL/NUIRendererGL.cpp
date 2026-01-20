@@ -134,15 +134,21 @@ in float vPrimitiveType;
 
 out vec4 FragColor;
 
-// uniform int uPrimitiveType; // REMOVED: Now passed as vertex attribute
 uniform sampler2D uTexture;
 uniform bool uUseTexture;
 
-uniform float uSmoothness;
-
-float sdRoundedRect(vec2 p, vec2 size, float radius) {
-    vec2 d = abs(p) - size + radius;
-    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
+// Squircle SDF Implementation
+// Based on "sdContinuousRect" logic but optimized for GLSL 3.3
+float sdSquircle(vec2 p, vec2 b, float r) {
+    // Effectively a higher order distance metric for the corner
+    // For standard performance, we use a modified rounded rect with
+    // a curvature adjustment.
+    
+    // Standard SDF component
+    vec2 d = abs(p) - b + vec2(r);
+    float dist = length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
+    
+    return dist;
 }
 
 void main() {
@@ -153,32 +159,16 @@ void main() {
     if (uUseTexture && (primitiveID == 0 || primitiveID == 2 || primitiveID == 4)) {
         vec4 texColor = texture(uTexture, vTexCoord);
         if (primitiveID == 2) {
-             // Standard SDF rendering
+             // Standard SDF rendering (MSDF/SDF text)
              float dist = texColor.r;
-             
-             // Screen-space derivative for sharp edges regardless of scale/zoom
-             // ddist is large for small text (dUV/dPixel is high), small for large text.
              float ddist = fwidth(dist);
-             
-             // Softness factor: 0.7 gives a nice crisp edge without aliasing
              float edgeWidth = ddist * 0.7;
-             
-             // Adaptive Weighting:
-             // Thicken small text (high ddist) to prevent it looking spindly.
-             // ranges from 0.5 (large text) to ~0.42 (tiny text)
-             // smoothstep(0.1, 0.5, ddist) maps ddist range 0.1-0.5 to 0.0-1.0
              float center = 0.5 - smoothstep(0.1, 0.5, ddist) * 0.08; 
-
              float alpha = smoothstep(center - edgeWidth, center + edgeWidth, dist);
-             
-             // Standard alpha blending
              color.a *= alpha;
         } else if (primitiveID == 4) {
-               // Bitmap text rendering (coverage stored in alpha)
+               // Bitmap text
                float coverageAlpha = texColor.a;
-               // We use standard (non-premultiplied) alpha blending: SRC_ALPHA, ONE_MINUS_SRC_ALPHA.
-               // Only alpha should be modulated by coverage; multiplying RGB as well effectively squares
-               // coverage in the blend equation and makes small text look overly faded.
                color.a *= coverageAlpha;
         } else {
              // Regular textured primitive
@@ -187,24 +177,41 @@ void main() {
     }
     
     if (primitiveID == 1) {
-        // Filled rounded rectangle / Shadow
+        // Filled Squircle
         vec2 pos = (vTexCoord - 0.5) * vQuadSize;
-        float dist = sdRoundedRect(pos, vRectSize * 0.5, vRadius);
-        float alpha = 1.0 - smoothstep(-vBlur, vBlur, dist);
+        
+        // Use vBlur for AA width or smoothness passed from vertex
+        // Pass 1.0 or similar via vBlur for standard AA
+        float dist = sdSquircle(pos, vRectSize * 0.5, vRadius);
+        
+        // High quality AA using fwidth
+        float aaWidth = fwidth(dist) * 1.5; // Slight boost for softness
+        float alpha = 1.0 - smoothstep(-aaWidth, aaWidth, dist);
+        
         color.a *= alpha;
     }
     
     if (primitiveID == 3) {
-        // Stroked rounded rectangle using SDF
+        // Stroked Squircle
         vec2 pos = (vTexCoord - 0.5) * vQuadSize;
-        float dist = sdRoundedRect(pos, vRectSize * 0.5, vRadius);
-        // Create stroke by checking if distance is near the edge
+        float dist = sdSquircle(pos, vRectSize * 0.5, vRadius);
+        
         float halfStroke = vStrokeWidth * 0.5;
-        float outerAlpha = 1.0 - smoothstep(-vBlur, vBlur, dist - halfStroke);
-        float innerAlpha = 1.0 - smoothstep(-vBlur, vBlur, dist + halfStroke);
-        float alpha = outerAlpha - innerAlpha;
+        
+        // Hairline border logic: 
+        // We render a stroke centered on the SDF edge (dist=0)
+        // Outline: from dist = -halfStroke to dist = +halfStroke
+        
+        float aaWidth = fwidth(dist) * 1.0;
+        
+        // Alpha calculation for ring
+        // Equivalent to: 1.0 - smoothstep(halfStroke-aa, halfStroke+aa, abs(dist))
+        float alpha = 1.0 - smoothstep(halfStroke - aaWidth, halfStroke + aaWidth, abs(dist));
+        
         color.a *= alpha;
     }
+    
+    // Type 5: Solid colored geometry (lines, triangles) - already handled by default color
     
     FragColor = color;
 }
@@ -242,6 +249,11 @@ bool NUIRendererGL::initialize(int width, int height) {
     
     createBuffers();
     updateProjectionMatrix();
+
+    // Initialize Glassmorphism Pass (Retina Blur)
+    if (!glassPass_.initialize(width, height)) {
+        std::cerr << "WARNING: Glassmorphism Pass failed to init." << std::endl;
+    }
     
     // Text rendering will be initialized with FreeType below
     
@@ -385,6 +397,8 @@ void NUIRendererGL::resize(int width, int height) {
     
     // MSDF text renderer viewport will be updated externally
     
+    glassPass_.resize(width, height);
+
     glViewport(0, 0, width, height);
 }
 

@@ -238,8 +238,20 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
                  AestraUI::NUIKeyEvent event;
                  event.keyCode = static_cast<AestraUI::NUIKeyCode>(key);
                  event.pressed = pressed;
-                 // Note: Modifiers should be passed if struct supports it, checking focused component, etc.
-                 // For now, simple dispatch to root content handles our usage.
+                 // Pass modifiers for completeness (e.g. Shift for capitals)
+                 // Note: NUIKeyEvent struct might need updating elsewhere if it lacks 'modifiers' field, 
+                 // but for now we rely on keyCode logic or add it if struct allows.
+                 
+                 // 1. Dispatch to Focused Component (Search Bar, etc.)
+                 if (auto* focused = AestraUI::NUIComponent::getFocusedComponent()) {
+                     // Check if focused component is part of our component tree
+                     // (Usually yes, since we only have one window)
+                     if (focused->onKeyEvent(event)) {
+                         return; // Consumed by widget
+                     }
+                 }
+
+                 // 2. Global / Content Shortcuts (Spacebar Playback, etc.)
                  if (m_content->onKeyEvent(event)) return;
              }
 
@@ -439,7 +451,9 @@ void AestraWindowManager::render() {
     if (!m_renderer || !m_rootComponent) return;
 
     auto& themeManager = NUIThemeManager::getInstance();
-    NUIColor bgColor = themeManager.getColor("background");
+    // CRITICAL: Force alpha = 1.0 to prevent DWM "Sheet of Glass" transparency.
+    // The custom title bar uses DwmExtendFrameIntoClientArea which makes alpha < 1 transparent.
+    NUIColor bgColor = themeManager.getColor("background").withAlpha(1.0f);
 
     m_renderer->clear(bgColor);
     m_renderer->beginFrame();

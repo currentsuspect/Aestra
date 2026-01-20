@@ -174,7 +174,7 @@ void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
         textColor = accentColor;
     }
     
-    float fontSize = themeManager.getFontSize("l");
+    float fontSize = themeManager.getFontSize("m"); // Compact font
     std::stringstream ss;
     ss << std::fixed << std::setprecision(1) << m_displayBPM << " BPM";
     std::string bpmText = ss.str();
@@ -350,7 +350,7 @@ void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
         ? themeManager.getColor("accentPrimary") 	// Vibrant purple when playing
         : themeManager.getColor("textPrimary"); 	 	// White when stopped
     
-    float fontSize = themeManager.getFontSize("l");
+    float fontSize = themeManager.getFontSize("m");
     std::string timeText = formatTime(m_currentTime);
     
     // Perfectly center text in the pill
@@ -434,7 +434,7 @@ void TimeSignatureDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     // Text
     AestraUI::NUIColor textColor = m_isHovered ? accentColor : themeManager.getColor("textPrimary");
     
-    float fontSize = themeManager.getFontSize("l");
+    float fontSize = themeManager.getFontSize("m");
     std::string text = getDisplayText();
     
     AestraUI::NUISize textSize = renderer.measureText(text, fontSize);
@@ -492,49 +492,33 @@ TransportInfoContainer::TransportInfoContainer()
 void TransportInfoContainer::layoutComponents() {
     AestraUI::NUIRect bounds = getBounds();
     
-    // Get layout dimensions from theme
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    const auto& layout = themeManager.getLayoutDimensions();
+    // Expanded Layout: [TimeSig 50px] [BPM 90px] [Timer 80px] = ~220px
     
-    // Timer on the left - position using ABSOLUTE coordinates (bounds.x + offset)
-    float timerWidth = 120.0f;
-    float timerHeight = 30.0f;
-    float timerOffsetX = layout.transportButtonSize * 3 + layout.transportButtonSpacing * 4 + layout.panelMargin;
-    float timerOffsetY = (bounds.height - timerHeight) / 2.0f; // Vertically centered in container
+    float padding = 4.0f; // Increased padding
+    float contentHeight = 28.0f;
+    float yPos = bounds.y + (bounds.height - contentHeight) / 2.0f;
     
-    // Use absolute positioning (add bounds.x and bounds.y) - SNAP TO INTEGERS
-    m_timerDisplay->setBounds(AestraUI::NUIRect(
-        std::floor(bounds.x + timerOffsetX), 
-        std::floor(bounds.y + timerOffsetY), 
-        std::round(timerWidth), 
-        std::round(timerHeight)
-    ));
+    float currentX = bounds.x;
     
-    // BPM in the center (horizontally centered in transport bar) - also ABSOLUTE
-    float bpmWidth = 120.0f;  // Increased to fit content with padding
-    float bpmHeight = 30.0f;
-    float bpmOffsetX = (bounds.width - bpmWidth) / 2.0f;
-    float bpmOffsetY = (bounds.height - bpmHeight) / 2.0f;
+    // 1. Time Signature (Left)
+    float timeSigWidth = 50.0f; // Increased
+    if (m_timeSignatureDisplay) {
+        m_timeSignatureDisplay->setBounds(AestraUI::NUIRect(std::floor(currentX), std::floor(yPos), timeSigWidth, contentHeight));
+    }
+    currentX += timeSigWidth + padding;
     
-    m_bpmDisplay->setBounds(AestraUI::NUIRect(
-        std::floor(bounds.x + bpmOffsetX), 
-        std::floor(bounds.y + bpmOffsetY), 
-        std::round(bpmWidth), 
-        std::round(bpmHeight)
-    ));
-    
-    // Time signature to the left of BPM display (between metronome button and BPM)
-    float timeSigWidth = 50.0f;
-    float timeSigHeight = 30.0f;
-    float timeSigOffsetX = bpmOffsetX - timeSigWidth - 10.0f;
-    float timeSigOffsetY = (bounds.height - timeSigHeight) / 2.0f;
-    
-    m_timeSignatureDisplay->setBounds(AestraUI::NUIRect(
-        std::floor(bounds.x + timeSigOffsetX), 
-        std::floor(bounds.y + timeSigOffsetY), 
-        std::round(timeSigWidth), 
-        std::round(timeSigHeight)
-    ));
+    // 2. BPM (Center/Next)
+    float bpmWidth = 90.0f; // Increased from 70
+    if (m_bpmDisplay) {
+        m_bpmDisplay->setBounds(AestraUI::NUIRect(std::floor(currentX), std::floor(yPos), bpmWidth, contentHeight));
+    }
+    currentX += bpmWidth + padding;
+
+    // 3. Timer (Right)
+    float timerWidth = 76.0f; // Increased from 65
+    if (m_timerDisplay) {
+        m_timerDisplay->setBounds(AestraUI::NUIRect(std::floor(currentX), std::floor(yPos), timerWidth, contentHeight));
+    }
 }
 
 void TransportInfoContainer::onRender(AestraUI::NUIRenderer& renderer) {

@@ -192,12 +192,21 @@ void TransportBar::createIcons() {
 
 void TransportBar::createButtons() {
     // Play/Pause/Stop/Record...
+    // Play/Pause/Stop/Record...
     auto createBtn = [&](std::shared_ptr<AestraUI::NUIButton>& btn, std::function<void()> cb) {
         btn = std::make_shared<AestraUI::NUIButton>();
         btn->setText("");
         btn->setStyle(AestraUI::NUIButton::Style::Icon);
         btn->setSize(40, 40);
-        btn->setBackgroundColor(AestraUI::NUIColor(0,0,0,0)); 
+        
+        // APPLIZED GLASS STYLE - UPDATED
+        // Brighter tinted glass to match AuditionPanel and improve visibility
+        btn->setBackgroundColor(AestraUI::NUIColor(0.12f, 0.12f, 0.22f, 0.4f)); // Purple/Blue tint
+        btn->setBorderColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f)); // Brighter border
+        btn->setBorderWidth(1.0f);
+        btn->setCornerRadius(20.0f); // Circular
+        btn->setGlowEnabled(true); // Hover glow
+        
         btn->setOnClick(cb);
         addChild(btn);
     };
@@ -405,11 +414,11 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     const auto& layout = themeManager.getLayoutDimensions();
     
     // Colors
-    // "Frosted Glass" - Grey tint to distinguish from dark displays
-    AestraUI::NUIColor glassBg = themeManager.getColor("textSecondary").withAlpha(0.15f); 
+    // Pure White Glass - Clean frosted effect without grey contamination
+    AestraUI::NUIColor glassBg = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.04f); 
     AestraUI::NUIColor glassBorder = themeManager.getColor("glassBorder");
-    AestraUI::NUIColor glassHover = themeManager.getColor("textSecondary").withAlpha(0.25f); // Brighter grey on hover
-    AestraUI::NUIColor glassActive = themeManager.getColor("glassActive"); // Purple tint
+    AestraUI::NUIColor glassHover = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
+    AestraUI::NUIColor glassActive = themeManager.getColor("accentPrimary").withAlpha(0.15f);
     
     AestraUI::NUIColor iconGrey = themeManager.getColor("textSecondary");
     AestraUI::NUIColor iconPurple = themeManager.getColor("accentPrimary");
@@ -422,9 +431,9 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     float centerOffsetY = (bounds.height - buttonSize) / 2.0f;
     float x = padding;
     
-    const float iconSize = 24.0f;
-    float iconPadding = (buttonSize - iconSize) * 0.5f;
-    if (iconPadding < 0.0f) iconPadding = 0.0f;
+    const float iconSize = 18.0f; // Reduced from 24 to 18 for better padding in 28px button
+    float iconPadding = (buttonSize - iconSize) * 0.5f; // (28 - 18)/2 = 5px padding
+    if (iconPadding < 2.0f) iconPadding = 2.0f;
 
     // Helper to render universal Glass Box button
     auto renderGlassButton = [&](std::shared_ptr<AestraUI::NUIButton>& btn, std::shared_ptr<AestraUI::NUIIcon>& icon, bool isActive, bool isRecording = false) {
@@ -511,6 +520,8 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
 // SECTION: Layout
 // =============================================================================
 
+// ... (Previous code)
+
 void TransportBar::layoutComponents() {
     AestraUI::NUIRect bounds = getBounds();
 
@@ -518,149 +529,156 @@ void TransportBar::layoutComponents() {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 
-    // Use configurable dimensions
-    float padding = layout.panelMargin;
-    float buttonSize = layout.transportButtonSize;
-    float spacing = layout.transportButtonSpacing;
+    // Use configurable dimensions - OVERRIDE for Compact Mode
+    float buttonSize = 34.0f; // Relaxed from 28.0f
+    float spacing = 8.0f;     // Relaxed from 6.0f
+    float groupSpacing = 24.0f; // Relaxed from 16.0f
 
-    // Center vertically offset
-    float centerOffsetY = (bounds.height - buttonSize) / 2.0f;
+    // --- Layout Logic: Center-Out Calculation ---
+    // We calculate the required width first to center the island perfectly
+    
+    // Group 1: Transport (Play, Stop, Rec)
+    float group1Width = (buttonSize * 3) + (spacing * 2);
+    
+    // Group 2: Extras (Count, Wait, Loop, Metronome)
+    float group2Width = (buttonSize * 4) + (spacing * 3);
+    
+    // Group 3: Info Display (Center)
+    // Compact Info: 180px instead of 220px -> reduce to 160px for tighter packing?
+    // Let's check TransportInfoContainer first, but for now allow 170.
+    // Group 3: Info Display (Center)
+    // Expanded Info: 220px to accommodate children
+    float infoWidth = 220.0f; 
+    
+    // Group 4: Views (Mixer, Seq, Piano, Playlist) - 4 buttons
+    float group4Width = (buttonSize * 4) + (spacing * 3);
 
-    // Layout buttons from left using utility helpers
-    float x = padding;
-
-    // Play button - using NUIAbsolute helper for cleaner code
-    m_playButton->setBounds(NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize));
-    x += buttonSize + spacing;
-
-    // Stop button
-    m_stopButton->setBounds(NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize));
-    x += buttonSize + spacing;
-
-    // Record button
-    m_recordButton->setBounds(NUIAbsolute(bounds, x, centerOffsetY, buttonSize, buttonSize));
-    x += buttonSize + layout.panelMargin; // Extra margin after transport
-
-    // Center of the transport bar (BPM display area)
-    float centerX = bounds.width / 2.0f;
+    // Total Content Width
+    float totalContentWidth = group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
+    float islandPadding = 12.0f; // Reduced padding
+    float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
-    // Metronome button: Positioned to the LEFT of BPM display
-    // New Balance: [Count] [Wait] [Loop] [Metronome] ---> [BPM]
-    
-    // Start metronome at old position (Center - 180 - buttonSize)
-    // Then stack others to the left of it.
-    
-    float metronomeRightGap = 180.0f; // Gap from center to Right edge of Metronome
-    float metronomeX = centerX - metronomeRightGap - buttonSize;
-    m_metronomeButton->setBounds(NUIAbsolute(bounds, metronomeX, centerOffsetY, buttonSize, buttonSize));
-    
-    // Stack Extras to the left of Metronome
-    float currentX = metronomeX;
-    
-    // Loop Record
-    currentX -= (buttonSize + spacing);
-    m_loopRecordButton->setBounds(NUIAbsolute(bounds, currentX, centerOffsetY, buttonSize, buttonSize));
-    
-    // Wait
-    currentX -= (buttonSize + spacing);
-    m_waitButton->setBounds(NUIAbsolute(bounds, currentX, centerOffsetY, buttonSize, buttonSize));
-    
-    // Count In
-    currentX -= (buttonSize + spacing);
-    m_countInButton->setBounds(NUIAbsolute(bounds, currentX, centerOffsetY, buttonSize, buttonSize));
-
-    
-    // Calculate position for view toggles (Right side)
-    float rightEdge = bounds.width;
-    // View toggle buttons
-    // Position to the right of center (BPM display) - centerX already declared above
-    if (x > currentX - 20) { 
-        // If main transport buttons encroach on extras, we might need adjustments.
-        // But main transport is far left, so unlikely overlap.
+    // Clamp to window width
+    if (islandWidth > bounds.width - 20.0f) {
+        islandWidth = bounds.width - 20.0f;
     }
-    
-    float viewButtonsX = centerX + 120.0f; // Offset from center to avoid BPM
 
+    float islandHeight = 48.0f; // Increased from 42.0f to fit 34px buttons
+    float islandX = (bounds.width - islandWidth) / 2.0f;
+    float islandY = (bounds.height - islandHeight) / 2.0f;
+    
+    // Check min width/fallback
+    if (bounds.width < islandWidth) {
+        islandX = 0;
+        islandWidth = bounds.width;
+    }
+
+    float centerOffsetY = islandY + (islandHeight - buttonSize) / 2.0f;
+
+    // --- Placement ---
+    float xCursor = islandX + islandPadding;
+
+    // Group 1: Transport
+    m_playButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+    xCursor += buttonSize + spacing;
+    
+    m_stopButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+    xCursor += buttonSize + spacing;
+    
+    m_recordButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+    xCursor += buttonSize + groupSpacing; // GAP
+
+    // Group 2: Extras
+    m_countInButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+    xCursor += buttonSize + spacing;
+    
+    m_waitButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+    xCursor += buttonSize + spacing;
+    
+    m_loopRecordButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+    xCursor += buttonSize + spacing;
+    
+    m_metronomeButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+    xCursor += buttonSize + groupSpacing; // GAP to Info
+
+    // Group 3: Info Container
+    if (m_infoContainer) {
+        m_infoContainer->setBounds(NUIAbsolute(bounds, xCursor, islandY, infoWidth, islandHeight));
+    }
+    xCursor += infoWidth + groupSpacing; // GAP
+
+    // Group 4: Views
     if (m_mixerButton) {
-        m_mixerButton->setBounds(NUIAbsolute(bounds, viewButtonsX, centerOffsetY, buttonSize, buttonSize));
-        viewButtonsX += buttonSize + spacing;
+        m_mixerButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+        xCursor += buttonSize + spacing;
     }
     if (m_sequencerButton) {
-        m_sequencerButton->setBounds(NUIAbsolute(bounds, viewButtonsX, centerOffsetY, buttonSize, buttonSize));
-        viewButtonsX += buttonSize + spacing;
+        m_sequencerButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+        xCursor += buttonSize + spacing;
     }
     if (m_pianoRollButton) {
-        m_pianoRollButton->setBounds(NUIAbsolute(bounds, viewButtonsX, centerOffsetY, buttonSize, buttonSize));
-        viewButtonsX += buttonSize + spacing;
+        m_pianoRollButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+        xCursor += buttonSize + spacing;
     }
     if (m_playlistButton) {
-        m_playlistButton->setBounds(NUIAbsolute(bounds, viewButtonsX, centerOffsetY, buttonSize, buttonSize));
-        viewButtonsX += buttonSize + spacing;
+        m_playlistButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+        // xCursor += buttonSize + spacing;
     }
 
-    // Info container (timer + BPM) - spans full transport bar
-    // Use NUIAbsolute with 0,0 offset to position at transport bar's absolute position
-    if (m_infoContainer) {
-        m_infoContainer->setBounds(NUIAbsolute(bounds, 0, 0, bounds.width, bounds.height));
-    }
+    // Pass dimensions to Render via Theme or member not possible easily here without state.
+    // We relying on onRender duplicating the math or us storing it?
+    // Let's update onRender to match these hardcoded compaction values.
 }
 
 void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     AESTRA_ZONE("Transport_Render");
     AestraUI::NUIRect bounds = getBounds();
-    
-    // Get Liminal Dark v2.0 theme colors
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");  // #19191c - Same black as title bar
-    AestraUI::NUIColor borderColor = themeManager.getColor("border");           // #2e2e35 - Subtle separation lines
-    AestraUI::NUIColor accentCyan = themeManager.getColor("accentCyan");        // #00bcd4 - Accent cyan
-    AestraUI::NUIColor accentMagenta = themeManager.getColor("accentMagenta");  // #ff4081 - Accent magenta
+
+    // 1. Clear background (Void/Transparent)
+    // renderer.fillRect(bounds, themeManager.getColor("backgroundPrimary")); // REMOVE: Occludes FileBrowser if Z-Ordered on top
+
+    // 2. Re-Calculate Island Geometry (Match layoutComponents logic)
+    // 2. Re-Calculate Island Geometry (Match layoutComponents logic)
+    // Compact Values (Relaxed per user request: "space would have done the trick")
+    float buttonSize = 34.0f; // Increased from 28.0f
+    float spacing = 8.0f;     // Increased from 6.0f
+    float groupSpacing = 24.0f; // Increased from 16.0f
+    float group1Width = (buttonSize * 3) + (spacing * 2);
+    float group2Width = (buttonSize * 4) + (spacing * 3);
+    float infoWidth = 220.0f; // Increased from 170.0f per user request ("give it more space")
+    float group4Width = (buttonSize * 4) + (spacing * 3);
+
+    float totalContentWidth = group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
+    float islandPadding = 12.0f;
+    float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
-    // Solid background (no gradient) - same black as title bar
-    renderer.fillRect(bounds, bgColor);
+    if (islandWidth > bounds.width - 20.0f) islandWidth = bounds.width - 20.0f;
     
-    // Enhanced border with subtle glow
-    renderer.drawLine(
-        AestraUI::NUIPoint(bounds.x, bounds.y),
-        AestraUI::NUIPoint(bounds.x + bounds.width, bounds.y),
-        1.0f,
-        borderColor.withAlpha(0.6f)
-    );
+    float islandHeight = 48.0f; 
+    float islandX = (bounds.width - islandWidth) / 2.0f;
+    float islandY = (bounds.height - islandHeight) / 2.0f;
     
-    // Add subtle inner highlight
-    renderer.drawLine(
-        AestraUI::NUIPoint(bounds.x, bounds.y + 1),
-        AestraUI::NUIPoint(bounds.x + bounds.width, bounds.y + 1),
-        1.0f,
-        AestraUI::NUIColor::white().withAlpha(0.05f)
-    );
+    if (bounds.width < islandWidth) {
+        islandX = 0;
+        islandWidth = bounds.width;
+    }
+
+    AestraUI::NUIRect islandRect(bounds.x + islandX, bounds.y + islandY, islandWidth, islandHeight);
+
+    // 3. Draw Island Body
+    renderer.drawShadow(islandRect, 0.0f, 4.0f, 12.0f, AestraUI::NUIColor(0,0,0,0.5f));
     
-    // REMOVED: Vertical separator was slicing through Arsenal/Timeline buttons
-    // auto& layout = themeManager.getLayoutDimensions();
-    // float fileBrowserWidth = layout.fileBrowserWidth;
-    // renderer.drawLine(
-    //     AestraUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y),
-    //     AestraUI::NUIPoint(bounds.x + fileBrowserWidth, bounds.y + bounds.height),
-    //     1.0f,
-    //     borderColor.withAlpha(0.8f)
-    // );
+    AestraUI::NUIColor islandColor = themeManager.getColor("surfaceTertiary"); // Opaque or slightly trans? 
+    // User asked to fix Z. If we make it opaque it blocks. If trans, it blends.
+    // Let's keep it solid "surfaceTertiary" from theme (usually opaque-ish).
+    renderer.fillRoundedRect(islandRect, 12.0f, islandColor);
     
-    // Add horizontal divider at bottom to separate transport from track area
-    renderer.drawLine(
-        AestraUI::NUIPoint(bounds.x, bounds.y + bounds.height - 1),
-        AestraUI::NUIPoint(bounds.x + bounds.width, bounds.y + bounds.height - 1),
-        1.0f,
-        borderColor  // Full opacity for visibility
-    );
+    // 4. Border
+    renderer.strokeRoundedRect(islandRect, 12.0f, 1.0f, themeManager.getColor("border"));
     
-    // Render children (buttons and labels)
     renderChildren(renderer);
-    
-    // Render custom icons on top of buttons
     renderButtonIcons(renderer);
-
-    // Popups Last (Render Z-Top)
-
 }
 
 void TransportBar::onResize(int width, int height) {
