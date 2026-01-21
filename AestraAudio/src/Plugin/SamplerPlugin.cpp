@@ -119,7 +119,10 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
     // Parameters
     float pitchParam = m_params[kParamPitch].load(std::memory_order_relaxed);
     float semitones = (pitchParam - 0.5f) * 24.0f;
-    float pitchRatio = std::pow(2.0f, semitones / 12.0f);
+    // Optimization: Use std::exp for 2^(x/12) -> e^(x * ln(2)/12)
+    // ln(2) / 12 = 0.69314718 / 12 = 0.057762265
+    constexpr float kLog2Over12 = 0.057762265046662109118102676788f;
+    float pitchRatio = std::exp(semitones * kLog2Over12);
     
     // Source Rate correction
     double baseRate = (double)currentData->rate / m_sampleRate;
