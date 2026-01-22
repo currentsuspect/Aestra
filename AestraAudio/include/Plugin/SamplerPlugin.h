@@ -82,9 +82,13 @@ private:
         std::string path;
     };
 
-    // Shared Ptr accessed atomically (C++11/17 free functions)
-    // No mutex needed for access anymore!
-    std::shared_ptr<SampleData> m_data;
+    // Real-Time Safe: Raw pointer for wait-free access in process()
+    // The object is kept alive by m_dataHolder.
+    std::atomic<SampleData*> m_activeData{nullptr};
+
+    // Life-cycle management (Main Thread / UI Thread)
+    // Holds the shared_ptr to ensure the data is not deleted while active.
+    std::shared_ptr<SampleData> m_dataHolder;
 
     // Parameters
     enum ParamID {

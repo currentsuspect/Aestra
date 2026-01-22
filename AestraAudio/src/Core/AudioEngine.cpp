@@ -7,6 +7,7 @@
 #include "EffectChain.h" // [NEW]
 #include "PluginHost.h"
 #include "Plugin/SamplerPlugin.h" // [NEW]
+#include "GarbageCollector.h"
 #include "UnitManager.h"
 #include "PatternPlaybackEngine.h"
 #include <algorithm>
@@ -1187,6 +1188,10 @@ void AudioEngine::loudnessWorkerLoop() {
             }
         }
         
+        // Run Garbage Collection for RT resources (e.g. old sample buffers)
+        // This ensures destructors run on this background thread, not the audio thread.
+        Aestra::Audio::GarbageCollector::instance().collect();
+
         // Sleep to save CPU (update rate ~10Hz is plenty for Integrated)
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
