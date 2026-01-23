@@ -6,6 +6,7 @@
 #include "PathUtils.h" // [NEW] For robust path conversion
 #include "EffectChain.h" // [NEW]
 #include "PluginHost.h"
+#include "GarbageCollector.h" // [BOLT] Fix Memory Leak
 #include "Plugin/SamplerPlugin.h" // [NEW]
 #include "UnitManager.h"
 #include "PatternPlaybackEngine.h"
@@ -1187,6 +1188,10 @@ void AudioEngine::loudnessWorkerLoop() {
             }
         }
         
+        // [BOLT] Fix Memory Leak:
+        // Perform garbage collection for resources released by RT thread (e.g. Sampler Data)
+        Aestra::Audio::GarbageCollector::instance().collect();
+
         // Sleep to save CPU (update rate ~10Hz is plenty for Integrated)
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }

@@ -84,7 +84,11 @@ private:
 
     // Shared Ptr accessed atomically (C++11/17 free functions)
     // No mutex needed for access anymore!
-    std::shared_ptr<SampleData> m_data;
+    // [BOLT] Refactored for Lock-Free Safety:
+    // m_dataHolder keeps the object alive (ownership)
+    // m_activeData provides lock-free access for RT thread
+    std::shared_ptr<SampleData> m_dataHolder;
+    std::atomic<SampleData*> m_activeData{nullptr};
 
     // Parameters
     enum ParamID {

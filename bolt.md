@@ -29,6 +29,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### JIT DSP Compilation
+
+- **Innovation**: Compile user-scripted DSP or complex graphs to machine code at runtime (using LLVM or specialized JIT).
+- **Benefit**: Native performance for dynamic user scripts.
+
+### GPU Audio Offloading
+
+- **Innovation**: Offload massive convolution reverbs or spectral processing to GPU (CUDA/Vulkan).
+- **Benefit**: Free up CPU for low-latency serial processing.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -39,13 +49,18 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 ### Lock-Free Garbage Collection
 
-- **Status**: Missing global GC for audio thread resources.
-- **Plan**: Implement a `GarbageCollector` singleton using the "Zombie Queue" pattern.
+- **Status**: Implemented & Integrated (Fixed leak in `AudioEngine`).
+- **Plan**: Maintain `GarbageCollector` singleton using the "Zombie Queue" pattern.
 - **Benefit**: Eliminates all mutexes from `processBlock` paths (specifically fixing `SamplerPlugin`).
 
 ### Zero-Allocation UI
 
 - **Plan**: Use `ImGui` or custom immediate mode renderer that reuses vertex buffers. Eliminate `std::string` allocations in the draw loop (use `fmt::format_to` into fixed buffers).
+
+### SIMD-Accelerated Voice Management
+
+- **Innovation**: Update all synth/sampler voices in a single SIMD pass (SoA layout) instead of iterating Array of Structures (AoS).
+- **Benefit**: 4x-8x speedup in polyphonic voice rendering.
 
 ## 3. Sound Quality
 
@@ -63,13 +78,19 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
 
+### Oversampled Nonlinearities
+
+- **Innovation**: Automatically oversample any plugin detecting saturation/distortion logic.
+- **Benefit**: Eliminates aliasing in saturation plugins without manual user configuration.
+
 ## 4. Fixes & Cleanups
 
 ### Real-Time Safety
 
-- **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
-- **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
-- **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+- **Violation**: `SamplerPlugin` used `std::atomic_load` on `std::shared_ptr` (potential lock).
+- **Fix**: Replaced with `std::atomic<SampleData*>` (Raw) + `std::shared_ptr<SampleData>` (Holder) pattern. True lock-free access.
+- **Violation**: Memory Leak in `AudioEngine` (GarbageCollector never collected).
+- **Fix**: Added `GarbageCollector::instance().collect()` to `loudnessWorkerLoop`.
 
 ---
 *Signed: Bolt*

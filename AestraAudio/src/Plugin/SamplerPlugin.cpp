@@ -27,8 +27,9 @@ bool SamplerPlugin::initialize(double sampleRate, uint32_t maxBlockSize) {
 void SamplerPlugin::shutdown() {
     m_active = false;
     // Force release of data to ensure cleanup
-    auto old = std::atomic_exchange(&m_data, std::shared_ptr<SampleData>(nullptr));
-    GarbageCollector::instance().release(old);
+    m_activeData.store(nullptr, std::memory_order_release);
+    GarbageCollector::instance().release(m_dataHolder);
+    m_dataHolder.reset();
 }
 
 void SamplerPlugin::activate() {
@@ -79,12 +80,18 @@ bool SamplerPlugin::loadSample(const std::string& path) {
     newData->channels = channels;
     newData->path = path;
 
-    // Atomic Swap (Thread-Safe, Lock-Free-ish)
-    // std::atomic_exchange uses standard atomics for shared_ptr
-    auto oldData = std::atomic_exchange(&m_data, newData);
+    // Atomic Swap (True Lock-Free)
+    // 1. Swap the raw pointer visible to RT thread
+    SampleData* oldRaw = m_activeData.exchange(newData.get(), std::memory_order_acq_rel);
+    (void)oldRaw; // Unused, but returned by exchange
+
+    // 2. Update ownership holder (Main Thread)
+    // We capture the old holder to release it safely
+    std::shared_ptr<SampleData> oldHolder = m_dataHolder;
+    m_dataHolder = newData;
 
     // Safely dispose of old data via Garbage Collector (avoids delete on Audio Thread)
-    GarbageCollector::instance().release(oldData);
+    GarbageCollector::instance().release(oldHolder);
     
     return true;
 }
@@ -113,7 +120,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
     }
     
     // Thread-safe access to sample data
-    auto currentData = std::atomic_load(&m_data);
+    SampleData* currentData = m_activeData.load(std::memory_order_acquire);
     if (!currentData || currentData->data.empty()) return;
 
     // Parameters
@@ -363,7 +370,7 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
      
      // Sample Path
      {
-         auto current = std::atomic_load(&m_data);
+         SampleData* current = m_activeData.load(std::memory_order_acquire);
          if (current && !current->path.empty()) {
              json.set("samplePath", Aestra::JSON(current->path));
          }
