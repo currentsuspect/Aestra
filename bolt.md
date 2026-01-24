@@ -29,6 +29,21 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### GPU Audio Offloading
+
+- **Innovation**: Use Vulkan Compute Shaders for heavy DSP tasks (Convolution Reverbs, Spectral Processing).
+- **Benefit**: Offload massive parallel tasks from CPU, enabling dense atmospheric processing without glitches.
+
+### JIT DSP Compilation
+
+- **Innovation**: Compile DSP graphs to machine code at runtime using LLVM.
+- **Benefit**: Eliminates virtual function overhead for per-sample processing chains.
+
+### SIMD Voice Management
+
+- **Innovation**: Manage synth voices using Structure-of-Arrays (SoA) instead of Array-of-Structures (AoS).
+- **Benefit**: Allows processing 8/16 envelopes in parallel using AVX-512 in a single instruction.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -67,9 +82,14 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 ### Real-Time Safety
 
-- **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
-- **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
+- **Violation**: `SamplerPlugin` uses `std::unique_lock` (or `atomic_load` on shared_ptr) in `process()`.
+- **Fix**: Replaced with `std::atomic<SampleData*>` (Context Swap pattern) + Deferred Reclamation (GC).
 - **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+
+### Platform Abstraction Leaks
+
+- **Violation**: Windows headers (`<windows.h>`) included in public headers (`AestraThreading.h`, `AudioEngine.h`).
+- **Fix**: Moved implementation to `AestraThreading.cpp`, removed headers, and added platform suppression comments where strictly necessary.
 
 ---
 *Signed: Bolt*
