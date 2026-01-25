@@ -302,6 +302,12 @@ public:
      * @brief Check if plugin has crashed (fatal exception caught)
      */
     virtual bool isCrashed() const = 0;
+
+    /**
+     * @brief Request a hard reset of all active voices (e.g. Sampler stop).
+     * Safe to call from Real-Time thread.
+     */
+    virtual void requestHardResetVoices() noexcept {}
 };
 
 /**

@@ -7,6 +7,7 @@
 #include "EffectChain.h" // [NEW]
 #include "PluginHost.h"
 #include "Plugin/SamplerPlugin.h" // [NEW]
+#include "GarbageCollector.h"
 #include "UnitManager.h"
 #include "PatternPlaybackEngine.h"
 #include <algorithm>
@@ -313,10 +314,7 @@ void AudioEngine::processBlock(float* outputBuffer,
             if (snapshot) {
                 for (const auto& unitState : snapshot->units) {
                     if (unitState.plugin) {
-                        auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(unitState.plugin);
-                        if (sampler) {
-                            sampler->requestHardResetVoices();
-                        }
+                        unitState.plugin->requestHardResetVoices();
                     }
                 }
             }
@@ -356,10 +354,7 @@ void AudioEngine::processBlock(float* outputBuffer,
                 if (snapshot) {
                     for (const auto& unitState : snapshot->units) {
                         if (unitState.plugin) {
-                            auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(unitState.plugin);
-                            if (sampler) {
-                                sampler->requestHardResetVoices();
-                            }
+                            unitState.plugin->requestHardResetVoices();
                         }
                     }
                 }
@@ -1187,6 +1182,10 @@ void AudioEngine::loudnessWorkerLoop() {
             }
         }
         
+        // Perform GC cleanup (freeing resources from Audio Thread)
+        // This is the ideal place since it runs at low priority on a background thread.
+        GarbageCollector::instance().collect();
+
         // Sleep to save CPU (update rate ~10Hz is plenty for Integrated)
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -1868,10 +1867,7 @@ void AudioEngine::panic() {
         if (snapshot) {
             for (const auto& unitState : snapshot->units) {
                 if (unitState.plugin) {
-                    auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(unitState.plugin);
-                    if (sampler) {
-                        sampler->requestHardResetVoices();
-                    }
+                    unitState.plugin->requestHardResetVoices();
                 }
             }
         }
@@ -1893,10 +1889,7 @@ void AudioEngine::requestVoiceResetOnPatternChange() {
         if (snapshot) {
             for (const auto& unitState : snapshot->units) {
                 if (unitState.plugin) {
-                    auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(unitState.plugin);
-                    if (sampler) {
-                        sampler->requestHardResetVoices();
-                    }
+                    unitState.plugin->requestHardResetVoices();
                 }
             }
         }

@@ -65,7 +65,7 @@ public:
     void setSampleRate(double sampleRate) { m_sampleRate = sampleRate; }
 
     // RT-safe: requests an immediate voice reset on the next process() call.
-    void requestHardResetVoices() noexcept {
+    void requestHardResetVoices() noexcept override {
         m_resetVoicesRequested.store(true, std::memory_order_release);
     }
 
@@ -82,9 +82,9 @@ private:
         std::string path;
     };
 
-    // Shared Ptr accessed atomically (C++11/17 free functions)
-    // No mutex needed for access anymore!
-    std::shared_ptr<SampleData> m_data;
+    // Safe Pattern: Atomic raw pointer for lock-free RT access + Shared Holder
+    std::atomic<SampleData*> m_activeData{nullptr};
+    std::shared_ptr<SampleData> m_dataHolder;
 
     // Parameters
     enum ParamID {

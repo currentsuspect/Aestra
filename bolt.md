@@ -29,6 +29,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### GPU Audio Offloading
+
+- **Innovation**: Utilize Vulkan Compute Shaders for heavy spectral processing (Convolution Reverb, Spectral Cleaning).
+- **Benefit**: Offload generic DSP from CPU, enabling massive track counts with heavy effects.
+
+### JIT DSP Compilation
+
+- **Innovation**: Compile effect chains into optimized machine code at runtime using LLVM ORC JIT, removing virtual function overhead and enabling cross-plugin optimization.
+- **Benefit**: 20-30% reduction in CPU usage for long effect chains.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -39,8 +49,8 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 ### Lock-Free Garbage Collection
 
-- **Status**: Missing global GC for audio thread resources.
-- **Plan**: Implement a `GarbageCollector` singleton using the "Zombie Queue" pattern.
+- **Status**: Missing global GC usage in `AudioEngine`.
+- **Plan**: Implement a `GarbageCollector` singleton using the "Zombie Queue" pattern with timestamp-based reclamation.
 - **Benefit**: Eliminates all mutexes from `processBlock` paths (specifically fixing `SamplerPlugin`).
 
 ### Zero-Allocation UI
@@ -63,13 +73,24 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
 
+### Psychoacoustic Noise Shaping
+
+- **Innovation**: Apply ATH (Absolute Threshold of Hearing) based noise shaping during dithering.
+- **Benefit**: Perceptually silent quantization noise at 16-bit.
+
 ## 4. Fixes & Cleanups
 
-### Real-Time Safety
+### Real-Time Safety Violations
 
-- **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
-- **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
-- **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+- **Violation**: `SamplerPlugin` used `std::atomic_load` on `std::shared_ptr` (potential lock).
+- **Fix**: Replaced with `std::atomic<SampleData*>` (raw pointer) + GC-managed Holder pattern.
+- **Violation**: `AudioEngine` used `std::dynamic_pointer_cast` in `processBlock`.
+- **Fix**: Added `requestHardResetVoices` virtual method to `IPluginInstance` to avoid RTTI/allocations.
+
+### Memory Leaks
+
+- **Violation**: `GarbageCollector::collect()` was never called.
+- **Fix**: Added `collect()` call to `AudioEngine::loudnessWorkerLoop`.
 
 ---
 *Signed: Bolt*
