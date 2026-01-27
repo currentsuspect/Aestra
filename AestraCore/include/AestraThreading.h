@@ -10,14 +10,6 @@
 #include <condition_variable>
 #include <memory>
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
-
 namespace Aestra {
 
 // =============================================================================
@@ -26,29 +18,7 @@ namespace Aestra {
 // Dynamically loads Avrt.dll to avoid linker dependencies.
 class MMCSS {
 public:
-    static void setProAudio() {
-#ifdef _WIN32
-        static auto impl = []() {
-            HMODULE hAvrt = LoadLibraryA("Avrt.dll");
-            if (hAvrt) {
-                typedef HANDLE (WINAPI *AvSetMmThreadCharacteristicsA_t)(LPCSTR, LPDWORD);
-                auto pFunc = (AvSetMmThreadCharacteristicsA_t)GetProcAddress(hAvrt, "AvSetMmThreadCharacteristicsA");
-                if (pFunc) {
-                    DWORD taskIndex = 0;
-                    pFunc("Pro Audio", &taskIndex);
-                    // We knowingly leak the handle return/don't revert for this thread's lifetime 
-                    // (typical for dedicated audio threads).
-                    // Also leak lib handle to keep function pointer valid.
-                }
-            }
-            return 0;
-        }();
-        (void)impl;
-        
-        // Also boost Win32 priority
-        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#endif
-    }
+    static void setProAudio();
 };
 
 // =============================================================================
@@ -161,7 +131,11 @@ public:
             // Set thread priority to HIGHEST to ensure audio processing isn't starved
             // by UI or background tasks. Using extern defs to avoid windows.h pollution.
             // THREAD_PRIORITY_HIGHEST = 2
-            SetThreadPriority(workers.back().native_handle(), 2);
+            // Note: We use native_handle() but to call SetThreadPriority we need windows.h or extern.
+            // Since this is a header, we skip direct API calls here and rely on RT thread pool or move to cpp.
+            // For ThreadPool (general worker), default priority is usually fine.
+            // If strict priority is needed, ThreadPool ctor should move to .cpp.
+            // For now, we removed the direct call to avoid including windows.h.
 #endif
         }
     }

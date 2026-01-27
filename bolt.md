@@ -17,17 +17,29 @@ Expand the prototype `NeuralAmp` into a full suite of differentiable DSP plugins
 Current `SamplerPlugin` loads entire samples into RAM.
 - **Innovation**: Implement memory-mapped file streaming (using `mmap` on Linux/Windows) with a lock-free ring buffer for the audio thread.
 - **Benefit**: Instant load times for multi-GB libraries, near-zero RAM footprint.
+- **Zero-Copy**: Pass file-backed memory pointers directly to the mixing engine where possible.
 
 ### HyperGraph Audio Engine
 
 Move from a linear processing list to a DAG (Directed Acyclic Graph) task scheduler.
 - **Innovation**: Analyze dependency graph of tracks/busses. Dispatch independent branches to separate threads using a work-stealing scheduler.
 - **Benefit**: Massive multi-core scaling (e.g., 64-core Threadripper support).
+- **Caching**: Topological sort results are cached until graph structure changes.
 
 ### WASM Sandboxed Plugins
 
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
+
+### Adaptive Polyphase Resampler
+
+- **Innovation**: Dynamically switch interpolation kernels (tap counts) based on signal complexity and CPU load.
+- **Benefit**: Saves CPU on simple signals while maintaining high fidelity for complex ones.
+
+### Cockroach-Grade Metering
+
+- **Innovation**: Robust LUFS metering that survives infinite runtime without infinite RAM.
+- **Strategy**: Use circular buffers for block history and "good enough" approximation for integrated loudness over extremely long periods.
 
 ## 2. Performance Boosts
 
@@ -39,9 +51,9 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 ### Lock-Free Garbage Collection
 
-- **Status**: Missing global GC for audio thread resources.
-- **Plan**: Implement a `GarbageCollector` singleton using the "Zombie Queue" pattern.
-- **Benefit**: Eliminates all mutexes from `processBlock` paths (specifically fixing `SamplerPlugin`).
+- **Status**: Implemented for `SamplerPlugin` and `AudioEngine`.
+- **Plan**: Standardize `GarbageCollector` usage across all real-time components.
+- **Benefit**: Eliminates all mutexes from `processBlock` paths.
 
 ### Zero-Allocation UI
 
@@ -67,9 +79,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 ### Real-Time Safety
 
-- **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
-- **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
-- **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+- **Violation**: `SamplerPlugin` used `std::unique_lock` and `std::shared_ptr` access in `process()`.
+- **Fix**: Replaced with `std::atomic<SampleData*>` (raw pointer) + `std::shared_ptr` Holder + Deferred Reclamation (GC).
+- **Violation**: `EffectChain` deleted operators (False Positive in audit).
+
+### Platform Leaks
+
+- **Violation**: `AestraThreading.h` included `<windows.h>`.
+- **Fix**: Moved `MMCSS` implementation to `AestraCore/src/AestraThreading.cpp`.
+- **Violation**: `AudioEngine.h` included `<windows.h>`.
+- **Fix**: Removed unnecessary include.
 
 ---
 *Signed: Bolt*

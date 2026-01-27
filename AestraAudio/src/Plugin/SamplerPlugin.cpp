@@ -27,8 +27,9 @@ bool SamplerPlugin::initialize(double sampleRate, uint32_t maxBlockSize) {
 void SamplerPlugin::shutdown() {
     m_active = false;
     // Force release of data to ensure cleanup
-    auto old = std::atomic_exchange(&m_data, std::shared_ptr<SampleData>(nullptr));
-    GarbageCollector::instance().release(old);
+    m_activeData.store(nullptr, std::memory_order_release);
+    GarbageCollector::instance().release(std::move(m_dataHolder));
+    m_dataHolder.reset();
 }
 
 void SamplerPlugin::activate() {
@@ -79,12 +80,20 @@ bool SamplerPlugin::loadSample(const std::string& path) {
     newData->channels = channels;
     newData->path = path;
 
-    // Atomic Swap (Thread-Safe, Lock-Free-ish)
-    // std::atomic_exchange uses standard atomics for shared_ptr
-    auto oldData = std::atomic_exchange(&m_data, newData);
+    // 1. Get raw pointer for RT thread
+    SampleData* rawData = newData.get();
 
-    // Safely dispose of old data via Garbage Collector (avoids delete on Audio Thread)
-    GarbageCollector::instance().release(oldData);
+    // 2. Atomic Swap the raw pointer (Lock-Free)
+    // We don't care about the return value here, because we own the previous holder.
+    m_activeData.store(rawData, std::memory_order_release);
+
+    // 3. Release previous holder to GC (keeps old data alive if RT is reading it)
+    if (m_dataHolder) {
+        GarbageCollector::instance().release(std::move(m_dataHolder));
+    }
+
+    // 4. Take ownership of new data
+    m_dataHolder = std::move(newData);
     
     return true;
 }
@@ -112,8 +121,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
         }
     }
     
-    // Thread-safe access to sample data
-    auto currentData = std::atomic_load(&m_data);
+    // Thread-safe access to sample data (Raw Pointer)
+    SampleData* currentData = m_activeData.load(std::memory_order_acquire);
     if (!currentData || currentData->data.empty()) return;
 
     // Parameters
@@ -363,9 +372,10 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
      
      // Sample Path
      {
-         auto current = std::atomic_load(&m_data);
-         if (current && !current->path.empty()) {
-             json.set("samplePath", Aestra::JSON(current->path));
+         // Safe to read holder on Main Thread (saveState is main thread)
+         // But for consistency let's use the atomic or holder.
+         if (m_dataHolder && !m_dataHolder->path.empty()) {
+             json.set("samplePath", Aestra::JSON(m_dataHolder->path));
          }
      }
      
