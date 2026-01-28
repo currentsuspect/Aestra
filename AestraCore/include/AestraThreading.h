@@ -10,14 +10,6 @@
 #include <condition_variable>
 #include <memory>
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
-
 namespace Aestra {
 
 // =============================================================================
@@ -26,29 +18,7 @@ namespace Aestra {
 // Dynamically loads Avrt.dll to avoid linker dependencies.
 class MMCSS {
 public:
-    static void setProAudio() {
-#ifdef _WIN32
-        static auto impl = []() {
-            HMODULE hAvrt = LoadLibraryA("Avrt.dll");
-            if (hAvrt) {
-                typedef HANDLE (WINAPI *AvSetMmThreadCharacteristicsA_t)(LPCSTR, LPDWORD);
-                auto pFunc = (AvSetMmThreadCharacteristicsA_t)GetProcAddress(hAvrt, "AvSetMmThreadCharacteristicsA");
-                if (pFunc) {
-                    DWORD taskIndex = 0;
-                    pFunc("Pro Audio", &taskIndex);
-                    // We knowingly leak the handle return/don't revert for this thread's lifetime 
-                    // (typical for dedicated audio threads).
-                    // Also leak lib handle to keep function pointer valid.
-                }
-            }
-            return 0;
-        }();
-        (void)impl;
-        
-        // Also boost Win32 priority
-        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#endif
-    }
+    static void setProAudio();
 };
 
 // =============================================================================
@@ -284,13 +254,13 @@ private:
     void workerLoop(uint32_t threadIdx) {
         (void)threadIdx;
         while (!m_stop) {
-            m_signal.wait([this] { return m_stop || m_taskCounter.load(std::memory_order_acquire) < m_taskCount; });
+            m_signal.wait([this] { return m_stop || m_taskCounter.load(std::memory_order_acquire) < static_cast<int>(m_taskCount); });
             
             if (m_stop) return;
 
             while (true) {
                 int idx = m_taskCounter.fetch_add(1, std::memory_order_acq_rel);
-                if (idx >= (int)m_taskCount) break;
+                if (idx >= static_cast<int>(m_taskCount)) break;
 
                 m_taskFunc(m_context, m_taskData[idx]);
                 

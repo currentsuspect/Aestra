@@ -29,6 +29,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### Adaptive Polyphase Resampler
+
+- **Innovation**: Dynamically switch interpolation kernels (tap counts) based on signal complexity/content.
+- **Benefit**: Optimize CPU usage by using cheaper filters for simple signals or when high precision isn't audible, while reserving heavy Sinc64 filters for critical rendering.
+
+### Cockroach-Grade Metering
+
+- **Innovation**: Robust, infinite-runtime LUFS metering using circular buffers for block energy history.
+- **Benefit**: EBU R128 compliance without infinite RAM growth, ensuring the DAW can run indefinitely ("Cockroach" survival) without crashing or leaking memory in long sessions.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
