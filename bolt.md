@@ -29,6 +29,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### Genetic EQ Optimization
+
+- **Innovation**: An "Evolve" button on the EQ that uses a genetic algorithm to match the frequency spectrum of a reference track.
+- **Benefit**: Automates "tone matching" for guitar cabs or vocal chains.
+
+### Spectral Editing
+
+- **Innovation**: Represent audio as a spectrogram image in the GPU shader. Allow users to "paint" out noise or clicks directly on the texture.
+- **Implementation**: Compute Shader FFT -> Texture Edit -> Inverse FFT.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -47,6 +57,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Plan**: Use `ImGui` or custom immediate mode renderer that reuses vertex buffers. Eliminate `std::string` allocations in the draw loop (use `fmt::format_to` into fixed buffers).
 
+### Adaptive Polyphase Resampler
+
+- **Problem**: High-quality resampling (Sinc64) is expensive; simple linear is low quality.
+- **Innovation**: Dynamically switch interpolation kernels per-block based on signal content (transients vs. steady-state) or CPU load. Use Sinc64Turbo for offline bounces and fallback to Cubic/Linear for high-voice-count preview.
+
 ## 3. Sound Quality
 
 ### 64-bit End-to-End Mixing
@@ -62,6 +77,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 ### Phase-Linear EQs
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
+
+### Cockroach-Grade Metering
+
+- **Problem**: UI-based meters often crash the audio thread or allocate memory.
+- **Innovation**: Implement a lock-free, allocation-free "Loudness Worker" that uses a circular buffer of block energies. The worker thread lazily computes integrated LUFS (EBU R128) by scanning the history, ensuring strict standard compliance without impacting real-time safety. "Cockroach" resilience means it survives everything and never loses state.
 
 ## 4. Fixes & Cleanups
 
