@@ -42,6 +42,10 @@ def analyze_file(filepath):
         # Detect function start
         for func in CRITICAL_FUNCTIONS:
             if re.search(fr"\b{func}\s*\(", stripped):
+                # Ignore declarations
+                if stripped.endswith(";") or stripped.endswith("= 0;"):
+                    continue
+
                 in_critical_section = True
                 # rudimentary brace counting to stay in function
                 # Assuming opening brace is on same line or next
@@ -63,6 +67,10 @@ def analyze_file(filepath):
                 if re.search(pattern, stripped):
                     # Ignore comments (simple check)
                     if stripped.startswith("//") or stripped.startswith("*"):
+                        continue
+
+                    # Ignore deleted functions (e.g., MyClass(const MyClass&) = delete;)
+                    if "delete" in pattern and ("= delete" in stripped or "=delete" in stripped):
                         continue
 
                     issues.append(f"{filepath}:{line_num}: {desc} found in critical section candidate: '{stripped}'")

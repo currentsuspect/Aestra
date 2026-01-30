@@ -5,6 +5,7 @@
 #include <vector>
 #include <fstream>
 #include <memory>
+#include <cstring>
 #include <cstdint>
 
 namespace Aestra {

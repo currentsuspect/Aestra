@@ -29,6 +29,21 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### Cockroach-Grade Metering
+
+- **Innovation**: Robust LUFS/True Peak metering designed for infinite runtime.
+- **Details**: Uses circular buffers for history and relative gating to prevent floating point drift or memory exhaustion over days of continuous operation.
+
+### Genetic EQ Optimization
+
+- **Innovation**: Evolutionary algorithms to automatically match EQ curves to a reference track.
+- **Benefit**: "One-click" mastering EQ matching.
+
+### Spectral Editing
+
+- **Innovation**: Image-based audio manipulation allowing users to edit spectrograms like bitmaps.
+- **Benefit**: Surgical removal of noise/artifacts.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -46,6 +61,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 ### Zero-Allocation UI
 
 - **Plan**: Use `ImGui` or custom immediate mode renderer that reuses vertex buffers. Eliminate `std::string` allocations in the draw loop (use `fmt::format_to` into fixed buffers).
+
+### Adaptive Polyphase Resampler
+
+- **Innovation**: Dynamically switch interpolation kernels (tap counts) based on signal complexity/transients.
+- **Benefit**: Reduces CPU usage during silence or simple waveforms while maintaining quality for complex signals.
 
 ## 3. Sound Quality
 
