@@ -67,10 +67,15 @@ if [ -n "$CHECKER_CMD" ]; then
     # Find markdown files, exclude templates and node_modules
     FILES=$(find . -name "*.md" -not -path "*/node_modules/*" -not -path "*/TEMPLATE/*" -not -path "*/_site/*" -not -path "*/html/*" -not -path "*/latex/*" -not -path "*/xml/*")
 
+    CONFIG_ARG=""
+    if [ -f ".markdown-link-check.json" ]; then
+        CONFIG_ARG="-c .markdown-link-check.json"
+    fi
+
     LINK_ERRORS=0
     for file in $FILES; do
         # echo "Checking $file..."
-        if ! $CHECKER_CMD -q "$file" 2>/dev/null; then
+        if ! $CHECKER_CMD -q $CONFIG_ARG "$file" 2>/dev/null; then
              echo -e "${RED}✗ Broken links in $file${NC}"
              LINK_ERRORS=1
         fi
