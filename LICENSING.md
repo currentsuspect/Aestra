@@ -229,7 +229,7 @@ For a comprehensive breakdown of the license terms, including:
 - Contributor guidelines
 - Frequently asked questions
 
-See **[docs/LICENSE_REFERENCE.md](docs/LICENSE_REFERENCE.md)** for the complete license reference guide.
+See **[docs/about/license-reference.md](docs/about/license-reference.md)** for the complete license reference guide.
 
 ---
 
@@ -272,8 +272,8 @@ Any unauthorized use of this software will result in:
 ## 🔗 Additional Resources
 
 - **[Full LICENSE Text](LICENSE)** — Complete legal license document
-- **[License Reference Guide](docs/LICENSE_REFERENCE.md)** — Detailed FAQ and examples
-- **[Contributing Guide](docs/CONTRIBUTING.md)** — How to contribute to Aestra
+- **[License Reference Guide](docs/about/license-reference.md)** — Detailed FAQ and examples
+- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute to Aestra
 - **[Code of Conduct](CODE_OF_CONDUCT.md)** — Community guidelines
 
 ---
