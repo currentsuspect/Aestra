@@ -29,6 +29,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### GPU Audio Processing
+
+- **Innovation**: Offload heavy spectral processing (Convolution Reverb, FFT Denoising) to Compute Shaders (Vulkan/DirectCompute).
+- **Benefit**: Frees up CPU for low-latency serial processing.
+
+### Genetic EQ Optimization
+
+- **Innovation**: "Tone Match" feature using Genetic Algorithms to evolve EQ parameters to match a reference track's spectral fingerprint.
+- **Benefit**: Automated mastering assistance.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -70,6 +80,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
 - **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
 - **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+
+### Platform Abstraction
+
+- **Violation**: `AestraCore` and `AestraAudio` headers leaking `<windows.h>`.
+- **Fix**: Refactored `AestraThreading` to hide implementation in `.cpp`. Removed platform headers from public `AudioEngine.h`.
 
 ---
 *Signed: Bolt*

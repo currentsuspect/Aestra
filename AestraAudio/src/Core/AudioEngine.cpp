@@ -1,5 +1,10 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioEngine.h"
+
+#ifdef _WIN32
+#include <windows.h> // ALLOW_PLATFORM_INCLUDE
+#endif
+
 #include "../../AestraCore/include/AestraLog.h"
 #include "../../AestraCore/include/AestraMath.h"
 #include "AuditionEngine.h"
