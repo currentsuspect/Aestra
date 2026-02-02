@@ -64,8 +64,8 @@ elif command -v npx &> /dev/null; then
 fi
 
 if [ -n "$CHECKER_CMD" ]; then
-    # Find markdown files, exclude templates, node_modules, and legacy AestraDocs
-    FILES=$(find . -name "*.md" -not -path "*/node_modules/*" -not -path "*/TEMPLATE/*" -not -path "*/_site/*" -not -path "*/html/*" -not -path "*/latex/*" -not -path "*/xml/*" -not -path "./AestraDocs/*")
+    # Find markdown files, exclude templates, node_modules, legacy AestraDocs, and meta archives
+    FILES=$(find . -name "*.md" -not -path "*/node_modules/*" -not -path "*/TEMPLATE/*" -not -path "*/_site/*" -not -path "*/html/*" -not -path "*/latex/*" -not -path "*/xml/*" -not -path "./AestraDocs/*" -not -path "*/meta/*" -not -path "./meta/*")
 
     LINK_ERRORS=0
     # Check if config file exists

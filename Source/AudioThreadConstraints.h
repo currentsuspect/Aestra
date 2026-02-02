@@ -214,7 +214,6 @@ struct AudioThreadStats {
  * if called from the audio thread.
  * 
  * @param size Size of allocation in bytes
- * @param source Optional string describing the source (file:line or function)
  */
 #define AESTRA_TRACK_ALLOCATION(size) \
     do { \

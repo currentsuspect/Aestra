@@ -165,6 +165,7 @@ MARKDOWN_SUPPORT       = YES
 AUTOLINK_SUPPORT       = YES
 
 # Warnings
+ALIASES                = license="\par License"
 QUIET                  = NO
 WARNINGS               = YES
 WARN_IF_UNDOCUMENTED   = NO
