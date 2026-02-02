@@ -29,6 +29,31 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### Adaptive Polyphase Resampler
+
+- **Innovation**: Dynamically switch interpolation kernels (tap counts) based on signal complexity and frequency content.
+- **Benefit**: Significant CPU savings on simple signals without compromising quality on complex ones.
+
+### Cockroach-Grade Metering
+
+- **Innovation**: Robust metering using shared memory ring buffers that survive audio thread hangs.
+- **Benefit**: Visual feedback remains active even if the audio engine stalls, aiding diagnostics.
+
+### Genetic EQ Optimization
+
+- **Innovation**: AI-driven EQ that listens to a reference track and evolves EQ settings to match the target curve.
+- **Benefit**: Automated tone matching for mixing and mastering.
+
+### Spectral Editing
+
+- **Innovation**: Image-based audio editing (spectrogram painting) for surgical noise removal and creative sound design.
+- **Benefit**: Visual approach to editing complex spectral content.
+
+### Live Coding Interface
+
+- **Innovation**: Embedded Lua or Python integration for real-time DSP scripting and algorithmic composition.
+- **Benefit**: Rapid prototyping and experimental sound design directly within the DAW.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere

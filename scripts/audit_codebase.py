@@ -65,6 +65,10 @@ def analyze_file(filepath):
                     if stripped.startswith("//") or stripped.startswith("*"):
                         continue
 
+                    # Ignore deleted functions and pure virtuals
+                    if "= delete" in stripped or "= 0" in stripped:
+                        continue
+
                     issues.append(f"{filepath}:{line_num}: {desc} found in critical section candidate: '{stripped}'")
 
             if brace_count <= 0 and '}' in stripped:
