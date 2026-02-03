@@ -18,7 +18,7 @@ This guide explains how to report bugs effectively for Aestra DAW, ensuring issu
 
 ---
 
-## 🔍 Before You Report
+## Before You Report
 
 Before creating a bug report, please:
 
@@ -42,7 +42,7 @@ Ensure the behavior is actually a bug:
 
 ---
 
-## 📝 How to Report a Bug
+## How to Report a Bug
 
 ### Step 1: Open a New Issue
 1. Go to [GitHub Issues](https://github.com/currentsuspect/Aestra/issues/new)
@@ -67,7 +67,7 @@ Include:
 
 ---
 
-## 📄 Bug Report Template
+## Bug Report Template
 
 ```markdown
 ## Bug Summary
@@ -106,7 +106,7 @@ Include:
 
 ---
 
-## 🔁 Reproduction Steps
+## Reproduction Steps
 
 Clear reproduction steps are **critical** for fixing bugs. Follow this format:
 
@@ -141,7 +141,7 @@ Audio stops at 3.0 seconds, timer freezes
 
 ---
 
-## 🖥️ Gathering System Information
+## Gathering System Information
 
 ### Windows System Info
 Run in PowerShell:
@@ -173,7 +173,7 @@ gcc --version  # For GCC
 
 ---
 
-## 📂 Log Files and Debugging
+## Log Files and Debugging
 
 ### Locating Log Files
 Aestra logs are typically saved to:
@@ -204,7 +204,7 @@ Log::setLogLevel(LogLevel::Debug);  // Change from Info to Debug
 
 ---
 
-## 📸 Visual Bugs and Screenshots
+## Visual Bugs and Screenshots
 
 For UI bugs, include screenshots:
 
@@ -235,7 +235,7 @@ Scrollbar should be to the right of all track controls.
 
 ---
 
-## 🎵 Audio Bugs and Recordings
+## Audio Bugs and Recordings
 
 For audio-related bugs, provide:
 
@@ -282,7 +282,7 @@ Crackling does not occur on 48kHz samples.
 
 ---
 
-## ⏱️ Performance Issues
+## Performance Issues
 
 For performance bugs (lag, FPS drops):
 
@@ -318,7 +318,7 @@ For performance bugs (lag, FPS drops):
 
 ---
 
-## 🔧 Crash Reports
+## Crash Reports
 
 For crashes (application closes unexpectedly):
 
@@ -365,7 +365,7 @@ TransportBar tries to access m_trackManager without null check.
 
 ---
 
-## ✅ What Happens Next
+## What Happens Next
 
 After you submit a bug report:
 
@@ -433,8 +433,8 @@ Before submitting, verify:
 
 ## 📚 Related Resources
 
-- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute to Aestra
-- **[Debugging Guide](developer/debugging.md)** — Advanced debugging techniques
+- **[Contributing Guide](contributing.md)** — How to contribute to Aestra
+- **[Debugging Guide](debugging.md)** — Advanced debugging techniques
 - **[GitHub Issues](https://github.com/currentsuspect/Aestra/issues)** — Browse existing bugs
 
 ---

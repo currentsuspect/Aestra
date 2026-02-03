@@ -8,14 +8,14 @@ Comprehensive reference for Aestra DAW licensing, including the source-available
 
 ## 📋 Table of Contents
 
-- [Overview](#-overview)
-- [Proprietary License](#-proprietary-license)
-- [ASSAL License Details](#-Aestra-studios-source-available-license-ASSAL)
-- [Contributor License Agreement](#-contributor-license-agreement)
-- [Commercial Licensing](#-commercial-licensing)
-- [License FAQ](#-license-faq)
+- [Overview](#overview)
+- [Hybrid Licensing Model](#hybrid-licensing-model)
+- [Aestra Studios Source-Available License (ASSAL)](#aestra-studios-source-available-license-assal)
+- [Contributor License Agreement](#contributor-license-agreement)
+- [Premium Add-on Licensing (Future)](#premium-add-on-licensing-future)
+- [License FAQ](#license-faq)
 
-## 🌟 Overview
+## Overview
 
 **Aestra DAW uses a hybrid licensing model:**
 
@@ -35,9 +35,9 @@ Comprehensive reference for Aestra DAW licensing, including the source-available
 - ❌ Source code is **NOT open-source** (cannot be used in other projects)
 - ✅ Contributions are **welcomed and credited**
 - 🤖 Premium features (Muse AI, plugins) will require paid licenses
-- 📜 Full license text available in [LICENSE](../LICENSE)
+- 📜 Full license text available in [LICENSE](../../LICENSE)
 
-## 🔒 Hybrid Licensing Model
+## Hybrid Licensing Model
 
 ### Aestra Core License (Free Forever)
 
@@ -85,7 +85,7 @@ Unauthorized use, copying, or distribution of Aestra DAW will be prosecuted to t
 - International copyright treaties
 - DMCA (Digital Millennium Copyright Act)
 
-## 📜 Aestra Studios Source-Available License (ASSAL)
+## Aestra Studios Source-Available License (ASSAL)
 
 ### Full License Details
 
@@ -111,7 +111,7 @@ Unauthorized use, copying, or distribution of Aestra DAW will be prosecuted to t
 **Ownership:**
 All title, ownership rights, and intellectual property rights in and to the Software, including all source code, documentation, designs, and associated materials, remain the exclusive property of Dylan Makori and Aestra Studios.
 
-**For the complete legal text, see:** [LICENSE](../LICENSE)
+**For the complete legal text, see:** [LICENSE](../../LICENSE)
 
 ### Third-Party Dependencies
 
@@ -123,7 +123,7 @@ Aestra may use third-party libraries under their respective licenses:
 
 All third-party licenses are compatible with Aestra's proprietary model.
 
-## 🤝 Contributor License Agreement
+## Contributor License Agreement
 
 ### By Contributing to Aestra
 
@@ -156,7 +156,7 @@ While you grant full rights, we value contributions:
 - ⭐ Featured in documentation for significant contributions
 - 🎖️ Hall of Fame for major contributors
 
-## 💰 Premium Add-on Licensing (Future)
+## Premium Add-on Licensing (Future)
 
 ### What's Free vs. Paid
 
@@ -220,7 +220,7 @@ While you grant full rights, we value contributions:
 
 **Note:** Aestra Core requires no activation or license key.
 
-## ❓ License FAQ
+## License FAQ
 
 ### Q: Is Aestra open-source?
 
@@ -277,7 +277,7 @@ While you grant full rights, we value contributions:
 
 **For contribution questions:**
 - 💬 GitHub Issues: Technical questions
-- 📖 Contributing Guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- 📖 Contributing Guide: [../developer/contributing.md](../developer/contributing.md)
 
 ## 🌍 Jurisdiction
 
@@ -292,14 +292,14 @@ While you grant full rights, we value contributions:
 
 ## 📚 Additional Resources
 
-- [Full License Text](../LICENSE) - Complete ASSAL license terms
-- [Licensing Details](../LICENSING.md) - Original licensing document
-- [Contributing Guide](CONTRIBUTING.md) - How to contribute
-- [FAQ](FAQ.md) - General questions
+- [Full License Text](../../LICENSE) - Complete ASSAL license terms
+- [Licensing Details](licensing.md) - Original licensing document
+- [Contributing Guide](../developer/contributing.md) - How to contribute
+- [FAQ](../technical/faq.md) - General questions
 
 ## ⚠️ Legal Disclaimer
 
-This document provides a summary and reference for Aestra DAW licensing. The complete legal terms are in the [LICENSE](../LICENSE) and [LICENSING.md](../LICENSING.md) files. In case of conflict, the official license documents take precedence.
+This document provides a summary and reference for Aestra DAW licensing. The complete legal terms are in the [LICENSE](../../LICENSE) and [LICENSING.md](licensing.md) files. In case of conflict, the official license documents take precedence.
 
 **Not legal advice**: This document is for informational purposes only and does not constitute legal advice. Consult an attorney for legal questions.
 
@@ -311,4 +311,4 @@ This document provides a summary and reference for Aestra DAW licensing. The com
 
 ---
 
-[← Return to Aestra Docs Index](README.md)
+[← Return to Aestra Docs Index](../../README.md)

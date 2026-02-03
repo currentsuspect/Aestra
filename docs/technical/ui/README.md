@@ -12,8 +12,8 @@
 
 ### Progress & Status
 - **[PROGRESS.md](PROGRESS.md)** - Development progress tracking
-- **[COMMIT_READY.md](COMMIT_READY.md)** - Commit readiness checklist
-- **[SESSION_COMPLETE.md](SESSION_COMPLETE.md)** - Completed session summaries
+- **Commit Ready Checklist** - Commit readiness checklist
+- **Session Complete** - Completed session summaries
 
 ### Renderer Documentation
 - **[OPENGL_RENDERER_COMPLETE.md](OPENGL_RENDERER_COMPLETE.md)** - OpenGL renderer implementation

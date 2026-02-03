@@ -14,6 +14,12 @@
     },
     {
       "pattern": "^http://www.music.mcgill.ca/~gary/rtaudio/"
+    },
+    {
+      "pattern": "^https://github.com/currentsuspect/Aestra/issues"
+    },
+    {
+      "pattern": "^https://github.com/currentsuspect/Aestra/discussions"
     }
   ],
   "retryOn429": true,
