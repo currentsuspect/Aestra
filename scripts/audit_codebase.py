@@ -42,6 +42,9 @@ def analyze_file(filepath):
         # Detect function start
         for func in CRITICAL_FUNCTIONS:
             if re.search(fr"\b{func}\s*\(", stripped):
+                # Ignore if inside a comment (simple check)
+                if stripped.startswith("//") or stripped.startswith("*") or stripped.startswith("/*"):
+                    continue
                 in_critical_section = True
                 # rudimentary brace counting to stay in function
                 # Assuming opening brace is on same line or next
@@ -62,7 +65,11 @@ def analyze_file(filepath):
             for pattern, desc in FORBIDDEN_KEYWORDS:
                 if re.search(pattern, stripped):
                     # Ignore comments (simple check)
-                    if stripped.startswith("//") or stripped.startswith("*"):
+                    if stripped.startswith("//") or stripped.startswith("*") or stripped.startswith("/*"):
+                        continue
+
+                    # Ignore deleted functions or pure virtuals
+                    if "= delete" in stripped or "= 0" in stripped:
                         continue
 
                     issues.append(f"{filepath}:{line_num}: {desc} found in critical section candidate: '{stripped}'")

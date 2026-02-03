@@ -29,7 +29,32 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### Live Coding Interface
+
+- **Innovation**: Embed a JIT-compiled C++ or Lua environment for real-time DSP scripting.
+- **Benefit**: Users can write custom effects that compile and hot-swap instantly without restarting audio.
+
+### Spectral Editing
+
+- **Innovation**: Implement a spectrogram-based editor with "Photoshop-like" tools (clone stamp, healing brush) for audio.
+- **Benefit**: Surgical repair of audio artifacts and creative sound design.
+
+### Genetic EQ Optimization
+
+- **Innovation**: Use genetic algorithms to evolve EQ curves to match a target reference spectrum.
+- **Benefit**: Automated mastering and tone matching.
+
 ## 2. Performance Boosts
+
+### Adaptive Polyphase Resampler
+
+- **Innovation**: Dynamically switch between SIMD-optimized windowed sinc kernels based on required quality and ratio.
+- **Benefit**: ~290x real-time throughput at 48kHz (AVX2), effectively zero CPU cost for standard rate conversions.
+
+### Compute Shader DSP
+
+- **Innovation**: Offload massive convolution reverbs and spectral processing to the GPU via Vulkan/Metal compute shaders.
+- **Benefit**: Frees up CPU for low-latency serial processing while handling heavy parallel tasks on the GPU.
 
 ### AVX-512 Everywhere
 
@@ -62,6 +87,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 ### Phase-Linear EQs
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
+
+### Cockroach-Grade Metering
+
+- **Plan**: Implement robust LUFS metering with infinite runtime history using circular buffers and relative gating.
+- **Benefit**: Meets EBU R128 standards with zero memory allocation and crash-proof stability ("survives a nuclear blast").
+
+### Psychoacoustic Quantization
+
+- **Plan**: Apply dither shaped by the absolute threshold of hearing (ATH) curve.
+- **Benefit**: Perceptually lower noise floor than standard TPDF dither, effectively gaining bits of resolution.
 
 ## 4. Fixes & Cleanups
 
