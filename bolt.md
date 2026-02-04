@@ -29,6 +29,36 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### Adaptive Polyphase Resampler
+
+- **Innovation**: Dynamically switch between varying lengths of polyphase filters based on content frequency content and available CPU.
+- **Benefit**: Zero-latency, mastering-grade sample rate conversion that scales down to run on potatoes.
+
+### Cockroach-Grade Metering
+
+- **Innovation**: Implement robust, never-failing LUFS metering that survives buffer underruns, thread priority inversions, and cosmic rays.
+- **Algo**: Use lock-free ring buffers for inter-thread communication and a dedicated low-priority worker thread for integration.
+
+### Genetic EQ Optimization
+
+- **Innovation**: Auto-EQ that uses a genetic algorithm to match a reference curve using the minimum number of filters.
+- **Benefit**: Perfect tonal matching with minimal phase shift.
+
+### Spectral Editing
+
+- **Innovation**: FFT-based spectrogram editing directly in the timeline.
+- **Tech**: Use `vkFFT` (Vulkan) for GPU-accelerated spectral processing.
+
+### Live Coding Interface
+
+- **Innovation**: Embed a LuaJIT or ChucK interpreter for live-coding DSP and control signals.
+- **Benefit**: Infinite extensibility for power users and performers.
+
+### Compute Shader DSP
+
+- **Innovation**: Offload heavy reverb and granular synthesis to the GPU using Compute Shaders.
+- **Benefit**: Free up CPU for low-latency serial processing chains.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
