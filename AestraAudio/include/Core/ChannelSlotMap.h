@@ -58,7 +58,7 @@ public:
      * Assigns dense slot indices (0, 1, 2...) to tracks in order.
      * Master channel always uses MASTER_SLOT_INDEX (127).
      *
-     * @param tracks Vector of track pointers (order determines slot assignment)
+     * @param channels Vector of track pointers (order determines slot assignment)
      */
     void rebuild(const std::vector<std::shared_ptr<MixerChannel>>& channels);
 

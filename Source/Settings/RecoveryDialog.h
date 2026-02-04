@@ -63,6 +63,7 @@ public:
     /**
      * @brief Check if an autosave file exists and return info
      * @param autosavePath Path to check
+     * @param outTimestamp Output buffer for the file timestamp
      * @return True if autosave exists and is valid
      */
     static bool detectAutosave(const std::string& autosavePath, std::string& outTimestamp);

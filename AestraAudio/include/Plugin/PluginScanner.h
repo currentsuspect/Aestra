@@ -85,8 +85,8 @@ public:
      * @brief Add default platform search paths
      * 
      * Windows:
-     *   - C:\Program Files\Common Files\VST3
-     *   - C:\Program Files\Common Files\CLAP
+     *   - C:/Program Files/Common Files/VST3
+     *   - C:/Program Files/Common Files/CLAP
      * 
      * macOS:
      *   - /Library/Audio/Plug-Ins/VST3
