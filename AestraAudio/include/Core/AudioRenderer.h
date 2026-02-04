@@ -44,13 +44,9 @@ namespace Audio {
         ~AudioRenderer();
 
         /**
-         * @brief Render a single block of audio.
-         * @param ctx Execution context (buffers, time).
-         * @param state The graph state (tracks, params).
-         * @param engineRef Helper ref to engine for accessing EffectChains/Clips (Legacy bridge).
-         */
-        /**
          * @brief Pass 1: Handle MIDI timing and pattern scheduling
+         * @param ctx Execution context (buffers, time).
+         * @param engineRef Helper ref to engine for accessing EffectChains/Clips (Legacy bridge).
          */
         void processArsenalMidi(const Context& ctx, AudioEngine& engineRef);
 

@@ -71,6 +71,7 @@ REFERENCES_RELATION    = YES
 REFERENCES_LINK_SOURCE = YES
 
 # Alphabetical Index
+ALIASES                = license="\par License"
 ALPHABETICAL_INDEX     = YES
 IGNORE_PREFIX          = 
 
