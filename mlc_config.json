@@ -1,0 +1,22 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^https://patreon.com"
+    },
+    {
+      "pattern": "^https://www.patreon.com"
+    },
+    {
+      "pattern": "^https://ko-fi.com"
+    },
+    {
+      "pattern": "^https://learnopengl.com"
+    }
+  ],
+  "aliveStatusCodes": [
+    200,
+    403,
+    429
+  ],
+  "retryOn429": true
+}
