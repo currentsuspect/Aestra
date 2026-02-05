@@ -27,7 +27,8 @@ bool SamplerPlugin::initialize(double sampleRate, uint32_t maxBlockSize) {
 void SamplerPlugin::shutdown() {
     m_active = false;
     // Force release of data to ensure cleanup
-    auto old = std::atomic_exchange(&m_data, std::shared_ptr<SampleData>(nullptr));
+    m_activeData.store(nullptr, std::memory_order_release);
+    auto old = std::move(m_dataHolder);
     GarbageCollector::instance().release(old);
 }
 
@@ -79,11 +80,15 @@ bool SamplerPlugin::loadSample(const std::string& path) {
     newData->channels = channels;
     newData->path = path;
 
-    // Atomic Swap (Thread-Safe, Lock-Free-ish)
-    // std::atomic_exchange uses standard atomics for shared_ptr
-    auto oldData = std::atomic_exchange(&m_data, newData);
+    // Atomic Swap (Context Swap Pattern)
+    // 1. Update Active View (Audio thread sees new data immediately)
+    m_activeData.store(newData.get(), std::memory_order_release);
 
-    // Safely dispose of old data via Garbage Collector (avoids delete on Audio Thread)
+    // 2. Update Ownership (Main thread)
+    auto oldData = std::move(m_dataHolder);
+    m_dataHolder = newData;
+
+    // 3. Safely dispose of old data via Garbage Collector (avoids delete on Audio Thread)
     GarbageCollector::instance().release(oldData);
     
     return true;
@@ -112,14 +117,16 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
         }
     }
     
-    // Thread-safe access to sample data
-    auto currentData = std::atomic_load(&m_data);
+    // Thread-safe access to sample data (Lock-Free Read)
+    auto* currentData = m_activeData.load(std::memory_order_acquire);
     if (!currentData || currentData->data.empty()) return;
 
     // Parameters
     float pitchParam = m_params[kParamPitch].load(std::memory_order_relaxed);
     float semitones = (pitchParam - 0.5f) * 24.0f;
-    float pitchRatio = std::pow(2.0f, semitones / 12.0f);
+    // Optimized pitch calculation (exp instead of pow)
+    // ln(2)/12 approx 0.057762265
+    float pitchRatio = std::exp(semitones * 0.057762265f);
     
     // Source Rate correction
     double baseRate = (double)currentData->rate / m_sampleRate;
@@ -363,7 +370,7 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
      
      // Sample Path
      {
-         auto current = std::atomic_load(&m_data);
+         auto current = m_dataHolder;
          if (current && !current->path.empty()) {
              json.set("samplePath", Aestra::JSON(current->path));
          }
