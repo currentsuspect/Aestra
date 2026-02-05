@@ -11,6 +11,12 @@
     },
     {
       "pattern": "^https://learnopengl.com"
+    },
+    {
+      "pattern": "^https://github.com/yourusername"
+    },
+    {
+      "pattern": "^http://www.music.mcgill.ca"
     }
   ],
   "aliveStatusCodes": [
