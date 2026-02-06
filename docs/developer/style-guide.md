@@ -189,7 +189,7 @@ Use tables for structured data:
 
 **Internal Links:**
 ```markdown
-See [Building Guide](BUILDING.md) for instructions.
+See [Building Guide](../getting-started/building.md) for instructions.
 ```
 
 **External Links:**
@@ -543,7 +543,7 @@ double Track::getPosition() const {
 
 ### Troubleshooting
 
-If you encounter build errors, see [Building Guide](BUILDING.md).
+If you encounter build errors, see [Building Guide](../getting-started/building.md).
 ```
 
 ### Example 3: Inline Code Comment
@@ -593,9 +593,9 @@ Before submitting documentation, verify:
 
 ## 📚 Additional Resources
 
-- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute
-- **[Coding Style Guide](developer/coding-style.md)** — Code formatting rules
-- **[Bug Reports Guide](BUG_REPORTS.md)** — Reporting issues
+- **[Contributing Guide](contributing.md)** — How to contribute
+- **[Coding Style Guide](coding-style.md)** — Code formatting rules
+- **[Bug Reports Guide](bug-reports.md)** — Reporting issues
 
 ---
 

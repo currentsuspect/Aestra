@@ -1,0 +1,18 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^http://localhost"
+    },
+    {
+      "pattern": "^https://patreon.com"
+    },
+    {
+      "pattern": "^https://www.patreon.com"
+    },
+    {
+      "pattern": "^https://ko-fi.com"
+    }
+  ],
+  "retryOn429": true,
+  "timeout": "20s"
+}
