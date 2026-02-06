@@ -29,6 +29,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### JIT Graph Compilation
+
+- **Innovation**: Compile the entire audio mixing graph into a single function pointer at runtime using a lightweight JIT (e.g., specialized machine code generation).
+- **Benefit**: Eliminates virtual function overhead and enables cross-plugin inlining for massive CPU savings.
+
+### GPU-Accelerated Spectral Processing
+
+- **Innovation**: Offload heavy FFT/iFFT and spectral edits to GPU Compute Shaders (Vulkan/Metal).
+- **Benefit**: Allows thousands of spectral bands or real-time neural denoising without stalling the CPU audio thread.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -63,6 +73,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
 
+### Volumetric Panning
+
+- **Plan**: Integrate Ambisonics (upto 3rd order) and Object-Based Audio panning into the core mixer.
+- **Benefit**: Native support for spatial audio formats and immersive mixing workflows.
+
 ## 4. Fixes & Cleanups
 
 ### Real-Time Safety
@@ -70,6 +85,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
 - **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
 - **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+
+### Platform Abstraction Leaks
+
+- **Violation**: `AestraThreading.h` and `AudioEngine.h` included `<windows.h>` in headers.
+- **Fix**: Moved platform-specific implementation to `AestraCore/src/AestraThreading.cpp` and used `// ALLOW_PLATFORM_INCLUDE` where unavoidable.
 
 ---
 *Signed: Bolt*
