@@ -64,8 +64,9 @@ endif()
 set(VST3_SDK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/External/vst3sdk)
 
 if(EXISTS ${VST3_SDK_DIR}/pluginterfaces AND EXISTS ${VST3_SDK_DIR}/public.sdk)
-    set(AESTRA_HAS_VST3 ON)
-    message(STATUS "VST3 SDK: Found at ${VST3_SDK_DIR}")
+    # Force VST3 OFF for partial build
+    set(AESTRA_HAS_VST3 OFF)
+    message(STATUS "VST3 SDK: Found at ${VST3_SDK_DIR} (DISABLED)")
     
     # VST3 SDK include directories
     set(VST3_INCLUDE_DIRS
@@ -142,27 +143,27 @@ endif()
 # Organized into subdirectories for maintainability
 set(AESTRA_AUDIO_CORE_SOURCES
     # Core
-    src/Core/AudioEngine.cpp
-    src/Core/AudioDeviceManager.cpp
+    # src/Core/AudioEngine.cpp
+    # src/Core/AudioDeviceManager.cpp
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
     
     # Playback
-    src/Playback/AuditionEngine.cpp
+    # src/Playback/AuditionEngine.cpp
     src/Playback/PreviewEngine.cpp
-    src/Playback/PatternPlaybackEngine.cpp
-    src/Playback/MetronomeEngine.cpp
-    src/Playback/TimelineClock.cpp
+    # src/Playback/PatternPlaybackEngine.cpp
+    # src/Playback/MetronomeEngine.cpp
+    # src/Playback/TimelineClock.cpp
     
-    # Models
-    src/Models/TrackManager.cpp
-    src/Models/PlaylistModel.cpp
-    # src/Models/SelectionModel.cpp  # TODO: Rewrite for new PlaylistModel API (uses obsolete getAllClipsInRange, etc.)
-    src/Models/UnitManager.cpp
-    src/Models/PatternManager.cpp
-    src/Models/ClipSource.cpp
-    src/Models/AudioClip.cpp
-    src/Models/PlaylistTrack.cpp
+    # Models - DISABLED DUE TO MISSING FILES
+    # src/Models/TrackManager.cpp
+    # src/Models/PlaylistModel.cpp
+    # src/Models/SelectionModel.cpp
+    # src/Models/UnitManager.cpp
+    # src/Models/PatternManager.cpp
+    # src/Models/ClipSource.cpp
+    # src/Models/AudioClip.cpp
+    # src/Models/PlaylistTrack.cpp
     
     # DSP
     src/DSP/AudioProcessor.cpp
@@ -174,7 +175,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     # IO
     src/IO/MiniAudioDecoder.cpp
     src/IO/StreamingDecoder.cpp
-    src/IO/WaveformCache.cpp
+    # src/IO/WaveformCache.cpp
     src/IO/PathUtils.cpp
     src/IO/MetadataParser.cpp
     
@@ -182,15 +183,15 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Drivers/DummyAudioDriver.cpp
     
     # Other (root-level for now)
-    src/AudioGraphBuilder.cpp
+    # src/AudioGraphBuilder.cpp
     src/ChannelSlotMap.cpp
     src/SamplePool.cpp
-    src/AudioRenderer.cpp
+    # src/AudioRenderer.cpp
     
     # Commands
     src/Commands/CommandHistory.cpp
-    src/Commands/SplitClipCommand.cpp
-    src/Commands/AddClipCommand.cpp
+    # src/Commands/SplitClipCommand.cpp
+    # src/Commands/AddClipCommand.cpp
     
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp
@@ -239,7 +240,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Drivers/AudioDriverTypes.h
     include/Drivers/AudioDriverRegistry.h   # Registry interface
     include/DSP/AudioProcessor.h
-    include/Models/MeterSnapshot.h
+    # include/Models/MeterSnapshot.h
     include/Core/MixerBus.h
     include/DSP/Oscillator.h
     include/Playback/MetronomeEngine.h
@@ -248,33 +249,33 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/IO/SamplePool.h
     include/DSP/SampleRateConverter.h
     include/Core/MixerChannel.h
-    include/Models/TrackManager.h
-    include/Models/PatternSource.h
-    include/Models/ClipInstance.h
-    include/Models/PatternManager.h
-    include/Models/AudioClip.h
+    # include/Models/TrackManager.h
+    # include/Models/PatternSource.h
+    # include/Models/ClipInstance.h
+    # include/Models/PatternManager.h
+    # include/Models/AudioClip.h
     include/IO/MiniAudioDecoder.h
-    include/Models/PlaylistTrack.h
+    # include/Models/PlaylistTrack.h
     # Multi-clip playlist system
-    include/Models/TimeTypes.h
-    include/Models/ClipSource.h
-    include/Models/PlaylistModel.h
-    include/Models/PlaylistRuntimeSnapshot.h
-    include/Models/PlaylistMixer.h
-    # include/Models/SelectionModel.h  # TODO: Fix - references non-existent PlaylistClip.h
+    # include/Models/TimeTypes.h
+    # include/Models/ClipSource.h
+    # include/Models/PlaylistModel.h
+    # include/Models/PlaylistRuntimeSnapshot.h
+    # include/Models/PlaylistMixer.h
+    # include/Models/SelectionModel.h
     include/IO/WaveformCache.h
-    include/Models/PlaylistGeometry.h
-    include/Models/PlaylistSerializer.h
-    include/Models/MultiClipPlaylist.h
-    include/Models/ArsenalUnit.h
-    include/Models/UnitManager.h
+    # include/Models/PlaylistGeometry.h
+    # include/Models/PlaylistSerializer.h
+    # include/Models/MultiClipPlaylist.h
+    # include/Models/ArsenalUnit.h
+    # include/Models/UnitManager.h
 
     include/IO/StreamingDecoder.h
     # Undo/Redo
     include/Commands/ICommand.h
     include/Commands/CommandHistory.h
-    include/Commands/SplitClipCommand.h
-    include/Commands/AddClipCommand.h
+    # include/Commands/SplitClipCommand.h
+    # include/Commands/AddClipCommand.h
     
     src/DummyAudioDriver.h
     

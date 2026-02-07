@@ -22,19 +22,19 @@ namespace Audio {
 /**
  * @brief Unique identifier for a Mixer Channel
  */
-struct MixerChannelID : public AestraUUID {
+struct MixerChannelID : public Aestra::Audio::AestraUUID {
     uint64_t value = 0;
     
     MixerChannelID() = default;
     MixerChannelID(uint64_t v) : value(v) { low = v; }
-    MixerChannelID(const AestraUUID& other) : AestraUUID(other), value(other.low) {}
+    MixerChannelID(const Aestra::Audio::AestraUUID& other) : Aestra::Audio::AestraUUID(other), value(other.low) {}
 };
 
 
 /**
  * @brief Legacy alias for serialization
  */
-using TrackUUID = AestraUUID;
+using TrackUUID = Aestra::Audio::AestraUUID;
 
 /**
  * @brief Legacy Track states for UI compatibility
@@ -96,7 +96,7 @@ struct AudioQualitySettings {
     OversamplingMode oversampling{OversamplingMode::None};
     bool removeDCOffset{true};
     bool enableSoftClipping{false};
-    AestraMode AestraMode{AestraMode::Off};
+    AestraMode aestraMode{AestraMode::Off};
 
     void applyPreset(QualityPreset p) {
         preset = p;
@@ -139,8 +139,8 @@ public:
     MixerChannelID getID() const { return m_uuid; }
     uint32_t getChannelId() const { return m_channelId; }
     
-    void setUUID(const AestraUUID& uuid) { m_uuid = uuid; }
-    const AestraUUID& getUUID() const { return m_uuid; }
+    void setUUID(const Aestra::Audio::AestraUUID& uuid) { m_uuid = uuid; }
+    const Aestra::Audio::AestraUUID& getUUID() const { return m_uuid; }
 
 
     
@@ -211,7 +211,7 @@ public:
 
 private:
     std::string m_name;
-    AestraUUID m_uuid;
+    Aestra::Audio::AestraUUID m_uuid;
     uint32_t m_channelId;
     uint32_t m_color;
 

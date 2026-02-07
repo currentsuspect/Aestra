@@ -293,7 +293,10 @@ public:
      * 
      * @return Latency in output frames (depends on filter size)
      */
-    uint32_t getLatency() const noexcept { return m_filterBank.halfTaps; }
+    uint32_t getLatency() const noexcept {
+        const auto* bank = getFilterBank();
+        return bank ? bank->halfTaps : 0;
+    }
     
     /**
      * @brief Check if configured and ready to process
@@ -387,9 +390,6 @@ private:
     
     // Fractional position accumulator (maintains phase between calls)
     double m_srcPosition{0.0};
-    
-    // Precomputed polyphase filter bank
-    PolyphaseFilterBank m_filterBank;
     
     // Input sample history (ring buffer)
     SampleHistory m_history;

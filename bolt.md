@@ -29,6 +29,26 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### JIT Graph Compilation
+
+- **Innovation**: Compile the entire audio graph routing into optimized machine code at runtime (using LLVM or custom JIT).
+- **Benefit**: Removes virtual function overhead and improves instruction cache locality for massive graphs.
+
+### GPU-Accelerated Spectral Processing
+
+- **Innovation**: Offload heavy FFT/IFFT operations (convolution reverb, spectral editing) to GPU via Vulkan/Compute Shaders.
+- **Benefit**: Frees up CPU for low-latency synthesis and mixing.
+
+### Platform Isolation
+
+- **Innovation**: Run the audio engine in a separate, high-priority process, communicating with the UI via shared memory.
+- **Benefit**: UI hangs or crashes never interrupt audio playback; crucial for live performance.
+
+### Safe Context Swap
+
+- **Innovation**: Implement RCU (Read-Copy-Update) pattern for hot-swapping plugin states without locking the audio thread.
+- **Benefit**: Glitch-free preset changes and plugin bypasses.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -67,8 +87,10 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 ### Real-Time Safety
 
-- **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
-- **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
+- **Violation**: `SamplerPlugin` used `std::atomic_load` on `std::shared_ptr` (potential lock in implementation).
+- **Fix**: Replaced with `std::atomic<SampleData*>` (guaranteed lock-free) + `std::shared_ptr` ownership holder (Main Thread).
+- **Violation**: `SampleRateConverter` latency reporting was broken (returning 0).
+- **Fix**: Corrected `getLatency()` to return latency from the active filter bank.
 - **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
 
 ---
