@@ -65,7 +65,7 @@ fi
 
 if [ -n "$CHECKER_CMD" ]; then
     # Find markdown files, exclude templates and node_modules
-    FILES=$(find . -name "*.md" -not -path "*/node_modules/*" -not -path "*/TEMPLATE/*" -not -path "*/_site/*" -not -path "*/html/*" -not -path "*/latex/*" -not -path "*/xml/*" -not -path "*/meta/*")
+    FILES=$(find . -name "*.md" -not -path "*/node_modules/*" -not -path "*/TEMPLATE/*" -not -path "*/_site/*" -not -path "*/html/*" -not -path "*/latex/*" -not -path "*/xml/*" -not -path "*/meta/*" -not -path "*/AestraDocs/*")
 
     LINK_ERRORS=0
     for file in $FILES; do

@@ -9,10 +9,10 @@ Comprehensive reference for Aestra DAW licensing, including the source-available
 ## 📋 Table of Contents
 
 - [Overview](#-overview)
-- [Proprietary License](#-proprietary-license)
-- [ASSAL License Details](#-Aestra-studios-source-available-license-ASSAL)
+- [Proprietary License](#-hybrid-licensing-model)
+- [ASSAL License Details](#-aestra-studios-source-available-license-assal)
 - [Contributor License Agreement](#-contributor-license-agreement)
-- [Commercial Licensing](#-commercial-licensing)
+- [Commercial Licensing](#-premium-add-on-licensing-future)
 - [License FAQ](#-license-faq)
 
 ## 🌟 Overview

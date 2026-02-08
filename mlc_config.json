@@ -1,13 +1,13 @@
 {
   "ignorePatterns": [
-    {"pattern": "^https://patreon.com"},
-    {"pattern": "^https://www.patreon.com"},
-    {"pattern": "^https://ko-fi.com"},
+    {"pattern": "^https://patreon\\.com"},
+    {"pattern": "^https://www\\.patreon\\.com"},
+    {"pattern": "^https://ko-fi\\.com"},
     {"pattern": "^http://localhost"},
-    {"pattern": "^https://twitter.com"},
-    {"pattern": "^https://x.com"},
-    {"pattern": "^https://linkedin.com"},
-    {"pattern": "^https://discord.gg"}
+    {"pattern": "^https://twitter\\.com"},
+    {"pattern": "^https://x\\.com"},
+    {"pattern": "^https://linkedin\\.com"},
+    {"pattern": "^https://discord\\.gg"}
   ],
   "timeout": "10s",
   "retryOn429": true,
