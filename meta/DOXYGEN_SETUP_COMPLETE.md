@@ -473,9 +473,9 @@ HTML_COLORSTYLE_GAMMA  = 80    # Brightness
 - **Doxygen Command Reference**: https://www.doxygen.nl/manual/commands.html
 
 ### Aestra Specific
-- **API Documentation Guide**: `docs/API_DOCUMENTATION_GUIDE.md`
-- **Coding Style Guide**: `docs/developer/coding-style.md`
-- **Contributing Guide**: `CONTRIBUTING.md`
+- **API Documentation Guide**: `../docs/API_DOCUMENTATION_GUIDE.md`
+- **Coding Style Guide**: `../docs/developer/coding-style.md`
+- **Contributing Guide**: `../CONTRIBUTING.md`
 
 ---
 

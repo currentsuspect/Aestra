@@ -163,7 +163,7 @@ All notable changes to this project will be documented in this file.
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](AestraDocs/DEVELOPER_GUIDE.md) for details.
+We welcome contributions! Please see our [Contributing Guidelines](../../AestraDocs/guides/DEVELOPER_GUIDE.md) for details.
 
 ## License
 

@@ -15,7 +15,7 @@
 - [`../AestraAudio/README.md`](../AestraAudio/README.md) - Audio module overview
 
 ### User Interface
-- [UI Coordinate System](architecture/AestraUI_COORDINATE_SYSTEM.md) ⚠️ **CRITICAL**
+- [UI Coordinate System](architecture/NOMADUI_COORDINATE_SYSTEM.md) ⚠️ **CRITICAL**
 - [UI Layout Guide](guides/UI_LAYOUT_GUIDE.md) - Layout best practices
 - [Custom Window Integration](systems/CUSTOM_WINDOW_INTEGRATION.md) - Custom windows
 - [Dropdown System v2.0](systems/DROPDOWN_SYSTEM_V2.0.md) - Dropdown menus
@@ -37,7 +37,7 @@
 
 ### Core Systems
 - [`../AestraCore/README.md`](../AestraCore/README.md) - Core utilities overview
-- [Aestra Mode Implementation](architecture/Aestra_MODE_IMPLEMENTATION.md) - Mode system
+- [Aestra Mode Implementation](architecture/NOMAD_MODE_IMPLEMENTATION.md) - Mode system
 
 ## 📋 Project Status
 - [Build Status](status/BUILD_STATUS.md) - Current completion status
@@ -62,7 +62,7 @@
 ## 🏗️ Module READMEs
 - [`../AestraCore/README.md`](../AestraCore/README.md) - Core utilities
 - [`../AestraPlat/README.md`](../AestraPlat/README.md) - Platform abstraction
-- [`../AestraUI/docs/`](../AestraUI/docs/) - UI framework docs
+- [`../docs/technical/ui/`](../docs/technical/ui/) - UI framework docs
 - [`../AestraAudio/README.md`](../AestraAudio/README.md) - Audio system
 
 ## 📖 Root Documentation
