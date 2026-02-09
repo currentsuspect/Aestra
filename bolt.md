@@ -29,6 +29,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### GPU-Accelerated Spectral Processing
+
+- **Innovation**: Offload heavy spectral tasks (Reverb, Denoise) to GPU using Compute Shaders (Vulkan/Metal).
+- **Benefit**: Frees up CPU for low-latency tasks, enabling massive reverb counts.
+
+### JIT Graph Compilation
+
+- **Innovation**: Compile the audio processing graph into optimized machine code at runtime (using LLVM or custom JIT).
+- **Benefit**: Eliminates virtual function overhead and enables cross-module optimization for massive graphs.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -46,6 +56,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 ### Zero-Allocation UI
 
 - **Plan**: Use `ImGui` or custom immediate mode renderer that reuses vertex buffers. Eliminate `std::string` allocations in the draw loop (use `fmt::format_to` into fixed buffers).
+
+### Fast Math Approximation
+
+- **Plan**: Replace `std::sin`, `std::exp` with polynomial approximations (e.g., minimax) for modulation sources and envelopes.
+- **Benefit**: 2-4x speedup for heavy modulation scenarios with minimal precision loss.
 
 ## 3. Sound Quality
 
@@ -70,6 +85,12 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
 - **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
 - **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+
+### Platform Isolation
+
+- **Violation**: Public headers (`AudioEngine.h`, `AestraThreading.h`) leaking `<windows.h>`.
+- **Fix**: Moved platform-specific includes to `.cpp` files (`AestraThreading.cpp`) or tagged them with `// ALLOW_PLATFORM_INCLUDE` (`ASIOInterface.h`).
+- **Benefit**: Prevents namespace pollution and ensures strict architectural layering.
 
 ---
 *Signed: Bolt*
