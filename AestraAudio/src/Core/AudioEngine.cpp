@@ -16,6 +16,11 @@
 #include <immintrin.h> // AVX/SSE for high-performance mixing
 #include "miniaudio.h"
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 // Denormal protection macros
 #define DISABLE_DENORMALS \
     int oldMXCSR = _mm_getcsr(); \

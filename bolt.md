@@ -29,6 +29,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### JIT Graph Compilation
+
+- **Innovation**: Compile the audio processing graph to machine code at runtime (using LLVM or AsmJit).
+- **Benefit**: Removes virtual function overhead (indirect calls) and improves instruction cache locality for complex routing.
+
+### GPU-Accelerated Spectral Processing
+
+- **Innovation**: Use Compute Shaders (Vulkan/Metal/CUDA) for heavy spectral effects (FFT/iFFT) to offload the CPU.
+- **Benefit**: Allows massive spectral transformations (denoising, spectral morphing) without stalling the audio thread.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -46,6 +56,17 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 ### Zero-Allocation UI
 
 - **Plan**: Use `ImGui` or custom immediate mode renderer that reuses vertex buffers. Eliminate `std::string` allocations in the draw loop (use `fmt::format_to` into fixed buffers).
+
+### Platform Isolation (Threading)
+
+- **Status**: Completed (v3.2).
+- **Fix**: Moved `MMCSS` and `ThreadPool` implementations to `AestraCore/src/AestraThreading.cpp` to hide `<windows.h>` from public headers.
+- **Benefit**: Cleaner build, faster compilation, and true cross-platform readiness.
+
+### Fast Math Approximation
+
+- **Plan**: Use `std::exp` approximation for dB-to-Gain and envelope calculations.
+- **Benefit**: Significant speedup in heavy math operations.
 
 ## 3. Sound Quality
 
@@ -69,7 +90,13 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
 - **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
-- **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+- **Audit Tooling**: Updated `scripts/audit_codebase.py` to correctly ignore deleted functions (`= delete`) to prevent false positives.
+
+### Platform Leaks
+
+- **Violation**: `<windows.h>` in `AestraThreading.h` and `AudioEngine.h`.
+- **Fix**: Refactored `AestraThreading` to move implementation to source file. Removed include from `AudioEngine.h`. Tagged `ASIOInterface.h` as allowed.
+- **Result**: `scripts/check_platform_leaks.py` now passes clean.
 
 ---
 *Signed: Bolt*
