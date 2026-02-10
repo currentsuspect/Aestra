@@ -10,3 +10,6 @@
 [submodule "AestraUI/External/freetype_local"]
 	path = AestraUI/External/freetype_local
 	url = https://github.com/freetype/freetype.git
+[submodule "subprojects/dlg"]
+	path = subprojects/dlg
+	url = https://github.com/nyorain/dlg.git
