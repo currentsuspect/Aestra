@@ -1,0 +1,23 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^https://patreon.com"
+    },
+    {
+      "pattern": "^https://www.patreon.com"
+    },
+    {
+      "pattern": "^https://ko-fi.com"
+    },
+    {
+      "pattern": "^http://localhost"
+    },
+    {
+      "pattern": "^https://github.com/yourusername"
+    }
+  ],
+  "retryOn429": true,
+  "retryCount": 5,
+  "fallbackRetryDelay": "30s",
+  "aliveStatusCodes": [200, 206]
+}

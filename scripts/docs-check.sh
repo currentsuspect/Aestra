@@ -70,7 +70,7 @@ if [ -n "$CHECKER_CMD" ]; then
     LINK_ERRORS=0
     for file in $FILES; do
         # echo "Checking $file..."
-        if ! $CHECKER_CMD -q "$file" 2>/dev/null; then
+        if ! $CHECKER_CMD -c mlc_config.json -q "$file" 2>/dev/null; then
              echo -e "${RED}✗ Broken links in $file${NC}"
              LINK_ERRORS=1
         fi
