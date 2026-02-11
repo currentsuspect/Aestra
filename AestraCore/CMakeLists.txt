@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(AestraCore STATIC
     src/AestraProfiler.cpp
     src/AestraUnifiedProfiler.cpp
+    src/AestraThreading.cpp
     src/PointerRegistry.cpp
 )
 
