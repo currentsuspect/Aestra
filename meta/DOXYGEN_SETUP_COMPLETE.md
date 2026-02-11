@@ -30,7 +30,7 @@ The Aestra project has been fully prepared for Doxygen API documentation generat
 - Integration with MkDocs
 - Maintenance guidelines
 
-#### `docs/API_DOCUMENTATION_GUIDE.md`
+#### `../docs/API_DOCUMENTATION_GUIDE.md`
 - Comprehensive guide for generating API docs
 - Installation instructions for Windows/macOS/Linux
 - Configuration details
@@ -473,7 +473,7 @@ HTML_COLORSTYLE_GAMMA  = 80    # Brightness
 - **Doxygen Command Reference**: https://www.doxygen.nl/manual/commands.html
 
 ### Aestra Specific
-- **API Documentation Guide**: `docs/API_DOCUMENTATION_GUIDE.md`
+- **API Documentation Guide**: `../docs/API_DOCUMENTATION_GUIDE.md`
 - **Coding Style Guide**: `docs/developer/coding-style.md`
 - **Contributing Guide**: `CONTRIBUTING.md`
 
@@ -494,7 +494,7 @@ HTML_COLORSTYLE_GAMMA  = 80    # Brightness
 ## 📞 Support
 
 For questions or issues:
-- 📖 Read the [API Documentation Guide](docs/API_DOCUMENTATION_GUIDE.md)
+- 📖 Read the [API Documentation Guide](../docs/API_DOCUMENTATION_GUIDE.md)
 - 🐛 Open an [Issue](https://github.com/currentsuspect/Aestra/issues)
 - 💬 Start a [Discussion](https://github.com/currentsuspect/Aestra/discussions)
 - 📧 Email: makoridylan@gmail.com

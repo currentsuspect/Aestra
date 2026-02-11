@@ -306,7 +306,7 @@ See the [Contributing Guide](../developer/contributing.md) for details.
 - [Architecture Overview](../architecture/overview.md)
 - [Getting Started Guide](../getting-started/index.md)
 - [Developer Guide](../developer/contributing.md)
-- [Code Examples](https://github.com/currentsuspect/Aestra/tree/main/examples)
+- [Code Examples](https://github.com/currentsuspect/Aestra)
 
 ---
 

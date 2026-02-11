@@ -89,7 +89,7 @@ void TransportBar::layoutComponents() {
 ## Documentation Created
 
 ### Primary Documentation
-- **AestraDocs/AestraUI_COORDINATE_SYSTEM.md** - Comprehensive guide with examples, debugging tips, and best practices
+- **AestraDocs/../AestraDocs/architecture/AestraUI_COORDINATE_SYSTEM.md** - Comprehensive guide with examples, debugging tips, and best practices
 
 ### Quick References
 - **AestraUI/docs/COORDINATE_SYSTEM_QUICK_REF.md** - Quick reference card for developers
@@ -97,7 +97,7 @@ void TransportBar::layoutComponents() {
 
 ### Updated Documentation
 - **AestraDocs/README.md** - Added links to coordinate system guide
-- **AestraDocs/DEVELOPER_GUIDE.md** - Added architectural rule about coordinate system
+- **AestraDocs/../docs/developer/contributing.md** - Added architectural rule about coordinate system
 
 ---
 
@@ -176,10 +176,10 @@ Must follow the absolute coordinate pattern documented here.
 
 ## References
 
-- [AestraUI_COORDINATE_SYSTEM.md](AestraUI_COORDINATE_SYSTEM.md) - Full documentation
-- [COORDINATE_SYSTEM_QUICK_REF.md](../AestraUI/docs/COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
-- [CUSTOM_WINDOW_INTEGRATION.md](CUSTOM_WINDOW_INTEGRATION.md) - Custom window setup
-- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - Development guidelines
+- [../AestraDocs/architecture/AestraUI_COORDINATE_SYSTEM.md](../AestraDocs/architecture/AestraUI_COORDINATE_SYSTEM.md) - Full documentation
+- [COORDINATE_SYSTEM_QUICK_REF.md](../docs/technical/ui/COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
+- [../docs/technical/ui/CUSTOM_WINDOW_INTEGRATION.md](../docs/technical/ui/CUSTOM_WINDOW_INTEGRATION.md) - Custom window setup
+- [../docs/developer/contributing.md](../docs/developer/contributing.md) - Development guidelines
 
 ---
 

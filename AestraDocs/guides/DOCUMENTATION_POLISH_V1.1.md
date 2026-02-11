@@ -10,7 +10,7 @@
 
 ### 1. Coordinate Origin Specification
 
-**Added to:** `AestraUI_COORDINATE_SYSTEM.md`
+**Added to:** `../architecture/AestraUI_COORDINATE_SYSTEM.md`
 
 **Content:**
 - Explicit statement that (0,0) is at top-left
@@ -33,7 +33,7 @@
 
 ### 2. Render Order / Z-Index Documentation
 
-**Added to:** `AestraUI_COORDINATE_SYSTEM.md`
+**Added to:** `../architecture/AestraUI_COORDINATE_SYSTEM.md`
 
 **Content:**
 - Explanation that stacking order is determined by render order
@@ -60,7 +60,7 @@ addChild(overlayPanel);     // Top
 ### 3. Quick Reference Tables
 
 **Added to:**
-- `AestraUI_COORDINATE_SYSTEM.md` - Comprehensive table
+- `../architecture/AestraUI_COORDINATE_SYSTEM.md` - Comprehensive table
 - `COORDINATE_SYSTEM_QUICK_REF.md` - Condensed table
 - `COMPONENT_CHECKLIST.md` - Quick facts box
 
@@ -84,7 +84,7 @@ addChild(overlayPanel);     // Top
 
 ### Primary Documents
 
-1. **AestraUI_COORDINATE_SYSTEM.md** (Comprehensive Guide)
+1. **../architecture/AestraUI_COORDINATE_SYSTEM.md** (Comprehensive Guide)
    - Coordinate fundamentals (NEW)
    - No automatic transformation
    - Render order and Z-index (NEW)
@@ -227,7 +227,7 @@ Clear, concise, actionable
 
 ### Documentation Files
 
-1. `AestraDocs/AestraUI_COORDINATE_SYSTEM.md`
+1. `AestraDocs/../architecture/AestraUI_COORDINATE_SYSTEM.md`
    - Added coordinate origin section
    - Added render order / Z-index section
    - Added quick reference table
@@ -266,10 +266,10 @@ The coordinate system documentation is now production-ready and serves as a mode
 
 ## References
 
-- [AestraUI_COORDINATE_SYSTEM.md](AestraUI_COORDINATE_SYSTEM.md) - Complete guide
+- [../architecture/AestraUI_COORDINATE_SYSTEM.md](../architecture/AestraUI_COORDINATE_SYSTEM.md) - Complete guide
 - [COORDINATE_UTILITIES_V1.1.md](COORDINATE_UTILITIES_V1.1.md) - Utility helpers
-- [COORDINATE_SYSTEM_QUICK_REF.md](../AestraUI/docs/COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
-- [COMPONENT_CHECKLIST.md](../AestraUI/docs/COMPONENT_CHECKLIST.md) - Development checklist
+- [COORDINATE_SYSTEM_QUICK_REF.md](../../docs/technical/ui/COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
+- [COMPONENT_CHECKLIST.md](../../docs/technical/ui/COMPONENT_CHECKLIST.md) - Development checklist
 
 ---
 

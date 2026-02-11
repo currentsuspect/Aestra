@@ -126,7 +126,7 @@ private:
 2. **Platform abstraction** - All OS-specific code lives in AestraPlat
 3. **No blocking in audio thread** - Use lock-free queues for communication
 4. **Document everything** - Doxygen headers for all public APIs
-5. **⚠️ CRITICAL: AestraUI uses absolute coordinates** - See [AestraUI_COORDINATE_SYSTEM.md](AestraUI_COORDINATE_SYSTEM.md) before positioning components
+5. **⚠️ CRITICAL: AestraUI uses absolute coordinates** - See [../architecture/AestraUI_COORDINATE_SYSTEM.md](../architecture/AestraUI_COORDINATE_SYSTEM.md) before positioning components
 
 ---
 
@@ -221,12 +221,12 @@ Values for every contributor:
 ### Getting Started
 
 1. Read this guide completely
-2. Review [BRANCHING_STRATEGY.md](BRANCHING_STRATEGY.md)
+2. Review [../status/BRANCHING_STRATEGY.md](../status/BRANCHING_STRATEGY.md)
 3. Check subsystem READMEs:
-   - [AestraCore/README.md](../AestraCore/README.md)
-   - [AestraPlat/README.md](../AestraPlat/README.md)
-   - [AestraUI/README.md](../AestraUI/README.md)
-   - [AestraAudio/README.md](../AestraAudio/README.md)
+   - [AestraCore/README.md](../../AestraCore/README.md)
+   - [AestraPlat/README.md](../../AestraPlat/README.md)
+   - [AestraUI/README.md](../../AestraUI/README.md)
+   - [AestraAudio/README.md](../../AestraAudio/README.md)
 
 ### Workflow
 
@@ -291,8 +291,8 @@ cmake --build build --config Release
 
 ### Documentation
 
-- [BRANCHING_STRATEGY.md](BRANCHING_STRATEGY.md) - Git workflow
-- [BUILD_STATUS.md](BUILD_STATUS.md) - Current build state
+- [../status/BRANCHING_STRATEGY.md](../status/BRANCHING_STRATEGY.md) - Git workflow
+- [../status/BUILD_STATUS.md](../status/BUILD_STATUS.md) - Current build state
 - Subsystem READMEs - Layer-specific guides
 
 ### External Dependencies

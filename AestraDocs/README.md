@@ -12,20 +12,20 @@ Architectural documentation and design decisions:
 
 - [ADAPTIVE_FPS_ARCHITECTURE.md](architecture/ADAPTIVE_FPS_ARCHITECTURE.md) - Adaptive frame rate system design
 - [DROPDOWN_ARCHITECTURE.md](architecture/DROPDOWN_ARCHITECTURE.md) - Dropdown menu system architecture
-- [Aestra_MODE_IMPLEMENTATION.md](architecture/Aestra_MODE_IMPLEMENTATION.md) - Aestra mode implementation details
-- [AestraUI_COORDINATE_SYSTEM.md](architecture/AestraUI_COORDINATE_SYSTEM.md) - **CRITICAL:** UI coordinate system specification
+- [Aestra_MODE_IMPLEMENTATION.md](architecture/NOMAD_MODE_IMPLEMENTATION.md) - Aestra mode implementation details
+- [architecture/AestraUI_COORDINATE_SYSTEM.md](architecture/architecture/AestraUI_COORDINATE_SYSTEM.md) - **CRITICAL:** UI coordinate system specification
 
 ### 📖 [guides/](guides/)
 
 How-to guides and reference documentation:
 
-- [DEVELOPER_GUIDE.md](guides/DEVELOPER_GUIDE.md) - Philosophy, architecture, and contribution guidelines
+- [guides/DEVELOPER_GUIDE.md](guides/guides/DEVELOPER_GUIDE.md) - Philosophy, architecture, and contribution guidelines
 - [ADAPTIVE_FPS_GUIDE.md](guides/ADAPTIVE_FPS_GUIDE.md) - Using the adaptive FPS system
 - [ADAPTIVE_FPS_README.md](guides/ADAPTIVE_FPS_README.md) - Adaptive FPS quick reference
 - [UI_LAYOUT_GUIDE.md](guides/UI_LAYOUT_GUIDE.md) - UI layout and design guide
 - [OPENGL_LINKING_GUIDE.md](guides/OPENGL_LINKING_GUIDE.md) - OpenGL setup and linking
 - [DROPDOWN_QUICK_REFERENCE.md](guides/DROPDOWN_QUICK_REFERENCE.md) - Dropdown usage reference
-- [COORDINATE_UTILITIES_V1.1.md](guides/COORDINATE_UTILITIES_V1.1.md) - Coordinate utility functions
+- [guides/COORDINATE_UTILITIES_V1.1.md](guides/guides/COORDINATE_UTILITIES_V1.1.md) - Coordinate utility functions
 - [DOCUMENTATION_POLISH_V1.1.md](guides/DOCUMENTATION_POLISH_V1.1.md) - Documentation standards
 
 ### 🔧 [systems/](systems/)
@@ -42,8 +42,8 @@ System-specific technical documentation:
 
 Project status, analysis, and planning documents:
 
-- [BUILD_STATUS.md](status/BUILD_STATUS.md) - Current build status and module completion
-- [BRANCHING_STRATEGY.md](status/BRANCHING_STRATEGY.md) - Git workflow and commit conventions
+- [status/BUILD_STATUS.md](status/status/BUILD_STATUS.md) - Current build status and module completion
+- [status/BRANCHING_STRATEGY.md](status/status/BRANCHING_STRATEGY.md) - Git workflow and commit conventions
 - [CURRENT_STATE_ANALYSIS.md](status/CURRENT_STATE_ANALYSIS.md) - Current project state analysis
 - [DOCUMENTATION_STATUS.md](status/DOCUMENTATION_STATUS.md) - Documentation coverage status
 - [SCREENSHOT_LIMITATION.md](status/SCREENSHOT_LIMITATION.md) - Known screenshot/rendering limitations
@@ -99,22 +99,22 @@ UI framework with OpenGL rendering:
 
 **Key Guides:**
 
-- [Platform Migration](../AestraUI/docs/PLATFORM_MIGRATION.md) - Migration from old Windows code to AestraPlat
-- [Architecture](../AestraUI/docs/ARCHITECTURE.md) - UI framework architecture
-- [Custom Window Integration](../AestraUI/docs/CUSTOM_WINDOW_INTEGRATION.md) - Building custom windows
-- [Coordinate System Guide](AestraUI_COORDINATE_SYSTEM.md) - **CRITICAL:** Understanding AestraUI positioning
-- [Coordinate Utilities v1.1](COORDINATE_UTILITIES_V1.1.md) - **NEW:** Convenience helpers for positioning
-- [Icon System Guide](../AestraUI/docs/ICON_SYSTEM_GUIDE.md) - SVG icon usage
-- [Theme Demo Guide](../AestraUI/docs/THEME_DEMO_GUIDE.md) - Theming system
-- [Windows Snap Guide](../AestraUI/docs/WINDOWS_SNAP_GUIDE.md) - Window snapping behavior
+- [Platform Migration](../docs/technical/ui/PLATFORM_MIGRATION.md) - Migration from old Windows code to AestraPlat
+- [Architecture](../docs/architecture/Aestra-ui.md) - UI framework architecture
+- [Custom Window Integration](../docs/technical/ui/CUSTOM_WINDOW_INTEGRATION.md) - Building custom windows
+- [Coordinate System Guide](architecture/AestraUI_COORDINATE_SYSTEM.md) - **CRITICAL:** Understanding AestraUI positioning
+- [Coordinate Utilities v1.1](guides/COORDINATE_UTILITIES_V1.1.md) - **NEW:** Convenience helpers for positioning
+- [Icon System Guide](../docs/technical/ui/ICON_SYSTEM_GUIDE.md) - SVG icon usage
+- [Theme Demo Guide](../docs/technical/ui/THEME_DEMO_GUIDE.md) - Theming system
+- [Windows Snap Guide](../docs/technical/ui/WINDOWS_SNAP_GUIDE.md) - Window snapping behavior
 
 ## 🎯 Quick Links
 
 ### For New Contributors
 
-1. Read [Developer Guide](DEVELOPER_GUIDE.md) - Understand the philosophy
-2. Check [Build Status](BUILD_STATUS.md) - See what's complete
-3. Review [Branching Strategy](BRANCHING_STRATEGY.md) - Learn the workflow
+1. Read [Developer Guide](guides/DEVELOPER_GUIDE.md) - Understand the philosophy
+2. Check [Build Status](status/BUILD_STATUS.md) - See what's complete
+3. Review [Branching Strategy](status/BRANCHING_STRATEGY.md) - Learn the workflow
 4. Pick a module and dive in!
 
 ### For Module Development
@@ -128,7 +128,7 @@ UI framework with OpenGL rendering:
 - **Adding DPI support?** → `AestraPlat/docs/DPI_SUPPORT.md`
 - **Migrating from old code?** → `AestraUI/docs/PLATFORM_MIGRATION.md`
 - **Building custom windows?** → `AestraUI/docs/CUSTOM_WINDOW_INTEGRATION.md`
-- **Component positioning issues?** → `AestraDocs/AestraUI_COORDINATE_SYSTEM.md` ⚠️ **READ THIS FIRST**
+- **Component positioning issues?** → `AestraDocs/architecture/AestraUI_COORDINATE_SYSTEM.md` ⚠️ **READ THIS FIRST**
 
 ## 📊 Project Status
 
@@ -208,8 +208,8 @@ Aestra is built with intention. Every line of code, every architectural decision
 
 ## 🤝 Contributing
 
-1. Read the [Developer Guide](DEVELOPER_GUIDE.md)
-2. Follow the [Branching Strategy](BRANCHING_STRATEGY.md)
+1. Read the [Developer Guide](guides/DEVELOPER_GUIDE.md)
+2. Follow the [Branching Strategy](status/BRANCHING_STRATEGY.md)
 3. Write clean, documented code
 4. Test thoroughly
 5. Submit with clear commit messages

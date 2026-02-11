@@ -1,4 +1,9 @@
 
+// Removed documented symbols that were not declared in the class definition to fix Doxygen warnings.
+// void ArsenalPanel::onPlayClicked()
+// void ArsenalPanel::onStopClicked()
+
+/*
 void ArsenalPanel::onPlayClicked() {
     if (!m_trackManager || !m_activePatternID.isValid()) {
         Aestra::Log::warn("[Arsenal] No active pattern to play");
@@ -19,3 +24,4 @@ void ArsenalPanel::onStopClicked() {
     
     Aestra::Log::info("[Arsenal] Stopped playback");
 }
+*/

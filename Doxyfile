@@ -74,6 +74,9 @@ REFERENCES_LINK_SOURCE = YES
 ALPHABETICAL_INDEX     = YES
 IGNORE_PREFIX          = 
 
+# Custom Aliases
+ALIASES                += license="\par License"
+
 # HTML Output
 GENERATE_HTML          = YES
 HTML_OUTPUT            = html

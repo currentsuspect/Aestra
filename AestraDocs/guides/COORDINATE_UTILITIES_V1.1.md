@@ -274,7 +274,7 @@ These would maintain the absolute coordinate system while adding more convenienc
 
 1. **AestraUI/Core/NUITypes.h** - Added utility functions with documentation
 2. **Source/TransportBar.cpp** - Updated to use new utilities
-3. **AestraDocs/AestraUI_COORDINATE_SYSTEM.md** - Added utility helpers section
+3. **AestraDocs/../architecture/AestraUI_COORDINATE_SYSTEM.md** - Added utility helpers section
 4. **AestraUI/docs/COORDINATE_SYSTEM_QUICK_REF.md** - Updated examples
 
 ### New Documentation
@@ -321,9 +321,9 @@ cmake --build build --config Release --target Aestra_DAW
 
 ## References
 
-- [AestraUI_COORDINATE_SYSTEM.md](AestraUI_COORDINATE_SYSTEM.md) - Full coordinate system guide
-- [COORDINATE_SYSTEM_QUICK_REF.md](../AestraUI/docs/COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
-- [NUITypes.h](../AestraUI/Core/NUITypes.h) - Utility function implementations
+- [../architecture/AestraUI_COORDINATE_SYSTEM.md](../architecture/AestraUI_COORDINATE_SYSTEM.md) - Full coordinate system guide
+- [COORDINATE_SYSTEM_QUICK_REF.md](../../docs/technical/ui/COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
+- [NUITypes.h](../../AestraUI/Core/NUITypes.h) - Utility function implementations
 
 ---
 
