@@ -1,0 +1,25 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^https://patreon.com"
+    },
+    {
+      "pattern": "^https://www.patreon.com"
+    },
+    {
+      "pattern": "^https://ko-fi.com"
+    },
+    {
+      "pattern": "^http://localhost"
+    },
+    {
+      "pattern": "^http://www.music.mcgill.ca"
+    },
+    {
+      "pattern": "^https://www.music.mcgill.ca"
+    }
+  ],
+  "timeout": "10s",
+  "retryOn429": true,
+  "aliveStatusCodes": [200, 206]
+}
