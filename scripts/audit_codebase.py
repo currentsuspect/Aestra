@@ -41,6 +41,10 @@ def analyze_file(filepath):
 
         # Detect function start
         for func in CRITICAL_FUNCTIONS:
+            # Avoid triggering on comments (e.g. Doxygen @code blocks)
+            if stripped.startswith("//") or stripped.startswith("*"):
+                continue
+
             if re.search(fr"\b{func}\s*\(", stripped):
                 in_critical_section = True
                 # rudimentary brace counting to stay in function

@@ -29,6 +29,27 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### NeuralMix Assistant
+
+Real-time mixing engineer AI.
+- **Innovation**: Analyze spectral balance and dynamic range of tracks in real-time. Suggest EQ cuts to resolve frequency masking.
+- **Benefit**: Faster mixing workflow, professional results for beginners.
+
+### Collaborative Editing (CloudSession)
+
+- **Innovation**: Use CRDTs (Conflict-free Replicated Data Types) for project state (Timeline, Automation).
+- **Benefit**: Real-time multi-user collaboration over the internet without locking.
+
+### GPU-Accelerated DSP
+
+- **Innovation**: Offload heavy spectral processing (Convolution Reverb, Spectral Cleaning) to CUDA/Vulkan.
+- **Benefit**: Run hundreds of convolution reverbs with near-zero CPU load.
+
+### Voice Cloning (Sketch Vocals)
+
+- **Innovation**: Integrated TTS/Voice Conversion model to generate placeholder vocals from text or hummed melodies.
+- **Benefit**: Rapid prototyping of song ideas without a singer.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -69,7 +90,13 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
 - **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
-- **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+- **Violation**: `EffectChain` deleted operators (False Positive in audit).
+- **Fix**: Updated audit script to ignore Doxygen code blocks.
+
+### Platform Safety
+
+- **Violation**: `AestraThreading` and `AudioEngine` headers included `<windows.h>`.
+- **Fix**: Refactored `AestraThreading` implementation to `.cpp` and cleaned headers. Added strict include guards.
 
 ---
 *Signed: Bolt*
