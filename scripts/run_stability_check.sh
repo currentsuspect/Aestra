@@ -28,6 +28,14 @@ if [[ "${MIN_PEAK:-}" != "" ]]; then
   ARGS+=("--min-peak" "$MIN_PEAK")
 fi
 
+if [[ "${MAX_CPU_RATIO:-}" != "" ]]; then
+  export AESTRA_MAX_CPU_RATIO="$MAX_CPU_RATIO"
+fi
+
+if [[ "${MAX_RENDER_MS:-}" != "" ]]; then
+  export AESTRA_MAX_RENDER_MS="$MAX_RENDER_MS"
+fi
+
 RUNS=1
 MODE="${1:-}" 
 if [[ "$MODE" == "--stress" ]]; then

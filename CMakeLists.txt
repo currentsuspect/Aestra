@@ -127,7 +127,6 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessMain.cpp")
   target_include_directories(AestraHeadless PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
     ${CMAKE_SOURCE_DIR}/AestraCore/include
-    ${CMAKE_SOURCE_DIR}/Source
   )
 
   if(WIN32)

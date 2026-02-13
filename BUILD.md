@@ -34,6 +34,9 @@ cmake --build --preset headless-release
 pwsh -File scripts/watch_build.ps1 -Preset headless -Config Release
 ```
 
+Headless runner usage, gate thresholds, and failure codes are documented here:
+**[docs/technical/headless/HEADLESS.md](docs/technical/headless/HEADLESS.md)**
+
 Important note: CMake preset build directories are generator-specific. If you previously configured `build/headless` (or `build/full`) with a different generator (e.g. Ninja vs Visual Studio), delete that preset folder and re-run `cmake --preset ...`.
 
 ---

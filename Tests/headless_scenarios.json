@@ -21,6 +21,15 @@
       "project": "autosave.aes"
     },
     {
+      "name": "roundtrip_autosave",
+      "type": "roundtrip",
+      "sr": 44100,
+      "frames": 256,
+      "seconds": 10,
+      "minPeak": 0.000001,
+      "project": "autosave.aes"
+    },
+    {
       "name": "stress_graph_32_tracks",
       "type": "stress",
       "sr": 48000,

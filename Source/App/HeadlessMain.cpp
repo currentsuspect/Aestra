@@ -36,6 +36,7 @@ constexpr uint32_t kChannels = 2;
 
 enum class ScenarioType {
     Project,
+    RoundTrip,
     Tone,
     Stress,
 };
@@ -137,6 +138,7 @@ static bool jsonGetString(const JSON& obj, const char* key, std::string& out) {
 static ScenarioType parseScenarioType(const std::string& s, bool& ok) {
     ok = true;
     if (s == "project") return ScenarioType::Project;
+    if (s == "roundtrip" || s == "round_trip" || s == "round-trip") return ScenarioType::RoundTrip;
     if (s == "tone") return ScenarioType::Tone;
     if (s == "stress") return ScenarioType::Stress;
     ok = false;
@@ -253,6 +255,66 @@ static AudioGraph buildLoopGraph(const std::shared_ptr<AudioBuffer>& source,
     return graph;
 }
 
+static std::shared_ptr<TrackManager> makeTrackManager(uint32_t sampleRate) {
+    auto trackManager = std::make_shared<TrackManager>();
+    trackManager->setOutputSampleRate(static_cast<double>(sampleRate));
+    trackManager->setInputSampleRate(static_cast<double>(sampleRate));
+    trackManager->setInputChannelCount(0);
+    return trackManager;
+}
+
+static std::string makeRoundTripPath(const std::string& name) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    fs::path base = fs::temp_directory_path() / "AestraHeadless";
+    fs::create_directories(base, ec);
+    const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+    std::string safeName = name.empty() ? "roundtrip" : name;
+    fs::path file = base / (safeName + "_" + std::to_string(stamp) + ".aes");
+    return file.string();
+}
+
+static RunMetrics renderEngine(AudioEngine& engine,
+                               uint32_t sampleRate,
+                               uint32_t bufferFrames,
+                               uint32_t seconds,
+                               float minPeak,
+                               std::function<void(uint64_t /*blockIndex*/)> onBlock = {});
+
+static RunMetrics renderLoadedProject(const std::shared_ptr<TrackManager>& trackManager,
+                                      const ProjectSerializer::LoadResult& loadRes,
+                                      const Scenario& sc) {
+    AudioEngine engine;
+    engine.setSampleRate(sc.sampleRate);
+    engine.setBufferConfig(sc.bufferFrames, kChannels);
+
+    // Mirror app wiring for metering + routing.
+    auto meterBuffer = std::make_shared<MeterSnapshotBuffer>();
+    engine.setMeterSnapshots(meterBuffer);
+    trackManager->setMeterSnapshots(meterBuffer);
+    if (auto slotMap = trackManager->getChannelSlotMapShared()) {
+        engine.setChannelSlotMap(slotMap);
+    }
+
+    engine.setBPM(static_cast<float>(loadRes.tempo));
+    trackManager->setPosition(loadRes.playhead);
+    engine.setGlobalSamplePos(static_cast<uint64_t>(loadRes.playhead * static_cast<double>(sc.sampleRate)));
+
+    auto graph = AudioGraphBuilder::buildFromTrackManager(*trackManager, static_cast<double>(sc.sampleRate));
+    engine.setGraph(graph);
+
+    engine.setTransportPlaying(true);
+    {
+        AudioQueueCommand cmd{};
+        cmd.type = AudioQueueCommandType::SetTransportState;
+        cmd.value1 = 1.0f;
+        cmd.samplePos = engine.getGlobalSamplePos();
+        engine.commandQueue().push(cmd);
+    }
+
+    return renderEngine(engine, sc.sampleRate, sc.bufferFrames, sc.seconds, sc.minPeak);
+}
+
 static RunMetrics renderEngine(AudioEngine& engine,
                                uint32_t sampleRate,
                                uint32_t bufferFrames,
@@ -334,6 +396,24 @@ static RunMetrics renderEngine(AudioEngine& engine,
         return m;
     }
 
+    if (const char* env = std::getenv("AESTRA_MAX_CPU_RATIO")) {
+        const double maxCpu = std::strtod(env, nullptr);
+        if (maxCpu > 0.0 && m.cpuRatio > maxCpu) {
+            m.ok = false;
+            m.failure = "cpu_ratio_exceeded";
+            return m;
+        }
+    }
+
+    if (const char* env = std::getenv("AESTRA_MAX_RENDER_MS")) {
+        const double maxRender = std::strtod(env, nullptr);
+        if (maxRender > 0.0 && m.renderMs > maxRender) {
+            m.ok = false;
+            m.failure = "render_time_exceeded";
+            return m;
+        }
+    }
+
     m.ok = true;
     return m;
 }
@@ -347,11 +427,7 @@ static RunMetrics runScenarioProject(const Scenario& sc) {
         return m;
     }
 
-    auto trackManager = std::make_shared<TrackManager>();
-    trackManager->setOutputSampleRate(static_cast<double>(sc.sampleRate));
-    trackManager->setInputSampleRate(static_cast<double>(sc.sampleRate));
-    trackManager->setInputChannelCount(0);
-
+    auto trackManager = makeTrackManager(sc.sampleRate);
     ProjectSerializer::LoadResult loadRes = ProjectSerializer::load(projectPath, trackManager);
     if (!loadRes.ok) {
         RunMetrics m;
@@ -360,35 +436,58 @@ static RunMetrics runScenarioProject(const Scenario& sc) {
         return m;
     }
 
-    AudioEngine engine;
-    engine.setSampleRate(sc.sampleRate);
-    engine.setBufferConfig(sc.bufferFrames, kChannels);
+    return renderLoadedProject(trackManager, loadRes, sc);
+}
 
-    // Mirror app wiring for metering + routing.
-    auto meterBuffer = std::make_shared<MeterSnapshotBuffer>();
-    engine.setMeterSnapshots(meterBuffer);
-    trackManager->setMeterSnapshots(meterBuffer);
-    if (auto slotMap = trackManager->getChannelSlotMapShared()) {
-        engine.setChannelSlotMap(slotMap);
+static RunMetrics runScenarioRoundTrip(const Scenario& sc) {
+    const std::string projectPath = resolvePathRelativeToCwd(sc.projectPath);
+    if (projectPath.empty()) {
+        RunMetrics m;
+        m.ok = false;
+        m.failure = "missing_project";
+        return m;
     }
 
-    engine.setBPM(static_cast<float>(loadRes.tempo));
-    trackManager->setPosition(loadRes.playhead);
-    engine.setGlobalSamplePos(static_cast<uint64_t>(loadRes.playhead * static_cast<double>(sc.sampleRate)));
-
-    auto graph = AudioGraphBuilder::buildFromTrackManager(*trackManager, static_cast<double>(sc.sampleRate));
-    engine.setGraph(graph);
-
-    engine.setTransportPlaying(true);
-    {
-        AudioQueueCommand cmd{};
-        cmd.type = AudioQueueCommandType::SetTransportState;
-        cmd.value1 = 1.0f;
-        cmd.samplePos = engine.getGlobalSamplePos();
-        engine.commandQueue().push(cmd);
+    auto trackManager = makeTrackManager(sc.sampleRate);
+    ProjectSerializer::LoadResult loadRes = ProjectSerializer::load(projectPath, trackManager);
+    if (!loadRes.ok) {
+        RunMetrics m;
+        m.ok = false;
+        m.failure = "project_load_failed";
+        return m;
     }
 
-    return renderEngine(engine, sc.sampleRate, sc.bufferFrames, sc.seconds, sc.minPeak);
+    const std::string roundTripPath = makeRoundTripPath(sc.name);
+    const ProjectSerializer::UIState* uiState = loadRes.ui ? &(*loadRes.ui) : nullptr;
+    if (!ProjectSerializer::save(roundTripPath, trackManager, loadRes.tempo, loadRes.playhead, uiState)) {
+        RunMetrics m;
+        m.ok = false;
+        m.failure = "project_save_failed";
+        return m;
+    }
+
+    auto roundTripManager = makeTrackManager(sc.sampleRate);
+    ProjectSerializer::LoadResult loadResRoundTrip = ProjectSerializer::load(roundTripPath, roundTripManager);
+
+    std::error_code ec;
+    std::filesystem::remove(roundTripPath, ec);
+
+    if (!loadResRoundTrip.ok) {
+        RunMetrics m;
+        m.ok = false;
+        m.failure = "roundtrip_load_failed";
+        return m;
+    }
+
+    if (std::abs(loadResRoundTrip.tempo - loadRes.tempo) > 1.0e-6 ||
+        std::abs(loadResRoundTrip.playhead - loadRes.playhead) > 1.0e-6) {
+        RunMetrics m;
+        m.ok = false;
+        m.failure = "roundtrip_mismatch";
+        return m;
+    }
+
+    return renderLoadedProject(roundTripManager, loadResRoundTrip, sc);
 }
 
 static RunMetrics runScenarioTone(const Scenario& sc) {
@@ -494,6 +593,7 @@ static RunMetrics runScenarioStress(const Scenario& sc) {
 static RunMetrics runScenario(const Scenario& sc) {
     switch (sc.type) {
         case ScenarioType::Project: return runScenarioProject(sc);
+        case ScenarioType::RoundTrip: return runScenarioRoundTrip(sc);
         case ScenarioType::Tone: return runScenarioTone(sc);
         case ScenarioType::Stress: return runScenarioStress(sc);
     }
@@ -512,7 +612,11 @@ static JSON makeReportJson(const Scenario& sc, const RunMetrics& m) {
 
     JSON r = JSON::object();
     r.set("name", JSON(sc.name));
-    r.set("type", JSON(sc.type == ScenarioType::Project ? "project" : sc.type == ScenarioType::Tone ? "tone" : "stress"));
+    const char* typeStr = "project";
+    if (sc.type == ScenarioType::RoundTrip) typeStr = "roundtrip";
+    else if (sc.type == ScenarioType::Tone) typeStr = "tone";
+    else if (sc.type == ScenarioType::Stress) typeStr = "stress";
+    r.set("type", JSON(typeStr));
     r.set("ok", JSON(m.ok));
     if (!m.failure.empty()) r.set("failure", JSON(m.failure));
 
@@ -521,7 +625,9 @@ static JSON makeReportJson(const Scenario& sc, const RunMetrics& m) {
     cfg.set("frames", JSON(static_cast<double>(sc.bufferFrames)));
     cfg.set("seconds", JSON(static_cast<double>(sc.seconds)));
     cfg.set("minPeak", JSON(static_cast<double>(sc.minPeak)));
-    if (sc.type == ScenarioType::Project) cfg.set("project", JSON(sc.projectPath));
+    if (sc.type == ScenarioType::Project || sc.type == ScenarioType::RoundTrip) {
+        cfg.set("project", JSON(sc.projectPath));
+    }
     if (sc.type == ScenarioType::Tone) {
         cfg.set("frequencyHz", JSON(sc.frequencyHz));
         cfg.set("amplitude", JSON(sc.amplitude));
