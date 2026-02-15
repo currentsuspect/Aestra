@@ -474,13 +474,14 @@ using NUIRenderCallback = std::function<void()>;
  * @param height Height of the child component
  * @return NUIRect with absolute screen coordinates
  * 
- * @example
+ * @code
  * // Instead of manually calculating:
  * NUIRect parentBounds = getBounds();
  * child->setBounds(NUIRect(parentBounds.x + 10, parentBounds.y + 20, 100, 50));
  * 
  * // Use the helper:
  * child->setBounds(NUIAbsolute(getBounds(), 10, 20, 100, 50));
+ * @endcode
  */
 inline NUIRect NUIAbsolute(const NUIRect& parent, float offsetX, float offsetY, float width, float height) {
     return NUIRect(parent.x + offsetX, parent.y + offsetY, width, height);
@@ -494,8 +495,9 @@ inline NUIRect NUIAbsolute(const NUIRect& parent, float offsetX, float offsetY, 
  * @param offsetY Relative Y offset from parent's top edge
  * @return NUIPoint with absolute screen coordinates
  * 
- * @example
+ * @code
  * renderer.drawText("Hello", NUIAbsolutePoint(getBounds(), 10, 20), 16, color);
+ * @endcode
  */
 inline NUIPoint NUIAbsolutePoint(const NUIRect& parent, float offsetX, float offsetY) {
     return NUIPoint(parent.x + offsetX, parent.y + offsetY);
@@ -509,8 +511,9 @@ inline NUIPoint NUIAbsolutePoint(const NUIRect& parent, float offsetX, float off
  * @param height Height of the child component
  * @return NUIRect centered within parent, with absolute screen coordinates
  * 
- * @example
+ * @code
  * child->setBounds(NUICentered(getBounds(), 200, 100));
+ * @endcode
  */
 inline NUIRect NUICentered(const NUIRect& parent, float width, float height) {
     float x = parent.x + (parent.width - width) * 0.5f;
@@ -528,12 +531,13 @@ inline NUIRect NUICentered(const NUIRect& parent, float width, float height) {
  * @param bottom Bottom margin (or -1 to stretch to parent's bottom edge)
  * @return NUIRect with absolute screen coordinates
  * 
- * @example
+ * @code
  * // Fill parent with 10px margins on all sides
  * child->setBounds(NUIAligned(getBounds(), 10, 10, 10, 10));
  * 
  * // Dock to top with 10px margins
  * child->setBounds(NUIAligned(getBounds(), 10, 10, 10, -1));
+ * @endcode
  */
 inline NUIRect NUIAligned(const NUIRect& parent, float left, float top, float right, float bottom) {
     float x = parent.x + left;
@@ -552,12 +556,13 @@ inline NUIRect NUIAligned(const NUIRect& parent, float left, float top, float ri
  * @param startIndex Starting index in children vector
  * @return Vector of NUIRect for each child
  *
- * @example
+ * @code
  * std::vector<NUISize> childSizes = {{100, 50}, {200, 50}, {150, 50}};
  * auto rects = NUIStackHorizontal(bounds, childSizes, 10);
  * for (size_t i = 0; i < rects.size(); ++i) {
  *     children[i]->setBounds(rects[i]);
  * }
+ * @endcode
  */
 inline std::vector<NUIRect> NUIStackHorizontal(const NUIRect& parent, const std::vector<NUISize>& children, float spacing, size_t startIndex = 0) {
     std::vector<NUIRect> rects;
@@ -623,12 +628,13 @@ inline NUIRect NUIGridCell(const NUIRect& parent, int row, int col, int rows, in
  * @param scrollY Vertical scroll offset
  * @return Adjusted NUIRect
  *
- * @example
+ * @code
  * // In a scrollable container's layout
  * for (auto& child : children) {
  *     NUIRect original = child->getBounds();
  *     child->setBounds(NUIApplyScrollOffset(original, 0, -scrollY));
  * }
+ * @endcode
  */
 inline NUIRect NUIApplyScrollOffset(const NUIRect& rect, float scrollX, float scrollY) {
     return NUIRect(rect.x - scrollX, rect.y - scrollY, rect.width, rect.height);
@@ -644,9 +650,10 @@ inline NUIRect NUIApplyScrollOffset(const NUIRect& rect, float scrollX, float sc
  * @param screenHeight Screen height
  * @return Clamped NUIRect
  *
- * @example
+ * @code
  * NUIRect clamped = NUIScreenClamp(popupBounds, screenWidth, screenHeight);
  * popup->setBounds(clamped);
+ * @endcode
  */
 inline NUIRect NUIScreenClamp(const NUIRect& rect, float screenWidth, float screenHeight) {
     float x = clamp(rect.x, 0.0f, screenWidth - rect.width);
@@ -664,9 +671,10 @@ inline NUIRect NUIScreenClamp(const NUIRect& rect, float screenWidth, float scre
  * @param parentRect Parent's absolute bounds
  * @return NUIRect with relative coordinates (x,y are offsets from parent)
  *
- * @example
+ * @code
  * NUIRect relative = NUIRelativePosition(child->getBounds(), parent->getBounds());
  * // relative.x is now offset from parent's left edge
+ * @endcode
  */
 inline NUIRect NUIRelativePosition(const NUIRect& childRect, const NUIRect& parentRect) {
     return NUIRect(childRect.x - parentRect.x, childRect.y - parentRect.y, childRect.width, childRect.height);
@@ -691,10 +699,11 @@ inline NUIRect NUIAbsoluteFromRelative(const NUIRect& relativeRect, const NUIRec
  * @param rects Vector of rects to union
  * @return NUIRect containing all input rects
  *
- * @example
+ * @code
  * std::vector<NUIRect> dirtyRects = {child1->getBounds(), child2->getBounds()};
  * NUIRect invalidationArea = NUIUnionRects(dirtyRects);
  * renderer.invalidateRegion(invalidationArea);
+ * @endcode
  */
 inline NUIRect NUIUnionRects(const std::vector<NUIRect>& rects) {
     if (rects.empty()) return NUIRect(0, 0, 0, 0);
