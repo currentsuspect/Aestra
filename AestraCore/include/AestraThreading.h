@@ -10,14 +10,6 @@
 #include <condition_variable>
 #include <memory>
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
-
 namespace Aestra {
 
 // =============================================================================
@@ -26,29 +18,7 @@ namespace Aestra {
 // Dynamically loads Avrt.dll to avoid linker dependencies.
 class MMCSS {
 public:
-    static void setProAudio() {
-#ifdef _WIN32
-        static auto impl = []() {
-            HMODULE hAvrt = LoadLibraryA("Avrt.dll");
-            if (hAvrt) {
-                typedef HANDLE (WINAPI *AvSetMmThreadCharacteristicsA_t)(LPCSTR, LPDWORD);
-                auto pFunc = (AvSetMmThreadCharacteristicsA_t)GetProcAddress(hAvrt, "AvSetMmThreadCharacteristicsA");
-                if (pFunc) {
-                    DWORD taskIndex = 0;
-                    pFunc("Pro Audio", &taskIndex);
-                    // We knowingly leak the handle return/don't revert for this thread's lifetime 
-                    // (typical for dedicated audio threads).
-                    // Also leak lib handle to keep function pointer valid.
-                }
-            }
-            return 0;
-        }();
-        (void)impl;
-        
-        // Also boost Win32 priority
-        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#endif
-    }
+    static void setProAudio();
 };
 
 // =============================================================================
@@ -130,54 +100,12 @@ private:
 };
 
 // =============================================================================
-// Thread Pool
+// ThreadPool
 // =============================================================================
 class ThreadPool {
 public:
-    ThreadPool(size_t numThreads = std::thread::hardware_concurrency()) 
-        : stop(false) {
-        for (size_t i = 0; i < numThreads; ++i) {
-            workers.emplace_back([this] {
-                while (true) {
-                    std::function<void()> task;
-                    {
-                        std::unique_lock<std::mutex> lock(queueMutex);
-                        condition.wait(lock, [this] { 
-                            return stop || !tasks.empty(); 
-                        });
-                        
-                        if (stop && tasks.empty()) {
-                            return;
-                        }
-                        
-                        task = std::move(tasks.front());
-                        tasks.pop();
-                    }
-                    task();
-                }
-            });
-            
-#ifdef _WIN32
-            // Set thread priority to HIGHEST to ensure audio processing isn't starved
-            // by UI or background tasks. Using extern defs to avoid windows.h pollution.
-            // THREAD_PRIORITY_HIGHEST = 2
-            SetThreadPriority(workers.back().native_handle(), 2);
-#endif
-        }
-    }
-
-    ~ThreadPool() {
-        {
-            std::unique_lock<std::mutex> lock(queueMutex);
-            stop = true;
-        }
-        condition.notify_all();
-        for (std::thread& worker : workers) {
-            if (worker.joinable()) {
-                worker.join();
-            }
-        }
-    }
+    ThreadPool(size_t numThreads = std::thread::hardware_concurrency());
+    ~ThreadPool();
 
     // Enqueue a task
     template<typename F>
@@ -242,28 +170,8 @@ class RealTimeThreadPool {
 public:
     using TaskFunc = void(*)(void* context, void* taskData);
 
-    RealTimeThreadPool(size_t numThreads) : m_stop(false), m_taskCount(0), m_activeTasks(0) {
-        m_taskCounter.store(0);
-        for (size_t i = 0; i < numThreads; ++i) {
-            m_workers.emplace_back([this, i] {
-                // "Black Magic": Register as System Pro Audio Task
-                MMCSS::setProAudio();
-                workerLoop(static_cast<uint32_t>(i));
-            });
-            
-#ifdef _WIN32
-            // SetThreadPriority(m_workers.back().native_handle(), 2); // Handled by MMCSS wrapper now
-#endif
-        }
-    }
-
-    ~RealTimeThreadPool() {
-        m_stop = true;
-        m_signal.notify_all();
-        for (auto& w : m_workers) {
-            if (w.joinable()) w.join();
-        }
-    }
+    RealTimeThreadPool(size_t numThreads);
+    ~RealTimeThreadPool();
 
     // Prepare a batch of tasks. Call from RT thread.
     void dispatch(uint32_t count, void* context, void** taskDataArray, TaskFunc func, Barrier* syncBarrier) {
@@ -284,7 +192,7 @@ private:
     void workerLoop(uint32_t threadIdx) {
         (void)threadIdx;
         while (!m_stop) {
-            m_signal.wait([this] { return m_stop || m_taskCounter.load(std::memory_order_acquire) < m_taskCount; });
+            m_signal.wait([this] { return m_stop || m_taskCounter.load(std::memory_order_acquire) < static_cast<int>(m_taskCount); });
             
             if (m_stop) return;
 
