@@ -84,7 +84,10 @@ private:
 
     // Shared Ptr accessed atomically (C++11/17 free functions)
     // No mutex needed for access anymore!
-    std::shared_ptr<SampleData> m_data;
+    // FIX: Use separate holder for ownership and atomic raw pointer for RT access
+    // to avoid std::atomic<shared_ptr> locks.
+    std::shared_ptr<SampleData> m_dataHolder;
+    std::atomic<SampleData*> m_dataRaw{nullptr};
 
     // Parameters
     enum ParamID {
