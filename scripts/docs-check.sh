@@ -68,9 +68,16 @@ if [ -n "$CHECKER_CMD" ]; then
     FILES=$(find . -name "*.md" -not -path "*/node_modules/*" -not -path "*/TEMPLATE/*" -not -path "*/_site/*" -not -path "*/html/*" -not -path "*/latex/*" -not -path "*/xml/*")
 
     LINK_ERRORS=0
+    CONFIG_FILE="mlc_config.json"
+    CONFIG_ARG=""
+
+    if [ -f "$CONFIG_FILE" ]; then
+        CONFIG_ARG="-c $CONFIG_FILE"
+    fi
+
     for file in $FILES; do
         # echo "Checking $file..."
-        if ! $CHECKER_CMD -q "$file" 2>/dev/null; then
+        if ! $CHECKER_CMD -q $CONFIG_ARG "$file" 2>/dev/null; then
              echo -e "${RED}✗ Broken links in $file${NC}"
              LINK_ERRORS=1
         fi
