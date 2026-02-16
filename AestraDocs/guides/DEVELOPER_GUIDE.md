@@ -134,7 +134,7 @@ private:
 
 ### RtAudio Backend
 
-Aestra uses [RtAudio](https://www.music.mcgill.ca/~gary/rtaudio/) for cross-platform audio I/O:
+Aestra uses [RtAudio](https://github.com/thestk/rtaudio) for cross-platform audio I/O:
 
 **Supported APIs:**
 - Windows: WASAPI, ASIO
