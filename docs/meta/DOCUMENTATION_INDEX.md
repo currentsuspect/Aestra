@@ -26,8 +26,8 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 4. **[🗺️ Roadmap](../technical/roadmap.md)** - Project roadmap
 
 ### For Project Management
-1. **[📋 Changelog](../../meta/CHANGELOGS/CHANGELOG_2025Q1.md)** - Version history
-2. **[📊 Development Logs](../../meta/SESSION_SUMMARY_DEC2024.md)** - Recent progress
+1. **[📋 Changelog](../../../meta/CHANGELOGS/CHANGELOG_2025Q1.md)** - Version history
+2. **[📊 Development Logs](../../../meta/SESSION_SUMMARY_DEC2024.md)** - Recent progress
 3. **[📜 License Reference](../about/license-reference.md)** - Licensing details
 4. **[🤝 Community](../community/)** - Support and guidelines
 
@@ -71,9 +71,9 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 - **[Generated Docs](../api-reference/html/index.html)** - Doxygen-generated docs
 
 ### 📋 **Release Information**
-- **[Changelog](../../meta/CHANGELOGS/CHANGELOG_2025Q1.md)** - Version history
-- **[Development Logs](../../meta/SESSION_SUMMARY_DEC2024.md)** - Recent work
-- **[Milestone Updates](../../meta/TASK_4.*_SUMMARY.md)** - Task summaries
+- **[Changelog](../../../meta/CHANGELOGS/CHANGELOG_2025Q1.md)** - Version history
+- **[Development Logs](../../../meta/SESSION_SUMMARY_DEC2024.md)** - Recent work
+- **[Milestone Updates](../../../meta/TASK_4.*_SUMMARY.md)** - Task summaries
 
 ### 🌐 **Community**
 - **[Code of Conduct](../community/code-of-conduct.md)** - Community guidelines
@@ -107,8 +107,8 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 
 ### 📊 **For Project Managers**
 1. Review [Roadmap](../technical/roadmap.md)
-2. Check [Changelog](../../meta/CHANGELOGS/CHANGELOG_2025Q1.md)
-3. Read [Development Logs](../../meta/SESSION_SUMMARY_DEC2024.md)
+2. Check [Changelog](../../../meta/CHANGELOGS/CHANGELOG_2025Q1.md)
+3. Read [Development Logs](../../../meta/SESSION_SUMMARY_DEC2024.md)
 4. Understand [Milestones](../technical/roadmap.md#milestones)
 
 ## 🔗 External Resources
