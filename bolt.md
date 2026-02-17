@@ -29,6 +29,31 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### NeuralMix Assistant
+
+- **Idea**: Intelligent track balancing using spectral analysis and target curves.
+- **Benefit**: Faster mixdowns for beginners and pros.
+
+### Collaborative Editing
+
+- **Idea**: Real-time collaboration using CRDTs (Conflict-free Replicated Data Types) for project files.
+- **Benefit**: Multi-user editing sessions over the internet.
+
+### GPU-Accelerated DSP
+
+- **Idea**: Utilize CUDA/OpenCL/Vulkan for heavy effects like convolution reverb or spectral processing.
+- **Benefit**: Offload CPU for critical low-latency tasks.
+
+### Voice Cloning
+
+- **Idea**: Integrate RVC (Retrieval-based Voice Conversion) for vocal guide tracks.
+- **Benefit**: Rapid prototyping of vocal lines.
+
+### Smart Quantize
+
+- **Idea**: Extract groove templates from audio analysis and apply to MIDI.
+- **Benefit**: Human-feel quantization.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -70,6 +95,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
 - **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
 - **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+
+### Platform Leaks
+
+- **Violation**: `AestraThreading.h` and `AudioEngine.h` including `<windows.h>`.
+- **Fix**: Moved platform implementation to `.cpp` files, used `// ALLOW_PLATFORM_INCLUDE` where unavoidable.
 
 ---
 *Signed: Bolt*
