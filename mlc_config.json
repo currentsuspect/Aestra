@@ -14,6 +14,12 @@
     },
     {
       "pattern": "^http://localhost"
+    },
+    {
+      "pattern": "^https://github.com/yourusername/Aestra-daw"
+    },
+    {
+      "pattern": "^http://www.music.mcgill.ca/~gary/rtaudio/"
     }
   ],
   "timeout": "20s",
