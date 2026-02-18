@@ -17,6 +17,9 @@
     },
     {
       "pattern": "^https://www.music.mcgill.ca/~gary/rtaudio/"
+    },
+    {
+      "pattern": "^http://www.music.mcgill.ca/~gary/rtaudio/"
     }
   ],
   "timeout": "20s",

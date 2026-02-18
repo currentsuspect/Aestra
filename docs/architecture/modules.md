@@ -373,4 +373,4 @@ Dive deeper into each module:
 
 Or return to:
 - [Architecture Overview →](overview.md)
-- [System Architecture →](overview.md#high-level-architecture)
+- [System Architecture →](overview.md#3-interface-based-design)
