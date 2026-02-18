@@ -47,6 +47,18 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Plan**: Use `ImGui` or custom immediate mode renderer that reuses vertex buffers. Eliminate `std::string` allocations in the draw loop (use `fmt::format_to` into fixed buffers).
 
+### Graph Coloring for Thread Affinity
+
+- **Status**: Threads are currently loosely prioritized.
+- **Plan**: Implement a graph coloring algorithm to assign non-overlapping signal chains to specific physical cores (L3 cache aware).
+- **Benefit**: Maximizes cache locality and minimizes context switching.
+
+### SimdLin Library Integration
+
+- **Status**: Custom AVX intrinsics used sporadically.
+- **Plan**: Integrate a unified `SimdLin` library for vectorized linear algebra operations (vector add, mul, mac, sum).
+- **Benefit**: Standardized, optimized math kernels across all DSP modules.
+
 ## 3. Sound Quality
 
 ### 64-bit End-to-End Mixing
@@ -62,6 +74,18 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 ### Phase-Linear EQs
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
+
+### Analog Drift Modeling
+
+- **Status**: Digital precision only.
+- **Plan**: Introduce randomized micro-timing jitter and pitch drift per channel, modeled after tape saturation and voltage sag.
+- **Benefit**: Warmer, more organic sound character.
+
+### Spectral Anti-Aliasing
+
+- **Status**: Standard oversampling.
+- **Plan**: Implement nonlinear processing in the frequency domain (Spectral Shaping) or use higher-order anti-aliasing filters for saturation stages.
+- **Benefit**: Eliminates digital harshness (aliasing foldback) at high gain.
 
 ## 4. Fixes & Cleanups
 
