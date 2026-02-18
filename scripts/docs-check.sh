@@ -70,7 +70,13 @@ if [ -n "$CHECKER_CMD" ]; then
     LINK_ERRORS=0
     for file in $FILES; do
         # echo "Checking $file..."
-        if ! $CHECKER_CMD -q "$file" 2>/dev/null; then
+    # Check for config file in root
+    CONFIG_ARG=""
+    if [ -f "mlc_config.json" ]; then
+        CONFIG_ARG="-c mlc_config.json"
+    fi
+
+    if ! $CHECKER_CMD -q $CONFIG_ARG "$file" 2>/dev/null; then
              echo -e "${RED}✗ Broken links in $file${NC}"
              LINK_ERRORS=1
         fi
