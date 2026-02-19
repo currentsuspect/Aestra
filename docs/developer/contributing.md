@@ -338,4 +338,4 @@ Your contributions help make Aestra DAW better for everyone. We appreciate your 
 
 ---
 
-[← Return to Aestra Docs Index](../index.md)
+[← Return to Aestra Docs Index](../README.md)

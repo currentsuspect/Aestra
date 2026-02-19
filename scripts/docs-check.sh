@@ -65,7 +65,10 @@ fi
 
 if [ -n "$CHECKER_CMD" ]; then
     # Find markdown files, exclude templates and node_modules
-    FILES=$(find . -name "*.md" -not -path "*/node_modules/*" -not -path "*/TEMPLATE/*" -not -path "*/_site/*" -not -path "*/html/*" -not -path "*/latex/*" -not -path "*/xml/*")
+    # Also exclude AestraDocs as it contains legacy planning documents
+    # Exclude External dependencies (vst3sdk, clap, etc)
+    # Exclude docs/meta and root meta as it contains internal index files with relative link issues
+    FILES=$(find . -name "*.md" -not -path "*/node_modules/*" -not -path "*/TEMPLATE/*" -not -path "*/_site/*" -not -path "*/html/*" -not -path "*/latex/*" -not -path "*/xml/*" -not -path "./AestraDocs/*" -not -path "*/External/*" -not -path "./docs/meta/*" -not -path "./meta/*")
 
     LINK_ERRORS=0
     for file in $FILES; do

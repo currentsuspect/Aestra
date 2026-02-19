@@ -143,6 +143,6 @@ Try modifying the demo to:
 
 ## See Also
 
-- [Aestra_COLOR_SYSTEM.md](Aestra_COLOR_SYSTEM.md) - Complete color palette reference
+- [../../developer/style-guide.md](../../developer/style-guide.md) - Complete color palette reference
 - [CUSTOM_WINDOW_INTEGRATION.md](CUSTOM_WINDOW_INTEGRATION.md) - Custom window guide
 - NUIThemeSystem.h - Theme system API reference

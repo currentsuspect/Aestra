@@ -348,4 +348,4 @@ We're actively gathering input during development. Your feedback helps shape Mus
 
 ---
 
-[← Return to Aestra Docs Index](README.md)
+[← Return to Aestra Docs Index](../README.md)

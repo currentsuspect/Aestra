@@ -6,15 +6,15 @@ This guide explains how to report bugs effectively for Aestra DAW, ensuring issu
 
 ## 📋 Table of Contents
 
-- [Before You Report](#before-you-report)
-- [How to Report a Bug](#how-to-report-a-bug)
-- [Bug Report Template](#bug-report-template)
-- [Reproduction Steps](#reproduction-steps)
-- [Gathering System Information](#gathering-system-information)
-- [Log Files and Debugging](#log-files-and-debugging)
-- [Visual Bugs and Screenshots](#visual-bugs-and-screenshots)
-- [Audio Bugs and Recordings](#audio-bugs-and-recordings)
-- [What Happens Next](#what-happens-next)
+- Before You Report
+- How to Report a Bug
+- Bug Report Template
+- Reproduction Steps
+- Gathering System Information
+- Log Files and Debugging
+- Visual Bugs and Screenshots
+- Audio Bugs and Recordings
+- What Happens Next
 
 ---
 
@@ -434,7 +434,7 @@ Before submitting, verify:
 ## 📚 Related Resources
 
 - **[Contributing Guide](contributing.md)** — How to contribute to Aestra
-- **[Debugging Guide](developer/debugging.md)** — Advanced debugging techniques
+- **[Debugging Guide](debugging.md)** — Advanced debugging techniques
 - **[GitHub Issues](https://github.com/currentsuspect/Aestra/issues)** — Browse existing bugs
 
 ---

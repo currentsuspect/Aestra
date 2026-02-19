@@ -342,4 +342,4 @@ If you encounter issues not covered here:
 
 ---
 
-[← Return to Aestra Docs Index](README.md)
+[← Return to Aestra Docs Index](../README.md)

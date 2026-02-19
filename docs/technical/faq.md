@@ -167,7 +167,7 @@ This is necessary because Aestra is commercial software. See [Contributing Guide
 
 ### What code style should I follow?
 
-Follow our [Coding Style Guide](developer/coding-style.md):
+Follow our [Coding Style Guide](../developer/coding-style.md):
 - **clang-format** for automatic formatting
 - **PascalCase** for classes
 - **camelCase** for functions and variables
@@ -349,7 +349,7 @@ Still have questions? Check these resources:
 - [Building Guide](../getting-started/building.md) - Detailed build instructions
 - [Contributing Guide](../developer/contributing.md) - How to contribute
 - [Architecture Overview](../architecture/overview.md) - Technical deep dive
-- [Coding Style Guide](developer/coding-style.md) - Code conventions
+- [Coding Style Guide](../developer/coding-style.md) - Code conventions
 - [Glossary](glossary.md) - Technical terminology
 
 ## 💬 Getting Help
@@ -363,4 +363,4 @@ Still have questions? Check these resources:
 
 ---
 
-[← Return to Aestra Docs Index](README.md)
+[← Return to Aestra Docs Index](../README.md)

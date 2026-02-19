@@ -656,9 +656,9 @@ std::vector<float> largeBuffer = std::move(createBuffer());  // No copy
 
 ## 📚 Additional Resources
 
-- **[Debugging Guide](developer/debugging.md)** — Profiling and debugging tools
+- **[Debugging Guide](debugging.md)** — Profiling and debugging tools
 - **[Architecture Overview](../architecture/overview.md)** — System design
-- **[Coding Style Guide](developer/coding-style.md)** — Code conventions
+- **[Coding Style Guide](coding-style.md)** — Code conventions
 
 ---
 

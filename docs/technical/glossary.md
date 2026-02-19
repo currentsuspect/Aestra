@@ -8,8 +8,8 @@ Comprehensive glossary of technical terms, acronyms, and concepts used in Aestra
 
 - [Audio Terms](#-audio-terms)
 - [Programming Concepts](#-programming-concepts)
-- [Aestra-Specific Terms](#-Aestra-specific-terms)
-- [UI/UX Terms](#%EF%B8%8F-uiux-terms)
+- [Aestra-Specific Terms](#-aestra-specific-terms)
+- [UI/UX Terms](#-uiux-terms)
 - [Acronyms](#-acronyms)
 
 ## 🎵 Audio Terms
@@ -326,9 +326,9 @@ Test that verifies a single component in isolation. Helps catch bugs early.
 
 - [Architecture Overview](../architecture/overview.md) - Detailed system design
 - [Building Guide](../getting-started/building.md) - Build instructions
-- [Coding Style Guide](developer/coding-style.md) - Code conventions
+- [Coding Style Guide](../developer/coding-style.md) - Code conventions
 - [FAQ](faq.md) - Common questions
 
 ---
 
-[← Return to Aestra Docs Index](README.md)
+[← Return to Aestra Docs Index](../README.md)
