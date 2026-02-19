@@ -548,7 +548,7 @@ If generation is slow:
 
 ### Aestra Specific
 - [Coding Style Guide](developer/coding-style.md)
-- [Contributing Guidelines](../CONTRIBUTING.md)
+- [Contributing Guidelines](developer/contributing.md)
 - [Architecture Documentation](architecture/)
 
 ---

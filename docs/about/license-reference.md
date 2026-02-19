@@ -277,7 +277,7 @@ While you grant full rights, we value contributions:
 
 **For contribution questions:**
 - 💬 GitHub Issues: Technical questions
-- 📖 Contributing Guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- 📖 Contributing Guide: [CONTRIBUTING.md](../developer/contributing.md)
 
 ## 🌍 Jurisdiction
 
@@ -294,8 +294,8 @@ While you grant full rights, we value contributions:
 
 - [Full License Text](../LICENSE) - Complete ASSAL license terms
 - [Licensing Details](../LICENSING.md) - Original licensing document
-- [Contributing Guide](CONTRIBUTING.md) - How to contribute
-- [FAQ](FAQ.md) - General questions
+- [Contributing Guide](../developer/contributing.md) - How to contribute
+- [FAQ](../technical/faq.md) - General questions
 
 ## ⚠️ Legal Disclaimer
 

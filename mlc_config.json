@@ -1,0 +1,12 @@
+{
+  "ignorePatterns": [
+    { "pattern": "^https://patreon.com" },
+    { "pattern": "^https://www.patreon.com" },
+    { "pattern": "^https://ko-fi.com" },
+    { "pattern": "^https://www.khronos.org" },
+    { "pattern": "^http://localhost" }
+  ],
+  "retryOn429": true,
+  "retryCount": 5,
+  "fallbackRetryDelay": "30s"
+}

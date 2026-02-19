@@ -3,7 +3,7 @@
 ## 📚 Core Documentation
 
 ### Architecture & Design
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - AestraUI system architecture and design patterns
+- **[ARCHITECTURE.md](../../architecture/overview.md)** - AestraUI system architecture and design patterns
 - **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Implementation guidelines and best practices
 
 ### Development

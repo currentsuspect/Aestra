@@ -101,7 +101,7 @@ Select all that apply:
 ## Checklist
 
 Before requesting review:
-- [ ] I have read the [Contributing Guide](../CONTRIBUTING.md)
+- [ ] I have read the [Contributing Guide](../developer/contributing.md)
 - [ ] My changes follow the project's documentation style
 - [ ] I have spell-checked my changes
 - [ ] I have tested all links

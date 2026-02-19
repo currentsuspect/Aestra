@@ -449,10 +449,10 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 
 ## 📚 Additional Resources
 
-- [Building Guide](BUILDING.md) - How to build Aestra
-- [Coding Style](CODING_STYLE.md) - Code conventions
-- [Contributing](CONTRIBUTING.md) - How to contribute
-- [Glossary](GLOSSARY.md) - Technical terms
+- [Building Guide](../getting-started/building.md) - How to build Aestra
+- [Coding Style](../developer/coding-style.md) - Code conventions
+- [Contributing](../developer/contributing.md) - How to contribute
+- [Glossary](../technical/glossary.md) - Technical terms
 
 ---
 

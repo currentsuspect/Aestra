@@ -331,10 +331,10 @@ Muse AI is part of **Aestra Premium**:
 
 ## 📚 Additional Resources
 
-- [Architecture Overview](ARCHITECTURE.md) - Aestra system design
-- [Roadmap](ROADMAP.md) - Feature timeline
-- [FAQ](FAQ.md) - Common questions about Muse
-- [License Reference](LICENSE_REFERENCE.md) - Licensing terms
+- [Architecture Overview](../architecture/overview.md) - Aestra system design
+- [Roadmap](roadmap.md) - Feature timeline
+- [FAQ](faq.md) - Common questions about Muse
+- [License Reference](../about/license-reference.md) - Licensing terms
 
 ## 💬 Feedback and Requests
 

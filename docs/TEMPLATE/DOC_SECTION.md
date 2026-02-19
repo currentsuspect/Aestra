@@ -209,7 +209,7 @@ code goes here
 
 - 💬 [GitHub Issues](https://github.com/currentsuspect/Aestra/issues) - Report problems or ask questions
 - 📧 Email: makoridylan@gmail.com
-- 📖 [FAQ](../FAQ.md) - Check frequently asked questions
+- 📖 [FAQ](../technical/faq.md) - Check frequently asked questions
 
 ## 📝 Contributing
 
