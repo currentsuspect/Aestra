@@ -23,6 +23,34 @@ FORBIDDEN_KEYWORDS = [
     (r"\bstd::this_thread::sleep_for\b", "Thread sleep usage"),
 ]
 
+def strip_comments(line, in_block_comment):
+    # Remove block comments /* ... */
+    # This is a simple state machine approach for single line processing
+    # But C++ comments can be tricky.
+
+    clean_line = ""
+    i = 0
+    n = len(line)
+
+    while i < n:
+        if in_block_comment:
+            if i + 1 < n and line[i:i+2] == "*/":
+                in_block_comment = False
+                i += 2
+            else:
+                i += 1
+        else:
+            if i + 1 < n and line[i:i+2] == "//":
+                break # Rest of line is comment
+            elif i + 1 < n and line[i:i+2] == "/*":
+                in_block_comment = True
+                i += 2
+            else:
+                clean_line += line[i]
+                i += 1
+
+    return clean_line.strip(), in_block_comment
+
 def analyze_file(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
         lines = f.readlines()
@@ -30,44 +58,51 @@ def analyze_file(filepath):
     issues = []
     in_critical_section = False
     brace_count = 0
-
-    # Simple state machine to detect if we are inside a critical function
-    # This is a heuristic and won't be perfect (e.g. doesn't handle nested classes well without parsing)
-    # But for AudioEngine.cpp it should work reasonably well if formatted standardly.
+    in_block_comment = False
 
     for i, line in enumerate(lines):
         line_num = i + 1
-        stripped = line.strip()
+
+        clean_line, in_block_comment = strip_comments(line, in_block_comment)
+
+        if not clean_line:
+            continue
 
         # Detect function start
-        for func in CRITICAL_FUNCTIONS:
-            if re.search(fr"\b{func}\s*\(", stripped):
-                in_critical_section = True
-                # rudimentary brace counting to stay in function
-                # Assuming opening brace is on same line or next
-                pass
+        if not in_critical_section:
+            for func in CRITICAL_FUNCTIONS:
+                # Check for function definition start: "void processBlock (" or "processBlock("
+                # We want to avoid matching "processBlock;" (call) or "processBlock = delete" here if possible,
+                # but "processBlock(" is a good indicator.
+                if re.search(fr"\b{func}\s*\(", clean_line):
+                    # Check if it is a declaration (ends with ;)
+                    if clean_line.endswith(";") and "{" not in clean_line:
+                        continue
+
+                    in_critical_section = True
+                    brace_count = 0 # Reset for new function
 
         if in_critical_section:
-            brace_count += stripped.count('{')
-            brace_count -= stripped.count('}')
-
-            if brace_count <= 0 and '}' in stripped:
-                 # Check if we really closed the function?
-                 # This is tricky with nested blocks.
-                 # Let's just assume if brace_count goes back to 0 (or less if we started at 0) we exited.
-                 # But we need to handle the case where the function starts.
-                 pass
+            brace_count += clean_line.count('{')
+            brace_count -= clean_line.count('}')
 
             # Scan for keywords
             for pattern, desc in FORBIDDEN_KEYWORDS:
-                if re.search(pattern, stripped):
-                    # Ignore comments (simple check)
-                    if stripped.startswith("//") or stripped.startswith("*"):
+                if re.search(pattern, clean_line):
+                    # Special Case: Ignore "= delete"
+                    if "= delete" in clean_line:
                         continue
 
-                    issues.append(f"{filepath}:{line_num}: {desc} found in critical section candidate: '{stripped}'")
+                    issues.append(f"{filepath}:{line_num}: {desc} found in critical section candidate: '{clean_line}'")
 
-            if brace_count <= 0 and '}' in stripped:
+            # Check for exit condition
+            # If brace_count hits 0 (and we had some braces), we are out.
+            # But initial line might not have braces: "void processBlock(...) \n {"
+            # So we only exit if brace_count is <= 0 AND we have seen at least one '}' or we are at the end of a one-liner?
+            # Or simply: if we are in critical section, and brace_count returns to 0 (or less), we exit.
+            # But we must handle the start case where brace_count is 0.
+            # Heuristic: if brace_count <= 0 and "}" is in line, we probably exited.
+            if brace_count <= 0 and "}" in clean_line:
                 in_critical_section = False
 
     return issues
@@ -76,6 +111,8 @@ def main():
     print("Starting Audit...")
     all_issues = []
     for d in SEARCH_DIRS:
+        if not os.path.exists(d):
+            continue
         for root, _, files in os.walk(d):
             for file in files:
                 if file.endswith(".cpp") or file.endswith(".h"):
@@ -90,8 +127,11 @@ def main():
         with open("audit_results.txt", "w") as f:
             for issue in all_issues:
                 f.write(issue + "\n")
+        exit(1) # Fail if issues found
     else:
         print("No obvious real-time safety issues found (heuristic check).")
+        if os.path.exists("audit_results.txt"):
+            os.remove("audit_results.txt")
 
 if __name__ == "__main__":
     main()
