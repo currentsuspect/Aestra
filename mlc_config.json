@@ -1,0 +1,29 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^https://patreon.com"
+    },
+    {
+      "pattern": "^https://ko-fi.com"
+    },
+    {
+      "pattern": "^https://www.khronos.org"
+    },
+    {
+      "pattern": "^http://localhost"
+    },
+    {
+        "pattern": "^https://github.com/currentsuspect/Aestra"
+    },
+    {
+        "pattern": "^https://github.com/yourusername/Aestra-daw"
+    },
+    {
+        "pattern": "^https://docs.opencv.org"
+    }
+  ],
+  "timeout": "20s",
+  "retryOn429": true,
+  "retryCount": 5,
+  "fallbackRetryDelay": "30s"
+}
