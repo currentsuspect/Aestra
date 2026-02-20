@@ -29,6 +29,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### NeuralMix Assistant
+
+- **Innovation**: Integrate reinforcement learning agents trained on hit songs to suggest EQ, compression, and levels.
+- **Benefit**: Accelerates mixing workflow for beginners and pros alike.
+
+### Collaborative Editing
+
+- **Innovation**: Implement CRDT (Conflict-free Replicated Data Type) structures for the project state.
+- **Benefit**: Real-time multi-user editing over WebSockets without locking.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -62,6 +72,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 ### Phase-Linear EQs
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
+
+### Analog Drift Modeling
+
+- **Plan**: Introduce per-voice subtle random modulation for oscillator pitch, filter cutoff, and envelope times.
+- **Benefit**: Mimics the organic instability and warmth of vintage analog synthesizers.
+
+### Spectral Anti-Aliasing
+
+- **Plan**: Use additive synthesis or pre-computed bandlimited wavetables instead of oversampling for oscillators.
+- **Benefit**: Perfect anti-aliasing with lower CPU cost than 8x oversampling.
 
 ## 4. Fixes & Cleanups
 
