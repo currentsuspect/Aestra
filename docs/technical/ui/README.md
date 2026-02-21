@@ -21,7 +21,7 @@
 
 ## 🚀 Quick Start
 
-See the main [README.md](../README.md) for getting started with AestraUI.
+See the main [README.md](../../README.md) for getting started with AestraUI.
 
 ## 📁 Code Structure
 

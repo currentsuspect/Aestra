@@ -6,7 +6,7 @@ This guide explains how to report bugs effectively for Aestra DAW, ensuring issu
 
 ## 📋 Table of Contents
 
-- [Before You Report](#before-you-report)
+- [Before You Report](#before-you-report-a-bug)
 - [How to Report a Bug](#how-to-report-a-bug)
 - [Bug Report Template](#bug-report-template)
 - [Reproduction Steps](#reproduction-steps)

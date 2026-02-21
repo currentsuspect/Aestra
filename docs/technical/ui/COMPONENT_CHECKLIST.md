@@ -166,10 +166,10 @@ void MyComponent::onRender(NUIRenderer& renderer) {
 
 Before starting, read:
 - [COORDINATE_SYSTEM_QUICK_REF.md](COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
-- [AestraUI_COORDINATE_SYSTEM.md](../../AestraDocs/AestraUI_COORDINATE_SYSTEM.md) - Full guide
+- [AestraUI_COORDINATE_SYSTEM.md](../../AestraUI_COORDINATE_SYSTEM.md) - Full guide
 
 When stuck, check:
-- [TRANSPORT_BAR_FIX_SUMMARY.md](../../AestraDocs/TRANSPORT_BAR_FIX_SUMMARY.md) - Real-world example
+- [TRANSPORT_BAR_FIX_SUMMARY.md](../../TRANSPORT_BAR_FIX_SUMMARY.md) - Real-world example
 - [NUIComponent.h](../Core/NUIComponent.h) - Base class API
 
 ---
