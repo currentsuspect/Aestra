@@ -17,15 +17,15 @@ Select one:
 
 **File(s)**: 
 - [ ] docs/README.md
-- [ ] docs/BUILDING.md
-- [ ] docs/CONTRIBUTING.md
+- [ ] docs/getting-started/building.md
+- [ ] docs/developer/contributing.md
 - [ ] docs/developer/coding-style.md
-- [ ] docs/ARCHITECTURE.md
-- [ ] docs/AI_GUIDE.md
-- [ ] docs/FAQ.md
-- [ ] docs/GLOSSARY.md
-- [ ] docs/ROADMAP.md
-- [ ] docs/LICENSE_REFERENCE.md
+- [ ] docs/architecture/overview.md
+- [ ] docs/technical/ai-guide.md
+- [ ] docs/technical/faq.md
+- [ ] docs/technical/glossary.md
+- [ ] docs/technical/roadmap.md
+- [ ] docs/about/license-reference.md
 - [ ] docs/TEMPLATE/*
 - [ ] Other: _____________
 

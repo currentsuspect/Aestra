@@ -28,7 +28,7 @@
 ### AestraUI/
 - ✅ `docs/README.md` - UI documentation index (to be created)
 - ✅ `docs/PLATFORM_MIGRATION.md` - Migration from old Windows code
-- ✅ `docs/ARCHITECTURE.md` - UI framework architecture
+- ✅ `docs/architecture/overview.md` - UI framework architecture
 - ✅ `docs/CUSTOM_WINDOW_INTEGRATION.md` - Custom window guide
 - ✅ `docs/ICON_SYSTEM_GUIDE.md` - SVG icon usage
 - ✅ `docs/THEME_DEMO_GUIDE.md` - Theming system

@@ -548,7 +548,7 @@ If generation is slow:
 
 ### Aestra Specific
 - [Coding Style Guide](developer/coding-style.md)
-- [Contributing Guidelines](../CONTRIBUTING.md)
+- [Contributing Guidelines](../developer/contributing.md)
 - [Architecture Documentation](architecture/)
 
 ---
@@ -603,4 +603,4 @@ find AestraCore AestraAudio AestraPlat AestraUI -name "*.h" | xargs grep -B1 "^c
 
 **Happy Documenting! 📚✨**
 
-For questions or issues, see [SUPPORT.md](../SUPPORT.md) or open a [GitHub Discussion](https://github.com/currentsuspect/Aestra/discussions).
+For questions or issues, see [SUPPORT.md](../community/support.md) or open a [GitHub Discussion](https://github.com/currentsuspect/Aestra/discussions).

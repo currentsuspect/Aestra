@@ -68,7 +68,7 @@
 ## 📖 Root Documentation
 - [`../README.md`](../README.md) - Project overview
 - [`../BUILD.md`](../BUILD.md) - Build instructions
-- [`../CONTRIBUTING.md`](../CONTRIBUTING.md) - Contribution guidelines
+- [`../developer/contributing.md`](../developer/contributing.md) - Contribution guidelines
 - [`../docs/`](../docs/) - Additional documentation
 
 ---

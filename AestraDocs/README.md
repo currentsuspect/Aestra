@@ -100,7 +100,7 @@ UI framework with OpenGL rendering:
 **Key Guides:**
 
 - [Platform Migration](../AestraUI/docs/PLATFORM_MIGRATION.md) - Migration from old Windows code to AestraPlat
-- [Architecture](../AestraUI/docs/ARCHITECTURE.md) - UI framework architecture
+- [Architecture](../AestraUI/docs/architecture/overview.md) - UI framework architecture
 - [Custom Window Integration](../AestraUI/docs/CUSTOM_WINDOW_INTEGRATION.md) - Building custom windows
 - [Coordinate System Guide](AestraUI_COORDINATE_SYSTEM.md) - **CRITICAL:** Understanding AestraUI positioning
 - [Coordinate Utilities v1.1](COORDINATE_UTILITIES_V1.1.md) - **NEW:** Convenience helpers for positioning
@@ -121,7 +121,7 @@ UI framework with OpenGL rendering:
 
 - **Working on Core?** → `AestraCore/README.md`
 - **Working on Platform?** → `AestraPlat/README.md` + `AestraPlat/docs/DPI_SUPPORT.md`
-- **Working on UI?** → `AestraUI/docs/ARCHITECTURE.md`
+- **Working on UI?** → `AestraUI/docs/architecture/overview.md`
 
 ### For Integration
 
