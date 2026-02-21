@@ -29,6 +29,31 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### Graph Coloring for Cache Locality
+
+- **Innovation**: Implement graph coloring algorithm to assign non-overlapping tracks to the same thread, maximizing cache locality and minimizing context switches.
+- **Benefit**: Reduced CPU overhead and improved real-time performance.
+
+### SimdLin Integration
+
+- **Innovation**: Integrate SimdLin (or similar vectorized library) for optimized linear algebra operations (matrix multiplication, inversion) in NeuralFX and generic DSP.
+- **Benefit**: accelerated neural inference and complex DSP algorithms.
+
+### Analog Drift Modeling
+
+- **Innovation**: Model component tolerance and temperature drift in all analog-modeled plugins. Use a per-voice random seed.
+- **Benefit**: More organic, "alive" sound characteristic of vintage hardware.
+
+### Spectral Anti-Aliasing
+
+- **Innovation**: Apply spectral masking/filtering to nonlinear processes (distortion, compression) to suppress aliasing without heavy oversampling.
+- **Benefit**: Cleaner high-end without the latency/CPU cost of 8x oversampling.
+
+### Collaborative Editing
+
+- **Innovation**: CRDT-based document model for real-time collaboration over generic WebSocket relay.
+- **Benefit**: Multiple users can edit the same project simultaneously without conflicts.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -70,6 +95,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
 - **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
 - **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+
+### Platform Leaks
+
+- **Violation**: Public headers (`AestraThreading.h`, `AudioEngine.h`) included `<windows.h>`.
+- **Fix**: Removed platform includes from public headers. Moved implementation of `MMCSS` and `ThreadPool` to `src/AestraThreading.cpp` where `<windows.h>` is safely included. Tagged unavoidable ASIO includes in `ASIOInterface.h` with `// ALLOW_PLATFORM_INCLUDE`.
 
 ---
 *Signed: Bolt*
