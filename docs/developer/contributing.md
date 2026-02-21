@@ -17,7 +17,7 @@ Thank you for your interest in contributing to Aestra DAW! This guide will help 
 
 ## 📜 Code of Conduct
 
-We are committed to providing a welcoming and inclusive environment. Please read our [Code of Conduct](../../community/code-of-conduct.md) before contributing.
+We are committed to providing a welcoming and inclusive environment. Please read our [Code of Conduct](../community/code-of-conduct.md) before contributing.
 
 ## 🚀 Getting Started
 
@@ -239,7 +239,7 @@ main
 - **No secrets in code**: Never commit API keys, passwords, or certificates
 - **Validate inputs**: Always validate user input and external data
 - **Follow best practices**: Use secure coding practices
-- **Report vulnerabilities**: See [SECURITY.md](../../community/security.md)
+- **Report vulnerabilities**: See [SECURITY.md](../community/security.md)
 
 ### What NOT to Commit
 

@@ -433,8 +433,8 @@ Before submitting, verify:
 
 ## 📚 Related Resources
 
-- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute to Aestra
-- **[Debugging Guide](developer/debugging.md)** — Advanced debugging techniques
+- **[Contributing Guide](contributing.md)** — How to contribute to Aestra
+- **[Debugging Guide](debugging.md)** — Advanced debugging techniques
 - **[GitHub Issues](https://github.com/currentsuspect/Aestra/issues)** — Browse existing bugs
 
 ---

@@ -115,7 +115,7 @@ RtAudio is licensed under the MIT License, which is compatible with Aestra's MIT
 ## References
 
 - [RtAudio GitHub](https://github.com/thestk/rtaudio)
-- [RtAudio Documentation](http://www.music.mcgill.ca/~gary/rtaudio/)
+- [RtAudio Documentation](https://www.music.mcgill.ca/~gary/rtaudio/)
 - [RtAudio v6 Migration Guide](https://github.com/thestk/rtaudio/blob/master/doc/release.txt)
 
 ---
