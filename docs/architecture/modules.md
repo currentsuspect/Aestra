@@ -366,10 +366,10 @@ When adding a new module to Aestra:
 
 Dive deeper into each module:
 
-- [AestraCore Details →](Aestra-core.md)
-- [AestraPlat Details →](Aestra-plat.md)
-- [AestraUI Details →](Aestra-ui.md)
-- [AestraAudio Details →](Aestra-audio.md)
+- [AestraCore Details →](nomad-core.md)
+- [AestraPlat Details →](nomad-plat.md)
+- [AestraUI Details →](nomad-ui.md)
+- [AestraAudio Details →](nomad-audio.md)
 
 Or return to:
 - [Architecture Overview →](overview.md)
