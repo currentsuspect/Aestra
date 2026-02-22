@@ -25,7 +25,7 @@ Foundation utilities and data structures.
 - `Aestra::Logger` — Structured logging
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-core.md) for high-level design concepts.
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-core.md) for high-level design concepts.
 
 ---
 
@@ -42,7 +42,7 @@ Platform-specific functionality with unified interface.
 - `Aestra::Timer` — High-resolution timing
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-plat.md) for high-level design concepts.
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-plat.md) for high-level design concepts.
 
 ---
 
@@ -61,7 +61,7 @@ GPU-accelerated UI framework.
 - `Aestra::Theme` — Theme system
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-ui.md) for high-level design concepts.
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-ui.md) for high-level design concepts.
 
 ---
 
@@ -78,7 +78,7 @@ Professional audio processing system.
 - `Aestra::DSP::EQ` — Equalizer processor
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-audio.md) for high-level design concepts.
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-audio.md) for high-level design concepts.
 
 ---
 
@@ -258,19 +258,19 @@ void AudioBuffer::read(float* buffer, int samples);
 
 Looking for specific functionality? See the architecture documentation:
 
-- **Window Management** → [AestraPlat Architecture](../architecture/Aestra-plat.md)
-- **Rendering** → [AestraUI Architecture](../architecture/Aestra-ui.md)
-- **Audio I/O** → [AestraAudio Architecture](../architecture/Aestra-audio.md)
-- **File Operations** → [AestraCore Architecture](../architecture/Aestra-core.md)
+- **Window Management** → [AestraPlat Architecture](../architecture/nomad-plat.md)
+- **Rendering** → [AestraUI Architecture](../architecture/nomad-ui.md)
+- **Audio I/O** → [AestraAudio Architecture](../architecture/nomad-audio.md)
+- **File Operations** → [AestraCore Architecture](../architecture/nomad-core.md)
 
 ### By Module
 
 Exploring a specific module? See architecture docs:
 
-- [AestraCore Architecture](../architecture/Aestra-core.md)
-- [AestraPlat Architecture](../architecture/Aestra-plat.md)
-- [AestraUI Architecture](../architecture/Aestra-ui.md)
-- [AestraAudio Architecture](../architecture/Aestra-audio.md)
+- [AestraCore Architecture](../architecture/nomad-core.md)
+- [AestraPlat Architecture](../architecture/nomad-plat.md)
+- [AestraUI Architecture](../architecture/nomad-ui.md)
+- [AestraAudio Architecture](../architecture/nomad-audio.md)
 
 ## 📝 Documentation Status
 

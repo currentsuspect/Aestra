@@ -1,0 +1,15 @@
+{
+  "ignorePatterns": [
+    { "pattern": "^https://patreon.com" },
+    { "pattern": "^https://www.patreon.com" },
+    { "pattern": "^https://ko-fi.com" },
+    { "pattern": "^https://www.khronos.org" },
+    { "pattern": "^http://localhost" },
+    { "pattern": "^https://github.com/yourusername" },
+    { "pattern": "^https://docs.opencv.org" },
+    { "pattern": "^http://www.music.mcgill.ca/~gary/rtaudio/" },
+    { "pattern": "^https://www.music.mcgill.ca/~gary/rtaudio/" }
+  ],
+  "timeout": "20s",
+  "retryOn429": true
+}
