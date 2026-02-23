@@ -20,6 +20,9 @@
     },
     {
       "pattern": "^https://discord.gg"
+    },
+    {
+      "pattern": "^https://www.music.mcgill.ca"
     }
   ],
   "timeout": "20s",

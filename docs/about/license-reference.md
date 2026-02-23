@@ -293,13 +293,13 @@ While you grant full rights, we value contributions:
 ## 📚 Additional Resources
 
 - [Full License Text](../../LICENSE) - Complete ASSAL license terms
-- [Licensing Details](../licensing.md) - Original licensing document
+- [Licensing Details](licensing.md) - Original licensing document
 - [Contributing Guide](../developer/contributing.md) - How to contribute
 - [FAQ](../technical/faq.md) - General questions
 
 ## ⚠️ Legal Disclaimer
 
-This document provides a summary and reference for Aestra DAW licensing. The complete legal terms are in the [LICENSE](../../LICENSE) and [LICENSING.md](../licensing.md) files. In case of conflict, the official license documents take precedence.
+This document provides a summary and reference for Aestra DAW licensing. The complete legal terms are in the [LICENSE](../../LICENSE) and [LICENSING.md](licensing.md) files. In case of conflict, the official license documents take precedence.
 
 **Not legal advice**: This document is for informational purposes only and does not constitute legal advice. Consult an attorney for legal questions.
 
