@@ -7,3 +7,9 @@
 [submodule "AestraAudio/External/clap"]
 	path = AestraAudio/External/clap
 	url = https://github.com/free-audio/clap.git
+[submodule "AestraUI/External/freetype_local"]
+	path = AestraUI/External/freetype_local
+	url = https://gitlab.freedesktop.org/freetype/freetype.git
+[submodule "subprojects/dlg"]
+	path = subprojects/dlg
+	url = https://github.com/nyorain/dlg.git

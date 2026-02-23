@@ -20,7 +20,7 @@ EXIT_CODE=0
 # ----------------------------------------
 # 1. Doxygen Check
 # ----------------------------------------
-if false; then
+if command -v doxygen &> /dev/null; then
     echo -e "\n${YELLOW}Running Doxygen...${NC}"
     # Redirect stdout to null, keep stderr
     if doxygen Doxyfile > /dev/null; then
@@ -72,19 +72,23 @@ if [ -n "$CHECKER_CMD" ]; then
 
     LINK_ERRORS=0
 
-    # Process files in parallel to save time if possible, or just sequential with progress
+    # Process files sequentially
     for file in $FILES; do
         # echo "Checking $file..."
         if [ -f "mlc_config.json" ]; then
-            # Using grep to suppress verbose output if -q doesn't work well with npx sometimes
+            # Temporarily disable exit-on-error for the command capture
+            set +e
             OUTPUT=$($CHECKER_CMD -q -c mlc_config.json "$file" 2>&1)
             RET=$?
+            set -e
+
             if [ $RET -ne 0 ]; then
                  echo -e "${RED}✗ Broken links in $file${NC}"
                  echo "$OUTPUT" | grep -v "FILE: "
                  LINK_ERRORS=1
             fi
         else
+             # Allow failure without exiting script
              if ! $CHECKER_CMD -q "$file"; then
                  echo -e "${RED}✗ Broken links in $file${NC}"
                  LINK_ERRORS=1
