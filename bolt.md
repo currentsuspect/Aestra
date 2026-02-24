@@ -29,7 +29,22 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
 - **Benefit**: Plugin crashes never crash the DAW. Security against malicious plugins.
 
+### Collaborative Editing
+
+- **Innovation**: Real-time multi-user editing using CRDTs (Conflict-free Replicated Data Types) for the project state (tracks, clips, automation).
+- **Benefit**: Google Docs-style collaboration for music production.
+
 ## 2. Performance Boosts
+
+### Graph Coloring Scheduler
+
+- **Innovation**: Use graph coloring algorithms to assign non-conflicting tracks to thread pools statically during graph compilation.
+- **Benefit**: Minimizes thread contention and cache thrashing compared to dynamic work-stealing for static subgraphs.
+
+### SimdLin Integration
+
+- **Innovation**: Integrate a custom SIMD linear algebra library (`SimdLin`) for batch processing of DSP operations.
+- **Benefit**: 4-8x speedup for mixing, gain staging, and metering by processing 8/16 samples at once.
 
 ### AVX-512 Everywhere
 
@@ -63,6 +78,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
 
+### Analog Drift Modeling
+
+- **Innovation**: Apply chaos theory (Lorenz attractors) to oscillator phase and filter cutoff modulation.
+- **Benefit**: Organic, non-repetitive "warmth" and instability characteristic of vintage hardware.
+
+### Spectral Anti-Aliasing
+
+- **Innovation**: Perform non-linear processing (saturation/distortion) in the frequency domain or use spectral repair to remove aliasing artifacts post-process.
+- **Benefit**: Pristine high-gain sounds without oversampling latency penalties.
+
 ## 4. Fixes & Cleanups
 
 ### Real-Time Safety
@@ -70,6 +95,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
 - **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
 - **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+
+### Platform Leaks
+
+- **Violation**: `windows.h` in public headers (`AestraThreading.h`, `AudioEngine.h`).
+- **Fix**: Moved implementations to `.cpp` files or used `// ALLOW_PLATFORM_INCLUDE` where unavoidable (ASIO, VirtualLock).
 
 ---
 *Signed: Bolt*
