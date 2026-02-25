@@ -85,7 +85,7 @@ Documents are moved to this directory when they:
 ## 📖 Related Documentation
 
 - **[Main Documentation Portal](../docs/README.md)** — Current project documentation
-- **[Contributing Guide](../docs/CONTRIBUTING.md)** — How to contribute
+- **[Contributing Guide](../docs/developer/contributing.md)** — How to contribute
 - **[Changelog (Current)](../docs/ROADMAP.md)** — Current roadmap and changes
 
 ---

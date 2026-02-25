@@ -229,7 +229,7 @@ For a comprehensive breakdown of the license terms, including:
 - Contributor guidelines
 - Frequently asked questions
 
-See **[docs/LICENSE_REFERENCE.md](../LICENSE_REFERENCE.md)** for the complete license reference guide.
+See **[docs/about/license-reference.md](license-reference.md)** for the complete license reference guide.
 
 ---
 
