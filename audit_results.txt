@@ -1,4 +1,3 @@
-AestraAudio/include/Plugin/EffectChain.h:63: Memory deallocation (delete) found in critical section candidate: 'EffectChain(const EffectChain&) = delete;'
-AestraAudio/include/Plugin/EffectChain.h:64: Memory deallocation (delete) found in critical section candidate: 'EffectChain& operator=(const EffectChain&) = delete;'
-AestraAudio/include/DSP/SampleRateConverter.h:206: Memory deallocation (delete) found in critical section candidate: 'SampleRateConverter(const SampleRateConverter&) = delete;'
-AestraAudio/include/DSP/SampleRateConverter.h:207: Memory deallocation (delete) found in critical section candidate: 'SampleRateConverter& operator=(const SampleRateConverter&) = delete;'
+AestraAudio/include/Plugin/PluginHost.h:140: Memory deallocation (free) found in critical section candidate: '* - No locks (except lock-free structures)'
+AestraAudio/include/Plugin/PluginHost.h:246: Memory allocation (new) found in critical section candidate: '* @brief Resize editor to new size'
+AestraAudio/include/DSP/SampleRateConverter.h:272: Memory allocation (new) found in critical section candidate: '* Smoothly transitions to a new ratio over the specified number of frames'
