@@ -1,0 +1,39 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^https://patreon.com"
+    },
+    {
+      "pattern": "^https://www.patreon.com"
+    },
+    {
+      "pattern": "^https://ko-fi.com"
+    },
+    {
+      "pattern": "^https://www.khronos.org"
+    },
+    {
+      "pattern": "^https://docs.opencv.org"
+    },
+    {
+      "pattern": "^https://discord.gg"
+    },
+    {
+      "pattern": "^http://localhost"
+    },
+    {
+      "pattern": "^https://www.music.mcgill.ca"
+    },
+    {
+      "pattern": "^http://www.music.mcgill.ca"
+    },
+    {
+      "pattern": "^https://github.com/yourusername"
+    }
+  ],
+  "timeout": "20s",
+  "retryOn429": true,
+  "retryCount": 5,
+  "fallbackRetryDelay": "30s",
+  "aliveStatusCodes": [200, 206]
+}

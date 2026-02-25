@@ -265,7 +265,7 @@ All source files include the following header:
 ### Full License Text
 
 - **[View LICENSE →](LICENSE)** — Full legal license text
-- **[License Reference →](docs/LICENSE_REFERENCE.md)** — Detailed breakdown and FAQ
+- **[License Reference →](docs/about/license-reference.md)** — Detailed breakdown and FAQ
 
 **Important:** The source code is publicly visible for transparency, but is **NOT open-source**. All rights reserved by Dylan Makori / Aestra Studios.
 
