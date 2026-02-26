@@ -12,8 +12,8 @@ Architectural documentation and design decisions:
 
 - [ADAPTIVE_FPS_ARCHITECTURE.md](architecture/ADAPTIVE_FPS_ARCHITECTURE.md) - Adaptive frame rate system design
 - [DROPDOWN_ARCHITECTURE.md](architecture/DROPDOWN_ARCHITECTURE.md) - Dropdown menu system architecture
-- [Aestra_MODE_IMPLEMENTATION.md](architecture/Aestra_MODE_IMPLEMENTATION.md) - Aestra mode implementation details
-- [AestraUI_COORDINATE_SYSTEM.md](architecture/AestraUI_COORDINATE_SYSTEM.md) - **CRITICAL:** UI coordinate system specification
+- [Aestra_MODE_IMPLEMENTATION.md](architecture/nomad-core.md) - Aestra mode implementation details
+- [AestraUI_COORDINATE_SYSTEM.md](architecture/nomad-ui.md) - **CRITICAL:** UI coordinate system specification
 
 ### 📖 [guides/](guides/)
 
