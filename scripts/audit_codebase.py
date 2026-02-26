@@ -39,19 +39,22 @@ def analyze_file(filepath):
         line_num = i + 1
         stripped = line.strip()
 
+        # Strip comments for structure analysis
+        code_part = stripped.split("//")[0].split("/*")[0].strip()
+
         # Detect function start
         for func in CRITICAL_FUNCTIONS:
-            if re.search(fr"\b{func}\s*\(", stripped):
+            if re.search(fr"\b{func}\s*\(", code_part):
                 in_critical_section = True
                 # rudimentary brace counting to stay in function
                 # Assuming opening brace is on same line or next
                 pass
 
         if in_critical_section:
-            brace_count += stripped.count('{')
-            brace_count -= stripped.count('}')
+            brace_count += code_part.count('{')
+            brace_count -= code_part.count('}')
 
-            if brace_count <= 0 and '}' in stripped:
+            if brace_count <= 0 and '}' in code_part:
                  # Check if we really closed the function?
                  # This is tricky with nested blocks.
                  # Let's just assume if brace_count goes back to 0 (or less if we started at 0) we exited.
@@ -63,6 +66,10 @@ def analyze_file(filepath):
                 if re.search(pattern, stripped):
                     # Ignore comments (simple check)
                     if stripped.startswith("//") or stripped.startswith("*"):
+                        continue
+
+                    # Ignore deleted functions
+                    if "= delete" in stripped:
                         continue
 
                     issues.append(f"{filepath}:{line_num}: {desc} found in critical section candidate: '{stripped}'")

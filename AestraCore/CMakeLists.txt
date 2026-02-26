@@ -12,6 +12,7 @@ add_library(AestraCore STATIC
     src/AestraProfiler.cpp
     src/AestraUnifiedProfiler.cpp
     src/PointerRegistry.cpp
+    src/AestraThreading.cpp
 )
 
 target_include_directories(AestraCore PUBLIC
