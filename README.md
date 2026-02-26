@@ -217,7 +217,7 @@ By contributing to Aestra, you agree that:
 - You waive ownership claims to your contributions
 - Contributions are made under the ASSAL v1.0 license terms
 
-For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRIBUTING.md)**
+For detailed contribution guidelines, see **[Contributing Guide →](docs/developer/contributing.md)**
 
 ### Ways to Contribute
 

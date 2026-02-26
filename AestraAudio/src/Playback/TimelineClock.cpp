@@ -6,6 +6,7 @@
 namespace Aestra {
 namespace Audio {
 
+/// @brief Constructor
 TimelineClock::TimelineClock(double defaultBPM)
     : m_defaultBPM(defaultBPM)
 {

@@ -1,0 +1,14 @@
+{
+  "ignorePatterns": [
+    {"pattern": "^https://patreon.com"},
+    {"pattern": "^https://www.patreon.com"},
+    {"pattern": "^https://ko-fi.com"},
+    {"pattern": "^https://www.khronos.org"},
+    {"pattern": "^https://docs.opencv.org"},
+    {"pattern": "^http://localhost"},
+    {"pattern": "^https://discord.gg"},
+    {"pattern": "^http://www.music.mcgill.ca"}
+  ],
+  "timeout": "10s",
+  "retryOn429": true
+}
