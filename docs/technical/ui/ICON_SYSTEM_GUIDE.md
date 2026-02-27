@@ -264,6 +264,6 @@ Planned features:
 
 ## See Also
 
-- [Aestra_COLOR_SYSTEM.md](Aestra_COLOR_SYSTEM.md) - Theme colors
+- [NOMAD_COLOR_SYSTEM.md](NOMAD_COLOR_SYSTEM.md) - Theme colors
 - [THEME_DEMO_GUIDE.md](THEME_DEMO_GUIDE.md) - Theme integration
 - IconDemo.cpp - Complete example

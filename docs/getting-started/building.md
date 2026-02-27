@@ -323,16 +323,16 @@ cmake --build build --parallel
 
 ## 📚 Additional Resources
 
-- [Architecture Overview](ARCHITECTURE.md) - Understand Aestra's structure
-- [Contributing Guide](CONTRIBUTING.md) - How to contribute code
-- [Coding Style](CODING_STYLE.md) - Code formatting guidelines
-- [FAQ](FAQ.md) - Frequently asked questions
+- [Architecture Overview](../architecture/overview.md) - Understand Aestra's structure
+- [Contributing Guide](../developer/contributing.md) - How to contribute code
+- [Coding Style](../developer/coding-style.md) - Code formatting guidelines
+- [FAQ](../technical/faq.md) - Frequently asked questions
 
 ## 🆘 Getting Help
 
 If you encounter issues not covered here:
 
-1. Check [FAQ](FAQ.md) for common problems
+1. Check [FAQ](../technical/faq.md) for common problems
 2. Search [GitHub Issues](https://github.com/currentsuspect/Aestra/issues)
 3. Open a new issue with:
    - Operating system and version
@@ -342,4 +342,4 @@ If you encounter issues not covered here:
 
 ---
 
-[← Return to Aestra Docs Index](README.md)
+[← Return to Aestra Docs Index](../index.md)

@@ -39,9 +39,9 @@ Aestra is built with a vision to make professional music production accessible t
 
 Choose your preferred platform:
 
-- [Patreon](https://patreon.com/Aestra-daw)
+- [Patreon](https://patreon.com/aestra-daw)
 - [GitHub Sponsors](https://github.com/sponsors/currentsuspect)
-- [Ko-fi](https://ko-fi.com/Aestradaw)
+- [Ko-fi](https://ko-fi.com/aestradaw)
 
 ## Our Promise
 

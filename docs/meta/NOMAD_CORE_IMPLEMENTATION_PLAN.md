@@ -1435,6 +1435,115 @@ bool ConfigManager::loadFromFile(const std::string& filePath) {
         if (config.contains("audio")) {
             auto& audio = config["audio"];
             if (audio.contains("sampleRate")) {
+                AppConfig::getInstance().sampleRate().set(audio["sampleRate"]);
+            }
+            if (audio.contains("bufferSize")) {
+                AppConfig::getInstance().bufferSize().set(audio["bufferSize"]);
+            }
+            if (audio.contains("masterVolume")) {
+                AppConfig::getInstance().masterVolume().set(audio["masterVolume"]);
+            }
+        }
+
+        // Apply UI settings
+        if (config.contains("ui")) {
+            auto& ui = config["ui"];
+            if (ui.contains("windowWidth")) {
+                AppConfig::getInstance().windowWidth().set(ui["windowWidth"]);
+            }
+            if (ui.contains("windowHeight")) {
+                AppConfig::getInstance().windowHeight().set(ui["windowHeight"]);
+            }
+            if (ui.contains("fullscreen")) {
+                AppConfig::getInstance().fullscreen().set(ui["fullscreen"]);
+            }
+            if (ui.contains("theme")) {
+                AppConfig::getInstance().themeName() = ui["theme"];
+            }
+        }
+
+        // Apply performance settings
+        if (config.contains("performance")) {
+            auto& perf = config["performance"];
+            if (perf.contains("audioThreads")) {
+                AppConfig::getInstance().audioThreads().set(perf["audioThreads"]);
+            }
+            if (perf.contains("vsyncEnabled")) {
+                AppConfig::getInstance().vsyncEnabled().set(perf["vsyncEnabled"]);
+            }
+        }
+
+        m_configFilePath = configPath;
+        Log::info("Configuration loaded from: " + configPath);
+        return true;
+
+    } catch (const std::exception& e) {
+        Log::error("Failed to load configuration: " + std::string(e.what()));
+        return false;
+    }
+}
+```
+
+**Step 3: Configuration File Format**
+```json
+{
+    "audio": {
+        "sampleRate": 48000,
+        "bufferSize": 256,
+        "masterVolume": 1.0,
+        "lowLatencyMode": true,
+        "exclusiveMode": true
+    },
+    "ui": {
+        "windowWidth": 1280,
+        "windowHeight": 720,
+        "fullscreen": false,
+        "theme": "Aestra-dark",
+        "showFPS": true,
+        "adaptiveFPS": true
+    },
+    "performance": {
+        "audioThreads": 4,
+        "vsyncEnabled": true,
+        "maxCPUUsage": 80.0,
+        "renderQuality": "high"
+    },
+    "paths": {
+        "lastProjectPath": "C:/Users/Music/Projects",
+        "samplesDirectory": "C:/Users/Music/Samples",
+        "pluginsDirectory": "C:/Program Files/VST3"
+    },
+    "keyboard": {
+        "shortcuts": {
+            "play": "space",
+            "stop": "escape",
+            "record": "r",
+            "save": "ctrl+s",
+            "open": "ctrl+o"
+        }
+    }
+}
+```
+
+**Step 4: Integration with Existing Code**
+```cpp
+// Before: Hard-coded values
+void AudioDeviceManager::initialize() {
+    m_sampleRate = 48000; // Hard-coded
+    m_bufferSize = 256;   // Hard-coded
+}
+
+// After: Configuration-based
+void AudioDeviceManager::initialize() {
+    auto& config = AppConfig::getInstance();
+    m_sampleRate = config.sampleRate();
+    m_bufferSize = config.bufferSize();
+
+    Log::info("Audio initialized: " + std::to_string(m_sampleRate) + "Hz, " +
+              std::to_string(m_bufferSize) + " samples");
+}
+```
+
 ## New Features & Functionality
 
 ### 1. Volume/Pan Controls Per Track (Priority: HIGH)
@@ -2341,179 +2450,3 @@ void operator delete(void* ptr, size_t size) noexcept {
 4. Set up performance monitoring and testing infrastructure
 
 *This document serves as the technical blueprint for Aestra core improvements. Each phase builds upon previous achievements while maintaining stability and user experience.*
-                AppConfig::getInstance().sampleRate().set(audio["sampleRate"]);
-            }
-            if (audio.contains("bufferSize")) {
-                AppConfig::getInstance().bufferSize().set(audio["bufferSize"]);
-            }
-            if (audio.contains("masterVolume")) {
-                AppConfig::getInstance().masterVolume().set(audio["masterVolume"]);
-            }
-        }
-        
-        // Apply UI settings
-        if (config.contains("ui")) {
-            auto& ui = config["ui"];
-            if (ui.contains("windowWidth")) {
-                AppConfig::getInstance().windowWidth().set(ui["windowWidth"]);
-            }
-            if (ui.contains("windowHeight")) {
-                AppConfig::getInstance().windowHeight().set(ui["windowHeight"]);
-            }
-            if (ui.contains("fullscreen")) {
-                AppConfig::getInstance().fullscreen().set(ui["fullscreen"]);
-            }
-            if (ui.contains("theme")) {
-                AppConfig::getInstance().themeName() = ui["theme"];
-            }
-        }
-        
-        // Apply performance settings
-        if (config.contains("performance")) {
-            auto& perf = config["performance"];
-            if (perf.contains("audioThreads")) {
-                AppConfig::getInstance().audioThreads().set(perf["audioThreads"]);
-            }
-            if (perf.contains("vsyncEnabled")) {
-                AppConfig::getInstance().vsyncEnabled().set(perf["vsyncEnabled"]);
-            }
-        }
-        
-        m_configFilePath = configPath;
-        Log::info("Configuration loaded from: " + configPath);
-        return true;
-        
-    } catch (const std::exception& e) {
-        Log::error("Failed to load configuration: " + std::string(e.what()));
-        return false;
-    }
-}
-```
-
-**Step 3: Configuration File Format**
-```json
-{
-    "audio": {
-        "sampleRate": 48000,
-        "bufferSize": 256,
-        "masterVolume": 1.0,
-        "lowLatencyMode": true,
-        "exclusiveMode": true
-    },
-    "ui": {
-        "windowWidth": 1280,
-        "windowHeight": 720,
-        "fullscreen": false,
-        "theme": "Aestra-dark",
-        "showFPS": true,
-        "adaptiveFPS": true
-    },
-    "performance": {
-        "audioThreads": 4,
-        "vsyncEnabled": true,
-        "maxCPUUsage": 80.0,
-        "renderQuality": "high"
-    },
-    "paths": {
-        "lastProjectPath": "C:/Users/Music/Projects",
-        "samplesDirectory": "C:/Users/Music/Samples",
-        "pluginsDirectory": "C:/Program Files/VST3"
-    },
-    "keyboard": {
-        "shortcuts": {
-            "play": "space",
-            "stop": "escape",
-            "record": "r",
-            "save": "ctrl+s",
-            "open": "ctrl+o"
-        }
-    }
-}
-```
-
-**Step 4: Integration with Existing Code**
-```cpp
-// Before: Hard-coded values
-void AudioDeviceManager::initialize() {
-    m_sampleRate = 48000; // Hard-coded
-    m_bufferSize = 256;   // Hard-coded
-}
-
-// After: Configuration-based
-void AudioDeviceManager::initialize() {
-    auto& config = AppConfig::getInstance();
-    m_sampleRate = config.sampleRate();
-    m_bufferSize = config.bufferSize();
-    
-    Log::info("Audio initialized: " + std::to_string(m_sampleRate) + "Hz, " + 
-              std::to_string(m_bufferSize) + " samples");
-}
-```
-}
-```
-
-**Step 5: UI Integration**
-```cpp
-// UndoRedoButtons.h
-class UndoRedoButtons : public NUIComponent {
-public:
-    void render(NUIRenderer& renderer) override;
-    void onMouseClick(const MouseClickEvent& event) override;
-    
-private:
-    void renderUndoButton(NUIRenderer& renderer, const NUIRect& bounds);
-    void renderRedoButton(NUIRenderer& renderer, const NUIRect& bounds);
-    
-    bool m_hoveringUndo = false;
-    bool m_hoveringRedo = false;
-};
-
-// TransportBar.h (enhancement)
-class TransportBar {
-public:
-    void setUndoButton(std::unique_ptr<UndoRedoButtons> undoRedo);
-    
-private:
-    std::unique_ptr<UndoRedoButtons> m_undoRedoButtons;
-};
-
-// Keyboard Shortcuts
-void EventHandler::setupKeyboardShortcuts() {
-    m_window->setKeyCallback([this](int key, bool pressed) {
-        if (pressed) {
-            auto& commandManager = CommandManager::getInstance();
-            
-            if (key == Aestra_KEY_CTRL_Z) {
-                if (key == Aestra_KEY_SHIFT) {
-                    commandManager.redo(); // Ctrl+Shift+Z or Ctrl+Y
-                } else {
-                    commandManager.undo(); // Ctrl+Z
-                }
-            }
-            // ... other shortcuts
-        }
-    });
-}
-```
-
-#### History Management
-```cpp
-// CommandHistory.h
-class CommandHistory {
-public:
-    struct HistoryEntry {
-        std::string description;
-        std::chrono::system_clock::time_point timestamp;
-        size_t undoStackSize;
-        size_t redoStackSize;
-    };
-    
-    void recordCommand(const std::string& description);
-    std::vector<HistoryEntry> getHistory(size_t maxEntries = 20) const;
-    void clearHistory();
-    
-private:
-    std::vector<HistoryEntry> m_history;
-    mutable std::mutex m_historyMutex;
-};
-```
