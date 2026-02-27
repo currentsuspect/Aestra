@@ -71,5 +71,17 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
 - **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
 
+## 5. Future Roadmap
+
+### Cloud Collaboration
+
+- **Vision**: Real-time multi-user editing of the same project file, similar to Google Docs but for audio.
+- **Tech**: CRDT (Conflict-free Replicated Data Types) for track state synchronization over WebSockets.
+
+### AI Assistant
+
+- **Vision**: "Aestra Copilot" that suggests EQ curves, compression settings, and arrangement ideas based on genre analysis.
+- **Tech**: Lightweight Transformer models running locally via ONNX Runtime.
+
 ---
 *Signed: Bolt*

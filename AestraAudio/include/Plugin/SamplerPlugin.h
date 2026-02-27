@@ -82,9 +82,12 @@ private:
         std::string path;
     };
 
-    // Shared Ptr accessed atomically (C++11/17 free functions)
-    // No mutex needed for access anymore!
-    std::shared_ptr<SampleData> m_data;
+    // Real-Time Safety:
+    // Audio Thread reads m_activeData (Raw Pointer, Atomic Load) -> Lock-Free.
+    // Main Thread updates m_dataOwner (Shared Ptr) and syncs raw pointer.
+    // GarbageCollector handles destruction of old shared_ptrs.
+    std::atomic<SampleData*> m_activeData{nullptr};
+    std::shared_ptr<SampleData> m_dataOwner;
 
     // Parameters
     enum ParamID {

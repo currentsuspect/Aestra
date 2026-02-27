@@ -27,7 +27,8 @@ bool SamplerPlugin::initialize(double sampleRate, uint32_t maxBlockSize) {
 void SamplerPlugin::shutdown() {
     m_active = false;
     // Force release of data to ensure cleanup
-    auto old = std::atomic_exchange(&m_data, std::shared_ptr<SampleData>(nullptr));
+    m_activeData.store(nullptr, std::memory_order_release);
+    auto old = std::atomic_exchange(&m_dataOwner, std::shared_ptr<SampleData>(nullptr));
     GarbageCollector::instance().release(old);
 }
 
@@ -79,12 +80,15 @@ bool SamplerPlugin::loadSample(const std::string& path) {
     newData->channels = channels;
     newData->path = path;
 
-    // Atomic Swap (Thread-Safe, Lock-Free-ish)
-    // std::atomic_exchange uses standard atomics for shared_ptr
-    auto oldData = std::atomic_exchange(&m_data, newData);
+    // RT-Safe Swap Pattern:
+    // 1. Swap ownership (Main Thread)
+    // 2. Update raw pointer (Atomic)
+    // 3. Release old owner to GC
 
-    // Safely dispose of old data via Garbage Collector (avoids delete on Audio Thread)
-    GarbageCollector::instance().release(oldData);
+    auto oldOwner = std::atomic_exchange(&m_dataOwner, newData);
+    m_activeData.store(newData.get(), std::memory_order_release);
+
+    GarbageCollector::instance().release(oldOwner);
     
     return true;
 }
@@ -112,8 +116,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs,
         }
     }
     
-    // Thread-safe access to sample data
-    auto currentData = std::atomic_load(&m_data);
+    // Thread-safe access to sample data (Raw Pointer)
+    SampleData* currentData = m_activeData.load(std::memory_order_acquire);
     if (!currentData || currentData->data.empty()) return;
 
     // Parameters
@@ -363,7 +367,8 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
      
      // Sample Path
      {
-         auto current = std::atomic_load(&m_data);
+         // Saving state happens on Main/UI thread, safe to read owner or active
+         auto current = m_activeData.load(std::memory_order_acquire);
          if (current && !current->path.empty()) {
              json.set("samplePath", Aestra::JSON(current->path));
          }
