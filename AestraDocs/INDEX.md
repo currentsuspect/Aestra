@@ -57,18 +57,18 @@
 ## 🗺️ Vision & Planning
 - [**v1 Beta Roadmap**](../docs/technical/roadmap.md) - Official execution plan (Jan 2026)
 - [v1 Beta Task List](../docs/technical/v1_beta_task_list.md) - Detailed backlog
-- [Vision & Roadmap](Vision%20&%20Roadmap.md) - Legacy (redirects to above)
+- [Vision & Roadmap](Vision_and_Roadmap.md) - Legacy (redirects to above)
 
 ## 🏗️ Module READMEs
 - [`../AestraCore/README.md`](../AestraCore/README.md) - Core utilities
 - [`../AestraPlat/README.md`](../AestraPlat/README.md) - Platform abstraction
-- [`../AestraUI/docs/`](../AestraUI/docs/) - UI framework docs
+- [`../docs/technical/ui/`](../docs/technical/ui/) - UI framework docs
 - [`../AestraAudio/README.md`](../AestraAudio/README.md) - Audio system
 
 ## 📖 Root Documentation
 - [`../README.md`](../README.md) - Project overview
-- [`../BUILD.md`](../BUILD.md) - Build instructions
-- [`../CONTRIBUTING.md`](../CONTRIBUTING.md) - Contribution guidelines
+- [`../docs/getting-started/building.md`](../docs/getting-started/building.md) - Build instructions
+- [`../docs/developer/contributing.md`](../docs/developer/contributing.md) - Contribution guidelines
 - [`../docs/`](../docs/) - Additional documentation
 
 ---

@@ -99,22 +99,22 @@ UI framework with OpenGL rendering:
 
 **Key Guides:**
 
-- [Platform Migration](../AestraUI/docs/PLATFORM_MIGRATION.md) - Migration from old Windows code to AestraPlat
-- [Architecture](../AestraUI/docs/ARCHITECTURE.md) - UI framework architecture
-- [Custom Window Integration](../AestraUI/docs/CUSTOM_WINDOW_INTEGRATION.md) - Building custom windows
-- [Coordinate System Guide](AestraUI_COORDINATE_SYSTEM.md) - **CRITICAL:** Understanding AestraUI positioning
-- [Coordinate Utilities v1.1](COORDINATE_UTILITIES_V1.1.md) - **NEW:** Convenience helpers for positioning
-- [Icon System Guide](../AestraUI/docs/ICON_SYSTEM_GUIDE.md) - SVG icon usage
-- [Theme Demo Guide](../AestraUI/docs/THEME_DEMO_GUIDE.md) - Theming system
-- [Windows Snap Guide](../AestraUI/docs/WINDOWS_SNAP_GUIDE.md) - Window snapping behavior
+- [Platform Migration](../docs/technical/ui/PLATFORM_MIGRATION.md) - Migration from old Windows code to AestraPlat
+- [Architecture](../docs/technical/ui/ARCHITECTURE.md) - UI framework architecture
+- [Custom Window Integration](systems/CUSTOM_WINDOW_INTEGRATION.md) - Building custom windows
+- [Coordinate System Guide](architecture/AestraUI_COORDINATE_SYSTEM.md) - **CRITICAL:** Understanding AestraUI positioning
+- [Coordinate Utilities v1.1](guides/COORDINATE_UTILITIES_V1.1.md) - **NEW:** Convenience helpers for positioning
+- [Icon System Guide](../docs/technical/ui/ICON_SYSTEM_GUIDE.md) - SVG icon usage
+- [Theme Demo Guide](../docs/technical/ui/THEME_DEMO_GUIDE.md) - Theming system
+- [Windows Snap Guide](../docs/technical/ui/WINDOWS_SNAP_GUIDE.md) - Window snapping behavior
 
 ## 🎯 Quick Links
 
 ### For New Contributors
 
-1. Read [Developer Guide](DEVELOPER_GUIDE.md) - Understand the philosophy
-2. Check [Build Status](BUILD_STATUS.md) - See what's complete
-3. Review [Branching Strategy](BRANCHING_STRATEGY.md) - Learn the workflow
+1. Read [Developer Guide](guides/DEVELOPER_GUIDE.md) - Understand the philosophy
+2. Check [Build Status](status/BUILD_STATUS.md) - See what's complete
+3. Review [Branching Strategy](status/BRANCHING_STRATEGY.md) - Learn the workflow
 4. Pick a module and dive in!
 
 ### For Module Development
@@ -208,8 +208,8 @@ Aestra is built with intention. Every line of code, every architectural decision
 
 ## 🤝 Contributing
 
-1. Read the [Developer Guide](DEVELOPER_GUIDE.md)
-2. Follow the [Branching Strategy](BRANCHING_STRATEGY.md)
+1. Read the [Developer Guide](guides/DEVELOPER_GUIDE.md)
+2. Follow the [Branching Strategy](status/BRANCHING_STRATEGY.md)
 3. Write clean, documented code
 4. Test thoroughly
 5. Submit with clear commit messages
