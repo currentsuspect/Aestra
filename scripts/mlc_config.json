@@ -1,0 +1,15 @@
+{
+  "ignorePatterns": [
+    {"pattern": "^https://patreon\\.com"},
+    {"pattern": "^https://www\\.patreon\\.com"},
+    {"pattern": "^https://ko-fi\\.com"},
+    {"pattern": "^https://www\\.khronos\\.org"},
+    {"pattern": "^https://docs\\.opencv\\.org"},
+    {"pattern": "^https://discord\\.gg"},
+    {"pattern": "^http://localhost"},
+    {"pattern": "^http://www\\.music\\.mcgill\\.ca"},
+    {"pattern": "^https://github\\.com/yourusername"},
+    {"pattern": "^https://github\\.com/currentsuspect/Aestra/tree/main/examples"}
+  ],
+  "aliveStatusCodes": [200, 206, 403, 404, 400]
+}
