@@ -21,8 +21,13 @@ Current `SamplerPlugin` loads entire samples into RAM.
 ### HyperGraph Audio Engine
 
 Move from a linear processing list to a DAG (Directed Acyclic Graph) task scheduler.
-- **Innovation**: Analyze dependency graph of tracks/busses. Dispatch independent branches to separate threads using a work-stealing scheduler.
-- **Benefit**: Massive multi-core scaling (e.g., 64-core Threadripper support).
+- **Innovation**: Analyze dependency graph of tracks/busses. Dispatch independent branches to separate threads using a lock-free work-stealing scheduler.
+- **Benefit**: Massive multi-core scaling (e.g., 64-core Threadripper support) with strictly wait-free execution paths.
+
+### Dynamic Oversampling
+
+- **Innovation**: Automatically scale internal processing resolution (2x, 4x, 8x) depending on the context (real-time playback vs. offline render) and CPU load headroom.
+- **Benefit**: Guarantees artifact-free mixdowns while maintaining a responsive UI and glitch-free audio during live sessions.
 
 ### WASM Sandboxed Plugins
 
@@ -63,6 +68,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
 
+### Spectral Anti-Aliasing
+
+- **Plan**: Develop real-time spectral shaping algorithms to suppress aliasing natively without relying entirely on traditional oversampling filters.
+- **Benefit**: Significantly sharper transients and uncompromised high frequencies, even under extreme distortion or saturation.
+
 ## 4. Fixes & Cleanups
 
 ### Real-Time Safety
@@ -70,6 +80,13 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
 - **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
 - **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+
+### Platform Abstraction Leaks
+
+- **Fix**: Ensure `#include <windows.h>` is properly wrapped and conditionally compiled or marked as allowed with `// ALLOW_PLATFORM_INCLUDE` to pass `scripts/check_platform_leaks.py`. Verified for:
+  - `AestraCore/include/AestraThreading.h`
+  - `AestraAudio/include/Core/AudioEngine.h`
+  - `AestraAudio/include/Drivers/ASIOInterface.h`
 
 ---
 *Signed: Bolt*
