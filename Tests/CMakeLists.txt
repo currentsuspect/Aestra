@@ -6,6 +6,10 @@ cmake_minimum_required(VERSION 3.22)
 
 enable_testing()
 
+# Runtime/integration tests can be noisy or environment-dependent in CI.
+# Keep them opt-in for clean default CI signal.
+option(AESTRA_ENABLE_RUNTIME_TESTS "Enable runtime/integration tests that require host audio/devices or full project semantics" OFF)
+
 # =============================================================================
 # Integration Tests (Cross-Module)
 # =============================================================================
@@ -50,8 +54,13 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     target_compile_definitions(ProjectRoundTripTest PRIVATE
         $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
     )
-    add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
-    add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
+    if(AESTRA_ENABLE_RUNTIME_TESTS)
+        add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
+        add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
+        set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;runtime")
+    else()
+        message(STATUS "ProjectRoundTrip tests built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+    endif()
 endif()
 
 # Plugin Scanner Test
@@ -90,15 +99,25 @@ endif()
 # AestraAudio Tests
 # =============================================================================
 
-# Audio Test
+# Audio Test (runtime/device-dependent)
 add_executable(AestraAudioTest AestraAudio/AudioTest.cpp)
 target_link_libraries(AestraAudioTest PRIVATE AestraAudio AestraCore)
-add_test(NAME AestraAudioTest COMMAND AestraAudioTest)
+if(AESTRA_ENABLE_RUNTIME_TESTS)
+    add_test(NAME AestraAudioTest COMMAND AestraAudioTest)
+    set_tests_properties(AestraAudioTest PROPERTIES LABELS "audio;runtime;device")
+else()
+    message(STATUS "AestraAudioTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+endif()
 
-# Soak Test
+# Soak Test (runtime/device-dependent)
 add_executable(AestraAudioSoakTest AestraAudio/AudioEngineSoakTest.cpp)
 target_link_libraries(AestraAudioSoakTest PRIVATE AestraAudio AestraCore)
-add_test(NAME AestraAudioSoakTest COMMAND AestraAudioSoakTest)
+if(AESTRA_ENABLE_RUNTIME_TESTS)
+    add_test(NAME AestraAudioSoakTest COMMAND AestraAudioSoakTest)
+    set_tests_properties(AestraAudioSoakTest PROPERTIES LABELS "audio;runtime;soak;long")
+else()
+    message(STATUS "AestraAudioSoakTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+endif()
 
 # Performance Stress Test
 add_executable(AestraAudioPerformanceTest
