@@ -1,4 +1,9 @@
 #pragma once
+#include <cstdint>
+
 namespace Aestra { namespace Audio {
-    // Stub
+    /**
+     * @brief Signed sample index for audio positioning
+     */
+    using SampleIndex = int64_t;
 }}
