@@ -13,6 +13,9 @@ endif()
 
 project(AESTRA VERSION 0.1.0 LANGUAGES CXX)
 
+# Ensure CTest discovery/registration works from the build root.
+include(CTest)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
