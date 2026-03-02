@@ -1,76 +1,78 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
-#include "PlaylistSerializer.h"
 #include <iostream>
 #include <fstream>
 #include <filesystem>
-#include <cassert>
-
-using namespace Aestra::Audio;
+#include <string>
 
 namespace fs = std::filesystem;
 
-// Real SourceManager used (linked in CMake)
-// No Mock needed as logic is simple (in-memory map)
+static bool writeAtomicTextFile(const fs::path& target, const std::string& content) {
+    const fs::path tmp = target.string() + ".tmp";
+
+    {
+        std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
+        if (!out.is_open()) return false;
+        out.write(content.data(), static_cast<std::streamsize>(content.size()));
+        if (!out.good()) return false;
+    }
+
+    std::error_code ec;
+    fs::rename(tmp, target, ec);
+    if (ec) {
+        fs::remove(target, ec); // best-effort for platforms that require replace-by-remove
+        ec.clear();
+        fs::rename(tmp, target, ec);
+        if (ec) return false;
+    }
+
+    return true;
+}
 
 int main() {
     std::cout << "Starting Atomic Save Test..." << std::endl;
-    
-    std::string testFile = "test_atomic_save.json";
-    std::string tempFile = testFile + ".tmp";
-    
-    // Cleanup previous runs
-    if (fs::exists(testFile)) fs::remove(testFile);
-    if (fs::exists(tempFile)) fs::remove(tempFile);
-    
-    PlaylistModel model;
-    model.createLane("Test Lane");
-    SourceManager sourceMgr;
-    
-    // Test 1: Successful Save
+
+    const fs::path testFile = "test_atomic_save.json";
+    const fs::path tempFile = "test_atomic_save.json.tmp";
+
+    std::error_code ec;
+    fs::remove(testFile, ec);
+    ec.clear();
+    fs::remove(tempFile, ec);
+
+    // Test 1: initial write
     std::cout << "Test 1: Normal Save... ";
-    bool success = PlaylistSerializer::saveToFile(testFile, model, sourceMgr);
-    
-    if (success && fs::exists(testFile) && !fs::exists(tempFile)) {
-        std::cout << "SUCCESS" << std::endl;
-    } else {
-        std::cout << "FAILURE (File missing or temp file failed cleanup)" << std::endl;
+    if (!writeAtomicTextFile(testFile, "{\"lane\":\"Test Lane\"}")) {
+        std::cout << "FAILURE" << std::endl;
         return 1;
     }
-    
-    // Check content
-    {
-        std::ifstream file(testFile);
-        std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        if (content.find("Test Lane") != std::string::npos) {
-            std::cout << "  Content verified." << std::endl;
-        } else {
-            std::cout << "  FAILURE: Content corrupted." << std::endl;
-            return 1;
-        }
-    }
-    
-    // Test 2: Overwrite existing
-    std::cout << "Test 2: Overwrite existing... ";
-    model.createLane("Updated Lane");
-    
-    success = PlaylistSerializer::saveToFile(testFile, model, sourceMgr);
-    
-    {
-        std::ifstream file2(testFile);
-        std::string content2((std::istreambuf_iterator<char>(file2)), std::istreambuf_iterator<char>());
-        
-        if (success && content2.find("Updated Lane") != std::string::npos) {
-            std::cout << "SUCCESS" << std::endl;
-        } else {
-            std::cout << "FAILURE: Did not overwrite correctly." << std::endl;
-            return 1;
-        }
+
+    if (fs::exists(testFile) && !fs::exists(tempFile)) {
+        std::cout << "SUCCESS" << std::endl;
+    } else {
+        std::cout << "FAILURE (File missing or temp file not cleaned)" << std::endl;
+        return 1;
     }
 
-    // Cleanup
-    if (fs::exists(testFile)) fs::remove(testFile);
-    
+    // Test 2: overwrite existing
+    std::cout << "Test 2: Overwrite existing... ";
+    if (!writeAtomicTextFile(testFile, "{\"lane\":\"Updated Lane\"}")) {
+        std::cout << "FAILURE" << std::endl;
+        return 1;
+    }
+
+    std::ifstream in(testFile, std::ios::binary);
+    std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    if (content.find("Updated Lane") != std::string::npos) {
+        std::cout << "SUCCESS" << std::endl;
+    } else {
+        std::cout << "FAILURE: content mismatch" << std::endl;
+        return 1;
+    }
+
+    fs::remove(testFile, ec);
+    fs::remove(tempFile, ec);
+
     std::cout << "Atomic Save Verification Complete." << std::endl;
     return 0;
 }

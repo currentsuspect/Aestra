@@ -96,7 +96,7 @@ struct AudioQualitySettings {
     OversamplingMode oversampling{OversamplingMode::None};
     bool removeDCOffset{true};
     bool enableSoftClipping{false};
-    AestraMode AestraMode{AestraMode::Off};
+    AestraMode aestraMode{AestraMode::Off};
 
     void applyPreset(QualityPreset p) {
         preset = p;
