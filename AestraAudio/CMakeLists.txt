@@ -275,6 +275,9 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Commands/CommandHistory.h
     include/Commands/SplitClipCommand.h
     include/Commands/AddClipCommand.h
+    include/Commands/MoveClipCommand.h
+    include/Commands/RemoveClipCommand.h
+    include/Commands/MacroCommand.h
     
     src/DummyAudioDriver.h
     
