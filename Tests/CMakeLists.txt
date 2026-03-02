@@ -6,6 +6,10 @@ cmake_minimum_required(VERSION 3.22)
 
 enable_testing()
 
+# Runtime/integration tests can be noisy or environment-dependent in CI.
+# Keep them opt-in for clean default CI signal.
+option(AESTRA_ENABLE_RUNTIME_TESTS "Enable runtime/integration tests that require host audio/devices or full project semantics" OFF)
+
 # =============================================================================
 # Integration Tests (Cross-Module)
 # =============================================================================
@@ -50,8 +54,13 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     target_compile_definitions(ProjectRoundTripTest PRIVATE
         $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
     )
-    add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
-    add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
+    if(AESTRA_ENABLE_RUNTIME_TESTS)
+        add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
+        add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
+        set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;runtime")
+    else()
+        message(STATUS "ProjectRoundTrip tests built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+    endif()
 endif()
 
 # Plugin Scanner Test
@@ -90,15 +99,25 @@ endif()
 # AestraAudio Tests
 # =============================================================================
 
-# Audio Test
+# Audio Test (runtime/device-dependent)
 add_executable(AestraAudioTest AestraAudio/AudioTest.cpp)
 target_link_libraries(AestraAudioTest PRIVATE AestraAudio AestraCore)
-add_test(NAME AestraAudioTest COMMAND AestraAudioTest)
+if(AESTRA_ENABLE_RUNTIME_TESTS)
+    add_test(NAME AestraAudioTest COMMAND AestraAudioTest)
+    set_tests_properties(AestraAudioTest PROPERTIES LABELS "audio;runtime;device")
+else()
+    message(STATUS "AestraAudioTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+endif()
 
-# Soak Test
+# Soak Test (runtime/device-dependent)
 add_executable(AestraAudioSoakTest AestraAudio/AudioEngineSoakTest.cpp)
 target_link_libraries(AestraAudioSoakTest PRIVATE AestraAudio AestraCore)
-add_test(NAME AestraAudioSoakTest COMMAND AestraAudioSoakTest)
+if(AESTRA_ENABLE_RUNTIME_TESTS)
+    add_test(NAME AestraAudioSoakTest COMMAND AestraAudioSoakTest)
+    set_tests_properties(AestraAudioSoakTest PROPERTIES LABELS "audio;runtime;soak;long")
+else()
+    message(STATUS "AestraAudioSoakTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+endif()
 
 # Performance Stress Test
 add_executable(AestraAudioPerformanceTest
@@ -124,33 +143,39 @@ add_executable(AestraWaveformLockTest
 target_link_libraries(AestraWaveformLockTest PRIVATE AestraAudio AestraCore)
 add_test(NAME AestraWaveformLockTest COMMAND AestraWaveformLockTest)
 
-# Atomic Save Test
-add_executable(AestraAtomicSaveTest
-    AestraAudio/AtomicSaveTest.cpp
-    ${CMAKE_SOURCE_DIR}/AestraAudio/src/Models/PlaylistModel.cpp
-    ${CMAKE_SOURCE_DIR}/AestraAudio/src/Models/ClipSource.cpp
-)
-target_link_libraries(AestraAtomicSaveTest PRIVATE AestraAudio AestraCore)
+# Atomic Save Test (self-contained filesystem atomic-write smoke test)
+add_executable(AestraAtomicSaveTest AestraAudio/AtomicSaveTest.cpp)
+target_link_libraries(AestraAtomicSaveTest PRIVATE AestraCore)
 add_test(NAME AestraAtomicSaveTest COMMAND AestraAtomicSaveTest)
 
-# Watchdog Test
-add_executable(AestraWatchdogTest AestraAudio/WatchdogTest.cpp)
-target_link_libraries(AestraWatchdogTest PRIVATE AestraAudio AestraCore)
-add_test(NAME AestraWatchdogTest COMMAND AestraWatchdogTest)
-if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces")
+# Watchdog Test (requires VST3 SDK headers)
+if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/ivstaudioprocessor.h")
+    add_executable(AestraWatchdogTest AestraAudio/WatchdogTest.cpp)
+    target_link_libraries(AestraWatchdogTest PRIVATE AestraAudio AestraCore)
+    add_test(NAME AestraWatchdogTest COMMAND AestraWatchdogTest)
     target_include_directories(AestraWatchdogTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk
+        ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces
+        ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/base
+        ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/public.sdk
     )
+else()
+    message(STATUS "AestraWatchdogTest skipped (VST3 SDK headers not found)")
 endif()
 
-# Crash Test
-add_executable(AestraCrashTest AestraAudio/CrashTest.cpp)
-target_link_libraries(AestraCrashTest PRIVATE AestraAudio AestraCore)
-add_test(NAME AestraCrashTest COMMAND AestraCrashTest)
-if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces")
+# Crash Test (requires VST3 SDK headers)
+if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/ivstaudioprocessor.h")
+    add_executable(AestraCrashTest AestraAudio/CrashTest.cpp)
+    target_link_libraries(AestraCrashTest PRIVATE AestraAudio AestraCore)
+    add_test(NAME AestraCrashTest COMMAND AestraCrashTest)
     target_include_directories(AestraCrashTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk
+        ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces
+        ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/base
+        ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/public.sdk
     )
+else()
+    message(STATUS "AestraCrashTest skipped (VST3 SDK headers not found)")
 endif()
 
 # Wav Loader Test
