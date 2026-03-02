@@ -475,7 +475,12 @@ elseif(UNIX)
 
         add_library(AestraAudio ALIAS AestraAudioLinux)
     else()
-        # Create a dummy target so tests don't fail configuration
+        # No ALSA - add the stub source directly to AestraAudioCore
+        target_sources(AestraAudioCore PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/Core/DriverRegistryStub.cpp
+        )
+        
+        # Create an interface library for compatibility
         add_library(AestraAudio INTERFACE)
         target_link_libraries(AestraAudio INTERFACE AestraAudioCore)
     endif()

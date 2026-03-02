@@ -98,6 +98,9 @@ public:
     struct UnitMidiRoute {
         UnitID unitId{0};
         MidiBuffer* midiBuffer{nullptr};
+        
+        UnitMidiRoute() = default;
+        UnitMidiRoute(UnitID id, MidiBuffer* buf) : unitId(id), midiBuffer(buf) {}
     };
     
     /**
