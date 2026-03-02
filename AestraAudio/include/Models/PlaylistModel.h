@@ -2,6 +2,9 @@
 #pragma once
 
 #include "ClipInstance.h"
+#include "PlaylistRuntimeSnapshot.h"
+#include "PatternManager.h"
+#include "SourceManager.h"
 #include "../AestraUUID.h"
 #include <vector>
 #include <unordered_map>
@@ -19,6 +22,14 @@ struct PlaylistLane {
     std::string name;
     int index = 0;
     std::vector<ClipInstance> clips;
+    
+    // Lane properties
+    float volume{1.0f};
+    float pan{0.0f};
+    bool muted{false};
+    bool solo{false};
+    uint32_t colorRGBA{0xFFFFFFFF};
+    std::vector<AutomationCurve> automationCurves;
     
     PlaylistLane() = default;
     explicit PlaylistLane(int idx) : index(idx) {
@@ -264,12 +275,166 @@ public:
         m_clipChangedCallback = std::move(callback);
     }
     
+    // === Runtime Snapshot ===
+    
+    /**
+     * @brief Build a runtime snapshot for audio rendering
+     * @param patterns Pattern manager for MIDI patterns
+     * @param sources Source manager for audio data
+     * @return Runtime snapshot (nullptr if empty)
+     */
+    std::unique_ptr<PlaylistRuntimeSnapshot> buildRuntimeSnapshot(
+        const PatternManager& patterns,
+        const SourceManager& sources) const {
+        
+        std::lock_guard<std::mutex> lock(m_mutex);
+        
+        if (m_lanes.empty()) {
+            return nullptr;
+        }
+        
+        auto snapshot = std::make_unique<PlaylistRuntimeSnapshot>();
+        snapshot->lanes.reserve(m_lanes.size());
+        snapshot->bpm = 120.0; // Default BPM
+        snapshot->projectSampleRate = 48000; // Default sample rate
+        
+        const double samplesPerBeat = (48000.0 * 60.0) / snapshot->bpm;
+        
+        for (const auto& lane : m_lanes) {
+            LaneRuntimeInfo laneInfo;
+            laneInfo.clips.reserve(lane.clips.size());
+            
+            for (const auto& clip : lane.clips) {
+                ClipRuntimeInfo clipInfo;
+                clipInfo.startTime = static_cast<uint64_t>(clip.startBeat * samplesPerBeat);
+                clipInfo.duration = static_cast<uint64_t>(clip.durationBeats * samplesPerBeat);
+                clipInfo.sourceStart = static_cast<uint64_t>(clip.sourceOffset * samplesPerBeat);
+                clipInfo.gainLinear = clip.edits.gain;
+                clipInfo.isAudioClip = true;
+                
+                // Try to get audio data from source
+                if (clip.sourceId != 0) {
+                    if (auto* source = sources.getSource(ClipSourceID{clip.sourceId})) {
+                        clipInfo.audioData = const_cast<AudioBufferData*>(source->getRawBuffer());
+                        if (clipInfo.audioData) {
+                            clipInfo.sourceSampleRate = clipInfo.audioData->sampleRate;
+                            clipInfo.sourceChannels = clipInfo.audioData->numChannels;
+                        }
+                    }
+                }
+                
+                laneInfo.clips.push_back(clipInfo);
+            }
+            
+            snapshot->lanes.push_back(std::move(laneInfo));
+        }
+        
+        return snapshot;
+    }
+    
+    /**
+     * @brief Get the project sample rate
+     */
+    double getProjectSampleRate() const {
+        return 48000.0; // Default for now
+    }
+    
+    /**
+     * @brief Set BPM
+     */
+    void setBPM(double bpm) {
+        m_bpm = bpm;
+    }
+    
+    /**
+     * @brief Get BPM
+     */
+    double getBPM() const {
+        return m_bpm;
+    }
+    
+    /**
+     * @brief Set pattern manager reference
+     */
+    void setPatternManager(PatternManager* pm) {
+        m_patternManager = pm;
+    }
+    
+    /**
+     * @brief Get lane ID by index
+     */
+    PlaylistLaneID getLaneId(size_t index) const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (index < m_lanes.size()) {
+            return m_lanes[index].id;
+        }
+        return PlaylistLaneID();
+    }
+    
+    /**
+     * @brief Add a clip from a pattern
+     */
+    ClipInstanceID addClipFromPattern(const PlaylistLaneID& laneId, PatternID patternId, double startBeat, double durationBeats) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        auto it = m_laneMap.find(laneId);
+        if (it == m_laneMap.end()) return ClipInstanceID();
+
+        ClipInstance clip;
+        clip.id = ClipInstanceID::generate();
+        clip.startBeat = startBeat;
+        clip.durationBeats = durationBeats;
+        clip.sourceId = patternId.value; // Store pattern ID in sourceId for now
+
+        m_lanes[it->second].clips.push_back(clip);
+        m_clipLaneMap[clip.id] = laneId;
+
+        notifyClipChanged(clip.id);
+        return clip.id;
+    }
+
+    /**
+     * @brief Get all lane IDs
+     */
+    std::vector<PlaylistLaneID> getLaneIDs() const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        std::vector<PlaylistLaneID> ids;
+        ids.reserve(m_lanes.size());
+        for (const auto& lane : m_lanes) {
+            ids.push_back(lane.id);
+        }
+        return ids;
+    }
+
+    /**
+     * @brief Scoped batch update (no-op for now)
+     */
+    struct BatchUpdateScope {
+        ~BatchUpdateScope() {}
+    };
+
+    BatchUpdateScope scopedBatchUpdate() {
+        return BatchUpdateScope{};
+    }
+
+    /**
+     * @brief Clear all lanes and clips
+     */
+    void clear() {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_lanes.clear();
+        m_laneMap.clear();
+        m_clipLaneMap.clear();
+    }
+
 private:
     std::vector<PlaylistLane> m_lanes;
     std::unordered_map<PlaylistLaneID, size_t> m_laneMap;
     std::unordered_map<ClipInstanceID, PlaylistLaneID> m_clipLaneMap;
     mutable std::mutex m_mutex;
     ClipChangedCallback m_clipChangedCallback;
+    double m_bpm{120.0};
+    PatternManager* m_patternManager{nullptr};
     
     ClipInstance* getClipInternal(const ClipInstanceID& clipId) {
         auto laneIt = m_clipLaneMap.find(clipId);
