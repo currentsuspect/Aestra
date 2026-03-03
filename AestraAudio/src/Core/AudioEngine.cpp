@@ -1245,7 +1245,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                 if (bufIdx >= m_scratchMidiBuffers.size()) break;
                 if (unit.id != 0 && unit.plugin) {
                     m_scratchMidiBuffers[bufIdx].clear();
-                    unitMidiRoutes[unitMidiRouteCount++] = { unit.id, &m_scratchMidiBuffers[bufIdx] };
+                    unitMidiRoutes[unitMidiRouteCount++] = PatternPlaybackEngine::UnitMidiRoute{static_cast<UnitID>(unit.id), &m_scratchMidiBuffers[bufIdx]};
                     ++bufIdx;
                 }
             }
@@ -1988,7 +1988,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
         if (unitMidiRouteCount >= unitMidiRoutes.size()) break;
         if (bufIdx >= m_unitMidiBuffers.size()) break;
         m_unitMidiBuffers[bufIdx].clear();
-        unitMidiRoutes[unitMidiRouteCount++] = { unit.id, &m_unitMidiBuffers[bufIdx] };
+        unitMidiRoutes[unitMidiRouteCount++] = PatternPlaybackEngine::UnitMidiRoute{static_cast<UnitID>(unit.id), &m_unitMidiBuffers[bufIdx]};
         ++bufIdx;
     }
     
