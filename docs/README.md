@@ -46,6 +46,7 @@ Aestra DAW is a professional digital audio workstation featuring:
 ### 📋 Project Management
 
 - **[Roadmap](technical/roadmap.md)** — High-level milestones and future plans
+- **[CI Workflows Map](technical/ci_workflows.md)** — What runs in GitHub Actions, what is blocking vs preview
 - **[License Reference](about/license-reference.md)** — Licensing information and ASSAL v1.0 details
 
 ### 📝 Templates
