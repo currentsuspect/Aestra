@@ -112,6 +112,19 @@ bool AestraApp::initialize(const std::string& projectPath) {
         return false;
     }
 
+    // Apply persisted window position/maximized state (Issue #120)
+    AestraWindowManager::WindowState windowState;
+    windowState.x = uiState.windowX;
+    windowState.y = uiState.windowY;
+    windowState.width = uiState.windowWidth;
+    windowState.height = uiState.windowHeight;
+    windowState.maximized = uiState.maximized;
+    m_windowManager->applyWindowState(windowState);
+    
+    Log::info("[UIState] Applied window state: " + std::to_string(uiState.windowWidth) + "x" + 
+              std::to_string(uiState.windowHeight) + " at (" + std::to_string(uiState.windowX) + "," + 
+              std::to_string(uiState.windowY) + ") maximized=" + (uiState.maximized ? "true" : "false"));
+
     // Initialize Audio
     if (!m_audioController->initialize()) {
         Log::warning("Audio Controller initialization failed (continuing without audio)");
@@ -634,12 +647,29 @@ void AestraApp::shutdown() {
     Log::info("[SHUTDOWN] Entering shutdown function...");
     Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::ShuttingDown);
     
-    // Save preferences and UI state
+    // Save preferences and UI state (Issue #120)
     Preferences::instance().save();
     
+    // Capture current window/panel states and save UI state
     UIState uiState;
-    // TODO: Capture current window/panel states from window manager
-    // For now, save defaults that will be updated in future iterations
+    if (m_windowManager) {
+        // Capture window geometry from actual window
+        auto windowState = m_windowManager->captureWindowState();
+        uiState.windowX = windowState.x;
+        uiState.windowY = windowState.y;
+        uiState.windowWidth = windowState.width;
+        uiState.windowHeight = windowState.height;
+        uiState.maximized = windowState.maximized;
+        
+        Log::info("[UIState] Captured window state: " + std::to_string(windowState.width) + "x" + 
+                  std::to_string(windowState.height) + " at (" + std::to_string(windowState.x) + "," + 
+                  std::to_string(windowState.y) + ") maximized=" + (windowState.maximized ? "true" : "false"));
+    }
+    
+    // TODO: Capture panel states from AestraContent when those APIs are available
+    // (browser width/visibility, mixer height/visibility, file browser expanded folders)
+    // For now, we persist window geometry which is the most critical for user experience
+    
     uiState.save();
     
     Aestra::ServiceLocator::clear();

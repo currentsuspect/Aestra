@@ -100,6 +100,17 @@ public:
     double endFrame(); // Returns sleep time
     double getDeltaTime() const { return m_deltaTime; }
 
+    // Window state capture/restore for persistence (Issue #120)
+    struct WindowState {
+        int x = 100;
+        int y = 100;
+        int width = 1280;
+        int height = 720;
+        bool maximized = false;
+    };
+    WindowState captureWindowState() const;
+    void applyWindowState(const WindowState& state);
+
 private:
     std::unique_ptr<AestraUI::NUIPlatformBridge> m_window;
     std::unique_ptr<AestraUI::NUIRenderer> m_renderer;
