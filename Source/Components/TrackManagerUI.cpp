@@ -4603,6 +4603,12 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
         return;
     }
     
+    // Issue #50: Don't show skeleton preview for existing clip drags
+    // Instant clip drag provides real-time visual feedback by moving the actual clip
+    if (m_isDraggingClipInstant) {
+        return;
+    }
+    
     AestraUI::NUIRect bounds = getBounds();
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
