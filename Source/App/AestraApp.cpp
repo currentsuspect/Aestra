@@ -333,16 +333,58 @@ bool AestraApp::initialize(const std::string& projectPath) {
             if (result.ui) applyUIState(*result.ui);
         }
     } else {
-        // Autosave check
+        // Issue #41: Show RecoveryDialog instead of silently loading autosave
         std::string autosavePath = getAutosavePath();
         std::string timestamp;
         if (RecoveryDialog::detectAutosave(autosavePath, timestamp)) {
-            m_projectPath = autosavePath;
-            auto result = loadProject();
-            if (result.ok) {
-                if (result.ui) applyUIState(*result.ui);
-                m_projectPath = getAutosavePath();
+            // Store the path for later use and show the recovery dialog
+            m_pendingAutosavePath = autosavePath;
+            m_recoveryHandled = false;
+            
+            if (auto recoveryDialog = m_windowManager->getRecoveryDialog()) {
+                recoveryDialog->show(autosavePath, [this, autosavePath](Aestra::RecoveryResponse response) {
+                    m_recoveryHandled = true;
+                    if (response == Aestra::RecoveryResponse::Recover) {
+                        // User chose to recover - load the autosave
+                        m_projectPath = autosavePath;
+                        auto result = loadProject();
+                        if (result.ok) {
+                            if (result.ui) applyUIState(*result.ui);
+                            m_projectPath = getAutosavePath(); // Reset path to autosave for future saves
+                            Log::info("[Recovery] Autosave recovered successfully");
+                        } else {
+                            Log::error("[Recovery] Failed to load autosave");
+                            // Fall back to empty project
+                            if (m_content) m_content->resetToDefaultProject();
+                        }
+                    } else if (response == Aestra::RecoveryResponse::Discard) {
+                        // User chose to discard - remove autosave and start fresh
+                        std::error_code ec;
+                        std::filesystem::remove(autosavePath, ec);
+                        if (ec) {
+                            Log::warning("[Recovery] Failed to remove autosave: " + ec.message());
+                        } else {
+                            Log::info("[Recovery] Autosave discarded");
+                        }
+                        if (m_content) m_content->resetToDefaultProject();
+                        m_projectPath = getAutosavePath();
+                    }
+                });
+                Log::info("[Recovery] Showing recovery dialog for autosave");
+            } else {
+                // Fallback: if dialog not available, silently load (shouldn't happen)
+                Log::warning("[Recovery] RecoveryDialog not available, falling back to silent load");
+                m_projectPath = autosavePath;
+                auto result = loadProject();
+                if (result.ok) {
+                    if (result.ui) applyUIState(*result.ui);
+                    m_projectPath = getAutosavePath();
+                }
+                m_recoveryHandled = true;
             }
+        } else {
+            // No autosave found - mark recovery as "handled" (nothing to do)
+            m_recoveryHandled = true;
         }
     }
 
