@@ -188,6 +188,16 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         m_lastMouseX = x;
         m_lastMouseY = y;
         
+        // RecoveryDialog is modal - consume mouse move when visible
+        if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
+            AestraUI::NUIMouseEvent event;
+            event.position = AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y));
+            event.button = AestraUI::NUIMouseButton::None;
+            event.pressed = false;
+            m_recoveryDialog->onMouseEvent(event);
+            return;
+        }
+        
         // Drag & Drop (convert to float for NUI)
         if (m_content) {
             AestraUI::NUIDragDropManager::getInstance().updateDrag(AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y)));
@@ -195,6 +205,17 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     });
 
     m_window->setMouseButtonCallback([this](int button, bool pressed) { // Fixed signature
+        // RecoveryDialog is modal - consume all mouse events when visible
+        if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
+            AestraUI::NUIMouseEvent event;
+            event.position = AestraUI::NUIPoint(static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY));
+            event.button = (button == 0) ? AestraUI::NUIMouseButton::Left : 
+                          (button == 1) ? AestraUI::NUIMouseButton::Right : AestraUI::NUIMouseButton::Middle;
+            event.pressed = pressed;
+            m_recoveryDialog->onMouseEvent(event);
+            return; // Block all other mouse handling while recovery dialog is shown
+        }
+        
         if (!pressed) { // Release
             if (m_content) {
                 AestraUI::NUIDragDropManager::getInstance().endDrag(AestraUI::NUIPoint((float)m_lastMouseX, (float)m_lastMouseY)); // Fixed arg
@@ -231,6 +252,15 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         }
         
         m_keyModifiers = static_cast<NM>(currentMods);
+
+        // RecoveryDialog is modal - consume all key events when visible
+        if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
+            AestraUI::NUIKeyEvent event;
+            event.keyCode = static_cast<AestraUI::NUIKeyCode>(key);
+            event.pressed = pressed;
+            m_recoveryDialog->onKeyEvent(event);
+            return; // Block all other key handling while recovery dialog is shown
+        }
 
         if (pressed) { // Press
              // Dispatch to Content (Global handling)
@@ -351,7 +381,8 @@ void AestraWindowManager::setConfirmationDialog(std::shared_ptr<Aestra::Confirma
 
 void AestraWindowManager::setRecoveryDialog(std::shared_ptr<Aestra::RecoveryDialog> dialog) {
     m_recoveryDialog = dialog;
-    if (m_rootComponent) m_rootComponent->addChild(m_recoveryDialog);
+    // Note: RecoveryDialog is NOT added as a child - it's rendered manually
+    // at the end of the render loop to ensure it appears on top of all UI
 }
 
 void AestraWindowManager::setUnifiedHUD(std::shared_ptr<UnifiedHUD> hud) {
@@ -459,6 +490,16 @@ void AestraWindowManager::render() {
     m_renderer->beginFrame();
     m_rootComponent->onRender(*m_renderer);
     NUIDragDropManager::getInstance().renderDragGhost(*m_renderer);
+
+    // Render RecoveryDialog on top of everything if visible
+    // This ensures the modal dialog blocks interaction with main UI
+    if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
+        // Set bounds to full window size so dialog centers correctly
+        if (m_rootComponent) {
+            m_recoveryDialog->setBounds(m_rootComponent->getBounds());
+        }
+        m_recoveryDialog->onRender(*m_renderer);
+    }
 
     if (m_useCustomCursor && m_windowFocused) {
         // Ensure cursor is not clipped by previous UI elements
