@@ -949,6 +949,65 @@ void AestraContent::syncViewState() {
     }
 }
 
+// =============================================================================
+// SECTION: Panel State Persistence (Issue #120)
+// =============================================================================
+
+float AestraContent::getBrowserWidth() const {
+    if (m_fileBrowser) {
+        return m_fileBrowser->getBounds().width;
+    }
+    return 0.0f;
+}
+
+void AestraContent::setBrowserWidth(float width) {
+    if (m_fileBrowser && width > 0.0f) {
+        auto bounds = m_fileBrowser->getBounds();
+        bounds.width = width;
+        m_fileBrowser->setBounds(bounds);
+        // Trigger relayout to adjust other components
+        onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
+    }
+}
+
+bool AestraContent::isBrowserVisible() const {
+    return m_fileBrowser ? m_fileBrowser->isVisible() : false;
+}
+
+void AestraContent::setBrowserVisible(bool visible) {
+    if (m_fileBrowser) {
+        bool currentlyVisible = m_fileBrowser->isVisible();
+        if (currentlyVisible != visible) {
+            m_fileBrowser->setVisible(visible);
+            // Also update plugin browser and preview panel visibility
+            if (m_pluginBrowser) {
+                // If hiding, hide plugin browser too; if showing, show file browser tab
+                if (!visible) {
+                    m_pluginBrowser->setVisible(false);
+                } else {
+                    // Show file browser tab
+                    if (m_browserToggle) {
+                        m_browserToggle->setSelectedIndex(0);
+                    }
+                }
+            }
+            if (m_previewPanel) {
+                m_previewPanel->setVisible(visible && m_browserToggle && m_browserToggle->getSelectedIndex() == 0);
+            }
+            onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
+            Log::info("[PanelState] Browser visibility set to: " + std::string(visible ? "VISIBLE" : "HIDDEN"));
+        }
+    }
+}
+
+bool AestraContent::isMixerVisible() const {
+    return m_mixerPanel ? m_mixerPanel->isVisible() : false;
+}
+
+void AestraContent::setMixerVisible(bool visible) {
+    setViewOpen(Audio::ViewType::Mixer, visible);
+}
+
 void AestraContent::setViewFocus(ViewFocus focus) {
     // Guard against re-entrancy (setSelectedIndex triggers callback which calls setViewFocus)
     static bool isUpdating = false;
