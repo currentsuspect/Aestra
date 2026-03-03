@@ -23,7 +23,7 @@ jobs:
           sudo apt-get install -y cmake g++
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
         run: cmake --build build --config Release --parallel
@@ -47,7 +47,7 @@ jobs:
         uses: lukka/get-cmake@latest
 
       - name: Configure
-        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
         run: cmake --build build --config Release --parallel
@@ -63,7 +63,7 @@ jobs:
           submodules: false
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
         run: cmake --build build --config Release --parallel
