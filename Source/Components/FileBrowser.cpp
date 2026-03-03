@@ -3955,6 +3955,55 @@ void FileBrowser::loadState(const std::string& filePath) {
     Aestra::Log::info("[FileBrowser] State loaded from: " + filePath);
 }
 
+// Issue #120: Get list of currently expanded folder paths for UIState persistence
+std::vector<std::string> FileBrowser::getExpandedFolders() const {
+    std::vector<std::string> expanded;
+    
+    std::function<void(const FileItem&)> collectExpanded = [&](const FileItem& item) {
+        if (item.isDirectory && item.isExpanded) {
+            expanded.push_back(item.path);
+            for (const auto& child : item.children) {
+                collectExpanded(child);
+            }
+        }
+    };
+    
+    for (const auto& item : rootItems_) {
+        collectExpanded(item);
+    }
+    
+    return expanded;
+}
+
+// Issue #120: Expand folders from a list of paths (used when restoring UIState)
+void FileBrowser::expandFolders(const std::vector<std::string>& folders) {
+    if (folders.empty()) return;
+    
+    std::function<void(FileItem&)> expandMatching = [&](FileItem& item) {
+        if (!item.isDirectory) return;
+        
+        for (const auto& path : folders) {
+            if (item.path == path) {
+                if (!item.hasLoadedChildren) {
+                    loadFolderContents(&item);
+                }
+                item.isExpanded = true;
+                break;
+            }
+        }
+        
+        for (auto& child : item.children) {
+            expandMatching(child);
+        }
+    };
+    
+    for (auto& item : rootItems_) {
+        expandMatching(item);
+    }
+    
+    updateDisplayList();
+    invalidateCache();
+}
 
 void FileBrowser::showHiddenBreadcrumbMenu(const std::vector<std::string>& hiddenPaths, const NUIPoint& position) {
     if (!popupMenu_ || hiddenPaths.empty()) return;
