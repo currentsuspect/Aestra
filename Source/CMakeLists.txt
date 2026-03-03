@@ -23,6 +23,10 @@ set(Aestra_SOURCES
 	Core/AestraContent.h
 	Core/AestraContent.cpp
 	Core/ProjectSerializer.cpp
+	Core/Preferences.h
+	Core/Preferences.cpp
+	Core/UIState.h
+	Core/UIState.cpp
 	
 	# Panels
 	Panels/TransportBar.h

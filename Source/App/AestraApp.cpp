@@ -3,6 +3,8 @@
 #include "AppLifecycle.h"
 #include "ServiceLocator.h"
 #include "AudioThreadConstraints.h"
+#include "Preferences.h"
+#include "UIState.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraCore/include/PointerRegistry.h"
 #include "FileBrowser.h"
@@ -91,11 +93,18 @@ bool AestraApp::initialize(const std::string& projectPath) {
         return false;
     }
 
-    // Initialize Window
+    // Load preferences and UI state early
+    Preferences::instance().load();
+    m_autoSaveEnabled.store(Preferences::instance().autoSaveEnabled, std::memory_order_relaxed);
+    
+    UIState uiState;
+    uiState.load();
+
+    // Initialize Window with persisted state
     AestraWindowManager::WindowConfig winConfig;
     winConfig.title = "Aestra v1.0";
-    winConfig.width = 1280;
-    winConfig.height = 720;
+    winConfig.width = uiState.windowWidth;
+    winConfig.height = uiState.windowHeight;
     winConfig.fullscreen = false; // Default
 
     if (!m_windowManager->initialize(winConfig)) {
@@ -624,6 +633,15 @@ void AestraApp::run() {
 void AestraApp::shutdown() {
     Log::info("[SHUTDOWN] Entering shutdown function...");
     Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::ShuttingDown);
+    
+    // Save preferences and UI state
+    Preferences::instance().save();
+    
+    UIState uiState;
+    // TODO: Capture current window/panel states from window manager
+    // For now, save defaults that will be updated in future iterations
+    uiState.save();
+    
     Aestra::ServiceLocator::clear();
     
     Aestra::Audio::PluginManager::getInstance().shutdown();
