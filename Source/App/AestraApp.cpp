@@ -410,6 +410,17 @@ bool AestraApp::initialize(const std::string& projectPath) {
         }
     }
 
+    // Apply persisted panel layout state (Issue #120)
+    // This happens after all UI components are initialized
+    if (m_content) {
+        m_content->setBrowserVisible(uiState.browserVisible);
+        m_content->setBrowserWidth(uiState.browserWidth);
+        m_content->setMixerVisible(uiState.mixerVisible);
+        Log::info("[UIState] Applied panel state: browserVisible=" + std::string(uiState.browserVisible ? "true" : "false") +
+                  ", browserWidth=" + std::to_string(uiState.browserWidth) +
+                  ", mixerVisible=" + std::string(uiState.mixerVisible ? "true" : "false"));
+    }
+
     if (!Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::Running)) {
         Log::error("Failed to transition to Running state");
         return false;
@@ -666,9 +677,17 @@ void AestraApp::shutdown() {
                   std::to_string(windowState.y) + ") maximized=" + (windowState.maximized ? "true" : "false"));
     }
     
-    // TODO: Capture panel states from AestraContent when those APIs are available
-    // (browser width/visibility, mixer height/visibility, file browser expanded folders)
-    // For now, we persist window geometry which is the most critical for user experience
+    // Capture panel states from AestraContent (Issue #120)
+    if (m_content) {
+        uiState.browserVisible = m_content->isBrowserVisible();
+        uiState.browserWidth = m_content->getBrowserWidth();
+        uiState.mixerVisible = m_content->isMixerVisible();
+        
+        Log::info("[UIState] Captured panel state: browserVisible=" + 
+                  std::string(uiState.browserVisible ? "true" : "false") +
+                  ", browserWidth=" + std::to_string(uiState.browserWidth) +
+                  ", mixerVisible=" + std::string(uiState.mixerVisible ? "true" : "false"));
+    }
     
     uiState.save();
     
