@@ -161,3 +161,9 @@ GITHUB_SETUP.md
 __pycache__/
 node_modules/
 _codeql_detected_source_root
+
+# User preferences and state files (not committed)
+preferences.json
+ui_state.json
+recent_files.json
+*.userprefs
