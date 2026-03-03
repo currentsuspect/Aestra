@@ -616,3 +616,35 @@ void AestraWindowManager::updateCursorState(bool focused, AestraUI::NUICursorSty
         AestraUI::NUIComponent::clearFocusedComponent();
     }
 }
+
+// =============================================================================
+// Window State Capture/Restore for Persistence (Issue #120)
+// =============================================================================
+
+AestraWindowManager::WindowState AestraWindowManager::captureWindowState() const {
+    WindowState state;
+    if (m_window) {
+        m_window->getPosition(state.x, state.y);
+        m_window->getSize(state.width, state.height);
+        state.maximized = m_window->isMaximized();
+    }
+    return state;
+}
+
+void AestraWindowManager::applyWindowState(const WindowState& state) {
+    if (!m_window) return;
+    
+    // Only apply position/size if not maximized (maximized state handled separately)
+    if (!state.maximized) {
+        // Validate reasonable bounds (prevent off-screen or tiny windows)
+        if (state.width >= 640 && state.height >= 480) {
+            m_window->setSize(state.width, state.height);
+            // Only set position if it seems reasonable (not negative/off-screen by much)
+            if (state.x > -1000 && state.y > -1000) {
+                m_window->setPosition(state.x, state.y);
+            }
+        }
+    } else {
+        m_window->maximize();
+    }
+}
