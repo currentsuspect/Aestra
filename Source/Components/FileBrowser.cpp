@@ -2125,7 +2125,9 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     };
 
     // Clip file items to the list area to prevent bleed
-    renderer.setClipRect(listClip);
+    // Extend clip rect by 1px on all sides to ensure full coverage
+    NUIRect listClipExtended(listClip.x - 1.0f, listClip.y - 1.0f, listClip.width + 2.0f, listClip.height + 2.0f);
+    renderer.setClipRect(listClipExtended);
     
     // Ensure the list area has a solid background (prevents FBO transparency leaks)
     // Frosted Glass Gradient Background
@@ -2186,19 +2188,21 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         const FileItem* item = view[i];
 
         // Background styling
-        // Background styling
+        // Cap rounded rect radius to itemHeight/3 to prevent visual bleed into adjacent rows
+        const float maxRadius = std::min(6.0f, itemHeight / 3.0f);
+        const float hoverRadius = std::min(4.0f, itemHeight / 4.0f);
         if (selected) {
             // Selected state: Neon Glass Pill
             // Background: Semi-transparent primary/cyan
-            renderer.fillRoundedRect(itemRect, 6, themeManager.getColor("accentPrimary").withAlpha(0.2f));
+            renderer.fillRoundedRect(itemRect, maxRadius, themeManager.getColor("accentPrimary").withAlpha(0.2f));
             // Border: Hot Neon Glow
-            renderer.strokeRoundedRect(itemRect, 6, 1.5f, themeManager.getColor("accentCyan"));
+            renderer.strokeRoundedRect(itemRect, maxRadius, 1.5f, themeManager.getColor("accentCyan"));
         } else if (hovered) {
             // Hover state: Subtle Glass Interaction
             // Background: Very faint white/glass
-            renderer.fillRoundedRect(itemRect, 4, themeManager.getColor("glassHover")); 
+            renderer.fillRoundedRect(itemRect, hoverRadius, themeManager.getColor("glassHover")); 
             // Border: Crisp glass edge
-            renderer.strokeRoundedRect(itemRect, 4, 1.0f, themeManager.getColor("glassBorder"));
+            renderer.strokeRoundedRect(itemRect, hoverRadius, 1.0f, themeManager.getColor("glassBorder"));
         } 
         // Note: Alternating rows removed for cleaner "Deep Space" look
         
@@ -2210,12 +2214,13 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         
         // Draw vertical guide lines for tree structure
         if (guideDepth > 0) {
-            float lineX = std::round(itemRect.x + layout.panelMargin + rowIndentStep * 0.5f) + 0.5f;
+            // FIX: Align tree guide lines with expander positions (remove 0.5f offset)
+            float lineX = std::round(itemRect.x + layout.panelMargin) + 0.5f;
             // More subtle guide lines
             const NUIColor guideColor = themeManager.getColor("glassBorder").withAlpha(0.12f);
             const float yPad = 1.0f;
             for (int d = 0; d < guideDepth; ++d) {
-                // Draw vertical line segment
+                // Draw vertical line segment aligned with expander at this depth
                 renderer.drawLine(NUIPoint(lineX, itemRect.y + yPad),
                                   NUIPoint(lineX, itemRect.y + itemRect.height - yPad),
                                   1.0f, guideColor);
