@@ -25,6 +25,7 @@
 #include <thread>
 #include <cmath>
 #include <algorithm>
+#include <filesystem>
 
 using namespace Aestra;
 using namespace AestraUI;
@@ -420,6 +421,24 @@ bool AestraApp::initialize(const std::string& projectPath) {
                   ", browserWidth=" + std::to_string(uiState.browserWidth) +
                   ", mixerVisible=" + std::string(uiState.mixerVisible ? "true" : "false"));
     }
+    
+    // Apply file browser state (Issue #120: expanded folders + last browsed path)
+    if (m_content && m_content->getFileBrowser()) {
+        auto fileBrowser = m_content->getFileBrowser();
+        
+        // Restore last browsed path if valid
+        if (!uiState.lastBrowsedPath.empty() && std::filesystem::exists(uiState.lastBrowsedPath)) {
+            fileBrowser->setCurrentPath(uiState.lastBrowsedPath);
+            Log::info("[UIState] Restored file browser path: " + uiState.lastBrowsedPath);
+        }
+        
+        // Restore expanded folders
+        if (!uiState.expandedFolders.empty()) {
+            std::vector<std::string> folders(uiState.expandedFolders.begin(), uiState.expandedFolders.end());
+            fileBrowser->expandFolders(folders);
+            Log::info("[UIState] Restored expanded folders: " + std::to_string(folders.size()));
+        }
+    }
 
     if (!Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::Running)) {
         Log::error("Failed to transition to Running state");
@@ -687,6 +706,25 @@ void AestraApp::shutdown() {
                   std::string(uiState.browserVisible ? "true" : "false") +
                   ", browserWidth=" + std::to_string(uiState.browserWidth) +
                   ", mixerVisible=" + std::string(uiState.mixerVisible ? "true" : "false"));
+    }
+    
+    // Capture file browser state (Issue #120: expanded folders + last selected path)
+    if (m_content && m_content->getFileBrowser()) {
+        auto fileBrowser = m_content->getFileBrowser();
+        
+        // Get expanded folders
+        auto expanded = fileBrowser->getExpandedFolders();
+        uiState.expandedFolders.clear();
+        for (const auto& path : expanded) {
+            uiState.expandedFolders.insert(path);
+        }
+        
+        // Get current path (last browsed)
+        uiState.lastBrowsedPath = fileBrowser->getCurrentPath();
+        
+        Log::info("[UIState] Captured file browser state: expandedFolders=" + 
+                  std::to_string(uiState.expandedFolders.size()) +
+                  ", lastPath=" + uiState.lastBrowsedPath);
     }
     
     uiState.save();
