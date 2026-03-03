@@ -1,4 +1,4 @@
-// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios - All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraApp.h"
 #include "AppLifecycle.h"
 #include "ServiceLocator.h"
@@ -35,7 +35,7 @@ using namespace Aestra::Audio;
 // AestraApp Implementation
 // =============================================================================
 
-AestraApp::AestraApp() 
+AestraApp::AestraApp()
     : m_running(false)
 {
     // Initialize m_projectPath with autosave path
@@ -48,7 +48,7 @@ AestraApp::AestraApp()
     auto fileLogger = std::make_shared<FileLogger>(logPath, LogLevel::Info);
     multiLogger->addLogger(fileLogger);
     m_asyncLogger = std::make_shared<AsyncLogger>(multiLogger);
-    
+
     Log::init(m_asyncLogger);
     Log::info("Logging initialized to console and " + logPath);
 
@@ -86,7 +86,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
         Log::error("Failed to transition to Initializing state");
         return false;
     }
-    
+
     Log::info("Aestra v1.0.0 - Initializing...");
 
     if (!Platform::initialize()) {
@@ -97,7 +97,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
     // Load preferences and UI state early
     Preferences::instance().load();
     m_autoSaveEnabled.store(Preferences::instance().autoSaveEnabled, std::memory_order_relaxed);
-    
+
     UIState uiState;
     uiState.load();
 
@@ -121,9 +121,9 @@ bool AestraApp::initialize(const std::string& projectPath) {
     windowState.height = uiState.windowHeight;
     windowState.maximized = uiState.maximized;
     m_windowManager->applyWindowState(windowState);
-    
-    Log::info("[UIState] Applied window state: " + std::to_string(uiState.windowWidth) + "x" + 
-              std::to_string(uiState.windowHeight) + " at (" + std::to_string(uiState.windowX) + "," + 
+
+    Log::info("[UIState] Applied window state: " + std::to_string(uiState.windowWidth) + "x" +
+              std::to_string(uiState.windowHeight) + " at (" + std::to_string(uiState.windowX) + "," +
               std::to_string(uiState.windowY) + ") maximized=" + (uiState.maximized ? "true" : "false"));
 
     // Initialize Audio
@@ -188,7 +188,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
     auto menuBar = std::make_shared<AestraUI::NUIMenuBar>();
     menuBar->addItem("File", [this]() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
-        
+
         // Project actions
         menu->addItem("New Project", [this]() {
             if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->stop();
@@ -197,7 +197,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
             m_lastWindowTitle.clear();
             Log::info("New project created");
         });
-        
+
         menu->addItem("Open Project...", [this]() {
             // TODO: Implement proper file browser integration
             Log::info("Open Project - Not yet fully implemented");
@@ -217,13 +217,13 @@ bool AestraApp::initialize(const std::string& projectPath) {
             //     });
             // }
         });
-        
+
         menu->addSeparator();
-        
-        menu->addItem("Save", [this]() { 
-            saveCurrentProject(); 
+
+        menu->addItem("Save", [this]() {
+            saveCurrentProject();
         });
-        
+
         menu->addItem("Save As...", [this]() {
             // TODO: Implement proper file browser integration
             Log::info("Save As - Not yet fully implemented");
@@ -238,96 +238,96 @@ bool AestraApp::initialize(const std::string& projectPath) {
             //     });
             // }
         });
-        
+
         menu->addSeparator();
-        
+
         menu->addItem("Settings...", [this]() {
             if (m_windowManager->getSettingsDialog()) {
                 m_windowManager->getSettingsDialog()->show();
             }
         });
-        
+
         menu->addSeparator();
-        
-        menu->addItem("Exit", [this]() { 
-            m_running = false; 
+
+        menu->addItem("Exit", [this]() {
+            m_running = false;
         });
-        
+
         m_windowManager->showDropdownMenu(menu, 10.0f);
     });
     // Edit Menu
     menuBar->addItem("Edit", [this]() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
-        
+
         menu->addItem("Undo", [this]() {
             if (m_content && m_content->getTrackManager()) {
                 m_content->getTrackManager()->getCommandHistory().undo();
             }
         });
-        
+
         menu->addItem("Redo", [this]() {
             if (m_content && m_content->getTrackManager()) {
                 m_content->getTrackManager()->getCommandHistory().redo();
             }
         });
-        
+
         menu->addSeparator();
-        
+
         menu->addItem("Cut", [this]() {
             // TODO: Implement Cut functionality
             Log::info("Cut - Not yet implemented");
         });
-        
+
         menu->addItem("Copy", [this]() {
             // TODO: Implement Copy functionality
             Log::info("Copy - Not yet implemented");
         });
-        
+
         menu->addItem("Paste", [this]() {
             // TODO: Implement Paste functionality
             Log::info("Paste - Not yet implemented");
         });
-        
+
         menu->addSeparator();
-        
+
         menu->addItem("Delete", [this]() {
             // TODO: Implement Delete functionality
             Log::info("Delete - Not yet implemented");
         });
-        
+
         m_windowManager->showDropdownMenu(menu, 55.0f);
     });
-    
+
     // View Menu
     menuBar->addItem("View", [this]() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
-        
+
         menu->addItem("Performance Stats", [this]() {
             if (auto hud = m_windowManager->getUnifiedHUD()) {
                 hud->setVisible(!hud->isVisible());
             }
         });
-        
+
         menu->addSeparator();
-        
+
         menu->addItem("Toggle Fullscreen", [this]() {
             if (m_windowManager) {
                 m_windowManager->toggleFullScreen();
             }
         });
-        
+
         menu->addSeparator();
-        
+
         menu->addItem("Show Timeline", [this]() {
             // TODO: Implement view switching
             Log::info("Show Timeline - Not yet fully implemented");
         });
-        
+
         menu->addItem("Show Arsenal", [this]() {
             // TODO: Implement view switching
             Log::info("Show Arsenal - Not yet fully implemented");
         });
-        
+
         m_windowManager->showDropdownMenu(menu, 100.0f);
     });
 
@@ -363,7 +363,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
             // Store the path for later use and show the recovery dialog
             m_pendingAutosavePath = autosavePath;
             m_recoveryHandled = false;
-            
+
             if (auto recoveryDialog = m_windowManager->getRecoveryDialog()) {
                 recoveryDialog->show(autosavePath, [this, autosavePath](Aestra::RecoveryResponse response) {
                     m_recoveryHandled = true;
@@ -421,17 +421,17 @@ bool AestraApp::initialize(const std::string& projectPath) {
                   ", browserWidth=" + std::to_string(uiState.browserWidth) +
                   ", mixerVisible=" + std::string(uiState.mixerVisible ? "true" : "false"));
     }
-    
+
     // Apply file browser state (Issue #120: expanded folders + last browsed path)
     if (m_content && m_content->getFileBrowser()) {
         auto fileBrowser = m_content->getFileBrowser();
-        
+
         // Restore last browsed path if valid
         if (!uiState.lastBrowsedPath.empty() && std::filesystem::exists(uiState.lastBrowsedPath)) {
             fileBrowser->setCurrentPath(uiState.lastBrowsedPath);
             Log::info("[UIState] Restored file browser path: " + uiState.lastBrowsedPath);
         }
-        
+
         // Restore expanded folders
         if (!uiState.expandedFolders.empty()) {
             std::vector<std::string> folders(uiState.expandedFolders.begin(), uiState.expandedFolders.end());
@@ -440,11 +440,25 @@ bool AestraApp::initialize(const std::string& projectPath) {
         }
     }
 
+    // Issue #120: Apply persisted track view zoom/scroll state
+    if (m_content && m_content->getTrackManagerUI()) {
+        auto trackManagerUI = m_content->getTrackManagerUI();
+        // Only apply if values differ from defaults (user has customized)
+        if (uiState.horizontalZoom != 1.0f || uiState.scrollPositionX != 0.0f || uiState.scrollPositionY != 0.0f) {
+            trackManagerUI->setHorizontalZoom(uiState.horizontalZoom);
+            trackManagerUI->setHorizontalScroll(uiState.scrollPositionX);
+            trackManagerUI->setVerticalScroll(uiState.scrollPositionY);
+            Log::info("[UIState] Applied track view state: zoom=" + std::to_string(uiState.horizontalZoom) +
+                      ", hScroll=" + std::to_string(uiState.scrollPositionX) +
+                      ", vScroll=" + std::to_string(uiState.scrollPositionY));
+        }
+    }
+
     if (!Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::Running)) {
         Log::error("Failed to transition to Running state");
         return false;
     }
-    
+
     return true;
 }
 
@@ -456,31 +470,31 @@ void AestraApp::connectAudioToUI() {
             m_content->getTrackManager()->setInputChannelCount(config.numInputChannels);
             m_content->getTrackManager()->setOutputSampleRate(config.sampleRate);
             m_content->getTrackManager()->setInputSampleRate(config.sampleRate);
-            
+
             auto meterBuffer = std::make_shared<Audio::MeterSnapshotBuffer>();
             m_audioController->getEngine()->setMeterSnapshots(meterBuffer);
             m_content->getTrackManager()->setMeterSnapshots(meterBuffer);
-            
+
             auto slotMap = m_content->getTrackManager()->getChannelSlotMapShared();
             if (slotMap) {
                 m_audioController->getEngine()->setChannelSlotMap(slotMap);
             }
-            
+
             Aestra::ServiceLocator::provide<Aestra::Audio::AudioEngine>(m_audioController->getEngine());
             Aestra::ServiceLocator::provide<Aestra::Audio::AudioDeviceManager>(m_audioController->getDeviceManager());
             Aestra::ServiceLocator::provide<Aestra::Audio::TrackManager>(m_content->getTrackManager());
-            
+
             auto trackMgr = m_content->getTrackManager();
             trackMgr->getCommandHistory().setOnStateChanged([trackMgr]() {
                 if (trackMgr) trackMgr->markModified();
             });
-            
+
             Aestra::PointerRegistry::expectNotNull("AudioEngine", m_audioController->getEngine());
             Aestra::PointerRegistry::expectNotNull("TrackManager", trackMgr.get());
             Aestra::PointerRegistry::validateAll();
         }
     }
-    
+
     // Transport Bar Wiring
     if (m_content && m_content->getTransportBar() && m_audioController->getEngine()) {
         auto engine = m_audioController->getEngine();
@@ -521,9 +535,9 @@ void AestraApp::connectAudioToUI() {
                 }
             }
         });
-        
+
         // Record (Todo)
-        
+
         // Metronome toggle
         m_content->getTransportBar()->setOnMetronomeToggle([this, engine](bool active) {
             if (engine) {
@@ -531,14 +545,14 @@ void AestraApp::connectAudioToUI() {
                 Log::info(std::string("Metronome toggled: ") + (active ? "ON" : "OFF"));
             }
         });
-        
+
         // Tempo change
         m_content->getTransportBar()->setOnTempoChange([this, engine](float bpm) {
             if (engine) {
                 engine->setBPM(bpm);
             }
         });
-        
+
         // Load metronome click sounds (Redundant but safe fallback if Controller update missed it)
         engine->loadMetronomeClicks(
             "AestraAudio/assets/Aestra_metronome.wav",
@@ -552,12 +566,12 @@ void AestraApp::setupCallbacks() {
     m_windowManager->setCloseCallback([this]() {
         requestClose();
     });
-    
+
     m_windowManager->setTransportCallback([this](AestraWindowManager::TransportAction action) {
         if (!m_audioController || !m_audioController->getEngine()) return;
         auto engine = m_audioController->getEngine();
         using Action = AestraWindowManager::TransportAction;
-        
+
         if (action == Action::Play) {
             if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->play();
             engine->setTransportPlaying(true);
@@ -569,7 +583,7 @@ void AestraApp::setupCallbacks() {
         else if (action == Action::Stop) {
              if (m_content && m_content->getTrackManager()) {
                  auto trackMgr = m_content->getTrackManager();
-                 
+
                  // [FIX] If in pattern mode, we want to stay in pattern mode on stop
                  if (trackMgr->isPatternMode()) {
                      trackMgr->stopArsenalPlayback(true);
@@ -578,7 +592,7 @@ void AestraApp::setupCallbacks() {
                      double playStartPos = trackMgr->getPlayStartPosition();
                      double sr = engine->getSampleRate();
                      uint64_t samplePos = static_cast<uint64_t>(playStartPos * sr);
-                     
+
                      trackMgr->stop();
                      engine->setGlobalSamplePos(samplePos);
                      trackMgr->setPosition(playStartPos);
@@ -587,7 +601,7 @@ void AestraApp::setupCallbacks() {
              }
         }
     });
-    
+
     // Other callbacks handled by WindowManager internally
 }
 
@@ -596,18 +610,18 @@ void AestraApp::run() {
 
     double autoSaveTimer = 0.0;
     const double autoSaveInterval = 300.0;
-    
+
     while (m_running && m_windowManager->processEvents()) {
         UnifiedProfiler::getInstance().beginFrame();
         m_windowManager->beginFrame(); // Start timing
-        
+
         {
             AESTRA_ZONE("UI_Update");
             // Sync Transport State
             if (m_audioController->getEngine() && m_content && m_content->getTrackManager()) {
                 auto engine = m_audioController->getEngine();
                 auto tm = m_content->getTrackManager();
-                
+
                 if (tm->isUserScrubbing()) {
                     double scrubPos = tm->getPosition();
                     uint32_t sr = engine->getSampleRate();
@@ -616,14 +630,14 @@ void AestraApp::run() {
                     double realTime = engine->getPositionSeconds();
                     tm->syncPositionFromEngine(realTime);
                 }
-                
+
                 if (m_content->getTransportBar()) {
                    m_content->getTransportBar()->setPosition(tm->getPosition());
                    // Sync play state...
                 }
                 updateWindowTitle();
             }
-            
+
             // Rebuild graph check
             if (m_audioController->getEngine() && m_content && m_content->getTrackManager() &&
                 m_content->getTrackManager()->consumeGraphDirty()) {
@@ -645,7 +659,7 @@ void AestraApp::run() {
                 m_autoSaveInFlight.store(false, std::memory_order_relaxed);
            }
         }
-        
+
         if (m_autoSaveEnabled.load(std::memory_order_relaxed)) {
             double deltaTime = m_windowManager->getDeltaTime();
             autoSaveTimer += deltaTime;
@@ -658,7 +672,7 @@ void AestraApp::run() {
                  }
             }
         }
-        
+
         double sleepTime = m_windowManager->endFrame();
         m_windowManager->swapBuffers();
         if (sleepTime > 0.0) {
@@ -668,7 +682,7 @@ void AestraApp::run() {
                  std::this_thread::sleep_for(std::chrono::duration<double>(sleepTime));
              }
         }
-        
+
         UnifiedProfiler::getInstance().endFrame();
     }
 }
@@ -676,10 +690,10 @@ void AestraApp::run() {
 void AestraApp::shutdown() {
     Log::info("[SHUTDOWN] Entering shutdown function...");
     Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::ShuttingDown);
-    
+
     // Save preferences and UI state (Issue #120)
     Preferences::instance().save();
-    
+
     // Capture current window/panel states and save UI state
     UIState uiState;
     if (m_windowManager) {
@@ -690,54 +704,65 @@ void AestraApp::shutdown() {
         uiState.windowWidth = windowState.width;
         uiState.windowHeight = windowState.height;
         uiState.maximized = windowState.maximized;
-        
-        Log::info("[UIState] Captured window state: " + std::to_string(windowState.width) + "x" + 
-                  std::to_string(windowState.height) + " at (" + std::to_string(windowState.x) + "," + 
+
+        Log::info("[UIState] Captured window state: " + std::to_string(windowState.width) + "x" +
+                  std::to_string(windowState.height) + " at (" + std::to_string(windowState.x) + "," +
                   std::to_string(windowState.y) + ") maximized=" + (windowState.maximized ? "true" : "false"));
     }
-    
+
     // Capture panel states from AestraContent (Issue #120)
     if (m_content) {
         uiState.browserVisible = m_content->isBrowserVisible();
         uiState.browserWidth = m_content->getBrowserWidth();
         uiState.mixerVisible = m_content->isMixerVisible();
-        
-        Log::info("[UIState] Captured panel state: browserVisible=" + 
+
+        Log::info("[UIState] Captured panel state: browserVisible=" +
                   std::string(uiState.browserVisible ? "true" : "false") +
                   ", browserWidth=" + std::to_string(uiState.browserWidth) +
                   ", mixerVisible=" + std::string(uiState.mixerVisible ? "true" : "false"));
     }
-    
+
     // Capture file browser state (Issue #120: expanded folders + last selected path)
     if (m_content && m_content->getFileBrowser()) {
         auto fileBrowser = m_content->getFileBrowser();
-        
+
         // Get expanded folders
         auto expanded = fileBrowser->getExpandedFolders();
         uiState.expandedFolders.clear();
         for (const auto& path : expanded) {
             uiState.expandedFolders.insert(path);
         }
-        
+
         // Get current path (last browsed)
         uiState.lastBrowsedPath = fileBrowser->getCurrentPath();
-        
+
         Log::info("[UIState] Captured file browser state: expandedFolders=" + 
                   std::to_string(uiState.expandedFolders.size()) +
                   ", lastPath=" + uiState.lastBrowsedPath);
     }
-    
+
+    // Issue #120: Capture track view zoom/scroll state
+    if (m_content && m_content->getTrackManagerUI()) {
+        auto trackManagerUI = m_content->getTrackManagerUI();
+        uiState.horizontalZoom = trackManagerUI->getHorizontalZoom();
+        uiState.scrollPositionX = trackManagerUI->getHorizontalScroll();
+        uiState.scrollPositionY = trackManagerUI->getVerticalScroll();
+        Log::info("[UIState] Captured track view state: zoom=" + std::to_string(uiState.horizontalZoom) +
+                  ", hScroll=" + std::to_string(uiState.scrollPositionX) +
+                  ", vScroll=" + std::to_string(uiState.scrollPositionY));
+    }
+
     uiState.save();
-    
+
     Aestra::ServiceLocator::clear();
-    
+
     Aestra::Audio::PluginManager::getInstance().shutdown();
-    
+
     // Save project...
 
     m_audioController->shutdown();
     m_windowManager->shutdown();
-    
+
     Platform::shutdown();
     Log::info("Aestra shutdown complete");
     Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::Terminated);
