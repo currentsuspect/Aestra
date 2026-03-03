@@ -51,3 +51,19 @@ jobs:
 
       - name: Build
         run: cmake --build build --config Release --parallel
+
+  macos-build:
+    name: macOS build
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
