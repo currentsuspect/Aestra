@@ -63,6 +63,7 @@ public:
 
     // Dialogs getters
     std::shared_ptr<Aestra::SettingsDialog> getSettingsDialog() { return m_settingsDialog; }
+    std::shared_ptr<Aestra::RecoveryDialog> getRecoveryDialog() { return m_recoveryDialog; }
 
     // Menus
     void setMenuBar(std::shared_ptr<AestraUI::NUIMenuBar> menuBar);
