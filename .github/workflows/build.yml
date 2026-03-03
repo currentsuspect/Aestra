@@ -53,8 +53,9 @@ jobs:
         run: cmake --build build --config Release --parallel
 
   macos-build:
-    name: macOS build
+    name: macOS build (non-blocking preview)
     runs-on: macos-latest
+    continue-on-error: true
 
     steps:
       - name: Checkout

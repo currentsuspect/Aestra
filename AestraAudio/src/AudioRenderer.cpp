@@ -209,7 +209,7 @@ namespace Audio {
         for (const auto& u : snap->units) {
             if (count >= 256 || bIdx >= engineRef.m_unitMidiBuffers.size()) break;
             // engineRef.m_unitMidiBuffers[bIdx].clear(); // REMOVED: Handled externally
-            routes[count++] = { u.id, &engineRef.m_unitMidiBuffers[bIdx] };
+            routes[count++] = { static_cast<UnitID>(u.id), &engineRef.m_unitMidiBuffers[bIdx] };
             bIdx++;
         }
         if (engineRef.m_transportPlaying.load(std::memory_order_relaxed)) {
