@@ -138,6 +138,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessMain.cpp")
       _CRT_SECURE_NO_WARNINGS
       NOMINMAX
     )
+    # Media Foundation symbols used by MiniAudioDecoder on Windows
+    target_link_libraries(AestraHeadless PRIVATE mfplat mfreadwrite mfuuid)
   endif()
 
   message(STATUS "AestraHeadless configured")
