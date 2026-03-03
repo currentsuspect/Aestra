@@ -254,4 +254,16 @@ target_link_libraries(PlatformDPITest PRIVATE AestraPlat AestraCore)
 add_executable(PlatformWindowTest AestraPlat/PlatformWindowTest.cpp)
 target_link_libraries(PlatformWindowTest PRIVATE AestraPlat AestraCore)
 
+# =============================================================================
+# AestraUI Tests
+# =============================================================================
+
+# Text Renderer STB Space Glyph Test (Issue #121 regression test)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/TextRendererSTBSpaceTest.cpp")
+    add_executable(TextRendererSTBSpaceTest AestraUI/TextRendererSTBSpaceTest.cpp)
+    add_test(NAME TextRendererSTBSpaceTest COMMAND TextRendererSTBSpaceTest)
+    set_tests_properties(TextRendererSTBSpaceTest PROPERTIES LABELS "ui;regression")
+    message(STATUS "TextRendererSTBSpaceTest added - Issue #121 regression test")
+endif()
+
 message(STATUS "Tests configured - see Tests/ directory")
