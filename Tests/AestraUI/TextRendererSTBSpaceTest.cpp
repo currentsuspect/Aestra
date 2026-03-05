@@ -14,6 +14,7 @@
 #include <string>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 
 // Minimal mock of the GlyphInfo structure to test logic
 struct TestGlyphInfo {
