@@ -30,10 +30,5 @@ struct MeterSnapshotBuffer {
     MeterReadout readMeter(int slot) const { return {}; }
 };
 
-// STUB: ContinuousParamBuffer — Phase 2 will hold real-time automation snapshots
-struct ContinuousParamBuffer {
-    // Placeholder for continuous parameter automation readback
-};
-
 } // namespace Audio
 } // namespace Aestra
