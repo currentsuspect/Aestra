@@ -18,9 +18,11 @@
 #endif
 
 // Include Windows headers (windows.h MUST come first)
+// clang-format off
+#include <windows.h>
 #include <commdlg.h>
 #include <shlobj.h>
-#include <windows.h>
+// clang-format on
 
 // Additional Windows headers as needed (only add what's actually used)
 // #include <dwmapi.h>
