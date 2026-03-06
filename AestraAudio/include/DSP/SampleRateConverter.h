@@ -350,12 +350,8 @@ public:
 
     // Allow tests/tools to force scalar processing even when SIMD is available.
     // RT-safe (atomic flag read in process()).
-    void setSIMDEnabled(bool enabled) noexcept {
-        m_simdEnabled.store(enabled, std::memory_order_relaxed);
-    }
-    bool isSIMDEnabled() const noexcept {
-        return m_simdEnabled.load(std::memory_order_relaxed);
-    }
+    void setSIMDEnabled(bool enabled) noexcept { m_simdEnabled.store(enabled, std::memory_order_relaxed); }
+    bool isSIMDEnabled() const noexcept { return m_simdEnabled.load(std::memory_order_relaxed); }
 
 private:
     // =========================================================================
