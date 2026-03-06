@@ -35,6 +35,7 @@ jobs:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           title: "Aestra CI — Windows"
           status: ${{ job.status }}
+          username: "Aestra CI"
 
   build-linux:
     runs-on: ubuntu-latest
@@ -66,6 +67,7 @@ jobs:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           title: "Aestra CI — Linux"
           status: ${{ job.status }}
+          username: "Aestra CI"
 
   build-macos:
     runs-on: macos-latest
@@ -92,6 +94,7 @@ jobs:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           title: "Aestra CI — macOS"
           status: ${{ job.status }}
+          username: "Aestra CI"
 
   format-check:
     runs-on: ubuntu-latest
