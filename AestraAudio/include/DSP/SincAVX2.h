@@ -3,6 +3,8 @@
 // It is only called when CPUDetection confirms AVX2 support.
 #pragma once
 
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+
 #include <immintrin.h>
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -99,3 +101,4 @@ inline void sincDotProductAVX2_Reversed(const float* coeffs, const float* sample
 
 } // namespace Audio
 } // namespace Aestra
+#endif // x86 guard

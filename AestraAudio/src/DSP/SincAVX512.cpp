@@ -1,3 +1,4 @@
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
 // © 2025 Aestra Studios — All Rights Reserved.
 // This file uses AVX-512 intrinsics.
 // It is compiled with /arch:AVX512 (MSVC) or -mavx512f -mavx512dq (GCC/Clang) via CMake.
@@ -97,3 +98,5 @@ void sincDotProductAVX512_Reversed(const float* coeffs, const float* samples, fl
 
 } // namespace Audio
 } // namespace Aestra
+
+#endif // x86 guard
