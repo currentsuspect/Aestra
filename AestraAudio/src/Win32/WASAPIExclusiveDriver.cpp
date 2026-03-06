@@ -12,6 +12,7 @@
 // clang-format off
 #include <windows.h>
 #include <initguid.h>
+#include <propkeydef.h>
 #include <audioclient.h>
 #include <avrt.h>
 #include <devpkey.h>
