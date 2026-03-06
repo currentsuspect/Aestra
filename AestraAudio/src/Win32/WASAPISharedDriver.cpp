@@ -11,6 +11,7 @@
 #define NOMINMAX
 #endif
 #include <audioclient.h>
+#include <windows.h>
 #include <avrt.h>
 #include <chrono>
 #include <cstring>
@@ -20,7 +21,6 @@
 #include <ksmedia.h>
 #include <mmdeviceapi.h>
 #include <sstream>
-#include <windows.h>
 
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "avrt.lib")
