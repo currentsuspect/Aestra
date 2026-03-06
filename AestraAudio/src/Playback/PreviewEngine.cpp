@@ -274,6 +274,7 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
     const float gain = voice->gain;
     const uint32_t srcChannels = voice->channels;
 
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
     // SIMD Helper: 4-wide Cubic Hermite Spline
     auto cubicSIMD = [&](__m128 p0, __m128 p1, __m128 p2, __m128 p3, __m128 t) -> __m128 {
         const __m128 vHalf = _mm_set1_ps(0.5f);
@@ -416,6 +417,7 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
             phase += ratio * 4.0;
         }
     }
+#endif // x86 SIMD
 
     // Scalar Helper
     auto cubic = [](float p0, float p1, float p2, float p3, float t) {
