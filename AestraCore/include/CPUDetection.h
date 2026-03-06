@@ -34,19 +34,13 @@ public:
 
     // ARM NEON detection (compile-time on ARM, always false on x86)
 #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
-    bool hasNEON() const {
-        return true;
-    }
+    bool hasNEON() const { return true; }
 #else
-    bool hasNEON() const {
-        return false;
-    }
+    bool hasNEON() const { return false; }
 #endif
 
 private:
-    CPUDetection() {
-        detectFeatures();
-    }
+    CPUDetection() { detectFeatures(); }
 
     // Check OS support for AVX/AVX512 states using XGETBV (x86 only)
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
