@@ -11,7 +11,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/aestra-core/cmake/AestraCoreMode.cmake")
 	include(${CMAKE_SOURCE_DIR}/aestra-core/cmake/AestraCoreMode.cmake)
 endif()
 
-project(AESTRA VERSION 0.1.0 LANGUAGES CXX)
+project(AESTRA VERSION 0.1.0 LANGUAGES C CXX)
 
 # Ensure CTest discovery/registration works from the build root.
 include(CTest)
