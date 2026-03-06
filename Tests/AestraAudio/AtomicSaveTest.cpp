@@ -1,8 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
-#include <iostream>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <string>
 
 namespace fs = std::filesystem;
@@ -12,9 +12,11 @@ static bool writeAtomicTextFile(const fs::path& target, const std::string& conte
 
     {
         std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
-        if (!out.is_open()) return false;
+        if (!out.is_open())
+            return false;
         out.write(content.data(), static_cast<std::streamsize>(content.size()));
-        if (!out.good()) return false;
+        if (!out.good())
+            return false;
     }
 
     std::error_code ec;
@@ -23,7 +25,8 @@ static bool writeAtomicTextFile(const fs::path& target, const std::string& conte
         fs::remove(target, ec); // best-effort for platforms that require replace-by-remove
         ec.clear();
         fs::rename(tmp, target, ec);
-        if (ec) return false;
+        if (ec)
+            return false;
     }
 
     return true;

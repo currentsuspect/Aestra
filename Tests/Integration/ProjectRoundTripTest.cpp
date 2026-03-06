@@ -1,12 +1,10 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "../../Source/Core/ProjectSerializer.h"
-
-#include "Models/TrackManager.h"
+#include "../AestraCore/include/AestraLog.h"
 #include "Models/ClipSource.h"
 #include "Models/PatternSource.h"
-
-#include "../AestraCore/include/AestraLog.h"
+#include "Models/TrackManager.h"
 
 #include <cassert>
 #include <cstdint>
@@ -38,7 +36,8 @@ std::filesystem::path makeTempDir() {
 
 // Minimal PCM 16-bit mono WAV writer (enough to satisfy SourceManager file loading).
 bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, int numSamples) {
-    if (sampleRate <= 0 || numSamples <= 0) return false;
+    if (sampleRate <= 0 || numSamples <= 0)
+        return false;
 
     const int numChannels = 1;
     const int bitsPerSample = 16;
@@ -48,7 +47,8 @@ bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, in
     const std::uint32_t dataSize = static_cast<std::uint32_t>(numSamples * blockAlign);
 
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
-    if (!out) return false;
+    if (!out)
+        return false;
 
     auto writeU32 = [&](std::uint32_t v) { out.write(reinterpret_cast<const char*>(&v), 4); };
     auto writeU16 = [&](std::uint16_t v) { out.write(reinterpret_cast<const char*>(&v), 2); };
@@ -60,8 +60,8 @@ bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, in
 
     // fmt chunk
     out.write("fmt ", 4);
-    writeU32(16);                 // PCM
-    writeU16(1);                  // audio format = PCM
+    writeU32(16); // PCM
+    writeU16(1);  // audio format = PCM
     writeU16(numChannels);
     writeU32(static_cast<std::uint32_t>(sampleRate));
     writeU32(static_cast<std::uint32_t>(byteRate));
@@ -150,7 +150,8 @@ int main() {
         auto ser = ProjectSerializer::serialize(tm1, 128.0, 1.234, 0);
         require(ser.ok, "ProjectSerializer::serialize failed");
         require(!ser.contents.empty(), "ProjectSerializer::serialize produced empty output");
-        require(ProjectSerializer::writeAtomically(autosavePath.string(), ser.contents), "ProjectSerializer::writeAtomically failed");
+        require(ProjectSerializer::writeAtomically(autosavePath.string(), ser.contents),
+                "ProjectSerializer::writeAtomically failed");
         std::cout << "[INFO] Autosave written: " << autosavePath.string() << " (" << ser.contents.size() << " bytes)\n";
     }
 
