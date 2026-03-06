@@ -8,7 +8,8 @@
 #include <thread>
 #include <vector>
 
-namespace AestraAudio {
+namespace Aestra {
+namespace Audio {
 
 class RtAudioDriver : public IAudioDriver {
 public:
@@ -49,4 +50,5 @@ private:
     bool isDeviceStillConnected();
 };
 
-} // namespace AestraAudio
+} // namespace Audio
+} // namespace Aestra

@@ -4,7 +4,8 @@
 #include <string>
 #include <vector>
 
-namespace AestraAudio {
+namespace Aestra {
+namespace Audio {
 
 void RegisterPlatformDrivers(AudioDeviceManager& manager) {
     manager.addDriver(std::make_unique<RtAudioDriver>());
@@ -18,4 +19,5 @@ PlatformAudioInfo GetPlatformAudioInfo() {
     return info;
 }
 
-} // namespace AestraAudio
+} // namespace Audio
+} // namespace Aestra
