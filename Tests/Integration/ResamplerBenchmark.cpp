@@ -1,14 +1,14 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-#include <iostream>
-#include <vector>
+#include "AestraLog.h"
+#include "SampleRateConverter.h"
+
 #include <chrono>
 #include <cmath>
 #include <iomanip>
-#include <string>
+#include <iostream>
 #include <numeric>
-
-#include "SampleRateConverter.h"
-#include "AestraLog.h"
+#include <string>
+#include <vector>
 
 using namespace Aestra::Audio;
 
@@ -23,12 +23,13 @@ public:
         double durationMs = std::chrono::duration<double, std::milli>(end - m_start).count();
         double nsPerItem = (durationMs * 1000000.0) / static_cast<double>(m_items);
 
-        std::cout << std::left << std::setw(30) << m_name
-                  << " | Time: " << std::fixed << std::setprecision(2) << durationMs << " ms"
+        std::cout << std::left << std::setw(30) << m_name << " | Time: " << std::fixed << std::setprecision(2)
+                  << durationMs << " ms"
                   << " | Per Sample: " << std::setprecision(2) << nsPerItem << " ns"
-                  << " | Speed: " << std::setprecision(2) << (static_cast<double>(m_items)/durationMs/1000.0) << " MHz"
-                  << std::endl;
+                  << " | Speed: " << std::setprecision(2) << (static_cast<double>(m_items) / durationMs / 1000.0)
+                  << " MHz" << std::endl;
     }
+
 private:
     std::string m_name;
     uint64_t m_items;
@@ -53,16 +54,28 @@ void runBenchmark(const std::string& name, uint32_t srcRate, uint32_t dstRate, S
     }
 
     // Output buffer (estimated)
-    uint32_t estOut = static_cast<uint32_t>(static_cast<double>(inputFrames) * static_cast<double>(dstRate) / static_cast<double>(srcRate)) + 100;
+    uint32_t estOut = static_cast<uint32_t>(static_cast<double>(inputFrames) * static_cast<double>(dstRate) /
+                                            static_cast<double>(srcRate)) +
+                      100;
     std::vector<float> output(estOut * 2);
 
     std::string qName;
-    switch(quality) {
-        case SRCQuality::Linear: qName = "Linear"; break;
-        case SRCQuality::Cubic: qName = "Cubic"; break;
-        case SRCQuality::Sinc8: qName = "Sinc8"; break;
-        case SRCQuality::Sinc16: qName = "Sinc16"; break;
-        case SRCQuality::Sinc64: qName = "Sinc64 (Turbo)"; break;
+    switch (quality) {
+    case SRCQuality::Linear:
+        qName = "Linear";
+        break;
+    case SRCQuality::Cubic:
+        qName = "Cubic";
+        break;
+    case SRCQuality::Sinc8:
+        qName = "Sinc8";
+        break;
+    case SRCQuality::Sinc16:
+        qName = "Sinc16";
+        break;
+    case SRCQuality::Sinc64:
+        qName = "Sinc64 (Turbo)";
+        break;
     }
 
     std::string fullName = name + " [" + qName + "]";

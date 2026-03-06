@@ -1,16 +1,17 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraAudio.h"
 #include "AudioProcessor.h"
-#include <iostream>
-#include <thread>
+
 #include <chrono>
 #include <iomanip>
+#include <iostream>
+#include <thread>
 
 using namespace Aestra::Audio;
 
 /**
  * @brief Test audio callback with lock-free UIâ†’Audio communication
- * 
+ *
  * This test validates:
  * 1. Audio processing callback works correctly
  * 2. Lock-free command queue for UIâ†’Audio communication
@@ -24,18 +25,17 @@ struct PerformanceStats {
     double maxLatency = 0.0;
     double avgLatency = 0.0;
     int sampleCount = 0;
-    
+
     void update(double latency) {
         minLatency = std::min(minLatency, latency);
         maxLatency = std::max(maxLatency, latency);
         avgLatency = (avgLatency * sampleCount + latency) / (sampleCount + 1);
         sampleCount++;
     }
-    
+
     void print() const {
         std::cout << "Performance Statistics:\n";
-        std::cout << "  Min latency: " << std::fixed << std::setprecision(2) 
-                  << minLatency << " ms\n";
+        std::cout << "  Min latency: " << std::fixed << std::setprecision(2) << minLatency << " ms\n";
         std::cout << "  Max latency: " << maxLatency << " ms\n";
         std::cout << "  Avg latency: " << avgLatency << " ms\n";
         std::cout << "  Samples: " << sampleCount << "\n";
@@ -52,7 +52,7 @@ int main() {
 
     // Initialize audio device manager
     AudioDeviceManager manager;
-    
+
     std::cout << "Initializing audio system...\n";
     if (!manager.initialize()) {
         std::cerr << "ERROR: Failed to initialize audio system!\n";
@@ -79,15 +79,10 @@ int main() {
 
     // Create test tone generator
     TestToneGenerator generator(config.sampleRate);
-    
+
     // Create audio callback wrapper
-    auto audioCallback = [](
-        float* outputBuffer,
-        const float* inputBuffer,
-        uint32_t numFrames,
-        double streamTime,
-        void* userData
-    ) -> int {
+    auto audioCallback = [](float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime,
+                            void* userData) -> int {
         TestToneGenerator* gen = static_cast<TestToneGenerator*>(userData);
         gen->process(outputBuffer, inputBuffer, numFrames, streamTime);
         return 0;
@@ -99,11 +94,10 @@ int main() {
         std::cerr << "ERROR: Failed to open audio stream!\n";
         return 1;
     }
-    
+
     double latency = manager.getStreamLatency() * 1000.0;
     std::cout << "âœ“ Audio stream opened\n";
-    std::cout << "  Latency: " << std::fixed << std::setprecision(2) 
-              << latency << " ms\n\n";
+    std::cout << "  Latency: " << std::fixed << std::setprecision(2) << latency << " ms\n\n";
 
     // Validate latency requirement
     if (latency > 10.0) {
@@ -137,46 +131,46 @@ int main() {
     std::cout << "===========================================\n";
     std::cout << "Test 2: Lock-Free UIâ†’Audio Communication\n";
     std::cout << "===========================================\n";
-    
+
     // Test gain control
     std::cout << "Testing gain control...\n";
     std::cout << "  Setting gain to 0.5...\n";
     generator.sendCommand(AudioCommandMessage(AudioCommand::SetGain, 0.5f));
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     std::cout << "  Current gain: " << generator.getGain() << "\n";
-    
+
     std::cout << "  Setting gain to 1.0...\n";
     generator.sendCommand(AudioCommandMessage(AudioCommand::SetGain, 1.0f));
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     std::cout << "  Current gain: " << generator.getGain() << "\n";
     std::cout << "âœ“ Gain control working\n\n";
-    
+
     // Test pan control
     std::cout << "Testing pan control...\n";
     std::cout << "  Panning left (-1.0)...\n";
     generator.sendCommand(AudioCommandMessage(AudioCommand::SetPan, -1.0f));
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    
+
     std::cout << "  Panning center (0.0)...\n";
     generator.sendCommand(AudioCommandMessage(AudioCommand::SetPan, 0.0f));
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    
+
     std::cout << "  Panning right (1.0)...\n";
     generator.sendCommand(AudioCommandMessage(AudioCommand::SetPan, 1.0f));
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    
+
     std::cout << "  Panning center (0.0)...\n";
     generator.sendCommand(AudioCommandMessage(AudioCommand::SetPan, 0.0f));
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     std::cout << "âœ“ Pan control working\n\n";
-    
+
     // Test mute/unmute
     std::cout << "Testing mute control...\n";
     std::cout << "  Muting...\n";
     generator.sendCommand(AudioCommandMessage(AudioCommand::Mute));
     std::this_thread::sleep_for(std::chrono::seconds(1));
     std::cout << "  Muted: " << (generator.isMuted() ? "Yes" : "No") << "\n";
-    
+
     std::cout << "  Unmuting...\n";
     generator.sendCommand(AudioCommandMessage(AudioCommand::Unmute));
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -190,14 +184,14 @@ int main() {
     std::cout << "Test 3: Frequency Sweep\n";
     std::cout << "===========================================\n";
     std::cout << "Sweeping from 220 Hz to 880 Hz...\n";
-    
+
     for (int i = 0; i <= 10; ++i) {
         double freq = 220.0 + (880.0 - 220.0) * i / 10.0;
         generator.setFrequency(freq);
         std::cout << "  " << static_cast<int>(freq) << " Hz\n";
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
-    
+
     generator.setFrequency(440.0);
     std::cout << "âœ“ Frequency sweep working\n\n";
 
@@ -207,15 +201,15 @@ int main() {
     std::cout << "===========================================\n";
     std::cout << "Test 4: Buffer Management\n";
     std::cout << "===========================================\n";
-    
+
     AudioBufferManager bufferManager;
     std::cout << "Max buffer size: " << bufferManager.getMaxBufferSize() << " frames\n";
-    
+
     // Allocate test buffer
     float* buffer = bufferManager.allocate(512, 2);
     if (buffer) {
         std::cout << "âœ“ Buffer allocation successful\n";
-        
+
         // Test buffer clear
         bufferManager.clear();
         bool allZero = true;
@@ -238,32 +232,32 @@ int main() {
     std::cout << "Test 5: Command Queue Stress Test\n";
     std::cout << "===========================================\n";
     std::cout << "Sending 1000 commands rapidly...\n";
-    
+
     auto startTime = std::chrono::high_resolution_clock::now();
     int successCount = 0;
-    
+
     for (int i = 0; i < 1000; ++i) {
         float gain = 0.5f + 0.5f * std::sin(i * 0.1f);
         if (generator.sendCommand(AudioCommandMessage(AudioCommand::SetGain, gain))) {
             successCount++;
         }
     }
-    
+
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
-    
+
     std::cout << "  Commands sent: 1000\n";
     std::cout << "  Commands queued: " << successCount << "\n";
     std::cout << "  Time taken: " << duration.count() << " Î¼s\n";
     std::cout << "  Avg time per command: " << (duration.count() / 1000.0) << " Î¼s\n";
-    
+
     if (successCount >= 950) {
         std::cout << "âœ“ Command queue handling high load\n";
     } else {
         std::cout << "âš  WARNING: Some commands were dropped\n";
     }
     std::cout << "\n";
-    
+
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     // =============================================================================
@@ -272,14 +266,13 @@ int main() {
     std::cout << "===========================================\n";
     std::cout << "Performance Summary\n";
     std::cout << "===========================================\n";
-    std::cout << "Stream latency: " << std::fixed << std::setprecision(2) 
-              << (manager.getStreamLatency() * 1000.0) << " ms\n";
+    std::cout << "Stream latency: " << std::fixed << std::setprecision(2) << (manager.getStreamLatency() * 1000.0)
+              << " ms\n";
     std::cout << "Buffer size: " << config.bufferSize << " frames\n";
     std::cout << "Sample rate: " << config.sampleRate << " Hz\n";
-    std::cout << "Theoretical latency: " 
-              << std::fixed << std::setprecision(2)
+    std::cout << "Theoretical latency: " << std::fixed << std::setprecision(2)
               << (config.bufferSize * 1000.0 / config.sampleRate) << " ms\n";
-    
+
     if (manager.getStreamLatency() * 1000.0 < 10.0) {
         std::cout << "âœ“ Real-time performance requirement met (<10ms)\n";
     } else {

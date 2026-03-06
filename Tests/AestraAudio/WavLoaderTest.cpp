@@ -1,11 +1,12 @@
-#include "PlaylistTrack.h"
 #include "MiniAudioDecoder.h"
+#include "PlaylistTrack.h"
+
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <vector>
 #include <string>
-#include <cmath>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -41,12 +42,8 @@ std::string makeTempPath(const std::string& name) {
     return temp.string();
 }
 
-void writeTestWav(const std::string& path,
-                  uint16_t bitsPerSample,
-                  uint32_t sampleRate,
-                  uint16_t numChannels,
-                  const std::vector<int32_t>& samples,
-                  bool insertJunkChunk) {
+void writeTestWav(const std::string& path, uint16_t bitsPerSample, uint32_t sampleRate, uint16_t numChannels,
+                  const std::vector<int32_t>& samples, bool insertJunkChunk) {
     std::ofstream wav(path, std::ios::binary);
     const uint16_t audioFormat = 1; // PCM
     const uint32_t fmtChunkSize = 16;
@@ -104,7 +101,8 @@ bool runBasic16BitTest() {
 
     // Note: decodeAudioFile forces stereo, so channel count will be 2
     if (!ok || sampleRate != 44100 || channels != 2 || audio.size() != samples.size() * 2) {
-        std::cout << " FAILED (Metadata mismatch) SR: " << sampleRate << " CH: " << channels << " Size: " << audio.size() << "\n";
+        std::cout << " FAILED (Metadata mismatch) SR: " << sampleRate << " CH: " << channels
+                  << " Size: " << audio.size() << "\n";
         return false;
     }
 

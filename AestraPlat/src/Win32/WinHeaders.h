@@ -18,9 +18,9 @@
 #endif
 
 // Include Windows headers (windows.h MUST come first)
-#include <windows.h>
 #include <commdlg.h>
 #include <shlobj.h>
+#include <windows.h>
 
 // Additional Windows headers as needed (only add what's actually used)
 // #include <dwmapi.h>

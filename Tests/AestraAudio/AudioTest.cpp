@@ -1,9 +1,10 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraAudio.h"
-#include <iostream>
-#include <cmath>
-#include <thread>
+
 #include <chrono>
+#include <cmath>
+#include <iostream>
+#include <thread>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -19,29 +20,24 @@ struct SineWaveData {
 };
 
 // Audio callback that generates a sine wave
-int sineWaveCallback(
-    float* outputBuffer,
-    const float* inputBuffer,
-    uint32_t numFrames,
-    double streamTime,
-    void* userData
-) {
+int sineWaveCallback(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime,
+                     void* userData) {
     SineWaveData* data = static_cast<SineWaveData*>(userData);
-    
+
     for (uint32_t i = 0; i < numFrames; ++i) {
         float sample = static_cast<float>(0.3 * std::sin(2.0 * M_PI * data->phase));
-        
+
         // Stereo output
         outputBuffer[i * 2 + 0] = sample; // Left
         outputBuffer[i * 2 + 1] = sample; // Right
-        
+
         // Advance phase
         data->phase += data->frequency / data->sampleRate;
         if (data->phase >= 1.0) {
             data->phase -= 1.0;
         }
     }
-    
+
     return 0;
 }
 
@@ -55,7 +51,7 @@ int main() {
 
     // Initialize audio device manager
     AudioDeviceManager manager;
-    
+
     std::cout << "Initializing audio system...\n";
     if (!manager.initialize()) {
         std::cerr << "ERROR: Failed to initialize audio system!\n";
@@ -119,7 +115,7 @@ int main() {
     // Play sine wave for 3 seconds
     std::cout << "Playing 440 Hz sine wave for 3 seconds...\n";
     std::cout << "(You should hear a tone)\n\n";
-    
+
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
     // Stop audio stream

@@ -11,22 +11,39 @@
 namespace Aestra {
 namespace Audio {
 
-class RtAudioDriver : public IAudioDriver {
+// STUB: Legacy types used by RtAudioDriver — Phase 2 will unify with IAudioDriver types
+struct AudioDeviceConfig {
+    unsigned int deviceId{0};
+    unsigned int sampleRate{48000};
+    unsigned int bufferSize{512};
+    unsigned int inputChannels{0};
+    unsigned int outputChannels{2};
+};
+
+class IAudioCallback {
+public:
+    virtual ~IAudioCallback() = default;
+    virtual void process(const float* input, float* output, unsigned int frames) = 0;
+};
+
+// STUB: RtAudioDriver — standalone Linux audio driver, not yet conforming to IAudioDriver interface
+// Phase 2 will align this with the IAudioDriver API (openStream, getDevices, etc.)
+class RtAudioDriver {
 public:
     RtAudioDriver();
-    ~RtAudioDriver() override;
+    ~RtAudioDriver();
 
     // IAudioDriver interface
-    std::string getDriverName() const override { return "RtAudio"; }
-    std::vector<AudioDeviceInfo> enumerateDevices() override;
-    bool openDevice(const AudioDeviceConfig& config) override;
-    void closeDevice() override;
-    bool startStream(IAudioCallback* callback) override;
-    void stopStream() override;
-    bool isStreamOpen() const override { return isStreamOpen_; }
-    bool isStreamRunning() const override { return isStreamRunning_; }
-    double getStreamCpuLoad() const override { return 0.0; } // RtAudio doesn't provide this directly
-    bool supportsExclusiveMode() const override;
+    std::string getDriverName() const { return "RtAudio"; }
+    std::vector<AudioDeviceInfo> enumerateDevices();
+    bool openDevice(const AudioDeviceConfig& config);
+    void closeDevice();
+    bool startStream(IAudioCallback* callback);
+    void stopStream();
+    bool isStreamOpen() const { return isStreamOpen_; }
+    bool isStreamRunning() const { return isStreamRunning_; }
+    double getStreamCpuLoad() const { return 0.0; } // RtAudio doesn't provide this directly
+    bool supportsExclusiveMode() const;
 
     // Internal callback
     static int rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int nFrames, double streamTime,
