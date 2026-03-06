@@ -459,7 +459,7 @@ elseif(UNIX)
     if(ALSA_FOUND)
         set(AESTRA_AUDIO_LINUX_SOURCES
             src/Linux/LinuxDriverRegistry.cpp
-            src/Linux/RtAudioDriver.cpp
+            # STUB: RtAudioDriver.cpp excluded — uses legacy interface, Phase 2 will rewrite
         )
 
         set(AESTRA_AUDIO_LINUX_HEADERS
