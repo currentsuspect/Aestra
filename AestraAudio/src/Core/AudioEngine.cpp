@@ -15,7 +15,9 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#if defined(_MSC_VER) || defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
 #include <immintrin.h> // AVX/SSE for high-performance mixing
+#endif
 #include <map>
 
 // Denormal protection macros
