@@ -15,8 +15,8 @@
     #include <SDL2/SDL.h>
     #endif
 #elif AESTRA_PLATFORM_MACOS
-    // TODO: macOS implementation
-    #error "macOS platform not yet implemented"
+    // macOS stub implementation - runtime parity pending
+    // No Cocoa/AppKit headers required for headless builds
 #endif
 
 namespace Aestra {
