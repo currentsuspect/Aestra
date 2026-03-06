@@ -84,6 +84,13 @@ public:
         return result;
     }
 
+    // STUB: applyPatch — Phase 2 will support undo-aware pattern mutations
+    template<typename PatchFn>
+    void applyPatch(PatternID id, PatchFn&& fn) {
+        auto* pattern = getOrCreatePattern(id);
+        if (pattern) fn(*pattern);
+    }
+
 private:
     uint64_t nextId{1};
     std::unordered_map<uint64_t, std::unique_ptr<PatternSource>> m_patterns;

@@ -108,6 +108,9 @@ public:
      */
     std::shared_ptr<MeterSnapshotBuffer> getMeterSnapshots() const { return m_meterSnapshots; }
 
+    // STUB: getContinuousParams — Phase 2 will return real-time automation parameter buffer
+    std::shared_ptr<ContinuousParamBuffer> getContinuousParams() const { return m_continuousParams; }
+
     /**
      * @brief Get channel slot map
      */
@@ -139,6 +142,7 @@ private:
     int m_inputChannelCount{0};
     double m_position{0.0};
     std::shared_ptr<MeterSnapshotBuffer> m_meterSnapshots;
+    std::shared_ptr<ContinuousParamBuffer> m_continuousParams; // STUB: Phase 2
     std::shared_ptr<ChannelSlotMap> m_channelSlotMap;
     UnitManager m_unitManager;
 };

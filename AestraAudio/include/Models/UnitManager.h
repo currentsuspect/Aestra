@@ -2,7 +2,9 @@
 #include "../../AestraCore/include/AestraJSON.h"
 #include "PluginHost.h"
 
+#include <cstdint>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -12,6 +14,12 @@ namespace Audio {
 // Forward declarations
 using UnitID = uint64_t;
 
+// STUB: UnitGroup — Phase 2 will define group routing/bus logic
+struct UnitGroup {
+    uint64_t id{0};
+    std::string name;
+};
+
 /**
  * @brief Unit information for audio engine
  */
@@ -20,6 +28,16 @@ struct UnitInfo {
     bool enabled{false};
     int targetMixerRoute{-1}; // -1 = not routed
     std::shared_ptr<IPluginInstance> plugin;
+
+    // STUB: Phase 2 UI-facing properties
+    std::string name;
+    uint32_t color{0x808080};       // Default grey
+    bool isMuted{false};
+    bool isSolo{false};
+    bool isArmed{false};
+    bool isEnabled{false};
+    std::string audioClipPath;
+    UnitGroup group;
 };
 
 struct UnitState {
@@ -70,6 +88,15 @@ public:
         m_units[id].id = id;
         return id;
     }
+
+    // STUB: Phase 2 unit property setters — UI calls these to modify unit state
+    void setUnitName(UnitID id, const std::string& name) { if (auto* u = getUnit(id)) u->name = name; }
+    void setUnitMute(UnitID id, bool muted) { if (auto* u = getUnit(id)) u->isMuted = muted; }
+    void setUnitSolo(UnitID id, bool solo) { if (auto* u = getUnit(id)) u->isSolo = solo; }
+    void setUnitArmed(UnitID id, bool armed) { if (auto* u = getUnit(id)) u->isArmed = armed; }
+    void setUnitEnabled(UnitID id, bool enabled) { if (auto* u = getUnit(id)) u->isEnabled = enabled; }
+    void setUnitMixerChannel(UnitID id, int channel) { if (auto* u = getUnit(id)) u->targetMixerRoute = channel; }
+    void setUnitAudioClip(UnitID id, const std::string& path) { if (auto* u = getUnit(id)) u->audioClipPath = path; }
 
     /**
      * @brief Save to JSON (stub)
