@@ -274,6 +274,8 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
     const float gain = voice->gain;
     const uint32_t srcChannels = voice->channels;
 
+    uint32_t i = 0;
+
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
     // SIMD Helper: 4-wide Cubic Hermite Spline
     auto cubicSIMD = [&](__m128 p0, __m128 p1, __m128 p2, __m128 p3, __m128 t) -> __m128 {
@@ -311,8 +313,6 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
         res = _mm_add_ps(res, d);
         return res;
     };
-
-    uint32_t i = 0;
 
     // --- SIMD LOOP (Process 4 frames at a time) ---
     // Safety Limit: ensuring phase + 4*ratio + lookahead(2) is within [0, totalFrames-1]

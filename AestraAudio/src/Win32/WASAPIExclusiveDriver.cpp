@@ -9,8 +9,8 @@
 #define NOMINMAX
 #endif
 #include <algorithm>
-#include <audioclient.h>
 #include <windows.h>
+#include <audioclient.h>
 #include <avrt.h>
 #include <chrono>
 #include <cstring>
