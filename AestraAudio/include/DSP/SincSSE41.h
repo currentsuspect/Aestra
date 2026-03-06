@@ -3,6 +3,8 @@
 // It is only called when CPUDetection confirms SSE4.1 support (and lacks AVX2).
 #pragma once
 
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+
 #include <smmintrin.h> // SSE4.1
 #include <xmmintrin.h> // SSE
 
@@ -60,3 +62,5 @@ inline void sincDotProductSSE41(const float* coeffs,
 
 } // namespace Audio
 } // namespace Aestra
+
+#endif // x86 guard
