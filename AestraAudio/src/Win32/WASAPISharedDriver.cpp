@@ -15,6 +15,7 @@
 #include <avrt.h>
 #include <chrono>
 #include <cstring>
+#include <initguid.h>
 #include <functiondiscoverykeys_devpkey.h>
 #include <iomanip>
 #include <iostream>
