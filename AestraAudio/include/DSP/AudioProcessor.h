@@ -1,8 +1,9 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "AudioDriver.h"
 #include "AestraThreading.h"
+#include "AudioDriver.h"
+
 #include <atomic>
 #include <cstring>
 
@@ -12,14 +13,7 @@ namespace Audio {
 /**
  * @brief Audio command for lock-free UIâ†’Audio communication
  */
-enum class AudioCommand {
-    None = 0,
-    SetGain,
-    SetPan,
-    Mute,
-    Unmute,
-    Reset
-};
+enum class AudioCommand { None = 0, SetGain, SetPan, Mute, Unmute, Reset };
 
 /**
  * @brief Audio command message
@@ -28,15 +22,14 @@ struct AudioCommandMessage {
     AudioCommand command = AudioCommand::None;
     float value1 = 0.0f;
     float value2 = 0.0f;
-    
+
     AudioCommandMessage() = default;
-    AudioCommandMessage(AudioCommand cmd, float v1 = 0.0f, float v2 = 0.0f)
-        : command(cmd), value1(v1), value2(v2) {}
+    AudioCommandMessage(AudioCommand cmd, float v1 = 0.0f, float v2 = 0.0f) : command(cmd), value1(v1), value2(v2) {}
 };
 
 /**
  * @brief Base class for audio processors
- * 
+ *
  * Provides lock-free communication between UI and audio threads.
  * Uses a ring buffer for command passing.
  */
@@ -47,22 +40,17 @@ public:
 
     /**
      * @brief Process audio callback (called from audio thread)
-     * 
+     *
      * @param outputBuffer Output audio buffer (interleaved)
      * @param inputBuffer Input audio buffer (interleaved, can be nullptr)
      * @param numFrames Number of frames to process
      * @param streamTime Current stream time in seconds
      */
-    virtual void process(
-        float* outputBuffer,
-        const float* inputBuffer,
-        uint32_t numFrames,
-        double streamTime
-    ) = 0;
+    virtual void process(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime) = 0;
 
     /**
      * @brief Send command from UI thread to audio thread
-     * 
+     *
      * @param message Command message to send
      * @return true if command was queued successfully
      */
@@ -107,7 +95,7 @@ private:
 
 /**
  * @brief Simple audio buffer manager
- * 
+ *
  * Manages temporary audio buffers for processing.
  */
 class AudioBufferManager {
@@ -117,7 +105,7 @@ public:
 
     /**
      * @brief Allocate buffer for given size
-     * 
+     *
      * @param numFrames Number of frames
      * @param numChannels Number of channels
      * @return Pointer to allocated buffer
@@ -137,7 +125,7 @@ public:
 private:
     static constexpr uint32_t MAX_BUFFER_SIZE = 8192; // frames
     static constexpr uint32_t MAX_CHANNELS = 8;
-    
+
     float* m_buffer;
     uint32_t m_maxBufferSize;
     uint32_t m_maxChannels;
@@ -145,7 +133,7 @@ private:
 
 /**
  * @brief Simple test tone generator
- * 
+ *
  * Generates sine waves for testing audio callback.
  */
 class TestToneGenerator : public AudioProcessor {
@@ -153,12 +141,7 @@ public:
     TestToneGenerator(double sampleRate = 48000.0);
     ~TestToneGenerator() override = default;
 
-    void process(
-        float* outputBuffer,
-        const float* inputBuffer,
-        uint32_t numFrames,
-        double streamTime
-    ) override;
+    void process(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime) override;
 
     /**
      * @brief Set frequency of test tone

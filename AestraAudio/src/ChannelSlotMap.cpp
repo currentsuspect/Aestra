@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "ChannelSlotMap.h"
+
 #include "MixerChannel.h"
 
 namespace Aestra {
@@ -22,7 +23,6 @@ void ChannelSlotMap::rebuild(const std::vector<std::shared_ptr<MixerChannel>>& c
     }
     m_channelCount = slot;
 }
-
 
 uint32_t ChannelSlotMap::getSlotIndex(uint32_t channelId) const {
     auto it = m_idToSlot.find(channelId);

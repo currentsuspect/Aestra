@@ -1,19 +1,20 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "IAudioDriver.h"
 #include "AudioDriverTypes.h"
-#include <memory>
-#include <functional>
-#include <vector>
+#include "IAudioDriver.h"
+
 #include <chrono>
+#include <functional>
+#include <memory>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
 
 /**
  * @brief Manages audio devices and streams
- * 
+ *
  * Provides high-level interface for audio I/O:
  * - Device enumeration and selection
  * - Stream configuration
@@ -92,12 +93,12 @@ public:
      * Returns 0 if no active stream.
      */
     uint32_t getStreamBufferSize() const;
-    
+
     /**
      * @brief Get latency compensation values for recording
      * @param[out] inputLatencyMs Input latency in milliseconds
      * @param[out] outputLatencyMs Output latency in milliseconds
-     * 
+     *
      * Call this after opening a stream to get latency compensation values.
      * These should be passed to Track::setLatencyCompensation() for recording.
      */
@@ -112,7 +113,7 @@ public:
      * @brief Switch to a different audio device
      * @param deviceId New device ID to switch to
      * @return true if device switch was successful
-     * 
+     *
      * This will stop the current stream, reconfigure with the new device,
      * and restart the stream if it was running.
      */
@@ -122,7 +123,7 @@ public:
      * @brief Update sample rate
      * @param sampleRate New sample rate in Hz
      * @return true if sample rate was updated successfully
-     * 
+     *
      * This will restart the stream with the new sample rate.
      */
     bool setSampleRate(uint32_t sampleRate);
@@ -131,7 +132,7 @@ public:
      * @brief Update buffer size
      * @param bufferSize New buffer size in frames
      * @return true if buffer size was updated successfully
-     * 
+     *
      * This will restart the stream with the new buffer size.
      */
     bool setBufferSize(uint32_t bufferSize);
@@ -153,7 +154,7 @@ public:
      * @brief Set preferred driver type
      * @param type Preferred driver type (WASAPI_EXCLUSIVE or WASAPI_SHARED)
      * @return true if driver type was set successfully
-     * 
+     *
      * This will attempt to reopen the stream with the specified driver.
      * Falls back to next best driver if the preferred one fails.
      */
@@ -163,7 +164,7 @@ public:
      * @brief Check if a specific driver type is currently available
      * @param type Driver type to check
      * @return true if the driver can be opened (not blocked by another app)
-     * 
+     *
      * This performs a quick test-open to check availability without changing
      * the active stream. Useful for UI to grey out unavailable options.
      */
@@ -177,7 +178,7 @@ public:
     /**
      * @brief Check if we're using a fallback driver (not the preferred one)
      * @return true if active driver differs from preferred driver
-     * 
+     *
      * This is useful for showing warnings in the UI when Exclusive mode
      * was requested but Shared mode is active (e.g., due to conflicts).
      */
@@ -189,24 +190,21 @@ public:
      * @param actualType The driver type that was actually used
      * @param reason Human-readable explanation of why fallback occurred
      */
-    using DriverModeChangeCallback = std::function<void(AudioDriverType preferredType, 
-                                                         AudioDriverType actualType, 
-                                                         const std::string& reason)>;
-    
+    using DriverModeChangeCallback =
+        std::function<void(AudioDriverType preferredType, AudioDriverType actualType, const std::string& reason)>;
+
     /**
      * @brief Set callback for driver mode changes (fallback notifications)
      * @param callback Function to call when driver mode changes
-     * 
+     *
      * This callback is invoked when:
      * - Exclusive mode was requested but Shared mode is used (conflict)
      * - Any automatic driver fallback occurs
-     * 
+     *
      * Use this to show info bars or notifications in the UI.
      */
-    void setDriverModeChangeCallback(DriverModeChangeCallback callback) { 
-        m_driverModeChangeCallback = callback; 
-    }
-    
+    void setDriverModeChangeCallback(DriverModeChangeCallback callback) { m_driverModeChangeCallback = callback; }
+
     /**
      * @brief Get reason for current fallback (if any)
      * @return Human-readable reason, or empty string if using preferred driver
@@ -245,7 +243,7 @@ public:
      * @brief Monitor active driver health and perform safety fallback if stalled.
      */
     void checkDriverHealth();
-    
+
     /**
      * @brief Force switch to the internal dummy driver (e.g. after a crash/disconnect).
      */
@@ -255,7 +253,7 @@ public:
      * @brief Enable/Disable dithering for active driver
      */
     void setDitheringEnabled(bool enabled);
-    
+
     /**
      * @brief Check if dithering is enabled (preference)
      */
@@ -265,30 +263,30 @@ private:
     // Driver management
     std::vector<std::unique_ptr<IAudioDriver>> m_drivers;
     IAudioDriver* m_activeDriver = nullptr;
-    AudioDriverType m_preferredDriverType = AudioDriverType::WASAPI_EXCLUSIVE;  // Prefer Exclusive, auto-fallback to Shared if blocked
-    
+    AudioDriverType m_preferredDriverType =
+        AudioDriverType::WASAPI_EXCLUSIVE; // Prefer Exclusive, auto-fallback to Shared if blocked
+
     // Preferences
     bool m_ditherEnabled = false;
-    
+
     AudioStreamConfig m_currentConfig;
     AudioCallback m_currentCallback;
     void* m_currentUserData;
     bool m_initialized;
     bool m_wasRunning;
-    
+
     // Driver mode change notification
     DriverModeChangeCallback m_driverModeChangeCallback;
     std::string m_fallbackReason;
-    
+
     // Auto-buffer scaling
     bool m_autoBufferScalingEnabled = false;
-    uint32_t m_underrunThreshold = 10;  // Underruns per minute
+    uint32_t m_underrunThreshold = 10; // Underruns per minute
     uint64_t m_lastUnderrunCount = 0;
     std::chrono::steady_clock::time_point m_lastUnderrunCheck;
-    
+
     // Helper methods
-    bool tryDriver(IAudioDriver* driver, const AudioStreamConfig& config, 
-                   AudioCallback callback, void* userData);
+    bool tryDriver(IAudioDriver* driver, const AudioStreamConfig& config, AudioCallback callback, void* userData);
 };
 
 // =============================================================================

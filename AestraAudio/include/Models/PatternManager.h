@@ -1,8 +1,9 @@
 #pragma once
 #include "PatternSource.h"
-#include <vector>
-#include <unordered_map>
+
 #include <memory>
+#include <unordered_map>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -13,7 +14,7 @@ namespace Audio {
 class PatternManager {
 public:
     PatternManager() = default;
-    
+
     /**
      * @brief Get a pattern by ID (returns nullptr if not found)
      */
@@ -24,7 +25,7 @@ public:
         }
         return nullptr;
     }
-    
+
     const PatternSource* getPattern(PatternID id) const {
         auto it = m_patterns.find(id.value);
         if (it != m_patterns.end()) {
@@ -32,7 +33,7 @@ public:
         }
         return nullptr;
     }
-    
+
     /**
      * @brief Create a new pattern and return its ID
      */
@@ -42,7 +43,7 @@ public:
         m_patterns[id.value]->id = id;
         return id;
     }
-    
+
     /**
      * @brief Create an audio pattern
      */
@@ -57,7 +58,7 @@ public:
         m_patterns[id.value] = std::move(pattern);
         return id;
     }
-    
+
     /**
      * @brief Get or create a pattern
      */
@@ -69,7 +70,7 @@ public:
         }
         return ptr.get();
     }
-    
+
     /**
      * @brief Get all patterns
      */
@@ -82,7 +83,7 @@ public:
         }
         return result;
     }
-    
+
 private:
     uint64_t nextId{1};
     std::unordered_map<uint64_t, std::unique_ptr<PatternSource>> m_patterns;

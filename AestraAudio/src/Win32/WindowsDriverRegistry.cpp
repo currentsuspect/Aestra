@@ -1,11 +1,12 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-#include "AudioDriverRegistry.h"
+#include "../DummyAudioDriver.h"
+#include "ASIODriver.h"
 #include "AudioDeviceManager.h"
+#include "AudioDriverRegistry.h"
+#include "RtAudioBackend.h"
 #include "WASAPIExclusiveDriver.h"
 #include "WASAPISharedDriver.h"
-#include "ASIODriver.h"
-#include "RtAudioBackend.h"
-#include "../DummyAudioDriver.h"
+
 #include <iostream>
 
 namespace Aestra {
@@ -13,7 +14,7 @@ namespace Audio {
 
 void RegisterPlatformDrivers(AudioDeviceManager& manager) {
     std::cout << "[AudioDriverRegistry] Registering Windows drivers..." << std::endl;
-    
+
     // Register ASIO Drivers (Phase 6)
     try {
         auto asio = std::make_unique<ASIODriver>();
@@ -30,7 +31,7 @@ void RegisterPlatformDrivers(AudioDeviceManager& manager) {
         if (exclusive->initialize()) {
             manager.addDriver(std::move(exclusive));
         } else {
-             std::cout << "[AudioDriverRegistry] Failed to initialize WASAPI Exclusive" << std::endl;
+            std::cout << "[AudioDriverRegistry] Failed to initialize WASAPI Exclusive" << std::endl;
         }
     } catch (const std::exception& e) {
         std::cerr << "[AudioDriverRegistry] WASAPI Exclusive exception: " << e.what() << std::endl;
@@ -42,17 +43,17 @@ void RegisterPlatformDrivers(AudioDeviceManager& manager) {
         if (shared->initialize()) {
             manager.addDriver(std::move(shared));
         } else {
-             std::cout << "[AudioDriverRegistry] Failed to initialize WASAPI Shared" << std::endl;
+            std::cout << "[AudioDriverRegistry] Failed to initialize WASAPI Shared" << std::endl;
         }
     } catch (const std::exception& e) {
         std::cerr << "[AudioDriverRegistry] WASAPI Shared exception: " << e.what() << std::endl;
     }
-    
+
     // Register RtAudio (Fallback)
     try {
         auto rtaudio = std::make_unique<RtAudioBackend>();
         if (rtaudio->initialize()) {
-             manager.addDriver(std::move(rtaudio));
+            manager.addDriver(std::move(rtaudio));
         }
     } catch (...) {
         std::cerr << "[AudioDriverRegistry] RtAudio exception" << std::endl;

@@ -2,7 +2,7 @@
 /**
  * @file AestraProfiler.h
  * @brief Lightweight performance profiler for AESTRA
- * 
+ *
  * Features:
  * - Zone timing macros (AESTRA_ZONE)
  * - Ring buffer for last 300 frames
@@ -13,12 +13,12 @@
 
 #pragma once
 
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <fstream>
 #include <string>
 #include <vector>
-#include <chrono>
-#include <atomic>
-#include <array>
-#include <fstream>
 
 namespace Aestra {
 
@@ -29,7 +29,7 @@ class ScopedTimer {
 public:
     ScopedTimer(const char* name);
     ~ScopedTimer();
-    
+
 private:
     const char* m_name;
     std::chrono::steady_clock::time_point m_start;
@@ -41,21 +41,21 @@ private:
 // forward declare ZoneEntry so FrameStats can contain a vector of them
 struct ZoneEntry;
 struct FrameStats {
-    double cpuTimeMs{0.0};      // CPU logic + render prep
-    double gpuTimeMs{0.0};      // GPU draw time
-    double totalTimeMs{0.0};    // Total frame time
+    double cpuTimeMs{0.0};        // CPU logic + render prep
+    double gpuTimeMs{0.0};        // GPU draw time
+    double totalTimeMs{0.0};      // Total frame time
     double audioLoadPercent{0.0}; // Audio thread load
-    
-    uint32_t drawCalls{0};      // OpenGL draw calls
-    uint32_t widgetCount{0};    // Active widgets
-    uint32_t triangles{0};      // Rendered triangles
-    
+
+    uint32_t drawCalls{0};   // OpenGL draw calls
+    uint32_t widgetCount{0}; // Active widgets
+    uint32_t triangles{0};   // Rendered triangles
+
     // Per-zone timings (microseconds)
     double uiUpdateUs{0.0};
     double renderPrepUs{0.0};
     double gpuSubmitUs{0.0};
     double inputPollUs{0.0};
-    
+
     // Absolute frame start time (microseconds since epoch) - used for JSON export
     uint64_t frameStartUs{0};
 
@@ -79,65 +79,65 @@ struct ZoneEntry {
 class Profiler {
 public:
     static Profiler& getInstance();
-    
+
     // Zone timing
     void beginZone(const char* name);
     void endZone(const char* name);
-    
+
     // Frame markers
     void beginFrame();
     void endFrame();
-    
+
     // Stats recording
     void recordDrawCall();
     void recordTriangles(uint32_t count);
     void setWidgetCount(uint32_t count);
     void setAudioLoad(double percent);
-    
+
     // Query
     const FrameStats& getCurrentFrame() const { return m_currentFrame; }
     const FrameStats& getAverageStats() const { return m_averageStats; }
     double getFPS() const { return m_fps; }
-    
+
     // History
     const std::vector<FrameStats>& getHistory() const { return m_history; }
-    
+
     // Export
     void exportToJSON(const std::string& filepath);
-    
+
     // Enable/disable
     void setEnabled(bool enabled) { m_enabled = enabled; }
     bool isEnabled() const { return m_enabled; }
-    
+
 private:
     Profiler();
     ~Profiler() = default;
     Profiler(const Profiler&) = delete;
     Profiler& operator=(const Profiler&) = delete;
-    
+
     void updateAverages();
     uint64_t getMicroseconds() const;
-    
+
     std::atomic<bool> m_enabled{true};
-    
+
     // Current frame
     FrameStats m_currentFrame;
     std::chrono::steady_clock::time_point m_frameStart;
     std::chrono::steady_clock::time_point m_cpuStart;
     std::chrono::steady_clock::time_point m_gpuStart;
-    
+
     // Zone stack (for nested zones)
     std::vector<ZoneEntry> m_zoneStack;
-    
+
     // History (ring buffer of last 300 frames)
     static constexpr size_t HISTORY_SIZE = 300;
     std::vector<FrameStats> m_history;
     size_t m_historyIndex{0};
-    
+
     // Running averages
     FrameStats m_averageStats;
     double m_fps{60.0};
-    
+
     // Frame counter
     uint64_t m_frameCount{0};
     std::chrono::steady_clock::time_point m_fpsTimer;

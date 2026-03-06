@@ -2,8 +2,8 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -11,60 +11,47 @@ namespace Audio {
 /**
  * @brief Automation target types
  */
-enum class AutomationTarget : uint8_t {
-    Volume = 0,
-    Pan = 1,
-    Custom = 255
-};
+enum class AutomationTarget : uint8_t { Volume = 0, Pan = 1, Custom = 255 };
 
 struct AutomationPoint {
     uint64_t sample{0};
     float value{0.0f};
-    double beat{0.0};       // For serialization
-    float curve{0.0f};      // For serialization (curve tension)
+    double beat{0.0};  // For serialization
+    float curve{0.0f}; // For serialization (curve tension)
 };
 
 struct AutomationCurve {
     uint32_t laneId{0};
     std::vector<AutomationPoint> points;
-    
+
     // Extended fields for full AutomationCurve API
     std::string name;
     AutomationTarget target{AutomationTarget::Custom};
     float defaultValue{0.0f};
-    
+
     AutomationCurve() = default;
-    AutomationCurve(const std::string& n, AutomationTarget t) 
-        : name(n), target(t) {}
-    
+    AutomationCurve(const std::string& n, AutomationTarget t) : name(n), target(t) {}
+
     /**
      * @brief Get the automation target type
      */
-    AutomationTarget getAutomationTarget() const {
-        return target;
-    }
-    
+    AutomationTarget getAutomationTarget() const { return target; }
+
     /**
      * @brief Get target as double for JSON serialization
      */
-    double getTarget() const {
-        return static_cast<double>(target);
-    }
-    
+    double getTarget() const { return static_cast<double>(target); }
+
     /**
      * @brief Get default value
      */
-    float getDefaultValue() const {
-        return defaultValue;
-    }
-    
+    float getDefaultValue() const { return defaultValue; }
+
     /**
      * @brief Get all points
      */
-    const std::vector<AutomationPoint>& getPoints() const {
-        return points;
-    }
-    
+    const std::vector<AutomationPoint>& getPoints() const { return points; }
+
     /**
      * @brief Get interpolated value at a given beat position
      * @param beat The beat position
@@ -74,16 +61,16 @@ struct AutomationCurve {
         if (points.empty()) {
             return defaultValue;
         }
-        
+
         // Simple linear interpolation between points
         // Convert beat to sample for lookup (assume 48000 sample rate, 120 BPM as default)
         const double samplesPerBeat = (48000.0 * 60.0) / 120.0;
         const uint64_t targetSample = static_cast<uint64_t>(beat * samplesPerBeat);
-        
+
         // Find surrounding points
         const AutomationPoint* prev = nullptr;
         const AutomationPoint* next = nullptr;
-        
+
         for (const auto& pt : points) {
             if (pt.sample <= targetSample) {
                 prev = &pt;
@@ -92,7 +79,7 @@ struct AutomationCurve {
                 break;
             }
         }
-        
+
         if (!prev && !next) {
             return defaultValue;
         }
@@ -102,24 +89,22 @@ struct AutomationCurve {
         if (!next) {
             return prev->value;
         }
-        
+
         // Linear interpolation
         const double sampleRange = static_cast<double>(next->sample - prev->sample);
         if (sampleRange <= 0.0) {
             return prev->value;
         }
-        
+
         const double t = static_cast<double>(targetSample - prev->sample) / sampleRange;
         return prev->value + static_cast<float>(t) * (next->value - prev->value);
     }
-    
+
     /**
      * @brief Set the default value for this curve
      */
-    void setDefaultValue(float val) {
-        defaultValue = val;
-    }
-    
+    void setDefaultValue(float val) { defaultValue = val; }
+
     /**
      * @brief Add a control point to the curve
      * @param beat Beat position
@@ -131,7 +116,7 @@ struct AutomationCurve {
         AutomationPoint pt;
         pt.sample = static_cast<uint64_t>(beat * samplesPerBeat);
         pt.value = value;
-        
+
         // Insert in sorted order
         auto it = points.begin();
         while (it != points.end() && it->sample < pt.sample) {

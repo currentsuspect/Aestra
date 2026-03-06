@@ -1,9 +1,11 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "MixerBus.h"
+
 #include "FastMath.h"
+
+#include <algorithm>
 #include <cmath>
 #include <cstring>
-#include <algorithm>
 
 namespace Aestra {
 namespace Audio {
@@ -13,19 +15,10 @@ static constexpr float PI = 3.14159265358979323846f;
 static constexpr float SQRT2_OVER_2 = 0.70710678118654752440f; // sqrt(2)/2
 
 MixerBus::MixerBus(const char* name, uint32_t numChannels)
-    : m_name(name)
-    , m_numChannels(numChannels)
-    , m_gain(1.0f)
-    , m_pan(0.0f)
-    , m_muted(false)
-    , m_soloed(false)
-    , m_currentGain(1.0f)
-    , m_currentPan(0.0f)
-{
-}
+    : m_name(name), m_numChannels(numChannels), m_gain(1.0f), m_pan(0.0f), m_muted(false), m_soloed(false),
+      m_currentGain(1.0f), m_currentPan(0.0f) {}
 
-void MixerBus::process(float* buffer, uint32_t numFrames)
-{
+void MixerBus::process(float* buffer, uint32_t numFrames) {
     // Load targets (atomic)
     const float targetGain = m_gain.load(std::memory_order_acquire);
     const float targetPan = m_pan.load(std::memory_order_acquire);
@@ -47,14 +40,13 @@ void MixerBus::process(float* buffer, uint32_t numFrames)
         const float gainStart = m_currentGain;
         const float gainEnd = targetGain;
         const float gainDelta = (gainEnd - gainStart) / static_cast<float>(numFrames);
-        
+
         float current = gainStart;
         for (uint32_t i = 0; i < numFrames; ++i) {
             buffer[i] *= current;
             current += gainDelta;
         }
-    }
-    else if (m_numChannels == 2) {
+    } else if (m_numChannels == 2) {
         // Stereo: Apply Width (M/S), then Pan, then Gain
         const float panStart = m_currentPan;
         const float panEnd = targetPan;
@@ -62,7 +54,7 @@ void MixerBus::process(float* buffer, uint32_t numFrames)
         const float gainEnd = targetGain;
         const float widthStart = m_currentWidth;
         const float widthEnd = targetWidth;
-        
+
         const float panDelta = (panEnd - panStart) / static_cast<float>(numFrames);
         const float gainDelta = (gainEnd - gainStart) / static_cast<float>(numFrames);
         const float widthDelta = (widthEnd - widthStart) / static_cast<float>(numFrames);
@@ -74,7 +66,7 @@ void MixerBus::process(float* buffer, uint32_t numFrames)
         for (uint32_t i = 0; i < numFrames; ++i) {
             const uint32_t leftIdx = i * 2;
             const uint32_t rightIdx = i * 2 + 1;
-            
+
             float L = buffer[leftIdx];
             float R = buffer[rightIdx];
 
@@ -83,10 +75,10 @@ void MixerBus::process(float* buffer, uint32_t numFrames)
                 // Encode M/S
                 float mid = 0.5f * (L + R);
                 float side = 0.5f * (L - R);
-                
+
                 // Process Side
                 side *= currentWidth;
-                
+
                 // Decode L/R
                 L = mid + side;
                 R = mid - side;
@@ -95,27 +87,27 @@ void MixerBus::process(float* buffer, uint32_t numFrames)
             // 2. Panning
             float leftPanGain, rightPanGain;
             calculatePanGains(currentPan, leftPanGain, rightPanGain);
-            
+
             L *= leftPanGain;
             R *= rightPanGain;
 
             // 3. Master Gain
             L *= currentGain;
             R *= currentGain;
-            
+
             buffer[leftIdx] = L;
             buffer[rightIdx] = R;
-            
+
             currentPan += panDelta;
             currentGain += gainDelta;
             currentWidth += widthDelta;
         }
-        
+
         // Calculate Phase Correlation for this block
         float sumLR = 0.0f;
         float sumLL = 0.0f;
         float sumRR = 0.0f;
-        
+
         // Optimization: Use a stride to save CPU? Correlation changes slowly.
         // Let's check every sample for accuracy for now (SIMD would be better later).
         for (uint32_t i = 0; i < numFrames; ++i) {
@@ -125,33 +117,32 @@ void MixerBus::process(float* buffer, uint32_t numFrames)
             sumLL += l * l;
             sumRR += r * r;
         }
-        
+
         float correlation = 0.0f;
         const float denominator = std::sqrt(sumLL * sumRR);
-        
+
         if (denominator > 1e-9f) {
             correlation = sumLR / denominator;
         } else if (sumLL < 1e-9f && sumRR < 1e-9f) {
-             // Silence = perfectly correlated (technically undefined but 0 or 1 is fine, 0 is safer UI)
-             correlation = 0.0f; 
+            // Silence = perfectly correlated (technically undefined but 0 or 1 is fine, 0 is safer UI)
+            correlation = 0.0f;
         }
-        
+
         // Simple smoothing for the UI readout (1-pole LPF)
         // alpha ~ 0.1 for fast response but not jittery
         float prev = m_lastCorrelation.load(std::memory_order_relaxed);
         correlation = prev * 0.9f + correlation * 0.1f;
-        
+
         m_lastCorrelation.store(correlation, std::memory_order_relaxed);
     }
-    
+
     // Snap to target at end of block
     m_currentGain = targetGain;
     m_currentPan = targetPan;
     m_currentWidth = targetWidth;
 }
 
-void MixerBus::mixInto(float* output, const float* input, uint32_t numFrames)
-{
+void MixerBus::mixInto(float* output, const float* input, uint32_t numFrames) {
     // Load targets (atomic)
     const float targetGain = m_gain.load(std::memory_order_acquire);
     const float targetPan = m_pan.load(std::memory_order_acquire);
@@ -169,20 +160,19 @@ void MixerBus::mixInto(float* output, const float* input, uint32_t numFrames)
         const float gainStart = m_currentGain;
         const float gainEnd = targetGain;
         const float gainDelta = (gainEnd - gainStart) / static_cast<float>(numFrames);
-        
+
         float current = gainStart;
         for (uint32_t i = 0; i < numFrames; ++i) {
             output[i] += input[i] * current;
             current += gainDelta;
         }
-    }
-    else if (m_numChannels == 2) {
+    } else if (m_numChannels == 2) {
         // Stereo: mix with gain and pan smoothing
         const float panStart = m_currentPan;
         const float panEnd = targetPan;
         const float gainStart = m_currentGain;
         const float gainEnd = targetGain;
-        
+
         const float panDelta = (panEnd - panStart) / static_cast<float>(numFrames);
         const float gainDelta = (gainEnd - gainStart) / static_cast<float>(numFrames);
 
@@ -192,92 +182,79 @@ void MixerBus::mixInto(float* output, const float* input, uint32_t numFrames)
         for (uint32_t i = 0; i < numFrames; ++i) {
             float leftGain, rightGain;
             calculatePanGains(currentPan, leftGain, rightGain);
-            
+
             leftGain *= currentGain;
             rightGain *= currentGain;
 
             const uint32_t leftIdx = i * 2;
             const uint32_t rightIdx = i * 2 + 1;
-            
+
             output[leftIdx] += input[leftIdx] * leftGain;
             output[rightIdx] += input[rightIdx] * rightGain;
-            
+
             currentPan += panDelta;
             currentGain += gainDelta;
         }
     }
-    
+
     // Snap to target
     m_currentGain = targetGain;
     m_currentPan = targetPan;
 }
 
-void MixerBus::clear(float* buffer, uint32_t numFrames)
-{
+void MixerBus::clear(float* buffer, uint32_t numFrames) {
     const size_t numSamples = numFrames * m_numChannels;
     std::memset(buffer, 0, numSamples * sizeof(float));
 }
 
-void MixerBus::setGain(float gain)
-{
+void MixerBus::setGain(float gain) {
     // Clamp gain to reasonable range [0.0, 2.0]
     gain = std::max(0.0f, std::min(2.0f, gain));
     m_gain.store(gain, std::memory_order_release);
 }
 
-void MixerBus::setPan(float pan)
-{
+void MixerBus::setPan(float pan) {
     // Clamp pan to [-1.0, 1.0]
     pan = std::max(-1.0f, std::min(1.0f, pan));
     m_pan.store(pan, std::memory_order_release);
 }
 
-
-void MixerBus::setWidth(float width)
-{
+void MixerBus::setWidth(float width) {
     // Clamp width [0.0 (mono) to 4.0 (super-wide)]
     width = std::max(0.0f, std::min(4.0f, width));
     m_width.store(width, std::memory_order_release);
 }
 
-void MixerBus::setMute(bool mute)
-{
+void MixerBus::setMute(bool mute) {
     m_muted.store(mute, std::memory_order_release);
 }
 
-void MixerBus::setSolo(bool solo)
-{
+void MixerBus::setSolo(bool solo) {
     m_soloed.store(solo, std::memory_order_release);
 }
 
-void MixerBus::calculatePanGains(float pan, float& leftGain, float& rightGain) const
-{
+void MixerBus::calculatePanGains(float pan, float& leftGain, float& rightGain) const {
     // Fast constant power panning using polynomial approximation (~5x faster)
     FastMath::fastPan(pan, leftGain, rightGain);
 }
 
 // SimpleMixer implementation
 
-SimpleMixer::SimpleMixer()
-{
-}
+SimpleMixer::SimpleMixer() {}
 
-size_t SimpleMixer::addBus(const char* name, uint32_t numChannels)
-{
+size_t SimpleMixer::addBus(const char* name, uint32_t numChannels) {
     m_buses.push_back(std::make_unique<MixerBus>(name, numChannels));
     return m_buses.size() - 1;
 }
 
-MixerBus* SimpleMixer::getBus(size_t index)
-{
+MixerBus* SimpleMixer::getBus(size_t index) {
     if (index >= m_buses.size()) {
         return nullptr;
     }
     return m_buses[index].get();
 }
 
-void SimpleMixer::process(float* masterOutput, const float** inputs, uint32_t numFrames)
-{
+void SimpleMixer::process(float* masterOutput, const float** inputs, uint32_t numFrames) {
     // Clear master output
     std::memset(masterOutput, 0, numFrames * 2 * sizeof(float)); // Assume stereo master
 
@@ -293,7 +270,7 @@ void SimpleMixer::process(float* masterOutput, const float** inputs, uint32_t nu
     // Mix each bus into master
     for (size_t i = 0; i < m_buses.size(); ++i) {
         auto& bus = m_buses[i];
-        
+
         // Skip if muted
         if (bus->isMuted()) {
             continue;
@@ -311,8 +288,7 @@ void SimpleMixer::process(float* masterOutput, const float** inputs, uint32_t nu
     }
 }
 
-void SimpleMixer::reset()
-{
+void SimpleMixer::reset() {
     m_buses.clear();
 }
 

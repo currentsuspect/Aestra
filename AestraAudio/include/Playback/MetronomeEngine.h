@@ -1,11 +1,11 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include <vector>
-#include <string>
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -23,12 +23,8 @@ public:
      * @brief Mixes metronome click into the output buffer if enabled and playing.
      * Real-time safe.
      */
-    void process(float* outputBuffer,
-                 uint32_t numFrames,
-                 uint32_t numChannels,
-                 uint64_t globalSamplePos,
-                 uint32_t sampleRate,
-                 bool transportPlaying);
+    void process(float* outputBuffer, uint32_t numFrames, uint32_t numChannels, uint64_t globalSamplePos,
+                 uint32_t sampleRate, bool transportPlaying);
 
     // Configuration
     void setEnabled(bool enabled) { m_enabled.store(enabled, std::memory_order_relaxed); }
@@ -62,8 +58,8 @@ private:
     std::atomic<int> m_beatsPerBar{4};
 
     // Audio Data
-    std::vector<float> m_synthClickLow;  // Generated default (Downbeat)
-    std::vector<float> m_synthClickHigh; // Generated default (Upbeat)
+    std::vector<float> m_synthClickLow;    // Generated default (Downbeat)
+    std::vector<float> m_synthClickHigh;   // Generated default (Upbeat)
     std::vector<float> m_clickSamplesDown; // Custom (Downbeat)
     std::vector<float> m_clickSamplesUp;   // Custom (Upbeat)
 

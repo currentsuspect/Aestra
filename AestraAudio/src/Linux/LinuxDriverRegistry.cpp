@@ -1,7 +1,8 @@
 #include "../../include/AudioPlatformRegistry.h"
 #include "RtAudioDriver.h"
-#include <vector>
+
 #include <string>
+#include <vector>
 
 namespace AestraAudio {
 

@@ -2,19 +2,20 @@
 // SIMD-optimized mixing operations for real-time audio.
 #pragma once
 
+#include "CPUDetection.h"
+
 #include <cstddef>
 #include <cstdint>
-#include "CPUDetection.h"
 
 // Platform-specific SIMD headers
 #if defined(_MSC_VER) || defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
-    #include <immintrin.h>
-    #define AESTRA_HAS_X86_SIMD 1
+#include <immintrin.h>
+#define AESTRA_HAS_X86_SIMD 1
 #endif
 
 #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
-    #include <arm_neon.h>
-    #define AESTRA_HAS_NEON 1
+#include <arm_neon.h>
+#define AESTRA_HAS_NEON 1
 #endif
 
 namespace Aestra {
@@ -22,7 +23,7 @@ namespace Audio {
 
 /**
  * @brief SIMD-optimized mixing operations for PlaylistMixer
- * 
+ *
  * All functions process audio in bulk for maximum throughput.
  * Automatic dispatch to best available SIMD path.
  */
@@ -40,7 +41,7 @@ namespace MixerSIMD {
  */
 inline void mixWithGainAVX2(const float* src, float* dst, float gain, size_t count) {
     __m256 vGain = _mm256_set1_ps(gain);
-    
+
     size_t i = 0;
     // Process 8 samples at a time
     for (; i + 8 <= count; i += 8) {
@@ -49,7 +50,7 @@ inline void mixWithGainAVX2(const float* src, float* dst, float gain, size_t cou
         __m256 vResult = _mm256_fmadd_ps(vSrc, vGain, vDst);
         _mm256_storeu_ps(&dst[i], vResult);
     }
-    
+
     // Scalar remainder
     for (; i < count; ++i) {
         dst[i] += src[i] * gain;
@@ -61,15 +62,11 @@ inline void mixWithGainAVX2(const float* src, float* dst, float gain, size_t cou
  * dstL[i] += srcL[i] * gainL
  * dstR[i] += srcR[i] * gainR
  */
-inline void mixStereoWithGainAVX2(
-    const float* srcL, const float* srcR,
-    float* dstL, float* dstR,
-    float gainL, float gainR,
-    size_t count)
-{
+inline void mixStereoWithGainAVX2(const float* srcL, const float* srcR, float* dstL, float* dstR, float gainL,
+                                  float gainR, size_t count) {
     __m256 vGainL = _mm256_set1_ps(gainL);
     __m256 vGainR = _mm256_set1_ps(gainR);
-    
+
     size_t i = 0;
     for (; i + 8 <= count; i += 8) {
         // Left channel
@@ -77,14 +74,14 @@ inline void mixStereoWithGainAVX2(
         __m256 vDstL = _mm256_loadu_ps(&dstL[i]);
         __m256 vResultL = _mm256_fmadd_ps(vSrcL, vGainL, vDstL);
         _mm256_storeu_ps(&dstL[i], vResultL);
-        
+
         // Right channel
         __m256 vSrcR = _mm256_loadu_ps(&srcR[i]);
         __m256 vDstR = _mm256_loadu_ps(&dstR[i]);
         __m256 vResultR = _mm256_fmadd_ps(vSrcR, vGainR, vDstR);
         _mm256_storeu_ps(&dstR[i], vResultR);
     }
-    
+
     // Scalar remainder
     for (; i < count; ++i) {
         dstL[i] += srcL[i] * gainL;
@@ -102,7 +99,7 @@ inline void mixStereoWithGainAVX2(
 
 inline void mixWithGainSSE41(const float* src, float* dst, float gain, size_t count) {
     __m128 vGain = _mm_set1_ps(gain);
-    
+
     size_t i = 0;
     // Process 4 samples at a time
     for (; i + 4 <= count; i += 4) {
@@ -111,22 +108,18 @@ inline void mixWithGainSSE41(const float* src, float* dst, float gain, size_t co
         __m128 vResult = _mm_add_ps(vDst, _mm_mul_ps(vSrc, vGain));
         _mm_storeu_ps(&dst[i], vResult);
     }
-    
+
     // Scalar remainder
     for (; i < count; ++i) {
         dst[i] += src[i] * gain;
     }
 }
 
-inline void mixStereoWithGainSSE41(
-    const float* srcL, const float* srcR,
-    float* dstL, float* dstR,
-    float gainL, float gainR,
-    size_t count)
-{
+inline void mixStereoWithGainSSE41(const float* srcL, const float* srcR, float* dstL, float* dstR, float gainL,
+                                   float gainR, size_t count) {
     __m128 vGainL = _mm_set1_ps(gainL);
     __m128 vGainR = _mm_set1_ps(gainR);
-    
+
     size_t i = 0;
     for (; i + 4 <= count; i += 4) {
         // Left channel
@@ -134,14 +127,14 @@ inline void mixStereoWithGainSSE41(
         __m128 vDstL = _mm_loadu_ps(&dstL[i]);
         __m128 vResultL = _mm_add_ps(vDstL, _mm_mul_ps(vSrcL, vGainL));
         _mm_storeu_ps(&dstL[i], vResultL);
-        
+
         // Right channel
         __m128 vSrcR = _mm_loadu_ps(&srcR[i]);
         __m128 vDstR = _mm_loadu_ps(&dstR[i]);
         __m128 vResultR = _mm_add_ps(vDstR, _mm_mul_ps(vSrcR, vGainR));
         _mm_storeu_ps(&dstR[i], vResultR);
     }
-    
+
     // Scalar remainder
     for (; i < count; ++i) {
         dstL[i] += srcL[i] * gainL;
@@ -159,7 +152,7 @@ inline void mixStereoWithGainSSE41(
 
 inline void mixWithGainNEON(const float* src, float* dst, float gain, size_t count) {
     float32x4_t vGain = vdupq_n_f32(gain);
-    
+
     size_t i = 0;
     for (; i + 4 <= count; i += 4) {
         float32x4_t vSrc = vld1q_f32(&src[i]);
@@ -167,22 +160,18 @@ inline void mixWithGainNEON(const float* src, float* dst, float gain, size_t cou
         float32x4_t vResult = vfmaq_f32(vDst, vSrc, vGain);
         vst1q_f32(&dst[i], vResult);
     }
-    
+
     // Scalar remainder
     for (; i < count; ++i) {
         dst[i] += src[i] * gain;
     }
 }
 
-inline void mixStereoWithGainNEON(
-    const float* srcL, const float* srcR,
-    float* dstL, float* dstR,
-    float gainL, float gainR,
-    size_t count)
-{
+inline void mixStereoWithGainNEON(const float* srcL, const float* srcR, float* dstL, float* dstR, float gainL,
+                                  float gainR, size_t count) {
     float32x4_t vGainL = vdupq_n_f32(gainL);
     float32x4_t vGainR = vdupq_n_f32(gainR);
-    
+
     size_t i = 0;
     for (; i + 4 <= count; i += 4) {
         // Left channel
@@ -190,14 +179,14 @@ inline void mixStereoWithGainNEON(
         float32x4_t vDstL = vld1q_f32(&dstL[i]);
         float32x4_t vResultL = vfmaq_f32(vDstL, vSrcL, vGainL);
         vst1q_f32(&dstL[i], vResultL);
-        
+
         // Right channel
         float32x4_t vSrcR = vld1q_f32(&srcR[i]);
         float32x4_t vDstR = vld1q_f32(&dstR[i]);
         float32x4_t vResultR = vfmaq_f32(vDstR, vSrcR, vGainR);
         vst1q_f32(&dstR[i], vResultR);
     }
-    
+
     // Scalar remainder
     for (; i < count; ++i) {
         dstL[i] += srcL[i] * gainL;
@@ -217,12 +206,8 @@ inline void mixWithGainScalar(const float* src, float* dst, float gain, size_t c
     }
 }
 
-inline void mixStereoWithGainScalar(
-    const float* srcL, const float* srcR,
-    float* dstL, float* dstR,
-    float gainL, float gainR,
-    size_t count)
-{
+inline void mixStereoWithGainScalar(const float* srcL, const float* srcR, float* dstL, float* dstR, float gainL,
+                                    float gainR, size_t count) {
     for (size_t i = 0; i < count; ++i) {
         dstL[i] += srcL[i] * gainL;
         dstR[i] += srcR[i] * gainR;
@@ -235,7 +220,7 @@ inline void mixStereoWithGainScalar(
 
 /**
  * @brief Mix source into destination with gain (auto-dispatched)
- * 
+ *
  * Automatically selects the best SIMD implementation based on CPU.
  */
 inline void mixWithGain(const float* src, float* dst, float gain, size_t count) {
@@ -243,7 +228,7 @@ inline void mixWithGain(const float* src, float* dst, float gain, size_t count) 
     static const auto& cpu = Aestra::Core::CPUDetection::get();
     static const bool useAVX2 = cpu.hasAVX2() && cpu.hasFMA();
     static const bool useSSE41 = cpu.hasSSE41();
-    
+
     if (useAVX2) {
         mixWithGainAVX2(src, dst, gain, count);
         return;
@@ -265,17 +250,13 @@ inline void mixWithGain(const float* src, float* dst, float gain, size_t count) 
 /**
  * @brief Mix stereo into destination with L/R gains (auto-dispatched)
  */
-inline void mixStereoWithGain(
-    const float* srcL, const float* srcR,
-    float* dstL, float* dstR,
-    float gainL, float gainR,
-    size_t count)
-{
+inline void mixStereoWithGain(const float* srcL, const float* srcR, float* dstL, float* dstR, float gainL, float gainR,
+                              size_t count) {
 #ifdef AESTRA_HAS_X86_SIMD
     static const auto& cpu = Aestra::Core::CPUDetection::get();
     static const bool useAVX2 = cpu.hasAVX2() && cpu.hasFMA();
     static const bool useSSE41 = cpu.hasSSE41();
-    
+
     if (useAVX2) {
         mixStereoWithGainAVX2(srcL, srcR, dstL, dstR, gainL, gainR, count);
         return;
@@ -300,7 +281,7 @@ inline void mixStereoWithGain(
 inline void clearBuffer(float* dst, size_t count) {
 #ifdef AESTRA_HAS_X86_SIMD
     static const bool useAVX2 = Aestra::Core::CPUDetection::get().hasAVX2();
-    
+
     if (useAVX2) {
         __m256 vZero = _mm256_setzero_ps();
         size_t i = 0;

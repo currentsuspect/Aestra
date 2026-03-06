@@ -1,11 +1,11 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include <string>
 #include <map>
-#include <vector>
 #include <memory>
 #include <sstream>
+#include <string>
+#include <vector>
 
 namespace Aestra {
 
@@ -14,14 +14,7 @@ namespace Aestra {
 // =============================================================================
 class JSON {
 public:
-    enum class Type {
-        Null,
-        Boolean,
-        Number,
-        String,
-        Array,
-        Object
-    };
+    enum class Type { Null, Boolean, Number, String, Array, Object };
 
     JSON() : type_(Type::Null) {}
     JSON(bool value) : type_(Type::Boolean), boolValue_(value) {}
@@ -45,19 +38,31 @@ public:
     const std::string& asString() const { return stringValue_; }
 
     std::vector<JSON>& asArray() {
-        if (type_ != Type::Array) { static std::vector<JSON> e; return e; }
+        if (type_ != Type::Array) {
+            static std::vector<JSON> e;
+            return e;
+        }
         return *arrayValue_;
     }
     const std::vector<JSON>& asArray() const {
-        if (type_ != Type::Array) { static std::vector<JSON> e; return e; }
+        if (type_ != Type::Array) {
+            static std::vector<JSON> e;
+            return e;
+        }
         return *arrayValue_;
     }
     std::map<std::string, JSON>& asObject() {
-        if (type_ != Type::Object) { static std::map<std::string, JSON> e; return e; }
+        if (type_ != Type::Object) {
+            static std::map<std::string, JSON> e;
+            return e;
+        }
         return *objectValue_;
     }
     const std::map<std::string, JSON>& asObject() const {
-        if (type_ != Type::Object) { static std::map<std::string, JSON> e; return e; }
+        if (type_ != Type::Object) {
+            static std::map<std::string, JSON> e;
+            return e;
+        }
         return *objectValue_;
     }
 
@@ -70,13 +75,16 @@ public:
     }
 
     void push(const JSON& value) {
-        if (type_ != Type::Array) return;
+        if (type_ != Type::Array)
+            return;
         arrayValue_->push_back(value);
     }
 
     size_t size() const {
-        if (type_ == Type::Array) return arrayValue_->size();
-        if (type_ == Type::Object) return objectValue_->size();
+        if (type_ == Type::Array)
+            return arrayValue_->size();
+        if (type_ == Type::Object)
+            return objectValue_->size();
         return 0;
     }
 
@@ -105,7 +113,8 @@ public:
     }
 
     void set(const std::string& key, const JSON& value) {
-        if (type_ != Type::Object) return;
+        if (type_ != Type::Object)
+            return;
         (*objectValue_)[key] = value;
     }
 
@@ -131,7 +140,8 @@ public:
     }
 
     bool has(const std::string& key) const {
-        if (type_ != Type::Object) return false;
+        if (type_ != Type::Object)
+            return false;
         return objectValue_->find(key) != objectValue_->end();
     }
 
@@ -161,12 +171,24 @@ private:
         out.reserve(in.size());
         for (char ch : in) {
             switch (ch) {
-                case '\\': out += "\\\\"; break;
-                case '"': out += "\\\""; break;
-                case '\n': out += "\\n"; break;
-                case '\r': out += "\\r"; break;
-                case '\t': out += "\\t"; break;
-                default: out += ch; break;
+            case '\\':
+                out += "\\\\";
+                break;
+            case '"':
+                out += "\\\"";
+                break;
+            case '\n':
+                out += "\\n";
+                break;
+            case '\r':
+                out += "\\r";
+                break;
+            case '\t':
+                out += "\\t";
+                break;
+            default:
+                out += ch;
+                break;
             }
         }
         return out;
@@ -177,46 +199,57 @@ private:
         std::string nextIndentStr((depth + 1) * indent, ' ');
 
         switch (type_) {
-            case Type::Null:
-                ss << "null";
-                break;
-            case Type::Boolean:
-                ss << (boolValue_ ? "true" : "false");
-                break;
-            case Type::Number:
-                ss << numberValue_;
-                break;
-            case Type::String:
-                ss << "\"" << escapeString(stringValue_) << "\"";
-                break;
-            case Type::Array:
-                ss << "[";
-                if (indent > 0 && !arrayValue_->empty()) ss << "\n";
-                for (size_t i = 0; i < arrayValue_->size(); ++i) {
-                    if (indent > 0) ss << nextIndentStr;
-                    (*arrayValue_)[i].serialize(ss, indent, depth + 1);
-                    if (i < arrayValue_->size() - 1) ss << ",";
-                    if (indent > 0) ss << "\n";
-                }
-                if (indent > 0 && !arrayValue_->empty()) ss << indentStr;
-                ss << "]";
-                break;
-            case Type::Object:
-                ss << "{";
-                if (indent > 0 && !objectValue_->empty()) ss << "\n";
-                size_t count = 0;
-                for (const auto& pair : *objectValue_) {
-                    if (indent > 0) ss << nextIndentStr;
-                    ss << "\"" << escapeString(pair.first) << "\":";
-                    if (indent > 0) ss << " ";
-                    pair.second.serialize(ss, indent, depth + 1);
-                    if (count < objectValue_->size() - 1) ss << ",";
-                    if (indent > 0) ss << "\n";
-                    count++;
-                }
-                if (indent > 0 && !objectValue_->empty()) ss << indentStr;
-                ss << "}";
-                break;
+        case Type::Null:
+            ss << "null";
+            break;
+        case Type::Boolean:
+            ss << (boolValue_ ? "true" : "false");
+            break;
+        case Type::Number:
+            ss << numberValue_;
+            break;
+        case Type::String:
+            ss << "\"" << escapeString(stringValue_) << "\"";
+            break;
+        case Type::Array:
+            ss << "[";
+            if (indent > 0 && !arrayValue_->empty())
+                ss << "\n";
+            for (size_t i = 0; i < arrayValue_->size(); ++i) {
+                if (indent > 0)
+                    ss << nextIndentStr;
+                (*arrayValue_)[i].serialize(ss, indent, depth + 1);
+                if (i < arrayValue_->size() - 1)
+                    ss << ",";
+                if (indent > 0)
+                    ss << "\n";
+            }
+            if (indent > 0 && !arrayValue_->empty())
+                ss << indentStr;
+            ss << "]";
+            break;
+        case Type::Object:
+            ss << "{";
+            if (indent > 0 && !objectValue_->empty())
+                ss << "\n";
+            size_t count = 0;
+            for (const auto& pair : *objectValue_) {
+                if (indent > 0)
+                    ss << nextIndentStr;
+                ss << "\"" << escapeString(pair.first) << "\":";
+                if (indent > 0)
+                    ss << " ";
+                pair.second.serialize(ss, indent, depth + 1);
+                if (count < objectValue_->size() - 1)
+                    ss << ",";
+                if (indent > 0)
+                    ss << "\n";
+                count++;
+            }
+            if (indent > 0 && !objectValue_->empty())
+                ss << indentStr;
+            ss << "}";
+            break;
         }
     }
 
@@ -228,15 +261,22 @@ private:
 
     static JSON parseValue(const std::string& str, size_t& pos) {
         skipWhitespace(str, pos);
-        if (pos >= str.size()) return JSON();
+        if (pos >= str.size())
+            return JSON();
 
         char c = str[pos];
-        if (c == '{') return parseObject(str, pos);
-        if (c == '[') return parseArray(str, pos);
-        if (c == '"') return parseString(str, pos);
-        if (c == 't' || c == 'f') return parseBool(str, pos);
-        if (c == 'n') return parseNull(str, pos);
-        if (c == '-' || std::isdigit(c)) return parseNumber(str, pos);
+        if (c == '{')
+            return parseObject(str, pos);
+        if (c == '[')
+            return parseArray(str, pos);
+        if (c == '"')
+            return parseString(str, pos);
+        if (c == 't' || c == 'f')
+            return parseBool(str, pos);
+        if (c == 'n')
+            return parseNull(str, pos);
+        if (c == '-' || std::isdigit(c))
+            return parseNumber(str, pos);
 
         return JSON();
     }
@@ -253,18 +293,21 @@ private:
 
         while (pos < str.size()) {
             skipWhitespace(str, pos);
-            if (str[pos] != '"') break;
+            if (str[pos] != '"')
+                break;
 
             JSON key = parseString(str, pos);
             skipWhitespace(str, pos);
-            if (pos >= str.size() || str[pos] != ':') break;
+            if (pos >= str.size() || str[pos] != ':')
+                break;
             pos++; // Skip ':'
 
             JSON value = parseValue(str, pos);
             obj.set(key.asString(), value);
 
             skipWhitespace(str, pos);
-            if (pos >= str.size()) break;
+            if (pos >= str.size())
+                break;
             if (str[pos] == '}') {
                 pos++;
                 break;
@@ -292,7 +335,8 @@ private:
             arr.push(value);
 
             skipWhitespace(str, pos);
-            if (pos >= str.size()) break;
+            if (pos >= str.size())
+                break;
             if (str[pos] == ']') {
                 pos++;
                 break;
@@ -312,25 +356,39 @@ private:
             if (str[pos] == '\\' && pos + 1 < str.size()) {
                 pos++;
                 switch (str[pos]) {
-                    case 'n': value += '\n'; break;
-                    case 't': value += '\t'; break;
-                    case 'r': value += '\r'; break;
-                    case '"': value += '"'; break;
-                    case '\\': value += '\\'; break;
-                    default: value += str[pos]; break;
+                case 'n':
+                    value += '\n';
+                    break;
+                case 't':
+                    value += '\t';
+                    break;
+                case 'r':
+                    value += '\r';
+                    break;
+                case '"':
+                    value += '"';
+                    break;
+                case '\\':
+                    value += '\\';
+                    break;
+                default:
+                    value += str[pos];
+                    break;
                 }
             } else {
                 value += str[pos];
             }
             pos++;
         }
-        if (pos < str.size()) pos++; // Skip closing '"'
+        if (pos < str.size())
+            pos++; // Skip closing '"'
         return JSON(value);
     }
 
     static JSON parseNumber(const std::string& str, size_t& pos) {
         size_t start = pos;
-        if (str[pos] == '-') pos++;
+        if (str[pos] == '-')
+            pos++;
 
         // Integer/fractional part
         while (pos < str.size() && (std::isdigit(str[pos]) || str[pos] == '.')) {

@@ -4,10 +4,10 @@
 /**
  * @file Oscillator.h
  * @brief DSP oscillators with anti-aliasing
- * 
+ *
  * Provides sine, saw, and square wave oscillators optimized for real-time audio.
  * Includes PolyBLEP anti-aliasing for saw and square waves to reduce aliasing artifacts.
- * 
+ *
  * @version 1.0.0
  * @license MIT
  */
@@ -21,27 +21,23 @@ namespace Audio {
 /**
  * @brief Oscillator waveform types
  */
-enum class WaveformType {
-    Sine,
-    Saw,
-    Square
-};
+enum class WaveformType { Sine, Saw, Square };
 
 /**
  * @brief Real-time oscillator with anti-aliasing
- * 
+ *
  * Features:
  * - Multiple waveform types (sine, saw, square)
  * - PolyBLEP anti-aliasing for non-bandlimited waveforms
  * - Phase-accurate frequency modulation
  * - Optimized for real-time audio processing
- * 
+ *
  * Usage:
  * @code
  * Oscillator osc(44100.0f);
  * osc.setFrequency(440.0f);  // A4
  * osc.setWaveform(WaveformType::Sine);
- * 
+ *
  * float sample = osc.process();  // Generate next sample
  * @endcode
  */

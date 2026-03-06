@@ -1,9 +1,10 @@
 #pragma once
 #include "ClipSource.h"
-#include <vector>
-#include <unordered_map>
+
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -14,7 +15,7 @@ namespace Audio {
 class SourceManager {
 public:
     SourceManager() = default;
-    
+
     /**
      * @brief Get or create a source for a file path
      * @return Source ID (returns ClipSourceID{0} on failure)
@@ -24,18 +25,18 @@ public:
         if (it != m_pathToId.end()) {
             return it->second;
         }
-        
+
         // Create new source
         ClipSourceID id{nextId++};
         auto source = std::make_unique<ClipSource>(id, filePath);
         source->setFilePath(filePath);
-        
+
         m_sources[id.value] = std::move(source);
         m_pathToId[filePath] = id;
-        
+
         return id;
     }
-    
+
     /**
      * @brief Get a source by ID
      * @return Pointer to source, or nullptr if not found
@@ -47,7 +48,7 @@ public:
         }
         return nullptr;
     }
-    
+
     const ClipSource* getSource(ClipSourceID id) const {
         auto it = m_sources.find(id.value);
         if (it != m_sources.end()) {
@@ -55,7 +56,7 @@ public:
         }
         return nullptr;
     }
-    
+
     /**
      * @brief Get all source IDs
      */
@@ -67,7 +68,7 @@ public:
         }
         return ids;
     }
-    
+
     /**
      * @brief Clear all sources
      */

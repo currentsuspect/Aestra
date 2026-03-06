@@ -9,9 +9,9 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <windows.h>
 #include <avrt.h>
 #include <iostream>
+#include <windows.h>
 
 // Link against avrt.lib for MMCSS functions
 #pragma comment(lib, "avrt.lib")
@@ -26,26 +26,26 @@ bool Platform::setCurrentThreadPriority(ThreadPriority priority) {
     int nPriority = THREAD_PRIORITY_NORMAL;
 
     switch (priority) {
-        case ThreadPriority::Low:
-            nPriority = THREAD_PRIORITY_BELOW_NORMAL;
-            break;
-        case ThreadPriority::Normal:
-            nPriority = THREAD_PRIORITY_NORMAL;
-            break;
-        case ThreadPriority::High:
-            nPriority = THREAD_PRIORITY_HIGHEST; // High priority, but not realtime/MMCSS
-            break;
-        case ThreadPriority::RealtimeAudio:
-            // For standard API, we max out at TIME_CRITICAL, but MMCSS is preferred via AudioThreadScope
-            nPriority = THREAD_PRIORITY_TIME_CRITICAL;
-            break;
+    case ThreadPriority::Low:
+        nPriority = THREAD_PRIORITY_BELOW_NORMAL;
+        break;
+    case ThreadPriority::Normal:
+        nPriority = THREAD_PRIORITY_NORMAL;
+        break;
+    case ThreadPriority::High:
+        nPriority = THREAD_PRIORITY_HIGHEST; // High priority, but not realtime/MMCSS
+        break;
+    case ThreadPriority::RealtimeAudio:
+        // For standard API, we max out at TIME_CRITICAL, but MMCSS is preferred via AudioThreadScope
+        nPriority = THREAD_PRIORITY_TIME_CRITICAL;
+        break;
     }
 
     HANDLE hThread = GetCurrentThread();
     if (SetThreadPriority(hThread, nPriority)) {
         return true;
     }
-    
+
     return false;
 }
 
@@ -57,7 +57,7 @@ Platform::AudioThreadScope::AudioThreadScope() {
     // Enable MMCSS "Pro Audio" profile
     DWORD taskIndex = 0;
     m_handle = AvSetMmThreadCharacteristicsW(L"Pro Audio", &taskIndex);
-    
+
     if (m_handle) {
         m_valid = true;
         // Optionally set priority to Critical within the MMCSS group

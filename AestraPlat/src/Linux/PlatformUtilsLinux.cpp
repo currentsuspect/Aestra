@@ -1,13 +1,14 @@
 #include "PlatformUtilsLinux.h"
-#include <unistd.h>
-#include <sys/sysinfo.h>
-#include <pwd.h>
+
+#include <SDL2/SDL.h>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <iostream>
+#include <pwd.h>
+#include <sys/sysinfo.h>
 #include <time.h>
-#include <SDL2/SDL.h>
+#include <unistd.h>
 
 namespace Aestra {
 
@@ -21,7 +22,7 @@ void PlatformUtilsLinux::sleep(int milliseconds) const {
 
 std::string PlatformUtilsLinux::openFileDialog(const std::string& title, const std::string& filter) const {
     std::cerr << "Linux File Dialog not fully implemented. Returning empty string." << std::endl;
-    return ""; 
+    return "";
 }
 
 std::string PlatformUtilsLinux::saveFileDialog(const std::string& title, const std::string& filter) const {
@@ -77,15 +78,16 @@ std::string PlatformUtilsLinux::getAppDataPath(const std::string& appName) const
             return "/tmp/" + appName;
         }
     }
-    
+
     path /= appName;
-    
+
     std::error_code ec;
     if (!std::filesystem::exists(path)) {
         std::filesystem::create_directories(path, ec);
-        std::filesystem::permissions(path, std::filesystem::perms::owner_all, std::filesystem::perm_options::replace, ec);
+        std::filesystem::permissions(path, std::filesystem::perms::owner_all, std::filesystem::perm_options::replace,
+                                     ec);
     }
-    
+
     return path.string();
 }
 

@@ -1,11 +1,12 @@
 #pragma once
 #include "../../include/IAudioDriver.h"
+
 #include <RtAudio.h>
 #include <atomic>
+#include <functional>
+#include <memory>
 #include <thread>
 #include <vector>
-#include <memory>
-#include <functional>
 
 namespace AestraAudio {
 
@@ -27,8 +28,8 @@ public:
     bool supportsExclusiveMode() const override;
 
     // Internal callback
-    static int rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int nFrames,
-                             double streamTime, RtAudioStreamStatus status, void* userData);
+    static int rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int nFrames, double streamTime,
+                               RtAudioStreamStatus status, void* userData);
 
 private:
     std::unique_ptr<RtAudio> rtAudio_;
@@ -40,10 +41,10 @@ private:
     std::atomic<IAudioCallback*> callback_{nullptr};
     std::vector<float> inputBuffer_;
     std::vector<float> outputBuffer_; // If we need intermediate buffer, though RtAudio gives direct access
-    
+
     // Monitoring
     std::atomic<uint64_t> xrunCount_{0};
-    
+
     // Helper to check device connection
     bool isDeviceStillConnected();
 };

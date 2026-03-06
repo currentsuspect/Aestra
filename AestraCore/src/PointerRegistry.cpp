@@ -1,10 +1,12 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PointerRegistry.h"
+
 #include "AestraDebug.h"
 #include "AestraLog.h"
-#include <sstream>
+
 #include <iomanip>
+#include <sstream>
 
 namespace Aestra {
 
@@ -17,7 +19,9 @@ void PointerRegistry::expectSame(const char* name, const void* a, const void* b)
 #if AESTRA_DEBUG_POINTERS
     expectations().push_back({name, a, b, false});
 #else
-    (void)name; (void)a; (void)b; // Suppress unused warnings
+    (void)name;
+    (void)a;
+    (void)b; // Suppress unused warnings
 #endif
 }
 
@@ -25,7 +29,8 @@ void PointerRegistry::expectNotNull(const char* name, const void* ptr) {
 #if AESTRA_DEBUG_POINTERS
     expectations().push_back({name, ptr, nullptr, true});
 #else
-    (void)name; (void)ptr;
+    (void)name;
+    (void)ptr;
 #endif
 }
 
@@ -34,13 +39,13 @@ bool PointerRegistry::validateAll() {
     bool allPassed = true;
     int passed = 0;
     int failed = 0;
-    
+
     Log::info("[PointerRegistry] Validating " + std::to_string(expectations().size()) + " expectations...");
-    
+
     for (const auto& exp : expectations()) {
         bool ok = false;
         std::ostringstream oss;
-        
+
         if (exp.isNullCheck) {
             ok = (exp.ptrA != nullptr);
             oss << "  " << (ok ? "✓" : "✗") << " " << exp.name << ": ";
@@ -57,7 +62,7 @@ bool PointerRegistry::validateAll() {
                 oss << " != 0x" << reinterpret_cast<uintptr_t>(exp.ptrB) << " (MISMATCH!)";
             }
         }
-        
+
         if (ok) {
             passed++;
             Log::info(oss.str());
@@ -67,10 +72,9 @@ bool PointerRegistry::validateAll() {
             Log::warning(oss.str());
         }
     }
-    
-    Log::info("[PointerRegistry] Result: " + std::to_string(passed) + " passed, " 
-              + std::to_string(failed) + " failed");
-    
+
+    Log::info("[PointerRegistry] Result: " + std::to_string(passed) + " passed, " + std::to_string(failed) + " failed");
+
     return allPassed;
 #else
     return true; // Always passes in Release

@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "Commands/CommandHistory.h"
+
 #include <iostream>
 
 namespace Aestra {
@@ -11,7 +12,8 @@ CommandHistory::CommandHistory() {
 }
 
 void CommandHistory::pushAndExecute(std::shared_ptr<ICommand> cmd) {
-    if (!cmd) return;
+    if (!cmd)
+        return;
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -20,18 +22,18 @@ void CommandHistory::pushAndExecute(std::shared_ptr<ICommand> cmd) {
         cmd->execute();
     } catch (const std::exception& e) {
         std::cerr << "Command execution failed: " << e.what() << std::endl;
-        return; 
+        return;
     }
 
     // Add to undo stack
     m_undoStack.push_back(cmd);
-    
+
     // Clear redo stack on new action
     m_redoStack.clear();
-    
+
     // Trim history if needed
     trimHistory();
-    
+
     // Notify listeners
     if (m_onStateChanged) {
         m_onStateChanged();
@@ -40,23 +42,24 @@ void CommandHistory::pushAndExecute(std::shared_ptr<ICommand> cmd) {
 
 bool CommandHistory::undo() {
     std::lock_guard<std::mutex> lock(m_mutex);
-    
-    if (m_undoStack.empty()) return false;
-    
+
+    if (m_undoStack.empty())
+        return false;
+
     auto cmd = m_undoStack.back();
     m_undoStack.pop_back();
-    
+
     try {
         cmd->undo();
         m_redoStack.push_back(cmd);
-        
+
         if (m_onStateChanged) {
             m_onStateChanged();
         }
         return true;
     } catch (const std::exception& e) {
         std::cerr << "Command undo failed: " << e.what() << std::endl;
-        // If undo fails, we're in an inconsistent state. 
+        // If undo fails, we're in an inconsistent state.
         // Best approach might be to not push to redo stack, effectively losing the command.
         return false;
     }
@@ -64,16 +67,17 @@ bool CommandHistory::undo() {
 
 bool CommandHistory::redo() {
     std::lock_guard<std::mutex> lock(m_mutex);
-    
-    if (m_redoStack.empty()) return false;
-    
+
+    if (m_redoStack.empty())
+        return false;
+
     auto cmd = m_redoStack.back();
     m_redoStack.pop_back();
-    
+
     try {
         cmd->redo();
         m_undoStack.push_back(cmd);
-        
+
         if (m_onStateChanged) {
             m_onStateChanged();
         }
@@ -96,13 +100,15 @@ bool CommandHistory::canRedo() const {
 
 std::string CommandHistory::getUndoName() const {
     std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_undoStack.empty()) return "";
+    if (m_undoStack.empty())
+        return "";
     return m_undoStack.back()->getName();
 }
 
 std::string CommandHistory::getRedoName() const {
     std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_redoStack.empty()) return "";
+    if (m_redoStack.empty())
+        return "";
     return m_redoStack.back()->getName();
 }
 
@@ -122,8 +128,9 @@ void CommandHistory::setMaxHistorySize(size_t size) {
 }
 
 void CommandHistory::trimHistory() {
-    if (m_maxHistorySize == 0) return;
-    
+    if (m_maxHistorySize == 0)
+        return;
+
     while (m_undoStack.size() > m_maxHistorySize) {
         m_undoStack.erase(m_undoStack.begin());
     }

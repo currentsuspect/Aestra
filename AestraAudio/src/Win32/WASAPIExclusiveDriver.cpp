@@ -8,18 +8,18 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <windows.h>
-#include <mmdeviceapi.h>
+#include <algorithm>
 #include <audioclient.h>
 #include <avrt.h>
-#include <functiondiscoverykeys_devpkey.h>
-#include <ksmedia.h>
-#include <iostream>
-#include <sstream>
-#include <iomanip>
-#include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <functiondiscoverykeys_devpkey.h>
+#include <iomanip>
+#include <iostream>
+#include <ksmedia.h>
+#include <mmdeviceapi.h>
+#include <sstream>
+#include <windows.h>
 
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "avrt.lib")
@@ -30,21 +30,21 @@ namespace Aestra {
 namespace Audio {
 
 namespace {
-    const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
-    const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
-    const IID IID_IAudioClient = __uuidof(IAudioClient);
-    const IID IID_IAudioRenderClient = __uuidof(IAudioRenderClient);
-    const IID IID_IAudioCaptureClient = __uuidof(IAudioCaptureClient);
+const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
+const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
+const IID IID_IAudioClient = __uuidof(IAudioClient);
+const IID IID_IAudioRenderClient = __uuidof(IAudioRenderClient);
+const IID IID_IAudioCaptureClient = __uuidof(IAudioCaptureClient);
 
-    // Common exclusive mode sample rates to test
-    const uint32_t EXCLUSIVE_SAMPLE_RATES[] = { 44100, 48000, 88200, 96000, 176400, 192000 };
+// Common exclusive mode sample rates to test
+const uint32_t EXCLUSIVE_SAMPLE_RATES[] = {44100, 48000, 88200, 96000, 176400, 192000};
 
-    std::string HResultToString(HRESULT hr) {
-        std::ostringstream oss;
-        oss << "0x" << std::hex << hr;
-        return oss.str();
-    }
+std::string HResultToString(HRESULT hr) {
+    std::ostringstream oss;
+    oss << "0x" << std::hex << hr;
+    return oss.str();
 }
+} // namespace
 
 WASAPIExclusiveDriver::WASAPIExclusiveDriver() {
     LARGE_INTEGER freq;
@@ -57,12 +57,8 @@ WASAPIExclusiveDriver::~WASAPIExclusiveDriver() {
 }
 
 DriverCapability WASAPIExclusiveDriver::getCapabilities() const {
-    return DriverCapability::PLAYBACK |
-           DriverCapability::RECORDING |
-           DriverCapability::DUPLEX |
-           DriverCapability::EXCLUSIVE_MODE |
-           DriverCapability::EVENT_DRIVEN |
-           DriverCapability::HOT_PLUG_DETECTION;
+    return DriverCapability::PLAYBACK | DriverCapability::RECORDING | DriverCapability::DUPLEX |
+           DriverCapability::EXCLUSIVE_MODE | DriverCapability::EVENT_DRIVEN | DriverCapability::HOT_PLUG_DETECTION;
 }
 
 bool WASAPIExclusiveDriver::initialize() {
@@ -104,13 +100,8 @@ bool WASAPIExclusiveDriver::initializeCOM() {
         return false;
     }
 
-    hr = CoCreateInstance(
-        CLSID_MMDeviceEnumerator,
-        nullptr,
-        CLSCTX_ALL,
-        IID_IMMDeviceEnumerator,
-        (void**)&m_deviceEnumerator
-    );
+    hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_ALL, IID_IMMDeviceEnumerator,
+                          (void**)&m_deviceEnumerator);
 
     if (FAILED(hr)) {
         setError(DriverError::INITIALIZATION_FAILED, "Failed to create device enumerator: " + HResultToString(hr));
@@ -144,11 +135,8 @@ std::vector<AudioDeviceInfo> WASAPIExclusiveDriver::getDevices() {
 bool WASAPIExclusiveDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devices) {
     IMMDeviceCollection* deviceCollection = nullptr;
 
-    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->EnumAudioEndpoints(
-        eRender,
-        DEVICE_STATE_ACTIVE,
-        &deviceCollection
-    );
+    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)
+                     ->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &deviceCollection);
 
     if (SUCCEEDED(hr)) {
         UINT count = 0;
@@ -180,7 +168,8 @@ bool WASAPIExclusiveDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devic
                         PROPVARIANT varName;
                         PropVariantInit(&varName);
                         if (SUCCEEDED(propertyStore->GetValue(PKEY_Device_FriendlyName, &varName))) {
-                            int len = WideCharToMultiByte(CP_UTF8, 0, varName.pwszVal, -1, nullptr, 0, nullptr, nullptr);
+                            int len =
+                                WideCharToMultiByte(CP_UTF8, 0, varName.pwszVal, -1, nullptr, 0, nullptr, nullptr);
                             if (len > 0) {
                                 std::string name(len - 1, '\0');
                                 WideCharToMultiByte(CP_UTF8, 0, varName.pwszVal, -1, &name[0], len, nullptr, nullptr);
@@ -214,28 +203,20 @@ uint32_t WASAPIExclusiveDriver::getDefaultInputDevice() {
 bool WASAPIExclusiveDriver::isExclusiveModeAvailable(uint32_t deviceId) {
     // Try to open the device and test exclusive mode
     IMMDevice* testDevice = nullptr;
-    
+
     if (!m_deviceEnumerator) {
         return false;
     }
 
-    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->GetDefaultAudioEndpoint(
-        eRender,
-        eConsole,
-        &testDevice
-    );
+    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)
+                     ->GetDefaultAudioEndpoint(eRender, eConsole, &testDevice);
 
     if (FAILED(hr)) {
         return false;
     }
 
     IAudioClient* testClient = nullptr;
-    hr = testDevice->Activate(
-        IID_IAudioClient,
-        CLSCTX_ALL,
-        nullptr,
-        (void**)&testClient
-    );
+    hr = testDevice->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)&testClient);
 
     bool available = false;
     if (SUCCEEDED(hr)) {
@@ -251,7 +232,7 @@ bool WASAPIExclusiveDriver::isExclusiveModeAvailable(uint32_t deviceId) {
 
         WAVEFORMATEX* closestMatch = nullptr;
         hr = testClient->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &closestMatch);
-        
+
         available = (hr == S_OK);
 
         if (closestMatch) {
@@ -264,7 +245,6 @@ bool WASAPIExclusiveDriver::isExclusiveModeAvailable(uint32_t deviceId) {
     testDevice->Release();
     return available;
 }
-
 
 bool WASAPIExclusiveDriver::openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) {
     if (m_state == DriverState::STREAM_RUNNING) {
@@ -302,11 +282,8 @@ bool WASAPIExclusiveDriver::openDevice(uint32_t deviceId) {
         return false;
     }
 
-    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->GetDefaultAudioEndpoint(
-        eRender,
-        eConsole,
-        (IMMDevice**)&m_device
-    );
+    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)
+                     ->GetDefaultAudioEndpoint(eRender, eConsole, (IMMDevice**)&m_device);
 
     if (FAILED(hr)) {
         setError(DriverError::DEVICE_NOT_FOUND, "Failed to get audio device: " + HResultToString(hr));
@@ -352,12 +329,8 @@ void WASAPIExclusiveDriver::closeDevice() {
 
 bool WASAPIExclusiveDriver::initializeAudioClient() {
     m_usingSharedFallback = false;
-    HRESULT hr = reinterpret_cast<IMMDevice*>(m_device)->Activate(
-        IID_IAudioClient,
-        CLSCTX_ALL,
-        nullptr,
-        (void**)&m_audioClient
-    );
+    HRESULT hr =
+        reinterpret_cast<IMMDevice*>(m_device)->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)&m_audioClient);
 
     if (FAILED(hr)) {
         setError(DriverError::STREAM_OPEN_FAILED, "Failed to activate audio client: " + HResultToString(hr));
@@ -372,42 +345,36 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
 
     WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
     m_actualSampleRate = wf->nSamplesPerSec;
-    
+
     // Log format details for diagnostics
     // Log format details for diagnostics
     std::stringstream ss;
-    ss << "[WASAPI Exclusive] Requested format: "
-       << m_actualSampleRate << " Hz, "
-       << wf->nChannels << " channels, "
-       << wf->wBitsPerSample << " bits, "
-       << (wf->wFormatTag == WAVE_FORMAT_IEEE_FLOAT ? "Float32" : "PCM");
+    ss << "[WASAPI Exclusive] Requested format: " << m_actualSampleRate << " Hz, " << wf->nChannels << " channels, "
+       << wf->wBitsPerSample << " bits, " << (wf->wFormatTag == WAVE_FORMAT_IEEE_FLOAT ? "Float32" : "PCM");
     Aestra::Log::info(ss.str());
 
     // Pre-flight check: Test if exclusive mode is available
     // This helps detect if another application is already using the device
     WAVEFORMATEX* testFormat = nullptr;
-    hr = reinterpret_cast<IAudioClient*>(m_audioClient)->IsFormatSupported(
-        AUDCLNT_SHAREMODE_EXCLUSIVE,
-        reinterpret_cast<const WAVEFORMATEX*>(m_waveFormat),
-        &testFormat
-    );
-    
+    hr = reinterpret_cast<IAudioClient*>(m_audioClient)
+             ->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, reinterpret_cast<const WAVEFORMATEX*>(m_waveFormat),
+                                 &testFormat);
+
     if (testFormat) {
         CoTaskMemFree(testFormat);
     }
-    
+
     if (hr == AUDCLNT_E_DEVICE_IN_USE) {
-        setError(DriverError::DEVICE_IN_USE, 
-                "Device is in use by another application in Exclusive mode. "
-                "Please close other audio applications or switch to Shared mode.");
+        setError(DriverError::DEVICE_IN_USE, "Device is in use by another application in Exclusive mode. "
+                                             "Please close other audio applications or switch to Shared mode.");
         Aestra::Log::error("[WASAPI Exclusive] Device busy (AUDCLNT_E_DEVICE_IN_USE)");
         return false;
     }
-    
+
     if (hr == AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED) {
         setError(DriverError::EXCLUSIVE_MODE_UNAVAILABLE,
-                "Exclusive mode is not allowed for this device. "
-                "Windows may have disabled exclusive access in device properties.");
+                 "Exclusive mode is not allowed for this device. "
+                 "Windows may have disabled exclusive access in device properties.");
         Aestra::Log::error("[WASAPI Exclusive] Exclusive mode not allowed (AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED)");
         return false;
     }
@@ -421,14 +388,12 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
     }
 
     // Use requested buffer size, but respect minimum
-    REFERENCE_TIME requestedDuration = (REFERENCE_TIME)(
-        10000000.0 * m_config.bufferSize / m_actualSampleRate
-    );
+    REFERENCE_TIME requestedDuration = (REFERENCE_TIME)(10000000.0 * m_config.bufferSize / m_actualSampleRate);
 
     if (requestedDuration < minDuration) {
         requestedDuration = minDuration;
-        std::cout << "[WASAPI Exclusive] Buffer size adjusted to minimum: " 
-                  << (minDuration / 10000.0) << "ms" << std::endl;
+        std::cout << "[WASAPI Exclusive] Buffer size adjusted to minimum: " << (minDuration / 10000.0) << "ms"
+                  << std::endl;
     }
 
     // Create event for audio thread
@@ -439,14 +404,10 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
     }
 
     // Initialize in exclusive mode
-    hr = reinterpret_cast<IAudioClient*>(m_audioClient)->Initialize(
-        AUDCLNT_SHAREMODE_EXCLUSIVE,
-        AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-        requestedDuration,
-        requestedDuration,  // Exclusive mode requires both durations to match
-        reinterpret_cast<const WAVEFORMATEX*>(m_waveFormat),
-        nullptr
-    );
+    hr = reinterpret_cast<IAudioClient*>(m_audioClient)
+             ->Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, requestedDuration,
+                          requestedDuration, // Exclusive mode requires both durations to match
+                          reinterpret_cast<const WAVEFORMATEX*>(m_waveFormat), nullptr);
 
     if (hr == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED) {
         // Need to align buffer size
@@ -456,59 +417,67 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
             m_audioClient = nullptr;
 
             // Recalculate aligned duration
-            requestedDuration = (REFERENCE_TIME)(
-                10000000.0 * m_bufferFrameCount / m_actualSampleRate + 0.5
-            );
+            requestedDuration = (REFERENCE_TIME)(10000000.0 * m_bufferFrameCount / m_actualSampleRate + 0.5);
 
             std::cout << "[WASAPI Exclusive] Realigning buffer: " << m_bufferFrameCount << " frames" << std::endl;
 
             // Try again with aligned buffer
-            hr = reinterpret_cast<IMMDevice*>(m_device)->Activate(
-                IID_IAudioClient,
-                CLSCTX_ALL,
-                nullptr,
-                (void**)&m_audioClient
-            );
+            hr = reinterpret_cast<IMMDevice*>(m_device)->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr,
+                                                                  (void**)&m_audioClient);
 
             if (SUCCEEDED(hr)) {
-                hr = reinterpret_cast<IAudioClient*>(m_audioClient)->Initialize(
-                    AUDCLNT_SHAREMODE_EXCLUSIVE,
-                    AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-                    requestedDuration,
-                    requestedDuration,
-                    reinterpret_cast<const WAVEFORMATEX*>(m_waveFormat),
-                    nullptr
-                );
+                hr = reinterpret_cast<IAudioClient*>(m_audioClient)
+                         ->Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, requestedDuration,
+                                      requestedDuration, reinterpret_cast<const WAVEFORMATEX*>(m_waveFormat), nullptr);
             }
         }
     }
 
     // Enhanced error handling with specific diagnostics
     if (hr == AUDCLNT_E_DEVICE_IN_USE || hr == AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED) {
-        Aestra::Log::error("[WASAPI Exclusive] Exclusive unavailable (" + HResultToString(hr) + "), attempting shared fallback");
+        Aestra::Log::error("[WASAPI Exclusive] Exclusive unavailable (" + HResultToString(hr) +
+                           "), attempting shared fallback");
         // Clean up exclusive client resources before retrying shared
-        if (m_audioClient) { reinterpret_cast<IAudioClient*>(m_audioClient)->Release(); m_audioClient = nullptr; }
-        if (m_renderClient) { reinterpret_cast<IAudioRenderClient*>(m_renderClient)->Release(); m_renderClient = nullptr; }
-        if (m_captureClient) { reinterpret_cast<IAudioCaptureClient*>(m_captureClient)->Release(); m_captureClient = nullptr; }
-        if (m_audioEvent) { CloseHandle(m_audioEvent); m_audioEvent = nullptr; }
-        if (m_waveFormat) { CoTaskMemFree(m_waveFormat); m_waveFormat = nullptr; }
+        if (m_audioClient) {
+            reinterpret_cast<IAudioClient*>(m_audioClient)->Release();
+            m_audioClient = nullptr;
+        }
+        if (m_renderClient) {
+            reinterpret_cast<IAudioRenderClient*>(m_renderClient)->Release();
+            m_renderClient = nullptr;
+        }
+        if (m_captureClient) {
+            reinterpret_cast<IAudioCaptureClient*>(m_captureClient)->Release();
+            m_captureClient = nullptr;
+        }
+        if (m_audioEvent) {
+            CloseHandle(m_audioEvent);
+            m_audioEvent = nullptr;
+        }
+        if (m_waveFormat) {
+            CoTaskMemFree(m_waveFormat);
+            m_waveFormat = nullptr;
+        }
         return initializeSharedFallback();
     }
 
     if (hr == AUDCLNT_E_UNSUPPORTED_FORMAT) {
         setError(DriverError::STREAM_OPEN_FAILED,
-                "Audio format not supported by hardware in Exclusive mode. "
-                "Format: " + std::to_string(m_actualSampleRate) + " Hz, " +
-                std::to_string(reinterpret_cast<WAVEFORMATEX*>(m_waveFormat)->nChannels) + " channels, " +
-                std::to_string(reinterpret_cast<WAVEFORMATEX*>(m_waveFormat)->wBitsPerSample) + " bits. "
-                "HRESULT: " + HResultToString(hr));
+                 "Audio format not supported by hardware in Exclusive mode. "
+                 "Format: " +
+                     std::to_string(m_actualSampleRate) + " Hz, " +
+                     std::to_string(reinterpret_cast<WAVEFORMATEX*>(m_waveFormat)->nChannels) + " channels, " +
+                     std::to_string(reinterpret_cast<WAVEFORMATEX*>(m_waveFormat)->wBitsPerSample) +
+                     " bits. "
+                     "HRESULT: " +
+                     HResultToString(hr));
         Aestra::Log::error("[WASAPI Exclusive] Initialize failed: AUDCLNT_E_UNSUPPORTED_FORMAT");
         return false;
     }
 
     if (FAILED(hr)) {
-        setError(DriverError::STREAM_OPEN_FAILED, 
-                "Failed to initialize exclusive mode. HRESULT: " + HResultToString(hr));
+        setError(DriverError::STREAM_OPEN_FAILED,
+                 "Failed to initialize exclusive mode. HRESULT: " + HResultToString(hr));
         Aestra::Log::error("[WASAPI Exclusive] Initialize failed: " + HResultToString(hr));
         return false;
     }
@@ -535,12 +504,10 @@ bool WASAPIExclusiveDriver::initializeAudioClient() {
     }
 
     // Calculate accurate latency metrics
-    AudioLatencyInfo latencyInfo = AudioLatencyInfo::calculate(
-        m_bufferFrameCount, 
-        m_actualSampleRate,
-        3.0  // Conservative RTL estimate: 3x buffer period
+    AudioLatencyInfo latencyInfo = AudioLatencyInfo::calculate(m_bufferFrameCount, m_actualSampleRate,
+                                                               3.0 // Conservative RTL estimate: 3x buffer period
     );
-    
+
     std::stringstream logSS;
     logSS << "[WASAPI Exclusive] Initialized - "
           << "Sample Rate: " << m_actualSampleRate << " Hz, "
@@ -556,19 +523,21 @@ bool WASAPIExclusiveDriver::findBestExclusiveFormat(void** format) {
     WAVEFORMATEX** wfFormat = reinterpret_cast<WAVEFORMATEX**>(format);
     // Try requested sample rate first with different bit depths
     // Most consumer devices support 16-bit, some support 24-bit, fewer support 32-bit float
-    
+
     // Try 16-bit PCM first (most compatible)
-    if (testExclusiveFormatPCM(m_config.sampleRate, m_config.numOutputChannels, 16, reinterpret_cast<void**>(wfFormat))) {
+    if (testExclusiveFormatPCM(m_config.sampleRate, m_config.numOutputChannels, 16,
+                               reinterpret_cast<void**>(wfFormat))) {
         Aestra::Log::info("[WASAPI Exclusive] Using 16-bit PCM at " + std::to_string(m_config.sampleRate) + " Hz");
         return true;
     }
-    
+
     // Try 24-bit PCM
-    if (testExclusiveFormatPCM(m_config.sampleRate, m_config.numOutputChannels, 24, reinterpret_cast<void**>(wfFormat))) {
+    if (testExclusiveFormatPCM(m_config.sampleRate, m_config.numOutputChannels, 24,
+                               reinterpret_cast<void**>(wfFormat))) {
         Aestra::Log::info("[WASAPI Exclusive] Using 24-bit PCM at " + std::to_string(m_config.sampleRate) + " Hz");
         return true;
     }
-    
+
     // Try 32-bit float
     if (testExclusiveFormat(m_config.sampleRate, m_config.numOutputChannels, reinterpret_cast<void**>(wfFormat))) {
         Aestra::Log::info("[WASAPI Exclusive] Using 32-bit float at " + std::to_string(m_config.sampleRate) + " Hz");
@@ -578,17 +547,15 @@ bool WASAPIExclusiveDriver::findBestExclusiveFormat(void** format) {
     // Try common sample rates with 16-bit PCM (most compatible)
     for (uint32_t sampleRate : EXCLUSIVE_SAMPLE_RATES) {
         if (testExclusiveFormatPCM(sampleRate, m_config.numOutputChannels, 16, reinterpret_cast<void**>(wfFormat))) {
-            std::cout << "[WASAPI Exclusive] Using fallback 16-bit PCM at " 
-                      << sampleRate << " Hz" << std::endl;
+            std::cout << "[WASAPI Exclusive] Using fallback 16-bit PCM at " << sampleRate << " Hz" << std::endl;
             return true;
         }
     }
-    
+
     // Try common sample rates with 32-bit float
     for (uint32_t sampleRate : EXCLUSIVE_SAMPLE_RATES) {
         if (testExclusiveFormat(sampleRate, m_config.numOutputChannels, reinterpret_cast<void**>(wfFormat))) {
-            std::cout << "[WASAPI Exclusive] Using fallback 32-bit float at " 
-                      << sampleRate << " Hz" << std::endl;
+            std::cout << "[WASAPI Exclusive] Using fallback 32-bit float at " << sampleRate << " Hz" << std::endl;
             return true;
         }
     }
@@ -608,15 +575,13 @@ bool WASAPIExclusiveDriver::testExclusiveFormat(uint32_t sampleRate, uint32_t ch
     testFormat.cbSize = 0;
 
     WAVEFORMATEX* closestMatch = nullptr;
-    HRESULT hr = reinterpret_cast<IAudioClient*>(m_audioClient)->IsFormatSupported(
-        AUDCLNT_SHAREMODE_EXCLUSIVE,
-        &testFormat,
-        &closestMatch
-    );
-    
+    HRESULT hr = reinterpret_cast<IAudioClient*>(m_audioClient)
+                     ->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &testFormat, &closestMatch);
+
     // Log failure reasons
     if (hr != S_OK) {
-        Aestra::Log::warning("[WASAPI Exclusive] Float format not supported: " + std::to_string(sampleRate) + "Hz. HR=" + HResultToString(hr));
+        Aestra::Log::warning("[WASAPI Exclusive] Float format not supported: " + std::to_string(sampleRate) +
+                             "Hz. HR=" + HResultToString(hr));
     }
 
     if (hr == S_OK) {
@@ -635,7 +600,8 @@ bool WASAPIExclusiveDriver::testExclusiveFormat(uint32_t sampleRate, uint32_t ch
     return false;
 }
 
-bool WASAPIExclusiveDriver::testExclusiveFormatPCM(uint32_t sampleRate, uint32_t channels, uint32_t bitsPerSample, void** format) {
+bool WASAPIExclusiveDriver::testExclusiveFormatPCM(uint32_t sampleRate, uint32_t channels, uint32_t bitsPerSample,
+                                                   void** format) {
     WAVEFORMATEX** wfFormat = reinterpret_cast<WAVEFORMATEX**>(format);
     WAVEFORMATEX testFormat = {};
     testFormat.wFormatTag = WAVE_FORMAT_PCM;
@@ -647,11 +613,8 @@ bool WASAPIExclusiveDriver::testExclusiveFormatPCM(uint32_t sampleRate, uint32_t
     testFormat.cbSize = 0;
 
     WAVEFORMATEX* closestMatch = nullptr;
-    HRESULT hr = reinterpret_cast<IAudioClient*>(m_audioClient)->IsFormatSupported(
-        AUDCLNT_SHAREMODE_EXCLUSIVE,
-        &testFormat,
-        &closestMatch
-    );
+    HRESULT hr = reinterpret_cast<IAudioClient*>(m_audioClient)
+                     ->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &testFormat, &closestMatch);
 
     if (hr == S_OK) {
         // Exact match - allocate and copy
@@ -690,17 +653,16 @@ bool WASAPIExclusiveDriver::startStream() {
         // Zero the entire buffer
         std::memset(reinterpret_cast<void*>(data), 0, m_bufferFrameCount * wf->nBlockAlign);
         reinterpret_cast<IAudioRenderClient*>(m_renderClient)->ReleaseBuffer(m_bufferFrameCount, 0);
-        std::cout << "[WASAPI Exclusive] Pre-filled buffer with silence (" 
-                  << m_bufferFrameCount << " frames)" << std::endl;
+        std::cout << "[WASAPI Exclusive] Pre-filled buffer with silence (" << m_bufferFrameCount << " frames)"
+                  << std::endl;
     }
-    
+
     // Initialize soft-start ramp (150ms fade-in to prevent pops/clicks)
     m_rampDurationSamples = static_cast<uint32_t>(m_actualSampleRate * 0.150); // 150ms
     m_rampSampleCount = 0;
     m_isRamping = true;
-    std::cout << "[WASAPI Exclusive] Soft-start ramp: " << m_rampDurationSamples 
-              << " samples (" << (m_rampDurationSamples / static_cast<double>(m_actualSampleRate) * 1000.0) 
-              << "ms)" << std::endl;
+    std::cout << "[WASAPI Exclusive] Soft-start ramp: " << m_rampDurationSamples << " samples ("
+              << (m_rampDurationSamples / static_cast<double>(m_actualSampleRate) * 1000.0) << "ms)" << std::endl;
 
     m_shouldStop = false;
     m_isRunning = true;
@@ -713,7 +675,8 @@ bool WASAPIExclusiveDriver::startStream() {
         return false;
     }
 
-    Aestra::Log::info("[WASAPI Exclusive] Stream started successfully at " + std::to_string(m_config.sampleRate) + " Hz");
+    Aestra::Log::info("[WASAPI Exclusive] Stream started successfully at " + std::to_string(m_config.sampleRate) +
+                      " Hz");
 
     // Start audio thread
     m_audioThread = std::thread(&WASAPIExclusiveDriver::audioThreadProc, this);
@@ -729,10 +692,10 @@ void WASAPIExclusiveDriver::stopStream() {
     }
 
     std::cout << "[WASAPI Exclusive] Stopping stream safely..." << std::endl;
-    
+
     // Signal stop to audio thread
     m_shouldStop = true;
-    
+
     // Trigger event to wake up audio thread immediately
     if (m_audioEvent) {
         SetEvent(m_audioEvent);
@@ -742,9 +705,9 @@ void WASAPIExclusiveDriver::stopStream() {
     if (m_audioThread.joinable()) {
         // Wait a short period for thread to exit gracefully
         if (m_audioThread.joinable()) {
-            m_audioThread.join();  // Try normal join first
+            m_audioThread.join(); // Try normal join first
         }
-        
+
         // If still joinable after a brief wait, it may be hung - detach to prevent std::terminate
         if (m_audioThread.joinable()) {
             std::cerr << "[WASAPI Exclusive] Warning: Audio thread didn't stop gracefully, detaching" << std::endl;
@@ -777,7 +740,8 @@ void WASAPIExclusiveDriver::fillAudioBufferWithSilence() {
         if (SUCCEEDED(hr)) {
             WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
             std::memset(reinterpret_cast<void*>(data), 0, m_bufferFrameCount * wf->nBlockAlign);
-            reinterpret_cast<IAudioRenderClient*>(m_renderClient)->ReleaseBuffer(m_bufferFrameCount, AUDCLNT_BUFFERFLAGS_SILENT);
+            reinterpret_cast<IAudioRenderClient*>(m_renderClient)
+                ->ReleaseBuffer(m_bufferFrameCount, AUDCLNT_BUFFERFLAGS_SILENT);
         }
     }
 }
@@ -785,15 +749,12 @@ void WASAPIExclusiveDriver::fillAudioBufferWithSilence() {
 bool WASAPIExclusiveDriver::initializeSharedFallback() {
     m_usingSharedFallback = true;
 
-    HRESULT hr = reinterpret_cast<IMMDevice*>(m_device)->Activate(
-        IID_IAudioClient,
-        CLSCTX_ALL,
-        nullptr,
-        (void**)&m_audioClient
-    );
+    HRESULT hr =
+        reinterpret_cast<IMMDevice*>(m_device)->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)&m_audioClient);
 
     if (FAILED(hr)) {
-        setError(DriverError::STREAM_OPEN_FAILED, "Shared fallback: failed to activate audio client: " + HResultToString(hr));
+        setError(DriverError::STREAM_OPEN_FAILED,
+                 "Shared fallback: failed to activate audio client: " + HResultToString(hr));
         return false;
     }
 
@@ -815,18 +776,13 @@ bool WASAPIExclusiveDriver::initializeSharedFallback() {
     }
 
     // Initialize in shared mode; let WASAPI pick the buffer duration
-    hr = reinterpret_cast<IAudioClient*>(m_audioClient)->Initialize(
-        AUDCLNT_SHAREMODE_SHARED,
-        AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-        0,
-        0,
-        reinterpret_cast<const WAVEFORMATEX*>(m_waveFormat),
-        nullptr
-    );
+    hr = reinterpret_cast<IAudioClient*>(m_audioClient)
+             ->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, 0, 0,
+                          reinterpret_cast<const WAVEFORMATEX*>(m_waveFormat), nullptr);
 
     if (FAILED(hr)) {
         setError(DriverError::STREAM_OPEN_FAILED,
-                "Shared fallback: initialize failed. HRESULT: " + HResultToString(hr));
+                 "Shared fallback: initialize failed. HRESULT: " + HResultToString(hr));
         return false;
     }
 
@@ -879,20 +835,21 @@ void WASAPIExclusiveDriver::audioThreadProc() {
 
     std::vector<float> userBuffer(m_bufferFrameCount * m_config.numOutputChannels);
 
-    std::cout << "[WASAPI Exclusive] Audio thread running with " 
-              << m_bufferFrameCount << " frames at " << m_actualSampleRate << " Hz" << std::endl;
+    std::cout << "[WASAPI Exclusive] Audio thread running with " << m_bufferFrameCount << " frames at "
+              << m_actualSampleRate << " Hz" << std::endl;
 
     while (!m_shouldStop) {
         DWORD waitResult = WaitForSingleObject(m_audioEvent, 2000);
-        
+
         if (waitResult != WAIT_OBJECT_0) {
             if (!m_shouldStop) {
                 std::cerr << "[WASAPI Exclusive] Event timeout!" << std::endl;
                 m_statistics.underrunCount++;
-                
+
                 // On timeout/underrun, try to recover by filling silence
                 BYTE* data = nullptr;
-                HRESULT hr = reinterpret_cast<IAudioRenderClient*>(m_renderClient)->GetBuffer(m_bufferFrameCount, &data);
+                HRESULT hr =
+                    reinterpret_cast<IAudioRenderClient*>(m_renderClient)->GetBuffer(m_bufferFrameCount, &data);
                 if (SUCCEEDED(hr)) {
                     WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
                     std::memset(reinterpret_cast<void*>(data), 0, m_bufferFrameCount * wf->nBlockAlign);
@@ -916,7 +873,7 @@ void WASAPIExclusiveDriver::audioThreadProc() {
         if (FAILED(hr)) {
             std::cerr << "[WASAPI Exclusive] GetBuffer failed: " << HResultToString(hr) << std::endl;
             m_statistics.underrunCount++;
-            
+
             // Zero user buffer to prevent stale data on next successful callback
             std::fill(userBuffer.begin(), userBuffer.end(), 0.0f);
             continue;
@@ -924,19 +881,13 @@ void WASAPIExclusiveDriver::audioThreadProc() {
 
         // Call user callback
         double streamTime = static_cast<double>(m_statistics.callbackCount * m_bufferFrameCount) / m_actualSampleRate;
-        
+
         if (m_userCallback) {
-            m_userCallback(
-                userBuffer.data(),
-                nullptr,
-                m_bufferFrameCount,
-                streamTime,
-                m_userData
-            );
+            m_userCallback(userBuffer.data(), nullptr, m_bufferFrameCount, streamTime, m_userData);
         } else {
             std::fill(userBuffer.begin(), userBuffer.end(), 0.0f);
         }
-        
+
         m_statistics.callbackCount++;
 
         // Apply soft-start ramp to prevent harsh audio on startup
@@ -945,12 +896,12 @@ void WASAPIExclusiveDriver::audioThreadProc() {
                 if (m_rampSampleCount < m_rampDurationSamples) {
                     // Linear fade-in ramp
                     float rampGain = static_cast<float>(m_rampSampleCount) / m_rampDurationSamples;
-                    
+
                     // Apply ramp to all channels in this frame
                     for (uint32_t ch = 0; ch < m_config.numOutputChannels; ++ch) {
                         userBuffer[frame * m_config.numOutputChannels + ch] *= rampGain;
                     }
-                    
+
                     m_rampSampleCount++;
                 } else {
                     // Ramp complete
@@ -959,14 +910,13 @@ void WASAPIExclusiveDriver::audioThreadProc() {
                 }
             }
         }
-        
+
         // Convert and copy to WASAPI buffer based on format
         WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
         if (wf->wFormatTag == WAVE_FORMAT_IEEE_FLOAT) {
             // 32-bit float - direct copy
             std::memcpy(reinterpret_cast<void*>(data), userBuffer.data(), m_bufferFrameCount * wf->nBlockAlign);
-        }
-        else if (wf->wFormatTag == WAVE_FORMAT_PCM) {
+        } else if (wf->wFormatTag == WAVE_FORMAT_PCM) {
             // PCM format - need to convert floats to integers with proper clamping
             if (wf->wBitsPerSample == 16) {
                 // 16-bit PCM
@@ -975,20 +925,23 @@ void WASAPIExclusiveDriver::audioThreadProc() {
                     // Convert float (-1.0 to 1.0) to int16_t (-32768 to 32767)
                     float sample = userBuffer[i];
                     // Clamp to valid range (already done above, but double-check)
-                    if (sample > 1.0f) sample = 1.0f;
-                    if (sample < -1.0f) sample = -1.0f;
+                    if (sample > 1.0f)
+                        sample = 1.0f;
+                    if (sample < -1.0f)
+                        sample = -1.0f;
                     // Convert with proper scaling (32767.0f, not 32768.0f to avoid overflow)
                     pcmData[i] = static_cast<int16_t>(sample * 32767.0f);
                 }
-            }
-            else if (wf->wBitsPerSample == 24) {
+            } else if (wf->wBitsPerSample == 24) {
                 // 24-bit PCM (stored in 3 bytes, little-endian)
                 uint8_t* pcmData = data;
                 for (uint32_t i = 0; i < m_bufferFrameCount * m_config.numOutputChannels; ++i) {
                     float sample = userBuffer[i];
                     // Clamp to valid range
-                    if (sample > 1.0f) sample = 1.0f;
-                    if (sample < -1.0f) sample = -1.0f;
+                    if (sample > 1.0f)
+                        sample = 1.0f;
+                    if (sample < -1.0f)
+                        sample = -1.0f;
                     // Convert to 24-bit (8388607 = 2^23 - 1)
                     int32_t pcmValue = static_cast<int32_t>(sample * 8388607.0f);
                     // Write 3 bytes (little-endian)
@@ -996,28 +949,29 @@ void WASAPIExclusiveDriver::audioThreadProc() {
                     pcmData[i * 3 + 1] = static_cast<uint8_t>((pcmValue >> 8) & 0xFF);
                     pcmData[i * 3 + 2] = static_cast<uint8_t>((pcmValue >> 16) & 0xFF);
                 }
-            }
-            else if (wf->wBitsPerSample == 32) {
+            } else if (wf->wBitsPerSample == 32) {
                 // 32-bit PCM
                 int32_t* pcmData = reinterpret_cast<int32_t*>(data);
                 for (uint32_t i = 0; i < m_bufferFrameCount * m_config.numOutputChannels; ++i) {
                     float sample = userBuffer[i];
                     // Clamp to valid range
-                    if (sample > 1.0f) sample = 1.0f;
-                    if (sample < -1.0f) sample = -1.0f;
+                    if (sample > 1.0f)
+                        sample = 1.0f;
+                    if (sample < -1.0f)
+                        sample = -1.0f;
                     // Convert to 32-bit (2147483647 = 2^31 - 1)
                     pcmData[i] = static_cast<int32_t>(sample * 2147483647.0f);
                 }
-            }
-            else {
+            } else {
                 // Unknown bit depth - zero the buffer and log warning
-                Aestra::Log::warning("[WASAPI Exclusive] Unknown PCM bit depth: " + std::to_string(wf->wBitsPerSample) + " bits. Outputting silence.");
+                Aestra::Log::warning("[WASAPI Exclusive] Unknown PCM bit depth: " + std::to_string(wf->wBitsPerSample) +
+                                     " bits. Outputting silence.");
                 std::memset(reinterpret_cast<void*>(data), 0, m_bufferFrameCount * wf->nBlockAlign);
             }
-        }
-        else {
+        } else {
             // Unknown format - zero the buffer and log warning
-            Aestra::Log::warning("[WASAPI Exclusive] Unknown format tag: " + std::to_string(wf->wFormatTag) + ". Outputting silence.");
+            Aestra::Log::warning("[WASAPI Exclusive] Unknown format tag: " + std::to_string(wf->wFormatTag) +
+                                 ". Outputting silence.");
             std::memset(reinterpret_cast<void*>(data), 0, m_bufferFrameCount * wf->nBlockAlign);
         }
 
@@ -1030,7 +984,8 @@ void WASAPIExclusiveDriver::audioThreadProc() {
         // Update statistics
         LARGE_INTEGER endTime;
         QueryPerformanceCounter(&endTime);
-        double callbackTimeUs = static_cast<double>(endTime.QuadPart - startTime.QuadPart) * 1000000.0 / static_cast<double>(m_perfFreq);
+        double callbackTimeUs =
+            static_cast<double>(endTime.QuadPart - startTime.QuadPart) * 1000000.0 / static_cast<double>(m_perfFreq);
         updateStatistics(callbackTimeUs);
     }
 
@@ -1059,11 +1014,10 @@ void WASAPIExclusiveDriver::setError(DriverError error, const std::string& messa
 
 void WASAPIExclusiveDriver::updateStatistics(double callbackTimeUs) {
     m_statistics.callbackCount++;
-    
+
     const double alpha = 0.1;
-    m_statistics.averageCallbackTimeUs = 
-        alpha * callbackTimeUs + (1.0 - alpha) * m_statistics.averageCallbackTimeUs;
-    
+    m_statistics.averageCallbackTimeUs = alpha * callbackTimeUs + (1.0 - alpha) * m_statistics.averageCallbackTimeUs;
+
     if (callbackTimeUs > m_statistics.maxCallbackTimeUs) {
         m_statistics.maxCallbackTimeUs = callbackTimeUs;
     }
@@ -1076,76 +1030,80 @@ void WASAPIExclusiveDriver::updateStatistics(double callbackTimeUs) {
     m_statistics.actualLatencyMs = getStreamLatency() * 1000.0;
 }
 
-
 std::vector<uint32_t> WASAPIExclusiveDriver::getSupportedExclusiveSampleRates(uint32_t deviceIndex) {
     std::vector<uint32_t> supportedRates;
-    std::vector<uint32_t> testRates = { 44100, 48000, 88200, 96000, 176400, 192000 };
-    
+    std::vector<uint32_t> testRates = {44100, 48000, 88200, 96000, 176400, 192000};
+
     IMMDeviceEnumerator* enumerator = nullptr;
     IMMDeviceCollection* collection = nullptr;
     IMMDevice* device = nullptr;
     IAudioClient* client = nullptr;
 
-    HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&enumerator);
-    if (FAILED(hr)) return supportedRates;
+    HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator),
+                                  (void**)&enumerator);
+    if (FAILED(hr))
+        return supportedRates;
 
     hr = enumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &collection);
     if (SUCCEEDED(hr)) {
         hr = collection->Item(deviceIndex, &device);
         if (SUCCEEDED(hr)) {
-             hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)&client);
-             if (SUCCEEDED(hr)) {
-                 for (uint32_t rate : testRates) {
-                     // Check 1. Float 32-bit (Preferred)
-                     WAVEFORMATEX* match = nullptr;
-                     WAVEFORMATEX format = {};
-                     format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-                     format.nChannels = 2;
-                     format.nSamplesPerSec = rate;
-                     format.wBitsPerSample = 32;
-                     format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
-                     format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-                     format.cbSize = 0;
+            hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)&client);
+            if (SUCCEEDED(hr)) {
+                for (uint32_t rate : testRates) {
+                    // Check 1. Float 32-bit (Preferred)
+                    WAVEFORMATEX* match = nullptr;
+                    WAVEFORMATEX format = {};
+                    format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+                    format.nChannels = 2;
+                    format.nSamplesPerSec = rate;
+                    format.wBitsPerSample = 32;
+                    format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
+                    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+                    format.cbSize = 0;
 
-                     hr = client->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &match);
-                     if (match) CoTaskMemFree(match);
-                     
-                     if (hr == S_OK) {
-                         supportedRates.push_back(rate);
-                         continue; 
-                     }
+                    hr = client->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &match);
+                    if (match)
+                        CoTaskMemFree(match);
 
-                     // Check 2. PCM 24-bit
-                     format.wFormatTag = WAVE_FORMAT_PCM;
-                     format.wBitsPerSample = 24;
-                     format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
-                     format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-                     
-                     match = nullptr;
-                     hr = client->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &match);
-                     if (match) CoTaskMemFree(match);
+                    if (hr == S_OK) {
+                        supportedRates.push_back(rate);
+                        continue;
+                    }
 
-                     if (hr == S_OK) {
-                         supportedRates.push_back(rate);
-                         continue;
-                     }
+                    // Check 2. PCM 24-bit
+                    format.wFormatTag = WAVE_FORMAT_PCM;
+                    format.wBitsPerSample = 24;
+                    format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
+                    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
 
-                     // Check 3. PCM 16-bit
-                     format.wBitsPerSample = 16;
-                     format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
-                     format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-                     
-                     match = nullptr;
-                     hr = client->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &match);
-                     if (match) CoTaskMemFree(match);
+                    match = nullptr;
+                    hr = client->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &match);
+                    if (match)
+                        CoTaskMemFree(match);
 
-                     if (hr == S_OK) {
-                         supportedRates.push_back(rate);
-                     }
-                 }
-                 client->Release();
-             }
-             device->Release();
+                    if (hr == S_OK) {
+                        supportedRates.push_back(rate);
+                        continue;
+                    }
+
+                    // Check 3. PCM 16-bit
+                    format.wBitsPerSample = 16;
+                    format.nBlockAlign = (format.nChannels * format.wBitsPerSample) / 8;
+                    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+
+                    match = nullptr;
+                    hr = client->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &match);
+                    if (match)
+                        CoTaskMemFree(match);
+
+                    if (hr == S_OK) {
+                        supportedRates.push_back(rate);
+                    }
+                }
+                client->Release();
+            }
+            device->Release();
         }
         collection->Release();
     }
@@ -1155,7 +1113,7 @@ std::vector<uint32_t> WASAPIExclusiveDriver::getSupportedExclusiveSampleRates(ui
     if (supportedRates.empty()) {
         supportedRates.push_back(48000);
     }
-    
+
     return supportedRates;
 }
 

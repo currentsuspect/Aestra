@@ -14,7 +14,7 @@ namespace Core {
 
 /**
  * @brief Runtime CPU feature detection for SIMD dispatch.
- * 
+ *
  * Uses CPUID to detect AVX2 and FMA support at startup.
  * Results are cached in static booleans for zero-overhead queries.
  */
@@ -31,12 +31,16 @@ public:
     bool hasSSE41() const { return m_hasSSE41; }
     bool hasAVX512F() const { return m_hasAVX512F; }
     bool hasAVX512DQ() const { return m_hasAVX512DQ; }
-    
+
     // ARM NEON detection (compile-time on ARM, always false on x86)
 #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
-    bool hasNEON() const { return true; }
+    bool hasNEON() const {
+        return true;
+    }
 #else
-    bool hasNEON() const { return false; }
+    bool hasNEON() const {
+        return false;
+    }
 #endif
 
 private:
