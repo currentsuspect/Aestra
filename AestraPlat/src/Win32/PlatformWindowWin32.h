@@ -47,28 +47,32 @@ public:
     void* getNativeDisplayHandle() const override { return m_hdc; }
 
     float getDPIScale() const override { return m_dpiScale; }
-    
+
     void setCursorVisible(bool visible) override;
-    
+
     // Set cursor position (screen coordinates)
     void setCursorPosition(int x, int y) override;
-    
+
     // Mouse Capture
     void setMouseCapture(bool captured) override;
-    
+
     KeyModifiers getCurrentModifiers() const override { return getKeyModifiers(); }
 
     void setHitTestCallback(HitTestCallback callback) override { m_hitTestCallback = callback; }
     void setMouseMoveCallback(std::function<void(int, int)> callback) override { m_mouseMoveCallback = callback; }
-    void setMouseButtonCallback(std::function<void(MouseButton, bool, int, int)> callback) override { m_mouseButtonCallback = callback; }
+    void setMouseButtonCallback(std::function<void(MouseButton, bool, int, int)> callback) override {
+        m_mouseButtonCallback = callback;
+    }
     void setMouseWheelCallback(std::function<void(float)> callback) override { m_mouseWheelCallback = callback; }
-    void setKeyCallback(std::function<void(KeyCode, bool, const KeyModifiers&)> callback) override { m_keyCallback = callback; }
+    void setKeyCallback(std::function<void(KeyCode, bool, const KeyModifiers&)> callback) override {
+        m_keyCallback = callback;
+    }
     void setCharCallback(std::function<void(unsigned int)> callback) override { m_charCallback = callback; }
     void setResizeCallback(std::function<void(int, int)> callback) override { m_resizeCallback = callback; }
     void setCloseCallback(std::function<void()> callback) override { m_closeCallback = callback; }
     void setFocusCallback(std::function<void(bool)> callback) override { m_focusCallback = callback; }
     void setDPIChangeCallback(std::function<void(float)> callback) override { m_dpiChangeCallback = callback; }
-    
+
     void requestClose() override;
 
 private:
@@ -102,10 +106,10 @@ private:
     // Fullscreen restore state
     WINDOWPLACEMENT m_wpPrev;
     DWORD m_styleBackup;
-    
+
     // Thread affinity tracking (for cursor control and other window-thread-only operations)
     DWORD m_creatingThreadId;
-    
+
     // Cursor state
     bool m_cursorVisible = true;
 

@@ -1,8 +1,8 @@
 #pragma once
 #include <cstdint>
-#include <vector>
-#include <string>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -30,15 +30,14 @@ struct AudioBufferData {
     uint32_t sampleRate{44100};
     uint32_t numChannels{2};
     uint64_t numFrames{0};
-    
+
     double durationSeconds() const {
-        if (sampleRate == 0 || numChannels == 0) return 0.0;
+        if (sampleRate == 0 || numChannels == 0)
+            return 0.0;
         return static_cast<double>(numFrames) / static_cast<double>(sampleRate);
     }
-    
-    bool isValid() const {
-        return !interleavedData.empty() && sampleRate > 0 && numChannels > 0;
-    }
+
+    bool isValid() const { return !interleavedData.empty() && sampleRate > 0 && numChannels > 0; }
 };
 
 /**
@@ -47,51 +46,30 @@ struct AudioBufferData {
 class ClipSource {
 public:
     ClipSource() = default;
-    explicit ClipSource(ClipSourceID id, const std::string& name = "")
-        : m_id(id), m_name(name) {}
-    
+    explicit ClipSource(ClipSourceID id, const std::string& name = "") : m_id(id), m_name(name) {}
+
     // Getters
-    const std::string& getName() const {
-        return m_name;
-    }
-    
-    double getDurationSeconds() const {
-        return m_buffer ? m_buffer->durationSeconds() : 0.0;
-    }
-    
-    const AudioBufferData* getRawBuffer() const {
-        return m_buffer.get();
-    }
-    
-    std::shared_ptr<AudioBufferData> getBuffer() const {
-        return m_buffer;
-    }
-    
-    const std::string& getFilePath() const {
-        return m_filePath;
-    }
-    
-    ClipSourceID getID() const {
-        return m_id;
-    }
-    
-    bool isValid() const {
-        return m_buffer && m_buffer->isValid();
-    }
-    
-    bool isReady() const {
-        return isValid();
-    }
-    
+    const std::string& getName() const { return m_name; }
+
+    double getDurationSeconds() const { return m_buffer ? m_buffer->durationSeconds() : 0.0; }
+
+    const AudioBufferData* getRawBuffer() const { return m_buffer.get(); }
+
+    std::shared_ptr<AudioBufferData> getBuffer() const { return m_buffer; }
+
+    const std::string& getFilePath() const { return m_filePath; }
+
+    ClipSourceID getID() const { return m_id; }
+
+    bool isValid() const { return m_buffer && m_buffer->isValid(); }
+
+    bool isReady() const { return isValid(); }
+
     // Setters
-    void setFilePath(const std::string& path) {
-        m_filePath = path;
-    }
-    
-    void setBuffer(std::shared_ptr<AudioBufferData> buffer) {
-        m_buffer = std::move(buffer);
-    }
-    
+    void setFilePath(const std::string& path) { m_filePath = path; }
+
+    void setBuffer(std::shared_ptr<AudioBufferData> buffer) { m_buffer = std::move(buffer); }
+
 private:
     ClipSourceID m_id;
     std::string m_name;

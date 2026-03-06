@@ -1,5 +1,6 @@
 #pragma once
 #include "../../include/AestraPlatform.h"
+
 #include <SDL2/SDL.h>
 #include <string>
 
@@ -51,20 +52,26 @@ public:
 
     // DPI support
     float getDPIScale() const override;
-    
+
     // Cursor control
     void setCursorVisible(bool visible) override;
-    
+
     // Modifier key state query
     KeyModifiers getCurrentModifiers() const override;
 
     // Event callbacks
     void setMouseMoveCallback(std::function<void(int x, int y)> callback) override { m_mouseMoveCallback = callback; }
-    void setMouseButtonCallback(std::function<void(MouseButton button, bool pressed, int x, int y)> callback) override { m_mouseButtonCallback = callback; }
+    void setMouseButtonCallback(std::function<void(MouseButton button, bool pressed, int x, int y)> callback) override {
+        m_mouseButtonCallback = callback;
+    }
     void setMouseWheelCallback(std::function<void(float delta)> callback) override { m_mouseWheelCallback = callback; }
-    void setKeyCallback(std::function<void(KeyCode key, bool pressed, const KeyModifiers& mods)> callback) override { m_keyCallback = callback; }
+    void setKeyCallback(std::function<void(KeyCode key, bool pressed, const KeyModifiers& mods)> callback) override {
+        m_keyCallback = callback;
+    }
     void setCharCallback(std::function<void(unsigned int codepoint)> callback) override { m_charCallback = callback; }
-    void setResizeCallback(std::function<void(int width, int height)> callback) override { m_resizeCallback = callback; }
+    void setResizeCallback(std::function<void(int width, int height)> callback) override {
+        m_resizeCallback = callback;
+    }
     void setCloseCallback(std::function<void()> callback) override { m_closeCallback = callback; }
     void setFocusCallback(std::function<void(bool focused)> callback) override { m_focusCallback = callback; }
     void setDPIChangeCallback(std::function<void(float dpiScale)> callback) override { m_dpiChangeCallback = callback; }

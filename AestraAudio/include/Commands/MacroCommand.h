@@ -2,16 +2,17 @@
 #pragma once
 
 #include "ICommand.h"
-#include <vector>
+
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
 
 /**
  * @brief Groups multiple commands into a single undoable transaction
- * 
+ *
  * Usage:
  *   auto macro = std::make_shared<MacroCommand>();
  *   macro->setName("Move Clips");
@@ -23,7 +24,7 @@ class MacroCommand : public ICommand {
 public:
     MacroCommand() = default;
     explicit MacroCommand(const std::string& name) : m_name(name) {}
-    
+
     /**
      * @brief Add a command to the macro (executed in order, undone in reverse)
      */
@@ -32,38 +33,34 @@ public:
             m_commands.push_back(cmd);
         }
     }
-    
+
     /**
      * @brief Set a human-readable name for the macro
      */
-    void setName(const std::string& name) {
-        m_name = name;
-    }
-    
+    void setName(const std::string& name) { m_name = name; }
+
     void execute() override {
         for (auto& cmd : m_commands) {
             cmd->execute();
         }
     }
-    
+
     void undo() override {
         // Reverse order for undo
         for (auto it = m_commands.rbegin(); it != m_commands.rend(); ++it) {
             (*it)->undo();
         }
     }
-    
+
     void redo() override {
         // Forward order for redo
         for (auto& cmd : m_commands) {
             cmd->redo();
         }
     }
-    
-    std::string getName() const override {
-        return m_name.empty() ? "Macro" : m_name;
-    }
-    
+
+    std::string getName() const override { return m_name.empty() ? "Macro" : m_name; }
+
     size_t getSizeInBytes() const override {
         size_t total = sizeof(*this);
         for (const auto& cmd : m_commands) {
@@ -71,7 +68,7 @@ public:
         }
         return total;
     }
-    
+
     bool changesProjectState() const override {
         for (const auto& cmd : m_commands) {
             if (cmd->changesProjectState()) {
@@ -80,14 +77,10 @@ public:
         }
         return false;
     }
-    
-    size_t getCommandCount() const {
-        return m_commands.size();
-    }
-    
-    bool empty() const {
-        return m_commands.empty();
-    }
+
+    size_t getCommandCount() const { return m_commands.size(); }
+
+    bool empty() const { return m_commands.empty(); }
 
 private:
     std::vector<std::shared_ptr<ICommand>> m_commands;
