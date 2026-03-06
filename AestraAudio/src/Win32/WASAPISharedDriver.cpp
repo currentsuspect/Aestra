@@ -10,6 +10,8 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
+// clang-format off
+#include <windows.h>
 #include <audioclient.h>
 #include <avrt.h>
 #include <chrono>
@@ -21,8 +23,8 @@
 #include <iostream>
 #include <ksmedia.h>
 #include <mmdeviceapi.h>
+// clang-format on
 #include <sstream>
-#include <windows.h>
 
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "avrt.lib")
