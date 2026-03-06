@@ -1,4 +1,5 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+// clang-format off
 #pragma once
 
 #if defined(_WIN32)
