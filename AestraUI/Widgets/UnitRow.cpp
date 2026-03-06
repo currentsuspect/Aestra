@@ -748,7 +748,7 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
             if (it != midi.notes.end()) {
                 midi.notes.erase(it);
             } else {
-                midi.notes.push_back({targetStart, 0.25, 60, 100, m_unitId});
+                midi.notes.push_back({60, targetStart, 0.25, 100.0f / 127.0f, m_unitId});
                 
                 // [NEW] Audition Sound
                 auto& engine = Aestra::Audio::AudioEngine::getInstance();

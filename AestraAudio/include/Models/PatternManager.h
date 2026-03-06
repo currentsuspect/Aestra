@@ -85,10 +85,10 @@ public:
     }
 
     // STUB: applyPatch — Phase 2 will support undo-aware pattern mutations
-    template<typename PatchFn>
-    void applyPatch(PatternID id, PatchFn&& fn) {
+    template <typename PatchFn> void applyPatch(PatternID id, PatchFn&& fn) {
         auto* pattern = getOrCreatePattern(id);
-        if (pattern) fn(*pattern);
+        if (pattern)
+            fn(*pattern);
     }
 
 private:

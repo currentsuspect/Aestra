@@ -101,6 +101,10 @@ if(EXISTS ${VST3_SDK_DIR}/pluginterfaces AND EXISTS ${VST3_SDK_DIR}/public.sdk)
         list(APPEND VST3_HOST_SOURCES
             ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_mac.mm
         )
+        set_source_files_properties(
+            ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_mac.mm
+            PROPERTIES COMPILE_FLAGS "-fobjc-arc"
+        )
     else()
         list(APPEND VST3_HOST_SOURCES
             ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_linux.cpp

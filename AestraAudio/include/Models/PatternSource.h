@@ -23,6 +23,8 @@ struct PatternID {
     explicit operator uint64_t() const { return value; }
     bool operator==(const PatternID& other) const { return value == other.value; }
     bool operator!=(const PatternID& other) const { return value != other.value; }
+    // STUB: isValid — Phase 2 will define validity rules
+    bool isValid() const { return value != 0; }
 };
 
 /**
