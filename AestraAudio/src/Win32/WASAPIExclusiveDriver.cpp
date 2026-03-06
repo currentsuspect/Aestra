@@ -11,14 +11,12 @@
 #include <algorithm>
 // clang-format off
 #include <windows.h>
-#include <initguid.h>
-#include <propkeydef.h>
+#include <objbase.h>
 #include <audioclient.h>
 #include <avrt.h>
-#include <devpkey.h>
+#include <mmdeviceapi.h>
 #include <functiondiscoverykeys_devpkey.h>
 #include <ksmedia.h>
-#include <mmdeviceapi.h>
 // clang-format on
 #include <chrono>
 #include <cstring>
