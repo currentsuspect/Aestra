@@ -4,6 +4,7 @@
 
 #include "Commands/MoveClipCommand.h"
 
+#include "Commands/CommandHistory.h"
 #include "Models/PlaylistModel.h"
 
 #include <cassert>
@@ -25,7 +26,7 @@ public:
         // Add a clip at beat 10
         ClipInstance clip;
         clip.id = ClipInstanceID::generate();
-        clip.patternId = PatternID::fromString("pattern-001");
+        clip.patternId = PatternID(1); // Simple ID
         clip.startBeat = 10.0;
         clip.durationBeats = 4.0;
 

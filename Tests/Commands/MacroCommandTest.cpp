@@ -4,6 +4,7 @@
 
 #include "Commands/MacroCommand.h"
 
+#include "Commands/CommandHistory.h"
 #include "Commands/ICommand.h"
 
 #include <cassert>
