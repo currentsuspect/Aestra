@@ -3,6 +3,7 @@
 
 #include "AestraConfig.h"
 #include "AestraLog.h"
+
 #include <sstream>
 
 namespace Aestra {
@@ -26,43 +27,43 @@ inline void assertHandler(const char* expr, const char* file, int line, const ch
         ss << " - " << msg;
     }
     ss << "\n  File: " << file << "\n  Line: " << line;
-    
+
     Log::error(ss.str());
-    
-    // Break into debugger if available
-    #if AESTRA_COMPILER_MSVC
-        __debugbreak();
-    #elif AESTRA_COMPILER_GCC || AESTRA_COMPILER_CLANG
-        __builtin_trap();
-    #else
-        std::abort();
-    #endif
+
+// Break into debugger if available
+#if AESTRA_COMPILER_MSVC
+    __debugbreak();
+#elif AESTRA_COMPILER_GCC || AESTRA_COMPILER_CLANG
+    __builtin_trap();
+#else
+    std::abort();
+#endif
 }
 
 // Basic assertion
-#define AESTRA_ASSERT(expr) \
-    do { \
-        if (AESTRA_UNLIKELY(!(expr))) { \
+#define AESTRA_ASSERT(expr)                                   \
+    do {                                                      \
+        if (AESTRA_UNLIKELY(!(expr))) {                       \
             Aestra::assertHandler(#expr, __FILE__, __LINE__); \
-        } \
+        }                                                     \
     } while (0)
 
 // Assertion with message
-#define AESTRA_ASSERT_MSG(expr, msg) \
-    do { \
-        if (AESTRA_UNLIKELY(!(expr))) { \
+#define AESTRA_ASSERT_MSG(expr, msg)                               \
+    do {                                                           \
+        if (AESTRA_UNLIKELY(!(expr))) {                            \
             Aestra::assertHandler(#expr, __FILE__, __LINE__, msg); \
-        } \
+        }                                                          \
     } while (0)
 
 // Assertion with formatted message
-#define AESTRA_ASSERT_FMT(expr, ...) \
-    do { \
-        if (AESTRA_UNLIKELY(!(expr))) { \
-            std::stringstream ss; \
-            ss << __VA_ARGS__; \
+#define AESTRA_ASSERT_FMT(expr, ...)                                            \
+    do {                                                                        \
+        if (AESTRA_UNLIKELY(!(expr))) {                                         \
+            std::stringstream ss;                                               \
+            ss << __VA_ARGS__;                                                  \
             Aestra::assertHandler(#expr, __FILE__, __LINE__, ss.str().c_str()); \
-        } \
+        }                                                                       \
     } while (0)
 
 #else
@@ -92,23 +93,23 @@ inline void verifyHandler(const char* expr, const char* file, int line, const ch
         ss << " - " << msg;
     }
     ss << "\n  File: " << file << "\n  Line: " << line;
-    
+
     Log::error(ss.str());
     std::abort();
 }
 
-#define AESTRA_VERIFY(expr) \
-    do { \
-        if (AESTRA_UNLIKELY(!(expr))) { \
+#define AESTRA_VERIFY(expr)                                   \
+    do {                                                      \
+        if (AESTRA_UNLIKELY(!(expr))) {                       \
             Aestra::verifyHandler(#expr, __FILE__, __LINE__); \
-        } \
+        }                                                     \
     } while (0)
 
-#define AESTRA_VERIFY_MSG(expr, msg) \
-    do { \
-        if (AESTRA_UNLIKELY(!(expr))) { \
+#define AESTRA_VERIFY_MSG(expr, msg)                               \
+    do {                                                           \
+        if (AESTRA_UNLIKELY(!(expr))) {                            \
             Aestra::verifyHandler(#expr, __FILE__, __LINE__, msg); \
-        } \
+        }                                                          \
     } while (0)
 
 // =============================================================================
@@ -135,13 +136,13 @@ inline void verifyHandler(const char* expr, const char* file, int line, const ch
 
 #if AESTRA_ENABLE_ASSERTS
 
-#define AESTRA_ASSERT_RANGE(value, min, max) \
+#define AESTRA_ASSERT_RANGE(value, min, max)                \
     AESTRA_ASSERT_FMT((value) >= (min) && (value) <= (max), \
-        "Value " << (value) << " out of range [" << (min) << ", " << (max) << "]")
+                      "Value " << (value) << " out of range [" << (min) << ", " << (max) << "]")
 
-#define AESTRA_ASSERT_INDEX(index, size) \
+#define AESTRA_ASSERT_INDEX(index, size)                \
     AESTRA_ASSERT_FMT((index) >= 0 && (index) < (size), \
-        "Index " << (index) << " out of bounds (size: " << (size) << ")")
+                      "Index " << (index) << " out of bounds (size: " << (size) << ")")
 
 #else
 
@@ -156,8 +157,7 @@ inline void verifyHandler(const char* expr, const char* file, int line, const ch
 
 #if AESTRA_ENABLE_ASSERTS
 
-#define AESTRA_ASSERT_NOT_NULL(ptr) \
-    AESTRA_ASSERT_MSG((ptr) != nullptr, "Pointer is null")
+#define AESTRA_ASSERT_NOT_NULL(ptr) AESTRA_ASSERT_MSG((ptr) != nullptr, "Pointer is null")
 
 #else
 
@@ -171,10 +171,10 @@ inline void verifyHandler(const char* expr, const char* file, int line, const ch
 
 #if AESTRA_ENABLE_ASSERTS
 
-#define AESTRA_ASSERT_UNREACHABLE() \
-    do { \
+#define AESTRA_ASSERT_UNREACHABLE()                                            \
+    do {                                                                       \
         Aestra::assertHandler("Unreachable code reached", __FILE__, __LINE__); \
-        AESTRA_UNREACHABLE(); \
+        AESTRA_UNREACHABLE();                                                  \
     } while (0)
 
 #else
@@ -187,10 +187,10 @@ inline void verifyHandler(const char* expr, const char* file, int line, const ch
 // Not Implemented
 // =============================================================================
 
-#define AESTRA_NOT_IMPLEMENTED() \
-    do { \
+#define AESTRA_NOT_IMPLEMENTED()                                                         \
+    do {                                                                                 \
         Aestra::Log::error("Not implemented: " __FILE__ ":" AESTRA_STRINGIFY(__LINE__)); \
-        std::abort(); \
+        std::abort();                                                                    \
     } while (0)
 
 } // namespace Aestra

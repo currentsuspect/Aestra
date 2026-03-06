@@ -2,9 +2,9 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <unordered_map>
 #include <vector>
-#include <memory>
 
 namespace Aestra {
 namespace Audio {
@@ -31,10 +31,10 @@ class ChannelSlotMap {
 public:
     /// Reserved slot index for master channel
     static constexpr uint32_t MASTER_SLOT_INDEX = 127;
-    
+
     /// Returned when lookup fails
     static constexpr uint32_t INVALID_SLOT = UINT32_MAX;
-    
+
     /// Maximum number of channel slots (excluding master)
     static constexpr uint32_t MAX_CHANNEL_SLOTS = 127;
 
@@ -103,9 +103,9 @@ public:
     void clear();
 
 private:
-    std::unordered_map<uint32_t, uint32_t> m_idToSlot;   ///< channelId -> slotIndex
-    std::unordered_map<uint32_t, uint32_t> m_slotToId;   ///< slotIndex -> channelId
-    uint32_t m_channelCount{0};                          ///< Number of mapped channels
+    std::unordered_map<uint32_t, uint32_t> m_idToSlot; ///< channelId -> slotIndex
+    std::unordered_map<uint32_t, uint32_t> m_slotToId; ///< slotIndex -> channelId
+    uint32_t m_channelCount{0};                        ///< Number of mapped channels
 };
 
 } // namespace Audio

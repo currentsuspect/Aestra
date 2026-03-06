@@ -28,7 +28,7 @@ public:
     std::string getPlatformName() const override { return "Windows"; }
     int getProcessorCount() const override;
     size_t getSystemMemory() const override;
-    
+
     // Paths
     std::string getAppDataPath(const std::string& appName) const override;
 

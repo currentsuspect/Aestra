@@ -1,8 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 
 namespace Aestra {
 
@@ -20,16 +20,41 @@ struct Vector2 {
     Vector2 operator*(float scalar) const { return Vector2(x * scalar, y * scalar); }
     Vector2 operator/(float scalar) const { return Vector2(x / scalar, y / scalar); }
 
-    Vector2& operator+=(const Vector2& other) { x += other.x; y += other.y; return *this; }
-    Vector2& operator-=(const Vector2& other) { x -= other.x; y -= other.y; return *this; }
-    Vector2& operator*=(float scalar) { x *= scalar; y *= scalar; return *this; }
-    Vector2& operator/=(float scalar) { x /= scalar; y /= scalar; return *this; }
+    Vector2& operator+=(const Vector2& other) {
+        x += other.x;
+        y += other.y;
+        return *this;
+    }
+    Vector2& operator-=(const Vector2& other) {
+        x -= other.x;
+        y -= other.y;
+        return *this;
+    }
+    Vector2& operator*=(float scalar) {
+        x *= scalar;
+        y *= scalar;
+        return *this;
+    }
+    Vector2& operator/=(float scalar) {
+        x /= scalar;
+        y /= scalar;
+        return *this;
+    }
 
     float dot(const Vector2& other) const { return x * other.x + y * other.y; }
     float length() const { return std::sqrt(x * x + y * y); }
     float lengthSquared() const { return x * x + y * y; }
-    Vector2 normalized() const { float len = length(); return len > 0 ? *this / len : Vector2(); }
-    void normalize() { float len = length(); if (len > 0) { x /= len; y /= len; } }
+    Vector2 normalized() const {
+        float len = length();
+        return len > 0 ? *this / len : Vector2();
+    }
+    void normalize() {
+        float len = length();
+        if (len > 0) {
+            x /= len;
+            y /= len;
+        }
+    }
 };
 
 // =============================================================================
@@ -46,23 +71,49 @@ struct Vector3 {
     Vector3 operator*(float scalar) const { return Vector3(x * scalar, y * scalar, z * scalar); }
     Vector3 operator/(float scalar) const { return Vector3(x / scalar, y / scalar, z / scalar); }
 
-    Vector3& operator+=(const Vector3& other) { x += other.x; y += other.y; z += other.z; return *this; }
-    Vector3& operator-=(const Vector3& other) { x -= other.x; y -= other.y; z -= other.z; return *this; }
-    Vector3& operator*=(float scalar) { x *= scalar; y *= scalar; z *= scalar; return *this; }
-    Vector3& operator/=(float scalar) { x /= scalar; y /= scalar; z /= scalar; return *this; }
+    Vector3& operator+=(const Vector3& other) {
+        x += other.x;
+        y += other.y;
+        z += other.z;
+        return *this;
+    }
+    Vector3& operator-=(const Vector3& other) {
+        x -= other.x;
+        y -= other.y;
+        z -= other.z;
+        return *this;
+    }
+    Vector3& operator*=(float scalar) {
+        x *= scalar;
+        y *= scalar;
+        z *= scalar;
+        return *this;
+    }
+    Vector3& operator/=(float scalar) {
+        x /= scalar;
+        y /= scalar;
+        z /= scalar;
+        return *this;
+    }
 
     float dot(const Vector3& other) const { return x * other.x + y * other.y + z * other.z; }
     Vector3 cross(const Vector3& other) const {
-        return Vector3(
-            y * other.z - z * other.y,
-            z * other.x - x * other.z,
-            x * other.y - y * other.x
-        );
+        return Vector3(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x);
     }
     float length() const { return std::sqrt(x * x + y * y + z * z); }
     float lengthSquared() const { return x * x + y * y + z * z; }
-    Vector3 normalized() const { float len = length(); return len > 0 ? *this / len : Vector3(); }
-    void normalize() { float len = length(); if (len > 0) { x /= len; y /= len; z /= len; } }
+    Vector3 normalized() const {
+        float len = length();
+        return len > 0 ? *this / len : Vector3();
+    }
+    void normalize() {
+        float len = length();
+        if (len > 0) {
+            x /= len;
+            y /= len;
+            z /= len;
+        }
+    }
 };
 
 // =============================================================================
@@ -74,21 +125,60 @@ struct Vector4 {
     Vector4() : x(0.0f), y(0.0f), z(0.0f), w(0.0f) {}
     Vector4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
 
-    Vector4 operator+(const Vector4& other) const { return Vector4(x + other.x, y + other.y, z + other.z, w + other.w); }
-    Vector4 operator-(const Vector4& other) const { return Vector4(x - other.x, y - other.y, z - other.z, w - other.w); }
+    Vector4 operator+(const Vector4& other) const {
+        return Vector4(x + other.x, y + other.y, z + other.z, w + other.w);
+    }
+    Vector4 operator-(const Vector4& other) const {
+        return Vector4(x - other.x, y - other.y, z - other.z, w - other.w);
+    }
     Vector4 operator*(float scalar) const { return Vector4(x * scalar, y * scalar, z * scalar, w * scalar); }
     Vector4 operator/(float scalar) const { return Vector4(x / scalar, y / scalar, z / scalar, w / scalar); }
 
-    Vector4& operator+=(const Vector4& other) { x += other.x; y += other.y; z += other.z; w += other.w; return *this; }
-    Vector4& operator-=(const Vector4& other) { x -= other.x; y -= other.y; z -= other.z; w -= other.w; return *this; }
-    Vector4& operator*=(float scalar) { x *= scalar; y *= scalar; z *= scalar; w *= scalar; return *this; }
-    Vector4& operator/=(float scalar) { x /= scalar; y /= scalar; z /= scalar; w /= scalar; return *this; }
+    Vector4& operator+=(const Vector4& other) {
+        x += other.x;
+        y += other.y;
+        z += other.z;
+        w += other.w;
+        return *this;
+    }
+    Vector4& operator-=(const Vector4& other) {
+        x -= other.x;
+        y -= other.y;
+        z -= other.z;
+        w -= other.w;
+        return *this;
+    }
+    Vector4& operator*=(float scalar) {
+        x *= scalar;
+        y *= scalar;
+        z *= scalar;
+        w *= scalar;
+        return *this;
+    }
+    Vector4& operator/=(float scalar) {
+        x /= scalar;
+        y /= scalar;
+        z /= scalar;
+        w /= scalar;
+        return *this;
+    }
 
     float dot(const Vector4& other) const { return x * other.x + y * other.y + z * other.z + w * other.w; }
     float length() const { return std::sqrt(x * x + y * y + z * z + w * w); }
     float lengthSquared() const { return x * x + y * y + z * z + w * w; }
-    Vector4 normalized() const { float len = length(); return len > 0 ? *this / len : Vector4(); }
-    void normalize() { float len = length(); if (len > 0) { x /= len; y /= len; z /= len; w /= len; } }
+    Vector4 normalized() const {
+        float len = length();
+        return len > 0 ? *this / len : Vector4();
+    }
+    void normalize() {
+        float len = length();
+        if (len > 0) {
+            x /= len;
+            y /= len;
+            z /= len;
+            w /= len;
+        }
+    }
 };
 
 // =============================================================================
@@ -98,7 +188,8 @@ struct Matrix4x4 {
     float m[16]; // Column-major order
 
     Matrix4x4() {
-        for (int i = 0; i < 16; ++i) m[i] = 0.0f;
+        for (int i = 0; i < 16; ++i)
+            m[i] = 0.0f;
     }
 
     static Matrix4x4 identity() {
@@ -160,11 +251,9 @@ struct Matrix4x4 {
         Matrix4x4 result;
         for (int col = 0; col < 4; ++col) {
             for (int row = 0; row < 4; ++row) {
-                result.m[col * 4 + row] = 
-                    m[0 * 4 + row] * other.m[col * 4 + 0] +
-                    m[1 * 4 + row] * other.m[col * 4 + 1] +
-                    m[2 * 4 + row] * other.m[col * 4 + 2] +
-                    m[3 * 4 + row] * other.m[col * 4 + 3];
+                result.m[col * 4 + row] = m[0 * 4 + row] * other.m[col * 4 + 0] +
+                                          m[1 * 4 + row] * other.m[col * 4 + 1] +
+                                          m[2 * 4 + row] * other.m[col * 4 + 2] + m[3 * 4 + row] * other.m[col * 4 + 3];
             }
         }
         return result;
@@ -172,11 +261,8 @@ struct Matrix4x4 {
 
     Vector4 operator*(const Vector4& v) const {
         return Vector4(
-            m[0] * v.x + m[4] * v.y + m[8] * v.z + m[12] * v.w,
-            m[1] * v.x + m[5] * v.y + m[9] * v.z + m[13] * v.w,
-            m[2] * v.x + m[6] * v.y + m[10] * v.z + m[14] * v.w,
-            m[3] * v.x + m[7] * v.y + m[11] * v.z + m[15] * v.w
-        );
+            m[0] * v.x + m[4] * v.y + m[8] * v.z + m[12] * v.w, m[1] * v.x + m[5] * v.y + m[9] * v.z + m[13] * v.w,
+            m[2] * v.x + m[6] * v.y + m[10] * v.z + m[14] * v.w, m[3] * v.x + m[7] * v.y + m[11] * v.z + m[15] * v.w);
     }
 };
 
@@ -210,7 +296,8 @@ constexpr float LN10_OVER_20 = 0.11512925464970228420089957273422f;
 
 // Decibels to linear gain (Optimized with exp)
 inline float dbToGain(float db) {
-    if (db <= -90.0f) return 0.0f;
+    if (db <= -90.0f)
+        return 0.0f;
     return std::exp(db * LN10_OVER_20);
 }
 

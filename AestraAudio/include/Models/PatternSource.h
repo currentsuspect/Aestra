@@ -1,9 +1,10 @@
 #pragma once
+#include "ClipSource.h"
+
 #include <cstdint>
-#include <vector>
 #include <string>
 #include <variant>
-#include "ClipSource.h"
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -48,8 +49,8 @@ struct MidiPayload {
 struct AudioSlice {
     double startOffset{0.0};
     double duration{0.0};
-    double startSamples{0.0};    // Alternative representation in samples (as double for JSON)
-    double lengthSamples{0.0};   // Alternative representation in samples (as double for JSON)
+    double startSamples{0.0};  // Alternative representation in samples (as double for JSON)
+    double lengthSamples{0.0}; // Alternative representation in samples (as double for JSON)
 };
 
 /**
@@ -68,35 +69,23 @@ struct AudioSlicePayload {
 class PatternSource {
 public:
     PatternSource() = default;
-    
-    enum class Type {
-        Empty,
-        Midi,
-        Audio
-    };
-    
+
+    enum class Type { Empty, Midi, Audio };
+
     PatternID id;
     std::string name;
     double lengthBeats{4.0};
     Type type{Type::Empty};
     std::variant<std::monostate, MidiPayload, AudioSlicePayload> payload;
-    
-    bool isMidi() const {
-        return type == Type::Midi && std::holds_alternative<MidiPayload>(payload);
-    }
-    
-    bool isAudio() const {
-        return type == Type::Audio && std::holds_alternative<AudioSlicePayload>(payload);
-    }
-    
+
+    bool isMidi() const { return type == Type::Midi && std::holds_alternative<MidiPayload>(payload); }
+
+    bool isAudio() const { return type == Type::Audio && std::holds_alternative<AudioSlicePayload>(payload); }
+
     // Convenience access to MIDI notes
-    std::vector<MidiNote>& getMidiNotes() {
-        return std::get<MidiPayload>(payload).notes;
-    }
-    
-    const std::vector<MidiNote>& getMidiNotes() const {
-        return std::get<MidiPayload>(payload).notes;
-    }
+    std::vector<MidiNote>& getMidiNotes() { return std::get<MidiPayload>(payload).notes; }
+
+    const std::vector<MidiNote>& getMidiNotes() const { return std::get<MidiPayload>(payload).notes; }
 };
 
 } // namespace Audio

@@ -13,18 +13,12 @@ struct AestraUUID {
     AestraUUID() = default;
     AestraUUID(uint64_t v) : low(v) {}
 
-    static AestraUUID generate() {
-        return AestraUUID(1);
-    }
+    static AestraUUID generate() { return AestraUUID(1); }
 
-    bool operator==(const AestraUUID& other) const {
-        return low == other.low && high == other.high;
-    }
-    
-    bool operator!=(const AestraUUID& other) const {
-        return !(*this == other);
-    }
-    
+    bool operator==(const AestraUUID& other) const { return low == other.low && high == other.high; }
+
+    bool operator!=(const AestraUUID& other) const { return !(*this == other); }
+
     /**
      * @brief Convert to string representation
      */
@@ -36,20 +30,19 @@ struct AestraUUID {
     }
 };
 
-}
-}
+} // namespace Audio
+} // namespace Aestra
 
 using AestraUUID = Aestra::Audio::AestraUUID;
 
 // Hash specialization for AestraUUID
 namespace std {
-    template<>
-    struct hash<Aestra::Audio::AestraUUID> {
-        size_t operator()(const Aestra::Audio::AestraUUID& uuid) const noexcept {
-            // Combine low and high using a hash combiner
-            size_t h1 = std::hash<uint64_t>{}(uuid.low);
-            size_t h2 = std::hash<uint64_t>{}(uuid.high);
-            return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
-        }
-    };
-}
+template <> struct hash<Aestra::Audio::AestraUUID> {
+    size_t operator()(const Aestra::Audio::AestraUUID& uuid) const noexcept {
+        // Combine low and high using a hash combiner
+        size_t h1 = std::hash<uint64_t>{}(uuid.low);
+        size_t h2 = std::hash<uint64_t>{}(uuid.high);
+        return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
+    }
+};
+} // namespace std

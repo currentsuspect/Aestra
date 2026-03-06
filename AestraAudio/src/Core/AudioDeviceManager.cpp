@@ -1,21 +1,17 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioDeviceManager.h"
-#include <iostream>
-#include <chrono>
-#include <thread>
-#include <chrono>
+
 #include "AestraLog.h"
+
+#include <chrono>
+#include <iostream>
+#include <thread>
 
 namespace Aestra {
 namespace Audio {
 
 AudioDeviceManager::AudioDeviceManager()
-    : m_currentCallback(nullptr)
-    , m_currentUserData(nullptr)
-    , m_initialized(false)
-    , m_wasRunning(false)
-{
-}
+    : m_currentCallback(nullptr), m_currentUserData(nullptr), m_initialized(false), m_wasRunning(false) {}
 
 AudioDeviceManager::~AudioDeviceManager() {
     shutdown();
@@ -38,30 +34,30 @@ bool AudioDeviceManager::initialize() {
     try {
         // Register platform-specific drivers (Dependency Injection Point)
         RegisterPlatformDrivers(*this);
-        
+
         if (m_drivers.empty()) {
-             std::cout << "No audio drivers available!" << std::endl;
-             // Continue initialization but warn? Or fail? 
-             // Logic suggests returning false if strictly no audio capability is fatal.
-             // But for audit tool we might want to continue. 
-             // Let's print warning.
+            std::cout << "No audio drivers available!" << std::endl;
+            // Continue initialization but warn? Or fail?
+            // Logic suggests returning false if strictly no audio capability is fatal.
+            // But for audit tool we might want to continue.
+            // Let's print warning.
         }
 
         std::cout << "Registered " << m_drivers.size() << " driver(s)." << std::endl;
 
         // Log driver status
         for (const auto& driver : m_drivers) {
-            std::cout << (driver->isAvailable() ? "✓ " : "✗ ") << driver->getDisplayName() 
+            std::cout << (driver->isAvailable() ? "✓ " : "✗ ") << driver->getDisplayName()
                       << (driver->isAvailable() ? " available" : " unavailable") << std::endl;
         }
-        
+
         // Removed explicit ASIO scanning (now handled by drivers themselves if registered)
-        
+
         m_initialized = true;
         std::cout << "=== Audio System Ready ===" << std::endl;
         std::cout << std::endl;
         return true;
-        
+
     } catch (const std::exception& e) {
         std::cerr << "AudioDeviceManager::initialize: Exception: " << e.what() << std::endl;
         return false;
@@ -74,12 +70,12 @@ bool AudioDeviceManager::initialize() {
 void AudioDeviceManager::shutdown() {
     if (m_initialized) {
         closeStream();
-        
+
         m_drivers.clear();
-        
+
         m_activeDriver = nullptr;
         m_initialized = false;
-        
+
         std::cout << "Audio system shutdown complete" << std::endl;
     }
 }
@@ -88,24 +84,24 @@ std::vector<AudioDeviceInfo> AudioDeviceManager::getDevices() const {
     if (!m_initialized) {
         return {};
     }
-    
+
     // Aggregated devices from all available drivers?
     // Or just the active one?
     // Original code: "active driver -> exclusive -> shared -> rtaudio"
     // We should preserve this priority logic.
     // Iterating drivers in order (assuming registration order implies priority).
-    
+
     // Use active driver if available
     if (m_activeDriver) {
         return m_activeDriver->getDevices();
     }
-    
+
     for (const auto& driver : m_drivers) {
         if (driver && driver->isAvailable()) {
-             return driver->getDevices();
+            return driver->getDevices();
         }
     }
-    
+
     return {};
 }
 
@@ -116,20 +112,20 @@ AudioDeviceInfo AudioDeviceManager::getDefaultOutputDevice() const {
 
     // Get all devices and find first output device
     auto devices = getDevices();
-    
+
     for (const auto& device : devices) {
         if (device.maxOutputChannels > 0 && device.isDefaultOutput) {
             return device;
         }
     }
-    
+
     // If no default marked, return first output device
     for (const auto& device : devices) {
         if (device.maxOutputChannels > 0) {
             return device;
         }
     }
-    
+
     return {};
 }
 
@@ -140,32 +136,31 @@ AudioDeviceInfo AudioDeviceManager::getDefaultInputDevice() const {
 
     // Get all devices and find first input device
     auto devices = getDevices();
-    
+
     for (const auto& device : devices) {
         if (device.maxInputChannels > 0 && device.isDefaultInput) {
             return device;
         }
     }
-    
+
     // If no default marked, return first input device
     for (const auto& device : devices) {
         if (device.maxInputChannels > 0) {
             return device;
         }
     }
-    
+
     return {};
 }
 
-
-bool AudioDeviceManager::tryDriver(IAudioDriver* driver, const AudioStreamConfig& config,
-                                   AudioCallback callback, void* userData) {
+bool AudioDeviceManager::tryDriver(IAudioDriver* driver, const AudioStreamConfig& config, AudioCallback callback,
+                                   void* userData) {
     if (!driver || !driver->isAvailable()) {
         return false;
     }
-    
+
     std::cout << "Trying " << driver->getDisplayName() << "..." << std::endl;
-    
+
     if (driver->openStream(config, callback, userData)) {
         std::cout << "âœ“ " << driver->getDisplayName() << " opened successfully" << std::endl;
         double lat = driver->getStreamLatency();
@@ -173,14 +168,14 @@ bool AudioDeviceManager::tryDriver(IAudioDriver* driver, const AudioStreamConfig
         m_activeDriver = driver;
         return true;
     }
-    
-    std::cout << "✗ " << driver->getDisplayName() << " failed: " 
-              << driver->getErrorMessage() << std::endl;
+
+    std::cout << "✗ " << driver->getDisplayName() << " failed: " << driver->getErrorMessage() << std::endl;
     return false;
 }
 
 bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) {
-    Aestra::Log::info("[AudioDeviceManager] openStream called. Rate: " + std::to_string(config.sampleRate) + "Hz, Device: " + std::to_string(config.deviceId));
+    Aestra::Log::info("[AudioDeviceManager] openStream called. Rate: " + std::to_string(config.sampleRate) +
+                      "Hz, Device: " + std::to_string(config.deviceId));
 
     if (!m_initialized) {
         Aestra::Log::error("[AudioDeviceManager] openStream failed: Not initialized");
@@ -217,13 +212,13 @@ void AudioDeviceManager::closeStream() {
 
 bool AudioDeviceManager::startStream() {
     auto logStreamInfo = [this](IAudioDriver* driver, const char* label) {
-        if (!driver) return;
+        if (!driver)
+            return;
         uint32_t actualRate = driver->getStreamSampleRate();
         uint32_t requestedRate = m_currentConfig.sampleRate;
         std::cout << label << ": requested " << requestedRate << " Hz"
                   << ", actual " << actualRate << " Hz"
-                  << ", buffer " << m_currentConfig.bufferSize << " frames"
-                  << std::endl;
+                  << ", buffer " << m_currentConfig.bufferSize << " frames" << std::endl;
     };
 
     if (m_activeDriver) {
@@ -274,11 +269,11 @@ void AudioDeviceManager::getLatencyCompensationValues(double& inputLatencyMs, do
     // Get base latency from current stream
     double baseLatencySeconds = getStreamLatency();
     double baseLatencyMs = baseLatencySeconds * 1000.0;
-    
+
     // For recording, we need to compensate for:
     // 1. Input latency (time from mic to buffer)
     // 2. Output latency (time from buffer to monitoring headphones)
-    
+
     // If we have input channels, assume input latency equals output latency
     if (m_currentConfig.numInputChannels > 0) {
         inputLatencyMs = baseLatencyMs;
@@ -288,7 +283,7 @@ void AudioDeviceManager::getLatencyCompensationValues(double& inputLatencyMs, do
         inputLatencyMs = 0.0;
         outputLatencyMs = baseLatencyMs;
     }
-    
+
     // Store in config for reference
     const_cast<AudioStreamConfig&>(m_currentConfig).inputLatencyMs = inputLatencyMs;
     const_cast<AudioStreamConfig&>(m_currentConfig).outputLatencyMs = outputLatencyMs;
@@ -331,7 +326,7 @@ bool AudioDeviceManager::switchDevice(uint32_t deviceId) {
 
 bool AudioDeviceManager::setSampleRate(uint32_t sampleRate) {
     Aestra::Log::info("[AudioDeviceManager] Request to set sample rate to: " + std::to_string(sampleRate));
-    
+
     if (!m_initialized) {
         Aestra::Log::error("[AudioDeviceManager] setSampleRate failed: Not initialized");
         return false;
@@ -339,8 +334,8 @@ bool AudioDeviceManager::setSampleRate(uint32_t sampleRate) {
 
     // Validate sample rate (common rates)
     // TODO: Add more robust validation or query device capabilities
-    if (sampleRate != 44100 && sampleRate != 48000 && sampleRate != 88200 &&
-        sampleRate != 96000 && sampleRate != 176400 && sampleRate != 192000) {
+    if (sampleRate != 44100 && sampleRate != 48000 && sampleRate != 88200 && sampleRate != 96000 &&
+        sampleRate != 176400 && sampleRate != 192000) {
         Aestra::Log::error("[AudioDeviceManager] setSampleRate failed: Invalid rate " + std::to_string(sampleRate));
         return false;
     }
@@ -370,23 +365,24 @@ bool AudioDeviceManager::setSampleRate(uint32_t sampleRate) {
 
     // Reopen stream with new sample rate
     if (!openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
-        Aestra::Log::error("[AudioDeviceManager] Failed to reopen stream with sample rate " + std::to_string(sampleRate) + ", rolling back to " + std::to_string(previousSampleRate));
-        
+        Aestra::Log::error("[AudioDeviceManager] Failed to reopen stream with sample rate " +
+                           std::to_string(sampleRate) + ", rolling back to " + std::to_string(previousSampleRate));
+
         // Rollback to previous sample rate
         m_currentConfig.sampleRate = previousSampleRate;
-        
+
         // Try to restore previous working state
         if (!openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
             Aestra::Log::error("[AudioDeviceManager] CRITICAL: Failed to restore previous sample rate!");
             return false;
         }
-        
+
         // If we successfully rolled back, restart if needed
         if (m_wasRunning) {
             startStream();
         }
-        
-        return false;  // Still return false because the requested change failed
+
+        return false; // Still return false because the requested change failed
     }
 
     // Restart stream if it was running
@@ -424,24 +420,24 @@ bool AudioDeviceManager::setBufferSize(uint32_t bufferSize) {
 
     // Reopen stream with new buffer size
     if (!openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
-        std::cerr << "[AudioDeviceManager] Failed to reopen stream with buffer size " 
-                  << bufferSize << ", rolling back to " << previousBufferSize << std::endl;
-        
+        std::cerr << "[AudioDeviceManager] Failed to reopen stream with buffer size " << bufferSize
+                  << ", rolling back to " << previousBufferSize << std::endl;
+
         // Rollback to previous buffer size
         m_currentConfig.bufferSize = previousBufferSize;
-        
+
         // Try to restore previous working state
         if (!openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
             std::cerr << "[AudioDeviceManager] CRITICAL: Failed to restore previous buffer size!" << std::endl;
             return false;
         }
-        
+
         // If we successfully rolled back, restart if needed
         if (m_wasRunning) {
             startStream();
         }
-        
-        return false;  // Still return false because the requested change failed
+
+        return false; // Still return false because the requested change failed
     }
 
     // Restart stream if it was running
@@ -459,7 +455,7 @@ bool AudioDeviceManager::validateDeviceConfig(uint32_t deviceId, uint32_t sample
     }
 
     auto devices = getDevices();
-    
+
     // Find the device
     for (const auto& device : devices) {
         if (device.id == deviceId) {
@@ -481,17 +477,19 @@ bool AudioDeviceManager::validateDeviceConfig(uint32_t deviceId, uint32_t sample
             }
 
             if (!sampleRateSupported) {
-        // Log as warning but ALLOW it. 
-        // Some drivers (e.g. WASAPI Exclusive on certain virtual devices) report empty/incorrect supported lists 
-        // during enumeration but work fine when actually opened. 
-        // We let openStream() be the final judge.
-        Aestra::Log::warning("[AudioDeviceManager] Sample rate " + std::to_string(sampleRate) + " not in supported list (Driver Issue?), attempting anyway...");
-        return true; 
-    }        return sampleRateSupported;
+                // Log as warning but ALLOW it.
+                // Some drivers (e.g. WASAPI Exclusive on certain virtual devices) report empty/incorrect supported
+                // lists during enumeration but work fine when actually opened. We let openStream() be the final judge.
+                Aestra::Log::warning("[AudioDeviceManager] Sample rate " + std::to_string(sampleRate) +
+                                     " not in supported list (Driver Issue?), attempting anyway...");
+                return true;
+            }
+            return sampleRateSupported;
         }
     }
 
-    Aestra::Log::error("[AudioDeviceManager] validateDeviceConfig failed: Device ID " + std::to_string(deviceId) + " not found");
+    Aestra::Log::error("[AudioDeviceManager] validateDeviceConfig failed: Device ID " + std::to_string(deviceId) +
+                       " not found");
     return false; // Device not found
 }
 
@@ -525,32 +523,32 @@ bool AudioDeviceManager::setPreferredDriverType(AudioDriverType type) {
     // If stream is open, reopen with new driver preference
     if (m_activeDriver && m_currentCallback) {
         bool wasRunning = isStreamRunning();
-        
+
         // Save callback and user data before closing (closeStream clears them!)
         auto savedCallback = m_currentCallback;
         auto savedUserData = m_currentUserData;
         auto savedConfig = m_currentConfig;
-        
+
         if (wasRunning) {
             stopStream();
         }
         closeStream();
-        
+
         // Reopen with preferred driver - this will try preferred first, then fallback
         bool success = openStream(savedConfig, savedCallback, savedUserData);
-        
+
         if (!success) {
             std::cerr << "âœ— Failed to reopen stream with any driver!" << std::endl;
             return false;
         }
-        
+
         if (wasRunning) {
             if (!startStream()) {
                 std::cerr << "âœ— Failed to restart stream!" << std::endl;
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -572,13 +570,13 @@ bool AudioDeviceManager::isDriverTypeAvailable(AudioDriverType type) const {
 
 std::vector<AudioDriverType> AudioDeviceManager::getAvailableDriverTypes() const {
     std::vector<AudioDriverType> types;
-    
+
     for (const auto& driver : m_drivers) {
         if (driver && driver->isAvailable()) {
             types.push_back(driver->getDriverType());
         }
     }
-    
+
     return types;
 }
 
@@ -591,45 +589,43 @@ bool AudioDeviceManager::isUsingFallbackDriver() const {
     return activeType != m_preferredDriverType;
 }
 
-
-
 void AudioDeviceManager::setAutoBufferScaling(bool enable, uint32_t underrunsPerMinuteThreshold) {
     m_autoBufferScalingEnabled = enable;
     m_underrunThreshold = underrunsPerMinuteThreshold;
     m_lastUnderrunCheck = std::chrono::steady_clock::now();
     m_lastUnderrunCount = 0;
-    
+
     if (enable) {
-        std::cout << "[Auto-Buffer Scaling] Enabled with threshold: " 
-                  << underrunsPerMinuteThreshold << " underruns/minute" << std::endl;
+        std::cout << "[Auto-Buffer Scaling] Enabled with threshold: " << underrunsPerMinuteThreshold
+                  << " underruns/minute" << std::endl;
     }
 }
 
 void AudioDeviceManager::checkAndAutoScaleBuffer() {
     checkDriverHealth();
-    
+
     if (!m_autoBufferScalingEnabled || !m_activeDriver || !isStreamRunning()) {
         return;
     }
-    
+
     auto now = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - m_lastUnderrunCheck);
-    
+
     // Check every 60 seconds
     if (elapsed.count() < 60) {
         return;
     }
-    
+
     DriverStatistics stats = m_activeDriver->getStatistics();
     uint64_t newUnderruns = stats.underrunCount - m_lastUnderrunCount;
-    
+
     // std::cout << "[Auto-Buffer Scaling] Check - Underruns in last minute: " << newUnderruns << std::endl;
-    
+
     if (newUnderruns >= m_underrunThreshold) {
         // Need to scale up buffer
         uint32_t currentBuffer = m_currentConfig.bufferSize;
         uint32_t newBuffer = currentBuffer;
-        
+
         // Scale: 64->128->256->512->1024
         if (currentBuffer < 128) {
             newBuffer = 128;
@@ -645,30 +641,30 @@ void AudioDeviceManager::checkAndAutoScaleBuffer() {
             m_lastUnderrunCount = stats.underrunCount;
             return;
         }
-        
-        // std::cout << "[Auto-Buffer Scaling] Too many underruns (" << newUnderruns << "/" << m_underrunThreshold 
+
+        // std::cout << "[Auto-Buffer Scaling] Too many underruns (" << newUnderruns << "/" << m_underrunThreshold
         //           << ") - increasing buffer: " << currentBuffer << " -> " << newBuffer << " frames" << std::endl;
-        
+
         // Update buffer size and restart stream
         bool wasRunning = isStreamRunning();
         if (wasRunning) {
             stopStream();
         }
-        
+
         closeStream();
         m_currentConfig.bufferSize = newBuffer;
-        
+
         if (openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
             if (wasRunning) {
                 startStream();
             }
-            // std::cout << "[Auto-Buffer Scaling] Buffer increased successfully. New latency: " 
+            // std::cout << "[Auto-Buffer Scaling] Buffer increased successfully. New latency: "
             //           << getStreamLatency() * 1000.0 << "ms" << std::endl;
         } else {
             // std::cerr << "[Auto-Buffer Scaling] Failed to reopen stream with new buffer size" << std::endl;
         }
     }
-    
+
     m_lastUnderrunCheck = now;
     m_lastUnderrunCount = stats.underrunCount;
 }
@@ -677,13 +673,13 @@ void AudioDeviceManager::checkDriverHealth() {
     if (!m_activeDriver || !isStreamRunning() || m_activeDriver->getDriverType() == AudioDriverType::DUMMY) {
         return;
     }
-    
+
     DriverStatistics stats = m_activeDriver->getStatistics();
     auto now = std::chrono::steady_clock::now();
-    
+
     static uint64_t lastCount = 0;
     static auto lastUpdateTime = now;
-    
+
     if (stats.callbackCount != lastCount) {
         lastCount = stats.callbackCount;
         lastUpdateTime = now;
@@ -691,8 +687,8 @@ void AudioDeviceManager::checkDriverHealth() {
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdateTime).count();
         // If we've had no callbacks for 2 seconds while running, it's a stall
         if (elapsed > 2000) {
-            std::cerr << "[AudioDeviceManager] !!! DRIVER STALL DETECTED (" 
-                      << m_activeDriver->getDisplayName() << ") !!!" << std::endl;
+            std::cerr << "[AudioDeviceManager] !!! DRIVER STALL DETECTED (" << m_activeDriver->getDisplayName()
+                      << ") !!!" << std::endl;
             switchToSafetyDriver();
             lastUpdateTime = now; // Reset to avoid repeated triggers in same fallback window
         }
@@ -701,7 +697,7 @@ void AudioDeviceManager::checkDriverHealth() {
 
 bool AudioDeviceManager::switchToSafetyDriver() {
     std::cout << "[AudioDeviceManager] Attempting emergency fallback to Dummy driver..." << std::endl;
-    
+
     // 1. Find the dummy driver
     IAudioDriver* dummy = nullptr;
     for (auto& driver : m_drivers) {
@@ -710,12 +706,12 @@ bool AudioDeviceManager::switchToSafetyDriver() {
             break;
         }
     }
-    
+
     if (!dummy) {
         std::cerr << "[AudioDeviceManager] Critical failure: No dummy driver available for fallback!" << std::endl;
         return false;
     }
-    
+
     // 2. Stop and close the current (likely broken) driver
     if (m_activeDriver) {
         // Use a try-catch or just be very careful here as the driver might be in a bad state
@@ -725,21 +721,21 @@ bool AudioDeviceManager::switchToSafetyDriver() {
         } catch (...) {}
         m_activeDriver = nullptr;
     }
-    
+
     // 3. Open dummy with existing configuration
     if (dummy->openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
         m_activeDriver = dummy;
         if (dummy->startStream()) {
             std::cout << "[AudioDeviceManager] Safety fallback ACTIVE. Audio engine is still running." << std::endl;
-            
+
             if (m_driverModeChangeCallback) {
-                m_driverModeChangeCallback(m_preferredDriverType, AudioDriverType::DUMMY, 
-                                          "Hardware stall/disconnect: fallback to safety driver");
+                m_driverModeChangeCallback(m_preferredDriverType, AudioDriverType::DUMMY,
+                                           "Hardware stall/disconnect: fallback to safety driver");
             }
             return true;
         }
     }
-    
+
     return false;
 }
 

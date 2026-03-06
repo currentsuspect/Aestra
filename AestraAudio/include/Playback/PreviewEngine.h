@@ -2,22 +2,23 @@
 #pragma once
 
 #include "SamplePool.h"
+
 #include <atomic>
+#include <condition_variable>
 #include <functional>
 #include <memory>
-#include <string>
-#include <thread>
 #include <mutex>
 #include <optional>
-#include <condition_variable>
+#include <string>
+#include <thread>
 
 namespace Aestra {
 namespace Audio {
 
 enum class PreviewResult {
-    Success,   // Playback started immediately (cache hit)
-    Pending,   // Decode in progress, playback will start when ready
-    Failed     // Decode error or invalid file
+    Success, // Playback started immediately (cache hit)
+    Pending, // Decode in progress, playback will start when ready
+    Failed   // Decode error or invalid file
 };
 
 /**
@@ -41,7 +42,7 @@ public:
     void setOutputSampleRate(double sr);
     void process(float* interleavedOutput, uint32_t numFrames);
     bool isPlaying() const;
-    bool isBufferReady() const;  // True when buffer is decoded and ready for playback
+    bool isBufferReady() const; // True when buffer is decoded and ready for playback
     void setOnComplete(std::function<void(const std::string& path)> callback);
     void setGlobalPreviewVolume(float gainDb);
     float getGlobalPreviewVolume() const;
@@ -65,23 +66,23 @@ private:
         std::atomic<double> seekRequestSeconds{-1.0}; // -1.0 = no seek
         bool fadeOutActive{false};
         std::atomic<bool> playing{false};
-        std::atomic<bool> bufferReady{false};  // True when buffer is decoded and ready
+        std::atomic<bool> bufferReady{false}; // True when buffer is decoded and ready
     };
 
     std::shared_ptr<AudioBuffer> loadBuffer(const std::string& path, uint32_t& sampleRate, uint32_t& channels);
     void downmixToStereo(std::vector<float>& data, uint32_t inChannels);
     float dbToLinear(float db) const;
-    
+
     // Async decode support
     void decodeAsync(const std::string& path, std::shared_ptr<PreviewVoice> voice);
-    PreviewResult startVoiceWithBuffer(std::shared_ptr<AudioBuffer> buffer, 
-                                        const std::string& path, float gainDb, double maxSeconds);
+    PreviewResult startVoiceWithBuffer(std::shared_ptr<AudioBuffer> buffer, const std::string& path, float gainDb,
+                                       double maxSeconds);
 
     std::shared_ptr<PreviewVoice> m_activeVoice;
     std::atomic<double> m_outputSampleRate;
     std::atomic<float> m_globalGainDb;
     std::function<void(const std::string&)> m_onComplete;
-    
+
     // Decode Worker Thread
     // Persistent thread to handle decode requests without spawn overhead
     struct DecodeJob {
@@ -97,7 +98,7 @@ private:
     bool m_workerRunning{true};
 
     void workerLoop();
-    
+
     // Generation counter to handle rapid switching
     std::atomic<uint64_t> m_decodeGeneration{0};
 };

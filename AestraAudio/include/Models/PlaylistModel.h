@@ -1,15 +1,16 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "ClipInstance.h"
-#include "PlaylistRuntimeSnapshot.h"
-#include "PatternManager.h"
-#include "SourceManager.h"
 #include "../AestraUUID.h"
-#include <vector>
-#include <unordered_map>
+#include "ClipInstance.h"
+#include "PatternManager.h"
+#include "PlaylistRuntimeSnapshot.h"
+#include "SourceManager.h"
+
 #include <functional>
 #include <mutex>
+#include <unordered_map>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -22,7 +23,7 @@ struct PlaylistLane {
     std::string name;
     int index = 0;
     std::vector<ClipInstance> clips;
-    
+
     // Lane properties
     float volume{1.0f};
     float pan{0.0f};
@@ -30,54 +31,53 @@ struct PlaylistLane {
     bool solo{false};
     uint32_t colorRGBA{0xFFFFFFFF};
     std::vector<AutomationCurve> automationCurves;
-    
+
     PlaylistLane() = default;
-    explicit PlaylistLane(int idx) : index(idx) {
-        id = PlaylistLaneID::generate();
-    }
+    explicit PlaylistLane(int idx) : index(idx) { id = PlaylistLaneID::generate(); }
 };
 
 /**
  * @brief Multi-lane playlist model with undo/redo support
- * 
+ *
  * This is the canonical data model for the playlist (arrangement view).
  * All mutations should go through public methods to enable command tracking.
  */
 class PlaylistModel {
 public:
     using ClipChangedCallback = std::function<void(const ClipInstanceID&)>;
-    
+
     PlaylistModel() = default;
-    
+
     // === Lane Management ===
-    
+
     PlaylistLaneID createLane(const std::string& name = "") {
         std::lock_guard<std::mutex> lock(m_mutex);
-        
+
         PlaylistLane lane(static_cast<int>(m_lanes.size()));
         lane.name = name.empty() ? "Track " + std::to_string(lane.index + 1) : name;
-        
+
         PlaylistLaneID id = lane.id;
         m_lanes.push_back(std::move(lane));
         m_laneMap[id] = m_lanes.size() - 1;
-        
+
         return id;
     }
-    
+
     PlaylistLane* getLane(const PlaylistLaneID& id) {
         std::lock_guard<std::mutex> lock(m_mutex);
         auto it = m_laneMap.find(id);
-        if (it == m_laneMap.end()) return nullptr;
+        if (it == m_laneMap.end())
+            return nullptr;
         return &m_lanes[it->second];
     }
-    
+
     size_t getLaneCount() const {
         std::lock_guard<std::mutex> lock(m_mutex);
         return m_lanes.size();
     }
-    
+
     // === Clip Management ===
-    
+
     /**
      * @brief Add a clip to a lane
      * @param laneId Target lane
@@ -86,74 +86,81 @@ public:
      */
     ClipInstanceID addClip(const PlaylistLaneID& laneId, const ClipInstance& clip) {
         std::lock_guard<std::mutex> lock(m_mutex);
-        
+
         auto it = m_laneMap.find(laneId);
-        if (it == m_laneMap.end()) return ClipInstanceID();
-        
+        if (it == m_laneMap.end())
+            return ClipInstanceID();
+
         ClipInstance newClip = clip;
         if (!newClip.id.isValid()) {
             newClip.id = ClipInstanceID::generate();
         }
-        
+
         m_lanes[it->second].clips.push_back(newClip);
         m_clipLaneMap[newClip.id] = laneId;
-        
+
         notifyClipChanged(newClip.id);
         return newClip.id;
     }
-    
+
     /**
      * @brief Remove a clip by ID
      */
     void removeClip(const ClipInstanceID& clipId) {
         std::lock_guard<std::mutex> lock(m_mutex);
-        
+
         auto laneIt = m_clipLaneMap.find(clipId);
-        if (laneIt == m_clipLaneMap.end()) return;
-        
+        if (laneIt == m_clipLaneMap.end())
+            return;
+
         auto laneIdxIt = m_laneMap.find(laneIt->second);
-        if (laneIdxIt == m_laneMap.end()) return;
-        
+        if (laneIdxIt == m_laneMap.end())
+            return;
+
         auto& clips = m_lanes[laneIdxIt->second].clips;
-        clips.erase(std::remove_if(clips.begin(), clips.end(),
-            [&clipId](const ClipInstance& c) { return c.id == clipId; }),
+        clips.erase(
+            std::remove_if(clips.begin(), clips.end(), [&clipId](const ClipInstance& c) { return c.id == clipId; }),
             clips.end());
-        
+
         m_clipLaneMap.erase(clipId);
         notifyClipChanged(clipId);
     }
-    
+
     /**
      * @brief Get a clip by ID
      * @return Pointer to clip, or nullptr if not found
      */
     ClipInstance* getClip(const ClipInstanceID& clipId) {
         std::lock_guard<std::mutex> lock(m_mutex);
-        
+
         auto laneIt = m_clipLaneMap.find(clipId);
-        if (laneIt == m_clipLaneMap.end()) return nullptr;
-        
+        if (laneIt == m_clipLaneMap.end())
+            return nullptr;
+
         auto laneIdxIt = m_laneMap.find(laneIt->second);
-        if (laneIdxIt == m_laneMap.end()) return nullptr;
-        
+        if (laneIdxIt == m_laneMap.end())
+            return nullptr;
+
         for (auto& clip : m_lanes[laneIdxIt->second].clips) {
-            if (clip.id == clipId) return &clip;
+            if (clip.id == clipId)
+                return &clip;
         }
-        
+
         return nullptr;
     }
-    
+
     /**
      * @brief Find which lane a clip belongs to
      */
     PlaylistLaneID findClipLane(const ClipInstanceID& clipId) const {
         std::lock_guard<std::mutex> lock(m_mutex);
-        
+
         auto it = m_clipLaneMap.find(clipId);
-        if (it == m_clipLaneMap.end()) return PlaylistLaneID();
+        if (it == m_clipLaneMap.end())
+            return PlaylistLaneID();
         return it->second;
     }
-    
+
     /**
      * @brief Set the duration of a clip
      */
@@ -164,7 +171,7 @@ public:
             notifyClipChanged(clipId);
         }
     }
-    
+
     /**
      * @brief Set the start beat of a clip
      */
@@ -175,24 +182,25 @@ public:
             notifyClipChanged(clipId);
         }
     }
-    
+
     /**
      * @brief Move a clip to a new position (and optionally new lane)
      * @param clipId Clip to move
      * @param newStartBeat New start position
      * @param newLaneId New lane (optional, stays in current lane if invalid)
      */
-    void moveClip(const ClipInstanceID& clipId, double newStartBeat, 
+    void moveClip(const ClipInstanceID& clipId, double newStartBeat,
                   const PlaylistLaneID& newLaneId = PlaylistLaneID()) {
         std::lock_guard<std::mutex> lock(m_mutex);
-        
+
         auto* clip = getClipInternal(clipId);
-        if (!clip) return;
-        
+        if (!clip)
+            return;
+
         // Store clip data
         ClipInstance clipCopy = *clip;
         clipCopy.startBeat = newStartBeat;
-        
+
         // Check if we need to move to a different lane
         if (newLaneId.isValid()) {
             auto oldLaneIt = m_clipLaneMap.find(clipId);
@@ -202,27 +210,27 @@ public:
                 if (oldLaneIdxIt != m_laneMap.end()) {
                     auto& oldClips = m_lanes[oldLaneIdxIt->second].clips;
                     oldClips.erase(std::remove_if(oldClips.begin(), oldClips.end(),
-                        [&clipId](const ClipInstance& c) { return c.id == clipId; }),
-                        oldClips.end());
+                                                  [&clipId](const ClipInstance& c) { return c.id == clipId; }),
+                                   oldClips.end());
                 }
-                
+
                 // Add to new lane
                 auto newLaneIdxIt = m_laneMap.find(newLaneId);
                 if (newLaneIdxIt != m_laneMap.end()) {
                     m_lanes[newLaneIdxIt->second].clips.push_back(clipCopy);
                     m_clipLaneMap[clipId] = newLaneId;
                 }
-                
+
                 notifyClipChanged(clipId);
                 return;
             }
         }
-        
+
         // Just update position
         clip->startBeat = newStartBeat;
         notifyClipChanged(clipId);
     }
-    
+
     /**
      * @brief Split a clip at the given beat position
      * @param clipId Clip to split
@@ -231,20 +239,23 @@ public:
      */
     ClipInstanceID splitClip(const ClipInstanceID& clipId, double splitBeat) {
         std::lock_guard<std::mutex> lock(m_mutex);
-        
+
         auto* clip = getClipInternal(clipId);
-        if (!clip) return ClipInstanceID();
-        
+        if (!clip)
+            return ClipInstanceID();
+
         if (splitBeat <= clip->startBeat || splitBeat >= clip->endBeat()) {
             return ClipInstanceID(); // Invalid split position
         }
-        
+
         auto laneIt = m_clipLaneMap.find(clipId);
-        if (laneIt == m_clipLaneMap.end()) return ClipInstanceID();
-        
+        if (laneIt == m_clipLaneMap.end())
+            return ClipInstanceID();
+
         auto laneIdxIt = m_laneMap.find(laneIt->second);
-        if (laneIdxIt == m_laneMap.end()) return ClipInstanceID();
-        
+        if (laneIdxIt == m_laneMap.end())
+            return ClipInstanceID();
+
         // Create new clip for second part
         ClipInstance newClip;
         newClip.id = ClipInstanceID::generate();
@@ -254,56 +265,52 @@ public:
         newClip.sourceOffset = clip->sourceOffset + (splitBeat - clip->startBeat);
         newClip.edits = clip->edits;
         newClip.edits.fadeInBeats = 0.0f; // Clear fades at split point
-        
+
         // Trim original clip
         clip->durationBeats = splitBeat - clip->startBeat;
         clip->edits.fadeOutBeats = 0.0f;
-        
+
         // Add new clip
         m_lanes[laneIdxIt->second].clips.push_back(newClip);
         m_clipLaneMap[newClip.id] = laneIt->second;
-        
+
         notifyClipChanged(clipId);
         notifyClipChanged(newClip.id);
-        
+
         return newClip.id;
     }
-    
+
     // === Callbacks ===
-    
-    void setClipChangedCallback(ClipChangedCallback callback) {
-        m_clipChangedCallback = std::move(callback);
-    }
-    
+
+    void setClipChangedCallback(ClipChangedCallback callback) { m_clipChangedCallback = std::move(callback); }
+
     // === Runtime Snapshot ===
-    
+
     /**
      * @brief Build a runtime snapshot for audio rendering
      * @param patterns Pattern manager for MIDI patterns
      * @param sources Source manager for audio data
      * @return Runtime snapshot (nullptr if empty)
      */
-    std::unique_ptr<PlaylistRuntimeSnapshot> buildRuntimeSnapshot(
-        const PatternManager& patterns,
-        const SourceManager& sources) const {
-        
+    std::unique_ptr<PlaylistRuntimeSnapshot> buildRuntimeSnapshot(const PatternManager& patterns,
+                                                                  const SourceManager& sources) const {
         std::lock_guard<std::mutex> lock(m_mutex);
-        
+
         if (m_lanes.empty()) {
             return nullptr;
         }
-        
+
         auto snapshot = std::make_unique<PlaylistRuntimeSnapshot>();
         snapshot->lanes.reserve(m_lanes.size());
-        snapshot->bpm = 120.0; // Default BPM
+        snapshot->bpm = 120.0;               // Default BPM
         snapshot->projectSampleRate = 48000; // Default sample rate
-        
+
         const double samplesPerBeat = (48000.0 * 60.0) / snapshot->bpm;
-        
+
         for (const auto& lane : m_lanes) {
             LaneRuntimeInfo laneInfo;
             laneInfo.clips.reserve(lane.clips.size());
-            
+
             for (const auto& clip : lane.clips) {
                 ClipRuntimeInfo clipInfo;
                 clipInfo.startTime = static_cast<uint64_t>(clip.startBeat * samplesPerBeat);
@@ -311,7 +318,7 @@ public:
                 clipInfo.sourceStart = static_cast<uint64_t>(clip.sourceOffset * samplesPerBeat);
                 clipInfo.gainLinear = clip.edits.gain;
                 clipInfo.isAudioClip = true;
-                
+
                 // Try to get audio data from source
                 if (clip.sourceId != 0) {
                     if (auto* source = sources.getSource(ClipSourceID{clip.sourceId})) {
@@ -322,44 +329,38 @@ public:
                         }
                     }
                 }
-                
+
                 laneInfo.clips.push_back(clipInfo);
             }
-            
+
             snapshot->lanes.push_back(std::move(laneInfo));
         }
-        
+
         return snapshot;
     }
-    
+
     /**
      * @brief Get the project sample rate
      */
     double getProjectSampleRate() const {
         return 48000.0; // Default for now
     }
-    
+
     /**
      * @brief Set BPM
      */
-    void setBPM(double bpm) {
-        m_bpm = bpm;
-    }
-    
+    void setBPM(double bpm) { m_bpm = bpm; }
+
     /**
      * @brief Get BPM
      */
-    double getBPM() const {
-        return m_bpm;
-    }
-    
+    double getBPM() const { return m_bpm; }
+
     /**
      * @brief Set pattern manager reference
      */
-    void setPatternManager(PatternManager* pm) {
-        m_patternManager = pm;
-    }
-    
+    void setPatternManager(PatternManager* pm) { m_patternManager = pm; }
+
     /**
      * @brief Get lane ID by index
      */
@@ -370,15 +371,17 @@ public:
         }
         return PlaylistLaneID();
     }
-    
+
     /**
      * @brief Add a clip from a pattern
      */
-    ClipInstanceID addClipFromPattern(const PlaylistLaneID& laneId, PatternID patternId, double startBeat, double durationBeats) {
+    ClipInstanceID addClipFromPattern(const PlaylistLaneID& laneId, PatternID patternId, double startBeat,
+                                      double durationBeats) {
         std::lock_guard<std::mutex> lock(m_mutex);
 
         auto it = m_laneMap.find(laneId);
-        if (it == m_laneMap.end()) return ClipInstanceID();
+        if (it == m_laneMap.end())
+            return ClipInstanceID();
 
         ClipInstance clip;
         clip.id = ClipInstanceID::generate();
@@ -413,9 +416,7 @@ public:
         ~BatchUpdateScope() {}
     };
 
-    BatchUpdateScope scopedBatchUpdate() {
-        return BatchUpdateScope{};
-    }
+    BatchUpdateScope scopedBatchUpdate() { return BatchUpdateScope{}; }
 
     /**
      * @brief Clear all lanes and clips
@@ -435,21 +436,24 @@ private:
     ClipChangedCallback m_clipChangedCallback;
     double m_bpm{120.0};
     PatternManager* m_patternManager{nullptr};
-    
+
     ClipInstance* getClipInternal(const ClipInstanceID& clipId) {
         auto laneIt = m_clipLaneMap.find(clipId);
-        if (laneIt == m_clipLaneMap.end()) return nullptr;
-        
+        if (laneIt == m_clipLaneMap.end())
+            return nullptr;
+
         auto laneIdxIt = m_laneMap.find(laneIt->second);
-        if (laneIdxIt == m_laneMap.end()) return nullptr;
-        
+        if (laneIdxIt == m_laneMap.end())
+            return nullptr;
+
         for (auto& clip : m_lanes[laneIdxIt->second].clips) {
-            if (clip.id == clipId) return &clip;
+            if (clip.id == clipId)
+                return &clip;
         }
-        
+
         return nullptr;
     }
-    
+
     void notifyClipChanged(const ClipInstanceID& clipId) {
         if (m_clipChangedCallback) {
             m_clipChangedCallback(clipId);

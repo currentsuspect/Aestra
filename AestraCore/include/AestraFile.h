@@ -1,12 +1,12 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include <string>
-#include <vector>
-#include <fstream>
-#include <memory>
 #include <cstdint>
 #include <cstring>
+#include <fstream>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace Aestra {
 
@@ -15,12 +15,7 @@ namespace Aestra {
 // =============================================================================
 class File {
 public:
-    enum class Mode {
-        Read,
-        Write,
-        Append,
-        ReadWrite
-    };
+    enum class Mode { Read, Write, Append, ReadWrite };
 
     File() : isOpen_(false) {}
     ~File() { close(); }
@@ -29,23 +24,23 @@ public:
     bool open(const std::string& path, Mode mode) {
         close();
         path_ = path;
-        
+
         std::ios::openmode iosMode = std::ios::binary;
         switch (mode) {
-            case Mode::Read:
-                iosMode |= std::ios::in;
-                break;
-            case Mode::Write:
-                iosMode |= std::ios::out | std::ios::trunc;
-                break;
-            case Mode::Append:
-                iosMode |= std::ios::out | std::ios::app;
-                break;
-            case Mode::ReadWrite:
-                iosMode |= std::ios::in | std::ios::out;
-                break;
+        case Mode::Read:
+            iosMode |= std::ios::in;
+            break;
+        case Mode::Write:
+            iosMode |= std::ios::out | std::ios::trunc;
+            break;
+        case Mode::Append:
+            iosMode |= std::ios::out | std::ios::app;
+            break;
+        case Mode::ReadWrite:
+            iosMode |= std::ios::in | std::ios::out;
+            break;
         }
-        
+
         stream_.open(path, iosMode);
         isOpen_ = stream_.is_open();
         return isOpen_;
@@ -64,21 +59,24 @@ public:
 
     // Read data
     bool read(void* buffer, size_t size) {
-        if (!isOpen_) return false;
+        if (!isOpen_)
+            return false;
         stream_.read(static_cast<char*>(buffer), size);
         return stream_.good();
     }
 
     // Write data
     bool write(const void* buffer, size_t size) {
-        if (!isOpen_) return false;
+        if (!isOpen_)
+            return false;
         stream_.write(static_cast<const char*>(buffer), size);
         return stream_.good();
     }
 
     // Get file size
     size_t size() {
-        if (!isOpen_) return 0;
+        if (!isOpen_)
+            return 0;
         auto pos = stream_.tellg();
         stream_.seekg(0, std::ios::end);
         size_t fileSize = stream_.tellg();
@@ -88,26 +86,29 @@ public:
 
     // Seek to position
     bool seek(size_t position) {
-        if (!isOpen_) return false;
+        if (!isOpen_)
+            return false;
         stream_.seekg(position);
         return stream_.good();
     }
 
     // Get current position
     size_t tell() {
-        if (!isOpen_) return 0;
+        if (!isOpen_)
+            return 0;
         return stream_.tellg();
     }
 
     // Read entire file as string
     static std::string readAllText(const std::string& path) {
         std::ifstream file(path, std::ios::binary);
-        if (!file.is_open()) return "";
-        
+        if (!file.is_open())
+            return "";
+
         file.seekg(0, std::ios::end);
         size_t size = file.tellg();
         file.seekg(0);
-        
+
         std::string content(size, '\0');
         file.read(&content[0], size);
         return content;
@@ -116,7 +117,8 @@ public:
     // Write entire string to file
     static bool writeAllText(const std::string& path, const std::string& content) {
         std::ofstream file(path, std::ios::binary | std::ios::trunc);
-        if (!file.is_open()) return false;
+        if (!file.is_open())
+            return false;
         file.write(content.c_str(), content.size());
         return file.good();
     }
@@ -143,37 +145,37 @@ public:
     // Write primitive types
     void write(int8_t value) { data_.push_back(static_cast<uint8_t>(value)); }
     void write(uint8_t value) { data_.push_back(value); }
-    
+
     void write(int16_t value) {
         data_.push_back(static_cast<uint8_t>(value & 0xFF));
         data_.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
     }
-    
+
     void write(uint16_t value) {
         data_.push_back(static_cast<uint8_t>(value & 0xFF));
         data_.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
     }
-    
+
     void write(int32_t value) {
         data_.push_back(static_cast<uint8_t>(value & 0xFF));
         data_.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
         data_.push_back(static_cast<uint8_t>((value >> 16) & 0xFF));
         data_.push_back(static_cast<uint8_t>((value >> 24) & 0xFF));
     }
-    
+
     void write(uint32_t value) {
         data_.push_back(static_cast<uint8_t>(value & 0xFF));
         data_.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
         data_.push_back(static_cast<uint8_t>((value >> 16) & 0xFF));
         data_.push_back(static_cast<uint8_t>((value >> 24) & 0xFF));
     }
-    
+
     void write(float value) {
         uint32_t bits;
         std::memcpy(&bits, &value, sizeof(float));
         write(bits);
     }
-    
+
     void write(double value) {
         uint64_t bits;
         std::memcpy(&bits, &value, sizeof(double));
@@ -181,7 +183,7 @@ public:
             data_.push_back(static_cast<uint8_t>((bits >> (i * 8)) & 0xFF));
         }
     }
-    
+
     void write(const std::string& value) {
         write(static_cast<uint32_t>(value.size()));
         for (char c : value) {
@@ -191,11 +193,12 @@ public:
 
     // Get serialized data
     const std::vector<uint8_t>& data() const { return data_; }
-    
+
     // Write to file
     bool writeToFile(const std::string& path) {
         File file;
-        if (!file.open(path, File::Mode::Write)) return false;
+        if (!file.open(path, File::Mode::Write))
+            return false;
         return file.write(data_.data(), data_.size());
     }
 
@@ -211,70 +214,70 @@ public:
     // Read primitive types
     bool read(int8_t& value) {
         const auto& data = *dataRef_;
-        if (position_ >= data.size()) return false;
+        if (position_ >= data.size())
+            return false;
         value = static_cast<int8_t>(data[position_++]);
         return true;
     }
-    
+
     bool read(uint8_t& value) {
         const auto& data = *dataRef_;
-        if (position_ >= data.size()) return false;
+        if (position_ >= data.size())
+            return false;
         value = data[position_++];
         return true;
     }
-    
+
     bool read(int16_t& value) {
         const auto& data = *dataRef_;
-        if (position_ + 2 > data.size()) return false;
+        if (position_ + 2 > data.size())
+            return false;
         value = static_cast<int16_t>(data[position_] | (data[position_ + 1] << 8));
         position_ += 2;
         return true;
     }
-    
+
     bool read(uint16_t& value) {
         const auto& data = *dataRef_;
-        if (position_ + 2 > data.size()) return false;
+        if (position_ + 2 > data.size())
+            return false;
         value = static_cast<uint16_t>(data[position_] | (data[position_ + 1] << 8));
         position_ += 2;
         return true;
     }
-    
+
     bool read(int32_t& value) {
         const auto& data = *dataRef_;
-        if (position_ + 4 > data.size()) return false;
-        value = static_cast<int32_t>(
-            data[position_] | 
-            (data[position_ + 1] << 8) |
-            (data[position_ + 2] << 16) |
-            (data[position_ + 3] << 24)
-        );
+        if (position_ + 4 > data.size())
+            return false;
+        value = static_cast<int32_t>(data[position_] | (data[position_ + 1] << 8) | (data[position_ + 2] << 16) |
+                                     (data[position_ + 3] << 24));
         position_ += 4;
         return true;
     }
-    
+
     bool read(uint32_t& value) {
         const auto& data = *dataRef_;
-        if (position_ + 4 > data.size()) return false;
-        value = static_cast<uint32_t>(
-            data[position_] | 
-            (data[position_ + 1] << 8) |
-            (data[position_ + 2] << 16) |
-            (data[position_ + 3] << 24)
-        );
+        if (position_ + 4 > data.size())
+            return false;
+        value = static_cast<uint32_t>(data[position_] | (data[position_ + 1] << 8) | (data[position_ + 2] << 16) |
+                                      (data[position_ + 3] << 24));
         position_ += 4;
         return true;
     }
-    
+
     bool read(float& value) {
         uint32_t bits;
-        if (!read(bits)) return false;
+        if (!read(bits))
+            return false;
         std::memcpy(&value, &bits, sizeof(float));
         return true;
     }
-    
+
     bool read(double& value) {
         const auto& data = *dataRef_;
-        if (position_ + 8 > data.size()) return false;
+        if (position_ + 8 > data.size())
+            return false;
         uint64_t bits = 0;
         for (int i = 0; i < 8; ++i) {
             bits |= static_cast<uint64_t>(data[position_ + i]) << (i * 8);
@@ -283,12 +286,14 @@ public:
         std::memcpy(&value, &bits, sizeof(double));
         return true;
     }
-    
+
     bool read(std::string& value) {
         const auto& data = *dataRef_;
         uint32_t size;
-        if (!read(size)) return false;
-        if (position_ + size > data.size()) return false;
+        if (!read(size))
+            return false;
+        if (position_ + size > data.size())
+            return false;
         value.resize(size);
         for (uint32_t i = 0; i < size; ++i) {
             value[i] = static_cast<char>(data[position_++]);
@@ -299,12 +304,14 @@ public:
     // Read from file
     static std::unique_ptr<BinaryReader> readFromFile(const std::string& path) {
         File file;
-        if (!file.open(path, File::Mode::Read)) return nullptr;
-        
+        if (!file.open(path, File::Mode::Read))
+            return nullptr;
+
         size_t fileSize = file.size();
         std::vector<uint8_t> data(fileSize);
-        if (!file.read(data.data(), fileSize)) return nullptr;
-        
+        if (!file.read(data.data(), fileSize))
+            return nullptr;
+
         return std::make_unique<BinaryReader>(std::move(data));
     }
 

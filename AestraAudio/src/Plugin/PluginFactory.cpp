@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PluginFactory.h"
+
 #include "AestraLog.h"
 
 // Re-using the same host includes as PluginManager
@@ -12,38 +13,37 @@
 #include "Plugin/CLAPHost.h"
 #endif
 
-
-
 #ifdef AESTRA_HAS_PLUGINS
-#include <RumbleInstance.h>
 #include "Plugin/SamplerPlugin.h"
+
+#include <RumbleInstance.h>
 #endif
 
 namespace Aestra {
 namespace Audio {
 
-void InProcessPluginFactory::createPluginAsync(const PluginInfo& info, 
+void InProcessPluginFactory::createPluginAsync(const PluginInfo& info,
                                                std::function<void(PluginInstancePtr)> callback) {
     // Current In-Process implementation acts synchronously "simulating" async completion
     // This allows the API to be async-ready without forcing a thread context switch
     // that might be unsafe for VST3 initialization (which often requires Main Thread).
-    
+
     PluginInstancePtr instance = nullptr;
 
     try {
         switch (info.format) {
-            case PluginFormat::VST3:
-                instance = createVST3Instance(info);
-                break;
-            case PluginFormat::CLAP:
-                instance = createCLAPInstance(info);
-                break;
-            case PluginFormat::Internal:
-                instance = createInternalInstance(info);
-                break;
-            default:
-                Log::error("Unknown plugin format for: " + info.name);
-                break;
+        case PluginFormat::VST3:
+            instance = createVST3Instance(info);
+            break;
+        case PluginFormat::CLAP:
+            instance = createCLAPInstance(info);
+            break;
+        case PluginFormat::Internal:
+            instance = createInternalInstance(info);
+            break;
+        default:
+            Log::error("Unknown plugin format for: " + info.name);
+            break;
         }
     } catch (const std::exception& e) {
         Log::error("Exception during plugin creation: " + std::string(e.what()));
@@ -86,7 +86,7 @@ PluginInstancePtr InProcessPluginFactory::createInternalInstance(const PluginInf
     if (info.id == "com.Aestrastudios.rumble") {
         return std::make_shared<Aestra::Plugins::RumbleInstance>();
     }
-    
+
     // Aestra Sampler
     if (info.id == "com.Aestrastudios.sampler") {
         return std::make_shared<Aestra::Audio::Plugins::SamplerPlugin>();

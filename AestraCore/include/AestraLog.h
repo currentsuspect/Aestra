@@ -1,31 +1,27 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include <string>
-#include <fstream>
-#include <iostream>
-#include <vector>
-#include <mutex>
-#include <memory>
-#include <sstream>
-#include <ctime>
-#include <iomanip>
 #include "AestraThreading.h"
-#include <thread>
+
 #include <atomic>
 #include <cstring>
+#include <ctime>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <memory>
+#include <mutex>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <vector>
 
 namespace Aestra {
 
 // =============================================================================
 // Log Levels
 // =============================================================================
-enum class LogLevel {
-    Debug,
-    Info,
-    Warning,
-    Error
-};
+enum class LogLevel { Debug, Info, Warning, Error };
 
 // =============================================================================
 // Logger Interface
@@ -46,22 +42,19 @@ public:
     ConsoleLogger(LogLevel minLevel = LogLevel::Info) : minLevel_(minLevel) {}
 
     void log(LogLevel level, const std::string& message) override {
-        if (level < minLevel_) return;
+        if (level < minLevel_)
+            return;
 
         std::lock_guard<std::mutex> lock(mutex_);
-        
+
         std::cout << "[" << getTimestamp() << "] ";
         std::cout << getLevelString(level) << " ";
         std::cout << message << std::endl;
     }
 
-    void setLevel(LogLevel level) override {
-        minLevel_ = level;
-    }
+    void setLevel(LogLevel level) override { minLevel_ = level; }
 
-    LogLevel getLevel() const override {
-        return minLevel_;
-    }
+    LogLevel getLevel() const override { return minLevel_; }
 
 private:
     LogLevel minLevel_;
@@ -77,11 +70,16 @@ private:
 
     std::string getLevelString(LogLevel level) const {
         switch (level) {
-            case LogLevel::Debug:   return "[DEBUG]";
-            case LogLevel::Info:    return "[INFO] ";
-            case LogLevel::Warning: return "[WARN] ";
-            case LogLevel::Error:   return "[ERROR]";
-            default:                return "[?????]";
+        case LogLevel::Debug:
+            return "[DEBUG]";
+        case LogLevel::Info:
+            return "[INFO] ";
+        case LogLevel::Warning:
+            return "[WARN] ";
+        case LogLevel::Error:
+            return "[ERROR]";
+        default:
+            return "[?????]";
         }
     }
 };
@@ -103,28 +101,24 @@ public:
     }
 
     void log(LogLevel level, const std::string& message) override {
-        if (level < minLevel_) return;
-        if (!file_.is_open()) return;
+        if (level < minLevel_)
+            return;
+        if (!file_.is_open())
+            return;
 
         std::lock_guard<std::mutex> lock(mutex_);
-        
+
         file_ << "[" << getTimestamp() << "] ";
         file_ << getLevelString(level) << " ";
         file_ << message << std::endl;
         file_.flush();
     }
 
-    void setLevel(LogLevel level) override {
-        minLevel_ = level;
-    }
+    void setLevel(LogLevel level) override { minLevel_ = level; }
 
-    LogLevel getLevel() const override {
-        return minLevel_;
-    }
+    LogLevel getLevel() const override { return minLevel_; }
 
-    bool isOpen() const {
-        return file_.is_open();
-    }
+    bool isOpen() const { return file_.is_open(); }
 
 private:
     LogLevel minLevel_;
@@ -142,11 +136,16 @@ private:
 
     std::string getLevelString(LogLevel level) const {
         switch (level) {
-            case LogLevel::Debug:   return "[DEBUG]";
-            case LogLevel::Info:    return "[INFO] ";
-            case LogLevel::Warning: return "[WARN] ";
-            case LogLevel::Error:   return "[ERROR]";
-            default:                return "[?????]";
+        case LogLevel::Debug:
+            return "[DEBUG]";
+        case LogLevel::Info:
+            return "[INFO] ";
+        case LogLevel::Warning:
+            return "[WARN] ";
+        case LogLevel::Error:
+            return "[ERROR]";
+        default:
+            return "[?????]";
         }
     }
 };
@@ -164,7 +163,8 @@ public:
     }
 
     void log(LogLevel level, const std::string& message) override {
-        if (level < minLevel_) return;
+        if (level < minLevel_)
+            return;
 
         std::lock_guard<std::mutex> lock(mutex_);
         for (auto& logger : loggers_) {
@@ -180,9 +180,7 @@ public:
         }
     }
 
-    LogLevel getLevel() const override {
-        return minLevel_;
-    }
+    LogLevel getLevel() const override { return minLevel_; }
 
 private:
     LogLevel minLevel_;
@@ -195,9 +193,7 @@ private:
 // =============================================================================
 class Log {
 public:
-    static void init(std::shared_ptr<ILogger> logger) {
-        instance().logger_ = logger;
-    }
+    static void init(std::shared_ptr<ILogger> logger) { instance().logger_ = logger; }
 
     static void debug(const std::string& message) {
         if (instance().logger_) {
@@ -229,9 +225,7 @@ public:
         }
     }
 
-    static std::shared_ptr<ILogger> getLogger() {
-        return instance().logger_;
-    }
+    static std::shared_ptr<ILogger> getLogger() { return instance().logger_; }
 
     static void shutdown() {
         // Reset to basic console logger to allow AsyncLogger to clean up
@@ -256,16 +250,16 @@ private:
 // =============================================================================
 // Convenience Macros
 // =============================================================================
-#define AESTRA_LOG_DEBUG(msg)   Aestra::Log::debug(msg)
-#define AESTRA_LOG_INFO(msg)    Aestra::Log::info(msg)
+#define AESTRA_LOG_DEBUG(msg) Aestra::Log::debug(msg)
+#define AESTRA_LOG_INFO(msg) Aestra::Log::info(msg)
 #define AESTRA_LOG_WARNING(msg) Aestra::Log::warning(msg)
-#define AESTRA_LOG_ERROR(msg)   Aestra::Log::error(msg)
+#define AESTRA_LOG_ERROR(msg) Aestra::Log::error(msg)
 
 // Stream-style logging
-#define AESTRA_LOG_STREAM_DEBUG   Aestra::LogStream(Aestra::LogLevel::Debug)
-#define AESTRA_LOG_STREAM_INFO    Aestra::LogStream(Aestra::LogLevel::Info)
+#define AESTRA_LOG_STREAM_DEBUG Aestra::LogStream(Aestra::LogLevel::Debug)
+#define AESTRA_LOG_STREAM_INFO Aestra::LogStream(Aestra::LogLevel::Info)
 #define AESTRA_LOG_STREAM_WARNING Aestra::LogStream(Aestra::LogLevel::Warning)
-#define AESTRA_LOG_STREAM_ERROR   Aestra::LogStream(Aestra::LogLevel::Error)
+#define AESTRA_LOG_STREAM_ERROR Aestra::LogStream(Aestra::LogLevel::Error)
 
 // =============================================================================
 // Stream-style Logger Helper
@@ -274,12 +268,9 @@ class LogStream {
 public:
     LogStream(LogLevel level) : level_(level) {}
 
-    ~LogStream() {
-        Log::getLogger()->log(level_, stream_.str());
-    }
+    ~LogStream() { Log::getLogger()->log(level_, stream_.str()); }
 
-    template<typename T>
-    LogStream& operator<<(const T& value) {
+    template <typename T> LogStream& operator<<(const T& value) {
         stream_ << value;
         return *this;
     }
@@ -299,8 +290,7 @@ struct LogMessage {
 
 class AsyncLogger : public ILogger {
 public:
-    AsyncLogger(std::shared_ptr<ILogger> target) 
-        : target_(target), running_(true) {
+    AsyncLogger(std::shared_ptr<ILogger> target) : target_(target), running_(true) {
         worker_ = std::thread(&AsyncLogger::processQueue, this);
     }
 
@@ -317,26 +307,26 @@ public:
         // Truncate if necessary
         LogMessage msg;
         msg.level = level;
-        
+
         size_t len = message.length();
-        if (len >= sizeof(msg.message)) len = sizeof(msg.message) - 1;
-        
+        if (len >= sizeof(msg.message))
+            len = sizeof(msg.message) - 1;
+
         std::memcpy(msg.message, message.c_str(), len);
         msg.message[len] = '\0';
 
         if (!queue_.push(msg)) {
             // Drop or fallback? For audio thread safety, we drop.
-            // printf("Log dropped!\n"); 
+            // printf("Log dropped!\n");
         }
     }
 
     void setLevel(LogLevel level) override {
-        if (target_) target_->setLevel(level);
+        if (target_)
+            target_->setLevel(level);
     }
 
-    LogLevel getLevel() const override {
-        return target_ ? target_->getLevel() : LogLevel::Info;
-    }
+    LogLevel getLevel() const override { return target_ ? target_->getLevel() : LogLevel::Info; }
 
 private:
     std::shared_ptr<ILogger> target_;

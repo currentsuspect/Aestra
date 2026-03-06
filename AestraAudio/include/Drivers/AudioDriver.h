@@ -31,24 +31,24 @@ struct AudioStreamConfig {
     uint32_t bufferSize = 512;
     uint32_t numInputChannels = 0;
     uint32_t numOutputChannels = 2;
-    
+
     // Latency compensation (in milliseconds)
-    double inputLatencyMs = 0.0;   // Input device latency
-    double outputLatencyMs = 0.0;  // Output device latency
+    double inputLatencyMs = 0.0;  // Input device latency
+    double outputLatencyMs = 0.0; // Output device latency
 };
 
 /**
  * @brief Audio latency metrics
- * 
+ *
  * Distinguishes between buffer period (one-way) and round-trip latency (RTL).
  * RTL is what users actually experience during recording/monitoring.
  */
 struct AudioLatencyInfo {
-    double bufferPeriodMs;      // Single buffer period (output or input)
-    double estimatedRTL_Ms;     // Estimated round-trip latency (3x buffer period typical)
+    double bufferPeriodMs;       // Single buffer period (output or input)
+    double estimatedRTL_Ms;      // Estimated round-trip latency (3x buffer period typical)
     uint32_t actualBufferFrames; // Actual buffer size (may differ from requested)
-    uint32_t sampleRate;        // Sample rate used
-    
+    uint32_t sampleRate;         // Sample rate used
+
     // Calculate from buffer size
     static AudioLatencyInfo calculate(uint32_t bufferFrames, uint32_t sampleRate, double rtlMultiplier = 3.0) {
         AudioLatencyInfo info;
@@ -62,7 +62,7 @@ struct AudioLatencyInfo {
 
 /**
  * @brief Audio callback function type
- * 
+ *
  * @param outputBuffer Output audio buffer (interleaved)
  * @param inputBuffer Input audio buffer (interleaved, can be nullptr)
  * @param numFrames Number of frames to process
@@ -70,13 +70,8 @@ struct AudioLatencyInfo {
  * @param userData User-provided data pointer
  * @return 0 to continue, non-zero to stop stream
  */
-using AudioCallback = int (*)(
-    float* outputBuffer,
-    const float* inputBuffer,
-    uint32_t numFrames,
-    double streamTime,
-    void* userData
-);
+using AudioCallback = int (*)(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime,
+                              void* userData);
 
 /**
  * @brief Abstract audio driver interface

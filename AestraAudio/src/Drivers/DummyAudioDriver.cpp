@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "DummyAudioDriver.h"
+
 #include <chrono>
 
 namespace Aestra {
@@ -17,9 +18,9 @@ std::vector<AudioDeviceInfo> DummyAudioDriver::getDevices() {
     info.name = "Dummy Output";
     info.maxInputChannels = 0;
     info.maxOutputChannels = 2;
-    info.supportedSampleRates = { 44100, 48000, 88200, 96000 };
+    info.supportedSampleRates = {44100, 48000, 88200, 96000};
     info.isDefaultOutput = true;
-    return { info };
+    return {info};
 }
 
 bool DummyAudioDriver::openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) {
@@ -39,7 +40,8 @@ void DummyAudioDriver::closeStream() {
 }
 
 bool DummyAudioDriver::startStream() {
-    if (m_running) return true;
+    if (m_running)
+        return true;
     m_stopRequested = false;
     m_running = true;
     m_thread = std::thread(&DummyAudioDriver::threadFunc, this);
@@ -62,9 +64,9 @@ void DummyAudioDriver::threadFunc() {
         if (m_callback) {
             m_callback(m_silentBuffer.data(), nullptr, m_bufferSize, 0.0, m_userData);
         }
-        
+
         m_stats.callbackCount++;
-        
+
         nextTick += frameDuration;
         std::this_thread::sleep_until(nextTick);
     }
