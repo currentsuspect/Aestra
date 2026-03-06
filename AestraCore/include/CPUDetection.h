@@ -5,7 +5,7 @@
 
 #ifdef _MSC_VER
 #include <intrin.h>
-#else
+#elif defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
 #include <cpuid.h>
 #endif
 
@@ -48,19 +48,21 @@ private:
         detectFeatures();
     }
 
-    // Check OS support for AVX/AVX512 states using XGETBV
+    // Check OS support for AVX/AVX512 states using XGETBV (x86 only)
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
     uint64_t getXCR0() {
 #ifdef _MSC_VER
         return _xgetbv(0);
 #else
         uint32_t eax, edx;
-        // xgetbv with ecx=0
         __asm__ __volatile__("xgetbv" : "=a"(eax), "=d"(edx) : "c"(0));
         return (static_cast<uint64_t>(edx) << 32) | eax;
 #endif
     }
+#endif
 
     void detectFeatures() {
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
         int info[4] = {0};
 
 #ifdef _MSC_VER
@@ -128,6 +130,9 @@ private:
                 }
             }
         }
+#else
+        // Non-x86 platforms: SIMD features remain false
+        (void)0;
 #endif
     }
 
