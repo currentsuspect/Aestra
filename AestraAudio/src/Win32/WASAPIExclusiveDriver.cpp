@@ -14,12 +14,12 @@
 #include <avrt.h>
 #include <chrono>
 #include <cstring>
+#include <mmdeviceapi.h>
 #include <initguid.h>
 #include <functiondiscoverykeys_devpkey.h>
 #include <iomanip>
 #include <iostream>
 #include <ksmedia.h>
-#include <mmdeviceapi.h>
 #include <sstream>
 
 #pragma comment(lib, "ole32.lib")
