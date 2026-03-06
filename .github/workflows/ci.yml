@@ -123,7 +123,10 @@ jobs:
           submodules: recursive
 
       - name: Install clang-format
-        run: sudo apt-get install -y clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format-14
+          sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-14 100
 
       - name: Check Formatting
         run: |
