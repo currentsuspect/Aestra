@@ -5,7 +5,8 @@
 #include <string>
 #include <vector>
 
-namespace AestraAudio {
+namespace Aestra {
+namespace Audio {
 
 /**
  * @brief Structure containing information about the platform's audio capabilities
@@ -36,4 +37,5 @@ void RegisterPlatformDrivers(AudioDeviceManager& manager);
  */
 PlatformAudioInfo GetPlatformAudioInfo();
 
-} // namespace AestraAudio
+} // namespace Audio
+} // namespace Aestra

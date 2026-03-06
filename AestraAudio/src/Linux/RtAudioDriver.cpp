@@ -13,7 +13,8 @@
 #define AESTRA_LOG_ERROR(x) std::cerr << "[ERROR] " << x << std::endl
 #endif
 
-namespace AestraAudio {
+namespace Aestra {
+namespace Audio {
 
 RtAudioDriver::RtAudioDriver() {
     // Try backends in priority order
@@ -225,4 +226,5 @@ bool RtAudioDriver::supportsExclusiveMode() const {
     return false; // JACK is effectively exclusive, but ALSA/Pulse usually shared
 }
 
-} // namespace AestraAudio
+} // namespace Audio
+} // namespace Aestra

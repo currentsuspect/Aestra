@@ -377,6 +377,15 @@ endif()
 
 target_link_libraries(AestraAudioCore PUBLIC AestraPlat)
 
+# macOS frameworks needed by VST3 hosting
+if(APPLE)
+    target_link_libraries(AestraAudioCore PUBLIC
+        "-framework CoreFoundation"
+        "-framework CoreAudio"
+        "-framework Foundation"
+    )
+endif()
+
 # =============================================================================
 # Premium Plugins Integration (Optional)
 # =============================================================================
