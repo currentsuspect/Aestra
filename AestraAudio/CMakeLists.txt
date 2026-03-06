@@ -451,7 +451,7 @@ elseif(UNIX)
 
         set(AESTRA_AUDIO_LINUX_HEADERS
             src/Linux/RtAudioDriver.h
-            include/AudioPlatformRegistry.h
+            include/Drivers/AudioPlatformRegistry.h
             ${RTAUDIO_HEADERS}
         )
 
