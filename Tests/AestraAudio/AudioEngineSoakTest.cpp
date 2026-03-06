@@ -5,8 +5,8 @@
 #include "AudioGraph.h"
 #include "SamplePool.h"
 
-#include <atomic>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -19,18 +19,18 @@
 #include <vector>
 
 #if defined(__linux__)
-    #include <unistd.h>
-    #include <cstdio>
+#include <cstdio>
+#include <unistd.h>
 #elif defined(_WIN32)
-    // Windows-specific includes (only in .cpp file)
-    #ifndef WIN32_LEAN_AND_MEAN
-    #define WIN32_LEAN_AND_MEAN
-    #endif
-    #ifndef NOMINMAX
-    #define NOMINMAX
-    #endif
-    #include <windows.h>
-    #include <psapi.h>
+// Windows-specific includes (only in .cpp file)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <psapi.h>
+#include <windows.h>
 #endif
 
 using namespace Aestra::Audio;
@@ -51,19 +51,20 @@ struct Options {
 uint64_t getRSSBytes() {
 #if defined(__linux__)
     std::FILE* f = std::fopen("/proc/self/statm", "r");
-    if (!f) return 0;
+    if (!f)
+        return 0;
     long residentPages = 0;
     const int ok = std::fscanf(f, "%*s %ld", &residentPages);
     std::fclose(f);
-    if (ok != 1 || residentPages < 0) return 0;
+    if (ok != 1 || residentPages < 0)
+        return 0;
     const long pageSize = ::sysconf(_SC_PAGESIZE);
-    if (pageSize <= 0) return 0;
+    if (pageSize <= 0)
+        return 0;
     return static_cast<uint64_t>(residentPages) * static_cast<uint64_t>(pageSize);
 #elif defined(_WIN32)
     PROCESS_MEMORY_COUNTERS_EX pmc{};
-    if (!GetProcessMemoryInfo(GetCurrentProcess(),
-                              reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc),
-                              sizeof(pmc))) {
+    if (!GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc), sizeof(pmc))) {
         return 0;
     }
     return static_cast<uint64_t>(pmc.WorkingSetSize);
@@ -93,9 +94,7 @@ std::shared_ptr<AudioBuffer> makeSineBuffer(uint32_t sampleRate, uint32_t second
     return buffer;
 }
 
-AudioGraph buildLoopGraph(const std::shared_ptr<AudioBuffer>& source,
-                          uint32_t engineSampleRate,
-                          uint32_t tracks,
+AudioGraph buildLoopGraph(const std::shared_ptr<AudioBuffer>& source, uint32_t engineSampleRate, uint32_t tracks,
                           uint32_t timelineSeconds) {
     AudioGraph graph;
     graph.tracks.reserve(tracks);
@@ -135,18 +134,27 @@ Options parseArgs(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
         auto nextU32 = [&](uint32_t& dst) {
-            if (i + 1 >= argc) return;
+            if (i + 1 >= argc)
+                return;
             dst = static_cast<uint32_t>(std::strtoul(argv[++i], nullptr, 10));
         };
 
-        if (a == "--sr") nextU32(opt.sampleRate);
-        else if (a == "--frames") nextU32(opt.bufferFrames);
-        else if (a == "--tracks") nextU32(opt.tracks);
-        else if (a == "--timeline-sec") nextU32(opt.timelineSeconds);
-        else if (a == "--duration-sec") nextU32(opt.durationSeconds);
-        else if (a == "--cmd-hz") nextU32(opt.commandHz);
-        else if (a == "--graph-hz") nextU32(opt.graphSwapHz);
-        else if (a == "--no-realtime") opt.realtime = false;
+        if (a == "--sr")
+            nextU32(opt.sampleRate);
+        else if (a == "--frames")
+            nextU32(opt.bufferFrames);
+        else if (a == "--tracks")
+            nextU32(opt.tracks);
+        else if (a == "--timeline-sec")
+            nextU32(opt.timelineSeconds);
+        else if (a == "--duration-sec")
+            nextU32(opt.durationSeconds);
+        else if (a == "--cmd-hz")
+            nextU32(opt.commandHz);
+        else if (a == "--graph-hz")
+            nextU32(opt.graphSwapHz);
+        else if (a == "--no-realtime")
+            opt.realtime = false;
     }
     return opt;
 }
@@ -157,15 +165,10 @@ int main(int argc, char** argv) {
     const Options opt = parseArgs(argc, argv);
 
     std::cout << "AestraAudioSoakTest\n";
-    std::cout << "  sr=" << opt.sampleRate
-              << " frames=" << opt.bufferFrames
-              << " tracks=" << opt.tracks
-              << " timelineSec=" << opt.timelineSeconds
-              << " durationSec=" << opt.durationSeconds
-              << " cmdHz=" << opt.commandHz
-              << " graphHz=" << opt.graphSwapHz
-              << " realtime=" << (opt.realtime ? "yes" : "no")
-              << "\n";
+    std::cout << "  sr=" << opt.sampleRate << " frames=" << opt.bufferFrames << " tracks=" << opt.tracks
+              << " timelineSec=" << opt.timelineSeconds << " durationSec=" << opt.durationSeconds
+              << " cmdHz=" << opt.commandHz << " graphHz=" << opt.graphSwapHz
+              << " realtime=" << (opt.realtime ? "yes" : "no") << "\n";
 
     AudioEngine engine;
     engine.setSampleRate(opt.sampleRate);
@@ -215,26 +218,26 @@ int main(int argc, char** argv) {
                 AudioQueueCommand cmd{};
                 const int which = static_cast<int>(rng() % 4u);
                 switch (which) {
-                    case 0:
-                        cmd.type = AudioQueueCommandType::SetTrackVolume;
-                        cmd.trackIndex = trackIndex;
-                        cmd.value1 = volDist(rng);
-                        break;
-                    case 1:
-                        cmd.type = AudioQueueCommandType::SetTrackPan;
-                        cmd.trackIndex = trackIndex;
-                        cmd.value1 = panDist(rng);
-                        break;
-                    case 2:
-                        cmd.type = AudioQueueCommandType::SetTrackMute;
-                        cmd.trackIndex = trackIndex;
-                        cmd.value1 = boolDist(rng) ? 1.0f : 0.0f;
-                        break;
-                    default:
-                        cmd.type = AudioQueueCommandType::SetTrackSolo;
-                        cmd.trackIndex = trackIndex;
-                        cmd.value1 = boolDist(rng) ? 1.0f : 0.0f;
-                        break;
+                case 0:
+                    cmd.type = AudioQueueCommandType::SetTrackVolume;
+                    cmd.trackIndex = trackIndex;
+                    cmd.value1 = volDist(rng);
+                    break;
+                case 1:
+                    cmd.type = AudioQueueCommandType::SetTrackPan;
+                    cmd.trackIndex = trackIndex;
+                    cmd.value1 = panDist(rng);
+                    break;
+                case 2:
+                    cmd.type = AudioQueueCommandType::SetTrackMute;
+                    cmd.trackIndex = trackIndex;
+                    cmd.value1 = boolDist(rng) ? 1.0f : 0.0f;
+                    break;
+                default:
+                    cmd.type = AudioQueueCommandType::SetTrackSolo;
+                    cmd.trackIndex = trackIndex;
+                    cmd.value1 = boolDist(rng) ? 1.0f : 0.0f;
+                    break;
                 }
                 engine.commandQueue().push(cmd);
             }
@@ -245,8 +248,10 @@ int main(int argc, char** argv) {
                 // Mutate a few clip gains and swap the snapshot (sizes stable => no alloc churn).
                 for (uint32_t i = 0; i < std::min<uint32_t>(opt.tracks, 8); ++i) {
                     const uint32_t trackIndex = trackDist(rng);
-                    if (trackIndex >= graph.tracks.size()) continue;
-                    if (graph.tracks[trackIndex].clips.empty()) continue;
+                    if (trackIndex >= graph.tracks.size())
+                        continue;
+                    if (graph.tracks[trackIndex].clips.empty())
+                        continue;
                     graph.tracks[trackIndex].clips[0].gain = 0.6f + 0.4f * volDist(rng);
                 }
 
@@ -283,13 +288,15 @@ int main(int argc, char** argv) {
         engine.processBlock(out.data(), nullptr, opt.bufferFrames, 0.0);
         const auto t1 = std::chrono::high_resolution_clock::now();
 
-        const uint64_t cbNs = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count());
+        const uint64_t cbNs =
+            static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count());
 
         ++blocks;
         sumCallbackNs += static_cast<long double>(cbNs);
-        if (cbNs > maxCallbackNs) maxCallbackNs = cbNs;
-        if (cbNs > bufferDurationNs) ++xruns;
+        if (cbNs > maxCallbackNs)
+            maxCallbackNs = cbNs;
+        if (cbNs > bufferDurationNs)
+            ++xruns;
 
         if (opt.realtime) {
             const uint64_t sleepNs = (cbNs < bufferDurationNs) ? (bufferDurationNs - cbNs) : 0;
@@ -301,24 +308,23 @@ int main(int argc, char** argv) {
         if (now >= nextMemSample) {
             nextMemSample += std::chrono::seconds(10);
             const uint64_t rss = getRSSBytes();
-            if (rss > rssMax) rssMax = rss;
+            if (rss > rssMax)
+                rssMax = rss;
         }
 
         if (now >= nextReport) {
             nextReport += std::chrono::seconds(5);
             const long double avgNs = (blocks > 0) ? (sumCallbackNs / static_cast<long double>(blocks)) : 0.0;
-            const double loadPct = (bufferDurationNs > 0)
-                                       ? (static_cast<double>(maxCallbackNs) / static_cast<double>(bufferDurationNs)) * 100.0
-                                       : 0.0;
+            const double loadPct =
+                (bufferDurationNs > 0)
+                    ? (static_cast<double>(maxCallbackNs) / static_cast<double>(bufferDurationNs)) * 100.0
+                    : 0.0;
 
             std::cout << "t=" << elapsed << "s"
-                      << " blocks=" << blocks
-                      << " avg=" << (static_cast<double>(avgNs) / 1e6) << "ms"
+                      << " blocks=" << blocks << " avg=" << (static_cast<double>(avgNs) / 1e6) << "ms"
                       << " max=" << (static_cast<double>(maxCallbackNs) / 1e6) << "ms"
-                      << " xruns=" << xruns
-                      << " qDepthMax=" << engine.commandQueue().maxDepth()
-                      << " qDrops=" << engine.commandQueue().droppedCount()
-                      << " rssMB=" << (rssMax / (1024.0 * 1024.0))
+                      << " xruns=" << xruns << " qDepthMax=" << engine.commandQueue().maxDepth()
+                      << " qDrops=" << engine.commandQueue().droppedCount() << " rssMB=" << (rssMax / (1024.0 * 1024.0))
                       << " peakLoad=" << loadPct << "%"
                       << "\n";
         }
@@ -357,7 +363,8 @@ int main(int argc, char** argv) {
     const bool passQueueDrops = (engine.commandQueue().droppedCount() == 0);
 
     const double headroomPct =
-        (bufferDurationNs > 0) ? (static_cast<double>(maxCallbackNs) / static_cast<double>(bufferDurationNs)) * 100.0 : 0.0;
+        (bufferDurationNs > 0) ? (static_cast<double>(maxCallbackNs) / static_cast<double>(bufferDurationNs)) * 100.0
+                               : 0.0;
     const bool passHeadroom = (headroomPct < 80.0); // max callback must be <80% of buffer budget
 
     std::cout << "\n=== Thresholds ===\n";

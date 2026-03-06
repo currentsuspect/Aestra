@@ -10,19 +10,19 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <windows.h>
 #include <audioclient.h>
 #include <avrt.h>
 #include <chrono>
 #include <cstring>
-#include <mmdeviceapi.h>
-#include <initguid.h>
 #include <devpkey.h>
 #include <functiondiscoverykeys_devpkey.h>
+#include <initguid.h>
 #include <iomanip>
 #include <iostream>
 #include <ksmedia.h>
+#include <mmdeviceapi.h>
 #include <sstream>
+#include <windows.h>
 
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "avrt.lib")

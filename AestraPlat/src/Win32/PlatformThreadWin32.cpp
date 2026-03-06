@@ -9,9 +9,9 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <windows.h>
 #include <avrt.h>
 #include <iostream>
+#include <windows.h>
 
 // Link against avrt.lib for MMCSS functions
 #pragma comment(lib, "avrt.lib")
