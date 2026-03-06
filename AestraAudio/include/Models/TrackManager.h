@@ -1,5 +1,6 @@
 #pragma once
 #include "../Core/ChannelSlotMap.h"
+#include "../DSP/ContinuousParamBuffer.h"
 #include "MeterSnapshot.h"
 #include "MixerChannel.h"
 #include "PatternManager.h"
