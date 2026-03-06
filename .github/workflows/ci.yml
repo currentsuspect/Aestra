@@ -23,7 +23,7 @@ jobs:
           cmake-version: "3.28"
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_ENABLE_UI=OFF
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
@@ -33,7 +33,7 @@ jobs:
         if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          title: "Aestra Windows Build"
+          title: "Aestra CI — Windows"
           status: ${{ job.status }}
 
   build-linux:
@@ -43,13 +43,18 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "3.28"
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake build-essential libasound2-dev libgl1-mesa-dev libx11-dev
+          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_ENABLE_UI=OFF
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
@@ -59,7 +64,7 @@ jobs:
         if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          title: "Aestra Linux Build"
+          title: "Aestra CI — Linux"
           status: ${{ job.status }}
 
   build-macos:
@@ -69,11 +74,13 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Dependencies
-        run: brew install cmake
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "3.28"
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_ENABLE_UI=OFF
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
@@ -83,7 +90,7 @@ jobs:
         if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          title: "Aestra macOS Build"
+          title: "Aestra CI — macOS"
           status: ${{ job.status }}
 
   format-check:
