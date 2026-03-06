@@ -11,18 +11,18 @@
 #include <algorithm>
 // clang-format off
 #include <windows.h>
+#include <initguid.h>
 #include <audioclient.h>
 #include <avrt.h>
-#include <chrono>
-#include <cstring>
 #include <devpkey.h>
 #include <functiondiscoverykeys_devpkey.h>
-#include <initguid.h>
-#include <iomanip>
-#include <iostream>
 #include <ksmedia.h>
 #include <mmdeviceapi.h>
 // clang-format on
+#include <chrono>
+#include <cstring>
+#include <iomanip>
+#include <iostream>
 #include <sstream>
 
 #pragma comment(lib, "ole32.lib")
