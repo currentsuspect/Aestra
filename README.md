@@ -4,6 +4,7 @@
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-lightgrey)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-orange)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
+![Discord](https://img.shields.io/discord/1479359803120943104?label=Discord&color=5865F2)
 
 > **A modern, professional digital audio workstation built from the ground up with intention.**
 > Featuring ultra-low latency audio, GPU-accelerated UI, and a pattern-based workflow.
