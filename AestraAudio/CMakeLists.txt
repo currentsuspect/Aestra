@@ -200,11 +200,15 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Plugin/EffectChain.cpp
 )
 
-# Set per-file compile flags for AVX-512
-if(MSVC)
-    set_source_files_properties(src/DSP/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "/arch:AVX512")
+# Set per-file compile flags for AVX-512 (x86_64 only, not ARM64)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i686")
+    if(MSVC)
+        set_source_files_properties(src/DSP/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "/arch:AVX512")
+    else()
+        set_source_files_properties(src/DSP/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "-mavx512f -mavx512dq")
+    endif()
 else()
-    set_source_files_properties(src/DSP/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "-mavx512f -mavx512dq")
+    message(STATUS "Skipping AVX-512 optimizations for ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
 # Add VST3 host sources if SDK is available
