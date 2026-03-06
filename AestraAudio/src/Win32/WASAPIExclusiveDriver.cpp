@@ -16,6 +16,7 @@
 #include <cstring>
 #include <mmdeviceapi.h>
 #include <initguid.h>
+#include <devpkey.h>
 #include <functiondiscoverykeys_devpkey.h>
 #include <iomanip>
 #include <iostream>
