@@ -21,11 +21,17 @@
 #include <map>
 
 // Denormal protection macros
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
 #define DISABLE_DENORMALS        \
     int oldMXCSR = _mm_getcsr(); \
     _mm_setcsr(oldMXCSR | 0x8040); // Set DAZ and FTZ flags
 
 #define RESTORE_DENORMALS _mm_setcsr(oldMXCSR);
+#else
+// Non-x86: no denormal control needed (ARM FPU handles this differently)
+#define DISABLE_DENORMALS
+#define RESTORE_DENORMALS
+#endif
 
 namespace Aestra {
 namespace Audio {
