@@ -182,9 +182,7 @@ public:
     }
 
     // Get number of worker threads
-    size_t size() const {
-        return workers.size();
-    }
+    size_t size() const { return workers.size(); }
 
 private:
     std::vector<std::thread> workers;
@@ -267,9 +265,7 @@ public:
         m_signal.notify_all();
     }
 
-    size_t size() const {
-        return m_workers.size();
-    }
+    size_t size() const { return m_workers.size(); }
 
 private:
     void workerLoop(uint32_t threadIdx) {
