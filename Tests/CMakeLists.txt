@@ -269,4 +269,40 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/TextRendererSTBSpaceTest.cpp")
     message(STATUS "TextRendererSTBSpaceTest added - Issue #121 regression test")
 endif()
 
+# =============================================================================
+# Commands Tests (Phase 2 - Undo/Redo System)
+# =============================================================================
+
+# CommandHistory Test
+add_executable(CommandHistoryTest Commands/CommandHistoryTest.cpp)
+target_link_libraries(CommandHistoryTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(CommandHistoryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME CommandHistoryTest COMMAND CommandHistoryTest)
+set_tests_properties(CommandHistoryTest PROPERTIES LABELS "commands;phase2")
+
+# MoveClipCommand Test
+add_executable(MoveClipCommandTest Commands/MoveClipCommandTest.cpp)
+target_link_libraries(MoveClipCommandTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(MoveClipCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MoveClipCommandTest COMMAND MoveClipCommandTest)
+set_tests_properties(MoveClipCommandTest PROPERTIES LABELS "commands;phase2")
+
+# MacroCommand Test
+add_executable(MacroCommandTest Commands/MacroCommandTest.cpp)
+target_link_libraries(MacroCommandTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(MacroCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MacroCommandTest COMMAND MacroCommandTest)
+set_tests_properties(MacroCommandTest PROPERTIES LABELS "commands;phase2")
+
+message(STATUS "Commands tests added - Phase 2 undo/redo system")
+
 message(STATUS "Tests configured - see Tests/ directory")
