@@ -63,6 +63,39 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
 
+### Spectral Anti-Aliasing
+
+- **Innovation**: Real-time analysis of non-linear processes (like saturation) to compute dynamic oversampling requirements.
+- **Benefit**: Transparent highs without the CPU hit of global 16x oversampling.
+
+### Dynamic Oversampling
+
+- **Plan**: Implement adaptive oversampling ratios based on frequency content and plugin parameters. Only oversample when audible aliasing is predicted.
+
+### Analog Drift Modeling
+
+- **Plan**: Introduce component-level variance and temperature drift simulations to digital models for true analog warmth.
+
+### SimdLin Integration
+
+- **Innovation**: Replace standard math functions with SIMD-optimized approximations where exact precision isn't necessary (e.g. fast exp/log).
+
+### Collaborative Editing
+
+- **Plan**: CRDT-based synchronization of project states allowing real-time multi-user editing.
+
+### Cloud Collaboration
+
+- **Plan**: Deep integration with cloud storage for transparent asset sharing, stemming, and version control.
+
+### Graph Coloring
+
+- **Innovation**: Heuristic-based coloring of the DAG to optimize cache locality and memory bandwidth during multi-threaded rendering.
+
+### NeuralMix Assistant
+
+- **Plan**: AI-driven analysis of stems to suggest EQ, compression, and panning moves based on genre references.
+
 ## 4. Fixes & Cleanups
 
 ### Real-Time Safety

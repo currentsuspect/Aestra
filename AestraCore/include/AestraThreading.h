@@ -15,7 +15,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <windows.h>
+#include <windows.h> // ALLOW_PLATFORM_INCLUDE
 #endif
 
 namespace Aestra {
@@ -284,7 +284,7 @@ private:
     void workerLoop(uint32_t threadIdx) {
         (void)threadIdx;
         while (!m_stop) {
-            m_signal.wait([this] { return m_stop || m_taskCounter.load(std::memory_order_acquire) < m_taskCount; });
+            m_signal.wait([this] { return m_stop || m_taskCounter.load(std::memory_order_acquire) < static_cast<int>(m_taskCount); });
             
             if (m_stop) return;
 
