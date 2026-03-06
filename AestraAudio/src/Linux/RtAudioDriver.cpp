@@ -1,6 +1,6 @@
 #include "RtAudioDriver.h"
 
-#include "../../include/AestraAudio.h" // For logging macros if available, otherwise generic
+#include "../../include/Core/AestraAudio.h" // For logging macros if available
 
 #include <algorithm>
 #include <cstring>
