@@ -431,6 +431,7 @@ struct Sinc64Turbo {
     // Specific Implementations
     // -------------------------------------------------------------------------
 
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
     static void implAVX512(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
         interpolateImpl(data, totalFrames, phase, outL, outR, sincDotProductAVX512, sincDotProductAVX512_Reversed);
     }
@@ -462,7 +463,9 @@ struct Sinc64Turbo {
         };
         interpolateImpl(data, totalFrames, phase, outL, outR, sincDotProductSSE41, scalarRev);
     }
+#endif // x86
 
+#if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
     static void implNEON(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
         // Assume optimized NEON
         interpolateImpl(data, totalFrames, phase, outL, outR, sincDotProductNEON,
@@ -477,6 +480,7 @@ struct Sinc64Turbo {
                             r = sr;
                         });
     }
+#endif // ARM NEON
 
     static void implScalar(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
         auto scalarOp = [](const float* c, const float* s, float& l, float& r) {
@@ -510,14 +514,18 @@ struct Sinc64Turbo {
         getTable();
 
         const auto& cpu = Aestra::Core::CPUDetection::get();
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
         if (cpu.hasAVX512F())
             return implAVX512;
         if (cpu.hasAVX2())
             return implAVX2;
         if (cpu.hasSSE41())
             return implSSE41;
+#endif
+#if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
         if (cpu.hasNEON())
             return implNEON;
+#endif
         return implScalar;
     }
 
