@@ -31,7 +31,7 @@ struct UnitInfo {
 
     // STUB: Phase 2 UI-facing properties
     std::string name;
-    uint32_t color{0x808080};       // Default grey
+    uint32_t color{0x808080}; // Default grey
     bool isMuted{false};
     bool isSolo{false};
     bool isArmed{false};
@@ -90,13 +90,34 @@ public:
     }
 
     // STUB: Phase 2 unit property setters — UI calls these to modify unit state
-    void setUnitName(UnitID id, const std::string& name) { if (auto* u = getUnit(id)) u->name = name; }
-    void setUnitMute(UnitID id, bool muted) { if (auto* u = getUnit(id)) u->isMuted = muted; }
-    void setUnitSolo(UnitID id, bool solo) { if (auto* u = getUnit(id)) u->isSolo = solo; }
-    void setUnitArmed(UnitID id, bool armed) { if (auto* u = getUnit(id)) u->isArmed = armed; }
-    void setUnitEnabled(UnitID id, bool enabled) { if (auto* u = getUnit(id)) u->isEnabled = enabled; }
-    void setUnitMixerChannel(UnitID id, int channel) { if (auto* u = getUnit(id)) u->targetMixerRoute = channel; }
-    void setUnitAudioClip(UnitID id, const std::string& path) { if (auto* u = getUnit(id)) u->audioClipPath = path; }
+    void setUnitName(UnitID id, const std::string& name) {
+        if (auto* u = getUnit(id))
+            u->name = name;
+    }
+    void setUnitMute(UnitID id, bool muted) {
+        if (auto* u = getUnit(id))
+            u->isMuted = muted;
+    }
+    void setUnitSolo(UnitID id, bool solo) {
+        if (auto* u = getUnit(id))
+            u->isSolo = solo;
+    }
+    void setUnitArmed(UnitID id, bool armed) {
+        if (auto* u = getUnit(id))
+            u->isArmed = armed;
+    }
+    void setUnitEnabled(UnitID id, bool enabled) {
+        if (auto* u = getUnit(id))
+            u->isEnabled = enabled;
+    }
+    void setUnitMixerChannel(UnitID id, int channel) {
+        if (auto* u = getUnit(id))
+            u->targetMixerRoute = channel;
+    }
+    void setUnitAudioClip(UnitID id, const std::string& path) {
+        if (auto* u = getUnit(id))
+            u->audioClipPath = path;
+    }
 
     /**
      * @brief Save to JSON (stub)
