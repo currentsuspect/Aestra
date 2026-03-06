@@ -148,6 +148,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     # Core
     src/Core/AudioEngine.cpp
     src/Core/AudioDeviceManager.cpp
+    src/Core/DriverRegistryStub.cpp  # Default no-op; platform libs override at link time
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
     
@@ -458,8 +459,8 @@ elseif(UNIX)
     # Non-Windows (Linux)
     if(ALSA_FOUND)
         set(AESTRA_AUDIO_LINUX_SOURCES
-            src/Linux/LinuxDriverRegistry.cpp
-            # STUB: RtAudioDriver.cpp excluded — uses legacy interface, Phase 2 will rewrite
+            # STUB: All Linux drivers excluded — RtAudioDriver uses legacy interface
+            # LinuxDriverRegistry.cpp removed to avoid duplicate RegisterPlatformDrivers
         )
 
         set(AESTRA_AUDIO_LINUX_HEADERS
@@ -492,11 +493,7 @@ elseif(UNIX)
 
         add_library(AestraAudio ALIAS AestraAudioLinux)
     else()
-        # No ALSA - add the stub source directly to AestraAudioCore
-        target_sources(AestraAudioCore PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/Core/DriverRegistryStub.cpp
-        )
-        
+        # No ALSA - stub already in AestraAudioCore
         # Create an interface library for compatibility
         add_library(AestraAudio INTERFACE)
         target_link_libraries(AestraAudio INTERFACE AestraAudioCore)
