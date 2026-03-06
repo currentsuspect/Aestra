@@ -1,3 +1,6 @@
 [submodule "AestraAudio/External/vst3sdk"]
 	path = AestraAudio/External/vst3sdk
 	url = https://github.com/steinbergmedia/vst3sdk.git
+[submodule "AestraUI/External/freetype_local"]
+	path = AestraUI/External/freetype_local
+	url = https://github.com/freetype/freetype.git
