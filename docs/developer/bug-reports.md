@@ -33,7 +33,7 @@ Ensure the behavior is actually a bug:
 - Check the documentation for expected behavior
 - Try reproducing on a clean install
 - Test with minimal plugins/samples loaded
-- Verify your system meets [minimum requirements](../README.md#-supported-platforms--requirements)
+- Verify your system meets [minimum requirements](../../README.md#-supported-platforms--requirements)
 
 ### 3. Update to Latest Version
 - Pull the latest code from `main` branch
@@ -433,8 +433,8 @@ Before submitting, verify:
 
 ## 📚 Related Resources
 
-- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute to Aestra
-- **[Debugging Guide](developer/debugging.md)** — Advanced debugging techniques
+- **[Contributing Guide](contributing.md)** — How to contribute to Aestra
+- **[Debugging Guide](debugging.md)** — Advanced debugging techniques
 - **[GitHub Issues](https://github.com/currentsuspect/Aestra/issues)** — Browse existing bugs
 
 ---

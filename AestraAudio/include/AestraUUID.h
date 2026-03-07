@@ -25,7 +25,7 @@ struct AestraUUID {
     std::string toString() const {
         // Simple hex representation
         char buf[64];
-        snprintf(buf, sizeof(buf), "%016lx%016lx", high, low);
+        snprintf(buf, sizeof(buf), "%016llx%016llx", (unsigned long long)high, (unsigned long long)low);
         return std::string(buf);
     }
 };

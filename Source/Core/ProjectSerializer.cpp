@@ -1,6 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ProjectSerializer.h"
-#include "../AestraCore/include/AestraLog.h"
+#include "AestraLog.h"
 #include "MiniAudioDecoder.h"
 #include <filesystem>
 #include <fstream>

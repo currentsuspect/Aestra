@@ -29,20 +29,20 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 1. **[📋 Changelog](../meta/CHANGELOGS/CHANGELOG_2025Q1.md)** - Version history
 2. **[📊 Development Logs](../meta/SESSION_SUMMARY_DEC2024.md)** - Recent progress
 3. **[📜 License Reference](about/license-reference.md)** - Licensing details
-4. **[🤝 Community](community/)** - Support and guidelines
+4. **[🤝 Community](../community/)** - Support and guidelines
 
 ## 📖 Documentation Sections
 
 ### 🏠 **Home & Overview**
 - **[Project Overview](index.md)** - What is Aestra DAW?
 - **[Philosophy](about/philosophy.md)** - Our design principles
-- **[Features](index.md#key-features)** - Core capabilities
+- **[Features](../index.md#key-features)** - Core capabilities
 
 ### 🚀 **Getting Started**
 - **[Installation Guide](getting-started/building.md)** - Build from source
 - **[Quick Setup](getting-started/quickstart.md)** - 5-minute tutorial
-- **[System Requirements](getting-started/index.md#requirements)** - Hardware needs
-- **[First Project](getting-started/quickstart.md#create-your-first-project)** - Create your first project
+- **[System Requirements](../getting-started/index.md#requirements)** - Hardware needs
+- **[First Project](../getting-started/quickstart.md#create-your-first-project)** - Create your first project
 
 ### 🏗️ **Architecture**
 - **[System Overview](architecture/overview.md)** - High-level architecture
@@ -68,7 +68,7 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 
 ### 📡 **API Documentation**
 - **[API Overview](api/index.md)** - Complete API reference
-- **[Generated Docs](api-reference/html/index.html)** - Doxygen-generated docs
+- **[Generated Docs](../api-reference/html/index.html)** - Doxygen-generated docs
 
 ### 📋 **Release Information**
 - **[Changelog](../meta/CHANGELOGS/CHANGELOG_2025Q1.md)** - Version history
@@ -76,9 +76,9 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 - **[Milestone Updates](../meta/TASK_4.*_SUMMARY.md)** - Task summaries
 
 ### 🌐 **Community**
-- **[Code of Conduct](community/code-of-conduct.md)** - Community guidelines
-- **[Support](community/support.md)** - Get help
-- **[Security](community/security.md)** - Security policy
+- **[Code of Conduct](../community/code-of-conduct.md)** - Community guidelines
+- **[Support](../community/support.md)** - Get help
+- **[Security](../community/security.md)** - Security policy
 
 ### 🧠 **About**
 - **[Philosophy](about/philosophy.md)** - Design principles
@@ -91,7 +91,7 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 1. Start with [Home](index.md)
 2. Read [Getting Started](getting-started/index.md)
 3. Follow [Quickstart Guide](getting-started/quickstart.md)
-4. Explore [Features](index.md#key-features)
+4. Explore [Features](../index.md#key-features)
 
 ### 👨‍💻 **For Developers**
 1. Read [Architecture Overview](architecture/overview.md)
@@ -109,7 +109,7 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 1. Review [Roadmap](technical/roadmap.md)
 2. Check [Changelog](../meta/CHANGELOGS/CHANGELOG_2025Q1.md)
 3. Read [Development Logs](../meta/SESSION_SUMMARY_DEC2024.md)
-4. Understand [Milestones](technical/roadmap.md#milestones)
+4. Understand [Milestones](../technical/roadmap.md#milestones)
 
 ## 🔗 External Resources
 
@@ -122,7 +122,7 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 
 ### 💬 **Community Support**
 - [GitHub Discussions](https://github.com/currentsuspect/Aestra/discussions)
-- [Community Support](community/support.md)
+- [Community Support](../community/support.md)
 
 ### 🐛 **Bug Reports**
 - [Bug Reports Guide](developer/bug-reports.md)

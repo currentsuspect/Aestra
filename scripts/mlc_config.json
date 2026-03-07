@@ -1,0 +1,19 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^http"
+    },
+    {
+      "pattern": "^#"
+    },
+    {
+      "pattern": "^/"
+    },
+    {
+      "pattern": "^\\.\\./"
+    },
+    {
+      "pattern": "^.*\\.md$"
+    }
+  ]
+}

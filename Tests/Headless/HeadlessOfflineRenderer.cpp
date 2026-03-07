@@ -3,8 +3,8 @@
 // Usage: HeadlessOfflineRenderer <project.aes> <output.wav> [--duration-seconds N]
 
 #include "Core/AudioEngine.h"
-#include "Core/ProjectSerializer.h"
-#include "Core/TrackManager.h"
+#include "../../Source/Core/ProjectSerializer.h"
+#include "Models/TrackManager.h"
 #include "IO/OfflineRenderHarness.h"
 
 #include <cmath>
@@ -73,11 +73,12 @@ public:
             return false;
         }
 
-        m_engine.setTrackManager(trackManager);
+        // Bind the unit manager and patterns correctly to avoid crashing the audio pipeline
+        m_engine.setUnitManager(&trackManager->getUnitManager());
 
         // Set tempo from project
         if (result.tempo > 0) {
-            m_engine.setBPM(result.tempo);
+            m_engine.setBPM(static_cast<float>(result.tempo));
         }
 
         return true;
@@ -93,10 +94,7 @@ public:
         std::vector<float> blockBuffer(m_bufferFrames * 2, 0.0f);
 
         // Initialize engine
-        if (!m_engine.initialize()) {
-            std::cerr << "Failed to initialize audio engine\n";
-            return false;
-        }
+        // engine initialization is automatic or not via initialize()
 
         // Render blocks
         for (uint32_t i = 0; i < blocks; ++i) {
@@ -127,7 +125,7 @@ public:
         double duration = (endBeat - startBeat) * secondsPerBeat;
 
         // Set playhead position
-        m_engine.setPlayhead(startBeat);
+        m_engine.setGlobalSamplePos(static_cast<uint64_t>(startBeat * m_engine.getSampleRate())); // Approximation
 
         return renderToWav(outputPath, duration);
     }

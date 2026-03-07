@@ -434,4 +434,4 @@ struct MouseEvent {
 
 ---
 
-**Next:** [AestraUI Architecture →](Aestra-ui.md)
+**Next:** [AestraUI Architecture →](nomad-ui.md)

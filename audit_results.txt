@@ -1,4 +1,4 @@
-AestraAudio/include/Plugin/EffectChain.h:63: Memory deallocation (delete) found in critical section candidate: 'EffectChain(const EffectChain&) = delete;'
-AestraAudio/include/Plugin/EffectChain.h:64: Memory deallocation (delete) found in critical section candidate: 'EffectChain& operator=(const EffectChain&) = delete;'
-AestraAudio/include/DSP/SampleRateConverter.h:206: Memory deallocation (delete) found in critical section candidate: 'SampleRateConverter(const SampleRateConverter&) = delete;'
-AestraAudio/include/DSP/SampleRateConverter.h:207: Memory deallocation (delete) found in critical section candidate: 'SampleRateConverter& operator=(const SampleRateConverter&) = delete;'
+AestraAudio/include/Plugin/EffectChain.h:64: Memory deallocation (delete) found in critical section candidate: 'EffectChain(const EffectChain&) = delete; // ALLOW_REALTIME_DELETE'
+AestraAudio/include/Plugin/EffectChain.h:65: Memory deallocation (delete) found in critical section candidate: 'EffectChain& operator=(const EffectChain&) = delete; // ALLOW_REALTIME_DELETE'
+AestraAudio/include/DSP/SampleRateConverter.h:209: Memory deallocation (delete) found in critical section candidate: 'SampleRateConverter(const SampleRateConverter&) = delete; // ALLOW_REALTIME_DELETE'
+AestraAudio/include/DSP/SampleRateConverter.h:210: Memory deallocation (delete) found in critical section candidate: 'SampleRateConverter& operator=(const SampleRateConverter&) = delete; // ALLOW_REALTIME_DELETE'

@@ -313,6 +313,9 @@ set(AESTRA_USE_MINIAUDIO ON)
 # Apply miniaudio compile definition
 if (AESTRA_USE_MINIAUDIO)
     target_compile_definitions(AestraAudioCore PRIVATE AESTRA_USE_MINIAUDIO)
+    if(WIN32)
+        target_link_libraries(AestraAudioCore PRIVATE mfplat mfreadwrite mfuuid)
+    endif()
 endif()
 
 # AVX2/FMA: Enabled per-TU via #pragma in SincAVX2.h for safe runtime dispatch.
