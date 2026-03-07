@@ -3,14 +3,14 @@
 // Usage: OfflineRenderRegressionTest <project.aes> <reference.wav> [--tolerance-db N]
 
 #include "Core/AudioEngine.h"
-#include "Core/ProjectSerializer.h"
-#include "Core/TrackManager.h"
+#include "../../Source/Core/ProjectSerializer.h"
+#include "Models/TrackManager.h"
 
 #include <cstring>
 #include <fstream>
 #include <functional>
 #include <iostream>
-#include <math>
+#include <cmath>
 #include <vector>
 
 using namespace Aestra::Audio;
@@ -126,10 +126,11 @@ struct AudioMetrics {
 class OfflineRenderRegressionTest {
 public:
     struct Config {
-        double durationSeconds = 5.0;
-        uint32_t sampleRate = 48000;
-        double toleranceDb = -80.0; // -80dB = ~0.01% difference
-        bool requireExactMatch = false;
+        double durationSeconds;
+        uint32_t sampleRate;
+        double toleranceDb;
+        bool requireExactMatch;
+        Config() : durationSeconds(5.0), sampleRate(48000), toleranceDb(-80.0), requireExactMatch(false) {}
     };
 
     struct Result {
@@ -185,7 +186,12 @@ public:
             result.passed = AudioMetrics::isSimilar(renderedSamples, referenceSamples, m_config.toleranceDb);
         } else {
             // Relaxed: correlation > 0.999 and RMS diff < -60dB
-            result.passed = (result.correlation > 0.999) && (result.rmsDiffDb < -60.0);
+            // Handle NaN correlation caused by 0/0 when both samples are pure silence
+            if (std::isnan(result.correlation) && result.rmsDiffDb < -60.0 && rmsA < 1e-6 && rmsB < 1e-6) {
+                result.passed = true;
+            } else {
+                result.passed = (result.correlation > 0.999) && (result.rmsDiffDb < -60.0);
+            }
         }
 
         return result;
@@ -205,16 +211,15 @@ private:
         AudioEngine engine;
         engine.setSampleRate(targetSampleRate);
         engine.setBufferConfig(512, targetChannels);
-        engine.setTrackManager(trackManager);
+
+        // Bind the unit manager and patterns correctly to avoid crashing the audio pipeline
+        engine.setUnitManager(&trackManager->getUnitManager());
 
         if (loadResult.tempo > 0) {
-            engine.setBPM(loadResult.tempo);
+            engine.setBPM(static_cast<float>(loadResult.tempo));
         }
 
-        if (!engine.initialize()) {
-            std::cerr << "Failed to initialize audio engine\n";
-            return false;
-        }
+        engine.setTransportPlaying(true);
 
         uint32_t totalFrames = static_cast<uint32_t>(m_config.durationSeconds * targetSampleRate);
         uint32_t blocks = (totalFrames + 511) / 512;
