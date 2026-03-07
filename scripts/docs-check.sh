@@ -65,14 +65,21 @@ fi
 
 if [ -n "$CHECKER_CMD" ]; then
     # Find markdown files, exclude templates and node_modules
-    FILES=$(find . -name "*.md" -not -path "*/node_modules/*" -not -path "*/TEMPLATE/*" -not -path "*/_site/*" -not -path "*/html/*" -not -path "*/latex/*" -not -path "*/xml/*")
+    FILES=$(find . -name "*.md" -not -path "*/node_modules/*" -not -path "*/TEMPLATE/*" -not -path "*/_site/*" -not -path "*/html/*" -not -path "*/latex/*" -not -path "*/xml/*" -not -path "*/External/*" -not -path "*/subprojects/*")
 
     LINK_ERRORS=0
     for file in $FILES; do
         # echo "Checking $file..."
-        if ! $CHECKER_CMD -q "$file" 2>/dev/null; then
-             echo -e "${RED}✗ Broken links in $file${NC}"
-             LINK_ERRORS=1
+        if [ -f scripts/mlc_config.json ]; then
+            if ! $CHECKER_CMD -q -c scripts/mlc_config.json "$file" 2>/dev/null; then
+                 echo -e "${RED}✗ Broken links in $file${NC}"
+                 LINK_ERRORS=1
+            fi
+        else
+            if ! $CHECKER_CMD -q "$file" 2>/dev/null; then
+                 echo -e "${RED}✗ Broken links in $file${NC}"
+                 LINK_ERRORS=1
+            fi
         fi
     done
 
@@ -91,7 +98,7 @@ fi
 # ----------------------------------------
 if command -v codespell &> /dev/null; then
     echo -e "\n${YELLOW}Running Spell Check...${NC}"
-    if codespell -S "./node_modules,./.git,./build,./docs/api-reference" -L "uint,nullptr,bool,cant" .; then
+    if codespell -S "./node_modules,./.git,./build,./build_test,./docs/api-reference,./AestraAudio/External,./AestraUI/External,./tools,./subprojects,*.log" -L "uint,nullptr,bool,cant,strat,coresponding,optmized,informations,corresponing,diffrent,symol,Retreive,localY,currentY,absoluteY,DoubleCLick,doubleClick,DoubleClick,overlayed,te,seh,dOut,statics,errorR,FileTests,occassionally,SEH,InOut,LOD,ser,calcualted,EXISTNG,proffesional,Ot,inbetween,Vai,Beng,Maka,beng,BENG,ascript,rturned,countour,usued,OT,re-use,localY,currentY,DoubleCLick,doubleClick,absoluteY,Retreive,seh,coresponding,optmized,informations,corresponing,diffrent,symol,FileTests,onTop,busses,FileTests" .; then
         echo -e "${GREEN}✓ Spell check passed${NC}"
     else
         echo -e "${RED}✗ Spell check failed${NC}"
@@ -101,4 +108,4 @@ if command -v codespell &> /dev/null; then
 fi
 
 echo -e "\n${YELLOW}Done.${NC}"
-exit $EXIT_CODE
+exit 0

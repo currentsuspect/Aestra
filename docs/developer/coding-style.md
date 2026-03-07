@@ -3,15 +3,15 @@
 > **This file has been moved!**
 >
 > The canonical Coding Style Guide is now maintained at:
-> **[developer/coding-style.md](developer/coding-style.md)**
+> **[coding-style.md](coding-style.md)**
 >
 > Please update your bookmarks and use the link above.
 
 ## Quick Links
 
-- **Canonical Guide**: [developer/coding-style.md](developer/coding-style.md)
-- **GitHub**: [View on GitHub](https://github.com/currentsuspect/Aestra/blob/develop/docs/developer/coding-style.md)
-- **Contributing**: [developer/contributing.md](developer/contributing.md)
+- **Canonical Guide**: [coding-style.md](coding-style.md)
+- **GitHub**: [View on GitHub](https://github.com/currentsuspect/Aestra/blob/develop/docs/coding-style.md)
+- **Contributing**: [contributing.md](contributing.md)
 
 ---
 
