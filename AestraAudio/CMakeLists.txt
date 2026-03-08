@@ -378,6 +378,10 @@ endif()
 
 target_link_libraries(AestraAudioCore PUBLIC AestraPlat)
 
+if(WIN32)
+    target_link_libraries(AestraAudioCore PRIVATE mfplat mfreadwrite mfuuid)
+endif()
+
 # macOS frameworks needed by VST3 hosting
 if(APPLE)
     target_link_libraries(AestraAudioCore PUBLIC
