@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -13,7 +14,10 @@ struct AestraUUID {
     AestraUUID() = default;
     AestraUUID(uint64_t v) : low(v) {}
 
-    static AestraUUID generate() { return AestraUUID(1); }
+    static AestraUUID generate() {
+        static std::atomic<uint64_t> counter{1};
+        return AestraUUID(counter.fetch_add(1, std::memory_order_relaxed));
+    }
 
     bool operator==(const AestraUUID& other) const { return low == other.low && high == other.high; }
 
