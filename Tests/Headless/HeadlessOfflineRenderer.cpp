@@ -4,7 +4,7 @@
 
 #include "Core/AudioEngine.h"
 #include "Core/ProjectSerializer.h"
-#include "Core/TrackManager.h"
+#include "Models/TrackManager.h"
 #include "IO/OfflineRenderHarness.h"
 
 #include <cmath>
