@@ -140,7 +140,7 @@ public:
         std::string errorMessage;
     };
 
-    OfflineRenderRegressionTest(const Config& config = Config{}) : m_config(config) {}
+    OfflineRenderRegressionTest(const Config& config = Config()) : m_config(config) {}
 
     Result run(const std::string& projectPath, const std::string& referenceWavPath) {
         Result result;
