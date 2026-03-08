@@ -1,0 +1,15 @@
+MathTests 3 0.00713651
+ThreadingTests 3 0.21834
+FileTests 3 0.0132791
+LogTests 3 0.0965991
+ConfigAssertTests 3 0.0102908
+AestraAudioPerformanceTest 3 8.77788
+AestraAtomicSaveTest 3 0.0240188
+AestraWavLoaderTest 3 0.0182917
+AestraOscillatorTest 3 0.0266807
+AestraMixerBusTest 3 0.0106887
+TextRendererSTBSpaceTest 3 0.00667977
+CommandHistoryTest 3 0.0127292
+MoveClipCommandTest 2 0.0193064
+MacroCommandTest 3 0.0091203
+---

@@ -61,6 +61,11 @@ public:
         }
     }
 
+    void redo() override {
+        // For testing, redo just calls execute
+        execute();
+    }
+
     std::string getName() const override { return "FailingCommand"; }
 
 private:
