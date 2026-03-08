@@ -224,8 +224,6 @@ build CMakeFiles/AestraHeadless.dir/Source/App/HeadlessMain.cpp.o: CXX_COMPILER_
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/Source -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = CMakeFiles/AestraHeadless.dir
   OBJECT_FILE_DIR = CMakeFiles/AestraHeadless.dir/Source/App
-  TARGET_COMPILE_PDB = CMakeFiles/AestraHeadless.dir/
-  TARGET_PDB = bin/AestraHeadless.pdb
 
 build CMakeFiles/AestraHeadless.dir/Source/Core/ProjectSerializer.cpp.o: CXX_COMPILER__AestraHeadless_Debug /home/currentsuspect/.openclaw/workspace/Aestra/Source/Core/ProjectSerializer.cpp || cmake_object_order_depends_target_AestraHeadless
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAestra_ENABLE_PROFILING
@@ -234,8 +232,6 @@ build CMakeFiles/AestraHeadless.dir/Source/Core/ProjectSerializer.cpp.o: CXX_COM
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/Source -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = CMakeFiles/AestraHeadless.dir
   OBJECT_FILE_DIR = CMakeFiles/AestraHeadless.dir/Source/Core
-  TARGET_COMPILE_PDB = CMakeFiles/AestraHeadless.dir/
-  TARGET_PDB = bin/AestraHeadless.pdb
 
 
 # =============================================================================
@@ -251,9 +247,8 @@ build bin/AestraHeadless: CXX_EXECUTABLE_LINKER__AestraHeadless_Debug CMakeFiles
   OBJECT_DIR = CMakeFiles/AestraHeadless.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = CMakeFiles/AestraHeadless.dir/
   TARGET_FILE = bin/AestraHeadless
-  TARGET_PDB = bin/AestraHeadless.pdb
+  TARGET_PDB = AestraHeadless.dbg
 
 
 #############################################
@@ -536,8 +531,6 @@ build AestraCore/CMakeFiles/AestraCore.dir/src/AestraProfiler.cpp.o: CXX_COMPILE
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include
   OBJECT_DIR = AestraCore/CMakeFiles/AestraCore.dir
   OBJECT_FILE_DIR = AestraCore/CMakeFiles/AestraCore.dir/src
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/AestraCore.dir/AestraCore.pdb
-  TARGET_PDB = AestraCore/libAestraCore.pdb
 
 build AestraCore/CMakeFiles/AestraCore.dir/src/AestraUnifiedProfiler.cpp.o: CXX_COMPILER__AestraCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/src/AestraUnifiedProfiler.cpp || cmake_object_order_depends_target_AestraCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAestra_ENABLE_PROFILING
@@ -546,8 +539,6 @@ build AestraCore/CMakeFiles/AestraCore.dir/src/AestraUnifiedProfiler.cpp.o: CXX_
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include
   OBJECT_DIR = AestraCore/CMakeFiles/AestraCore.dir
   OBJECT_FILE_DIR = AestraCore/CMakeFiles/AestraCore.dir/src
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/AestraCore.dir/AestraCore.pdb
-  TARGET_PDB = AestraCore/libAestraCore.pdb
 
 build AestraCore/CMakeFiles/AestraCore.dir/src/PointerRegistry.cpp.o: CXX_COMPILER__AestraCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/src/PointerRegistry.cpp || cmake_object_order_depends_target_AestraCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAestra_ENABLE_PROFILING
@@ -556,8 +547,6 @@ build AestraCore/CMakeFiles/AestraCore.dir/src/PointerRegistry.cpp.o: CXX_COMPIL
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include
   OBJECT_DIR = AestraCore/CMakeFiles/AestraCore.dir
   OBJECT_FILE_DIR = AestraCore/CMakeFiles/AestraCore.dir/src
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/AestraCore.dir/AestraCore.pdb
-  TARGET_PDB = AestraCore/libAestraCore.pdb
 
 
 # =============================================================================
@@ -572,9 +561,8 @@ build AestraCore/libAestraCore.a: CXX_STATIC_LIBRARY_LINKER__AestraCore_Debug Ae
   OBJECT_DIR = AestraCore/CMakeFiles/AestraCore.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/AestraCore.dir/AestraCore.pdb
   TARGET_FILE = AestraCore/libAestraCore.a
-  TARGET_PDB = AestraCore/libAestraCore.pdb
+  TARGET_PDB = AestraCore.a.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target MathTests
@@ -592,8 +580,6 @@ build AestraCore/CMakeFiles/MathTests.dir/src/MathTests.cpp.o: CXX_COMPILER__Mat
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include
   OBJECT_DIR = AestraCore/CMakeFiles/MathTests.dir
   OBJECT_FILE_DIR = AestraCore/CMakeFiles/MathTests.dir/src
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/MathTests.dir/
-  TARGET_PDB = AestraCore/MathTests.pdb
 
 
 # =============================================================================
@@ -609,9 +595,8 @@ build AestraCore/MathTests: CXX_EXECUTABLE_LINKER__MathTests_Debug AestraCore/CM
   OBJECT_DIR = AestraCore/CMakeFiles/MathTests.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/MathTests.dir/
   TARGET_FILE = AestraCore/MathTests
-  TARGET_PDB = AestraCore/MathTests.pdb
+  TARGET_PDB = MathTests.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target ThreadingTests
@@ -629,8 +614,6 @@ build AestraCore/CMakeFiles/ThreadingTests.dir/src/ThreadingTests.cpp.o: CXX_COM
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include
   OBJECT_DIR = AestraCore/CMakeFiles/ThreadingTests.dir
   OBJECT_FILE_DIR = AestraCore/CMakeFiles/ThreadingTests.dir/src
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/ThreadingTests.dir/
-  TARGET_PDB = AestraCore/ThreadingTests.pdb
 
 
 # =============================================================================
@@ -646,9 +629,8 @@ build AestraCore/ThreadingTests: CXX_EXECUTABLE_LINKER__ThreadingTests_Debug Aes
   OBJECT_DIR = AestraCore/CMakeFiles/ThreadingTests.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/ThreadingTests.dir/
   TARGET_FILE = AestraCore/ThreadingTests
-  TARGET_PDB = AestraCore/ThreadingTests.pdb
+  TARGET_PDB = ThreadingTests.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target FileTests
@@ -666,8 +648,6 @@ build AestraCore/CMakeFiles/FileTests.dir/src/FileTests.cpp.o: CXX_COMPILER__Fil
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include
   OBJECT_DIR = AestraCore/CMakeFiles/FileTests.dir
   OBJECT_FILE_DIR = AestraCore/CMakeFiles/FileTests.dir/src
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/FileTests.dir/
-  TARGET_PDB = AestraCore/FileTests.pdb
 
 
 # =============================================================================
@@ -683,9 +663,8 @@ build AestraCore/FileTests: CXX_EXECUTABLE_LINKER__FileTests_Debug AestraCore/CM
   OBJECT_DIR = AestraCore/CMakeFiles/FileTests.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/FileTests.dir/
   TARGET_FILE = AestraCore/FileTests
-  TARGET_PDB = AestraCore/FileTests.pdb
+  TARGET_PDB = FileTests.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target LogTests
@@ -703,8 +682,6 @@ build AestraCore/CMakeFiles/LogTests.dir/src/LogTests.cpp.o: CXX_COMPILER__LogTe
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include
   OBJECT_DIR = AestraCore/CMakeFiles/LogTests.dir
   OBJECT_FILE_DIR = AestraCore/CMakeFiles/LogTests.dir/src
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/LogTests.dir/
-  TARGET_PDB = AestraCore/LogTests.pdb
 
 
 # =============================================================================
@@ -720,9 +697,8 @@ build AestraCore/LogTests: CXX_EXECUTABLE_LINKER__LogTests_Debug AestraCore/CMak
   OBJECT_DIR = AestraCore/CMakeFiles/LogTests.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/LogTests.dir/
   TARGET_FILE = AestraCore/LogTests
-  TARGET_PDB = AestraCore/LogTests.pdb
+  TARGET_PDB = LogTests.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target ConfigAssertTests
@@ -740,8 +716,6 @@ build AestraCore/CMakeFiles/ConfigAssertTests.dir/src/ConfigAssertTests.cpp.o: C
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include
   OBJECT_DIR = AestraCore/CMakeFiles/ConfigAssertTests.dir
   OBJECT_FILE_DIR = AestraCore/CMakeFiles/ConfigAssertTests.dir/src
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/ConfigAssertTests.dir/
-  TARGET_PDB = AestraCore/ConfigAssertTests.pdb
 
 
 # =============================================================================
@@ -757,9 +731,8 @@ build AestraCore/ConfigAssertTests: CXX_EXECUTABLE_LINKER__ConfigAssertTests_Deb
   OBJECT_DIR = AestraCore/CMakeFiles/ConfigAssertTests.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = AestraCore/CMakeFiles/ConfigAssertTests.dir/
   TARGET_FILE = AestraCore/ConfigAssertTests
-  TARGET_PDB = AestraCore/ConfigAssertTests.pdb
+  TARGET_PDB = ConfigAssertTests.dbg
 
 
 #############################################
@@ -818,8 +791,6 @@ build AestraPlat/CMakeFiles/AestraPlat.dir/src/Platform.cpp.o: CXX_COMPILER__Aes
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/../AestraUI/External/glad/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include
   OBJECT_DIR = AestraPlat/CMakeFiles/AestraPlat.dir
   OBJECT_FILE_DIR = AestraPlat/CMakeFiles/AestraPlat.dir/src
-  TARGET_COMPILE_PDB = AestraPlat/CMakeFiles/AestraPlat.dir/AestraPlat.pdb
-  TARGET_PDB = AestraPlat/libAestraPlat.pdb
 
 
 # =============================================================================
@@ -834,9 +805,8 @@ build AestraPlat/libAestraPlat.a: CXX_STATIC_LIBRARY_LINKER__AestraPlat_Debug Ae
   OBJECT_DIR = AestraPlat/CMakeFiles/AestraPlat.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = AestraPlat/CMakeFiles/AestraPlat.dir/AestraPlat.pdb
   TARGET_FILE = AestraPlat/libAestraPlat.a
-  TARGET_PDB = AestraPlat/libAestraPlat.pdb
+  TARGET_PDB = AestraPlat.a.dbg
 
 
 #############################################
@@ -895,8 +865,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core/AudioEngine.cpp.o: CXX
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core/AudioDeviceManager.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core/AudioDeviceManager.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -905,8 +873,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core/AudioDeviceManager.cpp
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core/DriverRegistryStub.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core/DriverRegistryStub.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -915,8 +881,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core/DriverRegistryStub.cpp
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core/MixerBus.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core/MixerBus.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -925,8 +889,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core/MixerBus.cpp.o: CXX_CO
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core/MixerChannel.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core/MixerChannel.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -935,8 +897,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core/MixerChannel.cpp.o: CX
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Core
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback/AuditionEngine.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback/AuditionEngine.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -945,8 +905,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback/AuditionEngine.cpp
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback/PreviewEngine.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback/PreviewEngine.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -955,8 +913,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback/PreviewEngine.cpp.
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback/PatternPlaybackEngine.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback/PatternPlaybackEngine.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -965,8 +921,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback/PatternPlaybackEng
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback/MetronomeEngine.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback/MetronomeEngine.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -975,8 +929,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback/MetronomeEngine.cp
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback/TimelineClock.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback/TimelineClock.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -985,8 +937,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback/TimelineClock.cpp.
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Playback
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/TrackManager.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models/TrackManager.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -995,8 +945,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/TrackManager.cpp.o: 
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/PlaylistModel.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models/PlaylistModel.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1005,8 +953,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/PlaylistModel.cpp.o:
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/UnitManager.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models/UnitManager.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1015,8 +961,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/UnitManager.cpp.o: C
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/PatternManager.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models/PatternManager.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1025,8 +969,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/PatternManager.cpp.o
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/ClipSource.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models/ClipSource.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1035,8 +977,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/ClipSource.cpp.o: CX
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/AudioClip.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models/AudioClip.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1045,8 +985,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/AudioClip.cpp.o: CXX
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/PlaylistTrack.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models/PlaylistTrack.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1055,8 +993,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models/PlaylistTrack.cpp.o:
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Models
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP/AudioProcessor.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP/AudioProcessor.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1065,8 +1001,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP/AudioProcessor.cpp.o: C
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP/Filter.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP/Filter.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1075,8 +1009,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP/Filter.cpp.o: CXX_COMPI
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP/Oscillator.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP/Oscillator.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1085,8 +1017,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP/Oscillator.cpp.o: CXX_C
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP/SincAVX512.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP/SincAVX512.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1095,8 +1025,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP/SincAVX512.cpp.o: CXX_C
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP/SampleRateConverter.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP/SampleRateConverter.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1105,8 +1033,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP/SampleRateConverter.cpp
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/DSP
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO/MiniAudioDecoder.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO/MiniAudioDecoder.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1115,8 +1041,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO/MiniAudioDecoder.cpp.o: 
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO/StreamingDecoder.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO/StreamingDecoder.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1125,8 +1049,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO/StreamingDecoder.cpp.o: 
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO/WaveformCache.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO/WaveformCache.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1135,8 +1057,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO/WaveformCache.cpp.o: CXX
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO/PathUtils.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO/PathUtils.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1145,8 +1065,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO/PathUtils.cpp.o: CXX_COM
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO/MetadataParser.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO/MetadataParser.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1155,8 +1073,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO/MetadataParser.cpp.o: CX
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/IO
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Drivers/DummyAudioDriver.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers/DummyAudioDriver.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1165,8 +1081,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Drivers/DummyAudioDriver.cp
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Drivers
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/AudioGraphBuilder.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/AudioGraphBuilder.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1175,8 +1089,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/AudioGraphBuilder.cpp.o: CX
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/ChannelSlotMap.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/ChannelSlotMap.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1185,8 +1097,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/ChannelSlotMap.cpp.o: CXX_C
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/SamplePool.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/SamplePool.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1195,8 +1105,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/SamplePool.cpp.o: CXX_COMPI
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/AudioRenderer.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/AudioRenderer.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1205,8 +1113,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/AudioRenderer.cpp.o: CXX_CO
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Commands/CommandHistory.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands/CommandHistory.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1215,8 +1121,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Commands/CommandHistory.cpp
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Commands
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Commands/SplitClipCommand.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands/SplitClipCommand.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1225,8 +1129,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Commands/SplitClipCommand.c
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Commands
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Commands/AddClipCommand.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands/AddClipCommand.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1235,8 +1137,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Commands/AddClipCommand.cpp
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Commands
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin/PluginScanner.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin/PluginScanner.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1245,8 +1145,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin/PluginScanner.cpp.o:
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin/PluginManager.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin/PluginManager.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1255,8 +1153,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin/PluginManager.cpp.o:
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin/PluginFactory.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin/PluginFactory.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1265,8 +1161,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin/PluginFactory.cpp.o:
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin/SamplerPlugin.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin/SamplerPlugin.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1275,8 +1169,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin/SamplerPlugin.cpp.o:
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin/EffectChain.cpp.o: CXX_COMPILER__AestraAudioCore_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin/EffectChain.cpp || cmake_object_order_depends_target_AestraAudioCore
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAESTRA_USE_MINIAUDIO -DAestra_ENABLE_PROFILING -D__LINUX_ALSA__
@@ -1285,8 +1177,6 @@ build AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin/EffectChain.cpp.o: C
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/../AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/External/miniaudio -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   OBJECT_FILE_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Plugin
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
 
 
 # =============================================================================
@@ -1301,9 +1191,8 @@ build AestraAudio/libAestraAudioCore.a: CXX_STATIC_LIBRARY_LINKER__AestraAudioCo
   OBJECT_DIR = AestraAudio/CMakeFiles/AestraAudioCore.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = AestraAudio/CMakeFiles/AestraAudioCore.dir/AestraAudioCore.pdb
   TARGET_FILE = AestraAudio/libAestraAudioCore.a
-  TARGET_PDB = AestraAudio/libAestraAudioCore.pdb
+  TARGET_PDB = AestraAudioCore.a.dbg
 
 
 #############################################
@@ -1362,8 +1251,6 @@ build Tests/CMakeFiles/VST3PluginTest.dir/Integration/VST3PluginTest.cpp.o: CXX_
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/VST3PluginTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/VST3PluginTest.dir/Integration
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/VST3PluginTest.dir/
-  TARGET_PDB = Tests/VST3PluginTest.pdb
 
 
 # =============================================================================
@@ -1379,9 +1266,8 @@ build Tests/VST3PluginTest: CXX_EXECUTABLE_LINKER__VST3PluginTest_Debug Tests/CM
   OBJECT_DIR = Tests/CMakeFiles/VST3PluginTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/VST3PluginTest.dir/
   TARGET_FILE = Tests/VST3PluginTest
-  TARGET_PDB = Tests/VST3PluginTest.pdb
+  TARGET_PDB = VST3PluginTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target ProjectRoundTripTest
@@ -1399,8 +1285,6 @@ build Tests/CMakeFiles/ProjectRoundTripTest.dir/Integration/ProjectRoundTripTest
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/Source -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/ProjectRoundTripTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/ProjectRoundTripTest.dir/Integration
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/ProjectRoundTripTest.dir/
-  TARGET_PDB = Tests/ProjectRoundTripTest.pdb
 
 build Tests/CMakeFiles/ProjectRoundTripTest.dir/__/Source/Core/ProjectSerializer.cpp.o: CXX_COMPILER__ProjectRoundTripTest_Debug /home/currentsuspect/.openclaw/workspace/Aestra/Source/Core/ProjectSerializer.cpp || cmake_object_order_depends_target_ProjectRoundTripTest
   DEFINES = -DAESTRA_ENABLE_PROJECT_LOAD_LOGS -DAESTRA_PLATFORM_LINUX=1 -DAestra_ENABLE_PROFILING
@@ -1409,8 +1293,6 @@ build Tests/CMakeFiles/ProjectRoundTripTest.dir/__/Source/Core/ProjectSerializer
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/Source -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/ProjectRoundTripTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/ProjectRoundTripTest.dir/__/Source/Core
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/ProjectRoundTripTest.dir/
-  TARGET_PDB = Tests/ProjectRoundTripTest.pdb
 
 
 # =============================================================================
@@ -1426,9 +1308,8 @@ build Tests/ProjectRoundTripTest: CXX_EXECUTABLE_LINKER__ProjectRoundTripTest_De
   OBJECT_DIR = Tests/CMakeFiles/ProjectRoundTripTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/ProjectRoundTripTest.dir/
   TARGET_FILE = Tests/ProjectRoundTripTest
-  TARGET_PDB = Tests/ProjectRoundTripTest.pdb
+  TARGET_PDB = ProjectRoundTripTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target AestraPluginScanTest
@@ -1446,8 +1327,6 @@ build Tests/CMakeFiles/AestraPluginScanTest.dir/Integration/PluginScanTest.cpp.o
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraPluginScanTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraPluginScanTest.dir/Integration
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraPluginScanTest.dir/
-  TARGET_PDB = Tests/AestraPluginScanTest.pdb
 
 
 # =============================================================================
@@ -1463,9 +1342,8 @@ build Tests/AestraPluginScanTest: CXX_EXECUTABLE_LINKER__AestraPluginScanTest_De
   OBJECT_DIR = Tests/CMakeFiles/AestraPluginScanTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraPluginScanTest.dir/
   TARGET_FILE = Tests/AestraPluginScanTest
-  TARGET_PDB = Tests/AestraPluginScanTest.pdb
+  TARGET_PDB = AestraPluginScanTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target ResamplerBenchmark
@@ -1483,8 +1361,6 @@ build Tests/CMakeFiles/ResamplerBenchmark.dir/Integration/ResamplerBenchmark.cpp
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/ResamplerBenchmark.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/ResamplerBenchmark.dir/Integration
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/ResamplerBenchmark.dir/
-  TARGET_PDB = Tests/ResamplerBenchmark.pdb
 
 
 # =============================================================================
@@ -1500,9 +1376,8 @@ build Tests/ResamplerBenchmark: CXX_EXECUTABLE_LINKER__ResamplerBenchmark_Debug 
   OBJECT_DIR = Tests/CMakeFiles/ResamplerBenchmark.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/ResamplerBenchmark.dir/
   TARGET_FILE = Tests/ResamplerBenchmark
-  TARGET_PDB = Tests/ResamplerBenchmark.pdb
+  TARGET_PDB = ResamplerBenchmark.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target AestraAudioTest
@@ -1520,8 +1395,6 @@ build Tests/CMakeFiles/AestraAudioTest.dir/AestraAudio/AudioTest.cpp.o: CXX_COMP
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraAudioTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraAudioTest.dir/AestraAudio
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraAudioTest.dir/
-  TARGET_PDB = Tests/AestraAudioTest.pdb
 
 
 # =============================================================================
@@ -1537,9 +1410,8 @@ build Tests/AestraAudioTest: CXX_EXECUTABLE_LINKER__AestraAudioTest_Debug Tests/
   OBJECT_DIR = Tests/CMakeFiles/AestraAudioTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraAudioTest.dir/
   TARGET_FILE = Tests/AestraAudioTest
-  TARGET_PDB = Tests/AestraAudioTest.pdb
+  TARGET_PDB = AestraAudioTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target AestraAudioSoakTest
@@ -1557,8 +1429,6 @@ build Tests/CMakeFiles/AestraAudioSoakTest.dir/AestraAudio/AudioEngineSoakTest.c
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraAudioSoakTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraAudioSoakTest.dir/AestraAudio
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraAudioSoakTest.dir/
-  TARGET_PDB = Tests/AestraAudioSoakTest.pdb
 
 
 # =============================================================================
@@ -1574,9 +1444,8 @@ build Tests/AestraAudioSoakTest: CXX_EXECUTABLE_LINKER__AestraAudioSoakTest_Debu
   OBJECT_DIR = Tests/CMakeFiles/AestraAudioSoakTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraAudioSoakTest.dir/
   TARGET_FILE = Tests/AestraAudioSoakTest
-  TARGET_PDB = Tests/AestraAudioSoakTest.pdb
+  TARGET_PDB = AestraAudioSoakTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target AestraAudioPerformanceTest
@@ -1594,8 +1463,6 @@ build Tests/CMakeFiles/AestraAudioPerformanceTest.dir/AestraAudio/PerformanceStr
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraAudioPerformanceTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraAudioPerformanceTest.dir/AestraAudio
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraAudioPerformanceTest.dir/
-  TARGET_PDB = Tests/AestraAudioPerformanceTest.pdb
 
 build Tests/CMakeFiles/AestraAudioPerformanceTest.dir/__/AestraAudio/src/DSP/Filter.cpp.o: CXX_COMPILER__AestraAudioPerformanceTest_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP/Filter.cpp || cmake_object_order_depends_target_AestraAudioPerformanceTest
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAestra_ENABLE_PROFILING
@@ -1604,8 +1471,6 @@ build Tests/CMakeFiles/AestraAudioPerformanceTest.dir/__/AestraAudio/src/DSP/Fil
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraAudioPerformanceTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraAudioPerformanceTest.dir/__/AestraAudio/src/DSP
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraAudioPerformanceTest.dir/
-  TARGET_PDB = Tests/AestraAudioPerformanceTest.pdb
 
 build Tests/CMakeFiles/AestraAudioPerformanceTest.dir/__/AestraAudio/src/DSP/Oscillator.cpp.o: CXX_COMPILER__AestraAudioPerformanceTest_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/DSP/Oscillator.cpp || cmake_object_order_depends_target_AestraAudioPerformanceTest
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAestra_ENABLE_PROFILING
@@ -1614,8 +1479,6 @@ build Tests/CMakeFiles/AestraAudioPerformanceTest.dir/__/AestraAudio/src/DSP/Osc
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraAudioPerformanceTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraAudioPerformanceTest.dir/__/AestraAudio/src/DSP
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraAudioPerformanceTest.dir/
-  TARGET_PDB = Tests/AestraAudioPerformanceTest.pdb
 
 
 # =============================================================================
@@ -1631,9 +1494,8 @@ build Tests/AestraAudioPerformanceTest: CXX_EXECUTABLE_LINKER__AestraAudioPerfor
   OBJECT_DIR = Tests/CMakeFiles/AestraAudioPerformanceTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraAudioPerformanceTest.dir/
   TARGET_FILE = Tests/AestraAudioPerformanceTest
-  TARGET_PDB = Tests/AestraAudioPerformanceTest.pdb
+  TARGET_PDB = AestraAudioPerformanceTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target AestraSincBenchmark
@@ -1651,8 +1513,6 @@ build Tests/CMakeFiles/AestraSincBenchmark.dir/AestraAudio/SincBenchmark.cpp.o: 
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraSincBenchmark.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraSincBenchmark.dir/AestraAudio
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraSincBenchmark.dir/
-  TARGET_PDB = Tests/AestraSincBenchmark.pdb
 
 
 # =============================================================================
@@ -1668,9 +1528,8 @@ build Tests/AestraSincBenchmark: CXX_EXECUTABLE_LINKER__AestraSincBenchmark_Debu
   OBJECT_DIR = Tests/CMakeFiles/AestraSincBenchmark.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraSincBenchmark.dir/
   TARGET_FILE = Tests/AestraSincBenchmark
-  TARGET_PDB = Tests/AestraSincBenchmark.pdb
+  TARGET_PDB = AestraSincBenchmark.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target AestraWaveformLockTest
@@ -1688,8 +1547,6 @@ build Tests/CMakeFiles/AestraWaveformLockTest.dir/AestraAudio/WaveformLockTest.c
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraWaveformLockTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraWaveformLockTest.dir/AestraAudio
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraWaveformLockTest.dir/
-  TARGET_PDB = Tests/AestraWaveformLockTest.pdb
 
 build Tests/CMakeFiles/AestraWaveformLockTest.dir/__/AestraAudio/src/IO/WaveformCache.cpp.o: CXX_COMPILER__AestraWaveformLockTest_Debug /home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/src/IO/WaveformCache.cpp || cmake_object_order_depends_target_AestraWaveformLockTest
   DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAestra_ENABLE_PROFILING
@@ -1698,8 +1555,6 @@ build Tests/CMakeFiles/AestraWaveformLockTest.dir/__/AestraAudio/src/IO/Waveform
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraWaveformLockTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraWaveformLockTest.dir/__/AestraAudio/src/IO
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraWaveformLockTest.dir/
-  TARGET_PDB = Tests/AestraWaveformLockTest.pdb
 
 
 # =============================================================================
@@ -1715,9 +1570,8 @@ build Tests/AestraWaveformLockTest: CXX_EXECUTABLE_LINKER__AestraWaveformLockTes
   OBJECT_DIR = Tests/CMakeFiles/AestraWaveformLockTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraWaveformLockTest.dir/
   TARGET_FILE = Tests/AestraWaveformLockTest
-  TARGET_PDB = Tests/AestraWaveformLockTest.pdb
+  TARGET_PDB = AestraWaveformLockTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target AestraAtomicSaveTest
@@ -1735,8 +1589,6 @@ build Tests/CMakeFiles/AestraAtomicSaveTest.dir/AestraAudio/AtomicSaveTest.cpp.o
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include
   OBJECT_DIR = Tests/CMakeFiles/AestraAtomicSaveTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraAtomicSaveTest.dir/AestraAudio
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraAtomicSaveTest.dir/
-  TARGET_PDB = Tests/AestraAtomicSaveTest.pdb
 
 
 # =============================================================================
@@ -1752,9 +1604,8 @@ build Tests/AestraAtomicSaveTest: CXX_EXECUTABLE_LINKER__AestraAtomicSaveTest_De
   OBJECT_DIR = Tests/CMakeFiles/AestraAtomicSaveTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraAtomicSaveTest.dir/
   TARGET_FILE = Tests/AestraAtomicSaveTest
-  TARGET_PDB = Tests/AestraAtomicSaveTest.pdb
+  TARGET_PDB = AestraAtomicSaveTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target AestraWavLoaderTest
@@ -1772,8 +1623,6 @@ build Tests/CMakeFiles/AestraWavLoaderTest.dir/AestraAudio/WavLoaderTest.cpp.o: 
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraWavLoaderTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraWavLoaderTest.dir/AestraAudio
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraWavLoaderTest.dir/
-  TARGET_PDB = Tests/AestraWavLoaderTest.pdb
 
 
 # =============================================================================
@@ -1789,9 +1638,8 @@ build Tests/AestraWavLoaderTest: CXX_EXECUTABLE_LINKER__AestraWavLoaderTest_Debu
   OBJECT_DIR = Tests/CMakeFiles/AestraWavLoaderTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraWavLoaderTest.dir/
   TARGET_FILE = Tests/AestraWavLoaderTest
-  TARGET_PDB = Tests/AestraWavLoaderTest.pdb
+  TARGET_PDB = AestraWavLoaderTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target AestraAudioCallbackTest
@@ -1809,8 +1657,6 @@ build Tests/CMakeFiles/AestraAudioCallbackTest.dir/AestraAudio/AudioCallbackTest
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraAudioCallbackTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraAudioCallbackTest.dir/AestraAudio
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraAudioCallbackTest.dir/
-  TARGET_PDB = Tests/AestraAudioCallbackTest.pdb
 
 
 # =============================================================================
@@ -1826,9 +1672,8 @@ build Tests/AestraAudioCallbackTest: CXX_EXECUTABLE_LINKER__AestraAudioCallbackT
   OBJECT_DIR = Tests/CMakeFiles/AestraAudioCallbackTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraAudioCallbackTest.dir/
   TARGET_FILE = Tests/AestraAudioCallbackTest
-  TARGET_PDB = Tests/AestraAudioCallbackTest.pdb
+  TARGET_PDB = AestraAudioCallbackTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target AestraFilterTest
@@ -1846,8 +1691,6 @@ build Tests/CMakeFiles/AestraFilterTest.dir/AestraAudio/FilterTest.cpp.o: CXX_CO
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraFilterTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraFilterTest.dir/AestraAudio
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraFilterTest.dir/
-  TARGET_PDB = Tests/AestraFilterTest.pdb
 
 
 # =============================================================================
@@ -1863,9 +1706,8 @@ build Tests/AestraFilterTest: CXX_EXECUTABLE_LINKER__AestraFilterTest_Debug Test
   OBJECT_DIR = Tests/CMakeFiles/AestraFilterTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraFilterTest.dir/
   TARGET_FILE = Tests/AestraFilterTest
-  TARGET_PDB = Tests/AestraFilterTest.pdb
+  TARGET_PDB = AestraFilterTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target AestraOscillatorTest
@@ -1883,8 +1725,6 @@ build Tests/CMakeFiles/AestraOscillatorTest.dir/AestraAudio/OscillatorTest.cpp.o
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraOscillatorTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraOscillatorTest.dir/AestraAudio
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraOscillatorTest.dir/
-  TARGET_PDB = Tests/AestraOscillatorTest.pdb
 
 
 # =============================================================================
@@ -1900,9 +1740,8 @@ build Tests/AestraOscillatorTest: CXX_EXECUTABLE_LINKER__AestraOscillatorTest_De
   OBJECT_DIR = Tests/CMakeFiles/AestraOscillatorTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraOscillatorTest.dir/
   TARGET_FILE = Tests/AestraOscillatorTest
-  TARGET_PDB = Tests/AestraOscillatorTest.pdb
+  TARGET_PDB = AestraOscillatorTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target AestraMixerBusTest
@@ -1920,8 +1759,6 @@ build Tests/CMakeFiles/AestraMixerBusTest.dir/AestraAudio/MixerBusTest.cpp.o: CX
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraMixerBusTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraMixerBusTest.dir/AestraAudio
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraMixerBusTest.dir/
-  TARGET_PDB = Tests/AestraMixerBusTest.pdb
 
 
 # =============================================================================
@@ -1937,9 +1774,8 @@ build Tests/AestraMixerBusTest: CXX_EXECUTABLE_LINKER__AestraMixerBusTest_Debug 
   OBJECT_DIR = Tests/CMakeFiles/AestraMixerBusTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraMixerBusTest.dir/
   TARGET_FILE = Tests/AestraMixerBusTest
-  TARGET_PDB = Tests/AestraMixerBusTest.pdb
+  TARGET_PDB = AestraMixerBusTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target AestraSampleRateConverterTest
@@ -1957,8 +1793,6 @@ build Tests/CMakeFiles/AestraSampleRateConverterTest.dir/AestraAudio/SampleRateC
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/AestraSampleRateConverterTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/AestraSampleRateConverterTest.dir/AestraAudio
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraSampleRateConverterTest.dir/
-  TARGET_PDB = Tests/AestraSampleRateConverterTest.pdb
 
 
 # =============================================================================
@@ -1974,9 +1808,8 @@ build Tests/AestraSampleRateConverterTest: CXX_EXECUTABLE_LINKER__AestraSampleRa
   OBJECT_DIR = Tests/CMakeFiles/AestraSampleRateConverterTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/AestraSampleRateConverterTest.dir/
   TARGET_FILE = Tests/AestraSampleRateConverterTest
-  TARGET_PDB = Tests/AestraSampleRateConverterTest.pdb
+  TARGET_PDB = AestraSampleRateConverterTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target PlatformDPITest
@@ -1994,8 +1827,6 @@ build Tests/CMakeFiles/PlatformDPITest.dir/AestraPlat/PlatformDPITest.cpp.o: CXX
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include
   OBJECT_DIR = Tests/CMakeFiles/PlatformDPITest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/PlatformDPITest.dir/AestraPlat
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/PlatformDPITest.dir/
-  TARGET_PDB = Tests/PlatformDPITest.pdb
 
 
 # =============================================================================
@@ -2011,9 +1842,8 @@ build Tests/PlatformDPITest: CXX_EXECUTABLE_LINKER__PlatformDPITest_Debug Tests/
   OBJECT_DIR = Tests/CMakeFiles/PlatformDPITest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/PlatformDPITest.dir/
   TARGET_FILE = Tests/PlatformDPITest
-  TARGET_PDB = Tests/PlatformDPITest.pdb
+  TARGET_PDB = PlatformDPITest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target PlatformWindowTest
@@ -2031,8 +1861,6 @@ build Tests/CMakeFiles/PlatformWindowTest.dir/AestraPlat/PlatformWindowTest.cpp.
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include
   OBJECT_DIR = Tests/CMakeFiles/PlatformWindowTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/PlatformWindowTest.dir/AestraPlat
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/PlatformWindowTest.dir/
-  TARGET_PDB = Tests/PlatformWindowTest.pdb
 
 
 # =============================================================================
@@ -2048,9 +1876,8 @@ build Tests/PlatformWindowTest: CXX_EXECUTABLE_LINKER__PlatformWindowTest_Debug 
   OBJECT_DIR = Tests/CMakeFiles/PlatformWindowTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/PlatformWindowTest.dir/
   TARGET_FILE = Tests/PlatformWindowTest
-  TARGET_PDB = Tests/PlatformWindowTest.pdb
+  TARGET_PDB = PlatformWindowTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target TextRendererSTBSpaceTest
@@ -2067,8 +1894,6 @@ build Tests/CMakeFiles/TextRendererSTBSpaceTest.dir/AestraUI/TextRendererSTBSpac
   FLAGS = -g -fPIE -std=gnu++17
   OBJECT_DIR = Tests/CMakeFiles/TextRendererSTBSpaceTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/TextRendererSTBSpaceTest.dir/AestraUI
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/TextRendererSTBSpaceTest.dir/
-  TARGET_PDB = Tests/TextRendererSTBSpaceTest.pdb
 
 
 # =============================================================================
@@ -2083,9 +1908,8 @@ build Tests/TextRendererSTBSpaceTest: CXX_EXECUTABLE_LINKER__TextRendererSTBSpac
   OBJECT_DIR = Tests/CMakeFiles/TextRendererSTBSpaceTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/TextRendererSTBSpaceTest.dir/
   TARGET_FILE = Tests/TextRendererSTBSpaceTest
-  TARGET_PDB = Tests/TextRendererSTBSpaceTest.pdb
+  TARGET_PDB = TextRendererSTBSpaceTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target CommandHistoryTest
@@ -2103,8 +1927,6 @@ build Tests/CMakeFiles/CommandHistoryTest.dir/Commands/CommandHistoryTest.cpp.o:
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/CommandHistoryTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/CommandHistoryTest.dir/Commands
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/CommandHistoryTest.dir/
-  TARGET_PDB = Tests/CommandHistoryTest.pdb
 
 
 # =============================================================================
@@ -2120,9 +1942,8 @@ build Tests/CommandHistoryTest: CXX_EXECUTABLE_LINKER__CommandHistoryTest_Debug 
   OBJECT_DIR = Tests/CMakeFiles/CommandHistoryTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/CommandHistoryTest.dir/
   TARGET_FILE = Tests/CommandHistoryTest
-  TARGET_PDB = Tests/CommandHistoryTest.pdb
+  TARGET_PDB = CommandHistoryTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target MoveClipCommandTest
@@ -2140,8 +1961,6 @@ build Tests/CMakeFiles/MoveClipCommandTest.dir/Commands/MoveClipCommandTest.cpp.
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/MoveClipCommandTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/MoveClipCommandTest.dir/Commands
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/MoveClipCommandTest.dir/
-  TARGET_PDB = Tests/MoveClipCommandTest.pdb
 
 
 # =============================================================================
@@ -2157,9 +1976,8 @@ build Tests/MoveClipCommandTest: CXX_EXECUTABLE_LINKER__MoveClipCommandTest_Debu
   OBJECT_DIR = Tests/CMakeFiles/MoveClipCommandTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/MoveClipCommandTest.dir/
   TARGET_FILE = Tests/MoveClipCommandTest
-  TARGET_PDB = Tests/MoveClipCommandTest.pdb
+  TARGET_PDB = MoveClipCommandTest.dbg
 
 # =============================================================================
 # Object build statements for EXECUTABLE target MacroCommandTest
@@ -2177,8 +1995,6 @@ build Tests/CMakeFiles/MacroCommandTest.dir/Commands/MacroCommandTest.cpp.o: CXX
   INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
   OBJECT_DIR = Tests/CMakeFiles/MacroCommandTest.dir
   OBJECT_FILE_DIR = Tests/CMakeFiles/MacroCommandTest.dir/Commands
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/MacroCommandTest.dir/
-  TARGET_PDB = Tests/MacroCommandTest.pdb
 
 
 # =============================================================================
@@ -2194,9 +2010,8 @@ build Tests/MacroCommandTest: CXX_EXECUTABLE_LINKER__MacroCommandTest_Debug Test
   OBJECT_DIR = Tests/CMakeFiles/MacroCommandTest.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = Tests/CMakeFiles/MacroCommandTest.dir/
   TARGET_FILE = Tests/MacroCommandTest
-  TARGET_PDB = Tests/MacroCommandTest.pdb
+  TARGET_PDB = MacroCommandTest.dbg
 
 
 #############################################
@@ -2238,6 +2053,90 @@ build Tests/rebuild_cache: phony Tests/CMakeFiles/rebuild_cache.util
 # Write statements declared in CMakeLists.txt:
 # /home/currentsuspect/.openclaw/workspace/Aestra/Tests/CMakeLists.txt
 # =============================================================================
+
+# =============================================================================
+# Object build statements for EXECUTABLE target HeadlessOfflineRenderer
+
+
+#############################################
+# Order-only phony target for HeadlessOfflineRenderer
+
+build cmake_object_order_depends_target_HeadlessOfflineRenderer: phony || cmake_object_order_depends_target_AestraAudioCore cmake_object_order_depends_target_AestraCore cmake_object_order_depends_target_AestraPlat
+
+build Tests/Headless/CMakeFiles/HeadlessOfflineRenderer.dir/HeadlessOfflineRenderer.cpp.o: CXX_COMPILER__HeadlessOfflineRenderer_Debug /home/currentsuspect/.openclaw/workspace/Aestra/Tests/Headless/HeadlessOfflineRenderer.cpp || cmake_object_order_depends_target_HeadlessOfflineRenderer
+  DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAestra_ENABLE_PROFILING
+  DEP_FILE = Tests/Headless/CMakeFiles/HeadlessOfflineRenderer.dir/HeadlessOfflineRenderer.cpp.o.d
+  FLAGS = -g -fPIE -std=gnu++17
+  INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/Source -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
+  OBJECT_DIR = Tests/Headless/CMakeFiles/HeadlessOfflineRenderer.dir
+  OBJECT_FILE_DIR = Tests/Headless/CMakeFiles/HeadlessOfflineRenderer.dir
+
+build Tests/Headless/CMakeFiles/HeadlessOfflineRenderer.dir/__/__/Source/Core/ProjectSerializer.cpp.o: CXX_COMPILER__HeadlessOfflineRenderer_Debug /home/currentsuspect/.openclaw/workspace/Aestra/Source/Core/ProjectSerializer.cpp || cmake_object_order_depends_target_HeadlessOfflineRenderer
+  DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAestra_ENABLE_PROFILING
+  DEP_FILE = Tests/Headless/CMakeFiles/HeadlessOfflineRenderer.dir/__/__/Source/Core/ProjectSerializer.cpp.o.d
+  FLAGS = -g -fPIE -std=gnu++17
+  INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/Source -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
+  OBJECT_DIR = Tests/Headless/CMakeFiles/HeadlessOfflineRenderer.dir
+  OBJECT_FILE_DIR = Tests/Headless/CMakeFiles/HeadlessOfflineRenderer.dir/__/__/Source/Core
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target HeadlessOfflineRenderer
+
+
+#############################################
+# Link the executable Tests/Headless/HeadlessOfflineRenderer
+
+build Tests/Headless/HeadlessOfflineRenderer: CXX_EXECUTABLE_LINKER__HeadlessOfflineRenderer_Debug Tests/Headless/CMakeFiles/HeadlessOfflineRenderer.dir/HeadlessOfflineRenderer.cpp.o Tests/Headless/CMakeFiles/HeadlessOfflineRenderer.dir/__/__/Source/Core/ProjectSerializer.cpp.o | AestraAudio/libAestraAudioCore.a AestraCore/libAestraCore.a AestraPlat/libAestraPlat.a AestraCore/libAestraCore.a || AestraAudio/libAestraAudioCore.a AestraCore/libAestraCore.a AestraPlat/libAestraPlat.a
+  FLAGS = -g
+  LINK_LIBRARIES = AestraAudio/libAestraAudioCore.a  AestraCore/libAestraCore.a  AestraPlat/libAestraPlat.a  AestraCore/libAestraCore.a  -ldl
+  OBJECT_DIR = Tests/Headless/CMakeFiles/HeadlessOfflineRenderer.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = Tests/Headless/HeadlessOfflineRenderer
+  TARGET_PDB = HeadlessOfflineRenderer.dbg
+
+# =============================================================================
+# Object build statements for EXECUTABLE target OfflineRenderRegressionTest
+
+
+#############################################
+# Order-only phony target for OfflineRenderRegressionTest
+
+build cmake_object_order_depends_target_OfflineRenderRegressionTest: phony || cmake_object_order_depends_target_AestraAudioCore cmake_object_order_depends_target_AestraCore cmake_object_order_depends_target_AestraPlat
+
+build Tests/Headless/CMakeFiles/OfflineRenderRegressionTest.dir/OfflineRenderRegressionTest.cpp.o: CXX_COMPILER__OfflineRenderRegressionTest_Debug /home/currentsuspect/.openclaw/workspace/Aestra/Tests/Headless/OfflineRenderRegressionTest.cpp || cmake_object_order_depends_target_OfflineRenderRegressionTest
+  DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAestra_ENABLE_PROFILING
+  DEP_FILE = Tests/Headless/CMakeFiles/OfflineRenderRegressionTest.dir/OfflineRenderRegressionTest.cpp.o.d
+  FLAGS = -g -fPIE -std=gnu++17
+  INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/Source -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
+  OBJECT_DIR = Tests/Headless/CMakeFiles/OfflineRenderRegressionTest.dir
+  OBJECT_FILE_DIR = Tests/Headless/CMakeFiles/OfflineRenderRegressionTest.dir
+
+build Tests/Headless/CMakeFiles/OfflineRenderRegressionTest.dir/__/__/Source/Core/ProjectSerializer.cpp.o: CXX_COMPILER__OfflineRenderRegressionTest_Debug /home/currentsuspect/.openclaw/workspace/Aestra/Source/Core/ProjectSerializer.cpp || cmake_object_order_depends_target_OfflineRenderRegressionTest
+  DEFINES = -DAESTRA_PLATFORM_LINUX=1 -DAestra_ENABLE_PROFILING
+  DEP_FILE = Tests/Headless/CMakeFiles/OfflineRenderRegressionTest.dir/__/__/Source/Core/ProjectSerializer.cpp.o.d
+  FLAGS = -g -fPIE -std=gnu++17
+  INCLUDES = -I/home/currentsuspect/.openclaw/workspace/Aestra/Source -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraCore/include -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Core -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/DSP -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Models -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Playback -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/IO -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Drivers -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Plugin -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraAudio/include/Commands -I/home/currentsuspect/.openclaw/workspace/Aestra/AestraPlat/include
+  OBJECT_DIR = Tests/Headless/CMakeFiles/OfflineRenderRegressionTest.dir
+  OBJECT_FILE_DIR = Tests/Headless/CMakeFiles/OfflineRenderRegressionTest.dir/__/__/Source/Core
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target OfflineRenderRegressionTest
+
+
+#############################################
+# Link the executable Tests/Headless/OfflineRenderRegressionTest
+
+build Tests/Headless/OfflineRenderRegressionTest: CXX_EXECUTABLE_LINKER__OfflineRenderRegressionTest_Debug Tests/Headless/CMakeFiles/OfflineRenderRegressionTest.dir/OfflineRenderRegressionTest.cpp.o Tests/Headless/CMakeFiles/OfflineRenderRegressionTest.dir/__/__/Source/Core/ProjectSerializer.cpp.o | AestraAudio/libAestraAudioCore.a AestraCore/libAestraCore.a AestraPlat/libAestraPlat.a AestraCore/libAestraCore.a || AestraAudio/libAestraAudioCore.a AestraCore/libAestraCore.a AestraPlat/libAestraPlat.a
+  FLAGS = -g
+  LINK_LIBRARIES = AestraAudio/libAestraAudioCore.a  AestraCore/libAestraCore.a  AestraPlat/libAestraPlat.a  AestraCore/libAestraCore.a  -ldl
+  OBJECT_DIR = Tests/Headless/CMakeFiles/OfflineRenderRegressionTest.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = Tests/Headless/OfflineRenderRegressionTest
+  TARGET_PDB = OfflineRenderRegressionTest.dbg
 
 
 #############################################
@@ -2318,6 +2217,8 @@ build ConfigAssertTests: phony AestraCore/ConfigAssertTests
 
 build FileTests: phony AestraCore/FileTests
 
+build HeadlessOfflineRenderer: phony Tests/Headless/HeadlessOfflineRenderer
+
 build LogTests: phony AestraCore/LogTests
 
 build MacroCommandTest: phony Tests/MacroCommandTest
@@ -2325,6 +2226,8 @@ build MacroCommandTest: phony Tests/MacroCommandTest
 build MathTests: phony AestraCore/MathTests
 
 build MoveClipCommandTest: phony Tests/MoveClipCommandTest
+
+build OfflineRenderRegressionTest: phony Tests/Headless/OfflineRenderRegressionTest
 
 build PlatformDPITest: phony Tests/PlatformDPITest
 
@@ -2389,7 +2292,7 @@ build Tests/all: phony Tests/VST3PluginTest Tests/ProjectRoundTripTest Tests/Aes
 #############################################
 # Folder: /home/currentsuspect/.openclaw/workspace/Aestra/build-dev/Tests/Headless
 
-build Tests/Headless/all: phony
+build Tests/Headless/all: phony Tests/Headless/HeadlessOfflineRenderer Tests/Headless/OfflineRenderRegressionTest
 
 # =============================================================================
 # Built-in targets
@@ -2398,14 +2301,14 @@ build Tests/Headless/all: phony
 #############################################
 # Re-run CMake if any of its inputs changed.
 
-build build.ninja: RERUN_CMAKE | ../AestraAudio/CMakeLists.txt ../AestraCore/CMakeLists.txt ../AestraPlat/CMakeLists.txt ../CMakeLists.txt ../Tests/CMakeLists.txt ../Tests/Headless/CMakeLists.txt /usr/share/cmake-3.22/Modules/CMakeCCompiler.cmake.in /usr/share/cmake-3.22/Modules/CMakeCCompilerABI.c /usr/share/cmake-3.22/Modules/CMakeCInformation.cmake /usr/share/cmake-3.22/Modules/CMakeCXXCompiler.cmake.in /usr/share/cmake-3.22/Modules/CMakeCXXCompilerABI.cpp /usr/share/cmake-3.22/Modules/CMakeCXXInformation.cmake /usr/share/cmake-3.22/Modules/CMakeCommonLanguageInclude.cmake /usr/share/cmake-3.22/Modules/CMakeCompilerIdDetection.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineCCompiler.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineCXXCompiler.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineCompileFeatures.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineCompiler.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineCompilerABI.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineCompilerId.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineSystem.cmake /usr/share/cmake-3.22/Modules/CMakeFindBinUtils.cmake /usr/share/cmake-3.22/Modules/CMakeGenericSystem.cmake /usr/share/cmake-3.22/Modules/CMakeInitializeConfigs.cmake /usr/share/cmake-3.22/Modules/CMakeLanguageInformation.cmake /usr/share/cmake-3.22/Modules/CMakeNinjaFindMake.cmake /usr/share/cmake-3.22/Modules/CMakeParseImplicitIncludeInfo.cmake /usr/share/cmake-3.22/Modules/CMakeParseImplicitLinkInfo.cmake /usr/share/cmake-3.22/Modules/CMakeParseLibraryArchitecture.cmake /usr/share/cmake-3.22/Modules/CMakeSystem.cmake.in /usr/share/cmake-3.22/Modules/CMakeSystemSpecificInformation.cmake /usr/share/cmake-3.22/Modules/CMakeSystemSpecificInitialize.cmake /usr/share/cmake-3.22/Modules/CMakeTestCCompiler.cmake /usr/share/cmake-3.22/Modules/CMakeTestCXXCompiler.cmake /usr/share/cmake-3.22/Modules/CMakeTestCompilerCommon.cmake /usr/share/cmake-3.22/Modules/CTest.cmake /usr/share/cmake-3.22/Modules/CTestTargets.cmake /usr/share/cmake-3.22/Modules/CTestUseLaunchers.cmake /usr/share/cmake-3.22/Modules/Compiler/ADSP-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/ARMCC-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/ARMClang-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/AppleClang-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Borland-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Bruce-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/CMakeCommonCompilerMacros.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-C.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-CXX.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-DetermineCompilerInternal.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-FindBinUtils.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang.cmake /usr/share/cmake-3.22/Modules/Compiler/Comeau-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Compaq-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Compaq-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Cray-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Embarcadero-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Fujitsu-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/FujitsuClang-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/GHS-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/GNU-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/GNU-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/GNU.cmake /usr/share/cmake-3.22/Modules/Compiler/HP-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/HP-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/IAR-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/IBMCPP-C-DetermineVersionInternal.cmake /usr/share/cmake-3.22/Modules/Compiler/IBMCPP-CXX-DetermineVersionInternal.cmake /usr/share/cmake-3.22/Modules/Compiler/Intel-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/IntelLLVM-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/MSVC-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/NVHPC-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/NVIDIA-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/OpenWatcom-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/PGI-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/PathScale-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/SCO-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/SDCC-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/SunPro-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/SunPro-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/TI-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/TinyCC-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/VisualAge-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/VisualAge-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Watcom-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/XL-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/XL-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/XLClang-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/XLClang-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/zOS-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/zOS-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/DartConfiguration.tcl.in /usr/share/cmake-3.22/Modules/FindALSA.cmake /usr/share/cmake-3.22/Modules/FindPackageHandleStandardArgs.cmake /usr/share/cmake-3.22/Modules/FindPackageMessage.cmake /usr/share/cmake-3.22/Modules/Internal/FeatureTesting.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-Clang-C.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-Clang-CXX.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-Determine-CXX.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-GNU-C.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-GNU-CXX.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-GNU.cmake /usr/share/cmake-3.22/Modules/Platform/Linux.cmake /usr/share/cmake-3.22/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.22.1/CMakeCCompiler.cmake CMakeFiles/3.22.1/CMakeCXXCompiler.cmake CMakeFiles/3.22.1/CMakeSystem.cmake
+build build.ninja: RERUN_CMAKE | ../AestraAudio/CMakeLists.txt ../AestraCore/CMakeLists.txt ../AestraPlat/CMakeLists.txt ../CMakeLists.txt ../Tests/CMakeLists.txt ../Tests/Headless/CMakeLists.txt /usr/share/cmake-3.22/Modules/CMakeCInformation.cmake /usr/share/cmake-3.22/Modules/CMakeCXXInformation.cmake /usr/share/cmake-3.22/Modules/CMakeCommonLanguageInclude.cmake /usr/share/cmake-3.22/Modules/CMakeGenericSystem.cmake /usr/share/cmake-3.22/Modules/CMakeInitializeConfigs.cmake /usr/share/cmake-3.22/Modules/CMakeLanguageInformation.cmake /usr/share/cmake-3.22/Modules/CMakeSystemSpecificInformation.cmake /usr/share/cmake-3.22/Modules/CMakeSystemSpecificInitialize.cmake /usr/share/cmake-3.22/Modules/CTest.cmake /usr/share/cmake-3.22/Modules/CTestTargets.cmake /usr/share/cmake-3.22/Modules/CTestUseLaunchers.cmake /usr/share/cmake-3.22/Modules/Compiler/CMakeCommonCompilerMacros.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-C.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-CXX.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang.cmake /usr/share/cmake-3.22/Modules/Compiler/GNU.cmake /usr/share/cmake-3.22/Modules/DartConfiguration.tcl.in /usr/share/cmake-3.22/Modules/FindALSA.cmake /usr/share/cmake-3.22/Modules/FindPackageHandleStandardArgs.cmake /usr/share/cmake-3.22/Modules/FindPackageMessage.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-Clang-C.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-Clang-CXX.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-GNU-C.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-GNU-CXX.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-GNU.cmake /usr/share/cmake-3.22/Modules/Platform/Linux.cmake /usr/share/cmake-3.22/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.22.1/CMakeCCompiler.cmake CMakeFiles/3.22.1/CMakeCXXCompiler.cmake CMakeFiles/3.22.1/CMakeSystem.cmake
   pool = console
 
 
 #############################################
 # A missing CMake input file is not an error.
 
-build ../AestraAudio/CMakeLists.txt ../AestraCore/CMakeLists.txt ../AestraPlat/CMakeLists.txt ../CMakeLists.txt ../Tests/CMakeLists.txt ../Tests/Headless/CMakeLists.txt /usr/share/cmake-3.22/Modules/CMakeCCompiler.cmake.in /usr/share/cmake-3.22/Modules/CMakeCCompilerABI.c /usr/share/cmake-3.22/Modules/CMakeCInformation.cmake /usr/share/cmake-3.22/Modules/CMakeCXXCompiler.cmake.in /usr/share/cmake-3.22/Modules/CMakeCXXCompilerABI.cpp /usr/share/cmake-3.22/Modules/CMakeCXXInformation.cmake /usr/share/cmake-3.22/Modules/CMakeCommonLanguageInclude.cmake /usr/share/cmake-3.22/Modules/CMakeCompilerIdDetection.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineCCompiler.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineCXXCompiler.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineCompileFeatures.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineCompiler.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineCompilerABI.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineCompilerId.cmake /usr/share/cmake-3.22/Modules/CMakeDetermineSystem.cmake /usr/share/cmake-3.22/Modules/CMakeFindBinUtils.cmake /usr/share/cmake-3.22/Modules/CMakeGenericSystem.cmake /usr/share/cmake-3.22/Modules/CMakeInitializeConfigs.cmake /usr/share/cmake-3.22/Modules/CMakeLanguageInformation.cmake /usr/share/cmake-3.22/Modules/CMakeNinjaFindMake.cmake /usr/share/cmake-3.22/Modules/CMakeParseImplicitIncludeInfo.cmake /usr/share/cmake-3.22/Modules/CMakeParseImplicitLinkInfo.cmake /usr/share/cmake-3.22/Modules/CMakeParseLibraryArchitecture.cmake /usr/share/cmake-3.22/Modules/CMakeSystem.cmake.in /usr/share/cmake-3.22/Modules/CMakeSystemSpecificInformation.cmake /usr/share/cmake-3.22/Modules/CMakeSystemSpecificInitialize.cmake /usr/share/cmake-3.22/Modules/CMakeTestCCompiler.cmake /usr/share/cmake-3.22/Modules/CMakeTestCXXCompiler.cmake /usr/share/cmake-3.22/Modules/CMakeTestCompilerCommon.cmake /usr/share/cmake-3.22/Modules/CTest.cmake /usr/share/cmake-3.22/Modules/CTestTargets.cmake /usr/share/cmake-3.22/Modules/CTestUseLaunchers.cmake /usr/share/cmake-3.22/Modules/Compiler/ADSP-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/ARMCC-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/ARMClang-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/AppleClang-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Borland-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Bruce-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/CMakeCommonCompilerMacros.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-C.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-CXX.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-DetermineCompilerInternal.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-FindBinUtils.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang.cmake /usr/share/cmake-3.22/Modules/Compiler/Comeau-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Compaq-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Compaq-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Cray-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Embarcadero-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Fujitsu-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/FujitsuClang-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/GHS-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/GNU-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/GNU-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/GNU.cmake /usr/share/cmake-3.22/Modules/Compiler/HP-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/HP-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/IAR-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/IBMCPP-C-DetermineVersionInternal.cmake /usr/share/cmake-3.22/Modules/Compiler/IBMCPP-CXX-DetermineVersionInternal.cmake /usr/share/cmake-3.22/Modules/Compiler/Intel-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/IntelLLVM-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/MSVC-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/NVHPC-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/NVIDIA-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/OpenWatcom-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/PGI-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/PathScale-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/SCO-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/SDCC-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/SunPro-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/SunPro-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/TI-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/TinyCC-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/VisualAge-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/VisualAge-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/Watcom-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/XL-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/XL-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/XLClang-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/XLClang-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/zOS-C-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/Compiler/zOS-CXX-DetermineCompiler.cmake /usr/share/cmake-3.22/Modules/DartConfiguration.tcl.in /usr/share/cmake-3.22/Modules/FindALSA.cmake /usr/share/cmake-3.22/Modules/FindPackageHandleStandardArgs.cmake /usr/share/cmake-3.22/Modules/FindPackageMessage.cmake /usr/share/cmake-3.22/Modules/Internal/FeatureTesting.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-Clang-C.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-Clang-CXX.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-Determine-CXX.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-GNU-C.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-GNU-CXX.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-GNU.cmake /usr/share/cmake-3.22/Modules/Platform/Linux.cmake /usr/share/cmake-3.22/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.22.1/CMakeCCompiler.cmake CMakeFiles/3.22.1/CMakeCXXCompiler.cmake CMakeFiles/3.22.1/CMakeSystem.cmake: phony
+build ../AestraAudio/CMakeLists.txt ../AestraCore/CMakeLists.txt ../AestraPlat/CMakeLists.txt ../CMakeLists.txt ../Tests/CMakeLists.txt ../Tests/Headless/CMakeLists.txt /usr/share/cmake-3.22/Modules/CMakeCInformation.cmake /usr/share/cmake-3.22/Modules/CMakeCXXInformation.cmake /usr/share/cmake-3.22/Modules/CMakeCommonLanguageInclude.cmake /usr/share/cmake-3.22/Modules/CMakeGenericSystem.cmake /usr/share/cmake-3.22/Modules/CMakeInitializeConfigs.cmake /usr/share/cmake-3.22/Modules/CMakeLanguageInformation.cmake /usr/share/cmake-3.22/Modules/CMakeSystemSpecificInformation.cmake /usr/share/cmake-3.22/Modules/CMakeSystemSpecificInitialize.cmake /usr/share/cmake-3.22/Modules/CTest.cmake /usr/share/cmake-3.22/Modules/CTestTargets.cmake /usr/share/cmake-3.22/Modules/CTestUseLaunchers.cmake /usr/share/cmake-3.22/Modules/Compiler/CMakeCommonCompilerMacros.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-C.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang-CXX.cmake /usr/share/cmake-3.22/Modules/Compiler/Clang.cmake /usr/share/cmake-3.22/Modules/Compiler/GNU.cmake /usr/share/cmake-3.22/Modules/DartConfiguration.tcl.in /usr/share/cmake-3.22/Modules/FindALSA.cmake /usr/share/cmake-3.22/Modules/FindPackageHandleStandardArgs.cmake /usr/share/cmake-3.22/Modules/FindPackageMessage.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-Clang-C.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-Clang-CXX.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-GNU-C.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-GNU-CXX.cmake /usr/share/cmake-3.22/Modules/Platform/Linux-GNU.cmake /usr/share/cmake-3.22/Modules/Platform/Linux.cmake /usr/share/cmake-3.22/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.22.1/CMakeCCompiler.cmake CMakeFiles/3.22.1/CMakeCXXCompiler.cmake CMakeFiles/3.22.1/CMakeSystem.cmake: phony
 
 
 #############################################

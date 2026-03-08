@@ -24,6 +24,7 @@
 #include "AudioGraphState.h"
 #include "AudioRenderer.h"
 #include "MetronomeEngine.h" // [NEW]
+#include "Models/TrackManager.h" // [NEW] For headless rendering
 
 #include <array>
 #include <memory>
@@ -242,6 +243,63 @@ public:
     std::atomic<InputCallback> m_inputCallback{nullptr};
     std::atomic<void*> m_inputCallbackData{nullptr};
 
+    // ============================================================================
+    // HEADLESS / OFFLINE RENDERING API
+    // ============================================================================
+
+    /**
+     * @brief Set the TrackManager for playlist rendering
+     * @param trackManager Shared pointer to track manager
+     */
+    void setTrackManager(std::shared_ptr<TrackManager> trackManager) {
+        m_trackManager = std::move(trackManager);
+    }
+
+    /**
+     * @brief Get the current TrackManager
+     * @return Shared pointer to track manager (may be null)
+     */
+    std::shared_ptr<TrackManager> getTrackManager() const {
+        return m_trackManager.lock();
+    }
+
+    /**
+     * @brief Initialize the engine for rendering
+     * @return true if initialization successful
+     */
+    bool initialize();
+
+    /**
+     * @brief Set the playhead position in beats
+     * @param beat Beat position (0.0 = start)
+     */
+    void setPlayhead(double beat) {
+        uint32_t sr = m_sampleRate.load(std::memory_order_relaxed);
+        double bpm = getBPM();
+        if (sr > 0 && bpm > 0) {
+            double secondsPerBeat = 60.0 / bpm;
+            double seconds = beat * secondsPerBeat;
+            uint64_t samples = static_cast<uint64_t>(seconds * sr);
+            setGlobalSamplePos(samples);
+        }
+    }
+
+    /**
+     * @brief Get the current playhead position in beats
+     * @return Current beat position
+     */
+    double getPlayhead() const {
+        uint32_t sr = m_sampleRate.load(std::memory_order_relaxed);
+        double bpm = getBPM();
+        if (sr > 0 && bpm > 0) {
+            double secondsPerBeat = 60.0 / bpm;
+            uint64_t samples = getGlobalSamplePos();
+            double seconds = static_cast<double>(samples) / sr;
+            return seconds / secondsPerBeat;
+        }
+        return 0.0;
+    }
+
 private:
     static constexpr size_t kMaxTracks = 4096;
     static constexpr uint32_t kWaveformHistoryFramesDefault = 2048;
@@ -430,6 +488,9 @@ private:
     std::atomic<float> m_peakR{0.0f};
     std::atomic<float> m_rmsL{0.0f};
     std::atomic<float> m_rmsR{0.0f};
+
+    // TrackManager for playlist rendering (headless/offline mode)
+    std::weak_ptr<TrackManager> m_trackManager;
 
     // Mixer meter snapshots (optional; when set, audio thread writes peaks)
     std::shared_ptr<MeterSnapshotBuffer> m_meterSnapshotsOwned;
