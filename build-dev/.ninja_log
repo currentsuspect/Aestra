@@ -143,3 +143,5 @@
 10	5662	1772986755703387707	Tests/CMakeFiles/CommandHistoryTest.dir/Commands/CommandHistoryTest.cpp.o	34855f3fc8c702c7
 5630	5732	1772986755782387912	AestraAudio/libAestraAudioCore.a	7e435bc10d6bdee1
 5732	5833	1772986755901388223	Tests/CommandHistoryTest	49b78de3ac39e81c
+2	1532	1772992156868877752	Tests/CMakeFiles/MacroCommandTest.dir/Commands/MacroCommandTest.cpp.o	5659a2b1348ee9
+1532	1632	1772992156987878061	Tests/MacroCommandTest	ca0207459a719cd0
