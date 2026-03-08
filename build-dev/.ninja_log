@@ -139,3 +139,7 @@
 10	578	1772986320317330450	AestraAudio/libAestraAudioCore.a	7e435bc10d6bdee1
 10	3890	1772986323698341456	Tests/CMakeFiles/CommandHistoryTest.dir/Commands/CommandHistoryTest.cpp.o	34855f3fc8c702c7
 3890	4239	1772986324071342670	Tests/CommandHistoryTest	49b78de3ac39e81c
+9	5630	1772986755667387613	AestraAudio/CMakeFiles/AestraAudioCore.dir/src/Commands/CommandHistory.cpp.o	edf0d1b7c518cdc6
+10	5662	1772986755703387707	Tests/CMakeFiles/CommandHistoryTest.dir/Commands/CommandHistoryTest.cpp.o	34855f3fc8c702c7
+5630	5732	1772986755782387912	AestraAudio/libAestraAudioCore.a	7e435bc10d6bdee1
+5732	5833	1772986755901388223	Tests/CommandHistoryTest	49b78de3ac39e81c
