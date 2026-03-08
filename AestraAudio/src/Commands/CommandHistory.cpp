@@ -152,15 +152,51 @@ void CommandHistory::setMaxHistorySize(size_t size) {
     trimHistory();
 }
 
+void CommandHistory::setMaxHistoryMemory(size_t bytes) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_maxHistoryMemory = bytes;
+    trimHistoryByMemory();
+}
+
+size_t CommandHistory::getHistoryMemoryUsage() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return calculateMemoryUsage();
+}
+
 void CommandHistory::trimHistory() {
-    if (m_maxHistorySize == 0)
+    if (m_maxHistorySize == 0 && m_maxHistoryMemory == 0)
         return;
 
-    // O(n) batch erase instead of O(n²) loop
-    if (m_undoStack.size() > m_maxHistorySize) {
+    // Trim by count first
+    if (m_maxHistorySize > 0 && m_undoStack.size() > m_maxHistorySize) {
         size_t excess = m_undoStack.size() - m_maxHistorySize;
         m_undoStack.erase(m_undoStack.begin(), m_undoStack.begin() + excess);
     }
+
+    // Then trim by memory if still over limit
+    if (m_maxHistoryMemory > 0) {
+        trimHistoryByMemory();
+    }
+}
+
+void CommandHistory::trimHistoryByMemory() {
+    if (m_maxHistoryMemory == 0)
+        return;
+
+    while (!m_undoStack.empty() && calculateMemoryUsage() > m_maxHistoryMemory) {
+        // Remove oldest commands until under memory limit
+        m_undoStack.erase(m_undoStack.begin());
+    }
+}
+
+size_t CommandHistory::calculateMemoryUsage() const {
+    size_t total = 0;
+    for (const auto& cmd : m_undoStack) {
+        if (cmd) {
+            total += cmd->getSizeInBytes();
+        }
+    }
+    return total;
 }
 
 } // namespace Audio
