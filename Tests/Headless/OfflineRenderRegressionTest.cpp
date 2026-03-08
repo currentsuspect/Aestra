@@ -10,7 +10,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
-#include <math>
+#include <cmath>
 #include <vector>
 
 using namespace Aestra::Audio;
