@@ -2206,5 +2206,28 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     return true;
 }
 
+bool AudioEngine::initialize() {
+    // Initialize the engine for headless/offline rendering
+    // This is a lightweight init that doesn't start a real audio driver
+
+    // Ensure buffers are allocated
+    if (m_maxBufferFrames.load() == 0) {
+        setBufferConfig(4096, 2); // Default: 4096 frames, stereo
+    }
+
+    // Reset state
+    m_globalSamplePos.store(0, std::memory_order_relaxed);
+    m_transportPlaying.store(false, std::memory_order_relaxed);
+
+    // Clear command queue
+    AudioQueueCommand cmd;
+    while (m_commandQueue.pop(cmd)) {
+        // Drain any pending commands
+    }
+
+    Aestra::Log::info("[AudioEngine] Initialized for headless rendering.");
+    return true;
+}
+
 } // namespace Audio
 } // namespace Aestra
