@@ -24,9 +24,10 @@ public:
     virtual void undo() = 0;
 
     /**
-     * @brief Redo the command (default implementation calls execute)
+     * @brief Redo the command (must be explicitly implemented)
+     * Implementers should consider: is redo() exactly execute(), or different?
      */
-    virtual void redo() { execute(); }
+    virtual void redo() = 0;
 
     /**
      * @brief Get a human-readable name for the command (for UI)

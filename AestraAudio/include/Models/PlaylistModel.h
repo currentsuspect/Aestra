@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <mutex>
+#include <shared_mutex>
 #include <unordered_map>
 #include <vector>
 
@@ -51,7 +52,7 @@ public:
     // === Lane Management ===
 
     PlaylistLaneID createLane(const std::string& name = "") {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
 
         PlaylistLane lane(static_cast<int>(m_lanes.size()));
         lane.name = name.empty() ? "Track " + std::to_string(lane.index + 1) : name;
@@ -64,7 +65,7 @@ public:
     }
 
     PlaylistLane* getLane(const PlaylistLaneID& id) {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
         auto it = m_laneMap.find(id);
         if (it == m_laneMap.end())
             return nullptr;
@@ -72,7 +73,7 @@ public:
     }
 
     size_t getLaneCount() const {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
         return m_lanes.size();
     }
 
@@ -85,7 +86,7 @@ public:
      * @return The clip's ID
      */
     ClipInstanceID addClip(const PlaylistLaneID& laneId, const ClipInstance& clip) {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
 
         auto it = m_laneMap.find(laneId);
         if (it == m_laneMap.end())
@@ -107,7 +108,7 @@ public:
      * @brief Remove a clip by ID
      */
     void removeClip(const ClipInstanceID& clipId) {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
 
         auto laneIt = m_clipLaneMap.find(clipId);
         if (laneIt == m_clipLaneMap.end())
@@ -131,7 +132,7 @@ public:
      * @return Pointer to clip, or nullptr if not found
      */
     ClipInstance* getClip(const ClipInstanceID& clipId) {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
 
         auto laneIt = m_clipLaneMap.find(clipId);
         if (laneIt == m_clipLaneMap.end())
@@ -153,7 +154,7 @@ public:
      * @brief Find which lane a clip belongs to
      */
     PlaylistLaneID findClipLane(const ClipInstanceID& clipId) const {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
 
         auto it = m_clipLaneMap.find(clipId);
         if (it == m_clipLaneMap.end())
@@ -191,7 +192,7 @@ public:
      */
     void moveClip(const ClipInstanceID& clipId, double newStartBeat,
                   const PlaylistLaneID& newLaneId = PlaylistLaneID()) {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
 
         auto* clip = getClipInternal(clipId);
         if (!clip)
@@ -238,7 +239,7 @@ public:
      * @return ID of the newly created clip (second part)
      */
     ClipInstanceID splitClip(const ClipInstanceID& clipId, double splitBeat) {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
 
         auto* clip = getClipInternal(clipId);
         if (!clip)
@@ -294,7 +295,8 @@ public:
      */
     std::unique_ptr<PlaylistRuntimeSnapshot> buildRuntimeSnapshot(const PatternManager& patterns,
                                                                   const SourceManager& sources) const {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        // Use shared_lock for readers (audio thread) - allows concurrent reads
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
 
         if (m_lanes.empty()) {
             return nullptr;
@@ -365,7 +367,7 @@ public:
      * @brief Get lane ID by index
      */
     PlaylistLaneID getLaneId(size_t index) const {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
         if (index < m_lanes.size()) {
             return m_lanes[index].id;
         }
@@ -377,7 +379,7 @@ public:
      */
     ClipInstanceID addClipFromPattern(const PlaylistLaneID& laneId, PatternID patternId, double startBeat,
                                       double durationBeats) {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
 
         auto it = m_laneMap.find(laneId);
         if (it == m_laneMap.end())
@@ -400,7 +402,7 @@ public:
      * @brief Get all lane IDs
      */
     std::vector<PlaylistLaneID> getLaneIDs() const {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
         std::vector<PlaylistLaneID> ids;
         ids.reserve(m_lanes.size());
         for (const auto& lane : m_lanes) {
@@ -422,7 +424,7 @@ public:
      * @brief Clear all lanes and clips
      */
     void clear() {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
         m_lanes.clear();
         m_laneMap.clear();
         m_clipLaneMap.clear();
@@ -432,7 +434,7 @@ private:
     std::vector<PlaylistLane> m_lanes;
     std::unordered_map<PlaylistLaneID, size_t> m_laneMap;
     std::unordered_map<ClipInstanceID, PlaylistLaneID> m_clipLaneMap;
-    mutable std::mutex m_mutex;
+    mutable std::shared_mutex m_mutex;
     ClipChangedCallback m_clipChangedCallback;
     double m_bpm{120.0};
     PatternManager* m_patternManager{nullptr};
