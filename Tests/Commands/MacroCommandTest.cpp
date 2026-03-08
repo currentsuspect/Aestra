@@ -255,6 +255,7 @@ bool testChangesProjectStateAnyTrue() {
     public:
         void execute() override {}
         void undo() override {}
+        void redo() override { execute(); }
         std::string getName() const override { return "NoChange"; }
         bool changesProjectState() const override { return false; }
     };
