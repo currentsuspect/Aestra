@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 # Headless Offline Renderer
-add_executable(HeadlessOfflineRenderer HeadlessOfflineRenderer.cpp)
+add_executable(HeadlessOfflineRenderer HeadlessOfflineRenderer.cpp ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp)
 target_link_libraries(HeadlessOfflineRenderer PRIVATE AestraAudioCore AestraCore)
 target_include_directories(HeadlessOfflineRenderer PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
@@ -17,7 +17,7 @@ set_tests_properties(HeadlessOfflineRenderer PROPERTIES
 )
 
 # Offline Render Regression Test
-add_executable(OfflineRenderRegressionTest OfflineRenderRegressionTest.cpp)
+add_executable(OfflineRenderRegressionTest OfflineRenderRegressionTest.cpp ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp)
 target_link_libraries(OfflineRenderRegressionTest PRIVATE AestraAudioCore AestraCore)
 target_include_directories(OfflineRenderRegressionTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include

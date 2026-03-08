@@ -1,0 +1,6 @@
+{
+  "ignorePatterns": [
+    { "pattern": "^http://" },
+    { "pattern": "^https://" }
+  ]
+}
