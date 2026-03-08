@@ -2,7 +2,7 @@
 #pragma once
 
 #include "TrackManager.h"
-#include "../AestraCore/include/AestraJSON.h"
+#include "AestraJSON.h"
 #include <string>
 #include <memory>
 #include <optional>

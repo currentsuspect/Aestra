@@ -206,12 +206,55 @@ public:
     ~SampleRateConverter() = default;
 
     // Non-copyable (contains internal state)
-    SampleRateConverter(const SampleRateConverter&) = delete;
-    SampleRateConverter& operator=(const SampleRateConverter&) = delete;
+    SampleRateConverter(const SampleRateConverter&) = delete; // ALLOW_REALTIME_DELETE
+    SampleRateConverter& operator=(const SampleRateConverter&) = delete; // ALLOW_REALTIME_DELETE
 
-    // Move is allowed
-    SampleRateConverter(SampleRateConverter&&) = default;
-    SampleRateConverter& operator=(SampleRateConverter&&) = default;
+    // Custom move constructor and assignment to handle atomic members
+    SampleRateConverter(SampleRateConverter&& other) noexcept
+        : m_srcRate(other.m_srcRate),
+          m_dstRate(other.m_dstRate),
+          m_channels(other.m_channels),
+          m_quality(other.m_quality),
+          m_configured(other.m_configured),
+          m_isPassthrough(other.m_isPassthrough),
+          m_ratio(other.m_ratio),
+          m_srcPosition(other.m_srcPosition),
+          m_filterBank(std::move(other.m_filterBank)),
+          m_history(std::move(other.m_history)),
+          m_historyFilled(other.m_historyFilled),
+          m_currentRatio(other.m_currentRatio),
+          m_targetRatio(other.m_targetRatio),
+          m_ratioSmoothFrames(other.m_ratioSmoothFrames),
+          m_ratioSmoothTotal(other.m_ratioSmoothTotal),
+          m_nextOutputSrcPos(other.m_nextOutputSrcPos),
+          m_sharedFilterBank(std::move(other.m_sharedFilterBank)),
+          m_localFilterBank(std::move(other.m_localFilterBank)),
+          m_simdEnabled(other.m_simdEnabled.load()) {}
+
+    SampleRateConverter& operator=(SampleRateConverter&& other) noexcept {
+        if (this != &other) {
+            m_srcRate = other.m_srcRate;
+            m_dstRate = other.m_dstRate;
+            m_channels = other.m_channels;
+            m_quality = other.m_quality;
+            m_configured = other.m_configured;
+            m_isPassthrough = other.m_isPassthrough;
+            m_ratio = other.m_ratio;
+            m_srcPosition = other.m_srcPosition;
+            m_filterBank = std::move(other.m_filterBank);
+            m_history = std::move(other.m_history);
+            m_historyFilled = other.m_historyFilled;
+            m_currentRatio = other.m_currentRatio;
+            m_targetRatio = other.m_targetRatio;
+            m_ratioSmoothFrames = other.m_ratioSmoothFrames;
+            m_ratioSmoothTotal = other.m_ratioSmoothTotal;
+            m_nextOutputSrcPos = other.m_nextOutputSrcPos;
+            m_sharedFilterBank = std::move(other.m_sharedFilterBank);
+            m_localFilterBank = std::move(other.m_localFilterBank);
+            m_simdEnabled.store(other.m_simdEnabled.load());
+        }
+        return *this;
+    }
 
     // =========================================================================
     // Configuration

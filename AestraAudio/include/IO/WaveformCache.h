@@ -131,8 +131,23 @@ public:
     // Non-copyable, movable
     WaveformCache(const WaveformCache&) = delete;
     WaveformCache& operator=(const WaveformCache&) = delete;
-    WaveformCache(WaveformCache&&) = default;
-    WaveformCache& operator=(WaveformCache&&) = default;
+
+    // Custom move constructor and assignment to handle atomic members
+    WaveformCache(WaveformCache&& other) noexcept
+        : m_levels(std::move(other.m_levels)),
+          m_numChannels(other.m_numChannels),
+          m_sourceFrames(other.m_sourceFrames),
+          m_ready(other.m_ready.load()) {}
+
+    WaveformCache& operator=(WaveformCache&& other) noexcept {
+        if (this != &other) {
+            m_levels = std::move(other.m_levels);
+            m_numChannels = other.m_numChannels;
+            m_sourceFrames = other.m_sourceFrames;
+            m_ready.store(other.m_ready.load());
+        }
+        return *this;
+    }
 
     /**
      * @brief Build cache from audio buffer
