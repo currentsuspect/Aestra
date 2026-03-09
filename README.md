@@ -33,7 +33,7 @@ Whether you're producing electronic music, scoring films, or recording live inst
 
 ### 🎵 Audio Engine
 
-- **ASIO Driver Support** — Professional, super-low latency audio with native COM integration
+- **ASIO Driver Support** — Windows ASIO playback is implemented end-to-end with native COM integration and validated on ASIO4ALL; broader driver compatibility hardening is ongoing
 - **WASAPI Integration** — Seamless fallback for consumer audio hardware
 - **Multi-threaded Processing** — 64-bit audio pipeline for maximum performance
 - **Sample-accurate Timing** — Professional-grade playback precision
