@@ -42,8 +42,14 @@ RtAudioCallback → AestraAudioEngine → MixerBus → OutputBuffer
 ## Supported APIs
 
 - **Windows:** WASAPI, ASIO
-- **macOS:** CoreAudio
-- **Linux:** ALSA, JACK, PipeWire
+- **macOS:** CoreAudio (planned / partial platform groundwork)
+- **Linux:** ALSA via RtAudio, with broader Linux audio support still maturing
+
+### Windows ASIO status
+
+- End-to-end ASIO playback has been implemented and validated with **ASIO4ALL**.
+- ASIO support is real and integrated, not just scanner/scaffolding work.
+- Broader compatibility across more third-party ASIO drivers still needs ongoing validation and hardening.
 
 ## Design Principles
 
