@@ -8,7 +8,7 @@ add_executable(HeadlessOfflineRenderer
     HeadlessOfflineRenderer.cpp
     ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
 )
-target_link_libraries(HeadlessOfflineRenderer PRIVATE AestraAudioCore AestraCore)
+target_link_libraries(HeadlessOfflineRenderer PRIVATE AestraAudio AestraCore)
 target_include_directories(HeadlessOfflineRenderer PRIVATE
     ${CMAKE_SOURCE_DIR}/Source
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
@@ -25,7 +25,7 @@ add_executable(OfflineRenderRegressionTest
     OfflineRenderRegressionTest.cpp
     ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
 )
-target_link_libraries(OfflineRenderRegressionTest PRIVATE AestraAudioCore AestraCore)
+target_link_libraries(OfflineRenderRegressionTest PRIVATE AestraAudio AestraCore)
 target_include_directories(OfflineRenderRegressionTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
