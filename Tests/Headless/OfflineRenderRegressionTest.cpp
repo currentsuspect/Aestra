@@ -126,10 +126,12 @@ struct AudioMetrics {
 class OfflineRenderRegressionTest {
 public:
     struct Config {
-        double durationSeconds = 5.0;
-        uint32_t sampleRate = 48000;
-        double toleranceDb = -80.0; // -80dB = ~0.01% difference
-        bool requireExactMatch = false;
+        double durationSeconds;
+        uint32_t sampleRate;
+        double toleranceDb; // -80dB = ~0.01% difference
+        bool requireExactMatch;
+
+        Config() : durationSeconds(5.0), sampleRate(48000), toleranceDb(-80.0), requireExactMatch(false) {}
     };
 
     struct Result {
@@ -140,7 +142,9 @@ public:
         std::string errorMessage;
     };
 
-    OfflineRenderRegressionTest(const Config& config = Config()) : m_config(config) {}
+    OfflineRenderRegressionTest() : m_config() {}
+
+    explicit OfflineRenderRegressionTest(const Config& config) : m_config(config) {}
 
     Result run(const std::string& projectPath, const std::string& referenceWavPath) {
         Result result;
