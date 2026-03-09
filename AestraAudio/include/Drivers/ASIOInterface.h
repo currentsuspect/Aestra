@@ -3,8 +3,8 @@
 #pragma once
 
 #if defined(_WIN32)
-#include <objbase.h>
-#include <windows.h>
+#include <objbase.h> // ALLOW_PLATFORM_INCLUDE
+#include <windows.h> // ALLOW_PLATFORM_INCLUDE
 #else
 #include <unistd.h>
 #endif

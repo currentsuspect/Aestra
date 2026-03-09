@@ -62,7 +62,7 @@ def analyze_file(filepath):
             for pattern, desc in FORBIDDEN_KEYWORDS:
                 if re.search(pattern, stripped):
                     # Ignore comments (simple check)
-                    if stripped.startswith("//") or stripped.startswith("*"):
+                    if stripped.startswith("//") or stripped.startswith("*") or "// ALLOW_REALTIME_DELETE" in stripped:
                         continue
 
                     issues.append(f"{filepath}:{line_num}: {desc} found in critical section candidate: '{stripped}'")

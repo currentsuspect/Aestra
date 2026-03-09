@@ -4,6 +4,14 @@ As the performance and quality agent "Bolt", I propose the following innovations
 
 ## 1. Innovations
 
+### NeuralMix Assistant
+- **Innovation**: An AI-driven mixing assistant that analyzes track elements and suggests EQ/Compression settings.
+- **Benefit**: Speeds up workflow for beginners and provides a solid starting point for pros.
+
+### Cloud Collaboration
+- **Innovation**: Real-time project syncing and live multi-user editing directly within Aestra.
+- **Benefit**: Seamless remote collaboration for producers, musicians, and mixing engineers worldwide.
+
 ### NeuralFX Suite
 
 Expand the prototype `NeuralAmp` into a full suite of differentiable DSP plugins.
@@ -48,6 +56,14 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Plan**: Use `ImGui` or custom immediate mode renderer that reuses vertex buffers. Eliminate `std::string` allocations in the draw loop (use `fmt::format_to` into fixed buffers).
 
 ## 3. Sound Quality
+
+### Spectral Anti-Aliasing
+- **Plan**: Implement advanced spectral anti-aliasing algorithms to eliminate digital harshness.
+- **Benefit**: Provides cleaner highs and prevents foldover distortion in non-linear processing.
+
+### Dynamic Oversampling
+- **Plan**: Automatically apply up to 16x oversampling only when harmonic distortion exceeds a threshold.
+- **Benefit**: Saves CPU while maintaining pristine audio quality during aggressive saturation.
 
 ### 64-bit End-to-End Mixing
 
