@@ -61,8 +61,8 @@ public:
     ~EffectChain();
 
     // Non-copyable
-    EffectChain(const EffectChain&) = delete;
-    EffectChain& operator=(const EffectChain&) = delete;
+    EffectChain(const EffectChain&) = delete; // ALLOW_REALTIME_DELETE
+    EffectChain& operator=(const EffectChain&) = delete; // ALLOW_REALTIME_DELETE
 
     // ==============================
     // Slot Management
