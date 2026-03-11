@@ -189,7 +189,14 @@ public:
             result.passed = AudioMetrics::isSimilar(renderedSamples, referenceSamples, m_config.toleranceDb);
         } else {
             // Relaxed: correlation > 0.999 and RMS diff < -60dB
-            result.passed = (result.correlation > 0.999) && (result.rmsDiffDb < -60.0);
+            // Fix: If both files are completely silent/empty, correlation will be NaN.
+            if (renderedSamples.empty() && referenceSamples.empty()) {
+                result.passed = true;
+            } else if (rmsA < 1e-9 && rmsB < 1e-9) {
+                result.passed = true;
+            } else {
+                result.passed = (result.correlation > 0.999) && (result.rmsDiffDb < -60.0);
+            }
         }
 
         return result;

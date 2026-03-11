@@ -14,7 +14,8 @@ target_include_directories(HeadlessOfflineRenderer PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
-add_test(NAME HeadlessOfflineRenderer COMMAND HeadlessOfflineRenderer)
+# Pass dummy arguments to satisfy the CLI parser (which requires project and output file paths)
+add_test(NAME HeadlessOfflineRenderer COMMAND HeadlessOfflineRenderer ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/dummy.aes ${CMAKE_CURRENT_BINARY_DIR}/output.wav --duration-seconds 0.1)
 set_tests_properties(HeadlessOfflineRenderer PROPERTIES
     LABELS "headless;offline;rendering"
     ENVIRONMENT "AESTRA_HEADLESS=1"
@@ -31,7 +32,8 @@ target_include_directories(OfflineRenderRegressionTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
-add_test(NAME OfflineRenderRegressionTest COMMAND OfflineRenderRegressionTest)
+# Pass dummy arguments to satisfy the CLI parser
+add_test(NAME OfflineRenderRegressionTest COMMAND OfflineRenderRegressionTest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/dummy.aes ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/dummy.wav --duration-seconds 0.0)
 set_tests_properties(OfflineRenderRegressionTest PROPERTIES
     LABELS "headless;regression;offline"
     ENVIRONMENT "AESTRA_HEADLESS=1"

@@ -67,14 +67,27 @@ if [ -n "$CHECKER_CMD" ]; then
     # Find markdown files, exclude templates and node_modules
     FILES=$(find . -name "*.md" -not -path "*/node_modules/*" -not -path "*/TEMPLATE/*" -not -path "*/_site/*" -not -path "*/html/*" -not -path "*/latex/*" -not -path "*/xml/*")
 
+    # Set IFS to newline so spaces in filenames don't break the loop
+    SAVEIFS=$IFS
+    IFS=$(echo -en "\n\b")
+
     LINK_ERRORS=0
     for file in $FILES; do
         # echo "Checking $file..."
-        if ! $CHECKER_CMD -q "$file" 2>/dev/null; then
-             echo -e "${RED}✗ Broken links in $file${NC}"
-             LINK_ERRORS=1
+        if [ -f "scripts/mlc_config.json" ]; then
+            if ! $CHECKER_CMD -c scripts/mlc_config.json -q "$file" 2>/dev/null; then
+                 echo -e "${RED}✗ Broken links in $file${NC}"
+                 LINK_ERRORS=1
+            fi
+        else
+            if ! $CHECKER_CMD -q "$file" 2>/dev/null; then
+                 echo -e "${RED}✗ Broken links in $file${NC}"
+                 LINK_ERRORS=1
+            fi
         fi
     done
+
+    IFS=$SAVEIFS
 
     if [ $LINK_ERRORS -eq 0 ]; then
         echo -e "${GREEN}✓ No broken links found${NC}"

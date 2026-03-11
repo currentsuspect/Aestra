@@ -63,6 +63,26 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
 
+### Spectral Anti-Aliasing
+
+- **Plan**: Advanced techniques for suppressing aliasing in non-linear DSP models beyond traditional oversampling.
+- **Benefit**: Cleaner highs and less harmonic distortion in saturation/distortion effects without massive CPU hits.
+
+### Dynamic Oversampling
+
+- **Plan**: Automatically oversample critical plugin paths without globally changing the project sample rate.
+- **Benefit**: High quality non-linear processing exactly where needed without wasting CPU on linear effects.
+
+### Analog Drift Modeling
+
+- **Plan**: Simulating minor, random fluctuations in component values to mimic vintage hardware imperfections.
+- **Benefit**: Adds warmth and organic life to digital synths and effects.
+
+### SimdLin Integration
+
+- **Plan**: Use standard libraries or bespoke intrinsic-based linear algebra routines (`SimdLin`) for massive matrix operation speedups.
+- **Benefit**: Accelerates Neural Amp/Cab models, allowing more complex networks in real-time.
+
 ## 4. Fixes & Cleanups
 
 ### Real-Time Safety

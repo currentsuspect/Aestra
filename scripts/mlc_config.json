@@ -1,0 +1,15 @@
+{
+  "ignorePatterns": [
+    { "pattern": "^http" },
+    { "pattern": "^\\.\\." },
+    { "pattern": "^/" },
+    { "pattern": ".*\\.md$" },
+    { "pattern": ".*\\.md#.*" },
+    { "pattern": ".*\\.h$" },
+    { "pattern": ".*\\.html$" },
+    { "pattern": "^#" },
+    { "pattern": "^developer/$" },
+    { "pattern": "^community/$" },
+    { "pattern": "^\\(.*" }
+  ]
+}
