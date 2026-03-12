@@ -14,7 +14,10 @@ target_include_directories(HeadlessOfflineRenderer PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
-add_test(NAME HeadlessOfflineRenderer COMMAND HeadlessOfflineRenderer dummy.aes dummy.wav --duration-seconds 5)
+# Generate a dummy valid project file
+file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/dummy.aes" CONTENT "{\"version\": 1, \"settings\": {\"bpm\": 120.0, \"timeSigNum\": 4, \"timeSigDen\": 4, \"loopStart\": 0.0, \"loopEnd\": 16.0, \"loopEnabled\": false}, \"lanes\": []}\n")
+
+add_test(NAME HeadlessOfflineRenderer COMMAND HeadlessOfflineRenderer "${CMAKE_CURRENT_BINARY_DIR}/dummy.aes" "${CMAKE_CURRENT_BINARY_DIR}/dummy.wav" --duration-seconds 5)
 set_tests_properties(HeadlessOfflineRenderer PROPERTIES
     LABELS "headless;offline;rendering"
     ENVIRONMENT "AESTRA_HEADLESS=1"
@@ -31,10 +34,11 @@ target_include_directories(OfflineRenderRegressionTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
-add_test(NAME OfflineRenderRegressionTest COMMAND OfflineRenderRegressionTest dummy.aes dummy.wav --duration-seconds 5)
+add_test(NAME OfflineRenderRegressionTest COMMAND OfflineRenderRegressionTest "${CMAKE_CURRENT_BINARY_DIR}/dummy.aes" "${CMAKE_CURRENT_BINARY_DIR}/dummy.wav" --duration-seconds 5)
 set_tests_properties(OfflineRenderRegressionTest PROPERTIES
     LABELS "headless;regression;offline"
     ENVIRONMENT "AESTRA_HEADLESS=1"
+    DEPENDS HeadlessOfflineRenderer
 )
 
 message(STATUS "Headless tests enabled - AudioEngine API implemented")

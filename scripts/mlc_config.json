@@ -1,0 +1,35 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^http"
+    },
+    {
+      "pattern": "^#"
+    },
+    {
+      "pattern": "^\\.\\."
+    },
+    {
+      "pattern": "^/"
+    },
+    {
+      "pattern": ".*\\.md$"
+    },
+    {
+      "pattern": "^[A-Z_]*\\.md$"
+    },
+    {
+      "pattern": "index\\.html$"
+    },
+    {
+      "pattern": ".*\\.md#.*$"
+    },
+    {
+      "pattern": ".*/$"
+    },
+    {
+      "pattern": ".*AAX\\+Wrapper\\.html$"
+    }
+  ],
+  "replacementPatterns": []
+}
