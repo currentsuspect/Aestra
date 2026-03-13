@@ -55,30 +55,35 @@ bool PluginManager::initialize() {
     // Initialize default factory (In-Process)
     m_factory = std::make_unique<InProcessPluginFactory>();
 
-    // Load Plugin Cache
-    if (auto* utils = Platform::getUtils()) {
-        std::string appData = utils->getAppDataPath("AESTRA");
-        if (!appData.empty()) {
-            std::filesystem::path cachePath = std::filesystem::path(appData) / "plugin_cache.bin";
+    // Load plugin cache when platform utilities are available.
+    // In headless/internal-plugin test flows the platform layer may not be initialized,
+    // and that should not be treated as an error.
+    const bool platformInitialized = Platform::isInitialized();
+    if (platformInitialized) {
+        if (auto* utils = Platform::getUtils()) {
+            std::string appData = utils->getAppDataPath("AESTRA");
+            if (!appData.empty()) {
+                std::filesystem::path cachePath = std::filesystem::path(appData) / "plugin_cache.bin";
 
-            // Ensure directory exists
-            std::error_code ec;
-            std::filesystem::create_directories(cachePath.parent_path(), ec);
+                // Ensure directory exists
+                std::error_code ec;
+                std::filesystem::create_directories(cachePath.parent_path(), ec);
 
-            if (m_scanner.loadScanCache(cachePath)) {
-                Aestra::Log::info("Plugin cache loaded: " + std::to_string(m_scanner.getScannedPlugins().size()) +
-                                  " plugins");
+                if (m_scanner.loadScanCache(cachePath)) {
+                    Aestra::Log::info("Plugin cache loaded: " + std::to_string(m_scanner.getScannedPlugins().size()) +
+                                      " plugins");
+                } else {
+                    Aestra::Log::warning("Plugin cache not found or invalid. Triggering initial scan...");
+                    m_scanner.scanAsync();
+                }
             } else {
-                Aestra::Log::warning("Plugin cache not found or invalid. Triggering initial scan...");
+                Aestra::Log::warning("AppData path is empty in PluginManager::initialize; skipping plugin cache");
                 m_scanner.scanAsync();
             }
         } else {
-            Aestra::Log::error("AppData path is empty in PluginManager::initialize");
+            Aestra::Log::warning("Platform utilities unavailable in PluginManager::initialize; skipping plugin cache");
             m_scanner.scanAsync();
         }
-    } else {
-        Aestra::Log::error("Platform::getUtils() returned null in PluginManager::initialize");
-        m_scanner.scanAsync();
     }
 
     m_initialized = true;
@@ -95,26 +100,29 @@ void PluginManager::shutdown() {
     // Cancel any ongoing scan
     m_scanner.cancelScan();
 
-    // Save Plugin Cache
-    if (auto* utils = Platform::getUtils()) {
-        std::string appData = utils->getAppDataPath("AESTRA");
-        if (!appData.empty()) {
-            std::filesystem::path cachePath = std::filesystem::path(appData) / "plugin_cache.bin";
+    // Save plugin cache only when platform utilities are available.
+    const bool platformInitialized = Platform::isInitialized();
+    if (platformInitialized) {
+        if (auto* utils = Platform::getUtils()) {
+            std::string appData = utils->getAppDataPath("AESTRA");
+            if (!appData.empty()) {
+                std::filesystem::path cachePath = std::filesystem::path(appData) / "plugin_cache.bin";
 
-            // Ensure directory exists (just in case)
-            std::error_code ec;
-            std::filesystem::create_directories(cachePath.parent_path(), ec);
+                // Ensure directory exists (just in case)
+                std::error_code ec;
+                std::filesystem::create_directories(cachePath.parent_path(), ec);
 
-            if (m_scanner.saveScanCache(cachePath)) {
-                Aestra::Log::info("Plugin cache saved to: " + cachePath.string());
+                if (m_scanner.saveScanCache(cachePath)) {
+                    Aestra::Log::info("Plugin cache saved to: " + cachePath.string());
+                } else {
+                    Aestra::Log::error("Failed to save plugin cache to: " + cachePath.string());
+                }
             } else {
-                Aestra::Log::error("Failed to save plugin cache to: " + cachePath.string());
+                Aestra::Log::warning("AppData path is empty in PluginManager::shutdown; skipping plugin cache save");
             }
         } else {
-            Aestra::Log::error("AppData path is empty in PluginManager::shutdown");
+            Aestra::Log::warning("Platform utilities unavailable in PluginManager::shutdown; skipping plugin cache save");
         }
-    } else {
-        Aestra::Log::error("Platform::getUtils() returned null in PluginManager::shutdown");
     }
 
     // Clear all active instances

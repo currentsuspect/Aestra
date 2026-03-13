@@ -89,6 +89,18 @@ if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SO
     set_tests_properties(RumblePluginFactoryTest PROPERTIES LABELS "plugins;rumble;factory")
 endif()
 
+# Rumble Usage Path Test
+if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumbleUsagePathTest.cpp")
+    add_executable(RumbleUsagePathTest Integration/RumbleUsagePathTest.cpp)
+    target_link_libraries(RumbleUsagePathTest PRIVATE AestraAudioCore AestraRumble AestraCore)
+    target_include_directories(RumbleUsagePathTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME RumbleUsagePathTest COMMAND RumbleUsagePathTest)
+    set_tests_properties(RumbleUsagePathTest PROPERTIES LABELS "plugins;rumble;usage")
+endif()
+
 # Resampler Benchmark
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerBenchmark.cpp")
     add_executable(ResamplerBenchmark Integration/ResamplerBenchmark.cpp)
