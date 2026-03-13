@@ -113,6 +113,37 @@ if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SO
     set_tests_properties(RumbleDiscoveryTest PROPERTIES LABELS "plugins;rumble;discovery")
 endif()
 
+# Internal Plugin Project Round-Trip Test
+if(TARGET AestraAudio AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/InternalPluginProjectRoundTripTest.cpp")
+    add_executable(InternalPluginProjectRoundTripTest
+        Integration/InternalPluginProjectRoundTripTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(InternalPluginProjectRoundTripTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(InternalPluginProjectRoundTripTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    target_compile_definitions(InternalPluginProjectRoundTripTest PRIVATE
+        $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
+    )
+    add_test(NAME InternalPluginProjectRoundTripTest COMMAND InternalPluginProjectRoundTripTest)
+    set_tests_properties(InternalPluginProjectRoundTripTest PROPERTIES LABELS "integration;plugins;project")
+endif()
+
+# Arsenal Instrument Attachment Test
+if(TARGET AestraAudio AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ArsenalInstrumentAttachmentTest.cpp")
+    add_executable(ArsenalInstrumentAttachmentTest Integration/ArsenalInstrumentAttachmentTest.cpp)
+    target_link_libraries(ArsenalInstrumentAttachmentTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(ArsenalInstrumentAttachmentTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalInstrumentAttachmentTest COMMAND ArsenalInstrumentAttachmentTest)
+    set_tests_properties(ArsenalInstrumentAttachmentTest PROPERTIES LABELS "integration;arsenal;plugins")
+endif()
+
 # Resampler Benchmark
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerBenchmark.cpp")
     add_executable(ResamplerBenchmark Integration/ResamplerBenchmark.cpp)

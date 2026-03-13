@@ -41,6 +41,10 @@ Current state of the MVP slice:
   - normal manager lookup via `findPlugin(...)`
   - instrument-list presence
   - `createInstanceById(...)` for the internal Rumble id
+- `InternalPluginProjectRoundTripTest` covers:
+  - unit creation + plugin attachment
+  - project save/load persistence for internal instrument units
+  - restored plugin state after project reload
 
 This means Rumble has crossed from concept into a real, testable internal instrument slice.
 
