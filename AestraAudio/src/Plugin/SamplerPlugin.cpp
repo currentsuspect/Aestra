@@ -1,6 +1,7 @@
 #include "Plugin/SamplerPlugin.h"
 
 #include "AestraJSON.h"
+#include "Plugin/BuiltInPlugins.h"
 #include "GarbageCollector.h"
 #include "IO/MiniAudioDecoder.h"
 
@@ -44,21 +45,7 @@ void SamplerPlugin::deactivate() {
 }
 
 const PluginInfo& SamplerPlugin::getInfo() const {
-    static PluginInfo info;
-    if (info.id.empty()) {
-        info.id = "com.Aestrastudios.sampler";
-        info.name = "Aestra Sampler";
-        info.vendor = "Aestra Studios";
-        info.version = "1.0.0";
-        info.category = "Instrument";
-        info.format = PluginFormat::Internal;
-        info.type = PluginType::Instrument;
-        info.numAudioInputs = 0;
-        info.numAudioOutputs = 2;
-        info.hasMidiInput = true;
-        info.hasMidiOutput = false;
-    }
-    return info;
+    return BuiltInPlugins::samplerInfo();
 }
 
 // ... parameters ...

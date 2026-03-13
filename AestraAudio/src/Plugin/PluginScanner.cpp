@@ -2,6 +2,8 @@
 
 #include "PluginScanner.h"
 
+#include "Plugin/BuiltInPlugins.h"
+
 #include <algorithm>
 #include <cctype>
 #include <fstream>
@@ -17,7 +19,22 @@
 namespace Aestra {
 namespace Audio {
 
-PluginScanner::PluginScanner() = default;
+namespace {
+void mergeBuiltInPlugins(std::vector<PluginInfo>& plugins) {
+    for (auto& builtIn : BuiltInPlugins::all()) {
+        const auto it = std::find_if(plugins.begin(), plugins.end(), [&](const PluginInfo& existing) {
+            return existing.id == builtIn.id;
+        });
+        if (it == plugins.end()) {
+            plugins.push_back(std::move(builtIn));
+        }
+    }
+}
+} // namespace
+
+PluginScanner::PluginScanner() {
+    mergeBuiltInPlugins(m_scannedPlugins);
+}
 
 PluginScanner::~PluginScanner() {
     cancelScan();
@@ -128,6 +145,7 @@ void PluginScanner::scanAsync(ScanProgressCallback progressCallback, ScanComplet
 
             // Store results
             if (success) {
+                mergeBuiltInPlugins(results);
                 std::lock_guard<std::mutex> lock(m_mutex);
                 m_scannedPlugins = std::move(results);
             }
@@ -176,6 +194,8 @@ std::vector<PluginInfo> PluginScanner::scanBlocking() {
             scanDirectory(path, results, nullptr, currentIndex, totalCount);
         }
     }
+
+    mergeBuiltInPlugins(results);
 
     // Store results
     {
@@ -372,6 +392,7 @@ bool PluginScanner::loadScanCache(const std::filesystem::path& cachePath) {
             plugins.push_back(std::move(p));
         }
 
+        mergeBuiltInPlugins(plugins);
         m_scannedPlugins = std::move(plugins);
         return true;
     } catch (...) {
@@ -382,6 +403,7 @@ bool PluginScanner::loadScanCache(const std::filesystem::path& cachePath) {
 void PluginScanner::clearCache() {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_scannedPlugins.clear();
+    mergeBuiltInPlugins(m_scannedPlugins);
     m_fileTimestamps.clear();
 }
 

@@ -201,6 +201,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Plugin/PluginScanner.cpp
     src/Plugin/PluginManager.cpp
     src/Plugin/PluginFactory.cpp
+    src/Plugin/BuiltInPlugins.cpp
     src/Plugin/SamplerPlugin.cpp
     src/Plugin/EffectChain.cpp
 )
@@ -296,6 +297,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Plugin/PluginScanner.h
     include/Plugin/PluginManager.h
     include/Plugin/PluginFactory.h
+    include/Plugin/BuiltInPlugins.h
     include/Plugin/EffectChain.h
     include/Plugin/VST3Host.h
     include/Playback/AuditionEngine.h

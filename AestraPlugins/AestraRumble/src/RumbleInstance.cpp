@@ -1,5 +1,7 @@
 #include "RumbleInstance.h"
 
+#include "Plugin/BuiltInPlugins.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -209,22 +211,7 @@ bool RumbleInstance::loadState(const std::vector<uint8_t>& state) {
 }
 
 const Aestra::Audio::PluginInfo& RumbleInstance::getInfo() const {
-    static Aestra::Audio::PluginInfo info;
-    if (info.id.empty()) {
-        info.id = "com.Aestrastudios.rumble";
-        info.name = "Aestra Rumble";
-        info.vendor = "Aestra Studios";
-        info.version = "0.1.0";
-        info.category = "Instrument";
-        info.format = Aestra::Audio::PluginFormat::Internal;
-        info.type = Aestra::Audio::PluginType::Instrument;
-        info.numAudioInputs = 0;
-        info.numAudioOutputs = 2;
-        info.hasMidiInput = true;
-        info.hasMidiOutput = false;
-        info.hasEditor = false;
-    }
-    return info;
+    return Aestra::Audio::BuiltInPlugins::rumbleInfo();
 }
 
 uint32_t RumbleInstance::getTailSamples() const {
