@@ -439,4 +439,4 @@ Load themes from JSON:
 
 ---
 
-**Next:** [AestraAudio Architecture →](Aestra-audio.md)
+**Next:** [AestraAudio Architecture →](nomad-audio.md)
