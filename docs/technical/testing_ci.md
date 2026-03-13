@@ -29,6 +29,57 @@ cd build
 ctest --output-on-failure
 ```
 
+## Current high-value confidence suite (March 2026)
+
+These are the self-contained tests that currently give the best signal for the internal plugin + project path work:
+
+- `RumbleStateTest`
+- `RumblePluginFactoryTest`
+- `RumbleUsagePathTest`
+- `RumbleDiscoveryTest`
+- `ArsenalInstrumentAttachmentTest`
+- `InternalPluginProjectRoundTripTest`
+- `RumbleRenderTest`
+- `RumbleArsenalAudibleTest`
+- `ProjectRoundTripTest`
+
+Recommended local run:
+
+```bash
+cmake -S . -B build-dev
+cmake --build build-dev --target \
+  RumbleStateTest \
+  RumblePluginFactoryTest \
+  RumbleUsagePathTest \
+  RumbleDiscoveryTest \
+  ArsenalInstrumentAttachmentTest \
+  InternalPluginProjectRoundTripTest \
+  RumbleRenderTest \
+  RumbleArsenalAudibleTest \
+  ProjectRoundTripTest -j2
+
+./build-dev/Tests/RumbleStateTest
+./build-dev/Tests/RumblePluginFactoryTest
+./build-dev/Tests/RumbleUsagePathTest
+./build-dev/Tests/RumbleDiscoveryTest
+./build-dev/Tests/ArsenalInstrumentAttachmentTest
+./build-dev/Tests/InternalPluginProjectRoundTripTest
+./build-dev/Tests/Headless/RumbleRenderTest /tmp/rumble_ci
+./build-dev/Tests/Headless/RumbleArsenalAudibleTest
+./build-dev/Tests/ProjectRoundTripTest
+```
+
+## Fixture-driven tests
+
+`OfflineRenderRegressionTest` is built and available, but it is currently fixture-driven rather than self-contained.
+It requires a project file and a reference WAV:
+
+```bash
+./build-dev/Tests/Headless/OfflineRenderRegressionTest <project.aes> <reference.wav>
+```
+
+That means a clean nightly/CI workflow still needs canonical fixtures before this test can be treated as a reliable green/red gate.
+
 ## Full Local Verification (opt-in)
 
 ```bash
