@@ -371,4 +371,4 @@ public:
 
 ---
 
-**Next:** [AestraPlat Architecture →](Aestra-plat.md)
+**Next:** [AestraPlat Architecture →](nomad-plat.md)
