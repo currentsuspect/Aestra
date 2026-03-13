@@ -15,8 +15,7 @@
 
 #ifdef AESTRA_HAS_PLUGINS
 #include "Plugin/SamplerPlugin.h"
-
-#include <RumbleInstance.h>
+#include "RumbleInstance.h"
 #endif
 
 namespace Aestra {

@@ -98,6 +98,29 @@ endif()
 add_subdirectory(AestraPlat)
 
 # =============================================================================
+# Shared Plugin API Interface
+# Provides the plugin contract headers without creating target cycles.
+# =============================================================================
+add_library(AestraPluginAPI INTERFACE)
+target_include_directories(AestraPluginAPI INTERFACE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+)
+target_link_libraries(AestraPluginAPI INTERFACE AestraCore)
+
+# =============================================================================
+# AestraPlugins - Premium Plugins (Optional Private Submodule)
+# Must be added before AestraAudio so plugin targets exist when linked.
+# =============================================================================
+if(EXISTS "${CMAKE_SOURCE_DIR}/AestraPlugins/CMakeLists.txt")
+    message(STATUS "Found AestraPlugins - including premium plugins")
+    add_subdirectory(AestraPlugins)
+    set(AESTRA_HAS_PLUGINS ON)
+else()
+    message(STATUS "AestraPlugins not found - skipping premium plugins")
+    set(AESTRA_HAS_PLUGINS OFF)
+endif()
+
+# =============================================================================
 # AestraAudio - Audio Engine
 # =============================================================================
 add_subdirectory(AestraAudio)
@@ -150,18 +173,6 @@ if(AESTRA_ENABLE_UI)
   # AestraUI - UI Framework
   # =============================================================================
   add_subdirectory(AestraUI)
-endif()
-
-# =============================================================================
-# AestraPlugins - Premium Plugins (Optional Private Submodule)
-# =============================================================================
-if(EXISTS "${CMAKE_SOURCE_DIR}/AestraPlugins/CMakeLists.txt")
-    message(STATUS "Found AestraPlugins - including premium plugins")
-    add_subdirectory(AestraPlugins)
-    set(AESTRA_HAS_PLUGINS ON)
-else()
-    message(STATUS "AestraPlugins not found - skipping premium plugins")
-    set(AESTRA_HAS_PLUGINS OFF)
 endif()
 
 # =============================================================================

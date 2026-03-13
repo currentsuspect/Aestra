@@ -77,6 +77,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/PluginScanTest.cpp")
     endif()
 endif()
 
+# Rumble Plugin Factory Test
+if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumblePluginFactoryTest.cpp")
+    add_executable(RumblePluginFactoryTest Integration/RumblePluginFactoryTest.cpp)
+    target_link_libraries(RumblePluginFactoryTest PRIVATE AestraAudioCore AestraRumble AestraCore)
+    target_include_directories(RumblePluginFactoryTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME RumblePluginFactoryTest COMMAND RumblePluginFactoryTest)
+    set_tests_properties(RumblePluginFactoryTest PROPERTIES LABELS "plugins;rumble;factory")
+endif()
+
 # Resampler Benchmark
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerBenchmark.cpp")
     add_executable(ResamplerBenchmark Integration/ResamplerBenchmark.cpp)
@@ -302,6 +314,17 @@ target_include_directories(MacroCommandTest PRIVATE
 )
 add_test(NAME MacroCommandTest COMMAND MacroCommandTest)
 set_tests_properties(MacroCommandTest PROPERTIES LABELS "commands;phase2")
+
+# Rumble State Test
+if(TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
+    add_executable(RumbleStateTest Commands/RumbleStateTest.cpp)
+    target_link_libraries(RumbleStateTest PRIVATE AestraRumble)
+    target_include_directories(RumbleStateTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME RumbleStateTest COMMAND RumbleStateTest)
+    set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state")
+endif()
 
 message(STATUS "Commands tests added - Phase 2 undo/redo system")
 
