@@ -250,6 +250,7 @@ public:
 
     // Get platform utilities
     static IPlatformUtils* getUtils();
+    static bool isInitialized();
 
     // Initialize/shutdown platform
     static bool initialize();

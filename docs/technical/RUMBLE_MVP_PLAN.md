@@ -32,6 +32,11 @@ Current state of the MVP slice:
   - in-process factory instantiation for `com.Aestrastudios.rumble`
   - plugin metadata sanity
   - basic initialization and parameter exposure
+- `RumbleUsagePathTest` covers:
+  - plugin-manager lifecycle
+  - factory-backed instance creation through normal manager flow
+  - MIDI note input
+  - real rendered audio buffer sanity
 
 This means Rumble has crossed from concept into a real, testable internal instrument slice.
 

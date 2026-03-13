@@ -50,6 +50,10 @@ IPlatformUtils* Platform::getUtils() {
     return s_utils;
 }
 
+bool Platform::isInitialized() {
+    return s_utils != nullptr;
+}
+
 bool Platform::initialize() {
     if (s_utils) {
         return true; // Already initialized
