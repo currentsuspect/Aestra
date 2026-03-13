@@ -24,10 +24,12 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 2. **[📡 API Reference](api/index.md)** - Complete API documentation
 3. **[⚙️ Technical Reference](technical/faq.md)** - FAQ and advanced topics
 4. **[🗺️ Roadmap](technical/roadmap.md)** - Project roadmap
+5. **[🧪 Testing & CI](technical/testing_ci.md)** - Confidence suite and workflow
+6. **[🎛️ Rumble MVP](technical/RUMBLE_MVP_PLAN.md)** - Internal instrument slice status
 
 ### For Project Management
-1. **[📋 Changelog](../meta/CHANGELOGS/CHANGELOG_2025Q1.md)** - Version history
-2. **[📊 Development Logs](../meta/SESSION_SUMMARY_DEC2024.md)** - Recent progress
+1. **[📋 Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q1.md)** - Current 2026 milestone history
+2. **[📚 Historical Meta Archive](../meta/README.md)** - Older summaries, bug-fix notes, and archive context
 3. **[📜 License Reference](about/license-reference.md)** - Licensing details
 4. **[🤝 Community](community/)** - Support and guidelines
 
@@ -65,15 +67,18 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 - **[Glossary](technical/glossary.md)** - Technical terms
 - **[AI Integration](technical/ai-guide.md)** - Muse AI features
 - **[Roadmap](technical/roadmap.md)** - Future development plans
+- **[Testing & CI](technical/testing_ci.md)** - Current verification workflow
+- **[Rumble MVP Plan](technical/RUMBLE_MVP_PLAN.md)** - Internal instrument status and validation
 
 ### 📡 **API Documentation**
 - **[API Overview](api/index.md)** - Complete API reference
 - **[Generated Docs](api-reference/html/index.html)** - Doxygen-generated docs
 
 ### 📋 **Release Information**
-- **[Changelog](../meta/CHANGELOGS/CHANGELOG_2025Q1.md)** - Version history
-- **[Development Logs](../meta/SESSION_SUMMARY_DEC2024.md)** - Recent work
-- **[Milestone Updates](../meta/TASK_4.*_SUMMARY.md)** - Task summaries
+- **[Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q1.md)** - Current 2026 milestone history
+- **[Historical Changelog Snapshot](../meta/CHANGELOGS/CHANGELOG_2025Q1.md)** - Older release-era changelog
+- **[Historical Meta Archive](../meta/README.md)** - Archived work logs, bug notes, and task summaries
+- **[Milestone Updates](../meta/README.md)** - Entry point for archived implementation notes
 
 ### 🌐 **Community**
 - **[Code of Conduct](community/code-of-conduct.md)** - Community guidelines
@@ -107,9 +112,9 @@ Welcome to the comprehensive documentation hub for **Aestra DAW**! This guide he
 
 ### 📊 **For Project Managers**
 1. Review [Roadmap](technical/roadmap.md)
-2. Check [Changelog](../meta/CHANGELOGS/CHANGELOG_2025Q1.md)
-3. Read [Development Logs](../meta/SESSION_SUMMARY_DEC2024.md)
-4. Understand [Milestones](technical/roadmap.md#milestones)
+2. Check [Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q1.md)
+3. Read [Development Logs](../meta/SESSION_SUMMARY_DEC2024.md) for archive context
+4. Understand [Milestones](technical/roadmap.md#roadmap-phases-now--dec-2026)
 
 ## 🔗 External Resources
 
