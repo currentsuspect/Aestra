@@ -37,6 +37,10 @@ Current state of the MVP slice:
   - factory-backed instance creation through normal manager flow
   - MIDI note input
   - real rendered audio buffer sanity
+- `RumbleDiscoveryTest` covers:
+  - normal manager lookup via `findPlugin(...)`
+  - instrument-list presence
+  - `createInstanceById(...)` for the internal Rumble id
 
 This means Rumble has crossed from concept into a real, testable internal instrument slice.
 
