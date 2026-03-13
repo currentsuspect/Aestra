@@ -371,10 +371,11 @@ add_test(NAME MacroCommandTest COMMAND MacroCommandTest)
 set_tests_properties(MacroCommandTest PROPERTIES LABELS "commands;phase2")
 
 # Rumble State Test
-if(TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
+if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
     add_executable(RumbleStateTest Commands/RumbleStateTest.cpp)
-    target_link_libraries(RumbleStateTest PRIVATE AestraRumble)
+    target_link_libraries(RumbleStateTest PRIVATE AestraRumble AestraAudioCore AestraCore)
     target_include_directories(RumbleStateTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME RumbleStateTest COMMAND RumbleStateTest)

@@ -1,12 +1,22 @@
 # 📘 Aestra DAW — Documentation Portal
 
-![Aestra Version](https://img.shields.io/badge/Aestra-v1.0-blue)
-![License](https://img.shields.io/badge/License-ASSAL%20v1.0-blue)
+![Aestra Version](https://img.shields.io/badge/Aestra-v1.1-blue)
+![License](https://img.shields.io/badge/License-ASSAL%20v1.1-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-orange)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
 
-Welcome to the **Aestra DAW Documentation Portal**! This is your comprehensive guide to understanding, building, and contributing to Aestra — a modern digital audio workstation built with intention.
+Welcome to the **Aestra DAW Documentation Portal**! This is your guide to understanding, building, validating, and contributing to Aestra.
+
+## 📌 Current docs posture
+
+Some documents in this repo are active engineering references, while others are preserved historical notes.
+If you want the most accurate current picture, start with:
+
+- [Roadmap](technical/roadmap.md)
+- [Testing & CI](technical/testing_ci.md)
+- [Rumble MVP Plan](technical/RUMBLE_MVP_PLAN.md)
+- [Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q1.md)
 
 ## 🎯 What is Aestra?
 
@@ -16,7 +26,7 @@ Aestra DAW is a professional digital audio workstation featuring:
 - **Pattern-based workflow** — Intuitive pattern and playlist sequencer
 - **Professional audio quality** — 64-bit multi-threaded processing
 - **Modern C++ architecture** — Clean separation of concerns
-- **Source-available** — Transparent codebase under ASSAL v1.0
+- **Source-available** — Transparent codebase under ASSAL v1.1
 
 ## 📚 Documentation Index
 
@@ -45,9 +55,11 @@ Aestra DAW is a professional digital audio workstation featuring:
 
 ### 📋 Project Management
 
-- **[Roadmap](technical/roadmap.md)** — High-level milestones and future plans
+- **[Roadmap](technical/roadmap.md)** — High-level milestones and current execution plan
+- **[Testing & CI](technical/testing_ci.md)** — Current confidence suite and verification workflow
 - **[CI Workflows Map](technical/ci_workflows.md)** — What runs in GitHub Actions, what is blocking vs preview
-- **[License Reference](about/license-reference.md)** — Licensing information and ASSAL v1.0 details
+- **[Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q1.md)** — Current milestone history
+- **[License Reference](about/license-reference.md)** — Licensing information and ASSAL v1.1 details
 
 ### 📝 Templates
 
@@ -76,8 +88,9 @@ Aestra DAW is a professional digital audio workstation featuring:
 
 ### For Project Managers
 1. Review [Roadmap](technical/roadmap.md) for project milestones
-2. Check [License Reference](about/license-reference.md) for ASSAL v1.0 details
-3. Use [Issue Template](TEMPLATE/ISSUE_TEMPLATE.md) for documentation issues
+2. Check [Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q1.md) for recent milestone history
+3. Check [License Reference](about/license-reference.md) for ASSAL v1.1 details
+4. Use [Issue Template](TEMPLATE/ISSUE_TEMPLATE.md) for documentation issues
 
 ## 🌟 Key Features
 
@@ -132,7 +145,7 @@ We welcome contributions from the community! Before contributing:
 
 ## ⚖️ License
 
-**Aestra DAW** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.0**. See [License Reference](about/license-reference.md) for full details.
+**Aestra DAW** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**. See [License Reference](about/license-reference.md) for full details.
 
 **Key Points:**
 - ✅ Source code is publicly visible for educational purposes
@@ -146,4 +159,4 @@ The source code is publicly visible for transparency but is **NOT open-source**.
 
 **Built by musicians, for musicians. Crafted with intention.** 🎵
 
-*Last updated: January 2025*
+*Last updated: March 2026*

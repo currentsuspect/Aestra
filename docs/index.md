@@ -130,6 +130,22 @@ Every feature serves a purpose. No bloat, just professional tools that get out o
 
 For detailed build instructions, see the [Building Guide](getting-started/building.md).
 
+## 📌 Current Engineering Snapshot (March 2026)
+
+Aestra is still in active development, but a few paths are now concretely proven:
+
+- internal built-in plugin discovery works through normal manager lookup
+- `Aestra Rumble` can be instantiated, saved, restored, and rendered in headless tests
+- Arsenal units can now hold real plugin instances instead of placeholder-only entries
+- internal plugin units survive project save/load round-trips
+- headless Arsenal pattern playback can route MIDI to Rumble and produce audible output
+
+If you want the most truthful picture of current progress, start with:
+
+- [Roadmap](technical/roadmap.md)
+- [Testing & CI](technical/testing_ci.md)
+- [Rumble MVP Plan](technical/RUMBLE_MVP_PLAN.md)
+
 ## 📊 Project Status
 
 <table class="module-status-table">
@@ -172,14 +188,14 @@ For detailed build instructions, see the [Building Guide](getting-started/buildi
       <td>Volume, pan, mute, solo controls</td>
     </tr>
     <tr>
-      <td><strong>VST3 Hosting</strong></td>
-      <td><span class="status-icon info"></span>Planned Q2 2025</td>
-      <td>Plugin integration system</td>
+      <td><strong>Internal Arsenal Plugins</strong></td>
+      <td><span class="status-icon warning"></span>In Progress</td>
+      <td>Built-in instrument path now validated through discovery, project persistence, and audible headless playback</td>
     </tr>
     <tr>
-      <td><strong>MIDI</strong></td>
-      <td><span class="status-icon info"></span>Planned Q2 2025</td>
-      <td>MIDI input/output and piano roll</td>
+      <td><strong>Third-Party Plugin Hosting</strong></td>
+      <td><span class="status-icon info"></span>Decision Gate</td>
+      <td>VST3/CLAP scaffolding exists, but Beta scope still favors internal Arsenal unless external hosting becomes boringly stable</td>
     </tr>
   </tbody>
 </table>
@@ -274,6 +290,13 @@ Comprehensive API documentation for all Aestra modules.
 </div>
 
 <div class="feature-card" markdown="1">
+### 🧪 Testing & Verification
+Current confidence suite, CI profile notes, and the highest-signal local verification commands.
+
+[See Testing & CI →](technical/testing_ci.md)
+</div>
+
+<div class="feature-card" markdown="1">
 ### 🤝 Community
 Code of conduct, support channels, and security policy.
 
@@ -300,7 +323,7 @@ Aestra is built by musicians, for musicians. Your feedback, contributions, and s
 
 ## 📜 License
 
-Aestra is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.0**.
+Aestra is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**.
 
 The source code is publicly visible for transparency and education, but is **NOT open-source**. All rights reserved by Dylan Makori / Aestra Studios.
 
@@ -312,6 +335,6 @@ The source code is publicly visible for transparency and education, but is **NOT
 
 **Built by musicians, for musicians. Crafted with intention.** 🎵
 
-*Copyright © 2025 Dylan Makori / Aestra Studios. All rights reserved.*
+*Copyright © 2026 Dylan Makori / Aestra Studios. All rights reserved.*
 
 </div>

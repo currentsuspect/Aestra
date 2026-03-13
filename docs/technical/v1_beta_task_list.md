@@ -18,9 +18,12 @@ This section is here to prevent us from re-building things that already exist.
 	- Known gaps (still P0): end-to-end reliability/stress tests, file management rules, device edge cases.
 - **Export/offline render**: not confirmed in code yet (still treated as missing until we find the implementation).
 
-New this session:
+New since the early January baseline:
 
 - **Project roundtrip smoke test added**: `Tests/ProjectRoundTripTest.cpp` + CMake target `ProjectRoundTripTest`.
+- **Internal plugin persistence path added**: units can now serialize plugin ID/state and restore internal instruments on project load.
+- **Internal plugin discovery path added**: built-in plugins now participate in normal scanner/manager lookup.
+- **Headless audible Arsenal proof added**: `RumbleArsenalAudibleTest` proves an internal Arsenal instrument can be driven by pattern playback and render audible output.
 
 ## How to use this list
 

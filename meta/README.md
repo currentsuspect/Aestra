@@ -9,10 +9,11 @@ This directory contains project metadata, historical records, session summaries,
 ```
 meta/
 ├── CHANGELOGS/              # Historical changelogs
-│   └── CHANGELOG_2025Q1.md  # Q1 2025 changelog
-├── BUG_REPORTS/             # Detailed bug fix documentation
+│   ├── CHANGELOG_2025Q1.md  # Older changelog snapshot
+│   └── CHANGELOG_2026Q1.md  # Current 2026 Q1 changelog
+├── BUG_REPORTS/             # Historical bug fix documentation
 │   └── BUG_FIXES_29.10.25.md
-├── SESSION_SUMMARY_DEC2024.md   # Development session summary
+├── SESSION_SUMMARY_DEC2024.md   # Historical development session summary
 ├── MANIFESTO.md                  # Aestra Studios manifesto
 └── [Various task summaries]      # Completed task documentation
 ```
@@ -22,10 +23,11 @@ meta/
 ## 📝 File Descriptions
 
 ### Changelogs
-- **CHANGELOG_2025Q1.md** — All changes made in Q1 2025 (January-March)
+- **CHANGELOG_2025Q1.md** — Older changelog snapshot from the early public repo phase
+- **CHANGELOG_2026Q1.md** — Current Q1 2026 changelog covering the internal Arsenal / Rumble / project-path milestone work
 
 ### Bug Reports
-- **BUG_FIXES_29.10.25.md** — Comprehensive guide for implementing 11 reported bugs from October 2025
+- **BUG_FIXES_29.10.25.md** — Historical guide for implementing 11 reported bugs from October 2025
 
 ### Session Summaries
 - **SESSION_SUMMARY_DEC2024.md** — Development session summary from December 2024
@@ -78,15 +80,16 @@ Documents are moved to this directory when they:
 3. Document completed tasks or fixed bugs
 4. Serve as a record of development sessions
 
-**Note:** Files here are preserved for reference but not actively maintained.
+**Note:** Files here are preserved primarily for reference. Some index files are maintained so the archive stays navigable, but many historical summaries are intentionally not kept perfectly in sync with the current codebase.
 
 ---
 
 ## 📖 Related Documentation
 
 - **[Main Documentation Portal](../docs/README.md)** — Current project documentation
-- **[Contributing Guide](../docs/CONTRIBUTING.md)** — How to contribute
-- **[Changelog (Current)](../docs/ROADMAP.md)** — Current roadmap and changes
+- **[Contributing Guide](../docs/developer/contributing.md)** — How to contribute
+- **[Current Roadmap](../docs/technical/roadmap.md)** — Current execution plan
+- **[Testing & CI](../docs/technical/testing_ci.md)** — Current confidence suite and verification workflow
 
 ---
 

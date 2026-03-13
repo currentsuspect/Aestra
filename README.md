@@ -29,6 +29,33 @@ Whether you're producing electronic music, scoring films, or recording live inst
 
 ---
 
+## 📌 Current Verified Snapshot (March 2026)
+
+Aestra is still in active engineering mode, but several important paths are now proven rather than aspirational.
+
+### Verified today
+
+- Internal built-in plugins participate in normal discovery and lookup.
+- `Aestra Rumble` can be instantiated through the plugin manager and factory paths.
+- Internal plugin state can be saved, restored, and survive project round-trips.
+- Arsenal units can now hold real plugin instances instead of placeholder-only entries.
+- Headless Arsenal playback can route MIDI to Rumble and produce audible output.
+- Project round-trip coverage is passing for both playlist/project persistence and internal plugin unit persistence.
+
+### Current self-contained confidence suite
+
+- `RumbleStateTest`
+- `RumblePluginFactoryTest`
+- `RumbleUsagePathTest`
+- `RumbleDiscoveryTest`
+- `ArsenalInstrumentAttachmentTest`
+- `InternalPluginProjectRoundTripTest`
+- `RumbleRenderTest`
+- `RumbleArsenalAudibleTest`
+- `ProjectRoundTripTest`
+
+This matters because Aestra is no longer just “plugin scaffolding exists” — the internal instrument path now reaches discovery, project persistence, and audible playback.
+
 ## ⚙️ Core Features
 
 ### 🎵 Audio Engine
@@ -218,7 +245,7 @@ By contributing to Aestra, you agree that:
 - You waive ownership claims to your contributions
 - Contributions are made under the ASSAL v1.0 license terms
 
-For detailed contribution guidelines, see **[Contributing Guide →](docs/CONTRIBUTING.md)**
+For detailed contribution guidelines, see **[Contributing Guide →](docs/developer/contributing.md)**
 
 ### Ways to Contribute
 
@@ -342,8 +369,10 @@ Thank you to all contributors and the open-source community for making Aestra po
 ### 🎯 Phase 2 — Project + Undo/Redo (Apr–Jun 2026)
 
 ✅ Project format v1 spec with versioning
-✅ Undo/redo for core actions
--[ ] Autosave + crash recovery
+✅ Autosave + crash-safe recovery path
+✅ Project round-trip smoke coverage
+✅ Internal plugin project round-trip coverage
+⚠️ Undo/redo exists, but still needs broader main-UX integration hardening
 
 ### 🎯 Phase 3 — Recording + Export (Jul–Sep 2026)
 
@@ -356,6 +385,8 @@ Thank you to all contributors and the open-source community for making Aestra po
 - Option A: Ship with internal Arsenal only
 - Option B: Minimal VST3/CLAP MVP (if stable)
 
+Current signal favors Option A as the safer Beta baseline: internal Arsenal work is now materially ahead, with discovery, persistence, and audible playback already validated for Rumble.
+
 ### 🎯 Phase 5–6 — Hardening + Release (Oct–Dec 2026)
 
 - Bug triage, performance budgets
@@ -363,6 +394,8 @@ Thank you to all contributors and the open-source community for making Aestra po
 - v1 Beta ship
 
 See **[docs/technical/roadmap.md](docs/technical/roadmap.md)** for the full execution plan.
+See **[docs/technical/testing_ci.md](docs/technical/testing_ci.md)** for the current confidence suite and test workflow.
+See **[docs/technical/RUMBLE_MVP_PLAN.md](docs/technical/RUMBLE_MVP_PLAN.md)** for the internal instrument slice that drove much of the recent progress.
 
 ---
 
