@@ -164,7 +164,8 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             for (const auto& clip : lane->clips) {
                 JSON cjs = JSON::object();
                 cjs.set("id", JSON(clip.id.toString()));
-                cjs.set("patternId", JSON(static_cast<double>(clip.patternId.value)));
+                const uint64_t serializedPatternId = clip.patternId.value != 0 ? clip.patternId.value : clip.sourceId;
+                cjs.set("patternId", JSON(static_cast<double>(serializedPatternId)));
                 cjs.set("start", JSON(clip.startBeat));
                 cjs.set("duration", JSON(clip.durationBeats));
                 cjs.set("name", JSON(clip.name));
@@ -524,6 +525,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             ClipInstance clip;
                             clip.id = ClipInstanceID::fromString(cj[c]["id"].asString());
                             clip.patternId = patternMap[oldPatId];
+                            clip.sourceId = clip.patternId.value;
                             clip.startBeat = cj[c]["start"].asNumber();
                             clip.durationBeats = cj[c]["duration"].asNumber();
                             clip.name = cj[c]["name"].asString();

@@ -55,4 +55,21 @@ if(TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleRenderTest.
     )
 endif()
 
+# Rumble Arsenal Audible Test
+if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleArsenalAudibleTest.cpp")
+    add_executable(RumbleArsenalAudibleTest
+        RumbleArsenalAudibleTest.cpp
+    )
+    target_link_libraries(RumbleArsenalAudibleTest PRIVATE AestraAudioCore AestraRumble AestraCore)
+    target_include_directories(RumbleArsenalAudibleTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME RumbleArsenalAudibleTest COMMAND RumbleArsenalAudibleTest)
+    set_tests_properties(RumbleArsenalAudibleTest PROPERTIES
+        LABELS "headless;rumble;arsenal;audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 message(STATUS "Headless tests enabled - AudioEngine API implemented")

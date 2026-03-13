@@ -14,10 +14,11 @@ namespace Audio {
 // Forward declarations
 using UnitID = uint64_t;
 
-// STUB: UnitGroup — Phase 2 will define group routing/bus logic
-struct UnitGroup {
-    uint64_t id{0};
-    std::string name;
+enum class UnitGroup : uint32_t {
+    Unknown = 0,
+    Synth = 1,
+    Drums = 2,
+    Audio = 3,
 };
 
 /**
@@ -28,8 +29,10 @@ struct UnitInfo {
     bool enabled{false};
     int targetMixerRoute{-1}; // -1 = not routed
     std::shared_ptr<IPluginInstance> plugin;
+    std::string pluginId;
+    std::vector<uint8_t> pluginState;
 
-    // STUB: Phase 2 UI-facing properties
+    // Phase-2-lite UI-facing properties
     std::string name;
     uint32_t color{0x808080}; // Default grey
     bool isMuted{false};
@@ -58,87 +61,42 @@ class UnitManager {
 public:
     UnitManager() = default;
 
-    std::shared_ptr<const AudioArsenalSnapshot> getAudioSnapshot() const { return nullptr; }
+    std::shared_ptr<const AudioArsenalSnapshot> getAudioSnapshot() const;
 
-    /**
-     * @brief Get unit info by ID (returns nullptr if not found)
-     */
-    UnitInfo* getUnit(UnitID id) {
-        auto it = m_units.find(id);
-        if (it != m_units.end()) {
-            return &it->second;
-        }
-        return nullptr;
-    }
+    UnitInfo* getUnit(UnitID id);
+    const UnitInfo* getUnit(UnitID id) const;
 
-    const UnitInfo* getUnit(UnitID id) const {
-        auto it = m_units.find(id);
-        if (it != m_units.end()) {
-            return &it->second;
-        }
-        return nullptr;
-    }
+    UnitID createUnit();
+    UnitID createUnit(const std::string& name, UnitGroup group = UnitGroup::Unknown);
 
-    /**
-     * @brief Create a new unit and return its ID
-     */
-    UnitID createUnit() {
-        UnitID id = nextId++;
-        m_units[id] = UnitInfo{};
-        m_units[id].id = id;
-        return id;
-    }
+    size_t getUnitCount() const { return m_unitOrder.size(); }
+    std::vector<UnitID> getAllUnitIDs() const { return m_unitOrder; }
+    void reorderUnit(UnitID id, size_t newIndex);
+    void clear();
 
-    // STUB: Phase 2 unit property setters — UI calls these to modify unit state
-    void setUnitName(UnitID id, const std::string& name) {
-        if (auto* u = getUnit(id))
-            u->name = name;
-    }
-    void setUnitMute(UnitID id, bool muted) {
-        if (auto* u = getUnit(id))
-            u->isMuted = muted;
-    }
-    void setUnitSolo(UnitID id, bool solo) {
-        if (auto* u = getUnit(id))
-            u->isSolo = solo;
-    }
-    void setUnitArmed(UnitID id, bool armed) {
-        if (auto* u = getUnit(id))
-            u->isArmed = armed;
-    }
-    void setUnitEnabled(UnitID id, bool enabled) {
-        if (auto* u = getUnit(id))
-            u->isEnabled = enabled;
-    }
-    void setUnitMixerChannel(UnitID id, int channel) {
-        if (auto* u = getUnit(id))
-            u->targetMixerRoute = channel;
-    }
-    void setUnitAudioClip(UnitID id, const std::string& path) {
-        if (auto* u = getUnit(id))
-            u->audioClipPath = path;
-    }
+    void setUnitName(UnitID id, const std::string& name);
+    void setUnitMute(UnitID id, bool muted);
+    void setUnitSolo(UnitID id, bool solo);
+    void setUnitArmed(UnitID id, bool armed);
+    void setUnitEnabled(UnitID id, bool enabled);
+    void setUnitMixerChannel(UnitID id, int channel);
+    void setUnitAudioClip(UnitID id, const std::string& path);
+    void setUnitColor(UnitID id, uint32_t color);
+    void setUnitGroup(UnitID id, UnitGroup group);
 
-    /**
-     * @brief Save to JSON (stub)
-     */
-    JSON saveToJSON() const {
-        JSON json;
-        // Stub - return empty object
-        return json;
-    }
+    void attachPlugin(UnitID id, const std::string& pluginId, std::shared_ptr<IPluginInstance> plugin);
+    void setUnitPluginState(UnitID id, const std::vector<uint8_t>& state);
+    void captureUnitPluginState(UnitID id);
+    std::shared_ptr<IPluginInstance> getUnitPlugin(UnitID id) const;
+    std::string getUnitPluginId(UnitID id) const;
 
-    /**
-     * @brief Load from JSON (stub)
-     */
-    void loadFromJSON(const JSON& json) {
-        // Stub - do nothing
-        (void)json;
-    }
+    JSON saveToJSON() const;
+    void loadFromJSON(const JSON& json);
 
 private:
     UnitID nextId{1};
     std::unordered_map<UnitID, UnitInfo> m_units;
+    std::vector<UnitID> m_unitOrder;
 };
 
 } // namespace Audio

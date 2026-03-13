@@ -1784,7 +1784,7 @@ void AestraContent::loadInstrumentToArsenal(const std::string& pluginId) {
     // 1. Get UnitManager from TrackManager
     if (!m_trackManager) return;
     auto& unitManager = m_trackManager->getUnitManager();
-    
+
     // 2. Find plugin info to get the name
     auto& pm = Aestra::Audio::PluginManager::getInstance();
     const auto* pluginInfo = pm.findPlugin(pluginId);
@@ -1792,18 +1792,30 @@ void AestraContent::loadInstrumentToArsenal(const std::string& pluginId) {
     if (pluginInfo) {
         unitName = pluginInfo->name;
     }
-    
-    // 3. Create new Unit with the plugin name
-    UnitID newUnit = unitManager.createUnit(unitName);
-    
-    // TODO: Future - attach plugin instance to unit for audio processing
-    // For now, just create the unit placeholder
-    
-    // 4. Refresh Arsenal UI
+
+    // 3. Create and initialize plugin instance
+    auto instance = pm.createInstanceById(pluginId);
+    if (!instance) {
+        Log::error("Failed to create instrument instance for Arsenal: " + pluginId);
+        return;
+    }
+
+    if (!instance->initialize(pm.getDefaultSampleRate(), pm.getDefaultBlockSize())) {
+        Log::error("Failed to initialize instrument instance for Arsenal: " + pluginId);
+        return;
+    }
+
+    // 4. Create new Unit with the plugin name and attach plugin for audio processing
+    UnitID newUnit = unitManager.createUnit(unitName, UnitGroup::Synth);
+    unitManager.setUnitEnabled(newUnit, true);
+    unitManager.attachPlugin(newUnit, pluginId, instance);
+    unitManager.captureUnitPluginState(newUnit);
+
+    // 5. Refresh Arsenal UI
     if (m_sequencerPanel) {
         m_sequencerPanel->refreshUnits();
     }
-    
+
     Log::info("Loaded instrument '" + unitName + "' to Arsenal as Unit " + std::to_string(newUnit));
 }
 
