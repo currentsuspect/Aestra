@@ -44,7 +44,7 @@ if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SO
     add_executable(RumbleRenderTest
         RumbleRenderTest.cpp
     )
-    target_link_libraries(RumbleRenderTest PRIVATE AestraAudioCore AestraRumble AestraCore)
+    target_link_libraries(RumbleRenderTest PRIVATE AestraRumble AestraAudioCore AestraCore)
     target_include_directories(RumbleRenderTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
