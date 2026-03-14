@@ -40,12 +40,13 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/OfflineRenderRegressionTest.cpp")
 endif()
 
 # Rumble Render Test
-if(TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleRenderTest.cpp")
+if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleRenderTest.cpp")
     add_executable(RumbleRenderTest
         RumbleRenderTest.cpp
     )
-    target_link_libraries(RumbleRenderTest PRIVATE AestraRumble)
+    target_link_libraries(RumbleRenderTest PRIVATE AestraAudioCore AestraRumble AestraCore)
     target_include_directories(RumbleRenderTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME RumbleRenderTest COMMAND RumbleRenderTest)

@@ -389,6 +389,13 @@ if(APPLE)
     )
 endif()
 
+# Media Foundation symbols are referenced from AestraAudioCore sources on Windows
+# (for example MiniAudioDecoder), so consumers of the static library need these
+# system libraries transitively.
+if(WIN32)
+    target_link_libraries(AestraAudioCore PUBLIC mfplat mfreadwrite mfuuid)
+endif()
+
 # =============================================================================
 # Premium Plugins Integration (Optional)
 # =============================================================================
