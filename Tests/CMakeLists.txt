@@ -370,6 +370,26 @@ target_include_directories(MacroCommandTest PRIVATE
 add_test(NAME MacroCommandTest COMMAND MacroCommandTest)
 set_tests_properties(MacroCommandTest PROPERTIES LABELS "commands;phase2")
 
+# Mixer Commands Test (Volume, Pan, Mute, Solo)
+add_executable(MixerCommandsTest Commands/MixerCommandsTest.cpp)
+target_link_libraries(MixerCommandsTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(MixerCommandsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MixerCommandsTest COMMAND MixerCommandsTest)
+set_tests_properties(MixerCommandsTest PROPERTIES LABELS "commands;phase2;mixer")
+
+# Clip Commands Test (Trim, Duplicate)
+add_executable(ClipCommandsTest Commands/ClipCommandsTest.cpp)
+target_link_libraries(ClipCommandsTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(ClipCommandsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ClipCommandsTest COMMAND ClipCommandsTest)
+set_tests_properties(ClipCommandsTest PROPERTIES LABELS "commands;phase2;clip")
+
 # Rumble State Test
 if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
     add_executable(RumbleStateTest Commands/RumbleStateTest.cpp)
