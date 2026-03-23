@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
 
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2
@@ -29,7 +29,7 @@ jobs:
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_ENABLE_UI=OFF
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
@@ -59,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
 
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2
@@ -67,7 +67,7 @@ jobs:
           cmake-version: "3.28"
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_ENABLE_UI=OFF
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
@@ -100,7 +100,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
 
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2
@@ -108,7 +108,7 @@ jobs:
           cmake-version: "3.28"
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_ENABLE_UI=OFF
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
