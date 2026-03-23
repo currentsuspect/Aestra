@@ -167,3 +167,13 @@ preferences.json
 ui_state.json
 recent_files.json
 *.userprefs
+
+# Build directories - comprehensive patterns
+**/build/
+**/build-*/
+**/build_*/
+**/build*/
+**/out/
+**/bin/
+**/obj/
+**/dist/
