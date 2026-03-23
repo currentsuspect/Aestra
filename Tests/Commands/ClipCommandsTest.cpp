@@ -1,9 +1,10 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // Clip Commands Unit Tests
-// Tests: TrimClipCommand, DuplicateClipCommand
+// Tests: TrimClipCommand, DuplicateClipCommand, RemoveClipCommand
 
 #include "Commands/TrimClipCommand.h"
 #include "Commands/DuplicateClipCommand.h"
+#include "Commands/RemoveClipCommand.h"
 #include "Commands/AddClipCommand.h"
 #include "Models/ClipInstance.h"
 #include "Models/PlaylistModel.h"
@@ -87,11 +88,168 @@ void testDuplicateClipCommand() {
     std::cout << "✅ PASS\n";
 }
 
+// =============================================================================
+// RemoveClipCommand tests
+// =============================================================================
+
+void testRemoveClipCommand() {
+    std::cout << "TEST: RemoveClipCommand execute/undo/redo... ";
+
+    PlaylistModel model;
+    PlaylistLaneID laneId = model.createLane();
+
+    ClipInstance clip;
+    clip.id = ClipInstanceID::generate();
+    clip.startBeat = 2.0;
+    clip.durationBeats = 4.0;
+    model.addClip(laneId, clip);
+
+    assert(model.getClip(clip.id) != nullptr);
+
+    RemoveClipCommand cmd(model, clip.id);
+    cmd.execute();
+
+    // Clip should be removed
+    assert(model.getClip(clip.id) == nullptr);
+
+    // Undo should restore the clip
+    cmd.undo();
+    ClipInstance* restored = model.getClip(clip.id);
+    assert(restored != nullptr);
+    assert(restored->startBeat == 2.0);
+    assert(restored->durationBeats == 4.0);
+
+    // Redo should remove it again
+    cmd.redo();
+    assert(model.getClip(clip.id) == nullptr);
+
+    std::cout << "✅ PASS\n";
+}
+
+void testRemoveClipCommandDoubleExecuteNoOp() {
+    std::cout << "TEST: RemoveClipCommand double execute no-op... ";
+
+    PlaylistModel model;
+    PlaylistLaneID laneId = model.createLane();
+
+    ClipInstance clip;
+    clip.id = ClipInstanceID::generate();
+    clip.startBeat = 0.0;
+    clip.durationBeats = 2.0;
+    model.addClip(laneId, clip);
+
+    RemoveClipCommand cmd(model, clip.id);
+    cmd.execute();
+    assert(model.getClip(clip.id) == nullptr);
+
+    // Second execute should be no-op (clip already removed)
+    cmd.execute();
+    assert(model.getClip(clip.id) == nullptr);
+
+    // Undo should still work
+    cmd.undo();
+    assert(model.getClip(clip.id) != nullptr);
+
+    std::cout << "✅ PASS\n";
+}
+
+void testRemoveClipCommandUndoBeforeExecuteNoOp() {
+    std::cout << "TEST: RemoveClipCommand undo before execute no-op... ";
+
+    PlaylistModel model;
+    PlaylistLaneID laneId = model.createLane();
+
+    ClipInstance clip;
+    clip.id = ClipInstanceID::generate();
+    clip.startBeat = 0.0;
+    clip.durationBeats = 2.0;
+    model.addClip(laneId, clip);
+
+    RemoveClipCommand cmd(model, clip.id);
+    // Undo before execute - should be no-op
+    cmd.undo();
+
+    // Clip should still be present
+    assert(model.getClip(clip.id) != nullptr);
+
+    std::cout << "✅ PASS\n";
+}
+
+void testRemoveClipCommandInvalidId() {
+    std::cout << "TEST: RemoveClipCommand invalid clip ID... ";
+
+    PlaylistModel model;
+    model.createLane();
+
+    // Attempt to remove a clip that doesn't exist - should not crash
+    ClipInstanceID nonExistentId = ClipInstanceID::generate();
+    RemoveClipCommand cmd(model, nonExistentId);
+    cmd.execute(); // Should handle gracefully
+
+    // Nothing to undo since execute was a no-op
+    cmd.undo(); // Should not crash
+
+    std::cout << "✅ PASS\n";
+}
+
+void testRemoveClipCommandMetadata() {
+    std::cout << "TEST: RemoveClipCommand metadata... ";
+
+    PlaylistModel model;
+    PlaylistLaneID laneId = model.createLane();
+
+    ClipInstance clip;
+    clip.id = ClipInstanceID::generate();
+    model.addClip(laneId, clip);
+
+    RemoveClipCommand cmd(model, clip.id);
+
+    assert(cmd.getName() == "Remove Clip");
+    assert(cmd.changesProjectState() == true);
+    assert(cmd.getSizeInBytes() > 0);
+
+    std::cout << "✅ PASS\n";
+}
+
+void testRemoveClipCommandPreservesClipData() {
+    std::cout << "TEST: RemoveClipCommand preserves clip data on undo... ";
+
+    PlaylistModel model;
+    PlaylistLaneID laneId = model.createLane();
+
+    ClipInstance clip;
+    clip.id = ClipInstanceID::generate();
+    clip.startBeat = 8.0;
+    clip.durationBeats = 16.0;
+    model.addClip(laneId, clip);
+
+    RemoveClipCommand cmd(model, clip.id);
+    cmd.execute();
+    assert(model.getClip(clip.id) == nullptr);
+
+    cmd.undo();
+    ClipInstance* restored = model.getClip(clip.id);
+    assert(restored != nullptr);
+    // Verify exact data is preserved
+    assert(restored->id == clip.id);
+    assert(restored->startBeat == 8.0);
+    assert(restored->durationBeats == 16.0);
+
+    std::cout << "✅ PASS\n";
+}
+
 int main() {
     std::cout << "\n=== Aestra Clip Commands Test ===\n";
 
     testTrimClipCommand();
     testDuplicateClipCommand();
+
+    testRemoveClipCommand();
+    testRemoveClipCommandDoubleExecuteNoOp();
+    testRemoveClipCommandUndoBeforeExecuteNoOp();
+    testRemoveClipCommandInvalidId();
+    testRemoveClipCommandMetadata();
+    testRemoveClipCommandPreservesClipData();
 
     std::cout << "\nAll clip commands tests passed.\n";
     return 0;

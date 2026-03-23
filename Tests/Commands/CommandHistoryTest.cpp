@@ -361,6 +361,97 @@ bool testNullCommand() {
     return true;
 }
 
+bool testMemoryLimit() {
+    std::cout << "TEST: memory limit... ";
+
+    CommandHistory history;
+    // Set a tiny memory limit (1 byte) to force aggressive trimming.
+    // The default getSizeInBytes() returns sizeof(ICommand) which is at least
+    // a few bytes, so even a 1-byte limit causes every push to trim the oldest entry.
+    history.setMaxHistoryMemory(1);
+
+    int executeCount = 0;
+    int undoCount = 0;
+
+    // Push 10 commands - the very tight limit should cause aggressive trimming
+    for (int i = 0; i < 10; ++i) {
+        auto cmd = std::make_shared<TestCommand>("Cmd" + std::to_string(i), &executeCount, &undoCount);
+        history.pushAndExecute(cmd);
+    }
+
+    // We should have fewer than 10 undos available due to memory limit
+    int undoableCount = 0;
+    while (history.canUndo()) {
+        history.undo();
+        undoableCount++;
+    }
+
+    // Should have been limited (less than 10 commands retained)
+    assert(undoableCount < 10);
+
+    std::cout << "✅ PASS\n";
+    return true;
+}
+
+bool testGetHistoryMemoryUsage() {
+    std::cout << "TEST: getHistoryMemoryUsage... ";
+
+    CommandHistory history;
+    int executeCount = 0;
+    int undoCount = 0;
+
+    // Initially no memory usage
+    size_t initialUsage = history.getHistoryMemoryUsage();
+    assert(initialUsage == 0);
+
+    // After pushing commands, usage should grow
+    auto cmd1 = std::make_shared<TestCommand>("Cmd1", &executeCount, &undoCount);
+    history.pushAndExecute(cmd1);
+    size_t afterOne = history.getHistoryMemoryUsage();
+    assert(afterOne > 0);
+
+    auto cmd2 = std::make_shared<TestCommand>("Cmd2", &executeCount, &undoCount);
+    history.pushAndExecute(cmd2);
+    size_t afterTwo = history.getHistoryMemoryUsage();
+    assert(afterTwo >= afterOne);
+
+    // After clear, usage should drop to zero
+    history.clear();
+    size_t afterClear = history.getHistoryMemoryUsage();
+    assert(afterClear == 0);
+
+    std::cout << "✅ PASS\n";
+    return true;
+}
+
+bool testMemoryLimitUnlimited() {
+    std::cout << "TEST: memory limit zero means unlimited... ";
+
+    CommandHistory history;
+    history.setMaxHistoryMemory(0); // 0 = unlimited
+
+    int executeCount = 0;
+    int undoCount = 0;
+
+    // Push many commands - none should be trimmed
+    for (int i = 0; i < 50; ++i) {
+        auto cmd = std::make_shared<TestCommand>("Cmd" + std::to_string(i), &executeCount, &undoCount);
+        history.pushAndExecute(cmd);
+    }
+
+    int undoableCount = 0;
+    while (history.canUndo()) {
+        history.undo();
+        undoableCount++;
+    }
+
+    // All 50 should be undoable (memory limit is off)
+    assert(undoableCount == 50);
+
+    std::cout << "✅ PASS\n";
+    return true;
+}
+
 // =============================================================================
 // MAIN
 // =============================================================================
@@ -391,6 +482,9 @@ int main() {
         {"Execute Failure", testExecuteFailure},
         {"Undo Failure", testUndoFailure},
         {"Null Command", testNullCommand},
+        {"Memory Limit", testMemoryLimit},
+        {"Get History Memory Usage", testGetHistoryMemoryUsage},
+        {"Memory Limit Unlimited", testMemoryLimitUnlimited},
     };
 
     for (const auto& test : tests) {

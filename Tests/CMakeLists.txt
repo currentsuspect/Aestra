@@ -297,6 +297,16 @@ add_executable(AestraMixerBusTest AestraAudio/MixerBusTest.cpp)
 target_link_libraries(AestraMixerBusTest PRIVATE AestraAudio AestraCore)
 add_test(NAME AestraMixerBusTest COMMAND AestraMixerBusTest)
 
+# AestraUUID Test (header-only, no audio hardware required)
+add_executable(AestraUUIDTest AestraAudio/AestraUUIDTest.cpp)
+target_link_libraries(AestraUUIDTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(AestraUUIDTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraUUIDTest COMMAND AestraUUIDTest)
+set_tests_properties(AestraUUIDTest PROPERTIES LABELS "audio;uuid")
+
 # Sample Rate Converter Test
 add_executable(AestraSampleRateConverterTest AestraAudio/SampleRateConverterTest.cpp)
 target_link_libraries(AestraSampleRateConverterTest PRIVATE AestraAudio AestraCore)
@@ -389,6 +399,16 @@ target_include_directories(ClipCommandsTest PRIVATE
 )
 add_test(NAME ClipCommandsTest COMMAND ClipCommandsTest)
 set_tests_properties(ClipCommandsTest PROPERTIES LABELS "commands;phase2;clip")
+
+# CommandTransaction Test
+add_executable(CommandTransactionTest Commands/CommandTransactionTest.cpp)
+target_link_libraries(CommandTransactionTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(CommandTransactionTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME CommandTransactionTest COMMAND CommandTransactionTest)
+set_tests_properties(CommandTransactionTest PROPERTIES LABELS "commands;phase2")
 
 # Rumble State Test
 if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
