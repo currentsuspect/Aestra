@@ -75,36 +75,59 @@ void UIMixerHeader::setIsMaster(bool isMaster)
 void UIMixerHeader::onRender(NUIRenderer& renderer)
 {
     auto bounds = getBounds();
+    
+    // Safety check for invalid bounds
+    if (bounds.width <= 0 || bounds.height <= 0) return;
 
+    // Background for selection
     if (m_selected) {
         renderer.fillRect(bounds, m_selectedBg);
     }
 
-    // Color chip
-    NUIRect chip{bounds.x, bounds.y, CHIP_W, bounds.height};
-    renderer.fillRect(chip, colorFromARGB(m_trackColorArgb));
+    // Top Colored Bar (Visual Indicator) - Replaces side chip
+    constexpr float TOP_BAR_H = 3.0f;
+    
+    // Explicitly define top bar rect to cover full width
+    // Use floor/ceil to snap to pixels and avoid subpixel gaps (which causes "missing right/top" look)
+    NUIRect topBar{
+        std::floor(bounds.x), 
+        std::floor(bounds.y), 
+        std::ceil(bounds.width), 
+        TOP_BAR_H
+    };
+    
+    // Use Primary Purple for Master if detection fails, otherwise use track color
+    NUIColor barColor = (m_isMaster && m_trackColorArgb == 0) // Fallback for master
+                        ? NUIThemeManager::getInstance().getColor("primary") 
+                        : colorFromARGB(m_trackColorArgb);
+                        
+    // Ensure alpha is 1.0 for the bar itself
+    barColor = barColor.withAlpha(1.0f);
+    
+    renderer.fillRect(topBar, barColor);
 
-    // Text area
-    NUIRect textRect{bounds.x + CHIP_W + PAD_X, bounds.y, bounds.width - CHIP_W - PAD_X, bounds.height};
+    // Text area (Below the top bar)
+    // textRect starts AFTER top bar + padding
+    NUIRect textRect{
+        bounds.x + PAD_X, 
+        bounds.y + TOP_BAR_H + 2.0f, // padding below bar
+        bounds.width - (PAD_X * 2), 
+        bounds.height - (TOP_BAR_H + 2.0f)
+    };
 
-    const float nameFont = m_isMaster ? 13.0f : 12.0f;  // Increased regular track font for readability
+    const float nameFont = m_isMaster ? 13.0f : 12.0f;
     const float routeFont = m_isMaster ? 10.0f : 9.0f;
 
-    // Name (top)
-    NUIRect nameRect{textRect.x, std::floor(textRect.y + 2.0f), textRect.width, textRect.height * 0.6f};
+    // Name (top half of remaining space)
+    NUIRect nameRect{textRect.x, textRect.y, textRect.width, textRect.height * 0.55f};
     renderer.drawTextCentered(m_name, nameRect, nameFont, m_selected ? m_selectedText : m_text);
 
-    // Route (bottom)
+    // Route (bottom half)
     if (!m_route.empty()) {
         const float routeH = m_isMaster ? 14.0f : 12.0f;
-        NUIRect routeRect{textRect.x, std::floor(bounds.y + bounds.height - routeH), textRect.width, routeH};
+        NUIRect routeRect{textRect.x, textRect.y + textRect.height - routeH - 2.0f, textRect.width, routeH};
         renderer.drawTextCentered(m_route, routeRect, routeFont, m_textSecondary);
     }
-    
-    // Thin colored accent line at bottom of header (matching track color)
-    constexpr float ACCENT_LINE_H = 2.0f;
-    NUIRect accentLine{bounds.x, bounds.y + bounds.height - ACCENT_LINE_H, bounds.width, ACCENT_LINE_H};
-    renderer.fillRect(accentLine, colorFromARGB(m_trackColorArgb));
 }
 
 } // namespace AestraUI

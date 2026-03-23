@@ -1,15 +1,16 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "../include/AestraFile.h"
 #include "../include/AestraJSON.h"
-#include <iostream>
+
 #include <cassert>
+#include <iostream>
 
 using namespace Aestra;
 
-#define TEST_ASSERT(condition, message) \
-    if (!(condition)) { \
+#define TEST_ASSERT(condition, message)                  \
+    if (!(condition)) {                                  \
         std::cerr << "FAILED: " << message << std::endl; \
-        return false; \
+        return false;                                    \
     }
 
 // =============================================================================
@@ -33,7 +34,7 @@ bool testFile() {
     File file;
     TEST_ASSERT(file.open(testPath, File::Mode::Read), "Should open file");
     TEST_ASSERT(file.isOpen(), "File should be open");
-    
+
     size_t fileSize = file.size();
     TEST_ASSERT(fileSize == testContent.size(), "File size should match");
 
@@ -69,41 +70,41 @@ bool testBinarySerialization() {
 
     // Test reading
     BinaryReader reader(writer.data());
-    
+
     int8_t i8;
     TEST_ASSERT(reader.read(i8) && i8 == -42, "Should read int8");
-    
+
     uint8_t u8;
     TEST_ASSERT(reader.read(u8) && u8 == 255, "Should read uint8");
-    
+
     int16_t i16;
     TEST_ASSERT(reader.read(i16) && i16 == -1000, "Should read int16");
-    
+
     uint16_t u16;
     TEST_ASSERT(reader.read(u16) && u16 == 60000, "Should read uint16");
-    
+
     int32_t i32;
     TEST_ASSERT(reader.read(i32) && i32 == -100000, "Should read int32");
-    
+
     uint32_t u32;
     TEST_ASSERT(reader.read(u32) && u32 == 4000000000, "Should read uint32");
-    
+
     float f;
     TEST_ASSERT(reader.read(f) && std::abs(f - 3.14159f) < 0.0001f, "Should read float");
-    
+
     double d;
     TEST_ASSERT(reader.read(d) && std::abs(d - 2.71828) < 0.0001, "Should read double");
-    
+
     std::string str;
     TEST_ASSERT(reader.read(str) && str == "AESTRA", "Should read string");
 
     // Test file I/O
     const std::string testPath = "test_binary.bin";
     TEST_ASSERT(writer.writeToFile(testPath), "Should write binary file");
-    
+
     auto fileReader = BinaryReader::readFromFile(testPath);
     TEST_ASSERT(fileReader != nullptr, "Should read binary file");
-    
+
     TEST_ASSERT(fileReader->read(i8) && i8 == -42, "Should read int8 from file");
 
     // Cleanup

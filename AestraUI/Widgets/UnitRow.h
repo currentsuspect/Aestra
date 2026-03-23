@@ -5,13 +5,13 @@
 #include "NUITextInput.h"
 #include "NUIDragDrop.h"
 #include "UnitManager.h"
+#include "PatternSource.h" // For PatternID (value type, can't forward-declare)
 #include <functional>
 #include <memory>
 
 namespace Aestra { 
     namespace Audio { 
-        class TrackManager; 
-        struct PatternID;
+        class TrackManager;
     } 
 }
 

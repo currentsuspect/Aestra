@@ -1,31 +1,34 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include <cmath>
-#include <cstdint>
+#include "CPUDetection.h" // Runtime SIMD dispatch
+#include "SincAVX2.h"     // AVX2 dot product
+#include "SincAVX512.h"   // AVX-512 dot product
+#include "SincNEON.h"     // ARM NEON support
+#include "SincSSE41.h"    // SSE4.1 fallback
+
 #include <array>
 #include <cassert>
-#include <immintrin.h>  // AVX2 Support
+#include <cmath>
+#include <cstdint>
+#if defined(_MSC_VER) || defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+#include <immintrin.h> // AVX2 Support
+#endif
 #include <memory>
-#include "CPUDetection.h"  // Runtime SIMD dispatch
-#include "SincAVX2.h"      // AVX2 dot product
-#include "SincSSE41.h"     // SSE4.1 fallback
-#include "SincNEON.h"      // ARM NEON support
-#include "SincAVX512.h"    // AVX-512 dot product
 
 namespace Aestra {
 namespace Audio {
 
 /**
  * @brief High-precision interpolation functions for audio resampling.
- * 
+ *
  * All functions use double precision internally for 144dB+ dynamic range.
  * Output is converted to float for the audio buffer.
- * 
+ *
  * Quality Modes:
  * - Cubic:    4-point Catmull-Rom, ~80dB SNR, lowest CPU
  * - Sinc8:    8-point Blackman-windowed sinc, ~100dB SNR
- * - Sinc16:   16-point Kaiser-windowed sinc, ~120dB SNR  
+ * - Sinc16:   16-point Kaiser-windowed sinc, ~120dB SNR
  * - Sinc32:   32-point Kaiser-windowed sinc, ~130dB SNR
  * - Sinc64:   64-point Kaiser-windowed sinc, ~144dB SNR (mastering)
  */
@@ -57,15 +60,16 @@ inline double kaiserWindow(double n, double N, double beta) {
         double sum = 1.0;
         double term = 1.0;
         const double x_half = x * 0.5;
-        for (int k = 1; k < 25; ++k) {  // 25 terms is plenty for convergence
+        for (int k = 1; k < 25; ++k) { // 25 terms is plenty for convergence
             term *= (x_half / static_cast<double>(k));
             term *= (x_half / static_cast<double>(k));
             sum += term;
-            if (term < 1e-20) break;
+            if (term < 1e-20)
+                break;
         }
         return sum;
     };
-    
+
     const double half = (N - 1.0) * 0.5;
     const double ratio = (n - half) / half;
     const double arg = beta * std::sqrt(1.0 - ratio * ratio);
@@ -74,7 +78,8 @@ inline double kaiserWindow(double n, double N, double beta) {
 
 // Normalized sinc function
 inline double sinc(double x) {
-    if (std::abs(x) < 1e-10) return 1.0;
+    if (std::abs(x) < 1e-10)
+        return 1.0;
     const double pix = PI * x;
     return std::sin(pix) / pix;
 }
@@ -85,41 +90,40 @@ inline double sinc(double x) {
 
 struct CubicInterpolator {
     // Double precision, no clamping - let the data speak
-    static inline void interpolate(
-        const float* data,          // Interleaved stereo source
-        int64_t totalFrames,        // Total frames in source
-        double phase,               // Fractional position in source
-        float& outL, float& outR)   // Output samples
+    static inline void interpolate(const float* data,        // Interleaved stereo source
+                                   int64_t totalFrames,      // Total frames in source
+                                   double phase,             // Fractional position in source
+                                   float& outL, float& outR) // Output samples
     {
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
-        
+
         // 4-point indices with safe bounds
         const int64_t i0 = (idx > 0) ? idx - 1 : 0;
         const int64_t i1 = idx;
         const int64_t i2 = (idx + 1 < totalFrames) ? idx + 1 : totalFrames - 1;
         const int64_t i3 = (idx + 2 < totalFrames) ? idx + 2 : totalFrames - 1;
-        
+
         // Load samples as double for precision
         const double l0 = static_cast<double>(data[i0 * 2]);
         const double l1 = static_cast<double>(data[i1 * 2]);
         const double l2 = static_cast<double>(data[i2 * 2]);
         const double l3 = static_cast<double>(data[i3 * 2]);
-        
+
         const double r0 = static_cast<double>(data[i0 * 2 + 1]);
         const double r1 = static_cast<double>(data[i1 * 2 + 1]);
         const double r2 = static_cast<double>(data[i2 * 2 + 1]);
         const double r3 = static_cast<double>(data[i3 * 2 + 1]);
-        
+
         // Catmull-Rom coefficients (double precision)
         const double frac2 = frac * frac;
         const double frac3 = frac2 * frac;
-        
+
         const double c0 = -0.5 * frac3 + frac2 - 0.5 * frac;
         const double c1 = 1.5 * frac3 - 2.5 * frac2 + 1.0;
         const double c2 = -1.5 * frac3 + 2.0 * frac2 + 0.5 * frac;
         const double c3 = 0.5 * frac3 - 0.5 * frac2;
-        
+
         // Accumulate in double, output as float
         outL = static_cast<float>(l0 * c0 + l1 * c1 + l2 * c2 + l3 * c3);
         outR = static_cast<float>(r0 * c0 + r1 * c1 + r2 * c2 + r3 * c3);
@@ -133,47 +137,44 @@ struct CubicInterpolator {
 struct Sinc8Interpolator {
     static constexpr int TAPS = 8;
     static constexpr int HALF_TAPS = 4;
-    
-    static inline void interpolate(
-        const float* data,
-        int64_t totalFrames,
-        double phase,
-        float& outL, float& outR)
-    {
-        static const std::array<double, TAPS> weights = [](){
+
+    static inline void interpolate(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
+        static const std::array<double, TAPS> weights = []() {
             std::array<double, TAPS> w;
-            for(int i=0; i<TAPS; ++i) w[i] = blackmanWindow(static_cast<double>(i), static_cast<double>(TAPS));
+            for (int i = 0; i < TAPS; ++i)
+                w[i] = blackmanWindow(static_cast<double>(i), static_cast<double>(TAPS));
             return w;
         }();
 
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
-        
+
         // OPTIMIZATION: Trig Reduction
         // sin(pi * (t - frac)) = (-1)^t * -sin(pi * frac)
         // We compute sin(pi*frac) once instead of 8 times.
         const double pix = PI * frac;
         const double sin_pi_frac = std::sin(pix);
         const double neg_sin_pi_frac = -sin_pi_frac;
-        
+
         double sumL = 0.0;
         double sumR = 0.0;
         double weightSum = 0.0;
-        
+
         // Pre-calculate signs: t ranges -3 to 4.
         // t=-3: (-1)^-3 = -1
         // t=-2: +1
         // ...
         // Sequence starting at t=-3: -1, 1, -1, 1, -1, 1, -1, 1
-        
+
         // Loop t from -3 to 4 (8 taps)
         // We can unroll this fully for Sinc8
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
             const int64_t sampleIdx = idx + t;
-            if (sampleIdx < 0 || sampleIdx >= totalFrames) continue;
-            
+            if (sampleIdx < 0 || sampleIdx >= totalFrames)
+                continue;
+
             const double x = static_cast<double>(t) - frac;
-            
+
             // Sinc calculation with optimization
             double s;
             if (std::abs(x) < 1e-9) {
@@ -190,21 +191,21 @@ struct Sinc8Interpolator {
                 double numerator = (t % 2 == 0) ? neg_sin_pi_frac : sin_pi_frac;
                 s = numerator / denom;
             }
-            
+
             const int tableIdx = t + HALF_TAPS - 1;
             s *= weights[tableIdx];
-            
+
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
             weightSum += s;
         }
-        
+
         if (weightSum > 0.0) {
             const double invW = 1.0 / weightSum;
             sumL *= invW;
             sumR *= invW;
         }
-        
+
         outL = static_cast<float>(sumL);
         outR = static_cast<float>(sumR);
     }
@@ -217,38 +218,35 @@ struct Sinc8Interpolator {
 struct Sinc16Interpolator {
     static constexpr int TAPS = 16;
     static constexpr int HALF_TAPS = 8;
-    static constexpr double KAISER_BETA = 9.0;  // Good stopband attenuation
-    
-    static inline void interpolate(
-        const float* data,
-        int64_t totalFrames,
-        double phase,
-        float& outL, float& outR)
-    {
-        static const std::array<double, TAPS> weights = [](){
+    static constexpr double KAISER_BETA = 9.0; // Good stopband attenuation
+
+    static inline void interpolate(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
+        static const std::array<double, TAPS> weights = []() {
             std::array<double, TAPS> w;
-            for(int i=0; i<TAPS; ++i) w[i] = kaiserWindow(static_cast<double>(i), static_cast<double>(TAPS), KAISER_BETA);
+            for (int i = 0; i < TAPS; ++i)
+                w[i] = kaiserWindow(static_cast<double>(i), static_cast<double>(TAPS), KAISER_BETA);
             return w;
         }();
 
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
-        
+
         // OPTIMIZATION: Trig Reduction
         const double pix = PI * frac;
         const double sin_pi_frac = std::sin(pix);
         const double neg_sin_pi_frac = -sin_pi_frac;
-        
+
         double sumL = 0.0;
         double sumR = 0.0;
         double weightSum = 0.0;
-        
+
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
             const int64_t sampleIdx = idx + t;
-            if (sampleIdx < 0 || sampleIdx >= totalFrames) continue;
-            
+            if (sampleIdx < 0 || sampleIdx >= totalFrames)
+                continue;
+
             const double x = static_cast<double>(t) - frac;
-            
+
             double s;
             if (std::abs(x) < 1e-9) {
                 s = 1.0;
@@ -256,21 +254,21 @@ struct Sinc16Interpolator {
                 double numerator = (t % 2 == 0) ? neg_sin_pi_frac : sin_pi_frac;
                 s = numerator / (PI * x);
             }
-            
+
             const int tableIdx = t + HALF_TAPS - 1;
             s *= weights[tableIdx];
-            
+
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
             weightSum += s;
         }
-        
+
         if (weightSum > 0.0) {
             const double invW = 1.0 / weightSum;
             sumL *= invW;
             sumR *= invW;
         }
-        
+
         outL = static_cast<float>(sumL);
         outR = static_cast<float>(sumR);
     }
@@ -284,16 +282,12 @@ struct Sinc32Interpolator {
     static constexpr int TAPS = 32;
     static constexpr int HALF_TAPS = 16;
     static constexpr double KAISER_BETA = 10.0;
-    
-    static inline void interpolate(
-        const float* data,
-        int64_t totalFrames,
-        double phase,
-        float& outL, float& outR)
-    {
-        static const std::array<double, TAPS> weights = [](){
+
+    static inline void interpolate(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
+        static const std::array<double, TAPS> weights = []() {
             std::array<double, TAPS> w;
-            for(int i=0; i<TAPS; ++i) w[i] = kaiserWindow(static_cast<double>(i), static_cast<double>(TAPS), KAISER_BETA);
+            for (int i = 0; i < TAPS; ++i)
+                w[i] = kaiserWindow(static_cast<double>(i), static_cast<double>(TAPS), KAISER_BETA);
             return w;
         }();
 
@@ -304,17 +298,18 @@ struct Sinc32Interpolator {
         const double pix = PI * frac;
         const double sin_pi_frac = std::sin(pix);
         const double neg_sin_pi_frac = -sin_pi_frac;
-        
+
         double sumL = 0.0;
         double sumR = 0.0;
         double weightSum = 0.0;
-        
+
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
             const int64_t sampleIdx = idx + t;
-            if (sampleIdx < 0 || sampleIdx >= totalFrames) continue;
-            
+            if (sampleIdx < 0 || sampleIdx >= totalFrames)
+                continue;
+
             const double x = static_cast<double>(t) - frac;
-            
+
             double s;
             if (std::abs(x) < 1e-9) {
                 s = 1.0;
@@ -322,21 +317,21 @@ struct Sinc32Interpolator {
                 double numerator = (t % 2 == 0) ? neg_sin_pi_frac : sin_pi_frac;
                 s = numerator / (PI * x);
             }
-            
+
             const int tableIdx = t + HALF_TAPS - 1;
             s *= weights[tableIdx];
-            
+
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
             weightSum += s;
         }
-        
+
         if (weightSum > 0.0) {
             const double invW = 1.0 / weightSum;
             sumL *= invW;
             sumR *= invW;
         }
-        
+
         outL = static_cast<float>(sumL);
         outR = static_cast<float>(sumR);
     }
@@ -370,10 +365,12 @@ struct Sinc64Turbo {
                     coeffs[p][t + 31] = static_cast<float>(s * w);
                 }
                 double sum = 0.0;
-                for(int i=0; i<TAPS; ++i) sum += coeffs[p][i];
+                for (int i = 0; i < TAPS; ++i)
+                    sum += coeffs[p][i];
                 if (sum > 0.0) {
                     float invSum = static_cast<float>(1.0 / sum);
-                    for(int i=0; i<TAPS; ++i) coeffs[p][i] *= invSum;
+                    for (int i = 0; i < TAPS; ++i)
+                        coeffs[p][i] *= invSum;
                 }
             }
         }
@@ -385,33 +382,30 @@ struct Sinc64Turbo {
     }
 
     // Function pointer type for dispatch
-    using InterpolateFunc = void(*)(const float*, int64_t, double, float&, float&);
+    using InterpolateFunc = void (*)(const float*, int64_t, double, float&, float&);
 
     // -------------------------------------------------------------------------
     // Implementation Generators
     // -------------------------------------------------------------------------
-    
+
     // Core logic template to avoid code duplication across SIMD variants
     // SimdOp: Lambda/Functor for the dot product
-    template<typename SimdOp, typename SimdRevOp>
-    static inline void interpolateImpl(
-        const float* data, int64_t totalFrames, double phase, 
-        float& outL, float& outR, 
-        SimdOp op, SimdRevOp revOp) 
-    {
+    template <typename SimdOp, typename SimdRevOp>
+    static inline void interpolateImpl(const float* data, int64_t totalFrames, double phase, float& outL, float& outR,
+                                       SimdOp op, SimdRevOp revOp) {
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
         int phaseIdx = static_cast<int>(frac * (PHASES - 1) + 0.5);
         bool reversed = (phaseIdx >= HALF_PHASES);
         int lutIdx = reversed ? (PHASES - 1 - phaseIdx) : phaseIdx;
-        
+
         // Fast access to static table
         const float* c = getTable().coeffs[lutIdx];
-        
+
         const int64_t startIdx = idx - 31;
         float sumL = 0.0f;
         float sumR = 0.0f;
-        
+
         bool validRange = (startIdx >= 0 && startIdx + 64 <= totalFrames);
 
         if (validRange && !reversed) {
@@ -422,7 +416,8 @@ struct Sinc64Turbo {
             // Scalar fallback for boundaries
             for (int t = 0; t < 64; ++t) {
                 int64_t sIdx = startIdx + t;
-                if (sIdx < 0 || sIdx >= totalFrames) continue;
+                if (sIdx < 0 || sIdx >= totalFrames)
+                    continue;
                 float coeff = reversed ? c[63 - t] : c[t];
                 sumL += data[sIdx * 2] * coeff;
                 sumR += data[sIdx * 2 + 1] * coeff;
@@ -436,6 +431,7 @@ struct Sinc64Turbo {
     // Specific Implementations
     // -------------------------------------------------------------------------
 
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
     static void implAVX512(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
         interpolateImpl(data, totalFrames, phase, outL, outR, sincDotProductAVX512, sincDotProductAVX512_Reversed);
     }
@@ -443,47 +439,68 @@ struct Sinc64Turbo {
     static void implAVX2(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
         interpolateImpl(data, totalFrames, phase, outL, outR, sincDotProductAVX2, sincDotProductAVX2_Reversed);
     }
-    
+
     static void implSSE41(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
         // SSE4.1 usually doesn't have a specialized reversed kernel in this codebase, assume fallback or standard
         // If SincSSE41.h doesn't have reversed, using scalar fallback logic for reversed part inside template is fine
         // providing a dummy lambda for reversed if it doesn't exist?
-        // Checking SincSSE41.h would be ideal, but for now let's map to the standard scalar-loop-reversed or a scalar-shim
+        // Checking SincSSE41.h would be ideal, but for now let's map to the standard scalar-loop-reversed or a
+        // scalar-shim
         auto scalarRev = [](const float* c, const float* s, float& l, float& r) {
-             // We shouldn't hit this often in validRange+reversed if we pass the scalar loop in 'else' 
-             // BUT `interpolateImpl` calls `revOp`.
-             // If SincSSE41.h lacks reversed, we must provide one.
-             // Let's use scalar for reversed path on SSE4.1 for safety/simplicity unless we verified SincSSE41_Reversed exists.
-             // For safety: simply use scalar loop here.
-             float sl = 0, sr = 0;
-             for(int t=0; t<64; ++t) { 
-                 float coeff = c[63-t]; 
-                 sl += s[t*2]*coeff; sr += s[t*2+1]*coeff; 
-             }
-             l=sl; r=sr;
+            // We shouldn't hit this often in validRange+reversed if we pass the scalar loop in 'else'
+            // BUT `interpolateImpl` calls `revOp`.
+            // If SincSSE41.h lacks reversed, we must provide one.
+            // Let's use scalar for reversed path on SSE4.1 for safety/simplicity unless we verified SincSSE41_Reversed
+            // exists. For safety: simply use scalar loop here.
+            float sl = 0, sr = 0;
+            for (int t = 0; t < 64; ++t) {
+                float coeff = c[63 - t];
+                sl += s[t * 2] * coeff;
+                sr += s[t * 2 + 1] * coeff;
+            }
+            l = sl;
+            r = sr;
         };
         interpolateImpl(data, totalFrames, phase, outL, outR, sincDotProductSSE41, scalarRev);
     }
+#endif // x86
 
+#if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
     static void implNEON(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
         // Assume optimized NEON
-        interpolateImpl(data, totalFrames, phase, outL, outR, sincDotProductNEON, [](const float* c, const float* s, float& l, float& r){
-             float sl = 0, sr = 0;
-             for(int t=0; t<64; ++t) { float coeff = c[63-t]; sl += s[t*2]*coeff; sr += s[t*2+1]*coeff; }
-             l=sl; r=sr;
-        });
+        interpolateImpl(data, totalFrames, phase, outL, outR, sincDotProductNEON,
+                        [](const float* c, const float* s, float& l, float& r) {
+                            float sl = 0, sr = 0;
+                            for (int t = 0; t < 64; ++t) {
+                                float coeff = c[63 - t];
+                                sl += s[t * 2] * coeff;
+                                sr += s[t * 2 + 1] * coeff;
+                            }
+                            l = sl;
+                            r = sr;
+                        });
     }
+#endif // ARM NEON
 
     static void implScalar(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
         auto scalarOp = [](const float* c, const float* s, float& l, float& r) {
             float sl = 0, sr = 0;
-            for(int t=0; t<64; ++t) { sl += s[t*2]*c[t]; sr += s[t*2+1]*c[t]; }
-            l=sl; r=sr;
+            for (int t = 0; t < 64; ++t) {
+                sl += s[t * 2] * c[t];
+                sr += s[t * 2 + 1] * c[t];
+            }
+            l = sl;
+            r = sr;
         };
-         auto scalarRev = [](const float* c, const float* s, float& l, float& r) {
-             float sl = 0, sr = 0;
-             for(int t=0; t<64; ++t) { float coeff = c[63-t]; sl += s[t*2]*coeff; sr += s[t*2+1]*coeff; }
-             l=sl; r=sr;
+        auto scalarRev = [](const float* c, const float* s, float& l, float& r) {
+            float sl = 0, sr = 0;
+            for (int t = 0; t < 64; ++t) {
+                float coeff = c[63 - t];
+                sl += s[t * 2] * coeff;
+                sr += s[t * 2 + 1] * coeff;
+            }
+            l = sl;
+            r = sr;
         };
         interpolateImpl(data, totalFrames, phase, outL, outR, scalarOp, scalarRev);
     }
@@ -494,13 +511,21 @@ struct Sinc64Turbo {
 
     static InterpolateFunc resolve() {
         // Force table initialization on first call (startup)
-        getTable(); 
-        
+        getTable();
+
         const auto& cpu = Aestra::Core::CPUDetection::get();
-        if (cpu.hasAVX512F()) return implAVX512;
-        if (cpu.hasAVX2()) return implAVX2;
-        if (cpu.hasSSE41()) return implSSE41;
-        if (cpu.hasNEON()) return implNEON;
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+        if (cpu.hasAVX512F())
+            return implAVX512;
+        if (cpu.hasAVX2())
+            return implAVX2;
+        if (cpu.hasSSE41())
+            return implSSE41;
+#endif
+#if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
+        if (cpu.hasNEON())
+            return implNEON;
+#endif
         return implScalar;
     }
 
@@ -508,12 +533,7 @@ struct Sinc64Turbo {
 
 public:
     // The Hot Path: Indirect function call, ZERO branches, ZERO checks.
-    static inline void interpolate(
-        const float* data,
-        int64_t totalFrames,
-        double phase,
-        float& outL, float& outR)
-    {
+    static inline void interpolate(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
         pImpl(data, totalFrames, phase, outL, outR);
     }
 };
@@ -531,7 +551,7 @@ struct Sinc32Turbo {
     static constexpr double KAISER_BETA = 9.0;
 
     struct alignas(64) Table {
-        float coeffs[HALF_PHASES][TAPS];  // 64KB - fits L1
+        float coeffs[HALF_PHASES][TAPS]; // 64KB - fits L1
 
         Table() {
             for (int p = 0; p < HALF_PHASES; ++p) {
@@ -543,10 +563,12 @@ struct Sinc32Turbo {
                     coeffs[p][t + 15] = static_cast<float>(s * w);
                 }
                 double sum = 0.0;
-                for(int i=0; i<TAPS; ++i) sum += coeffs[p][i];
+                for (int i = 0; i < TAPS; ++i)
+                    sum += coeffs[p][i];
                 if (sum > 0.0) {
                     float invSum = static_cast<float>(1.0 / sum);
-                    for(int i=0; i<TAPS; ++i) coeffs[p][i] *= invSum;
+                    for (int i = 0; i < TAPS; ++i)
+                        coeffs[p][i] *= invSum;
                 }
             }
         }
@@ -559,17 +581,17 @@ struct Sinc32Turbo {
 
     static inline void interpolate(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
         const Table& table = getTable();
-        
+
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
         int phaseIdx = static_cast<int>(frac * (PHASES - 1) + 0.5);
         bool reversed = (phaseIdx >= HALF_PHASES);
         int lutIdx = reversed ? (PHASES - 1 - phaseIdx) : phaseIdx;
         const float* c = table.coeffs[lutIdx];
-        
+
         const int64_t startIdx = idx - 15;
         float sumL = 0.0f, sumR = 0.0f;
-        
+
         if (startIdx >= 0 && startIdx + 32 <= totalFrames && !reversed) {
             const float* samples = &data[startIdx * 2];
             for (int t = 0; t < 32; ++t) {
@@ -579,7 +601,8 @@ struct Sinc32Turbo {
         } else {
             for (int t = 0; t < 32; ++t) {
                 int64_t sIdx = startIdx + t;
-                if (sIdx < 0 || sIdx >= totalFrames) continue;
+                if (sIdx < 0 || sIdx >= totalFrames)
+                    continue;
                 float coeff = reversed ? c[31 - t] : c[t];
                 sumL += data[sIdx * 2] * coeff;
                 sumR += data[sIdx * 2 + 1] * coeff;
@@ -595,16 +618,12 @@ struct Sinc64Interpolator {
     static constexpr int TAPS = 64;
     static constexpr int HALF_TAPS = 32;
     static constexpr double KAISER_BETA = 12.0;
-    
-    static inline void interpolate(
-        const float* data,
-        int64_t totalFrames,
-        double phase,
-        float& outL, float& outR)
-    {
-        static const std::array<double, TAPS> weights = [](){
+
+    static inline void interpolate(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
+        static const std::array<double, TAPS> weights = []() {
             std::array<double, TAPS> w;
-            for(int i=0; i<TAPS; ++i) w[i] = kaiserWindow(static_cast<double>(i), static_cast<double>(TAPS), KAISER_BETA);
+            for (int i = 0; i < TAPS; ++i)
+                w[i] = kaiserWindow(static_cast<double>(i), static_cast<double>(TAPS), KAISER_BETA);
             return w;
         }();
 
@@ -615,20 +634,21 @@ struct Sinc64Interpolator {
         const double pix = PI * frac;
         const double sin_pi_frac = std::sin(pix);
         const double neg_sin_pi_frac = -sin_pi_frac;
-        
+
         double sumL = 0.0;
         double sumR = 0.0;
         double weightSum = 0.0;
-        
+
         // Main loop - Auto-vectorizes well
         for (int t = -HALF_TAPS + 1; t <= HALF_TAPS; ++t) {
             const int64_t sampleIdx = idx + t;
             // Check bounds (rare branch inside loop, effectively predicted usually, or use padding)
             // For extreme quality, we clamp or zero. Here we skip.
-            if (sampleIdx < 0 || sampleIdx >= totalFrames) continue;
-            
+            if (sampleIdx < 0 || sampleIdx >= totalFrames)
+                continue;
+
             const double x = static_cast<double>(t) - frac;
-            
+
             double s;
             if (std::abs(x) < 1e-9) {
                 s = 1.0;
@@ -636,21 +656,21 @@ struct Sinc64Interpolator {
                 double numerator = (t % 2 == 0) ? neg_sin_pi_frac : sin_pi_frac;
                 s = numerator / (PI * x);
             }
-            
+
             const int tableIdx = t + HALF_TAPS - 1;
             s *= weights[tableIdx];
-            
+
             sumL += static_cast<double>(data[sampleIdx * 2]) * s;
             sumR += static_cast<double>(data[sampleIdx * 2 + 1]) * s;
             weightSum += s;
         }
-        
+
         if (weightSum > 0.0) {
             const double invW = 1.0 / weightSum;
             sumL *= invW;
             sumR *= invW;
         }
-        
+
         outL = static_cast<float>(sumL);
         outR = static_cast<float>(sumR);
     }
@@ -661,45 +681,40 @@ struct Sinc64Interpolator {
 // =============================================================================
 
 enum class InterpolationQuality {
-    Cubic,      // 4-point, ~80dB, lowest CPU
-    Sinc8,      // 8-point Blackman, ~100dB
-    Sinc16,     // 16-point Kaiser, ~120dB (Ultra)
-    Sinc32,     // 32-point Kaiser, ~130dB (Extreme)
-    Sinc64      // 64-point Kaiser, ~144dB (Perfect/Mastering)
+    Cubic,  // 4-point, ~80dB, lowest CPU
+    Sinc8,  // 8-point Blackman, ~100dB
+    Sinc16, // 16-point Kaiser, ~120dB (Ultra)
+    Sinc32, // 32-point Kaiser, ~130dB (Extreme)
+    Sinc64  // 64-point Kaiser, ~144dB (Perfect/Mastering)
 };
 
 // Runtime dispatch helper
-inline void interpolateSample(
-    InterpolationQuality quality,
-    const float* data,
-    int64_t totalFrames,
-    double phase,
-    float& outL, float& outR)
-{
+inline void interpolateSample(InterpolationQuality quality, const float* data, int64_t totalFrames, double phase,
+                              float& outL, float& outR) {
     switch (quality) {
-        case InterpolationQuality::Cubic:
-            CubicInterpolator::interpolate(data, totalFrames, phase, outL, outR);
-            break;
-        case InterpolationQuality::Sinc8:
-            Sinc8Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-            break;
-        case InterpolationQuality::Sinc16:
-            Sinc16Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-            break;
-        case InterpolationQuality::Sinc32:
-            Sinc32Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-            break;
-        case InterpolationQuality::Sinc64:
-            Sinc64Turbo::interpolate(data, totalFrames, phase, outL, outR);
-            break;
-        default:
-            // Defensive handling for unknown/added enum values
-            // Assert in debug builds to catch issues during development/testing
-            assert(false && "Unknown InterpolationQuality enum value in interpolateSample");
-            // Fall back to safe CubicInterpolator to prevent undefined behavior
-            // in release builds or when assertions are disabled
-            CubicInterpolator::interpolate(data, totalFrames, phase, outL, outR);
-            break;
+    case InterpolationQuality::Cubic:
+        CubicInterpolator::interpolate(data, totalFrames, phase, outL, outR);
+        break;
+    case InterpolationQuality::Sinc8:
+        Sinc8Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+        break;
+    case InterpolationQuality::Sinc16:
+        Sinc16Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+        break;
+    case InterpolationQuality::Sinc32:
+        Sinc32Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+        break;
+    case InterpolationQuality::Sinc64:
+        Sinc64Turbo::interpolate(data, totalFrames, phase, outL, outR);
+        break;
+    default:
+        // Defensive handling for unknown/added enum values
+        // Assert in debug builds to catch issues during development/testing
+        assert(false && "Unknown InterpolationQuality enum value in interpolateSample");
+        // Fall back to safe CubicInterpolator to prevent undefined behavior
+        // in release builds or when assertions are disabled
+        CubicInterpolator::interpolate(data, totalFrames, phase, outL, outR);
+        break;
     }
 }
 
@@ -707,11 +722,10 @@ inline void interpolateSample(
 inline void precomputeTables() {
     Sinc64Turbo::getTable();
     Sinc32Turbo::getTable();
-    // Ensure all variants are touched if they have statics (Sinc8, Sinc16, Sinc32, Sinc64 have static weights inside interpolate)
-    // We can't easily force-init function-local statics without running the function.
-    // However, Sinc8/16/32/64 use std::array initialized with lambda.
-    // Ideally we'd move those out too, but they are small (8-64 doubles).
-    // The "Turbo" ones are the heavy ones (Megabytes).
+    // Ensure all variants are touched if they have statics (Sinc8, Sinc16, Sinc32, Sinc64 have static weights inside
+    // interpolate) We can't easily force-init function-local statics without running the function. However,
+    // Sinc8/16/32/64 use std::array initialized with lambda. Ideally we'd move those out too, but they are small (8-64
+    // doubles). The "Turbo" ones are the heavy ones (Megabytes).
 }
 
 } // namespace Interpolators

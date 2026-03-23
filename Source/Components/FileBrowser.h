@@ -152,6 +152,10 @@ public:
     void saveState(const std::string& filePath);
     void loadState(const std::string& filePath);
     
+    // Issue #120: Get/set expanded folders for UIState persistence
+    std::vector<std::string> getExpandedFolders() const;
+    void expandFolders(const std::vector<std::string>& folders);
+    
     // Properties
     const std::string& getCurrentPath() const { return currentPath_; }
     const FileItem* getSelectedFile() const { return selectedFile_; }

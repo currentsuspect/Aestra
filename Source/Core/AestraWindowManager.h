@@ -61,6 +61,10 @@ public:
     void setRecoveryDialog(std::shared_ptr<Aestra::RecoveryDialog> dialog);
     void setUnifiedHUD(std::shared_ptr<UnifiedHUD> hud);
 
+    // Dialogs getters
+    std::shared_ptr<Aestra::SettingsDialog> getSettingsDialog() { return m_settingsDialog; }
+    std::shared_ptr<Aestra::RecoveryDialog> getRecoveryDialog() { return m_recoveryDialog; }
+
     // Menus
     void setMenuBar(std::shared_ptr<AestraUI::NUIMenuBar> menuBar);
     void showDropdownMenu(std::shared_ptr<AestraUI::NUIContextMenu> menu, float xOffset);
@@ -95,6 +99,17 @@ public:
     void beginFrame();
     double endFrame(); // Returns sleep time
     double getDeltaTime() const { return m_deltaTime; }
+
+    // Window state capture/restore for persistence (Issue #120)
+    struct WindowState {
+        int x = 100;
+        int y = 100;
+        int width = 1280;
+        int height = 720;
+        bool maximized = false;
+    };
+    WindowState captureWindowState() const;
+    void applyWindowState(const WindowState& state);
 
 private:
     std::unique_ptr<AestraUI::NUIPlatformBridge> m_window;

@@ -1,33 +1,37 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioGraphBuilder.h"
+
 #include "PlaylistRuntimeSnapshot.h"
-#include <limits>
-#include <iostream>
-#include <cmath>
+
 #include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <limits>
 
 namespace Aestra {
 namespace Audio {
 
 namespace {
-    uint64_t safeSecondsToSamples(long double seconds, double sampleRate) {
-        const long double maxSamples = static_cast<long double>(std::numeric_limits<uint64_t>::max());
-        const long double samples = seconds * static_cast<long double>(sampleRate);
-        if (samples > maxSamples) return std::numeric_limits<uint64_t>::max();
-        return static_cast<uint64_t>(std::llround(samples));
-    }
+uint64_t safeSecondsToSamples(long double seconds, double sampleRate) {
+    const long double maxSamples = static_cast<long double>(std::numeric_limits<uint64_t>::max());
+    const long double samples = seconds * static_cast<long double>(sampleRate);
+    if (samples > maxSamples)
+        return std::numeric_limits<uint64_t>::max();
+    return static_cast<uint64_t>(std::llround(samples));
 }
+} // namespace
 
 AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, double outputSampleRate) {
     AudioGraph graph;
     const size_t channelCount = trackManager.getChannelCount();
     graph.tracks.reserve(channelCount);
-    
+
     // Create track render states for all mixer channels
     bool anySoloFound = false;
     for (size_t i = 0; i < channelCount; ++i) {
         auto channel = trackManager.getChannel(i);
-        if (!channel) continue;
+        if (!channel)
+            continue;
 
         TrackRenderState trackState;
         trackState.trackId = channel->getChannelId();
@@ -36,14 +40,15 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, 
         trackState.pan = channel->getPan();
         trackState.mute = channel->isMuted();
         trackState.solo = channel->isSoloed();
-        if (trackState.solo) anySoloFound = true;
+        if (trackState.solo)
+            anySoloFound = true;
         trackState.isSoloSafe = channel->isSoloSafe();
-        
+
         // Copy Routing
         trackState.mainOutputId = channel->getMainOutputId();
         trackState.sends = channel->getSends();
         trackState.effectChain = &channel->getEffectChain();
-        
+
         graph.tracks.push_back(std::move(trackState));
     }
     graph.anySolo = anySoloFound;
@@ -56,55 +61,58 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, 
     auto snapshot = playlist.buildRuntimeSnapshot(patterns, sources);
     if (snapshot) {
         uint64_t maxEndSample = 0;
-        
+
         // Map snapshot lanes to mixer tracks.
         // In the current implementation, lane index usually corresponds to mixer channel index.
         for (size_t laneIdx = 0; laneIdx < snapshot->lanes.size(); ++laneIdx) {
-            if (laneIdx >= graph.tracks.size()) break;
-            
+            if (laneIdx >= graph.tracks.size())
+                break;
+
             auto& trackState = graph.tracks[laneIdx];
             const auto& laneInfo = snapshot->lanes[laneIdx];
-            
+
             for (const auto& clipInfo : laneInfo.clips) {
-                if (!clipInfo.isValid()) continue;
-                
+                if (!clipInfo.isValid())
+                    continue;
+
                 ClipRenderState clip;
                 // ClipRuntimeInfo.audioData is a raw pointer to AudioBufferData.
                 // AudioGraph needs a shared_ptr to AudioBuffer for lifetime management,
                 // but currently it just takes the raw pointer from the snapshot's buffer.
                 // We'll bridge this by assuming SourceManager keeps the buffers alive.
-                
+
                 if (clipInfo.isAudio()) {
                     clip.audioData = clipInfo.audioData->interleavedData.data();
                     clip.totalFrames = clipInfo.audioData->numFrames;
                     clip.sourceSampleRate = static_cast<double>(clipInfo.sourceSampleRate);
                     clip.channels = clipInfo.sourceChannels;
                 }
-                
+
                 clip.startSample = clipInfo.startTime;
                 clip.endSample = clipInfo.getEndTime();
-                
+
                 // Convert sourceStart (Project Rate) to sampleOffset (Source Rate)
                 // Use double precision to prevent audio popping due to sub-sample drift
                 double projectSampleRate = playlist.getProjectSampleRate();
                 if (projectSampleRate > 0.0 && clip.sourceSampleRate > 0.0) {
-                     clip.sampleOffset = static_cast<double>(clipInfo.sourceStart) * (clip.sourceSampleRate / projectSampleRate);
+                    clip.sampleOffset =
+                        static_cast<double>(clipInfo.sourceStart) * (clip.sourceSampleRate / projectSampleRate);
                 } else {
                     clip.sampleOffset = static_cast<double>(clipInfo.sourceStart);
                 }
-                
+
                 clip.gain = clipInfo.gainLinear;
                 clip.pan = clipInfo.pan;
-                
+
                 if (clip.endSample > maxEndSample) {
                     maxEndSample = clip.endSample;
                 }
-                
+
                 trackState.clips.push_back(std::move(clip));
             }
             trackState.automationCurves = laneInfo.automationCurves;
         }
-        
+
         graph.timelineEndSample = maxEndSample;
         graph.bpm = snapshot->bpm;
     }

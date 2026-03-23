@@ -47,9 +47,10 @@ AuditionPanel::AuditionPanel(std::shared_ptr<Audio::AuditionEngine> engine)
         });
         
         m_engine->setOnPlaybackStateChanged([this](bool isPlaying) {
-            if (m_playPauseButton) {
-                m_playPauseButton->setText(isPlaying ? "PAUSE" : "PLAY");
-            }
+            // Visual update handled by SVG swap in onRender
+            // if (m_playPauseButton) {
+            //     m_playPauseButton->setText(isPlaying ? "PAUSE" : "PLAY");
+            // }
         });
     }
     
@@ -94,7 +95,12 @@ void AuditionPanel::setupComponents() {
     m_playPauseButton->setStyle(AestraUI::NUIButton::Style::Primary);
     m_playPauseButton->setCornerRadius(28.0f);
     m_playPauseButton->setOnClick([this]() {
-        if (m_engine) m_engine->togglePlayPause();
+        if (m_engine) {
+             if (!m_engine->isPlaying()) {
+                 if (m_onPlayRequest) m_onPlayRequest(); // Stop external preview
+             }
+             m_engine->togglePlayPause();
+        }
     });
     addChild(m_playPauseButton);
     
@@ -185,141 +191,189 @@ void AuditionPanel::setupComponents() {
 void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& area) {
     if (!m_engine) return;
     
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+
     // Headers
-    float headerH = 30.0f;
-    AestraUI::NUIColor headerTxtColor(0.7f, 0.7f, 0.7f, 1.0f);
-    float colNo = area.x + 10.0f;
-    float colTitle = area.x + 50.0f;
+    float headerH = 28.0f;
+    AestraUI::NUIColor headerTxtColor(0.5f, 0.5f, 0.5f, 1.0f);
+    float colNo = area.x + 12.0f;
+    float colTitle = area.x + 60.0f;
     float colTime = area.x + area.width - 60.0f;
     
-    renderer.drawText("#", AestraUI::NUIPoint(colNo, area.y + 10.0f), 12.0f, headerTxtColor);
-    renderer.drawText("Title", AestraUI::NUIPoint(colTitle, area.y + 10.0f), 12.0f, headerTxtColor);
-    renderer.drawText("Time", AestraUI::NUIPoint(colTime, area.y + 10.0f), 12.0f, headerTxtColor);
-    renderer.drawLine(AestraUI::NUIPoint(area.x, area.y + headerH), AestraUI::NUIPoint(area.x + area.width, area.y + headerH), 1.0f, AestraUI::NUIColor(1.0f,1.0f,1.0f,0.1f));
+    // Header divider
+    // renderer.drawText("#", AestraUI::NUIPoint(colNo, area.y + 8.0f), 11.0f, headerTxtColor);
+    // renderer.drawText("TITLE", AestraUI::NUIPoint(colTitle, area.y + 8.0f), 11.0f, headerTxtColor);
+    // renderer.drawText("TIME", AestraUI::NUIPoint(colTime, area.y + 8.0f), 11.0f, headerTxtColor);
+    // renderer.drawLine(AestraUI::NUIPoint(area.x, area.y + headerH), AestraUI::NUIPoint(area.x + area.width, area.y + headerH), 1.0f, AestraUI::NUIColor(1.0f,1.0f,1.0f,0.05f));
     
     // Items
     const auto& queue = m_engine->getQueue();
     auto currentItem = m_engine->getCurrentItem();
     
-    float y = area.y + headerH + 10.0f;
-    float rowH = 35.0f;
+    // Scroll handling would go here (offset)
+    float y = area.y; // + headerH;
+    float rowH = 32.0f;
+    float spacing = 4.0f;
     
     for (size_t i = 0; i < queue.size(); ++i) {
-        if (y + rowH > area.y + area.height) break;
+        if (y + rowH > area.y + area.height) break; // Clip
         
         const auto& item = queue[i];
         bool isCurrent = (currentItem && currentItem->id == item.id);
         bool isHovered = (static_cast<int>(i) == m_hoveredQueueIndex);
         
-        // Selection/Hover bg
-        if (isCurrent || isHovered) {
-             AestraUI::NUIColor hlColor = isCurrent ? 
-                AestraUI::NUIColor(0.55f, 0.35f, 0.85f, 0.2f) : 
-                AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.05f);
-             renderer.fillRoundedRect(AestraUI::NUIRect(area.x + 5.0f, y, area.width - 10.0f, rowH - 2.0f), 4.0f, hlColor);
+        AestraUI::NUIRect rowRect(area.x, y, area.width, rowH);
+        
+        // Background
+        if (isCurrent) {
+            // Active Glass Gradient
+            AestraUI::NUIColor start = AestraUI::NUIColor(0.1f, 0.1f, 0.15f, 0.9f);
+            AestraUI::NUIColor end = AestraUI::NUIColor(0.15f, 0.15f, 0.22f, 0.8f);
+            
+            // Draw gradient background
+             for(int j=0; j<4; ++j) {
+                 float f = j/3.0f;
+                 AestraUI::NUIRect r = rowRect;
+                 r.y += j * (rowRect.height/4.0f);
+                 r.height = rowRect.height/4.0f;
+                 renderer.fillRoundedRect(r, 6.0f, AestraUI::NUIColor::lerp(start, end, f));
+             }
+             
+            // Neon Border
+            renderer.strokeRoundedRect(rowRect, 6.0f, 1.0f, theme.getColor("primary")); 
+            
+            // Inner Highlight
+            AestraUI::NUIRect innerRect = rowRect;
+            innerRect.x += 1.0f; innerRect.y += 1.0f;
+            innerRect.width -= 2.0f; innerRect.height -= 2.0f;
+            renderer.strokeRoundedRect(innerRect, 5.0f, 1.0f, theme.getColor("primary").withAlpha(0.3f));
+            
+        } else if (isHovered) {
+             renderer.fillRoundedRect(rowRect, 6.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f)); // Hover light
+        } else {
+             // Alternating subtle
+             if (i % 2 == 0) renderer.fillRoundedRect(rowRect, 6.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.01f));
         }
 
-        // Icon Column Logic:
-        // Hover -> Play Icon
-        // Not Hover -> Number (Green if current, Grey if not)
+        // Icon Column Logic
         if (isHovered) {
-             renderer.drawText("▶", AestraUI::NUIPoint(colNo - 5.0f, y + 10.0f), 12.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+             renderer.drawText("▶", AestraUI::NUIPoint(colNo - 3.0f, y + 8.0f), 11.0f, theme.getColor("textPrimary"));
+        } else if (isCurrent) {
+             // Speaker icon or waveform icon
+             renderer.drawText("ılı", AestraUI::NUIPoint(colNo - 1.0f, y + 8.0f), 11.0f, theme.getColor("primary")); 
         } else {
-             AestraUI::NUIColor numColor = isCurrent ? 
-                AestraUI::NUIColor(0.1f, 0.8f, 0.3f, 1.0f) : 
-                AestraUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f);
-             renderer.drawText(std::to_string(i + 1), AestraUI::NUIPoint(colNo, y + 10.0f), 12.0f, numColor);
+             renderer.drawText(std::to_string(i + 1), AestraUI::NUIPoint(colNo, y + 8.0f), 11.0f, theme.getColor("textTertiary"));
         }
         
         // Title
         AestraUI::NUIColor titleColor = isCurrent ? 
-            AestraUI::NUIColor(0.1f, 0.8f, 0.3f, 1.0f) : 
-            AestraUI::NUIColor(0.9f, 0.9f, 0.9f, 1.0f);
-        renderer.drawText(item.title, AestraUI::NUIPoint(colTitle, y + 10.0f), 13.0f, titleColor);
+            theme.getColor("primary") : 
+            theme.getColor("textPrimary");
+        renderer.drawText(item.title, AestraUI::NUIPoint(colTitle, y + 8.0f), 13.0f, titleColor);
         
         // Time
         std::string timeStr = (item.durationSeconds > 0.0) ? formatTime(item.durationSeconds) : "--:--";
-        renderer.drawText(timeStr, AestraUI::NUIPoint(colTime, y + 10.0f), 12.0f, AestraUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f));
+        renderer.drawText(timeStr, AestraUI::NUIPoint(colTime, y + 8.0f), 11.0f, theme.getColor("textSecondary"));
         
-        y += rowH;
+        y += rowH + spacing;
     }
 }
 // ============================================================================
 // LAYOUT - Called from onResize
 // ============================================================================
 
+// ============================================================================
+// LAYOUT - Called from onResize
+// ============================================================================
+
 void AuditionPanel::layoutComponents() {
     auto bounds = getBounds();
-    const float padding = 30.0f; // More breathing room
+    const float padding = 20.0f;
+    const float gap = 16.0f;
     
-    // === 1. Header Area (Top 35%) ===
-    float headerHeight = bounds.height * 0.35f;
+    // Fixed heights matching onRender
+    float headerHeight = 220.0f;
+    float waveformHeight = 120.0f;
     
-    // Cover Art (Square within Header)
-    float artSize = headerHeight - (padding * 2);
-    if (artSize > 250.0f) artSize = 250.0f; // Max size
+    AestraUI::NUIRect headerRect(bounds.x + padding, bounds.y + padding, bounds.width - padding*2, headerHeight);
+    AestraUI::NUIRect waveformRect(bounds.x + padding, headerRect.bottom() + gap, bounds.width - padding*2, waveformHeight);
     
-    // Info Area (Right of Art)
-    float infoX = padding + artSize + 30.0f;
-    float infoWidth = bounds.width - infoX - padding;
-    float infoStartY = padding + 20.0f;
+    // === 1. Header Layout ===
+    float artPadding = 20.0f;
+    float artSize = headerHeight - (artPadding * 2);
+    if (artSize > 180.0f) artSize = 180.0f;
     
-    // Title (Big!)
-    m_trackTitle->setFontSize(48.0f); // Huge font
-    m_trackTitle->setAlignment(AestraUI::NUILabel::Alignment::Left); // Left align
-    m_trackTitle->setBounds(AestraUI::NUIAbsolute(bounds, infoX, infoStartY, infoWidth, 60.0f));
+    float infoX = headerRect.x + artPadding + artSize + 30.0f;
+    float infoW = headerRect.width - (artPadding + artSize + 30.0f) - artPadding;
+    float startY = headerRect.y + artPadding + 10.0f;
     
-    // Artist (Medium)
-    m_trackArtist->setFontSize(24.0f);
-    m_trackArtist->setAlignment(AestraUI::NUILabel::Alignment::Left);
-    m_trackArtist->setBounds(AestraUI::NUIAbsolute(bounds, infoX, infoStartY + 60.0f, infoWidth, 30.0f));
+    // Title
+    m_trackTitle->setFontSize(32.0f); // clean size
+    m_trackTitle->setBounds(AestraUI::NUIAbsolute(bounds, infoX, startY, infoW, 40.0f));
     
-    // Controls (Below Artist)
-    float controlsY = infoStartY + 60.0f + 30.0f + 20.0f;
+    // Artist
+    m_trackArtist->setFontSize(18.0f);
+    // m_trackArtist->setFontWeight(AestraUI::FontWeight::Light); // Not supported
+    m_trackArtist->setBounds(AestraUI::NUIAbsolute(bounds, infoX, startY + 45.0f, infoW, 24.0f));
     
-    // Play Button (Big and prominent)
-    float playSize = 64.0f;
-    m_playPauseButton->setBounds(AestraUI::NUIAbsolute(bounds, infoX, controlsY, playSize, playSize));
-    m_playPauseButton->setCornerRadius(playSize / 2.0f); // Circle
+    // Controls - Bottom aligned in header info area
+    float controlsY = headerRect.bottom() - artPadding - 64.0f - 12.0f; // Shift UP by 12px due to user request (was clipping bottom)
     
-    // Transport Neighbors
-    float btnSize = 40.0f;
-    float gap = 15.0f;
-    float txX = infoX + playSize + 20.0f;
-    float txY = controlsY + (playSize - btnSize) / 2.0f;
+    // Play Button Group
+    float playSize = 56.0f;
+    float navSize = 36.0f;
+    float navGap = 12.0f;
     
-    m_prevButton->setBounds(AestraUI::NUIAbsolute(bounds, txX, txY, btnSize, btnSize));
-    m_nextButton->setBounds(AestraUI::NUIAbsolute(bounds, txX + btnSize + gap, txY, btnSize, btnSize));
+    m_prevButton->setBounds(AestraUI::NUIAbsolute(bounds, infoX, controlsY + (playSize-navSize)/2, navSize, navSize));
+    // Glass Style for Prev
+    m_prevButton->setBackgroundColor(AestraUI::NUIColor(0.1f, 0.1f, 0.15f, 0.4f));
+    m_prevButton->setBorderColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.1f));
+    m_prevButton->setBorderWidth(1.0f);
+    m_prevButton->setCornerRadius(navSize/2.0f);
 
-    // DSP / Volume (Next to transport or new row?)
-    // Let's put DSP next to transport
-    float dspX = txX + (btnSize + gap) * 2 + 20.0f;
-    m_dspPresetButton->setBounds(AestraUI::NUIAbsolute(bounds, dspX, txY + 5.0f, 100.0f, 30.0f)); 
-    m_abToggleButton->setBounds(AestraUI::NUIAbsolute(bounds, dspX + 110.0f, txY + 5.0f, 50.0f, 30.0f));
+    m_playPauseButton->setBounds(AestraUI::NUIAbsolute(bounds, infoX + navSize + navGap, controlsY, playSize, playSize));
+    // Glass Style for Play (Slightly brighter/different?)
+    // Let's make it consistent but maybe slightly more opaque or accented if playing? 
+    // For now, consistent Glass Base.
+    m_playPauseButton->setBackgroundColor(AestraUI::NUIColor(0.1f, 0.1f, 0.15f, 0.4f));
+    m_playPauseButton->setBorderColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.1f));
+    m_playPauseButton->setBorderWidth(1.0f);
+    m_playPauseButton->setCornerRadius(playSize/2.0f);
+
+    m_nextButton->setBounds(AestraUI::NUIAbsolute(bounds, infoX + navSize + navGap + playSize + navGap, controlsY + (playSize-navSize)/2, navSize, navSize));
+    // Glass Style for Next
+    m_nextButton->setBackgroundColor(AestraUI::NUIColor(0.1f, 0.1f, 0.15f, 0.4f));
+    m_nextButton->setBorderColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.1f));
+    m_nextButton->setBorderWidth(1.0f);
+    m_nextButton->setCornerRadius(navSize/2.0f);
     
-    // Volume (Far right or right of DSP)
-    m_volumeSlider->setBounds(AestraUI::NUIAbsolute(bounds, dspX + 180.0f, txY + 17.0f, 100.0f, 6.0f));
+    // DSP & Volume Group (Right aligned or Next to transport)
+    float extraX = infoX + navSize + navGap + playSize + navGap + navSize + 40.0f;
     
+    m_dspPresetButton->setBounds(AestraUI::NUIAbsolute(bounds, extraX, controlsY + 12.0f, 120.0f, 32.0f));
+    // Apply Glass Style to DSP Button
+    // Apply Glass Style to DSP Button - Match Transport Style
+    m_dspPresetButton->setBackgroundColor(AestraUI::NUIColor(0.12f, 0.12f, 0.22f, 0.4f));
+    m_dspPresetButton->setBorderColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f));
+    m_dspPresetButton->setBorderWidth(1.0f);
+    m_dspPresetButton->setCornerRadius(16.0f);
+
+    m_abToggleButton->setBounds(AestraUI::NUIAbsolute(bounds, extraX + 130.0f, controlsY + 12.0f, 50.0f, 32.0f));
+    // Apply Glass Style to A/B Button
+    // Apply Glass Style to A/B Button - Match Transport Style
+    m_abToggleButton->setBackgroundColor(AestraUI::NUIColor(0.12f, 0.12f, 0.22f, 0.4f));
+    m_abToggleButton->setBorderColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f));
+    m_abToggleButton->setBorderWidth(1.0f);
+    m_abToggleButton->setCornerRadius(16.0f);
     
-    // === 2. Waveform Area (Middle Strip 20%) ===
-    float waveformY = headerHeight;
-    float waveformHeight = bounds.height * 0.20f;
+    // Volume - Mini slider
+    m_volumeSlider->setBounds(AestraUI::NUIAbsolute(bounds, extraX + 200.0f, controlsY + 24.0f, 80.0f, 6.0f));
     
-    // Progress Bar (Overlaid on bottom of waveform or between?)
-    // Let's put it at the bottom of the Header for "Timeline" feel?
-    // Or just top of Waveform.
-    float progressY = waveformY - 10.0f; // Overlap slightly or just above
-    // m_progressSlider->setBounds(AestraUI::NUIAbsolute(bounds, padding, progressY, bounds.width - padding*2, 6.0f));
-    
-    // Time Labels
-    float timeY = waveformY + waveformHeight - 20.0f;
-    m_currentTime->setBounds(AestraUI::NUIAbsolute(bounds, padding + 5.0f, timeY, 60.0f, 16.0f));
-    m_totalTime->setBounds(AestraUI::NUIAbsolute(bounds, bounds.width - padding - 65.0f, timeY, 60.0f, 16.0f));
-    
-    
-    // === 3. Queue Area (Bottom Rest) ===
-    float queueY = waveformY + waveformHeight;
-    float queueHeight = bounds.height - queueY - 10.0f;
+    // === 2. Waveform Info ===
+    // Time labels inside waveform panel, bottom corners
+    float timeY = waveformRect.bottom() - 24.0f;
+    m_currentTime->setBounds(AestraUI::NUIAbsolute(bounds, waveformRect.x + 12.0f, timeY, 60.0f, 16.0f));
+    m_totalTime->setBounds(AestraUI::NUIAbsolute(bounds, waveformRect.right() - 72.0f, timeY, 60.0f, 16.0f));
 }
 
 // ============================================================================
@@ -356,161 +410,209 @@ void AuditionPanel::onUpdate(double deltaTime) {
     NUIComponent::onUpdate(deltaTime);
 }
 
+
+
 void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
     auto bounds = getBounds();
-    
-    // === 1. Base Background (Black-ish) ===
-    AestraUI::NUIColor bgColor(0.05f, 0.05f, 0.05f, 1.0f); // Deep dark
-    renderer.fillRect(bounds, bgColor);
-    
-    // === 2. Adaptive Header Gradient ===
-    float headerHeight = bounds.height * 0.35f;
-    AestraUI::NUIRect headerRect(bounds.x, bounds.y, bounds.width, headerHeight);
-    
-    // Dynamic color from track title hash (inspo: Spotify adaptive header)
-    m_currentHeaderColor = AestraUI::NUIColor(0.2f, 0.1f, 0.1f, 1.0f); // Fallback: Dark Red
-    if (m_engine) {
-        auto item = m_engine->getCurrentItem();
-        if (item && !item->title.empty()) {
-            size_t hash = std::hash<std::string>{}(item->title);
-            float r = 0.2f + ((hash & 0xFF) / 255.0f) * 0.3f;
-            float g = 0.1f + (((hash >> 8) & 0xFF) / 255.0f) * 0.2f;
-            float b = 0.1f + (((hash >> 16) & 0xFF) / 255.0f) * 0.2f;
-            m_currentHeaderColor = AestraUI::NUIColor(r, g, b, 1.0f);
-        }
-    }
-    
-    // Render Gradient (Color -> BaseColor)
-    renderer.fillRectGradient(headerRect, m_currentHeaderColor, bgColor, true);
-    
-    // === 3. Cover Art Box ===
-    const float padding = 30.0f;
-    float artSize = headerHeight - (padding * 2);
-    if (artSize > 250.0f) artSize = 250.0f;
-    
-    AestraUI::NUIRect artRect(bounds.x + padding, bounds.y + padding, artSize, artSize);
-    
-    // Shadow
-    renderer.drawShadow(artRect, 0.0f, 10.0f, 20.0f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.5f));
-    
-    // Check if we need to load new cover art
+
+    // === 0. Update Logic for Cover Art ===
     bool hasCoverArt = false;
     if (m_engine) {
         auto item = m_engine->getCurrentItem();
         if (item && item->id != m_currentTrackId) {
-            // Track changed, update cover art
             m_currentTrackId = item->id;
-            
-            // Clean up old texture
             if (m_coverArtTextureId != 0) {
                 renderer.deleteTexture(m_coverArtTextureId);
                 m_coverArtTextureId = 0;
             }
-            
-            // Load new cover art if available
             if (!item->coverArtData.empty()) {
                 int w, h, comp;
-                unsigned char* rgba = stbi_load_from_memory(
-                    item->coverArtData.data(),
-                    static_cast<int>(item->coverArtData.size()),
-                    &w, &h, &comp, 4  // Request RGBA
-                );
-                
+                unsigned char* rgba = stbi_load_from_memory(item->coverArtData.data(), static_cast<int>(item->coverArtData.size()), &w, &h, &comp, 4);
                 if (rgba) {
                     m_coverArtTextureId = renderer.createTexture(rgba, w, h);
-                    m_coverArtWidth = w;
-                    m_coverArtHeight = h;
-                    
-                    // Extract dominant color for gradient (Sample center pixel)
-                    int cx = w / 2;
-                    int cy = h / 2;
-                    int idx = (cy * w + cx) * 4;
-                    float r = rgba[idx] / 255.0f;
-                    float g = rgba[idx + 1] / 255.0f;
-                    float b = rgba[idx + 2] / 255.0f;
-                    // Darken for better gradient
+                    m_coverArtWidth = w; m_coverArtHeight = h;
+                    int cx = w / 2; int cy = h / 2; int idx = (cy * w + cx) * 4;
+                    float r = rgba[idx] / 255.0f; float g = rgba[idx + 1] / 255.0f; float b = rgba[idx + 2] / 255.0f;
                     m_currentHeaderColor = AestraUI::NUIColor(r * 0.5f, g * 0.5f, b * 0.5f, 1.0f);
-                    
                     stbi_image_free(rgba);
-                    Log::info("[AuditionPanel] Loaded cover art: " + std::to_string(w) + "x" + std::to_string(h));
                 }
             }
         }
         hasCoverArt = (m_coverArtTextureId != 0);
     }
     
-    // Draw Cover Art
-    if (hasCoverArt) {
-        // Draw the loaded texture
-        AestraUI::NUIRect srcRect(0, 0, static_cast<float>(m_coverArtWidth), static_cast<float>(m_coverArtHeight));
-        renderer.drawTexture(m_coverArtTextureId, artRect, srcRect);
-    } else {
-        // Placeholder Art Fill
-        AestraUI::NUIColor artFill(m_currentHeaderColor.r * 1.2f, m_currentHeaderColor.g * 1.2f, m_currentHeaderColor.b * 1.2f, 1.0f);
-        renderer.fillRoundedRect(artRect, 4.0f, artFill);
-        renderer.drawText("AESTRA", AestraUI::NUIPoint(artRect.x + artSize/2.0f - 20.0f, artRect.y + artSize/2.0f), 12.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.3f));
+    // === 1. Base Background (Void) ===
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+    renderer.fillRect(bounds, theme.getColor("backgroundPrimary"));
+    
+    const float padding = 20.0f;
+    const float gap = 16.0f;
+    float headerHeight = 220.0f;
+    float waveformHeight = 120.0f;
+    
+    AestraUI::NUIRect headerRect(bounds.x + padding, bounds.y + padding, bounds.width - padding*2, headerHeight);
+    AestraUI::NUIRect waveformRect(bounds.x + padding, headerRect.bottom() + gap, bounds.width - padding*2, waveformHeight);
+    AestraUI::NUIRect queueRect(bounds.x + padding, waveformRect.bottom() + gap, bounds.width - padding*2, bounds.height - waveformRect.bottom() - gap - padding);
+
+    // === 2. Panels ===
+    // Header
+    renderer.drawShadow(headerRect, 0, 4, 16, AestraUI::NUIColor(0,0,0,0.5f));
+    renderer.fillRoundedRect(headerRect, 12.0f, theme.getColor("surfaceTertiary"));
+    renderer.strokeRoundedRect(headerRect, 12.0f, 1.0f, theme.getColor("border"));
+    if (m_currentHeaderColor.a > 0.1f) {
+         AestraUI::NUIColor tint = m_currentHeaderColor; tint.a = 0.05f;
+         renderer.fillRoundedRect(headerRect, 12.0f, tint);
+    }
+    // Waveform
+    renderer.drawShadow(waveformRect, 0, 4, 16, AestraUI::NUIColor(0,0,0,0.5f));
+    renderer.fillRoundedRect(waveformRect, 12.0f, theme.getColor("surfaceTertiary"));
+    renderer.strokeRoundedRect(waveformRect, 12.0f, 1.0f, theme.getColor("border"));
+    // Queue
+    renderer.drawShadow(queueRect, 0, 4, 16, AestraUI::NUIColor(0,0,0,0.5f));
+    renderer.fillRoundedRect(queueRect, 12.0f, theme.getColor("surfaceTertiary"));
+    renderer.strokeRoundedRect(queueRect, 12.0f, 1.0f, theme.getColor("border"));
+    
+    // === 3. Cover Art ===
+    if (headerRect.width > 50) {
+        float artPadding = 20.0f;
+        float artSize = headerHeight - (artPadding * 2);
+        if (artSize > 180.0f) artSize = 180.0f;
+        
+        AestraUI::NUIRect artRect(headerRect.x + artPadding, headerRect.y + artPadding, artSize, artSize);
+        
+        if (hasCoverArt) {
+            AestraUI::NUIRect srcRect(0, 0, static_cast<float>(m_coverArtWidth), static_cast<float>(m_coverArtHeight));
+            renderer.setClipRect(artRect);
+            renderer.drawTexture(m_coverArtTextureId, artRect, srcRect);
+            renderer.clearClipRect();
+            renderer.strokeRoundedRect(artRect, 8.0f, 1.0f, AestraUI::NUIColor(1.0f,1.0f,1.0f,0.1f));
+        } else {
+             AestraUI::NUIColor artFill(m_currentHeaderColor.r * 0.8f, m_currentHeaderColor.g * 0.8f, m_currentHeaderColor.b * 0.8f, 1.0f);
+             renderer.fillRoundedRect(artRect, 8.0f, artFill);
+             renderer.drawText("AESTRA", AestraUI::NUIPoint(artRect.x + artSize/2.0f - 24.0f, artRect.y + artSize/2.0f - 6.0f), 14.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+        }
+    }
+    
+    // === 4. Content Calls ===
+    AestraUI::NUIRect waveformInner = waveformRect;
+    float wInset = 20.0f;
+    waveformInner.x += wInset; waveformInner.y += wInset; 
+    waveformInner.width -= wInset*2; 
+    // Reserve space for time pills at the bottom (extra 24px)
+    waveformInner.height -= (wInset + 24.0f);
+    renderWaveform(renderer, waveformInner);
+    
+    AestraUI::NUIRect queueInner = queueRect;
+    float qInset = 12.0f;
+    queueInner.x += qInset; queueInner.y += qInset;
+    queueInner.width -= qInset*2; queueInner.height -= qInset*2; 
+    renderQueue(renderer, queueInner);
+    
+
+    // === Render Time Label Backgrounds (Pill shape) in Reserved Bottom Space ===
+    // Use the reserved space: waveformRect bottom + padding
+    float timePillY = waveformInner.bottom() + 2.0f; // Moved up by 4px (was +6.0f)
+    float pillW = 70.0f;
+    float pillH = 22.0f;
+    
+    // Calculate precise center based on layout
+    float totalTimeWidth = (pillW * 2) + 40.0f; // 2 pills + gap
+    float startX = waveformRect.x + (waveformRect.width - totalTimeWidth) / 2.0f;
+    
+    AestraUI::NUIRect currentPillRest(startX, timePillY, pillW, pillH);
+    AestraUI::NUIRect totalPillRect(startX + pillW + 40.0f, timePillY, pillW, pillH);
+    
+    if (m_currentTime) {
+        std::string timeStr = "0:00";
+        double pos = 0.0;
+        if (m_engine) pos = m_engine->getPositionSeconds();
+        int mins = static_cast<int>(pos / 60.0);
+        int secs = static_cast<int>(pos) % 60;
+        std::stringstream ss;
+        ss << mins << ":" << std::setfill('0') << std::setw(2) << secs;
+        m_currentTime->setText(ss.str());
+        
+        // Use full pill bounds and Center alignment
+        m_currentTime->setBounds(currentPillRest);
+        m_currentTime->setAlignment(AestraUI::NUILabel::Alignment::Center);
+        m_currentTime->setBackgroundVisible(false); // We draw manually for glass effect
+        
+        // Draw Glass Pill Background
+        renderer.fillRoundedRect(currentPillRest, 11.0f, AestraUI::NUIColor(0,0,0,0.5f)); // Dark glass
+        renderer.strokeRoundedRect(currentPillRest, 11.0f, 1.0f, AestraUI::NUIColor(1.0f,1.0f,1.0f,0.1f)); // Subtle border
     }
 
+    if (m_totalTime) {
+        std::string timeStr = "0:00";
+        double dur = 0.0;
+        if (m_engine) dur = m_engine->getDurationSeconds();
+        int mins = static_cast<int>(dur / 60.0);
+        int secs = static_cast<int>(dur) % 60;
+        std::stringstream ss;
+        ss << mins << ":" << std::setfill('0') << std::setw(2) << secs;
+        m_totalTime->setText(ss.str());
+        
+        m_totalTime->setBounds(totalPillRect);
+        m_totalTime->setAlignment(AestraUI::NUILabel::Alignment::Center);
+         m_totalTime->setBackgroundVisible(false);
+        
+        // Draw Glass Pill Background
+        renderer.fillRoundedRect(totalPillRect, 11.0f, AestraUI::NUIColor(0,0,0,0.5f));
+        renderer.strokeRoundedRect(totalPillRect, 11.0f, 1.0f, AestraUI::NUIColor(1.0f,1.0f,1.0f,0.1f));
+    }
     
-    
-    // === 4. Waveform Area ===
-    float waveformY = headerHeight;
-    float waveformHeight = bounds.height * 0.20f;
-    AestraUI::NUIRect waveformArea(bounds.x + padding, bounds.y + waveformY + 20.0f, bounds.width - padding*2, waveformHeight - 40.0f);
-    
-    renderWaveform(renderer, waveformArea);
-    
-    // === 5. Queue Area ===
-    float queueY = waveformY + waveformHeight;
-    float queueHeight = bounds.height - queueY;
-    AestraUI::NUIRect queueArea(bounds.x + padding, bounds.y + queueY, bounds.width - padding*2, queueHeight - padding);
-    
-    renderQueue(renderer, queueArea);
-    
-    // Render children (Buttons, etc.)
-    NUIComponent::onRender(renderer);
+
+     // m_currentTime->onRender(renderer); // REMOVED: Handled by renderChildren()
+     // m_totalTime->onRender(renderer);   // REMOVED: Handled by renderChildren()
 
     // === Overlay SVGs on Buttons ===
+    // Force White/Primary color for visibility against filled buttons
     AestraUI::NUIColor iconColor(1.0f, 1.0f, 1.0f, 1.0f);
     
-    // Play/Pause
-    bool isPlaying = m_engine && m_engine->isPlaying();
-    auto& playIcon = isPlaying ? m_svgPause : m_svgPlay;
-    if (playIcon) {
-        auto btnBounds = m_playPauseButton->getBounds();
-        float iconSize = btnBounds.width * 0.5f;
-        AestraUI::NUIRect iconRect(
-            btnBounds.x + (btnBounds.width - iconSize)/2,
-            btnBounds.y + (btnBounds.height - iconSize)/2,
-            iconSize, iconSize
-        );
-        AestraUI::NUISVGRenderer::render(renderer, *playIcon, iconRect, iconColor);
-    }
+    // Manual background fill for Icon buttons REMOVED (Handled by NUIButton now with renderChildren)
     
+    // Note: We still render icons manually because NUIButton's internal setIcon might not be used here yet.
+    // If we call renderChildren(), it will draw the NUIButton background/border.
+    // Then we draw the icon on top.
+    
+    // RENDER CHILD COMPONENTS (Buttons, Labels, Slider) on top of panels
+    renderChildren(renderer);
+
     // Prev
-    if (m_svgPrev) {
+    {
         auto btnBounds = m_prevButton->getBounds();
-        float iconSize = btnBounds.width * 0.5f;
-        AestraUI::NUIRect iconRect(
-            btnBounds.x + (btnBounds.width - iconSize)/2,
-            btnBounds.y + (btnBounds.height - iconSize)/2,
-            iconSize, iconSize
-        );
-        AestraUI::NUISVGRenderer::render(renderer, *m_svgPrev, iconRect, iconColor);
+        if (m_svgPrev) {
+            float iconSize = btnBounds.width * 0.5f;
+            AestraUI::NUIRect iconRect(btnBounds.x + (btnBounds.width - iconSize)/2, btnBounds.y + (btnBounds.height - iconSize)/2, iconSize, iconSize);
+            AestraUI::NUISVGRenderer::render(renderer, *m_svgPrev, iconRect, iconColor);
+        }
     }
-    
     // Next
-    if (m_svgNext) {
+    {
         auto btnBounds = m_nextButton->getBounds();
-        float iconSize = btnBounds.width * 0.5f;
-        AestraUI::NUIRect iconRect(
-            btnBounds.x + (btnBounds.width - iconSize)/2,
-            btnBounds.y + (btnBounds.height - iconSize)/2,
-            iconSize, iconSize
-        );
-        AestraUI::NUISVGRenderer::render(renderer, *m_svgNext, iconRect, iconColor);
+         if (m_svgNext) {
+            float iconSize = btnBounds.width * 0.5f;
+            AestraUI::NUIRect iconRect(btnBounds.x + (btnBounds.width - iconSize)/2, btnBounds.y + (btnBounds.height - iconSize)/2, iconSize, iconSize);
+            AestraUI::NUISVGRenderer::render(renderer, *m_svgNext, iconRect, iconColor);
+        }
+    }
+    // Play
+    {
+        bool isPlaying = m_engine && m_engine->isPlaying();
+        auto& playIcon = isPlaying ? m_svgPause : m_svgPlay;
+        if (playIcon) {
+            auto btnBounds = m_playPauseButton->getBounds();
+            float iconSize = btnBounds.width * 0.5f;
+            AestraUI::NUIRect iconRect(
+                btnBounds.x + (btnBounds.width - iconSize)/2,
+                btnBounds.y + (btnBounds.height - iconSize)/2,
+                iconSize, iconSize
+            );
+            AestraUI::NUISVGRenderer::render(renderer, *playIcon, iconRect, iconColor);
+        }
     }
 }
+
 
 // ============================================================================
 // WAVEFORM (SOUNDCLOUD SCRUB)
@@ -528,12 +630,16 @@ void AuditionPanel::renderWaveform(AestraUI::NUIRenderer& renderer, const Aestra
     auto buffer = source->getBuffer();
     if (!buffer) return;
 
-    // Gradient Colors
-    AestraUI::NUIColor playedColor = m_currentHeaderColor; 
-    playedColor = AestraUI::NUIColor(playedColor.r + 0.2f, playedColor.g + 0.2f, playedColor.b + 0.2f, 1.0f);
-    AestraUI::NUIColor unplayedColor(0.4f, 0.4f, 0.45f, 0.5f);
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
 
-    const float pixelStride = 3.0f; // More spacing
+    // Neon Colors
+    AestraUI::NUIColor playedColorStart = theme.getColor("primary"); // Purple
+    AestraUI::NUIColor playedColorEnd = theme.getColor("secondary"); // Cyan (or mapped secondary)
+    AestraUI::NUIColor unplayedColor = theme.getColor("surfaceRaised");
+    unplayedColor.a = 0.5f;
+
+    const float pixelStride = 4.0f; // Wider spacing for cleaner look
+    const float barWidth = 3.0f; // Thicker bars (less gap)
     const uint32_t numBars = static_cast<uint32_t>(area.width / pixelStride);
     if (numBars == 0) return;
     
@@ -562,13 +668,44 @@ void AuditionPanel::renderWaveform(AestraUI::NUIRenderer& renderer, const Aestra
         }
         
         if (maxAmp > 0.001f) {
-            float h = maxAmp * halfHeight;
+            // Apply log scaling or boost for better visuals
+            float h = maxAmp * halfHeight * 1.5f; 
             if (h < 2.0f) h = 2.0f;
             if (h > halfHeight) h = halfHeight;
             
             float x = area.x + (i * pixelStride);
-            AestraUI::NUIColor barColor = (x < playheadX) ? playedColor : unplayedColor;
-            renderer.fillRoundedRect(AestraUI::NUIRect(x, centerY - h, 2.0f, h * 2.0f), 1.0f, barColor);
+            
+            AestraUI::NUIRect barRect(x, centerY - h, barWidth, h * 2.0f);
+            
+            if (x < playheadX) {
+                // Vertical Gradient for Played Bars: Purple (Bottom) -> Cyan (Top)
+                // Since we render from CenterY, we can just use a vibrant vertical gradient
+                // Top Color
+                AestraUI::NUIColor colTop = theme.getColor("secondary"); // Cyan
+                AestraUI::NUIColor colBot = theme.getColor("primary");   // Purple
+                
+                // Draw in 2 segments for simple gradient simulation
+                // Top Half
+                renderer.fillRoundedRect(AestraUI::NUIRect(x, centerY - h, barWidth, h), 1.0f, colTop);
+                // Bottom Half
+                renderer.fillRoundedRect(AestraUI::NUIRect(x, centerY, barWidth, h), 1.0f, colBot);
+                // Or better: manual lerp loop?
+                // Let's stick to a solid vibrant color that matches the Slider gradient midpoint?
+                // Or just use the Vertical Logic:
+                // We'll draw 4 segments vertically
+                for (int s=0; s<4; ++s) {
+                    float t = s/3.0f;
+                    AestraUI::NUIColor segCol = AestraUI::NUIColor::lerp(colTop, colBot, t);
+                    renderer.fillRoundedRect(
+                        AestraUI::NUIRect(x, (centerY-h) + (s*(h*2.0f)/4.0f), barWidth, (h*2.0f)/4.0f + 0.5f), 
+                        0.5f, 
+                        segCol
+                    );
+                }
+            } else {
+                // Unplayed: Darker, subtle
+                renderer.fillRoundedRect(barRect, 1.0f, unplayedColor);
+            }
         }
     }
 }
@@ -578,6 +715,8 @@ void AuditionPanel::renderWaveform(AestraUI::NUIRenderer& renderer, const Aestra
 // ============================================================================
 // MOUSE HANDLING
 // ============================================================================
+
+
 
 bool AuditionPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     auto bounds = getBounds();
@@ -695,6 +834,9 @@ bool AuditionPanel::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (event.pressed) {
         if (event.keyCode == AestraUI::NUIKeyCode::Space) {
             if (m_engine) {
+                if (!m_engine->isPlaying()) {
+                    if (m_onPlayRequest) m_onPlayRequest();
+                }
                 m_engine->togglePlayPause();
                 return true;
             }

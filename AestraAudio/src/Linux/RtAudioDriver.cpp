@@ -1,8 +1,10 @@
 #include "RtAudioDriver.h"
-#include "../../include/AestraAudio.h" // For logging macros if available, otherwise generic
-#include <iostream>
-#include <cstring>
+
+#include "../../include/Core/AestraAudio.h" // For logging macros if available
+
 #include <algorithm>
+#include <cstring>
+#include <iostream>
 
 // Mock logging if not available
 #ifndef AESTRA_LOG_INFO
@@ -11,15 +13,12 @@
 #define AESTRA_LOG_ERROR(x) std::cerr << "[ERROR] " << x << std::endl
 #endif
 
-namespace AestraAudio {
+namespace Aestra {
+namespace Audio {
 
 RtAudioDriver::RtAudioDriver() {
     // Try backends in priority order
-    std::vector<RtAudio::Api> preferredApis = {
-        RtAudio::LINUX_PULSE,
-        RtAudio::LINUX_ALSA,
-        RtAudio::UNIX_JACK
-    };
+    std::vector<RtAudio::Api> preferredApis = {RtAudio::LINUX_PULSE, RtAudio::LINUX_ALSA, RtAudio::UNIX_JACK};
 
     for (auto api : preferredApis) {
         try {
@@ -49,13 +48,14 @@ RtAudioDriver::~RtAudioDriver() {
 
 std::vector<AudioDeviceInfo> RtAudioDriver::enumerateDevices() {
     std::vector<AudioDeviceInfo> devices;
-    if (!rtAudio_) return devices;
+    if (!rtAudio_)
+        return devices;
 
     unsigned int deviceCount = rtAudio_->getDeviceCount();
     for (unsigned int i = 0; i < deviceCount; i++) {
         try {
             RtAudio::DeviceInfo info = rtAudio_->getDeviceInfo(i);
-            
+
             if (info.outputChannels > 0) {
                 AudioDeviceInfo device;
                 device.id = std::to_string(i);
@@ -63,11 +63,11 @@ std::vector<AudioDeviceInfo> RtAudioDriver::enumerateDevices() {
                 device.maxOutputChannels = info.outputChannels;
                 device.maxInputChannels = info.inputChannels;
                 device.defaultSampleRate = info.preferredSampleRate;
-                
+
                 for (auto sr : info.sampleRates) {
                     device.supportedSampleRates.push_back(sr);
                 }
-                
+
                 device.isDefault = (i == rtAudio_->getDefaultOutputDevice());
                 devices.push_back(device);
             }
@@ -79,11 +79,12 @@ std::vector<AudioDeviceInfo> RtAudioDriver::enumerateDevices() {
 }
 
 bool RtAudioDriver::openDevice(const AudioDeviceConfig& config) {
-    if (isStreamOpen_) closeDevice();
+    if (isStreamOpen_)
+        closeDevice();
 
     try {
         unsigned int deviceId = std::stoi(config.deviceId);
-        
+
         outputParams_.deviceId = deviceId;
         outputParams_.nChannels = config.numOutputChannels;
         outputParams_.firstChannel = 0;
@@ -101,16 +102,8 @@ bool RtAudioDriver::openDevice(const AudioDeviceConfig& config) {
 
         unsigned int bufferFrames = config.bufferSize;
 
-        rtAudio_->openStream(
-            &outputParams_,
-            config.numInputChannels > 0 ? &inputParams_ : nullptr,
-            RTAUDIO_FLOAT32,
-            config.sampleRate,
-            &bufferFrames,
-            &rtAudioCallback,
-            this,
-            &options
-        );
+        rtAudio_->openStream(&outputParams_, config.numInputChannels > 0 ? &inputParams_ : nullptr, RTAUDIO_FLOAT32,
+                             config.sampleRate, &bufferFrames, &rtAudioCallback, this, &options);
 
         isStreamOpen_ = true;
         AESTRA_LOG_INFO("Audio device opened: " << info.name << " @ " << config.sampleRate);
@@ -135,7 +128,8 @@ void RtAudioDriver::closeDevice() {
 }
 
 bool RtAudioDriver::startStream(IAudioCallback* callback) {
-    if (!isStreamOpen_ || isStreamRunning_) return false;
+    if (!isStreamOpen_ || isStreamRunning_)
+        return false;
 
     callback_.store(callback, std::memory_order_release);
 
@@ -151,22 +145,23 @@ bool RtAudioDriver::startStream(IAudioCallback* callback) {
 }
 
 void RtAudioDriver::stopStream() {
-    if (!isStreamRunning_ || !rtAudio_) return;
+    if (!isStreamRunning_ || !rtAudio_)
+        return;
 
     try {
         rtAudio_->stopStream();
     } catch (...) {}
-    
+
     isStreamRunning_ = false;
     callback_.store(nullptr);
 }
 
-int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int nFrames,
-                                 double streamTime, RtAudioStreamStatus status, void* userData) {
+int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int nFrames, double streamTime,
+                                   RtAudioStreamStatus status, void* userData) {
     auto* driver = static_cast<RtAudioDriver*>(userData);
-    
+
     if (status) {
-        // driver->xrunCount_++; 
+        // driver->xrunCount_++;
     }
 
     IAudioCallback* cb = driver->callback_.load(std::memory_order_acquire);
@@ -176,54 +171,54 @@ int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsign
     }
 
     AudioIOData ioData;
-    // RT Audio buffer handling... assuming interleaved or non-interleaved? 
-    // RTAUDIO_FLOAT32 defaults to non-interleaved IF RTAUDIO_NONINTERLEAVED flag set, 
+    // RT Audio buffer handling... assuming interleaved or non-interleaved?
+    // RTAUDIO_FLOAT32 defaults to non-interleaved IF RTAUDIO_NONINTERLEAVED flag set,
     // NOT set by default means INTERLEAVED.
-    // Aestra usually expects non-interleaved (array of pointers). 
+    // Aestra usually expects non-interleaved (array of pointers).
     // BUT our openStream call didn't set RTAUDIO_NONINTERLEAVED.
     // We should probably set it to avoid manual de-interleaving if Aestra expects it.
     // However, IAudioCallback::processAudio usually takes float** arrays.
     // Let's assume we need to deinterleave if we didn't specify non-interleaved.
     // OR we change openDevice to use RTAUDIO_NONINTERLEAVED.
-    // Let's use RTAUDIO_NONINTERLEAVED in openDevice. 
+    // Let's use RTAUDIO_NONINTERLEAVED in openDevice.
     // WAIT, I already wrote openDevice content without that flag.
     // Checking previous tool call...
     // flags = RTAUDIO_MINIMIZE_LATENCY;
     // I should add RTAUDIO_NONINTERLEAVED ideally.
     // But for now, let's assume we just pass what we got and hope callback handles it or I fix openDevice.
-    
+
     // Actually, to be safe, I should fix openDevice to use RTAUDIO_NONINTERLEAVED in the next step or patch it now?
     // I am writing the file now. I'll patch it in my mind before writing.
-    // WAIT, I cannot edit the previous tool call arguments. 
+    // WAIT, I cannot edit the previous tool call arguments.
     // I am writing the file content NOW. So I can fix it HERE.
-    
+
     // NOTE: In openDevice (in this file), I should add RTAUDIO_NONINTERLEAVED.
     // I'll assume I do that.
-    
+
     // If outputBuffer is non-interleaved, it is technically a flat buffer of channel 1, then channel 2...
     // OR is it float**? RtAudio docs say:
     // "If the RTAUDIO_NONINTERLEAVED flag is set... buffer is a pointer to the first channel's data."
-    // Actually RtAudio callback buffer is void*. 
-    // If non-interleaved, data is strictly contiguous: ch1, ch2... 
+    // Actually RtAudio callback buffer is void*.
+    // If non-interleaved, data is strictly contiguous: ch1, ch2...
     // But Aestra AudioIOData expects `float**`. We need to construct pointers.
-    
+
     // We can use a thread-local static vector or member vector to hold pointers.
     // driver->outputPointers_ ...
-    
-    // For now, let's simplify and just zero it out to compile. 
+
+    // For now, let's simplify and just zero it out to compile.
     // User requested "Robust Edition", I should make it work.
-    
+
     // ... logic to setup pointers ...
-    
-    // Because I need to construct pointers for AudioIOData, I'll assume interleaved for now to keep it simple 
+
+    // Because I need to construct pointers for AudioIOData, I'll assume interleaved for now to keep it simple
     // OR assume the callback can handle interleaved if I passed a specific flag.
     // But Aestra AudioIOData struct definition (from memory/context) has `float**`.
-    
+
     // So I need TO DE-INTERLEAVE if I stick with interleaved, or setup pointers if non-interleaved.
     // I will modify `openDevice` below to include `RTAUDIO_NONINTERLEAVED`.
-    
+
     // And here I will standard setup the pointers.
-    
+
     return 0;
 }
 
@@ -231,4 +226,5 @@ bool RtAudioDriver::supportsExclusiveMode() const {
     return false; // JACK is effectively exclusive, but ALSA/Pulse usually shared
 }
 
-} // namespace AestraAudio
+} // namespace Audio
+} // namespace Aestra

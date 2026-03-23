@@ -2,8 +2,8 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
 #include <functional>
+#include <string>
 
 namespace Aestra {
 namespace Audio {
@@ -28,11 +28,8 @@ namespace Audio {
  * @warning Callers must handle the case where AESTRA_USE_MINIAUDIO is not defined,
  *          in which case this function always returns false.
  */
-[[nodiscard]] bool loadWithMiniAudio(const std::string& filePath,
-                                     std::vector<float>& audioData,
-                                     uint32_t& sampleRate,
-                                     uint32_t& numChannels,
-                                     std::function<void(float)> progressCallback = nullptr);
+[[nodiscard]] bool loadWithMiniAudio(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate,
+                                     uint32_t& numChannels, std::function<void(float)> progressCallback = nullptr);
 
 /**
  * @brief Unified audio file decoder that tries multiple paths:
@@ -40,11 +37,8 @@ namespace Audio {
  * 2. MiniAudio (compressed formats like MP3/FLAC/OGG)
  * 3. Platform decoder (Media Foundation on Windows)
  */
-[[nodiscard]] bool decodeAudioFile(const std::string& filePath,
-                                   std::vector<float>& audioData,
-                                   uint32_t& sampleRate,
-                                   uint32_t& numChannels,
-                                   std::function<void(float)> progressCallback = nullptr);
+[[nodiscard]] bool decodeAudioFile(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate,
+                                   uint32_t& numChannels, std::function<void(float)> progressCallback = nullptr);
 
 /**
  * @brief Ensures audio data is stereo by upmixing or downmixing.
@@ -53,4 +47,3 @@ void forceStereo(std::vector<float>& buffer, uint32_t& channelCount);
 
 } // namespace Audio
 } // namespace Aestra
-

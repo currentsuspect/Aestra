@@ -1,38 +1,41 @@
 #pragma once
 #include "AudioDeviceManager.h"
-#include <vector>
-#include <string>
+
 #include <memory>
+#include <string>
+#include <vector>
 
-namespace AestraAudio {
+namespace Aestra {
+namespace Audio {
 
-    /**
-     * @brief Structure containing information about the platform's audio capabilities
-     * and backend availability.
-     */
-    struct PlatformAudioInfo {
-        std::vector<std::string> availableBackends;
-        std::string recommendedBackend;
-        bool requiresRootForRT = false;
-        std::string warningMessage;
-    };
+/**
+ * @brief Structure containing information about the platform's audio capabilities
+ * and backend availability.
+ */
+struct PlatformAudioInfo {
+    std::vector<std::string> availableBackends;
+    std::string recommendedBackend;
+    bool requiresRootForRT = false;
+    std::string warningMessage;
+};
 
-    /**
-     * @brief Called during AudioDeviceManager initialization to register platform-specific
-     * audio drivers (WASAPI, ASIO, ALSA, PulseAudio, etc.).
-     * 
-     * This function must be implemented by each platform's audio layer.
-     * 
-     * @param manager Reference to the AudioDeviceManager instance
-     */
-    void RegisterPlatformDrivers(AudioDeviceManager& manager);
+/**
+ * @brief Called during AudioDeviceManager initialization to register platform-specific
+ * audio drivers (WASAPI, ASIO, ALSA, PulseAudio, etc.).
+ *
+ * This function must be implemented by each platform's audio layer.
+ *
+ * @param manager Reference to the AudioDeviceManager instance
+ */
+void RegisterPlatformDrivers(AudioDeviceManager& manager);
 
-    /**
-     * @brief Query the platform for available audio backends and capabilities
-     * before driver registration.
-     * 
-     * @return PlatformAudioInfo struct with backend details
-     */
-    PlatformAudioInfo GetPlatformAudioInfo();
+/**
+ * @brief Query the platform for available audio backends and capabilities
+ * before driver registration.
+ *
+ * @return PlatformAudioInfo struct with backend details
+ */
+PlatformAudioInfo GetPlatformAudioInfo();
 
-} // namespace AestraAudio
+} // namespace Audio
+} // namespace Aestra

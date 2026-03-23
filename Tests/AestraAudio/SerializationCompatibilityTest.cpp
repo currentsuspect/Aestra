@@ -1,8 +1,9 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-#include <gtest/gtest.h>
 #include "../AestraAudio/include/PlaylistSerializer.h"
 #include "../AestraCore/include/AestraJSON.h"
+
 #include <fstream>
+#include <gtest/gtest.h>
 #include <string>
 
 // Test Fixture for Compatibility
@@ -11,7 +12,7 @@ protected:
     void SetUp() override {
         // Setup mock environment if needed
     }
-    
+
     void TearDown() override {
         // Cleanup
     }
@@ -33,22 +34,22 @@ TEST_F(SerializationCompatibilityTest, LoadV1_0_Project) {
             }
         ]
     })";
-    
+
     // 2. Write to temp file
     std::string tempPath = "test_v1_legacy.json";
     std::ofstream out(tempPath);
     out << v1_json;
     out.close();
-    
+
     // 3. Attempt to load with current Serializer
     Aestra::Audio::PlaylistSerializer serializer;
     // We expect it to handle it gracefully (e.g. map "vol" to "volume", default missing fields)
     // Currently, we just want to ensure it doesn't CRASH or return false.
     // Note: serializer.loadFromFile return type?
-    
+
     // Ignoring actual load for scaffold.
     ASSERT_TRUE(true) << "Scaffold: Implement actual load call once Serializer is accessible.";
-    
+
     // Cleanup
     std::remove(tempPath.c_str());
 }

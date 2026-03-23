@@ -3,6 +3,8 @@
 
 #include "MixerViewModel.h"
 #include "../AestraUI/Widgets/UIMixerPanel.h"
+#include "../App/ServiceLocator.h"
+#include "AudioDeviceManager.h"
 
 using namespace AestraUI;
 using namespace Aestra::Audio;
@@ -30,6 +32,12 @@ void MixerPanel::refreshChannels()
     if (!m_viewModel || !m_newMixer) return;
 
     auto slotMap = m_trackManager->getChannelSlotMapSnapshot();
+    
+    // Refresh inputs from device manager
+    if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
+        m_viewModel->refreshInputs(*deviceManager);
+    }
+    
     m_viewModel->syncFromEngine(*m_trackManager, slotMap);
     m_newMixer->refreshChannels();
 }

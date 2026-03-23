@@ -5,7 +5,7 @@
 
 #ifdef _MSC_VER
 #include <intrin.h>
-#else
+#elif defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
 #include <cpuid.h>
 #endif
 
@@ -14,7 +14,7 @@ namespace Core {
 
 /**
  * @brief Runtime CPU feature detection for SIMD dispatch.
- * 
+ *
  * Uses CPUID to detect AVX2 and FMA support at startup.
  * Results are cached in static booleans for zero-overhead queries.
  */
@@ -31,7 +31,7 @@ public:
     bool hasSSE41() const { return m_hasSSE41; }
     bool hasAVX512F() const { return m_hasAVX512F; }
     bool hasAVX512DQ() const { return m_hasAVX512DQ; }
-    
+
     // ARM NEON detection (compile-time on ARM, always false on x86)
 #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
     bool hasNEON() const { return true; }
@@ -40,23 +40,34 @@ public:
 #endif
 
 private:
-    CPUDetection() {
-        detectFeatures();
-    }
+    CPUDetection() { detectFeatures(); }
 
-    // Check OS support for AVX/AVX512 states using XGETBV
+    // Check OS support for AVX/AVX512 states using XGETBV (x86 only)
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
     uint64_t getXCR0() {
 #ifdef _MSC_VER
         return _xgetbv(0);
 #else
         uint32_t eax, edx;
-        // xgetbv with ecx=0
         __asm__ __volatile__("xgetbv" : "=a"(eax), "=d"(edx) : "c"(0));
         return (static_cast<uint64_t>(edx) << 32) | eax;
 #endif
     }
+#endif
 
     void detectFeatures() {
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+        // x86/x64 CPU feature detection
+        detectFeaturesX86();
+#else
+        // Non-x86 platforms: SIMD features remain false (already default-initialized)
+        (void)0;
+#endif
+    }
+
+private:
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+    void detectFeaturesX86() {
         int info[4] = {0};
 
 #ifdef _MSC_VER
@@ -68,18 +79,12 @@ private:
             m_hasSSE41 = (info[2] & (1 << 19)) != 0;
             m_hasFMA = (info[2] & (1 << 12)) != 0;
 
-            // Check OSXSAVE bit (bit 27 of ECX) before checking XCR0
             bool hasOSXSAVE = (info[2] & (1 << 27)) != 0;
 
             if (hasOSXSAVE) {
                 uint64_t xcr0 = getXCR0();
-
-                // AVX requires XMM (bit 1) and YMM (bit 2) state
                 bool osAvxSupport = (xcr0 & 0x6) == 0x6;
-
-                // AVX-512 requires OpMask (5), ZMM_Hi256 (6), Hi16_ZMM (7)
-                // (XMM+YMM: 0x6) | (OpMask+ZMM_Hi256+Hi16_ZMM: 0xE0) = 0xE6
-                bool osAvx512Support = (xcr0 & 0xE6) == 0xE6; // Checks 1, 2, 5, 6, 7
+                bool osAvx512Support = (xcr0 & 0xE6) == 0xE6;
 
                 if (nIds >= 7) {
                     __cpuidex(info, 7, 0);
@@ -94,6 +99,7 @@ private:
             }
         }
 #else
+        // GCC/Clang x86
         unsigned int eax, ebx, ecx, edx;
         if (__get_cpuid(0, &eax, &ebx, &ecx, &edx)) {
             unsigned int nIds = eax;
@@ -103,7 +109,6 @@ private:
                 m_hasSSE41 = (ecx & (1 << 19)) != 0;
                 m_hasFMA = (ecx & (1 << 12)) != 0;
 
-                // Check OSXSAVE bit (bit 27 of ECX)
                 bool hasOSXSAVE = (ecx & (1 << 27)) != 0;
 
                 if (hasOSXSAVE) {
@@ -126,6 +131,7 @@ private:
         }
 #endif
     }
+#endif
 
     bool m_hasAVX2 = false;
     bool m_hasFMA = false;

@@ -1,8 +1,9 @@
 #include "../../include/AestraPlatform.h"
+
+#include <iostream>
 #include <pthread.h>
 #include <sched.h>
 #include <sys/resource.h>
-#include <iostream>
 
 namespace Aestra {
 
@@ -18,7 +19,7 @@ bool Platform::setCurrentThreadPriority(ThreadPriority priority) {
         }
         return false;
     }
-    
+
     if (priority == ThreadPriority::Low) {
         // Low: SCHED_OTHER, nice 10
         setpriority(PRIO_PROCESS, 0, 10);
@@ -28,8 +29,9 @@ bool Platform::setCurrentThreadPriority(ThreadPriority priority) {
     if (priority == ThreadPriority::High) {
         // High: nice -10 (might need CAP_SYS_NICE for < 0, but -10 usually requires it)
         // Try nice first
-        if (setpriority(PRIO_PROCESS, 0, -10) == 0) return true;
-        
+        if (setpriority(PRIO_PROCESS, 0, -10) == 0)
+            return true;
+
         std::cerr << "Warning: Failed to set High thread priority (EPERM?)." << std::endl;
         return false;
     }
@@ -40,19 +42,21 @@ bool Platform::setCurrentThreadPriority(ThreadPriority priority) {
         int policy = SCHED_FIFO;
         int min_prio = sched_get_priority_min(policy);
         int max_prio = sched_get_priority_max(policy);
-        
+
         struct sched_param param;
         // Conservative RT priority
         param.sched_priority = min_prio + 10;
-        if (param.sched_priority > max_prio) param.sched_priority = max_prio;
+        if (param.sched_priority > max_prio)
+            param.sched_priority = max_prio;
 
         if (pthread_setschedparam(pthread_self(), policy, &param) == 0) {
             return true;
         } else {
-             std::cerr << "Warning: Failed to set Realtime thread priority (needs CAP_SYS_NICE or RT limits)." << std::endl;
-             // Fallback to high priority nice
-             setpriority(PRIO_PROCESS, 0, -15);
-             return false;
+            std::cerr << "Warning: Failed to set Realtime thread priority (needs CAP_SYS_NICE or RT limits)."
+                      << std::endl;
+            // Fallback to high priority nice
+            setpriority(PRIO_PROCESS, 0, -15);
+            return false;
         }
     }
 

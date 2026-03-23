@@ -3,9 +3,10 @@
 
 #include "AudioDriver.h"
 #include "AudioDriverTypes.h"
+
+#include <functional>
 #include <string>
 #include <vector>
-#include <functional>
 
 namespace Aestra {
 namespace Audio {
@@ -44,7 +45,7 @@ public:
 
     /**
      * @brief Enable/Disable dithering for output
-     * 
+     *
      * Dithering mitigates quantization distortion when converting float audio
      * to lower bit-depths (e.g. 16-bit or 24-bit integer) for the hardware.
      */

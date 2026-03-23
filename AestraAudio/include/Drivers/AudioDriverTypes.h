@@ -1,46 +1,41 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include <string>
 #include <cstdint>
+#include <string>
 
 namespace Aestra {
 namespace Audio {
 
 /**
  * @brief Audio driver types supported by AESTRA
- * 
+ *
  * Ordered by priority (lower value = higher priority)
  */
-enum class DitheringMode {
-    None,
-    Triangular,
-    HighPass,
-    NoiseShaped
-};
+enum class DitheringMode { None, Triangular, HighPass, NoiseShaped };
 
 enum class AudioDriverType : uint8_t {
     // Phase 2-3: ASIO Drivers (lowest latency)
-    ASIO_EXTERNAL = 0,      // External ASIO drivers (ASIO4ALL, FL ASIO, Focusrite, etc.)
-    ASIO_Aestra = 1,         // Aestra's own ASIO wrapper â†’ WASAPI Exclusive
-    
+    ASIO_EXTERNAL = 0, // External ASIO drivers (ASIO4ALL, FL ASIO, Focusrite, etc.)
+    ASIO_Aestra = 1,   // Aestra's own ASIO wrapper â†’ WASAPI Exclusive
+
     // Phase 1: Native Windows Audio
-    WASAPI_EXCLUSIVE = 2,   // Exclusive mode - Pro/low-latency
-    WASAPI_SHARED = 3,      // Shared mode - Default safe mode
-    DIRECTSOUND = 4,        // Legacy fallback - Maximum compatibility
-    
+    WASAPI_EXCLUSIVE = 2, // Exclusive mode - Pro/low-latency
+    WASAPI_SHARED = 3,    // Shared mode - Default safe mode
+    DIRECTSOUND = 4,      // Legacy fallback - Maximum compatibility
+
     // Legacy RtAudio
-    RTAUDIO = 5,            // RtAudio backend (legacy fallback)
-    
+    RTAUDIO = 5, // RtAudio backend (legacy fallback)
+
     // Safety Fallback
-    DUMMY = 6,              // Silent dummy driver for cable-yank survival
-    
+    DUMMY = 6, // Silent dummy driver for cable-yank survival
+
     // Future: Cross-platform
-    COREAUDIO = 10,         // macOS
-    ALSA = 11,              // Linux
-    JACK = 12,              // Linux/macOS pro audio
-    PULSEAUDIO = 13,        // Linux
-    
+    COREAUDIO = 10,  // macOS
+    ALSA = 11,       // Linux
+    JACK = 12,       // Linux/macOS pro audio
+    PULSEAUDIO = 13, // Linux
+
     UNKNOWN = 255
 };
 
@@ -49,11 +44,11 @@ enum class AudioDriverType : uint8_t {
  */
 struct DriverPriority {
     AudioDriverType type;
-    uint8_t priority;           // 0 = highest
+    uint8_t priority; // 0 = highest
     const char* displayName;
     const char* description;
-    bool requiresExternalDll;   // True for ASIO external
-    float typicalLatencyMs;     // Typical achievable latency
+    bool requiresExternalDll; // True for ASIO external
+    float typicalLatencyMs;   // Typical achievable latency
 };
 
 /**
@@ -61,14 +56,14 @@ struct DriverPriority {
  */
 inline const DriverPriority* GetWindowsDriverPriorities() {
     static const DriverPriority priorities[] = {
-        { AudioDriverType::ASIO_EXTERNAL,     0, "ASIO (External)",    "Professional ASIO drivers (ASIO4ALL, etc.)", true,  2.0f },
-        { AudioDriverType::ASIO_Aestra,        1, "Aestra ASIO",         "Built-in ASIO wrapper",                      false, 3.0f },
-        { AudioDriverType::WASAPI_EXCLUSIVE,  2, "WASAPI Exclusive",   "Low-latency exclusive mode",                 false, 5.0f },
-        { AudioDriverType::WASAPI_SHARED,     3, "WASAPI Shared",      "Default safe mode",                          false, 15.0f },
-        { AudioDriverType::DIRECTSOUND,       4, "DirectSound",        "Legacy fallback",                            false, 30.0f },
-        { AudioDriverType::DUMMY,             5, "Dummy Driver",       "Silent safety fallback",                     false, 1.0f },
-        { AudioDriverType::UNKNOWN,         255, "Unknown",            "Unknown driver",                             false, 100.0f }
-    };
+        {AudioDriverType::ASIO_EXTERNAL, 0, "ASIO (External)", "Professional ASIO drivers (ASIO4ALL, etc.)", true,
+         2.0f},
+        {AudioDriverType::ASIO_Aestra, 1, "Aestra ASIO", "Built-in ASIO wrapper", false, 3.0f},
+        {AudioDriverType::WASAPI_EXCLUSIVE, 2, "WASAPI Exclusive", "Low-latency exclusive mode", false, 5.0f},
+        {AudioDriverType::WASAPI_SHARED, 3, "WASAPI Shared", "Default safe mode", false, 15.0f},
+        {AudioDriverType::DIRECTSOUND, 4, "DirectSound", "Legacy fallback", false, 30.0f},
+        {AudioDriverType::DUMMY, 5, "Dummy Driver", "Silent safety fallback", false, 1.0f},
+        {AudioDriverType::UNKNOWN, 255, "Unknown", "Unknown driver", false, 100.0f}};
     return priorities;
 }
 
@@ -96,16 +91,16 @@ inline const char* DriverTypeToString(AudioDriverType type) {
  * @brief Driver capability flags
  */
 enum class DriverCapability : uint32_t {
-    NONE                    = 0,
-    PLAYBACK                = 1 << 0,   // Supports audio output
-    RECORDING               = 1 << 1,   // Supports audio input
-    DUPLEX                  = 1 << 2,   // Supports simultaneous I/O
-    SAMPLE_RATE_CONVERSION  = 1 << 3,   // Can convert sample rates
-    BIT_DEPTH_CONVERSION    = 1 << 4,   // Can convert bit depths
-    EXCLUSIVE_MODE          = 1 << 5,   // Supports exclusive device access
-    EVENT_DRIVEN            = 1 << 6,   // Uses event-driven callbacks
-    HOT_PLUG_DETECTION      = 1 << 7,   // Detects device connection changes
-    CHANNEL_MIXING          = 1 << 8,   // Can mix/route channels
+    NONE = 0,
+    PLAYBACK = 1 << 0,               // Supports audio output
+    RECORDING = 1 << 1,              // Supports audio input
+    DUPLEX = 1 << 2,                 // Supports simultaneous I/O
+    SAMPLE_RATE_CONVERSION = 1 << 3, // Can convert sample rates
+    BIT_DEPTH_CONVERSION = 1 << 4,   // Can convert bit depths
+    EXCLUSIVE_MODE = 1 << 5,         // Supports exclusive device access
+    EVENT_DRIVEN = 1 << 6,           // Uses event-driven callbacks
+    HOT_PLUG_DETECTION = 1 << 7,     // Detects device connection changes
+    CHANNEL_MIXING = 1 << 8,         // Can mix/route channels
 };
 
 inline DriverCapability operator|(DriverCapability a, DriverCapability b) {
@@ -157,20 +152,34 @@ enum class DriverError : uint32_t {
  */
 inline const char* DriverErrorToString(DriverError error) {
     switch (error) {
-        case DriverError::NONE:                         return "No error";
-        case DriverError::INITIALIZATION_FAILED:        return "Driver initialization failed";
-        case DriverError::DEVICE_NOT_FOUND:             return "Audio device not found";
-        case DriverError::DEVICE_IN_USE:                return "Device is already in use";
-        case DriverError::UNSUPPORTED_FORMAT:           return "Audio format not supported";
-        case DriverError::BUFFER_UNDERRUN:              return "Buffer underrun detected";
-        case DriverError::BUFFER_OVERRUN:               return "Buffer overrun detected";
-        case DriverError::SAMPLE_RATE_MISMATCH:         return "Sample rate mismatch";
-        case DriverError::EXCLUSIVE_MODE_UNAVAILABLE:   return "Exclusive mode not available";
-        case DriverError::DRIVER_DLL_NOT_FOUND:         return "Driver DLL not found";
-        case DriverError::DRIVER_DLL_LOAD_FAILED:       return "Driver DLL load failed";
-        case DriverError::STREAM_OPEN_FAILED:           return "Stream open failed";
-        case DriverError::STREAM_START_FAILED:          return "Stream start failed";
-        default:                                        return "Unknown error";
+    case DriverError::NONE:
+        return "No error";
+    case DriverError::INITIALIZATION_FAILED:
+        return "Driver initialization failed";
+    case DriverError::DEVICE_NOT_FOUND:
+        return "Audio device not found";
+    case DriverError::DEVICE_IN_USE:
+        return "Device is already in use";
+    case DriverError::UNSUPPORTED_FORMAT:
+        return "Audio format not supported";
+    case DriverError::BUFFER_UNDERRUN:
+        return "Buffer underrun detected";
+    case DriverError::BUFFER_OVERRUN:
+        return "Buffer overrun detected";
+    case DriverError::SAMPLE_RATE_MISMATCH:
+        return "Sample rate mismatch";
+    case DriverError::EXCLUSIVE_MODE_UNAVAILABLE:
+        return "Exclusive mode not available";
+    case DriverError::DRIVER_DLL_NOT_FOUND:
+        return "Driver DLL not found";
+    case DriverError::DRIVER_DLL_LOAD_FAILED:
+        return "Driver DLL load failed";
+    case DriverError::STREAM_OPEN_FAILED:
+        return "Stream open failed";
+    case DriverError::STREAM_START_FAILED:
+        return "Stream start failed";
+    default:
+        return "Unknown error";
     }
 }
 
@@ -178,14 +187,14 @@ inline const char* DriverErrorToString(DriverError error) {
  * @brief Driver statistics for monitoring and benchmarking
  */
 struct DriverStatistics {
-    uint64_t callbackCount = 0;          // Total callbacks processed
-    uint64_t underrunCount = 0;          // Buffer underruns
-    uint64_t overrunCount = 0;           // Buffer overruns
-    double actualLatencyMs = 0.0;        // Measured latency
-    double cpuLoadPercent = 0.0;         // CPU usage in audio thread
-    double averageCallbackTimeUs = 0.0;  // Average callback execution time
-    double maxCallbackTimeUs = 0.0;      // Peak callback execution time
-    
+    uint64_t callbackCount = 0;         // Total callbacks processed
+    uint64_t underrunCount = 0;         // Buffer underruns
+    uint64_t overrunCount = 0;          // Buffer overruns
+    double actualLatencyMs = 0.0;       // Measured latency
+    double cpuLoadPercent = 0.0;        // CPU usage in audio thread
+    double averageCallbackTimeUs = 0.0; // Average callback execution time
+    double maxCallbackTimeUs = 0.0;     // Peak callback execution time
+
     void reset() {
         callbackCount = 0;
         underrunCount = 0;
