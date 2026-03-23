@@ -483,8 +483,9 @@ elseif(UNIX)
     # Non-Windows (Linux)
     if(ALSA_FOUND)
         set(AESTRA_AUDIO_LINUX_SOURCES
-            src/Linux/LinuxDriverRegistry.cpp
-            src/Linux/RtAudioDriver.cpp
+            # STUB: Linux drivers need API updates to match current AudioDeviceInfo struct
+            # src/Linux/LinuxDriverRegistry.cpp
+            # src/Linux/RtAudioDriver.cpp
         )
 
         set(AESTRA_AUDIO_LINUX_HEADERS
