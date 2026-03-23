@@ -1,20 +1,20 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "MixerBus.h"
-#include "AudioProcessor.h"
-#include "AudioGraph.h"
-#include "EffectChain.h"
-#include <memory>
-#include <vector>
-#include <string>
-#include <atomic>
-#include <mutex>
-#include <functional>
+#include "AestraUUID.h"
 #include "AudioCommandQueue.h"
 #include "AudioDriverTypes.h"
+#include "AudioGraph.h"
+#include "AudioProcessor.h"
+#include "EffectChain.h"
+#include "MixerBus.h"
 
-#include "AestraUUID.h"
+#include <atomic>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -24,12 +24,11 @@ namespace Audio {
  */
 struct MixerChannelID : public AestraUUID {
     uint64_t value = 0;
-    
+
     MixerChannelID() = default;
     MixerChannelID(uint64_t v) : value(v) { low = v; }
     MixerChannelID(const AestraUUID& other) : AestraUUID(other), value(other.low) {}
 };
-
 
 /**
  * @brief Legacy alias for serialization
@@ -39,54 +38,20 @@ using TrackUUID = AestraUUID;
 /**
  * @brief Legacy Track states for UI compatibility
  */
-enum class TrackState {
-    Empty,
-    Loading,
-    Ready,
-    Processing,
-    Recording,
-    Error
-};
+enum class TrackState { Empty, Loading, Ready, Processing, Recording, Error };
 
 /**
  * @brief Legacy Audio Quality definitions for UI compatibility
  */
-enum class QualityPreset {
-    Economy,
-    Balanced,
-    HighFidelity,
-    Mastering,
-    Custom
-};
+enum class QualityPreset { Economy, Balanced, HighFidelity, Mastering, Custom };
 
-enum class ResamplingMode {
-    Fast,
-    Medium,
-    High,
-    Ultra,
-    Extreme,
-    Perfect
-};
+enum class ResamplingMode { Fast, Medium, High, Ultra, Extreme, Perfect };
 
+enum class AestraMode { Off, Transparent, Euphoric };
 
+enum class InternalPrecision { Float32, Float64 };
 
-enum class AestraMode {
-    Off,
-    Transparent,
-    Euphoric
-};
-
-enum class InternalPrecision {
-    Float32,
-    Float64
-};
-
-enum class OversamplingMode {
-    None,
-    x2,
-    x4,
-    x8
-};
+enum class OversamplingMode { None, x2, x4, x8 };
 
 struct AudioQualitySettings {
     QualityPreset preset{QualityPreset::Balanced};
@@ -96,7 +61,7 @@ struct AudioQualitySettings {
     OversamplingMode oversampling{OversamplingMode::None};
     bool removeDCOffset{true};
     bool enableSoftClipping{false};
-    AestraMode AestraMode{AestraMode::Off};
+    AestraMode aestraMode{AestraMode::Off};
 
     void applyPreset(QualityPreset p) {
         preset = p;
@@ -115,7 +80,6 @@ struct AudioQualitySettings {
         }
     }
 };
-
 
 /**
  * @brief Mixer Channel - Dedicated routing and DSP entity (v3.0)
@@ -138,12 +102,10 @@ public:
 
     MixerChannelID getID() const { return m_uuid; }
     uint32_t getChannelId() const { return m_channelId; }
-    
+
     void setUUID(const AestraUUID& uuid) { m_uuid = uuid; }
     const AestraUUID& getUUID() const { return m_uuid; }
 
-
-    
     // Channel Properties
     void setName(const std::string& name);
     const std::string& getName() const { return m_name; }
@@ -185,20 +147,20 @@ public:
     // Mixer Integration
     MixerBus* getMixerBus() { return m_mixerBus.get(); }
     const MixerBus* getMixerBus() const { return m_mixerBus.get(); }
-    
+
     // Command sink for RT parameter updates
     void setCommandSink(std::function<void(const AudioQueueCommand&)> cb) { m_commandSink = std::move(cb); }
-    
+
     void setQualitySettings(const AudioQualitySettings&) {}
-    
+
     // Effect Chain (insert effects)
     EffectChain& getEffectChain() { return m_effectChain; }
     const EffectChain& getEffectChain() const { return m_effectChain; }
-    
+
     // Routing Accessors
     // Routing Accessors
     uint32_t getMainOutputId() const { return m_mainOutputId; }
-    
+
     // Thread-safe Send Management
     std::vector<AudioRoute> getSends() const; // Returns copy
     void addSend(const AudioRoute& route);
@@ -222,7 +184,7 @@ private:
     std::atomic<bool> m_muted{false};
     std::atomic<bool> m_soloed{false};
     std::atomic<bool> m_soloSafe{false};
-    
+
     // Recording
     std::atomic<bool> m_isArmed{false};
     std::atomic<bool> m_monitorInput{true};
@@ -230,7 +192,7 @@ private:
 
     // Mixer integration
     std::unique_ptr<MixerBus> m_mixerBus;
-    
+
     // Effect chain for insert effects
     EffectChain m_effectChain;
 
@@ -239,7 +201,7 @@ private:
     // Routing (v3.1)
     // Primary output (defaults to Master). 0xFFFFFFFF = Master.
     uint32_t m_mainOutputId{0xFFFFFFFF};
-    
+
     // Aux Sends / Direct Outs
     // Aux Sends / Direct Outs
     mutable std::mutex m_sendMutex;
@@ -250,4 +212,3 @@ using Track = MixerChannel;
 
 } // namespace Audio
 } // namespace Aestra
-

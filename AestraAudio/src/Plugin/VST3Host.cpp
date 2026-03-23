@@ -1,7 +1,9 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "Plugin/VST3Host.h"
+
 #include "AestraLog.h"
+
 #include <chrono>
 
 #ifdef _WIN32
@@ -10,19 +12,19 @@
 #endif
 
 // VST3 SDK includes
-#include "pluginterfaces/base/ipluginbase.h"
 #include "pluginterfaces/base/funknown.h"
-#include "pluginterfaces/vst/ivstcomponent.h"
+#include "pluginterfaces/base/ipluginbase.h"
+#include "pluginterfaces/gui/iplugview.h"
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
+#include "pluginterfaces/vst/ivstcomponent.h"
 #include "pluginterfaces/vst/ivsteditcontroller.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
-#include "pluginterfaces/gui/iplugview.h"
-#include "public.sdk/source/vst/hosting/module.h"
 #include "public.sdk/source/vst/hosting/hostclasses.h"
+#include "public.sdk/source/vst/hosting/module.h"
 #include "public.sdk/source/vst/hosting/plugprovider.h"
 
-#include <cstring>
 #include <codecvt>
+#include <cstring>
 #include <locale>
 
 using namespace Steinberg;
@@ -33,20 +35,21 @@ namespace Audio {
 
 // Helper for UTF-16 (VST3) to UTF-8 (Aestra) conversion
 static std::string utf16_to_utf8(const Steinberg::Vst::TChar* str) {
-    if (!str) return "";
+    if (!str)
+        return "";
     try {
         // VST3 strings are always UTF-16, regardless of platform wchar_t size
         std::u16string u16str(reinterpret_cast<const char16_t*>(str));
-        // Suppress C++17 deprecation warning for codecvt
-        #if defined(__GNUC__) || defined(__clang__)
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        #endif
+// Suppress C++17 deprecation warning for codecvt
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
         std::string result = convert.to_bytes(u16str);
-        #if defined(__GNUC__) || defined(__clang__)
-        #pragma GCC diagnostic pop
-        #endif
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
         return result;
     } catch (...) {
         return "";
@@ -83,9 +86,9 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
     if (m_loaded) {
         unload();
     }
-    
+
     std::string errorMsg;
-    
+
     try {
         // Load the VST3 module
         auto module = VST3::Hosting::Module::create(path.string(), errorMsg);
@@ -93,10 +96,10 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
             Log::error("VST3: Failed to load module: " + path.string() + " - " + errorMsg);
             return false;
         }
-        
+
         m_module = new VST3::Hosting::Module::Ptr(std::move(module));
         auto& mod = *static_cast<VST3::Hosting::Module::Ptr*>(m_module);
-        
+
         // Get the factory
         auto factory = mod->getFactory();
         if (!factory.get()) {
@@ -104,7 +107,7 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
             unload();
             return false;
         }
-        
+
         // Get class info
         auto classInfos = factory.classInfos();
         if (classInfos.empty()) {
@@ -112,13 +115,13 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
             unload();
             return false;
         }
-        
+
         if (classIndex < 0 || classIndex >= static_cast<int>(classInfos.size())) {
             classIndex = 0;
         }
-        
+
         const auto& classInfo = classInfos[classIndex];
-        
+
         // Store plugin info
         m_info.id = classInfo.ID().toString();
         m_info.name = classInfo.name();
@@ -127,11 +130,10 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
         m_info.category = classInfo.subCategoriesString();
         m_info.format = PluginFormat::VST3;
         m_info.path = path;
-        
+
         // Determine plugin type from category
         std::string cat = classInfo.subCategoriesString();
-        if (cat.find("Instrument") != std::string::npos || 
-            cat.find("Synth") != std::string::npos) {
+        if (cat.find("Instrument") != std::string::npos || cat.find("Synth") != std::string::npos) {
             m_info.type = PluginType::Instrument;
             m_info.hasMidiInput = true;
         } else if (cat.find("Analyzer") != std::string::npos) {
@@ -139,7 +141,7 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
         } else {
             m_info.type = PluginType::Effect;
         }
-        
+
         // Create the component
         auto component = factory.createInstance<IComponent>(classInfo.ID());
         if (!component) {
@@ -147,9 +149,9 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
             unload();
             return false;
         }
-        
+
         m_component = component.take();
-        
+
         // Initialize component
         auto comp = static_cast<IComponent*>(m_component);
         if (comp->initialize(nullptr) != kResultOk) {
@@ -157,13 +159,13 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
             unload();
             return false;
         }
-        
+
         // Query for audio processor
         auto processor = FUnknownPtr<IAudioProcessor>(comp);
         if (processor) {
             m_processor = processor.take();
         }
-        
+
         // Query or create edit controller
         auto controller = FUnknownPtr<IEditController>(comp);
         if (controller) {
@@ -180,11 +182,11 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
                 }
             }
         }
-        
+
         // Get I/O configuration
-        m_info.numAudioInputs = 2;  // Default stereo
+        m_info.numAudioInputs = 2; // Default stereo
         m_info.numAudioOutputs = 2;
-        
+
         // Check for editor
         if (m_controller) {
             auto ctrl = static_cast<IEditController*>(m_controller);
@@ -194,12 +196,12 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
                 view->release();
             }
         }
-        
+
         m_loaded = true;
         Log::info("VST3: Loaded plugin: " + m_info.name + " (" + m_info.vendor + ")");
-        
+
         return true;
-        
+
     } catch (const std::exception& e) {
         Log::error("VST3: Exception loading " + path.string() + ": " + e.what());
         unload();
@@ -211,41 +213,41 @@ void VST3PluginInstance::unload() {
     if (m_editorOpen) {
         closeEditor();
     }
-    
+
     if (m_active) {
         deactivate();
     }
-    
+
     // Release VST3 objects in reverse order
     if (m_plugView) {
         // View should already be removed
         m_plugView = nullptr;
     }
-    
+
     if (m_controller && m_controller != m_component) {
         auto ctrl = static_cast<IEditController*>(m_controller);
         ctrl->terminate();
         ctrl->release();
     }
     m_controller = nullptr;
-    
+
     if (m_processor && m_processor != m_component) {
         static_cast<IAudioProcessor*>(m_processor)->release();
     }
     m_processor = nullptr;
-    
+
     if (m_component) {
         auto comp = static_cast<IComponent*>(m_component);
         comp->terminate();
         comp->release();
         m_component = nullptr;
     }
-    
+
     if (m_module) {
         delete static_cast<VST3::Hosting::Module::Ptr*>(m_module);
         m_module = nullptr;
     }
-    
+
     m_loaded = false;
     m_parameterCacheValid = false;
 }
@@ -254,27 +256,27 @@ bool VST3PluginInstance::initialize(double sampleRate, uint32_t maxBlockSize) {
     if (!m_loaded || !m_processor) {
         return false;
     }
-    
+
     m_sampleRate = sampleRate;
     m_maxBlockSize = maxBlockSize;
-    
+
     auto processor = static_cast<IAudioProcessor*>(m_processor);
-    
+
     // Setup processing
     ProcessSetup setup;
     setup.processMode = kRealtime;
     setup.symbolicSampleSize = kSample32;
     setup.maxSamplesPerBlock = maxBlockSize;
     setup.sampleRate = sampleRate;
-    
+
     if (processor->setupProcessing(setup) != kResultOk) {
         Log::error("VST3: setupProcessing failed for " + m_info.name);
         return false;
     }
-    
+
     // Allocate temp buffers
     m_tempBuffer.resize(maxBlockSize * 4); // Extra space for stereo I/O
-    
+
     return true;
 }
 
@@ -288,8 +290,9 @@ void VST3PluginInstance::shutdown() {
 }
 
 void VST3PluginInstance::activate() {
-    if (!m_loaded || m_active) return;
-    
+    if (!m_loaded || m_active)
+        return;
+
     auto comp = static_cast<IComponent*>(m_component);
     if (comp->setActive(true) == kResultOk) {
         m_active = true;
@@ -297,22 +300,17 @@ void VST3PluginInstance::activate() {
 }
 
 void VST3PluginInstance::deactivate() {
-    if (!m_loaded || !m_active) return;
-    
+    if (!m_loaded || !m_active)
+        return;
+
     auto comp = static_cast<IComponent*>(m_component);
     comp->setActive(false);
     m_active = false;
 }
 
-void VST3PluginInstance::process(
-    const float* const* inputs,
-    float** outputs,
-    uint32_t numInputChannels,
-    uint32_t numOutputChannels,
-    uint32_t numFrames,
-    const MidiBuffer* midiInput,
-    MidiBuffer* midiOutput
-) {
+void VST3PluginInstance::process(const float* const* inputs, float** outputs, uint32_t numInputChannels,
+                                 uint32_t numOutputChannels, uint32_t numFrames, const MidiBuffer* midiInput,
+                                 MidiBuffer* midiOutput) {
     if (!m_active || !m_processor) {
         // Pass-through or silence
         return;
@@ -328,20 +326,20 @@ void VST3PluginInstance::process(
         }
         return;
     }
-    
+
     auto processor = static_cast<IAudioProcessor*>(m_processor);
-    
+
     // Setup audio buses
     AudioBusBuffers inputBus;
     inputBus.numChannels = numInputChannels;
     inputBus.silenceFlags = 0;
     inputBus.channelBuffers32 = const_cast<float**>(inputs);
-    
+
     AudioBusBuffers outputBus;
     outputBus.numChannels = numOutputChannels;
     outputBus.silenceFlags = 0;
     outputBus.channelBuffers32 = outputs;
-    
+
     // Process data
     ProcessData data;
     data.processMode = kRealtime;
@@ -356,11 +354,11 @@ void VST3PluginInstance::process(
     data.inputEvents = nullptr;
     data.outputEvents = nullptr;
     data.processContext = nullptr;
-    
+
     // TODO: Handle MIDI events via inputEvents/outputEvents
     (void)midiInput;
     (void)midiOutput;
-    
+
     auto startTime = std::chrono::high_resolution_clock::now();
 
     // Call safe wrapper
@@ -371,12 +369,13 @@ void VST3PluginInstance::process(
 #ifdef _WIN32
         Log::error("VST3: CRASH DETECTED in " + m_info.name + "! (Access Violation trapped)");
 #else
-        Log::error("VST3: Crash detected (Signal trapped)"); 
+        Log::error("VST3: Crash detected (Signal trapped)");
 #endif
-        
+
         // Silence output buffers immediately
         for (uint32_t i = 0; i < numOutputChannels; ++i) {
-             if (outputs[i]) std::memset(outputs[i], 0, numFrames * sizeof(float));
+            if (outputs[i])
+                std::memset(outputs[i], 0, numFrames * sizeof(float));
         }
         return;
     }
@@ -394,16 +393,16 @@ void VST3PluginInstance::process(
     // Check budget
     // Budget is the duration of the audio block itself
     double budgetNs = (static_cast<double>(numFrames) / m_sampleRate) * 1.0e9;
-    
+
     // We allow a small margin (e.g. 100% CPU usage) but if it exceeds strict budget it's a violation
     // A stricter budget might be 80% to leave room for other tracks.
     // For now, let's use 100% of the block time.
     if (durationNs > budgetNs) {
         m_watchdogStats.violationCount++;
-        
+
         if (m_watchdogStats.violationCount > WATCHDOG_VIOLATION_LIMIT) {
             m_watchdogStats.isBypassed = true;
-            Log::error("VST3: Plugin " + m_info.name + " exceeded time budget " + 
+            Log::error("VST3: Plugin " + m_info.name + " exceeded time budget " +
                        std::to_string(WATCHDOG_VIOLATION_LIMIT) + " times. Auto-bypassing.");
         }
     } else {
@@ -422,27 +421,31 @@ std::vector<PluginParameter> VST3PluginInstance::getParameters() const {
 }
 
 uint32_t VST3PluginInstance::getParameterCount() const {
-    if (!m_controller) return 0;
+    if (!m_controller)
+        return 0;
     auto ctrl = static_cast<IEditController*>(m_controller);
     return ctrl->getParameterCount();
 }
 
 float VST3PluginInstance::getParameter(uint32_t id) const {
-    if (!m_controller) return 0.0f;
+    if (!m_controller)
+        return 0.0f;
     auto ctrl = static_cast<IEditController*>(m_controller);
     return static_cast<float>(ctrl->getParamNormalized(id));
 }
 
 void VST3PluginInstance::setParameter(uint32_t id, float value) {
-    if (!m_controller) return;
+    if (!m_controller)
+        return;
     auto ctrl = static_cast<IEditController*>(m_controller);
     ctrl->setParamNormalized(id, value);
 }
 
 std::string VST3PluginInstance::getParameterDisplay(uint32_t id) const {
-    if (!m_controller) return "";
+    if (!m_controller)
+        return "";
     auto ctrl = static_cast<IEditController*>(m_controller);
-    
+
     String128 display;
     if (ctrl->getParamStringByValue(id, ctrl->getParamNormalized(id), display) == kResultOk) {
         return utf16_to_utf8(display);
@@ -466,14 +469,16 @@ bool VST3PluginInstance::hasEditor() const {
 }
 
 bool VST3PluginInstance::openEditor(void* parentWindow) {
-    if (!m_controller || m_editorOpen) return false;
-    
+    if (!m_controller || m_editorOpen)
+        return false;
+
     auto ctrl = static_cast<IEditController*>(m_controller);
     auto view = ctrl->createView("editor");
-    if (!view) return false;
-    
+    if (!view)
+        return false;
+
     m_plugView = view;
-    
+
 #ifdef _WIN32
     if (view->isPlatformTypeSupported("HWND") == kResultOk) {
         view->attached(parentWindow, "HWND");
@@ -481,15 +486,16 @@ bool VST3PluginInstance::openEditor(void* parentWindow) {
         return true;
     }
 #endif
-    
+
     view->release();
     m_plugView = nullptr;
     return false;
 }
 
 void VST3PluginInstance::closeEditor() {
-    if (!m_plugView) return;
-    
+    if (!m_plugView)
+        return;
+
     auto view = static_cast<IPlugView*>(m_plugView);
     view->removed();
     view->release();
@@ -498,8 +504,9 @@ void VST3PluginInstance::closeEditor() {
 }
 
 std::pair<int, int> VST3PluginInstance::getEditorSize() const {
-    if (!m_plugView) return {0, 0};
-    
+    if (!m_plugView)
+        return {0, 0};
+
     auto view = static_cast<IPlugView*>(m_plugView);
     ViewRect rect;
     if (view->getSize(&rect) == kResultOk) {
@@ -509,43 +516,47 @@ std::pair<int, int> VST3PluginInstance::getEditorSize() const {
 }
 
 bool VST3PluginInstance::resizeEditor(int width, int height) {
-    if (!m_plugView) return false;
-    
+    if (!m_plugView)
+        return false;
+
     auto view = static_cast<IPlugView*>(m_plugView);
     ViewRect rect(0, 0, width, height);
     return view->onSize(&rect) == kResultOk;
 }
 
 uint32_t VST3PluginInstance::getLatencySamples() const {
-    if (!m_processor) return 0;
+    if (!m_processor)
+        return 0;
     auto processor = static_cast<IAudioProcessor*>(m_processor);
     return processor->getLatencySamples();
 }
 
 uint32_t VST3PluginInstance::getTailSamples() const {
-    if (!m_processor) return 0;
+    if (!m_processor)
+        return 0;
     auto processor = static_cast<IAudioProcessor*>(m_processor);
     return processor->getTailSamples();
 }
 
 void VST3PluginInstance::buildParameterCache() const {
     m_parameterCache.clear();
-    
-    if (!m_controller) return;
-    
+
+    if (!m_controller)
+        return;
+
     auto ctrl = static_cast<IEditController*>(m_controller);
     int32 count = ctrl->getParameterCount();
-    
+
     for (int32 i = 0; i < count; ++i) {
         ParameterInfo info;
         if (ctrl->getParameterInfo(i, info) == kResultOk) {
             PluginParameter param;
             param.id = info.id;
-            
+
             param.name = utf16_to_utf8(info.title);
             param.shortName = utf16_to_utf8(info.shortTitle);
             param.unit = utf16_to_utf8(info.units);
-            
+
             param.defaultValue = static_cast<float>(info.defaultNormalizedValue);
             param.minValue = 0.0f;
             param.maxValue = 1.0f;
@@ -553,11 +564,11 @@ void VST3PluginInstance::buildParameterCache() const {
             param.isAutomatable = (info.flags & ParameterInfo::kCanAutomate) != 0;
             param.isBypass = (info.flags & ParameterInfo::kIsBypass) != 0;
             param.isReadOnly = (info.flags & ParameterInfo::kIsReadOnly) != 0;
-            
+
             m_parameterCache.push_back(param);
         }
     }
-    
+
     m_parameterCacheValid = true;
 }
 
@@ -577,27 +588,27 @@ void VST3PluginInstance::resetWatchdog() {
 
 std::vector<PluginInfo> VST3PluginFactory::scanPlugin(const std::filesystem::path& path) {
     std::vector<PluginInfo> result;
-    
+
     std::string errorMsg;
     auto module = VST3::Hosting::Module::create(path.string(), errorMsg);
     if (!module) {
         return result;
     }
-    
+
     auto factory = module->getFactory();
     if (!factory.get()) {
         return result;
     }
-    
+
     auto classInfos = factory.classInfos();
     for (size_t i = 0; i < classInfos.size(); ++i) {
         const auto& classInfo = classInfos[i];
-        
+
         // Only include audio plugins (skip controller, etc.)
         if (classInfo.category() != kVstAudioEffectClass) {
             continue;
         }
-        
+
         PluginInfo info;
         info.id = classInfo.ID().toString();
         info.name = classInfo.name();
@@ -606,11 +617,10 @@ std::vector<PluginInfo> VST3PluginFactory::scanPlugin(const std::filesystem::pat
         info.category = classInfo.subCategoriesString();
         info.format = PluginFormat::VST3;
         info.path = path;
-        
+
         // Determine type from category
         std::string cat = classInfo.subCategoriesString();
-        if (cat.find("Instrument") != std::string::npos ||
-            cat.find("Synth") != std::string::npos) {
+        if (cat.find("Instrument") != std::string::npos || cat.find("Synth") != std::string::npos) {
             info.type = PluginType::Instrument;
             info.hasMidiInput = true;
         } else if (cat.find("Analyzer") != std::string::npos) {
@@ -618,14 +628,14 @@ std::vector<PluginInfo> VST3PluginFactory::scanPlugin(const std::filesystem::pat
         } else {
             info.type = PluginType::Effect;
         }
-        
+
         info.numAudioInputs = 2;
         info.numAudioOutputs = 2;
         info.hasEditor = true; // Assume true, verified on load
-        
+
         result.push_back(info);
     }
-    
+
     return result;
 }
 
@@ -633,12 +643,12 @@ std::shared_ptr<VST3PluginInstance> VST3PluginFactory::createInstance(const Plug
     if (info.format != PluginFormat::VST3) {
         return nullptr;
     }
-    
+
     auto instance = std::make_shared<VST3PluginInstance>();
     if (!instance->load(info.path)) {
         return nullptr;
     }
-    
+
     return instance;
 }
 

@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "SamplePool.h"
+
 #include "AestraLog.h"
 #include "PathUtils.h"
 
@@ -41,7 +42,7 @@ SampleKey SamplePool::makeKeyFast(const std::string& path) {
     try {
         fs::path p = fs::absolute(makeUnicodePath(path));
         key.filePath = pathToUtf8(p);
-        key.modTime = 0;  // Skip file stat - much faster
+        key.modTime = 0; // Skip file stat - much faster
     } catch (...) {
         key.filePath = path;
         key.modTime = 0;
@@ -53,9 +54,9 @@ std::shared_ptr<AudioBuffer> SamplePool::tryGetCached(const std::string& path) {
     // Fast path: path-only lookup without filesystem stat
     // This is much faster than acquire() for checking cache hits
     SampleKey fastKey = makeKeyFast(path);
-    
+
     std::lock_guard<std::mutex> lock(m_mutex);
-    
+
     // Try exact path match first (ignoring mod time)
     for (const auto& [key, weakBuf] : m_samples) {
         // Compare paths only, ignore modification time for fast lookup
@@ -63,12 +64,12 @@ std::shared_ptr<AudioBuffer> SamplePool::tryGetCached(const std::string& path) {
             if (auto existing = weakBuf.lock()) {
                 if (existing->ready.load(std::memory_order_acquire)) {
                     existing->lastAccessTick.store(++m_accessCounter);
-                    return existing;  // Cache hit
+                    return existing; // Cache hit
                 }
             }
         }
     }
-    return nullptr;  // Cache miss
+    return nullptr; // Cache miss
 }
 
 size_t SamplePool::calculateBufferBytes(const AudioBuffer& buffer) {
@@ -85,10 +86,8 @@ void SamplePool::updateMemoryUsageLocked() {
     m_memoryCurrent.store(total);
 }
 
-std::shared_ptr<AudioBuffer> SamplePool::acquire(
-    const std::string& path,
-    const std::function<bool(AudioBuffer&)>& loader) {
-    
+std::shared_ptr<AudioBuffer> SamplePool::acquire(const std::string& path,
+                                                 const std::function<bool(AudioBuffer&)>& loader) {
     SampleKey key = makeKey(path);
 
     // Fast path: try to find an existing buffer
@@ -112,7 +111,7 @@ std::shared_ptr<AudioBuffer> SamplePool::acquire(
 
     auto buffer = std::make_shared<AudioBuffer>();
     buffer->sourcePath = path;
-    
+
     // Exception-safe loading
     try {
         if (!loader(*buffer)) {
@@ -130,7 +129,7 @@ std::shared_ptr<AudioBuffer> SamplePool::acquire(
 
     // Insert into cache (re-check to prevent race)
     std::lock_guard<std::mutex> lock(m_mutex);
-    
+
     // Race check: another thread may have loaded this while we were unlocked
     if (auto it = m_samples.find(key); it != m_samples.end()) {
         if (auto existing = it->second.lock()) {
@@ -138,7 +137,7 @@ std::shared_ptr<AudioBuffer> SamplePool::acquire(
         }
         m_samples.erase(it); // Expired: remove stale entry
     }
-    
+
     m_samples.emplace(key, buffer);
     updateMemoryUsageLocked();
     garbageCollectLocked(); // Already locked: use private variant
@@ -153,7 +152,7 @@ void SamplePool::garbageCollect() {
 
 void SamplePool::garbageCollectLocked() {
     // Remove expired entries first
-    for (auto it = m_samples.begin(); it != m_samples.end(); ) {
+    for (auto it = m_samples.begin(); it != m_samples.end();) {
         if (it->second.expired()) {
             it = m_samples.erase(it);
         } else {
@@ -173,7 +172,7 @@ void SamplePool::garbageCollectLocked() {
     };
     std::vector<EntryInfo> live;
     live.reserve(m_samples.size());
-    
+
     size_t totalBytes = 0;
     for (auto& [key, weakBuf] : m_samples) {
         if (auto buf = weakBuf.lock()) {
@@ -190,12 +189,11 @@ void SamplePool::garbageCollectLocked() {
     }
 
     // Sort and evict (using pre-calculated sizes)
-    std::sort(live.begin(), live.end(), [](const EntryInfo& a, const EntryInfo& b) {
-        return a.lastTick < b.lastTick;
-    });
+    std::sort(live.begin(), live.end(), [](const EntryInfo& a, const EntryInfo& b) { return a.lastTick < b.lastTick; });
 
     for (const auto& info : live) {
-        if (m_memoryCurrent.load() <= m_memoryBudget) break;
+        if (m_memoryCurrent.load() <= m_memoryBudget)
+            break;
         if (m_samples.erase(info.key) > 0) {
             m_memoryCurrent.fetch_sub(info.sizeBytes);
         }

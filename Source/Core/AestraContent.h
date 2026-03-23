@@ -108,12 +108,21 @@ public:
     void onUpdate(double dt) override;
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
+    bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override; // [NEW] Global shortcuts
 
     // View Management
     void setViewOpen(Aestra::Audio::ViewType view, bool open);
     void toggleView(Aestra::Audio::ViewType view);
     void toggleFileBrowser();
     void syncViewState();
+    
+    // Panel State Persistence (Issue #120)
+    float getBrowserWidth() const;
+    void setBrowserWidth(float width);
+    bool isBrowserVisible() const;
+    void setBrowserVisible(bool visible);
+    bool isMixerVisible() const;
+    void setMixerVisible(bool visible);
     void setViewFocus(ViewFocus focus);
     ViewFocus getViewFocus() const { return m_viewFocus; }
     
@@ -146,7 +155,7 @@ public:
 
     // Platform
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
-    void setAudioEngine(Aestra::Audio::AudioEngine* engine) { m_audioEngine = engine; }
+    void setAudioEngine(Aestra::Audio::AudioEngine* engine);
 
     // Project Management
     void resetToDefaultProject();  // Clear and recreate default tracks

@@ -2,17 +2,14 @@
 #pragma once
 
 #include "NativeAudioDriver.h"
-#include <thread>
+
 #include <atomic>
-#include <mutex>
-#include "NativeAudioDriver.h"
-#include <thread>
-#include <atomic>
-#include <mutex>
 #include <cstdint>
-#include <vector>
-#include <string>
 #include <functional>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
 
 // Forward declarations for Windows types (implementation details)
 // Note: Using opaque pointers to avoid Windows type leaks
@@ -28,7 +25,7 @@ namespace Audio {
 
 /**
  * @brief WASAPI Shared Mode Driver
- * 
+ *
  * Default safe mode for all Windows users.
  * Features:
  * - Automatic sample rate conversion
@@ -59,7 +56,6 @@ public:
 
     bool supportsExclusiveMode() const override { return false; }
 
-
     // AudioDriver interface
     virtual std::vector<AudioDeviceInfo> getDevices() override;
 
@@ -73,9 +69,7 @@ public:
     bool isStreamRunning() const override { return m_isRunning; }
     double getStreamLatency() const override;
     uint32_t getStreamSampleRate() const override;
-    uint32_t getStreamBufferSize() const override {
-        return isStreamRunning() ? m_bufferFrameCount : 0;
-    }
+    uint32_t getStreamBufferSize() const override { return isStreamRunning() ? m_bufferFrameCount : 0; }
 
     // Dithering support
     void setDitheringEnabled(bool enabled) override { m_ditherEnabled = enabled; }
@@ -83,21 +77,21 @@ public:
 
 private:
     // COM interfaces (opaque pointers - Windows-specific implementation)
-    void* m_deviceEnumerator = nullptr;  // IMMDeviceEnumerator*
-    void* m_device = nullptr;  // IMMDevice*
-    void* m_audioClient = nullptr;  // IAudioClient*
-    void* m_audioClient3 = nullptr;  // IAudioClient3* (for low-latency shared mode, Win10+)
-    void* m_renderClient = nullptr;  // IAudioRenderClient*
-    void* m_captureClient = nullptr;  // IAudioCaptureClient*
+    void* m_deviceEnumerator = nullptr; // IMMDeviceEnumerator*
+    void* m_device = nullptr;           // IMMDevice*
+    void* m_audioClient = nullptr;      // IAudioClient*
+    void* m_audioClient3 = nullptr;     // IAudioClient3* (for low-latency shared mode, Win10+)
+    void* m_renderClient = nullptr;     // IAudioRenderClient*
+    void* m_captureClient = nullptr;    // IAudioCaptureClient*
 
     // Thread management
     std::thread m_audioThread;
-    std::atomic<bool> m_isRunning{ false };
-    std::atomic<bool> m_shouldStop{ false };
-    void* m_audioEvent = nullptr;  // HANDLE (opaque)
+    std::atomic<bool> m_isRunning{false};
+    std::atomic<bool> m_shouldStop{false};
+    void* m_audioEvent = nullptr; // HANDLE (opaque)
 
     // Dither State
-    std::atomic<bool> m_ditherEnabled{ false };
+    std::atomic<bool> m_ditherEnabled{false};
     uint32_t m_ditherState = 123456789;
 
     // State
@@ -113,7 +107,7 @@ private:
     void* m_userData = nullptr;
 
     // Format information
-    void* m_waveFormat = nullptr;  // WAVEFORMATEX* (opaque)
+    void* m_waveFormat = nullptr; // WAVEFORMATEX* (opaque)
     uint32_t m_bufferFrameCount = 0;
 
     // Performance monitoring (Windows-specific, only accessed in .cpp)

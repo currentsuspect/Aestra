@@ -2,6 +2,7 @@
 #pragma once
 
 #include "IAudioDriver.h"
+
 #include <atomic>
 #include <thread>
 #include <vector>
@@ -45,16 +46,16 @@ private:
     std::atomic<bool> m_running{false};
     std::atomic<bool> m_stopRequested{false};
     std::thread m_thread;
-    
+
     AudioStreamConfig m_config;
     AudioCallback m_callback{nullptr};
     void* m_userData{nullptr};
-    
+
     uint32_t m_sampleRate{48000};
     uint32_t m_bufferSize{512};
     double m_latency{0.01};
     bool m_dither{false};
-    
+
     DriverStatistics m_stats;
     std::vector<float> m_silentBuffer;
 };

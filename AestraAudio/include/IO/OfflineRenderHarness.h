@@ -15,10 +15,8 @@ namespace Audio {
 class OfflineRenderHarness {
 public:
     OfflineRenderHarness(AudioEngine& engine, uint32_t bufferFrames, uint32_t channels = 2)
-        : m_engine(engine)
-        , m_bufferFrames(bufferFrames)
-        , m_channels(channels)
-        , m_buffer(static_cast<size_t>(bufferFrames) * channels, 0.0f) {
+        : m_engine(engine), m_bufferFrames(bufferFrames), m_channels(channels),
+          m_buffer(static_cast<size_t>(bufferFrames) * channels, 0.0f) {
         m_engine.setBufferConfig(bufferFrames, channels);
     }
 

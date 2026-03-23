@@ -25,15 +25,17 @@ Select all that apply:
 
 **Documentation files changed:**
 - [ ] docs/README.md
-- [ ] docs/BUILDING.md
-- [ ] docs/CONTRIBUTING.md
+- [ ] docs/getting-started/building.md
+- [ ] docs/developer/contributing.md
 - [ ] docs/developer/coding-style.md
-- [ ] docs/ARCHITECTURE.md
-- [ ] docs/AI_GUIDE.md
-- [ ] docs/FAQ.md
-- [ ] docs/GLOSSARY.md
-- [ ] docs/ROADMAP.md
-- [ ] docs/LICENSE_REFERENCE.md
+- [ ] docs/architecture/overview.md
+- [ ] docs/technical/ai-guide.md
+- [ ] docs/technical/faq.md
+- [ ] docs/technical/glossary.md
+- [ ] docs/technical/roadmap.md
+- [ ] docs/technical/RUMBLE_MVP_PLAN.md
+- [ ] docs/about/license-reference.md
+- [ ] docs/technical/testing_ci.md
 - [ ] docs/TEMPLATE/*
 - [ ] Other: _____________
 
@@ -101,7 +103,7 @@ Select all that apply:
 ## Checklist
 
 Before requesting review:
-- [ ] I have read the [Contributing Guide](../CONTRIBUTING.md)
+- [ ] I have read the [Contributing Guide](../developer/contributing.md)
 - [ ] My changes follow the project's documentation style
 - [ ] I have spell-checked my changes
 - [ ] I have tested all links

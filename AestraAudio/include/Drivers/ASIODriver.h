@@ -1,12 +1,13 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "IAudioDriver.h"
 #include "ASIOInterface.h"
-#include <vector>
-#include <memory>
+#include "IAudioDriver.h"
+
 #include <atomic>
+#include <memory>
 #include <mutex>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -56,7 +57,7 @@ private:
     bool loadDriver(uint32_t deviceIndex);
     bool initASIO();
     bool createBuffers(const AudioStreamConfig& config);
-    
+
     // Format conversion helpers
     void convertInput(long index, float* dest, size_t frames);
     void convertOutput(long index, const float* src, size_t frames);
@@ -64,14 +65,14 @@ private:
     // Member Variables
     std::string m_driverName = "ASIO Wrapper";
     std::string m_lastError;
-    
+
     // Driver Registry (Index -> CLSID)
     struct DriverEntry {
         std::string name;
         std::string clsid;
     };
     std::vector<DriverEntry> m_knownDrivers;
-    
+
     ASIO::IASIO* m_asio = nullptr;
     bool m_driversScanned = false;
     std::atomic<bool> m_isRunning{false};
@@ -80,24 +81,24 @@ private:
     // Stream State
     AudioCallback m_callback = nullptr;
     void* m_callbackUserData = nullptr;
-    
+
     std::vector<ASIO::ASIOBufferInfo> m_bufferInfos;
     std::vector<ASIO::ASIOChannelInfo> m_channelInfos;
-    
+
     long m_inputChannels = 0;
     long m_outputChannels = 0;
     long m_configuredInputChannels = 0;
     long m_configuredOutputChannels = 0;
     long m_bufferSize = 0;
     double m_sampleRate = 44100.0;
-    
+
     // Scratch Buffers for Interleaving/Deinterleaving
     // ASIO is planar (LLLL RRRR), AudioEngine is Interleaved (LRLRLRLR)
     std::vector<float> m_interleavedInput;
     std::vector<float> m_interleavedOutput;
-    
+
     DriverStatistics m_stats;
-    
+
     // Static instance for callback routing (Public for global wrappers)
 public:
     static ASIODriver* s_instance;

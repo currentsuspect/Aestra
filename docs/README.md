@@ -1,12 +1,22 @@
 # 📘 Aestra DAW — Documentation Portal
 
-![Aestra Version](https://img.shields.io/badge/Aestra-v1.0-blue)
-![License](https://img.shields.io/badge/License-ASSAL%20v1.0-blue)
+![Aestra Version](https://img.shields.io/badge/Aestra-v1.1-blue)
+![License](https://img.shields.io/badge/License-ASSAL%20v1.1-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-orange)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
 
-Welcome to the **Aestra DAW Documentation Portal**! This is your comprehensive guide to understanding, building, and contributing to Aestra — a modern digital audio workstation built with intention.
+Welcome to the **Aestra DAW Documentation Portal**! This is your guide to understanding, building, validating, and contributing to Aestra.
+
+## 📌 Current docs posture
+
+Some documents in this repo are active engineering references, while others are preserved historical notes.
+If you want the most accurate current picture, start with:
+
+- [Roadmap](technical/roadmap.md)
+- [Testing & CI](technical/testing_ci.md)
+- [Rumble MVP Plan](technical/RUMBLE_MVP_PLAN.md)
+- [Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q1.md)
 
 ## 🎯 What is Aestra?
 
@@ -16,37 +26,40 @@ Aestra DAW is a professional digital audio workstation featuring:
 - **Pattern-based workflow** — Intuitive pattern and playlist sequencer
 - **Professional audio quality** — 64-bit multi-threaded processing
 - **Modern C++ architecture** — Clean separation of concerns
-- **Source-available** — Transparent codebase under ASSAL v1.0
+- **Source-available** — Transparent codebase under ASSAL v1.1
 
 ## 📚 Documentation Index
 
 ### 🚀 Getting Started
 
-- **[Building Guide](BUILDING.md)** — Complete build instructions for Windows and Linux
-- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute to Aestra (GitHub workflow, PR rules)
-- **[FAQ](FAQ.md)** — Frequently asked questions for contributors and users
+- **[Building Guide](getting-started/building.md)** — Complete build instructions for Windows and Linux
+- **[Contributing Guide](developer/contributing.md)** — How to contribute to Aestra (GitHub workflow, PR rules)
+- **[FAQ](technical/faq.md)** — Frequently asked questions for contributors and users
 
 ### 🏗️ Architecture & Design
 
-- **[Architecture Overview](ARCHITECTURE.md)** — Aestra's modular architecture (Core, UI, Audio, Platform)
+- **[Architecture Overview](architecture/overview.md)** — Aestra's modular architecture (Core, UI, Audio, Platform)
 - **[Coding Style Guide](developer/coding-style.md)** — Code conventions, formatting rules, and best practices
-- **[Glossary](GLOSSARY.md)** — Technical terms and definitions
+- **[Glossary](technical/glossary.md)** — Technical terms and definitions
 
 ### 🐛 Development & Debugging
 
-- **[Bug Reports Guide](BUG_REPORTS.md)** — How to report bugs effectively with reproduction steps
+- **[Bug Reports Guide](developer/bug-reports.md)** — How to report bugs effectively with reproduction steps
 - **[Debugging Guide](developer/debugging.md)** — Using Aestra profiler, Visual Studio debugger, and logging
-- **[Performance Tuning](PERFORMANCE_TUNING.md)** — FPS optimization, latency reduction, and profiling
-- **[Style Guide](STYLE_GUIDE.md)** — Documentation and comment standards
+- **[Performance Tuning](developer/performance-tuning.md)** — FPS optimization, latency reduction, and profiling
+- **[Style Guide](developer/style-guide.md)** — Documentation and comment standards
 
 ### 🤖 AI Integration
 
-- **[AI Guide](AI_GUIDE.md)** — Muse AI integration documentation and usage
+- **[AI Guide](technical/ai-guide.md)** — Muse AI integration documentation and usage
 
 ### 📋 Project Management
 
-- **[Roadmap](ROADMAP.md)** — High-level milestones and future plans
-- **[License Reference](LICENSE_REFERENCE.md)** — Licensing information and ASSAL v1.0 details
+- **[Roadmap](technical/roadmap.md)** — High-level milestones and current execution plan
+- **[Testing & CI](technical/testing_ci.md)** — Current confidence suite and verification workflow
+- **[CI Workflows Map](technical/ci_workflows.md)** — What runs in GitHub Actions, what is blocking vs preview
+- **[Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q1.md)** — Current milestone history
+- **[License Reference](about/license-reference.md)** — Licensing information and ASSAL v1.1 details
 
 ### 📝 Templates
 
@@ -57,26 +70,27 @@ Aestra DAW is a professional digital audio workstation featuring:
 ## 🎓 Quick Links
 
 ### For New Contributors
-1. Start with [FAQ](FAQ.md) to understand common questions
-2. Read [Contributing Guide](CONTRIBUTING.md) to learn our workflow
-3. Check [Building Guide](BUILDING.md) to set up your development environment
+1. Start with [FAQ](technical/faq.md) to understand common questions
+2. Read [Contributing Guide](developer/contributing.md) to learn our workflow
+3. Check [Building Guide](getting-started/building.md) to set up your development environment
 4. Review [Coding Style Guide](developer/coding-style.md) before writing code
 
 ### For Developers
-1. Understand [Architecture Overview](ARCHITECTURE.md) to grasp system design
-2. Reference [Glossary](GLOSSARY.md) for technical terminology
+1. Understand [Architecture Overview](architecture/overview.md) to grasp system design
+2. Reference [Glossary](technical/glossary.md) for technical terminology
 3. Follow [Coding Style Guide](developer/coding-style.md) for consistent code quality
-4. Use [Debugging Guide](developer/debugging.md) and [Performance Tuning](PERFORMANCE_TUNING.md) for optimization
+4. Use [Debugging Guide](developer/debugging.md) and [Performance Tuning](developer/performance-tuning.md) for optimization
 
 ### For Bug Reporters
-1. Read [Bug Reports Guide](BUG_REPORTS.md) for effective bug reporting
+1. Read [Bug Reports Guide](developer/bug-reports.md) for effective bug reporting
 2. Follow the bug report template with clear reproduction steps
 3. Include logs, screenshots, and system information
 
 ### For Project Managers
-1. Review [Roadmap](ROADMAP.md) for project milestones
-2. Check [License Reference](LICENSE_REFERENCE.md) for ASSAL v1.0 details
-3. Use [Issue Template](TEMPLATE/ISSUE_TEMPLATE.md) for documentation issues
+1. Review [Roadmap](technical/roadmap.md) for project milestones
+2. Check [Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q1.md) for recent milestone history
+3. Check [License Reference](about/license-reference.md) for ASSAL v1.1 details
+4. Use [Issue Template](TEMPLATE/ISSUE_TEMPLATE.md) for documentation issues
 
 ## 🌟 Key Features
 
@@ -116,8 +130,8 @@ Aestra DAW is a professional digital audio workstation featuring:
 
 We welcome contributions from the community! Before contributing:
 
-1. Read our [Contributing Guide](CONTRIBUTING.md)
-2. Check the [Roadmap](ROADMAP.md) for current priorities
+1. Read our [Contributing Guide](developer/contributing.md)
+2. Check the [Roadmap](technical/roadmap.md) for current priorities
 3. Review existing issues and discussions
 4. Follow our [Coding Style Guide](developer/coding-style.md)
 
@@ -131,7 +145,7 @@ We welcome contributions from the community! Before contributing:
 
 ## ⚖️ License
 
-**Aestra DAW** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.0**. See [License Reference](LICENSE_REFERENCE.md) for full details.
+**Aestra DAW** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**. See [License Reference](about/license-reference.md) for full details.
 
 **Key Points:**
 - ✅ Source code is publicly visible for educational purposes
@@ -145,4 +159,4 @@ The source code is publicly visible for transparency but is **NOT open-source**.
 
 **Built by musicians, for musicians. Crafted with intention.** 🎵
 
-*Last updated: January 2025*
+*Last updated: March 2026*

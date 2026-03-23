@@ -130,7 +130,8 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible()) return false;
 
-    NUIRect bounds = getBounds();
+    // CRITICAL: Use global bounds since event.position is in global/window coordinates
+    NUIRect globalBounds = getGlobalBounds();
     
     // Give priority to submenu
     if (activeSubmenu_ && activeSubmenu_->isVisible())
@@ -141,7 +142,10 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
         }
     }
 
-    if (!bounds.contains(event.position)) return false;
+    // Check if mouse is within our global bounds
+    if (!globalBounds.contains(event.position)) {
+        return false; // Not in our bounds, don't consume
+    }
 
     int itemIndex = getItemAtPosition(event.position);
 
@@ -149,7 +153,7 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
     {
         pressedItemIndex_ = itemIndex;
         setDirty(true);
-        return true;
+        return true; // Consume the event
     }
     else if (event.released && event.button == NUIMouseButton::Left)
     {
@@ -159,7 +163,7 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
         }
         pressedItemIndex_ = -1;
         setDirty(true);
-        return true;
+        return true; // Consume the event
     }
     else if (event.button == NUIMouseButton::None) // Mouse move
     {
@@ -172,10 +176,10 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
             }
             setDirty(true);
         }
-        return true;
+        return true; // Consume the event
     }
 
-    return false;
+    return true; // If we're in bounds, consume all events to prevent click-through
 }
 
 bool NUIContextMenu::onKeyEvent(const NUIKeyEvent& event)
@@ -687,10 +691,11 @@ float NUIContextMenu::calculateMenuHeight() const
 
 int NUIContextMenu::getItemAtPosition(const NUIPoint& position) const
 {
-    NUIRect bounds = getBounds();
-    if (!bounds.contains(position)) return -1;
+    // Use global bounds since position is in global/window coordinates
+    NUIRect globalBounds = getGlobalBounds();
+    if (!globalBounds.contains(position)) return -1;
     
-    float relativeY = position.y - bounds.y;
+    float relativeY = position.y - globalBounds.y;
     float currentY = 0.0f;
     
     for (int i = 0; i < getItemCount(); ++i)

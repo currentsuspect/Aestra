@@ -1,184 +1,45 @@
-# Aestra - Build Status
+# Aestra — Legacy Build Status Note
 
-**Last Updated:** October 2025  
-**Status:** ✅ Production Ready
+> **Archived document — not the current source of truth.**
+>
+> This file previously described Aestra as “production ready” and listed several module states that no longer match the repo.
+> It is being retained only as a historical artifact until the legacy `AestraDocs/` tree is cleaned up.
 
-## Current Architecture
+## Current status
 
-```
-Aestra/
-├── AestraCore/        ✅ Complete - Base utilities (math, threading, file I/O, logging)
-├── AestraPlat/        ✅ Complete - Platform abstraction with DPI support
-├── AestraUI/          ✅ Complete - UI framework with OpenGL renderer
-├── AestraAudio/       ⏳ Planned - RtAudio integration
-├── AestraSDK/         ⏳ Planned - Plugin system
-├── AestraAssets/      ⏳ Planned - Assets and resources
-└── AestraDocs/        ✅ Current - Documentation
-```
+Do **not** use this file to judge project health, readiness, or roadmap status.
 
-## Module Status
+For current truth, use:
 
-### ✅ AestraCore (v1.0.0)
-**Status:** Production Ready
+- `docs/technical/roadmap.md` — current engineering roadmap and beta framing
+- `docs/technical/v1_beta_task_list.md` — actionable beta backlog
+- GitHub Actions / CI — current build and test status
 
-**Features:**
-- Math utilities (Vector2/3/4, Matrix4x4, DSP functions)
-- Threading primitives (lock-free ring buffer, thread pool, atomics)
-- File I/O (binary serialization, JSON parsing)
-- Logging system (console, file, multi-logger, stream-style)
+## Why this file was archived
 
-**Tests:** All passing
-- MathTests.exe
-- ThreadingTests.exe
-- FileTests.exe
-- LogTests.exe
-- ConfigAssertTests.exe
+The old version of this document had drifted from reality. Examples:
 
-### ✅ AestraPlat (v1.0.0)
-**Status:** Production Ready
+- it labeled Aestra as **production ready**
+- it described `AestraAudio` as **planned**, even though the repo now contains substantial audio implementation
+- it described the plugin system as **planned**, even though plugin manager / scanner / host groundwork exists
+- it referenced outdated structure and milestone assumptions
 
-**Features:**
-- Cross-platform window management (Win32 complete)
-- Input handling (mouse, keyboard, modifiers)
-- OpenGL context creation
-- Per-Monitor V2 DPI awareness
-- Dynamic DPI change handling
-- Platform utilities (time, file dialogs, clipboard)
+## Honest project framing
 
-**Platforms:**
-- ✅ Windows (Win32) - Complete
-- ⏳ Linux (X11) - Planned
-- ⏳ macOS (Cocoa) - Planned
+A better summary of Aestra today is:
 
-**Tests:** All passing
-- PlatformWindowTest.exe
-- PlatformDPITest.exe
+- **serious in-progress DAW / pre-beta product**
+- **Windows-first** for practical shipping scope
+- strong architectural progress in audio, UI, project structure, and test infrastructure
+- still needs disciplined reliability work, documentation cleanup, and beta-scope focus
 
-### ✅ AestraUI (v0.1.0)
-**Status:** Production Ready
+## Migration note
 
-**Features:**
-- OpenGL renderer with MSAA support
-- Component system (buttons, labels, sliders, checkboxes, etc.)
-- Theme system with color customization
-- Animation system
-- SVG icon support with color tinting
-- Custom window with title bar
-- Platform bridge to AestraPlat
+If this file is referenced elsewhere, update those links to point to:
 
-**Components:**
-- NUIButton, NUILabel, NUISlider
-- NUICheckbox, NUITextInput, NUIProgressBar
-- NUIScrollbar, NUIContextMenu, NUIIcon
-- NUICustomWindow, NUICustomTitleBar
-
-**Examples:** All building
-- WindowDemo
-- ButtonLabelDemo
-- NewComponentsDemo
-- CustomWindowDemo
-- FullScreenDemo
-- IconDemo
-
-### ⏳ AestraAudio
-**Status:** Planned for v1.5
-
-**Planned Features:**
-- RtAudio integration
-- AudioDeviceManager
-- Lock-free audio callback
-- Basic mixer with gain/pan
-- <10ms latency target
-
-### ⏳ AestraSDK
-**Status:** Planned for v3.0
-
-**Planned Features:**
-- Plugin API
-- Extension system
-- Third-party module support
-
-## Build System
-
-### Requirements
-- CMake 3.22+
-- C++17 compiler
-- Windows SDK (for Windows builds)
-
-### Build Command
-```powershell
-.\build.ps1
-```
-
-Or manually:
-```bash
-cmake -B build
-cmake --build build --config Debug
-```
-
-### Build Targets
-```bash
-# Core modules
-cmake --build build --target AestraCore
-cmake --build build --target AestraPlat
-cmake --build build --target AestraUI_Core
-cmake --build build --target AestraUI_Platform
-
-# Tests
-cmake --build build --target PlatformDPITest
-cmake --build build --target PlatformWindowTest
-
-# Examples
-cmake --build build --target AestraUI_CustomWindowDemo
-cmake --build build --target AestraUI_WindowDemo
-```
-
-## Recent Optimizations
-
-### Platform Layer Consolidation
-- Removed 2000+ lines of redundant Windows code from AestraUI
-- Unified all platform code in AestraPlat
-- Added comprehensive DPI support
-
-### Documentation Cleanup
-- Removed 4 outdated documentation files
-- Created consolidated migration guides
-- All docs now current and accurate
-
-### Build System
-- All examples properly linked to AestraUI_Platform
-- Clear dependency graph
-- Zero build errors
-
-## Quality Metrics
-
-- ✅ Zero build errors
-- ✅ Minimal warnings
-- ✅ All tests passing
-- ✅ All examples working
-- ✅ Clean architecture
-- ✅ Comprehensive documentation
-
-## Next Milestones
-
-### v1.5 - Audio Integration
-- [ ] Integrate RtAudio
-- [ ] Implement AudioDeviceManager
-- [ ] Create basic mixer
-- [ ] Build minimal DAW application
-
-### v2.0 - DSP Foundation
-- [ ] Oscillators (sine, saw, square)
-- [ ] Filters (low-pass, high-pass, band-pass)
-- [ ] ADSR envelope generator
-
-### v3.0 - Plugin System
-- [ ] Plugin API design
-- [ ] Extension system
-- [ ] Third-party module support
+- `docs/technical/roadmap.md`
 
 ---
 
-**Build Status:** ✅ All systems operational  
-**Code Quality:** ✅ Production ready  
-**Documentation:** ✅ Complete and current
+**Status of this file:** archived / historical only  
+**Last reviewed:** 2026-03-09

@@ -1,16 +1,17 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "../include/AestraThreading.h"
-#include <iostream>
+
 #include <cassert>
 #include <chrono>
+#include <iostream>
 #include <thread>
 
 using namespace Aestra;
 
-#define TEST_ASSERT(condition, message) \
-    if (!(condition)) { \
+#define TEST_ASSERT(condition, message)                  \
+    if (!(condition)) {                                  \
         std::cerr << "FAILED: " << message << std::endl; \
-        return false; \
+        return false;                                    \
     }
 
 // =============================================================================
@@ -113,9 +114,7 @@ bool testThreadPool() {
     const int numTasks = 100;
 
     for (int i = 0; i < numTasks; ++i) {
-        pool.enqueue([&counter]() {
-            counter++;
-        });
+        pool.enqueue([&counter]() { counter++; });
     }
 
     // Wait for tasks to complete
@@ -125,9 +124,7 @@ bool testThreadPool() {
     // Test with more complex tasks
     std::atomic<int> sum(0);
     for (int i = 1; i <= 10; ++i) {
-        pool.enqueue([&sum, i]() {
-            sum += i;
-        });
+        pool.enqueue([&sum, i]() { sum += i; });
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -169,7 +166,7 @@ bool testAtomicUtilities() {
     // Test SpinLock
     SpinLock spinLock;
     int sharedValue = 0;
-    
+
     std::thread t1([&]() {
         for (int i = 0; i < 1000; ++i) {
             spinLock.lock();

@@ -32,13 +32,16 @@ jobs:
       - name: Build
         shell: pwsh
         run: cmake --build build --config Release --parallel
-      - name: Sign binaries
-        if: ${{ secrets.CODESIGN_PFX_BASE64 && secrets.CODESIGN_PFX_PASSWORD }}
+      - name: Sign binaries (optional)
         shell: pwsh
         env:
           PFX_BASE64: ${{ secrets.CODESIGN_PFX_BASE64 }}
           PFX_PASSWORD: ${{ secrets.CODESIGN_PFX_PASSWORD }}
         run: |
+          if (-not $env:PFX_BASE64 -or -not $env:PFX_PASSWORD) {
+            Write-Host "Codesign secrets not configured; skipping signing step."
+            exit 0
+          }
           $pfxPath = "$env:RUNNER_TEMP\codesign.pfx"
           [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:PFX_BASE64))
           $bins = Get-ChildItem build -Recurse -Include *.exe,*.dll

@@ -1,0 +1,74 @@
+# CodeRabbit AI Configuration for Aestra
+# Documentation: https://docs.coderabbit.ai/guides/configure-coderabbit
+
+language: en-US
+
+reviews:
+  # Profile: ASSERTIVE for detailed reviews
+  profile: assertive
+  
+  # Request changes for issues
+  request_changes_workflow: true
+  
+  # Auto-review settings
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    # Increase file limit from default 150
+    max_files: 500
+    # Ignore build artifacts and generated files
+    ignore:
+      - "**/build*/**"
+      - "**/*.min.js"
+      - "**/*.min.css"
+      - "**/dist/**"
+      - "**/node_modules/**"
+      - "AestraAudio/External/**"
+      - "AestraUI/External/**"
+      - "subprojects/**"
+  
+  # Path filters for review
+  path_filters:
+    - "!**/*.ico"
+    - "!**/*.png"
+    - "!**/*.jpg"
+    - "!**/*.jpeg"
+    - "!**/*.gif"
+    - "!**/*.wav"
+    - "!**/*.mp3"
+    - "!build*/**"
+    - "!**/CMakeFiles/**"
+    - "!**/.ninja_*"
+    - "!**/Makefile"
+    - "!**/CTestTestfile.cmake"
+    - "!**/DartConfiguration.tcl"
+    - "!**/*.a"
+    - "!**/*.so"
+    - "!**/*.exe"
+    - "!**/Testing/**"
+  
+  # Tools to run
+  tools:
+    clang-tidy:
+      enabled: true
+    clang-format:
+      enabled: true
+  
+  # Review instructions
+  review_instructions: |
+    Focus on C++ code quality, performance, and correctness.
+    Check for:
+    - Memory safety issues
+    - Thread safety in real-time audio code
+    - API design consistency
+    - Proper error handling
+    - Include header completeness
+
+# Chat settings
+chat:
+  auto_reply: true
+
+# Knowledge base (optional)
+knowledge_base:
+  learnings:
+    scope: auto

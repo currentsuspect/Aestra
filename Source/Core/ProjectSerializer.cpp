@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ProjectSerializer.h"
+#include "ProjectMigrations.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "MiniAudioDecoder.h"
 #include <filesystem>
@@ -164,7 +165,8 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             for (const auto& clip : lane->clips) {
                 JSON cjs = JSON::object();
                 cjs.set("id", JSON(clip.id.toString()));
-                cjs.set("patternId", JSON(static_cast<double>(clip.patternId.value)));
+                const uint64_t serializedPatternId = clip.patternId.value != 0 ? clip.patternId.value : clip.sourceId;
+                cjs.set("patternId", JSON(static_cast<double>(serializedPatternId)));
                 cjs.set("start", JSON(clip.startBeat));
                 cjs.set("duration", JSON(clip.durationBeats));
                 cjs.set("name", JSON(clip.name));
@@ -234,6 +236,18 @@ bool ProjectSerializer::save(const std::string& path,
                              double tempo,
                              double playheadSeconds,
                              const UIState* uiState) {
+    // Create backup of existing file before overwriting
+    namespace fs = std::filesystem;
+    if (fs::exists(path)) {
+        fs::path backupPath = path;
+        backupPath += ".bak";
+        std::error_code ec;
+        fs::copy_file(path, backupPath, fs::copy_options::overwrite_existing, ec);
+        if (ec) {
+            Log::warning("Could not create backup: " + ec.message());
+        }
+    }
+
     auto ser = serialize(trackManager, tempo, playheadSeconds, 2, uiState);
     if (!ser.ok) return false;
     if (!writeAtomicallyImpl(path, ser.contents)) {
@@ -309,6 +323,20 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     
     Log::info("[ProjectLoad] Version " + std::to_string(fileVersion) + " (current: " + 
               std::to_string(PROJECT_VERSION_CURRENT) + ")");
+
+    // Run migrations if needed
+    if (fileVersion < PROJECT_VERSION_CURRENT) {
+        Log::info("[ProjectLoad] Migrating from v" + std::to_string(fileVersion) + 
+                  " to v" + std::to_string(PROJECT_VERSION_CURRENT));
+        if (!ProjectMigrations::runMigrations(root, fileVersion, PROJECT_VERSION_CURRENT)) {
+            result.errorMessage = "Failed to migrate project from version " + 
+                                  std::to_string(fileVersion) + " to " + 
+                                  std::to_string(PROJECT_VERSION_CURRENT);
+            Log::error("[ProjectLoad] " + result.errorMessage);
+            return result;
+        }
+        Log::info("[ProjectLoad] Migration complete");
+    }
 
     // ========================================================================
     // PHASE 2: Validate structure and check assets (non-destructive)
@@ -524,6 +552,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             ClipInstance clip;
                             clip.id = ClipInstanceID::fromString(cj[c]["id"].asString());
                             clip.patternId = patternMap[oldPatId];
+                            clip.sourceId = clip.patternId.value;
                             clip.startBeat = cj[c]["start"].asNumber();
                             clip.durationBeats = cj[c]["duration"].asNumber();
                             clip.name = cj[c]["name"].asString();

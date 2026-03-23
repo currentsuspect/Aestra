@@ -856,7 +856,8 @@ if (!driver->isAvailable()) {
 
 ### Planned Features
 
-- [ ] **ASIO Driver Support:** Full ASIO SDK integration (currently info-only)
+- [x] **ASIO Driver Support:** End-to-end Windows ASIO playback is implemented and validated on ASIO4ALL
+- [ ] **Broader ASIO Compatibility Hardening:** Expand validation beyond ASIO4ALL, improve failure handling, and refine device UX
 - [ ] **Buffer Size Control:** UI for adjusting buffer size (latency vs stability)
 - [ ] **Sample Rate Control:** UI for changing sample rate
 - [ ] **Device Selection:** Dropdown for multiple audio devices

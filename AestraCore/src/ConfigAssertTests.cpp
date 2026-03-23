@@ -1,16 +1,17 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-#include "../include/AestraConfig.h"
 #include "../include/AestraAssert.h"
+#include "../include/AestraConfig.h"
 #include "../include/AestraLog.h"
-#include <iostream>
+
 #include <cassert>
+#include <iostream>
 
 using namespace Aestra;
 
-#define TEST_ASSERT(condition, message) \
-    if (!(condition)) { \
+#define TEST_ASSERT(condition, message)                  \
+    if (!(condition)) {                                  \
         std::cerr << "FAILED: " << message << std::endl; \
-        return false; \
+        return false;                                    \
     }
 
 // =============================================================================
@@ -19,57 +20,57 @@ using namespace Aestra;
 bool testConfig() {
     std::cout << "Testing Configuration..." << std::endl;
 
-    // Test build configuration
-    #if AESTRA_DEBUG
-        std::cout << "  Build: DEBUG" << std::endl;
-    #else
-        std::cout << "  Build: RELEASE" << std::endl;
-    #endif
+// Test build configuration
+#if AESTRA_DEBUG
+    std::cout << "  Build: DEBUG" << std::endl;
+#else
+    std::cout << "  Build: RELEASE" << std::endl;
+#endif
 
-    // Test platform detection
-    #if AESTRA_PLATFORM_WINDOWS
-        std::cout << "  Platform: Windows" << std::endl;
-        TEST_ASSERT(AESTRA_PLATFORM_WINDOWS == 1, "Windows platform should be detected");
-    #elif AESTRA_PLATFORM_LINUX
-        std::cout << "  Platform: Linux" << std::endl;
-        TEST_ASSERT(AESTRA_PLATFORM_LINUX == 1, "Linux platform should be detected");
-    #elif AESTRA_PLATFORM_MACOS
-        std::cout << "  Platform: macOS" << std::endl;
-        TEST_ASSERT(AESTRA_PLATFORM_MACOS == 1, "macOS platform should be detected");
-    #endif
+// Test platform detection
+#if AESTRA_PLATFORM_WINDOWS
+    std::cout << "  Platform: Windows" << std::endl;
+    TEST_ASSERT(AESTRA_PLATFORM_WINDOWS == 1, "Windows platform should be detected");
+#elif AESTRA_PLATFORM_LINUX
+    std::cout << "  Platform: Linux" << std::endl;
+    TEST_ASSERT(AESTRA_PLATFORM_LINUX == 1, "Linux platform should be detected");
+#elif AESTRA_PLATFORM_MACOS
+    std::cout << "  Platform: macOS" << std::endl;
+    TEST_ASSERT(AESTRA_PLATFORM_MACOS == 1, "macOS platform should be detected");
+#endif
 
-    // Test compiler detection
-    #if AESTRA_COMPILER_MSVC
-        std::cout << "  Compiler: MSVC" << std::endl;
-    #elif AESTRA_COMPILER_GCC
-        std::cout << "  Compiler: GCC" << std::endl;
-    #elif AESTRA_COMPILER_CLANG
-        std::cout << "  Compiler: Clang" << std::endl;
-    #endif
+// Test compiler detection
+#if AESTRA_COMPILER_MSVC
+    std::cout << "  Compiler: MSVC" << std::endl;
+#elif AESTRA_COMPILER_GCC
+    std::cout << "  Compiler: GCC" << std::endl;
+#elif AESTRA_COMPILER_CLANG
+    std::cout << "  Compiler: Clang" << std::endl;
+#endif
 
-    // Test architecture detection
-    #if AESTRA_ARCH_X64
-        std::cout << "  Architecture: x64" << std::endl;
-    #elif AESTRA_ARCH_X86
-        std::cout << "  Architecture: x86" << std::endl;
-    #elif AESTRA_ARCH_ARM
-        std::cout << "  Architecture: ARM" << std::endl;
-    #endif
+// Test architecture detection
+#if AESTRA_ARCH_X64
+    std::cout << "  Architecture: x64" << std::endl;
+#elif AESTRA_ARCH_X86
+    std::cout << "  Architecture: x86" << std::endl;
+#elif AESTRA_ARCH_ARM
+    std::cout << "  Architecture: ARM" << std::endl;
+#endif
 
     // Test SIMD detection
     std::cout << "  SIMD Support:" << std::endl;
-    #if AESTRA_SIMD_AVX2
-        std::cout << "    - AVX2: YES" << std::endl;
-    #endif
-    #if AESTRA_SIMD_AVX
-        std::cout << "    - AVX: YES" << std::endl;
-    #endif
-    #if AESTRA_SIMD_SSE4
-        std::cout << "    - SSE4: YES" << std::endl;
-    #endif
-    #if AESTRA_SIMD_SSE2
-        std::cout << "    - SSE2: YES" << std::endl;
-    #endif
+#if AESTRA_SIMD_AVX2
+    std::cout << "    - AVX2: YES" << std::endl;
+#endif
+#if AESTRA_SIMD_AVX
+    std::cout << "    - AVX: YES" << std::endl;
+#endif
+#if AESTRA_SIMD_SSE4
+    std::cout << "    - SSE4: YES" << std::endl;
+#endif
+#if AESTRA_SIMD_SSE2
+    std::cout << "    - SSE2: YES" << std::endl;
+#endif
 
     // Test audio configuration
     TEST_ASSERT(Config::DEFAULT_SAMPLE_RATE == 48000, "Default sample rate should be 48000");
@@ -103,38 +104,38 @@ bool testAsserts() {
     auto fileLogger = std::make_shared<FileLogger>("test_assert.log", LogLevel::Debug);
     Log::init(fileLogger);
 
-    #if AESTRA_ENABLE_ASSERTS
-        std::cout << "  Assertions: ENABLED" << std::endl;
-        
-        // Test passing assertions (should not trigger)
-        AESTRA_ASSERT(true);
-        AESTRA_ASSERT_MSG(1 + 1 == 2, "Math works");
-        AESTRA_ASSERT_FMT(5 > 3, "Five is greater than three");
-        
-        // Test preconditions/postconditions/invariants
-        AESTRA_PRECONDITION(true);
-        AESTRA_POSTCONDITION(true);
-        AESTRA_INVARIANT(true);
-        
-        // Test bounds checking
-        AESTRA_ASSERT_RANGE(5, 0, 10);
-        AESTRA_ASSERT_INDEX(3, 10);
-        
-        // Test null pointer check
-        int value = 42;
-        int* ptr = &value;
-        AESTRA_ASSERT_NOT_NULL(ptr);
-        
-        std::cout << "  âœ“ All passing assertions work correctly" << std::endl;
-    #else
-        std::cout << "  Assertions: DISABLED (release build)" << std::endl;
-        
-        // Assertions should compile to nothing
-        AESTRA_ASSERT(false); // This won't trigger in release
-        AESTRA_ASSERT_MSG(false, "This won't trigger");
-        
-        std::cout << "  âœ“ Assertions disabled correctly" << std::endl;
-    #endif
+#if AESTRA_ENABLE_ASSERTS
+    std::cout << "  Assertions: ENABLED" << std::endl;
+
+    // Test passing assertions (should not trigger)
+    AESTRA_ASSERT(true);
+    AESTRA_ASSERT_MSG(1 + 1 == 2, "Math works");
+    AESTRA_ASSERT_FMT(5 > 3, "Five is greater than three");
+
+    // Test preconditions/postconditions/invariants
+    AESTRA_PRECONDITION(true);
+    AESTRA_POSTCONDITION(true);
+    AESTRA_INVARIANT(true);
+
+    // Test bounds checking
+    AESTRA_ASSERT_RANGE(5, 0, 10);
+    AESTRA_ASSERT_INDEX(3, 10);
+
+    // Test null pointer check
+    int value = 42;
+    int* ptr = &value;
+    AESTRA_ASSERT_NOT_NULL(ptr);
+
+    std::cout << "  âœ“ All passing assertions work correctly" << std::endl;
+#else
+    std::cout << "  Assertions: DISABLED (release build)" << std::endl;
+
+    // Assertions should compile to nothing
+    AESTRA_ASSERT(false); // This won't trigger in release
+    AESTRA_ASSERT_MSG(false, "This won't trigger");
+
+    std::cout << "  âœ“ Assertions disabled correctly" << std::endl;
+#endif
 
     // Test static assertions (compile-time)
     AESTRA_STATIC_ASSERT(sizeof(int) >= 4, "int must be at least 4 bytes");

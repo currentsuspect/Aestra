@@ -1,17 +1,17 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "AutomationCurve.h"
+
 #include <cstdint>
 #include <memory>
 #include <vector>
-#include "AutomationCurve.h"
 
 namespace Aestra {
 namespace Audio {
 
 struct AudioBuffer; // Forward declaration (defined in SamplePool.h)
 class EffectChain;  // Forward declaration
-
 
 /**
  * @brief Render-time clip state used by the audio thread.
@@ -21,13 +21,13 @@ class EffectChain;  // Forward declaration
  */
 struct ClipRenderState {
     std::shared_ptr<const AudioBuffer> buffer; // Owns audioData lifetime for the snapshot
-    const float* audioData{nullptr};    // Interleaved stereo (engine format)
-    uint64_t startSample{0};            // Absolute project sample (engine rate)
-    uint64_t endSample{0};              // Exclusive end
-    double sampleOffset{0.0};           // Offset into audioData in frames (double for sub-sample precision)
-    uint64_t totalFrames{0};            // Bounds for audioData to guard OOB
-    double sourceSampleRate{48000.0};   // Original clip sample rate
-    uint32_t channels{2};               // Source channels (1=mono, 2=stereo)
+    const float* audioData{nullptr};           // Interleaved stereo (engine format)
+    uint64_t startSample{0};                   // Absolute project sample (engine rate)
+    uint64_t endSample{0};                     // Exclusive end
+    double sampleOffset{0.0};                  // Offset into audioData in frames (double for sub-sample precision)
+    uint64_t totalFrames{0};                   // Bounds for audioData to guard OOB
+    double sourceSampleRate{48000.0};          // Original clip sample rate
+    uint32_t channels{2};                      // Source channels (1=mono, 2=stereo)
     float gain{1.0f};
     float pan{0.0f};
 };
@@ -47,8 +47,8 @@ struct AudioRoute {
  * @brief Render-time track state.
  */
 struct TrackRenderState {
-    uint32_t trackId{0};                 // Stable track identity
-    uint32_t trackIndex{0};              // Compact zero-based index in TrackManager ordering
+    uint32_t trackId{0};    // Stable track identity
+    uint32_t trackIndex{0}; // Compact zero-based index in TrackManager ordering
     std::vector<ClipRenderState> clips;
     float volume{1.0f};
     float pan{0.0f};
@@ -56,7 +56,7 @@ struct TrackRenderState {
     bool solo{false};
     bool isSoloSafe{false};
     std::vector<AutomationCurve> automationCurves;
-    
+
     // Routing (v3.1)
     uint32_t mainOutputId{0xFFFFFFFF}; // Master
     std::vector<AudioRoute> sends;

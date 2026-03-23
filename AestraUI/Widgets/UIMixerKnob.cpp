@@ -155,6 +155,31 @@ void UIMixerKnob::renderTooltip(NUIRenderer& renderer, const NUIRect& knobBounds
     renderer.drawTextCentered(m_cachedText, tipRect, fontSize, m_tooltipText);
 }
 
+// Helper to draw an arc using polyline
+void drawRoughArc(NUIRenderer& renderer, NUIPoint center, float radius, float startAngle, float endAngle, float thickness, NUIColor color) {
+    const int segments = 32;
+    // ensure endAngle > startAngle
+    if (endAngle < startAngle) std::swap(startAngle, endAngle);
+    
+    // Clamp range
+    if (endAngle - startAngle <= 0.001f) return;
+
+    std::vector<NUIPoint> points;
+    points.reserve(segments + 1);
+    
+    float angleStep = (endAngle - startAngle) / static_cast<float>(segments);
+    
+    for (int i = 0; i <= segments; ++i) {
+        float theta = startAngle + i * angleStep;
+        points.push_back({
+            center.x + std::cos(theta) * radius,
+            center.y + std::sin(theta) * radius
+        });
+    }
+    
+    renderer.drawPolyline(points.data(), static_cast<int>(points.size()), thickness, color);
+}
+
 void UIMixerKnob::onRender(NUIRenderer& renderer)
 {
     const auto b = getBounds();
@@ -163,25 +188,73 @@ void UIMixerKnob::onRender(NUIRenderer& renderer)
     const float knobAreaH = std::max(1.0f, b.height - LABEL_H);
     const float cx = b.x + b.width * 0.5f;
     const float cy = b.y + knobAreaH * 0.5f;
-    float r = std::min(b.width, knobAreaH) * 0.38f;
-    r = std::clamp(r, 8.0f, 14.0f);
+    
+    // Size tuning: make it slightly punchier
+    float r = std::min(b.width, knobAreaH) * 0.42f; 
+    r = std::clamp(r, 10.0f, 16.0f);
 
     const bool hovered = isHovered() || m_dragging;
-    // Drop Shadow (Subtle)
-    renderer.fillCircle({cx, cy + 2.0f}, r, NUIColor(0.0f, 0.0f, 0.0f, 0.4f));
+    
+    // 1. Background Track Arc (Dark Grey)
+    // Full scale from 7 o'clock to 5 o'clock
+    NUIColor trackColor = NUIThemeManager::getInstance().getColor("background").withAlpha(0.5f);
+    drawRoughArc(renderer, {cx, cy}, r, ARC_START, ARC_END, 3.0f, trackColor);
 
-    renderer.fillCircle({cx, cy}, r, hovered ? m_bgHover : m_bg);
-    renderer.strokeCircle({cx, cy}, r, 1.0f, hovered ? m_ringHover : m_ring);
-
-    // Indicator
+    // 2. Active Value Arc (Accent Color)
+    // Determine span
+    float startAng = ARC_START;
+    float currentAng = ARC_START;
     const float t = (m_value - minValue()) / std::max(1e-5f, (maxValue() - minValue()));
-    const float angle = ARC_START + std::clamp(t, 0.0f, 1.0f) * (ARC_END - ARC_START);
-    const float ix = cx + std::cos(angle) * (r * 0.72f);
-    const float iy = cy + std::sin(angle) * (r * 0.72f);
-    renderer.drawLine({cx, cy}, {ix, iy}, 2.0f, m_indicator);
-    renderer.fillCircle({ix, iy}, 2.0f, m_indicator);
+    
+    if (m_type == UIMixerKnobType::Pan) {
+         // Pan centers at 12 o'clock (approx -PI/2 or 270 deg)
+         // Map 0.0 (Left) -> 1.0 (Right)
+         // Center is 0.5
+         float midAng = (ARC_START + ARC_END) * 0.5f;
+         startAng = midAng;
+         currentAng = ARC_START + t * (ARC_END - ARC_START);
+    } else {
+         // Standard: Start to Current
+         currentAng = ARC_START + t * (ARC_END - ARC_START);
+    }
+    
+    NUIColor activeColor = m_indicator;
+    if (hovered) activeColor = activeColor.withAlpha(1.0f);
+    else activeColor = activeColor.withAlpha(0.85f);
+    
+    drawRoughArc(renderer, {cx, cy}, r, std::min(startAng, currentAng), std::max(startAng, currentAng), 3.0f, activeColor);
 
-    // Tooltip (while dragging)
+    // 3. Knob Cap (Inner Circle)
+    // Slightly smaller than the ring
+    float capR = r * 0.75f;
+    
+    // Subtle gradient simulation via two fills (or assuming flat looks modern enough)
+    // Flat modern look: Dark grey cap
+    NUIColor capColor = m_bg;
+    if (hovered) capColor = m_bgHover;
+    
+    // Add distinct drop shadow for depth
+    renderer.drawShadow(NUIRect{cx - capR, cy - capR, capR * 2, capR * 2}, 0, 2, 4, NUIColor(0,0,0,0.5f));
+    
+    renderer.fillCircle({cx, cy}, capR, capColor);
+    
+    // Edge highlight for 3D feel
+    renderer.strokeCircle({cx, cy}, capR, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.1f));
+
+    // 4. Pointer Line on Cap
+    // Points exactly to current value
+    const float ptrLen = capR * 0.8f;
+    const float ptrAng = ARC_START + t * (ARC_END - ARC_START);
+    NUIPoint ptrStart = {cx, cy};
+    NUIPoint ptrEnd = {
+        cx + std::cos(ptrAng) * ptrLen,
+        cy + std::sin(ptrAng) * ptrLen
+    };
+    
+    // White pointer for contrast
+    renderer.drawLine(ptrStart, ptrEnd, 2.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
+
+    // Tooltip (only while dragging)
     if (m_dragging) {
         renderTooltip(renderer, b);
     }

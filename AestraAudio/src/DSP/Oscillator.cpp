@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "Oscillator.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -7,13 +8,8 @@ namespace Aestra {
 namespace Audio {
 
 Oscillator::Oscillator(float sampleRate)
-    : m_sampleRate(sampleRate)
-    , m_frequency(440.0f)
-    , m_phase(0.0f)
-    , m_phaseIncrement(0.0f)
-    , m_pulseWidth(0.5f)
-    , m_waveform(WaveformType::Sine)
-{
+    : m_sampleRate(sampleRate), m_frequency(440.0f), m_phase(0.0f), m_phaseIncrement(0.0f), m_pulseWidth(0.5f),
+      m_waveform(WaveformType::Sine) {
     setFrequency(m_frequency);
 }
 
@@ -39,15 +35,15 @@ float Oscillator::process() {
     float output = 0.0f;
 
     switch (m_waveform) {
-        case WaveformType::Sine:
-            output = generateSine();
-            break;
-        case WaveformType::Saw:
-            output = generateSaw();
-            break;
-        case WaveformType::Square:
-            output = generateSquare();
-            break;
+    case WaveformType::Sine:
+        output = generateSine();
+        break;
+    case WaveformType::Saw:
+        output = generateSaw();
+        break;
+    case WaveformType::Square:
+        output = generateSquare();
+        break;
     }
 
     // Advance phase
@@ -67,30 +63,30 @@ float Oscillator::generateSine() {
 float Oscillator::generateSaw() {
     // Naive sawtooth
     float naive = 2.0f * m_phase - 1.0f;
-    
+
     // Apply PolyBLEP anti-aliasing at discontinuities
     naive -= polyBLEP(m_phase);
-    
+
     return naive;
 }
 
 float Oscillator::generateSquare() {
     // Naive square wave
     float naive = (m_phase < m_pulseWidth) ? 1.0f : -1.0f;
-    
+
     // Apply PolyBLEP at both edges
     naive += polyBLEP(m_phase);
     naive -= polyBLEP(std::fmod(m_phase + (1.0f - m_pulseWidth), 1.0f));
-    
+
     return naive;
 }
 
 float Oscillator::polyBLEP(float t) {
     // PolyBLEP (Polynomial Bandlimited Step)
     // Reduces aliasing by smoothing discontinuities
-    
+
     float dt = m_phaseIncrement;
-    
+
     // 0 <= t < 1
     if (t < dt) {
         t /= dt;
@@ -101,7 +97,7 @@ float Oscillator::polyBLEP(float t) {
         t = (t - 1.0f) / dt;
         return t * t + t + t + 1.0f;
     }
-    
+
     return 0.0f;
 }
 

@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "../include/AestraMath.h"
+
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -7,10 +8,10 @@
 using namespace Aestra;
 
 // Test helper
-#define TEST_ASSERT(condition, message) \
-    if (!(condition)) { \
+#define TEST_ASSERT(condition, message)                  \
+    if (!(condition)) {                                  \
         std::cerr << "FAILED: " << message << std::endl; \
-        return false; \
+        return false;                                    \
     }
 
 #define FLOAT_EPSILON 0.0001f
@@ -78,7 +79,7 @@ bool testVector3() {
     Vector3 v4(1.0f, 0.0f, 0.0f);
     Vector3 v5(0.0f, 1.0f, 0.0f);
     Vector3 cross = v4.cross(v5);
-    TEST_ASSERT(FLOAT_EQUAL(cross.x, 0.0f) && FLOAT_EQUAL(cross.y, 0.0f) && FLOAT_EQUAL(cross.z, 1.0f), 
+    TEST_ASSERT(FLOAT_EQUAL(cross.x, 0.0f) && FLOAT_EQUAL(cross.y, 0.0f) && FLOAT_EQUAL(cross.z, 1.0f),
                 "Vector3 cross product");
 
     // Length
@@ -130,27 +131,24 @@ bool testMatrix4x4() {
 
     // Identity matrix
     Matrix4x4 identity = Matrix4x4::identity();
-    TEST_ASSERT(identity.m[0] == 1.0f && identity.m[5] == 1.0f && 
-                identity.m[10] == 1.0f && identity.m[15] == 1.0f, "Matrix4x4 identity");
+    TEST_ASSERT(identity.m[0] == 1.0f && identity.m[5] == 1.0f && identity.m[10] == 1.0f && identity.m[15] == 1.0f,
+                "Matrix4x4 identity");
 
     // Translation
     Matrix4x4 trans = Matrix4x4::translation(1.0f, 2.0f, 3.0f);
     Vector4 v1(0.0f, 0.0f, 0.0f, 1.0f);
     Vector4 v2 = trans * v1;
-    TEST_ASSERT(FLOAT_EQUAL(v2.x, 1.0f) && FLOAT_EQUAL(v2.y, 2.0f) && FLOAT_EQUAL(v2.z, 3.0f), 
-                "Matrix4x4 translation");
+    TEST_ASSERT(FLOAT_EQUAL(v2.x, 1.0f) && FLOAT_EQUAL(v2.y, 2.0f) && FLOAT_EQUAL(v2.z, 3.0f), "Matrix4x4 translation");
 
     // Scale
     Matrix4x4 scale = Matrix4x4::scale(2.0f, 3.0f, 4.0f);
     Vector4 v3(1.0f, 1.0f, 1.0f, 1.0f);
     Vector4 v4 = scale * v3;
-    TEST_ASSERT(FLOAT_EQUAL(v4.x, 2.0f) && FLOAT_EQUAL(v4.y, 3.0f) && FLOAT_EQUAL(v4.z, 4.0f), 
-                "Matrix4x4 scale");
+    TEST_ASSERT(FLOAT_EQUAL(v4.x, 2.0f) && FLOAT_EQUAL(v4.y, 3.0f) && FLOAT_EQUAL(v4.z, 4.0f), "Matrix4x4 scale");
 
     // Matrix multiplication
     Matrix4x4 result = trans * scale;
-    TEST_ASSERT(result.m[0] == 2.0f && result.m[5] == 3.0f && result.m[10] == 4.0f, 
-                "Matrix4x4 multiplication");
+    TEST_ASSERT(result.m[0] == 2.0f && result.m[5] == 3.0f && result.m[10] == 4.0f, "Matrix4x4 multiplication");
 
     std::cout << "  âœ“ Matrix4x4 tests passed" << std::endl;
     return true;
