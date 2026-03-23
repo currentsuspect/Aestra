@@ -483,8 +483,8 @@ elseif(UNIX)
     # Non-Windows (Linux)
     if(ALSA_FOUND)
         set(AESTRA_AUDIO_LINUX_SOURCES
-            # STUB: All Linux drivers excluded — RtAudioDriver uses legacy interface
-            # LinuxDriverRegistry.cpp removed to avoid duplicate RegisterPlatformDrivers
+            src/Linux/LinuxDriverRegistry.cpp
+            src/Linux/RtAudioDriver.cpp
         )
 
         set(AESTRA_AUDIO_LINUX_HEADERS

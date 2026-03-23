@@ -43,10 +43,13 @@ public:
 
         // Create duplicate
         ClipInstance duplicate = *sourceClip;
-        duplicate.id = ClipInstanceID::generate();  // New ID for the duplicate
+        
+        // Use stored ID if available (for redo), otherwise generate new one
+        if (!m_duplicateId.isValid()) {
+            m_duplicateId = ClipInstanceID::generate();
+        }
+        duplicate.id = m_duplicateId;
         duplicate.startBeat = m_targetStartBeat;
-
-        m_duplicateId = duplicate.id;
 
         // Add the duplicate
         m_model.addClip(laneId, duplicate);
