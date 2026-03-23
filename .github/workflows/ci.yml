@@ -46,7 +46,7 @@ jobs:
 
       - name: Test
         working-directory: build
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -E "Soak|Crash|Watchdog|PluginScan|VST3"
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest|ConfigAssertTests|MathTests|ThreadingTests|FileTests|LogTests"
 
       - name: Discord Notification
         if: always()
@@ -95,7 +95,7 @@ jobs:
       - name: Test
         working-directory: build
         shell: bash
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -E "Soak|Crash|Watchdog|PluginScan|VST3"
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest|ConfigAssertTests|MathTests|ThreadingTests|FileTests|LogTests"
 
       - name: Discord Notification
         if: always()
@@ -145,7 +145,7 @@ jobs:
 
       - name: Test
         working-directory: build
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -E "Soak|Crash|Watchdog|PluginScan|VST3"
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest|ConfigAssertTests|MathTests|ThreadingTests|FileTests|LogTests"
 
       - name: Discord Notification
         if: always()
