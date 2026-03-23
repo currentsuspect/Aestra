@@ -271,7 +271,7 @@ private:
     void workerLoop(uint32_t threadIdx) {
         (void)threadIdx;
         while (!m_stop) {
-            m_signal.wait([this] { return m_stop || m_taskCounter.load(std::memory_order_acquire) < m_taskCount; });
+            m_signal.wait([this] { return m_stop || static_cast<uint32_t>(m_taskCounter.load(std::memory_order_acquire)) < m_taskCount; });
 
             if (m_stop)
                 return;
