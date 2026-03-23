@@ -46,7 +46,7 @@ jobs:
 
       - name: Test
         working-directory: build
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest|AestraCore"
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -E "Soak|Crash|Watchdog|PluginScan|VST3"
 
       - name: Discord Notification
         if: always()
@@ -95,7 +95,7 @@ jobs:
       - name: Test
         working-directory: build
         shell: bash
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest|AestraCore"
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -E "Soak|Crash|Watchdog|PluginScan|VST3"
 
       - name: Discord Notification
         if: always()
@@ -145,7 +145,7 @@ jobs:
 
       - name: Test
         working-directory: build
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest|AestraCore"
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -E "Soak|Crash|Watchdog|PluginScan|VST3"
 
       - name: Discord Notification
         if: always()
@@ -176,8 +176,28 @@ jobs:
 
       - name: Check Formatting
         run: |
-          find AestraAudio AestraCore AestraPlat Tests \
-            -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \
-            | grep -v External/ \
-            | xargs clang-format --dry-run --Werror 2>&1 | head -50 || true
+          FILES=$(find AestraAudio AestraCore AestraPlat Tests -name "*.cpp" -o -name "*.hpp" -o -name "*.h" | grep -v External/)
+          if [ -n "$FILES" ]; then
+            echo "$FILES" | xargs clang-format --dry-run --Werror 2>&1 | head -100
+          fi
+        continue-on-error: true
+
+  static-analysis:
+    name: Static Analysis (clang-tidy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy-14 clang-format-14
+
+      - name: Configure
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DAESTRA_ENABLE_UI=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Run clang-tidy
+        run: |
+          # Run on a subset of core files to avoid noise
+          clang-tidy-14 --config-file=.clang-tidy             AestraCore/src/*.cpp             -- -IAestraCore/include -std=c++17 2>&1 | head -100 || true
         continue-on-error: true
