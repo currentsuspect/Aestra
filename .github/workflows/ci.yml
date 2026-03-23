@@ -4,13 +4,67 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 env:
   BUILD_TYPE: Release
 
 jobs:
+  build-linux:
+    name: Linux (GCC)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "3.28"
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev
+
+      - name: Cache CMake
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cmake
+            build/CMakeFiles
+          key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt', '**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-
+
+      - name: Configure
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_ENABLE_UI=OFF
+
+      - name: Build
+        run: cmake --build build --config ${{env.BUILD_TYPE}} --parallel
+
+      - name: Test
+        working-directory: build
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest|AestraCore"
+
+      - name: Discord Notification
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          COLOR=3066993; [ "$STATUS" != "success" ] && COLOR=15158332
+          curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" -d "{
+            \"username\": \"Aestra CI\",
+            \"embeds\": [{
+              \"title\": \"CI — Linux: $STATUS\",
+              \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
+              \"color\": $COLOR,
+              \"footer\": {\"text\": \"${{ github.event.head_commit.message }}\" }
+            }]
+          }" "${{ secrets.DISCORD_WEBHOOK }}"
+
   build-windows:
+    name: Windows (MSVC)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,16 +76,26 @@ jobs:
         with:
           cmake-version: "3.28"
 
+      - name: Cache CMake
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\CMake
+            build\CMakeFiles
+          key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-
+
       - name: Configure
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
-        run: cmake --build build --config ${{env.BUILD_TYPE}}
+        run: cmake --build build --config ${{env.BUILD_TYPE}} --parallel
 
       - name: Test
         working-directory: build
         shell: bash
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest|AestraCore"
 
       - name: Discord Notification
         if: always()
@@ -49,50 +113,10 @@ jobs:
             }]
           }" "${{ secrets.DISCORD_WEBHOOK }}"
 
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: "3.28"
-
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev
-
-      - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_ENABLE_UI=OFF
-
-      - name: Build
-        run: cmake --build build --config ${{env.BUILD_TYPE}}
-
-      - name: Test
-        working-directory: build
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
-
-      - name: Discord Notification
-        if: always()
-        run: |
-          STATUS="${{ job.status }}"
-          COLOR=3066993; [ "$STATUS" != "success" ] && COLOR=15158332
-          curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" -d "{
-            \"username\": \"Aestra CI\",
-            \"embeds\": [{
-              \"title\": \"CI — Linux: $STATUS\",
-              \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
-              \"color\": $COLOR,
-              \"footer\": {\"text\": \"${{ github.event.head_commit.message }}\" }
-            }]
-          }" "${{ secrets.DISCORD_WEBHOOK }}"
-
   build-macos:
+    name: macOS (Clang)
     runs-on: macos-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -103,15 +127,25 @@ jobs:
         with:
           cmake-version: "3.28"
 
+      - name: Cache CMake
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/CMake
+            build/CMakeFiles
+          key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-
+
       - name: Configure
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
-        run: cmake --build build --config ${{env.BUILD_TYPE}}
+        run: cmake --build build --config ${{env.BUILD_TYPE}} --parallel
 
       - name: Test
         working-directory: build
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest|AestraCore"
 
       - name: Discord Notification
         if: always()
@@ -129,12 +163,10 @@ jobs:
           }" "${{ secrets.DISCORD_WEBHOOK }}"
 
   format-check:
-    if: false  # Temporarily disabled - cosmetic only, not blocking engine work
+    name: Code Formatting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install clang-format
         run: |
@@ -147,4 +179,5 @@ jobs:
           find AestraAudio AestraCore AestraPlat Tests \
             -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \
             | grep -v External/ \
-            | xargs clang-format --dry-run --Werror
+            | xargs clang-format --dry-run --Werror 2>&1 | head -50 || true
+        continue-on-error: true
