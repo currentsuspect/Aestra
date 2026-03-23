@@ -1,10 +1,12 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <algorithm>
+#include <cstdint>
+#include <functional>
+#include <optional>
 #include <string>
 #include <vector>
-#include <optional>
-#include <functional>
 
 namespace Aestra {
 namespace Audio {
