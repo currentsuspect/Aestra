@@ -1,10 +1,12 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-#include "AestraAudio.h"
 #include "MixerBus.h"
-#include <iostream>
-#include <thread>
+
+#include "AestraAudio.h"
+
 #include <chrono>
 #include <cmath>
+#include <iostream>
+#include <thread>
 
 using namespace Aestra::Audio;
 
@@ -12,24 +14,19 @@ using namespace Aestra::Audio;
 class MixerTestTone {
 public:
     MixerTestTone(double frequency, double sampleRate)
-        : m_frequency(frequency)
-        , m_sampleRate(sampleRate)
-        , m_phase(0.0)
-    {
-    }
+        : m_frequency(frequency), m_sampleRate(sampleRate), m_phase(0.0) {}
 
-    void generate(float* buffer, uint32_t numFrames, uint32_t numChannels)
-    {
+    void generate(float* buffer, uint32_t numFrames, uint32_t numChannels) {
         const double phaseIncrement = 2.0 * 3.14159265358979323846 * m_frequency / m_sampleRate;
-        
+
         for (uint32_t i = 0; i < numFrames; ++i) {
             const float sample = static_cast<float>(std::sin(m_phase));
-            
+
             // Write to all channels
             for (uint32_t ch = 0; ch < numChannels; ++ch) {
                 buffer[i * numChannels + ch] = sample;
             }
-            
+
             m_phase += phaseIncrement;
             if (m_phase >= 2.0 * 3.14159265358979323846) {
                 m_phase -= 2.0 * 3.14159265358979323846;
@@ -50,13 +47,12 @@ MixerTestTone g_tone2(554.37, 48000.0); // C#5
 MixerTestTone g_tone3(659.25, 48000.0); // E5
 
 // Audio callback
-int audioCallback(float* outputBuffer, const float* inputBuffer,
-                  uint32_t numFrames, double streamTime, void* userData)
-{
+int audioCallback(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime,
+                  void* userData) {
     static std::vector<float> bus1Buffer;
     static std::vector<float> bus2Buffer;
     static std::vector<float> bus3Buffer;
-    
+
     // Resize buffers if needed
     const size_t bufferSize = numFrames * 2; // Stereo
     if (bus1Buffer.size() != bufferSize) {
@@ -71,11 +67,7 @@ int audioCallback(float* outputBuffer, const float* inputBuffer,
     g_tone3.generate(bus3Buffer.data(), numFrames, 2);
 
     // Prepare input array for mixer
-    const float* inputs[3] = {
-        bus1Buffer.data(),
-        bus2Buffer.data(),
-        bus3Buffer.data()
-    };
+    const float* inputs[3] = {bus1Buffer.data(), bus2Buffer.data(), bus3Buffer.data()};
 
     // Mix all buses to master output
     g_mixer.process(outputBuffer, inputs, numFrames);
@@ -83,18 +75,13 @@ int audioCallback(float* outputBuffer, const float* inputBuffer,
     return 0;
 }
 
-void printBusInfo(const char* name, MixerBus* bus)
-{
+void printBusInfo(const char* name, MixerBus* bus) {
     std::cout << name << ": "
-              << "Gain=" << bus->getGain()
-              << ", Pan=" << bus->getPan()
-              << ", Muted=" << (bus->isMuted() ? "Yes" : "No")
-              << ", Solo=" << (bus->isSoloed() ? "Yes" : "No")
-              << std::endl;
+              << "Gain=" << bus->getGain() << ", Pan=" << bus->getPan() << ", Muted=" << (bus->isMuted() ? "Yes" : "No")
+              << ", Solo=" << (bus->isSoloed() ? "Yes" : "No") << std::endl;
 }
 
-void testMixerBus()
-{
+void testMixerBus() {
     std::cout << "\n=== AestraAudio Mixer Bus Test ===" << std::endl;
     std::cout << "Testing basic mixer with gain, pan, and routing\n" << std::endl;
 
@@ -109,7 +96,7 @@ void testMixerBus()
 
     // Get default output device
     auto defaultDevice = manager.getDefaultOutputDevice();
-    
+
     std::cout << "Using device: " << defaultDevice.name << std::endl;
     std::cout << "Sample rate: 48000 Hz" << std::endl;
     std::cout << "Buffer size: 512 frames\n" << std::endl;
@@ -209,14 +196,14 @@ void testMixerBus()
     std::cout << "Bus 1: Left pan, gain 0.4" << std::endl;
     std::cout << "Bus 2: Center, gain 0.5" << std::endl;
     std::cout << "Bus 3: Right pan, gain 0.4" << std::endl;
-    
+
     bus1->setPan(-0.7f);
     bus1->setGain(0.4f);
     bus2->setPan(0.0f);
     bus2->setGain(0.5f);
     bus3->setPan(0.7f);
     bus3->setGain(0.4f);
-    
+
     printBusInfo("Bus 1", bus1);
     printBusInfo("Bus 2", bus2);
     printBusInfo("Bus 3", bus3);
@@ -227,21 +214,21 @@ void testMixerBus()
     for (int i = 0; i < 100; ++i) {
         float pan = std::sin(i * 0.1f);
         float gain = 0.2f + 0.2f * std::cos(i * 0.15f);
-        
+
         bus1->setPan(pan);
         bus1->setGain(gain);
         bus2->setPan(-pan);
         bus2->setGain(gain);
-        
+
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
-    
+
     // Reset to defaults
     bus1->setPan(0.0f);
     bus1->setGain(0.3f);
     bus2->setPan(0.0f);
     bus2->setGain(0.3f);
-    
+
     std::cout << "Stress test complete!" << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
@@ -262,13 +249,11 @@ void testMixerBus()
     std::cout << "âœ“ Constant power panning" << std::endl;
 }
 
-int main()
-{
+int main() {
     try {
         testMixerBus();
         return 0;
-    }
-    catch (const std::exception& e) {
+    } catch (const std::exception& e) {
         std::cerr << "Exception: " << e.what() << std::endl;
         return 1;
     }

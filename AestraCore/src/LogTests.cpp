@@ -1,17 +1,18 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-#include "../include/AestraLog.h"
 #include "../include/AestraFile.h"
-#include <iostream>
+#include "../include/AestraLog.h"
+
 #include <cassert>
-#include <thread>
 #include <chrono>
+#include <iostream>
+#include <thread>
 
 using namespace Aestra;
 
-#define TEST_ASSERT(condition, message) \
-    if (!(condition)) { \
+#define TEST_ASSERT(condition, message)                  \
+    if (!(condition)) {                                  \
         std::cerr << "FAILED: " << message << std::endl; \
-        return false; \
+        return false;                                    \
     }
 
 // =============================================================================
@@ -21,7 +22,7 @@ bool testConsoleLogger() {
     std::cout << "\nTesting ConsoleLogger..." << std::endl;
 
     ConsoleLogger logger(LogLevel::Debug);
-    
+
     // Test all log levels
     logger.log(LogLevel::Debug, "This is a debug message");
     logger.log(LogLevel::Info, "This is an info message");
@@ -31,7 +32,7 @@ bool testConsoleLogger() {
     // Test level filtering
     logger.setLevel(LogLevel::Warning);
     TEST_ASSERT(logger.getLevel() == LogLevel::Warning, "Level should be Warning");
-    
+
     logger.log(LogLevel::Debug, "This debug should NOT appear");
     logger.log(LogLevel::Info, "This info should NOT appear");
     logger.log(LogLevel::Warning, "This warning SHOULD appear");
@@ -48,7 +49,7 @@ bool testFileLogger() {
     std::cout << "\nTesting FileLogger..." << std::endl;
 
     const std::string logFile = "test_log.txt";
-    
+
     // Remove old log file if exists
     std::remove(logFile.c_str());
 
@@ -64,7 +65,7 @@ bool testFileLogger() {
 
     // Verify file was created and contains data
     TEST_ASSERT(File::exists(logFile), "Log file should exist");
-    
+
     std::string content = File::readAllText(logFile);
     TEST_ASSERT(!content.empty(), "Log file should not be empty");
     TEST_ASSERT(content.find("Debug message") != std::string::npos, "Should contain debug message");
@@ -119,10 +120,8 @@ bool testMultiLogger() {
 
     // Verify file contains messages
     std::string content = File::readAllText(logFile);
-    TEST_ASSERT(content.find("Multi-logger debug message") != std::string::npos, 
-                "File should contain debug message");
-    TEST_ASSERT(content.find("Multi-logger info message") != std::string::npos, 
-                "File should contain info message");
+    TEST_ASSERT(content.find("Multi-logger debug message") != std::string::npos, "File should contain debug message");
+    TEST_ASSERT(content.find("Multi-logger info message") != std::string::npos, "File should contain info message");
 
     // Cleanup
     std::remove(logFile.c_str());
@@ -158,19 +157,17 @@ bool testGlobalLogger() {
 
     // Test stream-style logging
     AESTRA_LOG_STREAM_INFO << "Stream info: " << 42 << " " << 3.14;
-    AESTRA_LOG_STREAM_WARNING << "Stream warning: " << "test";
+    AESTRA_LOG_STREAM_WARNING << "Stream warning: "
+                              << "test";
 
     // Give file logger time to flush
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     // Verify file contains messages
     std::string content = File::readAllText(logFile);
-    TEST_ASSERT(content.find("Global debug message") != std::string::npos, 
-                "Should contain global debug message");
-    TEST_ASSERT(content.find("Macro info message") != std::string::npos, 
-                "Should contain macro info message");
-    TEST_ASSERT(content.find("Stream info: 42 3.14") != std::string::npos, 
-                "Should contain stream info message");
+    TEST_ASSERT(content.find("Global debug message") != std::string::npos, "Should contain global debug message");
+    TEST_ASSERT(content.find("Macro info message") != std::string::npos, "Should contain macro info message");
+    TEST_ASSERT(content.find("Stream info: 42 3.14") != std::string::npos, "Should contain stream info message");
 
     // Cleanup
     std::remove(logFile.c_str());
@@ -219,8 +216,7 @@ bool testThreadSafety() {
         pos++;
     }
 
-    TEST_ASSERT(messageCount == numThreads * messagesPerThread, 
-                "Should have all messages from all threads");
+    TEST_ASSERT(messageCount == numThreads * messagesPerThread, "Should have all messages from all threads");
 
     // Cleanup
     std::remove(logFile.c_str());

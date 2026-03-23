@@ -1,7 +1,9 @@
 // © 2025 Aestra Studios â€" All Rights Reserved. Licensed for personal & educational use only.
 #include "PlatformUtilsWin32.h"
-#include "PlatformWindowWin32.h"
+
 #include "../../../AestraCore/include/AestraLog.h"
+#include "PlatformWindowWin32.h"
+
 #include <thread>
 
 namespace Aestra {
@@ -38,7 +40,7 @@ void PlatformUtilsWin32::sleep(int milliseconds) const {
 std::string PlatformUtilsWin32::openFileDialog(const std::string& title, const std::string& filter) const {
     OPENFILENAMEA ofn = {};
     char filename[MAX_PATH] = "";
-    
+
     // Windows filter format: "Description\0*.ext\0Description2\0*.ext2\0\0"
     // If filter is empty or doesn't contain embedded nulls, use a default
     // The filter string must contain the full null-separated format
@@ -73,7 +75,7 @@ std::string PlatformUtilsWin32::saveFileDialog(const std::string& title, const s
     ofn.lpstrFile = filename;
     ofn.nMaxFile = MAX_PATH;
     ofn.lpstrTitle = title.c_str();
-    ofn.lpstrDefExt = "aes";  // Default extension for save
+    ofn.lpstrDefExt = "aes"; // Default extension for save
     ofn.Flags = OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
 
     if (GetSaveFileNameA(&ofn)) {

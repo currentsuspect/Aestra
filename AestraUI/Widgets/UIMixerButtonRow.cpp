@@ -36,8 +36,6 @@ void UIMixerButtonRow::cacheThemeColors()
     m_muteOn = theme.getColor("accentAmber");
     m_soloOn = theme.getColor("accentCyan");
     m_armOn = theme.getColor("error");
-    m_monitorOn = theme.getColor("accentSuccess"); 
-    if (m_monitorOn.a == 0.0f) m_monitorOn = NUIColor(0.2f, 0.8f, 0.2f, 1.0f); // Fallback
 }
 
 void UIMixerButtonRow::layoutButtons()
@@ -87,14 +85,6 @@ void UIMixerButtonRow::setArmed(bool armed)
 {
     if (m_armed == armed) return;
     m_armed = armed;
-    m_armed = armed;
-    requestInvalidate();
-}
-
-void UIMixerButtonRow::setMonitored(bool monitored)
-{
-    if (m_monitored == monitored) return;
-    m_monitored = monitored;
     requestInvalidate();
 }
 
@@ -106,7 +96,7 @@ void UIMixerButtonRow::onResize(int width, int height)
 
 void UIMixerButtonRow::onRender(NUIRenderer& renderer)
 {
-    static constexpr const char* labels[kButtonCount] = {"M", "S", "R", "I"};
+    static constexpr const char* labels[kButtonCount] = {"M", "S", "R"};
 
     for (int i = 0; i < kButtonCount; ++i) {
         const bool hovered = (i == m_hovered);
@@ -128,27 +118,55 @@ void UIMixerButtonRow::onRender(NUIRenderer& renderer)
             active = m_armed;
             activeBg = m_armOn;
             if (active) textColor = m_textOnRed;
-        } else if (i == 3) {
-            active = m_monitored;
-            activeBg = m_monitorOn;
-            if (active) textColor = m_textOnBright;
         }
 
-        NUIColor bg = active ? activeBg : m_bg;
-        if (pressed) {
-            bg = bg.withAlpha(std::min(1.0f, bg.a + 0.12f));
+        NUIRect rect = m_buttonBounds[i];
+        
+        // --- Neon / Glass Rendering ---
+        
+        if (active) {
+            // Active: "Neon Glass"
+            // 1. Bloom/Glow (behind)
+            renderer.fillRoundedRect(
+                NUIRect(rect.x - 2, rect.y - 2, rect.width + 4, rect.height + 4), 
+                BTN_RADIUS + 2.0f, 
+                activeBg.withAlpha(0.25f)
+            );
+            
+            // 2. Glass Body
+            renderer.fillRoundedRect(rect, BTN_RADIUS, activeBg.withAlpha(0.2f));
+            
+            // 3. Neon Border
+            renderer.strokeRoundedRect(rect, BTN_RADIUS, 1.0f, activeBg.withAlpha(0.9f));
+            
+            // 4. Text (Bright/Glow)
+            renderer.drawTextCentered(labels[i], rect, 10.0f, textColor);
+        } 
+        else {
+            // Inactive: "Subtle Glass"
+            NUIColor bg = m_bg.withAlpha(0.05f); // Very faint background
+            NUIColor border = m_border;
+            
+            if (hovered) {
+                bg = m_text.withAlpha(0.1f);
+                border = m_hoverBorder;
+                textColor = m_text; // Brighten text
+            } else {
+                textColor = m_text.withAlpha(0.6f); // Dim text
+            }
+            
+            if (pressed) {
+                 bg = bg.withAlpha(0.2f);
+            }
+
+            renderer.fillRoundedRect(rect, BTN_RADIUS, bg);
+            
+            if (border.a > 0.0f) {
+                renderer.strokeRoundedRect(rect, BTN_RADIUS, 1.0f, border);
+            }
+            
+            renderer.drawTextCentered(labels[i], rect, 10.0f, textColor);
         }
-
-        const auto& rect = m_buttonBounds[i];
-        renderer.fillRoundedRect(rect, BTN_RADIUS, bg);
-
-        // Border (subtle)
-        const NUIColor border = hovered ? m_hoverBorder : m_border;
-        if (border.a > 0.0f) {
-            renderer.strokeRoundedRect(rect, BTN_RADIUS, 1.0f, border);
-        }
-
-        renderer.drawTextCentered(labels[i], rect, 10.0f, textColor);
     }
 }
 
@@ -169,7 +187,6 @@ bool UIMixerButtonRow::onMouseEvent(const NUIMouseEvent& event)
                 if (m_hovered == 0) text = "Mute";
                 else if (m_hovered == 1) text = "Solo";
                 else if (m_hovered == 2) text = "Record Arm";
-                else if (m_hovered == 3) text = "Input Monitor";
                 
                 const auto& rect = m_buttonBounds[m_hovered];
                 NUIPoint center(rect.x + rect.width * 0.5f, rect.y + rect.height + 8.0f);
@@ -210,10 +227,6 @@ bool UIMixerButtonRow::onMouseEvent(const NUIMouseEvent& event)
                 m_armed = !m_armed;
                 requestInvalidate();
                 if (onArmToggled) onArmToggled(m_armed);
-            } else if (wasPressed == 3) {
-                m_monitored = !m_monitored;
-                requestInvalidate();
-                if (onMonitorToggled) onMonitorToggled(m_monitored);
             }
             return true;
         }

@@ -11,7 +11,7 @@
 #include "UIMixerButtonRow.h"
 #include "UIMixerFXSummary.h"
 #include "UIMixerFooter.h"
-#include "NUIDropdown.h"
+#include "UIMixerFooter.h"
 
 #include <memory>
 #include <string>
@@ -59,7 +59,6 @@ private:
     std::shared_ptr<UIMixerFXSummary> m_fxSummary;
     std::shared_ptr<UIMixerKnob> m_panKnob;
     std::shared_ptr<UIMixerKnob> m_widthKnob; 
-    std::shared_ptr<NUIDropdown> m_inputDropdown; // Input Selector
     std::shared_ptr<UIMixerButtonRow> m_buttons;
     std::shared_ptr<UIMixerMeter> m_meter;
     std::shared_ptr<UIMixerFader> m_fader;

@@ -7,7 +7,7 @@
 #include "TrackUIComponent.h"
 #include "PianoRollPanel.h"
 #include "MixerPanel.h"
-#include "StepSequencerPanel.h"
+// Sequencer panel include removed (replaced by Arsenal)
 #include "TimelineMinimapBar.h"
 #include "TimelineMinimapModel.h"
 #include "TimelineSummaryCache.h"
@@ -207,6 +207,32 @@ public:
             if(track) track->setBeatsPerBar(bpb);
         }
         setDirty(true);
+    }
+
+    // Issue #120: Track View Zoom/Scroll State Persistence
+    float getHorizontalZoom() const { return m_pixelsPerBeat; }
+    void setHorizontalZoom(float zoom) {
+        m_pixelsPerBeat = std::clamp(zoom, 1.0f, 300.0f);
+        m_targetPixelsPerBeat = m_pixelsPerBeat;
+        for (auto& trackUI : m_trackUIComponents) {
+            trackUI->setPixelsPerBeat(m_pixelsPerBeat);
+        }
+        invalidateCache();
+    }
+    
+    float getHorizontalScroll() const { return m_timelineScrollOffset; }
+    void setHorizontalScroll(float scroll) {
+        m_timelineScrollOffset = std::max(0.0f, scroll);
+        for (auto& trackUI : m_trackUIComponents) {
+            trackUI->setTimelineScrollOffset(m_timelineScrollOffset);
+        }
+        invalidateCache();
+    }
+    
+    float getVerticalScroll() const { return m_scrollOffset; }
+    void setVerticalScroll(float scroll) {
+        m_scrollOffset = std::max(0.0f, scroll);
+        layoutTracks();
     }
 
 protected:

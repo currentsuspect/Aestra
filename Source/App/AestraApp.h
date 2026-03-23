@@ -84,4 +84,8 @@ private:
     // Window title state (to avoid updating every frame)
     std::string m_lastWindowTitle;
     bool m_lastModifiedState{false};
+    
+    // Recovery state (for deferred project loading during startup)
+    std::string m_pendingAutosavePath;
+    bool m_recoveryHandled{false};
 };

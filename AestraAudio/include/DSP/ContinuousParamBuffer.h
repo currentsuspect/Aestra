@@ -42,21 +42,24 @@ public:
     static constexpr uint8_t DIRTY_TRIM = 0x04;
 
     void setFaderDb(uint32_t slotIndex, float db) {
-        if (slotIndex >= MAX_SLOTS) return;
+        if (slotIndex >= MAX_SLOTS)
+            return;
         auto& slot = m_slots[slotIndex];
         slot.faderDbBits.store(ParamBitcast::floatToU32(db), std::memory_order_relaxed);
         slot.dirty.fetch_or(DIRTY_FADER, std::memory_order_release);
     }
 
     void setPan(uint32_t slotIndex, float pan) {
-        if (slotIndex >= MAX_SLOTS) return;
+        if (slotIndex >= MAX_SLOTS)
+            return;
         auto& slot = m_slots[slotIndex];
         slot.panBits.store(ParamBitcast::floatToU32(pan), std::memory_order_relaxed);
         slot.dirty.fetch_or(DIRTY_PAN, std::memory_order_release);
     }
 
     void setTrimDb(uint32_t slotIndex, float db) {
-        if (slotIndex >= MAX_SLOTS) return;
+        if (slotIndex >= MAX_SLOTS)
+            return;
         auto& slot = m_slots[slotIndex];
         slot.trimDbBits.store(ParamBitcast::floatToU32(db), std::memory_order_relaxed);
         slot.dirty.fetch_or(DIRTY_TRIM, std::memory_order_release);
@@ -129,4 +132,3 @@ private:
 
 } // namespace Audio
 } // namespace Aestra
-

@@ -2,17 +2,14 @@
 #pragma once
 
 #include "NativeAudioDriver.h"
-#include <thread>
+
 #include <atomic>
-#include <mutex>
-#include "NativeAudioDriver.h"
-#include <thread>
-#include <atomic>
-#include <mutex>
 #include <cstdint>
-#include <vector>
-#include <string>
 #include <functional>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
 
 // Forward declarations for Windows types (implementation details)
 // Note: Using opaque pointers to avoid Windows type leaks
@@ -27,7 +24,7 @@ namespace Audio {
 
 /**
  * @brief WASAPI Exclusive Mode Driver
- * 
+ *
  * Professional low-latency mode for AESTRA.
  * Features:
  * - Exclusive device access (no mixing)
@@ -70,12 +67,8 @@ public:
     void stopStream() override;
     bool isStreamRunning() const override { return m_isRunning; }
     double getStreamLatency() const override;
-    uint32_t getStreamSampleRate() const override {
-        return isStreamRunning() ? m_actualSampleRate : 0;
-    }
-    uint32_t getStreamBufferSize() const override {
-        return isStreamRunning() ? m_bufferFrameCount : 0;
-    }
+    uint32_t getStreamSampleRate() const override { return isStreamRunning() ? m_actualSampleRate : 0; }
+    uint32_t getStreamBufferSize() const override { return isStreamRunning() ? m_bufferFrameCount : 0; }
 
     /**
      * @brief Check if exclusive mode is available for a device
@@ -89,17 +82,17 @@ public:
 
 private:
     // COM interfaces (opaque pointers - Windows-specific implementation)
-    void* m_deviceEnumerator = nullptr;  // IMMDeviceEnumerator*
-    void* m_device = nullptr;  // IMMDevice*
-    void* m_audioClient = nullptr;  // IAudioClient*
-    void* m_renderClient = nullptr;  // IAudioRenderClient*
-    void* m_captureClient = nullptr;  // IAudioCaptureClient*
+    void* m_deviceEnumerator = nullptr; // IMMDeviceEnumerator*
+    void* m_device = nullptr;           // IMMDevice*
+    void* m_audioClient = nullptr;      // IAudioClient*
+    void* m_renderClient = nullptr;     // IAudioRenderClient*
+    void* m_captureClient = nullptr;    // IAudioCaptureClient*
 
     // Thread management
     std::thread m_audioThread;
-    std::atomic<bool> m_isRunning{ false };
-    std::atomic<bool> m_shouldStop{ false };
-    void* m_audioEvent = nullptr;  // HANDLE (opaque)
+    std::atomic<bool> m_isRunning{false};
+    std::atomic<bool> m_shouldStop{false};
+    void* m_audioEvent = nullptr; // HANDLE (opaque)
 
     // State
     DriverState m_state = DriverState::UNINITIALIZED;
@@ -114,10 +107,10 @@ private:
     void* m_userData = nullptr;
 
     // Format information
-    void* m_waveFormat = nullptr;  // WAVEFORMATEX* (opaque)
+    void* m_waveFormat = nullptr; // WAVEFORMATEX* (opaque)
     uint32_t m_bufferFrameCount = 0;
     uint32_t m_actualSampleRate = 0;
-    
+
     // Soft-start ramp to prevent harsh audio on initialization
     uint32_t m_rampSampleCount = 0;
     uint32_t m_rampDurationSamples = 0;
@@ -136,16 +129,17 @@ private:
     void closeDevice();
     bool initializeAudioClient();
     bool initializeSharedFallback();
-    bool findBestExclusiveFormat(void** format);  // WAVEFORMATEX** (opaque)
-    bool testExclusiveFormat(uint32_t sampleRate, uint32_t channels, void** format);  // WAVEFORMATEX** (opaque)
-    bool testExclusiveFormatPCM(uint32_t sampleRate, uint32_t channels, uint32_t bitsPerSample, void** format);  // WAVEFORMATEX** (opaque)
+    bool findBestExclusiveFormat(void** format);                                     // WAVEFORMATEX** (opaque)
+    bool testExclusiveFormat(uint32_t sampleRate, uint32_t channels, void** format); // WAVEFORMATEX** (opaque)
+    bool testExclusiveFormatPCM(uint32_t sampleRate, uint32_t channels, uint32_t bitsPerSample,
+                                void** format); // WAVEFORMATEX** (opaque)
     void audioThreadProc();
     void fillAudioBufferWithSilence();
     void setError(DriverError error, const std::string& message);
     void updateStatistics(double callbackTimeUs);
     bool setThreadPriority();
 
-    bool m_usingSharedFallback{ false };
+    bool m_usingSharedFallback{false};
 };
 
 } // namespace Audio

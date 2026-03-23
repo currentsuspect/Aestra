@@ -23,6 +23,10 @@ set(Aestra_SOURCES
 	Core/AestraContent.h
 	Core/AestraContent.cpp
 	Core/ProjectSerializer.cpp
+	Core/Preferences.h
+	Core/Preferences.cpp
+	Core/UIState.h
+	Core/UIState.cpp
 	
 	# Panels
 	Panels/TransportBar.h
@@ -35,8 +39,7 @@ set(Aestra_SOURCES
 	Panels/MixerPanel.cpp
 	Panels/ArsenalPanel.h
 	Panels/ArsenalPanel.cpp
-	Panels/StepSequencerPanel.h
-	Panels/StepSequencerPanel.cpp
+	# Panels/StepSequencerPanel removed
 	Panels/PatternBrowserPanel.h
 	Panels/PatternBrowserPanel.cpp
 	Panels/AuditionPanel.h

@@ -188,6 +188,16 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         m_lastMouseX = x;
         m_lastMouseY = y;
         
+        // RecoveryDialog is modal - consume mouse move when visible
+        if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
+            AestraUI::NUIMouseEvent event;
+            event.position = AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y));
+            event.button = AestraUI::NUIMouseButton::None;
+            event.pressed = false;
+            m_recoveryDialog->onMouseEvent(event);
+            return;
+        }
+        
         // Drag & Drop (convert to float for NUI)
         if (m_content) {
             AestraUI::NUIDragDropManager::getInstance().updateDrag(AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y)));
@@ -195,13 +205,32 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     });
 
     m_window->setMouseButtonCallback([this](int button, bool pressed) { // Fixed signature
+        // RecoveryDialog is modal - consume all mouse events when visible
+        if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
+            AestraUI::NUIMouseEvent event;
+            event.position = AestraUI::NUIPoint(static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY));
+            event.button = (button == 0) ? AestraUI::NUIMouseButton::Left : 
+                          (button == 1) ? AestraUI::NUIMouseButton::Right : AestraUI::NUIMouseButton::Middle;
+            event.pressed = pressed;
+            m_recoveryDialog->onMouseEvent(event);
+            return; // Block all other mouse handling while recovery dialog is shown
+        }
+        
         if (!pressed) { // Release
             if (m_content) {
                 AestraUI::NUIDragDropManager::getInstance().endDrag(AestraUI::NUIPoint((float)m_lastMouseX, (float)m_lastMouseY)); // Fixed arg
             }
         }
-        if (pressed) { // Press
-             this->hideActiveMenu(); // Fixed method
+        if (pressed && button == 0) { // Left click
+            // Only hide the menu if clicking OUTSIDE of it
+            if (m_activeMenu && m_activeMenu->isVisible()) {
+                AestraUI::NUIPoint clickPos(static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY));
+                AestraUI::NUIRect menuBounds = m_activeMenu->getGlobalBounds();
+                if (!menuBounds.contains(clickPos)) {
+                    hideActiveMenu();
+                }
+                // If clicking inside the menu, let the event propagate to the menu component
+            }
         }
     });
 
@@ -224,17 +253,39 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         
         m_keyModifiers = static_cast<NM>(currentMods);
 
+        // RecoveryDialog is modal - consume all key events when visible
+        if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
+            AestraUI::NUIKeyEvent event;
+            event.keyCode = static_cast<AestraUI::NUIKeyCode>(key);
+            event.pressed = pressed;
+            m_recoveryDialog->onKeyEvent(event);
+            return; // Block all other key handling while recovery dialog is shown
+        }
+
         if (pressed) { // Press
-             // Space: Play/Stop
-             if (key == static_cast<int>(Aestra::KeyCode::Space)) { // 32
-                 if (m_content && m_content->getTrackManager()) {
-                     if (m_content->getTrackManager()->isPlaying()) {
-                         if (m_transportCallback) m_transportCallback(TransportAction::Stop);
-                     } else {
-                         if (m_transportCallback) m_transportCallback(TransportAction::Play);
+             // Dispatch to Content (Global handling)
+             if (m_content) {
+                 AestraUI::NUIKeyEvent event;
+                 event.keyCode = static_cast<AestraUI::NUIKeyCode>(key);
+                 event.pressed = pressed;
+                 // Pass modifiers for completeness (e.g. Shift for capitals)
+                 // Note: NUIKeyEvent struct might need updating elsewhere if it lacks 'modifiers' field, 
+                 // but for now we rely on keyCode logic or add it if struct allows.
+                 
+                 // 1. Dispatch to Focused Component (Search Bar, etc.)
+                 if (auto* focused = AestraUI::NUIComponent::getFocusedComponent()) {
+                     // Check if focused component is part of our component tree
+                     // (Usually yes, since we only have one window)
+                     if (focused->onKeyEvent(event)) {
+                         return; // Consumed by widget
                      }
                  }
+
+                 // 2. Global / Content Shortcuts (Spacebar Playback, etc.)
+                 if (m_content->onKeyEvent(event)) return;
              }
+
+             // F12: HUD
              // F12: HUD
              if (key == static_cast<int>(Aestra::KeyCode::F12)) { // 123
                  if (m_unifiedHUD) m_unifiedHUD->setVisible(!m_unifiedHUD->isVisible());
@@ -330,7 +381,8 @@ void AestraWindowManager::setConfirmationDialog(std::shared_ptr<Aestra::Confirma
 
 void AestraWindowManager::setRecoveryDialog(std::shared_ptr<Aestra::RecoveryDialog> dialog) {
     m_recoveryDialog = dialog;
-    if (m_rootComponent) m_rootComponent->addChild(m_recoveryDialog);
+    // Note: RecoveryDialog is NOT added as a child - it's rendered manually
+    // at the end of the render loop to ensure it appears on top of all UI
 }
 
 void AestraWindowManager::setUnifiedHUD(std::shared_ptr<UnifiedHUD> hud) {
@@ -430,12 +482,24 @@ void AestraWindowManager::render() {
     if (!m_renderer || !m_rootComponent) return;
 
     auto& themeManager = NUIThemeManager::getInstance();
-    NUIColor bgColor = themeManager.getColor("background");
+    // CRITICAL: Force alpha = 1.0 to prevent DWM "Sheet of Glass" transparency.
+    // The custom title bar uses DwmExtendFrameIntoClientArea which makes alpha < 1 transparent.
+    NUIColor bgColor = themeManager.getColor("background").withAlpha(1.0f);
 
     m_renderer->clear(bgColor);
     m_renderer->beginFrame();
     m_rootComponent->onRender(*m_renderer);
     NUIDragDropManager::getInstance().renderDragGhost(*m_renderer);
+
+    // Render RecoveryDialog on top of everything if visible
+    // This ensures the modal dialog blocks interaction with main UI
+    if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
+        // Set bounds to full window size so dialog centers correctly
+        if (m_rootComponent) {
+            m_recoveryDialog->setBounds(m_rootComponent->getBounds());
+        }
+        m_recoveryDialog->onRender(*m_renderer);
+    }
 
     if (m_useCustomCursor && m_windowFocused) {
         // Ensure cursor is not clipped by previous UI elements
@@ -550,5 +614,37 @@ void AestraWindowManager::updateCursorState(bool focused, AestraUI::NUICursorSty
     } else {
         m_keyModifiers = AestraUI::NUIModifiers::None;
         AestraUI::NUIComponent::clearFocusedComponent();
+    }
+}
+
+// =============================================================================
+// Window State Capture/Restore for Persistence (Issue #120)
+// =============================================================================
+
+AestraWindowManager::WindowState AestraWindowManager::captureWindowState() const {
+    WindowState state;
+    if (m_window) {
+        m_window->getPosition(state.x, state.y);
+        m_window->getSize(state.width, state.height);
+        state.maximized = m_window->isMaximized();
+    }
+    return state;
+}
+
+void AestraWindowManager::applyWindowState(const WindowState& state) {
+    if (!m_window) return;
+    
+    // Only apply position/size if not maximized (maximized state handled separately)
+    if (!state.maximized) {
+        // Validate reasonable bounds (prevent off-screen or tiny windows)
+        if (state.width >= 640 && state.height >= 480) {
+            m_window->setSize(state.width, state.height);
+            // Only set position if it seems reasonable (not negative/off-screen by much)
+            if (state.x > -1000 && state.y > -1000) {
+                m_window->setPosition(state.x, state.y);
+            }
+        }
+    } else {
+        m_window->maximize();
     }
 }

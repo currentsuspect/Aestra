@@ -17,13 +17,14 @@
 #define NOMINMAX
 #endif
 
-// Include Windows headers
+// Include Windows headers (windows.h MUST come first)
+// clang-format off
 #include <windows.h>
 #include <commdlg.h>
 #include <shlobj.h>
+// clang-format on
 
 // Additional Windows headers as needed (only add what's actually used)
 // #include <dwmapi.h>
 // #include <mmdeviceapi.h>
 // #include <audioclient.h>
-

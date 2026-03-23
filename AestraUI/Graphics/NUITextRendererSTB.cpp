@@ -105,7 +105,23 @@ void NUITextRendererSTB::bakeGlyphs(float fontSize) {
         int width, height, xoff, yoff;
         unsigned char* bitmap = stbtt_GetCodepointBitmap(&font, 0, scale, c, &width, &height, &xoff, &yoff);
 
-        if (!bitmap) continue;
+        int advance, lsb;
+        stbtt_GetCodepointHMetrics(&font, c, &advance, &lsb);
+
+        if (!bitmap) {
+            // Space and control characters have no bitmap but still need advance metrics
+            if (c == ' ') {
+                GlyphInfo glyph;
+                glyph.textureId = 0;  // No texture for space
+                glyph.width = 0;
+                glyph.height = 0;
+                glyph.bearingX = 0;
+                glyph.bearingY = 0;
+                glyph.advance = advance * scale;
+                glyphs_[c] = glyph;
+            }
+            continue;
+        }
 
         // Create OpenGL texture
         GLuint texture;
@@ -117,9 +133,6 @@ void NUITextRendererSTB::bakeGlyphs(float fontSize) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        int advance, lsb;
-        stbtt_GetCodepointHMetrics(&font, c, &advance, &lsb);
 
         GlyphInfo glyph;
         glyph.textureId = texture;
@@ -155,9 +168,16 @@ void NUITextRendererSTB::renderText(
     glBindVertexArray(vao_);
 
     for (char c : text) {
-        if (glyphs_.find(c) == glyphs_.end()) continue;
+        auto it = glyphs_.find(c);
+        if (it == glyphs_.end()) continue;
 
-        const GlyphInfo& glyph = glyphs_[c];
+        const GlyphInfo& glyph = it->second;
+
+        // Space and control characters have no texture - just advance
+        if (glyph.textureId == 0) {
+            x += glyph.advance;
+            continue;
+        }
 
         float xpos = x + glyph.bearingX;
         float ypos = y + glyph.bearingY;

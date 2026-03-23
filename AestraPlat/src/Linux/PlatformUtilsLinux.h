@@ -1,5 +1,6 @@
 #pragma once
 #include "../../include/AestraPlatform.h"
+
 #include <string>
 
 namespace Aestra {

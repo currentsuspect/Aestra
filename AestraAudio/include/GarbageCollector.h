@@ -1,11 +1,11 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include <vector>
-#include <memory>
 #include <algorithm>
-#include <mutex>
 #include <atomic>
+#include <memory>
+#include <mutex>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -36,9 +36,9 @@ public:
      * @brief Schedule a shared_ptr for deferred destruction.
      * Call from Non-RT thread (UI/Loading).
      */
-    template<typename T>
-    void release(std::shared_ptr<T> ptr) {
-        if (!ptr) return;
+    template <typename T> void release(std::shared_ptr<T> ptr) {
+        if (!ptr)
+            return;
         std::lock_guard<std::mutex> lock(m_mutex);
         m_zombies.push_back(std::static_pointer_cast<void>(ptr));
     }
@@ -59,9 +59,7 @@ private:
     void internalCleanup() {
         // Identify dead objects (use_count == 1 means only we hold it)
         auto it = std::remove_if(m_zombies.begin(), m_zombies.end(),
-            [](const std::shared_ptr<void>& p) {
-                return p.use_count() == 1;
-            });
+                                 [](const std::shared_ptr<void>& p) { return p.use_count() == 1; });
 
         // Erase them (triggering destructor)
         // Destruction happens here, on the calling thread (UI/Idle)

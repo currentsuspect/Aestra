@@ -9,48 +9,55 @@ NUITheme::NUITheme() {
 std::shared_ptr<NUITheme> NUITheme::createDefault() {
     auto theme = std::make_shared<NUITheme>();
     
-    // Aestra Dark Theme
-    theme->setColor("background", NUIColor::fromHex(0x0d0d0d));
-    theme->setColor("surface", NUIColor::fromHex(0x1a1a1a));
-    theme->setColor("surfaceLight", NUIColor::fromHex(0x2a2a2a));
-    theme->setColor("primary", NUIColor::fromHex(0xa855f7));      // Purple
-    theme->setColor("secondary", NUIColor::fromHex(0x3b82f6));    // Blue
-    theme->setColor("accent", NUIColor::fromHex(0x22c55e));       // Green
-    theme->setColor("warning", NUIColor::fromHex(0xf59e0b));      // Orange
-    theme->setColor("error", NUIColor::fromHex(0xef4444));        // Red
-    theme->setColor("text", NUIColor::fromHex(0xffffff));
-    theme->setColor("textSecondary", NUIColor::fromHex(0x999999));
-    theme->setColor("textDisabled", NUIColor::fromHex(0x666666));
-    theme->setColor("border", NUIColor::fromHex(0x333333));
-    theme->setColor("hover", NUIColor::fromHex(0x2a2a2a));
-    theme->setColor("active", NUIColor::fromHex(0x3a3a3a));
-    theme->setColor("disabled", NUIColor::fromHex(0x1a1a1a));
+    // Aestra "Deep Glass" Theme
+    theme->setColor("background", NUIColor::fromHex(0x0a0b10));   // Void
+    theme->setColor("surface", NUIColor::fromHex(0x181b21, 0.9f)); // Dark Surface (Glass)
+    theme->setColor("surfaceLight", NUIColor::fromHex(0x242730)); // Overlay
     
+    // Accents
+    theme->setColor("primary", NUIColor::fromHex(0x9d4edd));      // Aestra Purple
+    theme->setColor("secondary", NUIColor::fromHex(0x4cc9f0));    // Neon Cyan
+    theme->setColor("accent", NUIColor::fromHex(0x06d6a0));       // Signal Green
+    theme->setColor("warning", NUIColor::fromHex(0xffd166));      // Warning Yellow/Orange
+    theme->setColor("error", NUIColor::fromHex(0xef476f));        // Signal Red
+    
+    // UI Elements
+    theme->setColor("text", NUIColor::fromHex(0xffffff, 0.95f));
+    theme->setColor("textSecondary", NUIColor::fromHex(0xffffff, 0.6f));
+    theme->setColor("textDisabled", NUIColor::fromHex(0xffffff, 0.3f));
+    
+    theme->setColor("border", NUIColor::fromHex(0xffffff, 0.1f)); // 10% White Border
+    theme->setColor("hover", NUIColor::fromHex(0xffffff, 0.05f));  // Subtle white highlight
+    theme->setColor("active", NUIColor::fromHex(0x9d4edd, 0.2f));  // Purple Tint
+    theme->setColor("disabled", NUIColor::fromHex(0x181b21, 0.5f));
+
     // Dimensions
-    theme->setDimension("borderRadius", 4.0f);
-    theme->setDimension("borderRadiusSmall", 2.0f);
-    theme->setDimension("borderRadiusLarge", 8.0f);
-    theme->setDimension("padding", 8.0f);
-    theme->setDimension("paddingSmall", 4.0f);
-    theme->setDimension("paddingLarge", 12.0f);
-    theme->setDimension("margin", 4.0f);
+    theme->setDimension("borderRadius", 12.0f);        // Soft Geometry
+    theme->setDimension("borderRadiusSmall", 6.0f);
+    theme->setDimension("borderRadiusLarge", 16.0f);
+    
+    theme->setDimension("padding", 12.0f);             // More breathing room
+    theme->setDimension("paddingSmall", 6.0f);
+    theme->setDimension("paddingLarge", 24.0f);
+    
+    theme->setDimension("margin", 8.0f);
     theme->setDimension("borderWidth", 1.0f);
     
     // Effects
-    theme->setEffect("glowIntensity", 0.3f);
-    theme->setEffect("shadowBlur", 8.0f);
+    theme->setEffect("glowIntensity", 0.5f);           // Enhanced Glow
+    theme->setEffect("shadowBlur", 16.0f);             // Softer Shadows
     theme->setEffect("shadowOffsetX", 0.0f);
-    theme->setEffect("shadowOffsetY", 2.0f);
-    theme->setEffect("animationDuration", 0.2f);
-    theme->setEffect("hoverScale", 1.05f);
+    theme->setEffect("shadowOffsetY", 4.0f);
+    theme->setEffect("animationDuration", 0.25f);
+    theme->setEffect("hoverScale", 1.02f);             // Subtler scale
     
-    // Font sizes
-    theme->setFontSize("tiny", 9.0f);
-    theme->setFontSize("small", 11.0f);
-    theme->setFontSize("normal", 14.0f);
-    theme->setFontSize("large", 18.0f);
-    theme->setFontSize("title", 24.0f);
-    theme->setFontSize("huge", 32.0f);
+    // Font sizes (Variable)
+    theme->setFontSize("tiny", 10.0f);
+    theme->setFontSize("small", 12.0f);
+    theme->setFontSize("normal", 15.0f);               // Improved readability
+    theme->setFontSize("large", 20.0f);
+    theme->setFontSize("title", 28.0f);
+    theme->setFontSize("huge", 48.0f);
     
     return theme;
 }

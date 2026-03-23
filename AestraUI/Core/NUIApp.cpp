@@ -3,6 +3,7 @@
 #include "NUIAdaptiveFPS.h"
 #include "NUITheme.h"
 #include "NUIRenderer.h"
+#include "../../AestraCore/include/AestraLog.h"
 #include <algorithm>
 #include <thread>
 
@@ -232,12 +233,13 @@ void NUIApp::handleMouseEvent(const NUIMouseEvent& event) {
     
     // Dispatch event to root component
     // The component will handle hover state internally
-    rootComponent_->onMouseEvent(event);
+    // Dispatch event to root component
+    // The component will handle hover state internally
+    bool handled = rootComponent_->onMouseEvent(event);
     
     // Handle focus on click
-    if (event.pressed) {
-        // For now, just focus the root component
-        // TODO: Implement proper hit testing
+    if (event.pressed && !handled) {
+        // Only reset to root if no component handled the interaction
         setFocusedComponent(rootComponent_);
     }
 }
@@ -247,8 +249,16 @@ void NUIApp::handleKeyEvent(const NUIKeyEvent& event) {
     adaptiveFPS_.signalActivity(NUIAdaptiveFPS::ActivityType::KeyPress);
     
     // Dispatch to focused component
-    if (focusedComponent_) {
+    // Use global focus registry as source of truth
+    if (auto* focused = NUIComponent::getFocusedComponent()) {
+        // Aestra::Log::info("[NUIApp] Dispatching key " + std::to_string(static_cast<int>(event.keyCode)) + " to " + focused->getId());
+        focused->onKeyEvent(event);
+    } else if (focusedComponent_) {
+        // Fallback to locally tracked component if global is null (unlikely but safe)
+        // Aestra::Log::info("[NUIApp] Fallback dispatch to " + focusedComponent_->getId());
         focusedComponent_->onKeyEvent(event);
+    } else {
+        // Aestra::Log::info("[NUIApp] No focused component for key " + std::to_string(static_cast<int>(event.keyCode)));
     }
 }
 

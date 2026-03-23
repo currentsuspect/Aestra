@@ -3,14 +3,18 @@
 #include "PluginBrowserPanel.h"
 #include "NUIRenderer.h"
 #include "NUIDragDrop.h"
+#include "NUIContextMenu.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <iostream>
+#include <cstdio>
+#include "../../AestraCore/include/AestraLog.h"
 
 namespace AestraUI {
 
-// ============================================================================
+// Theme colors (inline)
 // Theme colors (inline)
 // ============================================================================
 
@@ -514,6 +518,7 @@ EffectChainRack::EffectChainRack() {
         slot.isEmpty = true;
         slot.bypassed = false;
     }
+    m_bypassOverride.fill(-1);
 }
 
 void EffectChainRack::onRender(NUIRenderer& renderer) {
@@ -530,47 +535,158 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
     }
     
     renderer.clearClipRect();
+
+    // Render Drag Ghost
+    if (m_isDraggingReorder && m_draggingSlotIndex >= 0) {
+        float ghostY = m_currentMousePos.y - (SLOT_HEIGHT * 0.5f);
+        renderSlot(renderer, m_draggingSlotIndex, ghostY);
+    }
+    
 }
 
 void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset) {
     auto bounds = getBounds();
-    NUIRect slotRect = {bounds.x + 4, yOffset, bounds.width - 8, SLOT_HEIGHT - 2};
+    NUIRect slotRect = {bounds.x + 4, yOffset, bounds.width - 8, SLOT_HEIGHT - 4}; // More gap
     
     const auto& slot = m_slots[index];
-    
+    const bool isHovered = (index == m_hoveredSlot);
+
+    // Premium Glass Styling
     NUIColor bgColor;
-    if (index == m_hoveredSlot) {
-        bgColor = Colors::listHover;
-    } else if (!slot.isEmpty) {
-        bgColor = {0.15f, 0.15f, 0.18f, 1.0f};
-    } else {
-        bgColor = {0.0f, 0.0f, 0.0f, 0.1f};
-    }
-    renderer.fillRoundedRect(slotRect, 4.0f, bgColor);
+    NUIColor borderColor;
+    // Drag Reorder: If this is the source slot, render faintly
+    bool isBeingDragged = (m_isDraggingReorder && index == m_draggingSlotIndex);
     
-    renderer.drawText(std::to_string(index + 1), {slotRect.x + 4, yOffset + 7}, 9.0f, Colors::textDisabled);
+    if (slot.isEmpty && !isBeingDragged) {
+        // Empty Slot: Subtle transparency or very faint glass
+        // Using Aestra "Deep Glass" tokens if available, otherwise manual
+        bgColor = isHovered ? NUIColor(1.0f, 1.0f, 1.0f, 0.05f) : NUIColor(0.0f, 0.0f, 0.0f, 0.2f);
+        borderColor = isHovered ? Colors::accentPrimary.withAlpha(0.3f) : NUIColor(1.0f, 1.0f, 1.0f, 0.05f);
+    } else {
+        // Populated: Solid dark glass
+        // If bypassed, make it slightly dimmer/transparent
+        if (isBeingDragged) {
+            bgColor = isHovered ? NUIColor(1.0f, 1.0f, 1.0f, 0.1f) : NUIColor(1.0f, 1.0f, 1.0f, 0.05f);
+            borderColor = Colors::accentPrimary.withAlpha(0.2f);
+        } else if (slot.bypassed) {
+             bgColor = NUIColor(0.0f, 0.0f, 0.0f, 0.3f);
+             borderColor = Colors::panelBorder.withAlpha(0.5f);
+        } else {
+             bgColor = NUIColor(0.0f, 0.0f, 0.0f, 0.5f);
+             borderColor = isHovered ? Colors::accentPrimary : Colors::panelBorder;
+        }
+    }
+
+    renderer.fillRoundedRect(slotRect, 4.0f, bgColor);
+    renderer.strokeRoundedRect(slotRect, 4.0f, 1.0f, borderColor);
+    
+    // DEBUG: Visual indicator for pending removal
+    if (slot.pendingRemoval) {
+        renderer.strokeRoundedRect(slotRect, 4.0f, 2.0f, NUIColor(1.0f, 0.0f, 0.0f, 0.8f));
+    }
+
+    // Slot Number (Left side, stylistic)
+    char numBuf[8];
+    std::snprintf(numBuf, sizeof(numBuf), "%d", index + 1);
+    renderer.drawText(numBuf, {slotRect.x + 8, yOffset + 7}, 10.0f, Colors::textDisabled.withAlpha(0.5f));
     
     if (slot.isEmpty) {
-        renderer.drawText("+ Add Plugin", {slotRect.x + 20, yOffset + 7}, 10.0f, Colors::textDisabled);
+        // ... (unchanged empty logic)
+        if (isHovered) {
+             renderer.drawTextCentered("+ Add Plugin", slotRect, 10.0f, Colors::textPrimary);
+        } else {
+             renderer.drawTextCentered("+", slotRect, 12.0f, Colors::textDisabled.withAlpha(0.3f));
+        }
     } else {
-        NUIColor nameColor = slot.bypassed ? Colors::textDisabled : Colors::textPrimary;
-        renderer.drawText(slot.name, {slotRect.x + 20, yOffset + 7}, 10.0f, nameColor);
+        // Plugin Name
+        NUIColor nameColor = slot.bypassed ? Colors::textDisabled.withAlpha(0.6f) : Colors::textPrimary;
+        // Limit name width to avoid running into knob
+        renderer.drawText(slot.name, {slotRect.x + 28, yOffset + 7}, 11.0f, nameColor); 
         
-        if (slot.bypassed) {
-            NUIRect bypassBadge = {slotRect.x + slotRect.width - 16, yOffset + 6, 12, 12};
-            renderer.fillRoundedRect(bypassBadge, 2.0f, Colors::accentWarning);
+        // Active indicator / Bypass toggle
+        float rightEdge = slotRect.x + slotRect.width;
+        float knobSize = 18.0f;
+        float knobX = rightEdge - knobSize - 4.0f;
+        float knobY = yOffset + (SLOT_HEIGHT - 4 - knobSize) * 0.5f;
+
+        // Dry/Wet Knob Rendering
+        NUIRect knobRect = {knobX, knobY, knobSize, knobSize};
+        
+        // Helper to draw arc
+        auto drawArcPoly = [&](float startAngle, float endAngle, float width, NUIColor col) {
+            NUIPoint center = knobRect.center();
+            float radius = knobSize * 0.5f - 2.0f;
+            std::vector<NUIPoint> points;
+            int segments = 16;
+            for(int i=0; i<=segments; ++i) {
+                float t = (float)i / segments;
+                float ang = startAngle + (endAngle - startAngle) * t;
+                points.push_back({
+                    center.x + std::cos(ang) * radius,
+                    center.y + std::sin(ang) * radius
+                });
+            }
+            if (!points.empty())
+                renderer.drawPolyline(points.data(), (int)points.size(), width, col);
+        };
+
+        // Background Arc
+        drawArcPoly(0.75f * 3.14159f, 2.25f * 3.14159f, 2.0f, Colors::textDisabled.withAlpha(0.2f));
+        
+        // Value Arc (Dim if bypassed)
+        float startAng = 0.75f * 3.14159f;
+        float range = 1.5f * 3.14159f;
+        float endAng = startAng + range * slot.dryWet;
+        NUIColor arcColor = slot.bypassed ? Colors::textDisabled.withAlpha(0.3f) : Colors::accentPrimary;
+        drawArcPoly(startAng, endAng, 2.0f, arcColor);
+        
+        // Bypass Indicator (Dot left of knob)
+        // Center vertically better
+        float dotSize = 6.0f;
+        float dotY = yOffset + (SLOT_HEIGHT - 4 - dotSize) * 0.5f;
+        NUIRect statusDot = {knobX - 12, dotY, dotSize, dotSize};
+        
+        if (!slot.bypassed) {
+            // Active: LED On
+            renderer.fillRoundedRect(statusDot, 3.0f, Colors::accentPrimary);
+             // Glow
+             renderer.fillRoundedRect({statusDot.x - 2, statusDot.y - 2, 10, 10}, 5.0f, Colors::accentPrimary.withAlpha(0.4f));
+        } else {
+             // Bypassed: LED Off (Dark/Stroked)
+             renderer.strokeRoundedRect(statusDot, 3.0f, 1.0f, Colors::textDisabled.withAlpha(0.5f));
         }
     }
 }
 
 bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
+    if (event.type == NUIMouseEventType::Down) {
+         char logBuf[128];
+         std::snprintf(logBuf, sizeof(logBuf), "[Rack] onMouseEvent Down at Y=%0.1f", event.position.y);
+         Aestra::Log::info(logBuf);
+    }
     if (!isVisible()) return false;
+
+    // DEBUG: Track mouse for overlay
+    m_currentMousePos = event.position;
+
+    // DEBUG: Log Clicks
+    if (event.pressed || event.released) {
+        int hit = hitTestSlot(event.position.y);
+        char logBuf[128];
+        std::snprintf(logBuf, sizeof(logBuf), "[Rack] Mouse %s Btn=%d Y=%.1f Hit=%d", 
+                      (event.pressed ? "Press" : "Release"), 
+                      (int)event.button, 
+                      event.position.y, 
+                      hit);
+        Aestra::Log::info(logBuf);
+    }
 
     auto bounds = getBounds();
     
-    // Early exit if mouse is outside our bounds
-    if (!bounds.contains(event.position)) {
-        // Clear hover state if mouse leaves
+    // Early exit if mouse is outside our bounds and not dragging
+    // Need to allow events if we are capturing mouse (like dragging knob or slot)
+    bool isCapturing = (m_activeKnobSlot != -1 || m_draggingSlotIndex != -1);
+    if (!bounds.contains(event.position) && !isCapturing) {
         if (m_hoveredSlot != -1) {
             m_hoveredSlot = -1;
             repaint();
@@ -578,8 +694,8 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
         return false;
     }
 
-    // Wheel support - only handle if mouse is over the rack
-    if (event.wheelDelta != 0) {
+    // Wheel support (Scroll)
+    if (std::abs(event.wheelDelta) > 0.001f && m_activeKnobSlot == -1) {
         m_scrollOffset -= event.wheelDelta * 20.0f;
         
         // Clamp scroll
@@ -592,44 +708,304 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     float my = event.position.y;
+    float mx = event.position.x;
     
     // Update hover
     m_hoveredSlot = hitTestSlot(my);
     
-    // Handle click
-    if (event.pressed && event.button == NUIMouseButton::Left) {
-        int slot = hitTestSlot(my);
-        if (slot >= 0 && slot < MAX_SLOTS) {
-            auto now = std::chrono::steady_clock::now();
-            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastClickTime).count();
-            
-            bool isDoubleClick = (slot == m_lastClickSlot && elapsed < 300);
-            
-            if (isDoubleClick) {
-                if (m_onAddPluginRequested) {
-                    m_onAddPluginRequested(slot);
-                }
-                m_lastClickSlot = -1; // Reset
-            } else {
-                if (!m_slots[slot].isEmpty) {
-                    if (m_onSlotClicked) {
-                        m_onSlotClicked(slot);
-                    }
-                }
-                m_lastClickTime = now;
-                m_lastClickSlot = slot;
+    // Hit Testing Helpers
+    auto isOverKnob = [&](int index) {
+        if (index < 0) return false;
+        float slotY = bounds.y + 5 + index * SLOT_HEIGHT - m_scrollOffset;
+        NUIRect slotRect = {bounds.x + 4, slotY, bounds.width - 8, SLOT_HEIGHT - 4};
+        float knobX = slotRect.x + slotRect.width - 22.0f; 
+        return (mx >= knobX - 2 && mx <= knobX + 22) && (my >= slotY + 2 && my <= slotY + 26);
+    };
+
+    auto isOverBypass = [&](int index) {
+        if (index < 0) return false;
+        float slotY = bounds.y + 5 + index * SLOT_HEIGHT - m_scrollOffset;
+        NUIRect slotRect = {bounds.x + 4, slotY, bounds.width - 8, SLOT_HEIGHT - 4};
+        float knobX = slotRect.x + slotRect.width - 22.0f;
+        return (mx >= knobX - 20 && mx <= knobX - 2) && (my >= slotY + 2 && my <= slotY + 26);
+    };
+
+    // RELEASED Event Handling (Must be checked before general Drag handling to allow drops)
+    if (event.released && event.button == NUIMouseButton::Left) {
+        if (m_activeKnobSlot != -1) {
+            m_activeKnobSlot = -1;
+            return true;
+        }
+        
+        // Handle Reorder Drop or Click
+        if (m_isDraggingReorder && m_draggingSlotIndex != -1) {
+             // Fix: Must account for scroll offset to map visual position back to slot index
+             float contentY = event.position.y - (bounds.y + 5) + m_scrollOffset;
+             int currentTarget = static_cast<int>(contentY / SLOT_HEIGHT);
+             
+             if (currentTarget >= 0 && currentTarget < MAX_SLOTS && currentTarget != m_draggingSlotIndex) {
+                 if (m_onSlotMoveRequested) {
+                     m_onSlotMoveRequested(m_draggingSlotIndex, currentTarget);
+                 }
+             }
+        }
+        else {
+             // Single Click Action
+             // Do nothing (User requested Double Click to open)
+        }
+
+        m_draggingSlotIndex = -1;
+        m_isDraggingReorder = false;
+        repaint();
+        return true;
+    }
+
+    // ONGOING DRAG Handling
+    // If we are in dragging mode, consume events (Move/Drag)
+    if (m_draggingSlotIndex != -1) {
+        // Slot Reorder Drag Check
+        m_currentMousePos = event.position;
+        float dist = std::abs(event.position.y - m_dragStartPos.y);
+        if (dist > 5.0f && !m_isDraggingReorder) {
+            m_isDraggingReorder = true;
+        }
+        
+        // Allow Move/Drag/None buttons to update the drag
+        if (event.type == NUIMouseEventType::Drag || event.button == NUIMouseButton::Left || event.button == NUIMouseButton::None) {
+             repaint();
+             return true;
+        }
+    }
+    
+    // KNOB DRAG Handling
+    if (m_activeKnobSlot != -1) { 
+        const float dx = event.position.x - m_dragStartPos.x;
+        const float dy = m_dragStartPos.y - event.position.y; // Up is positive (Values go up as mouse goes up)
+        const float dragDelta = dx + dy;
+        
+        float sensitivity = 0.005f; 
+        if (event.modifiers & NUIModifiers::Shift) sensitivity *= 0.1f;
+        
+        float newValue = std::clamp(m_dragStartValue + dragDelta * sensitivity, 0.0f, 1.0f);
+        
+        if (std::abs(newValue - m_slots[m_activeKnobSlot].dryWet) > 0.001f) {
+            m_slots[m_activeKnobSlot].dryWet = newValue;
+            if (m_onSlotMixChanged) {
+                m_onSlotMixChanged(m_activeKnobSlot, newValue);
             }
+            repaint();
+        }
+        return true;
+    }
+
+    // CLICK (PRESSED) Event Handling
+    int slotIdx = hitTestSlot(my);
+
+    if (event.pressed && event.button == NUIMouseButton::Left) {
+        if (slotIdx >= 0 && slotIdx < MAX_SLOTS) {
+             // 1. Knob Hit Test
+             if (isOverKnob(slotIdx)) { 
+                 if (!m_slots[slotIdx].isEmpty) {
+                     m_activeKnobSlot = slotIdx;
+                     m_dragStartValue = m_slots[slotIdx].dryWet;
+                     m_dragStartPos = event.position; 
+                     return true; 
+                 }
+             }
+             // 2. Bypass Hit Test
+             else if (isOverBypass(slotIdx)) {
+                 if (!m_slots[slotIdx].isEmpty) {
+                     bool newState = !m_slots[slotIdx].bypassed;
+                     m_slots[slotIdx].bypassed = newState;
+                     m_bypassOverride[slotIdx] = newState ? 1 : 0;
+                     if (m_onSlotBypassToggled) m_onSlotBypassToggled(slotIdx, newState);
+                     repaint();
+                     return true;
+                 }
+             }
+             // 3. Slot Click (Selection / Drag Start)
+             else {
+                 // Double Click Check
+                 auto now = std::chrono::steady_clock::now();
+                 auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastClickTime).count();
+                 bool isDoubleClick = (slotIdx == m_lastClickSlot && elapsed < 300);
+                 
+                 m_lastClickTime = now;
+                 m_lastClickSlot = slotIdx;
+                if (slotIdx != -1) {
+                     // Log click interaction for debugging
+                     char logBuf[128];
+                     if (!m_slots[slotIdx].isEmpty) {
+                         std::snprintf(logBuf, sizeof(logBuf), "[Rack] Click on Slot %d (Filled). Pending DoubleClick check.", slotIdx);
+                         Aestra::Log::info(logBuf);
+                     } else {
+                         std::snprintf(logBuf, sizeof(logBuf), "[Rack] Click on Slot %d (Empty). Pending DoubleClick check.", slotIdx);
+                         Aestra::Log::info(logBuf);
+                     }
+                }
+                 
+                 if (isDoubleClick) {
+                    char logBuf[128];
+                    if (!m_slots[slotIdx].isEmpty) {
+                        std::snprintf(logBuf, sizeof(logBuf), "[Rack] Double Click: Slot %d -> Open Windows", slotIdx);
+                        Aestra::Log::info(logBuf);
+                        if (m_onSlotClicked) m_onSlotClicked(slotIdx);
+                    } else {
+                        std::snprintf(logBuf, sizeof(logBuf), "[Rack] Double Click: Slot %d -> Open Browser", slotIdx);
+                        Aestra::Log::info(logBuf);
+                        if (m_onAddPluginRequested) m_onAddPluginRequested(slotIdx);
+                    }
+                    m_lastClickSlot = -1; // Reset to avoid triple-click issues
+                 } else {
+                     // Single click - Prepare for Drag
+                     if (!m_slots[slotIdx].isEmpty) {
+                         m_draggingSlotIndex = slotIdx;
+                         m_dragStartPos = event.position;
+                     }
+                 }
+                 return true;
+                 
+                 if (isDoubleClick) {
+                    if (!m_slots[slotIdx].isEmpty) {
+                        // Aestra::Log::info("[Rack] Double Click: Slot %d (Plugin Window)", slotIdx); // Log added above
+                        if (m_onSlotClicked) m_onSlotClicked(slotIdx);
+                    } else {
+                        // Aestra::Log::info("[Rack] Double Click: Slot %d (Add Plugin Browser)", slotIdx); // Log added above
+                        if (m_onAddPluginRequested) m_onAddPluginRequested(slotIdx);
+                    }
+                    m_lastClickSlot = -1; // Reset to avoid triple-click issues
+                 } else {
+                     if (!m_slots[slotIdx].isEmpty) {
+                         // Prepare for Drag
+                         m_draggingSlotIndex = slotIdx;
+                         m_dragStartPos = event.position;
+                     }
+                 }
+                 return true;
+             }
+        }
+    }
+    else if (event.pressed && event.button == NUIMouseButton::Right) {
+         if (slotIdx >= 0 && slotIdx < MAX_SLOTS && !m_slots[slotIdx].isEmpty) {
+            // Close existing menu properly if it exists
+            if (m_contextMenu) {
+                if (m_contextMenu->getParent()) m_contextMenu->getParent()->removeChild(m_contextMenu);
+                // Also try local remove just in case
+                removeChild(m_contextMenu); 
+                m_contextMenu = nullptr;
+            }
+            
+            m_contextMenuSlot = slotIdx;
+            m_contextMenu = std::make_shared<NUIContextMenu>();
+            
+            // DELETE ACTION
+            auto deleteItem = std::make_shared<NUIContextMenuItem>("Delete", NUIContextMenuItem::Type::Normal);
+            deleteItem->setOnClick([this]() {
+                Aestra::Log::info("[Rack] Delete clicked. Invoking m_onSlotRemoveRequested.");
+                if (m_onSlotRemoveRequested) {
+                    Aestra::Log::info("[Rack] Callback IS set. Invoking now...");
+                    if (m_contextMenuSlot >= 0) {
+                        m_onSlotRemoveRequested(m_contextMenuSlot);
+                        Aestra::Log::info("[Rack] Callback invoked successfully.");
+                    }
+                } else {
+                    Aestra::Log::warning("[Rack] m_onSlotRemoveRequested is NULL! Callback not bound.");
+                }
+                if (m_contextMenu) {
+                    if (m_contextMenu->getParent()) m_contextMenu->getParent()->removeChild(m_contextMenu);
+                    removeChild(m_contextMenu);
+                    m_contextMenu = nullptr;
+                }
+                m_contextMenuSlot = -1;
+            });
+            m_contextMenu->addItem(deleteItem);
+            
+            // BYPASS ACTION
+            bool currentBypass = m_slots[slotIdx].bypassed;
+            auto bypassItem = std::make_shared<NUIContextMenuItem>(
+                currentBypass ? "Enable" : "Bypass", 
+                NUIContextMenuItem::Type::Normal
+            );
+            bypassItem->setOnClick([this, slotIdx, currentBypass]() {
+                bool newState = !currentBypass;
+                m_slots[slotIdx].bypassed = newState;
+                m_bypassOverride[slotIdx] = newState ? 1 : 0;
+                if (m_onSlotBypassToggled) {
+                    m_onSlotBypassToggled(slotIdx, newState);
+                }
+                if (m_contextMenu) {
+                    if (m_contextMenu->getParent()) m_contextMenu->getParent()->removeChild(m_contextMenu);
+                    removeChild(m_contextMenu);
+                    m_contextMenu = nullptr;
+                }
+                repaint();
+            });
+            m_contextMenu->addItem(bypassItem);
+            
+            // ADD TO ROOT (The only robust way to handle context menus to avoid clipping and coordinate hell)
+            NUIComponent* root = this;
+            while (root->getParent()) {
+                root = root->getParent();
+            }
+            
+            if (root) {
+                root->addChild(m_contextMenu);
+                // NUIContextMenu::showAt calls setPosition. 
+                // Since we are adding to Root, Absolute Position == Relative Position.
+                // So passing event.position (Absolute) is correct.
+                m_contextMenu->showAt(event.position);
+                root->repaint(); // Ensure root repaints to show the new overlay
+            } else {
+                // Fallback (Should never happen in valid hierarchy)
+                addChild(m_contextMenu);
+                m_contextMenu->showAt(event.position);
+            }
+            
+            repaint();
             return true;
         }
     }
     
-    // Don't consume events we didn't handle - let them pass through
+    // If we are hovering a valid slot, consume the event to prevent 'fall-through' to parent
+    // which might think we are hovering "Add Send" or other overlapped widgets.
+    if (m_hoveredSlot != -1) {
+        return true;
+    }
+    
     return false;
 }
+    
+
 
 void EffectChainRack::setSlot(int index, const EffectSlotInfo& info) {
     if (index >= 0 && index < MAX_SLOTS) {
+        // DEBUG LOGGING
+        char logBuf[128];
+        if (!m_slots[index].isEmpty && info.isEmpty) {
+             std::snprintf(logBuf, sizeof(logBuf), "[Rack] Slot %d CLEARED (Empty=true)", index);
+             Aestra::Log::info(logBuf);
+        } else if (info.isEmpty) {
+             // Aestra::Log::info("[Rack] Slot %d Set Empty", index);
+        } else {
+             std::snprintf(logBuf, sizeof(logBuf), "[Rack] Slot %d Set: %s %s", index, info.name.c_str(), (info.bypassed ? "(Bypassed)" : ""));
+             Aestra::Log::info(logBuf);
+        }
+
         m_slots[index] = info;
+        
+        // Apply Override Logic
+        if (m_bypassOverride[index] != -1) {
+            bool forcedState = (m_bypassOverride[index] == 1);
+            
+            // If backend matches override, we are synced -> Clear override
+            if (info.bypassed == forcedState) {
+                m_bypassOverride[index] = -1;
+            } else {
+                // Otherwise force UI to keep user choice
+                m_slots[index].bypassed = forcedState;
+            }
+        }
+        repaint();
     }
 }
 
@@ -645,6 +1021,10 @@ void EffectChainRack::setOnSlotClicked(std::function<void(int)> callback) {
     m_onSlotClicked = std::move(callback);
 }
 
+void EffectChainRack::setOnSlotMoveRequested(std::function<void(int, int)> callback) {
+    m_onSlotMoveRequested = std::move(callback);
+}
+
 void EffectChainRack::setOnSlotBypassToggled(std::function<void(int, bool)> callback) {
     m_onSlotBypassToggled = std::move(callback);
 }
@@ -657,13 +1037,25 @@ void EffectChainRack::setOnAddPluginRequested(std::function<void(int)> callback)
     m_onAddPluginRequested = std::move(callback);
 }
 
+void EffectChainRack::setOnSlotMixChanged(std::function<void(int, float)> callback) {
+    m_onSlotMixChanged = std::move(callback);
+}
+
 int EffectChainRack::hitTestSlot(float y) const {
     auto bounds = getBounds();
-    if (!bounds.contains({bounds.x + 10, y})) {
-        return -1;
-    }
+    // Simplified logic with clamping
+    float relativeY = y - bounds.y - 5 + m_scrollOffset;
     
-    int index = static_cast<int>((y - bounds.y - 5 + m_scrollOffset) / SLOT_HEIGHT);
+    // If we are pressing in the top padding area (relativeY < 0) but still inside the component bounds (checked elsewhere or here)
+    // we should map to the first slot if scroll offset is low, or whichever slot is at the top.
+    
+    // Actually, calculate index normally
+    int index = static_cast<int>(std::floor(relativeY / SLOT_HEIGHT));
+    
+    // Fix: If clicking the top padding (index < 0), clamp to 0 if we are visible
+    // This allows clicking the very top edge of the rack to select the first slot.
+    if (index < 0) index = 0;
+    
     if (index >= 0 && index < MAX_SLOTS) {
         return index;
     }

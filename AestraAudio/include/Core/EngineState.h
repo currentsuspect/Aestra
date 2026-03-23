@@ -2,6 +2,7 @@
 #pragma once
 
 #include "AudioGraph.h"
+
 #include <atomic>
 
 namespace Aestra {
@@ -15,9 +16,7 @@ namespace Audio {
  */
 class EngineState {
 public:
-    const AudioGraph& activeGraph() const noexcept {
-        return m_graphs[m_activeIndex.load(std::memory_order_acquire)];
-    }
+    const AudioGraph& activeGraph() const noexcept { return m_graphs[m_activeIndex.load(std::memory_order_acquire)]; }
 
     void swapGraph(const AudioGraph& next) {
         const int inactive = 1 - m_activeIndex.load(std::memory_order_relaxed);

@@ -2,12 +2,13 @@
 #pragma once
 
 #include "PluginHost.h"
-#include <vector>
+
+#include <array>
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <string>
-#include <array>
-#include <memory>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -25,15 +26,8 @@ public:
     void deactivate() override;
     bool isActive() const override { return m_active; }
 
-    void process(
-        const float* const* inputs,
-        float** outputs,
-        uint32_t numInputChannels,
-        uint32_t numOutputChannels,
-        uint32_t numFrames,
-        const MidiBuffer* midiInput = nullptr,
-        MidiBuffer* midiOutput = nullptr
-    ) override;
+    void process(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
+                 uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) override;
 
     std::vector<PluginParameter> getParameters() const override;
     uint32_t getParameterCount() const override;
@@ -48,7 +42,7 @@ public:
     bool openEditor(void* parentWindow) override { return false; }
     void closeEditor() override {}
     bool isEditorOpen() const override { return false; }
-    std::pair<int, int> getEditorSize() const override { return { 0, 0 }; }
+    std::pair<int, int> getEditorSize() const override { return {0, 0}; }
     bool resizeEditor(int width, int height) override { return false; }
 
     const PluginInfo& getInfo() const override;
@@ -65,15 +59,13 @@ public:
     void setSampleRate(double sampleRate) { m_sampleRate = sampleRate; }
 
     // RT-safe: requests an immediate voice reset on the next process() call.
-    void requestHardResetVoices() noexcept {
-        m_resetVoicesRequested.store(true, std::memory_order_release);
-    }
+    void requestHardResetVoices() noexcept { m_resetVoicesRequested.store(true, std::memory_order_release); }
 
 private:
     std::atomic<bool> m_active{false};
     std::atomic<bool> m_resetVoicesRequested{false};
     double m_sampleRate = 44100.0;
-    
+
     // Sample Data encapsulated for Atomic Swap
     struct SampleData {
         std::vector<float> data; // Interleaved
@@ -87,19 +79,12 @@ private:
     std::shared_ptr<SampleData> m_data;
 
     // Parameters
-    enum ParamID {
-        kParamAttack = 0,
-        kParamDecay,
-        kParamSustain,
-        kParamRelease,
-        kParamPitch,
-        kParamCount
-    };
+    enum ParamID { kParamAttack = 0, kParamDecay, kParamSustain, kParamRelease, kParamPitch, kParamCount };
     std::array<std::atomic<float>, kParamCount> m_params;
 
     // Voice Architecture
     enum class EnvStage { Attack, Decay, Sustain, Release, Off };
-    
+
     struct Voice {
         bool active = false;
         int note = 0;

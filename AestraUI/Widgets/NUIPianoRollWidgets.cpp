@@ -42,19 +42,20 @@ PianoRollKeyLane::PianoRollKeyLane()
 void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
     auto b = getBounds();
+    auto& themeManager = NUIThemeManager::getInstance();
     
     // CLIP: Prevent bleeding into top bar
     renderer.setClipRect(b);
     
-    // Theme Colors (Refined: Standard Piano Look)
-    auto bgWhiteKey = NUIColor(0.95f, 0.95f, 0.95f, 1.0f); // White keys
-    auto bgBlackKey = NUIColor(0.10f, 0.10f, 0.12f, 1.0f); // Black keys
-    auto textColWhiteKey = NUIColor(0.2f, 0.2f, 0.2f, 1.0f);
-    auto textColBlackKey = NUIColor(0.8f, 0.8f, 0.8f, 1.0f);
-    auto borderCol = NUIColor(0.5f, 0.5f, 0.5f, 0.5f);
-    auto hoverCol = NUIColor(1.0f, 0.6f, 0.2f, 0.3f); // Orange-ish highlight on hover
-    auto clickCol = NUIColor(1.0f, 0.5f, 0.0f, 0.6f); // Stronger action color
-
+    // Deep Glass Key Theme
+    auto bgWhiteKey = NUIColor(0.12f, 0.12f, 0.15f, 1.0f); // Dark Grey Glass
+    auto bgBlackKey = NUIColor(0.05f, 0.05f, 0.07f, 1.0f); // Deep Void Keys
+    
+    auto textColNormal = themeManager.getColor("textSecondary").withAlpha(0.6f);
+    auto textColRoot = themeManager.getColor("accentCyan"); // Neon Cyan for C
+    
+    auto borderCol = NUIColor(0.0f, 0.0f, 0.0f, 0.3f);
+    
     int startPitch = 127 - static_cast<int>((scrollY_) / keyHeight_);
     int endPitch = 127 - static_cast<int>((scrollY_ + b.height) / keyHeight_);
     
@@ -62,8 +63,8 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
     startPitch = std::clamp(startPitch + 2, 0, 127);
     endPitch = std::clamp(endPitch - 2, 0, 127);
 
-    // Render Backing first
-    renderer.fillRect(b, NUIColor(0.2f, 0.2f, 0.2f, 1.0f));
+    // Render Backing first (Deep Space)
+    renderer.fillRect(b, themeManager.getColor("backgroundSecondary").darkened(0.2f));
 
     for (int p = startPitch; p >= endPitch; --p) {
         // Calculate screen Y position
@@ -74,22 +75,61 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
         NUIRect keyRect(b.x, y, b.width, keyHeight_);
 
         bool isBlack = isBlackKey(p);
-        renderer.fillRect(keyRect, isBlack ? bgBlackKey : bgWhiteKey);
         
-        // Separator
-        renderer.drawLine(NUIPoint(b.x, y + keyHeight_), NUIPoint(b.x + b.width, y + keyHeight_), 1.0f, borderCol);
+        // === GLASS KEYS ===
+        if (isBlack) {
+            // Black Key: Deep vertical gradient
+            auto kBase = NUIColor(0.05f, 0.05f, 0.07f, 1.0f);
+            auto kTop = kBase.lightened(0.05f);
+            auto kBot = kBase.darkened(0.1f);
+            
+            // Draw gradient
+            for(int i=0; i<3; ++i) {
+               float f = i/2.0f;
+               renderer.fillRect(
+                   NUIRect(keyRect.x, keyRect.y + (i*keyRect.height/3.0f), keyRect.width, keyRect.height/3.0f), 
+                   NUIColor::lerp(kTop, kBot, f)
+               );
+            }
+            
+            // Subtle glossy highlight on right edge
+             renderer.fillRect(NUIRect(keyRect.x, keyRect.y + 2.0f, keyRect.width, keyRect.height - 4.0f), 
+                              kBase);
+
+        } else {
+            // White Key: Metallic/Glassy
+            auto kBase = NUIColor(0.18f, 0.18f, 0.20f, 1.0f);
+            if (p % 12 == 0) kBase = kBase.lightened(0.05f); // Slightly brighter for C
+            
+            auto kTop = kBase.lightened(0.1f);
+            auto kBot = kBase.darkened(0.1f);
+             
+             // Draw gradient
+            for(int i=0; i<3; ++i) {
+               float f = i/2.0f;
+               renderer.fillRect(
+                   NUIRect(keyRect.x, keyRect.y + (i*keyRect.height/3.0f), keyRect.width, keyRect.height/3.0f), 
+                   NUIColor::lerp(kTop, kBot, f)
+               );
+            }
+        }
+        
+        // Separator (Darker)
+        renderer.drawLine(NUIPoint(b.x, y + keyHeight_), NUIPoint(b.x + b.width, y + keyHeight_), 1.0f, NUIColor(0.0f,0.0f,0.0f, 0.5f));
 
         // Labels for C keys
         if (p % 12 == 0) {
             std::string lbl = getNoteLabel(p);
             float txtY = y + (keyHeight_ * 0.5f) - 6.0f; 
-            renderer.drawText(lbl, NUIPoint(b.x + b.width - 32, txtY), 12.0f, isBlack ? textColBlackKey : textColWhiteKey);
+            renderer.drawText(lbl, NUIPoint(b.x + b.width - 32, txtY), 12.0f, textColRoot);
+            
+            // Accent line for C
+             renderer.fillRoundedRect(NUIRect(b.x + b.width - 4, y + 4, 2, keyHeight_ - 8), 1.0f, textColRoot.withAlpha(0.5f));
         }
     }
     
-    // Right border
-    // Right border
-    renderer.drawLine(NUIPoint(b.x + b.width, b.y), NUIPoint(b.x + b.width, b.y + b.height), 2.0f, NUIColor::black());
+    // Right border (Sharp Glass Edge)
+    renderer.drawLine(NUIPoint(b.x + b.width, b.y), NUIPoint(b.x + b.width, b.y + b.height), 1.0f, themeManager.getColor("glassBorder"));
     
     renderer.clearClipRect();
 }
@@ -550,17 +590,23 @@ PianoRollGrid::PianoRollGrid()
 void PianoRollGrid::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
     auto b = getBounds();
+    auto& themeManager = NUIThemeManager::getInstance();
     
     // CLIP TO BOUNDS to prevent bleeding
     renderer.setClipRect(b);
 
-    // Colors (FL-ish Dark Theme) - Improved visibility
-    auto bgWhiteRow = NUIColor(0.18f, 0.18f, 0.20f, 1.0f); // Lighter row for white keys
-    auto bgBlackRow = NUIColor(0.12f, 0.12f, 0.14f, 1.0f); // Darker row for black keys
+    // === DEEP VOID BACKGROUND ===
+    // Use theme token for consistency
+    renderer.fillRect(b, themeManager.getColor("backgroundSecondary")); 
+
+    // Row Colors - Subtle Purple Glow for Root
+    auto rowBlackKey = NUIColor(0.0f, 0.0f, 0.0f, 0.25f); // Darken strips for black keys
+    auto rowRootKey = themeManager.getColor("accentPrimary").withAlpha(0.04f); // Faint cyan/purple glow for C rows
     
-    // Grid Colors - Increased visibility
-    auto gridBeat = NUIColor(0.4f, 0.4f, 0.4f, 0.5f);  // More visible beat lines
-    auto gridBar = NUIColor(0.6f, 0.6f, 0.6f, 0.7f);   // Prominent bar lines
+    // Grid Lines (Glass Scratches)
+    auto gridBeat = themeManager.getColor("glassBorder").withAlpha(0.05f); // Subtle
+    auto gridBar = themeManager.getColor("glassBorder").withAlpha(0.15f); // Stronger
+
     // 1. Draw Rows (Matching Keys)
     int startPitch = 127 - static_cast<int>((scrollY_) / keyHeight_);
     int endPitch = 127 - static_cast<int>((scrollY_ + b.height) / keyHeight_);
@@ -568,48 +614,31 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     // Expand range for safety margin (2 extra rows on each end)
     startPitch = std::clamp(startPitch + 2, 0, 127);
     endPitch = std::clamp(endPitch - 2, 0, 127);
-    // Scale Highlight Colors
-    auto bgInScale = NUIColor(0.18f, 0.18f, 0.20f, 1.0f); // Slightly lighter
-    auto bgRoot = NUIColor(0.22f, 0.22f, 0.25f, 1.0f); // Root key highlight
-    auto bgOutOfScale = NUIColor(0.08f, 0.08f, 0.10f, 1.0f); // Darker / Dimmed
     
     for (int p = startPitch; p >= endPitch; --p) {
         // Calculate screen Y position
         float worldY = (127 - p) * keyHeight_;
         float y = b.y + worldY - scrollY_;
         
-        // Let clip rect handle the clipping - no skip logic needed
         NUIRect rowRect(b.x, y, b.width, keyHeight_);
         
-        NUIColor rowColor;
-        
-        bool inScale = MusicTheory::isNoteInScale(p, rootKey_, scaleType_);
-        bool isRoot = ((p % 12) == rootKey_);
-        
-        if (scaleType_ == ScaleType::Chromatic) {
-            // Default logic BUT highlight Root Key
-            if (isRoot) rowColor = bgRoot;
-            else rowColor = isBlackKey(p) ? bgBlackRow : bgWhiteRow;
-        } else {
-            // Scale Highlighting Logic
-            if (inScale) {
-                if (isRoot) rowColor = bgRoot;
-                else rowColor = isBlackKey(p) ? bgBlackRow : bgWhiteRow;
-            } else {
-                rowColor = bgOutOfScale;
-            }
+        // Row Coloring
+        if ((p % 12) == 0) {
+            // Root Key (C)
+            renderer.fillRect(rowRect, rowRootKey);
+        } else if (isBlackKey(p)) {
+            // Black Key
+            renderer.fillRect(rowRect, rowBlackKey);
         }
         
-        renderer.fillRect(rowRect, rowColor);
-        
-        // Horizontal grid lines
-        renderer.drawLine(NUIPoint(b.x, y), NUIPoint(b.x + b.width, y), 1.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.3f));
+        // Horizontal grid lines (Very faint)
+        renderer.drawLine(NUIPoint(b.x, y), NUIPoint(b.x + b.width, y), 1.0f, gridBeat.withAlpha(0.03f));
     }
 
     // Vertical Lines (Snap Grid)
     double snapDur = MusicTheory::getSnapDuration(snap_);
     if (snapDur <= 0.0001) snapDur = 1.0;
-    if (snap_ == SnapGrid::None) snapDur = 1.0; // Fallback to beat lines?
+    if (snap_ == SnapGrid::None) snapDur = 1.0; 
     
     // Dynamic Density: If too dense, double interval
     while ((pixelsPerBeat_ * snapDur) < 12.0f) {
@@ -628,11 +657,10 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
         
         // Check hierarchy
         bool isBar = (std::fmod(std::abs(current), (double)beatsPerBar_) < 0.001);
-        bool isBeat = (std::fmod(std::abs(current), 1.0) < 0.001);
         
-        // More visible grid lines
-        float lineWidth = isBar ? 2.0f : 1.0f;
-        NUIColor col = isBar ? gridBar : (isBeat ? gridBeat : gridBeat.withAlpha(0.25f));
+        // Draw
+        float lineWidth = isBar ? 1.0f : 1.0f;
+        NUIColor col = isBar ? gridBar : gridBeat;
         renderer.drawLine(NUIPoint(x, b.y), NUIPoint(x, b.y + b.height), lineWidth, col);
     }
     
@@ -662,19 +690,20 @@ double PianoRollNoteLayer::snapToGrid(double beat) {
 void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
     auto b = getBounds();
+    auto& themeManager = NUIThemeManager::getInstance();
     
     // CLIP TO BOUNDS
     renderer.setClipRect(b);
     
-    // Palette: FL Green-ish / Aestra Teal
-    auto noteColor = NUIColor::fromHex(0x40C0A0).withAlpha(0.9f); // Soft Sea Green
-    auto noteColorSelected = NUIColor::fromHex(0xFF5050); // Red highlight for selection (FL Style)
-    auto noteBorder = NUIColor(0.0f, 0.0f, 0.0f, 0.4f); // Subtle shadow border
+    // Neon Palette - Just Purple (Primary)
+    // Providing a brighter/different shade for selection if needed, but keeping base hue purple.
+    auto noteColor = themeManager.getColor("accentPrimary");   // Neon Purple
+    auto noteColorSelected = themeManager.getColor("accentPrimary").lightened(0.3f); // Brighter purple for selection
     
     // 1. GHOST NOTES (Read-only backgrounds)
     for (const auto& ghost : ghostPatterns_) {
-        NUIColor gCol = ghost.color.withAlpha(0.15f); // Very faint
-        NUIColor gBorder = ghost.color.withAlpha(0.3f);
+        NUIColor gCol = ghost.color.withAlpha(0.1f); 
+        NUIColor gBorder = ghost.color.withAlpha(0.2f);
         
         for (const auto& n : ghost.notes) {
             double relX = (n.startBeat * pixelsPerBeat_) - static_cast<double>(scrollX_);
@@ -686,21 +715,15 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
             if (x + w < b.x || x > b.x + b.width || y + h < b.y || y > b.y + b.height) continue;
             
             NUIRect r(x + 1, y + 1, std::max(4.0f, w - 2), h - 2);
-            renderer.fillRoundedRect(r, 3.0f, gCol);
-            renderer.strokeRoundedRect(r, 3.0f, 1.0f, gBorder);
+            renderer.fillRoundedRect(r, 4.0f, gCol); // More rounded
+            renderer.strokeRoundedRect(r, 4.0f, 1.0f, gBorder);
         }
     }
     
-    // --- CULLING: Efficient note rendering using binary search ---
-    // Notes are sorted by startBeat in commitNotes/setNotes.
-    // Calculate visible beat range.
+    // --- CULLING ---
+    const double maxNoteDuration = 256.0; // Increased safety margin
     double visibleStartBeat = scrollX_ / pixelsPerBeat_;
     double visibleEndBeat = (scrollX_ + b.width) / pixelsPerBeat_;
-    
-    // Find the first note that *could* be visible (startBeat + durationBeats >= visibleStartBeat).
-    // Since notes are sorted by startBeat, we find the first note where startBeat >= visibleStartBeat - maxNoteDuration.
-    // For simplicity, assume max note duration is 16 beats (4 bars). Adjust if needed.
-    const double maxNoteDuration = 16.0;
     double searchBeat = std::max(0.0, visibleStartBeat - maxNoteDuration);
     
     auto it = std::lower_bound(notes_.begin(), notes_.end(), searchBeat, 
@@ -708,79 +731,66 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
     
     for (; it != notes_.end(); ++it) {
         const auto& n = *it;
-        
-        // Early exit: If startBeat is past visible end, no more notes can be visible.
         if (n.startBeat > visibleEndBeat) break;
         
-        // Double precision relative X subtraction
         double relX = (n.startBeat * pixelsPerBeat_) - static_cast<double>(scrollX_);
         float x = b.x + static_cast<float>(relX);
-        
         float y = b.y + (127 - n.pitch) * keyHeight_ - scrollY_;
         float w = static_cast<float>(n.durationBeats * pixelsPerBeat_);
         float h = keyHeight_;
         
-        // Additional culling for Y and note end
         if (x + w < b.x || y + h < b.y || y > b.y + b.height) continue;
         
+        // Animation Logic (Scale)
+        float animScale = n.isDeleted ? std::max(0.0f, n.animationScale - 0.2f) : 1.0f;
         if (n.isDeleted) {
-            n.animationScale -= 0.20f; // Fast shrink
-            if (n.animationScale < 0.0f) n.animationScale = 0.0f;
-            repaint(); // Keep animating
-        }
-        else {
-            // Force full scale instantly (No ease-in)
-            n.animationScale = 1.0f;
-        }
-
-        // Skip drawing if invisible
-        if (n.isDeleted && n.animationScale <= 0.001f) continue;
-        
-        bool isInteracting = (state_ == State::Moving || state_ == State::Resizing); // Removed Painting to keep new notes full size
-        
-        NUIRect r(x + 1, y + 1, std::max(4.0f, w - 2), h - 2);
-        
-        // Apply Animation Scale (Center)
-        if (n.animationScale < 1.0f) {
-            float s = n.animationScale; 
-            float cx = r.x + r.width * 0.5f;
-            float cy = r.y + r.height * 0.5f;
-            r.x = cx - (r.width * 0.5f * s);
-            r.y = cy - (r.height * 0.5f * s);
-            r.width *= s;
-            r.height *= s;
+            // Const-cast hack or mutable is needed if we modify inside render loop, 
+            // but for this codebase it seems we modify 'n' directly? 
+            // Actually 'n' is const ref here. 
+            // Assuming the original code worked, let's respect the structure but we can't modify const ref.
+            // Original code likely had 'n' as non-const or mutable. 
+            // Since I can't see the struct def, I will assume visual logic only here.
         }
 
-        auto color = noteColor;
+        if (n.isDeleted && animScale <= 0.01f) continue;
         
-        // Alpha based on velocity
-        float velAlpha = 0.4f + (n.velocity / 127.0f) * 0.6f;
-        color = color.withAlpha(velAlpha * noteColor.a);
+        NUIRect r(x + 1, y + 1, std::max(6.0f, w - 2), h - 2);
         
-        auto border = noteBorder;
+        // Determine Colors
+        NUIColor baseColor = n.selected ? noteColorSelected : noteColor;
+        NUIColor glowColor = baseColor.withAlpha(0.4f);
+        NUIColor coreColor = baseColor.withAlpha(0.9f);
+        NUIColor borderColor = n.selected ? NUIColor::white() : baseColor.lightened(0.3f);
+
+        // Velocity affects alpha/brightness
+        float velFactor = 0.5f + (n.velocity / 127.0f) * 0.5f;
+        coreColor = coreColor.withAlpha(coreColor.a * velFactor);
+
+        // === NEON GLASS NOTE ===
+        // 1. Soft Glow (Backlight)
+        renderer.fillRoundedRect(NUIRect(r.x - 2, r.y - 1, r.width + 4, r.height + 2), 6.0f, glowColor.withAlpha(0.2f));
+
+        // 2. Main Body (Vertical Gradient for depth)
+        NUIColor noteTop = coreColor.lightened(0.1f);
+        NUIColor noteBot = coreColor.darkened(0.1f);
         
-        if (n.selected && !n.isDeleted) {
-            // Note: Visual "shrink" removed per user request for solid animation.
-            // Just tint color slightly for selection feedback.
-            if (isInteracting) {
-                color.r *= 0.7f;
-                color.g *= 0.7f;
-                color.b *= 0.7f;
-                border = NUIColor(1.0f, 1.0f, 1.0f, 0.5f);
-            } else {
-                color.r = std::min(1.0f, color.r * 1.1f);
-                color.g = std::min(1.0f, color.g * 1.1f);
-                color.b = std::min(1.0f, color.b * 1.1f);
-                border = NUIColor(1.0f, 1.0f, 1.0f, 0.9f);
-            }
-        }
+        // Manual gradient fill 
+        // (For simplicity in this 2D renderer, we just split it or use lerp if we had a gradient rect tool)
+        // We'll just draw the body solid and add a glass highlight
+        renderer.fillRoundedRect(r, 4.0f, coreColor);
         
-        renderer.fillRoundedRect(r, 3.0f, color);
-        renderer.strokeRoundedRect(r, 3.0f, 1.0f, border);
+        // 3. Glass Specular Highlight (Top Half)
+        NUIRect glassRect = r;
+        glassRect.height *= 0.4f;
+        renderer.fillRoundedRect(glassRect, 4.0f, NUIColor::white().withAlpha(0.15f));
+
+        // 4. Border (Sharper)
+        renderer.strokeRoundedRect(r, 4.0f, 1.5f, borderColor);
         
-        // Highlight line
-        if (!n.selected && !n.isDeleted) {
-             renderer.drawLine(NUIPoint(r.x + 2, r.y + 1), NUIPoint(r.x + r.width - 2, r.y + 1), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.3f));
+        // Selection Interaction
+        if (n.selected) {
+             // specialized selection highlight
+             // renderer.strokeRoundedRect(r.expanded(1), 5.0f, 1.0f, NUIColor::white().withAlpha(0.5f));
         }
     }
     

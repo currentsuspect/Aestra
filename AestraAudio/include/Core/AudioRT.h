@@ -4,12 +4,14 @@
 #include <cstdint>
 
 #if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
-    #if defined(_MSC_VER)
-        #include <intrin.h>
-        #include <xmmintrin.h>
-    #else
-        #include <x86intrin.h>
-    #endif
+#if defined(_MSC_VER)
+#include <intrin.h>
+#if defined(_MSC_VER) || defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+#include <xmmintrin.h>
+#endif
+#else
+#include <x86intrin.h>
+#endif
 #endif
 
 namespace Aestra {

@@ -10,6 +10,7 @@
 #include "NUIRenderBatch.h"
 #include "NUIDirtyRegion.h"
 #include "NUIRenderCache.h"
+#include "../GlassmorphismPass.h" // Added GlassmorphismPass
 #include <vector>
 #include <tuple>
 #include <cstdint>
@@ -165,6 +166,16 @@ public:
 
     // Query renderer state
     bool isScissorEnabled() const { return scissorEnabled_; }
+
+    // Glassmorphism API
+    void updateGlassBackground() {
+        // Capture screen 0 (default) or handle specific FBOs if needed
+        glassPass_.execute(0);
+    }
+    
+    GLuint getGlassTexture() const {
+        return glassPass_.getBlurredTexture();
+    }
     
 private:
     // Vertex structure for batching
@@ -391,6 +402,9 @@ private:
     float projectionBackup_[16];
     int widthBackup_ = 0;
     int heightBackup_ = 0;
+    
+    // Glassmorphism Pass
+    GlassmorphismPass glassPass_; 
 };
 
 } // namespace AestraUI

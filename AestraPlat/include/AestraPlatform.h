@@ -2,8 +2,9 @@
 #pragma once
 
 #include "../../AestraCore/include/AestraConfig.h"
-#include <string>
+
 #include <functional>
+#include <string>
 
 namespace Aestra {
 
@@ -14,8 +15,8 @@ struct WindowDesc {
     std::string title = "AESTRA";
     int width = 1280;
     int height = 720;
-    int x = -1;  // -1 = center
-    int y = -1;  // -1 = center
+    int x = -1; // -1 = center
+    int y = -1; // -1 = center
     bool resizable = true;
     bool decorated = true;
     bool startMaximized = false;
@@ -25,21 +26,61 @@ struct WindowDesc {
 // =============================================================================
 // Input Event Types
 // =============================================================================
-enum class MouseButton {
-    Left = 0,
-    Right = 1,
-    Middle = 2
-};
+enum class MouseButton { Left = 0, Right = 1, Middle = 2 };
 
 enum class KeyCode {
     Unknown = 0,
     // Letters
-    A = 65, B, C, D, E, F, G, H, I, J, K, L, M,
-    N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
+    A = 65,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
+    K,
+    L,
+    M,
+    N,
+    O,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
+    Z,
     // Numbers
-    Num0 = 48, Num1, Num2, Num3, Num4, Num5, Num6, Num7, Num8, Num9,
+    Num0 = 48,
+    Num1,
+    Num2,
+    Num3,
+    Num4,
+    Num5,
+    Num6,
+    Num7,
+    Num8,
+    Num9,
     // Function keys
-    F1 = 112, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
+    F1 = 112,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12,
     // Special keys
     Escape = 27,
     Tab = 9,
@@ -66,22 +107,30 @@ struct KeyModifiers {
     bool shift = false;
     bool control = false;
     bool alt = false;
-    bool super = false;  // Windows key / Command key
+    bool super = false; // Windows key / Command key
     bool capsLock = false;
 };
 
-    // Hit Test Result (Generic)
-    enum class HitTestResult {
-        Client,         // Client area (interactive)
-        Caption,        // Title bar (draggable, double-click to maximize)
-        ResizeTop, ResizeBottom, ResizeLeft, ResizeRight,
-        ResizeTopLeft, ResizeTopRight, ResizeBottomLeft, ResizeBottomRight,
-        CloseButton, MaxButton, MinButton, // (Optional: Platform handled buttons)
-        Nowhere,        // Transparent/Pass-through
-        Default         // Use platform default logic
-    };
+// Hit Test Result (Generic)
+enum class HitTestResult {
+    Client,  // Client area (interactive)
+    Caption, // Title bar (draggable, double-click to maximize)
+    ResizeTop,
+    ResizeBottom,
+    ResizeLeft,
+    ResizeRight,
+    ResizeTopLeft,
+    ResizeTopRight,
+    ResizeBottomLeft,
+    ResizeBottomRight,
+    CloseButton,
+    MaxButton,
+    MinButton, // (Optional: Platform handled buttons)
+    Nowhere,   // Transparent/Pass-through
+    Default    // Use platform default logic
+};
 
-    using HitTestCallback = std::function<HitTestResult(int x, int y)>;
+using HitTestCallback = std::function<HitTestResult(int x, int y)>;
 
 // =============================================================================
 // Platform Window Interface
@@ -96,7 +145,7 @@ public:
     virtual bool isValid() const = 0;
 
     // Event processing
-    virtual bool pollEvents() = 0;  // Returns false when window should close
+    virtual bool pollEvents() = 0; // Returns false when window should close
     virtual void swapBuffers() = 0;
 
     // Window properties
@@ -114,7 +163,7 @@ public:
     virtual void restore() = 0;
     virtual bool isMaximized() const = 0;
     virtual bool isMinimized() const = 0;
-    virtual void requestClose() = 0;  // Request window close (triggers close callback)
+    virtual void requestClose() = 0; // Request window close (triggers close callback)
 
     // Fullscreen
     virtual void setFullscreen(bool fullscreen) = 0;
@@ -131,28 +180,27 @@ public:
 
     // DPI support
     virtual float getDPIScale() const = 0;
-    
+
     // Cursor control
     // IMPORTANT: All platform window implementations (Win32, X11, Cocoa) MUST override this method.
     // Expected behavior: Show/hide cursor immediately with no delay.
     // Thread requirements: MUST be called from the same thread that created the window (window thread).
     virtual void setCursorVisible(bool visible) = 0;
-    
+
     // Set cursor position (screen coordinates)
     virtual void setCursorPosition(int x, int y) = 0;
 
     // Mouse Capture (for dragging outside window)
     virtual void setMouseCapture(bool captured) {}
-    
+
     // Modifier key state query (for wheel events that need modifier info)
     virtual KeyModifiers getCurrentModifiers() const = 0;
-
-
 
     // Event callbacks
     virtual void setHitTestCallback(HitTestCallback callback) = 0;
     virtual void setMouseMoveCallback(std::function<void(int x, int y)> callback) = 0;
-    virtual void setMouseButtonCallback(std::function<void(MouseButton button, bool pressed, int x, int y)> callback) = 0;
+    virtual void
+    setMouseButtonCallback(std::function<void(MouseButton button, bool pressed, int x, int y)> callback) = 0;
     virtual void setMouseWheelCallback(std::function<void(float delta)> callback) = 0;
     virtual void setKeyCallback(std::function<void(KeyCode key, bool pressed, const KeyModifiers& mods)> callback) = 0;
     virtual void setCharCallback(std::function<void(unsigned int codepoint)> callback) = 0;
@@ -170,7 +218,7 @@ public:
     virtual ~IPlatformUtils() = default;
 
     // Time
-    virtual double getTime() const = 0;  // High-resolution time in seconds
+    virtual double getTime() const = 0; // High-resolution time in seconds
     virtual void sleep(int milliseconds) const = 0;
 
     // File dialogs
@@ -185,10 +233,11 @@ public:
     // System info
     virtual std::string getPlatformName() const = 0;
     virtual int getProcessorCount() const = 0;
-    virtual size_t getSystemMemory() const = 0;  // In bytes
-    
+    virtual size_t getSystemMemory() const = 0; // In bytes
+
     // Paths
-    virtual std::string getAppDataPath(const std::string& appName) const = 0;  // Returns platform-specific app data directory
+    virtual std::string
+    getAppDataPath(const std::string& appName) const = 0; // Returns platform-specific app data directory
 };
 
 // =============================================================================
@@ -201,6 +250,7 @@ public:
 
     // Get platform utilities
     static IPlatformUtils* getUtils();
+    static bool isInitialized();
 
     // Initialize/shutdown platform
     static bool initialize();
@@ -237,6 +287,7 @@ private:
     private:
         void* m_handle = nullptr; // Windows: HANDLE (MMCSS)
         bool m_valid = false;
-    };};
+    };
+};
 
 } // namespace Aestra

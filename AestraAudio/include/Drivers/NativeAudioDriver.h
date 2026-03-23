@@ -1,17 +1,17 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "IAudioDriver.h"
 #include "AudioDriverTypes.h"
+#include "IAudioDriver.h"
+
+#include <functional>
 #include <string>
 #include <vector>
-#include <functional>
 
 namespace Aestra {
 namespace Audio {
 
 // Helper for type-to-string conversion
-
 
 /**
  * @brief Base class for native drivers (WASAPI, ASIO)
@@ -22,9 +22,9 @@ public:
     virtual ~NativeAudioDriver() = default;
 
     // IAudioDriver interface is inherited
-    
+
     // Extended Native Interface
-    
+
     /**
      * @brief Get driver capabilities
      */
@@ -39,10 +39,10 @@ public:
      * @brief Get last error
      */
     virtual DriverError getLastError() const = 0;
-    
+
     // IAudioDriver overrides that we want to enforce or extend
     // Note: getErrorMessage, getStatistics are already in IAudioDriver
-    
+
     /**
      * @brief Reset driver statistics
      */
@@ -58,9 +58,9 @@ public:
      * @brief Shutdown driver
      */
     virtual void shutdown() = 0;
-    
+
     // Note: isAvailable is in IAudioDriver
-    
+
     // Dithering defaults (can be overridden by specific drivers like WASAPI Shared)
     virtual void setDitheringEnabled(bool enabled) override {}
     virtual bool isDitheringEnabled() const override { return false; }

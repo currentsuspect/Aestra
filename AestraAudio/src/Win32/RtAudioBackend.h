@@ -3,8 +3,9 @@
 
 #include "IAudioDriver.h"
 #include "RtAudio.h"
-#include <memory>
+
 #include <atomic>
+#include <memory>
 
 namespace Aestra {
 namespace Audio {
@@ -36,7 +37,7 @@ public:
     double getStreamLatency() const override;
     uint32_t getStreamSampleRate() const override;
     uint32_t getStreamBufferSize() const override;
-    
+
     DriverStatistics getStatistics() const override { return m_stats; }
     std::string getErrorMessage() const override { return m_lastError; }
 
@@ -54,17 +55,11 @@ private:
     std::unique_ptr<RtAudio> m_rtAudio;
     std::atomic<AudioCallback> m_userCallback;
     std::atomic<void*> m_userData;
-    std::atomic<uint32_t> m_bufferSize{0};  // Store buffer size after stream opened
+    std::atomic<uint32_t> m_bufferSize{0}; // Store buffer size after stream opened
 
     // RtAudio callback wrapper
-    static int rtAudioCallback(
-        void* outputBuffer,
-        void* inputBuffer,
-        unsigned int numFrames,
-        double streamTime,
-        RtAudioStreamStatus status,
-        void* userData
-    );
+    static int rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int numFrames, double streamTime,
+                               RtAudioStreamStatus status, void* userData);
 
     DriverStatistics m_stats;
     std::string m_lastError;

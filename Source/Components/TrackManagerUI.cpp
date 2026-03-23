@@ -1449,7 +1449,7 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
         
         AestraUI::NUIRect selectionRect(minX, minY, maxX - minX, maxY - minY);
 
-        // CLIPPING: Constrain selection to grid area (ignore headers/rulers)
+        // CLIPPING: Constrain selection to grid area
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         
@@ -1476,41 +1476,52 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
             
             AestraUI::NUIRect clippedRect(clipX, clipY, clipR - clipX, clipB - clipY);
 
-            // "Glass Tech" Theme Style
+            // "Glass Tech" Theme Style - POLISHED
             AestraUI::NUIColor accent = themeManager.getColor("accentCyan");
             
             // 1. Vertical Gradient Fill for "Glass" depth
-            // Top: Almost transparent (5/255 ~= 0.02)
-            // Bottom: Slightly more visible (30/255 ~= 0.12)
-            AestraUI::NUIColor fillTop = accent.withAlpha(5.0f / 255.0f);
-            AestraUI::NUIColor fillBottom = accent.withAlpha(30.0f / 255.0f);
+            // Top: More transparent
+            // Bottom: Denser
+            AestraUI::NUIColor fillTop = accent.withAlpha(0.04f);
+            AestraUI::NUIColor fillBottom = accent.withAlpha(0.15f);
             renderer.fillRectGradient(clippedRect, fillTop, fillBottom, true /* vertical */);
             
-            // 2. Main Border: Solid, sharp line (200/255 ~= 0.78)
-            AestraUI::NUIColor borderColor = accent.withAlpha(200.0f / 255.0f);
-            renderer.strokeRect(clippedRect, 1.0f, borderColor);
+            // 2. Main Border with Glow
+            // Outer Glow (Blurred/Wide)
+            renderer.strokeRect(clippedRect, 3.0f, accent.withAlpha(0.25f));
+            // Inner Core (Sharp)
+            renderer.strokeRect(clippedRect, 1.0f, accent.withAlpha(0.9f));
             
-            // 3. Tech Corner Accents (Solid 255/255 = 1.0) - Gives precision feel
-            // Only draw corners if they weren't clipped away (simplified logic: just draw at clipped corners)
-            AestraUI::NUIColor cornerColor = accent.withAlpha(1.0f);
+            // 3. Glowing Corners
+            // Helper for corner rendering
+            auto drawCorner = [&](float x, float y, float w, float h) {
+                // Outer Glow
+                renderer.fillRect(AestraUI::NUIRect(x - 1, y - 1, w + 2, h + 2), accent.withAlpha(0.5f));
+                // Core
+                renderer.fillRect(AestraUI::NUIRect(x, y, w, h), accent.withAlpha(1.0f));
+            };
+
             float cornerLen = 6.0f;
             float cornerThick = 2.0f;
             
-            // Top-Left
-            renderer.fillRect(AestraUI::NUIRect(clipX, clipY, cornerLen, cornerThick), cornerColor);
-            renderer.fillRect(AestraUI::NUIRect(clipX, clipY, cornerThick, cornerLen), cornerColor);
-            
-            // Top-Right
-            renderer.fillRect(AestraUI::NUIRect(clipR - cornerLen, clipY, cornerLen, cornerThick), cornerColor);
-            renderer.fillRect(AestraUI::NUIRect(clipR - cornerThick, clipY, cornerThick, cornerLen), cornerColor);
-            
-            // Bottom-Left
-            renderer.fillRect(AestraUI::NUIRect(clipX, clipB - cornerThick, cornerLen, cornerThick), cornerColor);
-            renderer.fillRect(AestraUI::NUIRect(clipX, clipB - cornerLen, cornerThick, cornerLen), cornerColor);
-            
-            // Bottom-Right
-            renderer.fillRect(AestraUI::NUIRect(clipR - cornerLen, clipB - cornerThick, cornerLen, cornerThick), cornerColor);
-            renderer.fillRect(AestraUI::NUIRect(clipR - cornerThick, clipB - cornerLen, cornerThick, cornerLen), cornerColor);
+            // Only draw corners if rect is large enough
+            if (clippedRect.width > cornerLen * 2 && clippedRect.height > cornerLen * 2) {
+                // Top-Left
+                drawCorner(clipX, clipY, cornerLen, cornerThick);
+                drawCorner(clipX, clipY, cornerThick, cornerLen);
+                
+                // Top-Right
+                drawCorner(clipR - cornerLen, clipY, cornerLen, cornerThick);
+                drawCorner(clipR - cornerThick, clipY, cornerThick, cornerLen);
+                
+                // Bottom-Left
+                drawCorner(clipX, clipB - cornerThick, cornerLen, cornerThick);
+                drawCorner(clipX, clipB - cornerLen, cornerThick, cornerLen);
+                
+                // Bottom-Right
+                drawCorner(clipR - cornerLen, clipB - cornerThick, cornerLen, cornerThick);
+                drawCorner(clipR - cornerThick, clipB - cornerLen, cornerThick, cornerLen);
+            }
         }
     }
 
@@ -1533,7 +1544,8 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
     float gridStartX = controlAreaWidth + 5;
     
     // Draw background (control area + full grid area - no bounds restriction)
-    AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
+    // Deep Space Background (Explicitly dark to avoid missing-token pinks)
+    AestraUI::NUIColor bgColor = AestraUI::NUIColor::fromHex(0x050508); // Deep Void
     
     if (m_playlistVisible) {
         // Background for control area (always visible)
@@ -3293,14 +3305,13 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     auto textColor = themeManager.getColor("textSecondary");
     auto accentColor = themeManager.getColor("accentPrimary");
     
-    // === GLASS BACKGROUND (subtle dark glass like transport bar displays) ===
-    // Use a subtle dark glass - NOT the purple "glass" token which is too bright
-    auto glassBg = AestraUI::NUIColor(0.12f, 0.12f, 0.14f, 0.85f);  // Subtle dark grey glass
-    auto glassHighlight = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.04f);  // Very subtle top highlight
+    // === PRO/GLASS RULER STYLE ===
+    // Background: Darker than track area to visually separate
+    auto glassBg = themeManager.getColor("backgroundSecondary").withAlpha(0.9f);
+    auto glassHighlight = AestraUI::NUIColor::white().withAlpha(0.04f); // Top edge highlight
     
-    auto textCol = AestraUI::NUIColor(0.7f, 0.7f, 0.75f, 1.0f);
-    auto tickCol = AestraUI::NUIColor(0.35f, 0.35f, 0.40f, 1.0f);
-    auto borderCol = AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.5f);
+    auto textCol = themeManager.getColor("textSecondary");
+    auto tickCol = themeManager.getColor("textSecondary").withAlpha(0.6f);
     
     // Restore layout definition
     const auto& layout = themeManager.getLayoutDimensions();
@@ -4589,6 +4600,12 @@ double TrackManagerUI::getTimeAtPosition(float x) const {
 
 void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
     if (!m_showDropPreview || m_dropTargetTrack < 0) {
+        return;
+    }
+    
+    // Issue #50: Don't show skeleton preview for existing clip drags
+    // Instant clip drag provides real-time visual feedback by moving the actual clip
+    if (m_isDraggingClipInstant) {
         return;
     }
     

@@ -101,6 +101,10 @@ if(EXISTS ${VST3_SDK_DIR}/pluginterfaces AND EXISTS ${VST3_SDK_DIR}/public.sdk)
         list(APPEND VST3_HOST_SOURCES
             ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_mac.mm
         )
+        set_source_files_properties(
+            ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_mac.mm
+            PROPERTIES COMPILE_FLAGS "-fobjc-arc"
+        )
     else()
         list(APPEND VST3_HOST_SOURCES
             ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_linux.cpp
@@ -144,8 +148,11 @@ set(AESTRA_AUDIO_CORE_SOURCES
     # Core
     src/Core/AudioEngine.cpp
     src/Core/AudioDeviceManager.cpp
+    src/Core/AutosaveManager.cpp
+    src/Core/DriverRegistryStub.cpp  # Default no-op; platform libs override at link time
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
+    src/Core/ProjectValidator.cpp
     
     # Playback
     src/Playback/AuditionEngine.cpp
@@ -172,6 +179,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/DSP/SampleRateConverter.cpp
     
     # IO
+    src/IO/AudioExporter.cpp
     src/IO/MiniAudioDecoder.cpp
     src/IO/StreamingDecoder.cpp
     src/IO/WaveformCache.cpp
@@ -189,22 +197,31 @@ set(AESTRA_AUDIO_CORE_SOURCES
     
     # Commands
     src/Commands/CommandHistory.cpp
+    src/Commands/CommandTransaction.cpp
     src/Commands/SplitClipCommand.cpp
     src/Commands/AddClipCommand.cpp
+    
+    # Headless / batch processing
+    src/Headless/HeadlessMusicGenerator.cpp
     
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp
     src/Plugin/PluginManager.cpp
     src/Plugin/PluginFactory.cpp
+    src/Plugin/BuiltInPlugins.cpp
     src/Plugin/SamplerPlugin.cpp
     src/Plugin/EffectChain.cpp
 )
 
-# Set per-file compile flags for AVX-512
-if(MSVC)
-    set_source_files_properties(src/DSP/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "/arch:AVX512")
+# Set per-file compile flags for AVX-512 (x86_64 only, not ARM64)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i686")
+    if(MSVC)
+        set_source_files_properties(src/DSP/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "/arch:AVX512")
+    else()
+        set_source_files_properties(src/DSP/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "-mavx512f -mavx512dq")
+    endif()
 else()
-    set_source_files_properties(src/DSP/SincAVX512.cpp PROPERTIES COMPILE_FLAGS "-mavx512f -mavx512dq")
+    message(STATUS "Skipping AVX-512 optimizations for ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
 # Add VST3 host sources if SDK is available
@@ -234,6 +251,8 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Core/EngineState.h
     include/Core/AestraAudio.h
     include/Core/AudioDeviceManager.h
+    include/Core/AutosaveManager.h
+    include/Core/ProjectValidator.h
     include/Drivers/IAudioDriver.h
     include/Drivers/AudioDriver.h           # Legacy/Base types
     include/Drivers/AudioDriverTypes.h
@@ -244,6 +263,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/DSP/Oscillator.h
     include/Playback/MetronomeEngine.h
     include/IO/PathUtils.h
+    include/IO/AudioExporter.h
     include/Playback/PreviewEngine.h
     include/IO/SamplePool.h
     include/DSP/SampleRateConverter.h
@@ -273,8 +293,15 @@ set(AESTRA_AUDIO_CORE_HEADERS
     # Undo/Redo
     include/Commands/ICommand.h
     include/Commands/CommandHistory.h
+    include/Commands/CommandTransaction.h
     include/Commands/SplitClipCommand.h
     include/Commands/AddClipCommand.h
+    include/Commands/MoveClipCommand.h
+    include/Commands/RemoveClipCommand.h
+    include/Commands/MacroCommand.h
+    
+    # Headless / batch processing
+    include/Headless/HeadlessMusicGenerator.h
     
     src/DummyAudioDriver.h
     
@@ -284,6 +311,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Plugin/PluginScanner.h
     include/Plugin/PluginManager.h
     include/Plugin/PluginFactory.h
+    include/Plugin/BuiltInPlugins.h
     include/Plugin/EffectChain.h
     include/Plugin/VST3Host.h
     include/Playback/AuditionEngine.h
@@ -319,6 +347,7 @@ target_include_directories(AestraAudioCore
         ${CMAKE_CURRENT_SOURCE_DIR}/include/Drivers
         ${CMAKE_CURRENT_SOURCE_DIR}/include/Plugin
         ${CMAKE_CURRENT_SOURCE_DIR}/include/Commands
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/Headless
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/../AestraCore/include
@@ -365,6 +394,22 @@ if(TARGET AestraCore)
 endif()
 
 target_link_libraries(AestraAudioCore PUBLIC AestraPlat)
+
+# macOS frameworks needed by VST3 hosting
+if(APPLE)
+    target_link_libraries(AestraAudioCore PUBLIC
+        "-framework CoreFoundation"
+        "-framework CoreAudio"
+        "-framework Foundation"
+    )
+endif()
+
+# Media Foundation symbols are referenced from AestraAudioCore sources on Windows
+# (for example MiniAudioDecoder), so consumers of the static library need these
+# system libraries transitively.
+if(WIN32)
+    target_link_libraries(AestraAudioCore PUBLIC mfplat mfreadwrite mfuuid)
+endif()
 
 # =============================================================================
 # Premium Plugins Integration (Optional)
@@ -438,13 +483,14 @@ elseif(UNIX)
     # Non-Windows (Linux)
     if(ALSA_FOUND)
         set(AESTRA_AUDIO_LINUX_SOURCES
-            src/Linux/LinuxDriverRegistry.cpp
-            src/Linux/RtAudioDriver.cpp
+            # STUB: Linux drivers need API updates to match current AudioDeviceInfo struct
+            # src/Linux/LinuxDriverRegistry.cpp
+            # src/Linux/RtAudioDriver.cpp
         )
 
         set(AESTRA_AUDIO_LINUX_HEADERS
             src/Linux/RtAudioDriver.h
-            include/AudioPlatformRegistry.h
+            include/Drivers/AudioPlatformRegistry.h
             ${RTAUDIO_HEADERS}
         )
 
@@ -472,7 +518,8 @@ elseif(UNIX)
 
         add_library(AestraAudio ALIAS AestraAudioLinux)
     else()
-        # Create a dummy target so tests don't fail configuration
+        # No ALSA - stub already in AestraAudioCore
+        # Create an interface library for compatibility
         add_library(AestraAudio INTERFACE)
         target_link_libraries(AestraAudio INTERFACE AestraAudioCore)
     endif()

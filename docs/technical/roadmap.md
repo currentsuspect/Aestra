@@ -178,7 +178,14 @@ Deliverables:
 - ✅ Autosave recovery on startup (auto-loads if detected)
 - ✅ Crash-safe writes (atomic temp file + rename)
 - ✅ Project format v1 spec: versioning/migrations, validation, non-destructive load failures.
+- ✅ Project round-trip smoke coverage exists and is passing (`ProjectRoundTripTest`).
+- ✅ Internal plugin units can now persist through project save/load and restore plugin state.
 - [ ] Undo/redo integrated into the main UX for core actions (clip edits, lane edits, pattern edits).
+
+March 2026 snapshot:
+- internal built-in plugin discovery is working through normal manager lookup
+- headless/plugin tests now prove discovery, factory creation, usage path, project round-trip, and audible Arsenal playback for the internal Rumble instrument
+- `OfflineRenderRegressionTest` still needs canonical fixtures before it becomes a dependable regression gate
 
 Freeze:
 - Project file schema for Beta (allow forward-compatible additions only).
