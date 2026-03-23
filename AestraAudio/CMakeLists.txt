@@ -148,9 +148,11 @@ set(AESTRA_AUDIO_CORE_SOURCES
     # Core
     src/Core/AudioEngine.cpp
     src/Core/AudioDeviceManager.cpp
+    src/Core/AutosaveManager.cpp
     src/Core/DriverRegistryStub.cpp  # Default no-op; platform libs override at link time
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
+    src/Core/ProjectValidator.cpp
     
     # Playback
     src/Playback/AuditionEngine.cpp
@@ -177,6 +179,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/DSP/SampleRateConverter.cpp
     
     # IO
+    src/IO/AudioExporter.cpp
     src/IO/MiniAudioDecoder.cpp
     src/IO/StreamingDecoder.cpp
     src/IO/WaveformCache.cpp
@@ -194,8 +197,12 @@ set(AESTRA_AUDIO_CORE_SOURCES
     
     # Commands
     src/Commands/CommandHistory.cpp
+    src/Commands/CommandTransaction.cpp
     src/Commands/SplitClipCommand.cpp
     src/Commands/AddClipCommand.cpp
+    
+    # Headless / batch processing
+    src/Headless/HeadlessMusicGenerator.cpp
     
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp
@@ -244,6 +251,8 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Core/EngineState.h
     include/Core/AestraAudio.h
     include/Core/AudioDeviceManager.h
+    include/Core/AutosaveManager.h
+    include/Core/ProjectValidator.h
     include/Drivers/IAudioDriver.h
     include/Drivers/AudioDriver.h           # Legacy/Base types
     include/Drivers/AudioDriverTypes.h
@@ -254,6 +263,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/DSP/Oscillator.h
     include/Playback/MetronomeEngine.h
     include/IO/PathUtils.h
+    include/IO/AudioExporter.h
     include/Playback/PreviewEngine.h
     include/IO/SamplePool.h
     include/DSP/SampleRateConverter.h
@@ -283,11 +293,15 @@ set(AESTRA_AUDIO_CORE_HEADERS
     # Undo/Redo
     include/Commands/ICommand.h
     include/Commands/CommandHistory.h
+    include/Commands/CommandTransaction.h
     include/Commands/SplitClipCommand.h
     include/Commands/AddClipCommand.h
     include/Commands/MoveClipCommand.h
     include/Commands/RemoveClipCommand.h
     include/Commands/MacroCommand.h
+    
+    # Headless / batch processing
+    include/Headless/HeadlessMusicGenerator.h
     
     src/DummyAudioDriver.h
     
@@ -333,6 +347,7 @@ target_include_directories(AestraAudioCore
         ${CMAKE_CURRENT_SOURCE_DIR}/include/Drivers
         ${CMAKE_CURRENT_SOURCE_DIR}/include/Plugin
         ${CMAKE_CURRENT_SOURCE_DIR}/include/Commands
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/Headless
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/../AestraCore/include
