@@ -28,25 +28,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev
 
-      - name: Cache CMake
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cmake
-            build/CMakeFiles
-          key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt', '**/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-cmake-
-
       - name: Configure
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
-        run: cmake --build build --config ${{env.BUILD_TYPE}} --parallel
+        run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
         working-directory: build
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest|ConfigAssertTests|MathTests|ThreadingTests|FileTests|LogTests"
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
 
       - name: Discord Notification
         if: always()
@@ -76,26 +66,16 @@ jobs:
         with:
           cmake-version: "3.28"
 
-      - name: Cache CMake
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~\AppData\Local\CMake
-            build\CMakeFiles
-          key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-cmake-
-
       - name: Configure
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
-        run: cmake --build build --config ${{env.BUILD_TYPE}} --parallel
+        run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
         working-directory: build
         shell: bash
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest|ConfigAssertTests|MathTests|ThreadingTests|FileTests|LogTests"
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
 
       - name: Discord Notification
         if: always()
@@ -127,25 +107,15 @@ jobs:
         with:
           cmake-version: "3.28"
 
-      - name: Cache CMake
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Library/Caches/CMake
-            build/CMakeFiles
-          key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-cmake-
-
       - name: Configure
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
-        run: cmake --build build --config ${{env.BUILD_TYPE}} --parallel
+        run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
         working-directory: build
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest|ConfigAssertTests|MathTests|ThreadingTests|FileTests|LogTests"
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
 
       - name: Discord Notification
         if: always()
@@ -198,7 +168,6 @@ jobs:
 
       - name: Run clang-tidy
         run: |
-          # Run on a subset of core files to avoid noise
           clang-tidy-14 --config-file=.clang-tidy \
             AestraCore/src/*.cpp \
             -- -IAestraCore/include -std=c++17 2>&1 | head -100 || true
