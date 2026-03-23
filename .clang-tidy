@@ -1,0 +1,53 @@
+---
+# Aestra DAW - Clang-Tidy Configuration
+# Focus on: correctness, performance, and modern C++
+
+Checks: >
+  bugprone-*,
+  cppcoreguidelines-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -bugprone-easily-swappable-parameters,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-union-access,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-owning-memory,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length,
+  -readability-named-parameter,
+  -readability-implicit-bool-conversion,
+  -readability-braces-around-statements
+
+CheckOptions:
+  - key:   readability-function-cognitive-complexity.Threshold
+    value: '50'
+  - key:   readability-function-cognitive-complexity.IgnoreMacros
+    value: '1'
+  - key:   cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
+    value: '1'
+  - key:   cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions
+    value: '1'
+  - key:   modernize-loop-convert.MinConfidence
+    value: 'reasonable'
+  - key:   modernize-pass-by-value.IncludeStyle
+    value: 'llvm'
+  - key:   modernize-use-override.IgnoreDestructors
+    value: '1'
+  - key:   performance-for-range-copy.WarnOnAllAutoCopies
+    value: '1'
+  - key:   readability-uppercase-literal-suffix.NewSuffixes
+    value: 'u;ul;ull;f;L'
+
+# Header filter for Aestra code only (exclude External)
+HeaderFilterRegex: 'Aestra(Audio|Core|Plat)/.*'
+
+# Treat warnings as errors in CI (optional, can be overridden)
+WarningsAsErrors: ''
+
+# C++17 standard
+ExtraArgs:
+  - '-std=c++17'
