@@ -49,12 +49,13 @@ AutosaveManager::~AutosaveManager() {
 }
 
 void AutosaveManager::initialize(const std::string& projectPath, Config config) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    
-    if (m_initialized) {
+    // Check if already initialized (without lock first to avoid deadlock with shutdown)
+    if (m_initialized.load(std::memory_order_acquire)) {
         Log::warning("AutosaveManager already initialized, shutting down first");
         shutdown();
     }
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
     
     if (!config.serializer) {
         Log::error("AutosaveManager initialized without serializer callback");

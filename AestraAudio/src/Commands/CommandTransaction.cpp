@@ -49,7 +49,19 @@ void CommandTransaction::undo() {
 }
 
 void CommandTransaction::redo() {
-    execute();
+    if (m_executed) {
+        Log::warning("[CommandTransaction] Transaction already executed");
+        return;
+    }
+    
+    // Redo all commands in order (call redo(), not execute(), to preserve state)
+    for (auto& cmd : m_commands) {
+        if (cmd) {
+            cmd->redo();
+        }
+    }
+    
+    m_executed = true;
 }
 
 std::string CommandTransaction::getName() const {

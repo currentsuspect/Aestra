@@ -39,7 +39,9 @@ jobs:
         run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
 
       - name: Discord Notification
-        if: always()
+        if: always() && env.DISCORD_WEBHOOK != ''
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           STATUS="${{ job.status }}"
           COLOR=3066993; [ "$STATUS" != "success" ] && COLOR=15158332
@@ -51,7 +53,7 @@ jobs:
               \"color\": $COLOR,
               \"footer\": {\"text\": \"${{ github.event.head_commit.message }}\" }
             }]
-          }" "${{ secrets.DISCORD_WEBHOOK }}"
+          }" "$DISCORD_WEBHOOK"
 
   build-windows:
     name: Windows (MSVC)
@@ -78,8 +80,10 @@ jobs:
         run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
 
       - name: Discord Notification
-        if: always()
+        if: always() && env.DISCORD_WEBHOOK != ''
         shell: bash
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           STATUS="${{ job.status }}"
           COLOR=3066993; [ "$STATUS" != "success" ] && COLOR=15158332
@@ -91,7 +95,7 @@ jobs:
               \"color\": $COLOR,
               \"footer\": {\"text\": \"${{ github.event.head_commit.message }}\" }
             }]
-          }" "${{ secrets.DISCORD_WEBHOOK }}"
+          }" "$DISCORD_WEBHOOK"
 
   build-macos:
     name: macOS (Clang)
@@ -118,7 +122,9 @@ jobs:
         run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
 
       - name: Discord Notification
-        if: always()
+        if: always() && env.DISCORD_WEBHOOK != ''
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           STATUS="${{ job.status }}"
           COLOR=3066993; [ "$STATUS" != "success" ] && COLOR=15158332
@@ -130,7 +136,7 @@ jobs:
               \"color\": $COLOR,
               \"footer\": {\"text\": \"${{ github.event.head_commit.message }}\" }
             }]
-          }" "${{ secrets.DISCORD_WEBHOOK }}"
+          }" "$DISCORD_WEBHOOK"
 
   format-check:
     name: Code Formatting

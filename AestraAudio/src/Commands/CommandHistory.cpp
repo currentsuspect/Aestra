@@ -15,17 +15,18 @@ void CommandHistory::pushAndExecute(std::shared_ptr<ICommand> cmd) {
     if (!cmd)
         return;
 
+    // Execute BEFORE acquiring lock to prevent deadlock if command
+    // triggers callbacks that re-enter CommandHistory
+    try {
+        cmd->execute();
+    } catch (const std::exception& e) {
+        std::cerr << "Command execution failed: " << e.what() << std::endl;
+        return;
+    }
+
     bool stateChanged = false;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-
-        // Execute first
-        try {
-            cmd->execute();
-        } catch (const std::exception& e) {
-            std::cerr << "Command execution failed: " << e.what() << std::endl;
-            return;
-        }
 
         // Add to undo stack
         m_undoStack.push_back(cmd);

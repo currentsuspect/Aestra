@@ -42,6 +42,11 @@ public:
         double newStart = (m_newStartBeat < 0) ? clip->startBeat : m_newStartBeat;
         double newEnd = (m_newEndBeat < 0) ? (clip->startBeat + clip->durationBeats) : m_newEndBeat;
 
+        // Validate: end must be after start
+        if (newEnd <= newStart) {
+            return;  // Invalid trim range - don't apply
+        }
+
         clip->startBeat = newStart;
         clip->durationBeats = newEnd - newStart;
 
