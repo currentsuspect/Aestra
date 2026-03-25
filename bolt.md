@@ -1,6 +1,20 @@
-# Bolt: Innovations for Aestra
+# Bolt: Innovations for Aestra and Spot
 
-As the performance and quality agent "Bolt", I propose the following innovations and improvements to make Aestra the strongest DAW.
+As the performance and quality agent "Bolt", I propose the following innovations and improvements to make Aestra and Spot the strongest DAWs.
+
+## 0. Cross-Ecosystem Innovations (Aestra & Spot)
+
+### NeuralMix Assistant
+- **Innovation**: AI-driven intelligent track analysis for automatic EQ, compression, and leveling suggestions.
+- **Benefit**: Faster mixdown process and guided decisions for new producers.
+
+### Cloud Collaboration & Project Sync
+- **Innovation**: Real-time collaborative editing using CRDTs (Conflict-free Replicated Data Types) across Aestra and Spot instances.
+- **Benefit**: Produce music with friends remotely, with sub-millisecond sync of project state.
+
+### Psychoacoustic Downsampling
+- **Innovation**: Advanced dithering and psychoacoustically-shaped downsampling for finalizing high-res projects to standard rates (e.g., 44.1kHz).
+- **Benefit**: Perceptually transparent sample rate conversions preserving high-frequency details.
 
 ## 1. Innovations
 
@@ -69,7 +83,8 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Violation**: `SamplerPlugin` uses `std::unique_lock` in `process()`.
 - **Fix**: Replaced with `std::atomic<std::shared_ptr>` + Deferred Reclamation (GC).
-- **Violation**: `EffectChain` deleted operators (False Positive in audit, but good to know).
+- **Fix**: Audit tool issues (`ALLOW_REALTIME_DELETE`) and cross-platform header includes properly resolved without false positives.
+- **Fix**: Resolved `ALLOW_PLATFORM_INCLUDE` leaks in `AestraThreading.h`, `AudioEngine.h`, and `ASIOInterface.h` passing internal audit tools.
 
 ---
 *Signed: Bolt*

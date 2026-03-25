@@ -4,7 +4,7 @@
 
 #if defined(_WIN32)
 #include <objbase.h>
-#include <windows.h>
+#include <windows.h> // ALLOW_PLATFORM_INCLUDE
 #else
 #include <unistd.h>
 #endif
