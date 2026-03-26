@@ -301,6 +301,12 @@ void PlatformWindowLinux::setCursorVisible(bool visible) {
     SDL_ShowCursor(visible ? SDL_ENABLE : SDL_DISABLE);
 }
 
+void PlatformWindowLinux::setCursorPosition(int x, int y) {
+    if (m_window) {
+        SDL_WarpMouseInWindow(m_window, x, y);
+    }
+}
+
 KeyModifiers PlatformWindowLinux::getCurrentModifiers() const {
     return getModifiers(SDL_GetModState());
 }
@@ -348,7 +354,7 @@ KeyCode PlatformWindowLinux::translateKey(SDL_Keycode key) {
     }
 }
 
-KeyModifiers PlatformWindowLinux::getModifiers(Uint16 mod) {
+KeyModifiers PlatformWindowLinux::getModifiers(Uint16 mod) const {
     KeyModifiers m;
     m.shift = (mod & KMOD_SHIFT);
     m.control = (mod & KMOD_CTRL);
