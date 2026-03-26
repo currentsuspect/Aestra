@@ -1,22 +1,33 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "../../include/Drivers/AudioPlatformRegistry.h"
 
+#include "../DummyAudioDriver.h"
+#include "RtAudioDriver.h"
+
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace Aestra {
 namespace Audio {
 
-// STUB: Phase 2 will register RtAudioDriver once it conforms to IAudioDriver interface
-void RegisterPlatformDrivers(AudioDeviceManager& /*manager*/) {
-    // RtAudioDriver exists but uses legacy interface — not yet compatible with IAudioDriver
+void RegisterPlatformDrivers(AudioDeviceManager& manager) {
+    try {
+        auto rtAudio = std::make_unique<RtAudioDriver>();
+        if (rtAudio->isAvailable()) {
+            manager.addDriver(std::move(rtAudio));
+        }
+    } catch (...) {
+    }
+
+    manager.addDriver(std::make_unique<DummyAudioDriver>());
 }
 
 PlatformAudioInfo GetPlatformAudioInfo() {
     PlatformAudioInfo info;
-    info.availableBackends = {"PulseAudio", "ALSA", "JACK"};
-    info.recommendedBackend = "PulseAudio";
-    info.requiresRootForRT = true;
+    info.availableBackends = {"ALSA", "PulseAudio", "JACK"};
+    info.recommendedBackend = "ALSA";
+    info.requiresRootForRT = false;
     return info;
 }
 

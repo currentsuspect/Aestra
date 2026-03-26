@@ -201,22 +201,32 @@ target_include_directories(glad PUBLIC External/glad/include)
 # FreeType - Text Rendering
 # =============================================================================
 
-# Use local freetype (manual download fallback)
-message(STATUS "Using local FreeType from External/freetype_local...")
+set(AESTRAUI_FREETYPE_TARGET "")
 
-# Disable unnecessary FreeType features
-set(FT_DISABLE_ZLIB ON CACHE BOOL "" FORCE)
-set(FT_DISABLE_BZIP2 ON CACHE BOOL "" FORCE)
-set(FT_DISABLE_PNG ON CACHE BOOL "" FORCE)
-set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
-set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
+find_package(Freetype QUIET)
+if(Freetype_FOUND)
+    set(AESTRAUI_FREETYPE_TARGET Freetype::Freetype)
+    message(STATUS "Using system FreeType")
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/External/freetype_local/CMakeLists.txt")
+    message(STATUS "Using local FreeType from External/freetype_local...")
 
-# Suppress deprecation warnings from the dependency's CMakeLists
-set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
-add_subdirectory(External/freetype_local)
-set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
+    # Disable unnecessary FreeType features
+    set(FT_DISABLE_ZLIB ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_BZIP2 ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_PNG ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
 
-message(STATUS "✓ FreeType loaded")
+    # Suppress deprecation warnings from the dependency's CMakeLists
+    set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
+    add_subdirectory(External/freetype_local)
+    set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
+
+    set(AESTRAUI_FREETYPE_TARGET freetype)
+    message(STATUS "Using vendored FreeType")
+else()
+    message(FATAL_ERROR "FreeType not found. Install freetype2 or provide AestraUI/External/freetype_local.")
+endif()
 
 # ============================================================================
 # OpenGL Renderer (Optional)
@@ -253,7 +263,7 @@ if(AESTRAUI_BUILD_OPENGL)
     target_link_libraries(AestraUI_OpenGL PUBLIC
         AestraUI_Core
         glad
-        freetype
+        ${AESTRAUI_FREETYPE_TARGET}
     )
     
     # Add SDL2 libraries if available

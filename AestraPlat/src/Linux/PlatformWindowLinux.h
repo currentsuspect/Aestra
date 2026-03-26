@@ -55,11 +55,13 @@ public:
 
     // Cursor control
     void setCursorVisible(bool visible) override;
+    void setCursorPosition(int x, int y) override;
 
     // Modifier key state query
     KeyModifiers getCurrentModifiers() const override;
 
     // Event callbacks
+    void setHitTestCallback(HitTestCallback callback) override { m_hitTestCallback = callback; }
     void setMouseMoveCallback(std::function<void(int x, int y)> callback) override { m_mouseMoveCallback = callback; }
     void setMouseButtonCallback(std::function<void(MouseButton button, bool pressed, int x, int y)> callback) override {
         m_mouseButtonCallback = callback;
@@ -83,6 +85,7 @@ private:
     float m_dpiScale = 1.0f;
 
     // Callbacks
+    HitTestCallback m_hitTestCallback;
     std::function<void(int, int)> m_mouseMoveCallback;
     std::function<void(MouseButton, bool, int, int)> m_mouseButtonCallback;
     std::function<void(float)> m_mouseWheelCallback;
@@ -95,7 +98,7 @@ private:
 
     // Helpers
     KeyCode translateKey(SDL_Keycode key);
-    KeyModifiers getModifiers(Uint16 mod);
+    KeyModifiers getModifiers(Uint16 mod) const;
 };
 
 } // namespace Aestra

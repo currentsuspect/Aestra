@@ -7,6 +7,7 @@
 #include "PlaylistRuntimeSnapshot.h"
 #include "SourceManager.h"
 
+#include <algorithm>
 #include <functional>
 #include <mutex>
 #include <shared_mutex>
@@ -160,6 +161,20 @@ public:
         if (it == m_clipLaneMap.end())
             return PlaylistLaneID();
         return it->second;
+    }
+
+    /**
+     * @brief Check if a pattern ID is referenced by any clip in the playlist
+     */
+    bool isPatternUsed(PatternID patternId) const {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        for (const auto& lane : m_lanes) {
+            for (const auto& clip : lane.clips) {
+                if (clip.sourceId == patternId.value)
+                    return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -357,6 +372,28 @@ public:
      * @brief Get BPM
      */
     double getBPM() const { return m_bpm; }
+
+    double beatToSeconds(double beats) const {
+        if (m_bpm <= 0.0) {
+            return 0.0;
+        }
+        return beats * 60.0 / m_bpm;
+    }
+
+    double secondsToBeats(double seconds) const {
+        return seconds * m_bpm / 60.0;
+    }
+
+    double getTotalDurationBeats() const {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        double maxBeat = 0.0;
+        for (const auto& lane : m_lanes) {
+            for (const auto& clip : lane.clips) {
+                maxBeat = std::max(maxBeat, clip.endBeat());
+            }
+        }
+        return maxBeat;
+    }
 
     /**
      * @brief Set pattern manager reference

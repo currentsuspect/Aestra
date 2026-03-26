@@ -1,7 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIState.h"
 #include "AestraLog.h"
-#include "AestraPlat/include/IPlatformUtils.h"
+#include "AestraPlatform.h"
 #include <filesystem>
 #include <fstream>
 

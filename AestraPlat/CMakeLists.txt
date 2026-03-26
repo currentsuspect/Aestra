@@ -18,6 +18,8 @@ set(AESTRA_PLAT_HEADERS
     include/AestraPlatform.h
 )
 
+set(AESTRA_PLAT_PRIVATE_DEFINITIONS)
+
 # Platform-specific sources
 if(WIN32)
     list(APPEND AESTRA_PLAT_SOURCES
@@ -37,12 +39,11 @@ elseif(UNIX AND NOT APPLE)
             src/Linux/PlatformWindowLinux.cpp
             src/Linux/PlatformUtilsLinux.cpp
             src/Linux/PlatformThreadLinux.cpp
-            src/Linux/PlatformFileSystemLinux.cpp
         )
         list(APPEND AESTRA_PLAT_HEADERS
             src/Linux/PlatformWindowLinux.h
         )
-        target_compile_definitions(AestraPlat PRIVATE Aestra_HAS_SDL2)
+        list(APPEND AESTRA_PLAT_PRIVATE_DEFINITIONS AESTRA_HAS_SDL2)
     else()
         message(WARNING "SDL2 not found. AestraPlat Linux windowing disabled.")
     endif()
@@ -50,6 +51,10 @@ endif()
 
 # Create library
 add_library(AestraPlat STATIC ${AESTRA_PLAT_SOURCES} ${AESTRA_PLAT_HEADERS})
+
+if(AESTRA_PLAT_PRIVATE_DEFINITIONS)
+    target_compile_definitions(AestraPlat PRIVATE ${AESTRA_PLAT_PRIVATE_DEFINITIONS})
+endif()
 
 target_include_directories(AestraPlat PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -79,7 +84,7 @@ elseif(UNIX AND NOT APPLE)
         target_link_libraries(AestraPlat PRIVATE
             SDL2::SDL2
             ${CMAKE_DL_LIBS}
-            padding_pthread
+            pthread
         )
     else()
         target_link_libraries(AestraPlat PRIVATE
