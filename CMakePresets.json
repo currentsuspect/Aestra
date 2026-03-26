@@ -9,7 +9,6 @@
     {
       "name": "base",
       "hidden": true,
-      "architecture": "x64",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"

@@ -1657,7 +1657,12 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
     auto& patternManager = m_trackManager->getPatternManager();
     AudioSlicePayload payload;
     payload.audioSourceId = sourceId;
-    payload.slices.push_back({0.0, static_cast<double>(source->getNumFrames())});
+    AudioSlice slice;
+    slice.startOffset = 0.0;
+    slice.duration = durationSeconds;
+    slice.startSamples = 0.0;
+    slice.lengthSamples = static_cast<double>(source->getNumFrames());
+    payload.slices.push_back(slice);
     
     std::string patternName = std::filesystem::path(filePath).filename().string();
     PatternID patternId = patternManager.createAudioPattern(patternName, durationBeats, payload);
@@ -1879,4 +1884,3 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     
     return false;
 }
-

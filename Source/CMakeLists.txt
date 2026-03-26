@@ -194,9 +194,12 @@ if(WIN32)
 	target_sources(Aestra PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.rc")
 elseif(UNIX AND NOT APPLE)
 	# Linux-specific settings
+	find_package(OpenGL REQUIRED)
+	find_package(X11 REQUIRED)
+
 	target_link_libraries(Aestra PRIVATE
-		GL
-		X11
+		OpenGL::GL
+		X11::X11
 		pthread
 		dl
 	)
