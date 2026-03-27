@@ -92,14 +92,12 @@ CommandTransactionGuard::CommandTransactionGuard(CommandHistory& history, const 
     : m_history(history)
     , m_transaction(std::make_shared<CommandTransaction>(name))
 {
-    // Start the transaction - commands will be collected
+    m_history.beginTransaction(m_transaction);
     Log::debug("[CommandTransactionGuard] Starting transaction: " + name);
 }
 
 CommandTransactionGuard::~CommandTransactionGuard() {
     if (m_active && !m_committed) {
-        // If we get here without explicit commit/rollback, commit by default
-        // unless the transaction is empty
         if (m_transaction && !m_transaction->isEmpty()) {
             commit();
         } else {
@@ -111,14 +109,9 @@ CommandTransactionGuard::~CommandTransactionGuard() {
 void CommandTransactionGuard::commit() {
     if (!m_active || m_committed) return;
     
-    if (m_transaction && !m_transaction->isEmpty()) {
-        Log::debug("[CommandTransactionGuard] Committing transaction with " + 
-                   std::to_string(m_transaction->size()) + " commands");
-        m_history.pushAndExecute(m_transaction);
-    }
-    
     m_committed = true;
     m_active = false;
+    m_history.commitTransaction();
 }
 
 void CommandTransactionGuard::rollback() {
@@ -126,12 +119,8 @@ void CommandTransactionGuard::rollback() {
     
     Log::debug("[CommandTransactionGuard] Rolling back transaction");
     
-    // Undo any commands that were already executed
-    // (In practice, commands added to a transaction shouldn't execute until commit)
-    m_transaction->undo();
-    m_transaction->clear();
-    
     m_active = false;
+    m_history.rollbackTransaction();
 }
 
 } // namespace Audio
