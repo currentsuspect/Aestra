@@ -93,7 +93,7 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         if (!channel) return;
 
         channel->width = width;
-        if (auto mc = channel->channel.lock()) {
+        if (auto mc = channel->channel) {
              mc->setWidth(width);
         }
     };
@@ -109,7 +109,7 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         channel->muted = muted;
         invalidateStaticCache();
 
-        if (auto mc = channel->channel.lock()) {
+        if (auto mc = channel->channel) {
             mc->setMute(muted);
             if (muted && mc->isSoloed()) {
                 mc->setSolo(false);
@@ -140,7 +140,7 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
             m_buttons->setSoloed(!soloed); 
             
             // Toggle proper safe state
-            if (auto mc = channel->channel.lock()) {
+            if (auto mc = channel->channel) {
                bool newSafe = !mc->isSoloSafe();
                mc->setSoloSafe(newSafe);
                // Visual feedback? UIMixerStrip doesn't have a distinct 'Safe' icon yet.
@@ -155,7 +155,7 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
             for (size_t i = 0; i < count; ++i) {
                 auto* other = m_viewModel->getChannelByIndex(i);
                 if (!other || other->id == channel->id) continue;
-                if (auto otherMC = other->channel.lock()) {
+                if (auto otherMC = other->channel) {
                     otherMC->setSolo(false);
                 }
                 other->soloed = false;
@@ -165,7 +165,7 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         channel->soloed = soloed;
         invalidateStaticCache();
 
-        if (auto mc = channel->channel.lock()) {
+        if (auto mc = channel->channel) {
             mc->setSolo(soloed);
             if (soloed && mc->isMuted()) {
                 mc->setMute(false);
@@ -182,7 +182,7 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         channel->armed = armed;
         invalidateStaticCache();
 
-        if (auto mc = channel->channel.lock()) {
+        if (auto mc = channel->channel) {
             mc->setArmed(armed);
         }
     };

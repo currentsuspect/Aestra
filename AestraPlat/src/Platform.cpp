@@ -69,7 +69,7 @@ bool Platform::initialize() {
 #ifdef AESTRA_HAS_SDL2
     // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) != 0) {
-        AESTRA_LOG_ERROR("SDL_Init failed: " << SDL_GetError());
+        AESTRA_LOG_ERROR(std::string("SDL_Init failed: ") + SDL_GetError());
         return false;
     }
 

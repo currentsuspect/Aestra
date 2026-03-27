@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -18,6 +19,7 @@ struct AutomationPoint {
     float value{0.0f};
     double beat{0.0};  // For serialization
     float curve{0.0f}; // For serialization (curve tension)
+    bool selected{false}; // Selection state for UI
 };
 
 struct AutomationCurve {
@@ -51,6 +53,8 @@ struct AutomationCurve {
      * @brief Get all points
      */
     const std::vector<AutomationPoint>& getPoints() const { return points; }
+
+    std::vector<AutomationPoint>& getPoints() { return points; }
 
     /**
      * @brief Get interpolated value at a given beat position
@@ -124,6 +128,20 @@ struct AutomationCurve {
         }
         points.insert(it, pt);
     }
+
+    void removePoint(size_t index) {
+        if (index < points.size()) {
+            points.erase(points.begin() + index);
+        }
+    }
+
+    void sortPoints() {
+        std::sort(points.begin(), points.end(), [](const AutomationPoint& a, const AutomationPoint& b) {
+            return a.sample < b.sample;
+        });
+    }
+
+    bool isVisible() const { return true; }
 };
 
 } // namespace Audio

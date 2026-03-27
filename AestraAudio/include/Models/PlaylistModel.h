@@ -7,6 +7,7 @@
 #include "PlaylistRuntimeSnapshot.h"
 #include "SourceManager.h"
 
+#include <algorithm>
 #include <functional>
 #include <mutex>
 #include <shared_mutex>
@@ -160,6 +161,20 @@ public:
         if (it == m_clipLaneMap.end())
             return PlaylistLaneID();
         return it->second;
+    }
+
+    /**
+     * @brief Check if a pattern ID is referenced by any clip in the playlist
+     */
+    bool isPatternUsed(PatternID patternId) const {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        for (const auto& lane : m_lanes) {
+            for (const auto& clip : lane.clips) {
+                if (clip.sourceId == patternId.value)
+                    return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -358,6 +373,28 @@ public:
      */
     double getBPM() const { return m_bpm; }
 
+    double beatToSeconds(double beats) const {
+        if (m_bpm <= 0.0) {
+            return 0.0;
+        }
+        return beats * 60.0 / m_bpm;
+    }
+
+    double secondsToBeats(double seconds) const {
+        return seconds * m_bpm / 60.0;
+    }
+
+    double getTotalDurationBeats() const {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        double maxBeat = 0.0;
+        for (const auto& lane : m_lanes) {
+            for (const auto& clip : lane.clips) {
+                maxBeat = std::max(maxBeat, clip.endBeat());
+            }
+        }
+        return maxBeat;
+    }
+
     /**
      * @brief Set pattern manager reference
      */
@@ -419,6 +456,37 @@ public:
     };
 
     BatchUpdateScope scopedBatchUpdate() { return BatchUpdateScope{}; }
+
+    /**
+     * @brief Remove a lane by ID
+     * @param laneId Lane to remove
+     * @return true if removed, false if not found
+     */
+    bool removeLane(const PlaylistLaneID& laneId) {
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
+
+        auto it = m_laneMap.find(laneId);
+        if (it == m_laneMap.end())
+            return false;
+
+        size_t laneIdx = it->second;
+
+        // Remove all clips in this lane from the clip lane map
+        for (const auto& clip : m_lanes[laneIdx].clips) {
+            m_clipLaneMap.erase(clip.id);
+        }
+
+        // Remove the lane
+        m_lanes.erase(m_lanes.begin() + laneIdx);
+
+        // Rebuild lane map with correct indices
+        m_laneMap.clear();
+        for (size_t i = 0; i < m_lanes.size(); ++i) {
+            m_laneMap[m_lanes[i].id] = i;
+        }
+
+        return true;
+    }
 
     /**
      * @brief Clear all lanes and clips

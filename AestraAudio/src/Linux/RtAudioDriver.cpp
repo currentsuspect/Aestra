@@ -1,229 +1,245 @@
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "RtAudioDriver.h"
 
-#include "../../include/Core/AestraAudio.h" // For logging macros if available
-
-#include <algorithm>
-#include <cstring>
 #include <iostream>
-
-// Mock logging if not available
-#ifndef AESTRA_LOG_INFO
-#define AESTRA_LOG_INFO(x) std::cout << "[INFO] " << x << std::endl
-#define AESTRA_LOG_WARN(x) std::cerr << "[WARN] " << x << std::endl
-#define AESTRA_LOG_ERROR(x) std::cerr << "[ERROR] " << x << std::endl
-#endif
+#include <utility>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
 
 RtAudioDriver::RtAudioDriver() {
-    // Try backends in priority order
-    std::vector<RtAudio::Api> preferredApis = {RtAudio::LINUX_PULSE, RtAudio::LINUX_ALSA, RtAudio::UNIX_JACK};
+    std::vector<RtAudio::Api> candidates;
+#ifdef __LINUX_PULSE__
+    candidates.push_back(RtAudio::LINUX_PULSE);
+#endif
+#ifdef __LINUX_ALSA__
+    candidates.push_back(RtAudio::LINUX_ALSA);
+#endif
+#ifdef __UNIX_JACK__
+    candidates.push_back(RtAudio::UNIX_JACK);
+#endif
+    candidates.push_back(RtAudio::UNSPECIFIED);
 
-    for (auto api : preferredApis) {
-        try {
-            rtAudio_ = std::make_unique<RtAudio>(api);
-            if (rtAudio_->getDeviceCount() > 0) {
-                AESTRA_LOG_INFO("RtAudio using backend: " << rtAudio_->getApiName(api));
-                break;
-            }
-        } catch (RtAudioError& e) {
-            // Ignore unavailable backends
-        }
-    }
-
-    if (!rtAudio_ || rtAudio_->getDeviceCount() == 0) {
-        // Fallback to dummy or first available
-        try {
-            rtAudio_ = std::make_unique<RtAudio>();
-        } catch (...) {
-            AESTRA_LOG_ERROR("Failed to initialize any RtAudio backend");
-        }
+    if (!tryInitializeBackend(candidates)) {
+        m_lastError = "No Linux RtAudio backend could be initialized";
     }
 }
 
 RtAudioDriver::~RtAudioDriver() {
-    closeDevice();
+    closeStream();
 }
 
-std::vector<AudioDeviceInfo> RtAudioDriver::enumerateDevices() {
+std::string RtAudioDriver::getDisplayName() const {
+    const char* api = apiName(m_rtAudio ? m_rtAudio->getCurrentApi() : RtAudio::UNSPECIFIED);
+    return std::string("RtAudio (") + api + ")";
+}
+
+AudioDriverType RtAudioDriver::getDriverType() const {
+    return m_driverType;
+}
+
+bool RtAudioDriver::isAvailable() const {
+    return m_rtAudio != nullptr;
+}
+
+std::vector<AudioDeviceInfo> RtAudioDriver::getDevices() {
     std::vector<AudioDeviceInfo> devices;
-    if (!rtAudio_)
+    if (!m_rtAudio) {
         return devices;
-
-    unsigned int deviceCount = rtAudio_->getDeviceCount();
-    for (unsigned int i = 0; i < deviceCount; i++) {
-        try {
-            RtAudio::DeviceInfo info = rtAudio_->getDeviceInfo(i);
-
-            if (info.outputChannels > 0) {
-                AudioDeviceInfo device;
-                device.id = std::to_string(i);
-                device.name = info.name;
-                device.maxOutputChannels = info.outputChannels;
-                device.maxInputChannels = info.inputChannels;
-                device.defaultSampleRate = info.preferredSampleRate;
-
-                for (auto sr : info.sampleRates) {
-                    device.supportedSampleRates.push_back(sr);
-                }
-
-                device.isDefault = (i == rtAudio_->getDefaultOutputDevice());
-                devices.push_back(device);
-            }
-        } catch (RtAudioError& e) {
-            AESTRA_LOG_WARN("Failed to query device " << i << ": " << e.getMessage());
-        }
     }
+
+    try {
+        for (unsigned int id : m_rtAudio->getDeviceIds()) {
+            RtAudio::DeviceInfo rtInfo = m_rtAudio->getDeviceInfo(id);
+            if (rtInfo.outputChannels == 0 && rtInfo.inputChannels == 0) {
+                continue;
+            }
+
+            AudioDeviceInfo info{};
+            info.id = id;
+            info.name = rtInfo.name;
+            info.maxInputChannels = rtInfo.inputChannels;
+            info.maxOutputChannels = rtInfo.outputChannels;
+            info.supportedSampleRates = rtInfo.sampleRates;
+            info.preferredSampleRate = rtInfo.preferredSampleRate;
+            info.isDefaultInput = rtInfo.isDefaultInput;
+            info.isDefaultOutput = rtInfo.isDefaultOutput;
+            devices.push_back(std::move(info));
+        }
+    } catch (const std::exception& e) {
+        m_lastError = e.what();
+    }
+
     return devices;
 }
 
-bool RtAudioDriver::openDevice(const AudioDeviceConfig& config) {
-    if (isStreamOpen_)
-        closeDevice();
-
-    try {
-        unsigned int deviceId = std::stoi(config.deviceId);
-
-        outputParams_.deviceId = deviceId;
-        outputParams_.nChannels = config.numOutputChannels;
-        outputParams_.firstChannel = 0;
-
-        if (config.numInputChannels > 0) {
-            inputParams_.deviceId = deviceId; // Or separate input
-            inputParams_.nChannels = config.numInputChannels;
-            inputParams_.firstChannel = 0;
-        }
-
-        RtAudio::StreamOptions options;
-        options.flags = RTAUDIO_MINIMIZE_LATENCY;
-        options.numberOfBuffers = 2;
-        options.priority = 99; // Try RT priority
-
-        unsigned int bufferFrames = config.bufferSize;
-
-        rtAudio_->openStream(&outputParams_, config.numInputChannels > 0 ? &inputParams_ : nullptr, RTAUDIO_FLOAT32,
-                             config.sampleRate, &bufferFrames, &rtAudioCallback, this, &options);
-
-        isStreamOpen_ = true;
-        AESTRA_LOG_INFO("Audio device opened: " << info.name << " @ " << config.sampleRate);
-        return true;
-
-    } catch (RtAudioError& e) {
-        AESTRA_LOG_ERROR("Failed to open audio device: " << e.getMessage());
-        return false;
-    } catch (...) {
+bool RtAudioDriver::openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) {
+    if (!m_rtAudio) {
+        m_lastError = "RtAudio backend unavailable";
         return false;
     }
+
+    closeStream();
+
+    RtAudio::StreamParameters outputParams{};
+    outputParams.deviceId = config.deviceId;
+    outputParams.nChannels = config.numOutputChannels;
+    outputParams.firstChannel = 0;
+
+    RtAudio::StreamParameters inputParamsData{};
+    RtAudio::StreamParameters* inputParams = nullptr;
+    if (config.numInputChannels > 0) {
+        inputParamsData.deviceId = config.deviceId;
+        inputParamsData.nChannels = config.numInputChannels;
+        inputParamsData.firstChannel = 0;
+        inputParams = &inputParamsData;
+    }
+
+    RtAudio::StreamOptions options{};
+    options.flags = RTAUDIO_MINIMIZE_LATENCY;
+    options.numberOfBuffers = 2;
+    options.priority = 0;
+
+    unsigned int sampleRate = config.sampleRate;
+    unsigned int bufferFrames = config.bufferSize;
+
+    m_userCallback.store(callback, std::memory_order_relaxed);
+    m_userData.store(userData, std::memory_order_relaxed);
+    m_lastError.clear();
+
+    RtAudioErrorType error = m_rtAudio->openStream(&outputParams, inputParams, RTAUDIO_FLOAT32, sampleRate,
+                                                   &bufferFrames, &RtAudioDriver::rtAudioCallback, this, &options);
+    if (error != RTAUDIO_NO_ERROR) {
+        m_lastError = "RtAudio failed to open stream";
+        m_userCallback.store(nullptr, std::memory_order_relaxed);
+        m_userData.store(nullptr, std::memory_order_relaxed);
+        return false;
+    }
+
+    m_bufferSize.store(bufferFrames, std::memory_order_relaxed);
+    return true;
 }
 
-void RtAudioDriver::closeDevice() {
-    stopStream();
-    if (isStreamOpen_ && rtAudio_) {
-        try {
-            rtAudio_->closeStream();
-        } catch (...) {}
-        isStreamOpen_ = false;
+void RtAudioDriver::closeStream() {
+    if (!m_rtAudio) {
+        return;
     }
+
+    if (m_rtAudio->isStreamRunning()) {
+        stopStream();
+    }
+    if (m_rtAudio->isStreamOpen()) {
+        m_rtAudio->closeStream();
+    }
+
+    m_userCallback.store(nullptr, std::memory_order_relaxed);
+    m_userData.store(nullptr, std::memory_order_relaxed);
 }
 
-bool RtAudioDriver::startStream(IAudioCallback* callback) {
-    if (!isStreamOpen_ || isStreamRunning_)
-        return false;
-
-    callback_.store(callback, std::memory_order_release);
-
-    try {
-        rtAudio_->startStream();
-        isStreamRunning_ = true;
-        return true;
-    } catch (RtAudioError& e) {
-        AESTRA_LOG_ERROR("Failed to start audio stream: " << e.getMessage());
-        callback_.store(nullptr);
+bool RtAudioDriver::startStream() {
+    if (!m_rtAudio || !m_rtAudio->isStreamOpen()) {
+        m_lastError = "RtAudio stream is not open";
         return false;
     }
+    if (m_rtAudio->isStreamRunning()) {
+        return true;
+    }
+
+    RtAudioErrorType error = m_rtAudio->startStream();
+    if (error != RTAUDIO_NO_ERROR) {
+        m_lastError = "RtAudio failed to start stream";
+        return false;
+    }
+    return true;
 }
 
 void RtAudioDriver::stopStream() {
-    if (!isStreamRunning_ || !rtAudio_)
-        return;
-
-    try {
-        rtAudio_->stopStream();
-    } catch (...) {}
-
-    isStreamRunning_ = false;
-    callback_.store(nullptr);
+    if (m_rtAudio && m_rtAudio->isStreamRunning()) {
+        m_rtAudio->stopStream();
+    }
 }
 
-int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int nFrames, double streamTime,
+bool RtAudioDriver::isStreamRunning() const {
+    return m_rtAudio && m_rtAudio->isStreamRunning();
+}
+
+double RtAudioDriver::getStreamLatency() const {
+    return (m_rtAudio && m_rtAudio->isStreamOpen()) ? m_rtAudio->getStreamLatency() : 0.0;
+}
+
+uint32_t RtAudioDriver::getStreamSampleRate() const {
+    return (m_rtAudio && m_rtAudio->isStreamOpen()) ? m_rtAudio->getStreamSampleRate() : 0;
+}
+
+uint32_t RtAudioDriver::getStreamBufferSize() const {
+    return (m_rtAudio && m_rtAudio->isStreamOpen()) ? m_bufferSize.load(std::memory_order_relaxed) : 0;
+}
+
+int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int numFrames, double streamTime,
                                    RtAudioStreamStatus status, void* userData) {
     auto* driver = static_cast<RtAudioDriver*>(userData);
-
-    if (status) {
-        // driver->xrunCount_++;
+    if (status != 0) {
+        driver->m_stats.underrunCount++;
     }
 
-    IAudioCallback* cb = driver->callback_.load(std::memory_order_acquire);
-    if (!cb) {
-        std::memset(outputBuffer, 0, nFrames * driver->outputParams_.nChannels * sizeof(float));
+    AudioCallback callback = driver->m_userCallback.load(std::memory_order_relaxed);
+    void* callbackUserData = driver->m_userData.load(std::memory_order_relaxed);
+    if (!callback) {
         return 0;
     }
 
-    AudioIOData ioData;
-    // RT Audio buffer handling... assuming interleaved or non-interleaved?
-    // RTAUDIO_FLOAT32 defaults to non-interleaved IF RTAUDIO_NONINTERLEAVED flag set,
-    // NOT set by default means INTERLEAVED.
-    // Aestra usually expects non-interleaved (array of pointers).
-    // BUT our openStream call didn't set RTAUDIO_NONINTERLEAVED.
-    // We should probably set it to avoid manual de-interleaving if Aestra expects it.
-    // However, IAudioCallback::processAudio usually takes float** arrays.
-    // Let's assume we need to deinterleave if we didn't specify non-interleaved.
-    // OR we change openDevice to use RTAUDIO_NONINTERLEAVED.
-    // Let's use RTAUDIO_NONINTERLEAVED in openDevice.
-    // WAIT, I already wrote openDevice content without that flag.
-    // Checking previous tool call...
-    // flags = RTAUDIO_MINIMIZE_LATENCY;
-    // I should add RTAUDIO_NONINTERLEAVED ideally.
-    // But for now, let's assume we just pass what we got and hope callback handles it or I fix openDevice.
-
-    // Actually, to be safe, I should fix openDevice to use RTAUDIO_NONINTERLEAVED in the next step or patch it now?
-    // I am writing the file now. I'll patch it in my mind before writing.
-    // WAIT, I cannot edit the previous tool call arguments.
-    // I am writing the file content NOW. So I can fix it HERE.
-
-    // NOTE: In openDevice (in this file), I should add RTAUDIO_NONINTERLEAVED.
-    // I'll assume I do that.
-
-    // If outputBuffer is non-interleaved, it is technically a flat buffer of channel 1, then channel 2...
-    // OR is it float**? RtAudio docs say:
-    // "If the RTAUDIO_NONINTERLEAVED flag is set... buffer is a pointer to the first channel's data."
-    // Actually RtAudio callback buffer is void*.
-    // If non-interleaved, data is strictly contiguous: ch1, ch2...
-    // But Aestra AudioIOData expects `float**`. We need to construct pointers.
-
-    // We can use a thread-local static vector or member vector to hold pointers.
-    // driver->outputPointers_ ...
-
-    // For now, let's simplify and just zero it out to compile.
-    // User requested "Robust Edition", I should make it work.
-
-    // ... logic to setup pointers ...
-
-    // Because I need to construct pointers for AudioIOData, I'll assume interleaved for now to keep it simple
-    // OR assume the callback can handle interleaved if I passed a specific flag.
-    // But Aestra AudioIOData struct definition (from memory/context) has `float**`.
-
-    // So I need TO DE-INTERLEAVE if I stick with interleaved, or setup pointers if non-interleaved.
-    // I will modify `openDevice` below to include `RTAUDIO_NONINTERLEAVED`.
-
-    // And here I will standard setup the pointers.
-
-    return 0;
+    driver->m_stats.callbackCount++;
+    return callback(static_cast<float*>(outputBuffer), static_cast<const float*>(inputBuffer), numFrames, streamTime,
+                    callbackUserData);
 }
 
-bool RtAudioDriver::supportsExclusiveMode() const {
-    return false; // JACK is effectively exclusive, but ALSA/Pulse usually shared
+bool RtAudioDriver::tryInitializeBackend(const std::vector<RtAudio::Api>& candidates) {
+    for (RtAudio::Api api : candidates) {
+        try {
+            auto candidate = (api == RtAudio::UNSPECIFIED) ? std::make_unique<RtAudio>() : std::make_unique<RtAudio>(api);
+            candidate->setErrorCallback([](RtAudioErrorType type, const std::string& errorText) {
+                if (type != RTAUDIO_NO_ERROR && type != RTAUDIO_WARNING) {
+                    std::cerr << "RtAudio Linux error: " << errorText << std::endl;
+                }
+            });
+
+            if (!candidate->getDeviceIds().empty()) {
+                m_driverType = apiToDriverType(candidate->getCurrentApi());
+                m_rtAudio = std::move(candidate);
+                return true;
+            }
+        } catch (const std::exception&) {
+        }
+    }
+
+    return false;
+}
+
+AudioDriverType RtAudioDriver::apiToDriverType(RtAudio::Api api) {
+    switch (api) {
+    case RtAudio::LINUX_ALSA:
+        return AudioDriverType::ALSA;
+    case RtAudio::LINUX_PULSE:
+        return AudioDriverType::PULSEAUDIO;
+    case RtAudio::UNIX_JACK:
+        return AudioDriverType::JACK;
+    default:
+        return AudioDriverType::RTAUDIO;
+    }
+}
+
+const char* RtAudioDriver::apiName(RtAudio::Api api) {
+    switch (api) {
+    case RtAudio::LINUX_ALSA:
+        return "ALSA";
+    case RtAudio::LINUX_PULSE:
+        return "PulseAudio";
+    case RtAudio::UNIX_JACK:
+        return "JACK";
+    default:
+        return "Auto";
+    }
 }
 
 } // namespace Audio

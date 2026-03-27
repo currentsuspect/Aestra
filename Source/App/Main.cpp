@@ -11,13 +11,13 @@
 
 #include "AestraApp.h"
 #include "../AestraCore/include/AestraLog.h"
-#include <iostream>
 #include <cstdlib>
-#include <objbase.h>
-#include <string>
 #include <filesystem>
+#include <iostream>
+#include <string>
 
 #ifdef _WIN32
+#include <objbase.h>
 #include <windows.h>
 #endif
 
@@ -37,7 +37,7 @@ static void initializeFileLogging() {
     }
     
     // In debug builds, also keep console logging if attached
-    #ifdef _DEBUG
+    #if defined(_DEBUG) && defined(_WIN32)
     if (GetConsoleWindow() != nullptr) {
         multiLogger->addLogger(std::make_shared<ConsoleLogger>(LogLevel::Debug));
     }

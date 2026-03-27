@@ -79,6 +79,10 @@ public:
     double lengthBeats{4.0};
     Type type{Type::Empty};
     std::variant<std::monostate, MidiPayload, AudioSlicePayload> payload;
+    int m_mixerChannel{-1};
+
+    int getMixerChannel() const { return m_mixerChannel; }
+    void setMixerChannel(int ch) { m_mixerChannel = ch; }
 
     bool isMidi() const { return type == Type::Midi && std::holds_alternative<MidiPayload>(payload); }
 

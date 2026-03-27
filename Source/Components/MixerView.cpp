@@ -293,7 +293,7 @@ void MixerView::refreshChannels() {
     
     for (const auto& track : channelsSnapshot) {
         if (track && track->getName() != "Preview") {  // Skip preview track
-            auto channelStrip = std::make_shared<ChannelStrip>(track, m_trackManager.get());
+            auto channelStrip = std::make_shared<ChannelStrip>(std::shared_ptr<MixerChannel>(track, [](MixerChannel*){}), m_trackManager.get());
             
             // Map to playlist lane if it's a regular track
             if (track->getChannelId() != 0) {

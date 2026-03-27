@@ -129,7 +129,7 @@ void PianoRollPanel::updateGhostChannels() {
         AestraUI::PianoRollNoteLayer::GhostPattern gp;
         
         // Generate Color from ID
-        uint64_t h = p->id;
+        uint64_t h = p->id.value;
         float r = ((h * 1103515245 + 12345) & 0xFF) / 255.0f;
         float g = ((h * 134775813 + 12345) & 0xFF) / 255.0f;
         float b = ((h * 1103515245 + 12345) >> 8 & 0xFF) / 255.0f;

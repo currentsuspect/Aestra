@@ -38,6 +38,15 @@ struct AestraUUID {
 
     bool operator!=(const AestraUUID& other) const { return !(*this == other); }
 
+    bool operator<(const AestraUUID& other) const {
+        if (high != other.high) return high < other.high;
+        return low < other.low;
+    }
+
+    bool operator<=(const AestraUUID& other) const { return !(other < *this); }
+    bool operator>(const AestraUUID& other) const { return other < *this; }
+    bool operator>=(const AestraUUID& other) const { return !(*this < other); }
+
     /**
      * @brief Convert to string representation
      */

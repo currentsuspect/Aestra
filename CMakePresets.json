@@ -9,7 +9,6 @@
     {
       "name": "base",
       "hidden": true,
-      "architecture": "x64",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
@@ -39,6 +38,19 @@
         "Aestra_HEADLESS_ONLY": "OFF",
         "Aestra_ENABLE_TESTS": "OFF"
       }
+    },
+    {
+      "name": "lowmem",
+      "displayName": "Low-memory build (4GB RAM laptop)",
+      "inherits": "base",
+      "cacheVariables": {
+        "AESTRA_HEADLESS_ONLY": "OFF",
+        "AESTRA_ENABLE_TESTS": "OFF",
+        "AESTRA_LOW_MEMORY_BUILD": "ON",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "OFF"
+      }
+    }
     }
   ],
   "buildPresets": [
@@ -75,6 +87,13 @@
       "configurePreset": "full-fast",
       "configuration": "Release",
       "jobs": 0
+    },
+    {
+      "name": "lowmem-release",
+      "displayName": "Build low-mem (Release, 2 jobs)",
+      "configurePreset": "lowmem",
+      "configuration": "Release",
+      "jobs": 2
     }
   ]
 }
