@@ -517,8 +517,8 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     
     theme.backgroundPrimary = NUIColor(0.11f, 0.11f, 0.11f, 1.0f);       // AestraTheme::PanelBackground
     theme.backgroundSecondary = NUIColor(0.11f, 0.11f, 0.11f, 1.0f);     // AestraTheme::PanelBackground
-    theme.surfaceTertiary = NUIColor(0.15f, 0.15f, 0.15f, 1.0f);         // Slightly lighter
-    theme.surfaceRaised = NUIColor(0.18f, 0.18f, 0.18f, 1.0f);           // Raised
+    theme.surfaceTertiary = NUIColor(0.20f, 0.20f, 0.20f, 1.0f);         // Slightly lighter (was 0.15)
+    theme.surfaceRaised = NUIColor(0.24f, 0.24f, 0.24f, 1.0f);           // Raised (was 0.18)
     
     // Legacy compatibility
     theme.background = theme.backgroundPrimary;
@@ -526,8 +526,8 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     theme.surfaceVariant = theme.surfaceTertiary;
 
     // Glass Aesthetic
-    theme.glassHover = NUIColor(1.0f, 1.0f, 1.0f, 0.04f);
-    theme.glassBorder = NUIColor(1.0f, 1.0f, 1.0f, 0.09f);               // AestraTheme::PanelBorder
+    theme.glassHover = NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
+    theme.glassBorder = NUIColor(1.0f, 1.0f, 1.0f, 0.15f);               // AestraTheme::PanelBorder
     theme.glassActive = NUIColor(0.36f, 0.28f, 0.88f, 0.15f);            // AestraTheme::AccentPrimary low alpha
     
     // Accent & Branding
@@ -554,7 +554,7 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     
     // Text
     theme.textPrimary = NUIColor(0.98f, 0.98f, 0.98f, 1.0f);    // AestraTheme::TextPrimary
-    theme.textSecondary = NUIColor(0.98f, 0.98f, 0.98f, 0.60f); // AestraTheme::TextSecondary
+    theme.textSecondary = NUIColor(0.98f, 0.98f, 0.98f, 0.85f); // AestraTheme::TextSecondary
     theme.textDisabled = NUIColor(0.502f, 0.502f, 0.533f, 1.0f);
     theme.textLink = theme.primary;
     theme.textCritical = theme.error;
