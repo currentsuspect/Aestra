@@ -2,6 +2,7 @@
 #pragma once
 
 #include "ICommand.h"
+#include "CommandTransaction.h"
 
 #include <functional>
 #include <memory>
@@ -11,11 +12,14 @@
 namespace Aestra {
 namespace Audio {
 
+class CommandTransaction;
+
 /**
  * @brief Manages undo/redo stacks for commands
  *
  * Thread-safe implementation with configurable limits.
  * Supports both count-based and memory-based history limits.
+ * Supports nested transactions via beginTransaction/commitTransaction.
  */
 class CommandHistory {
 public:
@@ -31,9 +35,33 @@ public:
     /**
      * @brief Execute a command and push it to the undo stack
      * Clears the redo stack.
+     * If a transaction is active, adds command to the transaction instead.
      * @param cmd Command to execute and track
      */
     void pushAndExecute(std::shared_ptr<ICommand> cmd);
+
+    /**
+     * @brief Begin a transaction. All pushAndExecute calls until commitTransaction
+     * will be batched into the transaction.
+     * @param transaction The transaction to populate
+     */
+    void beginTransaction(std::shared_ptr<CommandTransaction> transaction);
+
+    /**
+     * @brief Commit the active transaction, executing all commands and adding
+     * the transaction to the undo stack.
+     */
+    void commitTransaction();
+
+    /**
+     * @brief Rollback the active transaction without executing commands.
+     */
+    void rollbackTransaction();
+
+    /**
+     * @brief Check if a transaction is currently active
+     */
+    bool isTransactionActive() const;
 
     /**
      * @brief Perform undo
@@ -80,6 +108,9 @@ public:
 private:
     std::vector<std::shared_ptr<ICommand>> m_undoStack;
     std::vector<std::shared_ptr<ICommand>> m_redoStack;
+
+    std::shared_ptr<CommandTransaction> m_activeTransaction;
+    int m_transactionNestingLevel = 0;
 
     size_t m_maxHistorySize = 100;
     size_t m_maxHistoryMemory = 100 * 1024 * 1024; // 100MB default

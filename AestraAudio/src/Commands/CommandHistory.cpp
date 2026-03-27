@@ -15,6 +15,15 @@ void CommandHistory::pushAndExecute(std::shared_ptr<ICommand> cmd) {
     if (!cmd)
         return;
 
+    // If a transaction is active, add to the transaction instead of executing
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_activeTransaction && m_transactionNestingLevel > 0) {
+            m_activeTransaction->add(cmd);
+            return;
+        }
+    }
+
     // Execute BEFORE acquiring lock to prevent deadlock if command
     // triggers callbacks that re-enter CommandHistory
     try {
@@ -45,6 +54,70 @@ void CommandHistory::pushAndExecute(std::shared_ptr<ICommand> cmd) {
     if (stateChanged && m_onStateChanged) {
         m_onStateChanged();
     }
+}
+
+void CommandHistory::beginTransaction(std::shared_ptr<CommandTransaction> transaction) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_transactionNestingLevel == 0) {
+        m_activeTransaction = transaction;
+    }
+    m_transactionNestingLevel++;
+}
+
+void CommandHistory::commitTransaction() {
+    std::shared_ptr<CommandTransaction> transactionToCommit;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_transactionNestingLevel <= 0) {
+            std::cerr << "CommandHistory::commitTransaction: No active transaction" << std::endl;
+            return;
+        }
+        m_transactionNestingLevel--;
+        if (m_transactionNestingLevel == 0) {
+            transactionToCommit = m_activeTransaction;
+            m_activeTransaction.reset();
+        }
+    }
+
+    if (transactionToCommit && transactionToCommit->isValid()) {
+        // Execute the transaction (this executes all commands in it)
+        try {
+            transactionToCommit->execute();
+        } catch (const std::exception& e) {
+            std::cerr << "Transaction execution failed: " << e.what() << std::endl;
+            return;
+        }
+
+        bool stateChanged = false;
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_undoStack.push_back(transactionToCommit);
+            m_redoStack.clear();
+            trimHistory();
+            stateChanged = true;
+        }
+
+        if (stateChanged && m_onStateChanged) {
+            m_onStateChanged();
+        }
+    }
+}
+
+void CommandHistory::rollbackTransaction() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_transactionNestingLevel <= 0) {
+        std::cerr << "CommandHistory::rollbackTransaction: No active transaction" << std::endl;
+        return;
+    }
+    m_transactionNestingLevel--;
+    if (m_transactionNestingLevel == 0) {
+        m_activeTransaction.reset();
+    }
+}
+
+bool CommandHistory::isTransactionActive() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_transactionNestingLevel > 0;
 }
 
 bool CommandHistory::undo() {
