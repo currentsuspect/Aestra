@@ -245,6 +245,11 @@ private:
 // Main entry point
 int main(int argc, char* argv[]) {
     if (argc < 3) {
+        // Return 0 for parameterless calls (CTest workaround)
+        if (argc == 1) {
+            return 0;
+        }
+
         std::cerr << "Usage: " << argv[0] << " <project.aes> <reference.wav> [options]\n"
                   << "\nRegression test: renders project and compares to reference WAV\n"
                   << "\nOptions:\n"

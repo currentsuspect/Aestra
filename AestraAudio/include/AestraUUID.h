@@ -2,6 +2,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <cinttypes>
 #include <functional>
 #include <random>
 #include <string>
@@ -44,7 +45,7 @@ struct AestraUUID {
     std::string toString() const {
         // Simple hex representation
         char buf[64];
-        snprintf(buf, sizeof(buf), "%016lx%016lx", high, low);
+        snprintf(buf, sizeof(buf), "%016" PRIx64 "%016" PRIx64, high, low);
         return std::string(buf);
     }
 };

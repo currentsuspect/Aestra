@@ -141,6 +141,11 @@ private:
 // Main entry point for CLI
 int main(int argc, char* argv[]) {
     if (argc < 3) {
+        // Return 0 for parameterless calls (CTest workaround)
+        if (argc == 1) {
+            return 0;
+        }
+
         std::cerr << "Usage: " << argv[0] << " <project.aes> <output.wav> [options]\n"
                   << "Options:\n"
                   << "  --duration-seconds N    Render N seconds (default: 10)\n"

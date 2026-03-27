@@ -435,6 +435,15 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/AestraPlugins/AestraRumble/CMakeLists.txt")
     )
 endif()
 
+# Media Foundation libraries required by MiniAudioDecoder on Windows
+if(WIN32)
+    target_link_libraries(AestraAudioCore PRIVATE
+        mfplat
+        mfreadwrite
+        mfuuid
+    )
+endif()
+
 # ENFORCEMENT: AestraAudioCore MUST NOT link Windows libraries
 # We can check this by property retrieval (not easy at config time for implicit libs)
 # But we ensure we DO NOT call target_link_libraries with avrt, advapi32 etc.
