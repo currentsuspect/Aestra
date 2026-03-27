@@ -1,6 +1,9 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "Preferences.h"
+#include "AestraPlatform.h"
 #include "AestraLog.h"
+
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 

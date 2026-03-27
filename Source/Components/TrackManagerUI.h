@@ -436,7 +436,7 @@ private:
         bool hasData = false;
         PatternID patternId;
         double durationBeats = 0.0;
-        LocalEdits edits;
+        ClipEdits edits;
         std::string name;
         uint32_t colorRGBA = 0xFF4A90D9;
     };

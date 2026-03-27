@@ -101,33 +101,34 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
     refreshTracks();
 
     // Register as observer of the playlist model to handle dynamic changes
-    m_trackManager->getPlaylistModel().addChangeObserver([this]() {
-        if (m_suppressPlaylistRefresh) return;
-        
-        Log::info("[TrackManagerUI] Playlist model changed, refreshing UI...");
-        refreshTracks();
-        invalidateCache();
-        scheduleTimelineMinimapRebuild();
-        setDirty(true);
-        
-        // Auto-update loop region if in "Project" mode (preset 6)
-        if (m_loopPreset == 6 && m_trackManager) {
-            double projectEndBeat = m_trackManager->getPlaylistModel().getTotalDurationBeats();
-            if (projectEndBeat > 0.001) {
-                // Update internal loop markers
-                m_loopStartBeat = 0.0;
-                m_loopEndBeat = projectEndBeat;
-                m_loopEnabled = true;
-                
-                // Notify audio engine to update loop region
-                if (m_onLoopRegionUpdate) {
-                    m_onLoopRegionUpdate(0.0, projectEndBeat);
-                }
-                
-                Log::info("[TrackManagerUI] Project loop auto-updated: 0 to " + std::to_string(projectEndBeat) + " beats");
-            }
-        }
-    });
+    // TODO: addChangeObserver not yet implemented in PlaylistModel
+    // m_trackManager->getPlaylistModel().addChangeObserver([this]() {
+    //     if (m_suppressPlaylistRefresh) return;
+    //     
+    //     Log::info("[TrackManagerUI] Playlist model changed, refreshing UI...");
+    //     refreshTracks();
+    //     invalidateCache();
+    //     scheduleTimelineMinimapRebuild();
+    //     setDirty(true);
+    //     
+    //     // Auto-update loop region if in "Project" mode (preset 6)
+    //     if (m_loopPreset == 6 && m_trackManager) {
+    //         double projectEndBeat = m_trackManager->getPlaylistModel().getTotalDurationBeats();
+    //         if (projectEndBeat > 0.001) {
+    //             // Update internal loop markers
+    //             m_loopStartBeat = 0.0;
+    //             m_loopEndBeat = projectEndBeat;
+    //             m_loopEnabled = true;
+    //             
+    //             // Notify audio engine to update loop region
+    //             if (m_onLoopRegionUpdate) {
+    //                 m_onLoopRegionUpdate(0.0, projectEndBeat);
+    //             }
+    //             
+    //             Log::info("[TrackManagerUI] Project loop auto-updated: 0 to " + std::to_string(projectEndBeat) + " beats");
+    //         }
+    //     }
+    // });
 
     // Create tool icons
     createToolIcons();
@@ -981,13 +982,13 @@ void TrackManagerUI::updateInstantClipDrag(const AestraUI::NUIPoint& currentPos)
         
         auto targetLaneId = playlist.getLaneId(targetTrackIndex);
         if (targetLaneId.isValid()) {
-            playlist.moveClip(m_draggedClipId, targetLaneId, newStartBeat);
+            playlist.moveClip(m_draggedClipId, newStartBeat, targetLaneId);
         }
     } else {
         // Fallback if no tracks? (Unlikely)
         auto laneId = playlist.findClipLane(m_draggedClipId);
         if (laneId.isValid()) {
-            playlist.moveClip(m_draggedClipId, laneId, newStartBeat);
+            playlist.moveClip(m_draggedClipId, newStartBeat, laneId);
         }
     }
     
@@ -1021,7 +1022,7 @@ void TrackManagerUI::cancelInstantClipDrag() {
         auto& playlist = m_trackManager->getPlaylistModel();
         auto laneId = playlist.findClipLane(m_draggedClipId);
         if (laneId.isValid()) {
-            playlist.moveClip(m_draggedClipId, laneId, m_clipOriginalStartTime);
+            playlist.moveClip(m_draggedClipId, m_clipOriginalStartTime, laneId);
         }
     }
     
@@ -1043,7 +1044,7 @@ void TrackManagerUI::addTrack(const std::string& name) {
         auto channel = m_trackManager->addChannel(name); // Assuming addChannel creates and returns a new channel
         
         // Create UI component for the track, passing both identifiers
-        auto trackUI = std::make_shared<TrackUIComponent>(laneId, channel, m_trackManager.get());
+        auto trackUI = std::make_shared<TrackUIComponent>(laneId, std::shared_ptr<MixerChannel>(channel, [](MixerChannel*){}), m_trackManager.get());
         
         // Register callback for exclusive solo coordination
         trackUI->setOnSoloToggled([this](TrackUIComponent* soloedTrack) {
@@ -1091,7 +1092,7 @@ void TrackManagerUI::refreshTracks() {
         if (!channel) continue;
 
         // Create UI component with LaneID and MixerChannel
-        auto trackUI = std::make_shared<TrackUIComponent>(laneId, channel, m_trackManager.get());
+        auto trackUI = std::make_shared<TrackUIComponent>(laneId, std::shared_ptr<MixerChannel>(channel, [](MixerChannel*){}), m_trackManager.get());
         
         // Register callbacks
         trackUI->setOnSoloToggled([this](TrackUIComponent* soloedTrack) {
@@ -4194,16 +4195,10 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
         ClipInstanceID clipId = ClipInstanceID::fromString(data.sourceClipIdString);
         
         if (clipId.isValid()) {
-            bool moved = playlist.moveClip(clipId, targetLaneId, timePositionBeats);
-            
-            if (moved) {
-                result.accepted = true;
-                result.message = "Clip moved to lane " + std::to_string(laneIndex) + " at beat " + std::to_string(timePositionBeats);
-                Log::info("[TrackManagerUI] Clip moved via PlaylistModel: " + data.sourceClipIdString);
-            } else {
-                result.accepted = false;
-                result.message = "Could not move clip (collision or error)";
-            }
+            playlist.moveClip(clipId, timePositionBeats, targetLaneId);
+            result.accepted = true;
+            result.message = "Clip moved to lane " + std::to_string(laneIndex) + " at beat " + std::to_string(timePositionBeats);
+            Log::info("[TrackManagerUI] Clip moved via PlaylistModel: " + data.sourceClipIdString);
         } else {
             result.accepted = false;
             result.message = "Invalid clip reference";

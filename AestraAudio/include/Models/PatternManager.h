@@ -60,6 +60,41 @@ public:
     }
 
     /**
+     * @brief Create a MIDI pattern
+     */
+    PatternID createMidiPattern(const std::string& name, double lengthBeats, const MidiPayload& payload) {
+        PatternID id{nextId++};
+        auto pattern = std::make_unique<PatternSource>();
+        pattern->id = id;
+        pattern->name = name;
+        pattern->lengthBeats = lengthBeats;
+        pattern->type = PatternSource::Type::Midi;
+        pattern->payload = payload;
+        m_patterns[id.value] = std::move(pattern);
+        return id;
+    }
+
+    /**
+     * @brief Clone an existing pattern and return the new ID
+     */
+    PatternID clonePattern(PatternID sourceId) {
+        auto* src = getPattern(sourceId);
+        if (!src) return PatternID{};
+        PatternID id{nextId++};
+        auto pattern = std::make_unique<PatternSource>(*src);
+        pattern->id = id;
+        m_patterns[id.value] = std::move(pattern);
+        return id;
+    }
+
+    /**
+     * @brief Remove a pattern by ID
+     */
+    void removePattern(PatternID id) {
+        m_patterns.erase(id.value);
+    }
+
+    /**
      * @brief Get or create a pattern
      */
     PatternSource* getOrCreatePattern(PatternID id) {

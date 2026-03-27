@@ -40,8 +40,11 @@ elseif(APPLE)
 
 elseif(UNIX)
     # Linux: ALSA (primary), JACK (optional), PulseAudio (optional)
-    add_definitions(-D__LINUX_ALSA__)
+    if(RTAUDIO_API_ALSA)
+        add_definitions(-D__LINUX_ALSA__)
+    endif()
     find_package(ALSA QUIET)
+    find_package(PkgConfig QUIET)
 
     if(ALSA_FOUND)
         set(RTAUDIO_LIBS ${ALSA_LIBRARIES} pthread)
@@ -49,12 +52,21 @@ elseif(UNIX)
         message(WARNING "ALSA not found. Audio backend will not function.")
     endif()
 
-    # Optional JACK support
-    # add_definitions(-D__UNIX_JACK__)
-    # find_package(Jack)
-    # if(JACK_FOUND)
-    #     set(RTAUDIO_LIBS ${RTAUDIO_LIBS} ${JACK_LIBRARIES})
-    # endif()
+    if(RTAUDIO_API_PULSE AND PkgConfig_FOUND)
+        pkg_check_modules(PULSE libpulse-simple IMPORTED_TARGET)
+        if(PULSE_FOUND)
+            add_definitions(-D__LINUX_PULSE__)
+            list(APPEND RTAUDIO_LIBS PkgConfig::PULSE)
+        endif()
+    endif()
+
+    if(RTAUDIO_API_JACK AND PkgConfig_FOUND)
+        pkg_check_modules(JACK jack IMPORTED_TARGET)
+        if(JACK_FOUND)
+            add_definitions(-D__UNIX_JACK__)
+            list(APPEND RTAUDIO_LIBS PkgConfig::JACK)
+        endif()
+    endif()
 endif()
 
 # =============================================================================
@@ -483,9 +495,8 @@ elseif(UNIX)
     # Non-Windows (Linux)
     if(ALSA_FOUND)
         set(AESTRA_AUDIO_LINUX_SOURCES
-            # STUB: Linux drivers need API updates to match current AudioDeviceInfo struct
-            # src/Linux/LinuxDriverRegistry.cpp
-            # src/Linux/RtAudioDriver.cpp
+            src/Linux/LinuxDriverRegistry.cpp
+            src/Linux/RtAudioDriver.cpp
         )
 
         set(AESTRA_AUDIO_LINUX_HEADERS

@@ -1,7 +1,8 @@
 #pragma once
 
 #include "ICommand.h"
-#include "PlaylistModel.h"
+#include "Models/PlaylistModel.h"
+#include "AestraUUID.h"
 
 namespace Aestra {
 namespace Audio {
@@ -17,6 +18,11 @@ public:
     std::string getName() const override { return "Add Clip"; }
     size_t getSizeInBytes() const override { return sizeof(*this); }
     bool changesProjectState() const override { return true; }
+
+    std::string serialize() const override;
+    std::string type() const override { return "add_clip"; }
+
+    static std::shared_ptr<ICommand> deserialize(PlaylistModel& playlist, const std::string& data);
 
 private:
     PlaylistModel& m_playlist;
