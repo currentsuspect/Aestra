@@ -271,25 +271,31 @@ bool NUIRendererGL::initialize(int width, int height) {
     
         // Try to load the best font for Aestra
         std::vector<std::string> fontPaths = {
-            // Bundled UI fonts (drop the TTFs into these paths)
-            // Bundled UI fonts (drop the TTFs into these paths)
-            // Try distinct paths for dev/build environments
+            // Bundled UI fonts - try multiple paths for dev/build/release
+            "/home/currentsuspect/Aestra/AestraAssets/fonts/Geist/Geist-Regular.ttf",
             "AestraAssets/fonts/Geist/Geist-Regular.ttf",
-            "../AestraAssets/fonts/Geist/Geist-Regular.ttf", 
+            "../AestraAssets/fonts/Geist/Geist-Regular.ttf",
             "../../AestraAssets/fonts/Geist/Geist-Regular.ttf",
             "../../../AestraAssets/fonts/Geist/Geist-Regular.ttf",
+            "../../../../AestraAssets/fonts/Geist/Geist-Regular.ttf",
 
+            "/home/currentsuspect/Aestra/AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
             "AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
             "../../../AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
 
             // System fallbacks (Windows)
-            "C:/Windows/Fonts/segoeui.ttf",      // VS Code look
-            "C:/Windows/Fonts/segoeuisl.ttf",    // Segoe UI Semilight
-            "C:/Windows/Fonts/calibri.ttf",      // Modern, clear
-            "C:/Windows/Fonts/arial.ttf",        // Classic fallback
-            "C:/Windows/Fonts/consola.ttf",      // Monospace fallback
-            "C:/Windows/Fonts/tahoma.ttf",       // Good for small text
-            "C:/Windows/Fonts/verdana.ttf"       // Designed for screen clarity
+            "C:/Windows/Fonts/segoeui.ttf",
+            "C:/Windows/Fonts/segoeuisl.ttf",
+            "C:/Windows/Fonts/calibri.ttf",
+            "C:/Windows/Fonts/arial.ttf",
+            "C:/Windows/Fonts/consola.ttf",
+            "C:/Windows/Fonts/tahoma.ttf",
+            "C:/Windows/Fonts/verdana.ttf",
+
+            // Linux system fonts
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/TTF/DejaVuSans.ttf",
+            "/usr/share/fonts/dejavu-sans/DejaVuSans.ttf"
         };
         
         bool fontLoaded = false;
@@ -303,14 +309,10 @@ bool NUIRendererGL::initialize(int width, int height) {
         if (!fontLoaded) {
             std::cerr << "WARNING: Could not load any font, using fallback" << std::endl;
             useSDFText_ = false;
-        } else if (sdfRenderer_) {
-            useSDFText_ = sdfRenderer_->initialize(defaultFontPath_, 64.0f);
-            if (!useSDFText_) {
-                std::cerr << "MSDF init failed, falling back to bitmap text\n";
-            } else {
-                std::cout << "MSDF text renderer enabled (atlas @64px)\n";
-                useSDFText_ = true;
-            }
+        } else {
+            // Force bitmap text for now - SDF has glyph rendering issues
+            useSDFText_ = false;
+            std::cout << "Using bitmap text renderer\n";
         }
     
     // Set initial state
