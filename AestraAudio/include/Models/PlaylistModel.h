@@ -458,6 +458,37 @@ public:
     BatchUpdateScope scopedBatchUpdate() { return BatchUpdateScope{}; }
 
     /**
+     * @brief Remove a lane by ID
+     * @param laneId Lane to remove
+     * @return true if removed, false if not found
+     */
+    bool removeLane(const PlaylistLaneID& laneId) {
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
+
+        auto it = m_laneMap.find(laneId);
+        if (it == m_laneMap.end())
+            return false;
+
+        size_t laneIdx = it->second;
+
+        // Remove all clips in this lane from the clip lane map
+        for (const auto& clip : m_lanes[laneIdx].clips) {
+            m_clipLaneMap.erase(clip.id);
+        }
+
+        // Remove the lane
+        m_lanes.erase(m_lanes.begin() + laneIdx);
+
+        // Rebuild lane map with correct indices
+        m_laneMap.clear();
+        for (size_t i = 0; i < m_lanes.size(); ++i) {
+            m_laneMap[m_lanes[i].id] = i;
+        }
+
+        return true;
+    }
+
+    /**
      * @brief Clear all lanes and clips
      */
     void clear() {

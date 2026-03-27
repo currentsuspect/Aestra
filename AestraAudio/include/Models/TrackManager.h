@@ -114,6 +114,21 @@ public:
     void setInputChannelCount(int count) { m_inputChannelCount = count; }
 
     /**
+     * @brief Get output sample rate
+     */
+    double getOutputSampleRate() const { return m_outputSampleRate; }
+
+    /**
+     * @brief Get recording data snapshot (stub for Phase 2)
+     */
+    bool getRecordingDataSnapshot(uint32_t channelId, std::vector<float>& recordingData, double& startBeat) {
+        (void)channelId;
+        (void)recordingData;
+        (void)startBeat;
+        return false;
+    }
+
+    /**
      * @brief Set meter snapshots buffer
      */
     void setMeterSnapshots(std::shared_ptr<MeterSnapshotBuffer> snapshots) { m_meterSnapshots = snapshots; }
@@ -248,6 +263,21 @@ public:
     void preparePatternForArsenal(PatternID pid) {
         m_patternPlaybackEngine.flush();
         m_patternPlaybackEngine.schedulePatternInstance(pid, 0.0, 1);
+    }
+
+    void clearAllSolos() {
+        for (auto& channel : m_channels) {
+            channel->setSolo(false);
+        }
+    }
+
+    std::vector<MixerChannel*> getChannelsSnapshot() const {
+        std::vector<MixerChannel*> result;
+        result.reserve(m_channels.size());
+        for (auto& channel : m_channels) {
+            result.push_back(channel.get());
+        }
+        return result;
     }
 
 private:

@@ -912,7 +912,7 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
     bool isSelected = false; // TODO: Connect to selection model
     
     // Mute state
-    if (clip.muted) {
+    if (clip.edits.muted) {
         baseColor = baseColor.withAlpha(0.4f);
     }
     

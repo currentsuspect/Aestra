@@ -50,6 +50,10 @@ public:
     static std::string getAppDataPath();
     static std::string getAutosavePath();
     static std::string getLegacyAutosavePath();
+    static std::string getCrashFlagPath();
+    static void writeCrashFlag();
+    static void clearCrashFlag();
+    static bool isCrashedSession();
 
 private:
     // Glue logic

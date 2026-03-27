@@ -1,6 +1,7 @@
 #include "Commands/AddClipCommand.h"
 
 #include "AestraAudio.h"
+#include <sstream>
 
 namespace Aestra {
 namespace Audio {
@@ -36,6 +37,18 @@ void AddClipCommand::redo() {
     // Re-add using the exact same ID so it restores state correctly
     m_playlist.addClip(m_laneId, m_clip);
     m_executed = true;
+}
+
+std::string AddClipCommand::serialize() const {
+    std::ostringstream oss;
+    oss << "{"
+        << "\"type\":\"add_clip\","
+        << "\"lane_id\":\"" << m_laneId.toString() << "\","
+        << "\"clip_id\":\"" << m_clip.id.toString() << "\","
+        << "\"start_beat\":" << m_clip.startBeat << ","
+        << "\"end_beat\":" << m_clip.endBeat()
+        << "}";
+    return oss.str();
 }
 
 } // namespace Audio

@@ -31,7 +31,7 @@ struct ChannelViewModel {
     // Identity
     uint32_t id{0};                      ///< Stable track/channel ID
     uint32_t slotIndex{0};               ///< Dense index into MeterSnapshotBuffer
-    std::weak_ptr<Audio::MixerChannel> channel;   ///< Weak reference for state sync/toggles (UI thread)
+    Audio::MixerChannel* channel{nullptr};   ///< Raw pointer for state sync/toggles (UI thread)
 
     std::string name;                    ///< Display name
     uint32_t trackColor{0xFF808080};     ///< Track color (ARGB)

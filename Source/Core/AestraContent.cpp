@@ -580,7 +580,7 @@ void AestraContent::onUpdate(double dt) {
                 // but let's be safe and assume we need to manage it)
                 
                 if (selectedCh) {
-                    auto channel = selectedCh->channel.lock();
+                    auto* channel = selectedCh->channel;
                     if (channel) {
                         auto mixerUI = m_mixerPanel->getMixerUI();
                         if (mixerUI) {
