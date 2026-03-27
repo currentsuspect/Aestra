@@ -21,6 +21,7 @@
 #include "AudioGraphBuilder.h"
 
 #include <iostream>
+#include <fstream>
 #include <chrono>
 #include <thread>
 #include <cmath>
@@ -81,6 +82,42 @@ std::string AestraApp::getLegacyAutosavePath() {
     return (std::filesystem::path(getAppDataPath()) / "autosave.Aestraproj").string();
 }
 
+std::string AestraApp::getCrashFlagPath() {
+    return (std::filesystem::path(getAppDataPath()) / "crash_flag").string();
+}
+
+void AestraApp::writeCrashFlag() {
+    std::string flagPath = getCrashFlagPath();
+    std::error_code ec;
+    std::ofstream out(flagPath, std::ios::trunc);
+    if (out) {
+        out << std::chrono::system_clock::now().time_since_epoch().count();
+        out.close();
+        Log::info("[CrashDetection] Wrote crash flag: " + flagPath);
+    } else {
+        Log::warning("[CrashDetection] Failed to write crash flag: " + flagPath);
+    }
+}
+
+void AestraApp::clearCrashFlag() {
+    std::string flagPath = getCrashFlagPath();
+    std::error_code ec;
+    if (std::filesystem::exists(flagPath, ec)) {
+        std::filesystem::remove(flagPath, ec);
+        if (!ec) {
+            Log::info("[CrashDetection] Cleared crash flag");
+        } else {
+            Log::warning("[CrashDetection] Failed to clear crash flag: " + ec.message());
+        }
+    }
+}
+
+bool AestraApp::isCrashedSession() {
+    std::string flagPath = getCrashFlagPath();
+    std::error_code ec;
+    return std::filesystem::exists(flagPath, ec);
+}
+
 bool AestraApp::initialize(const std::string& projectPath) {
     if (!Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::Initializing)) {
         Log::error("Failed to transition to Initializing state");
@@ -88,6 +125,8 @@ bool AestraApp::initialize(const std::string& projectPath) {
     }
 
     Log::info("Aestra v1.0.0 - Initializing...");
+
+    writeCrashFlag();
 
     if (!Platform::initialize()) {
         Log::error("Failed to initialize platform");
@@ -259,17 +298,41 @@ bool AestraApp::initialize(const std::string& projectPath) {
     menuBar->addItem("Edit", [this]() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
 
-        menu->addItem("Undo", [this]() {
+        auto trackMgr = m_content ? m_content->getTrackManager() : nullptr;
+        bool canUndo = trackMgr && trackMgr->getCommandHistory().canUndo();
+        bool canRedo = trackMgr && trackMgr->getCommandHistory().canRedo();
+
+        auto undoItem = std::make_shared<AestraUI::NUIContextMenuItem>();
+        undoItem->setShortcut("Ctrl+Z");
+        undoItem->setEnabled(canUndo);
+        if (canUndo) {
+            std::string undoName = trackMgr->getCommandHistory().getUndoName();
+            undoItem->setText(undoName.empty() ? "Undo" : "Undo: " + undoName);
+        } else {
+            undoItem->setText("Undo");
+        }
+        undoItem->setOnClick([this]() {
             if (m_content && m_content->getTrackManager()) {
                 m_content->getTrackManager()->getCommandHistory().undo();
             }
         });
+        menu->addItem(undoItem);
 
-        menu->addItem("Redo", [this]() {
+        auto redoItem = std::make_shared<AestraUI::NUIContextMenuItem>();
+        redoItem->setShortcut("Ctrl+Y");
+        redoItem->setEnabled(canRedo);
+        if (canRedo) {
+            std::string redoName = trackMgr->getCommandHistory().getRedoName();
+            redoItem->setText(redoName.empty() ? "Redo" : "Redo: " + redoName);
+        } else {
+            redoItem->setText("Redo");
+        }
+        redoItem->setOnClick([this]() {
             if (m_content && m_content->getTrackManager()) {
                 m_content->getTrackManager()->getCommandHistory().redo();
             }
         });
+        menu->addItem(redoItem);
 
         menu->addSeparator();
 
@@ -356,10 +419,12 @@ bool AestraApp::initialize(const std::string& projectPath) {
             if (result.ui) applyUIState(*result.ui);
         }
     } else {
-        // Issue #41: Show RecoveryDialog instead of silently loading autosave
         std::string autosavePath = getAutosavePath();
         std::string timestamp;
-        if (RecoveryDialog::detectAutosave(autosavePath, timestamp)) {
+        bool crashedSession = isCrashedSession();
+
+        if (crashedSession && RecoveryDialog::detectAutosave(autosavePath, timestamp)) {
+            Log::info("[Recovery] Crash detected, showing recovery dialog");
             // Store the path for later use and show the recovery dialog
             m_pendingAutosavePath = autosavePath;
             m_recoveryHandled = false;
@@ -690,6 +755,8 @@ void AestraApp::run() {
 void AestraApp::shutdown() {
     Log::info("[SHUTDOWN] Entering shutdown function...");
     Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::ShuttingDown);
+
+    clearCrashFlag();
 
     // Save preferences and UI state (Issue #120)
     Preferences::instance().save();

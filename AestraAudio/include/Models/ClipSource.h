@@ -9,6 +9,7 @@ namespace Audio {
 
 // Forward declaration
 struct AudioBufferData;
+class WaveformCache;
 
 /**
  * @brief Type-safe identifier for clip sources
@@ -74,11 +75,15 @@ public:
 
     void setBuffer(std::shared_ptr<AudioBufferData> buffer) { m_buffer = std::move(buffer); }
 
+    std::shared_ptr<WaveformCache> getWaveformCache() const { return m_waveformCache; }
+    void setWaveformCache(std::shared_ptr<WaveformCache> cache) { m_waveformCache = std::move(cache); }
+
 private:
     ClipSourceID m_id;
     std::string m_name;
     std::string m_filePath;
     std::shared_ptr<AudioBufferData> m_buffer;
+    std::shared_ptr<WaveformCache> m_waveformCache;
 };
 
 } // namespace Audio
