@@ -14,7 +14,7 @@ target_include_directories(HeadlessOfflineRenderer PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
-add_test(NAME HeadlessOfflineRenderer COMMAND HeadlessOfflineRenderer)
+add_test(NAME HeadlessOfflineRenderer COMMAND HeadlessOfflineRenderer ${CMAKE_CURRENT_SOURCE_DIR}/dummy.aes output.wav)
 set_tests_properties(HeadlessOfflineRenderer PROPERTIES
     LABELS "headless;offline;rendering"
     ENVIRONMENT "AESTRA_HEADLESS=1"
@@ -32,7 +32,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/OfflineRenderRegressionTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
-    add_test(NAME OfflineRenderRegressionTest COMMAND OfflineRenderRegressionTest)
+    add_test(NAME OfflineRenderRegressionTest COMMAND OfflineRenderRegressionTest ${CMAKE_CURRENT_SOURCE_DIR}/dummy.aes reference.wav)
     set_tests_properties(OfflineRenderRegressionTest PROPERTIES
         LABELS "headless;regression;offline"
         ENVIRONMENT "AESTRA_HEADLESS=1"

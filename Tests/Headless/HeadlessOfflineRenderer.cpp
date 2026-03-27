@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
                   << "  --sample-rate N         Set sample rate (default: 48000)\n"
                   << "\nExample:\n"
                   << "  " << argv[0] << " song.aes output.wav --duration-seconds 30\n";
-        return 1;
+        return 1; // Return 1 for invalid args (as specified in memory)
     }
 
     std::string projectPath = argv[1];
