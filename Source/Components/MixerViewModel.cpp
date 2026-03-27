@@ -43,7 +43,7 @@ void MixerViewModel::updateMeters(const Audio::MeterSnapshotBuffer& snapshots, d
     for (auto& channel : m_channels) {
         if (!channel) continue;
 
-        if (auto mc = channel->channel.lock()) {
+        if (auto mc = channel->channel) {
             channel->muted = mc->isMuted();
             channel->soloed = mc->isSoloed();
             // channel->armed = mc->isRecording(); // MixerChannel has no recording state
@@ -80,7 +80,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
         std::string name;
         uint32_t color{0};
         uint32_t slot{0};
-        std::weak_ptr<Audio::MixerChannel> channel;
+        Audio::MixerChannel* channel{nullptr};
         bool muted{false};
         bool soloed{false};
         bool armed{false};
@@ -129,10 +129,10 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             existing->armed = info.armed;
             existing->monitored = info.monitored;
             existing->fxCount = info.fxCount;
-            if (auto mc = info.channel.lock()) {
+            if (auto* mc = info.channel) {
                 existing->inputChannelIndex = mc->getInputChannelIndex();
             }
-            if (auto mc = info.channel.lock()) {
+            if (auto* mc = info.channel) {
                 existing->inputChannelIndex = mc->getInputChannelIndex();
             }
             newChannels.push_back(std::move(existing));
@@ -149,10 +149,10 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             channel->armed = info.armed;
             channel->monitored = info.monitored;
             channel->fxCount = info.fxCount;
-            if (auto mc = info.channel.lock()) {
+            if (auto* mc = info.channel) {
                 channel->inputChannelIndex = mc->getInputChannelIndex();
             }
-            if (auto mc = info.channel.lock()) {
+            if (auto* mc = info.channel) {
                 channel->inputChannelIndex = mc->getInputChannelIndex();
             }
             newChannels.push_back(std::move(channel));
@@ -160,7 +160,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
         
         // Sync Sends from Engine (Persistence Fix)
         if (auto* ch = newChannels.back().get()) {
-            if (auto mc = ch->channel.lock()) {
+            if (auto* mc = ch->channel) {
                auto engineSends = mc->getSends();
                ch->sends.clear();
                for (const auto& route : engineSends) {
@@ -192,7 +192,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
         
         // Sync Inserts (New)
         if (auto* ch = newChannels.back().get()) {
-            if (auto mc = ch->channel.lock()) {
+            if (auto mc = ch->channel) {
                 auto& chain = mc->getEffectChain();
                 
                 // Ensure size matches
@@ -504,7 +504,7 @@ void MixerViewModel::addSend(uint32_t channelId) {
     ch->sends.push_back(send);
 
     // Update Engine
-    if (auto mc = ch->channel.lock()) {
+    if (auto mc = ch->channel) {
         Audio::AudioRoute route;
         // Map 0 -> 0xFFFFFFFF for engine
         route.targetChannelId = (defaultTarget == 0) ? 0xFFFFFFFF : defaultTarget; 
@@ -524,7 +524,7 @@ void MixerViewModel::removeSend(uint32_t channelId, int sendIndex) {
     ch->sends.erase(ch->sends.begin() + sendIndex);
 
     // Update Engine
-    if (auto mc = ch->channel.lock()) {
+    if (auto mc = ch->channel) {
         mc->removeSend(sendIndex);
         
         if (m_onGraphDirty) m_onGraphDirty();
@@ -539,7 +539,7 @@ void MixerViewModel::setSendLevel(uint32_t channelId, int sendIndex, float linea
     ch->sends[sendIndex].gain = linearGain;
 
     // Update Engine
-    if (auto mc = ch->channel.lock()) {
+    if (auto mc = ch->channel) {
         mc->setSendLevel(sendIndex, linearGain);
     }
 }
@@ -559,7 +559,7 @@ void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint3
     }
 
     // Update Engine
-    if (auto mc = ch->channel.lock()) {
+    if (auto mc = ch->channel) {
         // Normalize 0 to 0xFFFFFFFF for engine master
         uint32_t engineId = (targetId == 0) ? 0xFFFFFFFF : targetId;
         mc->setSendDestination(sendIndex, engineId);
@@ -580,7 +580,7 @@ void MixerViewModel::setInsertBypass(uint32_t channelId, int slotIndex, bool byp
     ch->inserts[slotIndex].bypassDirty = true; // Mark as pending sync
 
     // Update Engine
-    if (auto mc = ch->channel.lock()) {
+    if (auto mc = ch->channel) {
         mc->getEffectChain().setSlotBypassed(slotIndex, bypassed);
         if (m_onProjectModified) m_onProjectModified();
     }
@@ -594,7 +594,7 @@ void MixerViewModel::setInsertMix(uint32_t channelId, int slotIndex, float mix) 
     ch->inserts[slotIndex].mix = mix;
 
     // Update Engine
-    if (auto mc = ch->channel.lock()) {
+    if (auto mc = ch->channel) {
         mc->getEffectChain().setSlotDryWetMix(slotIndex, mix);
          // Often mix changes don't need project dirty flag every frame, 
          // but for now we can trigger it or handle throttling elsewhere.
@@ -615,7 +615,7 @@ void MixerViewModel::moveInsert(uint32_t channelId, int fromSlot, int toSlot) {
     std::swap(ch->inserts[fromSlot], ch->inserts[toSlot]);
 
     // Update Engine
-    if (auto mc = ch->channel.lock()) {
+    if (auto mc = ch->channel) {
         auto& chain = mc->getEffectChain();
         const auto* targetSlotPtr = chain.getSlot(toSlot);
         
@@ -667,7 +667,7 @@ void MixerViewModel::removeInsert(uint32_t channelId, int slot) {
         std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] Ch %u Slot %d marked PENDING REMOVAL", channelId, slot);
         Aestra::Log::info(logBuf); 
         
-        if (auto mc = ch->channel.lock()) {
+        if (auto mc = ch->channel) {
             auto& chain = mc->getEffectChain();
             chain.removePlugin(slot);
             

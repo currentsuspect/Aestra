@@ -81,7 +81,7 @@ private:
     int calculateCurrentStep(); // Calculate step from TrackManager clock
 
     // Pattern Management (driven by Pattern Browser)
-    PatternID m_activePatternID = 0; // The pattern being edited
+    PatternID m_activePatternID{}; // The pattern being edited
     class PatternBrowserPanel* m_patternBrowser = nullptr; // For refresh
     void ensureDefaultPattern(); // Auto-create Pattern 1 if needed
     

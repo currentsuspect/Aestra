@@ -9,6 +9,7 @@ namespace Audio {
 
 // Forward declaration
 struct AudioBufferData;
+class WaveformCache;
 
 /**
  * @brief Type-safe identifier for clip sources
@@ -20,6 +21,7 @@ struct ClipSourceID {
     explicit operator uint64_t() const { return value; }
     bool operator==(const ClipSourceID& other) const { return value == other.value; }
     bool operator!=(const ClipSourceID& other) const { return value != other.value; }
+    bool isValid() const { return value != 0; }
 };
 
 /**
@@ -52,6 +54,9 @@ public:
     const std::string& getName() const { return m_name; }
 
     double getDurationSeconds() const { return m_buffer ? m_buffer->durationSeconds() : 0.0; }
+    uint64_t getNumFrames() const { return m_buffer ? m_buffer->numFrames : 0; }
+    uint32_t getSampleRate() const { return m_buffer ? m_buffer->sampleRate : 0; }
+    uint32_t getNumChannels() const { return m_buffer ? m_buffer->numChannels : 0; }
 
     const AudioBufferData* getRawBuffer() const { return m_buffer.get(); }
 
@@ -70,11 +75,15 @@ public:
 
     void setBuffer(std::shared_ptr<AudioBufferData> buffer) { m_buffer = std::move(buffer); }
 
+    std::shared_ptr<WaveformCache> getWaveformCache() const { return m_waveformCache; }
+    void setWaveformCache(std::shared_ptr<WaveformCache> cache) { m_waveformCache = std::move(cache); }
+
 private:
     ClipSourceID m_id;
     std::string m_name;
     std::string m_filePath;
     std::shared_ptr<AudioBufferData> m_buffer;
+    std::shared_ptr<WaveformCache> m_waveformCache;
 };
 
 } // namespace Audio

@@ -12,7 +12,10 @@ struct MeterSnapshotBuffer {
         float peakR = 0.0f;
         float rmsL = 0.0f;
         float rmsR = 0.0f;
+        float lowL = 0.0f;
+        float lowR = 0.0f;
         float lufs = -144.0f;
+        float integratedLufs = -144.0f;
         float correlation = 0.0f;
         bool clipL = false;
         bool clipR = false;
@@ -28,6 +31,8 @@ struct MeterSnapshotBuffer {
 
     // STUB: readMeter — Phase 2 will return actual metering data
     MeterReadout readMeter(int slot) const { return {}; }
+
+    MeterReadout readSnapshot(int slot) const { return readMeter(slot); }
 };
 
 } // namespace Audio
