@@ -92,7 +92,7 @@ endif()
 # Rumble Usage Path Test
 if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumbleUsagePathTest.cpp")
     add_executable(RumbleUsagePathTest Integration/RumbleUsagePathTest.cpp)
-    target_link_libraries(RumbleUsagePathTest PRIVATE AestraAudioCore AestraRumble AestraCore)
+    target_link_libraries(RumbleUsagePathTest PRIVATE AestraAudioCore AestraRumble AestraCore AestraPlat)
     target_include_directories(RumbleUsagePathTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -104,7 +104,7 @@ endif()
 # Rumble Discovery Test
 if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumbleDiscoveryTest.cpp")
     add_executable(RumbleDiscoveryTest Integration/RumbleDiscoveryTest.cpp)
-    target_link_libraries(RumbleDiscoveryTest PRIVATE AestraAudioCore AestraRumble AestraCore)
+    target_link_libraries(RumbleDiscoveryTest PRIVATE AestraAudioCore AestraRumble AestraCore AestraPlat)
     target_include_directories(RumbleDiscoveryTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
