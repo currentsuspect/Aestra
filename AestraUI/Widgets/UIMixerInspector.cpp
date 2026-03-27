@@ -84,7 +84,7 @@ UIMixerInspector::UIMixerInspector(Aestra::MixerViewModel* viewModel)
         auto* ch = m_viewModel->getSelectedChannel();
         if (ch) {
             // Update engine
-            if (auto mc = ch->channel.lock()) {
+            if (auto* mc = ch->channel) {
                 mc->setInputChannelIndex(value); 
             }
             // Update ViewModel for UI sync

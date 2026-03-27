@@ -43,6 +43,18 @@ public:
      * @brief Whether this command modifies the project state (dirty flag)
      */
     virtual bool changesProjectState() const { return true; }
+
+    /**
+     * @brief Serialize command to JSON string for persistence
+     * @return JSON representation of command data
+     */
+    virtual std::string serialize() const { return {}; }
+
+    /**
+     * @brief Get command type identifier for factory reconstruction
+     * @return String identifier like "add_clip", "move_pattern", etc.
+     */
+    virtual std::string type() const { return {}; }
 };
 
 } // namespace Audio
