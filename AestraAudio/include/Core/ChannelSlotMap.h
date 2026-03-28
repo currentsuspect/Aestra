@@ -60,7 +60,7 @@ public:
      *
      * @param tracks Vector of track pointers (order determines slot assignment)
      */
-    void rebuild(const std::vector<std::shared_ptr<MixerChannel>>& channels);
+     void rebuild(const std::vector<std::unique_ptr<MixerChannel>>& channels);
 
     /**
      * @brief Get the dense slot index for a channel ID.
