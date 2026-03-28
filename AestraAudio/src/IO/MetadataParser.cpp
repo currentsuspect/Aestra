@@ -244,6 +244,10 @@ bool MetadataParser::parseFLAC(const std::string& filePath, AudioMetadata& meta)
         if (blockSize == 0)
             continue;
 
+        // Cap block size at 10MB to prevent corrupted files from huge allocations
+        if (blockSize > 10 * 1024 * 1024)
+            break;
+
         std::vector<uint8_t> blockData(blockSize);
         file.read(reinterpret_cast<char*>(blockData.data()), blockSize);
         if (!file || static_cast<uint32_t>(file.gcount()) < blockSize)
@@ -303,38 +307,53 @@ bool MetadataParser::parseFLAC(const std::string& filePath, AudioMetadata& meta)
                 }
             }
         } else if (blockType == 6) {
-            // PICTURE
+            // PICTURE block (cover art)
+            // Structure: type(4) + mimeLen(4) + mime(mimeLen) + descLen(4) + desc(descLen)
+            //            + width(4) + height(4) + depth(4) + colors(4) + dataLen(4) + data(dataLen)
             if (blockSize < 32 || !meta.coverArtData.empty())
                 continue;
 
             size_t pos = 0;
-            // uint32_t pictureType = readBigEndian32(&blockData[pos]);
+
+            // Picture type (4 bytes)
+            if (pos + 4 > blockSize) continue;
             pos += 4;
 
+            // MIME type length + string
+            if (pos + 4 > blockSize) continue;
             uint32_t mimeLen = readBigEndian32(&blockData[pos]);
             pos += 4;
-            if (pos + mimeLen > blockSize)
-                continue;
+            if (mimeLen > 256 || pos + mimeLen > blockSize) continue;
             std::string mimeType(reinterpret_cast<char*>(&blockData[pos]), mimeLen);
             pos += mimeLen;
 
+            // Description length + string
+            if (pos + 4 > blockSize) continue;
             uint32_t descLen = readBigEndian32(&blockData[pos]);
             pos += 4;
-            if (pos + descLen + 16 > blockSize)
-                continue;
-            pos += descLen; // Skip description
+            if (descLen > 4096 || pos + descLen > blockSize) continue;
+            pos += descLen;
 
-            pos += 16; // Skip width, height, depth, colors
+            // Width(4) + Height(4) + Depth(4) + Colors(4)
+            if (pos + 16 > blockSize) continue;
+            pos += 16;
 
-            if (pos + 4 > blockSize)
-                continue;
+            // Image data length
+            if (pos + 4 > blockSize) continue;
             uint32_t dataLen = readBigEndian32(&blockData[pos]);
             pos += 4;
 
-            if (pos + dataLen <= blockSize) {
-                meta.coverArtData.assign(&blockData[pos], &blockData[pos + dataLen]);
-                meta.coverArtMimeType = mimeType;
-            }
+            // Validate image data: must have at least a valid JPEG/PNG header
+            if (dataLen < 8 || pos + dataLen > blockSize) continue;
+
+            // Sanity check: first bytes should be JPEG (FF D8 FF) or PNG (89 50 4E 47)
+            const uint8_t* imgData = &blockData[pos];
+            bool isJPEG = (imgData[0] == 0xFF && imgData[1] == 0xD8 && imgData[2] == 0xFF);
+            bool isPNG  = (imgData[0] == 0x89 && imgData[1] == 0x50 && imgData[2] == 0x4E && imgData[3] == 0x47);
+            if (!isJPEG && !isPNG) continue;
+
+            meta.coverArtData.assign(imgData, imgData + dataLen);
+            meta.coverArtMimeType = mimeType;
         }
     }
 
