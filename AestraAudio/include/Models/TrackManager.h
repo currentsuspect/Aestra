@@ -64,6 +64,13 @@ public:
         m_channels.push_back(std::move(channel));
         m_graphDirty.store(true, std::memory_order_relaxed);
         m_modified.store(true, std::memory_order_relaxed);
+        
+        // Rebuild channel slot map
+        if (!m_channelSlotMap) {
+            m_channelSlotMap = std::make_shared<ChannelSlotMap>();
+        }
+        m_channelSlotMap->rebuild(m_channels);
+        
         return raw;
     }
 
@@ -245,6 +252,9 @@ public:
     void clearAllChannels() {
         m_channels.clear();
         m_graphDirty.store(true, std::memory_order_relaxed);
+        if (m_channelSlotMap) {
+            m_channelSlotMap->clear();
+        }
     }
 
     TimelineClock& getTimelineClock() { return m_timelineClock; }
