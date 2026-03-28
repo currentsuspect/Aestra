@@ -202,15 +202,17 @@ AestraContent::AestraContent() {
         toggleView(view);
     });
     
-    // Wire Transport to TrackManager (Pre-definition allows wiring)
-    // Note: TrackManager exists since Line 100
-    m_transportBar->setOnPlay([this]() { if(m_trackManager) m_trackManager->play(); });
-    m_transportBar->setOnPause([this]() { if(m_trackManager) m_trackManager->pause(); });
+    // Wire Transport to AudioEngine (timeline playback)
+    m_transportBar->setOnPlay([this]() { if(m_audioEngine) m_audioEngine->setTransportPlaying(true); });
+    m_transportBar->setOnPause([this]() { if(m_audioEngine) m_audioEngine->setTransportPlaying(false); });
     m_transportBar->setOnStop([this]() { 
+        if(m_audioEngine) {
+            m_audioEngine->setTransportPlaying(false);
+            m_audioEngine->panic();
+        }
         if(m_trackManager) m_trackManager->stop();
         if(m_auditionEngine && m_viewFocus == ViewFocus::Audition) m_auditionEngine->stop();
         stopSoundPreview();
-        m_audioEngine->panic(); 
     });
     m_transportBar->setOnRecord([this](bool recording) { 
         if(m_trackManager) {
