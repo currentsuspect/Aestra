@@ -161,7 +161,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Core/AudioEngine.cpp
     src/Core/AudioDeviceManager.cpp
     src/Core/AutosaveManager.cpp
-    src/Core/DriverRegistryStub.cpp  # Default no-op; platform libs override at link time
+    # DriverRegistryStub is only for non-ALSA platforms (stub is in Linux/Windows libs)
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
     src/Core/ProjectValidator.cpp
