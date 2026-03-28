@@ -4,6 +4,35 @@ All notable changes for Aestra in Q1 2026 are documented here.
 
 ## [Unreleased]
 
+### Maintenance & Infrastructure (March 23, 2026)
+
+- **CI/CD Improvements:**
+  - Consolidated build workflows into unified CI pipeline
+  - Added build timeouts (30m Linux, 45m Windows/macOS) to prevent hanging builds
+  - Added Discord webhook gating (skips when secret unavailable)
+  - Fixed all CI build failures
+
+- **Code Quality:**
+  - Added `.clang-tidy` configuration for static analysis
+  - Added pre-commit hook for platform abstraction leak detection
+  - Removed redundant CMake C++ standard settings
+  - Removed accidentally committed build artifacts (saved 4MB)
+  - Strengthened `.gitignore` patterns
+
+- **Bug Fixes (Qodo Review):**
+  - Fixed CommandHistory deadlock (execute outside lock)
+  - Fixed AutosaveManager self-deadlock (check state before locking)
+  - Fixed CommandTransaction::redo() to call redo() on children
+  - Fixed DuplicateClipCommand to preserve ID across redo
+  - Fixed TrimClipCommand negative duration validation
+
+- **Headless Infrastructure:**
+  - Added ProjectValidator for safe project loading
+  - Added AutosaveManager for crash recovery
+  - Added CommandTransaction for grouped undo
+  - Added AudioExporter for offline rendering
+  - Added HeadlessMusicGenerator for programmatic music
+
 ### Internal Arsenal / Rumble milestone
 
 - Added a verified internal instrument validation stack around **Aestra Rumble**.
