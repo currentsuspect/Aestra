@@ -12,17 +12,24 @@ RtAudioDriver::RtAudioDriver() {
     std::vector<RtAudio::Api> candidates;
 #ifdef __LINUX_PULSE__
     candidates.push_back(RtAudio::LINUX_PULSE);
+    std::cout << "[RtAudio] LINUX_PULSE defined, adding to candidates\n";
 #endif
 #ifdef __LINUX_ALSA__
     candidates.push_back(RtAudio::LINUX_ALSA);
+    std::cout << "[RtAudio] LINUX_ALSA defined, adding to candidates\n";
 #endif
 #ifdef __UNIX_JACK__
     candidates.push_back(RtAudio::UNIX_JACK);
+    std::cout << "[RtAudio] UNIX_JACK defined, adding to candidates\n";
 #endif
     candidates.push_back(RtAudio::UNSPECIFIED);
+    std::cout << "[RtAudio] Trying " << candidates.size() << " backends\n";
 
     if (!tryInitializeBackend(candidates)) {
         m_lastError = "No Linux RtAudio backend could be initialized";
+        std::cerr << "[RtAudio] FAILED: " << m_lastError << "\n";
+    } else {
+        std::cout << "[RtAudio] SUCCESS: Backend initialized\n";
     }
 }
 
@@ -197,6 +204,7 @@ int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsign
 bool RtAudioDriver::tryInitializeBackend(const std::vector<RtAudio::Api>& candidates) {
     for (RtAudio::Api api : candidates) {
         try {
+            std::cout << "[RtAudio] Trying API: " << api << "\n";
             auto candidate = (api == RtAudio::UNSPECIFIED) ? std::make_unique<RtAudio>() : std::make_unique<RtAudio>(api);
             candidate->setErrorCallback([](RtAudioErrorType type, const std::string& errorText) {
                 if (type != RTAUDIO_NO_ERROR && type != RTAUDIO_WARNING) {
@@ -204,12 +212,16 @@ bool RtAudioDriver::tryInitializeBackend(const std::vector<RtAudio::Api>& candid
                 }
             });
 
-            if (!candidate->getDeviceIds().empty()) {
+            auto deviceIds = candidate->getDeviceIds();
+            std::cout << "[RtAudio] API " << api << " has " << deviceIds.size() << " devices\n";
+            
+            if (!deviceIds.empty()) {
                 m_driverType = apiToDriverType(candidate->getCurrentApi());
                 m_rtAudio = std::move(candidate);
                 return true;
             }
-        } catch (const std::exception&) {
+        } catch (const std::exception& e) {
+            std::cerr << "[RtAudio] Exception for API " << api << ": " << e.what() << "\n";
         }
     }
 
