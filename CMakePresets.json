@@ -19,7 +19,7 @@
       "displayName": "Headless (no UI, container-friendly)",
       "inherits": "base",
       "cacheVariables": {
-        "Aestra_HEADLESS_ONLY": "ON"
+        "AESTRA_HEADLESS_ONLY": "ON"
       }
     },
     {
@@ -27,7 +27,7 @@
       "displayName": "Full app (UI + tests default)",
       "inherits": "base",
       "cacheVariables": {
-        "Aestra_HEADLESS_ONLY": "OFF"
+        "AESTRA_HEADLESS_ONLY": "OFF"
       }
     },
     {
@@ -35,8 +35,8 @@
       "displayName": "Full app (UI, tests OFF for faster/confident builds)",
       "inherits": "base",
       "cacheVariables": {
-        "Aestra_HEADLESS_ONLY": "OFF",
-        "Aestra_ENABLE_TESTS": "OFF"
+        "AESTRA_HEADLESS_ONLY": "OFF",
+        "AESTRA_ENABLE_TESTS": "OFF"
       }
     },
     {
@@ -50,7 +50,6 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "OFF"
       }
-    }
     }
   ],
   "buildPresets": [

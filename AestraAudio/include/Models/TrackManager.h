@@ -1,13 +1,14 @@
 #pragma once
+
 #include "../Commands/CommandHistory.h"
 #include "../Core/AudioCommandQueue.h"
 #include "../Core/ChannelSlotMap.h"
 #include "../DSP/ContinuousParamBuffer.h"
+#include "../Playback/PatternPlaybackEngine.h"
+#include "../Playback/TimelineClock.h"
 #include "MeterSnapshot.h"
 #include "MixerChannel.h"
 #include "PatternManager.h"
-#include "../Playback/PatternPlaybackEngine.h"
-#include "../Playback/TimelineClock.h"
 #include "PlaylistModel.h"
 #include "SourceManager.h"
 #include "UnitManager.h"
@@ -15,6 +16,7 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace Aestra {
@@ -34,6 +36,7 @@ public:
      * @brief Get the number of channels
      */
     size_t getChannelCount() const { return m_channels.size(); }
+    size_t getTrackCount() const { return getChannelCount(); }
 
     /**
      * @brief Get a channel by index
@@ -62,11 +65,10 @@ public:
         channel->setCommandSink(m_commandSink);
         auto* raw = channel.get();
         m_channels.push_back(std::move(channel));
-        m_graphDirty.store(true, std::memory_order_relaxed);
+        markModified();
         return raw;
     }
 
-    size_t getTrackCount() const { return getChannelCount(); }
     MixerChannel* getTrack(size_t index) { return getChannel(index); }
     const MixerChannel* getTrack(size_t index) const { return getChannel(index); }
 
@@ -74,34 +76,31 @@ public:
      * @brief Get the playlist model
      */
     PlaylistModel& getPlaylistModel() { return m_playlistModel; }
-
     const PlaylistModel& getPlaylistModel() const { return m_playlistModel; }
 
     /**
      * @brief Get the pattern manager
      */
     PatternManager& getPatternManager() { return m_patternManager; }
-
     const PatternManager& getPatternManager() const { return m_patternManager; }
 
     /**
      * @brief Get the source manager
      */
     SourceManager& getSourceManager() { return m_sourceManager; }
-
     const SourceManager& getSourceManager() const { return m_sourceManager; }
 
     /**
      * @brief Get the unit manager (Arsenal)
      */
     UnitManager& getUnitManager() { return m_unitManager; }
-
     const UnitManager& getUnitManager() const { return m_unitManager; }
 
     /**
      * @brief Set output sample rate
      */
     void setOutputSampleRate(double rate) { m_outputSampleRate = rate; }
+    double getOutputSampleRate() const { return m_outputSampleRate; }
 
     /**
      * @brief Set input sample rate
@@ -112,11 +111,6 @@ public:
      * @brief Set input channel count
      */
     void setInputChannelCount(int count) { m_inputChannelCount = count; }
-
-    /**
-     * @brief Get output sample rate
-     */
-    double getOutputSampleRate() const { return m_outputSampleRate; }
 
     /**
      * @brief Get recording data snapshot (stub for Phase 2)
@@ -131,7 +125,7 @@ public:
     /**
      * @brief Set meter snapshots buffer
      */
-    void setMeterSnapshots(std::shared_ptr<MeterSnapshotBuffer> snapshots) { m_meterSnapshots = snapshots; }
+    void setMeterSnapshots(std::shared_ptr<MeterSnapshotBuffer> snapshots) { m_meterSnapshots = std::move(snapshots); }
 
     /**
      * @brief Get meter snapshots
@@ -151,21 +145,23 @@ public:
     /**
      * @brief Set channel slot map
      */
-    void setChannelSlotMapShared(std::shared_ptr<ChannelSlotMap> slotMap) { m_channelSlotMap = slotMap; }
+    void setChannelSlotMapShared(std::shared_ptr<ChannelSlotMap> slotMap) {
+        m_channelSlotMap = std::move(slotMap);
+        m_graphDirty.store(true, std::memory_order_relaxed);
+    }
 
     /**
      * @brief Set playhead position
      */
     void setPosition(double position) { m_position = position; }
     void syncPositionFromEngine(double position) { m_position = position; }
+    void setPlayStartPosition(double position) { m_playStartPosition = position; }
 
     /**
      * @brief Get playhead position
      */
     double getPosition() const { return m_position; }
     double getUIPosition() const { return m_position; }
-
-    void setPlayStartPosition(double position) { m_playStartPosition = position; }
     double getPlayStartPosition() const { return m_playStartPosition; }
 
     void setUserScrubbing(bool scrubbing) { m_userScrubbing.store(scrubbing, std::memory_order_relaxed); }
@@ -194,6 +190,8 @@ public:
     void stop() {
         m_isPlaying.store(false, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
+        m_isRecording.store(false, std::memory_order_relaxed);
+        m_userScrubbing.store(false, std::memory_order_relaxed);
         m_position = m_playStartPosition;
         pushTransportCommand(0.0f, m_playStartPosition);
     }
@@ -212,9 +210,11 @@ public:
             m_commandSink(cmd);
         }
     }
+    bool isMetronomeEnabled() const { return m_metronomeEnabled.load(std::memory_order_relaxed); }
 
     void setPatternMode(bool enabled) { m_patternMode.store(enabled, std::memory_order_relaxed); }
     bool isPatternMode() const { return m_patternMode.load(std::memory_order_relaxed); }
+
     void stopArsenalPlayback(bool keepPatternMode = false) {
         stop();
         if (!keepPatternMode) {
@@ -225,12 +225,22 @@ public:
     CommandHistory& getCommandHistory() { return m_commandHistory; }
     const CommandHistory& getCommandHistory() const { return m_commandHistory; }
 
-    void markModified() { m_modified.store(true, std::memory_order_relaxed); }
+    void markModified() {
+        m_modified.store(true, std::memory_order_relaxed);
+        m_graphDirty.store(true, std::memory_order_relaxed);
+    }
     void setModified(bool modified) { m_modified.store(modified, std::memory_order_relaxed); }
     bool isModified() const { return m_modified.load(std::memory_order_relaxed); }
 
     bool consumeGraphDirty() { return m_graphDirty.exchange(false, std::memory_order_acq_rel); }
-    void rebuildAndPushSnapshot() { m_graphDirty.store(false, std::memory_order_relaxed); }
+
+    void rebuildAndPushSnapshot() {
+        if (!m_channelSlotMap) {
+            m_channelSlotMap = std::make_shared<ChannelSlotMap>();
+        }
+        m_channelSlotMap->rebuild(getChannelsSharedSnapshot());
+        m_graphDirty.store(false, std::memory_order_relaxed);
+    }
 
     void setCommandSink(std::function<void(const AudioQueueCommand&)> sink) {
         m_commandSink = std::move(sink);
@@ -243,7 +253,10 @@ public:
 
     void clearAllChannels() {
         m_channels.clear();
-        m_graphDirty.store(true, std::memory_order_relaxed);
+        if (m_channelSlotMap) {
+            m_channelSlotMap->clear();
+        }
+        markModified();
     }
 
     TimelineClock& getTimelineClock() { return m_timelineClock; }
@@ -267,20 +280,31 @@ public:
 
     void clearAllSolos() {
         for (auto& channel : m_channels) {
-            channel->setSolo(false);
+            if (channel) {
+                channel->setSolo(false);
+            }
         }
     }
 
     std::vector<MixerChannel*> getChannelsSnapshot() const {
         std::vector<MixerChannel*> result;
         result.reserve(m_channels.size());
-        for (auto& channel : m_channels) {
+        for (const auto& channel : m_channels) {
             result.push_back(channel.get());
         }
         return result;
     }
 
 private:
+    std::vector<std::shared_ptr<MixerChannel>> getChannelsSharedSnapshot() const {
+        std::vector<std::shared_ptr<MixerChannel>> channels;
+        channels.reserve(m_channels.size());
+        for (const auto& channel : m_channels) {
+            channels.emplace_back(channel.get(), [](MixerChannel*) {});
+        }
+        return channels;
+    }
+
     void pushTransportCommand(float playing, double positionSeconds) {
         if (!m_commandSink) {
             return;
@@ -307,7 +331,7 @@ private:
     double m_position{0.0};
     double m_playStartPosition{0.0};
     std::shared_ptr<MeterSnapshotBuffer> m_meterSnapshots;
-    std::shared_ptr<ContinuousParamBuffer> m_continuousParams; // STUB: Phase 2
+    std::shared_ptr<ContinuousParamBuffer> m_continuousParams;
     std::shared_ptr<ChannelSlotMap> m_channelSlotMap;
     UnitManager m_unitManager;
     std::function<void(const AudioQueueCommand&)> m_commandSink;

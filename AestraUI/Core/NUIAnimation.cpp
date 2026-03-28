@@ -227,11 +227,14 @@ float NUIAnimation::easeOutBounce(float t) {
     if (t < 1.0f / d1) {
         return n1 * t * t;
     } else if (t < 2.0f / d1) {
-        return n1 * (t -= 1.5f / d1) * t + 0.75f;
+        const float u = t - 1.5f / d1;
+        return n1 * u * u + 0.75f;
     } else if (t < 2.5f / d1) {
-        return n1 * (t -= 2.25f / d1) * t + 0.9375f;
+        const float u = t - 2.25f / d1;
+        return n1 * u * u + 0.9375f;
     } else {
-        return n1 * (t -= 2.625f / d1) * t + 0.984375f;
+        const float u = t - 2.625f / d1;
+        return n1 * u * u + 0.984375f;
     }
 }
 

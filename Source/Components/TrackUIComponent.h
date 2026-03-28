@@ -138,9 +138,9 @@ protected:
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
-    void onMouseEnter();
-    void onMouseLeave();
-    void onUpdate(double deltaTime);
+    void onMouseEnter() override;
+    void onMouseLeave() override;
+    void onUpdate(double deltaTime) override;
 
 private:
     TrackManager* m_trackManager; // For coordinating solo exclusivity

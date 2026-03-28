@@ -1040,16 +1040,37 @@ struct NUIAnimationCurve {
     static float easeInOutQuad(float t) { return t < 0.5f ? 2.0f * t * t : -1.0f + (4.0f - 2.0f * t) * t; }
     
     static float easeInCubic(float t) { return t * t * t; }
-    static float easeOutCubic(float t) { return (--t) * t * t + 1.0f; }
+    static float easeOutCubic(float t) {
+        const float u = t - 1.0f;
+        return u * u * u + 1.0f;
+    }
     static float easeInOutCubic(float t) { return t < 0.5f ? 4.0f * t * t * t : (t - 1.0f) * (2.0f * t - 2.0f) * (2.0f * t - 2.0f) + 1.0f; }
     
     static float easeInQuart(float t) { return t * t * t * t; }
-    static float easeOutQuart(float t) { return 1.0f - (--t) * t * t * t; }
-    static float easeInOutQuart(float t) { return t < 0.5f ? 8.0f * t * t * t * t : 1.0f - 8.0f * (--t) * t * t * t; }
+    static float easeOutQuart(float t) {
+        const float u = t - 1.0f;
+        return 1.0f - u * u * u * u;
+    }
+    static float easeInOutQuart(float t) {
+        if (t < 0.5f) {
+            return 8.0f * t * t * t * t;
+        }
+        const float u = t - 1.0f;
+        return 1.0f - 8.0f * u * u * u * u;
+    }
     
     static float easeInQuint(float t) { return t * t * t * t * t; }
-    static float easeOutQuint(float t) { return 1.0f + (--t) * t * t * t * t; }
-    static float easeInOutQuint(float t) { return t < 0.5f ? 16.0f * t * t * t * t * t : 1.0f + 16.0f * (--t) * t * t * t * t; }
+    static float easeOutQuint(float t) {
+        const float u = t - 1.0f;
+        return 1.0f + u * u * u * u * u;
+    }
+    static float easeInOutQuint(float t) {
+        if (t < 0.5f) {
+            return 16.0f * t * t * t * t * t;
+        }
+        const float u = t - 1.0f;
+        return 1.0f + 16.0f * u * u * u * u * u;
+    }
     
     // Sine-based easing
     static float easeInSine(float t) { return 1.0f - std::cos(t * pi<float> * 0.5f); }

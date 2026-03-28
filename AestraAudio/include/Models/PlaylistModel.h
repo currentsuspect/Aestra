@@ -47,6 +47,7 @@ struct PlaylistLane {
 class PlaylistModel {
 public:
     using ClipChangedCallback = std::function<void(const ClipInstanceID&)>;
+    using ChangeObserver = std::function<void()>;
 
     PlaylistModel() = default;
 
@@ -61,6 +62,7 @@ public:
         PlaylistLaneID id = lane.id;
         m_lanes.push_back(std::move(lane));
         m_laneMap[id] = m_lanes.size() - 1;
+        notifyObservers();
 
         return id;
     }
@@ -102,6 +104,7 @@ public:
         m_clipLaneMap[newClip.id] = laneId;
 
         notifyClipChanged(newClip.id);
+        notifyObservers();
         return newClip.id;
     }
 
@@ -126,6 +129,7 @@ public:
 
         m_clipLaneMap.erase(clipId);
         notifyClipChanged(clipId);
+        notifyObservers();
     }
 
     /**
@@ -185,6 +189,7 @@ public:
         if (clip) {
             clip->durationBeats = duration;
             notifyClipChanged(clipId);
+            notifyObservers();
         }
     }
 
@@ -196,6 +201,7 @@ public:
         if (clip) {
             clip->startBeat = startBeat;
             notifyClipChanged(clipId);
+            notifyObservers();
         }
     }
 
@@ -205,13 +211,13 @@ public:
      * @param newStartBeat New start position
      * @param newLaneId New lane (optional, stays in current lane if invalid)
      */
-    void moveClip(const ClipInstanceID& clipId, double newStartBeat,
+    bool moveClip(const ClipInstanceID& clipId, double newStartBeat,
                   const PlaylistLaneID& newLaneId = PlaylistLaneID()) {
         std::unique_lock<std::shared_mutex> lock(m_mutex);
 
         auto* clip = getClipInternal(clipId);
         if (!clip)
-            return;
+            return false;
 
         // Store clip data
         ClipInstance clipCopy = *clip;
@@ -238,13 +244,20 @@ public:
                 }
 
                 notifyClipChanged(clipId);
-                return;
+                notifyObservers();
+                return true;
             }
         }
 
         // Just update position
         clip->startBeat = newStartBeat;
         notifyClipChanged(clipId);
+        notifyObservers();
+        return true;
+    }
+
+    bool moveClip(const ClipInstanceID& clipId, const PlaylistLaneID& newLaneId, double newStartBeat) {
+        return moveClip(clipId, newStartBeat, newLaneId);
     }
 
     /**
@@ -292,6 +305,7 @@ public:
 
         notifyClipChanged(clipId);
         notifyClipChanged(newClip.id);
+        notifyObservers();
 
         return newClip.id;
     }
@@ -299,6 +313,7 @@ public:
     // === Callbacks ===
 
     void setClipChangedCallback(ClipChangedCallback callback) { m_clipChangedCallback = std::move(callback); }
+    void addChangeObserver(ChangeObserver observer) { m_changeObservers.push_back(std::move(observer)); }
 
     // === Runtime Snapshot ===
 
@@ -381,6 +396,9 @@ public:
     }
 
     double secondsToBeats(double seconds) const {
+        if (m_bpm <= 0.0) {
+            return 0.0;
+        }
         return seconds * m_bpm / 60.0;
     }
 
@@ -496,6 +514,7 @@ public:
         m_lanes.clear();
         m_laneMap.clear();
         m_clipLaneMap.clear();
+        notifyObservers();
     }
 
 private:
@@ -504,6 +523,7 @@ private:
     std::unordered_map<ClipInstanceID, PlaylistLaneID> m_clipLaneMap;
     mutable std::shared_mutex m_mutex;
     ClipChangedCallback m_clipChangedCallback;
+    std::vector<ChangeObserver> m_changeObservers;
     double m_bpm{120.0};
     PatternManager* m_patternManager{nullptr};
 
@@ -527,6 +547,14 @@ private:
     void notifyClipChanged(const ClipInstanceID& clipId) {
         if (m_clipChangedCallback) {
             m_clipChangedCallback(clipId);
+        }
+    }
+
+    void notifyObservers() {
+        for (const auto& observer : m_changeObservers) {
+            if (observer) {
+                observer();
+            }
         }
     }
 };

@@ -31,7 +31,6 @@ struct MeterSnapshotBuffer {
 
     // STUB: readMeter — Phase 2 will return actual metering data
     MeterReadout readMeter(int slot) const { return {}; }
-
     MeterReadout readSnapshot(int slot) const { return readMeter(slot); }
 };
 

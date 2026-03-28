@@ -2,6 +2,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <functional>
 #include <random>
 #include <string>
@@ -46,14 +47,14 @@ struct AestraUUID {
     bool operator<=(const AestraUUID& other) const { return !(other < *this); }
     bool operator>(const AestraUUID& other) const { return other < *this; }
     bool operator>=(const AestraUUID& other) const { return !(*this < other); }
-
     /**
      * @brief Convert to string representation
      */
     std::string toString() const {
         // Simple hex representation
         char buf[64];
-        snprintf(buf, sizeof(buf), "%016lx%016lx", high, low);
+        snprintf(buf, sizeof(buf), "%016llx%016llx", static_cast<unsigned long long>(high),
+                 static_cast<unsigned long long>(low));
         return std::string(buf);
     }
 };

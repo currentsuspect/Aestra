@@ -208,7 +208,7 @@ if(Freetype_FOUND)
     set(AESTRAUI_FREETYPE_TARGET Freetype::Freetype)
     message(STATUS "Using system FreeType")
 elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/External/freetype_local/CMakeLists.txt")
-    message(STATUS "Using local FreeType from External/freetype_local...")
+    message(STATUS "Using vendored FreeType from External/freetype_local...")
 
     # Disable unnecessary FreeType features
     set(FT_DISABLE_ZLIB ON CACHE BOOL "" FORCE)
@@ -225,9 +225,33 @@ elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/External/freetype_local/CMakeLists.tx
     set(AESTRAUI_FREETYPE_TARGET freetype)
     message(STATUS "Using vendored FreeType")
 else()
-    message(FATAL_ERROR "FreeType not found. Install freetype2 or provide AestraUI/External/freetype_local.")
-endif()
+    message(STATUS "Vendored FreeType missing; searching system install...")
 
+    find_library(AESTRAUI_FREETYPE_LIBRARY
+        NAMES freetype libfreetype
+        HINTS /opt/homebrew/opt/freetype /usr/local/opt/freetype
+        PATH_SUFFIXES lib
+    )
+    find_path(AESTRAUI_FREETYPE_INCLUDE_DIR
+        NAMES ft2build.h
+        HINTS /opt/homebrew/opt/freetype /usr/local/opt/freetype
+        PATH_SUFFIXES include/freetype2 include
+    )
+
+    if(NOT AESTRAUI_FREETYPE_LIBRARY OR NOT AESTRAUI_FREETYPE_INCLUDE_DIR)
+        message(FATAL_ERROR
+            "FreeType not found. Provide External/freetype_local with a CMakeLists.txt "
+            "or install FreeType (for example with Homebrew)."
+        )
+    endif()
+
+    add_library(AestraUI_Freetype UNKNOWN IMPORTED)
+    set_target_properties(AestraUI_Freetype PROPERTIES
+        IMPORTED_LOCATION "${AESTRAUI_FREETYPE_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${AESTRAUI_FREETYPE_INCLUDE_DIR}"
+    )
+    set(AESTRAUI_FREETYPE_TARGET AestraUI_Freetype)
+endif()
 # ============================================================================
 # OpenGL Renderer (Optional)
 # ============================================================================

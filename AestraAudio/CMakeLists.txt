@@ -491,6 +491,42 @@ if(WIN32)
     # Define "AestraAudio" as an alias to the platform library for main app linking
     add_library(AestraAudio ALIAS AestraAudioWin)
 
+elseif(APPLE)
+    # macOS - CoreAudio via RtAudio
+    set(AESTRA_AUDIO_MACOS_SOURCES
+        src/macOS/RtAudioDriver.cpp
+    )
+    
+    set(AESTRA_AUDIO_MACOS_HEADERS
+        src/macOS/RtAudioDriver.h
+        include/Drivers/AudioPlatformRegistry.h
+        ${RTAUDIO_HEADERS}
+    )
+    
+    add_library(AestraAudioMacOS STATIC
+        ${AESTRA_AUDIO_MACOS_SOURCES}
+        ${AESTRA_AUDIO_MACOS_HEADERS}
+        ${RTAUDIO_SOURCES}
+    )
+    
+    target_include_directories(AestraAudioMacOS
+        PUBLIC
+            # Nothing public
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/macOS
+            ${RTAUDIO_DIR}
+    )
+    
+    target_link_libraries(AestraAudioMacOS
+        PUBLIC
+            AestraAudioCore
+        PRIVATE
+            ${RTAUDIO_LIBS}
+    )
+    
+    add_library(AestraAudio ALIAS AestraAudioMacOS)
+
 elseif(UNIX)
     # Non-Windows (Linux)
     if(ALSA_FOUND)

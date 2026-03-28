@@ -33,6 +33,24 @@ if(WIN32)
         src/Win32/PlatformUtilsWin32.h
         src/Win32/PlatformDPIWin32.h
     )
+elseif(APPLE)
+    # macOS uses SDL2 (same as Linux)
+    find_package(SDL2 QUIET)
+    if(SDL2_FOUND OR TARGET SDL2::SDL2)
+        list(APPEND AESTRA_PLAT_SOURCES
+            src/macOS/PlatformWindowmacOS.cpp
+            src/macOS/PlatformUtilsmacOS.cpp
+            src/macOS/PlatformThreadmacOS.cpp
+        )
+        list(APPEND AESTRA_PLAT_HEADERS
+            src/macOS/PlatformWindowmacOS.h
+            src/macOS/PlatformUtilsmacOS.h
+        )
+        list(APPEND AESTRA_PLAT_PRIVATE_DEFINITIONS AESTRA_HAS_SDL2)
+        message(STATUS "macOS platform: SDL2 windowing enabled")
+    else()
+        message(WARNING "SDL2 not found. AestraPlat macOS windowing disabled.")
+    endif()
 elseif(UNIX AND NOT APPLE)
     if(SDL2_FOUND OR TARGET SDL2::SDL2)
         list(APPEND AESTRA_PLAT_SOURCES
@@ -92,7 +110,15 @@ elseif(UNIX AND NOT APPLE)
         )
     endif()
 elseif(APPLE)
-    # TODO: macOS frameworks (Cocoa, OpenGL, etc.)
+    # macOS frameworks
+    target_link_libraries(AestraPlat PRIVATE
+        $<$<BOOL:${SDL2_FOUND}>:SDL2::SDL2>
+        "-framework Cocoa"
+        "-framework OpenGL"
+        "-framework IOKit"
+        "-framework CoreFoundation"
+        pthread
+    )
 endif()
 
 # =============================================================================

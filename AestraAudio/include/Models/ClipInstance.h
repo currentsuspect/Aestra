@@ -60,6 +60,8 @@ struct ClipEdits {
     double sourceStart = 0.0;
 };
 
+using LocalEdits = ClipEdits;
+
 /**
  * @brief Represents a single clip instance on the playlist
  */
@@ -71,6 +73,7 @@ struct ClipInstance {
     double startBeat = 0.0;
     double durationBeats = 4.0;
     double sourceOffset = 0.0; // Offset into source material
+    bool muted = false;
 
     ClipEdits edits;
 

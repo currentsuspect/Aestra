@@ -238,6 +238,7 @@ NUIRendererGL::~NUIRendererGL() {
 bool NUIRendererGL::initialize(int width, int height) {
     width_ = width;
     height_ = height;
+    updateFramebufferSize();
     
     if (!initializeGL()) {
         return false;
@@ -251,7 +252,7 @@ bool NUIRendererGL::initialize(int width, int height) {
     updateProjectionMatrix();
 
     // Initialize Glassmorphism Pass (Retina Blur)
-    if (!glassPass_.initialize(width, height)) {
+    if (!glassPass_.initialize(framebufferWidth_, framebufferHeight_)) {
         std::cerr << "WARNING: Glassmorphism Pass failed to init." << std::endl;
     }
     
@@ -389,6 +390,7 @@ void NUIRendererGL::shutdown() {
 void NUIRendererGL::resize(int width, int height) {
     width_ = width;
     height_ = height;
+    updateFramebufferSize();
     updateProjectionMatrix();
     
     // Invalidate all cached FBOs when the surface size changes
@@ -397,9 +399,18 @@ void NUIRendererGL::resize(int width, int height) {
     
     // MSDF text renderer viewport will be updated externally
     
-    glassPass_.resize(width, height);
+    glassPass_.resize(framebufferWidth_, framebufferHeight_);
 
-    glViewport(0, 0, width, height);
+    glViewport(0, 0, framebufferWidth_, framebufferHeight_);
+}
+
+void NUIRendererGL::setDPIScale(float dpiScale) {
+    if (dpiScale <= 0.0f) {
+        dpiScale = 1.0f;
+    }
+
+    dpiScale_ = dpiScale;
+    updateFramebufferSize();
 }
 
 // ============================================================================
@@ -506,16 +517,21 @@ void NUIRendererGL::setClipRect(const NUIRect& rect) {
     if (y1 > y2) std::swap(y1, y2);
     
     // Correct rounding to prevent shrinking (floor min, ceil max)
-    int glX = static_cast<int>(std::floor(x1));
-    int glRight = static_cast<int>(std::ceil(x2));
+    const float scaledX1 = x1 * dpiScale_;
+    const float scaledY1 = y1 * dpiScale_;
+    const float scaledX2 = x2 * dpiScale_;
+    const float scaledY2 = y2 * dpiScale_;
+
+    int glX = static_cast<int>(std::floor(scaledX1));
+    int glRight = static_cast<int>(std::ceil(scaledX2));
     int glWidth = std::max(0, glRight - glX);
     
     // Convert to GL coords (bottom-up)
     // Range in UI (y-down): [y1, y2]
     // Range in GL (y-up):   [height_ - y2, height_ - y1]
     
-    float bottomGL = static_cast<float>(height_) - y2;
-    float topGL = static_cast<float>(height_) - y1;
+    float bottomGL = static_cast<float>(framebufferHeight_) - scaledY2;
+    float topGL = static_cast<float>(framebufferHeight_) - scaledY1;
     
     int glY = static_cast<int>(std::floor(bottomGL));
     int glTop = static_cast<int>(std::ceil(topGL));
@@ -915,15 +931,7 @@ void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, 
 // ============================================================================
 
 float NUIRendererGL::getDPIScale() {
-#ifdef _WIN32
-    HDC hdc = GetDC(NULL);
-    if (hdc) {
-        int dpiX = GetDeviceCaps(hdc, LOGPIXELSX);
-        ReleaseDC(NULL, hdc);
-        return dpiX / 96.0f; // 96 is standard DPI
-    }
-#endif
-    return 1.0f; // Default scale
+    return dpiScale_;
 }
 
 NUIRendererGL::AtlasInfo NUIRendererGL::selectAtlas(float fontSize) const {
@@ -2129,10 +2137,11 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
             glGetIntegerv(GL_SCISSOR_BOX, scissor);
             // Convert GL bottom-up scissor back to UI coordinates top-down
             // Window height needed... using height_ member
-            float sx = (float)scissor[0];
-            float sy = (float)(height_ - scissor[1] - scissor[3]);
-            float sw = (float)scissor[2];
-            float sh = (float)scissor[3];
+            const float invDpi = dpiScale_ > 0.0f ? (1.0f / dpiScale_) : 1.0f;
+            float sx = (float)scissor[0] * invDpi;
+            float sy = (float)(framebufferHeight_ - scissor[1] - scissor[3]) * invDpi;
+            float sw = (float)scissor[2] * invDpi;
+            float sh = (float)scissor[3] * invDpi;
             strokeRect(NUIRect(sx, sy, sw, sh), 1.0f, NUIColor(1, 0, 0, 1));
         }
         
@@ -2416,6 +2425,8 @@ uint32_t NUIRendererGL::renderToTextureBegin(int width, int height) {
     glGetIntegerv(GL_VIEWPORT, fboPrevViewport_);
     widthBackup_ = width_;
     heightBackup_ = height_;
+    framebufferWidthBackup_ = framebufferWidth_;
+    framebufferHeightBackup_ = framebufferHeight_;
 
     // Set up FBO state
     glViewport(0, 0, width, height);
@@ -2423,6 +2434,8 @@ uint32_t NUIRendererGL::renderToTextureBegin(int width, int height) {
     // Update projection for FBO (Ortho 0..width, 0..height)
     width_ = width;
     height_ = height;
+    framebufferWidth_ = width;
+    framebufferHeight_ = height;
     updateProjectionMatrix();
 
     // Clear FBO (transparent black)
@@ -2449,6 +2462,8 @@ uint32_t NUIRendererGL::renderToTextureEnd() {
     
     width_ = widthBackup_;
     height_ = heightBackup_;
+    framebufferWidth_ = framebufferWidthBackup_;
+    framebufferHeight_ = framebufferHeightBackup_;
     updateProjectionMatrix();
 
     renderingToTexture_ = false;
@@ -2469,11 +2484,15 @@ void NUIRendererGL::beginOffscreen(int width, int height) {
     // Backup current size and projection
     widthBackup_ = width_;
     heightBackup_ = height_;
+    framebufferWidthBackup_ = framebufferWidth_;
+    framebufferHeightBackup_ = framebufferHeight_;
     std::memcpy(projectionBackup_, projectionMatrix_, sizeof(projectionMatrix_));
 
     // Switch to offscreen size and update projection
     width_ = width;
     height_ = height;
+    framebufferWidth_ = width;
+    framebufferHeight_ = height;
     updateProjectionMatrix();
     // Set viewport to match offscreen target so draw calls map correctly
     glViewport(0, 0, width, height);
@@ -2483,10 +2502,12 @@ void NUIRendererGL::endOffscreen() {
     // Restore original projection and size
     width_ = widthBackup_;
     height_ = heightBackup_;
+    framebufferWidth_ = framebufferWidthBackup_;
+    framebufferHeight_ = framebufferHeightBackup_;
     // Restore backup matrix explicitly (avoid precision drift)
     std::memcpy(projectionMatrix_, projectionBackup_, sizeof(projectionBackup_));
     // Restore viewport to the original backbuffer size
-    glViewport(0, 0, width_, height_);
+    glViewport(0, 0, framebufferWidth_, framebufferHeight_);
 }
 
 // ============================================================================
@@ -2794,6 +2815,11 @@ void NUIRendererGL::updateProjectionMatrix() {
     projectionMatrix_[13] = -(top + bottom) / (top - bottom);
     projectionMatrix_[14] = -(farPlane + nearPlane) / (farPlane - nearPlane);
     projectionMatrix_[15] = 1.0f;
+}
+
+void NUIRendererGL::updateFramebufferSize() {
+    framebufferWidth_ = std::max(1, static_cast<int>(std::lround(static_cast<float>(width_) * dpiScale_)));
+    framebufferHeight_ = std::max(1, static_cast<int>(std::lround(static_cast<float>(height_) * dpiScale_)));
 }
 
 // ============================================================================

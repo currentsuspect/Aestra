@@ -90,7 +90,6 @@ public:
 
     // Convenience access to MIDI notes
     std::vector<MidiNote>& getMidiNotes() { return std::get<MidiPayload>(payload).notes; }
-
     const std::vector<MidiNote>& getMidiNotes() const { return std::get<MidiPayload>(payload).notes; }
 };
 

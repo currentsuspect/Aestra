@@ -48,6 +48,11 @@ public:
      * Resize the viewport.
      */
     virtual void resize(int width, int height) = 0;
+
+    /**
+     * Update the renderer's DPI scale factor.
+     */
+    virtual void setDPIScale(float dpiScale) { (void)dpiScale; }
     
     // ========================================================================
     // Frame Management
@@ -218,6 +223,10 @@ public:
         metrics.lineHeight = metrics.ascent + metrics.descent;
         return metrics;
     }
+
+    virtual float getDPIScaleFactor() const { return 1.0f; }
+    virtual int getFramebufferWidth() const { return getWidth(); }
+    virtual int getFramebufferHeight() const { return getHeight(); }
     
     /**
      * Calculate baseline-aligned Y position for vertically centered text.
