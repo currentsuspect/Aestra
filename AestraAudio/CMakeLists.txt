@@ -161,7 +161,9 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Core/AudioEngine.cpp
     src/Core/AudioDeviceManager.cpp
     src/Core/AutosaveManager.cpp
-    # DriverRegistryStub is only for non-ALSA platforms (stub is in Linux/Windows libs)
+    # DriverRegistryStub provides a no-op fallback for platforms without ALSA
+    # Excluded on Linux where LinuxDriverRegistry provides the real implementation
+    # src/Core/DriverRegistryStub.cpp
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
     src/Core/ProjectValidator.cpp
@@ -522,9 +524,9 @@ elseif(UNIX)
 
         target_link_libraries(AestraAudioLinux
             PUBLIC
-                AestraAudioCore
-            PRIVATE
                 ${RTAUDIO_LIBS}
+            PRIVATE
+                AestraAudioCore
         )
 
         add_library(AestraAudio ALIAS AestraAudioLinux)
