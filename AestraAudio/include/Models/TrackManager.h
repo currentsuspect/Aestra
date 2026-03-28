@@ -28,7 +28,12 @@ struct MeterSnapshots;
  */
 class TrackManager {
 public:
-    TrackManager() : m_patternPlaybackEngine(&m_timelineClock, &m_patternManager, &m_unitManager) {}
+    TrackManager() : m_patternPlaybackEngine(&m_timelineClock, &m_patternManager, &m_unitManager) {
+        // Wire up playlist model to trigger audio graph rebuild when clips change
+        m_playlistModel.setClipChangedCallback([this](const ClipInstanceID&) {
+            m_graphDirty.store(true, std::memory_order_relaxed);
+        });
+    }
 
     /**
      * @brief Get the number of channels
