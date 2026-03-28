@@ -7,7 +7,7 @@
 namespace Aestra {
 namespace Audio {
 
-void ChannelSlotMap::rebuild(const std::vector<std::shared_ptr<MixerChannel>>& channels) {
+void ChannelSlotMap::rebuild(const std::vector<std::unique_ptr<MixerChannel>>& channels) {
     m_idToSlot.clear();
     m_slotToId.clear();
     m_channelCount = 0;
