@@ -344,6 +344,7 @@ private:
     float m_clipDragOffsetX = 0.0f;  // Offset from clip start to mouse
     double m_clipOriginalStartTime = 0.0;  // Original position before drag
     int m_clipOriginalTrackIndex = -1;  // Original track before drag
+    PlaylistLaneID m_clipOriginalLaneId;  // Original lane before drag
     
     // Split tool cursor position
     float m_splitCursorX = 0.0f;

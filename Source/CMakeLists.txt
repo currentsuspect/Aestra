@@ -118,13 +118,15 @@ set_target_properties(Aestra PROPERTIES
 )
 
 # Link against AESTRA libraries
+# --start-group around audio libs so GNU ld resolves RegisterPlatformDrivers
+# (Core calls it, Linux provides it — circular dependency)
 target_link_libraries(Aestra PRIVATE
 	AestraCore
 	AestraPlat
 	AestraUI_Core
 	AestraUI_Platform
 	AestraUI_OpenGL
-	AestraAudio
+	-Wl,--start-group AestraAudio AestraAudioCore -Wl,--end-group
 )
 
 # Include directories

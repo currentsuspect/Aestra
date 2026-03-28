@@ -66,14 +66,11 @@ void AuditionEngine::addToQueue(const std::string& filePath, bool isReference) {
 
     m_queue.push_back(std::move(item));
 
-    // Auto-load if this is the first track, but DO NOT auto-play
+    // Auto-select if this is the first track, but DO NOT decode yet
+    // (decode happens lazily in loadCurrentTrack when playback starts or track is selected)
     if (m_queue.size() == 1 && m_currentIndex < 0) {
         m_currentIndex = 0;
-        loadCurrentTrack();
-        // Explicitly ensure we are stopped
-        m_isPlaying.store(false);
-        if (m_onPlaybackStateChanged)
-            m_onPlaybackStateChanged(false);
+        notifyTrackChanged();
     }
 
     if (m_onQueueUpdated) {
@@ -179,6 +176,10 @@ void AuditionEngine::jumpToTrack(size_t index) {
 void AuditionEngine::play() {
     if (m_currentIndex < 0 && !m_queue.empty()) {
         jumpToTrack(0);
+    } else if (m_currentIndex >= 0 && !m_currentSource) {
+        // Track selected but not yet decoded — decode now (lazy load)
+        std::lock_guard<std::mutex> lock(m_queueMutex);
+        loadCurrentTrack();
     }
 
     bool wasPlaying = m_isPlaying.exchange(true);
@@ -431,9 +432,14 @@ void AuditionEngine::loadCurrentTrack() {
 
     notifyTrackChanged();
 
-    // Auto-play when track changes
+    // Auto-play when track changes (set flag directly — don't call play() to avoid deadlock)
     if (!m_isPlaying.load()) {
-        play();
+        m_isPlaying.store(true);
+        // Notify outside the mutex scope if possible — but this is safe since
+        // m_onPlaybackStateChanged only updates UI state, doesn't touch m_queueMutex
+        if (m_onPlaybackStateChanged) {
+            m_onPlaybackStateChanged(true);
+        }
     }
 }
 

@@ -5,7 +5,8 @@
 namespace Aestra {
 namespace Audio {
 
-void RegisterPlatformDrivers(AudioDeviceManager& manager) {
+// Weak symbol - Linux implementation overrides this if linked
+__attribute__((weak)) void RegisterPlatformDrivers(AudioDeviceManager& manager) {
     // No-op stub - no audio drivers available without ALSA
     (void)manager;
 }

@@ -15,6 +15,9 @@
 #include "ClipSource.h"
 #include "Commands/SplitClipCommand.h"
 #include "Commands/AddClipCommand.h"
+#include "Commands/MoveClipCommand.h"
+#include "Commands/RemoveClipCommand.h"
+#include "Commands/CommandTransaction.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include <algorithm>
 #include <cmath>
@@ -937,6 +940,7 @@ void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInsta
     auto& playlist = m_trackManager->getPlaylistModel();
     if (const auto* clip = playlist.getClip(clipId)) {
         m_clipOriginalStartTime = clip->startBeat;
+        m_clipOriginalLaneId = playlist.findClipLane(clipId);
         
         // Calculate offset (Cursor Beat - Clip Start Beat)
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
@@ -1017,12 +1021,18 @@ void TrackManagerUI::cancelInstantClipDrag() {
     
     Log::info("Cancelled instant clip drag");
     
-    // Revert position
-    if (m_trackManager) {
+    // Revert position using command so it's undoable
+    if (m_trackManager && m_draggedClipId.isValid()) {
         auto& playlist = m_trackManager->getPlaylistModel();
         auto laneId = playlist.findClipLane(m_draggedClipId);
-        if (laneId.isValid()) {
-            playlist.moveClip(m_draggedClipId, m_clipOriginalStartTime, laneId);
+        if (laneId.isValid() && m_clipOriginalLaneId.isValid()) {
+            auto cmd = std::make_shared<MoveClipCommand>(
+                playlist,
+                m_draggedClipId,
+                m_clipOriginalStartTime,
+                m_clipOriginalLaneId
+            );
+            m_trackManager->getCommandHistory().pushAndExecute(cmd);
         }
     }
     
@@ -1211,8 +1221,9 @@ void TrackManagerUI::onClipDeleted(TrackUIComponent* trackComp, ClipInstanceID c
     anim.duration = 0.25f;
     m_deleteAnimations.push_back(anim);
     
-    // Core deletion: remove from PlaylistModel
-    playlist.removeClip(clipId);
+    // Core deletion: remove from PlaylistModel using command for undo support
+    auto cmd = std::make_shared<RemoveClipCommand>(playlist, clipId);
+    m_trackManager->getCommandHistory().pushAndExecute(cmd);
     
     // FL-style transport behavior: if we just cleared the last clip while playing,
     // snap back to bar 1.
@@ -4036,7 +4047,9 @@ void TrackManagerUI::deleteSelectedClip() {
         return;
     }
     
-    m_trackManager->getPlaylistModel().removeClip(m_selectedClipId);
+    auto& playlist = m_trackManager->getPlaylistModel();
+    auto cmd = std::make_shared<RemoveClipCommand>(playlist, m_selectedClipId);
+    m_trackManager->getCommandHistory().pushAndExecute(cmd);
     m_selectedClipId = ClipInstanceID{};
     
     refreshTracks();
@@ -4216,7 +4229,10 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
         ClipInstanceID clipId = ClipInstanceID::fromString(data.sourceClipIdString);
         
         if (clipId.isValid()) {
-            playlist.moveClip(clipId, timePositionBeats, targetLaneId);
+            auto cmd = std::make_shared<MoveClipCommand>(
+                playlist, clipId, timePositionBeats, targetLaneId
+            );
+            m_trackManager->getCommandHistory().pushAndExecute(cmd);
             result.accepted = true;
             result.message = "Clip moved to lane " + std::to_string(laneIndex) + " at beat " + std::to_string(timePositionBeats);
             Log::info("[TrackManagerUI] Clip moved via PlaylistModel: " + data.sourceClipIdString);
@@ -4251,8 +4267,16 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
             auto pattern = m_trackManager->getPatternManager().getPattern(pid);
             if (pattern) {
                 double duration = pattern->lengthBeats;
-                // Add clip from pattern
-                playlist.addClipFromPattern(targetLaneId, pid, timePositionBeats, duration);
+                // Create clip instance manually and use command for undo support
+                ClipInstance clip;
+                clip.id = ClipInstanceID::generate();
+                clip.startBeat = timePositionBeats;
+                clip.durationBeats = duration;
+                clip.patternId = pid;
+                clip.sourceId = pid.value;
+                
+                auto cmd = std::make_shared<AddClipCommand>(playlist, targetLaneId, clip);
+                m_trackManager->getCommandHistory().pushAndExecute(cmd);
                 
                 result.accepted = true;
                 result.message = "Pattern added: " + pattern->name;
@@ -4322,16 +4346,22 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 
                 if (patternId.isValid()) {
                     auto& playlist = m_trackManager->getPlaylistModel();
-                    ClipInstanceID clipId = playlist.addClipFromPattern(targetLaneId, patternId, timePositionBeats, durationBeats);
                     
-                    if (clipId.isValid()) {
-                        refreshTracks();
-                        invalidateCache();
-                        scheduleTimelineMinimapRebuild();
-                        Log::info("[TrackManagerUI] Clip added successfully: " + clipId.toString());
-                    } else {
-                        Log::error("[TrackManagerUI] PlaylistModel::addClipFromPattern failed");
-                    }
+                    // Create clip instance manually and use command for undo support
+                    ClipInstance clip;
+                    clip.id = ClipInstanceID::generate();
+                    clip.startBeat = timePositionBeats;
+                    clip.durationBeats = durationBeats;
+                    clip.patternId = patternId;
+                    clip.sourceId = patternId.value;
+                    
+                    auto cmd = std::make_shared<AddClipCommand>(playlist, targetLaneId, clip);
+                    m_trackManager->getCommandHistory().pushAndExecute(cmd);
+                    
+                    refreshTracks();
+                    invalidateCache();
+                    scheduleTimelineMinimapRebuild();
+                    Log::info("[TrackManagerUI] Clip added successfully via command");
                 } else {
                      Log::error("[TrackManagerUI] PatternManager::createAudioPattern failed");
                 }

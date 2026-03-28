@@ -336,14 +336,20 @@ public:
                 clipInfo.gainLinear = clip.edits.gain;
                 clipInfo.isAudioClip = true;
 
-                // Try to get audio data from source
-                if (clip.sourceId != 0) {
-                    if (auto* source = sources.getSource(ClipSourceID{clip.sourceId})) {
-                        clipInfo.audioData = const_cast<AudioBufferData*>(source->getRawBuffer());
-                        if (clipInfo.audioData) {
-                            clipInfo.sourceSampleRate = clipInfo.audioData->sampleRate;
-                            clipInfo.sourceChannels = clipInfo.audioData->numChannels;
+                // Resolve audio data through pattern → AudioSlicePayload → source
+                if (clip.patternId.isValid()) {
+                    auto* pattern = patterns.getPattern(clip.patternId);
+                    if (pattern && pattern->isAudio()) {
+                        auto& audioPayload = std::get<AudioSlicePayload>(pattern->payload);
+                        if (auto* source = sources.getSource(audioPayload.audioSourceId)) {
+                            clipInfo.audioData = const_cast<AudioBufferData*>(source->getRawBuffer());
+                            if (clipInfo.audioData) {
+                                clipInfo.sourceSampleRate = clipInfo.audioData->sampleRate;
+                                clipInfo.sourceChannels = clipInfo.audioData->numChannels;
+                            }
                         }
+                    } else if (pattern && pattern->isMidi()) {
+                        clipInfo.isAudioClip = false;
                     }
                 }
 
@@ -426,6 +432,7 @@ public:
         clip.id = ClipInstanceID::generate();
         clip.startBeat = startBeat;
         clip.durationBeats = durationBeats;
+        clip.patternId = patternId;
         clip.sourceId = patternId.value; // Store pattern ID in sourceId for now
 
         m_lanes[it->second].clips.push_back(clip);
