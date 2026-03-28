@@ -397,10 +397,12 @@ namespace AestraUI {
 
             // Restore caller scissor state via the renderer so its internal bookkeeping stays in sync.
             if (m_previousScissorEnabled && m_restoreScissorBox) {
-                const float uiX = static_cast<float>(m_previousScissorBox[0]);
-                const float uiY = static_cast<float>(m_renderer->getHeight() - (m_previousScissorBox[1] + m_previousScissorBox[3]));
-                const float uiW = static_cast<float>(m_previousScissorBox[2]);
-                const float uiH = static_cast<float>(m_previousScissorBox[3]);
+                const float dpiScale = m_renderer->getDPIScaleFactor();
+                const float invDpi = dpiScale > 0.0f ? (1.0f / dpiScale) : 1.0f;
+                const float uiX = static_cast<float>(m_previousScissorBox[0]) * invDpi;
+                const float uiY = static_cast<float>(m_renderer->getFramebufferHeight() - (m_previousScissorBox[1] + m_previousScissorBox[3])) * invDpi;
+                const float uiW = static_cast<float>(m_previousScissorBox[2]) * invDpi;
+                const float uiH = static_cast<float>(m_previousScissorBox[3]) * invDpi;
                 m_renderer->setClipRect(NUIRect(uiX, uiY, uiW, uiH));
             } else {
                 m_renderer->clearClipRect();

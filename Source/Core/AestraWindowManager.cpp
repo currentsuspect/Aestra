@@ -114,14 +114,17 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
 
     Log::info("OpenGL context created");
 
+    int actualWidth = 0;
+    int actualHeight = 0;
+    m_window->getSize(actualWidth, actualHeight);
+
     // Initialize UI renderer (this will initialize GLAD internally)
     try {
         // Use raw pointer for initialization to avoid unique_ptr casting issues
         auto* glRenderer = new NUIRendererGL();
+        glRenderer->setDPIScale(m_window->getDPIScale());
 
-        // CRITICAL: Get the ACTUAL client size after window creation
-        int actualWidth = 0, actualHeight = 0;
-        m_window->getSize(actualWidth, actualHeight);
+        // CRITICAL: Get the actual client size after window creation.
         Log::info("Renderer init with actual client size: " + std::to_string(actualWidth) + "x" + std::to_string(actualHeight));
 
         if (!glRenderer->initialize(actualWidth, actualHeight)) {
@@ -148,16 +151,20 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     themeManager.setActiveTheme("Aestra-dark");
     Log::info("Theme system initialized");
 
+    // Use the actual logical window size after creation/maximize for UI layout.
+    int layoutWidth = actualWidth > 0 ? actualWidth : desc.width;
+    int layoutHeight = actualHeight > 0 ? actualHeight : desc.height;
+
     // Create root component
     m_rootComponent = std::make_shared<AestraRootComponent>();
-    m_rootComponent->setBounds(NUIRect(0, 0, desc.width, desc.height));
+    m_rootComponent->setBounds(NUIRect(0, 0, layoutWidth, layoutHeight));
     m_window->setRootComponent(m_rootComponent.get()); // WIRED: Events flow to this root
 
     // Create custom window with title bar
     m_customWindow = std::make_shared<NUICustomWindow>();
     m_rootComponent->addChild(m_customWindow); // WIRED: Window is in the tree
     m_customWindow->setTitle(config.title);
-    m_customWindow->setBounds(NUIRect(0, 0, desc.width, desc.height));
+    m_customWindow->setBounds(NUIRect(0, 0, layoutWidth, layoutHeight));
 
     // Wire up precise Hit Test callback logic
     m_window->setHitTestCallback([this](int x, int y) {
@@ -646,5 +653,21 @@ void AestraWindowManager::applyWindowState(const WindowState& state) {
         }
     } else {
         m_window->maximize();
+    }
+
+    int width = 0;
+    int height = 0;
+    m_window->getSize(width, height);
+
+    if (width > 0 && height > 0) {
+        if (m_rootComponent) {
+            m_rootComponent->setBounds(NUIRect(0, 0, width, height));
+        }
+        if (m_customWindow) {
+            m_customWindow->setBounds(NUIRect(0, 0, width, height));
+        }
+        if (m_renderer) {
+            m_renderer->resize(width, height);
+        }
     }
 }

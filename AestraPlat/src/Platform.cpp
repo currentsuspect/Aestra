@@ -16,8 +16,12 @@
 #include <SDL2/SDL.h>
 #endif
 #elif AESTRA_PLATFORM_MACOS
-// macOS stub implementation - runtime parity pending
-// No Cocoa/AppKit headers required for headless builds
+#ifdef AESTRA_HAS_SDL2
+#include "macOS/PlatformUtilsmacOS.h"
+#include "macOS/PlatformWindowmacOS.h"
+
+#include <SDL2/SDL.h>
+#endif
 #endif
 
 namespace Aestra {
@@ -39,7 +43,11 @@ IPlatformWindow* Platform::createWindow() {
     return nullptr;
 #endif
 #elif AESTRA_PLATFORM_MACOS
-    return nullptr; // TODO
+#ifdef AESTRA_HAS_SDL2
+    return new PlatformWindowmacOS();
+#else
+    return nullptr;
+#endif
 #endif
 }
 
@@ -80,9 +88,18 @@ bool Platform::initialize() {
     return false;
 #endif
 #elif AESTRA_PLATFORM_MACOS
-    // TODO: macOS initialization
-    AESTRA_LOG_ERROR("macOS platform not yet implemented");
-    return false;
+    // Initialize SDL for macOS
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) != 0) {
+        AESTRA_LOG_STREAM_ERROR << "SDL_Init failed: " << SDL_GetError();
+        return false;
+    }
+
+    // macOS-specific SDL hints
+    SDL_SetHint(SDL_HINT_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK, "1");
+    SDL_SetHint(SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, "1");
+
+    s_utils = new PlatformUtilsmacOS();
+    AESTRA_LOG_INFO("macOS platform initialized (SDL2)");
 #endif
 
     return s_utils != nullptr;
@@ -92,7 +109,7 @@ void Platform::shutdown() {
     if (s_utils) {
         delete s_utils;
         s_utils = nullptr;
-#if AESTRA_PLATFORM_LINUX && defined(AESTRA_HAS_SDL2)
+#if (AESTRA_PLATFORM_LINUX && defined(AESTRA_HAS_SDL2)) || (AESTRA_PLATFORM_MACOS && defined(AESTRA_HAS_SDL2))
         SDL_Quit();
 #endif
         AESTRA_LOG_INFO("Platform shutdown");

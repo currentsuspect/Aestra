@@ -62,7 +62,7 @@ public:
     /**
      * @brief Create a MIDI pattern
      */
-    PatternID createMidiPattern(const std::string& name, double lengthBeats, const MidiPayload& payload) {
+    PatternID createMidiPattern(const std::string& name, double lengthBeats, const MidiPayload& payload = MidiPayload{}) {
         PatternID id{nextId++};
         auto pattern = std::make_unique<PatternSource>();
         pattern->id = id;
@@ -72,26 +72,6 @@ public:
         pattern->payload = payload;
         m_patterns[id.value] = std::move(pattern);
         return id;
-    }
-
-    /**
-     * @brief Clone an existing pattern and return the new ID
-     */
-    PatternID clonePattern(PatternID sourceId) {
-        auto* src = getPattern(sourceId);
-        if (!src) return PatternID{};
-        PatternID id{nextId++};
-        auto pattern = std::make_unique<PatternSource>(*src);
-        pattern->id = id;
-        m_patterns[id.value] = std::move(pattern);
-        return id;
-    }
-
-    /**
-     * @brief Remove a pattern by ID
-     */
-    void removePattern(PatternID id) {
-        m_patterns.erase(id.value);
     }
 
     /**
@@ -124,6 +104,31 @@ public:
         auto* pattern = getOrCreatePattern(id);
         if (pattern)
             fn(*pattern);
+    }
+
+    /**
+     * @brief Clone an existing pattern
+     */
+    PatternID clonePattern(PatternID sourceId) {
+        auto* source = getPattern(sourceId);
+        if (!source) return PatternID{};
+
+        PatternID newId{nextId++};
+        auto pattern = std::make_unique<PatternSource>();
+        pattern->id = newId;
+        pattern->name = source->name + " (Copy)";
+        pattern->lengthBeats = source->lengthBeats;
+        pattern->type = source->type;
+        pattern->payload = source->payload;
+        m_patterns[newId.value] = std::move(pattern);
+        return newId;
+    }
+
+    /**
+     * @brief Remove a pattern
+     */
+    void removePattern(PatternID id) {
+        m_patterns.erase(id.value);
     }
 
 private:

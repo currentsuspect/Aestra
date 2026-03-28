@@ -273,9 +273,10 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         std::cout << "  Iterating Children (Reverse Order):" << std::endl;
         const auto& children = getChildren();
         for (auto it = children.rbegin(); it != children.rend(); ++it) {
-            auto b = (*it)->getBounds();
+            auto* child = it->get();
+            auto b = child->getBounds();
             bool contains = b.contains(event.position);
-            std::cout << "    Child (Type: " << typeid(*(*it)).name() << ") Bounds: " << b.x << "," << b.y 
+            std::cout << "    Child (Type: " << typeid(*child).name() << ") Bounds: " << b.x << "," << b.y
                       << " " << b.width << "x" << b.height 
                       << " Contains: " << (contains ? "YES" : "NO") << std::endl;
         }

@@ -61,13 +61,15 @@ endif()
 # =============================================================================
 # Dependencies
 # =============================================================================
-# SDL2
-find_package(SDL2 QUIET)
-if(NOT SDL2_FOUND)
-  if(EXISTS "${CMAKE_SOURCE_DIR}/external/SDL2/CMakeLists.txt")
-    add_subdirectory(external/SDL2)
-  else()
-    message(STATUS "SDL2 not found and external/SDL2 missing. Linux platform layer may fail to build.")
+# SDL2 (required for Linux and macOS platform layers)
+if(AESTRA_PLATFORM_LINUX OR AESTRA_PLATFORM_MACOS)
+  find_package(SDL2 QUIET)
+  if(NOT SDL2_FOUND)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/external/SDL2/CMakeLists.txt")
+      add_subdirectory(external/SDL2)
+    else()
+      message(STATUS "SDL2 not found. Install with: brew install sdl2 (macOS) or apt install libsdl2-dev (Linux)")
+    endif()
   endif()
 endif()
 
@@ -79,7 +81,6 @@ if(AESTRA_PLATFORM_LINUX)
   
   if(EXISTS "${CMAKE_SOURCE_DIR}/external/rtaudio/CMakeLists.txt")
     add_subdirectory(external/rtaudio EXCLUDE_FROM_ALL)
-    # create alias for consistency if needed, though target_link_libraries usually works with rtaudio directly
   else()
     message(STATUS "external/rtaudio missing. Audio backend will not build.")
   endif()

@@ -179,6 +179,7 @@ void NUIPlatformBridge::setupEventBridges() {
         
         // Update renderer viewport
         if (m_renderer) {
+            m_renderer->setDPIScale(m_window->getDPIScale());
             m_renderer->resize(width, height);
         }
     });
@@ -201,6 +202,7 @@ void NUIPlatformBridge::setupEventBridges() {
             // Renderer can handle DPI scaling internally
             int width, height;
             m_window->getSize(width, height);
+            m_renderer->setDPIScale(dpiScale);
             m_renderer->resize(width, height);
         }
     });

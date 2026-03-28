@@ -2,6 +2,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -19,7 +20,7 @@ struct AutomationPoint {
     float value{0.0f};
     double beat{0.0};  // For serialization
     float curve{0.0f}; // For serialization (curve tension)
-    bool selected{false}; // Selection state for UI
+    bool selected{false};
 };
 
 struct AutomationCurve {
@@ -30,6 +31,7 @@ struct AutomationCurve {
     std::string name;
     AutomationTarget target{AutomationTarget::Custom};
     float defaultValue{0.0f};
+    bool visible{true};
 
     AutomationCurve() = default;
     AutomationCurve(const std::string& n, AutomationTarget t) : name(n), target(t) {}
@@ -52,9 +54,8 @@ struct AutomationCurve {
     /**
      * @brief Get all points
      */
-    const std::vector<AutomationPoint>& getPoints() const { return points; }
-
     std::vector<AutomationPoint>& getPoints() { return points; }
+    const std::vector<AutomationPoint>& getPoints() const { return points; }
 
     /**
      * @brief Get interpolated value at a given beat position
@@ -131,7 +132,7 @@ struct AutomationCurve {
 
     void removePoint(size_t index) {
         if (index < points.size()) {
-            points.erase(points.begin() + index);
+            points.erase(points.begin() + static_cast<std::ptrdiff_t>(index));
         }
     }
 
@@ -141,7 +142,7 @@ struct AutomationCurve {
         });
     }
 
-    bool isVisible() const { return true; }
+    bool isVisible() const { return visible; }
 };
 
 } // namespace Audio

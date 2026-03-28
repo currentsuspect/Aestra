@@ -2,7 +2,6 @@
 #include "Preferences.h"
 #include "AestraPlatform.h"
 #include "AestraLog.h"
-
 #include <algorithm>
 #include <filesystem>
 #include <fstream>

@@ -45,6 +45,7 @@ public:
     bool initialize(int width, int height) override;
     void shutdown() override;
     void resize(int width, int height) override;
+    void setDPIScale(float dpiScale) override;
     
     // ========================================================================
     // Frame Management
@@ -122,8 +123,8 @@ public:
     uint32_t getGLTextureId(uint32_t textureId) const;
     
     // Render-to-texture helpers (FBO)
-    uint32_t renderToTextureBegin(int width, int height);
-    uint32_t renderToTextureEnd();
+    uint32_t renderToTextureBegin(int width, int height) override;
+    uint32_t renderToTextureEnd() override;
 
     // Temporary offscreen rendering (adjusts projection to target size)
     void beginOffscreen(int width, int height);
@@ -162,6 +163,9 @@ public:
     
     int getWidth() const override { return width_; }
     int getHeight() const override { return height_; }
+    float getDPIScaleFactor() const override { return dpiScale_; }
+    int getFramebufferWidth() const override { return framebufferWidth_; }
+    int getFramebufferHeight() const override { return framebufferHeight_; }
     const char* getBackendName() const override { return "OpenGL 3.3+"; }
 
     // Query renderer state
@@ -272,10 +276,14 @@ private:
                  float radius = 0.0f, float blur = 0.0f, float strokeWidth = 0.0f, float type = 0.0f);
     void applyTransform(float& x, float& y);
     void updateProjectionMatrix();
+    void updateFramebufferSize();
     
     // State
     int width_ = 0;
     int height_ = 0;
+    int framebufferWidth_ = 0;
+    int framebufferHeight_ = 0;
+    float dpiScale_ = 1.0f;
     float globalOpacity_ = 1.0f;
     bool batching_ = false;
     uint32_t drawCallCount_ = 0;  // Draw call tracking
@@ -402,6 +410,8 @@ private:
     float projectionBackup_[16];
     int widthBackup_ = 0;
     int heightBackup_ = 0;
+    int framebufferWidthBackup_ = 0;
+    int framebufferHeightBackup_ = 0;
     
     // Glassmorphism Pass
     GlassmorphismPass glassPass_; 

@@ -128,11 +128,11 @@ public:
     WaveformCache();
     ~WaveformCache();
 
-    // Non-copyable, movable
+    // Non-copyable and non-movable because atomic state prevents implicit moves.
     WaveformCache(const WaveformCache&) = delete;
     WaveformCache& operator=(const WaveformCache&) = delete;
-    WaveformCache(WaveformCache&&) = default;
-    WaveformCache& operator=(WaveformCache&&) = default;
+    WaveformCache(WaveformCache&&) = delete;
+    WaveformCache& operator=(WaveformCache&&) = delete;
 
     /**
      * @brief Build cache from audio buffer

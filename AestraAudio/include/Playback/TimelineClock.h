@@ -20,7 +20,7 @@ public:
     void setTempoMap(const std::vector<TempoChange>& tempoMap);
 
     double getTempoAtBeat(double beat) const;
-    double getCurrentTempo() const { return m_defaultBPM; }
+    double getCurrentTempo() const { return getTempoAtBeat(0.0); }
     double secondsAtBeat(double beat) const;
     uint64_t sampleFrameAtBeat(double beat, int sampleRate) const;
     double beatAtSampleFrame(uint64_t frame, int sampleRate) const;

@@ -65,6 +65,7 @@ public:
     const std::string& getFilePath() const { return m_filePath; }
 
     ClipSourceID getID() const { return m_id; }
+    std::shared_ptr<WaveformCache> getWaveformCache() const { return m_waveformCache; }
 
     bool isValid() const { return m_buffer && m_buffer->isValid(); }
 
@@ -74,8 +75,6 @@ public:
     void setFilePath(const std::string& path) { m_filePath = path; }
 
     void setBuffer(std::shared_ptr<AudioBufferData> buffer) { m_buffer = std::move(buffer); }
-
-    std::shared_ptr<WaveformCache> getWaveformCache() const { return m_waveformCache; }
     void setWaveformCache(std::shared_ptr<WaveformCache> cache) { m_waveformCache = std::move(cache); }
 
 private:

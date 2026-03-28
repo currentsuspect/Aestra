@@ -382,7 +382,7 @@ void AudioSettingsPage::applyChanges() {
         engineQ = Aestra::Audio::Interpolators::InterpolationQuality::Sinc64;
     }
     
-    PlaylistMixer::setResamplingQuality(globalQ);
+    PlaylistMixer::setResamplingQuality(static_cast<int>(globalQ));
     if (m_audioEngine) {
         m_audioEngine->setInterpolationQuality(engineQ);
     }
