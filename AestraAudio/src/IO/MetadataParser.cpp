@@ -320,6 +320,8 @@ bool MetadataParser::parseFLAC(const std::string& filePath, AudioMetadata& meta)
 
             uint32_t descLen = readBigEndian32(&blockData[pos]);
             pos += 4;
+            if (pos + descLen + 16 > blockSize)
+                continue;
             pos += descLen; // Skip description
 
             pos += 16; // Skip width, height, depth, colors
