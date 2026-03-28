@@ -1072,24 +1072,37 @@ void TrackManagerUI::addTrack(const std::string& name) {
 }
 
 void TrackManagerUI::refreshTracks() {
-    if (!m_trackManager) return;
+    if (!m_trackManager) {
+        Log::error("refreshTracks: m_trackManager is null!");
+        return;
+    }
+
+    Log::info("refreshTracks: starting, laneCount=" + std::to_string(m_trackManager->getPlaylistModel().getLaneCount()));
+
+    // v3.0 logic: iterate over PlaylistModel lanes instead of Mixer channels
+    auto& playlist = m_trackManager->getPlaylistModel();
+    size_t laneCount = playlist.getLaneCount();
+    Log::info("refreshTracks: looping over " + std::to_string(laneCount) + " lanes");
 
     // Clear existing UI components
     for (auto& trackUI : m_trackUIComponents) {
         removeChild(trackUI);
     }
     m_trackUIComponents.clear();
-
-    // v3.0 logic: iterate over PlaylistModel lanes instead of Mixer channels
-    auto& playlist = m_trackManager->getPlaylistModel();
-    for (size_t i = 0; i < playlist.getLaneCount(); ++i) {
+    for (size_t i = 0; i < laneCount; ++i) {
         auto laneId = playlist.getLaneId(i);
         auto lane = playlist.getLane(laneId);
-        if (!lane) continue;
+        if (!lane) {
+            Log::warning("refreshTracks: lane " + std::to_string(i) + " is null!");
+            continue;
+        }
         
         // Find associated MixerChannel (we maintain a 1:1 mapping between lane index and channel index for now)
         auto channel = m_trackManager->getTrack(i);
-        if (!channel) continue;
+        if (!channel) {
+            Log::warning("refreshTracks: channel " + std::to_string(i) + " is null!");
+            continue;
+        }
 
         // Create UI component with LaneID and MixerChannel
         auto trackUI = std::make_shared<TrackUIComponent>(laneId, std::shared_ptr<MixerChannel>(channel, [](MixerChannel*){}), m_trackManager.get());
@@ -1153,6 +1166,8 @@ void TrackManagerUI::refreshTracks() {
     updateTimelineMinimap(0.0);
     
     invalidateCache();  // Invalidate cache when tracks refreshed
+    
+    Log::info("refreshTracks: completed, created " + std::to_string(m_trackUIComponents.size()) + " TrackUIs");
 }
 
 void TrackManagerUI::onTrackSoloToggled(TrackUIComponent* soloedTrack) {
@@ -4166,12 +4181,18 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
     auto& playlist = m_trackManager->getPlaylistModel();
     size_t laneCount = playlist.getLaneCount();
     
+    Log::info("[TrackManagerUI] onDrop: position.y=" + std::to_string(position.y) + 
+              ", laneIndex=" + std::to_string(laneIndex) + ", laneCount=" + std::to_string(laneCount));
+    
     if (laneIndex < 0 || laneIndex > static_cast<int>(laneCount)) {
         result.accepted = false;
         result.message = "Invalid lane position";
         clearDropPreview();
         return result;
     }
+    
+    // Set target track index for logging
+    result.targetTrackIndex = laneIndex;
     
     // 2. Resolve target lane
     PlaylistLaneID targetLaneId;
@@ -4386,23 +4407,33 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                                 // Trigger waveform cache build
                                 m_waveformBuilder.buildAsync(*src, [this, src](std::shared_ptr<Aestra::Audio::WaveformCache> cache) {
                                      if (cache) {
-                                         std::lock_guard<std::mutex> lock(m_pendingTasksMutex);
-                                         m_pendingTasks.push_back([this, src, cache]() {
-                                             src->setWaveformCache(cache);
-                                             Log::info("✅ Waveform cache ready for: " + src->getName());
-                                             this->invalidateCache(); 
-                                             this->m_backgroundNeedsUpdate = true;
-                                             this->setDirty(true);
-                                         });
+                                          std::lock_guard<std::mutex> lock(m_pendingTasksMutex);
+                                          m_pendingTasks.push_back([this, src, cache]() {
+                                              src->setWaveformCache(cache);
+                                              Log::info("✅ Waveform cache ready for: " + src->getName());
+                                              this->invalidateCache(); 
+                                              this->m_backgroundNeedsUpdate = true;
+                                              this->setDirty(true);
+                                              // Refresh tracks to update UI with waveform data
+                                              this->refreshTracks();
+                                          });
                                      }
                                 });
                                 
-                                // Create the clip now that data is ready
-                                createClipFromSource();
+                                // Queue clip creation to main thread via pending tasks
+                                // This ensures UI updates happen on the main thread, not the background decode thread
+                                std::lock_guard<std::mutex> lock(m_pendingTasksMutex);
+                                m_pendingTasks.push_back([this, createClipFromSource]() {
+                                    createClipFromSource();
+                                });
                                 
                             } else {
                                 Log::error("[TrackManagerUI] Failed to decode file async: " + filePath);
-                                createClipFromSource(); // Cleanup UI
+                                // Queue cleanup to main thread
+                                std::lock_guard<std::mutex> lock(m_pendingTasksMutex);
+                                m_pendingTasks.push_back([this, createClipFromSource]() {
+                                    createClipFromSource(); // Cleanup UI
+                                });
                             }
                         });
                     }
