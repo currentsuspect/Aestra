@@ -427,14 +427,26 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
             }
             if (!item->coverArtData.empty()) {
                 int w, h, comp;
-                unsigned char* rgba = stbi_load_from_memory(item->coverArtData.data(), static_cast<int>(item->coverArtData.size()), &w, &h, &comp, 4);
-                if (rgba) {
-                    m_coverArtTextureId = renderer.createTexture(rgba, w, h);
-                    m_coverArtWidth = w; m_coverArtHeight = h;
-                    int cx = w / 2; int cy = h / 2; int idx = (cy * w + cx) * 4;
-                    float r = rgba[idx] / 255.0f; float g = rgba[idx + 1] / 255.0f; float b = rgba[idx + 2] / 255.0f;
-                    m_currentHeaderColor = AestraUI::NUIColor(r * 0.5f, g * 0.5f, b * 0.5f, 1.0f);
-                    stbi_image_free(rgba);
+                try {
+                    unsigned char* rgba = stbi_load_from_memory(item->coverArtData.data(), static_cast<int>(item->coverArtData.size()), &w, &h, &comp, 4);
+                    if (rgba && w > 0 && h > 0) {
+                        m_coverArtTextureId = renderer.createTexture(rgba, w, h);
+                        m_coverArtWidth = w; m_coverArtHeight = h;
+                        int cx = w / 2; int cy = h / 2; int idx = (cy * w + cx) * 4;
+                        int totalBytes = w * h * 4;
+                        if (idx + 2 < totalBytes) {
+                            float r = rgba[idx] / 255.0f; float g = rgba[idx + 1] / 255.0f; float b = rgba[idx + 2] / 255.0f;
+                            m_currentHeaderColor = AestraUI::NUIColor(r * 0.5f, g * 0.5f, b * 0.5f, 1.0f);
+                        }
+                        if (rgba) stbi_image_free(rgba);
+                    } else {
+                        Log::warning("[AuditionPanel] stbi_load_from_memory failed for cover art");
+                        if (rgba) stbi_image_free(rgba);
+                    }
+                } catch (const std::exception& e) {
+                    Log::error("[AuditionPanel] Exception decoding cover art: " + std::string(e.what()));
+                } catch (...) {
+                    Log::error("[AuditionPanel] Unknown exception decoding cover art");
                 }
             }
         }
@@ -883,9 +895,19 @@ AestraUI::DropResult AuditionPanel::onDrop(const AestraUI::DragData& data, const
     AestraUI::DropResult result;
     if (data.type == AestraUI::DragDataType::File) {
         Log::info("[AuditionPanel] Dropped file: " + data.filePath);
-        addFileToQueue(data.filePath);
-        result.accepted = true;
-        result.message = "Added to queue";
+        try {
+            addFileToQueue(data.filePath);
+            result.accepted = true;
+            result.message = "Added to queue";
+        } catch (const std::exception& e) {
+            Log::error("[AuditionPanel] Exception in addFileToQueue: " + std::string(e.what()));
+            result.accepted = false;
+            result.message = std::string("Error: ") + e.what();
+        } catch (...) {
+            Log::error("[AuditionPanel] Unknown exception in addFileToQueue");
+            result.accepted = false;
+            result.message = "Unknown error";
+        }
         m_isHoveringQueue = false;
     }
     return result;
