@@ -63,6 +63,7 @@ public:
         auto* raw = channel.get();
         m_channels.push_back(std::move(channel));
         m_graphDirty.store(true, std::memory_order_relaxed);
+        m_modified.store(true, std::memory_order_relaxed);
         return raw;
     }
 
