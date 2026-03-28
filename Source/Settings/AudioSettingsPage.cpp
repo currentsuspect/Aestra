@@ -478,6 +478,10 @@ void AudioSettingsPage::updateDriverList() {
         else if (types[i] == AudioDriverType::ASIO_EXTERNAL) name = "ASIO (External)";
         else if (types[i] == AudioDriverType::ASIO_Aestra) name = "ASIO (Aestra)";
         else if (types[i] == AudioDriverType::DIRECTSOUND) name = "DirectSound";
+        else if (types[i] == AudioDriverType::RTAUDIO) name = "RtAudio (Auto)";
+        else if (types[i] == AudioDriverType::PULSEAUDIO) name = "PulseAudio";
+        else if (types[i] == AudioDriverType::ALSA) name = "ALSA";
+        else if (types[i] == AudioDriverType::JACK) name = "JACK";
         
         m_driverDropdown->addItem(name, (int)types[i]);
     }
@@ -789,6 +793,10 @@ void AudioSettingsPage::startAsyncDeviceLoad() {
             else if (types[i] == AudioDriverType::ASIO_EXTERNAL) name = "ASIO (External)";
             else if (types[i] == AudioDriverType::ASIO_Aestra) name = "ASIO (Aestra)";
             else if (types[i] == AudioDriverType::DIRECTSOUND) name = "DirectSound";
+            else if (types[i] == AudioDriverType::RTAUDIO) name = "RtAudio (Auto)";
+            else if (types[i] == AudioDriverType::PULSEAUDIO) name = "PulseAudio";
+            else if (types[i] == AudioDriverType::ALSA) name = "ALSA";
+            else if (types[i] == AudioDriverType::JACK) name = "JACK";
             
             data.driverTypes.push_back({ name, static_cast<int>(types[i]) });
         }

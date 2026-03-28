@@ -33,7 +33,11 @@ bool AudioDeviceManager::initialize() {
 
     try {
         // Register platform-specific drivers (Dependency Injection Point)
+        fprintf(stderr, "[AudioDeviceManager] About to call RegisterPlatformDrivers\n");
+        fflush(stderr);
         RegisterPlatformDrivers(*this);
+        fprintf(stderr, "[AudioDeviceManager] RegisterPlatformDrivers returned, drivers count: %zu\n", m_drivers.size());
+        fflush(stderr);
 
         if (m_drivers.empty()) {
             std::cout << "No audio drivers available!" << std::endl;
