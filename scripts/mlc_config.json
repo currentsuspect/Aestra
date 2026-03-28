@@ -1,0 +1,22 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^http"
+    },
+    {
+      "pattern": "^https"
+    },
+    {
+      "pattern": "^#"
+    },
+    {
+      "pattern": "^\\.\\./"
+    },
+    {
+      "pattern": "^\\./"
+    },
+    {
+      "pattern": "^[a-zA-Z]"
+    }
+  ]
+}
