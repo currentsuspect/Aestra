@@ -218,7 +218,8 @@ void AudioSettingsPage::createUI() {
     };
     
     m_driverLabel = createLabel("Audio Driver:");
-    m_deviceLabel = createLabel("Device:");
+    m_deviceLabel = createLabel("Output Device:");
+    m_inputDeviceLabel = createLabel("Input Device:");
     m_sampleRateLabel = createLabel("Sample Rate:");
     m_bufferSizeLabel = createLabel("Buffer Size:");
     m_latencyLabel = createLabel("Est. Latency: -- ms");
@@ -257,6 +258,16 @@ void AudioSettingsPage::createUI() {
         // SWITCH DEVICE IMMEDIATELY
         if (m_audioManager) {
             m_audioManager->switchDevice((uint32_t)m_deviceDropdown->getSelectedValue());
+        }
+    });
+
+    m_inputDeviceDropdown = createDropdown([this](int idx) {
+        m_dirty = true;
+        if (m_audioManager) {
+            const int selected = m_inputDeviceDropdown->getSelectedValue();
+            if (selected >= 0) {
+                m_audioManager->switchInputDevice(static_cast<uint32_t>(selected));
+            }
         }
     });
     
@@ -501,19 +512,29 @@ void AudioSettingsPage::updateDriverList() {
 
 void AudioSettingsPage::updateDeviceList() {
     m_deviceDropdown->clearItems();
+    m_inputDeviceDropdown->clearItems();
     
     auto devices = m_audioManager->getDevices();
     for (const auto& dev : devices) {
-        m_deviceDropdown->addItem(dev.name, (int)dev.id);
+        if (dev.maxOutputChannels > 0) {
+            m_deviceDropdown->addItem(dev.name, (int)dev.id);
+        }
+        if (dev.maxInputChannels > 0) {
+            m_inputDeviceDropdown->addItem(dev.name, (int)dev.id);
+        }
     }
     
-    if (devices.empty()) {
-        m_deviceDropdown->addItem("No Devices Found", -1);
+    if (m_deviceDropdown->getItemCount() == 0) {
+        m_deviceDropdown->addItem("No Output Devices Found", -1);
+    }
+    if (m_inputDeviceDropdown->getItemCount() == 0) {
+        m_inputDeviceDropdown->addItem("No Input Devices Found", -1);
     }
     
     // Select active device
     auto currentConfig = m_audioManager->getCurrentConfig();
     m_deviceDropdown->setSelectedByValue((int)currentConfig.deviceId);
+    m_inputDeviceDropdown->setSelectedByValue((int)currentConfig.inputDeviceId);
     
     // Update Standard Rates/Buffers if empty
     if (m_sampleRateDropdown->getItemCount() == 0) {
@@ -554,6 +575,7 @@ void AudioSettingsPage::layoutComponents() {
     // Left Column: Device
     layRow(m_driverLabel, m_driverDropdown, x1); y += rowHeight + gap;
     layRow(m_deviceLabel, m_deviceDropdown, x1); y += rowHeight + gap;
+    layRow(m_inputDeviceLabel, m_inputDeviceDropdown, x1); y += rowHeight + gap;
     layRow(m_sampleRateLabel, m_sampleRateDropdown, x1); y += rowHeight + gap;
     layRow(m_bufferSizeLabel, m_bufferSizeDropdown, x1); y += rowHeight + gap;
     m_latencyLabel->setBounds(AestraUI::NUIRect(x1 + 110, y, colWidth - 110, 20)); y += 30;
@@ -648,6 +670,7 @@ void AudioSettingsPage::saveSettings() {
     if (file.is_open()) {
         file << "driver=" << m_driverDropdown->getSelectedValue() << "\n";
         file << "device=" << m_deviceDropdown->getSelectedValue() << "\n";
+        file << "input_device=" << m_inputDeviceDropdown->getSelectedValue() << "\n";
         file << "samplerate=" << m_sampleRateDropdown->getSelectedValue() << "\n";
         file << "buffersize=" << m_bufferSizeDropdown->getSelectedValue() << "\n";
         file << "quality_preset=" << m_qualityPresetDropdown->getSelectedValue() << "\n";
@@ -695,6 +718,10 @@ void AudioSettingsPage::loadSettings() {
         else if (key == "device") {
             if (m_audioManager) m_audioManager->switchDevice((uint32_t)val);
             m_deviceDropdown->setSelectedByValue(val);
+        }
+        else if (key == "input_device") {
+            if (m_audioManager) m_audioManager->switchInputDevice((uint32_t)val);
+            m_inputDeviceDropdown->setSelectedByValue(val);
         }
         else if (key == "samplerate") {
             if (m_audioManager) m_audioManager->setSampleRate((uint32_t)val);
@@ -773,6 +800,7 @@ void AudioSettingsPage::startAsyncDeviceLoad() {
     // Disable dropdowns while loading
     if (m_driverDropdown) m_driverDropdown->setEnabled(false);
     if (m_deviceDropdown) m_deviceDropdown->setEnabled(false);
+    if (m_inputDeviceDropdown) m_inputDeviceDropdown->setEnabled(false);
     
     Log::info("[AudioSettingsPage] Starting async device enumeration...");
     
@@ -811,15 +839,24 @@ void AudioSettingsPage::startAsyncDeviceLoad() {
         // === Enumerate devices ===
         auto devices = m_audioManager->getDevices();
         for (const auto& dev : devices) {
-            data.devices.push_back({ dev.name, static_cast<int>(dev.id) });
+            if (dev.maxOutputChannels > 0) {
+                data.outputDevices.push_back({ dev.name, static_cast<int>(dev.id) });
+            }
+            if (dev.maxInputChannels > 0) {
+                data.inputDevices.push_back({ dev.name, static_cast<int>(dev.id) });
+            }
         }
-        
-        if (data.devices.empty()) {
-            data.devices.push_back({ "No Devices Found", -1 });
+
+        if (data.outputDevices.empty()) {
+            data.outputDevices.push_back({ "No Output Devices Found", -1 });
         }
-        
+        if (data.inputDevices.empty()) {
+            data.inputDevices.push_back({ "No Input Devices Found", -1 });
+        }
+
         auto currentConfig = m_audioManager->getCurrentConfig();
         data.currentDeviceId = static_cast<int>(currentConfig.deviceId);
+        data.currentInputDeviceId = static_cast<int>(currentConfig.inputDeviceId);
         data.currentSampleRate = static_cast<int>(currentConfig.sampleRate);
         
         // Store results thread-safely
@@ -847,10 +884,16 @@ void AudioSettingsPage::onDeviceLoadComplete() {
     
     // Populate device dropdown
     m_deviceDropdown->clearItems();
-    for (const auto& [name, id] : m_cachedDevices.devices) {
+    for (const auto& [name, id] : m_cachedDevices.outputDevices) {
         m_deviceDropdown->addItem(name, id);
     }
     m_deviceDropdown->setSelectedByValue(m_cachedDevices.currentDeviceId);
+
+    m_inputDeviceDropdown->clearItems();
+    for (const auto& [name, id] : m_cachedDevices.inputDevices) {
+        m_inputDeviceDropdown->addItem(name, id);
+    }
+    m_inputDeviceDropdown->setSelectedByValue(m_cachedDevices.currentInputDeviceId);
     
     // Populate sample rates
     if (m_sampleRateDropdown->getItemCount() == 0) {
@@ -880,6 +923,7 @@ void AudioSettingsPage::onDeviceLoadComplete() {
     // Re-enable dropdowns
     if (m_driverDropdown) m_driverDropdown->setEnabled(true);
     if (m_deviceDropdown) m_deviceDropdown->setEnabled(true);
+    if (m_inputDeviceDropdown) m_inputDeviceDropdown->setEnabled(true);
     
     updateLatencyEstimate();
     

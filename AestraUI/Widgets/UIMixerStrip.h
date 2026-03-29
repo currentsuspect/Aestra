@@ -11,7 +11,6 @@
 #include "UIMixerButtonRow.h"
 #include "UIMixerFXSummary.h"
 #include "UIMixerFooter.h"
-#include "UIMixerFooter.h"
 
 #include <memory>
 #include <string>

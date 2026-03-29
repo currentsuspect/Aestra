@@ -90,6 +90,8 @@ private:
     
     Aestra::Audio::PatternID m_selectedPatternId;
     Aestra::Audio::PatternID m_hoveredPatternId;
+    Aestra::Audio::ClipSourceID m_selectedClipId;
+    Aestra::Audio::ClipSourceID m_hoveredClipId;
     
     // UI Layout
     float m_headerHeight = 40.0f; // Header now contains Buttons
@@ -124,6 +126,7 @@ private:
     // Drag state
     bool m_isDragging = false;
     Aestra::Audio::PatternID m_dragPatternId;
+    Aestra::Audio::ClipSourceID m_dragClipId;
     
     // Improved drag logic
     bool m_dragPotential = false;
@@ -132,6 +135,7 @@ private:
     // Double-click detection
     double m_lastClickTime = 0.0;
     Aestra::Audio::PatternID m_lastClickedPatternId;
+    Aestra::Audio::ClipSourceID m_lastClickedClipId;
     
     // Drag visual feedback
     bool m_isDragOver = false;
@@ -142,7 +146,7 @@ private:
     void renderClipList(AestraUI::NUIRenderer& renderer);
     
     void renderPatternItem(AestraUI::NUIRenderer& renderer, const PatternEntry& entry, float y, bool selected, bool hovered);
-    void renderClipItem(AestraUI::NUIRenderer& renderer, const ClipEntry& entry, float y, bool hovered);
+    void renderClipItem(AestraUI::NUIRenderer& renderer, const ClipEntry& entry, float y, bool selected, bool hovered);
     
     void switchMode(BrowserMode mode);
 };

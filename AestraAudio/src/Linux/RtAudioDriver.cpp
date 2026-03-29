@@ -97,7 +97,7 @@ bool RtAudioDriver::openStream(const AudioStreamConfig& config, AudioCallback ca
     RtAudio::StreamParameters inputParamsData{};
     RtAudio::StreamParameters* inputParams = nullptr;
     if (config.numInputChannels > 0) {
-        inputParamsData.deviceId = config.deviceId;
+        inputParamsData.deviceId = (config.inputDeviceId != 0) ? config.inputDeviceId : config.deviceId;
         inputParamsData.nChannels = config.numInputChannels;
         inputParamsData.firstChannel = 0;
         inputParams = &inputParamsData;

@@ -120,6 +120,11 @@ public:
     bool switchDevice(uint32_t deviceId);
 
     /**
+     * @brief Switch to a different input device while preserving the current output device.
+     */
+    bool switchInputDevice(uint32_t deviceId);
+
+    /**
      * @brief Update sample rate
      * @param sampleRate New sample rate in Hz
      * @return true if sample rate was updated successfully
@@ -287,6 +292,7 @@ private:
 
     // Helper methods
     bool tryDriver(IAudioDriver* driver, const AudioStreamConfig& config, AudioCallback callback, void* userData);
+    bool validateStreamConfig(const AudioStreamConfig& config) const;
 };
 
 // =============================================================================
