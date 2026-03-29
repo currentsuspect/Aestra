@@ -1,13 +1,13 @@
 # Getting Started with Aestra
 
-Welcome to Aestra! This guide will help you get up and running quickly.
+Welcome to Aestra. This page is the fast path into the current public build and contributor workflow.
 
 ## 🎯 Prerequisites
 
 Before you begin, ensure you have:
 
 ### All Platforms
-- **CMake** 3.15 or later
+- **CMake** 3.22 or later
 - **Git** 2.30 or later
 - **C++17 compatible compiler**
 
@@ -28,12 +28,6 @@ Before you begin, ensure you have:
     - **X11 development libraries** (`libx11-dev`, `libxrandr-dev`, `libxinerama-dev`)
     - **OpenGL development libraries** (`libgl1-mesa-dev`)
 
-=== "macOS"
-
-    - **Xcode Command Line Tools**
-    - **Homebrew** package manager
-    - **CMake** (via Homebrew)
-
 ## 🚀 Quick Start
 
 Choose your platform to get started:
@@ -48,8 +42,8 @@ cd Aestra
 # 2. Install Git hooks (recommended)
 pwsh -File scripts/install-hooks.ps1
 
-# 3. Configure build (Core-only mode for contributors)
-cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+# 3. Configure build
+cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 
 # 4. Build the project
 cmake --build build --config Release --parallel
@@ -71,14 +65,11 @@ sudo apt install build-essential cmake git libasound2-dev \
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
 
-# 3. Install Git hooks
-bash scripts/install-hooks.sh
-
-# 4. Configure and build
-cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+# 3. Configure and build
+cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 
-# 5. Run Aestra
+# 4. Run Aestra
 ./build/bin/Aestra
 ```
 
@@ -89,16 +80,16 @@ After successfully building Aestra:
 1. **[Read the Full Building Guide](building.md)** — Detailed build instructions and troubleshooting
 2. **[Try the Quickstart Tutorial](quickstart.md)** — Learn Aestra's basic workflow
 3. **[Explore the Architecture](../architecture/overview.md)** — Understand how Aestra works
-4. **[Join the Community](../community/code-of-conduct.md)** — Connect with other Aestra users
+4. **[Review the Contributor Workflow](../developer/contributing.md)** — See branch, test, and docs expectations
 
 ## 🎵 System Requirements
 
 ### Minimum Requirements
-- **OS:** Windows 10 64-bit (build 1809+), Linux with X11/Wayland, or macOS 10.15+
+- **OS:** Windows 10 64-bit (build 1809+) or Linux with the required development libraries
 - **CPU:** Intel Core i5 (4th gen) or AMD Ryzen 3
 - **RAM:** 8 GB
 - **GPU:** OpenGL 3.3+ compatible with 1 GB VRAM
-- **Audio:** WASAPI-compatible audio interface (Windows), ALSA (Linux), CoreAudio (macOS)
+- **Audio:** WASAPI-compatible audio interface (Windows) or ALSA-compatible device stack (Linux)
 
 ### Recommended
 - **CPU:** Intel Core i7/i9 or AMD Ryzen 7/9
@@ -111,17 +102,17 @@ After successfully building Aestra:
 
 Aestra supports different build configurations:
 
-### Core-Only Mode (Contributors)
+### Core Mode
 ```bash
 cmake -S . -B build -DAestra_CORE_MODE=ON
 ```
-Builds only the publicly available source-available modules. Perfect for contributors and learning.
+Builds the public/source-available shape of the repo and uses public assets when premium modules are absent.
 
-### Full Build (Internal)
+### Full Build
 ```bash
 cmake -S . -B build
 ```
-Includes all modules including private assets. Requires additional permissions.
+Builds with default options. In public-only checkouts, `Aestra_CORE_MODE` is still forced on when premium modules are not present.
 
 ### Debug Build
 ```bash
@@ -149,8 +140,7 @@ If you encounter issues:
 1. Check the [Building Guide](building.md) for detailed instructions
 2. Review the [FAQ](../technical/faq.md) for common questions
 3. Search [GitHub Issues](https://github.com/currentsuspect/Aestra/issues) for similar problems
-4. Join [GitHub Discussions](https://github.com/currentsuspect/Aestra/discussions) to ask questions
-5. Email support: [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
+4. Read [Contributing Guide](../developer/contributing.md) if you are preparing a patch
 
 ---
 

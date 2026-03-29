@@ -49,10 +49,6 @@ Aestra is a professional digital audio workstation featuring:
 - **[Performance Tuning](developer/performance-tuning.md)** — FPS optimization, latency reduction, and profiling
 - **[Style Guide](developer/style-guide.md)** — Documentation and comment standards
 
-### 🤖 AI Integration
-
-- **[AI Guide](technical/ai-guide.md)** — Muse AI integration documentation and usage
-
 ### 📋 Project Management
 
 - **[Roadmap](technical/roadmap.md)** — High-level milestones and current execution plan

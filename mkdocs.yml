@@ -209,8 +209,12 @@ nav:
   - ⚙️ Technical Reference:
       - FAQ: technical/faq.md
       - Glossary: technical/glossary.md
-      - AI Guide: technical/ai-guide.md
+      # AI Guide: technical/ai-guide.md  # Deferred - post-Beta
       - Roadmap: technical/roadmap.md
+      - Testing & CI: technical/testing_ci.md
+      - CI Workflows: technical/ci_workflows.md
+      - Rumble MVP Plan: technical/RUMBLE_MVP_PLAN.md
+      - v1 Beta Task List: technical/v1_beta_task_list.md
       - Audio Internals:
           - Architecture Plan: technical/audio/AUDIO_ENGINE_ARCH_PLAN.md
           - Driver Quickstart: technical/audio/DRIVER_IMPLEMENTATION_QUICKSTART.md
@@ -226,8 +230,8 @@ nav:
   - 📡 API Reference:
       - Overview: api/index.md
   - 📋 Changelog:
-      - Release Notes: ../meta/CHANGELOGS/CHANGELOG_2025Q1.md
-      - Development Logs: ../meta/SESSION_SUMMARY_DEC2024.md
+      - Release Notes: ../CHANGELOG.md
+      - 2025 Q1: ../meta/CHANGELOGS/CHANGELOG_2025Q1.md
   - 🌐 Community:
       - Code of Conduct: community/code-of-conduct.md
       - Support: community/support.md

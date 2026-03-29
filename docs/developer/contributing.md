@@ -1,341 +1,98 @@
-# 🤝 Contributing to Aestra
+# Contributing to Aestra
 
-![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-brightgreen)
-![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-blue)
+This is the current contributor workflow for the public repository.
 
-Thank you for your interest in contributing to Aestra! This guide will help you understand our development workflow and contribution process.
+## Before You Start
 
-## 📋 Table of Contents
+- Read [../getting-started/building.md](../getting-started/building.md)
+- Check the current priorities in [../technical/roadmap.md](../technical/roadmap.md)
+- Review testing posture in [../technical/testing_ci.md](../technical/testing_ci.md)
 
-- [Code of Conduct](#-code-of-conduct)
-- [Getting Started](#-getting-started)
-- [Development Workflow](#-development-workflow)
-- [Branching Strategy](#-branching-strategy)
-- [Pull Request Process](#-pull-request-process)
-- [Contribution Guidelines](#-contribution-guidelines)
-- [Contributor License Agreement](#-contributor-license-agreement)
+## Repository Workflow
 
-## 📜 Code of Conduct
+- Default integration branch: `develop`
+- Stable branch: `main`
+- Feature work should usually branch from `develop`
 
-We are committed to providing a welcoming and inclusive environment. Please read our [Code of Conduct](../../CODE_OF_CONDUCT.md) before contributing.
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-1. **Set up your development environment**
-   - Follow the [Building Guide](../getting-started/building.md) to set up your system
-   - Install Git, CMake, and a C++17 compatible compiler
-   - Configure your IDE with the project settings
-
-2. **Fork and clone the repository**
-   ```bash
-   # Fork the repository on GitHub first, then:
-   git clone https://github.com/YOUR_USERNAME/Aestra.git
-   cd Aestra
-   
-   # Add upstream remote
-   git remote add upstream https://github.com/currentsuspect/Aestra.git
-   ```
-
-3. **Install Git hooks**
-   ```powershell
-   # Windows PowerShell
-   pwsh -File scripts/install-hooks.ps1
-   ```
-   ```bash
-   # Linux
-   bash scripts/install-hooks.sh
-   ```
-
-4. **Build the project**
-   ```bash
-   cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
-   cmake --build build --config RelWithDebInfo --parallel
-   ```
-
-## 🔄 Development Workflow
-
-### 1. Find an Issue or Feature
-
-- Browse [open issues](https://github.com/currentsuspect/Aestra/issues)
-- Check the [project roadmap](../technical/roadmap.md) for planned features
-- Look for issues labeled `good first issue` or `help wanted`
-- Comment on an issue to express interest before starting work
-
-### 2. Create a Feature Branch
+Example:
 
 ```bash
-# Update your fork
-git checkout main
-git pull upstream main
-
-# Create a new branch
-git checkout -b feature/your-feature-name
-# or
-git checkout -b fix/bug-description
+git checkout develop
+git pull upstream develop
+git checkout -b docs/update-build-guidance
 ```
 
-### 3. Make Your Changes
+## Local Setup
 
-- Write clean, maintainable code following our [Coding Style Guide](coding-style.md)
-- Add unit tests for new functionality
-- Update documentation as needed
-- Keep commits small and focused
-- Write descriptive commit messages
+### Windows
 
-### 4. Test Your Changes
+```powershell
+git clone https://github.com/YOUR_USERNAME/Aestra.git
+cd Aestra
+git remote add upstream https://github.com/currentsuspect/Aestra.git
+pwsh -File scripts/install-hooks.ps1
+cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build --config RelWithDebInfo --parallel
+ctest --test-dir build --config RelWithDebInfo --output-on-failure
+```
+
+### Linux
 
 ```bash
-# Build and test
-cmake --build build --config RelWithDebInfo
-./build/AestraDAW  # Test manually
-
-# Run unit tests (if available)
-ctest --test-dir build --config RelWithDebInfo
+git clone https://github.com/YOUR_USERNAME/Aestra.git
+cd Aestra
+git remote add upstream https://github.com/currentsuspect/Aestra.git
+cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
 ```
 
-### 5. Commit Your Changes
+There is currently no `scripts/install-hooks.sh` equivalent in the repo. On Linux, install hooks manually if needed by configuring Git to use `.githooks/` or run the PowerShell helper if your environment supports it.
 
-```bash
-# Stage your changes
-git add .
+## Pull Request Expectations
 
-# Commit with a descriptive message
-git commit -m "feat: add sample drag-and-drop functionality"
+- Keep each PR focused on one change area
+- Update docs when behavior, build steps, or contributor workflow changes
+- Add or update tests when behavior changes
+- Add a short note under `Unreleased` in [../../CHANGELOG.md](../../CHANGELOG.md) for notable changes
+
+## Documentation Maintenance Rules
+
+- Prefer canonical docs in `docs/` over historical notes in `meta/`
+- Check relative links after editing Markdown
+- Run [../../scripts/docs-check.sh](../../scripts/docs-check.sh) when you change docs structure or links
+- Keep build instructions aligned with the root [../../CMakeLists.txt](../../CMakeLists.txt)
+
+If you touch public headers or API docs, regenerate documentation with:
+
+```powershell
+.\scripts\generate-api-docs.ps1 generate
 ```
 
-**Commit message format:**
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `docs:` - Documentation changes
-- `style:` - Code style changes (formatting, etc.)
-- `refactor:` - Code refactoring
-- `test:` - Adding or updating tests
-- `chore:` - Maintenance tasks
+or:
 
-### 6. Push and Create Pull Request
-
-```bash
-# Push to your fork
-git push origin feature/your-feature-name
-
-# Create a pull request on GitHub
+```powershell
+.\scripts\generate-api-docs.bat
 ```
 
-## 🌿 Branching Strategy
+## Commit and Branch Naming
 
-### Main Branches
+Use concise, reviewable commits. Conventional prefixes are preferred:
 
-- **`main`** - Production-ready code, stable releases
-- **`develop`** - Active development, integration branch
-- **`feature/*`** - New features (e.g., `feature/sample-editor`)
-- **`fix/*`** - Bug fixes (e.g., `fix/audio-glitch`)
-- **`docs/*`** - Documentation updates (e.g., `docs/api-reference`)
+- `feat:`
+- `fix:`
+- `docs:`
+- `refactor:`
+- `test:`
+- `chore:`
 
-### Branch Naming Conventions
+Branch examples:
 
-```bash
-feature/short-description    # New features
-fix/bug-description          # Bug fixes
-docs/documentation-update    # Documentation
-refactor/component-name      # Code refactoring
-test/test-description        # Test additions
-```
+- `feature/arsenal-pattern-routing`
+- `fix/project-roundtrip-regression`
+- `docs/build-and-contributing-refresh`
 
-### Workflow
+## Security and Licensing
 
-```
-main
-  ↑
-  └─ develop
-       ├─ feature/new-feature
-       ├─ fix/bug-fix
-       └─ docs/update-docs
-```
-
-## 🔀 Pull Request Process
-
-### Before Creating a PR
-
-✅ **Checklist:**
-- [ ] Code follows the [Coding Style Guide](coding-style.md)
-- [ ] All tests pass locally
-- [ ] No compiler warnings or errors
-- [ ] Documentation is updated
-- [ ] Commit messages are clear and descriptive
-- [ ] Branch is up-to-date with `develop`
-
-### Creating a Pull Request
-
-1. **Fill out the PR template completely**
-   - Describe what your PR does
-   - Reference related issues (e.g., "Closes #123")
-   - List any breaking changes
-   - Add screenshots for UI changes
-
-2. **PR title format:**
-   ```
-   feat: Add sample drag-and-drop functionality
-   fix: Resolve audio timing issue in WASAPI driver
-   docs: Update architecture documentation
-   ```
-
-3. **Request review from maintainers**
-
-### PR Review Process
-
-1. **Automated checks** run on your PR:
-   - Build verification (Windows/Linux)
-   - Code style validation (clang-format)
-   - Security scanning (Gitleaks)
-   - Unit tests (if available)
-
-2. **Manual code review** by maintainers:
-   - Code quality and architecture
-   - Adherence to guidelines
-   - Testing coverage
-   - Documentation completeness
-
-3. **Address review feedback:**
-   ```bash
-   # Make changes based on feedback
-   git add .
-   git commit -m "fix: address review feedback"
-   git push origin feature/your-feature-name
-   ```
-
-4. **Approval and merge:**
-   - Once approved, maintainers will merge your PR
-   - PR is typically merged into `develop` first
-   - Regular releases merge `develop` into `main`
-
-## 📝 Contribution Guidelines
-
-### Code Quality
-
-- **Follow the coding style**: Use clang-format (see [CODING_STYLE.md](coding-style.md))
-- **Write clean code**: Clear variable names, proper indentation, minimal complexity
-- **Add comments**: Explain complex logic and algorithms
-- **Avoid code duplication**: Refactor common patterns into reusable functions
-- **Handle errors**: Proper error handling and validation
-
-### Testing
-
-- **Write unit tests**: For new functionality when possible
-- **Manual testing**: Test your changes thoroughly before submitting
-- **Edge cases**: Consider and test edge cases and error conditions
-- **Performance**: Ensure changes don't introduce performance regressions
-
-### Documentation
-
-- **Update documentation**: Keep docs in sync with code changes
-- **Comment your code**: Add docstrings for public APIs
-- **Add examples**: Include usage examples for new features
-- **Update README**: If adding major features, update the main README
-
-### Security
-
-- **No secrets in code**: Never commit API keys, passwords, or certificates
-- **Validate inputs**: Always validate user input and external data
-- **Follow best practices**: Use secure coding practices
-- **Report vulnerabilities**: See [SECURITY.md](../../SECURITY.md)
-
-### What NOT to Commit
-
-❌ **Do NOT commit:**
-- Large binary files or assets (use Git LFS if needed)
-- Private or premium modules (kept in private repositories)
-- Compiled binaries or build artifacts
-- IDE-specific files (except shared configurations)
-- Personal configuration files
-- Secrets, keys, or credentials
-
-## 📄 Contributor License Agreement
-
-**By submitting a pull request, you agree that:**
-
-1. All contributed code becomes property of Dylan Makori / Aestra Studios
-2. Dylan Makori has full rights to use, modify, and distribute your contributions
-3. You waive all ownership claims to your contributions
-4. You grant Dylan Makori a perpetual, worldwide, exclusive license
-5. Your contributions are made under the ASSAL v1.1 license terms
-
-**Why this matters:**
-- Aestra is licensed under the Aestra Studios Source-Available License (ASSAL) v1.1
-- The source code is publicly visible for transparency, but is NOT open-source
-- We need clear ownership to maintain and distribute the product
-- Contributors are credited in the project
-
-## 🏆 Recognition
-
-We value all contributors! Contributors are recognized:
-
-- **GitHub Contributors** - Listed on the repository contributors page
-- **Release Notes** - Mentioned in release changelogs
-- **Hall of Fame** - Top contributors featured in documentation
-- **Community Credits** - Special recognition for significant contributions
-
-## 💡 Scope of Contributions
-
-### Public Contributions (Aestra-core)
-
-✅ **You can contribute to:**
-- Core audio engine improvements
-- UI framework enhancements
-- Bug fixes and optimizations
-- Documentation improvements
-- Unit tests and integration tests
-- Build system improvements
-- Cross-platform compatibility
-
-### Private Modules (Not in Public Repo)
-
-❌ **These are developed privately:**
-- Premium plugins and effects
-- AI/ML models (Muse integration internals)
-- Proprietary audio algorithms
-- Commercial licensing system
-- Code signing and distribution
-
-**Note**: Public contributors work on `Aestra-core/` with mock assets. Full builds with premium features are only available internally.
-
-## 🛠️ Development Tools
-
-### Required Tools
-
-- **clang-format** - Code formatting (automatic with Git hooks)
-- **CMake** - Build system
-- **Git** - Version control
-- **C++17 compiler** - MSVC (Windows) or GCC/Clang (Linux)
-
-### Recommended Tools
-
-- **Visual Studio 2022** - IDE for Windows development
-- **VS Code** - Cross-platform editor with C++ extensions
-- **CLion** - JetBrains IDE with CMake support
-- **Git GUI** - GitKraken, SourceTree, or GitHub Desktop
-
-## 📚 Additional Resources
-
-- [Building Guide](../getting-started/building.md) - How to build Aestra
-- [Coding Style Guide](coding-style.md) - Code formatting rules
-- [Architecture Overview](../architecture/overview.md) - System design
-- [FAQ](../technical/faq.md) - Common questions
-- [Glossary](../technical/glossary.md) - Technical terms
-
-## 🆘 Getting Help
-
-**Questions about contributing?**
-
-- 💬 Comment on relevant GitHub issues
-- 📧 Email: makoridylan@gmail.com
-- 🐛 Report bugs: [GitHub Issues](https://github.com/currentsuspect/Aestra/issues)
-
-## 🙏 Thank You!
-
-Your contributions help make Aestra better for everyone. We appreciate your time, effort, and passion for building great software!
-
----
-
-[← Return to Aestra Docs Index](../index.md)
+- Security issues should be reported privately per [../../SECURITY.md](../../SECURITY.md)
+- Contributions are accepted under the repository's ASSAL v1.1 terms in [../../LICENSE](../../LICENSE) and [../../LICENSING.md](../../LICENSING.md)

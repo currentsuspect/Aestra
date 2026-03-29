@@ -3,7 +3,7 @@
 ![Architecture](https://img.shields.io/badge/Architecture-Modular-blue)
 ![C++17](https://img.shields.io/badge/C%2B%2B-17-orange)
 
-Comprehensive overview of Aestra's modular architecture, covering Core, UI, Audio, and Muse AI systems.
+Comprehensive overview of Aestra's modular architecture, covering Core, UI, Audio, and Platform systems.
 
 ## 📋 Table of Contents
 
@@ -21,21 +21,22 @@ Aestra is built with a clean, modular architecture that separates concerns into 
 ┌─────────────────────────────────────────────────────────┐
 │                    Aestra Application                     │
 └─────────────────────────────────────────────────────────┘
-           │                 │                │
-     ┌─────┴─────┐     ┌─────┴─────┐    ┌────┴────┐
-     │  AestraUI  │     │ AestraAudio│    │  Muse   │
-     │ Framework │     │   Engine  │    │   AI    │
-     └─────┬─────┘     └─────┬─────┘    └────┬────┘
-           │                 │                │
-     ┌─────┴─────────────────┴────────────────┴─────┐
-     │              AestraCore                        │
-     │  (Platform abstraction, utilities, types)    │
-     └──────────────────────────────────────────────┘
-           │                 │                │
-     ┌─────┴─────┐     ┌─────┴─────┐    ┌────┴────┐
-     │  Windows  │     │   Linux   │    │  macOS  │
-     │  Platform │     │  Platform │    │ Platform│
-     └───────────┘     └───────────┘    └─────────┘
+            │                 │
+      ┌─────┴─────┐     ┌─────┴─────┐
+      │  AestraUI  │     │ AestraAudio│
+      │ Framework │     │   Engine  │
+      └─────┬─────┘     └─────┬─────┘
+            │                 │
+      ┌─────┴─────────────────┴─────┐
+      │          AestraCore            │
+      │  (Platform abstraction,       │
+      │   utilities, types)            │
+      └───────────────────────────────┘
+            │                 │
+      ┌─────┴─────┐     ┌─────┴─────┐
+      │  Windows  │     │   Linux   │
+      │  Platform │     │  Platform │
+      └───────────┘     └───────────┘
 ```
 
 ## 🧩 Core Modules
@@ -142,31 +143,9 @@ AestraAudio/
 - **Lock-free Audio Thread**: Zero-latency audio processing
 - **64-bit Processing**: High-quality 64-bit floating-point audio
 
-### Muse AI (Post-Beta — Deferred)
+### Muse AI — Post-Beta
 
-**Purpose**: AI-powered music generation and assistance.
-
-**Location**: `Aestra-premium/muse/` (private)
-
-**Status:** Explicitly deferred until after v1 Beta. The roadmap deliberately cuts AI features from Beta scope to focus on core DAW stability. Muse integration will resume only after the base product is shippable.
-
-**Planned Components (future):**
-- **Model Loading** - AI model management and inference
-- **Pattern Generation** - Automatic melody and rhythm generation
-- **Smart Suggestions** - Context-aware musical suggestions
-- **Audio Enhancement** - AI-powered mixing and mastering
-
-**Integration Points (future):**
-```cpp
-namespace Aestra {
-    namespace muse {
-        // Public API for Muse integration
-        class MuseEngine;
-        class PatternGenerator;
-        class MixAssistant;
-    }
-}
-```
+AI features are explicitly deferred until after v1 Beta. The roadmap cuts AI features from Beta scope to focus on core DAW stability. Muse integration will resume only after the base product is shippable.
 
 ### AestraPlat
 
@@ -442,7 +421,7 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 
 ### Post-Beta (Deferred)
 
-- **Muse AI Integration** — AI-powered music generation
+- **Muse AI Integration** — AI-powered music generation (post-Beta only)
 - **Video Support** — Video timeline and scoring
 - **MIDI Support** — Full MIDI I/O and routing
 - **Automation** — Parameter automation system

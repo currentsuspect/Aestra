@@ -4,10 +4,7 @@
 
 # 🧭 Aestra
 
-**Create Like Silence Is Watching**
-
-A modern, professional digital audio workstation built from the ground up with intention.  
-Featuring ultra-low latency audio, GPU-accelerated UI, and a pattern-based workflow.
+Active engineering repo for the Aestra DAW. The public tree includes the core engine, UI framework, platform layer, tests, and contributor docs.
 
 <div class="cta-buttons" markdown="1">
 [Get Started](getting-started/index.md){ .cta-button }
@@ -22,38 +19,38 @@ Featuring ultra-low latency audio, GPU-accelerated UI, and a pattern-based workf
 
 <div class="feature-card" markdown="1">
 <span class="icon">⚡</span>
-### Ultra-Low Latency
-Professional-grade audio with <10ms latency. WASAPI exclusive mode with multi-threaded 64-bit processing for real-time performance.
+### Native Audio Stack
+WASAPI, ASIO, RtAudio, DSP, and headless render/test paths live in one codebase.
 </div>
 
 <div class="feature-card" markdown="1">
 <span class="icon">🎨</span>
-### GPU-Accelerated UI
-Custom OpenGL 3.3+ renderer with MSAA anti-aliasing. Buttery-smooth 60 FPS performance with adaptive rendering system.
+### Custom UI Framework
+AestraUI provides the renderer, widgets, theme system, and app-facing UI infrastructure.
 </div>
 
 <div class="feature-card" markdown="1">
 <span class="icon">🔓</span>
-### Zero Dependencies
-Built from scratch with modern C++17. No bloated frameworks, no legacy constraints. Clean, maintainable codebase you can trust.
+### Modular Layout
+Core, platform, audio, UI, and app layers are split into distinct modules with separate docs and tests.
 </div>
 
 <div class="feature-card" markdown="1">
 <span class="icon">🧩</span>
-### Modular Architecture
-Clear separation: Core → Platform → Audio → UI. Professional software design that scales with your needs.
+### Source Available
+The public repo is intended for transparency, contribution, and engineering collaboration under ASSAL v1.1.
 </div>
 
 <div class="feature-card" markdown="1">
 <span class="icon">📖</span>
-### Source Available
-Publicly visible source code for transparency and education. See exactly how your DAW works under the hood.
+### Current Focus
+The strongest verified paths today are internal plugin discovery, persistence, and headless audible playback.
 </div>
 
 <div class="feature-card" markdown="1">
 <span class="icon">🎯</span>
-### Built with Intention
-Every feature serves a purpose. No bloat, just professional tools that get out of your way so you can create.
+### Contributor Surface
+Build, test, architecture, and roadmap docs are available directly in the repo for maintenance work.
 </div>
 
 </div>
@@ -70,8 +67,8 @@ Every feature serves a purpose. No bloat, just professional tools that get out o
     # Install Git hooks
     pwsh -File scripts/install-hooks.ps1
     
-    # Configure build (Core-only mode)
-    cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+    # Configure build
+    cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
     
     # Build the project
     cmake --build build --config Release --parallel
@@ -93,38 +90,11 @@ Every feature serves a purpose. No bloat, just professional tools that get out o
     git clone https://github.com/currentsuspect/Aestra.git
     cd Aestra
     
-    # Install Git hooks
-    bash scripts/install-hooks.sh
-    
     # Configure build
-    cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+    cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
     
     # Build and run
     cmake --build build --config Release --parallel
-    ./build/bin/Aestra
-    ```
-
-=== "macOS"
-
-    ```bash
-    # Install Xcode Command Line Tools
-    xcode-select --install
-    
-    # Install Homebrew (if not installed)
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    
-    # Install dependencies
-    brew install cmake git
-    
-    # Clone the repository
-    git clone https://github.com/currentsuspect/Aestra.git
-    cd Aestra
-    
-    # Configure and build
-    cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
-    cmake --build build --config Release --parallel
-    
-    # Run Aestra
     ./build/bin/Aestra
     ```
 
@@ -297,7 +267,7 @@ Contributing to Aestra? Find coding standards, debugging tips, and best practice
 
 <div class="feature-card" markdown="1">
 ### 📖 Technical Reference
-FAQ, glossary, AI integration guide, and project roadmap.
+FAQ, glossary, and project roadmap.
 
 [Browse Docs →](technical/faq.md)
 </div>
