@@ -22,7 +22,7 @@ void NUIThemeManager::initializeDefaultThemes() {
     // Aestra Dark Theme
     NUIThemeProperties AestraDark = NUIThemePresets::createAestraDark();
     themes_["Aestra-dark"] = AestraDark;
-    themes_["nomad-dark"] = AestraDark;  // Alias for legacy preference key
+    themes_["aestra-dark"] = AestraDark;  // Alias for lowercase preference key
     
     // Aestra Light Theme
     NUIThemeProperties AestraLight = NUIThemePresets::createAestraLight();

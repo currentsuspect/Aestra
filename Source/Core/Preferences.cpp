@@ -179,7 +179,7 @@ void Preferences::createDefaults() {
     showGrid = true;
     snapToGrid = true;
     gridSize = 0.25f;
-    theme = "nomad-dark";
+    theme = "Aestra-dark";
     autoSaveEnabled = true;
     autoSaveIntervalSeconds = 300;
     recentFiles.clear();

@@ -1,6 +1,6 @@
-# 🧾 Aestra DAW — Licensing Information
+# 🧾 Aestra — Licensing Information
 
-**Aestra DAW** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**.
+**Aestra** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**.
 
 This document provides an overview of the licensing terms and rights. For the complete legal text, see [LICENSE](LICENSE).
 
@@ -8,7 +8,7 @@ This document provides an overview of the licensing terms and rights. For the co
 
 ## 📋 Overview
 
-Aestra DAW uses a **source-available license**, which means:
+Aestra uses a **source-available license**, which means:
 - ✅ The source code is **publicly visible** for transparency and education
 - ❌ The code is **NOT open-source** — you cannot use it freely
 
@@ -43,7 +43,7 @@ You can:
 - Provide feedback on design decisions
 - Vote on community feature polls
 
-**Use Case:** Shape the future direction of Aestra DAW.
+**Use Case:** Shape the future direction of Aestra.
 
 ### 4. Submit Pull Requests
 You may contribute code by:
@@ -60,7 +60,7 @@ You may contribute code by:
 
 ### 1. Use the Software Without Permission
 You may **NOT**:
-- Build and use Aestra DAW for personal or commercial projects without written consent
+- Build and use Aestra for personal or commercial projects without written consent
 - Deploy Aestra in production environments
 - Distribute compiled binaries to others
 
@@ -91,14 +91,14 @@ You may **NOT**:
 
 **All source files must retain:**
 ```cpp
-// © 2025 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
+// © 2026 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
 ```
 
 ---
 
 ## 🏷️ SPDX License Identifier
 
-Aestra DAW uses the following SPDX identifier:
+Aestra uses the following SPDX identifier:
 
 ```
 SPDX-License-Identifier: ASSAL
@@ -111,7 +111,7 @@ This identifier should be included in:
 
 **Example Usage:**
 ```cpp
-// © 2025 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
+// © 2026 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
 // SPDX-License-Identifier: ASSAL
 
 #pragma once
@@ -123,7 +123,7 @@ This identifier should be included in:
 
 ## 🤝 Contributor License Agreement
 
-By contributing to Aestra DAW (via pull requests, issues, or other means), you agree to the following terms:
+By contributing to Aestra (via pull requests, issues, or other means), you agree to the following terms:
 
 ### 1. Grant of Rights
 You grant **Dylan Makori / Aestra Studios**:
@@ -137,7 +137,7 @@ You agree that:
 - All contributed code becomes the property of Aestra Studios
 - You waive all ownership claims to your contributions
 - You will not challenge Aestra Studios' ownership in the future
-- Your contributions will be licensed under ASSAL v1.0
+- Your contributions will be licensed under ASSAL v1.1
 
 ### 3. Representation and Warranty
 You represent that:
@@ -187,7 +187,7 @@ We chose a source-available model for several reasons:
 
 ## 💼 Future Commercial Licensing
 
-**Aestra DAW is currently in development.** Upon official release, we plan to offer:
+**Aestra is currently in development.** Upon official release, we plan to offer:
 
 ### Planned License Tiers
 - **Personal License** — For individual producers and hobbyists
@@ -229,14 +229,14 @@ For a comprehensive breakdown of the license terms, including:
 - Contributor guidelines
 - Frequently asked questions
 
-See **[docs/LICENSE_REFERENCE.md](docs/LICENSE_REFERENCE.md)** for the complete license reference guide.
+See **[docs/about/license-reference.md](docs/about/license-reference.md)** for the complete license reference guide.
 
 ---
 
 ## ⚖️ Legal Information
 
 ### Copyright
-**Copyright © 2025 Dylan Makori / Aestra Studios. All rights reserved.**
+**Copyright © 2026 Dylan Makori / Aestra Studios. All rights reserved.**
 
 ### Trademarks
 - **Aestra** and the **Aestra** logo are trademarks of Dylan Makori / Aestra Studios
@@ -273,7 +273,7 @@ Any unauthorized use of this software will result in:
 
 - **[Full LICENSE Text](LICENSE)** — Complete legal license document
 - **[License Reference Guide](docs/LICENSE_REFERENCE.md)** — Detailed FAQ and examples
-- **[Contributing Guide](docs/CONTRIBUTING.md)** — How to contribute to Aestra
+- **[Contributing Guide](docs/developer/contributing.md)** — How to contribute to Aestra
 - **[Code of Conduct](CODE_OF_CONDUCT.md)** — Community guidelines
 
 ---
@@ -284,7 +284,7 @@ Any unauthorized use of this software will result in:
 
 We believe in building sustainable, transparent software that serves musicians worldwide.
 
-*Copyright © 2025 Dylan Makori / Aestra Studios*  
-*Licensed under ASSAL v1.0*
+*Copyright © 2026 Dylan Makori / Aestra Studios*  
+*Licensed under ASSAL v1.1*
 
 </div>

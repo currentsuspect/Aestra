@@ -1,10 +1,10 @@
-# ⚖️ Aestra DAW License Reference
+# ⚖️ Aestra License Reference
 
 ![License](https://img.shields.io/badge/License-ASSAL-blue)
 ![Core](https://img.shields.io/badge/Core-Free%20Forever-brightgreen)
 ![Premium](https://img.shields.io/badge/Premium-Paid-orange)
 
-Comprehensive reference for Aestra DAW licensing, including the source-available license terms and contributor agreements.
+Comprehensive reference for Aestra licensing, including the source-available license terms and contributor agreements.
 
 ## 📋 Table of Contents
 
@@ -17,7 +17,7 @@ Comprehensive reference for Aestra DAW licensing, including the source-available
 
 ## 🌟 Overview
 
-**Aestra DAW uses a hybrid licensing model:**
+**Aestra uses a hybrid licensing model:**
 
 ### Aestra Core (Free Forever)
 - **Aestra Core** (this repository) uses the **Aestra Studios Source-Available License (ASSAL) v1.0**
@@ -35,7 +35,7 @@ Comprehensive reference for Aestra DAW licensing, including the source-available
 - ❌ Source code is **NOT open-source** (cannot be used in other projects)
 - ✅ Contributions are **welcomed and credited**
 - 🤖 Premium features (Muse AI, plugins) will require paid licenses
-- 📜 Full license text available in [LICENSE](../LICENSE)
+- 📜 Full license text available in [LICENSE](../../LICENSE)
 
 ## 🔒 Hybrid Licensing Model
 
@@ -80,7 +80,7 @@ Aestra Core is source-available software developed by Dylan Makori in Kenya, lic
 
 ### Enforcement
 
-Unauthorized use, copying, or distribution of Aestra DAW will be prosecuted to the fullest extent of the law under:
+Unauthorized use, copying, or distribution of Aestra will be prosecuted to the fullest extent of the law under:
 - Copyright laws of the Republic of Kenya
 - International copyright treaties
 - DMCA (Digital Millennium Copyright Act)
@@ -111,7 +111,7 @@ Unauthorized use, copying, or distribution of Aestra DAW will be prosecuted to t
 **Ownership:**
 All title, ownership rights, and intellectual property rights in and to the Software, including all source code, documentation, designs, and associated materials, remain the exclusive property of Dylan Makori and Aestra Studios.
 
-**For the complete legal text, see:** [LICENSE](../LICENSE)
+**For the complete legal text, see:** [LICENSE](../../LICENSE)
 
 ### Third-Party Dependencies
 
@@ -127,11 +127,11 @@ All third-party licenses are compatible with Aestra's proprietary model.
 
 ### By Contributing to Aestra
 
-By submitting a pull request, issue, or any contribution to Aestra DAW, you agree to the following:
+By submitting a pull request, issue, or any contribution to Aestra, you agree to the following:
 
 **Grant of Rights:**
-1. You grant Dylan Makori / Aestra DAW a **perpetual, worldwide, exclusive license** to your contributions
-2. All contributed code becomes **property of Dylan Makori / Aestra DAW**
+1. You grant Dylan Makori / Aestra a **perpetual, worldwide, exclusive license** to your contributions
+2. All contributed code becomes **property of Dylan Makori / Aestra**
 3. Dylan Makori has **full rights** to use, modify, distribute, and sublicense your contributions
 4. You **waive all ownership claims** to your contributions
 5. You **cannot revoke** this license
@@ -238,7 +238,7 @@ While you grant full rights, we value contributions:
 
 ### Q: Can I contribute to Aestra?
 
-**A:** Yes! We welcome contributions. By contributing, you agree that your contributions become property of Aestra DAW (see CLA above).
+**A:** Yes! We welcome contributions. By contributing, you agree that your contributions become property of Aestra (see CLA above).
 
 ### Q: What happens to my music?
 
@@ -277,7 +277,7 @@ While you grant full rights, we value contributions:
 
 **For contribution questions:**
 - 💬 GitHub Issues: Technical questions
-- 📖 Contributing Guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- 📖 Contributing Guide: [CONTRIBUTING.md](../../CONTRIBUTING.md)
 
 ## 🌍 Jurisdiction
 
@@ -292,14 +292,14 @@ While you grant full rights, we value contributions:
 
 ## 📚 Additional Resources
 
-- [Full License Text](../LICENSE) - Complete ASSAL license terms
-- [Licensing Details](../LICENSING.md) - Original licensing document
-- [Contributing Guide](CONTRIBUTING.md) - How to contribute
-- [FAQ](FAQ.md) - General questions
+- [Full License Text](../../LICENSE) - Complete ASSAL license terms
+- [Licensing Details](../../LICENSING.md) - Original licensing document
+- [Contributing Guide](../../CONTRIBUTING.md) - How to contribute
+- [FAQ](../technical/faq.md) - General questions
 
 ## ⚠️ Legal Disclaimer
 
-This document provides a summary and reference for Aestra DAW licensing. The complete legal terms are in the [LICENSE](../LICENSE) and [LICENSING.md](../LICENSING.md) files. In case of conflict, the official license documents take precedence.
+This document provides a summary and reference for Aestra licensing. The complete legal terms are in the [LICENSE](../../LICENSE) and [LICENSING.md](../../LICENSING.md) files. In case of conflict, the official license documents take precedence.
 
 **Not legal advice**: This document is for informational purposes only and does not constitute legal advice. Consult an attorney for legal questions.
 
@@ -311,4 +311,4 @@ This document provides a summary and reference for Aestra DAW licensing. The com
 
 ---
 
-[← Return to Aestra Docs Index](README.md)
+[← Return to Aestra Docs Index](../README.md)

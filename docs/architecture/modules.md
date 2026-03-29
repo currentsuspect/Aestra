@@ -68,7 +68,7 @@ graph TB
 #include "AestraCore/Logging/Logger.h"
 ```
 
-[View AestraCore Details →](nomad-core.md)
+[View AestraCore Details →](Aestra-core.md)
 
 ---
 
@@ -92,7 +92,7 @@ graph TB
 |----------|--------|----------------|
 | Windows 10/11 | ✅ Complete | Win32 API |
 | Linux | 🚧 In Progress | X11, Wayland planned |
-| macOS | 📅 Planned Q2 2025 | Cocoa |
+| macOS | 📅 Post-Beta | Cocoa | Deferred until after v1 Beta |
 
 **Public API:**
 ```cpp
@@ -101,7 +101,7 @@ graph TB
 #include "AestraPlat/FileDialog.h"
 ```
 
-[View AestraPlat Details →](nomad-plat.md)
+[View AestraPlat Details →](Aestra-plat.md)
 
 ---
 
@@ -138,7 +138,7 @@ graph TB
 #include "AestraUI/Theme.h"
 ```
 
-[View AestraUI Details →](nomad-ui.md)
+[View AestraUI Details →](Aestra-ui.md)
 
 ---
 
@@ -171,7 +171,7 @@ graph TB
 #include "AestraAudio/AudioBuffer.h"
 ```
 
-[View AestraAudio Details →](nomad-audio.md)
+[View AestraAudio Details →](Aestra-audio.md)
 
 ---
 
@@ -179,7 +179,9 @@ graph TB
 
 **Purpose:** Plugin hosting and extension system.
 
-**Status:** 📅 Planned Q2 2025
+**Status:** Phase 4 decision gate (Sep 2026) — see [Roadmap](../technical/roadmap.md)
+
+Internal Arsenal plugins (Rumble) are validated. Third-party VST3/CLAP hosting ships only if stability targets are met.
 
 **Dependencies:** AestraCore, AestraPlat
 
@@ -223,8 +225,8 @@ graph TB
 | Theme System | ✅ Complete |
 | Sample Manipulation | 🚧 In Progress |
 | Mixing Controls | 🚧 In Progress |
-| VST3 Hosting | 📅 Q2 2025 |
-| MIDI Support | 📅 Q2 2025 |
+| VST3 Hosting | Phase 4 decision gate (Sep 2026) |
+| MIDI Support | Phase 4 decision gate (Sep 2026) |
 
 ---
 
@@ -368,8 +370,8 @@ Dive deeper into each module:
 
 - [AestraCore Details →](Aestra-core.md)
 - [AestraPlat Details →](Aestra-plat.md)
-- [AestraUI Details →](nomad-ui.md)
-- [AestraAudio Details →](nomad-audio.md)
+- [AestraUI Details →](Aestra-ui.md)
+- [AestraAudio Details →](Aestra-audio.md)
 
 Or return to:
 - [Architecture Overview →](overview.md)

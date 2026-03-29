@@ -1,6 +1,6 @@
-# 🤝 Contributing to Aestra DAW
+# 🤝 Contributing to Aestra
 
-Thank you for your interest in contributing to Aestra DAW! We welcome contributions from the community.
+Thank you for your interest in contributing to Aestra! We welcome contributions from the community.
 
 ---
 
@@ -115,12 +115,12 @@ See [Style Guide](docs/developer/style-guide.md#-commit-messages) for details.
 
 ## ⚖️ Contributor License Agreement
 
-By contributing to Aestra DAW, you agree that:
+By contributing to Aestra, you agree that:
 
 - ✅ All contributed code becomes property of Dylan Makori / Aestra Studios
 - ✅ You grant Aestra Studios full rights to use, modify, and distribute your contributions
 - ✅ You waive all ownership claims to your contributions
-- ✅ Contributions are made under ASSAL v1.0 license terms
+- ✅ Contributions are made under ASSAL v1.1 license terms
 
 This ensures Aestra Studios can maintain the project sustainably while keeping the code source-available.
 
@@ -210,7 +210,7 @@ See [SECURITY.md](SECURITY.md) for our security policy.
 - ❌ Build signing and distribution
 
 ### License
-All contributions are licensed under **ASSAL v1.0** (Aestra Studios Source-Available License).
+All contributions are licensed under **ASSAL v1.1** (Aestra Studios Source-Available License).
 
 See [LICENSING.md](LICENSING.md) for full details.
 
@@ -226,4 +226,4 @@ Every contribution helps make Aestra better. Whether you're fixing typos, report
 
 **For detailed contribution guidelines, see [docs/developer/contributing.md](docs/developer/contributing.md)**
 
-*Last updated: January 2025*
+*Last updated: March 2026*

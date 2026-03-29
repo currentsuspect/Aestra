@@ -87,7 +87,7 @@ Aestra's interface consists of several key areas:
 
 !!! warning "In Development"
     Sample manipulation and drag-and-drop features are currently in development.
-    This section will be updated in Q1 2025 when these features are completed.
+    This section will be updated when these features are completed.
 
 ### Step 4: Use the Timeline
 

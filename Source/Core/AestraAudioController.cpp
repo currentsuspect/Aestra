@@ -259,6 +259,10 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
         }
     }
 
+    if (controller->m_audioEngine) {
+        controller->m_audioEngine->captureWaveformHistory(outputBuffer, nFrames);
+    }
+
     const uint64_t cbEndCycles = Aestra::Audio::RT::readCycleCounter();
     if (controller->m_audioEngine && cbEndCycles > cbStartCycles) {
         auto& tel = controller->m_audioEngine->telemetry();

@@ -5,7 +5,7 @@
 
 **From:** Engineering
 
-**Date:** January 3, 2026
+**Date:** March 29, 2026
 
 **Subject:** Aestra v1 Beta by Dec 2026 — Reality Check, Scope, and Execution Plan
 
@@ -52,7 +52,7 @@ The current reality is:
 
 - The core engine is solid, but the product is not shippable yet.
 - We have progress in recording, serialization, and plugin scaffolding.
-- Architectural debt remains: **Main.cpp is still 2414 lines**.
+- Architectural debt has been addressed: **Main.cpp has been refactored from 2414 lines to 138 lines** (`Source/App/Main.cpp`).
 - Shipping reality is Windows-first. Linux/macOS are post-Beta unless someone owns them end-to-end.
 
 This memo resets expectations and defines what “v1 Beta” means.
@@ -185,7 +185,9 @@ Deliverables:
 March 2026 snapshot:
 - internal built-in plugin discovery is working through normal manager lookup
 - headless/plugin tests now prove discovery, factory creation, usage path, project round-trip, and audible Arsenal playback for the internal Rumble instrument
+- internal plugin units survive project save/load round-trips (`InternalPluginProjectRoundTripTest`)
 - `OfflineRenderRegressionTest` still needs canonical fixtures before it becomes a dependable regression gate
+- undo/redo exists but still needs broader main-UX integration hardening
 
 Freeze:
 - Project file schema for Beta (allow forward-compatible additions only).
@@ -279,4 +281,4 @@ Kill (if they threaten the schedule):
 
 ---
 
-Last updated: January 2026
+Last updated: March 2026

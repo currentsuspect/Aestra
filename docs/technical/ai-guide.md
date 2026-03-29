@@ -15,7 +15,7 @@ Documentation for Aestra's Muse AI integration — intelligent music generation 
 
 ## 🌟 Overview
 
-**Muse** is Aestra DAW's AI-powered music generation and production assistant. It leverages machine learning models to help producers create, enhance, and refine their music with intelligent suggestions and automation.
+**Muse** is Aestra's AI-powered music generation and production assistant. It leverages machine learning models to help producers create, enhance, and refine their music with intelligent suggestions and automation.
 
 > **Note**: Muse is currently in private development and not yet available in the public build. This documentation serves as a reference for future integration.
 
@@ -40,7 +40,7 @@ Muse aims to:
 
 ```
 ┌─────────────────────────────────────────────┐
-│         Aestra DAW Application               │
+│         Aestra Application               │
 └─────────────────┬───────────────────────────┘
                   │
         ┌─────────┴──────────┐
@@ -201,7 +201,7 @@ public:
 
 ### Application Integration
 
-**Where Muse connects to Aestra DAW:**
+**Where Muse connects to Aestra:**
 
 1. **Pattern Editor** - Generate patterns on demand
 2. **Mixer View** - Real-time mix analysis and suggestions
@@ -324,17 +324,17 @@ musePa tternGen->generateMelodyAsync(
 ## 🛡️ Licensing
 
 Muse AI is part of **Aestra Premium**:
-- Included with paid Aestra DAW license
+- Included with paid Aestra license
 - Models and code are proprietary
 - Generated content is user's property
 - Commercial use allowed with valid license
 
 ## 📚 Additional Resources
 
-- [Architecture Overview](ARCHITECTURE.md) - Aestra system design
-- [Roadmap](ROADMAP.md) - Feature timeline
-- [FAQ](FAQ.md) - Common questions about Muse
-- [License Reference](LICENSE_REFERENCE.md) - Licensing terms
+- [Architecture Overview](../architecture/overview.md) - Aestra system design
+- [Roadmap](roadmap.md) - Feature timeline
+- [FAQ](faq.md) - Common questions about Muse
+- [License Reference](../about/license-reference.md) - Licensing terms
 
 ## 💬 Feedback and Requests
 
@@ -348,4 +348,4 @@ We're actively gathering input during development. Your feedback helps shape Mus
 
 ---
 
-[← Return to Aestra Docs Index](README.md)
+[← Return to Aestra Docs Index](../README.md)

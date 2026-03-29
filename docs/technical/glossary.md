@@ -1,8 +1,8 @@
-# 📖 Aestra DAW Glossary
+# 📖 Aestra Glossary
 
 ![Glossary](https://img.shields.io/badge/Glossary-Technical%20Terms-blue)
 
-Comprehensive glossary of technical terms, acronyms, and concepts used in Aestra DAW development.
+Comprehensive glossary of technical terms, acronyms, and concepts used in Aestra development.
 
 ## 📋 Table of Contents
 
@@ -140,7 +140,7 @@ Foundation module providing platform abstraction, utilities, and common types.
 Platform-specific implementations for Windows, Linux, and macOS.
 
 ### AestraUI
-Custom GPU-accelerated UI framework built specifically for Aestra DAW.
+Custom GPU-accelerated UI framework built specifically for Aestra.
 
 ### Premium Features
 Proprietary features available only in paid version (AI models, advanced effects, licensing).
@@ -284,7 +284,7 @@ Rendering order of overlapping UI elements. Higher z-order renders on top.
 ## 📚 Related Terms
 
 ### Branching Strategy
-Git workflow defining how branches are created, named, and merged. See [Contributing Guide](CONTRIBUTING.md).
+Git workflow defining how branches are created, named, and merged. See [Contributing Guide](../../CONTRIBUTING.md).
 
 ### Code Review
 Process of examining code changes before merging. Ensures quality and maintainability.
@@ -324,11 +324,11 @@ Test that verifies a single component in isolation. Helps catch bugs early.
 
 ## 📚 Additional Resources
 
-- [Architecture Overview](ARCHITECTURE.md) - Detailed system design
-- [Building Guide](BUILDING.md) - Build instructions
-- [Coding Style Guide](developer/coding-style.md) - Code conventions
-- [FAQ](FAQ.md) - Common questions
+- [Architecture Overview](../architecture/overview.md) - Detailed system design
+- [Building Guide](../getting-started/building.md) - Build instructions
+- [Coding Style Guide](../developer/coding-style.md) - Code conventions
+- [FAQ](faq.md) - Common questions
 
 ---
 
-[← Return to Aestra Docs Index](README.md)
+[← Return to Aestra Docs Index](../README.md)

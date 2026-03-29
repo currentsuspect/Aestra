@@ -248,6 +248,7 @@ public:
     
     // File management
     std::string currentPath_;
+    std::string pendingSelectionPath_;
     std::vector<FileItem> rootItems_;
     std::vector<const FileItem*> displayItems_;
     std::vector<const FileItem*> filteredFiles_;  // Filtered files for search

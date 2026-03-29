@@ -868,25 +868,6 @@ void AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, ui
                               static_cast<uint32_t>(m_sampleRate.load(std::memory_order_relaxed)),
                               m_transportPlaying.load(std::memory_order_relaxed));
 
-    // Capture recent output for compact waveform displays (post-fade).
-    uint32_t historyCap = m_waveformHistoryFrames.load(std::memory_order_relaxed);
-    if (historyCap > 0 && !m_waveformHistory.empty()) {
-        const uint32_t cap = historyCap;
-        uint32_t write = m_waveformWriteIndex.load(std::memory_order_relaxed);
-        const uint32_t framesToCopy = std::min(numFrames, cap);
-        const uint32_t first = std::min(framesToCopy, cap - write);
-        const size_t stride = static_cast<size_t>(m_outputChannels.load(std::memory_order_relaxed));
-
-        std::memcpy(&m_waveformHistory[static_cast<size_t>(write) * stride], outputBuffer,
-                    static_cast<size_t>(first) * stride * sizeof(float));
-        if (framesToCopy > first) {
-            std::memcpy(m_waveformHistory.data(), outputBuffer + static_cast<size_t>(first) * stride,
-                        static_cast<size_t>(framesToCopy - first) * stride * sizeof(float));
-        }
-        write = (write + framesToCopy) % cap;
-        m_waveformWriteIndex.store(write, std::memory_order_release);
-    }
-
     // Advance position (Atomic update to pre-calculated next position)
     if (m_transportPlaying.load(std::memory_order_relaxed) || m_fadeState == FadeState::FadingOut) {
         m_globalSamplePos.store(nextGlobalPos, std::memory_order_relaxed);
@@ -1042,6 +1023,33 @@ uint32_t AudioEngine::copyWaveformHistory(float* outInterleaved, uint32_t maxFra
                     static_cast<size_t>(frames - first) * stride * sizeof(float));
     }
     return frames;
+}
+
+void AudioEngine::captureWaveformHistory(const float* interleavedOutput, uint32_t numFrames) {
+    if (!interleavedOutput || numFrames == 0) {
+        return;
+    }
+
+    const uint32_t historyCap = m_waveformHistoryFrames.load(std::memory_order_relaxed);
+    if (historyCap == 0 || m_waveformHistory.empty()) {
+        return;
+    }
+
+    const uint32_t cap = historyCap;
+    uint32_t write = m_waveformWriteIndex.load(std::memory_order_relaxed);
+    const uint32_t framesToCopy = std::min(numFrames, cap);
+    const uint32_t first = std::min(framesToCopy, cap - write);
+    const size_t stride = static_cast<size_t>(m_outputChannels.load(std::memory_order_relaxed));
+
+    std::memcpy(&m_waveformHistory[static_cast<size_t>(write) * stride], interleavedOutput,
+                static_cast<size_t>(first) * stride * sizeof(float));
+    if (framesToCopy > first) {
+        std::memcpy(m_waveformHistory.data(), interleavedOutput + static_cast<size_t>(first) * stride,
+                    static_cast<size_t>(framesToCopy - first) * stride * sizeof(float));
+    }
+
+    write = (write + framesToCopy) % cap;
+    m_waveformWriteIndex.store(write, std::memory_order_release);
 }
 
 // --- Constants ---
