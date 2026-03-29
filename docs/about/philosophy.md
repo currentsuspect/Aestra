@@ -1,4 +1,4 @@
-# Aestra Studios Manifesto – 2025-10-30
+# Aestra Studios Manifesto – 2026-03-29
 
 Aestra exists to make professional music tools accessible to everyone.
 We believe software should feel like art — light, native, and human.

@@ -26,6 +26,23 @@ public:
                     PlaylistLaneID newLaneId = PlaylistLaneID())
         : m_model(model), m_clipId(clipId), m_newStartBeat(newStartBeat), m_newLaneId(newLaneId) {}
 
+    /**
+     * @brief Construct a move command with explicit original state (for post-hoc command creation)
+     * @param model The playlist model
+     * @param clipId The clip to move
+     * @param originalStartBeat Original start position in beats
+     * @param originalLaneId Original lane
+     * @param newStartBeat New start position in beats
+     * @param newLaneId New lane (invalid = stay in current lane)
+     */
+    MoveClipCommand(PlaylistModel& model, ClipInstanceID clipId,
+                    double originalStartBeat, PlaylistLaneID originalLaneId,
+                    double newStartBeat, PlaylistLaneID newLaneId)
+        : m_model(model), m_clipId(clipId),
+          m_newStartBeat(newStartBeat), m_newLaneId(newLaneId),
+          m_originalStartBeat(originalStartBeat), m_originalLaneId(originalLaneId),
+          m_executed(true) {}
+
     void execute() override {
         if (m_executed)
             return;
