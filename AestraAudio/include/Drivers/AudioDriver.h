@@ -27,6 +27,7 @@ struct AudioDeviceInfo {
  */
 struct AudioStreamConfig {
     uint32_t deviceId = 0;
+    uint32_t inputDeviceId = 0;
     uint32_t sampleRate = 48000;
     uint32_t bufferSize = 512;
     uint32_t numInputChannels = 0;

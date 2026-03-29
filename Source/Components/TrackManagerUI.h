@@ -133,6 +133,7 @@ public:
     // Audition Mode integration - called when user wants to send track/clip to Audition
     void setOnSendToAudition(std::function<void(uint32_t trackId, const std::string& trackName)> cb) { m_onSendToAudition = cb; }
     void setOnSendSelectionToAudition(std::function<void(double startBeat, double endBeat)> cb) { m_onSendSelectionToAudition = cb; }
+    void setOnClipLibraryChanged(std::function<void()> cb) { m_onClipLibraryChanged = std::move(cb); }
     
     // === MULTI-SELECTION ===
     void selectTrack(TrackUIComponent* track, bool addToSelection = false);
@@ -468,6 +469,7 @@ private:
     std::function<void(double, double)> m_onLoopRegionUpdate;  // Called when loop region needs update (Project auto-update)
     std::function<void(uint32_t, const std::string&)> m_onSendToAudition;  // Called for "Send to Audition"
     std::function<void(double, double)> m_onSendSelectionToAudition;  // Called for "Send Selection to Audition"
+    std::function<void()> m_onClipLibraryChanged;
     
     void updateBackgroundCache(::AestraUI::NUIRenderer& renderer);
     void updateControlsCache(::AestraUI::NUIRenderer& renderer);

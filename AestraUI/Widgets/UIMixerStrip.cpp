@@ -43,10 +43,6 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
     m_header = std::make_shared<UIMixerHeader>();
     m_header->setIsMaster(m_channelId == 0);
-    m_header->setIsMaster(m_channelId == 0);
-    addChild(m_header);
-
-    m_header->setIsMaster(m_channelId == 0);
     addChild(m_header);
 
     // Input Selector REMOVED (Moved to Inspector)
@@ -391,8 +387,6 @@ void UIMixerStrip::onUpdate(double deltaTime)
     if (m_cachedShowChannelControls != showChannelControls) {
         m_cachedShowChannelControls = showChannelControls;
         if (m_trimKnob) m_trimKnob->setVisible(showChannelControls);
-        if (m_panKnob) m_panKnob->setVisible(showChannelControls);
-        if (m_widthKnob) m_widthKnob->setVisible(showChannelControls);
         if (m_panKnob) m_panKnob->setVisible(showChannelControls);
         if (m_widthKnob) m_widthKnob->setVisible(showChannelControls);
         layoutChildren();

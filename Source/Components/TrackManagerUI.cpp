@@ -1618,7 +1618,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         const float textX = std::max(headerBounds.x + margin, headerBounds.right() - infoSize.width - rightPad);
         const float textY = std::round(renderer.calculateTextY(headerBounds, infoFont));
 
-        renderer.drawText(infoText, AestraUI::NUIPoint(textX, textY), infoFont, themeManager.getColor("textSecondary"));
+        renderer.drawText(infoText, AestraUI::NUIPoint(textX, textY), infoFont, themeManager.getColor("textPrimary"));
     }
 
     // Render Static Track Content (with Viewport Culling AND Clipping)
@@ -3329,7 +3329,7 @@ void TrackManagerUI::deselectAllTracks() {
 void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& rulerBounds) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     auto borderColor = themeManager.getColor("borderColor");
-    auto textColor = themeManager.getColor("textSecondary");
+    auto textColor = themeManager.getColor("textPrimary");
     auto accentColor = themeManager.getColor("accentPrimary");
     
     // === PRO/GLASS RULER STYLE ===
@@ -3337,8 +3337,8 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     auto glassBg = themeManager.getColor("backgroundSecondary").withAlpha(0.9f);
     auto glassHighlight = AestraUI::NUIColor::white().withAlpha(0.04f); // Top edge highlight
     
-    auto textCol = themeManager.getColor("textSecondary");
-    auto tickCol = themeManager.getColor("textSecondary").withAlpha(0.6f);
+    auto textCol = themeManager.getColor("textPrimary");
+    auto tickCol = themeManager.getColor("textPrimary").withAlpha(0.72f);
     
     // Restore layout definition
     const auto& layout = themeManager.getLayoutDimensions();
@@ -3921,8 +3921,8 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     
     // Ruler Render: "Mature" Playlist Style
     auto bg = AestraUI::NUIColor(0.08f, 0.08f, 0.10f, 1.0f); 
-    auto textCol = AestraUI::NUIColor(0.7f, 0.7f, 0.75f, 1.0f);
-    auto tickCol = AestraUI::NUIColor(0.35f, 0.35f, 0.40f, 1.0f);
+    auto textCol = AestraUI::NUIColor(0.82f, 0.82f, 0.82f, 1.0f);  // bright gray for ruler labels
+    auto tickCol = AestraUI::NUIColor(0.45f, 0.45f, 0.50f, 1.0f);   // visible tick marks
     
     // Draw ruler background
     renderer.fillRect(rulerRect, bg);
@@ -4330,6 +4330,10 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     setDirty(true);
                 }
 
+                if (m_onClipLibraryChanged) {
+                    m_onClipLibraryChanged();
+                }
+
                 if (!source || !source->isReady()) return;
 
                 double durationSeconds = source->getDurationSeconds();
@@ -4363,7 +4367,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     scheduleTimelineMinimapRebuild();
                     Log::info("[TrackManagerUI] Clip added successfully via command");
                 } else {
-                     Log::error("[TrackManagerUI] PatternManager::createAudioPattern failed");
+                    Log::error("[TrackManagerUI] PatternManager::createAudioPattern failed");
                 }
             };
 

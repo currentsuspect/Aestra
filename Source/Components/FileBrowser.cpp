@@ -2236,8 +2236,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             auto& icon = item->isExpanded ? chevronDownIcon_ : chevronIcon_;
             if (icon) {
                 icon->setBounds(arrowRect);
-                // Make arrows slightly more visible
-                icon->setColor(selected ? selectedColor_ : textColor_.withAlpha(0.6f));
+                icon->setColor(selected ? selectedColor_ : textColor_.withAlpha(0.82f));
                 icon->onRender(renderer);
             }
         }
@@ -2410,7 +2409,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
         if (!text.empty()) {
             float tY = std::round(renderer.calculateTextY(rect, toolbarFont));
             renderer.drawText(text, NUIPoint(rect.x + buttonPadX, tY), 
-                              toolbarFont, textColor_.withAlpha(hovered ? 1.0f : 0.85f));
+                              toolbarFont, textColor_);
         }
     };
 
@@ -2432,7 +2431,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
                                   sortButtonBounds_.y + (sortButtonBounds_.height - iconSize) * 0.5f,
                                   iconSize, iconSize);
         chevronDownIcon_->setBounds(chevronRect);
-        chevronDownIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(sortHovered_ ? 0.9f : 0.7f));
+        chevronDownIcon_->setColor(themeManager.getColor("textPrimary").withAlpha(sortHovered_ ? 1.0f : 0.85f));
         chevronDownIcon_->onRender(renderer);
     }
 
@@ -2454,7 +2453,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
                                    tagsButtonBounds_.y + (tagsButtonBounds_.height - iconSize) * 0.5f,
                                    iconSize, iconSize);
          chevronDownIcon_->setBounds(chevronRect);
-         chevronDownIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(tagsHovered_ ? 0.9f : 0.7f));
+         chevronDownIcon_->setColor(themeManager.getColor("textPrimary").withAlpha(tagsHovered_ ? 1.0f : 0.85f));
          chevronDownIcon_->onRender(renderer);
     }
 

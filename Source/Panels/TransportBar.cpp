@@ -212,7 +212,7 @@ void TransportBar::createButtons() {
     };
 
     createBtn(m_playButton, [this]() { togglePlayPause(); });
-    m_playButton->setTooltip("Play/Pause (Space)");
+    m_playButton->setTooltip("Play/Pause");
 
     createBtn(m_stopButton, [this]() { stop(); });
     m_stopButton->setTooltip("Stop (Space)");

@@ -107,6 +107,9 @@ private:
     
     std::shared_ptr<AestraUI::NUILabel> m_deviceLabel;
     std::shared_ptr<AestraUI::NUIDropdown> m_deviceDropdown;
+
+    std::shared_ptr<AestraUI::NUILabel> m_inputDeviceLabel;
+    std::shared_ptr<AestraUI::NUIDropdown> m_inputDeviceDropdown;
     
     std::shared_ptr<AestraUI::NUILabel> m_sampleRateLabel;
     std::shared_ptr<AestraUI::NUIDropdown> m_sampleRateDropdown;
@@ -169,9 +172,11 @@ private:
     // Cached device data (populated by background thread)
     struct CachedDeviceData {
         std::vector<std::pair<std::string, int>> driverTypes; // name, value
-        std::vector<std::pair<std::string, int>> devices;     // name, id
+        std::vector<std::pair<std::string, int>> outputDevices; // name, id
+        std::vector<std::pair<std::string, int>> inputDevices;  // name, id
         int currentDriverType = 0;
         int currentDeviceId = 0;
+        int currentInputDeviceId = 0;
         int currentSampleRate = 48000;
     };
     CachedDeviceData m_cachedDevices;

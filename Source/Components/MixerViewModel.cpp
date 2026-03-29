@@ -132,9 +132,6 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             if (auto* mc = info.channel) {
                 existing->inputChannelIndex = mc->getInputChannelIndex();
             }
-            if (auto* mc = info.channel) {
-                existing->inputChannelIndex = mc->getInputChannelIndex();
-            }
             newChannels.push_back(std::move(existing));
         } else {
             // Create new channel
@@ -149,9 +146,6 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             channel->armed = info.armed;
             channel->monitored = info.monitored;
             channel->fxCount = info.fxCount;
-            if (auto* mc = info.channel) {
-                channel->inputChannelIndex = mc->getInputChannelIndex();
-            }
             if (auto* mc = info.channel) {
                 channel->inputChannelIndex = mc->getInputChannelIndex();
             }

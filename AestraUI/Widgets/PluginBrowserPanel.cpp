@@ -21,9 +21,9 @@ namespace AestraUI {
 namespace Colors {
     static const NUIColor panelBackground = {0.12f, 0.12f, 0.14f, 1.0f};
     static const NUIColor panelBorder = {0.25f, 0.25f, 0.28f, 1.0f};
-    static const NUIColor textPrimary = {0.95f, 0.95f, 0.97f, 1.0f};
-    static const NUIColor textSecondary = {0.65f, 0.65f, 0.70f, 1.0f};
-    static const NUIColor textDisabled = {0.45f, 0.45f, 0.50f, 1.0f};
+    static const NUIColor textPrimary = {1.0f, 1.0f, 1.0f, 1.0f};           // white — atlas fix makes it bright
+    static const NUIColor textSecondary = {0.82f, 0.82f, 0.82f, 1.0f};   // bright gray for dark bg
+    static const NUIColor textDisabled = {0.52f, 0.52f, 0.52f, 1.0f};    // visible disabled
     static const NUIColor accentPrimary = {0.55f, 0.35f, 0.85f, 1.0f};
     static const NUIColor accentWarning = {0.95f, 0.75f, 0.25f, 1.0f};
     static const NUIColor buttonBackground = {0.22f, 0.22f, 0.25f, 1.0f};

@@ -31,15 +31,29 @@ void MixerChannel::setColor(uint32_t color) {
 }
 
 void MixerChannel::setVolume(float volume) {
-    m_volume.store(volume);
+    const float previous = m_volume.exchange(volume);
     if (m_mixerBus)
         m_mixerBus->setGain(volume);
+    if (m_commandSink && m_channelId > 0 && std::abs(previous - volume) > 0.0001f) {
+        AudioQueueCommand cmd{};
+        cmd.type = AudioQueueCommandType::SetTrackVolume;
+        cmd.trackIndex = m_channelId - 1;
+        cmd.value1 = volume;
+        m_commandSink(cmd);
+    }
 }
 
 void MixerChannel::setPan(float pan) {
-    m_pan.store(pan);
+    const float previous = m_pan.exchange(pan);
     if (m_mixerBus)
         m_mixerBus->setPan(pan);
+    if (m_commandSink && m_channelId > 0 && std::abs(previous - pan) > 0.0001f) {
+        AudioQueueCommand cmd{};
+        cmd.type = AudioQueueCommandType::SetTrackPan;
+        cmd.trackIndex = m_channelId - 1;
+        cmd.value1 = pan;
+        m_commandSink(cmd);
+    }
 }
 
 void MixerChannel::setWidth(float width) {
@@ -49,15 +63,29 @@ void MixerChannel::setWidth(float width) {
 }
 
 void MixerChannel::setMute(bool mute) {
-    m_muted.store(mute);
+    const bool previous = m_muted.exchange(mute);
     if (m_mixerBus)
         m_mixerBus->setMute(mute);
+    if (m_commandSink && m_channelId > 0 && previous != mute) {
+        AudioQueueCommand cmd{};
+        cmd.type = AudioQueueCommandType::SetTrackMute;
+        cmd.trackIndex = m_channelId - 1;
+        cmd.value1 = mute ? 1.0f : 0.0f;
+        m_commandSink(cmd);
+    }
 }
 
 void MixerChannel::setSolo(bool solo) {
-    m_soloed.store(solo);
+    const bool previous = m_soloed.exchange(solo);
     if (m_mixerBus)
         m_mixerBus->setSolo(solo);
+    if (m_commandSink && m_channelId > 0 && previous != solo) {
+        AudioQueueCommand cmd{};
+        cmd.type = AudioQueueCommandType::SetTrackSolo;
+        cmd.trackIndex = m_channelId - 1;
+        cmd.value1 = solo ? 1.0f : 0.0f;
+        m_commandSink(cmd);
+    }
 }
 
 void MixerChannel::setSoloSafe(bool safe) {

@@ -1,6 +1,7 @@
 #pragma once
 #include "ClipSource.h"
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -28,7 +29,7 @@ public:
 
         // Create new source
         ClipSourceID id{nextId++};
-        auto source = std::make_unique<ClipSource>(id, filePath);
+        auto source = std::make_unique<ClipSource>(id, makeDisplayName(filePath));
         source->setFilePath(filePath);
 
         m_sources[id.value] = std::move(source);
@@ -78,6 +79,22 @@ public:
     }
 
 private:
+    static std::string makeDisplayName(const std::string& filePath) {
+        try {
+            std::filesystem::path p(filePath);
+            const std::string stem = p.stem().string();
+            if (!stem.empty()) {
+                return stem;
+            }
+            const std::string filename = p.filename().string();
+            if (!filename.empty()) {
+                return filename;
+            }
+        } catch (...) {
+        }
+        return filePath;
+    }
+
     uint64_t nextId{1};
     std::unordered_map<uint64_t, std::unique_ptr<ClipSource>> m_sources;
     std::unordered_map<std::string, ClipSourceID> m_pathToId;

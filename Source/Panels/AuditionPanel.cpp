@@ -67,27 +67,28 @@ AuditionPanel::~AuditionPanel() {
 
 void AuditionPanel::setupComponents() {
     // 1. Text Labels
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
     m_trackTitle = std::make_shared<AestraUI::NUILabel>("No Track Selected");
     m_trackTitle->setFontSize(28.0f);
     m_trackTitle->setAlignment(AestraUI::NUILabel::Alignment::Left);
-    m_trackTitle->setTextColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+    m_trackTitle->setTextColor(theme.getColor("textPrimary"));
     addChild(m_trackTitle);
     
     m_trackArtist = std::make_shared<AestraUI::NUILabel>("Drag files to start");
     m_trackArtist->setFontSize(16.0f);
-    m_trackArtist->setTextColor(AestraUI::NUIColor(0.7f, 0.7f, 0.7f, 1.0f));
+    m_trackArtist->setTextColor(theme.getColor("textSecondary"));
     m_trackArtist->setAlignment(AestraUI::NUILabel::Alignment::Left);
     addChild(m_trackArtist);
     
     m_currentTime = std::make_shared<AestraUI::NUILabel>("0:00");
     m_currentTime->setFontSize(12.0f);
-    m_currentTime->setTextColor(AestraUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f));
+    m_currentTime->setTextColor(theme.getColor("textSecondary"));
     addChild(m_currentTime);
     
     m_totalTime = std::make_shared<AestraUI::NUILabel>("0:00");
     m_totalTime->setFontSize(12.0f);
     m_totalTime->setAlignment(AestraUI::NUILabel::Alignment::Right);
-    m_totalTime->setTextColor(AestraUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f));
+    m_totalTime->setTextColor(theme.getColor("textSecondary"));
     addChild(m_totalTime);
     
     // 2. Transport Buttons (Text cleared for SVG overlap)
@@ -195,7 +196,7 @@ void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI:
 
     // Headers
     float headerH = 28.0f;
-    AestraUI::NUIColor headerTxtColor(0.5f, 0.5f, 0.5f, 1.0f);
+    AestraUI::NUIColor headerTxtColor(0.82f, 0.82f, 0.82f, 1.0f);  // bright for dark bg
     float colNo = area.x + 12.0f;
     float colTitle = area.x + 60.0f;
     float colTime = area.x + area.width - 60.0f;
@@ -501,7 +502,7 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
         } else {
              AestraUI::NUIColor artFill(m_currentHeaderColor.r * 0.8f, m_currentHeaderColor.g * 0.8f, m_currentHeaderColor.b * 0.8f, 1.0f);
              renderer.fillRoundedRect(artRect, 8.0f, artFill);
-             renderer.drawText("AESTRA", AestraUI::NUIPoint(artRect.x + artSize/2.0f - 24.0f, artRect.y + artSize/2.0f - 6.0f), 14.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+             renderer.drawText("AESTRA", AestraUI::NUIPoint(artRect.x + artSize/2.0f - 24.0f, artRect.y + artSize/2.0f - 6.0f), 14.0f, AestraUI::NUIColor(0.82f, 0.82f, 0.82f, 1.0f));
         }
     }
     
@@ -635,7 +636,7 @@ void AuditionPanel::renderWaveform(AestraUI::NUIRenderer& renderer, const Aestra
     
     auto source = m_engine->getCurrentSource();
     if (!source || !source->isReady()) {
-        renderer.drawText("Load track to see waveform", AestraUI::NUIPoint(area.x + area.width/2 - 60, area.y + area.height/2), 12.0f, AestraUI::NUIColor(0.5f, 0.5f, 0.5f, 0.5f));
+        renderer.drawText("Load track to see waveform", AestraUI::NUIPoint(area.x + area.width/2 - 60, area.y + area.height/2), 12.0f, AestraUI::NUIColor(0.82f, 0.82f, 0.82f, 1.0f));
         return;
     }
     

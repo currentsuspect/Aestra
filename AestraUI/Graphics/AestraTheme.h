@@ -7,45 +7,44 @@ namespace Aestra::UI::Graphics {
 /**
  * @brief Semantic color palette for Aestra UI.
  * All colors are defined in Linear RGB space (0.0 - 1.0).
- * Tokens are strictly mapped to macOS Dark Mode values but adapted for cross-platform rendering.
+ * "The Synthetic Frontier" design system — void-black foundation, neon accents.
  */
 struct AestraTheme {
     // -------------------------------------------------------------------------
     // Panel Surfaces
     // -------------------------------------------------------------------------
 
-    // Dark, desaturated grey (not pure black) for main panel backgrounds.
-    static constexpr glm::vec4 PanelBackground = glm::vec4(0.11f, 0.11f, 0.11f, 1.0f);
+    // Void black base (#0e0e0e) — deep dark for long studio sessions.
+    static constexpr glm::vec4 PanelBackground = glm::vec4(0.055f, 0.055f, 0.055f, 1.0f);
 
-    // White with low alpha (~9%) for subtle separation borders.
-    static constexpr glm::vec4 PanelBorder = glm::vec4(1.0f, 1.0f, 1.0f, 0.09f);
+    // Ghost border at 15% white — hairline suggestion, not hard line.
+    static constexpr glm::vec4 PanelBorder = glm::vec4(1.0f, 1.0f, 1.0f, 0.15f);
 
     // -------------------------------------------------------------------------
     // Accents & Typography
     // -------------------------------------------------------------------------
 
-    // A refined Indigo/Violet for primary interactions (replacing neon purple).
-    static constexpr glm::vec4 AccentPrimary = glm::vec4(0.36f, 0.28f, 0.88f, 1.0f);
+    // Neon purple (#cc97ff) — primary accent, active state, time-cursor.
+    static constexpr glm::vec4 AccentPrimary = glm::vec4(0.800f, 0.592f, 1.000f, 1.0f);
 
-    // Primary text - 98% White.
-    static constexpr glm::vec4 TextPrimary = glm::vec4(0.98f, 0.98f, 0.98f, 1.0f);
+    // Soft white (#e6e6eb) — never use pure white for text.
+    static constexpr glm::vec4 TextPrimary = glm::vec4(0.902f, 0.902f, 0.922f, 1.0f);
 
-    // Secondary text - 60% White (using TextPrimary base with lower alpha).
-    static constexpr glm::vec4 TextSecondary = glm::vec4(0.98f, 0.98f, 0.98f, 0.60f);
+    // Muted gray (#adaaaa) — secondary labels, per design doc.
+    static constexpr glm::vec4 TextSecondary = glm::vec4(0.678f, 0.678f, 0.667f, 1.0f);
 
     // -------------------------------------------------------------------------
     // Semantic Status Colors
-    // Desaturated to avoid eye strain ("Pro" application standard).
     // -------------------------------------------------------------------------
 
-    // Success - Desaturated Green.
-    static constexpr glm::vec4 StatusSuccess = glm::vec4(0.25f, 0.65f, 0.35f, 1.0f);
+    // Success — saturated green.
+    static constexpr glm::vec4 StatusSuccess = glm::vec4(0.25f, 0.75f, 0.35f, 1.0f);
 
-    // Warning - Desaturated Yellow.
-    static constexpr glm::vec4 StatusWarning = glm::vec4(0.85f, 0.75f, 0.25f, 1.0f);
+    // Warning — amber.
+    static constexpr glm::vec4 StatusWarning = glm::vec4(1.00f, 0.816f, 0.376f, 1.0f);
 
-    // Critical - Desaturated Red.
-    static constexpr glm::vec4 StatusCritical = glm::vec4(0.85f, 0.35f, 0.35f, 1.0f);
+    // Critical — coral/pink (#ff6b9b).
+    static constexpr glm::vec4 StatusCritical = glm::vec4(1.00f, 0.420f, 0.608f, 1.0f);
 };
 
 } // namespace Aestra::UI::Graphics

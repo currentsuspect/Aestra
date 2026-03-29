@@ -7,6 +7,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_LCD_FILTER_H
+#include FT_OUTLINE_H
 // Profiler include for recording draw calls/triangles
 #include "../../../AestraCore/include/AestraProfiler.h"
 
@@ -167,9 +168,9 @@ void main() {
              float alpha = smoothstep(center - edgeWidth, center + edgeWidth, dist);
              color.a *= alpha;
         } else if (primitiveID == 4) {
-               // Bitmap text
-               float coverageAlpha = texColor.a;
-               color.a *= coverageAlpha;
+               // Bitmap text — atlas stores coverage in alpha channel.
+               float coverage = texColor.a;
+               color.a *= coverage;
         } else {
              // Regular textured primitive
              color *= texColor;
@@ -269,15 +270,23 @@ bool NUIRendererGL::initialize(int width, int height) {
     // subpixel-aware blending pipeline. Until that's implemented, default to grayscale coverage.
     fontUseLCD_ = false;
     
-        // Try to load the best font for Aestra
+        // Try to load the best font for Aestra.
+        // Prefer a heavier bundled weight so the global UI reads less thin.
         std::vector<std::string> fontPaths = {
             // Bundled UI fonts - try multiple paths for dev/build/release
-            "/home/currentsuspect/Aestra/AestraAssets/fonts/Geist/Geist-Regular.ttf",
-            "AestraAssets/fonts/Geist/Geist-Regular.ttf",
-            "../AestraAssets/fonts/Geist/Geist-Regular.ttf",
-            "../../AestraAssets/fonts/Geist/Geist-Regular.ttf",
-            "../../../AestraAssets/fonts/Geist/Geist-Regular.ttf",
-            "../../../../AestraAssets/fonts/Geist/Geist-Regular.ttf",
+            "/home/currentsuspect/Aestra/AestraAssets/fonts/Geist/Geist-Bold.ttf",
+            "AestraAssets/fonts/Geist/Geist-Bold.ttf",
+            "../AestraAssets/fonts/Geist/Geist-Bold.ttf",
+            "../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
+            "../../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
+            "../../../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
+
+            "/home/currentsuspect/Aestra/AestraAssets/fonts/Geist/Geist-Medium.ttf",
+            "AestraAssets/fonts/Geist/Geist-Medium.ttf",
+            "../AestraAssets/fonts/Geist/Geist-Medium.ttf",
+            "../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
+            "../../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
+            "../../../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
 
             "/home/currentsuspect/Aestra/AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
             "AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
@@ -351,9 +360,14 @@ void NUIRendererGL::shutdown() {
             glDeleteTextures(1, &fontAtlasTextureIdSmall_);
             fontAtlasTextureIdSmall_ = 0;
         }
+        if (fontAtlasTextureIdXSmall_ != 0) {
+            glDeleteTextures(1, &fontAtlasTextureIdXSmall_);
+            fontAtlasTextureIdXSmall_ = 0;
+        }
         fontCache_.clear();
         fontCacheMedium_.clear();
         fontCacheSmall_.clear();
+        fontCacheXSmall_.clear();
         
         FT_Done_Face(ftFace_);
         FT_Done_FreeType(ftLibrary_);
@@ -363,6 +377,7 @@ void NUIRendererGL::shutdown() {
         fontAscent_ = fontDescent_ = fontLineHeight_ = 0.0f;
         fontAscentMedium_ = fontDescentMedium_ = fontLineHeightMedium_ = 0.0f;
         fontAscentSmall_ = fontDescentSmall_ = fontLineHeightSmall_ = 0.0f;
+        fontAscentXSmall_ = fontDescentXSmall_ = fontLineHeightXSmall_ = 0.0f;
     }
     
     if (vao_) {
@@ -931,10 +946,18 @@ float NUIRendererGL::getDPIScale() {
 NUIRendererGL::AtlasInfo NUIRendererGL::selectAtlas(float fontSize) const {
     AtlasInfo info;
     
-    const bool useSmallAtlas = (fontSize <= 13.0f);
-    const bool useMediumAtlas = (!useSmallAtlas && fontSize <= 17.0f);
+    const bool useXSmallAtlas = (fontSize <= 12.5f);
+    const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= 14.5f);
+    const bool useMediumAtlas = (!useXSmallAtlas && !useSmallAtlas && fontSize <= 18.5f);
     
-    if (useSmallAtlas && fontAtlasTextureIdSmall_ != 0 && atlasFontSizeSmall_ > 0) {
+    if (useXSmallAtlas && fontAtlasTextureIdXSmall_ != 0 && atlasFontSizeXSmall_ > 0) {
+        info.textureId = fontAtlasTextureIdXSmall_;
+        info.atlasSize = atlasFontSizeXSmall_;
+        info.ascent = fontAscentXSmall_;
+        info.descent = fontDescentXSmall_;
+        info.lineHeight = fontLineHeightXSmall_;
+        info.cache = &fontCacheXSmall_;
+    } else if (useSmallAtlas && fontAtlasTextureIdSmall_ != 0 && atlasFontSizeSmall_ > 0) {
         info.textureId = fontAtlasTextureIdSmall_;
         info.atlasSize = atlasFontSizeSmall_;
         info.ascent = fontAscentSmall_;
@@ -1620,22 +1643,10 @@ void NUIRendererGL::drawCharacter(char c, float x, float y, float width, float h
 void NUIRendererGL::drawTextCentered(const std::string& text, const NUIRect& rect, float fontSize, const NUIColor& color) {
     // Measure actual text dimensions
     NUISize textSize = measureText(text, fontSize);
-    
-    // Measure actual text dimensions
-    // NUISize textSize = measureText(text, fontSize); // Already declared above?
-    
-    // Check line 1454 in error message.
-    // If I'm replacing lines 1453-1495, and I include the declaration, it should be fine unless it was already there outside the block?
-    // The previous error said 1454: declaration, 1460: redefinition.
-    // My previous edit REMOVED the redefinition.
-    // Now I replaced the whole block.
-    // Let's just look at the code to be sure.
-    // I'll assume I need to remove one.
 
-    
     // Calculate horizontal centering
     float x = std::round(rect.x + (rect.width - textSize.width) * 0.5f);
-    
+
     // Calculate vertical centering using real font metrics (Top-Left Y + Ascent).
     float y = std::round(calculateTextY(rect, fontSize));
     
@@ -1645,12 +1656,13 @@ void NUIRendererGL::drawTextCentered(const std::string& text, const NUIRect& rec
 NUIRenderer::FontMetrics NUIRendererGL::getFontMetrics(float fontSize) const {
     NUIRenderer::FontMetrics metrics;
     if (fontInitialized_) {
-        const bool useSmallAtlas = (fontSize <= 13.0f);
-        const bool useMediumAtlas = (!useSmallAtlas && fontSize <= 17.0f);
-        const int atlasSize = useSmallAtlas ? atlasFontSizeSmall_ : (useMediumAtlas ? atlasFontSizeMedium_ : atlasFontSize_);
-        const float ascent = useSmallAtlas ? fontAscentSmall_ : (useMediumAtlas ? fontAscentMedium_ : fontAscent_);
-        const float descent = useSmallAtlas ? fontDescentSmall_ : (useMediumAtlas ? fontDescentMedium_ : fontDescent_);
-        const float lineHeight = useSmallAtlas ? fontLineHeightSmall_ : (useMediumAtlas ? fontLineHeightMedium_ : fontLineHeight_);
+        const bool useXSmallAtlas = (fontSize <= 12.5f);
+        const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= 14.5f);
+        const bool useMediumAtlas = (!useXSmallAtlas && !useSmallAtlas && fontSize <= 18.5f);
+        const int atlasSize = useXSmallAtlas ? atlasFontSizeXSmall_ : (useSmallAtlas ? atlasFontSizeSmall_ : (useMediumAtlas ? atlasFontSizeMedium_ : atlasFontSize_));
+        const float ascent = useXSmallAtlas ? fontAscentXSmall_ : (useSmallAtlas ? fontAscentSmall_ : (useMediumAtlas ? fontAscentMedium_ : fontAscent_));
+        const float descent = useXSmallAtlas ? fontDescentXSmall_ : (useSmallAtlas ? fontDescentSmall_ : (useMediumAtlas ? fontDescentMedium_ : fontDescent_));
+        const float lineHeight = useXSmallAtlas ? fontLineHeightXSmall_ : (useSmallAtlas ? fontLineHeightSmall_ : (useMediumAtlas ? fontLineHeightMedium_ : fontLineHeight_));
         if (atlasSize > 0) {
             const float scale = fontSize / static_cast<float>(atlasSize);
             metrics.ascent = ascent * scale;
@@ -1836,9 +1848,9 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         cache.clear();
 
         int loadedChars = 0;
-        const int loadFlagsBase = FT_LOAD_RENDER | FT_LOAD_NO_BITMAP;
-        const int loadFlagsLCD = loadFlagsBase | FT_LOAD_TARGET_LCD | FT_LOAD_FORCE_AUTOHINT;
-        const int loadFlagsGray = loadFlagsBase | FT_LOAD_TARGET_LIGHT;
+        const int loadFlagsBase = FT_LOAD_NO_BITMAP | FT_LOAD_FORCE_AUTOHINT;
+        const int loadFlagsLCD = loadFlagsBase | FT_LOAD_TARGET_LCD;
+        const int loadFlagsGray = loadFlagsBase | FT_LOAD_TARGET_NORMAL;
         const int padding = 3;
 
         // Build character set: ASCII + Unicode symbols
@@ -1866,6 +1878,18 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
 
             int loadFlags = fontUseLCD_ ? loadFlagsLCD : loadFlagsGray;
             if (FT_Load_Glyph(ftFace_, glyphIndex, loadFlags)) {
+                continue;
+            }
+
+            // Thicken medium/large UI text slightly, but do it on the outline
+            // before rasterization so edges stay cleaner than bitmap embolden.
+            if (ftFace_->glyph->format == FT_GLYPH_FORMAT_OUTLINE && atlasFontSize >= 20) {
+                const FT_Pos emboldenStrength = (atlasFontSize >= 36) ? 56 : 34;
+                FT_Outline_Embolden(&ftFace_->glyph->outline, emboldenStrength);
+            }
+
+            const FT_Render_Mode renderMode = fontUseLCD_ ? FT_RENDER_MODE_LCD : FT_RENDER_MODE_NORMAL;
+            if (FT_Render_Glyph(ftFace_->glyph, renderMode)) {
                 continue;
             }
 
@@ -1906,8 +1930,10 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
                             b = srcRow[x * 3 + 2];
                             a = std::max({r, g, b});
                         } else {
-                            r = g = b = srcRow[x];
-                            a = srcRow[x];
+                            // Store WHITE in RGB — only alpha carries coverage.
+                            // This ensures the shader gets white * coverage = text color * coverage.
+                            r = g = b = 255;  // White base
+                            a = srcRow[x];     // Coverage in alpha
                         }
                         size_t dst = static_cast<size_t>(y * width + x) * 4;
                         rgba[dst + 0] = r;
@@ -1960,9 +1986,9 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         return loadedChars > 0;
     };
 
-    // Large atlas (48px)
+    // Large atlas (36px) for headings and larger controls without oversoft downsampling.
     {
-        const int ATLAS_FONT_SIZE = 48;
+        const int ATLAS_FONT_SIZE = 36;
         atlasFontSize_ = ATLAS_FONT_SIZE;
         if (!buildAtlas(ATLAS_FONT_SIZE,
                         fontAtlasTextureId_,
@@ -1977,9 +2003,9 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         }
     }
 
-    // Medium atlas (32px) for common UI copy
+    // Medium atlas (20px) for the common 15-18 px UI copy.
     {
-        const int ATLAS_FONT_SIZE_MEDIUM = 32;
+        const int ATLAS_FONT_SIZE_MEDIUM = 20;
         atlasFontSizeMedium_ = ATLAS_FONT_SIZE_MEDIUM;
         (void)buildAtlas(ATLAS_FONT_SIZE_MEDIUM,
                          fontAtlasTextureIdMedium_,
@@ -1992,9 +2018,9 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
                          fontAtlasRowHeightMedium_);
     }
 
-    // Small atlas (24px) for tiny labels
+    // Small atlas tuned for dense UI labels around 10-12 px.
     {
-        const int ATLAS_FONT_SIZE_SMALL = 24;
+        const int ATLAS_FONT_SIZE_SMALL = 14;
         atlasFontSizeSmall_ = ATLAS_FONT_SIZE_SMALL;
         (void)buildAtlas(ATLAS_FONT_SIZE_SMALL,
                          fontAtlasTextureIdSmall_,
@@ -2007,8 +2033,23 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
                          fontAtlasRowHeightSmall_);
     }
 
+    // Extra-small atlas for the densest 10-11 px copy.
+    {
+        const int ATLAS_FONT_SIZE_XSMALL = 12;
+        atlasFontSizeXSmall_ = ATLAS_FONT_SIZE_XSMALL;
+        (void)buildAtlas(ATLAS_FONT_SIZE_XSMALL,
+                         fontAtlasTextureIdXSmall_,
+                         fontCacheXSmall_,
+                         fontAscentXSmall_,
+                         fontDescentXSmall_,
+                         fontLineHeightXSmall_,
+                         fontAtlasXXSmall_,
+                         fontAtlasYXSmall_,
+                         fontAtlasRowHeightXSmall_);
+    }
+
     fontInitialized_ = true;
-    std::cout << "[Text] Font loaded: " << fontPath << " (dual atlases enabled)" << std::endl;
+    std::cout << "[Text] Font loaded: " << fontPath << " (quad atlases enabled)" << std::endl;
     return true;
 }
 
@@ -2026,6 +2067,13 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         flush();
         currentTextureId_ = atlas.textureId;
     }
+    
+    // Switch to pre-multiplied alpha blend mode for text rendering.
+    // This gives: result = text * coverage + bg * (1 - coverage)
+    // instead of the standard blend which gives: result = text * coverage^2 + bg * (1 - coverage)
+    glBlendFunc(GL_ONE, GL_SRC_ALPHA);
+    // Actually revert — pre-multiplied bleeds edges on dark backgrounds. Use standard.
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     // Pre-allocate vertex buffer space (4 vertices per glyph, 6 indices per glyph)
     // This avoids repeated vector resizing for large text blocks
@@ -2145,6 +2193,8 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         // However, we need to ensure we don't accidentally leave a bound texture if we used strokeRect which clears it.
     }
 
+    // Restore blend func for non-text geometry
+    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Already default
 }
 
 // ============================================================================

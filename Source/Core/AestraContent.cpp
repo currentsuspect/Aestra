@@ -193,6 +193,11 @@ AestraContent::AestraContent() {
             Log::error("[AestraContent] Failed to bounce selection to Audition.");
         }
     });
+    m_trackManagerUI->setOnClipLibraryChanged([this]() {
+        if (m_patternBrowser) {
+            m_patternBrowser->refreshClips();
+        }
+    });
     
     m_workspaceLayer->addChild(m_trackManagerUI);
 
@@ -1293,17 +1298,17 @@ AestraUI::NUIRect AestraContent::computeMaximizedRect() const {
 }
 
 AestraUI::NUIRect AestraContent::clampRectToAllowed(AestraUI::NUIRect panel, const AestraUI::NUIRect& allowed) const {
-    float x = std::clamp(panel.x, allowed.x, allowed.right() - panel.width);
-    float y = std::clamp(panel.y, allowed.y, allowed.bottom() - panel.height);
-    
+    // Clamp panel size to allowed area first, so bounds are valid for position clamp
     float w = panel.width;
     float h = panel.height;
-    
     if (w > allowed.width) w = allowed.width;
     if (h > allowed.height) h = allowed.height;
-    
-    x = std::clamp(x, allowed.x, allowed.right() - w);
-    y = std::clamp(y, allowed.y, allowed.bottom() - h);
+
+    float x = std::clamp(panel.x, allowed.x, std::max(allowed.x, allowed.right() - w));
+    float y = std::clamp(panel.y, allowed.y, std::max(allowed.y, allowed.bottom() - h));
+
+    x = std::clamp(x, allowed.x, std::max(allowed.x, allowed.right() - w));
+    y = std::clamp(y, allowed.y, std::max(allowed.y, allowed.bottom() - h));
 
     return AestraUI::NUIRect(x, y, w, h);
 }
@@ -1849,10 +1854,18 @@ void AestraContent::refreshPluginList() {
 
 // Global Shortcuts
 bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
+    if (event.keyCode == AestraUI::NUIKeyCode::Space && event.released) {
+        m_spaceShortcutLatched = false;
+        return true;
+    }
     if (!event.pressed) return false;
     
     // Debug log
     if (event.keyCode == AestraUI::NUIKeyCode::Space) {
+        if (m_spaceShortcutLatched) {
+            return true;
+        }
+        m_spaceShortcutLatched = true;
         Aestra::Log::info("[AestraContent] Spacebar pressed. ViewFocus: " + std::to_string(static_cast<int>(m_viewFocus)));
     }
     
@@ -1873,9 +1886,19 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         }
         else {
             // Timeline / Arsenal Mode
+            if (m_transportBar) {
+                if (m_transportBar->getState() == Aestra::TransportState::Playing) {
+                    m_transportBar->stop();
+                } else {
+                    m_transportBar->play();
+                }
+                return true;
+            }
+
+            // Fallback when transport bar is unavailable.
             if (m_trackManager) {
                 if (m_trackManager->isPlaying()) {
-                    m_trackManager->stop(); 
+                    m_trackManager->stop();
                 } else {
                     m_trackManager->play();
                 }
