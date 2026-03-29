@@ -1,9 +1,9 @@
-# 🧭 Aestra DAW Architecture Overview
+# 🧭 Aestra Architecture Overview
 
 ![Architecture](https://img.shields.io/badge/Architecture-Modular-blue)
 ![C++17](https://img.shields.io/badge/C%2B%2B-17-orange)
 
-Comprehensive overview of Aestra DAW's modular architecture, covering Core, UI, Audio, and Muse AI systems.
+Comprehensive overview of Aestra's modular architecture, covering Core, UI, Audio, and Muse AI systems.
 
 ## 📋 Table of Contents
 
@@ -15,7 +15,7 @@ Comprehensive overview of Aestra DAW's modular architecture, covering Core, UI, 
 
 ## 🏗️ System Overview
 
-Aestra DAW is built with a clean, modular architecture that separates concerns into distinct subsystems:
+Aestra is built with a clean, modular architecture that separates concerns into distinct subsystems:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -142,19 +142,21 @@ AestraAudio/
 - **Lock-free Audio Thread**: Zero-latency audio processing
 - **64-bit Processing**: High-quality 64-bit floating-point audio
 
-### Muse AI (Future Integration)
+### Muse AI (Post-Beta — Deferred)
 
 **Purpose**: AI-powered music generation and assistance.
 
 **Location**: `Aestra-premium/muse/` (private)
 
-**Planned Components:**
+**Status:** Explicitly deferred until after v1 Beta. The roadmap deliberately cuts AI features from Beta scope to focus on core DAW stability. Muse integration will resume only after the base product is shippable.
+
+**Planned Components (future):**
 - **Model Loading** - AI model management and inference
 - **Pattern Generation** - Automatic melody and rhythm generation
 - **Smart Suggestions** - Context-aware musical suggestions
 - **Audio Enhancement** - AI-powered mixing and mastering
 
-**Integration Points:**
+**Integration Points (future):**
 ```cpp
 namespace Aestra {
     namespace muse {
@@ -165,8 +167,6 @@ namespace Aestra {
     }
 }
 ```
-
-**Status**: 🚧 Planned for future release (private development)
 
 ### AestraPlat
 
@@ -433,13 +433,19 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 
 ## 🔮 Future Architecture Plans
 
-### Planned Enhancements
+### v1 Beta Focus (Dec 2026)
 
-1. **Plugin System** - VST3 and AU plugin hosting
-2. **MIDI Support** - Full MIDI I/O and routing
-3. **Recording** - Multi-track audio recording
-4. **Automation** - Parameter automation system
-5. **Muse Integration** - AI-powered music generation
+1. **Internal Arsenal Plugins** — Built-in instruments (Rumble) validated through discovery, persistence, and audible playback
+2. **Recording Reliability** — Multi-track audio recording with device stress testing
+3. **Offline Render/Export** — Bounce that matches playback
+4. **Plugin Decision Gate** — VST3/CLAP hosting ships only if it can be made boringly stable (Phase 4, Sep 2026)
+
+### Post-Beta (Deferred)
+
+- **Muse AI Integration** — AI-powered music generation
+- **Video Support** — Video timeline and scoring
+- **MIDI Support** — Full MIDI I/O and routing
+- **Automation** — Parameter automation system
 
 ### Scalability
 

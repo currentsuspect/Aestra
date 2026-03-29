@@ -34,6 +34,7 @@
 
 // Audio includes
 #include "AudioEngine.h"
+#include "ChannelSlotMap.h"
 #include "TrackManager.h"
 #include "PreviewEngine.h"
 #include "MiniAudioDecoder.h"
@@ -517,7 +518,7 @@ AestraContent::AestraContent() {
 
     // Create compact master meters
     m_waveformVisualizer = std::make_shared<AestraUI::AudioVisualizer>();
-    m_waveformVisualizer->setMode(AestraUI::AudioVisualizationMode::ArrangementWaveform);
+    m_waveformVisualizer->setMode(AestraUI::AudioVisualizationMode::CompactWaveform);
     m_waveformVisualizer->setShowStereo(true);
     m_overlayLayer->addChild(m_waveformVisualizer);
 
@@ -603,12 +604,33 @@ void AestraContent::onUpdate(double dt) {
     }
     
     // Update Mixer Meters (Real-time)
-    if (tm && m_mixerPanel) {
-        auto viewModel = m_mixerPanel->getViewModel();
-        if (viewModel) {
-            auto snapshots = tm->getMeterSnapshots();
-            if (snapshots) {
+    if (tm) {
+        auto snapshots = tm->getMeterSnapshots();
+        if (snapshots && m_mixerPanel) {
+            auto viewModel = m_mixerPanel->getViewModel();
+            if (viewModel) {
                 viewModel->updateMeters(*snapshots, dt);
+            }
+        }
+    }
+
+    if (m_audioEngine && (m_audioVisualizer || m_waveformVisualizer)) {
+        const uint32_t historyFrames = m_audioEngine->getWaveformHistoryCapacity();
+        if (historyFrames > 0) {
+            const size_t requiredSamples = static_cast<size_t>(historyFrames) * 2;
+            if (m_transportWaveformScratch.size() != requiredSamples) {
+                m_transportWaveformScratch.resize(requiredSamples);
+            }
+
+            const uint32_t copiedFrames =
+                m_audioEngine->copyWaveformHistory(m_transportWaveformScratch.data(), historyFrames);
+            if (copiedFrames > 0) {
+                if (m_waveformVisualizer) {
+                    m_waveformVisualizer->setInterleavedWaveform(m_transportWaveformScratch.data(), copiedFrames);
+                }
+                if (m_audioVisualizer) {
+                    m_audioVisualizer->setInterleavedWaveform(m_transportWaveformScratch.data(), copiedFrames);
+                }
             }
         }
     }
@@ -1025,6 +1047,19 @@ void AestraContent::setViewFocus(ViewFocus focus) {
     ViewFocus previousFocus = m_viewFocus;
     
     m_viewFocus = focus;
+
+    auto applyOverlayPanelVisibility = [this](bool auditionMode) {
+        if (auditionMode) {
+            if (m_mixerPanel) m_mixerPanel->setVisible(false);
+            if (m_pianoRollPanel) m_pianoRollPanel->setVisible(false);
+            if (m_sequencerPanel) m_sequencerPanel->setVisible(false);
+            return;
+        }
+
+        if (m_mixerPanel) m_mixerPanel->setVisible(m_viewState.mixerOpen);
+        if (m_pianoRollPanel) m_pianoRollPanel->setVisible(m_viewState.pianoRollOpen);
+        if (m_sequencerPanel) m_sequencerPanel->setVisible(m_viewState.sequencerOpen);
+    };
     
     // Handle mode transitions
     if (m_audioEngine) {
@@ -1139,7 +1174,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             // Show the Audition panel, hide DAW panels
             m_auditionPanel->setVisible(true);
             if (m_trackManagerUI) m_trackManagerUI->setVisible(false);
-            if (m_sequencerPanel) m_sequencerPanel->setVisible(false);
+            applyOverlayPanelVisibility(true);
             
             // POLISH: Hide Transport, Pattern Browser, and Visualizers for immersion
             if (m_transportBar) m_transportBar->setVisible(false);
@@ -1162,12 +1197,14 @@ void AestraContent::setViewFocus(ViewFocus focus) {
              if (m_patternBrowser) m_patternBrowser->setVisible(true);
              if (m_waveformVisualizer) m_waveformVisualizer->setVisible(true);
              if (m_audioVisualizer) m_audioVisualizer->setVisible(true);
+             applyOverlayPanelVisibility(false);
         } else {
              // Audition Mode - Hide Distractions
              if (m_transportBar) m_transportBar->setVisible(false);
              if (m_patternBrowser) m_patternBrowser->setVisible(false);
              if (m_waveformVisualizer) m_waveformVisualizer->setVisible(false);
              if (m_audioVisualizer) m_audioVisualizer->setVisible(false);
+             applyOverlayPanelVisibility(true);
         }
         
         // Sync segment control to reflect the new focus
@@ -1253,22 +1290,31 @@ AestraUI::NUIRect AestraContent::computeSafeRect() const {
     return safe;
 }
 
+float AestraContent::getVisibleBrowserEdge() const {
+    float browserEdge = 0.0f;
+
+    if (m_fileBrowser && m_fileBrowser->isVisible()) {
+        browserEdge = std::max(browserEdge, m_fileBrowser->getBounds().right());
+    }
+
+    if (m_pluginBrowser && m_pluginBrowser->isVisible()) {
+        browserEdge = std::max(browserEdge, m_pluginBrowser->getBounds().right());
+    }
+
+    return browserEdge;
+}
+
 AestraUI::NUIRect AestraContent::computeAllowedRectForPanels() const {
     AestraUI::NUIRect safe = computeSafeRect();
-    
-    if (m_fileBrowser && m_fileBrowser->isVisible()) {
-        AestraUI::NUIRect browserRect = m_fileBrowser->getBounds();
-        float margin = 0.0f;
-        float browserEdge = browserRect.width + margin;
-        
-        if (browserEdge > safe.x) {
-           float shift = browserEdge - safe.x;
-           safe.x = browserEdge;
-           safe.width -= shift; 
-        }
-        
-        if (safe.width < 100.0f) safe.width = 100.0f;
+
+    float browserEdge = getVisibleBrowserEdge();
+    if (browserEdge > safe.x) {
+       float shift = browserEdge - safe.x;
+       safe.x = browserEdge;
+       safe.width -= shift;
     }
+
+    if (safe.width < 100.0f) safe.width = 100.0f;
     
     return safe;
 }
@@ -1282,16 +1328,12 @@ AestraUI::NUIRect AestraContent::computeMaximizedRect() const {
     AestraUI::NUIRect maxRect = bounds;
     maxRect.y += transportHeight;
     maxRect.height -= transportHeight;
-    
-    if (m_fileBrowser && m_fileBrowser->isVisible()) {
-        AestraUI::NUIRect browserRect = m_fileBrowser->getBounds();
-        float browserEdge = browserRect.width;
-        
-        if (browserEdge > maxRect.x) {
-           float shift = browserEdge - maxRect.x;
-           maxRect.x = browserEdge;
-           maxRect.width -= shift; 
-        }
+
+    float browserEdge = getVisibleBrowserEdge();
+    if (browserEdge > maxRect.x) {
+       float shift = browserEdge - maxRect.x;
+       maxRect.x = browserEdge;
+       maxRect.width -= shift;
     }
     
     return maxRect;

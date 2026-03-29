@@ -175,7 +175,7 @@ If you want the most truthful picture of current progress, start with:
     <tr>
       <td><strong>AestraAudio</strong></td>
       <td><span class="status-icon success"></span>Complete</td>
-      <td>WASAPI/RtAudio integration</td>
+      <td>WASAPI/RtAudio/ASIO integration</td>
     </tr>
     <tr>
       <td><strong>Timeline</strong></td>
@@ -184,18 +184,38 @@ If you want the most truthful picture of current progress, start with:
     </tr>
     <tr>
       <td><strong>Mixing</strong></td>
-      <td><span class="status-icon warning"></span>In Progress</td>
+      <td><span class="status-icon success"></span>Complete</td>
       <td>Volume, pan, mute, solo controls</td>
+    </tr>
+    <tr>
+      <td><strong>Project Persistence</strong></td>
+      <td><span class="status-icon success"></span>Complete</td>
+      <td>Save/load, autosave, crash-safe recovery, round-trip verified</td>
+    </tr>
+    <tr>
+      <td><strong>Undo/Redo</strong></td>
+      <td><span class="status-icon warning"></span>In Progress</td>
+      <td>Command history exists, needs broader main-UX integration hardening</td>
     </tr>
     <tr>
       <td><strong>Internal Arsenal Plugins</strong></td>
       <td><span class="status-icon warning"></span>In Progress</td>
-      <td>Built-in instrument path now validated through discovery, project persistence, and audible headless playback</td>
+      <td>Rumble validated through discovery, project persistence, and audible headless playback</td>
     </tr>
     <tr>
       <td><strong>Third-Party Plugin Hosting</strong></td>
       <td><span class="status-icon info"></span>Decision Gate</td>
-      <td>VST3/CLAP scaffolding exists, but Beta scope still favors internal Arsenal unless external hosting becomes boringly stable</td>
+      <td>VST3/CLAP scaffolding exists; Phase 4 decision (Sep 2026)</td>
+    </tr>
+    <tr>
+      <td><strong>Recording</strong></td>
+      <td><span class="status-icon warning"></span>In Progress</td>
+      <td>Phase 3 target (Jul–Sep 2026)</td>
+    </tr>
+    <tr>
+      <td><strong>Offline Render/Export</strong></td>
+      <td><span class="status-icon warning"></span>In Progress</td>
+      <td>Phase 3 target (Jul–Sep 2026)</td>
     </tr>
   </tbody>
 </table>

@@ -213,6 +213,7 @@ public:
     // Waveform history (interleaved stereo), safe to read on UI thread.
     uint32_t getWaveformHistoryCapacity() const { return m_waveformHistoryFrames.load(std::memory_order_relaxed); }
     uint32_t copyWaveformHistory(float* outInterleaved, uint32_t maxFrames) const;
+    void captureWaveformHistory(const float* interleavedOutput, uint32_t numFrames);
 
     // Multi-threading
     void setThreadCount(int count);

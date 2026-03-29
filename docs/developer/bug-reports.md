@@ -1,6 +1,6 @@
 # 🐛 Bug Reports Guide
 
-This guide explains how to report bugs effectively for Aestra DAW, ensuring issues can be reproduced and fixed quickly.
+This guide explains how to report bugs effectively for Aestra, ensuring issues can be reproduced and fixed quickly.
 
 ---
 
@@ -89,7 +89,7 @@ Include:
 <!-- What actually happened -->
 
 ## Steps to Reproduce
-1. Launch Aestra DAW
+1. Launch Aestra
 2. Load a 48kHz WAV file
 3. Press play
 4. Observe that audio cuts 7 seconds early
@@ -433,13 +433,13 @@ Before submitting, verify:
 
 ## 📚 Related Resources
 
-- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute to Aestra
-- **[Debugging Guide](developer/debugging.md)** — Advanced debugging techniques
+- **[Contributing Guide](../../CONTRIBUTING.md)** — How to contribute to Aestra
+- **[Debugging Guide](debugging.md)** — Advanced debugging techniques
 - **[GitHub Issues](https://github.com/currentsuspect/Aestra/issues)** — Browse existing bugs
 
 ---
 
-**Thank you for helping improve Aestra DAW!** 🙏
+**Thank you for helping improve Aestra!** 🙏
 
 Quality bug reports make a huge difference in fixing issues quickly and efficiently.
 

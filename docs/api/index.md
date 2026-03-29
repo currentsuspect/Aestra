@@ -25,7 +25,7 @@ Foundation utilities and data structures.
 - `Aestra::Logger` — Structured logging
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-core.md) for high-level design concepts.
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-core.md) for high-level design concepts.
 
 ---
 
@@ -42,7 +42,7 @@ Platform-specific functionality with unified interface.
 - `Aestra::Timer` — High-resolution timing
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-plat.md) for high-level design concepts.
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-plat.md) for high-level design concepts.
 
 ---
 
@@ -61,7 +61,7 @@ GPU-accelerated UI framework.
 - `Aestra::Theme` — Theme system
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-ui.md) for high-level design concepts.
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-ui.md) for high-level design concepts.
 
 ---
 
@@ -78,22 +78,28 @@ Professional audio processing system.
 - `Aestra::DSP::EQ` — Equalizer processor
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/nomad-audio.md) for high-level design concepts.
+    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-audio.md) for high-level design concepts.
 
 ---
 
-### Plugin System (Planned)
+### Plugin System (Decision Gate)
 
 #### AestraSDK API
 Plugin hosting and extension system.
 
-**Status:** 📅 Planned for Q2 2025
+**Status:** Phase 4 decision gate (Sep 2026) — see [Roadmap](../technical/roadmap.md)
 
-**Planned APIs:**
+Internal Arsenal plugins (e.g., Rumble) are already validated through discovery, project persistence, and audible headless playback. Third-party VST3/CLAP hosting scaffolding exists but remains a scope decision for Beta.
+
+**Current APIs (Internal Arsenal):**
+- `Aestra::PluginManager` — Plugin discovery and lifecycle
+- `Aestra::ArsenalInstrument` — Internal instrument interface
+- `Aestra::MIDIRouter` — MIDI routing to instruments
+
+**Planned APIs (if third-party hosting ships):**
 - `Aestra::PluginHost` — VST3 plugin hosting
 - `Aestra::Effect` — Audio effect interface
 - `Aestra::Automation` — Parameter automation
-- `Aestra::MIDIRouter` — MIDI routing
 
 ---
 
@@ -258,19 +264,19 @@ void AudioBuffer::read(float* buffer, int samples);
 
 Looking for specific functionality? See the architecture documentation:
 
-- **Window Management** → [AestraPlat Architecture](../architecture/nomad-plat.md)
-- **Rendering** → [AestraUI Architecture](../architecture/nomad-ui.md)
-- **Audio I/O** → [AestraAudio Architecture](../architecture/nomad-audio.md)
-- **File Operations** → [AestraCore Architecture](../architecture/nomad-core.md)
+- **Window Management** → [AestraPlat Architecture](../architecture/Aestra-plat.md)
+- **Rendering** → [AestraUI Architecture](../architecture/Aestra-ui.md)
+- **Audio I/O** → [AestraAudio Architecture](../architecture/Aestra-audio.md)
+- **File Operations** → [AestraCore Architecture](../architecture/Aestra-core.md)
 
 ### By Module
 
 Exploring a specific module? See architecture docs:
 
-- [AestraCore Architecture](../architecture/nomad-core.md)
-- [AestraPlat Architecture](../architecture/nomad-plat.md)
-- [AestraUI Architecture](../architecture/nomad-ui.md)
-- [AestraAudio Architecture](../architecture/nomad-audio.md)
+- [AestraCore Architecture](../architecture/Aestra-core.md)
+- [AestraPlat Architecture](../architecture/Aestra-plat.md)
+- [AestraUI Architecture](../architecture/Aestra-ui.md)
+- [AestraAudio Architecture](../architecture/Aestra-audio.md)
 
 ## 📝 Documentation Status
 
