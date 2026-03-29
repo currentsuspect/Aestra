@@ -4,7 +4,7 @@
 #include "../Core/ChannelSlotMap.h"
 #include "../DSP/ContinuousParamBuffer.h"
 #include "MeterSnapshot.h"
-#include "MixerChannel.h"
+#include "../Core/MixerChannel.h"
 #include "PatternManager.h"
 #include "../Playback/PatternPlaybackEngine.h"
 #include "../Playback/TimelineClock.h"
@@ -61,9 +61,10 @@ public:
      * @brief Add a new channel
      */
     MixerChannel* addChannel(const std::string& name = "") {
+        // IDs start at 1 to avoid collision with Master (ID 0).
         auto channel =
             std::make_unique<MixerChannel>(name.empty() ? "Track " + std::to_string(m_channels.size() + 1) : name,
-                                           static_cast<uint32_t>(m_channels.size()));
+                                           static_cast<uint32_t>(m_channels.size() + 1));
         channel->setCommandSink(m_commandSink);
         auto* raw = channel.get();
         m_channels.push_back(std::move(channel));
