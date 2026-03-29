@@ -1,7 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "AudioEngine.h"
+#include "../Core/AudioEngine.h"
 
 namespace Aestra {
 namespace Audio {

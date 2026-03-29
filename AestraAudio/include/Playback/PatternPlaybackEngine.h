@@ -1,11 +1,11 @@
 // © 2025 Aestra Studios — All Rights Reserved.
 #pragma once
 
-#include "PatternManager.h"
-#include "PatternSource.h"
-#include "PluginHost.h" // [NEW] For MidiBuffer
+#include "../Models/PatternManager.h"
+#include "../Models/PatternSource.h"
+#include "../Plugin/PluginHost.h" // For MidiBuffer
 #include "TimelineClock.h"
-#include "UnitManager.h"
+#include "../Models/UnitManager.h"
 
 #include <array>
 #include <atomic>
