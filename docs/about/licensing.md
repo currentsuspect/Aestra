@@ -137,7 +137,7 @@ You agree that:
 - All contributed code becomes the property of Aestra Studios
 - You waive all ownership claims to your contributions
 - You will not challenge Aestra Studios' ownership in the future
-- Your contributions will be licensed under ASSAL v1.0
+- Your contributions will be licensed under ASSAL v1.1
 
 ### 3. Representation and Warranty
 You represent that:
@@ -229,14 +229,14 @@ For a comprehensive breakdown of the license terms, including:
 - Contributor guidelines
 - Frequently asked questions
 
-See **[docs/LICENSE_REFERENCE.md](license-reference.md)** for the complete license reference guide.
+See **[docs/about/license-reference.md](license-reference.md)** for the complete license reference guide.
 
 ---
 
 ## ⚖️ Legal Information
 
 ### Copyright
-**Copyright © 2025 Dylan Makori / Aestra Studios. All rights reserved.**
+**Copyright © 2026 Dylan Makori / Aestra Studios. All rights reserved.**
 
 ### Trademarks
 - **Aestra** and the **Aestra** logo are trademarks of Dylan Makori / Aestra Studios
@@ -284,7 +284,7 @@ Any unauthorized use of this software will result in:
 
 We believe in building sustainable, transparent software that serves musicians worldwide.
 
-*Copyright © 2025 Dylan Makori / Aestra Studios*  
-*Licensed under ASSAL v1.0*
+*Copyright © 2026 Dylan Makori / Aestra Studios*  
+*Licensed under ASSAL v1.1*
 
 </div>

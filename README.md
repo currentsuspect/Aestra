@@ -243,7 +243,7 @@ By contributing to Aestra, you agree that:
 - All contributed code becomes property of Dylan Makori / Aestra Studios
 - You grant Aestra Studios full rights to use, modify, and distribute your contributions
 - You waive ownership claims to your contributions
-- Contributions are made under the ASSAL v1.0 license terms
+- Contributions are made under the ASSAL v1.1 license terms
 
 For detailed contribution guidelines, see **[Contributing Guide →](docs/developer/contributing.md)**
 
@@ -293,7 +293,7 @@ All source files include the following header:
 ### Full License Text
 
 - **[View LICENSE →](LICENSE)** — Full legal license text
-- **[License Reference →](docs/LICENSE_REFERENCE.md)** — Detailed breakdown and FAQ
+- **[License Reference →](docs/about/license-reference.md)** — Detailed breakdown and FAQ
 
 **Important:** The source code is publicly visible for transparency, but is **NOT open-source**. All rights reserved by Dylan Makori / Aestra Studios.
 
