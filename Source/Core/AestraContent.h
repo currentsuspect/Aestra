@@ -218,6 +218,7 @@ private:
     std::shared_ptr<Aestra::AuditionPanel> m_auditionPanel;
 
     std::unique_ptr<Aestra::Audio::PreviewEngine> m_previewEngine;
+    bool m_spaceShortcutLatched{false};
     bool m_audioActive = false;
     
     // View state

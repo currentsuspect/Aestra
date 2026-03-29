@@ -112,13 +112,16 @@ bool AestraAudioController::openDefaultStream(void* userData) {
 
         Log::info("Using audio device: " + outputDevice.name);
 
+        auto defaultInput = m_audioManager->getDefaultInputDevice();
+
         // Configure audio stream
         AudioStreamConfig config;
         config.deviceId = outputDevice.id;
+        config.inputDeviceId = defaultInput.name.empty() ? outputDevice.id : defaultInput.id;
         config.sampleRate = 48000;
         config.bufferSize = 256;
 
-        config.numInputChannels = outputDevice.maxInputChannels;
+        config.numInputChannels = defaultInput.name.empty() ? 0 : defaultInput.maxInputChannels;
         config.numOutputChannels = 2;
 
         if (m_audioEngine) {

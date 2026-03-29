@@ -3,6 +3,7 @@
 
 #include "AestraLog.h"
 
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <thread>
@@ -179,10 +180,16 @@ bool AudioDeviceManager::tryDriver(IAudioDriver* driver, const AudioStreamConfig
 
 bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) {
     Aestra::Log::info("[AudioDeviceManager] openStream called. Rate: " + std::to_string(config.sampleRate) +
-                      "Hz, Device: " + std::to_string(config.deviceId));
+                      "Hz, Output Device: " + std::to_string(config.deviceId) +
+                      ", Input Device: " + std::to_string(config.inputDeviceId));
 
     if (!m_initialized) {
         Aestra::Log::error("[AudioDeviceManager] openStream failed: Not initialized");
+        return false;
+    }
+
+    if (!validateStreamConfig(config)) {
+        Aestra::Log::error("[AudioDeviceManager] openStream failed: Invalid stream configuration");
         return false;
     }
 
@@ -321,6 +328,41 @@ bool AudioDeviceManager::switchDevice(uint32_t deviceId) {
     }
 
     // Restart stream if it was running
+    if (m_wasRunning) {
+        return startStream();
+    }
+
+    return true;
+}
+
+bool AudioDeviceManager::switchInputDevice(uint32_t deviceId) {
+    if (!m_initialized) {
+        return false;
+    }
+
+    auto devices = getDevices();
+    const auto it = std::find_if(devices.begin(), devices.end(), [deviceId](const AudioDeviceInfo& device) {
+        return device.id == deviceId;
+    });
+    if (it == devices.end() || it->maxInputChannels == 0) {
+        return false;
+    }
+
+    m_wasRunning = isStreamRunning();
+    if (m_wasRunning) {
+        stopStream();
+    }
+    closeStream();
+
+    m_currentConfig.inputDeviceId = deviceId;
+    if (m_currentConfig.numInputChannels > it->maxInputChannels) {
+        m_currentConfig.numInputChannels = it->maxInputChannels;
+    }
+
+    if (!openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
+        return false;
+    }
+
     if (m_wasRunning) {
         return startStream();
     }
@@ -495,6 +537,40 @@ bool AudioDeviceManager::validateDeviceConfig(uint32_t deviceId, uint32_t sample
     Aestra::Log::error("[AudioDeviceManager] validateDeviceConfig failed: Device ID " + std::to_string(deviceId) +
                        " not found");
     return false; // Device not found
+}
+
+bool AudioDeviceManager::validateStreamConfig(const AudioStreamConfig& config) const {
+    if (!validateDeviceConfig(config.deviceId, config.sampleRate)) {
+        return false;
+    }
+
+    if (config.numInputChannels == 0) {
+        return true;
+    }
+
+    auto devices = getDevices();
+    const uint32_t inputDeviceId = (config.inputDeviceId != 0) ? config.inputDeviceId : config.deviceId;
+    for (const auto& device : devices) {
+        if (device.id != inputDeviceId) {
+            continue;
+        }
+
+        if (device.maxInputChannels == 0) {
+            Aestra::Log::error("[AudioDeviceManager] validateStreamConfig failed: Input device has 0 input channels");
+            return false;
+        }
+
+        if (config.numInputChannels > device.maxInputChannels) {
+            Aestra::Log::error("[AudioDeviceManager] validateStreamConfig failed: Requested input channels exceed device capacity");
+            return false;
+        }
+
+        return true;
+    }
+
+    Aestra::Log::error("[AudioDeviceManager] validateStreamConfig failed: Input device ID " + std::to_string(inputDeviceId) +
+                       " not found");
+    return false;
 }
 
 AudioDriverType AudioDeviceManager::getActiveDriverType() const {

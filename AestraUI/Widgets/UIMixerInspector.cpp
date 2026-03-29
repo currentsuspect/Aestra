@@ -363,7 +363,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         NUIColor bg = active ? m_tabActive : (hovered ? m_tabHover : m_tabBg);
         renderer.fillRoundedRect(m_tabRects[i], TAB_RADIUS, bg);
         renderer.strokeRoundedRect(m_tabRects[i], TAB_RADIUS, 1.0f, m_border);
-        renderer.drawTextCentered(tabLabels[i], m_tabRects[i], 10.0f, active ? m_text : m_textSecondary);
+        renderer.drawTextCentered(tabLabels[i], m_tabRects[i], 10.0f, active ? m_text : m_text.withAlpha(0.92f));
     }
 
     // Header

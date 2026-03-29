@@ -85,7 +85,7 @@ public:
     // Callbacks setters (forwarded to Bridge)
     void setCloseCallback(std::function<void()> cb) { if (m_window) m_window->setCloseCallback(cb); }
     void setResizeCallback(std::function<void(int, int)> cb) { if (m_window) m_window->setResizeCallback(cb); }
-    void setTransportCallback(std::function<void(TransportAction)> cb) { m_transportCallback = cb; }
+    void setTransportCallback(std::function<void(TransportAction)> cb);
     // ... others handled internally or exposed as needed
 
     // Mouse Tracking

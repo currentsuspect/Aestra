@@ -10,12 +10,61 @@
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 // #include "SourceManager.h" // Removed, inside ClipSource.h
+#include <cctype>
 #include <chrono>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 
 namespace Aestra {
 namespace Audio {
+
+namespace {
+std::string toLowerASCII(const std::string& text) {
+    std::string out = text;
+    std::transform(out.begin(), out.end(), out.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return out;
+}
+
+int compareNaturalNames(const std::string& lhs, const std::string& rhs) {
+    size_t i = 0;
+    size_t j = 0;
+    const std::string a = toLowerASCII(lhs);
+    const std::string b = toLowerASCII(rhs);
+
+    while (i < a.size() && j < b.size()) {
+        if (std::isdigit(static_cast<unsigned char>(a[i])) && std::isdigit(static_cast<unsigned char>(b[j]))) {
+            uint64_t av = 0;
+            uint64_t bv = 0;
+            while (i < a.size() && std::isdigit(static_cast<unsigned char>(a[i]))) {
+                av = (av * 10) + static_cast<uint64_t>(a[i] - '0');
+                ++i;
+            }
+            while (j < b.size() && std::isdigit(static_cast<unsigned char>(b[j]))) {
+                bv = (bv * 10) + static_cast<uint64_t>(b[j] - '0');
+                ++j;
+            }
+            if (av != bv) {
+                return (av < bv) ? -1 : 1;
+            }
+            continue;
+        }
+
+        if (a[i] != b[j]) {
+            return (a[i] < b[j]) ? -1 : 1;
+        }
+        ++i;
+        ++j;
+    }
+
+    if (a.size() == b.size()) {
+        return 0;
+    }
+    return (a.size() < b.size()) ? -1 : 1;
+}
+} // namespace
 
 PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     : m_trackManager(trackManager)
@@ -145,6 +194,9 @@ void PatternBrowserPanel::refreshPatterns() {
     
     auto allPatterns = m_trackManager->getPatternManager().getAllPatterns();
     for (const auto& p : allPatterns) {
+        if (!p || !p->isMidi()) {
+            continue;
+        }
         PatternEntry entry;
         entry.id = p->id;
         entry.name = p->name;
@@ -176,6 +228,21 @@ void PatternBrowserPanel::refreshClips() {
             m_clips.push_back(entry);
         }
     }
+
+    std::sort(m_clips.begin(), m_clips.end(), [](const ClipEntry& lhs, const ClipEntry& rhs) {
+        const int nameCmp = compareNaturalNames(lhs.name, rhs.name);
+        if (nameCmp != 0) {
+            return nameCmp < 0;
+        }
+
+        const int fileCmp = compareNaturalNames(lhs.filename, rhs.filename);
+        if (fileCmp != 0) {
+            return fileCmp < 0;
+        }
+
+        return lhs.id.value < rhs.id.value;
+    });
+
     setDirty(true);
 }
 
@@ -320,7 +387,9 @@ void PatternBrowserPanel::renderClipList(AestraUI::NUIRenderer& renderer) {
         if (y + m_itemHeight < bounds.y + m_headerHeight) { y += m_itemHeight; continue; }
         if (y > bounds.y + bounds.height) break;
         
-        renderClipItem(renderer, entry, y, false);
+        const bool selected = (entry.id == m_selectedClipId);
+        const bool hovered = (entry.id == m_hoveredClipId);
+        renderClipItem(renderer, entry, y, selected, hovered);
         y += m_itemHeight;
     }
 }
@@ -399,78 +468,118 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         // Find hovered item
         float listScrollY = relativeY - m_headerHeight + m_scrollOffset;
         int itemIndex = static_cast<int>(listScrollY / m_itemHeight);
-        
-        if (itemIndex >= 0 && itemIndex < static_cast<int>(m_patterns.size())) {
-            m_hoveredPatternId = m_patterns[itemIndex].id;
-            
-            // Mouse Press - Initialize Drag / Select
-            if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
-                // Get current time for double-click detection
-                auto now = std::chrono::steady_clock::now();
-                double currentTime = std::chrono::duration<double>(now.time_since_epoch()).count();
-                
-                // Double-click check
-                bool isDoubleClick = (m_lastClickedPatternId == m_patterns[itemIndex].id) &&
-                                    (currentTime - m_lastClickTime < 0.4);
-                
-                m_selectedPatternId = m_patterns[itemIndex].id;
-                if (m_onPatternSelected) m_onPatternSelected(m_selectedPatternId);
-                
-                if (isDoubleClick) {
-                    // Double-click: open pattern in editor
-                    if (m_onPatternDoubleClick) m_onPatternDoubleClick(m_selectedPatternId);
-                    m_dragPotential = false; // Cancel drag on double click
-                } else {
-                    // Single click: Potential drag start
-                    m_dragPotential = true;
-                    m_dragStartPos = event.position;
-                    m_dragPatternId = m_selectedPatternId;
+        if (m_mode == BrowserMode::Patterns) {
+            if (itemIndex >= 0 && itemIndex < static_cast<int>(m_patterns.size())) {
+                m_hoveredPatternId = m_patterns[itemIndex].id;
+
+                if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+                    auto now = std::chrono::steady_clock::now();
+                    double currentTime = std::chrono::duration<double>(now.time_since_epoch()).count();
+                    bool isDoubleClick = (m_lastClickedPatternId == m_patterns[itemIndex].id) &&
+                                         (currentTime - m_lastClickTime < 0.4);
+
+                    m_selectedPatternId = m_patterns[itemIndex].id;
+                    if (m_onPatternSelected) m_onPatternSelected(m_selectedPatternId);
+
+                    if (isDoubleClick) {
+                        if (m_onPatternDoubleClick) m_onPatternDoubleClick(m_selectedPatternId);
+                        m_dragPotential = false;
+                    } else {
+                        m_dragPotential = true;
+                        m_dragStartPos = event.position;
+                        m_dragPatternId = m_selectedPatternId;
+                        m_dragClipId = ClipSourceID{};
+                    }
+
+                    m_lastClickTime = currentTime;
+                    m_lastClickedPatternId = m_patterns[itemIndex].id;
+
+                    repaint();
+                    return true;
                 }
-                
-                m_lastClickTime = currentTime;
-                m_lastClickedPatternId = m_patterns[itemIndex].id;
-                
-                repaint();
-                return true;
+            } else {
+                m_hoveredPatternId = PatternID();
+            }
+
+            if (m_dragPotential && itemIndex >= 0 && itemIndex < static_cast<int>(m_patterns.size())) {
+                float dx = event.position.x - m_dragStartPos.x;
+                float dy = event.position.y - m_dragStartPos.y;
+                float dist = std::sqrt(dx * dx + dy * dy);
+
+                if (dist >= dragManager.getDragThreshold()) {
+                    AestraUI::DragData dragData;
+                    dragData.type = AestraUI::DragDataType::Pattern;
+
+                    for (const auto& p : m_patterns) {
+                        if (p.id == m_dragPatternId) {
+                            dragData.displayName = p.name;
+                            break;
+                        }
+                    }
+
+                    dragData.customData = m_dragPatternId;
+                    dragData.previewWidth = 120.0f;
+                    dragData.previewHeight = m_itemHeight;
+                    dragData.accentColor = m_selectedColor;
+
+                    dragManager.beginDrag(dragData, m_dragStartPos, this);
+                    m_isDragging = true;
+                    m_dragPotential = false;
+
+                    if (m_onPatternDragStart) m_onPatternDragStart(m_dragPatternId);
+
+                    return true;
+                }
             }
         } else {
-            m_hoveredPatternId = PatternID();
-        }
-        
-        // Drag Initiation Check
-        if (m_dragPotential && itemIndex >= 0 && itemIndex < static_cast<int>(m_patterns.size())) {
-             float dx = event.position.x - m_dragStartPos.x;
-             float dy = event.position.y - m_dragStartPos.y;
-             float dist = std::sqrt(dx * dx + dy * dy);
-             
-             if (dist >= dragManager.getDragThreshold()) {
-                 // Start Drag!
-                 AestraUI::DragData dragData;
-                 dragData.type = AestraUI::DragDataType::Pattern;
-                 
-                 // Find pattern name and data
-                 for(const auto& p : m_patterns) {
-                     if(p.id == m_dragPatternId) {
-                         dragData.displayName = p.name;
-                         break;
-                     }
-                 }
-                 
-                 // Pass PatternID value as string (safest) or customData
-                 dragData.customData = m_dragPatternId;
-                 dragData.previewWidth = 120.0f;
-                 dragData.previewHeight = m_itemHeight;
-                 dragData.accentColor = m_selectedColor;
-                 
-                 dragManager.beginDrag(dragData, m_dragStartPos, this);
-                 m_isDragging = true;
-                 m_dragPotential = false;
-                 
-                 // Legacy callback (optional)
-                 if (m_onPatternDragStart) m_onPatternDragStart(m_dragPatternId);
-                 
-                 return true;
-             }
+            if (itemIndex >= 0 && itemIndex < static_cast<int>(m_clips.size())) {
+                m_hoveredClipId = m_clips[itemIndex].id;
+
+                if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+                    auto now = std::chrono::steady_clock::now();
+                    double currentTime = std::chrono::duration<double>(now.time_since_epoch()).count();
+                    bool isDoubleClick = (m_lastClickedClipId == m_clips[itemIndex].id) &&
+                                         (currentTime - m_lastClickTime < 0.4);
+
+                    m_selectedClipId = m_clips[itemIndex].id;
+                    m_dragPotential = !isDoubleClick;
+                    m_dragStartPos = event.position;
+                    m_dragClipId = m_selectedClipId;
+                    m_dragPatternId = PatternID{};
+                    m_lastClickTime = currentTime;
+                    m_lastClickedClipId = m_clips[itemIndex].id;
+                    repaint();
+                    return true;
+                }
+            } else {
+                m_hoveredClipId = ClipSourceID{};
+            }
+
+            if (m_dragPotential && itemIndex >= 0 && itemIndex < static_cast<int>(m_clips.size())) {
+                float dx = event.position.x - m_dragStartPos.x;
+                float dy = event.position.y - m_dragStartPos.y;
+                float dist = std::sqrt(dx * dx + dy * dy);
+
+                if (dist >= dragManager.getDragThreshold()) {
+                    const auto& clip = m_clips[itemIndex];
+                    AestraUI::DragData dragData;
+                    dragData.type = AestraUI::DragDataType::File;
+                    dragData.filePath = clip.filename;
+                    dragData.displayName = clip.name;
+                    dragData.customData = clip.id;
+                    dragData.previewWidth = 140.0f;
+                    dragData.previewHeight = m_itemHeight;
+                    dragData.accentColor = m_selectedColor;
+
+                    dragManager.beginDrag(dragData, m_dragStartPos, this);
+                    m_isDragging = true;
+                    m_dragPotential = false;
+
+                    if (m_onClipDragStart) m_onClipDragStart(clip.id);
+
+                    return true;
+                }
+            }
         }
     }
     
@@ -496,12 +605,15 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     return NUIComponent::onMouseEvent(event);
 }
 
-void PatternBrowserPanel::renderClipItem(AestraUI::NUIRenderer& renderer, const ClipEntry& entry, float y, bool hovered) {
+void PatternBrowserPanel::renderClipItem(AestraUI::NUIRenderer& renderer, const ClipEntry& entry, float y, bool selected, bool hovered) {
     auto bounds = getBounds();
     AestraUI::NUIRect itemRect(bounds.x, y, bounds.width, m_itemHeight);
     auto& theme = AestraUI::NUIThemeManager::getInstance();
 
-    if (hovered) {
+    if (selected) {
+        renderer.fillRect(itemRect, m_selectedColor.withAlpha(0.2f));
+        renderer.fillRect(AestraUI::NUIRect(bounds.x, y, 2, m_itemHeight), m_selectedColor);
+    } else if (hovered) {
         // Use darker hover for contrast
         renderer.fillRoundedRect(itemRect, 4, theme.getColor("hover").withAlpha(0.1f));
     }
@@ -522,7 +634,10 @@ void PatternBrowserPanel::renderClipItem(AestraUI::NUIRenderer& renderer, const 
         displayName = displayName.substr(0, 22) + "...";
     }
 
-    renderer.drawText(displayName, AestraUI::NUIPoint(itemRect.x + 32, y + 9), 12.0f, theme.getColor("textPrimary"));
+    renderer.drawText(displayName,
+                     AestraUI::NUIPoint(itemRect.x + 32, y + 9),
+                     12.0f,
+                     selected ? theme.getColor("textPrimary") : theme.getColor("textSecondary"));
     
     // Duration
     std::stringstream ss;
