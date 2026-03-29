@@ -214,6 +214,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/CommandTransaction.cpp
     src/Commands/SplitClipCommand.cpp
     src/Commands/AddClipCommand.cpp
+    src/Commands/CreateLaneCommand.cpp
     
     # Headless / batch processing
     src/Headless/HeadlessMusicGenerator.cpp
@@ -310,9 +311,17 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Commands/CommandTransaction.h
     include/Commands/SplitClipCommand.h
     include/Commands/AddClipCommand.h
+    include/Commands/AddChannelCommand.h
+    include/Commands/CreateLaneCommand.h
+    include/Commands/DuplicateClipCommand.h
     include/Commands/MoveClipCommand.h
     include/Commands/RemoveClipCommand.h
+    include/Commands/TrimClipCommand.h
     include/Commands/MacroCommand.h
+    include/Commands/SetVolumeCommand.h
+    include/Commands/SetPanCommand.h
+    include/Commands/SetMuteCommand.h
+    include/Commands/SetSoloCommand.h
     
     # Headless / batch processing
     include/Headless/HeadlessMusicGenerator.h
