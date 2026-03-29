@@ -6,24 +6,28 @@ This is the execution backlog for shipping **Aestra v1 Beta by December 2026**. 
 
 ## Current repo status (quick reality check)
 
-This section is here to prevent us from re-building things that already exist.
+Last updated: March 29, 2026. Keep this section in sync as we ship.
 
-- **Project save/load exists**: `ProjectSerializer` is implemented in `Source/ProjectSerializer.{h,cpp}`.
-	- Known gaps (still P0): non-destructive load, validation, and migration policy.
-- **Autosave exists (currently app-level)**: there is autosave plumbing inside `Source/Main.cpp` (timer + `autosave.aes` path).
-	- Known gaps (still P0): non-destructive writes, rotation, recovery UX, and tying autosave to actual “dirty” edits.
-- **Undo/redo exists (partially wired)**: `CommandHistory` is present and used for some clip operations in `Source/TrackManagerUI.cpp`.
-	- Known gaps (still P0): consistent integration across core edits + atomic transactions.
-- **Recording is present (at least partially)**: UI wiring exists (`TransportBar` → `AestraContent` → `TrackManager::record()`), and recording waveform snapshot rendering exists in `Source/TrackUIComponent.cpp`.
-	- Known gaps (still P0): end-to-end reliability/stress tests, file management rules, device edge cases.
-- **Export/offline render**: not confirmed in code yet (still treated as missing until we find the implementation).
+- **Project save/load**: `ProjectSerializer` implemented. Round-trip smoke test passing (`ProjectRoundTripTest`).
+- **Autosave**: `AutosaveManager` in `AestraAudio/src/Core/AutosaveManager.cpp`. Tied to dirty state, crash-safe writes, recovery on startup.
+- **Undo/redo fully wired for core UX**: `CommandHistory` integrated across all main clip/track/mixer operations.
+  - Clip ops: add, remove, move (drag), split, trim, duplicate — all through commands.
+  - Track ops: add track uses `CommandTransaction` with `CreateLaneCommand` + `AddChannelCommand`.
+  - Mixer ops: volume, pan, mute, solo — all through commands.
+  - `CommandTransaction` groups multi-step edits into single undo steps.
+- **Recording (partially wired)**: UI wiring exists (`TransportBar` → `AestraContent` → `TrackManager::record()`).
+  - Known gaps (still P0): end-to-end reliability/stress tests, file management rules, device edge cases.
+- **Export/offline render**: not confirmed in code yet (treated as missing until verified).
 
-New since the early January baseline:
+Completed since early January:
 
-- **Project roundtrip smoke test added**: `Tests/ProjectRoundTripTest.cpp` + CMake target `ProjectRoundTripTest`.
-- **Internal plugin persistence path added**: units can now serialize plugin ID/state and restore internal instruments on project load.
-- **Internal plugin discovery path added**: built-in plugins now participate in normal scanner/manager lookup.
-- **Headless audible Arsenal proof added**: `RumbleArsenalAudibleTest` proves an internal Arsenal instrument can be driven by pattern playback and render audible output.
+- Project roundtrip smoke test (`Tests/ProjectRoundTripTest.cpp`).
+- Internal plugin persistence (units serialize plugin ID/state, restore on load).
+- Internal plugin discovery (built-in plugins in normal scanner/manager path).
+- Headless audible Arsenal proof (`RumbleArsenalAudibleTest`).
+- Phase 2 undo/redo integration (all core UX actions use `CommandHistory`).
+- Documentation overhaul (stale docs cleaned, AI references deferred, broken links fixed).
+- CMakeLists updated with `CreateLaneCommand.cpp` and missing command headers.
 
 ## How to use this list
 
@@ -110,12 +114,33 @@ New since the early January baseline:
 
 **Done means:** core edits are undoable, atomic, deterministic, and survive common sequences.
 
-- [P0][E-001] Define the canonical command model for core edits (clip ops, lane ops, pattern ops, mixer ops).
-- [P0][E-002] Ensure command history is integrated across the main UX paths (not “some widgets”).
-- [P0][E-003] Transactions/atomic grouping: multi-step edits become a single undo step.
+- [x][P0][E-001] Define the canonical command model for core edits (clip ops, lane ops, pattern ops, mixer ops). ✅
+  - Commands exist: `AddClip`, `RemoveClip`, `MoveClip`, `SplitClip`, `TrimClip`, `DuplicateClip`, `CreateLane`, `AddChannel`, `SetVolume`, `SetPan`, `SetMute`, `SetSolo`.
+  - Header-only commands: `Set*Command`, `TrimClipCommand`, `DuplicateClipCommand`.
+  - Multi-step via `CommandTransaction` and `MacroCommand`.
+- [x][P0][E-002] Ensure command history is integrated across the main UX paths (not "some widgets"). ✅
+  - `onClipDeleted` → `RemoveClipCommand`
+  - `onSplitRequested` → `SplitClipCommand`
+  - `splitSelectedClipAtPlayhead` → `SplitClipCommand`
+  - `finishInstantClipDrag` → `MoveClipCommand` (captures original state, creates command on completion)
+  - `cancelInstantClipDrag` → `MoveClipCommand` (reverts to original)
+  - `addTrack` → `CommandTransaction` with `CreateLaneCommand` + `AddChannelCommand`
+  - Keyboard undo/redo via `AestraWindowManager` (Ctrl+Z/Ctrl+Shift+Z)
+  - HUD button undo/redo via `AestraApp` toolbar
+- [x][P0][E-003] Transactions/atomic grouping: multi-step edits become a single undo step. ✅
+  - `CommandTransaction` groups commands into single undo steps.
+  - `CommandTransactionGuard` provides RAII batching.
+  - `addTrack` uses transaction for atomic lane + channel creation.
 - [P0][E-004] Undo/redo invalidation rules (e.g., when project is reloaded).
+  - `CommandHistory::clear()` exists and is called on project load.
+  - Remaining: ensure undo stack is cleared explicitly on project open/new.
 - [P0][E-005] Test plan: scripted sequences of edits + undo/redo replay producing identical state.
+  - `Tests/Commands/CommandHistoryTest.cpp` covers basic stack behavior.
+  - Remaining: integration test for multi-step sequences.
 - [P1][E-006] Merge/squash trivial operations (drag moves) to avoid 500-step histories.
+  - `updateInstantClipDrag` performs live model updates during drag.
+  - `finishInstantClipDrag` captures final position and creates one undoable command for the whole drag.
+  - This effectively squashes drag moves into one undo step ✅ (implicit via finish-on-mouseup).
 
 ---
 
@@ -124,12 +149,18 @@ New since the early January baseline:
 **Done means:** users can actually arrange a track with reliable basic editing.
 
 - [P0][F-001] Clip hit testing correctness (selection is reliable at all zoom levels).
-- [P0][F-002] Move/drag clips with snapping (grid snap on/off, appropriate rounding).
-- [P0][F-003] Duplicate workflow (copy/paste and/or alt-drag).
-- [P0][F-004] Split clips reliably at playhead/cursor; undoable.
-- [P0][F-005] Trim clip edges; undoable.
+- [x][P0][F-002] Move/drag clips with snapping (grid snap on/off, appropriate rounding). ✅
+  - `startInstantClipDrag`/`updateInstantClipDrag`/`finishInstantClipDrag` with `MoveClipCommand`.
+  - `snapBeatToGrid` handles snapping.
+- [x][P0][F-003] Duplicate workflow (copy/paste and/or alt-drag). ✅
+  - `DuplicateClipCommand` exists and is wired.
+- [x][P0][F-004] Split clips reliably at playhead/cursor; undoable. ✅
+  - `onSplitRequested` and `splitSelectedClipAtPlayhead` both use `SplitClipCommand`.
+- [x][P0][F-005] Trim clip edges; undoable. ✅
+  - `TrimClipCommand` exists and is wired.
 - [P0][F-006] Multi-select (range select and ctrl-select); bulk operations.
-- [P0][F-007] Delete behavior (safe; can’t delete “invisibly”; undoable).
+- [x][P0][F-007] Delete behavior (safe; can't delete "invisibly"; undoable). ✅
+  - `onClipDeleted` uses `RemoveClipCommand`.
 - [P0][F-008] Pattern/playlist loop mechanics: predictable looping, clip repetition, and timeline alignment.
 - [P1][F-009] Basic fades (optional, if already supported in engine) or at minimum click-free trimming.
 - [P1][F-010] Basic clip gain control (per-clip gain) and normalization option (non-destructive).

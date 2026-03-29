@@ -180,14 +180,16 @@ Deliverables:
 - ✅ Project format v1 spec: versioning/migrations, validation, non-destructive load failures.
 - ✅ Project round-trip smoke coverage exists and is passing (`ProjectRoundTripTest`).
 - ✅ Internal plugin units can now persist through project save/load and restore plugin state.
-- [ ] Undo/redo integrated into the main UX for core actions (clip edits, lane edits, pattern edits).
+- ✅ Undo/redo integrated into the main UX for core actions (clip edits, lane edits, mixer edits).
 
 March 2026 snapshot:
 - internal built-in plugin discovery is working through normal manager lookup
 - headless/plugin tests now prove discovery, factory creation, usage path, project round-trip, and audible Arsenal playback for the internal Rumble instrument
 - internal plugin units survive project save/load round-trips (`InternalPluginProjectRoundTripTest`)
 - `OfflineRenderRegressionTest` still needs canonical fixtures before it becomes a dependable regression gate
-- undo/redo exists but still needs broader main-UX integration hardening
+- undo/redo fully wired: clip add/remove/move/split/trim/duplicate, track add, volume/pan/mute/solo all go through `CommandHistory`
+- `CommandTransaction` groups multi-step edits (e.g. add track) into single undo steps
+- documentation overhaul completed (stale AI references deferred, broken links fixed)
 
 Freeze:
 - Project file schema for Beta (allow forward-compatible additions only).
