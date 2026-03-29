@@ -490,8 +490,9 @@ if(WIN32)
             advapi32    # Registry
     )
     
-    # Define "AestraAudio" as an alias to the platform library for main app linking
-    add_library(AestraAudio ALIAS AestraAudioWin)
+    # Use INTERFACE (not ALIAS) so PUBLIC include dirs from AestraAudioWin propagate
+    add_library(AestraAudio INTERFACE)
+    target_link_libraries(AestraAudio INTERFACE AestraAudioWin)
 
 elseif(UNIX)
     # Non-Windows (Linux)
@@ -529,7 +530,9 @@ elseif(UNIX)
                 AestraAudioCore
         )
 
-        add_library(AestraAudio ALIAS AestraAudioLinux)
+        # Use INTERFACE (not ALIAS) so PUBLIC include dirs from AestraAudioCore propagate
+        add_library(AestraAudio INTERFACE)
+        target_link_libraries(AestraAudio INTERFACE AestraAudioCore)
     else()
         # No ALSA - stub already in AestraAudioCore
         # Create an interface library for compatibility
