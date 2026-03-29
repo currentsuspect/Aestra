@@ -4,7 +4,7 @@
 
 # 🧭 Aestra
 
-Active engineering repo for the Aestra DAW. The public tree includes the core engine, UI framework, platform layer, tests, and contributor docs.
+Active engineering repo for Aestra. The public tree includes the core engine, UI framework, platform layer, tests, and contributor docs.
 
 <div class="cta-buttons" markdown="1">
 [Get Started](getting-started/index.md){ .cta-button }

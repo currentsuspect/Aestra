@@ -19,6 +19,8 @@
 #include "Commands/MoveClipCommand.h"
 #include "Commands/RemoveClipCommand.h"
 #include "Commands/CommandTransaction.h"
+#include "Commands/CreateLaneCommand.h"
+#include "Commands/AddChannelCommand.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include <algorithm>
 #include <cmath>
@@ -1029,6 +1031,28 @@ void TrackManagerUI::finishInstantClipDrag() {
     
     Log::info("Finished instant clip drag");
     
+    // Capture final position before clearing drag state
+    double finalStartBeat = 0.0;
+    PlaylistLaneID finalLaneId;
+    if (m_trackManager && m_draggedClipId.isValid()) {
+        auto& playlist = m_trackManager->getPlaylistModel();
+        if (const auto* clip = playlist.getClip(m_draggedClipId)) {
+            finalStartBeat = clip->startBeat;
+            finalLaneId = playlist.findClipLane(m_draggedClipId);
+        }
+        
+        // Create undoable command for the move if position actually changed
+        if (finalStartBeat != m_clipOriginalStartTime || finalLaneId != m_clipOriginalLaneId) {
+            auto cmd = std::make_shared<MoveClipCommand>(
+                playlist,
+                m_draggedClipId,
+                m_clipOriginalStartTime, m_clipOriginalLaneId,
+                finalStartBeat, finalLaneId
+            );
+            m_trackManager->getCommandHistory().pushAndExecute(cmd);
+        }
+    }
+    
     m_isDraggingClipInstant = false;
     m_draggedClipTrack = nullptr;
     m_draggedClipId = ClipInstanceID{};
@@ -1070,39 +1094,29 @@ void TrackManagerUI::cancelInstantClipDrag() {
 }
 
 void TrackManagerUI::addTrack(const std::string& name) {
-    if (m_trackManager) {
-        // Create lane in PlaylistModel
-        PlaylistLaneID laneId = m_trackManager->getPlaylistModel().createLane(name);
-        
-        // Create Mixer Channel, linking it to the new lane
-        auto channel = m_trackManager->addChannel(name); // Assuming addChannel creates and returns a new channel
-        
-        // Create UI component for the track, passing both identifiers
-        auto trackUI = std::make_shared<TrackUIComponent>(laneId, std::shared_ptr<MixerChannel>(channel, [](MixerChannel*){}), m_trackManager.get());
-        
-        // Register callback for exclusive solo coordination
-        trackUI->setOnSoloToggled([this](TrackUIComponent* soloedTrack) {
-            this->onTrackSoloToggled(soloedTrack);
-        });
-        
-        // Register callback for cache invalidation (button hover, etc.)
-        trackUI->setOnCacheInvalidationNeeded([this]() {
-            this->invalidateCache();
-        });
-        
-        // Register callback for clip deletion with ripple animation
-        trackUI->setOnClipDeleted([this](TrackUIComponent* trackComp, ClipInstanceID clipId, AestraUI::NUIPoint ripplePos) {
-            this->onClipDeleted(trackComp, clipId, ripplePos);
-        });
-        
-        m_trackUIComponents.push_back(trackUI);
-        addChild(trackUI);
-
-        layoutTracks();
-        scheduleTimelineMinimapRebuild();
-        invalidateCache();  // Invalidate cache when track added
-        Log::info("Added track UI: " + name);
-    }
+    if (!m_trackManager) return;
+    
+    // Use CommandTransaction so add track is a single undoable step
+    auto transaction = std::make_shared<CommandTransaction>("Add Track");
+    
+    // Add lane creation command
+    auto laneCmd = std::make_shared<CreateLaneCommand>(
+        m_trackManager->getPlaylistModel(), name);
+    transaction->add(laneCmd);
+    
+    // Add mixer channel creation command
+    auto channelCmd = std::make_shared<AddChannelCommand>(*m_trackManager, name);
+    transaction->add(channelCmd);
+    
+    // Execute the transaction (creates lane + channel atomically)
+    m_trackManager->getCommandHistory().pushAndExecute(transaction);
+    
+    // Rebuild UI from model state
+    refreshTracks();
+    layoutTracks();
+    scheduleTimelineMinimapRebuild();
+    invalidateCache();
+    Log::info("Added track via command: " + name);
 }
 
 void TrackManagerUI::refreshTracks() {

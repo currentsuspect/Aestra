@@ -583,7 +583,7 @@ Before submitting documentation, verify:
 - [ ] All links work (internal and external)
 - [ ] Headings use consistent emoji style
 - [ ] Code blocks have language specified
-- [ ] Year references are current (2025)
+- [ ] Year references are current (2026)
 - [ ] No outdated information
 - [ ] Clear and concise language
 - [ ] Examples included where helpful
@@ -601,4 +601,4 @@ Before submitting documentation, verify:
 
 **Write docs that you'd want to read!** 📖
 
-*Last updated: January 2025*
+*Last updated: March 2026*
