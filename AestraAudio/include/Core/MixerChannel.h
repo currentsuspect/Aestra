@@ -1,12 +1,12 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "AestraUUID.h"
+#include "../AestraUUID.h"
 #include "AudioCommandQueue.h"
-#include "AudioDriverTypes.h"
+#include "../Drivers/AudioDriverTypes.h"
 #include "AudioGraph.h"
-#include "AudioProcessor.h"
-#include "EffectChain.h"
+#include "../DSP/AudioProcessor.h"
+#include "../Plugin/EffectChain.h"
 #include "MixerBus.h"
 
 #include <atomic>
