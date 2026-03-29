@@ -1,7 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "Models/TrackManager.h"
+#include "TrackManager.h"
 #include "../AestraCore/include/AestraJSON.h"
 #include <string>
 #include <memory>
