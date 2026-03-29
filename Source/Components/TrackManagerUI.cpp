@@ -4109,7 +4109,10 @@ void TrackManagerUI::splitSelectedClipAtPlayhead() {
         return;
     }
     
-    playlist.splitClip(m_selectedClipId, splitBeat);
+    auto cmd = std::make_shared<SplitClipCommand>(playlist, m_selectedClipId, splitBeat);
+    m_trackManager->getCommandHistory().pushAndExecute(cmd);
+    
+    m_trackManager->markModified();
     refreshTracks();
     invalidateCache();
     scheduleTimelineMinimapRebuild();
