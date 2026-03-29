@@ -65,7 +65,6 @@ Welcome to the comprehensive documentation hub for **Aestra**! This guide helps 
 ### ⚙️ **Technical Reference**
 - **[FAQ](../technical/faq.md)** - Frequently asked questions
 - **[Glossary](../technical/glossary.md)** - Technical terms
-- **[AI Integration](../technical/ai-guide.md)** - Muse AI features
 - **[Roadmap](../technical/roadmap.md)** - Future development plans
 - **[Testing & CI](../technical/testing_ci.md)** - Current verification workflow
 - **[Rumble MVP Plan](../technical/RUMBLE_MVP_PLAN.md)** - Internal instrument status and validation
