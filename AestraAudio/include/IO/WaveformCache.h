@@ -1,8 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "ClipSource.h"
-#include "TimeTypes.h"
+#include "../Models/ClipSource.h"
+#include "../Models/TimeTypes.h"
 
 #include <atomic>
 #include <cstdint>

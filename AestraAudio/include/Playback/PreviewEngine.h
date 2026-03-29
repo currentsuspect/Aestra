@@ -1,7 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "SamplePool.h"
+#include "../IO/SamplePool.h"
 
 #include <atomic>
 #include <condition_variable>
