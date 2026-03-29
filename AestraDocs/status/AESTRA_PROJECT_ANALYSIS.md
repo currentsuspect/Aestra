@@ -1,7 +1,7 @@
-# Aestra DAW Project Analysis
+# Aestra Project Analysis
 
 ## Executive Summary
-This report details the findings from a comprehensive analysis of the Aestra DAW codebase. The focus was on identifying performance bottlenecks, real-time safety violations, and potential memory management issues.
+This report details the findings from a comprehensive analysis of the Aestra codebase. The focus was on identifying performance bottlenecks, real-time safety violations, and potential memory management issues.
 
 **Key Findings:**
 *   **Critical Real-Time Violations:** The audio engine performs logging and memory allocations (vector resizing) within the audio processing callback. This poses a high risk of audio dropouts and glitches.

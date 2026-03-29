@@ -15,6 +15,7 @@
 #include "ClipSource.h"
 #include "Commands/SplitClipCommand.h"
 #include "Commands/AddClipCommand.h"
+#include "Commands/DuplicateClipCommand.h"
 #include "Commands/MoveClipCommand.h"
 #include "Commands/RemoveClipCommand.h"
 #include "Commands/CommandTransaction.h"
@@ -32,6 +33,36 @@
     #define rmt_BeginCPUSample(name, flags) ((void)0)
     #define rmt_EndCPUSample() ((void)0)
 #endif
+
+namespace {
+
+AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* component) {
+    AestraUI::NUIComponent* root = component;
+    while (root && root->getParent()) {
+        root = root->getParent();
+    }
+    return root;
+}
+
+void detachContextMenu(const std::shared_ptr<AestraUI::NUIContextMenu>& menu) {
+    if (!menu) return;
+    if (auto* parent = menu->getParent()) {
+        parent->removeChild(menu);
+    }
+}
+
+void attachAndShowContextMenu(AestraUI::NUIComponent* owner,
+                              const std::shared_ptr<AestraUI::NUIContextMenu>& menu,
+                              const AestraUI::NUIPoint& position) {
+    if (!owner || !menu) return;
+    AestraUI::NUIComponent* root = getRootComponent(owner);
+    if (!root) root = owner;
+    root->addChild(menu);
+    menu->showAt(position);
+    root->repaint();
+}
+
+} // namespace
 
 namespace Aestra {
 namespace Audio {
@@ -492,7 +523,7 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
         // Cleanup previous menu if exists
         if (m_activeContextMenu) {
             Log::info("TrackManagerUI: Closing existing menu");
-            removeChild(m_activeContextMenu);
+            detachContextMenu(m_activeContextMenu);
             m_activeContextMenu = nullptr;
         } else {
              Log::info("TrackManagerUI: Creating new context menu");
@@ -616,14 +647,7 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
         // Assuming showAt handles standard NUI popup logic, but usually we need to retain reference 
         // or add it to a layer. If NUIContextMenu destroys itself on close, we are good.
         // For safety in this codebase, adding to children is often required unless using global overlay).
-        if (auto parent = getParent()) {
-             // Often context menus are added to the root window. 
-             // We'll trust the NUIContextMenu implementation for now or add it to specific layer if needed.
-             // If showAt creates a popup window/component, great. 
-             // If it sets visible, we might need to addChild(menu).
-             // Based on NUIContextMenu.h, it is a Component. Let's add it.
-             addChild(menu);
-        }
+        attachAndShowContextMenu(this, menu, AestraUI::NUIPoint(m_menuIconBounds.x, m_menuIconBounds.y + m_menuIconBounds.height));
         
         return true;
     }
@@ -2165,7 +2189,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Right && m_followPlayheadBounds.contains(event.position)) {
         
         if (m_activeContextMenu) {
-             removeChild(m_activeContextMenu);
+             detachContextMenu(m_activeContextMenu);
              m_activeContextMenu = nullptr;
         }
 
@@ -2183,8 +2207,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             setFollowPlayhead(true);
         });
         
-        menu->showAt(m_followPlayheadBounds.x, m_followPlayheadBounds.y + m_followPlayheadBounds.height);
-        addChild(menu);
+        attachAndShowContextMenu(this, menu, AestraUI::NUIPoint(m_followPlayheadBounds.x, m_followPlayheadBounds.y + m_followPlayheadBounds.height));
         return true;
     }
 
@@ -2196,7 +2219,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
          
          // If click was NOT handled by the menu (i.e. clicked outside), close it.
          if (!handled && event.pressed) {
-             removeChild(m_activeContextMenu);
+             detachContextMenu(m_activeContextMenu);
              m_activeContextMenu = nullptr;
              // Let execution continue so the click can interact with whatever is underneath
              // (e.g. Stop button, Track header, etc.)
@@ -2630,7 +2653,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         
         if (localPos.x >= minX && localPos.x <= maxX) {
             if (m_activeContextMenu) {
-                removeChild(m_activeContextMenu);
+                detachContextMenu(m_activeContextMenu);
             }
             m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
             auto menu = m_activeContextMenu;
@@ -2641,8 +2664,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 }
             });
             
-            menu->showAt(event.position.x, event.position.y);
-            addChild(menu);
+            attachAndShowContextMenu(this, menu, event.position);
             return true;
         }
     }
@@ -2822,6 +2844,12 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         // Tool shortcuts
         if (event.keyCode == AestraUI::NUIKeyCode::Num1) { setCurrentTool(PlaylistTool::Select); return true; }
         if (event.keyCode == AestraUI::NUIKeyCode::Num2) { setCurrentTool(PlaylistTool::Split); return true; }
+
+        if (event.keyCode == AestraUI::NUIKeyCode::Delete ||
+            event.keyCode == AestraUI::NUIKeyCode::Backspace) {
+            deleteSelectedClip();
+            return true;
+        }
         
         // Undo / Redo
         if (event.modifiers & AestraUI::NUIModifiers::Ctrl) {
@@ -2858,6 +2886,10 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             }
             if (event.keyCode == AestraUI::NUIKeyCode::V) {
                 pasteClipboardAtCursor();
+                return true;
+            }
+            if (event.keyCode == AestraUI::NUIKeyCode::D) {
+                duplicateSelectedClip();
                 return true;
             }
             // Ctrl+B: Paste-to-right (paste at end of selected clip, select new clip)
@@ -2963,6 +2995,40 @@ void TrackManagerUI::pasteClipToRight() {
     scheduleTimelineMinimapRebuild();
     m_trackManager->markModified();
     Log::info("Paste-to-right at beat " + std::to_string(newClip.startBeat));
+}
+
+void TrackManagerUI::duplicateSelectedClip() {
+    if (!m_trackManager || !m_selectedClipId.isValid()) return;
+
+    auto& playlist = m_trackManager->getPlaylistModel();
+    const ClipInstance* selectedClip = playlist.getClip(m_selectedClipId);
+    if (!selectedClip) return;
+
+    PlaylistLaneID targetLaneId = playlist.findClipLane(m_selectedClipId);
+    if (!targetLaneId.isValid()) return;
+
+    const double targetStartBeat = selectedClip->startBeat + selectedClip->durationBeats;
+    auto cmd = std::make_shared<Aestra::Audio::DuplicateClipCommand>(
+        playlist,
+        m_selectedClipId,
+        targetStartBeat,
+        targetLaneId
+    );
+    m_trackManager->getCommandHistory().pushAndExecute(cmd);
+
+    const ClipInstanceID duplicateId = cmd->getDuplicateId();
+    if (duplicateId.isValid()) {
+        m_selectedClipId = duplicateId;
+        if (const auto* duplicateClip = playlist.getClip(duplicateId)) {
+            m_clipboardClip = *duplicateClip;
+        }
+    }
+
+    refreshTracks();
+    invalidateCache();
+    scheduleTimelineMinimapRebuild();
+    m_trackManager->markModified();
+    Log::info("Duplicated selected clip");
 }
 
 void TrackManagerUI::onPaintClip(TrackUIComponent* trackComp, double beat) {
@@ -4920,7 +4986,7 @@ std::pair<double, double> TrackManagerUI::getSelectionBeatRange() const {
 
 void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition) {
     if (m_activeContextMenu) {
-        removeChild(m_activeContextMenu);
+        detachContextMenu(m_activeContextMenu);
     }
 
     m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
@@ -4930,8 +4996,7 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position, 
         if (onSendToAudition) onSendToAudition();
     });
 
-    menu->showAt(position.x, position.y);
-    addChild(menu);
+    attachAndShowContextMenu(this, menu, position);
 }
 
 } // namespace Audio

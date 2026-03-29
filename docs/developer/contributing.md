@@ -1,9 +1,9 @@
-# 🤝 Contributing to Aestra DAW
+# 🤝 Contributing to Aestra
 
 ![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-brightgreen)
 ![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-blue)
 
-Thank you for your interest in contributing to Aestra DAW! This guide will help you understand our development workflow and contribution process.
+Thank you for your interest in contributing to Aestra! This guide will help you understand our development workflow and contribution process.
 
 ## 📋 Table of Contents
 
@@ -255,17 +255,17 @@ main
 
 **By submitting a pull request, you agree that:**
 
-1. All contributed code becomes property of Dylan Makori / Aestra DAW
+1. All contributed code becomes property of Dylan Makori / Aestra Studios
 2. Dylan Makori has full rights to use, modify, and distribute your contributions
 3. You waive all ownership claims to your contributions
 4. You grant Dylan Makori a perpetual, worldwide, exclusive license
-5. Your contributions can be used in the proprietary Aestra DAW product
+5. Your contributions are made under the ASSAL v1.1 license terms
 
 **Why this matters:**
-- Aestra DAW is proprietary commercial software
-- We need clear ownership to maintain the product
+- Aestra is licensed under the Aestra Studios Source-Available License (ASSAL) v1.1
+- The source code is publicly visible for transparency, but is NOT open-source
+- We need clear ownership to maintain and distribute the product
 - Contributors are credited in the project
-- This allows us to build a sustainable business while being transparent
 
 ## 🏆 Recognition
 
@@ -334,7 +334,7 @@ We value all contributors! Contributors are recognized:
 
 ## 🙏 Thank You!
 
-Your contributions help make Aestra DAW better for everyone. We appreciate your time, effort, and passion for building great software!
+Your contributions help make Aestra better for everyone. We appreciate your time, effort, and passion for building great software!
 
 ---
 

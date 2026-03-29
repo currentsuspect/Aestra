@@ -132,6 +132,7 @@ public:
 
     // Panel Physics & Constraints
     AestraUI::NUIRect computeSafeRect() const;
+    float getVisibleBrowserEdge() const;
     AestraUI::NUIRect computeAllowedRectForPanels() const;
     AestraUI::NUIRect computeMaximizedRect() const;
     AestraUI::NUIRect clampRectToAllowed(AestraUI::NUIRect panel, const AestraUI::NUIRect& allowed) const;
@@ -231,6 +232,7 @@ private:
     std::chrono::steady_clock::time_point m_previewStartTime{};
     double m_previewDuration = 300.0;
     std::string m_currentPreviewFile;
+    std::vector<float> m_transportWaveformScratch;
     
     // Playback state persistence
     double m_savedTimelinePosition = 0.0;

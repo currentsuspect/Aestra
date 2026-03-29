@@ -93,6 +93,6 @@ Documents are moved to this directory when they:
 
 ---
 
-*This directory preserves the history and evolution of Aestra DAW.*
+*This directory preserves the history and evolution of Aestra.*
 
 *Last updated: January 2025*

@@ -6,7 +6,7 @@
 
 ## 🌍 Our Pledge
 
-We, as members, contributors, and leaders of the **Aestra Studios** community, pledge to make participation in the Aestra ecosystem — including **Aestra DAW**, its repositories, forums, and chat spaces — a safe, open, and welcoming experience for everyone.
+We, as members, contributors, and leaders of the **Aestra Studios** community, pledge to make participation in the Aestra ecosystem — including **Aestra**, its repositories, forums, and chat spaces — a safe, open, and welcoming experience for everyone.
 
 We commit to fostering an environment built on **respect, curiosity, and creativity**, regardless of:
 
