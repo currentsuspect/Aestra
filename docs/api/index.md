@@ -3,7 +3,7 @@
 Welcome to the Aestra API reference. This section provides detailed documentation for all public APIs.
 
 !!! tip "🚀 Full API Reference"
-    **[Browse the Complete Doxygen API Reference →](../api-reference/html/index.html)**
+    **[Generate Doxygen API Reference →](../API_DOCUMENTATION_GUIDE.md)**
     
     Comprehensive documentation for all classes, functions, and modules with searchable interface, inheritance diagrams, and detailed member descriptions.
 
@@ -25,7 +25,7 @@ Foundation utilities and data structures.
 - `Aestra::Logger` — Structured logging
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-core.md) for high-level design concepts.
+    Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](../API_DOCUMENTATION_GUIDE.md). See the [Architecture documentation](../architecture/Aestra-core.md) for high-level design concepts.
 
 ---
 
@@ -42,7 +42,7 @@ Platform-specific functionality with unified interface.
 - `Aestra::Timer` — High-resolution timing
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-plat.md) for high-level design concepts.
+    Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](../API_DOCUMENTATION_GUIDE.md). See the [Architecture documentation](../architecture/Aestra-plat.md) for high-level design concepts.
 
 ---
 
@@ -61,7 +61,7 @@ GPU-accelerated UI framework.
 - `Aestra::Theme` — Theme system
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-ui.md) for high-level design concepts.
+    Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](../API_DOCUMENTATION_GUIDE.md). See the [Architecture documentation](../architecture/Aestra-ui.md) for high-level design concepts.
 
 ---
 
@@ -78,7 +78,7 @@ Professional audio processing system.
 - `Aestra::DSP::EQ` — Equalizer processor
 
 !!! tip "Full API Reference Available"
-    Complete API documentation is available in the [Doxygen API Reference](../api-reference/html/index.html). See the [Architecture documentation](../architecture/Aestra-audio.md) for high-level design concepts.
+    Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](../API_DOCUMENTATION_GUIDE.md). See the [Architecture documentation](../architecture/Aestra-audio.md) for high-level design concepts.
 
 ---
 
@@ -282,14 +282,14 @@ Exploring a specific module? See architecture docs:
 
 | Module | API Docs | Examples | Coverage |
 |--------|----------|----------|----------|
-| AestraCore | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 80% |
-| AestraPlat | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 75% |
-| AestraUI | ✅ [Complete](../api-reference/html/index.html) | 🚧 Partial | 60% |
-| AestraAudio | ✅ [Complete](../api-reference/html/index.html) | ✅ Complete | 85% |
+| AestraCore | ✅ [Generate](../API_DOCUMENTATION_GUIDE.md) | ✅ Complete | 80% |
+| AestraPlat | ✅ [Generate](../API_DOCUMENTATION_GUIDE.md) | ✅ Complete | 75% |
+| AestraUI | ✅ [Generate](../API_DOCUMENTATION_GUIDE.md) | 🚧 Partial | 60% |
+| AestraAudio | ✅ [Generate](../API_DOCUMENTATION_GUIDE.md) | ✅ Complete | 85% |
 | AestraSDK | 📅 Planned | 📅 Planned | 0% |
 
 !!! success "Full API Reference Available"
-    Complete API documentation is now available via [Doxygen API Reference](../api-reference/html/index.html). Additional resources:
+    Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](../API_DOCUMENTATION_GUIDE.md). Additional resources:
     
     - [Architecture documentation](../architecture/overview.md) for high-level design concepts
     - [Getting Started Guide](../getting-started/index.md) for quick setup

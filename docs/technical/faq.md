@@ -22,7 +22,7 @@ Aestra is a modern digital audio workstation built with C++17, featuring:
 - GPU-accelerated custom UI framework (AestraUI)
 - Pattern-based workflow
 - Professional-grade audio processing
-- Planned AI integration (Muse)
+- AI integration (Muse) — deferred to post-Beta
 
 ### Who develops Aestra?
 

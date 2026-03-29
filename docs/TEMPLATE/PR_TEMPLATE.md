@@ -29,7 +29,7 @@ Select all that apply:
 - [ ] docs/developer/contributing.md
 - [ ] docs/developer/coding-style.md
 - [ ] docs/architecture/overview.md
-- [ ] docs/technical/ai-guide.md
+# - [ ] docs/technical/ai-guide.md  # Deferred - post-Beta
 - [ ] docs/technical/faq.md
 - [ ] docs/technical/glossary.md
 - [ ] docs/technical/roadmap.md
