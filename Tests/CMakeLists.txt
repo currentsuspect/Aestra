@@ -49,6 +49,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     target_link_libraries(ProjectRoundTripTest PRIVATE AestraAudio AestraCore)
     target_include_directories(ProjectRoundTripTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
         ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
         ${CMAKE_SOURCE_DIR}/AestraCore/include
         ${CMAKE_SOURCE_DIR}/Source
