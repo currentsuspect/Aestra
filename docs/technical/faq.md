@@ -214,7 +214,7 @@ Not yet. Plugin support is planned:
 
 ### How does the UI rendering work?
 
-AestraUI uses a custom immediate-mode rendering system:
+AestraUI uses a custom batched rendering system:
 - **OpenGL-based** rendering
 - **Adaptive FPS** (1-120 FPS based on activity)
 - **GPU-accelerated** for smooth 60+ FPS

@@ -224,9 +224,16 @@ nav:
           - Sinc64 Turbo Paper: technical/audio/SINC64_TURBO_PAPER.md
       - UI Internals:
           - Overview: technical/ui/README.md
+          - Architecture: technical/ui/ARCHITECTURE.md
           - Framework Status: technical/ui/FRAMEWORK_STATUS.md
           - Implementation Guide: technical/ui/IMPLEMENTATION_GUIDE.md
+          - Components: technical/ui/COMPONENTS.md
+          - Testing Strategy: technical/ui/TESTING_STRATEGY.md
           - Progress: technical/ui/PROGRESS.md
+          - Build & Test: technical/ui/BUILD_AND_TEST.md
+          - Color System: technical/ui/AESTRA_COLOR_SYSTEM.md
+          - Icon System: technical/ui/ICON_SYSTEM_GUIDE.md
+          - Coordinate System: technical/ui/COORDINATE_SYSTEM_QUICK_REF.md
   - 📡 API Reference:
       - Overview: api/index.md
   - 📋 Changelog:

@@ -80,6 +80,21 @@ public:
         return raw;
     }
 
+    /**
+     * @brief Remove the last added channel (for undo of addChannel)
+     * @return true if a channel was removed
+     */
+    bool removeLastChannel() {
+        if (m_channels.empty()) return false;
+        m_channels.pop_back();
+        m_graphDirty.store(true, std::memory_order_relaxed);
+        m_modified.store(true, std::memory_order_relaxed);
+        if (m_channelSlotMap) {
+            m_channelSlotMap->rebuild(m_channels);
+        }
+        return true;
+    }
+
     size_t getTrackCount() const { return getChannelCount(); }
     MixerChannel* getTrack(size_t index) { return getChannel(index); }
     const MixerChannel* getTrack(size_t index) const { return getChannel(index); }

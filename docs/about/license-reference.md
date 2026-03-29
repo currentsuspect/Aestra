@@ -20,7 +20,7 @@ Comprehensive reference for Aestra licensing, including the source-available lic
 **Aestra uses a hybrid licensing model:**
 
 ### Aestra Core (Free Forever)
-- **Aestra Core** (this repository) uses the **Aestra Studios Source-Available License (ASSAL) v1.0**
+- **Aestra Core** (this repository) uses the **Aestra Studios Source-Available License (ASSAL) v1.1**
 - ✅ **Free to use forever** - No paid license required for the core DAW
 - 👁️ **Source-available** - Code is publicly visible for transparency and education
 - 🎵 **Full DAW functionality** - Complete digital audio workstation without restrictions

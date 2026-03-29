@@ -1,6 +1,6 @@
 # 🧾 Aestra — Licensing Information
 
-**Aestra** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.0**.
+**Aestra** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**.
 
 This document provides an overview of the licensing terms and rights. For the complete legal text, see [LICENSE](../../../LICENSE).
 
@@ -91,7 +91,7 @@ You may **NOT**:
 
 **All source files must retain:**
 ```cpp
-// © 2025 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
+// © 2026 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
 ```
 
 ---
@@ -111,7 +111,7 @@ This identifier should be included in:
 
 **Example Usage:**
 ```cpp
-// © 2025 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
+// © 2026 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
 // SPDX-License-Identifier: ASSAL
 
 #pragma once

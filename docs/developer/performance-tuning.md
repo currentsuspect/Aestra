@@ -664,4 +664,4 @@ std::vector<float> largeBuffer = std::move(createBuffer());  // No copy
 
 **Performance is a feature!** ⚡
 
-*Last updated: January 2025*
+*Last updated: March 2026*
