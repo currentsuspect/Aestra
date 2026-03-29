@@ -1,6 +1,6 @@
 #pragma once
 #include "../../AestraCore/include/AestraJSON.h"
-#include "PluginHost.h"
+#include "../Plugin/PluginHost.h"
 
 #include <cstdint>
 #include <memory>
