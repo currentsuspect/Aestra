@@ -1,5 +1,5 @@
 #pragma once
-#include "AutomationCurve.h"
+#include "../Core/AutomationCurve.h"
 #include "ClipSource.h"
 #include "TimeTypes.h"
 
