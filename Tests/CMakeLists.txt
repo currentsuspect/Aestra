@@ -309,11 +309,13 @@ endif()
 # Oscillator Test
 add_executable(AestraOscillatorTest AestraAudio/OscillatorTest.cpp)
 target_link_libraries(AestraOscillatorTest PRIVATE AestraAudio AestraCore)
+target_compile_definitions(AestraOscillatorTest PRIVATE AESTRA_HEADLESS)
 add_test(NAME AestraOscillatorTest COMMAND AestraOscillatorTest)
 
 # Mixer Bus Test
 add_executable(AestraMixerBusTest AestraAudio/MixerBusTest.cpp)
 target_link_libraries(AestraMixerBusTest PRIVATE AestraAudio AestraCore)
+target_compile_definitions(AestraMixerBusTest PRIVATE AESTRA_HEADLESS)
 add_test(NAME AestraMixerBusTest COMMAND AestraMixerBusTest)
 
 # AestraUUID Test (header-only, no audio hardware required)

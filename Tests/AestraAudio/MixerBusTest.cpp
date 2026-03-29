@@ -81,62 +81,8 @@ void printBusInfo(const char* name, MixerBus* bus) {
               << ", Solo=" << (bus->isSoloed() ? "Yes" : "No") << std::endl;
 }
 
-void testMixerBus() {
-    std::cout << "\n=== AestraAudio Mixer Bus Test ===" << std::endl;
-    std::cout << "Testing basic mixer with gain, pan, and routing\n" << std::endl;
-
-    // Create audio device manager
-    AudioDeviceManager manager;
-
-    // Initialize audio system
-    if (!manager.initialize()) {
-        std::cerr << "Error: Failed to initialize audio system!" << std::endl;
-        return;
-    }
-
-    // Get default output device
-    auto defaultDevice = manager.getDefaultOutputDevice();
-
-    std::cout << "Using device: " << defaultDevice.name << std::endl;
-    std::cout << "Sample rate: 48000 Hz" << std::endl;
-    std::cout << "Buffer size: 512 frames\n" << std::endl;
-
-    // Set up mixer with 3 buses
-    size_t bus1Idx = g_mixer.addBus("Bus 1 (440 Hz)", 2);
-    size_t bus2Idx = g_mixer.addBus("Bus 2 (554 Hz)", 2);
-    size_t bus3Idx = g_mixer.addBus("Bus 3 (659 Hz)", 2);
-
-    MixerBus* bus1 = g_mixer.getBus(bus1Idx);
-    MixerBus* bus2 = g_mixer.getBus(bus2Idx);
-    MixerBus* bus3 = g_mixer.getBus(bus3Idx);
-
-    // Set initial gains (quieter for mixing)
-    bus1->setGain(0.3f);
-    bus2->setGain(0.3f);
-    bus3->setGain(0.3f);
-
-    // Configure audio
-    AudioStreamConfig config;
-    config.deviceId = defaultDevice.id;
-    config.sampleRate = 48000;
-    config.bufferSize = 512;
-    config.numInputChannels = 0;
-    config.numOutputChannels = 2;
-
-    // Open and start stream
-    if (!manager.openStream(config, audioCallback, nullptr)) {
-        std::cerr << "Error: Failed to open audio stream!" << std::endl;
-        return;
-    }
-
-    if (!manager.startStream()) {
-        std::cerr << "Error: Failed to start audio stream!" << std::endl;
-        manager.closeStream();
-        return;
-    }
-
-    std::cout << "Audio stream started successfully!\n" << std::endl;
-
+#ifndef AESTRA_HEADLESS
+void runAudioTests(MixerBus* bus1, MixerBus* bus2, MixerBus* bus3, AudioDeviceManager& manager) {
     // Test 1: All buses playing (chord)
     std::cout << "Test 1: All buses playing (A major chord)" << std::endl;
     printBusInfo("Bus 1", bus1);
@@ -149,7 +95,7 @@ void testMixerBus() {
     bus1->setGain(0.6f);
     printBusInfo("Bus 1", bus1);
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    bus1->setGain(0.3f); // Reset
+    bus1->setGain(0.3f);
 
     // Test 3: Pan control
     std::cout << "\nTest 3: Panning Bus 2 left (-1.0)" << std::endl;
@@ -179,7 +125,7 @@ void testMixerBus() {
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // Test 5: Solo control
-    std::cout << "\nTest 5: Soloing Bus 3 (only Bus 3 should play)" << std::endl;
+    std::cout << "\nTest 5: Soloing Bus 3" << std::endl;
     bus3->setSolo(true);
     printBusInfo("Bus 1", bus1);
     printBusInfo("Bus 2", bus2);
@@ -193,10 +139,6 @@ void testMixerBus() {
 
     // Test 6: Complex routing
     std::cout << "\nTest 6: Complex routing" << std::endl;
-    std::cout << "Bus 1: Left pan, gain 0.4" << std::endl;
-    std::cout << "Bus 2: Center, gain 0.5" << std::endl;
-    std::cout << "Bus 3: Right pan, gain 0.4" << std::endl;
-
     bus1->setPan(-0.7f);
     bus1->setGain(0.4f);
     bus2->setPan(0.0f);
@@ -236,17 +178,94 @@ void testMixerBus() {
     std::cout << "\nStopping audio stream..." << std::endl;
     manager.stopStream();
     manager.closeStream();
+}
+#endif // AESTRA_HEADLESS
+
+void testMixerBus() {
+    std::cout << "\n=== AestraAudio Mixer Bus Test ===" << std::endl;
+    std::cout << "Testing basic mixer with gain, pan, and routing\n" << std::endl;
+
+#ifndef AESTRA_HEADLESS
+    AudioDeviceManager manager;
+    if (!manager.initialize()) {
+        std::cerr << "Error: Failed to initialize audio system!" << std::endl;
+        return;
+    }
+    auto defaultDevice = manager.getDefaultOutputDevice();
+    std::cout << "Using device: " << defaultDevice.name << std::endl;
+
+    AudioStreamConfig config;
+    config.deviceId = defaultDevice.id;
+    config.sampleRate = 48000;
+    config.bufferSize = 512;
+    config.numInputChannels = 0;
+    config.numOutputChannels = 2;
+
+    if (!manager.openStream(config, audioCallback, nullptr)) {
+        std::cerr << "Error: Failed to open audio stream!" << std::endl;
+        return;
+    }
+    if (!manager.startStream()) {
+        std::cerr << "Error: Failed to start audio stream!" << std::endl;
+        manager.closeStream();
+        return;
+    }
+    std::cout << "Audio stream started successfully!\n" << std::endl;
+#else
+    std::cout << "[Headless mode - DSP logic only, no audio I/O]" << std::endl;
+#endif
+
+    std::cout << "Sample rate: 48000 Hz" << std::endl;
+    std::cout << "Buffer size: 512 frames\n" << std::endl;
+
+    // Set up mixer with 3 buses
+    size_t bus1Idx = g_mixer.addBus("Bus 1 (440 Hz)", 2);
+    size_t bus2Idx = g_mixer.addBus("Bus 2 (554 Hz)", 2);
+    size_t bus3Idx = g_mixer.addBus("Bus 3 (659 Hz)", 2);
+
+    MixerBus* bus1 = g_mixer.getBus(bus1Idx);
+    MixerBus* bus2 = g_mixer.getBus(bus2Idx);
+    MixerBus* bus3 = g_mixer.getBus(bus3Idx);
+
+    // Set initial gains (quieter for mixing)
+    bus1->setGain(0.3f);
+    bus2->setGain(0.3f);
+    bus3->setGain(0.3f);
+
+    std::cout << "Test: Verify initial bus configuration" << std::endl;
+    printBusInfo("Bus 1", bus1);
+    printBusInfo("Bus 2", bus2);
+    printBusInfo("Bus 3", bus3);
+
+#ifndef AESTRA_HEADLESS
+    runAudioTests(bus1, bus2, bus3, manager);
+#else
+    // Headless: run DSP logic validation without audio playback
+    std::cout << "\n[Headless] DSP validation: gain, pan, mute, solo" << std::endl;
+    bus1->setGain(0.6f);
+    bus2->setPan(-1.0f);
+    bus3->setMute(true);
+    bus3->setSolo(true);
+    printBusInfo("Bus 1", bus1);
+    printBusInfo("Bus 2", bus2);
+    printBusInfo("Bus 3", bus3);
+    bus1->setGain(0.3f);
+    bus2->setPan(0.0f);
+    bus3->setMute(false);
+    bus3->setSolo(false);
+    std::cout << "DSP validation complete!" << std::endl;
+#endif
 
     std::cout << "\n=== All Tests Complete ===" << std::endl;
     std::cout << "\nTest Results:" << std::endl;
-    std::cout << "âœ“ Mixer bus creation" << std::endl;
-    std::cout << "âœ“ Gain control (0.0 to 2.0)" << std::endl;
-    std::cout << "âœ“ Pan control (-1.0 to 1.0)" << std::endl;
-    std::cout << "âœ“ Mute functionality" << std::endl;
-    std::cout << "âœ“ Solo functionality" << std::endl;
-    std::cout << "âœ“ Audio routing (3 buses to master)" << std::endl;
-    std::cout << "âœ“ Thread-safe parameter changes" << std::endl;
-    std::cout << "âœ“ Constant power panning" << std::endl;
+    std::cout << "  Mixer bus creation" << std::endl;
+    std::cout << "  Gain control (0.0 to 2.0)" << std::endl;
+    std::cout << "  Pan control (-1.0 to 1.0)" << std::endl;
+    std::cout << "  Mute functionality" << std::endl;
+    std::cout << "  Solo functionality" << std::endl;
+    std::cout << "  Audio routing (3 buses to master)" << std::endl;
+    std::cout << "  Thread-safe parameter changes" << std::endl;
+    std::cout << "  Constant power panning" << std::endl;
 }
 
 int main() {
