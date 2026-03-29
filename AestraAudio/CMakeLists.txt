@@ -163,7 +163,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Core/AutosaveManager.cpp
     # DriverRegistryStub provides a no-op fallback for platforms without ALSA
     # Excluded on Linux where LinuxDriverRegistry provides the real implementation
-    # src/Core/DriverRegistryStub.cpp
+    src/Core/DriverRegistryStub.cpp
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
     src/Core/ProjectValidator.cpp
