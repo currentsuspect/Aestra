@@ -314,7 +314,8 @@ int main() {
     }
     std::cout << "========================================" << std::endl;
 
-    // Interactive audio test
+    // Interactive audio test (skip in headless/CI mode)
+#ifndef AESTRA_HEADLESS
     std::cout << "\nRun interactive audio test? (y/n): ";
     char choice;
     std::cin >> choice;
@@ -322,6 +323,9 @@ int main() {
     if (choice == 'y' || choice == 'Y') {
         interactiveAudioTest();
     }
+#else
+    std::cout << "\n[Headless mode - interactive audio test skipped]" << std::endl;
+#endif
 
     return allPassed ? 0 : 1;
 }
