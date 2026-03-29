@@ -272,7 +272,7 @@ Any unauthorized use of this software will result in:
 ## 🔗 Additional Resources
 
 - **[Full LICENSE Text](LICENSE)** — Complete legal license document
-- **[License Reference Guide](docs/LICENSE_REFERENCE.md)** — Detailed FAQ and examples
+- **[License Reference Guide](docs/about/license-reference.md)** — Detailed FAQ and examples
 - **[Contributing Guide](docs/developer/contributing.md)** — How to contribute to Aestra
 - **[Code of Conduct](CODE_OF_CONDUCT.md)** — Community guidelines
 

@@ -41,9 +41,9 @@ Comprehensive reference for Aestra licensing, including the source-available lic
 
 ### Aestra Core License (Free Forever)
 
-**Copyright © 2025 Dylan Makori. All rights reserved.**
+**Copyright © 2026 Dylan Makori. All rights reserved.**
 
-Aestra Core is source-available software developed by Dylan Makori in Kenya, licensed under ASSAL v1.0.
+Aestra Core is source-available software developed by Dylan Makori in Kenya, licensed under ASSAL v1.1.
 
 ### What You Can Do with Aestra Core (No License Required)
 
@@ -90,9 +90,9 @@ Unauthorized use, copying, or distribution of Aestra will be prosecuted to the f
 ### Full License Details
 
 **License Name:** Aestra Studios Source-Available License (ASSAL)  
-**Version:** 1.0  
-**Date:** October 30, 2025  
-**Copyright:** © 2025 Dylan Makori
+**Version:** 1.1  
+**Date:** March 2026  
+**Copyright:** © 2026 Dylan Makori
 
 ### Key Terms
 
@@ -307,7 +307,7 @@ This document provides a summary and reference for Aestra licensing. The complet
 
 **Aestra** - Built by musicians, for musicians. Crafted with intention.
 
-**Copyright © 2025 Dylan Makori. All rights reserved.**
+**Copyright © 2026 Dylan Makori. All rights reserved.**
 
 ---
 
