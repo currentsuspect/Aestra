@@ -1,8 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "AudioDriverTypes.h"
-#include "IAudioDriver.h"
+#include "../Drivers/AudioDriverTypes.h"
+#include "../Drivers/IAudioDriver.h"
 
 #include <chrono>
 #include <functional>
