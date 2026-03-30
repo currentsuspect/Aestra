@@ -26,7 +26,7 @@ Aestra is a modern digital audio workstation built with C++17, featuring:
 
 ### Who develops Aestra?
 
-Aestra is developed by Dylan Makori in Kenya, with contributions from the open-source community. While the source code is publicly visible for transparency, Aestra is proprietary commercial software.
+Aestra is developed by Dylan Makori in Kenya, with community contributions to the public repository. The source code is publicly visible for transparency, but the project is source-available rather than open-source.
 
 ### Is Aestra free to use?
 
@@ -39,10 +39,10 @@ Aestra is developed by Dylan Makori in Kenya, with contributions from the open-s
 
 ### What platforms does Aestra support?
 
-**Current support:**
-- ✅ Windows 10/11 (64-bit) - Primary platform
-- 🚧 Linux - In development
-- 📋 macOS - Planned for future
+**Current practical support surface:**
+- ✅ Windows 10/11 (64-bit) - primary platform
+- 🚧 Linux - active build/bring-up work
+- 📋 macOS - planned, not part of the current public build workflow
 
 ### Is Aestra open-source?
 
@@ -66,14 +66,15 @@ Follow our comprehensive [Building Guide](../getting-started/building.md):
 ```powershell
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
-cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+pwsh -File scripts/install-hooks.ps1
+cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 ```
 
 ### What are the build requirements?
 
 **All platforms:**
-- CMake 3.15+
+- CMake 3.22+
 - Git 2.30+
 - C++17 compatible compiler
 
@@ -87,7 +88,7 @@ cmake --build build --config Release --parallel
 
 ### What is Aestra_CORE_MODE?
 
-`Aestra_CORE_MODE=ON` builds only the public core without premium features. This is required for community contributors since premium modules are in private repositories.
+`Aestra_CORE_MODE=ON` builds the public/source-available repo shape without premium modules and switches to public assets when premium content is absent. In public-only checkouts, the helper CMake include forces this mode on automatically.
 
 ```bash
 # Public build (community contributors)
@@ -97,12 +98,12 @@ cmake -S . -B build -DAestra_CORE_MODE=ON
 cmake -S . -B build
 ```
 
-### Build fails with "private folder present" error?
+### Build fails because premium/private modules are missing
 
-This is expected in public CI. Use `Aestra_CORE_MODE=ON` to skip private folders:
+In public checkouts, configure with the public build shape:
 
 ```bash
-cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 ```
 
 ### How do I set up my development environment?
@@ -139,7 +140,7 @@ This is necessary because Aestra is commercial software. See [Contributing Guide
 
 ### What kind of contributions are accepted?
 
-**Public contributions** (in `Aestra-core/`):
+**Public contributions**:
 - ✅ Core audio engine improvements
 - ✅ UI framework enhancements
 - ✅ Bug fixes and optimizations
@@ -148,7 +149,7 @@ This is necessary because Aestra is commercial software. See [Contributing Guide
 - ✅ Build system improvements
 - ✅ Cross-platform compatibility
 
-**Private modules** (not in public repo):
+**Private/commercial-only areas**:
 - ❌ Premium plugins and effects
 - ❌ AI models (Muse internals)
 - ❌ Licensing system
@@ -188,14 +189,13 @@ Reviews depend on maintainer availability and PR complexity.
 ### What audio drivers does Aestra support?
 
 **Windows:**
-- ✅ WASAPI (Exclusive and Shared modes)
-- ✅ DirectSound (fallback)
-- 📋 ASIO (planned)
+- ✅ WASAPI
+- ✅ RtAudio-backed device support where configured
+- ✅ ASIO paths exist in the codebase and have targeted validation coverage, but broader compatibility hardening is still ongoing
 
 **Linux:**
-- 🚧 ALSA (in development)
-- 📋 JACK (planned)
-- 📋 PulseAudio (planned)
+- 🚧 ALSA / PulseAudio through the Linux audio stack under active bring-up
+- 📋 JACK remains future/planned
 
 ### What's the typical audio latency?
 
@@ -209,7 +209,7 @@ Latency depends on buffer size, sample rate, and hardware.
 
 Not yet. Plugin support is planned:
 - 📋 VST3 hosting
-- 📋 AU hosting (macOS)
+- 📋 AU hosting (future macOS work)
 - 📋 Native Aestra plugin format
 
 ### How does the UI rendering work?
