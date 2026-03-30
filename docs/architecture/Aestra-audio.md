@@ -18,7 +18,7 @@ AestraAudio is Aestra's professional audio engine, delivering ultra-low latency 
 - **Real-time Safe** — No allocations or locks on audio thread
 - **High Quality** — 64-bit float processing pipeline
 - **Multi-threaded** — Parallel DSP processing
-- **Cross-platform** — WASAPI, ALSA, CoreAudio support
+- **Cross-platform direction** — Windows-first today, with Linux bring-up in progress and macOS/CoreAudio still planned
 
 ## 🧩 Key Components
 
@@ -76,10 +76,10 @@ config.bufferSize = 512;  // 10.7ms at 48kHz
 
 Cross-platform audio I/O abstraction.
 
-**Supported APIs:**
-- **Windows:** WASAPI, DirectSound, ASIO
-- **Linux:** ALSA, PulseAudio, JACK
-- **macOS:** CoreAudio
+**Current API posture:**
+- **Windows:** WASAPI, DirectSound, ASIO-related paths in the codebase
+- **Linux:** ALSA / PulseAudio bring-up via the Linux audio stack
+- **macOS:** CoreAudio remains planned rather than part of the current public build surface
 
 **Example:**
 ```cpp

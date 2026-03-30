@@ -45,7 +45,7 @@ Aestra is built with a clean, modular architecture that separates concerns into 
 
 **Purpose**: Foundation layer providing platform abstraction, utilities, and common types.
 
-**Location**: `Aestra-core/`, `AestraCore/`
+**Location**: `AestraCore/`
 
 **Key Components:**
 - **Platform Abstraction** - OS-specific functionality (file I/O, threading, memory)
@@ -113,7 +113,7 @@ AestraUI/
 **Location**: `AestraAudio/`
 
 **Key Components:**
-- **Audio Driver System** - WASAPI (Windows), ALSA (Linux), CoreAudio (macOS)
+- **Audio Driver System** - Windows-first today, with WASAPI shipping in the practical build surface and Linux audio work in progress
 - **Track Management** - Multi-track audio with sample-accurate timing
 - **Buffer Management** - Lock-free ring buffers for real-time audio
 - **Sample Loading** - Lazy-loading with waveform caching
@@ -180,7 +180,7 @@ AestraCore
     ↓
 AestraPlat (Platform Layer)
     ↓
-OS APIs (Windows, Linux, macOS)
+OS APIs (primarily Windows today, with Linux bring-up and future macOS work)
 ```
 
 **Rules:**
@@ -370,7 +370,7 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 
 ### Public vs Private Code
 
-**Public (`Aestra-core/`):**
+**Public repository surface:**
 - Core audio engine
 - UI framework
 - Platform abstractions

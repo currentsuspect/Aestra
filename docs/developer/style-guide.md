@@ -518,7 +518,7 @@ double Track::getPosition() const {
 ### Quick Start (Windows)
 
 1. **Install Prerequisites:**
-   - CMake 3.15+
+   - CMake 3.22+
    - Git
    - Visual Studio 2022 with C++ workload
    - PowerShell 7
@@ -529,7 +529,7 @@ double Track::getPosition() const {
    cd Aestra
    
    # Configure build
-   cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+   cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
    
    # Build project
    cmake --build build --config Release --parallel

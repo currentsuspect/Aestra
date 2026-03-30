@@ -180,19 +180,16 @@ docs: update architecture overview for plugin system
 Install hooks to enforce style automatically:
 
 ```powershell
-# Windows
+# PowerShell helper
 pwsh -File scripts/install-hooks.ps1
-```
-
-```bash
-# Linux
-bash scripts/install-hooks.sh
 ```
 
 The hooks run:
 - `clang-format` on all staged C++ files
 - Gitleaks secret scanning
 - Basic validation checks
+
+There is currently no `scripts/install-hooks.sh` companion in the repo. On Linux, either run the PowerShell helper if available in your environment or point Git at `.githooks/` manually.
 
 ## Resources
 
