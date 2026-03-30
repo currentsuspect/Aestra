@@ -161,9 +161,6 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Core/AudioEngine.cpp
     src/Core/AudioDeviceManager.cpp
     src/Core/AutosaveManager.cpp
-    # DriverRegistryStub provides a no-op fallback for platforms without ALSA
-    # Excluded on Linux where LinuxDriverRegistry provides the real implementation
-    src/Core/DriverRegistryStub.cpp
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
     src/Core/ProjectValidator.cpp
@@ -227,6 +224,15 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Plugin/SamplerPlugin.cpp
     src/Plugin/EffectChain.cpp
 )
+
+# Driver registry wiring:
+# - Linux with ALSA builds the real registry in AestraAudioLinux.
+# - Other builds keep the weak fallback in core so the dummy driver is available.
+if(NOT (UNIX AND ALSA_FOUND))
+    list(APPEND AESTRA_AUDIO_CORE_SOURCES
+        src/Core/DriverRegistryStub.cpp
+    )
+endif()
 
 # Set per-file compile flags for AVX-512 (x86_64 only, not ARM64)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i686")

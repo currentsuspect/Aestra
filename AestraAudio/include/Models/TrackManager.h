@@ -288,13 +288,14 @@ public:
         m_patternMode.store(true, std::memory_order_relaxed);
         m_isPlaying.store(true, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
+        m_patternPlaybackEngine.flush();
         pushTransportCommand(1.0f, m_position);
         m_patternPlaybackEngine.schedulePatternInstance(pid, 0.0, 1);
     }
 
     void preparePatternForArsenal(PatternID pid) {
+        (void)pid;
         m_patternPlaybackEngine.flush();
-        m_patternPlaybackEngine.schedulePatternInstance(pid, 0.0, 1);
     }
 
     void clearAllSolos() {

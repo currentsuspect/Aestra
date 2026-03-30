@@ -43,6 +43,7 @@ public:
     std::function<void(Aestra::Audio::UnitID)> m_onEditUnit;
     std::function<void(Aestra::Audio::UnitID)> m_onLoadUnitSample;
     std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onSampleDropped; // Direct sample path
+    std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onPluginDropped;
     
     void setOnDragStart(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDragStart = cb; }
     void setOnDrop(std::function<void(Aestra::Audio::UnitID, int)> cb) { m_onDrop = cb; }
@@ -50,6 +51,7 @@ public:
     void setOnEditUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onEditUnit = cb; }
     void setOnLoadUnitSample(std::function<void(Aestra::Audio::UnitID)> cb) { m_onLoadUnitSample = cb; }
     void setOnSampleDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onSampleDropped = cb; }
+    void setOnPluginDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onPluginDropped = cb; }
     
     // Step count configuration
     void setStepCount(int count) { m_stepCount = count; invalidateVisuals(); }
