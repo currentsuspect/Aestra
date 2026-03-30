@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UnitRow.h"
+#include "PluginBrowserPanel.h"
 #include <chrono>
 #include <algorithm>
 #include "NUIThemeSystem.h"
@@ -786,6 +787,16 @@ UnitRow::~UnitRow() {
 
 DropFeedback UnitRow::onDragEnter(const DragData& data, const NUIPoint& position) {
     (void)position;
+    if (data.type == DragDataType::Plugin && !data.sourceClipIdString.empty()) {
+        if (const auto* plugin = std::any_cast<PluginListItem>(&data.customData)) {
+            if (plugin->typeName != "Instrument") {
+                return DropFeedback::None;
+            }
+        }
+        invalidateVisuals();
+        return DropFeedback::Copy;
+    }
+
     // Accept file drags (audio files)
     if (data.type == DragDataType::File) {
         // Check if it's an audio file
@@ -813,6 +824,26 @@ DropResult UnitRow::onDrop(const DragData& data, const NUIPoint& position) {
     (void)position;
     DropResult result;
     
+    if (data.type == DragDataType::Plugin && !data.sourceClipIdString.empty()) {
+        if (const auto* plugin = std::any_cast<PluginListItem>(&data.customData)) {
+            if (plugin->typeName != "Instrument") {
+                result.accepted = false;
+                result.message = "Only instrument plugins can be dropped into Arsenal";
+                return result;
+            }
+        }
+
+        if (m_onPluginDropped) {
+            m_onPluginDropped(m_unitId, data.sourceClipIdString);
+            updateState();
+            invalidateVisuals();
+            result.accepted = true;
+            result.message = "Instrument loaded into Arsenal";
+            Aestra::Log::info("[UnitRow] Plugin dropped: " + data.sourceClipIdString);
+        }
+        return result;
+    }
+
     if (data.type == DragDataType::File) {
         std::string path = data.filePath;
         std::string ext = path.substr(path.find_last_of('.') + 1);

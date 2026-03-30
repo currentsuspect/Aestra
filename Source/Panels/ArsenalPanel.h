@@ -6,6 +6,7 @@
 #include "../AestraUI/Widgets/UnitRow.h"
 #include "../AestraUI/Widgets/UnitColorPicker.h"
 #include "NUIComponent.h"
+#include "../AestraUI/Core/NUIDragDrop.h"
 #include <optional>
 
 namespace Aestra {
@@ -15,15 +16,20 @@ namespace Audio {
  * @brief The Arsenal: Unit-Based Sequencer Window
  * Standardized as a WindowPanel (v3.1)
  */
-class ArsenalPanel : public WindowPanel {
+class ArsenalPanel : public WindowPanel, public AestraUI::IDropTarget {
 public:
     ArsenalPanel(std::shared_ptr<TrackManager> trackManager);
-    ~ArsenalPanel() override = default;
+    ~ArsenalPanel() override;
 
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     void onUpdate(double dt) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    AestraUI::DropFeedback onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
+    AestraUI::DropFeedback onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
+    void onDragLeave() override;
+    AestraUI::DropResult onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
+    AestraUI::NUIRect getDropBounds() const override;
 
     // Rebuilds the UI from UnitManager state
     void refreshUnits();
@@ -48,6 +54,8 @@ public:
     // Internal Integration
     void setOnRequestEditor(std::function<void(UnitID)> cb) { m_onRequestEditor = cb; }
     void setOnRequestLoadSample(std::function<void(UnitID)> cb) { m_onRequestLoadSample = cb; }
+    void setOnPluginDropped(std::function<void(const std::string&)> cb) { m_onPluginDropped = cb; }
+    void setOnPluginDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onPluginDroppedToUnit = cb; }
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;
@@ -95,6 +103,7 @@ private:
 
     void createLayout();
     void onAddUnit();
+    void ensureDropTargetRegistration(bool reorder = false);
     
     // Drag-drop callbacks
     void onUnitDragStart(UnitID unitId);
@@ -105,6 +114,9 @@ private:
     
     std::function<void(UnitID)> m_onRequestEditor;
     std::function<void(UnitID)> m_onRequestLoadSample;
+    std::function<void(const std::string&)> m_onPluginDropped;
+    std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
+    bool m_dropTargetRegistered = false;
 };
 
 } // namespace Audio

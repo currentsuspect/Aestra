@@ -29,6 +29,13 @@ public:
     
     void setSelectedIndex(size_t index, bool animate = true) {
         if (index >= segments_.size()) return;
+        if (index == selectedIndex_) {
+            if (!animate) {
+                indicatorPosition_ = static_cast<float>(index);
+                setDirty(true);
+            }
+            return;
+        }
         selectedIndex_ = index;
         if (!animate) {
             indicatorPosition_ = static_cast<float>(index);
