@@ -18,7 +18,7 @@ Comprehensive glossary of technical terms, acronyms, and concepts used in Aestra
 A fixed-size block of audio samples processed together. Smaller buffers reduce latency but increase CPU usage. Typical sizes: 128, 256, 512, or 1024 samples.
 
 ### Audio Driver
-Software interface between application and audio hardware. Examples: WASAPI, ASIO, ALSA, CoreAudio.
+Software interface between application and audio hardware. Examples include WASAPI, ASIO, and ALSA. CoreAudio is relevant for planned future macOS work.
 
 ### ASIO (Audio Stream Input/Output)
 Low-latency audio driver protocol developed by Steinberg. Widely used in professional audio applications (planned for Aestra).
@@ -137,7 +137,7 @@ Aestra's audio engine module responsible for playback, recording, and processing
 Foundation module providing platform abstraction, utilities, and common types.
 
 ### AestraPlat
-Platform-specific implementations for Windows, Linux, and macOS.
+Platform-specific implementations, with Windows first today and Linux/macOS handled as bring-up or planned work depending on the subsystem.
 
 ### AestraUI
 Custom GPU-accelerated UI framework built specifically for Aestra.
@@ -146,7 +146,7 @@ Custom GPU-accelerated UI framework built specifically for Aestra.
 Proprietary features available only in paid version (AI models, advanced effects, licensing).
 
 ### Public Build
-Build from public repository with core features only. No premium features or private assets.
+Build from the public repository surface without premium/commercial-only modules.
 
 ### Sample Clip
 Visual representation of an audio sample on the timeline. Can be moved, resized, and edited.
