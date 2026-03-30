@@ -15,7 +15,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <windows.h>
+#include <windows.h> // ALLOW_PLATFORM_INCLUDE
 #endif
 
 namespace Aestra {

@@ -206,8 +206,8 @@ public:
     ~SampleRateConverter() = default;
 
     // Non-copyable (contains internal state)
-    SampleRateConverter(const SampleRateConverter&) = delete;
-    SampleRateConverter& operator=(const SampleRateConverter&) = delete;
+    SampleRateConverter(const SampleRateConverter&) = delete; // ALLOW_REALTIME_DELETE
+    SampleRateConverter& operator=(const SampleRateConverter&) = delete; // ALLOW_REALTIME_DELETE
 
     // Move is allowed
     SampleRateConverter(SampleRateConverter&&) = default;

@@ -47,6 +47,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Plan**: Use `ImGui` or custom immediate mode renderer that reuses vertex buffers. Eliminate `std::string` allocations in the draw loop (use `fmt::format_to` into fixed buffers).
 
+### Dynamic Oversampling
+
+- **Innovation**: Automatically enable high-quality oversampling only when non-linear processing (like saturation) generates harmonics above the Nyquist limit.
+- **Benefit**: Significantly reduces CPU usage while maintaining pristine audio quality, preventing aliasing only when strictly necessary.
+
+### JIT Audio Processing
+
+- **Innovation**: Utilize a Just-In-Time (JIT) compiler for effect chains to merge consecutive processing nodes into a single, optimized kernel.
+- **Benefit**: Drastically reduces memory bandwidth and cache misses by keeping audio data in CPU registers throughout the entire effect chain.
+
 ## 3. Sound Quality
 
 ### 64-bit End-to-End Mixing
@@ -63,7 +73,39 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
 
-## 4. Fixes & Cleanups
+### Analog Drift Modeling
+
+- **Innovation**: Implement chaotic system-based micro-deviations for parameters like oscillator pitch and filter cutoff.
+- **Benefit**: Emulates the organic, "warm" instability of vintage analog hardware without the predictability of simple LFOs.
+
+### Spectral Anti-Aliasing
+
+- **Innovation**: Apply frequency-domain band-limiting techniques rather than traditional time-domain oversampling for anti-aliasing.
+- **Benefit**: Achieves near-perfect brickwall filtering for non-linear effects, resulting in cleaner high frequencies.
+
+### Psychoacoustic Downsampling
+
+- **Innovation**: Integrate a psychoacoustic model to guide dithering and noise shaping during bit-depth reduction and sample rate conversion.
+- **Benefit**: Produces transparent, perceptually lossless downsampling for final exports and Spot ecosystem delivery.
+
+## 4. Workflow & Ecosystem
+
+### Collaborative Editing
+
+- **Innovation**: Use Conflict-free Replicated Data Types (CRDTs) to enable real-time, multiplayer project editing over the network.
+- **Benefit**: Allows multiple producers to work on the same Aestra project simultaneously, seeing changes instantly without conflict.
+
+### NeuralMix Assistant
+
+- **Innovation**: Introduce machine learning-driven automated mixing suggestions that analyze tracks and apply basic balancing, panning, and EQ.
+- **Benefit**: Provides a solid starting point for mixes, accelerating the workflow for both beginners and professionals.
+
+### Cloud Collaboration & Spot Integration
+
+- **Innovation**: Implement seamless cloud syncing with the Spot ecosystem for instant stem bouncing, sharing, and version control.
+- **Benefit**: Bridges the gap between the Aestra DAW and Spot, enabling a unified, cloud-first music production environment.
+
+## 5. Fixes & Cleanups
 
 ### Real-Time Safety
 
