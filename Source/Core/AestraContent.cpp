@@ -474,6 +474,13 @@ AestraContent::AestraContent() {
              }
         });
     });
+    m_sequencerPanel->setOnPluginDropped([this](const std::string& pluginId) {
+        loadInstrumentToArsenal(pluginId);
+    });
+    m_sequencerPanel->setOnPluginDroppedToUnit([this](UnitID unitId, const std::string& pluginId) {
+        loadInstrumentIntoArsenalUnit(unitId, pluginId);
+    });
+    m_sequencerPanel->refreshUnits();
     m_patternBrowser->refreshPatterns();
     
     m_sequencerPanel->setVisible(true);
@@ -1871,6 +1878,40 @@ void AestraContent::loadInstrumentToArsenal(const std::string& pluginId) {
     }
 
     Log::info("Loaded instrument '" + unitName + "' to Arsenal as Unit " + std::to_string(newUnit));
+}
+
+void AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::string& pluginId) {
+    if (!m_trackManager) return;
+    auto& unitManager = m_trackManager->getUnitManager();
+
+    auto* unit = unitManager.getUnit(unitId);
+    if (!unit) {
+        Log::error("Cannot attach instrument to missing Arsenal Unit " + std::to_string(unitId));
+        return;
+    }
+
+    auto& pm = Aestra::Audio::PluginManager::getInstance();
+    const auto* pluginInfo = pm.findPlugin(pluginId);
+    std::string unitName = pluginInfo ? pluginInfo->name : "Plugin Synth";
+
+    auto instance = pm.createInstanceById(pluginId);
+    if (!instance) {
+        Log::error("Failed to create instrument instance for Arsenal Unit " + std::to_string(unitId) + ": " + pluginId);
+        return;
+    }
+
+    if (!instance->initialize(pm.getDefaultSampleRate(), pm.getDefaultBlockSize())) {
+        Log::error("Failed to initialize instrument instance for Arsenal Unit " + std::to_string(unitId) + ": " + pluginId);
+        return;
+    }
+
+    unitManager.setUnitName(unitId, unitName);
+    unitManager.setUnitGroup(unitId, UnitGroup::Synth);
+    unitManager.setUnitEnabled(unitId, true);
+    unitManager.attachPlugin(unitId, pluginId, instance);
+    unitManager.captureUnitPluginState(unitId);
+
+    Log::info("Attached instrument '" + unitName + "' to Arsenal Unit " + std::to_string(unitId));
 }
 
 void AestraContent::refreshPluginList() {

@@ -297,6 +297,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
                     data.type = AestraUI::DragDataType::Plugin;
                     data.displayName = plugin.name;
                     data.sourceClipIdString = plugin.id;
+                    data.customData = plugin;
                     
                     AestraUI::NUIDragDropManager::getInstance().beginDrag(data, m_dragStartPos, this);
                     

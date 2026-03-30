@@ -77,11 +77,10 @@ if(AESTRA_PLATFORM_LINUX)
   option(RTAUDIO_API_PULSE "Compile with PulseAudio support" ON)
   option(RTAUDIO_API_JACK "Compile with JACK support" OFF)
   
-  if(EXISTS "${CMAKE_SOURCE_DIR}/external/rtaudio/CMakeLists.txt")
-    add_subdirectory(external/rtaudio EXCLUDE_FROM_ALL)
-    # create alias for consistency if needed, though target_link_libraries usually works with rtaudio directly
+  if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/rtaudio/CMakeLists.txt")
+    message(STATUS "RtAudio source available via AestraAudio/External/rtaudio")
   else()
-    message(STATUS "external/rtaudio missing. Audio backend will not build.")
+    message(STATUS "AestraAudio/External/rtaudio missing. Native Linux audio backend will not build.")
   endif()
 endif()
 

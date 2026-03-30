@@ -130,8 +130,14 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             return false;
         }
 
-        // Enable render caching by default for performance
+        // Linux release builds currently have an optimization-sensitive failure
+        // in the GL widget cache path that can leave the window blank even though
+        // startup completes. Prefer direct rendering until the cache bug is fixed.
+#if defined(__linux__)
+        glRenderer->setCachingEnabled(false);
+#else
         glRenderer->setCachingEnabled(true);
+#endif
 
         // Transfer ownership to unique_ptr
         m_renderer.reset(glRenderer);

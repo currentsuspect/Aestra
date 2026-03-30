@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ArsenalPanel.h"
 #include "PatternBrowserPanel.h" // For m_patternBrowser
+#include "../AestraUI/Widgets/PluginBrowserPanel.h"
 #include "NUIButton.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -9,6 +10,24 @@ using namespace AestraUI;
 
 namespace Aestra {
 namespace Audio {
+
+namespace {
+bool isInstrumentPluginDrag(const AestraUI::DragData& data) {
+    if (data.type != AestraUI::DragDataType::Plugin || data.sourceClipIdString.empty()) {
+        return false;
+    }
+
+    if (!data.customData.has_value()) {
+        return true;
+    }
+
+    if (const auto* item = std::any_cast<AestraUI::PluginListItem>(&data.customData)) {
+        return item->typeName == "Instrument";
+    }
+
+    return true;
+}
+} // namespace
 
 ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     : WindowPanel("THE ARSENAL")
@@ -21,7 +40,8 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     if (m_trackManager) {
         auto& unitMgr = m_trackManager->getUnitManager();
         if (unitMgr.getUnitCount() == 0) {
-            unitMgr.createUnit("Sampler 1", UnitGroup::Drums);
+            UnitID defaultUnit = unitMgr.createUnit("Sampler 1", UnitGroup::Drums);
+            unitMgr.setUnitEnabled(defaultUnit, true);
         }
     }
 
@@ -44,6 +64,10 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     });
     
     // ScrollView wrapper would go here, for now directly setting content
+}
+
+ArsenalPanel::~ArsenalPanel() {
+    AestraUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
 }
 
 void ArsenalPanel::createLayout() {
@@ -121,6 +145,12 @@ void ArsenalPanel::refreshUnits() {
         row->setOnLoadUnitSample([this](UnitID id) {
             if (m_onRequestLoadSample) m_onRequestLoadSample(id);
         });
+
+        row->setOnPluginDropped([this](UnitID unitId, const std::string& pluginId) {
+            if (m_onPluginDroppedToUnit) {
+                m_onPluginDroppedToUnit(unitId, pluginId);
+            }
+        });
         
         m_listContainer->addChild(row);
         m_unitRows.push_back(row);
@@ -140,6 +170,7 @@ void ArsenalPanel::refreshUnits() {
     m_listContainer->addChild(addBtn);
     
     layoutUnits();
+    ensureDropTargetRegistration(true);
     
     if (auto parent = getParent()) {
         parent->repaint();
@@ -235,20 +266,21 @@ void ArsenalPanel::layoutUnits() {
     if (!m_listContainer) return;
     
     NUIRect bounds = m_listContainer->getBounds();
-    float width = bounds.width;
-    float startY = bounds.y;
-    
+    const float horizontalPadding = 8.0f;
+    const float topPadding = 6.0f;
+    const float width = std::max(0.0f, bounds.width - horizontalPadding * 2.0f);
+    const float startX = bounds.x + horizontalPadding;
+    const float startY = bounds.y + topPadding;
 
-    
     // Reserve space for progress header
-    float yPos = startY + PROGRESS_HEADER_HEIGHT + 6.0f - m_scrollY;
+    float yPos = startY + PROGRESS_HEADER_HEIGHT + 8.0f - m_scrollY;
     float spacing = 4.0f;        // Increased from 2px
     float rowHeight = 42.0f;     // Increased from 28px - matches UnitRow::ROW_HEIGHT
     
     // Layout unit rows
     for (auto& row : m_unitRows) {
         if (row) {
-            row->setBounds(NUIRect(bounds.x, yPos, width, rowHeight));
+            row->setBounds(NUIRect(startX, yPos, width, rowHeight));
             yPos += rowHeight + spacing;
         }
     }
@@ -259,7 +291,7 @@ void ArsenalPanel::layoutUnits() {
         auto addBtn = children.back();
         bool isAddButton = m_unitRows.empty() || (addBtn != m_unitRows.back());
         if (addBtn && isAddButton) {
-            addBtn->setBounds(NUIRect(bounds.x + 8, yPos + 4.0f, width - 16, 36.0f));
+            addBtn->setBounds(NUIRect(startX, yPos + 8.0f, width, 34.0f));
         }
     }
 }
@@ -273,6 +305,7 @@ void ArsenalPanel::onResize(int width, int height) {
 
 void ArsenalPanel::onUpdate(double dt) {
     WindowPanel::onUpdate(dt);
+    ensureDropTargetRegistration();
     
     // Sync Play/Stop button text and color with actual engine state
     if (m_playBtn && m_trackManager) {
@@ -289,6 +322,27 @@ void ArsenalPanel::onUpdate(double dt) {
                 m_playBtn->setBackgroundColor(theme.getColor("accentPrimary"));
             }
         }
+    }
+}
+
+void ArsenalPanel::ensureDropTargetRegistration(bool reorder) {
+    auto self = weak_from_this().lock();
+    if (!self) {
+        return;
+    }
+
+    auto dropTarget = std::dynamic_pointer_cast<AestraUI::IDropTarget>(self);
+    if (!dropTarget) {
+        return;
+    }
+
+    if (reorder || m_dropTargetRegistered) {
+        AestraUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
+    }
+
+    if (!m_dropTargetRegistered || reorder) {
+        AestraUI::NUIDragDropManager::getInstance().registerDropTarget(dropTarget);
+        m_dropTargetRegistered = true;
     }
 }
 
@@ -385,6 +439,48 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
 }
 
 // === Drag-Drop Callbacks ===
+
+AestraUI::DropFeedback ArsenalPanel::onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    return onDragOver(data, position);
+}
+
+AestraUI::DropFeedback ArsenalPanel::onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    (void)position;
+    if (isInstrumentPluginDrag(data)) {
+        return AestraUI::DropFeedback::Copy;
+    }
+    return AestraUI::DropFeedback::None;
+}
+
+void ArsenalPanel::onDragLeave() {
+}
+
+AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    (void)position;
+    AestraUI::DropResult result;
+
+    if (!isInstrumentPluginDrag(data)) {
+        result.accepted = false;
+        result.message = "Arsenal accepts instrument plugins only";
+        return result;
+    }
+
+    if (!m_onPluginDropped) {
+        result.accepted = false;
+        result.message = "No Arsenal plugin drop handler bound";
+        return result;
+    }
+
+    m_onPluginDropped(data.sourceClipIdString);
+    result.accepted = true;
+    result.message = "Loaded instrument into Arsenal";
+    Log::info("[Arsenal] Plugin dropped into Arsenal: " + data.sourceClipIdString);
+    return result;
+}
+
+AestraUI::NUIRect ArsenalPanel::getDropBounds() const {
+    return getBounds();
+}
 
 void ArsenalPanel::onUnitDragStart(UnitID unitId) {
     m_isDragging = true;
