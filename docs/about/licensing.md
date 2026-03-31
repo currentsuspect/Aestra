@@ -2,7 +2,7 @@
 
 **Aestra** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**.
 
-This document provides an overview of the licensing terms and rights. For the complete legal text, see [LICENSE](../../../LICENSE).
+This document provides an overview of the licensing terms and rights. For the complete legal text, see [LICENSE](../../LICENSE).
 
 ---
 
@@ -271,7 +271,7 @@ Any unauthorized use of this software will result in:
 
 ## 🔗 Additional Resources
 
-- **[Full LICENSE Text](../../../LICENSE)** — Complete legal license document
+- **[Full LICENSE Text](../../LICENSE)** — Complete legal license document
 - **[License Reference Guide](license-reference.md)** — Detailed FAQ and examples
 - **[Contributing Guide](../../CONTRIBUTING.md)** — How to contribute to Aestra
 - **[Code of Conduct](../community/code-of-conduct.md)** — Community guidelines
