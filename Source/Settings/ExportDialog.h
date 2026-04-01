@@ -28,6 +28,7 @@ public:
 
     void onUpdate(double deltaTime) override;
     void onRender(AestraUI::NUIRenderer& renderer) override;
+    void onResize(int width, int height) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
     bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
 
@@ -41,6 +42,8 @@ private:
     void exportThreadFn();
     void handleMouseClick(AestraUI::NUIPoint pos);
     void updateButtonHover(AestraUI::NUIPoint pos);
+    bool parseTailInput(double& outTailSeconds) const;
+    void syncTailInputFromValue();
 
     enum class PanelState { Settings, Progress, Complete };
     PanelState m_panelState = PanelState::Settings;
@@ -48,7 +51,7 @@ private:
     bool m_visible = false;
     AestraUI::NUIRect m_dialogRect;
     static constexpr float DIALOG_WIDTH = 520.0f;
-    static constexpr float DIALOG_HEIGHT = 440.0f;
+    static constexpr float DIALOG_HEIGHT = 330.0f;
 
     // Settings
     std::string m_outputPath;
@@ -83,6 +86,7 @@ private:
     AestraUI::NUIRect m_cancelButtonRect;
     AestraUI::NUIRect m_closeButtonRect;
     AestraUI::NUIRect m_browseButtonRect;
+    AestraUI::NUIRect m_outputFieldRect;
     AestraUI::NUIRect m_bitDepthDropdownRect;
     AestraUI::NUIRect m_sampleRateDropdownRect;
     AestraUI::NUIRect m_scopeDropdownRect;
@@ -92,6 +96,7 @@ private:
     bool m_bitDepthOpen = false;
     bool m_sampleRateOpen = false;
     bool m_scopeOpen = false;
+    bool m_tailInputFocused = false;
     AestraUI::NUIRect m_bitDepthDropdownPopup;
     AestraUI::NUIRect m_sampleRateDropdownPopup;
     AestraUI::NUIRect m_scopeDropdownPopup;
