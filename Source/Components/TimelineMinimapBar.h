@@ -25,6 +25,7 @@ enum class TimelineMinimapCursorHint
 class TimelineMinimapBar final : public NUIComponent
 {
 public:
+    /** @brief Create the shared timeline minimap widget. */
     TimelineMinimapBar();
 
     void onRender(NUIRenderer& renderer) override;
@@ -32,14 +33,26 @@ public:
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onMouseLeave() override;
 
+    /** @brief Replace the model consumed by the minimap. */
     void setModel(const TimelineMinimapModel& model);
+    /** @brief Get the current minimap model. */
     const TimelineMinimapModel& getModel() const { return model_; }
+    /** @brief Get the current cursor hint for the host UI. */
     TimelineMinimapCursorHint getCursorHint() const { return cursorHint_; }
+    /** @brief Enable or disable the top-left mode toggles. */
+    void setShowModeToggles(bool show) { showModeToggles_ = show; repaint(); }
+    /** @brief Set an additional leading inset applied before the minimap content. */
+    void setLeadingInset(float insetPx) { leadingInsetPx_ = insetPx; repaint(); }
 
+    /** @brief Callback requesting that the host center the view around a beat. */
     std::function<void(double centerBeat)> onRequestCenterView;
+    /** @brief Callback requesting a new view-start beat. */
     std::function<void(double viewStartBeat, bool isFinal)> onRequestSetViewStart;
+    /** @brief Callback requesting viewport-edge resizing. */
     std::function<void(TimelineMinimapResizeEdge edge, double anchorBeat, double edgeBeat, bool isFinal)> onRequestResizeViewEdge;
+    /** @brief Callback requesting zoom around an anchor beat. */
     std::function<void(double anchorBeat, float zoomMultiplier)> onRequestZoomAround;
+    /** @brief Callback fired when the minimap mode toggle changes. */
     std::function<void(TimelineMinimapMode mode)> onModeChanged;
 
 private:
@@ -83,6 +96,8 @@ private:
     double hoverBeat_ = 0.0;
     NUIPoint hoverPos_{};
     int hoverToggleIndex_ = -1;
+    bool showModeToggles_ = true;
+    float leadingInsetPx_ = -1.0f;
 
     // Cached toggle bounds (absolute).
     NUIRect toggleBounds_[3]{};

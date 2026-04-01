@@ -1,6 +1,6 @@
 # 🎨 Aestra UI Framework
 
-A modern, GPU-accelerated UI framework built from scratch for the Aestra DAW.
+A modern, GPU-accelerated UI framework built from scratch for the Aestra.
 
 ## Vision
 
@@ -306,7 +306,7 @@ Every pixel is intentional. The UI should feel alive and motion-driven.
 
 ## Contributing
 
-This is currently a solo project for the Aestra DAW, but contributions are welcome!
+This is currently a solo project for the Aestra, but contributions are welcome!
 
 ## License
 

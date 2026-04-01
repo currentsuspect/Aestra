@@ -90,7 +90,7 @@ bool RtAudioDriver::openStream(const AudioStreamConfig& config, AudioCallback ca
     RtAudio::StreamParameters inputParamsData{};
     RtAudio::StreamParameters* inputParams = nullptr;
     if (config.numInputChannels > 0) {
-        inputParamsData.deviceId = config.deviceId;
+        inputParamsData.deviceId = (config.inputDeviceId != 0) ? config.inputDeviceId : config.deviceId;
         inputParamsData.nChannels = config.numInputChannels;
         inputParamsData.firstChannel = 0;
         inputParams = &inputParamsData;
@@ -204,7 +204,8 @@ bool RtAudioDriver::tryInitializeBackend(const std::vector<RtAudio::Api>& candid
                 }
             });
 
-            if (!candidate->getDeviceIds().empty()) {
+            auto deviceIds = candidate->getDeviceIds();
+            if (!deviceIds.empty()) {
                 m_driverType = apiToDriverType(candidate->getCurrentApi());
                 m_rtAudio = std::move(candidate);
                 return true;

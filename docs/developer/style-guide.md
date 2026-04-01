@@ -1,6 +1,6 @@
 # 📝 Documentation & Comment Style Guide
 
-This guide defines standards for writing documentation and code comments in Aestra DAW.
+This guide defines standards for writing documentation and code comments in Aestra.
 
 ---
 
@@ -518,7 +518,7 @@ double Track::getPosition() const {
 ### Quick Start (Windows)
 
 1. **Install Prerequisites:**
-   - CMake 3.15+
+   - CMake 3.22+
    - Git
    - Visual Studio 2022 with C++ workload
    - PowerShell 7
@@ -529,7 +529,7 @@ double Track::getPosition() const {
    cd Aestra
    
    # Configure build
-   cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+   cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
    
    # Build project
    cmake --build build --config Release --parallel
@@ -543,7 +543,7 @@ double Track::getPosition() const {
 
 ### Troubleshooting
 
-If you encounter build errors, see [Building Guide](BUILDING.md).
+If you encounter build errors, see [Building Guide](../getting-started/building.md).
 ```
 
 ### Example 3: Inline Code Comment
@@ -583,7 +583,7 @@ Before submitting documentation, verify:
 - [ ] All links work (internal and external)
 - [ ] Headings use consistent emoji style
 - [ ] Code blocks have language specified
-- [ ] Year references are current (2025)
+- [ ] Year references are current (2026)
 - [ ] No outdated information
 - [ ] Clear and concise language
 - [ ] Examples included where helpful
@@ -593,12 +593,12 @@ Before submitting documentation, verify:
 
 ## 📚 Additional Resources
 
-- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute
-- **[Coding Style Guide](developer/coding-style.md)** — Code formatting rules
-- **[Bug Reports Guide](BUG_REPORTS.md)** — Reporting issues
+- **[Contributing Guide](../../CONTRIBUTING.md)** — How to contribute
+- **[Coding Style Guide](coding-style.md)** — Code formatting rules
+- **[Bug Reports Guide](bug-reports.md)** — Reporting issues
 
 ---
 
 **Write docs that you'd want to read!** 📖
 
-*Last updated: January 2025*
+*Last updated: March 2026*

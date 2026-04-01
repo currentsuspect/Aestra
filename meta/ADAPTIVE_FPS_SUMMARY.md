@@ -8,7 +8,7 @@
 
 ## 🎯 Objective
 
-Implement an **adaptive frame pacing system** for the Aestra DAW that intelligently switches between 30 FPS (idle) and 60 FPS (active) based on user activity and system performance, providing a smooth user experience while maintaining thermal and CPU efficiency.
+Implement an **adaptive frame pacing system** for the Aestra that intelligently switches between 30 FPS (idle) and 60 FPS (active) based on user activity and system performance, providing a smooth user experience while maintaining thermal and CPU efficiency.
 
 ---
 

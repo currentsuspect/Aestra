@@ -5,7 +5,7 @@
 
 **From:** Engineering
 
-**Date:** January 3, 2026
+**Date:** March 29, 2026
 
 **Subject:** Aestra v1 Beta by Dec 2026 — Reality Check, Scope, and Execution Plan
 
@@ -52,7 +52,7 @@ The current reality is:
 
 - The core engine is solid, but the product is not shippable yet.
 - We have progress in recording, serialization, and plugin scaffolding.
-- Architectural debt remains: **Main.cpp is still 2414 lines**.
+- Architectural debt has been addressed: **Main.cpp has been refactored from 2414 lines to 138 lines** (`Source/App/Main.cpp`).
 - Shipping reality is Windows-first. Linux/macOS are post-Beta unless someone owns them end-to-end.
 
 This memo resets expectations and defines what “v1 Beta” means.
@@ -168,7 +168,7 @@ Deliverables:
 Freeze:
 - ✅ Data model API shapes (`PlaylistModel`, `PatternManager`, lane/clip IDs).
 
-### Phase 2 — Project + undo/redo become real (Apr–Jun 2026) ⏳ In Progress
+### Phase 2 — Project + undo/redo become real (Apr–Jun 2026) ✅ Complete
 
 Primary goal: users can trust edits.
 
@@ -180,24 +180,36 @@ Deliverables:
 - ✅ Project format v1 spec: versioning/migrations, validation, non-destructive load failures.
 - ✅ Project round-trip smoke coverage exists and is passing (`ProjectRoundTripTest`).
 - ✅ Internal plugin units can now persist through project save/load and restore plugin state.
-- [ ] Undo/redo integrated into the main UX for core actions (clip edits, lane edits, pattern edits).
+- ✅ Undo/redo integrated into the main UX for core actions (clip edits, lane edits, mixer edits).
+- ✅ Cut/Copy/Paste/Delete fully wired via `CommandHistory`.
+- ✅ Clip split fixed — both halves retain `patternId`, name, and color.
+- ✅ Piano Roll ↔ Arsenal ↔ Sequencer unit routing and selection sync.
+- ✅ Double-click pattern clips to open in Piano Roll.
+- ✅ Low-memory build preset for constrained hardware.
 
 March 2026 snapshot:
 - internal built-in plugin discovery is working through normal manager lookup
 - headless/plugin tests now prove discovery, factory creation, usage path, project round-trip, and audible Arsenal playback for the internal Rumble instrument
+- internal plugin units survive project save/load round-trips (`InternalPluginProjectRoundTripTest`)
 - `OfflineRenderRegressionTest` still needs canonical fixtures before it becomes a dependable regression gate
+- undo/redo fully wired: clip add/remove/move/split/trim/duplicate, track add, volume/pan/mute/solo all go through `CommandHistory`
+- `CommandTransaction` groups multi-step edits (e.g. add track) into single undo steps
+- documentation overhaul completed (stale AI references deferred, broken links fixed)
+- Arsenal UI: unit selection, removal, row redesign, progress header with context
+- Piano Roll: unit-aware notes, auto-save, pattern/label display, sequencer refresh on edit
+- Edit menu: Cut/Copy/Paste/Delete functional with keyboard shortcuts
 
 Freeze:
 - Project file schema for Beta (allow forward-compatible additions only).
 
-### Phase 3 — Recording + export (Jul–Sep 2026)
+### Phase 3 — Recording + export (Jul–Sep 2026) ⏳ In Progress
 
 Primary goal: finishing tracks becomes possible.
 
 Deliverables:
-- Recording workflow reliability: arming, input selection, monitoring, latency compensation behavior.
-- Render/export: offline bounce that matches playback.
-- Session stress tests: long playback, repeated record takes, device switch, device disconnect.
+- ✅ Export/offline render: `AudioExporter` rewritten with proper render path, duration from playlist, master output stage, File > Export Audio menu.
+- ⏳ Recording workflow reliability: arming, input selection, monitoring, latency compensation behavior.
+- ⏳ Session stress tests: long playback, repeated record takes, device switch, device disconnect.
 
 Freeze:
 - Recording file management rules (where files live, naming, relinking behavior).
@@ -279,4 +291,4 @@ Kill (if they threaten the schedule):
 
 ---
 
-Last updated: January 2026
+Last updated: April 2026

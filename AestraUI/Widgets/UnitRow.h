@@ -19,6 +19,13 @@ namespace AestraUI {
 
 class UnitRow : public NUIComponent, public IDropTarget {
 public:
+    /**
+     * @brief Create a sequencer row for an Arsenal unit.
+     * @param trackManager Shared track manager backing the current project.
+     * @param manager Unit manager that owns the row's unit state.
+     * @param unitId Unit identifier rendered by this row.
+     * @param patternId Active pattern identifier edited through this row.
+     */
     UnitRow(std::shared_ptr<Aestra::Audio::TrackManager> trackManager, Aestra::Audio::UnitManager& manager, Aestra::Audio::UnitID unitId, Aestra::Audio::PatternID patternId);
     ~UnitRow() override;
 
@@ -33,16 +40,27 @@ public:
     DropResult onDrop(const DragData& data, const NUIPoint& position) override;
     NUIRect getDropBounds() const override;
 
-    // Called by parent to refresh state reference
+    /**
+     * @brief Refresh cached unit state from the backing managers.
+     */
     void updateState();
 
-    // === Callbacks for parent panel ===
+    /** @brief Callback fired when row dragging begins. */
     std::function<void(Aestra::Audio::UnitID)> m_onDragStart;
+    /** @brief Callback fired when the row is dropped at a new index. */
     std::function<void(Aestra::Audio::UnitID, int)> m_onDrop;
+    /** @brief Callback that requests a color picker for the unit. */
     std::function<void()> m_onRequestColorPicker;
+    /** @brief Callback used to open the unit editor. */
     std::function<void(Aestra::Audio::UnitID)> m_onEditUnit;
+    /** @brief Callback used to trigger sample loading for the unit. */
     std::function<void(Aestra::Audio::UnitID)> m_onLoadUnitSample;
+    /** @brief Callback fired when a sample path is dropped directly onto the unit. */
     std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onSampleDropped; // Direct sample path
+    /** @brief Callback fired when a plugin identifier is dropped onto the unit. */
+    std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onPluginDropped;
+    /** @brief Callback fired after the shared pattern backing this row is edited. */
+    std::function<void(Aestra::Audio::PatternID)> m_onPatternEdited;
     
     void setOnDragStart(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDragStart = cb; }
     void setOnDrop(std::function<void(Aestra::Audio::UnitID, int)> cb) { m_onDrop = cb; }
@@ -50,12 +68,35 @@ public:
     void setOnEditUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onEditUnit = cb; }
     void setOnLoadUnitSample(std::function<void(Aestra::Audio::UnitID)> cb) { m_onLoadUnitSample = cb; }
     void setOnSampleDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onSampleDropped = cb; }
+    void setOnPluginDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onPluginDropped = cb; }
+    void setOnPatternEdited(std::function<void(Aestra::Audio::PatternID)> cb) { m_onPatternEdited = cb; }
     
-    // Step count configuration
+    /**
+     * @brief Set the visible step count for the sequencer section.
+     * @param count Number of step pads to render.
+     */
     void setStepCount(int count) { m_stepCount = count; invalidateVisuals(); }
+    /**
+     * @brief Get the visible step count for the sequencer section.
+     * @return Number of rendered steps.
+     */
     int getStepCount() const { return m_stepCount; }
     
+    /**
+     * @brief Get the unit identifier represented by this row.
+     * @return Backing unit identifier.
+     */
     Aestra::Audio::UnitID getUnitId() const { return m_unitId; }
+    /**
+     * @brief Update the row's selected-state styling.
+     * @param selected True when the row is currently selected.
+     */
+    void setSelected(bool selected) { m_isSelected = selected; invalidateVisuals(); }
+    /**
+     * @brief Check whether the row is selected.
+     * @return True when the row is selected.
+     */
+    bool isSelected() const { return m_isSelected; }
 
 private:
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;
@@ -72,6 +113,9 @@ private:
     bool m_isMuted = false;
     bool m_isSolo = false;
     std::string m_audioClip; // Audio clip filename
+    std::string m_pluginId;
+    std::string m_sourceSummary;
+    std::string m_groupLabel;
     int m_mixerChannel = -1; // Mixer route
 
     // === Internal State ===
@@ -98,7 +142,11 @@ private:
     // === Interaction States ===
     bool m_isHovered = false;
     bool m_isDragging = false;
+    bool m_isSelected = false;
     NUIPoint m_dragStartPos;
+    bool m_isStepEditing = false;
+    int m_stepEditStart = -1;
+    int m_stepEditEndExclusive = -1;
     
     // Inline name editing
     bool m_isEditingName = false;

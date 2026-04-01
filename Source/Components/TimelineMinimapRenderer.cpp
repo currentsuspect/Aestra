@@ -109,6 +109,7 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
                       colors.baseline);
 
     const int N = static_cast<int>(s->bucketCount);
+    if (N <= 0) return; // No data to render
     const int W = std::max(1, static_cast<int>(std::round(map.width)));
     const auto* buckets = s->buckets.data();
 

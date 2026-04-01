@@ -1,4 +1,4 @@
-# 📘 Aestra DAW — Documentation Portal
+# 📘 Aestra — Documentation Portal
 
 ![Aestra Version](https://img.shields.io/badge/Aestra-v1.1-blue)
 ![License](https://img.shields.io/badge/License-ASSAL%20v1.1-blue)
@@ -6,7 +6,7 @@
 ![C++](https://img.shields.io/badge/C%2B%2B-17-orange)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
 
-Welcome to the **Aestra DAW Documentation Portal**! This is your guide to understanding, building, validating, and contributing to Aestra.
+Welcome to the **Aestra Documentation Portal**! This is your guide to understanding, building, validating, and contributing to Aestra.
 
 ## 📌 Current docs posture
 
@@ -20,7 +20,7 @@ If you want the most accurate current picture, start with:
 
 ## 🎯 What is Aestra?
 
-Aestra DAW is a professional digital audio workstation featuring:
+Aestra is a professional digital audio workstation featuring:
 - **Ultra-low latency audio engine** — WASAPI multi-tier processing
 - **GPU-accelerated custom UI** — Built with AestraUI framework
 - **Pattern-based workflow** — Intuitive pattern and playlist sequencer
@@ -48,10 +48,6 @@ Aestra DAW is a professional digital audio workstation featuring:
 - **[Debugging Guide](developer/debugging.md)** — Using Aestra profiler, Visual Studio debugger, and logging
 - **[Performance Tuning](developer/performance-tuning.md)** — FPS optimization, latency reduction, and profiling
 - **[Style Guide](developer/style-guide.md)** — Documentation and comment standards
-
-### 🤖 AI Integration
-
-- **[AI Guide](technical/ai-guide.md)** — Muse AI integration documentation and usage
 
 ### 📋 Project Management
 
@@ -145,7 +141,7 @@ We welcome contributions from the community! Before contributing:
 
 ## ⚖️ License
 
-**Aestra DAW** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**. See [License Reference](about/license-reference.md) for full details.
+**Aestra** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**. See [License Reference](about/license-reference.md) for full details.
 
 **Key Points:**
 - ✅ Source code is publicly visible for educational purposes

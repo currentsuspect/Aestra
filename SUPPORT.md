@@ -1,4 +1,4 @@
-# Support Aestra Studios (2025-Launch)
+# Support Aestra Studios
 
 Thank you for considering supporting Aestra Studios! Your contribution helps us continue developing Aestra and keeping its core features free for everyone.
 
@@ -6,7 +6,7 @@ Thank you for considering supporting Aestra Studios! Your contribution helps us 
 
 Aestra is built with a vision to make professional music production accessible to everyone. Your support helps us:
 
-- Keep the core software free and open-source
+- Keep the core software free and source-available
 - Develop new features and improvements
 - Provide better documentation and learning resources
 - Maintain our infrastructure and community spaces
@@ -52,4 +52,4 @@ Choose your preferred platform:
 Thank you for being part of the Aestra community!
 
 ---
-*Last updated: October 30, 2025*
+*Last updated: March 2026*

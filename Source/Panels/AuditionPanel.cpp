@@ -67,27 +67,28 @@ AuditionPanel::~AuditionPanel() {
 
 void AuditionPanel::setupComponents() {
     // 1. Text Labels
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
     m_trackTitle = std::make_shared<AestraUI::NUILabel>("No Track Selected");
     m_trackTitle->setFontSize(28.0f);
     m_trackTitle->setAlignment(AestraUI::NUILabel::Alignment::Left);
-    m_trackTitle->setTextColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+    m_trackTitle->setTextColor(theme.getColor("textPrimary"));
     addChild(m_trackTitle);
     
     m_trackArtist = std::make_shared<AestraUI::NUILabel>("Drag files to start");
     m_trackArtist->setFontSize(16.0f);
-    m_trackArtist->setTextColor(AestraUI::NUIColor(0.7f, 0.7f, 0.7f, 1.0f));
+    m_trackArtist->setTextColor(theme.getColor("textSecondary"));
     m_trackArtist->setAlignment(AestraUI::NUILabel::Alignment::Left);
     addChild(m_trackArtist);
     
     m_currentTime = std::make_shared<AestraUI::NUILabel>("0:00");
     m_currentTime->setFontSize(12.0f);
-    m_currentTime->setTextColor(AestraUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f));
+    m_currentTime->setTextColor(theme.getColor("textSecondary"));
     addChild(m_currentTime);
     
     m_totalTime = std::make_shared<AestraUI::NUILabel>("0:00");
     m_totalTime->setFontSize(12.0f);
     m_totalTime->setAlignment(AestraUI::NUILabel::Alignment::Right);
-    m_totalTime->setTextColor(AestraUI::NUIColor(0.6f, 0.6f, 0.6f, 1.0f));
+    m_totalTime->setTextColor(theme.getColor("textSecondary"));
     addChild(m_totalTime);
     
     // 2. Transport Buttons (Text cleared for SVG overlap)
@@ -195,7 +196,7 @@ void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI:
 
     // Headers
     float headerH = 28.0f;
-    AestraUI::NUIColor headerTxtColor(0.5f, 0.5f, 0.5f, 1.0f);
+    AestraUI::NUIColor headerTxtColor(0.82f, 0.82f, 0.82f, 1.0f);  // bright for dark bg
     float colNo = area.x + 12.0f;
     float colTitle = area.x + 60.0f;
     float colTime = area.x + area.width - 60.0f;
@@ -427,14 +428,27 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
             }
             if (!item->coverArtData.empty()) {
                 int w, h, comp;
-                unsigned char* rgba = stbi_load_from_memory(item->coverArtData.data(), static_cast<int>(item->coverArtData.size()), &w, &h, &comp, 4);
-                if (rgba) {
-                    m_coverArtTextureId = renderer.createTexture(rgba, w, h);
-                    m_coverArtWidth = w; m_coverArtHeight = h;
-                    int cx = w / 2; int cy = h / 2; int idx = (cy * w + cx) * 4;
-                    float r = rgba[idx] / 255.0f; float g = rgba[idx + 1] / 255.0f; float b = rgba[idx + 2] / 255.0f;
-                    m_currentHeaderColor = AestraUI::NUIColor(r * 0.5f, g * 0.5f, b * 0.5f, 1.0f);
-                    stbi_image_free(rgba);
+                try {
+                    unsigned char* rgba = stbi_load_from_memory(item->coverArtData.data(), static_cast<int>(item->coverArtData.size()), &w, &h, &comp, 4);
+                    if (rgba && w > 0 && h > 0 && w <= 16384 && h <= 16384) {
+                        m_coverArtTextureId = renderer.createTexture(rgba, w, h);
+                        m_coverArtWidth = w; m_coverArtHeight = h;
+                        size_t sw = static_cast<size_t>(w), sh = static_cast<size_t>(h);
+                        size_t idx = (sh / 2 * sw + sw / 2) * 4u;
+                        size_t totalBytes = sw * sh * 4u;
+                        if (idx + 2 < totalBytes) {
+                            float r = rgba[idx] / 255.0f; float g = rgba[idx + 1] / 255.0f; float b = rgba[idx + 2] / 255.0f;
+                            m_currentHeaderColor = AestraUI::NUIColor(r * 0.5f, g * 0.5f, b * 0.5f, 1.0f);
+                        }
+                        if (rgba) stbi_image_free(rgba);
+                    } else {
+                        Log::warning("[AuditionPanel] stbi_load_from_memory failed for cover art");
+                        if (rgba) stbi_image_free(rgba);
+                    }
+                } catch (const std::exception& e) {
+                    Log::error("[AuditionPanel] Exception decoding cover art: " + std::string(e.what()));
+                } catch (...) {
+                    Log::error("[AuditionPanel] Unknown exception decoding cover art");
                 }
             }
         }
@@ -489,7 +503,7 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
         } else {
              AestraUI::NUIColor artFill(m_currentHeaderColor.r * 0.8f, m_currentHeaderColor.g * 0.8f, m_currentHeaderColor.b * 0.8f, 1.0f);
              renderer.fillRoundedRect(artRect, 8.0f, artFill);
-             renderer.drawText("AESTRA", AestraUI::NUIPoint(artRect.x + artSize/2.0f - 24.0f, artRect.y + artSize/2.0f - 6.0f), 14.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+             renderer.drawText("AESTRA", AestraUI::NUIPoint(artRect.x + artSize/2.0f - 24.0f, artRect.y + artSize/2.0f - 6.0f), 14.0f, AestraUI::NUIColor(0.82f, 0.82f, 0.82f, 1.0f));
         }
     }
     
@@ -623,7 +637,7 @@ void AuditionPanel::renderWaveform(AestraUI::NUIRenderer& renderer, const Aestra
     
     auto source = m_engine->getCurrentSource();
     if (!source || !source->isReady()) {
-        renderer.drawText("Load track to see waveform", AestraUI::NUIPoint(area.x + area.width/2 - 60, area.y + area.height/2), 12.0f, AestraUI::NUIColor(0.5f, 0.5f, 0.5f, 0.5f));
+        renderer.drawText("Load track to see waveform", AestraUI::NUIPoint(area.x + area.width/2 - 60, area.y + area.height/2), 12.0f, AestraUI::NUIColor(0.82f, 0.82f, 0.82f, 1.0f));
         return;
     }
     
@@ -883,9 +897,19 @@ AestraUI::DropResult AuditionPanel::onDrop(const AestraUI::DragData& data, const
     AestraUI::DropResult result;
     if (data.type == AestraUI::DragDataType::File) {
         Log::info("[AuditionPanel] Dropped file: " + data.filePath);
-        addFileToQueue(data.filePath);
-        result.accepted = true;
-        result.message = "Added to queue";
+        try {
+            addFileToQueue(data.filePath);
+            result.accepted = true;
+            result.message = "Added to queue";
+        } catch (const std::exception& e) {
+            Log::error("[AuditionPanel] Exception in addFileToQueue: " + std::string(e.what()));
+            result.accepted = false;
+            result.message = std::string("Error: ") + e.what();
+        } catch (...) {
+            Log::error("[AuditionPanel] Unknown exception in addFileToQueue");
+            result.accepted = false;
+            result.message = "Unknown error";
+        }
         m_isHoveringQueue = false;
     }
     return result;

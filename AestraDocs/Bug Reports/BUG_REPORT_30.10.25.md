@@ -1,4 +1,4 @@
-# Aestra DAW — Bug Triage (2025-10-31)
+# Aestra — Bug Triage (2025-10-31)
 
 **Build:** Release/Debug (Windows)
 **Audio:** WASAPI Exclusive/Shared enabled

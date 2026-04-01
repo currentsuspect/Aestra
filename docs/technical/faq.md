@@ -2,7 +2,7 @@
 
 ![FAQ](https://img.shields.io/badge/FAQ-Updated-blue)
 
-Common questions and answers for contributors, developers, and users of Aestra DAW.
+Common questions and answers for contributors, developers, and users of Aestra.
 
 ## 📋 Table of Contents
 
@@ -15,18 +15,18 @@ Common questions and answers for contributors, developers, and users of Aestra D
 
 ## 🌍 General Questions
 
-### What is Aestra DAW?
+### What is Aestra?
 
-Aestra DAW is a modern digital audio workstation built with C++17, featuring:
+Aestra is a modern digital audio workstation built with C++17, featuring:
 - Ultra-low latency audio engine with WASAPI support
 - GPU-accelerated custom UI framework (AestraUI)
 - Pattern-based workflow
 - Professional-grade audio processing
-- Planned AI integration (Muse)
+- AI integration (Muse) — deferred to post-Beta
 
 ### Who develops Aestra?
 
-Aestra is developed by Dylan Makori in Kenya, with contributions from the open-source community. While the source code is publicly visible for transparency, Aestra is proprietary commercial software.
+Aestra is developed by Dylan Makori in Kenya, with community contributions to the public repository. The source code is publicly visible for transparency, but the project is source-available rather than open-source.
 
 ### Is Aestra free to use?
 
@@ -39,10 +39,10 @@ Aestra is developed by Dylan Makori in Kenya, with contributions from the open-s
 
 ### What platforms does Aestra support?
 
-**Current support:**
-- ✅ Windows 10/11 (64-bit) - Primary platform
-- 🚧 Linux - In development
-- 📋 macOS - Planned for future
+**Current practical support surface:**
+- ✅ Windows 10/11 (64-bit) - primary platform
+- 🚧 Linux - active build/bring-up work
+- 📋 macOS - planned, not part of the current public build workflow
 
 ### Is Aestra open-source?
 
@@ -54,26 +54,27 @@ No. Aestra uses the **ASSAL (Aestra Studios Source-Available License)** - a sour
 - ❌ You cannot distribute modified versions
 - 📜 All contributions become property of the project
 
-See [License Reference](LICENSE_REFERENCE.md) for complete details.
+See [License Reference](../about/license-reference.md) for complete details.
 
 ## 🔨 Building and Setup
 
 ### How do I build Aestra from source?
 
-Follow our comprehensive [Building Guide](BUILDING.md):
+Follow our comprehensive [Building Guide](../getting-started/building.md):
 
 **Quick start (Windows):**
 ```powershell
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
-cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+pwsh -File scripts/install-hooks.ps1
+cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 ```
 
 ### What are the build requirements?
 
 **All platforms:**
-- CMake 3.15+
+- CMake 3.22+
 - Git 2.30+
 - C++17 compatible compiler
 
@@ -87,7 +88,7 @@ cmake --build build --config Release --parallel
 
 ### What is Aestra_CORE_MODE?
 
-`Aestra_CORE_MODE=ON` builds only the public core without premium features. This is required for community contributors since premium modules are in private repositories.
+`Aestra_CORE_MODE=ON` builds the public/source-available repo shape without premium modules and switches to public assets when premium content is absent. In public-only checkouts, the helper CMake include forces this mode on automatically.
 
 ```bash
 # Public build (community contributors)
@@ -97,23 +98,23 @@ cmake -S . -B build -DAestra_CORE_MODE=ON
 cmake -S . -B build
 ```
 
-### Build fails with "private folder present" error?
+### Build fails because premium/private modules are missing
 
-This is expected in public CI. Use `Aestra_CORE_MODE=ON` to skip private folders:
+In public checkouts, configure with the public build shape:
 
 ```bash
-cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 ```
 
 ### How do I set up my development environment?
 
-1. **Install prerequisites** - See [Building Guide](BUILDING.md)
+1. **Install prerequisites** - See [Building Guide](../getting-started/building.md)
 2. **Clone the repository** - Fork and clone from GitHub
 3. **Install Git hooks** - `pwsh -File scripts/install-hooks.ps1`
 4. **Build the project** - Follow build instructions
 5. **Configure your IDE** - Use `.clang-format` for code formatting
 
-See [Contributing Guide](CONTRIBUTING.md) for detailed setup.
+See [Contributing Guide](../../CONTRIBUTING.md) for detailed setup.
 
 ## 🤝 Contributing
 
@@ -126,20 +127,20 @@ Several ways to contribute:
 4. **Improve documentation** - Help make docs better
 5. **Test and provide feedback** - Try new features and report issues
 
-See [Contributing Guide](CONTRIBUTING.md) for details.
+See [Contributing Guide](../../CONTRIBUTING.md) for details.
 
 ### Do I need to sign a CLA?
 
 Yes. By submitting a pull request, you agree that:
-- All contributed code becomes property of Dylan Makori / Aestra DAW
+- All contributed code becomes property of Dylan Makori / Aestra
 - You grant full rights to use, modify, and distribute your contributions
 - You waive ownership claims to your contributions
 
-This is necessary because Aestra is commercial software. See [Contributing Guide](CONTRIBUTING.md) for details.
+This is necessary because Aestra is commercial software. See [Contributing Guide](../../CONTRIBUTING.md) for details.
 
 ### What kind of contributions are accepted?
 
-**Public contributions** (in `Aestra-core/`):
+**Public contributions**:
 - ✅ Core audio engine improvements
 - ✅ UI framework enhancements
 - ✅ Bug fixes and optimizations
@@ -148,7 +149,7 @@ This is necessary because Aestra is commercial software. See [Contributing Guide
 - ✅ Build system improvements
 - ✅ Cross-platform compatibility
 
-**Private modules** (not in public repo):
+**Private/commercial-only areas**:
 - ❌ Premium plugins and effects
 - ❌ AI models (Muse internals)
 - ❌ Licensing system
@@ -167,7 +168,7 @@ This is necessary because Aestra is commercial software. See [Contributing Guide
 
 ### What code style should I follow?
 
-Follow our [Coding Style Guide](developer/coding-style.md):
+Follow our [Coding Style Guide](../developer/coding-style.md):
 - **clang-format** for automatic formatting
 - **PascalCase** for classes
 - **camelCase** for functions and variables
@@ -188,14 +189,13 @@ Reviews depend on maintainer availability and PR complexity.
 ### What audio drivers does Aestra support?
 
 **Windows:**
-- ✅ WASAPI (Exclusive and Shared modes)
-- ✅ DirectSound (fallback)
-- 📋 ASIO (planned)
+- ✅ WASAPI
+- ✅ RtAudio-backed device support where configured
+- ✅ ASIO paths exist in the codebase and have targeted validation coverage, but broader compatibility hardening is still ongoing
 
 **Linux:**
-- 🚧 ALSA (in development)
-- 📋 JACK (planned)
-- 📋 PulseAudio (planned)
+- 🚧 ALSA / PulseAudio through the Linux audio stack under active bring-up
+- 📋 JACK remains future/planned
 
 ### What's the typical audio latency?
 
@@ -209,18 +209,18 @@ Latency depends on buffer size, sample rate, and hardware.
 
 Not yet. Plugin support is planned:
 - 📋 VST3 hosting
-- 📋 AU hosting (macOS)
+- 📋 AU hosting (future macOS work)
 - 📋 Native Aestra plugin format
 
 ### How does the UI rendering work?
 
-AestraUI uses a custom immediate-mode rendering system:
+AestraUI uses a custom batched rendering system:
 - **OpenGL-based** rendering
 - **Adaptive FPS** (1-120 FPS based on activity)
 - **GPU-accelerated** for smooth 60+ FPS
 - **Cache-friendly** widget tree
 
-See [Architecture Overview](ARCHITECTURE.md) for details.
+See [Architecture Overview](../architecture/overview.md) for details.
 
 ### What's the threading model?
 
@@ -229,7 +229,7 @@ Aestra uses multiple threads:
 - **Audio Thread**: Real-time audio processing (lock-free)
 - **Loader Thread**: Async file I/O and caching
 
-See [Architecture Overview](ARCHITECTURE.md) for threading details.
+See [Architecture Overview](../architecture/overview.md) for threading details.
 
 ### Can I use Aestra in my commercial projects?
 
@@ -248,7 +248,7 @@ Only premium add-ons (Muse AI, premium plugins - future releases) will require p
 
 ### What license is Aestra under?
 
-Aestra DAW is **proprietary commercial software**. The source code is visible but not open-source. See [License Reference](LICENSE_REFERENCE.md) for complete terms.
+Aestra is **proprietary commercial software**. The source code is visible but not open-source. See [License Reference](../about/license-reference.md) for complete terms.
 
 ### Can I fork Aestra?
 
@@ -346,11 +346,11 @@ cmake --build build --config Release
 
 Still have questions? Check these resources:
 
-- [Building Guide](BUILDING.md) - Detailed build instructions
-- [Contributing Guide](CONTRIBUTING.md) - How to contribute
-- [Architecture Overview](ARCHITECTURE.md) - Technical deep dive
-- [Coding Style Guide](developer/coding-style.md) - Code conventions
-- [Glossary](GLOSSARY.md) - Technical terminology
+- [Building Guide](../getting-started/building.md) - Detailed build instructions
+- [Contributing Guide](../../CONTRIBUTING.md) - How to contribute
+- [Architecture Overview](../architecture/overview.md) - Technical deep dive
+- [Coding Style Guide](../developer/coding-style.md) - Code conventions
+- [Glossary](glossary.md) - Technical terminology
 
 ## 💬 Getting Help
 
@@ -363,4 +363,4 @@ Still have questions? Check these resources:
 
 ---
 
-[← Return to Aestra Docs Index](README.md)
+[← Return to Aestra Docs Index](../README.md)

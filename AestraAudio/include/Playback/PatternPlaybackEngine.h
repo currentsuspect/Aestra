@@ -1,11 +1,11 @@
 // © 2025 Aestra Studios — All Rights Reserved.
 #pragma once
 
-#include "PatternManager.h"
-#include "PatternSource.h"
-#include "PluginHost.h" // [NEW] For MidiBuffer
+#include "../Models/PatternManager.h"
+#include "../Models/PatternSource.h"
+#include "../Plugin/PluginHost.h" // For MidiBuffer
 #include "TimelineClock.h"
-#include "UnitManager.h"
+#include "../Models/UnitManager.h"
 
 #include <array>
 #include <atomic>
@@ -25,13 +25,21 @@ class MixerChannel;
  * @brief Compact, cache-aligned scheduled MIDI event (32 bytes)
  */
 struct ScheduledEvent {
+    /** @brief Absolute sample frame at which the event should fire. */
     uint64_t sampleFrame; // 8 bytes
+    /** @brief Destination unit identifier. */
     UnitID unitId;        // 8 bytes (Moved)
+    /** @brief Pattern-instance identifier used for cancellation. */
     uint32_t instanceId;  // 4 bytes
+    /** @brief Resolved MIDI channel index. */
     uint16_t channelIdx;  // 2 bytes
+    /** @brief MIDI status byte. */
     uint8_t statusByte;   // 1 byte (MIDI status)
+    /** @brief First MIDI data byte, usually note number. */
     uint8_t data1;        // 1 byte (note number)
+    /** @brief Second MIDI data byte, usually velocity. */
     uint8_t data2;        // 1 byte (velocity)
+    /** @brief Event priority inside a frame. */
     uint8_t priority;     // 1 byte (0=note-off first, 1=note-on second)
     uint8_t _padding[6];  // 6 bytes -> Total 32.
 };
@@ -44,8 +52,16 @@ static_assert(sizeof(ScheduledEvent) == 32, "ScheduledEvent must be 32 bytes");
  */
 template <typename T, size_t Capacity> class LockFreeSPSCQueue {
 public:
+    /**
+     * @brief Create an empty single-producer/single-consumer queue.
+     */
     LockFreeSPSCQueue() : m_head(0), m_tail(0) {}
 
+    /**
+     * @brief Push an item into the queue.
+     * @param item Item to enqueue.
+     * @return False when the queue is full.
+     */
     bool push(const T& item) {
         uint32_t head = m_head.load(std::memory_order_relaxed);
         uint32_t nextHead = (head + 1) % Capacity;
@@ -59,6 +75,11 @@ public:
         return true;
     }
 
+    /**
+     * @brief Read the next queued item without removing it.
+     * @param item Output slot for the queued item.
+     * @return False when the queue is empty.
+     */
     bool peek(T& item) const {
         uint32_t tail = m_tail.load(std::memory_order_relaxed);
         if (tail == m_head.load(std::memory_order_acquire)) {
@@ -68,11 +89,18 @@ public:
         return true;
     }
 
+    /**
+     * @brief Remove the current front item.
+     */
     void pop() {
         uint32_t tail = m_tail.load(std::memory_order_relaxed);
         m_tail.store((tail + 1) % Capacity, std::memory_order_release);
     }
 
+    /**
+     * @brief Get the current queue occupancy.
+     * @return Number of queued items.
+     */
     size_t size() const {
         uint32_t head = m_head.load(std::memory_order_acquire);
         uint32_t tail = m_tail.load(std::memory_order_acquire);
@@ -93,48 +121,87 @@ private:
  */
 class PatternPlaybackEngine {
 public:
+    /**
+     * @brief Create the pattern scheduler.
+     * @param clock Timeline clock used for beat/frame conversion.
+     * @param patternMgr Pattern manager containing the source note data.
+     * @param unitMgr Unit manager used for routing and channel lookup.
+     */
     PatternPlaybackEngine(TimelineClock* clock, PatternManager* patternMgr, UnitManager* unitMgr);
 
+    /**
+     * @brief Route descriptor for allocation-free MIDI fanout on the audio thread.
+     */
     struct UnitMidiRoute {
+        /** @brief Destination unit identifier. */
         UnitID unitId{0};
+        /** @brief Destination MIDI buffer for that unit. */
         MidiBuffer* midiBuffer{nullptr};
 
         UnitMidiRoute() = default;
+        /**
+         * @brief Create a route entry.
+         * @param id Destination unit identifier.
+         * @param buf Destination MIDI buffer.
+         */
         UnitMidiRoute(UnitID id, MidiBuffer* buf) : unitId(id), midiBuffer(buf) {}
     };
 
     /**
      * Schedule new pattern instance (non-RT thread)
+     * @param pid Pattern identifier to schedule.
+     * @param startBeat Beat at which the pattern starts.
+     * @param instanceId Caller-supplied instance identifier.
      */
     void schedulePatternInstance(PatternID pid, double startBeat, uint32_t instanceId);
 
     /**
      * Cancel pattern instance via atomic flag (RT-safe)
+     * @param instanceId Pattern-instance identifier to cancel.
      */
     void cancelPatternInstance(uint32_t instanceId);
 
     /**
      * Refill lookahead window with events (non-RT thread)
      * Called periodically by scheduler
+     * @param currentFrame Current transport frame.
+     * @param sampleRate Active sample rate.
+     * @param lookaheadSamples Number of frames to schedule ahead.
      */
     void refillWindow(uint64_t currentFrame, int sampleRate, int lookaheadSamples = 4096);
 
     /**
      * Process audio callback (RT-safe, audio thread only)
+     * @param currentFrame Current transport frame.
+     * @param bufferSize Number of frames in the current audio callback.
+     * @param unitMidiBuffers Routing map from unit ID to MIDI buffer.
      */
     void processAudio(uint64_t currentFrame, int bufferSize, std::map<UnitID, MidiBuffer*>& unitMidiBuffers);
 
     /**
      * Process audio callback (RT-safe, audio thread only)
      * Allocation-free alternative to std::map routing.
+     * @param currentFrame Current transport frame.
+     * @param bufferSize Number of frames in the current audio callback.
+     * @param routes Route array for unit MIDI fanout.
+     * @param routeCount Number of route entries in @p routes.
      */
     void processAudio(uint64_t currentFrame, int bufferSize, const UnitMidiRoute* routes, size_t routeCount) noexcept;
 
-    // [NEW] Flush queue (Hard Kill)
+    /**
+     * @brief Flush queued events and rewind active instances.
+     */
     void flush();
 
-    // Diagnostics
+    /**
+     * @brief Get the number of scheduler overflows observed so far.
+     * @return Overflow counter value.
+     */
     uint32_t getOverflowCount() const { return m_overflowCounter.load(std::memory_order_relaxed); }
+    /**
+     * @brief Get the number of scheduled events processed so far.
+     * @return Processed event counter value.
+     */
     uint32_t getProcessedEventCount() const { return m_processedCounter.load(std::memory_order_relaxed); }
 
 private:

@@ -9,6 +9,52 @@
 #include <sys/sysinfo.h>
 #include <time.h>
 #include <unistd.h>
+#include <array>
+#include <cstdio>
+
+namespace {
+
+std::string trimTrailingNewlines(std::string value) {
+    while (!value.empty() && (value.back() == '\n' || value.back() == '\r')) {
+        value.pop_back();
+    }
+    return value;
+}
+
+std::string shellEscape(const std::string& input) {
+    std::string escaped = "'";
+    for (char c : input) {
+        if (c == '\'') {
+            escaped += "'\\''";
+        } else {
+            escaped += c;
+        }
+    }
+    escaped += "'";
+    return escaped;
+}
+
+std::string runDialogCommand(const std::string& command) {
+    std::array<char, 512> buffer{};
+    std::string output;
+    FILE* pipe = popen(command.c_str(), "r");
+    if (!pipe) {
+        return "";
+    }
+
+    while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr) {
+        output += buffer.data();
+    }
+
+    const int status = pclose(pipe);
+    if (status != 0) {
+        return "";
+    }
+
+    return trimTrailingNewlines(output);
+}
+
+} // namespace
 
 namespace Aestra {
 
@@ -25,8 +71,22 @@ std::string PlatformUtilsLinux::openFileDialog(const std::string& title, const s
     return "";
 }
 
-std::string PlatformUtilsLinux::saveFileDialog(const std::string& title, const std::string& filter) const {
-    std::cerr << "Linux File Dialog not fully implemented. Returning empty string." << std::endl;
+std::string PlatformUtilsLinux::saveFileDialog(const SaveFileDialogOptions& options) const {
+    const std::string escapedTitle = shellEscape(options.title.empty() ? "Save File" : options.title);
+    const std::string filenameArg = options.defaultPath.empty() ? "" : (" --filename=" + shellEscape(options.defaultPath));
+
+    std::string path = runDialogCommand("command -v zenity >/dev/null 2>&1 && zenity --file-selection --save --confirm-overwrite --title=" +
+                                        escapedTitle + filenameArg);
+    if (!path.empty()) return path;
+
+    path = runDialogCommand("command -v qarma >/dev/null 2>&1 && qarma --file-selection --save --confirm-overwrite --title=" +
+                            escapedTitle + filenameArg);
+    if (!path.empty()) return path;
+
+    const std::string kdialogDefault = options.defaultPath.empty() ? "~" : shellEscape(options.defaultPath);
+    path = runDialogCommand("command -v kdialog >/dev/null 2>&1 && kdialog --getsavefilename " + kdialogDefault);
+    if (!path.empty()) return path;
+
     return "";
 }
 

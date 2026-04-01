@@ -161,7 +161,6 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Core/AudioEngine.cpp
     src/Core/AudioDeviceManager.cpp
     src/Core/AutosaveManager.cpp
-    src/Core/DriverRegistryStub.cpp  # Default no-op; platform libs override at link time
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
     src/Core/ProjectValidator.cpp
@@ -212,6 +211,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/CommandTransaction.cpp
     src/Commands/SplitClipCommand.cpp
     src/Commands/AddClipCommand.cpp
+    src/Commands/CreateLaneCommand.cpp
     
     # Headless / batch processing
     src/Headless/HeadlessMusicGenerator.cpp
@@ -224,6 +224,15 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Plugin/SamplerPlugin.cpp
     src/Plugin/EffectChain.cpp
 )
+
+# Driver registry wiring:
+# - Linux with ALSA builds the real registry in AestraAudioLinux.
+# - Other builds keep the weak fallback in core so the dummy driver is available.
+if(NOT (UNIX AND ALSA_FOUND))
+    list(APPEND AESTRA_AUDIO_CORE_SOURCES
+        src/Core/DriverRegistryStub.cpp
+    )
+endif()
 
 # Set per-file compile flags for AVX-512 (x86_64 only, not ARM64)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i686")
@@ -308,9 +317,17 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Commands/CommandTransaction.h
     include/Commands/SplitClipCommand.h
     include/Commands/AddClipCommand.h
+    include/Commands/AddChannelCommand.h
+    include/Commands/CreateLaneCommand.h
+    include/Commands/DuplicateClipCommand.h
     include/Commands/MoveClipCommand.h
     include/Commands/RemoveClipCommand.h
+    include/Commands/TrimClipCommand.h
     include/Commands/MacroCommand.h
+    include/Commands/SetVolumeCommand.h
+    include/Commands/SetPanCommand.h
+    include/Commands/SetMuteCommand.h
+    include/Commands/SetSoloCommand.h
     
     # Headless / batch processing
     include/Headless/HeadlessMusicGenerator.h
@@ -488,8 +505,9 @@ if(WIN32)
             advapi32    # Registry
     )
     
-    # Define "AestraAudio" as an alias to the platform library for main app linking
-    add_library(AestraAudio ALIAS AestraAudioWin)
+    # Use INTERFACE (not ALIAS) so PUBLIC include dirs from AestraAudioWin propagate
+    add_library(AestraAudio INTERFACE)
+    target_link_libraries(AestraAudio INTERFACE AestraAudioWin)
 
 elseif(UNIX)
     # Non-Windows (Linux)
@@ -523,11 +541,12 @@ elseif(UNIX)
         target_link_libraries(AestraAudioLinux
             PUBLIC
                 AestraAudioCore
-            PRIVATE
                 ${RTAUDIO_LIBS}
         )
 
-        add_library(AestraAudio ALIAS AestraAudioLinux)
+        # Use INTERFACE (not ALIAS) so PUBLIC include dirs from AestraAudioCore propagate
+        add_library(AestraAudio INTERFACE)
+        target_link_libraries(AestraAudio INTERFACE AestraAudioLinux)
     else()
         # No ALSA - stub already in AestraAudioCore
         # Create an interface library for compatibility

@@ -17,9 +17,9 @@ void RegisterPlatformDrivers(AudioDeviceManager& manager) {
         if (rtAudio->isAvailable()) {
             manager.addDriver(std::move(rtAudio));
         }
+    } catch (const std::exception&) {
     } catch (...) {
     }
-
     manager.addDriver(std::make_unique<DummyAudioDriver>());
 }
 

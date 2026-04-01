@@ -1,7 +1,9 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UnitRow.h"
+#include "PluginBrowserPanel.h"
 #include <chrono>
 #include <algorithm>
+#include <cmath>
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
 
@@ -29,7 +31,31 @@ void UnitRow::updateState() {
         m_isSolo = unit->isSolo;
         m_audioClip = unit->audioClipPath.empty() ? "" : 
                       unit->audioClipPath.substr(unit->audioClipPath.find_last_of("/\\") + 1);
+        m_pluginId = unit->pluginId;
         m_mixerChannel = unit->targetMixerRoute;
+
+        switch (m_group) {
+        case Aestra::Audio::UnitGroup::Synth:
+            m_groupLabel = "Synth";
+            break;
+        case Aestra::Audio::UnitGroup::Drums:
+            m_groupLabel = "Drums";
+            break;
+        case Aestra::Audio::UnitGroup::Audio:
+            m_groupLabel = "Audio";
+            break;
+        default:
+            m_groupLabel = "Unit";
+            break;
+        }
+
+        if (!m_pluginId.empty()) {
+            m_sourceSummary = "Plugin";
+        } else if (!m_audioClip.empty()) {
+            m_sourceSummary = "Sample";
+        } else {
+            m_sourceSummary = "Empty";
+        }
     }
     invalidateVisuals();
 }
@@ -42,21 +68,10 @@ void UnitRow::onRender(NUIRenderer& renderer) {
     }
 
     auto bounds = getBounds();
-    
-    // Render utilizing the FBO cache for performance (prevents popping/flicker on click)
-    // The lambda is only executed if the cache is invalid.
-    bool usedCache = renderer.renderCachedOrUpdate(reinterpret_cast<uint64_t>(this), bounds, [this, &renderer, bounds]() {
-        // Transform absolute specific drawings to FBO-local space (0,0 based)
-        // This ensures drawing at 'bounds.x' works correctly within the FBO texture.
-        renderer.pushTransform(-bounds.x, -bounds.y);
-        this->drawContent(renderer);
-        renderer.popTransform();
-    });
-    
-    // If caching isn't supported by the renderer, fallback to direct draw
-    if (!usedCache) {
-        drawContent(renderer);
-    }
+
+    // Render live for now. The widget cache path is currently producing
+    // duplicate/local-space ghosts for Arsenal rows on Linux.
+    drawContent(renderer);
     
     // Render dynamic children (Input Widget, Context Menu) on top
     // Push UnitRow position so children (relative coords) draw correctly
@@ -76,7 +91,9 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     float radius = theme.getRadius("radiusL");
 
     // Shadow/Glow behind the row
-    if (m_isHovered || m_isDragging) {
+    if (m_isSelected) {
+        renderer.drawShadow(cardBounds, 0.0f, 3.0f, 14.0f, theme.getColor("accentPrimary").withAlpha(0.28f));
+    } else if (m_isHovered || m_isDragging) {
         renderer.drawShadow(cardBounds, 0.0f, 4.0f, 16.0f, theme.getColor("primary").withAlpha(0.2f));
     } else {
         renderer.drawShadow(cardBounds, 0.0f, 2.0f, 8.0f, NUIColor::black().withAlpha(0.5f));
@@ -88,14 +105,22 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     // For rows, we want them to feel like plates floating on the void.
     // Let's use a custom glass color derived from panel background but with alpha.
     NUIColor cardBg = theme.getColor("surfaceTertiary").withAlpha(0.6f); 
-    if (m_isHovered) cardBg = cardBg.lightened(0.1f).withAlpha(0.7f);
+    if (m_isSelected) {
+        cardBg = theme.getColor("accentPrimary").withAlpha(0.14f);
+    } else if (m_isHovered) {
+        cardBg = cardBg.lightened(0.1f).withAlpha(0.7f);
+    }
     
     renderer.fillRoundedRect(cardBounds, radius, cardBg);
     
     // Glass Border
     // Glass Border
     NUIColor borderColor = theme.getColor("glassBorder"); // 0.09f white
-    if (m_isHovered) borderColor = theme.getColor("accentPrimary").withAlpha(0.5f);
+    if (m_isSelected) {
+        borderColor = theme.getColor("accentPrimary").withAlpha(0.9f);
+    } else if (m_isHovered) {
+        borderColor = theme.getColor("accentPrimary").withAlpha(0.5f);
+    }
     
     renderer.strokeRoundedRect(cardBounds, radius, 1.0f, borderColor);
     
@@ -136,7 +161,9 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     
     // === Context Block (step sequencer grid) ===
     NUIRect contextRect(separatorX + 6.0f, cardBounds.y, cardBounds.width - m_controlWidth - 12.0f, cardBounds.height);
+    renderer.setClipRect(cardBounds);
     drawContextBlock(renderer, contextRect);
+    renderer.clearClipRect();
 }
 
 void UnitRow::drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -287,11 +314,18 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     drawGearIcon(renderer, gearRect, false); // Always "inactive" state unless toggled? Just use clickable style
     x += BUTTON_SIZE + BUTTON_SPACING + 4.0f;
     
-    // === 5. Unit Name ===
-    // Dynamic width calculation to fill space up to mixer channel
-    float mixerRight = bounds.width - DRAG_HANDLE_WIDTH - COLOR_STRIP_WIDTH - 8.0f;
-    float mixerBitStart = mixerRight - 50.0f; 
-    float nameWidth = std::max(50.0f, mixerBitStart - x);
+    // === Right-aligned info cluster ===
+    float rightX = bounds.x + bounds.width - 4.0f;
+    const bool hasSourceTag = !m_pluginId.empty() || !m_audioClip.empty();
+    const std::string mixText = (m_mixerChannel >= 0) ? ("CH " + std::to_string(m_mixerChannel + 1)) : "MAIN";
+    const float mixTagWidth = renderer.measureText(mixText, 10.0f).width + 10.0f;
+    const float sourceTagWidth = hasSourceTag
+        ? (renderer.measureText(!m_pluginId.empty() ? "INST" : "CLIP", 9.0f).width + 12.0f)
+        : 0.0f;
+    const float rightClusterWidth = mixTagWidth + (hasSourceTag ? (sourceTagWidth + 8.0f) : 0.0f);
+
+    // === 5. Unit Identity ===
+    float nameWidth = std::max(72.0f, (rightX - rightClusterWidth - 10.0f) - x);
 
     if (!m_isEditingName) {
         // Truncate long names to fit available space
@@ -308,18 +342,45 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             displayName += "...";
         }
         
-        float textY = centerY - (13.0f * 0.38f);
-        renderer.drawText(displayName, NUIPoint(x, textY), 13.0f, theme.getColor("textPrimary"));
+        renderer.drawText(displayName, NUIPoint(x, bounds.y + 9.0f), 13.0f, theme.getColor("textPrimary"));
+
+        std::string metaText = m_groupLabel;
+
+        float maxMetaWidth = std::max(40.0f, nameWidth - 10.0f);
+        auto metaSize = renderer.measureText(metaText, 10.0f);
+        while (metaSize.width > maxMetaWidth && metaText.length() > 3) {
+            metaText.pop_back();
+            metaSize = renderer.measureText(metaText + "...", 10.0f);
+        }
+        if (metaSize.width > maxMetaWidth) {
+            metaText = "...";
+        } else if (metaText.length() < m_groupLabel.length()) {
+            metaText += "...";
+        }
+
+        if (nameWidth > 90.0f) {
+            renderer.drawText(metaText, NUIPoint(x, bounds.y + 24.0f), 10.0f, theme.getColor("textSecondary"));
+        }
     }
-    
-    // === Right-aligned info (Mixer Channel only - sample name is now the unit name) ===
-    float rightX = bounds.x + bounds.width - 4.0f;
+
+    if (!m_pluginId.empty() || !m_audioClip.empty()) {
+        std::string sourceTag = !m_pluginId.empty() ? "INST" : "CLIP";
+        float w = renderer.measureText(sourceTag, 9.0f).width + 12.0f;
+        NUIColor tagBg = !m_pluginId.empty()
+            ? theme.getColor("accentPrimary").withAlpha(0.2f)
+            : NUIColor(0.22f, 0.46f, 0.88f, 0.18f);
+
+        NUIRect tagRect(rightX - mixTagWidth - 8.0f - w, centerY - 9.0f, w, 18.0f);
+        renderer.fillRoundedRect(tagRect, 4.0f, tagBg);
+        renderer.strokeRoundedRect(tagRect, 4.0f, 1.0f, theme.getColor("borderSubtle"));
+        float textY = renderer.calculateTextY(tagRect, 9.0f);
+        renderer.drawText(sourceTag, NUIPoint(tagRect.x + 6.0f, textY), 9.0f, theme.getColor("textSecondary"));
+    }
     
     // Mixer Channel Tag
     if (m_mixerChannel >= 0) {
-        std::string mixText = "CH " + std::to_string(m_mixerChannel + 1);
-        float w = renderer.measureText(mixText, 10.0f).width + 10.0f;
-        
+        float w = mixTagWidth;
+
         NUIRect tagRect(rightX - w, centerY - 9.0f, w, 18.0f);
         renderer.fillRoundedRect(tagRect, 4.0f, theme.getColor("backgroundSecondary"));
         renderer.strokeRoundedRect(tagRect, 4.0f, 1.0f, theme.getColor("borderSubtle"));
@@ -327,11 +388,24 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         float textY = renderer.calculateTextY(tagRect, 10.0f);
         renderer.drawText(mixText, NUIPoint(tagRect.x + 5.0f, textY), 10.0f, theme.getColor("textSecondary"));
     }
-    // Note: Audio clip name display removed - the unit name already shows the loaded sample
+    else {
+        NUIRect tagRect(rightX - mixTagWidth, centerY - 9.0f, mixTagWidth, 18.0f);
+        renderer.fillRoundedRect(tagRect, 4.0f, theme.getColor("backgroundSecondary"));
+        renderer.strokeRoundedRect(tagRect, 4.0f, 1.0f, theme.getColor("borderSubtle"));
+        float textY = renderer.calculateTextY(tagRect, 10.0f);
+        renderer.drawText(mixText, NUIPoint(tagRect.x + 5.0f, textY), 10.0f, theme.getColor("textSecondary"));
+    }
 }
 
 void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
+    struct NoteSpan {
+        int startStep{0};
+        int endStep{0};
+        int lane{0};
+        int pitch{60};
+        float velocity{1.0f};
+    };
     
     // === Extract unit's accent color for active steps ===
     float r = ((m_color >> 16) & 0xFF) / 255.0f;
@@ -358,18 +432,49 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     
     // === Fetch Active Steps ===
     std::vector<int> activeSteps;
+    std::vector<NoteSpan> noteSpans;
     if (m_patternId.isValid()) {
         auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId);
         if (pattern && pattern->isMidi()) {
             auto& midi = std::get<Aestra::Audio::MidiPayload>(pattern->payload);
+            std::vector<Aestra::Audio::MidiNote> unitNotes;
             for (const auto& note : midi.notes) {
                 if (note.unitId != m_unitId && note.unitId != 0) continue;
-                if (note.pitch != 60) continue;
-                int step = static_cast<int>(std::floor(note.startBeat / 0.25 + 0.1));
-                if (step >= 0 && step < m_stepCount) activeSteps.push_back(step);
+                unitNotes.push_back(note);
+            }
+
+            std::sort(unitNotes.begin(), unitNotes.end(), [](const auto& a, const auto& b) {
+                if (std::abs(a.startBeat - b.startBeat) > 0.0001) return a.startBeat < b.startBeat;
+                return a.pitch < b.pitch;
+            });
+
+            std::vector<int> laneEnds;
+            for (const auto& note : unitNotes) {
+                const int startStep = std::clamp(static_cast<int>(std::floor(note.startBeat / 0.25 + 0.0001)), 0, m_stepCount - 1);
+                const double endBeat = std::max(note.startBeat + 0.25, note.startBeat + note.durationBeats);
+                const int endExclusive =
+                    std::clamp(static_cast<int>(std::ceil(endBeat / 0.25 - 0.0001)), startStep + 1, m_stepCount);
+
+                for (int step = startStep; step < endExclusive; ++step) {
+                    activeSteps.push_back(step);
+                }
+
+                int lane = 0;
+                while (lane < static_cast<int>(laneEnds.size()) && laneEnds[lane] > startStep) {
+                    ++lane;
+                }
+                if (lane == static_cast<int>(laneEnds.size())) {
+                    laneEnds.push_back(endExclusive);
+                } else {
+                    laneEnds[lane] = endExclusive;
+                }
+
+                noteSpans.push_back(NoteSpan{startStep, endExclusive, lane, note.pitch, note.velocity});
             }
         }
     }
+    std::sort(activeSteps.begin(), activeSteps.end());
+    activeSteps.erase(std::unique(activeSteps.begin(), activeSteps.end()), activeSteps.end());
     
     // Theme colors
     NUIColor stepInactiveColor = theme.getColor("stepInactive");
@@ -430,10 +535,84 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             renderer.strokeRoundedRect(padRect, padRadius, 1.0f, borderColor);
         }
     }
+
+    if (!noteSpans.empty()) {
+        const int laneCount = std::max(1, std::min(4, static_cast<int>(
+            std::max_element(noteSpans.begin(), noteSpans.end(),
+                             [](const NoteSpan& a, const NoteSpan& b) { return a.lane < b.lane; })->lane + 1)));
+        const float laneGap = 2.0f;
+        const float laneHeight = std::max(5.0f, (padSize - laneGap * (laneCount - 1)) / laneCount);
+
+        for (const auto& span : noteSpans) {
+            const float startX =
+                bounds.x + (span.startStep * stepWidth) + PAD_SPACING * 0.5f - m_scrollX;
+            const float endX =
+                bounds.x + (span.endStep * stepWidth) - PAD_SPACING * 0.5f - m_scrollX;
+            const float width = std::max(6.0f, endX - startX);
+
+            if (startX + width < bounds.x || startX > bounds.x + bounds.width) {
+                continue;
+            }
+
+            const float laneY = gridY + span.lane * (laneHeight + laneGap);
+            NUIRect spanRect(startX, laneY, width, laneHeight);
+            const float velocity = std::clamp(span.velocity <= 1.0f ? span.velocity : span.velocity / 127.0f, 0.1f, 1.0f);
+            const NUIColor fill = unitAccent.withAlpha(0.45f + velocity * 0.35f);
+            const NUIColor border = unitAccent.lightened(0.15f).withAlpha(0.95f);
+
+            renderer.fillRoundedRect(spanRect, std::min(laneHeight * 0.5f, 5.0f), fill);
+            renderer.strokeRoundedRect(spanRect, std::min(laneHeight * 0.5f, 5.0f), 1.0f, border);
+
+        }
+    }
 }
 
 bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     auto bounds = getBounds();
+
+    auto resolveGridStep = [this](const NUIPoint& position, const NUIRect& gridBounds) -> int {
+        float relativeX = position.x - gridBounds.x;
+        float availWidth = gridBounds.width;
+        float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
+        float contentX = relativeX + m_scrollX;
+        return static_cast<int>(contentX / stepWidth);
+    };
+
+    auto updateStepEditSpan = [this](int endExclusive) {
+        if (!m_patternId.isValid() || m_stepEditStart < 0 || endExclusive <= m_stepEditStart) {
+            return;
+        }
+
+        m_stepEditEndExclusive = std::max(m_stepEditStart + 1, std::min(m_stepCount, endExclusive));
+        const double targetStart = static_cast<double>(m_stepEditStart) * 0.25;
+        const double targetDuration = static_cast<double>(m_stepEditEndExclusive - m_stepEditStart) * 0.25;
+
+        auto& pm = m_trackManager->getPatternManager();
+        pm.applyPatch(m_patternId, [this, targetStart, targetDuration](Aestra::Audio::PatternSource& p) {
+            if (!p.isMidi()) return;
+            auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
+            auto it = std::find_if(midi.notes.begin(), midi.notes.end(),
+                [this, targetStart](const Aestra::Audio::MidiNote& n) {
+                    return n.unitId == m_unitId &&
+                           n.pitch == 60 &&
+                           std::abs(n.startBeat - targetStart) < 0.01;
+                });
+            if (it != midi.notes.end()) {
+                it->durationBeats = targetDuration;
+            }
+        });
+    };
+
+    auto finishStepEdit = [this]() {
+        if (!m_isStepEditing) {
+            return;
+        }
+        m_isStepEditing = false;
+        if (m_onPatternEdited && m_patternId.isValid()) {
+            m_onPatternEdited(m_patternId);
+        }
+        invalidateVisuals();
+    };
 
     // Forward events to active input widget (convert to local space)
     if (m_isEditingName && m_nameInput) {
@@ -495,6 +674,31 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     
     if (wasHovered != m_isHovered || oldHoveredStep != m_hoveredStep) {
         invalidateVisuals();
+    }
+
+    if (m_isStepEditing) {
+        if (event.released || event.type == NUIMouseEventType::Up) {
+            finishStepEdit();
+            return true;
+        }
+
+        const bool isPointerMoveWhileEditing =
+            !event.pressed && !event.released &&
+            (event.type == NUIMouseEventType::Drag ||
+             event.type == NUIMouseEventType::Move ||
+             event.button == NUIMouseButton::None);
+
+        if (isPointerMoveWhileEditing) {
+            const NUIRect gridBounds(bounds.x + m_controlWidth, bounds.y, bounds.width - m_controlWidth, bounds.height);
+            int stepIndex = resolveGridStep(event.position, gridBounds);
+            stepIndex = std::max(m_stepEditStart, std::min(m_stepCount - 1, stepIndex));
+            const int endExclusive = stepIndex + 1;
+            if (endExclusive != m_stepEditEndExclusive) {
+                updateStepEditSpan(endExclusive);
+                invalidateVisuals();
+            }
+            return true;
+        }
     }
     
     // === Click Handling ===
@@ -731,34 +935,48 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
     
     if (stepIndex >= 0 && stepIndex < m_stepCount && m_patternId.isValid()) {
         auto& pm = m_trackManager->getPatternManager();
-        
-        pm.applyPatch(m_patternId, [this, stepIndex](Aestra::Audio::PatternSource& p) {
+
+        bool removedExisting = false;
+        pm.applyPatch(m_patternId, [this, stepIndex, &removedExisting](Aestra::Audio::PatternSource& p) {
             if (!p.isMidi()) return;
             auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
-            
-            // Look for existing note
-            double targetStart = stepIndex * 0.25;
-            auto it = std::find_if(midi.notes.begin(), midi.notes.end(), 
-                [this, targetStart](const Aestra::Audio::MidiNote& n) {
-                    return n.unitId == m_unitId && 
-                           n.pitch == 60 && 
-                           std::abs(n.startBeat - targetStart) < 0.01;
+
+            const double targetBeat = stepIndex * 0.25;
+            auto it = std::find_if(midi.notes.begin(), midi.notes.end(),
+                [this, targetBeat](const Aestra::Audio::MidiNote& n) {
+                    const double endBeat = std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
+                    return n.unitId == m_unitId &&
+                           n.pitch == 60 &&
+                           targetBeat >= n.startBeat - 0.01 &&
+                           targetBeat < endBeat - 0.01;
                 });
-            
+
             if (it != midi.notes.end()) {
                 midi.notes.erase(it);
-            } else {
-                midi.notes.push_back({60, targetStart, 0.25, 100.0f / 127.0f, m_unitId});
-                
-                // [NEW] Audition Sound
-                auto& engine = Aestra::Audio::AudioEngine::getInstance();
-                Aestra::Audio::AudioQueueCommand audCmd;
-                audCmd.type = Aestra::Audio::AudioQueueCommandType::AuditionUnit;
-                audCmd.trackIndex = m_unitId;
-                audCmd.value1 = 0.8f; // Velocity
-                engine.commandQueue().push(audCmd);
+                removedExisting = true;
+                return;
             }
+
+            midi.notes.push_back({60, targetBeat, 0.25, 100.0f / 127.0f, m_unitId});
         });
+
+        if (removedExisting) {
+            if (m_onPatternEdited) {
+                m_onPatternEdited(m_patternId);
+            }
+        } else {
+            m_isStepEditing = true;
+            m_stepEditStart = stepIndex;
+            m_stepEditEndExclusive = stepIndex + 1;
+
+            Aestra::Audio::AudioQueueCommand audCmd;
+            audCmd.type = Aestra::Audio::AudioQueueCommandType::AuditionUnit;
+            audCmd.trackIndex = m_unitId;
+            audCmd.value1 = 0.8f;
+            if (m_trackManager) {
+                m_trackManager->pushAudioCommand(audCmd);
+            }
+        }
         
         invalidateVisuals();
     }
@@ -786,6 +1004,16 @@ UnitRow::~UnitRow() {
 
 DropFeedback UnitRow::onDragEnter(const DragData& data, const NUIPoint& position) {
     (void)position;
+    if (data.type == DragDataType::Plugin && !data.sourceClipIdString.empty()) {
+        if (const auto* plugin = std::any_cast<PluginListItem>(&data.customData)) {
+            if (plugin->typeName != "Instrument") {
+                return DropFeedback::None;
+            }
+        }
+        invalidateVisuals();
+        return DropFeedback::Copy;
+    }
+
     // Accept file drags (audio files)
     if (data.type == DragDataType::File) {
         // Check if it's an audio file
@@ -813,6 +1041,26 @@ DropResult UnitRow::onDrop(const DragData& data, const NUIPoint& position) {
     (void)position;
     DropResult result;
     
+    if (data.type == DragDataType::Plugin && !data.sourceClipIdString.empty()) {
+        if (const auto* plugin = std::any_cast<PluginListItem>(&data.customData)) {
+            if (plugin->typeName != "Instrument") {
+                result.accepted = false;
+                result.message = "Only instrument plugins can be dropped into Arsenal";
+                return result;
+            }
+        }
+
+        if (m_onPluginDropped) {
+            m_onPluginDropped(m_unitId, data.sourceClipIdString);
+            updateState();
+            invalidateVisuals();
+            result.accepted = true;
+            result.message = "Instrument loaded into Arsenal";
+            Aestra::Log::info("[UnitRow] Plugin dropped: " + data.sourceClipIdString);
+        }
+        return result;
+    }
+
     if (data.type == DragDataType::File) {
         std::string path = data.filePath;
         std::string ext = path.substr(path.find_last_of('.') + 1);

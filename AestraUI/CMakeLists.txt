@@ -131,6 +131,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/PluginSelectorMenu.cpp
     Widgets/GenericPluginEditor.h
     Widgets/GenericPluginEditor.cpp
+    Widgets/RumblePluginEditor.h
+    Widgets/RumblePluginEditor.cpp
 )
 
 set(AESTRAUI_GRAPHICS_SOURCES

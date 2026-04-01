@@ -59,6 +59,8 @@ set(Aestra_SOURCES
 	Settings/GeneralSettingsPage.cpp
 	Settings/AppearanceSettingsPage.h
 	Settings/AppearanceSettingsPage.cpp
+	Settings/ExportDialog.h
+	Settings/ExportDialog.cpp
 	
 	# Components
 	Components/TransportInfoContainer.h
@@ -118,13 +120,15 @@ set_target_properties(Aestra PROPERTIES
 )
 
 # Link against AESTRA libraries
+# --start-group around audio libs so GNU ld resolves RegisterPlatformDrivers
+# (Core calls it, Linux provides it — circular dependency)
 target_link_libraries(Aestra PRIVATE
 	AestraCore
 	AestraPlat
 	AestraUI_Core
 	AestraUI_Platform
 	AestraUI_OpenGL
-	AestraAudio
+	-Wl,--start-group AestraAudio AestraAudioCore -Wl,--end-group
 )
 
 # Include directories
@@ -135,6 +139,7 @@ target_include_directories(Aestra PRIVATE
 	${CMAKE_SOURCE_DIR}/AestraPlat/include
 	${CMAKE_SOURCE_DIR}/AestraUI/Graphics
 	${CMAKE_SOURCE_DIR}/AestraUI/Core
+	${CMAKE_SOURCE_DIR}/AestraUI/Base
 	${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
 	${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
 	${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
