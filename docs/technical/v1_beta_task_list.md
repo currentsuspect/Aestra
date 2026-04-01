@@ -6,7 +6,7 @@ This is the execution backlog for shipping **Aestra v1 Beta by December 2026**. 
 
 ## Current repo status (quick reality check)
 
-Last updated: March 29, 2026. Keep this section in sync as we ship.
+Last updated: April 1, 2026. Keep this section in sync as we ship.
 
 - **Project save/load**: `ProjectSerializer` implemented. Round-trip smoke test passing (`ProjectRoundTripTest`).
 - **Autosave**: `AutosaveManager` in `AestraAudio/src/Core/AutosaveManager.cpp`. Tied to dirty state, crash-safe writes, recovery on startup.
@@ -17,7 +17,7 @@ Last updated: March 29, 2026. Keep this section in sync as we ship.
   - `CommandTransaction` groups multi-step edits into single undo steps.
 - **Recording (partially wired)**: UI wiring exists (`TransportBar` → `AestraContent` → `TrackManager::record()`).
   - Known gaps (still P0): end-to-end reliability/stress tests, file management rules, device edge cases.
-- **Export/offline render**: not confirmed in code yet (treated as missing until verified).
+- **Export/offline render**: `AudioExporter` fully rewritten — uses `AudioRenderer::renderBlock()`, proper duration from playlist, master output stage (DC block, soft clip, dither), File > Export Audio menu wired.
 
 Completed since early January:
 
@@ -213,13 +213,26 @@ Completed since early January:
 
 **Done means:** users can finish a track and trust the output.
 
-- [P0][J-001] Define render scope: full song vs loop region, tail handling.
-- [P0][J-002] Implement offline render/bounce pipeline.
-- [P0][J-003] Ensure export uses the same signal path as realtime playback (no “sounds different” bugs).
-- [P0][J-004] Render to WAV (minimum). Sample rate/bit depth selection policy.
+- [x][P0][J-001] Define render scope: full song vs loop region, tail handling. ✅
+  - `RenderScope::FullSong`, `RenderScope::LoopRegion`, `RenderScope::Selection`
+  - Tail seconds configurable, converted to beats for render loop
+- [x][P0][J-002] Implement offline render/bounce pipeline. ✅
+  - `AudioExporter` rewritten to use `AudioRenderer::renderBlock()` (same path as `bounceRangeToWav()`)
+  - Position advances correctly between blocks
+  - Duration computed from `PlaylistModel::getTotalDurationBeats()`
+- [x][P0][J-003] Ensure export uses the same signal path as realtime playback. ✅
+  - `AudioRenderer::renderBlock()` + `processArsenalUnits()` for master-routed units
+  - Master output stage: DC blocking, soft clipping, TPDF dither for PCM
+- [x][P0][J-004] Render to WAV (minimum). Sample rate/bit depth selection policy. ✅
+  - 16-bit PCM, 24-bit PCM (32-bit containers), 32-bit IEEE float
+  - Sample rate configurable (defaults to engine sample rate)
 - [P0][J-005] Dither policy (if 16-bit is supported) or explicitly omit for Beta.
+  - TPDF dither applied for PCM output (16-bit and 24-bit), disabled for float
+  - Deterministic seed for reproducibility
 - [P0][J-006] Render verification tests: compare realtime capture vs offline render (within tolerance).
 - [P1][J-007] Render progress UI + cancel.
+  - Progress callback wired; cancel check supported
+  - File > Export Audio menu logs progress; no visual progress dialog yet
 
 ---
 

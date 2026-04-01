@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Export / Offline Render
+
+- **Rewrote `AudioExporter` from scratch** — the previous implementation was fundamentally broken (never started transport, never advanced position between blocks, hardcoded 60s duration → produced silence).
+- Now uses `AudioRenderer::renderBlock()` — the same proven offline rendering path as `bounceRangeToWav()` — ensuring export matches real-time playback.
+- **Duration computed from actual playlist** via `PlaylistModel::getTotalDurationBeats()` instead of hardcoded values.
+- **Position advances correctly** between render blocks (sample-accurate).
+- **Master output stage** applied during export: DC blocking, soft clipping, TPDF dither for PCM — matching the playback signal path.
+- **Three render scopes supported**: FullSong, LoopRegion, Selection.
+- **Bit depths**: 16-bit PCM, 24-bit PCM (stored in 32-bit containers), 32-bit IEEE float.
+- **Progress callbacks** and **cancel support** for UI integration.
+- **Wired `File > Export Audio...`** menu item — exports to WAV using project sample rate, 24-bit PCM, with 2s tail for reverb/decay.
+- Added `friend class AudioExporter` to `AudioEngine` for safe access to renderer internals.
+
 ### Playlist / Clip Editing
 
 - **Fixed clip split bug**: `PlaylistModel::splitClip()` now copies `patternId`, `name`, and `colorRGBA` to the newly created clip half. Previously the second half received a default empty `patternId` (value 0), producing one valid clip + one empty pattern.
