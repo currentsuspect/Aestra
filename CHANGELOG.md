@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Playlist / Clip Editing
+
+- **Fixed clip split bug**: `PlaylistModel::splitClip()` now copies `patternId`, `name`, and `colorRGBA` to the newly created clip half. Previously the second half received a default empty `patternId` (value 0), producing one valid clip + one empty pattern.
+- **Wired Cut/Copy/Paste/Delete** to the edit menu and keyboard shortcuts (`Ctrl+X`, `Ctrl+C`, `Ctrl+V`, `Delete`):
+  - `cutSelectedClip()` — copies to clipboard and removes via `RemoveClipCommand`
+  - `copySelectedClip()` — copies to clipboard
+  - `pasteClipboardAtCursor()` — pastes at playhead position
+  - `deleteSelectedClip()` — removes without clipboard
+- **Split tool** now works via both blade tool click and keyboard shortcut (`S` key), all routed through `SplitClipCommand` for full undo/redo support.
+
+### Piano Roll / Pattern workflow
+
+- **Double-click pattern clips** on the timeline to open them in the Piano Roll panel.
+- **Piano Roll unit routing**: notes now carry `unitId` for Arsenal unit routing. New notes inherit the currently selected Arsenal unit.
+- **Piano Roll ↔ Sequencer sync**: editing a pattern in Piano Roll refreshes the Sequencer panel. Selecting a unit in Arsenal updates the Piano Roll's editing context.
+- `PianoRollPanel` now auto-saves on note changes and displays the active pattern name + unit label.
+
+### Arsenal Panel
+
+- **Unit selection state**: Arsenal now tracks a selected unit, highlights it visually, and broadcasts selection changes to Piano Roll and Sequencer.
+- **Remove units**: Delete/Backspace removes the selected unit (minimum one unit enforced). Notes belonging to the removed unit are cleaned from all patterns.
+- **Unit row redesign**: rows now show group label (Synth/Drums/Audio), source summary (Plugin/Sample/Empty), and a source tag badge. Selected rows get accent-colored border and shadow.
+- **Progress header** now displays the selected unit name and active pattern info.
+
+### Build / CI
+
+- **Low-memory build preset** (`lowmem`): configured for 4GB RAM laptops — 2 parallel jobs, no LTO, no tests, Release mode. Use `cmake --preset lowmem && cmake --build --preset lowmem-release`.
+
 ### Internal Arsenal / Rumble milestone
 
 - Added a verified internal instrument validation stack around **Aestra Rumble**.
