@@ -168,7 +168,7 @@ Deliverables:
 Freeze:
 - ✅ Data model API shapes (`PlaylistModel`, `PatternManager`, lane/clip IDs).
 
-### Phase 2 — Project + undo/redo become real (Apr–Jun 2026) ⏳ In Progress
+### Phase 2 — Project + undo/redo become real (Apr–Jun 2026) ✅ Complete
 
 Primary goal: users can trust edits.
 
@@ -181,6 +181,11 @@ Deliverables:
 - ✅ Project round-trip smoke coverage exists and is passing (`ProjectRoundTripTest`).
 - ✅ Internal plugin units can now persist through project save/load and restore plugin state.
 - ✅ Undo/redo integrated into the main UX for core actions (clip edits, lane edits, mixer edits).
+- ✅ Cut/Copy/Paste/Delete fully wired via `CommandHistory`.
+- ✅ Clip split fixed — both halves retain `patternId`, name, and color.
+- ✅ Piano Roll ↔ Arsenal ↔ Sequencer unit routing and selection sync.
+- ✅ Double-click pattern clips to open in Piano Roll.
+- ✅ Low-memory build preset for constrained hardware.
 
 March 2026 snapshot:
 - internal built-in plugin discovery is working through normal manager lookup
@@ -190,11 +195,14 @@ March 2026 snapshot:
 - undo/redo fully wired: clip add/remove/move/split/trim/duplicate, track add, volume/pan/mute/solo all go through `CommandHistory`
 - `CommandTransaction` groups multi-step edits (e.g. add track) into single undo steps
 - documentation overhaul completed (stale AI references deferred, broken links fixed)
+- Arsenal UI: unit selection, removal, row redesign, progress header with context
+- Piano Roll: unit-aware notes, auto-save, pattern/label display, sequencer refresh on edit
+- Edit menu: Cut/Copy/Paste/Delete functional with keyboard shortcuts
 
 Freeze:
 - Project file schema for Beta (allow forward-compatible additions only).
 
-### Phase 3 — Recording + export (Jul–Sep 2026)
+### Phase 3 — Recording + export (Jul–Sep 2026) ⏳ Next
 
 Primary goal: finishing tracks becomes possible.
 
@@ -283,4 +291,4 @@ Kill (if they threaten the schedule):
 
 ---
 
-Last updated: March 2026
+Last updated: April 2026
