@@ -1,4 +1,4 @@
-# ⚖️ Aestra License Reference
+# Aestra License Reference
 
 ![License](https://img.shields.io/badge/License-ASSAL-blue)
 ![Core](https://img.shields.io/badge/Core-Free%20Forever-brightgreen)
@@ -6,16 +6,16 @@
 
 Comprehensive reference for Aestra licensing, including the source-available license terms and contributor agreements.
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Overview](#-overview)
-- [Proprietary License](#-proprietary-license)
-- [ASSAL License Details](#-Aestra-studios-source-available-license-ASSAL)
-- [Contributor License Agreement](#-contributor-license-agreement)
-- [Commercial Licensing](#-commercial-licensing)
-- [License FAQ](#-license-faq)
+- [Overview](#overview)
+- [Hybrid Licensing Model](#hybrid-licensing-model)
+- [ASSAL License Details](#aestra-studios-source-available-license-assal)
+- [Contributor License Agreement](#contributor-license-agreement)
+- [Commercial Licensing](#premium-add-on-licensing-future)
+- [License FAQ](#license-faq)
 
-## 🌟 Overview
+## Overview
 
 **Aestra uses a hybrid licensing model:**
 
@@ -35,9 +35,9 @@ Comprehensive reference for Aestra licensing, including the source-available lic
 - ❌ Source code is **NOT open-source** (cannot be used in other projects)
 - ✅ Contributions are **welcomed and credited**
 - 🤖 Premium features (Muse AI, plugins) will require paid licenses
-- 📜 Full license text available in [LICENSE](../../LICENSE)
+- 📜 Full license text available in [LICENSING.md](../../LICENSING.md)
 
-## 🔒 Hybrid Licensing Model
+## Hybrid Licensing Model
 
 ### Aestra Core License (Free Forever)
 
@@ -85,7 +85,7 @@ Unauthorized use, copying, or distribution of Aestra will be prosecuted to the f
 - International copyright treaties
 - DMCA (Digital Millennium Copyright Act)
 
-## 📜 Aestra Studios Source-Available License (ASSAL)
+## Aestra Studios Source-Available License (ASSAL)
 
 ### Full License Details
 
@@ -111,7 +111,7 @@ Unauthorized use, copying, or distribution of Aestra will be prosecuted to the f
 **Ownership:**
 All title, ownership rights, and intellectual property rights in and to the Software, including all source code, documentation, designs, and associated materials, remain the exclusive property of Dylan Makori and Aestra Studios.
 
-**For the complete legal text, see:** [LICENSE](../../LICENSE)
+**For the complete legal text, see:** [LICENSING.md](../../LICENSING.md)
 
 ### Third-Party Dependencies
 
@@ -123,7 +123,7 @@ Aestra may use third-party libraries under their respective licenses:
 
 All third-party licenses are compatible with Aestra's proprietary model.
 
-## 🤝 Contributor License Agreement
+## Contributor License Agreement
 
 ### By Contributing to Aestra
 
@@ -156,7 +156,7 @@ While you grant full rights, we value contributions:
 - ⭐ Featured in documentation for significant contributions
 - 🎖️ Hall of Fame for major contributors
 
-## 💰 Premium Add-on Licensing (Future)
+## Premium Add-on Licensing (Future)
 
 ### What's Free vs. Paid
 
@@ -220,7 +220,7 @@ While you grant full rights, we value contributions:
 
 **Note:** Aestra Core requires no activation or license key.
 
-## ❓ License FAQ
+## License FAQ
 
 ### Q: Is Aestra open-source?
 
@@ -268,7 +268,7 @@ While you grant full rights, we value contributions:
 
 **A:** No. The source code is proprietary. You can view it for educational purposes and submit improvements via pull requests.
 
-## 📧 Licensing Inquiries
+## Licensing Inquiries
 
 **For licensing questions or enterprise sales:**
 - 📧 Email: makoridylan@gmail.com
@@ -279,7 +279,7 @@ While you grant full rights, we value contributions:
 - 💬 GitHub Issues: Technical questions
 - 📖 Contributing Guide: [CONTRIBUTING.md](../../CONTRIBUTING.md)
 
-## 🌍 Jurisdiction
+## Jurisdiction
 
 **Legal jurisdiction:**
 - **Primary**: Republic of Kenya
@@ -290,16 +290,16 @@ While you grant full rights, we value contributions:
 - International copyright conventions
 - TRIPS Agreement (Trade-Related Aspects of Intellectual Property Rights)
 
-## 📚 Additional Resources
+## Additional Resources
 
-- [Full License Text](../../LICENSE) - Complete ASSAL license terms
+- [Full License Text](../../LICENSING.md) - Complete ASSAL license terms
 - [Licensing Details](../../LICENSING.md) - Original licensing document
 - [Contributing Guide](../../CONTRIBUTING.md) - How to contribute
 - [FAQ](../technical/faq.md) - General questions
 
-## ⚠️ Legal Disclaimer
+## Legal Disclaimer
 
-This document provides a summary and reference for Aestra licensing. The complete legal terms are in the [LICENSE](../../LICENSE) and [LICENSING.md](../../LICENSING.md) files. In case of conflict, the official license documents take precedence.
+This document provides a summary and reference for Aestra licensing. The complete legal terms are in [LICENSING.md](../../LICENSING.md). In case of conflict, the official license document takes precedence.
 
 **Not legal advice**: This document is for informational purposes only and does not constitute legal advice. Consult an attorney for legal questions.
 
@@ -311,4 +311,4 @@ This document provides a summary and reference for Aestra licensing. The complet
 
 ---
 
-[← Return to Aestra Docs Index](../README.md)
+[Return to Aestra Docs Index](../README.md)
