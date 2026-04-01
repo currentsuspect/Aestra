@@ -26,7 +26,7 @@ public:
     };
 
     ExportDialog();
-    ~ExportDialog() = default;
+    ~ExportDialog();
 
     void show(const std::string& projectPath, Aestra::Audio::AudioEngine& engine, Aestra::Audio::TrackManager& trackManager);
     void hide();
@@ -48,7 +48,7 @@ private:
     void drawSettingsPanel(AestraUI::NUIRenderer& renderer);
     void drawProgressPanel(AestraUI::NUIRenderer& renderer);
     void startExport();
-    ExportJobResult exportThreadFn();
+    ExportJobResult exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds);
     void handleMouseClick(AestraUI::NUIPoint pos);
     void updateButtonHover(AestraUI::NUIPoint pos);
     bool parseTailInput(double& outTailSeconds) const;

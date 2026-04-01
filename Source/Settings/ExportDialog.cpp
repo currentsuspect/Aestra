@@ -18,6 +18,15 @@ ExportDialog::ExportDialog() {
     setVisible(false);
 }
 
+ExportDialog::~ExportDialog() {
+    if (m_exporting.load()) {
+        m_cancelRequested.store(true);
+    }
+    if (m_exportFuture.valid()) {
+        m_exportFuture.wait();
+    }
+}
+
 void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngine& engine, Aestra::Audio::TrackManager& trackManager) {
     m_projectPath = projectPath;
     m_engine = &engine;
@@ -52,9 +61,9 @@ void ExportDialog::hide() {
     m_visible = false;
     setVisible(false);
     m_tailInputFocused = false;
-    if (m_exporting) {
-        m_cancelRequested = true;
-        if (m_exportFuture.valid()) m_exportFuture.wait();
+    if (m_exporting.load()) {
+        m_cancelRequested.store(true);
+        // Non-blocking: destructor will join the future when needed
     }
 }
 
@@ -636,23 +645,25 @@ void ExportDialog::startExport() {
     m_exportElapsed = 0.0f;
     layoutDialog();
 
-    m_exportFuture = std::async(std::launch::async, &ExportDialog::exportThreadFn, this);
+    m_exportFuture = std::async(std::launch::async,
+        &ExportDialog::exportThreadFn, this,
+        m_outputPath, m_selectedBitDepth, m_selectedSampleRate, m_selectedScope, m_tailSeconds);
 }
 
-ExportDialog::ExportJobResult ExportDialog::exportThreadFn() {
+ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds) {
     Aestra::Audio::AudioExporter::Config config;
-    config.outputPath = m_outputPath;
-    config.sampleRate = std::stoi(m_sampleRateOptions[m_selectedSampleRate]);
+    config.outputPath = std::move(outputPath);
+    config.sampleRate = std::stoi(m_sampleRateOptions[selectedSampleRate]);
     config.numChannels = 2;
-    config.tailSeconds = m_tailSeconds;
+    config.tailSeconds = tailSeconds;
 
-    switch (m_selectedBitDepth) {
+    switch (selectedBitDepth) {
         case 0: config.bitDepth = Aestra::Audio::AudioExporter::BitDepth::PCM_16; break;
         case 1: config.bitDepth = Aestra::Audio::AudioExporter::BitDepth::PCM_24; break;
         case 2: config.bitDepth = Aestra::Audio::AudioExporter::BitDepth::Float_32; break;
     }
 
-    switch (m_selectedScope) {
+    switch (selectedScope) {
         case 0: config.scope = Aestra::Audio::AudioExporter::RenderScope::FullSong; break;
         case 1: config.scope = Aestra::Audio::AudioExporter::RenderScope::LoopRegion; break;
         case 2: config.scope = Aestra::Audio::AudioExporter::RenderScope::Selection; break;
