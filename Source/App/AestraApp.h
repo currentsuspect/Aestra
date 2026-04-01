@@ -68,6 +68,7 @@ private:
     ProjectSerializer::UIState captureUIState() const;
     void applyUIState(const ProjectSerializer::UIState& state);
     void updateWindowTitle();  // Updates title bar with project name and dirty indicator
+    void startExport();         // Starts offline render/export with titlebar progress
     
 private:
     std::unique_ptr<AestraWindowManager> m_windowManager;

@@ -491,6 +491,30 @@ void AestraWindowManager::setWindowTitle(const std::string& title) {
     if (m_customWindow) m_customWindow->setTitle(title);
 }
 
+void AestraWindowManager::setExportProgress(float progress) {
+    if (m_customWindow) {
+        if (auto titleBar = m_customWindow->getTitleBar()) {
+            titleBar->setExportProgress(progress);
+        }
+    }
+}
+
+void AestraWindowManager::setExporting(bool exporting) {
+    if (m_customWindow) {
+        if (auto titleBar = m_customWindow->getTitleBar()) {
+            titleBar->setExporting(exporting);
+        }
+    }
+}
+
+void AestraWindowManager::setOnExportRequested(std::function<void()> cb) {
+    if (m_customWindow) {
+        if (auto titleBar = m_customWindow->getTitleBar()) {
+            titleBar->setOnExportRequested(std::move(cb));
+        }
+    }
+}
+
 void AestraWindowManager::toggleFullScreen() {
     if (m_customWindow) m_customWindow->toggleFullScreen();
 }
