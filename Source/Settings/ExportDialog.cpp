@@ -2,6 +2,7 @@
 
 #include "ExportDialog.h"
 #include "AudioExporter.h"
+#include "../../AestraPlat/include/AestraPlatform.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -10,6 +11,7 @@
 #include <cmath>
 #include <chrono>
 #include <filesystem>
+#include <cstdio>
 
 ExportDialog::ExportDialog() {
     setId("exportDialog");
@@ -39,6 +41,7 @@ void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngi
     std::filesystem::path outDir = std::filesystem::path(projectPath).parent_path();
     if (outDir.empty()) outDir = std::filesystem::current_path();
     m_outputPath = (outDir / exportName).string();
+    syncTailInputFromValue();
 
     m_visible = true;
     setVisible(true);
@@ -48,6 +51,7 @@ void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngi
 void ExportDialog::hide() {
     m_visible = false;
     setVisible(false);
+    m_tailInputFocused = false;
     if (m_exporting) {
         m_cancelRequested = true;
         if (m_exportFuture.valid()) m_exportFuture.wait();
@@ -64,34 +68,37 @@ void ExportDialog::layoutDialog() {
     float pad = 24.0f;
     float contentX = m_dialogRect.x + pad;
     float contentW = m_dialogRect.width - pad * 2.0f;
-    float rowH = 28.0f;
-    float labelW = 120.0f;
-    float gap = 16.0f;
-    float y = m_dialogRect.y + 52.0f; // Below title
+    float rowH = 30.0f;
+    float labelW = 110.0f;
+    float gap = 12.0f;
+    float y = m_dialogRect.y + 56.0f; // Below title
 
     if (m_panelState == PanelState::Settings) {
         // Output path row
-        m_browseButtonRect = AestraUI::NUIRect(contentX + contentW - 70.0f, y, 70.0f, rowH);
+        m_outputFieldRect = AestraUI::NUIRect(contentX + labelW, y, contentW - labelW - 82.0f, rowH);
+        m_browseButtonRect = AestraUI::NUIRect(m_outputFieldRect.right() + 10.0f, y, 72.0f, rowH);
         y += rowH + gap;
 
         // Format section
-        m_scopeDropdownRect = AestraUI::NUIRect(contentX + labelW, y, contentW - labelW - 10.0f, rowH);
-        y += rowH + gap * 0.6f;
+        m_scopeDropdownRect = AestraUI::NUIRect(contentX + labelW, y, contentW - labelW, rowH);
+        m_scopeDropdownPopup = m_scopeDropdownRect;
+        y += rowH + gap;
 
-        m_sampleRateDropdownRect = AestraUI::NUIRect(contentX + labelW, y, contentW - labelW - 10.0f, rowH);
-        y += rowH + gap * 0.6f;
+        m_sampleRateDropdownRect = AestraUI::NUIRect(contentX + labelW, y, contentW - labelW, rowH);
+        m_sampleRateDropdownPopup = m_sampleRateDropdownRect;
+        y += rowH + gap;
 
-        m_bitDepthDropdownRect = AestraUI::NUIRect(contentX + labelW, y, contentW - labelW - 10.0f, rowH);
+        m_bitDepthDropdownRect = AestraUI::NUIRect(contentX + labelW, y, contentW - labelW, rowH);
+        m_bitDepthDropdownPopup = m_bitDepthDropdownRect;
         y += rowH + gap;
 
         // Tail row
         m_tailInputRect = AestraUI::NUIRect(contentX + labelW, y, 80.0f, rowH);
-        y += rowH + gap * 2.0f;
 
         // Buttons at bottom
         float btnW = 110.0f;
         float btnH = 36.0f;
-        float btnY = m_dialogRect.y + m_dialogRect.height - btnH - 20.0f;
+        float btnY = m_dialogRect.bottom() - btnH - 18.0f;
         float totalBtnW = btnW * 2.0f + 12.0f;
         float btnStartX = m_dialogRect.x + (m_dialogRect.width - totalBtnW) * 0.5f;
         m_startButtonRect = AestraUI::NUIRect(btnStartX, btnY, btnW, btnH);
@@ -119,6 +126,32 @@ void ExportDialog::onUpdate(double deltaTime) {
     }
 }
 
+void ExportDialog::syncTailInputFromValue() {
+    char tailBuf[32];
+    std::snprintf(tailBuf, sizeof(tailBuf), "%.1f", m_tailSeconds);
+    m_tailInput = tailBuf;
+}
+
+bool ExportDialog::parseTailInput(double& outTailSeconds) const {
+    if (m_tailInput.empty()) {
+        return false;
+    }
+
+    char* endPtr = nullptr;
+    const double parsed = std::strtod(m_tailInput.c_str(), &endPtr);
+    if (endPtr == m_tailInput.c_str() || (endPtr && *endPtr != '\0') || !std::isfinite(parsed) || parsed < 0.0) {
+        return false;
+    }
+
+    outTailSeconds = parsed;
+    return true;
+}
+
+void ExportDialog::onResize(int width, int height) {
+    NUIComponent::onResize(width, height);
+    layoutDialog();
+}
+
 void ExportDialog::onRender(AestraUI::NUIRenderer& renderer) {
     if (!m_visible) return;
     drawOverlay(renderer);
@@ -127,18 +160,18 @@ void ExportDialog::onRender(AestraUI::NUIRenderer& renderer) {
 
 void ExportDialog::drawOverlay(AestraUI::NUIRenderer& renderer) {
     auto parentBounds = getBounds();
-    renderer.fillRect(parentBounds, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.6f));
+    renderer.fillRect(parentBounds, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.72f));
 }
 
 void ExportDialog::drawDialog(AestraUI::NUIRenderer& renderer) {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
-    AestraUI::NUIColor dialogBg = theme.getColor("surfacePrimary");
-    AestraUI::NUIColor border = theme.getColor("border").withAlpha(0.5f);
+    AestraUI::NUIColor dialogBg = theme.getColor("surfaceTertiary");
+    AestraUI::NUIColor border = theme.getColor("border").withAlpha(0.8f);
 
     // Shadow
-    renderer.fillRoundedRect(AestraUI::NUIRect(m_dialogRect.x + 4, m_dialogRect.y + 6, m_dialogRect.width, m_dialogRect.height), 10.0f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.4f));
-    renderer.fillRoundedRect(m_dialogRect, 10.0f, dialogBg);
-    renderer.strokeRoundedRect(m_dialogRect, 10.0f, 1.0f, border);
+    renderer.fillRoundedRect(AestraUI::NUIRect(m_dialogRect.x + 6, m_dialogRect.y + 10, m_dialogRect.width, m_dialogRect.height), 12.0f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.32f));
+    renderer.fillRoundedRect(m_dialogRect, 12.0f, dialogBg);
+    renderer.strokeRoundedRect(m_dialogRect, 12.0f, 1.0f, border);
 
     // Title bar area
     float titleY = m_dialogRect.y + 14.0f;
@@ -162,24 +195,24 @@ void ExportDialog::drawSettingsPanel(AestraUI::NUIRenderer& renderer) {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     float pad = 24.0f;
     float contentX = m_dialogRect.x + pad;
-    float contentW = m_dialogRect.width - pad * 2.0f;
-    float labelW = 120.0f;
-    float rowH = 28.0f;
-    float gap = 16.0f;
-    float y = m_dialogRect.y + 52.0f;
+    float labelW = 110.0f;
+    float rowH = 30.0f;
+    float gap = 12.0f;
+    float y = m_dialogRect.y + 56.0f;
+    const AestraUI::NUIColor fieldBg = theme.getColor("surfaceRaised");
+    const AestraUI::NUIColor fieldBorder = theme.getColor("border").withAlpha(0.85f);
+    const AestraUI::NUIColor fieldBorderActive = theme.getColor("primary").withAlpha(0.85f);
 
     auto drawLabel = [&](const std::string& text, float yPos) {
-        renderer.drawText(text, AestraUI::NUIPoint(contentX, yPos + 6.0f), 12.0f, theme.getColor("textSecondary"));
+        renderer.drawText(text, AestraUI::NUIPoint(contentX, yPos + 7.0f), 12.0f, theme.getColor("textSecondary"));
     };
 
     auto drawDropdown = [&](const AestraUI::NUIRect& rect, const std::string& value, bool isOpen) {
-        AestraUI::NUIColor bg = theme.getColor("surfaceSecondary");
-        AestraUI::NUIColor borderCol = isOpen ? theme.getColor("primary") : theme.getColor("border").withAlpha(0.4f);
-        renderer.fillRoundedRect(rect, 4.0f, bg);
-        renderer.strokeRoundedRect(rect, 4.0f, 1.0f, borderCol);
+        AestraUI::NUIColor borderCol = isOpen ? fieldBorderActive : fieldBorder;
+        renderer.fillRoundedRect(rect, 6.0f, fieldBg);
+        renderer.strokeRoundedRect(rect, 6.0f, 1.0f, borderCol);
         renderer.drawText(value, AestraUI::NUIPoint(rect.x + 8.0f, rect.y + 7.0f), 12.0f, theme.getColor("textPrimary"));
-        // Arrow
-        renderer.drawText(isOpen ? "▲" : "▼", AestraUI::NUIPoint(rect.x + rect.width - 16.0f, rect.y + 7.0f), 10.0f, theme.getColor("textSecondary"));
+        renderer.drawText(isOpen ? "^" : "v", AestraUI::NUIPoint(rect.x + rect.width - 16.0f, rect.y + 7.0f), 10.0f, theme.getColor("textSecondary"));
     };
 
     auto drawDropdownPopup = [&](const AestraUI::NUIRect& popup, const std::vector<std::string>& options, int selected) {
@@ -189,10 +222,8 @@ void ExportDialog::drawSettingsPanel(AestraUI::NUIRenderer& renderer) {
         actualPopup.height = popupH;
         actualPopup.y = popup.y + popup.height + 2.0f;
 
-        AestraUI::NUIColor bg = theme.getColor("surfaceSecondary");
-        AestraUI::NUIColor borderCol = theme.getColor("border").withAlpha(0.5f);
-        renderer.fillRoundedRect(actualPopup, 4.0f, bg);
-        renderer.strokeRoundedRect(actualPopup, 4.0f, 1.0f, borderCol);
+        renderer.fillRoundedRect(actualPopup, 6.0f, fieldBg);
+        renderer.strokeRoundedRect(actualPopup, 6.0f, 1.0f, fieldBorder);
 
         for (size_t i = 0; i < options.size(); i++) {
             AestraUI::NUIRect itemRect(actualPopup.x + 2.0f, actualPopup.y + 2.0f + i * itemH, actualPopup.width - 4.0f, itemH);
@@ -204,16 +235,16 @@ void ExportDialog::drawSettingsPanel(AestraUI::NUIRenderer& renderer) {
 
     // Output path
     drawLabel("Output", y);
-    // Truncate path for display
+    renderer.fillRoundedRect(m_outputFieldRect, 6.0f, fieldBg);
+    renderer.strokeRoundedRect(m_outputFieldRect, 6.0f, 1.0f, fieldBorder);
     std::string displayPath = m_outputPath;
-    if (displayPath.size() > 45) displayPath = "..." + displayPath.substr(displayPath.size() - 42);
-    renderer.drawText(displayPath, AestraUI::NUIPoint(contentX + labelW, y + 6.0f), 11.0f, theme.getColor("textPrimary"));
-    // Browse button
+    if (displayPath.size() > 42) displayPath = "..." + displayPath.substr(displayPath.size() - 39);
+    renderer.drawText(displayPath, AestraUI::NUIPoint(m_outputFieldRect.x + 8.0f, m_outputFieldRect.y + 7.0f), 11.0f, theme.getColor("textPrimary"));
     {
         bool hovered = (m_hoveredButton == 3);
-        AestraUI::NUIColor btnBg = hovered ? theme.getColor("primary").withAlpha(0.3f) : theme.getColor("surfaceSecondary");
-        renderer.fillRoundedRect(m_browseButtonRect, 4.0f, btnBg);
-        renderer.strokeRoundedRect(m_browseButtonRect, 4.0f, 1.0f, theme.getColor("border").withAlpha(0.4f));
+        AestraUI::NUIColor btnBg = hovered ? theme.getColor("hover") : fieldBg;
+        renderer.fillRoundedRect(m_browseButtonRect, 6.0f, btnBg);
+        renderer.strokeRoundedRect(m_browseButtonRect, 6.0f, 1.0f, fieldBorder);
         renderer.drawTextCentered("Browse", m_browseButtonRect, 11.0f, theme.getColor("textPrimary"));
     }
     y += rowH + gap;
@@ -221,45 +252,47 @@ void ExportDialog::drawSettingsPanel(AestraUI::NUIRenderer& renderer) {
     // Scope
     drawLabel("Scope", y);
     drawDropdown(m_scopeDropdownRect, m_scopeOptions[m_selectedScope], m_scopeOpen);
-    if (m_scopeOpen) drawDropdownPopup(m_scopeDropdownPopup, m_scopeOptions, m_selectedScope);
-    y += rowH + gap * 0.6f;
+    y += rowH + gap;
 
     // Sample rate
     drawLabel("Sample Rate", y);
     drawDropdown(m_sampleRateDropdownRect, m_sampleRateOptions[m_selectedSampleRate], m_sampleRateOpen);
-    if (m_sampleRateOpen) drawDropdownPopup(m_sampleRateDropdownPopup, m_sampleRateOptions, m_selectedSampleRate);
-    y += rowH + gap * 0.6f;
+    y += rowH + gap;
 
     // Bit depth
     drawLabel("Bit Depth", y);
     drawDropdown(m_bitDepthDropdownRect, m_bitDepthOptions[m_selectedBitDepth], m_bitDepthOpen);
-    if (m_bitDepthOpen) drawDropdownPopup(m_bitDepthDropdownPopup, m_bitDepthOptions, m_selectedBitDepth);
     y += rowH + gap;
 
     // Tail
     drawLabel("Tail (seconds)", y);
     {
-        AestraUI::NUIColor bg = theme.getColor("surfaceSecondary");
-        renderer.fillRoundedRect(m_tailInputRect, 4.0f, bg);
-        renderer.strokeRoundedRect(m_tailInputRect, 4.0f, 1.0f, theme.getColor("border").withAlpha(0.4f));
+        const AestraUI::NUIColor tailBorder = m_tailInputFocused ? fieldBorderActive : fieldBorder;
+        renderer.fillRoundedRect(m_tailInputRect, 6.0f, fieldBg);
+        renderer.strokeRoundedRect(m_tailInputRect, 6.0f, 1.0f, tailBorder);
         renderer.drawText(m_tailInput, AestraUI::NUIPoint(m_tailInputRect.x + 8.0f, m_tailInputRect.y + 7.0f), 12.0f, theme.getColor("textPrimary"));
     }
-    y += rowH + gap * 2.0f;
 
     // Buttons
     {
-        // Start/Export button
         bool startHovered = (m_hoveredButton == 0);
         AestraUI::NUIColor startBg = startHovered ? theme.getColor("primary").withAlpha(0.8f) : theme.getColor("primary");
         renderer.fillRoundedRect(m_startButtonRect, 6.0f, startBg);
-        renderer.drawTextCentered("Export", m_startButtonRect, 13.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+        renderer.drawTextCentered("Export", m_startButtonRect, 13.0f, theme.getColor("backgroundPrimary"));
 
-        // Close button
         bool closeHovered = (m_hoveredButton == 2);
-        AestraUI::NUIColor closeBg = closeHovered ? theme.getColor("surfaceTertiary") : theme.getColor("surfaceSecondary");
+        AestraUI::NUIColor closeBg = closeHovered ? theme.getColor("hover") : fieldBg;
         renderer.fillRoundedRect(m_closeButtonRect, 6.0f, closeBg);
-        renderer.strokeRoundedRect(m_closeButtonRect, 6.0f, 1.0f, theme.getColor("border").withAlpha(0.4f));
+        renderer.strokeRoundedRect(m_closeButtonRect, 6.0f, 1.0f, fieldBorder);
         renderer.drawTextCentered("Cancel", m_closeButtonRect, 13.0f, theme.getColor("textPrimary"));
+    }
+
+    if (m_scopeOpen) {
+        drawDropdownPopup(m_scopeDropdownPopup, m_scopeOptions, m_selectedScope);
+    } else if (m_sampleRateOpen) {
+        drawDropdownPopup(m_sampleRateDropdownPopup, m_sampleRateOptions, m_selectedSampleRate);
+    } else if (m_bitDepthOpen) {
+        drawDropdownPopup(m_bitDepthDropdownPopup, m_bitDepthOptions, m_selectedBitDepth);
     }
 }
 
@@ -269,6 +302,8 @@ void ExportDialog::drawProgressPanel(AestraUI::NUIRenderer& renderer) {
     float contentX = m_dialogRect.x + pad;
     float contentW = m_dialogRect.width - pad * 2.0f;
     float y = m_dialogRect.y + 52.0f;
+    const AestraUI::NUIColor fieldBg = theme.getColor("surfaceRaised");
+    const AestraUI::NUIColor fieldBorder = theme.getColor("border").withAlpha(0.85f);
 
     if (m_panelState == PanelState::Progress) {
         // Status text
@@ -279,7 +314,7 @@ void ExportDialog::drawProgressPanel(AestraUI::NUIRenderer& renderer) {
         // Progress bar (manual draw for full control)
         float barH = 20.0f;
         AestraUI::NUIRect barRect(contentX, y, contentW, barH);
-        renderer.fillRoundedRect(barRect, 4.0f, theme.getColor("surfaceSecondary"));
+        renderer.fillRoundedRect(barRect, 4.0f, fieldBg);
 
         float progress = std::max(0.0f, std::min(1.0f, m_progress.load()));
         if (progress > 0.0f) {
@@ -311,9 +346,9 @@ void ExportDialog::drawProgressPanel(AestraUI::NUIRenderer& renderer) {
             renderer.drawTextCentered("Cancel", m_cancelButtonRect, 13.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
 
             bool closeHovered = (m_hoveredButton == 2);
-            AestraUI::NUIColor closeBg = closeHovered ? theme.getColor("surfaceTertiary") : theme.getColor("surfaceSecondary");
+            AestraUI::NUIColor closeBg = closeHovered ? theme.getColor("hover") : fieldBg;
             renderer.fillRoundedRect(m_closeButtonRect, 6.0f, closeBg);
-            renderer.strokeRoundedRect(m_closeButtonRect, 6.0f, 1.0f, theme.getColor("border").withAlpha(0.4f));
+            renderer.strokeRoundedRect(m_closeButtonRect, 6.0f, 1.0f, fieldBorder);
             renderer.drawTextCentered("Close", m_closeButtonRect, 13.0f, theme.getColor("textPrimary"));
         }
     } else if (m_panelState == PanelState::Complete) {
@@ -353,13 +388,11 @@ void ExportDialog::drawProgressPanel(AestraUI::NUIRenderer& renderer) {
 bool ExportDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!m_visible) return false;
 
+    updateButtonHover(event.position);
+
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         handleMouseClick(event.position);
         return true;
-    }
-
-    if (!event.pressed) {
-        updateButtonHover(event.position);
     }
 
     return true; // Modal
@@ -367,7 +400,43 @@ bool ExportDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
 bool ExportDialog::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (!m_visible) return false;
-    if (event.pressed && event.keyCode == AestraUI::NUIKeyCode::Escape) {
+    if (!event.pressed) return true;
+
+    if (m_tailInputFocused) {
+        if (event.keyCode == AestraUI::NUIKeyCode::Escape) {
+            m_tailInputFocused = false;
+            syncTailInputFromValue();
+            setDirty(true);
+            return true;
+        }
+        if (event.keyCode == AestraUI::NUIKeyCode::Enter) {
+            double parsedTail = 0.0;
+            if (parseTailInput(parsedTail)) {
+                m_tailSeconds = parsedTail;
+            } else {
+                syncTailInputFromValue();
+            }
+            m_tailInputFocused = false;
+            setDirty(true);
+            return true;
+        }
+        if (event.keyCode == AestraUI::NUIKeyCode::Backspace) {
+            if (!m_tailInput.empty()) {
+                m_tailInput.pop_back();
+                setDirty(true);
+            }
+            return true;
+        }
+
+        const char c = event.character;
+        if ((c >= '0' && c <= '9') || (c == '.' && m_tailInput.find('.') == std::string::npos)) {
+            m_tailInput.push_back(c);
+            setDirty(true);
+        }
+        return true;
+    }
+
+    if (event.keyCode == AestraUI::NUIKeyCode::Escape) {
         if (m_panelState == PanelState::Progress && m_exporting) {
             m_cancelRequested = true;
         } else {
@@ -438,10 +507,27 @@ void ExportDialog::handleMouseClick(AestraUI::NUIPoint pos) {
     if (m_scopeDropdownRect.contains(pos)) { m_scopeOpen = !m_scopeOpen; return; }
     if (m_sampleRateDropdownRect.contains(pos)) { m_sampleRateOpen = !m_sampleRateOpen; return; }
     if (m_bitDepthDropdownRect.contains(pos)) { m_bitDepthOpen = !m_bitDepthOpen; return; }
+    if (m_tailInputRect.contains(pos)) {
+        m_tailInputFocused = true;
+        setDirty(true);
+        return;
+    }
+    m_tailInputFocused = false;
 
     // Browse button
     if (m_browseButtonRect.contains(pos)) {
-        // For now, just use the default path (real file browser comes later)
+        if (auto* utils = Aestra::Platform::getUtils()) {
+            Aestra::IPlatformUtils::SaveFileDialogOptions options;
+            options.title = "Export Audio";
+            options.filter = "WAV Files\0*.wav\0All Files\0*.*\0";
+            options.defaultPath = m_outputPath;
+            options.defaultExtension = "wav";
+            const std::string pickedPath = utils->saveFileDialog(options);
+            if (!pickedPath.empty()) {
+                m_outputPath = pickedPath;
+                setDirty(true);
+            }
+        }
         return;
     }
 
@@ -490,6 +576,32 @@ void ExportDialog::updateButtonHover(AestraUI::NUIPoint pos) {
 void ExportDialog::startExport() {
     if (!m_engine || !m_trackManager) return;
 
+    double parsedTail = 0.0;
+    if (!parseTailInput(parsedTail)) {
+        m_panelState = PanelState::Complete;
+        m_exportError = "Invalid tail value";
+        m_exportResultPath.clear();
+        m_exportDuration = 0.0;
+        m_exportPeakDb = -96.0;
+        layoutDialog();
+        setDirty(true);
+        return;
+    }
+
+    if (m_outputPath.empty()) {
+        m_panelState = PanelState::Complete;
+        m_exportError = "No output path specified";
+        m_exportResultPath.clear();
+        m_exportDuration = 0.0;
+        m_exportPeakDb = -96.0;
+        layoutDialog();
+        setDirty(true);
+        return;
+    }
+
+    m_tailSeconds = parsedTail;
+    m_tailInputFocused = false;
+
     m_panelState = PanelState::Progress;
     m_progress = 0.0f;
     m_exporting = true;
@@ -537,9 +649,14 @@ void ExportDialog::exportThreadFn() {
         m_exportResultPath = result.outputPath;
         m_exportDuration = result.durationSeconds;
         m_exportPeakDb = result.peakDb;
+        m_exportError.clear();
     } else {
         m_panelState = PanelState::Complete;
+        m_exportResultPath.clear();
+        m_exportDuration = 0.0;
+        m_exportPeakDb = -96.0;
         m_exportError = result.errorMessage;
     }
+    layoutDialog();
     setDirty(true);
 }
