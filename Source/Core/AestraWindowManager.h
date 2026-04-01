@@ -64,6 +64,8 @@ public:
     // Dialogs getters
     std::shared_ptr<Aestra::SettingsDialog> getSettingsDialog() { return m_settingsDialog; }
     std::shared_ptr<Aestra::RecoveryDialog> getRecoveryDialog() { return m_recoveryDialog; }
+    std::shared_ptr<class ExportDialog> getExportDialog() { return m_exportDialog; }
+    void setExportDialog(std::shared_ptr<class ExportDialog> dialog);
 
     // Menus
     void setMenuBar(std::shared_ptr<AestraUI::NUIMenuBar> menuBar);
@@ -132,6 +134,7 @@ private:
     std::shared_ptr<Aestra::ConfirmationDialog> m_confirmationDialog;
     std::shared_ptr<Aestra::RecoveryDialog> m_recoveryDialog;
     std::shared_ptr<UnifiedHUD> m_unifiedHUD;
+    std::shared_ptr<class ExportDialog> m_exportDialog;
 
     std::unique_ptr<AestraUI::NUIAdaptiveFPS> m_adaptiveFPS;
 
