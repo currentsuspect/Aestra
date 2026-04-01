@@ -38,7 +38,17 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     double startBeat = 0.0;
     double durationBeats = computeRenderDurationBeats(config, startBeat);
     if (durationBeats <= 0.0) {
-        result.errorMessage = "Nothing to render (empty timeline)";
+        switch (config.scope) {
+            case RenderScope::FullSong:
+                result.errorMessage = "Nothing to render (empty timeline)";
+                break;
+            case RenderScope::LoopRegion:
+                result.errorMessage = "Nothing to render (invalid or empty loop region)";
+                break;
+            case RenderScope::Selection:
+                result.errorMessage = "Nothing to render (no selection range)";
+                break;
+        }
         return result;
     }
 
@@ -266,7 +276,7 @@ double AudioExporter::computeRenderDurationBeats(const Config& config, double& o
     switch (config.scope) {
         case RenderScope::FullSong:
             outStartBeat = 0.0;
-            return totalBeats > 0.0 ? totalBeats : 64.0;  // Fallback: 16 bars at 4/4
+            return totalBeats > 0.0 ? totalBeats : 0.0;
 
         case RenderScope::LoopRegion: {
             double loopStart = m_engine.getLoopStartBeat();
@@ -275,9 +285,7 @@ double AudioExporter::computeRenderDurationBeats(const Config& config, double& o
                 outStartBeat = loopStart;
                 return loopEnd - loopStart;
             }
-            // Fallback to full song
-            outStartBeat = 0.0;
-            return totalBeats > 0.0 ? totalBeats : 64.0;
+            return 0.0;
         }
 
         case RenderScope::Selection: {

@@ -217,13 +217,23 @@ class IPlatformUtils {
 public:
     virtual ~IPlatformUtils() = default;
 
+    struct SaveFileDialogOptions {
+        std::string title;
+        std::string filter;
+        std::string defaultPath;
+        std::string defaultExtension;
+    };
+
     // Time
     virtual double getTime() const = 0; // High-resolution time in seconds
     virtual void sleep(int milliseconds) const = 0;
 
     // File dialogs
     virtual std::string openFileDialog(const std::string& title, const std::string& filter) const = 0;
-    virtual std::string saveFileDialog(const std::string& title, const std::string& filter) const = 0;
+    virtual std::string saveFileDialog(const SaveFileDialogOptions& options) const = 0;
+    std::string saveFileDialog(const std::string& title, const std::string& filter) const {
+        return saveFileDialog(SaveFileDialogOptions{title, filter, "", ""});
+    }
     virtual std::string selectFolderDialog(const std::string& title) const = 0;
 
     // Clipboard

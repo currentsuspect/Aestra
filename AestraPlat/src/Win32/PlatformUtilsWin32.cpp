@@ -62,20 +62,24 @@ std::string PlatformUtilsWin32::openFileDialog(const std::string& title, const s
     return "";
 }
 
-std::string PlatformUtilsWin32::saveFileDialog(const std::string& title, const std::string& filter) const {
+std::string PlatformUtilsWin32::saveFileDialog(const SaveFileDialogOptions& options) const {
     OPENFILENAMEA ofn = {};
     char filename[MAX_PATH] = "";
 
     const char* defaultFilter = "All Files\0*.*\0";
-    const char* filterPtr = filter.empty() ? defaultFilter : filter.data();
+    const char* filterPtr = options.filter.empty() ? defaultFilter : options.filter.data();
+
+    if (!options.defaultPath.empty()) {
+        strncpy_s(filename, options.defaultPath.c_str(), _TRUNCATE);
+    }
 
     ofn.lStructSize = sizeof(OPENFILENAMEA);
     ofn.hwndOwner = nullptr;
     ofn.lpstrFilter = filterPtr;
     ofn.lpstrFile = filename;
     ofn.nMaxFile = MAX_PATH;
-    ofn.lpstrTitle = title.c_str();
-    ofn.lpstrDefExt = "aes"; // Default extension for save
+    ofn.lpstrTitle = options.title.c_str();
+    ofn.lpstrDefExt = options.defaultExtension.empty() ? nullptr : options.defaultExtension.c_str();
     ofn.Flags = OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
 
     if (GetSaveFileNameA(&ofn)) {
