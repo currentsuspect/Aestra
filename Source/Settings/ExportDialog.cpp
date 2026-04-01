@@ -124,12 +124,37 @@ void ExportDialog::onUpdate(double deltaTime) {
     if (m_panelState == PanelState::Progress && m_exporting) {
         m_exportElapsed += deltaTime;
     }
+
+    if (m_exportFuture.valid() &&
+        m_exportFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        applyExportResult(m_exportFuture.get());
+    }
 }
 
 void ExportDialog::syncTailInputFromValue() {
     char tailBuf[32];
     std::snprintf(tailBuf, sizeof(tailBuf), "%.1f", m_tailSeconds);
     m_tailInput = tailBuf;
+}
+
+void ExportDialog::applyExportResult(const ExportJobResult& result) {
+    m_exporting = false;
+    m_panelState = PanelState::Complete;
+
+    if (result.success) {
+        m_exportResultPath = result.outputPath;
+        m_exportDuration = result.durationSeconds;
+        m_exportPeakDb = result.peakDb;
+        m_exportError.clear();
+    } else {
+        m_exportResultPath.clear();
+        m_exportDuration = 0.0;
+        m_exportPeakDb = -96.0;
+        m_exportError = result.errorMessage;
+    }
+
+    layoutDialog();
+    setDirty(true);
 }
 
 bool ExportDialog::parseTailInput(double& outTailSeconds) const {
@@ -519,7 +544,8 @@ void ExportDialog::handleMouseClick(AestraUI::NUIPoint pos) {
         if (auto* utils = Aestra::Platform::getUtils()) {
             Aestra::IPlatformUtils::SaveFileDialogOptions options;
             options.title = "Export Audio";
-            options.filter = "WAV Files\0*.wav\0All Files\0*.*\0";
+            options.filter = std::string("WAV Files\0*.wav\0All Files\0*.*\0",
+                                         sizeof("WAV Files\0*.wav\0All Files\0*.*\0") - 1);
             options.defaultPath = m_outputPath;
             options.defaultExtension = "wav";
             const std::string pickedPath = utils->saveFileDialog(options);
@@ -613,7 +639,7 @@ void ExportDialog::startExport() {
     m_exportFuture = std::async(std::launch::async, &ExportDialog::exportThreadFn, this);
 }
 
-void ExportDialog::exportThreadFn() {
+ExportDialog::ExportJobResult ExportDialog::exportThreadFn() {
     Aestra::Audio::AudioExporter::Config config;
     config.outputPath = m_outputPath;
     config.sampleRate = std::stoi(m_sampleRateOptions[m_selectedSampleRate]);
@@ -641,22 +667,11 @@ void ExportDialog::exportThreadFn() {
     });
 
     auto result = exporter.render(config);
-
-    m_exporting = false;
-
-    if (result.success) {
-        m_panelState = PanelState::Complete;
-        m_exportResultPath = result.outputPath;
-        m_exportDuration = result.durationSeconds;
-        m_exportPeakDb = result.peakDb;
-        m_exportError.clear();
-    } else {
-        m_panelState = PanelState::Complete;
-        m_exportResultPath.clear();
-        m_exportDuration = 0.0;
-        m_exportPeakDb = -96.0;
-        m_exportError = result.errorMessage;
-    }
-    layoutDialog();
-    setDirty(true);
+    return ExportJobResult{
+        .success = result.success,
+        .outputPath = result.outputPath,
+        .durationSeconds = result.durationSeconds,
+        .peakDb = result.peakDb,
+        .errorMessage = result.errorMessage,
+    };
 }

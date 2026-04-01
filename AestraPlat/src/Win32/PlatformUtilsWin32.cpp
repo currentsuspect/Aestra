@@ -67,7 +67,11 @@ std::string PlatformUtilsWin32::saveFileDialog(const SaveFileDialogOptions& opti
     char filename[MAX_PATH] = "";
 
     const char* defaultFilter = "All Files\0*.*\0";
-    const char* filterPtr = options.filter.empty() ? defaultFilter : options.filter.data();
+    std::string normalizedFilter = options.filter;
+    if (!normalizedFilter.empty() && normalizedFilter.back() != '\0') {
+        normalizedFilter.push_back('\0');
+    }
+    const char* filterPtr = normalizedFilter.empty() ? defaultFilter : normalizedFilter.c_str();
 
     if (!options.defaultPath.empty()) {
         strncpy_s(filename, options.defaultPath.c_str(), _TRUNCATE);
