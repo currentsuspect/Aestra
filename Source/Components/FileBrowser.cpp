@@ -776,7 +776,7 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
 
     // FBO Caching Logic
     auto* renderCache = renderer.getRenderCache();
-    if (!renderCache) {
+    if (!renderCache || !renderCache->isEnabled()) {
         // Fallback: Immediate render
         renderStaticContent(renderer, bounds);
         renderChildren(renderer);
@@ -944,6 +944,7 @@ void FileBrowser::onResize(int width, int height) {
     updateBreadcrumbs();
     updateScrollbarVisibility(); 
     invalidateAllItemCaches(); // Force text re-layout on resize
+    invalidateCache();
 }
 
 void FileBrowser::invalidateAllItemCaches() {

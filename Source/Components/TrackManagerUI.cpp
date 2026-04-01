@@ -1184,6 +1184,12 @@ void TrackManagerUI::refreshTracks() {
             copySelectedClip();
         });
 
+        trackUI->setOnPatternClipOpenRequested([this](PatternID patternId) {
+            if (m_onOpenPatternInPianoRoll) {
+                m_onOpenPatternInPianoRoll(patternId);
+            }
+        });
+
         trackUI->setOnTrackSelected([this](TrackUIComponent* trackComp, bool addToSelection) {
             this->selectTrack(trackComp, addToSelection);
         });
@@ -2894,6 +2900,10 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             }
             
             // Clipboard
+            if (event.keyCode == AestraUI::NUIKeyCode::X) {
+                cutSelectedClip();
+                return true;
+            }
             if (event.keyCode == AestraUI::NUIKeyCode::C) {
                 copySelectedClip();
                 return true;
@@ -2924,6 +2934,28 @@ void TrackManagerUI::copySelectedClip() {
         m_clipboardClip = *clip;
         Log::info("Copied clip: " + m_clipboardClip.name);
     }
+}
+
+void TrackManagerUI::cutSelectedClip() {
+    if (!m_trackManager || !m_selectedClipId.isValid()) return;
+
+    auto& playlist = m_trackManager->getPlaylistModel();
+    if (const auto* clip = playlist.getClip(m_selectedClipId)) {
+        m_clipboardClip = *clip;
+        Log::info("Cut clip: " + m_clipboardClip.name);
+    } else {
+        return;
+    }
+
+    auto cmd = std::make_shared<RemoveClipCommand>(playlist, m_selectedClipId);
+    m_trackManager->getCommandHistory().pushAndExecute(cmd);
+    m_selectedClipId = ClipInstanceID{};
+
+    refreshTracks();
+    invalidateCache();
+    scheduleTimelineMinimapRebuild();
+
+    Log::info("Cut and removed selected clip via PlaylistModel");
 }
 
 void TrackManagerUI::pasteClipboardAtCursor() {

@@ -894,6 +894,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                  newNote.startBeat = beat;
                  newNote.durationBeats = lastNoteDuration_; 
                  newNote.velocity = lastNoteVelocity_;
+                 newNote.unitId = defaultUnitId_;
                  newNote.selected = true; 
                  newNote.animationScale = 1.0f; // Instant appearance 
                  
@@ -947,6 +948,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             newNote.startBeat = paintStartBeat_;
             newNote.durationBeats = lastNoteDuration_; 
             newNote.velocity = lastNoteVelocity_;
+            newNote.unitId = defaultUnitId_;
             newNote.selected = true;
             newNote.animationScale = 1.0f; // Instant appearance
             
@@ -1845,6 +1847,14 @@ void PianoRollView::setGhostPatterns(const std::vector<PianoRollNoteLayer::Ghost
 
 const std::vector<MidiNote>& PianoRollView::getNotes() const {
     return m_notes->getNotes();
+}
+
+void PianoRollView::setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb) {
+    m_notes->setOnNotesChanged(std::move(cb));
+}
+
+void PianoRollView::setDefaultUnitId(uint64_t unitId) {
+    m_notes->setDefaultUnitId(unitId);
 }
 
 void PianoRollView::setPixelsPerBeat(float ppb) {

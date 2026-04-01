@@ -52,8 +52,6 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     // Set as the content of the WindowPanel
     setContent(m_listContainer);
 
-    refreshUnits();
-
     // Create color picker (initially hidden)
     m_colorPicker = std::make_shared<UnitColorPicker>();
     m_colorPicker->setOnColorSelected([this](uint32_t color) {
@@ -117,9 +115,17 @@ void ArsenalPanel::refreshUnits() {
     // Build unit rows
     auto& unitMgr = m_trackManager->getUnitManager();
     auto unitIDs = unitMgr.getAllUnitIDs();
+
+    if (m_selectedUnitId == 0 || std::find(unitIDs.begin(), unitIDs.end(), m_selectedUnitId) == unitIDs.end()) {
+        m_selectedUnitId = unitIDs.empty() ? 0 : unitIDs.front();
+    }
+    if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
+        m_onSelectedUnitChanged(m_selectedUnitId);
+    }
     
     for (size_t i = 0; i < unitIDs.size(); ++i) {
         auto row = std::make_shared<UnitRow>(m_trackManager, unitMgr, unitIDs[i], m_activePatternID);
+        row->setSelected(unitIDs[i] == m_selectedUnitId);
         
         // Set step count
         row->setStepCount(m_stepCount);
@@ -170,6 +176,7 @@ void ArsenalPanel::refreshUnits() {
     m_listContainer->addChild(addBtn);
     
     layoutUnits();
+    syncRowSelection();
     ensureDropTargetRegistration(true);
     
     if (auto parent = getParent()) {
@@ -180,8 +187,82 @@ void ArsenalPanel::refreshUnits() {
 void ArsenalPanel::onAddUnit() {
     if (!m_trackManager) return;
     std::string name = "Unit " + std::to_string(m_trackManager->getUnitManager().getUnitCount() + 1);
-    m_trackManager->getUnitManager().createUnit(name, UnitGroup::Synth);
+    m_selectedUnitId = m_trackManager->getUnitManager().createUnit(name, UnitGroup::Synth);
+    if (m_onSelectedUnitChanged) {
+        m_onSelectedUnitChanged(m_selectedUnitId);
+    }
     refreshUnits();
+}
+
+bool ArsenalPanel::removeSelectedUnit() {
+    if (!m_trackManager || m_selectedUnitId == 0) {
+        return false;
+    }
+
+    auto& unitMgr = m_trackManager->getUnitManager();
+    auto unitIDs = unitMgr.getAllUnitIDs();
+    if (unitIDs.size() <= 1) {
+        Log::warning("[Arsenal] Refusing to remove the last unit");
+        return false;
+    }
+
+    auto it = std::find(unitIDs.begin(), unitIDs.end(), m_selectedUnitId);
+    if (it == unitIDs.end()) {
+        return false;
+    }
+
+    const size_t removedIndex = static_cast<size_t>(std::distance(unitIDs.begin(), it));
+    const UnitID removedUnit = m_selectedUnitId;
+    if (!unitMgr.removeUnit(removedUnit)) {
+        return false;
+    }
+
+    removeUnitNotes(removedUnit);
+
+    auto remaining = unitMgr.getAllUnitIDs();
+    if (remaining.empty()) {
+        m_selectedUnitId = 0;
+    } else if (removedIndex < remaining.size()) {
+        m_selectedUnitId = remaining[removedIndex];
+    } else {
+        m_selectedUnitId = remaining.back();
+    }
+
+    refreshUnits();
+    if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
+        m_onSelectedUnitChanged(m_selectedUnitId);
+    }
+    Log::info("[Arsenal] Removed Unit " + std::to_string(removedUnit));
+    return true;
+}
+
+void ArsenalPanel::syncRowSelection() {
+    for (auto& row : m_unitRows) {
+        if (row) {
+            row->setSelected(row->getUnitId() == m_selectedUnitId);
+        }
+    }
+}
+
+void ArsenalPanel::removeUnitNotes(UnitID unitId) {
+    if (!m_trackManager || unitId == 0) {
+        return;
+    }
+
+    auto patterns = m_trackManager->getPatternManager().getAllPatterns();
+    for (const auto& pattern : patterns) {
+        if (!pattern || !pattern->isMidi()) {
+            continue;
+        }
+
+        auto& midi = std::get<MidiPayload>(pattern->payload);
+        midi.notes.erase(
+            std::remove_if(
+                midi.notes.begin(),
+                midi.notes.end(),
+                [unitId](const MidiNote& note) { return note.unitId == unitId; }),
+            midi.notes.end());
+    }
 }
 
 void ArsenalPanel::setActivePattern(PatternID patternId) {
@@ -388,6 +469,20 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     float controlWidth = 280.0f; // Same as UnitRow::CONTROL_WIDTH
     float gridStartX = bounds.x + controlWidth + 6.0f;
     float availWidth = bounds.width - controlWidth - 12.0f;
+
+    std::string selectedLabel = "No unit selected";
+    if (m_trackManager && m_selectedUnitId != 0) {
+        if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
+            selectedLabel = unit->name.empty()
+                ? ("Unit " + std::to_string(m_selectedUnitId))
+                : unit->name;
+        }
+    }
+
+    std::string patternLabel = "Pattern " + std::to_string(m_activePatternID.value) + " • " +
+        std::to_string(m_stepCount) + " steps";
+    renderer.drawText(selectedLabel, NUIPoint(bounds.x + 10.0f, bounds.y + 3.0f), 11.0f, theme.getColor("textPrimary"));
+    renderer.drawText(patternLabel, NUIPoint(bounds.x + 10.0f, bounds.y + 12.0f), 9.0f, theme.getColor("textSecondary"));
     
     float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
     float indicatorHeight = PROGRESS_HEADER_HEIGHT - 6.0f;
@@ -610,6 +705,11 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         for (size_t i = 0; i < m_unitRows.size(); ++i) {
             if (m_unitRows[i] && m_unitRows[i]->getBounds().contains(event.position)) {
                 m_selectedUnitId = m_unitRows[i]->getUnitId();
+                syncRowSelection();
+                if (m_onSelectedUnitChanged) {
+                    m_onSelectedUnitChanged(m_selectedUnitId);
+                }
+                repaint();
                 break;
             }
         }
@@ -634,6 +734,10 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
     if (isCtrl && (event.keyCode == NUIKeyCode::V)) {
         pastePattern();
         return true;
+    }
+
+    if (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) {
+        return removeSelectedUnit();
     }
 
 
