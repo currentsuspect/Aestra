@@ -220,9 +220,9 @@ bool testTransactionRedoForwardOrder() {
     txn.redo();
 
     assert(log.size() == 3);
-    assert(log[0] == "exec:A");
-    assert(log[1] == "exec:B");
-    assert(log[2] == "exec:C");
+    assert(log[0] == "redo:A");
+    assert(log[1] == "redo:B");
+    assert(log[2] == "redo:C");
 
     std::cout << "✅ PASS\n";
     return true;
