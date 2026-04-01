@@ -224,7 +224,12 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         m_engine.setTransportPlaying(true);
     }
 
-    if (!result.success && result.errorMessage.empty()) {
+    // Check if render completed successfully
+    if (framesRemaining == 0 && result.framesRendered > 0) {
+        result.success = true;
+    }
+
+    if (!result.success) {
         if (shouldCancel()) {
             result.errorMessage = "Render cancelled by user";
         } else {
