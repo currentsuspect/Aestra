@@ -19,6 +19,7 @@
 #include "ConfirmationDialog.h"
 #include "PluginManager.h"
 #include "AudioGraphBuilder.h"
+#include "../../AestraAudio/include/IO/AudioExporter.h"
 
 #include <iostream>
 #include <fstream>
@@ -276,6 +277,48 @@ bool AestraApp::initialize(const std::string& projectPath) {
             //         }
             //     });
             // }
+        });
+
+        menu->addSeparator();
+
+        menu->addItem("Export Audio...", [this]() {
+            if (!m_content || !m_content->getTrackManager()) {
+                Log::warning("No project loaded for export");
+                return;
+            }
+            auto& engine = Aestra::Audio::AudioEngine::getInstance();
+            auto& trackMgr = *m_content->getTrackManager();
+            auto& playlist = trackMgr.getPlaylistModel();
+
+            double totalBeats = playlist.getTotalDurationBeats();
+            if (totalBeats <= 0.0) totalBeats = 64.0;
+
+            Aestra::Audio::AudioExporter::Config config;
+            config.scope = Aestra::Audio::AudioExporter::RenderScope::FullSong;
+            config.sampleRate = engine.getSampleRate();
+            config.bitDepth = Aestra::Audio::AudioExporter::BitDepth::PCM_24;
+            config.numChannels = 2;
+            config.tailSeconds = 2.0;
+
+            // Default output path
+            std::string exportName = Aestra::Audio::AudioExporter::getDefaultExportName(m_projectPath);
+            std::filesystem::path outDir = std::filesystem::path(m_projectPath).parent_path();
+            if (outDir.empty()) outDir = std::filesystem::current_path();
+            config.outputPath = (outDir / exportName).string();
+
+            Aestra::Audio::AudioExporter exporter(engine, trackMgr);
+            exporter.setProgressCallback([](float pct) {
+                Log::info("[Export] Progress: " + std::to_string(static_cast<int>(pct * 100)) + "%");
+            });
+
+            auto result = exporter.render(config);
+            if (result.success) {
+                Log::info("[Export] Done: " + result.outputPath + " (" +
+                          std::to_string(result.durationSeconds) + "s, peak " +
+                          std::to_string(result.peakDb) + " dB)");
+            } else {
+                Log::error("[Export] Failed: " + result.errorMessage);
+            }
         });
 
         menu->addSeparator();
