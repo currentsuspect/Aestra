@@ -30,7 +30,31 @@ void UnitRow::updateState() {
         m_isSolo = unit->isSolo;
         m_audioClip = unit->audioClipPath.empty() ? "" : 
                       unit->audioClipPath.substr(unit->audioClipPath.find_last_of("/\\") + 1);
+        m_pluginId = unit->pluginId;
         m_mixerChannel = unit->targetMixerRoute;
+
+        switch (m_group) {
+        case Aestra::Audio::UnitGroup::Synth:
+            m_groupLabel = "Synth";
+            break;
+        case Aestra::Audio::UnitGroup::Drums:
+            m_groupLabel = "Drums";
+            break;
+        case Aestra::Audio::UnitGroup::Audio:
+            m_groupLabel = "Audio";
+            break;
+        default:
+            m_groupLabel = "Unit";
+            break;
+        }
+
+        if (!m_pluginId.empty()) {
+            m_sourceSummary = "Plugin";
+        } else if (!m_audioClip.empty()) {
+            m_sourceSummary = "Sample";
+        } else {
+            m_sourceSummary = "Empty";
+        }
     }
     invalidateVisuals();
 }
@@ -43,21 +67,10 @@ void UnitRow::onRender(NUIRenderer& renderer) {
     }
 
     auto bounds = getBounds();
-    
-    // Render utilizing the FBO cache for performance (prevents popping/flicker on click)
-    // The lambda is only executed if the cache is invalid.
-    bool usedCache = renderer.renderCachedOrUpdate(reinterpret_cast<uint64_t>(this), bounds, [this, &renderer, bounds]() {
-        // Transform absolute specific drawings to FBO-local space (0,0 based)
-        // This ensures drawing at 'bounds.x' works correctly within the FBO texture.
-        renderer.pushTransform(-bounds.x, -bounds.y);
-        this->drawContent(renderer);
-        renderer.popTransform();
-    });
-    
-    // If caching isn't supported by the renderer, fallback to direct draw
-    if (!usedCache) {
-        drawContent(renderer);
-    }
+
+    // Render live for now. The widget cache path is currently producing
+    // duplicate/local-space ghosts for Arsenal rows on Linux.
+    drawContent(renderer);
     
     // Render dynamic children (Input Widget, Context Menu) on top
     // Push UnitRow position so children (relative coords) draw correctly
@@ -77,7 +90,9 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     float radius = theme.getRadius("radiusL");
 
     // Shadow/Glow behind the row
-    if (m_isHovered || m_isDragging) {
+    if (m_isSelected) {
+        renderer.drawShadow(cardBounds, 0.0f, 3.0f, 14.0f, theme.getColor("accentPrimary").withAlpha(0.28f));
+    } else if (m_isHovered || m_isDragging) {
         renderer.drawShadow(cardBounds, 0.0f, 4.0f, 16.0f, theme.getColor("primary").withAlpha(0.2f));
     } else {
         renderer.drawShadow(cardBounds, 0.0f, 2.0f, 8.0f, NUIColor::black().withAlpha(0.5f));
@@ -89,14 +104,22 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     // For rows, we want them to feel like plates floating on the void.
     // Let's use a custom glass color derived from panel background but with alpha.
     NUIColor cardBg = theme.getColor("surfaceTertiary").withAlpha(0.6f); 
-    if (m_isHovered) cardBg = cardBg.lightened(0.1f).withAlpha(0.7f);
+    if (m_isSelected) {
+        cardBg = theme.getColor("accentPrimary").withAlpha(0.14f);
+    } else if (m_isHovered) {
+        cardBg = cardBg.lightened(0.1f).withAlpha(0.7f);
+    }
     
     renderer.fillRoundedRect(cardBounds, radius, cardBg);
     
     // Glass Border
     // Glass Border
     NUIColor borderColor = theme.getColor("glassBorder"); // 0.09f white
-    if (m_isHovered) borderColor = theme.getColor("accentPrimary").withAlpha(0.5f);
+    if (m_isSelected) {
+        borderColor = theme.getColor("accentPrimary").withAlpha(0.9f);
+    } else if (m_isHovered) {
+        borderColor = theme.getColor("accentPrimary").withAlpha(0.5f);
+    }
     
     renderer.strokeRoundedRect(cardBounds, radius, 1.0f, borderColor);
     
@@ -288,10 +311,10 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     drawGearIcon(renderer, gearRect, false); // Always "inactive" state unless toggled? Just use clickable style
     x += BUTTON_SIZE + BUTTON_SPACING + 4.0f;
     
-    // === 5. Unit Name ===
+    // === 5. Unit Identity ===
     // Dynamic width calculation to fill space up to mixer channel
     float mixerRight = bounds.width - DRAG_HANDLE_WIDTH - COLOR_STRIP_WIDTH - 8.0f;
-    float mixerBitStart = mixerRight - 50.0f; 
+    float mixerBitStart = mixerRight - 124.0f;
     float nameWidth = std::max(50.0f, mixerBitStart - x);
 
     if (!m_isEditingName) {
@@ -309,12 +332,47 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             displayName += "...";
         }
         
-        float textY = centerY - (13.0f * 0.38f);
-        renderer.drawText(displayName, NUIPoint(x, textY), 13.0f, theme.getColor("textPrimary"));
+        renderer.drawText(displayName, NUIPoint(x, bounds.y + 9.0f), 13.0f, theme.getColor("textPrimary"));
+
+        std::string metaText = m_groupLabel + " • " + m_sourceSummary;
+        if (!m_audioClip.empty() && m_pluginId.empty()) {
+            metaText += " • " + m_audioClip;
+        } else if (!m_pluginId.empty()) {
+            metaText += " • armed for plugin";
+        }
+
+        float maxMetaWidth = std::max(40.0f, nameWidth - 10.0f);
+        auto metaSize = renderer.measureText(metaText, 10.0f);
+        while (metaSize.width > maxMetaWidth && metaText.length() > 3) {
+            metaText.pop_back();
+            metaSize = renderer.measureText(metaText + "...", 10.0f);
+        }
+        if (metaSize.width > maxMetaWidth) {
+            metaText = "...";
+        } else if (metaText.length() < (m_groupLabel + " • " + m_sourceSummary).length()) {
+            metaText += "...";
+        }
+
+        renderer.drawText(metaText, NUIPoint(x, bounds.y + 24.0f), 10.0f, theme.getColor("textSecondary"));
     }
     
-    // === Right-aligned info (Mixer Channel only - sample name is now the unit name) ===
+    // === Right-aligned info ===
     float rightX = bounds.x + bounds.width - 4.0f;
+
+    {
+        std::string sourceTag = m_pluginId.empty() ? (m_audioClip.empty() ? "EMPTY" : "SAMPLE") : "PLUGIN";
+        float w = renderer.measureText(sourceTag, 9.0f).width + 12.0f;
+        NUIColor tagBg = m_pluginId.empty()
+            ? (m_audioClip.empty() ? theme.getColor("surfaceTertiary").withAlpha(0.7f)
+                                   : NUIColor(0.22f, 0.46f, 0.88f, 0.18f))
+            : theme.getColor("accentPrimary").withAlpha(0.2f);
+
+        NUIRect tagRect(rightX - w - 56.0f, centerY - 9.0f, w, 18.0f);
+        renderer.fillRoundedRect(tagRect, 4.0f, tagBg);
+        renderer.strokeRoundedRect(tagRect, 4.0f, 1.0f, theme.getColor("borderSubtle"));
+        float textY = renderer.calculateTextY(tagRect, 9.0f);
+        renderer.drawText(sourceTag, NUIPoint(tagRect.x + 6.0f, textY), 9.0f, theme.getColor("textSecondary"));
+    }
     
     // Mixer Channel Tag
     if (m_mixerChannel >= 0) {
@@ -328,7 +386,13 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         float textY = renderer.calculateTextY(tagRect, 10.0f);
         renderer.drawText(mixText, NUIPoint(tagRect.x + 5.0f, textY), 10.0f, theme.getColor("textSecondary"));
     }
-    // Note: Audio clip name display removed - the unit name already shows the loaded sample
+    else {
+        NUIRect tagRect(rightX - 48.0f, centerY - 9.0f, 44.0f, 18.0f);
+        renderer.fillRoundedRect(tagRect, 4.0f, theme.getColor("backgroundSecondary"));
+        renderer.strokeRoundedRect(tagRect, 4.0f, 1.0f, theme.getColor("borderSubtle"));
+        float textY = renderer.calculateTextY(tagRect, 10.0f);
+        renderer.drawText("MAIN", NUIPoint(tagRect.x + 5.0f, textY), 10.0f, theme.getColor("textSecondary"));
+    }
 }
 
 void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {

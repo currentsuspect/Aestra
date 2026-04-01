@@ -18,6 +18,9 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     
     // Start with empty notes (will load when pattern is opened)
     m_pianoRoll->setNotes({});
+    m_pianoRoll->setOnNotesChanged([this](const std::vector<AestraUI::MidiNote>&) {
+        savePattern();
+    });
     
     // Set as content of WindowPanel
     setContent(m_pianoRoll);
@@ -54,15 +57,25 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
             uiNote.pitch = vn.pitch;
             uiNote.startBeat = vn.startBeat;
             uiNote.durationBeats = vn.durationBeats;
-            uiNote.velocity = vn.velocity / 127.0f;
+            uiNote.velocity = vn.velocity;
+            uiNote.unitId = vn.unitId;
             uiNote.selected = false;
             uiNote.isDeleted = false;
-            // Store unitId in a way the UI can preserve it (we'll add this field or use a map)
-            // For now, notes default to unitId=0 (all units)
             uiNotes.push_back(uiNote);
         }
         
+        std::string sourceLabel = pattern->name;
+        if (m_editingUnitId != 0) {
+            if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_editingUnitId)) {
+                if (!unit->name.empty()) {
+                    sourceLabel += " • " + unit->name;
+                }
+            }
+        }
+
+        m_pianoRoll->setDefaultUnitId(m_editingUnitId);
         m_pianoRoll->setNotes(uiNotes);
+        m_pianoRoll->setPatternName(sourceLabel);
         setTitle("PIANO ROLL - " + pattern->name);
         
         Log::info("[PianoRollPanel] Loaded pattern " + std::to_string(patternId.value) + 
@@ -79,7 +92,7 @@ void PianoRollPanel::savePattern() {
     const auto& uiNotes = m_pianoRoll->getNotes();
     
     // Apply patch to update pattern data
-    pm.applyPatch(m_currentPatternId, [&uiNotes](PatternSource& pattern) {
+    pm.applyPatch(m_currentPatternId, [this, &uiNotes](PatternSource& pattern) {
         if (pattern.isMidi()) {
             auto& midiPayload = std::get<MidiPayload>(pattern.payload);
             midiPayload.notes.clear();
@@ -92,15 +105,26 @@ void PianoRollPanel::savePattern() {
                 backendNote.pitch = uiNote.pitch;
                 backendNote.startBeat = uiNote.startBeat;
                 backendNote.durationBeats = uiNote.durationBeats;
-                backendNote.velocity = static_cast<uint8_t>(uiNote.velocity * 127.0f);
-                backendNote.unitId = 0; // Piano Roll notes default to unitId=0 (all units, or let Arsenal assign)
+                backendNote.velocity = uiNote.velocity;
+                backendNote.unitId = uiNote.unitId != 0 ? uiNote.unitId : m_editingUnitId;
                 midiPayload.notes.push_back(backendNote);
             }
         }
     });
+
+    if (m_onPatternEdited) {
+        m_onPatternEdited(m_currentPatternId);
+    }
     
     Log::info("[PianoRollPanel] Saved pattern " + std::to_string(m_currentPatternId.value) + 
               " with " + std::to_string(uiNotes.size()) + " notes");
+}
+
+void PianoRollPanel::setEditingUnit(UnitID unitId) {
+    m_editingUnitId = unitId;
+    if (m_pianoRoll) {
+        m_pianoRoll->setDefaultUnitId(unitId);
+    }
 }
 
 void PianoRollPanel::onUpdate(double deltaTime) {

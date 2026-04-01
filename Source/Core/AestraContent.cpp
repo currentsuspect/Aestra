@@ -126,6 +126,9 @@ AestraContent::AestraContent() {
     // Wire up TrackManagerUI internal toggles to centralized authority (v3.1)
     m_trackManagerUI->setOnToggleMixer([this]() { toggleView(Audio::ViewType::Mixer); });
     m_trackManagerUI->setOnTogglePianoRoll([this]() { toggleView(Audio::ViewType::PianoRoll); });
+    m_trackManagerUI->setOnOpenPatternInPianoRoll([this](PatternID patternId) {
+        openPatternInPianoRoll(patternId);
+    });
     m_trackManagerUI->setOnToggleSequencer([this]() { toggleView(Audio::ViewType::Sequencer); });
     m_trackManagerUI->setOnTogglePlaylist([this]() { toggleView(Audio::ViewType::Playlist); });
     
@@ -381,29 +384,16 @@ AestraContent::AestraContent() {
         if (m_sequencerPanel) {
             m_sequencerPanel->setActivePattern(patternId);
         }
+        if (m_pianoRollPanel) {
+            m_pianoRollPanel->loadPattern(patternId);
+        }
     });
     m_patternBrowser->setOnPatternDragStart([this](PatternID patternId) {
         Log::info("Pattern drag started: " + std::to_string(patternId.value));
     });
     m_patternBrowser->setOnPatternDoubleClick([this](PatternID patternId) {
         Log::info("Pattern double-clicked: " + std::to_string(patternId.value));
-        
-        if (m_pianoRollPanel && m_trackManager) {
-            auto& pm = m_trackManager->getPatternManager();
-            auto pattern = pm.getPattern(patternId);
-            
-            if (pattern && pattern->isMidi()) {
-                AestraUI::NUIRect allowed = computeAllowedRectForPanels();
-                float editorWidth = std::min(900.0f, allowed.width * 0.8f);
-                float editorHeight = std::min(500.0f, allowed.height * 0.7f);
-                float editorX = allowed.x + (allowed.width - editorWidth) / 2.0f;
-                float editorY = allowed.y + (allowed.height - editorHeight) / 2.0f;
-                
-                m_viewState.pianoRollRect = AestraUI::NUIRect(editorX, editorY, editorWidth, editorHeight);
-                m_pianoRollPanel->loadPattern(patternId);
-                setViewOpen(Audio::ViewType::PianoRoll, true);
-            }
-        }
+        openPatternInPianoRoll(patternId);
     });
     m_workspaceLayer->addChild(m_patternBrowser);
 
@@ -421,6 +411,11 @@ AestraContent::AestraContent() {
 
     m_pianoRollPanel = std::make_shared<PianoRollPanel>(m_trackManager);
     m_pianoRollPanel->setVisible(false);
+    m_pianoRollPanel->setOnPatternEdited([this](PatternID patternId) {
+        if (m_sequencerPanel && m_sequencerPanel->getActivePatternID() == patternId) {
+            m_sequencerPanel->refreshUnits();
+        }
+    });
     m_pianoRollPanel->setOnClose([this]() { 
         m_pianoRollPanel->savePattern();
         toggleView(Audio::ViewType::PianoRoll); 
@@ -479,6 +474,11 @@ AestraContent::AestraContent() {
     });
     m_sequencerPanel->setOnPluginDroppedToUnit([this](UnitID unitId, const std::string& pluginId) {
         loadInstrumentIntoArsenalUnit(unitId, pluginId);
+    });
+    m_sequencerPanel->setOnSelectedUnitChanged([this](UnitID unitId) {
+        if (m_pianoRollPanel) {
+            m_pianoRollPanel->setEditingUnit(unitId);
+        }
     });
     m_sequencerPanel->refreshUnits();
     m_patternBrowser->refreshPatterns();
@@ -1463,8 +1463,35 @@ PatternID AestraContent::getActivePatternID() const {
     return PatternID();
 }
 
-std::shared_ptr<AestraUI::FileBrowser> AestraContent::getFileBrowser() const { 
-    return m_fileBrowser; 
+void AestraContent::openPatternInPianoRoll(PatternID patternId) {
+    if (!m_pianoRollPanel || !m_trackManager || !patternId.isValid()) {
+        return;
+    }
+
+    auto& pm = m_trackManager->getPatternManager();
+    auto pattern = pm.getPattern(patternId);
+    if (!pattern || !pattern->isMidi()) {
+        return;
+    }
+
+    if (m_sequencerPanel) {
+        m_sequencerPanel->setActivePattern(patternId);
+        m_pianoRollPanel->setEditingUnit(m_sequencerPanel->getSelectedUnitId());
+    }
+
+    AestraUI::NUIRect allowed = computeAllowedRectForPanels();
+    float editorWidth = std::min(900.0f, allowed.width * 0.8f);
+    float editorHeight = std::min(500.0f, allowed.height * 0.7f);
+    float editorX = allowed.x + (allowed.width - editorWidth) / 2.0f;
+    float editorY = allowed.y + (allowed.height - editorHeight) / 2.0f;
+
+    m_viewState.pianoRollRect = AestraUI::NUIRect(editorX, editorY, editorWidth, editorHeight);
+    m_pianoRollPanel->loadPattern(patternId);
+    setViewOpen(Audio::ViewType::PianoRoll, true);
+}
+
+std::shared_ptr<AestraUI::FileBrowser> AestraContent::getFileBrowser() const {
+    return m_fileBrowser;
 }
 
 void AestraContent::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) {

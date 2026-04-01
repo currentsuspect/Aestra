@@ -2071,6 +2071,22 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             
             // Check if clicking on any clip for drag initiation or trimming
             if (clickedClipId.isValid()) {
+                if (event.doubleClick && m_trackManager) {
+                    auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
+                    if (lane) {
+                        for (const auto& clip : lane->clips) {
+                            if (clip.id == clickedClipId && clip.patternId.isValid()) {
+                                auto* pattern = m_trackManager->getPatternManager().getPattern(clip.patternId);
+                                if (pattern && pattern->isMidi() && m_onPatternClipOpenRequested) {
+                                    m_onPatternClipOpenRequested(clip.patternId);
+                                    return true;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 float leftEdge = clickedClipBounds.x;
                 float rightEdge = clickedClipBounds.x + clickedClipBounds.width;
                 
@@ -2393,4 +2409,3 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
 
 } // namespace Audio
 } // namespace Aestra
-

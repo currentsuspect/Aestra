@@ -241,6 +241,7 @@ public:
 
     // Callbacks
     void setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb);
+    void setDefaultUnitId(uint64_t unitId) { defaultUnitId_ = unitId; }
     
 
 
@@ -253,6 +254,7 @@ private:
     float scrollY_;
     
     std::function<void(const std::vector<MidiNote>&)> onNotesChanged_;
+    uint64_t defaultUnitId_ = 0;
 
     // Tool
     PianoRollTool tool_ = PianoRollTool::Pointer;
@@ -342,6 +344,8 @@ public:
     void setNotes(const std::vector<MidiNote>& notes);
     const std::vector<MidiNote>& getNotes() const;
     void setPatternName(const std::string& name);
+    void setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb);
+    void setDefaultUnitId(uint64_t unitId);
     
     void setGhostPatterns(const std::vector<PianoRollNoteLayer::GhostPattern>& ghosts);
 

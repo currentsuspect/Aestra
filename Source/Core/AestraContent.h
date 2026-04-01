@@ -181,6 +181,7 @@ public:
     void loadEffectToSelectedTrack(const std::string& pluginId);
     void loadInstrumentToArsenal(const std::string& pluginId);
     void loadInstrumentIntoArsenalUnit(Aestra::Audio::UnitID unitId, const std::string& pluginId);
+    void openPatternInPianoRoll(Aestra::Audio::PatternID patternId);
 
 private:
     std::shared_ptr<AestraUI::NUIComponent> m_workspaceLayer;

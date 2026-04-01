@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
+#include <cstdint>
 #include <vector>
 #include <string>
 
@@ -10,6 +11,7 @@ struct MidiNote {
     double startBeat;    // Start position in beats
     double durationBeats;// Duration in beats
     float velocity;      // 0..1
+    uint64_t unitId = 0; // Arsenal unit routing
     bool selected = false;
     bool isDeleted = false; // For delete animation
     mutable float animationScale = 1.0f; // For animations

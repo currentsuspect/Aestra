@@ -72,6 +72,7 @@ public:
     size_t getUnitCount() const { return m_unitOrder.size(); }
     std::vector<UnitID> getAllUnitIDs() const { return m_unitOrder; }
     void reorderUnit(UnitID id, size_t newIndex);
+    bool removeUnit(UnitID id);
     void clear();
 
     void setUnitName(UnitID id, const std::string& name);
