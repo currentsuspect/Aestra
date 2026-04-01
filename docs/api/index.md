@@ -7,7 +7,7 @@ Welcome to the Aestra API reference. This section provides detailed documentatio
     
     Comprehensive documentation for all classes, functions, and modules with searchable interface, inheritance diagrams, and detailed member descriptions.
 
-## 📚 Module APIs
+## Module APIs
 
 Aestra's API is organized by module. Each module provides a focused set of functionality:
 
@@ -103,7 +103,7 @@ Internal Arsenal plugins (e.g., Rumble) are already validated through discovery,
 
 ---
 
-## 🎯 Quick Start Examples
+## Quick Start Examples
 
 ### Creating a Window
 
@@ -172,7 +172,7 @@ while (window->isOpen()) {
 }
 ```
 
-## 📖 API Conventions
+## API Conventions
 
 ### Naming Conventions
 
@@ -312,7 +312,7 @@ See the [Contributing Guide](../developer/contributing.md) for details.
 - [Architecture Overview](../architecture/overview.md)
 - [Getting Started Guide](../getting-started/index.md)
 - [Developer Guide](../developer/contributing.md)
-- [Code Examples](https://github.com/currentsuspect/Aestra/tree/main/examples)
+- [Repository Root](https://github.com/currentsuspect/Aestra) - Browse the current public source tree
 
 ---
 
