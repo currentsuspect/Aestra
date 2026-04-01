@@ -77,6 +77,11 @@ public:
     bool isFullScreen() const;
     void swapBuffers();
 
+    // Export progress (titlebar button)
+    void setExportProgress(float progress);  // 0-1, -1 for indeterminate
+    void setExporting(bool exporting);
+    void setOnExportRequested(std::function<void()> cb);
+
     // Cursor
     void initializeCustomCursors();
     void renderCustomCursor();
