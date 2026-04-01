@@ -306,8 +306,6 @@ bool AudioExporter::writeWavHeader(std::ofstream& file, const Config& config, ui
 
     int bitsPerSample = static_cast<int>(config.bitDepth);
     int bytesPerSample = bitsPerSample / 8;
-    // 24-bit stored in 32-bit containers
-    if (config.bitDepth == BitDepth::PCM_24) bytesPerSample = 4;
 
     uint32_t byteRate = config.sampleRate * config.numChannels * bytesPerSample;
     uint32_t blockAlign = config.numChannels * bytesPerSample;
@@ -353,14 +351,15 @@ bool AudioExporter::writeSamples(std::ofstream& file, const float* buffer,
         file.write(reinterpret_cast<const char*>(converted.data()),
                    converted.size() * sizeof(int16_t));
     } else if constexpr (std::is_same_v<SampleType, int32_t>) {
-        // 24-bit stored in 32-bit containers
-        std::vector<int32_t> converted(frames * channels);
+        std::vector<uint8_t> converted(frames * channels * 3);
         for (size_t i = 0; i < frames * channels; ++i) {
             float sample = std::clamp(buffer[i], -1.0f, 1.0f);
-            converted[i] = static_cast<int32_t>(sample * 8388607.0f);
+            const int32_t packed24 = static_cast<int32_t>(sample * 8388607.0f);
+            converted[i * 3 + 0] = static_cast<uint8_t>(packed24 & 0xFF);
+            converted[i * 3 + 1] = static_cast<uint8_t>((packed24 >> 8) & 0xFF);
+            converted[i * 3 + 2] = static_cast<uint8_t>((packed24 >> 16) & 0xFF);
         }
-        file.write(reinterpret_cast<const char*>(converted.data()),
-                   converted.size() * sizeof(int32_t));
+        file.write(reinterpret_cast<const char*>(converted.data()), converted.size());
     }
 
     return file.good();

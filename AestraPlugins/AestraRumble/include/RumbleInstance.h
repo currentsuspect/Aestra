@@ -36,7 +36,7 @@ public:
     std::vector<uint8_t> saveState() const override;
     bool loadState(const std::vector<uint8_t>& state) override;
 
-    bool hasEditor() const override { return true; }
+    bool hasEditor() const override { return false; }
     bool openEditor(void* parentWindow) override { return false; }
     void closeEditor() override {}
     bool isEditorOpen() const override { return false; }

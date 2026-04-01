@@ -10,12 +10,21 @@
 #include <atomic>
 #include <thread>
 #include <future>
+#include <optional>
 #include <vector>
 
 namespace Aestra { namespace Audio { class AudioEngine; class TrackManager; } }
 
 class ExportDialog : public AestraUI::NUIComponent {
 public:
+    struct ExportJobResult {
+        bool success = false;
+        std::string outputPath;
+        double durationSeconds = 0.0;
+        double peakDb = -96.0;
+        std::string errorMessage;
+    };
+
     ExportDialog();
     ~ExportDialog() = default;
 
@@ -39,11 +48,12 @@ private:
     void drawSettingsPanel(AestraUI::NUIRenderer& renderer);
     void drawProgressPanel(AestraUI::NUIRenderer& renderer);
     void startExport();
-    void exportThreadFn();
+    ExportJobResult exportThreadFn();
     void handleMouseClick(AestraUI::NUIPoint pos);
     void updateButtonHover(AestraUI::NUIPoint pos);
     bool parseTailInput(double& outTailSeconds) const;
     void syncTailInputFromValue();
+    void applyExportResult(const ExportJobResult& result);
 
     enum class PanelState { Settings, Progress, Complete };
     PanelState m_panelState = PanelState::Settings;
@@ -70,7 +80,7 @@ private:
     std::atomic<float> m_progress{0.0f};
     std::atomic<bool> m_exporting{false};
     std::atomic<bool> m_cancelRequested{false};
-    std::future<void> m_exportFuture;
+    std::future<ExportJobResult> m_exportFuture;
     std::string m_exportResultPath;
     double m_exportDuration = 0.0;
     double m_exportPeakDb = -96.0;
