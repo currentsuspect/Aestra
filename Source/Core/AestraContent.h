@@ -153,6 +153,9 @@ public:
     std::shared_ptr<AestraUI::NUISegmentedControl> getViewToggle();
     Aestra::Audio::PatternID getActivePatternID() const;
     std::shared_ptr<AestraUI::FileBrowser> getFileBrowser() const;
+    void playFromCurrentFocus();
+    void stopFromCurrentFocus(bool hardStop = false);
+    void pauseFromCurrentFocus();
 
     // Platform
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);

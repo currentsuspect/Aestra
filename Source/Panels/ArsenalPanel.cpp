@@ -103,6 +103,9 @@ void ArsenalPanel::refreshUnits() {
                  if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
                      m_trackManager->stopArsenalPlayback(true);
                  } else {
+                     if (m_onRequestPlaybackActivation) {
+                         m_onRequestPlaybackActivation();
+                     }
                      m_trackManager->playPatternInArsenal(m_activePatternID);
                  }
              }
@@ -155,6 +158,11 @@ void ArsenalPanel::refreshUnits() {
         row->setOnPluginDropped([this](UnitID unitId, const std::string& pluginId) {
             if (m_onPluginDroppedToUnit) {
                 m_onPluginDroppedToUnit(unitId, pluginId);
+            }
+        });
+        row->setOnPatternEdited([this](PatternID patternId) {
+            if (m_onPatternEdited) {
+                m_onPatternEdited(patternId);
             }
         });
         
@@ -232,6 +240,9 @@ bool ArsenalPanel::removeSelectedUnit() {
     if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
         m_onSelectedUnitChanged(m_selectedUnitId);
     }
+    if (m_activePatternID.isValid() && m_onPatternEdited) {
+        m_onPatternEdited(m_activePatternID);
+    }
     Log::info("[Arsenal] Removed Unit " + std::to_string(removedUnit));
     return true;
 }
@@ -275,6 +286,9 @@ void ArsenalPanel::setActivePattern(PatternID patternId) {
     }
     
     refreshUnits(); // Rebuild UI with new pattern context
+    if (m_onActivePatternChanged) {
+        m_onActivePatternChanged(m_activePatternID);
+    }
 }
 
 void ArsenalPanel::setStepCount(int count) {
@@ -306,6 +320,9 @@ void ArsenalPanel::ensureDefaultPattern() {
             if (m_trackManager) {
                 m_trackManager->preparePatternForArsenal(m_activePatternID);
             }
+            if (m_onActivePatternChanged) {
+                m_onActivePatternChanged(m_activePatternID);
+            }
             return;
         }
     }
@@ -317,6 +334,9 @@ void ArsenalPanel::ensureDefaultPattern() {
     // [FIX] Pre-load pattern
     if (m_trackManager) {
         m_trackManager->preparePatternForArsenal(m_activePatternID);
+    }
+    if (m_onActivePatternChanged) {
+        m_onActivePatternChanged(m_activePatternID);
     }
     
     // Refresh Pattern Browser to show Pattern 1
@@ -479,10 +499,16 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
         }
     }
 
-    std::string patternLabel = "Pattern " + std::to_string(m_activePatternID.value) + " • " +
-        std::to_string(m_stepCount) + " steps";
-    renderer.drawText(selectedLabel, NUIPoint(bounds.x + 10.0f, bounds.y + 3.0f), 11.0f, theme.getColor("textPrimary"));
-    renderer.drawText(patternLabel, NUIPoint(bounds.x + 10.0f, bounds.y + 12.0f), 9.0f, theme.getColor("textSecondary"));
+    std::string patternLabel = std::to_string(m_stepCount) + " steps";
+    if (m_trackManager && m_activePatternID.isValid()) {
+        if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID)) {
+            if (!pattern->name.empty()) {
+                patternLabel = pattern->name + " • " + patternLabel;
+            }
+        }
+    }
+    renderer.drawText(selectedLabel, NUIPoint(bounds.x + 10.0f, bounds.y + 2.0f), 11.0f, theme.getColor("textPrimary"));
+    renderer.drawText(patternLabel, NUIPoint(bounds.x + 10.0f, bounds.y + 13.0f), 8.5f, theme.getColor("textSecondary").withAlpha(0.85f));
     
     float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
     float indicatorHeight = PROGRESS_HEADER_HEIGHT - 6.0f;
@@ -645,6 +671,9 @@ void ArsenalPanel::pastePattern() {
     });
     
     refreshUnits();
+    if (m_onPatternEdited) {
+        m_onPatternEdited(m_activePatternID);
+    }
     Log::info("[Arsenal] Pasted " + std::to_string(m_clipboard->notes.size()) + " notes to Unit " + std::to_string(m_selectedUnitId));
 }
 
@@ -751,6 +780,9 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
             if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
                 m_trackManager->stopArsenalPlayback(true);
             } else {
+                if (m_onRequestPlaybackActivation) {
+                    m_onRequestPlaybackActivation();
+                }
                 m_trackManager->playPatternInArsenal(m_activePatternID);
             }
         }

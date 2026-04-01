@@ -330,6 +330,8 @@ private:
     void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset = 0);
     void applyPendingCommands();
     void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame);
+    void injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount,
+                                   uint32_t numFrames) noexcept;
 
     // Pre-allocated buffers for Arsenal unit processing (RT-safe)
     std::vector<double> m_unitBufferD;         // Stereo interleaved unit output
@@ -388,6 +390,16 @@ private:
     std::vector<float> m_scratchL;                    // Scratch L for plugins
     std::vector<float> m_scratchR;                    // Scratch R for plugins
     std::vector<MidiBuffer> m_scratchMidiBuffers;     // [NEW] Scratch MIDI buffers for units
+
+    struct UnitAuditionState {
+        UnitID unitId{0};
+        uint8_t note{36};
+        uint8_t velocity{100};
+        uint32_t noteOffSamplesRemaining{0};
+        bool noteOnPending{false};
+        bool active{false};
+    };
+    UnitAuditionState m_unitAuditionState;
     // std::vector<TrackRTState> m_trackState; <-- Moved to m_rtGraphState (actually m_graphStates)
     // But we need persistent state across swaps?
     // TrackRTState contains current Volume/Pan/SmoothedParams.

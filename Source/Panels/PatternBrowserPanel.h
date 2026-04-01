@@ -42,6 +42,7 @@ public:
 
     // Currently selected item
     Aestra::Audio::PatternID getSelectedPatternId() const { return m_selectedPatternId; }
+    void setSelectedPatternId(Aestra::Audio::PatternID patternId, bool notify = false);
 
     // IDropTarget Implementation
     AestraUI::DropFeedback onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;

@@ -4,9 +4,20 @@
 #include "../../AestraCore/include/AestraLog.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace Aestra {
 namespace Audio {
+
+namespace {
+uint8_t toMidiVelocity(float velocity) {
+    const float clamped = std::max(0.0f, velocity);
+    if (clamped <= 1.0f) {
+        return static_cast<uint8_t>(std::clamp<int>(static_cast<int>(std::lround(clamped * 127.0f)), 0, 127));
+    }
+    return static_cast<uint8_t>(std::clamp<int>(static_cast<int>(std::lround(clamped)), 0, 127));
+}
+} // namespace
 
 PatternPlaybackEngine::PatternPlaybackEngine(TimelineClock* clock, PatternManager* patternMgr, UnitManager* unitMgr)
     : m_clock(clock), m_patternManager(patternMgr), m_unitManager(unitMgr), m_overflowCounter(0),
@@ -156,7 +167,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
             onEvent.channelIdx = channelIdx;
             onEvent.statusByte = 0x90; // Note-on
             onEvent.data1 = note.pitch;
-            onEvent.data2 = note.velocity;
+            onEvent.data2 = toMidiVelocity(note.velocity);
             onEvent.priority = 1; // Note-on comes after note-off at same sample
 
             if (!m_rtQueue.push(onEvent)) {
@@ -267,6 +278,9 @@ void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, 
 
 void PatternPlaybackEngine::flush() {
     std::lock_guard<std::mutex> lock(m_mutex);
+    for (auto& inst : m_activeInstances) {
+        inst.nextEventIdx = 0;
+    }
     ScheduledEvent ev;
     while (m_rtQueue.peek(ev)) {
         m_rtQueue.pop();
