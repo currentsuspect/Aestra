@@ -6,6 +6,7 @@
 #include "SettingsDialog.h"
 #include "ConfirmationDialog.h"
 #include "RecoveryDialog.h"
+#include "../Settings/ExportDialog.h"
 #include "ViewTypes.h"
 #include "TrackManagerUI.h"
 #include "FileBrowser.h"
@@ -431,6 +432,13 @@ void AestraWindowManager::setRecoveryDialog(std::shared_ptr<Aestra::RecoveryDial
     m_recoveryDialog = dialog;
     // Note: RecoveryDialog is NOT added as a child - it's rendered manually
     // at the end of the render loop to ensure it appears on top of all UI
+}
+
+void AestraWindowManager::setExportDialog(std::shared_ptr<ExportDialog> dialog) {
+    m_exportDialog = std::move(dialog);
+    if (m_rootComponent && m_exportDialog) {
+        m_rootComponent->addChild(m_exportDialog);
+    }
 }
 
 void AestraWindowManager::setUnifiedHUD(std::shared_ptr<UnifiedHUD> hud) {
