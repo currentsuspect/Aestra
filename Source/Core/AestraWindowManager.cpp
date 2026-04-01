@@ -6,6 +6,7 @@
 #include "SettingsDialog.h"
 #include "ConfirmationDialog.h"
 #include "RecoveryDialog.h"
+#include "../Settings/ExportDialog.h"
 #include "ViewTypes.h"
 #include "TrackManagerUI.h"
 #include "FileBrowser.h"
@@ -130,8 +131,14 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             return false;
         }
 
-        // Enable render caching by default for performance
+        // Linux release builds currently have an optimization-sensitive failure
+        // in the GL widget cache path that can leave the window blank even though
+        // startup completes. Prefer direct rendering until the cache bug is fixed.
+#if defined(__linux__)
+        glRenderer->setCachingEnabled(false);
+#else
         glRenderer->setCachingEnabled(true);
+#endif
 
         // Transfer ownership to unique_ptr
         m_renderer.reset(glRenderer);
@@ -262,29 +269,26 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             return; // Block all other key handling while recovery dialog is shown
         }
 
-        if (pressed) { // Press
-             // Dispatch to Content (Global handling)
-             if (m_content) {
-                 AestraUI::NUIKeyEvent event;
-                 event.keyCode = static_cast<AestraUI::NUIKeyCode>(key);
-                 event.pressed = pressed;
-                 // Pass modifiers for completeness (e.g. Shift for capitals)
-                 // Note: NUIKeyEvent struct might need updating elsewhere if it lacks 'modifiers' field, 
-                 // but for now we rely on keyCode logic or add it if struct allows.
-                 
-                 // 1. Dispatch to Focused Component (Search Bar, etc.)
-                 if (auto* focused = AestraUI::NUIComponent::getFocusedComponent()) {
-                     // Check if focused component is part of our component tree
-                     // (Usually yes, since we only have one window)
-                     if (focused->onKeyEvent(event)) {
-                         return; // Consumed by widget
-                     }
-                 }
+        // Dispatch to Content / Focused widgets for both press and release so
+        // key latches and controls can observe the full key lifecycle.
+        if (m_content) {
+            AestraUI::NUIKeyEvent event;
+            event.keyCode = static_cast<AestraUI::NUIKeyCode>(key);
+            event.pressed = pressed;
+            event.released = !pressed;
+            event.modifiers = m_keyModifiers;
 
-                 // 2. Global / Content Shortcuts (Spacebar Playback, etc.)
-                 if (m_content->onKeyEvent(event)) return;
-             }
+            if (auto* focused = AestraUI::NUIComponent::getFocusedComponent()) {
+                if (focused->onKeyEvent(event)) {
+                    return;
+                }
+            }
 
+            if (m_content->onKeyEvent(event)) return;
+        }
+
+        if (pressed) { // Press-only globals
+             
              // F12: HUD
              // F12: HUD
              if (key == static_cast<int>(Aestra::KeyCode::F12)) { // 123
@@ -339,8 +343,53 @@ bool AestraWindowManager::processEvents() {
     return m_window && m_window->processEvents();
 }
 
+void AestraWindowManager::setTransportCallback(std::function<void(TransportAction)> cb) {
+    m_transportCallback = std::move(cb);
+    if (m_rootComponent) {
+        m_rootComponent->setTransportCallback([this](AestraRootComponent::TransportAction action) {
+            if (!m_transportCallback) {
+                return;
+            }
+
+            switch (action) {
+                case AestraRootComponent::TransportAction::Play:
+                    m_transportCallback(TransportAction::Play);
+                    break;
+                case AestraRootComponent::TransportAction::Pause:
+                    m_transportCallback(TransportAction::Pause);
+                    break;
+                case AestraRootComponent::TransportAction::Stop:
+                    m_transportCallback(TransportAction::Stop);
+                    break;
+            }
+        });
+    }
+}
+
 void AestraWindowManager::setContent(std::shared_ptr<AestraContent> content) {
     m_content = content;
+    if (m_rootComponent) {
+        m_rootComponent->setContent(m_content.get());
+        if (m_transportCallback) {
+            m_rootComponent->setTransportCallback([this](AestraRootComponent::TransportAction action) {
+                if (!m_transportCallback) {
+                    return;
+                }
+
+                switch (action) {
+                    case AestraRootComponent::TransportAction::Play:
+                        m_transportCallback(TransportAction::Play);
+                        break;
+                    case AestraRootComponent::TransportAction::Pause:
+                        m_transportCallback(TransportAction::Pause);
+                        break;
+                    case AestraRootComponent::TransportAction::Stop:
+                        m_transportCallback(TransportAction::Stop);
+                        break;
+                }
+            });
+        }
+    }
     if (m_customWindow) {
         m_customWindow->setContent(m_content.get());
     }
@@ -383,6 +432,13 @@ void AestraWindowManager::setRecoveryDialog(std::shared_ptr<Aestra::RecoveryDial
     m_recoveryDialog = dialog;
     // Note: RecoveryDialog is NOT added as a child - it's rendered manually
     // at the end of the render loop to ensure it appears on top of all UI
+}
+
+void AestraWindowManager::setExportDialog(std::shared_ptr<ExportDialog> dialog) {
+    m_exportDialog = std::move(dialog);
+    if (m_rootComponent && m_exportDialog) {
+        m_rootComponent->addChild(m_exportDialog);
+    }
 }
 
 void AestraWindowManager::setUnifiedHUD(std::shared_ptr<UnifiedHUD> hud) {
@@ -441,6 +497,30 @@ bool AestraWindowManager::isMenuOpen() const {
 
 void AestraWindowManager::setWindowTitle(const std::string& title) {
     if (m_customWindow) m_customWindow->setTitle(title);
+}
+
+void AestraWindowManager::setExportProgress(float progress) {
+    if (m_customWindow) {
+        if (auto titleBar = m_customWindow->getTitleBar()) {
+            titleBar->setExportProgress(progress);
+        }
+    }
+}
+
+void AestraWindowManager::setExporting(bool exporting) {
+    if (m_customWindow) {
+        if (auto titleBar = m_customWindow->getTitleBar()) {
+            titleBar->setExporting(exporting);
+        }
+    }
+}
+
+void AestraWindowManager::setOnExportRequested(std::function<void()> cb) {
+    if (m_customWindow) {
+        if (auto titleBar = m_customWindow->getTitleBar()) {
+            titleBar->setOnExportRequested(std::move(cb));
+        }
+    }
 }
 
 void AestraWindowManager::toggleFullScreen() {

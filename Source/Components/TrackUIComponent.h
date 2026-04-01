@@ -73,6 +73,7 @@ public:
     
     // Callback for clip selection
     void setOnClipSelected(std::function<void(TrackUIComponent*, ClipInstanceID)> callback) { m_onClipSelectedCallback = callback; }
+    void setOnPatternClipOpenRequested(std::function<void(PatternID)> callback) { m_onPatternClipOpenRequested = std::move(callback); }
 
     // Callback for track selection
     void setOnTrackSelected(std::function<void(TrackUIComponent*, bool)> callback) { m_onTrackSelectedCallback = callback; }
@@ -158,6 +159,7 @@ private:
     std::function<bool()> m_isSplitToolActiveCallback;
     std::function<void(TrackUIComponent*, double)> m_onSplitRequestedCallback;
     std::function<void(TrackUIComponent*, ClipInstanceID)> m_onClipSelectedCallback;
+    std::function<void(PatternID)> m_onPatternClipOpenRequested;
     std::function<void(TrackUIComponent*, bool)> m_onTrackSelectedCallback;
     std::function<void()> m_onSendToAuditionCallback;
 

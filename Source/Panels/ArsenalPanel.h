@@ -6,6 +6,7 @@
 #include "../AestraUI/Widgets/UnitRow.h"
 #include "../AestraUI/Widgets/UnitColorPicker.h"
 #include "NUIComponent.h"
+#include "../AestraUI/Core/NUIDragDrop.h"
 #include <optional>
 
 namespace Aestra {
@@ -15,39 +16,72 @@ namespace Audio {
  * @brief The Arsenal: Unit-Based Sequencer Window
  * Standardized as a WindowPanel (v3.1)
  */
-class ArsenalPanel : public WindowPanel {
+class ArsenalPanel : public WindowPanel, public AestraUI::IDropTarget {
 public:
+    /** @brief Create the Arsenal sequencer panel. */
     ArsenalPanel(std::shared_ptr<TrackManager> trackManager);
-    ~ArsenalPanel() override = default;
+    /** @brief Destroy the Arsenal sequencer panel. */
+    ~ArsenalPanel() override;
 
+    /** @brief Render the Arsenal panel and unit rows. */
     void onRender(AestraUI::NUIRenderer& renderer) override;
+    /** @brief Relayout the panel after a resize. */
     void onResize(int width, int height) override;
+    /** @brief Advance Arsenal playback state and UI sync. */
     void onUpdate(double dt) override;
+    /** @brief Handle mouse input routed to the Arsenal panel. */
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    /** @brief Handle drag-enter for plugin/sample drops. */
+    AestraUI::DropFeedback onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
+    /** @brief Handle drag-over for plugin/sample drops. */
+    AestraUI::DropFeedback onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
+    /** @brief Clear drag state when the cursor leaves the panel. */
+    void onDragLeave() override;
+    /** @brief Commit a drop operation onto the Arsenal panel. */
+    AestraUI::DropResult onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
+    /** @brief Get the drop target bounds for the Arsenal panel. */
+    AestraUI::NUIRect getDropBounds() const override;
 
-    // Rebuilds the UI from UnitManager state
+    /** @brief Rebuild the UI rows from the current UnitManager state. */
     void refreshUnits();
     
-    // Set Pattern Browser for bidirectional communication
+    /** @brief Bind the pattern browser used for bidirectional pattern sync. */
     void setPatternBrowser(class PatternBrowserPanel* browser) { m_patternBrowser = browser; }
     
-    // Called when Pattern Browser selection changes
+    /** @brief Set the active pattern edited by Arsenal. */
     void setActivePattern(PatternID patternId);
     
-    // Get current active pattern
+    /** @brief Get the active pattern edited by Arsenal. */
     PatternID getActivePatternID() const { return m_activePatternID; }
     
-    // Step count configuration (16/32/64)
+    /** @brief Set the visible step count for Arsenal rows. */
     void setStepCount(int count);
+    /** @brief Get the visible step count for Arsenal rows. */
     int getStepCount() const { return m_stepCount; }
     
-    // Copy/paste operations
+    /** @brief Copy notes from the selected unit into the local clipboard. */
     void copySelectedPattern();
+    /** @brief Paste clipboard notes into the selected unit. */
     void pastePattern();
     
-    // Internal Integration
+    /** @brief Set the callback used to open a unit editor. */
     void setOnRequestEditor(std::function<void(UnitID)> cb) { m_onRequestEditor = cb; }
+    /** @brief Set the callback used to request sample loading. */
     void setOnRequestLoadSample(std::function<void(UnitID)> cb) { m_onRequestLoadSample = cb; }
+    /** @brief Set the callback used for generic plugin drops. */
+    void setOnPluginDropped(std::function<void(const std::string&)> cb) { m_onPluginDropped = cb; }
+    /** @brief Set the callback used for plugin drops onto a specific unit. */
+    void setOnPluginDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onPluginDroppedToUnit = cb; }
+    /** @brief Set the callback fired when unit selection changes. */
+    void setOnSelectedUnitChanged(std::function<void(UnitID)> cb) { m_onSelectedUnitChanged = std::move(cb); }
+    /** @brief Set the callback used to activate playback before editing. */
+    void setOnRequestPlaybackActivation(std::function<void()> cb) { m_onRequestPlaybackActivation = std::move(cb); }
+    /** @brief Set the callback fired when the active pattern is edited. */
+    void setOnPatternEdited(std::function<void(PatternID)> cb) { m_onPatternEdited = std::move(cb); }
+    /** @brief Set the callback fired when the active pattern changes. */
+    void setOnActivePatternChanged(std::function<void(PatternID)> cb) { m_onActivePatternChanged = std::move(cb); }
+    /** @brief Get the currently selected unit identifier. */
+    UnitID getSelectedUnitId() const { return m_selectedUnitId; }
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;
@@ -95,6 +129,10 @@ private:
 
     void createLayout();
     void onAddUnit();
+    bool removeSelectedUnit();
+    void syncRowSelection();
+    void removeUnitNotes(UnitID unitId);
+    void ensureDropTargetRegistration(bool reorder = false);
     
     // Drag-drop callbacks
     void onUnitDragStart(UnitID unitId);
@@ -105,6 +143,13 @@ private:
     
     std::function<void(UnitID)> m_onRequestEditor;
     std::function<void(UnitID)> m_onRequestLoadSample;
+    std::function<void(const std::string&)> m_onPluginDropped;
+    std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
+    std::function<void(UnitID)> m_onSelectedUnitChanged;
+    std::function<void()> m_onRequestPlaybackActivation;
+    std::function<void(PatternID)> m_onPatternEdited;
+    std::function<void(PatternID)> m_onActivePatternChanged;
+    bool m_dropTargetRegistered = false;
 };
 
 } // namespace Audio

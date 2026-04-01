@@ -27,7 +27,7 @@ PluginInfo makeRumbleInfo() {
     info.numAudioOutputs = 2;
     info.hasMidiInput = true;
     info.hasMidiOutput = false;
-    info.hasEditor = false;
+    info.hasEditor = true;
     return info;
 }
 

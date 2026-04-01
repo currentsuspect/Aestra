@@ -13,6 +13,9 @@ namespace Audio {
  */
 class PatternManager {
 public:
+    /**
+     * @brief Construct an empty in-memory pattern store.
+     */
     PatternManager() = default;
 
     /**
@@ -36,6 +39,7 @@ public:
 
     /**
      * @brief Create a new pattern and return its ID
+     * @return Identifier of the created empty pattern.
      */
     PatternID createPattern() {
         PatternID id{nextId++};
@@ -46,6 +50,10 @@ public:
 
     /**
      * @brief Create an audio pattern
+     * @param name Pattern display name.
+     * @param lengthBeats Pattern duration in beats.
+     * @param payload Audio pattern payload.
+     * @return Identifier of the created audio pattern.
      */
     PatternID createAudioPattern(const std::string& name, double lengthBeats, const AudioSlicePayload& payload) {
         PatternID id{nextId++};
@@ -61,6 +69,10 @@ public:
 
     /**
      * @brief Create a MIDI pattern
+     * @param name Pattern display name.
+     * @param lengthBeats Pattern duration in beats.
+     * @param payload MIDI pattern payload.
+     * @return Identifier of the created MIDI pattern.
      */
     PatternID createMidiPattern(const std::string& name, double lengthBeats, const MidiPayload& payload) {
         PatternID id{nextId++};
@@ -76,6 +88,8 @@ public:
 
     /**
      * @brief Clone an existing pattern and return the new ID
+     * @param sourceId Pattern identifier to duplicate.
+     * @return Identifier of the cloned pattern, or an invalid ID if the source is missing.
      */
     PatternID clonePattern(PatternID sourceId) {
         auto* src = getPattern(sourceId);
@@ -89,6 +103,7 @@ public:
 
     /**
      * @brief Remove a pattern by ID
+     * @param id Pattern identifier to erase.
      */
     void removePattern(PatternID id) {
         m_patterns.erase(id.value);
@@ -96,6 +111,8 @@ public:
 
     /**
      * @brief Get or create a pattern
+     * @param id Pattern identifier to look up or create.
+     * @return Pointer to the requested pattern.
      */
     PatternSource* getOrCreatePattern(PatternID id) {
         auto& ptr = m_patterns[id.value];
@@ -108,6 +125,7 @@ public:
 
     /**
      * @brief Get all patterns
+     * @return Shared-pointer view of all stored patterns.
      */
     std::vector<std::shared_ptr<PatternSource>> getAllPatterns() const {
         std::vector<std::shared_ptr<PatternSource>> result;
@@ -119,7 +137,12 @@ public:
         return result;
     }
 
-    // STUB: applyPatch — Phase 2 will support undo-aware pattern mutations
+    /**
+     * @brief Apply a mutation lambda to a pattern, creating it on demand.
+     * @tparam PatchFn Callable that mutates a PatternSource.
+     * @param id Pattern identifier to mutate.
+     * @param fn Mutation function invoked with the target pattern.
+     */
     template <typename PatchFn> void applyPatch(PatternID id, PatchFn&& fn) {
         auto* pattern = getOrCreatePattern(id);
         if (pattern)

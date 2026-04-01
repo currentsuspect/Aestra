@@ -25,7 +25,7 @@ public:
     bool showGrid = true;
     bool snapToGrid = true;
     float gridSize = 0.25f;  // beats
-    std::string theme = "nomad-dark";
+    std::string theme = "Aestra-dark";
     
     // Auto-save
     bool autoSaveEnabled = true;

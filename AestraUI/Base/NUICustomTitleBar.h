@@ -42,6 +42,14 @@ public:
     using ContextCallback = std::function<void(const NUIPoint&)>;
     void setOnContextRequested(ContextCallback callback) { onContextRequested_ = callback; }
 
+    // Export callback
+    void setOnExportRequested(std::function<void()> callback) { onExportRequested_ = callback; }
+
+    // Export progress state
+    void setExportProgress(float progress);  // 0.0 - 1.0, -1 for indeterminate
+    void setExporting(bool exporting);
+    bool isExporting() const { return isExporting_; }
+
     // Window state
     void setMaximized(bool maximized);
     bool isMaximized() const { return isMaximized_; }
@@ -50,6 +58,7 @@ public:
     Aestra::HitTestResult hitTest(const NUIPoint& point);
 
     // Component overrides
+    void onUpdate(double deltaTime) override;
     void onRender(NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
@@ -104,7 +113,15 @@ private:
     std::function<void()> onEditMenu_;
     std::function<void()> onViewMenu_;
     ContextCallback onContextRequested_;
+    std::function<void()> onExportRequested_;
 
+    // Export progress state
+    bool isExporting_ = false;
+    float exportProgress_ = 0.0f;      // 0.0 - 1.0
+    float exportAnimPhase_ = 0.0f;     // For indeterminate animation
+    NUIRect exportButtonRect_;
+    bool exportHovered_ = false;
+    bool exportAnimating_ = false;
     
     // Helper methods
     void updateButtonRects();

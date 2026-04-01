@@ -139,6 +139,16 @@ void UnitManager::reorderUnit(UnitID id, size_t newIndex) {
     m_unitOrder.insert(m_unitOrder.begin() + static_cast<std::ptrdiff_t>(newIndex), value);
 }
 
+bool UnitManager::removeUnit(UnitID id) {
+    auto orderIt = std::find(m_unitOrder.begin(), m_unitOrder.end(), id);
+    if (orderIt == m_unitOrder.end()) {
+        return false;
+    }
+
+    m_unitOrder.erase(orderIt);
+    return m_units.erase(id) > 0;
+}
+
 void UnitManager::clear() {
     m_units.clear();
     m_unitOrder.clear();

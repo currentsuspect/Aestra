@@ -150,7 +150,7 @@ That means the MVP should fit into the existing internal plugin model rather tha
 - **Type:** `Instrument`
 - **Outputs:** 2
 - **MIDI Input:** true
-- **Editor:** false for MVP
+- **Editor:** generic parameter editor enabled
 
 ---
 

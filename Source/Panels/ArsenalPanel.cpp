@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ArsenalPanel.h"
 #include "PatternBrowserPanel.h" // For m_patternBrowser
+#include "../AestraUI/Widgets/PluginBrowserPanel.h"
 #include "NUIButton.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -9,6 +10,24 @@ using namespace AestraUI;
 
 namespace Aestra {
 namespace Audio {
+
+namespace {
+bool isInstrumentPluginDrag(const AestraUI::DragData& data) {
+    if (data.type != AestraUI::DragDataType::Plugin || data.sourceClipIdString.empty()) {
+        return false;
+    }
+
+    if (!data.customData.has_value()) {
+        return true;
+    }
+
+    if (const auto* item = std::any_cast<AestraUI::PluginListItem>(&data.customData)) {
+        return item->typeName == "Instrument";
+    }
+
+    return true;
+}
+} // namespace
 
 ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     : WindowPanel("THE ARSENAL")
@@ -21,7 +40,8 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     if (m_trackManager) {
         auto& unitMgr = m_trackManager->getUnitManager();
         if (unitMgr.getUnitCount() == 0) {
-            unitMgr.createUnit("Sampler 1", UnitGroup::Drums);
+            UnitID defaultUnit = unitMgr.createUnit("Sampler 1", UnitGroup::Drums);
+            unitMgr.setUnitEnabled(defaultUnit, true);
         }
     }
 
@@ -31,8 +51,6 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     
     // Set as the content of the WindowPanel
     setContent(m_listContainer);
-
-    refreshUnits();
 
     // Create color picker (initially hidden)
     m_colorPicker = std::make_shared<UnitColorPicker>();
@@ -44,6 +62,10 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     });
     
     // ScrollView wrapper would go here, for now directly setting content
+}
+
+ArsenalPanel::~ArsenalPanel() {
+    AestraUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
 }
 
 void ArsenalPanel::createLayout() {
@@ -81,6 +103,9 @@ void ArsenalPanel::refreshUnits() {
                  if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
                      m_trackManager->stopArsenalPlayback(true);
                  } else {
+                     if (m_onRequestPlaybackActivation) {
+                         m_onRequestPlaybackActivation();
+                     }
                      m_trackManager->playPatternInArsenal(m_activePatternID);
                  }
              }
@@ -93,9 +118,17 @@ void ArsenalPanel::refreshUnits() {
     // Build unit rows
     auto& unitMgr = m_trackManager->getUnitManager();
     auto unitIDs = unitMgr.getAllUnitIDs();
+
+    if (m_selectedUnitId == 0 || std::find(unitIDs.begin(), unitIDs.end(), m_selectedUnitId) == unitIDs.end()) {
+        m_selectedUnitId = unitIDs.empty() ? 0 : unitIDs.front();
+    }
+    if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
+        m_onSelectedUnitChanged(m_selectedUnitId);
+    }
     
     for (size_t i = 0; i < unitIDs.size(); ++i) {
         auto row = std::make_shared<UnitRow>(m_trackManager, unitMgr, unitIDs[i], m_activePatternID);
+        row->setSelected(unitIDs[i] == m_selectedUnitId);
         
         // Set step count
         row->setStepCount(m_stepCount);
@@ -121,6 +154,17 @@ void ArsenalPanel::refreshUnits() {
         row->setOnLoadUnitSample([this](UnitID id) {
             if (m_onRequestLoadSample) m_onRequestLoadSample(id);
         });
+
+        row->setOnPluginDropped([this](UnitID unitId, const std::string& pluginId) {
+            if (m_onPluginDroppedToUnit) {
+                m_onPluginDroppedToUnit(unitId, pluginId);
+            }
+        });
+        row->setOnPatternEdited([this](PatternID patternId) {
+            if (m_onPatternEdited) {
+                m_onPatternEdited(patternId);
+            }
+        });
         
         m_listContainer->addChild(row);
         m_unitRows.push_back(row);
@@ -140,6 +184,8 @@ void ArsenalPanel::refreshUnits() {
     m_listContainer->addChild(addBtn);
     
     layoutUnits();
+    syncRowSelection();
+    ensureDropTargetRegistration(true);
     
     if (auto parent = getParent()) {
         parent->repaint();
@@ -149,8 +195,85 @@ void ArsenalPanel::refreshUnits() {
 void ArsenalPanel::onAddUnit() {
     if (!m_trackManager) return;
     std::string name = "Unit " + std::to_string(m_trackManager->getUnitManager().getUnitCount() + 1);
-    m_trackManager->getUnitManager().createUnit(name, UnitGroup::Synth);
+    m_selectedUnitId = m_trackManager->getUnitManager().createUnit(name, UnitGroup::Synth);
+    if (m_onSelectedUnitChanged) {
+        m_onSelectedUnitChanged(m_selectedUnitId);
+    }
     refreshUnits();
+}
+
+bool ArsenalPanel::removeSelectedUnit() {
+    if (!m_trackManager || m_selectedUnitId == 0) {
+        return false;
+    }
+
+    auto& unitMgr = m_trackManager->getUnitManager();
+    auto unitIDs = unitMgr.getAllUnitIDs();
+    if (unitIDs.size() <= 1) {
+        Log::warning("[Arsenal] Refusing to remove the last unit");
+        return false;
+    }
+
+    auto it = std::find(unitIDs.begin(), unitIDs.end(), m_selectedUnitId);
+    if (it == unitIDs.end()) {
+        return false;
+    }
+
+    const size_t removedIndex = static_cast<size_t>(std::distance(unitIDs.begin(), it));
+    const UnitID removedUnit = m_selectedUnitId;
+    if (!unitMgr.removeUnit(removedUnit)) {
+        return false;
+    }
+
+    removeUnitNotes(removedUnit);
+
+    auto remaining = unitMgr.getAllUnitIDs();
+    if (remaining.empty()) {
+        m_selectedUnitId = 0;
+    } else if (removedIndex < remaining.size()) {
+        m_selectedUnitId = remaining[removedIndex];
+    } else {
+        m_selectedUnitId = remaining.back();
+    }
+
+    refreshUnits();
+    if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
+        m_onSelectedUnitChanged(m_selectedUnitId);
+    }
+    if (m_activePatternID.isValid() && m_onPatternEdited) {
+        m_onPatternEdited(m_activePatternID);
+    }
+    Log::info("[Arsenal] Removed Unit " + std::to_string(removedUnit));
+    return true;
+}
+
+void ArsenalPanel::syncRowSelection() {
+    for (auto& row : m_unitRows) {
+        if (row) {
+            row->setSelected(row->getUnitId() == m_selectedUnitId);
+        }
+    }
+}
+
+void ArsenalPanel::removeUnitNotes(UnitID unitId) {
+    if (!m_trackManager || unitId == 0) {
+        return;
+    }
+
+    auto patterns = m_trackManager->getPatternManager().getAllPatterns();
+    for (const auto& pattern : patterns) {
+        if (!pattern || !pattern->isMidi()) {
+            continue;
+        }
+
+        auto& midi = std::get<MidiPayload>(pattern->payload);
+        midi.notes.erase(
+            std::remove_if(
+                midi.notes.begin(),
+                midi.notes.end(),
+                [unitId](const MidiNote& note) { return note.unitId == unitId; }),
+            midi.notes.end());
+    }
 }
 
 void ArsenalPanel::setActivePattern(PatternID patternId) {
@@ -163,6 +286,9 @@ void ArsenalPanel::setActivePattern(PatternID patternId) {
     }
     
     refreshUnits(); // Rebuild UI with new pattern context
+    if (m_onActivePatternChanged) {
+        m_onActivePatternChanged(m_activePatternID);
+    }
 }
 
 void ArsenalPanel::setStepCount(int count) {
@@ -194,6 +320,9 @@ void ArsenalPanel::ensureDefaultPattern() {
             if (m_trackManager) {
                 m_trackManager->preparePatternForArsenal(m_activePatternID);
             }
+            if (m_onActivePatternChanged) {
+                m_onActivePatternChanged(m_activePatternID);
+            }
             return;
         }
     }
@@ -205,6 +334,9 @@ void ArsenalPanel::ensureDefaultPattern() {
     // [FIX] Pre-load pattern
     if (m_trackManager) {
         m_trackManager->preparePatternForArsenal(m_activePatternID);
+    }
+    if (m_onActivePatternChanged) {
+        m_onActivePatternChanged(m_activePatternID);
     }
     
     // Refresh Pattern Browser to show Pattern 1
@@ -235,20 +367,21 @@ void ArsenalPanel::layoutUnits() {
     if (!m_listContainer) return;
     
     NUIRect bounds = m_listContainer->getBounds();
-    float width = bounds.width;
-    float startY = bounds.y;
-    
+    const float horizontalPadding = 8.0f;
+    const float topPadding = 6.0f;
+    const float width = std::max(0.0f, bounds.width - horizontalPadding * 2.0f);
+    const float startX = bounds.x + horizontalPadding;
+    const float startY = bounds.y + topPadding;
 
-    
     // Reserve space for progress header
-    float yPos = startY + PROGRESS_HEADER_HEIGHT + 6.0f - m_scrollY;
+    float yPos = startY + PROGRESS_HEADER_HEIGHT + 8.0f - m_scrollY;
     float spacing = 4.0f;        // Increased from 2px
     float rowHeight = 42.0f;     // Increased from 28px - matches UnitRow::ROW_HEIGHT
     
     // Layout unit rows
     for (auto& row : m_unitRows) {
         if (row) {
-            row->setBounds(NUIRect(bounds.x, yPos, width, rowHeight));
+            row->setBounds(NUIRect(startX, yPos, width, rowHeight));
             yPos += rowHeight + spacing;
         }
     }
@@ -259,7 +392,7 @@ void ArsenalPanel::layoutUnits() {
         auto addBtn = children.back();
         bool isAddButton = m_unitRows.empty() || (addBtn != m_unitRows.back());
         if (addBtn && isAddButton) {
-            addBtn->setBounds(NUIRect(bounds.x + 8, yPos + 4.0f, width - 16, 36.0f));
+            addBtn->setBounds(NUIRect(startX, yPos + 8.0f, width, 34.0f));
         }
     }
 }
@@ -273,6 +406,7 @@ void ArsenalPanel::onResize(int width, int height) {
 
 void ArsenalPanel::onUpdate(double dt) {
     WindowPanel::onUpdate(dt);
+    ensureDropTargetRegistration();
     
     // Sync Play/Stop button text and color with actual engine state
     if (m_playBtn && m_trackManager) {
@@ -289,6 +423,27 @@ void ArsenalPanel::onUpdate(double dt) {
                 m_playBtn->setBackgroundColor(theme.getColor("accentPrimary"));
             }
         }
+    }
+}
+
+void ArsenalPanel::ensureDropTargetRegistration(bool reorder) {
+    auto self = weak_from_this().lock();
+    if (!self) {
+        return;
+    }
+
+    auto dropTarget = std::dynamic_pointer_cast<AestraUI::IDropTarget>(self);
+    if (!dropTarget) {
+        return;
+    }
+
+    if (reorder || m_dropTargetRegistered) {
+        AestraUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
+    }
+
+    if (!m_dropTargetRegistered || reorder) {
+        AestraUI::NUIDragDropManager::getInstance().registerDropTarget(dropTarget);
+        m_dropTargetRegistered = true;
     }
 }
 
@@ -334,6 +489,26 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     float controlWidth = 280.0f; // Same as UnitRow::CONTROL_WIDTH
     float gridStartX = bounds.x + controlWidth + 6.0f;
     float availWidth = bounds.width - controlWidth - 12.0f;
+
+    std::string selectedLabel = "No unit selected";
+    if (m_trackManager && m_selectedUnitId != 0) {
+        if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
+            selectedLabel = unit->name.empty()
+                ? ("Unit " + std::to_string(m_selectedUnitId))
+                : unit->name;
+        }
+    }
+
+    std::string patternLabel = std::to_string(m_stepCount) + " steps";
+    if (m_trackManager && m_activePatternID.isValid()) {
+        if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID)) {
+            if (!pattern->name.empty()) {
+                patternLabel = pattern->name + " • " + patternLabel;
+            }
+        }
+    }
+    renderer.drawText(selectedLabel, NUIPoint(bounds.x + 10.0f, bounds.y + 2.0f), 11.0f, theme.getColor("textPrimary"));
+    renderer.drawText(patternLabel, NUIPoint(bounds.x + 10.0f, bounds.y + 13.0f), 8.5f, theme.getColor("textSecondary").withAlpha(0.85f));
     
     float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
     float indicatorHeight = PROGRESS_HEADER_HEIGHT - 6.0f;
@@ -385,6 +560,48 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
 }
 
 // === Drag-Drop Callbacks ===
+
+AestraUI::DropFeedback ArsenalPanel::onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    return onDragOver(data, position);
+}
+
+AestraUI::DropFeedback ArsenalPanel::onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    (void)position;
+    if (isInstrumentPluginDrag(data)) {
+        return AestraUI::DropFeedback::Copy;
+    }
+    return AestraUI::DropFeedback::None;
+}
+
+void ArsenalPanel::onDragLeave() {
+}
+
+AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    (void)position;
+    AestraUI::DropResult result;
+
+    if (!isInstrumentPluginDrag(data)) {
+        result.accepted = false;
+        result.message = "Arsenal accepts instrument plugins only";
+        return result;
+    }
+
+    if (!m_onPluginDropped) {
+        result.accepted = false;
+        result.message = "No Arsenal plugin drop handler bound";
+        return result;
+    }
+
+    m_onPluginDropped(data.sourceClipIdString);
+    result.accepted = true;
+    result.message = "Loaded instrument into Arsenal";
+    Log::info("[Arsenal] Plugin dropped into Arsenal: " + data.sourceClipIdString);
+    return result;
+}
+
+AestraUI::NUIRect ArsenalPanel::getDropBounds() const {
+    return getBounds();
+}
 
 void ArsenalPanel::onUnitDragStart(UnitID unitId) {
     m_isDragging = true;
@@ -454,6 +671,9 @@ void ArsenalPanel::pastePattern() {
     });
     
     refreshUnits();
+    if (m_onPatternEdited) {
+        m_onPatternEdited(m_activePatternID);
+    }
     Log::info("[Arsenal] Pasted " + std::to_string(m_clipboard->notes.size()) + " notes to Unit " + std::to_string(m_selectedUnitId));
 }
 
@@ -514,6 +734,11 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         for (size_t i = 0; i < m_unitRows.size(); ++i) {
             if (m_unitRows[i] && m_unitRows[i]->getBounds().contains(event.position)) {
                 m_selectedUnitId = m_unitRows[i]->getUnitId();
+                syncRowSelection();
+                if (m_onSelectedUnitChanged) {
+                    m_onSelectedUnitChanged(m_selectedUnitId);
+                }
+                repaint();
                 break;
             }
         }
@@ -540,6 +765,10 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
         return true;
     }
 
+    if (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) {
+        return removeSelectedUnit();
+    }
+
 
     
     // Space: Play/Stop Arsenal
@@ -551,6 +780,9 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
             if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
                 m_trackManager->stopArsenalPlayback(true);
             } else {
+                if (m_onRequestPlaybackActivation) {
+                    m_onRequestPlaybackActivation();
+                }
                 m_trackManager->playPatternInArsenal(m_activePatternID);
             }
         }

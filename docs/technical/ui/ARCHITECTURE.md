@@ -1,7 +1,7 @@
 # 🎨 Aestra UI Framework - Architecture
 
 ## Vision
-A modern, GPU-accelerated UI framework built from scratch for the Aestra DAW. Zero dependencies on JUCE's component system - pure C++17+ with OpenGL/Vulkan rendering.
+A modern, GPU-accelerated UI framework built from scratch for the Aestra. Zero dependencies on JUCE's component system - pure C++17+ with OpenGL/Vulkan rendering.
 
 ## Core Philosophy
 
@@ -28,7 +28,7 @@ A modern, GPU-accelerated UI framework built from scratch for the Aestra DAW. Ze
 
 ```
 ┌─────────────────────────────────────────────┐
-│         Application Layer (Aestra DAW)       │
+│         Application Layer (Aestra)       │
 ├─────────────────────────────────────────────┤
 │      Aestra_ui_widgets (Knobs, Sliders)      │
 ├─────────────────────────────────────────────┤

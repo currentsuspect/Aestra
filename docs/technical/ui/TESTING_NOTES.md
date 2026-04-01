@@ -33,7 +33,7 @@
 ### Prerequisites (Windows)
 ```bash
 # Install Visual Studio 2022 with C++ Desktop Development
-# Install CMake 3.15+
+# Install CMake 3.22+
 # Install Git
 ```
 
@@ -248,5 +248,5 @@ int main() {
 
 ---
 
-*Last Updated: 2025-10-09*  
+*Last Updated: 2026-03-29*  
 *Status: Bugs fixed, but untested on target platform*

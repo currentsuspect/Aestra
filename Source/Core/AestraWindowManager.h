@@ -28,87 +28,138 @@ class AestraContent;
 
 class AestraWindowManager {
 public:
+    /** @brief Construct the window manager and its top-level UI services. */
     AestraWindowManager();
+    /** @brief Tear down the native window, renderer, and owned UI hierarchy. */
     ~AestraWindowManager();
 
     struct WindowConfig {
+        /** @brief Window title shown by the platform host. */
         std::string title;
+        /** @brief Initial window width. */
         int width;
+        /** @brief Initial window height. */
         int height;
+        /** @brief Whether the window starts in fullscreen mode. */
         bool fullscreen;
     };
 
     enum class TransportAction { Stop, Play, Pause };
 
+    /** @brief Initialize the window, renderer, and root component. */
     bool initialize(const WindowConfig& config);
+    /** @brief Shut down the window manager and release owned resources. */
     void shutdown();
+    /** @brief Pump platform events once. */
     bool processEvents();
+    /** @brief Render the current UI frame. */
     void render();
 
-    // Accessors
+    /** @brief Get the platform bridge/window wrapper. */
     AestraUI::NUIPlatformBridge* getWindow() { return m_window.get(); }
+    /** @brief Get the active renderer. */
     AestraUI::NUIRenderer* getRenderer() { return m_renderer.get(); }
+    /** @brief Get the root component attached to the window. */
     AestraRootComponent* getRootComponent() { return m_rootComponent.get(); }
+    /** @brief Get the custom window chrome widget. */
     AestraUI::NUICustomWindow* getCustomWindow() { return m_customWindow.get(); }
+    /** @brief Get the unified HUD overlay. */
     UnifiedHUD* getUnifiedHUD() { return m_unifiedHUD.get(); }
 
+    /** @brief Get the adaptive-FPS controller. */
     AestraUI::NUIAdaptiveFPS* getAdaptiveFPS() { return m_adaptiveFPS.get(); }
 
-    // UI State Management
+    /** @brief Attach the main content view. */
     void setContent(std::shared_ptr<AestraContent> content);
+    /** @brief Attach the settings dialog. */
     void setSettingsDialog(std::shared_ptr<Aestra::SettingsDialog> dialog);
+    /** @brief Attach the confirmation dialog. */
     void setConfirmationDialog(std::shared_ptr<Aestra::ConfirmationDialog> dialog);
+    /** @brief Attach the recovery dialog. */
     void setRecoveryDialog(std::shared_ptr<Aestra::RecoveryDialog> dialog);
+    /** @brief Attach the unified HUD overlay. */
     void setUnifiedHUD(std::shared_ptr<UnifiedHUD> hud);
 
-    // Dialogs getters
+    /** @brief Get the settings dialog. */
     std::shared_ptr<Aestra::SettingsDialog> getSettingsDialog() { return m_settingsDialog; }
+    /** @brief Get the recovery dialog. */
     std::shared_ptr<Aestra::RecoveryDialog> getRecoveryDialog() { return m_recoveryDialog; }
+    /** @brief Get the export dialog. */
+    std::shared_ptr<class ExportDialog> getExportDialog() { return m_exportDialog; }
+    /** @brief Attach the export dialog. */
+    void setExportDialog(std::shared_ptr<class ExportDialog> dialog);
 
-    // Menus
+    /** @brief Attach the main menu bar. */
     void setMenuBar(std::shared_ptr<AestraUI::NUIMenuBar> menuBar);
+    /** @brief Show a dropdown context menu anchored to the title area. */
     void showDropdownMenu(std::shared_ptr<AestraUI::NUIContextMenu> menu, float xOffset);
+    /** @brief Hide the active dropdown menu if present. */
     void hideActiveMenu();
+    /** @brief Check whether any dropdown menu is open. */
     bool isMenuOpen() const;
 
-    // Window Control
+    /** @brief Update the native window title. */
     void setWindowTitle(const std::string& title);
+    /** @brief Toggle fullscreen mode. */
     void toggleFullScreen();
+    /** @brief Check whether the native window is fullscreen. */
     bool isFullScreen() const;
+    /** @brief Swap the renderer backbuffer to screen. */
     void swapBuffers();
 
-    // Cursor
+    /** @brief Update the title-bar export progress indicator. */
+    void setExportProgress(float progress);  // 0-1, -1 for indeterminate
+    /** @brief Toggle the title-bar exporting state. */
+    void setExporting(bool exporting);
+    /** @brief Set the callback fired when the export button is pressed. */
+    void setOnExportRequested(std::function<void()> cb);
+
+    /** @brief Load and prepare custom cursor assets. */
     void initializeCustomCursors();
+    /** @brief Render the current custom cursor. */
     void renderCustomCursor();
+    /** @brief Update cursor visibility and style. */
     void updateCursorState(bool focused, AestraUI::NUICursorStyle style);
 
     // Callbacks setters (forwarded to Bridge)
     void setCloseCallback(std::function<void()> cb) { if (m_window) m_window->setCloseCallback(cb); }
     void setResizeCallback(std::function<void(int, int)> cb) { if (m_window) m_window->setResizeCallback(cb); }
-    void setTransportCallback(std::function<void(TransportAction)> cb) { m_transportCallback = cb; }
+    void setTransportCallback(std::function<void(TransportAction)> cb);
     // ... others handled internally or exposed as needed
 
-    // Mouse Tracking
+    /** @brief Get the last known mouse x position. */
     int getLastMouseX() const { return m_lastMouseX; }
+    /** @brief Get the last known mouse y position. */
     int getLastMouseY() const { return m_lastMouseY; }
 
+    /** @brief Get the current modifier-key state. */
     AestraUI::NUIModifiers getKeyModifiers() const { return m_keyModifiers; }
+    /** @brief Override the cached modifier-key state. */
     void setKeyModifiers(AestraUI::NUIModifiers mods) { m_keyModifiers = mods; }
 
-    // Frame timing
+    /** @brief Mark the start of a rendered frame. */
     void beginFrame();
+    /** @brief Finish the current frame and return suggested sleep time. */
     double endFrame(); // Returns sleep time
+    /** @brief Get the most recent frame delta in seconds. */
     double getDeltaTime() const { return m_deltaTime; }
 
     // Window state capture/restore for persistence (Issue #120)
     struct WindowState {
+        /** @brief Stored window x position. */
         int x = 100;
+        /** @brief Stored window y position. */
         int y = 100;
+        /** @brief Stored window width. */
         int width = 1280;
+        /** @brief Stored window height. */
         int height = 720;
+        /** @brief Stored maximized-state flag. */
         bool maximized = false;
     };
+    /** @brief Capture the current native window placement. */
     WindowState captureWindowState() const;
+    /** @brief Restore a previously captured native window placement. */
     void applyWindowState(const WindowState& state);
 
 private:
@@ -127,6 +178,7 @@ private:
     std::shared_ptr<Aestra::ConfirmationDialog> m_confirmationDialog;
     std::shared_ptr<Aestra::RecoveryDialog> m_recoveryDialog;
     std::shared_ptr<UnifiedHUD> m_unifiedHUD;
+    std::shared_ptr<class ExportDialog> m_exportDialog;
 
     std::unique_ptr<AestraUI::NUIAdaptiveFPS> m_adaptiveFPS;
 

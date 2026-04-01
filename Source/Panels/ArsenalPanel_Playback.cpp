@@ -1,7 +1,7 @@
 
 void ArsenalPanel::onPlayClicked() {
     if (!m_trackManager || !m_activePatternID.isValid()) {
-        Aestra::Log::warn("[Arsenal] No active pattern to play");
+        Aestra::Log::warning("[Arsenal] No active pattern to play");
         return;
     }
     

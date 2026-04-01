@@ -276,7 +276,7 @@ AestraCore includes comprehensive unit tests:
 
 ```bash
 # Build and run tests
-cmake -S . -B build -DAestra_BUILD_TESTS=ON
+cmake -S . -B build -DAESTRA_ENABLE_TESTS=ON
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```

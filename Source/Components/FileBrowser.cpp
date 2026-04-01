@@ -34,6 +34,32 @@ namespace {
 
 constexpr float kPreviewPanelHeight = 90.0f;
 
+AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* component) {
+    AestraUI::NUIComponent* root = component;
+    while (root && root->getParent()) {
+        root = root->getParent();
+    }
+    return root;
+}
+
+void detachPopupMenu(const std::shared_ptr<AestraUI::NUIContextMenu>& menu) {
+    if (!menu) return;
+    if (auto* parent = menu->getParent()) {
+        parent->removeChild(menu);
+    }
+}
+
+void attachAndShowPopupMenu(AestraUI::NUIComponent* owner,
+                            const std::shared_ptr<AestraUI::NUIContextMenu>& menu,
+                            const AestraUI::NUIPoint& position) {
+    if (!owner || !menu) return;
+    AestraUI::NUIComponent* root = getRootComponent(owner);
+    if (!root) root = owner;
+    root->addChild(menu);
+    menu->showAt(position);
+    root->repaint();
+}
+
 std::string ellipsizeMiddle(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth) {
     constexpr const char* kEllipsis = "...";
 
@@ -373,7 +399,6 @@ FileBrowser::FileBrowser()
     starFilledIcon_->setColor(themeManager.getColor("accentPrimary"));
     popupMenu_ = std::make_shared<NUIContextMenu>();
     popupMenu_->hide();
-    addChild(popupMenu_);
     
     // Initialize navigation history with the resolved root path (from top of constructor)
     navHistory_.clear();
@@ -616,7 +641,11 @@ void FileBrowser::processScanResults() {
             } else {
                 filteredFiles_.clear();
                 viewDirty_ = true;
-                if (!displayItems_.empty()) {
+                if (!pendingSelectionPath_.empty()) {
+                    const std::string restoredPath = pendingSelectionPath_;
+                    pendingSelectionPath_.clear();
+                    selectFile(restoredPath);
+                } else if (!displayItems_.empty()) {
                     selectedIndex_ = 0;
                     selectedFile_ = displayItems_[0];
                     selectedIndices_.clear();
@@ -747,7 +776,7 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
 
     // FBO Caching Logic
     auto* renderCache = renderer.getRenderCache();
-    if (!renderCache) {
+    if (!renderCache || !renderCache->isEnabled()) {
         // Fallback: Immediate render
         renderStaticContent(renderer, bounds);
         renderChildren(renderer);
@@ -915,6 +944,7 @@ void FileBrowser::onResize(int width, int height) {
     updateBreadcrumbs();
     updateScrollbarVisibility(); 
     invalidateAllItemCaches(); // Force text re-layout on resize
+    invalidateCache();
 }
 
 void FileBrowser::invalidateAllItemCaches() {
@@ -1135,14 +1165,26 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
         if (!favoritesButtonBounds_.isEmpty() && favoritesButtonBounds_.contains(event.position)) {
+            if (popupMenu_ && popupMenu_->isVisible()) {
+                hidePopupMenu();
+                return true;
+            }
             showFavoritesMenu();
             return true;
         }
         if (!tagsButtonBounds_.isEmpty() && tagsButtonBounds_.contains(event.position)) {
+            if (popupMenu_ && popupMenu_->isVisible()) {
+                hidePopupMenu();
+                return true;
+            }
             showTagFilterMenu();
             return true;
         }
         if (!sortButtonBounds_.isEmpty() && sortButtonBounds_.contains(event.position)) {
+            if (popupMenu_ && popupMenu_->isVisible()) {
+                hidePopupMenu();
+                return true;
+            }
             showSortMenu();
             return true;
         }
@@ -1268,6 +1310,11 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	                if (!clickedFile || clickedFile->isPlaceholder) {
 	                    return true;
 	                }
+
+                    if (popupMenu_ && popupMenu_->isVisible() && popupMenuTargetPath_ == clickedFile->path) {
+                        hidePopupMenu();
+                        return true;
+                    }
 	                
 		                // Check for expander click (match renderFileList layout)
 		                if (clickedFile->isDirectory) {
@@ -1659,6 +1706,17 @@ void FileBrowser::navigateForward() {
 }
 
 void FileBrowser::refresh() {
+    pendingSelectionPath_.clear();
+    if (selectedFile_) {
+        pendingSelectionPath_ = selectedFile_->path;
+    }
+
+    hidePopupMenu();
+    popupMenuTargetPath_.clear();
+    popupMenuTargetIsDirectory_ = false;
+    hoveredIndex_ = -1;
+    hoveredBreadcrumbIndex_ = -1;
+
     loadDirectoryContents();
     invalidateCache();
 }
@@ -2236,8 +2294,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             auto& icon = item->isExpanded ? chevronDownIcon_ : chevronIcon_;
             if (icon) {
                 icon->setBounds(arrowRect);
-                // Make arrows slightly more visible
-                icon->setColor(selected ? selectedColor_ : textColor_.withAlpha(0.6f));
+                icon->setColor(selected ? selectedColor_ : textColor_.withAlpha(0.82f));
                 icon->onRender(renderer);
             }
         }
@@ -2410,7 +2467,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
         if (!text.empty()) {
             float tY = std::round(renderer.calculateTextY(rect, toolbarFont));
             renderer.drawText(text, NUIPoint(rect.x + buttonPadX, tY), 
-                              toolbarFont, textColor_.withAlpha(hovered ? 1.0f : 0.85f));
+                              toolbarFont, textColor_);
         }
     };
 
@@ -2432,7 +2489,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
                                   sortButtonBounds_.y + (sortButtonBounds_.height - iconSize) * 0.5f,
                                   iconSize, iconSize);
         chevronDownIcon_->setBounds(chevronRect);
-        chevronDownIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(sortHovered_ ? 0.9f : 0.7f));
+        chevronDownIcon_->setColor(themeManager.getColor("textPrimary").withAlpha(sortHovered_ ? 1.0f : 0.85f));
         chevronDownIcon_->onRender(renderer);
     }
 
@@ -2454,7 +2511,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
                                    tagsButtonBounds_.y + (tagsButtonBounds_.height - iconSize) * 0.5f,
                                    iconSize, iconSize);
          chevronDownIcon_->setBounds(chevronRect);
-         chevronDownIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(tagsHovered_ ? 0.9f : 0.7f));
+         chevronDownIcon_->setColor(themeManager.getColor("textPrimary").withAlpha(tagsHovered_ ? 1.0f : 0.85f));
          chevronDownIcon_->onRender(renderer);
     }
 
@@ -2529,6 +2586,7 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 		void FileBrowser::hidePopupMenu() {
 		    if (popupMenu_ && popupMenu_->isVisible()) {
 		        popupMenu_->hide();
+		        detachPopupMenu(popupMenu_);
 		        popupMenuTargetPath_.clear();
 		        popupMenuTargetIsDirectory_ = false;
 		        invalidateCache();
@@ -2638,7 +2696,7 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 
 		    const float menuX = favoritesButtonBounds_.x;
 		    const float menuY = favoritesButtonBounds_.bottom() + 6.0f;
-		    popupMenu_->showAt(static_cast<int>(menuX), static_cast<int>(menuY));
+		    attachAndShowPopupMenu(this, popupMenu_, NUIPoint(menuX, menuY));
 		    invalidateCache();
 		}
 
@@ -2658,7 +2716,7 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 
 	    const float menuX = sortButtonBounds_.x;
 	    const float menuY = sortButtonBounds_.bottom() + 6.0f;
-		    popupMenu_->showAt(static_cast<int>(menuX), static_cast<int>(menuY));
+		    attachAndShowPopupMenu(this, popupMenu_, NUIPoint(menuX, menuY));
 		    invalidateCache();
 		}
 
@@ -2687,7 +2745,7 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 
 		    const float menuX = tagsButtonBounds_.isEmpty() ? (sortButtonBounds_.x - 150.0f) : tagsButtonBounds_.x;
 		    const float menuY = (tagsButtonBounds_.isEmpty() ? sortButtonBounds_.bottom() : tagsButtonBounds_.bottom()) + 6.0f;
-		    popupMenu_->showAt(static_cast<int>(menuX), static_cast<int>(menuY));
+		    attachAndShowPopupMenu(this, popupMenu_, NUIPoint(menuX, menuY));
 		    invalidateCache();
 		}
 
@@ -2780,7 +2838,7 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 		        popupMenu_->addItem("Copy Path", [path = item.path, copyToClipboard]() { copyToClipboard(path); });
 		    }
 
-	    popupMenu_->showAt(position);
+	    attachAndShowPopupMenu(this, popupMenu_, position);
 	    invalidateCache();
 	}
 

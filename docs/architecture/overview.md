@@ -1,9 +1,9 @@
-# 🧭 Aestra DAW Architecture Overview
+# 🧭 Aestra Architecture Overview
 
 ![Architecture](https://img.shields.io/badge/Architecture-Modular-blue)
 ![C++17](https://img.shields.io/badge/C%2B%2B-17-orange)
 
-Comprehensive overview of Aestra DAW's modular architecture, covering Core, UI, Audio, and Muse AI systems.
+Comprehensive overview of Aestra's modular architecture, covering Core, UI, Audio, and Platform systems.
 
 ## 📋 Table of Contents
 
@@ -15,27 +15,28 @@ Comprehensive overview of Aestra DAW's modular architecture, covering Core, UI, 
 
 ## 🏗️ System Overview
 
-Aestra DAW is built with a clean, modular architecture that separates concerns into distinct subsystems:
+Aestra is built with a clean, modular architecture that separates concerns into distinct subsystems:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Aestra Application                     │
 └─────────────────────────────────────────────────────────┘
-           │                 │                │
-     ┌─────┴─────┐     ┌─────┴─────┐    ┌────┴────┐
-     │  AestraUI  │     │ AestraAudio│    │  Muse   │
-     │ Framework │     │   Engine  │    │   AI    │
-     └─────┬─────┘     └─────┬─────┘    └────┬────┘
-           │                 │                │
-     ┌─────┴─────────────────┴────────────────┴─────┐
-     │              AestraCore                        │
-     │  (Platform abstraction, utilities, types)    │
-     └──────────────────────────────────────────────┘
-           │                 │                │
-     ┌─────┴─────┐     ┌─────┴─────┐    ┌────┴────┐
-     │  Windows  │     │   Linux   │    │  macOS  │
-     │  Platform │     │  Platform │    │ Platform│
-     └───────────┘     └───────────┘    └─────────┘
+            │                 │
+      ┌─────┴─────┐     ┌─────┴─────┐
+      │  AestraUI  │     │ AestraAudio│
+      │ Framework │     │   Engine  │
+      └─────┬─────┘     └─────┬─────┘
+            │                 │
+      ┌─────┴─────────────────┴─────┐
+      │          AestraCore            │
+      │  (Platform abstraction,       │
+      │   utilities, types)            │
+      └───────────────────────────────┘
+            │                 │
+      ┌─────┴─────┐     ┌─────┴─────┐
+      │  Windows  │     │   Linux   │
+      │  Platform │     │  Platform │
+      └───────────┘     └───────────┘
 ```
 
 ## 🧩 Core Modules
@@ -44,7 +45,7 @@ Aestra DAW is built with a clean, modular architecture that separates concerns i
 
 **Purpose**: Foundation layer providing platform abstraction, utilities, and common types.
 
-**Location**: `Aestra-core/`, `AestraCore/`
+**Location**: `AestraCore/`
 
 **Key Components:**
 - **Platform Abstraction** - OS-specific functionality (file I/O, threading, memory)
@@ -112,7 +113,7 @@ AestraUI/
 **Location**: `AestraAudio/`
 
 **Key Components:**
-- **Audio Driver System** - WASAPI (Windows), ALSA (Linux), CoreAudio (macOS)
+- **Audio Driver System** - Windows-first today, with WASAPI shipping in the practical build surface and Linux audio work in progress
 - **Track Management** - Multi-track audio with sample-accurate timing
 - **Buffer Management** - Lock-free ring buffers for real-time audio
 - **Sample Loading** - Lazy-loading with waveform caching
@@ -142,31 +143,9 @@ AestraAudio/
 - **Lock-free Audio Thread**: Zero-latency audio processing
 - **64-bit Processing**: High-quality 64-bit floating-point audio
 
-### Muse AI (Future Integration)
+### Muse AI — Post-Beta
 
-**Purpose**: AI-powered music generation and assistance.
-
-**Location**: `Aestra-premium/muse/` (private)
-
-**Planned Components:**
-- **Model Loading** - AI model management and inference
-- **Pattern Generation** - Automatic melody and rhythm generation
-- **Smart Suggestions** - Context-aware musical suggestions
-- **Audio Enhancement** - AI-powered mixing and mastering
-
-**Integration Points:**
-```cpp
-namespace Aestra {
-    namespace muse {
-        // Public API for Muse integration
-        class MuseEngine;
-        class PatternGenerator;
-        class MixAssistant;
-    }
-}
-```
-
-**Status**: 🚧 Planned for future release (private development)
+AI features are explicitly deferred until after v1 Beta. The roadmap cuts AI features from Beta scope to focus on core DAW stability. Muse integration will resume only after the base product is shippable.
 
 ### AestraPlat
 
@@ -201,7 +180,7 @@ AestraCore
     ↓
 AestraPlat (Platform Layer)
     ↓
-OS APIs (Windows, Linux, macOS)
+OS APIs (primarily Windows today, with Linux bring-up and future macOS work)
 ```
 
 **Rules:**
@@ -391,7 +370,7 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 
 ### Public vs Private Code
 
-**Public (`Aestra-core/`):**
+**Public repository surface:**
 - Core audio engine
 - UI framework
 - Platform abstractions
@@ -433,13 +412,19 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 
 ## 🔮 Future Architecture Plans
 
-### Planned Enhancements
+### v1 Beta Focus (Dec 2026)
 
-1. **Plugin System** - VST3 and AU plugin hosting
-2. **MIDI Support** - Full MIDI I/O and routing
-3. **Recording** - Multi-track audio recording
-4. **Automation** - Parameter automation system
-5. **Muse Integration** - AI-powered music generation
+1. **Internal Arsenal Plugins** — Built-in instruments (Rumble) validated through discovery, persistence, and audible playback
+2. **Recording Reliability** — Multi-track audio recording with device stress testing
+3. **Offline Render/Export** — Bounce that matches playback
+4. **Plugin Decision Gate** — VST3/CLAP hosting ships only if it can be made boringly stable (Phase 4, Sep 2026)
+
+### Post-Beta (Deferred)
+
+- **Muse AI Integration** — AI-powered music generation (post-Beta only)
+- **Video Support** — Video timeline and scoring
+- **MIDI Support** — Full MIDI I/O and routing
+- **Automation** — Parameter automation system
 
 ### Scalability
 
@@ -449,11 +434,10 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 
 ## 📚 Additional Resources
 
-- [Building Guide](BUILDING.md) - How to build Aestra
-- [Coding Style](CODING_STYLE.md) - Code conventions
-- [Contributing](CONTRIBUTING.md) - How to contribute
-- [Glossary](GLOSSARY.md) - Technical terms
+- [Building Guide](../BUILD.md) - How to build Aestra
+- [Coding Style](developer/coding-style.md) - Code conventions
+- [Contributing](../CONTRIBUTING.md) - How to contribute
 
 ---
 
-[← Return to Aestra Docs Index](README.md)
+[← Return to Aestra Docs Index](../README.md)

@@ -5,6 +5,7 @@
 #include "NUITypes.h"
 #include "PluginBrowserPanel.h"
 #include "GenericPluginEditor.h"
+#include "RumblePluginEditor.h"
 
 // AestraAudio includes
 #include <PluginHost.h>
@@ -39,7 +40,9 @@ class PluginSelectorMenu;
  */
 class PluginUIController {
 public:
+    /** @brief Construct the plugin UI controller. */
     PluginUIController();
+    /** @brief Destroy the plugin UI controller and owned popup/editor widgets. */
     ~PluginUIController();
     
     // ==============================
@@ -48,16 +51,19 @@ public:
     
     /**
      * @brief Set the plugin scanner (for discovery)
+     * @param scanner Plugin scanner used to populate the browser.
      */
     void setPluginScanner(Aestra::Audio::PluginScanner* scanner);
     
     /**
      * @brief Set the plugin manager (for loading instances)
+     * @param manager Plugin manager used to create plugin instances.
      */
     void setPluginManager(Aestra::Audio::PluginManager* manager);
     
     /**
      * @brief Set the component to use as a layer for popups (menus, etc)
+     * @param layer Popup-layer component that owns transient menus and editors.
      */
     void setPopupLayer(NUIComponent* layer);
     
@@ -97,16 +103,20 @@ public:
     
     /**
      * @brief Bind an EffectChainRack to an audio EffectChain
+     * @param rack Rack widget to populate.
+     * @param chain Audio effect chain mirrored by the rack.
      */
     void bindEffectRack(EffectChainRack* rack, Aestra::Audio::EffectChain* chain);
     
     /**
      * @brief Unbind effect rack
+     * @param rack Rack widget to detach.
      */
     void unbindEffectRack(EffectChainRack* rack);
     
     /**
      * @brief Refresh rack display from effect chain state
+     * @param rack Rack widget to refresh.
      */
     void refreshRackDisplay(EffectChainRack* rack);
     
@@ -127,6 +137,8 @@ public:
     
     /**
      * @brief Remove plugin from slot
+     * @param chain Target effect chain.
+     * @param slot Slot index to clear.
      */
     void removePluginFromSlot(Aestra::Audio::EffectChain* chain, int slot);
     
@@ -144,11 +156,13 @@ public:
     
     /**
      * @brief Set callback when a plugin is loaded
+     * @param callback Callback receiving plugin identifier and slot index.
      */
     void setOnPluginLoaded(std::function<void(const std::string& pluginId, int slot)> callback);
     
     /**
      * @brief Set callback when scan completes
+     * @param callback Callback receiving the discovered plugin count.
      */
     void setOnScanComplete(std::function<void(int pluginCount)> callback);
 
@@ -177,7 +191,7 @@ private:
     // UI components for popups
     NUIComponent* m_popupLayer = nullptr;
     std::shared_ptr<PluginSelectorMenu> m_activeMenu;
-    std::vector<std::shared_ptr<GenericPluginEditor>> m_activeEditors;
+    std::vector<std::shared_ptr<NUIComponent>> m_activeEditors;
 };
 
 /**
@@ -189,7 +203,9 @@ private:
  */
 class PluginEditorWindow {
 public:
+    /** @brief Construct a floating plugin editor window. */
     PluginEditorWindow();
+    /** @brief Destroy the floating plugin editor window. */
     ~PluginEditorWindow();
     
     /**
@@ -208,16 +224,19 @@ public:
     
     /**
      * @brief Check if window is currently open
+     * @return True when the native editor window is open.
      */
     bool isOpen() const;
     
     /**
      * @brief Get the native window handle
+     * @return Platform-specific native window handle.
      */
     void* getNativeHandle() const;
     
     /**
      * @brief Get the plugin instance being edited
+     * @return Shared pointer to the currently edited plugin instance.
      */
     std::shared_ptr<Aestra::Audio::IPluginInstance> getPluginInstance() const;
     
@@ -228,16 +247,20 @@ public:
     
     /**
      * @brief Set window position
+     * @param x New window x position.
+     * @param y New window y position.
      */
     void setPosition(int x, int y);
     
     /**
      * @brief Get window position
+     * @return Current window position pair.
      */
     std::pair<int, int> getPosition() const;
     
     /**
      * @brief Set callback for when window closes
+     * @param callback Callback invoked after the editor window closes.
      */
     void setOnClose(std::function<void()> callback);
 

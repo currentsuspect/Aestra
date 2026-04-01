@@ -12,7 +12,7 @@ public:
 
     // File dialogs
     std::string openFileDialog(const std::string& title, const std::string& filter) const override;
-    std::string saveFileDialog(const std::string& title, const std::string& filter) const override;
+    std::string saveFileDialog(const SaveFileDialogOptions& options) const override;
     std::string selectFolderDialog(const std::string& title) const override;
 
     // Clipboard

@@ -18,7 +18,7 @@ AestraPlat provides platform abstraction for Aestra, enabling cross-platform sup
 |----------|--------|-----|-------|
 | Windows 10/11 | ✅ Complete | Win32 | Primary target platform |
 | Linux | 🚧 In Progress | X11, Wayland planned | Active development |
-| macOS | 📅 Planned Q2 2025 | Cocoa | Future support |
+| macOS | 📅 Post-Beta | Cocoa | Deferred until after v1 Beta |
 
 ## 🧩 Components
 
@@ -425,7 +425,9 @@ struct MouseEvent {
 - **Clipboard Operations** (copy/paste)
 - **Drag and Drop** (file import)
 
-### macOS Support (Q2 2025)
+### macOS Support (Post-Beta)
+
+macOS support is explicitly deferred until after v1 Beta. Planned work:
 
 - Cocoa window management
 - Metal rendering backend
