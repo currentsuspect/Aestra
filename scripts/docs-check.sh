@@ -74,7 +74,9 @@ if [ ${#CHECKER_CMD[@]} -gt 0 ]; then
             -print0
     )
 
-    if "${CHECKER_CMD[@]}" -q -c .markdown-link-check.json "${FILES[@]}" 2>/dev/null; then
+    if [ ${#FILES[@]} -eq 0 ]; then
+        echo -e "${GREEN}✓ No markdown files matched scoped docs-check paths${NC}"
+    elif "${CHECKER_CMD[@]}" -q -c .markdown-link-check.json "${FILES[@]}" 2>/dev/null; then
         echo -e "${GREEN}✓ No broken links found${NC}"
     else
         echo -e "${RED}✗ Found broken links!${NC}"
