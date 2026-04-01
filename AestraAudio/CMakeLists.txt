@@ -539,16 +539,16 @@ elseif(UNIX)
         )
 
         target_link_libraries(AestraAudioLinux
-            PRIVATE
+            PUBLIC
                 AestraAudioCore
+            PRIVATE
                 ${RTAUDIO_LIBS}
         )
 
-        # Preserve static archive link order for consumers:
-        # AestraAudioCore must appear before AestraAudioLinux so LinuxDriverRegistry
-        # can satisfy RegisterPlatformDrivers(...) referenced from core objects.
         add_library(AestraAudio INTERFACE)
-        target_link_libraries(AestraAudio INTERFACE AestraAudioCore AestraAudioLinux)
+        target_link_libraries(AestraAudio INTERFACE
+            "$<LINK_GROUP:RESCAN,AestraAudioLinux,AestraAudioCore>"
+        )
     else()
         # No ALSA - stub already in AestraAudioCore
         # Create an interface library for compatibility
