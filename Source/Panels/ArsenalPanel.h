@@ -57,6 +57,9 @@ public:
     void setOnPluginDropped(std::function<void(const std::string&)> cb) { m_onPluginDropped = cb; }
     void setOnPluginDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onPluginDroppedToUnit = cb; }
     void setOnSelectedUnitChanged(std::function<void(UnitID)> cb) { m_onSelectedUnitChanged = std::move(cb); }
+    void setOnRequestPlaybackActivation(std::function<void()> cb) { m_onRequestPlaybackActivation = std::move(cb); }
+    void setOnPatternEdited(std::function<void(PatternID)> cb) { m_onPatternEdited = std::move(cb); }
+    void setOnActivePatternChanged(std::function<void(PatternID)> cb) { m_onActivePatternChanged = std::move(cb); }
     UnitID getSelectedUnitId() const { return m_selectedUnitId; }
 
 private:
@@ -122,6 +125,9 @@ private:
     std::function<void(const std::string&)> m_onPluginDropped;
     std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
     std::function<void(UnitID)> m_onSelectedUnitChanged;
+    std::function<void()> m_onRequestPlaybackActivation;
+    std::function<void(PatternID)> m_onPatternEdited;
+    std::function<void(PatternID)> m_onActivePatternChanged;
     bool m_dropTargetRegistered = false;
 };
 

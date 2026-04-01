@@ -76,9 +76,6 @@ AestraContent::~AestraContent() {
 }
 
 AestraContent::AestraContent() {
-    // Audio Engine Init
-    auto& audioEngine = Aestra::Audio::AudioEngine::getInstance();
-
     // Create layers
     m_workspaceLayer = std::make_shared<AestraUI::NUIComponent>();
     m_workspaceLayer->setId("WorkspaceLayer");
@@ -107,18 +104,7 @@ AestraContent::AestraContent() {
 
     addDemoTracks();
 
-    // Antigravity Dependencies (v3.1) - Correctly wired in AestraContent
-    {
-        auto& audioEngine = Aestra::Audio::AudioEngine::getInstance();
-        audioEngine.setUnitManager(&m_trackManager->getUnitManager());
-        audioEngine.setPatternPlaybackEngine(&m_trackManager->getPatternPlaybackEngine());
-
-        // [FIX] Wire command sink so TrackManager's transport calls (play/pause/stop) 
-        // actually reach the AudioEngine's real-time queue.
-        m_trackManager->setCommandSink([&audioEngine](const AudioQueueCommand& cmd) {
-            audioEngine.commandQueue().push(cmd);
-        });
-    }
+    // Defer audio-engine wiring until setAudioEngine() receives the live controller engine.
 
     // Create track manager UI (add to workspace)
     m_trackManagerUI = std::make_shared<TrackManagerUI>(m_trackManager);
@@ -410,6 +396,9 @@ AestraContent::AestraContent() {
     m_overlayLayer->addChild(m_mixerPanel);
 
     m_pianoRollPanel = std::make_shared<PianoRollPanel>(m_trackManager);
+    if (m_audioEngine) {
+        m_pianoRollPanel->setAudioEngine(m_audioEngine);
+    }
     m_pianoRollPanel->setVisible(false);
     m_pianoRollPanel->setOnPatternEdited([this](PatternID patternId) {
         if (m_sequencerPanel && m_sequencerPanel->getActivePatternID() == patternId) {
@@ -480,8 +469,47 @@ AestraContent::AestraContent() {
             m_pianoRollPanel->setEditingUnit(unitId);
         }
     });
+    m_sequencerPanel->setOnPatternEdited([this](PatternID patternId) {
+        if (m_patternBrowser) {
+            m_patternBrowser->refreshPatterns();
+            m_patternBrowser->setSelectedPatternId(patternId, false);
+        }
+        if (m_pianoRollPanel && m_pianoRollPanel->getCurrentPatternId() == patternId) {
+            m_pianoRollPanel->loadPattern(patternId);
+        }
+    });
+    m_sequencerPanel->setOnActivePatternChanged([this](PatternID patternId) {
+        if (!patternId.isValid()) {
+            return;
+        }
+        if (m_patternBrowser) {
+            m_patternBrowser->refreshPatterns();
+            m_patternBrowser->setSelectedPatternId(patternId, false);
+        }
+        if (m_pianoRollPanel) {
+            if (m_sequencerPanel) {
+                m_pianoRollPanel->setEditingUnit(m_sequencerPanel->getSelectedUnitId());
+            }
+            m_pianoRollPanel->loadPattern(patternId);
+        }
+    });
+    m_sequencerPanel->setOnRequestPlaybackActivation([this]() {
+        if (m_viewFocus != ViewFocus::Arsenal) {
+            setViewFocus(ViewFocus::Arsenal);
+            if (m_viewToggle) {
+                m_viewToggle->setSelectedIndex(0);
+            }
+        } else if (m_audioEngine && m_sequencerPanel) {
+            m_audioEngine->setPatternPlaybackMode(true, m_sequencerPanel->getStepCount() * 0.25);
+        }
+    });
     m_sequencerPanel->refreshUnits();
     m_patternBrowser->refreshPatterns();
+    if (const PatternID initialPattern = m_sequencerPanel->getActivePatternID(); initialPattern.isValid()) {
+        m_patternBrowser->setSelectedPatternId(initialPattern, false);
+        m_pianoRollPanel->setEditingUnit(m_sequencerPanel->getSelectedUnitId());
+        m_pianoRollPanel->loadPattern(initialPattern);
+    }
     
     m_sequencerPanel->setVisible(true);
     m_sequencerPanel->setOnClose([this]() { setArsenalPanelVisible(false); });
@@ -1463,6 +1491,87 @@ PatternID AestraContent::getActivePatternID() const {
     return PatternID();
 }
 
+void AestraContent::playFromCurrentFocus() {
+    if (m_viewFocus == ViewFocus::Audition) {
+        if (m_auditionEngine) {
+            if (!m_auditionEngine->isPlaying()) {
+                stopSoundPreview();
+            }
+            m_auditionEngine->togglePlayPause();
+        }
+        return;
+    }
+
+    if (m_viewFocus == ViewFocus::Arsenal) {
+        if (!m_trackManager || !m_sequencerPanel) {
+            return;
+        }
+
+        const PatternID activePattern = m_sequencerPanel->getActivePatternID();
+        if (!activePattern.isValid()) {
+            Aestra::Log::error("[Arsenal] Cannot start playback without an active pattern");
+            return;
+        }
+
+        if (m_audioEngine) {
+            m_audioEngine->setPatternPlaybackMode(true, m_sequencerPanel->getStepCount() * 0.25);
+        }
+
+        Aestra::Log::info("[Arsenal] Focus-aware play scheduling pattern " + std::to_string(activePattern.value));
+        m_trackManager->playPatternInArsenal(activePattern);
+        return;
+    }
+
+    if (m_trackManager) {
+        m_trackManager->play();
+    }
+}
+
+void AestraContent::stopFromCurrentFocus(bool hardStop) {
+    if (m_viewFocus == ViewFocus::Audition) {
+        if (m_auditionEngine) {
+            m_auditionEngine->stop();
+        }
+        return;
+    }
+
+    if (m_viewFocus == ViewFocus::Arsenal) {
+        if (m_trackManager) {
+            Aestra::Log::info("[Arsenal] Focus-aware stop");
+            m_trackManager->stopArsenalPlayback(true);
+        }
+        if (hardStop && m_audioEngine) {
+            m_audioEngine->panic();
+        }
+        return;
+    }
+
+    if (m_trackManager) {
+        m_trackManager->stop();
+    }
+    if (hardStop && m_audioEngine) {
+        m_audioEngine->panic();
+    }
+}
+
+void AestraContent::pauseFromCurrentFocus() {
+    if (m_viewFocus == ViewFocus::Audition) {
+        if (m_auditionEngine) {
+            m_auditionEngine->togglePlayPause();
+        }
+        return;
+    }
+
+    if (m_viewFocus == ViewFocus::Arsenal) {
+        stopFromCurrentFocus(false);
+        return;
+    }
+
+    if (m_trackManager) {
+        m_trackManager->pause();
+    }
+}
+
 void AestraContent::openPatternInPianoRoll(PatternID patternId) {
     if (!m_pianoRollPanel || !m_trackManager || !patternId.isValid()) {
         return;
@@ -1503,6 +1612,23 @@ void AestraContent::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) {
 
 void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
     m_audioEngine = engine;
+    if (m_pianoRollPanel) {
+        m_pianoRollPanel->setAudioEngine(m_audioEngine);
+    }
+    if (m_audioEngine && m_trackManager) {
+        m_audioEngine->setUnitManager(&m_trackManager->getUnitManager());
+        m_audioEngine->setPatternPlaybackEngine(&m_trackManager->getPatternPlaybackEngine());
+        m_trackManager->setCommandSink([this](const AudioQueueCommand& cmd) {
+            if (m_audioEngine) {
+                if (cmd.type == AudioQueueCommandType::SetTransportState) {
+                    m_audioEngine->setGlobalSamplePos(cmd.samplePos);
+                    m_audioEngine->setTransportPlaying(cmd.value1 != 0.0f);
+                } else {
+                    m_audioEngine->commandQueue().push(cmd);
+                }
+            }
+        });
+    }
     Aestra::Log::info("AestraContent::setAudioEngine called - Initializing View State");
     // Ensure correct initial state now that engine is valid
     setViewFocus(ViewFocus::Timeline);
@@ -2007,10 +2133,18 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
 
             // Fallback when transport bar is unavailable.
             if (m_trackManager) {
-                if (m_trackManager->isPlaying()) {
-                    m_trackManager->stop();
+                if (m_viewFocus == ViewFocus::Arsenal) {
+                    if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
+                        stopFromCurrentFocus(false);
+                    } else {
+                        playFromCurrentFocus();
+                    }
                 } else {
-                    m_trackManager->play();
+                    if (m_trackManager->isPlaying()) {
+                        stopFromCurrentFocus(false);
+                    } else {
+                        playFromCurrentFocus();
+                    }
                 }
                 return true;
             }

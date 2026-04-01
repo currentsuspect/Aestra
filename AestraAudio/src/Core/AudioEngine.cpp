@@ -169,6 +169,17 @@ void AudioEngine::applyPendingCommands() {
             state.solo = (cmd.value1 != 0.0f);
             break;
         }
+        case AudioQueueCommandType::AuditionUnit: {
+            m_unitAuditionState.unitId = static_cast<UnitID>(cmd.trackIndex);
+            m_unitAuditionState.note = 36;
+            m_unitAuditionState.velocity =
+                static_cast<uint8_t>(std::clamp(cmd.value1 * 127.0f, 1.0f, 127.0f));
+            m_unitAuditionState.noteOffSamplesRemaining =
+                std::max<uint32_t>(1, m_sampleRate.load(std::memory_order_relaxed) / 8);
+            m_unitAuditionState.noteOnPending = true;
+            m_unitAuditionState.active = true;
+            break;
+        }
         default:
             break;
         }
@@ -209,6 +220,39 @@ void AudioEngine::applyPendingCommands() {
             // Start fade-in from where fade-out left off (inverted progress)
             m_fadeSamplesRemaining = std::min(fadeProgress, FADE_IN_SAMPLES);
         }
+    }
+}
+
+void AudioEngine::injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount,
+                                            uint32_t numFrames) noexcept {
+    if (!m_unitAuditionState.active || !routes || routeCount == 0 || numFrames == 0) {
+        return;
+    }
+
+    MidiBuffer* target = nullptr;
+    for (size_t i = 0; i < routeCount; ++i) {
+        if (routes[i].unitId == m_unitAuditionState.unitId) {
+            target = routes[i].midiBuffer;
+            break;
+        }
+    }
+
+    if (!target) {
+        return;
+    }
+
+    if (m_unitAuditionState.noteOnPending) {
+        target->addNoteOn(1, m_unitAuditionState.note, m_unitAuditionState.velocity, 0);
+        m_unitAuditionState.noteOnPending = false;
+    }
+
+    if (m_unitAuditionState.noteOffSamplesRemaining <= numFrames) {
+        const uint32_t noteOffOffset = std::min(numFrames - 1, m_unitAuditionState.noteOffSamplesRemaining - 1);
+        target->addNoteOff(1, m_unitAuditionState.note, 0, noteOffOffset);
+        m_unitAuditionState.noteOffSamplesRemaining = 0;
+        m_unitAuditionState.active = false;
+    } else {
+        m_unitAuditionState.noteOffSamplesRemaining -= numFrames;
     }
 }
 
@@ -1309,6 +1353,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                 patEng->processAudio(blockStart, static_cast<int>(numFrames), unitMidiRoutes.data(),
                                      unitMidiRouteCount);
             }
+
+            injectPendingUnitAudition(unitMidiRoutes.data(), unitMidiRouteCount, numFrames);
         }
     }
 
@@ -1758,6 +1804,34 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         state.gainR.snap();
     }
 
+    if (unitSnapshot) {
+        for (const auto& unit : unitSnapshot->units) {
+            if (unit.routeId >= 0 || !unit.enabled || !unit.plugin) {
+                continue;
+            }
+
+            MidiBuffer* midiBuf = nullptr;
+            for (size_t r = 0; r < unitMidiRouteCount; ++r) {
+                if (unitMidiRoutes[r].unitId == unit.id) {
+                    midiBuf = unitMidiRoutes[r].midiBuffer;
+                    break;
+                }
+            }
+
+            if (m_scratchL.size() < numFrames || m_scratchR.size() < numFrames) {
+                continue;
+            }
+
+            float* outputs[2] = {m_scratchL.data(), m_scratchR.data()};
+            unit.plugin->process(nullptr, outputs, 0, 2, numFrames, midiBuf, nullptr);
+
+            for (uint32_t i = 0; i < numFrames; ++i) {
+                masterBuf[i * 2] += static_cast<double>(outputs[0][i]);
+                masterBuf[i * 2 + 1] += static_cast<double>(outputs[1][i]);
+            }
+        }
+    }
+
     if (srcActiveThisBlock) {
         m_telemetry.incrementSrcActiveBlocks();
     }
@@ -2055,6 +2129,8 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
         patternEngine->processAudio(currentFrame, static_cast<int>(numFrames), unitMidiRoutes.data(),
                                     unitMidiRouteCount);
     }
+
+    injectPendingUnitAudition(unitMidiRoutes.data(), unitMidiRouteCount, numFrames);
 
     // Process each unit plugin
     bufIdx = 0;

@@ -581,15 +581,22 @@ void AestraApp::connectAudioToUI() {
         m_content->getTransportBar()->setOnPlay([this, engine]() {
             if (m_content && m_content->getTrackManager()) {
                 m_content->stopSoundPreview();
-                // View Focus logic omitted for brevity, assume timeline for now
-                m_content->getTrackManager()->play();
-                engine->setTransportPlaying(true);
+                if (m_content->getViewFocus() == ViewFocus::Arsenal) {
+                    m_content->playFromCurrentFocus();
+                } else {
+                    m_content->getTrackManager()->play();
+                    engine->setTransportPlaying(true);
+                }
             }
         });
         m_content->getTransportBar()->setOnPause([this, engine]() {
             if (m_content && m_content->getTrackManager()) {
-                m_content->getTrackManager()->pause();
-                engine->setTransportPlaying(false);
+                if (m_content->getViewFocus() == ViewFocus::Arsenal) {
+                    m_content->pauseFromCurrentFocus();
+                } else {
+                    m_content->getTrackManager()->pause();
+                    engine->setTransportPlaying(false);
+                }
             }
         });
         m_content->getTransportBar()->setOnStop([this, engine]() {
@@ -601,8 +608,8 @@ void AestraApp::connectAudioToUI() {
                     trackMgr->setPosition(0.0);
                     trackMgr->setPlayStartPosition(0.0);
                 } else {
-                    if (trackMgr->isPatternMode()) {
-                        trackMgr->stopArsenalPlayback(true);
+                    if (m_content->getViewFocus() == ViewFocus::Arsenal || trackMgr->isPatternMode()) {
+                        m_content->stopFromCurrentFocus(true);
                     } else {
                         double playStartPos = trackMgr->getPlayStartPosition();
                         double sr = engine->getSampleRate();
@@ -657,20 +664,36 @@ void AestraApp::setupCallbacks() {
         using Action = AestraWindowManager::TransportAction;
 
         if (action == Action::Play) {
-            if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->play();
-            engine->setTransportPlaying(true);
+            if (m_content) {
+                if (m_content->getViewFocus() == ViewFocus::Arsenal) {
+                    m_content->playFromCurrentFocus();
+                } else {
+                    if (m_content->getTrackManager()) {
+                        m_content->getTrackManager()->play();
+                    }
+                    engine->setTransportPlaying(true);
+                }
+            }
         }
         else if (action == Action::Pause) {
-             if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->pause();
-             engine->setTransportPlaying(false);
+             if (m_content) {
+                 if (m_content->getViewFocus() == ViewFocus::Arsenal) {
+                     m_content->pauseFromCurrentFocus();
+                 } else {
+                     if (m_content->getTrackManager()) {
+                         m_content->getTrackManager()->pause();
+                     }
+                     engine->setTransportPlaying(false);
+                 }
+             }
         }
         else if (action == Action::Stop) {
              if (m_content && m_content->getTrackManager()) {
                  auto trackMgr = m_content->getTrackManager();
 
                  // [FIX] If in pattern mode, we want to stay in pattern mode on stop
-                 if (trackMgr->isPatternMode()) {
-                     trackMgr->stopArsenalPlayback(true);
+                 if (m_content->getViewFocus() == ViewFocus::Arsenal || trackMgr->isPatternMode()) {
+                     m_content->stopFromCurrentFocus(true);
                      Log::info("[Arsenal] Global Stop (keeping mode)");
                  } else {
                      double playStartPos = trackMgr->getPlayStartPosition();

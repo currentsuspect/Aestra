@@ -269,6 +269,11 @@ public:
     }
 
     void setStopPreviewCallback(std::function<void()> callback) { m_stopPreviewCallback = std::move(callback); }
+    void pushAudioCommand(const AudioQueueCommand& cmd) {
+        if (m_commandSink) {
+            m_commandSink(cmd);
+        }
+    }
 
     void clearAllChannels() {
         m_channels.clear();
@@ -288,8 +293,10 @@ public:
         m_patternMode.store(true, std::memory_order_relaxed);
         m_isPlaying.store(true, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
+        m_position = 0.0;
+        m_playStartPosition = 0.0;
         m_patternPlaybackEngine.flush();
-        pushTransportCommand(1.0f, m_position);
+        pushTransportCommand(1.0f, 0.0);
         m_patternPlaybackEngine.schedulePatternInstance(pid, 0.0, 1);
     }
 

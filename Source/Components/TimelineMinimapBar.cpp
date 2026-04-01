@@ -182,7 +182,9 @@ TimelineMinimapLayout TimelineMinimapBar::computeLayout_() const
     auto& theme = NUIThemeManager::getInstance();
     const auto& layout = theme.getLayoutDimensions();
 
-    const float controlW = layout.trackControlsWidth;
+    const float controlW = showModeToggles_
+                               ? std::min(layout.trackControlsWidth, b.width)
+                               : std::max(0.0f, std::min(leadingInsetPx_ >= 0.0f ? leadingInsetPx_ : 0.0f, b.width));
     const NUIRect corner(b.x, b.y, std::min(controlW, b.width), b.height);
 
     const float gridStartX = b.x + controlW + 5.0f;
@@ -210,6 +212,7 @@ NUIRect TimelineMinimapBar::toggleRect_(int index) const
 
 bool TimelineMinimapBar::hitToggle_(const NUIPoint& p, TimelineMinimapMode& outMode) const
 {
+    if (!showModeToggles_) return false;
     const NUIRect b = getBounds();
     if (!b.contains(p)) return false;
 
@@ -224,6 +227,7 @@ bool TimelineMinimapBar::hitToggle_(const NUIPoint& p, TimelineMinimapMode& outM
 
 void TimelineMinimapBar::renderToggles_(NUIRenderer& renderer, const TimelineMinimapLayout& layout)
 {
+    if (!showModeToggles_) return;
     (void)layout;
 
     static constexpr const char* kLabels[3] = {"C", "E", "A"};
@@ -285,7 +289,7 @@ std::string TimelineMinimapBar::formatHoverText_(double hoverBeat) const
 void TimelineMinimapBar::renderTooltip_(NUIRenderer& renderer, const TimelineMinimapLayout& layout) const
 {
     const bool showToggleTip =
-        (hoverToggleIndex_ >= 0 && hoverToggleIndex_ < 3 && toggleBounds_[hoverToggleIndex_].contains(hoverPos_));
+        (showModeToggles_ && hoverToggleIndex_ >= 0 && hoverToggleIndex_ < 3 && toggleBounds_[hoverToggleIndex_].contains(hoverPos_));
     const bool showMapTip = (hoverInMap_ && layout.mapRect.contains(hoverPos_));
     if (!showToggleTip && !showMapTip) return;
 
@@ -344,7 +348,7 @@ void TimelineMinimapBar::onRender(NUIRenderer& renderer)
             const float vw = std::max(1.0f, std::abs(x1 - x0));
             const NUIRect vr(vx, layout.mapRect.y, vw, layout.mapRect.height);
 
-            if (dragKind_ != DragKind::None) {
+            if (dragKind_ != DragKind::None || !showModeToggles_) {
                 const NUIColor active = NUIThemeManager::getInstance().getColor("borderActive").withAlpha(0.85f);
                 renderer.strokeRect(vr, 1.0f, active);
             }
@@ -353,7 +357,7 @@ void TimelineMinimapBar::onRender(NUIRenderer& renderer)
                                  (dragKind_ == DragKind::ResizeLeft);
             const bool rightHot = (hoverOnResizeEdge_ && hoverResizeEdge_ == TimelineMinimapResizeEdge::Right) ||
                                   (dragKind_ == DragKind::ResizeRight);
-            if (leftHot || rightHot) {
+            if (leftHot || rightHot || !showModeToggles_) {
                 // White, premium resize handle
                 const NUIColor handleColor = NUIColor(1.0f, 1.0f, 1.0f, 0.95f);
                 const NUIColor glowColor = NUIColor(1.0f, 1.0f, 1.0f, 0.4f);
@@ -362,13 +366,13 @@ void TimelineMinimapBar::onRender(NUIRenderer& renderer)
                 const float hy = vr.y + 2.0f;
                 const float hh = std::max(0.0f, vr.height - 4.0f);
                 
-                if (leftHot) {
+                if (leftHot || !showModeToggles_) {
                     NUIRect r(vr.x, hy, hw, hh);
                     // Add subtle glow/shadow for depth
                     renderer.fillRoundedRect(NUIRect(r.x - 1.0f, r.y - 1.0f, r.width + 2.0f, r.height + 2.0f), 2.0f, glowColor);
                     renderer.fillRoundedRect(r, 1.0f, handleColor);
                 }
-                if (rightHot) {
+                if (rightHot || !showModeToggles_) {
                     NUIRect r(vr.right() - hw, hy, hw, hh);
                     renderer.fillRoundedRect(NUIRect(r.x - 1.0f, r.y - 1.0f, r.width + 2.0f, r.height + 2.0f), 2.0f, glowColor);
                     renderer.fillRoundedRect(r, 1.0f, handleColor);
