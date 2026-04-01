@@ -1,21 +1,21 @@
-# 📝 Documentation & Comment Style Guide
+# Documentation & Comment Style Guide
 
 This guide defines standards for writing documentation and code comments in Aestra.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Documentation Principles](#-documentation-principles)
-- [Markdown Documentation](#-markdown-documentation)
-- [Code Comments](#-code-comments)
-- [API Documentation](#-api-documentation)
-- [Commit Messages](#-commit-messages)
-- [Examples](#-examples)
+- [Documentation Principles](#documentation-principles)
+- [Markdown Documentation](#markdown-documentation)
+- [Code Comments](#code-comments)
+- [API Documentation](#api-documentation)
+- [Commit Messages](#commit-messages)
+- [Examples](#examples)
 
 ---
 
-## 🎯 Documentation Principles
+## Documentation Principles
 
 ### 1. Clarity Over Cleverness
 
@@ -67,7 +67,7 @@ Assume readers are new to the codebase:
 
 ---
 
-## 📄 Markdown Documentation
+## Markdown Documentation
 
 ### File Structure
 
@@ -218,7 +218,7 @@ Use blockquotes for important notes:
 
 ---
 
-## 💬 Code Comments
+## Code Comments
 
 ### Comment Philosophy
 
@@ -311,7 +311,7 @@ m_waveformCache.resize(4096);
 
 ---
 
-## 📖 API Documentation
+## API Documentation
 
 ### Function Documentation
 
@@ -396,7 +396,7 @@ Use Doxygen-compatible tags:
 
 ---
 
-## 📝 Commit Messages
+## Commit Messages
 
 ### Format
 
@@ -482,7 +482,7 @@ No functional changes.
 
 ---
 
-## 🎓 Examples
+## Examples
 
 ### Example 1: Function with Good Documentation
 
@@ -513,7 +513,7 @@ double Track::getPosition() const {
 ### Example 2: README Section
 
 ```markdown
-## 🛠️ How to Build
+## How to Build
 
 ### Quick Start (Windows)
 
@@ -574,7 +574,7 @@ void TrackManager::processAudio(float* buffer, uint32_t frames, double time) {
 
 ---
 
-## ✅ Documentation Checklist
+## Documentation Checklist
 
 Before submitting documentation, verify:
 
@@ -591,7 +591,7 @@ Before submitting documentation, verify:
 
 ---
 
-## 📚 Additional Resources
+## Additional Resources
 
 - **[Contributing Guide](../../CONTRIBUTING.md)** — How to contribute
 - **[Coding Style Guide](coding-style.md)** — Code formatting rules

@@ -95,4 +95,4 @@ Branch examples:
 ## Security and Licensing
 
 - Security issues should be reported privately per [../../SECURITY.md](../../SECURITY.md)
-- Contributions are accepted under the repository's ASSAL v1.1 terms in [../../LICENSE](../../LICENSE) and [../../LICENSING.md](../../LICENSING.md)
+- Contributions are accepted under the repository's ASSAL v1.1 terms in [../../LICENSING.md](../../LICENSING.md)

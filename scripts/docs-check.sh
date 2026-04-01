@@ -5,7 +5,7 @@
 # Validates Doxygen builds, markdown links, and spelling.
 # ----------------------------------------
 
-set -e
+set -euo pipefail
 
 # Colors
 RED='\033[0;31m'
@@ -56,27 +56,27 @@ fi
 # ----------------------------------------
 echo -e "\n${YELLOW}Checking Markdown Links...${NC}"
 
-CHECKER_CMD=""
+CHECKER_CMD=()
 if command -v markdown-link-check &> /dev/null; then
-    CHECKER_CMD="markdown-link-check"
+    CHECKER_CMD=(markdown-link-check)
 elif command -v npx &> /dev/null; then
-    CHECKER_CMD="npx markdown-link-check"
+    CHECKER_CMD=(npx --yes markdown-link-check)
 fi
 
-if [ -n "$CHECKER_CMD" ]; then
-    # Find markdown files, exclude templates and node_modules
-    FILES=$(find . -name "*.md" -not -path "*/node_modules/*" -not -path "*/TEMPLATE/*" -not -path "*/_site/*" -not -path "*/html/*" -not -path "*/latex/*" -not -path "*/xml/*")
+if [ ${#CHECKER_CMD[@]} -gt 0 ]; then
+    mapfile -d '' FILES < <(
+        find \
+            ./docs \
+            -type f -name "*.md" \
+            -not -path "./docs/api-reference/*" \
+            -not -path "./docs/meta/*" \
+            -not -path "./docs/TEMPLATE/*" \
+            -print0
+    )
 
-    LINK_ERRORS=0
-    for file in $FILES; do
-        # echo "Checking $file..."
-        if ! $CHECKER_CMD -q "$file" 2>/dev/null; then
-             echo -e "${RED}✗ Broken links in $file${NC}"
-             LINK_ERRORS=1
-        fi
-    done
-
-    if [ $LINK_ERRORS -eq 0 ]; then
+    if [ ${#FILES[@]} -eq 0 ]; then
+        echo -e "${GREEN}✓ No markdown files matched scoped docs-check paths${NC}"
+    elif "${CHECKER_CMD[@]}" -q -c .markdown-link-check.json "${FILES[@]}" 2>/dev/null; then
         echo -e "${GREEN}✓ No broken links found${NC}"
     else
         echo -e "${RED}✗ Found broken links!${NC}"

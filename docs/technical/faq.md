@@ -1,19 +1,19 @@
-# ❓ Frequently Asked Questions (FAQ)
+# Frequently Asked Questions (FAQ)
 
 ![FAQ](https://img.shields.io/badge/FAQ-Updated-blue)
 
 Common questions and answers for contributors, developers, and users of Aestra.
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [General Questions](#-general-questions)
-- [Building and Setup](#-building-and-setup)
-- [Contributing](#-contributing)
-- [Technical Questions](#-technical-questions)
-- [Licensing](#-licensing)
-- [Troubleshooting](#-troubleshooting)
+- [General Questions](#general-questions)
+- [Building and Setup](#building-and-setup)
+- [Contributing](#contributing)
+- [Technical Questions](#technical-questions)
+- [Licensing](#licensing)
+- [Troubleshooting](#troubleshooting)
 
-## 🌍 General Questions
+## General Questions
 
 ### What is Aestra?
 
@@ -56,7 +56,7 @@ No. Aestra uses the **ASSAL (Aestra Studios Source-Available License)** - a sour
 
 See [License Reference](../about/license-reference.md) for complete details.
 
-## 🔨 Building and Setup
+## Building and Setup
 
 ### How do I build Aestra from source?
 
@@ -116,7 +116,7 @@ cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD
 
 See [Contributing Guide](../../CONTRIBUTING.md) for detailed setup.
 
-## 🤝 Contributing
+## Contributing
 
 ### How can I contribute to Aestra?
 
@@ -184,7 +184,7 @@ Follow our [Coding Style Guide](../developer/coding-style.md):
 
 Reviews depend on maintainer availability and PR complexity.
 
-## 💻 Technical Questions
+## Technical Questions
 
 ### What audio drivers does Aestra support?
 
@@ -244,7 +244,7 @@ Only premium add-ons (Muse AI, premium plugins - future releases) will require p
 
 **Note:** The source code itself is proprietary and cannot be reused in other software projects.
 
-## ⚖️ Licensing
+## Licensing
 
 ### What license is Aestra under?
 
@@ -271,7 +271,7 @@ We chose a proprietary model to:
 
 Source code transparency allows educational use and community contributions while maintaining a viable business.
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Audio is cutting out or glitching
 
@@ -342,7 +342,7 @@ git pull origin main
 cmake --build build --config Release
 ```
 
-## 📚 Additional Resources
+## Additional Resources
 
 Still have questions? Check these resources:
 
@@ -352,7 +352,7 @@ Still have questions? Check these resources:
 - [Coding Style Guide](../developer/coding-style.md) - Code conventions
 - [Glossary](glossary.md) - Technical terminology
 
-## 💬 Getting Help
+## Getting Help
 
 **Can't find your answer?**
 
