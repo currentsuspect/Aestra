@@ -208,6 +208,14 @@ void PatternBrowserPanel::refreshPatterns() {
     setDirty(true);
 }
 
+void PatternBrowserPanel::setSelectedPatternId(Aestra::Audio::PatternID patternId, bool notify) {
+    m_selectedPatternId = patternId;
+    setDirty(true);
+    if (notify && m_onPatternSelected && patternId.isValid()) {
+        m_onPatternSelected(patternId);
+    }
+}
+
 void PatternBrowserPanel::refreshClips() {
     m_clips.clear();
     if (!m_trackManager) return;

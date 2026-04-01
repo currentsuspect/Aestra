@@ -35,6 +35,8 @@ public:
     void setModel(const TimelineMinimapModel& model);
     const TimelineMinimapModel& getModel() const { return model_; }
     TimelineMinimapCursorHint getCursorHint() const { return cursorHint_; }
+    void setShowModeToggles(bool show) { showModeToggles_ = show; repaint(); }
+    void setLeadingInset(float insetPx) { leadingInsetPx_ = insetPx; repaint(); }
 
     std::function<void(double centerBeat)> onRequestCenterView;
     std::function<void(double viewStartBeat, bool isFinal)> onRequestSetViewStart;
@@ -83,6 +85,8 @@ private:
     double hoverBeat_ = 0.0;
     NUIPoint hoverPos_{};
     int hoverToggleIndex_ = -1;
+    bool showModeToggles_ = true;
+    float leadingInsetPx_ = -1.0f;
 
     // Cached toggle bounds (absolute).
     NUIRect toggleBounds_[3]{};

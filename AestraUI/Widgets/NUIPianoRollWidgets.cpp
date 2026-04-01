@@ -184,6 +184,11 @@ void PianoRollMinimap::setTotalDuration(double total) {
     repaint();
 }
 
+void PianoRollMinimap::setPlayheadBeat(double beat) {
+    playheadBeat_ = std::max(0.0, beat);
+    repaint();
+}
+
 void PianoRollMinimap::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
     auto b = getBounds();
@@ -202,6 +207,15 @@ void PianoRollMinimap::onRender(NUIRenderer& renderer) {
     
     renderer.fillRect(viewRect, thumbCol);
     renderer.strokeRect(viewRect, 1.0f, borderCol);
+
+    const auto playheadColor = NUIThemeManager::getInstance().getColor("accentPrimary");
+    const float playheadX = b.x + beatToX(playheadBeat_);
+    if (playheadX >= b.x && playheadX <= b.x + b.width) {
+        renderer.drawLine(NUIPoint(playheadX, b.y + 1.0f),
+                          NUIPoint(playheadX, b.y + b.height - 1.0f),
+                          2.0f,
+                          playheadColor.withAlpha(0.9f));
+    }
     
     // Handles (Visual only, logic in mouse)
     float handleW = 6.0f;
@@ -352,7 +366,7 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
             renderer.drawLine(NUIPoint(x, b.y + b.height * 0.75f), NUIPoint(x, b.y + b.height), 1.0f, tickCol.withAlpha(0.6f));
         }
     }
-    
+
     renderer.clearClipRect();
 }
 
@@ -532,11 +546,22 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
 
     // Editing Pattern Label (Right Side)
     if (!m_patternName.empty()) {
-        std::string labelStr = "Source: " + m_patternName;
-        float fontSize = themeManager.getFontSize("s");
+        std::string labelStr = m_patternName;
+        float fontSize = 10.0f;
+        const float maxLabelWidth = std::max(120.0f, b.width * 0.28f);
+        auto measured = renderer.measureText(labelStr, fontSize);
+        while (measured.width > maxLabelWidth && labelStr.length() > 3) {
+            labelStr.pop_back();
+            measured = renderer.measureText(labelStr + "...", fontSize);
+        }
+        if (measured.width > maxLabelWidth) {
+            labelStr = "...";
+        } else if (labelStr.length() < m_patternName.length()) {
+            labelStr += "...";
+        }
         auto size = renderer.measureText(labelStr, fontSize);
         float lx = b.right() - size.width - innerPad - 4.0f;
-        renderer.drawText(labelStr, NUIPoint(lx, currentY + (buttonSize - size.height) * 0.5f + 2.0f), fontSize, themeManager.getColor("textSecondary").withAlpha(0.6f));
+        renderer.drawText(labelStr, NUIPoint(lx, currentY + (buttonSize - size.height) * 0.5f + 2.0f), fontSize, themeManager.getColor("textSecondary").withAlpha(0.72f));
     }
 
     // 4. Context Menu (If active)
@@ -663,7 +688,7 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
         NUIColor col = isBar ? gridBar : gridBeat;
         renderer.drawLine(NUIPoint(x, b.y), NUIPoint(x, b.y + b.height), lineWidth, col);
     }
-    
+
     renderer.clearClipRect();
 }
 
@@ -793,7 +818,7 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
              // renderer.strokeRoundedRect(r.expanded(1), 5.0f, 1.0f, NUIColor::white().withAlpha(0.5f));
         }
     }
-    
+
     renderer.clearClipRect();
     
     // Cleanup Deleted Notes
@@ -1665,6 +1690,40 @@ PianoRollView::PianoRollView()
 void PianoRollView::onRender(NUIRenderer& renderer) {
     renderer.fillRect(getBounds(), NUIColor(0.12f, 0.12f, 0.14f, 1.0f));
     NUIComponent::onRender(renderer);
+
+    if (!m_grid || !m_ruler) return;
+
+    const auto gridBounds = m_grid->getBounds();
+    const auto rulerBounds = m_ruler->getBounds();
+    const auto accent = NUIThemeManager::getInstance().getColor("accentPrimary");
+    const double visibleStartBeat = getViewStartBeat();
+    const double visibleEndBeat = visibleStartBeat + getViewDurationBeats();
+    if (m_playheadBeat < visibleStartBeat || m_playheadBeat > visibleEndBeat) return;
+
+    const float playheadX =
+        gridBounds.x + static_cast<float>((m_playheadBeat - visibleStartBeat) * (gridBounds.width / std::max(0.25, getViewDurationBeats())));
+    const float playheadStartY = rulerBounds.bottom();
+    const float playheadEndY = gridBounds.bottom();
+
+    if (playheadX < gridBounds.x || playheadX > gridBounds.right()) return;
+
+    renderer.drawLine(NUIPoint(playheadX, playheadStartY),
+                      NUIPoint(playheadX, playheadEndY),
+                      1.5f,
+                      accent);
+
+    const float triangleH = 8.0f;
+    const float triangleW = 5.0f;
+    for (float dx = 0.0f; dx <= triangleW; dx += 1.0f) {
+        renderer.drawLine(NUIPoint(playheadX + dx, playheadStartY),
+                          NUIPoint(playheadX + dx, playheadStartY + triangleH - dx * (triangleH / triangleW)),
+                          1.0f,
+                          accent);
+        renderer.drawLine(NUIPoint(playheadX - dx, playheadStartY),
+                          NUIPoint(playheadX - dx, playheadStartY + triangleH - dx * (triangleH / triangleW)),
+                          1.0f,
+                          accent);
+    }
 }
 
 void PianoRollView::onResize(int width, int height) {
@@ -1693,7 +1752,10 @@ void PianoRollView::layoutChildren() {
     float contentH = b.height - topTotalH - m_controlPanelHeight; // Subtract control panel
     
     // 1. Minimap (Top)
-    m_minimap->setBounds(NUIRect(b.x + keyW, b.y + toolbarH, contentW, miniMapH));
+    m_minimap->setVisible(m_showLocalMinimap);
+    if (m_showLocalMinimap) {
+        m_minimap->setBounds(NUIRect(b.x + keyW, b.y + toolbarH, contentW, miniMapH));
+    }
     
     // 2. Ruler
     m_ruler->setBounds(NUIRect(b.x + keyW, b.y + toolbarH + miniMapH, contentW, rulerH));
@@ -1718,13 +1780,15 @@ void PianoRollView::layoutChildren() {
 }
 
 void PianoRollView::updateScrollbars() {
-    float totalBeats = 100.0f * 4.0f; // 400 beats total
+    float totalBeats = static_cast<float>(std::max(4.0, m_totalDurationBeats));
     float visibleW = m_grid->getWidth();
     double viewDur = visibleW / m_pixelsPerBeat;
     double start = m_scrollX / m_pixelsPerBeat;
     
-    m_minimap->setTotalDuration(totalBeats);
-    m_minimap->setView(start, viewDur);
+    if (m_minimap && m_showLocalMinimap) {
+        m_minimap->setTotalDuration(totalBeats);
+        m_minimap->setView(start, viewDur);
+    }
 
     // Vertical
     float totalH = 128 * m_keyHeight;
@@ -1745,20 +1809,27 @@ void PianoRollView::syncChildren() {
     
     m_ruler->setScrollX(x);
     m_ruler->setPixelsPerBeat(m_pixelsPerBeat);
+    m_ruler->setPlayheadBeat(m_playheadBeat);
 
     m_grid->setPixelsPerBeat(m_pixelsPerBeat);
     m_grid->setKeyHeight(m_keyHeight);
     m_grid->setScrollOffsetX(x);
     m_grid->setScrollOffsetY(y);
+    m_grid->setPlayheadBeat(m_playheadBeat);
     
     m_notes->setPixelsPerBeat(m_pixelsPerBeat);
     m_notes->setKeyHeight(m_keyHeight);
     m_notes->setScrollOffsetX(m_scrollX);
     m_notes->setScrollOffsetY(m_scrollY);
+    m_notes->setPlayheadBeat(m_playheadBeat);
     
     if (m_controls) {
         m_controls->setPixelsPerBeat(m_pixelsPerBeat);
         m_controls->setScrollX(m_scrollX);
+    }
+
+    if (m_minimap && m_showLocalMinimap) {
+        m_minimap->setPlayheadBeat(m_playheadBeat);
     }
     
 }
@@ -1881,6 +1952,64 @@ void PianoRollView::setScale(int root, ScaleType type) {
 
 void PianoRollView::setPatternName(const std::string& name) {
     if (m_toolbar) m_toolbar->setPatternName(name);
+}
+
+void PianoRollView::setPlayheadBeat(double beat, bool follow) {
+    m_playheadBeat = std::max(0.0, beat);
+
+    if (follow && m_grid) {
+        const float visibleW = m_grid->getWidth();
+        if (visibleW > 0.0f) {
+            const double visibleStart = static_cast<double>(m_scrollX) / m_pixelsPerBeat;
+            const double visibleDur = static_cast<double>(visibleW) / m_pixelsPerBeat;
+            const double leftGuard = visibleStart + visibleDur * 0.15;
+            const double rightGuard = visibleStart + visibleDur * 0.85;
+
+            if (m_playheadBeat < leftGuard || m_playheadBeat > rightGuard) {
+                const double targetStart = std::max(0.0, m_playheadBeat - visibleDur * 0.2);
+                m_scrollX = static_cast<float>(targetStart * m_pixelsPerBeat);
+                updateScrollbars();
+            }
+        }
+    }
+
+    syncChildren();
+}
+
+void PianoRollView::setTotalDurationBeats(double beats) {
+    m_totalDurationBeats = std::max(4.0, beats);
+    updateScrollbars();
+    syncChildren();
+}
+
+void PianoRollView::setLocalMinimapVisible(bool visible) {
+    if (m_showLocalMinimap == visible) return;
+    m_showLocalMinimap = visible;
+    layoutChildren();
+}
+
+double PianoRollView::getViewStartBeat() const {
+    return static_cast<double>(m_scrollX) / m_pixelsPerBeat;
+}
+
+double PianoRollView::getViewDurationBeats() const {
+    if (!m_grid) return 4.0;
+    const float visibleW = m_grid->getWidth();
+    if (visibleW <= 0.0f) return 4.0;
+    return static_cast<double>(visibleW) / m_pixelsPerBeat;
+}
+
+void PianoRollView::setViewWindow(double startBeat, double durationBeats) {
+    const double clampedDuration = std::max(0.25, durationBeats);
+    if (m_grid) {
+        const float visibleW = m_grid->getWidth();
+        if (visibleW > 0.0f) {
+            m_pixelsPerBeat = std::clamp(visibleW / static_cast<float>(clampedDuration), 10.0f, 500.0f);
+        }
+    }
+    m_scrollX = std::max(0.0f, static_cast<float>(startBeat * m_pixelsPerBeat));
+    updateScrollbars();
+    syncChildren();
 }
 
 } // namespace AestraUI

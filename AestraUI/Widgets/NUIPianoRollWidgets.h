@@ -48,6 +48,7 @@ public:
     // State
     void setView(double startBeat, double durationBeat);
     void setTotalDuration(double totalBeats);
+    void setPlayheadBeat(double beat);
     
     // Callbacks
     std::function<void(double start, double duration)> onViewChanged; // For Pan/Zoom
@@ -56,6 +57,7 @@ private:
     double startBeat_ = 0.0;
     double viewDuration_ = 4.0;
     double totalDuration_ = 100.0; // Default 100 bars?
+    double playheadBeat_ = 0.0;
 
     // Interaction
     bool isDragging_ = false;
@@ -85,6 +87,7 @@ public:
     void setScrollX(float scrollX); // MODIFIED from setScrollOffsetX
     void setPixelsPerBeat(float ppb); // REORDERED
     void setBeatsPerBar(int bpb) { beatsPerBar_ = bpb; repaint(); }
+    void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
 
     // Callback: delta (wheel), mouseX (local)
     std::function<void(float delta, float mouseX)> onZoomRequested; // ADDED
@@ -93,6 +96,7 @@ private:
     float scrollX_; // REORDERED
     float pixelsPerBeat_; // REORDERED
     int beatsPerBar_;
+    double playheadBeat_ = 0.0;
 };
 
 // -----------------------------------------------------------------------------
@@ -164,6 +168,7 @@ public:
     void setKeyHeight(float height);
     void setScrollOffsetX(float offset);
     void setScrollOffsetY(float offset);
+    void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
     
     // Zoom/Grid settings
     void setBeatsPerBar(int bpb) { beatsPerBar_ = bpb; repaint(); }
@@ -181,6 +186,7 @@ private:
     float scrollX_;
     float scrollY_; // Added implementation
     int beatsPerBar_ = 4;
+    double playheadBeat_ = 0.0;
     
     // Scale State
     int rootKey_ = 0; // 0=C, 1=C#, etc.
@@ -238,6 +244,7 @@ public:
     void setKeyHeight(float height);
     void setScrollOffsetX(float offset);
     void setScrollOffsetY(float offset);
+    void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
 
     // Callbacks
     void setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb);
@@ -252,6 +259,7 @@ private:
     float keyHeight_;
     float scrollX_;
     float scrollY_;
+    double playheadBeat_ = 0.0;
     
     std::function<void(const std::vector<MidiNote>&)> onNotesChanged_;
     uint64_t defaultUnitId_ = 0;
@@ -344,6 +352,12 @@ public:
     void setNotes(const std::vector<MidiNote>& notes);
     const std::vector<MidiNote>& getNotes() const;
     void setPatternName(const std::string& name);
+    void setPlayheadBeat(double beat, bool follow = false);
+    void setTotalDurationBeats(double beats);
+    void setLocalMinimapVisible(bool visible);
+    double getViewStartBeat() const;
+    double getViewDurationBeats() const;
+    void setViewWindow(double startBeat, double durationBeats);
     void setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb);
     void setDefaultUnitId(uint64_t unitId);
     
@@ -376,6 +390,9 @@ private:
     
     float m_scrollX;
     float m_scrollY;
+    double m_playheadBeat = 0.0;
+    double m_totalDurationBeats = 400.0;
+    bool m_showLocalMinimap = true;
 
     bool m_isResizingPanel = false; // Added for splitter dragging
     float m_dragStartPanelHeight = 0.0f;
