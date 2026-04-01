@@ -5,6 +5,7 @@
 #include "NUITypes.h"
 #include "PluginBrowserPanel.h"
 #include "GenericPluginEditor.h"
+#include "RumblePluginEditor.h"
 
 // AestraAudio includes
 #include <PluginHost.h>
@@ -177,7 +178,7 @@ private:
     // UI components for popups
     NUIComponent* m_popupLayer = nullptr;
     std::shared_ptr<PluginSelectorMenu> m_activeMenu;
-    std::vector<std::shared_ptr<GenericPluginEditor>> m_activeEditors;
+    std::vector<std::shared_ptr<NUIComponent>> m_activeEditors;
 };
 
 /**

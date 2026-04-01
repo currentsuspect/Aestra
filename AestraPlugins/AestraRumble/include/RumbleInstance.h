@@ -36,11 +36,11 @@ public:
     std::vector<uint8_t> saveState() const override;
     bool loadState(const std::vector<uint8_t>& state) override;
 
-    bool hasEditor() const override { return false; }
+    bool hasEditor() const override { return true; }
     bool openEditor(void* parentWindow) override { return false; }
     void closeEditor() override {}
     bool isEditorOpen() const override { return false; }
-    std::pair<int, int> getEditorSize() const override { return {0, 0}; }
+    std::pair<int, int> getEditorSize() const override { return {460, 320}; }
     bool resizeEditor(int width, int height) override { return false; }
 
     const Aestra::Audio::PluginInfo& getInfo() const override;
@@ -65,10 +65,15 @@ private:
         bool active = false;
         uint8_t note = 36;
         float velocity = 1.0f;
+        double baseFrequency = 65.406391;
         double phase = 0.0;
         double phaseIncrement = 0.0;
         double envelope = 0.0;
         double releaseCoeff = 0.0;
+        double pitchSweep = 0.0;
+        double pitchSweepCoeff = 0.0;
+        double transient = 0.0;
+        double transientCoeff = 0.0;
     };
 
     void handleMidiEvent(const Aestra::Audio::MidiBuffer::Event& event);
@@ -80,6 +85,8 @@ private:
     float getOutputGainLinear() const;
     void updateVoiceTuning();
     void updateEnvelopeRate();
+    void updatePitchSweepRate();
+    void updateTransientRate();
     void updateToneCoefficient();
     float applyDrive(float input) const;
     float processToneFilter(float input);
