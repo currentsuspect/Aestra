@@ -40,6 +40,8 @@ bool RumbleInstance::initialize(double sampleRate, uint32_t maxBlockSize) {
     m_voice = {};
     updateVoiceTuning();
     updateEnvelopeRate();
+    updatePitchSweepRate();
+    updateTransientRate();
     updateToneCoefficient();
     return true;
 }
@@ -82,6 +84,8 @@ void RumbleInstance::process(const float* const* inputs, float** outputs, uint32
     }
 
     updateEnvelopeRate();
+    updatePitchSweepRate();
+    updateTransientRate();
 
     size_t eventIdx = 0;
     size_t eventCount = midiInput ? midiInput->getEventCount() : 0;
@@ -103,13 +107,22 @@ void RumbleInstance::process(const float* const* inputs, float** outputs, uint32
             continue;
         }
 
-        const float raw = static_cast<float>(std::sin(m_voice.phase));
+        const double sweepSemitones = 24.0 * m_voice.pitchSweep * (0.45 + (getParameter(kParamDrive) * 0.55));
+        const double effectiveFrequency = m_voice.baseFrequency * std::pow(2.0, sweepSemitones / 12.0);
+        m_voice.phaseIncrement = (2.0 * kPi * effectiveFrequency) / m_sampleRate;
+
+        const float fundamental = static_cast<float>(std::sin(m_voice.phase));
+        const float overtone = static_cast<float>(std::sin(m_voice.phase * 2.0));
+        const float transientWeight = static_cast<float>(m_voice.transient) * (0.12f + getParameter(kParamDrive) * 0.18f);
+        const float raw = fundamental + (overtone * transientWeight);
         m_voice.phase += m_voice.phaseIncrement;
         if (m_voice.phase >= (2.0 * kPi)) {
             m_voice.phase = std::fmod(m_voice.phase, 2.0 * kPi);
         }
 
         m_voice.envelope *= m_voice.releaseCoeff;
+        m_voice.pitchSweep *= m_voice.pitchSweepCoeff;
+        m_voice.transient *= m_voice.transientCoeff;
         if (m_voice.envelope < 1.0e-5) {
             m_voice.envelope = 0.0;
             m_voice.active = false;
@@ -117,7 +130,7 @@ void RumbleInstance::process(const float* const* inputs, float** outputs, uint32
         }
 
         float sample = raw * static_cast<float>(m_voice.envelope) * m_voice.velocity;
-        sample *= 0.65f; // keep default voicing in a safer range before coloration
+        sample *= 0.58f; // keep the sub focused while leaving room for drive/transient
         sample = applyDrive(sample);
         sample = processToneFilter(sample);
         sample *= getOutputGainLinear();
@@ -159,6 +172,12 @@ void RumbleInstance::setParameter(uint32_t id, float value) {
     m_params[id].store(clamp01(value), std::memory_order_relaxed);
     if (id == kParamTone) {
         updateToneCoefficient();
+    } else if (id == kParamDecay) {
+        updateEnvelopeRate();
+        updatePitchSweepRate();
+    } else if (id == kParamDrive) {
+        updatePitchSweepRate();
+        updateTransientRate();
     }
 }
 
@@ -231,10 +250,15 @@ void RumbleInstance::handleMidiEvent(const Aestra::Audio::MidiBuffer::Event& eve
         m_voice.active = true;
         m_voice.note = note;
         m_voice.velocity = std::max(0.05f, velocity / 127.0f);
+        m_voice.baseFrequency = midiNoteToFrequency(note);
         m_voice.phase = 0.0;
         m_voice.envelope = 1.0;
+        m_voice.pitchSweep = 1.0;
+        m_voice.transient = 1.0;
         updateVoiceTuning();
         updateEnvelopeRate();
+        updatePitchSweepRate();
+        updateTransientRate();
     } else if (status == 0x80 || (status == 0x90 && velocity == 0)) {
         // MVP behavior: classic 808-style decay continues naturally after note-off.
         (void)note;
@@ -265,13 +289,24 @@ float RumbleInstance::getOutputGainLinear() const {
 }
 
 void RumbleInstance::updateVoiceTuning() {
-    const float frequency = midiNoteToFrequency(m_voice.note);
-    m_voice.phaseIncrement = (2.0 * kPi * frequency) / m_sampleRate;
+    m_voice.baseFrequency = midiNoteToFrequency(m_voice.note);
+    m_voice.phaseIncrement = (2.0 * kPi * m_voice.baseFrequency) / m_sampleRate;
 }
 
 void RumbleInstance::updateEnvelopeRate() {
     const float decaySeconds = std::max(0.01f, getDecaySeconds());
     m_voice.releaseCoeff = std::exp(std::log(1.0e-4) / (decaySeconds * m_sampleRate));
+}
+
+void RumbleInstance::updatePitchSweepRate() {
+    const float decaySeconds = std::max(0.01f, getDecaySeconds());
+    const double sweepSeconds = std::max(0.018, static_cast<double>(decaySeconds) * 0.12);
+    m_voice.pitchSweepCoeff = std::exp(std::log(1.0e-4) / (sweepSeconds * m_sampleRate));
+}
+
+void RumbleInstance::updateTransientRate() {
+    const double transientSeconds = 0.004 + (1.0 - static_cast<double>(getParameter(kParamTone))) * 0.012;
+    m_voice.transientCoeff = std::exp(std::log(1.0e-4) / (transientSeconds * m_sampleRate));
 }
 
 void RumbleInstance::updateToneCoefficient() {
