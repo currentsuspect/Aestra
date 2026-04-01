@@ -25,6 +25,8 @@ public:
     // Pattern management
     void loadPattern(PatternID patternId);
     void savePattern();
+    void setEditingUnit(UnitID unitId);
+    void setOnPatternEdited(std::function<void(PatternID)> callback) { m_onPatternEdited = std::move(callback); }
     
     // View config
     void setPixelsPerBeat(float ppb);
@@ -36,6 +38,8 @@ private:
     std::shared_ptr<TrackManager> m_trackManager;
     std::shared_ptr<AestraUI::PianoRollView> m_pianoRoll;
     PatternID m_currentPatternId;
+    UnitID m_editingUnitId{0};
+    std::function<void(PatternID)> m_onPatternEdited;
 };
 
 } // namespace Audio

@@ -56,6 +56,8 @@ public:
     void setOnRequestLoadSample(std::function<void(UnitID)> cb) { m_onRequestLoadSample = cb; }
     void setOnPluginDropped(std::function<void(const std::string&)> cb) { m_onPluginDropped = cb; }
     void setOnPluginDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onPluginDroppedToUnit = cb; }
+    void setOnSelectedUnitChanged(std::function<void(UnitID)> cb) { m_onSelectedUnitChanged = std::move(cb); }
+    UnitID getSelectedUnitId() const { return m_selectedUnitId; }
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;
@@ -103,6 +105,9 @@ private:
 
     void createLayout();
     void onAddUnit();
+    bool removeSelectedUnit();
+    void syncRowSelection();
+    void removeUnitNotes(UnitID unitId);
     void ensureDropTargetRegistration(bool reorder = false);
     
     // Drag-drop callbacks
@@ -116,6 +121,7 @@ private:
     std::function<void(UnitID)> m_onRequestLoadSample;
     std::function<void(const std::string&)> m_onPluginDropped;
     std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
+    std::function<void(UnitID)> m_onSelectedUnitChanged;
     bool m_dropTargetRegistered = false;
 };
 

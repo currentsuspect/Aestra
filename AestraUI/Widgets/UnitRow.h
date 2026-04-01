@@ -58,6 +58,8 @@ public:
     int getStepCount() const { return m_stepCount; }
     
     Aestra::Audio::UnitID getUnitId() const { return m_unitId; }
+    void setSelected(bool selected) { m_isSelected = selected; invalidateVisuals(); }
+    bool isSelected() const { return m_isSelected; }
 
 private:
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;
@@ -74,6 +76,9 @@ private:
     bool m_isMuted = false;
     bool m_isSolo = false;
     std::string m_audioClip; // Audio clip filename
+    std::string m_pluginId;
+    std::string m_sourceSummary;
+    std::string m_groupLabel;
     int m_mixerChannel = -1; // Mixer route
 
     // === Internal State ===
@@ -100,6 +105,7 @@ private:
     // === Interaction States ===
     bool m_isHovered = false;
     bool m_isDragging = false;
+    bool m_isSelected = false;
     NUIPoint m_dragStartPos;
     
     // Inline name editing

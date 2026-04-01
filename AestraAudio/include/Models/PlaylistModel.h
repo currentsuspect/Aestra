@@ -275,6 +275,9 @@ public:
         // Create new clip for second part
         ClipInstance newClip;
         newClip.id = ClipInstanceID::generate();
+        newClip.name = clip->name;
+        newClip.patternId = clip->patternId;
+        newClip.colorRGBA = clip->colorRGBA;
         newClip.startBeat = splitBeat;
         newClip.durationBeats = clip->endBeat() - splitBeat;
         newClip.sourceId = clip->sourceId;

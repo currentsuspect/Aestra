@@ -337,25 +337,29 @@ bool AestraApp::initialize(const std::string& projectPath) {
         menu->addSeparator();
 
         menu->addItem("Cut", [this]() {
-            // TODO: Implement Cut functionality
-            Log::info("Cut - Not yet implemented");
+            if (auto tmUI = m_content ? m_content->getTrackManagerUI() : nullptr) {
+                tmUI->cutSelectedClip();
+            }
         });
 
         menu->addItem("Copy", [this]() {
-            // TODO: Implement Copy functionality
-            Log::info("Copy - Not yet implemented");
+            if (auto tmUI = m_content ? m_content->getTrackManagerUI() : nullptr) {
+                tmUI->copySelectedClip();
+            }
         });
 
         menu->addItem("Paste", [this]() {
-            // TODO: Implement Paste functionality
-            Log::info("Paste - Not yet implemented");
+            if (auto tmUI = m_content ? m_content->getTrackManagerUI() : nullptr) {
+                tmUI->pasteClipboardAtCursor();
+            }
         });
 
         menu->addSeparator();
 
         menu->addItem("Delete", [this]() {
-            // TODO: Implement Delete functionality
-            Log::info("Delete - Not yet implemented");
+            if (auto tmUI = m_content ? m_content->getTrackManagerUI() : nullptr) {
+                tmUI->deleteSelectedClip();
+            }
         });
 
         m_windowManager->showDropdownMenu(menu, 55.0f);
