@@ -430,11 +430,12 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
                 int w, h, comp;
                 try {
                     unsigned char* rgba = stbi_load_from_memory(item->coverArtData.data(), static_cast<int>(item->coverArtData.size()), &w, &h, &comp, 4);
-                    if (rgba && w > 0 && h > 0) {
+                    if (rgba && w > 0 && h > 0 && w <= 16384 && h <= 16384) {
                         m_coverArtTextureId = renderer.createTexture(rgba, w, h);
                         m_coverArtWidth = w; m_coverArtHeight = h;
-                        int cx = w / 2; int cy = h / 2; int idx = (cy * w + cx) * 4;
-                        int totalBytes = w * h * 4;
+                        size_t sw = static_cast<size_t>(w), sh = static_cast<size_t>(h);
+                        size_t idx = (sh / 2 * sw + sw / 2) * 4u;
+                        size_t totalBytes = sw * sh * 4u;
                         if (idx + 2 < totalBytes) {
                             float r = rgba[idx] / 255.0f; float g = rgba[idx + 1] / 255.0f; float b = rgba[idx + 2] / 255.0f;
                             m_currentHeaderColor = AestraUI::NUIColor(r * 0.5f, g * 0.5f, b * 0.5f, 1.0f);
