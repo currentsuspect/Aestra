@@ -59,6 +59,7 @@ class SamplerPlugin; // Forward declare for RT cache
  */
 class AudioEngine {
     friend class AudioRenderer; // Allow access to private members during hybrid engine transition
+    friend class AudioExporter; // Allow access for offline rendering/export
 public:
     AudioEngine();
     ~AudioEngine();
