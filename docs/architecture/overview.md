@@ -1,19 +1,19 @@
-# 🧭 Aestra Architecture Overview
+# Aestra Architecture Overview
 
 ![Architecture](https://img.shields.io/badge/Architecture-Modular-blue)
 ![C++17](https://img.shields.io/badge/C%2B%2B-17-orange)
 
 Comprehensive overview of Aestra's modular architecture, covering Core, UI, Audio, and Platform systems.
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [System Overview](#-system-overview)
-- [Core Modules](#-core-modules)
-- [Architecture Principles](#-architecture-principles)
-- [Data Flow](#-data-flow)
-- [Threading Model](#-threading-model)
+- [System Overview](#system-overview)
+- [Core Modules](#core-modules)
+- [Architecture Principles](#architecture-principles)
+- [Data Flow](#data-flow)
+- [Threading Model](#threading-model)
 
-## 🏗️ System Overview
+## System Overview
 
 Aestra is built with a clean, modular architecture that separates concerns into distinct subsystems:
 
@@ -39,7 +39,7 @@ Aestra is built with a clean, modular architecture that separates concerns into 
       └───────────┘     └───────────┘
 ```
 
-## 🧩 Core Modules
+## Core Modules
 
 ### AestraCore
 
@@ -159,7 +159,7 @@ AI features are explicitly deferred until after v1 Beta. The roadmap cuts AI fea
 - **System Integration** - System dialogs, notifications
 - **OpenGL Context** - Graphics context creation
 
-## 🎯 Architecture Principles
+## Architecture Principles
 
 ### 1. Separation of Concerns
 
@@ -224,7 +224,7 @@ class ALSADriver : public AudioDriver { ... };
 - Minimal pointer chasing
 - Hot/cold data separation
 
-## 🔄 Data Flow
+## Data Flow
 
 ### Audio Processing Pipeline
 
@@ -279,7 +279,7 @@ class ALSADriver : public AudioDriver { ... };
 └───────────────┘     └──────────────┘
 ```
 
-## 🧵 Threading Model
+## Threading Model
 
 ### Thread Architecture
 
@@ -348,7 +348,7 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 - **Ring buffers**: For audio data
 - **Mutexes**: Only in non-realtime paths
 
-## 📊 Performance Characteristics
+## Performance Characteristics
 
 ### AestraUI
 - **Frame rate**: Adaptive 1-120 FPS
@@ -366,7 +366,7 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 - **Audio buffers**: Fixed-size, pre-allocated
 - **UI widgets**: Dynamic allocation on creation only
 
-## 🔐 Security Considerations
+## Security Considerations
 
 ### Public vs Private Code
 
@@ -389,7 +389,7 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 - **`.gitignore`**: Block sensitive files
 - **Pre-commit validation**: Check for private folders
 
-## 📚 Module Dependencies
+## Module Dependencies
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -410,7 +410,7 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 └──────────────┘  └──────────────┘  └──────────┘
 ```
 
-## 🔮 Future Architecture Plans
+## Future Architecture Plans
 
 ### v1 Beta Focus (Dec 2026)
 
@@ -432,12 +432,12 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 - **GPU compute** - GPU-accelerated effects
 - **Distributed rendering** - Network rendering (future)
 
-## 📚 Additional Resources
+## Additional Resources
 
-- [Building Guide](../BUILD.md) - How to build Aestra
-- [Coding Style](developer/coding-style.md) - Code conventions
-- [Contributing](../CONTRIBUTING.md) - How to contribute
+- [Building Guide](../getting-started/building.md) - How to build Aestra
+- [Coding Style](../developer/coding-style.md) - Code conventions
+- [Contributing](../../CONTRIBUTING.md) - How to contribute
 
 ---
 
-[← Return to Aestra Docs Index](../README.md)
+[Return to Aestra Docs Index](../README.md)

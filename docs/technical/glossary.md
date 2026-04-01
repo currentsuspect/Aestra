@@ -1,18 +1,18 @@
-# 📖 Aestra Glossary
+# Aestra Glossary
 
 ![Glossary](https://img.shields.io/badge/Glossary-Technical%20Terms-blue)
 
 Comprehensive glossary of technical terms, acronyms, and concepts used in Aestra development.
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Audio Terms](#-audio-terms)
-- [Programming Concepts](#-programming-concepts)
-- [Aestra-Specific Terms](#-Aestra-specific-terms)
-- [UI/UX Terms](#%EF%B8%8F-uiux-terms)
-- [Acronyms](#-acronyms)
+- [Audio Terms](#audio-terms)
+- [Programming Concepts](#programming-concepts)
+- [Aestra-Specific Terms](#aestra-specific-terms)
+- [UI/UX Terms](#uiux-terms)
+- [Acronyms](#acronyms)
 
-## 🎵 Audio Terms
+## Audio Terms
 
 ### Audio Buffer
 A fixed-size block of audio samples processed together. Smaller buffers reduce latency but increase CPU usage. Typical sizes: 128, 256, 512, or 1024 samples.
@@ -66,7 +66,7 @@ Modern audio API for Windows Vista and later. Supports both Exclusive and Shared
 ### Waveform
 Visual representation of audio amplitude over time. Aestra caches waveforms for efficient rendering.
 
-## 💻 Programming Concepts
+## Programming Concepts
 
 ### Atomic Operation
 Operation that completes without interruption. Used for lock-free thread communication. Example: `std::atomic<bool>`.
@@ -119,7 +119,7 @@ C++ feature for generic programming. Allows functions and classes to work with a
 ### Thread Safety
 Property where code can be safely called from multiple threads without race conditions or data corruption.
 
-## 🎯 Aestra-Specific Terms
+## Aestra-Specific Terms
 
 ### Adaptive FPS
 AestraUI feature that dynamically adjusts frame rate (1-120 FPS) based on user activity to conserve CPU.
@@ -157,7 +157,7 @@ Component that manages multiple audio tracks, playback state, and mixing.
 ### Transport Bar
 UI component containing playback controls (play, pause, stop, record).
 
-## 🖥️ UI/UX Terms
+## UI/UX Terms
 
 ### Component
 Self-contained UI element with its own rendering and event handling. Examples: button, slider, dropdown.
@@ -198,7 +198,7 @@ Basic UI element (button, slider, label). Building block of the UI system.
 ### Z-Order
 Rendering order of overlapping UI elements. Higher z-order renders on top.
 
-## 🔤 Acronyms
+## Acronyms
 
 ### ALSA
 **Advanced Linux Sound Architecture** - Linux audio driver system.
@@ -281,7 +281,7 @@ Rendering order of overlapping UI elements. Higher z-order renders on top.
 ### WASAPI
 **Windows Audio Session API** - Modern Windows audio API.
 
-## 📚 Related Terms
+## Related Terms
 
 ### Branching Strategy
 Git workflow defining how branches are created, named, and merged. See [Contributing Guide](../../CONTRIBUTING.md).
@@ -313,7 +313,7 @@ Accumulated cost of suboptimal design decisions. Paid back through refactoring.
 ### Unit Test
 Test that verifies a single component in isolation. Helps catch bugs early.
 
-## 💡 Usage Examples
+## Usage Examples
 
 **In conversation:**
 - "Increase the **buffer size** to reduce CPU usage."
@@ -322,7 +322,7 @@ Test that verifies a single component in isolation. Helps catch bugs early.
 - "AestraUI uses **adaptive FPS** to conserve CPU when idle."
 - "Public contributors build in **Core Mode** without **premium features**."
 
-## 📚 Additional Resources
+## Additional Resources
 
 - [Architecture Overview](../architecture/overview.md) - Detailed system design
 - [Building Guide](../getting-started/building.md) - Build instructions
@@ -331,4 +331,4 @@ Test that verifies a single component in isolation. Helps catch bugs early.
 
 ---
 
-[← Return to Aestra Docs Index](../README.md)
+[Return to Aestra Docs Index](../README.md)
