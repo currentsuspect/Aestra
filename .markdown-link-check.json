@@ -1,0 +1,12 @@
+{
+  "ignorePatterns": [
+    { "pattern": "^https?://" },
+    { "pattern": "^https://example\\.com/?$" },
+    { "pattern": "^path/to/" },
+    { "pattern": "^https://patreon\\.com/" },
+    { "pattern": "^https://ko-fi\\.com/" },
+    { "pattern": "^https://www\\.khronos\\.org/" },
+    { "pattern": "^https://docs\\.opencv\\.org/" },
+    { "pattern": "^https://www\\.music\\.mcgill\\.ca/" }
+  ]
+}
