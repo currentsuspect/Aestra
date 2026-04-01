@@ -202,14 +202,14 @@ March 2026 snapshot:
 Freeze:
 - Project file schema for Beta (allow forward-compatible additions only).
 
-### Phase 3 — Recording + export (Jul–Sep 2026) ⏳ Next
+### Phase 3 — Recording + export (Jul–Sep 2026) ⏳ In Progress
 
 Primary goal: finishing tracks becomes possible.
 
 Deliverables:
-- Recording workflow reliability: arming, input selection, monitoring, latency compensation behavior.
-- Render/export: offline bounce that matches playback.
-- Session stress tests: long playback, repeated record takes, device switch, device disconnect.
+- ✅ Export/offline render: `AudioExporter` rewritten with proper render path, duration from playlist, master output stage, File > Export Audio menu.
+- ⏳ Recording workflow reliability: arming, input selection, monitoring, latency compensation behavior.
+- ⏳ Session stress tests: long playback, repeated record takes, device switch, device disconnect.
 
 Freeze:
 - Recording file management rules (where files live, naming, relinking behavior).
