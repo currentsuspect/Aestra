@@ -1,21 +1,21 @@
-# ⚡ Performance Tuning Guide
+# Performance Tuning Guide
 
 This guide covers optimization techniques for maximizing Aestra's performance, reducing latency, and improving frame rates.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Audio Performance](#-audio-performance)
-- [UI Performance](#-ui-performance)
-- [Memory Optimization](#-memory-optimization)
-- [Build Optimizations](#-build-optimizations)
-- [Profiling Tools](#-profiling-tools)
-- [Best Practices](#-best-practices)
+- [Audio Performance](#audio-performance)
+- [UI Performance](#ui-performance)
+- [Memory Optimization](#memory-optimization)
+- [Build Optimizations](#build-optimizations)
+- [Profiling Tools](#profiling-tools)
+- [Best Practices](#best-practices)
 
 ---
 
-## 🎵 Audio Performance
+## Audio Performance
 
 ### Low-Latency Audio Setup
 
@@ -222,7 +222,7 @@ public:
 
 ---
 
-## 🎨 UI Performance
+## UI Performance
 
 ### Adaptive FPS System
 
@@ -354,7 +354,7 @@ NUIColor bgColor = NUIColor(0.2f, 0.2f, 0.2f, 1.0f);  // No alpha blending
 
 ---
 
-## 💾 Memory Optimization
+## Memory Optimization
 
 ### Object Pooling
 
@@ -454,7 +454,7 @@ for (float volume : m_volumes) {
 
 ---
 
-## 🏗️ Build Optimizations
+## Build Optimizations
 
 ### Compiler Flags
 
@@ -509,7 +509,7 @@ target_precompile_headers(Aestra PRIVATE
 
 ---
 
-## 📊 Profiling Tools
+## Profiling Tools
 
 
 
@@ -545,7 +545,7 @@ Advanced system-level profiling:
 
 ---
 
-## 🎯 Best Practices
+## Best Practices
 
 ### 1. Measure Before Optimizing
 
@@ -635,7 +635,7 @@ std::vector<float> largeBuffer = std::move(createBuffer());  // No copy
 
 ---
 
-## 📈 Performance Targets
+## Performance Targets
 
 ### Audio Engine
 - **Latency:** <10ms round-trip
@@ -654,7 +654,7 @@ std::vector<float> largeBuffer = std::move(createBuffer());  // No copy
 
 ---
 
-## 📚 Additional Resources
+## Additional Resources
 
 - **[Debugging Guide](debugging.md)** — Profiling and debugging tools
 - **[Architecture Overview](../architecture/overview.md)** — System design
