@@ -398,6 +398,13 @@ if(AESTRA_HAS_VST3)
         ${VST3_INCLUDE_DIRS}
     )
     target_compile_definitions(AestraAudioCore PRIVATE AESTRA_HAS_VST3)
+
+    # Required by VST3 SDK fdebug.cpp
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        target_compile_definitions(AestraAudioCore PRIVATE _DEBUG)
+    else()
+        target_compile_definitions(AestraAudioCore PRIVATE NDEBUG RELEASE)
+    endif()
 endif()
 
 # CLAP SDK includes (if available)
