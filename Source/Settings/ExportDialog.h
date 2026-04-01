@@ -17,28 +17,82 @@ namespace Aestra { namespace Audio { class AudioEngine; class TrackManager; } }
 
 class ExportDialog : public AestraUI::NUIComponent {
 public:
+    /**
+     * @brief Immutable result returned by the asynchronous export worker.
+     */
     struct ExportJobResult {
+        /** @brief True when the export completed successfully. */
         bool success = false;
+        /** @brief Path to the exported file on success. */
         std::string outputPath;
+        /** @brief Final rendered duration in seconds. */
         double durationSeconds = 0.0;
+        /** @brief Peak level measured during export in dBFS. */
         double peakDb = -96.0;
+        /** @brief Failure message when @ref success is false. */
         std::string errorMessage;
     };
 
+    /**
+     * @brief Create the export dialog widget.
+     */
     ExportDialog();
+    /**
+     * @brief Cancel and join any in-flight export job before destruction.
+     */
     ~ExportDialog();
 
+    /**
+     * @brief Show the dialog and bind it to a project and engine context.
+     * @param projectPath Project path used to derive the default export name.
+     * @param engine Audio engine used for offline rendering.
+     * @param trackManager Track manager that provides playlist and pattern state.
+     */
     void show(const std::string& projectPath, Aestra::Audio::AudioEngine& engine, Aestra::Audio::TrackManager& trackManager);
+    /**
+     * @brief Hide the dialog and request cancellation of any active export.
+     */
     void hide();
+    /**
+     * @brief Check whether the dialog is currently visible.
+     * @return True when the dialog is shown.
+     */
     bool isVisible() const { return m_visible; }
 
     using ExportCallback = std::function<void(bool success, const std::string& path, double duration, double peakDb)>;
+    /**
+     * @brief Set the completion callback fired on the UI thread after export.
+     * @param cb Completion callback with success flag and render metadata.
+     */
     void setOnExportComplete(ExportCallback cb) { m_onExportComplete = cb; }
 
+    /**
+     * @brief Poll background export state and update the active panel.
+     * @param deltaTime Frame delta in seconds.
+     */
     void onUpdate(double deltaTime) override;
+    /**
+     * @brief Render the modal overlay and active export panel.
+     * @param renderer Active UI renderer.
+     */
     void onRender(AestraUI::NUIRenderer& renderer) override;
+    /**
+     * @brief Relayout the dialog after its parent view changes size.
+     * @param width New parent width in logical pixels.
+     * @param height New parent height in logical pixels.
+     */
     void onResize(int width, int height) override;
+    /**
+     * @brief Handle mouse interaction with dialog controls and dropdowns.
+     * @param event Pointer event routed to the dialog.
+     * @return True when the event was consumed.
+     */
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    /**
+     * @brief Handle keyboard interaction for inputs and dismissal.
+     * @param event Key event routed to the dialog.
+     * @return True when the event was consumed.
+     */
     bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
 
 private:

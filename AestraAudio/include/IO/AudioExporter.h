@@ -54,41 +54,61 @@ public:
         Selection       // Render selected time range
     };
 
+    /**
+     * @brief Immutable export configuration used for an offline render pass.
+     */
     struct Config {
-        // Output file path (WAV format)
+        /** @brief Output file path in WAV format. */
         std::string outputPath;
 
-        // Render scope
+        /** @brief Export scope that determines which project range is rendered. */
         RenderScope scope = RenderScope::FullSong;
 
-        // Time range in beats (used for FullSong and LoopRegion)
+        /** @brief Start beat for full-song and loop-region exports. */
         double startBeat = 0.0;
+        /** @brief End beat for full-song and loop-region exports. */
         double endBeat = 0.0;
 
-        // Time range in seconds (used if scope is Selection)
+        /** @brief Selection start time in seconds when exporting a time selection. */
         double startTimeSeconds = 0.0;
+        /** @brief Selection end time in seconds when exporting a time selection. */
         double endTimeSeconds = 0.0;
 
-        // Audio format
+        /** @brief Target sample rate for the rendered file. */
         uint32_t sampleRate = 48000;
+        /** @brief Output sample representation written to disk. */
         BitDepth bitDepth = BitDepth::PCM_24;
+        /** @brief Number of output channels. Stereo is the current default. */
         uint32_t numChannels = 2;  // Stereo output
 
-        // Tail handling (reverb/delay tails)
+        /** @brief Extra seconds appended to capture effect tails after the musical range. */
         double tailSeconds = 2.0;  // Extra time for tails
 
-        // Progress update interval
+        /** @brief Minimum interval between progress callback updates. */
         std::chrono::milliseconds progressInterval{100};
     };
 
+    /**
+     * @brief Final result returned by an export attempt.
+     */
     struct Result {
+        /** @brief True when rendering and file writing completed successfully. */
         bool success = false;
+        /** @brief Failure description when @ref success is false. */
         std::string errorMessage;
+        /** @brief Path to the exported file. */
         std::string outputPath;
+        /** @brief Total number of audio frames written to the file. */
         uint64_t framesRendered = 0;
+        /** @brief Duration of the rendered file in seconds. */
         double durationSeconds = 0.0;
+        /** @brief Measured peak output level in decibels full scale. */
         double peakDb = -96.0;  // Measured peak level
 
+        /**
+         * @brief Convenience predicate for success checks.
+         * @return True when the render completed successfully.
+         */
         bool ok() const { return success; }
     };
 
@@ -96,6 +116,11 @@ public:
     // Lifecycle
     // =============================================================================
 
+    /**
+     * @brief Create an exporter bound to the live audio engine and track manager.
+     * @param engine Audio engine that owns the offline renderer path.
+     * @param trackManager Track manager used to resolve playlist and pattern state.
+     */
     AudioExporter(AudioEngine& engine, TrackManager& trackManager);
     ~AudioExporter() = default;
 
@@ -110,7 +135,15 @@ public:
     using ProgressCallback = std::function<void(float percent)>;
     using CancelCheck = std::function<bool()>;  // Return true to cancel
 
+    /**
+     * @brief Set the callback that receives progress updates during export.
+     * @param cb Callback receiving normalized progress in the range [0, 1].
+     */
     void setProgressCallback(ProgressCallback cb) { m_progressCallback = cb; }
+    /**
+     * @brief Set a polling callback used to cancel a render from another thread.
+     * @param cb Callback returning true when the current render should stop.
+     */
     void setCancelCheck(CancelCheck cb) { m_cancelCheck = cb; }
 
     // =============================================================================
@@ -135,6 +168,7 @@ public:
 
     /**
      * @brief Check if a render is currently in progress
+     * @return True while @ref render is still running.
      */
     bool isRendering() const { return m_isRendering.load(std::memory_order_acquire); }
 
@@ -144,16 +178,21 @@ public:
 
     /**
      * @brief Get the default export filename based on project name
+     * @param projectPath Project file path used to derive a default WAV filename.
+     * @return Suggested export filename.
      */
     static std::string getDefaultExportName(const std::string& projectPath);
 
     /**
      * @brief Get supported bit depths for UI selection
+     * @return Ordered list of bit depths exposed by the exporter UI.
      */
     static std::vector<BitDepth> getSupportedBitDepths();
 
     /**
      * @brief Convert bit depth to string for display
+     * @param depth Bit-depth enum to stringify.
+     * @return Human-readable label for the supplied bit depth.
      */
     static std::string bitDepthToString(BitDepth depth);
 

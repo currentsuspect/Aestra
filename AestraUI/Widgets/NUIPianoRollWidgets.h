@@ -19,14 +19,18 @@ using PianoRollTool = GlobalTool;
 // -----------------------------------------------------------------------------
 class PianoRollKeyLane : public NUIComponent {
 public:
+    /** @brief Create the vertical piano-key lane. */
     PianoRollKeyLane();
 
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
+    /** @brief Set the rendered key height in pixels. */
     void setKeyHeight(float height);
+    /** @brief Get the rendered key height in pixels. */
     float getKeyHeight() const { return keyHeight_; }
 
+    /** @brief Set the vertical scroll offset applied to the lane. */
     void setScrollOffsetY(float offset);
 
 private:
@@ -40,14 +44,17 @@ private:
 // -----------------------------------------------------------------------------
 class PianoRollMinimap : public NUIComponent {
 public:
+    /** @brief Create the legacy piano-roll minimap widget. */
     PianoRollMinimap();
 
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
-    // State
+    /** @brief Set the visible beat window represented by the viewport. */
     void setView(double startBeat, double durationBeat);
+    /** @brief Set the total beat span represented by the minimap. */
     void setTotalDuration(double totalBeats);
+    /** @brief Set the current playhead beat displayed in the minimap. */
     void setPlayheadBeat(double beat);
     
     // Callbacks
@@ -79,14 +86,19 @@ private:
 // -----------------------------------------------------------------------------
 class PianoRollRuler : public NUIComponent {
 public:
+    /** @brief Create the piano-roll ruler. */
     PianoRollRuler();
 
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override; // ADDED
 
+    /** @brief Set the horizontal scroll offset in pixels. */
     void setScrollX(float scrollX); // MODIFIED from setScrollOffsetX
+    /** @brief Set the horizontal zoom level in pixels per beat. */
     void setPixelsPerBeat(float ppb); // REORDERED
+    /** @brief Set the current bar signature in beats per bar. */
     void setBeatsPerBar(int bpb) { beatsPerBar_ = bpb; repaint(); }
+    /** @brief Set the playhead beat for ruler rendering. */
     void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
 
     // Callback: delta (wheel), mouseX (local)
@@ -115,13 +127,17 @@ class NUIContextMenu; // Forward declaration
 // -----------------------------------------------------------------------------
 class PianoRollToolbar : public NUIComponent {
 public:
+    /** @brief Create the internal piano-roll toolbar. */
     PianoRollToolbar();
     
+    /** @brief Set the visible pattern name displayed in the toolbar. */
     void setPatternName(const std::string& name);
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     
+    /** @brief Bind the grid widget controlled by the toolbar. */
     void setGrid(std::shared_ptr<PianoRollGrid> grid);
+    /** @brief Bind the note layer controlled by the toolbar tools. */
     void setNoteLayer(std::shared_ptr<PianoRollNoteLayer> notes); // To set tools directly
     
     // Callbacks provided by view or used internally
@@ -160,24 +176,31 @@ private:
 // -----------------------------------------------------------------------------
 class PianoRollGrid : public NUIComponent { // ...
 public:
+    /** @brief Create the static piano-roll grid. */
     PianoRollGrid();
 
     void onRender(NUIRenderer& renderer) override;
 
+    /** @brief Set the horizontal zoom level in pixels per beat. */
     void setPixelsPerBeat(float ppb);
+    /** @brief Set the vertical pitch-row height. */
     void setKeyHeight(float height);
+    /** @brief Set the horizontal scroll offset. */
     void setScrollOffsetX(float offset);
+    /** @brief Set the vertical scroll offset. */
     void setScrollOffsetY(float offset);
+    /** @brief Set the playhead beat rendered on the grid. */
     void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
     
-    // Zoom/Grid settings
+    /** @brief Set the bar signature in beats per bar. */
     void setBeatsPerBar(int bpb) { beatsPerBar_ = bpb; repaint(); }
 
-    // Scale Settings
+    /** @brief Set the musical root key used for scale highlighting. */
     void setRootKey(int root) { rootKey_ = root; repaint(); }
+    /** @brief Set the active scale type used for scale highlighting. */
     void setScaleType(ScaleType type) { scaleType_ = type; repaint(); }
     
-    // Snap
+    /** @brief Set the active snap grid. */
     void setSnap(SnapGrid snap) { snap_ = snap; repaint(); }
 
 private:
@@ -201,8 +224,11 @@ private:
 // Simple Undo Command
 // -----------------------------------------------------------------------------
 struct PianoRollCommand {
+    /** @brief Human-readable description for the undo stack. */
     std::string description;
+    /** @brief Note state before the edit. */
     std::vector<MidiNote> notesBefore;
+    /** @brief Note state after the edit. */
     std::vector<MidiNote> notesAfter;
 };
 
@@ -213,41 +239,58 @@ struct PianoRollCommand {
 class PianoRollNoteLayer : public NUIComponent {
 public:
     struct GhostPattern {
+        /** @brief Notes rendered as a ghost overlay. */
         std::vector<MidiNote> notes;
+        /** @brief Ghost overlay color. */
         AestraUI::NUIColor color;
     };
 
+    /** @brief Create the editable piano-roll note layer. */
     PianoRollNoteLayer();
 
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
 
+    /** @brief Replace the currently edited note list. */
     void setNotes(const std::vector<MidiNote>& notes);
+    /** @brief Get the currently edited note list. */
     const std::vector<MidiNote>& getNotes() const { return notes_; }
     
+    /** @brief Set ghost patterns rendered behind the active notes. */
     void setGhostPatterns(const std::vector<GhostPattern>& ghosts);
     
-    // Tool State
+    /** @brief Set the active editing tool. */
     void setTool(PianoRollTool tool);
+    /** @brief Get the active editing tool. */
     PianoRollTool getTool() const { return tool_; }
     
+    /** @brief Set the snap grid used for note edits. */
     void setSnap(SnapGrid snap) { snap_ = snap; }
+    /** @brief Get the snap grid used for note edits. */
     SnapGrid getSnap() const { return snap_; }
     
-    // Undo/Redo
+    /** @brief Push an undo command onto the local history stack. */
     void pushUndo(const std::string& desc, const std::vector<MidiNote>& oldNotes, const std::vector<MidiNote>& newNotes);
+    /** @brief Undo the last local note edit. */
     void undo();
+    /** @brief Redo the last undone local note edit. */
     void redo();
 
+    /** @brief Set the horizontal zoom level in pixels per beat. */
     void setPixelsPerBeat(float ppb);
+    /** @brief Set the vertical pitch-row height. */
     void setKeyHeight(float height);
+    /** @brief Set the horizontal scroll offset. */
     void setScrollOffsetX(float offset);
+    /** @brief Set the vertical scroll offset. */
     void setScrollOffsetY(float offset);
+    /** @brief Set the current playhead beat used for rendering. */
     void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
 
-    // Callbacks
+    /** @brief Set the callback fired whenever notes change. */
     void setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb);
+    /** @brief Set the default unit assigned to newly created notes. */
     void setDefaultUnitId(uint64_t unitId) { defaultUnitId_ = unitId; }
     
 

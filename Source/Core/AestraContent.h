@@ -83,107 +83,164 @@ enum class PlaybackScope {
  */
 class AestraContent : public AestraUI::NUIComponent {
 public:
+    /** @brief Create the main application workspace component. */
     AestraContent();
+    /** @brief Tear down the workspace and owned panels. */
     ~AestraContent();
     
+    /**
+     * @brief Persisted overlay-panel state for the current workspace.
+     */
     struct ViewState {
+        /** @brief True when the mixer overlay is open. */
         bool mixerOpen = false;
+        /** @brief True when the piano-roll overlay is open. */
         bool pianoRollOpen = false;
+        /** @brief True when the Arsenal overlay is open. */
         bool sequencerOpen = false;
+        /** @brief True when the playlist/timeline view is the active overlay. */
         bool playlistActive = true;
 
-        // Canonical Panel Positions (Overlay-local coordinates)
+        /** @brief Mixer overlay bounds in overlay-local coordinates. */
         AestraUI::NUIRect mixerRect = {0, 0, 800, 400};
+        /** @brief Piano-roll overlay bounds in overlay-local coordinates. */
         AestraUI::NUIRect pianoRollRect = {0, 0, 800, 450};
+        /** @brief Arsenal overlay bounds in overlay-local coordinates. */
         AestraUI::NUIRect sequencerRect = {0, 0, 600, 300};
 
-        // Temporary Drag State
+        /** @brief True while an overlay panel is being dragged. */
         bool isDragging = false;
+        /** @brief View currently being dragged. */
         Aestra::Audio::ViewType draggingView = Aestra::Audio::ViewType::Playlist;
+        /** @brief Mouse origin in overlay coordinates for the active drag. */
         AestraUI::NUIPoint dragStartMouseOverlay = {0, 0};
+        /** @brief Panel rectangle captured at drag start. */
         AestraUI::NUIRect dragStartRect = {0, 0, 0, 0};
     };
 
-    // Lifecycle
+    /** @brief Advance workspace state and child-panel updates. */
     void onUpdate(double dt) override;
+    /** @brief Render the workspace and active overlays. */
     void onRender(AestraUI::NUIRenderer& renderer) override;
+    /** @brief Relayout the workspace after a host resize. */
     void onResize(int width, int height) override;
+    /** @brief Handle global keyboard shortcuts for the workspace. */
     bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override; // [NEW] Global shortcuts
 
-    // View Management
+    /** @brief Open or close a specific workspace overlay. */
     void setViewOpen(Aestra::Audio::ViewType view, bool open);
+    /** @brief Toggle visibility for a specific workspace overlay. */
     void toggleView(Aestra::Audio::ViewType view);
+    /** @brief Toggle visibility of the left browser area. */
     void toggleFileBrowser();
+    /** @brief Synchronize overlay state into owned child views. */
     void syncViewState();
     
-    // Panel State Persistence (Issue #120)
+    /** @brief Get the active browser column width. */
     float getBrowserWidth() const;
+    /** @brief Set the active browser column width. */
     void setBrowserWidth(float width);
+    /** @brief Check whether the left browser area is visible. */
     bool isBrowserVisible() const;
+    /** @brief Show or hide the left browser area. */
     void setBrowserVisible(bool visible);
+    /** @brief Check whether the mixer panel is visible. */
     bool isMixerVisible() const;
+    /** @brief Show or hide the mixer panel. */
     void setMixerVisible(bool visible);
+    /** @brief Set the active workspace mode. */
     void setViewFocus(ViewFocus focus);
+    /** @brief Get the active workspace mode. */
     ViewFocus getViewFocus() const { return m_viewFocus; }
     
-    // Arsenal Panel Visibility (independent of mode)
+    /** @brief Explicitly show or hide the Arsenal panel. */
     void setArsenalPanelVisible(bool visible);
+    /** @brief Toggle the Arsenal panel regardless of active mode. */
     void toggleArsenalPanel();
 
-    // Panel Physics & Constraints
+    /** @brief Compute the safe workspace rectangle after chrome and sidebars. */
     AestraUI::NUIRect computeSafeRect() const;
+    /** @brief Get the x coordinate of the visible browser edge. */
     float getVisibleBrowserEdge() const;
+    /** @brief Compute the rectangle panels are allowed to occupy. */
     AestraUI::NUIRect computeAllowedRectForPanels() const;
+    /** @brief Compute the maximized overlay rectangle. */
     AestraUI::NUIRect computeMaximizedRect() const;
+    /** @brief Clamp an overlay rectangle to the current allowed bounds. */
     AestraUI::NUIRect clampRectToAllowed(AestraUI::NUIRect panel, const AestraUI::NUIRect& allowed) const;
 
-    // Panel Drag Handlers
+    /** @brief Begin dragging an overlay panel. */
     void beginPanelDrag(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen);
+    /** @brief Update the active overlay-panel drag. */
     void updatePanelDrag(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen);
+    /** @brief End the active overlay-panel drag. */
     void endPanelDrag(Aestra::Audio::ViewType view);
 
-    // Getters
+    /** @brief Update the transport/UI audio-active state. */
     void setAudioStatus(bool active);
+    /** @brief Get the transport bar widget. */
     Aestra::TransportBar* getTransportBar();
+    /** @brief Get the compact transport VU visualizer. */
     std::shared_ptr<AestraUI::AudioVisualizer> getAudioVisualizer();
+    /** @brief Get the transport waveform visualizer. */
     std::shared_ptr<AestraUI::AudioVisualizer> getWaveformVisualizer();
+    /** @brief Get the preview engine used for browser audition. */
     Aestra::Audio::PreviewEngine* getPreviewEngine();
+    /** @brief Get the shared track manager. */
     std::shared_ptr<Aestra::Audio::TrackManager> getTrackManager();
+    /** @brief Get the track/timeline UI component. */
     std::shared_ptr<Aestra::Audio::TrackManagerUI> getTrackManagerUI();
+    /** @brief Get the top-level mode toggle. */
     std::shared_ptr<AestraUI::NUISegmentedControl> getViewToggle();
+    /** @brief Get the currently active pattern identifier. */
     Aestra::Audio::PatternID getActivePatternID() const;
+    /** @brief Get the file-browser widget. */
     std::shared_ptr<AestraUI::FileBrowser> getFileBrowser() const;
+    /** @brief Start playback based on the current focus mode. */
     void playFromCurrentFocus();
+    /** @brief Stop playback based on the current focus mode. */
     void stopFromCurrentFocus(bool hardStop = false);
+    /** @brief Pause playback based on the current focus mode. */
     void pauseFromCurrentFocus();
 
-    // Platform
+    /** @brief Bind the platform bridge used by file dialogs and native helpers. */
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
+    /** @brief Bind the live audio engine used by transport-aware panels. */
     void setAudioEngine(Aestra::Audio::AudioEngine* engine);
 
-    // Project Management
+    /** @brief Reset the workspace back to the default starter project. */
     void resetToDefaultProject();  // Clear and recreate default tracks
     
-    // Demo/Testing
+    /** @brief Populate the project with demo tracks for testing. */
     void addDemoTracks();
+    /** @brief Generate a temporary sine-wave WAV file for testing. */
     bool generateTestWavFile(const std::string& filename, float frequency, double duration);
 
-    // Initial Plugin UI Population
+    /** @brief Refresh the visible plugin list in the browser. */
     void refreshPluginList();
 
-    // Sound Preview
+    /** @brief Start preview playback for a file-browser item. */
     void playSoundPreview(const AestraUI::FileItem& file);
+    /** @brief Stop the active file-browser preview. */
     void stopSoundPreview();
+    /** @brief Load a sample into the currently selected track. */
     void loadSampleIntoSelectedTrack(const std::string& filePath);
+    /** @brief Advance preview-state bookkeeping. */
     void updateSoundPreview();
+    /** @brief Seek inside the active file preview. */
     void seekSoundPreview(double seconds);
+    /** @brief Check whether file preview playback is active. */
     bool isPlayingPreview() const;
+    /** @brief Update the preview playhead visible in the UI. */
     void updatePreviewPlayhead();
     
-    // Plugin Loading
+    /** @brief Load an effect plugin onto the selected track. */
     void loadEffectToSelectedTrack(const std::string& pluginId);
+    /** @brief Load an instrument plugin into Arsenal. */
     void loadInstrumentToArsenal(const std::string& pluginId);
+    /** @brief Load an instrument plugin into a specific Arsenal unit. */
     void loadInstrumentIntoArsenalUnit(Aestra::Audio::UnitID unitId, const std::string& pluginId);
+    /** @brief Open a pattern in the piano-roll editor. */
     void openPatternInPianoRoll(Aestra::Audio::PatternID patternId);
 
 private:

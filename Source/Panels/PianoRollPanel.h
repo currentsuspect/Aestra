@@ -20,22 +20,64 @@ class AudioEngine;
  */
 class PianoRollPanel : public WindowPanel {
 public:
+    /**
+     * @brief Create the piano-roll editor bound to the shared track manager.
+     * @param trackManager Shared project track manager.
+     */
     PianoRollPanel(std::shared_ptr<TrackManager> trackManager);
     ~PianoRollPanel() override = default;
 
+    /**
+     * @brief Advance panel playback state and sync the playhead/minimap.
+     * @param deltaTime Frame delta in seconds.
+     */
     void onUpdate(double deltaTime) override;
+    /**
+     * @brief Relayout the panel after a size change.
+     * @param width New width in logical pixels.
+     * @param height New height in logical pixels.
+     */
     void onResize(int width, int height) override;
     
-    // Pattern management
+    /**
+     * @brief Load a pattern into the piano-roll editor.
+     * @param patternId Pattern identifier to edit.
+     */
     void loadPattern(PatternID patternId);
+    /**
+     * @brief Persist the currently edited notes back to the pattern manager.
+     */
     void savePattern();
+    /**
+     * @brief Set the default unit assigned to newly created notes.
+     * @param unitId Unit identifier used for new note creation.
+     */
     void setEditingUnit(UnitID unitId);
+    /**
+     * @brief Set the callback fired after the current pattern is edited.
+     * @param callback Pattern-edited callback.
+     */
     void setOnPatternEdited(std::function<void(PatternID)> callback) { m_onPatternEdited = std::move(callback); }
+    /**
+     * @brief Get the currently loaded pattern.
+     * @return Active pattern identifier.
+     */
     PatternID getCurrentPatternId() const { return m_currentPatternId; }
     
-    // View config
+    /**
+     * @brief Set the horizontal zoom level in pixels per beat.
+     * @param ppb Horizontal scale used by the piano roll.
+     */
     void setPixelsPerBeat(float ppb);
+    /**
+     * @brief Set the bar signature used by the ruler.
+     * @param bpb Beats per bar.
+     */
     void setBeatsPerBar(int bpb);
+    /**
+     * @brief Bind the live audio engine used for transport/playhead sync.
+     * @param engine Audio engine pointer, or nullptr to disable engine sync.
+     */
     void setAudioEngine(AudioEngine* engine) { m_audioEngine = engine; }
     
 private:
