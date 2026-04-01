@@ -19,20 +19,25 @@ public:
 
     void execute() override {
         if (m_executed) return;
-        m_manager.addChannel(m_name);
-        m_executed = true;
+        if (auto* channel = m_manager.addChannel(m_name)) {
+            m_createdChannelId = channel->getChannelId();
+            m_executed = true;
+        }
     }
 
     void undo() override {
         if (!m_executed) return;
-        m_manager.removeLastChannel();
-        m_executed = false;
+        if (m_manager.removeChannelById(m_createdChannelId)) {
+            m_executed = false;
+        }
     }
 
     void redo() override {
         if (m_executed) return;
-        m_manager.addChannel(m_name);
-        m_executed = true;
+        if (auto* channel = m_manager.addChannel(m_name)) {
+            m_createdChannelId = channel->getChannelId();
+            m_executed = true;
+        }
     }
 
     std::string getName() const override { return "Add Channel"; }
@@ -43,6 +48,7 @@ private:
     TrackManager& m_manager;
     std::string m_name;
     bool m_executed = false;
+    uint32_t m_createdChannelId = 0;
 };
 
 } // namespace Audio

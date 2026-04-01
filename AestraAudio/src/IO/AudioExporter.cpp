@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <cstdlib>
 #include <random>
 #include <mutex>
 
@@ -94,6 +95,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_cancelled.store(false, std::memory_order_release);
     m_peakLevel.store(0.0f, std::memory_order_release);
     m_lastProgressTime = std::chrono::steady_clock::now();
+    m_progressInterval = config.progressInterval;
 
     // Reset master output state for this render
     m_dcBlockerL = DCBlockerD{};
@@ -124,18 +126,20 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // Stop transport for safe offline rendering
     if (wasPlaying) {
         m_engine.setTransportPlaying(false);
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        for (int i = 0; i < 20 && m_engine.isTransportPlaying(); ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        }
     }
 
     // Set engine to export sample rate
     m_engine.setSampleRate(config.sampleRate);
     m_trackManager.setOutputSampleRate(sampleRate);
 
-    // Lock graph for stability during render
-    std::lock_guard<std::mutex> graphLock(m_engine.m_graphMutex);
-
-    // Get active graph state
-    int activeIdx = m_engine.m_activeRenderTrackIndex.load(std::memory_order_relaxed);
+    int activeIdx = 0;
+    {
+        std::lock_guard<std::mutex> graphLock(m_engine.m_graphMutex);
+        activeIdx = m_engine.m_activeRenderTrackIndex.load(std::memory_order_relaxed);
+    }
     AudioGraphState& graphState = m_engine.m_graphStates[activeIdx];
 
     // Render loop using AudioRenderer::renderBlock (same path as bounceRangeToWav)
@@ -368,7 +372,7 @@ bool AudioExporter::writeSamples(std::ofstream& file, const float* buffer,
 void AudioExporter::updateProgress(float percent) {
     auto now = std::chrono::steady_clock::now();
     auto elapsed = now - m_lastProgressTime;
-    if (elapsed >= std::chrono::milliseconds(100)) {
+    if (elapsed >= m_progressInterval) {
         m_lastProgressTime = now;
         if (m_progressCallback) {
             m_progressCallback(percent);

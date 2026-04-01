@@ -191,6 +191,7 @@ private:
     CancelCheck m_cancelCheck;
 
     std::chrono::steady_clock::time_point m_lastProgressTime;
+    std::chrono::milliseconds m_progressInterval{100};
 
     // Render buffers (double for internal, float for output)
     std::vector<double> m_renderBufferD;

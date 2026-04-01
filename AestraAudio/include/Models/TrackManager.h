@@ -95,6 +95,24 @@ public:
         return true;
     }
 
+    bool removeChannelById(uint32_t channelId) {
+        auto it = std::find_if(m_channels.begin(), m_channels.end(),
+            [channelId](const auto& channel) {
+                return channel && channel->getChannelId() == channelId;
+            });
+        if (it == m_channels.end()) {
+            return false;
+        }
+
+        m_channels.erase(it);
+        m_graphDirty.store(true, std::memory_order_relaxed);
+        m_modified.store(true, std::memory_order_relaxed);
+        if (m_channelSlotMap) {
+            m_channelSlotMap->rebuild(m_channels);
+        }
+        return true;
+    }
+
     size_t getTrackCount() const { return getChannelCount(); }
     MixerChannel* getTrack(size_t index) { return getChannel(index); }
     const MixerChannel* getTrack(size_t index) const { return getChannel(index); }
