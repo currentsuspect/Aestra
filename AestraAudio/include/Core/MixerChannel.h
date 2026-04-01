@@ -23,10 +23,13 @@ namespace Audio {
  * @brief Unique identifier for a Mixer Channel
  */
 struct MixerChannelID : public AestraUUID {
+    /** @brief Cached numeric channel identifier. */
     uint64_t value = 0;
 
     MixerChannelID() = default;
+    /** @brief Construct from a numeric identifier. */
     MixerChannelID(uint64_t v) : value(v) { low = v; }
+    /** @brief Construct from a generic UUID by copying the low bits. */
     MixerChannelID(const AestraUUID& other) : AestraUUID(other), value(other.low) {}
 };
 
@@ -54,15 +57,24 @@ enum class InternalPrecision { Float32, Float64 };
 enum class OversamplingMode { None, x2, x4, x8 };
 
 struct AudioQualitySettings {
+    /** @brief Preset controlling the remaining quality fields. */
     QualityPreset preset{QualityPreset::Balanced};
+    /** @brief Resampling strategy. */
     ResamplingMode resampling{ResamplingMode::Medium};
+    /** @brief Dithering mode applied on output. */
     DitheringMode dithering{DitheringMode::None};
+    /** @brief Internal processing precision. */
     InternalPrecision precision{InternalPrecision::Float32};
+    /** @brief Oversampling mode used by the channel. */
     OversamplingMode oversampling{OversamplingMode::None};
+    /** @brief Whether DC removal is enabled. */
     bool removeDCOffset{true};
+    /** @brief Whether the channel should apply soft clipping. */
     bool enableSoftClipping{false};
+    /** @brief Aestra coloration mode. */
     AestraMode aestraMode{AestraMode::Off};
 
+    /** @brief Apply a named quality preset. */
     void applyPreset(QualityPreset p) {
         preset = p;
         if (p == QualityPreset::Economy) {
@@ -95,80 +107,110 @@ struct AudioQualitySettings {
  */
 class MixerChannel {
 public:
+    /** @brief Construct a mixer channel with a display name and stable channel ID. */
     MixerChannel(const std::string& name = "Channel", uint32_t channelId = 0);
+    /** @brief Destroy the mixer channel and its owned processing objects. */
     ~MixerChannel();
 
-    // === Identity ===
-
+    /** @brief Get the UUID-style channel identifier. */
     MixerChannelID getID() const { return m_uuid; }
+    /** @brief Get the dense numeric channel identifier. */
     uint32_t getChannelId() const { return m_channelId; }
 
+    /** @brief Override the persisted UUID for the channel. */
     void setUUID(const AestraUUID& uuid) { m_uuid = uuid; }
+    /** @brief Get the persisted UUID for the channel. */
     const AestraUUID& getUUID() const { return m_uuid; }
 
-    // Channel Properties
+    /** @brief Set the display name shown in the UI. */
     void setName(const std::string& name);
+    /** @brief Get the display name shown in the UI. */
     const std::string& getName() const { return m_name; }
+    /** @brief Set the UI accent color. */
     void setColor(uint32_t color);
+    /** @brief Get the UI accent color. */
     uint32_t getColor() const { return m_color; }
 
-    // Audio Parameters (thread-safe)
+    /** @brief Set channel output volume. */
     void setVolume(float volume);
+    /** @brief Get channel output volume. */
     float getVolume() const { return m_volume.load(); }
+    /** @brief Set stereo pan. */
     void setPan(float pan);
+    /** @brief Get stereo pan. */
     float getPan() const { return m_pan.load(); }
+    /** @brief Set stereo width. */
     void setWidth(float width);
+    /** @brief Get stereo width. */
     float getWidth() const { return m_width.load(); }
+    /** @brief Set mute state. */
     void setMute(bool mute);
+    /** @brief Check mute state. */
     bool isMuted() const { return m_muted.load(); }
+    /** @brief Set solo state. */
     void setSolo(bool solo);
+    /** @brief Check solo state. */
     bool isSoloed() const { return m_soloed.load(); }
+    /** @brief Set solo-safe state. */
     void setSoloSafe(bool safe);
+    /** @brief Check solo-safe state. */
     bool isSoloSafe() const { return m_soloSafe.load(); }
 
-    // Recording State
+    /** @brief Arm or disarm the channel. */
     void setArmed(bool armed) { m_isArmed.store(armed); }
+    /** @brief Check whether the channel is armed. */
     bool isArmed() const { return m_isArmed.load(); }
+    /** @brief Enable or disable input monitoring. */
     void setMonitoringEnabled(bool enabled) { m_monitorInput.store(enabled); }
+    /** @brief Check whether input monitoring is enabled. */
     bool isMonitoringEnabled() const { return m_monitorInput.load(); }
+    /** @brief Select the monitored input channel index. */
     void setInputChannelIndex(int index) { m_inputChannelIndex.store(index); }
+    /** @brief Get the monitored input channel index. */
     int getInputChannelIndex() const { return m_inputChannelIndex.load(); }
 
-    // Audio Processing
-    // MixerChannel processes its input bus/buffer. Timeline clips are managed by PlaylistModel.
+    /** @brief Process this channel's audio for one callback block. */
     void processAudio(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate);
 
-    // Metering
+    /** @brief Get the last stereo correlation value reported by the bus. */
     float getLastCorrelation() const {
         // Return 0 if no bus (e.g. inactive)
         return m_mixerBus ? m_mixerBus->getLastCorrelation() : 0.0f;
     }
 
-    // Mixer Integration
+    /** @brief Access the owned mixer bus. */
     MixerBus* getMixerBus() { return m_mixerBus.get(); }
+    /** @brief Access the owned mixer bus. */
     const MixerBus* getMixerBus() const { return m_mixerBus.get(); }
 
-    // Command sink for RT parameter updates
+    /** @brief Set the audio-thread command sink used for RT-safe updates. */
     void setCommandSink(std::function<void(const AudioQueueCommand&)> cb) { m_commandSink = std::move(cb); }
 
+    /** @brief Apply quality settings to the channel. */
     void setQualitySettings(const AudioQualitySettings&) {}
 
-    // Effect Chain (insert effects)
+    /** @brief Access the insert-effect chain. */
     EffectChain& getEffectChain() { return m_effectChain; }
+    /** @brief Access the insert-effect chain. */
     const EffectChain& getEffectChain() const { return m_effectChain; }
 
-    // Routing Accessors
-    // Routing Accessors
+    /** @brief Get the primary output destination identifier. */
     uint32_t getMainOutputId() const { return m_mainOutputId; }
 
-    // Thread-safe Send Management
+    /** @brief Get a copy of the current send list. */
     std::vector<AudioRoute> getSends() const; // Returns copy
+    /** @brief Add a send route. */
     void addSend(const AudioRoute& route);
+    /** @brief Remove a send route by index. */
     void removeSend(int index);
+    /** @brief Update send level by index. */
     void setSendLevel(int index, float level);
+    /** @brief Update send pan by index. */
     void setSendPan(int index, float pan);
+    /** @brief Update send destination by index. */
     void setSendDestination(int index, uint32_t destId);
 
+    /** @brief Set the primary output destination identifier. */
     void setMainOutputId(uint32_t id) { m_mainOutputId = id; }
 
 private:

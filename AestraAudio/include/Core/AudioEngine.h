@@ -61,11 +61,14 @@ class AudioEngine {
     friend class AudioRenderer; // Allow access to private members during hybrid engine transition
     friend class AudioExporter; // Allow access for offline rendering/export
 public:
+    /** @brief Construct the realtime audio engine. */
     AudioEngine();
+    /** @brief Destroy the realtime audio engine and release owned resources. */
     ~AudioEngine();
 
     /**
      * @brief Singleton Accessor (v3.1)
+     * @return Process-wide audio engine instance.
      */
     static AudioEngine& getInstance();
 
@@ -81,21 +84,29 @@ public:
      */
     void panic();
 
-    // Recording Callback (called on RT thread)
+    /** @brief Audio-input callback signature invoked on the realtime thread. */
     using InputCallback = void (*)(const float* inputBuffer, uint32_t numFrames, void* userData);
+    /** @brief Set the optional input callback used by recording flows. */
     void setInputCallback(InputCallback callback, void* userData) {
         m_inputCallback.store(callback);
         m_inputCallbackData.store(userData);
     }
 
+    /** @brief Access the command queue used to communicate with the audio thread. */
     AudioCommandQueue& commandQueue() { return m_commandQueue; }
+    /** @brief Access the engine telemetry collector. */
     AudioTelemetry& telemetry() { return m_telemetry; }
+    /** @brief Access the mutable engine state object. */
     EngineState& engineState() { return m_state; }
 
+    /** @brief Set the active sample rate used by the engine. */
     void setSampleRate(uint32_t sampleRate) { m_sampleRate.store(sampleRate, std::memory_order_relaxed); }
+    /** @brief Get the active sample rate used by the engine. */
     uint32_t getSampleRate() const { return m_sampleRate.load(std::memory_order_relaxed); }
 
+    /** @brief Configure the maximum buffer and output-channel counts. */
     void setBufferConfig(uint32_t maxFrames, uint32_t numChannels);
+    /** @brief Set transport running state and mirror it onto the audio command queue. */
     void setTransportPlaying(bool playing) {
         // Update immediately for UI queries, but also enqueue a command so the audio thread
         // can detect edges reliably (stop->play within one buffer, double-stop hard stop, etc.).
@@ -108,64 +119,81 @@ public:
         cmd.samplePos = pos;
         m_commandQueue.push(cmd);
     }
+    /** @brief Check whether transport playback is active. */
     bool isTransportPlaying() const { return m_transportPlaying.load(std::memory_order_relaxed); }
+    /** @brief Replace the active audio graph and compile it for rendering. */
     void setGraph(const AudioGraph& graph) {
         m_state.swapGraph(graph);
         compileGraph();
     }
 
-    // RT-safe metering (written on audio thread, read on UI thread)
+    /** @brief Publish the shared meter snapshot buffer used by the UI. */
     void setMeterSnapshots(std::shared_ptr<MeterSnapshotBuffer> snapshots) {
         m_meterSnapshotsOwned = std::move(snapshots);
         m_meterSnapshotsRaw.store(m_meterSnapshotsOwned.get(), std::memory_order_release);
     }
 
-    // Continuous mixer params (UI writes, audio reads)
+    /** @brief Publish the continuous parameter buffer used for automation. */
     void setContinuousParams(std::shared_ptr<ContinuousParamBuffer> params) {
         m_continuousParamsOwned = std::move(params);
         m_continuousParamsRaw.store(m_continuousParamsOwned.get(), std::memory_order_release);
     }
 
-    // Stable channelId -> dense slot mapping (set only at safe points)
+    /** @brief Publish the channel-slot map used by the audio thread. */
     void setChannelSlotMap(std::shared_ptr<const ChannelSlotMap> slotMap) {
         m_channelSlotMapOwned = std::move(slotMap);
         m_channelSlotMapRaw.store(m_channelSlotMapOwned.get(), std::memory_order_release);
     }
 
-    // Position tracking
+    /** @brief Get the current transport position in samples. */
     uint64_t getGlobalSamplePos() const { return m_globalSamplePos.load(std::memory_order_relaxed); }
+    /** @brief Set the current transport position in samples. */
     void setGlobalSamplePos(uint64_t pos) { m_globalSamplePos.store(pos, std::memory_order_relaxed); }
+    /** @brief Get the current transport position in seconds. */
     double getPositionSeconds() const {
         uint32_t sr = m_sampleRate.load(std::memory_order_relaxed);
         return sr > 0 ? static_cast<double>(m_globalSamplePos.load(std::memory_order_relaxed)) / sr : 0.0;
     }
 
-    // Quality settings
+    /** @brief Set the active interpolation quality. */
     void setInterpolationQuality(Interpolators::InterpolationQuality q) {
         m_interpQuality.store(q, std::memory_order_relaxed);
     }
+    /** @brief Get the active interpolation quality. */
     Interpolators::InterpolationQuality getInterpolationQuality() const {
         return m_interpQuality.load(std::memory_order_relaxed);
     }
 
-    // Master output control
+    /** @brief Set the master gain target. */
     void setMasterGain(float gain) { m_masterGainTarget.store(gain, std::memory_order_relaxed); }
+    /** @brief Get the master gain target. */
     float getMasterGain() const { return m_masterGainTarget.load(std::memory_order_relaxed); }
+    /** @brief Set global output headroom in decibels. */
     void setHeadroom(float db) { m_headroomLinear.store(std::pow(10.0f, db / 20.0f), std::memory_order_relaxed); }
+    /** @brief Enable or disable master safety processing. */
     void setSafetyProcessingEnabled(bool enabled) {
         m_safetyProcessingEnabled.store(enabled, std::memory_order_relaxed);
     }
+    /** @brief Check whether master safety processing is enabled. */
     bool isSafetyProcessingEnabled() const { return m_safetyProcessingEnabled.load(std::memory_order_relaxed); }
 
-    // Metronome control
+    /** @brief Enable or disable the metronome. */
     void setMetronomeEnabled(bool enabled) { m_metronomeEngine.setEnabled(enabled); }
+    /** @brief Check whether the metronome is enabled. */
     bool isMetronomeEnabled() const { return m_metronomeEngine.isEnabled(); }
+    /** @brief Set metronome output volume. */
     void setMetronomeVolume(float vol) { m_metronomeEngine.setVolume(vol); }
+    /** @brief Get metronome output volume. */
     float getMetronomeVolume() const { return m_metronomeEngine.getVolume(); }
+    /** @brief Set transport tempo in beats per minute. */
     void setBPM(float bpm) { m_metronomeEngine.setBPM(bpm); }
+    /** @brief Get transport tempo in beats per minute. */
     float getBPM() const { return m_metronomeEngine.getBPM(); }
+    /** @brief Set the time-signature numerator used by the metronome. */
     void setBeatsPerBar(int beats) { m_metronomeEngine.setBeatsPerBar(beats); }
+    /** @brief Get the time-signature numerator used by the metronome. */
     int getBeatsPerBar() const { return m_metronomeEngine.getBeatsPerBar(); }
+    /** @brief Load downbeat and upbeat click samples for the metronome. */
     void loadMetronomeClicks(const std::string& downbeatPath, const std::string& upbeatPath) {
         if (isTransportPlaying()) {
             // Avoid I/O during playback to prevent dropouts
@@ -174,59 +202,76 @@ public:
         m_metronomeEngine.loadClickSounds(downbeatPath, upbeatPath);
     }
 
-    // Loop control
+    /** @brief Enable or disable transport looping. */
     void setLoopEnabled(bool enabled) { m_loopEnabled.store(enabled, std::memory_order_relaxed); }
+    /** @brief Check whether transport looping is enabled. */
     bool isLoopEnabled() const { return m_loopEnabled.load(std::memory_order_relaxed); }
+    /** @brief Set the loop region in beats. */
     void setLoopRegion(double startBeat, double endBeat);
+    /** @brief Get the loop start position in beats. */
     double getLoopStartBeat() const { return m_loopStartBeat.load(std::memory_order_relaxed); }
+    /** @brief Get the loop end position in beats. */
     double getLoopEndBeat() const { return m_loopEndBeat.load(std::memory_order_relaxed); }
 
-    // Pattern Playback Mode (Overrides loop behavior for Arsenal)
+    /** @brief Enable or disable Arsenal pattern playback mode. */
     void setPatternPlaybackMode(bool enabled, double lengthBeats) {
         m_patternPlaybackMode.store(enabled, std::memory_order_relaxed);
         m_patternLengthBeats.store(lengthBeats, std::memory_order_relaxed);
     }
+    /** @brief Check whether Arsenal pattern playback mode is active. */
     bool isPatternPlaybackMode() const { return m_patternPlaybackMode.load(std::memory_order_relaxed); }
 
-    // Antigravity Dependencies (v3.1)
+    /** @brief Bind the unit manager used for Arsenal rendering. */
     void setUnitManager(UnitManager* mgr) { m_unitManager.store(mgr, std::memory_order_release); }
+    /** @brief Bind the pattern playback engine used for scheduled MIDI. */
     void setPatternPlaybackEngine(PatternPlaybackEngine* engine) {
         m_patternEngine.store(engine, std::memory_order_release);
     }
 
-    // Pattern change detection - reset voices when pattern ID changes (not on MIDI edits)
+    /** @brief Request a voice reset after a pattern identity change. */
     void requestVoiceResetOnPatternChange();
 
-    // Metering (read on UI thread)
+    /** @brief Get the latest left peak meter value. */
     float getPeakL() const { return m_peakL.load(std::memory_order_relaxed); }
+    /** @brief Get the latest right peak meter value. */
     float getPeakR() const { return m_peakR.load(std::memory_order_relaxed); }
+    /** @brief Get the latest left RMS meter value. */
     float getRmsL() const { return m_rmsL.load(std::memory_order_relaxed); }
+    /** @brief Get the latest right RMS meter value. */
     float getRmsR() const { return m_rmsR.load(std::memory_order_relaxed); }
 
-    // Dithering control
+    /** @brief Set the active dithering mode. */
     void setDitheringMode(DitheringMode mode) { m_ditheringMode.store(mode, std::memory_order_relaxed); }
+    /** @brief Get the active dithering mode. */
     DitheringMode getDitheringMode() const { return m_ditheringMode.load(std::memory_order_relaxed); }
 
-    // Test Tone
+    /** @brief Enable or disable the internal test tone. */
     void setTestToneEnabled(bool enabled) { m_testToneEnabled.store(enabled, std::memory_order_relaxed); }
+    /** @brief Check whether the internal test tone is enabled. */
     bool isTestToneEnabled() const { return m_testToneEnabled.load(std::memory_order_relaxed); }
 
-    // Waveform history (interleaved stereo), safe to read on UI thread.
+    /** @brief Get the waveform-history buffer capacity in frames. */
     uint32_t getWaveformHistoryCapacity() const { return m_waveformHistoryFrames.load(std::memory_order_relaxed); }
+    /** @brief Copy recent waveform history into an interleaved output buffer. */
     uint32_t copyWaveformHistory(float* outInterleaved, uint32_t maxFrames) const;
+    /** @brief Capture an interleaved output block into waveform history. */
     void captureWaveformHistory(const float* interleavedOutput, uint32_t numFrames);
 
-    // Multi-threading
+    /** @brief Set the worker-thread count used by the engine. */
     void setThreadCount(int count);
+    /** @brief Enable or disable multithreaded processing. */
     void setMultiThreadingEnabled(bool enabled) { m_multiThreadingEnabled.store(enabled, std::memory_order_relaxed); }
+    /** @brief Check whether multithreaded processing is enabled. */
     bool isMultiThreadingEnabled() const { return m_multiThreadingEnabled.load(std::memory_order_relaxed); }
 
-    // Audition Mode
+    /** @brief Bind the audition engine used by audition mode. */
     void setAuditionEngine(AuditionEngine* engine) { m_auditionEngine.store(engine, std::memory_order_relaxed); }
+    /** @brief Enable or disable audition mode. */
     void setAuditionModeEnabled(bool enabled) { m_auditionModeEnabled.store(enabled, std::memory_order_relaxed); }
+    /** @brief Check whether audition mode is enabled. */
     bool isAuditionModeEnabled() const { return m_auditionModeEnabled.load(std::memory_order_relaxed); }
 
-    // File Browser Preview (mixes into main output)
+    /** @brief Bind the preview engine mixed into the main output. */
     void setPreviewEngine(PreviewEngine* engine) { m_previewEngine.store(engine, std::memory_order_relaxed); }
 
     /**
