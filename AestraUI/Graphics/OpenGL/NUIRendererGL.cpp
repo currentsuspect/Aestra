@@ -272,25 +272,31 @@ bool NUIRendererGL::initialize(int width, int height) {
     
         // Try to load the best font for Aestra.
         // Prefer a heavier bundled weight so the global UI reads less thin.
-        std::vector<std::string> fontPaths = {
-            // Bundled UI fonts - try multiple paths for dev/build/release
-            "/home/currentsuspect/Aestra/AestraAssets/fonts/Geist/Geist-Bold.ttf",
+        std::vector<std::string> fontPaths;
+        if (const char* fontDir = std::getenv("AESTRA_FONT_DIR")) {
+            const std::string base(fontDir);
+            fontPaths.push_back(base + "/Geist/Geist-Bold.ttf");
+            fontPaths.push_back(base + "/Geist/Geist-Medium.ttf");
+            fontPaths.push_back(base + "/Manrope/Manrope-Regular.ttf");
+        }
+        std::vector<std::string> fallbackFontPaths = {
             "AestraAssets/fonts/Geist/Geist-Bold.ttf",
             "../AestraAssets/fonts/Geist/Geist-Bold.ttf",
             "../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
             "../../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
             "../../../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
 
-            "/home/currentsuspect/Aestra/AestraAssets/fonts/Geist/Geist-Medium.ttf",
             "AestraAssets/fonts/Geist/Geist-Medium.ttf",
             "../AestraAssets/fonts/Geist/Geist-Medium.ttf",
             "../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
             "../../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
             "../../../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
 
-            "/home/currentsuspect/Aestra/AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
             "AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
+            "../AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
+            "../../AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
             "../../../AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
+            "../../../../AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
 
             // System fallbacks (Windows)
             "C:/Windows/Fonts/segoeui.ttf",
@@ -306,6 +312,7 @@ bool NUIRendererGL::initialize(int width, int height) {
             "/usr/share/fonts/TTF/DejaVuSans.ttf",
             "/usr/share/fonts/dejavu-sans/DejaVuSans.ttf"
         };
+        fontPaths.insert(fontPaths.end(), fallbackFontPaths.begin(), fallbackFontPaths.end());
         
         bool fontLoaded = false;
         for (const auto& fontPath : fontPaths) {
