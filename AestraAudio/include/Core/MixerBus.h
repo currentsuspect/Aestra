@@ -1,7 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "AudioProcessor.h"
+#include "../DSP/AudioProcessor.h"
 
 #include <atomic>
 #include <memory>

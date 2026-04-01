@@ -29,6 +29,8 @@ AuditionEngine::~AuditionEngine() {
 void AuditionEngine::addToQueue(const std::string& filePath, bool isReference) {
     std::lock_guard<std::mutex> lock(m_queueMutex);
 
+    Log::info("[AuditionEngine] addToQueue: " + filePath);
+
     AuditionQueueItem item;
     item.id = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
     item.filePath = filePath;
@@ -36,7 +38,9 @@ void AuditionEngine::addToQueue(const std::string& filePath, bool isReference) {
     item.isFromTimeline = false;
 
     // Extract metadata using native parser
+    Log::info("[AuditionEngine] Parsing metadata...");
     AudioMetadata meta = MetadataParser::parse(filePath);
+    Log::info("[AuditionEngine] Metadata parsed OK");
 
     // Apply extracted metadata (with fallbacks)
     item.title = meta.title.empty() ? "" : meta.title;
@@ -64,21 +68,24 @@ void AuditionEngine::addToQueue(const std::string& filePath, bool isReference) {
         Log::info("[AuditionEngine] Cover art extracted: " + std::to_string(item.coverArtData.size()) + " bytes");
     }
 
+    Log::info("[AuditionEngine] Pushing to queue vector...");
     m_queue.push_back(std::move(item));
+    Log::info("[AuditionEngine] Queue push done, size=" + std::to_string(m_queue.size()));
 
-    // Auto-load if this is the first track, but DO NOT auto-play
+    // Auto-select if this is the first track, but DO NOT decode yet
+    // (decode happens lazily in loadCurrentTrack when playback starts or track is selected)
     if (m_queue.size() == 1 && m_currentIndex < 0) {
         m_currentIndex = 0;
-        loadCurrentTrack();
-        // Explicitly ensure we are stopped
-        m_isPlaying.store(false);
-        if (m_onPlaybackStateChanged)
-            m_onPlaybackStateChanged(false);
+        Log::info("[AuditionEngine] Calling notifyTrackChanged...");
+        notifyTrackChanged();
+        Log::info("[AuditionEngine] notifyTrackChanged done");
     }
 
+    Log::info("[AuditionEngine] Calling onQueueUpdated...");
     if (m_onQueueUpdated) {
         m_onQueueUpdated();
     }
+    Log::info("[AuditionEngine] addToQueue complete");
 }
 
 void AuditionEngine::addTimelineTrack(uint32_t trackId, const std::string& trackName) {
@@ -179,6 +186,10 @@ void AuditionEngine::jumpToTrack(size_t index) {
 void AuditionEngine::play() {
     if (m_currentIndex < 0 && !m_queue.empty()) {
         jumpToTrack(0);
+    } else if (m_currentIndex >= 0 && !m_currentSource) {
+        // Track selected but not yet decoded — decode now (lazy load)
+        std::lock_guard<std::mutex> lock(m_queueMutex);
+        loadCurrentTrack();
     }
 
     bool wasPlaying = m_isPlaying.exchange(true);
@@ -431,9 +442,14 @@ void AuditionEngine::loadCurrentTrack() {
 
     notifyTrackChanged();
 
-    // Auto-play when track changes
+    // Auto-play when track changes (set flag directly — don't call play() to avoid deadlock)
     if (!m_isPlaying.load()) {
-        play();
+        m_isPlaying.store(true);
+        // Notify outside the mutex scope if possible — but this is safe since
+        // m_onPlaybackStateChanged only updates UI state, doesn't touch m_queueMutex
+        if (m_onPlaybackStateChanged) {
+            m_onPlaybackStateChanged(true);
+        }
     }
 }
 

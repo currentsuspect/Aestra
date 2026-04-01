@@ -2,7 +2,7 @@
 
 ## **EXECUTIVE BRIEF**
 
-**Project**: Aestra DAW Architecture Modernization  
+**Project**: Aestra Architecture Modernization  
 **Timeline**: 8-12 weeks (Phased, with Parallel Development)  
 **Goal**: Transform from prototype to production-ready architecture capable of supporting 5-10 years of evolution  
 **Risk Level**: Moderate-High (Controlled through iterative delivery)  

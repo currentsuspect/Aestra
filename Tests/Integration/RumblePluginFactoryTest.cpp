@@ -27,7 +27,7 @@ int main() {
     info.numAudioOutputs = 2;
     info.hasMidiInput = true;
     info.hasMidiOutput = false;
-    info.hasEditor = false;
+    info.hasEditor = true;
 
     PluginInstancePtr instance;
     factory.createPluginAsync(info, [&](PluginInstancePtr created) { instance = created; });
@@ -44,7 +44,7 @@ int main() {
     assert(pluginInfo.format == PluginFormat::Internal);
     assert(pluginInfo.numAudioOutputs == 2);
     assert(pluginInfo.hasMidiInput == true);
-    assert(pluginInfo.hasEditor == false);
+    assert(pluginInfo.hasEditor == true);
     std::cout << "✅ PASS\n";
 
     std::cout << "TEST: plugin initializes and exposes parameters... ";

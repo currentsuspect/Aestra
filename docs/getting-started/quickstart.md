@@ -20,14 +20,16 @@ cd build/bin/Release
 ./Aestra.exe
 ```
 
-### Linux/macOS
+### Linux
 ```bash
 ./build/bin/Aestra
 ```
 
+macOS is still planned rather than part of the current public quickstart flow.
+
 On first launch, Aestra will:
 
-1. Initialize the audio engine (WASAPI/ALSA/CoreAudio)
+1. Initialize the audio engine (WASAPI on Windows, Linux audio stack where supported)
 2. Load the default theme
 3. Create a new empty project
 
@@ -87,7 +89,7 @@ Aestra's interface consists of several key areas:
 
 !!! warning "In Development"
     Sample manipulation and drag-and-drop features are currently in development.
-    This section will be updated in Q1 2025 when these features are completed.
+    This section will be updated when these features are completed.
 
 ### Step 4: Use the Timeline
 

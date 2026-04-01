@@ -1,8 +1,8 @@
-# 📖 Aestra DAW Glossary
+# 📖 Aestra Glossary
 
 ![Glossary](https://img.shields.io/badge/Glossary-Technical%20Terms-blue)
 
-Comprehensive glossary of technical terms, acronyms, and concepts used in Aestra DAW development.
+Comprehensive glossary of technical terms, acronyms, and concepts used in Aestra development.
 
 ## 📋 Table of Contents
 
@@ -18,7 +18,7 @@ Comprehensive glossary of technical terms, acronyms, and concepts used in Aestra
 A fixed-size block of audio samples processed together. Smaller buffers reduce latency but increase CPU usage. Typical sizes: 128, 256, 512, or 1024 samples.
 
 ### Audio Driver
-Software interface between application and audio hardware. Examples: WASAPI, ASIO, ALSA, CoreAudio.
+Software interface between application and audio hardware. Examples include WASAPI, ASIO, and ALSA. CoreAudio is relevant for planned future macOS work.
 
 ### ASIO (Audio Stream Input/Output)
 Low-latency audio driver protocol developed by Steinberg. Widely used in professional audio applications (planned for Aestra).
@@ -137,16 +137,16 @@ Aestra's audio engine module responsible for playback, recording, and processing
 Foundation module providing platform abstraction, utilities, and common types.
 
 ### AestraPlat
-Platform-specific implementations for Windows, Linux, and macOS.
+Platform-specific implementations, with Windows first today and Linux/macOS handled as bring-up or planned work depending on the subsystem.
 
 ### AestraUI
-Custom GPU-accelerated UI framework built specifically for Aestra DAW.
+Custom GPU-accelerated UI framework built specifically for Aestra.
 
 ### Premium Features
 Proprietary features available only in paid version (AI models, advanced effects, licensing).
 
 ### Public Build
-Build from public repository with core features only. No premium features or private assets.
+Build from the public repository surface without premium/commercial-only modules.
 
 ### Sample Clip
 Visual representation of an audio sample on the timeline. Can be moved, resized, and edited.
@@ -284,7 +284,7 @@ Rendering order of overlapping UI elements. Higher z-order renders on top.
 ## 📚 Related Terms
 
 ### Branching Strategy
-Git workflow defining how branches are created, named, and merged. See [Contributing Guide](CONTRIBUTING.md).
+Git workflow defining how branches are created, named, and merged. See [Contributing Guide](../../CONTRIBUTING.md).
 
 ### Code Review
 Process of examining code changes before merging. Ensures quality and maintainability.
@@ -324,11 +324,11 @@ Test that verifies a single component in isolation. Helps catch bugs early.
 
 ## 📚 Additional Resources
 
-- [Architecture Overview](ARCHITECTURE.md) - Detailed system design
-- [Building Guide](BUILDING.md) - Build instructions
-- [Coding Style Guide](developer/coding-style.md) - Code conventions
-- [FAQ](FAQ.md) - Common questions
+- [Architecture Overview](../architecture/overview.md) - Detailed system design
+- [Building Guide](../getting-started/building.md) - Build instructions
+- [Coding Style Guide](../developer/coding-style.md) - Code conventions
+- [FAQ](faq.md) - Common questions
 
 ---
 
-[← Return to Aestra Docs Index](README.md)
+[← Return to Aestra Docs Index](../README.md)

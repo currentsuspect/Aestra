@@ -1,5 +1,5 @@
 ---
-# Aestra DAW - Clang-Tidy Configuration
+# Aestra - Clang-Tidy Configuration
 # Focus on: correctness, performance, and modern C++
 
 Checks: >

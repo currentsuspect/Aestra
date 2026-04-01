@@ -50,6 +50,9 @@ void NUICustomTitleBar::createIcons() {
 
     // App icon removed for minimal header (Ableton-style)
     appIcon_.reset();
+
+    // Export button rect (will be positioned in updateButtonRects)
+    exportButtonRect_ = NUIRect(0, 0, 28.0f, 28.0f);
 }
 
 void NUICustomTitleBar::setMaximized(bool maximized) {
@@ -67,6 +70,30 @@ void NUICustomTitleBar::setHeight(float height) {
     setSize(getBounds().width, height);
     updateButtonRects();
     setDirty(true);
+}
+
+void NUICustomTitleBar::setExportProgress(float progress) {
+    exportProgress_ = progress;
+    exportAnimating_ = (progress < 0.0f);
+    setDirty(true);
+}
+
+void NUICustomTitleBar::setExporting(bool exporting) {
+    isExporting_ = exporting;
+    if (!exporting) {
+        exportProgress_ = 0.0f;
+        exportAnimating_ = false;
+    }
+    setDirty(true);
+}
+
+void NUICustomTitleBar::onUpdate(double deltaTime) {
+    NUIComponent::onUpdate(deltaTime);
+    if (isExporting_ && exportAnimating_) {
+        exportAnimPhase_ += static_cast<float>(deltaTime) * 3.0f;
+        if (exportAnimPhase_ > 6.28318f) exportAnimPhase_ -= 6.28318f;
+        setDirty(true);
+    }
 }
 
 void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
@@ -95,6 +122,49 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     // Use config colors for hover states
     NUIColor hoverBgColor = themeManager.getColor("primary").withAlpha(0.2f); // Aestra Purple hover
     NUIColor closeHoverBg = themeManager.getColor("error"); // Red for close button
+    NUIColor exportColor = themeManager.getColor("accentPrimary"); // Purple for export
+
+    // Draw export button (left of window controls)
+    if (isExporting_) {
+        // Animated progress bar inside export button
+        if (exportAnimating_) {
+            // Indeterminate: sliding bar animation
+            float phase = std::sin(exportAnimPhase_) * 0.5f + 0.5f;
+            float barWidth = exportButtonRect_.width * 0.4f;
+            float barX = exportButtonRect_.x + (exportButtonRect_.width - barWidth) * phase;
+            renderer.fillRoundedRect(exportButtonRect_, 4.0f, exportColor.withAlpha(0.15f));
+            renderer.fillRoundedRect(NUIRect(barX, exportButtonRect_.y + 4.0f, barWidth, exportButtonRect_.height - 8.0f), 3.0f, exportColor.withAlpha(0.7f));
+        } else if (exportProgress_ >= 0.0f) {
+            // Determinate progress
+            renderer.fillRoundedRect(exportButtonRect_, 4.0f, exportColor.withAlpha(0.15f));
+            float filledWidth = std::max(2.0f, exportButtonRect_.width * exportProgress_);
+            renderer.fillRoundedRect(NUIRect(exportButtonRect_.x + 2.0f, exportButtonRect_.y + 4.0f,
+                                             filledWidth - 4.0f, exportButtonRect_.height - 8.0f), 3.0f, exportColor.withAlpha(0.7f));
+        }
+        // Show percentage text
+        int pct = static_cast<int>(exportProgress_ * 100.0f);
+        std::string pctText = std::to_string(pct) + "%";
+        auto textSize = renderer.measureText(pctText, 9.0f);
+        float textX = exportButtonRect_.x + (exportButtonRect_.width - textSize.width) * 0.5f;
+        float textY = exportButtonRect_.y + (exportButtonRect_.height - 9.0f) * 0.5f;
+        renderer.drawText(pctText, NUIPoint(textX, textY), 9.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
+    } else {
+        // Export button: download/upload icon
+        if (exportHovered_) {
+            renderer.fillRoundedRect(exportButtonRect_, 4.0f, hoverBgColor);
+        }
+        // Draw a simple "export" icon (arrow pointing up from a line)
+        float cx = exportButtonRect_.x + exportButtonRect_.width * 0.5f;
+        float cy = exportButtonRect_.y + exportButtonRect_.height * 0.5f;
+        float iconSize = 10.0f;
+        // Arrow up
+        renderer.drawLine(NUIPoint(cx, cy - iconSize * 0.5f), NUIPoint(cx, cy + iconSize * 0.3f), 1.5f, NUIColor(1.0f, 1.0f, 1.0f, 0.8f));
+        // Arrow head
+        renderer.drawLine(NUIPoint(cx - 4.0f, cy - iconSize * 0.15f), NUIPoint(cx, cy - iconSize * 0.5f), 1.5f, NUIColor(1.0f, 1.0f, 1.0f, 0.8f));
+        renderer.drawLine(NUIPoint(cx + 4.0f, cy - iconSize * 0.15f), NUIPoint(cx, cy - iconSize * 0.5f), 1.5f, NUIColor(1.0f, 1.0f, 1.0f, 0.8f));
+        // Base line
+        renderer.drawLine(NUIPoint(cx - 5.0f, cy + iconSize * 0.35f), NUIPoint(cx + 5.0f, cy + iconSize * 0.35f), 1.5f, NUIColor(1.0f, 1.0f, 1.0f, 0.8f));
+    }
     
     // Draw minimize button
     if (hoveredButton_ == HoverButton::Minimize) {
@@ -146,7 +216,12 @@ bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
     HoverButton previousHover = hoveredButton_;
     hoveredButton_ = HoverButton::None;
     
-    if (isPointInButton(mousePos, minimizeButtonRect_)) {
+    bool previousExportHover = exportHovered_;
+    exportHovered_ = false;
+    
+    if (isPointInButton(mousePos, exportButtonRect_) && !isExporting_) {
+        exportHovered_ = true;
+    } else if (isPointInButton(mousePos, minimizeButtonRect_)) {
         hoveredButton_ = HoverButton::Minimize;
     } else if (isPointInButton(mousePos, maximizeButtonRect_)) {
         hoveredButton_ = HoverButton::Maximize;
@@ -155,11 +230,16 @@ bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
     }
     
     // Mark dirty if hover state changed
-    if (previousHover != hoveredButton_) {
+    if (previousHover != hoveredButton_ || previousExportHover != exportHovered_) {
         setDirty(true);
     }
     
     if (event.pressed && event.button == NUIMouseButton::Left) {
+        // Check export button first
+        if (isPointInButton(mousePos, exportButtonRect_) && !isExporting_) {
+            if (onExportRequested_) onExportRequested_();
+            return true;
+        }
         // Check if clicking on window controls
         if (isPointInButton(mousePos, minimizeButtonRect_)) {
             handleButtonClick(minimizeButtonRect_);
@@ -197,23 +277,27 @@ void NUICustomTitleBar::onResize(int width, int height) {
 
 void NUICustomTitleBar::updateButtonRects() {
     NUIRect bounds = getBounds();
-    
+
     // Button dimensions - Smaller, more spaced out (Ableton/FL style)
     float buttonWidth = 40.0f;
     float buttonHeight = 28.0f; // Slightly shorter than bar
     float buttonY = bounds.y + (height_ - buttonHeight) * 0.5f; // Vertically centered
     float spacing = 4.0f;
-    
+
     // Position buttons from right edge with padding
     float currentX = bounds.x + bounds.width - buttonWidth - 6.0f;
-    
+
     closeButtonRect_ = NUIRect(currentX, buttonY, buttonWidth, buttonHeight);
     currentX -= (buttonWidth + spacing);
-    
+
     maximizeButtonRect_ = NUIRect(currentX, buttonY, buttonWidth, buttonHeight);
     currentX -= (buttonWidth + spacing);
-    
+
     minimizeButtonRect_ = NUIRect(currentX, buttonY, buttonWidth, buttonHeight);
+    currentX -= (buttonWidth + spacing + 8.0f);
+
+    // Export button (left of minimize)
+    exportButtonRect_ = NUIRect(currentX, buttonY, 28.0f, buttonHeight);
 }
 
 bool NUICustomTitleBar::isPointInButton(const NUIPoint& point, const NUIRect& buttonRect) {

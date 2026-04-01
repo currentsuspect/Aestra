@@ -1,6 +1,6 @@
 # ⚡ Performance Tuning Guide
 
-This guide covers optimization techniques for maximizing Aestra DAW's performance, reducing latency, and improving frame rates.
+This guide covers optimization techniques for maximizing Aestra's performance, reducing latency, and improving frame rates.
 
 ---
 
@@ -656,12 +656,12 @@ std::vector<float> largeBuffer = std::move(createBuffer());  // No copy
 
 ## 📚 Additional Resources
 
-- **[Debugging Guide](developer/debugging.md)** — Profiling and debugging tools
-- **[Architecture Overview](ARCHITECTURE.md)** — System design
-- **[Coding Style Guide](developer/coding-style.md)** — Code conventions
+- **[Debugging Guide](debugging.md)** — Profiling and debugging tools
+- **[Architecture Overview](../architecture/overview.md)** — System design
+- **[Coding Style Guide](coding-style.md)** — Code conventions
 
 ---
 
 **Performance is a feature!** ⚡
 
-*Last updated: January 2025*
+*Last updated: March 2026*

@@ -118,6 +118,7 @@ public:
     void setOnTogglePianoRoll(std::function<void()> cb) { m_onTogglePianoRoll = cb; }
     void setOnToggleSequencer(std::function<void()> cb) { m_onToggleSequencer = cb; }
     void setOnTogglePlaylist(std::function<void()> cb) { m_onTogglePlaylist = cb; }
+    void setOnOpenPatternInPianoRoll(std::function<void(PatternID)> cb) { m_onOpenPatternInPianoRoll = std::move(cb); }
     
     // Loop control callback (preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project)
     void setOnLoopPresetChanged(std::function<void(int preset)> cb) { m_onLoopPresetChanged = cb; }
@@ -133,6 +134,7 @@ public:
     // Audition Mode integration - called when user wants to send track/clip to Audition
     void setOnSendToAudition(std::function<void(uint32_t trackId, const std::string& trackName)> cb) { m_onSendToAudition = cb; }
     void setOnSendSelectionToAudition(std::function<void(double startBeat, double endBeat)> cb) { m_onSendSelectionToAudition = cb; }
+    void setOnClipLibraryChanged(std::function<void()> cb) { m_onClipLibraryChanged = std::move(cb); }
     
     // === MULTI-SELECTION ===
     void selectTrack(TrackUIComponent* track, bool addToSelection = false);
@@ -344,6 +346,7 @@ private:
     float m_clipDragOffsetX = 0.0f;  // Offset from clip start to mouse
     double m_clipOriginalStartTime = 0.0;  // Original position before drag
     int m_clipOriginalTrackIndex = -1;  // Original track before drag
+    PlaylistLaneID m_clipOriginalLaneId;  // Original lane before drag
     
     // Split tool cursor position
     float m_splitCursorX = 0.0f;
@@ -462,11 +465,13 @@ private:
     std::function<void()> m_onTogglePianoRoll;
     std::function<void()> m_onToggleSequencer;
     std::function<void()> m_onTogglePlaylist;
+    std::function<void(PatternID)> m_onOpenPatternInPianoRoll;
     std::function<void(int)> m_onLoopPresetChanged;  // Called when loop preset dropdown changes
     std::function<void(double, double)> m_onSelectionMade;  // Called when ruler selection finalized
     std::function<void(double, double)> m_onLoopRegionUpdate;  // Called when loop region needs update (Project auto-update)
     std::function<void(uint32_t, const std::string&)> m_onSendToAudition;  // Called for "Send to Audition"
     std::function<void(double, double)> m_onSendSelectionToAudition;  // Called for "Send Selection to Audition"
+    std::function<void()> m_onClipLibraryChanged;
     
     void updateBackgroundCache(::AestraUI::NUIRenderer& renderer);
     void updateControlsCache(::AestraUI::NUIRenderer& renderer);

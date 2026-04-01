@@ -21,20 +21,31 @@ namespace Audio {
  * @brief A single lane (row) in the playlist
  */
 struct PlaylistLane {
+    /** @brief Stable lane identifier. */
     PlaylistLaneID id;
+    /** @brief User-facing lane name. */
     std::string name;
+    /** @brief Zero-based lane index. */
     int index = 0;
+    /** @brief Clips currently placed on the lane. */
     std::vector<ClipInstance> clips;
 
-    // Lane properties
+    /** @brief Lane volume multiplier. */
     float volume{1.0f};
+    /** @brief Lane pan value. */
     float pan{0.0f};
+    /** @brief Lane mute state. */
     bool muted{false};
+    /** @brief Lane solo state. */
     bool solo{false};
+    /** @brief Lane color shown in the UI. */
     uint32_t colorRGBA{0xFFFFFFFF};
+    /** @brief Automation curves attached to the lane. */
     std::vector<AutomationCurve> automationCurves;
 
+    /** @brief Construct an empty lane. */
     PlaylistLane() = default;
+    /** @brief Construct a lane with an explicit display index. */
     explicit PlaylistLane(int idx) : index(idx) { id = PlaylistLaneID::generate(); }
 };
 
@@ -46,12 +57,17 @@ struct PlaylistLane {
  */
 class PlaylistModel {
 public:
+    /** @brief Callback type fired whenever a clip changes. */
     using ClipChangedCallback = std::function<void(const ClipInstanceID&)>;
 
+    /** @brief Construct an empty playlist model. */
     PlaylistModel() = default;
 
-    // === Lane Management ===
-
+    /**
+     * @brief Create a new playlist lane.
+     * @param name Optional user-facing lane name.
+     * @return Identifier of the created lane.
+     */
     PlaylistLaneID createLane(const std::string& name = "") {
         std::unique_lock<std::shared_mutex> lock(m_mutex);
 
@@ -65,6 +81,11 @@ public:
         return id;
     }
 
+    /**
+     * @brief Get a mutable lane by identifier.
+     * @param id Lane identifier to look up.
+     * @return Pointer to the lane, or nullptr when missing.
+     */
     PlaylistLane* getLane(const PlaylistLaneID& id) {
         std::unique_lock<std::shared_mutex> lock(m_mutex);
         auto it = m_laneMap.find(id);
@@ -73,6 +94,10 @@ public:
         return &m_lanes[it->second];
     }
 
+    /**
+     * @brief Get the number of playlist lanes.
+     * @return Lane count.
+     */
     size_t getLaneCount() const {
         std::unique_lock<std::shared_mutex> lock(m_mutex);
         return m_lanes.size();
@@ -107,6 +132,7 @@ public:
 
     /**
      * @brief Remove a clip by ID
+     * @param clipId Clip identifier to erase.
      */
     void removeClip(const ClipInstanceID& clipId) {
         std::unique_lock<std::shared_mutex> lock(m_mutex);
@@ -153,6 +179,8 @@ public:
 
     /**
      * @brief Find which lane a clip belongs to
+     * @param clipId Clip identifier to resolve.
+     * @return Owning lane identifier, or an invalid identifier when missing.
      */
     PlaylistLaneID findClipLane(const ClipInstanceID& clipId) const {
         std::unique_lock<std::shared_mutex> lock(m_mutex);
@@ -165,6 +193,8 @@ public:
 
     /**
      * @brief Check if a pattern ID is referenced by any clip in the playlist
+     * @param patternId Pattern identifier to query.
+     * @return True when any clip references the pattern.
      */
     bool isPatternUsed(PatternID patternId) const {
         std::shared_lock<std::shared_mutex> lock(m_mutex);
@@ -179,6 +209,8 @@ public:
 
     /**
      * @brief Set the duration of a clip
+     * @param clipId Clip identifier to update.
+     * @param duration New clip duration in beats.
      */
     void setClipDuration(const ClipInstanceID& clipId, double duration) {
         auto* clip = getClip(clipId);
@@ -190,6 +222,8 @@ public:
 
     /**
      * @brief Set the start beat of a clip
+     * @param clipId Clip identifier to update.
+     * @param startBeat New clip start beat.
      */
     void setClipStartBeat(const ClipInstanceID& clipId, double startBeat) {
         auto* clip = getClip(clipId);
@@ -275,6 +309,9 @@ public:
         // Create new clip for second part
         ClipInstance newClip;
         newClip.id = ClipInstanceID::generate();
+        newClip.name = clip->name;
+        newClip.patternId = clip->patternId;
+        newClip.colorRGBA = clip->colorRGBA;
         newClip.startBeat = splitBeat;
         newClip.durationBeats = clip->endBeat() - splitBeat;
         newClip.sourceId = clip->sourceId;
@@ -336,14 +373,20 @@ public:
                 clipInfo.gainLinear = clip.edits.gain;
                 clipInfo.isAudioClip = true;
 
-                // Try to get audio data from source
-                if (clip.sourceId != 0) {
-                    if (auto* source = sources.getSource(ClipSourceID{clip.sourceId})) {
-                        clipInfo.audioData = const_cast<AudioBufferData*>(source->getRawBuffer());
-                        if (clipInfo.audioData) {
-                            clipInfo.sourceSampleRate = clipInfo.audioData->sampleRate;
-                            clipInfo.sourceChannels = clipInfo.audioData->numChannels;
+                // Resolve audio data through pattern → AudioSlicePayload → source
+                if (clip.patternId.isValid()) {
+                    auto* pattern = patterns.getPattern(clip.patternId);
+                    if (pattern && pattern->isAudio()) {
+                        auto& audioPayload = std::get<AudioSlicePayload>(pattern->payload);
+                        if (auto* source = sources.getSource(audioPayload.audioSourceId)) {
+                            clipInfo.audioData = const_cast<AudioBufferData*>(source->getRawBuffer());
+                            if (clipInfo.audioData) {
+                                clipInfo.sourceSampleRate = clipInfo.audioData->sampleRate;
+                                clipInfo.sourceChannels = clipInfo.audioData->numChannels;
+                            }
                         }
+                    } else if (pattern && pattern->isMidi()) {
+                        clipInfo.isAudioClip = false;
                     }
                 }
 
@@ -426,6 +469,7 @@ public:
         clip.id = ClipInstanceID::generate();
         clip.startBeat = startBeat;
         clip.durationBeats = durationBeats;
+        clip.patternId = patternId;
         clip.sourceId = patternId.value; // Store pattern ID in sourceId for now
 
         m_lanes[it->second].clips.push_back(clip);

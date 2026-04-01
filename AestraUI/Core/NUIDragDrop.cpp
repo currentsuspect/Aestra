@@ -161,6 +161,7 @@ void NUIDragDropManager::unregisterDropTarget(IDropTarget* target) {
                 m_dropTargets.erase(it);
                 break;
             }
+            ++it;
         } else {
             // Clean up expired weak_ptr
             it = m_dropTargets.erase(it);

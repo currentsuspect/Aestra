@@ -124,7 +124,7 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
     // Wire slot clicks
     rack->setOnSlotClicked([this, chain](int slot) {
         auto instance = chain->getPlugin(slot);
-        if (instance && instance->hasEditor()) {
+        if (instance && (instance->hasEditor() || instance->getParameterCount() > 0)) {
             openPluginEditor(instance, nullptr);
         }
     });
@@ -312,33 +312,45 @@ void PluginUIController::openPluginEditor(
     
     if (!instance) return;
     
-    // For now, always use generic editor to avoid threading/freezing issues
-    auto genericEditor = std::make_shared<GenericPluginEditor>(instance);
-    
-    // Position editor in center of popup layer
-    if (m_popupLayer) {
-        auto layerBounds = m_popupLayer->getBounds();
-        float editorWidth = 400.0f;  // Fixed window size
-        float editorHeight = 400.0f;
-        float x = (layerBounds.width - editorWidth) * 0.5f;
-        float y = (layerBounds.height - editorHeight) * 0.5f;
-        
-        genericEditor->setBounds(x, y, editorWidth, editorHeight);
-        
-        // Set close callback to remove from UI
+    std::shared_ptr<NUIComponent> editor;
+    const bool isRumble = instance->getInfo().id == "com.Aestrastudios.rumble";
+    if (isRumble) {
+        auto rumbleEditor = std::make_shared<RumblePluginEditor>(instance);
+        rumbleEditor->setOnClose([this, rumbleEditor]() {
+            if (m_popupLayer) {
+                m_popupLayer->removeChild(rumbleEditor);
+            }
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), rumbleEditor),
+                                  m_activeEditors.end());
+        });
+        editor = rumbleEditor;
+    } else {
+        auto genericEditor = std::make_shared<GenericPluginEditor>(instance);
         genericEditor->setOnClose([this, genericEditor]() {
             if (m_popupLayer) {
                 m_popupLayer->removeChild(genericEditor);
             }
-            // Remove from tracked editors
-            m_activeEditors.erase(
-                std::remove(m_activeEditors.begin(), m_activeEditors.end(), genericEditor),
-                m_activeEditors.end()
-            );
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), genericEditor),
+                                  m_activeEditors.end());
         });
+        editor = genericEditor;
+    }
+    
+    // Position editor in center of popup layer
+    if (m_popupLayer && editor) {
+        auto layerBounds = m_popupLayer->getBounds();
+        auto [preferredWidth, preferredHeight] = instance->getEditorSize();
+        float editorWidth = preferredWidth > 0 ? static_cast<float>(preferredWidth) : 400.0f;
+        float editorHeight = preferredHeight > 0 ? static_cast<float>(preferredHeight) : 400.0f;
+        editorWidth = std::min(editorWidth, layerBounds.width - 40.0f);
+        editorHeight = std::min(editorHeight, layerBounds.height - 40.0f);
+        float x = (layerBounds.width - editorWidth) * 0.5f;
+        float y = (layerBounds.height - editorHeight) * 0.5f;
         
-        m_popupLayer->addChild(genericEditor);
-        m_activeEditors.push_back(genericEditor);
+        editor->setBounds(x, y, editorWidth, editorHeight);
+        
+        m_popupLayer->addChild(editor);
+        m_activeEditors.push_back(editor);
     }
 }
 

@@ -51,7 +51,6 @@
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "OFF"
       }
     }
-    }
   ],
   "buildPresets": [
     {

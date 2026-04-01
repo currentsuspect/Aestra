@@ -1,8 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "AudioDriverTypes.h"
-#include "IAudioDriver.h"
+#include "../Drivers/AudioDriverTypes.h"
+#include "../Drivers/IAudioDriver.h"
 
 #include <chrono>
 #include <functional>
@@ -22,11 +22,14 @@ namespace Audio {
  */
 class AudioDeviceManager {
 public:
+    /** @brief Construct the audio device manager. */
     AudioDeviceManager();
+    /** @brief Shut down drivers and release active stream resources. */
     ~AudioDeviceManager();
 
     /**
      * @brief Initialize audio system
+     * @return True when at least one driver backend was initialized successfully.
      */
     bool initialize();
 
@@ -37,21 +40,28 @@ public:
 
     /**
      * @brief Get available audio devices
+     * @return Enumerated audio devices for the active backend.
      */
     std::vector<AudioDeviceInfo> getDevices() const;
 
     /**
      * @brief Get default output device
+     * @return Default output device descriptor.
      */
     AudioDeviceInfo getDefaultOutputDevice() const;
 
     /**
      * @brief Get default input device
+     * @return Default input device descriptor.
      */
     AudioDeviceInfo getDefaultInputDevice() const;
 
     /**
      * @brief Open audio stream with configuration
+     * @param config Requested stream configuration.
+     * @param callback Audio callback invoked by the backend.
+     * @param userData User data forwarded to the callback.
+     * @return True when the stream opened successfully.
      */
     bool openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData);
 
@@ -62,6 +72,7 @@ public:
 
     /**
      * @brief Start audio processing
+     * @return True when the stream started successfully.
      */
     bool startStream();
 
@@ -72,11 +83,13 @@ public:
 
     /**
      * @brief Check if stream is active
+     * @return True while the backend stream is running.
      */
     bool isStreamRunning() const;
 
     /**
      * @brief Get current stream latency
+     * @return Stream latency in seconds.
      */
     double getStreamLatency() const;
 
@@ -120,6 +133,11 @@ public:
     bool switchDevice(uint32_t deviceId);
 
     /**
+     * @brief Switch to a different input device while preserving the current output device.
+     */
+    bool switchInputDevice(uint32_t deviceId);
+
+    /**
      * @brief Update sample rate
      * @param sampleRate New sample rate in Hz
      * @return true if sample rate was updated successfully
@@ -147,6 +165,7 @@ public:
 
     /**
      * @brief Get active driver type
+     * @return Driver type currently servicing the stream.
      */
     AudioDriverType getActiveDriverType() const;
 
@@ -172,6 +191,7 @@ public:
 
     /**
      * @brief Get list of available driver types
+     * @return Driver types available on the current platform.
      */
     std::vector<AudioDriverType> getAvailableDriverTypes() const;
 
@@ -219,6 +239,7 @@ public:
 
     /**
      * @brief Get active driver statistics
+     * @return Driver telemetry snapshot.
      */
     DriverStatistics getDriverStatistics() const;
 
@@ -251,6 +272,7 @@ public:
 
     /**
      * @brief Enable/Disable dithering for active driver
+     * @param enabled True to enable driver-side dithering.
      */
     void setDitheringEnabled(bool enabled);
 
@@ -287,6 +309,7 @@ private:
 
     // Helper methods
     bool tryDriver(IAudioDriver* driver, const AudioStreamConfig& config, AudioCallback callback, void* userData);
+    bool validateStreamConfig(const AudioStreamConfig& config) const;
 };
 
 // =============================================================================

@@ -1,4 +1,4 @@
-# Aestra DAW — Vision & Roadmap
+# Aestra — Vision & Roadmap
 
 > ⚠️ **This document is deprecated.** See the updated roadmap at:
 > 
