@@ -12,7 +12,7 @@ namespace {
     constexpr float BTN_W = 22.0f;
     constexpr float BTN_H = 18.0f;
     constexpr float BTN_GAP = 4.0f;
-    constexpr float BTN_RADIUS = 4.0f;
+    constexpr float BTN_RADIUS = 7.0f;
 }
 
 UIMixerButtonRow::UIMixerButtonRow()
@@ -24,14 +24,12 @@ UIMixerButtonRow::UIMixerButtonRow()
 void UIMixerButtonRow::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
-    m_bg = theme.getColor("surfaceTertiary");
-    m_border = theme.getColor("borderSubtle").withAlpha(0.55f);
-    m_hoverBorder = theme.getColor("border").withAlpha(0.8f);
-    m_text = theme.getColor("textPrimary");
-
-    // High-contrast text on bright accent fills (mute/solo).
-    m_textOnBright = NUIColor(0.05f, 0.05f, 0.06f, 1.0f);
-    m_textOnRed = NUIColor::white();
+    m_bg = theme.getColor("buttonBgDefault").withAlpha(0.98f);
+    m_border = theme.getColor("border").withAlpha(0.28f);
+    m_hoverBorder = theme.getColor("border").withAlpha(0.38f);
+    m_text = theme.getColor("textSecondary").withAlpha(0.86f);
+    m_textOnBright = theme.getColor("textPrimary");
+    m_textOnRed = theme.getColor("textPrimary");
 
     m_muteOn = theme.getColor("accentAmber");
     m_soloOn = theme.getColor("accentCyan");
@@ -97,6 +95,7 @@ void UIMixerButtonRow::onResize(int width, int height)
 void UIMixerButtonRow::onRender(NUIRenderer& renderer)
 {
     static constexpr const char* labels[kButtonCount] = {"M", "S", "R"};
+    auto& theme = NUIThemeManager::getInstance();
 
     for (int i = 0; i < kButtonCount; ++i) {
         const bool hovered = (i == m_hovered);
@@ -121,52 +120,40 @@ void UIMixerButtonRow::onRender(NUIRenderer& renderer)
         }
 
         NUIRect rect = m_buttonBounds[i];
+        NUIRect visualRect{
+            std::floor(rect.x) + 0.5f,
+            std::floor(rect.y) + 0.5f,
+            std::max(1.0f, std::floor(rect.width) - 1.0f),
+            std::max(1.0f, std::floor(rect.height) - 1.0f)
+        };
         
-        // --- Neon / Glass Rendering ---
-        
-        if (active) {
-            // Active: "Neon Glass"
-            // 1. Bloom/Glow (behind)
-            renderer.fillRoundedRect(
-                NUIRect(rect.x - 2, rect.y - 2, rect.width + 4, rect.height + 4), 
-                BTN_RADIUS + 2.0f, 
-                activeBg.withAlpha(0.25f)
-            );
-            
-            // 2. Glass Body
-            renderer.fillRoundedRect(rect, BTN_RADIUS, activeBg.withAlpha(0.2f));
-            
-            // 3. Neon Border
-            renderer.strokeRoundedRect(rect, BTN_RADIUS, 1.0f, activeBg.withAlpha(0.9f));
-            
-            // 4. Text (Bright/Glow)
-            renderer.drawTextCentered(labels[i], rect, 10.0f, textColor);
-        } 
-        else {
-            // Inactive: "Subtle Glass"
-            NUIColor bg = m_bg.withAlpha(0.05f); // Very faint background
-            NUIColor border = m_border;
-            
-            if (hovered) {
-                bg = m_text.withAlpha(0.1f);
-                border = m_hoverBorder;
-                textColor = m_text; // Brighten text
-            } else {
-                textColor = m_text.withAlpha(0.6f); // Dim text
-            }
-            
-            if (pressed) {
-                 bg = bg.withAlpha(0.2f);
-            }
+        NUIColor bg = m_bg;
+        NUIColor border = m_border;
 
-            renderer.fillRoundedRect(rect, BTN_RADIUS, bg);
-            
-            if (border.a > 0.0f) {
-                renderer.strokeRoundedRect(rect, BTN_RADIUS, 1.0f, border);
-            }
-            
-            renderer.drawTextCentered(labels[i], rect, 10.0f, textColor);
+        if (active) {
+            bg = theme.getColor("buttonBgActive").withAlpha(0.99f);
+            border = activeBg.withAlpha(0.30f);
+            textColor = (i == 2) ? m_textOnRed : m_textOnBright;
+        } else if (hovered) {
+            bg = theme.getColor("buttonBgHover").withAlpha(0.99f);
+            border = m_hoverBorder;
+            textColor = theme.getColor("textPrimary").withAlpha(0.92f);
+        } else {
+            textColor = m_text;
         }
+
+        if (pressed) {
+            bg = theme.getColor("buttonBgActive").withAlpha(0.99f);
+        }
+
+        renderer.drawShadow(visualRect, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.12f));
+        renderer.fillRoundedRect(visualRect, BTN_RADIUS, bg);
+        renderer.strokeRoundedRect(visualRect, BTN_RADIUS, 1.0f, border);
+        renderer.strokeRoundedRect({visualRect.x + 1.0f, visualRect.y + 1.0f, visualRect.width - 2.0f, visualRect.height - 2.0f},
+                                   std::max(0.0f, BTN_RADIUS - 1.0f),
+                                   1.0f,
+                                   NUIColor::white().withAlpha(0.025f));
+        renderer.drawTextCentered(labels[i], visualRect, 10.0f, textColor);
     }
 }
 

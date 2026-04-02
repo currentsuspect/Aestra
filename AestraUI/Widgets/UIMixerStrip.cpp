@@ -256,23 +256,22 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 void UIMixerStrip::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
-    // Selection: Neon Purple (Glassy)
-    m_selectedTint = theme.getColor("accentPrimary").withAlpha(0.08f);
-    m_selectedOutline = theme.getColor("accentPrimary").withAlpha(0.5f);
-    m_selectedGlow = theme.getColor("accentPrimary").withAlpha(0.3f);
-    m_selectedTopHighlight = theme.getColor("accentPrimary").withAlpha(0.8f);
+    m_selectedTint = theme.getColor("primary").withAlpha(0.10f);
+    m_selectedOutline = theme.getColor("borderActive").withAlpha(0.18f);
+    m_selectedGlow = theme.getColor("primary").withAlpha(0.06f);
+    m_selectedTopHighlight = theme.getColor("primary").withAlpha(0.42f);
     
     // Master: Distinct Dark Glass
-    m_masterBackground = AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.3f);
+    m_masterBackground = theme.getColor("surfaceRaised").withAlpha(0.78f);
     m_mutedOverlay = NUIColor(0.0f, 0.0f, 0.0f, 0.4f);
     
     // Standard Strip: Use Theme Glass Border/Hover for consistency
     // m_stripBg = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.02f); 
     // Use theme.glassHover (0.04f) or similar. Let's use a custom weak glass for strips.
-    m_stripBg = theme.getColor("glassBorder").withAlpha(0.04f);
+    m_stripBg = theme.getColor("surfaceTertiary").withAlpha(0.52f);
     
     // Master Border
-    m_masterBorder = theme.getColor("glassBorder");
+    m_masterBorder = theme.getColor("border").withAlpha(0.36f);
 }
 
 void UIMixerStrip::layoutChildren()
@@ -550,17 +549,12 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     if (selected) {
         renderer.fillRoundedRect(bounds, radius, m_selectedTint);
 
-        // Top highlight "edge" (gives instant selection scent without heavy borders).
         renderer.fillRect(NUIRect{bounds.x, bounds.y, bounds.width, SELECT_TOP_H}, m_selectedTopHighlight);
-
-        // Enhanced Glow (Inner + Outer)
-        // Outer glow
-        auto glowColor = m_selectedGlow;
-        glowColor.a = 0.4f; // Brighter glow
-        renderer.strokeRoundedRect(NUIRect{bounds.x - 2.0f, bounds.y - 2.0f, bounds.width + 4.0f, bounds.height + 4.0f}, radius + 2.0f, 2.0f, glowColor);
-        
-        // Sharp Outline
-        renderer.strokeRoundedRect(bounds, radius, 1.5f, m_selectedOutline);
+        renderer.strokeRoundedRect(NUIRect{bounds.x - 1.0f, bounds.y - 1.0f, bounds.width + 2.0f, bounds.height + 2.0f},
+                                   radius + 1.0f,
+                                   1.0f,
+                                   m_selectedGlow);
+        renderer.strokeRoundedRect(bounds, radius, 1.0f, m_selectedOutline);
     }
 
     // While dragging, render live (no caching) so interactive controls update every frame.

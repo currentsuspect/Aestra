@@ -66,25 +66,18 @@ void NUIButton::onRender(NUIRenderer& renderer) {
     
     auto bounds = getBounds();
     float radius = cornerRadius_ >= 0.0f ? cornerRadius_ : (theme ? theme->getBorderRadius() : 4.0f);
+    NUIRect visualRect{
+        std::floor(bounds.x) + 0.5f,
+        std::floor(bounds.y) + 0.5f,
+        std::max(1.0f, std::floor(bounds.width) - 1.0f),
+        std::max(1.0f, std::floor(bounds.height) - 1.0f)
+    };
 
-    // ANIMATION: "Squish" effect on press
-    if (pressed_) {
-        float scale = 0.96f;
-        float cx = bounds.x + bounds.width * 0.5f;
-        float cy = bounds.y + bounds.height * 0.5f;
-        
-        float newW = bounds.width * scale;
-        float newH = bounds.height * scale;
-        
-        bounds.x = cx - newW * 0.5f;
-        bounds.y = cy - newH * 0.5f;
-        bounds.width = newW;
-        bounds.height = newH;
-    }
+    // Keep button geometry stable; visual press is conveyed by fill/border change.
     
     // Create render rect for background
     // If background relies on flat design logic, we should be careful.
-    bool shouldDrawBackground = isHovered() || pressed_ || hasCustomBg_;
+    bool shouldDrawBackground = isHovered() || pressed_ || hasCustomBg_ || style_ == Style::Primary;
     
     if (shouldDrawBackground) {
         NUIColor drawColor = backgroundColor;
@@ -93,10 +86,19 @@ void NUIButton::onRender(NUIRenderer& renderer) {
         // FIX: Only apply the 0.15f alpha reduction if we are using the THEME hover color.
         // If the user set a custom hover color (like in TrackUIComponent or WindowPanel), utilize it as is.
         if (!hasCustomBg_ && isHovered() && !pressed_ && !hasCustomHover_) {
-            drawColor = drawColor.withAlpha(0.15f); 
+            drawColor = drawColor.withAlpha(std::max(0.18f, drawColor.a));
         }
         
-        renderer.fillRoundedRect(bounds, radius, drawColor);
+        const bool raisedButton = style_ != Style::Text && style_ != Style::Icon;
+        if (raisedButton) {
+            renderer.drawShadow(visualRect, 0.0f, 6.0f, 16.0f, NUIColor(0, 0, 0, pressed_ ? 0.12f : 0.20f));
+        }
+        renderer.fillRoundedRect(visualRect, radius, drawColor);
+        if (!hasCustomBg_) {
+            NUIRect sheen = visualRect;
+            sheen.height = std::max(1.0f, visualRect.height * 0.42f);
+            renderer.fillRoundedRect(sheen, radius, NUIColor::white().withAlpha(pressed_ ? 0.03f : 0.05f));
+        }
     }
     
     // Draw border
@@ -108,16 +110,17 @@ void NUIButton::onRender(NUIRenderer& renderer) {
              if (pressed_) borderColor = borderColor.lightened(0.2f);
              else if (isHovered()) borderColor = borderColor.lightened(0.1f);
         } else if (theme) {
-             borderColor = theme->getPrimary();
-             if (pressed_) borderColor = borderColor.withBrightness(1.2f);
-             else if (isHovered()) borderColor = borderColor.withBrightness(1.1f);
+             borderColor = theme->getBorder();
+             if (pressed_) borderColor = theme->getColor("borderActive").withAlpha(0.9f);
+             else if (isHovered()) borderColor = theme->getColor("borderActive").withAlpha(0.55f);
+             else borderColor = borderColor.withAlpha(0.85f);
         } else {
              borderColor = NUIColor::fromHex(0x555555);
         }
         
         float borderWidth = hasCustomBorderWidth_ ? borderWidth_ : (theme ? theme->getBorderWidth() : 1.0f);
         // Inset stroke
-        NUIRect strokeRect = bounds;
+        NUIRect strokeRect = visualRect;
         strokeRect.x += borderWidth * 0.5f;
         strokeRect.y += borderWidth * 0.5f;
         strokeRect.width -= borderWidth;
@@ -125,13 +128,26 @@ void NUIButton::onRender(NUIRenderer& renderer) {
         float strokeRadius = std::max(0.0f, radius - borderWidth * 0.5f);
         
         renderer.strokeRoundedRect(strokeRect, strokeRadius, borderWidth, borderColor);
+        if (style_ != Style::Text && style_ != Style::Icon) {
+            NUIRect innerStroke = strokeRect;
+            innerStroke.x += 1.0f;
+            innerStroke.y += 1.0f;
+            innerStroke.width -= 2.0f;
+            innerStroke.height -= 2.0f;
+            if (innerStroke.width > 0.0f && innerStroke.height > 0.0f) {
+                renderer.strokeRoundedRect(innerStroke,
+                                           std::max(0.0f, strokeRadius - 1.0f),
+                                           1.0f,
+                                           NUIColor::white().withAlpha(pressed_ ? 0.015f : 0.04f));
+            }
+        }
     }
     
     // Draw text
     float fontSize = fontSize_ > 0.0f ? fontSize_ : (theme ? theme->getFontSizeNormal() : 12.0f);
     NUIColor textColor = getCurrentTextColor();
     
-    renderer.drawTextCentered(text_, bounds, fontSize, textColor);
+    renderer.drawTextCentered(text_, visualRect, fontSize, textColor);
     
     // Render children
     renderChildren(renderer); // Using NUIComponent helper
