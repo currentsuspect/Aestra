@@ -2,6 +2,7 @@
 
 #include "ExportDialog.h"
 #include "AudioExporter.h"
+#include "../App/ServiceLocator.h"
 #include "../../AestraPlat/include/AestraPlatform.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
@@ -25,6 +26,7 @@ ExportDialog::~ExportDialog() {
     if (m_exportFuture.valid()) {
         m_exportFuture.wait();
     }
+    restoreAudioStreamIfNeeded();
 }
 
 void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngine& engine, Aestra::Audio::TrackManager& trackManager) {
@@ -64,6 +66,8 @@ void ExportDialog::hide() {
     if (m_exporting.load()) {
         m_cancelRequested.store(true);
         // Non-blocking: destructor will join the future when needed
+    } else {
+        restoreAudioStreamIfNeeded();
     }
 }
 
@@ -149,6 +153,7 @@ void ExportDialog::syncTailInputFromValue() {
 void ExportDialog::applyExportResult(const ExportJobResult& result) {
     m_exporting = false;
     m_panelState = PanelState::Complete;
+    restoreAudioStreamIfNeeded();
 
     if (result.success) {
         m_exportResultPath = result.outputPath;
@@ -164,6 +169,17 @@ void ExportDialog::applyExportResult(const ExportJobResult& result) {
 
     layoutDialog();
     setDirty(true);
+}
+
+void ExportDialog::restoreAudioStreamIfNeeded() {
+    if (!m_resumeAudioStreamAfterExport) {
+        return;
+    }
+
+    if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
+        deviceManager->startStream();
+    }
+    m_resumeAudioStreamAfterExport = false;
 }
 
 bool ExportDialog::parseTailInput(double& outTailSeconds) const {
@@ -644,6 +660,15 @@ void ExportDialog::startExport() {
     m_exportError.clear();
     m_exportElapsed = 0.0f;
     layoutDialog();
+
+    if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
+        m_resumeAudioStreamAfterExport = deviceManager->isStreamRunning();
+        if (m_resumeAudioStreamAfterExport) {
+            deviceManager->stopStream();
+        }
+    } else {
+        m_resumeAudioStreamAfterExport = false;
+    }
 
     m_exportFuture = std::async(std::launch::async,
         &ExportDialog::exportThreadFn, this,
