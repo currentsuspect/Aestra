@@ -15,8 +15,11 @@
 #include "AestraLog.h"
 
 #include <atomic>
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <chrono>
+#include <ctime>
 #include <cstdlib>
 #include <fstream>
 #include <functional>
@@ -313,7 +316,10 @@ public:
             return;
         }
 
-        std::lock_guard<std::mutex> lock(m_recordingMutex);
+        std::unique_lock<std::mutex> lock(m_recordingMutex, std::try_to_lock);
+        if (!lock.owns_lock()) {
+            return;
+        }
         const size_t maxSamplesPerCapture = static_cast<size_t>(std::max(1.0, m_outputSampleRate * 30.0));
         const double captureBeat = getCurrentTransportBeat();
         bool capturedAnyChannel = false;
@@ -328,7 +334,11 @@ public:
                 continue;
             }
 
-            auto& capture = m_recordingCaptures[channel->getChannelId()];
+            auto captureIt = m_recordingCaptures.find(channel->getChannelId());
+            if (captureIt == m_recordingCaptures.end()) {
+                continue;
+            }
+            auto& capture = captureIt->second;
             if (capture.samples.empty()) {
                 capture.startBeat = captureBeat;
                 const std::string inputLabel =
@@ -337,7 +347,6 @@ public:
                           " from " + inputLabel);
             }
 
-            capture.samples.reserve(capture.samples.size() + frames);
             if (requestedInput == -2) {
                 const float channelScale = 1.0f / static_cast<float>(m_inputChannelCount);
                 for (uint32_t frame = 0; frame < frames; ++frame) {
@@ -432,8 +441,7 @@ public:
             return;
         }
 
-        std::vector<const MixerChannel*> monitoredChannels;
-        monitoredChannels.reserve(m_channels.size());
+        size_t monitoredCount = 0;
         for (const auto& channel : m_channels) {
             if (!channel || !channel->isArmed() || !channel->isMonitoringEnabled()) {
                 continue;
@@ -443,23 +451,27 @@ public:
                 continue;
             }
 
-            monitoredChannels.push_back(channel.get());
+            ++monitoredCount;
         }
 
-        if (monitoredChannels.empty()) {
+        if (monitoredCount == 0) {
             return;
         }
 
-        const float monitorMixScale = 0.85f / static_cast<float>(monitoredChannels.size());
+        const float monitorMixScale = 0.85f / static_cast<float>(monitoredCount);
         for (uint32_t frame = 0; frame < frames; ++frame) {
             const size_t inputBaseIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount);
             float monitoredSample = 0.0f;
 
-            for (const MixerChannel* channel : monitoredChannels) {
-                if (!channel) {
+            for (const auto& channelPtr : m_channels) {
+                const MixerChannel* channel = channelPtr.get();
+                if (!channel || !channel->isArmed() || !channel->isMonitoringEnabled()) {
                     continue;
                 }
                 const int requestedInput = channel->getInputChannelIndex();
+                if (requestedInput == -1) {
+                    continue;
+                }
                 float sample = 0.0f;
 
                 if (requestedInput == -2) {
@@ -743,6 +755,21 @@ private:
     void beginCaptureSession() {
         std::lock_guard<std::mutex> lock(m_recordingMutex);
         m_recordingCaptures.clear();
+        const size_t maxSamplesPerCapture = static_cast<size_t>(std::max(1.0, m_outputSampleRate * 30.0));
+        for (const auto& channel : m_channels) {
+            if (!channel || !channel->isArmed()) {
+                continue;
+            }
+            const int requestedInput = channel->getInputChannelIndex();
+            if (requestedInput == -1) {
+                continue;
+            }
+            auto& capture = m_recordingCaptures[channel->getChannelId()];
+            capture.samples.clear();
+            capture.samples.reserve(maxSamplesPerCapture);
+            capture.startBeat = 0.0;
+            capture.totalCapturedFrames = 0;
+        }
         m_recordingSessionStartBeat = getCurrentTransportBeat();
         m_recordingNoArmLogged = false;
         m_isCapturing.store(true, std::memory_order_relaxed);
