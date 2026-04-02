@@ -164,9 +164,9 @@ public:
     void setMonitoringEnabled(bool enabled) { m_monitorInput.store(enabled); }
     /** @brief Check whether input monitoring is enabled. */
     bool isMonitoringEnabled() const { return m_monitorInput.load(); }
-    /** @brief Select the monitored input channel index. */
+    /** @brief Select the monitored input channel index (-2 = Auto, -1 = None, >=0 = explicit input). */
     void setInputChannelIndex(int index) { m_inputChannelIndex.store(index); }
-    /** @brief Get the monitored input channel index. */
+    /** @brief Get the monitored input channel index (-2 = Auto, -1 = None, >=0 = explicit input). */
     int getInputChannelIndex() const { return m_inputChannelIndex.load(); }
 
     /** @brief Process this channel's audio for one callback block. */
@@ -229,8 +229,8 @@ private:
 
     // Recording
     std::atomic<bool> m_isArmed{false};
-    std::atomic<bool> m_monitorInput{true};
-    std::atomic<int> m_inputChannelIndex{0}; // 0 = Input 1, 1 = Input 2, -1 = None
+    std::atomic<bool> m_monitorInput{false};
+    std::atomic<int> m_inputChannelIndex{-2}; // -2 = Auto mono, -1 = None, 0 = Input 1, 1 = Input 2, ...
 
     // Mixer integration
     std::unique_ptr<MixerBus> m_mixerBus;

@@ -39,6 +39,30 @@ public:
     }
 
     /**
+     * @brief Create or replace a source for a recorded take.
+     * @param filePath Stable file path written for the take.
+     * @param displayName User-facing clip name.
+     * @param buffer In-memory audio buffer for immediate playback.
+     * @return Source ID (returns ClipSourceID{0} on failure)
+     */
+    ClipSourceID createRecordedSource(const std::string& filePath, const std::string& displayName,
+                                      std::shared_ptr<AudioBufferData> buffer) {
+        if (!buffer || !buffer->isValid()) {
+            return ClipSourceID{};
+        }
+
+        ClipSourceID id = getOrCreateSource(filePath);
+        auto* source = getSource(id);
+        if (!source) {
+            return ClipSourceID{};
+        }
+
+        source->setFilePath(filePath);
+        source->setBuffer(std::move(buffer));
+        return id;
+    }
+
+    /**
      * @brief Get a source by ID
      * @return Pointer to source, or nullptr if not found
      */

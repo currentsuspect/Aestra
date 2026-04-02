@@ -211,8 +211,8 @@ AestraContent::AestraContent() {
     });
     m_transportBar->setOnRecord([this](bool recording) { 
         if(m_trackManager) {
-            bool isEngineRecording = m_trackManager->isRecording();
-            if (recording != isEngineRecording) {
+            bool isRecordArmed = m_trackManager->isRecordArmed();
+            if (recording != isRecordArmed) {
                 m_trackManager->record();
             }
         }
