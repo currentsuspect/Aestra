@@ -16,7 +16,7 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
 {
     // Create piano roll view
     m_pianoRoll = std::make_shared<AestraUI::PianoRollView>();
-    m_pianoRoll->setLocalMinimapVisible(false);
+    m_pianoRoll->setLocalMinimapVisible(true);
     m_pianoRoll->setBeatsPerBar(4);
     m_pianoRoll->setPixelsPerBeat(50.0f);
     
@@ -26,45 +26,7 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
         savePattern();
     });
     
-    // Set as content of WindowPanel
     setContent(m_pianoRoll);
-
-    m_timelineMinimap = std::make_shared<AestraUI::TimelineMinimapBar>();
-    m_timelineMinimap->setShowModeToggles(false);
-    m_timelineMinimap->setLeadingInset(0.0f);
-    m_timelineMinimap->onRequestCenterView = [this](double centerBeat) {
-        if (!m_pianoRoll) return;
-        const double duration = m_pianoRoll->getViewDurationBeats();
-        m_pianoRoll->setViewWindow(std::max(0.0, centerBeat - duration * 0.5), duration);
-    };
-    m_timelineMinimap->onRequestSetViewStart = [this](double viewStartBeat, bool) {
-        if (!m_pianoRoll) return;
-        m_pianoRoll->setViewWindow(std::max(0.0, viewStartBeat), m_pianoRoll->getViewDurationBeats());
-    };
-    m_timelineMinimap->onRequestResizeViewEdge =
-        [this](AestraUI::TimelineMinimapResizeEdge edge, double anchorBeat, double edgeBeat, bool) {
-            if (!m_pianoRoll) return;
-            const double currentStart = m_pianoRoll->getViewStartBeat();
-            const double currentEnd = currentStart + m_pianoRoll->getViewDurationBeats();
-            double newStart = currentStart;
-            double newEnd = currentEnd;
-            if (edge == AestraUI::TimelineMinimapResizeEdge::Left) {
-                newStart = std::min(edgeBeat, anchorBeat - 0.25);
-                newEnd = std::max(anchorBeat, newStart + 0.25);
-            } else {
-                newStart = std::min(anchorBeat, edgeBeat - 0.25);
-                newEnd = std::max(edgeBeat, newStart + 0.25);
-            }
-            m_pianoRoll->setViewWindow(std::max(0.0, newStart), std::max(0.25, newEnd - newStart));
-        };
-    m_timelineMinimap->onRequestZoomAround = [this](double anchorBeat, float zoomMultiplier) {
-        if (!m_pianoRoll) return;
-        const double currentDuration = m_pianoRoll->getViewDurationBeats();
-        const double newDuration = std::clamp(currentDuration / std::max(0.1f, zoomMultiplier), 0.5, 256.0);
-        m_pianoRoll->setViewWindow(std::max(0.0, anchorBeat - newDuration * 0.5), newDuration);
-    };
-    addChild(m_timelineMinimap);
-    layoutTimelineMinimap();
 }
 
 
@@ -82,7 +44,6 @@ void PianoRollPanel::setBeatsPerBar(int bpb) {
 
 void PianoRollPanel::onResize(int width, int height) {
     WindowPanel::onResize(width, height);
-    layoutTimelineMinimap();
 }
 
 void PianoRollPanel::loadPattern(PatternID patternId) {
@@ -125,12 +86,10 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
         for (const auto& note : midiPayload.notes) {
             longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
         }
-        m_patternDurationBeats = std::max(4.0, longestBeat + 4.0);
+        m_patternDurationBeats = std::max(4.0, longestBeat + 0.5);
         m_pianoRoll->setTotalDurationBeats(m_patternDurationBeats);
         m_pianoRoll->setPatternName(sourceLabel);
         setTitle("PIANO ROLL - " + pattern->name);
-        rebuildTimelineMinimap();
-        
         Log::info("[PianoRollPanel] Loaded pattern " + std::to_string(patternId.value) + 
                   " with " + std::to_string(uiNotes.size()) + " notes");
     }
@@ -169,8 +128,14 @@ void PianoRollPanel::savePattern() {
         m_onPatternEdited(m_currentPatternId);
     }
 
-    rebuildTimelineMinimap();
-    
+    double longestBeat = 0.0;
+    for (const auto& uiNote : uiNotes) {
+        if (uiNote.isDeleted) continue;
+        longestBeat = std::max(longestBeat, uiNote.startBeat + uiNote.durationBeats);
+    }
+    m_patternDurationBeats = std::max(4.0, longestBeat + 0.5);
+    m_pianoRoll->setTotalDurationBeats(m_patternDurationBeats);
+
     Log::info("[PianoRollPanel] Saved pattern " + std::to_string(m_currentPatternId.value) + 
               " with " + std::to_string(uiNotes.size()) + " notes");
 }
@@ -211,75 +176,16 @@ void PianoRollPanel::onUpdate(double deltaTime) {
             m_pianoRoll->setPlayheadBeat(playheadBeat, follow);
             m_pianoRoll->repaint();
 
-            if (m_timelineMinimap) {
-                m_timelineSummarySnapshot = m_timelineSummaryCache.getSnapshot();
-                AestraUI::TimelineMinimapModel model;
-                model.summary = &m_timelineSummarySnapshot;
-                model.view.start = m_pianoRoll->getViewStartBeat();
-                model.view.end = model.view.start + m_pianoRoll->getViewDurationBeats();
-                model.playheadBeat = playheadBeat;
-                model.mode = AestraUI::TimelineMinimapMode::Clips;
-                model.aggregation = AestraUI::TimelineMinimapAggregation::MaxPresence;
-                model.beatsPerBar = 4;
-                model.showSelection = false;
-                model.showLoop = false;
-                model.showMarkers = false;
-                model.showDiagnostics = false;
-                model.showPlayhead = true;
-                m_timelineMinimap->setModel(model);
-                m_timelineMinimap->repaint();
-            }
         }
     }
 }
 
 void PianoRollPanel::layoutTimelineMinimap() {
-    if (!m_timelineMinimap) return;
-    const auto bounds = getBounds();
-    const float titleBarHeight = getTitleBarHeight();
-    const float toolbarH = 40.0f;
-    const float keyW = 60.0f;
-    const float scrollbarW = 14.0f;
-    const float minimapH = 24.0f;
-    const float contentW = std::max(0.0f, bounds.width - keyW - scrollbarW);
-    m_timelineMinimap->setBounds(AestraUI::NUIAbsolute(bounds, keyW, titleBarHeight + toolbarH, contentW, minimapH));
+    // PianoRollView manages its own local minimap layout.
 }
 
 void PianoRollPanel::rebuildTimelineMinimap() {
-    if (!m_trackManager || !m_currentPatternId.isValid()) return;
-
-    auto* pattern = m_trackManager->getPatternManager().getPattern(m_currentPatternId);
-    if (!pattern || !pattern->isMidi()) return;
-
-    std::vector<AestraUI::TimelineMinimapClipSpan> spans;
-    std::unordered_map<uint64_t, uint32_t> laneMap;
-    uint32_t nextLane = 0;
-
-    const auto& midiPayload = std::get<MidiPayload>(pattern->payload);
-    double domainEnd = std::max(4.0, pattern->lengthBeats);
-    for (const auto& note : midiPayload.notes) {
-        const double endBeat = std::max(note.startBeat + 0.25, note.startBeat + note.durationBeats);
-        domainEnd = std::max(domainEnd, endBeat);
-
-        const uint64_t laneKey = note.unitId != 0 ? note.unitId : static_cast<uint64_t>(note.pitch + 1);
-        auto [it, inserted] = laneMap.emplace(laneKey, nextLane);
-        if (inserted) ++nextLane;
-
-        AestraUI::TimelineMinimapClipSpan span;
-        span.id = (static_cast<uint64_t>(note.pitch & 0x7F) << 32) ^ static_cast<uint64_t>(std::llround(note.startBeat * 1000.0)) ^
-                  laneKey;
-        span.type = AestraUI::TimelineMinimapClipType::Midi;
-        span.startBeat = note.startBeat;
-        span.endBeat = endBeat;
-        span.trackIndex = std::min<uint32_t>(63, it->second);
-        const float velocity = std::clamp(note.velocity <= 1.0f ? note.velocity : note.velocity / 127.0f, 0.0f, 1.0f);
-        span.energyApprox = velocity;
-        span.peakApprox = velocity;
-        spans.push_back(span);
-    }
-
-    m_patternDurationBeats = std::max(32.0, domainEnd + 4.0);
-    m_timelineSummaryCache.requestRebuild(std::move(spans), 0.0, m_patternDurationBeats);
+    // Dedicated local piano minimap renders directly from note data.
 }
 
 void PianoRollPanel::updateGhostChannels() {
