@@ -315,7 +315,7 @@ void TimelineSummaryCache::addSpan_(TimelineSummary& s, const TimelineMinimapCli
         }
         
         // Track presence
-        if (span.trackIndex < 64) {
+        if (span.trackIndex < TimelineSummaryBucket::kTrackLaneCount) {
             if (b.trackCounts[span.trackIndex] < 255) {
                 b.trackCounts[span.trackIndex]++;
             }
@@ -350,7 +350,7 @@ void TimelineSummaryCache::removeSpan_(TimelineSummary& s, const ClipIndex& idx)
         }
         
         // Track presence
-        if (idx.trackIndex < 64) {
+        if (idx.trackIndex < TimelineSummaryBucket::kTrackLaneCount) {
              if (b.trackCounts[idx.trackIndex] > 0) {
                  b.trackCounts[idx.trackIndex]--;
              }
@@ -362,4 +362,3 @@ void TimelineSummaryCache::removeSpan_(TimelineSummary& s, const ClipIndex& idx)
 }
 
 } // namespace AestraUI
-

@@ -3,6 +3,7 @@
 #include "../Core/AudioCommandQueue.h"
 #include "../Core/ChannelSlotMap.h"
 #include "../DSP/ContinuousParamBuffer.h"
+#include "../Commands/AddClipCommand.h"
 #include "MeterSnapshot.h"
 #include "../Core/MixerChannel.h"
 #include "PatternManager.h"
@@ -11,10 +12,23 @@
 #include "PlaylistModel.h"
 #include "SourceManager.h"
 #include "UnitManager.h"
+#include "AestraLog.h"
 
 #include <atomic>
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <chrono>
+#include <ctime>
+#include <cstdlib>
+#include <fstream>
 #include <functional>
+#include <filesystem>
+#include <iomanip>
+#include <sstream>
 #include <memory>
+#include <mutex>
+#include <unordered_map>
 #include <vector>
 
 namespace Aestra {
@@ -28,6 +42,12 @@ struct MeterSnapshots;
  */
 class TrackManager {
 public:
+    struct RecordingCapture {
+        std::vector<float> samples;
+        double startBeat{0.0};
+        uint64_t totalCapturedFrames{0};
+    };
+
     /**
      * @brief Construct a track manager and wire its internal playback helpers.
      */
@@ -175,6 +195,7 @@ public:
      * @param count Number of hardware input channels currently available.
      */
     void setInputChannelCount(int count) { m_inputChannelCount = count; }
+    void setRecordingProjectPath(const std::string& projectPath) { m_recordingProjectPath = projectPath; }
 
     /**
      * @brief Get output sample rate
@@ -183,17 +204,22 @@ public:
     double getOutputSampleRate() const { return m_outputSampleRate; }
 
     /**
-     * @brief Get recording data snapshot (stub for Phase 2)
+     * @brief Get a copy of the currently captured waveform for one armed track.
      * @param channelId Target channel identifier.
      * @param recordingData Output buffer for captured samples.
      * @param startBeat Output start beat for the returned capture.
-     * @return Always false in the current stub implementation.
+     * @return True when captured waveform data exists for the target track.
      */
     bool getRecordingDataSnapshot(uint32_t channelId, std::vector<float>& recordingData, double& startBeat) {
-        (void)channelId;
-        (void)recordingData;
-        (void)startBeat;
-        return false;
+        std::lock_guard<std::mutex> lock(m_recordingMutex);
+        auto it = m_recordingCaptures.find(channelId);
+        if (it == m_recordingCaptures.end() || it->second.samples.empty()) {
+            return false;
+        }
+
+        recordingData = it->second.samples;
+        startBeat = it->second.startBeat;
+        return true;
     }
 
     /**
@@ -281,13 +307,196 @@ public:
     bool isUserScrubbing() const { return m_userScrubbing.load(std::memory_order_relaxed); }
 
     /**
-     * @brief Process input audio destined for future recording support.
+     * @brief Process interleaved hardware input for armed tracks.
      * @param input Input channel buffer.
      * @param frames Number of frames available in the input buffer.
      */
     void processInput(const float* input, uint32_t frames) {
-        (void)input;
-        (void)frames;
+        if (!m_isCapturing.load(std::memory_order_relaxed) || !input || frames == 0 || m_inputChannelCount <= 0) {
+            return;
+        }
+
+        std::unique_lock<std::mutex> lock(m_recordingMutex, std::try_to_lock);
+        if (!lock.owns_lock()) {
+            return;
+        }
+        const size_t maxSamplesPerCapture = static_cast<size_t>(std::max(1.0, m_outputSampleRate * 30.0));
+        const double captureBeat = getCurrentTransportBeat();
+        bool capturedAnyChannel = false;
+
+        for (const auto& channel : m_channels) {
+            if (!channel || !channel->isArmed()) {
+                continue;
+            }
+
+            const int requestedInput = channel->getInputChannelIndex();
+            if (requestedInput == -1) {
+                continue;
+            }
+
+            auto captureIt = m_recordingCaptures.find(channel->getChannelId());
+            if (captureIt == m_recordingCaptures.end()) {
+                continue;
+            }
+            auto& capture = captureIt->second;
+            if (capture.samples.empty()) {
+                capture.startBeat = captureBeat;
+                const std::string inputLabel =
+                    (requestedInput == -2) ? "auto-mono" : ("input " + std::to_string(std::max(0, requestedInput) + 1));
+                Log::info("[TrackManager] Recording capture started for track " + std::to_string(channel->getChannelId()) +
+                          " from " + inputLabel);
+            }
+
+            if (requestedInput == -2) {
+                const float channelScale = 1.0f / static_cast<float>(m_inputChannelCount);
+                for (uint32_t frame = 0; frame < frames; ++frame) {
+                    const size_t baseIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount);
+                    float mixedSample = 0.0f;
+                    for (int ch = 0; ch < m_inputChannelCount; ++ch) {
+                        mixedSample += input[baseIndex + static_cast<size_t>(ch)];
+                    }
+                    capture.samples.push_back(mixedSample * channelScale);
+                }
+            } else {
+                const int inputIndex = requestedInput;
+                if (inputIndex < 0 || inputIndex >= m_inputChannelCount) {
+                    continue;
+                }
+
+                for (uint32_t frame = 0; frame < frames; ++frame) {
+                    const size_t sampleIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount) +
+                                               static_cast<size_t>(inputIndex);
+                    capture.samples.push_back(input[sampleIndex]);
+                }
+            }
+            capture.totalCapturedFrames += frames;
+
+            if (capture.samples.size() > maxSamplesPerCapture) {
+                const size_t overflow = capture.samples.size() - maxSamplesPerCapture;
+                capture.samples.erase(capture.samples.begin(), capture.samples.begin() + overflow);
+                capture.startBeat += framesToBeats(static_cast<double>(overflow));
+            }
+            capturedAnyChannel = true;
+        }
+
+        if (!capturedAnyChannel && !m_recordingNoArmLogged) {
+            Log::warning("[TrackManager] Record enabled but no armed tracks had a valid input channel.");
+            m_recordingNoArmLogged = true;
+        }
+    }
+
+    /**
+     * @brief Update live hardware-input peak diagnostics from the audio callback.
+     * @param input Interleaved hardware input buffer.
+     * @param frames Number of frames in the block.
+     */
+    void updateInputDiagnostics(const float* input, uint32_t frames) {
+        if (!input || frames == 0 || m_inputChannelCount <= 0) {
+            return;
+        }
+
+        const int maxTrackedInputs = static_cast<int>(m_inputPeaks.size());
+        const int trackedInputs = std::min(m_inputChannelCount, maxTrackedInputs);
+
+        for (int ch = 0; ch < trackedInputs; ++ch) {
+            float peak = 0.0f;
+            for (uint32_t frame = 0; frame < frames; ++frame) {
+                const size_t sampleIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount) +
+                                           static_cast<size_t>(ch);
+                peak = std::max(peak, std::abs(input[sampleIndex]));
+            }
+            m_inputPeaks[static_cast<size_t>(ch)].store(peak, std::memory_order_relaxed);
+        }
+
+        for (int ch = trackedInputs; ch < maxTrackedInputs; ++ch) {
+            m_inputPeaks[static_cast<size_t>(ch)].store(0.0f, std::memory_order_relaxed);
+        }
+    }
+
+    /**
+     * @brief Get the latest live peak for a hardware input channel.
+     * @param inputIndex Zero-based hardware input channel index.
+     */
+    float getInputPeak(int inputIndex) const {
+        if (inputIndex < 0 || inputIndex >= static_cast<int>(m_inputPeaks.size())) {
+            return 0.0f;
+        }
+        return m_inputPeaks[static_cast<size_t>(inputIndex)].load(std::memory_order_relaxed);
+    }
+
+    /**
+     * @brief Get the number of currently configured hardware input channels.
+     */
+    int getInputChannelCount() const { return m_inputChannelCount; }
+
+    /**
+     * @brief Mix live monitored input into the realtime output buffer.
+     * @param input Interleaved hardware input buffer.
+     * @param output Interleaved hardware output buffer.
+     * @param frames Number of frames in the block.
+     * @param outputChannels Number of output channels in the destination buffer.
+     */
+    void mixInputMonitoring(const float* input, float* output, uint32_t frames, uint32_t outputChannels) const {
+        if (!input || !output || frames == 0 || outputChannels == 0 || m_inputChannelCount <= 0) {
+            return;
+        }
+
+        size_t monitoredCount = 0;
+        for (const auto& channel : m_channels) {
+            if (!channel || !channel->isArmed() || !channel->isMonitoringEnabled()) {
+                continue;
+            }
+
+            if (channel->getInputChannelIndex() == -1) {
+                continue;
+            }
+
+            ++monitoredCount;
+        }
+
+        if (monitoredCount == 0) {
+            return;
+        }
+
+        const float monitorMixScale = 0.85f / static_cast<float>(monitoredCount);
+        for (uint32_t frame = 0; frame < frames; ++frame) {
+            const size_t inputBaseIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount);
+            float monitoredSample = 0.0f;
+
+            for (const auto& channelPtr : m_channels) {
+                const MixerChannel* channel = channelPtr.get();
+                if (!channel || !channel->isArmed() || !channel->isMonitoringEnabled()) {
+                    continue;
+                }
+                const int requestedInput = channel->getInputChannelIndex();
+                if (requestedInput == -1) {
+                    continue;
+                }
+                float sample = 0.0f;
+
+                if (requestedInput == -2) {
+                    const float channelScale = 1.0f / static_cast<float>(m_inputChannelCount);
+                    for (int ch = 0; ch < m_inputChannelCount; ++ch) {
+                        sample += input[inputBaseIndex + static_cast<size_t>(ch)];
+                    }
+                    sample *= channelScale;
+                } else if (requestedInput >= 0 && requestedInput < m_inputChannelCount) {
+                    sample = input[inputBaseIndex + static_cast<size_t>(requestedInput)];
+                }
+
+                monitoredSample += sample * channel->getVolume();
+            }
+
+            monitoredSample *= monitorMixScale;
+            const size_t outputBaseIndex = static_cast<size_t>(frame) * static_cast<size_t>(outputChannels);
+            output[outputBaseIndex] += monitoredSample;
+            if (outputChannels > 1) {
+                output[outputBaseIndex + 1] += monitoredSample;
+            }
+            for (uint32_t ch = 2; ch < outputChannels; ++ch) {
+                output[outputBaseIndex + static_cast<size_t>(ch)] += monitoredSample;
+            }
+        }
     }
 
     /**
@@ -296,6 +505,9 @@ public:
     void play() {
         m_isPlaying.store(true, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
+        if (m_recordArmed.load(std::memory_order_relaxed) && !m_isCapturing.load(std::memory_order_relaxed)) {
+            beginCaptureSession();
+        }
         pushTransportCommand(1.0f, m_position);
         if (m_stopPreviewCallback) {
             m_stopPreviewCallback();
@@ -308,6 +520,9 @@ public:
     void pause() {
         m_isPlaying.store(false, std::memory_order_relaxed);
         m_isPaused.store(true, std::memory_order_relaxed);
+        if (m_isCapturing.load(std::memory_order_relaxed)) {
+            finalizeCaptureSession();
+        }
         pushTransportCommand(0.0f, m_position);
     }
 
@@ -315,6 +530,9 @@ public:
      * @brief Stop transport playback and return to the stored start position.
      */
     void stop() {
+        if (m_isCapturing.load(std::memory_order_relaxed)) {
+            finalizeCaptureSession();
+        }
         m_isPlaying.store(false, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
         m_position = m_playStartPosition;
@@ -328,14 +546,27 @@ public:
     bool isPlaying() const { return m_isPlaying.load(std::memory_order_relaxed); }
 
     /**
-     * @brief Toggle the recording state flag.
+     * @brief Toggle record-arm state and manage capture session lifetime.
      */
-    void record() { m_isRecording.store(!m_isRecording.load(std::memory_order_relaxed), std::memory_order_relaxed); }
+    void record() {
+        const bool newArmedState = !m_recordArmed.load(std::memory_order_relaxed);
+        m_recordArmed.store(newArmedState, std::memory_order_relaxed);
+        Log::info(std::string("[TrackManager] Record arm ") + (newArmedState ? "enabled" : "disabled"));
+
+        if (newArmedState) {
+            if (m_isPlaying.load(std::memory_order_relaxed) && !m_isCapturing.load(std::memory_order_relaxed)) {
+                beginCaptureSession();
+            }
+        } else if (m_isCapturing.load(std::memory_order_relaxed)) {
+            finalizeCaptureSession();
+        }
+    }
     /**
      * @brief Check whether recording is armed.
      * @return True while recording is active.
      */
-    bool isRecording() const { return m_isRecording.load(std::memory_order_relaxed); }
+    bool isRecording() const { return m_isCapturing.load(std::memory_order_relaxed); }
+    bool isRecordArmed() const { return m_recordArmed.load(std::memory_order_relaxed); }
 
     void enableMetronome(bool enabled) {
         m_metronomeEnabled.store(enabled, std::memory_order_relaxed);
@@ -510,6 +741,286 @@ public:
     }
 
 private:
+    double getCurrentTransportBeat() const {
+        const double bpm = std::max(1.0, m_playlistModel.getBPM());
+        return m_position * bpm / 60.0;
+    }
+
+    double framesToBeats(double frames) const {
+        const double sampleRate = std::max(1.0, m_inputSampleRate > 0.0 ? m_inputSampleRate : m_outputSampleRate);
+        const double bpm = std::max(1.0, m_playlistModel.getBPM());
+        return (frames / sampleRate) * (bpm / 60.0);
+    }
+
+    void beginCaptureSession() {
+        std::lock_guard<std::mutex> lock(m_recordingMutex);
+        m_recordingCaptures.clear();
+        const size_t maxSamplesPerCapture = static_cast<size_t>(std::max(1.0, m_outputSampleRate * 30.0));
+        for (const auto& channel : m_channels) {
+            if (!channel || !channel->isArmed()) {
+                continue;
+            }
+            const int requestedInput = channel->getInputChannelIndex();
+            if (requestedInput == -1) {
+                continue;
+            }
+            auto& capture = m_recordingCaptures[channel->getChannelId()];
+            capture.samples.clear();
+            capture.samples.reserve(maxSamplesPerCapture);
+            capture.startBeat = 0.0;
+            capture.totalCapturedFrames = 0;
+        }
+        m_recordingSessionStartBeat = getCurrentTransportBeat();
+        m_recordingNoArmLogged = false;
+        m_isCapturing.store(true, std::memory_order_relaxed);
+        Log::info("[TrackManager] Recording session started. Armed tracks: " + std::to_string(getArmedTrackCount()) +
+                  ", input channels: " + std::to_string(m_inputChannelCount));
+    }
+
+    void finalizeCaptureSession() {
+        std::unordered_map<uint32_t, RecordingCapture> captures;
+        double sessionStartBeat = 0.0;
+        {
+            std::lock_guard<std::mutex> lock(m_recordingMutex);
+            captures = m_recordingCaptures;
+            sessionStartBeat = m_recordingSessionStartBeat;
+            m_recordingCaptures.clear();
+            m_recordingSessionStartBeat = 0.0;
+            m_recordingNoArmLogged = false;
+        }
+
+        m_isCapturing.store(false, std::memory_order_relaxed);
+        Log::info("[TrackManager] Recording session stopped. Captured tracks: " + std::to_string(captures.size()));
+
+        for (const auto& [channelId, capture] : captures) {
+            commitRecordingTake(channelId, capture, sessionStartBeat);
+        }
+    }
+
+    void commitRecordingTake(uint32_t channelId, const RecordingCapture& capture, double fallbackStartBeat) {
+        if (capture.samples.empty()) {
+            return;
+        }
+
+        const size_t channelIndex = findChannelIndexById(channelId);
+        if (channelIndex == static_cast<size_t>(-1)) {
+            Log::warning("[TrackManager] Could not resolve lane for recorded track " + std::to_string(channelId));
+            return;
+        }
+
+        PlaylistLaneID laneId = m_playlistModel.getLaneId(channelIndex);
+        if (!laneId.isValid()) {
+            Log::warning("[TrackManager] Invalid lane target for recorded track " + std::to_string(channelId));
+            return;
+        }
+
+        std::vector<float> conditionedSamples = capture.samples;
+        const float rawPeak = analyzePeak(conditionedSamples);
+        conditionRecordedTakeSamples(conditionedSamples);
+        const float conditionedPeak = analyzePeak(conditionedSamples);
+
+        const double startBeat = capture.startBeat > 0.0 ? capture.startBeat : fallbackStartBeat;
+        const double durationBeats = framesToBeats(static_cast<double>(conditionedSamples.size()));
+        if (durationBeats <= 0.0) {
+            return;
+        }
+        const float playbackGain = computeRecordedTakeGain(conditionedSamples);
+
+        auto buffer = std::make_shared<AudioBufferData>();
+        buffer->sampleRate = static_cast<uint32_t>(std::max(1.0, m_inputSampleRate));
+        buffer->numChannels = 2;
+        buffer->numFrames = conditionedSamples.size();
+        buffer->interleavedData.resize(conditionedSamples.size() * 2);
+        for (size_t i = 0; i < conditionedSamples.size(); ++i) {
+            const float sample = conditionedSamples[i];
+            buffer->interleavedData[i * 2] = sample;
+            buffer->interleavedData[i * 2 + 1] = sample;
+        }
+
+        const std::string takePath = buildRecordingTakePath(channelId);
+        if (!writeRecordedTakeWav(takePath, *buffer)) {
+            Log::error("[TrackManager] Failed to write recorded take: " + takePath);
+            return;
+        }
+
+        const std::string takeName = std::filesystem::path(takePath).stem().string();
+        ClipSourceID sourceId = m_sourceManager.createRecordedSource(takePath, takeName, buffer);
+        if (!sourceId.isValid()) {
+            Log::error("[TrackManager] Failed to register recorded source for: " + takePath);
+            return;
+        }
+
+        AudioSlicePayload payload;
+        payload.audioSourceId = sourceId;
+        payload.slices.push_back({0.0, static_cast<double>(buffer->numFrames)});
+
+        PatternID patternId = m_patternManager.createAudioPattern(takeName, durationBeats, payload);
+        if (!patternId.isValid()) {
+            Log::error("[TrackManager] Failed to create audio pattern for recorded take.");
+            return;
+        }
+
+        ClipInstance clip;
+        clip.id = ClipInstanceID::generate();
+        clip.name = takeName;
+        clip.startBeat = startBeat;
+        clip.durationBeats = durationBeats;
+        clip.patternId = patternId;
+        clip.sourceId = patternId.value;
+        clip.edits.gain = playbackGain;
+        clip.edits.gainLinear = playbackGain;
+
+        auto cmd = std::make_shared<AddClipCommand>(m_playlistModel, laneId, clip);
+        m_commandHistory.pushAndExecute(cmd);
+        m_graphDirty.store(true, std::memory_order_relaxed);
+        m_modified.store(true, std::memory_order_relaxed);
+
+        Log::info("[TrackManager] Recorded take committed: " + takePath +
+                  " on track " + std::to_string(channelId) +
+                  " at beat " + std::to_string(startBeat) +
+                  " with raw peak " + std::to_string(rawPeak) +
+                  ", conditioned peak " + std::to_string(conditionedPeak) +
+                  ", clip gain " + std::to_string(playbackGain));
+    }
+
+    std::string buildRecordingTakePath(uint32_t channelId) const {
+        namespace fs = std::filesystem;
+        fs::path root = recordingRootDirectory();
+        std::error_code ec;
+        fs::create_directories(root, ec);
+
+        const auto now = std::chrono::system_clock::now();
+        const auto time = std::chrono::system_clock::to_time_t(now);
+        std::tm tm{};
+#if defined(_WIN32)
+        localtime_s(&tm, &time);
+#else
+        localtime_r(&time, &tm);
+#endif
+        std::ostringstream oss;
+        oss << "track_" << channelId << "_take_" << std::put_time(&tm, "%Y%m%d_%H%M%S") << ".wav";
+        return (root / oss.str()).string();
+    }
+
+    std::filesystem::path recordingRootDirectory() const {
+        namespace fs = std::filesystem;
+        if (!m_recordingProjectPath.empty()) {
+            fs::path projectPath(m_recordingProjectPath);
+            if (projectPath.has_extension()) {
+                return projectPath.parent_path() / "Recordings";
+            }
+            return projectPath / "Recordings";
+        }
+        if (const char* home = std::getenv("HOME")) {
+            return fs::path(home) / "Documents" / "Aestra" / "Recordings";
+        }
+        return fs::current_path() / "Recordings";
+    }
+
+    bool writeRecordedTakeWav(const std::string& path, const AudioBufferData& buffer) const {
+        std::ofstream file(path, std::ios::binary | std::ios::trunc);
+        if (!file.is_open()) {
+            return false;
+        }
+
+        const uint16_t audioFormat = 3; // IEEE float
+        const uint16_t numChannels = static_cast<uint16_t>(buffer.numChannels);
+        const uint32_t sampleRate = buffer.sampleRate;
+        const uint16_t bitsPerSample = 32;
+        const uint16_t blockAlign = static_cast<uint16_t>(numChannels * (bitsPerSample / 8));
+        const uint32_t byteRate = sampleRate * blockAlign;
+        const uint32_t dataSize = static_cast<uint32_t>(buffer.interleavedData.size() * sizeof(float));
+        const uint32_t sampleCount = static_cast<uint32_t>(buffer.numFrames);
+        const uint32_t factChunkSize = 4;
+        const uint32_t riffChunkSize = 48u + dataSize;
+
+        file.write("RIFF", 4);
+        file.write(reinterpret_cast<const char*>(&riffChunkSize), sizeof(riffChunkSize));
+        file.write("WAVE", 4);
+        file.write("fmt ", 4);
+
+        const uint32_t fmtChunkSize = 16;
+        file.write(reinterpret_cast<const char*>(&fmtChunkSize), sizeof(fmtChunkSize));
+        file.write(reinterpret_cast<const char*>(&audioFormat), sizeof(audioFormat));
+        file.write(reinterpret_cast<const char*>(&numChannels), sizeof(numChannels));
+        file.write(reinterpret_cast<const char*>(&sampleRate), sizeof(sampleRate));
+        file.write(reinterpret_cast<const char*>(&byteRate), sizeof(byteRate));
+        file.write(reinterpret_cast<const char*>(&blockAlign), sizeof(blockAlign));
+        file.write(reinterpret_cast<const char*>(&bitsPerSample), sizeof(bitsPerSample));
+
+        file.write("fact", 4);
+        file.write(reinterpret_cast<const char*>(&factChunkSize), sizeof(factChunkSize));
+        file.write(reinterpret_cast<const char*>(&sampleCount), sizeof(sampleCount));
+
+        file.write("data", 4);
+        file.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize));
+        file.write(reinterpret_cast<const char*>(buffer.interleavedData.data()), dataSize);
+        return file.good();
+    }
+
+    float computeRecordedTakeGain(const std::vector<float>& samples) const {
+        float peak = analyzePeak(samples);
+        if (peak <= 0.0f) {
+            return 1.0f;
+        }
+
+        constexpr float targetPeak = 0.35f;
+        return std::clamp(targetPeak / peak, 0.18f, 1.0f);
+    }
+
+    float analyzePeak(const std::vector<float>& samples) const {
+        float peak = 0.0f;
+        for (float sample : samples) {
+            peak = std::max(peak, std::abs(sample));
+        }
+        return peak;
+    }
+
+    void conditionRecordedTakeSamples(std::vector<float>& samples) const {
+        if (samples.empty()) {
+            return;
+        }
+
+        // Remove DC bias first so the recorded waveform sits more naturally around zero.
+        double mean = 0.0;
+        for (float sample : samples) {
+            mean += sample;
+        }
+        mean /= static_cast<double>(samples.size());
+        for (float& sample : samples) {
+            sample = static_cast<float>(sample - mean);
+        }
+
+        // If the capture came in too hot, scale it before it ever hits clip playback.
+        float peak = analyzePeak(samples);
+        constexpr float targetPeak = 0.85f;
+        if (peak > targetPeak && peak > 0.0f) {
+            const float scale = targetPeak / peak;
+            for (float& sample : samples) {
+                sample *= scale;
+            }
+        }
+    }
+
+    size_t getArmedTrackCount() const {
+        size_t count = 0;
+        for (const auto& channel : m_channels) {
+            if (channel && channel->isArmed()) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    size_t findChannelIndexById(uint32_t channelId) const {
+        for (size_t i = 0; i < m_channels.size(); ++i) {
+            if (m_channels[i] && m_channels[i]->getChannelId() == channelId) {
+                return i;
+            }
+        }
+        return static_cast<size_t>(-1);
+    }
+
     void pushTransportCommand(float playing, double positionSeconds) {
         if (!m_commandSink) {
             return;
@@ -543,12 +1054,19 @@ private:
     std::function<void()> m_stopPreviewCallback;
     std::atomic<bool> m_isPlaying{false};
     std::atomic<bool> m_isPaused{false};
-    std::atomic<bool> m_isRecording{false};
+    std::atomic<bool> m_recordArmed{false};
+    std::atomic<bool> m_isCapturing{false};
     std::atomic<bool> m_metronomeEnabled{false};
     std::atomic<bool> m_patternMode{false};
     std::atomic<bool> m_userScrubbing{false};
     std::atomic<bool> m_modified{false};
     std::atomic<bool> m_graphDirty{true};
+    mutable std::mutex m_recordingMutex;
+    std::unordered_map<uint32_t, RecordingCapture> m_recordingCaptures;
+    std::array<std::atomic<float>, 8> m_inputPeaks{};
+    double m_recordingSessionStartBeat{0.0};
+    bool m_recordingNoArmLogged{false};
+    std::string m_recordingProjectPath;
 };
 
 } // namespace Audio

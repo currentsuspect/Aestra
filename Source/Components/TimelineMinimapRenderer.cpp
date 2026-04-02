@@ -108,6 +108,18 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
     renderer.drawLine(NUIPoint(map.x, map.bottom() - 1.0f), NUIPoint(map.right(), map.bottom() - 1.0f), 1.0f,
                       colors.baseline);
 
+    NUIRect viewportRect;
+    bool hasViewportRect = false;
+    if (model.view.isValid()) {
+        const float x0 = timeToX(model.view.start, map, domainStart, domainEnd);
+        const float x1 = timeToX(model.view.end, map, domainStart, domainEnd);
+        const float vx = std::min(x0, x1);
+        const float vw = std::max(1.0f, std::abs(x1 - x0));
+        viewportRect = NUIRect(vx, map.y, vw, map.height);
+        hasViewportRect = true;
+        renderer.fillRect(viewportRect, colors.viewFill);
+    }
+
     const int N = static_cast<int>(s->bucketCount);
     if (N <= 0) return; // No data to render
     const int W = std::max(1, static_cast<int>(std::round(map.width)));
@@ -119,6 +131,34 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
     const float barHeight = std::max(0.0f, barBottom - barTop);
     const float minH = 1.0f;
     const float maxH = std::max(minH, barHeight);
+
+    int globalMaxLaneWithContent = -1;
+    for (int i = static_cast<int>(TimelineSummaryBucket::kTrackLaneCount) - 1; i >= 0; --i) {
+        bool lanePresent = false;
+        for (int k = 0; k < N; ++k) {
+            if (buckets[k].trackCounts[i] > 0) {
+                lanePresent = true;
+                break;
+            }
+        }
+        if (lanePresent) {
+            globalMaxLaneWithContent = i;
+            break;
+        }
+    }
+
+    const int numTracksToShow = globalMaxLaneWithContent + 1;
+    const float availableHeight = barBottom - barTop;
+    const float minTrackH = 1.0f;
+    const float maxTrackH = 3.0f;
+    const float gap = 0.0f;
+
+    float trackH = maxTrackH;
+    float rowH = maxTrackH;
+    if (numTracksToShow > 0) {
+        rowH = availableHeight / static_cast<float>(numTracksToShow);
+        trackH = std::max(minTrackH, std::min(maxTrackH, rowH - gap));
+    }
 
     for (int px = 0; px < W; ++px) {
         const int a = std::clamp(static_cast<int>((static_cast<int64_t>(px) * N) / W), 0, N - 1);
@@ -167,38 +207,6 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
             }
         }
 
-        // Render as stacked "Track Lines" (Discrete size) to match user request
-        // Render as True Track Map (Position = Track Index)
-        // Dynamically scale track rows to fit available height
-        
-        // Count how many tracks have content
-        int maxTrackWithContent = -1;
-        for (int i = 63; i >= 0; --i) {
-            for (int k = a; k <= b; ++k) {
-                if (buckets[k].trackCounts[i] > 0) {
-                    maxTrackWithContent = i;
-                    break;
-                }
-            }
-            if (maxTrackWithContent >= 0) break;
-        }
-        
-        // Calculate row height to fit all tracks with content
-        const int numTracksToShow = maxTrackWithContent + 1;
-        const float availableHeight = barBottom - barTop;
-        const float minTrackH = 2.0f;
-        const float maxTrackH = 4.0f;
-        const float gap = 1.0f;
-        
-        float trackH, rowH;
-        if (numTracksToShow > 0) {
-            rowH = availableHeight / static_cast<float>(numTracksToShow);
-            trackH = std::max(minTrackH, std::min(maxTrackH, rowH - gap));
-        } else {
-            trackH = maxTrackH;
-            rowH = trackH + gap;
-        }
-        
         static const std::vector<NUIColor> brightColors = {
             NUIColor(1.0f, 0.8f, 0.2f, 1.0f),   // Yellow
             NUIColor(0.2f, 1.0f, 0.8f, 1.0f),   // Cyan
@@ -213,9 +221,15 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
         };
 
         const float x = map.x + static_cast<float>(px);
+        const float normValue = (maxValue > 0.0f) ? std::clamp(value / maxValue, 0.0f, 1.0f) : 0.0f;
+        if (normValue > 0.0f) {
+            const float barHeight = std::max(1.0f, normValue * (barBottom - barTop));
+            const float barY = barBottom - barHeight;
+            renderer.fillRect(NUIRect(x, barY, 1.0f, barHeight), tint.withAlpha(0.18f));
+        }
         
-        // Loop through supported track slots (up to 64)
-        for (int i = 0; i < 64; ++i) {
+        // Loop through supported lanes.
+        for (uint32_t i = 0; i < TimelineSummaryBucket::kTrackLaneCount; ++i) {
              bool isPresent = false;
              // Check presence in any bucket covering this pixel
              for (int k = a; k <= b; ++k) {
@@ -261,15 +275,9 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
         }
     }
 
-    // Viewport rectangle.
-    if (model.view.isValid()) {
-        const float x0 = timeToX(model.view.start, map, domainStart, domainEnd);
-        const float x1 = timeToX(model.view.end, map, domainStart, domainEnd);
-        const float vx = std::min(x0, x1);
-        const float vw = std::max(1.0f, std::abs(x1 - x0));
-        const NUIRect vr(vx, map.y, vw, map.height);
-        renderer.fillRect(vr, colors.viewFill);
-        renderer.strokeRect(vr, 1.0f, colors.viewOutline);
+    // Viewport outline stays above the content; fill was rendered beneath it.
+    if (hasViewportRect) {
+        renderer.strokeRect(viewportRect, 1.0f, colors.viewOutline);
     }
 
     // Playhead: collision-free outline (dark underlay + bright center).
@@ -299,4 +307,3 @@ double TimelineMinimapRenderer::xToTime(float x, const NUIRect& mapRect, double 
 }
 
 } // namespace AestraUI
-

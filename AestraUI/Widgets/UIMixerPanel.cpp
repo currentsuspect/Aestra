@@ -148,6 +148,7 @@ void UIMixerPanel::onUpdate(double deltaTime)
         if (snapshots) {
             m_viewModel->updateMeters(*snapshots, deltaTime);
         }
+        m_viewModel->updateInputDiagnostics(*m_trackManager, deltaTime);
     }
 
     // Update children

@@ -11,7 +11,7 @@
 namespace AestraUI {
 
 namespace {
-    constexpr float RADIUS = 5.0f;
+    constexpr float RADIUS = 7.0f;
 }
 
 UIMixerFXSummary::UIMixerFXSummary()
@@ -25,11 +25,11 @@ UIMixerFXSummary::UIMixerFXSummary()
 void UIMixerFXSummary::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
-    m_bg = theme.getColor("surfaceTertiary");
-    m_border = theme.getColor("borderSubtle").withAlpha(0.55f);
-    m_borderHover = theme.getColor("border").withAlpha(0.85f);
+    m_bg = theme.getColor("buttonBgDefault").withAlpha(0.98f);
+    m_border = theme.getColor("border").withAlpha(0.28f);
+    m_borderHover = theme.getColor("border").withAlpha(0.38f);
     m_textPrimary = theme.getColor("textPrimary");
-    m_textSecondary = theme.getColor("textSecondary");
+    m_textSecondary = theme.getColor("textSecondary").withAlpha(0.86f);
     m_accent = theme.getColor("accentPrimary");
 }
 
@@ -56,18 +56,31 @@ void UIMixerFXSummary::onRender(NUIRenderer& renderer)
 {
     const auto b = getBounds();
     if (b.isEmpty()) return;
+    const NUIRect visualRect{
+        std::floor(b.x) + 0.5f,
+        std::floor(b.y) + 0.5f,
+        std::max(1.0f, std::floor(b.width) - 1.0f),
+        std::max(1.0f, std::floor(b.height) - 1.0f)
+    };
 
     NUIColor bg = m_bg;
     if (m_pressed) {
-        bg = bg.withAlpha(std::min(1.0f, bg.a + 0.12f));
+        bg = NUIThemeManager::getInstance().getColor("buttonBgActive").withAlpha(0.99f);
     }
-    renderer.fillRoundedRect(b, RADIUS, bg);
+    renderer.drawShadow(visualRect, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.12f));
+    renderer.fillRoundedRect(visualRect, RADIUS, bg);
     const bool hasFx = (m_fxCount > 0);
-    const NUIColor border = hasFx ? m_accent.withAlpha(m_hovered ? 0.85f : 0.55f) : (m_hovered ? m_borderHover : m_border);
-    renderer.strokeRoundedRect(b, RADIUS, 1.0f, border);
+    const NUIColor border = hasFx
+        ? m_accent.withAlpha(m_hovered ? 0.28f : 0.20f)
+        : (m_hovered ? m_borderHover : m_border);
+    renderer.strokeRoundedRect(visualRect, RADIUS, 1.0f, border);
+    renderer.strokeRoundedRect({visualRect.x + 1.0f, visualRect.y + 1.0f, visualRect.width - 2.0f, visualRect.height - 2.0f},
+                               std::max(0.0f, RADIUS - 1.0f),
+                               1.0f,
+                               NUIColor::white().withAlpha(0.025f));
 
-    const NUIColor text = hasFx ? m_textPrimary : m_textSecondary;
-    renderer.drawTextCentered(m_labelText.empty() ? std::string("FX") : m_labelText, b, 10.0f, text);
+    const NUIColor text = hasFx ? m_textPrimary : (m_hovered ? m_textPrimary.withAlpha(0.92f) : m_textSecondary);
+    renderer.drawTextCentered(m_labelText.empty() ? std::string("FX") : m_labelText, visualRect, 10.0f, text);
 }
 
 bool UIMixerFXSummary::onMouseEvent(const NUIMouseEvent& event)
