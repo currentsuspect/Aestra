@@ -9,6 +9,7 @@
 #include "../AestraCore/include/AestraLog.h"
 
 #include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <filesystem>
 #include <thread>
@@ -355,7 +356,8 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
         controller->m_audioEngine->setSampleRate(static_cast<uint32_t>(actualRate));
         controller->m_audioEngine->processBlock(outputBuffer, inputBuffer, nFrames, streamTime);
     } else {
-        std::fill(outputBuffer, outputBuffer + nFrames * 2, 0.0f);
+        const uint32_t outCh = std::max<uint32_t>(1, controller->m_streamConfig.numOutputChannels);
+        std::fill(outputBuffer, outputBuffer + static_cast<size_t>(nFrames) * outCh, 0.0f);
     }
 
     if (inputBuffer) {

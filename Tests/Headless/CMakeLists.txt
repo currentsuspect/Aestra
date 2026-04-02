@@ -36,17 +36,34 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/OfflineRenderRegressionTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/dummy.aes" AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/dummy_ref.wav")
-        add_test(NAME OfflineRenderRegressionTest
-            COMMAND OfflineRenderRegressionTest
-                    "${CMAKE_CURRENT_SOURCE_DIR}/dummy.aes"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/dummy_ref.wav"
-        )
-        set_tests_properties(OfflineRenderRegressionTest PROPERTIES
-            LABELS "headless;regression;offline"
-            ENVIRONMENT "AESTRA_HEADLESS=1"
-        )
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/dummy.aes")
+        message(FATAL_ERROR "OfflineRenderRegressionTest requires Tests/Headless/dummy.aes")
     endif()
+
+    set(OFFLINE_RENDER_REFERENCE_WAV "${CMAKE_CURRENT_BINARY_DIR}/dummy_ref.wav")
+    add_custom_command(
+        OUTPUT "${OFFLINE_RENDER_REFERENCE_WAV}"
+        COMMAND HeadlessOfflineRenderer
+                "${CMAKE_CURRENT_SOURCE_DIR}/dummy.aes"
+                "${OFFLINE_RENDER_REFERENCE_WAV}"
+        DEPENDS HeadlessOfflineRenderer "${CMAKE_CURRENT_SOURCE_DIR}/dummy.aes"
+        COMMENT "Generating offline render regression reference WAV"
+        VERBATIM
+    )
+    add_custom_target(GenerateOfflineRenderReference ALL
+        DEPENDS "${OFFLINE_RENDER_REFERENCE_WAV}"
+    )
+    add_dependencies(OfflineRenderRegressionTest GenerateOfflineRenderReference)
+
+    add_test(NAME OfflineRenderRegressionTest
+        COMMAND OfflineRenderRegressionTest
+                "${CMAKE_CURRENT_SOURCE_DIR}/dummy.aes"
+                "${OFFLINE_RENDER_REFERENCE_WAV}"
+    )
+    set_tests_properties(OfflineRenderRegressionTest PROPERTIES
+        LABELS "headless;regression;offline"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
 endif()
 
 # Rumble Render Test

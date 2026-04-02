@@ -142,13 +142,11 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // Render loop using AudioRenderer::renderBlock (same path as bounceRangeToWav)
     uint64_t framesRemaining = totalFrames;
     result.framesRendered = 0;
-    std::vector<float> silentInput(static_cast<size_t>(RENDER_BLOCK_FRAMES) * config.numChannels, 0.0f);
-
     while (framesRemaining > 0 && !shouldCancel()) {
         uint32_t framesThisBlock = static_cast<uint32_t>(
             std::min<uint64_t>(RENDER_BLOCK_FRAMES, framesRemaining));
 
-        m_engine.processBlock(m_renderBufferF.data(), silentInput.data(), framesThisBlock, 0.0);
+        m_engine.processBlock(m_renderBufferF.data(), nullptr, framesThisBlock, 0.0);
 
         // Track peak level
         float blockPeak = calculatePeakDb(m_renderBufferF.data(), framesThisBlock, config.numChannels);
