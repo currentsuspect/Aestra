@@ -326,7 +326,8 @@ private:
     bool m_followPlayheadHovered = false;
     
     // Loop state
-    int m_loopPreset{0};  // 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection
+    int m_loopPreset{0};  // 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project
+    double m_lastProjectLoopExtentBeats{-1.0};
     
     // Current editing tool
     PlaylistTool m_currentTool = PlaylistTool::Select;
