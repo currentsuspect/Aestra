@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "ExportDialog.h"
+#include "AudioDeviceManager.h"
 #include "AudioExporter.h"
 #include "../App/ServiceLocator.h"
 #include "../../AestraPlat/include/AestraPlatform.h"
@@ -173,6 +174,14 @@ void ExportDialog::applyExportResult(const ExportJobResult& result) {
 
 void ExportDialog::restoreAudioStreamIfNeeded() {
     if (!m_resumeAudioStreamAfterExport) {
+        return;
+    }
+
+    if (m_exporting.load()) {
+        return;
+    }
+    if (m_exportFuture.valid() &&
+        m_exportFuture.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
         return;
     }
 
@@ -670,9 +679,37 @@ void ExportDialog::startExport() {
         m_resumeAudioStreamAfterExport = false;
     }
 
-    m_exportFuture = std::async(std::launch::async,
-        &ExportDialog::exportThreadFn, this,
-        m_outputPath, m_selectedBitDepth, m_selectedSampleRate, m_selectedScope, m_tailSeconds);
+    try {
+        m_exportFuture = std::async(std::launch::async,
+            &ExportDialog::exportThreadFn, this,
+            m_outputPath, m_selectedBitDepth, m_selectedSampleRate, m_selectedScope, m_tailSeconds);
+    } catch (const std::system_error& e) {
+        if (m_resumeAudioStreamAfterExport) {
+            if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
+                deviceManager->startStream();
+            }
+            m_resumeAudioStreamAfterExport = false;
+        }
+        m_exporting = false;
+        m_panelState = PanelState::Complete;
+        m_exportError = std::string("Failed to start export worker: ") + e.what();
+        Aestra::Log::error("[ExportDialog] " + m_exportError);
+        layoutDialog();
+        setDirty(true);
+    } catch (const std::exception& e) {
+        if (m_resumeAudioStreamAfterExport) {
+            if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
+                deviceManager->startStream();
+            }
+            m_resumeAudioStreamAfterExport = false;
+        }
+        m_exporting = false;
+        m_panelState = PanelState::Complete;
+        m_exportError = std::string("Failed to start export worker: ") + e.what();
+        Aestra::Log::error("[ExportDialog] " + m_exportError);
+        layoutDialog();
+        setDirty(true);
+    }
 }
 
 ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds) {

@@ -71,6 +71,7 @@ public:
     bool isReady() const { return isValid(); }
 
     // Setters
+    void setName(const std::string& name) { m_name = name; }
     void setFilePath(const std::string& path) { m_filePath = path; }
 
     void setBuffer(std::shared_ptr<AudioBufferData> buffer) { m_buffer = std::move(buffer); }

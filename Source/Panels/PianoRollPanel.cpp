@@ -86,7 +86,10 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
         for (const auto& note : midiPayload.notes) {
             longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
         }
-        m_patternDurationBeats = std::max(4.0, longestBeat + 0.5);
+        const double baseline = (pattern->lengthBeats > 0.0)
+            ? pattern->lengthBeats
+            : m_patternDurationBeats;
+        m_patternDurationBeats = std::max(4.0, std::max(baseline, longestBeat + 0.5));
         m_pianoRoll->setTotalDurationBeats(m_patternDurationBeats);
         m_pianoRoll->setPatternName(sourceLabel);
         setTitle("PIANO ROLL - " + pattern->name);

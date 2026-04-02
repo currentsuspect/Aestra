@@ -155,15 +155,31 @@ double PianoRollMinimap::xToBeat(float x) const {
 
 void PianoRollMinimap::setView(double start, double duration) {
     if (isDragging_) return; // Don't fight drag
+    const double previousStart = startBeat_;
+    const double previousEnd = startBeat_ + viewDuration_;
     viewDuration_ = std::clamp(duration, 0.25, totalDuration_);
-    startBeat_ = std::clamp(start, 0.0, std::max(0.0, totalDuration_ - viewDuration_));
+    if (std::abs(previousStart) <= 1e-9) {
+        startBeat_ = 0.0;
+    } else if (std::abs(previousEnd - totalDuration_) <= 1e-6) {
+        startBeat_ = std::max(0.0, totalDuration_ - viewDuration_);
+    } else {
+        startBeat_ = std::clamp(start, 0.0, std::max(0.0, totalDuration_ - viewDuration_));
+    }
     repaint();
 }
 
 void PianoRollMinimap::setTotalDuration(double total) {
+    const double previousStart = startBeat_;
+    const double previousEnd = startBeat_ + viewDuration_;
     totalDuration_ = std::max(1.0, total);
-    viewDuration_ = std::min(viewDuration_, totalDuration_);
-    startBeat_ = std::clamp(startBeat_, 0.0, std::max(0.0, totalDuration_ - viewDuration_));
+    viewDuration_ = std::clamp(viewDuration_, 0.25, totalDuration_);
+    if (std::abs(previousStart) <= 1e-9) {
+        startBeat_ = 0.0;
+    } else if (std::abs(previousEnd - totalDuration_) <= 1e-6) {
+        startBeat_ = std::max(0.0, totalDuration_ - viewDuration_);
+    } else {
+        startBeat_ = std::clamp(startBeat_, 0.0, std::max(0.0, totalDuration_ - viewDuration_));
+    }
     repaint();
 }
 
@@ -804,7 +820,7 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
     const double visibleEndBeat = (scrollX_ + b.width) / pixelsPerBeat_;
 
     for (const auto& n : notes_) {
-        if (n.startBeat > visibleEndBeat) continue;
+        if (n.startBeat > visibleEndBeat) break;
         
         double relX = (n.startBeat * pixelsPerBeat_) - static_cast<double>(scrollX_);
         float x = b.x + static_cast<float>(relX);

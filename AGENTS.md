@@ -21,3 +21,4 @@ This file stores repo-specific workflow rules and continuity notes for future ag
 - Recording pipeline now supports armed capture, take commit, monitoring modes, project-relative recordings, and input diagnostics.
 - `Loop -> Project` now has empty-project fallback behavior and live extent sync as arrangement content changes.
 - Offline export now renders through the live engine path and temporarily suspends the realtime stream during export.
+- Last validated on 2026-04-02 / owner: Codex

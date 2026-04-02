@@ -36,6 +36,7 @@
 
 #include <memory>
 #include <functional>
+#include <mutex>
 #include <vector>
 
 namespace Aestra {
@@ -123,6 +124,13 @@ private:
     bool m_dropTargetRegistered{false};
     bool m_isScrubbingWaveform{false}; // New: Soundcloud-style scrubbing
     int m_hoveredQueueIndex{-1};       // New: Queue hover state
+    AestraUI::NUIRect m_waveformArea{};
+    AestraUI::NUIRect m_queueArea{};
+    std::mutex m_pendingUiMutex;
+    std::string m_pendingTrackTitle;
+    std::string m_pendingTrackArtist;
+    bool m_pendingTrackUiUpdate{false};
+    bool m_pendingPlaybackUiUpdate{false};
     
     // Visuals
     AestraUI::NUIColor m_currentHeaderColor{0.1f, 0.1f, 0.1f, 1.0f}; // Cached for waveform gradient
