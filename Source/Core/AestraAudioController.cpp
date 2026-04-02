@@ -9,6 +9,8 @@
 #include "../AestraCore/include/AestraLog.h"
 
 #include <algorithm>
+#include <fstream>
+#include <filesystem>
 #include <thread>
 #include <chrono>
 
@@ -29,6 +31,90 @@ uint64_t estimateCycleHz() {
 #else
     return 0;
 #endif
+}
+
+struct SavedAudioSelection {
+    int outputDeviceId{-1};
+    int inputDeviceId{-1};
+};
+
+SavedAudioSelection loadSavedAudioSelection() {
+    SavedAudioSelection selection;
+
+    const std::filesystem::path configPath = std::filesystem::current_path() / "audio_settings.conf";
+    std::ifstream file(configPath);
+    if (!file.is_open()) {
+        return selection;
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        const auto eq = line.find('=');
+        if (eq == std::string::npos) {
+            continue;
+        }
+
+        const std::string key = line.substr(0, eq);
+        const std::string value = line.substr(eq + 1);
+        try {
+            if (key == "device") {
+                selection.outputDeviceId = std::stoi(value);
+            } else if (key == "input_device") {
+                selection.inputDeviceId = std::stoi(value);
+            }
+        } catch (...) {
+        }
+    }
+
+    return selection;
+}
+
+const AudioDeviceInfo* findDeviceById(const std::vector<AudioDeviceInfo>& devices, int id) {
+    if (id < 0) {
+        return nullptr;
+    }
+
+    auto it = std::find_if(devices.begin(), devices.end(), [id](const AudioDeviceInfo& device) {
+        return static_cast<int>(device.id) == id;
+    });
+    return it != devices.end() ? &(*it) : nullptr;
+}
+
+bool looksLikeMonitorInput(const std::string& name) {
+    std::string lowered = name;
+    std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return lowered.find("monitor") != std::string::npos || lowered.find("loopback") != std::string::npos;
+}
+
+const AudioDeviceInfo* choosePreferredInputDevice(const std::vector<AudioDeviceInfo>& devices, int savedId) {
+    if (const auto* saved = findDeviceById(devices, savedId); saved && saved->maxInputChannels > 0) {
+        return saved;
+    }
+
+    for (const auto& device : devices) {
+        if (device.maxInputChannels > 0 && device.isDefaultInput && !looksLikeMonitorInput(device.name)) {
+            return &device;
+        }
+    }
+    for (const auto& device : devices) {
+        if (device.maxInputChannels > 0 && !looksLikeMonitorInput(device.name)) {
+            return &device;
+        }
+    }
+    for (const auto& device : devices) {
+        if (device.maxInputChannels > 0 && device.isDefaultInput) {
+            return &device;
+        }
+    }
+    for (const auto& device : devices) {
+        if (device.maxInputChannels > 0) {
+            return &device;
+        }
+    }
+
+    return nullptr;
 }
 }
 
@@ -92,37 +178,58 @@ bool AestraAudioController::openDefaultStream(void* userData) {
         }
 
         Log::info("Audio devices found");
-
-        // Find first output device
-        AudioDeviceInfo outputDevice;
-        bool foundOutput = false;
-
         for (const auto& device : devices) {
-            if (device.maxOutputChannels > 0) {
-                outputDevice = device;
-                foundOutput = true;
-                break;
+            Log::info("[Audio] Device " + std::to_string(device.id) + ": " + device.name +
+                      " | in=" + std::to_string(device.maxInputChannels) +
+                      " out=" + std::to_string(device.maxOutputChannels) +
+                      " | defaultIn=" + std::string(device.isDefaultInput ? "yes" : "no") +
+                      " defaultOut=" + std::string(device.isDefaultOutput ? "yes" : "no"));
+        }
+
+        const SavedAudioSelection savedSelection = loadSavedAudioSelection();
+
+        const AudioDeviceInfo* outputDevice = findDeviceById(devices, savedSelection.outputDeviceId);
+        if (!outputDevice || outputDevice->maxOutputChannels == 0) {
+            AudioDeviceInfo defaultOutput = m_audioManager->getDefaultOutputDevice();
+            outputDevice = findDeviceById(devices, static_cast<int>(defaultOutput.id));
+        }
+        if (!outputDevice) {
+            for (const auto& device : devices) {
+                if (device.maxOutputChannels > 0) {
+                    outputDevice = &device;
+                    break;
+                }
             }
         }
 
-        if (!foundOutput) {
+        if (!outputDevice) {
             Log::warning("No output audio device found");
             return false;
         }
 
-        Log::info("Using audio device: " + outputDevice.name);
+        Log::info("Using audio device: " + outputDevice->name);
 
-        auto defaultInput = m_audioManager->getDefaultInputDevice();
+        const AudioDeviceInfo* inputDevice = choosePreferredInputDevice(devices, savedSelection.inputDeviceId);
+        if (inputDevice) {
+            Log::info("Using input device: " + inputDevice->name + " (" +
+                      std::to_string(inputDevice->maxInputChannels) + " channels)");
+        } else {
+            Log::warning("No dedicated input device found; recording inputs disabled.");
+        }
 
         // Configure audio stream
         AudioStreamConfig config;
-        config.deviceId = outputDevice.id;
-        config.inputDeviceId = defaultInput.name.empty() ? outputDevice.id : defaultInput.id;
+        config.deviceId = outputDevice->id;
+        config.inputDeviceId = inputDevice ? inputDevice->id : outputDevice->id;
         config.sampleRate = 48000;
         config.bufferSize = 256;
 
-        config.numInputChannels = defaultInput.name.empty() ? 0 : defaultInput.maxInputChannels;
-        config.numOutputChannels = 2;
+        config.numInputChannels = inputDevice ? inputDevice->maxInputChannels : 0;
+        config.numOutputChannels = std::min<uint32_t>(2, std::max<uint32_t>(1, outputDevice->maxOutputChannels));
+        Log::info("AestraAudioController: Initial stream config - Output Device: " + std::to_string(config.deviceId) +
+                  ", Input Device: " + std::to_string(config.inputDeviceId) +
+                  ", Inputs: " + std::to_string(config.numInputChannels) +
+                  ", Outputs: " + std::to_string(config.numOutputChannels));
 
         if (m_audioEngine) {
             m_audioEngine->setSampleRate(config.sampleRate);
@@ -176,6 +283,7 @@ bool AestraAudioController::startStream() {
             if (controller) {
                 if (auto content = controller->m_content.lock()) {
                     if (content->getTrackManager()) {
+                        content->getTrackManager()->updateInputDiagnostics(input, n);
                         content->getTrackManager()->processInput(input, n);
                     }
                 }
@@ -248,6 +356,14 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
         controller->m_audioEngine->processBlock(outputBuffer, inputBuffer, nFrames, streamTime);
     } else {
         std::fill(outputBuffer, outputBuffer + nFrames * 2, 0.0f);
+    }
+
+    if (inputBuffer) {
+        if (auto content = controller->m_content.lock()) {
+            if (auto trackManager = content->getTrackManager()) {
+                trackManager->mixInputMonitoring(inputBuffer, outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
+            }
+        }
     }
 
     // Preview mixing
