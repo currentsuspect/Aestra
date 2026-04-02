@@ -339,16 +339,21 @@ void NUITabBar::onRender(NUIRenderer& renderer)
 
     auto& themeManager = NUIThemeManager::getInstance();
 
-    const auto bg = themeManager.getColor("backgroundSecondary");
-    const auto border = themeManager.getColor("border").withAlpha(0.6f);
-    const auto active = themeManager.getColor("primary").withAlpha(0.35f);
-    const auto hover = themeManager.getColor("surfaceRaised").withAlpha(0.55f);
+    const auto bg = themeManager.getColor("surfaceTertiary").withAlpha(0.92f);
+    const auto border = themeManager.getColor("border").withAlpha(0.35f);
+    const auto active = themeManager.getColor("surfaceRaised").withAlpha(0.98f);
+    const auto hover = themeManager.getColor("surfaceRaised").withAlpha(0.72f);
     const auto textActive = themeManager.getColor("textPrimary");
     const auto textInactive = themeManager.getColor("textSecondary").withAlpha(0.9f);
 
     const float radius = themeManager.getRadius("m");
+    renderer.drawShadow(bounds, 0.0f, 8.0f, 20.0f, NUIColor(0, 0, 0, 0.22f));
     renderer.fillRoundedRect(bounds, radius, bg);
     renderer.strokeRoundedRect(bounds, radius, 1.0f, border);
+    renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
+                               std::max(0.0f, radius - 1.0f),
+                               1.0f,
+                               NUIColor::white().withAlpha(0.04f));
 
     if (tabs_.empty()) {
         return;
@@ -374,7 +379,12 @@ void NUITabBar::onRender(NUIRenderer& renderer)
         tabRect.height -= inset * 2.0f;
 
         if (isActive) {
+            renderer.drawShadow(tabRect, 0.0f, 4.0f, 10.0f, NUIColor(0, 0, 0, 0.18f));
             renderer.fillRoundedRect(tabRect, radius - inset, active);
+            renderer.strokeRoundedRect(tabRect, radius - inset, 1.0f, themeManager.getColor("borderActive").withAlpha(0.28f));
+            renderer.fillRoundedRect({tabRect.x, tabRect.y, tabRect.width, std::max(1.0f, tabRect.height * 0.42f)},
+                                     radius - inset,
+                                     NUIColor::white().withAlpha(0.035f));
         } else if (isHovered) {
             renderer.fillRoundedRect(tabRect, radius - inset, hover);
         }
@@ -580,4 +590,3 @@ void NUIComboBox::showPopup()
 }
 
 } // namespace AestraUI
-

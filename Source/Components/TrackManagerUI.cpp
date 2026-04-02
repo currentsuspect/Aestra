@@ -367,24 +367,31 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     updateToolbarBounds();
 
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    const float radius = themeManager.getRadius("m"); // 8px buttons
-    const auto activeBg = themeManager.getColor("primary").withAlpha(0.25f);
-    const auto hoverBg = themeManager.getColor("hover").withAlpha(0.6f);
-    
-    // Idle button style (matching transport bar glassBg)
-    const auto idleBg = themeManager.getColor("textSecondary").withAlpha(0.15f);
-    const auto idleBorder = themeManager.getColor("glassBorder");
+    const float radius = themeManager.getRadius("m") + 1.0f;
+    const auto idleBg = themeManager.getColor("buttonBgDefault").withAlpha(0.98f);
+    const auto hoverBg = themeManager.getColor("buttonBgHover").withAlpha(0.99f);
+    const auto activeBg = themeManager.getColor("buttonBgActive").withAlpha(0.99f);
+    const auto idleBorder = themeManager.getColor("border").withAlpha(0.28f);
+    const auto hoverBorder = themeManager.getColor("border").withAlpha(0.40f);
+    const auto activeBorder = themeManager.getColor("borderActive").withAlpha(0.24f);
+    const auto innerHighlight = AestraUI::NUIColor::white().withAlpha(0.025f);
+    const auto shadowColor = AestraUI::NUIColor(0, 0, 0, 0.14f);
 
     // Menu Button (leftmost)
     {
         auto currentBg = idleBg;
         auto currentBorder = idleBorder;
         if (m_menuHovered) {
-            currentBg = themeManager.getColor("glassHover");
-            currentBorder = themeManager.getColor("glassBorder");
+            currentBg = hoverBg;
+            currentBorder = hoverBorder;
         }
+        renderer.drawShadow(m_menuIconBounds, 0.0f, 6.0f, 18.0f, shadowColor);
         renderer.fillRoundedRect(m_menuIconBounds, radius, currentBg);
         renderer.strokeRoundedRect(m_menuIconBounds, radius, 1.0f, currentBorder);
+        renderer.strokeRoundedRect({m_menuIconBounds.x + 1.0f, m_menuIconBounds.y + 1.0f, m_menuIconBounds.width - 2.0f, m_menuIconBounds.height - 2.0f},
+                                   std::max(0.0f, radius - 1.0f),
+                                   1.0f,
+                                   innerHighlight);
     }
     if (m_menuIcon) {
         const float iconSz = 16.0f;
@@ -397,7 +404,7 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         // Draw centered at local (0,0) - renderer handles the translation to 'center' via pushTransform
         // Note: We use a temporary rect centered at 0,0
         m_menuIcon->setBounds(AestraUI::NUIRect(-iconSz * 0.5f, -iconSz * 0.5f, iconSz, iconSz));
-        m_menuIcon->setColorFromTheme("textPrimary");
+        m_menuIcon->setColorFromTheme(m_menuHovered ? "textPrimary" : "textSecondary");
         m_menuIcon->onRender(renderer);
         
         renderer.popTransform();
@@ -418,11 +425,16 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         auto currentBg = idleBg;
         auto currentBorder = idleBorder;
         if (m_addTrackHovered) {
-            currentBg = themeManager.getColor("glassHover");
-            currentBorder = themeManager.getColor("glassBorder");
+            currentBg = hoverBg;
+            currentBorder = hoverBorder;
         }
+        renderer.drawShadow(m_addTrackBounds, 0.0f, 6.0f, 18.0f, shadowColor);
         renderer.fillRoundedRect(m_addTrackBounds, radius, currentBg);
         renderer.strokeRoundedRect(m_addTrackBounds, radius, 1.0f, currentBorder);
+        renderer.strokeRoundedRect({m_addTrackBounds.x + 1.0f, m_addTrackBounds.y + 1.0f, m_addTrackBounds.width - 2.0f, m_addTrackBounds.height - 2.0f},
+                                   std::max(0.0f, radius - 1.0f),
+                                   1.0f,
+                                   innerHighlight);
     }
     if (m_addTrackIcon) {
         const float iconSz = 16.0f;
@@ -432,7 +444,7 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
             iconSz, iconSz
         );
         m_addTrackIcon->setBounds(iconRect);
-        m_addTrackIcon->setColorFromTheme("textPrimary");
+        m_addTrackIcon->setColorFromTheme(m_addTrackHovered ? "textPrimary" : "textSecondary");
         m_addTrackIcon->onRender(renderer);
     }
 
@@ -445,17 +457,20 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         auto currentBorder = idleBorder;
         
         if (isActive) {
-            // Active state: Glassy colored overlay
-            currentBg = themeManager.getColor("glassActive");
-            currentBorder = themeManager.getColor("primary").withAlpha(0.4f);
+            currentBg = activeBg;
+            currentBorder = activeBorder;
         } else if (hovered) {
-            // Hover state: True Glass (neutral)
-            currentBg = themeManager.getColor("glassHover");
-            currentBorder = themeManager.getColor("glassBorder");
+            currentBg = hoverBg;
+            currentBorder = hoverBorder;
         }
-        
+
+        renderer.drawShadow(bounds, 0.0f, 6.0f, 18.0f, shadowColor);
         renderer.fillRoundedRect(bounds, radius, currentBg);
         renderer.strokeRoundedRect(bounds, radius, 1.0f, currentBorder);
+        renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
+                                   std::max(0.0f, radius - 1.0f),
+                                   1.0f,
+                                   innerHighlight);
         
         // Draw icon
         if (icon) {
@@ -466,6 +481,9 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
                 iconSz, iconSz
             );
             icon->setBounds(iconRect);
+            icon->setColor(isActive ? themeManager.getColor("textPrimary")
+                                    : hovered ? themeManager.getColor("textPrimary").withAlpha(0.92f)
+                                              : themeManager.getColor("textSecondary").withAlpha(0.82f));
             icon->onRender(renderer);
         }
     };
@@ -482,14 +500,19 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         auto currentBg = idleBg;
         auto currentBorder = idleBorder;
         if (followActive) {
-            currentBg = themeManager.getColor("glassActive");
-            currentBorder = themeManager.getColor("primary").withAlpha(0.4f);
+            currentBg = activeBg;
+            currentBorder = activeBorder;
         } else if (m_followPlayheadHovered) {
-            currentBg = themeManager.getColor("glassHover");
-            currentBorder = themeManager.getColor("glassBorder");
+            currentBg = hoverBg;
+            currentBorder = hoverBorder;
         }
+        renderer.drawShadow(m_followPlayheadBounds, 0.0f, 6.0f, 18.0f, shadowColor);
         renderer.fillRoundedRect(m_followPlayheadBounds, radius, currentBg);
         renderer.strokeRoundedRect(m_followPlayheadBounds, radius, 1.0f, currentBorder);
+        renderer.strokeRoundedRect({m_followPlayheadBounds.x + 1.0f, m_followPlayheadBounds.y + 1.0f, m_followPlayheadBounds.width - 2.0f, m_followPlayheadBounds.height - 2.0f},
+                                   std::max(0.0f, radius - 1.0f),
+                                   1.0f,
+                                   innerHighlight);
     }
     
     if (m_followPlayheadIcon) {
@@ -575,24 +598,40 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
                         Log::warning("Loop Selection: No valid selection found");
                     }
                 } else if (id == 6) {
-                    // Project: Loop from 0 to the end of the last clip
+                    // Project: loop to arrangement end when clips exist, otherwise fall back
+                    // to a sane empty-project extent instead of leaving the preset in limbo.
+                    double projectEnd = 0.0;
                     if (m_trackManager) {
-                        double projectEnd = m_trackManager->getPlaylistModel().getTotalDurationBeats();
-                        if (projectEnd > 0.001) {
-                            loopStartBeat = 0.0;
-                            loopEndBeat = projectEnd;
-                            loopEnabled = true;
-                        } else {
-                            loopEnabled = false;
-                            Log::warning("Loop Project: No clips found");
-                        }
+                        projectEnd = m_trackManager->getPlaylistModel().getTotalDurationBeats();
+                    }
+
+                    if (projectEnd <= 0.001) {
+                        const double emptyProjectBeats = static_cast<double>(std::max(1, m_beatsPerBar)) * 16.0;
+                        const double visibleEndBeat =
+                            static_cast<double>(m_pixelsPerBeat > 0.0f
+                                ? (m_timelineScrollOffset / m_pixelsPerBeat) + getTimelineGridWidthPixels() / m_pixelsPerBeat
+                                : 0.0f);
+                        projectEnd = std::max(emptyProjectBeats, visibleEndBeat);
+                        Log::info("Loop Project: Empty arrangement fallback -> " + std::to_string(projectEnd) + " beats");
+                    }
+
+                    if (projectEnd > 0.001) {
+                        loopStartBeat = 0.0;
+                        loopEndBeat = projectEnd;
+                        loopEnabled = true;
+                    } else {
+                        loopEnabled = false;
+                        Log::warning("Loop Project: Could not resolve a valid project extent");
                     }
                 }
                 
-                for (auto& trackUI : m_trackUIComponents) {
-                    if (trackUI) {
-                        trackUI->setLoopEnabled(loopEnabled);
-                        trackUI->setLoopRegion(loopStartBeat, loopEndBeat);
+                setLoopRegion(loopStartBeat, loopEndBeat, loopEnabled);
+
+                if (m_onLoopRegionUpdate) {
+                    if (loopEnabled) {
+                        m_onLoopRegionUpdate(loopStartBeat, loopEndBeat);
+                    } else {
+                        m_onLoopRegionUpdate(0.0, 0.0);
                     }
                 }
                 
@@ -1932,6 +1971,28 @@ void TrackManagerUI::onUpdate(double deltaTime) {
 
     NUIComponent::onUpdate(deltaTime);
 
+    if (m_loopPreset == 6 && m_trackManager) {
+        double projectEndBeat = m_trackManager->getPlaylistModel().getTotalDurationBeats();
+        if (projectEndBeat <= 0.001) {
+            const double emptyProjectBeats = static_cast<double>(std::max(1, m_beatsPerBar)) * 16.0;
+            const double visibleEndBeat =
+                static_cast<double>(m_pixelsPerBeat > 0.0f
+                    ? (m_timelineScrollOffset / m_pixelsPerBeat) + getTimelineGridWidthPixels() / m_pixelsPerBeat
+                    : 0.0f);
+            projectEndBeat = std::max(emptyProjectBeats, visibleEndBeat);
+        }
+
+        if (std::abs(projectEndBeat - m_lastProjectLoopExtentBeats) > 1e-3) {
+            m_lastProjectLoopExtentBeats = projectEndBeat;
+            setLoopRegion(0.0, projectEndBeat, true);
+            if (m_onLoopRegionUpdate) {
+                m_onLoopRegionUpdate(0.0, projectEndBeat);
+            }
+        }
+    } else {
+        m_lastProjectLoopExtentBeats = -1.0;
+    }
+
     // Animate Menu Icon Rotation
     float targetRot = m_activeContextMenu ? 90.0f : 0.0f;
     float diff = targetRot - m_menuIconRotation;
@@ -2620,10 +2681,8 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 double selStartBeat = std::min(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
                 double selEndBeat = std::max(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
                 
-                // Update loop markers to match selection
-                m_loopStartBeat = selStartBeat;
-                m_loopEndBeat = selEndBeat;
-                m_loopEnabled = true;
+                // Update loop markers to match selection through centralized propagation.
+                setLoopRegion(selStartBeat, selEndBeat, true);
                 
                 // Call selection callback - this will jump playhead and set loop region
                 if (m_onSelectionMade) {
@@ -2640,8 +2699,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                          std::to_string(selEndBeat) + " beats");
             } else {
                 // Click without drag - clear selection and disable loop
-                m_hasRulerSelection = false;
-                m_loopEnabled = false;
+                setLoopRegion(0.0, 0.0, false);
 
                 // SPECIAL: If we clicked on an EXISTNG range on ruler, show menu
                 // (Wait, this is handled in the isInRuler block if it's an instant click)
@@ -2720,14 +2778,12 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         if (m_isDraggingLoopStart) {
             // Don't allow start to go past end
             if (positionInBeats < m_loopEndBeat) {
-                m_loopStartBeat = positionInBeats;
-                m_rulerSelectionStartBeat = positionInBeats;
+                setLoopRegion(positionInBeats, m_loopEndBeat, true);
             }
         } else if (m_isDraggingLoopEnd) {
             // Don't allow end to go before start
             if (positionInBeats > m_loopStartBeat) {
-                m_loopEndBeat = positionInBeats;
-                m_rulerSelectionEndBeat = positionInBeats;
+                setLoopRegion(m_loopStartBeat, positionInBeats, true);
             }
         }
         
@@ -3629,13 +3685,24 @@ void TrackManagerUI::setLoopRegion(double startBeat, double endBeat, bool enable
     m_loopStartBeat = startBeat;
     m_loopEndBeat = endBeat;
     m_loopEnabled = enabled;
+    m_hasRulerSelection = enabled && (endBeat > startBeat);
+    if (m_hasRulerSelection) {
+        m_rulerSelectionStartBeat = startBeat;
+        m_rulerSelectionEndBeat = endBeat;
+    }
+    for (auto& trackUI : m_trackUIComponents) {
+        if (!trackUI) {
+            continue;
+        }
+        trackUI->setLoopEnabled(enabled);
+        trackUI->setLoopRegion(startBeat, endBeat);
+    }
     invalidateCache();  // Redraw to show updated markers
 }
 
 // Render loop markers on ruler
 void TrackManagerUI::renderLoopMarkers(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& rulerBounds) {
-    // Only show markers when there's an active ruler selection
-    if (!m_hasRulerSelection) return;
+    if (!m_loopEnabled) return;
     
     if (m_loopEndBeat <= m_loopStartBeat) return;  // Invalid loop region
     

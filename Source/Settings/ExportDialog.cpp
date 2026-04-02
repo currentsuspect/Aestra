@@ -1,7 +1,9 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "ExportDialog.h"
+#include "AudioDeviceManager.h"
 #include "AudioExporter.h"
+#include "../App/ServiceLocator.h"
 #include "../../AestraPlat/include/AestraPlatform.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
@@ -25,6 +27,7 @@ ExportDialog::~ExportDialog() {
     if (m_exportFuture.valid()) {
         m_exportFuture.wait();
     }
+    restoreAudioStreamIfNeeded();
 }
 
 void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngine& engine, Aestra::Audio::TrackManager& trackManager) {
@@ -64,6 +67,8 @@ void ExportDialog::hide() {
     if (m_exporting.load()) {
         m_cancelRequested.store(true);
         // Non-blocking: destructor will join the future when needed
+    } else {
+        restoreAudioStreamIfNeeded();
     }
 }
 
@@ -149,6 +154,7 @@ void ExportDialog::syncTailInputFromValue() {
 void ExportDialog::applyExportResult(const ExportJobResult& result) {
     m_exporting = false;
     m_panelState = PanelState::Complete;
+    restoreAudioStreamIfNeeded();
 
     if (result.success) {
         m_exportResultPath = result.outputPath;
@@ -164,6 +170,25 @@ void ExportDialog::applyExportResult(const ExportJobResult& result) {
 
     layoutDialog();
     setDirty(true);
+}
+
+void ExportDialog::restoreAudioStreamIfNeeded() {
+    if (!m_resumeAudioStreamAfterExport) {
+        return;
+    }
+
+    if (m_exporting.load()) {
+        return;
+    }
+    if (m_exportFuture.valid() &&
+        m_exportFuture.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+        return;
+    }
+
+    if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
+        deviceManager->startStream();
+    }
+    m_resumeAudioStreamAfterExport = false;
 }
 
 bool ExportDialog::parseTailInput(double& outTailSeconds) const {
@@ -645,9 +670,46 @@ void ExportDialog::startExport() {
     m_exportElapsed = 0.0f;
     layoutDialog();
 
-    m_exportFuture = std::async(std::launch::async,
-        &ExportDialog::exportThreadFn, this,
-        m_outputPath, m_selectedBitDepth, m_selectedSampleRate, m_selectedScope, m_tailSeconds);
+    if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
+        m_resumeAudioStreamAfterExport = deviceManager->isStreamRunning();
+        if (m_resumeAudioStreamAfterExport) {
+            deviceManager->stopStream();
+        }
+    } else {
+        m_resumeAudioStreamAfterExport = false;
+    }
+
+    try {
+        m_exportFuture = std::async(std::launch::async,
+            &ExportDialog::exportThreadFn, this,
+            m_outputPath, m_selectedBitDepth, m_selectedSampleRate, m_selectedScope, m_tailSeconds);
+    } catch (const std::system_error& e) {
+        if (m_resumeAudioStreamAfterExport) {
+            if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
+                deviceManager->startStream();
+            }
+            m_resumeAudioStreamAfterExport = false;
+        }
+        m_exporting = false;
+        m_panelState = PanelState::Complete;
+        m_exportError = std::string("Failed to start export worker: ") + e.what();
+        Aestra::Log::error("[ExportDialog] " + m_exportError);
+        layoutDialog();
+        setDirty(true);
+    } catch (const std::exception& e) {
+        if (m_resumeAudioStreamAfterExport) {
+            if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
+                deviceManager->startStream();
+            }
+            m_resumeAudioStreamAfterExport = false;
+        }
+        m_exporting = false;
+        m_panelState = PanelState::Complete;
+        m_exportError = std::string("Failed to start export worker: ") + e.what();
+        Aestra::Log::error("[ExportDialog] " + m_exportError);
+        layoutDialog();
+        setDirty(true);
+    }
 }
 
 ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds) {

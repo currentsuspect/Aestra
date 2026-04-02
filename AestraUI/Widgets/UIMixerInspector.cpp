@@ -9,6 +9,7 @@
 #include "MixerViewModel.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 
 namespace AestraUI {
@@ -21,6 +22,8 @@ namespace {
     constexpr float HEADER_H = 44.0f;
     constexpr float ROW_H = 26.0f;
     constexpr float ROW_RADIUS = 12.0f;
+    constexpr float INPUT_METER_H = 12.0f;
+    constexpr float IO_CARD_RADIUS = 14.0f;
 }
 
 UIMixerInspector::UIMixerInspector(Aestra::MixerViewModel* viewModel)
@@ -101,9 +104,9 @@ void UIMixerInspector::cacheThemeColors()
     m_border = theme.getColor("borderSubtle").withAlpha(0.65f);
     m_text = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary");
-    m_tabBg = theme.getColor("surfaceTertiary");
-    m_tabActive = theme.getColor("accentPrimary").withAlpha(0.22f);
-    m_tabHover = theme.getColor("surfaceSecondary");
+    m_tabBg = theme.getColor("buttonBgDefault").withAlpha(0.98f);
+    m_tabActive = theme.getColor("buttonBgActive").withAlpha(0.99f);
+    m_tabHover = theme.getColor("buttonBgHover").withAlpha(0.99f);
     m_addBg = theme.getColor("surfaceTertiary");
     m_addHover = theme.getColor("surfaceSecondary");
     m_addText = theme.getColor("textPrimary");
@@ -361,9 +364,15 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         const bool active = (static_cast<int>(m_activeTab) == i);
         const bool hovered = (m_hoveredTab == i);
         NUIColor bg = active ? m_tabActive : (hovered ? m_tabHover : m_tabBg);
+        NUIColor border = active ? m_border.withAlpha(0.42f) : m_border.withAlpha(0.32f);
+        renderer.drawShadow(m_tabRects[i], 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.12f));
         renderer.fillRoundedRect(m_tabRects[i], TAB_RADIUS, bg);
-        renderer.strokeRoundedRect(m_tabRects[i], TAB_RADIUS, 1.0f, m_border);
-        renderer.drawTextCentered(tabLabels[i], m_tabRects[i], 10.0f, active ? m_text : m_text.withAlpha(0.92f));
+        renderer.strokeRoundedRect(m_tabRects[i], TAB_RADIUS, 1.0f, border);
+        renderer.strokeRoundedRect({m_tabRects[i].x + 1.0f, m_tabRects[i].y + 1.0f, m_tabRects[i].width - 2.0f, m_tabRects[i].height - 2.0f},
+                                   std::max(0.0f, TAB_RADIUS - 1.0f),
+                                   1.0f,
+                                   NUIColor::white().withAlpha(0.025f));
+        renderer.drawTextCentered(tabLabels[i], m_tabRects[i], 10.0f, active ? m_text : m_textSecondary.withAlpha(0.92f));
     }
 
     // Header
@@ -437,9 +446,56 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         if (isMaster) {
              renderer.drawTextCentered("Master Output is fixed to Hardware Output 1/2", contentRect, 11.0f, m_textSecondary);
         } else if (m_activeTab == Tab::IO) {
-             renderer.drawText("Audio Input:", {contentRect.x, contentRect.y}, 11.0f, m_textSecondary);
-             
-             // Dropdown renders itself via renderChildren
+             renderer.drawText("Audio Input", {contentRect.x, contentRect.y}, 11.0f, m_text);
+             renderer.drawText("Choose the capture path, then verify live level before record.",
+                               {contentRect.x, contentRect.y + 15.0f}, 9.0f, m_textSecondary.withAlpha(0.92f));
+
+             const float infoTop = contentRect.y + 50.0f;
+             const NUIRect infoCard{contentRect.x, infoTop, contentRect.width, 90.0f};
+             renderer.drawShadow(infoCard, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.10f));
+             renderer.fillRoundedRect(infoCard, IO_CARD_RADIUS, m_tabBg.withAlpha(0.62f));
+             renderer.strokeRoundedRect(infoCard, IO_CARD_RADIUS, 1.0f, m_border.withAlpha(0.46f));
+             renderer.strokeRoundedRect({infoCard.x + 1.0f, infoCard.y + 1.0f, infoCard.width - 2.0f, infoCard.height - 2.0f},
+                                        std::max(0.0f, IO_CARD_RADIUS - 1.0f),
+                                        1.0f,
+                                        NUIColor::white().withAlpha(0.02f));
+
+             const float labelX = infoCard.x + 12.0f;
+             const float valueX = infoCard.x + 68.0f;
+             renderer.drawText("Source", {labelX, infoCard.y + 12.0f}, 9.0f, m_textSecondary);
+             renderer.drawText(channel->inputSourceName, {valueX, infoCard.y + 10.0f}, 10.0f, m_text);
+
+             const std::string monitorMode = channel->monitored ? "Arm + Monitor" : "Arm Only";
+             renderer.drawText("Mode", {labelX, infoCard.y + 30.0f}, 9.0f, m_textSecondary);
+             renderer.drawText(monitorMode, {valueX, infoCard.y + 28.0f}, 10.0f, m_text);
+
+             renderer.drawText("Signal", {labelX, infoCard.y + 52.0f}, 9.0f, m_textSecondary);
+             const NUIRect meterRect{labelX, infoCard.y + 66.0f, infoCard.width - 24.0f, INPUT_METER_H};
+             renderer.fillRoundedRect(meterRect, 6.0f, m_bg.withAlpha(0.62f));
+             renderer.strokeRoundedRect(meterRect, 6.0f, 1.0f, m_border.withAlpha(0.60f));
+
+             const float fillWidth = std::clamp(channel->inputPeak, 0.0f, 1.0f) * meterRect.width;
+             if (fillWidth > 1.0f) {
+                 const NUIColor meterColor = (channel->inputPeak >= 0.95f)
+                     ? NUIColor::fromHex(0xffd95f5f)
+                     : (channel->inputPeak >= 0.75f)
+                        ? NUIColor::fromHex(0xffd7b45f)
+                        : NUIColor::fromHex(0xff46d1c9);
+                 renderer.fillRoundedRect({meterRect.x, meterRect.y, fillWidth, meterRect.height}, 6.0f, meterColor.withAlpha(0.95f));
+             }
+
+             const float peakDb = (channel->inputPeak > 0.0001f)
+                 ? (20.0f * std::log10(channel->inputPeak))
+                 : -90.0f;
+             char peakBuf[64];
+             std::snprintf(peakBuf, sizeof(peakBuf), "%.1f dBFS", peakDb);
+             renderer.drawText(peakBuf,
+                               {meterRect.right() - renderer.measureText(peakBuf, 9.0f).width, infoCard.y + 50.0f},
+                               9.0f,
+                               m_textSecondary);
+
+             renderer.drawText("If this meter is flat or pinned, fix the input path before recording.",
+                               {contentRect.x, infoCard.bottom() + 10.0f}, 9.0f, m_textSecondary.withAlpha(0.88f));
         }
     }
 
@@ -469,13 +525,19 @@ void UIMixerInspector::onUpdate(double deltaTime)
              const auto& inputs = m_viewModel->inputNames;
              const auto& deviceIds = m_viewModel->inputDeviceIds;
              
-             if (m_ioInputDropdown->getItemCount() != inputs.size()) {
+             bool rebuildDropdown = m_ioInputDropdown->getItemCount() != static_cast<int>(inputs.size()) ||
+                                    m_cachedInputNames != inputs ||
+                                    m_cachedInputDeviceIds != deviceIds;
+
+             if (rebuildDropdown) {
                  m_ioInputDropdown->clearItems();
                  for (size_t i = 0; i < inputs.size(); ++i) {
                      // Use actual device ID as the value
                      int deviceId = (i < deviceIds.size()) ? deviceIds[i] : -1;
                      m_ioInputDropdown->addItem(inputs[i], deviceId);
                  }
+                 m_cachedInputNames = inputs;
+                 m_cachedInputDeviceIds = deviceIds;
              }
              
              // Sync Selection

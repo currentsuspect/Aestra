@@ -21,7 +21,7 @@ public:
      * @brief Get or create a source for a file path
      * @return Source ID (returns ClipSourceID{0} on failure)
      */
-    ClipSourceID getOrCreateSource(const std::string& filePath) {
+    ClipSourceID getOrCreateSource(const std::string& filePath, const std::string& displayName = {}) {
         auto it = m_pathToId.find(filePath);
         if (it != m_pathToId.end()) {
             return it->second;
@@ -29,12 +29,35 @@ public:
 
         // Create new source
         ClipSourceID id{nextId++};
-        auto source = std::make_unique<ClipSource>(id, makeDisplayName(filePath));
+        auto source = std::make_unique<ClipSource>(id, displayName.empty() ? makeDisplayName(filePath) : displayName);
         source->setFilePath(filePath);
 
         m_sources[id.value] = std::move(source);
         m_pathToId[filePath] = id;
 
+        return id;
+    }
+
+    /**
+     * @brief Create or replace a source for a recorded take.
+     * @param filePath Stable file path written for the take.
+     * @param displayName User-facing clip name.
+     * @param buffer In-memory audio buffer for immediate playback.
+     * @return Source ID (returns ClipSourceID{0} on failure)
+     */
+    ClipSourceID createRecordedSource(const std::string& filePath, const std::string& displayName,
+                                      std::shared_ptr<AudioBufferData> buffer) {
+        if (!buffer || !buffer->isValid()) {
+            return ClipSourceID{};
+        }
+
+        ClipSourceID id = getOrCreateSource(filePath, displayName);
+        auto* source = getSource(id);
+        if (!source) {
+            return ClipSourceID{};
+        }
+
+        source->setBuffer(std::move(buffer));
         return id;
     }
 
