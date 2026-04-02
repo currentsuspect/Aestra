@@ -74,6 +74,10 @@ AuditionPanel::AuditionPanel(std::shared_ptr<Audio::AuditionEngine> engine)
 }
 
 AuditionPanel::~AuditionPanel() {
+    if (m_engine) {
+        m_engine->setOnTrackChanged(nullptr);
+        m_engine->setOnPlaybackStateChanged(nullptr);
+    }
     AestraUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
 }
 
@@ -194,15 +198,6 @@ void AuditionPanel::setupComponents() {
     m_svgPrev = AestraUI::NUISVGParser::parse(SVG_PREV);
     m_svgNext = AestraUI::NUISVGParser::parse(SVG_NEXT);
     
-    // Registrations
-    if (m_engine) {
-        m_engine->setOnPlaybackStateChanged([this](bool playing) {
-            (void)playing;
-            // Button visual update handled in onRender via SVG swap
-            std::lock_guard<std::mutex> lock(m_pendingUiMutex);
-            m_pendingPlaybackUiUpdate = true;
-        });
-    }
 }
 // ... [Lines 185-385 unchanged] ...
 // ============================================================================
@@ -232,6 +227,7 @@ void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI:
     float y = area.y;
     float rowH = 32.0f;
     float spacing = 4.0f;
+    const float rowPitch = rowH + spacing;
     
     for (size_t i = 0; i < queue.size(); ++i) {
         if (y + rowH > area.y + area.height) break; // Clip
@@ -292,7 +288,7 @@ void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI:
         std::string timeStr = (item.durationSeconds > 0.0) ? formatTime(item.durationSeconds) : "--:--";
         renderer.drawText(timeStr, AestraUI::NUIPoint(colTime, y + 8.0f), 11.0f, theme.getColor("textSecondary"));
         
-        y += rowH + spacing;
+        y += rowPitch;
     }
 }
 // ============================================================================
@@ -484,6 +480,15 @@ void AuditionPanel::onUpdate(double deltaTime) {
         }
         if (m_pendingPlaybackUiUpdate) {
             m_pendingPlaybackUiUpdate = false;
+            setDirty(true);
+        }
+    }
+
+    if (m_engine) {
+        bool hasCurrent = m_engine->getCurrentItem().has_value();
+        if (hasCurrent != m_hadCurrentItem) {
+            m_hadCurrentItem = hasCurrent;
+            layoutComponents();
             setDirty(true);
         }
     }
@@ -869,8 +874,8 @@ bool AuditionPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return NUIComponent::onMouseEvent(event);
     }
     
-    // 1. Scrubbing
-    if (event.pressed) {
+    // 1. Scrubbing (left-click only)
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         if (m_waveformArea.contains(event.position)) {
             m_isScrubbingWaveform = true;
             float relativeX = event.position.x - m_waveformArea.x;
@@ -890,7 +895,8 @@ bool AuditionPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // 2. Queue Hover & Click-to-Play
     if (m_queueArea.contains(event.position)) {
         float relY = event.position.y - m_queueArea.y;
-        int index = static_cast<int>(relY / 35.0f);
+        constexpr float rowPitch = 36.0f;
+        int index = static_cast<int>(relY / rowPitch);
         if (m_engine && index >= 0 && index < static_cast<int>(m_engine->getQueue().size())) {
             m_hoveredQueueIndex = index;
             

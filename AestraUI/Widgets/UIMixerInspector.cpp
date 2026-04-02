@@ -519,45 +519,42 @@ void UIMixerInspector::onUpdate(double deltaTime)
     if (m_activeTab == Tab::IO && m_ioInputDropdown && m_viewModel) {
         auto* ch = m_viewModel->getSelectedChannel();
         if (ch && ch->id != 0) { // Not for Master
-             m_ioInputDropdown->setVisible(true);
-             
-             // Update Items using device IDs
-             const auto& inputs = m_viewModel->inputNames;
-             const auto& deviceIds = m_viewModel->inputDeviceIds;
-             
-             bool rebuildDropdown = m_ioInputDropdown->getItemCount() != static_cast<int>(inputs.size()) ||
-                                    m_cachedInputNames != inputs ||
-                                    m_cachedInputDeviceIds != deviceIds;
+            m_ioInputDropdown->setVisible(true);
 
-             if (rebuildDropdown) {
-                 m_ioInputDropdown->clearItems();
-                 for (size_t i = 0; i < inputs.size(); ++i) {
-                     // Use actual device ID as the value
-                     int deviceId = (i < deviceIds.size()) ? deviceIds[i] : -1;
-                     m_ioInputDropdown->addItem(inputs[i], deviceId);
-                 }
-                 m_cachedInputNames = inputs;
-                 m_cachedInputDeviceIds = deviceIds;
-             }
-             
-             // Sync Selection
-             int currentDeviceId = ch->inputChannelIndex;
-             // Find item index with matching device ID
-             int targetIndex = 0; // Default to "None"
-             for (size_t i = 0; i < deviceIds.size(); ++i) {
-                 if (deviceIds[i] == currentDeviceId) {
-                     targetIndex = static_cast<int>(i);
-                     break;
-                 }
-             }
-             
-             if (targetIndex >= 0 && targetIndex < (int)m_ioInputDropdown->getItemCount()) {
-                 if (m_ioInputDropdown->getSelectedIndex() != targetIndex) {
-                      m_ioInputDropdown->setSelectedIndex(targetIndex);
-                 }
-             }
+            const auto& inputs = m_viewModel->inputNames;
+            const auto& deviceIds = m_viewModel->inputDeviceIds;
+
+            const bool rebuildDropdown =
+                m_ioInputDropdown->getItemCount() != static_cast<int>(inputs.size()) ||
+                m_cachedInputNames != inputs ||
+                m_cachedInputDeviceIds != deviceIds;
+
+            if (rebuildDropdown) {
+                m_ioInputDropdown->clearItems();
+                for (size_t i = 0; i < inputs.size(); ++i) {
+                    // Use channel index as the value (matches input-channel selector space).
+                    m_ioInputDropdown->addItem(inputs[i], static_cast<int>(i));
+                }
+                m_cachedInputNames = inputs;
+                m_cachedInputDeviceIds = deviceIds;
+            }
+
+            const int currentChannelIndex = ch->inputChannelIndex;
+            int targetIndex = 0; // Default to "None".
+            for (size_t i = 0; i < inputs.size(); ++i) {
+                if (static_cast<int>(i) == currentChannelIndex) {
+                    targetIndex = static_cast<int>(i);
+                    break;
+                }
+            }
+
+            if (targetIndex >= 0 && targetIndex < m_ioInputDropdown->getItemCount()) {
+                if (m_ioInputDropdown->getSelectedIndex() != targetIndex) {
+                    m_ioInputDropdown->setSelectedIndex(targetIndex);
+                }
+            }
         } else {
-             m_ioInputDropdown->setVisible(false);
+            m_ioInputDropdown->setVisible(false);
         }
     }
 }

@@ -201,25 +201,25 @@ Completed since early January:
 
 **Done means:** users can record takes without losing audio, and recorded items land correctly.
 
-- [~][P0]`[I-001]` Input device selection UX (per project/global policy).
+- `[~][P0][I-001]` Input device selection UX (per project/global policy).
   - Global settings page now exposes separate input-device selection and switches the live engine input device.
   - Startup now prefers saved device selections and avoids monitor/loopback-style fallback inputs where possible.
   - Remaining gap: clarify project-vs-global persistence policy and validate failure cases on real hardware.
-- [~][P0]`[I-002]` Track/lane arming + clear armed state UI.
+- `[~][P0][I-002]` Track/lane arming + clear armed state UI.
   - Mixer and playlist track arming now both drive the real channel armed state used by recording capture.
   - Live waveform capture preview is now tied to those armed tracks during record.
   - Remaining gap: unify arm affordances across all recording entry points and verify multitrack behavior.
-- [~][P0]`[I-003]` Monitoring policy (software monitoring on/off; avoid feedback).
+- `[~][P0][I-003]` Monitoring policy (software monitoring on/off; avoid feedback).
   - New channels now default monitoring to off, so record-arm no longer implies live input monitor by default.
   - Remaining gap: add explicit input diagnostics/metering UI so source quality is visible before take commit.
-- [~][P0]`[I-004]` Record start/stop correctness (file handles, buffer flushing, no truncated files).
+- `[~][P0][I-004]` Record start/stop correctness (file handles, buffer flushing, no truncated files).
   - Record-arm no longer captures while stopped; capture starts when transport rolls and finalizes on stop/pause.
   - Current take commit writes a float WAV per armed track and places it into the playlist.
   - New default capture mode is `Auto`, which downmixes available hardware inputs instead of assuming `Input 1`.
-- [~][P0]`[I-005]` File naming + storage rules (inside project folder, stable relink).
+- `[~][P0][I-005]` File naming + storage rules (inside project folder, stable relink).
   - Current rule writes takes to a `Recordings/` folder beside the active project path when one exists; otherwise it falls back to `~/Documents/Aestra/Recordings/`.
   - Remaining gap: persist fully explicit project save/load rules and relink semantics.
-- [~][P0]`[I-006]` Recorded clip placement alignment (latency semantics documented; consistent result).
+- `[~][P0][I-006]` Recorded clip placement alignment (latency semantics documented; consistent result).
   - Recorded takes are inserted at the capture start beat on the armed lane.
   - Recorded takes now also apply a conservative auto-attenuation based on captured peak so hot input does not re-enter the arrangement at unity blast level.
   - Recorded mono takes are duplicated to stereo on commit so they follow the existing arrangement playback path safely.

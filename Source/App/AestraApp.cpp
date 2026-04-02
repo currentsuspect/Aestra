@@ -441,10 +441,10 @@ bool AestraApp::initialize(const std::string& projectPath) {
 
     // Load Project
     if (!projectPath.empty() && std::filesystem::exists(projectPath)) {
-        m_projectPath = projectPath;
-        syncRecordingProjectPath(m_content, m_projectPath);
         auto result = loadProject();
         if (result.ok) {
+            m_projectPath = projectPath;
+            syncRecordingProjectPath(m_content, m_projectPath);
             if (result.ui) applyUIState(*result.ui);
         }
     } else {
@@ -463,10 +463,10 @@ bool AestraApp::initialize(const std::string& projectPath) {
                     m_recoveryHandled = true;
                     if (response == Aestra::RecoveryResponse::Recover) {
                         // User chose to recover - load the autosave
-                        m_projectPath = autosavePath;
-                        syncRecordingProjectPath(m_content, m_projectPath);
                         auto result = loadProject();
                         if (result.ok) {
+                            m_projectPath = autosavePath;
+                            syncRecordingProjectPath(m_content, m_projectPath);
                             if (result.ui) applyUIState(*result.ui);
                             Log::info("[Recovery] Autosave recovered successfully");
                         } else {

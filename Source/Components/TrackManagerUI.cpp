@@ -607,11 +607,7 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
 
                     if (projectEnd <= 0.001) {
                         const double emptyProjectBeats = static_cast<double>(std::max(1, m_beatsPerBar)) * 16.0;
-                        const double visibleEndBeat =
-                            static_cast<double>(m_pixelsPerBeat > 0.0f
-                                ? (m_timelineScrollOffset / m_pixelsPerBeat) + getTimelineGridWidthPixels() / m_pixelsPerBeat
-                                : 0.0f);
-                        projectEnd = std::max(emptyProjectBeats, visibleEndBeat);
+                        projectEnd = emptyProjectBeats;
                         Log::info("Loop Project: Empty arrangement fallback -> " + std::to_string(projectEnd) + " beats");
                     }
 
@@ -1975,11 +1971,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         double projectEndBeat = m_trackManager->getPlaylistModel().getTotalDurationBeats();
         if (projectEndBeat <= 0.001) {
             const double emptyProjectBeats = static_cast<double>(std::max(1, m_beatsPerBar)) * 16.0;
-            const double visibleEndBeat =
-                static_cast<double>(m_pixelsPerBeat > 0.0f
-                    ? (m_timelineScrollOffset / m_pixelsPerBeat) + getTimelineGridWidthPixels() / m_pixelsPerBeat
-                    : 0.0f);
-            projectEndBeat = std::max(emptyProjectBeats, visibleEndBeat);
+            projectEndBeat = emptyProjectBeats;
         }
 
         if (std::abs(projectEndBeat - m_lastProjectLoopExtentBeats) > 1e-3) {

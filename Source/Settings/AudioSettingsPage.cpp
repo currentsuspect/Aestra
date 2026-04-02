@@ -16,15 +16,33 @@ namespace Aestra {
 using namespace Aestra::Audio;
 
 namespace {
-std::filesystem::path getAudioSettingsConfigPath() {
+std::filesystem::path getAudioSettingsConfigPath(bool* outIsLegacy = nullptr) {
     if (auto* utils = Aestra::Platform::getUtils()) {
         std::error_code ec;
         std::filesystem::path appDataDir(utils->getAppDataPath("Aestra"));
         if (!appDataDir.empty()) {
             std::filesystem::create_directories(appDataDir, ec);
             if (!ec) {
-                return appDataDir / "audio_settings.conf";
+                std::filesystem::path appDataPath = appDataDir / "audio_settings.conf";
+                if (std::filesystem::exists(appDataPath, ec)) {
+                    if (outIsLegacy) *outIsLegacy = false;
+                    return appDataPath;
+                }
             }
+        }
+    }
+    std::filesystem::path legacyPath = std::filesystem::current_path() / "audio_settings.conf";
+    std::error_code ec;
+    if (std::filesystem::exists(legacyPath, ec)) {
+        if (outIsLegacy) *outIsLegacy = true;
+        return legacyPath;
+    }
+    if (outIsLegacy) *outIsLegacy = false;
+    if (auto* utils = Aestra::Platform::getUtils()) {
+        std::error_code ec;
+        std::filesystem::path appDataDir(utils->getAppDataPath("Aestra"));
+        if (!appDataDir.empty()) {
+            return appDataDir / "audio_settings.conf";
         }
     }
     return std::filesystem::current_path() / "audio_settings.conf";
@@ -707,7 +725,8 @@ void AudioSettingsPage::saveSettings() {
 }
 
 void AudioSettingsPage::loadSettings() {
-    const auto configPath = getAudioSettingsConfigPath();
+    bool isLegacy = false;
+    const auto configPath = getAudioSettingsConfigPath(&isLegacy);
     std::ifstream file(configPath);
     if (!file.is_open()) {
         Log::info("[AudioSettingsPage] No saved settings found. Using defaults.");
@@ -776,6 +795,11 @@ void AudioSettingsPage::loadSettings() {
     
     applyChanges();
     Log::info("[AudioSettingsPage] Settings loaded successfully.");
+
+    if (isLegacy) {
+        Log::info("[AudioSettingsPage] Loaded from legacy path, migrating to app-data.");
+        saveSettings();
+    }
 }
 
 

@@ -373,8 +373,8 @@ public:
 
             if (capture.samples.size() > maxSamplesPerCapture) {
                 const size_t overflow = capture.samples.size() - maxSamplesPerCapture;
-                capture.samples.erase(capture.samples.begin(), capture.samples.begin() + overflow);
                 capture.startBeat += framesToBeats(static_cast<double>(overflow));
+                capture.samples.erase(capture.samples.begin(), capture.samples.begin() + static_cast<std::ptrdiff_t>(overflow));
             }
             capturedAnyChannel = true;
         }
@@ -891,14 +891,21 @@ private:
 
         const auto now = std::chrono::system_clock::now();
         const auto time = std::chrono::system_clock::to_time_t(now);
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            now.time_since_epoch()) % 1000;
         std::tm tm{};
 #if defined(_WIN32)
         localtime_s(&tm, &time);
 #else
         localtime_r(&time, &tm);
 #endif
+        static std::atomic<uint64_t> s_uniqCounter{0};
+        const uint64_t uniq = s_uniqCounter.fetch_add(1, std::memory_order_relaxed);
         std::ostringstream oss;
-        oss << "track_" << channelId << "_take_" << std::put_time(&tm, "%Y%m%d_%H%M%S") << ".wav";
+        oss << "track_" << channelId << "_take_"
+            << std::put_time(&tm, "%Y%m%d_%H%M%S")
+            << "_" << std::setfill('0') << std::setw(3) << ms.count()
+            << "_" << uniq << ".wav";
         return (root / oss.str()).string();
     }
 

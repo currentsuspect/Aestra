@@ -1,6 +1,7 @@
 #include "NUIButton.h"
 #include "NUITheme.h"
 #include <algorithm>
+#include <cmath>
 
 namespace AestraUI {
 
@@ -52,7 +53,7 @@ void NUIButton::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
 
     auto theme = getTheme();
-    const bool active = pressed_ || (toggleable_ && toggled_);
+    const bool active = isEnabled() && (pressed_ || (toggleable_ && toggled_));
     
     // Check custom color flags
     NUIColor backgroundColor = getCurrentBackgroundColor();
@@ -155,20 +156,6 @@ void NUIButton::onRender(NUIRenderer& renderer) {
 }
 
 void NUIButton::onUpdate(double deltaTime) {
-    // Animate hover effect
-    float targetAlpha = isHovered() ? 1.0f : 0.0f;
-    float speed = 8.0f; 
-    
-    if (hoverAlpha_ < targetAlpha) {
-        hoverAlpha_ += speed * deltaTime;
-        if (hoverAlpha_ > targetAlpha) hoverAlpha_ = targetAlpha;
-        setDirty();
-    } else if (hoverAlpha_ > targetAlpha) {
-        hoverAlpha_ -= speed * deltaTime;
-        if (hoverAlpha_ < targetAlpha) hoverAlpha_ = targetAlpha;
-        setDirty();
-    }
-    
     NUIComponent::onUpdate(deltaTime);
 }
 
@@ -217,7 +204,7 @@ bool NUIButton::onMouseEvent(const NUIMouseEvent& event) {
 
 NUIColor NUIButton::getCurrentBackgroundColor() const {
     auto theme = getTheme();
-    const bool active = pressed_ || (toggleable_ && toggled_);
+    const bool active = isEnabled() && (pressed_ || (toggleable_ && toggled_));
     
     if (active && hasCustomPressed_) return pressedColor_;
     if (isHovered() && hasCustomHover_) return hoverColor_;

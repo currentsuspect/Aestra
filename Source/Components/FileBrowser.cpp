@@ -945,7 +945,7 @@ void FileBrowser::onResize(int width, int height) {
     // Ignore legacy headerHeight, define our own stack
     const float buttonsRowHeight = 40.0f;     // Increased from 36
     const float breadcrumbRowHeight = 32.0f;  // Increased from 28
-    const float searchRowHeight = 34.0f;
+    const float searchRowHeight = 36.0f;
     const float innerPad = 8.0f;
     const float rowSpacing = 8.0f;            // Increased from 4
     
@@ -1704,6 +1704,16 @@ void FileBrowser::onMouseLeave() {
 void FileBrowser::setCurrentPath(const std::string& path) {
     const std::string targetPath = resolveExistingDirectoryPath(path, rootPath_);
     if (targetPath.empty()) {
+        currentPath_.clear();
+        rootItems_.clear();
+        displayItems_.clear();
+        filteredFiles_.clear();
+        selectedFile_ = nullptr;
+        selectedIndex_ = -1;
+        selectedIndices_.clear();
+        hoveredIndex_ = -1;
+        viewDirty_ = true;
+        invalidateCache();
         return;
     }
 
