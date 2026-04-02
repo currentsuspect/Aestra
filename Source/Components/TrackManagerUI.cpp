@@ -575,24 +575,40 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
                         Log::warning("Loop Selection: No valid selection found");
                     }
                 } else if (id == 6) {
-                    // Project: Loop from 0 to the end of the last clip
+                    // Project: loop to arrangement end when clips exist, otherwise fall back
+                    // to a sane empty-project extent instead of leaving the preset in limbo.
+                    double projectEnd = 0.0;
                     if (m_trackManager) {
-                        double projectEnd = m_trackManager->getPlaylistModel().getTotalDurationBeats();
-                        if (projectEnd > 0.001) {
-                            loopStartBeat = 0.0;
-                            loopEndBeat = projectEnd;
-                            loopEnabled = true;
-                        } else {
-                            loopEnabled = false;
-                            Log::warning("Loop Project: No clips found");
-                        }
+                        projectEnd = m_trackManager->getPlaylistModel().getTotalDurationBeats();
+                    }
+
+                    if (projectEnd <= 0.001) {
+                        const double emptyProjectBeats = static_cast<double>(std::max(1, m_beatsPerBar)) * 16.0;
+                        const double visibleEndBeat =
+                            static_cast<double>(m_pixelsPerBeat > 0.0f
+                                ? (m_timelineScrollOffset / m_pixelsPerBeat) + getTimelineGridWidthPixels() / m_pixelsPerBeat
+                                : 0.0f);
+                        projectEnd = std::max({emptyProjectBeats, m_minimapDomainEndBeat, visibleEndBeat});
+                        Log::info("Loop Project: Empty arrangement fallback -> " + std::to_string(projectEnd) + " beats");
+                    }
+
+                    if (projectEnd > 0.001) {
+                        loopStartBeat = 0.0;
+                        loopEndBeat = projectEnd;
+                        loopEnabled = true;
+                    } else {
+                        loopEnabled = false;
+                        Log::warning("Loop Project: Could not resolve a valid project extent");
                     }
                 }
                 
-                for (auto& trackUI : m_trackUIComponents) {
-                    if (trackUI) {
-                        trackUI->setLoopEnabled(loopEnabled);
-                        trackUI->setLoopRegion(loopStartBeat, loopEndBeat);
+                setLoopRegion(loopStartBeat, loopEndBeat, loopEnabled);
+
+                if (m_onLoopRegionUpdate) {
+                    if (loopEnabled) {
+                        m_onLoopRegionUpdate(loopStartBeat, loopEndBeat);
+                    } else {
+                        m_onLoopRegionUpdate(0.0, 0.0);
                     }
                 }
                 
@@ -1931,6 +1947,28 @@ void TrackManagerUI::onUpdate(double deltaTime) {
     }
 
     NUIComponent::onUpdate(deltaTime);
+
+    if (m_loopPreset == 6 && m_trackManager) {
+        double projectEndBeat = m_trackManager->getPlaylistModel().getTotalDurationBeats();
+        if (projectEndBeat <= 0.001) {
+            const double emptyProjectBeats = static_cast<double>(std::max(1, m_beatsPerBar)) * 16.0;
+            const double visibleEndBeat =
+                static_cast<double>(m_pixelsPerBeat > 0.0f
+                    ? (m_timelineScrollOffset / m_pixelsPerBeat) + getTimelineGridWidthPixels() / m_pixelsPerBeat
+                    : 0.0f);
+            projectEndBeat = std::max({emptyProjectBeats, m_minimapDomainEndBeat, visibleEndBeat});
+        }
+
+        if (std::abs(projectEndBeat - m_lastProjectLoopExtentBeats) > 1e-3) {
+            m_lastProjectLoopExtentBeats = projectEndBeat;
+            setLoopRegion(0.0, projectEndBeat, true);
+            if (m_onLoopRegionUpdate) {
+                m_onLoopRegionUpdate(0.0, projectEndBeat);
+            }
+        }
+    } else {
+        m_lastProjectLoopExtentBeats = -1.0;
+    }
 
     // Animate Menu Icon Rotation
     float targetRot = m_activeContextMenu ? 90.0f : 0.0f;
@@ -3629,13 +3667,24 @@ void TrackManagerUI::setLoopRegion(double startBeat, double endBeat, bool enable
     m_loopStartBeat = startBeat;
     m_loopEndBeat = endBeat;
     m_loopEnabled = enabled;
+    m_hasRulerSelection = enabled && (endBeat > startBeat);
+    if (m_hasRulerSelection) {
+        m_rulerSelectionStartBeat = startBeat;
+        m_rulerSelectionEndBeat = endBeat;
+    }
+    for (auto& trackUI : m_trackUIComponents) {
+        if (!trackUI) {
+            continue;
+        }
+        trackUI->setLoopEnabled(enabled);
+        trackUI->setLoopRegion(startBeat, endBeat);
+    }
     invalidateCache();  // Redraw to show updated markers
 }
 
 // Render loop markers on ruler
 void TrackManagerUI::renderLoopMarkers(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& rulerBounds) {
-    // Only show markers when there's an active ruler selection
-    if (!m_hasRulerSelection) return;
+    if (!m_loopEnabled) return;
     
     if (m_loopEndBeat <= m_loopStartBeat) return;  // Invalid loop region
     
