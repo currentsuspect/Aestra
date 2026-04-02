@@ -47,6 +47,8 @@ struct ChannelViewModel {
     bool armed{false};                   ///< Record arm state
     bool monitored{false};               ///< Input monitor state
     int inputChannelIndex{-1};           ///< Input channel index (0-based, -1 = none)
+    float inputPeak{0.0f};               ///< Smoothed live hardware-input peak (0..1)
+    std::string inputSourceName{"None"}; ///< Human-readable current input source
 
     // FX state
     struct InsertViewModel {
@@ -182,6 +184,7 @@ public:
      */
     void syncFromEngine(const Audio::TrackManager& trackManager,
                         const Audio::ChannelSlotMap& slotMap);
+    void updateInputDiagnostics(const Audio::TrackManager& trackManager, double deltaTime);
 
     /**
      * @brief Get channel by ID.

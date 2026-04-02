@@ -454,6 +454,10 @@ void PatternBrowserPanel::renderPatternItem(AestraUI::NUIRenderer& renderer, con
 bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     auto b = getBounds();
     auto& dragManager = AestraUI::NUIDragDropManager::getInstance();
+
+    if (!b.contains(event.position)) {
+        return NUIComponent::onMouseEvent(event);
+    }
     
     // 1. Handle active drag updates
     // 1. Handle active drag updates - DELEGATED TO GLOBAL MAIN LOOP
@@ -589,6 +593,12 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 }
             }
         }
+    }
+
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Right) {
+        // Consume empty-space right clicks so they do not fall through into TrackManagerUI
+        // and start its right-drag selection path.
+        return true;
     }
     
     // Mouse Wheel - Scroll Handling

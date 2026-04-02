@@ -43,13 +43,15 @@ struct TimelineMinimapClipDelta
 
 struct TimelineSummaryBucket
 {
+    static constexpr uint32_t kTrackLaneCount = 128;
+
     // Signed counts to make incremental +/- safe even under odd event ordering.
     int32_t audioCount = 0;
     int32_t midiCount = 0;
     int32_t automationCount = 0;
     
-    // Per-track active clip reference counts (supports up to 64 tracks for minimap viz)
-    uint8_t trackCounts[64] = {0};
+    // Per-lane active clip reference counts.
+    uint8_t trackCounts[kTrackLaneCount] = {0};
 
     float energySum = 0.0f;
     float peakSum = 0.0f;
@@ -154,4 +156,3 @@ private:
 };
 
 } // namespace AestraUI
-

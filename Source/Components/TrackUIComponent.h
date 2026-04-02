@@ -6,6 +6,7 @@
 #include "PlaylistModel.h"
 
 #include "NUIComponent.h"
+#include "NUIContextMenu.h"
 #include "MusicHelpers.h"
 #include "NUILabel.h"
 #include "NUIButton.h"
@@ -226,6 +227,7 @@ private:
 	    std::shared_ptr<AestraUI::NUIButton> m_muteButton;
 	    std::shared_ptr<AestraUI::NUIButton> m_soloButton;
 	    std::shared_ptr<AestraUI::NUIButton> m_recordButton;
+        std::shared_ptr<AestraUI::NUIContextMenu> m_recordModeMenu;
 
     // UI callbacks
     void onVolumeChanged(float volume);
@@ -233,6 +235,8 @@ private:
     void onMuteToggled();
     void onSoloToggled();
     void onRecordToggled();
+    void showRecordModeMenu(const AestraUI::NUIPoint& position);
+    void updateRecordTooltip();
 
     void drawWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, 
                      float offsetRatio = 0.0f, float visibleRatio = 1.0f);

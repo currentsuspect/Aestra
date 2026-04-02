@@ -23,7 +23,9 @@ void MixerViewModel::refreshInputs(const Aestra::Audio::AudioDeviceManager& devi
     inputNames.clear();
     inputDeviceIds.clear();
     
-    // Add "None" option
+    // Add "Auto" and "None" options first.
+    inputNames.push_back("Auto");
+    inputDeviceIds.push_back(-2);
     inputNames.push_back("None");
     inputDeviceIds.push_back(-1);
 
@@ -57,6 +59,33 @@ void MixerViewModel::updateMeters(const Audio::MeterSnapshotBuffer& snapshots, d
     if (m_master) {
         const auto snapshot = snapshots.readSnapshot(m_master->slotIndex);
         smoothMeterChannel(*m_master, snapshot, deltaTime);
+    }
+}
+
+void MixerViewModel::updateInputDiagnostics(const Audio::TrackManager& trackManager, double deltaTime) {
+    const float attack = 1.0f - std::exp(static_cast<float>(-deltaTime * 22.0));
+    const float release = 1.0f - std::exp(static_cast<float>(-deltaTime * 5.0));
+    const int availableInputs = trackManager.getInputChannelCount();
+
+    for (auto& channel : m_channels) {
+        if (!channel) continue;
+
+        float targetPeak = 0.0f;
+        if (channel->inputChannelIndex == -2) {
+            channel->inputSourceName = "Auto";
+            for (int i = 0; i < availableInputs; ++i) {
+                targetPeak = std::max(targetPeak, trackManager.getInputPeak(i));
+            }
+        } else if (channel->inputChannelIndex == -1) {
+            channel->inputSourceName = "None";
+        } else {
+            channel->inputSourceName = "Input " + std::to_string(channel->inputChannelIndex + 1);
+            targetPeak = trackManager.getInputPeak(channel->inputChannelIndex);
+        }
+
+        const float coeff = targetPeak > channel->inputPeak ? attack : release;
+        channel->inputPeak += (targetPeak - channel->inputPeak) * coeff;
+        channel->inputPeak = std::clamp(channel->inputPeak, 0.0f, 1.0f);
     }
 }
 

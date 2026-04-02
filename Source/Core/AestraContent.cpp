@@ -117,6 +117,28 @@ AestraContent::AestraContent() {
     });
     m_trackManagerUI->setOnToggleSequencer([this]() { toggleView(Audio::ViewType::Sequencer); });
     m_trackManagerUI->setOnTogglePlaylist([this]() { toggleView(Audio::ViewType::Playlist); });
+    m_trackManagerUI->setOnLoopPresetChanged([this](int preset) {
+        if (!m_audioEngine) {
+            return;
+        }
+        if (preset == 0) {
+            m_audioEngine->setLoopEnabled(false);
+        }
+    });
+    m_trackManagerUI->setOnLoopRegionUpdate([this](double startBeat, double endBeat) {
+        if (!m_audioEngine) {
+            return;
+        }
+        m_audioEngine->setLoopRegion(startBeat, endBeat);
+        m_audioEngine->setLoopEnabled(endBeat > startBeat);
+    });
+    m_trackManagerUI->setOnSelectionMade([this](double startBeat, double endBeat) {
+        if (!m_audioEngine) {
+            return;
+        }
+        m_audioEngine->setLoopRegion(startBeat, endBeat);
+        m_audioEngine->setLoopEnabled(endBeat > startBeat);
+    });
     
     // Audition Mode integration - sends track to Audition queue and switches mode
     m_trackManagerUI->setOnSendToAudition([this](uint32_t trackId, const std::string& trackName) {
@@ -211,8 +233,8 @@ AestraContent::AestraContent() {
     });
     m_transportBar->setOnRecord([this](bool recording) { 
         if(m_trackManager) {
-            bool isEngineRecording = m_trackManager->isRecording();
-            if (recording != isEngineRecording) {
+            bool isRecordArmed = m_trackManager->isRecordArmed();
+            if (recording != isRecordArmed) {
                 m_trackManager->record();
             }
         }
