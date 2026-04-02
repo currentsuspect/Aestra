@@ -56,11 +56,14 @@ public:
     void setTotalDuration(double totalBeats);
     /** @brief Set the current playhead beat displayed in the minimap. */
     void setPlayheadBeat(double beat);
+    /** @brief Replace the note spans rendered inside the minimap. */
+    void setNotes(const std::vector<MidiNote>& notes);
     
     // Callbacks
     std::function<void(double start, double duration)> onViewChanged; // For Pan/Zoom
 
 private:
+    std::vector<MidiNote> notes_;
     double startBeat_ = 0.0;
     double viewDuration_ = 4.0;
     double totalDuration_ = 100.0; // Default 100 bars?
@@ -151,7 +154,7 @@ private:
     std::shared_ptr<NUIButton> m_pencilBtn;
     std::shared_ptr<NUIButton> m_eraserBtn;
     
-    GlobalTool activeTool_ = GlobalTool::Pointer;
+    GlobalTool activeTool_ = GlobalTool::Pencil;
     
     // Icons
     std::shared_ptr<AestraUI::NUIIcon> m_menuIcon;
@@ -308,7 +311,7 @@ private:
     uint64_t defaultUnitId_ = 0;
 
     // Tool
-    PianoRollTool tool_ = PianoRollTool::Pointer;
+    PianoRollTool tool_ = PianoRollTool::Pencil;
     
     // Undo Stack
     std::vector<PianoRollCommand> undoStack_;
