@@ -97,11 +97,6 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_lastProgressTime = std::chrono::steady_clock::now();
     m_progressInterval = config.progressInterval;
 
-    // Reset master output state for this render
-    m_dcBlockerL = DCBlockerD{};
-    m_dcBlockerR = DCBlockerD{};
-    m_ditherRng.seed(42);  // Deterministic dither for reproducibility
-
     struct RenderGuard {
         AudioExporter& exporter;
         explicit RenderGuard(AudioExporter& e) : exporter(e) {}
@@ -135,66 +130,25 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_engine.setSampleRate(config.sampleRate);
     m_trackManager.setOutputSampleRate(sampleRate);
 
-    int activeIdx = 0;
-    {
-        std::lock_guard<std::mutex> graphLock(m_engine.m_graphMutex);
-        activeIdx = m_engine.m_activeRenderTrackIndex.load(std::memory_order_relaxed);
-    }
-    AudioGraphState& graphState = m_engine.m_graphStates[activeIdx];
+    // Offline export should follow the exact live engine path to avoid render-path
+    // mismatches between playback and export.
+    const bool wasMetronomeEnabled = m_engine.isMetronomeEnabled();
+    const bool wasAuditionEnabled = m_engine.isAuditionModeEnabled();
+    m_engine.setMetronomeEnabled(false);
+    m_engine.setAuditionModeEnabled(false);
+    m_engine.setGlobalSamplePos(startSample);
+    m_engine.setTransportPlaying(true);
 
     // Render loop using AudioRenderer::renderBlock (same path as bounceRangeToWav)
-    uint64_t currentFrame = startSample;
     uint64_t framesRemaining = totalFrames;
     result.framesRendered = 0;
-
-    std::vector<float> floatBlock(config.numChannels);
+    std::vector<float> silentInput(static_cast<size_t>(RENDER_BLOCK_FRAMES) * config.numChannels, 0.0f);
 
     while (framesRemaining > 0 && !shouldCancel()) {
         uint32_t framesThisBlock = static_cast<uint32_t>(
             std::min<uint64_t>(RENDER_BLOCK_FRAMES, framesRemaining));
 
-        // Zero buffer
-        std::fill(m_renderBufferD.begin(), m_renderBufferD.end(), 0.0);
-
-        // Setup context
-        AudioRenderer::Context ctx;
-        ctx.masterBuffer = m_renderBufferD.data();
-        ctx.numFrames = framesThisBlock;
-        ctx.bufferOffset = 0;
-        ctx.globalPos = currentFrame;
-        ctx.sampleRate = config.sampleRate;
-        ctx.isOffline = true;
-        ctx.isolatedTrackIndex = -1;  // Full mix
-
-        // Render this block
-        m_engine.m_rtRenderer.renderBlock(ctx, graphState, m_engine);
-
-        // Process Arsenal units routed to Master (Pass 3)
-        m_engine.m_rtRenderer.processArsenalUnits(ctx, m_engine);
-
-        // Apply master output stage (DC block, soft clip, dither)
-        for (uint32_t i = 0; i < framesThisBlock; ++i) {
-            double sampleL = m_renderBufferD[i * 2];
-            double sampleR = m_renderBufferD[i * 2 + 1];
-
-            // Soft clip
-            sampleL = AudioEngine::softClipD(sampleL);
-            sampleR = AudioEngine::softClipD(sampleR);
-
-            // DC blocker
-            sampleL = m_dcBlockerL.process(sampleL);
-            sampleR = m_dcBlockerR.process(sampleR);
-
-            // Dither for PCM output (TPDF)
-            if (config.bitDepth != BitDepth::Float_32) {
-                std::uniform_real_distribution<float> dist(-1.0f / 65536.0f, 1.0f / 65536.0f);
-                sampleL += dist(m_ditherRng) + dist(m_ditherRng);
-                sampleR += dist(m_ditherRng) + dist(m_ditherRng);
-            }
-
-            m_renderBufferF[i * 2] = static_cast<float>(sampleL);
-            m_renderBufferF[i * 2 + 1] = static_cast<float>(sampleR);
-        }
+        m_engine.processBlock(m_renderBufferF.data(), silentInput.data(), framesThisBlock, 0.0);
 
         // Track peak level
         float blockPeak = calculatePeakDb(m_renderBufferF.data(), framesThisBlock, config.numChannels);
@@ -221,7 +175,6 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         }
 
         // Advance position
-        currentFrame += framesThisBlock;
         framesRemaining -= framesThisBlock;
         result.framesRendered += framesThisBlock;
 
@@ -231,8 +184,11 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     }
 
     // Restore engine state
+    m_engine.setTransportPlaying(false);
     m_engine.setSampleRate(originalSampleRate);
     m_trackManager.setOutputSampleRate(static_cast<double>(originalSampleRate));
+    m_engine.setMetronomeEnabled(wasMetronomeEnabled);
+    m_engine.setAuditionModeEnabled(wasAuditionEnabled);
     m_engine.setGlobalSamplePos(savedSamplePos);
     if (wasPlaying) {
         m_engine.setTransportPlaying(true);

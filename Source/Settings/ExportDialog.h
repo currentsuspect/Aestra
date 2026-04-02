@@ -5,6 +5,7 @@
 #include "NUIButton.h"
 #include "NUIProgressBar.h"
 #include "NUIDropdown.h"
+#include "AudioDeviceManager.h"
 #include <string>
 #include <functional>
 #include <atomic>
@@ -108,6 +109,7 @@ private:
     bool parseTailInput(double& outTailSeconds) const;
     void syncTailInputFromValue();
     void applyExportResult(const ExportJobResult& result);
+    void restoreAudioStreamIfNeeded();
 
     enum class PanelState { Settings, Progress, Complete };
     PanelState m_panelState = PanelState::Settings;
@@ -140,6 +142,7 @@ private:
     double m_exportPeakDb = -96.0;
     std::string m_exportError;
     double m_exportElapsed = 0.0;
+    bool m_resumeAudioStreamAfterExport = false;
 
     // Engine refs
     Aestra::Audio::AudioEngine* m_engine = nullptr;
