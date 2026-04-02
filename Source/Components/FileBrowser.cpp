@@ -189,9 +189,8 @@ std::string resolveExistingDirectoryPath(const std::string& requestedPath, const
         return canonicalOrNormalized(root).string();
     }
 
-    const fs::path cwd = fs::current_path(ec);
-    if (!cwd.empty() && fs::exists(cwd, ec) && fs::is_directory(cwd, ec)) {
-        return canonicalOrNormalized(cwd).string();
+    if (!root.empty()) {
+        return {};
     }
 
     return requestedPath;
@@ -1704,6 +1703,9 @@ void FileBrowser::onMouseLeave() {
 }
 void FileBrowser::setCurrentPath(const std::string& path) {
     const std::string targetPath = resolveExistingDirectoryPath(path, rootPath_);
+    if (targetPath.empty()) {
+        return;
+    }
 
     if (currentPath_ == targetPath) {
         return;
@@ -1771,6 +1773,9 @@ void FileBrowser::refresh() {
     hoveredBreadcrumbIndex_ = -1;
 
     const std::string resolvedPath = resolveExistingDirectoryPath(currentPath_, rootPath_);
+    if (resolvedPath.empty()) {
+        return;
+    }
     if (resolvedPath != currentPath_) {
         currentPath_ = resolvedPath;
         if (!isNavigatingHistory_ && (navHistory_.empty() || navHistory_[navHistoryIndex_] != currentPath_)) {
@@ -1997,7 +2002,10 @@ void FileBrowser::setSortAscending(bool ascending) {
 }
 
 void FileBrowser::loadDirectoryContents() {
-    currentPath_ = resolveExistingDirectoryPath(currentPath_, rootPath_);
+    const std::string resolvedPath = resolveExistingDirectoryPath(currentPath_, rootPath_);
+    if (!resolvedPath.empty()) {
+        currentPath_ = resolvedPath;
+    }
 
     rootItems_.clear();
     displayItems_.clear();

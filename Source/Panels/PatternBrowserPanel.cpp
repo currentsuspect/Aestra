@@ -598,7 +598,6 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Right) {
         // Consume empty-space right clicks so they do not fall through into TrackManagerUI
         // and start its right-drag selection path.
-        repaint();
         return true;
     }
     

@@ -9,6 +9,7 @@
 #include "MixerViewModel.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 
 namespace AestraUI {
@@ -524,13 +525,19 @@ void UIMixerInspector::onUpdate(double deltaTime)
              const auto& inputs = m_viewModel->inputNames;
              const auto& deviceIds = m_viewModel->inputDeviceIds;
              
-             if (m_ioInputDropdown->getItemCount() != inputs.size()) {
+             bool rebuildDropdown = m_ioInputDropdown->getItemCount() != static_cast<int>(inputs.size()) ||
+                                    m_cachedInputNames != inputs ||
+                                    m_cachedInputDeviceIds != deviceIds;
+
+             if (rebuildDropdown) {
                  m_ioInputDropdown->clearItems();
                  for (size_t i = 0; i < inputs.size(); ++i) {
                      // Use actual device ID as the value
                      int deviceId = (i < deviceIds.size()) ? deviceIds[i] : -1;
                      m_ioInputDropdown->addItem(inputs[i], deviceId);
                  }
+                 m_cachedInputNames = inputs;
+                 m_cachedInputDeviceIds = deviceIds;
              }
              
              // Sync Selection

@@ -6,6 +6,7 @@
 #include "AudioTelemetry.h"
 #include "PreviewEngine.h"
 #include "TrackManager.h"
+#include "AestraPlatform.h"
 #include "../AestraCore/include/AestraLog.h"
 
 #include <algorithm>
@@ -19,6 +20,20 @@ using namespace Aestra;
 using namespace Aestra::Audio;
 
 namespace {
+std::filesystem::path getAudioSettingsConfigPath() {
+    if (auto* utils = Aestra::Platform::getUtils()) {
+        std::error_code ec;
+        std::filesystem::path appDataDir(utils->getAppDataPath("Aestra"));
+        if (!appDataDir.empty()) {
+            std::filesystem::create_directories(appDataDir, ec);
+            if (!ec) {
+                return appDataDir / "audio_settings.conf";
+            }
+        }
+    }
+    return std::filesystem::current_path() / "audio_settings.conf";
+}
+
 uint64_t estimateCycleHz() {
 #if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
     const auto t0 = std::chrono::steady_clock::now();
@@ -42,7 +57,7 @@ struct SavedAudioSelection {
 SavedAudioSelection loadSavedAudioSelection() {
     SavedAudioSelection selection;
 
-    const std::filesystem::path configPath = std::filesystem::current_path() / "audio_settings.conf";
+    const std::filesystem::path configPath = getAudioSettingsConfigPath();
     std::ifstream file(configPath);
     if (!file.is_open()) {
         return selection;

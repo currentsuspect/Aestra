@@ -533,7 +533,7 @@ void PluginBrowserPanel::setScanStatus(const std::string& status) {
 
 int PluginBrowserPanel::hitTestRow(int y) const {
     auto bounds = getBounds();
-    float listTop = bounds.y + HEADER_HEIGHT + TAB_HEIGHT + SEARCH_HEIGHT;
+    float listTop = bounds.y + HEADER_HEIGHT + TAB_HEIGHT + SEARCH_HEIGHT + 4.0f;
     
     if (y < listTop) return -1;
     

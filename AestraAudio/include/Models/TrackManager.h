@@ -930,7 +930,9 @@ private:
         const uint16_t blockAlign = static_cast<uint16_t>(numChannels * (bitsPerSample / 8));
         const uint32_t byteRate = sampleRate * blockAlign;
         const uint32_t dataSize = static_cast<uint32_t>(buffer.interleavedData.size() * sizeof(float));
-        const uint32_t riffChunkSize = 36u + dataSize;
+        const uint32_t sampleCount = static_cast<uint32_t>(buffer.numFrames);
+        const uint32_t factChunkSize = 4;
+        const uint32_t riffChunkSize = 48u + dataSize;
 
         file.write("RIFF", 4);
         file.write(reinterpret_cast<const char*>(&riffChunkSize), sizeof(riffChunkSize));
@@ -945,6 +947,10 @@ private:
         file.write(reinterpret_cast<const char*>(&byteRate), sizeof(byteRate));
         file.write(reinterpret_cast<const char*>(&blockAlign), sizeof(blockAlign));
         file.write(reinterpret_cast<const char*>(&bitsPerSample), sizeof(bitsPerSample));
+
+        file.write("fact", 4);
+        file.write(reinterpret_cast<const char*>(&factChunkSize), sizeof(factChunkSize));
+        file.write(reinterpret_cast<const char*>(&sampleCount), sizeof(sampleCount));
 
         file.write("data", 4);
         file.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize));
