@@ -225,6 +225,7 @@ public:
     void setSampleRate(double sampleRate) { m_sampleRate.store(sampleRate); }
 
 private:
+    void loadCurrentTrack(bool startPlayback);
     // Queue
     std::vector<AuditionQueueItem> m_queue;
     int32_t m_currentIndex{-1};
