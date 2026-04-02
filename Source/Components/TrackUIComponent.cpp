@@ -92,11 +92,10 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     m_muteButton->setText("M");
     m_muteButton->setStyle(AestraUI::NUIButton::Style::Secondary); 
     m_muteButton->setToggleable(true);
-    m_muteButton->setHoverColor(AestraUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.4f));
-    m_muteButton->setPressedColor(AestraUI::NUIThemeManager::getInstance().getColor("accentAmber")); 
-    m_muteButton->setTextColor(AestraUI::NUIColor::white());
+    m_muteButton->setHoverColor(AestraUI::NUIThemeManager::getInstance().getColor("buttonBgHover"));
+    m_muteButton->setPressedColor(AestraUI::NUIThemeManager::getInstance().getColor("buttonBgActive"));
+    m_muteButton->setTextColor(AestraUI::NUIThemeManager::getInstance().getColor("textSecondary"));
     m_muteButton->setFontSize(AestraUI::NUIThemeManager::getInstance().getFontSize("m"));
-    m_muteButton->setCornerRadius(13.0f);
     m_muteButton->setCornerRadius(13.0f);
     m_muteButton->setOnToggle([this](bool) { onMuteToggled(); });
     m_muteButton->setTooltip("Mute Track (M)");
@@ -107,11 +106,10 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     m_soloButton->setText("S");
     m_soloButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     m_soloButton->setToggleable(true);
-    m_soloButton->setHoverColor(AestraUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.4f));
-    m_soloButton->setPressedColor(AestraUI::NUIThemeManager::getInstance().getColor("accentCyan"));
-    m_soloButton->setTextColor(AestraUI::NUIColor::white());
+    m_soloButton->setHoverColor(AestraUI::NUIThemeManager::getInstance().getColor("buttonBgHover"));
+    m_soloButton->setPressedColor(AestraUI::NUIThemeManager::getInstance().getColor("buttonBgActive"));
+    m_soloButton->setTextColor(AestraUI::NUIThemeManager::getInstance().getColor("textSecondary"));
     m_soloButton->setFontSize(AestraUI::NUIThemeManager::getInstance().getFontSize("m"));
-    m_soloButton->setCornerRadius(13.0f);
     m_soloButton->setCornerRadius(13.0f);
     m_soloButton->setOnToggle([this](bool) { onSoloToggled(); });
     m_soloButton->setTooltip("Solo Track (S)");
@@ -122,10 +120,9 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     m_recordButton->setText("R");
     m_recordButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     m_recordButton->setToggleable(true);
-    m_recordButton->setHoverColor(AestraUI::NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.4f));
-    m_recordButton->setPressedColor(AestraUI::NUIThemeManager::getInstance().getColor("error"));
+    m_recordButton->setHoverColor(AestraUI::NUIThemeManager::getInstance().getColor("buttonBgHover"));
+    m_recordButton->setPressedColor(AestraUI::NUIThemeManager::getInstance().getColor("buttonBgActive"));
     m_recordButton->setFontSize(AestraUI::NUIThemeManager::getInstance().getFontSize("m"));
-    m_recordButton->setCornerRadius(13.0f);
     m_recordButton->setCornerRadius(13.0f);
     m_recordButton->setOnToggle([this](bool) { onRecordToggled(); });
     addChild(m_recordButton);
@@ -270,25 +267,26 @@ void TrackUIComponent::updateUI() {
 
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
 
-    // Standard Glassy Look for Inactive State (Pure White Glass - no grey contamination)
-    AestraUI::NUIColor inactiveBg = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.04f);
-    AestraUI::NUIColor inactiveHover = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
-    AestraUI::NUIColor inactiveText = themeManager.getColor("textSecondary");
+    const AestraUI::NUIColor inactiveBg = themeManager.getColor("buttonBgDefault").withAlpha(0.98f);
+    const AestraUI::NUIColor inactiveHover = themeManager.getColor("buttonBgHover").withAlpha(0.99f);
+    const AestraUI::NUIColor inactiveBorder = themeManager.getColor("border").withAlpha(0.28f);
+    const AestraUI::NUIColor inactiveText = themeManager.getColor("textSecondary").withAlpha(0.86f);
+    const AestraUI::NUIColor activeText = themeManager.getColor("textPrimary");
 
     if (m_muteButton) {
         m_muteButton->setToggled(m_channel->isMuted());
-        m_muteButton->setGlowEnabled(true); // Enable Neon Glow
+        m_muteButton->setGlowEnabled(false);
         
         if (m_channel->isMuted()) {
-            // Active: Strong Neon Amber (Mute)
-            m_muteButton->setBackgroundColor(themeManager.getColor("accentAmber").withAlpha(0.6f));
-            m_muteButton->setTextColor(AestraUI::NUIColor::white()); 
-            m_muteButton->setHoverColor(themeManager.getColor("accentAmber").withAlpha(0.8f));
+            m_muteButton->setBackgroundColor(themeManager.getColor("buttonBgActive").withAlpha(0.99f));
+            m_muteButton->setTextColor(activeText);
+            m_muteButton->setHoverColor(themeManager.getColor("buttonBgHover"));
+            m_muteButton->setBorderColor(themeManager.getColor("accentAmber").withAlpha(0.34f));
             m_muteButton->setBorderEnabled(true);
+            m_muteButton->setBorderWidth(1.0f);
         } else {
-            // Inactive: Grey Glass (Better visibility, clear glass)
-            m_muteButton->setBackgroundColor(themeManager.getColor("backgroundSecondary").withAlpha(0.0f)); // Transparent
-            m_muteButton->setBorderColor(AestraUI::NUIColor(1,1,1,0.15f));
+            m_muteButton->setBackgroundColor(inactiveBg);
+            m_muteButton->setBorderColor(inactiveBorder);
             m_muteButton->setTextColor(inactiveText);
             m_muteButton->setHoverColor(inactiveHover);
             m_muteButton->setBorderEnabled(true);
@@ -298,18 +296,18 @@ void TrackUIComponent::updateUI() {
 
     if (m_soloButton) {
         m_soloButton->setToggled(m_channel->isSoloed());
-        m_soloButton->setGlowEnabled(true); // Enable Neon Glow
+        m_soloButton->setGlowEnabled(false);
         
         if (m_channel->isSoloed()) {
-            // Active: Strong Neon Cyan (Solo)
-            m_soloButton->setBackgroundColor(themeManager.getColor("accentCyan").withAlpha(0.6f));
-            m_soloButton->setTextColor(AestraUI::NUIColor::white());
-            m_soloButton->setHoverColor(themeManager.getColor("accentCyan").withAlpha(0.8f));
+            m_soloButton->setBackgroundColor(themeManager.getColor("buttonBgActive").withAlpha(0.99f));
+            m_soloButton->setTextColor(activeText);
+            m_soloButton->setHoverColor(themeManager.getColor("buttonBgHover"));
+            m_soloButton->setBorderColor(themeManager.getColor("accentCyan").withAlpha(0.32f));
             m_soloButton->setBorderEnabled(true);
+            m_soloButton->setBorderWidth(1.0f);
         } else {
-            // Inactive: Grey Glass
-            m_soloButton->setBackgroundColor(themeManager.getColor("backgroundSecondary").withAlpha(0.0f));
-            m_soloButton->setBorderColor(AestraUI::NUIColor(1,1,1,0.15f));
+            m_soloButton->setBackgroundColor(inactiveBg);
+            m_soloButton->setBorderColor(inactiveBorder);
             m_soloButton->setTextColor(inactiveText);
             m_soloButton->setHoverColor(inactiveHover);
             m_soloButton->setBorderEnabled(true);
@@ -319,23 +317,22 @@ void TrackUIComponent::updateUI() {
 
     if (m_recordButton) {
         m_recordButton->setToggled(m_channel->isArmed());
-        m_recordButton->setGlowEnabled(true);
-        // Record state styling
-        m_recordButton->setBackgroundColor(themeManager.getColor("backgroundSecondary").withAlpha(0.0f));
-        m_recordButton->setBorderColor(AestraUI::NUIColor(1,1,1,0.15f));
+        m_recordButton->setGlowEnabled(false);
+        m_recordButton->setBackgroundColor(inactiveBg);
+        m_recordButton->setBorderColor(inactiveBorder);
         m_recordButton->setTextColor(inactiveText);
         m_recordButton->setHoverColor(inactiveHover);
         m_recordButton->setBorderEnabled(true);
         m_recordButton->setBorderWidth(1.0f);
 
         if (m_channel->isArmed()) {
-            m_recordButton->setBackgroundColor(themeManager.getColor("error").withAlpha(0.28f));
+            m_recordButton->setBackgroundColor(themeManager.getColor("buttonBgActive").withAlpha(0.99f));
             m_recordButton->setBorderColor(
                 m_channel->isMonitoringEnabled()
-                    ? themeManager.getColor("accentCyan").withAlpha(0.7f)
-                    : themeManager.getColor("error").withAlpha(0.55f));
-            m_recordButton->setTextColor(AestraUI::NUIColor::white());
-            m_recordButton->setHoverColor(themeManager.getColor("error").withAlpha(0.4f));
+                    ? themeManager.getColor("accentCyan").withAlpha(0.34f)
+                    : themeManager.getColor("error").withAlpha(0.34f));
+            m_recordButton->setTextColor(activeText);
+            m_recordButton->setHoverColor(themeManager.getColor("buttonBgHover"));
         }
         updateRecordTooltip();
     }
@@ -1273,25 +1270,13 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
     const AestraUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
 
-    // === GLASS HEADER 2.0 ===
-    // More transparent, "frosted" glass feel
-    AestraUI::NUIColor baseTint = AestraUI::NUIColor(0.25f, 0.25f, 0.32f, 0.2f); // Blue-grey tint, semi-transparent
-    
-    // Draw stacked gradient layers for depth
-    // Top is lighter, Bottom is darker
-    for(int i = 0; i < 6; ++i) { // Smoother gradient
-        float factor = static_cast<float>(i) / 5.0f;
-        AestraUI::NUIColor layerColor = baseTint.lightened(0.1f * (1.0f - factor)).darkened(0.2f * factor);
-        AestraUI::NUIRect layerRect = controlAreaBounds;
-        layerRect.y += i * 0.5f;
-        layerRect.height -= i * 0.5f;
-        renderer.fillRect(layerRect, layerColor);
-    }
-    
-    // Inner Top Highlight (Stronger Glass Edge)
+    // Flat control slab with restrained depth.
+    AestraUI::NUIColor baseTint = themeManager.getColor("surfaceTertiary").withAlpha(0.92f);
+    renderer.fillRect(controlAreaBounds, baseTint);
+
     AestraUI::NUIRect highlightRect = controlAreaBounds;
     highlightRect.height = 1.0f;
-    renderer.fillRect(highlightRect, AestraUI::NUIColor::white().withAlpha(0.15f)); // Boosted from 0.08f
+    renderer.fillRect(highlightRect, AestraUI::NUIColor::white().withAlpha(0.08f));
     
     // Right Border (Separator)
     AestraUI::NUIRect borderRect(controlAreaBounds.right() - 1.0f, controlAreaBounds.y, 1.0f, controlAreaBounds.height);
@@ -1380,7 +1365,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         const bool soloSuppressed = anySoloed && !m_channel->isSoloed();
 
         if (m_channel->isSoloed()) {
-            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentCyan").withAlpha(0.12f));
+            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentCyan").withAlpha(0.10f));
         } else if (m_channel->isMuted()) {
             renderer.fillRect(controlAreaBounds, AestraUI::NUIColor(0,0,0,0.35f));
         } else if (soloSuppressed) {
@@ -1389,7 +1374,9 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
 
         // SELECTION OVERLAY
         if (m_selected) {
-            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentPrimary").withAlpha(0.15f));
+            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentPrimary").withAlpha(0.08f));
+            AestraUI::NUIRect selectionBar(controlAreaBounds.x, controlAreaBounds.y, 3.0f, controlAreaBounds.height);
+            renderer.fillRect(selectionBar, themeManager.getColor("accentPrimary").withAlpha(0.95f));
         }
     }
 
