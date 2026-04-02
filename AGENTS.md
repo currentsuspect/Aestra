@@ -14,6 +14,7 @@ This file stores repo-specific workflow rules and continuity notes for future ag
 - Keep commits surgical and reviewable by concern.
 - After each meaningful pass, update the technical docs so roadmap/task status stays current.
 - Use `-j2` for local builds unless the user explicitly says otherwise.
+- End-of-day ritual: confirm whether the planned agenda actually landed, then ask for tomorrow's intended scope before wrapping.
 
 ## Recent Stable Areas
 
