@@ -159,6 +159,44 @@ bool isPathUnderRoot(const std::filesystem::path& candidatePath, const std::file
     return candidate.compare(0, root.size(), root) == 0;
 }
 
+std::string resolveExistingDirectoryPath(const std::string& requestedPath, const std::string& rootPath) {
+    namespace fs = std::filesystem;
+
+    std::error_code ec;
+    fs::path root = rootPath.empty() ? fs::path() : fs::path(rootPath);
+    fs::path candidate = requestedPath.empty() ? root : fs::path(requestedPath);
+
+    if (!root.empty() && !isPathUnderRoot(candidate, root)) {
+        candidate = root;
+    }
+
+    while (!candidate.empty()) {
+        if (fs::exists(candidate, ec) && fs::is_directory(candidate, ec)) {
+            if (!root.empty() && !isPathUnderRoot(candidate, root)) {
+                break;
+            }
+            return canonicalOrNormalized(candidate).string();
+        }
+
+        const fs::path parent = candidate.parent_path();
+        if (parent.empty() || parent == candidate) {
+            break;
+        }
+        candidate = parent;
+    }
+
+    if (!root.empty() && fs::exists(root, ec) && fs::is_directory(root, ec)) {
+        return canonicalOrNormalized(root).string();
+    }
+
+    const fs::path cwd = fs::current_path(ec);
+    if (!cwd.empty() && fs::exists(cwd, ec) && fs::is_directory(cwd, ec)) {
+        return canonicalOrNormalized(cwd).string();
+    }
+
+    return requestedPath;
+}
+
 // Generate waveform overview from decoded audio samples
 // Downsamples to targetSize bins, computing peak amplitude per bin
 std::vector<float> generateWaveformFromAudio(const std::vector<float>& samples, 
@@ -523,7 +561,8 @@ bool FileFilter::isAllowed(const std::string& path) {
     if (path.empty()) return false;
     
     // Always allow visible directories (caller handles hidden check)
-    if (std::filesystem::is_directory(path)) return true;
+    std::error_code ec;
+    if (std::filesystem::is_directory(path, ec)) return true;
 
     std::string ext = std::filesystem::path(path).extension().string();
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
@@ -555,12 +594,25 @@ std::vector<FileItem> FileBrowser::scanDirectory(const std::string& path, int de
     try {
         const std::filesystem::path dir(path);
         const auto options = std::filesystem::directory_options::skip_permission_denied;
+        std::error_code iterEc;
+        std::filesystem::directory_iterator it(dir, options, iterEc);
+        if (iterEc) {
+            Log::warning(std::string("[FileBrowser] Scan failed for ") + path + ": " + iterEc.message());
+            return items;
+        }
 
-        for (const auto& entry : std::filesystem::directory_iterator(dir, options)) {
+        for (; it != std::filesystem::directory_iterator(); it.increment(iterEc)) {
             if (scanStop_.load(std::memory_order_acquire) ||
                 generation != scanGeneration_.load(std::memory_order_acquire)) {
                 break;
             }
+
+            if (iterEc) {
+                Log::warning(std::string("[FileBrowser] Scan iteration failed for ") + path + ": " + iterEc.message());
+                break;
+            }
+
+            const auto& entry = *it;
 
             const std::string name = entry.path().filename().string();
             if (!showHidden && !name.empty() && name[0] == '.') {
@@ -894,7 +946,7 @@ void FileBrowser::onResize(int width, int height) {
     // Ignore legacy headerHeight, define our own stack
     const float buttonsRowHeight = 40.0f;     // Increased from 36
     const float breadcrumbRowHeight = 32.0f;  // Increased from 28
-    const float searchRowHeight = 36.0f;      // Increased from 32
+    const float searchRowHeight = 34.0f;
     const float innerPad = 8.0f;
     const float rowSpacing = 8.0f;            // Increased from 4
     
@@ -916,9 +968,9 @@ void FileBrowser::onResize(int width, int height) {
         searchInput_->setBounds(searchBounds);
         
         searchInput_->setTextColor(textColor_);
-        searchInput_->setBackgroundColor(themeManager.getColor("inputBgDefault"));
-        searchInput_->setBorderColor(borderColor_.withAlpha(0.5f));
-        searchInput_->setBorderRadius(themeManager.getRadius("s"));
+        searchInput_->setBackgroundColor(themeManager.getColor("buttonBgDefault").withAlpha(0.98f));
+        searchInput_->setBorderColor(themeManager.getColor("border").withAlpha(0.24f));
+        searchInput_->setBorderRadius(10.0f);
     }
     
     // 3. File List
@@ -1295,6 +1347,8 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	                    return true;
 	                }
 	            }
+                hidePopupMenu();
+                return true;
 	        }
 
 	        if (event.pressed && event.button == NUIMouseButton::Left) {
@@ -1453,7 +1507,13 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     
     // If we reached here, and the click was inside the list area but on no item,
     // we MUST consume it to prevent focus from resetting to Root.
-    if (isInsideList && event.pressed && event.button == NUIMouseButton::Left) {
+    if (isInsideList && event.pressed &&
+        (event.button == NUIMouseButton::Left || event.button == NUIMouseButton::Right)) {
+        return true;
+    }
+
+    if (mouseInside && event.pressed && event.button == NUIMouseButton::Right) {
+        hidePopupMenu();
         return true;
     }
 
@@ -1643,14 +1703,7 @@ void FileBrowser::onMouseLeave() {
     NUIComponent::onMouseLeave();
 }
 void FileBrowser::setCurrentPath(const std::string& path) {
-    std::string targetPath = path;
-    if (!rootPath_.empty()) {
-        const std::filesystem::path root(rootPath_);
-        const std::filesystem::path candidate(path);
-        if (!isPathUnderRoot(candidate, root)) {
-            targetPath = rootPath_;
-        }
-    }
+    const std::string targetPath = resolveExistingDirectoryPath(path, rootPath_);
 
     if (currentPath_ == targetPath) {
         return;
@@ -1717,6 +1770,18 @@ void FileBrowser::refresh() {
     hoveredIndex_ = -1;
     hoveredBreadcrumbIndex_ = -1;
 
+    const std::string resolvedPath = resolveExistingDirectoryPath(currentPath_, rootPath_);
+    if (resolvedPath != currentPath_) {
+        currentPath_ = resolvedPath;
+        if (!isNavigatingHistory_ && (navHistory_.empty() || navHistory_[navHistoryIndex_] != currentPath_)) {
+            pushToHistory(currentPath_);
+        }
+        updateBreadcrumbs();
+        if (onPathChanged_) {
+            onPathChanged_(currentPath_);
+        }
+    }
+
     loadDirectoryContents();
     invalidateCache();
 }
@@ -1738,13 +1803,9 @@ void FileBrowser::navigateUp() {
 }
 
 void FileBrowser::navigateTo(const std::string& path) {
-    if (!std::filesystem::exists(path) || !std::filesystem::is_directory(path)) return;
-    if (!rootPath_.empty()) {
-        const std::filesystem::path root(rootPath_);
-        const std::filesystem::path candidate(path);
-        if (!isPathUnderRoot(candidate, root)) return;
-    }
-    setCurrentPath(path);
+    const std::string targetPath = resolveExistingDirectoryPath(path, rootPath_);
+    if (targetPath.empty()) return;
+    setCurrentPath(targetPath);
 }
 
 void FileBrowser::selectFile(const std::string& path) {
@@ -1936,6 +1997,8 @@ void FileBrowser::setSortAscending(bool ascending) {
 }
 
 void FileBrowser::loadDirectoryContents() {
+    currentPath_ = resolveExistingDirectoryPath(currentPath_, rootPath_);
+
     rootItems_.clear();
     displayItems_.clear();
     cachedView_.clear(); // Prevent dangling pointers
@@ -2187,24 +2250,14 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     NUIRect listClipExtended(listClip.x - 1.0f, listClip.y - 1.0f, listClip.width + 2.0f, listClip.height + 2.0f);
     renderer.setClipRect(listClipExtended);
     
-    // Ensure the list area has a solid background (prevents FBO transparency leaks)
-    // Frosted Glass Gradient Background
-    // Top: Slightly lighter/transparent (Glass) -> Bottom: Darker/Depeer
-    AestraUI::NUIColor glassTop = AestraUI::NUIColor(0.14f, 0.14f, 0.20f, 0.4f);
-    AestraUI::NUIColor glassBottom = AestraUI::NUIColor(0.06f, 0.06f, 0.10f, 0.7f);
-    
-    // Draw vertical gradient
-    int steps = 20;
-    float stepH = listClip.height / static_cast<float>(steps);
-    for(int i = 0; i < steps; ++i) {
-        float factor = static_cast<float>(i) / static_cast<float>(steps - 1);
-        AestraUI::NUIColor stepColor = AestraUI::NUIColor::lerp(glassTop, glassBottom, factor);
-        AestraUI::NUIRect stepRect(listClip.x, listClip.y + i * stepH, listClip.width, stepH + 1.0f); // +1 overlap
-        renderer.fillRect(stepRect, stepColor);
-    }
-    
-    // Add subtle noise/texture scaling if renderer supported it, but for now just a border highlight
-    renderer.strokeRoundedRect(listClip, 0.0f, 1.0f, AestraUI::NUIColor(1.0f,1.0f,1.0f,0.05f)); // Inner faint border
+    const float listRadius = 10.0f;
+    const AestraUI::NUIColor listBg = themeManager.getColor("surfaceTertiary").withAlpha(0.58f);
+    renderer.fillRoundedRect(listClip, listRadius, listBg);
+    renderer.strokeRoundedRect(listClip, listRadius, 1.0f, themeManager.getColor("border").withAlpha(0.18f));
+    renderer.strokeRoundedRect({listClip.x + 1.0f, listClip.y + 1.0f, listClip.width - 2.0f, listClip.height - 2.0f},
+                               std::max(0.0f, listRadius - 1.0f),
+                               1.0f,
+                               AestraUI::NUIColor::white().withAlpha(0.02f));
 
     const float labelFont = 14.0f;   // +3px for better legibility
     const float metaFont = 12.0f;    // +2px for metadata
@@ -2245,35 +2298,33 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         
         const FileItem* item = view[i];
 
-        // Background styling
-        // Cap rounded rect radius to itemHeight/3 to prevent visual bleed into adjacent rows
-        const float maxRadius = std::min(6.0f, itemHeight / 3.0f);
-        const float hoverRadius = std::min(4.0f, itemHeight / 4.0f);
+        const float rowRadius = std::min(9.0f, itemHeight * 0.32f);
+        NUIRect rowRect(itemRect.x + 4.0f, itemRect.y + 2.0f, std::max(1.0f, itemRect.width - 8.0f), std::max(1.0f, itemRect.height - 4.0f));
         if (selected) {
-            // Selected state: Neon Glass Pill
-            // Background: Semi-transparent primary/cyan
-            renderer.fillRoundedRect(itemRect, maxRadius, themeManager.getColor("accentPrimary").withAlpha(0.2f));
-            // Border: Hot Neon Glow
-            renderer.strokeRoundedRect(itemRect, maxRadius, 1.5f, themeManager.getColor("accentCyan"));
+            renderer.drawShadow(rowRect, 0.0f, 5.0f, 14.0f, AestraUI::NUIColor(0, 0, 0, 0.10f));
+            renderer.fillRoundedRect(rowRect, rowRadius, themeManager.getColor("buttonBgActive").withAlpha(0.96f));
+            renderer.strokeRoundedRect(rowRect, rowRadius, 1.0f, themeManager.getColor("borderActive").withAlpha(0.22f));
+            renderer.strokeRoundedRect({rowRect.x + 1.0f, rowRect.y + 1.0f, rowRect.width - 2.0f, rowRect.height - 2.0f},
+                                       std::max(0.0f, rowRadius - 1.0f),
+                                       1.0f,
+                                       AestraUI::NUIColor::white().withAlpha(0.025f));
+            renderer.fillRoundedRect({rowRect.x, rowRect.y, 3.0f, rowRect.height}, 1.5f, themeManager.getColor("primary").withAlpha(0.9f));
         } else if (hovered) {
-            // Hover state: Subtle Glass Interaction
-            // Background: Very faint white/glass
-            renderer.fillRoundedRect(itemRect, hoverRadius, themeManager.getColor("glassHover")); 
-            // Border: Crisp glass edge
-            renderer.strokeRoundedRect(itemRect, hoverRadius, 1.0f, themeManager.getColor("glassBorder"));
+            renderer.fillRoundedRect(rowRect, rowRadius, themeManager.getColor("buttonBgHover").withAlpha(0.74f));
+            renderer.strokeRoundedRect(rowRect, rowRadius, 1.0f, themeManager.getColor("border").withAlpha(0.18f));
         } 
         // Note: Alternating rows removed for cleaner "Deep Space" look
         
         // Indentation & Tree Lines (clamped so deep trees don't destroy name readability)
         const int depth = item->depth;
         const float indent = std::min(static_cast<float>(depth) * rowIndentStep, maxIndent);
-        float contentX = itemRect.x + layout.panelMargin + indent;
+        float contentX = rowRect.x + 10.0f + indent;
         const int guideDepth = std::min(depth, maxGuideDepth);
         
         // Draw vertical guide lines for tree structure
         if (guideDepth > 0) {
             // FIX: Align tree guide lines with expander positions (remove 0.5f offset)
-            float lineX = std::round(itemRect.x + layout.panelMargin) + 0.5f;
+            float lineX = std::round(rowRect.x + 10.0f) + 0.5f;
             // More subtle guide lines
             const NUIColor guideColor = themeManager.getColor("glassBorder").withAlpha(0.12f);
             const float yPad = 1.0f;
@@ -2294,7 +2345,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             auto& icon = item->isExpanded ? chevronDownIcon_ : chevronIcon_;
             if (icon) {
                 icon->setBounds(arrowRect);
-                icon->setColor(selected ? selectedColor_ : textColor_.withAlpha(0.82f));
+                icon->setColor(selected ? themeManager.getColor("textPrimary") : textColor_.withAlpha(0.72f));
                 icon->onRender(renderer);
             }
         }
@@ -2368,9 +2419,9 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         // Add hover effect
         NUIColor nameColor = textColor_;
         if (selected) {
-            nameColor = NUIColor::white(); // Bright white for selected
+            nameColor = NUIColor::white();
         } else if (hovered) {
-            nameColor = textColor_.lightened(0.2f);
+            nameColor = textColor_.lightened(0.12f);
         }
         
         // USE CACHED display name
@@ -2386,7 +2437,9 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             float sizeX = itemRect.x + itemRect.width - sizeText.width - rightMargin;
             
             // Render size
-            renderer.drawText(item->cachedSizeStr, NUIPoint(sizeX, sizeTextY), metaFont, themeManager.getColor("textSecondary"));
+            renderer.drawText(item->cachedSizeStr, NUIPoint(sizeX, sizeTextY), metaFont,
+                              selected ? themeManager.getColor("textSecondary").withAlpha(0.88f)
+                                       : themeManager.getColor("textSecondary").withAlpha(0.72f));
         }
     }
 
@@ -2411,13 +2464,10 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     // Background
     // Glass Toolbar Header
     // Gradient for toolbar too
-    AestraUI::NUIColor toolbarTop = themeManager.getColor("surfaceTertiary").withAlpha(0.25f);
-    AestraUI::NUIColor toolbarBottom = themeManager.getColor("surfaceTertiary").withAlpha(0.15f);
-    
-    // Simple 2-pass gradient for toolbar
-    renderer.fillRect(toolbarRect, toolbarTop);
-    renderer.fillRect(AestraUI::NUIRect(toolbarRect.x, toolbarRect.y + toolbarRect.height * 0.5f, toolbarRect.width, toolbarRect.height * 0.5f), 
-                      AestraUI::NUIColor(0,0,0,0.1f)); // Darken bottom half slightly
+    AestraUI::NUIColor toolbarBg = themeManager.getColor("surfaceTertiary").withAlpha(0.82f);
+    renderer.fillRect(toolbarRect, toolbarBg);
+    renderer.fillRect(AestraUI::NUIRect(toolbarRect.x, toolbarRect.y, toolbarRect.width, 1.0f),
+                      AestraUI::NUIColor::white().withAlpha(0.035f));
     
     // Draw separator below buttons row (before breadcrumbs)
     float buttonRowSepY = toolbarRect.y + buttonsRowHeight;
@@ -2430,7 +2480,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     // Common sizes
     // Common sizes
     const float toolbarFont = themeManager.getFontSize("s");
-    const float buttonRadius = 6.0f; // More squared-off Aestra UI look (matching 24px height)
+    const float buttonRadius = 7.0f;
     const float buttonPadX = 8.0f;    
     const float buttonH = 24.0f; // Standardized Aestra UI toolbar height
     
@@ -2450,24 +2500,29 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     // Helper lambda for button drawing
 
     auto drawButton = [&](const NUIRect& rect, const std::string& text, bool hovered, bool active = false) {
-        // Glass Aesthetic Polish
-        NUIColor bg = themeManager.getColor("surfaceTertiary").withAlpha(hovered ? 0.35f : 0.15f);
-        NUIColor border = themeManager.getColor("glassBorder");
+        NUIColor bg = themeManager.getColor("buttonBgDefault").withAlpha(0.98f);
+        NUIColor border = themeManager.getColor("border").withAlpha(0.28f);
         
         if (active) {
-            bg = themeManager.getColor("accentPrimary").withAlpha(0.25f);
-            border = themeManager.getColor("accentPrimary").withAlpha(0.5f);
+            bg = themeManager.getColor("buttonBgActive").withAlpha(0.99f);
+            border = themeManager.getColor("borderActive").withAlpha(0.22f);
         } else if (hovered) {
-            border = themeManager.getColor("textSecondary").withAlpha(0.4f);
+            bg = themeManager.getColor("buttonBgHover").withAlpha(0.99f);
+            border = themeManager.getColor("border").withAlpha(0.38f);
         }
 
+        renderer.drawShadow(rect, 0.0f, 5.0f, 14.0f, NUIColor(0, 0, 0, 0.14f));
         renderer.fillRoundedRect(rect, buttonRadius, bg);
         renderer.strokeRoundedRect(rect, buttonRadius, 1.0f, border);
+        renderer.strokeRoundedRect({rect.x + 1.0f, rect.y + 1.0f, rect.width - 2.0f, rect.height - 2.0f},
+                                   std::max(0.0f, buttonRadius - 1.0f),
+                                   1.0f,
+                                   NUIColor::white().withAlpha(0.025f));
         
         if (!text.empty()) {
             float tY = std::round(renderer.calculateTextY(rect, toolbarFont));
             renderer.drawText(text, NUIPoint(rect.x + buttonPadX, tY), 
-                              toolbarFont, textColor_);
+                              toolbarFont, hovered || active ? textColor_ : textColor_.withAlpha(0.86f));
         }
     };
 
@@ -2489,7 +2544,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
                                   sortButtonBounds_.y + (sortButtonBounds_.height - iconSize) * 0.5f,
                                   iconSize, iconSize);
         chevronDownIcon_->setBounds(chevronRect);
-        chevronDownIcon_->setColor(themeManager.getColor("textPrimary").withAlpha(sortHovered_ ? 1.0f : 0.85f));
+        chevronDownIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(sortHovered_ ? 0.96f : 0.78f));
         chevronDownIcon_->onRender(renderer);
     }
 
@@ -2511,7 +2566,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
                                    tagsButtonBounds_.y + (tagsButtonBounds_.height - iconSize) * 0.5f,
                                    iconSize, iconSize);
          chevronDownIcon_->setBounds(chevronRect);
-         chevronDownIcon_->setColor(themeManager.getColor("textPrimary").withAlpha(tagsHovered_ ? 1.0f : 0.85f));
+         chevronDownIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(tagsHovered_ || isActive ? 0.96f : 0.78f));
          chevronDownIcon_->onRender(renderer);
     }
 
@@ -2548,7 +2603,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
         float iconY = favoritesButtonBounds_.y + (favoritesButtonBounds_.height - starSize) * 0.5f;
             
         icon->setBounds(NUIRect(iconX, iconY, starSize, starSize));
-        icon->setColor(isFav ? themeManager.getColor("accentPrimary") : textColor_.withAlpha(0.6f));
+        icon->setColor(isFav ? themeManager.getColor("textPrimary").withAlpha(0.94f) : textColor_.withAlpha(0.58f));
         icon->onRender(renderer);
     }
 
@@ -2675,7 +2730,8 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 
 		            bool isDir = false;
 		            try {
-		                isDir = std::filesystem::exists(favPath) && std::filesystem::is_directory(favPath);
+                        std::error_code ec;
+		                isDir = std::filesystem::exists(favPath, ec) && std::filesystem::is_directory(favPath, ec);
 		            } catch (...) {
 		                isDir = false;
 		            }
@@ -3442,7 +3498,7 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
         
         // Relative parts
         // Use lexical relative to avoid disk I/O or symlink confusion in rendering
-        std::filesystem::path rel = std::filesystem::relative(p, root);
+        std::filesystem::path rel = p.lexically_relative(root);
         if (rel != "." && !rel.empty()) {
             for (auto it = rel.begin(); it != rel.end(); ++it) {
                 if (*it != ".") parts.push_back(*it);
@@ -3955,7 +4011,10 @@ void FileBrowser::loadState(const std::string& filePath) {
 	    file.close();
 
 	    // Apply settings in safe order (sort/root before directory load)
-    if (!loadedRootPath.empty() && std::filesystem::exists(loadedRootPath) && std::filesystem::is_directory(loadedRootPath)) {
+    std::error_code rootEc;
+    if (!loadedRootPath.empty() &&
+        std::filesystem::exists(loadedRootPath, rootEc) &&
+        std::filesystem::is_directory(loadedRootPath, rootEc)) {
         rootPath_ = canonicalOrNormalized(std::filesystem::path(loadedRootPath)).string();
     } else {
         rootPath_.clear();

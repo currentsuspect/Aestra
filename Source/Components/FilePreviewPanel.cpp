@@ -170,31 +170,23 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     const float cornerRadius = 6.0f;
     NUIColor bgColor = theme.getColor("surfaceRaised");
     NUIColor borderColor = theme.getColor("borderSubtle");
-    
-    // === SOLID BASE FILL ===
-    // First, fill the entire bounds with background color to ensure no gaps
+
     renderer.fillRect(bounds, bgColor);
-    
-    // === CLIPPED BORDER RENDERING ===
-    
-    // 1. Draw the TOP portion (square corners) - only the top 6px
+
     {
         NUIRect topClip = bounds;
         topClip.height = cornerRadius;
         renderer.setClipRect(topClip);
-        
-        // Draw simple filled rect for the top (no rounded corners)
+
         renderer.fillRect(topClip, bgColor);
-        
-        // Draw side borders and top separator line
+
         renderer.drawLine(NUIPoint(topClip.x, topClip.y), NUIPoint(topClip.x, topClip.bottom()), 1.0f, borderColor);
         renderer.drawLine(NUIPoint(topClip.right(), topClip.y), NUIPoint(topClip.right(), topClip.bottom()), 1.0f, borderColor);
         renderer.drawLine(NUIPoint(bounds.x, bounds.y), NUIPoint(bounds.right(), bounds.y), 1.0f, borderColor);
-        
+
         renderer.clearClipRect();
     }
-    
-    // 2. Draw the BOTTOM portion (with rounded corners) - clip out top 6px
+
     {
         NUIRect bottomClip = bounds;
         bottomClip.y += cornerRadius;
@@ -210,7 +202,6 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         float centerX = bounds.x + bounds.width * 0.5f;
         float centerY = bounds.y + bounds.height * 0.5f;
         
-        // Draw File Icon (faded)
         float iconSize = 48.0f;
         if (fileIcon_) {
             fileIcon_->setBounds(NUIRect(centerX - iconSize * 0.5f, centerY - iconSize * 0.5f - 15, iconSize, iconSize));
@@ -218,12 +209,11 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
             fileIcon_->onRender(renderer);
         }
 
-        // Draw centered empty state text
         std::string emptyText = "Select a file to preview";
         float fontSize = 14.0f;
         auto size = renderer.measureText(emptyText, fontSize);
-        renderer.drawText(emptyText, 
-            NUIPoint(centerX - size.width * 0.5f, centerY + 25), 
+        renderer.drawText(emptyText,
+            NUIPoint(centerX - size.width * 0.5f, centerY + 25),
             fontSize, theme.getColor("textSecondary").withAlpha(0.6f));
         return;
     }
@@ -233,36 +223,23 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         float centerX = bounds.x + bounds.width * 0.5f;
         float centerY = bounds.y + bounds.height * 0.5f;
         
-        // Define layout
         float iconSize = 32.0f;
         float padding = 12.0f;
-        float startX = 20.0f; // Left margin
-        
-        // Folder Icon (SVG)
+        float startX = 20.0f;
+
         if (folderIcon_) {
-            // Icon on the left
             NUIRect iconRect(bounds.x + startX, centerY - iconSize * 0.5f, iconSize, iconSize);
             folderIcon_->setBounds(iconRect);
-            
-            // Purple Color (Matching sidebar selection)
-            // Using a vibrant purple accent
-            folderIcon_->setColor(theme.getColor("accentPrimary"));
-            
+            folderIcon_->setColor(theme.getColor("primary"));
             folderIcon_->onRender(renderer);
         }
-        
-        // Text Position (Right of icon)
+
         float textX = bounds.x + startX + iconSize + padding;
         float textMaxWidth = bounds.width - (startX + iconSize + padding + 10.0f);
-        
-        // Vertical Alignment Calculation
-        // Name (14px) + Gap (4px) + Hint (11px) = 29px Total Height
         float totalTextHeight = 14.0f + 4.0f + 11.0f;
         float textStartY = centerY - (totalTextHeight * 0.5f);
 
-        // Folder Name
         std::string name = currentFile_->name;
-        // Truncate if needed
         float nameWidth = renderer.measureText(name, 14.0f).width;
         if (nameWidth > textMaxWidth) {
              if (name.length() > 25) {
@@ -271,36 +248,27 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         }
         
         renderer.drawText(name, NUIPoint(textX, textStartY), 14.0f, theme.getColor("textPrimary"));
-        
-        // Hint / Info
         std::string hint = "Folder";
         renderer.drawText(hint, NUIPoint(textX, textStartY + 14.0f + 4.0f), 11.0f, theme.getColor("textSecondary"));
         
         return;
     }
     
-    // === VERTICAL LAYOUT (Audio File) ===
-    // Top row: [Info] ............. [Play Button]
-    // Bottom row: [======== Waveform ========]
-    
     float topRowY = bounds.y + 6;
-    float topRowHeight = 32;
-    float waveformY = topRowY + topRowHeight + 4;
-    float waveformHeight = bounds.height - topRowHeight - 14; // spacing
+    float topRowHeight = 26.0f;
+    float waveformY = topRowY + topRowHeight + 4.0f;
+    float waveformHeight = std::max(18.0f, bounds.height - topRowHeight - 12.0f);
     
-    // === TOP ROW: Info (Left) + Play (Right) ===
     float infoX = bounds.x + 10;
-    float playBtnWidth = 32.0f;
+    float playBtnWidth = 28.0f;
     float playX = bounds.x + bounds.width - playBtnWidth - 10;
-    
-    // File name (truncated)
+
     std::string displayName = currentFile_->name;
     if (displayName.length() > 25) {
         displayName = displayName.substr(0, 22) + "...";
     }
     renderer.drawText(displayName, NUIPoint(infoX, topRowY + 2), 11.0f, theme.getColor("textPrimary"));
     
-    // File size + extension on same line
     std::string sizeStr;
     if (currentFile_->size < 1024) {
         sizeStr = std::to_string(currentFile_->size) + " B";
@@ -316,33 +284,41 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     
     std::string meta = sizeStr + " • " + ext;
     renderer.drawText(meta, NUIPoint(infoX, topRowY + 16), 9.0f, theme.getColor("textSecondary"));
-    
-    // Play Button (Right side of top row)
-    playButtonBounds_ = NUIRect(playX, topRowY + 2, playBtnWidth, 26);
 
-    NUIColor btnColor = isPlaying_ ? theme.getColor("accentPrimary") : theme.getColor("primary");
-    // Button background
-    renderer.fillRoundedRect(playButtonBounds_, 4.0f, btnColor.withAlpha(0.3f));
+    playButtonBounds_ = NUIRect(playX, topRowY + 1.0f, playBtnWidth, 24.0f);
+
+    NUIColor btnBg = isPlaying_
+        ? theme.getColor("buttonBgActive").withAlpha(0.99f)
+        : theme.getColor("buttonBgDefault").withAlpha(0.98f);
+    NUIColor btnBorder = isPlaying_
+        ? theme.getColor("borderActive").withAlpha(0.24f)
+        : theme.getColor("border").withAlpha(0.28f);
+    renderer.drawShadow(playButtonBounds_, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.12f));
+    renderer.fillRoundedRect(playButtonBounds_, 7.0f, btnBg);
+    renderer.strokeRoundedRect(playButtonBounds_, 7.0f, 1.0f, btnBorder);
+    renderer.strokeRoundedRect({playButtonBounds_.x + 1.0f, playButtonBounds_.y + 1.0f, playButtonBounds_.width - 2.0f, playButtonBounds_.height - 2.0f},
+                               6.0f,
+                               1.0f,
+                               NUIColor::white().withAlpha(0.025f));
     
     // Icon
     auto& icon = isPlaying_ ? stopIcon_ : playIcon_;
     if (icon) {
-        float iconSize = 14.0f;
+        float iconSize = 12.0f;
         // Pixel snap positions
         float iconX = std::floor(playButtonBounds_.x + (playButtonBounds_.width - iconSize) * 0.5f + (isPlaying_ ? 0.0f : 1.0f)); 
         // Nudge Stop icon down 1px
         float iconY = std::floor(playButtonBounds_.y + (playButtonBounds_.height - iconSize) * 0.5f + (isPlaying_ ? 1.0f : 0.0f)); 
         
         icon->setBounds(NUIRect(iconX, iconY, iconSize, iconSize));
-        icon->setColor(theme.getColor("textPrimary")); // White/Bright
+        icon->setColor(theme.getColor("textPrimary"));
         icon->onRender(renderer);
     }
     
-    // === BOTTOM ROW: Waveform (Full Width) ===
     NUIRect waveformBounds(bounds.x + 8, waveformY, bounds.width - 16, waveformHeight);
     
-    // Waveform background
-    renderer.fillRoundedRect(waveformBounds, 4.0f, theme.getColor("waveformBackground"));
+    renderer.fillRoundedRect(waveformBounds, 7.0f, theme.getColor("surfaceTertiary").withAlpha(0.82f));
+    renderer.strokeRoundedRect(waveformBounds, 7.0f, 1.0f, theme.getColor("border").withAlpha(0.20f));
     
     // Draw waveform or loading state
     // Draw waveform or loading state
@@ -355,7 +331,6 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     }
 
     if (loading) {
-        // === LOADING SPINNER ===
         float centerX = waveformBounds.x + waveformBounds.width * 0.5f;
         float centerY = waveformBounds.y + waveformBounds.height * 0.5f;
         float spinnerRadius = std::min(waveformBounds.width, waveformBounds.height) * 0.3f;
@@ -380,12 +355,8 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         }
         
     } else if (hasData && waveformBounds.width > 0 && waveformBounds.height > 0) {
-        // === WAVEFORM RENDERING ===
         std::lock_guard<std::mutex> lock(waveformMutex_);
-        // Double check data is still there
         if (waveformData_.empty()) return;
-
-        // Use primary accent (Purple) for waveform to match theme
         NUIColor waveformFill = theme.getColor("accentPrimary").withAlpha(0.7f);
         
         float centerY = waveformBounds.y + waveformBounds.height * 0.5f;
@@ -400,7 +371,6 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
                 endSample = std::clamp(endSample, startSample + 1, (int)waveformData_.size());
                 
                 float amplitude = 0.0f;
-                // Find max amplitude in this pixel's range
                 for (int i = startSample; i < endSample; ++i) {
                     amplitude = std::max(amplitude, waveformData_[i]);
                 }
@@ -416,7 +386,6 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
             }
         }
 
-        // === PLAYHEAD RENDERING ===
         if (duration_ > 0.0) {
             float progress = static_cast<float>(playheadPosition_ / duration_);
             progress = std::clamp(progress, 0.0f, 1.0f);
@@ -432,7 +401,15 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
 }
 
 bool FilePreviewPanel::onMouseEvent(const NUIMouseEvent& event) {
-    if (!currentFile_ || currentFile_->isDirectory) return false;
+    const auto bounds = getBounds();
+    if (!bounds.contains(event.position)) return false;
+
+    if (!currentFile_ || currentFile_->isDirectory) {
+        if (event.pressed && event.button == NUIMouseButton::Right) {
+            return true;
+        }
+        return false;
+    }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (playButtonBounds_.contains(event.position)) {
@@ -444,7 +421,6 @@ bool FilePreviewPanel::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
 
-        // Handle seeking on waveform click
         NUIRect waveformBounds(getBounds().x + 8, getBounds().y + 32 + 4 + 6, getBounds().width - 16, getBounds().height - 32 - 14);
         if (waveformBounds.contains(event.position) && duration_ > 0.0) {
             float relativeX = event.position.x - waveformBounds.x;
@@ -455,6 +431,11 @@ bool FilePreviewPanel::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
     }
+
+    if (event.pressed && event.button == NUIMouseButton::Right) {
+        return true;
+    }
+
     return false;
 }
 

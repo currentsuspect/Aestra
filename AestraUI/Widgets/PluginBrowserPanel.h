@@ -235,10 +235,10 @@ private:
     NUIPoint m_dragStartPos;
     
     // Layout constants
-    static constexpr float ROW_HEIGHT = 32.0f;
-    static constexpr float HEADER_HEIGHT = 40.0f;
-    static constexpr float TAB_HEIGHT = 36.0f;
-    static constexpr float SEARCH_HEIGHT = 36.0f;
+    static constexpr float ROW_HEIGHT = 42.0f;
+    static constexpr float HEADER_HEIGHT = 44.0f;
+    static constexpr float TAB_HEIGHT = 34.0f;
+    static constexpr float SEARCH_HEIGHT = 40.0f;
 };
 
 /**
