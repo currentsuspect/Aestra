@@ -64,6 +64,9 @@ def analyze_file(filepath):
                     # Ignore comments (simple check)
                     if stripped.startswith("//") or stripped.startswith("*"):
                         continue
+                    # Deleted special members are declarations, not runtime deallocation.
+                    if "= delete;" in stripped:
+                        continue
 
                     issues.append(f"{filepath}:{line_num}: {desc} found in critical section candidate: '{stripped}'")
 
