@@ -76,9 +76,8 @@ void AuditionEngine::addToQueue(const std::string& filePath, bool isReference) {
     // (decode happens lazily in loadCurrentTrack when playback starts or track is selected)
     if (m_queue.size() == 1 && m_currentIndex < 0) {
         m_currentIndex = 0;
-        Log::info("[AuditionEngine] Calling notifyTrackChanged...");
-        notifyTrackChanged();
-        Log::info("[AuditionEngine] notifyTrackChanged done");
+        Log::info("[AuditionEngine] Preloading first queued track...");
+        loadCurrentTrack(false);
     }
 
     Log::info("[AuditionEngine] Calling onQueueUpdated...");
@@ -146,7 +145,7 @@ void AuditionEngine::nextTrack() {
         }
     }
 
-    loadCurrentTrack();
+    loadCurrentTrack(true);
 }
 
 void AuditionEngine::previousTrack() {
@@ -169,7 +168,7 @@ void AuditionEngine::previousTrack() {
         }
     }
 
-    loadCurrentTrack();
+    loadCurrentTrack(true);
 }
 
 void AuditionEngine::jumpToTrack(size_t index) {
@@ -178,7 +177,7 @@ void AuditionEngine::jumpToTrack(size_t index) {
         return;
 
     m_currentIndex = static_cast<int32_t>(index);
-    loadCurrentTrack();
+    loadCurrentTrack(true);
 }
 
 // === Transport Control ===
@@ -189,7 +188,7 @@ void AuditionEngine::play() {
     } else if (m_currentIndex >= 0 && !m_currentSource) {
         // Track selected but not yet decoded — decode now (lazy load)
         std::lock_guard<std::mutex> lock(m_queueMutex);
-        loadCurrentTrack();
+        loadCurrentTrack(true);
     }
 
     bool wasPlaying = m_isPlaying.exchange(true);
@@ -390,7 +389,7 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
 
 // === Internal Helpers ===
 
-void AuditionEngine::loadCurrentTrack() {
+void AuditionEngine::loadCurrentTrack(bool startPlayback) {
     if (m_currentIndex < 0 || m_currentIndex >= static_cast<int32_t>(m_queue.size())) {
         m_currentSource.reset();
         return;
@@ -442,11 +441,8 @@ void AuditionEngine::loadCurrentTrack() {
 
     notifyTrackChanged();
 
-    // Auto-play when track changes (set flag directly — don't call play() to avoid deadlock)
-    if (!m_isPlaying.load()) {
+    if (startPlayback && !m_isPlaying.load()) {
         m_isPlaying.store(true);
-        // Notify outside the mutex scope if possible — but this is safe since
-        // m_onPlaybackStateChanged only updates UI state, doesn't touch m_queueMutex
         if (m_onPlaybackStateChanged) {
             m_onPlaybackStateChanged(true);
         }
