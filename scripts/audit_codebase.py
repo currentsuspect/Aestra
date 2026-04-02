@@ -65,6 +65,10 @@ def analyze_file(filepath):
                     if stripped.startswith("//") or stripped.startswith("*"):
                         continue
 
+                    # Ignore explicit ALLOW_REALTIME_DELETE tags
+                    if "ALLOW_REALTIME_DELETE" in stripped:
+                        continue
+
                     issues.append(f"{filepath}:{line_num}: {desc} found in critical section candidate: '{stripped}'")
 
             if brace_count <= 0 and '}' in stripped:

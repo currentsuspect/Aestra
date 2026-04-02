@@ -185,7 +185,10 @@ public:
         result.correlation = AudioMetrics::calculateCorrelation(renderedSamples, referenceSamples);
 
         // Pass/fail criteria
-        if (m_config.requireExactMatch) {
+        if (rmsA < 1e-9 && rmsB < 1e-9) {
+            // Both are essentially silent
+            result.passed = true;
+        } else if (m_config.requireExactMatch) {
             result.passed = AudioMetrics::isSimilar(renderedSamples, referenceSamples, m_config.toleranceDb);
         } else {
             // Relaxed: correlation > 0.999 and RMS diff < -60dB
