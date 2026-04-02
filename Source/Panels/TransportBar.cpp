@@ -452,26 +452,28 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         // Inactive = Grey Tint Glass + Grey Icon
         
         if (isRecording) {
-             // Recording Active: Red Tint Glass + Red Icon
-             currentBg = iconRed.withAlpha(0.15f); // Red Glass
-             currentBorder = iconRed.withAlpha(0.5f);
+             currentBg = iconRed.withAlpha(0.16f);
+             currentBorder = iconRed.withAlpha(0.24f);
              iconColor = iconRed;
-             if (isHovered) currentBg = iconRed.withAlpha(0.25f);
+             if (isHovered) currentBg = iconRed.withAlpha(0.22f);
         } else if (isActive) {
-             // Normal Active: Purple Haze
-             currentBg = glassActive; 
-             currentBorder = iconPurple.withAlpha(0.5f);
-             iconColor = iconPurple;
+             currentBg = themeManager.getColor("buttonBgActive").withAlpha(0.98f);
+             currentBorder = themeManager.getColor("borderActive").withAlpha(0.22f);
+             iconColor = themeManager.getColor("textPrimary");
         } else if (isHovered) {
-             // Hover (Inactive): Brighter Grey Glass + Purple Icon
-             currentBg = glassHover;
-             currentBorder = iconPurple.withAlpha(0.3f);
-             iconColor = iconPurple;
+             currentBg = themeManager.getColor("buttonBgHover").withAlpha(0.98f);
+             currentBorder = themeManager.getColor("border").withAlpha(0.38f);
+             iconColor = themeManager.getColor("textPrimary");
         }
         
         // Draw Button Background
-        renderer.fillRoundedRect(buttonRect, 4.0f, currentBg);
-        renderer.strokeRoundedRect(buttonRect, 4.0f, 1.0f, currentBorder);
+        renderer.drawShadow(buttonRect, 0.0f, 6.0f, 18.0f, AestraUI::NUIColor(0, 0, 0, 0.14f));
+        renderer.fillRoundedRect(buttonRect, 7.0f, currentBg);
+        renderer.strokeRoundedRect(buttonRect, 7.0f, 1.0f, currentBorder);
+        renderer.strokeRoundedRect({buttonRect.x + 1.0f, buttonRect.y + 1.0f, buttonRect.width - 2.0f, buttonRect.height - 2.0f},
+                                   6.0f,
+                                   1.0f,
+                                   AestraUI::NUIColor::white().withAlpha(0.025f));
         
         if (!btn->isEnabled()) {
             iconColor = iconColor.withAlpha(0.3f);

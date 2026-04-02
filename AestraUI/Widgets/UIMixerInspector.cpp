@@ -103,9 +103,9 @@ void UIMixerInspector::cacheThemeColors()
     m_border = theme.getColor("borderSubtle").withAlpha(0.65f);
     m_text = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary");
-    m_tabBg = theme.getColor("surfaceTertiary");
-    m_tabActive = theme.getColor("accentPrimary").withAlpha(0.22f);
-    m_tabHover = theme.getColor("surfaceSecondary");
+    m_tabBg = theme.getColor("buttonBgDefault").withAlpha(0.98f);
+    m_tabActive = theme.getColor("buttonBgActive").withAlpha(0.99f);
+    m_tabHover = theme.getColor("buttonBgHover").withAlpha(0.99f);
     m_addBg = theme.getColor("surfaceTertiary");
     m_addHover = theme.getColor("surfaceSecondary");
     m_addText = theme.getColor("textPrimary");
@@ -363,9 +363,15 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         const bool active = (static_cast<int>(m_activeTab) == i);
         const bool hovered = (m_hoveredTab == i);
         NUIColor bg = active ? m_tabActive : (hovered ? m_tabHover : m_tabBg);
+        NUIColor border = active ? m_border.withAlpha(0.42f) : m_border.withAlpha(0.32f);
+        renderer.drawShadow(m_tabRects[i], 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.12f));
         renderer.fillRoundedRect(m_tabRects[i], TAB_RADIUS, bg);
-        renderer.strokeRoundedRect(m_tabRects[i], TAB_RADIUS, 1.0f, m_border);
-        renderer.drawTextCentered(tabLabels[i], m_tabRects[i], 10.0f, active ? m_text : m_text.withAlpha(0.92f));
+        renderer.strokeRoundedRect(m_tabRects[i], TAB_RADIUS, 1.0f, border);
+        renderer.strokeRoundedRect({m_tabRects[i].x + 1.0f, m_tabRects[i].y + 1.0f, m_tabRects[i].width - 2.0f, m_tabRects[i].height - 2.0f},
+                                   std::max(0.0f, TAB_RADIUS - 1.0f),
+                                   1.0f,
+                                   NUIColor::white().withAlpha(0.025f));
+        renderer.drawTextCentered(tabLabels[i], m_tabRects[i], 10.0f, active ? m_text : m_textSecondary.withAlpha(0.92f));
     }
 
     // Header
@@ -445,8 +451,13 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
 
              const float infoTop = contentRect.y + 50.0f;
              const NUIRect infoCard{contentRect.x, infoTop, contentRect.width, 90.0f};
-             renderer.fillRoundedRect(infoCard, IO_CARD_RADIUS, m_tabBg.withAlpha(0.42f));
-             renderer.strokeRoundedRect(infoCard, IO_CARD_RADIUS, 1.0f, m_border.withAlpha(0.85f));
+             renderer.drawShadow(infoCard, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.10f));
+             renderer.fillRoundedRect(infoCard, IO_CARD_RADIUS, m_tabBg.withAlpha(0.62f));
+             renderer.strokeRoundedRect(infoCard, IO_CARD_RADIUS, 1.0f, m_border.withAlpha(0.46f));
+             renderer.strokeRoundedRect({infoCard.x + 1.0f, infoCard.y + 1.0f, infoCard.width - 2.0f, infoCard.height - 2.0f},
+                                        std::max(0.0f, IO_CARD_RADIUS - 1.0f),
+                                        1.0f,
+                                        NUIColor::white().withAlpha(0.02f));
 
              const float labelX = infoCard.x + 12.0f;
              const float valueX = infoCard.x + 68.0f;
@@ -459,8 +470,8 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
 
              renderer.drawText("Signal", {labelX, infoCard.y + 52.0f}, 9.0f, m_textSecondary);
              const NUIRect meterRect{labelX, infoCard.y + 66.0f, infoCard.width - 24.0f, INPUT_METER_H};
-             renderer.fillRoundedRect(meterRect, 6.0f, m_bg.withAlpha(0.75f));
-             renderer.strokeRoundedRect(meterRect, 6.0f, 1.0f, m_border);
+             renderer.fillRoundedRect(meterRect, 6.0f, m_bg.withAlpha(0.62f));
+             renderer.strokeRoundedRect(meterRect, 6.0f, 1.0f, m_border.withAlpha(0.60f));
 
              const float fillWidth = std::clamp(channel->inputPeak, 0.0f, 1.0f) * meterRect.width;
              if (fillWidth > 1.0f) {
