@@ -55,18 +55,18 @@ AuditionPanel::AuditionPanel(std::shared_ptr<Audio::AuditionEngine> engine)
     // Wire up engine callbacks
     if (m_engine) {
         m_engine->setOnTrackChanged([this](const Audio::AuditionQueueItem& item) {
-            if (m_trackTitle) m_trackTitle->setText(item.title);
-            if (m_trackArtist) m_trackArtist->setText(item.artist);
-            repaint();
+            std::lock_guard<std::mutex> lock(m_pendingUiMutex);
+            m_pendingTrackTitle = item.title;
+            m_pendingTrackArtist = item.artist;
+            m_pendingTrackUiUpdate = true;
             Log::info("[AuditionPanel] Track changed: " + item.title);
         });
         
         m_engine->setOnPlaybackStateChanged([this](bool isPlaying) {
+            (void)isPlaying;
             // Visual update handled by SVG swap in onRender
-            // if (m_playPauseButton) {
-            //     m_playPauseButton->setText(isPlaying ? "PAUSE" : "PLAY");
-            // }
-            repaint();
+            std::lock_guard<std::mutex> lock(m_pendingUiMutex);
+            m_pendingPlaybackUiUpdate = true;
         });
     }
     
@@ -197,8 +197,10 @@ void AuditionPanel::setupComponents() {
     // Registrations
     if (m_engine) {
         m_engine->setOnPlaybackStateChanged([this](bool playing) {
+            (void)playing;
             // Button visual update handled in onRender via SVG swap
-            // No text update here to avoid cluttering the SVG
+            std::lock_guard<std::mutex> lock(m_pendingUiMutex);
+            m_pendingPlaybackUiUpdate = true;
         });
     }
 }
@@ -311,6 +313,7 @@ void AuditionPanel::layoutComponents() {
     
     AestraUI::NUIRect headerRect(bounds.x + padding, bounds.y + padding, contentWidth, headerHeight);
     AestraUI::NUIRect waveformRect(bounds.x + padding, headerRect.bottom() + gap, contentWidth, waveformHeight);
+    AestraUI::NUIRect queueRect(bounds.x + padding, waveformRect.bottom() + gap, contentWidth, bounds.height - waveformRect.bottom() - gap - padding);
     const bool hasCurrentTrack = (m_engine && m_engine->getCurrentItem().has_value());
     
     // === 1. Header Layout ===
@@ -432,6 +435,20 @@ void AuditionPanel::layoutComponents() {
     float timeY = waveformRect.bottom() - 24.0f;
     m_currentTime->setBounds(AestraUI::NUIAbsolute(bounds, waveformRect.x + 12.0f - bounds.x, timeY - bounds.y, 60.0f, 16.0f));
     m_totalTime->setBounds(AestraUI::NUIAbsolute(bounds, waveformRect.right() - 72.0f - bounds.x, timeY - bounds.y, 60.0f, 16.0f));
+
+    AestraUI::NUIRect waveformInner = waveformRect;
+    waveformInner.x += 20.0f;
+    waveformInner.y += 32.0f;
+    waveformInner.width -= 40.0f;
+    waveformInner.height -= 72.0f;
+    m_waveformArea = waveformInner;
+
+    AestraUI::NUIRect queueInner = queueRect;
+    queueInner.x += 12.0f;
+    queueInner.y += 34.0f;
+    queueInner.width -= 24.0f;
+    queueInner.height -= 40.0f;
+    m_queueArea = queueInner;
 }
 
 // ============================================================================
@@ -455,6 +472,20 @@ void AuditionPanel::onUpdate(double deltaTime) {
                 m_dropTargetRegistered = true;
             }
         } catch (const std::bad_weak_ptr&) {}
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_pendingUiMutex);
+        if (m_pendingTrackUiUpdate) {
+            if (m_trackTitle) m_trackTitle->setText(m_pendingTrackTitle);
+            if (m_trackArtist) m_trackArtist->setText(m_pendingTrackArtist);
+            m_pendingTrackUiUpdate = false;
+            setDirty(true);
+        }
+        if (m_pendingPlaybackUiUpdate) {
+            m_pendingPlaybackUiUpdate = false;
+            setDirty(true);
+        }
     }
     
     // Update time
@@ -838,40 +869,27 @@ bool AuditionPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return NUIComponent::onMouseEvent(event);
     }
     
-    const float padding = 30.0f;
-    float headerHeight = bounds.height * 0.35f;
-    float waveformY = headerHeight;
-    float waveformHeight = bounds.height * 0.20f;
-    AestraUI::NUIRect waveformArea(bounds.x + padding, bounds.y + waveformY + 20.0f, bounds.width - padding*2, waveformHeight - 40.0f);
-    
     // 1. Scrubbing
     if (event.pressed) {
-        if (waveformArea.contains(event.position)) {
+        if (m_waveformArea.contains(event.position)) {
             m_isScrubbingWaveform = true;
-            float relativeX = event.position.x - waveformArea.x;
-            float normPos = relativeX / waveformArea.width;
+            float relativeX = event.position.x - m_waveformArea.x;
+            float normPos = relativeX / m_waveformArea.width;
             if (m_engine) m_engine->seekNormalized(static_cast<double>(std::clamp(normPos, 0.0f, 1.0f)));
             return true;
         }
     } else if (event.released) {
         m_isScrubbingWaveform = false;
     } else if (m_isScrubbingWaveform) {
-        float relativeX = event.position.x - waveformArea.x;
-        float normPos = relativeX / waveformArea.width;
+        float relativeX = event.position.x - m_waveformArea.x;
+        float normPos = relativeX / m_waveformArea.width;
         if (m_engine) m_engine->seekNormalized(static_cast<double>(std::clamp(normPos, 0.0f, 1.0f)));
         return true;
     }
     
     // 2. Queue Hover & Click-to-Play
-    float queueY = waveformY + waveformHeight;
-    float headerH = 30.0f;
-    float startY = bounds.y + queueY + headerH + 10.0f;
-    
-    // Define queue area with proper X bounds
-    AestraUI::NUIRect queueArea(bounds.x + padding, startY, bounds.width - padding * 2, bounds.height - (queueY + headerH + 10.0f) - padding);
-    
-    if (queueArea.contains(event.position)) {
-        float relY = event.position.y - startY;
+    if (m_queueArea.contains(event.position)) {
+        float relY = event.position.y - m_queueArea.y;
         int index = static_cast<int>(relY / 35.0f);
         if (m_engine && index >= 0 && index < static_cast<int>(m_engine->getQueue().size())) {
             m_hoveredQueueIndex = index;

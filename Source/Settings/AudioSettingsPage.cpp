@@ -3,15 +3,33 @@
 #include "../AestraCore/include/AestraLog.h"
 #include "PlaylistMixer.h"
 #include "ClipResampler.h"
+#include "AestraPlatform.h"
 #include <sstream>
 #include <fstream>
 #include <string>
 #include <thread>
 #include <iomanip>
+#include <filesystem>
 
 namespace Aestra {
 
 using namespace Aestra::Audio;
+
+namespace {
+std::filesystem::path getAudioSettingsConfigPath() {
+    if (auto* utils = Aestra::Platform::getUtils()) {
+        std::error_code ec;
+        std::filesystem::path appDataDir(utils->getAppDataPath("Aestra"));
+        if (!appDataDir.empty()) {
+            std::filesystem::create_directories(appDataDir, ec);
+            if (!ec) {
+                return appDataDir / "audio_settings.conf";
+            }
+        }
+    }
+    return std::filesystem::current_path() / "audio_settings.conf";
+}
+}
 
 // ============================================================================
 // ThreadCountDisplay Implementation
@@ -666,7 +684,8 @@ bool AudioSettingsPage::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 // ============================================================================
 
 void AudioSettingsPage::saveSettings() {
-    std::ofstream file("audio_settings.conf");
+    const auto configPath = getAudioSettingsConfigPath();
+    std::ofstream file(configPath);
     if (file.is_open()) {
         file << "driver=" << m_driverDropdown->getSelectedValue() << "\n";
         file << "device=" << m_deviceDropdown->getSelectedValue() << "\n";
@@ -681,14 +700,15 @@ void AudioSettingsPage::saveSettings() {
         file << "soft_clipping=" << (m_softClippingToggle->isOn() ? "1" : "0") << "\n";
         file << "multi_threading=" << (m_multiThreadingToggle->isOn() ? "1" : "0") << "\n";
         file.close();
-        Log::info("[AudioSettingsPage] Settings saved to audio_settings.conf");
+        Log::info("[AudioSettingsPage] Settings saved to " + configPath.string());
     } else {
         Log::error("[AudioSettingsPage] Failed to save settings!");
     }
 }
 
 void AudioSettingsPage::loadSettings() {
-    std::ifstream file("audio_settings.conf");
+    const auto configPath = getAudioSettingsConfigPath();
+    std::ifstream file(configPath);
     if (!file.is_open()) {
         Log::info("[AudioSettingsPage] No saved settings found. Using defaults.");
         return;

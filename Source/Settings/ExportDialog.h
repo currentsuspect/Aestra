@@ -5,7 +5,6 @@
 #include "NUIButton.h"
 #include "NUIProgressBar.h"
 #include "NUIDropdown.h"
-#include "AudioDeviceManager.h"
 #include <string>
 #include <functional>
 #include <atomic>

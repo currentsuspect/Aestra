@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace Aestra {
 class MixerViewModel;
@@ -67,6 +68,8 @@ private:
 
     // I/O
     std::shared_ptr<NUIDropdown> m_ioInputDropdown;
+    std::vector<std::string> m_cachedInputNames;
+    std::vector<int> m_cachedInputDeviceIds;
 
     // Sends
     std::vector<std::shared_ptr<class UIMixerSend>> m_sendWidgets;

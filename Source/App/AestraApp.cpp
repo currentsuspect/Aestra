@@ -468,8 +468,6 @@ bool AestraApp::initialize(const std::string& projectPath) {
                         auto result = loadProject();
                         if (result.ok) {
                             if (result.ui) applyUIState(*result.ui);
-                            m_projectPath = getAutosavePath(); // Reset path to autosave for future saves
-                            syncRecordingProjectPath(m_content, m_projectPath);
                             Log::info("[Recovery] Autosave recovered successfully");
                         } else {
                             Log::error("[Recovery] Failed to load autosave");

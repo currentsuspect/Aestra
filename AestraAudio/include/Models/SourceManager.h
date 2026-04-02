@@ -21,7 +21,7 @@ public:
      * @brief Get or create a source for a file path
      * @return Source ID (returns ClipSourceID{0} on failure)
      */
-    ClipSourceID getOrCreateSource(const std::string& filePath) {
+    ClipSourceID getOrCreateSource(const std::string& filePath, const std::string& displayName = {}) {
         auto it = m_pathToId.find(filePath);
         if (it != m_pathToId.end()) {
             return it->second;
@@ -29,7 +29,7 @@ public:
 
         // Create new source
         ClipSourceID id{nextId++};
-        auto source = std::make_unique<ClipSource>(id, makeDisplayName(filePath));
+        auto source = std::make_unique<ClipSource>(id, displayName.empty() ? makeDisplayName(filePath) : displayName);
         source->setFilePath(filePath);
 
         m_sources[id.value] = std::move(source);
@@ -51,13 +51,12 @@ public:
             return ClipSourceID{};
         }
 
-        ClipSourceID id = getOrCreateSource(filePath);
+        ClipSourceID id = getOrCreateSource(filePath, displayName);
         auto* source = getSource(id);
         if (!source) {
             return ClipSourceID{};
         }
 
-        source->setFilePath(filePath);
         source->setBuffer(std::move(buffer));
         return id;
     }

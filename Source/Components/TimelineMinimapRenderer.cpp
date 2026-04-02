@@ -221,6 +221,12 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
         };
 
         const float x = map.x + static_cast<float>(px);
+        const float normValue = (maxValue > 0.0f) ? std::clamp(value / maxValue, 0.0f, 1.0f) : 0.0f;
+        if (normValue > 0.0f) {
+            const float barHeight = std::max(1.0f, normValue * (barBottom - barTop));
+            const float barY = barBottom - barHeight;
+            renderer.fillRect(NUIRect(x, barY, 1.0f, barHeight), tint.withAlpha(0.18f));
+        }
         
         // Loop through supported lanes.
         for (uint32_t i = 0; i < TimelineSummaryBucket::kTrackLaneCount; ++i) {

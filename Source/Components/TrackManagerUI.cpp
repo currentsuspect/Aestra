@@ -611,7 +611,7 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
                             static_cast<double>(m_pixelsPerBeat > 0.0f
                                 ? (m_timelineScrollOffset / m_pixelsPerBeat) + getTimelineGridWidthPixels() / m_pixelsPerBeat
                                 : 0.0f);
-                        projectEnd = std::max({emptyProjectBeats, m_minimapDomainEndBeat, visibleEndBeat});
+                        projectEnd = std::max(emptyProjectBeats, visibleEndBeat);
                         Log::info("Loop Project: Empty arrangement fallback -> " + std::to_string(projectEnd) + " beats");
                     }
 
@@ -1979,7 +1979,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
                 static_cast<double>(m_pixelsPerBeat > 0.0f
                     ? (m_timelineScrollOffset / m_pixelsPerBeat) + getTimelineGridWidthPixels() / m_pixelsPerBeat
                     : 0.0f);
-            projectEndBeat = std::max({emptyProjectBeats, m_minimapDomainEndBeat, visibleEndBeat});
+            projectEndBeat = std::max(emptyProjectBeats, visibleEndBeat);
         }
 
         if (std::abs(projectEndBeat - m_lastProjectLoopExtentBeats) > 1e-3) {
@@ -2681,10 +2681,8 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 double selStartBeat = std::min(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
                 double selEndBeat = std::max(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
                 
-                // Update loop markers to match selection
-                m_loopStartBeat = selStartBeat;
-                m_loopEndBeat = selEndBeat;
-                m_loopEnabled = true;
+                // Update loop markers to match selection through centralized propagation.
+                setLoopRegion(selStartBeat, selEndBeat, true);
                 
                 // Call selection callback - this will jump playhead and set loop region
                 if (m_onSelectionMade) {
@@ -2701,8 +2699,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                          std::to_string(selEndBeat) + " beats");
             } else {
                 // Click without drag - clear selection and disable loop
-                m_hasRulerSelection = false;
-                m_loopEnabled = false;
+                setLoopRegion(0.0, 0.0, false);
 
                 // SPECIAL: If we clicked on an EXISTNG range on ruler, show menu
                 // (Wait, this is handled in the isInRuler block if it's an instant click)
@@ -2781,14 +2778,12 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         if (m_isDraggingLoopStart) {
             // Don't allow start to go past end
             if (positionInBeats < m_loopEndBeat) {
-                m_loopStartBeat = positionInBeats;
-                m_rulerSelectionStartBeat = positionInBeats;
+                setLoopRegion(positionInBeats, m_loopEndBeat, true);
             }
         } else if (m_isDraggingLoopEnd) {
             // Don't allow end to go before start
             if (positionInBeats > m_loopStartBeat) {
-                m_loopEndBeat = positionInBeats;
-                m_rulerSelectionEndBeat = positionInBeats;
+                setLoopRegion(m_loopStartBeat, positionInBeats, true);
             }
         }
         
