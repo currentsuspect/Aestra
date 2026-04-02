@@ -34,6 +34,17 @@ using namespace Aestra;
 using namespace AestraUI;
 using namespace Aestra::Audio;
 
+namespace {
+void syncRecordingProjectPath(const std::shared_ptr<AestraContent>& content, const std::string& projectPath) {
+    if (!content) {
+        return;
+    }
+    if (auto trackManager = content->getTrackManager()) {
+        trackManager->setRecordingProjectPath(projectPath);
+    }
+}
+}
+
 // =============================================================================
 // AestraApp Implementation
 // =============================================================================
@@ -184,6 +195,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
     if (m_audioController->getEngine()) {
         m_content->setAudioEngine(m_audioController->getEngine());
     }
+    syncRecordingProjectPath(m_content, m_projectPath);
 
     m_windowManager->setContent(m_content);
     m_audioController->setContent(m_content);
@@ -238,6 +250,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
             if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->stop();
             if (m_content) m_content->resetToDefaultProject();
             m_projectPath = getAutosavePath();
+            syncRecordingProjectPath(m_content, m_projectPath);
             m_lastWindowTitle.clear();
             Log::info("New project created");
         });
@@ -429,6 +442,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
     // Load Project
     if (!projectPath.empty() && std::filesystem::exists(projectPath)) {
         m_projectPath = projectPath;
+        syncRecordingProjectPath(m_content, m_projectPath);
         auto result = loadProject();
         if (result.ok) {
             if (result.ui) applyUIState(*result.ui);
@@ -450,10 +464,12 @@ bool AestraApp::initialize(const std::string& projectPath) {
                     if (response == Aestra::RecoveryResponse::Recover) {
                         // User chose to recover - load the autosave
                         m_projectPath = autosavePath;
+                        syncRecordingProjectPath(m_content, m_projectPath);
                         auto result = loadProject();
                         if (result.ok) {
                             if (result.ui) applyUIState(*result.ui);
                             m_projectPath = getAutosavePath(); // Reset path to autosave for future saves
+                            syncRecordingProjectPath(m_content, m_projectPath);
                             Log::info("[Recovery] Autosave recovered successfully");
                         } else {
                             Log::error("[Recovery] Failed to load autosave");
@@ -471,6 +487,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
                         }
                         if (m_content) m_content->resetToDefaultProject();
                         m_projectPath = getAutosavePath();
+                        syncRecordingProjectPath(m_content, m_projectPath);
                     }
                 });
                 Log::info("[Recovery] Showing recovery dialog for autosave");
@@ -478,10 +495,12 @@ bool AestraApp::initialize(const std::string& projectPath) {
                 // Fallback: if dialog not available, silently load (shouldn't happen)
                 Log::warning("[Recovery] RecoveryDialog not available, falling back to silent load");
                 m_projectPath = autosavePath;
+                syncRecordingProjectPath(m_content, m_projectPath);
                 auto result = loadProject();
                 if (result.ok) {
                     if (result.ui) applyUIState(*result.ui);
                     m_projectPath = getAutosavePath();
+                    syncRecordingProjectPath(m_content, m_projectPath);
                 }
                 m_recoveryHandled = true;
             }
@@ -550,6 +569,9 @@ void AestraApp::connectAudioToUI() {
             m_content->getTrackManager()->setInputChannelCount(config.numInputChannels);
             m_content->getTrackManager()->setOutputSampleRate(config.sampleRate);
             m_content->getTrackManager()->setInputSampleRate(config.sampleRate);
+            Log::info("[AestraApp] TrackManager audio config synced. SampleRate=" + std::to_string(config.sampleRate) +
+                      ", InputChannels=" + std::to_string(config.numInputChannels) +
+                      ", OutputChannels=" + std::to_string(config.numOutputChannels));
 
             auto meterBuffer = std::make_shared<Audio::MeterSnapshotBuffer>();
             m_audioController->getEngine()->setMeterSnapshots(meterBuffer);
