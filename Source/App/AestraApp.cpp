@@ -441,11 +441,14 @@ bool AestraApp::initialize(const std::string& projectPath) {
 
     // Load Project
     if (!projectPath.empty() && std::filesystem::exists(projectPath)) {
+        const std::string previousProjectPath = m_projectPath;
+        m_projectPath = projectPath;
         auto result = loadProject();
         if (result.ok) {
-            m_projectPath = projectPath;
             syncRecordingProjectPath(m_content, m_projectPath);
             if (result.ui) applyUIState(*result.ui);
+        } else {
+            m_projectPath = previousProjectPath;
         }
     } else {
         std::string autosavePath = getAutosavePath();
@@ -463,13 +466,15 @@ bool AestraApp::initialize(const std::string& projectPath) {
                     m_recoveryHandled = true;
                     if (response == Aestra::RecoveryResponse::Recover) {
                         // User chose to recover - load the autosave
+                        const std::string previousProjectPath = m_projectPath;
+                        m_projectPath = autosavePath;
                         auto result = loadProject();
                         if (result.ok) {
-                            m_projectPath = autosavePath;
                             syncRecordingProjectPath(m_content, m_projectPath);
                             if (result.ui) applyUIState(*result.ui);
                             Log::info("[Recovery] Autosave recovered successfully");
                         } else {
+                            m_projectPath = previousProjectPath;
                             Log::error("[Recovery] Failed to load autosave");
                             // Fall back to empty project
                             if (m_content) m_content->resetToDefaultProject();
@@ -492,13 +497,16 @@ bool AestraApp::initialize(const std::string& projectPath) {
             } else {
                 // Fallback: if dialog not available, silently load (shouldn't happen)
                 Log::warning("[Recovery] RecoveryDialog not available, falling back to silent load");
+                const std::string previousProjectPath = m_projectPath;
                 m_projectPath = autosavePath;
-                syncRecordingProjectPath(m_content, m_projectPath);
                 auto result = loadProject();
                 if (result.ok) {
+                    syncRecordingProjectPath(m_content, m_projectPath);
                     if (result.ui) applyUIState(*result.ui);
                     m_projectPath = getAutosavePath();
                     syncRecordingProjectPath(m_content, m_projectPath);
+                } else {
+                    m_projectPath = previousProjectPath;
                 }
                 m_recoveryHandled = true;
             }

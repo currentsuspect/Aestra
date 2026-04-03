@@ -19,6 +19,7 @@
 #include <array>
 #include <cmath>
 #include <chrono>
+#include <condition_variable>
 #include <ctime>
 #include <cstdlib>
 #include <fstream>
@@ -195,6 +196,7 @@ public:
      * @param rate Input device sample rate in Hz.
      */
     void setInputSampleRate(double rate) { m_inputSampleRate = rate; }
+    void setMaxRecordingSeconds(double seconds) { m_maxRecordingSeconds = std::max(1.0, seconds); }
 
     /**
      * @brief Set input channel count
@@ -208,6 +210,7 @@ public:
      * @return Output sample rate in Hz.
      */
     double getOutputSampleRate() const { return m_outputSampleRate; }
+    double getMaxRecordingSeconds() const { return m_maxRecordingSeconds; }
 
     /**
      * @brief Get a copy of the currently captured waveform for one armed track.
@@ -276,36 +279,36 @@ public:
      * @brief Set playhead position
      * @param position New UI playhead position in seconds.
      */
-    void setPosition(double position) { m_position = position; }
+    void setPosition(double position) { m_position.store(position, std::memory_order_relaxed); }
     /**
      * @brief Update the UI playhead from the live audio engine.
      * @param position Current transport position in seconds.
      */
-    void syncPositionFromEngine(double position) { m_position = position; }
+    void syncPositionFromEngine(double position) { m_position.store(position, std::memory_order_relaxed); }
 
     /**
      * @brief Get playhead position
      * @return Current transport position in seconds.
      */
-    double getPosition() const { return m_position; }
+    double getPosition() const { return m_position.load(std::memory_order_relaxed); }
     /**
      * @brief Get the playhead position used by UI views.
      * @return Current UI transport position in seconds.
      */
     double getUIPosition() const {
-        if (m_hasDisplayPositionOverride.load(std::memory_order_relaxed)) {
+        if (m_hasDisplayPositionOverride.load(std::memory_order_acquire)) {
             return m_displayPositionOverride.load(std::memory_order_relaxed);
         }
-        return m_position;
+        return m_position.load(std::memory_order_relaxed);
     }
 
     void setDisplayPositionOverride(double position) {
         m_displayPositionOverride.store(std::max(0.0, position), std::memory_order_relaxed);
-        m_hasDisplayPositionOverride.store(true, std::memory_order_relaxed);
+        m_hasDisplayPositionOverride.store(true, std::memory_order_release);
     }
 
     void clearDisplayPositionOverride() {
-        m_hasDisplayPositionOverride.store(false, std::memory_order_relaxed);
+        m_hasDisplayPositionOverride.store(false, std::memory_order_release);
     }
 
     void setNextCapturePlacementStartBeat(double startBeat) {
@@ -322,12 +325,12 @@ public:
      * @brief Store the play start position used by stop/rewind.
      * @param position Play-start position in seconds.
      */
-    void setPlayStartPosition(double position) { m_playStartPosition = position; }
+    void setPlayStartPosition(double position) { m_playStartPosition.store(position, std::memory_order_relaxed); }
     /**
      * @brief Get the transport start position used when stopping playback.
      * @return Stored play-start position in seconds.
      */
-    double getPlayStartPosition() const { return m_playStartPosition; }
+    double getPlayStartPosition() const { return m_playStartPosition.load(std::memory_order_relaxed); }
 
     /**
      * @brief Mark whether the user is actively scrubbing the transport.
@@ -355,21 +358,29 @@ public:
         }
 
         struct RecordingWriteGuard {
-            explicit RecordingWriteGuard(std::atomic<uint32_t>& writersIn) : writers(writersIn) {
+            RecordingWriteGuard(std::atomic<uint32_t>& writersIn,
+                                std::condition_variable& writersCvIn,
+                                std::mutex& writersMutexIn)
+                : writers(writersIn), writersCv(writersCvIn), writersMutex(writersMutexIn) {
                 writers.fetch_add(1, std::memory_order_acq_rel);
             }
             ~RecordingWriteGuard() {
-                writers.fetch_sub(1, std::memory_order_acq_rel);
+                if (writers.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+                    std::lock_guard<std::mutex> lock(writersMutex);
+                    writersCv.notify_all();
+                }
             }
             std::atomic<uint32_t>& writers;
-        } guard(m_recordingWriters);
+            std::condition_variable& writersCv;
+            std::mutex& writersMutex;
+        } guard(m_recordingWriters, m_recordingWritersCv, m_recordingWritersMutex);
 
         if (!m_recordingCaptureAccepting.load(std::memory_order_acquire)) {
             return;
         }
 
         const double captureBeat = getCurrentTransportBeat();
-        const bool hasDeferredStart = m_hasDeferredRecordingStart.load(std::memory_order_relaxed);
+        const bool hasDeferredStart = m_hasDeferredRecordingStart.load(std::memory_order_acquire);
         const double deferredStartBeat = m_deferredRecordingStartBeat.load(std::memory_order_relaxed);
         const double bpm = std::max(1.0, m_playlistModel.getBPM());
         const double sampleRate = std::max(1.0, m_inputSampleRate > 0.0 ? m_inputSampleRate : m_outputSampleRate);
@@ -452,10 +463,6 @@ public:
                     appendSample(input[sampleIndex]);
                 }
             }
-            if (startFrame >= frames) {
-                continue;
-            }
-
             bool expectedStart = false;
             if (capture.hasStarted.compare_exchange_strong(expectedStart, true, std::memory_order_acq_rel)) {
                 capture.startBeat.store(effectiveCaptureBeat, std::memory_order_release);
@@ -607,7 +614,7 @@ public:
     void play() {
         m_isPlaying.store(true, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
-        pushTransportCommand(1.0f, m_position);
+        pushTransportCommand(1.0f, m_position.load(std::memory_order_relaxed));
         if (m_stopPreviewCallback) {
             m_stopPreviewCallback();
         }
@@ -619,7 +626,7 @@ public:
     void pause() {
         m_isPlaying.store(false, std::memory_order_relaxed);
         m_isPaused.store(true, std::memory_order_relaxed);
-        pushTransportCommand(0.0f, m_position);
+        pushTransportCommand(0.0f, m_position.load(std::memory_order_relaxed));
     }
 
     /**
@@ -628,8 +635,9 @@ public:
     void stop() {
         m_isPlaying.store(false, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
-        m_position = m_playStartPosition;
-        pushTransportCommand(0.0f, m_playStartPosition);
+        const double playStartPosition = m_playStartPosition.load(std::memory_order_relaxed);
+        m_position.store(playStartPosition, std::memory_order_relaxed);
+        pushTransportCommand(0.0f, playStartPosition);
     }
 
     /**
@@ -671,14 +679,14 @@ public:
     void setDeferredRecordingStartBeat(double startBeat) {
         if (startBeat > 0.0) {
             m_deferredRecordingStartBeat.store(startBeat, std::memory_order_relaxed);
-            m_hasDeferredRecordingStart.store(true, std::memory_order_relaxed);
+            m_hasDeferredRecordingStart.store(true, std::memory_order_release);
             return;
         }
         clearDeferredRecordingStartBeat();
     }
 
     void clearDeferredRecordingStartBeat() {
-        m_hasDeferredRecordingStart.store(false, std::memory_order_relaxed);
+        m_hasDeferredRecordingStart.store(false, std::memory_order_release);
         m_deferredRecordingStartBeat.store(0.0, std::memory_order_relaxed);
     }
 
@@ -774,7 +782,7 @@ public:
     void onTransportStateApplied(bool playing, double positionSeconds) {
         m_transportPlayingConfirmed.store(playing, std::memory_order_relaxed);
         if (!playing) {
-            m_position = positionSeconds;
+            m_position.store(positionSeconds, std::memory_order_relaxed);
             clearDeferredRecordingStartBeat();
             if (m_isCapturing.load(std::memory_order_relaxed)) {
                 finalizeCaptureSession();
@@ -839,8 +847,8 @@ public:
         m_patternMode.store(true, std::memory_order_relaxed);
         m_isPlaying.store(true, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
-        m_position = 0.0;
-        m_playStartPosition = 0.0;
+        m_position.store(0.0, std::memory_order_relaxed);
+        m_playStartPosition.store(0.0, std::memory_order_relaxed);
         m_patternPlaybackEngine.flush();
         pushTransportCommand(1.0f, 0.0);
         m_patternPlaybackEngine.schedulePatternInstance(pid, 0.0, 1);
@@ -880,7 +888,7 @@ public:
 private:
     double getCurrentTransportBeat() const {
         const double bpm = std::max(1.0, m_playlistModel.getBPM());
-        return m_position * bpm / 60.0;
+        return m_position.load(std::memory_order_relaxed) * bpm / 60.0;
     }
 
     double framesToBeats(double frames) const {
@@ -930,8 +938,14 @@ private:
     void finalizeCaptureSession() {
         m_recordingCaptureAccepting.store(false, std::memory_order_release);
         m_isCapturing.store(false, std::memory_order_relaxed);
-        while (m_recordingWriters.load(std::memory_order_acquire) != 0) {
-            std::this_thread::yield();
+        std::unique_lock<std::mutex> writersLock(m_recordingWritersMutex);
+        const bool writersDrained =
+            m_recordingWritersCv.wait_for(writersLock, std::chrono::milliseconds(250), [this]() {
+                return m_recordingWriters.load(std::memory_order_acquire) == 0;
+            });
+        writersLock.unlock();
+        if (!writersDrained) {
+            Log::warning("[TrackManager] Timed out waiting for recording writers to drain before finalizing capture.");
         }
 
         std::unordered_map<uint32_t, std::unique_ptr<RecordingCapture>> captures;
@@ -1198,7 +1212,7 @@ private:
     }
 
     size_t maxRecordingSamplesPerCapture() const {
-        return static_cast<size_t>(std::max(1.0, m_outputSampleRate * 30.0));
+        return static_cast<size_t>(std::max(1.0, m_outputSampleRate * std::max(1.0, m_maxRecordingSeconds)));
     }
 
     std::vector<float> copyCaptureSamples(const RecordingCapture& capture) const {
@@ -1244,8 +1258,8 @@ private:
     double m_outputSampleRate{48000.0};
     double m_inputSampleRate{48000.0};
     int m_inputChannelCount{0};
-    double m_position{0.0};
-    double m_playStartPosition{0.0};
+    std::atomic<double> m_position{0.0};
+    std::atomic<double> m_playStartPosition{0.0};
     std::atomic<bool> m_hasDisplayPositionOverride{false};
     std::atomic<double> m_displayPositionOverride{0.0};
     std::atomic<bool> m_hasNextCapturePlacementStartBeat{false};
@@ -1271,8 +1285,11 @@ private:
     mutable std::mutex m_recordingMutex;
     std::unordered_map<uint32_t, std::unique_ptr<RecordingCapture>> m_recordingCaptures;
     std::atomic<uint32_t> m_recordingWriters{0};
+    mutable std::mutex m_recordingWritersMutex;
+    std::condition_variable m_recordingWritersCv;
     std::atomic<bool> m_recordingCaptureAccepting{false};
     std::array<std::atomic<float>, 8> m_inputPeaks{};
+    double m_maxRecordingSeconds{15.0};
     double m_recordingSessionStartBeat{0.0};
     bool m_recordingSessionUsesPlacementOverride{false};
     bool m_recordingNoArmLogged{false};

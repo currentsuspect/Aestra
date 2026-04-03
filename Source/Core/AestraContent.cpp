@@ -1761,8 +1761,8 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
                     m_audioEngine->setGlobalSamplePos(cmd.samplePos);
                     m_audioEngine->setTransportPlaying(cmd.value1 != 0.0f);
                     if (m_trackManager) {
-                        const double positionSeconds =
-                            static_cast<double>(cmd.samplePos) / std::max(1.0, m_trackManager->getOutputSampleRate());
+                        const double engineSampleRate = std::max(1.0, static_cast<double>(m_audioEngine->getSampleRate()));
+                        const double positionSeconds = static_cast<double>(cmd.samplePos) / engineSampleRate;
                         m_trackManager->onTransportStateApplied(cmd.value1 != 0.0f, positionSeconds);
                     }
                 } else {

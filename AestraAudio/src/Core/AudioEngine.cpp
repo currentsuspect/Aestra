@@ -115,6 +115,9 @@ void AudioEngine::applyPendingMetronomeCountInRt() {
     const uint64_t samplesPerBeat =
         static_cast<uint64_t>((static_cast<double>(sampleRate) * 60.0) / bpm);
     const uint64_t totalSamples = std::max<uint64_t>(samplesPerBeat, samplesPerBeat * beats);
+    if (m_fadeState == FadeState::Silent) {
+        m_fadeState = FadeState::None;
+    }
     m_metronomeEngine.reset(0, sampleRate);
     m_metronomeCountInSamplePos.store(0, std::memory_order_relaxed);
     m_metronomeCountInRemainingSamples.store(totalSamples, std::memory_order_relaxed);
@@ -951,15 +954,19 @@ void AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, ui
     if (m_metronomeCountInActive.load(std::memory_order_relaxed) &&
         !m_transportPlaying.load(std::memory_order_relaxed)) {
         const uint64_t prerollPos = m_metronomeCountInSamplePos.load(std::memory_order_relaxed);
-        m_metronomeEngine.process(outputBuffer, numFrames, m_outputChannels.load(std::memory_order_relaxed), prerollPos,
-                                  static_cast<uint32_t>(m_sampleRate.load(std::memory_order_relaxed)), true);
-
         const uint64_t remaining = m_metronomeCountInRemainingSamples.load(std::memory_order_relaxed);
-        if (remaining <= numFrames) {
+        const uint32_t framesToRender = static_cast<uint32_t>(std::min<uint64_t>(numFrames, remaining));
+        if (framesToRender > 0) {
+            m_metronomeEngine.process(outputBuffer, framesToRender, m_outputChannels.load(std::memory_order_relaxed),
+                                      prerollPos, static_cast<uint32_t>(m_sampleRate.load(std::memory_order_relaxed)),
+                                      true);
+        }
+
+        if (remaining <= framesToRender) {
             clearMetronomeCountInRt();
         } else {
-            m_metronomeCountInRemainingSamples.store(remaining - numFrames, std::memory_order_relaxed);
-            m_metronomeCountInSamplePos.store(prerollPos + numFrames, std::memory_order_relaxed);
+            m_metronomeCountInRemainingSamples.store(remaining - framesToRender, std::memory_order_relaxed);
+            m_metronomeCountInSamplePos.store(prerollPos + framesToRender, std::memory_order_relaxed);
         }
     }
 

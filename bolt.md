@@ -73,11 +73,6 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Explore LLVM-style JIT fusion for hot audio chains so repeated gain, pan, and utility stages stay cache-friendly.
 - **Benefit**: Lower per-buffer overhead on dense sessions.
 
-### SimdLin Integration
-
-- **Innovation**: Introduce heavily vectorized linear algebra kernels utilizing SIMD (AVX-512/ARM NEON) tailored specifically for audio node topologies.
-- **Benefit**: Faster matrix and routing math for demanding polyphonic and granular workloads.
-
 ## 3. Sound Quality
 
 ### 64-bit End-to-End Mixing
