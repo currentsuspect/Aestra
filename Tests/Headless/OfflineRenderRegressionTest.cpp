@@ -1,293 +1,262 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-// OfflineRenderRegressionTest — Validates deterministic offline rendering
-// Usage: OfflineRenderRegressionTest <project.aes> <reference.wav> [--tolerance-db N]
+// OfflineRenderRegressionTest — Validates exporter parity against the engine bounce path.
 
 #include "Core/AudioEngine.h"
-#include "Core/ProjectSerializer.h"
+#include "Core/AudioGraphBuilder.h"
+#include "IO/AudioExporter.h"
+#include "IO/MiniAudioDecoder.h"
 #include "Models/TrackManager.h"
 
-#include <cstring>
-#include <fstream>
-#include <functional>
-#include <iostream>
 #include <cmath>
+#include <filesystem>
+#include <iostream>
+#include <string>
 #include <vector>
 
 using namespace Aestra::Audio;
 
-// Simple WAV file reader
-struct WavReader {
-    struct Header {
-        char riff[4];
-        uint32_t fileSize;
-        char wave[4];
-        char fmt_[4];
-        uint32_t fmtSize;
-        uint16_t audioFormat;
-        uint16_t numChannels;
-        uint32_t sampleRate;
-        uint32_t byteRate;
-        uint16_t blockAlign;
-        uint16_t bitsPerSample;
-        char data[4];
-        uint32_t dataSize;
-    };
+namespace {
 
-    static bool read(const std::string& path, std::vector<float>& samples, uint32_t& sampleRate, uint16_t& channels) {
-        std::ifstream file(path, std::ios::binary);
-        if (!file)
-            return false;
+constexpr uint32_t kSampleRate = 48000;
+constexpr uint32_t kChannels = 2;
+constexpr double kBpm = 120.0;
+constexpr double kDurationSeconds = 2.0;
+constexpr double kDurationBeats = 4.0;
+constexpr float kAmplitude = 0.3f;
+constexpr double kFrequencyHz = 440.0;
+constexpr double kTau = 6.28318530717958647692;
 
-        Header header;
-        file.read(reinterpret_cast<char*>(&header), sizeof(header));
-
-        if (std::memcmp(header.riff, "RIFF", 4) != 0 || std::memcmp(header.wave, "WAVE", 4) != 0) {
-            return false;
-        }
-
-        sampleRate = header.sampleRate;
-        channels = header.numChannels;
-
-        size_t numSamples = header.dataSize / sizeof(float);
-        samples.resize(numSamples);
-        file.read(reinterpret_cast<char*>(samples.data()), header.dataSize);
-
-        return file.good();
-    }
+struct DecodedAudio {
+    std::vector<float> samples;
+    uint32_t sampleRate = 0;
+    uint32_t channels = 0;
 };
 
-// Audio metrics for regression testing
-struct AudioMetrics {
-    static double calculateRMS(const std::vector<float>& samples) {
-        double sum = 0.0;
-        for (float s : samples) {
-            sum += s * s;
-        }
-        return std::sqrt(sum / samples.size());
+std::shared_ptr<AudioBufferData> makeToneBuffer() {
+    auto buffer = std::make_shared<AudioBufferData>();
+    buffer->sampleRate = kSampleRate;
+    buffer->numChannels = kChannels;
+    buffer->numFrames = static_cast<uint32_t>(kSampleRate * kDurationSeconds);
+    buffer->interleavedData.resize(static_cast<size_t>(buffer->numFrames) * kChannels, 0.0f);
+
+    for (uint32_t frame = 0; frame < buffer->numFrames; ++frame) {
+        const double t = static_cast<double>(frame) / static_cast<double>(kSampleRate);
+        const float sample = static_cast<float>(std::sin(kTau * kFrequencyHz * t) * kAmplitude);
+        buffer->interleavedData[static_cast<size_t>(frame) * 2] = sample;
+        buffer->interleavedData[static_cast<size_t>(frame) * 2 + 1] = sample;
+    }
+    return buffer;
+}
+
+std::shared_ptr<TrackManager> makeTrackManagerFixture(const std::filesystem::path& tempRoot) {
+    auto trackManager = std::make_shared<TrackManager>();
+    trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
+    trackManager->getPlaylistModel().setBPM(kBpm);
+    trackManager->addChannel("Parity Track");
+    const PlaylistLaneID laneId = trackManager->getPlaylistModel().createLane("Parity Track");
+
+    auto buffer = makeToneBuffer();
+    const auto sourcePath = (tempRoot / "offline_export_parity_source.wav").string();
+    const ClipSourceID sourceId = trackManager->getSourceManager().createRecordedSource(sourcePath, "ParityTone", buffer);
+    if (!sourceId.isValid()) {
+        return nullptr;
     }
 
-    static double calculatePeak(const std::vector<float>& samples) {
-        float peak = 0.0f;
-        for (float s : samples) {
-            peak = std::max(peak, std::abs(s));
-        }
-        return peak;
+    AudioSlicePayload payload;
+    payload.audioSourceId = sourceId;
+    payload.durationSeconds = kDurationSeconds;
+    payload.slices.push_back({0.0, kDurationSeconds, 0.0, static_cast<double>(buffer->numFrames)});
+
+    const PatternID patternId =
+        trackManager->getPatternManager().createAudioPattern("ParityTone", kDurationBeats, payload);
+    if (!patternId.isValid()) {
+        return nullptr;
     }
 
-    static double calculateDCOffset(const std::vector<float>& samples) {
-        double sum = 0.0;
-        for (float s : samples) {
-            sum += s;
-        }
-        return sum / samples.size();
+    const ClipInstanceID clipId = trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, kDurationBeats);
+    if (!clipId.isValid()) {
+        return nullptr;
     }
 
-    static double calculateCorrelation(const std::vector<float>& a, const std::vector<float>& b) {
-        if (a.size() != b.size() || a.empty())
-            return 0.0;
+    return trackManager;
+}
 
-        double meanA = 0.0, meanB = 0.0;
-        for (size_t i = 0; i < a.size(); ++i) {
-            meanA += a[i];
-            meanB += b[i];
-        }
-        meanA /= a.size();
-        meanB /= b.size();
+bool decodeWav(const std::filesystem::path& path, DecodedAudio& out) {
+    return decodeAudioFile(path.string(), out.samples, out.sampleRate, out.channels);
+}
 
-        double num = 0.0, denA = 0.0, denB = 0.0;
-        for (size_t i = 0; i < a.size(); ++i) {
-            double da = a[i] - meanA;
-            double db = b[i] - meanB;
-            num += da * db;
-            denA += da * da;
-            denB += db * db;
-        }
+void configureEngineFixture(AudioEngine& engine, const std::shared_ptr<TrackManager>& trackManager) {
+    engine.setSampleRate(kSampleRate);
+    engine.setBufferConfig(512, kChannels);
+    engine.setTrackManager(trackManager);
+    engine.setBPM(static_cast<float>(kBpm));
+    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*trackManager, static_cast<double>(kSampleRate)));
+    engine.initialize();
+}
 
-        return num / std::sqrt(denA * denB);
+std::vector<float> renderReferenceBuffer(AudioEngine& engine) {
+    const uint32_t totalFrames = static_cast<uint32_t>(kSampleRate * kDurationSeconds);
+    const uint32_t blockFrames = 512;
+    std::vector<float> output;
+    output.reserve(static_cast<size_t>(totalFrames) * kChannels);
+    std::vector<float> block(static_cast<size_t>(blockFrames) * kChannels, 0.0f);
+
+    engine.setMetronomeEnabled(false);
+    engine.setAuditionModeEnabled(false);
+    engine.setGlobalSamplePos(0);
+    engine.setTransportPlaying(true);
+
+    uint32_t renderedFrames = 0;
+    while (renderedFrames < totalFrames) {
+        const uint32_t framesThisBlock = std::min(blockFrames, totalFrames - renderedFrames);
+        std::fill(block.begin(), block.end(), 0.0f);
+        engine.processBlock(block.data(), nullptr, framesThisBlock, 0.0);
+        output.insert(output.end(), block.begin(), block.begin() + static_cast<std::ptrdiff_t>(framesThisBlock * kChannels));
+        renderedFrames += framesThisBlock;
     }
 
-    // Hash for exact match (within tolerance)
-    static bool isSimilar(const std::vector<float>& a, const std::vector<float>& b, double toleranceDb = -80.0) {
-        if (a.size() != b.size())
-            return false;
+    engine.setTransportPlaying(false);
+    return output;
+}
 
-        double toleranceLinear = std::pow(10.0, toleranceDb / 20.0);
-
-        for (size_t i = 0; i < a.size(); ++i) {
-            if (std::abs(a[i] - b[i]) > toleranceLinear) {
-                return false;
-            }
-        }
-        return true;
+float calculatePeak(const std::vector<float>& samples) {
+    float peak = 0.0f;
+    for (float sample : samples) {
+        peak = std::max(peak, std::abs(sample));
     }
-};
+    return peak;
+}
 
-// Regression test harness
-class OfflineRenderRegressionTest {
-public:
-    struct Config {
-        double durationSeconds;
-        uint32_t sampleRate;
-        double toleranceDb; // -80dB = ~0.01% difference
-        bool requireExactMatch;
-
-        Config() : durationSeconds(5.0), sampleRate(48000), toleranceDb(-80.0), requireExactMatch(false) {}
-    };
-
-    struct Result {
-        bool passed = false;
-        double rmsDiffDb = 0.0;
-        double peakDiffDb = 0.0;
-        double correlation = 0.0;
-        std::string errorMessage;
-    };
-
-    OfflineRenderRegressionTest() : m_config() {}
-
-    explicit OfflineRenderRegressionTest(const Config& config) : m_config(config) {}
-
-    Result run(const std::string& projectPath, const std::string& referenceWavPath) {
-        Result result;
-
-        // Load reference
-        std::vector<float> referenceSamples;
-        uint32_t refSampleRate;
-        uint16_t refChannels;
-
-        if (!WavReader::read(referenceWavPath, referenceSamples, refSampleRate, refChannels)) {
-            result.errorMessage = "Failed to read reference WAV: " + referenceWavPath;
-            return result;
-        }
-
-        // Render project
-        std::vector<float> renderedSamples;
-        if (!renderProject(projectPath, renderedSamples, refSampleRate, refChannels)) {
-            result.errorMessage = "Failed to render project";
-            return result;
-        }
-
-        // Compare
-        if (renderedSamples.size() != referenceSamples.size()) {
-            result.errorMessage = "Sample count mismatch: rendered=" + std::to_string(renderedSamples.size()) +
-                                  " reference=" + std::to_string(referenceSamples.size());
-            return result;
-        }
-
-        // Calculate metrics
-        double rmsA = AudioMetrics::calculateRMS(renderedSamples);
-        double rmsB = AudioMetrics::calculateRMS(referenceSamples);
-        result.rmsDiffDb = 20.0 * std::log10(std::abs(rmsA - rmsB) + 1e-10);
-
-        double peakA = AudioMetrics::calculatePeak(renderedSamples);
-        double peakB = AudioMetrics::calculatePeak(referenceSamples);
-        result.peakDiffDb = 20.0 * std::log10(std::abs(peakA - peakB) + 1e-10);
-
-        result.correlation = AudioMetrics::calculateCorrelation(renderedSamples, referenceSamples);
-
-        // Pass/fail criteria
-        if (m_config.requireExactMatch) {
-            result.passed = AudioMetrics::isSimilar(renderedSamples, referenceSamples, m_config.toleranceDb);
-        } else {
-            // Relaxed: correlation > 0.999 and RMS diff < -60dB
-            result.passed = (result.correlation > 0.999) && (result.rmsDiffDb < -60.0);
-        }
-
-        return result;
+double calculateCorrelation(const std::vector<float>& a, const std::vector<float>& b) {
+    if (a.size() != b.size() || a.empty()) {
+        return 0.0;
     }
 
-private:
-    bool renderProject(const std::string& projectPath, std::vector<float>& outputSamples, uint32_t targetSampleRate,
-                       uint16_t targetChannels) {
-        auto trackManager = std::make_shared<TrackManager>();
+    long double meanA = 0.0;
+    long double meanB = 0.0;
+    for (size_t i = 0; i < a.size(); ++i) {
+        meanA += a[i];
+        meanB += b[i];
+    }
+    meanA /= static_cast<long double>(a.size());
+    meanB /= static_cast<long double>(b.size());
 
-        auto loadResult = ProjectSerializer::load(projectPath, trackManager);
-        if (!loadResult.ok) {
-            std::cerr << "Failed to load project: " << loadResult.errorMessage << "\n";
-            return false;
-        }
-
-        AudioEngine engine;
-        engine.setSampleRate(targetSampleRate);
-        engine.setBufferConfig(512, targetChannels);
-        engine.setTrackManager(trackManager);
-
-        if (loadResult.tempo > 0) {
-            engine.setBPM(loadResult.tempo);
-        }
-
-        if (!engine.initialize()) {
-            std::cerr << "Failed to initialize audio engine\n";
-            return false;
-        }
-
-        uint32_t totalFrames = static_cast<uint32_t>(m_config.durationSeconds * targetSampleRate);
-        uint32_t blocks = (totalFrames + 511) / 512;
-
-        outputSamples.clear();
-        outputSamples.reserve(totalFrames * targetChannels);
-
-        std::vector<float> blockBuffer(512 * targetChannels, 0.0f);
-
-        for (uint32_t i = 0; i < blocks; ++i) {
-            uint32_t framesToProcess = std::min(512u, totalFrames - (i * 512));
-            engine.processBlock(blockBuffer.data(), nullptr, framesToProcess, 0.0);
-
-            outputSamples.insert(outputSamples.end(), blockBuffer.begin(),
-                                 blockBuffer.begin() + framesToProcess * targetChannels);
-        }
-
-        return true;
+    long double numerator = 0.0;
+    long double denomA = 0.0;
+    long double denomB = 0.0;
+    for (size_t i = 0; i < a.size(); ++i) {
+        const long double da = static_cast<long double>(a[i]) - meanA;
+        const long double db = static_cast<long double>(b[i]) - meanB;
+        numerator += da * db;
+        denomA += da * da;
+        denomB += db * db;
     }
 
-    Config m_config;
-};
+    if (denomA <= 0.0 || denomB <= 0.0) {
+        return 0.0;
+    }
+    return static_cast<double>(numerator / std::sqrt(denomA * denomB));
+}
 
-// Main entry point
-int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <project.aes> <reference.wav> [options]\n"
-                  << "\nRegression test: renders project and compares to reference WAV\n"
-                  << "\nOptions:\n"
-                  << "  --duration-seconds N    Render N seconds (default: 5)\n"
-                  << "  --tolerance-db N        Tolerance in dB (default: -80)\n"
-                  << "  --exact-match           Require exact sample match\n"
-                  << "\nExit code: 0 = passed, 1 = failed\n"
-                  << "\nExample:\n"
-                  << "  " << argv[0] << " song.aes reference.wav --duration-seconds 10\n";
-        return 1;
+double rmsDifferenceDb(const std::vector<float>& a, const std::vector<float>& b) {
+    if (a.size() != b.size() || a.empty()) {
+        return 0.0;
     }
 
-    std::string projectPath = argv[1];
-    std::string referencePath = argv[2];
-
-    OfflineRenderRegressionTest::Config config;
-
-    for (int i = 3; i < argc; ++i) {
-        if (std::strcmp(argv[i], "--duration-seconds") == 0 && i + 1 < argc) {
-            config.durationSeconds = std::atof(argv[++i]);
-        } else if (std::strcmp(argv[i], "--tolerance-db") == 0 && i + 1 < argc) {
-            config.toleranceDb = std::atof(argv[++i]);
-        } else if (std::strcmp(argv[i], "--exact-match") == 0) {
-            config.requireExactMatch = true;
-        }
+    long double sumSquares = 0.0;
+    for (size_t i = 0; i < a.size(); ++i) {
+        const long double diff = static_cast<long double>(a[i]) - static_cast<long double>(b[i]);
+        sumSquares += diff * diff;
     }
 
-    OfflineRenderRegressionTest test(config);
-    auto result = test.run(projectPath, referencePath);
+    const long double rms = std::sqrt(sumSquares / static_cast<long double>(a.size()));
+    return 20.0 * std::log10(static_cast<double>(rms) + 1e-12);
+}
 
-    std::cout << "=== Offline Render Regression Test ===\n"
-              << "Project: " << projectPath << "\n"
-              << "Reference: " << referencePath << "\n"
-              << "Duration: " << config.durationSeconds << "s\n"
-              << "\nResults:\n"
-              << "  RMS difference: " << result.rmsDiffDb << " dB\n"
-              << "  Peak difference: " << result.peakDiffDb << " dB\n"
-              << "  Correlation: " << result.correlation << "\n"
-              << "\nStatus: " << (result.passed ? "PASSED ✅" : "FAILED ❌") << "\n";
+bool runExportParityTest() {
+    namespace fs = std::filesystem;
+    const fs::path tempRoot = fs::temp_directory_path() / "aestra_offline_export_parity";
+    std::error_code ec;
+    fs::create_directories(tempRoot, ec);
 
-    if (!result.errorMessage.empty()) {
-        std::cerr << "Error: " << result.errorMessage << "\n";
+    auto exportTrackManager = makeTrackManagerFixture(tempRoot);
+    auto referenceTrackManager = makeTrackManagerFixture(tempRoot);
+    if (!exportTrackManager || !referenceTrackManager) {
+        std::cerr << "Failed to create in-memory export fixture.\n";
+        return false;
     }
 
-    return result.passed ? 0 : 1;
+    AudioEngine exportEngine;
+    configureEngineFixture(exportEngine, exportTrackManager);
+    AudioEngine referenceEngine;
+    configureEngineFixture(referenceEngine, referenceTrackManager);
+
+    const fs::path exportPath = tempRoot / "offline_export.wav";
+    fs::remove(exportPath, ec);
+
+    AudioExporter exporter(exportEngine, *exportTrackManager);
+    AudioExporter::Config config;
+    config.outputPath = exportPath.string();
+    config.sampleRate = kSampleRate;
+    config.numChannels = kChannels;
+    config.bitDepth = AudioExporter::BitDepth::Float_32;
+    config.scope = AudioExporter::RenderScope::FullSong;
+    config.tailSeconds = 0.0;
+
+    const auto exportResult = exporter.render(config);
+    if (!exportResult.success) {
+        std::cerr << "Exporter failed: " << exportResult.errorMessage << "\n";
+        return false;
+    }
+
+    const std::vector<float> referenceSamples = renderReferenceBuffer(referenceEngine);
+
+    DecodedAudio exported;
+    if (!decodeWav(exportPath, exported)) {
+        std::cerr << "Failed to decode exporter WAV.\n";
+        return false;
+    }
+
+    if (exported.sampleRate != kSampleRate || exported.channels != kChannels) {
+        std::cerr << "Unexpected output format.\n";
+        return false;
+    }
+
+    if (exported.samples.empty() || referenceSamples.empty()) {
+        std::cerr << "Rendered audio is empty.\n";
+        return false;
+    }
+
+    const float exportPeak = calculatePeak(exported.samples);
+    const float referencePeak = calculatePeak(referenceSamples);
+    if (exportPeak < 0.05f || referencePeak < 0.05f) {
+        std::cerr << "Rendered audio peak too low. exportPeak=" << exportPeak
+                  << " referencePeak=" << referencePeak << "\n";
+        return false;
+    }
+
+    if (exported.samples.size() != referenceSamples.size()) {
+        std::cerr << "Sample count mismatch. export=" << exported.samples.size()
+                  << " reference=" << referenceSamples.size() << "\n";
+        return false;
+    }
+
+    const double correlation = calculateCorrelation(exported.samples, referenceSamples);
+    const double diffDb = rmsDifferenceDb(exported.samples, referenceSamples);
+    if (correlation < 0.995 || diffDb > -35.0) {
+        std::cerr << "Exporter diverged from reference render path. correlation=" << correlation
+                  << " rmsDiffDb=" << diffDb << "\n";
+        return false;
+    }
+
+    std::cout << "Offline export parity OK. peak=" << exportPeak
+              << " correlation=" << correlation
+              << " rmsDiffDb=" << diffDb << "\n";
+    return true;
+}
+
+} // namespace
+
+int main() {
+    return runExportParityTest() ? 0 : 1;
 }

@@ -89,6 +89,21 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
 
+### Analog Drift Modeling
+
+- **Innovation**: Add subtle real-time chaotic modulation to selected parameters to mimic thermal drift in analog components.
+- **Benefit**: More organic variance and movement without relying on static saturation curves.
+
+### Spectral Anti-Aliasing
+
+- **Innovation**: Explore frequency-domain suppression approaches for nonlinear processing instead of relying only on oversampling filters.
+- **Benefit**: Cleaner high-end fidelity during heavy distortion and saturation at lower CPU cost.
+
+### Psychoacoustic Downsampling
+
+- **Innovation**: Intelligently filter imperceptible bands before bit-depth or sample-rate reduction.
+- **Benefit**: Lo-fi textures that stay musical and preserve transient clarity instead of collapsing into harsh alias-heavy artifacts.
+
 ## 4. Audit Notes
 
 ### Real-Time Safety

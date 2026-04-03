@@ -220,15 +220,14 @@ AestraContent::AestraContent() {
     });
     
     // Wire Transport to AudioEngine (timeline playback)
-    m_transportBar->setOnPlay([this]() { if(m_audioEngine) m_audioEngine->setTransportPlaying(true); });
-    m_transportBar->setOnPause([this]() { if(m_audioEngine) m_audioEngine->setTransportPlaying(false); });
+    m_transportBar->setOnPlay([this]() { handleTransportPlayRequest(); });
+    m_transportBar->setOnPause([this]() {
+        clearPendingCountIn();
+        pauseFromCurrentFocus();
+    });
     m_transportBar->setOnStop([this]() { 
-        if(m_audioEngine) {
-            m_audioEngine->setTransportPlaying(false);
-            m_audioEngine->panic();
-        }
-        if(m_trackManager) m_trackManager->stop();
-        if(m_auditionEngine && m_viewFocus == ViewFocus::Audition) m_auditionEngine->stop();
+        clearPendingCountIn();
+        stopFromCurrentFocus(true);
         stopSoundPreview();
     });
     m_transportBar->setOnRecord([this](bool recording) { 
@@ -241,6 +240,12 @@ AestraContent::AestraContent() {
     });
     m_transportBar->setOnMetronomeToggle([this](bool enabled) {
         if(m_trackManager) m_trackManager->enableMetronome(enabled);
+    });
+    m_transportBar->setOnCountInToggle([this](bool enabled) {
+        m_countInEnabled = enabled;
+        if (!enabled) {
+            clearPendingCountIn();
+        }
     });
     
     // Helper: Stop preview when Audition Queue changes (drop)
@@ -602,6 +607,8 @@ AestraContent::AestraContent() {
 // =============================================================================
 
 void AestraContent::onUpdate(double dt) {
+    updatePendingCountIn();
+
     // Sync track changes to MixerViewModel
     auto tm = getTrackManager();
     if (tm && tm->isModified()) {
@@ -1513,6 +1520,114 @@ PatternID AestraContent::getActivePatternID() const {
     return PatternID();
 }
 
+void AestraContent::clearPendingCountIn() {
+    if (m_trackManager) {
+        m_trackManager->clearDeferredRecordingStartBeat();
+        m_trackManager->clearDisplayPositionOverride();
+        m_trackManager->clearNextCapturePlacementStartBeat();
+    }
+    if (m_audioEngine) {
+        m_audioEngine->stopMetronomeCountIn();
+    }
+
+    if (m_forcedMetronomeForCountIn && m_trackManager) {
+        m_trackManager->enableMetronome(false);
+        if (m_audioEngine) {
+            m_audioEngine->setMetronomeEnabled(false);
+        }
+        if (m_transportBar) {
+            m_transportBar->setMetronomeActive(false);
+        }
+    }
+
+    m_forcedMetronomeForCountIn = false;
+    m_pendingCountIn = false;
+    m_pendingCountInTargetSeconds = 0.0;
+}
+
+void AestraContent::updatePendingCountIn() {
+    if (!m_pendingCountIn || !m_trackManager) {
+        return;
+    }
+
+    if (m_audioEngine && m_audioEngine->isMetronomeCountInActive()) {
+        return;
+    }
+
+    m_trackManager->clearDisplayPositionOverride();
+    m_trackManager->clearNextCapturePlacementStartBeat();
+    if (m_forcedMetronomeForCountIn) {
+        m_trackManager->enableMetronome(false);
+        if (m_audioEngine) {
+            m_audioEngine->setMetronomeEnabled(false);
+        }
+        if (m_transportBar) {
+            m_transportBar->setMetronomeActive(false);
+        }
+        m_forcedMetronomeForCountIn = false;
+    }
+    m_pendingCountIn = false;
+    m_pendingCountInTargetSeconds = 0.0;
+    m_trackManager->play();
+    stopSoundPreview();
+}
+
+void AestraContent::handleTransportPlayRequest() {
+    if (m_viewFocus != ViewFocus::Timeline || !m_trackManager) {
+        playFromCurrentFocus();
+        return;
+    }
+
+    if (!m_trackManager->isPlaying()) {
+        if (m_audioEngine) {
+            m_audioEngine->stopMetronomeCountIn();
+        }
+        m_trackManager->clearDeferredRecordingStartBeat();
+        m_trackManager->clearDisplayPositionOverride();
+        m_trackManager->clearNextCapturePlacementStartBeat();
+        m_pendingCountIn = false;
+        m_pendingCountInTargetSeconds = 0.0;
+    }
+
+    if (!m_countInEnabled || !m_trackManager->isRecordArmed() || !m_trackManager->hasArmedTracks()) {
+        clearPendingCountIn();
+        playFromCurrentFocus();
+        return;
+    }
+
+    const int beatsPerBar = m_transportBar ? std::max(1, m_transportBar->getTimeSignature()) : 4;
+    const double requestedStartSeconds = std::max(0.0, m_trackManager->getPosition());
+
+    if (m_trackManager->isPlaying()) {
+        return;
+    }
+
+    m_pendingCountIn = true;
+    m_pendingCountInTargetSeconds = requestedStartSeconds;
+    m_trackManager->setPlayStartPosition(requestedStartSeconds);
+    m_trackManager->setPosition(requestedStartSeconds);
+    m_trackManager->setDisplayPositionOverride(requestedStartSeconds);
+
+    if (m_audioEngine && !m_audioEngine->isMetronomeEnabled()) {
+        m_trackManager->enableMetronome(true);
+        m_audioEngine->setMetronomeEnabled(true);
+        if (m_transportBar) {
+            m_transportBar->setMetronomeActive(true);
+        }
+        m_forcedMetronomeForCountIn = true;
+    } else {
+        m_forcedMetronomeForCountIn = false;
+    }
+
+    if (m_audioEngine) {
+        m_audioEngine->stopMetronomeCountIn();
+        m_audioEngine->startMetronomeCountIn(static_cast<uint32_t>(beatsPerBar));
+    } else {
+        m_pendingCountIn = false;
+        playFromCurrentFocus();
+    }
+}
+
 void AestraContent::playFromCurrentFocus() {
     if (m_viewFocus == ViewFocus::Audition) {
         if (m_auditionEngine) {
@@ -1645,6 +1760,11 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
                 if (cmd.type == AudioQueueCommandType::SetTransportState) {
                     m_audioEngine->setGlobalSamplePos(cmd.samplePos);
                     m_audioEngine->setTransportPlaying(cmd.value1 != 0.0f);
+                    if (m_trackManager) {
+                        const double engineSampleRate = std::max(1.0, static_cast<double>(m_audioEngine->getSampleRate()));
+                        const double positionSeconds = static_cast<double>(cmd.samplePos) / engineSampleRate;
+                        m_trackManager->onTransportStateApplied(cmd.value1 != 0.0f, positionSeconds);
+                    }
                 } else {
                     m_audioEngine->commandQueue().push(cmd);
                 }
@@ -2144,28 +2264,21 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         }
         else {
             // Timeline / Arsenal Mode
-            if (m_transportBar) {
-                if (m_transportBar->getState() == Aestra::TransportState::Playing) {
-                    m_transportBar->stop();
-                } else {
-                    m_transportBar->play();
-                }
-                return true;
-            }
-
-            // Fallback when transport bar is unavailable.
             if (m_trackManager) {
+                const bool countInActive = m_pendingCountIn ||
+                                           (m_audioEngine && m_audioEngine->isMetronomeCountInActive());
                 if (m_viewFocus == ViewFocus::Arsenal) {
-                    if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
+                    if (countInActive || (m_trackManager->isPlaying() && m_trackManager->isPatternMode())) {
                         stopFromCurrentFocus(false);
                     } else {
                         playFromCurrentFocus();
                     }
                 } else {
-                    if (m_trackManager->isPlaying()) {
+                    if (countInActive || m_trackManager->isPlaying()) {
+                        clearPendingCountIn();
                         stopFromCurrentFocus(false);
                     } else {
-                        playFromCurrentFocus();
+                        handleTransportPlayRequest();
                     }
                 }
                 return true;
