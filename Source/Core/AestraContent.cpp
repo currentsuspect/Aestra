@@ -1645,6 +1645,11 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
                 if (cmd.type == AudioQueueCommandType::SetTransportState) {
                     m_audioEngine->setGlobalSamplePos(cmd.samplePos);
                     m_audioEngine->setTransportPlaying(cmd.value1 != 0.0f);
+                    if (m_trackManager) {
+                        const double positionSeconds =
+                            static_cast<double>(cmd.samplePos) / std::max(1.0, m_trackManager->getOutputSampleRate());
+                        m_trackManager->onTransportStateApplied(cmd.value1 != 0.0f, positionSeconds);
+                    }
                 } else {
                     m_audioEngine->commandQueue().push(cmd);
                 }
