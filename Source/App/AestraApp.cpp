@@ -598,60 +598,8 @@ void AestraApp::connectAudioToUI() {
     // Transport Bar Wiring
     if (m_content && m_content->getTransportBar() && m_audioController->getEngine()) {
         auto engine = m_audioController->getEngine();
-        m_content->getTransportBar()->setOnPlay([this, engine]() {
-            if (m_content && m_content->getTrackManager()) {
-                m_content->stopSoundPreview();
-                if (m_content->getViewFocus() == ViewFocus::Arsenal) {
-                    m_content->playFromCurrentFocus();
-                } else {
-                    m_content->getTrackManager()->play();
-                    engine->setTransportPlaying(true);
-                }
-            }
-        });
-        m_content->getTransportBar()->setOnPause([this, engine]() {
-            if (m_content && m_content->getTrackManager()) {
-                if (m_content->getViewFocus() == ViewFocus::Arsenal) {
-                    m_content->pauseFromCurrentFocus();
-                } else {
-                    m_content->getTrackManager()->pause();
-                    engine->setTransportPlaying(false);
-                }
-            }
-        });
-        m_content->getTransportBar()->setOnStop([this, engine]() {
-            if (m_content && m_content->getTrackManager()) {
-                auto trackMgr = m_content->getTrackManager();
-                if (!engine->isTransportPlaying()) {
-                    engine->panic();
-                    engine->setGlobalSamplePos(0);
-                    trackMgr->setPosition(0.0);
-                    trackMgr->setPlayStartPosition(0.0);
-                } else {
-                    if (m_content->getViewFocus() == ViewFocus::Arsenal || trackMgr->isPatternMode()) {
-                        m_content->stopFromCurrentFocus(true);
-                    } else {
-                        double playStartPos = trackMgr->getPlayStartPosition();
-                        double sr = engine->getSampleRate();
-                        uint64_t samplePos = static_cast<uint64_t>(playStartPos * sr);
-                        trackMgr->stop();
-                        engine->setGlobalSamplePos(samplePos);
-                        trackMgr->setPosition(playStartPos);
-                        engine->setTransportPlaying(false);
-                    }
-                }
-            }
-        });
-
-        // Record (Todo)
-
-        // Metronome toggle
-        m_content->getTransportBar()->setOnMetronomeToggle([this, engine](bool active) {
-            if (engine) {
-                engine->setMetronomeEnabled(active);
-                Log::info(std::string("Metronome toggled: ") + (active ? "ON" : "OFF"));
-            }
-        });
+        // Play / pause / stop / metronome are owned by AestraContent so transport-aware
+        // features like count-in, preview stop, and deferred capture all go through one path.
 
         // Tempo change
         m_content->getTransportBar()->setOnTempoChange([this, engine](float bpm) {

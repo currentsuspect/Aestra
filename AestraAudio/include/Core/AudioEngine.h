@@ -201,6 +201,9 @@ public:
         }
         m_metronomeEngine.loadClickSounds(downbeatPath, upbeatPath);
     }
+    void startMetronomeCountIn(uint32_t beats);
+    void stopMetronomeCountIn();
+    bool isMetronomeCountInActive() const { return m_metronomeCountInActive.load(std::memory_order_relaxed); }
 
     /** @brief Enable or disable transport looping. */
     void setLoopEnabled(bool enabled) { m_loopEnabled.store(enabled, std::memory_order_relaxed); }
@@ -424,6 +427,9 @@ private:
     std::atomic<bool> m_transportStopRequested{false};
     // Hard stop: immediate silence (e.g., stop pressed twice)
     std::atomic<bool> m_transportHardStopRequested{false};
+    std::atomic<bool> m_metronomeCountInActive{false};
+    std::atomic<uint64_t> m_metronomeCountInRemainingSamples{0};
+    std::atomic<uint64_t> m_metronomeCountInSamplePos{0};
 
     // Request MIDI panic (All Notes Off / All Sound Off) injection into unit MIDI buffers.
     std::atomic<bool> m_transportMidiPanicRequested{false};

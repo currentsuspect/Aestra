@@ -208,12 +208,15 @@ Completed since early January:
 - `[~][P0][I-002]` Track/lane arming + clear armed state UI.
   - Mixer and playlist track arming now both drive the real channel armed state used by recording capture.
   - Live waveform capture preview is now tied to those armed tracks during record.
-  - Remaining gap: unify arm affordances across all recording entry points and verify multitrack behavior.
+  - Record start now only opens a capture session when at least one lane is actually armed, so transport record-arm alone does not silently trigger count-in/capture behavior.
+  - Remaining gap: unify arm affordances across all recording entry points and validate multitrack behavior on real sessions.
 - `[~][P0][I-003]` Monitoring policy (software monitoring on/off; avoid feedback).
   - New channels now default monitoring to off, so record-arm no longer implies live input monitor by default.
-  - Remaining gap: add explicit input diagnostics/metering UI so source quality is visible before take commit.
+  - Track `R` right-click now exposes explicit `Arm Only` / `Arm + Monitor` modes, and the mixer `I/O` tab shows live input diagnostics before record.
+  - Remaining gap: validate monitor-mode behavior under multitrack/count-in sessions and real device changes.
 - `[~][P0][I-004]` Record start/stop correctness (file handles, buffer flushing, no truncated files).
   - Record-arm no longer captures while stopped; capture starts when transport rolls and finalizes on stop/pause.
+  - Count-in now delays capture until the target beat instead of writing preroll, and only engages when transport record is armed and at least one track is armed.
   - Current take commit writes a float WAV per armed track and places it into the playlist.
   - New default capture mode is `Auto`, which downmixes available hardware inputs instead of assuming `Input 1`.
 - `[~][P0][I-005]` File naming + storage rules (inside project folder, stable relink).

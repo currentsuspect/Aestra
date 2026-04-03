@@ -292,7 +292,31 @@ public:
      * @brief Get the playhead position used by UI views.
      * @return Current UI transport position in seconds.
      */
-    double getUIPosition() const { return m_position; }
+    double getUIPosition() const {
+        if (m_hasDisplayPositionOverride.load(std::memory_order_relaxed)) {
+            return m_displayPositionOverride.load(std::memory_order_relaxed);
+        }
+        return m_position;
+    }
+
+    void setDisplayPositionOverride(double position) {
+        m_displayPositionOverride.store(std::max(0.0, position), std::memory_order_relaxed);
+        m_hasDisplayPositionOverride.store(true, std::memory_order_relaxed);
+    }
+
+    void clearDisplayPositionOverride() {
+        m_hasDisplayPositionOverride.store(false, std::memory_order_relaxed);
+    }
+
+    void setNextCapturePlacementStartBeat(double startBeat) {
+        m_nextCapturePlacementStartBeat.store(std::max(0.0, startBeat), std::memory_order_relaxed);
+        m_hasNextCapturePlacementStartBeat.store(true, std::memory_order_relaxed);
+    }
+
+    void clearNextCapturePlacementStartBeat() {
+        m_hasNextCapturePlacementStartBeat.store(false, std::memory_order_relaxed);
+        m_nextCapturePlacementStartBeat.store(0.0, std::memory_order_relaxed);
+    }
 
     /**
      * @brief Store the play start position used by stop/rewind.
@@ -337,7 +361,12 @@ public:
         } guard(m_recordingWriters);
 
         const double captureBeat = getCurrentTransportBeat();
+        const bool hasDeferredStart = m_hasDeferredRecordingStart.load(std::memory_order_relaxed);
+        const double deferredStartBeat = m_deferredRecordingStartBeat.load(std::memory_order_relaxed);
+        const double bpm = std::max(1.0, m_playlistModel.getBPM());
+        const double sampleRate = std::max(1.0, m_inputSampleRate > 0.0 ? m_inputSampleRate : m_outputSampleRate);
         bool capturedAnyChannel = false;
+        bool startedDeferredCapture = false;
 
         for (const auto& channel : m_channels) {
             if (!channel || !channel->isArmed()) {
@@ -354,15 +383,6 @@ public:
                 continue;
             }
             RecordingCapture& capture = *captureIt->second;
-            bool expectedStart = false;
-            if (capture.hasStarted.compare_exchange_strong(expectedStart, true, std::memory_order_acq_rel)) {
-                capture.startBeat.store(captureBeat, std::memory_order_release);
-                const std::string inputLabel =
-                    (requestedInput == -2) ? "auto-mono" : ("input " + std::to_string(std::max(0, requestedInput) + 1));
-                Log::info("[TrackManager] Recording capture started for track " + std::to_string(channel->getChannelId()) +
-                          " from " + inputLabel);
-            }
-
             const size_t capacity = capture.capacity;
             if (capacity == 0 || !capture.samples) {
                 continue;
@@ -372,6 +392,24 @@ public:
             size_t size = capture.size.load(std::memory_order_relaxed);
             double startBeat = capture.startBeat.load(std::memory_order_relaxed);
             uint64_t droppedFrames = 0;
+            uint32_t startFrame = 0;
+            double effectiveCaptureBeat = captureBeat;
+
+            if (hasDeferredStart) {
+                const double beatsUntilCapture = deferredStartBeat - captureBeat;
+                if (beatsUntilCapture > 0.0) {
+                    const double secondsUntilCapture = beatsUntilCapture * 60.0 / bpm;
+                    const uint32_t skippedFrames =
+                        static_cast<uint32_t>(std::ceil(secondsUntilCapture * sampleRate));
+                    if (skippedFrames >= frames) {
+                        continue;
+                    }
+                    startFrame = skippedFrames;
+                    effectiveCaptureBeat = deferredStartBeat;
+                } else {
+                    effectiveCaptureBeat = deferredStartBeat;
+                }
+            }
 
             auto appendSample = [&](float sample) {
                 size_t writeIndex = (head + size) % capacity;
@@ -386,7 +424,7 @@ public:
 
             if (requestedInput == -2) {
                 const float channelScale = 1.0f / static_cast<float>(m_inputChannelCount);
-                for (uint32_t frame = 0; frame < frames; ++frame) {
+                for (uint32_t frame = startFrame; frame < frames; ++frame) {
                     const size_t baseIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount);
                     float mixedSample = 0.0f;
                     for (int ch = 0; ch < m_inputChannelCount; ++ch) {
@@ -400,10 +438,25 @@ public:
                     continue;
                 }
 
-                for (uint32_t frame = 0; frame < frames; ++frame) {
+                for (uint32_t frame = startFrame; frame < frames; ++frame) {
                     const size_t sampleIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount) +
                                                static_cast<size_t>(inputIndex);
                     appendSample(input[sampleIndex]);
+                }
+            }
+            if (startFrame >= frames) {
+                continue;
+            }
+
+            bool expectedStart = false;
+            if (capture.hasStarted.compare_exchange_strong(expectedStart, true, std::memory_order_acq_rel)) {
+                capture.startBeat.store(effectiveCaptureBeat, std::memory_order_release);
+                const std::string inputLabel =
+                    (requestedInput == -2) ? "auto-mono" : ("input " + std::to_string(std::max(0, requestedInput) + 1));
+                Log::info("[TrackManager] Recording capture started for track " + std::to_string(channel->getChannelId()) +
+                          " from " + inputLabel);
+                if (hasDeferredStart) {
+                    startedDeferredCapture = true;
                 }
             }
             if (droppedFrames > 0) {
@@ -412,8 +465,12 @@ public:
             }
             capture.headIndex.store(head, std::memory_order_release);
             capture.size.store(size, std::memory_order_release);
-            capture.totalCapturedFrames.fetch_add(frames, std::memory_order_relaxed);
+            capture.totalCapturedFrames.fetch_add(frames - startFrame, std::memory_order_relaxed);
             capturedAnyChannel = true;
+        }
+
+        if (startedDeferredCapture) {
+            clearDeferredRecordingStartBeat();
         }
 
         if (!capturedAnyChannel && !m_recordingNoArmLogged) {
@@ -572,6 +629,7 @@ public:
      * @return True while transport playback is running.
      */
     bool isPlaying() const { return m_isPlaying.load(std::memory_order_relaxed); }
+    bool hasArmedTracks() const { return getArmedTrackCount() > 0; }
 
     /**
      * @brief Toggle record-arm state and manage capture session lifetime.
@@ -582,12 +640,16 @@ public:
         Log::info(std::string("[TrackManager] Record arm ") + (newArmedState ? "enabled" : "disabled"));
 
         if (newArmedState) {
-            if (m_transportPlayingConfirmed.load(std::memory_order_relaxed) &&
+            if (hasArmedTracks() &&
+                m_transportPlayingConfirmed.load(std::memory_order_relaxed) &&
                 !m_isCapturing.load(std::memory_order_relaxed)) {
                 beginCaptureSession();
             }
         } else if (m_isCapturing.load(std::memory_order_relaxed)) {
+            clearDeferredRecordingStartBeat();
             finalizeCaptureSession();
+        } else {
+            clearNextCapturePlacementStartBeat();
         }
     }
     /**
@@ -596,6 +658,20 @@ public:
      */
     bool isRecording() const { return m_isCapturing.load(std::memory_order_relaxed); }
     bool isRecordArmed() const { return m_recordArmed.load(std::memory_order_relaxed); }
+
+    void setDeferredRecordingStartBeat(double startBeat) {
+        if (startBeat > 0.0) {
+            m_deferredRecordingStartBeat.store(startBeat, std::memory_order_relaxed);
+            m_hasDeferredRecordingStart.store(true, std::memory_order_relaxed);
+            return;
+        }
+        clearDeferredRecordingStartBeat();
+    }
+
+    void clearDeferredRecordingStartBeat() {
+        m_hasDeferredRecordingStart.store(false, std::memory_order_relaxed);
+        m_deferredRecordingStartBeat.store(0.0, std::memory_order_relaxed);
+    }
 
     void enableMetronome(bool enabled) {
         m_metronomeEnabled.store(enabled, std::memory_order_relaxed);
@@ -690,13 +766,16 @@ public:
         m_transportPlayingConfirmed.store(playing, std::memory_order_relaxed);
         if (!playing) {
             m_position = positionSeconds;
+            clearDeferredRecordingStartBeat();
             if (m_isCapturing.load(std::memory_order_relaxed)) {
                 finalizeCaptureSession();
             }
             return;
         }
 
-        if (m_recordArmed.load(std::memory_order_relaxed) && !m_isCapturing.load(std::memory_order_relaxed)) {
+        if (m_recordArmed.load(std::memory_order_relaxed) &&
+            hasArmedTracks() &&
+            !m_isCapturing.load(std::memory_order_relaxed)) {
             beginCaptureSession();
         }
     }
@@ -825,6 +904,12 @@ private:
             m_recordingCaptures[channel->getChannelId()] = std::move(capture);
         }
         m_recordingSessionStartBeat = getCurrentTransportBeat();
+        m_recordingSessionUsesPlacementOverride =
+            m_hasNextCapturePlacementStartBeat.load(std::memory_order_relaxed);
+        if (m_recordingSessionUsesPlacementOverride) {
+            m_recordingSessionStartBeat = m_nextCapturePlacementStartBeat.load(std::memory_order_relaxed);
+        }
+        clearNextCapturePlacementStartBeat();
         m_recordingNoArmLogged = false;
         m_isCapturing.store(true, std::memory_order_relaxed);
         Log::info("[TrackManager] Recording session started. Armed tracks: " + std::to_string(getArmedTrackCount()) +
@@ -839,25 +924,33 @@ private:
 
         std::unordered_map<uint32_t, std::unique_ptr<RecordingCapture>> captures;
         double sessionStartBeat = 0.0;
+        bool sessionUsesPlacementOverride = false;
         {
             std::lock_guard<std::mutex> lock(m_recordingMutex);
             captures = std::move(m_recordingCaptures);
             sessionStartBeat = m_recordingSessionStartBeat;
+            sessionUsesPlacementOverride = m_recordingSessionUsesPlacementOverride;
             m_recordingCaptures.clear();
             m_recordingSessionStartBeat = 0.0;
+            m_recordingSessionUsesPlacementOverride = false;
             m_recordingNoArmLogged = false;
         }
+        clearDeferredRecordingStartBeat();
+        clearNextCapturePlacementStartBeat();
 
         Log::info("[TrackManager] Recording session stopped. Captured tracks: " + std::to_string(captures.size()));
 
         for (const auto& [channelId, capture] : captures) {
             if (capture) {
-                commitRecordingTake(channelId, *capture, sessionStartBeat);
+                commitRecordingTake(channelId, *capture, sessionStartBeat, sessionUsesPlacementOverride);
             }
         }
     }
 
-    void commitRecordingTake(uint32_t channelId, const RecordingCapture& capture, double fallbackStartBeat) {
+    void commitRecordingTake(uint32_t channelId,
+                            const RecordingCapture& capture,
+                            double fallbackStartBeat,
+                            bool forcePlacementStartBeat) {
         std::vector<float> capturedSamples = copyCaptureSamples(capture);
         if (capturedSamples.empty()) {
             return;
@@ -881,7 +974,9 @@ private:
         const float conditionedPeak = analyzePeak(conditionedSamples);
 
         const double captureStartBeat = capture.startBeat.load(std::memory_order_acquire);
-        const double startBeat = captureStartBeat > 0.0 ? captureStartBeat : fallbackStartBeat;
+        const double startBeat = forcePlacementStartBeat
+                                     ? fallbackStartBeat
+                                     : (captureStartBeat > 0.0 ? captureStartBeat : fallbackStartBeat);
         const double durationBeats = framesToBeats(static_cast<double>(conditionedSamples.size()));
         if (durationBeats <= 0.0) {
             return;
@@ -1139,6 +1234,10 @@ private:
     int m_inputChannelCount{0};
     double m_position{0.0};
     double m_playStartPosition{0.0};
+    std::atomic<bool> m_hasDisplayPositionOverride{false};
+    std::atomic<double> m_displayPositionOverride{0.0};
+    std::atomic<bool> m_hasNextCapturePlacementStartBeat{false};
+    std::atomic<double> m_nextCapturePlacementStartBeat{0.0};
     std::shared_ptr<MeterSnapshotBuffer> m_meterSnapshots;
     std::shared_ptr<ContinuousParamBuffer> m_continuousParams; // STUB: Phase 2
     std::shared_ptr<ChannelSlotMap> m_channelSlotMap;
@@ -1150,6 +1249,8 @@ private:
     std::atomic<bool> m_recordArmed{false};
     std::atomic<bool> m_isCapturing{false};
     std::atomic<bool> m_transportPlayingConfirmed{false};
+    std::atomic<bool> m_hasDeferredRecordingStart{false};
+    std::atomic<double> m_deferredRecordingStartBeat{0.0};
     std::atomic<bool> m_metronomeEnabled{false};
     std::atomic<bool> m_patternMode{false};
     std::atomic<bool> m_userScrubbing{false};
@@ -1160,6 +1261,7 @@ private:
     std::atomic<uint32_t> m_recordingWriters{0};
     std::array<std::atomic<float>, 8> m_inputPeaks{};
     double m_recordingSessionStartBeat{0.0};
+    bool m_recordingSessionUsesPlacementOverride{false};
     bool m_recordingNoArmLogged{false};
     std::string m_recordingProjectPath;
 };
