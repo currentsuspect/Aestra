@@ -350,6 +350,10 @@ public:
             return;
         }
 
+        if (!m_recordingCaptureAccepting.load(std::memory_order_acquire)) {
+            return;
+        }
+
         struct RecordingWriteGuard {
             explicit RecordingWriteGuard(std::atomic<uint32_t>& writersIn) : writers(writersIn) {
                 writers.fetch_add(1, std::memory_order_acq_rel);
@@ -359,6 +363,10 @@ public:
             }
             std::atomic<uint32_t>& writers;
         } guard(m_recordingWriters);
+
+        if (!m_recordingCaptureAccepting.load(std::memory_order_acquire)) {
+            return;
+        }
 
         const double captureBeat = getCurrentTransportBeat();
         const bool hasDeferredStart = m_hasDeferredRecordingStart.load(std::memory_order_relaxed);
@@ -649,6 +657,7 @@ public:
             clearDeferredRecordingStartBeat();
             finalizeCaptureSession();
         } else {
+            m_recordingCaptureAccepting.store(false, std::memory_order_release);
             clearNextCapturePlacementStartBeat();
         }
     }
@@ -882,6 +891,7 @@ private:
 
     void beginCaptureSession() {
         std::lock_guard<std::mutex> lock(m_recordingMutex);
+        m_recordingCaptureAccepting.store(false, std::memory_order_release);
         m_recordingCaptures.clear();
         const size_t maxSamplesPerCapture = maxRecordingSamplesPerCapture();
         for (const auto& channel : m_channels) {
@@ -911,12 +921,14 @@ private:
         }
         clearNextCapturePlacementStartBeat();
         m_recordingNoArmLogged = false;
+        m_recordingCaptureAccepting.store(true, std::memory_order_release);
         m_isCapturing.store(true, std::memory_order_relaxed);
         Log::info("[TrackManager] Recording session started. Armed tracks: " + std::to_string(getArmedTrackCount()) +
                   ", input channels: " + std::to_string(m_inputChannelCount));
     }
 
     void finalizeCaptureSession() {
+        m_recordingCaptureAccepting.store(false, std::memory_order_release);
         m_isCapturing.store(false, std::memory_order_relaxed);
         while (m_recordingWriters.load(std::memory_order_acquire) != 0) {
             std::this_thread::yield();
@@ -1259,6 +1271,7 @@ private:
     mutable std::mutex m_recordingMutex;
     std::unordered_map<uint32_t, std::unique_ptr<RecordingCapture>> m_recordingCaptures;
     std::atomic<uint32_t> m_recordingWriters{0};
+    std::atomic<bool> m_recordingCaptureAccepting{false};
     std::array<std::atomic<float>, 8> m_inputPeaks{};
     double m_recordingSessionStartBeat{0.0};
     bool m_recordingSessionUsesPlacementOverride{false};

@@ -377,6 +377,8 @@ private:
     TrackRTState& ensureTrackState(uint32_t trackId);
     void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset = 0);
     void applyPendingCommands();
+    void applyPendingMetronomeCountInRt();
+    void clearMetronomeCountInRt();
     void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame);
     void injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount,
                                    uint32_t numFrames) noexcept;
@@ -430,6 +432,8 @@ private:
     std::atomic<bool> m_metronomeCountInActive{false};
     std::atomic<uint64_t> m_metronomeCountInRemainingSamples{0};
     std::atomic<uint64_t> m_metronomeCountInSamplePos{0};
+    std::atomic<uint32_t> m_pendingMetronomeCountInBeats{0};
+    std::atomic<bool> m_pendingMetronomeCountInStop{false};
 
     // Request MIDI panic (All Notes Off / All Sound Off) injection into unit MIDI buffers.
     std::atomic<bool> m_transportMidiPanicRequested{false};

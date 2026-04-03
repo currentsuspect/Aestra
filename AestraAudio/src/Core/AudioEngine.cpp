@@ -83,21 +83,42 @@ AudioEngine& AudioEngine::getInstance() {
 }
 
 void AudioEngine::startMetronomeCountIn(uint32_t beats) {
+    m_pendingMetronomeCountInStop.store(false, std::memory_order_release);
+    m_pendingMetronomeCountInBeats.store(std::max<uint32_t>(1, beats), std::memory_order_release);
+    m_metronomeCountInActive.store(true, std::memory_order_release);
+}
+
+void AudioEngine::stopMetronomeCountIn() {
+    m_pendingMetronomeCountInBeats.store(0, std::memory_order_release);
+    m_pendingMetronomeCountInStop.store(true, std::memory_order_release);
+    m_metronomeCountInActive.store(false, std::memory_order_release);
+}
+
+void AudioEngine::clearMetronomeCountInRt() {
+    m_metronomeCountInActive.store(false, std::memory_order_relaxed);
+    m_metronomeCountInRemainingSamples.store(0, std::memory_order_relaxed);
+    m_metronomeCountInSamplePos.store(0, std::memory_order_relaxed);
+}
+
+void AudioEngine::applyPendingMetronomeCountInRt() {
+    if (m_pendingMetronomeCountInStop.exchange(false, std::memory_order_acq_rel)) {
+        clearMetronomeCountInRt();
+    }
+
+    const uint32_t beats = m_pendingMetronomeCountInBeats.exchange(0, std::memory_order_acq_rel);
+    if (beats == 0) {
+        return;
+    }
+
     const uint32_t sampleRate = std::max(1u, m_sampleRate.load(std::memory_order_relaxed));
     const double bpm = std::max(1.0f, m_metronomeEngine.getBPM());
     const uint64_t samplesPerBeat =
         static_cast<uint64_t>((static_cast<double>(sampleRate) * 60.0) / bpm);
-    const uint64_t totalSamples = std::max<uint64_t>(samplesPerBeat, samplesPerBeat * std::max<uint32_t>(1, beats));
+    const uint64_t totalSamples = std::max<uint64_t>(samplesPerBeat, samplesPerBeat * beats);
     m_metronomeEngine.reset(0, sampleRate);
     m_metronomeCountInSamplePos.store(0, std::memory_order_relaxed);
     m_metronomeCountInRemainingSamples.store(totalSamples, std::memory_order_relaxed);
     m_metronomeCountInActive.store(true, std::memory_order_relaxed);
-}
-
-void AudioEngine::stopMetronomeCountIn() {
-    m_metronomeCountInActive.store(false, std::memory_order_relaxed);
-    m_metronomeCountInRemainingSamples.store(0, std::memory_order_relaxed);
-    m_metronomeCountInSamplePos.store(0, std::memory_order_relaxed);
 }
 
 void AudioEngine::applyPendingCommands() {
@@ -355,6 +376,8 @@ void AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, ui
     }
 
     const bool wasPlaying = m_transportPlaying.load(std::memory_order_relaxed);
+
+    applyPendingMetronomeCountInRt();
 
     // Process commands FIRST (lock-free)
     applyPendingCommands();
@@ -933,7 +956,7 @@ void AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, ui
 
         const uint64_t remaining = m_metronomeCountInRemainingSamples.load(std::memory_order_relaxed);
         if (remaining <= numFrames) {
-            stopMetronomeCountIn();
+            clearMetronomeCountInRt();
         } else {
             m_metronomeCountInRemainingSamples.store(remaining - numFrames, std::memory_order_relaxed);
             m_metronomeCountInSamplePos.store(prerollPos + numFrames, std::memory_order_relaxed);

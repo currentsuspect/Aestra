@@ -532,8 +532,7 @@ void UIMixerInspector::onUpdate(double deltaTime)
             if (rebuildDropdown) {
                 m_ioInputDropdown->clearItems();
                 for (size_t i = 0; i < inputs.size(); ++i) {
-                    // Use channel index as the value (matches input-channel selector space).
-                    m_ioInputDropdown->addItem(inputs[i], static_cast<int>(i));
+                    m_ioInputDropdown->addItem(inputs[i], deviceIds[i]);
                 }
                 m_cachedInputNames = inputs;
                 m_cachedInputDeviceIds = deviceIds;
@@ -541,8 +540,8 @@ void UIMixerInspector::onUpdate(double deltaTime)
 
             const int currentChannelIndex = ch->inputChannelIndex;
             int targetIndex = 0; // Default to "None".
-            for (size_t i = 0; i < inputs.size(); ++i) {
-                if (static_cast<int>(i) == currentChannelIndex) {
+            for (size_t i = 0; i < deviceIds.size(); ++i) {
+                if (deviceIds[i] == currentChannelIndex) {
                     targetIndex = static_cast<int>(i);
                     break;
                 }
