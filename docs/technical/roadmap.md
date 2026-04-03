@@ -78,8 +78,9 @@ These exist but are not yet “product-complete,” i.e. they will break user tr
 - **Undo/Redo**: there is a `CommandHistory`, but it’s not consistently wired across the entire app UX.
 - **Project management**: `ProjectSerializer` exists and saves substantial state, but gaps remain (e.g., MIDI content, “dirty state” semantics, migration/versioning strategy).
 - **Recording**: armed-track recording now captures only while transport is rolling and commits takes on stop.
-  - Working: input-device selection, track/mixer arming, transport record arm, live waveform capture, WAV take write, source registration, lane insertion on stop, default `Auto` input downmix for safer built-in-device capture, startup preference for saved/non-monitor Linux input devices, project-relative take folders when a project path exists, opt-in monitoring by default, per-track `R` right-click monitoring mode (`Arm Only` / `Arm + Monitor`), live input diagnostics in the mixer `I/O` tab, and empty-project-safe `Loop -> Project` fallback behavior.
-  - Still missing: multitrack validation and real-device reliability/stress coverage.
+  - Working: input-device selection, track/mixer arming, transport record arm, live waveform capture, WAV take write, source registration, lane insertion on stop, default `Auto` input downmix for safer built-in-device capture, startup preference for saved/non-monitor Linux input devices, project-relative take folders when a project path exists, opt-in monitoring by default, per-track `R` right-click monitoring mode (`Arm Only` / `Arm + Monitor`), live input diagnostics in the mixer `I/O` tab, count-in deferral that avoids preroll capture, and empty-project-safe `Loop -> Project` fallback behavior.
+  - Current policy: count-in only engages when transport record is armed and at least one lane is actually armed; multitrack capture starts those armed lanes together at the same target beat.
+  - Still missing: real-session multitrack validation and device-stress coverage.
 - **Cross-platform**: Linux code exists in audio, but end-to-end DAW shipping on Linux multiplies surface area (windowing, packaging, device behavior).
 
 ### Technically impressive but product-invisible

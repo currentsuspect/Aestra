@@ -51,7 +51,7 @@ public:
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
     /** @brief Set the visible beat window represented by the viewport. */
-    void setView(double startBeat, double durationBeat);
+    void setView(double startBeat, double durationBeat, bool preserveEdge = false);
     /** @brief Set the total beat span represented by the minimap. */
     void setTotalDuration(double totalBeats);
     /** @brief Set the current playhead beat displayed in the minimap. */

@@ -131,12 +131,19 @@ void PianoRollPanel::savePattern() {
         m_onPatternEdited(m_currentPatternId);
     }
 
+    double declaredLength = m_patternDurationBeats;
+    pm.applyPatch(m_currentPatternId, [&declaredLength](PatternSource& pattern) {
+        if (pattern.lengthBeats > 0.0) {
+            declaredLength = pattern.lengthBeats;
+        }
+    });
+
     double longestBeat = 0.0;
     for (const auto& uiNote : uiNotes) {
         if (uiNote.isDeleted) continue;
         longestBeat = std::max(longestBeat, uiNote.startBeat + uiNote.durationBeats);
     }
-    m_patternDurationBeats = std::max(4.0, longestBeat + 0.5);
+    m_patternDurationBeats = std::max(4.0, std::max(declaredLength, longestBeat + 0.5));
     m_pianoRoll->setTotalDurationBeats(m_patternDurationBeats);
 
     Log::info("[PianoRollPanel] Saved pattern " + std::to_string(m_currentPatternId.value) + 

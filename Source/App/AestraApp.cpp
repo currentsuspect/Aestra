@@ -441,11 +441,14 @@ bool AestraApp::initialize(const std::string& projectPath) {
 
     // Load Project
     if (!projectPath.empty() && std::filesystem::exists(projectPath)) {
+        const std::string previousProjectPath = m_projectPath;
         m_projectPath = projectPath;
-        syncRecordingProjectPath(m_content, m_projectPath);
         auto result = loadProject();
         if (result.ok) {
+            syncRecordingProjectPath(m_content, m_projectPath);
             if (result.ui) applyUIState(*result.ui);
+        } else {
+            m_projectPath = previousProjectPath;
         }
     } else {
         std::string autosavePath = getAutosavePath();
@@ -463,13 +466,15 @@ bool AestraApp::initialize(const std::string& projectPath) {
                     m_recoveryHandled = true;
                     if (response == Aestra::RecoveryResponse::Recover) {
                         // User chose to recover - load the autosave
+                        const std::string previousProjectPath = m_projectPath;
                         m_projectPath = autosavePath;
-                        syncRecordingProjectPath(m_content, m_projectPath);
                         auto result = loadProject();
                         if (result.ok) {
+                            syncRecordingProjectPath(m_content, m_projectPath);
                             if (result.ui) applyUIState(*result.ui);
                             Log::info("[Recovery] Autosave recovered successfully");
                         } else {
+                            m_projectPath = previousProjectPath;
                             Log::error("[Recovery] Failed to load autosave");
                             // Fall back to empty project
                             if (m_content) m_content->resetToDefaultProject();
@@ -492,13 +497,16 @@ bool AestraApp::initialize(const std::string& projectPath) {
             } else {
                 // Fallback: if dialog not available, silently load (shouldn't happen)
                 Log::warning("[Recovery] RecoveryDialog not available, falling back to silent load");
+                const std::string previousProjectPath = m_projectPath;
                 m_projectPath = autosavePath;
-                syncRecordingProjectPath(m_content, m_projectPath);
                 auto result = loadProject();
                 if (result.ok) {
+                    syncRecordingProjectPath(m_content, m_projectPath);
                     if (result.ui) applyUIState(*result.ui);
                     m_projectPath = getAutosavePath();
                     syncRecordingProjectPath(m_content, m_projectPath);
+                } else {
+                    m_projectPath = previousProjectPath;
                 }
                 m_recoveryHandled = true;
             }
@@ -598,60 +606,8 @@ void AestraApp::connectAudioToUI() {
     // Transport Bar Wiring
     if (m_content && m_content->getTransportBar() && m_audioController->getEngine()) {
         auto engine = m_audioController->getEngine();
-        m_content->getTransportBar()->setOnPlay([this, engine]() {
-            if (m_content && m_content->getTrackManager()) {
-                m_content->stopSoundPreview();
-                if (m_content->getViewFocus() == ViewFocus::Arsenal) {
-                    m_content->playFromCurrentFocus();
-                } else {
-                    m_content->getTrackManager()->play();
-                    engine->setTransportPlaying(true);
-                }
-            }
-        });
-        m_content->getTransportBar()->setOnPause([this, engine]() {
-            if (m_content && m_content->getTrackManager()) {
-                if (m_content->getViewFocus() == ViewFocus::Arsenal) {
-                    m_content->pauseFromCurrentFocus();
-                } else {
-                    m_content->getTrackManager()->pause();
-                    engine->setTransportPlaying(false);
-                }
-            }
-        });
-        m_content->getTransportBar()->setOnStop([this, engine]() {
-            if (m_content && m_content->getTrackManager()) {
-                auto trackMgr = m_content->getTrackManager();
-                if (!engine->isTransportPlaying()) {
-                    engine->panic();
-                    engine->setGlobalSamplePos(0);
-                    trackMgr->setPosition(0.0);
-                    trackMgr->setPlayStartPosition(0.0);
-                } else {
-                    if (m_content->getViewFocus() == ViewFocus::Arsenal || trackMgr->isPatternMode()) {
-                        m_content->stopFromCurrentFocus(true);
-                    } else {
-                        double playStartPos = trackMgr->getPlayStartPosition();
-                        double sr = engine->getSampleRate();
-                        uint64_t samplePos = static_cast<uint64_t>(playStartPos * sr);
-                        trackMgr->stop();
-                        engine->setGlobalSamplePos(samplePos);
-                        trackMgr->setPosition(playStartPos);
-                        engine->setTransportPlaying(false);
-                    }
-                }
-            }
-        });
-
-        // Record (Todo)
-
-        // Metronome toggle
-        m_content->getTransportBar()->setOnMetronomeToggle([this, engine](bool active) {
-            if (engine) {
-                engine->setMetronomeEnabled(active);
-                Log::info(std::string("Metronome toggled: ") + (active ? "ON" : "OFF"));
-            }
-        });
+        // Play / pause / stop / metronome are owned by AestraContent so transport-aware
+        // features like count-in, preview stop, and deferred capture all go through one path.
 
         // Tempo change
         m_content->getTransportBar()->setOnTempoChange([this, engine](float bpm) {
