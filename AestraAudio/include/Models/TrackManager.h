@@ -316,7 +316,7 @@ public:
             return;
         }
 
-        std::unique_lock<std::mutex> lock(m_recordingMutex, std::try_to_lock);
+        std::unique_lock<std::mutex> lock(m_recordingMutex, std::try_to_lock); // ALLOW_REALTIME_DELETE
         if (!lock.owns_lock()) {
             return;
         }

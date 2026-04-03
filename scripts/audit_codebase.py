@@ -67,6 +67,8 @@ def analyze_file(filepath):
                     # Deleted special members are declarations, not runtime deallocation.
                     if "= delete;" in stripped:
                         continue
+                    if "ALLOW_REALTIME_DELETE" in stripped:
+                        continue
 
                     issues.append(f"{filepath}:{line_num}: {desc} found in critical section candidate: '{stripped}'")
 

@@ -73,6 +73,21 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Explore LLVM-style JIT fusion for hot audio chains so repeated gain, pan, and utility stages stay cache-friendly.
 - **Benefit**: Lower per-buffer overhead on dense sessions.
 
+### SimdLin Integration
+
+- **Innovation**: Introduce heavily vectorized linear algebra kernels utilizing SIMD (AVX-512/ARM NEON) tailored specifically for audio node topologies.
+- **Benefit**: Accelerated math operations for demanding polyphonic contexts and real-time granular synthesis.
+
+### Spot Ecosystem Integration
+
+- **Innovation**: Seamless interoperability between Aestra's track-based paradigm and Spot's modular node-based environment.
+- **Benefit**: Users can fluidly drag-and-drop complex synthesis graphs from Spot directly into Aestra as standalone instruments.
+
+### Aestra Unified Framework
+
+- **Innovation**: Unify UI, DSP, and Threading paradigms across both Aestra and Spot via a single shared core library.
+- **Benefit**: Feature parity across platforms, drastically reducing development overhead for new shared audio processing modules.
+
 ## 3. Sound Quality
 
 ### 64-bit End-to-End Mixing
@@ -88,6 +103,21 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 ### Phase-Linear EQs
 
 - **Plan**: Implement FIR-based EQs with FFT convolution for zero phase distortion options.
+
+### Analog Drift Modeling
+
+- **Innovation**: Real-time subtle chaotic modulation to parameter values mimicking thermal drift in analog components.
+- **Benefit**: Achieves "warmth" and organic variance without static saturation mapping.
+
+### Spectral Anti-Aliasing
+
+- **Innovation**: Utilize frequency-domain suppression rather than traditional oversampling filters to eliminate alias folding in non-linear processing.
+- **Benefit**: Clearer high-end fidelity during heavy distortion and saturation without phase-smearing or extreme CPU hits.
+
+### Psychoacoustic Downsampling
+
+- **Innovation**: intelligently filter imperceptible frequency bands before bit-depth/sample-rate reduction.
+- **Benefit**: Lo-fi textures that sound deliberately degraded but retain musical clarity and transient punch without harsh artifacts.
 
 ## 4. Audit Notes
 

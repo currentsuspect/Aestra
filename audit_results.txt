@@ -1,0 +1,2 @@
+AestraAudio/include/Models/TrackManager.h:320: Mutex usage (check for locks in RT) found in critical section candidate: 'std::unique_lock<std::mutex> lock(m_recordingMutex, std::try_to_lock);'
+AestraAudio/include/Models/TrackManager.h:320: Unique lock usage found in critical section candidate: 'std::unique_lock<std::mutex> lock(m_recordingMutex, std::try_to_lock);'
