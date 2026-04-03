@@ -2273,18 +2273,34 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         }
     }
     
-    // Handle right-click to delete clip - check all clips
+    // Handle right-click delete using the same clip hit path as left-click selection.
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Right && isInsideBounds) {
-        // Find which clip was right-clicked
+        ClipInstanceID clickedClipId = ClipInstanceID{};
         for (const auto& [clipId, clipBounds] : m_allClipBounds) {
             if (clipBounds.contains(event.position)) {
-                if (m_onClipDeletedCallback) {
-                    // Send deletion request to parent
-                    m_onClipDeletedCallback(this, clipId, event.position);
-                }
-
-                return true;
+                clickedClipId = clipId;
+                break;
             }
+        }
+
+        if (clickedClipId.isValid()) {
+            m_activeClipId = clickedClipId;
+
+            if (m_onTrackSelectedCallback) {
+                m_onTrackSelectedCallback(this, false);
+            } else {
+                m_selected = true;
+            }
+
+            if (m_onClipSelectedCallback) {
+                m_onClipSelectedCallback(this, clickedClipId);
+            }
+
+            if (m_onClipDeletedCallback) {
+                m_onClipDeletedCallback(this, clickedClipId, event.position);
+            }
+
+            return true;
         }
     }
 

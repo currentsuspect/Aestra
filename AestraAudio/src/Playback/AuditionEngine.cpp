@@ -27,24 +27,17 @@ AuditionEngine::~AuditionEngine() {
 // === Queue Management ===
 
 void AuditionEngine::addToQueue(const std::string& filePath, bool isReference) {
-    bool shouldPreload = false;
-    {
-        std::lock_guard<std::mutex> lock(m_queueMutex);
+    // Construct item and parse metadata outside the lock
+    AuditionQueueItem item;
+    item.id = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    item.filePath = filePath;
+    item.isReference = isReference;
+    item.isFromTimeline = false;
 
-        Log::info("[AuditionEngine] addToQueue: " + filePath);
-
-        AuditionQueueItem item;
-        item.id = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
-        item.filePath = filePath;
-        item.isReference = isReference;
-        item.isFromTimeline = false;
-
-    // Extract metadata using native parser
     Log::info("[AuditionEngine] Parsing metadata...");
     AudioMetadata meta = MetadataParser::parse(filePath);
     Log::info("[AuditionEngine] Metadata parsed OK");
 
-    // Apply extracted metadata (with fallbacks)
     item.title = meta.title.empty() ? "" : meta.title;
     item.artist = meta.artist.empty() ? (isReference ? "Reference Track" : "Unknown Artist") : meta.artist;
     item.album = meta.album;
@@ -52,7 +45,6 @@ void AuditionEngine::addToQueue(const std::string& filePath, bool isReference) {
     item.coverArtData = std::move(meta.coverArtData);
     item.coverArtMimeType = meta.coverArtMimeType;
 
-    // Fallback: Title from filename if metadata is empty
     if (item.title.empty()) {
         size_t lastSlash = filePath.find_last_of("/\\");
         size_t lastDot = filePath.find_last_of('.');
@@ -65,26 +57,27 @@ void AuditionEngine::addToQueue(const std::string& filePath, bool isReference) {
         }
     }
 
-    Log::info("[AuditionEngine] Added to queue: " + item.title + " (" + item.artist + ")");
-    if (!item.coverArtData.empty()) {
-        Log::info("[AuditionEngine] Cover art extracted: " + std::to_string(item.coverArtData.size()) + " bytes");
-    }
-
+    // Only hold the lock for queue mutation
+    bool shouldPreload = false;
+    std::function<void()> onQueueUpdated;
+    {
+        std::lock_guard<std::mutex> lock(m_queueMutex);
         Log::info("[AuditionEngine] Pushing to queue vector...");
         m_queue.push_back(std::move(item));
         Log::info("[AuditionEngine] Queue push done, size=" + std::to_string(m_queue.size()));
 
-        // Auto-select if this is the first track, but defer decode until after unlocking.
         if (m_queue.size() == 1 && m_currentIndex < 0) {
             m_currentIndex = 0;
             shouldPreload = true;
         }
 
-        Log::info("[AuditionEngine] Calling onQueueUpdated...");
-        if (m_onQueueUpdated) {
-            m_onQueueUpdated();
-        }
+        onQueueUpdated = m_onQueueUpdated;
         Log::info("[AuditionEngine] addToQueue complete");
+    }
+
+    Log::info("[AuditionEngine] Calling onQueueUpdated...");
+    if (onQueueUpdated) {
+        onQueueUpdated();
     }
 
     if (shouldPreload) {
@@ -447,10 +440,16 @@ void AuditionEngine::loadCurrentTrack(bool startPlayback) {
 
     notifyTrackChanged();
 
-    if (startPlayback && !m_isPlaying.load()) {
+    if (startPlayback && !m_isPlaying.load() && m_currentSource != nullptr) {
         m_isPlaying.store(true);
         if (m_onPlaybackStateChanged) {
             m_onPlaybackStateChanged(true);
+        }
+    } else if (startPlayback && m_currentSource == nullptr) {
+        if (m_isPlaying.exchange(false)) {
+            if (m_onPlaybackStateChanged) {
+                m_onPlaybackStateChanged(false);
+            }
         }
     }
 }

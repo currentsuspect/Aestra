@@ -244,6 +244,10 @@ public:
     void openPatternInPianoRoll(Aestra::Audio::PatternID patternId);
 
 private:
+    void handleTransportPlayRequest();
+    void clearPendingCountIn();
+    void updatePendingCountIn();
+
     std::shared_ptr<AestraUI::NUIComponent> m_workspaceLayer;
     std::shared_ptr<OverlayLayer> m_overlayLayer;
 
@@ -298,4 +302,8 @@ private:
     
     // Playback state persistence
     double m_savedTimelinePosition = 0.0;
+    bool m_countInEnabled{false};
+    bool m_pendingCountIn{false};
+    bool m_forcedMetronomeForCountIn{false};
+    double m_pendingCountInTargetSeconds{0.0};
 };

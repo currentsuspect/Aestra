@@ -131,6 +131,7 @@ private:
     std::string m_pendingTrackArtist;
     bool m_pendingTrackUiUpdate{false};
     bool m_pendingPlaybackUiUpdate{false};
+    bool m_hadCurrentItem{false};
     
     // Visuals
     AestraUI::NUIColor m_currentHeaderColor{0.1f, 0.1f, 0.1f, 1.0f}; // Cached for waveform gradient

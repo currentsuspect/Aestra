@@ -1,6 +1,7 @@
 #include "NUIButton.h"
 #include "NUITheme.h"
 #include <algorithm>
+#include <cmath>
 
 namespace AestraUI {
 
@@ -52,14 +53,15 @@ void NUIButton::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
 
     auto theme = getTheme();
-    const bool active = pressed_ || (toggleable_ && toggled_);
+    const bool active = isEnabled() && (pressed_ || (toggleable_ && toggled_));
+    const bool hovered = isEnabled() && isHovered();
     
     // Check custom color flags
     NUIColor backgroundColor = getCurrentBackgroundColor();
     NUIColor borderColor;
     
     // Determine border color
-    if (active || isHovered()) {
+    if (active || hovered) {
         borderColor = backgroundColor;
     } else {
         borderColor = theme ? theme->getBorder() : NUIColor::fromHex(0x555555);
@@ -78,7 +80,7 @@ void NUIButton::onRender(NUIRenderer& renderer) {
     
     // Create render rect for background
     // If background relies on flat design logic, we should be careful.
-    bool shouldDrawBackground = isHovered() || active || hasCustomBg_ || style_ == Style::Primary;
+    bool shouldDrawBackground = hovered || active || hasCustomBg_ || style_ == Style::Primary;
     
     if (shouldDrawBackground) {
         NUIColor drawColor = backgroundColor;
@@ -86,7 +88,7 @@ void NUIButton::onRender(NUIRenderer& renderer) {
         // Refined hover style for default buttons (not custom)
         // FIX: Only apply the 0.15f alpha reduction if we are using the THEME hover color.
         // If the user set a custom hover color (like in TrackUIComponent or WindowPanel), utilize it as is.
-        if (!hasCustomBg_ && isHovered() && !active && !hasCustomHover_) {
+        if (!hasCustomBg_ && hovered && !active && !hasCustomHover_) {
             drawColor = drawColor.withAlpha(std::max(0.18f, drawColor.a));
         }
         
@@ -109,11 +111,11 @@ void NUIButton::onRender(NUIRenderer& renderer) {
              borderColor = borderColor_;
              // Optionally brighten on interaction if desired, but custom usually implies "exact"
              if (active) borderColor = borderColor.lightened(0.2f);
-             else if (isHovered()) borderColor = borderColor.lightened(0.1f);
+             else if (hovered) borderColor = borderColor.lightened(0.1f);
         } else if (theme) {
              borderColor = theme->getBorder();
              if (active) borderColor = theme->getColor("borderActive").withAlpha(0.9f);
-             else if (isHovered()) borderColor = theme->getColor("borderActive").withAlpha(0.55f);
+             else if (hovered) borderColor = theme->getColor("borderActive").withAlpha(0.55f);
              else borderColor = borderColor.withAlpha(0.85f);
         } else {
              borderColor = NUIColor::fromHex(0x555555);
@@ -155,20 +157,6 @@ void NUIButton::onRender(NUIRenderer& renderer) {
 }
 
 void NUIButton::onUpdate(double deltaTime) {
-    // Animate hover effect
-    float targetAlpha = isHovered() ? 1.0f : 0.0f;
-    float speed = 8.0f; 
-    
-    if (hoverAlpha_ < targetAlpha) {
-        hoverAlpha_ += speed * deltaTime;
-        if (hoverAlpha_ > targetAlpha) hoverAlpha_ = targetAlpha;
-        setDirty();
-    } else if (hoverAlpha_ > targetAlpha) {
-        hoverAlpha_ -= speed * deltaTime;
-        if (hoverAlpha_ < targetAlpha) hoverAlpha_ = targetAlpha;
-        setDirty();
-    }
-    
     NUIComponent::onUpdate(deltaTime);
 }
 
@@ -217,16 +205,17 @@ bool NUIButton::onMouseEvent(const NUIMouseEvent& event) {
 
 NUIColor NUIButton::getCurrentBackgroundColor() const {
     auto theme = getTheme();
-    const bool active = pressed_ || (toggleable_ && toggled_);
+    const bool active = isEnabled() && (pressed_ || (toggleable_ && toggled_));
+    const bool hovered = isEnabled() && isHovered();
     
     if (active && hasCustomPressed_) return pressedColor_;
-    if (isHovered() && hasCustomHover_) return hoverColor_;
+    if (hovered && hasCustomHover_) return hoverColor_;
     if (hasCustomBg_) return backgroundColor_;
     
     // Default Style Behavior
     // Text, Icon and Secondary styles should be transparent by default unless hovered/pressed state overrides
     if (style_ == Style::Text || style_ == Style::Icon || style_ == Style::Secondary) {
-       if (!active && !isHovered()) {
+       if (!active && !hovered) {
            return NUIColor::transparent();
        }
     }
@@ -238,13 +227,13 @@ NUIColor NUIButton::getCurrentBackgroundColor() const {
     // Style-specific colors
     if (style_ == Style::Primary) {
         if (active) return theme->getColor("primaryPressed", theme->getPrimary().darkened(0.1f));
-        if (isHovered()) return theme->getColor("primaryHover", theme->getPrimary().lightened(0.1f));
+        if (hovered) return theme->getColor("primaryHover", theme->getPrimary().lightened(0.1f));
         return theme->getPrimary();
     }
     
     // Default / Secondary Styles
     if (active) return theme->getActive();
-    if (isHovered()) return theme->getHover();
+    if (hovered) return theme->getHover();
     return theme->getSurface();
 }
 

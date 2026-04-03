@@ -330,6 +330,9 @@ void NUIComponent::setVisible(bool visible) {
 void NUIComponent::setEnabled(bool enabled) {
     if (enabled_ != enabled) {
         enabled_ = enabled;
+        if (!enabled_) {
+            setHovered(false);
+        }
         setDirty();
     }
 }
@@ -537,5 +540,4 @@ void NUIComponent::renderGlobalTooltip(NUIRenderer& renderer) {
 }
 
 } // namespace AestraUI
-
 

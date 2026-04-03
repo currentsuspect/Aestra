@@ -324,6 +324,7 @@ bool AestraAudioController::startStream() {
         if (auto tm = content->getTrackManager()) {
             tm->setOutputSampleRate(static_cast<double>(m_streamConfig.sampleRate));
             tm->setInputSampleRate(static_cast<double>(m_streamConfig.sampleRate));
+            tm->setInputChannelCount(m_streamConfig.numInputChannels);
             Log::info("AestraAudioController: Updated TrackManager Sample Rate to " + std::to_string(m_streamConfig.sampleRate));
         }
         if (auto pe = content->getPreviewEngine()) {

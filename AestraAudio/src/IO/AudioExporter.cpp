@@ -139,6 +139,10 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_engine.setGlobalSamplePos(startSample);
     m_engine.setTransportPlaying(true);
 
+    // Zero the render buffer before the first block so stale DSP state from
+    // prior playback cannot bleed into the export render.
+    std::fill(m_renderBufferF.begin(), m_renderBufferF.end(), 0.0f);
+
     // Render loop using AudioRenderer::renderBlock (same path as bounceRangeToWav)
     uint64_t framesRemaining = totalFrames;
     result.framesRendered = 0;

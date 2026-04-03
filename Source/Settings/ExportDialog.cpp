@@ -186,9 +186,13 @@ void ExportDialog::restoreAudioStreamIfNeeded() {
     }
 
     if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
-        deviceManager->startStream();
+        bool ok = deviceManager->startStream();
+        if (ok) {
+            m_resumeAudioStreamAfterExport = false;
+        } else {
+            Aestra::Log::warning("[ExportDialog] Failed to restart audio stream after export; will retry.");
+        }
     }
-    m_resumeAudioStreamAfterExport = false;
 }
 
 bool ExportDialog::parseTailInput(double& outTailSeconds) const {
@@ -635,6 +639,15 @@ void ExportDialog::updateButtonHover(AestraUI::NUIPoint pos) {
 
 void ExportDialog::startExport() {
     if (!m_engine || !m_trackManager) return;
+
+    if (m_exportFuture.valid() &&
+        m_exportFuture.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+        m_exportError = "An export is already in progress.";
+        Aestra::Log::warning("[ExportDialog] Export already in progress, ignoring request.");
+        layoutDialog();
+        setDirty(true);
+        return;
+    }
 
     double parsedTail = 0.0;
     if (!parseTailInput(parsedTail)) {

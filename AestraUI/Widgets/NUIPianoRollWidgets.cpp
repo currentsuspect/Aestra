@@ -153,29 +153,35 @@ double PianoRollMinimap::xToBeat(float x) const {
     return ratio * totalDuration_;
 }
 
-void PianoRollMinimap::setView(double start, double duration) {
-    if (isDragging_) return; // Don't fight drag
-    const double previousStart = startBeat_;
-    const double previousEnd = startBeat_ + viewDuration_;
-    viewDuration_ = std::clamp(duration, 0.25, totalDuration_);
-    if (std::abs(previousStart) <= 1e-9) {
-        startBeat_ = 0.0;
-    } else if (std::abs(previousEnd - totalDuration_) <= 1e-6) {
-        startBeat_ = std::max(0.0, totalDuration_ - viewDuration_);
+void PianoRollMinimap::setView(double start, double duration, bool preserveEdge) {
+    if (isDragging_) return;
+    if (preserveEdge) {
+        const double previousStart = startBeat_;
+        const double previousEnd = startBeat_ + viewDuration_;
+        viewDuration_ = std::clamp(duration, 0.25, totalDuration_);
+        if (std::abs(previousStart) <= 1e-9) {
+            startBeat_ = 0.0;
+        } else if (std::abs(previousEnd - totalDuration_) <= 1e-6) {
+            startBeat_ = std::max(0.0, totalDuration_ - viewDuration_);
+        } else {
+            startBeat_ = std::clamp(start, 0.0, std::max(0.0, totalDuration_ - viewDuration_));
+        }
     } else {
+        viewDuration_ = std::clamp(duration, 0.25, totalDuration_);
         startBeat_ = std::clamp(start, 0.0, std::max(0.0, totalDuration_ - viewDuration_));
     }
     repaint();
 }
 
 void PianoRollMinimap::setTotalDuration(double total) {
+    const double previousTotal = totalDuration_;
     const double previousStart = startBeat_;
     const double previousEnd = startBeat_ + viewDuration_;
     totalDuration_ = std::max(1.0, total);
     viewDuration_ = std::clamp(viewDuration_, 0.25, totalDuration_);
     if (std::abs(previousStart) <= 1e-9) {
         startBeat_ = 0.0;
-    } else if (std::abs(previousEnd - totalDuration_) <= 1e-6) {
+    } else if (std::abs(previousEnd - previousTotal) <= 1e-6) {
         startBeat_ = std::max(0.0, totalDuration_ - viewDuration_);
     } else {
         startBeat_ = std::clamp(startBeat_, 0.0, std::max(0.0, totalDuration_ - viewDuration_));
@@ -340,14 +346,14 @@ bool PianoRollMinimap::onMouseEvent(const NUIMouseEvent& event) {
             double newStart = dragStartStart_ + db;
             double newDur = dragStartDuration_ - db;
             
-            if (newDur < 0.1) { newStart -= (0.1 - newDur); newDur = 0.1; } // Clamp min
+            if (newDur < 0.25) { newStart -= (0.25 - newDur); newDur = 0.25; }
             
-            viewDuration_ = std::clamp(newDur, 0.1, totalDuration_);
+            viewDuration_ = std::clamp(newDur, 0.25, totalDuration_);
             startBeat_ = std::clamp(newStart, 0.0, std::max(0.0, totalDuration_ - viewDuration_));
         } 
         else if (isResizingR_) {
              double newDur = dragStartDuration_ + db;
-             viewDuration_ = std::clamp(newDur, 0.1, totalDuration_);
+             viewDuration_ = std::clamp(newDur, 0.25, totalDuration_);
              startBeat_ = std::clamp(startBeat_, 0.0, std::max(0.0, totalDuration_ - viewDuration_));
         }
         else {

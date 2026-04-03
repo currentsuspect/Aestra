@@ -455,7 +455,7 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     auto b = getBounds();
     auto& dragManager = AestraUI::NUIDragDropManager::getInstance();
 
-    if (!b.contains(event.position)) {
+    if (!b.contains(event.position) && !m_dragPotential) {
         return NUIComponent::onMouseEvent(event);
     }
     
