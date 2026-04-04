@@ -6,6 +6,9 @@ The public repository is currently on a `0.x` pre-beta line. The release target 
 
 ## [Unreleased]
 
+### Fixed
+- Piano Roll: dropdown menu (Scale, Snap, Root Key) now responds to clicks — was using local bounds for positioning but global bounds for hit-testing
+
 ### Device Resilience (EPIC K)
 
 - **Telemetry wiring**: Driver-level underrun/xrun counters now flow to engine telemetry across WASAPI Shared, WASAPI Exclusive, and RtAudioDriver
