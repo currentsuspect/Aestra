@@ -159,34 +159,41 @@ void PerformanceHUD::renderStats(NUIRenderer& renderer) {
     if (m_audioEngine) {
         const auto& tel = m_audioEngine->telemetry();
 
-        const uint64_t xruns = tel.xruns.load(std::memory_order_relaxed);
-        const uint64_t underruns = tel.underruns.load(std::memory_order_relaxed);
-        const uint64_t cbMaxNs = tel.maxCallbackNs.load(std::memory_order_relaxed);
-        const uint64_t blocks = tel.blocksProcessed.load(std::memory_order_relaxed);
-        const uint64_t srcBlocks = tel.srcActiveBlocks.load(std::memory_order_relaxed);
-        const uint32_t lastFrames = tel.lastBufferFrames.load(std::memory_order_relaxed);
-        const uint32_t lastSR = tel.lastSampleRate.load(std::memory_order_relaxed);
+        const uint64_t xruns = tel.getXruns();
+        const uint64_t underruns = tel.getUnderruns();
+        const uint64_t overruns = tel.getOverruns();
+        const uint64_t cbMaxNs = tel.getMaxCallbackNs();
+        const uint64_t lastCbNs = tel.getLastCallbackNs();
+        const uint64_t blocks = tel.getBlocksProcessed();
+        const uint64_t srcBlocks = tel.getSrcActiveBlocks();
+        const uint32_t lastFrames = tel.getLastBufferFrames();
+        const uint32_t lastSR = tel.getLastSampleRate();
+        const uint32_t consecUnderruns = tel.getConsecutiveUnderruns();
+        const bool inRecovery = tel.isInRecoveryMode();
+        const uint64_t recoveryActivations = tel.getRecoveryModeActivations();
+        const uint32_t threadPriStatus = tel.getThreadPriorityStatus();
 
         const uint64_t qDrops = m_audioEngine->commandQueue().droppedCount();
         const uint32_t qMax = m_audioEngine->commandQueue().maxDepth();
         const uint32_t qCap = Aestra::Audio::AudioCommandQueue::capacity();
 
         const double cbMaxMs = static_cast<double>(cbMaxNs) / 1e6;
+        const double lastCbMs = static_cast<double>(lastCbNs) / 1e6;
         const double budgetMs = (lastSR > 0) ? (static_cast<double>(lastFrames) * 1000.0 / static_cast<double>(lastSR)) : 0.0;
         const double srcPct = (blocks > 0) ? (100.0 * static_cast<double>(srcBlocks) / static_cast<double>(blocks)) : 0.0;
 
-        // Status: red on xruns/drops; yellow if close to budget; green otherwise.
+        // Status: red on xruns/drops/recovery; yellow if close to budget; green otherwise.
         const bool hasTiming = (cbMaxNs > 0 && budgetMs > 0.0);
         const bool closeToBudget = hasTiming && (cbMaxMs >= 0.8 * budgetMs);
         const bool warnQueue = (qCap > 0) && (static_cast<double>(qMax) / static_cast<double>(qCap) >= 0.8);
 
-        const char* status = "🟢";
+        const char* status = "\xF0\x9F\x9F\xA2"; // green circle
         NUIColor statusColor = theme.getColor("success");
-        if (xruns > 0 || underruns > 0 || qDrops > 0) {
-            status = "🔴";
+        if (xruns > 0 || underruns > 0 || qDrops > 0 || inRecovery) {
+            status = "\xF0\x9F\x94\xB4"; // red circle
             statusColor = theme.getColor("error");
         } else if (closeToBudget || warnQueue || !hasTiming) {
-            status = "🟡";
+            status = "\xF0\x9F\x9F\xA1"; // yellow circle
             statusColor = theme.getColor("warning");
         }
 
@@ -210,6 +217,56 @@ void PerformanceHUD::renderStats(NUIRenderer& renderer) {
             }
             oss << "  SRC: " << std::fixed << std::setprecision(1) << srcPct << "%";
             renderer.drawText(oss.str(), NUIPoint(x, y), fontSize, textColor);
+            y += lineHeight;
+        }
+
+        // K-001: Underrun detail line
+        if (underruns > 0 || consecUnderruns > 0 || inRecovery || recoveryActivations > 0) {
+            std::ostringstream oss;
+            oss << "  UND: " << underruns << " (+" << consecUnderruns << ")";
+            if (inRecovery) {
+                oss << " [RECOVERING]";
+            }
+            if (recoveryActivations > 0) {
+                oss << " rec=" << recoveryActivations;
+            }
+            NUIColor underrunColor = inRecovery ? theme.getColor("error") : theme.getColor("warning");
+            renderer.drawText(oss.str(), NUIPoint(x, y), fontSize, underrunColor);
+            y += lineHeight;
+        }
+
+        // K-001: Overruns detail
+        if (overruns > 0) {
+            std::ostringstream oss;
+            oss << "  OVR: " << overruns;
+            renderer.drawText(oss.str(), NUIPoint(x, y), fontSize, theme.getColor("warning"));
+            y += lineHeight;
+        }
+
+        // K-001: Thread priority status (B-010)
+        if (threadPriStatus > 0) {
+            std::ostringstream oss;
+            oss << "  RT: ";
+            if (threadPriStatus & 0x01) oss << "SCHED ";
+            if (threadPriStatus & 0x02) oss << "MMCSS ";
+            if (threadPriStatus & 0x04) oss << "CRIT ";
+            if (threadPriStatus == 0x07) {
+                oss << "optimal";
+            } else {
+                oss << "partial(" << threadPriStatus << ")";
+            }
+            NUIColor priColor = (threadPriStatus == 0x07) ? theme.getColor("success") : theme.getColor("warning");
+            renderer.drawText(oss.str(), NUIPoint(x, y), fontSize, priColor);
+            y += lineHeight;
+        }
+
+        // K-006: Last callback timing
+        if (lastCbNs > 0 && budgetMs > 0) {
+            std::ostringstream oss;
+            oss << "  CBlast: " << std::fixed << std::setprecision(3) << lastCbMs << "ms"
+                << " (" << std::setprecision(1) << (lastCbMs / budgetMs * 100.0) << "%)";
+            NUIColor cbColor = (lastCbMs >= 0.8 * budgetMs) ? theme.getColor("warning") : textColor;
+            renderer.drawText(oss.str(), NUIPoint(x, y), fontSize, cbColor);
             y += lineHeight;
         }
     }
