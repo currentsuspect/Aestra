@@ -56,11 +56,15 @@ Option A is cleaner — the NUI event system typically delivers events in the co
 - [ ] No regression in other NUIContextMenu usages (PluginBrowserPanel, etc.)
 
 ## Resolution
-- **What was done**: Three-part fix across NUIContextMenu and PianoRollToolbar:
-  1. `PianoRollToolbar::setupUI`: Use `getBounds()` (local coords) for menu positioning — menu is a child of toolbar so local coords are correct
-  2. `NUIContextMenu::showAt`: Clamp against immediate parent's size (not root parent's bounds with offsets) to prevent position warping
-  3. `NUIContextMenu::onMouseEvent`: Use `getGlobalBounds()` for containment check, then convert global event position to local by subtracting the menu's global bounds origin before calling `getItemAtPosition`
-  4. `NUIContextMenu::getItemAtPosition`: Accept local coordinates and check against local bounds instead of global bounds
-- **What differed from brief**: First attempt used `getGlobalBounds()` for positioning which spawned menu at wrong location. Second attempt converted all coords to local which broke playhead rendering. Final fix: keep positioning local, keep hit-testing global, convert only for item lookup.
-- **Commits**: 7c2b1ae9 (reverted), 3e89ada6 (partial), final commit pending
-- **Build**: lowmem build passes cleanly
+- **What was done**: Final fix was a coordinated popup-layer and coordinate-space cleanup:
+  1. `PianoRollToolbar` now owns the menu lifecycle, but mounts the active menu on the parent view using corrected parent-local coordinates so the popup appears at the correct screen position.
+  2. `PianoRollView::onRender()` explicitly renders the active menu after drawing the playhead, so the dropdown is no longer visually covered by the playhead line.
+  3. `PianoRollView::onMouseEvent()` now gives the active menu first shot at events and closes it on outside click, so the popup behaves like a true overlay instead of a passive child.
+  4. `NUIContextMenu::onMouseEvent()` and `showAt()` were corrected to use the same absolute/window-space bounds model the rest of this UI tree is using; this removed the double-offset hit-test bug that made visible menu items ignore clicks.
+- **What differed from brief**: The original brief correctly suspected a z/hit issue, but the real bug was not only z-order. The popup was simultaneously rendering under the playhead and hit-testing in a mismatched coordinate space. Fixing only one side was not enough.
+- **Files fixed**:
+  - `AestraUI/Widgets/NUIPianoRollWidgets.cpp`
+  - `AestraUI/Widgets/NUIPianoRollWidgets.h`
+  - `AestraUI/Base/NUIContextMenu.cpp`
+- **Result**: Piano-roll `Snap`, `Root Key`, and `Scale Type` menus now open in the right place, receive clicks, open submenus, and close correctly on outside click.
+- **Build**: `cmake --build /home/currentsuspect/Aestra/build/lowmem -j2 --target Aestra` passes

@@ -130,8 +130,9 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible()) return false;
 
-    // Use global bounds — event.position is in global/window coordinates
-    NUIRect globalBounds = getGlobalBounds();
+    // This UI tree lays popup/menu bounds in the same absolute/window space
+    // as incoming mouse events, so hit-test against raw bounds here.
+    NUIRect menuBounds = getBounds();
     
     // Give priority to submenu
     if (activeSubmenu_ && activeSubmenu_->isVisible())
@@ -143,15 +144,14 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
     }
 
     // Check if mouse is within our global bounds
-    if (!globalBounds.contains(event.position)) {
+    if (!menuBounds.contains(event.position)) {
         return false;
     }
 
-    // Convert global position to local for item lookup
+    // Convert absolute/window position to menu-local for item lookup
     NUIPoint localPos = event.position;
-    NUIRect gb = getGlobalBounds();
-    localPos.x -= gb.x;
-    localPos.y -= gb.y;
+    localPos.x -= menuBounds.x;
+    localPos.y -= menuBounds.y;
 
     int itemIndex = getItemAtPosition(localPos);
 
@@ -321,19 +321,20 @@ void NUIContextMenu::showAt(int x, int y)
     float posX = static_cast<float>(x);
     float posY = static_cast<float>(y);
     
-    // Clamp against immediate parent's size in local coordinate space
+    // Clamp in the same absolute/window coordinate space used by menu bounds.
     if (NUIComponent* parent = getParent()) {
-        float parentW = parent->getBounds().width;
-        float parentH = parent->getBounds().height;
+        NUIRect parentBounds = parent->getBounds();
+        float parentRight = parentBounds.x + parentBounds.width;
+        float parentBottom = parentBounds.y + parentBounds.height;
         
-        if (posX + menuWidth > parentW) {
-            posX = parentW - menuWidth - 10;
+        if (posX + menuWidth > parentRight) {
+            posX = parentRight - menuWidth - 10.0f;
         }
-        if (posY + menuHeight > parentH) {
-            posY = parentH - menuHeight - 10;
+        if (posY + menuHeight > parentBottom) {
+            posY = parentBottom - menuHeight - 10.0f;
         }
-        if (posX < 0) posX = 10;
-        if (posY < 0) posY = 10;
+        if (posX < parentBounds.x) posX = parentBounds.x + 10.0f;
+        if (posY < parentBounds.y) posY = parentBounds.y + 10.0f;
     }
     
     setPosition(posX, posY);

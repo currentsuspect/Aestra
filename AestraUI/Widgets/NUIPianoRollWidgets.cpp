@@ -458,6 +458,20 @@ PianoRollToolbar::PianoRollToolbar() {
     setupUI();
 }
 
+void PianoRollToolbar::closeActiveContextMenu() {
+    if (!m_activeContextMenu) {
+        return;
+    }
+
+    if (auto* parent = m_activeContextMenu->getParent()) {
+        parent->removeChild(m_activeContextMenu);
+    } else {
+        removeChild(m_activeContextMenu);
+    }
+
+    m_activeContextMenu = nullptr;
+}
+
 void PianoRollToolbar::setupUI() {
     // 0. Menu Button (Scale, Snap, etc.)
     m_menuBtn = std::make_shared<NUIButton>("");
@@ -468,13 +482,16 @@ void PianoRollToolbar::setupUI() {
     
     m_menuBtn->setOnClick([this]() {
         if (m_activeContextMenu) {
-            removeChild(m_activeContextMenu);
-            m_activeContextMenu = nullptr;
-            return;
+            if (!m_activeContextMenu->isVisible()) {
+                closeActiveContextMenu();
+            } else {
+                closeActiveContextMenu();
+                return;
+            }
         }
 
         auto menu = std::make_shared<NUIContextMenu>();
-        m_activeContextMenu = menu;
+        m_activeContextMenu = std::static_pointer_cast<NUIComponent>(menu);
         
         // --- SNAP SUBMENU ---
         auto snapMenu = std::make_shared<NUIContextMenu>();
@@ -511,11 +528,16 @@ void PianoRollToolbar::setupUI() {
         }
         menu->addSubmenu("Scale Type", scaleMenu);
 
-        // Position menu below the button (local coords — menu is child of toolbar)
         auto b = m_menuBtn->getBounds();
-        menu->showAt(b.x, b.y + b.height + 2.0f);
-
-        addChild(menu);
+        if (auto* parent = getParent()) {
+            parent->addChild(m_activeContextMenu);
+            const auto pb = parent->getBounds();
+            menu->showAt(static_cast<int>(b.x - pb.x),
+                         static_cast<int>(b.y - pb.y + b.height + 2.0f));
+        } else {
+            addChild(m_activeContextMenu);
+            menu->showAt(static_cast<int>(b.x), static_cast<int>(b.y + b.height + 2.0f));
+        }
     });
 
     // 1. Tool Buttons
@@ -672,17 +694,6 @@ void PianoRollToolbar::setActiveTool(GlobalTool tool) {
 
 
 bool PianoRollToolbar::onMouseEvent(const NUIMouseEvent& event) {
-    if (m_activeContextMenu && m_activeContextMenu->isVisible()) {
-        if (m_activeContextMenu->onMouseEvent(event)) return true;
-        
-        // Auto-hide click-away
-        if (event.pressed) {
-            removeChild(m_activeContextMenu);
-            m_activeContextMenu = nullptr;
-            // fallthrough to check other things
-        }
-    }
-
     if (m_menuBtn->onMouseEvent(event)) return true;
     if (m_ptrBtn->onMouseEvent(event)) return true;
     if (m_pencilBtn->onMouseEvent(event)) return true;
@@ -1737,6 +1748,7 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
     renderer.fillRect(getBounds(), theme.getColor("surfaceRaised").darkened(0.08f).withAlpha(0.98f));
     NUIComponent::onRender(renderer);
 
+    // Draw playhead
     if (!m_grid || !m_ruler) return;
 
     const auto gridBounds = m_grid->getBounds();
@@ -1770,6 +1782,13 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
                           1.0f,
                           accent);
     }
+
+    if (m_toolbar) {
+        if (auto menu = m_toolbar->getActiveContextMenu(); menu && menu->isVisible()) {
+            menu->onRender(renderer);
+        }
+    }
+
 }
 
 void PianoRollView::onResize(int width, int height) {
@@ -1883,13 +1902,22 @@ void PianoRollView::syncChildren() {
 bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
     if (!getBounds().contains(event.position) && !m_isResizingPanel) return false;
 
-    // Splitter Logic
-    // Access control panel rect logic relative to bounds... 
-    // We know layout: topTotalH + m_grid->height? No grid spans contentH.
-    // keys width = m_keyLaneWidth.
-    // The control panel is at the BOTTOM.
-    // The splitter line is at `b.y + b.height - m_controlPanelHeight`.
-    
+    if (m_toolbar) {
+        if (auto menu = m_toolbar->getActiveContextMenu(); menu && menu->isVisible()) {
+            if (menu->onMouseEvent(event)) return true;
+
+            if (event.pressed && event.button == NUIMouseButton::Left) {
+                const auto menuBounds = menu->getGlobalBounds();
+                const auto toolbarBounds = m_toolbar->getBounds();
+                if (!menuBounds.contains(event.position) &&
+                    !toolbarBounds.contains(event.position)) {
+                    m_toolbar->dismissActiveContextMenu();
+                    return true;
+                }
+            }
+        }
+    }
+
     auto b = getBounds();
     float splitterY = b.y + b.height - m_controlPanelHeight;
     float splitterZone = 5.0f;
