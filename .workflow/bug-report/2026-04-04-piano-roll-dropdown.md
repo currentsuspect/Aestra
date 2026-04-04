@@ -56,7 +56,11 @@ Option A is cleaner — the NUI event system typically delivers events in the co
 - [ ] No regression in other NUIContextMenu usages (PluginBrowserPanel, etc.)
 
 ## Resolution
-- **What was done**: Changed `PianoRollToolbar::setupUI` to use `m_menuBtn->getGlobalBounds()` instead of `m_menuBtn->getBounds()` when positioning the context menu. This ensures the coordinates passed to `showAt()` are in the same global/screen space that `NUIContextMenu::onMouseEvent` uses for hit-testing.
-- **What differed from brief**: Brief recommended Option A (fix hit-testing to use local coords). After verifying the event dispatch system, I found that mouse events flow through the tree in screen/global coordinates without transformation. So Option B (fix positioning to use global coords) was actually the correct approach. The brief's assumption about local coordinate delivery was wrong.
-- **Commit hash**: 7c2b1ae9
+- **What was done**: Three-part fix across NUIContextMenu and PianoRollToolbar:
+  1. `PianoRollToolbar::setupUI`: Use `getBounds()` (local coords) for menu positioning — menu is a child of toolbar so local coords are correct
+  2. `NUIContextMenu::showAt`: Clamp against immediate parent's size (not root parent's bounds with offsets) to prevent position warping
+  3. `NUIContextMenu::onMouseEvent`: Use `getGlobalBounds()` for containment check, then convert global event position to local by subtracting the menu's global bounds origin before calling `getItemAtPosition`
+  4. `NUIContextMenu::getItemAtPosition`: Accept local coordinates and check against local bounds instead of global bounds
+- **What differed from brief**: First attempt used `getGlobalBounds()` for positioning which spawned menu at wrong location. Second attempt converted all coords to local which broke playhead rendering. Final fix: keep positioning local, keep hit-testing global, convert only for item lookup.
+- **Commits**: 7c2b1ae9 (reverted), 3e89ada6 (partial), final commit pending
 - **Build**: lowmem build passes cleanly

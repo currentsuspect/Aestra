@@ -130,31 +130,28 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible()) return false;
 
-    // Convert global event position to our local coordinate space
-    NUIPoint localPos = event.position;
-    NUIComponent* current = getParent();
-    while (current) {
-        const NUIRect& pb = current->getBounds();
-        localPos.x -= pb.x;
-        localPos.y -= pb.y;
-        current = current->getParent();
-    }
-
-    // Check if mouse is within our local bounds
-    if (!getBounds().contains(localPos)) {
-        return false;
-    }
-
-    // Give priority to submenu (convert global coords for submenu too)
+    // Use global bounds — event.position is in global/window coordinates
+    NUIRect globalBounds = getGlobalBounds();
+    
+    // Give priority to submenu
     if (activeSubmenu_ && activeSubmenu_->isVisible())
     {
-        NUIMouseEvent submenuEvent = event;
-        submenuEvent.position = localPos;
-        if (activeSubmenu_->onMouseEvent(submenuEvent))
+        if (activeSubmenu_->onMouseEvent(event))
         {
             return true;
         }
     }
+
+    // Check if mouse is within our global bounds
+    if (!globalBounds.contains(event.position)) {
+        return false;
+    }
+
+    // Convert global position to local for item lookup
+    NUIPoint localPos = event.position;
+    NUIRect gb = getGlobalBounds();
+    localPos.x -= gb.x;
+    localPos.y -= gb.y;
 
     int itemIndex = getItemAtPosition(localPos);
 
@@ -324,17 +321,16 @@ void NUIContextMenu::showAt(int x, int y)
     float posX = static_cast<float>(x);
     float posY = static_cast<float>(y);
     
-    // Clamp against immediate parent's bounds in local coordinate space
+    // Clamp against immediate parent's size in local coordinate space
     if (NUIComponent* parent = getParent()) {
-        NUIRect parentBounds = parent->getBounds();
-        float parentRight = parentBounds.width;
-        float parentBottom = parentBounds.height;
+        float parentW = parent->getBounds().width;
+        float parentH = parent->getBounds().height;
         
-        if (posX + menuWidth > parentRight) {
-            posX = parentRight - menuWidth - 10;
+        if (posX + menuWidth > parentW) {
+            posX = parentW - menuWidth - 10;
         }
-        if (posY + menuHeight > parentBottom) {
-            posY = parentBottom - menuHeight - 10;
+        if (posY + menuHeight > parentH) {
+            posY = parentH - menuHeight - 10;
         }
         if (posX < 0) posX = 10;
         if (posY < 0) posY = 10;
@@ -684,11 +680,12 @@ float NUIContextMenu::calculateMenuHeight() const
 
 int NUIContextMenu::getItemAtPosition(const NUIPoint& position) const
 {
-    // Use global bounds since position is in global/window coordinates
-    NUIRect globalBounds = getGlobalBounds();
-    if (!globalBounds.contains(position)) return -1;
+    // position is now in local coordinates (origin at menu's top-left)
+    NUIRect localBounds = getBounds();
+    NUIRect localRect(0, 0, localBounds.width, localBounds.height);
+    if (!localRect.contains(position)) return -1;
     
-    float relativeY = position.y - globalBounds.y;
+    float relativeY = position.y;
     float currentY = 0.0f;
     
     for (int i = 0; i < getItemCount(); ++i)
