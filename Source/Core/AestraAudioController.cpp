@@ -250,6 +250,7 @@ bool AestraAudioController::openDefaultStream(void* userData) {
         if (m_audioEngine) {
             m_audioEngine->setSampleRate(config.sampleRate);
             m_audioEngine->setBufferConfig(config.bufferSize, config.numOutputChannels);
+            config.telemetry = &m_audioEngine->telemetry();
         }
 
         m_streamConfig = config;
