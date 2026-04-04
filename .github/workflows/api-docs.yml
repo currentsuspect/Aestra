@@ -24,7 +24,7 @@ jobs:
     name: Generate Doxygen Documentation
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
       issues: write
     

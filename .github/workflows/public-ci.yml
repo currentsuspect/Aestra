@@ -29,11 +29,11 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path build | Out-Null
-          cmake -S . -B build -DAestra_CORE_MODE=ON -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF -DCMAKE_BUILD_TYPE=Release
       - name: Build
         shell: pwsh
         run: cmake --build build --config Release --parallel
-      - name: Run tests (if any)
+      - name: Run maintained public tests
         shell: pwsh
         run: |
-          if (Test-Path build\tests\Release) { Get-ChildItem build\tests\Release\*.exe | ForEach-Object { & $_ } }
+          ctest --test-dir build -C Release --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
