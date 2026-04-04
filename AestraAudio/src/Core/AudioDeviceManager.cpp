@@ -164,17 +164,17 @@ bool AudioDeviceManager::tryDriver(IAudioDriver* driver, const AudioStreamConfig
         return false;
     }
 
-    std::cout << "Trying " << driver->getDisplayName() << "..." << std::endl;
+    Aestra::Log::info("Trying " + driver->getDisplayName() + "...");
 
     if (driver->openStream(config, callback, userData)) {
-        std::cout << "âœ“ " << driver->getDisplayName() << " opened successfully" << std::endl;
+        Aestra::Log::info(driver->getDisplayName() + " opened successfully");
         double lat = driver->getStreamLatency();
-        std::cout << "  Latency: " << (lat * 1000.0) << "ms" << std::endl;
+        Aestra::Log::info("  Latency: " + std::to_string(lat * 1000.0) + "ms");
         m_activeDriver = driver;
         return true;
     }
 
-    std::cout << "✗ " << driver->getDisplayName() << " failed: " << driver->getErrorMessage() << std::endl;
+    Aestra::Log::warning(driver->getDisplayName() + " failed: " + driver->getErrorMessage());
     return false;
 }
 
@@ -198,12 +198,31 @@ bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallba
     m_currentUserData = userData;
 
     // Iterate through drivers to find one that works
-    // Prioritize exclusive mode if that was the "preferred" (implied by previous usage)
+    // Track fallback reasons for the first failed driver
+    std::string firstFailureReason;
+    bool firstAttempt = true;
+
     for (auto& driver : m_drivers) {
         if (tryDriver(driver.get(), config, callback, userData)) {
-            // Log success handled in tryDriver
+            // If we fell back to a different driver than preferred, record the reason
+            if (m_activeDriver && m_activeDriver->getDriverType() != m_preferredDriverType) {
+                if (m_fallbackReason.empty()) {
+                    m_fallbackReason = "Preferred driver (" + std::string(DriverTypeToString(m_preferredDriverType)) +
+                                       ") was unavailable, fell back to " + m_activeDriver->getDisplayName();
+                }
+            }
             return true;
         }
+        if (firstAttempt) {
+            firstFailureReason = driver->getErrorMessage();
+            firstAttempt = false;
+        }
+    }
+
+    // Record why the preferred driver failed
+    if (!firstAttempt && !firstFailureReason.empty()) {
+        m_fallbackReason = "All drivers failed. Preferred (" + std::string(DriverTypeToString(m_preferredDriverType)) +
+                           ") error: " + firstFailureReason;
     }
 
     Aestra::Log::error("[AudioDeviceManager] All drivers failed to open stream!");
@@ -211,6 +230,7 @@ bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallba
 }
 
 void AudioDeviceManager::closeStream() {
+    stopHealthMonitor();
     if (m_activeDriver) {
         m_activeDriver->closeStream();
         m_activeDriver = nullptr;
@@ -236,6 +256,7 @@ bool AudioDeviceManager::startStream() {
         bool ok = m_activeDriver->startStream();
         if (ok) {
             logStreamInfo(m_activeDriver, "Active driver stream started");
+            startHealthMonitor();
         }
         return ok;
     }
@@ -243,6 +264,7 @@ bool AudioDeviceManager::startStream() {
 }
 
 void AudioDeviceManager::stopStream() {
+    stopHealthMonitor();
     if (m_activeDriver) {
         m_activeDriver->stopStream();
     }
@@ -765,13 +787,36 @@ void AudioDeviceManager::checkDriverHealth() {
         lastUpdateTime = now;
     } else {
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdateTime).count();
-        // If we've had no callbacks for 2 seconds while running, it's a stall
         if (elapsed > 2000) {
-            std::cerr << "[AudioDeviceManager] !!! DRIVER STALL DETECTED (" << m_activeDriver->getDisplayName()
-                      << ") !!!" << std::endl;
+            Aestra::Log::error("[AudioDeviceManager] DRIVER STALL DETECTED (" + m_activeDriver->getDisplayName() + "), switching to safety driver");
             switchToSafetyDriver();
-            lastUpdateTime = now; // Reset to avoid repeated triggers in same fallback window
+            lastUpdateTime = now;
         }
+    }
+}
+
+void AudioDeviceManager::healthMonitorLoop() {
+    while (m_healthMonitorRunning.load(std::memory_order_acquire)) {
+        checkDriverHealth();
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+}
+
+void AudioDeviceManager::startHealthMonitor() {
+    if (m_healthMonitorRunning.load(std::memory_order_acquire)) {
+        return;
+    }
+    m_healthMonitorRunning.store(true, std::memory_order_release);
+    m_healthMonitorThread = std::thread(&AudioDeviceManager::healthMonitorLoop, this);
+}
+
+void AudioDeviceManager::stopHealthMonitor() {
+    if (!m_healthMonitorRunning.load(std::memory_order_acquire)) {
+        return;
+    }
+    m_healthMonitorRunning.store(false, std::memory_order_release);
+    if (m_healthMonitorThread.joinable()) {
+        m_healthMonitorThread.join();
     }
 }
 
