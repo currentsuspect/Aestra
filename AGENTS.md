@@ -19,6 +19,10 @@ This file documents the public automation expectations for this repository.
 - Keep build, test, and contributor docs aligned with the real CMake options and GitHub Actions workflows.
 - Update public docs when contributor workflow, CI posture, or release-status language changes.
 - Prefer surgical commits grouped by concern.
+- Recording pipeline now supports armed capture, take commit, monitoring modes, project-relative recordings, and input diagnostics.
+- `Loop -> Project` now has empty-project fallback behavior and live extent sync as arrangement content changes.
+- Offline export now renders through the live engine path and temporarily suspends the realtime stream during export.
+- Last validated: 2026-04-02 by Codex (verified against TrackManager.h and TrackManagerUI.cpp)
 
 ## Freshness
 
