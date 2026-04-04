@@ -4,6 +4,8 @@ This file is the short entry point. The fuller contributor workflow lives in [do
 
 ## Quick Start
 
+### Windows
+
 ```powershell
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
@@ -13,13 +15,27 @@ cmake --build build --config RelWithDebInfo --parallel
 ctest --test-dir build --config RelWithDebInfo --output-on-failure
 ```
 
+### Linux
+
+```bash
+git clone https://github.com/currentsuspect/Aestra.git
+cd Aestra
+cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+```
+
+If you want Git hooks on Linux, configure Git to use `.githooks/` manually or run the PowerShell helper in an environment that supports it.
+
 ## Expectations
 
 - Work from a topic branch off `develop` unless maintainers direct otherwise
 - Keep changes scoped and reviewable
 - Update docs when behavior, build flow, or contributor workflow changes
 - Add a short item to the `Unreleased` section of [CHANGELOG.md](CHANGELOG.md) for notable changes
-- Run `scripts/docs-check.sh` if you changed Markdown or docs structure
+- Run the relevant local check for your change:
+  - `ctest --test-dir build --output-on-failure` for code changes
+  - `scripts/docs-check.sh` for docs or Markdown changes
 
 ## Documentation-specific checks
 
@@ -27,7 +43,7 @@ ctest --test-dir build --config RelWithDebInfo --output-on-failure
 - Prefer pointing to the current docs in `docs/` rather than historical notes in `meta/`
 - If you add public API surface, update Doxygen comments where appropriate
 
-API docs can be generated with:
+API docs can be generated on Windows with:
 
 ```powershell
 .\scripts\generate-api-docs.bat
