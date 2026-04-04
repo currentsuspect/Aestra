@@ -29,7 +29,7 @@ jobs:
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
@@ -69,7 +69,7 @@ jobs:
           cmake-version: "3.28"
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
@@ -98,7 +98,7 @@ jobs:
           }" "$DISCORD_WEBHOOK"
 
   build-macos:
-    name: macOS (Clang)
+    name: macOS (Clang, advisory)
     runs-on: macos-latest
     continue-on-error: true
     steps:
@@ -112,7 +112,7 @@ jobs:
           cmake-version: "3.28"
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
@@ -139,7 +139,7 @@ jobs:
           }" "$DISCORD_WEBHOOK"
 
   format-check:
-    name: Code Formatting
+    name: Formatting (advisory)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -152,14 +152,14 @@ jobs:
 
       - name: Check Formatting
         run: |
-          FILES=$(find AestraAudio AestraCore AestraPlat Tests -name "*.cpp" -o -name "*.hpp" -o -name "*.h" | grep -v External/)
+          FILES=$(find AestraAudio AestraCore AestraPlat AestraUI Source Tests -name "*.cpp" -o -name "*.hpp" -o -name "*.h" | grep -v External/)
           if [ -n "$FILES" ]; then
             echo "$FILES" | xargs clang-format --dry-run --Werror 2>&1 | head -100
           fi
         continue-on-error: true
 
   static-analysis:
-    name: Static Analysis (clang-tidy)
+    name: Static Analysis (clang-tidy, advisory)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -170,7 +170,7 @@ jobs:
           sudo apt-get install -y clang-tidy-14 clang-format-14
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DAESTRA_ENABLE_UI=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=OFF -DAESTRA_HEADLESS_ONLY=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Run clang-tidy
         run: |

@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
+The public repository is currently on a `0.x` pre-beta line. The release target tracked in the roadmap is **v1 Beta in December 2026**.
+
 ## [Unreleased]
 
 ### Export / Offline Render

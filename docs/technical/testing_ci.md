@@ -1,6 +1,6 @@
 # Testing & CI Profiles
 
-This repo now uses explicit test profiles so CI can stay stable while still allowing deeper runtime coverage locally.
+This repo uses explicit test profiles so CI can stay stable while still allowing deeper runtime coverage locally. The default public CI path is intentionally smaller than a full local `ctest` run.
 
 ## CMake Options
 
@@ -18,20 +18,22 @@ Enables tests currently under investigation for consistency/portability:
 - `AestraFilterTest`
 - `AestraSampleRateConverterTest`
 
-These are still compiled by default, but not registered in CTest unless explicitly enabled.
+These tests are still compiled by default, but they are not registered in CTest unless explicitly enabled.
 
-## Recommended CI Command Set (stable)
+## Maintained Default CI Path
 
 ```bash
-cmake -S . -B build
+cmake -S . -B build -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
 cmake --build build -j2
-cd build
-ctest --output-on-failure
+ctest --test-dir build --output-on-failure -R \
+  "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
 ```
 
-## Current high-value confidence suite (March 2026)
+This is the maintained cross-platform gate used in the main CI workflow. It is intentionally narrower than the broader local confidence suite.
 
-These are the self-contained tests that currently give the best signal for the internal plugin + project path work:
+## Current high-value self-contained confidence suite
+
+These are the self-contained tests that currently give the best signal for the internal plugin and headless audio paths without requiring runtime-sensitive registration:
 
 - `RumbleStateTest`
 - `RumblePluginFactoryTest`
@@ -41,7 +43,6 @@ These are the self-contained tests that currently give the best signal for the i
 - `InternalPluginProjectRoundTripTest`
 - `RumbleRenderTest`
 - `RumbleArsenalAudibleTest`
-- `ProjectRoundTripTest`
 
 Recommended local run:
 
@@ -55,8 +56,7 @@ cmake --build build-dev --target \
   ArsenalInstrumentAttachmentTest \
   InternalPluginProjectRoundTripTest \
   RumbleRenderTest \
-  RumbleArsenalAudibleTest \
-  ProjectRoundTripTest -j2
+  RumbleArsenalAudibleTest -j2
 
 ./build-dev/Tests/RumbleStateTest
 ./build-dev/Tests/RumblePluginFactoryTest
@@ -66,19 +66,27 @@ cmake --build build-dev --target \
 ./build-dev/Tests/InternalPluginProjectRoundTripTest
 ./build-dev/Tests/Headless/RumbleRenderTest /tmp/rumble_ci
 ./build-dev/Tests/Headless/RumbleArsenalAudibleTest
-./build-dev/Tests/ProjectRoundTripTest
 ```
 
-## Fixture-driven tests
+## Runtime-sensitive coverage
 
-`OfflineRenderRegressionTest` is built and available, but it is currently fixture-driven rather than self-contained.
-It requires a project file and a reference WAV:
+These are built by default but not registered in CTest unless `AESTRA_ENABLE_RUNTIME_TESTS=ON`:
+
+- `ProjectRoundTripTest`
+- `AutosaveRoundTripTest`
+- `AestraAudioTest`
+- `AestraAudioSoakTest`
+
+## Offline export parity coverage
+
+`OfflineRenderRegressionTest` is now a self-contained headless parity test. It does not rely on a checked-in golden WAV; instead it compares `AudioExporter` output against a direct engine reference render in-process.
+
+Typical local run:
 
 ```bash
-./build-dev/Tests/Headless/OfflineRenderRegressionTest <project.aes> <reference.wav>
+cmake --build build-dev --target OfflineRenderRegressionTest -j2
+./build-dev/Tests/Headless/OfflineRenderRegressionTest
 ```
-
-That means a clean nightly/CI workflow still needs canonical fixtures before this test can be treated as a reliable green/red gate.
 
 ## Full Local Verification (opt-in)
 
