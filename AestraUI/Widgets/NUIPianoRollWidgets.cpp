@@ -511,9 +511,9 @@ void PianoRollToolbar::setupUI() {
         }
         menu->addSubmenu("Scale Type", scaleMenu);
 
-        // Position menu below the button
-        auto b = m_menuBtn->getBounds();
-        menu->showAt(b.x, b.y + b.height + 2.0f);
+        // Position menu below the button using global coordinates
+        auto globalBtnBounds = m_menuBtn->getGlobalBounds();
+        menu->showAt(globalBtnBounds.x, globalBtnBounds.y + globalBtnBounds.height + 2.0f);
 
         addChild(menu);
     });
