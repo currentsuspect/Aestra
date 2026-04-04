@@ -51,6 +51,9 @@ struct AudioStreamConfig {
     double inputLatencyMs = 0.0;  // Input device latency
     /** @brief Measured or estimated output latency in milliseconds. */
     double outputLatencyMs = 0.0; // Output device latency
+
+    /** @brief Optional telemetry pointer for RT-thread counter updates. */
+    struct AudioTelemetry* telemetry = nullptr; // Forward-declared, set by engine
 };
 
 /**
