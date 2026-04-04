@@ -27,6 +27,21 @@ bool isInstrumentPluginDrag(const AestraUI::DragData& data) {
 
     return true;
 }
+
+bool isAudioFileDrag(const AestraUI::DragData& data) {
+    if (data.type != AestraUI::DragDataType::File || data.filePath.empty()) {
+        return false;
+    }
+
+    const auto dot = data.filePath.find_last_of('.');
+    if (dot == std::string::npos) {
+        return false;
+    }
+
+    std::string ext = data.filePath.substr(dot + 1);
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    return ext == "wav" || ext == "mp3" || ext == "flac" || ext == "ogg" || ext == "aiff";
+}
 } // namespace
 
 ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
@@ -567,7 +582,7 @@ AestraUI::DropFeedback ArsenalPanel::onDragEnter(const AestraUI::DragData& data,
 
 AestraUI::DropFeedback ArsenalPanel::onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
     (void)position;
-    if (isInstrumentPluginDrag(data)) {
+    if (isInstrumentPluginDrag(data) || isAudioFileDrag(data)) {
         return AestraUI::DropFeedback::Copy;
     }
     return AestraUI::DropFeedback::None;
@@ -580,9 +595,66 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
     (void)position;
     AestraUI::DropResult result;
 
+    UnitID targetUnit = 0;
+    if (m_trackManager) {
+        targetUnit = m_selectedUnitId;
+        if (targetUnit == 0) {
+            auto unitIDs = m_trackManager->getUnitManager().getAllUnitIDs();
+            if (!unitIDs.empty()) {
+                targetUnit = unitIDs.front();
+            }
+        }
+    }
+
+    if (isAudioFileDrag(data)) {
+        if (!m_trackManager) {
+            result.accepted = false;
+            result.message = "No TrackManager bound";
+            return result;
+        }
+
+        if (targetUnit == 0) {
+            result.accepted = false;
+            result.message = "No Arsenal unit available";
+            return result;
+        }
+
+        auto& unitMgr = m_trackManager->getUnitManager();
+        std::string filename = data.filePath.substr(data.filePath.find_last_of("/\\") + 1);
+        const auto lastDot = filename.find_last_of('.');
+        if (lastDot != std::string::npos) {
+            filename = filename.substr(0, lastDot);
+        }
+
+        unitMgr.setUnitName(targetUnit, filename);
+        unitMgr.setUnitAudioClip(targetUnit, data.filePath);
+        if (m_onSelectedUnitChanged) {
+            m_onSelectedUnitChanged(targetUnit);
+        }
+        refreshUnits();
+
+        result.accepted = true;
+        result.message = "Sample loaded into Arsenal";
+        Log::info("[Arsenal] File dropped into Arsenal: " + data.filePath);
+        return result;
+    }
+
     if (!isInstrumentPluginDrag(data)) {
         result.accepted = false;
-        result.message = "Arsenal accepts instrument plugins only";
+        result.message = "Arsenal accepts instrument plugins and audio files";
+        return result;
+    }
+
+    if (targetUnit != 0 && m_onPluginDroppedToUnit) {
+        if (m_onSelectedUnitChanged) {
+            m_onSelectedUnitChanged(targetUnit);
+        }
+        m_onPluginDroppedToUnit(targetUnit, data.sourceClipIdString);
+        refreshUnits();
+        result.accepted = true;
+        result.message = "Loaded instrument into Arsenal unit";
+        Log::info("[Arsenal] Plugin dropped into unit " + std::to_string(targetUnit) +
+                  ": " + data.sourceClipIdString);
         return result;
     }
 
