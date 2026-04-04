@@ -10,7 +10,9 @@
 
 ## Current Snapshot
 
-As of March 2026, the repo is in active engineering mode rather than release-polish mode. The most reliable currently verified paths are:
+Aestra is currently on a public `0.x` pre-beta line. The current roadmap target is **v1 Beta in December 2026**.
+
+As of April 2026, the repo is in active engineering mode rather than release-polish mode. The most reliable currently verified paths are:
 
 - Internal built-in plugin discovery through the normal manager/factory path
 - `Aestra Rumble` instantiation, state save/restore, and project round-trips
@@ -88,6 +90,8 @@ There is also a helper script:
 ```
 
 The exact tests and CI posture are documented in [docs/technical/testing_ci.md](docs/technical/testing_ci.md).
+
+The maintained GitHub Actions gate uses a smaller cross-platform subset than the full local `ctest` run. Treat [docs/technical/testing_ci.md](docs/technical/testing_ci.md) as the source of truth for which test lanes are default, optional, or advisory.
 
 ## Documentation
 

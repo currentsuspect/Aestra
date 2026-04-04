@@ -1,24 +1,25 @@
-# Aestra Agent Notes
+# Aestra Automation Policy
 
-This file stores repo-specific workflow rules and continuity notes for future agent passes.
+This file documents the public automation expectations for this repository.
 
-## PR Intake
+## Scope
 
-- Do not merge Jules-generated PRs raw.
-- Review Jules PRs for useful changes, then re-implement or cherry-pick only the good parts locally on `develop`.
-- Reject misleading suppressions, stale claims, or incomplete fixture/test wiring even if the PR has otherwise useful ideas.
-- Prefer clean local commits over merging bot branches directly.
+- Automation should keep changes small, reviewable, and aligned with the current public roadmap.
+- Public contributors and bots should prefer matching docs to the real repository state instead of inventing new process or release claims.
+- Feature work should land through normal review, not through hidden automation-only flows.
 
-## Current Workflow Preference
+## Pull Request Hygiene
 
-- Keep commits surgical and reviewable by concern.
-- After each meaningful pass, update the technical docs so roadmap/task status stays current.
-- Use `-j2` for local builds unless the user explicitly says otherwise.
-- End-of-day ritual: confirm whether the planned agenda actually landed, then ask for tomorrow's intended scope before wrapping.
+- Do not merge bot-generated pull requests blindly.
+- Review automation output the same way you would review a human contribution.
+- Reject misleading suppressions, generated artifacts that should not be tracked, and claims that are not supported by the code or tests.
 
-## Recent Stable Areas
+## Repo Expectations
 
-- Recording pipeline now supports armed capture, take commit, monitoring modes, project-relative recordings, and input diagnostics.
-- `Loop -> Project` now has empty-project fallback behavior and live extent sync as arrangement content changes.
-- Offline export now renders through the live engine path and temporarily suspends the realtime stream during export.
-- Last validated: 2026-04-02 by Codex (verified against TrackManager.h and TrackManagerUI.cpp)
+- Keep build, test, and contributor docs aligned with the real CMake options and GitHub Actions workflows.
+- Update public docs when contributor workflow, CI posture, or release-status language changes.
+- Prefer surgical commits grouped by concern.
+
+## Freshness
+
+Last reviewed: 2026-04-04 by Codex.

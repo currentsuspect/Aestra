@@ -1,12 +1,14 @@
 # 📘 Aestra — Documentation Portal
 
-![Aestra Version](https://img.shields.io/badge/Aestra-v1.1-blue)
+![Aestra Version](https://img.shields.io/badge/Aestra-0.x%20pre--beta-blue)
 ![License](https://img.shields.io/badge/License-ASSAL%20v1.1-blue)
-![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-orange)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
 
 Welcome to the **Aestra Documentation Portal**! This is your guide to understanding, building, validating, and contributing to Aestra.
+
+The public repository is currently on a **0.x pre-beta line**. The working roadmap target is **v1 Beta in December 2026**.
 
 ## 📌 Current docs posture
 
@@ -20,13 +22,7 @@ If you want the most accurate current picture, start with:
 
 ## 🎯 What is Aestra?
 
-Aestra is a professional digital audio workstation featuring:
-- **Ultra-low latency audio engine** — WASAPI multi-tier processing
-- **GPU-accelerated custom UI** — Built with AestraUI framework
-- **Pattern-based workflow** — Intuitive pattern and playlist sequencer
-- **Professional audio quality** — 64-bit multi-threaded processing
-- **Modern C++ architecture** — Clean separation of concerns
-- **Source-available** — Transparent codebase under ASSAL v1.1
+Aestra is a source-available digital audio workstation under active development. The public tree includes the native audio engine, custom UI framework, platform layer, tests, and contributor docs.
 
 ## 📚 Documentation Index
 
@@ -82,7 +78,7 @@ Aestra is a professional digital audio workstation featuring:
 2. Follow the bug report template with clear reproduction steps
 3. Include logs, screenshots, and system information
 
-### For Project Managers
+### For Maintainers
 1. Review [Roadmap](technical/roadmap.md) for project milestones
 2. Check [Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q1.md) for recent milestone history
 3. Check [License Reference](about/license-reference.md) for ASSAL v1.1 details
@@ -91,22 +87,20 @@ Aestra is a professional digital audio workstation featuring:
 ## 🌟 Key Features
 
 ### Audio Engine
-- **WASAPI Integration** - Exclusive and Shared mode support
-- **Multi-threaded Processing** - 64-bit audio processing pipeline
-- **Low-latency Design** - Professional-grade audio performance
-- **Sample-accurate Timing** - Precise audio playback and recording
+- **Native backend work** - WASAPI, ASIO, RtAudio, playback, recording, and export live in one codebase
+- **Headless test paths** - core audio workflows can be exercised without the full UI
+- **Sample-accurate timing work** - timing-sensitive paths are under active engineering and regression coverage
 
 ### User Interface
-- **AestraUI Framework** - Custom GPU-accelerated UI system
-- **Adaptive FPS Rendering** - Efficient resource usage
-- **Modern Timeline** - Familiar and intuitive workflow
-- **Professional Polish** - Smooth animations and visual feedback
+- **AestraUI Framework** - Custom renderer, widgets, and theming system
+- **Timeline and piano roll surfaces** - actively maintained as part of the public repo
+- **Contributor-visible UI stack** - no separate proprietary front-end layer is required to work on the app
 
 ### Development
 - **Modern C++ (C++17)** - Clean, maintainable codebase
 - **CMake Build System** - Cross-platform build configuration
 - **Git Hooks** - Pre-commit validation for code quality
-- **CI/CD Pipeline** - Automated testing and validation
+- **GitHub Actions** - maintained build, test, docs, and public-tree validation workflows
 
 ## 🔧 Development Tools
 
@@ -131,7 +125,7 @@ We welcome contributions from the community! Before contributing:
 3. Review existing issues and discussions
 4. Follow our [Coding Style Guide](developer/coding-style.md)
 
-**Note**: By contributing to Aestra, you agree to the Contributor License Agreement outlined in the contributing guide.
+**Note**: By contributing to Aestra, you agree your contribution is handled under the repository licensing terms described in the contributing guide.
 
 ## 📧 Contact & Support
 
@@ -153,6 +147,4 @@ The source code is publicly visible for transparency but is **NOT open-source**.
 
 ---
 
-**Built by musicians, for musicians. Crafted with intention.** 🎵
-
-*Last updated: March 2026*
+*Last updated: April 2026*

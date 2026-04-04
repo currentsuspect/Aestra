@@ -4,13 +4,14 @@ This is the canonical map of GitHub Actions workflows for Aestra.
 
 ## Core Pipelines
 
-### 1) `build.yml` — **Aestra Build & Test**
+### 1) `ci.yml` — **Aestra Build & Test**
 - Triggers: push + PR on `main`/`develop`
 - Purpose: primary engineering signal
 - Lanes:
   - Linux build + stable CTest suite (**blocking**)
   - Windows build (**blocking**)
   - macOS build preview (**non-blocking**, currently `continue-on-error`)
+  - formatting + clang-tidy lanes (**advisory**, not blocking)
 
 ### 2) `public-ci.yml` — **Public CI (Aestra Core)**
 - Triggers: push to `main`

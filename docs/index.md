@@ -6,6 +6,8 @@
 
 Active engineering repo for Aestra. The public tree includes the core engine, UI framework, platform layer, tests, and contributor docs.
 
+The public repository is currently on a **0.x pre-beta line**. The roadmap target is **v1 Beta in December 2026**.
+
 <div class="cta-buttons" markdown="1">
 [Get Started](getting-started/index.md){ .cta-button }
 [View on GitHub](https://github.com/currentsuspect/Aestra){ .cta-button .secondary }
@@ -117,6 +119,8 @@ If you want the most truthful picture of current progress, start with:
 - [Rumble MVP Plan](technical/RUMBLE_MVP_PLAN.md)
 
 ## 📊 Project Status
+
+This table reflects engineering-module posture, not release readiness. A module marked "Complete" here means the repo contains and maintains that layer; it does not mean Aestra itself is already at a `1.x` release state.
 
 <table class="module-status-table">
   <thead>
