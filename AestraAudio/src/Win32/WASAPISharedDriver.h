@@ -105,6 +105,17 @@ private:
     AudioStreamConfig m_config;
     AudioCallback m_userCallback = nullptr;
     void* m_userData = nullptr;
+    struct AudioTelemetry* m_telemetry = nullptr; // RT-thread telemetry (atomic, lock-free)
+
+    // K-002: Hot-plug detection
+    void* m_deviceNotifier = nullptr; // WASAPIDeviceNotifier* (COM IMMNotificationClient)
+    void registerDeviceNotifier();
+    void unregisterDeviceNotifier();
+
+public:
+    void onDeviceStateChanged(const std::string& deviceId, uint32_t newState);
+    void onDefaultDeviceChanged(bool isOutput, const std::string& newDefaultId);
+private:
 
     // Format information
     void* m_waveFormat = nullptr; // WAVEFORMATEX* (opaque)

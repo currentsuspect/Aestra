@@ -1,6 +1,9 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "WASAPIExclusiveDriver.h"
 
+#include "AestraLog.h"
+#include "Core/AudioTelemetry.h"
+
 // Windows-specific includes (only in .cpp file)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -47,6 +50,63 @@ std::string HResultToString(HRESULT hr) {
     oss << "0x" << std::hex << hr;
     return oss.str();
 }
+
+// K-002: IMMNotificationClient implementation for hot-plug detection
+class WASAPIExclusiveDeviceNotifier : public IMMNotificationClient {
+public:
+    WASAPIExclusiveDeviceNotifier(WASAPIExclusiveDriver* driver) : m_refCount(1), m_driver(driver) {}
+
+    STDMETHODIMP QueryInterface(REFIID riid, void** ppv) override {
+        if (riid == IID_IUnknown || riid == __uuidof(IMMNotificationClient)) {
+            *ppv = static_cast<IMMNotificationClient*>(this);
+            AddRef();
+            return S_OK;
+        }
+        *ppv = nullptr;
+        return E_NOINTERFACE;
+    }
+    STDMETHODIMP_(ULONG) AddRef() override { return InterlockedIncrement(&m_refCount); }
+    STDMETHODIMP_(ULONG) Release() override {
+        ULONG count = InterlockedDecrement(&m_refCount);
+        if (count == 0) delete this;
+        return count;
+    }
+
+    STDMETHODIMP OnDeviceStateChanged(LPCWSTR pwstrDeviceId, DWORD dwNewState) override {
+        (void)pwstrDeviceId;
+        (void)dwNewState;
+        if (m_driver) m_driver->onDeviceStateChanged("", dwNewState);
+        return S_OK;
+    }
+    STDMETHODIMP OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId) override {
+        (void)flow;
+        (void)role;
+        (void)pwstrDefaultDeviceId;
+        if (m_driver && flow == eRender && role == eConsole) {
+            m_driver->onDefaultDeviceChanged(true, "");
+        }
+        return S_OK;
+    }
+    STDMETHODIMP OnPropertyValueChanged(LPCWSTR pwstrDeviceId, const PROPERTYKEY key) override {
+        (void)pwstrDeviceId;
+        (void)key;
+        return S_OK;
+    }
+    STDMETHODIMP OnDeviceAdded(LPCWSTR pwstrDeviceId) override {
+        (void)pwstrDeviceId;
+        if (m_driver) m_driver->onDeviceStateChanged("", DEVICE_STATE_ACTIVE);
+        return S_OK;
+    }
+    STDMETHODIMP OnDeviceRemoved(LPCWSTR pwstrDeviceId) override {
+        (void)pwstrDeviceId;
+        if (m_driver) m_driver->onDeviceStateChanged("", DEVICE_STATE_NOTPRESENT);
+        return S_OK;
+    }
+
+private:
+    LONG m_refCount;
+    WASAPIExclusiveDriver* m_driver;
+};
 } // namespace
 
 WASAPIExclusiveDriver::WASAPIExclusiveDriver() {
@@ -260,6 +320,7 @@ bool WASAPIExclusiveDriver::openStream(const AudioStreamConfig& config, AudioCal
     m_config = config;
     m_userCallback = callback;
     m_userData = userData;
+    m_telemetry = config.telemetry;
 
     if (!openDevice(config.deviceId)) {
         return false;
@@ -276,6 +337,10 @@ bool WASAPIExclusiveDriver::openStream(const AudioStreamConfig& config, AudioCal
     } else {
         Aestra::Log::info("[WASAPI Exclusive] Stream opened successfully");
     }
+
+    // K-002: Register for hot-plug notifications
+    registerDeviceNotifier();
+
     return true;
 }
 
@@ -636,10 +701,10 @@ bool WASAPIExclusiveDriver::testExclusiveFormatPCM(uint32_t sampleRate, uint32_t
 }
 
 void WASAPIExclusiveDriver::closeStream() {
+    unregisterDeviceNotifier();
     closeDevice();
     m_bufferFrameCount = 0;
     m_state = DriverState::INITIALIZED;
-    std::cout << "[WASAPI Exclusive] Stream closed" << std::endl;
 }
 
 bool WASAPIExclusiveDriver::startStream() {
@@ -846,8 +911,11 @@ void WASAPIExclusiveDriver::audioThreadProc() {
 
         if (waitResult != WAIT_OBJECT_0) {
             if (!m_shouldStop) {
-                std::cerr << "[WASAPI Exclusive] Event timeout!" << std::endl;
                 m_statistics.underrunCount++;
+                if (m_telemetry) {
+                    m_telemetry->incrementXruns();
+                    m_telemetry->incrementUnderruns();
+                }
 
                 // On timeout/underrun, try to recover by filling silence
                 BYTE* data = nullptr;
@@ -857,7 +925,6 @@ void WASAPIExclusiveDriver::audioThreadProc() {
                     WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
                     std::memset(reinterpret_cast<void*>(data), 0, m_bufferFrameCount * wf->nBlockAlign);
                     reinterpret_cast<IAudioRenderClient*>(m_renderClient)->ReleaseBuffer(m_bufferFrameCount, 0);
-                    std::cout << "[WASAPI Exclusive] Recovered from timeout with silence" << std::endl;
                 }
             }
             continue;
@@ -874,8 +941,11 @@ void WASAPIExclusiveDriver::audioThreadProc() {
         BYTE* data = nullptr;
         HRESULT hr = reinterpret_cast<IAudioRenderClient*>(m_renderClient)->GetBuffer(m_bufferFrameCount, &data);
         if (FAILED(hr)) {
-            std::cerr << "[WASAPI Exclusive] GetBuffer failed: " << HResultToString(hr) << std::endl;
             m_statistics.underrunCount++;
+            if (m_telemetry) {
+                m_telemetry->incrementXruns();
+                m_telemetry->incrementUnderruns();
+            }
 
             // Zero user buffer to prevent stale data on next successful callback
             std::fill(userBuffer.begin(), userBuffer.end(), 0.0f);
@@ -980,9 +1050,6 @@ void WASAPIExclusiveDriver::audioThreadProc() {
 
         // Release buffer
         hr = reinterpret_cast<IAudioRenderClient*>(m_renderClient)->ReleaseBuffer(m_bufferFrameCount, 0);
-        if (FAILED(hr)) {
-            std::cerr << "[WASAPI Exclusive] ReleaseBuffer failed" << std::endl;
-        }
 
         // Update statistics
         LARGE_INTEGER endTime;
@@ -990,6 +1057,17 @@ void WASAPIExclusiveDriver::audioThreadProc() {
         double callbackTimeUs =
             static_cast<double>(endTime.QuadPart - startTime.QuadPart) * 1000000.0 / static_cast<double>(m_perfFreq);
         updateStatistics(callbackTimeUs);
+
+        // Update telemetry (lock-free, RT-safe)
+        if (m_telemetry) {
+            uint64_t callbackNs = static_cast<uint64_t>(callbackTimeUs * 1000);
+            m_telemetry->updateLastCallbackNs(callbackNs);
+            m_telemetry->updateMaxCallbackNs(callbackNs);
+            m_telemetry->updateLastBufferFrames(m_bufferFrameCount);
+            if (m_actualSampleRate > 0) {
+                m_telemetry->updateLastSampleRate(m_actualSampleRate);
+            }
+        }
     }
 
     if (avrtHandle) {
@@ -1118,6 +1196,61 @@ std::vector<uint32_t> WASAPIExclusiveDriver::getSupportedExclusiveSampleRates(ui
     }
 
     return supportedRates;
+}
+
+// K-002: Hot-plug detection implementation
+void WASAPIExclusiveDriver::registerDeviceNotifier() {
+    if (m_deviceNotifier || !m_deviceEnumerator) {
+        return;
+    }
+
+    WASAPIExclusiveDeviceNotifier* notifier = new WASAPIExclusiveDeviceNotifier(this);
+    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)
+                     ->RegisterEndpointNotificationCallback(notifier);
+    if (SUCCEEDED(hr)) {
+        m_deviceNotifier = notifier;
+        Aestra::Log::info("[WASAPI Exclusive] Hot-plug detection registered");
+    } else {
+        Aestra::Log::warning("[WASAPI Exclusive] Failed to register hot-plug detection: " + HResultToString(hr));
+        notifier->Release();
+    }
+}
+
+void WASAPIExclusiveDriver::unregisterDeviceNotifier() {
+    if (!m_deviceNotifier || !m_deviceEnumerator) {
+        return;
+    }
+
+    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)
+                     ->UnregisterEndpointNotificationCallback(static_cast<IMMNotificationClient*>(m_deviceNotifier));
+    if (SUCCEEDED(hr)) {
+        Aestra::Log::info("[WASAPI Exclusive] Hot-plug detection unregistered");
+    }
+
+    static_cast<WASAPIExclusiveDeviceNotifier*>(m_deviceNotifier)->Release();
+    m_deviceNotifier = nullptr;
+}
+
+void WASAPIExclusiveDriver::onDeviceStateChanged(const std::string& deviceId, uint32_t newState) {
+    (void)deviceId;
+    (void)newState;
+    if (m_isRunning.load(std::memory_order_relaxed) && m_state == DriverState::STREAM_RUNNING) {
+        if (!m_device) {
+            Aestra::Log::error("[WASAPI Exclusive] Active device removed — triggering safety fallback");
+            if (m_telemetry) {
+                m_telemetry->incrementXruns();
+            }
+            if (m_errorCallback) {
+                m_errorCallback(DriverError::DEVICE_NOT_FOUND, "Active audio device was removed");
+            }
+        }
+    }
+}
+
+void WASAPIExclusiveDriver::onDefaultDeviceChanged(bool isOutput, const std::string& newDefaultId) {
+    (void)isOutput;
+    (void)newDefaultId;
+    Aestra::Log::info("[WASAPI Exclusive] Default output device changed");
 }
 
 } // namespace Audio

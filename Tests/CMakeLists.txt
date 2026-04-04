@@ -209,6 +209,16 @@ else()
     message(STATUS "AestraAudioSoakTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
 endif()
 
+# K-005: Driver-level Soak Test (runtime/device-dependent, exercises real audio path)
+add_executable(AestraAudioDriverSoakTest AestraAudio/AudioDriverSoakTest.cpp)
+target_link_libraries(AestraAudioDriverSoakTest PRIVATE AestraAudio AestraAudioCore AestraCore)
+if(AESTRA_ENABLE_RUNTIME_TESTS)
+    add_test(NAME AestraAudioDriverSoakTest COMMAND AestraAudioDriverSoakTest --duration-sec 60)
+    set_tests_properties(AestraAudioDriverSoakTest PROPERTIES LABELS "audio;runtime;soak;driver;long")
+else()
+    message(STATUS "AestraAudioDriverSoakTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+endif()
+
 # Performance Stress Test
 add_executable(AestraAudioPerformanceTest
     AestraAudio/PerformanceStressTest.cpp

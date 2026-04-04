@@ -277,6 +277,7 @@ All CI builds use `-DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENAB
 - Review automation output the same way you would review a human contribution
 - Use clang-format and clang-tidy before committing
 - Check existing components and patterns before introducing new ones
+- Preserve the `main` and `develop` branches — they must never be deleted
 
 ### DON'T
 
@@ -290,3 +291,4 @@ All CI builds use `-DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENAB
 - Override CodeRabbit findings without justification
 - Use hidden automation-only flows for feature work
 - Modify FreeType warning suppressions
+- Delete the `main` or `develop` branches under any circumstances
