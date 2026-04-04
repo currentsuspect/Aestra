@@ -52,6 +52,7 @@ private:
     std::atomic<uint32_t> m_bufferSize{0};
     DriverStatistics m_stats;
     std::string m_lastError;
+    struct AudioTelemetry* m_telemetry = nullptr; // RT-thread telemetry (atomic, lock-free)
 };
 
 } // namespace Audio
