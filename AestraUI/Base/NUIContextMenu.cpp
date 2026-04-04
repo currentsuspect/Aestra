@@ -130,30 +130,39 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible()) return false;
 
-    // CRITICAL: Use global bounds since event.position is in global/window coordinates
-    NUIRect globalBounds = getGlobalBounds();
-    
-    // Give priority to submenu
+    // Convert global event position to our local coordinate space
+    NUIPoint localPos = event.position;
+    NUIComponent* current = getParent();
+    while (current) {
+        const NUIRect& pb = current->getBounds();
+        localPos.x -= pb.x;
+        localPos.y -= pb.y;
+        current = current->getParent();
+    }
+
+    // Check if mouse is within our local bounds
+    if (!getBounds().contains(localPos)) {
+        return false;
+    }
+
+    // Give priority to submenu (convert global coords for submenu too)
     if (activeSubmenu_ && activeSubmenu_->isVisible())
     {
-        if (activeSubmenu_->onMouseEvent(event))
+        NUIMouseEvent submenuEvent = event;
+        submenuEvent.position = localPos;
+        if (activeSubmenu_->onMouseEvent(submenuEvent))
         {
             return true;
         }
     }
 
-    // Check if mouse is within our global bounds
-    if (!globalBounds.contains(event.position)) {
-        return false; // Not in our bounds, don't consume
-    }
-
-    int itemIndex = getItemAtPosition(event.position);
+    int itemIndex = getItemAtPosition(localPos);
 
     if (event.pressed && event.button == NUIMouseButton::Left)
     {
         pressedItemIndex_ = itemIndex;
         setDirty(true);
-        return true; // Consume the event
+        return true;
     }
     else if (event.released && event.button == NUIMouseButton::Left)
     {
@@ -163,9 +172,9 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
         }
         pressedItemIndex_ = -1;
         setDirty(true);
-        return true; // Consume the event
+        return true;
     }
-    else if (event.button == NUIMouseButton::None) // Mouse move
+    else if (event.button == NUIMouseButton::None)
     {
         if (itemIndex != hoveredItemIndex_)
         {
@@ -176,10 +185,10 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
             }
             setDirty(true);
         }
-        return true; // Consume the event
+        return true;
     }
 
-    return true; // If we're in bounds, consume all events to prevent click-through
+    return true;
 }
 
 bool NUIContextMenu::onKeyEvent(const NUIKeyEvent& event)
@@ -312,44 +321,28 @@ void NUIContextMenu::showAt(int x, int y)
     float menuWidth = getBounds().width;
     float menuHeight = getBounds().height;
     
-    // Smart positioning - near cursor but adjust if off-screen
-    float posX = x;
-    float posY = y;
+    float posX = static_cast<float>(x);
+    float posY = static_cast<float>(y);
     
-    // Get window bounds by traversing up to find the root parent
-    // This ensures submenus use the actual window bounds, not parent menu bounds
-    NUIRect windowBounds(0, 0, 1920, 1080);  // Larger default fallback
-    bool foundParent = false;
-    NUIComponent* current = getParent();
-    while (current) {
-        windowBounds = current->getBounds();
-        foundParent = true;
-        current = current->getParent();
-    }
-    
-    // Only apply clamping if we found valid parent bounds
-    if (foundParent && windowBounds.width > 0 && windowBounds.height > 0) {
-        float windowRight = windowBounds.x + windowBounds.width;
-        float windowBottom = windowBounds.y + windowBounds.height;
+    // Clamp against immediate parent's bounds in local coordinate space
+    if (NUIComponent* parent = getParent()) {
+        NUIRect parentBounds = parent->getBounds();
+        float parentRight = parentBounds.width;
+        float parentBottom = parentBounds.height;
         
-        // Check if menu would go off the right edge of the window - move it left
-        if (posX + menuWidth > windowRight) {
-            posX = windowRight - menuWidth - 10; // 10px margin from window edge
+        if (posX + menuWidth > parentRight) {
+            posX = parentRight - menuWidth - 10;
         }
-        
-        // Check if menu would go off the bottom edge of the window - move it up
-        if (posY + menuHeight > windowBottom) {
-            posY = windowBottom - menuHeight - 10; // 10px margin from window edge
+        if (posY + menuHeight > parentBottom) {
+            posY = parentBottom - menuHeight - 10;
         }
-        
-        // Ensure menu doesn't go off the left or top edges of the window
-        if (posX < windowBounds.x) posX = windowBounds.x + 10; // 10px margin from window edge
-        if (posY < windowBounds.y) posY = windowBounds.y + 10; // 10px margin from window edge
+        if (posX < 0) posX = 10;
+        if (posY < 0) posY = 10;
     }
     
     setPosition(posX, posY);
     isVisible_ = true;
-    hoveredItemIndex_ = 0; // Start with first item selected
+    hoveredItemIndex_ = 0;
     pressedItemIndex_ = -1;
     triggerShow();
     setDirty(true);
