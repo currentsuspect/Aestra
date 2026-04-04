@@ -1,5 +1,5 @@
 # Security Policy
-**Aestra Studios** – *Last Updated: 2026-03-29*
+**Aestra Studios** – *Last Updated: 2026-04-04*
 
 Thank you for helping keep **Aestra** safe and secure.
 
@@ -8,8 +8,10 @@ Thank you for helping keep **Aestra** safe and secure.
 ## 🧩 Supported Versions
 | Version | Supported |
 |----------|------------|
-| 1.x.x (current) | ✅ Active |
-| Older builds / betas | ⚠️ Best-effort only |
+| `0.x` public pre-beta line (current) | ✅ Active |
+| Older pre-release snapshots / untagged commits | ⚠️ Best-effort only |
+
+The public roadmap target is **v1 Beta in December 2026**. Until then, this repository should be treated as a pre-beta engineering line rather than a supported `1.x` release family.
 
 ---
 
