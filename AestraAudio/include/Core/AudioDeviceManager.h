@@ -4,9 +4,11 @@
 #include "../Drivers/AudioDriverTypes.h"
 #include "../Drivers/IAudioDriver.h"
 
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <thread>
 #include <vector>
 
 namespace Aestra {
@@ -266,6 +268,18 @@ public:
     void checkDriverHealth();
 
     /**
+     * @brief Start the automatic driver health monitoring thread.
+     * Called after a stream is opened successfully.
+     */
+    void startHealthMonitor();
+
+    /**
+     * @brief Stop the automatic driver health monitoring thread.
+     * Called when the stream is closed or the manager is shut down.
+     */
+    void stopHealthMonitor();
+
+    /**
      * @brief Force switch to the internal dummy driver (e.g. after a crash/disconnect).
      */
     bool switchToSafetyDriver();
@@ -306,6 +320,11 @@ private:
     uint32_t m_underrunThreshold = 10; // Underruns per minute
     uint64_t m_lastUnderrunCount = 0;
     std::chrono::steady_clock::time_point m_lastUnderrunCheck;
+
+    // K-002: Driver health monitoring thread
+    std::atomic<bool> m_healthMonitorRunning{false};
+    std::thread m_healthMonitorThread;
+    void healthMonitorLoop();
 
     // Helper methods
     bool tryDriver(IAudioDriver* driver, const AudioStreamConfig& config, AudioCallback callback, void* userData);
