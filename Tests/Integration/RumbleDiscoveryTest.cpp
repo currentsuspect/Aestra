@@ -15,7 +15,8 @@ int main() {
     auto& manager = PluginManager::getInstance();
 
     std::cout << "TEST: plugin manager initializes... ";
-    assert(manager.initialize());
+    bool initialized = manager.initialize();
+    assert(initialized);
     std::cout << "✅ PASS\n";
 
     std::cout << "TEST: rumble is discoverable by id... ";
@@ -41,8 +42,12 @@ int main() {
     std::cout << "TEST: createInstanceById works for rumble... ";
     auto instance = manager.createInstanceById("com.Aestrastudios.rumble");
     assert(instance != nullptr);
-    assert(instance->initialize(48000.0, 512));
-    instance->shutdown();
+    if (instance) {
+        bool instInitialized = instance->initialize(48000.0, 512);
+        assert(instInitialized);
+        instance->shutdown();
+        instance.reset(); // clear weak ptr references before manager drops factory
+    }
     std::cout << "✅ PASS\n";
 
     manager.shutdown();

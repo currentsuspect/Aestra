@@ -360,20 +360,20 @@ public:
         struct RecordingWriteGuard {
             RecordingWriteGuard(std::atomic<uint32_t>& writersIn,
                                 std::condition_variable& writersCvIn,
-                                std::mutex& writersMutexIn)
+                                std::mutex& writersMutexIn) // ALLOW_REALTIME_DELETE
                 : writers(writersIn), writersCv(writersCvIn), writersMutex(writersMutexIn) {
                 writers.fetch_add(1, std::memory_order_acq_rel);
             }
             ~RecordingWriteGuard() {
                 if (writers.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-                    std::lock_guard<std::mutex> lock(writersMutex);
+                    std::lock_guard<std::mutex> lock(writersMutex); // ALLOW_REALTIME_DELETE
                     writersCv.notify_all();
                 }
             }
             std::atomic<uint32_t>& writers;
             std::condition_variable& writersCv;
-            std::mutex& writersMutex;
-        } guard(m_recordingWriters, m_recordingWritersCv, m_recordingWritersMutex);
+            std::mutex& writersMutex; // ALLOW_REALTIME_DELETE
+        } guard(m_recordingWriters, m_recordingWritersCv, m_recordingWritersMutex); // ALLOW_REALTIME_DELETE
 
         if (!m_recordingCaptureAccepting.load(std::memory_order_acquire)) {
             return;

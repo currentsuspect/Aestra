@@ -128,6 +128,9 @@ void PluginManager::shutdown() {
     // Clear all active instances
     m_activeInstances.clear();
 
+    // Destroy the factory
+    m_factory.reset();
+
 #ifdef _WIN32
     // Uninitialize COM
     CoUninitialize();

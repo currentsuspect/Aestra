@@ -14,23 +14,6 @@
 using namespace Aestra::Audio;
 
 namespace {
-PluginInfo makeRumbleInfo() {
-    PluginInfo info;
-    info.id = "com.Aestrastudios.rumble";
-    info.name = "Aestra Rumble";
-    info.vendor = "Aestra Studios";
-    info.version = "0.1.0";
-    info.category = "Instrument";
-    info.format = PluginFormat::Internal;
-    info.type = PluginType::Instrument;
-    info.numAudioInputs = 0;
-    info.numAudioOutputs = 2;
-    info.hasMidiInput = true;
-    info.hasMidiOutput = false;
-    info.hasEditor = true;
-    return info;
-}
-
 struct BufferStats {
     float peak = 0.0f;
     double rms = 0.0;
@@ -61,18 +44,22 @@ int main() {
 
     auto& manager = PluginManager::getInstance();
     std::cout << "TEST: plugin manager initializes... ";
-    assert(manager.initialize());
+    bool initialized = manager.initialize();
+    assert(initialized);
     std::cout << "✅ PASS\n";
 
-    auto instance = manager.createInstance(makeRumbleInfo());
+    auto instance = manager.createInstanceById("com.Aestrastudios.rumble");
     std::cout << "TEST: manager creates internal rumble instance... ";
     assert(instance != nullptr);
     std::cout << "✅ PASS\n";
 
     std::cout << "TEST: instance initializes and activates... ";
-    assert(instance->initialize(48000.0, 256));
-    instance->activate();
-    assert(instance->isActive());
+    if (instance) {
+        bool instInitialized = instance->initialize(48000.0, 256);
+        assert(instInitialized);
+        instance->activate();
+        assert(instance->isActive());
+    }
     std::cout << "✅ PASS\n";
 
     instance->setParameter(0, 0.58f); // decay
@@ -136,8 +123,12 @@ int main() {
     std::cout << "  Peak: " << stats.peak << "\n";
     std::cout << "  RMS: " << stats.rms << "\n";
 
-    instance->deactivate();
-    instance->shutdown();
+    if (instance) {
+        instance->deactivate();
+        instance->shutdown();
+        instance.reset();
+    }
+
     manager.shutdown();
 
     std::cout << "\nRumble usage path test passed.\n";
