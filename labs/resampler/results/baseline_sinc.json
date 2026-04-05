@@ -1,0 +1,46 @@
+{
+  "benchmark": "AestraSincBenchmark",
+  "iterations": 3,
+  "algorithms": [
+    {
+      "algo_id": "cubic_4pt",
+      "name": "Cubic (4-point)",
+      "median_mframes_per_sec": 45.4788,
+      "mean_mframes_per_sec": 45.5991,
+      "best_mframes_per_sec": 45.3499,
+      "worst_mframes_per_sec": 45.9688,
+      "median_us_per_block": 5.6290,
+      "cv": 0.005847
+    },
+    {
+      "algo_id": "sinc8_8pt",
+      "name": "Sinc8 (8-point)",
+      "median_mframes_per_sec": 8.9006,
+      "mean_mframes_per_sec": 9.4467,
+      "best_mframes_per_sec": 8.6948,
+      "worst_mframes_per_sec": 10.7446,
+      "median_us_per_block": 28.7620,
+      "cv": 0.097558
+    },
+    {
+      "algo_id": "sinc64_orig",
+      "name": "Sinc64 (Original Opt)",
+      "median_mframes_per_sec": 1.3950,
+      "mean_mframes_per_sec": 1.3374,
+      "best_mframes_per_sec": 1.1772,
+      "worst_mframes_per_sec": 1.4401,
+      "median_us_per_block": 183.5150,
+      "cv": 0.085840
+    },
+    {
+      "algo_id": "sinc64_turbo",
+      "name": "Sinc64 TURBO (Multi-SIMD)",
+      "median_mframes_per_sec": 8.1453,
+      "mean_mframes_per_sec": 8.0163,
+      "best_mframes_per_sec": 7.6815,
+      "worst_mframes_per_sec": 8.2220,
+      "median_us_per_block": 31.4290,
+      "cv": 0.029790
+    }
+  ]
+}

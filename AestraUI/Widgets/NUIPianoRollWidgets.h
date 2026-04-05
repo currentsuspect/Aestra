@@ -142,6 +142,10 @@ public:
     void setGrid(std::shared_ptr<PianoRollGrid> grid);
     /** @brief Bind the note layer controlled by the toolbar tools. */
     void setNoteLayer(std::shared_ptr<PianoRollNoteLayer> notes); // To set tools directly
+    /** @brief Get the currently open context menu, if any. */
+    std::shared_ptr<NUIComponent> getActiveContextMenu() const { return m_activeContextMenu; }
+    /** @brief Close and remove the currently open context menu, if any. */
+    void dismissActiveContextMenu() { closeActiveContextMenu(); }
     
     // Callbacks provided by view or used internally
     // void setOnToolChanged... -> Now we might just call NoteLayer directly
@@ -165,7 +169,9 @@ private:
     std::weak_ptr<PianoRollGrid> grid_;
     std::weak_ptr<PianoRollNoteLayer> notes_;
     
-    std::shared_ptr<NUIContextMenu> m_activeContextMenu;
+    std::shared_ptr<NUIComponent> m_activeContextMenu;
+
+    void closeActiveContextMenu();
     
     void setupUI();
     void setActiveTool(GlobalTool tool);

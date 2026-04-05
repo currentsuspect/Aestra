@@ -63,6 +63,8 @@ int audioCallback(float* outputBuffer, const float* /*inputBuffer*/, uint32_t nF
  * @brief Measure filter frequency response at a given frequency
  */
 float measureResponse(Filter& filter, float testFreq) {
+    constexpr float kInputSineRms = 0.70710678118f;
+
     Oscillator osc(SAMPLE_RATE);
     osc.setFrequency(testFreq);
     osc.setWaveform(WaveformType::Sine);
@@ -81,7 +83,8 @@ float measureResponse(Filter& filter, float testFreq) {
         sumSquares += sample * sample;
     }
 
-    return std::sqrt(sumSquares / 1000.0f);
+    const float outputRms = std::sqrt(sumSquares / 1000.0f);
+    return outputRms / kInputSineRms;
 }
 
 /**
