@@ -104,22 +104,21 @@ public:
 
     // Get available space
     size_t available() const {
-        size_t write = writeIndex.load(std::memory_order_acquire);
-        size_t read = readIndex.load(std::memory_order_acquire);
-        if (write >= read) {
-            return Size - (write - read) - 1;
-        }
-        return read - write - 1;
+        return capacity() - size();
     }
 
     // Current number of elements queued (0..Size-1)
     size_t size() const noexcept {
         size_t write = writeIndex.load(std::memory_order_acquire);
         size_t read = readIndex.load(std::memory_order_acquire);
-        if (write >= read) {
-            return write - read;
+        if constexpr (kPowerOfTwo) {
+            return (write - read) & (Size - 1);
+        } else {
+            if (write >= read) {
+                return write - read;
+            }
+            return Size - (read - write);
         }
-        return Size - (read - write);
     }
 
     // Maximum usable capacity (one slot is reserved to disambiguate full/empty)
