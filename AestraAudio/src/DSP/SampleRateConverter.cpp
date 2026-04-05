@@ -410,8 +410,20 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
     // Process input samples — use incrementing pointer to avoid multiply per frame
     const float* inPtr = input;
     for (uint32_t inFrame = 0; inFrame < inputFrames; ++inFrame) {
-        // Push input frame into history
-        m_history.push(inPtr);
+        // Inline push for stereo (most common case) — eliminates function call
+        if (m_channels == 2) {
+            const uint32_t wp = m_history.writePos;
+            const uint32_t wp1 = wp + m_history.size;
+            const float l = inPtr[0];
+            const float r = inPtr[1];
+            m_history.data[0][wp] = l;
+            m_history.data[0][wp1] = l;
+            m_history.data[1][wp] = r;
+            m_history.data[1][wp1] = r;
+            m_history.writePos = (wp + 1) & (m_history.size - 1);
+        } else {
+            m_history.push(inPtr);
+        }
         inPtr += m_channels;
 
         // Logical "now" position in source stream (in samples)
