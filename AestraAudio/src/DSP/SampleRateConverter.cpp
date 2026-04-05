@@ -449,32 +449,59 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             float* out = output + outputFrames * m_channels;
 
             // Generate output for each channel — hoist SIMD dispatch outside the loop
+            // Fast path for stereo (most common case): unroll to 2 independent accumulators
+            if (m_channels == 2) {
+                const float* windowL = &m_history.data[0][windowIdx];
+                const float* windowR = &m_history.data[1][windowIdx];
 #ifdef AESTRA_HAS_AVX
-            if (useSIMD) {
-                for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                    out[ch] = dotProductAVX(&m_history.data[ch][windowIdx], coeffs, numTaps);
+                if (useSIMD) {
+                    out[0] = dotProductAVX(windowL, coeffs, numTaps);
+                    out[1] = dotProductAVX(windowR, coeffs, numTaps);
+                } else {
+                    out[0] = dotProductScalar(windowL, coeffs, numTaps);
+                    out[1] = dotProductScalar(windowR, coeffs, numTaps);
                 }
-            } else {
-                for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                    out[ch] = dotProductScalar(&m_history.data[ch][windowIdx], coeffs, numTaps);
-                }
-            }
 #elif defined(AESTRA_HAS_SSE)
-            if (useSIMD) {
-                for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                    out[ch] = dotProductSSE(&m_history.data[ch][windowIdx], coeffs, numTaps);
+                if (useSIMD) {
+                    out[0] = dotProductSSE(windowL, coeffs, numTaps);
+                    out[1] = dotProductSSE(windowR, coeffs, numTaps);
+                } else {
+                    out[0] = dotProductScalar(windowL, coeffs, numTaps);
+                    out[1] = dotProductScalar(windowR, coeffs, numTaps);
                 }
+#else
+                (void)useSIMD;
+                out[0] = dotProductScalar(windowL, coeffs, numTaps);
+                out[1] = dotProductScalar(windowR, coeffs, numTaps);
+#endif
             } else {
+#ifdef AESTRA_HAS_AVX
+                if (useSIMD) {
+                    for (uint32_t ch = 0; ch < m_channels; ++ch) {
+                        out[ch] = dotProductAVX(&m_history.data[ch][windowIdx], coeffs, numTaps);
+                    }
+                } else {
+                    for (uint32_t ch = 0; ch < m_channels; ++ch) {
+                        out[ch] = dotProductScalar(&m_history.data[ch][windowIdx], coeffs, numTaps);
+                    }
+                }
+#elif defined(AESTRA_HAS_SSE)
+                if (useSIMD) {
+                    for (uint32_t ch = 0; ch < m_channels; ++ch) {
+                        out[ch] = dotProductSSE(&m_history.data[ch][windowIdx], coeffs, numTaps);
+                    }
+                } else {
+                    for (uint32_t ch = 0; ch < m_channels; ++ch) {
+                        out[ch] = dotProductScalar(&m_history.data[ch][windowIdx], coeffs, numTaps);
+                    }
+                }
+#else
+                (void)useSIMD;
                 for (uint32_t ch = 0; ch < m_channels; ++ch) {
                     out[ch] = dotProductScalar(&m_history.data[ch][windowIdx], coeffs, numTaps);
                 }
-            }
-#else
-            (void)useSIMD;
-            for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                out[ch] = dotProductScalar(&m_history.data[ch][windowIdx], coeffs, numTaps);
-            }
 #endif
+            }
 
             ++outputFrames;
             nextOutputSrcPos += invRatio;
