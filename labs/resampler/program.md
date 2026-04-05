@@ -104,12 +104,23 @@ The eval runner (`labs/resampler/run_eval.sh`) emits a summary at `labs/resample
 3. **Algorithm optimization**: Only after steps 1–2 are solid, begin experimenting with the resampler implementation.
 4. **Iterate**: Each change runs through the eval harness. Accept or revert based on gates.
 
+## Git Rules
+
+- Start from a clean working tree.
+- Before each round, confirm there are no leftover changes (`git status --short`).
+- For a rejected or inconclusive round, discard all changes from that round using `git checkout -- .` so the tree returns exactly to the latest accepted commit.
+- For an accepted round, commit immediately.
+- Commit message format: `resampler-lab: accept round NN <short hypothesis>`
+- Do not amend unrelated commits.
+- Do not rewrite history during the session.
+- End the session with a clean working tree.
+
 ## Keep/Revert Discipline
 
 - Every change to the resampler implementation is tracked by git commit.
 - After each eval run, the decision status determines the next action:
-  - `accept`: commit stands, update baselines.
-  - `reject`: `git revert` the change, log the failure in `results/`.
-  - `inconclusive`: re-run once; if still inconclusive, revert and investigate.
-- Never accumulate rejected changes. Revert immediately.
+  - `accept`: commit stands, update baselines, move to next round.
+  - `reject`: `git checkout -- .` to discard all uncommitted changes, log the failure in `results/`.
+  - `inconclusive`: re-run once; if still inconclusive, `git checkout -- .` and investigate.
+- Never accumulate rejected changes. Discard immediately.
 - Baseline files are updated only on `accept`.
