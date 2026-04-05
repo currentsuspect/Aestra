@@ -36,6 +36,10 @@ if(AESTRA_BUILD_TESTS)
     # Threading Tests
     add_executable(ThreadingTests src/ThreadingTests.cpp)
     target_link_libraries(ThreadingTests PRIVATE AestraCore)
+
+    # Threading Benchmark (micro-benchmarks with latency/deadline gates)
+    add_executable(ThreadingBenchmark src/ThreadingBenchmark.cpp)
+    target_link_libraries(ThreadingBenchmark PRIVATE AestraCore)
     
     # File I/O Tests
     add_executable(FileTests src/FileTests.cpp)

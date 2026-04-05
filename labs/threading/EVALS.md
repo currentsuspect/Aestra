@@ -11,11 +11,12 @@ cmake -S . -B build-autoresearch \
   -DCMAKE_BUILD_TYPE=Release
 
 cmake --build build-autoresearch --target ThreadingTests --parallel 2
+cmake --build build-autoresearch --target ThreadingBenchmark --parallel 2
 ```
 
 ## Eval Lanes
 
-### Lane 1: Threading Tests
+### Lane 1: Threading Tests (Correctness)
 
 Runs 4 test cases:
 - Ring buffer basic operations (push/pop/full/empty)
@@ -25,32 +26,46 @@ Runs 4 test cases:
 
 **Gate**: HARD — exit code must be 0.
 
-## Advisory Status
+### Lane 2: Threading Benchmark (Performance)
 
-- No trusted throughput benchmark exists yet for this lab.
-- Do not claim performance regressions or wins until a dedicated, repeatable
-  benchmark harness is added.
+Runs 5 microbenchmarks via `ThreadingBenchmark`:
+
+| Benchmark | What it measures | Samples |
+|-----------|-----------------|---------|
+| Ring buffer latency | Single-threaded push+pop latency | 100K |
+| Ring buffer contention | Push latency under producer/consumer pressure | 100K |
+| ThreadPool dispatch | Enqueue → task start round-trip | 10K |
+| Barrier sync | Time for 4 threads to synchronize | 10K |
+| SpinLock contention | Lock+unlock latency under 4-thread contention | 50K |
+
+Each benchmark reports median, P95, P99, min, max, mean, stddev, XRUN count,
+and deadline miss count. XRUNs are operations exceeding 10× median latency.
+
+**Gate**: HARD — XRUN rate < 0.1% and deadline miss rate < 0.1% across all benchmarks.
 
 ## Hard Gates vs Advisory Gates
 
 | Gate | Type | Failure Action |
 |------|------|----------------|
 | ThreadingTests exit code | HARD | Reject + revert |
-| Build warnings | HARD | Reject + investigate |
+| ThreadingBenchmark XRUN/miss rate | HARD | Reject + investigate |
+| Build warnings in threading code | HARD | Reject + investigate |
 
 ## Baseline Policy
 
-- Current baseline is a passing `ThreadingTests` run plus its recorded repo
-  metadata in `summary.json`.
-- No numeric performance baseline is valid yet.
-- Do not create `baseline.json` until the lab has a real benchmark lane.
+- The benchmark captures a baseline JSON on the first clean pass.
+- Future rounds compare against this baseline; a > 20% regression on median
+  latency of any benchmark triggers a warning (advisory, not blocking).
+- XRUN rate > 0.1% or deadline miss rate > 0.1% is a hard gate failure.
 
 ## Noise Policy
 
-- Thread safety tests are inherently non-deterministic in timing.
-- The correctness assertions (sum verification, item count) are deterministic.
-- If a test fails intermittently, mark `inconclusive`, re-run once, and do not
-  accept any optimization claims from that round.
+- Thread safety tests are deterministic on correctness assertions.
+- Benchmarks on a non-realtime kernel will show OS scheduler jitter in the
+  P99 and tail latency. This is expected and tolerated by the 0.1% XRUN/miss
+  rate threshold.
+- If benchmark rates exceed the gate, mark `inconclusive`, re-run once, and
+  do not accept any optimization claims from that round.
 
 ## Acceptance Thresholds
 
@@ -58,3 +73,5 @@ Runs 4 test cases:
 |--------|-----------|
 | Test pass rate | 100% |
 | Build warnings | 0 new warnings |
+| XRUN rate (all benchmarks) | < 0.1% |
+| Deadline miss rate (all benchmarks) | < 0.1% |

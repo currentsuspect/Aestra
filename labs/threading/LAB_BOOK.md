@@ -42,5 +42,5 @@ labs/threading/
 
 - **Branch**: `develop`
 - **Last commit**: see `git log` for M003 round commits
-- **Baselines**: Passing `results/summary.json` from M003 round 20 (clean tree, all optimizations accepted)
-- **Known issues**: Benchmark lane does not exist yet, so this remains correctness-only; no trusted performance measurements available
+- **Baselines**: Passing `results/summary.json` + `results/baseline_benchmark.json` from M003 round 20 + benchmark lane
+- **Known issues**: Benchmarks run on non-realtime kernel — P99 tail latency reflects OS scheduler jitter, not primitive quality. XRUN rate threshold (0.1%) accounts for this.

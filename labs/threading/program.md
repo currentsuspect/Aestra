@@ -46,19 +46,21 @@ An autonomous agent may modify:
 | Gate | Target |
 |------|--------|
 | `ThreadingTests` | All test cases pass (exit code 0) |
-| Build | Compiles cleanly (no new warnings) |
+| `ThreadingBenchmark` | XRUN rate < 0.1%, deadline miss rate < 0.1% |
+| Build | Compiles cleanly (no new warnings in threading code) |
 
 ### Advisory Gates (tracked, non-blocking)
 
 | Gate | Target |
 |------|--------|
 | Dirty worktree | Logged as maintenance context, never treated as an optimization acceptance |
+| Median regression | > 20% regression on any benchmark median vs baseline is advisory only |
 
 ### Decision Status
 
 - **`accept`**: All hard gates pass.
 - **`reject`**: Any hard gate fails.
-- **`inconclusive`**: Build succeeded but tests could not run.
+- **`inconclusive`**: Build succeeded but tests/benchmarks could not run.
 
 ## Default Read Set
 
