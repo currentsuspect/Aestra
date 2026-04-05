@@ -1,5 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "WASAPIExclusiveDriver.h"
+#include "../../AestraCore/include/AestraLog.h"
+#include "../../include/Core/AudioTelemetry.h"
 
 // Windows-specific includes (only in .cpp file)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -910,8 +912,8 @@ void WASAPIExclusiveDriver::audioThreadProc() {
             if (!m_shouldStop) {
                 m_statistics.underrunCount++;
                 if (m_telemetry) {
-                    m_telemetry->incrementXruns();
-                    m_telemetry->incrementUnderruns();
+                    m_telemetry->xrunCount.fetch_add(1, std::memory_order_relaxed);
+                    m_telemetry->underrunCount.fetch_add(1, std::memory_order_relaxed);
                 }
 
                 // On timeout/underrun, try to recover by filling silence
@@ -940,8 +942,8 @@ void WASAPIExclusiveDriver::audioThreadProc() {
         if (FAILED(hr)) {
             m_statistics.underrunCount++;
             if (m_telemetry) {
-                m_telemetry->incrementXruns();
-                m_telemetry->incrementUnderruns();
+                m_telemetry->xrunCount.fetch_add(1, std::memory_order_relaxed);
+                m_telemetry->underrunCount.fetch_add(1, std::memory_order_relaxed);
             }
 
             // Zero user buffer to prevent stale data on next successful callback
@@ -1058,11 +1060,14 @@ void WASAPIExclusiveDriver::audioThreadProc() {
         // Update telemetry (lock-free, RT-safe)
         if (m_telemetry) {
             uint64_t callbackNs = static_cast<uint64_t>(callbackTimeUs * 1000);
-            m_telemetry->updateLastCallbackNs(callbackNs);
-            m_telemetry->updateMaxCallbackNs(callbackNs);
-            m_telemetry->updateLastBufferFrames(m_bufferFrameCount);
+            m_telemetry->lastCallbackNs.store(callbackNs, std::memory_order_relaxed);
+            uint64_t maxNs = m_telemetry->maxCallbackNs.load(std::memory_order_relaxed);
+            if (callbackNs > maxNs) {
+                m_telemetry->maxCallbackNs.store(callbackNs, std::memory_order_relaxed);
+            }
+            m_telemetry->lastBufferFrames.store(m_bufferFrameCount, std::memory_order_relaxed);
             if (m_actualSampleRate > 0) {
-                m_telemetry->updateLastSampleRate(m_actualSampleRate);
+                m_telemetry->lastSampleRate.store(m_actualSampleRate, std::memory_order_relaxed);
             }
         }
     }
@@ -1235,7 +1240,7 @@ void WASAPIExclusiveDriver::onDeviceStateChanged(const std::string& deviceId, ui
         if (!m_device) {
             Aestra::Log::error("[WASAPI Exclusive] Active device removed — triggering safety fallback");
             if (m_telemetry) {
-                m_telemetry->incrementXruns();
+                m_telemetry->xrunCount.fetch_add(1, std::memory_order_relaxed);
             }
             if (m_errorCallback) {
                 m_errorCallback(DriverError::DEVICE_NOT_FOUND, "Active audio device was removed");

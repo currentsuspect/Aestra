@@ -111,9 +111,12 @@ private:
     void* m_deviceNotifier = nullptr; // WASAPIExclusiveDeviceNotifier* (COM IMMNotificationClient)
     void registerDeviceNotifier();
     void unregisterDeviceNotifier();
+
+public:
     void onDeviceStateChanged(const std::string& deviceId, uint32_t newState);
     void onDefaultDeviceChanged(bool isOutput, const std::string& newDefaultId);
 
+private:
     // Format information
     void* m_waveFormat = nullptr; // WAVEFORMATEX* (opaque)
     uint32_t m_bufferFrameCount = 0;

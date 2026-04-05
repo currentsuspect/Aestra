@@ -2,6 +2,8 @@
 #include "WASAPISharedDriver.h"
 
 #include "DitherUtils.h"
+#include "../../AestraCore/include/AestraLog.h"
+#include "../../include/Core/AudioTelemetry.h"
 
 // Windows-specific includes (only in .cpp file)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -712,8 +714,8 @@ void WASAPISharedDriver::audioThreadProc() {
             if (!m_shouldStop) {
                 m_statistics.underrunCount++;
                 if (m_telemetry) {
-                    m_telemetry->incrementXruns();
-                    m_telemetry->incrementUnderruns();
+                    m_telemetry->xrunCount.fetch_add(1, std::memory_order_relaxed);
+                    m_telemetry->underrunCount.fetch_add(1, std::memory_order_relaxed);
                 }
             }
             continue;
@@ -745,8 +747,8 @@ void WASAPISharedDriver::audioThreadProc() {
         if (FAILED(hr)) {
             m_statistics.underrunCount++;
             if (m_telemetry) {
-                m_telemetry->incrementXruns();
-                m_telemetry->incrementUnderruns();
+                m_telemetry->xrunCount.fetch_add(1, std::memory_order_relaxed);
+                m_telemetry->underrunCount.fetch_add(1, std::memory_order_relaxed);
             }
             continue;
         }
@@ -841,11 +843,14 @@ void WASAPISharedDriver::audioThreadProc() {
         // Update telemetry (lock-free, RT-safe)
         if (m_telemetry) {
             uint64_t callbackNs = static_cast<uint64_t>(callbackTimeUs * 1000);
-            m_telemetry->updateLastCallbackNs(callbackNs);
-            m_telemetry->updateMaxCallbackNs(callbackNs);
-            m_telemetry->updateLastBufferFrames(availableFrames);
+            m_telemetry->lastCallbackNs.store(callbackNs, std::memory_order_relaxed);
+            uint64_t maxNs = m_telemetry->maxCallbackNs.load(std::memory_order_relaxed);
+            if (callbackNs > maxNs) {
+                m_telemetry->maxCallbackNs.store(callbackNs, std::memory_order_relaxed);
+            }
+            m_telemetry->lastBufferFrames.store(availableFrames, std::memory_order_relaxed);
             if (m_config.sampleRate > 0) {
-                m_telemetry->updateLastSampleRate(m_config.sampleRate);
+                m_telemetry->lastSampleRate.store(m_config.sampleRate, std::memory_order_relaxed);
             }
         }
     }
@@ -949,7 +954,7 @@ void WASAPISharedDriver::onDeviceStateChanged(const std::string& deviceId, uint3
         if (!m_device) {
             Aestra::Log::error("[WASAPI Shared] Active device removed — triggering safety fallback");
             if (m_telemetry) {
-                m_telemetry->incrementXruns();
+                m_telemetry->xrunCount.fetch_add(1, std::memory_order_relaxed);
             }
             // Notify via error callback if set
             if (m_errorCallback) {
