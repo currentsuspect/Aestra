@@ -35,19 +35,15 @@ labs/math/
 | Session | Date | Rounds | Accepted | Rejected | Notes |
 |---------|------|--------|----------|----------|-------|
 | M001 | 2026-04-05 | 0 | 0 | 0 | Initial scaffold: lab infrastructure created, known issues documented |
+| M002 | 2026-04-05 | 1 | 1 | 0 | Single loop: added distance/reflect/project/lerp/clamp free functions for Vector2/3/4; clamp shadowing gotcha fixed with explicit ternary; tests + benchmark green |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: math lab scaffold (not yet committed)
-- **Baselines**: None yet — first session will capture baseline
+- **Last commit**: see `git log` for M002 round commits
+- **Baselines**: Passing `results/summary.json` + `results/baseline_benchmark.json` from initial scaffold, confirmed by M002
 - **Known issues**:
-  - `map()` divides by zero when `inMax == inMin` → NaN
-  - `gainToDb(0.0f)` returns `-inf`; `gainToDb(-1.0f)` returns NaN
-  - No `operator==` on any vector or matrix type
-  - No `constexpr` on constructors or Matrix4x4 factories
-  - No `Matrix4x4::inverse()`, `transpose()`, `determinant()`
-  - No static constants: `Vector3::zero()`, `unitX()`, etc.
-  - MathTests.cpp uses relative include path `../include/AestraMath.h`
-  - ~290 of 308 lines of AestraMath.h are dead code (only `dbToGain` is consumed)
-  - No `Matrix4x4 * Vector3` homogeneous multiply
+  - `Matrix4x4` constructor not `constexpr` in C++17 (loop body in constructor — blocked until C++20)
+  - All vector/matrix types lack SIMD alignment (`alignas(16)`)
+  - `dbToGain` uses `std::exp` (~50-100 cycles) — could use polynomial approximation for hot paths
+  - ~290 lines of math are effectively dead code (only `dbToGain` consumed by other modules)

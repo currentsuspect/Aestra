@@ -443,6 +443,100 @@ struct Matrix4x4 {
 };
 
 // =============================================================================
+// Free Functions: Distance, Reflection, Projection, Interpolation
+// =============================================================================
+
+// Euclidean distance between two vectors
+[[nodiscard]] inline float distance(const Vector2& a, const Vector2& b) noexcept {
+    return (a - b).length();
+}
+[[nodiscard]] inline float distance(const Vector3& a, const Vector3& b) noexcept {
+    return (a - b).length();
+}
+[[nodiscard]] inline float distance(const Vector4& a, const Vector4& b) noexcept {
+    return (a - b).length();
+}
+
+// Reflect a vector off a surface with the given normal (normal must be normalized)
+[[nodiscard]] constexpr Vector2 reflect(const Vector2& v, const Vector2& n) noexcept {
+    return v - n * (2.0f * v.dot(n));
+}
+[[nodiscard]] constexpr Vector3 reflect(const Vector3& v, const Vector3& n) noexcept {
+    return v - n * (2.0f * v.dot(n));
+}
+[[nodiscard]] constexpr Vector4 reflect(const Vector4& v, const Vector4& n) noexcept {
+    return v - n * (2.0f * v.dot(n));
+}
+
+// Project vector `v` onto vector `onto`
+[[nodiscard]] constexpr Vector2 project(const Vector2& v, const Vector2& onto) noexcept {
+    float d = onto.dot(onto);
+    if (d == 0.0f) return Vector2::zero();
+    return onto * (v.dot(onto) / d);
+}
+[[nodiscard]] constexpr Vector3 project(const Vector3& v, const Vector3& onto) noexcept {
+    float d = onto.dot(onto);
+    if (d == 0.0f) return Vector3::zero();
+    return onto * (v.dot(onto) / d);
+}
+[[nodiscard]] constexpr Vector4 project(const Vector4& v, const Vector4& onto) noexcept {
+    float d = onto.dot(onto);
+    if (d == 0.0f) return Vector4::zero();
+    return onto * (v.dot(onto) / d);
+}
+
+// Linear interpolation for vectors
+[[nodiscard]] constexpr Vector2 lerp(const Vector2& a, const Vector2& b, float t) noexcept {
+    return a + (b - a) * t;
+}
+[[nodiscard]] constexpr Vector3 lerp(const Vector3& a, const Vector3& b, float t) noexcept {
+    return a + (b - a) * t;
+}
+[[nodiscard]] constexpr Vector4 lerp(const Vector4& a, const Vector4& b, float t) noexcept {
+    return a + (b - a) * t;
+}
+
+// Component-wise clamp for vectors
+[[nodiscard]] constexpr Vector2 clamp(const Vector2& v, const Vector2& minVal, const Vector2& maxVal) noexcept {
+    return Vector2(
+        v.x < minVal.x ? minVal.x : (v.x > maxVal.x ? maxVal.x : v.x),
+        v.y < minVal.y ? minVal.y : (v.y > maxVal.y ? maxVal.y : v.y));
+}
+[[nodiscard]] constexpr Vector3 clamp(const Vector3& v, const Vector3& minVal, const Vector3& maxVal) noexcept {
+    return Vector3(
+        v.x < minVal.x ? minVal.x : (v.x > maxVal.x ? maxVal.x : v.x),
+        v.y < minVal.y ? minVal.y : (v.y > maxVal.y ? maxVal.y : v.y),
+        v.z < minVal.z ? minVal.z : (v.z > maxVal.z ? maxVal.z : v.z));
+}
+[[nodiscard]] constexpr Vector4 clamp(const Vector4& v, const Vector4& minVal, const Vector4& maxVal) noexcept {
+    return Vector4(
+        v.x < minVal.x ? minVal.x : (v.x > maxVal.x ? maxVal.x : v.x),
+        v.y < minVal.y ? minVal.y : (v.y > maxVal.y ? maxVal.y : v.y),
+        v.z < minVal.z ? minVal.z : (v.z > maxVal.z ? maxVal.z : v.z),
+        v.w < minVal.w ? minVal.w : (v.w > maxVal.w ? maxVal.w : v.w));
+}
+
+// Scalar clamp for all components
+[[nodiscard]] constexpr Vector2 clamp(const Vector2& v, float minVal, float maxVal) noexcept {
+    return Vector2(
+        v.x < minVal ? minVal : (v.x > maxVal ? maxVal : v.x),
+        v.y < minVal ? minVal : (v.y > maxVal ? maxVal : v.y));
+}
+[[nodiscard]] constexpr Vector3 clamp(const Vector3& v, float minVal, float maxVal) noexcept {
+    return Vector3(
+        v.x < minVal ? minVal : (v.x > maxVal ? maxVal : v.x),
+        v.y < minVal ? minVal : (v.y > maxVal ? maxVal : v.y),
+        v.z < minVal ? minVal : (v.z > maxVal ? maxVal : v.z));
+}
+[[nodiscard]] constexpr Vector4 clamp(const Vector4& v, float minVal, float maxVal) noexcept {
+    return Vector4(
+        v.x < minVal ? minVal : (v.x > maxVal ? maxVal : v.x),
+        v.y < minVal ? minVal : (v.y > maxVal ? maxVal : v.y),
+        v.z < minVal ? minVal : (v.z > maxVal ? maxVal : v.z),
+        v.w < minVal ? minVal : (v.w > maxVal ? maxVal : v.w));
+}
+
+// =============================================================================
 // DSP Math Functions
 // =============================================================================
 

@@ -297,6 +297,52 @@ bool testDSPMath() {
 }
 
 // =============================================================================
+// Free Function Tests (distance, reflect, project, lerp, clamp for vectors)
+// =============================================================================
+bool testFreeFunctions() {
+    std::cout << "Testing free functions..." << std::endl;
+
+    // Distance
+    Vector2 a2(0.0f, 0.0f), b2(3.0f, 4.0f);
+    TEST_ASSERT(FLOAT_EQUAL(distance(a2, b2), 5.0f), "Vector2 distance");
+
+    Vector3 a3(0.0f, 0.0f, 0.0f), b3(1.0f, 2.0f, 2.0f);
+    TEST_ASSERT(FLOAT_EQUAL(distance(a3, b3), 3.0f), "Vector3 distance");
+
+    // Reflect: 45° vector off Y normal
+    Vector3 v45(1.0f, 1.0f, 0.0f);
+    Vector3 refl45 = reflect(v45, Vector3::unitY());
+    TEST_ASSERT(FLOAT_EQUAL(refl45.x, 1.0f) && FLOAT_EQUAL(refl45.y, -1.0f), "Reflect 45° off Y normal");
+
+    // Project
+    Vector3 vp(3.0f, 4.0f, 0.0f);
+    Vector3 proj = project(vp, Vector3::unitX());
+    TEST_ASSERT(proj == Vector3(3.0f, 0.0f, 0.0f), "Project onto X axis");
+
+    Vector3 projZero = project(vp, Vector3::zero());
+    TEST_ASSERT(projZero == Vector3::zero(), "Project onto zero vector returns zero");
+
+    // Vector lerp
+    Vector3 la(0.0f, 0.0f, 0.0f), lb(10.0f, 20.0f, 30.0f);
+    Vector3 lm = lerp(la, lb, 0.5f);
+    TEST_ASSERT(FLOAT_EQUAL(lm.x, 5.0f) && FLOAT_EQUAL(lm.y, 10.0f) && FLOAT_EQUAL(lm.z, 15.0f), "Vector3 lerp");
+    TEST_ASSERT(lerp(la, lb, 0.0f) == la, "Vector3 lerp t=0");
+    TEST_ASSERT(lerp(la, lb, 1.0f) == lb, "Vector3 lerp t=1");
+
+    // Vector clamp (component-wise)
+    Vector3 vc(5.0f, -3.0f, 15.0f);
+    Vector3 vclamped = clamp(vc, Vector3(0.0f, 0.0f, 0.0f), Vector3(10.0f, 10.0f, 10.0f));
+    TEST_ASSERT(vclamped == Vector3(5.0f, 0.0f, 10.0f), "Vector3 component-wise clamp");
+
+    // Scalar clamp for vectors
+    Vector3 vcs = clamp(vc, 0.0f, 10.0f);
+    TEST_ASSERT(vcs == Vector3(5.0f, 0.0f, 10.0f), "Vector3 scalar clamp");
+
+    std::cout << "  ✓ Free functions tests passed" << std::endl;
+    return true;
+}
+
+// =============================================================================
 // Constants Tests
 // =============================================================================
 bool testConstants() {
@@ -348,6 +394,7 @@ int main() {
     allPassed &= testVector4();
     allPassed &= testMatrix4x4();
     allPassed &= testDSPMath();
+    allPassed &= testFreeFunctions();
     allPassed &= testConstants();
     allPassed &= testApproxEqual();
 
