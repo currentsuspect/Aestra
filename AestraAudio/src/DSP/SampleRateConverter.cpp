@@ -120,6 +120,11 @@ float dotProductAVX(const float* a, const float* b, uint32_t n) noexcept {
 #endif
 
 // Scalar fallback dot product
+// Scalar dot product with SSE4.1 target for auto-vectorization
+// This enables the compiler to use SSE multiply-add instructions on x86
+#ifdef __x86_64__
+__attribute__((target("sse4.1")))
+#endif
 float dotProductScalar(const float* a, const float* b, uint32_t n) noexcept {
     float sum = 0.0f;
     for (uint32_t i = 0; i < n; ++i) {
