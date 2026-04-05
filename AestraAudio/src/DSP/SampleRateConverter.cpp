@@ -409,6 +409,8 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
 
     // Process input samples — use incrementing pointer to avoid multiply per frame
     const float* inPtr = input;
+    // Use incrementing output pointer to avoid multiply per output sample
+    float* outPtr = output;
     for (uint32_t inFrame = 0; inFrame < inputFrames; ++inFrame) {
         // Inline push for stereo (most common case) — eliminates function call
         if (m_channels == 2) {
@@ -469,8 +471,8 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             const uint32_t windowIdx = m_history.writePos +
                 ((intPos - halfTaps) & historySizeMask);
 
-            // Precompute output base pointer to avoid multiply per channel
-            float* out = output + outputFrames * m_channels;
+            // Precompute output base pointer — use incrementing pointer
+            float* out = outPtr;
 
             // Generate output for each channel — hoist SIMD dispatch outside the loop
             // Fast path for stereo (most common case): unroll to 2 independent accumulators
@@ -528,6 +530,7 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             }
 
             ++outputFrames;
+            outPtr += m_channels;
             nextOutputSrcPos += invRatio;
             srcNextDiff -= invRatio;
             historyPos += invRatio;
