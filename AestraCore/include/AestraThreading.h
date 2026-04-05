@@ -55,13 +55,19 @@ public:
 // Lock-Free Ring Buffer (Single Producer, Single Consumer)
 // =============================================================================
 template <typename T, size_t Size> class LockFreeRingBuffer {
+    static constexpr bool kPowerOfTwo = (Size > 0) && ((Size & (Size - 1)) == 0);
+
+    static constexpr size_t mask(size_t idx) noexcept {
+        return kPowerOfTwo ? (idx & (Size - 1)) : (idx % Size);
+    }
+
 public:
     LockFreeRingBuffer() : writeIndex(0), readIndex(0) {}
 
     // Push element (returns false if buffer is full)
     bool push(const T& item) {
         size_t currentWrite = writeIndex.load(std::memory_order_relaxed);
-        size_t nextWrite = (currentWrite + 1) % Size;
+        size_t nextWrite = mask(currentWrite + 1);
 
         if (nextWrite == readIndex.load(std::memory_order_acquire)) {
             return false; // Buffer full
@@ -81,7 +87,7 @@ public:
         }
 
         item = buffer[currentRead];
-        readIndex.store((currentRead + 1) % Size, std::memory_order_release);
+        readIndex.store(mask(currentRead + 1), std::memory_order_release);
         return true;
     }
 
@@ -92,7 +98,7 @@ public:
 
     // Check if buffer is full
     bool isFull() const {
-        size_t nextWrite = (writeIndex.load(std::memory_order_acquire) + 1) % Size;
+        size_t nextWrite = mask(writeIndex.load(std::memory_order_acquire) + 1);
         return nextWrite == readIndex.load(std::memory_order_acquire);
     }
 
