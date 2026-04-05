@@ -97,6 +97,47 @@ All eval runs must produce a JSON file at `labs/resampler/results/run_<timestamp
 
 The eval runner (`labs/resampler/run_eval.sh`) emits a summary at `labs/resampler/results/summary.json`.
 
+## Default Read Set
+
+When starting a new session, read **only** these files:
+
+1. `program.md` — this file (rules, scope, gates)
+2. `EVALS.md` — build commands, eval lanes, thresholds
+3. `LAB_BOOK.md` — session summaries, finding pointers
+4. `findings/invariants.md` — things that must never break
+
+**Do NOT** load full session history by default. Only read session logs
+(`sessions/*.md`) or findings files (`findings/*.md`) when the current
+work makes them relevant. Use `LAB_BOOK.md` as the entry point for
+selective retrieval.
+
+## Session-End Reporting
+
+At the end of every session:
+
+1. Write a session log to `sessions/<date>_session_<NNN>.md` with:
+   - Round-by-round summary (hypothesis, result, notes)
+   - Key observations
+   - Files modified
+2. Update findings files with durable knowledge:
+   - `findings/accepted_patterns.md` — new optimizations that worked
+   - `findings/rejected_patterns.md` — new failures and why
+   - `findings/invariants.md` — new invariants discovered
+   - `findings/bottlenecks.md` — updated performance characteristics
+3. Update `LAB_BOOK.md` session summary table.
+4. Commit all lab-book changes as a single commit:
+   `resampler-lab: update lab-book after session NNN`
+5. Verify clean working tree.
+
+## Lab-Book Update Discipline
+
+- Write findings, not hype. Only record what was actually observed.
+- Do not invent metrics beyond what the eval runner reports.
+- Accepted patterns must include: where, what, why it works, round number.
+- Rejected patterns must include: round, what was tried, why it failed, lesson.
+- Invariants must be testable — if it can't be checked by a gate, it's not an invariant.
+- Bottlenecks should reference the actual code location and current state.
+
 ## Research Order
 
 1. **Benchmark observability** (this phase): Add `--json`, `--iterations N`, stable case IDs, median/mean/best/worst metrics to `ResamplerBenchmark` and `AestraSincBenchmark`. Get the eval runner working end-to-end.
