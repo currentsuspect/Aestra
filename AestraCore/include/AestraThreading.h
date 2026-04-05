@@ -143,9 +143,9 @@ public:
                     std::function<void()> task;
                     {
                         std::unique_lock<std::mutex> lock(queueMutex);
-                        condition.wait(lock, [this] { return stop || !tasks.empty(); });
+                        condition.wait(lock, [this] { return stop.load(std::memory_order_acquire) || !tasks.empty(); });
 
-                        if (stop && tasks.empty()) {
+                        if (stop.load(std::memory_order_acquire) && tasks.empty()) {
                             return;
                         }
 
@@ -166,10 +166,7 @@ public:
     }
 
     ~ThreadPool() {
-        {
-            std::unique_lock<std::mutex> lock(queueMutex);
-            stop = true;
-        }
+        stop.store(true, std::memory_order_release);
         condition.notify_all();
         for (std::thread& worker : workers) {
             if (worker.joinable()) {
@@ -180,6 +177,7 @@ public:
 
     // Enqueue a task
     template <typename F> void enqueue(F&& task) {
+        if (stop.load(std::memory_order_acquire)) return;
         {
             std::unique_lock<std::mutex> lock(queueMutex);
             tasks.emplace(std::forward<F>(task));
@@ -195,7 +193,7 @@ private:
     std::queue<std::function<void()>> tasks;
     std::mutex queueMutex;
     std::condition_variable condition;
-    bool stop;
+    std::atomic<bool> stop;
 };
 
 // =============================================================================
