@@ -434,6 +434,10 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
         const double srcPosMinusHalfTaps = srcPosition - halfTapsD;
         const double srcPosMinusHistorySize = srcPosition - historySizeMinusHalfTaps;
 
+        // Track historyPos directly: starts at historySizeMinus1 - srcNextDiff,
+        // increases by invRatio each output sample iteration
+        double historyPos = historySizeMinus1 - srcNextDiff;
+
         // Generate output samples while we have enough history
         while (outputFrames < maxOutputFrames) {
             // If the next sample is ahead of our current history window (accounting for filter tail), wait.
@@ -445,10 +449,8 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             if (nextOutputSrcPos < srcPosMinusHistorySize) {
                 nextOutputSrcPos = srcPosMinusHalfTaps;
                 srcNextDiff = srcPosition - nextOutputSrcPos;
+                historyPos = historySizeMinus1 - srcNextDiff;
             }
-
-            // Calculate fractional position within history ring
-            const double historyPos = historySizeMinus1 - srcNextDiff;
 
             const uint32_t intPos = static_cast<uint32_t>(historyPos);
             const double fracPos = historyPos - static_cast<double>(intPos);
@@ -529,6 +531,7 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             ++outputFrames;
             nextOutputSrcPos += invRatio;
             srcNextDiff -= invRatio;
+            historyPos += invRatio;
         }
     }
 
