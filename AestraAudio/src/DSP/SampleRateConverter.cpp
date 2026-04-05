@@ -421,36 +421,39 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             const float* coeffs = bank->coeffs[phaseIndex];
             const int32_t samplePos0 = static_cast<int32_t>(intPos) - static_cast<int32_t>(halfTaps);
 
+            // Precompute output base pointer to avoid multiply per channel
+            float* out = output + outputFrames * m_channels;
+
             // Generate output for each channel — hoist SIMD dispatch outside the loop
 #ifdef AESTRA_HAS_AVX
             if (useSIMD) {
                 for (uint32_t ch = 0; ch < m_channels; ++ch) {
                     const float* window = m_history.getWindow(ch, samplePos0);
-                    output[outputFrames * m_channels + ch] = dotProductAVX(window, coeffs, numTaps);
+                    out[ch] = dotProductAVX(window, coeffs, numTaps);
                 }
             } else {
                 for (uint32_t ch = 0; ch < m_channels; ++ch) {
                     const float* window = m_history.getWindow(ch, samplePos0);
-                    output[outputFrames * m_channels + ch] = dotProductScalar(window, coeffs, numTaps);
+                    out[ch] = dotProductScalar(window, coeffs, numTaps);
                 }
             }
 #elif defined(AESTRA_HAS_SSE)
             if (useSIMD) {
                 for (uint32_t ch = 0; ch < m_channels; ++ch) {
                     const float* window = m_history.getWindow(ch, samplePos0);
-                    output[outputFrames * m_channels + ch] = dotProductSSE(window, coeffs, numTaps);
+                    out[ch] = dotProductSSE(window, coeffs, numTaps);
                 }
             } else {
                 for (uint32_t ch = 0; ch < m_channels; ++ch) {
                     const float* window = m_history.getWindow(ch, samplePos0);
-                    output[outputFrames * m_channels + ch] = dotProductScalar(window, coeffs, numTaps);
+                    out[ch] = dotProductScalar(window, coeffs, numTaps);
                 }
             }
 #else
             (void)useSIMD;
             for (uint32_t ch = 0; ch < m_channels; ++ch) {
                 const float* window = m_history.getWindow(ch, samplePos0);
-                output[outputFrames * m_channels + ch] = dotProductScalar(window, coeffs, numTaps);
+                out[ch] = dotProductScalar(window, coeffs, numTaps);
             }
 #endif
 
