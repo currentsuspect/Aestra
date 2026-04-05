@@ -417,29 +417,38 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             const float* coeffs = bank->coeffs[phaseIndex];
             const int32_t samplePos0 = static_cast<int32_t>(intPos) - static_cast<int32_t>(halfTaps);
 
-            // Generate output for each channel
+            // Generate output for each channel — hoist SIMD dispatch outside the loop
+#ifdef AESTRA_HAS_AVX
+            if (useSIMD) {
+                for (uint32_t ch = 0; ch < m_channels; ++ch) {
+                    const float* window = m_history.getWindow(ch, samplePos0);
+                    output[outputFrames * m_channels + ch] = dotProductAVX(window, coeffs, numTaps);
+                }
+            } else {
+                for (uint32_t ch = 0; ch < m_channels; ++ch) {
+                    const float* window = m_history.getWindow(ch, samplePos0);
+                    output[outputFrames * m_channels + ch] = dotProductScalar(window, coeffs, numTaps);
+                }
+            }
+#elif defined(AESTRA_HAS_SSE)
+            if (useSIMD) {
+                for (uint32_t ch = 0; ch < m_channels; ++ch) {
+                    const float* window = m_history.getWindow(ch, samplePos0);
+                    output[outputFrames * m_channels + ch] = dotProductSSE(window, coeffs, numTaps);
+                }
+            } else {
+                for (uint32_t ch = 0; ch < m_channels; ++ch) {
+                    const float* window = m_history.getWindow(ch, samplePos0);
+                    output[outputFrames * m_channels + ch] = dotProductScalar(window, coeffs, numTaps);
+                }
+            }
+#else
+            (void)useSIMD;
             for (uint32_t ch = 0; ch < m_channels; ++ch) {
                 const float* window = m_history.getWindow(ch, samplePos0);
-                float sum = 0.0f;
-
-#ifdef AESTRA_HAS_AVX
-                if (useSIMD) {
-                    sum = dotProductAVX(window, coeffs, numTaps);
-                } else {
-                    sum = dotProductScalar(window, coeffs, numTaps);
-                }
-#elif defined(AESTRA_HAS_SSE)
-                if (useSIMD) {
-                    sum = dotProductSSE(window, coeffs, numTaps);
-                } else {
-                    sum = dotProductScalar(window, coeffs, numTaps);
-                }
-#else
-                (void)useSIMD;
-                sum = dotProductScalar(window, coeffs, numTaps);
-#endif
-                output[outputFrames * m_channels + ch] = sum;
+                output[outputFrames * m_channels + ch] = dotProductScalar(window, coeffs, numTaps);
             }
+#endif
 
             ++outputFrames;
             m_nextOutputSrcPos += invRatio; // hoisted: was 1.0 / effectiveRatio
