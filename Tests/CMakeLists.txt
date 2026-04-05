@@ -241,6 +241,19 @@ else()
     message(STATUS "AestraWaveformLockTest built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
 endif()
 
+# Waveform Cache Correctness Test
+add_executable(AestraWaveformCacheTest
+    AestraAudio/WaveformCacheTest.cpp
+    ${CMAKE_SOURCE_DIR}/AestraAudio/src/IO/WaveformCache.cpp
+)
+target_link_libraries(AestraWaveformCacheTest PRIVATE AestraAudio AestraCore)
+if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
+    add_test(NAME AestraWaveformCacheTest COMMAND AestraWaveformCacheTest)
+    set_tests_properties(AestraWaveformCacheTest PROPERTIES LABELS "experimental;unstable")
+else()
+    message(STATUS "AestraWaveformCacheTest built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
+endif()
+
 # Atomic Save Test (self-contained filesystem atomic-write smoke test)
 add_executable(AestraAtomicSaveTest AestraAudio/AtomicSaveTest.cpp)
 target_link_libraries(AestraAtomicSaveTest PRIVATE AestraCore)
