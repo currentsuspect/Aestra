@@ -396,6 +396,7 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
     const double historySizeMinusHalfTaps = historySizeD - static_cast<double>(halfTaps);
     const double halfTapsD = static_cast<double>(halfTaps);
     const double polyPhaseScale = static_cast<double>(SRCConstants::POLYPHASE_PHASES);
+    const uint32_t historySizeMask = m_history.size - 1;
 
     // Hoist member variables into locals to reduce memory traffic in the hot loop
     double srcPosition = m_srcPosition;
@@ -440,12 +441,9 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             const int32_t samplePos0 = static_cast<int32_t>(intPos) - static_cast<int32_t>(halfTaps);
 
             // Inline window access: compute idx once, then use planar data[ch][idx]
-            // samplePos0 is in [-halfTaps, size-1-halfTaps], so & mask handles wrapping
-            const int32_t sizeMask = static_cast<int32_t>(m_history.size) - 1;
-            int32_t rel = samplePos0 & sizeMask;
-            if (rel < 0)
-                rel += static_cast<int32_t>(m_history.size);
-            const uint32_t windowIdx = m_history.writePos + static_cast<uint32_t>(rel);
+            // Casting to uint32_t before & ensures well-defined two's complement wrapping
+            const uint32_t windowIdx = m_history.writePos +
+                (static_cast<uint32_t>(samplePos0) & historySizeMask);
 
             // Precompute output base pointer to avoid multiply per channel
             float* out = output + outputFrames * m_channels;
