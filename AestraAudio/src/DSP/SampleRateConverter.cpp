@@ -381,6 +381,10 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
     const double halfTapsD = static_cast<double>(halfTaps);
     const double polyPhaseScale = static_cast<double>(SRCConstants::POLYPHASE_PHASES);
 
+    // Hoist member variables into locals to reduce memory traffic in the hot loop
+    double srcPosition = m_srcPosition;
+    double nextOutputSrcPos = m_nextOutputSrcPos;
+
     // Process input samples — use incrementing pointer to avoid multiply per frame
     const float* inPtr = input;
     for (uint32_t inFrame = 0; inFrame < inputFrames; ++inFrame) {
@@ -389,22 +393,22 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
         inPtr += m_channels;
 
         // Logical "now" position in source stream (in samples)
-        m_srcPosition += 1.0;
+        srcPosition += 1.0;
 
         // Generate output samples while we have enough history
         while (outputFrames < maxOutputFrames) {
             // If the next sample is ahead of our current history window (accounting for filter tail), wait.
-            if (m_nextOutputSrcPos > m_srcPosition - halfTapsD) {
+            if (nextOutputSrcPos > srcPosition - halfTapsD) {
                 break;
             }
 
             // Re-check: If next sample is WAY behind (seek?), reset it to a safe "current" position.
-            if (m_nextOutputSrcPos < m_srcPosition - historySizeMinusHalfTaps) {
-                m_nextOutputSrcPos = m_srcPosition - halfTapsD;
+            if (nextOutputSrcPos < srcPosition - historySizeMinusHalfTaps) {
+                nextOutputSrcPos = srcPosition - halfTapsD;
             }
 
             // Calculate fractional position within history ring
-            const double historyPos = historySizeMinus1 - (m_srcPosition - m_nextOutputSrcPos);
+            const double historyPos = historySizeMinus1 - (srcPosition - nextOutputSrcPos);
 
             const uint32_t intPos = static_cast<uint32_t>(historyPos);
             const double fracPos = historyPos - static_cast<double>(intPos);
@@ -459,9 +463,13 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
 #endif
 
             ++outputFrames;
-            m_nextOutputSrcPos += invRatio; // hoisted: was 1.0 / effectiveRatio
+            nextOutputSrcPos += invRatio;
         }
     }
+
+    // Write back hoisted locals to member variables
+    m_srcPosition = srcPosition;
+    m_nextOutputSrcPos = nextOutputSrcPos;
 
     return outputFrames;
 }
