@@ -2,6 +2,7 @@
 #pragma once
 
 #include <atomic>
+#include <cassert>
 #include <condition_variable>
 #include <functional>
 #include <memory>
@@ -217,8 +218,11 @@ class Barrier {
 public:
     explicit Barrier(int count) : counter(count) {}
 
-    // Reset barrier for N expected signals
-    void reset(int count) { counter.store(count, std::memory_order_release); }
+    // Reset barrier for N expected signals (previous batch must be complete)
+    void reset(int count) {
+        assert(counter.load(std::memory_order_relaxed) == 0 && "Barrier reset while previous batch still in progress");
+        counter.store(count, std::memory_order_release);
+    }
 
     // Signal completion of one task
     void signal() { counter.fetch_sub(1, std::memory_order_acq_rel); }
