@@ -421,6 +421,14 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             const float* coeffs = bank->coeffs[phaseIndex];
             const int32_t samplePos0 = static_cast<int32_t>(intPos) - static_cast<int32_t>(halfTaps);
 
+            // Inline window access: compute idx once, then use planar data[ch][idx]
+            // samplePos0 is in [-halfTaps, size-1-halfTaps], so & mask handles wrapping
+            const int32_t sizeMask = static_cast<int32_t>(m_history.size) - 1;
+            int32_t rel = samplePos0 & sizeMask;
+            if (rel < 0)
+                rel += static_cast<int32_t>(m_history.size);
+            const uint32_t windowIdx = m_history.writePos + static_cast<uint32_t>(rel);
+
             // Precompute output base pointer to avoid multiply per channel
             float* out = output + outputFrames * m_channels;
 
@@ -428,32 +436,27 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
 #ifdef AESTRA_HAS_AVX
             if (useSIMD) {
                 for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                    const float* window = m_history.getWindow(ch, samplePos0);
-                    out[ch] = dotProductAVX(window, coeffs, numTaps);
+                    out[ch] = dotProductAVX(&m_history.data[ch][windowIdx], coeffs, numTaps);
                 }
             } else {
                 for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                    const float* window = m_history.getWindow(ch, samplePos0);
-                    out[ch] = dotProductScalar(window, coeffs, numTaps);
+                    out[ch] = dotProductScalar(&m_history.data[ch][windowIdx], coeffs, numTaps);
                 }
             }
 #elif defined(AESTRA_HAS_SSE)
             if (useSIMD) {
                 for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                    const float* window = m_history.getWindow(ch, samplePos0);
-                    out[ch] = dotProductSSE(window, coeffs, numTaps);
+                    out[ch] = dotProductSSE(&m_history.data[ch][windowIdx], coeffs, numTaps);
                 }
             } else {
                 for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                    const float* window = m_history.getWindow(ch, samplePos0);
-                    out[ch] = dotProductScalar(window, coeffs, numTaps);
+                    out[ch] = dotProductScalar(&m_history.data[ch][windowIdx], coeffs, numTaps);
                 }
             }
 #else
             (void)useSIMD;
             for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                const float* window = m_history.getWindow(ch, samplePos0);
-                out[ch] = dotProductScalar(window, coeffs, numTaps);
+                out[ch] = dotProductScalar(&m_history.data[ch][windowIdx], coeffs, numTaps);
             }
 #endif
 
