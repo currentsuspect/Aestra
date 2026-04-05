@@ -386,7 +386,11 @@ public:
     void lock() {
         while (flag.exchange(true, std::memory_order_acquire)) {
             while (flag.load(std::memory_order_relaxed)) {
-                // Spin with cheap loads until lock appears available
+#ifdef __x86_64__
+                __builtin_ia32_pause();
+#elif defined(__aarch64__)
+                asm volatile("yield" ::: "memory");
+#endif
             }
         }
     }
