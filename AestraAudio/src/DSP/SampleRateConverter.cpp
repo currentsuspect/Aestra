@@ -127,6 +127,9 @@ __attribute__((target("sse4.1")))
 #endif
 float dotProductScalar(const float* a, const float* b, uint32_t n) noexcept {
     float sum = 0.0f;
+#ifdef __GNUC__
+#pragma GCC ivdep
+#endif
     for (uint32_t i = 0; i < n; ++i) {
         sum += a[i] * b[i];
     }
