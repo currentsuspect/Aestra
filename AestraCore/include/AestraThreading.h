@@ -170,7 +170,10 @@ public:
     }
 
     ~ThreadPool() {
-        stop.store(true, std::memory_order_release);
+        {
+            std::unique_lock<std::mutex> lock(queueMutex);
+            stop.store(true, std::memory_order_release);
+        }
         condition.notify_all();
         for (std::thread& worker : workers) {
             if (worker.joinable()) {
@@ -184,6 +187,8 @@ public:
         if (stop.load(std::memory_order_acquire)) return;
         {
             std::unique_lock<std::mutex> lock(queueMutex);
+            // Re-check stop under lock to prevent race with destructor
+            if (stop.load(std::memory_order_acquire)) return;
             tasks.emplace(std::forward<F>(task));
         }
         condition.notify_one();
