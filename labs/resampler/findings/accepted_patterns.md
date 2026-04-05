@@ -83,4 +83,50 @@ on x86_64 (all CPUs since ~2007).
 **What**: `#pragma GCC ivdep` before the loop.
 **Why it works**: Tells the compiler there are no loop-carried dependencies,
 enabling more aggressive vectorization and unrolling.
-**Round**: 16
+**Round**: 16 (session 001)
+
+## Explicit Loop Unrolling for Dot Product
+
+**Where**: `dotProductScalar()`
+**What**: Unroll by 8 with remainder handling, replacing the simple loop.
+**Why it works**: Gives the compiler known iteration count patterns for better
+register allocation and instruction scheduling. Works well with SSE4.1 target.
+**Round**: 01 (session 002)
+
+## Dead Branch Removal in Window Access
+
+**Where**: `process()` inner loop, window index computation
+**What**: Removed `if (rel < 0) rel += size` after `samplePos0 & sizeMask`.
+**Why it works**: Bitwise AND with a power-of-2 mask never produces negative
+values in two's complement. The branch was dead code left over from the original
+`getWindow()` which used `%` (can return negative for negative operands).
+**Round**: 02 (session 002)
+
+## Stereo Fast Path (Channel Loop Unroll)
+
+**Where**: `process()` inner loop, channel iteration
+**What**: Added `if (m_channels == 2)` fast path with two independent dot
+product calls instead of a loop.
+**Why it works**: All benchmarks use 2 channels. Unrolling to two independent
+accumulators lets the CPU schedule both dot products in parallel with no loop
+overhead.
+**Round**: 03 (session 002)
+
+## `__restrict__` on Dot Product Parameters
+
+**Where**: `dotProductScalar()` signature
+**What**: Added `__restrict__` to both `a` and `b` pointer parameters.
+**Why it works**: Documents non-aliasing intent and gives the compiler permission
+to vectorize more aggressively without proving independence. Marginal gain on
+top of ivdep + unroll, but zero cost.
+**Round**: 04 (session 002)
+
+## Hoist Per-Frame Double Subtractions
+
+**Where**: `process()` — output sample loop
+**What**: Hoist `srcPosition - halfTapsD` and `srcPosition - historySizeMinusHalfTaps`
+into locals before the output loop (constant per input frame).
+**Why it works**: Eliminates redundant double subtractions per output sample.
+Significant for upsampling cases where many output samples are generated per
+input frame.
+**Round**: 05 (session 002)

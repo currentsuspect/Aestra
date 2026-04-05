@@ -62,11 +62,12 @@ When a future agent needs context:
 
 | Session | Date | Rounds | Accepted | Rejected | Notes |
 |---------|------|--------|----------|----------|-------|
-| 001 | 2026-04-05 | 16 | 15 | 1 | Hot-path optimization. See `sessions/2026-04-05_session_001.md` |
+| 001 | 2026-04-05 AM | 16 | 15 | 1 | Hot-path optimization. See `sessions/2026-04-05_session_001.md` |
+| 002 | 2026-04-05 PM | 5 | 5 | 0 | Continued hot-path: dot product unroll, stereo fast path, restrict, hoisting. See `sessions/2026-04-05_session_002.md` |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: `resampler-lab: accept round 16 add pragma GCC ivdep to scalar dot product loop`
-- **Baselines**: `results/baseline_resampler.json`, `results/baseline_sinc.json`
+- **Last commit**: `resampler-lab: accept round 05 hoist per-frame double subtractions out of output loop`
+- **Baselines**: `results/baseline_resampler.json`, `results/baseline_sinc.json` (from session 001, may need refresh)
 - **Known issues**: High machine variance (CV > 5% on many cases). Baselines should be refreshed on a quieter machine.
