@@ -69,7 +69,7 @@ public:
         size_t currentWrite = writeIndex.load(std::memory_order_relaxed);
         size_t nextWrite = mask(currentWrite + 1);
 
-        if (nextWrite == readIndex.load(std::memory_order_acquire)) {
+        if (nextWrite == readIndex.load(std::memory_order_acquire)) [[unlikely]] {
             return false; // Buffer full
         }
 
@@ -82,7 +82,7 @@ public:
     [[nodiscard]] bool pop(T& item) {
         size_t currentRead = readIndex.load(std::memory_order_relaxed);
 
-        if (currentRead == writeIndex.load(std::memory_order_acquire)) {
+        if (currentRead == writeIndex.load(std::memory_order_acquire)) [[unlikely]] {
             return false; // Buffer empty
         }
 
