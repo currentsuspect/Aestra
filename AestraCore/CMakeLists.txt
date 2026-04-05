@@ -32,6 +32,12 @@ if(AESTRA_BUILD_TESTS)
     # Math Tests
     add_executable(MathTests src/MathTests.cpp)
     target_link_libraries(MathTests PRIVATE AestraCore)
+    target_include_directories(MathTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+    # Math Benchmark (micro-benchmarks with latency/deadline gates)
+    add_executable(MathBenchmark src/MathBenchmark.cpp)
+    target_link_libraries(MathBenchmark PRIVATE AestraCore)
+    target_include_directories(MathBenchmark PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
     
     # Threading Tests
     add_executable(ThreadingTests src/ThreadingTests.cpp)

@@ -1,5 +1,5 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-#include "../include/AestraMath.h"
+#include <AestraMath.h>
 
 #include <cassert>
 #include <cmath>
@@ -27,6 +27,12 @@ bool testVector2() {
     Vector2 v1(3.0f, 4.0f);
     TEST_ASSERT(v1.x == 3.0f && v1.y == 4.0f, "Vector2 construction");
 
+    // Static constants
+    TEST_ASSERT(Vector2::zero() == Vector2(0.0f, 0.0f), "Vector2::zero");
+    TEST_ASSERT(Vector2::one() == Vector2(1.0f, 1.0f), "Vector2::one");
+    TEST_ASSERT(Vector2::unitX() == Vector2(1.0f, 0.0f), "Vector2::unitX");
+    TEST_ASSERT(Vector2::unitY() == Vector2(0.0f, 1.0f), "Vector2::unitY");
+
     // Addition
     Vector2 v2(1.0f, 2.0f);
     Vector2 v3 = v1 + v2;
@@ -40,6 +46,10 @@ bool testVector2() {
     Vector2 v5 = v1 * 2.0f;
     TEST_ASSERT(v5.x == 6.0f && v5.y == 8.0f, "Vector2 scalar multiplication");
 
+    // Scalar multiplication (commutative)
+    Vector2 v5b = 2.0f * v1;
+    TEST_ASSERT(v5b == v5, "Vector2 scalar*vector commutative");
+
     // Dot product
     float dot = v1.dot(v2);
     TEST_ASSERT(dot == 11.0f, "Vector2 dot product");
@@ -52,7 +62,13 @@ bool testVector2() {
     Vector2 v6 = v1.normalized();
     TEST_ASSERT(FLOAT_EQUAL(v6.length(), 1.0f), "Vector2 normalization");
 
-    std::cout << "  âœ“ Vector2 tests passed" << std::endl;
+    // Operator== and !=
+    Vector2 v7(3.0f, 4.0f);
+    TEST_ASSERT(v1 == v7, "Vector2 equality");
+    TEST_ASSERT(!(v1 != v7), "Vector2 inequality negation");
+    TEST_ASSERT(v1 != v2, "Vector2 non-equality");
+
+    std::cout << "  ✓ Vector2 tests passed" << std::endl;
     return true;
 }
 
@@ -66,6 +82,12 @@ bool testVector3() {
     Vector3 v1(1.0f, 2.0f, 3.0f);
     TEST_ASSERT(v1.x == 1.0f && v1.y == 2.0f && v1.z == 3.0f, "Vector3 construction");
 
+    // Static constants
+    TEST_ASSERT(Vector3::zero() == Vector3(0.0f, 0.0f, 0.0f), "Vector3::zero");
+    TEST_ASSERT(Vector3::unitX() == Vector3(1.0f, 0.0f, 0.0f), "Vector3::unitX");
+    TEST_ASSERT(Vector3::unitY() == Vector3(0.0f, 1.0f, 0.0f), "Vector3::unitY");
+    TEST_ASSERT(Vector3::unitZ() == Vector3(0.0f, 0.0f, 1.0f), "Vector3::unitZ");
+
     // Addition
     Vector3 v2(4.0f, 5.0f, 6.0f);
     Vector3 v3 = v1 + v2;
@@ -75,12 +97,11 @@ bool testVector3() {
     float dot = v1.dot(v2);
     TEST_ASSERT(dot == 32.0f, "Vector3 dot product");
 
-    // Cross product
+    // Cross product: X × Y = Z
     Vector3 v4(1.0f, 0.0f, 0.0f);
     Vector3 v5(0.0f, 1.0f, 0.0f);
     Vector3 cross = v4.cross(v5);
-    TEST_ASSERT(FLOAT_EQUAL(cross.x, 0.0f) && FLOAT_EQUAL(cross.y, 0.0f) && FLOAT_EQUAL(cross.z, 1.0f),
-                "Vector3 cross product");
+    TEST_ASSERT(cross == Vector3::unitZ(), "Vector3 cross product X×Y=Z");
 
     // Length
     Vector3 v6(3.0f, 4.0f, 0.0f);
@@ -91,7 +112,11 @@ bool testVector3() {
     Vector3 v7 = v6.normalized();
     TEST_ASSERT(FLOAT_EQUAL(v7.length(), 1.0f), "Vector3 normalization");
 
-    std::cout << "  âœ“ Vector3 tests passed" << std::endl;
+    // Operator== and !=
+    TEST_ASSERT(Vector3::one() == Vector3(1.0f, 1.0f, 1.0f), "Vector3 equality");
+    TEST_ASSERT(Vector3::unitX() != Vector3::unitY(), "Vector3 non-equality");
+
+    std::cout << "  ✓ Vector3 tests passed" << std::endl;
     return true;
 }
 
@@ -104,6 +129,10 @@ bool testVector4() {
     // Construction
     Vector4 v1(1.0f, 2.0f, 3.0f, 4.0f);
     TEST_ASSERT(v1.x == 1.0f && v1.y == 2.0f && v1.z == 3.0f && v1.w == 4.0f, "Vector4 construction");
+
+    // Static constants
+    TEST_ASSERT(Vector4::zero() == Vector4(0.0f, 0.0f, 0.0f, 0.0f), "Vector4::zero");
+    TEST_ASSERT(Vector4::unitW() == Vector4(0.0f, 0.0f, 0.0f, 1.0f), "Vector4::unitW");
 
     // Addition
     Vector4 v2(5.0f, 6.0f, 7.0f, 8.0f);
@@ -119,7 +148,15 @@ bool testVector4() {
     float len = v4.length();
     TEST_ASSERT(FLOAT_EQUAL(len, 3.0f), "Vector4 length");
 
-    std::cout << "  âœ“ Vector4 tests passed" << std::endl;
+    // Normalization
+    Vector4 v4n = v4.normalized();
+    TEST_ASSERT(FLOAT_EQUAL(v4n.length(), 1.0f), "Vector4 normalization");
+
+    // Operator== and !=
+    TEST_ASSERT(v1 == Vector4(1.0f, 2.0f, 3.0f, 4.0f), "Vector4 equality");
+    TEST_ASSERT(v1 != v2, "Vector4 non-equality");
+
+    std::cout << "  ✓ Vector4 tests passed" << std::endl;
     return true;
 }
 
@@ -150,7 +187,52 @@ bool testMatrix4x4() {
     Matrix4x4 result = trans * scale;
     TEST_ASSERT(result.m[0] == 2.0f && result.m[5] == 3.0f && result.m[10] == 4.0f, "Matrix4x4 multiplication");
 
-    std::cout << "  âœ“ Matrix4x4 tests passed" << std::endl;
+    // Identity preserves vectors
+    Vector4 testVec(1.5f, 2.5f, 3.5f, 1.0f);
+    Vector4 transformed = identity * testVec;
+    TEST_ASSERT(transformed == testVec, "Matrix4x4 identity preserves vector");
+
+    // Matrix * Vector3 (homogeneous)
+    Vector3 v3test(1.0f, 0.0f, 0.0f);
+    Vector3 v3result = trans * v3test;
+    TEST_ASSERT(FLOAT_EQUAL(v3result.x, 2.0f) && FLOAT_EQUAL(v3result.y, 2.0f) && FLOAT_EQUAL(v3result.z, 3.0f),
+                "Matrix4x4 * Vector3 homogeneous");
+
+    // Transpose
+    Matrix4x4 t = Matrix4x4::translation(1.0f, 2.0f, 3.0f);
+    Matrix4x4 tt = t.transposed();
+    TEST_ASSERT(FLOAT_EQUAL(tt.m[12], 0.0f) && FLOAT_EQUAL(tt.m[1], 0.0f), "Matrix4x4 transpose");
+    TEST_ASSERT(t == tt.transposed(), "Matrix4x4 double transpose = original");
+
+    // Determinant of identity is 1
+    float detIdentity = Matrix4x4::identity().determinant();
+    TEST_ASSERT(FLOAT_EQUAL(detIdentity, 1.0f), "Matrix4x4 identity determinant is 1");
+
+    // Determinant of scale matrix
+    Matrix4x4 s = Matrix4x4::scale(2.0f, 3.0f, 4.0f);
+    float detScale = s.determinant();
+    TEST_ASSERT(FLOAT_EQUAL(detScale, 24.0f), "Matrix4x4 scale determinant (2*3*4=24)");
+
+    // Inverse of identity is identity
+    Matrix4x4 invIdentity = Matrix4x4::identity().inverted();
+    TEST_ASSERT(invIdentity == Matrix4x4::identity(), "Matrix4x4 identity inverse");
+
+    // Inverse: M * M^-1 ≈ I
+    Matrix4x4 m = trans * scale;
+    Matrix4x4 mInv = m.inverted();
+    Matrix4x4 product = m * mInv;
+    TEST_ASSERT(product == Matrix4x4::identity(), "Matrix4x4 * inverse = identity");
+
+    // Singular matrix returns identity
+    Matrix4x4 singular = Matrix4x4::scale(0.0f, 1.0f, 1.0f);
+    Matrix4x4 singularInv = singular.inverted();
+    TEST_ASSERT(singularInv == Matrix4x4::identity(), "Matrix4x4 singular matrix inverse returns identity");
+
+    // Operator== and !=
+    TEST_ASSERT(identity == Matrix4x4::identity(), "Matrix4x4 equality");
+    TEST_ASSERT(trans != scale, "Matrix4x4 non-equality");
+
+    std::cout << "  ✓ Matrix4x4 tests passed" << std::endl;
     return true;
 }
 
@@ -162,21 +244,35 @@ bool testDSPMath() {
 
     // Lerp
     float l1 = lerp(0.0f, 10.0f, 0.5f);
-    TEST_ASSERT(FLOAT_EQUAL(l1, 5.0f), "lerp");
+    TEST_ASSERT(FLOAT_EQUAL(l1, 5.0f), "lerp midpoint");
+    TEST_ASSERT(FLOAT_EQUAL(lerp(0.0f, 10.0f, 0.0f), 0.0f), "lerp t=0");
+    TEST_ASSERT(FLOAT_EQUAL(lerp(0.0f, 10.0f, 1.0f), 10.0f), "lerp t=1");
 
     // Clamp
     float c1 = clamp(15.0f, 0.0f, 10.0f);
     TEST_ASSERT(FLOAT_EQUAL(c1, 10.0f), "clamp max");
     float c2 = clamp(-5.0f, 0.0f, 10.0f);
     TEST_ASSERT(FLOAT_EQUAL(c2, 0.0f), "clamp min");
+    float c3 = clamp(5.0f, 0.0f, 10.0f);
+    TEST_ASSERT(FLOAT_EQUAL(c3, 5.0f), "clamp in range");
 
     // Smoothstep
     float s1 = smoothstep(0.0f, 1.0f, 0.5f);
-    TEST_ASSERT(s1 > 0.4f && s1 < 0.6f, "smoothstep");
+    TEST_ASSERT(s1 > 0.4f && s1 < 0.6f, "smoothstep midpoint");
+    TEST_ASSERT(FLOAT_EQUAL(smoothstep(0.0f, 1.0f, 0.0f), 0.0f), "smoothstep edge0");
+    TEST_ASSERT(FLOAT_EQUAL(smoothstep(0.0f, 1.0f, 1.0f), 1.0f), "smoothstep edge1");
+    // Equal edges: should not produce NaN
+    float s2 = smoothstep(1.0f, 1.0f, 0.5f);
+    TEST_ASSERT(FLOAT_EQUAL(s2, 0.0f), "smoothstep equal edges: x < edge0 returns 0.0f");
+    float s3 = smoothstep(1.0f, 1.0f, 2.0f);
+    TEST_ASSERT(FLOAT_EQUAL(s3, 1.0f), "smoothstep equal edges: x >= edge0 returns 1.0f");
 
     // Map
     float m1 = map(5.0f, 0.0f, 10.0f, 0.0f, 100.0f);
     TEST_ASSERT(FLOAT_EQUAL(m1, 50.0f), "map");
+    // Div-by-zero guard
+    float m2 = map(5.0f, 10.0f, 10.0f, 0.0f, 100.0f);
+    TEST_ASSERT(FLOAT_EQUAL(m2, 0.0f), "map equal input ranges returns outMin");
 
     // DB conversion
     float gain = dbToGain(0.0f);
@@ -184,9 +280,59 @@ bool testDSPMath() {
     float db = gainToDb(1.0f);
     TEST_ASSERT(FLOAT_EQUAL(db, 0.0f), "gainToDb unity");
 
-    std::cout << "  âœ“ DSP Math tests passed" << std::endl;
+    // DB floor guards
+    float gainFloor = dbToGain(-90.0f);
+    TEST_ASSERT(FLOAT_EQUAL(gainFloor, 0.0f), "dbToGain -90dB = 0");
+    float gainBelow = dbToGain(-120.0f);
+    TEST_ASSERT(FLOAT_EQUAL(gainBelow, 0.0f), "dbToGain -120dB = 0");
+
+    // gainToDb floor guard (was producing -inf)
+    float dbZero = gainToDb(0.0f);
+    TEST_ASSERT(FLOAT_EQUAL(dbZero, -90.0f), "gainToDb 0.0f returns DB_FLOOR, not -inf");
+    float dbNeg = gainToDb(-1.0f);
+    TEST_ASSERT(FLOAT_EQUAL(dbNeg, -90.0f), "gainToDb -1.0f returns DB_FLOOR, not NaN");
+
+    std::cout << "  ✓ DSP Math tests passed" << std::endl;
     return true;
 }
+
+// =============================================================================
+// Constants Tests
+// =============================================================================
+bool testConstants() {
+    std::cout << "Testing constants..." << std::endl;
+
+    TEST_ASSERT(FLOAT_EQUAL(PI, 3.14159265358979323846f), "PI");
+    TEST_ASSERT(FLOAT_EQUAL(TWO_PI, 6.28318530717958647692f), "TWO_PI");
+    TEST_ASSERT(FLOAT_EQUAL(LN10_OVER_20, 0.11512925464970228420089957273422f), "LN10_OVER_20");
+    TEST_ASSERT(FLOAT_EQUAL(DB_FLOOR, -90.0f), "DB_FLOOR");
+
+    std::cout << "  ✓ Constants tests passed" << std::endl;
+    return true;
+}
+
+// =============================================================================
+// Approximate Equality Tests
+// =============================================================================
+bool testApproxEqual() {
+    std::cout << "Testing approxEqual..." << std::endl;
+
+    TEST_ASSERT(approxEqual(1.0f, 1.0f), "exact equality");
+    TEST_ASSERT(approxEqual(1.0f, 1.0000001f), "within default epsilon");
+    TEST_ASSERT(!approxEqual(1.0f, 1.1f), "outside default epsilon");
+    TEST_ASSERT(approxEqual(1.0f, 1.01f, 0.1f), "within custom epsilon");
+
+    std::cout << "  ✓ approxEqual tests passed" << std::endl;
+    return true;
+}
+
+// =============================================================================
+// constexpr Tests (compile-time verification)
+// =============================================================================
+static_assert(Vector2(1.0f, 2.0f).x == 1.0f, "constexpr Vector2 construction");
+static_assert(Vector3::unitZ().z == 1.0f, "constexpr Vector3::unitZ");
+static_assert(Vector4::zero().w == 0.0f, "constexpr Vector4::zero");
+static_assert(lerp(0.0f, 10.0f, 0.5f) == 5.0f, "constexpr lerp");
 
 // =============================================================================
 // Main Test Runner
@@ -202,12 +348,14 @@ int main() {
     allPassed &= testVector4();
     allPassed &= testMatrix4x4();
     allPassed &= testDSPMath();
+    allPassed &= testConstants();
+    allPassed &= testApproxEqual();
 
     std::cout << "\n==================================" << std::endl;
     if (allPassed) {
-        std::cout << "  âœ“ ALL TESTS PASSED" << std::endl;
+        std::cout << "  ✓ ALL TESTS PASSED" << std::endl;
     } else {
-        std::cout << "  âœ— SOME TESTS FAILED" << std::endl;
+        std::cout << "  ✗ SOME TESTS FAILED" << std::endl;
     }
     std::cout << "==================================" << std::endl;
 
