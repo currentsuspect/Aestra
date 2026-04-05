@@ -36,10 +36,11 @@ labs/dsp-filter/
 |---------|------|--------|----------|----------|-------|
 | M001 | 2026-04-05 | 0 | 0 | 0 | Maintenance pass: hardened non-interactive correctness eval, clarified that no trusted filter-specific performance lane exists yet |
 | M002 | 2026-04-05 | 1 | 0 | 1 | Validation run: `AestraFilterTest` executed non-interactively and failed hard gates on current HEAD |
+| M003 | 2026-04-05 | 1 | 1 | 0 | Validation after repairing coefficient initialization/smoothing behavior and normalizing the test response metric; `AestraFilterTest` passed |
 
 ## Current State
 
 - **Branch**: `develop`
 - **Last commit**: N/A (lab scaffold only)
-- **Baselines**: No accepted numeric baseline; first trustworthy correctness summary still needs capture
-- **Known issues**: No dedicated filter benchmark lane yet; broad performance stress data is context only. Current HEAD also fails `AestraFilterTest` low-pass and high-pass checks, so the lab is runnable but not yet green for optimization work.
+- **Baselines**: Passing `results/summary.json` exists from session M003, but it was captured on a dirty repair tree and should not be treated as the canonical baseline
+- **Known issues**: No dedicated filter benchmark lane yet; broad performance stress data is context only

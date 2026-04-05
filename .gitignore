@@ -148,6 +148,8 @@ AestraAudio/External/ASIOSDK/
 
 # AI tools
 .kiro/
+.codex
+.codex/
 .workflow
 
 # Installer outputs
