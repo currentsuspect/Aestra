@@ -385,10 +385,6 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
     for (uint32_t inFrame = 0; inFrame < inputFrames; ++inFrame) {
         // Push input frame into history
         m_history.push(input + inFrame * m_channels);
-        // Saturating increment — avoids std::min call in hot path
-        if (m_historyFilled < m_history.size) {
-            ++m_historyFilled;
-        }
 
         // Logical "now" position in source stream (in samples)
         m_srcPosition += 1.0;
