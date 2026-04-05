@@ -286,6 +286,7 @@ public:
 
     // Prepare a batch of tasks. Call from RT thread.
     void dispatch(uint32_t count, void* context, void** taskDataArray, TaskFunc func, Barrier* syncBarrier) {
+        assert(m_activeTasks.load(std::memory_order_relaxed) == 0 && "Dispatch while previous batch still active");
         m_taskFunc = func;
         m_context = context;
         m_taskData = taskDataArray;
