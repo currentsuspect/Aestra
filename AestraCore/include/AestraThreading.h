@@ -185,13 +185,17 @@ public:
     // Enqueue a task
     template <typename F> void enqueue(F&& task) {
         if (stop.load(std::memory_order_acquire)) return;
+        bool shouldNotify;
         {
             std::unique_lock<std::mutex> lock(queueMutex);
             // Re-check stop under lock to prevent race with destructor
             if (stop.load(std::memory_order_acquire)) return;
+            shouldNotify = tasks.empty();
             tasks.emplace(std::forward<F>(task));
         }
-        condition.notify_one();
+        if (shouldNotify) {
+            condition.notify_one();
+        }
     }
 
     // Get number of worker threads
