@@ -402,6 +402,11 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
     double srcPosition = m_srcPosition;
     double nextOutputSrcPos = m_nextOutputSrcPos;
 
+    // Track srcPosition - nextOutputSrcPos as a single variable.
+    // In the output loop, srcPosition is constant and nextOutputSrcPos increases
+    // by invRatio each iteration, so srcNextDiff decreases by invRatio.
+    double srcNextDiff = srcPosition - nextOutputSrcPos;
+
     // Process input samples — use incrementing pointer to avoid multiply per frame
     const float* inPtr = input;
     for (uint32_t inFrame = 0; inFrame < inputFrames; ++inFrame) {
@@ -411,6 +416,7 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
 
         // Logical "now" position in source stream (in samples)
         srcPosition += 1.0;
+        srcNextDiff = srcPosition - nextOutputSrcPos;
 
         // Hoist per-frame constants for the output loop
         const double srcPosMinusHalfTaps = srcPosition - halfTapsD;
@@ -426,10 +432,11 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             // Re-check: If next sample is WAY behind (seek?), reset it to a safe "current" position.
             if (nextOutputSrcPos < srcPosMinusHistorySize) {
                 nextOutputSrcPos = srcPosMinusHalfTaps;
+                srcNextDiff = srcPosition - nextOutputSrcPos;
             }
 
             // Calculate fractional position within history ring
-            const double historyPos = historySizeMinus1 - (srcPosition - nextOutputSrcPos);
+            const double historyPos = historySizeMinus1 - srcNextDiff;
 
             const uint32_t intPos = static_cast<uint32_t>(historyPos);
             const double fracPos = historyPos - static_cast<double>(intPos);
@@ -509,6 +516,7 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
 
             ++outputFrames;
             nextOutputSrcPos += invRatio;
+            srcNextDiff -= invRatio;
         }
     }
 
