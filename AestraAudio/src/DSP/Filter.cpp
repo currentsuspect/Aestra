@@ -238,44 +238,6 @@ void Filter::processBlock(float* samples, uint32_t numSamples) {
     }
 }
 
-void Filter::processBlockStereo(float* left, float* right, uint32_t numSamples) {
-    if (numSamples == 0)
-        return;
-
-    updateInternal();
-
-    const auto& rightCoeffs = m_stereoLinked ? m_coeffs[0] : m_coeffs[1];
-
-    for (uint32_t i = 0; i < numSamples; ++i) {
-        // Process left
-        float leftSample = left[i];
-        if (m_drive > 0.0f && m_saturationType != SaturationType::None) {
-            leftSample = applySaturation(leftSample * (1.0f + m_drive * 3.0f));
-        }
-
-        if (m_oversampling != OversamplingFactor::None) {
-            processOversampled(leftSample, m_state[0]);
-        } else {
-            processSample(leftSample, m_state[0], m_coeffs[0]);
-        }
-
-        // Process right
-        float rightSample = right[i];
-        if (m_drive > 0.0f && m_saturationType != SaturationType::None) {
-            rightSample = applySaturation(rightSample * (1.0f + m_drive * 3.0f));
-        }
-
-        if (m_oversampling != OversamplingFactor::None) {
-            processSample(rightSample, m_state[1], rightCoeffs);
-        } else {
-            processSample(rightSample, m_state[1], rightCoeffs);
-        }
-
-        left[i] = leftSample;
-        right[i] = rightSample;
-    }
-}
-
 // ============================================================================
 // Internal processing methods
 // ============================================================================
