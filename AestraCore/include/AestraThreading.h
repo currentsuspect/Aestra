@@ -65,7 +65,7 @@ public:
     LockFreeRingBuffer() : writeIndex(0), readIndex(0) {}
 
     // Push element (returns false if buffer is full)
-    bool push(const T& item) {
+    [[nodiscard]] bool push(const T& item) {
         size_t currentWrite = writeIndex.load(std::memory_order_relaxed);
         size_t nextWrite = mask(currentWrite + 1);
 
@@ -79,7 +79,7 @@ public:
     }
 
     // Pop element (returns false if buffer is empty)
-    bool pop(T& item) {
+    [[nodiscard]] bool pop(T& item) {
         size_t currentRead = readIndex.load(std::memory_order_relaxed);
 
         if (currentRead == writeIndex.load(std::memory_order_acquire)) {
