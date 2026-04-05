@@ -136,7 +136,11 @@ private:
 // =============================================================================
 class ThreadPool {
 public:
-    ThreadPool(size_t numThreads = std::thread::hardware_concurrency()) : stop(false) {
+    ThreadPool(size_t numThreads = 0) : stop(false) {
+        if (numThreads == 0) {
+            numThreads = std::thread::hardware_concurrency();
+            if (numThreads == 0) numThreads = 2; // fallback for platforms that don't report concurrency
+        }
         for (size_t i = 0; i < numThreads; ++i) {
             workers.emplace_back([this] {
                 while (true) {
