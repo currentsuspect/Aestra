@@ -174,15 +174,8 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerBenchmark.cpp")
     if(WIN32)
         target_link_libraries(ResamplerBenchmark PRIVATE ole32)
     endif()
-    # Enable AVX2 if available (x86 only, skip on ARM/Apple Silicon)
-    message(STATUS "ResamplerBenchmark: CMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}")
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i686" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
-        if(MSVC)
-            target_compile_options(ResamplerBenchmark PRIVATE /arch:AVX2)
-        else()
-            target_compile_options(ResamplerBenchmark PRIVATE -mavx2 -mfma)
-        endif()
-    endif()
+    # NOTE: No forced AVX flags here. SampleRateConverter uses runtime SIMD dispatch
+    # (#pragma / hasAVX() checks). Forcing -mavx2 breaks on CPUs without AVX2 support.
 endif()
 
 # =============================================================================

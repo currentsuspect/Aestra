@@ -294,7 +294,10 @@ public:
      *
      * @return Latency in output frames (depends on filter size)
      */
-    uint32_t getLatency() const noexcept { return m_filterBank.halfTaps; }
+    uint32_t getLatency() const noexcept {
+        const PolyphaseFilterBank* bank = getFilterBank();
+        return bank ? bank->halfTaps : 0;
+    }
 
     /**
      * @brief Check if configured and ready to process

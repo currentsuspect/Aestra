@@ -372,6 +372,14 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
 
     // Use current (possibly smoothed) ratio
     const double effectiveRatio = m_currentRatio;
+    const double invRatio = 1.0 / effectiveRatio; // hoisted: constant for entire process() call
+
+    // Hoisted constants (invariant across all frames in this call)
+    const double historySizeD = static_cast<double>(m_history.size);
+    const double historySizeMinus1 = historySizeD - 1.0;
+    const double historySizeMinusHalfTaps = historySizeD - static_cast<double>(halfTaps);
+    const double halfTapsD = static_cast<double>(halfTaps);
+    const double polyPhaseScale = static_cast<double>(SRCConstants::POLYPHASE_PHASES);
 
     // Process input samples
     for (uint32_t inFrame = 0; inFrame < inputFrames; ++inFrame) {
@@ -380,41 +388,37 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
         m_historyFilled = std::min(m_historyFilled + 1, m_history.size);
 
         // Logical "now" position in source stream (in samples)
-        // [FIX] Use cumulative position relative to Start of History, but track it across blocks.
-        // We use m_srcPosition to track how many input samples we've processed in total.
         m_srcPosition += 1.0;
 
         // Generate output samples while we have enough history
         while (outputFrames < maxOutputFrames) {
-            // [FIX] Phase correctness: m_nextOutputSrcPos tracks the exact source sample index
-            // where the NEXT output sample should be taken from.
-
             // If the next sample is ahead of our current history window (accounting for filter tail), wait.
-            if (m_nextOutputSrcPos > m_srcPosition - static_cast<double>(halfTaps)) {
+            if (m_nextOutputSrcPos > m_srcPosition - halfTapsD) {
                 break;
             }
 
             // Re-check: If next sample is WAY behind (seek?), reset it to a safe "current" position.
-            if (m_nextOutputSrcPos < m_srcPosition - static_cast<double>(m_history.size - halfTaps)) {
-                m_nextOutputSrcPos = m_srcPosition - static_cast<double>(halfTaps);
+            if (m_nextOutputSrcPos < m_srcPosition - historySizeMinusHalfTaps) {
+                m_nextOutputSrcPos = m_srcPosition - halfTapsD;
             }
 
             // Calculate fractional position within history ring
-            // history.size-1 is where the latest sample (m_srcPosition) was just written.
-            const double historyPos = static_cast<double>(m_history.size - 1) - (m_srcPosition - m_nextOutputSrcPos);
+            const double historyPos = historySizeMinus1 - (m_srcPosition - m_nextOutputSrcPos);
 
             const uint32_t intPos = static_cast<uint32_t>(historyPos);
             const double fracPos = historyPos - static_cast<double>(intPos);
 
             // Quantize fractional position to polyphase index
             const uint32_t phaseIndex =
-                static_cast<uint32_t>(fracPos * static_cast<double>(SRCConstants::POLYPHASE_PHASES) + 0.5) %
+                static_cast<uint32_t>(fracPos * polyPhaseScale + 0.5) %
                 SRCConstants::POLYPHASE_PHASES;
+
+            // Hoist channel-invariant computations
+            const float* coeffs = bank->coeffs[phaseIndex];
+            const int32_t samplePos0 = static_cast<int32_t>(intPos) - static_cast<int32_t>(halfTaps);
 
             // Generate output for each channel
             for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                const float* coeffs = bank->coeffs[phaseIndex];
-                const int32_t samplePos0 = static_cast<int32_t>(intPos) - static_cast<int32_t>(halfTaps);
                 const float* window = m_history.getWindow(ch, samplePos0);
                 float sum = 0.0f;
 
@@ -438,7 +442,7 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             }
 
             ++outputFrames;
-            m_nextOutputSrcPos += (1.0 / effectiveRatio); // [FIX] Precise phase step
+            m_nextOutputSrcPos += invRatio; // hoisted: was 1.0 / effectiveRatio
         }
     }
 
