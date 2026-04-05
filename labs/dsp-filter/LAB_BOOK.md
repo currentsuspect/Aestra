@@ -41,7 +41,7 @@ labs/dsp-filter/
 | M005 | 2026-04-05 | 1 | 1 | 0 | Optimization pass: hoisted drive×oversampling dispatch outside processBlock() loop; eliminated two per-sample branch checks; hard gate green |
 | M006 | 2026-04-05 | 1 | 1 | 0 | Optimization pass: applied M005 dispatch pattern to processBlockStereo(); eliminated per-sample branches in stereo fast path |
 | M007 | 2026-04-05 | 1 | 1 | 0 | Optimization pass: inlined biquad math into dispatch loops for processBlock(); improved register locality |
-| M008 | 2026-04-05 | 1 | 1 | 0 | Automated loop session: baseline validation on HEAD 7f3c6a87; identified remaining optimization opportunity in stereo oversampling paths |
+| M008 | 2026-04-05 | 2 | 2 | 0 | Automated loop session: round 1 baseline validation; round 2 inlined oversampling math in processBlockStereo() oversampling paths, eliminating per-sample function calls; hard gate green |
 
 ## Current State
 

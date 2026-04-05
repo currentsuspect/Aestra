@@ -304,23 +304,61 @@ void Filter::processBlockStereo(float* left, float* right, uint32_t numSamples) 
         m_state[0].x1 = lx1; m_state[0].x2 = lx2;
         m_state[1].x1 = rx1; m_state[1].x2 = rx2;
     } else if (!hasDrive && hasOversampling) {
+        // Oversampling only, no drive — inline for stereo
+        const float rb0 = rightCoeffs.b0, rb1 = rightCoeffs.b1, rb2 = rightCoeffs.b2;
+        const float ra1 = rightCoeffs.a1, ra2 = rightCoeffs.a2;
+        float rx1 = m_state[1].x1, rx2 = m_state[1].x2;
         for (uint32_t i = 0; i < numSamples; ++i) {
+            // Left channel: inline 2x oversampling
             float l = left[i];
-            float r = right[i];
-            processOversampled(l, m_state[0]);
-            processSample(r, m_state[1], rightCoeffs);
-            left[i] = l;
-            right[i] = r;
+            float lup1 = l, lup2 = l;
+            const float lb0 = m_coeffs[0].b0, lb1 = m_coeffs[0].b1, lb2 = m_coeffs[0].b2;
+            const float la1 = m_coeffs[0].a1, la2 = m_coeffs[0].a2;
+            float lx1 = m_state[0].x1, lx2 = m_state[0].x2;
+            const float lout1 = lb0 * lup1 + lx1;
+            lx1 = lb1 * lup1 - la1 * lout1 + lx2;
+            lx2 = lb2 * lup1 - la2 * lout1;
+            const float lout2 = lb0 * lup2 + lx1;
+            lx1 = lb1 * lup2 - la1 * lout2 + lx2;
+            lx2 = lb2 * lup2 - la2 * lout2;
+            left[i] = (lout1 + lout2) * 0.5f;
+            m_state[0].x1 = lx1; m_state[0].x2 = lx2;
+            // Right channel: normal biquad
+            const float rin = right[i];
+            const float rout = rb0 * rin + rx1;
+            rx1 = rb1 * rin - ra1 * rout + rx2;
+            rx2 = rb2 * rin - ra2 * rout;
+            right[i] = rout;
         }
+        m_state[1].x1 = rx1; m_state[1].x2 = rx2;
     } else {
+        // Both drive and oversampling — inline for stereo
+        const float rb0 = rightCoeffs.b0, rb1 = rightCoeffs.b1, rb2 = rightCoeffs.b2;
+        const float ra1 = rightCoeffs.a1, ra2 = rightCoeffs.a2;
+        float rx1 = m_state[1].x1, rx2 = m_state[1].x2;
         for (uint32_t i = 0; i < numSamples; ++i) {
             float l = applySaturation(left[i] * driveGain);
             float r = applySaturation(right[i] * driveGain);
-            processOversampled(l, m_state[0]);
-            processSample(r, m_state[1], rightCoeffs);
-            left[i] = l;
-            right[i] = r;
+            // Left: inline 2x oversampling
+            float lup1 = l, lup2 = l;
+            const float lb0 = m_coeffs[0].b0, lb1 = m_coeffs[0].b1, lb2 = m_coeffs[0].b2;
+            const float la1 = m_coeffs[0].a1, la2 = m_coeffs[0].a2;
+            float lx1 = m_state[0].x1, lx2 = m_state[0].x2;
+            const float lout1 = lb0 * lup1 + lx1;
+            lx1 = lb1 * lup1 - la1 * lout1 + lx2;
+            lx2 = lb2 * lup1 - la2 * lout1;
+            const float lout2 = lb0 * lup2 + lx1;
+            lx1 = lb1 * lup2 - la1 * lout2 + lx2;
+            lx2 = lb2 * lup2 - la2 * lout2;
+            left[i] = (lout1 + lout2) * 0.5f;
+            m_state[0].x1 = lx1; m_state[0].x2 = lx2;
+            // Right: normal biquad
+            const float rout = rb0 * r + rx1;
+            rx1 = rb1 * r - ra1 * rout + rx2;
+            rx2 = rb2 * r - ra2 * rout;
+            right[i] = rout;
         }
+        m_state[1].x1 = rx1; m_state[1].x2 = rx2;
     }
 }
 
