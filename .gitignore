@@ -151,6 +151,7 @@ AestraAudio/External/ASIOSDK/
 .codex
 .codex/
 .workflow
+.qwen/
 
 # Installer outputs
 /dist/installers/
