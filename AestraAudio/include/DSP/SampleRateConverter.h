@@ -150,7 +150,8 @@ struct SampleHistory {
             data[ch][base1] = s;
             data[ch][base2] = s;
         }
-        writePos = (writePos + 1) % size;
+        // size is always a power of 2 (128), so use bitwise AND instead of modulo
+        writePos = (writePos + 1) & (size - 1);
     }
 
     // Get a contiguous window pointer for the given channel starting at relPos
@@ -158,10 +159,10 @@ struct SampleHistory {
     const float* getWindow(uint32_t channel, int32_t relPos) const noexcept {
         if (size == 0)
             return nullptr;
-        const int32_t sizeI = static_cast<int32_t>(size);
-        int32_t rel = relPos % sizeI;
+        const int32_t sizeMask = static_cast<int32_t>(size) - 1;
+        int32_t rel = relPos & sizeMask;
         if (rel < 0)
-            rel += sizeI;
+            rel += static_cast<int32_t>(size);
 
         // Chronological ring is laid out contiguously at [writePos .. writePos+size-1].
         // Mirroring extends past wrap so tap windows are contiguous.
