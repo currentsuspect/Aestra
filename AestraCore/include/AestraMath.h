@@ -457,7 +457,7 @@ struct Matrix4x4 {
 }
 
 // Smooth Hermite interpolation
-[[nodiscard]] float smoothstep(float edge0, float edge1, float x) noexcept {
+[[nodiscard]] inline float smoothstep(float edge0, float edge1, float x) noexcept {
     float range = edge1 - edge0;
     if (approxEqual(range, 0.0f)) return x < edge0 ? 0.0f : 1.0f;
     float t = clamp((x - edge0) / range, 0.0f, 1.0f);
@@ -465,21 +465,21 @@ struct Matrix4x4 {
 }
 
 // Map value from one range to another. Returns outMin if ranges are equal.
-[[nodiscard]] float map(float value, float inMin, float inMax, float outMin, float outMax) noexcept {
+[[nodiscard]] inline float map(float value, float inMin, float inMax, float outMin, float outMax) noexcept {
     float range = inMax - inMin;
     if (approxEqual(range, 0.0f)) return outMin;
     return outMin + (value - inMin) * (outMax - outMin) / range;
 }
 
 // Decibels to linear gain. Returns 0.0f for db <= DB_FLOOR.
-[[nodiscard]] float dbToGain(float db) noexcept {
+[[nodiscard]] inline float dbToGain(float db) noexcept {
     if (db <= DB_FLOOR)
         return 0.0f;
     return std::exp(db * LN10_OVER_20);
 }
 
 // Linear gain to decibels. Returns DB_FLOOR for gain <= 0.
-[[nodiscard]] float gainToDb(float gain) noexcept {
+[[nodiscard]] inline float gainToDb(float gain) noexcept {
     if (gain <= 0.0f)
         return DB_FLOOR;
     return 20.0f * std::log10(gain);
