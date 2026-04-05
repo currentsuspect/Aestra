@@ -464,12 +464,10 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
 
             // Hoist channel-invariant computations
             const float* coeffs = bank->coeffs[phaseIndex];
-            const int32_t samplePos0 = static_cast<int32_t>(intPos) - static_cast<int32_t>(halfTaps);
-
-            // Inline window access: compute idx once, then use planar data[ch][idx]
-            // Casting to uint32_t before & ensures well-defined two's complement wrapping
+            // Compute windowIdx directly: (intPos - halfTaps) & mask wraps correctly
+            // for unsigned arithmetic, eliminating the intermediate samplePos0 variable
             const uint32_t windowIdx = m_history.writePos +
-                (static_cast<uint32_t>(samplePos0) & historySizeMask);
+                ((intPos - halfTaps) & historySizeMask);
 
             // Precompute output base pointer to avoid multiply per channel
             float* out = output + outputFrames * m_channels;
