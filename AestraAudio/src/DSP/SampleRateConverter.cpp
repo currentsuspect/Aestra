@@ -125,7 +125,7 @@ float dotProductAVX(const float* a, const float* b, uint32_t n) noexcept {
 #ifdef __x86_64__
 __attribute__((target("sse4.1")))
 #endif
-float dotProductScalar(const float* a, const float* b, uint32_t n) noexcept {
+float dotProductScalar(const float* __restrict__ a, const float* __restrict__ b, uint32_t n) noexcept {
     float sum = 0.0f;
     uint32_t i = 0;
 
