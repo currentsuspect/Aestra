@@ -130,3 +130,64 @@ into locals before the output loop (constant per input frame).
 Significant for upsampling cases where many output samples are generated per
 input frame.
 **Round**: 05 (session 002)
+
+## Variable Fusion: srcNextDiff Tracking
+
+**Where**: `process()` — `srcPosition` and `nextOutputSrcPos`
+**What**: Track `srcNextDiff = srcPosition - nextOutputSrcPos` as a single variable
+instead of computing the subtraction twice per output sample.
+**Why it works**: Eliminates redundant `srcPosition - nextOutputSrcPos` computation.
+`srcNextDiff` is decremented by `invRatio` each output sample instead of
+recomputing the subtraction.
+**Round**: 01 (session 003)
+
+## Inline Stereo Push
+
+**Where**: `process()` input loop
+**What**: Added `if (m_channels == 2)` fast path that directly writes to
+`m_history.data` instead of calling `m_history.push()`.
+**Why it works**: Eliminates function call overhead in the input loop.
+Function call overhead per-input-frame adds up when processing 10 seconds
+of audio (441k frames).
+**Round**: 02 (session 003)
+
+## Incremental historyPos Tracking
+
+**Where**: `process()` output loop
+**What**: Track `historyPos` as a local variable that increments by `invRatio`
+each iteration, instead of recomputing `historySizeMinus1 - srcNextDiff` each time.
+**Why it works**: Eliminates the double subtraction per output sample.
+The history position naturally increases by the inverse ratio, so tracking
+it incrementally is mathematically equivalent but computationally cheaper.
+**Round**: 03 (session 003)
+
+## Fused PhaseIndex Computation
+
+**Where**: `process()` output loop, phase quantization
+**What**: Replace `(historyPos - intPos) * polyPhaseScale` with `historyPos * polyPhaseScale`
+using the identity: `(intPos + frac) * 256 = intPos * 256 + frac * 256`, and the
+`& 255` mask removes the `intPos * 256` term.
+**Why it works**: Eliminates the intermediate `fracPos = historyPos - intPos` subtraction.
+Now the compiler sees a single multiply-add expression.
+**Round**: 04 (session 003)
+
+## Pure Unsigned WindowIdx Arithmetic
+
+**Where**: `process()` output loop, window index computation
+**What**: Replace `samplePos0 = intPos - halfTaps` (int32) and
+`static_cast<uint32_t>(samplePos0) & historySizeMask` with
+`(intPos - halfTaps) & historySizeMask` using pure uint32_t arithmetic.
+**Why it works**: Eliminates int32_t cast operations. In unsigned arithmetic,
+subtraction followed by AND correctly handles wrapping regardless of whether
+the result is positive or negative (two's complement wraps).
+**Round**: 05 (session 003)
+
+## Incrementing Output Pointer
+
+**Where**: `process()` output loop
+**What**: Track `outPtr` as an incrementing pointer instead of computing
+`output + outputFrames * m_channels` at each iteration.
+**Why it works**: Similar to incrementing input pointer. Eliminates the multiply
+per output sample. The pointer is incremented by `m_channels` after each
+output frame is written.
+**Round**: 06 (session 003)
