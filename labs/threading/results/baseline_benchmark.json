@@ -1,0 +1,68 @@
+{
+  "total_duration_ms": 307,
+    "ring_buffer_latency_ns": {
+      "samples": 100000,
+      "median_ns": 40,
+      "p95_ns": 46,
+      "p99_ns": 58,
+      "min_ns": 20,
+      "max_ns": 26970,
+      "mean_ns": 40.7,
+      "stddev_ns": 116.2,
+      "xruns": 4,
+      "missed_deadlines": 3,
+      "deadline_ns": 1000
+    },
+    "ring_buffer_contention_ns": {
+      "samples": 100000,
+      "median_ns": 40,
+      "p95_ns": 67,
+      "p99_ns": 72,
+      "min_ns": 20,
+      "max_ns": 122352,
+      "mean_ns": 119.7,
+      "stddev_ns": 2740.5,
+      "xruns": 83,
+      "missed_deadlines": 80,
+      "deadline_ns": 10000
+    },
+    "threadpool_dispatch_ns": {
+      "samples": 10000,
+      "median_ns": 3066556,
+      "p95_ns": 4096264,
+      "p99_ns": 4181900,
+      "min_ns": 23023,
+      "max_ns": 4202204,
+      "mean_ns": 3008811.5,
+      "stddev_ns": 785855.9,
+      "xruns": 0,
+      "missed_deadlines": 0,
+      "deadline_ns": 10000000
+    },
+    "barrier_sync_ns": {
+      "samples": 10000,
+      "median_ns": 7475,
+      "p95_ns": 8911,
+      "p99_ns": 24093,
+      "min_ns": 3916,
+      "max_ns": 4351802,
+      "mean_ns": 24528.7,
+      "stddev_ns": 225571.6,
+      "xruns": 70,
+      "missed_deadlines": 76,
+      "deadline_ns": 50000
+    },
+    "spinlock_contention_ns": {
+      "samples": 49910,
+      "median_ns": 43,
+      "p95_ns": 61,
+      "p99_ns": 67,
+      "min_ns": 42,
+      "max_ns": 19228,
+      "mean_ns": 47.6,
+      "stddev_ns": 115.4,
+      "xruns": 4,
+      "missed_deadlines": 3,
+      "deadline_ns": 5000
+    }
+}
