@@ -114,7 +114,7 @@ bool testThreadPool() {
     const int numTasks = 100;
 
     for (int i = 0; i < numTasks; ++i) {
-        pool.enqueue([&counter]() { counter++; });
+        TEST_ASSERT(pool.enqueue([&counter]() { counter++; }), "Task should be enqueued");
     }
 
     // Wait for tasks to complete
@@ -124,7 +124,7 @@ bool testThreadPool() {
     // Test with more complex tasks
     std::atomic<int> sum(0);
     for (int i = 1; i <= 10; ++i) {
-        pool.enqueue([&sum, i]() { sum += i; });
+        TEST_ASSERT(pool.enqueue([&sum, i]() { sum += i; }), "Sum task should be enqueued");
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));

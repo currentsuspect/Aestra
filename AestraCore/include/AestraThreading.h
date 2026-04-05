@@ -182,20 +182,21 @@ public:
         }
     }
 
-    // Enqueue a task
-    template <typename F> void enqueue(F&& task) {
-        if (stop.load(std::memory_order_acquire)) return;
+    // Enqueue a task (returns false if pool is shutting down)
+    template <typename F> [[nodiscard]] bool enqueue(F&& task) {
+        if (stop.load(std::memory_order_acquire)) return false;
         bool shouldNotify;
         {
             std::unique_lock<std::mutex> lock(queueMutex);
             // Re-check stop under lock to prevent race with destructor
-            if (stop.load(std::memory_order_acquire)) return;
+            if (stop.load(std::memory_order_acquire)) return false;
             shouldNotify = tasks.empty();
             tasks.emplace(std::forward<F>(task));
         }
         if (shouldNotify) {
             condition.notify_one();
         }
+        return true;
     }
 
     // Get number of worker threads
