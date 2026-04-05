@@ -47,7 +47,7 @@ bool testLockFreeRingBuffer() {
     TEST_ASSERT(!buffer.push(999), "Should not push when full");
 
     // Test available space
-    buffer.pop(value);
+    TEST_ASSERT(buffer.pop(value), "Should pop element for available space test");
     TEST_ASSERT(buffer.available() >= 1, "Should have available space after pop");
 
     std::cout << "  âœ“ LockFreeRingBuffer tests passed" << std::endl;
