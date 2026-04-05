@@ -205,22 +205,36 @@ void Filter::processBlock(float* samples, uint32_t numSamples) {
     // Update parameters once per block (optimization)
     updateInternal();
 
-    for (uint32_t i = 0; i < numSamples; ++i) {
-        float sample = samples[i];
+    const bool hasDrive = m_drive > 0.0f && m_saturationType != SaturationType::None;
+    const bool hasOversampling = m_oversampling != OversamplingFactor::None;
+    const float driveGain = 1.0f + m_drive * 3.0f;
 
-        // Apply drive
-        if (m_drive > 0.0f && m_saturationType != SaturationType::None) {
-            sample = applySaturation(sample * (1.0f + m_drive * 3.0f));
+    if (!hasDrive && !hasOversampling) {
+        // Fast path: no drive, no oversampling
+        for (uint32_t i = 0; i < numSamples; ++i) {
+            processSample(samples[i], m_state[0], m_coeffs[0]);
         }
-
-        // Process
-        if (m_oversampling != OversamplingFactor::None) {
-            processOversampled(sample, m_state[0]);
-        } else {
+    } else if (hasDrive && !hasOversampling) {
+        // Drive only, no oversampling
+        for (uint32_t i = 0; i < numSamples; ++i) {
+            float sample = applySaturation(samples[i] * driveGain);
             processSample(sample, m_state[0], m_coeffs[0]);
+            samples[i] = sample;
         }
-
-        samples[i] = sample;
+    } else if (!hasDrive && hasOversampling) {
+        // Oversampling only, no drive
+        for (uint32_t i = 0; i < numSamples; ++i) {
+            float sample = samples[i];
+            processOversampled(sample, m_state[0]);
+            samples[i] = sample;
+        }
+    } else {
+        // Both drive and oversampling
+        for (uint32_t i = 0; i < numSamples; ++i) {
+            float sample = applySaturation(samples[i] * driveGain);
+            processOversampled(sample, m_state[0]);
+            samples[i] = sample;
+        }
     }
 }
 
