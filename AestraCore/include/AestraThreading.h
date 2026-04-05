@@ -213,11 +213,17 @@ public:
 
     // Wait for all tasks to complete (Spin-wait optimized for low-latency audio)
     void wait() {
+        int spinCount = 0;
         while (counter.load(std::memory_order_acquire) > 0) {
-            // In a real-time thread, we prefer spinning over sleeping for short waits.
-            // But yielding prevents hogging the core if tasks are long.
-            // For audio graph, tasks should be micro-second scale.
-            std::this_thread::yield();
+#ifdef __x86_64__
+            __builtin_ia32_pause();
+#elif defined(__aarch64__)
+            asm volatile("yield" ::: "memory");
+#endif
+            if (++spinCount > 1024) {
+                std::this_thread::yield();
+                spinCount = 0;
+            }
         }
     }
 
