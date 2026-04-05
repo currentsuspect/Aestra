@@ -381,10 +381,12 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
     const double halfTapsD = static_cast<double>(halfTaps);
     const double polyPhaseScale = static_cast<double>(SRCConstants::POLYPHASE_PHASES);
 
-    // Process input samples
+    // Process input samples — use incrementing pointer to avoid multiply per frame
+    const float* inPtr = input;
     for (uint32_t inFrame = 0; inFrame < inputFrames; ++inFrame) {
         // Push input frame into history
-        m_history.push(input + inFrame * m_channels);
+        m_history.push(inPtr);
+        inPtr += m_channels;
 
         // Logical "now" position in source stream (in samples)
         m_srcPosition += 1.0;
