@@ -22,3 +22,14 @@ instead of raw output RMS.
 near `1.0`, not `0.707`. This makes the hard-gate thresholds match the metric
 being asserted.
 **Session**: M003
+
+## Short-Circuit `updateInternal()` Once Parameters Settle
+
+**Where**: `AestraAudio/src/DSP/Filter.cpp`
+**What**: `updateInternal()` now returns immediately when neither
+`m_parametersChanged` nor `m_needsUpdate` is set, and clears
+`m_parametersChanged` once the smoothed parameters have converged.
+**Why it works**: Stable filters were still paying per-block interpolation
+checks even after reaching their targets. The accepted change removes that dead
+work without changing filter math.
+**Session**: M004

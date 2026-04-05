@@ -514,6 +514,10 @@ void Filter::calculateAllPass(BiquadCoefficients& coeffs, float w0, float alpha)
 // ============================================================================
 
 void Filter::updateInternal() {
+    if (!m_parametersChanged && !m_needsUpdate) {
+        return;
+    }
+
     bool needsCoefficientUpdate = false;
 
     // Smooth cutoff
@@ -540,6 +544,10 @@ void Filter::updateInternal() {
     // Update coefficients if needed
     if (needsCoefficientUpdate || m_needsUpdate) {
         updateCoefficientsInternal();
+    }
+
+    if (!needsCoefficientUpdate && !m_needsUpdate) {
+        m_parametersChanged = false;
     }
 }
 
