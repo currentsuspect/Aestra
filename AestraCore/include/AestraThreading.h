@@ -335,7 +335,7 @@ private:
     TaskFunc m_taskFunc{nullptr};
     void* m_context{nullptr};
     void** m_taskData{nullptr};
-    uint32_t m_taskCount{0};
+    std::atomic<uint32_t> m_taskCount{0};
     std::atomic<int> m_taskCounter;
     std::atomic<int> m_activeTasks;
     Barrier* m_syncBarrier{nullptr};
