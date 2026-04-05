@@ -382,24 +382,22 @@ private:
 // Spin lock (use sparingly, for very short critical sections)
 class SpinLock {
 public:
-    SpinLock() : flag(false) {}
+    SpinLock() : flag(ATOMIC_FLAG_INIT) {}
 
     void lock() {
-        while (flag.exchange(true, std::memory_order_acquire)) {
-            while (flag.load(std::memory_order_relaxed)) {
+        while (flag.test_and_set(std::memory_order_acquire)) {
 #ifdef __x86_64__
-                __builtin_ia32_pause();
+            __builtin_ia32_pause();
 #elif defined(__aarch64__)
-                asm volatile("yield" ::: "memory");
+            asm volatile("yield" ::: "memory");
 #endif
-            }
         }
     }
 
-    void unlock() { flag.store(false, std::memory_order_release); }
+    void unlock() { flag.clear(std::memory_order_release); }
 
 private:
-    std::atomic<bool> flag;
+    std::atomic_flag flag;
 };
 
 } // namespace Aestra
