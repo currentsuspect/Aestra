@@ -300,6 +300,9 @@ void Filter::processOversampled(float& sample, FilterState& state) {
 
 void Filter::updateCoefficients() {
     updateCoefficientsInternal();
+    for (int i = 0; i < 2; ++i) {
+        m_coeffs[i] = m_targetCoeffs[i];
+    }
     m_needsUpdate = false;
 }
 
@@ -359,6 +362,20 @@ void Filter::updateCoefficientsInternal() {
 
     // Apply coefficient smoothing
     updateSmoothing();
+
+    constexpr float kCoeffEpsilon = 1.0e-6f;
+    m_needsUpdate = false;
+    for (int i = 0; i < 2; ++i) {
+        if (std::abs(m_coeffs[i].b0 - m_targetCoeffs[i].b0) > kCoeffEpsilon
+            || std::abs(m_coeffs[i].b1 - m_targetCoeffs[i].b1) > kCoeffEpsilon
+            || std::abs(m_coeffs[i].b2 - m_targetCoeffs[i].b2) > kCoeffEpsilon
+            || std::abs(m_coeffs[i].a1 - m_targetCoeffs[i].a1) > kCoeffEpsilon
+            || std::abs(m_coeffs[i].a2 - m_targetCoeffs[i].a2) > kCoeffEpsilon) {
+            m_needsUpdate = true;
+        } else {
+            m_coeffs[i] = m_targetCoeffs[i];
+        }
+    }
 }
 
 void Filter::calculateLowPass(BiquadCoefficients& coeffs, float w0, float alpha, float A) const noexcept {
@@ -497,6 +514,10 @@ void Filter::calculateAllPass(BiquadCoefficients& coeffs, float w0, float alpha)
 // ============================================================================
 
 void Filter::updateInternal() {
+    if (!m_parametersChanged && !m_needsUpdate) {
+        return;
+    }
+
     bool needsCoefficientUpdate = false;
 
     // Smooth cutoff
@@ -523,6 +544,10 @@ void Filter::updateInternal() {
     // Update coefficients if needed
     if (needsCoefficientUpdate || m_needsUpdate) {
         updateCoefficientsInternal();
+    }
+
+    if (!needsCoefficientUpdate && !m_needsUpdate) {
+        m_parametersChanged = false;
     }
 }
 

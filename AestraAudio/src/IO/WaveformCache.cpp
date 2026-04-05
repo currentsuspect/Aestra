@@ -62,8 +62,6 @@ void WaveformCache::buildFromRaw(const float* data, SampleIndex numFrames, uint3
     }
     // localLevels now holds the OLD data and is destroyed here (outside lock)
 
-    Log::info("WaveformCache: Built " + std::to_string(numLevels) + " mip levels for " + std::to_string(numFrames) +
-              " frames (" + std::to_string(numChannels) + " ch)");
 }
 
 void WaveformCache::buildLevel(const float* data, SampleIndex numFrames, uint32_t numChannels, uint32_t samplesPerPeak,

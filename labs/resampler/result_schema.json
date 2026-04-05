@@ -1,0 +1,303 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Resampler Eval Result",
+  "description": "Schema for a single resampler eval run result",
+  "type": "object",
+  "required": [
+    "run_id",
+    "timestamp",
+    "git",
+    "correctness",
+    "offline_parity",
+    "resampler_benchmark",
+    "sinc_benchmark",
+    "decision"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "Unique identifier for this eval run (e.g., run_20260405_123456)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of when the eval started"
+    },
+    "git": {
+      "type": "object",
+      "required": ["commit", "branch", "dirty"],
+      "properties": {
+        "commit": {
+          "type": "string",
+          "description": "Full git commit hash"
+        },
+        "branch": {
+          "type": "string",
+          "description": "Current git branch name"
+        },
+        "dirty": {
+          "type": "boolean",
+          "description": "True if working tree has uncommitted changes"
+        }
+      }
+    },
+    "correctness": {
+      "type": "object",
+      "description": "Results from AestraSampleRateConverterTest",
+      "required": ["exit_code", "passed", "failed", "total", "tests"],
+      "properties": {
+        "exit_code": {
+          "type": "integer",
+          "description": "Process exit code (0 = success)"
+        },
+        "passed": {
+          "type": "integer",
+          "description": "Number of tests passed"
+        },
+        "failed": {
+          "type": "integer",
+          "description": "Number of tests failed"
+        },
+        "total": {
+          "type": "integer",
+          "description": "Total number of tests"
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "passed"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Test case name"
+              },
+              "passed": {
+                "type": "boolean",
+                "description": "Whether the test passed"
+              },
+              "details": {
+                "type": "string",
+                "description": "Additional details (e.g., measured values)"
+              }
+            }
+          }
+        },
+        "simd_vs_scalar": {
+          "type": "object",
+          "properties": {
+            "rms_error": {
+              "type": "number",
+              "description": "RMS error between SIMD and scalar outputs"
+            },
+            "max_error": {
+              "type": "number",
+              "description": "Maximum absolute error between SIMD and scalar outputs"
+            }
+          }
+        },
+        "round_trip": {
+          "type": "object",
+          "properties": {
+            "rms_error": {
+              "type": "number",
+              "description": "Round-trip RMS error"
+            },
+            "max_error": {
+              "type": "number",
+              "description": "Round-trip maximum absolute error"
+            }
+          }
+        }
+      }
+    },
+    "offline_parity": {
+      "type": "object",
+      "description": "Results from OfflineRenderRegressionTest",
+      "required": ["exit_code", "passed"],
+      "properties": {
+        "exit_code": {
+          "type": "integer",
+          "description": "Process exit code (0 = success)"
+        },
+        "passed": {
+          "type": "boolean",
+          "description": "Whether the parity test passed"
+        },
+        "correlation": {
+          "type": "number",
+          "description": "Pearson correlation between exporter and reference render"
+        },
+        "rms_diff_db": {
+          "type": "number",
+          "description": "RMS difference in dB"
+        },
+        "peak": {
+          "type": "number",
+          "description": "Peak amplitude of rendered audio"
+        }
+      }
+    },
+    "resampler_benchmark": {
+      "type": "object",
+      "description": "Results from ResamplerBenchmark",
+      "required": ["exit_code", "cases"],
+      "properties": {
+        "exit_code": {
+          "type": "integer",
+          "description": "Process exit code"
+        },
+        "iterations": {
+          "type": "integer",
+          "description": "Number of iterations run per case"
+        },
+        "cases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["case_id", "name", "src_rate", "dst_rate", "quality"],
+            "properties": {
+              "case_id": {
+                "type": "string",
+                "description": "Stable case identifier (e.g., up_44100_48000_sinc16)"
+              },
+              "name": {
+                "type": "string",
+                "description": "Human-readable case name"
+              },
+              "src_rate": {
+                "type": "integer",
+                "description": "Source sample rate in Hz"
+              },
+              "dst_rate": {
+                "type": "integer",
+                "description": "Destination sample rate in Hz"
+              },
+              "quality": {
+                "type": "string",
+                "enum": ["Linear", "Cubic", "Sinc8", "Sinc16", "Sinc64"]
+              },
+              "median_ms": {
+                "type": "number",
+                "description": "Median total time in milliseconds"
+              },
+              "mean_ms": {
+                "type": "number",
+                "description": "Mean total time in milliseconds"
+              },
+              "best_ms": {
+                "type": "number",
+                "description": "Best (minimum) total time in milliseconds"
+              },
+              "worst_ms": {
+                "type": "number",
+                "description": "Worst (maximum) total time in milliseconds"
+              },
+              "ns_per_sample": {
+                "type": "number",
+                "description": "Nanoseconds per input sample (median)"
+              },
+              "mhz": {
+                "type": "number",
+                "description": "Effective throughput in MHz (median)"
+              },
+              "realtime_factor": {
+                "type": "number",
+                "description": "Real-time factor (audio seconds / wall seconds)"
+              },
+              "cv": {
+                "type": "number",
+                "description": "Coefficient of variation (stddev / mean)"
+              }
+            }
+          }
+        }
+      }
+    },
+    "sinc_benchmark": {
+      "type": "object",
+      "description": "Results from AestraSincBenchmark",
+      "required": ["exit_code", "algorithms"],
+      "properties": {
+        "exit_code": {
+          "type": "integer",
+          "description": "Process exit code"
+        },
+        "iterations": {
+          "type": "integer",
+          "description": "Number of iterations run per algorithm"
+        },
+        "algorithms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["algo_id", "name"],
+            "properties": {
+              "algo_id": {
+                "type": "string",
+                "description": "Stable algorithm identifier (e.g., cubic_4pt, sinc8_8pt, sinc64_orig, sinc64_turbo)"
+              },
+              "name": {
+                "type": "string",
+                "description": "Human-readable algorithm name"
+              },
+              "median_mframes_per_sec": {
+                "type": "number",
+                "description": "Median MFrame/sec"
+              },
+              "mean_mframes_per_sec": {
+                "type": "number",
+                "description": "Mean MFrame/sec"
+              },
+              "best_mframes_per_sec": {
+                "type": "number",
+                "description": "Best (maximum) MFrame/sec"
+              },
+              "worst_mframes_per_sec": {
+                "type": "number",
+                "description": "Worst (minimum) MFrame/sec"
+              },
+              "median_us_per_block": {
+                "type": "number",
+                "description": "Median microseconds per block"
+              },
+              "cv": {
+                "type": "number",
+                "description": "Coefficient of variation (stddev / mean)"
+              }
+            }
+          }
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["status", "reason"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["accept", "reject", "inconclusive"],
+          "description": "Overall decision status for this eval run"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Human-readable explanation of the decision"
+        },
+        "hard_gate_failures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of hard gate failures (if any)"
+        },
+        "advisory_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of advisory flags (e.g., benchmark regressions)"
+        }
+      }
+    }
+  }
+}

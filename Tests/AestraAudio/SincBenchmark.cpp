@@ -3,10 +3,14 @@
 
 #include "Interpolators.h"
 
+#include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <random>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -16,113 +20,262 @@ using namespace Aestra::Audio::Interpolators;
 // Prevent compiler optimization
 volatile float g_sink = 0.0f;
 
-struct BenchmarkResult {
-    std::string name;
-    double avgTimeUs;
-    double mframesPerSec;
+// ============================================================================
+// CLI parsing
+// ============================================================================
+
+struct BenchConfig {
+    bool jsonMode = false;
+    int iterations = 1;
+};
+
+static BenchConfig parseArgs(int argc, char* argv[]) {
+    BenchConfig cfg;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--json") {
+            cfg.jsonMode = true;
+        } else if (arg == "--iterations" && i + 1 < argc) {
+            cfg.iterations = std::stoi(argv[++i]);
+            if (cfg.iterations < 1) cfg.iterations = 1;
+        }
+    }
+    return cfg;
+}
+
+// ============================================================================
+// Algorithm definition
+// ============================================================================
+
+struct AlgoDef {
+    std::string algoId;   // stable: e.g. "cubic_4pt"
+    std::string name;     // human: e.g. "Cubic (4-point)"
+    std::function<void(const float*, int64_t, float*, int)> runFn;
 };
 
 template <typename Interpolator>
-BenchmarkResult runBenchmark(const std::string& name, const float* input, int64_t inputFrames, float* output,
-                             int outputFrames) {
-    auto t0 = std::chrono::high_resolution_clock::now();
-
-    // Simulate resampling 100 blocks of 1024 samples
+static void runInterpolator(const float* input, int64_t inputFrames, float* output, int outputFrames) {
     const int kBlocks = 1000;
     const int kBlockSize = 256;
-
-    // Random phase to trigger interpolation (unaligned)
-    double phaseStep = 1.0; // 1:1 resampling for simplicity, we just want to measure compute
-    double phase = 0.5;     // Start offset
-
-    int64_t operations = 0;
-
+    double phaseStep = 1.0;
+    double phase = 0.5;
     for (int b = 0; b < kBlocks; ++b) {
         for (int i = 0; i < kBlockSize; ++i) {
             float l, r;
             Interpolator::interpolate(input, inputFrames, phase, l, r);
             g_sink += l + r;
-
             phase += phaseStep;
             if (phase >= inputFrames - 64)
-                phase = 0.5; // Wrap around safely
+                phase = 0.5;
         }
-        operations += kBlockSize;
     }
-
-    auto t1 = std::chrono::high_resolution_clock::now();
-    double totalUs = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-
-    BenchmarkResult res;
-    res.name = name;
-    res.avgTimeUs = totalUs / kBlocks;
-    res.mframesPerSec = (double)operations / totalUs; // MFrames/sec (since us is 1e-6)
-
-    return res;
 }
 
-int main() {
-    std::cout << "========================================\n";
-    std::cout << " SINC INTERPOLATOR BENCHMARK\n";
-    std::cout << " Validating Trig Reduction Optimization\n";
-    std::cout << "========================================\n\n";
+static std::vector<AlgoDef> buildAlgos() {
+    std::vector<AlgoDef> algos;
+    algos.push_back({"cubic_4pt", "Cubic (4-point)",
+        [](const float* in, int64_t inF, float* out, int outF) {
+            runInterpolator<CubicInterpolator>(in, inF, out, outF);
+        }});
+    algos.push_back({"sinc8_8pt", "Sinc8 (8-point)",
+        [](const float* in, int64_t inF, float* out, int outF) {
+            runInterpolator<Sinc8Interpolator>(in, inF, out, outF);
+        }});
+    algos.push_back({"sinc64_orig", "Sinc64 (Original Opt)",
+        [](const float* in, int64_t inF, float* out, int outF) {
+            runInterpolator<Sinc64Interpolator>(in, inF, out, outF);
+        }});
+    algos.push_back({"sinc64_turbo", "Sinc64 TURBO (Multi-SIMD)",
+        [](const float* in, int64_t inF, float* out, int outF) {
+            runInterpolator<Sinc64Turbo>(in, inF, out, outF);
+        }});
+    return algos;
+}
+
+// ============================================================================
+// Single-run result
+// ============================================================================
+
+struct SingleRun {
+    double totalUs;
+    double avgTimeUs;
+    double mframesPerSec;
+};
+
+static SingleRun runOnce(const AlgoDef& algo, const float* input, int64_t inputFrames,
+                          float* output, int outputFrames) {
+    const int kBlocks = 1000;
+    const int kBlockSize = 256;
+    const int64_t operations = static_cast<int64_t>(kBlocks) * kBlockSize;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    algo.runFn(input, inputFrames, output, outputFrames);
+    auto t1 = std::chrono::high_resolution_clock::now();
+
+    double totalUs = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+    double avgTimeUs = totalUs / kBlocks;
+    double mframesPerSec = static_cast<double>(operations) / totalUs;
+
+    return {totalUs, avgTimeUs, mframesPerSec};
+}
+
+// ============================================================================
+// Statistics
+// ============================================================================
+
+struct Stats {
+    double median;
+    double mean;
+    double best;
+    double worst;
+    double stddev;
+    double cv;
+};
+
+static Stats computeStats(std::vector<double>& values) {
+    if (values.empty()) return {0, 0, 0, 0, 0, 0};
+    std::sort(values.begin(), values.end());
+    double sum = 0;
+    for (double v : values) sum += v;
+    double mean = sum / static_cast<double>(values.size());
+    double best = values.front();
+    double worst = values.back();
+    double median = values[values.size() / 2];
+    double varSum = 0;
+    for (double v : values) varSum += (v - mean) * (v - mean);
+    double stddev = std::sqrt(varSum / static_cast<double>(values.size()));
+    double cv = (mean > 0) ? (stddev / mean) : 0.0;
+    return {median, mean, best, worst, stddev, cv};
+}
+
+// ============================================================================
+// JSON helpers
+// ============================================================================
+
+static std::string jsonEscape(const std::string& s) {
+    std::string out;
+    for (char c : s) {
+        if (c == '"') out += "\\\"";
+        else if (c == '\\') out += "\\\\";
+        else out += c;
+    }
+    return out;
+}
+
+// ============================================================================
+// Main
+// ============================================================================
+
+int main(int argc, char* argv[]) {
+    BenchConfig cfg = parseArgs(argc, argv);
+    auto algos = buildAlgos();
 
     // Setup Data
     const int kInputSize = 48000;
     std::vector<float> input(kInputSize * 2);
-    std::vector<float> output(256 * 2); // Dummy output
+    std::vector<float> output(256 * 2);
 
-    // Fill with random noise to prevent bad branch prediction / zero optimizations
     std::mt19937 rng(42);
     std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
     for (size_t i = 0; i < input.size(); ++i)
         input[i] = dist(rng);
 
-    // Benchmarks
-    std::vector<BenchmarkResult> results;
+    if (!cfg.jsonMode) {
+        std::cout << "========================================\n";
+        std::cout << " SINC INTERPOLATOR BENCHMARK\n";
+        std::cout << " Validating Trig Reduction Optimization\n";
+        std::cout << "========================================\n\n";
 
-    std::cout << "Starting tests...\n";
-    std::cout << "Testing Cubic...\n";
-    results.push_back(runBenchmark<CubicInterpolator>("Cubic (4-point)", input.data(), kInputSize, output.data(), 0));
-    std::cout << "Testing Sinc8...\n";
-    results.push_back(runBenchmark<Sinc8Interpolator>("Sinc8 (8-point)", input.data(), kInputSize, output.data(), 0));
-    std::cout << "Testing Sinc64 (Original Opt)...\n";
-    results.push_back(
-        runBenchmark<Sinc64Interpolator>("Sinc64 (Original Opt)", input.data(), kInputSize, output.data(), 0));
-    std::cout << "Testing Sinc64 TURBO...\n";
-    std::cout << "  CPU Features:\n";
-    std::cout << "    AVX512F: " << (Aestra::Core::CPUDetection::get().hasAVX512F() ? "YES" : "NO") << "\n";
-    std::cout << "    AVX2:   " << (Aestra::Core::CPUDetection::get().hasAVX2() ? "YES" : "NO") << "\n";
-    std::cout << "    FMA:    " << (Aestra::Core::CPUDetection::get().hasFMA() ? "YES" : "NO") << "\n";
-    std::cout << "    SSE4.1: " << (Aestra::Core::CPUDetection::get().hasSSE41() ? "YES" : "NO") << "\n";
-    std::cout << "    NEON:   " << (Aestra::Core::CPUDetection::get().hasNEON() ? "YES" : "NO") << "\n";
-    results.push_back(
-        runBenchmark<Sinc64Turbo>("Sinc64 TURBO (Multi-SIMD)", input.data(), kInputSize, output.data(), 0));
-    std::cout << "All tests completed.\n\n";
-
-    std::cout << std::left << std::setw(20) << "Algorithm"
-              << "| " << std::setw(15) << "MFrame/sec"
-              << "| " << std::setw(10) << "Relative"
-              << "\n";
-    std::cout << "--------------------|----------------|-----------\n";
-
-    double baseRate = results[0].mframesPerSec;
-
-    for (const auto& res : results) {
-        std::cout << std::left << std::setw(20) << res.name << "| " << std::setw(15) << std::fixed
-                  << std::setprecision(2) << res.mframesPerSec << "| " << std::setw(10) << std::setprecision(2)
-                  << (res.mframesPerSec / baseRate) << "x"
-                  << "\n";
+        std::cout << "Starting tests...\n";
+        std::cout << "  CPU Features:\n";
+        std::cout << "    AVX512F: " << (Aestra::Core::CPUDetection::get().hasAVX512F() ? "YES" : "NO") << "\n";
+        std::cout << "    AVX2:   " << (Aestra::Core::CPUDetection::get().hasAVX2() ? "YES" : "NO") << "\n";
+        std::cout << "    FMA:    " << (Aestra::Core::CPUDetection::get().hasFMA() ? "YES" : "NO") << "\n";
+        std::cout << "    SSE4.1: " << (Aestra::Core::CPUDetection::get().hasSSE41() ? "YES" : "NO") << "\n";
+        std::cout << "    NEON:   " << (Aestra::Core::CPUDetection::get().hasNEON() ? "YES" : "NO") << "\n";
+        std::cout << "\n";
     }
 
-    std::cout << "\nAnalysis:\n";
-    double s8 = results[1].mframesPerSec;
-    double s64 = results[3].mframesPerSec;
-    double ratio = s8 / s64;
+    struct AlgoResult {
+        AlgoDef def;
+        Stats usPerBlock;
+        Stats mframesPerSec;
+    };
+    std::vector<AlgoResult> allResults;
 
-    std::cout << "Sinc64 is " << std::setprecision(2) << ratio << "x slower than Sinc8.\n";
-    std::cout << "(Theoretical non-optimized would be ~8x slower strictly due to taps,\n";
-    std::cout << " but with Trig Reduction, the overhead is purely MAC + RAM, so it should be efficient.)\n";
+    for (const auto& algo : algos) {
+        std::vector<double> usVals, mfpsVals;
+        for (int i = 0; i < cfg.iterations; ++i) {
+            SingleRun r = runOnce(algo, input.data(), kInputSize, output.data(), 0);
+            usVals.push_back(r.avgTimeUs);
+            mfpsVals.push_back(r.mframesPerSec);
+        }
+        AlgoResult ar;
+        ar.def = algo;
+        ar.usPerBlock = computeStats(usVals);
+        ar.mframesPerSec = computeStats(mfpsVals);
+        allResults.push_back(ar);
+
+        if (!cfg.jsonMode) {
+            std::cout << "Testing " << algo.name << "...\n";
+        }
+    }
+
+    // Human-readable table
+    if (!cfg.jsonMode) {
+        std::cout << "\n";
+        std::cout << std::left << std::setw(25) << "Algorithm"
+                  << "| " << std::setw(15) << "MFrame/sec"
+                  << "| " << std::setw(12) << "us/block"
+                  << "| " << std::setw(10) << "Relative"
+                  << "\n";
+        std::cout << "-------------------------|----------------|-------------|-----------\n";
+
+        double baseRate = allResults[0].mframesPerSec.median;
+        for (const auto& ar : allResults) {
+            std::cout << std::left << std::setw(25) << ar.def.name << "| "
+                      << std::setw(15) << std::fixed << std::setprecision(2) << ar.mframesPerSec.median << "| "
+                      << std::setw(12) << std::setprecision(2) << ar.usPerBlock.median << "| "
+                      << std::setw(10) << std::setprecision(2)
+                      << (baseRate > 0 ? (ar.mframesPerSec.median / baseRate) : 0.0) << "x"
+                      << "\n";
+        }
+
+        std::cout << "\nAnalysis:\n";
+        if (allResults.size() >= 4) {
+            double s8 = allResults[1].mframesPerSec.median;
+            double s64 = allResults[3].mframesPerSec.median;
+            double ratio = (s64 > 0) ? (s8 / s64) : 0.0;
+            std::cout << "Sinc64 is " << std::setprecision(2) << ratio << "x slower than Sinc8.\n";
+            std::cout << "(Theoretical non-optimized would be ~8x slower strictly due to taps,\n";
+            std::cout << " but with Trig Reduction, the overhead is purely MAC + RAM, so it should be efficient.)\n";
+        }
+    }
+
+    // JSON output
+    if (cfg.jsonMode) {
+        std::cout << "{\n";
+        std::cout << "  \"benchmark\": \"AestraSincBenchmark\",\n";
+        std::cout << "  \"iterations\": " << cfg.iterations << ",\n";
+        std::cout << "  \"algorithms\": [\n";
+        for (size_t i = 0; i < allResults.size(); ++i) {
+            const auto& ar = allResults[i];
+            std::cout << "    {\n";
+            std::cout << "      \"algo_id\": \"" << jsonEscape(ar.def.algoId) << "\",\n";
+            std::cout << "      \"name\": \"" << jsonEscape(ar.def.name) << "\",\n";
+            std::cout << "      \"median_mframes_per_sec\": " << std::fixed << std::setprecision(4) << ar.mframesPerSec.median << ",\n";
+            std::cout << "      \"mean_mframes_per_sec\": " << std::fixed << std::setprecision(4) << ar.mframesPerSec.mean << ",\n";
+            std::cout << "      \"best_mframes_per_sec\": " << std::fixed << std::setprecision(4) << ar.mframesPerSec.best << ",\n";
+            std::cout << "      \"worst_mframes_per_sec\": " << std::fixed << std::setprecision(4) << ar.mframesPerSec.worst << ",\n";
+            std::cout << "      \"median_us_per_block\": " << std::fixed << std::setprecision(4) << ar.usPerBlock.median << ",\n";
+            std::cout << "      \"cv\": " << std::fixed << std::setprecision(6) << ar.mframesPerSec.cv << "\n";
+            std::cout << "    }";
+            if (i + 1 < allResults.size()) std::cout << ",";
+            std::cout << "\n";
+        }
+        std::cout << "  ]\n";
+        std::cout << "}\n";
+    }
 
     return 0;
 }

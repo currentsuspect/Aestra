@@ -120,9 +120,25 @@ float dotProductAVX(const float* a, const float* b, uint32_t n) noexcept {
 #endif
 
 // Scalar fallback dot product
-float dotProductScalar(const float* a, const float* b, uint32_t n) noexcept {
+// Scalar dot product with SSE4.1 target for auto-vectorization
+// This enables the compiler to use SSE multiply-add instructions on x86
+#ifdef __x86_64__
+__attribute__((target("sse4.1")))
+#endif
+float dotProductScalar(const float* __restrict__ a, const float* __restrict__ b, uint32_t n) noexcept {
     float sum = 0.0f;
-    for (uint32_t i = 0; i < n; ++i) {
+    uint32_t i = 0;
+
+    // Unroll by 8 for better instruction-level parallelism
+    for (; i + 7 < n; i += 8) {
+        sum += a[i] * b[i] + a[i + 1] * b[i + 1] +
+               a[i + 2] * b[i + 2] + a[i + 3] * b[i + 3] +
+               a[i + 4] * b[i + 4] + a[i + 5] * b[i + 5] +
+               a[i + 6] * b[i + 6] + a[i + 7] * b[i + 7];
+    }
+
+    // Remainder
+    for (; i < n; ++i) {
         sum += a[i] * b[i];
     }
     return sum;
@@ -372,75 +388,158 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
 
     // Use current (possibly smoothed) ratio
     const double effectiveRatio = m_currentRatio;
+    const double invRatio = 1.0 / effectiveRatio; // hoisted: constant for entire process() call
 
-    // Process input samples
+    // Hoisted constants (invariant across all frames in this call)
+    const double historySizeD = static_cast<double>(m_history.size);
+    const double historySizeMinus1 = historySizeD - 1.0;
+    const double historySizeMinusHalfTaps = historySizeD - static_cast<double>(halfTaps);
+    const double halfTapsD = static_cast<double>(halfTaps);
+    const double polyPhaseScale = static_cast<double>(SRCConstants::POLYPHASE_PHASES);
+    const uint32_t historySizeMask = m_history.size - 1;
+
+    // Hoist member variables into locals to reduce memory traffic in the hot loop
+    double srcPosition = m_srcPosition;
+    double nextOutputSrcPos = m_nextOutputSrcPos;
+
+    // Track srcPosition - nextOutputSrcPos as a single variable.
+    // In the output loop, srcPosition is constant and nextOutputSrcPos increases
+    // by invRatio each iteration, so srcNextDiff decreases by invRatio.
+    double srcNextDiff = srcPosition - nextOutputSrcPos;
+
+    // Process input samples — use incrementing pointer to avoid multiply per frame
+    const float* inPtr = input;
+    // Use incrementing output pointer to avoid multiply per output sample
+    float* outPtr = output;
     for (uint32_t inFrame = 0; inFrame < inputFrames; ++inFrame) {
-        // Push input frame into history
-        m_history.push(input + inFrame * m_channels);
-        m_historyFilled = std::min(m_historyFilled + 1, m_history.size);
+        // Inline push for stereo (most common case) — eliminates function call
+        if (m_channels == 2) {
+            const uint32_t wp = m_history.writePos;
+            const uint32_t wp1 = wp + m_history.size;
+            const float l = inPtr[0];
+            const float r = inPtr[1];
+            m_history.data[0][wp] = l;
+            m_history.data[0][wp1] = l;
+            m_history.data[1][wp] = r;
+            m_history.data[1][wp1] = r;
+            m_history.writePos = (wp + 1) & (m_history.size - 1);
+        } else {
+            m_history.push(inPtr);
+        }
+        inPtr += m_channels;
 
         // Logical "now" position in source stream (in samples)
-        // [FIX] Use cumulative position relative to Start of History, but track it across blocks.
-        // We use m_srcPosition to track how many input samples we've processed in total.
-        m_srcPosition += 1.0;
+        srcPosition += 1.0;
+        srcNextDiff = srcPosition - nextOutputSrcPos;
+
+        // Hoist per-frame constants for the output loop
+        const double srcPosMinusHalfTaps = srcPosition - halfTapsD;
+        const double srcPosMinusHistorySize = srcPosition - historySizeMinusHalfTaps;
+
+        // Track historyPos directly: starts at historySizeMinus1 - srcNextDiff,
+        // increases by invRatio each output sample iteration
+        double historyPos = historySizeMinus1 - srcNextDiff;
 
         // Generate output samples while we have enough history
         while (outputFrames < maxOutputFrames) {
-            // [FIX] Phase correctness: m_nextOutputSrcPos tracks the exact source sample index
-            // where the NEXT output sample should be taken from.
-
             // If the next sample is ahead of our current history window (accounting for filter tail), wait.
-            if (m_nextOutputSrcPos > m_srcPosition - static_cast<double>(halfTaps)) {
+            if (nextOutputSrcPos > srcPosMinusHalfTaps) {
                 break;
             }
 
             // Re-check: If next sample is WAY behind (seek?), reset it to a safe "current" position.
-            if (m_nextOutputSrcPos < m_srcPosition - static_cast<double>(m_history.size - halfTaps)) {
-                m_nextOutputSrcPos = m_srcPosition - static_cast<double>(halfTaps);
+            if (nextOutputSrcPos < srcPosMinusHistorySize) {
+                nextOutputSrcPos = srcPosMinusHalfTaps;
+                srcNextDiff = srcPosition - nextOutputSrcPos;
+                historyPos = historySizeMinus1 - srcNextDiff;
             }
 
-            // Calculate fractional position within history ring
-            // history.size-1 is where the latest sample (m_srcPosition) was just written.
-            const double historyPos = static_cast<double>(m_history.size - 1) - (m_srcPosition - m_nextOutputSrcPos);
-
             const uint32_t intPos = static_cast<uint32_t>(historyPos);
-            const double fracPos = historyPos - static_cast<double>(intPos);
 
             // Quantize fractional position to polyphase index
+            // Equivalent to fracPos * 256 but avoids the intermediate subtraction:
+            // historyPos * 256 = intPos * 256 + fracPos * 256
+            // The & 255 mask removes the intPos * 256 term
             const uint32_t phaseIndex =
-                static_cast<uint32_t>(fracPos * static_cast<double>(SRCConstants::POLYPHASE_PHASES) + 0.5) %
-                SRCConstants::POLYPHASE_PHASES;
+                static_cast<uint32_t>(historyPos * polyPhaseScale + 0.5) &
+                (SRCConstants::POLYPHASE_PHASES - 1);
 
-            // Generate output for each channel
-            for (uint32_t ch = 0; ch < m_channels; ++ch) {
-                const float* coeffs = bank->coeffs[phaseIndex];
-                const int32_t samplePos0 = static_cast<int32_t>(intPos) - static_cast<int32_t>(halfTaps);
-                const float* window = m_history.getWindow(ch, samplePos0);
-                float sum = 0.0f;
+            // Hoist channel-invariant computations
+            const float* coeffs = bank->coeffs[phaseIndex];
+            // Compute windowIdx directly: (intPos - halfTaps) & mask wraps correctly
+            // for unsigned arithmetic, eliminating the intermediate samplePos0 variable
+            const uint32_t windowIdx = m_history.writePos +
+                ((intPos - halfTaps) & historySizeMask);
 
+            // Precompute output base pointer — use incrementing pointer
+            float* out = outPtr;
+
+            // Generate output for each channel — hoist SIMD dispatch outside the loop
+            // Fast path for stereo (most common case): unroll to 2 independent accumulators
+            if (m_channels == 2) {
+                const float* windowL = &m_history.data[0][windowIdx];
+                const float* windowR = &m_history.data[1][windowIdx];
 #ifdef AESTRA_HAS_AVX
                 if (useSIMD) {
-                    sum = dotProductAVX(window, coeffs, numTaps);
+                    out[0] = dotProductAVX(windowL, coeffs, numTaps);
+                    out[1] = dotProductAVX(windowR, coeffs, numTaps);
                 } else {
-                    sum = dotProductScalar(window, coeffs, numTaps);
+                    out[0] = dotProductScalar(windowL, coeffs, numTaps);
+                    out[1] = dotProductScalar(windowR, coeffs, numTaps);
                 }
 #elif defined(AESTRA_HAS_SSE)
                 if (useSIMD) {
-                    sum = dotProductSSE(window, coeffs, numTaps);
+                    out[0] = dotProductSSE(windowL, coeffs, numTaps);
+                    out[1] = dotProductSSE(windowR, coeffs, numTaps);
                 } else {
-                    sum = dotProductScalar(window, coeffs, numTaps);
+                    out[0] = dotProductScalar(windowL, coeffs, numTaps);
+                    out[1] = dotProductScalar(windowR, coeffs, numTaps);
                 }
 #else
                 (void)useSIMD;
-                sum = dotProductScalar(window, coeffs, numTaps);
+                out[0] = dotProductScalar(windowL, coeffs, numTaps);
+                out[1] = dotProductScalar(windowR, coeffs, numTaps);
 #endif
-                output[outputFrames * m_channels + ch] = sum;
+            } else {
+#ifdef AESTRA_HAS_AVX
+                if (useSIMD) {
+                    for (uint32_t ch = 0; ch < m_channels; ++ch) {
+                        out[ch] = dotProductAVX(&m_history.data[ch][windowIdx], coeffs, numTaps);
+                    }
+                } else {
+                    for (uint32_t ch = 0; ch < m_channels; ++ch) {
+                        out[ch] = dotProductScalar(&m_history.data[ch][windowIdx], coeffs, numTaps);
+                    }
+                }
+#elif defined(AESTRA_HAS_SSE)
+                if (useSIMD) {
+                    for (uint32_t ch = 0; ch < m_channels; ++ch) {
+                        out[ch] = dotProductSSE(&m_history.data[ch][windowIdx], coeffs, numTaps);
+                    }
+                } else {
+                    for (uint32_t ch = 0; ch < m_channels; ++ch) {
+                        out[ch] = dotProductScalar(&m_history.data[ch][windowIdx], coeffs, numTaps);
+                    }
+                }
+#else
+                (void)useSIMD;
+                for (uint32_t ch = 0; ch < m_channels; ++ch) {
+                    out[ch] = dotProductScalar(&m_history.data[ch][windowIdx], coeffs, numTaps);
+                }
+#endif
             }
 
             ++outputFrames;
-            m_nextOutputSrcPos += (1.0 / effectiveRatio); // [FIX] Precise phase step
+            outPtr += m_channels;
+            nextOutputSrcPos += invRatio;
+            srcNextDiff -= invRatio;
+            historyPos += invRatio;
         }
     }
+
+    // Write back hoisted locals to member variables
+    m_srcPosition = srcPosition;
+    m_nextOutputSrcPos = nextOutputSrcPos;
 
     return outputFrames;
 }

@@ -1,9 +1,16 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "RtAudioDriver.h"
+#include "Core/AudioTelemetry.h"
 
 #include <iostream>
 #include <utility>
 #include <vector>
+
+#ifdef __linux__
+#include <pthread.h>
+#include <sched.h>
+#include <sys/mman.h>
+#endif
 
 namespace Aestra {
 namespace Audio {
@@ -106,6 +113,7 @@ bool RtAudioDriver::openStream(const AudioStreamConfig& config, AudioCallback ca
 
     m_userCallback.store(callback, std::memory_order_relaxed);
     m_userData.store(userData, std::memory_order_relaxed);
+    m_telemetry = config.telemetry;
     m_lastError.clear();
 
     RtAudioErrorType error = m_rtAudio->openStream(&outputParams, inputParams, RTAUDIO_FLOAT32, sampleRate,
@@ -151,6 +159,29 @@ bool RtAudioDriver::startStream() {
         m_lastError = "RtAudio failed to start stream";
         return false;
     }
+
+#ifdef __linux__
+    // Set SCHED_FIFO real-time scheduling for the audio thread
+    // RtAudio creates its own thread; we set priority on the calling thread
+    // which should be the audio thread context at this point.
+    // Note: This requires CAP_SYS_NICE or appropriate RLIMIT_RTPRIO.
+    struct sched_param param;
+    param.sched_priority = sched_get_priority_max(SCHED_FIFO);
+    // Use 50% of max priority to avoid starving system threads
+    param.sched_priority = (param.sched_priority + sched_get_priority_min(SCHED_FIFO)) / 2;
+    if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &param) == 0) {
+        if (m_telemetry) {
+            m_telemetry->setThreadPriorityBit(0x01); // SCHED_FIFO success
+        }
+    }
+    // mlockall to prevent page faults during RT processing
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) == 0) {
+        if (m_telemetry) {
+            m_telemetry->setThreadPriorityBit(0x02); // mlockall success
+        }
+    }
+#endif
+
     return true;
 }
 
@@ -181,6 +212,10 @@ int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsign
     auto* driver = static_cast<RtAudioDriver*>(userData);
     if (status != 0) {
         driver->m_stats.underrunCount++;
+        if (driver->m_telemetry) {
+            driver->m_telemetry->incrementXruns();
+            driver->m_telemetry->incrementUnderruns();
+        }
     }
 
     AudioCallback callback = driver->m_userCallback.load(std::memory_order_relaxed);
@@ -190,8 +225,19 @@ int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsign
     }
 
     driver->m_stats.callbackCount++;
-    return callback(static_cast<float*>(outputBuffer), static_cast<const float*>(inputBuffer), numFrames, streamTime,
+    int result = callback(static_cast<float*>(outputBuffer), static_cast<const float*>(inputBuffer), numFrames, streamTime,
                     callbackUserData);
+
+    // Update telemetry (lock-free, RT-safe)
+    if (driver->m_telemetry) {
+        driver->m_telemetry->updateLastBufferFrames(numFrames);
+        uint32_t sr = driver->getStreamSampleRate();
+        if (sr > 0) {
+            driver->m_telemetry->updateLastSampleRate(sr);
+        }
+    }
+
+    return result;
 }
 
 bool RtAudioDriver::tryInitializeBackend(const std::vector<RtAudio::Api>& candidates) {

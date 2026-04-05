@@ -6,6 +6,20 @@ The public repository is currently on a `0.x` pre-beta line. The release target 
 
 ## [Unreleased]
 
+### Fixed
+- Piano Roll: dropdown menu (Scale, Snap, Root Key) now responds to clicks — was using local bounds for positioning but global bounds for hit-testing
+
+### Device Resilience (EPIC K)
+
+- **Telemetry wiring**: Driver-level underrun/xrun counters now flow to engine telemetry across WASAPI Shared, WASAPI Exclusive, and RtAudioDriver
+- **Health monitor thread**: Automatic driver health polling (500ms interval, 2s stall detection → safety driver fallback)
+- **Hot-plug detection**: `IMMNotificationClient` implementation for both WASAPI drivers — device removal/default device change events
+- **RT safety**: Removed all `std::cout`/`std::cerr` from WASAPI audio thread loops; added Linux SCHED_FIFO scheduling + mlockall in RtAudioDriver
+- **Fallback reasons**: `AudioDeviceManager` now populates descriptive fallback reason strings during driver fallback loop
+- **PerformanceHUD**: Enhanced with underrun detail, overruns, consecutive underruns, recovery mode, thread priority status, and last callback timing (% of budget)
+- **Driver soak test**: New `AestraAudioDriverSoakTest` exercises real audio driver path with live stream, monitors telemetry, reports every 5s
+- **AudioTelemetry fix**: `lastCallbackNs`, `maxCallbackNs`, `lastBufferFrames`, `lastSampleRate` now updated every callback frame (previously always zero)
+
 ### Export / Offline Render
 
 - **Rewrote `AudioExporter` from scratch** — the previous implementation was fundamentally broken (never started transport, never advanced position between blocks, hardcoded 60s duration → produced silence).

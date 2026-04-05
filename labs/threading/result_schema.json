@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Threading Eval Result",
+  "type": "object",
+  "required": ["run_id", "timestamp", "git", "lanes", "decision"],
+  "properties": {
+    "run_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "git": { "type": "object", "required": ["commit", "branch", "dirty"], "properties": { "commit": { "type": "string" }, "branch": { "type": "string" }, "dirty": { "type": "boolean" } } },
+    "lanes": { "type": "object", "required": ["threading"], "properties": { "threading": { "type": "object", "required": ["binary", "exit_code", "output_file"], "properties": { "binary": { "type": "string" }, "exit_code": { "type": "integer" }, "output_file": { "type": "string" } } } } },
+    "decision": { "type": "object", "required": ["status", "reason"], "properties": { "status": { "type": "string", "enum": ["accept", "reject", "inconclusive"] }, "reason": { "type": "string" }, "hard_gate_failures": { "type": "array", "items": { "type": "string" } }, "advisory_flags": { "type": "array", "items": { "type": "string" } } } }
+  }
+}

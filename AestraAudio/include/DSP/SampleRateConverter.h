@@ -117,7 +117,8 @@ struct SampleHistory {
     // Planar + mirrored storage for SIMD-friendly contiguous windows.
     // Layout: data[channel][index], where index spans kMirrorFactor * HISTORY_SIZE.
     // Mirroring eliminates wrap checks for tap windows (RT-safe, fixed size).
-    static constexpr uint32_t kMirrorFactor = 3; // 2 is usually enough; 3 covers any start+MAX_TAPS window safely.
+    // kMirrorFactor = 2 is sufficient: writePos + rel <= 127 + 127 = 254 < 256.
+    static constexpr uint32_t kMirrorFactor = 2;
 
     alignas(32) float data[SRCConstants::MAX_CHANNELS][SRCConstants::HISTORY_SIZE * kMirrorFactor];
 
@@ -142,15 +143,14 @@ struct SampleHistory {
     void push(const float* frame) noexcept {
         const uint32_t base0 = writePos;
         const uint32_t base1 = base0 + size;
-        const uint32_t base2 = base0 + 2 * size;
 
         for (uint32_t ch = 0; ch < channels; ++ch) {
             const float s = frame[ch];
             data[ch][base0] = s;
             data[ch][base1] = s;
-            data[ch][base2] = s;
         }
-        writePos = (writePos + 1) % size;
+        // size is always a power of 2 (128), so use bitwise AND instead of modulo
+        writePos = (writePos + 1) & (size - 1);
     }
 
     // Get a contiguous window pointer for the given channel starting at relPos
@@ -158,10 +158,10 @@ struct SampleHistory {
     const float* getWindow(uint32_t channel, int32_t relPos) const noexcept {
         if (size == 0)
             return nullptr;
-        const int32_t sizeI = static_cast<int32_t>(size);
-        int32_t rel = relPos % sizeI;
+        const int32_t sizeMask = static_cast<int32_t>(size) - 1;
+        int32_t rel = relPos & sizeMask;
         if (rel < 0)
-            rel += sizeI;
+            rel += static_cast<int32_t>(size);
 
         // Chronological ring is laid out contiguously at [writePos .. writePos+size-1].
         // Mirroring extends past wrap so tap windows are contiguous.
@@ -294,7 +294,10 @@ public:
      *
      * @return Latency in output frames (depends on filter size)
      */
-    uint32_t getLatency() const noexcept { return m_filterBank.halfTaps; }
+    uint32_t getLatency() const noexcept {
+        const PolyphaseFilterBank* bank = getFilterBank();
+        return bank ? bank->halfTaps : 0;
+    }
 
     /**
      * @brief Check if configured and ready to process
