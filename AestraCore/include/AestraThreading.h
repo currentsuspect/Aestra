@@ -368,7 +368,9 @@ public:
 
     void lock() {
         while (flag.exchange(true, std::memory_order_acquire)) {
-            // Spin
+            while (flag.load(std::memory_order_relaxed)) {
+                // Spin with cheap loads until lock appears available
+            }
         }
     }
 
