@@ -174,15 +174,8 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerBenchmark.cpp")
     if(WIN32)
         target_link_libraries(ResamplerBenchmark PRIVATE ole32)
     endif()
-    # Enable AVX2 if available (x86 only, skip on ARM/Apple Silicon)
-    message(STATUS "ResamplerBenchmark: CMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}")
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i686" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
-        if(MSVC)
-            target_compile_options(ResamplerBenchmark PRIVATE /arch:AVX2)
-        else()
-            target_compile_options(ResamplerBenchmark PRIVATE -mavx2 -mfma)
-        endif()
-    endif()
+    # NOTE: No forced AVX flags here. SampleRateConverter uses runtime SIMD dispatch
+    # (#pragma / hasAVX() checks). Forcing -mavx2 breaks on CPUs without AVX2 support.
 endif()
 
 # =============================================================================
@@ -207,6 +200,16 @@ if(AESTRA_ENABLE_RUNTIME_TESTS)
     set_tests_properties(AestraAudioSoakTest PROPERTIES LABELS "audio;runtime;soak;long")
 else()
     message(STATUS "AestraAudioSoakTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+endif()
+
+# K-005: Driver-level Soak Test (runtime/device-dependent, exercises real audio path)
+add_executable(AestraAudioDriverSoakTest AestraAudio/AudioDriverSoakTest.cpp)
+target_link_libraries(AestraAudioDriverSoakTest PRIVATE AestraAudio AestraAudioCore AestraCore)
+if(AESTRA_ENABLE_RUNTIME_TESTS)
+    add_test(NAME AestraAudioDriverSoakTest COMMAND AestraAudioDriverSoakTest --duration-sec 60)
+    set_tests_properties(AestraAudioDriverSoakTest PROPERTIES LABELS "audio;runtime;soak;driver;long")
+else()
+    message(STATUS "AestraAudioDriverSoakTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
 endif()
 
 # Performance Stress Test
@@ -236,6 +239,19 @@ if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
     set_tests_properties(AestraWaveformLockTest PROPERTIES LABELS "experimental;unstable")
 else()
     message(STATUS "AestraWaveformLockTest built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
+endif()
+
+# Waveform Cache Correctness Test
+add_executable(AestraWaveformCacheTest
+    AestraAudio/WaveformCacheTest.cpp
+    ${CMAKE_SOURCE_DIR}/AestraAudio/src/IO/WaveformCache.cpp
+)
+target_link_libraries(AestraWaveformCacheTest PRIVATE AestraAudio AestraCore)
+if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
+    add_test(NAME AestraWaveformCacheTest COMMAND AestraWaveformCacheTest)
+    set_tests_properties(AestraWaveformCacheTest PROPERTIES LABELS "experimental;unstable")
+else()
+    message(STATUS "AestraWaveformCacheTest built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
 endif()
 
 # Atomic Save Test (self-contained filesystem atomic-write smoke test)

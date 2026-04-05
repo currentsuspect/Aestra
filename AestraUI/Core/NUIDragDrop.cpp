@@ -170,8 +170,7 @@ void NUIDragDropManager::unregisterDropTarget(IDropTarget* target) {
 }
 
 std::shared_ptr<IDropTarget> NUIDragDropManager::findTargetAt(const NUIPoint& position) {
-    auto it = m_dropTargets.begin();
-    while (it != m_dropTargets.end()) {
+    for (auto it = m_dropTargets.rbegin(); it != m_dropTargets.rend();) {
         if (auto target = it->lock()) {
             
             // DEBUG LOGGING
@@ -194,7 +193,8 @@ std::shared_ptr<IDropTarget> NUIDragDropManager::findTargetAt(const NUIPoint& po
             ++it;
         } else {
             // Clean up expired weak_ptr
-            it = m_dropTargets.erase(it);
+            it = std::reverse_iterator<std::vector<std::weak_ptr<IDropTarget>>::iterator>(
+                m_dropTargets.erase(std::next(it).base()));
         }
     }
     return nullptr;

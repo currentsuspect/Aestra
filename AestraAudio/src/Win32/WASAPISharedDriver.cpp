@@ -44,6 +44,68 @@ std::string HResultToString(HRESULT hr) {
     oss << "0x" << std::hex << hr;
     return oss.str();
 }
+
+// K-002: IMMNotificationClient implementation for hot-plug detection
+class WASAPIDeviceNotifier : public IMMNotificationClient {
+public:
+    WASAPIDeviceNotifier(WASAPISharedDriver* driver) : m_refCount(1), m_driver(driver) {}
+
+    // IUnknown
+    STDMETHODIMP QueryInterface(REFIID riid, void** ppv) override {
+        if (riid == IID_IUnknown || riid == __uuidof(IMMNotificationClient)) {
+            *ppv = static_cast<IMMNotificationClient*>(this);
+            AddRef();
+            return S_OK;
+        }
+        *ppv = nullptr;
+        return E_NOINTERFACE;
+    }
+    STDMETHODIMP_(ULONG) AddRef() override { return InterlockedIncrement(&m_refCount); }
+    STDMETHODIMP_(ULONG) Release() override {
+        ULONG count = InterlockedDecrement(&m_refCount);
+        if (count == 0) delete this;
+        return count;
+    }
+
+    // IMMNotificationClient
+    STDMETHODIMP OnDeviceStateChanged(LPCWSTR pwstrDeviceId, DWORD dwNewState) override {
+        (void)pwstrDeviceId;
+        (void)dwNewState;
+        // Device connected/disabled/removed — trigger re-enumeration
+        if (m_driver) {
+            m_driver->onDeviceStateChanged("", dwNewState);
+        }
+        return S_OK;
+    }
+    STDMETHODIMP OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId) override {
+        (void)flow;
+        (void)role;
+        (void)pwstrDefaultDeviceId;
+        if (m_driver && flow == eRender && role == eConsole) {
+            m_driver->onDefaultDeviceChanged(true, "");
+        }
+        return S_OK;
+    }
+    STDMETHODIMP OnPropertyValueChanged(LPCWSTR pwstrDeviceId, const PROPERTYKEY key) override {
+        (void)pwstrDeviceId;
+        (void)key;
+        return S_OK;
+    }
+    STDMETHODIMP OnDeviceAdded(LPCWSTR pwstrDeviceId) override {
+        (void)pwstrDeviceId;
+        if (m_driver) m_driver->onDeviceStateChanged("", DEVICE_STATE_ACTIVE);
+        return S_OK;
+    }
+    STDMETHODIMP OnDeviceRemoved(LPCWSTR pwstrDeviceId) override {
+        (void)pwstrDeviceId;
+        if (m_driver) m_driver->onDeviceStateChanged("", DEVICE_STATE_NOTPRESENT);
+        return S_OK;
+    }
+
+private:
+    LONG m_refCount;
+    WASAPISharedDriver* m_driver;
+};
 } // namespace
 
 WASAPISharedDriver::WASAPISharedDriver() {
@@ -257,6 +319,7 @@ bool WASAPISharedDriver::openStream(const AudioStreamConfig& config, AudioCallba
     m_config = config;
     m_userCallback = callback;
     m_userData = userData;
+    m_telemetry = config.telemetry;
 
     if (!openDevice(config.deviceId)) {
         return false;
@@ -268,7 +331,11 @@ bool WASAPISharedDriver::openStream(const AudioStreamConfig& config, AudioCallba
     }
 
     m_state = DriverState::STREAM_OPEN;
-    std::cout << "[WASAPI Shared] Stream opened successfully" << std::endl;
+    Aestra::Log::info("[WASAPI Shared] Stream opened successfully");
+
+    // K-002: Register for hot-plug notifications
+    registerDeviceNotifier();
+
     return true;
 }
 
@@ -499,9 +566,9 @@ bool WASAPISharedDriver::initializeAudioClient() {
 }
 
 void WASAPISharedDriver::closeStream() {
+    unregisterDeviceNotifier();
     closeDevice();
     m_state = DriverState::INITIALIZED;
-    std::cout << "[WASAPI Shared] Stream closed" << std::endl;
 }
 
 bool WASAPISharedDriver::startStream() {
@@ -643,8 +710,11 @@ void WASAPISharedDriver::audioThreadProc() {
 
         if (waitResult != WAIT_OBJECT_0) {
             if (!m_shouldStop) {
-                std::cerr << "[WASAPI Shared] Audio event timeout" << std::endl;
                 m_statistics.underrunCount++;
+                if (m_telemetry) {
+                    m_telemetry->incrementXruns();
+                    m_telemetry->incrementUnderruns();
+                }
             }
             continue;
         }
@@ -674,6 +744,10 @@ void WASAPISharedDriver::audioThreadProc() {
         hr = reinterpret_cast<IAudioRenderClient*>(m_renderClient)->GetBuffer(availableFrames, &data);
         if (FAILED(hr)) {
             m_statistics.underrunCount++;
+            if (m_telemetry) {
+                m_telemetry->incrementXruns();
+                m_telemetry->incrementUnderruns();
+            }
             continue;
         }
 
@@ -754,7 +828,7 @@ void WASAPISharedDriver::audioThreadProc() {
         // Release buffer
         hr = reinterpret_cast<IAudioRenderClient*>(m_renderClient)->ReleaseBuffer(availableFrames, 0);
         if (FAILED(hr)) {
-            std::cerr << "[WASAPI Shared] Failed to release buffer" << std::endl;
+            // RT-safe: no logging in audio thread
         }
 
         // Update statistics
@@ -763,6 +837,17 @@ void WASAPISharedDriver::audioThreadProc() {
         double callbackTimeUs =
             static_cast<double>(endTime.QuadPart - startTime.QuadPart) * 1000000.0 / static_cast<double>(m_perfFreq);
         updateStatistics(callbackTimeUs);
+
+        // Update telemetry (lock-free, RT-safe)
+        if (m_telemetry) {
+            uint64_t callbackNs = static_cast<uint64_t>(callbackTimeUs * 1000);
+            m_telemetry->updateLastCallbackNs(callbackNs);
+            m_telemetry->updateMaxCallbackNs(callbackNs);
+            m_telemetry->updateLastBufferFrames(availableFrames);
+            if (m_config.sampleRate > 0) {
+                m_telemetry->updateLastSampleRate(m_config.sampleRate);
+            }
+        }
     }
 
     if (avrtHandle) {
@@ -819,6 +904,67 @@ uint32_t WASAPISharedDriver::getStreamSampleRate() const {
         return 0;
     WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(m_waveFormat);
     return wf->nSamplesPerSec;
+}
+
+// K-002: Hot-plug detection implementation
+void WASAPISharedDriver::registerDeviceNotifier() {
+    if (m_deviceNotifier || !m_deviceEnumerator) {
+        return;
+    }
+
+    WASAPIDeviceNotifier* notifier = new WASAPIDeviceNotifier(this);
+    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)
+                     ->RegisterEndpointNotificationCallback(notifier);
+    if (SUCCEEDED(hr)) {
+        m_deviceNotifier = notifier;
+        Aestra::Log::info("[WASAPI Shared] Hot-plug detection registered");
+    } else {
+        Aestra::Log::warning("[WASAPI Shared] Failed to register hot-plug detection: " + HResultToString(hr));
+        notifier->Release();
+    }
+}
+
+void WASAPISharedDriver::unregisterDeviceNotifier() {
+    if (!m_deviceNotifier || !m_deviceEnumerator) {
+        return;
+    }
+
+    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)
+                     ->UnregisterEndpointNotificationCallback(static_cast<IMMNotificationClient*>(m_deviceNotifier));
+    if (SUCCEEDED(hr)) {
+        Aestra::Log::info("[WASAPI Shared] Hot-plug detection unregistered");
+    }
+
+    static_cast<WASAPIDeviceNotifier*>(m_deviceNotifier)->Release();
+    m_deviceNotifier = nullptr;
+}
+
+void WASAPISharedDriver::onDeviceStateChanged(const std::string& deviceId, uint32_t newState) {
+    (void)deviceId;
+    (void)newState;
+    // Device state changed — check if our current device is still valid
+    // If the active device was removed, trigger fallback
+    if (m_isRunning.load(std::memory_order_relaxed) && m_state == DriverState::STREAM_RUNNING) {
+        // Check if current device is still available
+        if (!m_device) {
+            Aestra::Log::error("[WASAPI Shared] Active device removed — triggering safety fallback");
+            if (m_telemetry) {
+                m_telemetry->incrementXruns();
+            }
+            // Notify via error callback if set
+            if (m_errorCallback) {
+                m_errorCallback(DriverError::DEVICE_NOT_FOUND, "Active audio device was removed");
+            }
+        }
+    }
+}
+
+void WASAPISharedDriver::onDefaultDeviceChanged(bool isOutput, const std::string& newDefaultId) {
+    (void)isOutput;
+    (void)newDefaultId;
+    // Default output device changed — this happens when user plugs/unplugs headphones
+    // Log the event; actual stream restart is handled by the AudioDeviceManager
+    Aestra::Log::info("[WASAPI Shared] Default output device changed");
 }
 
 } // namespace Audio
