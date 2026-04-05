@@ -38,10 +38,12 @@ labs/dsp-filter/
 | M002 | 2026-04-05 | 1 | 0 | 1 | Validation run: `AestraFilterTest` executed non-interactively and failed hard gates on current HEAD |
 | M003 | 2026-04-05 | 1 | 1 | 0 | Validation after repairing coefficient initialization/smoothing behavior and normalizing the test response metric; `AestraFilterTest` passed |
 | M004 | 2026-04-05 | 3 | 1 | 2 | Optimization pass: rejected two hot-loop reshapes, kept settled-state smoothing short-circuit; hard gate green, broad perf context noisy |
+| M005 | 2026-04-05 | 1 | 1 | 0 | Optimization pass: hoisted drive×oversampling dispatch outside processBlock() loop; eliminated two per-sample branch checks; hard gate green |
+| M005 | 2026-04-05 | 1 | 1 | 0 | Optimization pass: hoisted drive×oversampling dispatch outside processBlock() loop; eliminated two per-sample branch checks; hard gate green |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: N/A (lab scaffold only)
-- **Baselines**: Passing `results/summary.json` exists from session M003, but it was captured on a dirty repair tree and should not be treated as the canonical baseline
-- **Known issues**: No dedicated filter benchmark lane yet; broad performance stress data remains too noisy for trusted keep/revert decisions
+- **Last commit**: `811a0a58` — dsp-filter-lab: accept round M005 dispatch processing variant once per block
+- **Baselines**: Passing `results/summary.json` from M005 (clean tree, post-optimization)
+- **Known issues**: No dedicated filter benchmark lane yet; broad performance stress data remains too noisy for trusted keep/revert decisions; `processBlockStereo()` still has per-sample branch pattern
