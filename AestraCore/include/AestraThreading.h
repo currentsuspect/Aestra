@@ -140,6 +140,7 @@ public:
             numThreads = std::thread::hardware_concurrency();
             if (numThreads == 0) numThreads = 2; // fallback for platforms that don't report concurrency
         }
+        workers.reserve(numThreads);
         for (size_t i = 0; i < numThreads; ++i) {
             workers.emplace_back([this] {
                 while (true) {
