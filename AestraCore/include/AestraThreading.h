@@ -222,18 +222,22 @@ public:
     // Signal completion of one task
     void signal() { counter.fetch_sub(1, std::memory_order_acq_rel); }
 
-    // Wait for all tasks to complete (Spin-wait optimized for low-latency audio)
+    // Wait for all tasks to complete (Adaptive spin-wait for low-latency audio)
     void wait() {
-        int spinCount = 0;
+        int spinCount = 1;
+        constexpr int maxSpin = 256;
         while (counter.load(std::memory_order_acquire) > 0) {
+            for (int i = 0; i < spinCount; ++i) {
 #ifdef __x86_64__
-            __builtin_ia32_pause();
+                __builtin_ia32_pause();
 #elif defined(__aarch64__)
-            asm volatile("yield" ::: "memory");
+                asm volatile("yield" ::: "memory");
 #endif
-            if (++spinCount > 1024) {
+            }
+            if (spinCount < maxSpin) {
+                spinCount *= 2;
+            } else {
                 std::this_thread::yield();
-                spinCount = 0;
             }
         }
     }
