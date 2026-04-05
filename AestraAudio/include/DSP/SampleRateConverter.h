@@ -117,7 +117,8 @@ struct SampleHistory {
     // Planar + mirrored storage for SIMD-friendly contiguous windows.
     // Layout: data[channel][index], where index spans kMirrorFactor * HISTORY_SIZE.
     // Mirroring eliminates wrap checks for tap windows (RT-safe, fixed size).
-    static constexpr uint32_t kMirrorFactor = 3; // 2 is usually enough; 3 covers any start+MAX_TAPS window safely.
+    // kMirrorFactor = 2 is sufficient: writePos + rel <= 127 + 127 = 254 < 256.
+    static constexpr uint32_t kMirrorFactor = 2;
 
     alignas(32) float data[SRCConstants::MAX_CHANNELS][SRCConstants::HISTORY_SIZE * kMirrorFactor];
 
@@ -142,13 +143,11 @@ struct SampleHistory {
     void push(const float* frame) noexcept {
         const uint32_t base0 = writePos;
         const uint32_t base1 = base0 + size;
-        const uint32_t base2 = base0 + 2 * size;
 
         for (uint32_t ch = 0; ch < channels; ++ch) {
             const float s = frame[ch];
             data[ch][base0] = s;
             data[ch][base1] = s;
-            data[ch][base2] = s;
         }
         // size is always a power of 2 (128), so use bitwise AND instead of modulo
         writePos = (writePos + 1) & (size - 1);
