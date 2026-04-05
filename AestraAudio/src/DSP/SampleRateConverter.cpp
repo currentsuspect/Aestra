@@ -412,9 +412,10 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             const double fracPos = historyPos - static_cast<double>(intPos);
 
             // Quantize fractional position to polyphase index
+            // POLYPHASE_PHASES = 256 (power of 2), so use bitwise AND instead of modulo
             const uint32_t phaseIndex =
-                static_cast<uint32_t>(fracPos * polyPhaseScale + 0.5) %
-                SRCConstants::POLYPHASE_PHASES;
+                static_cast<uint32_t>(fracPos * polyPhaseScale + 0.5) &
+                (SRCConstants::POLYPHASE_PHASES - 1);
 
             // Hoist channel-invariant computations
             const float* coeffs = bank->coeffs[phaseIndex];
