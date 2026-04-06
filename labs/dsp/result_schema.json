@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DSP Lab Eval Result",
+  "description": "Schema for a single DSP lab eval run result",
+  "type": "object",
+  "required": ["run_id", "timestamp", "git", "lanes", "decision"],
+  "properties": {
+    "run_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "git": {
+      "type": "object", "required": ["commit", "branch", "dirty"],
+      "properties": {
+        "commit": { "type": "string" },
+        "branch": { "type": "string" },
+        "dirty": { "type": "boolean" }
+      }
+    },
+    "lanes": {
+      "type": "object",
+      "required": ["core_tests", "oscillator", "mixer", "resampler", "filter", "offline", "sinc_benchmark", "resampler_benchmark"],
+      "properties": {
+        "core_tests": { "type": "object", "required": ["exit_code"], "properties": { "exit_code": { "type": "integer" } } },
+        "oscillator": { "type": "object", "required": ["exit_code"], "properties": { "exit_code": { "type": "integer" } } },
+        "mixer": { "type": "object", "required": ["exit_code"], "properties": { "exit_code": { "type": "integer" } } },
+        "resampler": { "type": "object", "required": ["exit_code"], "properties": { "exit_code": { "type": "integer" } } },
+        "filter": { "type": "object", "required": ["exit_code"], "properties": { "exit_code": { "type": "integer" } } },
+        "offline": { "type": "object", "required": ["exit_code"], "properties": { "exit_code": { "type": "integer" } } },
+        "sinc_benchmark": { "type": "object", "required": ["exit_code"], "properties": { "exit_code": { "type": "integer" }, "algorithms": { "type": "array" } } },
+        "resampler_benchmark": { "type": "object", "required": ["exit_code"], "properties": { "exit_code": { "type": "integer" }, "cases": { "type": "array" } } }
+      }
+    },
+    "decision": {
+      "type": "object", "required": ["status", "reason"],
+      "properties": {
+        "status": { "type": "string", "enum": ["accept", "reject", "inconclusive"] },
+        "reason": { "type": "string" },
+        "hard_gate_failures": { "type": "array", "items": { "type": "string" } },
+        "advisory_flags": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
