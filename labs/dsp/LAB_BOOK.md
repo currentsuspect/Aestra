@@ -34,12 +34,19 @@ labs/dsp/
 
 | Session | Date | Rounds | Accepted | Rejected | Notes |
 |---------|------|--------|----------|----------|-------|
-| 001 | 2026-04-06 PM | 1 | 1 | 0 | Sinc8Turbo: 3.06x speedup (8.97 → 27.40 Mf/s). See `sessions/2026-04-06_session_001.md` |
+| 001 | 2026-04-06 PM | 2 | 2 | 0 | Sinc8Turbo (3.16x) + Sinc16Turbo (new, 29.35 Mf/s). See sessions. |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: `dsp-lab: accept round 01 — Sinc8Turbo polyphase filter bank`
-- **Sinc8Turbo**: 27.40 Mf/s (3.06x over original 8.97 Mf/s)
-- **Sinc64Turbo**: 8.61 Mf/s (4.35x over original 1.98 Mf/s)
-- **Next**: AVX2 dormant code paths for all interpolators, or Sinc16Turbo
+- **Last commit**: `dsp-lab: accept round 02 — Sinc16Turbo polyphase filter bank`
+- **Performance tiers established:**
+
+| Algorithm | Mf/s | SNR | Table | Role |
+|-----------|------|-----|-------|------|
+| Cubic (4-pt) | 64.99 | ~80dB | — | Legacy, likely retire |
+| Sinc8 TURBO | 43.46 | ~100dB | 8KB | **Draft mode** — best quality/cost |
+| Sinc16 TURBO | 29.35 | ~120dB | 16KB | Quality mode — slower than Sinc8 TURBO due to L1 pressure |
+| Sinc64 TURBO | 10.91 | ~144dB | 256KB | Export mode |
+
+- **Next**: AVX2 dormant code paths, or integrate TURBO interpolators into the runtime dispatch pipeline

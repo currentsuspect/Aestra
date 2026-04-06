@@ -13,8 +13,18 @@ Float coefficients, 64-byte aligned for cache-line efficiency.
 **Why it works**: Eliminates 8 sin() reductions, 8 divisions, 8 weight
 multiplies, and 1 normalization per output sample. The 8KB table fits
 comfortably in L1 cache alongside the sample data.
-**Results**: 8.97 Mf/s → 27.40 Mf/s (3.06x speedup).
-Speedup is lower than Sinc64Turbo's 4.35x because the 8-tap inner loop
-is short enough that table lookup overhead (phase calc, bounds check) is
-proportionally larger.
+**Results**: 13.74 → 43.46 Mf/s (3.16x speedup).
 **Round**: 01 (session 001)
+
+## Sinc16Turbo Polyphase Filter Bank
+
+**Where**: `AestraAudio/include/DSP/Interpolators.h` — `Sinc16Turbo` struct
+**What**: Precomputed 512-phase × 16-tap polyphase table (16KB).
+Half-phase symmetry (256 phases). Float coefficients, 64-byte aligned.
+**Why it works**: Same principle as Sinc8Turbo — zero math in hot path.
+~120dB SNR vs Sinc8's ~100dB.
+**Results**: 29.35 Mf/s (new, no original to compare against since
+Sinc16Interpolator wasn't in the benchmark before).
+**Caveat**: 16KB table competes with sample data for L1 cache space.
+Lands slower than Sinc8Turbo despite more taps.
+**Round**: 02 (session 002)
