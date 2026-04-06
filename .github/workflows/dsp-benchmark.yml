@@ -109,11 +109,7 @@ jobs:
           python3 -c "
           import subprocess, json, sys
 
-          print('## Stress Test Results')
-          print('')
-          print('| Clips | Median | P99 | Budget Usage | Status |')
-          print('|-------|--------|-----|-------------|--------|')
-
+          results = []
           for clips in [16, 32, 64, 128]:
               result = subprocess.run([
                   './build-bench/Tests/AestraStressTest',
@@ -125,23 +121,31 @@ jobs:
                   '--json'
               ], capture_output=True, text=True)
 
-              # Parse JSON from output (may have INFO logs mixed in)
               text = result.stdout + result.stderr
               start = text.find('{')
               end = text.rfind('}') + 1
               if start >= 0 and end > start:
                   data = json.loads(text[start:end])
                   r = data['results']
-                  median = r['median_ms']
-                  p99 = r['p99_ms']
-                  cv = r['cv']
-                  usage = r['budget_usage_pct']
-                  passed = r['passed']
-                  icon = '✅' if passed else '❌'
-                  print(f'| {clips} | {median:.2f}ms | {p99:.2f}ms | {usage:.1f}% | {icon} |')
-              else:
-                  print(f'| {clips} | ERROR | - | - | ❌ |')
+                  results.append({
+                      'clips': clips,
+                      'median_ms': r['median_ms'],
+                      'p99_ms': r['p99_ms'],
+                      'cv': r['cv'],
+                      'budget_usage_pct': r['budget_usage_pct'],
+                      'passed': r['passed']
+                  })
 
+          with open('stress_test_results.json', 'w') as f:
+              json.dump({'results': results}, f, indent=2)
+
+          print('## Stress Test Results')
+          print('')
+          print('| Clips | Median | P99 | Budget Usage | Status |')
+          print('|-------|--------|-----|-------------|--------|')
+          for r in results:
+              icon = '✅' if r['passed'] else '❌'
+              print(f'| {r[\"clips\"]} | {r[\"median_ms\"]:.2f}ms | {r[\"p99_ms\"]:.2f}ms | {r[\"budget_usage_pct\"]:.1f}% | {icon} |')
           print('')
           print('**Budget:** 5.33ms per callback (256 samples @ 48kHz)')
           print('**Target:** <70% budget (3.73ms)')
@@ -180,3 +184,4 @@ jobs:
           name: benchmark-results
           path: |
             benchmark_raw.json
+            stress_test_results.json
