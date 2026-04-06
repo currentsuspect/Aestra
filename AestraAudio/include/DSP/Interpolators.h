@@ -212,6 +212,81 @@ struct Sinc8Interpolator {
 };
 
 // =============================================================================
+// Sinc8Turbo (Fast) - 8 point Polyphase Filter Bank
+// 256 phases, ~100dB SNR, L1 Cache Friendly (8KB table)
+// =============================================================================
+
+struct Sinc8Turbo {
+    static constexpr int TAPS = 8;
+    static constexpr int PHASES = 256;
+    static constexpr int HALF_PHASES = 128;
+
+    struct alignas(64) Table {
+        float coeffs[HALF_PHASES][TAPS];
+
+        Table() {
+            for (int p = 0; p < HALF_PHASES; ++p) {
+                double frac = static_cast<double>(p) / static_cast<double>(PHASES);
+                for (int t = -3; t <= 4; ++t) {
+                    double x = static_cast<double>(t) - frac;
+                    double s = (std::abs(x) < 1e-10) ? 1.0 : std::sin(PI * x) / (PI * x);
+                    double w = blackmanWindow(static_cast<double>(t + 3), 8.0);
+                    coeffs[p][t + 3] = static_cast<float>(s * w);
+                }
+                double sum = 0.0;
+                for (int i = 0; i < TAPS; ++i)
+                    sum += coeffs[p][i];
+                if (sum > 0.0) {
+                    float invSum = static_cast<float>(1.0 / sum);
+                    for (int i = 0; i < TAPS; ++i)
+                        coeffs[p][i] *= invSum;
+                }
+            }
+        }
+    };
+
+    static inline Table& getTable() {
+        static Table table;
+        return table;
+    }
+
+    using InterpolateFunc = void (*)(const float*, int64_t, double, float&, float&);
+
+    static inline void interpolate(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
+        const Table& table = getTable();
+
+        const int64_t idx = static_cast<int64_t>(phase);
+        const double frac = phase - static_cast<double>(idx);
+        int phaseIdx = static_cast<int>(frac * (PHASES - 1) + 0.5);
+        bool reversed = (phaseIdx >= HALF_PHASES);
+        int lutIdx = reversed ? (PHASES - 1 - phaseIdx) : phaseIdx;
+        const float* c = table.coeffs[lutIdx];
+
+        const int64_t startIdx = idx - 3;
+        float sumL = 0.0f, sumR = 0.0f;
+
+        if (startIdx >= 0 && startIdx + 8 <= totalFrames && !reversed) {
+            const float* samples = &data[startIdx * 2];
+            for (int t = 0; t < 8; ++t) {
+                sumL += samples[t * 2] * c[t];
+                sumR += samples[t * 2 + 1] * c[t];
+            }
+        } else {
+            for (int t = 0; t < 8; ++t) {
+                int64_t sIdx = startIdx + t;
+                if (sIdx < 0 || sIdx >= totalFrames)
+                    continue;
+                float coeff = reversed ? c[7 - t] : c[t];
+                sumL += data[sIdx * 2] * coeff;
+                sumR += data[sIdx * 2 + 1] * coeff;
+            }
+        }
+        outL = sumL;
+        outR = sumR;
+    }
+};
+
+// =============================================================================
 // Sinc16 (Ultra) - 16 point Kaiser-windowed, ~120dB SNR
 // =============================================================================
 

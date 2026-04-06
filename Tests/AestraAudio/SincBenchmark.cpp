@@ -81,6 +81,10 @@ static std::vector<AlgoDef> buildAlgos() {
         [](const float* in, int64_t inF, float* out, int outF) {
             runInterpolator<Sinc8Interpolator>(in, inF, out, outF);
         }});
+    algos.push_back({"sinc8_turbo", "Sinc8 TURBO (Polyphase)",
+        [](const float* in, int64_t inF, float* out, int outF) {
+            runInterpolator<Sinc8Turbo>(in, inF, out, outF);
+        }});
     algos.push_back({"sinc64_orig", "Sinc64 (Original Opt)",
         [](const float* in, int64_t inF, float* out, int outF) {
             runInterpolator<Sinc64Interpolator>(in, inF, out, outF);
