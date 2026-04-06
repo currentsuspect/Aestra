@@ -2,43 +2,56 @@
   "benchmark": "AestraSincBenchmark",
   "iterations": 10,
   "runner": "GitHub Actions ubuntu-22.04",
-  "commit": "3cc634d8",
+  "commit": "f8119ef6",
   "algorithms": [
     {
       "algo_id": "cubic_4pt",
       "name": "Cubic (4-point)",
-      "median_mframes_per_sec": 123.97,
-      "cv": 0.016
+      "median_mframes_per_sec": 124.39,
+      "cv": 0.006
     },
     {
       "algo_id": "sinc8_8pt",
       "name": "Sinc8 (8-point)",
-      "median_mframes_per_sec": 28.63,
+      "median_mframes_per_sec": 28.61,
       "cv": 0.001
     },
     {
       "algo_id": "sinc8_turbo",
       "name": "Sinc8 TURBO (Polyphase)",
-      "median_mframes_per_sec": 81.37,
+      "median_mframes_per_sec": 81.40,
       "cv": 0.003
     },
     {
       "algo_id": "sinc16_turbo",
       "name": "Sinc16 TURBO (Polyphase)",
-      "median_mframes_per_sec": 45.93,
-      "cv": 0.012
+      "median_mframes_per_sec": 46.04,
+      "cv": 0.011
     },
     {
       "algo_id": "sinc64_orig",
       "name": "Sinc64 (Original Opt)",
-      "median_mframes_per_sec": 5.97,
-      "cv": 0.003
+      "median_mframes_per_sec": 5.98,
+      "cv": 0.012
     },
     {
       "algo_id": "sinc64_turbo",
       "name": "Sinc64 TURBO (Multi-SIMD)",
-      "median_mframes_per_sec": 31.31,
+      "median_mframes_per_sec": 35.03,
       "cv": 0.001
     }
-  ]
+  ],
+  "stress_test": {
+    "quality": "sinc8_turbo",
+    "buffer_size": 256,
+    "sample_rate": 48000,
+    "budget_ms": 5.33,
+    "target_pct": 70,
+    "results": [
+      {"clips": 16, "median_ms": 0.06, "p99_ms": 0.07, "cv": 0.048, "budget_usage_pct": 1.2, "passed": true},
+      {"clips": 32, "median_ms": 0.14, "p99_ms": 0.15, "cv": 0.050, "budget_usage_pct": 2.5, "passed": true},
+      {"clips": 64, "median_ms": 0.31, "p99_ms": 0.35, "cv": 0.056, "budget_usage_pct": 5.7, "passed": true},
+      {"clips": 128, "median_ms": 0.72, "p99_ms": 0.74, "cv": 0.014, "budget_usage_pct": 13.5, "passed": true}
+    ]
+  }
 }

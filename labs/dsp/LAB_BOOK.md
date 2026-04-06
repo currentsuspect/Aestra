@@ -39,22 +39,46 @@ labs/dsp/
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: `dsp-lab: Sinc16 TURBO variance fixed — 7.7% → 1.2% CV`
-- **✅ CI baseline established** — all algorithms under 2% CV (trustworthy)
+- **Last commit**: `dsp-lab: write stress test results to JSON artifact`
+- **✅ CI baseline established** — all algorithms under 2% CV, stress test passing
 
-### Validated Tier System (GitHub Actions, AVX2, 10 iterations)
+### Interpolator Benchmarks (GitHub Actions, AVX2, 10 iterations)
 
-| Tier | Algorithm | Mf/s | CV | SNR | Role |
-|------|-----------|------|-----|-----|------|
-| — | Cubic (4-pt) | 123.97 | 1.6% | ~80dB | Low-end hardware fallback |
-| **Draft** | **Sinc8 TURBO** | **81.37** | **0.3%** | **~100dB** | **Real-time playback** |
-| **Quality** | **Sinc16 TURBO** | **45.93** | **1.2%** | **~120dB** | **Mixdown preview** |
-| **Export** | **Sinc64 TURBO** | **31.31** | **0.1%** | **~144dB** | **Offline bounce** |
+| Algorithm | Mf/s | CV | Relative | Speedup |
+|-----------|------|-----|----------|---------|
+| Cubic (4-pt) | 124.39 | 0.6% | 1.00x | — |
+| Sinc8 original | 28.61 | 0.1% | 0.23x | 1.00x |
+| **Sinc8 TURBO** | **81.40** | **0.3%** | **0.65x** | **2.84x** |
+| **Sinc16 TURBO** | **46.04** | **1.1%** | **0.37x** | **new** |
+| Sinc64 original | 5.98 | 1.2% | 0.05x | 1.00x |
+| **Sinc64 TURBO** | **35.03** | **0.1%** | **0.28x** | **5.86x** |
+
+### Stress Test — Simultaneous Clip Capacity (Sinc8 TURBO, ~100dB SNR)
+
+| Clips | Median | P99 | Budget Usage | Status |
+|-------|--------|-----|-------------|--------|
+| **16** | **0.06ms** | **0.07ms** | **1.2%** | **✅** |
+| 32 | 0.14ms | 0.15ms | 2.5% | ✅ |
+| 64 | 0.31ms | 0.35ms | 5.7% | ✅ |
+| 128 | 0.72ms | 0.74ms | 13.5% | ✅ |
+
+**Budget**: 5.33ms per callback (256 samples @ 48kHz)
+**Target**: <70% budget (3.73ms)
+**Honest caveat**: Stress test measures pure interpolation throughput.
+Real sessions have additional overhead — plugin processing, mixing,
+disk I/O, UI. Real-world capacity will be lower.
 
 ### Key Findings
 
-- **Sinc64 TURBO: 5.24x speedup** (5.97 → 31.31 Mf/s) — the headline number
-- **Sinc8 TURBO: 2.84x speedup** (28.63 → 81.37 Mf/s) — comfortably fast
-- **Sinc16 TURBO: variance fixed** (7.7% → 1.2% CV by reducing table to 8KB)
-- **Cubic stays** — 1.5x faster than Sinc8 TURBO, legitimate for low-end hardware
+- **Sinc64 TURBO: 5.86x speedup** (5.98 → 35.03 Mf/s) — headline number
+- **Sinc8 TURBO: 2.84x speedup** (28.61 → 81.40 Mf/s) — draft mode
+- **16 clips: 1.2% of callback budget** — enormous headroom for target session
+- **Breaking point**: ~660 clips on CI (extrapolated from 13.5% at 128 clips)
 - **All TURBO tables capped at 8KB** — larger tables cause L1 cache pressure
+- **Cubic stays** — 1.5x faster than Sinc8 TURBO, legitimate for low-end hardware
+
+### CI Infrastructure
+
+- `.github/workflows/dsp-benchmark.yml` triggers on DSP code changes
+- Runs interpolator benchmark + stress test (16/32/64/128 clips)
+- Results uploaded as JSON artifacts for comparison across runs
