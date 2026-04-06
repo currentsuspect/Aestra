@@ -40,13 +40,23 @@ labs/dsp/
 
 - **Branch**: `develop`
 - **Last commit**: `dsp-lab: accept round 02 — Sinc16Turbo polyphase filter bank`
-- **Performance tiers established:**
+- **⚠️ Benchmark machine has extreme variance (CV 20-35%)** — absolute Mf/s
+  numbers are unreliable. See `findings/benchmark_reliability.md`.
+- **Ranking is valid** (Sinc8 TURBO > Sinc16 TURBO > Sinc64 TURBO, always).
+  Absolute numbers swing wildly: Sinc8 TURBO ranges 27-44 Mf/s across 5
+  consecutive runs on the same binary.
 
-| Algorithm | Mf/s | SNR | Table | Role |
-|-----------|------|-----|-------|------|
-| Cubic (4-pt) | 64.99 | ~80dB | — | Legacy, likely retire |
-| Sinc8 TURBO | 43.46 | ~100dB | 8KB | **Draft mode** — best quality/cost |
-| Sinc16 TURBO | 29.35 | ~120dB | 16KB | Quality mode — slower than Sinc8 TURBO due to L1 pressure |
-| Sinc64 TURBO | 10.91 | ~144dB | 256KB | Export mode |
+| Algorithm | Range (5 runs) | Consistent Ranking |
+|-----------|---------------|-------------------|
+| Cubic (4-pt) | 43–65 Mf/s | Always fastest |
+| Sinc8 TURBO | 27–44 Mf/s | Always 2nd |
+| Sinc16 TURBO | 10–26 Mf/s | Always 3rd |
+| Sinc64 TURBO | 8–13 Mf/s | Always 4th |
 
-- **Next**: AVX2 dormant code paths, or integrate TURBO interpolators into the runtime dispatch pipeline
+- **Cannot reliably measure**: headroom, simultaneous clip capacity, or
+  absolute speedup. Need CPU isolation, frequency scaling control, and 20+
+  iterations for trustworthy numbers.
+- **What's still valid**: structural correctness (zero math in hot path),
+  relative ordering, quality tiers (~100dB/~120dB/~144dB).
+- **Next**: The DSP lab is reaching its practical limit on this noisy machine.
+  Further optimization work needs a controlled benchmark environment.
