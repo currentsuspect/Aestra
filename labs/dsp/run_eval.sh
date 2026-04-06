@@ -126,7 +126,14 @@ run_test() { local name="$1"; local bin="$2"; local outfile="$3"; local exitvar=
   log ""
   log "=== Lane: $name ==="
   if [ -n "$bin" ] && [ -x "$bin" ]; then
-    set +e; "$bin" > "$outfile" 2>&1; eval "$exitvar=\$?" ; set -e
+    set +e
+    # FilterTest has an interactive prompt at the end — pipe 'n'
+    if [ "$name" = "AestraFilterTest" ]; then
+      echo "n" | "$bin" > "$outfile" 2>&1
+    else
+      "$bin" > "$outfile" 2>&1
+    fi
+    eval "$exitvar=\$?" ; set -e
     log "Exit code: ${!exitvar}"
   else
     log "  Binary not found, skipping."
