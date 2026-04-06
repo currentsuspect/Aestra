@@ -65,6 +65,18 @@ if(AESTRA_BUILD_TESTS)
     target_link_libraries(MemoryProfilingTest PRIVATE AestraCore)
     target_include_directories(MemoryProfilingTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+    # Memory Allocator Tests
+    add_executable(MemoryAllocatorTest src/MemoryAllocatorTest.cpp)
+    target_link_libraries(MemoryAllocatorTest PRIVATE AestraCore AestraAudioCore)
+    target_include_directories(MemoryAllocatorTest PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    target_link_libraries(MemoryAllocatorTest PRIVATE pthread)
+
     enable_testing()
     add_test(NAME MathTests COMMAND MathTests)
     add_test(NAME ThreadingTests COMMAND ThreadingTests)
@@ -72,6 +84,7 @@ if(AESTRA_BUILD_TESTS)
     add_test(NAME LogTests COMMAND LogTests)
     add_test(NAME ConfigAssertTests COMMAND ConfigAssertTests)
     add_test(NAME MemoryProfilingTest COMMAND MemoryProfilingTest)
+    add_test(NAME MemoryAllocatorTest COMMAND MemoryAllocatorTest)
 endif()
 
 message(STATUS "AestraCore configured")

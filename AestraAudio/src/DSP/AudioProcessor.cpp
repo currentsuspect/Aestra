@@ -2,6 +2,7 @@
 #include "AudioProcessor.h"
 
 #include "../../../AestraCore/include/AestraUnifiedProfiler.h"
+#include "../../../AestraCore/include/AestraMemory.h"
 
 #include <algorithm>
 #include <cmath>
@@ -73,9 +74,9 @@ void AudioProcessor::handleCommand(const AudioCommandMessage& message) {
 // =============================================================================
 
 AudioBufferManager::AudioBufferManager() : m_maxBufferSize(MAX_BUFFER_SIZE), m_maxChannels(MAX_CHANNELS) {
-    // Allocate buffer
+    // Use arena allocator instead of raw new[]
     size_t totalSize = m_maxBufferSize * m_maxChannels;
-    m_buffer = new float[totalSize];
+    m_buffer = static_cast<float*>(GlobalAudioArena::instance().allocate(totalSize * sizeof(float), alignof(float)));
     AESTRA_MEMORY_ALLOC(totalSize * sizeof(float));
     clear();
 }
@@ -83,7 +84,8 @@ AudioBufferManager::AudioBufferManager() : m_maxBufferSize(MAX_BUFFER_SIZE), m_m
 AudioBufferManager::~AudioBufferManager() {
     size_t totalSize = m_maxBufferSize * m_maxChannels;
     AESTRA_MEMORY_FREE(totalSize * sizeof(float));
-    delete[] m_buffer;
+    // No explicit free — arena handles cleanup via reset()
+    m_buffer = nullptr;
 }
 
 float* AudioBufferManager::allocate(uint32_t numFrames, uint32_t numChannels) {
