@@ -120,6 +120,31 @@ jobs:
           print("</details>")
           PYEOF
 
+      - name: Run stress test
+        run: |
+          echo "## Stress Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          for clips in 16 32 64 128; do
+            echo "Running stress test with $clips clips..."
+            RESULT=$(./build-bench/Tests/AestraStressTest \
+              --clips "$clips" --quality sinc8_turbo \
+              --buffer-size 256 --sample-rate 48000 --iterations 10 --json 2>/dev/null)
+
+            median_ms=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['median_ms'])")
+            p99_ms=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['p99_ms'])")
+            cv=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['cv'])")
+            usage=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['budget_usage_pct'])")
+            passed=$(echo "$RESULT" | python3 -c "import sys,json; print('✅' if json.load(sys.stdin)['results']['passed'] else '❌')")
+
+            echo "| $clips | ${median_ms}ms | ${p99_ms}ms | ${usage}% | $passed |" >> $GITHUB_STEP_SUMMARY
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Budget:** 5.33ms per callback (256 samples @ 48kHz)" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** <70% budget (3.73ms)" >> $GITHUB_STEP_SUMMARY
+          echo "**Quality:** Sinc8 TURBO (~100dB SNR)" >> $GITHUB_STEP_SUMMARY
+
       - name: Check variance
         run: |
           python3 << 'PYEOF'

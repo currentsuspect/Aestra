@@ -201,6 +201,20 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/RealtimeSchedulingTest.cpp")
     )
 endif()
 
+# Stress Test (simultaneous clip capacity)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/AestraStressTest.cpp")
+    add_executable(AestraStressTest Integration/AestraStressTest.cpp)
+    target_link_libraries(AestraStressTest PRIVATE AestraAudioCore AestraCore)
+    target_include_directories(AestraStressTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    if(WIN32)
+        target_link_libraries(AestraStressTest PRIVATE ole32)
+    endif()
+endif()
+
 # =============================================================================
 # AestraAudio Tests
 # =============================================================================
