@@ -43,8 +43,9 @@ jobs:
             -DAESTRA_ENABLE_EXPERIMENTAL_TESTS=ON \
             -DCMAKE_BUILD_TYPE=Release
 
-      - name: Build benchmark
-        run: cmake --build build-bench --target AestraSincBenchmark --parallel
+      - name: Build benchmarks
+        run: |
+          cmake --build build-bench --target AestraSincBenchmark --target AestraStressTest --parallel
 
       - name: CPU info
         run: |
