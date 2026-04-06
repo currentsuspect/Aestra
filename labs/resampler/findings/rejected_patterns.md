@@ -3,6 +3,22 @@
 Optimizations that failed gates or were reverted. Recorded here so future
 rounds don't repeat the same mistakes.
 
+## Tap-Count-Specialized Dot Product via Switch/If Dispatch
+
+**Round**: 01 (session 004)
+**What**: Added `dotProductFixed<N>()` template for fully unrolled dot products
+and dispatched via `switch (numTaps)` / `if (numTaps <= 4)` in the stereo output
+path for Linear (2), Cubic (4), Sinc8 (8), Sinc16 (16), Sinc64 (64).
+**Why it failed**: The switch/if dispatch overhead dominated for larger tap counts.
+Sinc8 regressed +41.5%, Sinc16 +50.3%, Sinc64 +118.2%. Even the refined version
+with `if (numTaps <= 4)` caused Cubic to regress +10.3% to +17.7%. The branch
+added per-output-sample overhead that outweighed the loop-unroll benefit for all
+but Linear (which improved -21%).
+**Lesson**: The existing `dotProductScalar` with unroll-by-8 + SSE4.1 target is
+already optimal for larger tap counts. Adding dispatch branches in the hot loop
+costs more than the generic path. Only consider compile-time template specialization
+(if the quality level is known at compile time, which it isn't).
+
 ## Hoisting `writePos` to a Local Variable
 
 **Round**: 15 (attempt 1)
