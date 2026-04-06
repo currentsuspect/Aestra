@@ -4,6 +4,8 @@
 
 #include "Filter.h"
 
+#include "../../../AestraCore/include/AestraUnifiedProfiler.h"
+
 #include <complex>
 #include <cstring>
 
@@ -807,6 +809,7 @@ void Filter::FilterState::reset() noexcept {
 void Filter::OversampledBuffer::resize(uint32_t newSize) {
     if (newSize != size) {
         buffer = std::make_unique<float[]>(newSize);
+        AESTRA_MEMORY_ALLOC(newSize * sizeof(float));
         size = newSize;
     }
 }

@@ -1,6 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioProcessor.h"
 
+#include "../../../AestraCore/include/AestraUnifiedProfiler.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -74,10 +76,13 @@ AudioBufferManager::AudioBufferManager() : m_maxBufferSize(MAX_BUFFER_SIZE), m_m
     // Allocate buffer
     size_t totalSize = m_maxBufferSize * m_maxChannels;
     m_buffer = new float[totalSize];
+    AESTRA_MEMORY_ALLOC(totalSize * sizeof(float));
     clear();
 }
 
 AudioBufferManager::~AudioBufferManager() {
+    size_t totalSize = m_maxBufferSize * m_maxChannels;
+    AESTRA_MEMORY_FREE(totalSize * sizeof(float));
     delete[] m_buffer;
 }
 

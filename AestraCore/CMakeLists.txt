@@ -21,6 +21,7 @@ target_include_directories(AestraCore PUBLIC
 # Enable profiling in all build types (lightweight enough for Release)
 target_compile_definitions(AestraCore PUBLIC
     Aestra_ENABLE_PROFILING
+    AESTRA_ENABLE_MEMORY_PROFILING
 )
 
 # =============================================================================
@@ -58,13 +59,19 @@ if(AESTRA_BUILD_TESTS)
     # Config & Assert Tests
     add_executable(ConfigAssertTests src/ConfigAssertTests.cpp)
     target_link_libraries(ConfigAssertTests PRIVATE AestraCore)
-    
+
+    # Memory Profiling Tests
+    add_executable(MemoryProfilingTest src/MemoryProfilingTest.cpp)
+    target_link_libraries(MemoryProfilingTest PRIVATE AestraCore)
+    target_include_directories(MemoryProfilingTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
     enable_testing()
     add_test(NAME MathTests COMMAND MathTests)
     add_test(NAME ThreadingTests COMMAND ThreadingTests)
     add_test(NAME FileTests COMMAND FileTests)
     add_test(NAME LogTests COMMAND LogTests)
     add_test(NAME ConfigAssertTests COMMAND ConfigAssertTests)
+    add_test(NAME MemoryProfilingTest COMMAND MemoryProfilingTest)
 endif()
 
 message(STATUS "AestraCore configured")

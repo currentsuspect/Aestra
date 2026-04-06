@@ -2,6 +2,7 @@
 #include "SampleRateConverter.h"
 
 #include "../../AestraCore/include/AestraLog.h"
+#include "../../AestraCore/include/AestraUnifiedProfiler.h"
 
 #include <algorithm>
 #include <cstring>
@@ -40,6 +41,7 @@ std::shared_ptr<const PolyphaseFilterBank> SampleRateConverter::getSharedFilterB
 
     // Not in cache or expired, create new
     auto newBank = std::make_shared<PolyphaseFilterBank>();
+    AESTRA_MEMORY_ALLOC(sizeof(PolyphaseFilterBank));
 
     // We use a temporary SRC instance to generate the bank with a standard upsampling cutoff (0.98)
     SampleRateConverter temp;
