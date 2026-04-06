@@ -25,3 +25,27 @@ code. Wiring them gives visibility into when and how much memory is allocated
 during configure and processing. Foundation for measuring and eliminating
 hot-path allocations.
 **Round**: 01 (session 001)
+
+## AudioArena Bump Allocator with Atomic CAS
+
+**Where**: `AestraCore/include/AestraMemory.h`
+**What**: `AudioArena` class — lock-free bump allocator using atomic
+compare-and-swap loop. Allocates `capacity + 63` bytes and aligns the start
+pointer to 64 bytes (covers all common SIMD alignments: 16, 32, 64).
+Peak tracking via separate atomic CAS. Reset is non-thread-safe by design
+(called from idle thread).
+**Why it works**: Bump allocation is O(1) with no fragmentation. The atomic
+CAS loop allows concurrent allocations from multiple threads without locks.
+4 MB global singleton (`GlobalAudioArena`) covers typical audio buffer needs.
+**Round**: 02 (session 002)
+
+## AudioBufferManager Migrated to Arena
+
+**Where**: `AestraAudio/src/DSP/AudioProcessor.cpp`
+**What**: `AudioBufferManager` constructor now uses `GlobalAudioArena::allocate()`
+instead of `new float[]`. Destructor no longer calls `delete[]` — arena handles
+cleanup via `reset()`.
+**Why it works**: Eliminates the single `new[]` call in AudioBufferManager
+construction. All audio buffer allocations now come from the arena, which
+is O(1) lock-free bump allocation.
+**Round**: 02 (session 002)

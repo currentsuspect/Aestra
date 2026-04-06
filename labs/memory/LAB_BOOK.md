@@ -60,11 +60,12 @@ When a future agent needs context:
 | Session | Date | Rounds | Accepted | Rejected | Notes |
 |---------|------|--------|----------|----------|-------|
 | 001 | 2026-04-06 AM | 1 | 1 | 0 | Memory profiling enabled and wired at 3 key sites. See `sessions/2026-04-06_session_001.md` |
+| 002 | 2026-04-06 Late AM | 2 | 2 | 0 | Arena allocator (AudioArena) implemented, wired into AudioBufferManager. See `sessions/2026-04-06_session_002.md` |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: `memory-lab: accept round 01 — enable memory profiling and wire key allocation sites`
+- **Last commit**: `memory-lab: accept round 02 — arena allocator with lock-free bump allocation`
 - **Baselines**: Not yet captured (need MemoryBenchmark first)
-- **Known issues**: Only 3 allocation sites wired. GarbageCollector still uses mutex. No arena allocator yet.
-- **Next step**: Implement arena allocator for RT-safe buffer allocation
+- **Known issues**: Only AudioBufferManager migrated to arena. Filter::resize and SRC filter bank still use raw new[]. GarbageCollector still uses mutex.
+- **Next step**: Wire more allocation sites to arena, then create MemoryBenchmark
