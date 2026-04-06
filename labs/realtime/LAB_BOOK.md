@@ -36,12 +36,13 @@ labs/realtime/
 | Session | Date | Rounds | Accepted | Rejected | Notes |
 |---------|------|--------|----------|----------|-------|
 | 001 | 2026-04-06 PM | 1 | 1 | 0 | Diagnostic test created. Confirms SCHED_OTHER, RLIMIT_RTPRIO=0. |
+| 002 | 2026-04-06 Early PM | 1 | 1 | 0 | Fixed RT scheduling: moved from startStream() to callback via pthread_once. |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: `realtime-lab: accept round 01 — diagnostic test for RT scheduling`
-- **Confirmed bug**: Audio thread runs SCHED_OTHER (default CFS).
-- **RLIMIT_RTPRIO=0**: No RT scheduling capability without `CAP_SYS_NICE`.
-- **RLIMIT_MEMLOCK=8MB**: Memory locking is allowed.
-- **Next**: Fix `startStream()` to set priority on actual callback thread, or set capabilities.
+- **Last commit**: `realtime-lab: accept round 02 — fix RT scheduling to run on actual callback thread`
+- **Fixed**: `pthread_setschedparam` now runs on actual RtAudio callback thread via `pthread_once`
+- **Still limited**: Without `CAP_SYS_NICE`, audio thread falls back to SCHED_OTHER (graceful)
+- **mlockall**: Now called from callback (process-wide, prevents page faults)
+- **Next**: No more rounds needed on this machine (no CAP_SYS_NICE). The fix is correct; it just needs proper capabilities at deployment time.
