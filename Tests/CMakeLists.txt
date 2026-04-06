@@ -192,6 +192,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/MemoryBenchmark.cpp")
     endif()
 endif()
 
+# Realtime Scheduling Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/RealtimeSchedulingTest.cpp")
+    add_executable(RealtimeSchedulingTest AestraAudio/RealtimeSchedulingTest.cpp)
+    target_link_libraries(RealtimeSchedulingTest PRIVATE AestraCore)
+    target_include_directories(RealtimeSchedulingTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
 # =============================================================================
 # AestraAudio Tests
 # =============================================================================
