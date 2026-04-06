@@ -42,6 +42,19 @@ static const char* policyName(int policy) {
     }
 }
 
+// macOS compatibility macros for Linux-specific scheduling functions
+#ifdef __APPLE__
+#include <pthread.h>
+#include <mach/thread_policy.h>
+#include <mach/thread_act.h>
+#define sched_getscheduler(pid) SCHED_OTHER
+#define sched_getparam(pid, param) 0
+#define sched_setscheduler(pid, policy, param) -1
+#ifndef RLIMIT_RTPRIO
+#define RLIMIT_RTPRIO 0 // Dummy value for macOS
+#endif
+#endif
+
 // ============================================================================
 // Test: Current thread scheduling policy
 // ============================================================================
