@@ -130,13 +130,28 @@ jobs:
             echo "Running stress test with $clips clips..."
             RESULT=$(./build-bench/Tests/AestraStressTest \
               --clips "$clips" --quality sinc8_turbo \
-              --buffer-size 256 --sample-rate 48000 --iterations 10 --json 2>/dev/null)
+              --buffer-size 256 --sample-rate 48000 --iterations 10 --json 2>/dev/null || true)
 
-            median_ms=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['median_ms'])")
-            p99_ms=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['p99_ms'])")
-            cv=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['cv'])")
-            usage=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['budget_usage_pct'])")
-            passed=$(echo "$RESULT" | python3 -c "import sys,json; print('✅' if json.load(sys.stdin)['results']['passed'] else '❌')")
+            # Extract JSON from output (may have INFO logs mixed in)
+            CLEAN_JSON=$(echo "$RESULT" | python3 -c "
+import sys
+text = sys.stdin.read()
+start = text.find('{')
+end = text.rfind('}') + 1
+if start >= 0 and end > start:
+    print(text[start:end])
+")
+
+            if [ -z "$CLEAN_JSON" ]; then
+              echo "| $clips | ERROR | - | - | ❌ |" >> $GITHUB_STEP_SUMMARY
+              continue
+            fi
+
+            median_ms=$(echo "$CLEAN_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['median_ms'])")
+            p99_ms=$(echo "$CLEAN_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['p99_ms'])")
+            cv=$(echo "$CLEAN_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['cv'])")
+            usage=$(echo "$CLEAN_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['budget_usage_pct'])")
+            passed=$(echo "$CLEAN_JSON" | python3 -c "import sys,json; print('✅' if json.load(sys.stdin)['results']['passed'] else '❌')")
 
             echo "| $clips | ${median_ms}ms | ${p99_ms}ms | ${usage}% | $passed |" >> $GITHUB_STEP_SUMMARY
           done
