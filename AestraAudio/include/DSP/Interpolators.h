@@ -288,13 +288,13 @@ struct Sinc8Turbo {
 
 // =============================================================================
 // Sinc16Turbo (Quality) - 16 point Polyphase Filter Bank
-// 512 phases, ~120dB SNR, L1 Cache Friendly (16KB table)
+// 256 phases, ~120dB SNR, L1 Cache Friendly (8KB table)
 // =============================================================================
 
 struct Sinc16Turbo {
     static constexpr int TAPS = 16;
-    static constexpr int PHASES = 512;
-    static constexpr int HALF_PHASES = 256;
+    static constexpr int PHASES = 256;
+    static constexpr int HALF_PHASES = 128;
     static constexpr double KAISER_BETA = 9.0;
 
     struct alignas(64) Table {
