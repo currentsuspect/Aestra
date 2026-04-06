@@ -60,12 +60,13 @@ When a future agent needs context:
 | Session | Date | Rounds | Accepted | Rejected | Notes |
 |---------|------|--------|----------|----------|-------|
 | 001 | 2026-04-06 AM | 1 | 1 | 0 | Memory profiling enabled, wired at 3 sites. |
-| 002 | 2026-04-06 Late AM | 2 | 2 | 0 | AudioArena bump allocator, wired into AudioBufferManager. MemoryBenchmark with baselines. |
+| 002 | 2026-04-06 Late AM | 2 | 2 | 0 | AudioArena bump allocator, MemoryBenchmark with baselines. |
+| 003 | 2026-04-06 Late Late AM | 1 | 1 | 0 | SRC filter bank migrated to arena. See `sessions/2026-04-06_session_003.md` |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: `memory-lab: add MemoryBenchmark with real baselines and regression detection`
-- **Baselines**: Captured (`labs/memory/results/baseline.json`) — 6 cases
-- **Known issues**: SRC filter bank still uses raw `new[]`/`make_shared`. Filter::resize still uses `make_unique`. GarbageCollector still uses mutex.
-- **Next session**: Migrate SRC and Filter allocations to arena, improve GarbageCollector
+- **Last commit**: `memory-lab: migrate SRC filter bank to arena allocator`
+- **Baselines**: Captured and updated (`labs/memory/results/baseline.json`)
+- **Known issues**: Filter::resize still uses `make_unique`. GarbageCollector still uses mutex.
+- **Next session**: Filter arena migration, GarbageCollector improvement
