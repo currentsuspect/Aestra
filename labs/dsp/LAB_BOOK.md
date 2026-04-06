@@ -39,24 +39,9 @@ labs/dsp/
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: `dsp-lab: accept round 02 — Sinc16Turbo polyphase filter bank`
-- **⚠️ Benchmark machine has extreme variance (CV 20-35%)** — absolute Mf/s
-  numbers are unreliable. See `findings/benchmark_reliability.md`.
-- **Ranking is valid** (Sinc8 TURBO > Sinc16 TURBO > Sinc64 TURBO, always).
-  Absolute numbers swing wildly: Sinc8 TURBO ranges 27-44 Mf/s across 5
-  consecutive runs on the same binary.
-
-| Algorithm | Range (5 runs) | Consistent Ranking |
-|-----------|---------------|-------------------|
-| Cubic (4-pt) | 43–65 Mf/s | Always fastest |
-| Sinc8 TURBO | 27–44 Mf/s | Always 2nd |
-| Sinc16 TURBO | 10–26 Mf/s | Always 3rd |
-| Sinc64 TURBO | 8–13 Mf/s | Always 4th |
-
-- **Cannot reliably measure**: headroom, simultaneous clip capacity, or
-  absolute speedup. Need CPU isolation, frequency scaling control, and 20+
-  iterations for trustworthy numbers.
-- **What's still valid**: structural correctness (zero math in hot path),
-  relative ordering, quality tiers (~100dB/~120dB/~144dB).
-- **Next**: The DSP lab is reaching its practical limit on this noisy machine.
-  Further optimization work needs a controlled benchmark environment.
+- **Last commit**: `dsp-lab: set up CI benchmark workflow to solve variance problem`
+- **⚠️ Local benchmark variance: 20-35% CV** — absolute numbers unreliable
+- **✅ CI benchmark workflow created** — `.github/workflows/dsp-benchmark.yml`
+  triggers on DSP changes or manual dispatch
+- **Next**: Merge to develop → triggers first CI benchmark run → establishes
+  trustworthy baseline with isolated environment
