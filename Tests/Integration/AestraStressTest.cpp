@@ -205,6 +205,11 @@ int main(int argc, char* argv[]) {
     // Initialize global arena
     GlobalAudioArena::instance().reset();
 
+    // Suppress profiler output in JSON mode
+    if (cfg.jsonMode) {
+        UnifiedProfiler::getInstance().setEnabled(false);
+    }
+
     // Calculate buffer time budget
     double bufferTimeMs = (static_cast<double>(cfg.bufferSize) / cfg.sampleRate) * 1000.0;
     double targetTimeMs = bufferTimeMs * 0.70; // 70% budget target
