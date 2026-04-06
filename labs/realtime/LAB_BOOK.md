@@ -35,12 +35,13 @@ labs/realtime/
 
 | Session | Date | Rounds | Accepted | Rejected | Notes |
 |---------|------|--------|----------|----------|-------|
-| 001 | 2026-04-06 PM | 0 | 0 | 0 | Lab created. No work yet. |
+| 001 | 2026-04-06 PM | 1 | 1 | 0 | Diagnostic test created. Confirms SCHED_OTHER, RLIMIT_RTPRIO=0. |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: None (lab just created)
-- **Known bug**: `RtAudioDriver::startStream()` calls `pthread_setschedparam(pthread_self(), SCHED_FIFO, ...)` from the UI thread, not the audio thread. The audio callback thread runs SCHED_OTHER (default CFS).
-- **RtAudio internals**: ALSA backend does not honor `RTAUDIO_SCHEDULE_REALTIME`. Only PulseAudio/JACK do.
-- **Working**: `mlockall(MCL_CURRENT | MCL_FUTURE)` is active (process-wide, prevents page faults).
+- **Last commit**: `realtime-lab: accept round 01 — diagnostic test for RT scheduling`
+- **Confirmed bug**: Audio thread runs SCHED_OTHER (default CFS).
+- **RLIMIT_RTPRIO=0**: No RT scheduling capability without `CAP_SYS_NICE`.
+- **RLIMIT_MEMLOCK=8MB**: Memory locking is allowed.
+- **Next**: Fix `startStream()` to set priority on actual callback thread, or set capabilities.
