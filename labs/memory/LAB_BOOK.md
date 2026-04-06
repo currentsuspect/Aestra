@@ -61,12 +61,13 @@ When a future agent needs context:
 |---------|------|--------|----------|----------|-------|
 | 001 | 2026-04-06 AM | 1 | 1 | 0 | Memory profiling enabled, wired at 3 sites. |
 | 002 | 2026-04-06 Late AM | 2 | 2 | 0 | AudioArena bump allocator, MemoryBenchmark with baselines. |
-| 003 | 2026-04-06 Late Late AM | 1 | 1 | 0 | SRC filter bank migrated to arena. See `sessions/2026-04-06_session_003.md` |
+| 003 | 2026-04-06 Late Late AM | 1 | 1 | 0 | SRC filter bank migrated to arena. |
+| 004 | 2026-04-06 Noon | 1 | 1 | 0 | Lock-free GarbageCollector (mutex → SPSC ring buffer). |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: `memory-lab: migrate SRC filter bank to arena allocator`
-- **Baselines**: Captured and updated (`labs/memory/results/baseline.json`)
-- **Known issues**: Filter::resize still uses `make_unique`. GarbageCollector still uses mutex.
-- **Next session**: Filter arena migration, GarbageCollector improvement
+- **Last commit**: `memory-lab: accept round 01 — lock-free GarbageCollector`
+- **Baselines**: Captured (`labs/memory/results/baseline.json`)
+- **Known issues**: Filter::resize still uses `make_unique` (poor arena fit — resizable buffer).
+- **Next session**: Add GarbageCollector lock-free test, explore remaining allocation sites
