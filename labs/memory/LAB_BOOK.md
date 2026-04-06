@@ -59,13 +59,13 @@ When a future agent needs context:
 
 | Session | Date | Rounds | Accepted | Rejected | Notes |
 |---------|------|--------|----------|----------|-------|
-| 001 | 2026-04-06 AM | 1 | 1 | 0 | Memory profiling enabled and wired at 3 key sites. See `sessions/2026-04-06_session_001.md` |
-| 002 | 2026-04-06 Late AM | 2 | 2 | 0 | Arena allocator (AudioArena) implemented, wired into AudioBufferManager. See `sessions/2026-04-06_session_002.md` |
+| 001 | 2026-04-06 AM | 1 | 1 | 0 | Memory profiling enabled, wired at 3 sites. |
+| 002 | 2026-04-06 Late AM | 2 | 2 | 0 | AudioArena bump allocator, wired into AudioBufferManager. MemoryBenchmark with baselines. |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: `memory-lab: accept round 02 — arena allocator with lock-free bump allocation`
-- **Baselines**: Not yet captured (need MemoryBenchmark first)
-- **Known issues**: Only AudioBufferManager migrated to arena. Filter::resize and SRC filter bank still use raw new[]. GarbageCollector still uses mutex.
-- **Next step**: Wire more allocation sites to arena, then create MemoryBenchmark
+- **Last commit**: `memory-lab: add MemoryBenchmark with real baselines and regression detection`
+- **Baselines**: Captured (`labs/memory/results/baseline.json`) — 6 cases
+- **Known issues**: SRC filter bank still uses raw `new[]`/`make_shared`. Filter::resize still uses `make_unique`. GarbageCollector still uses mutex.
+- **Next session**: Migrate SRC and Filter allocations to arena, improve GarbageCollector
