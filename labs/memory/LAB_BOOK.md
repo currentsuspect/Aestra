@@ -59,11 +59,12 @@ When a future agent needs context:
 
 | Session | Date | Rounds | Accepted | Rejected | Notes |
 |---------|------|--------|----------|----------|-------|
-| 001 | 2026-04-06 | 0 | 0 | 0 | Lab created. No work yet. |
+| 001 | 2026-04-06 AM | 1 | 1 | 0 | Memory profiling enabled and wired at 3 key sites. See `sessions/2026-04-06_session_001.md` |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: None (lab just created)
-- **Baselines**: Not yet captured
-- **Known issues**: No arena allocator exists. Memory profiling macros are defined but never called. GarbageCollector uses mutex+vector.
+- **Last commit**: `memory-lab: accept round 01 — enable memory profiling and wire key allocation sites`
+- **Baselines**: Not yet captured (need MemoryBenchmark first)
+- **Known issues**: Only 3 allocation sites wired. GarbageCollector still uses mutex. No arena allocator yet.
+- **Next step**: Implement arena allocator for RT-safe buffer allocation
