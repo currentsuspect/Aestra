@@ -39,9 +39,22 @@ labs/dsp/
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: `dsp-lab: set up CI benchmark workflow to solve variance problem`
-- **⚠️ Local benchmark variance: 20-35% CV** — absolute numbers unreliable
-- **✅ CI benchmark workflow created** — `.github/workflows/dsp-benchmark.yml`
-  triggers on DSP changes or manual dispatch
-- **Next**: Merge to develop → triggers first CI benchmark run → establishes
-  trustworthy baseline with isolated environment
+- **Last commit**: `dsp-lab: Sinc16 TURBO variance fixed — 7.7% → 1.2% CV`
+- **✅ CI baseline established** — all algorithms under 2% CV (trustworthy)
+
+### Validated Tier System (GitHub Actions, AVX2, 10 iterations)
+
+| Tier | Algorithm | Mf/s | CV | SNR | Role |
+|------|-----------|------|-----|-----|------|
+| — | Cubic (4-pt) | 123.97 | 1.6% | ~80dB | Low-end hardware fallback |
+| **Draft** | **Sinc8 TURBO** | **81.37** | **0.3%** | **~100dB** | **Real-time playback** |
+| **Quality** | **Sinc16 TURBO** | **45.93** | **1.2%** | **~120dB** | **Mixdown preview** |
+| **Export** | **Sinc64 TURBO** | **31.31** | **0.1%** | **~144dB** | **Offline bounce** |
+
+### Key Findings
+
+- **Sinc64 TURBO: 5.24x speedup** (5.97 → 31.31 Mf/s) — the headline number
+- **Sinc8 TURBO: 2.84x speedup** (28.63 → 81.37 Mf/s) — comfortably fast
+- **Sinc16 TURBO: variance fixed** (7.7% → 1.2% CV by reducing table to 8KB)
+- **Cubic stays** — 1.5x faster than Sinc8 TURBO, legitimate for low-end hardware
+- **All TURBO tables capped at 8KB** — larger tables cause L1 cache pressure

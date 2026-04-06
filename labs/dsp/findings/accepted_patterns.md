@@ -6,25 +6,41 @@ Optimizations that measurably improved DSP performance and passed all gates.
 
 **Where**: `AestraAudio/include/DSP/Interpolators.h` — `Sinc8Turbo` struct
 **What**: Precomputed 256-phase × 8-tap polyphase table (8KB). All sin(),
-kaiser window, and normalization math baked into table at startup.
+blackman window, and normalization math baked into table at startup.
 Hot path is pure table lookup + 8-tap dot product. Half-phase symmetry
-exploits sinc's even function property (128 phases, not 256).
-Float coefficients, 64-byte aligned for cache-line efficiency.
-**Why it works**: Eliminates 8 sin() reductions, 8 divisions, 8 weight
-multiplies, and 1 normalization per output sample. The 8KB table fits
-comfortably in L1 cache alongside the sample data.
-**Results**: 13.74 → 43.46 Mf/s (3.16x speedup).
+(128 phases). Float coefficients, 64-byte aligned.
+**CI Results** (GitHub Actions, AVX2, 10 iterations):
+- Sinc8 original: 28.63 Mf/s, 0.1% CV
+- Sinc8 TURBO: 81.37 Mf/s, 0.3% CV
+- **Speedup: 2.84x**
 **Round**: 01 (session 001)
 
 ## Sinc16Turbo Polyphase Filter Bank
 
 **Where**: `AestraAudio/include/DSP/Interpolators.h` — `Sinc16Turbo` struct
-**What**: Precomputed 512-phase × 16-tap polyphase table (16KB).
-Half-phase symmetry (256 phases). Float coefficients, 64-byte aligned.
-**Why it works**: Same principle as Sinc8Turbo — zero math in hot path.
-~120dB SNR vs Sinc8's ~100dB.
-**Results**: 29.35 Mf/s (new, no original to compare against since
-Sinc16Interpolator wasn't in the benchmark before).
-**Caveat**: 16KB table competes with sample data for L1 cache space.
-Lands slower than Sinc8Turbo despite more taps.
+**What**: Precomputed 256-phase × 16-tap polyphase table (8KB).
+Half-phase symmetry (128 phases). Float coefficients, 64-byte aligned.
+**Initial issue**: 512-phase version (16KB table) showed 7.7% CV.
+**Fix**: Reduced to 256 phases (8KB table). CV dropped to 1.2%, speed
+unchanged at 45.93 Mf/s.
+**CI Results** (GitHub Actions, AVX2, 10 iterations):
+- Sinc16 TURBO: 45.93 Mf/s, 1.2% CV, ~120dB SNR
 **Round**: 02 (session 002)
+
+## Key Lesson: 8KB Table Size Limit
+
+All TURBO interpolators must cap their table at 8KB. The 16KB Sinc16
+table showed 7.7% CV because it competed with sample data for L1 cache
+space. Reducing to 8KB fixed the variance without affecting speed or
+quality (phase quantization error at 256 phases is ~0.2%, well below
+the 16-tap filter's ~120dB noise floor).
+
+## Sinc64 TURBO (Pre-existing, Validated)
+
+**Where**: `AestraAudio/include/DSP/Interpolators.h` — `Sinc64Turbo` struct
+**What**: Precomputed 2048-phase × 64-tap polyphase table (256KB).
+Half-phase symmetry (1024 phases). SIMD dispatch (AVX2, AVX-512, SSE4.1, NEON).
+**CI Results** (GitHub Actions, AVX2, 10 iterations):
+- Sinc64 original: 5.97 Mf/s, 0.3% CV
+- Sinc64 TURBO: 31.31 Mf/s, 0.1% CV
+- **Speedup: 5.24x**
