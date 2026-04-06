@@ -63,11 +63,14 @@ When a future agent needs context:
 | 002 | 2026-04-06 Late AM | 2 | 2 | 0 | AudioArena bump allocator, MemoryBenchmark with baselines. |
 | 003 | 2026-04-06 Late Late AM | 1 | 1 | 0 | SRC filter bank migrated to arena. |
 | 004 | 2026-04-06 Noon | 1 | 1 | 0 | Lock-free GarbageCollector (mutex → SPSC ring buffer). |
+| 005 | 2026-04-06 PM | 0 | 0 | 0 | RT scheduling research only. No code changes. Found bug: `pthread_setschedparam(pthread_self())` in `startStream()` sets UI thread priority, not audio thread. |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: `memory-lab: accept round 01 — lock-free GarbageCollector`
+- **Last commit**: `memory-lab: update lab-book after session 004`
 - **Baselines**: Captured (`labs/memory/results/baseline.json`)
-- **Known issues**: Filter::resize still uses `make_unique` (poor arena fit — resizable buffer).
-- **Next session**: Add GarbageCollector lock-free test, explore remaining allocation sites
+- **Known issues**: Filter::resize still uses `make_unique` (poor arena fit).
+  Linux audio thread runs SCHED_OTHER, not SCHED_FIFO/RR — `startStream()`
+  sets priority on wrong thread (bug, but out of scope for memory lab).
+- **Next session**: Remaining allocation sites, or new lab for RT scheduling fix
