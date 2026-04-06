@@ -1,0 +1,90 @@
+{
+  "benchmark": "MemoryBenchmark",
+  "iterations": 3,
+  "cases": [
+    {
+      "case_id": "bufmgr_construct",
+      "name": "AudioBufferManager Construct",
+      "arena_allocs": 1,
+      "arena_bytes": 262144,
+      "profiler_allocs": 1,
+      "profiler_frees": 1,
+      "profiler_bytes": 0,
+      "median_ms": 0.4300,
+      "mean_ms": 0.4473,
+      "best_ms": 0.4180,
+      "worst_ms": 0.4940,
+      "cv": 0.074575
+    },
+    {
+      "case_id": "bufmgr_alloc_clear",
+      "name": "AudioBufferManager Allocate + Clear",
+      "arena_allocs": 1,
+      "arena_bytes": 262144,
+      "profiler_allocs": 1,
+      "profiler_frees": 1,
+      "profiler_bytes": 0,
+      "median_ms": 0.8190,
+      "mean_ms": 0.8247,
+      "best_ms": 0.8150,
+      "worst_ms": 0.8400,
+      "cv": 0.013296
+    },
+    {
+      "case_id": "src_configure_sinc16_up",
+      "name": "SRC Configure Sinc16 44.1→48k",
+      "arena_allocs": 0,
+      "arena_bytes": 0,
+      "profiler_allocs": 1,
+      "profiler_frees": 0,
+      "profiler_bytes": 65568,
+      "median_ms": 1.5390,
+      "mean_ms": 1.5413,
+      "best_ms": 1.5080,
+      "worst_ms": 1.5770,
+      "cv": 0.018307
+    },
+    {
+      "case_id": "src_process_sinc16",
+      "name": "SRC Process Sinc16 (44100 frames)",
+      "arena_allocs": 0,
+      "arena_bytes": 0,
+      "profiler_allocs": 1,
+      "profiler_frees": 0,
+      "profiler_bytes": 65568,
+      "median_ms": 6.0230,
+      "mean_ms": 6.0237,
+      "best_ms": 5.9990,
+      "worst_ms": 6.0490,
+      "cv": 0.003390
+    },
+    {
+      "case_id": "src_process_sinc64",
+      "name": "SRC Process Sinc64 (44100 frames)",
+      "arena_allocs": 0,
+      "arena_bytes": 0,
+      "profiler_allocs": 1,
+      "profiler_frees": 0,
+      "profiler_bytes": 65568,
+      "median_ms": 11.9630,
+      "mean_ms": 11.9863,
+      "best_ms": 11.9510,
+      "worst_ms": 12.0450,
+      "cv": 0.003485
+    },
+    {
+      "case_id": "src_roundtrip",
+      "name": "SRC Round-Trip 44.1→48→44.1k Sinc16",
+      "arena_allocs": 0,
+      "arena_bytes": 0,
+      "profiler_allocs": 1,
+      "profiler_frees": 0,
+      "profiler_bytes": 65568,
+      "median_ms": 9.2240,
+      "mean_ms": 9.2240,
+      "best_ms": 9.1730,
+      "worst_ms": 9.2750,
+      "cv": 0.004514
+    }
+  ]
+}

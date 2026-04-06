@@ -187,6 +187,8 @@ public:
     size_t used() const noexcept { return m_arena.used(); }
     size_t capacity() const noexcept { return m_arena.capacity(); }
     size_t peakUsage() const noexcept { return m_arena.peakUsage(); }
+    size_t allocationCount() const noexcept { return m_arena.allocationCount(); }
+    size_t remaining() const noexcept { return m_arena.remaining(); }
 
 private:
     AudioArena m_arena;

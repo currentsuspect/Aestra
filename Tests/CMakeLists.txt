@@ -178,6 +178,20 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerBenchmark.cpp")
     # (#pragma / hasAVX() checks). Forcing -mavx2 breaks on CPUs without AVX2 support.
 endif()
 
+# Memory Benchmark
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/MemoryBenchmark.cpp")
+    add_executable(MemoryBenchmark Integration/MemoryBenchmark.cpp)
+    target_link_libraries(MemoryBenchmark PRIVATE AestraAudioCore AestraCore)
+    target_include_directories(MemoryBenchmark PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    if(WIN32)
+        target_link_libraries(MemoryBenchmark PRIVATE ole32)
+    endif()
+endif()
+
 # =============================================================================
 # AestraAudio Tests
 # =============================================================================

@@ -259,10 +259,78 @@ log ""
 log "=== Lane 5: MemoryBenchmark ==="
 if [ -n "$BIN_MEMBENCH" ] && [ -x "$BIN_MEMBENCH" ]; then
   set +e
-  "$BIN_MEMBENCH" --json --iterations "$ITERATIONS" > "$BENCH_OUT" 2>&1
-  BENCH_EXIT=$?
+  # INFO logs go to stdout mixed with JSON. Filter to only valid JSON.
+  "$BIN_MEMBENCH" --json --iterations "$ITERATIONS" 2>&1 | python3 -c "
+import sys, json
+lines = sys.stdin.read()
+# Find the JSON object (starts with { and ends with })
+start = lines.find('{')
+end = lines.rfind('}')
+if start >= 0 and end > start:
+    print(lines[start:end+1])
+else:
+    # Fallback: print everything (will fail parse but at least we get raw output)
+    print(lines)
+" > "$BENCH_OUT"
+  BENCH_EXIT=${PIPESTATUS[0]}
   set -e
   log "Exit code: $BENCH_EXIT"
+
+  # Baseline comparison
+  BASELINE_FILE="${RESULTS_DIR}/baseline.json"
+  if [ -f "$BASELINE_FILE" ] && [ "$BENCH_EXIT" -eq 0 ]; then
+    log "=== Baseline Comparison ==="
+    python3 -c "
+import json, sys
+
+with open('$BENCH_OUT') as f:
+    cur = json.load(f)
+with open('$BASELINE_FILE') as f:
+    base = json.load(f)
+
+cur_cases = {c['case_id']: c for c in cur.get('cases', [])}
+base_cases = {c['case_id']: c for c in base.get('cases', [])}
+
+TIME_REGRESS_THRESHOLD = 10  # percent
+ALLOC_INCREASE_THRESHOLD = 0  # allocations should not increase
+
+regressions = []
+alloc_regressions = []
+for case_id, cur_data in cur_cases.items():
+    if case_id not in base_cases:
+        continue
+    base_data = base_cases[case_id]
+    base_ms = base_data['median_ms']
+    cur_ms = cur_data['median_ms']
+    if base_ms > 0:
+        time_pct = ((cur_ms - base_ms) / base_ms) * 100.0
+        if time_pct > TIME_REGRESS_THRESHOLD:
+            regressions.append(f'{case_id}: time {base_ms:.2f}ms -> {cur_ms:.2f}ms ({time_pct:+.1f}%)')
+
+    # Allocation count should never increase
+    base_allocs = base_data.get('arena_allocs', 0) + base_data.get('profiler_allocs', 0)
+    cur_allocs = cur_data.get('arena_allocs', 0) + cur_data.get('profiler_allocs', 0)
+    if cur_allocs > base_allocs + ALLOC_INCREASE_THRESHOLD:
+        alloc_regressions.append(f'{case_id}: allocs {base_allocs} -> {cur_allocs}')
+
+if regressions:
+    print('TIME REGRESSIONS')
+    for r in regressions:
+        print(f'  - {r}')
+if alloc_regressions:
+    print('ALLOCATION REGRESSIONS')
+    for r in alloc_regressions:
+        print(f'  - {r}')
+if not regressions and not alloc_regressions:
+    print('OK — no regressions detected')
+" 2>&1 | while IFS= read -r line; do
+      log "  $line"
+    done
+  else
+    if [ ! -f "$BASELINE_FILE" ]; then
+      log "  No baseline found — skipping comparison."
+    fi
+  fi
 else
   log "  Binary not found, skipping."
   BENCH_EXIT=0
