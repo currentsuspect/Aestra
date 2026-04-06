@@ -161,25 +161,10 @@ bool RtAudioDriver::startStream() {
     }
 
 #ifdef __linux__
-    // Set SCHED_FIFO real-time scheduling for the audio thread
-    // RtAudio creates its own thread; we set priority on the calling thread
-    // which should be the audio thread context at this point.
-    // Note: This requires CAP_SYS_NICE or appropriate RLIMIT_RTPRIO.
-    struct sched_param param;
-    param.sched_priority = sched_get_priority_max(SCHED_FIFO);
-    // Use 50% of max priority to avoid starving system threads
-    param.sched_priority = (param.sched_priority + sched_get_priority_min(SCHED_FIFO)) / 2;
-    if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &param) == 0) {
-        if (m_telemetry) {
-            m_telemetry->setThreadPriorityBit(0x01); // SCHED_FIFO success
-        }
-    }
-    // mlockall to prevent page faults during RT processing
-    if (mlockall(MCL_CURRENT | MCL_FUTURE) == 0) {
-        if (m_telemetry) {
-            m_telemetry->setThreadPriorityBit(0x02); // mlockall success
-        }
-    }
+    // Real-time scheduling is set in the audio callback via pthread_once().
+    // We can't set it here because RtAudio creates its own callback thread,
+    // and pthread_self() at this point is the UI thread, not the audio thread.
+    // See rtAudioCallback() for the actual scheduling setup.
 #endif
 
     return true;
@@ -207,6 +192,40 @@ uint32_t RtAudioDriver::getStreamBufferSize() const {
     return (m_rtAudio && m_rtAudio->isStreamOpen()) ? m_bufferSize.load(std::memory_order_relaxed) : 0;
 }
 
+// =============================================================================
+// Linux Real-Time Scheduling Setup
+// =============================================================================
+// Called once from the audio callback thread (not the UI thread) to set
+// SCHED_FIFO priority. Uses pthread_once to ensure it runs only once per
+// process, regardless of how many streams are opened.
+// =============================================================================
+
+#ifdef __linux__
+static void setupRealtimeScheduling() {
+    // Set SCHED_FIFO with midpoint priority
+    struct sched_param param;
+    int maxPri = sched_get_priority_max(SCHED_FIFO);
+    int minPri = sched_get_priority_min(SCHED_FIFO);
+    if (maxPri < 0 || minPri < 0) return; // Not supported
+    param.sched_priority = (maxPri + minPri) / 2;
+
+    if (sched_setscheduler(0, SCHED_FIFO, &param) != 0) {
+        // Failed — likely no CAP_SYS_NICE or RLIMIT_RTPRIO=0.
+        // This is expected in CI/container environments. Fall back gracefully.
+        return;
+    }
+
+    // Lock all current and future memory to prevent page faults
+    mlockall(MCL_CURRENT | MCL_FUTURE);
+}
+
+static pthread_once_t s_rtOnce = PTHREAD_ONCE_INIT;
+#endif
+
+// =============================================================================
+// Audio Callback
+// =============================================================================
+
 int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int numFrames, double streamTime,
                                    RtAudioStreamStatus status, void* userData) {
     auto* driver = static_cast<RtAudioDriver*>(userData);
@@ -217,6 +236,12 @@ int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsign
             driver->m_telemetry->incrementUnderruns();
         }
     }
+
+#ifdef __linux__
+    // Set real-time scheduling on the first callback invocation.
+    // This runs on the actual RtAudio callback thread, not the UI thread.
+    pthread_once(&s_rtOnce, &setupRealtimeScheduling);
+#endif
 
     AudioCallback callback = driver->m_userCallback.load(std::memory_order_relaxed);
     void* callbackUserData = driver->m_userData.load(std::memory_order_relaxed);
