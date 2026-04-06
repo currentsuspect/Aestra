@@ -1,0 +1,3 @@
+*.json
+!baseline.json
+!schema.json
