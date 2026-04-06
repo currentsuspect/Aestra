@@ -1,57 +1,56 @@
 # Bottlenecks
 
-Known performance characteristics of the DSP subsystem before any optimization work.
+Known performance characteristics of the DSP subsystem.
 
-## SIMD Dispatch Architecture
+## Current Performance (GCC 15.2.1, SSE4.1 only, no AVX2)
 
-All SIMD code uses **runtime dispatch** via `CPUDetection.h`. The dispatch hierarchy:
+| Algorithm | Mf/s | us/block | Relative to Cubic |
+|-----------|------|----------|-------------------|
+| Cubic (4-pt) | ~46 | 5.5 | 1.00x |
+| Sinc8 original | 8.97 | 28.54 | 0.20x |
+| **Sinc8 TURBO** | **27.40** | **9.34** | **0.62x** |
+| Sinc64 original | 1.98 | 129.48 | 0.04x |
+| Sinc64 TURBO | 8.61 | 29.75 | 0.19x |
 
-```
-CPUDetection::hasAVX512F() → SincAVX512
-CPUDetection::hasAVX2()    → SincAVX2
-SSE4.1 (always on x86_64) → SincSSE41
-ARM NEON                   → SincNEON
-```
+## Why Sinc8 TURBO Got 3.06x (Not 4.35x Like Sinc64 TURBO)
 
-**No AVX2 on this machine** — confirmed by resampler lab. The SIMD path is SSE4.1 only.
+The polyphase table approach has fixed overhead per sample:
+- Phase index calculation: `frac * 2047 + 0.5`
+- Half-phase check: `phaseIdx >= HALF_PHASES`
+- Table pointer fetch: `table.coeffs[lutIdx]`
+- Bounds check: `startIdx >= 0 && startIdx + TAPS <= totalFrames`
+
+With 64 taps, this overhead is amortized over 64 multiply-adds.
+With 8 taps, the same overhead is amortized over only 8 multiply-adds.
+The ratio of "overhead work" to "compute work" is 8x higher for Sinc8.
+
+**This is a fundamental limitation of the approach for small tap counts.**
+For very short kernels (8 taps), the trig-reduction approach (1 sin per sample)
+is already quite efficient. The polyphase table wins by eliminating the divide
+and weight multiply, but those are only 2 operations per tap.
 
 ## Known Bottlenecks
 
 ### 1. Filter Oversampling (Filter.cpp)
+Half-band filters for 2x/4x upsampling. Most CPU-intensive filter mode
+because each stage doubles the sample rate.
 
-The oversampling path uses half-band filters for 2x/4x upsampling. This is the
-most CPU-intensive filter mode because:
-- Each 2x stage doubles the sample rate
-- The filter processes 2x/4x more samples
-- Half-band filters are efficient but still 2x/4x the work
+### 2. Oscillator BLEP
+BLEP table access for square/saw anti-aliasing. Sequential access pattern
+but large table (256+ entries).
 
-### 2. Sinc64 TURBO (Interpolators.h + SincAVX2.h)
+### 3. MixerBus Processing
+O(n) over active channels. SIMD helps but only up to SIMD width.
 
-The TURBO path uses AVX2 dot product with 8-wide SIMD. On machines without AVX2,
-this falls back to SSE4.1 (4-wide). The baseline is SSE4.1 with unroll-by-8.
+## What's Already Optimized
 
-### 3. Oscillator BLEP
-
-BLEP (Band-Limited Step) anti-aliasing for square/saw waves requires a lookup
-table and interpolation. The BLEP table access pattern is sequential but the
-table itself is large (typically 256+ entries).
-
-### 4. MixerBus Processing
-
-The mixer bus iterates over all active channels and processes each one. For
-high channel counts, this is O(n) where n = active channels. SIMD vectorization
-(MixerSIMD.h) helps but only up to the SIMD width.
-
-## What's NOT a Bottleneck
-
-- **SampleRateConverter**: Already at local optimum (4 sessions, 22 accepted rounds).
-  See resampler lab findings.
-- **Basic filter types**: Biquad filters are computationally cheap (5 multiply-adds
-  per sample per stage).
+- **SampleRateConverter**: Local optimum (resampler lab, 4 sessions)
+- **Sinc8**: TURBO applied (this session)
+- **Sinc64**: TURBO already existed (pre-this-lab)
 
 ## Compiler Context
 
 - GCC 15.2.1 with `-O3`
+- SSE4.1 only, no AVX2 hardware
 - Register allocator is extremely sensitive to local variable changes
   (see resampler lab findings)
-- No AVX2 hardware on this machine

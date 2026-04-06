@@ -34,13 +34,12 @@ labs/dsp/
 
 | Session | Date | Rounds | Accepted | Rejected | Notes |
 |---------|------|--------|----------|----------|-------|
-| 001 | 2026-04-06 PM | 0 | 0 | 0 | Lab created. No work yet. |
+| 001 | 2026-04-06 PM | 1 | 1 | 0 | Sinc8Turbo: 3.06x speedup (8.97 → 27.40 Mf/s). See `sessions/2026-04-06_session_001.md` |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: None (lab just created)
-- **DSP files in scope**: Filter.h/cpp, Oscillator.h/cpp, Interpolators.h, MixerBus.h/cpp, ClipResampler.h, Sinc*.h/cpp
-- **Existing tests**: OscillatorTest (always-registered), MixerBusTest (always), FilterTest (experimental), SincBenchmark, ResamplerBenchmark
-- **Existing SIMD dispatch**: SSE4.1, AVX2, AVX-512, NEON — runtime dispatch via `CPUDetection`
-- **Known from resampler lab**: Code is at a local optimum for GCC 15 -O3 on x86_64 with no AVX2
+- **Last commit**: `dsp-lab: accept round 01 — Sinc8Turbo polyphase filter bank`
+- **Sinc8Turbo**: 27.40 Mf/s (3.06x over original 8.97 Mf/s)
+- **Sinc64Turbo**: 8.61 Mf/s (4.35x over original 1.98 Mf/s)
+- **Next**: AVX2 dormant code paths for all interpolators, or Sinc16Turbo
