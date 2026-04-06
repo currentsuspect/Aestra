@@ -387,11 +387,9 @@ private:
 // Spin lock (use sparingly, for very short critical sections)
 class SpinLock {
 public:
-#if __cplusplus >= 202002L
-    SpinLock() = default;
-#else
-    SpinLock() : flag(ATOMIC_FLAG_INIT) {}
-#endif
+    SpinLock() {
+        flag.clear();
+    }
 
     // Delete copy/move to prevent C2280 errors related to atomic_flag copy
     SpinLock(const SpinLock&) = delete;
@@ -410,11 +408,7 @@ public:
     void unlock() { flag.clear(std::memory_order_release); }
 
 private:
-#if __cplusplus >= 202002L
     std::atomic_flag flag;
-#else
-    std::atomic_flag flag = ATOMIC_FLAG_INIT;
-#endif
 };
 
 } // namespace Aestra
