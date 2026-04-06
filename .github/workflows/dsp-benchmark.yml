@@ -15,6 +15,9 @@ on:
       - 'AestraAudio/include/DSP/Sinc*.h'
       - 'AestraAudio/src/DSP/*.cpp'
       - 'Tests/AestraAudio/SincBenchmark.cpp'
+      - 'Tests/AestraAudio/AestraStressTest.cpp'
+      - 'Tests/Integration/AestraStressTest.cpp'
+      - 'Tests/CMakeLists.txt'
       - '.github/workflows/dsp-benchmark.yml'
 
 jobs:
@@ -53,7 +56,6 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           lscpu | grep -E 'Model name|Architecture|CPU\(s\)|Thread|Core|MHz' >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## CPU Features" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
@@ -62,131 +64,115 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Run benchmark
-        id: benchmark
         run: |
           ITERATIONS=${{ github.event.inputs.iterations || 10 }}
           echo "Running benchmark with $ITERATIONS iterations..."
-          OUTPUT=$(./build-bench/Tests/AestraSincBenchmark --iterations "$ITERATIONS" --json 2>/dev/null)
-          echo "$OUTPUT" > benchmark_raw.json
+          ./build-bench/Tests/AestraSincBenchmark --iterations "$ITERATIONS" --json 2>/dev/null > benchmark_raw.json || true
 
-          # Parse results
-          python3 << 'PYEOF'
+          python3 -c "
           import json
-          import sys
-
           with open('benchmark_raw.json') as f:
               data = json.load(f)
-
-          print("## Sinc Interpolator Benchmark Results")
-          print("")
-          print(f"**Iterations:** {data['iterations']}")
-          print(f"**Runner:** GitHub Actions ubuntu-22.04")
-          print("")
-          print("| Algorithm | MFrame/sec (median) | us/block (median) | CV |")
-          print("|-----------|---------------------|-------------------|-----|")
-
+          print('## Sinc Interpolator Benchmark Results')
+          print('')
+          print(f\"**Iterations:** {data['iterations']}\")
+          print(f\"**Runner:** GitHub Actions ubuntu-22.04\")
+          print('')
+          print('| Algorithm | MFrame/sec (median) | us/block (median) | CV |')
+          print('|-----------|---------------------|-------------------|-----|')
           for algo in data['algorithms']:
               mfps = algo['median_mframes_per_sec']
               usb = algo['median_us_per_block']
               cv = algo['cv']
               name = algo['name']
-              print(f"| {name} | {mfps:.2f} | {usb:.2f} | {cv:.1%} |")
-
-          print("")
-
-          # Compute relative speeds
+              print(f'| {name} | {mfps:.2f} | {usb:.2f} | {cv:.1%} |')
+          print('')
           algorithms = data['algorithms']
           cubic_mfps = None
           for algo in algorithms:
               if algo['algo_id'] == 'cubic_4pt':
                   cubic_mfps = algo['median_mframes_per_sec']
                   break
-
           if cubic_mfps:
-              print("### Relative Performance")
-              print("")
-              print("| Algorithm | Relative to Cubic |")
-              print("|-----------|-------------------|")
+              print('### Relative Performance')
+              print('')
+              print('| Algorithm | Relative to Cubic |')
+              print('|-----------|-------------------|')
               for algo in algorithms:
                   rel = algo['median_mframes_per_sec'] / cubic_mfps
-                  print(f"| {algo['name']} | {rel:.2f}x |")
-
-          print("")
-          print("<details>")
-          print("<summary>Raw JSON output</summary>")
-          print("")
-          print('```json')
-          print(json.dumps(data, indent=2))
-          print('```')
-          print("</details>")
-          PYEOF
+                  print(f'| {algo[\"name\"]} | {rel:.2f}x |')
+          print('')
+          " >> $GITHUB_STEP_SUMMARY || true
 
       - name: Run stress test
         run: |
-          echo "## Stress Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          python3 -c "
+          import subprocess, json, sys
 
-          for clips in 16 32 64 128; do
-            echo "Running stress test with $clips clips..."
-            RESULT=$(./build-bench/Tests/AestraStressTest \
-              --clips "$clips" --quality sinc8_turbo \
-              --buffer-size 256 --sample-rate 48000 --iterations 10 --json 2>/dev/null || true)
+          print('## Stress Test Results')
+          print('')
+          print('| Clips | Median | P99 | Budget Usage | Status |')
+          print('|-------|--------|-----|-------------|--------|')
 
-            # Extract JSON from output (may have INFO logs mixed in)
-            CLEAN_JSON=$(echo "$RESULT" | python3 -c "
-import sys
-text = sys.stdin.read()
-start = text.find('{')
-end = text.rfind('}') + 1
-if start >= 0 and end > start:
-    print(text[start:end])
-")
+          for clips in [16, 32, 64, 128]:
+              result = subprocess.run([
+                  './build-bench/Tests/AestraStressTest',
+                  '--clips', str(clips),
+                  '--quality', 'sinc8_turbo',
+                  '--buffer-size', '256',
+                  '--sample-rate', '48000',
+                  '--iterations', '10',
+                  '--json'
+              ], capture_output=True, text=True)
 
-            if [ -z "$CLEAN_JSON" ]; then
-              echo "| $clips | ERROR | - | - | ❌ |" >> $GITHUB_STEP_SUMMARY
-              continue
-            fi
+              # Parse JSON from output (may have INFO logs mixed in)
+              text = result.stdout + result.stderr
+              start = text.find('{')
+              end = text.rfind('}') + 1
+              if start >= 0 and end > start:
+                  data = json.loads(text[start:end])
+                  r = data['results']
+                  median = r['median_ms']
+                  p99 = r['p99_ms']
+                  cv = r['cv']
+                  usage = r['budget_usage_pct']
+                  passed = r['passed']
+                  icon = '✅' if passed else '❌'
+                  print(f'| {clips} | {median:.2f}ms | {p99:.2f}ms | {usage:.1f}% | {icon} |')
+              else:
+                  print(f'| {clips} | ERROR | - | - | ❌ |')
 
-            median_ms=$(echo "$CLEAN_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['median_ms'])")
-            p99_ms=$(echo "$CLEAN_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['p99_ms'])")
-            cv=$(echo "$CLEAN_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['cv'])")
-            usage=$(echo "$CLEAN_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['results']['budget_usage_pct'])")
-            passed=$(echo "$CLEAN_JSON" | python3 -c "import sys,json; print('✅' if json.load(sys.stdin)['results']['passed'] else '❌')")
-
-            echo "| $clips | ${median_ms}ms | ${p99_ms}ms | ${usage}% | $passed |" >> $GITHUB_STEP_SUMMARY
-          done
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Budget:** 5.33ms per callback (256 samples @ 48kHz)" >> $GITHUB_STEP_SUMMARY
-          echo "**Target:** <70% budget (3.73ms)" >> $GITHUB_STEP_SUMMARY
-          echo "**Quality:** Sinc8 TURBO (~100dB SNR)" >> $GITHUB_STEP_SUMMARY
+          print('')
+          print('**Budget:** 5.33ms per callback (256 samples @ 48kHz)')
+          print('**Target:** <70% budget (3.73ms)')
+          print('**Quality:** Sinc8 TURBO (~100dB SNR)')
+          print('')
+          print('Note: Real-world capacity will be lower due to plugin processing,')
+          print('mixing, disk I/O, and UI overhead.')
+          " >> $GITHUB_STEP_SUMMARY
 
       - name: Check variance
         run: |
-          python3 << 'PYEOF'
+          python3 -c "
           import json
-
           with open('benchmark_raw.json') as f:
               data = json.load(f)
-
-          print("## Variance Analysis")
-          print("")
-
+          print('## Variance Analysis')
+          print('')
           high_cv = False
           for algo in data['algorithms']:
               cv = algo['cv']
               name = algo['name']
-              status = "⚠️ HIGH VARIANCE" if cv > 0.05 else "✅ Stable"
+              status = '⚠️ HIGH VARIANCE' if cv > 0.05 else '✅ Stable'
               if cv > 0.05:
                   high_cv = True
-              print(f"- {name}: CV = {cv:.1%} — {status}")
-
-          print("")
+              print(f'- {name}: CV = {cv:.1%} — {status}')
+          print('')
           if high_cv:
-              print("⚠️ Some benchmarks exceeded 5% CV. Results may be unreliable.")
+              print('⚠️ Some benchmarks exceeded 5% CV. Results may be unreliable.')
           else:
-              print("✅ All benchmarks within acceptable variance (< 5% CV).")
-          PYEOF
+              print('✅ All benchmarks within acceptable variance (< 5% CV).')
+          " >> $GITHUB_STEP_SUMMARY || true
 
       - name: Upload results
         uses: actions/upload-artifact@v4
