@@ -19,6 +19,34 @@ already optimal for larger tap counts. Adding dispatch branches in the hot loop
 costs more than the generic path. Only consider compile-time template specialization
 (if the quality level is known at compile time, which it isn't).
 
+## Restoring `#pragma GCC ivdep` on Unrolled Dot Product
+
+**Round**: 02 (session 004)
+**What**: Added `#pragma GCC ivdep` (wrapped in `#ifdef __GNUC__`) back to the
+unroll-by-8 loop in `dotProductScalar()`. This pragma was present at round 16
+(commit `ec273726`) but was dropped when unroll-by-8 was added in session 002.
+**Why it failed**: Regressed Sinc8 +11.8%, Sinc64 down +7.1%, Sinc16 down +7.9%.
+The unrolled loop with explicit 8-wide accumulation already provides ILP. The
+`ivdep` pragma confused GCC 15's auto-vectorizer into making worse scheduling
+decisions. The pragma was likely dropped intentionally in session 002 for this reason.
+**Lesson**: With explicit loop unrolling, `ivdep` is counterproductive on GCC 15.
+
+## Eliminating `srcNextDiff` Variable
+
+**Round**: 03 (session 004)
+**What**: Removed `srcNextDiff` entirely. Computed `historyPos` directly as
+`historySizeMinus1 - srcPosition + nextOutputSrcPos` instead of
+`historySizeMinus1 - srcNextDiff`. Eliminated the `srcNextDiff -= invRatio`
+dead write in the output loop (saving 1 double subtract per output sample).
+**Why it failed**: Massive regression across ALL cases: Linear +64%, Cubic +79%,
+Sinc64 +68%. CV was 0.2%, confirming real regression (not noise). The math was
+provably correct — the regression was due to GCC 15's register allocator using
+`srcNextDiff` for optimal register allocation. Removing it forced a worse
+allocation strategy across the entire function.
+**Lesson**: With GCC 15 -O3, seemingly "dead" variables can improve register
+allocation. Do NOT remove local variables from the hot loop even if they appear
+to have no readers — the compiler uses them as register hints.
+
 ## Hoisting `writePos` to a Local Variable
 
 **Round**: 15 (attempt 1)
