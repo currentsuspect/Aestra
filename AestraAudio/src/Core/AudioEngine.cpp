@@ -1424,13 +1424,15 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         // Apply Automation Override (v3.1)
         if (!track.automationCurves.empty() && m_sampleRate.load(std::memory_order_relaxed) > 0) {
             uint64_t globalPos = m_globalSamplePos.load(std::memory_order_relaxed);
+            const double samplesPerBeat = (static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)) * 60.0) /
+                                          std::max(graph.bpm, 1.0);
             double currentBeat =
                 (static_cast<double>(globalPos) / m_sampleRate.load(std::memory_order_relaxed)) * (graph.bpm / 60.0);
             for (const auto& curve : track.automationCurves) {
                 if (curve.getAutomationTarget() == AutomationTarget::Volume) {
-                    volTarget = curve.getValueAtBeat(currentBeat);
+                    volTarget = curve.getValueAtBeat(currentBeat, samplesPerBeat);
                 } else if (curve.getAutomationTarget() == AutomationTarget::Pan) {
-                    panTarget = clampD(curve.getValueAtBeat(currentBeat), -1.0, 1.0);
+                    panTarget = clampD(curve.getValueAtBeat(currentBeat, samplesPerBeat), -1.0, 1.0);
                 }
             }
         }
@@ -1541,36 +1543,82 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     const double phaseEnd = static_cast<double>(totalFrames);
 
                     if (channels == 1) {
-                        // Mono Resampling (Linear fallback)
-                        // Note: We avoid calling stereo interpolators on mono data to prevent OOB access.
-                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                            uint64_t idx = static_cast<uint64_t>(phase);
-                            double frac = phase - static_cast<double>(idx);
-
-                            float s0 = data[idx];
-                            float s1 = (idx + 1 < static_cast<uint64_t>(totalFrames)) ? data[idx + 1] : s0;
-
-                            double val = static_cast<double>(s0) + frac * static_cast<double>(s1 - s0);
-
-                            double fade = 1.0;
-                            const uint64_t projectSample = start + i;
-                            if (fadeLen > 0) {
-                                if (projectSample < clip.startSample + fadeLen) {
-                                    fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
-                                                           static_cast<double>(fadeLen)));
+                        // Mono Resampling — use the same quality interpolators as stereo.
+                        // The mono path reads a single float per frame, so we duplicate to L/R.
+                        switch (m_interpQuality.load(std::memory_order_relaxed)) {
+                        case Interpolators::InterpolationQuality::Cubic:
+                            for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                                double fade = 1.0;
+                                const uint64_t projectSample = start + i;
+                                if (fadeLen > 0) {
+                                    if (projectSample < clip.startSample + fadeLen)
+                                        fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) / static_cast<double>(fadeLen));
+                                    if (projectSample + fadeLen > clip.endSample)
+                                        fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen));
                                 }
-                                if (projectSample + fadeLen > clip.endSample) {
-                                    fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
-                                                           static_cast<double>(fadeLen)));
-                                }
+                                double clipGain = static_cast<double>(clip.gain);
+                                float sample = 0.0f;
+                                uint64_t idx = static_cast<uint64_t>(phase);
+                                double frac = phase - static_cast<double>(idx);
+                                // Catmull-Rom 4-point on mono data
+                                float s0 = (idx > 0) ? data[idx - 1] : data[idx];
+                                float s1 = data[idx];
+                                float s2 = (idx + 1 < totalFrames) ? data[idx + 1] : data[idx];
+                                float s3 = (idx + 2 < totalFrames) ? data[idx + 2] : s2;
+                                double f = frac;
+                                sample = static_cast<float>(0.5 * ((2.0 * s1) + (-s0 + s2) * f +
+                                    (2.0 * s0 - 5.0 * s1 + 4.0 * s2 - s3) * f * f +
+                                    (-s0 + 3.0 * s1 - 3.0 * s2 + s3) * f * f * f));
+                                dst[i * 2] = sample * clipGain * fade;
+                                dst[i * 2 + 1] = sample * clipGain * fade;
+                                phase += ratio;
                             }
-                            double clipGain = static_cast<double>(clip.gain);
-                            dst[i * 2] = val * clipGain * fade;
-                            dst[i * 2 + 1] = val * clipGain * fade;
-
-                            phase += ratio;
+                            continue;
+                        case Interpolators::InterpolationQuality::Sinc8:
+                        case Interpolators::InterpolationQuality::Sinc16:
+                        case Interpolators::InterpolationQuality::Sinc32:
+                        case Interpolators::InterpolationQuality::Sinc64:
+                            // Sinc on mono: compute weighted sum, duplicate to L/R
+                            for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                                double fade = 1.0;
+                                const uint64_t projectSample = start + i;
+                                if (fadeLen > 0) {
+                                    if (projectSample < clip.startSample + fadeLen)
+                                        fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) / static_cast<double>(fadeLen));
+                                    if (projectSample + fadeLen > clip.endSample)
+                                        fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen));
+                                }
+                                double clipGain = static_cast<double>(clip.gain);
+                                double val = Interpolators::sincInterpolateMono(data, totalFrames, phase,
+                                    m_interpQuality.load(std::memory_order_relaxed));
+                                dst[i * 2] = val * clipGain * fade;
+                                dst[i * 2 + 1] = val * clipGain * fade;
+                                phase += ratio;
+                            }
+                            continue;
+                        default:
+                            // Linear fallback
+                            for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                                double fade = 1.0;
+                                const uint64_t projectSample = start + i;
+                                if (fadeLen > 0) {
+                                    if (projectSample < clip.startSample + fadeLen)
+                                        fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) / static_cast<double>(fadeLen));
+                                    if (projectSample + fadeLen > clip.endSample)
+                                        fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen));
+                                }
+                                double clipGain = static_cast<double>(clip.gain);
+                                uint64_t idx = static_cast<uint64_t>(phase);
+                                double frac = phase - static_cast<double>(idx);
+                                float s0 = data[idx];
+                                float s1 = (idx + 1 < totalFrames) ? data[idx + 1] : s0;
+                                double val = s0 + frac * (s1 - s0);
+                                dst[i * 2] = val * clipGain * fade;
+                                dst[i * 2 + 1] = val * clipGain * fade;
+                                phase += ratio;
+                            }
+                            continue;
                         }
-                        continue; // Skip stereo switch
                     }
 
                     // Select interpolator at block level, not per-sample

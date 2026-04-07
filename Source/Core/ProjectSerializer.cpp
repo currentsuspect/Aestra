@@ -532,9 +532,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         curve.setDefaultValue(aj[a]["default"].asNumber());
                         
                         const JSON& pts = aj[a]["points"];
+                        double samplesPerBeat = (48000.0 * 60.0) / 120.0; // Default during load; corrected at runtime
                         for (size_t p = 0; p < pts.size(); ++p) {
-                            curve.addPoint(pts[p]["b"].asNumber(), 
-                                         pts[p]["v"].asNumber(), 
+                            curve.addPoint(pts[p]["b"].asNumber(),
+                                         pts[p]["v"].asNumber(),
+                                         samplesPerBeat,
                                          static_cast<float>(pts[p]["c"].asNumber()));
                         }
                         lane->automationCurves.push_back(curve);

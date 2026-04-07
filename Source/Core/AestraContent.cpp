@@ -1824,10 +1824,11 @@ void AestraContent::addDemoTracks() {
             if (i == 1) {
                 AutomationCurve vol("Volume", AutomationTarget::Volume);
                 vol.setDefaultValue(0.8);
-                vol.addPoint(0.0, 0.5, 0.5f);
-                vol.addPoint(4.0, 1.0, 0.5f);
-                vol.addPoint(8.0, 0.2, 0.5f);
-                vol.addPoint(12.0, 0.8, 0.5f);
+                double samplesPerBeat = (48000.0 * 60.0) / 120.0; // Demo values
+                vol.addPoint(0.0, 0.5, samplesPerBeat, 0.5f);
+                vol.addPoint(4.0, 1.0, samplesPerBeat, 0.5f);
+                vol.addPoint(8.0, 0.2, samplesPerBeat, 0.5f);
+                vol.addPoint(12.0, 0.8, samplesPerBeat, 0.5f);
                 lane->automationCurves.push_back(vol);
             }
         }

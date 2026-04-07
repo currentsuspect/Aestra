@@ -877,6 +877,46 @@ inline void precomputeTables() {
     // doubles). The "Turbo" ones are the heavy ones (Megabytes).
 }
 
+/**
+ * @brief Mono sinc interpolation — reads single-channel float data.
+ * Uses a Blackman-Harris-windowed sinc kernel matching the requested quality.
+ */
+inline double sincInterpolateMono(const float* data, uint64_t totalFrames, double phase,
+                                  InterpolationQuality quality) {
+    int halfLen = 4;
+    switch (quality) {
+    case InterpolationQuality::Sinc8:  halfLen = 4; break;
+    case InterpolationQuality::Sinc16: halfLen = 8; break;
+    case InterpolationQuality::Sinc32: halfLen = 16; break;
+    case InterpolationQuality::Sinc64: halfLen = 32; break;
+    default: halfLen = 4; break;
+    }
+
+    constexpr double pi = 3.14159265358979323846;
+    double frac = phase - std::floor(phase);
+    int64_t center = static_cast<int64_t>(phase);
+    double sum = 0.0, wSum = 0.0;
+
+    for (int k = -halfLen; k <= halfLen; ++k) {
+        int64_t idx = center + k;
+        if (idx < 0) idx = 0;
+        if (idx >= static_cast<int64_t>(totalFrames)) idx = static_cast<int64_t>(totalFrames) - 1;
+
+        double x = static_cast<double>(k) - frac;
+        double sincVal = (std::abs(x) < 1e-9) ? 1.0 : std::sin(pi * x) / (pi * x);
+
+        // Blackman-Harris window
+        double r = static_cast<double>(k) / halfLen;
+        double kaiser = 0.35875 - 0.48829 * std::cos(pi * r) + 0.14128 * std::cos(2.0 * pi * r) - 0.01168 * std::cos(3.0 * pi * r);
+
+        double w = sincVal * kaiser;
+        sum += data[idx] * w;
+        wSum += std::abs(w);
+    }
+
+    return wSum > 1e-12 ? sum / wSum : 0.0;
+}
+
 } // namespace Interpolators
 } // namespace Audio
 } // namespace Aestra

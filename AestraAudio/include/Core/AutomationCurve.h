@@ -59,16 +59,14 @@ struct AutomationCurve {
     /**
      * @brief Get interpolated value at a given beat position
      * @param beat The beat position
+     * @param samplesPerBeat Samples per beat for the current project tempo/rate
      * @return Interpolated value, or defaultValue if no points
      */
-    float getValueAtBeat(double beat) const {
+    float getValueAtBeat(double beat, double samplesPerBeat) const {
         if (points.empty()) {
             return defaultValue;
         }
 
-        // Simple linear interpolation between points
-        // Convert beat to sample for lookup (assume 48000 sample rate, 120 BPM as default)
-        const double samplesPerBeat = (48000.0 * 60.0) / 120.0;
         const uint64_t targetSample = static_cast<uint64_t>(beat * samplesPerBeat);
 
         // Find surrounding points
@@ -112,11 +110,11 @@ struct AutomationCurve {
     /**
      * @brief Add a control point to the curve
      * @param beat Beat position
+     * @param samplesPerBeat Samples per beat for the current project tempo/rate
      * @param value Value at this point (normalized 0-1 for volume/pan)
      * @param tension Curve tension (0-1, currently unused)
      */
-    void addPoint(double beat, float value, float /*tension*/ = 0.5f) {
-        const double samplesPerBeat = (48000.0 * 60.0) / 120.0;
+    void addPoint(double beat, float value, double samplesPerBeat, float /*tension*/ = 0.5f) {
         AutomationPoint pt;
         pt.sample = static_cast<uint64_t>(beat * samplesPerBeat);
         pt.value = value;
