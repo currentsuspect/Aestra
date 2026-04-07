@@ -46,7 +46,7 @@ public:
     template <typename T> void release(std::shared_ptr<T> ptr) {
         if (!ptr)
             return;
-        m_incoming.push(std::static_pointer_cast<void>(ptr));
+        (void)m_incoming.push(std::static_pointer_cast<void>(ptr));
     }
 
     /**
