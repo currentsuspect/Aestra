@@ -20,7 +20,8 @@ class AestraDelay : public IPluginInstance {
 public:
     static constexpr uint32_t kStateMagic = 0x444C5901; // 'DLY' v1
     static constexpr uint32_t kMaxDelaySec = 2;
-    static constexpr uint32_t kMaxSamples = kMaxDelaySec * 48000;
+    static constexpr uint32_t kMaxSamplesAt48k = kMaxDelaySec * 48000;
+    // Runtime-resized buffers in initialize()
 
     enum Param : uint32_t {
         kTime = 0,     // 10ms to 2000ms
@@ -38,8 +39,10 @@ public:
 
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         m_sampleRate = sampleRate;
-        m_bufL.assign(kMaxSamples, 0.0f);
-        m_bufR.assign(kMaxSamples, 0.0f);
+        // Size buffer for max delay time at actual sample rate
+        uint32_t maxSamples = static_cast<uint32_t>(kMaxDelaySec * sampleRate);
+        m_bufL.assign(maxSamples, 0.0f);
+        m_bufR.assign(maxSamples, 0.0f);
         m_posL = m_posR = 0;
         m_lfoPhase = 0.0f;
         m_filtL = m_filtR = 0.0f;
@@ -205,7 +208,7 @@ public:
 
     const PluginInfo& getInfo() const override { return m_info; }
     uint32_t getLatencySamples() const override { return 0; }
-    uint32_t getTailSamples() const override { return kMaxSamples / 4; }
+    uint32_t getTailSamples() const override { return static_cast<uint32_t>(m_bufL.size()) / 4; }
     WatchdogStats getWatchdogStats() const override { return {}; }
     void resetWatchdog() override {}
     bool isBypassedByWatchdog() const override { return false; }

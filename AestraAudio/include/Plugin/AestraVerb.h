@@ -98,14 +98,16 @@ public:
             float inL = (numInputChannels > 0 && inputs[0]) ? inputs[0][i] : 0.0f;
             float inR = (numInputChannels > 1 && inputs[1]) ? inputs[1][i] : inL;
 
-            // Predelay buffer
+            // Predelay buffer — ring buffer with separate read position
             m_predelay[predelayPos] = inL;
-            m_predelay[(predelayPos + kPredelay / 2) % kPredelay + kPredelay / 2] = inR;
+            m_predelay[predelayPos + kPredelay] = inR;
+
+            int readPos = (predelayPos + 1) % kPredelay;
+            float delayedL = m_predelay[readPos];
+            float delayedR = m_predelay[readPos + kPredelay];
+            predelayPos = (predelayPos + 1) % kPredelay;
             float dryL = inL;
             float dryR = inR;
-            float delayedL = m_predelay[predelayPos];
-            float delayedR = m_predelay[(predelayPos + kPredelay / 2) % kPredelay + kPredelay / 2];
-            predelayPos = (predelayPos + 1) % kPredelay;
 
             // Parallel comb filters (staggered for stereo)
             float combOutL = 0, combOutR = 0;

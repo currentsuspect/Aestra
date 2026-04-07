@@ -567,7 +567,7 @@ void AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, ui
             float bpm = m_metronomeEngine.getBPM();
             // Convert loop end beat to sample position
             double samplesPerBeat =
-                (static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)) * 60.0) / static_cast<double>(bpm);
+                (static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)) * 60.0) / std::max(static_cast<double>(bpm), 1.0);
             uint64_t loopEndSample = static_cast<uint64_t>(loopEndBeat * samplesPerBeat);
             loopStartSample = static_cast<uint64_t>(loopStartBeat * samplesPerBeat);
 
@@ -2141,27 +2141,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
     // Get Arsenal snapshot for RT-safe unit iteration
     auto snapshot = unitManager->getAudioSnapshot();
     if (!snapshot || snapshot->units.empty()) {
-        static int emptyCount = 0;
-        if (++emptyCount % 1000 == 0) {
-            Aestra::Log::info("[Arsenal] Snapshot empty or no units: " +
-                              std::to_string(snapshot ? snapshot->units.size() : 0));
-        }
         return;
-    }
-
-    // DEBUG: Log unit processing occasionally
-    static int arsenalDebug = 0;
-    if (++arsenalDebug % 500 == 0) {
-        int enabledCount = 0, pluginCount = 0;
-        for (const auto& u : snapshot->units) {
-            if (u.enabled)
-                enabledCount++;
-            if (u.plugin)
-                pluginCount++;
-        }
-        Aestra::Log::info("[Arsenal] Units: " + std::to_string(snapshot->units.size()) +
-                          " enabled=" + std::to_string(enabledCount) + " hasPlugin=" + std::to_string(pluginCount) +
-                          " playing=" + std::to_string(transportPlaying));
     }
 
     // Sync sample rate to units only when it changes (avoid per-block scans)
@@ -2264,7 +2244,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     // 1. Calculate length
     double sampleRate = (double)m_sampleRate.load(std::memory_order_relaxed);
     float bpm = m_metronomeEngine.getBPM();
-    double samplesPerBeat = (sampleRate * 60.0) / static_cast<double>(bpm);
+    double samplesPerBeat = (sampleRate * 60.0) / std::max(static_cast<double>(bpm), 1.0);
 
     uint64_t startSample = static_cast<uint64_t>(startBeat * samplesPerBeat);
     uint64_t endSample = static_cast<uint64_t>(endBeat * samplesPerBeat);
