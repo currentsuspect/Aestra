@@ -2,6 +2,12 @@
 
 #include "PluginUIController.h"
 #include "PluginSelectorMenu.h"
+#include "RumblePluginEditor.h"
+#include "GenericPluginEditor.h"
+#include "AestraEQEditor.h"
+#include "AestraCompEditor.h"
+#include "AestraVerbEditor.h"
+#include "AestraDelayEditor.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -309,31 +315,54 @@ void PluginUIController::removePluginFromSlot(Aestra::Audio::EffectChain* chain,
 void PluginUIController::openPluginEditor(
     std::shared_ptr<Aestra::Audio::IPluginInstance> instance,
     void* parentWindow) {
-    
+
     if (!instance) return;
-    
+
     std::shared_ptr<NUIComponent> editor;
-    const bool isRumble = instance->getInfo().id == "com.Aestrastudios.rumble";
-    if (isRumble) {
-        auto rumbleEditor = std::make_shared<RumblePluginEditor>(instance);
-        rumbleEditor->setOnClose([this, rumbleEditor]() {
-            if (m_popupLayer) {
-                m_popupLayer->removeChild(rumbleEditor);
-            }
-            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), rumbleEditor),
-                                  m_activeEditors.end());
+    const std::string& pluginId = instance->getInfo().id;
+
+    if (pluginId == "com.Aestrastudios.rumble") {
+        auto ed = std::make_shared<RumblePluginEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
         });
-        editor = rumbleEditor;
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.eq") {
+        auto ed = std::make_shared<AestraEQEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
+        });
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.comp") {
+        auto ed = std::make_shared<AestraCompEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
+        });
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.verb") {
+        auto ed = std::make_shared<AestraVerbEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
+        });
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.delay") {
+        auto ed = std::make_shared<AestraDelayEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
+        });
+        editor = ed;
     } else {
-        auto genericEditor = std::make_shared<GenericPluginEditor>(instance);
-        genericEditor->setOnClose([this, genericEditor]() {
-            if (m_popupLayer) {
-                m_popupLayer->removeChild(genericEditor);
-            }
-            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), genericEditor),
-                                  m_activeEditors.end());
+        auto ed = std::make_shared<GenericPluginEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
         });
-        editor = genericEditor;
+        editor = ed;
     }
     
     // Position editor in center of popup layer
