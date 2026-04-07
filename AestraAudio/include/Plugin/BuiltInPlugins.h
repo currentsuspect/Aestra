@@ -11,6 +11,7 @@ namespace Audio {
 namespace BuiltInPlugins {
 const PluginInfo& rumbleInfo();
 const PluginInfo& samplerInfo();
+const PluginInfo& eqInfo();
 std::vector<PluginInfo> all();
 }
 

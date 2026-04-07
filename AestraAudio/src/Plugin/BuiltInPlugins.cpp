@@ -46,12 +46,33 @@ const PluginInfo& samplerInfo() {
     return info;
 }
 
+const PluginInfo& eqInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.eq";
+        p.name = "Aestra EQ";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Equalizer";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = false;
+        return p;
+    }();
+    return info;
+}
+
 std::vector<PluginInfo> all() {
     std::vector<PluginInfo> plugins;
 #ifdef AESTRA_HAS_PLUGINS
     plugins.push_back(rumbleInfo());
 #endif
     plugins.push_back(samplerInfo());
+    plugins.push_back(eqInfo());
     return plugins;
 }
 

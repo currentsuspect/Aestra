@@ -343,6 +343,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Plugin/BuiltInPlugins.h
     include/Plugin/EffectChain.h
     include/Plugin/VST3Host.h
+    include/Plugin/AestraEQ.h
     include/Playback/AuditionEngine.h
 )
 

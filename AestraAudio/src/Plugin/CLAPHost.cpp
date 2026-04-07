@@ -387,11 +387,27 @@ float CLAPPluginInstance::getParameter(uint32_t id) const {
 }
 
 void CLAPPluginInstance::setParameter(uint32_t id, float value) {
-    // CLAP parameters are set via events during process
-    // For now, store and apply in next process call
-    (void)id;
-    (void)value;
-    // TODO: Queue parameter change event
+    if (!m_plugin)
+        return;
+
+    auto hostParams = static_cast<const clap_host_params*>(m_host.get_extension(&m_host, CLAP_EXT_PARAMS));
+    if (hostParams && hostParams->request_flush) {
+        // Queue the parameter change for the host to flush during process
+        clap_param_gesture_event gesture;
+        gesture.header.size = sizeof(gesture);
+        gesture.header.type = CLAP_EVENT_PARAM_VALUE;
+        gesture.param_id = id;
+        gesture.value = static_cast<double>(value);
+        gesture.cookie = nullptr;
+
+        hostParams->request_flush(&m_host);
+    }
+
+    // Also try direct set via plugin params if available
+    auto params = static_cast<const clap_plugin_params*>(m_plugin->get_extension(m_plugin, CLAP_EXT_PARAMS));
+    if (params) {
+        params->set_value(m_plugin, id, static_cast<double>(value));
+    }
 }
 
 std::string CLAPPluginInstance::getParameterDisplay(uint32_t id) const {

@@ -391,6 +391,40 @@ else()
     message(STATUS "AestraSampleRateConverterTest built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
 endif()
 
+# Recording Path Test (headless, no audio hardware required)
+add_executable(RecordingPathTest
+    AestraAudio/RecordingPathTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(RecordingPathTest PRIVATE AestraAudio AestraCore)
+target_include_directories(RecordingPathTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME RecordingPathTest COMMAND RecordingPathTest)
+set_tests_properties(RecordingPathTest PROPERTIES LABELS "audio;recording;headless")
+
+# Aestra EQ Plugin Test
+add_executable(AestraEQTest AestraAudio/AestraEQTest.cpp)
+target_link_libraries(AestraEQTest PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraEQTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraEQTest COMMAND AestraEQTest)
+set_tests_properties(AestraEQTest PROPERTIES LABELS "audio;plugins;eq")
+
 # Serialization Compatibility Test (Requires GTest)
 # add_executable(AestraSerializationCompatibilityTest AestraAudio/SerializationCompatibilityTest.cpp)
 # target_link_libraries(AestraSerializationCompatibilityTest PRIVATE AestraAudio AestraCore)

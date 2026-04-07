@@ -15,6 +15,7 @@
 
 #ifdef AESTRA_HAS_PLUGINS
 #include "Plugin/SamplerPlugin.h"
+#include "Plugin/AestraEQ.h"
 #include "RumbleInstance.h"
 #endif
 
@@ -89,6 +90,13 @@ PluginInstancePtr InProcessPluginFactory::createInternalInstance(const PluginInf
     // Aestra Sampler
     if (info.id == "com.Aestrastudios.sampler") {
         return std::make_shared<Aestra::Audio::Plugins::SamplerPlugin>();
+    }
+
+    // Aestra EQ — 8-Band Parametric Equalizer
+    if (info.id == "com.Aestrastudios.eq") {
+        auto eq = std::make_shared<Aestra::Audio::Plugins::AestraEQ>();
+        eq->setInfo(info);
+        return eq;
     }
 #endif
     (void)info;
