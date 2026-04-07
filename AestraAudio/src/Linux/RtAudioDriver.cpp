@@ -2,6 +2,8 @@
 #include "RtAudioDriver.h"
 #include "Core/AudioTelemetry.h"
 
+#include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <utility>
 #include <vector>
@@ -14,6 +16,19 @@
 
 namespace Aestra {
 namespace Audio {
+
+namespace {
+bool isMonitorDeviceName(const std::string& name) {
+    std::string lowered = name;
+    std::transform(lowered.begin(), lowered.end(), lowered.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return lowered.find("monitor") != std::string::npos ||
+           lowered.find("loopback") != std::string::npos ||
+           lowered.find("what u hear") != std::string::npos ||
+           lowered.find("stereo mix") != std::string::npos ||
+           lowered.find("dmix") != std::string::npos;
+}
+}
 
 RtAudioDriver::RtAudioDriver() {
     std::vector<RtAudio::Api> candidates;
@@ -96,11 +111,20 @@ bool RtAudioDriver::openStream(const AudioStreamConfig& config, AudioCallback ca
 
     RtAudio::StreamParameters inputParamsData{};
     RtAudio::StreamParameters* inputParams = nullptr;
-    if (config.numInputChannels > 0) {
-        inputParamsData.deviceId = (config.inputDeviceId != 0) ? config.inputDeviceId : config.deviceId;
-        inputParamsData.nChannels = config.numInputChannels;
-        inputParamsData.firstChannel = 0;
-        inputParams = &inputParamsData;
+    if (config.numInputChannels > 0 && config.inputDeviceId != 0) {
+        // Only open input when an explicit input device is configured.
+        // Falling back to the output device ID captures system playback
+        // on many Linux setups (PulseAudio default routing / dmix loopback),
+        // causing recording to bleed music from other tracks.
+        if (isMonitorDeviceName(getDeviceName(config.inputDeviceId))) {
+            std::cerr << "[RtAudioDriver] Refusing monitor/loopback input device — "
+                         "this would cause recording bleed. Skipping input capture." << std::endl;
+        } else {
+            inputParamsData.deviceId = config.inputDeviceId;
+            inputParamsData.nChannels = config.numInputChannels;
+            inputParamsData.firstChannel = 0;
+            inputParams = &inputParamsData;
+        }
     }
 
     RtAudio::StreamOptions options{};
@@ -298,6 +322,16 @@ AudioDriverType RtAudioDriver::apiToDriverType(RtAudio::Api api) {
         return AudioDriverType::JACK;
     default:
         return AudioDriverType::RTAUDIO;
+    }
+}
+
+std::string RtAudioDriver::getDeviceName(unsigned int deviceId) const {
+    if (!m_rtAudio) return "";
+    try {
+        auto info = m_rtAudio->getDeviceInfo(deviceId);
+        return info.name;
+    } catch (...) {
+        return "";
     }
 }
 
