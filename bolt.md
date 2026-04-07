@@ -2,6 +2,8 @@
 
 As the performance and quality agent "Bolt", I propose the following innovations and improvements to make Aestra and Spot the strongest DAWs and ecosystems.
 
+*Note: This document defines the roadmap for high-performance and audiophile-grade features.*
+
 ## 1. Innovations
 
 ### NeuralFX Suite
@@ -73,6 +75,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Explore LLVM-style JIT fusion for hot audio chains so repeated gain, pan, and utility stages stay cache-friendly.
 - **Benefit**: Lower per-buffer overhead on dense sessions.
 
+### Quantum-Modeled Reverb
+
+- **Innovation**: Use quantum-inspired probability algorithms for dense, hyper-realistic reverb tail generation.
+- **Benefit**: Infinite, non-repeating tails that never build up unnatural metallic ringing artifacts.
+
 ## 3. Sound Quality
 
 ### 64-bit End-to-End Mixing
@@ -103,6 +110,21 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Innovation**: Intelligently filter imperceptible bands before bit-depth or sample-rate reduction.
 - **Benefit**: Lo-fi textures that stay musical and preserve transient clarity instead of collapsing into harsh alias-heavy artifacts.
+
+### Aestra Unified Framework
+
+- **Innovation**: A shared, deeply integrated underlying architecture for both Aestra (timeline) and Spot (modular) environments.
+- **Benefit**: Instantly switch modes without rebuilding the DSP graph, sharing state flawlessly.
+
+### GPU Accelerated DSP
+
+- **Innovation**: Offload highly parallelizable DSP like FFT convolutions and additive synthesis to the GPU via compute shaders (Vulkan/Metal).
+- **Benefit**: Free up CPU for serial tasks, allowing thousands of real-time convolution voices.
+
+### Predictive Caching
+
+- **Innovation**: Anticipate timeline playback branches (e.g., upcoming dense sections or un-muted automation) and pre-render them in idle background threads.
+- **Benefit**: Eliminates audio dropouts entirely, even when pushing CPU near 100%.
 
 ## 4. Audit Notes
 
