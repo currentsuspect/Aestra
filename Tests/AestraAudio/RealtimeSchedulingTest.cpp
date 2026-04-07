@@ -23,6 +23,8 @@ static int g_fails = 0;
     } \
 } while(0)
 
+#if defined(__linux__) || defined(__APPLE__)
+
 // Get scheduling policy name
 static const char* policyName(int policy) {
     switch (policy) {
@@ -49,6 +51,7 @@ static const char* policyName(int policy) {
 void testCurrentThreadScheduling() {
     std::cout << "\n=== Test: Current Thread Scheduling ===\n";
 
+#if defined(__linux__)
     int policy = sched_getscheduler(0); // 0 = calling thread
     CHECK(policy >= 0, "sched_getscheduler() succeeds");
 
@@ -61,6 +64,10 @@ void testCurrentThreadScheduling() {
     if (ret == 0) {
         std::cout << "  Current thread priority: " << param.sched_priority << "\n";
     }
+#else
+    std::cout << "  [SKIP] sched_getscheduler not supported on this POSIX platform\n";
+    CHECK(true, "Skipped testCurrentThreadScheduling on macOS");
+#endif
 }
 
 // ============================================================================
@@ -70,6 +77,7 @@ void testCurrentThreadScheduling() {
 void testMlockallStatus() {
     std::cout << "\n=== Test: mlockall Status ===\n";
 
+#if defined(__linux__)
     // Check /proc/self/status for VmLck field
     std::ifstream status("/proc/self/status");
     bool found = false;
@@ -98,6 +106,10 @@ void testMlockallStatus() {
         std::cout << "  VmLck not found in /proc/self/status\n";
         CHECK(false, "Cannot determine mlockall status");
     }
+#else
+    std::cout << "  [SKIP] /proc/self/status not available on this POSIX platform\n";
+    CHECK(true, "Skipped testMlockallStatus on macOS");
+#endif
 }
 
 // ============================================================================
@@ -126,6 +138,7 @@ void testPriorityRange() {
 void testRlimitRtprio() {
     std::cout << "\n=== Test: RLIMIT_RTPRIO ===\n";
 
+#if defined(RLIMIT_RTPRIO)
     struct rlimit rlim;
     int ret = getrlimit(RLIMIT_RTPRIO, &rlim);
     CHECK(ret == 0, "getrlimit(RLIMIT_RTPRIO) succeeds");
@@ -142,6 +155,10 @@ void testRlimitRtprio() {
         }
         CHECK(true, "RLIMIT_RTPRIO reported (cur=" + std::to_string(rlim.rlim_cur) + ", RT cap: " + (hasRtCapability ? "yes" : "no") + ")");
     }
+#else
+    std::cout << "  [SKIP] RLIMIT_RTPRIO not available on this POSIX platform\n";
+    CHECK(true, "Skipped testRlimitRtprio on macOS");
+#endif
 }
 
 // ============================================================================
@@ -151,6 +168,7 @@ void testRlimitRtprio() {
 void testSetSchedFifo() {
     std::cout << "\n=== Test: Set SCHED_FIFO (dry run) ===\n";
 
+#if defined(__linux__)
     // Try to set SCHED_FIFO on current thread
     struct sched_param param;
     int maxPri = sched_get_priority_max(SCHED_FIFO);
@@ -171,6 +189,10 @@ void testSetSchedFifo() {
         std::cout << "  NOTE: This is expected in CI/container environments without CAP_SYS_NICE.\n";
         CHECK(true, "sched_setscheduler(SCHED_FIFO) fails as expected without CAP_SYS_NICE (errno=" + std::to_string(errno) + ")");
     }
+#else
+    std::cout << "  [SKIP] sched_setscheduler not available on this POSIX platform\n";
+    CHECK(true, "Skipped testSetSchedFifo on macOS");
+#endif
 }
 
 // ============================================================================
@@ -221,3 +243,9 @@ int main() {
 
     return g_fails > 0 ? 1 : 0;
 }
+#else
+int main() {
+    std::cout << "RealtimeSchedulingTest is a POSIX-specific test. Skipping on Windows.\n";
+    return 0;
+}
+#endif

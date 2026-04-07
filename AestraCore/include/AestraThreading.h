@@ -387,7 +387,7 @@ private:
 // Spin lock (use sparingly, for very short critical sections)
 class SpinLock {
 public:
-    SpinLock() : flag(ATOMIC_FLAG_INIT) {}
+    SpinLock() {}
 
     void lock() {
         while (flag.test_and_set(std::memory_order_acquire)) {
@@ -402,7 +402,7 @@ public:
     void unlock() { flag.clear(std::memory_order_release); }
 
 private:
-    std::atomic_flag flag;
+    std::atomic_flag flag = ATOMIC_FLAG_INIT;
 };
 
 } // namespace Aestra
