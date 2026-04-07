@@ -265,6 +265,7 @@ endif()
 set(AESTRA_AUDIO_CORE_HEADERS
     include/Core/AudioGraphBuilder.h
     include/Core/AudioEngine.h
+    include/Core/MasterSafetyLimiter.h
     include/Core/AudioCommandQueue.h
     include/Core/AudioTelemetry.h
     include/Core/AudioGraph.h

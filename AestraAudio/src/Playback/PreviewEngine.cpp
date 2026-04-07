@@ -24,7 +24,7 @@ namespace Aestra {
 namespace Audio {
 
 PreviewEngine::PreviewEngine()
-    : m_activeVoice(nullptr), m_outputSampleRate(48000.0), m_globalGainDb(-6.0f), m_decodeGeneration(0),
+    : m_activeVoice(nullptr), m_outputSampleRate(48000.0), m_globalGainDb(0.0f), m_decodeGeneration(0),
       m_workerRunning(true) // Initialize running state
 {
     // Start worker thread

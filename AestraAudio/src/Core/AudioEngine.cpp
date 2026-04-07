@@ -737,7 +737,7 @@ void AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, ui
     double& masterLfStateL = m_meterLfStateL[ChannelSlotMap::MASTER_SLOT_INDEX];
     double& masterLfStateR = m_meterLfStateR[ChannelSlotMap::MASTER_SLOT_INDEX];
 
-    const bool safety = m_safetyProcessingEnabled.load(std::memory_order_relaxed);
+    const bool limiterOn = m_safetyLimiterEnabled.load(std::memory_order_relaxed);
     const DitheringMode ditherMode = m_ditheringMode.load(std::memory_order_relaxed);
 
     // Deterministic Dithering: Seed RNG with global timeline position
@@ -750,39 +750,8 @@ void AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, ui
         double L = src[i * 2] * gain;
         double R = src[i * 2 + 1] * gain;
 
-        if (safety) {
-            // DC blocking
-            {
-                double y = L - m_dcBlockerL.x1 + DCBlockerD::R * m_dcBlockerL.y1;
-                m_dcBlockerL.x1 = L;
-                m_dcBlockerL.y1 = y;
-                L = y;
-            }
-            {
-                double y = R - m_dcBlockerR.x1 + DCBlockerD::R * m_dcBlockerR.y1;
-                m_dcBlockerR.x1 = R;
-                m_dcBlockerR.y1 = y;
-                R = y;
-            }
-
-            // Soft safety clip (disabled by default; enable for debugging only)
-            if (L > 1.5)
-                L = 1.0;
-            else if (L < -1.5)
-                L = -1.0;
-            else {
-                const double x2 = L * L;
-                L = L * (27.0 + x2) / (27.0 + 9.0 * x2);
-            }
-
-            if (R > 1.5)
-                R = 1.0;
-            else if (R < -1.5)
-                R = -1.0;
-            else {
-                const double x2 = R * R;
-                R = R * (27.0 + x2) / (27.0 + 9.0 * x2);
-            }
+        if (limiterOn) {
+            m_safetyLimiter.process(L, R);
         }
 
         // Track peaks
