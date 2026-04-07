@@ -16,6 +16,9 @@
 #ifdef AESTRA_HAS_PLUGINS
 #include "Plugin/SamplerPlugin.h"
 #include "Plugin/AestraEQ.h"
+#include "Plugin/AestraComp.h"
+#include "Plugin/AestraVerb.h"
+#include "Plugin/AestraDelay.h"
 #include "RumbleInstance.h"
 #endif
 
@@ -97,6 +100,27 @@ PluginInstancePtr InProcessPluginFactory::createInternalInstance(const PluginInf
         auto eq = std::make_shared<Aestra::Audio::Plugins::AestraEQ>();
         eq->setInfo(info);
         return eq;
+    }
+
+    // Aestra Comp — Dynamics Compressor
+    if (info.id == "com.Aestrastudios.comp") {
+        auto comp = std::make_shared<Aestra::Audio::Plugins::AestraComp>();
+        comp->setInfo(info);
+        return comp;
+    }
+
+    // Aestra Verb — Algorithmic Reverb
+    if (info.id == "com.Aestrastudios.verb") {
+        auto verb = std::make_shared<Aestra::Audio::Plugins::AestraVerb>();
+        verb->setInfo(info);
+        return verb;
+    }
+
+    // Aestra Delay — Stereo Delay with Modulation
+    if (info.id == "com.Aestrastudios.delay") {
+        auto delay = std::make_shared<Aestra::Audio::Plugins::AestraDelay>();
+        delay->setInfo(info);
+        return delay;
     }
 #endif
     (void)info;

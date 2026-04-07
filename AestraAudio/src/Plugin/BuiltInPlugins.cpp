@@ -66,6 +66,66 @@ const PluginInfo& eqInfo() {
     return info;
 }
 
+const PluginInfo& compInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.comp";
+        p.name = "Aestra Comp";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Dynamics";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = false;
+        return p;
+    }();
+    return info;
+}
+
+const PluginInfo& verbInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.verb";
+        p.name = "Aestra Verb";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Reverb";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = false;
+        return p;
+    }();
+    return info;
+}
+
+const PluginInfo& delayInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.delay";
+        p.name = "Aestra Delay";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Delay";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = false;
+        return p;
+    }();
+    return info;
+}
+
 std::vector<PluginInfo> all() {
     std::vector<PluginInfo> plugins;
 #ifdef AESTRA_HAS_PLUGINS
@@ -73,6 +133,9 @@ std::vector<PluginInfo> all() {
 #endif
     plugins.push_back(samplerInfo());
     plugins.push_back(eqInfo());
+    plugins.push_back(compInfo());
+    plugins.push_back(verbInfo());
+    plugins.push_back(delayInfo());
     return plugins;
 }
 
