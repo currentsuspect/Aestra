@@ -843,18 +843,18 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
 
 
     
-    // Space: Play/Stop Arsenal
+    // Space: Play/Stop Arsenal — route through AestraContent for proper Engine sync
     if (event.keyCode == NUIKeyCode::Space) {
-        if (event.repeat) return true; // Ignore auto-repeat for transport toggle
-        
+        if (event.repeat) return true;
+
+        if (m_onRequestPlaybackActivation) {
+            m_onRequestPlaybackActivation();
+        }
         if (m_trackManager) {
             Log::info("[ArsenalPanel] Space pressed. playing=" + std::string(m_trackManager->isPlaying() ? "true" : "false") + ", mode=" + std::string(m_trackManager->isPatternMode() ? "pattern" : "timeline"));
             if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
                 m_trackManager->stopArsenalPlayback(true);
             } else {
-                if (m_onRequestPlaybackActivation) {
-                    m_onRequestPlaybackActivation();
-                }
                 m_trackManager->playPatternInArsenal(m_activePatternID);
             }
         }
