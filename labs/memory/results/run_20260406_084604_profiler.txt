@@ -1,0 +1,34 @@
+=========================================
+  Aestra Memory Profiling Test Suite
+=========================================
+Memory profiling: ENABLED
+
+=== Test: Basic Allocation Tracking ===
+[11:46:08] [INFO]  Unified Profiler initialized
+[PASS] Allocation count is 1 after one AESTRA_MEMORY_ALLOC
+[PASS] Current bytes >= allocated size
+[PASS] Allocation count is 2 after two allocs
+[PASS] Deallocation count is 1 after one AESTRA_MEMORY_FREE
+
+=== Test: Accurate Allocation Sizes ===
+[PASS] Allocation count matches 4 allocs
+[PASS] Current bytes >= sum of allocations (1500)
+
+=== Test: Peak Memory Tracking ===
+[PASS] Peak >= 10000 after first alloc
+[PASS] Peak >= 50000 after larger alloc
+[PASS] Peak only increases, never decreases
+
+=== Test: Disabled Macro Behavior ===
+[PASS] Disabled macros compile and run without crash
+
+=== Test: Real Allocation Sites Wired ===
+[PASS] Baseline allocation count accessible
+
+=========================================
+  Test Summary
+=========================================
+  Passed: 11
+  Failed: 0
+  Total:  11
+=========================================

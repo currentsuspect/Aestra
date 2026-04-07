@@ -1,0 +1,90 @@
+{
+  "benchmark": "MemoryBenchmark",
+  "iterations": 3,
+  "cases": [
+    {
+      "case_id": "bufmgr_construct",
+      "name": "AudioBufferManager Construct",
+      "arena_allocs": 1,
+      "arena_bytes": 262144,
+      "profiler_allocs": 1,
+      "profiler_frees": 1,
+      "profiler_bytes": 0,
+      "median_ms": 0.6910,
+      "mean_ms": 2.7133,
+      "best_ms": 0.6410,
+      "worst_ms": 6.8080,
+      "cv": 1.067115
+    },
+    {
+      "case_id": "bufmgr_alloc_clear",
+      "name": "AudioBufferManager Allocate + Clear",
+      "arena_allocs": 1,
+      "arena_bytes": 262144,
+      "profiler_allocs": 1,
+      "profiler_frees": 1,
+      "profiler_bytes": 0,
+      "median_ms": 1.4270,
+      "mean_ms": 4.5297,
+      "best_ms": 1.2330,
+      "worst_ms": 10.9290,
+      "cv": 0.999125
+    },
+    {
+      "case_id": "src_configure_sinc16_up",
+      "name": "SRC Configure Sinc16 44.1→48k",
+      "arena_allocs": 1,
+      "arena_bytes": 65568,
+      "profiler_allocs": 1,
+      "profiler_frees": 0,
+      "profiler_bytes": 65568,
+      "median_ms": 5.4350,
+      "mean_ms": 12.5343,
+      "best_ms": 1.8520,
+      "worst_ms": 30.3160,
+      "cv": 1.009893
+    },
+    {
+      "case_id": "src_process_sinc16",
+      "name": "SRC Process Sinc16 (44100 frames)",
+      "arena_allocs": 1,
+      "arena_bytes": 65568,
+      "profiler_allocs": 1,
+      "profiler_frees": 0,
+      "profiler_bytes": 65568,
+      "median_ms": 17.3290,
+      "mean_ms": 16.8483,
+      "best_ms": 13.3010,
+      "worst_ms": 19.9150,
+      "cv": 0.161527
+    },
+    {
+      "case_id": "src_process_sinc64",
+      "name": "SRC Process Sinc64 (44100 frames)",
+      "arena_allocs": 1,
+      "arena_bytes": 65568,
+      "profiler_allocs": 1,
+      "profiler_frees": 0,
+      "profiler_bytes": 65568,
+      "median_ms": 12.7820,
+      "mean_ms": 13.1273,
+      "best_ms": 12.3070,
+      "worst_ms": 14.2930,
+      "cv": 0.064503
+    },
+    {
+      "case_id": "src_roundtrip",
+      "name": "SRC Round-Trip 44.1→48→44.1k Sinc16",
+      "arena_allocs": 1,
+      "arena_bytes": 65568,
+      "profiler_allocs": 1,
+      "profiler_frees": 0,
+      "profiler_bytes": 65568,
+      "median_ms": 10.2550,
+      "mean_ms": 10.2800,
+      "best_ms": 10.1450,
+      "worst_ms": 10.4400,
+      "cv": 0.011841
+    }
+  ]
+}
