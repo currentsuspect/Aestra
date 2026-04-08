@@ -70,6 +70,10 @@ public:
     uint32_t getStreamSampleRate() const override { return isStreamRunning() ? m_actualSampleRate : 0; }
     uint32_t getStreamBufferSize() const override { return isStreamRunning() ? m_bufferFrameCount : 0; }
 
+    // Device notification hooks used by the local IMMNotificationClient adapter.
+    void onDeviceStateChanged(const std::string& deviceId, uint32_t newState);
+    void onDefaultDeviceChanged(bool isOutput, const std::string& newDefaultId);
+
     /**
      * @brief Check if exclusive mode is available for a device
      */
@@ -111,8 +115,6 @@ private:
     void* m_deviceNotifier = nullptr; // WASAPIExclusiveDeviceNotifier* (COM IMMNotificationClient)
     void registerDeviceNotifier();
     void unregisterDeviceNotifier();
-    void onDeviceStateChanged(const std::string& deviceId, uint32_t newState);
-    void onDefaultDeviceChanged(bool isOutput, const std::string& newDefaultId);
 
     // Format information
     void* m_waveFormat = nullptr; // WAVEFORMATEX* (opaque)
