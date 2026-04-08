@@ -2161,9 +2161,16 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
         Log::error("Failed to create plugin instance for: " + pluginId);
         return;
     }
+
+    if (!instance->initialize(pm.getDefaultSampleRate(), pm.getDefaultBlockSize())) {
+        Log::error("Failed to initialize effect instance for: " + pluginId);
+        return;
+    }
+    instance->activate();
     
     // 4. Insert into first available effect chain slot
     auto& chain = channel->getEffectChain();
+    chain.prepare(pm.getDefaultSampleRate(), pm.getDefaultBlockSize());
     size_t slot = chain.getFirstEmptySlot();
     if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
         chain.insertPlugin(slot, std::move(instance));

@@ -44,7 +44,14 @@ public:
     AestraVerb() = default;
 
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
+        (void)maxBlockSize;
         m_sampleRate = sampleRate;
+        const auto defaults = getParameters();
+        for (const auto& param : defaults) {
+            if (param.id < kParamCount) {
+                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
+            }
+        }
         // Initialize delay buffers
         for (auto& b : m_combBuf) b.assign(kBufferSize, 0.0f);
         for (auto& b : m_allpassBuf) b.assign(kAllpass2 + 64, 0.0f);

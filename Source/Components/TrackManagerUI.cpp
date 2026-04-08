@@ -4711,6 +4711,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     instance->activate(); 
                     
                     auto& chain = channel->getEffectChain();
+                    chain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
                     size_t slot = chain.getFirstEmptySlot();
                     
                     if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {

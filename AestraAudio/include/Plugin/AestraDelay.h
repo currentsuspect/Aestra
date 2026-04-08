@@ -38,7 +38,14 @@ public:
     AestraDelay() = default;
 
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
+        (void)maxBlockSize;
         m_sampleRate = sampleRate;
+        const auto defaults = getParameters();
+        for (const auto& param : defaults) {
+            if (param.id < kParamCount) {
+                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
+            }
+        }
         // Size buffer for max delay time at actual sample rate
         uint32_t maxSamples = static_cast<uint32_t>(kMaxDelaySec * sampleRate);
         m_bufL.assign(maxSamples, 0.0f);

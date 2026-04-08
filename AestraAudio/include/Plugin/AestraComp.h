@@ -38,6 +38,12 @@ public:
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         m_sampleRate = sampleRate;
         m_maxBlockSize = maxBlockSize;
+        const auto defaults = getParameters();
+        for (const auto& param : defaults) {
+            if (param.id < kParamCount) {
+                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
+            }
+        }
         m_envL = m_envR = 0.0f;
         m_lookaheadDelay = 0;
         updateConstants();
