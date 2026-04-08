@@ -19,6 +19,7 @@ public:
 
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    void onResize() { layoutControls(); }
 
     void setOnClose(std::function<void()> callback) { m_onClose = std::move(callback); }
 
@@ -68,8 +69,8 @@ private:
     NUIPoint m_dragStartPos;
     NUIPoint m_windowStartPos;
 
-    static constexpr float kWindowWidth = 720.0f;
-    static constexpr float kWindowHeight = 400.0f;
+    static constexpr float kWindowWidth = 760.0f;
+    static constexpr float kWindowHeight = 410.0f;
     static constexpr float kTitleHeight = 42.0f;
     static constexpr float kCurveHeight = 160.0f;
     static constexpr float kPadding = 14.0f;

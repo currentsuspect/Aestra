@@ -31,7 +31,8 @@ void AestraVerbEditor::layoutControls() {
     auto b = getBounds();
     float totalW = m_knobs.size() * kKnobSize + (m_knobs.size() - 1) * kKnobGap;
     float startX = b.x + (b.width - totalW) * 0.5f;
-    float y = b.y + kTitleH + 20.0f;
+    float controlH = kKnobSize + 36.0f;
+    float y = b.y + kTitleH + std::max(16.0f, (b.height - kTitleH - controlH) * 0.5f);
     for (size_t i = 0; i < m_knobs.size(); ++i) {
         auto& k = m_knobs[i];
         float x = startX + i * (kKnobSize + kKnobGap);
@@ -44,15 +45,15 @@ void AestraVerbEditor::drawTitleBar(NUIRenderer& renderer) {
     auto b = getBounds();
     auto& theme = NUIThemeManager::getInstance();
     NUIRect titleBar(b.x, b.y, b.width, kTitleH);
-    renderer.fillRoundedRect(titleBar, kRadius, NUIColor(0.08f, 0.07f, 0.10f, 0.98f));
-    renderer.drawText("Aestra Verb", {titleBar.x + kPad, titleBar.y + 14.0f}, 13.0f, theme.getColor("textPrimary"));
-    renderer.drawText("Algorithmic reverb", {titleBar.x + 115.0f, titleBar.y + 15.0f}, 10.0f,
-                      NUIColor(0.3f, 0.7f, 1.0f).withAlpha(0.85f));
+    renderer.fillRoundedRect(titleBar, kRadius, NUIColor(0.16f, 0.18f, 0.27f, 0.94f));
+    renderer.drawText("Aestra Verb", {titleBar.x + kPad, titleBar.y + 10.0f}, 13.0f, theme.getColor("textPrimary"));
+    renderer.drawText("Algorithmic reverb", {titleBar.x + kPad, titleBar.y + 23.0f}, 9.0f,
+                      theme.getColor("textSecondary").withAlpha(0.82f));
     float cx = titleBar.right() - 26.0f, cy = titleBar.y + 13.0f;
     renderer.drawLine({cx+4, cy+4}, {cx+12, cy+12}, 1.5f, theme.getColor("textSecondary"));
     renderer.drawLine({cx+12, cy+4}, {cx+4, cy+12}, 1.5f, theme.getColor("textSecondary"));
     renderer.drawLine({titleBar.x, titleBar.bottom()}, {titleBar.right(), titleBar.bottom()},
-                      1.0f, NUIColor(1,1,1,0.06f));
+                      1.0f, NUIColor(1,1,1,0.08f));
 }
 
 void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const Knob& k, NUIColor accent) {
@@ -85,8 +86,12 @@ void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const Knob& k, NUIColor a
 
 void AestraVerbEditor::onRender(NUIRenderer& renderer) {
     auto b = getBounds();
-    renderer.fillRoundedRect(b, kRadius, NUIColor(0.07f, 0.07f, 0.08f, 0.97f));
-    renderer.strokeRoundedRect(b, kRadius, 1.0f, NUIColor(1,1,1,0.10f));
+    float cardY = m_knobs.empty() ? (b.y + kTitleH + 16.0f) : (m_knobs.front().bounds.y - 12.0f);
+    float cardH = m_knobs.empty() ? 108.0f : (m_knobs.front().bounds.height + 24.0f);
+    renderer.fillRoundedRect(b, kRadius, NUIColor(0.07f, 0.08f, 0.11f, 0.985f));
+    renderer.fillRoundedRect({b.x + 1.0f, cardY, b.width - 2.0f, cardH}, 11.0f,
+                             NUIColor(0.10f, 0.11f, 0.16f, 0.72f));
+    renderer.strokeRoundedRect(b, kRadius, 1.0f, NUIColor(0.60f, 0.68f, 1.0f, 0.16f));
     drawTitleBar(renderer);
     NUIColor accent(0.3f, 0.7f, 1.0f);
     for (const auto& k : m_knobs) drawKnob(renderer, k, accent);
@@ -113,11 +118,13 @@ void AestraVerbEditor::updateKnobValue(int idx, float v) {
 bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
     auto b = getBounds();
+    bool isDraggingKnob = std::any_of(m_knobs.begin(), m_knobs.end(),
+                                      [](const Knob& knob) { return knob.dragging; });
     bool contains = b.contains(event.position);
-    if (event.pressed && event.button == NUIMouseButton::Left && !contains && !m_isDraggingWindow) {
+    if (event.pressed && event.button == NUIMouseButton::Left && !contains && !m_isDraggingWindow && !isDraggingKnob) {
         if (m_onClose) m_onClose(); return false;
     }
-    if (!contains && !m_isDraggingWindow) return false;
+    if (!contains && !m_isDraggingWindow && !isDraggingKnob) return false;
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (hitTestCloseButton(event.position.x, event.position.y)) { if (m_onClose) m_onClose(); return true; }
         if (hitTestTitleBar(event.position.x, event.position.y)) {

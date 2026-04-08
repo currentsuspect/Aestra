@@ -15,6 +15,7 @@ public:
     explicit AestraCompEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance);
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    void onResize() { layoutControls(); }
     void setOnClose(std::function<void()> cb) { m_onClose = std::move(cb); }
 
 private:
@@ -48,8 +49,8 @@ private:
     bool m_isDraggingWindow = false;
     NUIPoint m_dragStartPos, m_windowStartPos;
 
-    static constexpr float kWinW = 480, kWinH = 300, kTitleH = 42, kPad = 14, kRadius = 12;
-    static constexpr float kKnobSize = 56, kKnobGap = 16;
+    static constexpr float kWinW = 560, kWinH = 250, kTitleH = 42, kPad = 18, kRadius = 12;
+    static constexpr float kKnobSize = 56, kKnobGap = 20;
 };
 
 } // namespace AestraUI

@@ -170,7 +170,7 @@ public:
             { kStereoShift, "Stereo", "STR", "", 0.5f, 0.0f, 1.0f, true },
             { kModDepth, "Mod Depth", "MOD", "", 0.0f, 0.0f, 1.0f, true },
             { kModRate, "Mod Rate", "RATE", "Hz", 0.1f, 0.0f, 1.0f, true },
-            { kMix, "Mix", "MIX", "%", 0.3f, 0.0f, 1.0f, true },
+            { kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true },
             { kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1 },
         };
     }
@@ -215,7 +215,7 @@ public:
 
     const PluginInfo& getInfo() const override { return m_info; }
     uint32_t getLatencySamples() const override { return 0; }
-    uint32_t getTailSamples() const override { return static_cast<uint32_t>(m_bufL.size()) / 4; }
+    uint32_t getTailSamples() const override { return static_cast<uint32_t>(m_bufL.size()); }
     WatchdogStats getWatchdogStats() const override { return {}; }
     void resetWatchdog() override {}
     bool isBypassedByWatchdog() const override { return false; }

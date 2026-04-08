@@ -43,13 +43,14 @@ void AestraEQEditor::buildControls() {
 
 void AestraEQEditor::layoutControls() {
     auto bounds = getBounds();
-    float bandW = (bounds.width - kPadding * 2.0f - 10.0f * 7.0f) / 8.0f;
+    constexpr float bandGap = 12.0f;
+    float bandW = (bounds.width - kPadding * 2.0f - bandGap * 7.0f) / 8.0f;
+    float y = bounds.y + kTitleHeight + kCurveHeight + 14.0f;
+    float h = bounds.bottom() - y - kPadding;
 
     for (size_t i = 0; i < m_bands.size(); ++i) {
         auto& b = m_bands[i];
-        float x = bounds.x + kPadding + i * (bandW + 10.0f);
-        float y = bounds.y + kTitleHeight + kCurveHeight + 10.0f;
-        float h = bounds.height - y - kPadding;
+        float x = bounds.x + kPadding + i * (bandW + bandGap);
         b.bounds = NUIRect(x, y, bandW, h);
 
         // Vertical sliders
@@ -257,6 +258,15 @@ void AestraEQEditor::onRender(NUIRenderer& renderer) {
     drawResponseCurve(renderer, {bounds.x + kPadding, bounds.y + kTitleHeight + 4.0f,
                                   bounds.width - kPadding * 2.0f, kCurveHeight});
 
+    if (!m_bands.empty()) {
+        const auto& first = m_bands.front();
+        const auto& last = m_bands.back();
+        renderer.fillRoundedRect(
+            {first.bounds.x - 4.0f, first.bounds.y - 8.0f,
+             last.bounds.right() - first.bounds.x + 8.0f, first.bounds.height + 16.0f},
+            11.0f, NUIColor(0.10f, 0.11f, 0.16f, 0.72f));
+    }
+
     for (const auto& band : m_bands) {
         drawBandPanel(renderer, band);
     }
@@ -335,13 +345,15 @@ std::string AestraEQEditor::qLabel(float norm) const {
 bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
     auto bounds = getBounds();
+    bool isDraggingBand = std::any_of(m_bands.begin(), m_bands.end(),
+                                      [](const BandControl& band) { return band.dragging; });
     bool contains = bounds.contains(event.position);
 
-    if (event.pressed && event.button == NUIMouseButton::Left && !contains && !m_isDraggingWindow) {
+    if (event.pressed && event.button == NUIMouseButton::Left && !contains && !m_isDraggingWindow && !isDraggingBand) {
         if (m_onClose) m_onClose();
         return false;
     }
-    if (!contains && !m_isDraggingWindow) return false;
+    if (!contains && !m_isDraggingWindow && !isDraggingBand) return false;
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (hitTestCloseButton(event.position.x, event.position.y)) {
@@ -388,6 +400,25 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
         float dy = event.position.y - m_dragStartPos.y;
         setBounds(m_windowStartPos.x + dx, m_windowStartPos.y + dy, bounds.width, bounds.height);
         layoutControls();
+        return true;
+    }
+
+    for (size_t i = 0; i < m_bands.size(); ++i) {
+        auto& band = m_bands[i];
+        if (!band.dragging) {
+            continue;
+        }
+
+        const NUIRect& sliderRect = (band.dragTarget == BandControl::Freq)
+            ? band.freqSlider
+            : (band.dragTarget == BandControl::Gain ? band.gainSlider : band.qSlider);
+        float val = 1.0f - (event.position.y - sliderRect.y) / std::max(1.0f, sliderRect.height);
+        updateBandValue(static_cast<int>(i), band.dragTarget, val);
+
+        if (!event.pressed && event.button == NUIMouseButton::Left) {
+            band.dragging = false;
+            band.dragTarget = BandControl::None;
+        }
         return true;
     }
 

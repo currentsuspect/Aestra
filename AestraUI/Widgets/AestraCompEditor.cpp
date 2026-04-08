@@ -35,7 +35,8 @@ void AestraCompEditor::layoutControls() {
     auto b = getBounds();
     float totalW = m_knobs.size() * kKnobSize + (m_knobs.size() - 1) * kKnobGap;
     float startX = b.x + (b.width - totalW) * 0.5f;
-    float y = b.y + kTitleH + 30.0f;
+    float controlH = kKnobSize + 50.0f;
+    float y = b.y + kTitleH + std::max(20.0f, (b.height - kTitleH - controlH) * 0.5f + 6.0f);
     for (size_t i = 0; i < m_knobs.size(); ++i) {
         auto& k = m_knobs[i];
         float x = startX + i * (kKnobSize + kKnobGap);
@@ -48,15 +49,15 @@ void AestraCompEditor::drawTitleBar(NUIRenderer& renderer) {
     auto b = getBounds();
     auto& theme = NUIThemeManager::getInstance();
     NUIRect titleBar(b.x, b.y, b.width, kTitleH);
-    renderer.fillRoundedRect(titleBar, kRadius, NUIColor(0.08f, 0.07f, 0.10f, 0.98f));
-    renderer.drawText("Aestra Comp", {titleBar.x + kPad, titleBar.y + 14.0f}, 13.0f, theme.getColor("textPrimary"));
-    renderer.drawText("Dynamics processor", {titleBar.x + 115.0f, titleBar.y + 15.0f}, 10.0f,
-                      NUIColor(1.0f, 0.6f, 0.2f).withAlpha(0.85f));
+    renderer.fillRoundedRect(titleBar, kRadius, NUIColor(0.16f, 0.18f, 0.27f, 0.94f));
+    renderer.drawText("Aestra Comp", {titleBar.x + kPad, titleBar.y + 10.0f}, 13.0f, theme.getColor("textPrimary"));
+    renderer.drawText("Dynamics processor", {titleBar.x + kPad, titleBar.y + 23.0f}, 9.0f,
+                      theme.getColor("textSecondary").withAlpha(0.82f));
     float cx = titleBar.right() - 16.0f - 10.0f, cy = titleBar.y + (kTitleH - 16.0f) * 0.5f;
     renderer.drawLine({cx+4, cy+4}, {cx+12, cy+12}, 1.5f, theme.getColor("textSecondary"));
     renderer.drawLine({cx+12, cy+4}, {cx+4, cy+12}, 1.5f, theme.getColor("textSecondary"));
     renderer.drawLine({titleBar.x, titleBar.bottom()}, {titleBar.right(), titleBar.bottom()},
-                      1.0f, NUIColor(1,1,1,0.06f));
+                      1.0f, NUIColor(1,1,1,0.08f));
 }
 
 void AestraCompEditor::drawMeter(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -122,8 +123,12 @@ void AestraCompEditor::drawKnob(NUIRenderer& renderer, const Knob& k) {
 
 void AestraCompEditor::onRender(NUIRenderer& renderer) {
     auto b = getBounds();
-    renderer.fillRoundedRect(b, kRadius, NUIColor(0.07f, 0.07f, 0.08f, 0.97f));
-    renderer.strokeRoundedRect(b, kRadius, 1.0f, NUIColor(1,1,1,0.10f));
+    float cardY = m_knobs.empty() ? (b.y + kTitleH + 18.0f) : (m_knobs.front().bounds.y - 14.0f);
+    float cardH = m_knobs.empty() ? 126.0f : (m_knobs.front().bounds.height + 28.0f);
+    renderer.fillRoundedRect(b, kRadius, NUIColor(0.07f, 0.08f, 0.11f, 0.985f));
+    renderer.fillRoundedRect({b.x + 1.0f, cardY, b.width - 2.0f, cardH}, 11.0f,
+                             NUIColor(0.10f, 0.11f, 0.16f, 0.72f));
+    renderer.strokeRoundedRect(b, kRadius, 1.0f, NUIColor(0.60f, 0.68f, 1.0f, 0.16f));
     drawTitleBar(renderer);
     for (const auto& k : m_knobs) drawKnob(renderer, k);
     NUIRect meterArea(b.x + kPad, b.y + kTitleH + 10, b.width - kPad * 2 - 26, 24);
@@ -155,11 +160,13 @@ void AestraCompEditor::updateKnobValue(int idx, float v) {
 bool AestraCompEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
     auto b = getBounds();
+    bool isDraggingKnob = std::any_of(m_knobs.begin(), m_knobs.end(),
+                                      [](const Knob& knob) { return knob.dragging; });
     bool contains = b.contains(event.position);
-    if (event.pressed && event.button == NUIMouseButton::Left && !contains && !m_isDraggingWindow) {
+    if (event.pressed && event.button == NUIMouseButton::Left && !contains && !m_isDraggingWindow && !isDraggingKnob) {
         if (m_onClose) m_onClose(); return false;
     }
-    if (!contains && !m_isDraggingWindow) return false;
+    if (!contains && !m_isDraggingWindow && !isDraggingKnob) return false;
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (hitTestCloseButton(event.position.x, event.position.y)) { if (m_onClose) m_onClose(); return true; }

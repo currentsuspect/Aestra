@@ -193,7 +193,7 @@ public:
             { kDamping, "Damping", "DMP", "", 0.3f, 0.0f, 1.0f, true },
             { kPredelayMs, "Predelay", "PRE", "ms", 0.1f, 0.0f, 1.0f, true },
             { kWidth, "Width", "WID", "", 0.7f, 0.0f, 1.0f, true },
-            { kMix, "Mix", "MIX", "%", 0.3f, 0.0f, 1.0f, true },
+            { kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true },
             { kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1 },
         };
     }

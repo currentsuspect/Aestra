@@ -58,14 +58,14 @@ private:
     NUIPoint m_windowStartPos;
     
     // Layout constants
-    static constexpr float TITLE_BAR_HEIGHT = 32.0f;
-    static constexpr float PARAMETER_HEIGHT = 28.0f;
-    static constexpr float LABEL_WIDTH = 120.0f;
-    static constexpr float SLIDER_WIDTH = 180.0f;
-    static constexpr float VALUE_WIDTH = 50.0f;
-    static constexpr float PADDING = 8.0f;
-    static constexpr float WINDOW_WIDTH = 400.0f;
-    static constexpr float WINDOW_HEIGHT = 400.0f;
+    static constexpr float TITLE_BAR_HEIGHT = 36.0f;
+    static constexpr float PARAMETER_HEIGHT = 36.0f;
+    static constexpr float LABEL_WIDTH = 132.0f;
+    static constexpr float SLIDER_WIDTH = 220.0f;
+    static constexpr float VALUE_WIDTH = 64.0f;
+    static constexpr float PADDING = 12.0f;
+    static constexpr float WINDOW_WIDTH = 468.0f;
+    static constexpr float WINDOW_HEIGHT = 420.0f;
     
     void buildParameterWidgets();
     void layoutParameters();
