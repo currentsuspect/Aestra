@@ -497,8 +497,8 @@ public:
 private:
     // Frequency mapping: normalized 0-1 → 20Hz-20kHz (logarithmic)
     static float freqToHz(float norm) {
-        constexpr float logMin = std::log10(20.0f);
-        constexpr float logMax = std::log10(20000.0f);
+        const float logMin = std::log10(20.0f);
+        const float logMax = std::log10(20000.0f);
         return std::pow(10.0f, logMin + norm * (logMax - logMin));
     }
 
@@ -514,8 +514,8 @@ private:
 
     static float dbToNorm(float db) { return (db + 18.0f) / 36.0f; }
     static float freqToNorm(float hz) {
-        constexpr float logMin = std::log10(20.0f);
-        constexpr float logMax = std::log10(20000.0f);
+        const float logMin = std::log10(20.0f);
+        const float logMax = std::log10(20000.0f);
         return (std::log10(hz) - logMin) / (logMax - logMin);
     }
 
