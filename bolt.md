@@ -45,6 +45,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Let Aestra plugins and devices move cleanly into Spot-style modular workflows.
 - **Benefit**: Shared DSP investment across the timeline DAW and the node-based ecosystem.
 
+### Aestra Unified Framework
+
+- **Innovation**: Create a seamless underlying architecture connecting UI, DSP, and project states that serves both Spot and Aestra DAWs.
+- **Benefit**: Faster feature iteration, shared plugins, and reduced maintenance overhead across all ecosystem products.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -67,6 +72,21 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Innovation**: Enable oversampling adaptively per plugin based on signal content and processing type.
 - **Benefit**: Better aliasing control without paying the CPU cost globally.
+
+### GPU Accelerated DSP
+
+- **Plan**: Offload massively parallel processing (like heavy convolution reverbs, spectral processing, and neural network inference) to the GPU using Vulkan or CUDA.
+- **Benefit**: Free up CPU cycles for the critical path audio thread while handling intense calculations off-chip.
+
+### Predictive Caching
+
+- **Innovation**: Cache upcoming audio regions into RAM before the playhead reaches them by pre-rendering deterministic processing chains.
+- **Benefit**: Eliminates disk-streaming dropouts and spikes during playback of dense arrangements.
+
+### SimdLin Integration
+
+- **Innovation**: Leverage SIMD libraries (`SimdLin` or custom vectorized math) for basic linear algebra operations in audio processing.
+- **Benefit**: Drastically cuts CPU usage for panning, mixing, and basic EQ functions across all channels simultaneously.
 
 ### JIT Audio Chains
 
@@ -103,6 +123,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Innovation**: Intelligently filter imperceptible bands before bit-depth or sample-rate reduction.
 - **Benefit**: Lo-fi textures that stay musical and preserve transient clarity instead of collapsing into harsh alias-heavy artifacts.
+
+### Quantum-Modeled Reverb
+
+- **Innovation**: Utilize quantum computing principles (or simulated equivalents) to compute acoustic reflections in chaotic or mathematically impossible spaces.
+- **Benefit**: Radically novel sonic textures and spatial environments not possible with traditional algorithmic or convolution reverbs.
 
 ## 4. Audit Notes
 
