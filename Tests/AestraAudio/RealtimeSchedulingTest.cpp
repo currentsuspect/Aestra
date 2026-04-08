@@ -10,6 +10,13 @@
 #include <sys/resource.h>
 #include <unistd.h>
 
+#ifndef __linux__
+int main() {
+    std::cout << "Realtime Scheduling Test skipped (Linux-only test).\n";
+    return 0;
+}
+#else
+
 static int g_passes = 0;
 static int g_fails = 0;
 
@@ -221,3 +228,5 @@ int main() {
 
     return g_fails > 0 ? 1 : 0;
 }
+
+#endif // __linux__
