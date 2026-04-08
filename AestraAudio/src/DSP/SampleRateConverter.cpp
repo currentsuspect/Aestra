@@ -131,12 +131,17 @@ float dotProductAVX(const float* a, const float* b, uint32_t n) noexcept {
 #endif
 
 // Scalar fallback dot product
-// Scalar dot product with SSE4.1 target for auto-vectorization
-// This enables the compiler to use SSE multiply-add instructions on x86
-#ifdef __x86_64__
+#if defined(_MSC_VER)
+#define AESTRA_RESTRICT __restrict
+#else
+#define AESTRA_RESTRICT __restrict__
+#endif
+
+// Scalar dot product with optional SSE4.1 target for auto-vectorization on GCC/Clang.
+#if defined(__GNUC__) && (defined(__x86_64__) || defined(__i386__))
 __attribute__((target("sse4.1")))
 #endif
-float dotProductScalar(const float* __restrict__ a, const float* __restrict__ b, uint32_t n) noexcept {
+float dotProductScalar(const float* AESTRA_RESTRICT a, const float* AESTRA_RESTRICT b, uint32_t n) noexcept {
     float sum = 0.0f;
     uint32_t i = 0;
 
@@ -154,6 +159,8 @@ float dotProductScalar(const float* __restrict__ a, const float* __restrict__ b,
     }
     return sum;
 }
+
+#undef AESTRA_RESTRICT
 
 } // anonymous namespace
 

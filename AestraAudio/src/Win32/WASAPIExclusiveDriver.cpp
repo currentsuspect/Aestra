@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "WASAPIExclusiveDriver.h"
+#include "AudioTelemetry.h"
 
 // Windows-specific includes (only in .cpp file)
 #ifndef WIN32_LEAN_AND_MEAN

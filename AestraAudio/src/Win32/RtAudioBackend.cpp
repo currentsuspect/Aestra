@@ -1,11 +1,20 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "RtAudioBackend.h"
+#include "AestraLog.h"
 
 #include <stdexcept>
 #include <string>
 
 namespace Aestra {
 namespace Audio {
+
+namespace {
+bool isMonitorDevice(unsigned int) {
+    // RtAudio's device API does not expose a reliable Windows loopback/monitor classification here.
+    // Keep the guard conservative on Windows until the backend grows explicit device metadata.
+    return false;
+}
+}
 
 RtAudioBackend::RtAudioBackend() : m_userCallback(nullptr), m_userData(nullptr) {
     std::cout << "RtAudioBackend: Initializing WASAPI audio backend" << std::endl;

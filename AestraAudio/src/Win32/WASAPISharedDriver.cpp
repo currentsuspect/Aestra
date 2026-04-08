@@ -2,6 +2,8 @@
 #include "WASAPISharedDriver.h"
 
 #include "DitherUtils.h"
+#include "AestraLog.h"
+#include "AudioTelemetry.h"
 
 // Windows-specific includes (only in .cpp file)
 #ifndef WIN32_LEAN_AND_MEAN
