@@ -196,6 +196,8 @@ public:
     Aestra::Audio::PatternID getActivePatternID() const;
     /** @brief Get the file-browser widget. */
     std::shared_ptr<AestraUI::FileBrowser> getFileBrowser() const;
+    /** @brief Request timeline-aware transport play/start behavior. */
+    void requestTransportPlay();
     /** @brief Start playback based on the current focus mode. */
     void playFromCurrentFocus();
     /** @brief Stop playback based on the current focus mode. */
@@ -218,6 +220,8 @@ public:
 
     /** @brief Refresh the visible plugin list in the browser. */
     void refreshPluginList();
+    /** @brief Refresh track/pattern/arsenal UI after an external project load. */
+    void refreshProjectViews();
 
     /** @brief Start preview playback for a file-browser item. */
     void playSoundPreview(const AestraUI::FileItem& file);
@@ -244,6 +248,8 @@ public:
     void openPatternInPianoRoll(Aestra::Audio::PatternID patternId);
 
 private:
+    ViewFocus resolveTransportFocus() const;
+    bool isTransportRolling() const;
     void handleTransportPlayRequest();
     void clearPendingCountIn();
     void updatePendingCountIn();

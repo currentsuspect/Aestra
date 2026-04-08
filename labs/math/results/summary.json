@@ -1,0 +1,10 @@
+{
+  "run_id": "run_20260405_115554",
+  "timestamp": "2026-04-05T11:55:54Z",
+  "git": { "commit": "28142f636b0019e3df8e46a23176651affc7d135", "branch": "develop", "dirty": false },
+  "lanes": {
+    "tests": { "binary": "/home/currentsuspect/Aestra/build-autoresearch/AestraCore/MathTests", "exit_code": 0, "output_file": "/home/currentsuspect/Aestra/labs/math/results/run_20260405_115554_math.txt" },
+    "benchmark": { "binary": "/home/currentsuspect/Aestra/build-autoresearch/AestraCore/MathBenchmark", "exit_code": 0, "output_file": "/home/currentsuspect/Aestra/labs/math/results/run_20260405_115554_benchmark.txt", "json_file": "/home/currentsuspect/Aestra/labs/math/results/run_20260405_115554_benchmark.json" }
+  },
+  "decision": { "status": "accept", "reason": "All gates passed.", "hard_gate_failures": [], "advisory_flags": [] }
+}

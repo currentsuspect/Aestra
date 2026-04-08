@@ -16,6 +16,9 @@ TARGETS=(
   RumbleRenderTest
   RumbleArsenalAudibleTest
   ProjectRoundTripTest
+  OfflineRenderRegressionTest
+  RecordingPathTest
+  AestraEQTest
 )
 
 usage() {
@@ -65,6 +68,9 @@ run_test InternalPluginProjectRoundTripTest "$BUILD_DIR/Tests/InternalPluginProj
 run_test RumbleRenderTest "$BUILD_DIR/Tests/Headless/RumbleRenderTest" "$TMP_DIR/rumble_render"
 run_test RumbleArsenalAudibleTest "$BUILD_DIR/Tests/Headless/RumbleArsenalAudibleTest"
 run_test ProjectRoundTripTest "$BUILD_DIR/Tests/ProjectRoundTripTest"
+run_test OfflineRenderRegressionTest "$BUILD_DIR/Tests/Headless/OfflineRenderRegressionTest"
+run_test RecordingPathTest "$BUILD_DIR/Tests/RecordingPathTest"
+run_test AestraEQTest "$BUILD_DIR/Tests/AestraEQTest"
 
 echo
 echo "Confidence suite passed."

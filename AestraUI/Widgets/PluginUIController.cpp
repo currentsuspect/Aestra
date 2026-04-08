@@ -2,6 +2,12 @@
 
 #include "PluginUIController.h"
 #include "PluginSelectorMenu.h"
+#include "RumblePluginEditor.h"
+#include "GenericPluginEditor.h"
+#include "AestraEQEditor.h"
+#include "AestraCompEditor.h"
+#include "AestraVerbEditor.h"
+#include "AestraDelayEditor.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -309,45 +315,96 @@ void PluginUIController::removePluginFromSlot(Aestra::Audio::EffectChain* chain,
 void PluginUIController::openPluginEditor(
     std::shared_ptr<Aestra::Audio::IPluginInstance> instance,
     void* parentWindow) {
-    
+
     if (!instance) return;
-    
+
     std::shared_ptr<NUIComponent> editor;
-    const bool isRumble = instance->getInfo().id == "com.Aestrastudios.rumble";
-    if (isRumble) {
-        auto rumbleEditor = std::make_shared<RumblePluginEditor>(instance);
-        rumbleEditor->setOnClose([this, rumbleEditor]() {
-            if (m_popupLayer) {
-                m_popupLayer->removeChild(rumbleEditor);
-            }
-            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), rumbleEditor),
-                                  m_activeEditors.end());
+    const std::string& pluginId = instance->getInfo().id;
+
+    if (pluginId == "com.Aestrastudios.rumble") {
+        auto ed = std::make_shared<RumblePluginEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
         });
-        editor = rumbleEditor;
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.eq") {
+        auto ed = std::make_shared<AestraEQEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
+        });
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.comp") {
+        auto ed = std::make_shared<AestraCompEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
+        });
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.verb") {
+        auto ed = std::make_shared<AestraVerbEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
+        });
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.delay") {
+        auto ed = std::make_shared<AestraDelayEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
+        });
+        editor = ed;
     } else {
-        auto genericEditor = std::make_shared<GenericPluginEditor>(instance);
-        genericEditor->setOnClose([this, genericEditor]() {
-            if (m_popupLayer) {
-                m_popupLayer->removeChild(genericEditor);
-            }
-            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), genericEditor),
-                                  m_activeEditors.end());
+        auto ed = std::make_shared<GenericPluginEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
         });
-        editor = genericEditor;
+        editor = ed;
     }
     
+    auto relayoutEditor = [&](const std::shared_ptr<NUIComponent>& editorComp,
+                              float width,
+                              float height) {
+        if (!editorComp) return;
+
+        if (auto delay = std::dynamic_pointer_cast<AestraDelayEditor>(editorComp)) {
+            delay->onResize();
+        } else if (auto eq = std::dynamic_pointer_cast<AestraEQEditor>(editorComp)) {
+            eq->onResize();
+        } else if (auto verb = std::dynamic_pointer_cast<AestraVerbEditor>(editorComp)) {
+            verb->onResize();
+        } else if (auto comp = std::dynamic_pointer_cast<AestraCompEditor>(editorComp)) {
+            comp->onResize();
+        } else if (auto generic = std::dynamic_pointer_cast<GenericPluginEditor>(editorComp)) {
+            generic->onResize();
+        } else if (auto rumble = std::dynamic_pointer_cast<RumblePluginEditor>(editorComp)) {
+            rumble->onResize(static_cast<int>(width), static_cast<int>(height));
+        }
+    };
+
     // Position editor in center of popup layer
     if (m_popupLayer && editor) {
         auto layerBounds = m_popupLayer->getBounds();
-        auto [preferredWidth, preferredHeight] = instance->getEditorSize();
-        float editorWidth = preferredWidth > 0 ? static_cast<float>(preferredWidth) : 400.0f;
-        float editorHeight = preferredHeight > 0 ? static_cast<float>(preferredHeight) : 400.0f;
+        auto editorBounds = editor->getBounds();
+        float editorWidth = editorBounds.width > 0.0f ? editorBounds.width : 0.0f;
+        float editorHeight = editorBounds.height > 0.0f ? editorBounds.height : 0.0f;
+
+        if (editorWidth <= 0.0f || editorHeight <= 0.0f) {
+            auto [preferredWidth, preferredHeight] = instance->getEditorSize();
+            editorWidth = preferredWidth > 0 ? static_cast<float>(preferredWidth) : 400.0f;
+            editorHeight = preferredHeight > 0 ? static_cast<float>(preferredHeight) : 400.0f;
+        }
+
         editorWidth = std::min(editorWidth, layerBounds.width - 40.0f);
         editorHeight = std::min(editorHeight, layerBounds.height - 40.0f);
         float x = (layerBounds.width - editorWidth) * 0.5f;
         float y = (layerBounds.height - editorHeight) * 0.5f;
         
         editor->setBounds(x, y, editorWidth, editorHeight);
+        relayoutEditor(editor, editorWidth, editorHeight);
         
         m_popupLayer->addChild(editor);
         m_activeEditors.push_back(editor);

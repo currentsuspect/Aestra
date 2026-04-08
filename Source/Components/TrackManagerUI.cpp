@@ -2631,7 +2631,6 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 positionInSeconds = std::max(0.0, positionInSeconds);
                 
                 m_trackManager->setPosition(positionInSeconds);
-                // Also save this as the new play start position for return-on-stop
                 m_trackManager->setPlayStartPosition(positionInSeconds);
             }
             return true;
@@ -2817,6 +2816,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         
         if (m_trackManager) {
             m_trackManager->setPosition(positionInSeconds);
+            m_trackManager->setPlayStartPosition(positionInSeconds);
         }
         
         return true;
@@ -3795,8 +3795,8 @@ double TrackManagerUI::getMaxTimelineExtent() const {
     
     auto& playlist = m_trackManager->getPlaylistModel();
     double totalDurationBeats = playlist.getTotalDurationBeats();
-    
-    double bpm = 120.0; // TODO: Get from project/transport
+
+    double bpm = std::max(playlist.getBPM(), 1.0);
     double secondsPerBeat = 60.0 / bpm;
     
     // Minimum extent - at least 8 bars even if empty
@@ -4085,7 +4085,7 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, static_cast<float>(width), rulerHeight);
     
     // Render ruler ticks (static part only - no moving elements)
-    double bpm = 120.0;
+    double bpm = std::max(m_trackManager->getPlaylistModel().getBPM(), 1.0);
     double secondsPerBeat = 60.0 / bpm;
     double maxExtent = getMaxTimelineExtent();
     double maxExtentInBeats = maxExtent / secondsPerBeat;
@@ -4188,7 +4188,7 @@ void TrackManagerUI::splitSelectedClipAtPlayhead() {
     
     // Get current playhead position from transport
     double currentPosSeconds = m_trackManager->getPosition();
-    double bpm = 120.0; // TODO: Get from transport
+    double bpm = std::max(m_trackManager->getPlaylistModel().getBPM(), 1.0);
     double secondsPerBeat = 60.0 / bpm;
     double splitBeat = currentPosSeconds / secondsPerBeat;
     
@@ -4711,6 +4711,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     instance->activate(); 
                     
                     auto& chain = channel->getEffectChain();
+                    chain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
                     size_t slot = chain.getFirstEmptySlot();
                     
                     if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
@@ -4824,9 +4825,9 @@ double TrackManagerUI::getTimeAtPosition(float x) const {
     
     // Convert pixels to beats, then to seconds
     // pixels / pixelsPerBeat = beats
-    // beats / beatsPerMinute * 60 = seconds (but we use BPM = 120 assumed)
+    // beats / beatsPerMinute * 60 = seconds
     double beats = relativeX / m_pixelsPerBeat;
-    double bpm = 120.0;  // TODO: Get actual BPM from transport
+    double bpm = std::max(m_trackManager->getPlaylistModel().getBPM(), 1.0);
     double seconds = (beats / bpm) * 60.0;
     
     return seconds;

@@ -228,6 +228,16 @@ endif()
 add_executable(AestraSincBenchmark AestraAudio/SincBenchmark.cpp)
 target_link_libraries(AestraSincBenchmark PRIVATE AestraAudioCore AestraCore)
 
+# Stress benchmark companion used by dsp-benchmark workflow
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/AestraStressTest.cpp")
+    add_executable(AestraStressTest Integration/AestraStressTest.cpp)
+    target_link_libraries(AestraStressTest PRIVATE AestraAudioCore AestraCore)
+    target_include_directories(AestraStressTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
 # Waveform Lock Test
 add_executable(AestraWaveformLockTest
     AestraAudio/WaveformLockTest.cpp

@@ -23,7 +23,8 @@ void MetronomeEngine::setBeatsPerBar(int beats) {
 }
 
 void MetronomeEngine::generateDefaultSounds() {
-    const size_t sampleRate = 48000;
+    const size_t sampleRate = static_cast<size_t>(m_sampleRate.load(std::memory_order_relaxed));
+    if (sampleRate == 0) return;
     const size_t durationSamples = static_cast<size_t>(0.10 * sampleRate); // 100ms
 
     m_synthClickLow.resize(durationSamples);
@@ -142,6 +143,8 @@ void MetronomeEngine::reset(uint64_t globalSamplePos, uint32_t sampleRate) {
     if (sampleRate == 0)
         return;
 
+    m_sampleRate.store(sampleRate, std::memory_order_relaxed);
+
     float bpm = m_bpm.load(std::memory_order_relaxed);
     int beatsPerBar = m_beatsPerBar.load(std::memory_order_relaxed);
 
@@ -255,6 +258,14 @@ void MetronomeEngine::process(float* outputBuffer, uint32_t numFrames, uint32_t 
                 ++m_clickPlayhead;
             }
         }
+    }
+}
+
+void MetronomeEngine::setSampleRate(uint32_t rate) {
+    uint32_t old = m_sampleRate.load(std::memory_order_relaxed);
+    m_sampleRate.store(rate, std::memory_order_relaxed);
+    if (old != rate && rate > 0) {
+        generateDefaultSounds();
     }
 }
 

@@ -75,18 +75,34 @@ double TimelineClock::beatAtSampleFrame(uint64_t frame, int sampleRate) const {
     double seconds = static_cast<double>(frame) / sampleRate;
 
     if (m_tempoMap.empty()) {
-        // Simple case: beat = (seconds / 60) * bpm
         return (seconds / 60.0) * m_defaultBPM;
     }
 
-    // Complex case: reverse lookup through tempo map
-    // (For now, use simple approximation - can be optimized later)
-    double beat = (seconds / 60.0) * m_defaultBPM;
+    // Walk through tempo segments to find which contains the target time
+    double accumulatedSeconds = 0.0;
+    double lastBeat = 0.0;
 
-    // TODO: Implement precise reverse lookup for tempo map
-    // For MVP, this approximation is acceptable
+    for (size_t i = 0; i < m_tempoMap.size(); ++i) {
+        double bpm = (i == 0) ? m_defaultBPM : m_tempoMap[i - 1].bpm;
+        double segmentBeats = m_tempoMap[i].beat - lastBeat;
+        double segmentSeconds = (segmentBeats / bpm) * 60.0;
 
-    return beat;
+        if (accumulatedSeconds + segmentSeconds >= seconds) {
+            // Target is within this segment
+            double remainingSeconds = seconds - accumulatedSeconds;
+            double remainingBeats = (remainingSeconds / 60.0) * bpm;
+            return lastBeat + remainingBeats;
+        }
+
+        accumulatedSeconds += segmentSeconds;
+        lastBeat = m_tempoMap[i].beat;
+    }
+
+    // Target is after the last tempo change
+    double lastBPM = m_tempoMap.back().bpm;
+    double remainingSeconds = seconds - accumulatedSeconds;
+    double remainingBeats = (remainingSeconds / 60.0) * lastBPM;
+    return lastBeat + remainingBeats;
 }
 
 } // namespace Audio

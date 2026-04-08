@@ -15,11 +15,27 @@
 
 #ifdef AESTRA_HAS_PLUGINS
 #include "Plugin/SamplerPlugin.h"
+#include "Plugin/AestraEQ.h"
+#include "Plugin/AestraComp.h"
+#include "Plugin/AestraVerb.h"
+#include "Plugin/AestraDelay.h"
 #include "RumbleInstance.h"
 #endif
 
 namespace Aestra {
 namespace Audio {
+
+namespace {
+void applyInternalPluginDefaults(const PluginInstancePtr& instance) {
+    if (!instance) {
+        return;
+    }
+
+    for (const auto& param : instance->getParameters()) {
+        instance->setParameter(param.id, param.defaultValue);
+    }
+}
+} // namespace
 
 void InProcessPluginFactory::createPluginAsync(const PluginInfo& info,
                                                std::function<void(PluginInstancePtr)> callback) {
@@ -83,12 +99,48 @@ PluginInstancePtr InProcessPluginFactory::createInternalInstance(const PluginInf
 #ifdef AESTRA_HAS_PLUGINS
     // Aestra Rumble 808 Bass Synthesizer
     if (info.id == "com.Aestrastudios.rumble") {
-        return std::make_shared<Aestra::Plugins::RumbleInstance>();
+        auto rumble = std::make_shared<Aestra::Plugins::RumbleInstance>();
+        applyInternalPluginDefaults(rumble);
+        return rumble;
     }
 
     // Aestra Sampler
     if (info.id == "com.Aestrastudios.sampler") {
-        return std::make_shared<Aestra::Audio::Plugins::SamplerPlugin>();
+        auto sampler = std::make_shared<Aestra::Audio::Plugins::SamplerPlugin>();
+        applyInternalPluginDefaults(sampler);
+        return sampler;
+    }
+
+    // Aestra EQ — 8-Band Parametric Equalizer
+    if (info.id == "com.Aestrastudios.eq") {
+        auto eq = std::make_shared<Aestra::Audio::Plugins::AestraEQ>();
+        eq->setInfo(info);
+        applyInternalPluginDefaults(eq);
+        return eq;
+    }
+
+    // Aestra Comp — Dynamics Compressor
+    if (info.id == "com.Aestrastudios.comp") {
+        auto comp = std::make_shared<Aestra::Audio::Plugins::AestraComp>();
+        comp->setInfo(info);
+        applyInternalPluginDefaults(comp);
+        return comp;
+    }
+
+    // Aestra Verb — Algorithmic Reverb
+    if (info.id == "com.Aestrastudios.verb") {
+        auto verb = std::make_shared<Aestra::Audio::Plugins::AestraVerb>();
+        verb->setInfo(info);
+        applyInternalPluginDefaults(verb);
+        return verb;
+    }
+
+    // Aestra Delay — Stereo Delay with Modulation
+    if (info.id == "com.Aestrastudios.delay") {
+        auto delay = std::make_shared<Aestra::Audio::Plugins::AestraDelay>();
+        delay->setInfo(info);
+        applyInternalPluginDefaults(delay);
+        return delay;
     }
 #endif
     (void)info;

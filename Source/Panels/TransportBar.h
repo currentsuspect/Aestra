@@ -68,7 +68,7 @@ public:
     void setOnRecord(std::function<void(bool)> callback) { m_onRecord = callback; }
     void setOnPlay(std::function<void()> callback) { m_onPlay = callback; }
     void setOnPause(std::function<void()> callback) { m_onPause = callback; }
-    void setOnStop(std::function<void()> callback) { m_onStop = callback; }
+    void setOnStop(std::function<void(bool)> callback) { m_onStop = callback; }
     void setOnTempoChange(std::function<void(float)> callback) { m_onTempoChange = callback; }
     void setOnMetronomeToggle(std::function<void(bool)> callback) { m_onMetronomeToggle = callback; }
     void setOnTimeSignatureChange(std::function<void(int)> callback) { m_onTimeSignatureChange = callback; }
@@ -87,6 +87,7 @@ public:
     
     // Push state from authority
     void setViewToggled(Audio::ViewType view, bool active);
+    void syncTransportState(bool playing, bool paused, bool recordArmed);
 
     // Global Tool & Scale Callbacks
 
@@ -141,7 +142,7 @@ private:
     std::function<void()> m_onPlay;
     std::function<void(bool)> m_onRecord;
     std::function<void()> m_onPause;
-    std::function<void()> m_onStop;
+    std::function<void(bool)> m_onStop;
     std::function<void(float)> m_onTempoChange;
     std::function<void(bool)> m_onMetronomeToggle;
     std::function<void(int)> m_onTimeSignatureChange;

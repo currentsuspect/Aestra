@@ -2,6 +2,7 @@
 #pragma once
 
 #include <atomic>
+#include <cassert>
 #include <condition_variable>
 #include <functional>
 #include <memory>
@@ -55,15 +56,21 @@ public:
 // Lock-Free Ring Buffer (Single Producer, Single Consumer)
 // =============================================================================
 template <typename T, size_t Size> class LockFreeRingBuffer {
+    static constexpr bool kPowerOfTwo = (Size > 0) && ((Size & (Size - 1)) == 0);
+
+    static constexpr size_t mask(size_t idx) noexcept {
+        return kPowerOfTwo ? (idx & (Size - 1)) : (idx % Size);
+    }
+
 public:
     LockFreeRingBuffer() : writeIndex(0), readIndex(0) {}
 
     // Push element (returns false if buffer is full)
-    bool push(const T& item) {
+    [[nodiscard]] bool push(const T& item) {
         size_t currentWrite = writeIndex.load(std::memory_order_relaxed);
-        size_t nextWrite = (currentWrite + 1) % Size;
+        size_t nextWrite = mask(currentWrite + 1);
 
-        if (nextWrite == readIndex.load(std::memory_order_acquire)) {
+        if (nextWrite == readIndex.load(std::memory_order_acquire)) [[unlikely]] {
             return false; // Buffer full
         }
 
@@ -73,15 +80,15 @@ public:
     }
 
     // Pop element (returns false if buffer is empty)
-    bool pop(T& item) {
+    [[nodiscard]] bool pop(T& item) {
         size_t currentRead = readIndex.load(std::memory_order_relaxed);
 
-        if (currentRead == writeIndex.load(std::memory_order_acquire)) {
+        if (currentRead == writeIndex.load(std::memory_order_acquire)) [[unlikely]] {
             return false; // Buffer empty
         }
 
         item = buffer[currentRead];
-        readIndex.store((currentRead + 1) % Size, std::memory_order_release);
+        readIndex.store(mask(currentRead + 1), std::memory_order_release);
         return true;
     }
 
@@ -92,28 +99,27 @@ public:
 
     // Check if buffer is full
     bool isFull() const {
-        size_t nextWrite = (writeIndex.load(std::memory_order_acquire) + 1) % Size;
+        size_t nextWrite = mask(writeIndex.load(std::memory_order_acquire) + 1);
         return nextWrite == readIndex.load(std::memory_order_acquire);
     }
 
     // Get available space
     size_t available() const {
-        size_t write = writeIndex.load(std::memory_order_acquire);
-        size_t read = readIndex.load(std::memory_order_acquire);
-        if (write >= read) {
-            return Size - (write - read) - 1;
-        }
-        return read - write - 1;
+        return capacity() - size();
     }
 
     // Current number of elements queued (0..Size-1)
     size_t size() const noexcept {
         size_t write = writeIndex.load(std::memory_order_acquire);
         size_t read = readIndex.load(std::memory_order_acquire);
-        if (write >= read) {
-            return write - read;
+        if constexpr (kPowerOfTwo) {
+            return (write - read) & (Size - 1);
+        } else {
+            if (write >= read) {
+                return write - read;
+            }
+            return Size - (read - write);
         }
-        return Size - (read - write);
     }
 
     // Maximum usable capacity (one slot is reserved to disambiguate full/empty)
@@ -130,16 +136,21 @@ private:
 // =============================================================================
 class ThreadPool {
 public:
-    ThreadPool(size_t numThreads = std::thread::hardware_concurrency()) : stop(false) {
+    ThreadPool(size_t numThreads = 0) : stop(false) {
+        if (numThreads == 0) {
+            numThreads = std::thread::hardware_concurrency();
+            if (numThreads == 0) numThreads = 2; // fallback for platforms that don't report concurrency
+        }
+        workers.reserve(numThreads);
         for (size_t i = 0; i < numThreads; ++i) {
             workers.emplace_back([this] {
                 while (true) {
                     std::function<void()> task;
                     {
                         std::unique_lock<std::mutex> lock(queueMutex);
-                        condition.wait(lock, [this] { return stop || !tasks.empty(); });
+                        condition.wait(lock, [this] { return stop.load(std::memory_order_acquire) || !tasks.empty(); });
 
-                        if (stop && tasks.empty()) {
+                        if (stop.load(std::memory_order_acquire) && tasks.empty()) {
                             return;
                         }
 
@@ -162,7 +173,7 @@ public:
     ~ThreadPool() {
         {
             std::unique_lock<std::mutex> lock(queueMutex);
-            stop = true;
+            stop.store(true, std::memory_order_release);
         }
         condition.notify_all();
         for (std::thread& worker : workers) {
@@ -172,13 +183,21 @@ public:
         }
     }
 
-    // Enqueue a task
-    template <typename F> void enqueue(F&& task) {
+    // Enqueue a task (returns false if pool is shutting down)
+    template <typename F> [[nodiscard]] bool enqueue(F&& task) {
+        if (stop.load(std::memory_order_acquire)) return false;
+        bool shouldNotify;
         {
             std::unique_lock<std::mutex> lock(queueMutex);
+            // Re-check stop under lock to prevent race with destructor
+            if (stop.load(std::memory_order_acquire)) return false;
+            shouldNotify = tasks.empty();
             tasks.emplace(std::forward<F>(task));
         }
-        condition.notify_one();
+        if (shouldNotify) {
+            condition.notify_one();
+        }
+        return true;
     }
 
     // Get number of worker threads
@@ -189,7 +208,7 @@ private:
     std::queue<std::function<void()>> tasks;
     std::mutex queueMutex;
     std::condition_variable condition;
-    bool stop;
+    std::atomic<bool> stop;
 };
 
 // =============================================================================
@@ -199,19 +218,32 @@ class Barrier {
 public:
     explicit Barrier(int count) : counter(count) {}
 
-    // Reset barrier for N expected signals
-    void reset(int count) { counter.store(count, std::memory_order_release); }
+    // Reset barrier for N expected signals (previous batch must be complete)
+    void reset(int count) {
+        assert(counter.load(std::memory_order_relaxed) == 0 && "Barrier reset while previous batch still in progress");
+        counter.store(count, std::memory_order_release);
+    }
 
     // Signal completion of one task
     void signal() { counter.fetch_sub(1, std::memory_order_acq_rel); }
 
-    // Wait for all tasks to complete (Spin-wait optimized for low-latency audio)
+    // Wait for all tasks to complete (Adaptive spin-wait for low-latency audio)
     void wait() {
+        int spinCount = 1;
+        constexpr int maxSpin = 256;
         while (counter.load(std::memory_order_acquire) > 0) {
-            // In a real-time thread, we prefer spinning over sleeping for short waits.
-            // But yielding prevents hogging the core if tasks are long.
-            // For audio graph, tasks should be micro-second scale.
-            std::this_thread::yield();
+            for (int i = 0; i < spinCount; ++i) {
+#ifdef __x86_64__
+                __builtin_ia32_pause();
+#elif defined(__aarch64__)
+                asm volatile("yield" ::: "memory");
+#endif
+            }
+            if (spinCount < maxSpin) {
+                spinCount *= 2;
+            } else {
+                std::this_thread::yield();
+            }
         }
     }
 
@@ -254,6 +286,7 @@ public:
 
     // Prepare a batch of tasks. Call from RT thread.
     void dispatch(uint32_t count, void* context, void** taskDataArray, TaskFunc func, Barrier* syncBarrier) {
+        assert(m_activeTasks.load(std::memory_order_relaxed) == 0 && "Dispatch while previous batch still active");
         m_taskFunc = func;
         m_context = context;
         m_taskData = taskDataArray;
@@ -309,7 +342,7 @@ private:
     TaskFunc m_taskFunc{nullptr};
     void* m_context{nullptr};
     void** m_taskData{nullptr};
-    uint32_t m_taskCount{0};
+    std::atomic<uint32_t> m_taskCount{0};
     std::atomic<int> m_taskCounter;
     std::atomic<int> m_activeTasks;
     Barrier* m_syncBarrier{nullptr};
@@ -354,18 +387,22 @@ private:
 // Spin lock (use sparingly, for very short critical sections)
 class SpinLock {
 public:
-    SpinLock() : flag(false) {}
+    SpinLock() noexcept = default;
 
     void lock() {
-        while (flag.exchange(true, std::memory_order_acquire)) {
-            // Spin
+        while (flag.test_and_set(std::memory_order_acquire)) {
+#ifdef __x86_64__
+            __builtin_ia32_pause();
+#elif defined(__aarch64__)
+            asm volatile("yield" ::: "memory");
+#endif
         }
     }
 
-    void unlock() { flag.store(false, std::memory_order_release); }
+    void unlock() { flag.clear(std::memory_order_release); }
 
 private:
-    std::atomic<bool> flag;
+    std::atomic_flag flag = ATOMIC_FLAG_INIT;
 };
 
 } // namespace Aestra

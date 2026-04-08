@@ -263,7 +263,7 @@ void AudioSettingsPage::createUI() {
     m_resamplingLabel = createLabel("Resampling:");
     m_ditheringLabel = createLabel("Dithering:");
     m_dcRemovalLabel = createLabel("DC Removal:");
-    m_softClippingLabel = createLabel("Soft Clipping:");
+    m_softClippingLabel = createLabel("Master Limiter:");
     m_multiThreadingLabel = createLabel("Multi-threading:");
     m_threadCountLabel = createLabel("Thread Count:");
     
@@ -446,7 +446,7 @@ void AudioSettingsPage::applyChanges() {
         // DC Removal (Mock - Engine doesn't have explicit param exposed yet, assume enabled by default or add later)
         // m_audioEngine->setDCRemovalEnabled(m_dcRemovalToggle->isOn());
         
-        m_audioEngine->setSafetyProcessingEnabled(m_softClippingToggle->isOn());
+        m_audioEngine->setSafetyLimiterEnabled(m_softClippingToggle->isOn());
     }
     
     // Multi-threading
@@ -715,7 +715,7 @@ void AudioSettingsPage::saveSettings() {
         file << "dithering=" << m_ditheringDropdown->getSelectedValue() << "\n";
         file << "threads=" << m_threadCountInput->getValue() << "\n";
         file << "dc_removal=" << (m_dcRemovalToggle->isOn() ? "1" : "0") << "\n";
-        file << "soft_clipping=" << (m_softClippingToggle->isOn() ? "1" : "0") << "\n";
+        file << "master_limiter=" << (m_softClippingToggle->isOn() ? "1" : "0") << "\n";
         file << "multi_threading=" << (m_multiThreadingToggle->isOn() ? "1" : "0") << "\n";
         file.close();
         Log::info("[AudioSettingsPage] Settings saved to " + configPath.string());
@@ -785,7 +785,7 @@ void AudioSettingsPage::loadSettings() {
         else if (key == "dc_removal") {
             m_dcRemovalToggle->setOn(val == 1);
         }
-        else if (key == "soft_clipping") {
+        else if (key == "master_limiter") {
             m_softClippingToggle->setOn(val == 1);
         }
         else if (key == "multi_threading") {

@@ -1,0 +1,131 @@
+[11:24:38] [INFO]  Unified Profiler initialized
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 64-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=4 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 64-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=4 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 64-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=4 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 64-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=4 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.872812
+[11:24:38] [INFO]  SampleRateConverter configured: 48000 -> 44100 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.872812
+[11:24:38] [INFO]  SampleRateConverter configured: 48000 -> 44100 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.872812
+[11:24:38] [INFO]  SampleRateConverter configured: 48000 -> 44100 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:24:38] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:24:38] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.872812
+[11:24:38] [INFO]  SampleRateConverter configured: 48000 -> 44100 Hz, 2 channels, quality=3 [SIMD]
+{
+  "benchmark": "MemoryBenchmark",
+  "iterations": 3,
+  "cases": [
+    {
+      "case_id": "bufmgr_construct",
+      "name": "AudioBufferManager Construct",
+      "arena_allocs": 1,
+      "arena_bytes": 262144,
+      "profiler_allocs": 1,
+      "profiler_frees": 1,
+      "profiler_bytes": 0,
+      "median_ms": 0.5580,
+      "mean_ms": 0.5200,
+      "best_ms": 0.4310,
+      "worst_ms": 0.5710,
+      "cv": 0.121454
+    },
+    {
+      "case_id": "bufmgr_alloc_clear",
+      "name": "AudioBufferManager Allocate + Clear",
+      "arena_allocs": 1,
+      "arena_bytes": 262144,
+      "profiler_allocs": 1,
+      "profiler_frees": 1,
+      "profiler_bytes": 0,
+      "median_ms": 1.0120,
+      "mean_ms": 1.5193,
+      "best_ms": 0.8550,
+      "worst_ms": 2.6910,
+      "cv": 0.546930
+    },
+    {
+      "case_id": "src_configure_sinc16_up",
+      "name": "SRC Configure Sinc16 44.1→48k",
+      "arena_allocs": 0,
+      "arena_bytes": 0,
+      "profiler_allocs": 1,
+      "profiler_frees": 0,
+      "profiler_bytes": 65568,
+      "median_ms": 1.6650,
+      "mean_ms": 1.6670,
+      "best_ms": 1.5770,
+      "worst_ms": 1.7590,
+      "cv": 0.044580
+    },
+    {
+      "case_id": "src_process_sinc16",
+      "name": "SRC Process Sinc16 (44100 frames)",
+      "arena_allocs": 0,
+      "arena_bytes": 0,
+      "profiler_allocs": 1,
+      "profiler_frees": 0,
+      "profiler_bytes": 65568,
+      "median_ms": 6.5730,
+      "mean_ms": 7.9270,
+      "best_ms": 6.0260,
+      "worst_ms": 11.1820,
+      "cv": 0.291717
+    },
+    {
+      "case_id": "src_process_sinc64",
+      "name": "SRC Process Sinc64 (44100 frames)",
+      "arena_allocs": 0,
+      "arena_bytes": 0,
+      "profiler_allocs": 1,
+      "profiler_frees": 0,
+      "profiler_bytes": 65568,
+      "median_ms": 12.8360,
+      "mean_ms": 12.7537,
+      "best_ms": 12.0170,
+      "worst_ms": 13.4080,
+      "cv": 0.044760
+    },
+    {
+      "case_id": "src_roundtrip",
+      "name": "SRC Round-Trip 44.1→48→44.1k Sinc16",
+      "arena_allocs": 0,
+      "arena_bytes": 0,
+      "profiler_allocs": 1,
+      "profiler_frees": 0,
+      "profiler_bytes": 65568,
+      "median_ms": 10.2510,
+      "mean_ms": 9.9673,
+      "best_ms": 9.2780,
+      "worst_ms": 10.3730,
+      "cv": 0.049158
+    }
+  ]
+}

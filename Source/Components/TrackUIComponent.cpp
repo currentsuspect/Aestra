@@ -1923,7 +1923,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         return true;
                     } else if (isInsideBounds) {
                         // Add new point - Default to smooth curve (0.5 tension)
-                        curve.addPoint(beat, value, 0.5f);
+                        double bpm = m_trackManager ? m_trackManager->getPlaylistModel().getBPM() : 120.0;
+                        double sampleRate = m_trackManager ? m_trackManager->getPlaylistModel().getProjectSampleRate() : 48000.0;
+                        double samplesPerBeat = (sampleRate * 60.0) / std::max(bpm, 1.0);
+                        curve.addPoint(beat, value, samplesPerBeat, 0.5f);
                         setDirty(true);
                         repaint(); // Immediate update
                         if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback(); // Force parent update
@@ -2332,14 +2335,18 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
         if (points.empty()) {
             // Draw a flat line at default value if no points
             float y = gridArea.y + (1.0f - static_cast<float>(curve.getDefaultValue())) * gridArea.height;
-            renderer.drawLine(AestraUI::NUIPoint(gridArea.x, y), 
-                              AestraUI::NUIPoint(gridArea.right(), y), 
+            renderer.drawLine(AestraUI::NUIPoint(gridArea.x, y),
+                              AestraUI::NUIPoint(gridArea.right(), y),
                               1.5f, theme.getColor("accentCyan").withAlpha(0.4f));
             continue;
         }
 
+        double bpm = m_trackManager ? m_trackManager->getPlaylistModel().getBPM() : 120.0;
+        double sampleRate = m_trackManager ? m_trackManager->getPlaylistModel().getProjectSampleRate() : 48000.0;
+        double samplesPerBeat = (sampleRate * 60.0) / std::max(bpm, 1.0);
+
         AestraUI::NUIColor curveColor = theme.getColor("accentCyan");
-        
+
         // Draw lines between points
         // Draw lines between points
         std::vector<AestraUI::NUIPoint> polyPoints;
@@ -2364,7 +2371,7 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
             for (int s = 0; s <= steps; ++s) {
                  double t = static_cast<double>(s) / static_cast<double>(steps);
                  double beat = p1.beat + (p2.beat - p1.beat) * t;
-                 double val = curve.getValueAtBeat(beat);
+                 double val = curve.getValueAtBeat(beat, samplesPerBeat);
                  
                  float x = gridStartX + (static_cast<float>(beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
                  float y = gridArea.y + (1.0f - static_cast<float>(val)) * gridArea.height;

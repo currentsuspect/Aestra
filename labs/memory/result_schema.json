@@ -1,0 +1,148 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Memory Lab Eval Result",
+  "description": "Schema for a single memory lab eval run result",
+  "type": "object",
+  "required": [
+    "run_id",
+    "timestamp",
+    "git",
+    "lanes",
+    "decision"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "Unique identifier for this eval run (e.g., run_20260406_123456)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of when the eval started"
+    },
+    "git": {
+      "type": "object",
+      "required": ["commit", "branch", "dirty"],
+      "properties": {
+        "commit": { "type": "string" },
+        "branch": { "type": "string" },
+        "dirty": { "type": "boolean" }
+      }
+    },
+    "lanes": {
+      "type": "object",
+      "required": ["core_tests", "resampler_tests", "allocator_tests", "profiler_tests", "memory_benchmark", "offline_parity"],
+      "properties": {
+        "core_tests": {
+          "type": "object",
+          "required": ["exit_code", "passed", "failed", "total"],
+          "properties": {
+            "exit_code": { "type": "integer" },
+            "passed": { "type": "integer" },
+            "failed": { "type": "integer" },
+            "total": { "type": "integer" }
+          }
+        },
+        "resampler_tests": {
+          "type": "object",
+          "required": ["exit_code", "passed", "failed", "total"],
+          "properties": {
+            "exit_code": { "type": "integer" },
+            "passed": { "type": "integer" },
+            "failed": { "type": "integer" },
+            "total": { "type": "integer" },
+            "simd_vs_scalar": {
+              "type": "object",
+              "properties": {
+                "rms_error": { "type": "number" },
+                "max_error": { "type": "number" }
+              }
+            }
+          }
+        },
+        "allocator_tests": {
+          "type": "object",
+          "required": ["exit_code", "passed", "failed", "total"],
+          "properties": {
+            "exit_code": { "type": "integer" },
+            "passed": { "type": "integer" },
+            "failed": { "type": "integer" },
+            "total": { "type": "integer" }
+          }
+        },
+        "profiler_tests": {
+          "type": "object",
+          "required": ["exit_code", "passed", "failed", "total"],
+          "properties": {
+            "exit_code": { "type": "integer" },
+            "passed": { "type": "integer" },
+            "failed": { "type": "integer" },
+            "total": { "type": "integer" },
+            "profiler_accuracy": {
+              "type": "number",
+              "description": "How accurately the profiler reports known allocations (0.0-1.0)"
+            }
+          }
+        },
+        "memory_benchmark": {
+          "type": "object",
+          "required": ["exit_code", "cases"],
+          "properties": {
+            "exit_code": { "type": "integer" },
+            "iterations": { "type": "integer" },
+            "cases": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["case_id", "name", "alloc_count"],
+                "properties": {
+                  "case_id": { "type": "string" },
+                  "name": { "type": "string" },
+                  "alloc_count": {
+                    "type": "integer",
+                    "description": "Number of allocations during this benchmark case"
+                  },
+                  "total_bytes": {
+                    "type": "integer",
+                    "description": "Total bytes allocated"
+                  },
+                  "median_ms": { "type": "number" },
+                  "cv": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "offline_parity": {
+          "type": "object",
+          "required": ["exit_code", "passed"],
+          "properties": {
+            "exit_code": { "type": "integer" },
+            "passed": { "type": "boolean" },
+            "correlation": { "type": "number" },
+            "rms_diff_db": { "type": "number" }
+          }
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["status", "reason"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["accept", "reject", "inconclusive"]
+        },
+        "reason": { "type": "string" },
+        "hard_gate_failures": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "advisory_flags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

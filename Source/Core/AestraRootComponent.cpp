@@ -6,6 +6,12 @@
 #include "../AestraCore/include/AestraLog.h"
 
 bool AestraRootComponent::onKeyEvent(const NUIKeyEvent& event) {
+    if (event.keyCode == NUIKeyCode::Space && m_rootContent) {
+        if (m_rootContent->onKeyEvent(event)) {
+            return true;
+        }
+    }
+
     // 1. First, dispatch to focused component (correct behavior)
     if (auto focused = AestraUI::NUIComponent::getFocusedComponent()) {
         if (focused->onKeyEvent(event)) {
@@ -15,21 +21,6 @@ bool AestraRootComponent::onKeyEvent(const NUIKeyEvent& event) {
 
     // 2. Fallback to global shortcuts
     if (event.pressed) {
-        // Space: Play/Stop
-        if (event.keyCode == NUIKeyCode::Space) {
-            if (event.repeat) return true; // Ignore auto-repeat for transport toggle
-            
-            if (m_rootContent && m_rootContent->getTrackManager()) {
-                AESTRA_LOG_INFO("[Root] Space Fallback. playing=" + std::string(m_rootContent->getTrackManager()->isPlaying() ? "true" : "false"));
-                if (m_rootContent->getTrackManager()->isPlaying()) {
-                    if (m_rootTransportCallback) m_rootTransportCallback(TransportAction::Stop);
-                } else {
-                    if (m_rootTransportCallback) m_rootTransportCallback(TransportAction::Play);
-                }
-                return true;
-            }
-        }
-        
         // F12: HUD
         if (event.keyCode == NUIKeyCode::F12) {
             if (m_rootUnifiedHUD) {

@@ -92,11 +92,18 @@ bool RtAudioBackend::openStream(const AudioStreamConfig& config, AudioCallback c
 
     RtAudio::StreamParameters* inputParams = nullptr;
     RtAudio::StreamParameters inputParamsData;
-    if (config.numInputChannels > 0) {
-        inputParamsData.deviceId = config.deviceId;
-        inputParamsData.nChannels = config.numInputChannels;
-        inputParamsData.firstChannel = 0;
-        inputParams = &inputParamsData;
+    if (config.numInputChannels > 0 && config.inputDeviceId != 0) {
+        // Guard against monitor/loopback devices — they capture system playback,
+        // causing recording to bleed music from other tracks.
+        if (isMonitorDevice(config.inputDeviceId)) {
+            Log::warning("RtAudioBackend: Refusing monitor/loopback input device — "
+                         "this would cause recording bleed. Skipping input capture.");
+        } else {
+            inputParamsData.deviceId = config.inputDeviceId;
+            inputParamsData.nChannels = config.numInputChannels;
+            inputParamsData.firstChannel = 0;
+            inputParams = &inputParamsData;
+        }
     }
 
     unsigned int bufferFrames = config.bufferSize;
