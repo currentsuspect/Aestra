@@ -45,15 +45,18 @@ jobs:
         run: |
           STATUS="${{ job.status }}"
           COLOR=3066993; [ "$STATUS" != "success" ] && COLOR=15158332
-          curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" -d "{
-            \"username\": \"Aestra CI\",
-            \"embeds\": [{
-              \"title\": \"CI — Linux: $STATUS\",
-              \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
-              \"color\": $COLOR,
-              \"footer\": {\"text\": \"${{ github.event.head_commit.message }}\" }
+          cat > discord_payload.json <<EOF
+          {
+            "username": "Aestra CI",
+            "embeds": [{
+              "title": "CI — Linux: $STATUS",
+              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "color": $COLOR,
+              "footer": {"text": "sha ${{ github.sha }}"}
             }]
-          }" "$DISCORD_WEBHOOK"
+          }
+          EOF
+          curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" --data @discord_payload.json "$DISCORD_WEBHOOK"
 
   build-windows:
     name: Windows (MSVC)
@@ -87,15 +90,18 @@ jobs:
         run: |
           STATUS="${{ job.status }}"
           COLOR=3066993; [ "$STATUS" != "success" ] && COLOR=15158332
-          curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" -d "{
-            \"username\": \"Aestra CI\",
-            \"embeds\": [{
-              \"title\": \"CI — Windows: $STATUS\",
-              \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
-              \"color\": $COLOR,
-              \"footer\": {\"text\": \"${{ github.event.head_commit.message }}\" }
+          cat > discord_payload.json <<EOF
+          {
+            "username": "Aestra CI",
+            "embeds": [{
+              "title": "CI — Windows: $STATUS",
+              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "color": $COLOR,
+              "footer": {"text": "sha ${{ github.sha }}"}
             }]
-          }" "$DISCORD_WEBHOOK"
+          }
+          EOF
+          curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" --data @discord_payload.json "$DISCORD_WEBHOOK"
 
   build-macos:
     name: macOS (Clang, advisory)
@@ -128,15 +134,18 @@ jobs:
         run: |
           STATUS="${{ job.status }}"
           COLOR=3066993; [ "$STATUS" != "success" ] && COLOR=15158332
-          curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" -d "{
-            \"username\": \"Aestra CI\",
-            \"embeds\": [{
-              \"title\": \"CI — macOS: $STATUS\",
-              \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
-              \"color\": $COLOR,
-              \"footer\": {\"text\": \"${{ github.event.head_commit.message }}\" }
+          cat > discord_payload.json <<EOF
+          {
+            "username": "Aestra CI",
+            "embeds": [{
+              "title": "CI — macOS: $STATUS",
+              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "color": $COLOR,
+              "footer": {"text": "sha ${{ github.sha }}"}
             }]
-          }" "$DISCORD_WEBHOOK"
+          }
+          EOF
+          curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" --data @discord_payload.json "$DISCORD_WEBHOOK"
 
   format-check:
     name: Formatting (advisory)
