@@ -225,9 +225,9 @@ AestraContent::AestraContent() {
         clearPendingCountIn();
         pauseFromCurrentFocus();
     });
-    m_transportBar->setOnStop([this]() { 
+    m_transportBar->setOnStop([this](bool hardStop) { 
         clearPendingCountIn();
-        stopFromCurrentFocus(true);
+        stopFromCurrentFocus(hardStop);
         stopSoundPreview();
     });
     m_transportBar->setOnRecord([this](bool recording) { 
@@ -611,30 +611,26 @@ void AestraContent::onUpdate(double dt) {
 
     // Sync track changes to MixerViewModel
     auto tm = getTrackManager();
-    if (tm && tm->isModified()) {
-         if (m_mixerPanel) {
-             auto viewModel = m_mixerPanel->getViewModel();
-             if (viewModel) {
-                 auto slotMap = tm->getChannelSlotMapRaw();
-                 if (slotMap) {
-                    viewModel->syncFromEngine(*tm, *slotMap);
-                    m_mixerPanel->refreshChannels();
-                    Log::info("Refreshed mixer channels from engine update");
-                    
-                    // Force refresh the rack display if we have one bound
-                    if (m_pluginController) {
-                        auto mixerUI = m_mixerPanel->getMixerUI();
-                        if (mixerUI) {
-                            auto inspector = mixerUI->getInspector();
-                            if (inspector && inspector->getEffectRack()) {
-                                m_pluginController->refreshRackDisplay(inspector->getEffectRack().get());
-                            }
+    if (tm && m_mixerPanel) {
+         auto viewModel = m_mixerPanel->getViewModel();
+         if (viewModel) {
+             auto slotMap = tm->getChannelSlotMapRaw();
+             if (slotMap) {
+                viewModel->syncFromEngine(*tm, *slotMap);
+                m_mixerPanel->refreshChannels();
+
+                // Force refresh the rack display if we have one bound
+                if (m_pluginController) {
+                    auto mixerUI = m_mixerPanel->getMixerUI();
+                    if (mixerUI) {
+                        auto inspector = mixerUI->getInspector();
+                        if (inspector && inspector->getEffectRack()) {
+                            m_pluginController->refreshRackDisplay(inspector->getEffectRack().get());
                         }
                     }
-                 }
+                }
              }
          }
-         tm->setModified(false);
     }
     
     // Update Plugin UI Binding (Effect Rack in Inspector)
@@ -1628,6 +1624,10 @@ void AestraContent::handleTransportPlayRequest() {
     }
 }
 
+void AestraContent::requestTransportPlay() {
+    handleTransportPlayRequest();
+}
+
 void AestraContent::playFromCurrentFocus() {
     if (m_viewFocus == ViewFocus::Audition) {
         if (m_auditionEngine) {
@@ -1688,6 +1688,14 @@ void AestraContent::stopFromCurrentFocus(bool hardStop) {
     }
     if (hardStop && m_audioEngine) {
         m_audioEngine->panic();
+    }
+    if (hardStop && m_trackManager) {
+        m_trackManager->setPlayStartPosition(0.0);
+        m_trackManager->setPosition(0.0);
+        m_trackManager->clearDisplayPositionOverride();
+        if (m_audioEngine) {
+            m_audioEngine->setGlobalSamplePos(0);
+        }
     }
 }
 
@@ -1755,11 +1763,14 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
     if (m_audioEngine && m_trackManager) {
         m_audioEngine->setUnitManager(&m_trackManager->getUnitManager());
         m_audioEngine->setPatternPlaybackEngine(&m_trackManager->getPatternPlaybackEngine());
+        m_audioEngine->setContinuousParams(m_trackManager->getContinuousParams());
+        if (auto slotMap = m_trackManager->getChannelSlotMapShared()) {
+            m_audioEngine->setChannelSlotMap(slotMap);
+        }
         m_trackManager->setCommandSink([this](const AudioQueueCommand& cmd) {
             if (m_audioEngine) {
                 if (cmd.type == AudioQueueCommandType::SetTransportState) {
-                    m_audioEngine->setGlobalSamplePos(cmd.samplePos);
-                    m_audioEngine->setTransportPlaying(cmd.value1 != 0.0f);
+                    m_audioEngine->commandQueue().push(cmd);
                     if (m_trackManager) {
                         const double engineSampleRate = std::max(1.0, static_cast<double>(m_audioEngine->getSampleRate()));
                         const double positionSeconds = static_cast<double>(cmd.samplePos) / engineSampleRate;

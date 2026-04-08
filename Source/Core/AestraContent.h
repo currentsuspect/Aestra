@@ -196,6 +196,8 @@ public:
     Aestra::Audio::PatternID getActivePatternID() const;
     /** @brief Get the file-browser widget. */
     std::shared_ptr<AestraUI::FileBrowser> getFileBrowser() const;
+    /** @brief Request timeline-aware transport play/start behavior. */
+    void requestTransportPlay();
     /** @brief Start playback based on the current focus mode. */
     void playFromCurrentFocus();
     /** @brief Stop playback based on the current focus mode. */

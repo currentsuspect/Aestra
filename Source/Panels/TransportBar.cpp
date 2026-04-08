@@ -343,7 +343,7 @@ void TransportBar::stop() {
     
     // Always call callback (hard-stop when already stopped)
     if (m_onStop) {
-        m_onStop();
+        m_onStop(wasAlreadyStopped);
     }
 }
 
@@ -380,6 +380,28 @@ void TransportBar::setViewToggled(Audio::ViewType view, bool active) {
         case Audio::ViewType::Playlist: m_playlistActive = active; break;
     }
     setDirty(true);
+}
+
+void TransportBar::syncTransportState(bool playing, bool paused, bool recordArmed) {
+    TransportState newState = TransportState::Stopped;
+    if (playing) {
+        newState = TransportState::Playing;
+    } else if (paused) {
+        newState = TransportState::Paused;
+    }
+
+    if (m_state != newState) {
+        m_state = newState;
+        updateButtonStates();
+    }
+
+    if (m_infoContainer) {
+        m_infoContainer->getTimerDisplay()->setPlaying(newState == TransportState::Playing);
+    }
+
+    if (m_recordButton && m_recordButton->isToggled() != recordArmed) {
+        m_recordButton->setToggled(recordArmed);
+    }
 }
 
 void TransportBar::updateButtonStates() {

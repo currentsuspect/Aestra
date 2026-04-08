@@ -82,6 +82,8 @@ public:
 
     /** @brief Get the settings dialog. */
     std::shared_ptr<Aestra::SettingsDialog> getSettingsDialog() { return m_settingsDialog; }
+    /** @brief Get the confirmation dialog. */
+    std::shared_ptr<Aestra::ConfirmationDialog> getConfirmationDialog() { return m_confirmationDialog; }
     /** @brief Get the recovery dialog. */
     std::shared_ptr<Aestra::RecoveryDialog> getRecoveryDialog() { return m_recoveryDialog; }
     /** @brief Get the export dialog. */

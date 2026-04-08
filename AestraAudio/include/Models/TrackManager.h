@@ -59,6 +59,8 @@ public:
      * @brief Construct a track manager and wire its internal playback helpers.
      */
     TrackManager() : m_patternPlaybackEngine(&m_timelineClock, &m_patternManager, &m_unitManager) {
+        m_continuousParams = std::make_shared<ContinuousParamBuffer>();
+        m_channelSlotMap = std::make_shared<ChannelSlotMap>();
         // Wire up playlist model to trigger audio graph rebuild when clips change
         m_playlistModel.setClipChangedCallback([this](const ClipInstanceID&) {
             m_graphDirty.store(true, std::memory_order_relaxed);
@@ -645,6 +647,7 @@ public:
      * @return True while transport playback is running.
      */
     bool isPlaying() const { return m_isPlaying.load(std::memory_order_relaxed); }
+    bool isPaused() const { return m_isPaused.load(std::memory_order_relaxed); }
     bool hasArmedTracks() const { return getArmedTrackCount() > 0; }
 
     /**

@@ -2,6 +2,7 @@
 #include "AestraApp.h"
 #include "AppLifecycle.h"
 #include "ServiceLocator.h"
+#include "AestraRootComponent.h"
 #include "AudioThreadConstraints.h"
 #include "Preferences.h"
 #include "UIState.h"
@@ -333,7 +334,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
         menu->addSeparator();
 
         menu->addItem("Exit", [this]() {
-            m_running = false;
+            requestClose();
         });
 
         m_windowManager->showDropdownMenu(menu, 10.0f);
@@ -602,6 +603,7 @@ void AestraApp::connectAudioToUI() {
             auto meterBuffer = std::make_shared<Audio::MeterSnapshotBuffer>();
             m_audioController->getEngine()->setMeterSnapshots(meterBuffer);
             m_content->getTrackManager()->setMeterSnapshots(meterBuffer);
+            m_audioController->getEngine()->setContinuousParams(m_content->getTrackManager()->getContinuousParams());
 
             auto slotMap = m_content->getTrackManager()->getChannelSlotMapShared();
             if (slotMap) {
@@ -655,53 +657,17 @@ void AestraApp::setupCallbacks() {
     });
 
     m_windowManager->setTransportCallback([this](AestraWindowManager::TransportAction action) {
-        if (!m_audioController || !m_audioController->getEngine()) return;
-        auto engine = m_audioController->getEngine();
+        if (!m_content) return;
         using Action = AestraWindowManager::TransportAction;
 
         if (action == Action::Play) {
-            if (m_content) {
-                if (m_content->getViewFocus() == ViewFocus::Arsenal) {
-                    m_content->playFromCurrentFocus();
-                } else {
-                    if (m_content->getTrackManager()) {
-                        m_content->getTrackManager()->play();
-                    }
-                    engine->setTransportPlaying(true);
-                }
-            }
+            m_content->requestTransportPlay();
         }
         else if (action == Action::Pause) {
-             if (m_content) {
-                 if (m_content->getViewFocus() == ViewFocus::Arsenal) {
-                     m_content->pauseFromCurrentFocus();
-                 } else {
-                     if (m_content->getTrackManager()) {
-                         m_content->getTrackManager()->pause();
-                     }
-                     engine->setTransportPlaying(false);
-                 }
-             }
+            m_content->pauseFromCurrentFocus();
         }
         else if (action == Action::Stop) {
-             if (m_content && m_content->getTrackManager()) {
-                 auto trackMgr = m_content->getTrackManager();
-
-                 // [FIX] If in pattern mode, we want to stay in pattern mode on stop
-                 if (m_content->getViewFocus() == ViewFocus::Arsenal || trackMgr->isPatternMode()) {
-                     m_content->stopFromCurrentFocus(true);
-                     Log::info("[Arsenal] Global Stop (keeping mode)");
-                 } else {
-                     double playStartPos = trackMgr->getPlayStartPosition();
-                     double sr = engine->getSampleRate();
-                     uint64_t samplePos = static_cast<uint64_t>(playStartPos * sr);
-
-                     trackMgr->stop();
-                     engine->setGlobalSamplePos(samplePos);
-                     trackMgr->setPosition(playStartPos);
-                     engine->setTransportPlaying(false);
-                 }
-             }
+            m_content->stopFromCurrentFocus(false);
         }
     });
 
@@ -735,8 +701,9 @@ void AestraApp::run() {
                 }
 
                 if (m_content->getTransportBar()) {
-                   m_content->getTransportBar()->setPosition(tm->getPosition());
-                   // Sync play state...
+                   auto* transportBar = m_content->getTransportBar();
+                   transportBar->setPosition(tm->getPosition());
+                   transportBar->syncTransportState(tm->isPlaying(), tm->isPaused(), tm->isRecordArmed());
                 }
                 updateWindowTitle();
             }
@@ -746,7 +713,10 @@ void AestraApp::run() {
                 m_content->getTrackManager()->consumeGraphDirty()) {
                     auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), m_audioController->getSampleRate());
                     m_audioController->getEngine()->setGraph(graph);
-                    // Sync slot map...
+                    if (auto slotMap = m_content->getTrackManager()->getChannelSlotMapShared()) {
+                        m_audioController->getEngine()->setChannelSlotMap(slotMap);
+                    }
+                    m_audioController->getEngine()->setContinuousParams(m_content->getTrackManager()->getContinuousParams());
                     m_content->getTrackManager()->rebuildAndPushSnapshot();
             }
         }
@@ -876,12 +846,43 @@ void AestraApp::shutdown() {
 
 // Project Helpers
 void AestraApp::requestClose() {
-    // Show confirmation dialog via WindowManager
-    if (m_content && m_content->getTrackManager() && m_content->getTrackManager()->isModified()) {
-        // ... show dialog ...
-    } else {
+    auto trackManager = m_content ? m_content->getTrackManager() : nullptr;
+    if (!trackManager || !trackManager->isModified()) {
         m_running = false;
+        return;
     }
+
+    if (!m_windowManager) {
+        return;
+    }
+
+    auto dialog = m_windowManager->getConfirmationDialog();
+    if (!dialog) {
+        return;
+    }
+
+    if (auto* root = m_windowManager->getRootComponent()) {
+        dialog->setBounds(root->getBounds());
+    }
+
+    dialog->show("Unsaved Changes",
+                 "You have unsaved changes. Save before closing?",
+                 [this](Aestra::DialogResponse response) {
+                     switch (response) {
+                     case Aestra::DialogResponse::Save:
+                         if (saveProject()) {
+                             m_running = false;
+                         }
+                         break;
+                     case Aestra::DialogResponse::DontSave:
+                         m_running = false;
+                         break;
+                     case Aestra::DialogResponse::Cancel:
+                     case Aestra::DialogResponse::None:
+                     default:
+                         break;
+                     }
+                 });
 }
 
 void AestraApp::saveCurrentProject() {
