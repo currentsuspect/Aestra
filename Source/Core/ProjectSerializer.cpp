@@ -3,8 +3,12 @@
 #include "ProjectMigrations.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "MiniAudioDecoder.h"
+#include <atomic>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
 
 using namespace Aestra;
 using namespace Aestra::Audio;
@@ -16,6 +20,8 @@ namespace {
     // - Future migration code can handle MIN_SUPPORTED <= version <= CURRENT
     constexpr int PROJECT_VERSION_CURRENT = 1;
     constexpr int PROJECT_VERSION_MIN_SUPPORTED = 1;
+    constexpr size_t PROJECT_HISTORY_MAX_ENTRIES = 50;
+    std::atomic<uint64_t> g_projectHistoryCounter{0};
 }
 
 static bool writeAtomicallyImpl(const std::string& path, const std::string& contents) {
@@ -62,6 +68,102 @@ static bool writeAtomicallyImpl(const std::string& path, const std::string& cont
     }
 
     return true;
+}
+
+static std::filesystem::path getHistoryDirImpl(const std::filesystem::path& projectPath) {
+    if (projectPath.empty()) {
+        return {};
+    }
+
+    return projectPath.parent_path() / (projectPath.stem().string() + ".history");
+}
+
+static std::string buildHistorySnapshotName(const std::filesystem::path& projectPath) {
+    const auto now = std::chrono::system_clock::now();
+    const auto tt = std::chrono::system_clock::to_time_t(now);
+    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()).count() % 1000;
+    const uint64_t suffix = g_projectHistoryCounter.fetch_add(1, std::memory_order_relaxed);
+
+    std::tm localTm{};
+#if defined(_WIN32)
+    localtime_s(&localTm, &tt);
+#else
+    localtime_r(&tt, &localTm);
+#endif
+
+    std::ostringstream oss;
+    oss << projectPath.stem().string()
+        << "_save_"
+        << std::put_time(&localTm, "%Y%m%d_%H%M%S")
+        << "_"
+        << std::setw(3) << std::setfill('0') << ms
+        << "_"
+        << suffix
+        << ".aes";
+    return oss.str();
+}
+
+static void pruneHistorySnapshots(const std::filesystem::path& historyDir) {
+    namespace fs = std::filesystem;
+
+    std::error_code ec;
+    if (!fs::exists(historyDir, ec) || ec) {
+        return;
+    }
+
+    std::vector<fs::directory_entry> entries;
+    for (const auto& entry : fs::directory_iterator(historyDir, ec)) {
+        if (ec) {
+            return;
+        }
+        if (entry.is_regular_file(ec) && entry.path().extension() == ".aes") {
+            entries.push_back(entry);
+        }
+    }
+
+    if (entries.size() <= PROJECT_HISTORY_MAX_ENTRIES) {
+        return;
+    }
+
+    std::sort(entries.begin(), entries.end(), [](const fs::directory_entry& a, const fs::directory_entry& b) {
+        std::error_code aec;
+        std::error_code bec;
+        return fs::last_write_time(a.path(), aec) > fs::last_write_time(b.path(), bec);
+    });
+
+    for (size_t i = PROJECT_HISTORY_MAX_ENTRIES; i < entries.size(); ++i) {
+        fs::remove(entries[i].path(), ec);
+    }
+}
+
+static void writeHistorySnapshot(const std::string& projectPath, const std::string& contents) {
+    namespace fs = std::filesystem;
+
+    if (projectPath.empty() || contents.empty()) {
+        return;
+    }
+
+    std::error_code ec;
+    const fs::path target(projectPath);
+    const fs::path historyDir = getHistoryDirImpl(target);
+    if (historyDir.empty()) {
+        return;
+    }
+
+    fs::create_directories(historyDir, ec);
+    if (ec) {
+        Log::warning("Project history snapshot skipped: cannot create history dir: " + historyDir.string());
+        return;
+    }
+
+    const fs::path snapshotPath = historyDir / buildHistorySnapshotName(target);
+    if (!writeAtomicallyImpl(snapshotPath.string(), contents)) {
+        Log::warning("Project history snapshot skipped: cannot write " + snapshotPath.string());
+        return;
+    }
+
+    pruneHistorySnapshots(historyDir);
 }
 
 ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::shared_ptr<TrackManager>& trackManager,
@@ -254,6 +356,9 @@ bool ProjectSerializer::save(const std::string& path,
         Log::error("Project save failed: " + path);
         return false;
     }
+
+    writeHistorySnapshot(path, ser.contents);
+
     Log::info("Project saved to " + path);
     return true;
 }
@@ -427,7 +532,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 
     playlist.clear();
     sourceManager.clear();
-    // patternManager.clear(); // TODO: If clear exists
+    patternManager.clear();
+    trackManager->clearAllChannels();
 
     // 1. Load Sources (and decode audio files)
     std::unordered_map<uint32_t, ClipSourceID> idMap;
@@ -511,6 +617,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             Log::info("[ProjectLoad] Lane[" + std::to_string(i) + "] name='" + lj[i]["name"].asString() + "'");
     #endif
             PlaylistLaneID laneId = playlist.createLane(lj[i]["name"].asString());
+            MixerChannel* channel = trackManager->addChannel(lj[i]["name"].asString());
             if (auto* lane = playlist.getLane(laneId)) {
                 if (lj[i]["color"].isString()) {
                     lane->colorRGBA = static_cast<uint32_t>(std::stoul(lj[i]["color"].asString()));
@@ -521,6 +628,15 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 lane->pan = static_cast<float>(lj[i]["pan"].asNumber());
                 lane->muted = lj[i]["mute"].asBool();
                 lane->solo = lj[i]["solo"].asBool();
+
+                if (channel) {
+                    channel->setName(lane->name);
+                    channel->setColor(lane->colorRGBA);
+                    channel->setVolume(lane->volume);
+                    channel->setPan(lane->pan);
+                    channel->setMute(lane->muted);
+                    channel->setSolo(lane->solo);
+                }
 
                 if (lj[i].has("automation")) {
                     const JSON& aj = lj[i]["automation"];
@@ -593,3 +709,48 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     return result;
 }
 
+std::string ProjectSerializer::getHistoryDirectory(const std::string& projectPath) {
+    return getHistoryDirImpl(std::filesystem::path(projectPath)).string();
+}
+
+std::vector<ProjectSerializer::HistoryEntry> ProjectSerializer::listHistory(const std::string& projectPath) {
+    namespace fs = std::filesystem;
+
+    std::vector<HistoryEntry> history;
+    const fs::path historyDir = getHistoryDirImpl(fs::path(projectPath));
+    if (historyDir.empty()) {
+        return history;
+    }
+
+    std::error_code ec;
+    if (!fs::exists(historyDir, ec) || ec) {
+        return history;
+    }
+
+    for (const auto& entry : fs::directory_iterator(historyDir, ec)) {
+        if (ec) {
+            break;
+        }
+        if (!entry.is_regular_file(ec) || entry.path().extension() != ".aes") {
+            continue;
+        }
+
+        HistoryEntry item;
+        item.path = entry.path().string();
+        item.label = entry.path().filename().string();
+        item.sizeBytes = static_cast<uint64_t>(entry.file_size(ec));
+
+        const auto ftime = fs::last_write_time(entry.path(), ec);
+        if (!ec) {
+            item.timestamp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                ftime - fs::file_time_type::clock::now() + std::chrono::system_clock::now());
+        }
+        history.push_back(std::move(item));
+    }
+
+    std::sort(history.begin(), history.end(), [](const HistoryEntry& a, const HistoryEntry& b) {
+        return a.timestamp > b.timestamp;
+    });
+
+    return history;
+}

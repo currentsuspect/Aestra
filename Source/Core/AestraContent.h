@@ -218,6 +218,8 @@ public:
 
     /** @brief Refresh the visible plugin list in the browser. */
     void refreshPluginList();
+    /** @brief Refresh track/pattern/arsenal UI after an external project load. */
+    void refreshProjectViews();
 
     /** @brief Start preview playback for a file-browser item. */
     void playSoundPreview(const AestraUI::FileItem& file);

@@ -2231,6 +2231,33 @@ void AestraContent::refreshPluginList() {
     Aestra::Log::info("Refreshed plugin list UI: " + std::to_string(uiPlugins.size()) + " plugins found.");
 }
 
+void AestraContent::refreshProjectViews() {
+    if (m_trackManagerUI) {
+        m_trackManagerUI->refreshTracks();
+        m_trackManagerUI->invalidateCache();
+    }
+
+    if (m_patternBrowser) {
+        m_patternBrowser->refreshPatterns();
+    }
+
+    if (m_sequencerPanel) {
+        m_sequencerPanel->refreshUnits();
+        const PatternID activePattern = m_sequencerPanel->getActivePatternID();
+        if (activePattern.isValid()) {
+            if (m_patternBrowser) {
+                m_patternBrowser->setSelectedPatternId(activePattern, false);
+            }
+            if (m_pianoRollPanel) {
+                m_pianoRollPanel->setEditingUnit(m_sequencerPanel->getSelectedUnitId());
+                m_pianoRollPanel->loadPattern(activePattern);
+            }
+        }
+    }
+
+    setDirty(true);
+}
+
 // Global Shortcuts
 bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (event.keyCode == AestraUI::NUIKeyCode::Space && event.released) {

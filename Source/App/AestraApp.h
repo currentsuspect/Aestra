@@ -63,6 +63,7 @@ private:
     // Project management
     void requestClose();
     void saveCurrentProject();
+    ProjectSerializer::LoadResult loadProjectFromPath(const std::string& path, const std::string& activeProjectPathOverride = "");
     ProjectSerializer::LoadResult loadProject();
     bool saveProject();
     ProjectSerializer::UIState captureUIState() const;
