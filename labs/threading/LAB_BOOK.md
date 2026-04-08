@@ -36,11 +36,10 @@ labs/threading/
 |---------|------|--------|----------|----------|-------|
 | M001 | 2026-04-05 | 0 | 0 | 0 | Maintenance pass: corrected real target name, repaired eval runner JSON bug, tightened anti-gaming guidance |
 | M002 | 2026-04-05 | 1 | 0 | 0 | Validation run: `ThreadingTests` built on demand and passed; dirty-tree maintenance run so not treated as a baseline capture |
-| M003 | 2026-04-05 | 20 | 20 | 0 | Automated loop session: 20 rounds covering ring buffer optimizations (modulo→bitmask, size arithmetic, unlikely hints, nodiscard), ThreadPool hardening (atomic stop, double-checked lock, conditional notify, reserve, nodiscard enqueue, hardware_concurrency fallback), Barrier fixes (spin-wait, exponential backoff, reset assert), SpinLock (atomic_flag + pause), RealTimeThreadPool (atomic m_taskCount, dispatch assert); all green |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: see `git log` for M003 round commits
-- **Baselines**: Passing `results/summary.json` + `results/baseline_benchmark.json` from M003 round 20 + benchmark lane
-- **Known issues**: Benchmarks run on non-realtime kernel — P99 tail latency reflects OS scheduler jitter, not primitive quality. XRUN rate threshold (0.1%) accounts for this.
+- **Last commit**: N/A (lab scaffold only)
+- **Baselines**: Passing `results/summary.json` captured on a dirty maintenance tree; not an accepted baseline capture
+- **Known issues**: Benchmark lane does not exist yet, so this remains correctness-only

@@ -2,8 +2,6 @@
 #include "RtAudioDriver.h"
 #include "Core/AudioTelemetry.h"
 
-#include <algorithm>
-#include <cctype>
 #include <iostream>
 #include <utility>
 #include <vector>
@@ -16,19 +14,6 @@
 
 namespace Aestra {
 namespace Audio {
-
-namespace {
-bool isMonitorDeviceName(const std::string& name) {
-    std::string lowered = name;
-    std::transform(lowered.begin(), lowered.end(), lowered.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return lowered.find("monitor") != std::string::npos ||
-           lowered.find("loopback") != std::string::npos ||
-           lowered.find("what u hear") != std::string::npos ||
-           lowered.find("stereo mix") != std::string::npos ||
-           lowered.find("dmix") != std::string::npos;
-}
-}
 
 RtAudioDriver::RtAudioDriver() {
     std::vector<RtAudio::Api> candidates;
@@ -111,20 +96,11 @@ bool RtAudioDriver::openStream(const AudioStreamConfig& config, AudioCallback ca
 
     RtAudio::StreamParameters inputParamsData{};
     RtAudio::StreamParameters* inputParams = nullptr;
-    if (config.numInputChannels > 0 && config.inputDeviceId != 0) {
-        // Only open input when an explicit input device is configured.
-        // Falling back to the output device ID captures system playback
-        // on many Linux setups (PulseAudio default routing / dmix loopback),
-        // causing recording to bleed music from other tracks.
-        if (isMonitorDeviceName(getDeviceName(config.inputDeviceId))) {
-            std::cerr << "[RtAudioDriver] Refusing monitor/loopback input device — "
-                         "this would cause recording bleed. Skipping input capture." << std::endl;
-        } else {
-            inputParamsData.deviceId = config.inputDeviceId;
-            inputParamsData.nChannels = config.numInputChannels;
-            inputParamsData.firstChannel = 0;
-            inputParams = &inputParamsData;
-        }
+    if (config.numInputChannels > 0) {
+        inputParamsData.deviceId = (config.inputDeviceId != 0) ? config.inputDeviceId : config.deviceId;
+        inputParamsData.nChannels = config.numInputChannels;
+        inputParamsData.firstChannel = 0;
+        inputParams = &inputParamsData;
     }
 
     RtAudio::StreamOptions options{};
@@ -185,10 +161,25 @@ bool RtAudioDriver::startStream() {
     }
 
 #ifdef __linux__
-    // Real-time scheduling is set in the audio callback via pthread_once().
-    // We can't set it here because RtAudio creates its own callback thread,
-    // and pthread_self() at this point is the UI thread, not the audio thread.
-    // See rtAudioCallback() for the actual scheduling setup.
+    // Set SCHED_FIFO real-time scheduling for the audio thread
+    // RtAudio creates its own thread; we set priority on the calling thread
+    // which should be the audio thread context at this point.
+    // Note: This requires CAP_SYS_NICE or appropriate RLIMIT_RTPRIO.
+    struct sched_param param;
+    param.sched_priority = sched_get_priority_max(SCHED_FIFO);
+    // Use 50% of max priority to avoid starving system threads
+    param.sched_priority = (param.sched_priority + sched_get_priority_min(SCHED_FIFO)) / 2;
+    if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &param) == 0) {
+        if (m_telemetry) {
+            m_telemetry->setThreadPriorityBit(0x01); // SCHED_FIFO success
+        }
+    }
+    // mlockall to prevent page faults during RT processing
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) == 0) {
+        if (m_telemetry) {
+            m_telemetry->setThreadPriorityBit(0x02); // mlockall success
+        }
+    }
 #endif
 
     return true;
@@ -216,40 +207,6 @@ uint32_t RtAudioDriver::getStreamBufferSize() const {
     return (m_rtAudio && m_rtAudio->isStreamOpen()) ? m_bufferSize.load(std::memory_order_relaxed) : 0;
 }
 
-// =============================================================================
-// Linux Real-Time Scheduling Setup
-// =============================================================================
-// Called once from the audio callback thread (not the UI thread) to set
-// SCHED_FIFO priority. Uses pthread_once to ensure it runs only once per
-// process, regardless of how many streams are opened.
-// =============================================================================
-
-#ifdef __linux__
-static void setupRealtimeScheduling() {
-    // Set SCHED_FIFO with midpoint priority
-    struct sched_param param;
-    int maxPri = sched_get_priority_max(SCHED_FIFO);
-    int minPri = sched_get_priority_min(SCHED_FIFO);
-    if (maxPri < 0 || minPri < 0) return; // Not supported
-    param.sched_priority = (maxPri + minPri) / 2;
-
-    if (sched_setscheduler(0, SCHED_FIFO, &param) != 0) {
-        // Failed — likely no CAP_SYS_NICE or RLIMIT_RTPRIO=0.
-        // This is expected in CI/container environments. Fall back gracefully.
-        return;
-    }
-
-    // Lock all current and future memory to prevent page faults
-    mlockall(MCL_CURRENT | MCL_FUTURE);
-}
-
-static pthread_once_t s_rtOnce = PTHREAD_ONCE_INIT;
-#endif
-
-// =============================================================================
-// Audio Callback
-// =============================================================================
-
 int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int numFrames, double streamTime,
                                    RtAudioStreamStatus status, void* userData) {
     auto* driver = static_cast<RtAudioDriver*>(userData);
@@ -260,12 +217,6 @@ int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsign
             driver->m_telemetry->incrementUnderruns();
         }
     }
-
-#ifdef __linux__
-    // Set real-time scheduling on the first callback invocation.
-    // This runs on the actual RtAudio callback thread, not the UI thread.
-    pthread_once(&s_rtOnce, &setupRealtimeScheduling);
-#endif
 
     AudioCallback callback = driver->m_userCallback.load(std::memory_order_relaxed);
     void* callbackUserData = driver->m_userData.load(std::memory_order_relaxed);
@@ -322,16 +273,6 @@ AudioDriverType RtAudioDriver::apiToDriverType(RtAudio::Api api) {
         return AudioDriverType::JACK;
     default:
         return AudioDriverType::RTAUDIO;
-    }
-}
-
-std::string RtAudioDriver::getDeviceName(unsigned int deviceId) const {
-    if (!m_rtAudio) return "";
-    try {
-        auto info = m_rtAudio->getDeviceInfo(deviceId);
-        return info.name;
-    } catch (...) {
-        return "";
     }
 }
 

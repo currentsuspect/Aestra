@@ -1,47 +1,46 @@
 {
-  "run_id": "run_20260406_064433",
-  "timestamp": "2026-04-06T06:44:33Z",
+  "benchmark": "AestraSincBenchmark",
   "iterations": 3,
   "algorithms": [
     {
       "algo_id": "cubic_4pt",
       "name": "Cubic (4-point)",
-      "median_mframes_per_sec": 65.5234,
-      "mean_mframes_per_sec": 65.7601,
-      "best_mframes_per_sec": 65.0903,
-      "worst_mframes_per_sec": 66.6667,
-      "median_us_per_block": 3.907,
-      "cv": 0.010112
+      "median_mframes_per_sec": 45.4788,
+      "mean_mframes_per_sec": 45.5991,
+      "best_mframes_per_sec": 45.3499,
+      "worst_mframes_per_sec": 45.9688,
+      "median_us_per_block": 5.6290,
+      "cv": 0.005847
     },
     {
       "algo_id": "sinc8_8pt",
       "name": "Sinc8 (8-point)",
-      "median_mframes_per_sec": 14.2373,
-      "mean_mframes_per_sec": 13.9855,
-      "best_mframes_per_sec": 13.0048,
-      "worst_mframes_per_sec": 14.7143,
-      "median_us_per_block": 17.981,
-      "cv": 0.0515
+      "median_mframes_per_sec": 8.9006,
+      "mean_mframes_per_sec": 9.4467,
+      "best_mframes_per_sec": 8.6948,
+      "worst_mframes_per_sec": 10.7446,
+      "median_us_per_block": 28.7620,
+      "cv": 0.097558
     },
     {
       "algo_id": "sinc64_orig",
       "name": "Sinc64 (Original Opt)",
-      "median_mframes_per_sec": 2.5837,
-      "mean_mframes_per_sec": 2.6114,
-      "best_mframes_per_sec": 2.5641,
-      "worst_mframes_per_sec": 2.6863,
-      "median_us_per_block": 99.083,
-      "cv": 0.020533
+      "median_mframes_per_sec": 1.3950,
+      "mean_mframes_per_sec": 1.3374,
+      "best_mframes_per_sec": 1.1772,
+      "worst_mframes_per_sec": 1.4401,
+      "median_us_per_block": 183.5150,
+      "cv": 0.085840
     },
     {
       "algo_id": "sinc64_turbo",
       "name": "Sinc64 TURBO (Multi-SIMD)",
-      "median_mframes_per_sec": 11.1922,
-      "mean_mframes_per_sec": 10.9928,
-      "best_mframes_per_sec": 10.2535,
-      "worst_mframes_per_sec": 11.5326,
-      "median_us_per_block": 22.873,
-      "cv": 0.049203
+      "median_mframes_per_sec": 8.1453,
+      "mean_mframes_per_sec": 8.0163,
+      "best_mframes_per_sec": 7.6815,
+      "worst_mframes_per_sec": 8.2220,
+      "median_us_per_block": 31.4290,
+      "cv": 0.029790
     }
   ]
 }

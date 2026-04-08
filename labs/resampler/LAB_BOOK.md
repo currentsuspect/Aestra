@@ -65,12 +65,10 @@ When a future agent needs context:
 | 001 | 2026-04-05 AM | 16 | 15 | 1 | Hot-path optimization. See `sessions/2026-04-05_session_001.md` |
 | 002 | 2026-04-05 PM | 5 | 5 | 0 | Dot product unroll, stereo fast path, restrict, hoisting. See `sessions/2026-04-05_session_002.md` |
 | 003 | 2026-04-05 Eve | 6 | 6 | 0 | Variable fusion, inlining, pure unsigned arithmetic. See `sessions/2026-04-05_session_003.md` |
-| 004 | 2026-04-06 AM | 1 | 0 | 1 | Tap-count specialization rejected. See `sessions/2026-04-06_session_004.md` |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Last commit**: `resampler-lab: refresh baselines after sessions 001-003 optimizations`
-- **Baselines**: `results/baseline_resampler.json`, `results/baseline_sinc.json` (refreshed 2026-04-06)
-- **Known issues**: High machine variance (CV > 5% on many cases). Machine variance continues to make small improvements hard to detect.
-- **Next direction needed**: Dot product already heavily optimized. Need new optimization angle.
+- **Last commit**: `resampler-lab: accept round 06 use incrementing output pointer instead of multiply per sample`
+- **Baselines**: `results/baseline_resampler.json`, `results/baseline_sinc.json` (from session 001, needs refresh)
+- **Known issues**: High machine variance (CV > 5% on many cases). Baselines should be refreshed on a quieter machine.

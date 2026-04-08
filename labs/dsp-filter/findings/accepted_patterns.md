@@ -33,28 +33,3 @@ being asserted.
 checks even after reaching their targets. The accepted change removes that dead
 work without changing filter math.
 **Session**: M004
-
-## Per-Block Dispatch in processBlock()
-
-**Where**: `AestraAudio/src/DSP/Filter.cpp`
-**What**: `processBlock()` now evaluates `m_drive` and `m_oversampling` once
-before the loop and dispatches into one of four specialized loops:
-(1) fast path — no drive, no oversampling; (2) drive only; (3) oversampling
-only; (4) both.
-**Why it works**: The original loop checked two branches per sample even though
-these values are constant per block. The fast path (most common in practice)
-is now a tight loop with only `processSample()` calls and zero branches.
-**Session**: M005
-
-## Inline Oversampling Math in Stereo Dispatch
-
-**Where**: `AestraAudio/src/DSP/Filter.cpp`
-**What**: `processBlockStereo()` oversampling paths now inline the TwoX
-oversampling math (two biquad passes + average) and the right-channel biquad
-instead of calling `processOversampled()` and `processSample()` per sample.
-State variables are hoisted outside the loop and written back once per block.
-**Why it works**: The original code made two function calls per sample per
-channel in the oversampling paths. Inlining the biquad math eliminates call
-overhead and improves register locality, following the same pattern as M005/M007
-but applied to the stereo oversampling branches.
-**Session**: M008
