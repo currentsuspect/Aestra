@@ -2631,7 +2631,6 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 positionInSeconds = std::max(0.0, positionInSeconds);
                 
                 m_trackManager->setPosition(positionInSeconds);
-                // Also save this as the new play start position for return-on-stop
                 m_trackManager->setPlayStartPosition(positionInSeconds);
             }
             return true;
@@ -2817,6 +2816,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         
         if (m_trackManager) {
             m_trackManager->setPosition(positionInSeconds);
+            m_trackManager->setPlayStartPosition(positionInSeconds);
         }
         
         return true;

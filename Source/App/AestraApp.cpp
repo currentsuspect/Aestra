@@ -695,7 +695,7 @@ void AestraApp::run() {
                     double scrubPos = tm->getPosition();
                     uint32_t sr = engine->getSampleRate();
                     if (sr > 0) engine->setGlobalSamplePos(static_cast<uint64_t>(scrubPos * sr));
-                } else if (engine->isTransportPlaying()) {
+                } else if (engine->isTransportPlaying() && tm->isPlaying()) {
                     double realTime = engine->getPositionSeconds();
                     tm->syncPositionFromEngine(realTime);
                 }

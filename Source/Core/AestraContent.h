@@ -248,6 +248,8 @@ public:
     void openPatternInPianoRoll(Aestra::Audio::PatternID patternId);
 
 private:
+    ViewFocus resolveTransportFocus() const;
+    bool isTransportRolling() const;
     void handleTransportPlayRequest();
     void clearPendingCountIn();
     void updatePendingCountIn();

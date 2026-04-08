@@ -616,7 +616,9 @@ public:
     void play() {
         m_isPlaying.store(true, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
-        pushTransportCommand(1.0f, m_position.load(std::memory_order_relaxed));
+        const double playStartPosition = m_position.load(std::memory_order_relaxed);
+        m_playStartPosition.store(playStartPosition, std::memory_order_relaxed);
+        pushTransportCommand(1.0f, playStartPosition);
         if (m_stopPreviewCallback) {
             m_stopPreviewCallback();
         }
@@ -632,7 +634,7 @@ public:
     }
 
     /**
-     * @brief Stop transport playback and return to the stored start position.
+     * @brief Stop transport playback and return to the stored cue/start position.
      */
     void stop() {
         m_isPlaying.store(false, std::memory_order_relaxed);

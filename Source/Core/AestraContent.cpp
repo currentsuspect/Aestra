@@ -1541,6 +1541,29 @@ void AestraContent::clearPendingCountIn() {
     m_pendingCountInTargetSeconds = 0.0;
 }
 
+ViewFocus AestraContent::resolveTransportFocus() const {
+    if (m_viewToggle) {
+        switch (m_viewToggle->getSelectedIndex()) {
+            case 0: return ViewFocus::Arsenal;
+            case 2: return ViewFocus::Audition;
+            case 1:
+            default: return ViewFocus::Timeline;
+        }
+    }
+    return m_viewFocus;
+}
+
+bool AestraContent::isTransportRolling() const {
+    if (m_pendingCountIn || (m_audioEngine && m_audioEngine->isMetronomeCountInActive())) {
+        return true;
+    }
+
+    const bool trackManagerPlaying = m_trackManager && m_trackManager->isPlaying();
+    const bool transportBarPlaying = m_transportBar &&
+                                     m_transportBar->getState() == TransportState::Playing;
+    return trackManagerPlaying || transportBarPlaying;
+}
+
 void AestraContent::updatePendingCountIn() {
     if (!m_pendingCountIn || !m_trackManager) {
         return;
@@ -1569,12 +1592,12 @@ void AestraContent::updatePendingCountIn() {
 }
 
 void AestraContent::handleTransportPlayRequest() {
-    if (m_viewFocus != ViewFocus::Timeline || !m_trackManager) {
+    if (resolveTransportFocus() != ViewFocus::Timeline || !m_trackManager) {
         playFromCurrentFocus();
         return;
     }
 
-    if (!m_trackManager->isPlaying()) {
+    if (!isTransportRolling()) {
         if (m_audioEngine) {
             m_audioEngine->stopMetronomeCountIn();
         }
@@ -1594,7 +1617,7 @@ void AestraContent::handleTransportPlayRequest() {
     const int beatsPerBar = m_transportBar ? std::max(1, m_transportBar->getTimeSignature()) : 4;
     const double requestedStartSeconds = std::max(0.0, m_trackManager->getPosition());
 
-    if (m_trackManager->isPlaying()) {
+    if (isTransportRolling()) {
         return;
     }
 
@@ -1629,7 +1652,8 @@ void AestraContent::requestTransportPlay() {
 }
 
 void AestraContent::playFromCurrentFocus() {
-    if (m_viewFocus == ViewFocus::Audition) {
+    const ViewFocus focus = resolveTransportFocus();
+    if (focus == ViewFocus::Audition) {
         if (m_auditionEngine) {
             if (!m_auditionEngine->isPlaying()) {
                 stopSoundPreview();
@@ -1639,7 +1663,7 @@ void AestraContent::playFromCurrentFocus() {
         return;
     }
 
-    if (m_viewFocus == ViewFocus::Arsenal) {
+    if (focus == ViewFocus::Arsenal) {
         if (!m_trackManager || !m_sequencerPanel) {
             return;
         }
@@ -1665,14 +1689,15 @@ void AestraContent::playFromCurrentFocus() {
 }
 
 void AestraContent::stopFromCurrentFocus(bool hardStop) {
-    if (m_viewFocus == ViewFocus::Audition) {
+    const ViewFocus focus = resolveTransportFocus();
+    if (focus == ViewFocus::Audition) {
         if (m_auditionEngine) {
             m_auditionEngine->stop();
         }
         return;
     }
 
-    if (m_viewFocus == ViewFocus::Arsenal) {
+    if (focus == ViewFocus::Arsenal) {
         if (m_trackManager) {
             Aestra::Log::info("[Arsenal] Focus-aware stop");
             m_trackManager->stopArsenalPlayback(true);
@@ -1700,14 +1725,15 @@ void AestraContent::stopFromCurrentFocus(bool hardStop) {
 }
 
 void AestraContent::pauseFromCurrentFocus() {
-    if (m_viewFocus == ViewFocus::Audition) {
+    const ViewFocus focus = resolveTransportFocus();
+    if (focus == ViewFocus::Audition) {
         if (m_auditionEngine) {
             m_auditionEngine->togglePlayPause();
         }
         return;
     }
 
-    if (m_viewFocus == ViewFocus::Arsenal) {
+    if (focus == ViewFocus::Arsenal) {
         stopFromCurrentFocus(false);
         return;
     }
@@ -2286,13 +2312,21 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         Aestra::Log::info("[AestraContent] Spacebar pressed. ViewFocus: " + std::to_string(static_cast<int>(m_viewFocus)));
     }
     
-    // Spacebar: Play/Stop (Timeline/Arsenal) or Play/Pause (Audition handled by panel usually)
+    // Spacebar follows the top-level selected mode first. Overlay/panel focus can
+    // drift (for example while editing piano roll with Arsenal assets visible),
+    // but the segmented mode reflects the user's actual transport context.
     if (event.keyCode == AestraUI::NUIKeyCode::Space) {
-        
-        // If Audition Panel is focused, it handles space. But if we are here, it didn't consume it?
-        // Actually NUIComponent dispatch usually stops if consumed.
-        
-        if (m_viewFocus == ViewFocus::Audition) {
+        ViewFocus transportFocus = m_viewFocus;
+        if (m_viewToggle) {
+            switch (m_viewToggle->getSelectedIndex()) {
+                case 0: transportFocus = ViewFocus::Arsenal; break;
+                case 2: transportFocus = ViewFocus::Audition; break;
+                case 1:
+                default: transportFocus = ViewFocus::Timeline; break;
+            }
+        }
+
+        if (transportFocus == ViewFocus::Audition && m_auditionPanel && m_auditionPanel->isVisible()) {
             // If Audition Panel didn't handle it (maybe lost focus?), try to toggle play/pause on engine directly
             if (m_auditionEngine) {
                 // Ensure preview stops
@@ -2302,23 +2336,12 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             }
         }
         else {
-            // Timeline / Arsenal Mode
-            if (m_trackManager) {
-                const bool countInActive = m_pendingCountIn ||
-                                           (m_audioEngine && m_audioEngine->isMetronomeCountInActive());
-                if (m_viewFocus == ViewFocus::Arsenal) {
-                    if (countInActive || (m_trackManager->isPlaying() && m_trackManager->isPatternMode())) {
-                        stopFromCurrentFocus(false);
-                    } else {
-                        playFromCurrentFocus();
-                    }
+            if (m_transportBar) {
+                if (isTransportRolling()) {
+                    clearPendingCountIn();
+                    m_transportBar->stop();
                 } else {
-                    if (countInActive || m_trackManager->isPlaying()) {
-                        clearPendingCountIn();
-                        stopFromCurrentFocus(false);
-                    } else {
-                        handleTransportPlayRequest();
-                    }
+                    m_transportBar->play();
                 }
                 return true;
             }
