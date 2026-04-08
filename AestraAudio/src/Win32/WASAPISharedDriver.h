@@ -71,6 +71,10 @@ public:
     uint32_t getStreamSampleRate() const override;
     uint32_t getStreamBufferSize() const override { return isStreamRunning() ? m_bufferFrameCount : 0; }
 
+    // Device notification hooks used by the local IMMNotificationClient adapter.
+    void onDeviceStateChanged(const std::string& deviceId, uint32_t newState);
+    void onDefaultDeviceChanged(bool isOutput, const std::string& newDefaultId);
+
     // Dithering support
     void setDitheringEnabled(bool enabled) override { m_ditherEnabled = enabled; }
     bool isDitheringEnabled() const override { return m_ditherEnabled; }
@@ -111,8 +115,6 @@ private:
     void* m_deviceNotifier = nullptr; // WASAPIDeviceNotifier* (COM IMMNotificationClient)
     void registerDeviceNotifier();
     void unregisterDeviceNotifier();
-    void onDeviceStateChanged(const std::string& deviceId, uint32_t newState);
-    void onDefaultDeviceChanged(bool isOutput, const std::string& newDefaultId);
 
     // Format information
     void* m_waveFormat = nullptr; // WAVEFORMATEX* (opaque)

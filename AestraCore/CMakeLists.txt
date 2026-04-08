@@ -75,7 +75,9 @@ if(AESTRA_BUILD_TESTS)
         ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
-    target_link_libraries(MemoryAllocatorTest PRIVATE pthread)
+    if(NOT WIN32)
+        target_link_libraries(MemoryAllocatorTest PRIVATE pthread)
+    endif()
 
     enable_testing()
     add_test(NAME MathTests COMMAND MathTests)
