@@ -971,16 +971,7 @@ std::string AuditionPanel::formatTime(double seconds) const {
 
 bool AuditionPanel::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (event.pressed) {
-        if (event.keyCode == AestraUI::NUIKeyCode::Space) {
-            if (m_engine) {
-                if (!m_engine->isPlaying()) {
-                    if (m_onPlayRequest) m_onPlayRequest();
-                }
-                m_engine->togglePlayPause();
-                return true;
-            }
-        }
-        else if (event.keyCode == AestraUI::NUIKeyCode::Left) {
+        if (event.keyCode == AestraUI::NUIKeyCode::Left) {
             if (m_engine) m_engine->previousTrack();
             return true;
         }

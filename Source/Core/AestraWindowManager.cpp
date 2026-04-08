@@ -278,6 +278,10 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             event.released = !pressed;
             event.modifiers = m_keyModifiers;
 
+            if (event.keyCode == AestraUI::NUIKeyCode::Space) {
+                if (m_content->onKeyEvent(event)) return;
+            }
+
             if (auto* focused = AestraUI::NUIComponent::getFocusedComponent()) {
                 if (focused->onKeyEvent(event)) {
                     return;

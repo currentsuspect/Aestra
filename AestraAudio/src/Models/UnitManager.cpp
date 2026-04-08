@@ -317,7 +317,9 @@ void UnitManager::loadFromJSON(const JSON& json) {
         if (!unit.pluginId.empty()) {
             unit.plugin = pluginManager.createInstanceById(unit.pluginId);
             if (unit.plugin) {
-                unit.plugin->initialize(48000.0, 512);
+                double sr = m_sampleRate.load(std::memory_order_relaxed);
+                uint32_t blockSize = m_blockSize.load(std::memory_order_relaxed);
+                unit.plugin->initialize(sr > 0 ? sr : 48000.0, blockSize > 0 ? blockSize : 512);
                 if (unit.enabled || unit.isEnabled) {
                     unit.plugin->activate();
                 }

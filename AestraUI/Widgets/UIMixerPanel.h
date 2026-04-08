@@ -67,6 +67,8 @@ public:
     UIMixerInspector* getInspector() { return m_inspector.get(); }
 
 private:
+    bool channelLayoutMatchesViewModel() const;
+
     std::shared_ptr<Aestra::MixerViewModel> m_viewModel;
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;
 

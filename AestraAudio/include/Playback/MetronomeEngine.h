@@ -48,6 +48,9 @@ public:
     // Reset internal state (e.g. on seek/loop)
     void reset(uint64_t globalSamplePos, uint32_t sampleRate);
 
+    /** @brief Set the project sample rate and regenerate click sounds. */
+    void setSampleRate(uint32_t rate);
+
 private:
     void generateDefaultSounds();
 
@@ -56,6 +59,7 @@ private:
     std::atomic<float> m_volume{0.7f};
     std::atomic<float> m_bpm{120.0f};
     std::atomic<int> m_beatsPerBar{4};
+    std::atomic<uint32_t> m_sampleRate{48000};
 
     // Audio Data
     std::vector<float> m_synthClickLow;    // Generated default (Downbeat)

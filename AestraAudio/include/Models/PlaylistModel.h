@@ -356,10 +356,10 @@ public:
 
         auto snapshot = std::make_unique<PlaylistRuntimeSnapshot>();
         snapshot->lanes.reserve(m_lanes.size());
-        snapshot->bpm = 120.0;               // Default BPM
-        snapshot->projectSampleRate = 48000; // Default sample rate
+        snapshot->bpm = std::max(m_bpm, 1.0);
+        snapshot->projectSampleRate = m_projectSampleRate;
 
-        const double samplesPerBeat = (48000.0 * 60.0) / snapshot->bpm;
+        const double samplesPerBeat = (m_projectSampleRate * 60.0) / snapshot->bpm;
 
         for (const auto& lane : m_lanes) {
             LaneRuntimeInfo laneInfo;
@@ -403,7 +403,14 @@ public:
      * @brief Get the project sample rate
      */
     double getProjectSampleRate() const {
-        return 48000.0; // Default for now
+        return m_projectSampleRate;
+    }
+
+    /**
+     * @brief Set the project sample rate
+     */
+    void setProjectSampleRate(double rate) {
+        if (rate > 0) m_projectSampleRate = rate;
     }
 
     /**
@@ -549,6 +556,7 @@ private:
     mutable std::shared_mutex m_mutex;
     ClipChangedCallback m_clipChangedCallback;
     double m_bpm{120.0};
+    double m_projectSampleRate{48000.0}; // Default, configurable
     PatternManager* m_patternManager{nullptr};
 
     ClipInstance* getClipInternal(const ClipInstanceID& clipId) {

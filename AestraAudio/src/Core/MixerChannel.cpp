@@ -100,15 +100,6 @@ void MixerChannel::processAudio(float* outputBuffer, uint32_t numFrames, double 
     if (m_muted.load())
         return;
 
-    // Prepare effect chain with actual stream sample rate (once)
-    static bool chainPrepared = false;
-    if (!chainPrepared && m_effectChain.getActiveSlotCount() > 0) {
-        Log::info("[MixerChannel] Preparing chain for ch " + std::to_string(m_channelId) + " at " +
-                  std::to_string(outputSampleRate) + " Hz");
-        m_effectChain.prepare(outputSampleRate, numFrames * 2); // Max block size
-        chainPrepared = true;
-    }
-
     // In v3.0, MixerChannel processes its internal bus/effects chain.
     // The TrackManager orchestration handles mixing clip data into appropriate channel buffers.
     if (m_mixerBus) {

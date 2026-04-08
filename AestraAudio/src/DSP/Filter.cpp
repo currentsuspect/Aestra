@@ -4,6 +4,8 @@
 
 #include "Filter.h"
 
+#include "../../../AestraCore/include/AestraUnifiedProfiler.h"
+
 #include <complex>
 #include <cstring>
 
@@ -205,22 +207,49 @@ void Filter::processBlock(float* samples, uint32_t numSamples) {
     // Update parameters once per block (optimization)
     updateInternal();
 
-    for (uint32_t i = 0; i < numSamples; ++i) {
-        float sample = samples[i];
+    const bool hasDrive = m_drive > 0.0f && m_saturationType != SaturationType::None;
+    const bool hasOversampling = m_oversampling != OversamplingFactor::None;
+    const float driveGain = 1.0f + m_drive * 3.0f;
 
-        // Apply drive
-        if (m_drive > 0.0f && m_saturationType != SaturationType::None) {
-            sample = applySaturation(sample * (1.0f + m_drive * 3.0f));
+    if (!hasDrive && !hasOversampling) {
+        // Fast path: no drive, no oversampling — inline biquad for register locality
+        const float b0 = m_coeffs[0].b0, b1 = m_coeffs[0].b1, b2 = m_coeffs[0].b2;
+        const float a1 = m_coeffs[0].a1, a2 = m_coeffs[0].a2;
+        float x1 = m_state[0].x1, x2 = m_state[0].x2;
+        for (uint32_t i = 0; i < numSamples; ++i) {
+            const float input = samples[i];
+            const float output = b0 * input + x1;
+            x1 = b1 * input - a1 * output + x2;
+            x2 = b2 * input - a2 * output;
+            samples[i] = output;
         }
-
-        // Process
-        if (m_oversampling != OversamplingFactor::None) {
+        m_state[0].x1 = x1; m_state[0].x2 = x2;
+    } else if (hasDrive && !hasOversampling) {
+        const float b0 = m_coeffs[0].b0, b1 = m_coeffs[0].b1, b2 = m_coeffs[0].b2;
+        const float a1 = m_coeffs[0].a1, a2 = m_coeffs[0].a2;
+        float x1 = m_state[0].x1, x2 = m_state[0].x2;
+        for (uint32_t i = 0; i < numSamples; ++i) {
+            float sample = applySaturation(samples[i] * driveGain);
+            const float output = b0 * sample + x1;
+            x1 = b1 * sample - a1 * output + x2;
+            x2 = b2 * sample - a2 * output;
+            samples[i] = output;
+        }
+        m_state[0].x1 = x1; m_state[0].x2 = x2;
+    } else if (!hasDrive && hasOversampling) {
+        // Oversampling only, no drive
+        for (uint32_t i = 0; i < numSamples; ++i) {
+            float sample = samples[i];
             processOversampled(sample, m_state[0]);
-        } else {
-            processSample(sample, m_state[0], m_coeffs[0]);
+            samples[i] = sample;
         }
-
-        samples[i] = sample;
+    } else {
+        // Both drive and oversampling
+        for (uint32_t i = 0; i < numSamples; ++i) {
+            float sample = applySaturation(samples[i] * driveGain);
+            processOversampled(sample, m_state[0]);
+            samples[i] = sample;
+        }
     }
 }
 
@@ -230,35 +259,108 @@ void Filter::processBlockStereo(float* left, float* right, uint32_t numSamples) 
 
     updateInternal();
 
+    const bool hasDrive = m_drive > 0.0f && m_saturationType != SaturationType::None;
+    const bool hasOversampling = m_oversampling != OversamplingFactor::None;
+    const float driveGain = 1.0f + m_drive * 3.0f;
     const auto& rightCoeffs = m_stereoLinked ? m_coeffs[0] : m_coeffs[1];
 
-    for (uint32_t i = 0; i < numSamples; ++i) {
-        // Process left
-        float leftSample = left[i];
-        if (m_drive > 0.0f && m_saturationType != SaturationType::None) {
-            leftSample = applySaturation(leftSample * (1.0f + m_drive * 3.0f));
+    if (!hasDrive && !hasOversampling) {
+        const float lb0 = m_coeffs[0].b0, lb1 = m_coeffs[0].b1, lb2 = m_coeffs[0].b2;
+        const float la1 = m_coeffs[0].a1, la2 = m_coeffs[0].a2;
+        float lx1 = m_state[0].x1, lx2 = m_state[0].x2;
+        const float rb0 = rightCoeffs.b0, rb1 = rightCoeffs.b1, rb2 = rightCoeffs.b2;
+        const float ra1 = rightCoeffs.a1, ra2 = rightCoeffs.a2;
+        float rx1 = m_state[1].x1, rx2 = m_state[1].x2;
+        for (uint32_t i = 0; i < numSamples; ++i) {
+            const float lin = left[i], rin = right[i];
+            const float lout = lb0 * lin + lx1;
+            lx1 = lb1 * lin - la1 * lout + lx2;
+            lx2 = lb2 * lin - la2 * lout;
+            const float rout = rb0 * rin + rx1;
+            rx1 = rb1 * rin - ra1 * rout + rx2;
+            rx2 = rb2 * rin - ra2 * rout;
+            left[i] = lout;
+            right[i] = rout;
         }
-
-        if (m_oversampling != OversamplingFactor::None) {
-            processOversampled(leftSample, m_state[0]);
-        } else {
-            processSample(leftSample, m_state[0], m_coeffs[0]);
+        m_state[0].x1 = lx1; m_state[0].x2 = lx2;
+        m_state[1].x1 = rx1; m_state[1].x2 = rx2;
+    } else if (hasDrive && !hasOversampling) {
+        const float lb0 = m_coeffs[0].b0, lb1 = m_coeffs[0].b1, lb2 = m_coeffs[0].b2;
+        const float la1 = m_coeffs[0].a1, la2 = m_coeffs[0].a2;
+        float lx1 = m_state[0].x1, lx2 = m_state[0].x2;
+        const float rb0 = rightCoeffs.b0, rb1 = rightCoeffs.b1, rb2 = rightCoeffs.b2;
+        const float ra1 = rightCoeffs.a1, ra2 = rightCoeffs.a2;
+        float rx1 = m_state[1].x1, rx2 = m_state[1].x2;
+        for (uint32_t i = 0; i < numSamples; ++i) {
+            float l = applySaturation(left[i] * driveGain);
+            float r = applySaturation(right[i] * driveGain);
+            const float lout = lb0 * l + lx1;
+            lx1 = lb1 * l - la1 * lout + lx2;
+            lx2 = lb2 * l - la2 * lout;
+            const float rout = rb0 * r + rx1;
+            rx1 = rb1 * r - ra1 * rout + rx2;
+            rx2 = rb2 * r - ra2 * rout;
+            left[i] = lout;
+            right[i] = rout;
         }
-
-        // Process right
-        float rightSample = right[i];
-        if (m_drive > 0.0f && m_saturationType != SaturationType::None) {
-            rightSample = applySaturation(rightSample * (1.0f + m_drive * 3.0f));
+        m_state[0].x1 = lx1; m_state[0].x2 = lx2;
+        m_state[1].x1 = rx1; m_state[1].x2 = rx2;
+    } else if (!hasDrive && hasOversampling) {
+        // Oversampling only, no drive — inline for stereo
+        const float rb0 = rightCoeffs.b0, rb1 = rightCoeffs.b1, rb2 = rightCoeffs.b2;
+        const float ra1 = rightCoeffs.a1, ra2 = rightCoeffs.a2;
+        float rx1 = m_state[1].x1, rx2 = m_state[1].x2;
+        for (uint32_t i = 0; i < numSamples; ++i) {
+            // Left channel: inline 2x oversampling
+            float l = left[i];
+            float lup1 = l, lup2 = l;
+            const float lb0 = m_coeffs[0].b0, lb1 = m_coeffs[0].b1, lb2 = m_coeffs[0].b2;
+            const float la1 = m_coeffs[0].a1, la2 = m_coeffs[0].a2;
+            float lx1 = m_state[0].x1, lx2 = m_state[0].x2;
+            const float lout1 = lb0 * lup1 + lx1;
+            lx1 = lb1 * lup1 - la1 * lout1 + lx2;
+            lx2 = lb2 * lup1 - la2 * lout1;
+            const float lout2 = lb0 * lup2 + lx1;
+            lx1 = lb1 * lup2 - la1 * lout2 + lx2;
+            lx2 = lb2 * lup2 - la2 * lout2;
+            left[i] = (lout1 + lout2) * 0.5f;
+            m_state[0].x1 = lx1; m_state[0].x2 = lx2;
+            // Right channel: normal biquad
+            const float rin = right[i];
+            const float rout = rb0 * rin + rx1;
+            rx1 = rb1 * rin - ra1 * rout + rx2;
+            rx2 = rb2 * rin - ra2 * rout;
+            right[i] = rout;
         }
-
-        if (m_oversampling != OversamplingFactor::None) {
-            processSample(rightSample, m_state[1], rightCoeffs);
-        } else {
-            processSample(rightSample, m_state[1], rightCoeffs);
+        m_state[1].x1 = rx1; m_state[1].x2 = rx2;
+    } else {
+        // Both drive and oversampling — inline for stereo
+        const float rb0 = rightCoeffs.b0, rb1 = rightCoeffs.b1, rb2 = rightCoeffs.b2;
+        const float ra1 = rightCoeffs.a1, ra2 = rightCoeffs.a2;
+        float rx1 = m_state[1].x1, rx2 = m_state[1].x2;
+        for (uint32_t i = 0; i < numSamples; ++i) {
+            float l = applySaturation(left[i] * driveGain);
+            float r = applySaturation(right[i] * driveGain);
+            // Left: inline 2x oversampling
+            float lup1 = l, lup2 = l;
+            const float lb0 = m_coeffs[0].b0, lb1 = m_coeffs[0].b1, lb2 = m_coeffs[0].b2;
+            const float la1 = m_coeffs[0].a1, la2 = m_coeffs[0].a2;
+            float lx1 = m_state[0].x1, lx2 = m_state[0].x2;
+            const float lout1 = lb0 * lup1 + lx1;
+            lx1 = lb1 * lup1 - la1 * lout1 + lx2;
+            lx2 = lb2 * lup1 - la2 * lout1;
+            const float lout2 = lb0 * lup2 + lx1;
+            lx1 = lb1 * lup2 - la1 * lout2 + lx2;
+            lx2 = lb2 * lup2 - la2 * lout2;
+            left[i] = (lout1 + lout2) * 0.5f;
+            m_state[0].x1 = lx1; m_state[0].x2 = lx2;
+            // Right: normal biquad
+            const float rout = rb0 * r + rx1;
+            rx1 = rb1 * r - ra1 * rout + rx2;
+            rx2 = rb2 * r - ra2 * rout;
+            right[i] = rout;
         }
-
-        left[i] = leftSample;
-        right[i] = rightSample;
+        m_state[1].x1 = rx1; m_state[1].x2 = rx2;
     }
 }
 
@@ -707,6 +809,7 @@ void Filter::FilterState::reset() noexcept {
 void Filter::OversampledBuffer::resize(uint32_t newSize) {
     if (newSize != size) {
         buffer = std::make_unique<float[]>(newSize);
+        AESTRA_MEMORY_ALLOC(newSize * sizeof(float));
         size = newSize;
     }
 }

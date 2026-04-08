@@ -1,0 +1,91 @@
+=========================================
+  Aestra SampleRateConverter Test Suite
+=========================================
+
+=== Test: Passthrough Mode ===
+[11:02:41] [INFO]  SampleRateConverter configured: 48000 -> 48000 Hz, 2 channels, quality=3 (passthrough) [SIMD]
+[PASS] Passthrough mode copies input exactly
+[PASS] Passthrough reports correct frame count - Expected 1024, got 1024
+
+=== Test: Upsampling 44100 -> 48000 ===
+[11:02:41] [INFO]  Unified Profiler initialized
+[11:02:41] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:02:41] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[PASS] Upsample produces correct frame count - Expected ~48000, got 47992
+[PASS] Latency is reported - Latency: 8 frames
+
+=== Test: Downsampling 48000 -> 44100 ===
+[11:02:41] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.872812
+[11:02:41] [INFO]  SampleRateConverter configured: 48000 -> 44100 Hz, 2 channels, quality=3 [SIMD]
+[PASS] Downsample produces correct frame count - Expected ~44100, got 44093
+
+=== Test: Round-Trip Quality ===
+[11:02:41] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:02:41] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:02:41] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.872812
+[11:02:41] [INFO]  SampleRateConverter configured: 48000 -> 44100 Hz, 2 channels, quality=3 [SIMD]
+  Round-trip RMS error: 6.8297e-02
+  Round-trip max error: 0.139530
+[PASS] Round-trip RMS error < 0.15 - RMS: 0.068297
+[PASS] Round-trip max error < 0.20 - Max: 0.139530
+
+=== Test: All Quality Levels ===
+[11:02:41] [INFO]  SampleRateConverter: Generated 2-tap filter with 256 phases, cutoff=0.980000
+[11:02:41] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=0 [SIMD]
+[PASS] Quality Linear works - Latency: 1
+[11:02:41] [INFO]  SampleRateConverter: Generated 4-tap filter with 256 phases, cutoff=0.980000
+[11:02:41] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=1 [SIMD]
+[PASS] Quality Cubic works - Latency: 2
+[11:02:41] [INFO]  SampleRateConverter: Generated 8-tap filter with 256 phases, cutoff=0.980000
+[11:02:41] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=2 [SIMD]
+[PASS] Quality Sinc8 works - Latency: 4
+[11:02:41] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:02:41] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[PASS] Quality Sinc16 works - Latency: 8
+[11:02:41] [INFO]  SampleRateConverter: Generated 64-tap filter with 256 phases, cutoff=0.980000
+[11:02:41] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=4 [SIMD]
+[PASS] Quality Sinc64 works - Latency: 32
+
+=== Test: Multi-Channel (6ch surround) ===
+[11:02:41] [INFO]  SampleRateConverter: Generated 8-tap filter with 256 phases, cutoff=0.980000
+[11:02:41] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 6 channels, quality=2 [SIMD]
+[PASS] 6-channel processing works - Wrote 1111 frames
+[PASS] Channels reported correctly
+
+=== Test: Reset Functionality ===
+[11:02:41] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:02:41] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[PASS] Reset produces consistent output - Before: 1106, After: 1106
+
+=== Test: Variable Ratio (Pitch Shifting) ===
+[11:02:41] [INFO]  SampleRateConverter configured: 48000 -> 48000 Hz, 2 channels, quality=3 (passthrough) [SIMD]
+[PASS] Initial ratio is 1.0 - Ratio: 1.000000
+[PASS] setRatio changes ratio - Ratio after setRatio(2.0): 2.000000
+[PASS] Smooth transition initiated - Ratio before smoothing completes: 2.000000
+[PASS] Ratio approaches target after processing - Ratio after processing: 1.000000
+  SIMD available: Yes
+  AVX available: No
+
+=== Test: SIMD vs Scalar Equivalence ===
+[11:02:41] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:02:41] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[11:02:41] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+[PASS] SIMD/scalar frame counts match - SIMD=4792, scalar=4792
+  SIMD vs scalar RMS error: 4.7742e-08
+  SIMD vs scalar max error: 0.00000024
+[PASS] SIMD matches scalar within tolerance - RMS=0.000000, max=0.000000
+
+=== Test: Performance ===
+[11:02:41] [INFO]  SampleRateConverter: Generated 16-tap filter with 256 phases, cutoff=0.980000
+[11:02:41] [INFO]  SampleRateConverter configured: 44100 -> 48000 Hz, 2 channels, quality=3 [SIMD]
+  Processed 441000 frames in 19.491 ms
+  Real-time factor: 513.1x
+[PASS] Performance >= 10x real-time - 513.057309x real-time
+
+=========================================
+  Test Summary
+=========================================
+  Passed: 22
+  Failed: 0
+  Total:  22
+=========================================

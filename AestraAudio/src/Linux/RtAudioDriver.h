@@ -44,6 +44,7 @@ private:
     bool tryInitializeBackend(const std::vector<RtAudio::Api>& candidates);
     static AudioDriverType apiToDriverType(RtAudio::Api api);
     static const char* apiName(RtAudio::Api api);
+    std::string getDeviceName(unsigned int deviceId) const;
 
     std::unique_ptr<RtAudio> m_rtAudio;
     AudioDriverType m_driverType{AudioDriverType::UNKNOWN};

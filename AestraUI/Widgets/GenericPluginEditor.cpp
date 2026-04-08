@@ -3,8 +3,8 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include <algorithm>
-#include <sstream>
 #include <iomanip>
+#include <sstream>
 
 namespace AestraUI {
 
@@ -27,12 +27,8 @@ void GenericPluginEditor::buildParameterWidgets() {
     m_parameters.clear();
     
     auto allParams = m_instance->getParameters();
-    printf("[GenericPluginEditor] Plugin has %zu total parameters\n", allParams.size());
     
     for (const auto& info : allParams) {
-        printf("[GenericPluginEditor] Param: %s (readOnly=%d, bypass=%d)\n", 
-               info.name.c_str(), info.isReadOnly, info.isBypass);
-        
         // Skip read-only or bypass parameters
         if (info.isReadOnly || info.isBypass) continue;
         
@@ -47,9 +43,7 @@ void GenericPluginEditor::buildParameterWidgets() {
         
         m_parameters.push_back(widget);
     }
-    
-    printf("[GenericPluginEditor] Created %zu editable parameter widgets\n", m_parameters.size());
-    
+
     layoutParameters();
 }
 
@@ -71,7 +65,7 @@ void GenericPluginEditor::layoutParameters() {
         // Value display
         p.valueBounds = NUIRect(x, y, VALUE_WIDTH, PARAMETER_HEIGHT);
         
-        y += PARAMETER_HEIGHT;
+        y += PARAMETER_HEIGHT + 6.0f;
     }
 }
 
@@ -82,10 +76,10 @@ void GenericPluginEditor::onResize() {
 void GenericPluginEditor::onRender(NUIRenderer& renderer) {
     auto bounds = getBounds();
     auto& theme = NUIThemeManager::getInstance();
-    
-    // Window background: Dark "Glass" look
-    // Deep dark grey with slight transparency
-    renderer.fillRect(bounds, NUIColor(0.08f, 0.08f, 0.08f, 0.96f));
+
+    renderer.fillRoundedRect(bounds, 14.0f, NUIColor(0.07f, 0.075f, 0.10f, 0.985f));
+    renderer.fillRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, 60.0f},
+                             13.0f, NUIColor(0.17f, 0.19f, 0.27f, 0.92f));
     
     // Draw title bar
     drawTitleBar(renderer);
@@ -121,8 +115,7 @@ void GenericPluginEditor::onRender(NUIRenderer& renderer) {
     
     renderer.clearClipRect();
     
-    // Subtle border
-    renderer.strokeRect(bounds, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.1f));
+    renderer.strokeRoundedRect(bounds, 14.0f, 1.0f, NUIColor(0.60f, 0.68f, 1.0f, 0.16f));
 }
 
 void GenericPluginEditor::drawTitleBar(NUIRenderer& renderer) {
@@ -130,25 +123,20 @@ void GenericPluginEditor::drawTitleBar(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     
     NUIRect titleBar(bounds.x, bounds.y, bounds.width, TITLE_BAR_HEIGHT);
-    
-    // Header background (slightly lighter than body)
-    renderer.fillRect(titleBar, NUIColor(1.0f, 1.0f, 1.0f, 0.03f));
-    
-    // Plugin name (Bold, primary)
+
     std::string title = m_instance ? m_instance->getInfo().name : "Plugin Editor";
-    // Using a slightly larger font if available, otherwise standard
-    renderer.drawText(title, {titleBar.x + PADDING, titleBar.y + 10}, 12.0f, theme.getColor("textPrimary"));
-    
-    // Close button (Subtle Icon)
+    std::string subtitle = m_instance ? m_instance->getInfo().vendor : "Aestra";
+
+    renderer.drawText(title, {titleBar.x + PADDING, titleBar.y + 10.0f}, 12.5f, theme.getColor("textPrimary"));
+    renderer.drawText(subtitle, {titleBar.x + PADDING, titleBar.y + 24.0f}, 9.0f,
+                      theme.getColor("textSecondary").withAlpha(0.78f));
+
     float closeSize = 16.0f;
     float closeX = titleBar.right() - closeSize - 8.0f;
     float closeY = titleBar.y + (TITLE_BAR_HEIGHT - closeSize) * 0.5f;
-    
-    // Draw X (Thinner, cleaner)
+
     float pad = 4.0f;
     NUIColor closeColor = theme.getColor("textSecondary");
-    // Hover effect for close button could be added here if we tracked it specifically
-    // For now, simpler static look
     renderer.drawLine({closeX + pad, closeY + pad}, 
                      {closeX + closeSize - pad, closeY + closeSize - pad},
                      1.5f, closeColor);
@@ -156,10 +144,9 @@ void GenericPluginEditor::drawTitleBar(NUIRenderer& renderer) {
                      {closeX + pad, closeY + closeSize - pad},
                      1.5f, closeColor);
     
-    // Divider
     renderer.drawLine({titleBar.x, titleBar.bottom()}, 
                      {titleBar.right(), titleBar.bottom()},
-                     1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.05f));
+                     1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
 }
 
 void GenericPluginEditor::drawParameter(NUIRenderer& renderer, const ParameterWidget& p, bool hovered) {
@@ -169,65 +156,62 @@ void GenericPluginEditor::drawParameter(NUIRenderer& renderer, const ParameterWi
     float offsetX = bounds.x;
     float offsetY = bounds.y;
     
-    // 1. Label (Left side, slightly dimmed)
-    // Vertically center label with slider
+    NUIRect rowRect(offsetX + p.labelBounds.x - 6.0f,
+                    offsetY + p.labelBounds.y + 1.0f,
+                    LABEL_WIDTH + SLIDER_WIDTH + VALUE_WIDTH + PADDING * 3.0f + 12.0f,
+                    PARAMETER_HEIGHT - 2.0f);
+    renderer.fillRoundedRect(rowRect, 9.0f,
+        hovered || p.isDragging ? NUIColor(0.16f, 0.18f, 0.25f, 0.92f)
+                                : NUIColor(0.10f, 0.11f, 0.15f, 0.74f));
+    renderer.strokeRoundedRect(rowRect, 9.0f, 1.0f,
+        hovered || p.isDragging ? theme.getColor("accentPrimary").withAlpha(0.30f)
+                                : NUIColor(1.0f, 1.0f, 1.0f, 0.05f));
+
     float labelY = offsetY + p.sliderBounds.y + (p.sliderBounds.height * 0.5f) - 5.0f; 
     renderer.drawText(p.shortName, 
-                     {offsetX + p.labelBounds.x, labelY}, 
-                     11.0f, theme.getColor("textSecondary"));
-    
-    // 2. Slider Track (Thin Rail)
-    // Center the track vertically in the allocated slider area
-    float trackH = 4.0f; 
+                     {offsetX + p.labelBounds.x, labelY},
+                     11.0f, theme.getColor("textPrimary").withAlpha(0.90f));
+
+    float trackH = 8.0f; 
     float trackY = offsetY + p.sliderBounds.y + (p.sliderBounds.height - trackH) * 0.5f;
     NUIRect track(offsetX + p.sliderBounds.x, trackY, 
                   p.sliderBounds.width, trackH);
-    
-    // Track Background (Dark groove)
-    renderer.fillRoundedRect(track, 2.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.6f));
-    
-    // 3. Active Fill (Glowy)
+
+    renderer.fillRoundedRect(track, 3.0f, NUIColor(0.03f, 0.04f, 0.06f, 0.78f));
+
     float fillWidth = track.width * p.normalizedValue;
     if (fillWidth > 0) {
         NUIRect fillRect(track.x, track.y, fillWidth, track.height);
         NUIColor accent = theme.getColor("accentPrimary");
         
         if (hovered || p.isDragging) {
-            // Brighten on hover
-             renderer.fillRoundedRect(fillRect, 2.0f, accent);
-             // Subtle glow
+             renderer.fillRoundedRect(fillRect, 3.0f, accent.withAlpha(0.95f));
              renderer.fillRoundedRect({fillRect.x, fillRect.y - 1, fillRect.width, fillRect.height + 2}, 
-                                      3.0f, accent.withAlpha(0.3f));
+                                      4.0f, accent.withAlpha(0.22f));
         } else {
-            renderer.fillRoundedRect(fillRect, 2.0f, accent.withAlpha(0.8f));
+            renderer.fillRoundedRect(fillRect, 3.0f, accent.withAlpha(0.78f));
         }
     }
-    
-    // 4. Thumb (Circle/Capsule)
+
     float thumbSize = 12.0f;
     float thumbX = track.x + fillWidth - (thumbSize * 0.5f);
     float thumbY = track.center().y - (thumbSize * 0.5f);
-    
+    thumbX = std::clamp(thumbX, track.x - thumbSize * 0.5f, track.right() - thumbSize * 0.5f);
     NUIRect thumbRect(thumbX, thumbY, thumbSize, thumbSize);
-    
+
     if (hovered || p.isDragging) {
          renderer.fillRoundedRect(thumbRect, thumbSize * 0.5f, NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
-         // Ring around thumb
          renderer.strokeRoundedRect(thumbRect, thumbSize * 0.5f, 1.5f, theme.getColor("accentPrimary"));
     } else {
-         // Smaller dot when idle
          float idleSize = 8.0f;
          float offset = (thumbSize - idleSize) * 0.5f;
          NUIRect idleThumb = {thumbRect.x + offset, thumbRect.y + offset, idleSize, idleSize};
          renderer.fillRoundedRect(idleThumb, idleSize * 0.5f, NUIColor(0.9f, 0.9f, 0.9f, 0.9f));
     }
-    
-    // 5. Value Text (Right side, Bright)
+
     std::string valueStr = formatParameterValue(p);
-    // Align right? Or left of value box?
-    // Let's keep existing left-align for now but use brighter color
     renderer.drawText(valueStr, 
-                     {offsetX + p.valueBounds.x, labelY}, 
+                     {offsetX + p.valueBounds.x, labelY},
                      11.0f, theme.getColor("textPrimary"));
 }
 
@@ -235,14 +219,18 @@ bool GenericPluginEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
     
     auto bounds = getBounds();
+    const bool isDraggingParameter = std::any_of(
+        m_parameters.begin(), m_parameters.end(),
+        [](const ParameterWidget& p) { return p.isDragging; });
     
     // Close if clicked outside window
-    if (event.pressed && event.button == NUIMouseButton::Left && !bounds.contains(event.position)) {
+    if (event.pressed && event.button == NUIMouseButton::Left &&
+        !bounds.contains(event.position) && !m_isDraggingWindow && !isDraggingParameter) {
         if (m_onClose) m_onClose();
         return false;
     }
     
-    if (!bounds.contains(event.position)) {
+    if (!bounds.contains(event.position) && !m_isDraggingWindow && !isDraggingParameter) {
         return false;
     }
     

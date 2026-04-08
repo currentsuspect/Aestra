@@ -1,0 +1,76 @@
+# Memory Lab Book
+
+## Purpose
+
+This is the persistent memory system for the memory lab. It exists so that
+future sessions can pick up where the last one left off without re-reading
+entire session logs or re-discovering known facts.
+
+## Structure
+
+```
+labs/memory/
+├── program.md              — Constitution (scope, rules, gates)
+├── EVALS.md                — Eval documentation (build, lanes, thresholds)
+├── LAB_BOOK.md             — This file (entry point for lab memory)
+├── result_schema.json      — JSON schema for eval results
+├── run_eval.sh             — Eval runner script
+├── results/                — Generated eval outputs (gitignored)
+│   └── baseline.json
+├── sessions/               — Per-session logs (one file per session)
+└── findings/               — Durable knowledge, updated after each session
+    ├── accepted_patterns.md     — Optimizations that worked, why
+    ├── rejected_patterns.md     — Optimizations that failed, why
+    ├── invariants.md            — Things that must never break
+    └── bottlenecks.md           — Known performance characteristics
+```
+
+## Default Read Set
+
+When starting a new session, read **only** these files by default:
+
+1. `program.md` — rules, scope, acceptance logic
+2. `EVALS.md` — build commands, eval lanes, thresholds
+3. `LAB_BOOK.md` — this file (session summary, finding pointers)
+4. `findings/invariants.md` — things that must never break
+
+**Do NOT** load full session history by default. Only read session logs or
+findings files when the current work makes them relevant.
+
+## Session Discipline
+
+- Each session gets one log file in `sessions/`.
+- At session end, update findings files with durable knowledge.
+- Write findings, not hype. Only record what was actually observed.
+- Use `accepted_patterns.md` and `rejected_patterns.md` to guide future rounds.
+- Use `bottlenecks.md` to track what's still slow after accepted optimizations.
+
+## Selective Retrieval
+
+When a future agent needs context:
+
+1. Check `LAB_BOOK.md` first for the session summary.
+2. If a specific optimization is relevant, check `findings/accepted_patterns.md`.
+3. If a failure mode is relevant, check `findings/rejected_patterns.md`.
+4. Only read full session logs in `sessions/` when the above files don't
+   contain enough detail.
+
+## Session Summary
+
+| Session | Date | Rounds | Accepted | Rejected | Notes |
+|---------|------|--------|----------|----------|-------|
+| 001 | 2026-04-06 AM | 1 | 1 | 0 | Memory profiling enabled, wired at 3 sites. |
+| 002 | 2026-04-06 Late AM | 2 | 2 | 0 | AudioArena bump allocator, MemoryBenchmark with baselines. |
+| 003 | 2026-04-06 Late Late AM | 1 | 1 | 0 | SRC filter bank migrated to arena. |
+| 004 | 2026-04-06 Noon | 1 | 1 | 0 | Lock-free GarbageCollector (mutex → SPSC ring buffer). |
+| 005 | 2026-04-06 PM | 0 | 0 | 0 | RT scheduling research only. No code changes. Found bug: `pthread_setschedparam(pthread_self())` in `startStream()` sets UI thread priority, not audio thread. |
+
+## Current State
+
+- **Branch**: `develop`
+- **Last commit**: `memory-lab: update lab-book after session 004`
+- **Baselines**: Captured (`labs/memory/results/baseline.json`)
+- **Known issues**: Filter::resize still uses `make_unique` (poor arena fit).
+  Linux audio thread runs SCHED_OTHER, not SCHED_FIFO/RR — `startStream()`
+  sets priority on wrong thread (bug, but out of scope for memory lab).
+- **Next session**: Remaining allocation sites, or new lab for RT scheduling fix

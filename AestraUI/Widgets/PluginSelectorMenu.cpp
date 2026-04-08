@@ -6,6 +6,14 @@
 
 namespace AestraUI {
 
+namespace {
+constexpr float kMenuWidth = 292.0f;
+constexpr float kListInset = 6.0f;
+constexpr float kRowSpacing = 4.0f;
+constexpr float kItemHeight = 24.0f;
+constexpr float kRowPitch = kItemHeight + 10.0f;
+}
+
 PluginSelectorMenu::PluginSelectorMenu() {
     setId("PluginSelectorMenu");
     m_isSearchActive = true;
@@ -15,62 +23,63 @@ PluginSelectorMenu::PluginSelectorMenu() {
 void PluginSelectorMenu::onRender(NUIRenderer& renderer) {
     auto b = getBounds();
     auto& theme = NUIThemeManager::getInstance();
-    
-    // Background and border (Deep Void / Menu Style)
-    renderer.fillRect(b, theme.getColor("dropdown.background")); // Dark Glass
-    renderer.strokeRect(b, 1.0f, theme.getColor("border"));
 
-    // --- Search Bar Header ---
+    renderer.fillRoundedRect(b, 12.0f, NUIColor(0.08f, 0.09f, 0.13f, 0.985f));
+    renderer.strokeRoundedRect(b, 12.0f, 1.0f, theme.getColor("border").withAlpha(0.85f));
+
     NUIRect headerRect = {b.x, b.y, b.width, HEADER_H};
-    renderer.fillRect(headerRect, theme.getColor("surfaceRaised")); // Slightly lighter for header
-    
-    // Search Box Background
-    NUIRect searchBox = {b.x + 4, b.y + 4, b.width - 8, HEADER_H - 8};
-    renderer.fillRoundedRect(searchBox, 4.0f, theme.getColor("inputBackground"));
-    
+    renderer.fillRoundedRect({headerRect.x + 1.0f, headerRect.y + 1.0f, headerRect.width - 2.0f, headerRect.height},
+                             11.0f, NUIColor(0.17f, 0.19f, 0.27f, 0.92f));
+
+    NUIRect searchBox = {b.x + 8, b.y + 6, b.width - 16, HEADER_H - 12};
+    renderer.fillRoundedRect(searchBox, 7.0f, theme.getColor("inputBackground"));
     if (m_isSearchActive) {
-        renderer.strokeRoundedRect(searchBox, 4.0f, 1.0f, theme.getColor("accentPrimary"));
+        renderer.strokeRoundedRect(searchBox, 7.0f, 1.0f, theme.getColor("accentPrimary").withAlpha(0.8f));
+    } else {
+        renderer.strokeRoundedRect(searchBox, 7.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.06f));
     }
 
-    // Search Text
     std::string displayStr = m_searchQuery;
-    bool showCaret = m_isSearchActive && isFocused(); // Strict focus check for caret
-    
-    // DEBUG: Force visible color to rule out theme issues
-    NUIColor debugTextColor = theme.getColor("textPrimary");
+    bool showCaret = m_isSearchActive && isFocused();
     
     if (displayStr.empty() && !m_isSearchActive) {
-        renderer.drawText("Search...", {searchBox.x + 6, searchBox.y + 4}, 11.0f, theme.getColor("textDisabled"));
+        renderer.drawText("Search plugins...", {searchBox.x + 8, searchBox.y + 5}, 11.0f, theme.getColor("textDisabled"));
     } else {
-        renderer.drawText(displayStr + (showCaret ? "|" : ""), {searchBox.x + 6, searchBox.y + 4}, 11.0f, debugTextColor);
+        renderer.drawText(displayStr + (showCaret ? "|" : ""), {searchBox.x + 8, searchBox.y + 5}, 11.0f,
+                          theme.getColor("textPrimary"));
     }
 
-    // --- Plugin List ---
     const NUIColor textColor = theme.getColor("textPrimary");
-    const NUIColor hoverBg = theme.getColor("accentPrimary").withAlpha(0.2f);
-    
-    // Draw Separator
-    renderer.drawLine({b.x, b.y + HEADER_H}, {b.x + b.width, b.y + HEADER_H}, 1.0f, theme.getColor("border"));
+    const NUIColor hoverBg = theme.getColor("accentPrimary").withAlpha(0.16f);
+    const NUIColor rowBg = NUIColor(0.11f, 0.12f, 0.17f, 0.74f);
+    const NUIColor metaColor = theme.getColor("textSecondary").withAlpha(0.78f);
+    renderer.drawLine({b.x + 8.0f, b.y + HEADER_H}, {b.right() - 8.0f, b.y + HEADER_H}, 1.0f,
+                      theme.getColor("border").withAlpha(0.55f));
 
-    float y = b.y + HEADER_H;
+    float y = b.y + HEADER_H + 6.0f;
     
-    // Render filtered list
     for (size_t i = 0; i < m_filteredPlugins.size(); ++i) {
-        NUIRect itemRect = {b.x, y, b.width, ITEM_H};
-        
-        // Clip check
-        if (y + ITEM_H > b.bottom()) break;
+        NUIRect itemRect = {b.x + kListInset, y, b.width - kListInset * 2.0f, ITEM_H + 6.0f};
+        if (y + itemRect.height > b.bottom() - 6.0f) break;
 
+        renderer.fillRoundedRect(itemRect, 8.0f, m_hoveredIndex == static_cast<int>(i) ? hoverBg : rowBg);
         if (m_hoveredIndex == static_cast<int>(i)) {
-            renderer.fillRect(itemRect, hoverBg);
+            renderer.strokeRoundedRect(itemRect, 8.0f, 1.0f, theme.getColor("accentPrimary").withAlpha(0.34f));
+        } else {
+            renderer.strokeRoundedRect(itemRect, 8.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.04f));
         }
 
-        renderer.drawText(m_filteredPlugins[i].name, {itemRect.x + 8.0f, itemRect.y + 6.0f}, 11.0f, textColor);
-        y += ITEM_H;
+        renderer.drawText(m_filteredPlugins[i].name, {itemRect.x + 10.0f, itemRect.y + 6.0f}, 11.0f, textColor);
+        std::string meta = m_filteredPlugins[i].vendor;
+        if (!m_filteredPlugins[i].formatStr.empty()) {
+            meta += meta.empty() ? m_filteredPlugins[i].formatStr : " • " + m_filteredPlugins[i].formatStr;
+        }
+        renderer.drawText(meta, {itemRect.x + 10.0f, itemRect.y + 19.0f}, 8.5f, metaColor);
+        y += itemRect.height + kRowSpacing;
     }
     
     if (m_filteredPlugins.empty()) {
-       renderer.drawText("No results", {b.x + 8.0f, y + 6.0f}, 11.0f, theme.getColor("textDisabled"));
+       renderer.drawText("No matching plugins", {b.x + 12.0f, y + 8.0f}, 11.0f, theme.getColor("textDisabled"));
     }
 }
 
@@ -98,7 +107,8 @@ bool PluginSelectorMenu::onMouseEvent(const NUIMouseEvent& event) {
         }
 
         // List Interaction
-        int index = static_cast<int>((relY - HEADER_H) / ITEM_H);
+        float listY = relY - HEADER_H - 6.0f;
+        int index = listY >= 0.0f ? static_cast<int>(listY / kRowPitch) : -1;
         
         if (index >= 0 && index < static_cast<int>(m_filteredPlugins.size())) {
             if (m_hoveredIndex != index) {
@@ -216,9 +226,9 @@ void PluginSelectorMenu::updateFilter() {
     m_hoveredIndex = m_filteredPlugins.empty() ? -1 : 0; // Auto-select first result
 
     // Adjust size based on filtered content + Header
-    float listH = m_filteredPlugins.empty() ? ITEM_H : (m_filteredPlugins.size() * ITEM_H);
-    float h = std::min(MAX_H, listH + HEADER_H);
-    setSize(200.0f, h + 4.0f); // + padding
+    float listH = m_filteredPlugins.empty() ? (ITEM_H + 12.0f) : (m_filteredPlugins.size() * kRowPitch);
+    float h = std::min(MAX_H, listH + HEADER_H + 12.0f);
+    setSize(kMenuWidth, h + 8.0f);
     repaint();
 }
 

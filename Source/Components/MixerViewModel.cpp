@@ -91,6 +91,15 @@ void MixerViewModel::updateInputDiagnostics(const Audio::TrackManager& trackMana
 
 void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                                      const Audio::ChannelSlotMap& slotMap) {
+    auto continuousParams = trackManager.getContinuousParams();
+
+    if (m_master && continuousParams) {
+        continuousParams->read(Audio::ChannelSlotMap::MASTER_SLOT_INDEX,
+                               m_master->faderGainDb,
+                               m_master->pan,
+                               m_master->trimDb);
+    }
+
     // Build set of current track IDs for quick lookup
     std::unordered_map<uint32_t, size_t> existingIds;
     
@@ -160,6 +169,10 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             existing->fxCount = info.fxCount;
             if (auto* mc = info.channel) {
                 existing->inputChannelIndex = mc->getInputChannelIndex();
+                existing->width = mc->getWidth();
+            }
+            if (continuousParams && info.slot != Audio::ChannelSlotMap::INVALID_SLOT) {
+                continuousParams->read(info.slot, existing->faderGainDb, existing->pan, existing->trimDb);
             }
             newChannels.push_back(std::move(existing));
         } else {
@@ -177,6 +190,10 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             channel->fxCount = info.fxCount;
             if (auto* mc = info.channel) {
                 channel->inputChannelIndex = mc->getInputChannelIndex();
+                channel->width = mc->getWidth();
+            }
+            if (continuousParams && info.slot != Audio::ChannelSlotMap::INVALID_SLOT) {
+                continuousParams->read(info.slot, channel->faderGainDb, channel->pan, channel->trimDb);
             }
             newChannels.push_back(std::move(channel));
         }

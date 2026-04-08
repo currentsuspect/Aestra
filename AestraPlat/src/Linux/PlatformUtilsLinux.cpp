@@ -67,7 +67,19 @@ void PlatformUtilsLinux::sleep(int milliseconds) const {
 }
 
 std::string PlatformUtilsLinux::openFileDialog(const std::string& title, const std::string& filter) const {
-    std::cerr << "Linux File Dialog not fully implemented. Returning empty string." << std::endl;
+    const std::string escapedTitle = shellEscape(title.empty() ? "Open File" : title);
+
+    std::string path = runDialogCommand(
+        "command -v zenity >/dev/null 2>&1 && zenity --file-selection --title=" + escapedTitle);
+    if (!path.empty()) return path;
+
+    path = runDialogCommand(
+        "command -v qarma >/dev/null 2>&1 && qarma --file-selection --title=" + escapedTitle);
+    if (!path.empty()) return path;
+
+    path = runDialogCommand("command -v kdialog >/dev/null 2>&1 && kdialog --getopenfilename ~");
+    if (!path.empty()) return path;
+
     return "";
 }
 

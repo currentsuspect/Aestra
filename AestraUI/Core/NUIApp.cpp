@@ -247,18 +247,18 @@ void NUIApp::handleMouseEvent(const NUIMouseEvent& event) {
 void NUIApp::handleKeyEvent(const NUIKeyEvent& event) {
     // Signal activity to adaptive FPS system
     adaptiveFPS_.signalActivity(NUIAdaptiveFPS::ActivityType::KeyPress);
-    
-    // Dispatch to focused component
-    // Use global focus registry as source of truth
+
+    // Let the root component arbitrate key routing first so app-level shortcuts
+    // can stay authoritative before focused widgets get a chance to consume them.
+    if (rootComponent_ && rootComponent_->onKeyEvent(event)) {
+        return;
+    }
+
+    // Fallback to focused component only if the root did not handle the event.
     if (auto* focused = NUIComponent::getFocusedComponent()) {
-        // Aestra::Log::info("[NUIApp] Dispatching key " + std::to_string(static_cast<int>(event.keyCode)) + " to " + focused->getId());
         focused->onKeyEvent(event);
     } else if (focusedComponent_) {
-        // Fallback to locally tracked component if global is null (unlikely but safe)
-        // Aestra::Log::info("[NUIApp] Fallback dispatch to " + focusedComponent_->getId());
         focusedComponent_->onKeyEvent(event);
-    } else {
-        // Aestra::Log::info("[NUIApp] No focused component for key " + std::to_string(static_cast<int>(event.keyCode)));
     }
 }
 

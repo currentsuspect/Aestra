@@ -133,6 +133,14 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/GenericPluginEditor.cpp
     Widgets/RumblePluginEditor.h
     Widgets/RumblePluginEditor.cpp
+    Widgets/AestraEQEditor.h
+    Widgets/AestraEQEditor.cpp
+    Widgets/AestraCompEditor.h
+    Widgets/AestraCompEditor.cpp
+    Widgets/AestraVerbEditor.h
+    Widgets/AestraVerbEditor.cpp
+    Widgets/AestraDelayEditor.h
+    Widgets/AestraDelayEditor.cpp
 )
 
 set(AESTRAUI_GRAPHICS_SOURCES

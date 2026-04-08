@@ -42,6 +42,7 @@ public:
     void onUpdate(double deltaTime) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    uint32_t getChannelId() const { return m_channelId; }
 
     // Request opening the inspector on the Inserts tab for this channel.
     std::function<void(uint32_t channelId)> onFXClicked;

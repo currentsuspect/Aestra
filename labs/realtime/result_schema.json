@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Realtime Lab Eval Result",
+  "description": "Schema for a single realtime lab eval run result",
+  "type": "object",
+  "required": ["run_id", "timestamp", "git", "lanes", "decision"],
+  "properties": {
+    "run_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "git": {
+      "type": "object",
+      "required": ["commit", "branch", "dirty"],
+      "properties": {
+        "commit": { "type": "string" },
+        "branch": { "type": "string" },
+        "dirty": { "type": "boolean" }
+      }
+    },
+    "lanes": {
+      "type": "object",
+      "required": ["core_tests", "resampler_tests", "realtime_scheduling", "offline_parity"],
+      "properties": {
+        "core_tests": {
+          "type": "object",
+          "required": ["exit_code"],
+          "properties": {
+            "exit_code": { "type": "integer" },
+            "passed": { "type": "integer" },
+            "failed": { "type": "integer" },
+            "total": { "type": "integer" }
+          }
+        },
+        "resampler_tests": {
+          "type": "object",
+          "required": ["exit_code"],
+          "properties": {
+            "exit_code": { "type": "integer" },
+            "passed": { "type": "integer" },
+            "failed": { "type": "integer" },
+            "total": { "type": "integer" }
+          }
+        },
+        "realtime_scheduling": {
+          "type": "object",
+          "required": ["exit_code"],
+          "properties": {
+            "exit_code": { "type": "integer" },
+            "policy": { "type": "string", "description": "SCHED_FIFO, SCHED_RR, or SCHED_OTHER" },
+            "priority": { "type": "integer" },
+            "mlockall": { "type": "boolean" },
+            "tests_passed": { "type": "boolean" }
+          }
+        },
+        "offline_parity": {
+          "type": "object",
+          "required": ["exit_code"],
+          "properties": {
+            "exit_code": { "type": "integer" },
+            "passed": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["status", "reason"],
+      "properties": {
+        "status": { "type": "string", "enum": ["accept", "reject", "inconclusive"] },
+        "reason": { "type": "string" },
+        "hard_gate_failures": { "type": "array", "items": { "type": "string" } },
+        "advisory_flags": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

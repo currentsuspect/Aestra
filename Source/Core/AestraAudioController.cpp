@@ -101,7 +101,11 @@ bool looksLikeMonitorInput(const std::string& name) {
     std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) {
         return static_cast<char>(std::tolower(c));
     });
-    return lowered.find("monitor") != std::string::npos || lowered.find("loopback") != std::string::npos;
+    return lowered.find("monitor") != std::string::npos ||
+           lowered.find("loopback") != std::string::npos ||
+           lowered.find("what u hear") != std::string::npos ||
+           lowered.find("stereo mix") != std::string::npos ||
+           lowered.find("wasapi") != std::string::npos;
 }
 
 const AudioDeviceInfo* choosePreferredInputDevice(const std::vector<AudioDeviceInfo>& devices, int savedId) {

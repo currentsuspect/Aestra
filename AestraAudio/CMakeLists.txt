@@ -265,6 +265,7 @@ endif()
 set(AESTRA_AUDIO_CORE_HEADERS
     include/Core/AudioGraphBuilder.h
     include/Core/AudioEngine.h
+    include/Core/MasterSafetyLimiter.h
     include/Core/AudioCommandQueue.h
     include/Core/AudioTelemetry.h
     include/Core/AudioGraph.h
@@ -343,6 +344,10 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Plugin/BuiltInPlugins.h
     include/Plugin/EffectChain.h
     include/Plugin/VST3Host.h
+    include/Plugin/AestraEQ.h
+    include/Plugin/AestraComp.h
+    include/Plugin/AestraVerb.h
+    include/Plugin/AestraDelay.h
     include/Playback/AuditionEngine.h
 )
 
