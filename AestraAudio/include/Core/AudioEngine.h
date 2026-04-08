@@ -9,6 +9,7 @@
 #include "ContinuousParamBuffer.h"
 #include "EngineState.h"
 #include "Interpolators.h"
+#include "MasterSafetyLimiter.h"
 #include "MeterSnapshot.h"
 #include "PluginHost.h" // For MidiBuffer [NEW]
 
@@ -170,12 +171,12 @@ public:
     float getMasterGain() const { return m_masterGainTarget.load(std::memory_order_relaxed); }
     /** @brief Set global output headroom in decibels. */
     void setHeadroom(float db) { m_headroomLinear.store(std::pow(10.0f, db / 20.0f), std::memory_order_relaxed); }
-    /** @brief Enable or disable master safety processing. */
-    void setSafetyProcessingEnabled(bool enabled) {
-        m_safetyProcessingEnabled.store(enabled, std::memory_order_relaxed);
+    /** @brief Enable or disable the master safety limiter. Default: off. */
+    void setSafetyLimiterEnabled(bool enabled) {
+        m_safetyLimiterEnabled.store(enabled, std::memory_order_relaxed);
     }
-    /** @brief Check whether master safety processing is enabled. */
-    bool isSafetyProcessingEnabled() const { return m_safetyProcessingEnabled.load(std::memory_order_relaxed); }
+    /** @brief Check whether the master safety limiter is enabled. */
+    bool isSafetyLimiterEnabled() const { return m_safetyLimiterEnabled.load(std::memory_order_relaxed); }
 
     /** @brief Enable or disable the metronome. */
     void setMetronomeEnabled(bool enabled) { m_metronomeEngine.setEnabled(enabled); }
@@ -548,9 +549,8 @@ private:
     std::atomic<float> m_masterGainTarget{1.0f};
     std::atomic<float> m_headroomLinear{1.0f}; // 0dB headroom (standard DAW behavior)
     SmoothedParamD m_smoothedMasterGain;
-    DCBlockerD m_dcBlockerL;
-    DCBlockerD m_dcBlockerR;
-    std::atomic<bool> m_safetyProcessingEnabled{false};
+    MasterSafetyLimiter m_safetyLimiter;
+    std::atomic<bool> m_safetyLimiterEnabled{false};
 
     // Peak detection
     std::atomic<float> m_peakL{0.0f};

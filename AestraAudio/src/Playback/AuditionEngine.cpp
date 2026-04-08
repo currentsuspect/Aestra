@@ -285,18 +285,12 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
     std::fill(output, output + numFrames * numChannels, 0.0f);
 
     if (!m_isPlaying.load() || !m_currentSource) {
-        static int debugCounter = 0;
-        if (++debugCounter % 1000 == 0) {
-            Log::info("[AuditionEngine::processBlock] SKIP: isPlaying=" + std::to_string(m_isPlaying.load()) +
-                      " hasSource=" + std::to_string(m_currentSource != nullptr));
-        }
         return;
     }
 
     // Read from source
     const auto* srcBuffer = m_currentSource->getRawBuffer();
     if (!srcBuffer || !srcBuffer->isValid()) {
-        Log::warning("[AuditionEngine::processBlock] SKIP: srcBuffer invalid");
         return;
     }
 
@@ -305,8 +299,6 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
 
     // Safety check for rates
     if (srcRate <= 0.0 || dstRate <= 0.0) {
-        Log::warning("[AuditionEngine::processBlock] SKIP: srcRate=" + std::to_string(srcRate) +
-                     " dstRate=" + std::to_string(dstRate));
         return;
     }
 

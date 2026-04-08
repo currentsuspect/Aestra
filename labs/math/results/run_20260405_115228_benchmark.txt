@@ -1,0 +1,115 @@
+
+==================================
+  AestraCore Math Benchmark
+==================================
+
+[1/6] Vector3 arithmetic... done (1000000 samples)
+  median=29ns p95=31ns p99=40ns xruns=71 missed=769
+
+[2/6] Vector3 normalization... done (500000 samples)
+  median=30ns p95=38ns p99=42ns xruns=57 missed=398
+
+[3/6] Matrix4x4 multiplication... done (100000 samples)
+  median=30ns p95=30ns p99=31ns xruns=2 missed=1
+
+[4/6] Matrix-vector transform... done (500000 samples)
+  median=30ns p95=36ns p99=41ns xruns=56 missed=409
+
+[5/6] DSP math (scalar)... done (1000000 samples)
+  median=66ns p95=69ns p99=78ns xruns=34 missed=45
+
+[6/6] Batch transform (1000 vectors)... done (10000 samples)
+  median=4537ns p95=4656ns p99=5053ns xruns=1 missed=0
+
+==================================
+  JSON Output
+==================================
+{
+  "total_duration_ms": 374,
+    "vector3_arithmetic_ns": {
+      "samples": 1000000,
+      "median_ns": 29,
+      "p95_ns": 31,
+      "p99_ns": 40,
+      "min_ns": 15,
+      "max_ns": 58625,
+      "mean_ns": 26.3,
+      "stddev_ns": 110.2,
+      "xruns": 71,
+      "missed_deadlines": 769,
+      "deadline_ns": 100
+    },
+    "vector3_normalization_ns": {
+      "samples": 500000,
+      "median_ns": 30,
+      "p95_ns": 38,
+      "p99_ns": 42,
+      "min_ns": 15,
+      "max_ns": 15043,
+      "mean_ns": 26.9,
+      "stddev_ns": 35.0,
+      "xruns": 57,
+      "missed_deadlines": 398,
+      "deadline_ns": 200
+    },
+    "matrix_multiplication_ns": {
+      "samples": 100000,
+      "median_ns": 30,
+      "p95_ns": 30,
+      "p99_ns": 31,
+      "min_ns": 16,
+      "max_ns": 19675,
+      "mean_ns": 25.7,
+      "stddev_ns": 62.5,
+      "xruns": 2,
+      "missed_deadlines": 1,
+      "deadline_ns": 500
+    },
+    "matrix_vector_transform_ns": {
+      "samples": 500000,
+      "median_ns": 30,
+      "p95_ns": 36,
+      "p99_ns": 41,
+      "min_ns": 15,
+      "max_ns": 43586,
+      "mean_ns": 26.9,
+      "stddev_ns": 80.5,
+      "xruns": 56,
+      "missed_deadlines": 409,
+      "deadline_ns": 200
+    },
+    "dsp_math_scalar_ns": {
+      "samples": 1000000,
+      "median_ns": 66,
+      "p95_ns": 69,
+      "p99_ns": 78,
+      "min_ns": 52,
+      "max_ns": 131461,
+      "mean_ns": 62.9,
+      "stddev_ns": 164.6,
+      "xruns": 34,
+      "missed_deadlines": 45,
+      "deadline_ns": 500
+    },
+    "batch_transform_1000_ns": {
+      "samples": 10000,
+      "median_ns": 4537,
+      "p95_ns": 4656,
+      "p99_ns": 5053,
+      "min_ns": 4531,
+      "max_ns": 46143,
+      "mean_ns": 4597.9,
+      "stddev_ns": 794.0,
+      "xruns": 1,
+      "missed_deadlines": 0,
+      "deadline_ns": 50000
+    }
+}
+
+==================================
+  Benchmark Verdict
+==================================
+  Total samples: 3110000
+  Total XRUNs: 221 (0.007%)
+  Total missed deadlines: 1622 (0.052%)
+  ✓ All benchmarks within thresholds

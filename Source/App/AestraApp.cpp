@@ -2,6 +2,7 @@
 #include "AestraApp.h"
 #include "AppLifecycle.h"
 #include "ServiceLocator.h"
+#include "AestraRootComponent.h"
 #include "AudioThreadConstraints.h"
 #include "Preferences.h"
 #include "UIState.h"
@@ -256,23 +257,17 @@ bool AestraApp::initialize(const std::string& projectPath) {
         });
 
         menu->addItem("Open Project...", [this]() {
-            // TODO: Implement proper file browser integration
-            Log::info("Open Project - Not yet fully implemented");
-            // When FileBrowser has openProjectDialog:
-            // if (m_content && m_content->getFileBrowser()) {
-            //     m_content->getFileBrowser()->openProjectDialog([this](const std::string& path) {
-            //         if (!path.empty() && std::filesystem::exists(path)) {
-            //             m_projectPath = path;
-            //             auto result = loadProject();
-            //             if (result.ok) {
-            //                 if (result.ui) applyUIState(*result.ui);
-            //                 Log::info("Project loaded: " + path);
-            //             } else {
-            //                 Log::error("Failed to load project: " + path);
-            //             }
-            //         }
-            //     });
-            // }
+            if (auto* utils = Aestra::Platform::getUtils()) {
+                const std::string filter = std::string("Aestra Project\0*.aes\0All Files\0*.*\0",
+                                                       sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
+                const std::string pickedPath = utils->openFileDialog("Open Project", filter);
+                if (!pickedPath.empty() && std::filesystem::exists(pickedPath)) {
+                    auto result = loadProjectFromPath(pickedPath);
+                    if (!result.ok) {
+                        Log::error("Failed to load project: " + pickedPath + " (" + result.errorMessage + ")");
+                    }
+                }
+            }
         });
 
         menu->addSeparator();
@@ -282,19 +277,45 @@ bool AestraApp::initialize(const std::string& projectPath) {
         });
 
         menu->addItem("Save As...", [this]() {
-            // TODO: Implement proper file browser integration
-            Log::info("Save As - Not yet fully implemented");
-            // When FileBrowser has saveProjectDialog:
-            // if (m_content && m_content->getFileBrowser()) {
-            //     m_content->getFileBrowser()->saveProjectDialog([this](const std::string& path) {
-            //         if (!path.empty()) {
-            //             m_projectPath = path;
-            //             saveProject();
-            //             Log::info("Project saved as: " + path);
-            //         }
-            //     });
-            // }
+            if (auto* utils = Aestra::Platform::getUtils()) {
+                Aestra::IPlatformUtils::SaveFileDialogOptions options;
+                options.title = "Save Project As";
+                options.filter = std::string("Aestra Project\0*.aes\0All Files\0*.*\0",
+                                             sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
+                options.defaultPath = m_projectPath.empty() ? getAutosavePath() : m_projectPath;
+                options.defaultExtension = "aes";
+                const std::string pickedPath = utils->saveFileDialog(options);
+                if (!pickedPath.empty()) {
+                    m_projectPath = pickedPath;
+                    if (saveProject()) {
+                        Log::info("Project saved as: " + pickedPath);
+                    }
+                }
+            }
         });
+
+        auto historyMenu = std::make_shared<AestraUI::NUIContextMenu>();
+        const auto historyEntries = ProjectSerializer::listHistory(m_projectPath);
+        if (historyEntries.empty()) {
+            auto emptyItem = std::make_shared<AestraUI::NUIContextMenuItem>("No Save History");
+            emptyItem->setEnabled(false);
+            historyMenu->addItem(emptyItem);
+        } else {
+            size_t count = 0;
+            for (const auto& entry : historyEntries) {
+                if (count++ >= 10) {
+                    break;
+                }
+                historyMenu->addItem(entry.label, [this, snapshotPath = entry.path]() {
+                    auto result = loadProjectFromPath(snapshotPath, m_projectPath);
+                    if (!result.ok) {
+                        Log::error("Failed to restore snapshot: " + snapshotPath + " (" + result.errorMessage + ")");
+                    }
+                });
+            }
+        }
+
+        menu->addSubmenu("Project History", historyMenu);
 
         menu->addSeparator();
 
@@ -313,7 +334,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
         menu->addSeparator();
 
         menu->addItem("Exit", [this]() {
-            m_running = false;
+            requestClose();
         });
 
         m_windowManager->showDropdownMenu(menu, 10.0f);
@@ -582,6 +603,7 @@ void AestraApp::connectAudioToUI() {
             auto meterBuffer = std::make_shared<Audio::MeterSnapshotBuffer>();
             m_audioController->getEngine()->setMeterSnapshots(meterBuffer);
             m_content->getTrackManager()->setMeterSnapshots(meterBuffer);
+            m_audioController->getEngine()->setContinuousParams(m_content->getTrackManager()->getContinuousParams());
 
             auto slotMap = m_content->getTrackManager()->getChannelSlotMapShared();
             if (slotMap) {
@@ -635,53 +657,17 @@ void AestraApp::setupCallbacks() {
     });
 
     m_windowManager->setTransportCallback([this](AestraWindowManager::TransportAction action) {
-        if (!m_audioController || !m_audioController->getEngine()) return;
-        auto engine = m_audioController->getEngine();
+        if (!m_content) return;
         using Action = AestraWindowManager::TransportAction;
 
         if (action == Action::Play) {
-            if (m_content) {
-                if (m_content->getViewFocus() == ViewFocus::Arsenal) {
-                    m_content->playFromCurrentFocus();
-                } else {
-                    if (m_content->getTrackManager()) {
-                        m_content->getTrackManager()->play();
-                    }
-                    engine->setTransportPlaying(true);
-                }
-            }
+            m_content->requestTransportPlay();
         }
         else if (action == Action::Pause) {
-             if (m_content) {
-                 if (m_content->getViewFocus() == ViewFocus::Arsenal) {
-                     m_content->pauseFromCurrentFocus();
-                 } else {
-                     if (m_content->getTrackManager()) {
-                         m_content->getTrackManager()->pause();
-                     }
-                     engine->setTransportPlaying(false);
-                 }
-             }
+            m_content->pauseFromCurrentFocus();
         }
         else if (action == Action::Stop) {
-             if (m_content && m_content->getTrackManager()) {
-                 auto trackMgr = m_content->getTrackManager();
-
-                 // [FIX] If in pattern mode, we want to stay in pattern mode on stop
-                 if (m_content->getViewFocus() == ViewFocus::Arsenal || trackMgr->isPatternMode()) {
-                     m_content->stopFromCurrentFocus(true);
-                     Log::info("[Arsenal] Global Stop (keeping mode)");
-                 } else {
-                     double playStartPos = trackMgr->getPlayStartPosition();
-                     double sr = engine->getSampleRate();
-                     uint64_t samplePos = static_cast<uint64_t>(playStartPos * sr);
-
-                     trackMgr->stop();
-                     engine->setGlobalSamplePos(samplePos);
-                     trackMgr->setPosition(playStartPos);
-                     engine->setTransportPlaying(false);
-                 }
-             }
+            m_content->stopFromCurrentFocus(false);
         }
     });
 
@@ -709,14 +695,15 @@ void AestraApp::run() {
                     double scrubPos = tm->getPosition();
                     uint32_t sr = engine->getSampleRate();
                     if (sr > 0) engine->setGlobalSamplePos(static_cast<uint64_t>(scrubPos * sr));
-                } else if (engine->isTransportPlaying()) {
+                } else if (engine->isTransportPlaying() && tm->isPlaying()) {
                     double realTime = engine->getPositionSeconds();
                     tm->syncPositionFromEngine(realTime);
                 }
 
                 if (m_content->getTransportBar()) {
-                   m_content->getTransportBar()->setPosition(tm->getPosition());
-                   // Sync play state...
+                   auto* transportBar = m_content->getTransportBar();
+                   transportBar->setPosition(tm->getPosition());
+                   transportBar->syncTransportState(tm->isPlaying(), tm->isPaused(), tm->isRecordArmed());
                 }
                 updateWindowTitle();
             }
@@ -726,7 +713,10 @@ void AestraApp::run() {
                 m_content->getTrackManager()->consumeGraphDirty()) {
                     auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), m_audioController->getSampleRate());
                     m_audioController->getEngine()->setGraph(graph);
-                    // Sync slot map...
+                    if (auto slotMap = m_content->getTrackManager()->getChannelSlotMapShared()) {
+                        m_audioController->getEngine()->setChannelSlotMap(slotMap);
+                    }
+                    m_audioController->getEngine()->setContinuousParams(m_content->getTrackManager()->getContinuousParams());
                     m_content->getTrackManager()->rebuildAndPushSnapshot();
             }
         }
@@ -856,34 +846,178 @@ void AestraApp::shutdown() {
 
 // Project Helpers
 void AestraApp::requestClose() {
-    // Show confirmation dialog via WindowManager
-    if (m_content && m_content->getTrackManager() && m_content->getTrackManager()->isModified()) {
-        // ... show dialog ...
-    } else {
+    auto trackManager = m_content ? m_content->getTrackManager() : nullptr;
+    if (!trackManager || !trackManager->isModified()) {
         m_running = false;
+        return;
     }
+
+    if (!m_windowManager) {
+        return;
+    }
+
+    auto dialog = m_windowManager->getConfirmationDialog();
+    if (!dialog) {
+        return;
+    }
+
+    if (auto* root = m_windowManager->getRootComponent()) {
+        dialog->setBounds(root->getBounds());
+    }
+
+    dialog->show("Unsaved Changes",
+                 "You have unsaved changes. Save before closing?",
+                 [this](Aestra::DialogResponse response) {
+                     switch (response) {
+                     case Aestra::DialogResponse::Save:
+                         if (saveProject()) {
+                             m_running = false;
+                         }
+                         break;
+                     case Aestra::DialogResponse::DontSave:
+                         m_running = false;
+                         break;
+                     case Aestra::DialogResponse::Cancel:
+                     case Aestra::DialogResponse::None:
+                     default:
+                         break;
+                     }
+                 });
 }
 
 void AestraApp::saveCurrentProject() {
     saveProject();
 }
 
+ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& path, const std::string& activeProjectPathOverride) {
+    ProjectSerializer::LoadResult result;
+    if (path.empty()) {
+        result.errorMessage = "Project path is empty";
+        return result;
+    }
+
+    const std::string previousProjectPath = m_projectPath;
+    m_projectPath = activeProjectPathOverride.empty() ? path : activeProjectPathOverride;
+
+    result = ProjectSerializer::load(path, m_content ? m_content->getTrackManager() : nullptr);
+    if (!result.ok) {
+        m_projectPath = previousProjectPath;
+        Log::error("Failed to load project: " + path + " (" + result.errorMessage + ")");
+        return result;
+    }
+
+    if (m_audioController && m_audioController->getEngine()) {
+        auto* engine = m_audioController->getEngine();
+        engine->setTransportPlaying(false);
+        engine->setBPM(static_cast<float>(result.tempo));
+        const double sampleRate = std::max(1.0, static_cast<double>(engine->getSampleRate()));
+        engine->setGlobalSamplePos(static_cast<uint64_t>(std::max(0.0, result.playhead) * sampleRate));
+    }
+
+    if (m_content) {
+        if (auto trackManager = m_content->getTrackManager()) {
+            trackManager->setPosition(result.playhead);
+            trackManager->setPlayStartPosition(result.playhead);
+            trackManager->setModified(false);
+        }
+
+        if (auto transportBar = m_content->getTransportBar()) {
+            transportBar->setTempo(static_cast<float>(result.tempo));
+            transportBar->setPosition(result.playhead);
+        }
+
+        m_content->refreshProjectViews();
+    }
+
+    if (m_audioController && m_audioController->getEngine() && m_content && m_content->getTrackManager()) {
+        auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(),
+                                                              m_audioController->getSampleRate());
+        m_audioController->getEngine()->setGraph(graph);
+        m_content->getTrackManager()->rebuildAndPushSnapshot();
+    }
+
+    syncRecordingProjectPath(m_content, m_projectPath);
+    if (result.ui) {
+        applyUIState(*result.ui);
+    }
+    updateWindowTitle();
+    Log::info("Project loaded into app state from " + path);
+    return result;
+}
+
 ProjectSerializer::LoadResult AestraApp::loadProject() {
-    // ...
-    return {};
+    ProjectSerializer::LoadResult result;
+
+    if (!m_content || !m_content->getTrackManager()) {
+        result.errorMessage = "No active project context";
+        return result;
+    }
+
+    if (m_projectPath.empty()) {
+        result.errorMessage = "Project path is empty";
+        return result;
+    }
+
+    return loadProjectFromPath(m_projectPath);
 }
 
 bool AestraApp::saveProject() {
-    // ...
-    return false;
+    if (!m_content || !m_content->getTrackManager()) {
+        Log::warning("Cannot save project without an active TrackManager");
+        return false;
+    }
+
+    if (m_projectPath.empty()) {
+        m_projectPath = getAutosavePath();
+    }
+
+    const double tempo = (m_audioController && m_audioController->getEngine())
+        ? static_cast<double>(m_audioController->getEngine()->getBPM())
+        : (m_content->getTransportBar() ? static_cast<double>(m_content->getTransportBar()->getTempo()) : 120.0);
+    const double playhead = m_content->getTrackManager()->getPosition();
+    const auto uiState = captureUIState();
+
+    const bool ok = ProjectSerializer::save(m_projectPath,
+                                            m_content->getTrackManager(),
+                                            tempo,
+                                            playhead,
+                                            &uiState);
+    if (ok) {
+        m_content->getTrackManager()->setModified(false);
+        syncRecordingProjectPath(m_content, m_projectPath);
+        updateWindowTitle();
+    }
+    return ok;
 }
 
 ProjectSerializer::UIState AestraApp::captureUIState() const {
-    return {};
+    ProjectSerializer::UIState state;
+
+    if (m_windowManager) {
+        if (auto settingsDialog = m_windowManager->getSettingsDialog()) {
+            state.settingsDialogVisible = settingsDialog->isVisible();
+            state.settingsDialogActivePage = settingsDialog->getActivePageID();
+        }
+    }
+
+    return state;
 }
 
 void AestraApp::applyUIState(const ProjectSerializer::UIState& state) {
-    // ...
+    if (!m_windowManager) {
+        return;
+    }
+
+    if (auto settingsDialog = m_windowManager->getSettingsDialog()) {
+        if (!state.settingsDialogActivePage.empty()) {
+            settingsDialog->setActivePage(state.settingsDialogActivePage);
+        }
+        if (state.settingsDialogVisible) {
+            settingsDialog->show();
+        } else {
+            settingsDialog->hide();
+        }
+    }
 }
 
 void AestraApp::updateWindowTitle() {

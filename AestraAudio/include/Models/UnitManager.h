@@ -191,6 +191,12 @@ private:
     UnitID nextId{1};
     std::unordered_map<UnitID, UnitInfo> m_units;
     std::vector<UnitID> m_unitOrder;
+    std::atomic<double> m_sampleRate{48000.0};
+    std::atomic<uint32_t> m_blockSize{512};
+
+public:
+    void setSampleRate(double rate) { m_sampleRate.store(rate, std::memory_order_relaxed); }
+    void setBlockSize(uint32_t size) { m_blockSize.store(size, std::memory_order_relaxed); }
 };
 
 } // namespace Audio

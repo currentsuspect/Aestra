@@ -149,6 +149,14 @@ public:
             fn(*pattern);
     }
 
+    /**
+     * @brief Clear all stored patterns and reset ID allocation.
+     */
+    void clear() {
+        m_patterns.clear();
+        nextId = 1;
+    }
+
 private:
     uint64_t nextId{1};
     std::unordered_map<uint64_t, std::unique_ptr<PatternSource>> m_patterns;

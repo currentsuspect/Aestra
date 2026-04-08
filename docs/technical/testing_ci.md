@@ -79,6 +79,16 @@ These are built by default but not registered in CTest unless `AESTRA_ENABLE_RUN
 
 ## Offline export parity coverage
 
+This validates that the exporter produces bit-correlated output matching the engine's live playback path:
+
+- `OfflineRenderRegressionTest`
+
+This test is now included in the confidence suite and can be run locally via:
+
+```bash
+./build-dev/Tests/Headless/OfflineRenderRegressionTest
+```
+
 `OfflineRenderRegressionTest` is now a self-contained headless parity test. It does not rely on a checked-in golden WAV; instead it compares `AudioExporter` output against a direct engine reference render in-process.
 
 Typical local run:

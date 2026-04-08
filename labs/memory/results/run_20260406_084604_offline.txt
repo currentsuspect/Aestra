@@ -1,0 +1,12 @@
+[11:46:08] [INFO]  MixerChannel created: Parity Track (ID: 1)
+[11:46:08] [INFO]  MixerChannel created: Parity Track (ID: 1)
+[11:46:08] [INFO]  [AudioEngine] Created (Original Ctor). Ptr: 140731914605184
+[11:46:09] [INFO]  [AudioEngine] Initialized for headless rendering.
+[11:46:09] [INFO]  [AudioEngine] Created (Original Ctor). Ptr: 140731914650560
+[11:46:09] [INFO]  [AudioEngine] Initialized for headless rendering.
+[11:46:09] [INFO]  [Export] Starting render: /tmp/aestra_offline_export_parity/offline_export.wav
+[11:46:09] [INFO]  [Export] Duration: 4.000000 beats (2.000000s), SampleRate: 48000, BitDepth: 32-bit Float
+[11:46:09] [INFO]  [Export] Render complete: 96000 frames, peak: -11.748333 dB
+Offline export parity OK. peak=0.258573 correlation=0.997787 rmsDiffDb=-44.9849
+[11:46:09] [INFO]  MixerChannel destroyed: Parity Track
+[11:46:09] [INFO]  MixerChannel destroyed: Parity Track

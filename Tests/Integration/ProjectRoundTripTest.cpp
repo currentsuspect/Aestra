@@ -123,6 +123,8 @@ int main() {
 
     PlaylistLaneID laneId = playlist1.createLane("Lane 1");
     require(laneId.isValid(), "Failed to create lane");
+    auto* channel1 = tm1->addChannel("Lane 1");
+    require(channel1 != nullptr, "Failed to create channel");
 
     if (auto* lane = playlist1.getLane(laneId)) {
         lane->volume = 0.75f;
@@ -130,6 +132,10 @@ int main() {
         lane->muted = false;
         lane->solo = false;
     }
+    channel1->setVolume(0.75f);
+    channel1->setPan(-0.25f);
+    channel1->setMute(false);
+    channel1->setSolo(false);
 
     ClipInstanceID clipId = playlist1.addClipFromPattern(laneId, patId, 0.0, 4.0);
     require(clipId.isValid(), "Failed to add clip from pattern");
@@ -160,6 +166,17 @@ int main() {
     require(ProjectSerializer::save(projectPath.string(), tm1, 128.0, 1.234), "ProjectSerializer::save failed");
     std::cout << "[INFO] Canonical project saved: " << projectPath.string() << "\n";
 
+    auto historyAfterFirstSave = ProjectSerializer::listHistory(projectPath.string());
+    require(historyAfterFirstSave.size() == 1, "Expected first canonical save to create one history snapshot");
+    require(std::filesystem::exists(historyAfterFirstSave[0].path), "History snapshot path missing after first save");
+
+    std::cout << "[INFO] Saving canonical project a second time to validate unique history snapshots...\n";
+    require(ProjectSerializer::save(projectPath.string(), tm1, 128.0, 2.345), "Second ProjectSerializer::save failed");
+    auto historyAfterSecondSave = ProjectSerializer::listHistory(projectPath.string());
+    require(historyAfterSecondSave.size() >= 2, "Expected second canonical save to create another history snapshot");
+    require(historyAfterSecondSave[0].path != historyAfterSecondSave[1].path,
+            "Project history snapshots collided across consecutive saves");
+
     // --- Act: load into a fresh TrackManager (avoids cross-contamination; current loader clears only some subsystems)
     auto tm2 = std::make_shared<TrackManager>();
     tm2->getPlaylistModel().setPatternManager(&tm2->getPatternManager());
@@ -171,10 +188,11 @@ int main() {
 
     // --- Assert: verify key invariants
     require(std::abs(loadResult.tempo - 128.0) < 1e-9, "Tempo did not roundtrip");
-    require(std::abs(loadResult.playhead - 1.234) < 1e-9, "Playhead did not roundtrip");
+    require(std::abs(loadResult.playhead - 2.345) < 1e-9, "Playhead did not roundtrip");
 
     auto& playlist2 = tm2->getPlaylistModel();
     require(playlist2.getLaneCount() == 1, "Lane count mismatch after load");
+    require(tm2->getChannelCount() == 1, "Channel count mismatch after load");
 
     PlaylistLaneID lane2Id = playlist2.getLaneId(0);
     const auto* lane2 = playlist2.getLane(lane2Id);
@@ -188,6 +206,12 @@ int main() {
     require(std::abs(loadedClip.startBeat - 0.0) < 1e-9, "Clip start mismatch after load");
     require(std::abs(loadedClip.durationBeats - 4.0) < 1e-9, "Clip duration mismatch after load");
     require(std::abs(loadedClip.edits.gainLinear - 0.9f) < 1e-6f, "Clip gain mismatch after load");
+
+    const auto* channel2 = tm2->getChannel(0);
+    require(channel2 != nullptr, "Loaded channel missing");
+    require(channel2->getName() == "Lane 1", "Channel name mismatch after load");
+    require(std::abs(channel2->getVolume() - 0.75f) < 1e-6f, "Channel volume mismatch after load");
+    require(std::abs(channel2->getPan() - (-0.25f)) < 1e-6f, "Channel pan mismatch after load");
 
     auto patterns2 = tm2->getPatternManager().getAllPatterns();
     require(patterns2.size() == 1, "Pattern count mismatch after load");

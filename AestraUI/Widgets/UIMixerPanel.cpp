@@ -49,11 +49,37 @@ void UIMixerPanel::cacheThemeColors()
     m_separatorColor = theme.getColor("divider");
 }
 
+bool UIMixerPanel::channelLayoutMatchesViewModel() const
+{
+    if (!m_viewModel) {
+        return m_strips.empty();
+    }
+
+    const size_t channelCount = m_viewModel->getChannelCount();
+    if (m_strips.size() != channelCount) {
+        return false;
+    }
+
+    for (size_t i = 0; i < channelCount; ++i) {
+        auto* channel = m_viewModel->getChannelByIndex(i);
+        if (!channel || !m_strips[i] || m_strips[i]->getChannelId() != channel->id) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void UIMixerPanel::refreshChannels()
 {
     if (!m_viewModel) return;
 
     size_t channelCount = m_viewModel->getChannelCount();
+
+    if (channelLayoutMatchesViewModel()) {
+        layoutMeters();
+        return;
+    }
 
     for (auto& strip : m_strips) {
         removeChild(strip);

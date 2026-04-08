@@ -193,9 +193,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             v.position += rate;
         }
 
-        // Master Attenuation to prevent clipping with polyphony
-        outputs[0][i] = L * 0.5f;
-        outputs[1][i] = R * 0.5f;
+        outputs[0][i] = L;
+        outputs[1][i] = R;
     }
 }
 

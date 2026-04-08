@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <chrono>
 
 class ProjectSerializer {
 public:
@@ -43,6 +44,13 @@ public:
         std::string contents;
     };
 
+    struct HistoryEntry {
+        std::string path;
+        std::string label;
+        uint64_t sizeBytes{0};
+        std::chrono::system_clock::time_point timestamp{};
+    };
+
     static bool save(const std::string& path,
                      const std::shared_ptr<Aestra::Audio::TrackManager>& trackManager,
                      double tempo,
@@ -62,4 +70,7 @@ public:
 
     static LoadResult load(const std::string& path,
                            const std::shared_ptr<Aestra::Audio::TrackManager>& trackManager);
+
+    static std::string getHistoryDirectory(const std::string& projectPath);
+    static std::vector<HistoryEntry> listHistory(const std::string& projectPath);
 };

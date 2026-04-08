@@ -59,6 +59,8 @@ public:
      * @brief Construct a track manager and wire its internal playback helpers.
      */
     TrackManager() : m_patternPlaybackEngine(&m_timelineClock, &m_patternManager, &m_unitManager) {
+        m_continuousParams = std::make_shared<ContinuousParamBuffer>();
+        m_channelSlotMap = std::make_shared<ChannelSlotMap>();
         // Wire up playlist model to trigger audio graph rebuild when clips change
         m_playlistModel.setClipChangedCallback([this](const ClipInstanceID&) {
             m_graphDirty.store(true, std::memory_order_relaxed);
@@ -614,7 +616,9 @@ public:
     void play() {
         m_isPlaying.store(true, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
-        pushTransportCommand(1.0f, m_position.load(std::memory_order_relaxed));
+        const double playStartPosition = m_position.load(std::memory_order_relaxed);
+        m_playStartPosition.store(playStartPosition, std::memory_order_relaxed);
+        pushTransportCommand(1.0f, playStartPosition);
         if (m_stopPreviewCallback) {
             m_stopPreviewCallback();
         }
@@ -630,7 +634,7 @@ public:
     }
 
     /**
-     * @brief Stop transport playback and return to the stored start position.
+     * @brief Stop transport playback and return to the stored cue/start position.
      */
     void stop() {
         m_isPlaying.store(false, std::memory_order_relaxed);
@@ -645,6 +649,7 @@ public:
      * @return True while transport playback is running.
      */
     bool isPlaying() const { return m_isPlaying.load(std::memory_order_relaxed); }
+    bool isPaused() const { return m_isPaused.load(std::memory_order_relaxed); }
     bool hasArmedTracks() const { return getArmedTrackCount() > 0; }
 
     /**
