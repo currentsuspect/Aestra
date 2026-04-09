@@ -477,12 +477,15 @@ void NUIComponent::setTooltip(const std::string& text) {
 }
 
 void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& position) {
+    const bool wasActive = s_tooltipState.active;
     s_tooltipState.text = text;
     s_tooltipState.position = position;
     s_tooltipState.hoverPos = position;  // Set both for manual tooltip calls
     s_tooltipState.active = true;
-    s_tooltipState.delayTimer = 0.0f;
-    s_tooltipState.alpha = 0.0f;
+    if (!wasActive) {
+        s_tooltipState.delayTimer = 0.0f;
+        s_tooltipState.alpha = 0.0f;
+    }
 }
 
 void NUIComponent::hideRemoteTooltip() {
@@ -540,4 +543,3 @@ void NUIComponent::renderGlobalTooltip(NUIRenderer& renderer) {
 }
 
 } // namespace AestraUI
-

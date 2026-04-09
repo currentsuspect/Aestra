@@ -89,6 +89,9 @@ public:
     
     void setLevel(float level);
     float getLevel() const;
+    void setPostFader(bool postFader) { postFader_ = postFader; repaint(); }
+    void setMuted(bool muted) { muted_ = muted; repaint(); }
+    void setAccentColor(const NUIColor& color) { accentColor_ = color; if (destSelector_) destSelector_->setAccentColor(color); if (levelKnob_) levelKnob_->setAccentColor(color); repaint(); }
 
     void setAvailableDestinations(const std::vector<std::pair<uint32_t, std::string>>& dests);
     
@@ -105,6 +108,9 @@ private:
     
     // Store mapping from index to ID
     std::vector<std::pair<uint32_t, std::string>> destinations_;
+    bool postFader_{true};
+    bool muted_{false};
+    NUIColor accentColor_;
     
     std::function<void(uint32_t)> onDestChanged_;
     std::function<void(float)> onLevelChanged_;
@@ -162,4 +168,3 @@ private:
 };
 
 } // namespace AestraUI
-

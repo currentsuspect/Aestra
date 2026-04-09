@@ -12,6 +12,7 @@ namespace AestraUI {
 
 namespace {
     constexpr float RADIUS = 7.0f;
+    constexpr float CHIP_RADIUS = 5.0f;
 }
 
 UIMixerFXSummary::UIMixerFXSummary()
@@ -45,9 +46,9 @@ void UIMixerFXSummary::setFxCount(int count)
     if (clamped == m_fxCount) return;
     m_fxCount = clamped;
     if (m_fxCount <= 0) {
-        m_labelText = "+ Add FX";
+        m_labelText = "Add Insert";
     } else {
-        m_labelText = std::to_string(m_fxCount) + " FX";
+        m_labelText = std::to_string(m_fxCount) + (m_fxCount == 1 ? " Insert" : " Inserts");
     }
     requestInvalidate();
 }
@@ -80,7 +81,21 @@ void UIMixerFXSummary::onRender(NUIRenderer& renderer)
                                NUIColor::white().withAlpha(0.025f));
 
     const NUIColor text = hasFx ? m_textPrimary : (m_hovered ? m_textPrimary.withAlpha(0.92f) : m_textSecondary);
-    renderer.drawTextCentered(m_labelText.empty() ? std::string("FX") : m_labelText, visualRect, 10.0f, text);
+    const NUIRect chipRect{visualRect.x + 8.0f, visualRect.y + (visualRect.height - 10.0f) * 0.5f, 18.0f, 10.0f};
+    renderer.fillRoundedRect(chipRect,
+                             CHIP_RADIUS,
+                             hasFx ? m_accent.withAlpha(0.88f) : m_textSecondary.withAlpha(0.30f));
+    renderer.strokeRoundedRect(chipRect,
+                               CHIP_RADIUS,
+                               1.0f,
+                               hasFx ? m_accent.withAlpha(0.36f) : m_border.withAlpha(0.35f));
+
+    const float textX = chipRect.right() + 8.0f;
+    const NUIRect textRect{textX, visualRect.y, std::max(1.0f, visualRect.right() - textX - 10.0f), visualRect.height};
+    renderer.drawText(m_labelText.empty() ? std::string("FX") : m_labelText,
+                      {textRect.x, textRect.y + 6.5f},
+                      10.0f,
+                      text);
 }
 
 bool UIMixerFXSummary::onMouseEvent(const NUIMouseEvent& event)

@@ -11,12 +11,13 @@
 namespace AestraUI {
 
 namespace {
-    constexpr float TRACK_RADIUS = 3.0f;
-    constexpr float HANDLE_RADIUS = 3.0f;
-    constexpr float HANDLE_HEIGHT = 12.0f;
-    constexpr float TOP_PAD = 8.0f;
-    constexpr float BOTTOM_PAD = 18.0f; // room for text
+    constexpr float TRACK_RADIUS = 4.0f;
+    constexpr float HANDLE_RADIUS = 4.0f;
+    constexpr float HANDLE_HEIGHT = 14.0f;
+    constexpr float TOP_PAD = 10.0f;
+    constexpr float BOTTOM_PAD = 20.0f; // room for text
     constexpr float SNAP_DB = 0.5f;
+    constexpr float DRAG_SLOP = 1.5f;
 }
 
 UIMixerFader::UIMixerFader()
@@ -94,7 +95,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     const float trackHeight = std::max(1.0f, trackBottom - trackTop);
 
     // Thinner track for "Tech" look
-    const float trackWidth = 4.0f;
+    const float trackWidth = 6.0f;
     const float trackX = bounds.x + (bounds.width - trackWidth) * 0.5f;
     NUIRect trackRect{trackX, trackTop, trackWidth, trackHeight};
 
@@ -109,7 +110,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     
     if (filledH > 0.0f) {
         // Draw fill slightly wider than track for glow bleed
-        float fillW = 4.0f; 
+        float fillW = 6.0f; 
         
         NUIRect fillRect{trackX, trackBottom - filledH, fillW, filledH};
         
@@ -122,8 +123,8 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
         
         // Inner Glow (Blur)
         renderer.fillRoundedRect(
-            NUIRect{fillRect.x - 2, fillRect.y, fillRect.width + 4, fillRect.height}, 
-            3.0f, 
+            NUIRect{fillRect.x - 2, fillRect.y, fillRect.width + 4, fillRect.height},
+            4.0f,
             m_trackFg.withAlpha(0.25f)
         );
         
@@ -137,9 +138,9 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
                                      trackBottom - HANDLE_HEIGHT * 0.5f);
     
     // Wider tech handle
-    const float handleW = 24.0f; 
+    const float handleW = 28.0f;
     const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
-    const float handleH = 14.0f;
+    const float handleH = 16.0f;
     
     NUIRect handleRect{handleX, handleY, handleW, handleH};
     float handleRad = 3.0f;
@@ -152,8 +153,8 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     renderer.strokeRoundedRect(handleRect, handleRad, 1.0f, handleBorder);
     
     // Center "Light Slit"
-    float slitW = 12.0f;
-    float slitH = 2.0f;
+    float slitW = 14.0f;
+    float slitH = 2.5f;
     renderer.fillRoundedRect(
         NUIRect{handleX + (handleW - slitW)*0.5f, handleY + (handleH - slitH)*0.5f, slitW, slitH}, 
         1.0f, 
@@ -162,8 +163,8 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
 
     // Drag Value Tooltip
     if (m_dragging) {
-        const float tipW = 34.0f;
-        const float tipH = 16.0f;
+        const float tipW = 38.0f;
+        const float tipH = 18.0f;
         float tipX = handleX + (handleW - tipW) * 0.5f;
         float tipY = handleY - tipH - 4.0f;
         
@@ -174,11 +175,11 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
 
         renderer.fillRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, NUIColor(0.05f, 0.05f, 0.08f, 0.95f));
         renderer.strokeRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, 1.0f, m_trackFg.withAlpha(0.5f));
-        renderer.drawTextCentered(m_cachedText, {tipX, tipY, tipW, tipH}, 10.0f, m_text);
+        renderer.drawTextCentered(m_cachedText, {tipX, tipY, tipW, tipH}, 10.5f, m_text);
     }
 
     // Value readout (bottom)
-    const float fontSize = 10.0f;
+    const float fontSize = 10.5f;
     NUIRect textRect{bounds.x, trackBottom + 2.0f, bounds.width, bounds.y + bounds.height - trackBottom};
     renderer.drawTextCentered(m_cachedText, textRect, fontSize, m_textSecondary);
 }
@@ -200,14 +201,24 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
     if (event.pressed && event.button == NUIMouseButton::Left) {
         m_dragging = true;
         m_dragStartPos = event.position;
-
-        // Click-to-set
         const float trackTop = bounds.y + TOP_PAD;
         const float trackBottom = bounds.y + bounds.height - BOTTOM_PAD;
         const float trackHeight = std::max(1.0f, trackBottom - trackTop);
-        const float norm = std::clamp(1.0f - (event.position.y - trackTop) / trackHeight, 0.0f, 1.0f);
-        const float clickedDb = m_minDb + norm * (m_maxDb - m_minDb);
-        setValueDb(clickedDb);
+        const float currentNorm = (m_valueDb - m_minDb) / std::max(1e-3f, (m_maxDb - m_minDb));
+        const float filledH = std::clamp(currentNorm, 0.0f, 1.0f) * trackHeight;
+        const float handleY = std::clamp(trackBottom - filledH - HANDLE_HEIGHT * 0.5f,
+                                         trackTop - HANDLE_HEIGHT * 0.5f,
+                                         trackBottom - HANDLE_HEIGHT * 0.5f);
+        const float handleW = 28.0f;
+        const float handleH = 16.0f;
+        const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
+        const NUIRect handleRect{handleX, handleY, handleW, handleH};
+
+        if (!handleRect.contains(event.position)) {
+            const float norm = std::clamp(1.0f - (event.position.y - trackTop) / trackHeight, 0.0f, 1.0f);
+            const float clickedDb = m_minDb + norm * (m_maxDb - m_minDb);
+            setValueDb(clickedDb);
+        }
 
         m_dragStartDb = m_valueDb;
         return true;
@@ -224,13 +235,17 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
         const float trackBottom = bounds.y + bounds.height - BOTTOM_PAD;
         const float trackHeight = std::max(1.0f, trackBottom - trackTop);
         const float dbPerPixel = (m_maxDb - m_minDb) / trackHeight;
+        const float deltaPx = (m_dragStartPos.y - event.position.y);
+        const float absDelta = std::abs(deltaPx);
 
         float sensitivity = 1.0f;
         if (event.modifiers & NUIModifiers::Shift) {
-            sensitivity *= 0.1f;
+            sensitivity *= 0.2f;
+        }
+        if (absDelta < DRAG_SLOP) {
+            return true;
         }
 
-        const float deltaPx = (m_dragStartPos.y - event.position.y);
         float nextDb = m_dragStartDb + deltaPx * dbPerPixel * sensitivity;
 
         if ((event.modifiers & NUIModifiers::Ctrl) || (event.modifiers & NUIModifiers::Alt)) {

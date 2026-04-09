@@ -27,25 +27,36 @@ NUICustomTitleBar::NUICustomTitleBar()
 }
 
 void NUICustomTitleBar::createIcons() {
-    // Create window control icons using the NUIIcon system
-    minimizeIcon_ = NUIIcon::createMinimizeIcon();
-    minimizeIcon_->setIconSize(NUIIconSize::Small);
-    
-    maximizeIcon_ = NUIIcon::createMaximizeIcon();
-    maximizeIcon_->setIconSize(NUIIconSize::Small);
-    
-    // Create a restore icon (two overlapping squares)
-    const char* restoreSvg = R"(
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="8" y="8" width="13" height="13" rx="2" ry="2"/>
-            <path d="M3 16V5a2 2 0 0 1 2-2h11"/>
+    const char* minimizeSvg = R"(
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 12h12"/>
         </svg>
     )";
+    const char* maximizeSvg = R"(
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/>
+        </svg>
+    )";
+    const char* restoreSvg = R"(
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="8" y="8" width="10" height="10" rx="1.5"/>
+            <path d="M6 14V7.5A1.5 1.5 0 0 1 7.5 6H14"/>
+        </svg>
+    )";
+    const char* closeSvg = R"(
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 7l10 10"/>
+            <path d="M17 7L7 17"/>
+        </svg>
+    )";
+    minimizeIcon_ = std::make_shared<NUIIcon>(minimizeSvg);
+    minimizeIcon_->setIconSize(NUIIconSize::Small);
+    maximizeIcon_ = std::make_shared<NUIIcon>(maximizeSvg);
+    maximizeIcon_->setIconSize(NUIIconSize::Small);
     restoreIcon_ = std::make_shared<NUIIcon>(restoreSvg);
     restoreIcon_->setIconSize(NUIIconSize::Small);
     restoreIcon_->setColorFromTheme("textPrimary");
-    
-    closeIcon_ = NUIIcon::createCloseIcon();
+    closeIcon_ = std::make_shared<NUIIcon>(closeSvg);
     closeIcon_->setIconSize(NUIIconSize::Small);
 
     // App icon removed for minimal header (Ableton-style)
@@ -104,11 +115,15 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     auto& themeManager = NUIThemeManager::getInstance();
     NUIColor bgColor = themeManager.getColor("background"); // Use background color for flush look
     
-    // Draw title bar background - flush with window background
+    // Draw title bar background - flush with window background, but with a slight top sheen.
     renderer.fillRect(bounds, bgColor);
-    
-    // No separator line for clean, flush appearance
-    // Menu items are now handled by NUIMenuBar child component
+    renderer.fillRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, std::max(8.0f, bounds.height * 0.42f)},
+                             10.0f,
+                             NUIColor::white().withAlpha(0.018f));
+    renderer.drawLine({bounds.x, bounds.bottom() - 1.0f},
+                      {bounds.right(), bounds.bottom() - 1.0f},
+                      1.0f,
+                      themeManager.getColor("borderSubtle").withAlpha(0.26f));
     
     // Draw window controls
     drawWindowControls(renderer);
@@ -120,7 +135,7 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
 void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     auto& themeManager = NUIThemeManager::getInstance();
     // Use config colors for hover states
-    NUIColor hoverBgColor = themeManager.getColor("primary").withAlpha(0.2f); // Aestra Purple hover
+    NUIColor hoverBgColor = themeManager.getColor("primary").withAlpha(0.16f);
     NUIColor closeHoverBg = themeManager.getColor("error"); // Red for close button
     NUIColor exportColor = themeManager.getColor("accentPrimary"); // Purple for export
 
@@ -151,7 +166,7 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     } else {
         // Export button: download/upload icon
         if (exportHovered_) {
-            renderer.fillRoundedRect(exportButtonRect_, 4.0f, hoverBgColor);
+            renderer.fillRoundedRect(exportButtonRect_, 8.0f, hoverBgColor);
         }
         // Draw a simple "export" icon (arrow pointing up from a line)
         float cx = exportButtonRect_.x + exportButtonRect_.width * 0.5f;
@@ -169,7 +184,7 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     // Draw minimize button
     if (hoveredButton_ == HoverButton::Minimize) {
         // Rounded hover effect
-        renderer.fillRoundedRect(minimizeButtonRect_, 4.0f, hoverBgColor);
+        renderer.fillRoundedRect(minimizeButtonRect_, 8.0f, hoverBgColor);
     }
     minimizeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // White
     NUIPoint minCenter(minimizeButtonRect_.x + minimizeButtonRect_.width * 0.5f,
@@ -181,7 +196,7 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     // Draw maximize/restore button
     if (hoveredButton_ == HoverButton::Maximize) {
         // Rounded hover effect
-        renderer.fillRoundedRect(maximizeButtonRect_, 4.0f, hoverBgColor);
+        renderer.fillRoundedRect(maximizeButtonRect_, 8.0f, hoverBgColor);
     }
     NUIPoint maxCenter(maximizeButtonRect_.x + maximizeButtonRect_.width * 0.5f,
                        maximizeButtonRect_.y + maximizeButtonRect_.height * 0.5f);
@@ -195,7 +210,7 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     // Draw close button with red hover
     if (hoveredButton_ == HoverButton::Close) {
         // Rounded hover effect
-        renderer.fillRoundedRect(closeButtonRect_, 4.0f, closeHoverBg);
+        renderer.fillRoundedRect(closeButtonRect_, 8.0f, closeHoverBg.withAlpha(0.92f));
     }
     closeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // Always white
     NUIPoint closeCenter(closeButtonRect_.x + closeButtonRect_.width * 0.5f,
@@ -260,8 +275,6 @@ bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
     }
     
     return false;
-    
-    return false;
 }
 
 void NUICustomTitleBar::onResize(int width, int height) {
@@ -279,13 +292,13 @@ void NUICustomTitleBar::updateButtonRects() {
     NUIRect bounds = getBounds();
 
     // Button dimensions - Smaller, more spaced out (Ableton/FL style)
-    float buttonWidth = 40.0f;
-    float buttonHeight = 28.0f; // Slightly shorter than bar
+    float buttonWidth = 34.0f;
+    float buttonHeight = 24.0f;
     float buttonY = bounds.y + (height_ - buttonHeight) * 0.5f; // Vertically centered
     float spacing = 4.0f;
 
     // Position buttons from right edge with padding
-    float currentX = bounds.x + bounds.width - buttonWidth - 6.0f;
+    float currentX = bounds.x + bounds.width - buttonWidth - 8.0f;
 
     closeButtonRect_ = NUIRect(currentX, buttonY, buttonWidth, buttonHeight);
     currentX -= (buttonWidth + spacing);
@@ -294,10 +307,10 @@ void NUICustomTitleBar::updateButtonRects() {
     currentX -= (buttonWidth + spacing);
 
     minimizeButtonRect_ = NUIRect(currentX, buttonY, buttonWidth, buttonHeight);
-    currentX -= (buttonWidth + spacing + 8.0f);
+    currentX -= (buttonWidth + spacing + 10.0f);
 
     // Export button (left of minimize)
-    exportButtonRect_ = NUIRect(currentX, buttonY, 28.0f, buttonHeight);
+    exportButtonRect_ = NUIRect(currentX, buttonY, 24.0f, buttonHeight);
 }
 
 bool NUICustomTitleBar::isPointInButton(const NUIPoint& point, const NUIRect& buttonRect) {

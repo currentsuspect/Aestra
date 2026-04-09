@@ -9,6 +9,7 @@
 #include <array>
 #include <atomic>
 #include <cmath>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <vector>
@@ -226,6 +227,11 @@ class AestraEQ : public IPluginInstance {
 public:
     static constexpr uint32_t kNumBands = 8;
     static constexpr uint32_t kStateMagic = 0x45510001; // 'EQ' + version 1
+    static constexpr uint32_t kAnalyzerWindowSize = 1024;
+    static constexpr uint32_t kMaxFilterStages = 8;
+    static constexpr std::array<float, kNumBands> kDefaultFreqs = {
+        0.04f, 0.12f, 0.22f, 0.36f, 0.50f, 0.66f, 0.80f, 0.92f
+    };
 
     // Parameter IDs: per-band params (5 per band) + master bypass
     static constexpr uint32_t kParamBandStart = 0;
@@ -239,36 +245,16 @@ public:
         m_maxBlockSize = maxBlockSize;
 
         // Initialize bands with default values
-        // Band 0: Low Cut at 30Hz
-        // Band 1: Low Shelf at 100Hz, +2dB
-        // Band 2: Bell at 300Hz, 0dB
-        // Band 3: Bell at 1kHz, 0dB
-        // Band 4: Bell at 3kHz, 0dB
-        // Band 5: Bell at 8kHz, 0dB
-        // Band 6: High Shelf at 12kHz, +1dB
-        // Band 7: High Cut at 18kHz (off by default)
-        const float defaultFreqs[kNumBands] = {
-            0.02f, 0.08f, 0.20f, 0.40f, 0.55f, 0.70f, 0.80f, 0.92f
-        };
+        // Start with a neutral, consistent graph: all visible bands begin as
+        // bell filters distributed across the spectrum. That keeps the default
+        // interaction intuitive before type-specific shaping is introduced.
         for (uint32_t i = 0; i < kNumBands; ++i) {
-            m_bands[i].frequency.store(defaultFreqs[i], std::memory_order_relaxed);
+            m_bands[i].frequency.store(kDefaultFreqs[i], std::memory_order_relaxed);
             m_bands[i].q.store(0.5f, std::memory_order_relaxed);
             m_bands[i].gain.store(0.5f, std::memory_order_relaxed);
-            m_bands[i].type.store(
-                (i == 0) ? static_cast<uint32_t>(FilterType::LowCut) :
-                (i == 1) ? static_cast<uint32_t>(FilterType::LowShelf) :
-                (i == 6) ? static_cast<uint32_t>(FilterType::HighShelf) :
-                (i == 7) ? static_cast<uint32_t>(FilterType::HighCut) :
-                static_cast<uint32_t>(FilterType::Bell),
-                std::memory_order_relaxed
-            );
-            if (i == 7) {
-                m_bands[i].enabled.store(false, std::memory_order_relaxed);
-            }
+            m_bands[i].type.store(static_cast<uint32_t>(FilterType::Bell), std::memory_order_relaxed);
+            m_bands[i].enabled.store(true, std::memory_order_relaxed);
         }
-        m_bands[1].gain.store(0.61f, std::memory_order_relaxed);  // +2dB
-        m_bands[6].gain.store(0.556f, std::memory_order_relaxed); // +1dB
-
         updateAllFilters();
         return true;
     }
@@ -295,6 +281,7 @@ public:
                     std::memset(outputs[ch], 0, numFrames * sizeof(float));
                 }
             }
+            publishAnalyzerFrame(outputs, std::min(numInputChannels, numOutputChannels), numFrames);
             return;
         }
 
@@ -307,6 +294,7 @@ public:
                     std::memset(outputs[ch], 0, numFrames * sizeof(float));
                 }
             }
+            publishAnalyzerFrame(outputs, std::min(numInputChannels, numOutputChannels), numFrames);
             return;
         }
 
@@ -327,7 +315,12 @@ public:
             // Process through each enabled band
             for (uint32_t band = 0; band < kNumBands; ++band) {
                 if (m_bands[band].enabled.load(std::memory_order_relaxed)) {
-                    m_filters[ch * kNumBands + band].process(outputs[ch], numFrames);
+                    const FilterType type = static_cast<FilterType>(m_bands[band].type.load(std::memory_order_relaxed));
+                    const uint32_t stages = filterStageCount(type, m_bands[band].q.load(std::memory_order_relaxed));
+                    const uint32_t stageBase = (ch * kNumBands + band) * kMaxFilterStages;
+                    for (uint32_t stage = 0; stage < stages; ++stage) {
+                        m_filters[stageBase + stage].process(outputs[ch], numFrames);
+                    }
                 }
             }
         }
@@ -336,6 +329,8 @@ public:
         for (uint32_t ch = channels; ch < numOutputChannels; ++ch) {
             if (outputs[ch]) std::memset(outputs[ch], 0, numFrames * sizeof(float));
         }
+
+        publishAnalyzerFrame(outputs, channels, numFrames);
     }
 
     // ---- Parameters (normalized 0-1) ----
@@ -383,7 +378,7 @@ public:
             // Frequency
             params.push_back({
                 band * 5 + 2, "Band " + std::to_string(band + 1) + " Freq",
-                "F" + std::to_string(band + 1), "Hz", 0.5f, 0.0f, 1.0f, true, false, false, 0
+                "F" + std::to_string(band + 1), "Hz", kDefaultFreqs[band], 0.0f, 1.0f, true, false, false, 0
             });
             // Gain
             params.push_back({
@@ -433,6 +428,13 @@ public:
             return (db >= 0 ? "+" : "") + std::to_string(db).substr(0, 5) + "dB";
         }
         case 4: {
+            if (id < kNumBands * 5) {
+                const uint32_t band = id / 5;
+                const FilterType type = static_cast<FilterType>(m_bands[band].type.load(std::memory_order_relaxed));
+                if (type == FilterType::LowCut || type == FilterType::HighCut) {
+                    return std::to_string(filterStageCount(type, val) * 12) + " dB/oct";
+                }
+            }
             const float qVal = qToLinear(val);
             return std::to_string(qVal).substr(0, 4);
         }
@@ -485,6 +487,20 @@ public:
     const PluginInfo& getInfo() const { return m_info; }
     uint32_t getLatencySamples() const { return 0; }
     uint32_t getTailSamples() const { return 64; } // filter tail
+    double getAnalyzerSampleRate() const { return m_sampleRate; }
+    bool getAnalyzerWindow(std::array<float, kAnalyzerWindowSize>& out, uint64_t* outSerial = nullptr) const {
+        const uint64_t serial = m_publishedAnalyzerSerial.load(std::memory_order_acquire);
+        if (serial == 0) {
+            return false;
+        }
+
+        const uint32_t page = m_publishedAnalyzerPage.load(std::memory_order_acquire);
+        out = m_analyzerPages[page];
+        if (outSerial) {
+            *outSerial = serial;
+        }
+        return true;
+    }
 
     WatchdogStats getWatchdogStats() const { return {}; }
     void resetWatchdog() {}
@@ -512,6 +528,36 @@ private:
         return 0.1f + norm * 9.9f;
     }
 
+    static uint32_t cutSlopeDbPerOct(float norm) {
+        static constexpr std::array<uint32_t, 5> kSlopeDb = {12u, 24u, 48u, 72u, 96u};
+        const float clamped = std::clamp(norm, 0.0f, 1.0f);
+        const size_t index = static_cast<size_t>(std::round(clamped * static_cast<float>(kSlopeDb.size() - 1)));
+        return kSlopeDb[std::min(index, kSlopeDb.size() - 1)];
+    }
+
+    static uint32_t filterStageCount(FilterType type, float norm) {
+        if (type != FilterType::LowCut && type != FilterType::HighCut) {
+            return 1;
+        }
+        switch (cutSlopeDbPerOct(norm)) {
+        case 12u: return 1u;
+        case 24u: return 2u;
+        case 48u: return 4u;
+        case 72u: return 6u;
+        case 96u: return 8u;
+        default: return 1u;
+        }
+    }
+
+    static float effectiveFilterQ(FilterType type, float norm) {
+        if (type == FilterType::LowCut || type == FilterType::HighCut) {
+            // For cascaded cut filters, keep each stage Butterworth-like so
+            // slope increases without introducing a resonant peak.
+            return 0.70710678f;
+        }
+        return qToLinear(norm);
+    }
+
     static float dbToNorm(float db) { return (db + 18.0f) / 36.0f; }
     static float freqToNorm(float hz) {
         const float logMin = std::log10(20.0f);
@@ -526,13 +572,54 @@ private:
 
                 const float freq = freqToHz(m_bands[band].frequency.load(std::memory_order_relaxed));
                 const float gain = gainToDb(m_bands[band].gain.load(std::memory_order_relaxed));
-                const float q = qToLinear(m_bands[band].q.load(std::memory_order_relaxed));
                 const FilterType type = static_cast<FilterType>(m_bands[band].type.load(std::memory_order_relaxed));
+                const float q = effectiveFilterQ(type, m_bands[band].q.load(std::memory_order_relaxed));
+                const uint32_t stages = filterStageCount(type, m_bands[band].q.load(std::memory_order_relaxed));
 
                 const auto coeffs = designBiquad(type, freq, gain, q, m_sampleRate);
-                m_filters[ch * kNumBands + band].setCoeffs(
-                    coeffs.b0, coeffs.b1, coeffs.b2, coeffs.a0, coeffs.a1, coeffs.a2
-                );
+                const uint32_t stageBase = (ch * kNumBands + band) * kMaxFilterStages;
+                for (uint32_t stage = 0; stage < kMaxFilterStages; ++stage) {
+                    if (stage < stages) {
+                        m_filters[stageBase + stage].setCoeffs(
+                            coeffs.b0, coeffs.b1, coeffs.b2, coeffs.a0, coeffs.a1, coeffs.a2
+                        );
+                    } else {
+                        m_filters[stageBase + stage].setCoeffs(1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+                    }
+                }
+            }
+        }
+    }
+
+    void publishAnalyzerFrame(float** outputs, uint32_t numChannels, uint32_t numFrames) {
+        if (numChannels == 0 || !outputs) {
+            return;
+        }
+
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            float mono = 0.0f;
+            uint32_t contributingChannels = 0;
+
+            for (uint32_t ch = 0; ch < numChannels; ++ch) {
+                if (!outputs[ch]) {
+                    continue;
+                }
+                mono += outputs[ch][i];
+                ++contributingChannels;
+            }
+
+            if (contributingChannels == 0) {
+                mono = 0.0f;
+            } else if (contributingChannels > 1) {
+                mono /= static_cast<float>(contributingChannels);
+            }
+
+            m_analyzerPages[m_analyzerWritePage][m_analyzerWritePos++] = mono;
+            if (m_analyzerWritePos >= kAnalyzerWindowSize) {
+                m_publishedAnalyzerPage.store(m_analyzerWritePage, std::memory_order_release);
+                m_publishedAnalyzerSerial.fetch_add(1, std::memory_order_release);
+                m_analyzerWritePage = 1u - m_analyzerWritePage;
+                m_analyzerWritePos = 0;
             }
         }
     }
@@ -544,8 +631,13 @@ private:
     std::atomic<bool> m_filtersDirty{true};
 
     std::array<EQBand, kNumBands> m_bands;
-    std::array<BiquadFilter, kNumBands * 2> m_filters; // 2 channels
+    std::array<BiquadFilter, kNumBands * 2 * kMaxFilterStages> m_filters; // 2 channels, staged for steeper cuts
     std::array<std::atomic<float>, kParamCount> m_params;
+    std::array<std::array<float, kAnalyzerWindowSize>, 2> m_analyzerPages{};
+    std::atomic<uint32_t> m_publishedAnalyzerPage{0};
+    std::atomic<uint64_t> m_publishedAnalyzerSerial{0};
+    uint32_t m_analyzerWritePage = 0;
+    uint32_t m_analyzerWritePos = 0;
 };
 
 } // namespace Plugins

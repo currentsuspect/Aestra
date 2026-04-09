@@ -184,6 +184,8 @@ public:
     void updateInstantClipDrag(const ::AestraUI::NUIPoint& currentPos);
     void finishInstantClipDrag();
     void cancelInstantClipDrag();
+    bool isInstantClipDragActive() const { return m_isDraggingClipInstant; }
+    bool clampInstantClipDragPosition(::AestraUI::NUIPoint& position) const;
     
     // === IDropTarget Interface ===
     ::AestraUI::DropFeedback onDragEnter(const ::AestraUI::DragData& data, const ::AestraUI::NUIPoint& position) override;
@@ -234,6 +236,7 @@ public:
     float getVerticalScroll() const { return m_scrollOffset; }
     void setVerticalScroll(float scroll) {
         m_scrollOffset = std::max(0.0f, scroll);
+        m_targetScrollOffset = m_scrollOffset;
         layoutTracks();
     }
 
@@ -262,6 +265,7 @@ private:
     int m_trackHeight{48};
     int m_trackSpacing{4}; // 8px grid spacing scale (S1)
     float m_scrollOffset{0.0f};
+    float m_targetScrollOffset{0.0f};
     PlaylistMode m_playlistMode{PlaylistMode::Clips};
     bool m_patternMode = false; // True when Pattern (Arsenal) playback is active
     

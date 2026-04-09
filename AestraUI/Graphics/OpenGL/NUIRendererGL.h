@@ -188,7 +188,7 @@ private:
         float radius;       // Corner radius
         float blur;         // Blur amount
         float strokeWidth;  // Stroke width
-        float primitiveType; // Batching Primitive ID (0=Img, 1=Rect, 2=SDFText, 3=Stroke, 4=BitmapText)
+        float primitiveType; // Batching Primitive ID (0=Img, 1=Rect, 2=SDFText, 3=Stroke, 4=BitmapText, 6=FillCircle, 7=StrokeCircle)
     };
     
     // Shader program
@@ -349,10 +349,10 @@ private:
     bool fontInitialized_;
     bool fontUseLCD_ = true;       // Enable subpixel LCD rendering when available
     bool fontHasKerning_ = false;  // Kerning support advertised by the font
-    int atlasFontSize_ = 36;       // Pixel height of glyphs baked into the large atlas
-    int atlasFontSizeMedium_ = 20; // Pixel height of glyphs baked into the medium atlas
-    int atlasFontSizeSmall_ = 14;  // Pixel height of glyphs baked into the small atlas
-    int atlasFontSizeXSmall_ = 12; // Pixel height of glyphs baked into the extra-small atlas
+    int atlasFontSize_ = 40;       // Pixel height of glyphs baked into the large atlas
+    int atlasFontSizeMedium_ = 22; // Pixel height of glyphs baked into the medium atlas
+    int atlasFontSizeSmall_ = 16;  // Pixel height of glyphs baked into the small atlas
+    int atlasFontSizeXSmall_ = 14; // Pixel height of glyphs baked into the extra-small atlas
     float fontAscent_ = 0.0f;
     float fontDescent_ = 0.0f;
     float fontLineHeight_ = 0.0f;

@@ -29,6 +29,7 @@ public:
 
     void setValue(float value);
     float getValue() const { return m_value; }
+    void setAccentColor(const NUIColor& color) { m_indicator = color; repaint(); }
 
     bool isDragging() const { return m_dragging; }
 
@@ -37,10 +38,12 @@ public:
 private:
     UIMixerKnobType m_type;
     float m_value{0.0f};
+    enum class DragAxis { Undecided, Vertical, Horizontal };
 
     bool m_dragging{false};
     NUIPoint m_dragStartPos{};
     float m_dragStartValue{0.0f};
+    DragAxis m_dragAxis{DragAxis::Undecided};
 
     // Cached formatted value string (tooltip)
     float m_cachedValue{1234567.0f};
@@ -64,8 +67,7 @@ private:
     float defaultValue() const;
     void updateCachedText();
     const char* label() const;
-    void renderTooltip(NUIRenderer& renderer, const NUIRect& knobBounds) const;
+    void updateGlobalTooltip() const;
 };
 
 } // namespace AestraUI
-
