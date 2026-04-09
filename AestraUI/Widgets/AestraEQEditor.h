@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <array>
+#include <future>
 #include <vector>
 
 namespace AestraUI {
@@ -83,7 +84,9 @@ private:
     NUIRect m_lastResponseBounds;
     std::array<float, 160> m_spectrumMagnitudes{};
     std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> m_analyzerWindow{};
+    std::future<std::array<float, 160>> m_spectrumFuture;
     uint64_t m_lastAnalyzerSerial = 0;
+    uint64_t m_pendingAnalyzerSerial = 0;
     std::shared_ptr<NUIContextMenu> m_bandTypeMenu;
 
     static constexpr float kWindowWidth = 760.0f;

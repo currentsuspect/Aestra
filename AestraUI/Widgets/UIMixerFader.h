@@ -40,6 +40,7 @@ private:
     float m_valueDb{0.0f};
 
     bool m_dragging{false};
+    bool m_dragLatched{false};
     NUIPoint m_dragStartPos{};
     float m_dragStartDb{0.0f};
 
@@ -61,4 +62,3 @@ private:
 };
 
 } // namespace AestraUI
-

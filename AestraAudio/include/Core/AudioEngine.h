@@ -171,7 +171,7 @@ public:
     float getMasterGain() const { return m_masterGainTarget.load(std::memory_order_relaxed); }
     /** @brief Set global output headroom in decibels. */
     void setHeadroom(float db) { m_headroomLinear.store(std::pow(10.0f, db / 20.0f), std::memory_order_relaxed); }
-    /** @brief Enable or disable the master safety limiter. Default: off. */
+    /** @brief Enable or disable the master safety limiter. Default: on. */
     void setSafetyLimiterEnabled(bool enabled) {
         m_safetyLimiterEnabled.store(enabled, std::memory_order_relaxed);
     }
