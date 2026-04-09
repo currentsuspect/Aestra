@@ -50,6 +50,7 @@ public:
     // Component interface
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    void onUpdate(double deltaTime) override;
     void onMouseEnter() override;
     void onMouseLeave() override;
 

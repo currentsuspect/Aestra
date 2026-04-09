@@ -40,13 +40,11 @@ std::shared_ptr<const PolyphaseFilterBank> SampleRateConverter::getSharedFilterB
         }
     }
 
-    // Not in cache or expired, create new
-    // Use arena allocation instead of make_shared for RT-safety and measurability.
-    // The shared_ptr uses a no-op deleter since arena manages lifetime via reset().
-    auto* rawBank = static_cast<PolyphaseFilterBank*>(
-        GlobalAudioArena::instance().allocate(sizeof(PolyphaseFilterBank), alignof(PolyphaseFilterBank)));
-    if (!rawBank) return nullptr;
-    std::memset(rawBank, 0, sizeof(PolyphaseFilterBank));
+    // Not in cache or expired, create a heap-owned bank. configure() is already
+    // documented as non-RT-safe, and shared cache entries need normal lifetime
+    // management instead of leaking arena-backed allocations after expiry.
+    auto newBank = std::make_shared<PolyphaseFilterBank>();
+    newBank->clear();
     AESTRA_MEMORY_ALLOC(sizeof(PolyphaseFilterBank));
 
     // We use a temporary SRC instance to generate the bank with a standard upsampling cutoff (0.98)
@@ -55,10 +53,7 @@ std::shared_ptr<const PolyphaseFilterBank> SampleRateConverter::getSharedFilterB
     temp.generateFilterBank(quality);
 
     // Copy generated coeffs to the shared bank
-    *rawBank = temp.m_localFilterBank;
-
-    auto deleter = [](PolyphaseFilterBank*) { /* arena manages lifetime */ };
-    auto newBank = std::shared_ptr<PolyphaseFilterBank>(rawBank, deleter);
+    *newBank = temp.m_localFilterBank;
 
     cache.entries[quality] = newBank;
     return newBank;

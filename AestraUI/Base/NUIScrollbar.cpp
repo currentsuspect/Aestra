@@ -72,6 +72,35 @@ void NUIScrollbar::onRender(NUIRenderer& renderer)
     drawArrows(renderer);
 }
 
+void NUIScrollbar::onUpdate(double deltaTime)
+{
+    if (isAnimating_ && !isDragging_) {
+        animationTime_ += deltaTime;
+        const double t = std::clamp(animationTime_ / animationDuration_, 0.0, 1.0);
+        const double eased = 1.0 - std::pow(1.0 - t, 3.0);
+        const double next = animationStartValue_ + (animationTargetValue_ - animationStartValue_) * eased;
+        setCurrentRange(next, currentRangeSize_);
+        triggerScroll();
+
+        if (t >= 1.0) {
+            isAnimating_ = false;
+            currentRangeStart_ = animationTargetValue_;
+            setCurrentRange(currentRangeStart_, currentRangeSize_);
+            triggerScroll();
+        }
+    }
+
+    if (autoHide_ && !isHovered_ && !isDragging_ && autoHideTimer_ > 0.0) {
+        autoHideTimer_ = std::max(0.0, autoHideTimer_ - deltaTime);
+        if (autoHideTimer_ <= 0.0) {
+            isAutoHidden_ = true;
+            setDirty(true);
+        }
+    }
+
+    NUIComponent::onUpdate(deltaTime);
+}
+
 bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || isAutoHidden_) return false;
@@ -148,11 +177,18 @@ bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
         setDirty(true);
         return true;
     }
+    else if (event.wheelDelta != 0.0f && bounds.contains(event.position))
+    {
+        const double direction = (event.wheelDelta > 0.0f) ? -1.0 : 1.0;
+        scrollBy(direction * singleStepSize_ * 2.0);
+        return true;
+    }
     else if (event.released && event.button == NUIMouseButton::Left && isPressed_)
     {
         isPressed_ = false;
         isDragging_ = false;
         pressedPart_ = Part::None;
+        isAnimating_ = false;
         triggerScrollEnd();
         setDirty(true);
         return true;
@@ -258,6 +294,7 @@ bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
         }
         
         lastMousePosition_ = event.position;
+        isAnimating_ = false;
         return true;
     }
 
@@ -442,15 +479,28 @@ void NUIScrollbar::setArrowSize(float size)
 
 void NUIScrollbar::scrollBy(double delta)
 {
-    double newStart = currentRangeStart_ + delta;
-    setCurrentRange(newStart, currentRangeSize_);
-    triggerScroll();
+    scrollTo(currentRangeStart_ + delta);
 }
 
 void NUIScrollbar::scrollTo(double position)
 {
-    setCurrentRange(position, currentRangeSize_);
-    triggerScroll();
+    double maxStart = std::max(rangeLimitStart_, rangeLimitStart_ + rangeLimitSize_ - currentRangeSize_);
+    double clamped = std::clamp(position, rangeLimitStart_, maxStart);
+    if (isDragging_) {
+        isAnimating_ = false;
+        setCurrentRange(clamped, currentRangeSize_);
+        triggerScroll();
+        return;
+    }
+    if (std::abs(clamped - currentRangeStart_) < 1e-6) {
+        return;
+    }
+    animationStartValue_ = currentRangeStart_;
+    animationTargetValue_ = clamped;
+    animationTime_ = 0.0;
+    animationDuration_ = 0.16;
+    isAnimating_ = true;
+    setDirty(true);
 }
 
 void NUIScrollbar::scrollToStart()
@@ -982,20 +1032,20 @@ void NUIScrollbar::drawArrowIcon(NUIRenderer& renderer, const NUIRect& rect, flo
 void NUIScrollbar::drawEnhancedTrack(NUIRenderer& renderer, const NUIRect& trackRect)
 {
     // Track: subtle gradient based on configured color
-    const float trackAlphaMul = (isHovered_ || isDragging_) ? 0.18f : 0.08f;
+    const float trackAlphaMul = (isHovered_ || isDragging_) ? 0.16f : 0.06f;
     NUIColor trackBase = trackColor_.withAlpha(std::clamp(trackColor_.a * trackAlphaMul, 0.0f, 1.0f));
     NUIColor trackTop = trackBase.lightened(0.03f);
     NUIColor trackBottom = trackBase.darkened(0.06f);
     const float radius = std::min(trackRect.width, trackRect.height) * 0.5f;
     
     // Draw gradient track background (16px wide)
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 3; ++i)
     {
-        float factor = static_cast<float>(i) / 3.0f;
+        float factor = static_cast<float>(i) / 2.0f;
         NUIColor gradientColor = NUIColor::lerp(trackTop, trackBottom, factor);
         NUIRect gradientRect = trackRect;
-        gradientRect.y += i * 0.5f;
-        gradientRect.height -= i * 0.5f;
+        gradientRect.y += i * 0.4f;
+        gradientRect.height -= i * 0.4f;
         renderer.fillRoundedRect(gradientRect, radius, gradientColor);
     }
     
@@ -1027,7 +1077,7 @@ void NUIScrollbar::drawEnhancedThumb(NUIRenderer& renderer, const NUIRect& thumb
 
     // Thickness affordance: slightly narrower by default, slightly wider on hover.
     NUIRect visualThumb = thumbRect;
-    const float inset = thumbHot ? 1.0f : 2.0f;
+    const float inset = thumbHot ? 1.5f : 2.5f;
     if (orientation_ == Orientation::Vertical) {
         visualThumb.x += inset;
         visualThumb.width = std::max(0.0f, visualThumb.width - inset * 2.0f);
@@ -1039,13 +1089,13 @@ void NUIScrollbar::drawEnhancedThumb(NUIRenderer& renderer, const NUIRect& thumb
     const float radius = std::min(visualThumb.width, visualThumb.height) * 0.5f;
     
     // Faded white gradient thumb (16px wide)
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 3; ++i)
     {
-        float factor = static_cast<float>(i) / 3.0f;
+        float factor = static_cast<float>(i) / 2.0f;
         NUIColor gradientColor = NUIColor::lerp(thumbTop, thumbBottom, factor);
         NUIRect gradientRect = visualThumb;
-        gradientRect.y += i * 0.5f;
-        gradientRect.height -= i * 0.5f;
+        gradientRect.y += i * 0.4f;
+        gradientRect.height -= i * 0.4f;
         renderer.fillRoundedRect(gradientRect, radius, gradientColor);
     }
     

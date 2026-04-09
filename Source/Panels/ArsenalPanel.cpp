@@ -422,6 +422,22 @@ void ArsenalPanel::onResize(int width, int height) {
 void ArsenalPanel::onUpdate(double dt) {
     WindowPanel::onUpdate(dt);
     ensureDropTargetRegistration();
+    const float viewportHeight = std::max(0.0f, (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - PROGRESS_HEADER_HEIGHT);
+    const float contentHeight = static_cast<float>(m_unitRows.size()) * (42.0f + 6.0f);
+    const float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
+    m_targetScrollY = std::clamp(m_targetScrollY, 0.0f, maxScroll);
+    m_scrollY = std::clamp(m_scrollY, 0.0f, maxScroll);
+
+    const float delta = m_targetScrollY - m_scrollY;
+    if (std::abs(delta) > 0.1f) {
+        const float ease = 1.0f - std::exp(-static_cast<float>(dt) * 18.0f);
+        m_scrollY += delta * ease;
+        m_scrollY = std::clamp(m_scrollY, 0.0f, maxScroll);
+        layoutUnits();
+    } else if (std::abs(delta) > 0.0f) {
+        m_scrollY = m_targetScrollY;
+        layoutUnits();
+    }
     
     // Sync Play/Stop button text and color with actual engine state
     if (m_playBtn && m_trackManager) {
@@ -794,10 +810,8 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         float viewportHeight = m_listContainer ? m_listContainer->getBounds().height : 100.0f;
         float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
         
-        m_scrollY -= event.wheelDelta * 40.0f;
-        m_scrollY = std::clamp(m_scrollY, 0.0f, maxScroll);
-        
-        layoutUnits();
+        m_targetScrollY -= event.wheelDelta * 40.0f;
+        m_targetScrollY = std::clamp(m_targetScrollY, 0.0f, maxScroll);
         return true;
     }
     

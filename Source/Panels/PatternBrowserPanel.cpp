@@ -607,8 +607,8 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         float viewportHeight = b.height - m_headerHeight - m_footerHeight;
         float maxScroll = std::max(0.0f, listHeight - viewportHeight);
         
-        m_scrollOffset -= event.wheelDelta * 40.0f;
-        m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, maxScroll);
+        m_targetScrollOffset -= event.wheelDelta * 40.0f;
+        m_targetScrollOffset = std::clamp(m_targetScrollOffset, 0.0f, maxScroll);
         
         repaint();
         return true;
@@ -687,6 +687,24 @@ void PatternBrowserPanel::onResize(int width, int height) {
 
 void PatternBrowserPanel::onUpdate(double deltaTime) {
     if (m_modeToggle) m_modeToggle->onUpdate(deltaTime);
+    const float viewportHeight = std::max(0.0f, getBounds().height - m_headerHeight - m_footerHeight);
+    const float listHeight = ((m_mode == BrowserMode::Patterns)
+        ? static_cast<float>(m_patterns.size())
+        : static_cast<float>(m_clips.size())) * m_itemHeight;
+    const float maxScroll = std::max(0.0f, listHeight - viewportHeight);
+    m_targetScrollOffset = std::clamp(m_targetScrollOffset, 0.0f, maxScroll);
+    m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, maxScroll);
+
+    const float delta = m_targetScrollOffset - m_scrollOffset;
+    if (std::abs(delta) > 0.1f) {
+        const float ease = 1.0f - std::exp(-static_cast<float>(deltaTime) * 18.0f);
+        m_scrollOffset += delta * ease;
+        m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, maxScroll);
+        repaint();
+    } else if (std::abs(delta) > 0.0f) {
+        m_scrollOffset = m_targetScrollOffset;
+        repaint();
+    }
 }
 
 // IDropTarget Implementation

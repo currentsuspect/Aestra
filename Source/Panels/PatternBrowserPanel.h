@@ -99,6 +99,7 @@ private:
     float m_footerHeight = 42.0f; // Footer contains Mode Toggle
     float m_itemHeight = 32.0f;
     float m_scrollOffset = 0.0f;
+    float m_targetScrollOffset = 0.0f;
     
     // Callbacks
     std::function<void(Aestra::Audio::PatternID)> m_onPatternSelected;

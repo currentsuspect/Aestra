@@ -258,7 +258,7 @@ bool TrackManagerUI::isCustomCursorActive() const {
     
     // 2. Split or Paint tool in grid area
     if (m_currentTool == PlaylistTool::Split || m_currentTool == PlaylistTool::Paint) {
-        AestraUI::NUIRect bounds = getBounds();
+        AestraUI::NUIRect bounds = getGlobalBounds();
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         const float controlAreaWidth = layout.trackControlsWidth;
@@ -992,24 +992,30 @@ void TrackManagerUI::performSplitAtPosition(int laneIndex, double timeSeconds) {
 
 void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInstanceID clipId, const AestraUI::NUIPoint& clickPos) {
     if (!trackComp || !clipId.isValid() || !m_trackManager) return;
-    
+
+    auto& playlist = m_trackManager->getPlaylistModel();
+    const auto* clip = playlist.getClip(clipId);
+    if (!clip) {
+        return;
+    }
+
     m_isDraggingClipInstant = true;
     m_draggedClipTrack = trackComp;
     m_draggedClipId = clipId;
     m_suppressPlaylistRefresh = true; // Suppress full rebuilds for smoothness
-    
-    auto& playlist = m_trackManager->getPlaylistModel();
-    if (const auto* clip = playlist.getClip(clipId)) {
-        m_clipOriginalStartTime = clip->startBeat;
-        m_clipOriginalLaneId = playlist.findClipLane(clipId);
-        
-        // Calculate offset (Cursor Beat - Clip Start Beat)
-        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-        float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
-        float gridStartX = getBounds().x + controlAreaWidth + 5.0f;
-        
-        double cursorBeat = (clickPos.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
-        m_clipDragOffsetBeats = cursorBeat - clip->startBeat;
+    m_clipOriginalStartTime = clip->startBeat;
+    m_clipOriginalLaneId = playlist.findClipLane(clipId);
+
+    // Calculate offset (Cursor Beat - Clip Start Beat)
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
+    float gridStartX = getGlobalBounds().x + controlAreaWidth + 5.0f;
+
+    double cursorBeat = (clickPos.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
+    m_clipDragOffsetBeats = cursorBeat - clip->startBeat;
+
+    if (m_window) {
+        m_window->setMouseCapture(true);
     }
     
     Log::info("Started instant clip drag");
@@ -1018,14 +1024,17 @@ void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInsta
 void TrackManagerUI::updateInstantClipDrag(const AestraUI::NUIPoint& currentPos) {
     if (!m_isDraggingClipInstant || !m_trackManager) return;
     
-    // Track mouse position for edge-scrolling in onUpdate
-    m_lastMousePos = currentPos;
-    
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
-    float gridStartX = getBounds().x + controlAreaWidth + 5.0f;
+    const float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
+    const AestraUI::NUIRect bounds = getGlobalBounds();
+    const float gridStartX = bounds.x + controlAreaWidth + 5.0f;
+    AestraUI::NUIPoint latchedPos = currentPos;
+    clampInstantClipDragPosition(latchedPos);
+
+    // Track mouse position for edge-scrolling in onUpdate
+    m_lastMousePos = latchedPos;
     
-    double cursorBeat = (currentPos.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
+    double cursorBeat = (latchedPos.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
     
     // Apply relative offset
     double newStartBeat = cursorBeat - m_clipDragOffsetBeats;
@@ -1038,7 +1047,7 @@ void TrackManagerUI::updateInstantClipDrag(const AestraUI::NUIPoint& currentPos)
     auto& playlist = m_trackManager->getPlaylistModel();
     
     // Determine target track from Y position
-    int targetTrackIndex = getTrackAtPosition(currentPos.y);
+    int targetTrackIndex = getTrackAtPosition(latchedPos.y);
     int trackCount = static_cast<int>(m_trackUIComponents.size());
     
     // Clamp to valid tracks
@@ -1059,6 +1068,31 @@ void TrackManagerUI::updateInstantClipDrag(const AestraUI::NUIPoint& currentPos)
     
     // Redraw immediately (GPU cache handles the rest)
     invalidateCache();
+}
+
+bool TrackManagerUI::clampInstantClipDragPosition(AestraUI::NUIPoint& position) const {
+    if (!m_isDraggingClipInstant) {
+        return false;
+    }
+
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    const float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
+    const AestraUI::NUIRect bounds = getGlobalBounds();
+    const float headerHeight = 38.0f;
+    const float horizontalScrollbarHeight = 24.0f;
+    const float rulerHeight = 28.0f;
+    const float scrollbarWidth = 15.0f;
+    const float gridStartX = bounds.x + controlAreaWidth + 5.0f;
+    const float gridEndX = bounds.x + bounds.width - scrollbarWidth;
+    const float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+    const float trackAreaBottom = bounds.y + bounds.height;
+
+    const float clampedX = std::clamp(position.x, gridStartX, gridEndX);
+    const float clampedY = std::clamp(position.y, trackAreaTop, trackAreaBottom);
+    const bool changed = std::abs(position.x - clampedX) > 0.5f || std::abs(position.y - clampedY) > 0.5f;
+    position.x = clampedX;
+    position.y = clampedY;
+    return changed;
 }
 
 void TrackManagerUI::finishInstantClipDrag() {
@@ -1092,6 +1126,10 @@ void TrackManagerUI::finishInstantClipDrag() {
     m_draggedClipTrack = nullptr;
     m_draggedClipId = ClipInstanceID{};
     m_suppressPlaylistRefresh = false; // Restore normal behavior
+
+    if (m_window) {
+        m_window->setMouseCapture(false);
+    }
     
     // Final refresh to ensure everything is consistent
     refreshTracks();
@@ -1123,6 +1161,10 @@ void TrackManagerUI::cancelInstantClipDrag() {
     m_draggedClipTrack = nullptr;
     m_draggedClipId = ClipInstanceID{};
     m_suppressPlaylistRefresh = false;
+
+    if (m_window) {
+        m_window->setMouseCapture(false);
+    }
     
     refreshTracks();
     invalidateCache();
@@ -2044,6 +2086,18 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         invalidateCache();  // Full cache invalidation for smooth zoom animation
     }
 
+    if (std::abs(m_targetScrollOffset - m_scrollOffset) > 0.25f) {
+        const float lerpSpeed = 14.0f;
+        const float t = std::min(1.0f, static_cast<float>(deltaTime * lerpSpeed));
+        m_scrollOffset += (m_targetScrollOffset - m_scrollOffset) * t;
+        layoutTracks();
+        invalidateCache();
+    } else if (m_scrollOffset != m_targetScrollOffset) {
+        m_scrollOffset = m_targetScrollOffset;
+        layoutTracks();
+        invalidateCache();
+    }
+
     // === Follow Playhead Logic (Page & Continuous) ===
     if (m_followPlayhead && m_trackManager && m_trackManager->isPlaying()) {
         if (!AestraUI::NUIDragDropManager::getInstance().isDragging() && 
@@ -2112,9 +2166,17 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         }
     }
 
-    // === EDGE-SCROLLING DURING CLIP DRAG ===
-    // When dragging a clip near the edges of the grid, auto-scroll the view
-    if (m_isDraggingClipInstant && m_pixelsPerBeat > 0) {
+    // === EDGE-SCROLLING DURING TIMELINE DRAG OPERATIONS ===
+    // Keep the timeline moving while dragging clips, selections, loop markers, or the playhead near edges.
+    const bool needsEdgeScroll =
+        m_isDraggingClipInstant ||
+        m_isDrawingSelectionBox ||
+        m_isDraggingRulerSelection ||
+        m_isDraggingLoopStart ||
+        m_isDraggingLoopEnd ||
+        m_isDraggingPlayhead;
+
+    if (needsEdgeScroll && m_pixelsPerBeat > 0) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
@@ -2126,27 +2188,40 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         float gridWidth = gridEndX - gridStartX;
         
         // Edge zone size (pixels from edge where scrolling activates)
-        const float edgeZone = 60.0f;
-        // Base scroll speed (beats per second)
-        const float scrollSpeed = 8.0f;
+        const float edgeZone = 110.0f;
+        // Allow a little overshoot beyond the grid so edge-scroll keeps breathing while dragging.
+        const float edgeOvershoot = 36.0f;
+        // Scroll speed is pixel-based so the feel stays consistent across zoom levels.
+        const float minScrollPxPerSecond = 220.0f;
+        const float maxScrollPxPerSecond = 1500.0f;
         
         float mouseX = m_lastMousePos.x;
         float scrollDelta = 0.0f;
         
         // Check left edge
-        if (mouseX < gridStartX + edgeZone && mouseX >= gridStartX - 20.0f) {
-            // Proximity factor: closer to edge = faster scroll
-            float proximity = 1.0f - ((mouseX - gridStartX) / edgeZone);
+        if (mouseX < gridStartX + edgeZone && mouseX >= gridStartX - edgeOvershoot) {
+            float proximity = 1.0f - ((mouseX - gridStartX + edgeOvershoot) / (edgeZone + edgeOvershoot));
             proximity = std::clamp(proximity, 0.0f, 1.0f);
-            scrollDelta = -scrollSpeed * proximity * static_cast<float>(deltaTime);
+            const float response = proximity * proximity * (3.0f - 2.0f * proximity); // smoothstep
+            const float pxPerSecond = minScrollPxPerSecond + (maxScrollPxPerSecond - minScrollPxPerSecond) * response;
+            scrollDelta = -(pxPerSecond / std::max(1.0f, m_pixelsPerBeat)) * static_cast<float>(deltaTime);
         }
         // Check right edge
-        else if (mouseX > gridEndX - edgeZone && mouseX <= gridEndX + 20.0f) {
-            float proximity = 1.0f - ((gridEndX - mouseX) / edgeZone);
+        else if (mouseX > gridEndX - edgeZone && mouseX <= gridEndX + edgeOvershoot) {
+            float proximity = 1.0f - ((gridEndX + edgeOvershoot - mouseX) / (edgeZone + edgeOvershoot));
             proximity = std::clamp(proximity, 0.0f, 1.0f);
-            scrollDelta = scrollSpeed * proximity * static_cast<float>(deltaTime);
+            const float response = proximity * proximity * (3.0f - 2.0f * proximity); // smoothstep
+            const float pxPerSecond = minScrollPxPerSecond + (maxScrollPxPerSecond - minScrollPxPerSecond) * response;
+            scrollDelta = (pxPerSecond / std::max(1.0f, m_pixelsPerBeat)) * static_cast<float>(deltaTime);
         }
         
+        if (std::abs(scrollDelta) > 0.001f) {
+            double currentStartBeat = m_timelineScrollOffset / m_pixelsPerBeat;
+            if (scrollDelta < 0.0f && currentStartBeat <= 0.0001) {
+                scrollDelta = 0.0f;
+            }
+        }
+
         if (std::abs(scrollDelta) > 0.001f) {
             double currentStartBeat = m_timelineScrollOffset / m_pixelsPerBeat;
             double newStartBeat = currentStartBeat + scrollDelta;
@@ -2157,8 +2232,40 @@ void TrackManagerUI::onUpdate(double deltaTime) {
             // Apply the scroll
             setTimelineViewStartBeat(newStartBeat, false);
             
-            // Also update the clip drag position to follow the scroll
-            updateInstantClipDrag(m_lastMousePos);
+            // Keep the active gesture aligned with the newly scrolled view.
+            if (m_isDraggingClipInstant) {
+                updateInstantClipDrag(m_lastMousePos);
+            } else if (m_isDraggingRulerSelection) {
+                const float localMouseX = m_lastMousePos.x - gridStartX + m_timelineScrollOffset;
+                double positionInBeats = std::max(0.0, snapBeatToGrid(localMouseX / m_pixelsPerBeat));
+                m_rulerSelectionEndBeat = positionInBeats;
+                if (std::abs(m_rulerSelectionEndBeat - m_rulerSelectionStartBeat) > 0.001) {
+                    m_hasRulerSelection = true;
+                }
+                invalidateCache();
+            } else if (m_isDraggingLoopStart || m_isDraggingLoopEnd) {
+                const float localMouseX = m_lastMousePos.x - gridStartX + m_timelineScrollOffset;
+                double positionInBeats = std::max(0.0, snapBeatToGrid(localMouseX / m_pixelsPerBeat));
+                if (m_isDraggingLoopStart) {
+                    if (positionInBeats < m_loopEndBeat) {
+                        setLoopRegion(positionInBeats, m_loopEndBeat, true);
+                    }
+                } else if (positionInBeats > m_loopStartBeat) {
+                    setLoopRegion(m_loopStartBeat, positionInBeats, true);
+                }
+                m_minimapSelectionBeatRange = {m_loopStartBeat, m_loopEndBeat};
+                invalidateCache();
+            } else if (m_isDraggingPlayhead && m_trackManager) {
+                auto& playlist = m_trackManager->getPlaylistModel();
+                const float localMouseX = m_lastMousePos.x - gridStartX + m_timelineScrollOffset;
+                const double positionInBeats = localMouseX / m_pixelsPerBeat;
+                const double positionInSeconds = std::max(0.0, playlist.beatToSeconds(positionInBeats));
+                m_trackManager->setPosition(positionInSeconds);
+                m_trackManager->setPlayStartPosition(positionInSeconds);
+            } else if (m_isDrawingSelectionBox) {
+                m_selectionBoxEnd.x = std::clamp(m_lastMousePos.x, gridStartX, gridEndX);
+                invalidateCache();
+            }
         }
     }
 
@@ -2518,7 +2625,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             float scrollSpeed = 60.0f;
             float scrollDelta = -event.wheelDelta * scrollSpeed; // Invert for natural scroll direction
             
-            m_scrollOffset += scrollDelta;
+            m_targetScrollOffset += scrollDelta;
             
             // Clamp scroll offset
             float viewportHeight = bounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight;
@@ -2526,14 +2633,13 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             const float laneCount = static_cast<float>(m_trackUIComponents.size());
             float totalContentHeight = laneCount * (m_trackHeight + m_trackSpacing);
             float maxScroll = std::max(0.0f, totalContentHeight - viewportHeight);
-            m_scrollOffset = std::max(0.0f, std::min(m_scrollOffset, maxScroll));
+            m_targetScrollOffset = std::max(0.0f, std::min(m_targetScrollOffset, maxScroll));
             
             if (m_scrollbar) {
                 m_scrollbar->setCurrentRange(m_scrollOffset, viewportHeight);
             }
             
-            layoutTracks();
-            invalidateCache();  // Vertical scroll needs full redraw
+            setDirty(true);
             return true;
         }
     }
@@ -3169,8 +3275,9 @@ void TrackManagerUI::updateScrollbar() {
 
 void TrackManagerUI::onScroll(double position) {
     m_scrollOffset = static_cast<float>(position);
-    layoutTracks(); // Re-layout with new scroll offset
-    invalidateCache();  // ⚡ Mark cache dirty
+    m_targetScrollOffset = m_scrollOffset;
+    layoutTracks();
+    invalidateCache();
 }
 
 void TrackManagerUI::scheduleTimelineMinimapRebuild()
@@ -3343,15 +3450,14 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime)
     bool hasContent = (clipEndBeat > 0.001);
     
     double requiredEndBeat;
+    const bool allowViewDrivenDomainExpand = m_isDraggingClipInstant;
     if (!hasContent) {
         // EMPTY PROJECT: Fixed 16 bars - can't zoom out beyond this
-        // EXCEPT: edge scrolling can push the view, which expands domain dynamically
         const double emptyFixedBars = 16.0;
         const double emptyMinBeats = beatsPerBarD * emptyFixedBars;
         
-        // If view has scrolled beyond the fixed domain (via edge-scroll), expand to accommodate
-        // Otherwise stay locked at 16 bars
-        if (viewEndBeat > emptyMinBeats) {
+        // Only an active clip drag may extend the domain beyond the empty-project floor.
+        if (allowViewDrivenDomainExpand && viewEndBeat > emptyMinBeats) {
             // Edge scrolling pushed us out - expand domain to current view + small buffer
             requiredEndBeat = viewEndBeat + (beatsPerBarD * 2.0);
         } else {
@@ -3383,8 +3489,11 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime)
         const double padBeats = beatsPerBarD * paddingBars;
         const double playheadBuffer = beatsPerBarD * 4.0;  // 4 bars ahead of playhead
         
-        // Required = max of: content + padding, playhead + buffer, view with small margin
-        requiredEndBeat = std::max({clipEndBeat + padBeats, playheadBeat + playheadBuffer, viewEndBeat + beatsPerBarD});
+        // Normal scrolling/zooming should not mutate the domain; only a real clip edge-drag may do that.
+        requiredEndBeat = std::max(clipEndBeat + padBeats, playheadBeat + playheadBuffer);
+        if (allowViewDrivenDomainExpand) {
+            requiredEndBeat = std::max(requiredEndBeat, viewEndBeat + beatsPerBarD);
+        }
         
         // No hard ceiling - let it grow as big as needed (infinite if PC can handle it)
     }
