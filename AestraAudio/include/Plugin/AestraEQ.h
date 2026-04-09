@@ -429,7 +429,6 @@ public:
         }
         case 4: {
             if (id < kNumBands * 5) {
-                const uint32_t band = id / 5;
                 const FilterType type = static_cast<FilterType>(m_bands[band].type.load(std::memory_order_relaxed));
                 if (type == FilterType::LowCut || type == FilterType::HighCut) {
                     return std::to_string(filterStageCount(type, val) * 12) + " dB/oct";
