@@ -413,7 +413,7 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
         }
     }
 
-    if (hoverToggleIndex_ >= 0 && hoverToggleIndex_ < 3) {
+    if (showModeToggles_ && hoverToggleIndex_ >= 0 && hoverToggleIndex_ < 3) {
         std::string text;
         if (hoverToggleIndex_ == 0) text = "C: Clips (where audio/MIDI exists)";
         else if (hoverToggleIndex_ == 1) text = "E: Energy (approx. loudness per region)";

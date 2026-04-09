@@ -1009,7 +1009,7 @@ void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInsta
     // Calculate offset (Cursor Beat - Clip Start Beat)
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
-    float gridStartX = getBounds().x + controlAreaWidth + 5.0f;
+    float gridStartX = getGlobalBounds().x + controlAreaWidth + 5.0f;
 
     double cursorBeat = (clickPos.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
     m_clipDragOffsetBeats = cursorBeat - clip->startBeat;
@@ -2636,7 +2636,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             m_targetScrollOffset = std::max(0.0f, std::min(m_targetScrollOffset, maxScroll));
             
             if (m_scrollbar) {
-                m_scrollbar->setCurrentRange(m_targetScrollOffset, viewportHeight);
+                m_scrollbar->setCurrentRange(m_scrollOffset, viewportHeight);
             }
             
             setDirty(true);
@@ -3269,15 +3269,13 @@ void TrackManagerUI::updateScrollbar() {
     
     // Set scrollbar range
     m_scrollbar->setRangeLimit(0, totalContentHeight);
-    m_scrollbar->setCurrentRange(m_targetScrollOffset, viewportHeight);
+    m_scrollbar->setCurrentRange(m_scrollOffset, viewportHeight);
     m_scrollbar->setAutoHide(totalContentHeight <= viewportHeight);
 }
 
 void TrackManagerUI::onScroll(double position) {
-    m_targetScrollOffset = static_cast<float>(position);
-    if (std::abs(m_targetScrollOffset - m_scrollOffset) < 0.25f) {
-        m_scrollOffset = m_targetScrollOffset;
-    }
+    m_scrollOffset = static_cast<float>(position);
+    m_targetScrollOffset = m_scrollOffset;
     layoutTracks();
     invalidateCache();
 }
