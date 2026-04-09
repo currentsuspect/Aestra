@@ -705,25 +705,37 @@ void NUIRendererGL::drawLine(const NUIPoint& start, const NUIPoint& end, float t
     len = std::sqrt(dx * dx + dy * dy);
     if (len < 0.001f) return;
 
-    float nx = -dy / len * thickness * 0.5f;
-    float ny = dx / len * thickness * 0.5f;
-    
-    // Use Type 5 (Colored Geometry) for perfectly solid, non-aliased rendering when snapped
-    // SDF (Type 1) is too soft for 1px lines (alpha falloff causes "dotted" look)
-    // We pass 0 for UVs/Sizes as regular geometry doesn't need them
-    
-    addVertex(x1 + nx, y1 + ny, 0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
-    addVertex(x1 - nx, y1 - ny, 0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f); 
-    addVertex(x2 - nx, y2 - ny, 0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
-    addVertex(x2 + nx, y2 + ny, 0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
-    
-    uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 1);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 3);
+    const float halfThickness = thickness * 0.5f;
+    const float featherWidth = std::max(0.75f, thickness * 0.75f);
+    const float innerNx = -dy / len * halfThickness;
+    const float innerNy = dx / len * halfThickness;
+    const float outerNx = -dy / len * (halfThickness + featherWidth);
+    const float outerNy = dx / len * (halfThickness + featherWidth);
+
+    const NUIColor transparent(color.r, color.g, color.b, 0.0f);
+    const uint32_t base = static_cast<uint32_t>(vertices_.size());
+
+    addVertex(x1 + outerNx, y1 + outerNy, 0.0f, 0.0f, transparent, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x1 + innerNx, y1 + innerNy, 0.0f, 0.0f, color,       0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x1 - innerNx, y1 - innerNy, 0.0f, 0.0f, color,       0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x1 - outerNx, y1 - outerNy, 0.0f, 0.0f, transparent, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x2 + outerNx, y2 + outerNy, 0.0f, 0.0f, transparent, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x2 + innerNx, y2 + innerNy, 0.0f, 0.0f, color,       0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x2 - innerNx, y2 - innerNy, 0.0f, 0.0f, color,       0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x2 - outerNx, y2 - outerNy, 0.0f, 0.0f, transparent, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+
+    auto addQuadIndices = [this](uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+        indices_.push_back(a);
+        indices_.push_back(b);
+        indices_.push_back(c);
+        indices_.push_back(c);
+        indices_.push_back(b);
+        indices_.push_back(d);
+    };
+
+    addQuadIndices(base + 0, base + 1, base + 4, base + 5);
+    addQuadIndices(base + 1, base + 2, base + 5, base + 6);
+    addQuadIndices(base + 2, base + 3, base + 6, base + 7);
 }
 
 void NUIRendererGL::drawPolyline(const NUIPoint* points, int count, float thickness, const NUIColor& color) {
