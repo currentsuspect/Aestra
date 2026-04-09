@@ -124,7 +124,9 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
         constexpr float kMasterNameH = 14.0f;
         constexpr float kMasterRouteH = 11.0f;
         constexpr float kMasterGap = 1.5f;
-        const float stackH = kMasterNameH + kMasterGap + kMasterRouteH;
+        const float stackH = m_route.empty()
+            ? kMasterNameH
+            : (kMasterNameH + kMasterGap + kMasterRouteH);
         const float stackY = textRect.y + std::max(0.0f, (textRect.height - stackH) * 0.5f) - 1.0f;
 
         NUIRect nameRect{textRect.x, stackY, textRect.width, kMasterNameH};

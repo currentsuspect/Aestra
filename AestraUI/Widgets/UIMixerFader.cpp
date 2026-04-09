@@ -13,7 +13,7 @@ namespace AestraUI {
 namespace {
     constexpr float TRACK_RADIUS = 4.0f;
     constexpr float HANDLE_RADIUS = 4.0f;
-    constexpr float HANDLE_HEIGHT = 14.0f;
+    constexpr float HANDLE_HEIGHT = 16.0f;
     constexpr float TOP_PAD = 10.0f;
     constexpr float BOTTOM_PAD = 20.0f; // room for text
     constexpr float SNAP_DB = 0.5f;
@@ -140,7 +140,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     // Wider tech handle
     const float handleW = 28.0f;
     const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
-    const float handleH = 16.0f;
+    const float handleH = HANDLE_HEIGHT;
     
     NUIRect handleRect{handleX, handleY, handleW, handleH};
     float handleRad = 3.0f;
@@ -200,6 +200,7 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
         m_dragging = true;
+        m_dragLatched = false;
         m_dragStartPos = event.position;
         const float trackTop = bounds.y + TOP_PAD;
         const float trackBottom = bounds.y + bounds.height - BOTTOM_PAD;
@@ -210,7 +211,7 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
                                          trackTop - HANDLE_HEIGHT * 0.5f,
                                          trackBottom - HANDLE_HEIGHT * 0.5f);
         const float handleW = 28.0f;
-        const float handleH = 16.0f;
+        const float handleH = HANDLE_HEIGHT;
         const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
         const NUIRect handleRect{handleX, handleY, handleW, handleH};
 
@@ -226,6 +227,7 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
 
     if (event.released && event.button == NUIMouseButton::Left && m_dragging) {
         m_dragging = false;
+        m_dragLatched = false;
         return true;
     }
 
@@ -242,7 +244,13 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
         if (event.modifiers & NUIModifiers::Shift) {
             sensitivity *= 0.2f;
         }
-        if (absDelta < DRAG_SLOP) {
+        if (!m_dragLatched && absDelta < DRAG_SLOP) {
+            return true;
+        }
+        if (!m_dragLatched) {
+            m_dragLatched = true;
+            m_dragStartDb = m_valueDb;
+            m_dragStartPos = event.position;
             return true;
         }
 
