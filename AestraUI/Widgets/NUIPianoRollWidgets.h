@@ -397,6 +397,7 @@ public:
 
     void onRender(NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
+    void onUpdate(double deltaTime) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
 
@@ -442,6 +443,8 @@ private:
     
     float m_scrollX;
     float m_scrollY;
+    float m_targetScrollX;
+    float m_targetScrollY;
     double m_playheadBeat = 0.0;
     double m_totalDurationBeats = 400.0;
     bool m_showLocalMinimap = true;

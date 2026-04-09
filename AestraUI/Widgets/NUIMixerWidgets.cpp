@@ -5,6 +5,7 @@
 #include "NUIThemeSystem.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 
 namespace AestraUI {
 
@@ -188,6 +189,8 @@ void InsertSlot::setOnActivate(std::function<void()> callback)
 UIMixerSend::UIMixerSend()
 {
     destSelector_ = std::make_shared<UIItemSelector>();
+    accentColor_ = NUIThemeManager::getInstance().getColor("accentPrimary");
+    destSelector_->setAccentColor(accentColor_);
     
     // Forward selection changes
     destSelector_->setOnSelectionChanged([this](int index) {
@@ -197,6 +200,7 @@ UIMixerSend::UIMixerSend()
     });
 
     levelKnob_ = std::make_shared<UIMixerKnob>(UIMixerKnobType::Send);
+    levelKnob_->setAccentColor(accentColor_);
     levelKnob_->setValue(0.7f); // Unity-ish
     levelKnob_->onValueChanged = [this](float v) {
         if (onLevelChanged_) onLevelChanged_(v);
@@ -226,23 +230,58 @@ UIMixerSend::UIMixerSend()
 
 void UIMixerSend::onRender(NUIRenderer& renderer)
 {
-    // Layout: Knob on left, Selector on right
     auto b = getBounds();
-    const float knobSize = b.height - 4.0f;
-    
-    NUIRect knobRect = {b.x + 2.0f, b.y + 2.0f, knobSize, knobSize};
-    
-    float comboX = b.x + knobSize + 8.0f;
-    float deleteBtnSize = 20.0f;
-    float maxComboWidth = 120.0f;
-    float availableWidth = b.width - (knobSize + 10.0f) - (deleteBtnSize + 4.0f); // Reserve space for delete button
-    float comboWidth = (availableWidth > maxComboWidth) ? maxComboWidth : availableWidth;
-    
-    NUIRect comboRect = {comboX, b.y + 2.0f, comboWidth, b.height - 4.0f};
-    // Ensure button has integer coordinates for crisp rendering
-    float delX = std::floor(comboX + comboWidth + 4.0f);
-    float delY = std::floor(b.y + (b.height - deleteBtnSize) * 0.5f);
-    NUIRect deleteRect = {delX, delY, deleteBtnSize, deleteBtnSize};
+    auto& theme = NUIThemeManager::getInstance();
+    const float radius = 14.0f;
+
+    renderer.drawShadow(b, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.10f));
+    renderer.fillRoundedRect(b, radius, theme.getColor("backgroundSecondary").withAlpha(0.42f));
+    renderer.strokeRoundedRect(b, radius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.36f));
+    renderer.strokeRoundedRect({b.x + 1.0f, b.y + 1.0f, b.width - 2.0f, b.height - 2.0f},
+                               radius - 1.0f,
+                               1.0f,
+                               NUIColor::white().withAlpha(0.02f));
+
+    const NUIRect indexChip{b.x + 10.0f, b.y + 8.0f, 22.0f, 16.0f};
+    renderer.fillRoundedRect(indexChip, 8.0f, accentColor_.withAlpha(0.12f));
+    renderer.strokeRoundedRect(indexChip, 8.0f, 1.0f, accentColor_.withAlpha(0.20f));
+    renderer.drawTextCentered(std::to_string(index_ + 1), indexChip, 9.0f, theme.getColor("textSecondary").withAlpha(0.94f));
+
+    renderer.drawText("Route", {b.x + 40.0f, b.y + 10.0f}, 8.5f, theme.getColor("textSecondary").withAlpha(0.84f));
+
+    const char* routeMode = postFader_ ? "Post" : "Pre";
+    const float modeW = renderer.measureText(routeMode, 8.0f).width + 12.0f;
+    const float muteW = muted_ ? renderer.measureText("Muted", 8.0f).width + 12.0f : 0.0f;
+    float chipRight = b.right() - 8.0f;
+
+    if (muted_) {
+        const NUIRect muteChip{chipRight - muteW, b.y + 8.0f, muteW, 15.0f};
+        renderer.fillRoundedRect(muteChip, 7.5f, theme.getColor("warning").withAlpha(0.12f));
+        renderer.strokeRoundedRect(muteChip, 7.5f, 1.0f, theme.getColor("warning").withAlpha(0.22f));
+        renderer.drawTextCentered("Muted", muteChip, 8.0f, theme.getColor("textSecondary").withAlpha(0.92f));
+        chipRight -= muteW + 4.0f;
+    }
+
+    const NUIRect modeChip{chipRight - modeW, b.y + 8.0f, modeW, 15.0f};
+    renderer.fillRoundedRect(modeChip, 7.5f, theme.getColor("backgroundPrimary").withAlpha(0.34f));
+    renderer.strokeRoundedRect(modeChip, 7.5f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.22f));
+    renderer.drawTextCentered(routeMode, modeChip, 8.0f, theme.getColor("textSecondary").withAlpha(0.90f));
+
+    char levelBuf[32];
+    const float level = std::max(0.0001f, levelKnob_ ? levelKnob_->getValue() : 1.0f);
+    const float db = 20.0f * std::log10(level);
+    std::snprintf(levelBuf, sizeof(levelBuf), db <= -59.9f ? "-inf dB" : "%.1f dB", db);
+    renderer.drawText(levelBuf, {b.right() - 74.0f, b.y + 11.0f}, 8.5f, theme.getColor("textSecondary").withAlpha(0.88f));
+
+    const float knobSize = 22.0f;
+    const float deleteBtnSize = 20.0f;
+    const NUIRect knobRect{b.right() - 64.0f, b.y + 21.0f, knobSize, knobSize};
+    const NUIRect deleteRect{b.right() - 28.0f, b.y + 22.0f, deleteBtnSize, deleteBtnSize};
+    const float selectorRight = knobRect.x - 8.0f;
+    const NUIRect comboRect{b.x + 40.0f, b.y + 22.0f, std::max(56.0f, selectorRight - (b.x + 40.0f)), 22.0f};
+
+    renderer.drawText("Destination", {comboRect.x, b.y + 33.5f}, 7.5f, theme.getColor("textSecondary").withAlpha(0.66f));
+    renderer.drawText("Level", {knobRect.x - 1.0f, b.y + 44.0f}, 7.5f, theme.getColor("textSecondary").withAlpha(0.66f));
 
     levelKnob_->setBounds(knobRect);
     destSelector_->setBounds(comboRect);

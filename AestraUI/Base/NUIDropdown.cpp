@@ -18,7 +18,7 @@ NUIDropdown::NUIDropdown()
     , isOpen_(false)
     , dropdownAnimProgress_(0.0f)
     , maxVisibleItems_(5)
-    , itemHeight_(28.0f)
+    , itemHeight_(30.0f)
     , placeholderText_("Select an option...")
     , hoveredIndex_(-1)
 {
@@ -29,14 +29,14 @@ NUIDropdown::NUIDropdown()
         auto& mgr = NUIThemeManager::getInstance();
         const auto& props = mgr.getCurrentTheme();
         backgroundColor_ = props.surfaceRaised;
-        hoverColor_ = NUIColor(0.3f, 0.3f, 0.35f, 1.0f);
+        hoverColor_ = props.buttonBgHover;
         selectedColor_ = props.selected;
         borderColor_ = props.border;
         textColor_ = props.textPrimary;
         arrowColor_ = props.textSecondary;
     } catch (...) {
         backgroundColor_ = NUIColor(0.15f, 0.15f, 0.15f, 1.0f);
-        hoverColor_ = NUIColor(0.3f, 0.3f, 0.35f, 1.0f);
+        hoverColor_ = NUIColor(0.22f, 0.24f, 0.30f, 1.0f);
         selectedColor_ = NUIColor(0.25f, 0.35f, 0.45f, 1.0f);
         borderColor_ = NUIColor(0.3f, 0.3f, 0.3f, 1.0f);
         textColor_ = NUIColor(0.9f, 0.9f, 0.9f, 1.0f);
@@ -157,12 +157,19 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
 
     auto bounds = getBounds();
-    float cornerRadius = 6.0f;
-    renderer.fillRoundedRect(bounds, cornerRadius, backgroundColor_);
+    const float cornerRadius = 8.0f;
+    const bool hovered = isHovered();
+    const NUIColor bg = hovered ? backgroundColor_.withAlpha(0.98f) : backgroundColor_.withAlpha(0.94f);
+    const NUIColor outerBorder = NUIColor(0.0f, 0.0f, 0.0f, 0.52f);
+    const NUIColor mainBorder = hovered ? borderColor_.withAlpha(0.70f) : borderColor_.withAlpha(0.50f);
+    const NUIColor innerStroke = NUIColor::white().withAlpha(0.030f);
+
+    renderer.drawShadow(bounds, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.12f));
+    renderer.fillRoundedRect(bounds, cornerRadius, bg);
 
     std::string displayText = getSelectedText();
-    float padding = 10.0f;
-    float arrowSpace = 26.0f;
+    const float padding = 12.0f;
+    const float arrowSpace = 32.0f;
 
     NUIRect textBounds = bounds;
     textBounds.x += padding;
@@ -194,10 +201,19 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
         renderer.drawText(displayText, NUIPoint(textBounds.x, textY), fontSize, textColor_);
     }
 
+    const NUIRect arrowWell{
+        bounds.right() - arrowSpace,
+        bounds.y + 2.0f,
+        arrowSpace - 4.0f,
+        bounds.height - 4.0f
+    };
+    renderer.fillRoundedRect(arrowWell, 7.0f, NUIColor(1.0f, 1.0f, 1.0f, hovered ? 0.055f : 0.040f));
+    renderer.strokeRoundedRect(arrowWell, 7.0f, 1.0f, NUIColor::white().withAlpha(0.05f));
+
     // Draw chevron arrow
     float arrowSize = 6.0f;
     float centerY = bounds.y + bounds.height / 2;
-    float arrowX = bounds.x + bounds.width - padding - arrowSize - 4.0f;
+    float arrowX = arrowWell.x + (arrowWell.width - arrowSize) * 0.5f;
     float arrowCenterX = arrowX + arrowSize / 2;
     
     float rotationRad = chevronRotation_ * 3.14159f / 180.0f;
@@ -215,9 +231,12 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
     renderer.drawLine(p1, p3, lineWidth, arrowColor_);
     renderer.drawLine(p2, p3, lineWidth, arrowColor_);
 
-    NUIColor outerBorder = NUIColor(0.0f, 0.0f, 0.0f, 0.6f);
     renderer.strokeRoundedRect(bounds, cornerRadius, 2.0f, outerBorder);
-    renderer.strokeRoundedRect(bounds, cornerRadius, 1.0f, borderColor_.withAlpha(0.5f));
+    renderer.strokeRoundedRect(bounds, cornerRadius, 1.0f, mainBorder);
+    renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
+                               cornerRadius - 1.0f,
+                               1.0f,
+                               innerStroke);
 
     if (isOpen_) {
         renderDropdownList(renderer);
@@ -362,7 +381,7 @@ void NUIDropdown::renderDropdownListInternal(NUIRenderer& renderer) {
     int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
     float listHeight = itemHeight_ * visibleItems;
 
-    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height + 2.0f, bounds.width, listHeight);
+    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height + 6.0f, bounds.width, listHeight);
 
     renderer.setOpacity(1.0f);
     renderer.pushTransform(0, 0, 0, 1.0f);
@@ -379,15 +398,14 @@ void NUIDropdown::renderDropdownListInternal(NUIRenderer& renderer) {
         itemWidthCacheValid_ = true;
     }
 
-    NUIRect shadowBounds = dropdownBounds;
-    shadowBounds.y += 2.0f;
-    shadowBounds.width += 2.0f;
-    shadowBounds.height += 2.0f;
-    renderer.fillRoundedRect(shadowBounds, 6.0f, NUIColor(0,0,0,0.4f));
-
-    renderer.fillRoundedRect(dropdownBounds, 6.0f, backgroundColor_);
-    renderer.strokeRoundedRect(dropdownBounds, 6.0f, 2.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.6f));
-    renderer.strokeRoundedRect(dropdownBounds, 6.0f, 1.0f, borderColor_.withAlpha(0.5f));
+    renderer.drawShadow(dropdownBounds, 0.0f, 8.0f, 18.0f, NUIColor(0,0,0,0.18f));
+    renderer.fillRoundedRect(dropdownBounds, 10.0f, backgroundColor_.withAlpha(0.985f));
+    renderer.strokeRoundedRect(dropdownBounds, 10.0f, 2.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.50f));
+    renderer.strokeRoundedRect(dropdownBounds, 10.0f, 1.0f, borderColor_.withAlpha(0.62f));
+    renderer.strokeRoundedRect({dropdownBounds.x + 1.0f, dropdownBounds.y + 1.0f, dropdownBounds.width - 2.0f, dropdownBounds.height - 2.0f},
+                               9.0f,
+                               1.0f,
+                               NUIColor::white().withAlpha(0.028f));
 
     for (int i = 0; i < visibleItems && i < static_cast<int>(items_.size()); ++i) {
         NUIRect itemBounds(dropdownBounds.x, dropdownBounds.y + i * itemHeight_, dropdownBounds.width, itemHeight_);
@@ -397,10 +415,10 @@ void NUIDropdown::renderDropdownListInternal(NUIRenderer& renderer) {
         
         if (i < visibleItems - 1) {
             float dividerY = itemBounds.y + itemBounds.height;
-            float dividerPadding = 8.0f;
+            float dividerPadding = 10.0f;
             renderer.drawLine(NUIPoint(itemBounds.x + dividerPadding, dividerY), 
                             NUIPoint(itemBounds.x + itemBounds.width - dividerPadding, dividerY), 
-                            1.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.4f));
+                            1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.05f));
         }
     }
 
@@ -414,7 +432,7 @@ void NUIDropdown::renderDropdownList(NUIRenderer& renderer) {
     auto bounds = getBounds();
     int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
     float listHeight = itemHeight_ * visibleItems;
-    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height + 2.0f, bounds.width, listHeight);
+    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height + 6.0f, bounds.width, listHeight);
 
     if (cachedTextureId_ != 0 && !cacheDirty_) {
         renderer.drawTexture(cachedTextureId_, dropdownBounds, NUIRect(0,0,cachedTextureWidth_, cachedTextureHeight_));
@@ -427,13 +445,17 @@ void NUIDropdown::renderDropdownList(NUIRenderer& renderer) {
 void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bounds, bool isSelected, bool isHovered) {
     const auto& item = items_[index];
     if (isSelected) {
-        renderer.fillRect(bounds, selectedColor_);
+        renderer.fillRoundedRect({bounds.x + 4.0f, bounds.y + 2.0f, bounds.width - 8.0f, bounds.height - 4.0f},
+                                 7.0f,
+                                 selectedColor_.withAlpha(0.34f));
     } else if (isHovered) {
-        renderer.fillRect(bounds, hoverColor_);
+        renderer.fillRoundedRect({bounds.x + 4.0f, bounds.y + 2.0f, bounds.width - 8.0f, bounds.height - 4.0f},
+                                 7.0f,
+                                 hoverColor_.withAlpha(0.22f));
     }
 
     NUIColor curText = item.enabled ? textColor_ : textColor_.withAlpha(0.5f);
-    float padding = 8.0f;
+    float padding = 12.0f;
     
     NUIRect textBounds = bounds;
     textBounds.x += padding;
@@ -441,7 +463,7 @@ void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bo
     textBounds.y += 2.0f;
     textBounds.height -= 4.0f;
 
-    float fontSize = 14.0f;
+    float fontSize = 13.0f;
     if (auto th = getTheme()) fontSize = th->getFontSize("large");
 
     if (textBounds.width > 2.0f && textBounds.height > 0) {
@@ -472,7 +494,7 @@ int NUIDropdown::getItemUnderMouse(const NUIPoint& mousePos) const {
     if (!isOpen_) return -1;
     auto bounds = getBounds();
     int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
-    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height + 2.0f, bounds.width, itemHeight_ * visibleItems);
+    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height + 6.0f, bounds.width, itemHeight_ * visibleItems);
     if (!dropdownBounds.contains(mousePos)) return -1;
     float localY = mousePos.y - dropdownBounds.y;
     int index = static_cast<int>(localY / itemHeight_);

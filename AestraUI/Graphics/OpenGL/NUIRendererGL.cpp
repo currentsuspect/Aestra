@@ -152,6 +152,10 @@ float sdSquircle(vec2 p, vec2 b, float r) {
     return dist;
 }
 
+float sdCircle(vec2 p, float r) {
+    return length(p) - r;
+}
+
 void main() {
     vec4 color = vColor;
     int primitiveID = int(floor(vPrimitiveType + 0.5));
@@ -209,6 +213,25 @@ void main() {
         // Equivalent to: 1.0 - smoothstep(halfStroke-aa, halfStroke+aa, abs(dist))
         float alpha = 1.0 - smoothstep(halfStroke - aaWidth, halfStroke + aaWidth, abs(dist));
         
+        color.a *= alpha;
+    }
+
+    if (primitiveID == 6) {
+        // Filled Circle
+        vec2 pos = (vTexCoord - 0.5) * vQuadSize;
+        float dist = sdCircle(pos, vRectSize.x * 0.5);
+        float aaWidth = max(fwidth(dist) * 1.5, 0.75);
+        float alpha = 1.0 - smoothstep(-aaWidth, aaWidth, dist);
+        color.a *= alpha;
+    }
+
+    if (primitiveID == 7) {
+        // Stroked Circle
+        vec2 pos = (vTexCoord - 0.5) * vQuadSize;
+        float dist = sdCircle(pos, vRectSize.x * 0.5);
+        float halfStroke = vStrokeWidth * 0.5;
+        float aaWidth = max(fwidth(dist) * 1.25, 0.75);
+        float alpha = 1.0 - smoothstep(halfStroke - aaWidth, halfStroke + aaWidth, abs(dist));
         color.a *= alpha;
     }
     
@@ -271,16 +294,23 @@ bool NUIRendererGL::initialize(int width, int height) {
     fontUseLCD_ = false;
     
         // Try to load the best font for Aestra.
-        // Prefer a heavier bundled weight so the global UI reads less thin.
+        // Prefer a production-safe medium weight first so the UI hierarchy feels
+        // intentional without needing overly aggressive outline emboldening.
         std::vector<std::string> fontPaths;
         if (const char* fontDir = std::getenv("AESTRA_FONT_DIR")) {
             const std::string base(fontDir);
+            fontPaths.push_back(base + "/Geist/Geist-Medium.ttf");
             fontPaths.push_back(base + "/Geist/Geist-Regular.ttf");
             fontPaths.push_back(base + "/Geist/Geist-Bold.ttf");
-            fontPaths.push_back(base + "/Geist/Geist-Medium.ttf");
             fontPaths.push_back(base + "/Manrope/Manrope-Regular.ttf");
         }
         std::vector<std::string> fallbackFontPaths = {
+            "AestraAssets/fonts/Geist/Geist-Medium.ttf",
+            "../AestraAssets/fonts/Geist/Geist-Medium.ttf",
+            "../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
+            "../../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
+            "../../../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
+
             "AestraAssets/fonts/Geist/Geist-Regular.ttf",
             "../AestraAssets/fonts/Geist/Geist-Regular.ttf",
             "../../AestraAssets/fonts/Geist/Geist-Regular.ttf",
@@ -292,12 +322,6 @@ bool NUIRendererGL::initialize(int width, int height) {
             "../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
             "../../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
             "../../../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
-
-            "AestraAssets/fonts/Geist/Geist-Medium.ttf",
-            "../AestraAssets/fonts/Geist/Geist-Medium.ttf",
-            "../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
-            "../../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
-            "../../../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
 
             "AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
             "../AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
@@ -660,43 +684,27 @@ void NUIRendererGL::strokeRoundedRect(const NUIRect& rect, float radius, float t
 }
 
 void NUIRendererGL::fillCircle(const NUIPoint& center, float radius, const NUIColor& color) {
-    ensureBasicPrimitive();
-    // Approximate circle with triangle fan
-    const int segments = 32;
-    const float angleStep = 2.0f * 3.14159f / segments;
-    
-    for (int i = 0; i < segments; ++i) {
-        float angle1 = i * angleStep;
-        float angle2 = (i + 1) * angleStep;
-        
-        uint32_t base = static_cast<uint32_t>(vertices_.size());
-        
-        addVertex(center.x, center.y, 0.5f, 0.5f, color);
-        addVertex(center.x + std::cos(angle1) * radius, center.y + std::sin(angle1) * radius, 0, 0, color);
-        addVertex(center.x + std::cos(angle2) * radius, center.y + std::sin(angle2) * radius, 1, 1, color);
-        
-        // Add indices for this triangle
-        indices_.push_back(base + 0);
-        indices_.push_back(base + 1);
-        indices_.push_back(base + 2);
-    }
+    constexpr float kCirclePad = 1.5f;
+    const float diameter = radius * 2.0f;
+    const NUIRect quad = {
+        center.x - radius - kCirclePad,
+        center.y - radius - kCirclePad,
+        diameter + kCirclePad * 2.0f,
+        diameter + kCirclePad * 2.0f
+    };
+    addQuad(quad, color, diameter, diameter, quad.width, quad.height, radius, 1.0f, 0.0f, 6.0f);
 }
 
 void NUIRendererGL::strokeCircle(const NUIPoint& center, float radius, float thickness, const NUIColor& color) {
-    ensureBasicPrimitive();
-    // Approximate with line segments
-    const int segments = 32;
-    const float angleStep = 2.0f * 3.14159f / segments;
-    
-    for (int i = 0; i < segments; ++i) {
-        float angle1 = i * angleStep;
-        float angle2 = (i + 1) * angleStep;
-        
-        NUIPoint p1(center.x + std::cos(angle1) * radius, center.y + std::sin(angle1) * radius);
-        NUIPoint p2(center.x + std::cos(angle2) * radius, center.y + std::sin(angle2) * radius);
-        
-        drawLine(p1, p2, thickness, color);
-    }
+    const float aaPad = std::max(1.5f, thickness * 0.75f + 0.5f);
+    const float diameter = radius * 2.0f;
+    const NUIRect quad = {
+        center.x - radius - aaPad,
+        center.y - radius - aaPad,
+        diameter + aaPad * 2.0f,
+        diameter + aaPad * 2.0f
+    };
+    addQuad(quad, color, diameter, diameter, quad.width, quad.height, radius, 1.0f, thickness, 7.0f);
 }
 
 void NUIRendererGL::drawLine(const NUIPoint& start, const NUIPoint& end, float thickness, const NUIColor& color) {
@@ -1106,9 +1114,9 @@ float NUIRendererGL::getDPIScale() {
 NUIRendererGL::AtlasInfo NUIRendererGL::selectAtlas(float fontSize) const {
     AtlasInfo info;
     
-    const bool useXSmallAtlas = (fontSize <= 12.5f);
-    const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= 14.5f);
-    const bool useMediumAtlas = (!useXSmallAtlas && !useSmallAtlas && fontSize <= 18.5f);
+    const bool useXSmallAtlas = (fontSize <= 14.25f);
+    const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= 16.75f);
+    const bool useMediumAtlas = (!useXSmallAtlas && !useSmallAtlas && fontSize <= 20.5f);
     
     if (useXSmallAtlas && fontAtlasTextureIdXSmall_ != 0 && atlasFontSizeXSmall_ > 0) {
         info.textureId = fontAtlasTextureIdXSmall_;
@@ -1816,9 +1824,9 @@ void NUIRendererGL::drawTextCentered(const std::string& text, const NUIRect& rec
 NUIRenderer::FontMetrics NUIRendererGL::getFontMetrics(float fontSize) const {
     NUIRenderer::FontMetrics metrics;
     if (fontInitialized_) {
-        const bool useXSmallAtlas = (fontSize <= 12.5f);
-        const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= 14.5f);
-        const bool useMediumAtlas = (!useXSmallAtlas && !useSmallAtlas && fontSize <= 18.5f);
+        const bool useXSmallAtlas = (fontSize <= 14.25f);
+        const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= 16.75f);
+        const bool useMediumAtlas = (!useXSmallAtlas && !useSmallAtlas && fontSize <= 20.5f);
         const int atlasSize = useXSmallAtlas ? atlasFontSizeXSmall_ : (useSmallAtlas ? atlasFontSizeSmall_ : (useMediumAtlas ? atlasFontSizeMedium_ : atlasFontSize_));
         const float ascent = useXSmallAtlas ? fontAscentXSmall_ : (useSmallAtlas ? fontAscentSmall_ : (useMediumAtlas ? fontAscentMedium_ : fontAscent_));
         const float descent = useXSmallAtlas ? fontDescentXSmall_ : (useSmallAtlas ? fontDescentSmall_ : (useMediumAtlas ? fontDescentMedium_ : fontDescent_));
@@ -1966,7 +1974,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         // 1. Rebalance Ascent so Cap Height is centered (keeps text vertically aligned).
         // 2. Expand Line Height by ~15% to remove "Invisible Border" feel.
         
-        float verticalPadding = atlasFontSize * 0.15f; 
+        float verticalPadding = atlasFontSize * 0.10f; 
         float capHalfHeight = atlasFontSize * 0.35f;
         
         // Center of Expanded Box = (RawLineHeight + Padding) / 2
@@ -2045,13 +2053,15 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
             // embolden amount so small labels gain confidence without turning
             // blurry or overfilled.
             if (ftFace_->glyph->format == FT_GLYPH_FORMAT_OUTLINE && atlasFontSize >= 11) {
-                FT_Pos emboldenStrength = 22;
-                if (atlasFontSize >= 36) {
-                    emboldenStrength = 56;
-                } else if (atlasFontSize >= 20) {
-                    emboldenStrength = 34;
-                } else if (atlasFontSize >= 15) {
-                    emboldenStrength = 28;
+                FT_Pos emboldenStrength = 18;
+                if (atlasFontSize >= 40) {
+                    emboldenStrength = 42;
+                } else if (atlasFontSize >= 22) {
+                    emboldenStrength = 26;
+                } else if (atlasFontSize >= 16) {
+                    emboldenStrength = 22;
+                } else if (atlasFontSize >= 14) {
+                    emboldenStrength = 24;
                 }
                 FT_Outline_Embolden(&ftFace_->glyph->outline, emboldenStrength);
             }
@@ -2156,7 +2166,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
 
     // Large atlas (36px) for headings and larger controls without oversoft downsampling.
     {
-        const int ATLAS_FONT_SIZE = 36;
+        const int ATLAS_FONT_SIZE = 40;
         atlasFontSize_ = ATLAS_FONT_SIZE;
         if (!buildAtlas(ATLAS_FONT_SIZE,
                         fontAtlasTextureId_,
@@ -2173,7 +2183,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
 
     // Medium atlas (20px) for the common 15-18 px UI copy.
     {
-        const int ATLAS_FONT_SIZE_MEDIUM = 20;
+        const int ATLAS_FONT_SIZE_MEDIUM = 22;
         atlasFontSizeMedium_ = ATLAS_FONT_SIZE_MEDIUM;
         (void)buildAtlas(ATLAS_FONT_SIZE_MEDIUM,
                          fontAtlasTextureIdMedium_,
@@ -2188,7 +2198,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
 
     // Small atlas tuned for dense UI labels around 10-12 px.
     {
-        const int ATLAS_FONT_SIZE_SMALL = 14;
+        const int ATLAS_FONT_SIZE_SMALL = 16;
         atlasFontSizeSmall_ = ATLAS_FONT_SIZE_SMALL;
         (void)buildAtlas(ATLAS_FONT_SIZE_SMALL,
                          fontAtlasTextureIdSmall_,
@@ -2203,7 +2213,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
 
     // Extra-small atlas for the densest 10-11 px copy.
     {
-        const int ATLAS_FONT_SIZE_XSMALL = 12;
+        const int ATLAS_FONT_SIZE_XSMALL = 14;
         atlasFontSizeXSmall_ = ATLAS_FONT_SIZE_XSMALL;
         (void)buildAtlas(ATLAS_FONT_SIZE_XSMALL,
                          fontAtlasTextureIdXSmall_,

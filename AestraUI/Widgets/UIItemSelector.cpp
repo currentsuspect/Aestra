@@ -262,7 +262,7 @@ void UIItemSelector::onRender(NUIRenderer& renderer) {
     // Colors
     NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.3f); 
     NUIColor borderColor = themeManager.getColor("glassBorder");
-    NUIColor accentColor = themeManager.getColor("accentPrimary");
+    NUIColor accentColor = m_accentOverride.a > 0.0f ? m_accentOverride : themeManager.getColor("accentPrimary");
     NUIColor textPrimary = themeManager.getColor("textPrimary");
     NUIColor textSecondary = themeManager.getColor("textSecondary");
     

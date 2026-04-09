@@ -46,7 +46,7 @@ public:
         NUIColor hoverColor = theme.getColor("primary").withAlpha(0.2f); // Aestra Purple hover
         
         float fontSize = 12.0f;
-        float padding = 8.0f;
+        float paddingX = 7.0f;
         float x = bounds.x;
         
         // Calculate and render each menu item
@@ -55,7 +55,7 @@ public:
             const auto& item = items_[i];
             NUISize sz = renderer.measureText(item.label, fontSize);
             
-            NUIRect itemRect(x, bounds.y, sz.width + padding * 2, bounds.height);
+            NUIRect itemRect(x, bounds.y, sz.width + paddingX * 2, bounds.height);
             itemRects_.push_back(itemRect);
             
             // Draw hover background
@@ -64,8 +64,7 @@ public:
             }
             
             // Draw text centered
-            float textY = bounds.y + (bounds.height - sz.height) / 2.0f;
-            renderer.drawText(item.label, NUIPoint(x + padding, textY), fontSize, textColor);
+            renderer.drawTextCentered(item.label, itemRect, fontSize, textColor);
             
             x += itemRect.width + 4.0f; // 4px gap between items
         }

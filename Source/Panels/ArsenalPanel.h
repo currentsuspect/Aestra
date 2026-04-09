@@ -105,6 +105,7 @@ private:
     
     // Layout & Scrolling
     float m_scrollY = 0.0f;
+    float m_targetScrollY = 0.0f;
     int m_stepCount = 16; // Default step count
     void layoutUnits();
     

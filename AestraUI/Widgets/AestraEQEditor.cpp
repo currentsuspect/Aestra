@@ -36,6 +36,11 @@ const char* shortTypeLabel(uint32_t type) {
     return type < 8 ? labels[type] : "Bell";
 }
 
+const char* glyphTypeLabel(uint32_t type) {
+    static const char* labels[] = {"Bell", "Cut", "Cut", "Shelf", "Shelf", "Notch", "Band", "Tilt"};
+    return type < 8 ? labels[type] : "Bell";
+}
+
 bool usesDiscreteCutSlope(uint32_t type) {
     using FilterType = Aestra::Audio::Plugins::FilterType;
     const auto filterType = static_cast<FilterType>(type);
@@ -333,11 +338,11 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
         offsetDown[i].y += 0.75f;
     }
 
-    renderer.drawPolyline(offsetUp.data(), static_cast<int>(offsetUp.size()), 4.0f, curveColor.withAlpha(0.06f));
-    renderer.drawPolyline(offsetDown.data(), static_cast<int>(offsetDown.size()), 4.0f, curveColor.withAlpha(0.06f));
-    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 5.0f, curveColor.withAlpha(0.12f));
-    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 2.5f, curveColor.withAlpha(0.30f));
-    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 1.25f, curveColor);
+    renderer.drawPolyline(offsetUp.data(), static_cast<int>(offsetUp.size()), 4.0f, curveColor.withAlpha(0.07f));
+    renderer.drawPolyline(offsetDown.data(), static_cast<int>(offsetDown.size()), 4.0f, curveColor.withAlpha(0.07f));
+    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 6.0f, curveColor.withAlpha(0.10f));
+    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 3.0f, curveColor.withAlpha(0.34f));
+    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 1.4f, curveColor.withAlpha(0.96f));
 
     for (size_t i = 0; i < m_bands.size(); ++i) {
         const auto& band = m_bands[i];
@@ -349,45 +354,73 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
         const bool hovered = static_cast<int>(i) == m_hoveredBand;
         const bool dragging = static_cast<int>(i) == m_draggingGraphBand;
         const NUIPoint node = graphNodePosition(band, m_lastResponseBounds);
-        const float radius = dragging ? 9.0f : (selected ? 8.0f : 6.5f);
-        NUIColor nodeColor = bandColorForIndex(i).withAlpha(selected || hovered || dragging ? 0.98f : 0.84f);
+        const float radius = dragging ? 10.0f : (selected ? 8.75f : (hovered ? 7.3f : 6.5f));
+        NUIColor nodeColor = bandColorForIndex(i).withAlpha(selected || hovered || dragging ? 0.99f : 0.80f);
+        const NUIColor guideColor = nodeColor.withAlpha(selected || hovered || dragging ? 0.30f : 0.08f);
 
         renderer.drawLine({node.x, m_lastResponseBounds.bottom()}, {node.x, node.y},
-                          selected || hovered || dragging ? 1.5f : 1.0f,
-                          nodeColor.withAlpha(selected || hovered || dragging ? 0.28f : 0.12f));
+                          selected || hovered || dragging ? 1.6f : 1.0f,
+                          guideColor);
 
-        renderer.fillCircle(node, radius + 4.0f, nodeColor.withAlpha(0.12f));
+        if (selected || dragging) {
+            renderer.fillCircle(node, radius + 7.0f, nodeColor.withAlpha(0.08f));
+        }
+        renderer.fillCircle(node, radius + 4.0f, nodeColor.withAlpha(selected || dragging ? 0.16f : 0.10f));
         renderer.fillCircle(node, radius, NUIColor(0.08f, 0.08f, 0.10f, 0.95f));
-        renderer.strokeCircle(node, radius, 1.5f, nodeColor);
-        renderer.fillCircle(node, 2.0f, nodeColor);
+        renderer.strokeCircle(node, radius, selected || dragging ? 1.8f : 1.4f, nodeColor);
+        renderer.fillCircle(node, selected || dragging ? 2.5f : 2.0f, nodeColor);
 
         const float labelY = m_lastResponseBounds.y + 8.0f + static_cast<float>(i % 2) * 16.0f;
-        const float pillWidth = 52.0f;
+        const float pillWidth = 58.0f;
         const float pillX = std::clamp(node.x - pillWidth * 0.5f,
                                        m_lastResponseBounds.x + 2.0f,
                                        m_lastResponseBounds.right() - pillWidth - 2.0f);
 
         renderer.drawLine({node.x, labelY + 16.0f}, {node.x, node.y - radius - 4.0f},
-                          1.0f, nodeColor.withAlpha(0.16f));
-        renderer.fillRoundedRect({pillX, labelY, pillWidth, 14.0f}, 7.0f, NUIColor(0.09f, 0.09f, 0.11f, 0.92f));
-        renderer.strokeRoundedRect({pillX, labelY, pillWidth, 14.0f}, 7.0f, 1.0f, nodeColor.withAlpha(0.34f));
+                          1.0f, nodeColor.withAlpha(selected || hovered || dragging ? 0.18f : 0.10f));
+        const NUIRect pillRect{pillX, labelY, pillWidth, 14.0f};
+        renderer.fillRoundedRect(pillRect, 7.0f,
+                                 selected || dragging
+                                     ? NUIColor(0.11f, 0.11f, 0.14f, 0.96f)
+                                     : NUIColor(0.09f, 0.09f, 0.11f, 0.90f));
+        if (selected || dragging) {
+            renderer.fillRoundedRect({pillRect.x + 1.0f, pillRect.y + 1.0f, pillRect.width - 2.0f, pillRect.height * 0.52f},
+                                     6.0f, nodeColor.withAlpha(0.09f));
+        }
+        renderer.strokeRoundedRect(pillRect, 7.0f, 1.0f,
+                                   nodeColor.withAlpha(selected || dragging ? 0.52f : 0.26f));
         renderer.drawText(band.name, {pillX + 5.0f, labelY + 3.0f}, 7.0f,
-                          theme.getColor("textPrimary").withAlpha(0.88f));
-        renderer.drawText(freqLabel(band.freq), {pillX + 19.0f, labelY + 3.0f}, 7.0f,
-                          nodeColor.withAlpha(0.86f));
+                          theme.getColor("textPrimary").withAlpha(selected || dragging ? 0.98f : 0.82f));
+        renderer.drawText(freqLabel(band.freq), {pillX + 20.0f, labelY + 3.0f}, 7.0f,
+                          nodeColor.withAlpha(selected || dragging ? 0.96f : 0.78f));
     }
 
     if (m_selectedBand >= 0 && m_selectedBand < static_cast<int>(m_bands.size())) {
         const auto& band = m_bands[m_selectedBand];
-        const auto hudX = bounds.right() - 210.0f;
+        const NUIColor selectedColor = bandColorForIndex(static_cast<size_t>(m_selectedBand));
+        const auto hudX = bounds.right() - 214.0f;
         const auto hudY = bounds.y + 10.0f;
-        renderer.fillRoundedRect({hudX, hudY, 170.0f, 20.0f}, 10.0f, NUIColor(0.08f, 0.09f, 0.11f, 0.90f));
-        renderer.strokeRoundedRect({hudX, hudY, 170.0f, 20.0f}, 10.0f, 1.0f, bandColorForIndex(static_cast<size_t>(m_selectedBand)).withAlpha(0.28f));
-        const std::string hud = usesGainAxis(band)
-            ? (band.name + "  " + freqLabel(band.freq) + "  " + gainLabel(band.gain) + " dB  Q " + qLabel(band.q))
-            : (band.name + "  " + typeLabel(band.type) + "  " + freqLabel(band.freq) + "  Q " + qLabel(band.q));
-        renderer.drawText(hud, {hudX + 8.0f, hudY + 5.0f}, 8.0f,
-                          theme.getColor("textPrimary").withAlpha(0.90f));
+        const NUIRect hudRect{hudX, hudY, 174.0f, 26.0f};
+        renderer.fillRoundedRect(hudRect, 12.0f, NUIColor(0.08f, 0.09f, 0.11f, 0.94f));
+        renderer.fillRoundedRect({hudRect.x + 1.0f, hudRect.y + 1.0f, hudRect.width - 2.0f, hudRect.height * 0.5f},
+                                 11.0f, selectedColor.withAlpha(0.08f));
+        renderer.strokeRoundedRect(hudRect, 12.0f, 1.0f, selectedColor.withAlpha(0.34f));
+        renderer.fillRoundedRect({hudRect.x + 8.0f, hudRect.y + 6.0f, 34.0f, 14.0f}, 7.0f,
+                                 selectedColor.withAlpha(0.16f));
+        renderer.strokeRoundedRect({hudRect.x + 8.0f, hudRect.y + 6.0f, 34.0f, 14.0f}, 7.0f, 1.0f,
+                                   selectedColor.withAlpha(0.34f));
+        renderer.drawText(band.name, {hudRect.x + 15.0f, hudRect.y + 9.0f}, 7.5f,
+                          theme.getColor("textPrimary").withAlpha(0.98f));
+
+        const std::string meta = std::string(glyphTypeLabel(band.type)) + "  " + freqLabel(band.freq);
+        renderer.drawText(meta, {hudRect.x + 50.0f, hudRect.y + 8.0f}, 8.0f,
+                          selectedColor.withAlpha(0.90f));
+
+        const std::string detail = usesGainAxis(band)
+            ? ("Gain " + gainLabel(band.gain) + " dB   Q " + qLabel(band.q))
+            : ("Slope/Q " + qLabel(band.q));
+        renderer.drawText(detail, {hudRect.x + 50.0f, hudRect.y + 15.5f}, 7.0f,
+                          theme.getColor("textSecondary").withAlpha(0.82f));
     }
 }
 

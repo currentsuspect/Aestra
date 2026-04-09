@@ -333,7 +333,6 @@ void TimelineMinimapBar::onRender(NUIRenderer& renderer)
     const auto layout = computeLayout_();
     renderer_.render(renderer, layout, model_, colors_);
     renderToggles_(renderer, layout);
-    renderTooltip_(renderer, layout);
 
     // Active feedback: purple outline on click/drag + edge handles for resizing.
     const TimelineSummary* s = (model_.summary) ? model_.summary->summary : nullptr;
@@ -387,6 +386,7 @@ void TimelineMinimapBar::onMouseLeave()
     hoverInMap_ = false;
     hoverToggleIndex_ = -1;
     hoverOnResizeEdge_ = false;
+    AestraUI::NUIComponent::hideRemoteTooltip();
     if (dragKind_ == DragKind::ResizeLeft || dragKind_ == DragKind::ResizeRight) {
         cursorHint_ = TimelineMinimapCursorHint::ResizeHorizontal;
     } else {
@@ -410,6 +410,7 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
         hoverToggleIndex_ = -1;
         hoverOnResizeEdge_ = false;
         cursorHint_ = TimelineMinimapCursorHint::Default;
+        AestraUI::NUIComponent::hideRemoteTooltip();
         repaint();
         return false;
     }
@@ -446,6 +447,18 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
             hoverInMap_ = false;
             if (prevHoverInMap) repaint();
         }
+    }
+
+    if (hoverToggleIndex_ >= 0 && hoverToggleIndex_ < 3) {
+        std::string text;
+        if (hoverToggleIndex_ == 0) text = "C: Clips (where audio/MIDI exists)";
+        else if (hoverToggleIndex_ == 1) text = "E: Energy (approx. loudness per region)";
+        else text = "A: Automation (where automation exists)";
+        AestraUI::NUIComponent::showRemoteTooltip(text, event.position);
+    } else if (hoverInMap_) {
+        AestraUI::NUIComponent::showRemoteTooltip(formatHoverText_(hoverBeat_), event.position);
+    } else {
+        AestraUI::NUIComponent::hideRemoteTooltip();
     }
 
     // Mode toggles.

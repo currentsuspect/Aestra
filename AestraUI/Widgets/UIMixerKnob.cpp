@@ -12,12 +12,10 @@ namespace AestraUI {
 
 namespace {
     constexpr float LABEL_H = 0.0f; // Labels are shown via tooltip to reduce strip noise.
-    constexpr float TOOLTIP_H = 18.0f;
-    constexpr float TOOLTIP_PAD_X = 6.0f;
-    constexpr float TOOLTIP_RADIUS = 5.0f;
 
     constexpr float ARC_START = 135.0f * 3.14159265f / 180.0f; // 7 o'clock
     constexpr float ARC_END = 405.0f * 3.14159265f / 180.0f;   // 5 o'clock (wrapping)
+    constexpr float DRAG_SLOP = 2.5f;
 }
 
 UIMixerKnob::UIMixerKnob(UIMixerKnobType type)
@@ -142,17 +140,11 @@ void UIMixerKnob::setValue(float value)
     }
 }
 
-void UIMixerKnob::renderTooltip(NUIRenderer& renderer, const NUIRect& knobBounds) const
+void UIMixerKnob::updateGlobalTooltip() const
 {
-    const float fontSize = 10.0f;
-    const auto textSize = renderer.measureText(m_cachedText, fontSize);
-    const float w = std::max(28.0f, textSize.width + TOOLTIP_PAD_X * 2.0f);
-
-    const float x = std::round(knobBounds.x + (knobBounds.width - w) * 0.5f);
-    const float y = std::round(knobBounds.y - TOOLTIP_H - 6.0f);
-    const NUIRect tipRect{x, y, w, TOOLTIP_H};
-    renderer.fillRoundedRect(tipRect, TOOLTIP_RADIUS, m_tooltipBg);
-    renderer.drawTextCentered(m_cachedText, tipRect, fontSize, m_tooltipText);
+    const auto b = getBounds();
+    const NUIPoint anchor{b.x + b.width * 0.5f, b.y + b.height + 8.0f};
+    NUIComponent::showRemoteTooltip(m_cachedText, anchor);
 }
 
 // Helper to draw an arc using polyline
@@ -254,10 +246,10 @@ void UIMixerKnob::onRender(NUIRenderer& renderer)
     // White pointer for contrast
     renderer.drawLine(ptrStart, ptrEnd, 2.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
 
-    // Tooltip (only while dragging)
     if (m_dragging) {
-        renderTooltip(renderer, b);
+        updateGlobalTooltip();
     }
+
 }
 
 bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
@@ -271,6 +263,7 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
     // Double-click reset
     if (event.doubleClick && event.pressed && event.button == NUIMouseButton::Left) {
         setValue(defaultValue());
+        updateGlobalTooltip();
         return true;
     }
 
@@ -278,42 +271,61 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
         m_dragging = true;
         m_dragStartPos = event.position;
         m_dragStartValue = m_value;
+        m_dragAxis = DragAxis::Undecided;
+        updateGlobalTooltip();
         repaint();
         return true;
     }
 
     if (event.released && event.button == NUIMouseButton::Left && m_dragging) {
         m_dragging = false;
+        m_dragAxis = DragAxis::Undecided;
+        NUIComponent::hideRemoteTooltip();
         repaint();
         return true;
     }
 
     // Dragging (mouse move events set button = None)
     if (m_dragging && event.button == NUIMouseButton::None) {
-        // Support both horizontal and vertical dragging
-        // Right = Increase, Up = Increase
         const float dx = (event.position.x - m_dragStartPos.x);
         const float dy = (m_dragStartPos.y - event.position.y); 
-        const float dragDelta = dx + dy;
+        const float absDx = std::abs(dx);
+        const float absDy = std::abs(dy);
+
+        if (m_dragAxis == DragAxis::Undecided && std::max(absDx, absDy) > DRAG_SLOP) {
+            m_dragAxis = (absDy >= absDx) ? DragAxis::Vertical : DragAxis::Horizontal;
+        }
+
+        float primaryDelta = 0.0f;
+        if (m_dragAxis == DragAxis::Horizontal) {
+            primaryDelta = dx * 0.75f + dy * 0.25f;
+        } else {
+            primaryDelta = dy + dx * 0.15f;
+        }
 
         float sensitivity = 1.0f;
         if (event.modifiers & NUIModifiers::Shift) {
-            sensitivity *= 0.1f;
+            sensitivity *= 0.22f;
         }
 
         float delta = 0.0f;
         if (m_type == UIMixerKnobType::Trim) {
-            delta = dragDelta * 0.15f; // dB per px
+            delta = primaryDelta * 0.11f;
         } else if (m_type == UIMixerKnobType::Send) {
-            delta = dragDelta * 0.005f; // Linear 0-1
+            delta = primaryDelta * 0.004f;
         } else if (m_type == UIMixerKnobType::Width) {
-            delta = dragDelta * 0.01f; // 1% per px (approx)
+            delta = primaryDelta * 0.008f;
         } else {
-            delta = dragDelta * 0.006f; // pan per px (~166px full range)
+            delta = primaryDelta * 0.0048f;
         }
 
         setValue(m_dragStartValue + delta * sensitivity);
+        updateGlobalTooltip();
         return true;
+    }
+
+    if (!b.contains(event.position) && !m_dragging) {
+        NUIComponent::hideRemoteTooltip();
     }
 
     return false;

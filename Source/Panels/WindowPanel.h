@@ -3,6 +3,8 @@
 
 #include "NUIComponent.h"
 #include "NUIButton.h"
+#include "NUIIcon.h"
+#include <chrono>
 #include <string>
 #include <memory>
 #include <functional>
@@ -76,13 +78,17 @@ private:
     // Window state
     bool m_minimized{false};
     bool m_maximized{false};
-    float m_titleBarHeight{25.0f};
+    float m_titleBarHeight{28.0f};
     float m_expandedHeight{300.0f}; // Remember height when expanded
     
     // Title bar buttons
     std::shared_ptr<AestraUI::NUIButton> m_minimizeButton;
     std::shared_ptr<AestraUI::NUIButton> m_maximizeButton;
     std::shared_ptr<AestraUI::NUIButton> m_closeButton;
+    std::shared_ptr<AestraUI::NUIIcon> m_minimizeIcon;
+    std::shared_ptr<AestraUI::NUIIcon> m_maximizeIcon;
+    std::shared_ptr<AestraUI::NUIIcon> m_restoreIcon;
+    std::shared_ptr<AestraUI::NUIIcon> m_closeIcon;
     
     // Dragging state (for future docking)
     bool m_draggingTitleBar{false};
@@ -93,6 +99,7 @@ private:
     // Hover states
     bool m_titleBarHovered{false};
     AestraUI::NUIRect m_titleBarBounds;
+    std::chrono::steady_clock::time_point m_lastTitleBarClickTime{};
     
     // Callbacks
     std::function<void(bool)> m_onMinimizeToggle;

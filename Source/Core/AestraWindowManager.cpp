@@ -403,6 +403,23 @@ void AestraWindowManager::setContent(std::shared_ptr<AestraContent> content) {
         m_content->getTrackManagerUI()->setPlatformWindow(m_window.get());
     }
 
+    if (m_window) {
+        m_window->setMousePositionFilter([this](int& x, int& y) {
+            if (!m_content) return;
+            auto trackUI = m_content->getTrackManagerUI();
+            if (!trackUI || !trackUI->isInstantClipDragActive()) return;
+
+            AestraUI::NUIPoint pos(static_cast<float>(x), static_cast<float>(y));
+            if (trackUI->clampInstantClipDragPosition(pos)) {
+                x = static_cast<int>(std::lround(pos.x));
+                y = static_cast<int>(std::lround(pos.y));
+                if (m_window) {
+                    m_window->setCursorPosition(x, y);
+                }
+            }
+        });
+    }
+
     if (m_content && m_content->getTrackManagerUI()) {
         m_content->getTrackManagerUI()->setOnCursorVisibilityChanged([this](bool visible) {
             if (m_window && !m_useCustomCursor) {

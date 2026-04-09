@@ -79,6 +79,10 @@ void NUIPlatformBridge::destroy() {
 void NUIPlatformBridge::setupEventBridges() {
     // Mouse move
     m_window->setMouseMoveCallback([this](int x, int y) {
+        if (m_mousePositionFilter) {
+            m_mousePositionFilter(x, y);
+        }
+
         // Store mouse position for wheel events
         m_lastMouseX = x;
         m_lastMouseY = y;
@@ -105,6 +109,10 @@ void NUIPlatformBridge::setupEventBridges() {
 
     // Mouse button
     m_window->setMouseButtonCallback([this](Aestra::MouseButton button, bool pressed, int x, int y) {
+        if (m_mousePositionFilter) {
+            m_mousePositionFilter(x, y);
+        }
+
         // Store mouse position for wheel events
         m_lastMouseX = x;
         m_lastMouseY = y;
@@ -353,6 +361,10 @@ void NUIPlatformBridge::setMouseButtonCallback(std::function<void(int, bool)> ca
 
 void NUIPlatformBridge::setMouseWheelCallback(std::function<void(float)> callback) {
     m_mouseWheelCallback = callback;
+}
+
+void NUIPlatformBridge::setMousePositionFilter(std::function<void(int&, int&)> callback) {
+    m_mousePositionFilter = std::move(callback);
 }
 
 void NUIPlatformBridge::setKeyCallback(std::function<void(int, bool)> callback) {
