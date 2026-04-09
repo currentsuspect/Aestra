@@ -1094,19 +1094,12 @@ void EffectChainRack::setOnSlotMixChanged(std::function<void(int, float)> callba
 
 int EffectChainRack::hitTestSlot(float y) const {
     auto bounds = getBounds();
-    // Simplified logic with clamping
     float relativeY = y - bounds.y - 8 + m_scrollOffset;
-    
-    // If we are pressing in the top padding area (relativeY < 0) but still inside the component bounds (checked elsewhere or here)
-    // we should map to the first slot if scroll offset is low, or whichever slot is at the top.
-    
-    // Actually, calculate index normally
+    if (relativeY < 0.0f) {
+        return -1;
+    }
+
     int index = static_cast<int>(std::floor(relativeY / SLOT_HEIGHT));
-    
-    // Fix: If clicking the top padding (index < 0), clamp to 0 if we are visible
-    // This allows clicking the very top edge of the rack to select the first slot.
-    if (index < 0) index = 0;
-    
     if (index >= 0 && index < MAX_SLOTS) {
         return index;
     }

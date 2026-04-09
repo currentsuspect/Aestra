@@ -1824,18 +1824,12 @@ void NUIRendererGL::drawTextCentered(const std::string& text, const NUIRect& rec
 NUIRenderer::FontMetrics NUIRendererGL::getFontMetrics(float fontSize) const {
     NUIRenderer::FontMetrics metrics;
     if (fontInitialized_) {
-        const bool useXSmallAtlas = (fontSize <= 14.25f);
-        const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= 16.75f);
-        const bool useMediumAtlas = (!useXSmallAtlas && !useSmallAtlas && fontSize <= 20.5f);
-        const int atlasSize = useXSmallAtlas ? atlasFontSizeXSmall_ : (useSmallAtlas ? atlasFontSizeSmall_ : (useMediumAtlas ? atlasFontSizeMedium_ : atlasFontSize_));
-        const float ascent = useXSmallAtlas ? fontAscentXSmall_ : (useSmallAtlas ? fontAscentSmall_ : (useMediumAtlas ? fontAscentMedium_ : fontAscent_));
-        const float descent = useXSmallAtlas ? fontDescentXSmall_ : (useSmallAtlas ? fontDescentSmall_ : (useMediumAtlas ? fontDescentMedium_ : fontDescent_));
-        const float lineHeight = useXSmallAtlas ? fontLineHeightXSmall_ : (useSmallAtlas ? fontLineHeightSmall_ : (useMediumAtlas ? fontLineHeightMedium_ : fontLineHeight_));
-        if (atlasSize > 0) {
-            const float scale = fontSize / static_cast<float>(atlasSize);
-            metrics.ascent = ascent * scale;
-            metrics.descent = descent * scale;
-            metrics.lineHeight = lineHeight * scale;
+        const AtlasInfo atlas = selectAtlas(fontSize);
+        if (atlas.atlasSize > 0) {
+            const float scale = fontSize / static_cast<float>(atlas.atlasSize);
+            metrics.ascent = atlas.ascent * scale;
+            metrics.descent = atlas.descent * scale;
+            metrics.lineHeight = atlas.lineHeight * scale;
             return metrics;
         }
         return metrics;

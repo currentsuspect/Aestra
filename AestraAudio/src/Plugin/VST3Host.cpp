@@ -562,6 +562,10 @@ std::vector<uint8_t> VST3PluginInstance::saveState() const {
         ~MemStream() { if (i) i->release(); }
 
         tresult STDCALL write(void* buffer, int32 numBytes, int32* numBytesWritten) override {
+            if (!buffer || numBytes < 0 || pos < 0) {
+                if (numBytesWritten) *numBytesWritten = 0;
+                return kInvalidArgument;
+            }
             if (pos + numBytes > static_cast<int64_t>(data.size()))
                 data.resize(pos + numBytes);
             std::memcpy(data.data() + pos, buffer, numBytes);
@@ -570,8 +574,17 @@ std::vector<uint8_t> VST3PluginInstance::saveState() const {
             return kResultOk;
         }
         tresult STDCALL read(void* buffer, int32 numBytes, int32* numBytesRead) override {
-            int32 toRead = std::min(numBytes, static_cast<int32_t>(data.size() - pos));
-            std::memcpy(buffer, data.data() + pos, toRead);
+            if (numBytesRead) *numBytesRead = 0;
+            if (!buffer || numBytes < 0 || pos < 0) {
+                return kInvalidArgument;
+            }
+            int32 toRead = 0;
+            if (static_cast<size_t>(pos) < data.size()) {
+                toRead = std::min(numBytes, static_cast<int32_t>(data.size() - static_cast<size_t>(pos)));
+            }
+            if (toRead > 0) {
+                std::memcpy(buffer, data.data() + pos, toRead);
+            }
             if (numBytesRead) *numBytesRead = toRead;
             pos += toRead;
             return kResultOk;
@@ -579,7 +592,9 @@ std::vector<uint8_t> VST3PluginInstance::saveState() const {
         tresult STDCALL seek(int64 pos, int32 type, int64* result) override {
             if (type == kIBSeekSet) this->pos = pos;
             else if (type == kIBSeekCur) this->pos += pos;
-            else if (type == kIBSeekEnd) this->pos = data.size() + pos;
+            else if (type == kIBSeekEnd) this->pos = static_cast<int64_t>(data.size()) + pos;
+            else return kInvalidArgument;
+            this->pos = std::clamp<int64_t>(this->pos, 0, static_cast<int64_t>(data.size()));
             if (result) *result = this->pos;
             return kResultOk;
         }
@@ -623,8 +638,17 @@ bool VST3PluginInstance::loadState(const std::vector<uint8_t>& state) {
 
         tresult STDCALL write(void*, int32, int32*) override { return kNotImplemented; }
         tresult STDCALL read(void* buffer, int32 numBytes, int32* numBytesRead) override {
-            int32 toRead = std::min(numBytes, static_cast<int32_t>(data.size() - pos));
-            std::memcpy(buffer, data.data() + pos, toRead);
+            if (numBytesRead) *numBytesRead = 0;
+            if (!buffer || numBytes < 0 || pos < 0) {
+                return kInvalidArgument;
+            }
+            int32 toRead = 0;
+            if (static_cast<size_t>(pos) < data.size()) {
+                toRead = std::min(numBytes, static_cast<int32_t>(data.size() - static_cast<size_t>(pos)));
+            }
+            if (toRead > 0) {
+                std::memcpy(buffer, data.data() + pos, toRead);
+            }
             if (numBytesRead) *numBytesRead = toRead;
             pos += toRead;
             return kResultOk;
@@ -632,7 +656,9 @@ bool VST3PluginInstance::loadState(const std::vector<uint8_t>& state) {
         tresult STDCALL seek(int64 p, int32 type, int64* result) override {
             if (type == kIBSeekSet) pos = p;
             else if (type == kIBSeekCur) pos += p;
-            else if (type == kIBSeekEnd) pos = data.size() + p;
+            else if (type == kIBSeekEnd) pos = static_cast<int64_t>(data.size()) + p;
+            else return kInvalidArgument;
+            pos = std::clamp<int64_t>(pos, 0, static_cast<int64_t>(data.size()));
             if (result) *result = pos;
             return kResultOk;
         }

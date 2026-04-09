@@ -992,25 +992,27 @@ void TrackManagerUI::performSplitAtPosition(int laneIndex, double timeSeconds) {
 
 void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInstanceID clipId, const AestraUI::NUIPoint& clickPos) {
     if (!trackComp || !clipId.isValid() || !m_trackManager) return;
-    
+
+    auto& playlist = m_trackManager->getPlaylistModel();
+    const auto* clip = playlist.getClip(clipId);
+    if (!clip) {
+        return;
+    }
+
     m_isDraggingClipInstant = true;
     m_draggedClipTrack = trackComp;
     m_draggedClipId = clipId;
     m_suppressPlaylistRefresh = true; // Suppress full rebuilds for smoothness
-    
-    auto& playlist = m_trackManager->getPlaylistModel();
-    if (const auto* clip = playlist.getClip(clipId)) {
-        m_clipOriginalStartTime = clip->startBeat;
-        m_clipOriginalLaneId = playlist.findClipLane(clipId);
-        
-        // Calculate offset (Cursor Beat - Clip Start Beat)
-        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-        float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
-        float gridStartX = getBounds().x + controlAreaWidth + 5.0f;
-        
-        double cursorBeat = (clickPos.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
-        m_clipDragOffsetBeats = cursorBeat - clip->startBeat;
-    }
+    m_clipOriginalStartTime = clip->startBeat;
+    m_clipOriginalLaneId = playlist.findClipLane(clipId);
+
+    // Calculate offset (Cursor Beat - Clip Start Beat)
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
+    float gridStartX = getBounds().x + controlAreaWidth + 5.0f;
+
+    double cursorBeat = (clickPos.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
+    m_clipDragOffsetBeats = cursorBeat - clip->startBeat;
 
     if (m_window) {
         m_window->setMouseCapture(true);
