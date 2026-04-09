@@ -562,14 +562,18 @@ EffectChainRack::EffectChainRack() {
 void EffectChainRack::onRender(NUIRenderer& renderer) {
     auto bounds = getBounds();
     
-    renderer.fillRoundedRect(bounds, 6.0f, Colors::panelBackground);
-    renderer.strokeRoundedRect(bounds, 6.0f, 1.0f, Colors::panelBorder);
+    renderer.fillRoundedRect(bounds, 10.0f, Colors::panelBackground);
+    renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, Colors::panelBorder.withAlpha(0.75f));
+    renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
+                               9.0f,
+                               1.0f,
+                               NUIColor::white().withAlpha(0.025f));
     
     // Enable clipping
     renderer.setClipRect(bounds);
     
     for (int i = 0; i < MAX_SLOTS; ++i) {
-        renderSlot(renderer, i, bounds.y + 5 + i * SLOT_HEIGHT - m_scrollOffset);
+        renderSlot(renderer, i, bounds.y + 8 + i * SLOT_HEIGHT - m_scrollOffset);
     }
     
     renderer.clearClipRect();
@@ -584,7 +588,7 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
 
 void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset) {
     auto bounds = getBounds();
-    NUIRect slotRect = {bounds.x + 4, yOffset, bounds.width - 8, SLOT_HEIGHT - 4}; // More gap
+    NUIRect slotRect = {bounds.x + 8, yOffset, bounds.width - 16, SLOT_HEIGHT - 6};
     
     const auto& slot = m_slots[index];
     const bool isHovered = (index == m_hoveredSlot);
@@ -598,8 +602,8 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     if (slot.isEmpty && !isBeingDragged) {
         // Empty Slot: Subtle transparency or very faint glass
         // Using Aestra "Deep Glass" tokens if available, otherwise manual
-        bgColor = isHovered ? NUIColor(1.0f, 1.0f, 1.0f, 0.05f) : NUIColor(0.0f, 0.0f, 0.0f, 0.2f);
-        borderColor = isHovered ? Colors::accentPrimary.withAlpha(0.3f) : NUIColor(1.0f, 1.0f, 1.0f, 0.05f);
+        bgColor = isHovered ? NUIColor(1.0f, 1.0f, 1.0f, 0.06f) : NUIColor(0.0f, 0.0f, 0.0f, 0.18f);
+        borderColor = isHovered ? Colors::accentPrimary.withAlpha(0.26f) : NUIColor(1.0f, 1.0f, 1.0f, 0.06f);
     } else {
         // Populated: Solid dark glass
         // If bypassed, make it slightly dimmer/transparent
@@ -607,16 +611,20 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
             bgColor = isHovered ? NUIColor(1.0f, 1.0f, 1.0f, 0.1f) : NUIColor(1.0f, 1.0f, 1.0f, 0.05f);
             borderColor = Colors::accentPrimary.withAlpha(0.2f);
         } else if (slot.bypassed) {
-             bgColor = NUIColor(0.0f, 0.0f, 0.0f, 0.3f);
+             bgColor = NUIColor(0.0f, 0.0f, 0.0f, 0.34f);
              borderColor = Colors::panelBorder.withAlpha(0.5f);
         } else {
-             bgColor = NUIColor(0.0f, 0.0f, 0.0f, 0.5f);
-             borderColor = isHovered ? Colors::accentPrimary : Colors::panelBorder;
+             bgColor = isHovered ? NUIColor(0.0f, 0.0f, 0.0f, 0.56f) : NUIColor(0.0f, 0.0f, 0.0f, 0.48f);
+             borderColor = isHovered ? Colors::accentPrimary.withAlpha(0.82f) : Colors::panelBorder;
         }
     }
 
-    renderer.fillRoundedRect(slotRect, 4.0f, bgColor);
-    renderer.strokeRoundedRect(slotRect, 4.0f, 1.0f, borderColor);
+    renderer.fillRoundedRect(slotRect, 8.0f, bgColor);
+    renderer.strokeRoundedRect(slotRect, 8.0f, 1.0f, borderColor);
+    renderer.strokeRoundedRect({slotRect.x + 1.0f, slotRect.y + 1.0f, slotRect.width - 2.0f, slotRect.height - 2.0f},
+                               7.0f,
+                               1.0f,
+                               NUIColor::white().withAlpha(0.022f));
     
     // DEBUG: Visual indicator for pending removal
     if (slot.pendingRemoval) {
@@ -626,20 +634,25 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     // Slot Number (Left side, stylistic)
     char numBuf[8];
     std::snprintf(numBuf, sizeof(numBuf), "%d", index + 1);
-    renderer.drawText(numBuf, {slotRect.x + 8, yOffset + 7}, 10.0f, Colors::textDisabled.withAlpha(0.5f));
+    const NUIRect indexChip{slotRect.x + 8.0f, slotRect.y + (slotRect.height - 14.0f) * 0.5f, 18.0f, 14.0f};
+    renderer.fillRoundedRect(indexChip, 7.0f, NUIColor(1.0f, 1.0f, 1.0f, slot.isEmpty ? 0.05f : 0.07f));
+    renderer.strokeRoundedRect(indexChip, 7.0f, 1.0f, Colors::panelBorder.withAlpha(0.35f));
+    renderer.drawTextCentered(numBuf, indexChip, 9.0f, Colors::textDisabled.withAlpha(0.68f));
     
     if (slot.isEmpty) {
-        // ... (unchanged empty logic)
         if (isHovered) {
-             renderer.drawTextCentered("+ Add Plugin", slotRect, 10.0f, Colors::textPrimary);
+             renderer.drawText("+ Add Insert", {slotRect.x + 36.0f, slotRect.y + 10.0f}, 10.0f, Colors::textPrimary);
         } else {
-             renderer.drawTextCentered("+", slotRect, 12.0f, Colors::textDisabled.withAlpha(0.3f));
+             renderer.drawText("Empty slot", {slotRect.x + 36.0f, slotRect.y + 10.0f}, 9.5f, Colors::textDisabled.withAlpha(0.56f));
         }
     } else {
         // Plugin Name
         NUIColor nameColor = slot.bypassed ? Colors::textDisabled.withAlpha(0.6f) : Colors::textPrimary;
-        // Limit name width to avoid running into knob
-        renderer.drawText(slot.name, {slotRect.x + 28, yOffset + 7}, 11.0f, nameColor); 
+        renderer.drawText(slot.name, {slotRect.x + 36, slotRect.y + 7.0f}, 10.5f, nameColor);
+        renderer.drawText(slot.bypassed ? "Bypassed" : "Active",
+                          {slotRect.x + 36, slotRect.y + 18.0f},
+                          8.5f,
+                          slot.bypassed ? Colors::textDisabled.withAlpha(0.72f) : Colors::accentPrimary.withAlpha(0.78f));
         
         // Active indicator / Bypass toggle
         float rightEdge = slotRect.x + slotRect.width;
@@ -681,12 +694,12 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
         // Bypass Indicator (Dot left of knob)
         // Center vertically better
         float dotSize = 6.0f;
-        float dotY = yOffset + (SLOT_HEIGHT - 4 - dotSize) * 0.5f;
+        float dotY = slotRect.y + (slotRect.height - dotSize) * 0.5f;
         NUIRect statusDot = {knobX - 12, dotY, dotSize, dotSize};
         
         if (!slot.bypassed) {
             // Active: LED On
-            renderer.fillRoundedRect(statusDot, 3.0f, Colors::accentPrimary);
+        renderer.fillRoundedRect(statusDot, 3.0f, Colors::accentPrimary);
              // Glow
              renderer.fillRoundedRect({statusDot.x - 2, statusDot.y - 2, 10, 10}, 5.0f, Colors::accentPrimary.withAlpha(0.4f));
         } else {
@@ -1081,19 +1094,12 @@ void EffectChainRack::setOnSlotMixChanged(std::function<void(int, float)> callba
 
 int EffectChainRack::hitTestSlot(float y) const {
     auto bounds = getBounds();
-    // Simplified logic with clamping
-    float relativeY = y - bounds.y - 5 + m_scrollOffset;
-    
-    // If we are pressing in the top padding area (relativeY < 0) but still inside the component bounds (checked elsewhere or here)
-    // we should map to the first slot if scroll offset is low, or whichever slot is at the top.
-    
-    // Actually, calculate index normally
+    float relativeY = y - bounds.y - 8 + m_scrollOffset;
+    if (relativeY < 0.0f) {
+        return -1;
+    }
+
     int index = static_cast<int>(std::floor(relativeY / SLOT_HEIGHT));
-    
-    // Fix: If clicking the top padding (index < 0), clamp to 0 if we are visible
-    // This allows clicking the very top edge of the rack to select the first slot.
-    if (index < 0) index = 0;
-    
     if (index >= 0 && index < MAX_SLOTS) {
         return index;
     }

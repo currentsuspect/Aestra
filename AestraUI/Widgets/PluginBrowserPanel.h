@@ -323,7 +323,7 @@ private:
     std::shared_ptr<NUIContextMenu> m_contextMenu;
     int m_contextMenuSlot = -1;
     
-    static constexpr float SLOT_HEIGHT = 28.0f;
+    static constexpr float SLOT_HEIGHT = 34.0f;
 };
 
 } // namespace AestraUI

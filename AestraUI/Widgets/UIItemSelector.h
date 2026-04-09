@@ -35,6 +35,7 @@ public:
     
     // Callbacks
     void setOnSelectionChanged(std::function<void(int)> callback) { m_onSelectionChanged = callback; }
+    void setAccentColor(const NUIColor& color) { m_accentOverride = color; setDirty(true); }
     
     // Component Overrides
     void onRender(NUIRenderer& renderer) override;
@@ -71,6 +72,7 @@ private:
     // Hold handling
     float m_holdTimer;
     float m_holdDelay;
+    NUIColor m_accentOverride;
     
     // Helper
     NUIRect getUpArrowBounds() const;

@@ -72,7 +72,6 @@ private:
     NUIRect toggleRect_(int index) const;
 
     void renderToggles_(NUIRenderer& renderer, const TimelineMinimapLayout& layout);
-    void renderTooltip_(NUIRenderer& renderer, const TimelineMinimapLayout& layout) const;
     std::string formatHoverText_(double hoverBeat) const;
     void endDrag_();
 

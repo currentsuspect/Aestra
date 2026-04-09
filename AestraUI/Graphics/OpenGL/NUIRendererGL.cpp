@@ -152,6 +152,10 @@ float sdSquircle(vec2 p, vec2 b, float r) {
     return dist;
 }
 
+float sdCircle(vec2 p, float r) {
+    return length(p) - r;
+}
+
 void main() {
     vec4 color = vColor;
     int primitiveID = int(floor(vPrimitiveType + 0.5));
@@ -209,6 +213,25 @@ void main() {
         // Equivalent to: 1.0 - smoothstep(halfStroke-aa, halfStroke+aa, abs(dist))
         float alpha = 1.0 - smoothstep(halfStroke - aaWidth, halfStroke + aaWidth, abs(dist));
         
+        color.a *= alpha;
+    }
+
+    if (primitiveID == 6) {
+        // Filled Circle
+        vec2 pos = (vTexCoord - 0.5) * vQuadSize;
+        float dist = sdCircle(pos, vRectSize.x * 0.5);
+        float aaWidth = max(fwidth(dist) * 1.5, 0.75);
+        float alpha = 1.0 - smoothstep(-aaWidth, aaWidth, dist);
+        color.a *= alpha;
+    }
+
+    if (primitiveID == 7) {
+        // Stroked Circle
+        vec2 pos = (vTexCoord - 0.5) * vQuadSize;
+        float dist = sdCircle(pos, vRectSize.x * 0.5);
+        float halfStroke = vStrokeWidth * 0.5;
+        float aaWidth = max(fwidth(dist) * 1.25, 0.75);
+        float alpha = 1.0 - smoothstep(halfStroke - aaWidth, halfStroke + aaWidth, abs(dist));
         color.a *= alpha;
     }
     
@@ -271,32 +294,46 @@ bool NUIRendererGL::initialize(int width, int height) {
     fontUseLCD_ = false;
     
         // Try to load the best font for Aestra.
-        // Prefer a heavier bundled weight so the global UI reads less thin.
+        // Prefer a production-safe medium weight first so the UI hierarchy feels
+        // intentional without needing overly aggressive outline emboldening.
         std::vector<std::string> fontPaths;
         if (const char* fontDir = std::getenv("AESTRA_FONT_DIR")) {
             const std::string base(fontDir);
-            fontPaths.push_back(base + "/Geist/Geist-Bold.ttf");
             fontPaths.push_back(base + "/Geist/Geist-Medium.ttf");
+            fontPaths.push_back(base + "/Geist/Geist-Regular.ttf");
+            fontPaths.push_back(base + "/Geist/Geist-Bold.ttf");
             fontPaths.push_back(base + "/Manrope/Manrope-Regular.ttf");
         }
         std::vector<std::string> fallbackFontPaths = {
-            "AestraAssets/fonts/Geist/Geist-Bold.ttf",
-            "../AestraAssets/fonts/Geist/Geist-Bold.ttf",
-            "../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
-            "../../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
-            "../../../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
-
             "AestraAssets/fonts/Geist/Geist-Medium.ttf",
             "../AestraAssets/fonts/Geist/Geist-Medium.ttf",
             "../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
             "../../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
             "../../../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
 
+            "AestraAssets/fonts/Geist/Geist-Regular.ttf",
+            "../AestraAssets/fonts/Geist/Geist-Regular.ttf",
+            "../../AestraAssets/fonts/Geist/Geist-Regular.ttf",
+            "../../../AestraAssets/fonts/Geist/Geist-Regular.ttf",
+            "../../../../AestraAssets/fonts/Geist/Geist-Regular.ttf",
+
+            "AestraAssets/fonts/Geist/Geist-Bold.ttf",
+            "../AestraAssets/fonts/Geist/Geist-Bold.ttf",
+            "../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
+            "../../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
+            "../../../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
+
             "AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
             "../AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
             "../../AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
             "../../../AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
             "../../../../AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
+
+            // Local-only Apple system fallbacks. Do not bundle these.
+            "/usr/share/fonts/apple/SF-Pro-Text-Medium.otf",
+            "/usr/share/fonts/apple/SF-Pro-Text-Regular.otf",
+            "/usr/share/fonts/apple/SF-Pro-Display-Semibold.otf",
+            "/usr/share/fonts/apple/SF-Pro-Display-Regular.otf",
 
             // System fallbacks (Windows)
             "C:/Windows/Fonts/segoeui.ttf",
@@ -529,10 +566,11 @@ void NUIRendererGL::setClipRect(const NUIRect& rect) {
     if (x1 > x2) std::swap(x1, x2);
     if (y1 > y2) std::swap(y1, y2);
     
-    // Correct rounding to prevent shrinking (floor min, ceil max)
-    int glX = static_cast<int>(std::floor(x1));
-    int glRight = static_cast<int>(std::ceil(x2));
-    int glWidth = std::max(0, glRight - glX);
+    // Correct rounding to prevent shrinking and add a small padding margin so
+    // anti-aliased edges are not shaved off at the clip boundary.
+    constexpr int kClipPadding = 2;
+    int glX = static_cast<int>(std::floor(x1)) - kClipPadding;
+    int glRight = static_cast<int>(std::ceil(x2)) + kClipPadding;
     
     // Convert to GL coords (bottom-up)
     // Range in UI (y-down): [y1, y2]
@@ -541,8 +579,15 @@ void NUIRendererGL::setClipRect(const NUIRect& rect) {
     float bottomGL = static_cast<float>(height_) - y2;
     float topGL = static_cast<float>(height_) - y1;
     
-    int glY = static_cast<int>(std::floor(bottomGL));
-    int glTop = static_cast<int>(std::ceil(topGL));
+    int glY = static_cast<int>(std::floor(bottomGL)) - kClipPadding;
+    int glTop = static_cast<int>(std::ceil(topGL)) + kClipPadding;
+
+    glX = std::max(0, glX);
+    glY = std::max(0, glY);
+    glRight = std::min(width_, glRight);
+    glTop = std::min(height_, glTop);
+
+    int glWidth = std::max(0, glRight - glX);
     int glHeight = std::max(0, glTop - glY);
 
     glScissor(glX, glY, glWidth, glHeight);
@@ -585,9 +630,19 @@ void NUIRendererGL::fillRoundedRect(const NUIRect& rect, float radius, const NUI
     snapped.width = std::round(rect.width);
     snapped.height = std::round(rect.height);
 
+    // Give the fragment AA fringe a little room so filled pills/cards don't look
+    // shaved on the bottom/right edge when they sit near a clip boundary.
+    constexpr float kAASafePad = 1.5f;
+    AestraUI::NUIRect quad = {
+        snapped.x - kAASafePad,
+        snapped.y - kAASafePad,
+        snapped.width + kAASafePad * 2.0f,
+        snapped.height + kAASafePad * 2.0f
+    };
+
     // Standard behavior: Clamp radius to fit
     float safeRadius = std::min(radius, std::min(snapped.width * 0.5f, snapped.height * 0.5f));
-    addQuad(snapped, color, snapped.width, snapped.height, snapped.width, snapped.height, safeRadius, 1.0f, 0.0f, 1.0f);
+    addQuad(quad, color, snapped.width, snapped.height, quad.width, quad.height, safeRadius, 1.0f, 0.0f, 1.0f);
 }
 
 void NUIRendererGL::strokeRect(const NUIRect& rect, float thickness, const NUIColor& color) {
@@ -612,49 +667,44 @@ void NUIRendererGL::strokeRoundedRect(const NUIRect& rect, float radius, float t
     snapped.width = std::round(rect.width) - 1.0f;
     snapped.height = std::round(rect.height) - 1.0f;
 
+    // The stroked SDF needs a slightly larger carrier quad than the logical rect,
+    // otherwise the AA fringe gets clipped on the bottom/right edge and borders
+    // look visibly shaved.
+    const float aaPad = std::max(1.5f, thickness * 0.75f + 0.5f);
+    AestraUI::NUIRect quad = {
+        snapped.x - aaPad,
+        snapped.y - aaPad,
+        snapped.width + aaPad * 2.0f,
+        snapped.height + aaPad * 2.0f
+    };
+
     // Standard behavior: Clamp radius to fit
     float safeRadius = std::min(radius, std::min(snapped.width * 0.5f, snapped.height * 0.5f));
-    addQuad(snapped, color, snapped.width, snapped.height, snapped.width, snapped.height, safeRadius, 1.0f, thickness, 3.0f);
+    addQuad(quad, color, snapped.width, snapped.height, quad.width, quad.height, safeRadius, 1.0f, thickness, 3.0f);
 }
 
 void NUIRendererGL::fillCircle(const NUIPoint& center, float radius, const NUIColor& color) {
-    ensureBasicPrimitive();
-    // Approximate circle with triangle fan
-    const int segments = 32;
-    const float angleStep = 2.0f * 3.14159f / segments;
-    
-    for (int i = 0; i < segments; ++i) {
-        float angle1 = i * angleStep;
-        float angle2 = (i + 1) * angleStep;
-        
-        uint32_t base = static_cast<uint32_t>(vertices_.size());
-        
-        addVertex(center.x, center.y, 0.5f, 0.5f, color);
-        addVertex(center.x + std::cos(angle1) * radius, center.y + std::sin(angle1) * radius, 0, 0, color);
-        addVertex(center.x + std::cos(angle2) * radius, center.y + std::sin(angle2) * radius, 1, 1, color);
-        
-        // Add indices for this triangle
-        indices_.push_back(base + 0);
-        indices_.push_back(base + 1);
-        indices_.push_back(base + 2);
-    }
+    constexpr float kCirclePad = 1.5f;
+    const float diameter = radius * 2.0f;
+    const NUIRect quad = {
+        center.x - radius - kCirclePad,
+        center.y - radius - kCirclePad,
+        diameter + kCirclePad * 2.0f,
+        diameter + kCirclePad * 2.0f
+    };
+    addQuad(quad, color, diameter, diameter, quad.width, quad.height, radius, 1.0f, 0.0f, 6.0f);
 }
 
 void NUIRendererGL::strokeCircle(const NUIPoint& center, float radius, float thickness, const NUIColor& color) {
-    ensureBasicPrimitive();
-    // Approximate with line segments
-    const int segments = 32;
-    const float angleStep = 2.0f * 3.14159f / segments;
-    
-    for (int i = 0; i < segments; ++i) {
-        float angle1 = i * angleStep;
-        float angle2 = (i + 1) * angleStep;
-        
-        NUIPoint p1(center.x + std::cos(angle1) * radius, center.y + std::sin(angle1) * radius);
-        NUIPoint p2(center.x + std::cos(angle2) * radius, center.y + std::sin(angle2) * radius);
-        
-        drawLine(p1, p2, thickness, color);
-    }
+    const float aaPad = std::max(1.5f, thickness * 0.75f + 0.5f);
+    const float diameter = radius * 2.0f;
+    const NUIRect quad = {
+        center.x - radius - aaPad,
+        center.y - radius - aaPad,
+        diameter + aaPad * 2.0f,
+        diameter + aaPad * 2.0f
+    };
+    addQuad(quad, color, diameter, diameter, quad.width, quad.height, radius, 1.0f, thickness, 7.0f);
 }
 
 void NUIRendererGL::drawLine(const NUIPoint& start, const NUIPoint& end, float thickness, const NUIColor& color) {
@@ -705,31 +755,142 @@ void NUIRendererGL::drawLine(const NUIPoint& start, const NUIPoint& end, float t
     len = std::sqrt(dx * dx + dy * dy);
     if (len < 0.001f) return;
 
-    float nx = -dy / len * thickness * 0.5f;
-    float ny = dx / len * thickness * 0.5f;
-    
-    // Use Type 5 (Colored Geometry) for perfectly solid, non-aliased rendering when snapped
-    // SDF (Type 1) is too soft for 1px lines (alpha falloff causes "dotted" look)
-    // We pass 0 for UVs/Sizes as regular geometry doesn't need them
-    
-    addVertex(x1 + nx, y1 + ny, 0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
-    addVertex(x1 - nx, y1 - ny, 0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f); 
-    addVertex(x2 - nx, y2 - ny, 0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
-    addVertex(x2 + nx, y2 + ny, 0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
-    
-    uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 1);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 3);
+    const float halfThickness = thickness * 0.5f;
+    const float featherWidth = std::max(0.75f, thickness * 0.75f);
+    const float innerNx = -dy / len * halfThickness;
+    const float innerNy = dx / len * halfThickness;
+    const float outerNx = -dy / len * (halfThickness + featherWidth);
+    const float outerNy = dx / len * (halfThickness + featherWidth);
+
+    const NUIColor transparent(color.r, color.g, color.b, 0.0f);
+    const uint32_t base = static_cast<uint32_t>(vertices_.size());
+
+    addVertex(x1 + outerNx, y1 + outerNy, 0.0f, 0.0f, transparent, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x1 + innerNx, y1 + innerNy, 0.0f, 0.0f, color,       0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x1 - innerNx, y1 - innerNy, 0.0f, 0.0f, color,       0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x1 - outerNx, y1 - outerNy, 0.0f, 0.0f, transparent, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x2 + outerNx, y2 + outerNy, 0.0f, 0.0f, transparent, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x2 + innerNx, y2 + innerNy, 0.0f, 0.0f, color,       0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x2 - innerNx, y2 - innerNy, 0.0f, 0.0f, color,       0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    addVertex(x2 - outerNx, y2 - outerNy, 0.0f, 0.0f, transparent, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+
+    auto addQuadIndices = [this](uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+        indices_.push_back(a);
+        indices_.push_back(b);
+        indices_.push_back(c);
+        indices_.push_back(c);
+        indices_.push_back(b);
+        indices_.push_back(d);
+    };
+
+    addQuadIndices(base + 0, base + 1, base + 4, base + 5);
+    addQuadIndices(base + 1, base + 2, base + 5, base + 6);
+    addQuadIndices(base + 2, base + 3, base + 6, base + 7);
 }
 
 void NUIRendererGL::drawPolyline(const NUIPoint* points, int count, float thickness, const NUIColor& color) {
     ensureBasicPrimitive();
+
+    if (count < 2) return;
+
+    // Ensure we are not using a texture (batch breaking)
+    if (currentTextureId_ != 0) {
+        flush();
+        currentTextureId_ = 0;
+    }
+
+    if (count == 2) {
+        drawLine(points[0], points[1], thickness, color);
+        return;
+    }
+
+    const float halfThickness = thickness * 0.5f;
+    const float featherWidth = std::max(0.75f, thickness * 0.75f);
+    const uint32_t baseIndex = static_cast<uint32_t>(vertices_.size());
+    const NUIColor transparent(color.r, color.g, color.b, 0.0f);
+
+    auto normalize = [](float x, float y) {
+        const float len = std::sqrt(x * x + y * y);
+        if (len < 1.0e-4f) {
+            return std::pair<float, float>{0.0f, 0.0f};
+        }
+        return std::pair<float, float>{x / len, y / len};
+    };
+
+    for (int i = 0; i < count; ++i) {
+        const NUIPoint& curr = points[i];
+        const NUIPoint& prev = (i > 0) ? points[i - 1] : points[i];
+        const NUIPoint& next = (i + 1 < count) ? points[i + 1] : points[i];
+
+        const auto [prevDirX, prevDirY] = normalize(curr.x - prev.x, curr.y - prev.y);
+        const auto [nextDirX, nextDirY] = normalize(next.x - curr.x, next.y - curr.y);
+
+        float nx = 0.0f;
+        float ny = 0.0f;
+
+        if (i == 0) {
+            nx = -nextDirY;
+            ny = nextDirX;
+        } else if (i == count - 1) {
+            nx = -prevDirY;
+            ny = prevDirX;
+        } else {
+            const float prevNx = -prevDirY;
+            const float prevNy = prevDirX;
+            const float nextNx = -nextDirY;
+            const float nextNy = nextDirX;
+
+            const float miterX = prevNx + nextNx;
+            const float miterY = prevNy + nextNy;
+            const auto [miterNormX, miterNormY] = normalize(miterX, miterY);
+
+            if (std::abs(miterNormX) < 1.0e-4f && std::abs(miterNormY) < 1.0e-4f) {
+                nx = nextNx;
+                ny = nextNy;
+            } else {
+                const float dot = std::max(0.25f, miterNormX * nextNx + miterNormY * nextNy);
+                const float miterScale = std::min(3.0f, 1.0f / dot);
+                nx = miterNormX * miterScale;
+                ny = miterNormY * miterScale;
+            }
+        }
+
+        addVertex(curr.x + nx * (halfThickness + featherWidth), curr.y + ny * (halfThickness + featherWidth),
+                  0.0f, 0.0f, transparent, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+        addVertex(curr.x + nx * halfThickness, curr.y + ny * halfThickness,
+                  0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+        addVertex(curr.x - nx * halfThickness, curr.y - ny * halfThickness,
+                  0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+        addVertex(curr.x - nx * (halfThickness + featherWidth), curr.y - ny * (halfThickness + featherWidth),
+                  0.0f, 0.0f, transparent, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    }
+
     for (int i = 0; i < count - 1; ++i) {
-        drawLine(points[i], points[i + 1], thickness, color);
+        const uint32_t col0 = baseIndex + static_cast<uint32_t>(i * 4);
+        const uint32_t col1 = col0 + 4;
+
+        const uint32_t outerLeft0 = col0 + 0;
+        const uint32_t innerLeft0 = col0 + 1;
+        const uint32_t innerRight0 = col0 + 2;
+        const uint32_t outerRight0 = col0 + 3;
+
+        const uint32_t outerLeft1 = col1 + 0;
+        const uint32_t innerLeft1 = col1 + 1;
+        const uint32_t innerRight1 = col1 + 2;
+        const uint32_t outerRight1 = col1 + 3;
+
+        auto addQuadIndices = [this](uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+            indices_.push_back(a);
+            indices_.push_back(b);
+            indices_.push_back(c);
+            indices_.push_back(c);
+            indices_.push_back(b);
+            indices_.push_back(d);
+        };
+
+        addQuadIndices(outerLeft0, innerLeft0, outerLeft1, innerLeft1);
+        addQuadIndices(innerLeft0, innerRight0, innerLeft1, innerRight1);
+        addQuadIndices(innerRight0, outerRight0, innerRight1, outerRight1);
     }
 }
 
@@ -953,9 +1114,9 @@ float NUIRendererGL::getDPIScale() {
 NUIRendererGL::AtlasInfo NUIRendererGL::selectAtlas(float fontSize) const {
     AtlasInfo info;
     
-    const bool useXSmallAtlas = (fontSize <= 12.5f);
-    const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= 14.5f);
-    const bool useMediumAtlas = (!useXSmallAtlas && !useSmallAtlas && fontSize <= 18.5f);
+    const bool useXSmallAtlas = (fontSize <= 14.25f);
+    const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= 16.75f);
+    const bool useMediumAtlas = (!useXSmallAtlas && !useSmallAtlas && fontSize <= 20.5f);
     
     if (useXSmallAtlas && fontAtlasTextureIdXSmall_ != 0 && atlasFontSizeXSmall_ > 0) {
         info.textureId = fontAtlasTextureIdXSmall_;
@@ -1663,18 +1824,12 @@ void NUIRendererGL::drawTextCentered(const std::string& text, const NUIRect& rec
 NUIRenderer::FontMetrics NUIRendererGL::getFontMetrics(float fontSize) const {
     NUIRenderer::FontMetrics metrics;
     if (fontInitialized_) {
-        const bool useXSmallAtlas = (fontSize <= 12.5f);
-        const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= 14.5f);
-        const bool useMediumAtlas = (!useXSmallAtlas && !useSmallAtlas && fontSize <= 18.5f);
-        const int atlasSize = useXSmallAtlas ? atlasFontSizeXSmall_ : (useSmallAtlas ? atlasFontSizeSmall_ : (useMediumAtlas ? atlasFontSizeMedium_ : atlasFontSize_));
-        const float ascent = useXSmallAtlas ? fontAscentXSmall_ : (useSmallAtlas ? fontAscentSmall_ : (useMediumAtlas ? fontAscentMedium_ : fontAscent_));
-        const float descent = useXSmallAtlas ? fontDescentXSmall_ : (useSmallAtlas ? fontDescentSmall_ : (useMediumAtlas ? fontDescentMedium_ : fontDescent_));
-        const float lineHeight = useXSmallAtlas ? fontLineHeightXSmall_ : (useSmallAtlas ? fontLineHeightSmall_ : (useMediumAtlas ? fontLineHeightMedium_ : fontLineHeight_));
-        if (atlasSize > 0) {
-            const float scale = fontSize / static_cast<float>(atlasSize);
-            metrics.ascent = ascent * scale;
-            metrics.descent = descent * scale;
-            metrics.lineHeight = lineHeight * scale;
+        const AtlasInfo atlas = selectAtlas(fontSize);
+        if (atlas.atlasSize > 0) {
+            const float scale = fontSize / static_cast<float>(atlas.atlasSize);
+            metrics.ascent = atlas.ascent * scale;
+            metrics.descent = atlas.descent * scale;
+            metrics.lineHeight = atlas.lineHeight * scale;
             return metrics;
         }
         return metrics;
@@ -1813,7 +1968,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         // 1. Rebalance Ascent so Cap Height is centered (keeps text vertically aligned).
         // 2. Expand Line Height by ~15% to remove "Invisible Border" feel.
         
-        float verticalPadding = atlasFontSize * 0.15f; 
+        float verticalPadding = atlasFontSize * 0.10f; 
         float capHalfHeight = atlasFontSize * 0.35f;
         
         // Center of Expanded Box = (RawLineHeight + Padding) / 2
@@ -1888,10 +2043,20 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
                 continue;
             }
 
-            // Thicken medium/large UI text slightly, but do it on the outline
-            // before rasterization so edges stay cleaner than bitmap embolden.
-            if (ftFace_->glyph->format == FT_GLYPH_FORMAT_OUTLINE && atlasFontSize >= 20) {
-                const FT_Pos emboldenStrength = (atlasFontSize >= 36) ? 56 : 34;
+            // Thicken UI text at all maintained atlas sizes, but scale the
+            // embolden amount so small labels gain confidence without turning
+            // blurry or overfilled.
+            if (ftFace_->glyph->format == FT_GLYPH_FORMAT_OUTLINE && atlasFontSize >= 11) {
+                FT_Pos emboldenStrength = 18;
+                if (atlasFontSize >= 40) {
+                    emboldenStrength = 42;
+                } else if (atlasFontSize >= 22) {
+                    emboldenStrength = 26;
+                } else if (atlasFontSize >= 16) {
+                    emboldenStrength = 22;
+                } else if (atlasFontSize >= 14) {
+                    emboldenStrength = 24;
+                }
                 FT_Outline_Embolden(&ftFace_->glyph->outline, emboldenStrength);
             }
 
@@ -1995,7 +2160,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
 
     // Large atlas (36px) for headings and larger controls without oversoft downsampling.
     {
-        const int ATLAS_FONT_SIZE = 36;
+        const int ATLAS_FONT_SIZE = 40;
         atlasFontSize_ = ATLAS_FONT_SIZE;
         if (!buildAtlas(ATLAS_FONT_SIZE,
                         fontAtlasTextureId_,
@@ -2012,7 +2177,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
 
     // Medium atlas (20px) for the common 15-18 px UI copy.
     {
-        const int ATLAS_FONT_SIZE_MEDIUM = 20;
+        const int ATLAS_FONT_SIZE_MEDIUM = 22;
         atlasFontSizeMedium_ = ATLAS_FONT_SIZE_MEDIUM;
         (void)buildAtlas(ATLAS_FONT_SIZE_MEDIUM,
                          fontAtlasTextureIdMedium_,
@@ -2027,7 +2192,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
 
     // Small atlas tuned for dense UI labels around 10-12 px.
     {
-        const int ATLAS_FONT_SIZE_SMALL = 14;
+        const int ATLAS_FONT_SIZE_SMALL = 16;
         atlasFontSizeSmall_ = ATLAS_FONT_SIZE_SMALL;
         (void)buildAtlas(ATLAS_FONT_SIZE_SMALL,
                          fontAtlasTextureIdSmall_,
@@ -2042,7 +2207,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
 
     // Extra-small atlas for the densest 10-11 px copy.
     {
-        const int ATLAS_FONT_SIZE_XSMALL = 12;
+        const int ATLAS_FONT_SIZE_XSMALL = 14;
         atlasFontSizeXSmall_ = ATLAS_FONT_SIZE_XSMALL;
         (void)buildAtlas(ATLAS_FONT_SIZE_XSMALL,
                          fontAtlasTextureIdXSmall_,

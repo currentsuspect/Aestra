@@ -550,7 +550,7 @@ private:
     std::atomic<float> m_headroomLinear{1.0f}; // 0dB headroom (standard DAW behavior)
     SmoothedParamD m_smoothedMasterGain;
     MasterSafetyLimiter m_safetyLimiter;
-    std::atomic<bool> m_safetyLimiterEnabled{false};
+    std::atomic<bool> m_safetyLimiterEnabled{true};
 
     // Peak detection
     std::atomic<float> m_peakL{0.0f};

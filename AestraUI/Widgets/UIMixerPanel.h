@@ -68,6 +68,11 @@ public:
 
 private:
     bool channelLayoutMatchesViewModel() const;
+    NUIRect getMinimapRect() const;
+    float getChannelViewportWidth() const;
+    float getChannelContentWidth() const;
+    float getChannelMaxScroll() const;
+    void updateScrollFromMinimapX(float x);
 
     std::shared_ptr<Aestra::MixerViewModel> m_viewModel;
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;
@@ -83,14 +88,19 @@ private:
 
     // Horizontal scroll offset for channel strips (pixels).
     float m_scrollX{0.0f};
+    float m_targetScrollX{0.0f};
+    bool m_isDraggingMinimap{false};
+    float m_minimapDragOffsetX{0.0f};
 
     // Layout constants (from design spec)
-    static constexpr float STRIP_WIDTH = 104.0f;
-    static constexpr float STRIP_SPACING = 2.0f;
+    static constexpr float STRIP_WIDTH = 110.0f;
+    static constexpr float STRIP_SPACING = 6.0f;
     static constexpr float HEADER_HEIGHT = 28.0f;
     static constexpr float PADDING = 8.0f;
-    static constexpr float MASTER_STRIP_WIDTH = 140.0f;
-    static constexpr float INSPECTOR_WIDTH = 220.0f;
+    static constexpr float MASTER_STRIP_WIDTH = 146.0f;
+    static constexpr float INSPECTOR_WIDTH = 236.0f;
+    static constexpr float MINIMAP_HEIGHT = 22.0f;
+    static constexpr float MINIMAP_GAP = 6.0f;
 
     // Cached theme colors
     NUIColor m_backgroundColor;

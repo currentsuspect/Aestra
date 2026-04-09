@@ -640,6 +640,12 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 
                 if (lj[i].has("automation")) {
                     const JSON& aj = lj[i]["automation"];
+                    double projectBPM = root.has("tempo") ? root["tempo"].asNumber() : 120.0;
+                    // Automation point sample positions are serialized in project-rate
+                    // coordinates. Serializer code must stay on PlaylistModel's sample
+                    // rate; device/output sample rate belongs only in the audio I/O layer.
+                    double projectSampleRate = playlist.getProjectSampleRate();
+                    double samplesPerBeat = (projectSampleRate * 60.0) / std::max(projectBPM, 1.0);
                     for (size_t a = 0; a < aj.size(); ++a) {
                         std::string param = aj[a]["param"].asString();
                         auto target = static_cast<AutomationTarget>(aj[a]["targetEnum"].asNumber());
@@ -648,8 +654,6 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         curve.setDefaultValue(aj[a]["default"].asNumber());
                         
                         const JSON& pts = aj[a]["points"];
-                        double projectBPM = root.has("tempo") ? root["tempo"].asNumber() : 120.0;
-                        double samplesPerBeat = (48000.0 * 60.0) / std::max(projectBPM, 1.0);
                         for (size_t p = 0; p < pts.size(); ++p) {
                             curve.addPoint(pts[p]["b"].asNumber(),
                                          pts[p]["v"].asNumber(),

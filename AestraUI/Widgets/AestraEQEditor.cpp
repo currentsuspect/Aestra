@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraEQEditor.h"
+#include "Plugin/AestraEQ.h"
 
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -14,6 +15,108 @@ namespace AestraUI {
 namespace {
 constexpr float kCloseSize = 16.0f;
 constexpr float kRadius = 12.0f;
+constexpr float kPi = 3.14159265358979323846f;
+
+NUIColor bandColorForIndex(size_t index) {
+    static const NUIColor colors[] = {
+        NUIColor(0.55f, 0.72f, 1.0f, 1.0f),
+        NUIColor(0.48f, 0.82f, 1.0f, 1.0f),
+        NUIColor(0.62f, 0.74f, 1.0f, 1.0f),
+        NUIColor(0.74f, 0.67f, 1.0f, 1.0f),
+        NUIColor(0.96f, 0.72f, 0.52f, 1.0f),
+        NUIColor(0.90f, 0.60f, 0.40f, 1.0f),
+        NUIColor(0.88f, 0.56f, 0.76f, 1.0f),
+        NUIColor(0.78f, 0.76f, 1.0f, 1.0f),
+    };
+    return colors[index % (sizeof(colors) / sizeof(colors[0]))];
+}
+
+const char* shortTypeLabel(uint32_t type) {
+    static const char* labels[] = {"Bell", "LC", "HC", "LS", "HS", "Notch", "BP", "Tilt"};
+    return type < 8 ? labels[type] : "Bell";
+}
+
+const char* glyphTypeLabel(uint32_t type) {
+    static const char* labels[] = {"Bell", "Cut", "Cut", "Shelf", "Shelf", "Notch", "Band", "Tilt"};
+    return type < 8 ? labels[type] : "Bell";
+}
+
+bool usesDiscreteCutSlope(uint32_t type) {
+    using FilterType = Aestra::Audio::Plugins::FilterType;
+    const auto filterType = static_cast<FilterType>(type);
+    return filterType == FilterType::LowCut || filterType == FilterType::HighCut;
+}
+
+float quantizeCutSlopeNorm(float norm) {
+    static constexpr float kSlopeSteps[] = {0.0f, 0.25f, 0.5f, 0.75f, 1.0f};
+    const float clamped = std::clamp(norm, 0.0f, 1.0f);
+    int bestIndex = 0;
+    float bestDistance = std::abs(clamped - kSlopeSteps[0]);
+    for (int i = 1; i < 5; ++i) {
+        const float distance = std::abs(clamped - kSlopeSteps[i]);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestIndex = i;
+        }
+    }
+    return kSlopeSteps[bestIndex];
+}
+
+uint32_t cutSlopeDbPerOct(float norm) {
+    static constexpr uint32_t kSlopeDb[] = {12u, 24u, 48u, 72u, 96u};
+    const float quantized = quantizeCutSlopeNorm(norm);
+    const int index = static_cast<int>(std::round(quantized * 4.0f));
+    return kSlopeDb[std::clamp(index, 0, 4)];
+}
+
+std::vector<NUIPoint> makeSmoothCurvePoints(const std::vector<NUIPoint>& points, int subdivisions) {
+    if (points.size() < 4 || subdivisions <= 1) {
+        return points;
+    }
+
+    std::vector<NUIPoint> result;
+    result.reserve(points.size() * static_cast<size_t>(subdivisions));
+
+    for (size_t i = 0; i + 1 < points.size(); ++i) {
+        const NUIPoint& p0 = points[(i == 0) ? i : (i - 1)];
+        const NUIPoint& p1 = points[i];
+        const NUIPoint& p2 = points[i + 1];
+        const NUIPoint& p3 = points[(i + 2 < points.size()) ? (i + 2) : (i + 1)];
+
+        for (int s = 0; s < subdivisions; ++s) {
+            const float t = static_cast<float>(s) / static_cast<float>(subdivisions);
+            const float t2 = t * t;
+            const float t3 = t2 * t;
+
+            const float x =
+                0.5f * ((2.0f * p1.x) +
+                        (-p0.x + p2.x) * t +
+                        (2.0f * p0.x - 5.0f * p1.x + 4.0f * p2.x - p3.x) * t2 +
+                        (-p0.x + 3.0f * p1.x - 3.0f * p2.x + p3.x) * t3);
+            const float y =
+                0.5f * ((2.0f * p1.y) +
+                        (-p0.y + p2.y) * t +
+                        (2.0f * p0.y - 5.0f * p1.y + 4.0f * p2.y - p3.y) * t2 +
+                        (-p0.y + 3.0f * p1.y - 3.0f * p2.y + p3.y) * t3);
+
+            result.push_back({x, y});
+        }
+    }
+
+    result.push_back(points.back());
+    return result;
+}
+
+NUIRect graphNodeSafeBounds(const NUIRect& graphBounds) {
+    constexpr float kNodePadX = 10.0f;
+    constexpr float kNodePadY = 12.0f;
+    return {
+        graphBounds.x + kNodePadX,
+        graphBounds.y + kNodePadY,
+        std::max(1.0f, graphBounds.width - kNodePadX * 2.0f),
+        std::max(1.0f, graphBounds.height - kNodePadY * 2.0f),
+    };
+}
 }
 
 AestraEQEditor::AestraEQEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
@@ -52,28 +155,20 @@ void AestraEQEditor::layoutControls() {
         auto& b = m_bands[i];
         float x = bounds.x + kPadding + i * (bandW + bandGap);
         b.bounds = NUIRect(x, y, bandW, h);
-
-        // Vertical sliders
-        float sliderW = 6.0f;
-        float knobSize = 12.0f;
-
-        // Freq slider (left)
-        b.freqSlider = NUIRect(x + 6.0f, y + 20.0f, sliderW, h - 40.0f);
-        b.freqKnob = NUIRect(x + 6.0f - (knobSize - sliderW) * 0.5f,
-                             y + 20.0f + (1.0f - b.freq) * (h - 40.0f) - knobSize * 0.5f,
-                             knobSize, knobSize);
-
-        // Gain slider (center)
+        float sliderW = 8.0f;
+        float knobSize = 14.0f;
+        float sliderTop = y + 30.0f;
+        float sliderHeight = std::max(40.0f, h - 58.0f);
         float cx = x + bandW * 0.5f;
-        b.gainSlider = NUIRect(cx - sliderW * 0.5f, y + 20.0f, sliderW, h - 40.0f);
-        b.gainKnob = NUIRect(cx - knobSize * 0.5f,
-                             y + 20.0f + (1.0f - b.gain) * (h - 40.0f) - knobSize * 0.5f,
-                             knobSize, knobSize);
 
-        // Q slider (right)
-        b.qSlider = NUIRect(x + bandW - 6.0f - sliderW, y + 20.0f, sliderW, h - 40.0f);
-        b.qKnob = NUIRect(x + bandW - 6.0f - sliderW - (knobSize - sliderW) * 0.5f,
-                          y + 20.0f + (1.0f - b.q) * (h - 40.0f) - knobSize * 0.5f,
+        b.freqSlider = {};
+        b.freqKnob = {};
+        b.gainSlider = {};
+        b.gainKnob = {};
+
+        b.qSlider = NUIRect(cx - sliderW * 0.5f, sliderTop, sliderW, sliderHeight);
+        b.qKnob = NUIRect(cx - knobSize * 0.5f,
+                          sliderTop + (1.0f - b.q) * sliderHeight - knobSize * 0.5f,
                           knobSize, knobSize);
     }
 }
@@ -103,41 +198,97 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     auto& theme = NUIThemeManager::getInstance();
     renderer.fillRoundedRect(bounds, kRadius, NUIColor(0.06f, 0.06f, 0.07f, 0.95f));
     renderer.strokeRoundedRect(bounds, kRadius, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+    drawSpectrumBackdrop(renderer, bounds);
+    m_lastResponseBounds = responseGraphBounds(bounds);
 
     // Compute approximate response curve
-    constexpr float pi = 3.14159265358979323846f;
     auto freqToHz = [](float norm) {
         float logMin = std::log10(20.0f), logMax = std::log10(20000.0f);
         return std::pow(10.0f, logMin + norm * (logMax - logMin));
     };
     auto gainToDb = [](float norm) { return -18.0f + norm * 36.0f; };
     auto qToLinear = [](float norm) { return 0.1f + norm * 9.9f; };
+    auto filterStageCount = [](uint32_t type, float norm) {
+        using FilterType = Aestra::Audio::Plugins::FilterType;
+        const auto filterType = static_cast<FilterType>(type);
+        if (!usesDiscreteCutSlope(type)) {
+            return 1u;
+        }
+        switch (cutSlopeDbPerOct(norm)) {
+        case 12u: return 1u;
+        case 24u: return 2u;
+        case 48u: return 4u;
+        case 72u: return 6u;
+        case 96u: return 8u;
+        default: return 1u;
+        }
+    };
+    auto effectiveQ = [&](uint32_t type, float norm) {
+        using FilterType = Aestra::Audio::Plugins::FilterType;
+        const auto filterType = static_cast<FilterType>(type);
+        if (usesDiscreteCutSlope(type)) {
+            return 0.70710678f;
+        }
+        return qToLinear(norm);
+    };
+    auto biquadMagnitudeDb = [](const Aestra::Audio::Plugins::FilterCoeffs& coeffs, double omega) {
+        const double cos1 = std::cos(omega);
+        const double sin1 = std::sin(omega);
+        const double cos2 = std::cos(2.0 * omega);
+        const double sin2 = std::sin(2.0 * omega);
 
-    // Compute total response at 500 frequency points
-    const int numPoints = 500;
+        const double numRe = static_cast<double>(coeffs.b0) + static_cast<double>(coeffs.b1) * cos1 + static_cast<double>(coeffs.b2) * cos2;
+        const double numIm = -static_cast<double>(coeffs.b1) * sin1 - static_cast<double>(coeffs.b2) * sin2;
+        const double denRe = static_cast<double>(coeffs.a0) + static_cast<double>(coeffs.a1) * cos1 + static_cast<double>(coeffs.a2) * cos2;
+        const double denIm = -static_cast<double>(coeffs.a1) * sin1 - static_cast<double>(coeffs.a2) * sin2;
+
+        const double numMag = std::hypot(numRe, numIm);
+        const double denMag = std::hypot(denRe, denIm);
+        const double safeDen = std::max(denMag, 1.0e-12);
+        const double mag = std::max(numMag / safeDen, 1.0e-12);
+        return static_cast<float>(20.0 * std::log10(mag));
+    };
+
+    auto eq = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraEQ>(m_instance);
+    const float sampleRate = static_cast<float>(std::max(1.0, eq ? eq->getAnalyzerSampleRate() : 48000.0));
+
+    // Compute total response at a higher point density so the graph reads as a
+    // continuous curve rather than a chain of obvious line segments.
+    const int numPoints = 1400;
     std::vector<float> responseDb(numPoints, 0.0f);
     for (int p = 0; p < numPoints; ++p) {
         float freqNorm = static_cast<float>(p) / (numPoints - 1);
         float freq = freqToHz(freqNorm);
+        double omega = 2.0 * static_cast<double>(kPi) * static_cast<double>(freq) / static_cast<double>(sampleRate);
         for (const auto& band : m_bands) {
             if (!band.enabled) continue;
             float f0 = freqToHz(band.freq);
             float gainDb = gainToDb(band.gain);
-            float Q = qToLinear(band.q);
-            float w0 = 2.0f * pi * f0 / 48000.0f;
-            float w = 2.0f * pi * freq / 48000.0f;
-            float A = std::pow(10.0f, gainDb / 40.0f);
-            float alpha = std::sin(w0) / (2.0f * Q);
-
-            // Approximate magnitude response of biquad
-            float numRe = 1.0f, numIm = 0.0f, denRe = 1.0f, denIm = 0.0f;
-            // Simplified: just compute gain at this frequency for the band type
-            float bandType = static_cast<float>(band.type);
-            float bw = f0 / Q;
-            float dist = std::abs(freq - f0) / std::max(bw * 0.5f, 1.0f);
-            float magDb = gainDb / (1.0f + dist * dist);
-            responseDb[p] += magDb;
+            float Q = effectiveQ(band.type, band.q);
+            const auto type = static_cast<Aestra::Audio::Plugins::FilterType>(band.type);
+            const auto coeffs = Aestra::Audio::Plugins::designBiquad(type, f0, gainDb, Q, sampleRate);
+            float bandResponse = biquadMagnitudeDb(coeffs, omega) * static_cast<float>(filterStageCount(band.type, band.q));
+            if (type == Aestra::Audio::Plugins::FilterType::LowCut || type == Aestra::Audio::Plugins::FilterType::HighCut) {
+                bandResponse = std::min(bandResponse, 0.0f);
+            }
+            responseDb[p] += bandResponse;
         }
+    }
+
+    // Light neighbor smoothing keeps the rendered line visually fluid without
+    // materially changing the underlying filter shape.
+    std::vector<float> smoothedResponseDb(numPoints, 0.0f);
+    for (int i = 0; i < numPoints; ++i) {
+        const int i0 = std::max(0, i - 2);
+        const int i1 = std::max(0, i - 1);
+        const int i3 = std::min(numPoints - 1, i + 1);
+        const int i4 = std::min(numPoints - 1, i + 2);
+        smoothedResponseDb[i] =
+            responseDb[i0] * 0.10f +
+            responseDb[i1] * 0.20f +
+            responseDb[i]  * 0.40f +
+            responseDb[i3] * 0.20f +
+            responseDb[i4] * 0.10f;
     }
 
     // Draw grid lines
@@ -165,27 +316,297 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     }
 
     // Draw curve
-    float xStart = bounds.x + 40.0f;
-    float xEnd = bounds.right() - 10.0f;
-    float curveTop = bounds.y + 10.0f;
-    float curveBottom = bounds.bottom() - 20.0f;
+    float xStart = m_lastResponseBounds.x;
+    float xEnd = m_lastResponseBounds.right();
+    float curveTop = m_lastResponseBounds.y;
+    float curveBottom = m_lastResponseBounds.bottom();
 
-    for (int p = 0; p < numPoints - 1; ++p) {
-        float x1 = xStart + (static_cast<float>(p) / (numPoints - 1)) * (xEnd - xStart);
-        float x2 = xStart + (static_cast<float>(p + 1) / (numPoints - 1)) * (xEnd - xStart);
-        float y1 = curveBottom - std::clamp((responseDb[p] + dbRange) / (dbRange * 2.0f), 0.0f, 1.0f) * (curveBottom - curveTop);
-        float y2 = curveBottom - std::clamp((responseDb[p + 1] + dbRange) / (dbRange * 2.0f), 0.0f, 1.0f) * (curveBottom - curveTop);
-
-        NUIColor curveColor = theme.getColor("accentPrimary").withAlpha(0.85f);
-        // Glow
-        renderer.drawLine({x1, y1}, {x2, y2}, 5.0f, curveColor.withAlpha(0.15f));
-        renderer.drawLine({x1, y1}, {x2, y2}, 2.0f, curveColor);
+    std::vector<NUIPoint> curvePoints;
+    curvePoints.reserve(numPoints);
+    for (int p = 0; p < numPoints; ++p) {
+        const float x = xStart + (static_cast<float>(p) / (numPoints - 1)) * (xEnd - xStart);
+        const float y = curveBottom - std::clamp((smoothedResponseDb[p] + dbRange) / (dbRange * 2.0f), 0.0f, 1.0f) * (curveBottom - curveTop);
+        curvePoints.push_back({x, y});
     }
+
+    const std::vector<NUIPoint> smoothCurvePoints = makeSmoothCurvePoints(curvePoints, 6);
+    const NUIColor curveColor = theme.getColor("accentPrimary").withAlpha(0.85f);
+    std::vector<NUIPoint> offsetUp = smoothCurvePoints;
+    std::vector<NUIPoint> offsetDown = smoothCurvePoints;
+    for (size_t i = 0; i < smoothCurvePoints.size(); ++i) {
+        offsetUp[i].y -= 0.75f;
+        offsetDown[i].y += 0.75f;
+    }
+
+    renderer.drawPolyline(offsetUp.data(), static_cast<int>(offsetUp.size()), 4.0f, curveColor.withAlpha(0.07f));
+    renderer.drawPolyline(offsetDown.data(), static_cast<int>(offsetDown.size()), 4.0f, curveColor.withAlpha(0.07f));
+    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 6.0f, curveColor.withAlpha(0.10f));
+    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 3.0f, curveColor.withAlpha(0.34f));
+    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 1.4f, curveColor.withAlpha(0.96f));
+
+    for (size_t i = 0; i < m_bands.size(); ++i) {
+        const auto& band = m_bands[i];
+        if (!band.enabled) {
+            continue;
+        }
+
+        const bool selected = static_cast<int>(i) == m_selectedBand;
+        const bool hovered = static_cast<int>(i) == m_hoveredBand;
+        const bool dragging = static_cast<int>(i) == m_draggingGraphBand;
+        const NUIPoint node = graphNodePosition(band, m_lastResponseBounds);
+        const float radius = dragging ? 10.0f : (selected ? 8.75f : (hovered ? 7.3f : 6.5f));
+        NUIColor nodeColor = bandColorForIndex(i).withAlpha(selected || hovered || dragging ? 0.99f : 0.80f);
+        const NUIColor guideColor = nodeColor.withAlpha(selected || hovered || dragging ? 0.30f : 0.08f);
+
+        renderer.drawLine({node.x, m_lastResponseBounds.bottom()}, {node.x, node.y},
+                          selected || hovered || dragging ? 1.6f : 1.0f,
+                          guideColor);
+
+        if (selected || dragging) {
+            renderer.fillCircle(node, radius + 7.0f, nodeColor.withAlpha(0.08f));
+        }
+        renderer.fillCircle(node, radius + 4.0f, nodeColor.withAlpha(selected || dragging ? 0.16f : 0.10f));
+        renderer.fillCircle(node, radius, NUIColor(0.08f, 0.08f, 0.10f, 0.95f));
+        renderer.strokeCircle(node, radius, selected || dragging ? 1.8f : 1.4f, nodeColor);
+        renderer.fillCircle(node, selected || dragging ? 2.5f : 2.0f, nodeColor);
+
+        const float labelY = m_lastResponseBounds.y + 8.0f + static_cast<float>(i % 2) * 16.0f;
+        const float pillWidth = 58.0f;
+        const float pillX = std::clamp(node.x - pillWidth * 0.5f,
+                                       m_lastResponseBounds.x + 2.0f,
+                                       m_lastResponseBounds.right() - pillWidth - 2.0f);
+
+        renderer.drawLine({node.x, labelY + 16.0f}, {node.x, node.y - radius - 4.0f},
+                          1.0f, nodeColor.withAlpha(selected || hovered || dragging ? 0.18f : 0.10f));
+        const NUIRect pillRect{pillX, labelY, pillWidth, 14.0f};
+        renderer.fillRoundedRect(pillRect, 7.0f,
+                                 selected || dragging
+                                     ? NUIColor(0.11f, 0.11f, 0.14f, 0.96f)
+                                     : NUIColor(0.09f, 0.09f, 0.11f, 0.90f));
+        if (selected || dragging) {
+            renderer.fillRoundedRect({pillRect.x + 1.0f, pillRect.y + 1.0f, pillRect.width - 2.0f, pillRect.height * 0.52f},
+                                     6.0f, nodeColor.withAlpha(0.09f));
+        }
+        renderer.strokeRoundedRect(pillRect, 7.0f, 1.0f,
+                                   nodeColor.withAlpha(selected || dragging ? 0.52f : 0.26f));
+        renderer.drawText(band.name, {pillX + 5.0f, labelY + 3.0f}, 7.0f,
+                          theme.getColor("textPrimary").withAlpha(selected || dragging ? 0.98f : 0.82f));
+        renderer.drawText(freqLabel(band.freq), {pillX + 20.0f, labelY + 3.0f}, 7.0f,
+                          nodeColor.withAlpha(selected || dragging ? 0.96f : 0.78f));
+    }
+
+    if (m_selectedBand >= 0 && m_selectedBand < static_cast<int>(m_bands.size())) {
+        const auto& band = m_bands[m_selectedBand];
+        const NUIColor selectedColor = bandColorForIndex(static_cast<size_t>(m_selectedBand));
+        const auto hudX = bounds.right() - 214.0f;
+        const auto hudY = bounds.y + 10.0f;
+        const NUIRect hudRect{hudX, hudY, 174.0f, 26.0f};
+        renderer.fillRoundedRect(hudRect, 12.0f, NUIColor(0.08f, 0.09f, 0.11f, 0.94f));
+        renderer.fillRoundedRect({hudRect.x + 1.0f, hudRect.y + 1.0f, hudRect.width - 2.0f, hudRect.height * 0.5f},
+                                 11.0f, selectedColor.withAlpha(0.08f));
+        renderer.strokeRoundedRect(hudRect, 12.0f, 1.0f, selectedColor.withAlpha(0.34f));
+        renderer.fillRoundedRect({hudRect.x + 8.0f, hudRect.y + 6.0f, 34.0f, 14.0f}, 7.0f,
+                                 selectedColor.withAlpha(0.16f));
+        renderer.strokeRoundedRect({hudRect.x + 8.0f, hudRect.y + 6.0f, 34.0f, 14.0f}, 7.0f, 1.0f,
+                                   selectedColor.withAlpha(0.34f));
+        renderer.drawText(band.name, {hudRect.x + 15.0f, hudRect.y + 9.0f}, 7.5f,
+                          theme.getColor("textPrimary").withAlpha(0.98f));
+
+        const std::string meta = std::string(glyphTypeLabel(band.type)) + "  " + freqLabel(band.freq);
+        renderer.drawText(meta, {hudRect.x + 50.0f, hudRect.y + 8.0f}, 8.0f,
+                          selectedColor.withAlpha(0.90f));
+
+        const std::string detail = usesGainAxis(band)
+            ? ("Gain " + gainLabel(band.gain) + " dB   Q " + qLabel(band.q, band.type))
+            : ("Slope/Q " + qLabel(band.q, band.type));
+        renderer.drawText(detail, {hudRect.x + 50.0f, hudRect.y + 15.5f}, 7.0f,
+                          theme.getColor("textSecondary").withAlpha(0.82f));
+    }
+}
+
+void AestraEQEditor::updateSpectrumSnapshot() {
+    auto eq = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraEQ>(m_instance);
+    if (!eq) {
+        return;
+    }
+
+    uint64_t serial = 0;
+    if (!eq->getAnalyzerWindow(m_analyzerWindow, &serial) || serial == m_lastAnalyzerSerial) {
+        return;
+    }
+
+    m_lastAnalyzerSerial = serial;
+    const double sampleRate = std::max(1.0, eq->getAnalyzerSampleRate());
+    const size_t sampleCount = m_analyzerWindow.size();
+    std::array<float, 160> nextMagnitudes{};
+    std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> windowedSamples{};
+
+    for (size_t n = 0; n < sampleCount; ++n) {
+        const float window = 0.5f - 0.5f * std::cos((2.0f * kPi * static_cast<float>(n)) / static_cast<float>(sampleCount - 1));
+        windowedSamples[n] = m_analyzerWindow[n] * window;
+    }
+
+    for (size_t bin = 0; bin < nextMagnitudes.size(); ++bin) {
+        const float norm = static_cast<float>(bin) / static_cast<float>(nextMagnitudes.size() - 1);
+        const float targetHz = std::pow(10.0f, std::log10(20.0f) + norm * (std::log10(20000.0f) - std::log10(20.0f)));
+        const float omega = 2.0f * kPi * targetHz / static_cast<float>(sampleRate);
+        const float cosine = std::cos(omega);
+        const float sine = std::sin(omega);
+        const float coeff = 2.0f * cosine;
+        float q0 = 0.0f;
+        float q1 = 0.0f;
+        float q2 = 0.0f;
+
+        for (size_t n = 0; n < sampleCount; ++n) {
+            q0 = coeff * q1 - q2 + windowedSamples[n];
+            q2 = q1;
+            q1 = q0;
+        }
+
+        const float real = q1 - q2 * cosine;
+        const float imag = q2 * sine;
+        const float magnitude = std::sqrt(real * real + imag * imag) / static_cast<float>(sampleCount);
+        const float db = 20.0f * std::log10(std::max(magnitude * 8.0f, 1.0e-5f));
+        const float normalized = std::clamp((db + 72.0f) / 72.0f, 0.0f, 1.0f);
+        nextMagnitudes[bin] = normalized;
+    }
+
+    // Smooth across neighboring bins so the analyzer reads as a continuous
+    // spectral bed instead of a set of independent vertical spikes.
+    std::array<float, 160> smoothedMagnitudes{};
+    for (size_t i = 0; i < nextMagnitudes.size(); ++i) {
+        const size_t i0 = (i == 0) ? i : (i - 1);
+        const size_t i2 = std::min(i + 1, nextMagnitudes.size() - 1);
+        smoothedMagnitudes[i] =
+            nextMagnitudes[i0] * 0.22f +
+            nextMagnitudes[i]  * 0.56f +
+            nextMagnitudes[i2] * 0.22f;
+    }
+
+    for (size_t i = 0; i < m_spectrumMagnitudes.size(); ++i) {
+        const float current = m_spectrumMagnitudes[i];
+        const float target = smoothedMagnitudes[i];
+        const float attack = 0.62f;
+        const float release = 0.92f;
+        if (target >= current) {
+            m_spectrumMagnitudes[i] = current + (target - current) * attack;
+        } else {
+            m_spectrumMagnitudes[i] = current * release + target * (1.0f - release);
+        }
+    }
+}
+
+void AestraEQEditor::drawSpectrumBackdrop(NUIRenderer& renderer, const NUIRect& bounds) {
+    if (m_spectrumMagnitudes.empty()) {
+        return;
+    }
+
+    const float left = bounds.x + 40.0f;
+    const float right = bounds.right() - 10.0f;
+    const float top = bounds.y + 10.0f;
+    const float bottom = bounds.bottom() - 20.0f;
+    const float width = right - left;
+    const float height = bottom - top;
+
+    for (size_t i = 0; i < m_spectrumMagnitudes.size(); ++i) {
+        const float t = static_cast<float>(i) / static_cast<float>(m_spectrumMagnitudes.size() - 1);
+        const float x = left + t * width;
+        const float nextT = static_cast<float>(i + 1) / static_cast<float>(m_spectrumMagnitudes.size() - 1);
+        const float nextX = (i + 1 < m_spectrumMagnitudes.size()) ? (left + nextT * width) : right;
+        const float barWidth = std::max(1.0f, nextX - x);
+        const float currentMag = std::clamp(m_spectrumMagnitudes[i], 0.0f, 1.0f);
+        const float nextMag = (i + 1 < m_spectrumMagnitudes.size())
+            ? std::clamp(m_spectrumMagnitudes[i + 1], 0.0f, 1.0f)
+            : currentMag;
+        const float mag = currentMag * 0.65f + nextMag * 0.35f;
+        const float barHeight = mag * height;
+        const float y = bottom - barHeight;
+
+        const NUIColor glow(0.64f, 0.36f, 1.0f, 0.05f + mag * 0.09f);
+        const NUIColor core(0.74f, 0.52f, 1.0f, 0.05f + mag * 0.08f);
+        renderer.fillRect({x, y, barWidth, barHeight}, glow);
+        renderer.fillRect({x, std::max(top, y + barHeight * 0.38f), barWidth, barHeight * 0.62f}, core);
+    }
+}
+
+NUIRect AestraEQEditor::responseGraphBounds(const NUIRect& outerBounds) const {
+    return {outerBounds.x + 40.0f, outerBounds.y + 10.0f,
+            outerBounds.width - 50.0f, outerBounds.height - 30.0f};
+}
+
+bool AestraEQEditor::usesGainAxis(const BandControl& band) const {
+    switch (static_cast<Aestra::Audio::Plugins::FilterType>(band.type)) {
+    case Aestra::Audio::Plugins::FilterType::Bell:
+    case Aestra::Audio::Plugins::FilterType::LowShelf:
+    case Aestra::Audio::Plugins::FilterType::HighShelf:
+    case Aestra::Audio::Plugins::FilterType::Tilt:
+        return true;
+    case Aestra::Audio::Plugins::FilterType::LowCut:
+    case Aestra::Audio::Plugins::FilterType::HighCut:
+    case Aestra::Audio::Plugins::FilterType::Notch:
+    case Aestra::Audio::Plugins::FilterType::BandPass:
+        return false;
+    }
+    return true;
+}
+
+NUIPoint AestraEQEditor::graphNodePosition(const BandControl& band, const NUIRect& graphBounds) const {
+    const NUIRect safeBounds = graphNodeSafeBounds(graphBounds);
+    const float x = safeBounds.x + band.freq * safeBounds.width;
+    const float y = usesGainAxis(band)
+        ? (safeBounds.bottom() - band.gain * safeBounds.height)
+        : (safeBounds.y + safeBounds.height * 0.5f);
+    return {x, y};
+}
+
+int AestraEQEditor::hitTestGraphNode(float x, float y) const {
+    if (m_lastResponseBounds.isEmpty() || !m_lastResponseBounds.contains(x, y)) {
+        return -1;
+    }
+
+    int bestIndex = -1;
+    float bestDistance = 18.0f;
+    for (size_t i = 0; i < m_bands.size(); ++i) {
+        if (!m_bands[i].enabled) {
+            continue;
+        }
+        const NUIPoint node = graphNodePosition(m_bands[i], m_lastResponseBounds);
+        const float distance = node.distanceTo({x, y});
+        if (distance <= bestDistance) {
+            bestDistance = distance;
+            bestIndex = static_cast<int>(i);
+        }
+    }
+    return bestIndex;
+}
+
+void AestraEQEditor::updateBandFromGraphPosition(int bandIndex, const NUIPoint& position) {
+    if (bandIndex < 0 || bandIndex >= static_cast<int>(m_bands.size()) || !m_instance || m_lastResponseBounds.isEmpty()) {
+        return;
+    }
+
+    auto& band = m_bands[bandIndex];
+    const NUIRect safeBounds = graphNodeSafeBounds(m_lastResponseBounds);
+    const float freqNorm = std::clamp((position.x - safeBounds.x) / std::max(1.0f, safeBounds.width), 0.0f, 1.0f);
+    const float verticalNorm = std::clamp(1.0f - ((position.y - safeBounds.y) / std::max(1.0f, safeBounds.height)), 0.0f, 1.0f);
+
+    band.freq = freqNorm;
+    m_instance->setParameter(band.paramBase + 2, band.freq);
+    if (usesGainAxis(band)) {
+        band.gain = verticalNorm;
+        m_instance->setParameter(band.paramBase + 3, band.gain);
+    } else {
+        band.q = usesDiscreteCutSlope(band.type) ? quantizeCutSlopeNorm(verticalNorm) : verticalNorm;
+        m_instance->setParameter(band.paramBase + 4, band.q);
+    }
+    layoutControls();
+    setDirty(true);
 }
 
 void AestraEQEditor::drawBandPanel(NUIRenderer& renderer, const BandControl& band) {
     auto& theme = NUIThemeManager::getInstance();
-    NUIColor accent = theme.getColor("accentPrimary");
+    const size_t bandIndex = static_cast<size_t>(&band - m_bands.data());
+    NUIColor accent = bandColorForIndex(bandIndex);
     NUIColor cardColor = band.hovered || band.dragging ? NUIColor(0.14f, 0.12f, 0.16f, 0.98f)
                                                         : NUIColor(0.10f, 0.09f, 0.12f, 0.96f);
 
@@ -198,58 +619,35 @@ void AestraEQEditor::drawBandPanel(NUIRenderer& renderer, const BandControl& ban
         renderer.strokeRoundedRect(band.bounds, 8.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.04f));
     }
 
-    // Band name
-    renderer.drawText(band.name, {band.bounds.x + 4.0f, band.bounds.y + 4.0f}, 9.0f,
+    renderer.drawText(band.name, {band.bounds.x + 6.0f, band.bounds.y + 4.0f}, 9.0f,
                       band.enabled ? theme.getColor("textPrimary") : theme.getColor("textSecondary").withAlpha(0.4f));
 
-    // Type label
     if (band.enabled) {
-        renderer.drawText(typeLabel(band.type), {band.bounds.x + 4.0f, band.bounds.y + 14.0f}, 7.5f,
+        renderer.drawText(typeLabel(band.type), {band.bounds.x + 6.0f, band.bounds.y + 14.0f}, 7.5f,
                           accent.withAlpha(0.8f));
+        renderer.drawText("Q", {band.bounds.center().x - 3.0f, band.bounds.y + 14.0f}, 7.5f,
+                          theme.getColor("textSecondary").withAlpha(0.75f));
     }
 
     if (!band.enabled) return;
 
-    // Freq slider
-    renderer.fillRoundedRect(band.freqSlider, 3.0f, NUIColor(0.02f, 0.02f, 0.03f, 0.7f));
-    float freqFill = band.freq * band.freqSlider.height;
-    if (freqFill > 0) {
-        renderer.fillRoundedRect({band.freqSlider.x, band.freqSlider.y + band.freqSlider.height - freqFill,
-                                  band.freqSlider.width, freqFill},
-                                 3.0f, NUIColor(0.3f, 0.5f, 0.8f, 0.8f));
-    }
-    renderer.fillRoundedRect(band.freqKnob, 6.0f, band.dragTarget == BandControl::Freq ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : NUIColor(0.7f, 0.8f, 1.0f, 0.9f));
-
-    // Gain slider
-    renderer.fillRoundedRect(band.gainSlider, 3.0f, NUIColor(0.02f, 0.02f, 0.03f, 0.7f));
-    float gainFill = band.gain * band.gainSlider.height;
-    if (gainFill > 0) {
-        renderer.fillRoundedRect({band.gainSlider.x, band.gainSlider.y + band.gainSlider.height - gainFill,
-                                  band.gainSlider.width, gainFill},
-                                 3.0f, accent.withAlpha(0.8f));
-    }
-    renderer.fillRoundedRect(band.gainKnob, 6.0f, band.dragTarget == BandControl::Gain ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : accent.withAlpha(0.9f));
-
-    // Q slider
-    renderer.fillRoundedRect(band.qSlider, 3.0f, NUIColor(0.02f, 0.02f, 0.03f, 0.7f));
+    renderer.fillRoundedRect({band.bounds.center().x - 1.0f, band.qSlider.y, 2.0f, band.qSlider.height}, 1.0f,
+                             NUIColor(1.0f, 1.0f, 1.0f, 0.06f));
+    renderer.fillRoundedRect(band.qSlider, 4.0f, NUIColor(0.02f, 0.02f, 0.03f, 0.7f));
     float qFill = band.q * band.qSlider.height;
     if (qFill > 0) {
         renderer.fillRoundedRect({band.qSlider.x, band.qSlider.y + band.qSlider.height - qFill,
                                   band.qSlider.width, qFill},
                                  3.0f, NUIColor(0.8f, 0.5f, 0.3f, 0.8f));
     }
-    renderer.fillRoundedRect(band.qKnob, 6.0f, band.dragTarget == BandControl::Q ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : NUIColor(0.9f, 0.7f, 0.5f, 0.9f));
+    renderer.fillRoundedRect(band.qKnob, 7.0f, band.dragTarget == BandControl::Q ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : NUIColor(0.9f, 0.7f, 0.5f, 0.95f));
 
-    // Value labels
-    renderer.drawText(freqLabel(band.freq), {band.bounds.x + 2.0f, band.bounds.bottom() - 14.0f}, 7.0f,
-                      theme.getColor("textSecondary").withAlpha(0.6f));
-    renderer.drawText(gainLabel(band.gain), {band.bounds.x + 2.0f, band.bounds.bottom() - 6.0f}, 7.0f,
-                      theme.getColor("textSecondary").withAlpha(0.6f));
-    renderer.drawText(qLabel(band.q), {band.bounds.right() - 16.0f, band.bounds.bottom() - 14.0f}, 7.0f,
+    renderer.drawText(qLabel(band.q, band.type), {band.bounds.x + 6.0f, band.bounds.bottom() - 12.0f}, 7.0f,
                       theme.getColor("textSecondary").withAlpha(0.6f));
 }
 
 void AestraEQEditor::onRender(NUIRenderer& renderer) {
+    updateSpectrumSnapshot();
     auto bounds = getBounds();
     renderer.fillRoundedRect(bounds, kRadius, NUIColor(0.07f, 0.07f, 0.08f, 0.97f));
     renderer.strokeRoundedRect(bounds, kRadius, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.10f));
@@ -315,7 +713,7 @@ void AestraEQEditor::updateBandValue(int bandIndex, BandControl::DragTarget targ
         m_instance->setParameter(pid + 3, b.gain);
         break;
     case BandControl::Q:
-        b.q = normalizedValue;
+        b.q = usesDiscreteCutSlope(b.type) ? quantizeCutSlopeNorm(normalizedValue) : normalizedValue;
         m_instance->setParameter(pid + 4, b.q);
         break;
     default: break;
@@ -337,7 +735,11 @@ std::string AestraEQEditor::gainLabel(float norm) const {
     float db = -18.0f + norm * 36.0f;
     std::ostringstream o; o << std::fixed << std::setprecision(1) << db; return o.str();
 }
-std::string AestraEQEditor::qLabel(float norm) const {
+std::string AestraEQEditor::qLabel(float norm, uint32_t type) const {
+    const auto filterType = static_cast<Aestra::Audio::Plugins::FilterType>(type);
+    if (filterType == Aestra::Audio::Plugins::FilterType::LowCut || filterType == Aestra::Audio::Plugins::FilterType::HighCut) {
+        return std::to_string(cutSlopeDbPerOct(norm)) + "dB";
+    }
     float q = 0.1f + norm * 9.9f;
     std::ostringstream o; o << std::fixed << std::setprecision(1) << q; return o.str();
 }
@@ -349,11 +751,82 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
                                       [](const BandControl& band) { return band.dragging; });
     bool contains = bounds.contains(event.position);
 
+    if (m_bandTypeMenu && m_bandTypeMenu->isVisible()) {
+        if (m_bandTypeMenu->onMouseEvent(event)) {
+            return true;
+        }
+        if (event.pressed && event.button == NUIMouseButton::Left && !m_bandTypeMenu->getBounds().contains(event.position)) {
+            m_bandTypeMenu->hide();
+            if (auto parent = m_bandTypeMenu->getParent()) {
+                parent->removeChild(m_bandTypeMenu);
+            }
+            m_bandTypeMenu.reset();
+        }
+    }
+
     if (event.pressed && event.button == NUIMouseButton::Left && !contains && !m_isDraggingWindow && !isDraggingBand) {
         if (m_onClose) m_onClose();
         return false;
     }
     if (!contains && !m_isDraggingWindow && !isDraggingBand) return false;
+
+    if (event.wheelDelta != 0.0f) {
+        int graphBandIdx = hitTestGraphNode(event.position.x, event.position.y);
+        if (graphBandIdx >= 0) {
+            auto& band = m_bands[graphBandIdx];
+            m_selectedBand = graphBandIdx;
+            if (usesDiscreteCutSlope(band.type)) {
+                const float currentIndex = std::round(std::clamp(band.q, 0.0f, 1.0f) * 4.0f);
+                const float nextIndex = std::clamp(currentIndex + (event.wheelDelta > 0.0f ? 1.0f : -1.0f), 0.0f, 4.0f);
+                band.q = nextIndex / 4.0f;
+            } else {
+                const float step = 0.03f;
+                band.q = std::clamp(band.q + (event.wheelDelta > 0.0f ? step : -step), 0.0f, 1.0f);
+            }
+            if (m_instance) {
+                m_instance->setParameter(band.paramBase + 4, band.q);
+            }
+            layoutControls();
+            setDirty(true);
+            return true;
+        }
+    }
+
+    if (event.pressed && event.button == NUIMouseButton::Right) {
+        int graphBandIdx = hitTestGraphNode(event.position.x, event.position.y);
+        int bandIdx = (graphBandIdx >= 0) ? graphBandIdx : hitTestBand(event.position.x, event.position.y);
+        if (bandIdx >= 0) {
+            m_selectedBand = bandIdx;
+            auto menu = std::make_shared<NUIContextMenu>();
+            static const char* labels[] = {"Bell", "Low Cut", "High Cut", "Low Shelf", "High Shelf", "Notch", "Band Pass", "Tilt"};
+            for (uint32_t type = 0; type < 8; ++type) {
+                auto item = std::make_shared<NUIContextMenuItem>(labels[type], NUIContextMenuItem::Type::Radio);
+                item->setRadioGroup("eq_band_type");
+                item->setChecked(m_bands[bandIdx].type == type);
+                item->setOnClick([this, bandIdx, type]() {
+                    if (!m_instance || bandIdx < 0 || bandIdx >= static_cast<int>(m_bands.size())) {
+                        return;
+                    }
+                    m_bands[bandIdx].type = type;
+                    m_instance->setParameter(m_bands[bandIdx].paramBase + 1, static_cast<float>(type) / 7.0f);
+                    if (m_bandTypeMenu) {
+                        m_bandTypeMenu->hide();
+                    }
+                    setDirty(true);
+                });
+                menu->addItem(item);
+            }
+            if (auto parent = getParent()) {
+                if (m_bandTypeMenu && m_bandTypeMenu->getParent()) {
+                    m_bandTypeMenu->getParent()->removeChild(m_bandTypeMenu);
+                }
+                m_bandTypeMenu = menu;
+                parent->addChild(std::static_pointer_cast<NUIComponent>(menu));
+                menu->showAt(event.position);
+                return true;
+            }
+        }
+    }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (hitTestCloseButton(event.position.x, event.position.y)) {
@@ -367,9 +840,18 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
 
+        int graphBandIdx = hitTestGraphNode(event.position.x, event.position.y);
+        if (graphBandIdx >= 0) {
+            m_selectedBand = graphBandIdx;
+            m_draggingGraphBand = graphBandIdx;
+            updateBandFromGraphPosition(graphBandIdx, event.position);
+            return true;
+        }
+
         int bandIdx = hitTestBand(event.position.x, event.position.y);
         if (bandIdx >= 0) {
             auto& band = m_bands[bandIdx];
+            m_selectedBand = bandIdx;
             auto target = hitTestSlider(event.position.x, event.position.y, band);
             if (target != BandControl::None) {
                 band.dragging = true;
@@ -389,6 +871,14 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
                 return true;
             }
         }
+    }
+
+    if (m_draggingGraphBand >= 0) {
+        updateBandFromGraphPosition(m_draggingGraphBand, event.position);
+        if (!event.pressed && event.button == NUIMouseButton::Left) {
+            m_draggingGraphBand = -1;
+        }
+        return true;
     }
 
     if (m_isDraggingWindow && !event.pressed && event.button == NUIMouseButton::Left) {
@@ -436,7 +926,10 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     if (!event.pressed && !event.released) {
-        int hovered = contains ? hitTestBand(event.position.x, event.position.y) : -1;
+        int hovered = contains ? hitTestGraphNode(event.position.x, event.position.y) : -1;
+        if (hovered < 0 && contains) {
+            hovered = hitTestBand(event.position.x, event.position.y);
+        }
         if (hovered != m_hoveredBand) {
             m_hoveredBand = hovered;
             for (size_t i = 0; i < m_bands.size(); ++i) m_bands[i].hovered = (static_cast<int>(i) == hovered);

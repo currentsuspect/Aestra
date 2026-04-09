@@ -118,13 +118,32 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     const float nameFont = m_isMaster ? 13.0f : 12.0f;
     const float routeFont = m_isMaster ? 10.0f : 9.0f;
 
+    if (m_isMaster) {
+        // The master strip reads better when title + subtitle are treated as one
+        // vertically centered stack instead of using the generic track split.
+        constexpr float kMasterNameH = 14.0f;
+        constexpr float kMasterRouteH = 11.0f;
+        constexpr float kMasterGap = 1.5f;
+        const float stackH = kMasterNameH + kMasterGap + kMasterRouteH;
+        const float stackY = textRect.y + std::max(0.0f, (textRect.height - stackH) * 0.5f) - 1.0f;
+
+        NUIRect nameRect{textRect.x, stackY, textRect.width, kMasterNameH};
+        renderer.drawTextCentered(m_name, nameRect, nameFont, m_selected ? m_selectedText : m_text);
+
+        if (!m_route.empty()) {
+            NUIRect routeRect{textRect.x, stackY + kMasterNameH + kMasterGap, textRect.width, kMasterRouteH};
+            renderer.drawTextCentered(m_route, routeRect, routeFont, m_textSecondary);
+        }
+        return;
+    }
+
     // Name (top half of remaining space)
     NUIRect nameRect{textRect.x, textRect.y, textRect.width, textRect.height * 0.55f};
     renderer.drawTextCentered(m_name, nameRect, nameFont, m_selected ? m_selectedText : m_text);
 
     // Route (bottom half)
     if (!m_route.empty()) {
-        const float routeH = m_isMaster ? 14.0f : 12.0f;
+        const float routeH = 12.0f;
         NUIRect routeRect{textRect.x, textRect.y + textRect.height - routeH - 2.0f, textRect.width, routeH};
         renderer.drawTextCentered(m_route, routeRect, routeFont, m_textSecondary);
     }

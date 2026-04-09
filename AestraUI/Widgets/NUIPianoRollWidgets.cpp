@@ -1667,7 +1667,7 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
 // PianoRollView
 // =============================================================================
 PianoRollView::PianoRollView()
-    : m_keyLaneWidth(60.0f), m_rulerHeight(30.0f), m_pixelsPerBeat(80.0f), m_keyHeight(24.0f), m_scrollX(0.0f), m_scrollY(1800.0f)
+    : m_keyLaneWidth(60.0f), m_rulerHeight(30.0f), m_pixelsPerBeat(80.0f), m_keyHeight(24.0f), m_scrollX(0.0f), m_scrollY(1800.0f), m_targetScrollX(0.0f), m_targetScrollY(1800.0f)
 {
     m_keys = std::make_shared<PianoRollKeyLane>();
     m_ruler = std::make_shared<PianoRollRuler>();
@@ -1706,6 +1706,7 @@ PianoRollView::PianoRollView()
         
         m_pixelsPerBeat = newPPB;
         m_scrollX = newScrollX;
+        m_targetScrollX = newScrollX;
         
         updateScrollbars();
         syncChildren();
@@ -1713,6 +1714,7 @@ PianoRollView::PianoRollView()
 
     m_minimap->onViewChanged = [this](double start, double duration) {
         m_scrollX = static_cast<float>(start * m_pixelsPerBeat);
+        m_targetScrollX = m_scrollX;
         
         // ZOOM LOGIC: 
         // duration * ppb = visibleWidth
@@ -1729,8 +1731,7 @@ PianoRollView::PianoRollView()
         float totalH = 128 * m_keyHeight;
         float visibleH = m_grid->getHeight();
         float maxScroll = std::max(0.0f, totalH - visibleH);
-        m_scrollY = std::clamp(static_cast<float>(val), 0.0f, maxScroll);
-        syncChildren();
+        m_targetScrollY = std::clamp(static_cast<float>(val), 0.0f, maxScroll);
     });
     
     addChild(m_keys);
@@ -1794,6 +1795,42 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
 void PianoRollView::onResize(int width, int height) {
     NUIComponent::onResize(width, height);
     layoutChildren();
+}
+
+void PianoRollView::onUpdate(double deltaTime) {
+    NUIComponent::onUpdate(deltaTime);
+
+    const float totalH = 128 * m_keyHeight;
+    const float visibleH = m_grid ? m_grid->getHeight() : 0.0f;
+    const float maxScrollY = std::max(0.0f, totalH - visibleH);
+    m_targetScrollY = std::clamp(m_targetScrollY, 0.0f, maxScrollY);
+    m_targetScrollX = std::max(0.0f, m_targetScrollX);
+
+    bool changed = false;
+    const float ease = 1.0f - std::exp(-static_cast<float>(deltaTime) * 18.0f);
+
+    const float dx = m_targetScrollX - m_scrollX;
+    if (std::abs(dx) > 0.1f) {
+        m_scrollX += dx * ease;
+        changed = true;
+    } else if (std::abs(dx) > 0.0f) {
+        m_scrollX = m_targetScrollX;
+        changed = true;
+    }
+
+    const float dy = m_targetScrollY - m_scrollY;
+    if (std::abs(dy) > 0.1f) {
+        m_scrollY += dy * ease;
+        changed = true;
+    } else if (std::abs(dy) > 0.0f) {
+        m_scrollY = m_targetScrollY;
+        changed = true;
+    }
+
+    if (changed) {
+        updateScrollbars();
+        syncChildren();
+    }
 }
 
 void PianoRollView::layoutChildren() {
@@ -1958,19 +1995,21 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
             m_pixelsPerBeat = std::max(20.0f, m_pixelsPerBeat + event.wheelDelta * 5.0f);
         } else if (shift) {
             // H-Scroll
-            m_scrollX = std::max(0.0f, m_scrollX - event.wheelDelta * 40.0f);
+            m_targetScrollX = std::max(0.0f, m_targetScrollX - event.wheelDelta * 40.0f);
         } else {
             // V-Scroll
             float totalH = 128 * m_keyHeight;
             float visibleH = m_grid->getHeight();
             float maxScroll = std::max(0.0f, totalH - visibleH);
             
-            float newY = m_scrollY - event.wheelDelta * 30.0f;
-            m_scrollY = std::clamp(newY, 0.0f, maxScroll);
+            float newY = m_targetScrollY - event.wheelDelta * 30.0f;
+            m_targetScrollY = std::clamp(newY, 0.0f, maxScroll);
         }
         
-        updateScrollbars(); 
-        syncChildren();
+        if (ctrl) {
+            updateScrollbars(); 
+            syncChildren();
+        }
         return true;
     }
     
@@ -2050,6 +2089,7 @@ void PianoRollView::setPlayheadBeat(double beat, bool follow) {
             if (m_playheadBeat < leftGuard || m_playheadBeat > rightGuard) {
                 const double targetStart = std::max(0.0, m_playheadBeat - visibleDur * 0.2);
                 m_scrollX = static_cast<float>(targetStart * m_pixelsPerBeat);
+                m_targetScrollX = m_scrollX;
                 updateScrollbars();
             }
         }
@@ -2090,6 +2130,7 @@ void PianoRollView::setViewWindow(double startBeat, double durationBeats) {
         }
     }
     m_scrollX = std::max(0.0f, static_cast<float>(startBeat * m_pixelsPerBeat));
+    m_targetScrollX = m_scrollX;
     updateScrollbars();
     syncChildren();
 }

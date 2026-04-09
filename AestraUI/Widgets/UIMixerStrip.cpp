@@ -14,17 +14,19 @@
 namespace AestraUI {
 
 namespace {
-    constexpr float HEADER_H = 28.0f;
-    constexpr float KNOB_H = 30.0f;
-    constexpr float FX_H = 24.0f;
-    constexpr float BUTTONS_H = 24.0f;
-    constexpr float FOOTER_H = 20.0f;
-    constexpr float PAD = 6.0f;
-    constexpr float GAP = 4.0f;
-    constexpr float METER_W = 26.0f;
-    constexpr float MASTER_METER_W = 34.0f;
+    constexpr float HEADER_H = 30.0f;
+    constexpr float KNOB_H = 32.0f;
+    constexpr float FX_H = 30.0f;
+    constexpr float BUTTONS_H = 26.0f;
+    constexpr float FOOTER_H = 22.0f;
+    constexpr float PAD = 8.0f;
+    constexpr float GAP = 6.0f;
+    constexpr float SIDE_INSET = 4.0f;
+    constexpr float SECTION_GAP = 8.0f;
+    constexpr float METER_W = 28.0f;
+    constexpr float MASTER_METER_W = 36.0f;
 
-    constexpr float SELECT_TOP_H = 2.0f;
+    constexpr float SELECT_TOP_H = 3.0f;
 }
 
 UIMixerStrip::UIMixerStrip(uint32_t channelId,
@@ -278,29 +280,31 @@ void UIMixerStrip::layoutChildren()
 {
     auto bounds = getBounds();
 
-    float y = bounds.y;
+    const float contentX = bounds.x + SIDE_INSET;
+    const float contentW = std::max(1.0f, bounds.width - SIDE_INSET * 2.0f);
+    float y = bounds.y + PAD * 0.75f;
 
     if (m_header) {
-        m_header->setBounds(bounds.x, y, bounds.width, HEADER_H);
-        y += HEADER_H;
+        m_header->setBounds(contentX, y, contentW, HEADER_H);
+        y += HEADER_H + SECTION_GAP;
     }
 
     // Input Dropdown Removed from Strip Layout
 
     const bool hasButtons = (m_buttons && m_buttons->isVisible());
     if (hasButtons) {
-        m_buttons->setBounds(bounds.x, y, bounds.width, BUTTONS_H);
-        y += BUTTONS_H;
+        m_buttons->setBounds(contentX, y, contentW, BUTTONS_H);
+        y += BUTTONS_H + GAP;
     }
 
     if (m_trimKnob && m_trimKnob->isVisible()) {
-        m_trimKnob->setBounds(bounds.x, y, bounds.width, KNOB_H);
-        y += KNOB_H;
+        m_trimKnob->setBounds(contentX, y, contentW, KNOB_H);
+        y += KNOB_H + GAP;
     }
 
     if (m_fxSummary && m_fxSummary->isVisible()) {
-        m_fxSummary->setBounds(bounds.x + PAD, y, std::max(1.0f, bounds.width - PAD * 2), FX_H);
-        y += FX_H;
+        m_fxSummary->setBounds(contentX, y, contentW, FX_H);
+        y += FX_H + SECTION_GAP;
     }
 
     // Side-by-side Pan and Width
@@ -308,23 +312,23 @@ void UIMixerStrip::layoutChildren()
     const bool showWidth = (m_widthKnob && m_widthKnob->isVisible());
     
     if (showPan && showWidth) {
-        const float halfW = bounds.width * 0.5f;
-        m_panKnob->setBounds(bounds.x, y, halfW, KNOB_H);
-        m_widthKnob->setBounds(bounds.x + halfW, y, halfW, KNOB_H);
-        y += KNOB_H;
+        const float halfW = (contentW - GAP) * 0.5f;
+        m_panKnob->setBounds(contentX, y, halfW, KNOB_H);
+        m_widthKnob->setBounds(contentX + halfW + GAP, y, halfW, KNOB_H);
+        y += KNOB_H + SECTION_GAP;
     } else if (showPan) {
-        m_panKnob->setBounds(bounds.x, y, bounds.width, KNOB_H);
-        y += KNOB_H;
+        m_panKnob->setBounds(contentX, y, contentW, KNOB_H);
+        y += KNOB_H + SECTION_GAP;
     } else if (showWidth) {
-        m_widthKnob->setBounds(bounds.x, y, bounds.width, KNOB_H);
-        y += KNOB_H;
+        m_widthKnob->setBounds(contentX, y, contentW, KNOB_H);
+        y += KNOB_H + SECTION_GAP;
     }
 
     const bool hasFooter = (m_footer && m_footer->isVisible());
     const float footerH = hasFooter ? FOOTER_H : 0.0f;
-    const float footerY = bounds.y + bounds.height - footerH;
+    const float footerY = bounds.y + bounds.height - PAD - footerH;
     if (hasFooter) {
-        m_footer->setBounds(bounds.x, footerY, bounds.width, FOOTER_H);
+        m_footer->setBounds(contentX, footerY, contentW, FOOTER_H);
     }
 
     const float contentY = y;
@@ -332,11 +336,10 @@ void UIMixerStrip::layoutChildren()
 
     const float meterW = (m_channelId == 0) ? MASTER_METER_W : METER_W;
 
-    const float availableH = std::max(1.0f, contentH - PAD * 2);
-    // User requested "half their height positioned at the bottom"
-    const float meterH = availableH * 0.5f; 
-    const float meterY = footerY - PAD - meterH;
-    const float meterX = bounds.x + PAD;
+    const float availableH = std::max(1.0f, contentH - PAD);
+    const float meterH = availableH * 0.62f;
+    const float meterY = footerY - GAP - meterH;
+    const float meterX = contentX + 2.0f;
 
     if (m_meter) {
         m_meter->setBounds(meterX, meterY, meterW, meterH);
@@ -344,7 +347,7 @@ void UIMixerStrip::layoutChildren()
 
     if (m_fader) {
         const float faderX = meterX + meterW + GAP;
-        const float faderW = std::max(10.0f, bounds.width - (faderX - bounds.x) - PAD);
+        const float faderW = std::max(16.0f, (contentX + contentW) - faderX);
         m_fader->setBounds(faderX, meterY, faderW, meterH);
     }
 }
