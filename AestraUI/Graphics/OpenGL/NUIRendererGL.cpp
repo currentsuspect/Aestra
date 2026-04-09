@@ -275,11 +275,18 @@ bool NUIRendererGL::initialize(int width, int height) {
         std::vector<std::string> fontPaths;
         if (const char* fontDir = std::getenv("AESTRA_FONT_DIR")) {
             const std::string base(fontDir);
+            fontPaths.push_back(base + "/Geist/Geist-Regular.ttf");
             fontPaths.push_back(base + "/Geist/Geist-Bold.ttf");
             fontPaths.push_back(base + "/Geist/Geist-Medium.ttf");
             fontPaths.push_back(base + "/Manrope/Manrope-Regular.ttf");
         }
         std::vector<std::string> fallbackFontPaths = {
+            "AestraAssets/fonts/Geist/Geist-Regular.ttf",
+            "../AestraAssets/fonts/Geist/Geist-Regular.ttf",
+            "../../AestraAssets/fonts/Geist/Geist-Regular.ttf",
+            "../../../AestraAssets/fonts/Geist/Geist-Regular.ttf",
+            "../../../../AestraAssets/fonts/Geist/Geist-Regular.ttf",
+
             "AestraAssets/fonts/Geist/Geist-Bold.ttf",
             "../AestraAssets/fonts/Geist/Geist-Bold.ttf",
             "../../AestraAssets/fonts/Geist/Geist-Bold.ttf",
@@ -297,6 +304,12 @@ bool NUIRendererGL::initialize(int width, int height) {
             "../../AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
             "../../../AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
             "../../../../AestraAssets/fonts/Manrope/Manrope-Regular.ttf",
+
+            // Local-only Apple system fallbacks. Do not bundle these.
+            "/usr/share/fonts/apple/SF-Pro-Text-Medium.otf",
+            "/usr/share/fonts/apple/SF-Pro-Text-Regular.otf",
+            "/usr/share/fonts/apple/SF-Pro-Display-Semibold.otf",
+            "/usr/share/fonts/apple/SF-Pro-Display-Regular.otf",
 
             // System fallbacks (Windows)
             "C:/Windows/Fonts/segoeui.ttf",
@@ -529,10 +542,11 @@ void NUIRendererGL::setClipRect(const NUIRect& rect) {
     if (x1 > x2) std::swap(x1, x2);
     if (y1 > y2) std::swap(y1, y2);
     
-    // Correct rounding to prevent shrinking (floor min, ceil max)
-    int glX = static_cast<int>(std::floor(x1));
-    int glRight = static_cast<int>(std::ceil(x2));
-    int glWidth = std::max(0, glRight - glX);
+    // Correct rounding to prevent shrinking and add a small padding margin so
+    // anti-aliased edges are not shaved off at the clip boundary.
+    constexpr int kClipPadding = 2;
+    int glX = static_cast<int>(std::floor(x1)) - kClipPadding;
+    int glRight = static_cast<int>(std::ceil(x2)) + kClipPadding;
     
     // Convert to GL coords (bottom-up)
     // Range in UI (y-down): [y1, y2]
@@ -541,8 +555,15 @@ void NUIRendererGL::setClipRect(const NUIRect& rect) {
     float bottomGL = static_cast<float>(height_) - y2;
     float topGL = static_cast<float>(height_) - y1;
     
-    int glY = static_cast<int>(std::floor(bottomGL));
-    int glTop = static_cast<int>(std::ceil(topGL));
+    int glY = static_cast<int>(std::floor(bottomGL)) - kClipPadding;
+    int glTop = static_cast<int>(std::ceil(topGL)) + kClipPadding;
+
+    glX = std::max(0, glX);
+    glY = std::max(0, glY);
+    glRight = std::min(width_, glRight);
+    glTop = std::min(height_, glTop);
+
+    int glWidth = std::max(0, glRight - glX);
     int glHeight = std::max(0, glTop - glY);
 
     glScissor(glX, glY, glWidth, glHeight);
@@ -585,9 +606,19 @@ void NUIRendererGL::fillRoundedRect(const NUIRect& rect, float radius, const NUI
     snapped.width = std::round(rect.width);
     snapped.height = std::round(rect.height);
 
+    // Give the fragment AA fringe a little room so filled pills/cards don't look
+    // shaved on the bottom/right edge when they sit near a clip boundary.
+    constexpr float kAASafePad = 1.5f;
+    AestraUI::NUIRect quad = {
+        snapped.x - kAASafePad,
+        snapped.y - kAASafePad,
+        snapped.width + kAASafePad * 2.0f,
+        snapped.height + kAASafePad * 2.0f
+    };
+
     // Standard behavior: Clamp radius to fit
     float safeRadius = std::min(radius, std::min(snapped.width * 0.5f, snapped.height * 0.5f));
-    addQuad(snapped, color, snapped.width, snapped.height, snapped.width, snapped.height, safeRadius, 1.0f, 0.0f, 1.0f);
+    addQuad(quad, color, snapped.width, snapped.height, quad.width, quad.height, safeRadius, 1.0f, 0.0f, 1.0f);
 }
 
 void NUIRendererGL::strokeRect(const NUIRect& rect, float thickness, const NUIColor& color) {
@@ -612,9 +643,20 @@ void NUIRendererGL::strokeRoundedRect(const NUIRect& rect, float radius, float t
     snapped.width = std::round(rect.width) - 1.0f;
     snapped.height = std::round(rect.height) - 1.0f;
 
+    // The stroked SDF needs a slightly larger carrier quad than the logical rect,
+    // otherwise the AA fringe gets clipped on the bottom/right edge and borders
+    // look visibly shaved.
+    const float aaPad = std::max(1.5f, thickness * 0.75f + 0.5f);
+    AestraUI::NUIRect quad = {
+        snapped.x - aaPad,
+        snapped.y - aaPad,
+        snapped.width + aaPad * 2.0f,
+        snapped.height + aaPad * 2.0f
+    };
+
     // Standard behavior: Clamp radius to fit
     float safeRadius = std::min(radius, std::min(snapped.width * 0.5f, snapped.height * 0.5f));
-    addQuad(snapped, color, snapped.width, snapped.height, snapped.width, snapped.height, safeRadius, 1.0f, thickness, 3.0f);
+    addQuad(quad, color, snapped.width, snapped.height, quad.width, quad.height, safeRadius, 1.0f, thickness, 3.0f);
 }
 
 void NUIRendererGL::fillCircle(const NUIPoint& center, float radius, const NUIColor& color) {
@@ -1999,10 +2041,18 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
                 continue;
             }
 
-            // Thicken medium/large UI text slightly, but do it on the outline
-            // before rasterization so edges stay cleaner than bitmap embolden.
-            if (ftFace_->glyph->format == FT_GLYPH_FORMAT_OUTLINE && atlasFontSize >= 20) {
-                const FT_Pos emboldenStrength = (atlasFontSize >= 36) ? 56 : 34;
+            // Thicken UI text at all maintained atlas sizes, but scale the
+            // embolden amount so small labels gain confidence without turning
+            // blurry or overfilled.
+            if (ftFace_->glyph->format == FT_GLYPH_FORMAT_OUTLINE && atlasFontSize >= 11) {
+                FT_Pos emboldenStrength = 22;
+                if (atlasFontSize >= 36) {
+                    emboldenStrength = 56;
+                } else if (atlasFontSize >= 20) {
+                    emboldenStrength = 34;
+                } else if (atlasFontSize >= 15) {
+                    emboldenStrength = 28;
+                }
                 FT_Outline_Embolden(&ftFace_->glyph->outline, emboldenStrength);
             }
 

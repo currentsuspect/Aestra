@@ -101,6 +101,17 @@ std::vector<NUIPoint> makeSmoothCurvePoints(const std::vector<NUIPoint>& points,
     result.push_back(points.back());
     return result;
 }
+
+NUIRect graphNodeSafeBounds(const NUIRect& graphBounds) {
+    constexpr float kNodePadX = 10.0f;
+    constexpr float kNodePadY = 12.0f;
+    return {
+        graphBounds.x + kNodePadX,
+        graphBounds.y + kNodePadY,
+        std::max(1.0f, graphBounds.width - kNodePadX * 2.0f),
+        std::max(1.0f, graphBounds.height - kNodePadY * 2.0f),
+    };
+}
 }
 
 AestraEQEditor::AestraEQEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
@@ -345,14 +356,10 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
                           selected || hovered || dragging ? 1.5f : 1.0f,
                           nodeColor.withAlpha(selected || hovered || dragging ? 0.28f : 0.12f));
 
-        renderer.fillRoundedRect({node.x - radius - 4.0f, node.y - radius - 4.0f,
-                                  (radius + 4.0f) * 2.0f, (radius + 4.0f) * 2.0f},
-                                 radius + 4.0f, nodeColor.withAlpha(0.12f));
-        renderer.fillRoundedRect({node.x - radius, node.y - radius, radius * 2.0f, radius * 2.0f},
-                                 radius, NUIColor(0.08f, 0.08f, 0.10f, 0.95f));
-        renderer.strokeRoundedRect({node.x - radius, node.y - radius, radius * 2.0f, radius * 2.0f},
-                                   radius, 1.5f, nodeColor);
-        renderer.fillRoundedRect({node.x - 2.0f, node.y - 2.0f, 4.0f, 4.0f}, 2.0f, nodeColor);
+        renderer.fillCircle(node, radius + 4.0f, nodeColor.withAlpha(0.12f));
+        renderer.fillCircle(node, radius, NUIColor(0.08f, 0.08f, 0.10f, 0.95f));
+        renderer.strokeCircle(node, radius, 1.5f, nodeColor);
+        renderer.fillCircle(node, 2.0f, nodeColor);
 
         const float labelY = m_lastResponseBounds.y + 8.0f + static_cast<float>(i % 2) * 16.0f;
         const float pillWidth = 52.0f;
@@ -501,10 +508,11 @@ bool AestraEQEditor::usesGainAxis(const BandControl& band) const {
 }
 
 NUIPoint AestraEQEditor::graphNodePosition(const BandControl& band, const NUIRect& graphBounds) const {
-    const float x = graphBounds.x + band.freq * graphBounds.width;
+    const NUIRect safeBounds = graphNodeSafeBounds(graphBounds);
+    const float x = safeBounds.x + band.freq * safeBounds.width;
     const float y = usesGainAxis(band)
-        ? (graphBounds.bottom() - band.gain * graphBounds.height)
-        : (graphBounds.y + graphBounds.height * 0.5f);
+        ? (safeBounds.bottom() - band.gain * safeBounds.height)
+        : (safeBounds.y + safeBounds.height * 0.5f);
     return {x, y};
 }
 
@@ -535,8 +543,9 @@ void AestraEQEditor::updateBandFromGraphPosition(int bandIndex, const NUIPoint& 
     }
 
     auto& band = m_bands[bandIndex];
-    const float freqNorm = std::clamp((position.x - m_lastResponseBounds.x) / std::max(1.0f, m_lastResponseBounds.width), 0.0f, 1.0f);
-    const float verticalNorm = std::clamp(1.0f - ((position.y - m_lastResponseBounds.y) / std::max(1.0f, m_lastResponseBounds.height)), 0.0f, 1.0f);
+    const NUIRect safeBounds = graphNodeSafeBounds(m_lastResponseBounds);
+    const float freqNorm = std::clamp((position.x - safeBounds.x) / std::max(1.0f, safeBounds.width), 0.0f, 1.0f);
+    const float verticalNorm = std::clamp(1.0f - ((position.y - safeBounds.y) / std::max(1.0f, safeBounds.height)), 0.0f, 1.0f);
 
     band.freq = freqNorm;
     m_instance->setParameter(band.paramBase + 2, band.freq);
