@@ -376,22 +376,26 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
         size_t eventCount = midiInput->getEventCount();
         for (size_t i = 0; i < eventCount && inputEvents.count < 256; ++i) {
             const auto& ev = midiInput->getEvent(i);
+            const uint8_t status = ev.data[0] & 0xF0;
+            const uint8_t channel = ev.data[0] & 0x0F;
+            const uint8_t pitch = ev.data[1];
+            const uint8_t velocity = ev.data[2];
             Event vstEvent;
             vstEvent.busIndex = 0;
             vstEvent.sampleOffset = ev.sampleOffset;
             vstEvent.ppqPosition = 0;
             vstEvent.flags = Event::kIsLive;
             vstEvent.type = Event::kNoteOnEvent;
-            vstEvent.noteOn.channel = ev.data[0] & 0x0F;
-            vstEvent.noteOn.pitch = ev.data[1];
-            vstEvent.noteOn.velocity = ev.data[2] / 127.0f;
+            vstEvent.noteOn.channel = channel;
+            vstEvent.noteOn.pitch = pitch;
+            vstEvent.noteOn.velocity = velocity / 127.0f;
             vstEvent.noteOn.tuning = 0.0f;
             vstEvent.noteOn.noteId = -1;
-            if (ev.data[0] >= 0x80 && ev.data[0] < 0x90) {
+            if (status == 0x80 || (status == 0x90 && velocity == 0)) {
                 vstEvent.type = Event::kNoteOffEvent;
-                vstEvent.noteOff.channel = vstEvent.noteOn.channel;
-                vstEvent.noteOff.pitch = vstEvent.noteOn.pitch;
-                vstEvent.noteOff.velocity = ev.data[2] / 127.0f;
+                vstEvent.noteOff.channel = channel;
+                vstEvent.noteOff.pitch = pitch;
+                vstEvent.noteOff.velocity = velocity / 127.0f;
                 vstEvent.noteOff.tuning = 0.0f;
                 vstEvent.noteOff.noteId = -1;
             }
@@ -540,20 +544,9 @@ std::vector<uint8_t> VST3PluginInstance::saveState() const {
     if (!m_component)
         return {};
 
-    // First ask the component how big the state is
     auto component = static_cast<IComponent*>(m_component);
-    IBStream* tempStream = nullptr;
-    if (component->getState(tempStream) != kResultOk)
-        return {};
 
-    // Use VST3's StreamOpen to get the actual state
-    // We need to use the controller to get full state (UI + params)
-    auto ctrl = static_cast<IEditController*>(m_controller);
-    if (!ctrl)
-        return {};
-
-    // Use a two-pass approach: first get size, then allocate
-    // VST3 uses IBStream - we'll use a simple memory stream
+    // VST3 writes state directly into the provided stream.
     struct MemStream : public IBStream {
         std::vector<uint8_t> data;
         int64_t pos = 0;
