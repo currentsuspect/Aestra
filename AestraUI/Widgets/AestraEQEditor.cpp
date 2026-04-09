@@ -417,8 +417,8 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
                           selectedColor.withAlpha(0.90f));
 
         const std::string detail = usesGainAxis(band)
-            ? ("Gain " + gainLabel(band.gain) + " dB   Q " + qLabel(band.q))
-            : ("Slope/Q " + qLabel(band.q));
+            ? ("Gain " + gainLabel(band.gain) + " dB   Q " + qLabel(band.q, band.type))
+            : ("Slope/Q " + qLabel(band.q, band.type));
         renderer.drawText(detail, {hudRect.x + 50.0f, hudRect.y + 15.5f}, 7.0f,
                           theme.getColor("textSecondary").withAlpha(0.82f));
     }
@@ -430,31 +430,41 @@ void AestraEQEditor::updateSpectrumSnapshot() {
         return;
     }
 
-    std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> samples{};
     uint64_t serial = 0;
-    if (!eq->getAnalyzerWindow(samples, &serial) || serial == m_lastAnalyzerSerial) {
+    if (!eq->getAnalyzerWindow(m_analyzerWindow, &serial) || serial == m_lastAnalyzerSerial) {
         return;
     }
 
     m_lastAnalyzerSerial = serial;
     const double sampleRate = std::max(1.0, eq->getAnalyzerSampleRate());
-    const size_t sampleCount = samples.size();
+    const size_t sampleCount = m_analyzerWindow.size();
     std::array<float, 160> nextMagnitudes{};
+    std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> windowedSamples{};
+
+    for (size_t n = 0; n < sampleCount; ++n) {
+        const float window = 0.5f - 0.5f * std::cos((2.0f * kPi * static_cast<float>(n)) / static_cast<float>(sampleCount - 1));
+        windowedSamples[n] = m_analyzerWindow[n] * window;
+    }
 
     for (size_t bin = 0; bin < nextMagnitudes.size(); ++bin) {
         const float norm = static_cast<float>(bin) / static_cast<float>(nextMagnitudes.size() - 1);
         const float targetHz = std::pow(10.0f, std::log10(20.0f) + norm * (std::log10(20000.0f) - std::log10(20.0f)));
-        float real = 0.0f;
-        float imag = 0.0f;
+        const float omega = 2.0f * kPi * targetHz / static_cast<float>(sampleRate);
+        const float cosine = std::cos(omega);
+        const float sine = std::sin(omega);
+        const float coeff = 2.0f * cosine;
+        float q0 = 0.0f;
+        float q1 = 0.0f;
+        float q2 = 0.0f;
 
         for (size_t n = 0; n < sampleCount; ++n) {
-            const float window = 0.5f - 0.5f * std::cos((2.0f * kPi * static_cast<float>(n)) / static_cast<float>(sampleCount - 1));
-            const float sample = samples[n] * window;
-            const float phase = 2.0f * kPi * targetHz * static_cast<float>(n) / static_cast<float>(sampleRate);
-            real += sample * std::cos(phase);
-            imag -= sample * std::sin(phase);
+            q0 = coeff * q1 - q2 + windowedSamples[n];
+            q2 = q1;
+            q1 = q0;
         }
 
+        const float real = q1 - q2 * cosine;
+        const float imag = q2 * sine;
         const float magnitude = std::sqrt(real * real + imag * imag) / static_cast<float>(sampleCount);
         const float db = 20.0f * std::log10(std::max(magnitude * 8.0f, 1.0e-5f));
         const float normalized = std::clamp((db + 72.0f) / 72.0f, 0.0f, 1.0f);
@@ -632,7 +642,7 @@ void AestraEQEditor::drawBandPanel(NUIRenderer& renderer, const BandControl& ban
     }
     renderer.fillRoundedRect(band.qKnob, 7.0f, band.dragTarget == BandControl::Q ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : NUIColor(0.9f, 0.7f, 0.5f, 0.95f));
 
-    renderer.drawText(qLabel(band.q), {band.bounds.x + 6.0f, band.bounds.bottom() - 12.0f}, 7.0f,
+    renderer.drawText(qLabel(band.q, band.type), {band.bounds.x + 6.0f, band.bounds.bottom() - 12.0f}, 7.0f,
                       theme.getColor("textSecondary").withAlpha(0.6f));
 }
 
@@ -725,12 +735,10 @@ std::string AestraEQEditor::gainLabel(float norm) const {
     float db = -18.0f + norm * 36.0f;
     std::ostringstream o; o << std::fixed << std::setprecision(1) << db; return o.str();
 }
-std::string AestraEQEditor::qLabel(float norm) const {
-    if (m_selectedBand >= 0 && m_selectedBand < static_cast<int>(m_bands.size())) {
-        const auto type = static_cast<Aestra::Audio::Plugins::FilterType>(m_bands[m_selectedBand].type);
-        if (type == Aestra::Audio::Plugins::FilterType::LowCut || type == Aestra::Audio::Plugins::FilterType::HighCut) {
-            return std::to_string(cutSlopeDbPerOct(norm)) + "dB";
-        }
+std::string AestraEQEditor::qLabel(float norm, uint32_t type) const {
+    const auto filterType = static_cast<Aestra::Audio::Plugins::FilterType>(type);
+    if (filterType == Aestra::Audio::Plugins::FilterType::LowCut || filterType == Aestra::Audio::Plugins::FilterType::HighCut) {
+        return std::to_string(cutSlopeDbPerOct(norm)) + "dB";
     }
     float q = 0.1f + norm * 9.9f;
     std::ostringstream o; o << std::fixed << std::setprecision(1) << q; return o.str();

@@ -378,8 +378,9 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
         const float visibleW = std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
         const float contentW = m_strips.empty() ? 0.0f : (m_strips.size() * (STRIP_WIDTH + STRIP_SPACING) - STRIP_SPACING);
         const float maxScroll = std::max(0.0f, contentW - visibleW);
+        const float channelY = minimapRect.bottom() + MINIMAP_GAP;
 
-        const NUIRect channelClip(bounds.x, bounds.y, visibleW, bounds.height);
+        const NUIRect channelClip(bounds.x, channelY, visibleW, std::max(0.0f, bounds.bottom() - channelY));
         if (maxScroll > 0.0f && channelClip.contains(event.position)) {
             constexpr float SCROLL_PX = 60.0f;
             m_targetScrollX = std::clamp(m_targetScrollX - static_cast<float>(event.wheelDelta) * SCROLL_PX, 0.0f, maxScroll);

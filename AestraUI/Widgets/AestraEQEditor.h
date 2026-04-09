@@ -4,6 +4,7 @@
 #include "NUIComponent.h"
 #include "NUIContextMenu.h"
 #include "NUITypes.h"
+#include "Plugin/AestraEQ.h"
 #include "PluginHost.h"
 
 #include <functional>
@@ -68,7 +69,7 @@ private:
     std::string typeLabel(uint32_t type) const;
     std::string freqLabel(float norm) const;
     std::string gainLabel(float norm) const;
-    std::string qLabel(float norm) const;
+    std::string qLabel(float norm, uint32_t type) const;
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
     std::vector<BandControl> m_bands;
@@ -81,6 +82,7 @@ private:
     NUIPoint m_windowStartPos;
     NUIRect m_lastResponseBounds;
     std::array<float, 160> m_spectrumMagnitudes{};
+    std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> m_analyzerWindow{};
     uint64_t m_lastAnalyzerSerial = 0;
     std::shared_ptr<NUIContextMenu> m_bandTypeMenu;
 

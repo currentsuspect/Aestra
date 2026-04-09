@@ -376,7 +376,13 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
         size_t eventCount = midiInput->getEventCount();
         for (size_t i = 0; i < eventCount && inputEvents.count < 256; ++i) {
             const auto& ev = midiInput->getEvent(i);
+            if (ev.size < 3) {
+                continue;
+            }
             const uint8_t status = ev.data[0] & 0xF0;
+            if (status != 0x80 && status != 0x90) {
+                continue;
+            }
             const uint8_t channel = ev.data[0] & 0x0F;
             const uint8_t pitch = ev.data[1];
             const uint8_t velocity = ev.data[2];
