@@ -728,8 +728,107 @@ void NUIRendererGL::drawLine(const NUIPoint& start, const NUIPoint& end, float t
 
 void NUIRendererGL::drawPolyline(const NUIPoint* points, int count, float thickness, const NUIColor& color) {
     ensureBasicPrimitive();
+
+    if (count < 2) return;
+
+    // Ensure we are not using a texture (batch breaking)
+    if (currentTextureId_ != 0) {
+        flush();
+        currentTextureId_ = 0;
+    }
+
+    if (count == 2) {
+        drawLine(points[0], points[1], thickness, color);
+        return;
+    }
+
+    const float halfThickness = thickness * 0.5f;
+    const float featherWidth = std::max(0.75f, thickness * 0.75f);
+    const uint32_t baseIndex = static_cast<uint32_t>(vertices_.size());
+    const NUIColor transparent(color.r, color.g, color.b, 0.0f);
+
+    auto normalize = [](float x, float y) {
+        const float len = std::sqrt(x * x + y * y);
+        if (len < 1.0e-4f) {
+            return std::pair<float, float>{0.0f, 0.0f};
+        }
+        return std::pair<float, float>{x / len, y / len};
+    };
+
+    for (int i = 0; i < count; ++i) {
+        const NUIPoint& curr = points[i];
+        const NUIPoint& prev = (i > 0) ? points[i - 1] : points[i];
+        const NUIPoint& next = (i + 1 < count) ? points[i + 1] : points[i];
+
+        const auto [prevDirX, prevDirY] = normalize(curr.x - prev.x, curr.y - prev.y);
+        const auto [nextDirX, nextDirY] = normalize(next.x - curr.x, next.y - curr.y);
+
+        float nx = 0.0f;
+        float ny = 0.0f;
+
+        if (i == 0) {
+            nx = -nextDirY;
+            ny = nextDirX;
+        } else if (i == count - 1) {
+            nx = -prevDirY;
+            ny = prevDirX;
+        } else {
+            const float prevNx = -prevDirY;
+            const float prevNy = prevDirX;
+            const float nextNx = -nextDirY;
+            const float nextNy = nextDirX;
+
+            const float miterX = prevNx + nextNx;
+            const float miterY = prevNy + nextNy;
+            const auto [miterNormX, miterNormY] = normalize(miterX, miterY);
+
+            if (std::abs(miterNormX) < 1.0e-4f && std::abs(miterNormY) < 1.0e-4f) {
+                nx = nextNx;
+                ny = nextNy;
+            } else {
+                const float dot = std::max(0.25f, miterNormX * nextNx + miterNormY * nextNy);
+                const float miterScale = std::min(3.0f, 1.0f / dot);
+                nx = miterNormX * miterScale;
+                ny = miterNormY * miterScale;
+            }
+        }
+
+        addVertex(curr.x + nx * (halfThickness + featherWidth), curr.y + ny * (halfThickness + featherWidth),
+                  0.0f, 0.0f, transparent, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+        addVertex(curr.x + nx * halfThickness, curr.y + ny * halfThickness,
+                  0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+        addVertex(curr.x - nx * halfThickness, curr.y - ny * halfThickness,
+                  0.0f, 0.0f, color, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+        addVertex(curr.x - nx * (halfThickness + featherWidth), curr.y - ny * (halfThickness + featherWidth),
+                  0.0f, 0.0f, transparent, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
+    }
+
     for (int i = 0; i < count - 1; ++i) {
-        drawLine(points[i], points[i + 1], thickness, color);
+        const uint32_t col0 = baseIndex + static_cast<uint32_t>(i * 4);
+        const uint32_t col1 = col0 + 4;
+
+        const uint32_t outerLeft0 = col0 + 0;
+        const uint32_t innerLeft0 = col0 + 1;
+        const uint32_t innerRight0 = col0 + 2;
+        const uint32_t outerRight0 = col0 + 3;
+
+        const uint32_t outerLeft1 = col1 + 0;
+        const uint32_t innerLeft1 = col1 + 1;
+        const uint32_t innerRight1 = col1 + 2;
+        const uint32_t outerRight1 = col1 + 3;
+
+        auto addQuadIndices = [this](uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+            indices_.push_back(a);
+            indices_.push_back(b);
+            indices_.push_back(c);
+            indices_.push_back(c);
+            indices_.push_back(b);
+            indices_.push_back(d);
+        };
+
+        addQuadIndices(outerLeft0, innerLeft0, outerLeft1, innerLeft1);
+        addQuadIndices(innerLeft0, innerRight0, innerLeft1, innerRight1);
+        addQuadIndices(innerRight0, outerRight0, innerRight1, outerRight1);
     }
 }
 

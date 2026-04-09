@@ -2,12 +2,14 @@
 #pragma once
 
 #include "NUIComponent.h"
+#include "NUIContextMenu.h"
 #include "NUITypes.h"
 #include "PluginHost.h"
 
 #include <functional>
 #include <memory>
 #include <string>
+#include <array>
 #include <vector>
 
 namespace AestraUI {
@@ -50,6 +52,13 @@ private:
     void layoutControls();
     void drawTitleBar(NUIRenderer& renderer);
     void drawResponseCurve(NUIRenderer& renderer, const NUIRect& bounds);
+    void updateSpectrumSnapshot();
+    void drawSpectrumBackdrop(NUIRenderer& renderer, const NUIRect& bounds);
+    NUIRect responseGraphBounds(const NUIRect& outerBounds) const;
+    bool usesGainAxis(const BandControl& band) const;
+    NUIPoint graphNodePosition(const BandControl& band, const NUIRect& graphBounds) const;
+    int hitTestGraphNode(float x, float y) const;
+    void updateBandFromGraphPosition(int bandIndex, const NUIPoint& position);
     void drawBandPanel(NUIRenderer& renderer, const BandControl& band);
     void updateBandValue(int bandIndex, BandControl::DragTarget target, float normalizedValue);
     int hitTestBand(float x, float y) const;
@@ -65,9 +74,15 @@ private:
     std::vector<BandControl> m_bands;
     std::function<void()> m_onClose;
     int m_hoveredBand = -1;
+    int m_selectedBand = -1;
+    int m_draggingGraphBand = -1;
     bool m_isDraggingWindow = false;
     NUIPoint m_dragStartPos;
     NUIPoint m_windowStartPos;
+    NUIRect m_lastResponseBounds;
+    std::array<float, 160> m_spectrumMagnitudes{};
+    uint64_t m_lastAnalyzerSerial = 0;
+    std::shared_ptr<NUIContextMenu> m_bandTypeMenu;
 
     static constexpr float kWindowWidth = 760.0f;
     static constexpr float kWindowHeight = 410.0f;
