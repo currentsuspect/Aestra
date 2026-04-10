@@ -3,6 +3,7 @@
 
 #include "NUIComponent.h"
 #include "NUIDropdown.h"
+#include "NUISegmentedControl.h"
 
 #include <cstdint>
 #include <string>
@@ -65,6 +66,7 @@ private:
 
     // Inserts
     std::shared_ptr<EffectChainRack> m_effectRack;
+    std::shared_ptr<NUISegmentedControl> m_tabControl;
 
     // I/O
     std::shared_ptr<NUIDropdown> m_ioInputDropdown;

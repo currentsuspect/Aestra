@@ -152,6 +152,18 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
     std::vector<std::unique_ptr<ChannelViewModel>> newChannels;
     newChannels.reserve(channelInfo.size());
 
+    auto resolveMainOutputName = [&](uint32_t mainOutputId) -> std::string {
+        if (mainOutputId == 0xFFFFFFFFu || mainOutputId == 0u) {
+            return "Master";
+        }
+        auto targetIt = std::find_if(channelInfo.begin(), channelInfo.end(),
+            [&](const ChannelInfo& ci) { return ci.id == mainOutputId; });
+        if (targetIt != channelInfo.end()) {
+            return targetIt->name;
+        }
+        return "Unknown (" + std::to_string(mainOutputId) + ")";
+    };
+
     for (const auto& info : channelInfo) {
         const auto it = existingIds.find(info.id);
         if (it != existingIds.end() && m_channels[it->second]) {
@@ -170,6 +182,10 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             if (auto* mc = info.channel) {
                 existing->inputChannelIndex = mc->getInputChannelIndex();
                 existing->width = mc->getWidth();
+                const uint32_t engineMainOutputId = mc->getMainOutputId();
+                existing->mainOutputId = (engineMainOutputId == 0xFFFFFFFFu) ? 0u : engineMainOutputId;
+                existing->masterSendEnabled = (engineMainOutputId == 0xFFFFFFFFu);
+                existing->routeName = resolveMainOutputName(engineMainOutputId);
             }
             if (continuousParams && info.slot != Audio::ChannelSlotMap::INVALID_SLOT) {
                 continuousParams->read(info.slot, existing->faderGainDb, existing->pan, existing->trimDb);
@@ -191,6 +207,10 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             if (auto* mc = info.channel) {
                 channel->inputChannelIndex = mc->getInputChannelIndex();
                 channel->width = mc->getWidth();
+                const uint32_t engineMainOutputId = mc->getMainOutputId();
+                channel->mainOutputId = (engineMainOutputId == 0xFFFFFFFFu) ? 0u : engineMainOutputId;
+                channel->masterSendEnabled = (engineMainOutputId == 0xFFFFFFFFu);
+                channel->routeName = resolveMainOutputName(engineMainOutputId);
             }
             if (continuousParams && info.slot != Audio::ChannelSlotMap::INVALID_SLOT) {
                 continuousParams->read(info.slot, channel->faderGainDb, channel->pan, channel->trimDb);
@@ -224,7 +244,8 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                    }
                    uiSend.gain = route.gain;
                    uiSend.pan = route.pan;
-                   // uiSend.postFader = ... engine doesn't have this yet, assume true
+                   uiSend.postFader = route.postFader;
+                   uiSend.muted = route.mute;
                    ch->sends.push_back(uiSend);
                }
             }
@@ -604,6 +625,42 @@ void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint3
         uint32_t engineId = (targetId == 0) ? 0xFFFFFFFF : targetId;
         mc->setSendDestination(sendIndex, engineId);
         
+        if (m_onGraphDirty) m_onGraphDirty();
+        if (m_onProjectModified) m_onProjectModified();
+    }
+}
+
+void MixerViewModel::setSendPostFader(uint32_t channelId, int sendIndex, bool postFader) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
+
+    ch->sends[sendIndex].postFader = postFader;
+
+    if (auto mc = ch->channel) {
+        mc->setSendPostFader(sendIndex, postFader);
+        if (m_onGraphDirty) m_onGraphDirty();
+        if (m_onProjectModified) m_onProjectModified();
+    }
+}
+
+void MixerViewModel::setMainOutputDestination(uint32_t channelId, uint32_t targetId) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || ch->id == 0) return;
+
+    ch->mainOutputId = targetId;
+    ch->masterSendEnabled = (targetId == 0);
+    ch->routeName = (targetId == 0) ? "Master" : "Unknown";
+
+    if (targetId != 0) {
+        if (auto* target = getChannelById(targetId)) {
+            ch->routeName = target->name;
+        } else {
+            ch->routeName = "Unknown (" + std::to_string(targetId) + ")";
+        }
+    }
+
+    if (auto mc = ch->channel) {
+        mc->setMainOutputId(targetId == 0 ? 0xFFFFFFFFu : targetId);
         if (m_onGraphDirty) m_onGraphDirty();
         if (m_onProjectModified) m_onProjectModified();
     }

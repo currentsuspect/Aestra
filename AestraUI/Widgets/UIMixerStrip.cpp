@@ -26,7 +26,7 @@ namespace {
     constexpr float METER_W = 28.0f;
     constexpr float MASTER_METER_W = 36.0f;
 
-    constexpr float SELECT_TOP_H = 3.0f;
+    constexpr float SELECT_TOP_H = 4.0f;
 }
 
 UIMixerStrip::UIMixerStrip(uint32_t channelId,
@@ -258,10 +258,10 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 void UIMixerStrip::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
-    m_selectedTint = theme.getColor("primary").withAlpha(0.10f);
-    m_selectedOutline = theme.getColor("borderActive").withAlpha(0.18f);
-    m_selectedGlow = theme.getColor("primary").withAlpha(0.06f);
-    m_selectedTopHighlight = theme.getColor("primary").withAlpha(0.42f);
+    m_selectedTint = theme.getColor("primary").withAlpha(0.012f);
+    m_selectedOutline = theme.getColor("borderActive").withAlpha(0.30f);
+    m_selectedGlow = theme.getColor("primary").withAlpha(0.050f);
+    m_selectedTopHighlight = theme.getColor("primary").withAlpha(0.62f);
     
     // Master: Distinct Dark Glass
     m_masterBackground = theme.getColor("surfaceRaised").withAlpha(0.78f);
@@ -270,7 +270,7 @@ void UIMixerStrip::cacheThemeColors()
     // Standard Strip: Use Theme Glass Border/Hover for consistency
     // m_stripBg = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.02f); 
     // Use theme.glassHover (0.04f) or similar. Let's use a custom weak glass for strips.
-    m_stripBg = theme.getColor("surfaceTertiary").withAlpha(0.52f);
+    m_stripBg = theme.getColor("surfaceTertiary").withAlpha(0.58f);
     
     // Master Border
     m_masterBorder = theme.getColor("border").withAlpha(0.36f);
@@ -550,9 +550,13 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     }
 
     if (selected) {
+        renderer.drawShadow(bounds, 0.0f, 8.0f, 18.0f, m_selectedGlow.withAlpha(0.20f));
         renderer.fillRoundedRect(bounds, radius, m_selectedTint);
 
         renderer.fillRect(NUIRect{bounds.x, bounds.y, bounds.width, SELECT_TOP_H}, m_selectedTopHighlight);
+        renderer.fillRoundedRect(NUIRect{bounds.x + 2.0f, bounds.y + 2.0f, bounds.width - 4.0f, 34.0f},
+                                 std::max(0.0f, radius - 2.0f),
+                                 m_selectedGlow.withAlpha(0.08f));
         renderer.strokeRoundedRect(NUIRect{bounds.x - 1.0f, bounds.y - 1.0f, bounds.width + 2.0f, bounds.height + 2.0f},
                                    radius + 1.0f,
                                    1.0f,

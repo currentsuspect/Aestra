@@ -181,6 +181,44 @@ Completed since early January:
 - [P0][G-005] Metering: stable RMS/peak meters with smoothing; no UI stutter.
 - [P1][G-006] Track naming + color persistence.
 - [P1][G-007] Basic routing policy documented (even if it’s “no sends for Beta”).
+- [P0][G-008] Core routing primitives: master send on/off, subgroup-only output, FX sends, sidechain-only sends, and explicit pre/post send behavior.
+- [P0][G-009] Routing visibility: inspector or mini-matrix must show source, audible destinations, master-send state, send mode, and sidechain-only state with no hidden routing assumptions.
+- [P0][G-010] Routing safety rules: detect duplicate audible routes, prevent feedback loops, and warn on ambiguous routing states before they become trust-breaking mix bugs.
+- [P0][G-011] Solo/mute/cue semantics locked: define solo-in-place vs cue behavior and keep it consistent through groups, returns, sends, and sidechain paths.
+- [P0][G-012] PDC for routing graph: sends, buses, sidechains, master FX, recording, and export all remain aligned under high-latency plugins.
+- [P0][G-013] Internal print/export respects routing: bus print, internal recording, stem export, and project reopen all preserve the same routing graph and audible result.
+- [P1][G-014] Mono/stereo routing discipline: mono sources, stereo tracks, returns, panning, polarity, and collapse/summing behave predictably even if full multichannel routing is deferred.
+- [P1][G-015] One-click routing actions: create bus from selection, create FX return, route selected to bus only, and sidechain selected to target.
+- [P1][G-016] Routing templates/presets for common workflows (drum bus, vocal FX return, parallel compression bus, cue/headphone bus).
+- [P0][G-017] Route-state serialization tests: save, reopen, render, and reopen on another machine without route corruption.
+
+### Routing Release Bar
+
+Routing is not done when it exists in code. It is done when normal mix decisions are fast and invisible:
+
+- Route multiple drum tracks into a drum bus, then bus to master.
+- Create a reverb return and send several tracks to it.
+- Feed a compressor sidechain without also making that send audible.
+- Disable a track's master send and route it only to a subgroup.
+- Solo a track and still get the intended return/sidechain behavior.
+- Add a high-latency plugin anywhere in the graph and keep playback, record, and render aligned.
+- Print a bus to audio.
+- Reopen the project and get the exact same graph back.
+
+### Routing Non-Goals For Beta
+
+Do not block v1 Beta on:
+
+- full arbitrary graph-editing UI
+- surround / Atmos / ambisonics
+- per-send FX chains
+- REAPER-style high-channel-count arbitrary internal routing
+- complex hardware insert calibration wizards
+
+### Routing Notes
+
+- Favor a routing model that is simpler to understand and harder to break over maximum theoretical flexibility.
+- Excellent mono/stereo routing plus buses, sends, sidechain, alt outputs, and trustworthy export matters more than deep multichannel graphs for Beta.
 
 ---
 
