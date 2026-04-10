@@ -4,6 +4,11 @@ As the performance and quality agent "Bolt", I propose the following innovations
 
 ## 1. Innovations
 
+### Aestra Unified Framework
+
+- **Innovation**: Implement a shared foundation layer that unifies data structures, plugin interfaces, and project serialization across both Aestra (timeline DAW) and Spot (modular ecosystem).
+- **Benefit**: Ensures seamless interoperability, zero-friction project sharing, and drastically reduced duplication of effort between the two DAWs.
+
 ### NeuralFX Suite
 
 Expand the prototype `NeuralAmp` into a full suite of differentiable DSP plugins.
@@ -47,6 +52,21 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 ## 2. Performance Boosts
 
+### GPU Accelerated DSP
+
+- **Innovation**: Offload highly parallel audio computations (e.g., FFT, heavy convolution, spectral processing) to the GPU using Vulkan or compute shaders.
+- **Benefit**: Frees up the CPU for critical real-time thread management and enables extremely dense processing that was previously impossible.
+
+### SimdLin Integration
+
+- **Plan**: Deeply integrate `SimdLin` (a SIMD-accelerated linear algebra library) into all core DSP operations requiring heavy math.
+- **Benefit**: Maximize vectorization opportunities across platforms, standardizing how SIMD instructions are dispatched.
+
+### Predictive Caching
+
+- **Innovation**: Anticipate upcoming heavy processing regions on the timeline and pre-compute/render them into a background cache before the playhead arrives.
+- **Benefit**: Reduces audio dropouts on massive sessions by dynamically load-balancing CPU usage across time.
+
 ### AVX-512 Everywhere
 
 - **Status**: Partially used in `SampleRateConverter`.
@@ -74,6 +94,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Benefit**: Lower per-buffer overhead on dense sessions.
 
 ## 3. Sound Quality
+
+### Quantum-Modeled Reverb
+
+- **Innovation**: Develop a highly advanced spatial engine using quantum-inspired stochastic modeling to compute room reflections, scattering, and tail density.
+- **Benefit**: Produces astoundingly realistic and lush spaces that rival algorithmic classics, while retaining unique character.
 
 ### 64-bit End-to-End Mixing
 
