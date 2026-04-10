@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Security Lab Eval Result",
+  "type": "object",
+  "required": ["run_id", "timestamp", "git", "lanes", "decision"],
+  "properties": {
+    "run_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "git": {
+      "type": "object",
+      "required": ["commit", "branch", "dirty"],
+      "properties": {
+        "commit": { "type": "string" },
+        "branch": { "type": "string" },
+        "dirty": { "type": "boolean" }
+      }
+    },
+    "lanes": {
+      "type": "object",
+      "required": ["security_tests", "redteam_pocs", "regression"],
+      "properties": {
+        "security_tests": {
+          "type": "object",
+          "required": ["tests", "pass_count", "fail_count", "total_count"],
+          "properties": {
+            "tests": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "exit_code", "output_file"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "exit_code": { "type": "integer" },
+                  "output_file": { "type": "string" }
+                }
+              }
+            },
+            "pass_count": { "type": "integer" },
+            "fail_count": { "type": "integer" },
+            "total_count": { "type": "integer" }
+          }
+        },
+        "redteam_pocs": {
+          "type": "object",
+          "required": ["pocs", "mitigated_count", "open_count", "total_count"],
+          "properties": {
+            "pocs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "target_vuln", "status", "output_file"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "target_vuln": { "type": "string" },
+                  "status": { "type": "string", "enum": ["mitigated", "open", "monitor", "skipped"] },
+                  "output_file": { "type": "string" }
+                }
+              }
+            },
+            "mitigated_count": { "type": "integer" },
+            "open_count": { "type": "integer" },
+            "total_count": { "type": "integer" }
+          }
+        },
+        "regression": {
+          "type": "object",
+          "required": ["math_tests", "filter_tests"],
+          "properties": {
+            "math_tests": {
+              "type": "object",
+              "required": ["exit_code", "output_file"],
+              "properties": {
+                "exit_code": { "type": "integer" },
+                "output_file": { "type": "string" }
+              }
+            },
+            "filter_tests": {
+              "type": "object",
+              "required": ["exit_code", "output_file"],
+              "properties": {
+                "exit_code": { "type": "integer" },
+                "output_file": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["status", "reason", "hard_gate_failures", "advisory_flags"],
+      "properties": {
+        "status": { "type": "string", "enum": ["accept", "reject", "inconclusive"] },
+        "reason": { "type": "string" },
+        "hard_gate_failures": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "advisory_flags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

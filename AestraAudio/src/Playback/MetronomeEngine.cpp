@@ -119,7 +119,13 @@ void MetronomeEngine::loadClickSounds(const std::string& downbeatPath, const std
 
                 if (bitsPerSample == 16) {
                     std::vector<int16_t> rawData(numSamples * numChannels);
-                    fread(rawData.data(), 2, numSamples * numChannels, file);
+                    size_t itemsRead = fread(rawData.data(), 2, numSamples * numChannels, file);
+                    // [SEC-RTM-011] Guard against truncated WAV — reject if file has fewer
+                    // bytes than the header claims. Prevents uninitialized memory in output.
+                    if (itemsRead != static_cast<size_t>(numSamples * numChannels)) {
+                        fclose(file);
+                        return false;
+                    }
                     for (uint32_t i = 0; i < numSamples; ++i) {
                         float sample = 0.0f;
                         for (uint16_t ch = 0; ch < numChannels; ++ch) {
@@ -129,7 +135,13 @@ void MetronomeEngine::loadClickSounds(const std::string& downbeatPath, const std
                     }
                 } else if (bitsPerSample == 24) {
                     std::vector<uint8_t> rawData(numSamples * numChannels * 3);
-                    fread(rawData.data(), 1, numSamples * numChannels * 3, file);
+                    size_t bytesExpected = numSamples * numChannels * 3;
+                    size_t bytesRead = fread(rawData.data(), 1, bytesExpected, file);
+                    // [SEC-RTM-011] Same truncated-file guard for 24-bit path
+                    if (bytesRead != bytesExpected) {
+                        fclose(file);
+                        return false;
+                    }
                     for (uint32_t i = 0; i < numSamples; ++i) {
                         float sample = 0.0f;
                         for (uint16_t ch = 0; ch < numChannels; ++ch) {
