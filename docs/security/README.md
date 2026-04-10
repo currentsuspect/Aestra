@@ -8,39 +8,36 @@ Every vulnerability must have:
 
 No "trust me bro". Every claim backed by reproducible code.
 
----
+## Running Tests
+```bash
+cd tests/security
+g++ -std=c++17 -o stoul_crash stoul_crash.cpp && ./stoul_crash
+g++ -std=c++17 -o json_dos json_dos.cpp && ./json_dos
+g++ -std=c++17 -o div_zero_channels div_zero_channels.cpp && ./div_zero_channels
+g++ -std=c++17 -o sampler_path_traversal sampler_path_traversal.cpp && ./sampler_path_traversal
+g++ -std=c++17 -o id3_overflow id3_overflow.cpp && ./id3_overflow
+g++ -std=c++17 -o shell_escape_test shell_escape_test.cpp && ./shell_escape_test
+```
 
 ## Vulnerability Register
 
-| ID | Vulnerability | Severity | Status | Test | Fix |
+| ID | Vulnerability | Severity | Status | Test | Fix Commit |
 |----|---|---|---|---|---|
-| SEC-001 | `std::stoul` crash on malformed project color | Medium | 🔴 Open | `tests/security/stoul_crash.cpp` | `ProjectSerializer.cpp` |
-| SEC-002 | JSON parser stack exhaustion (DoS) | High | 🔴 Open | `tests/security/json_dos.cpp` | `AestraJSON.h` |
-| SEC-003 | `numChannels == 0` division by zero | Medium | 🔴 Open | `tests/security/div_zero_channels.cpp` | `ProjectSerializer.cpp` |
-| SEC-004 | Path traversal in SamplerPlugin loadState | Low-Med | 🔴 Open | `tests/security/sampler_path_traversal.cpp` | `SamplerPlugin.cpp` |
-| SEC-005 | Unbounded ID3v2 tag allocation (DoS) | Medium | 🔴 Open | `tests/security/id3_overflow.cpp` | `MetadataParser.cpp` |
-| SEC-006 | Metronome WAV parser OOB read | Medium | 🔴 Open | `tests/security/wav_oob_read.cpp` | `MetronomeEngine.cpp` |
-| SEC-007 | CLAP/VST3 plugin arbitrary code exec | Critical | 🟡 Monitor | — | By-design (documented risk) |
-| SEC-008 | `popen` shell injection (latent) | Low | 🟡 Monitor | — | ShellEscape is correct today |
-
----
-
-## Test Harness
-
-Each test is a standalone C++ file that:
-- Compiles with the project's existing build system
-- Runs in CI as part of the confidence suite
-- Returns exit code 0 if the fix is in place, non-zero if the vuln is exploitable
-
-Build:
-```bash
-cmake --build build-dev --target SecurityTests
-./build-dev/Tests/SecurityTests
-```
-
----
+| SEC-001 | `std::stoul` crash on malformed project color | Medium | 🟢 Fixed | `stoul_crash.cpp` | `d7c00a48` |
+| SEC-002 | JSON parser stack exhaustion (DoS) | High | 🟢 Fixed | `json_dos.cpp` | `d7c00a48` |
+| SEC-003 | `numChannels == 0` division by zero | Medium | 🟢 Fixed | `div_zero_channels.cpp` | `d7c00a48` |
+| SEC-004 | Path traversal in SamplerPlugin loadState | Low-Med | 🟢 Fixed | `sampler_path_traversal.cpp` | Sprint 2 |
+| SEC-005 | Unbounded ID3v2 tag allocation (DoS) | Medium | 🟢 Fixed | `id3_overflow.cpp` | `d7c00a48` |
+| SEC-006 | Metronome WAV parser OOB read | Medium | 🟢 Fixed | (confidence suite) | `d7c00a48` |
+| SEC-007 | CLAP/VST3 plugin arbitrary code exec | Critical | 🟡 Monitor | — | Documented risk |
+| SEC-008 | `popen` shell injection (regression test) | Low | 🟢 Fixed | `shell_escape_test.cpp` | Sprint 2 |
 
 ## Status Legend
 - 🔴 Open — vuln exists, fix needed
 - 🟡 Monitor — by-design risk or latent, not exploitable today
 - 🟢 Closed — fix deployed, test proves it
+
+## Sprint 2 — Blue Team
+- **SEC-004**: Added path traversal guard to SamplerPlugin::loadState — rejects absolute paths and `..` components
+- **SEC-008**: Added regression test for shellEscape() — verifies POSIX single-quote escaping handles all metacharacters correctly
+- **Infrastructure**: Added CMakeLists.txt for security tests, README updated with status table
