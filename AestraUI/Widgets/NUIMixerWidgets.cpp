@@ -206,6 +206,21 @@ UIMixerSend::UIMixerSend()
         if (onLevelChanged_) onLevelChanged_(v);
     };
 
+    modeControl_ = std::make_shared<NUISegmentedControl>(std::vector<std::string>{"Pre", "Post"});
+    modeControl_->setCornerRadius(8.0f);
+    modeControl_->setAccentColor(m_accentColor);
+    modeControl_->setSelectedIndex(1, false);
+    modeControl_->setOnSelectionChanged([this](size_t index) {
+        const bool post = (index == 1);
+        if (m_postFader != post) {
+            m_postFader = post;
+            if (onPostFaderChanged_) {
+                onPostFaderChanged_(post);
+            }
+            repaint();
+        }
+    });
+
     deleteButton_ = std::make_shared<NUIButton>("");
     deleteButton_->setStyle(NUIButton::Style::Secondary); // Visible border/bg
     
@@ -225,6 +240,7 @@ UIMixerSend::UIMixerSend()
 
     addChild(destSelector_);
     addChild(levelKnob_);
+    addChild(modeControl_);
     addChild(deleteButton_);
 }
 
@@ -236,6 +252,9 @@ void UIMixerSend::setAccentColor(const NUIColor& color)
     }
     if (levelKnob_) {
         levelKnob_->setAccentColor(color);
+    }
+    if (modeControl_) {
+        modeControl_->setAccentColor(color);
     }
     repaint();
 }
@@ -259,25 +278,24 @@ void UIMixerSend::onRender(NUIRenderer& renderer)
     renderer.strokeRoundedRect(indexChip, 8.0f, 1.0f, m_accentColor.withAlpha(0.20f));
     renderer.drawTextCentered(std::to_string(index_ + 1), indexChip, 9.0f, theme.getColor("textSecondary").withAlpha(0.94f));
 
-    renderer.drawText("Route", {b.x + 40.0f, b.y + 10.0f}, 8.5f, theme.getColor("textSecondary").withAlpha(0.84f));
+    renderer.drawText("Route", {b.x + 40.0f, b.y + 10.0f}, 8.5f, theme.getColor("textSecondary").withAlpha(0.92f));
 
-    const char* routeMode = m_postFader ? "Post" : "Pre";
-    const float modeW = renderer.measureText(routeMode, 8.0f).width + 12.0f;
-    const float muteW = m_muted ? renderer.measureText("Muted", 8.0f).width + 12.0f : 0.0f;
+    const char* sendKind = m_muted ? "Muted" : "Audio";
+    const float kindW = renderer.measureText(sendKind, 8.0f).width + 12.0f;
     float chipRight = b.right() - 8.0f;
 
-    if (m_muted) {
-        const NUIRect muteChip{chipRight - muteW, b.y + 8.0f, muteW, 15.0f};
-        renderer.fillRoundedRect(muteChip, 7.5f, theme.getColor("warning").withAlpha(0.12f));
-        renderer.strokeRoundedRect(muteChip, 7.5f, 1.0f, theme.getColor("warning").withAlpha(0.22f));
-        renderer.drawTextCentered("Muted", muteChip, 8.0f, theme.getColor("textSecondary").withAlpha(0.92f));
-        chipRight -= muteW + 4.0f;
-    }
-
-    const NUIRect modeChip{chipRight - modeW, b.y + 8.0f, modeW, 15.0f};
-    renderer.fillRoundedRect(modeChip, 7.5f, theme.getColor("backgroundPrimary").withAlpha(0.34f));
-    renderer.strokeRoundedRect(modeChip, 7.5f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.22f));
-    renderer.drawTextCentered(routeMode, modeChip, 8.0f, theme.getColor("textSecondary").withAlpha(0.90f));
+    const NUIRect kindChip{chipRight - kindW, b.y + 8.0f, kindW, 15.0f};
+    renderer.fillRoundedRect(kindChip,
+                             7.5f,
+                             m_muted ? theme.getColor("warning").withAlpha(0.12f)
+                                     : theme.getColor("backgroundPrimary").withAlpha(0.26f));
+    renderer.strokeRoundedRect(kindChip,
+                               7.5f,
+                               1.0f,
+                               m_muted ? theme.getColor("warning").withAlpha(0.22f)
+                                       : theme.getColor("borderSubtle").withAlpha(0.18f));
+    renderer.drawTextCentered(sendKind, kindChip, 8.0f, theme.getColor("textSecondary").withAlpha(0.92f));
+    chipRight -= kindW + 4.0f;
 
     char levelBuf[32];
     const float level = std::max(0.0001f, levelKnob_ ? levelKnob_->getValue() : 1.0f);
@@ -287,20 +305,25 @@ void UIMixerSend::onRender(NUIRenderer& renderer)
     } else {
         std::snprintf(levelBuf, sizeof(levelBuf), "%.1f dB", db);
     }
-    renderer.drawText(levelBuf, {b.right() - 74.0f, b.y + 11.0f}, 8.5f, theme.getColor("textSecondary").withAlpha(0.88f));
+    renderer.drawText(levelBuf, {b.right() - 74.0f, b.y + 11.0f}, 8.5f, theme.getColor("textPrimary").withAlpha(0.90f));
 
     const float knobSize = 22.0f;
     const float deleteBtnSize = 20.0f;
+    const float modeW = 60.0f;
     const NUIRect knobRect{b.right() - 64.0f, b.y + 21.0f, knobSize, knobSize};
     const NUIRect deleteRect{b.right() - 28.0f, b.y + 22.0f, deleteBtnSize, deleteBtnSize};
-    const float selectorRight = knobRect.x - 8.0f;
+    const NUIRect modeRect{knobRect.x - modeW - 8.0f, b.y + 23.0f, modeW, 18.0f};
+    const float selectorRight = modeRect.x - 8.0f;
     const NUIRect comboRect{b.x + 40.0f, b.y + 22.0f, std::max(56.0f, selectorRight - (b.x + 40.0f)), 22.0f};
 
-    renderer.drawText("Destination", {comboRect.x, b.y + 33.5f}, 7.5f, theme.getColor("textSecondary").withAlpha(0.66f));
-    renderer.drawText("Level", {knobRect.x - 1.0f, b.y + 44.0f}, 7.5f, theme.getColor("textSecondary").withAlpha(0.66f));
+    renderer.drawText("Destination", {comboRect.x, b.y + 33.5f}, 7.5f, theme.getColor("textSecondary").withAlpha(0.76f));
+    renderer.drawText("Tap", {modeRect.x + 10.0f, b.y + 10.0f}, 8.5f, theme.getColor("textSecondary").withAlpha(0.92f));
+    renderer.drawText("Level", {knobRect.x - 1.0f, b.y + 44.0f}, 7.5f, theme.getColor("textSecondary").withAlpha(0.76f));
 
     levelKnob_->setBounds(knobRect);
     destSelector_->setBounds(comboRect);
+    modeControl_->setVisible(m_modeEditable);
+    modeControl_->setBounds(modeRect);
     deleteButton_->setBounds(deleteRect);
 
     renderChildren(renderer);
@@ -317,6 +340,15 @@ void UIMixerSend::setDestination(uint32_t destId, const std::string& name)
     }
 }
 
+void UIMixerSend::setPostFader(bool postFader)
+{
+    m_postFader = postFader;
+    if (modeControl_) {
+        modeControl_->setSelectedIndex(postFader ? 1u : 0u, false);
+    }
+    repaint();
+}
+
 uint32_t UIMixerSend::getDestinationId() const
 {
     int idx = destSelector_->getSelectedIndex();
@@ -329,6 +361,11 @@ uint32_t UIMixerSend::getDestinationId() const
 void UIMixerSend::setLevel(float level)
 {
     levelKnob_->setValue(level);
+}
+
+void UIMixerSend::setOnPostFaderChanged(std::function<void(bool)> cb)
+{
+    onPostFaderChanged_ = std::move(cb);
 }
 
 float UIMixerSend::getLevel() const

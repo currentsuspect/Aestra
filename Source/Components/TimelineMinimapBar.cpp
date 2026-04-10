@@ -20,9 +20,9 @@ namespace {
 constexpr float kRadius = 6.0f;
 constexpr float kToggleRadius = 4.0f;
 
-constexpr float kToggleW = 22.0f;
-constexpr float kToggleH = 18.0f;
-constexpr float kToggleGap = 4.0f;
+constexpr float kToggleW = 20.0f;
+constexpr float kToggleH = 16.0f;
+constexpr float kToggleGap = 3.0f;
 
 constexpr float kTooltipPadX = 6.0f;
 constexpr float kTooltipPadY = 3.0f;
@@ -240,20 +240,20 @@ void TimelineMinimapBar::renderToggles_(NUIRenderer& renderer, const TimelineMin
                                                    : (i == 1) ? TimelineMinimapMode::Energy : TimelineMinimapMode::Automation));
 
         NUIColor fill = NUIColor(0.0f, 0.0f, 0.0f, 0.0f);
-        NUIColor border = colors_.glassBorder.withAlpha(0.40f);
-        NUIColor text = colors_.text.withAlpha(0.75f);
+        NUIColor border = colors_.glassBorder.withAlpha(0.30f);
+        NUIColor text = colors_.text.withAlpha(0.68f);
 
         if (isActive) {
             const NUIColor tint =
                 (i == 0) ? colors_.audioTint : (i == 1) ? colors_.audioTint : colors_.automationTint;
-            fill = tint.withAlpha(0.20f);
-            border = tint.withAlpha(0.65f);
-            text = colors_.text.withAlpha(0.90f);
+            fill = tint.withAlpha(0.16f);
+            border = tint.withAlpha(0.52f);
+            text = colors_.text.withAlpha(0.86f);
         }
 
         renderer.fillRoundedRect(toggleBounds_[i], kToggleRadius, fill);
         renderer.strokeRoundedRect(toggleBounds_[i], kToggleRadius, 1.0f, border);
-        renderer.drawTextCentered(kLabels[i], toggleBounds_[i], 10.0f, text);
+        renderer.drawTextCentered(kLabels[i], toggleBounds_[i], 9.5f, text);
     }
 }
 

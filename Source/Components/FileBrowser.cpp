@@ -945,7 +945,7 @@ void FileBrowser::onResize(int width, int height) {
     // Ignore legacy headerHeight, define our own stack
     const float buttonsRowHeight = 40.0f;     // Increased from 36
     const float breadcrumbRowHeight = 32.0f;  // Increased from 28
-    const float searchRowHeight = 36.0f;
+    const float searchRowHeight = 38.0f;
     const float innerPad = 8.0f;
     const float rowSpacing = 8.0f;            // Increased from 4
     
@@ -967,9 +967,9 @@ void FileBrowser::onResize(int width, int height) {
         searchInput_->setBounds(searchBounds);
         
         searchInput_->setTextColor(textColor_);
-        searchInput_->setBackgroundColor(themeManager.getColor("buttonBgDefault").withAlpha(0.98f));
-        searchInput_->setBorderColor(themeManager.getColor("border").withAlpha(0.24f));
-        searchInput_->setBorderRadius(10.0f);
+        searchInput_->setBackgroundColor(themeManager.getColor("surfaceRaised").withAlpha(0.995f));
+        searchInput_->setBorderColor(themeManager.getColor("borderActive").withAlpha(0.38f));
+        searchInput_->setBorderRadius(11.0f);
     }
     
     // 3. File List
@@ -2269,9 +2269,9 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     renderer.setClipRect(listClipExtended);
     
     const float listRadius = 10.0f;
-    const AestraUI::NUIColor listBg = themeManager.getColor("surfaceTertiary").withAlpha(0.58f);
+    const AestraUI::NUIColor listBg = themeManager.getColor("surfaceTertiary").withAlpha(0.62f);
     renderer.fillRoundedRect(listClip, listRadius, listBg);
-    renderer.strokeRoundedRect(listClip, listRadius, 1.0f, themeManager.getColor("border").withAlpha(0.18f));
+    renderer.strokeRoundedRect(listClip, listRadius, 1.0f, themeManager.getColor("border").withAlpha(0.24f));
     renderer.strokeRoundedRect({listClip.x + 1.0f, listClip.y + 1.0f, listClip.width - 2.0f, listClip.height - 2.0f},
                                std::max(0.0f, listRadius - 1.0f),
                                1.0f,
@@ -2319,17 +2319,17 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         const float rowRadius = std::min(9.0f, itemHeight * 0.32f);
         NUIRect rowRect(itemRect.x + 4.0f, itemRect.y + 2.0f, std::max(1.0f, itemRect.width - 8.0f), std::max(1.0f, itemRect.height - 4.0f));
         if (selected) {
-            renderer.drawShadow(rowRect, 0.0f, 5.0f, 14.0f, AestraUI::NUIColor(0, 0, 0, 0.10f));
+            renderer.drawShadow(rowRect, 0.0f, 5.0f, 14.0f, AestraUI::NUIColor(0, 0, 0, 0.12f));
             renderer.fillRoundedRect(rowRect, rowRadius, themeManager.getColor("buttonBgActive").withAlpha(0.96f));
-            renderer.strokeRoundedRect(rowRect, rowRadius, 1.0f, themeManager.getColor("borderActive").withAlpha(0.22f));
+            renderer.strokeRoundedRect(rowRect, rowRadius, 1.0f, themeManager.getColor("borderActive").withAlpha(0.28f));
             renderer.strokeRoundedRect({rowRect.x + 1.0f, rowRect.y + 1.0f, rowRect.width - 2.0f, rowRect.height - 2.0f},
                                        std::max(0.0f, rowRadius - 1.0f),
                                        1.0f,
                                        AestraUI::NUIColor::white().withAlpha(0.025f));
-            renderer.fillRoundedRect({rowRect.x, rowRect.y, 3.0f, rowRect.height}, 1.5f, themeManager.getColor("primary").withAlpha(0.9f));
+            renderer.fillRoundedRect({rowRect.x, rowRect.y, 4.0f, rowRect.height}, 2.0f, themeManager.getColor("primary").withAlpha(0.94f));
         } else if (hovered) {
-            renderer.fillRoundedRect(rowRect, rowRadius, themeManager.getColor("buttonBgHover").withAlpha(0.74f));
-            renderer.strokeRoundedRect(rowRect, rowRadius, 1.0f, themeManager.getColor("border").withAlpha(0.18f));
+            renderer.fillRoundedRect(rowRect, rowRadius, themeManager.getColor("buttonBgHover").withAlpha(0.78f));
+            renderer.strokeRoundedRect(rowRect, rowRadius, 1.0f, themeManager.getColor("border").withAlpha(0.22f));
         } 
         // Note: Alternating rows removed for cleaner "Deep Space" look
         
@@ -2456,8 +2456,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             
             // Render size
             renderer.drawText(item->cachedSizeStr, NUIPoint(sizeX, sizeTextY), metaFont,
-                              selected ? themeManager.getColor("textSecondary").withAlpha(0.88f)
-                                       : themeManager.getColor("textSecondary").withAlpha(0.72f));
+                              selected ? themeManager.getColor("textSecondary").withAlpha(0.92f)
+                                       : themeManager.getColor("textSecondary").withAlpha(0.80f));
         }
     }
 
@@ -2482,7 +2482,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     // Background
     // Glass Toolbar Header
     // Gradient for toolbar too
-    AestraUI::NUIColor toolbarBg = themeManager.getColor("surfaceTertiary").withAlpha(0.82f);
+    AestraUI::NUIColor toolbarBg = themeManager.getColor("surfaceTertiary").withAlpha(0.86f);
     renderer.fillRect(toolbarRect, toolbarBg);
     renderer.fillRect(AestraUI::NUIRect(toolbarRect.x, toolbarRect.y, toolbarRect.width, 1.0f),
                       AestraUI::NUIColor::white().withAlpha(0.035f));
@@ -2510,7 +2510,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
 
     // === MEASURE layout from edges ===
     
-    // 1. Right Layout (Sort <- Tags <- Favorites)
+    // 1. Right Layout (Sort <- Tags)
     float currentRightX = toolbarRect.right() - innerPad;
 
     // === PREPARE ===
@@ -2518,29 +2518,38 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     // Helper lambda for button drawing
 
     auto drawButton = [&](const NUIRect& rect, const std::string& text, bool hovered, bool active = false) {
-        NUIColor bg = themeManager.getColor("buttonBgDefault").withAlpha(0.98f);
-        NUIColor border = themeManager.getColor("border").withAlpha(0.28f);
+        const bool iconOnly = text.empty();
+        NUIColor bg = iconOnly
+            ? themeManager.getColor("surfaceSecondary").withAlpha(0.54f)
+            : themeManager.getColor("buttonBgDefault").withAlpha(0.94f);
+        NUIColor border = iconOnly
+            ? themeManager.getColor("border").withAlpha(0.12f)
+            : themeManager.getColor("border").withAlpha(0.24f);
         
         if (active) {
-            bg = themeManager.getColor("buttonBgActive").withAlpha(0.99f);
-            border = themeManager.getColor("borderActive").withAlpha(0.22f);
+            bg = iconOnly
+                ? themeManager.getColor("buttonBgActive").withAlpha(0.82f)
+                : themeManager.getColor("buttonBgActive").withAlpha(0.99f);
+            border = themeManager.getColor("borderActive").withAlpha(iconOnly ? 0.20f : 0.26f);
         } else if (hovered) {
-            bg = themeManager.getColor("buttonBgHover").withAlpha(0.99f);
-            border = themeManager.getColor("border").withAlpha(0.38f);
+            bg = iconOnly
+                ? themeManager.getColor("buttonBgHover").withAlpha(0.72f)
+                : themeManager.getColor("buttonBgHover").withAlpha(0.96f);
+            border = themeManager.getColor("border").withAlpha(iconOnly ? 0.20f : 0.34f);
         }
 
-        renderer.drawShadow(rect, 0.0f, 5.0f, 14.0f, NUIColor(0, 0, 0, 0.14f));
+        renderer.drawShadow(rect, 0.0f, iconOnly ? 2.0f : 4.0f, iconOnly ? 8.0f : 12.0f, NUIColor(0, 0, 0, iconOnly ? 0.06f : 0.14f));
         renderer.fillRoundedRect(rect, buttonRadius, bg);
         renderer.strokeRoundedRect(rect, buttonRadius, 1.0f, border);
         renderer.strokeRoundedRect({rect.x + 1.0f, rect.y + 1.0f, rect.width - 2.0f, rect.height - 2.0f},
                                    std::max(0.0f, buttonRadius - 1.0f),
                                    1.0f,
-                                   NUIColor::white().withAlpha(0.025f));
+                                   NUIColor::white().withAlpha(iconOnly ? 0.015f : 0.025f));
         
         if (!text.empty()) {
             float tY = std::round(renderer.calculateTextY(rect, toolbarFont));
             renderer.drawText(text, NUIPoint(rect.x + buttonPadX, tY), 
-                              toolbarFont, hovered || active ? textColor_ : textColor_.withAlpha(0.86f));
+                              toolbarFont, active ? textColor_ : hovered ? textColor_.withAlpha(0.94f) : textColor_.withAlpha(0.76f));
         }
     };
 
@@ -2588,32 +2597,22 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
          chevronDownIcon_->onRender(renderer);
     }
 
-    // Favorites Button (Star only if no text needed, or text?)
-    // Just icon for favorites is cleaner
-    const float starSize = 14.0f;
-    const float starButtonW = starSize + buttonPadX * 2.0f; // Square-ish or pill?
-    
-    favoritesButtonBounds_ = NUIRect(currentRightX - starButtonW, buttonY, starButtonW, buttonH);
-    if (favoritesButtonBounds_.x < toolbarRect.x) favoritesButtonBounds_.x = toolbarRect.x;
-    currentRightX = favoritesButtonBounds_.x - clusterGap;
-    
-    // Favorites RENDER
-    // Check for overlap with Refresh button (Left Cluster)
-    float leftLimit = 0; // Will be set after refresh is calcualted, but wait... circular dependency?
-    // Refresh is left aligned, Favorites is right aligned.
-    // We already moved Favorites X.
-    
     // Refresh Button - compact (Icon only)
     float currentLeftX = toolbarRect.x + innerPad;
     float refreshButtonW = buttonH; // Square button
     
     refreshButtonBounds_ = NUIRect(currentLeftX, buttonY, refreshButtonW, buttonH);
     currentLeftX = refreshButtonBounds_.right() + clusterGap;
-    
-    // NOW render Favorites
+
+    // Favorites Button - grouped with Refresh on the left
+    const float starSize = 16.0f;
+    const float starButtonW = buttonH;
+    favoritesButtonBounds_ = NUIRect(currentLeftX, buttonY, starButtonW, buttonH);
+    currentLeftX = favoritesButtonBounds_.right() + clusterGap;
+
+    // Render Favorites
     bool isFav = isFavorite(currentPath_);
-    // Use standard drawButton for consistent styling (borders, hovers)
-    drawButton(favoritesButtonBounds_, "", favoritesHovered_, false); 
+    drawButton(favoritesButtonBounds_, "", favoritesHovered_, isFav); 
         
     auto icon = isFav ? starFilledIcon_ : starIcon_;
     if (icon) {
@@ -2621,7 +2620,8 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
         float iconY = favoritesButtonBounds_.y + (favoritesButtonBounds_.height - starSize) * 0.5f;
             
         icon->setBounds(NUIRect(iconX, iconY, starSize, starSize));
-        icon->setColor(isFav ? themeManager.getColor("textPrimary").withAlpha(0.94f) : textColor_.withAlpha(0.58f));
+        icon->setColor(isFav ? AestraUI::NUIColor::white().withAlpha(0.96f)
+                             : AestraUI::NUIColor::white().withAlpha(favoritesHovered_ ? 0.82f : 0.68f));
         icon->onRender(renderer);
     }
 
@@ -2646,7 +2646,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
          float iconX = refreshButtonBounds_.x + (refreshButtonBounds_.width - iconSize) * 0.5f;
          float iconY = refreshButtonBounds_.y + (refreshButtonBounds_.height - iconSize) * 0.5f;
          refreshIcon_->setBounds(NUIRect(iconX, iconY, iconSize, iconSize));
-         refreshIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(refreshHovered_ ? 1.0f : 0.7f));
+         refreshIcon_->setColor(AestraUI::NUIColor::white().withAlpha(refreshHovered_ ? 0.80f : 0.60f));
          refreshIcon_->onRender(renderer);
     }
 }

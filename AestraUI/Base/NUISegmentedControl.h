@@ -23,6 +23,8 @@ public:
         , selectedIndex_(0)
         , indicatorPosition_(0.0f)
         , cornerRadius_(12.0f)
+        , accentColor_(NUIColor(0.55f, 0.36f, 0.96f, 1.0f))
+        , hoveredIndex_(-1)
     {
         setId("SegmentedControl");
     }
@@ -53,18 +55,20 @@ public:
     }
     
     void setCornerRadius(float radius) { cornerRadius_ = radius; }
+    void setAccentColor(const NUIColor& color) { accentColor_ = color; setDirty(true); }
     
     void onRender(NUIRenderer& renderer) override {
         auto bounds = getBounds();
         auto& theme = NUIThemeManager::getInstance();
         
-        // Background track (dark, almost black)
-        NUIColor trackColor = NUIColor(0.08f, 0.08f, 0.10f, 0.95f);
+        // Background track
+        NUIColor trackColor = theme.getColor("surfaceRaised").withAlpha(0.72f);
         renderer.fillRoundedRect(bounds, cornerRadius_, trackColor);
         
-        // Subtle outer border
-        renderer.strokeRoundedRect(bounds, cornerRadius_, 1.0f, 
-            NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+        renderer.strokeRoundedRect(bounds, cornerRadius_, 1.0f,
+            theme.getColor("borderSubtle").withAlpha(0.34f));
+        renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
+            std::max(0.0f, cornerRadius_ - 1.0f), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.018f));
         
         // Calculate segment dimensions
         float segmentWidth = bounds.width / static_cast<float>(segments_.size());
@@ -72,42 +76,38 @@ public:
         float indicatorWidth = segmentWidth - padding * 2;
         float indicatorHeight = bounds.height - padding * 2;
         
-        // Draw INACTIVE segment background first (subtle grey)
+        // Draw inactive / hovered segment plates
         for (size_t i = 0; i < segments_.size(); ++i) {
             if (i != selectedIndex_) {
                 float segmentX = bounds.x + padding + i * segmentWidth;
                 NUIRect inactiveRect(segmentX, bounds.y + padding, indicatorWidth, indicatorHeight);
-                // Subtle grey background for inactive
+                const bool hovered = static_cast<int>(i) == hoveredIndex_;
                 renderer.fillRoundedRect(inactiveRect, cornerRadius_ - padding, 
-                    NUIColor(0.25f, 0.25f, 0.28f, 0.5f));
+                    hovered ? theme.getColor("buttonBgHover").withAlpha(0.72f)
+                            : theme.getColor("buttonBgDefault").withAlpha(0.46f));
             }
         }
         
-        // Sliding indicator (purple accent for active)
+        // Sliding indicator
         float indicatorX = bounds.x + padding + indicatorPosition_ * segmentWidth;
         NUIRect indicatorRect(indicatorX, bounds.y + padding, indicatorWidth, indicatorHeight);
         
-        // Purple accent indicator
-        NUIColor indicatorColor = theme.getColor("primary");
-        if (indicatorColor.r < 0.1f && indicatorColor.g < 0.1f && indicatorColor.b < 0.1f) {
-            indicatorColor = NUIColor(0.55f, 0.36f, 0.96f, 1.0f); // Fallback purple
-        }
-        renderer.fillRoundedRect(indicatorRect, cornerRadius_ - padding, indicatorColor);
+        renderer.fillRoundedRect(indicatorRect, cornerRadius_ - padding, accentColor_.withAlpha(0.22f));
+        renderer.strokeRoundedRect(indicatorRect, cornerRadius_ - padding, 1.0f, accentColor_.withAlpha(0.46f));
         
-        // Subtle inner highlight on indicator (glass effect)
         NUIRect highlightRect(indicatorRect.x + 2, indicatorRect.y, indicatorRect.width - 4, 1.0f);
-        renderer.fillRect(highlightRect, NUIColor(1.0f, 1.0f, 1.0f, 0.20f));
+        renderer.fillRect(highlightRect, NUIColor(1.0f, 1.0f, 1.0f, 0.12f));
         
         // Draw segment labels
-        float fontSize = 11.0f;
+        float fontSize = 10.5f;
         for (size_t i = 0; i < segments_.size(); ++i) {
             float segmentX = bounds.x + i * segmentWidth;
             NUIRect segmentBounds(segmentX, bounds.y, segmentWidth, bounds.height);
             
             bool isSelected = (i == selectedIndex_);
             NUIColor textColor = isSelected 
-                ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f)  // Bright white for active
-                : NUIColor(0.7f, 0.7f, 0.72f, 1.0f); // Grey for inactive
+                ? theme.getColor("textPrimary")
+                : theme.getColor("textSecondary").withAlpha(static_cast<int>(i) == hoveredIndex_ ? 0.92f : 0.82f);
             
             renderer.drawTextCentered(segments_[i], segmentBounds, fontSize, textColor);
         }
@@ -135,6 +135,22 @@ public:
         if (!isVisible() || !isEnabled()) return false;
         
         auto bounds = getBounds();
+
+        if (event.button == NUIMouseButton::None) {
+            int newHover = -1;
+            if (bounds.contains(event.position)) {
+                float relativeX = event.position.x - bounds.x;
+                float segmentWidth = bounds.width / static_cast<float>(segments_.size());
+                size_t hoverIndex = static_cast<size_t>(relativeX / segmentWidth);
+                if (hoverIndex < segments_.size()) {
+                    newHover = static_cast<int>(hoverIndex);
+                }
+            }
+            if (newHover != hoveredIndex_) {
+                hoveredIndex_ = newHover;
+                setDirty(true);
+            }
+        }
         
         if (event.pressed && event.button == NUIMouseButton::Left) {
             if (bounds.contains(event.position)) {
@@ -158,6 +174,8 @@ private:
     size_t selectedIndex_;
     float indicatorPosition_; // Animated position (0.0 to segments_.size()-1)
     float cornerRadius_;
+    NUIColor accentColor_;
+    int hoveredIndex_;
     std::function<void(size_t)> onSelectionChanged_;
 };
 
