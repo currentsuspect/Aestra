@@ -70,8 +70,11 @@ private:
 
     // I/O
     std::shared_ptr<NUIDropdown> m_ioInputDropdown;
+    std::shared_ptr<NUIDropdown> m_mainOutputDropdown;
     std::vector<std::string> m_cachedInputNames;
     std::vector<int> m_cachedInputDeviceIds;
+    std::vector<std::string> m_cachedOutputNames;
+    std::vector<int> m_cachedOutputIds;
 
     // Sends
     std::vector<std::shared_ptr<class UIMixerSend>> m_sendWidgets;
@@ -87,12 +90,16 @@ private:
     int m_cachedTrackNumber{0};
 
     std::vector<std::function<void()>> m_deferredActions; // Added m_deferredActions
+    float m_scrollOffset{0.0f};
+    float m_targetScrollOffset{0.0f};
+    float m_maxScrollOffset{0.0f};
 
     void cacheThemeColors();
     void layoutHitRects();
     int hitTestTab(const NUIPoint& p) const;
     int findTrackNumber(uint32_t channelId) const;
     void updateHeaderCache(const Aestra::ChannelViewModel* channel);
+    void clampScrollOffsets();
 };
 
 } // namespace AestraUI

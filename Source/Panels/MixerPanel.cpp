@@ -15,6 +15,18 @@ MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
 {
     // Create view model and modern mixer
     m_viewModel = std::make_shared<Aestra::MixerViewModel>();
+    if (m_trackManager) {
+        m_viewModel->setOnGraphDirty([trackManager = m_trackManager]() {
+            if (trackManager) {
+                trackManager->markGraphDirty();
+            }
+        });
+        m_viewModel->setOnProjectModified([trackManager = m_trackManager]() {
+            if (trackManager) {
+                trackManager->markModified();
+            }
+        });
+    }
     m_newMixer = std::make_shared<UIMixerPanel>(m_viewModel, m_trackManager);
     m_newMixer->setId("UIMixerPanel_Inner");
     

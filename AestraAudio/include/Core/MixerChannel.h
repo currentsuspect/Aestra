@@ -211,6 +211,8 @@ public:
     void setSendDestination(int index, uint32_t destId);
     /** @brief Update send pre/post fader mode by index. */
     void setSendPostFader(int index, bool postFader);
+    /** @brief Update send audible/sidechain-only mode by index. */
+    void setSendSidechainOnly(int index, bool sidechainOnly);
 
     /** @brief Set the primary output destination identifier. */
     void setMainOutputId(uint32_t id) { m_mainOutputId = id; }
