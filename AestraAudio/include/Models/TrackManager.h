@@ -761,6 +761,10 @@ public:
      * @brief Clear the graph-dirty flag after rebuilding a snapshot.
      */
     void rebuildAndPushSnapshot() { m_graphDirty.store(false, std::memory_order_relaxed); }
+    /**
+     * @brief Mark the live audio graph as requiring a rebuild.
+     */
+    void markGraphDirty() { m_graphDirty.store(true, std::memory_order_relaxed); }
 
     /**
      * @brief Install the audio-command sink used to talk to the live engine.

@@ -1390,6 +1390,17 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         }
     }
 
+    // Clear all per-track buffers for this block up front so routed audio can
+    // accumulate into destination tracks before they render/process.
+    for (const auto& track : graph.tracks) {
+        const uint32_t trackIdx = track.trackIndex;
+        if (static_cast<size_t>(trackIdx) >= availableTracks) {
+            continue;
+        }
+        auto& buffer = m_trackBuffersD[trackIdx];
+        std::memset(buffer.data(), 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
+    }
+
     // Process tracks
     for (const auto& track : graph.tracks) {
         const uint32_t trackIdx = track.trackIndex;
@@ -1452,10 +1463,9 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             continue;
         }
 
-        // Empty tracks should not touch RT buffers. Still keep param state updated
-        // so automation is consistent when clips appear later.
+        // Buffers were already cleared up front so destination tracks can receive
+        // routed audio before their own clips/effects are processed.
         auto& buffer = m_trackBuffersD[trackIdx];
-        std::memset(buffer.data(), 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
 
         // Check isPlaying inside loop to avoid brace wrapping issues
         // [FIX] Suppress timeline clips if in Pattern Mode (Audio Isolation)
@@ -1534,8 +1544,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                             sR = static_cast<double>(src[i * 2 + 1]);
                         }
 
-                        dst[i * 2] = sL * clipGain * fade;
-                        dst[i * 2 + 1] = sR * clipGain * fade;
+                        dst[i * 2] += sL * clipGain * fade;
+                        dst[i * 2 + 1] += sR * clipGain * fade;
                     }
                 } else {
                     srcActiveThisBlock = true;
@@ -1569,8 +1579,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 sample = static_cast<float>(0.5 * ((2.0 * s1) + (-s0 + s2) * f +
                                     (2.0 * s0 - 5.0 * s1 + 4.0 * s2 - s3) * f * f +
                                     (-s0 + 3.0 * s1 - 3.0 * s2 + s3) * f * f * f));
-                                dst[i * 2] = sample * clipGain * fade;
-                                dst[i * 2 + 1] = sample * clipGain * fade;
+                                dst[i * 2] += sample * clipGain * fade;
+                                dst[i * 2 + 1] += sample * clipGain * fade;
                                 phase += ratio;
                             }
                             continue;
@@ -1591,8 +1601,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 double clipGain = static_cast<double>(clip.gain);
                                 double val = Interpolators::sincInterpolateMono(data, totalFrames, phase,
                                     m_interpQuality.load(std::memory_order_relaxed));
-                                dst[i * 2] = val * clipGain * fade;
-                                dst[i * 2 + 1] = val * clipGain * fade;
+                                dst[i * 2] += val * clipGain * fade;
+                                dst[i * 2 + 1] += val * clipGain * fade;
                                 phase += ratio;
                             }
                             continue;
@@ -1613,8 +1623,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 float s0 = data[idx];
                                 float s1 = (idx + 1 < totalFrames) ? data[idx + 1] : s0;
                                 double val = s0 + frac * (s1 - s0);
-                                dst[i * 2] = val * clipGain * fade;
-                                dst[i * 2 + 1] = val * clipGain * fade;
+                                dst[i * 2] += val * clipGain * fade;
+                                dst[i * 2 + 1] += val * clipGain * fade;
                                 phase += ratio;
                             }
                             continue;
@@ -1640,8 +1650,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 }
                             }
                             const double clipGain = static_cast<double>(clip.gain);
-                            dst[i * 2] = static_cast<double>(outL) * clipGain * fade;
-                            dst[i * 2 + 1] = static_cast<double>(outR) * clipGain * fade;
+                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
                             phase += ratio;
                         }
                         break;
@@ -1662,8 +1672,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 }
                             }
                             const double clipGain = static_cast<double>(clip.gain);
-                            dst[i * 2] = static_cast<double>(outL) * clipGain * fade;
-                            dst[i * 2 + 1] = static_cast<double>(outR) * clipGain * fade;
+                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
                             phase += ratio;
                         }
                         break;
@@ -1684,8 +1694,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 }
                             }
                             const double clipGain = static_cast<double>(clip.gain);
-                            dst[i * 2] = static_cast<double>(outL) * clipGain * fade;
-                            dst[i * 2 + 1] = static_cast<double>(outR) * clipGain * fade;
+                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
                             phase += ratio;
                         }
                         break;
@@ -1706,8 +1716,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 }
                             }
                             const double clipGain = static_cast<double>(clip.gain);
-                            dst[i * 2] = static_cast<double>(outL) * clipGain * fade;
-                            dst[i * 2 + 1] = static_cast<double>(outR) * clipGain * fade;
+                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
                             phase += ratio;
                         }
                         break;
@@ -1728,8 +1738,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 }
                             }
                             const double clipGain = static_cast<double>(clip.gain);
-                            dst[i * 2] = static_cast<double>(outL) * clipGain * fade;
-                            dst[i * 2 + 1] = static_cast<double>(outR) * clipGain * fade;
+                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
                             phase += ratio;
                         }
                         break;
@@ -1802,7 +1812,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
         }
 
-        // Mix track into master
+        // Route post-fader output to the selected main destination and any audible sends.
         double tL, tR;
         fastPanGainsD(panTarget, volTarget, tL, tR);
         state.gainL.setTarget(tL);
@@ -1829,12 +1839,55 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             const double leftGain = state.gainL.next();
             const double rightGain = state.gainR.next();
 
-            const double outL = trackData[i * 2] * leftGain;
-            const double outR = trackData[i * 2 + 1] * rightGain;
+            const double preL = trackData[i * 2];
+            const double preR = trackData[i * 2 + 1];
+            const double outL = preL * leftGain;
+            const double outR = preR * rightGain;
 
             if (!muted) {
-                master[i * 2] += outL;
-                master[i * 2 + 1] += outR;
+                if (track.mainOutputId == 0xFFFFFFFFu) {
+                    master[i * 2] += outL;
+                    master[i * 2 + 1] += outR;
+                } else if (slotMap) {
+                    const uint32_t destSlot = slotMap->getSlotIndex(track.mainOutputId);
+                    if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < availableTracks && destSlot != trackIdx) {
+                        auto& destBuffer = m_trackBuffersD[destSlot];
+                        destBuffer[i * 2] += outL;
+                        destBuffer[i * 2 + 1] += outR;
+                    }
+                }
+
+                for (const auto& send : track.sends) {
+                    if (send.mute || send.sidechainOnly) {
+                        continue;
+                    }
+
+                    const double sendSrcL = send.postFader ? outL : preL;
+                    const double sendSrcR = send.postFader ? outR : preR;
+                    double sendGainL = static_cast<double>(send.gain);
+                    double sendGainR = static_cast<double>(send.gain);
+
+                    const double panClamped = clampD(static_cast<double>(send.pan), -1.0, 1.0);
+                    const double angle = (panClamped + 1.0) * QUARTER_PI_D;
+                    sendGainL *= std::cos(angle);
+                    sendGainR *= std::sin(angle);
+
+                    const double routedL = sendSrcL * sendGainL;
+                    const double routedR = sendSrcR * sendGainR;
+
+                    if (send.targetChannelId == 0xFFFFFFFFu) {
+                        master[i * 2] += routedL;
+                        master[i * 2 + 1] += routedR;
+                    } else if (slotMap) {
+                        const uint32_t sendDestSlot = slotMap->getSlotIndex(send.targetChannelId);
+                        if (sendDestSlot != ChannelSlotMap::INVALID_SLOT && sendDestSlot < availableTracks &&
+                            sendDestSlot != trackIdx) {
+                            auto& sendDestBuffer = m_trackBuffersD[sendDestSlot];
+                            sendDestBuffer[i * 2] += routedL;
+                            sendDestBuffer[i * 2 + 1] += routedR;
+                        }
+                    }
+                }
             }
 
             const double absL = (outL >= 0.0) ? outL : -outL;
@@ -2003,7 +2056,7 @@ void AudioEngine::compileGraph() {
 
         // --- Process Sends ---
         for (const auto& send : tr.sends) {
-            if (send.mute)
+            if (send.mute || send.sidechainOnly)
                 continue;
 
             double sendGainL = static_cast<double>(send.gain);

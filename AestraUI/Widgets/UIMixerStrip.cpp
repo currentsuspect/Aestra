@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <sstream>
 
 namespace AestraUI {
 
@@ -27,6 +28,43 @@ namespace {
     constexpr float MASTER_METER_W = 36.0f;
 
     constexpr float SELECT_TOP_H = 4.0f;
+
+    std::string buildStripRouteSummary(const Aestra::ChannelViewModel& channel)
+    {
+        if (channel.id == 0) {
+            return channel.routeName;
+        }
+
+        const bool busOnly = !channel.masterSendEnabled && channel.mainOutputId != 0;
+        int audibleSendCount = 0;
+        bool hasSidechainSend = false;
+
+        for (const auto& send : channel.sends) {
+            if (send.muted) continue;
+            if (send.sidechainOnly) {
+                hasSidechainSend = true;
+                continue;
+            }
+            ++audibleSendCount;
+        }
+
+        std::ostringstream summary;
+        bool first = true;
+        auto appendToken = [&](const std::string& token) {
+            if (token.empty()) return;
+            if (!first) summary << " • ";
+            summary << token;
+            first = false;
+        };
+
+        if (busOnly) appendToken("Bus");
+        if (audibleSendCount > 0) {
+            appendToken(audibleSendCount == 1 ? "Send" : ("+" + std::to_string(audibleSendCount)));
+        }
+        if (hasSidechainSend) appendToken("SC");
+
+        return summary.str();
+    }
 }
 
 UIMixerStrip::UIMixerStrip(uint32_t channelId,
@@ -423,11 +461,12 @@ void UIMixerStrip::onUpdate(double deltaTime)
             invalidateStaticCache();
         }
         m_header->setTrackName(channel->name);
-        if (m_cachedRoute != channel->routeName) {
-            m_cachedRoute = channel->routeName;
+        const std::string stripRoute = buildStripRouteSummary(*channel);
+        if (m_cachedRoute != stripRoute) {
+            m_cachedRoute = stripRoute;
             invalidateStaticCache();
         }
-        m_header->setRouteName(channel->routeName);
+        m_header->setRouteName(stripRoute);
         if (m_cachedTrackColorArgb != channel->trackColor) {
             m_cachedTrackColorArgb = channel->trackColor;
             invalidateStaticCache();
