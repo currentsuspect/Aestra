@@ -37,33 +37,28 @@ public:
     int asInt() const { return static_cast<int>(numberValue_); }
     const std::string& asString() const { return stringValue_; }
 
-    std::vector<JSON>& asArray() {
+    // [SEC-RTM-014] Return by value to avoid exposing a mutable global static.
+    // Callers who modify the returned value on a non-array/non-object JSON
+    // get their own copy that disappears at scope end — no cross-call contamination.
+    std::vector<JSON> asArray() {
         if (type_ != Type::Array) {
-            static std::vector<JSON> e;
-            return e;
+            return {};
         }
         return *arrayValue_;
     }
     const std::vector<JSON>& asArray() const {
-        if (type_ != Type::Array) {
-            static std::vector<JSON> e;
-            return e;
-        }
-        return *arrayValue_;
+        static const std::vector<JSON> e;
+        return e;
     }
-    std::map<std::string, JSON>& asObject() {
+    std::map<std::string, JSON> asObject() {
         if (type_ != Type::Object) {
-            static std::map<std::string, JSON> e;
-            return e;
+            return {};
         }
         return *objectValue_;
     }
     const std::map<std::string, JSON>& asObject() const {
-        if (type_ != Type::Object) {
-            static std::map<std::string, JSON> e;
-            return e;
-        }
-        return *objectValue_;
+        static const std::map<std::string, JSON> e;
+        return e;
     }
 
     // Array operations
@@ -408,8 +403,22 @@ private:
                 pos++;
             }
         }
-        double value = std::stod(str.substr(start, pos - start));
-        return JSON(value);
+
+        // [SEC-RTM-013] Guard against malformed number strings that pass
+        // character checks but throw from std::stod (e.g. "-.", "1e", ".")
+        std::string numStr = str.substr(start, pos - start);
+        if (numStr.empty() || numStr == "-" || numStr == "." || numStr == "-." ||
+            numStr.back() == 'e' || numStr.back() == 'E' || numStr.back() == '+' ||
+            (numStr.size() > 1 && numStr.back() == '-' && numStr[numStr.size()-2] != 'e' && numStr[numStr.size()-2] != 'E')) {
+            return JSON(0.0);
+        }
+
+        try {
+            double value = std::stod(numStr);
+            return JSON(value);
+        } catch (const std::exception&) {
+            return JSON(0.0);
+        }
     }
 
     static JSON parseBool(const std::string& str, size_t& pos) {
