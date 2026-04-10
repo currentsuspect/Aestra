@@ -18,10 +18,10 @@ namespace {
     constexpr float PAD = 10.0f;
     constexpr float TAB_H = 28.0f;
     constexpr float TAB_RADIUS = 12.0f;
-    constexpr float SECTION_GAP = 8.0f;
-    constexpr float HEADER_H = 72.0f;
+    constexpr float SECTION_GAP = 10.0f;
+    constexpr float HEADER_H = 80.0f;
     constexpr float INSERT_SUMMARY_H = 28.0f;
-    constexpr float ROW_H = 26.0f;
+    constexpr float ROW_H = 28.0f;
     constexpr float ROW_RADIUS = 12.0f;
     constexpr float INPUT_METER_H = 12.0f;
     constexpr float IO_CARD_RADIUS = 14.0f;
@@ -35,6 +35,14 @@ UIMixerInspector::UIMixerInspector(Aestra::MixerViewModel* viewModel)
     cacheThemeColors();
 
     m_effectRack = std::make_shared<EffectChainRack>();
+    m_tabControl = std::make_shared<NUISegmentedControl>(std::vector<std::string>{"Inserts", "Sends", "I/O"});
+    m_tabControl->setCornerRadius(TAB_RADIUS);
+    m_tabControl->setOnSelectionChanged([this](size_t index) {
+        setActiveTab(static_cast<Tab>(index));
+    });
+    addChild(m_tabControl);
+    m_tabControl->setSelectedIndex(static_cast<size_t>(m_activeTab), false);
+    m_tabControl->setAccentColor(NUIColor(0.62f, 0.58f, 0.98f, 1.0f));
     
     // Bind Callbacks
     m_effectRack->setOnSlotBypassToggled([this](int slot, bool bypassed) {
@@ -120,6 +128,17 @@ void UIMixerInspector::setActiveTab(Tab tab)
     if (m_activeTab == tab) return;
     m_activeTab = tab;
 
+    NUIColor accent = NUIThemeManager::getInstance().getColor("accentPrimary");
+    switch (m_activeTab) {
+        case Tab::Inserts: accent = NUIColor(0.62f, 0.58f, 0.98f, 1.0f); break;
+        case Tab::Sends:   accent = NUIColor(0.42f, 0.86f, 0.92f, 1.0f); break;
+        case Tab::IO:      accent = NUIColor(0.90f, 0.74f, 0.50f, 1.0f); break;
+    }
+    if (m_tabControl) {
+        m_tabControl->setAccentColor(accent);
+        m_tabControl->setSelectedIndex(static_cast<size_t>(m_activeTab), false);
+    }
+
     // Update child visibility
     if (m_effectRack) {
         m_effectRack->setVisible(m_activeTab == Tab::Inserts);
@@ -145,6 +164,9 @@ void UIMixerInspector::layoutHitRects()
     const float gap = 3.0f;
     for (int i = 0; i < 3; ++i) {
         m_tabRects[i] = NUIRect{x + i * (tabW + gap), y, tabW, TAB_H};
+    }
+    if (m_tabControl) {
+        m_tabControl->setBounds(x, y, w, TAB_H);
     }
 
     const float contentY = y + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
@@ -232,6 +254,9 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
         : "Channel";
     const bool hasSends = !channel->sends.empty();
     m_cachedHeaderSubtitle = trackLabel + "  ->  " + route;
+    if (!channel->masterSendEnabled && channel->mainOutputId != 0) {
+        m_cachedHeaderSubtitle += "  •  Bus only";
+    }
     if (hasSends) {
         m_cachedHeaderSubtitle += "  •  " + std::to_string(channel->sends.size()) + " send";
         if (channel->sends.size() != 1) {
@@ -379,44 +404,64 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         rebuildInsertRack(channel);
     }
 
-    // Tabs
-    static constexpr const char* tabLabels[3] = {"Inserts", "Sends", "I/O"};
-    for (int i = 0; i < 3; ++i) {
-        const bool active = (static_cast<int>(m_activeTab) == i);
-        const bool hovered = (m_hoveredTab == i);
-        NUIColor bg = active ? accent.withAlpha(0.18f) : (hovered ? m_tabHover : m_tabBg);
-        NUIColor border = active ? accent.withAlpha(0.42f) : m_border.withAlpha(0.32f);
-        renderer.drawShadow(m_tabRects[i], 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.12f));
-        renderer.fillRoundedRect(m_tabRects[i], TAB_RADIUS, bg);
-        renderer.strokeRoundedRect(m_tabRects[i], TAB_RADIUS, 1.0f, border);
-        renderer.strokeRoundedRect({m_tabRects[i].x + 1.0f, m_tabRects[i].y + 1.0f, m_tabRects[i].width - 2.0f, m_tabRects[i].height - 2.0f},
-                                   std::max(0.0f, TAB_RADIUS - 1.0f),
-                                   1.0f,
-                                   NUIColor::white().withAlpha(0.025f));
-        renderer.drawTextCentered(tabLabels[i], m_tabRects[i], 10.0f, active ? m_text : m_textSecondary.withAlpha(0.92f));
-    }
-
     // Header
     const float headerY = b.y + PAD + TAB_H + SECTION_GAP;
     const NUIRect headerRect{b.x + PAD, headerY, b.width - PAD * 2.0f, HEADER_H};
+    const float contentTop = b.y + PAD + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
+    const NUIRect contentRect{b.x + PAD, contentTop, b.width - PAD * 2.0f, b.height - (contentTop - b.y) - PAD};
+
+    if (!channel) {
+        const float emptyCardH = 160.0f;
+        const float emptyTop = contentRect.y + 8.0f;
+        const float emptyBottom = contentRect.bottom() - 54.0f;
+        const float availableH = std::max(0.0f, emptyBottom - emptyTop);
+        const NUIRect emptyCard{
+            contentRect.x,
+            std::round(emptyTop + std::max(0.0f, (availableH - emptyCardH) * 0.20f)),
+            contentRect.width,
+            std::min(emptyCardH, availableH)
+        };
+        renderer.drawShadow(emptyCard, 0.0f, 4.0f, 14.0f, NUIColor(0, 0, 0, 0.12f));
+        renderer.fillRoundedRect(emptyCard, HEADER_RADIUS, m_tabBg.withAlpha(0.62f));
+        renderer.strokeRoundedRect(emptyCard, HEADER_RADIUS, 1.0f, m_border.withAlpha(0.42f));
+        renderer.strokeRoundedRect({emptyCard.x + 1.0f, emptyCard.y + 1.0f, emptyCard.width - 2.0f, emptyCard.height - 2.0f},
+                                   std::max(0.0f, HEADER_RADIUS - 1.0f),
+                                   1.0f,
+                                   NUIColor::white().withAlpha(0.022f));
+
+        const NUIRect stateChip{emptyCard.center().x - 34.0f, emptyCard.y + 18.0f, 68.0f, 18.0f};
+        renderer.fillRoundedRect(stateChip, 9.0f, m_bg.withAlpha(0.34f));
+        renderer.strokeRoundedRect(stateChip, 9.0f, 1.0f, accent.withAlpha(0.20f));
+        renderer.drawTextCentered("INSPECTOR", stateChip, 9.0f, m_textSecondary.withAlpha(0.90f));
+        renderer.drawTextCentered("Select a Track", {emptyCard.x + 18.0f, stateChip.bottom() + 16.0f, emptyCard.width - 36.0f, 18.0f},
+                                  13.0f, m_text.withAlpha(0.95f));
+        renderer.drawTextCentered("Choose a mixer channel to inspect",
+                                  {emptyCard.x + 24.0f, stateChip.bottom() + 38.0f, emptyCard.width - 48.0f, 14.0f},
+                                  10.0f, m_textSecondary.withAlpha(0.86f));
+        renderer.drawTextCentered("Inserts, Sends, and I/O.",
+                                  {emptyCard.x + 24.0f, stateChip.bottom() + 52.0f, emptyCard.width - 48.0f, 14.0f},
+                                  10.0f, m_textSecondary.withAlpha(0.86f));
+        return;
+    }
+
     renderer.drawShadow(headerRect, 0.0f, 4.0f, 14.0f, NUIColor(0, 0, 0, 0.12f));
-    renderer.fillRoundedRect(headerRect, HEADER_RADIUS, m_tabBg.withAlpha(0.62f));
-    renderer.strokeRoundedRect(headerRect, HEADER_RADIUS, 1.0f, m_border.withAlpha(0.44f));
+    renderer.fillRoundedRect(headerRect, HEADER_RADIUS, m_tabBg.withAlpha(0.70f));
+    renderer.strokeRoundedRect(headerRect, HEADER_RADIUS, 1.0f, m_border.withAlpha(0.50f));
     renderer.strokeRoundedRect({headerRect.x + 1.0f, headerRect.y + 1.0f, headerRect.width - 2.0f, headerRect.height - 2.0f},
                                std::max(0.0f, HEADER_RADIUS - 1.0f),
                                1.0f,
                                NUIColor::white().withAlpha(0.022f));
 
-    const NUIRect titleChip{headerRect.x + 10.0f, headerRect.y + 9.0f, 52.0f, 18.0f};
-    renderer.fillRoundedRect(titleChip, 9.0f, accent.withAlpha(0.16f));
-    renderer.strokeRoundedRect(titleChip, 9.0f, 1.0f, accent.withAlpha(0.26f));
-    renderer.drawTextCentered(channel && channel->id == 0 ? "BUS" : "TRACK", titleChip, 9.0f, m_textSecondary.withAlpha(0.95f));
+    const NUIRect titleChip{headerRect.x + 10.0f, headerRect.y + 10.0f, 56.0f, 18.0f};
+    renderer.fillRoundedRect(titleChip, 9.0f, m_bg.withAlpha(0.34f));
+    renderer.strokeRoundedRect(titleChip, 9.0f, 1.0f, accent.withAlpha(0.22f));
+    renderer.drawTextCentered(channel->id == 0 ? "BUS" : "TRACK", titleChip, 9.0f, m_textSecondary.withAlpha(0.92f));
 
-    renderer.drawText(m_cachedHeaderTitle, {headerRect.x + 10.0f, headerRect.y + 28.0f}, 12.0f, m_text);
+    renderer.drawText(m_cachedHeaderTitle, {headerRect.x + 10.0f, headerRect.y + 30.0f}, 12.5f, m_text);
     if (!m_cachedHeaderSubtitle.empty()) {
-        renderer.drawText(m_cachedHeaderSubtitle, {headerRect.x + 10.0f, headerRect.y + 42.0f}, 10.0f, m_textSecondary);
+        renderer.drawText(m_cachedHeaderSubtitle, {headerRect.x + 10.0f, headerRect.y + 45.0f}, 10.0f, m_textSecondary.withAlpha(0.92f));
     }
-    if (channel) {
+    {
         const char* flowSteps[4];
         int flowCount = 0;
         switch (m_activeTab) {
@@ -440,7 +485,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         }
 
         float chipX = headerRect.x + 10.0f;
-        const float chipY = headerRect.y + 54.0f;
+        const float chipY = headerRect.y + 59.0f;
         for (int i = 0; i < flowCount; ++i) {
             const std::string step = flowSteps[i];
             const float textW = renderer.measureText(step, 8.0f).width;
@@ -451,27 +496,19 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                                     (m_activeTab == Tab::IO && (step == "Input" || step == "Record"));
             renderer.fillRoundedRect(chipRect,
                                      6.5f,
-                                     activeStep ? accent.withAlpha(0.14f)
-                                                : m_bg.withAlpha(0.42f));
+                                     activeStep ? m_bg.withAlpha(0.48f)
+                                                : m_bg.withAlpha(0.32f));
             renderer.strokeRoundedRect(chipRect,
                                        6.5f,
                                        1.0f,
-                                       activeStep ? accent.withAlpha(0.24f)
-                                                  : m_border.withAlpha(0.24f));
+                                       activeStep ? accent.withAlpha(0.22f)
+                                                  : m_border.withAlpha(0.18f));
             renderer.drawTextCentered(step, chipRect, 8.0f, m_textSecondary.withAlpha(activeStep ? 0.94f : 0.82f));
             chipX += chipW + 4.0f;
         }
     }
 
-    const float contentTop = b.y + PAD + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
-    const NUIRect contentRect{b.x + PAD, contentTop, b.width - PAD * 2.0f, b.height - (contentTop - b.y) - PAD};
-
     // Content
-    if (!channel) {
-        renderer.drawTextCentered("Select a track to edit Inserts, Sends, and I/O", contentRect, 11.0f, m_textSecondary);
-        return;
-    }
-
     if (m_activeTab == Tab::Inserts) {
         const int fxCount = channel->fxCount;
         char buf[64];
@@ -481,9 +518,10 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
             std::snprintf(buf, sizeof(buf), "%d insert%s active", fxCount, fxCount == 1 ? "" : "s");
         }
         const NUIRect summaryCard{contentRect.x, contentRect.y, contentRect.width, INSERT_SUMMARY_H};
-        renderer.fillRoundedRect(summaryCard, 12.0f, accent.withAlpha(0.08f));
-        renderer.strokeRoundedRect(summaryCard, 12.0f, 1.0f, accent.withAlpha(0.18f));
-        renderer.drawText(buf, {summaryCard.x + 10.0f, summaryCard.y + 9.0f}, 10.5f, m_textSecondary);
+        renderer.fillRoundedRect(summaryCard, 12.0f, m_tabBg.withAlpha(0.46f));
+        renderer.strokeRoundedRect(summaryCard, 12.0f, 1.0f, accent.withAlpha(0.16f));
+        renderer.drawText("Insert Status", {summaryCard.x + 10.0f, summaryCard.y + 7.0f}, 8.5f, m_textSecondary.withAlpha(0.88f));
+        renderer.drawText(buf, {summaryCard.x + 10.0f, summaryCard.y + 18.0f}, 10.5f, m_text.withAlpha(0.96f));
 
         // Rack is rendered by renderChildren() if visible
     } else if (m_activeTab == Tab::Sends) {
@@ -496,35 +534,44 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
             std::snprintf(summaryBuf, sizeof(summaryBuf), "%d send%s active", sendCount, sendCount == 1 ? "" : "s");
         }
         const NUIRect summaryCard{contentRect.x, contentRect.y, contentRect.width, INSERT_SUMMARY_H};
-        renderer.fillRoundedRect(summaryCard, 12.0f, accent.withAlpha(0.08f));
-        renderer.strokeRoundedRect(summaryCard, 12.0f, 1.0f, accent.withAlpha(0.18f));
-        renderer.drawText(summaryBuf, {summaryCard.x + 10.0f, summaryCard.y + 9.0f}, 10.5f, m_textSecondary);
+        renderer.fillRoundedRect(summaryCard, 12.0f, m_tabBg.withAlpha(0.46f));
+        renderer.strokeRoundedRect(summaryCard, 12.0f, 1.0f, accent.withAlpha(0.16f));
+        renderer.drawText("Send Status", {summaryCard.x + 10.0f, summaryCard.y + 7.0f}, 8.5f, m_textSecondary.withAlpha(0.88f));
+        renderer.drawText(summaryBuf, {summaryCard.x + 10.0f, summaryCard.y + 18.0f}, 10.5f, m_text.withAlpha(0.96f));
 
         const NUIRect routingCard{contentRect.x, contentRect.y + INSERT_SUMMARY_H + 8.0f, contentRect.width, 78.0f};
-        renderer.fillRoundedRect(routingCard, 12.0f, m_tabBg.withAlpha(0.46f));
-        renderer.strokeRoundedRect(routingCard, 12.0f, 1.0f, m_border.withAlpha(0.26f));
-        renderer.drawText("Route Map", {routingCard.x + 10.0f, routingCard.y + 8.0f}, 9.5f, m_textSecondary.withAlpha(0.94f));
+        renderer.fillRoundedRect(routingCard, 12.0f, m_tabBg.withAlpha(0.52f));
+        renderer.strokeRoundedRect(routingCard, 12.0f, 1.0f, m_border.withAlpha(0.30f));
+        renderer.drawText("Route Map", {routingCard.x + 10.0f, routingCard.y + 8.0f}, 9.5f, m_text.withAlpha(0.92f));
 
         const char* sidechainLabel = "Sidechain unavailable";
         const float sidechainW = renderer.measureText(sidechainLabel, 8.0f).width + 14.0f;
+        const bool busOnly = !channel->masterSendEnabled && channel->mainOutputId != 0;
+        const char* masterLabel = busOnly ? "Master off" : "Master on";
+        const float masterW = renderer.measureText(masterLabel, 8.0f).width + 14.0f;
         const NUIRect sidechainChip{routingCard.right() - sidechainW - 10.0f, routingCard.y + 7.0f, sidechainW, 16.0f};
-        renderer.fillRoundedRect(sidechainChip, 8.0f, m_bg.withAlpha(0.34f));
-        renderer.strokeRoundedRect(sidechainChip, 8.0f, 1.0f, m_border.withAlpha(0.18f));
+        const NUIRect masterChip{sidechainChip.x - masterW - 6.0f, routingCard.y + 7.0f, masterW, 16.0f};
+        renderer.fillRoundedRect(masterChip, 8.0f, busOnly ? accent.withAlpha(0.10f) : m_bg.withAlpha(0.28f));
+        renderer.strokeRoundedRect(masterChip, 8.0f, 1.0f, busOnly ? accent.withAlpha(0.20f) : m_border.withAlpha(0.14f));
+        renderer.drawTextCentered(masterLabel, masterChip, 8.0f, m_textSecondary.withAlpha(0.88f));
+        renderer.fillRoundedRect(sidechainChip, 8.0f, m_bg.withAlpha(0.28f));
+        renderer.strokeRoundedRect(sidechainChip, 8.0f, 1.0f, m_border.withAlpha(0.14f));
         renderer.drawTextCentered(sidechainLabel, sidechainChip, 8.0f, m_textSecondary.withAlpha(0.82f));
 
         const float laneTop = routingCard.y + 30.0f;
         const float sourceW = 72.0f;
         const float targetW = 86.0f;
         const NUIRect sourceChip{routingCard.x + 10.0f, laneTop + 16.0f, sourceW, 20.0f};
-        renderer.fillRoundedRect(sourceChip, 10.0f, accent.withAlpha(0.10f));
-        renderer.strokeRoundedRect(sourceChip, 10.0f, 1.0f, accent.withAlpha(0.18f));
+        renderer.fillRoundedRect(sourceChip, 10.0f, m_bg.withAlpha(0.34f));
+        renderer.strokeRoundedRect(sourceChip, 10.0f, 1.0f, accent.withAlpha(0.16f));
         renderer.drawTextCentered(channel->name.empty() ? "Track" : channel->name, sourceChip, 9.0f, m_textSecondary.withAlpha(0.96f));
 
         const std::string routeTarget = channel->routeName.empty() ? "Master" : channel->routeName;
+        const char* outputPrefix = busOnly ? "Bus -> " : "Out -> ";
         const NUIRect outputChip{routingCard.right() - targetW - 10.0f, laneTop + 1.0f, targetW, 16.0f};
-        renderer.fillRoundedRect(outputChip, 8.0f, m_bg.withAlpha(0.24f));
-        renderer.strokeRoundedRect(outputChip, 8.0f, 1.0f, m_border.withAlpha(0.20f));
-        renderer.drawTextCentered("Out -> " + routeTarget, outputChip, 8.0f, m_textSecondary.withAlpha(0.88f));
+        renderer.fillRoundedRect(outputChip, 8.0f, m_bg.withAlpha(0.22f));
+        renderer.strokeRoundedRect(outputChip, 8.0f, 1.0f, m_border.withAlpha(0.14f));
+        renderer.drawTextCentered(std::string(outputPrefix) + routeTarget, outputChip, 8.0f, m_textSecondary.withAlpha(0.88f));
 
         const float routeBaseY = sourceChip.y + sourceChip.height * 0.5f;
         renderer.drawLine({sourceChip.right() + 6.0f, routeBaseY},
@@ -537,9 +584,9 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
             const auto& send = channel->sends[static_cast<size_t>(i)];
             const float rowY = laneTop + 22.0f + static_cast<float>(i) * 16.0f;
             const NUIRect targetChip{routingCard.right() - targetW - 10.0f, rowY, targetW, 15.0f};
-            renderer.fillRoundedRect(targetChip, 7.5f, accent.withAlpha(0.08f));
-            renderer.strokeRoundedRect(targetChip, 7.5f, 1.0f, accent.withAlpha(0.16f));
-            renderer.drawTextCentered("Send -> " + send.targetName, targetChip, 7.75f, m_textSecondary.withAlpha(0.90f));
+            renderer.fillRoundedRect(targetChip, 7.5f, m_bg.withAlpha(0.28f));
+            renderer.strokeRoundedRect(targetChip, 7.5f, 1.0f, accent.withAlpha(0.14f));
+            renderer.drawTextCentered("Send -> " + send.targetName, targetChip, 7.75f, m_textSecondary.withAlpha(0.94f));
             renderer.drawLine({sourceChip.right() + 6.0f, routeBaseY},
                               {targetChip.x - 8.0f, targetChip.y + targetChip.height * 0.5f},
                               1.5f,
@@ -588,11 +635,11 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
              renderer.drawTextCentered("Master Output is fixed to Hardware Output 1/2", contentRect, 11.0f, m_textSecondary);
         } else if (m_activeTab == Tab::IO) {
              const NUIRect ioHeader{contentRect.x, contentRect.y, contentRect.width, 48.0f};
-             renderer.fillRoundedRect(ioHeader, 14.0f, m_tabBg.withAlpha(0.34f));
-             renderer.strokeRoundedRect(ioHeader, 14.0f, 1.0f, m_border.withAlpha(0.34f));
-             renderer.drawText("Audio Input", {ioHeader.x + 10.0f, ioHeader.y + 10.0f}, 11.0f, m_text);
+             renderer.fillRoundedRect(ioHeader, 14.0f, m_tabBg.withAlpha(0.40f));
+             renderer.strokeRoundedRect(ioHeader, 14.0f, 1.0f, m_border.withAlpha(0.36f));
+             renderer.drawText("Audio Input", {ioHeader.x + 10.0f, ioHeader.y + 10.0f}, 11.5f, m_text);
              renderer.drawText("Pick a source, then verify the live level before record.",
-                               {ioHeader.x + 10.0f, ioHeader.y + 25.0f}, 9.0f, m_textSecondary.withAlpha(0.90f));
+                               {ioHeader.x + 10.0f, ioHeader.y + 25.0f}, 9.0f, m_textSecondary.withAlpha(0.94f));
 
              const float infoTop = contentRect.y + 84.0f;
              const NUIRect infoCard{contentRect.x, infoTop, contentRect.width, 100.0f};
@@ -727,12 +774,6 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
     // if (NUIComponent::onMouseEvent(event)) return true; // Disabled standard dispatch
 
     if (event.button == NUIMouseButton::None) {
-        const int tab = hitTestTab(event.position);
-        if (tab != m_hoveredTab) {
-            m_hoveredTab = tab;
-            repaint();
-        }
-
         const bool addHover = (m_viewModel && m_viewModel->getSelectedChannel()) && m_addFxRect.contains(event.position);
         if (addHover != m_addHovered) {
             m_addHovered = addHover;
@@ -743,12 +784,6 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
     }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        const int tab = hitTestTab(event.position);
-        if (tab >= 0) {
-            setActiveTab(static_cast<Tab>(tab));
-            return true;
-        }
-
         if (m_activeTab == Tab::Sends && (m_viewModel && m_viewModel->getSelectedChannel()) && m_addFxRect.contains(event.position)) {
             m_addPressed = true;
             repaint();

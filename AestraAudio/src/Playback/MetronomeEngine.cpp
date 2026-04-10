@@ -76,11 +76,26 @@ void MetronomeEngine::loadClickSounds(const std::string& downbeatPath, const std
                 break;
 
             if (memcmp(chunkId, "fmt ", 4) == 0) {
-                fread(&audioFormat, 2, 1, file);
-                fread(&numChannels, 2, 1, file);
-                fread(&sampleRate, 4, 1, file);
+                if (fread(&audioFormat, 2, 1, file) != 1 ||
+                    fread(&numChannels, 2, 1, file) != 1 ||
+                    fread(&sampleRate, 4, 1, file) != 1) {
+                    fclose(file);
+                    return false;
+                }
                 fseek(file, 6, SEEK_CUR);
-                fread(&bitsPerSample, 2, 1, file);
+                if (fread(&bitsPerSample, 2, 1, file) != 1) {
+                    fclose(file);
+                    return false;
+                }
+                // Validate format before using
+                if (numChannels == 0 || numChannels > 32) {
+                    fclose(file);
+                    return false;
+                }
+                if (bitsPerSample != 16 && bitsPerSample != 24) {
+                    fclose(file);
+                    return false;
+                }
                 if (chunkLen > 16)
                     fseek(file, chunkLen - 16, SEEK_CUR);
             } else if (memcmp(chunkId, "data", 4) == 0) {
@@ -90,7 +105,16 @@ void MetronomeEngine::loadClickSounds(const std::string& downbeatPath, const std
                 }
 
                 const uint32_t bytesPerSample = bitsPerSample / 8;
+                if (numChannels * bytesPerSample == 0) {
+                    fclose(file);
+                    return false;
+                }
                 const uint32_t numSamples = chunkLen / (numChannels * bytesPerSample);
+                // Guard against excessive allocation from malformed chunkLen
+                if (numSamples > 10000000) { // ~10M samples max (~200 seconds at 48kHz)
+                    fclose(file);
+                    return false;
+                }
                 samples.resize(numSamples);
 
                 if (bitsPerSample == 16) {

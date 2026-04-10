@@ -209,6 +209,8 @@ public:
     void setSendPan(int index, float pan);
     /** @brief Update send destination by index. */
     void setSendDestination(int index, uint32_t destId);
+    /** @brief Update send pre/post fader mode by index. */
+    void setSendPostFader(int index, bool postFader);
 
     /** @brief Set the primary output destination identifier. */
     void setMainOutputId(uint32_t id) { m_mainOutputId = id; }

@@ -561,7 +561,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     buffer->interleavedData = std::move(decodedData);
                     buffer->sampleRate = sampleRate;
                     buffer->numChannels = numChannels;
-                    buffer->numFrames = buffer->interleavedData.size() / numChannels;
+                    if (numChannels == 0) {
+                        Log::warning("[ProjectLoad] Audio file reports 0 channels: " + filePath);
+                        buffer->numChannels = 1;
+                    }
+                    buffer->numFrames = buffer->interleavedData.size() / buffer->numChannels;
                     source->setBuffer(buffer);
                     Log::info("[ProjectLoad] Loaded audio: " + filePath + 
                               " (" + std::to_string(buffer->numFrames) + " frames, " + 
@@ -620,7 +624,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             MixerChannel* channel = trackManager->addChannel(lj[i]["name"].asString());
             if (auto* lane = playlist.getLane(laneId)) {
                 if (lj[i]["color"].isString()) {
-                    lane->colorRGBA = static_cast<uint32_t>(std::stoul(lj[i]["color"].asString()));
+                    try {
+                        lane->colorRGBA = static_cast<uint32_t>(std::stoul(lj[i]["color"].asString()));
+                    } catch (const std::exception&) {
+                        lane->colorRGBA = 0xFFFFFFFF;
+                    }
                 } else {
                     lane->colorRGBA = static_cast<uint32_t>(lj[i]["color"].asNumber());
                 }

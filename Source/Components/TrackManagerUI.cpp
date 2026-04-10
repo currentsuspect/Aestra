@@ -368,30 +368,71 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
 
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const float radius = themeManager.getRadius("m") + 1.0f;
-    const auto idleBg = themeManager.getColor("buttonBgDefault").withAlpha(0.98f);
-    const auto hoverBg = themeManager.getColor("buttonBgHover").withAlpha(0.99f);
+    const auto idleBg = themeManager.getColor("buttonBgDefault").withAlpha(0.94f);
+    const auto hoverBg = themeManager.getColor("buttonBgHover").withAlpha(0.97f);
     const auto activeBg = themeManager.getColor("buttonBgActive").withAlpha(0.99f);
-    const auto idleBorder = themeManager.getColor("border").withAlpha(0.28f);
+    const auto idleBorder = themeManager.getColor("border").withAlpha(0.24f);
     const auto hoverBorder = themeManager.getColor("border").withAlpha(0.40f);
     const auto activeBorder = themeManager.getColor("borderActive").withAlpha(0.24f);
     const auto innerHighlight = AestraUI::NUIColor::white().withAlpha(0.025f);
     const auto shadowColor = AestraUI::NUIColor(0, 0, 0, 0.14f);
+    const auto utilityBg = themeManager.getColor("surfaceRaised").withAlpha(0.58f);
+    const auto utilityHoverBg = themeManager.getColor("buttonBgHover").withAlpha(0.86f);
+    const auto utilityBorder = themeManager.getColor("borderSubtle").withAlpha(0.26f);
+    const auto utilityHoverBorder = themeManager.getColor("border").withAlpha(0.34f);
+    const auto modeIdleBg = themeManager.getColor("buttonBgDefault").withAlpha(0.90f);
+    const auto modeHoverBg = themeManager.getColor("buttonBgHover").withAlpha(0.95f);
+    const auto modeActiveBg = themeManager.getColor("buttonBgActive").withAlpha(0.98f);
+    const auto modeIdleBorder = themeManager.getColor("borderSubtle").withAlpha(0.24f);
+    const auto modeHoverBorder = themeManager.getColor("border").withAlpha(0.38f);
+    const auto modeActiveBorder = themeManager.getColor("borderActive").withAlpha(0.36f);
+    const auto accent = themeManager.getColor("accentPrimary");
+
+    auto drawClusterPlate = [&](const AestraUI::NUIRect& rect) {
+        renderer.fillRoundedRect(rect, radius + 2.0f, themeManager.getColor("surfaceRaised").withAlpha(0.34f));
+        renderer.strokeRoundedRect(rect, radius + 2.0f, 1.0f, idleBorder.withAlpha(0.26f));
+    };
+
+    const AestraUI::NUIRect toolCluster{
+        m_selectToolBounds.x - 5.0f,
+        m_selectToolBounds.y - 4.0f,
+        (m_paintToolBounds.right() - m_selectToolBounds.x) + 10.0f,
+        m_selectToolBounds.height + 8.0f
+    };
+    drawClusterPlate(toolCluster);
+
+    const AestraUI::NUIRect utilityCluster{
+        m_followPlayheadBounds.x - 5.0f,
+        m_followPlayheadBounds.y - 4.0f,
+        m_followPlayheadBounds.width + 10.0f,
+        m_followPlayheadBounds.height + 8.0f
+    };
+    drawClusterPlate(utilityCluster);
+
+    const AestraUI::NUIRect actionCluster{
+        m_menuIconBounds.x - 5.0f,
+        m_menuIconBounds.y - 4.0f,
+        (m_addTrackBounds.right() - m_menuIconBounds.x) + 10.0f,
+        m_menuIconBounds.height + 8.0f
+    };
+    drawClusterPlate(actionCluster);
+
+    auto drawUtilityButton = [&](const AestraUI::NUIRect& bounds, bool hovered) {
+        const auto currentBg = hovered ? utilityHoverBg : utilityBg;
+        const auto currentBorder = hovered ? utilityHoverBorder : utilityBorder;
+        renderer.drawShadow(bounds, 0.0f, hovered ? 4.0f : 3.0f, hovered ? 12.0f : 10.0f,
+                            shadowColor.withAlpha(hovered ? 0.64f : 0.52f));
+        renderer.fillRoundedRect(bounds, radius, currentBg);
+        renderer.strokeRoundedRect(bounds, radius, 1.0f, currentBorder);
+        renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
+                                   std::max(0.0f, radius - 1.0f),
+                                   1.0f,
+                                   innerHighlight.withAlpha(0.8f));
+    };
 
     // Menu Button (leftmost)
     {
-        auto currentBg = idleBg;
-        auto currentBorder = idleBorder;
-        if (m_menuHovered) {
-            currentBg = hoverBg;
-            currentBorder = hoverBorder;
-        }
-        renderer.drawShadow(m_menuIconBounds, 0.0f, 6.0f, 18.0f, shadowColor);
-        renderer.fillRoundedRect(m_menuIconBounds, radius, currentBg);
-        renderer.strokeRoundedRect(m_menuIconBounds, radius, 1.0f, currentBorder);
-        renderer.strokeRoundedRect({m_menuIconBounds.x + 1.0f, m_menuIconBounds.y + 1.0f, m_menuIconBounds.width - 2.0f, m_menuIconBounds.height - 2.0f},
-                                   std::max(0.0f, radius - 1.0f),
-                                   1.0f,
-                                   innerHighlight);
+        drawUtilityButton(m_menuIconBounds, m_menuHovered);
     }
     if (m_menuIcon) {
         const float iconSz = 16.0f;
@@ -404,7 +445,9 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         // Draw centered at local (0,0) - renderer handles the translation to 'center' via pushTransform
         // Note: We use a temporary rect centered at 0,0
         m_menuIcon->setBounds(AestraUI::NUIRect(-iconSz * 0.5f, -iconSz * 0.5f, iconSz, iconSz));
-        m_menuIcon->setColorFromTheme(m_menuHovered ? "textPrimary" : "textSecondary");
+        m_menuIcon->setColor(m_menuHovered
+                                 ? themeManager.getColor("textPrimary").withAlpha(0.94f)
+                                 : themeManager.getColor("textSecondary").withAlpha(0.76f));
         m_menuIcon->onRender(renderer);
         
         renderer.popTransform();
@@ -422,19 +465,7 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
 
     // Add-track button (next to menu)
     {
-        auto currentBg = idleBg;
-        auto currentBorder = idleBorder;
-        if (m_addTrackHovered) {
-            currentBg = hoverBg;
-            currentBorder = hoverBorder;
-        }
-        renderer.drawShadow(m_addTrackBounds, 0.0f, 6.0f, 18.0f, shadowColor);
-        renderer.fillRoundedRect(m_addTrackBounds, radius, currentBg);
-        renderer.strokeRoundedRect(m_addTrackBounds, radius, 1.0f, currentBorder);
-        renderer.strokeRoundedRect({m_addTrackBounds.x + 1.0f, m_addTrackBounds.y + 1.0f, m_addTrackBounds.width - 2.0f, m_addTrackBounds.height - 2.0f},
-                                   std::max(0.0f, radius - 1.0f),
-                                   1.0f,
-                                   innerHighlight);
+        drawUtilityButton(m_addTrackBounds, m_addTrackHovered);
     }
     if (m_addTrackIcon) {
         const float iconSz = 16.0f;
@@ -444,7 +475,9 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
             iconSz, iconSz
         );
         m_addTrackIcon->setBounds(iconRect);
-        m_addTrackIcon->setColorFromTheme(m_addTrackHovered ? "textPrimary" : "textSecondary");
+        m_addTrackIcon->setColor(m_addTrackHovered
+                                     ? themeManager.getColor("textPrimary").withAlpha(0.94f)
+                                     : themeManager.getColor("textSecondary").withAlpha(0.78f));
         m_addTrackIcon->onRender(renderer);
     }
 
@@ -452,21 +485,26 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     auto drawToolIcon = [&](std::shared_ptr<AestraUI::NUIIcon>& icon, const AestraUI::NUIRect& bounds, PlaylistTool tool, bool hovered) {
         bool isActive = (m_currentTool == tool);
         
-        // Always draw background - idle, hover, or active
-        auto currentBg = idleBg;
-        auto currentBorder = idleBorder;
+        auto currentBg = modeIdleBg;
+        auto currentBorder = modeIdleBorder;
         
         if (isActive) {
-            currentBg = activeBg;
-            currentBorder = activeBorder;
+            currentBg = modeActiveBg;
+            currentBorder = modeActiveBorder;
         } else if (hovered) {
-            currentBg = hoverBg;
-            currentBorder = hoverBorder;
+            currentBg = modeHoverBg;
+            currentBorder = modeHoverBorder;
         }
 
-        renderer.drawShadow(bounds, 0.0f, 6.0f, 18.0f, shadowColor);
+        renderer.drawShadow(bounds, 0.0f, isActive ? 5.0f : 4.0f, isActive ? 15.0f : 13.0f,
+                            shadowColor.withAlpha(isActive ? 0.84f : hovered ? 0.72f : 0.60f));
         renderer.fillRoundedRect(bounds, radius, currentBg);
         renderer.strokeRoundedRect(bounds, radius, 1.0f, currentBorder);
+        if (isActive) {
+            renderer.fillRoundedRect({bounds.x + 5.0f, bounds.y + 2.0f, bounds.width - 10.0f, 2.0f},
+                                     1.0f,
+                                     accent.withAlpha(0.68f));
+        }
         renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
                                    std::max(0.0f, radius - 1.0f),
                                    1.0f,
@@ -481,9 +519,9 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
                 iconSz, iconSz
             );
             icon->setBounds(iconRect);
-            icon->setColor(isActive ? themeManager.getColor("textPrimary")
-                                    : hovered ? themeManager.getColor("textPrimary").withAlpha(0.92f)
-                                              : themeManager.getColor("textSecondary").withAlpha(0.82f));
+            icon->setColor(isActive ? accent.withAlpha(0.96f)
+                                    : hovered ? themeManager.getColor("textPrimary").withAlpha(0.90f)
+                                              : themeManager.getColor("textSecondary").withAlpha(0.72f));
             icon->onRender(renderer);
         }
     };
@@ -497,18 +535,24 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     // Render Follow Playhead Toggle
     bool followActive = m_followPlayhead;
     {
-        auto currentBg = idleBg;
-        auto currentBorder = idleBorder;
+        auto currentBg = utilityBg;
+        auto currentBorder = utilityBorder;
         if (followActive) {
-            currentBg = activeBg;
-            currentBorder = activeBorder;
+            currentBg = accent.withAlpha(0.18f);
+            currentBorder = accent.withAlpha(0.42f);
         } else if (m_followPlayheadHovered) {
-            currentBg = hoverBg;
-            currentBorder = hoverBorder;
+            currentBg = utilityHoverBg;
+            currentBorder = utilityHoverBorder;
         }
-        renderer.drawShadow(m_followPlayheadBounds, 0.0f, 6.0f, 18.0f, shadowColor);
+        renderer.drawShadow(m_followPlayheadBounds, 0.0f, followActive ? 5.0f : 4.0f, followActive ? 14.0f : 11.0f,
+                            shadowColor.withAlpha(followActive ? 0.76f : 0.56f));
         renderer.fillRoundedRect(m_followPlayheadBounds, radius, currentBg);
         renderer.strokeRoundedRect(m_followPlayheadBounds, radius, 1.0f, currentBorder);
+        if (followActive) {
+            renderer.fillRoundedRect({m_followPlayheadBounds.x + 5.0f, m_followPlayheadBounds.y + 2.0f, m_followPlayheadBounds.width - 10.0f, 2.0f},
+                                     1.0f,
+                                     accent.withAlpha(0.68f));
+        }
         renderer.strokeRoundedRect({m_followPlayheadBounds.x + 1.0f, m_followPlayheadBounds.y + 1.0f, m_followPlayheadBounds.width - 2.0f, m_followPlayheadBounds.height - 2.0f},
                                    std::max(0.0f, radius - 1.0f),
                                    1.0f,
@@ -525,9 +569,9 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         m_followPlayheadIcon->setBounds(iconRect);
         
         if (followActive) {
-            m_followPlayheadIcon->setColorFromTheme("accentPrimary");
+            m_followPlayheadIcon->setColor(accent.withAlpha(0.96f));
         } else {
-            m_followPlayheadIcon->setColorFromTheme("textSecondary");
+            m_followPlayheadIcon->setColor(themeManager.getColor("textSecondary").withAlpha(m_followPlayheadHovered ? 0.88f : 0.76f));
         }
         m_followPlayheadIcon->onRender(renderer);
     }
@@ -3603,11 +3647,11 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     
     // === PRO/GLASS RULER STYLE ===
     // Background: Darker than track area to visually separate
-    auto glassBg = themeManager.getColor("backgroundSecondary").withAlpha(0.9f);
-    auto glassHighlight = AestraUI::NUIColor::white().withAlpha(0.04f); // Top edge highlight
+    auto glassBg = themeManager.getColor("backgroundSecondary").withAlpha(0.92f);
+    auto glassHighlight = AestraUI::NUIColor::white().withAlpha(0.045f); // Top edge highlight
     
-    auto textCol = themeManager.getColor("textPrimary");
-    auto tickCol = themeManager.getColor("textPrimary").withAlpha(0.72f);
+    auto textCol = themeManager.getColor("textPrimary").withAlpha(0.94f);
+    auto tickCol = themeManager.getColor("textPrimary").withAlpha(0.62f);
     
     // Restore layout definition
     const auto& layout = themeManager.getLayoutDimensions();
@@ -3631,7 +3675,13 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     renderer.fillRect(highlightRect, glassHighlight);
     
     // Draw subtle glass border on grid area
-    renderer.strokeRoundedRect(gridRulerRect, cornerRadius, 1.0f, borderColor.withAlpha(0.4f));
+    renderer.strokeRoundedRect(gridRulerRect, cornerRadius, 1.0f, borderColor.withAlpha(0.34f));
+    renderer.drawLine(
+        AestraUI::NUIPoint(gridRulerRect.x, gridRulerRect.bottom() - 1.0f),
+        AestraUI::NUIPoint(gridRulerRect.right(), gridRulerRect.bottom() - 1.0f),
+        1.0f,
+        themeManager.getColor("glassBorder").withAlpha(0.20f)
+    );
 
     // === SET CLIP RECT for timeline grid area (prevents text/ticks bleeding outside) ===
     renderer.setClipRect(gridRulerRect);
@@ -3682,7 +3732,6 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         // When using stride, all shown bars are "major" since we're already filtering
         bool isMajorBar = (barStride > 1) || (barNum == 1) || ((barNum - 1) % 4 == 0); // 1, 5, 9, 13...
         float fontSize = isMajorBar ? 11.0f : 9.0f;  // Compact ruler text
-        float textAlpha = isMajorBar ? 1.0f : 0.7f;
         
         auto textSize = renderer.measureText(barText, fontSize);
         
@@ -3695,7 +3744,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         // Draw text - clip rect handles edge clipping automatically
         renderer.drawText(barText, 
                         AestraUI::NUIPoint(textX, textY),
-                        fontSize, textCol);
+                        fontSize, isMajorBar ? textCol : textCol.withAlpha(0.78f));
         
         // Bar tick line - major bars get full height, others half
         // Mature Style: Ticks bottom-up
@@ -3769,6 +3818,12 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     auto controlBg = themeManager.getColor("backgroundPrimary");
     AestraUI::NUIRect controlRect(rulerBounds.x, rulerBounds.y, controlAreaWidth + 5.0f, rulerBounds.height);
     renderer.fillRect(controlRect, controlBg);
+    renderer.drawLine(
+        AestraUI::NUIPoint(controlRect.x, controlRect.bottom() - 1.0f),
+        AestraUI::NUIPoint(controlRect.right(), controlRect.bottom() - 1.0f),
+        1.0f,
+        themeManager.getColor("glassBorder").withAlpha(0.14f)
+    );
 
     // Dedicated "corner" panel where track controls meet the ruler.
     const AestraUI::NUIRect cornerRect(rulerBounds.x, rulerBounds.y, controlAreaWidth, rulerBounds.height);

@@ -9,6 +9,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <limits>
 #include <cstdint>
 #include <cmath>
 #include <algorithm>
@@ -36,6 +37,8 @@ struct ChannelViewModel {
     std::string name;                    ///< Display name
     uint32_t trackColor{0xFF808080};     ///< Track color (ARGB)
     std::string routeName{"Master"};     ///< Output routing name
+    uint32_t mainOutputId{0};            ///< 0 = Master, otherwise channel ID
+    bool masterSendEnabled{true};        ///< True when audible main path reaches master directly
 
     // Control state (reflects engine, optimistic updates allowed)
     float faderGainDb{0.0f};             ///< Fader position in dB
@@ -90,6 +93,7 @@ struct ChannelViewModel {
         float pan{0.0f};
         bool postFader{true};
         bool muted{false};
+        bool sidechainOnly{false};
     };
     std::vector<SendViewModel> sends;
 
@@ -265,6 +269,8 @@ public:
     void removeSend(uint32_t channelId, int sendIndex);
     void setSendLevel(uint32_t channelId, int sendIndex, float linearGain);
     void setSendDestination(uint32_t channelId, int sendIndex, uint32_t targetId);
+    void setSendPostFader(uint32_t channelId, int sendIndex, bool postFader);
+    void setMainOutputDestination(uint32_t channelId, uint32_t targetId);
 
     // Insert Management
     void setInsertBypass(uint32_t channelId, int slotIndex, bool bypassed);

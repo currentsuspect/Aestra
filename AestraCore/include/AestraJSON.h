@@ -155,7 +155,7 @@ public:
     // Parsing
     static JSON parse(const std::string& jsonString) {
         size_t pos = 0;
-        return parseValue(jsonString, pos);
+        return parseValue(jsonString, pos, 0);
     }
 
 private:
@@ -259,16 +259,19 @@ private:
         }
     }
 
-    static JSON parseValue(const std::string& str, size_t& pos) {
+    static constexpr size_t kMaxJsonDepth = 1024; // Prevent stack exhaustion on crafted input
+
+    static JSON parseValue(const std::string& str, size_t& pos, size_t depth) {
+        if (depth > kMaxJsonDepth) return JSON();
         skipWhitespace(str, pos);
         if (pos >= str.size())
             return JSON();
 
         char c = str[pos];
         if (c == '{')
-            return parseObject(str, pos);
+            return parseObject(str, pos, depth + 1);
         if (c == '[')
-            return parseArray(str, pos);
+            return parseArray(str, pos, depth + 1);
         if (c == '"')
             return parseString(str, pos);
         if (c == 't' || c == 'f')
@@ -281,7 +284,7 @@ private:
         return JSON();
     }
 
-    static JSON parseObject(const std::string& str, size_t& pos) {
+    static JSON parseObject(const std::string& str, size_t& pos, size_t depth) {
         JSON obj = JSON::object();
         pos++; // Skip '{'
 
@@ -302,7 +305,7 @@ private:
                 break;
             pos++; // Skip ':'
 
-            JSON value = parseValue(str, pos);
+            JSON value = parseValue(str, pos, depth);
             obj.set(key.asString(), value);
 
             skipWhitespace(str, pos);
@@ -320,7 +323,7 @@ private:
         return obj;
     }
 
-    static JSON parseArray(const std::string& str, size_t& pos) {
+    static JSON parseArray(const std::string& str, size_t& pos, size_t depth) {
         JSON arr = JSON::array();
         pos++; // Skip '['
 
@@ -331,7 +334,7 @@ private:
         }
 
         while (pos < str.size()) {
-            JSON value = parseValue(str, pos);
+            JSON value = parseValue(str, pos, depth);
             arr.push(value);
 
             skipWhitespace(str, pos);
