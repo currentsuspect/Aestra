@@ -41,6 +41,7 @@ struct AudioRoute {
     float pan{0.0f};          // Send Pan (-1.0 to 1.0)
     bool postFader{true};     // Pre/Post Fader tap
     bool mute{false};         // Mute this specific send
+    bool sidechainOnly{false}; // Route exists for sidechain/control input, not audible mix
 };
 
 /**

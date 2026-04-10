@@ -270,7 +270,9 @@ public:
     void setSendLevel(uint32_t channelId, int sendIndex, float linearGain);
     void setSendDestination(uint32_t channelId, int sendIndex, uint32_t targetId);
     void setSendPostFader(uint32_t channelId, int sendIndex, bool postFader);
+    void setSendSidechainOnly(uint32_t channelId, int sendIndex, bool sidechainOnly);
     void setMainOutputDestination(uint32_t channelId, uint32_t targetId);
+    std::string getRoutingWarning(uint32_t channelId) const;
 
     // Insert Management
     void setInsertBypass(uint32_t channelId, int slotIndex, bool bypassed);
