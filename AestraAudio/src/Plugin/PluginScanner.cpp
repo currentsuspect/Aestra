@@ -379,7 +379,7 @@ bool PluginScanner::loadScanCache(const std::filesystem::path& cachePath) {
         // Read each plugin
         // [SEC-RTM-010] String length cap: no single metadata string > 64 KB
         constexpr uint32_t kMaxStringLen = 65536;
-        auto readString = [&file]() -> std::string {
+        auto readString = [&file, kMaxStringLen]() -> std::string {
             uint32_t len;
             file.read(reinterpret_cast<char*>(&len), sizeof(len));
             if (!file.good()) return "";
