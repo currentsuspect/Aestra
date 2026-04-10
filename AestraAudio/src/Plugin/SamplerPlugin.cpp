@@ -383,7 +383,18 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
 
     if (json.has("samplePath")) {
         std::string path = json["samplePath"].asString();
+        // Guard against path traversal — only allow relative paths resolved
+        // against the plugin's working directory, reject absolute paths
+        // that escape the expected sample directories.
         if (!path.empty()) {
+            // Reject absolute paths (could reference arbitrary filesystem locations)
+            if (path[0] == '/' || (path.size() >= 2 && path[1] == ':')) {
+                return false;
+            }
+            // Reject path traversal components
+            if (path.find("..") != std::string::npos) {
+                return false;
+            }
             loadSample(path);
         }
     }
