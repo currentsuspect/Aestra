@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <unordered_set>
 #include <sstream>
 
 namespace AestraUI {
@@ -30,6 +31,25 @@ namespace {
 
     constexpr float SELECT_TOP_H = 4.0f;
 
+    std::string compactRouteName(uint32_t targetId, const std::string& targetName)
+    {
+        if (targetId == 0 || targetName == "Master" || targetName == "MASTER") {
+            return "M";
+        }
+        const std::string trackPrefix = "Track ";
+        if (targetName.rfind(trackPrefix, 0) == 0) {
+            return "T" + targetName.substr(trackPrefix.size());
+        }
+        const std::string lanePrefix = "Lane ";
+        if (targetName.rfind(lanePrefix, 0) == 0) {
+            return "L" + targetName.substr(lanePrefix.size());
+        }
+        if (targetName.size() <= 6) {
+            return targetName;
+        }
+        return targetName.substr(0, 6);
+    }
+
     std::string buildStripRouteSummary(const Aestra::ChannelViewModel& channel)
     {
         if (channel.id == 0) {
@@ -38,15 +58,27 @@ namespace {
 
         const bool busOnly = !channel.masterSendEnabled && channel.mainOutputId != 0;
         int audibleSendCount = 0;
-        bool hasSidechainSend = false;
+        int sidechainSendCount = 0;
+        std::string audibleTarget;
+        std::string sidechainTarget;
+        std::unordered_set<uint32_t> audibleTargets;
+        std::unordered_set<uint32_t> sidechainTargets;
 
         for (const auto& send : channel.sends) {
             if (send.muted) continue;
             if (send.sidechainOnly) {
-                hasSidechainSend = true;
+                ++sidechainSendCount;
+                sidechainTargets.insert(send.targetId);
+                if (sidechainTarget.empty()) {
+                    sidechainTarget = compactRouteName(send.targetId, send.targetName);
+                }
                 continue;
             }
             ++audibleSendCount;
+            audibleTargets.insert(send.targetId);
+            if (audibleTarget.empty()) {
+                audibleTarget = compactRouteName(send.targetId, send.targetName);
+            }
         }
 
         std::ostringstream summary;
@@ -58,11 +90,23 @@ namespace {
             first = false;
         };
 
-        if (busOnly) appendToken("Bus");
-        if (audibleSendCount > 0) {
-            appendToken(audibleSendCount == 1 ? "Send" : ("+" + std::to_string(audibleSendCount)));
+        if (busOnly) {
+            appendToken("Bus " + compactRouteName(channel.mainOutputId, channel.routeName));
         }
-        if (hasSidechainSend) appendToken("SC");
+        if (audibleSendCount > 0) {
+            if (audibleTargets.size() == 1) {
+                appendToken("Snd " + audibleTarget);
+            } else {
+                appendToken("S+" + std::to_string(static_cast<int>(audibleTargets.size())));
+            }
+        }
+        if (sidechainSendCount > 0) {
+            if (sidechainTargets.size() == 1) {
+                appendToken("SC " + sidechainTarget);
+            } else {
+                appendToken("SC+" + std::to_string(static_cast<int>(sidechainTargets.size())));
+            }
+        }
 
         return summary.str();
     }

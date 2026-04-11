@@ -287,6 +287,7 @@ public:
 private:
     std::function<void()> m_onGraphDirty;
     std::function<void()> m_onProjectModified;
+    std::unordered_map<uint32_t, std::string> m_blockedRoutingWarnings;
 
     /// Stable storage - pointers remain valid across add/remove
     std::vector<std::unique_ptr<ChannelViewModel>> m_channels;
@@ -321,6 +322,8 @@ private:
     void smoothMeterChannel(ChannelViewModel& channel,
                             const Audio::MeterSnapshotBuffer::MeterReadout& snapshot,
                             double deltaTime);
+    bool routeWouldCreateCycle(uint32_t sourceId, uint32_t targetId) const;
+    bool hasRoutePath(uint32_t fromId, uint32_t targetId) const;
 };
 
 } // namespace Aestra
