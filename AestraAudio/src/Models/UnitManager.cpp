@@ -265,6 +265,16 @@ JSON UnitManager::saveToJSON() const {
     return root;
 }
 
+/**
+ * @brief Loads unit manager state from a JSON object.
+ *
+ * Parses the provided JSON to populate units, their ordering, IDs, properties, and plugin attachments.
+ * Existing manager state is cleared first. Entries that are missing required fields are skipped.
+ * If a unit includes a `pluginId`, a plugin instance may be created, initialized (using stored sample rate/block size or defaults 48000/512), activated if the unit is enabled, and its saved state loaded when present.
+ * When a unit's `color` is a string that cannot be parsed as an unsigned long, the color defaults to 0xFFFFFFFF.
+ *
+ * @param json JSON object produced by saveToJSON() containing `nextId` and a `units` array; if `json` is not an object or lacks a valid `units` array, the function returns after clearing state.
+ */
 void UnitManager::loadFromJSON(const JSON& json) {
     clear();
     if (!json.isObject()) {

@@ -225,6 +225,16 @@ bool TimelineMinimapBar::hitToggle_(const NUIPoint& p, TimelineMinimapMode& outM
     return false;
 }
 
+/**
+ * @brief Render the three mode toggles (Clips, Energy, Automation) and update their hit bounds.
+ *
+ * Draws each toggle as a rounded rectangle with a fill, stroked border, and centered single-letter label.
+ * Active toggles use an accent tint for fill, border, and text; inactive toggles use subdued glass/text colors.
+ * The function writes each toggle's rectangle into `toggleBounds_` for hit-testing.
+ *
+ * @param renderer Renderer used to draw the toggles.
+ * @param layout Layout information for the component (unused directly but provided for consistency).
+ */
 void TimelineMinimapBar::renderToggles_(NUIRenderer& renderer, const TimelineMinimapLayout& layout)
 {
     if (!showModeToggles_) return;

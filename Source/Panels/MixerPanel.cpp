@@ -9,6 +9,15 @@
 using namespace AestraUI;
 using namespace Aestra::Audio;
 
+/**
+ * @brief Creates a MIXER panel tied to a track manager.
+ *
+ * Initializes the internal MixerViewModel and UI mixer panel, wires view-model callbacks to
+ * notify the provided TrackManager when the audio graph or project becomes dirty, sets the
+ * UI mixer as the panel content, and refreshes channel state from the engine.
+ *
+ * @param trackManager Shared pointer to the TrackManager to associate with this panel; may be null.
+ */
 MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
     : WindowPanel("MIXER")
     , m_trackManager(std::move(trackManager))

@@ -14,7 +14,14 @@ import sys
 import os
 
 def create_malicious_project(output_path):
-    """Create a project file where a clip has a non-numeric color string."""
+    """
+    Create a crafted .aes-style project file that contains a clip whose `color` field is a non-numeric string to demonstrate a parsing crash.
+    
+    The function ensures the output directory exists, writes a JSON project payload to output_path, and prints the written file path, size, and a brief note about the expected crash site related to parsing the clip color.
+    
+    Parameters:
+        output_path (str): Filesystem path where the generated project file will be written.
+    """
     project = {
         "version": 2,
         "bpm": 120.0,

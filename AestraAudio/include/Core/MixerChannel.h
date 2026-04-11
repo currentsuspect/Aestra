@@ -214,7 +214,12 @@ public:
     /** @brief Update send audible/sidechain-only mode by index. */
     void setSendSidechainOnly(int index, bool sidechainOnly);
 
-    /** @brief Set the primary output destination identifier. */
+    /**
+ * Set the primary output destination for this channel.
+ *
+ * @param id Destination identifier for the channel's main output.
+ *           Use 0xFFFFFFFF to select the master output.
+ */
     void setMainOutputId(uint32_t id) { m_mainOutputId = id; }
 
 private:

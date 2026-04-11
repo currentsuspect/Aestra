@@ -132,6 +132,22 @@ bool AestraApp::isCrashedSession() {
     return std::filesystem::exists(flagPath, ec);
 }
 
+/**
+ * @brief Initializes the application and prepares runtime subsystems.
+ *
+ * Performs full startup: transitions lifecycle state, initializes platform, window manager,
+ * audio controller, content and UI components, connects audio to UI, initializes plugins,
+ * and loads or recovers a project when applicable.
+ *
+ * If a non-empty @p projectPath is provided and exists, that project is loaded. If @p projectPath
+ * is empty the initializer checks for a crashed session and, if an autosave is detected, may
+ * present a recovery dialog to recover or discard the autosave (safety checks are performed to
+ * avoid loading suspicious/older autosave files).
+ *
+ * @param projectPath Path to a project file to open on startup. If empty, the app attempts
+ *                    crash-recovery/autosave handling or starts a fresh project.
+ * @return true if initialization completed and the app entered the Running state; false on failure.
+ */
 bool AestraApp::initialize(const std::string& projectPath) {
     if (!Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::Initializing)) {
         Log::error("Failed to transition to Initializing state");

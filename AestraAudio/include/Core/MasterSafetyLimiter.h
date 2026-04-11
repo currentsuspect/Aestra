@@ -8,6 +8,17 @@
 #include <algorithm>
 #include <cmath>
 
+/**
+ * Process a single stereo frame by applying per-channel DC blocking and safety limiting.
+ *
+ * The left and right samples are modified in place: a one-pole DC blocker is applied to each channel,
+ * then each sample is passed through the limiter which enforces a soft-knee region and a hard clamp.
+ * Non-finite inputs are treated as limiting events and produce 0.0 on output.
+ *
+ * @param L Left channel sample (modified in place).
+ * @param R Right channel sample (modified in place).
+ * @returns `true` if either channel was limited (soft-knee, hard clamp, or non-finite handling), `false` otherwise.
+ */
 namespace Aestra {
 namespace Audio {
 

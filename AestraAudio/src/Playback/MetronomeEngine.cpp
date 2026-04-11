@@ -42,6 +42,20 @@ void MetronomeEngine::generateDefaultSounds() {
     }
 }
 
+/**
+ * @brief Load custom downbeat and upbeat click WAV files into the engine's internal buffers.
+ *
+ * Attempts to read the files at downbeatPath and upbeatPath as PCM WAVs and populate the engine's
+ * internal downbeat/upbeat sample buffers. Only 16-bit and 24-bit PCM formats are accepted; multi‑channel
+ * audio is converted to mono by averaging channels. The loader validates RIFF/WAVE headers, per‑chunk
+ * metadata, enforces a hard cap of 10,000,000 output samples to avoid excessive allocations, and rejects
+ * malformed or truncated files. If only one of the two files loads successfully, the loaded buffer is
+ * copied to the other as a fallback. After loading, the engine's active click buffer is set to the
+ * downbeat buffer.
+ *
+ * @param downbeatPath Filesystem path to the WAV used for downbeats (strong-beat).
+ * @param upbeatPath   Filesystem path to the WAV used for upbeats (weak-beat).
+ */
 void MetronomeEngine::loadClickSounds(const std::string& downbeatPath, const std::string& upbeatPath) {
     auto loadWav = [](const std::string& wavPath, std::vector<float>& samples) -> bool {
         FILE* file = fopen(wavPath.c_str(), "rb");

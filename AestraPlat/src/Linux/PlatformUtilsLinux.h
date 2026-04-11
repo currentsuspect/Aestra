@@ -3,6 +3,12 @@
 
 #include <string>
 
+/**
+ * Escape a string so it can be safely used within a POSIX shell command.
+ *
+ * @param input The raw string to escape.
+ * @returns The escaped string, quoted or backslash-escaped as needed so the result can be embedded safely in a shell command line.
+ */
 namespace Aestra {
 
 std::string shellEscape(const std::string& input);

@@ -169,9 +169,16 @@ public:
     void setMasterGain(float gain) { m_masterGainTarget.store(gain, std::memory_order_relaxed); }
     /** @brief Get the master gain target. */
     float getMasterGain() const { return m_masterGainTarget.load(std::memory_order_relaxed); }
-    /** @brief Set global output headroom in decibels. */
+    /**
+ * Set the global output headroom.
+ *
+ * @param db Headroom in decibels; negative values reduce output level. The value is converted to a linear multiplier and stored for use during mixing.
+ */
     void setHeadroom(float db) { m_headroomLinear.store(std::pow(10.0f, db / 20.0f), std::memory_order_relaxed); }
-    /** @brief Enable or disable the master safety limiter. Default: on. */
+    /**
+     * Enable or disable the master safety limiter. Default: enabled.
+     * @param enabled `true` to enable the safety limiter, `false` to disable it.
+     */
     void setSafetyLimiterEnabled(bool enabled) {
         m_safetyLimiterEnabled.store(enabled, std::memory_order_relaxed);
     }

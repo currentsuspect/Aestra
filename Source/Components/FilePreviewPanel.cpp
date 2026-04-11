@@ -14,7 +14,20 @@ namespace AestraUI {
 
 namespace {
 
-// Generate waveform overview from decoded audio samples
+/**
+ * @brief Produce a fixed-size waveform overview from decoded interleaved audio samples.
+ *
+ * Generates a vector of `targetSize` bins representing per-bin peak amplitudes. Each bin's
+ * value is the maximum, within that bin's frame range, of the per-frame mixed amplitude
+ * computed as the average of absolute sample values across all channels. Values are clamped
+ * to the range [0, 1].
+ *
+ * @param samples Interleaved PCM samples (frame-major: frame0_ch0, frame0_ch1, ..., frame1_ch0, ...).
+ * @param numChannels Number of interleaved channels present in `samples`.
+ * @param targetSize Number of bins in the returned waveform vector.
+ * @return std::vector<float> Vector of length `targetSize` containing per-bin peak amplitudes in [0, 1].
+ *                          If `samples` is empty or `numChannels` is 0, returns a zero-initialized vector.
+ */
 std::vector<float> generateWaveformFromAudio(const std::vector<float>& samples, 
                                               uint32_t numChannels, 
                                               size_t targetSize = 256) {
@@ -44,6 +57,16 @@ std::vector<float> generateWaveformFromAudio(const std::vector<float>& samples,
     return waveform;
 }
 
+/**
+ * Truncates a UTF-8 string to fit within a maximum rendered width by appending an ellipsis when necessary.
+ *
+ * @param renderer Renderer used to measure text widths.
+ * @param text Original UTF-8 encoded string to truncate.
+ * @param fontSize Font size used for width measurements.
+ * @param maxWidth Maximum allowed width in pixels; if <= 0 the function returns an empty string.
+ * @return std::string `text` if it fits within `maxWidth`; otherwise a truncated variant that ends with `"..."` and fits.
+ * If the ellipsis alone exceeds `maxWidth`, returns an empty string.
+ */
 std::string truncateToWidth(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth) {
     if (maxWidth <= 0.0f) return "";
     if (renderer.measureText(text, fontSize).width <= maxWidth) {
@@ -77,7 +100,12 @@ std::string truncateToWidth(NUIRenderer& renderer, const std::string& text, floa
     return "";
 }
 
-} // namespace
+} /**
+ * @brief Initializes the FilePreviewPanel and prepares its shared visual resources.
+ *
+ * Sets the panel identifier to "FilePreviewPanel" and constructs the shared SVG icons
+ * used by the panel: folder, file (text snippet), play (triangle), and stop (square).
+ */
 
 FilePreviewPanel::FilePreviewPanel() {
     setId("FilePreviewPanel");
@@ -196,6 +224,22 @@ void FilePreviewPanel::waveformWorker(const std::string& path, uint64_t generati
     }
 }
 
+/**
+ * @brief Render the file preview panel contents and interactive controls.
+ *
+ * Draws the panel background and border, then renders one of three states based on
+ * the current selection: an empty prompt, a folder preview, or a file preview.
+ * The file preview includes the filename (width-truncated), size/extension metadata,
+ * a play/stop button, and a waveform area that shows either a loading spinner or
+ * decoded waveform bars with an optional playhead indicator.
+ *
+ * Side effects:
+ * - Reads theme colors and current file/state members.
+ * - May read waveform data under an internal mutex.
+ * - Updates playButtonBounds_ to reflect the play/stop control position.
+ *
+ * @param renderer Renderer used to draw shapes, text, icons, and apply clipping.
+ */
 void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     NUIRect bounds = getBounds();

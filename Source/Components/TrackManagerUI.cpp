@@ -360,7 +360,17 @@ void TrackManagerUI::updateToolbarBounds() {
 
 // =============================================================================
 // SECTION: Rendering
-// =============================================================================
+/**
+ * @brief Render the top toolbar for the track manager UI.
+ *
+ * Draws the toolbar background plates and all interactive toolbar elements:
+ * menu and add-track buttons, the tool icons cluster (Select, Split, MultiSelect, Paint),
+ * and the Follow Playhead toggle. Visual states for hover and active/selected tools
+ * are applied from the active theme. Note: dropdowns and popup lists are handled via
+ * the menu and are not rendered here.
+ *
+ * @param renderer Renderer instance used to draw the toolbar elements.
+ */
 
 void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     // Update bounds before rendering
@@ -3639,6 +3649,15 @@ void TrackManagerUI::deselectAllTracks() {
     }
 }
 
+/**
+ * @brief Renders the timeline time ruler and its grid area, including bar/beat ticks, bar numbers, and ruler selection visuals.
+ *
+ * Draws the glass-styled timeline background and adaptive vertical grid lines based on current zoom, bar/beat density, and scroll offset;
+ * renders beat/downbeat ticks when sufficiently zoomed, bar number labels, the left control area divider, and the ruler selection highlight when active.
+ *
+ * @param renderer Renderer used for drawing primitives and text.
+ * @param rulerBounds Pixel bounds of the full ruler area (includes control area and timeline grid portion).
+ */
 void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& rulerBounds) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     auto borderColor = themeManager.getColor("borderColor");

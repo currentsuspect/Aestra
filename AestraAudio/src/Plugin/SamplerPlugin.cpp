@@ -365,6 +365,18 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
     return std::vector<uint8_t>(s.begin(), s.end());
 }
 
+/**
+ * @brief Restores plugin parameters and the selected sample from a serialized JSON state.
+ *
+ * The provided byte vector must contain the JSON produced by saveState(). When present,
+ * the `params` array is loaded into the plugin's parameter values. If a `samplePath`
+ * string is present and non-empty, the path is validated (absolute paths and any
+ * path containing "`..`" are rejected) before attempting to load the sample.
+ *
+ * @param state Byte sequence containing the serialized JSON state created by saveState().
+ * @return true if the state was applied (or there was nothing to apply), `false` if the
+ *         input is empty, not a JSON object, or contains an invalid `samplePath`.
+ */
 bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
     if (state.empty())
         return false;

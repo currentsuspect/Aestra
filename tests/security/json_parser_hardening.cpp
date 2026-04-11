@@ -11,6 +11,17 @@
 // Include the actual JSON parser header
 #include "AestraJSON.h"
 
+/**
+ * @brief Executes end-to-end tests that verify two JSON parser hardening fixes.
+ *
+ * Runs two test suites: one validating numeric parsing guard behavior (RTM-013)
+ * using a variety of well-formed and malformed numeric tokens, and another
+ * ensuring `asArray()` / `asObject()` return independent empty containers for
+ * non-array/non-object values (RTM-014) while real arrays/objects continue to
+ * behave correctly. Test results are printed to stdout.
+ *
+ * @return int Exit status: `0` if all tests pass, `1` otherwise.
+ */
 int main() {
     std::cout << "=== RTM-013 + RTM-014: JSON parser hardening — proof of fix ===" << std::endl;
 

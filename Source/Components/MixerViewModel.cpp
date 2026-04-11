@@ -90,6 +90,20 @@ void MixerViewModel::updateInputDiagnostics(const Audio::TrackManager& trackMana
     }
 }
 
+/**
+ * @brief Synchronizes the MixerViewModel state from the engine's track snapshot.
+ *
+ * Reads channels and continuous parameters from the provided TrackManager and
+ * ChannelSlotMap and updates the view model to match the engine. The method
+ * preserves existing UI-owned state where possible (meter/envelope state,
+ * insert pending/removal and bypass-dirty flags, send entries and resolved
+ * destination names), normalizes legacy master routing IDs to the UI master,
+ * rebuilds the internal channel list and ID map, and validates the selected
+ * channel.
+ *
+ * @param trackManager Source of engine channel snapshots and continuous params.
+ * @param slotMap Maps engine channel IDs to slot indices used for continuous params.
+ */
 void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                                      const Audio::ChannelSlotMap& slotMap) {
     auto continuousParams = trackManager.getContinuousParams();
@@ -540,6 +554,17 @@ std::vector<MixerViewModel::Destination> MixerViewModel::getAvailableDestination
     return dests;
 }
 
+/**
+ * @brief Adds a new send to the specified channel and synchronizes the new route with the audio engine.
+ *
+ * The new send is appended to the channel's local send list with a default gain of 1.0 and `sidechainOnly` set
+ * to false. A destination is chosen automatically, preferring the first available non-master destination; if none
+ * is available the Master (id 0) is used. When an engine channel exists, a corresponding Audio::AudioRoute is
+ * created (UI master id 0 is translated to engine id 0xFFFFFFFF) and pushed to the engine. If present, the
+ * callbacks `m_onGraphDirty` and `m_onProjectModified` are invoked after updating the engine.
+ *
+ * @param channelId ID of the channel to which the send will be added.
+ */
 void MixerViewModel::addSend(uint32_t channelId) {
     auto* ch = getChannelById(channelId);
     if (!ch) return;
@@ -612,6 +637,18 @@ void MixerViewModel::setSendLevel(uint32_t channelId, int sendIndex, float linea
     }
 }
 
+/**
+ * @brief Sets the destination of a send on a channel.
+ *
+ * Updates the send's target id and its displayed target name ("Master", the target channel's
+ * name, or "Unknown"), updates the engine with a normalized master id when needed
+ * (engine master id = 0xFFFFFFFF), and invokes graph/project-modified callbacks.
+ * If the channel is missing or the send index is out of range, the call is a no-op.
+ *
+ * @param channelId ID of the channel that owns the send.
+ * @param sendIndex Index of the send within the channel's send list.
+ * @param targetId Destination channel ID to route the send to (use 0 for UI "Master").
+ */
 void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint32_t targetId) {
     auto* ch = getChannelById(channelId);
     if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
@@ -637,6 +674,18 @@ void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint3
     }
 }
 
+/**
+ * @brief Set whether a send is post-fader for a specific channel.
+ *
+ * Updates the local send model's postFader flag and, if the channel is connected to the engine,
+ * updates the engine routing state and notifies graph/project callbacks.
+ *
+ * @param channelId ID of the channel owning the send (use 0 for master).
+ * @param sendIndex Index of the send within the channel's send list.
+ * @param postFader True to make the send post-fader, false to make it pre-fader.
+ *
+ * @note If the channel is not found or sendIndex is out of range, the call is a no-op.
+ */
 void MixerViewModel::setSendPostFader(uint32_t channelId, int sendIndex, bool postFader) {
     auto* ch = getChannelById(channelId);
     if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
@@ -650,6 +699,18 @@ void MixerViewModel::setSendPostFader(uint32_t channelId, int sendIndex, bool po
     }
 }
 
+/**
+ * @brief Set whether a send is used only for sidechain (non-audible) routing.
+ *
+ * Updates the local send flag for the specified channel/send and, if the engine channel exists,
+ * updates the engine routing state and invokes graph/project-modified callbacks.
+ *
+ * @param channelId Channel identifier (UI id; 0 represents master).
+ * @param sendIndex Index of the send within the channel's send list.
+ * @param sidechainOnly `true` to mark the send as sidechain-only (not audible), `false` otherwise.
+ *
+ * If the channel does not exist or `sendIndex` is out of range, the function returns without effect.
+ */
 void MixerViewModel::setSendSidechainOnly(uint32_t channelId, int sendIndex, bool sidechainOnly) {
     auto* ch = getChannelById(channelId);
     if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
@@ -663,6 +724,20 @@ void MixerViewModel::setSendSidechainOnly(uint32_t channelId, int sendIndex, boo
     }
 }
 
+/**
+ * @brief Set the main output destination for a channel's post-fader/main send.
+ *
+ * Updates the channel's UI routing state (mainOutputId, masterSendEnabled, routeName),
+ * normalizes the UI master destination to the engine's master id, and updates the engine routing.
+ * If the channel id is missing or refers to the master channel, no action is taken.
+ *
+ * @param channelId Channel id to update (0 is reserved for the UI master and is ignored).
+ * @param targetId Destination channel id in UI terms (0 denotes the UI Master).
+ *
+ * Side effects:
+ * - If the engine channel exists, calls the engine with `setMainOutputId`, using `0xFFFFFFFFu` for the master target.
+ * - Invokes `m_onGraphDirty` and `m_onProjectModified` callbacks when the engine is updated.
+ */
 void MixerViewModel::setMainOutputDestination(uint32_t channelId, uint32_t targetId) {
     auto* ch = getChannelById(channelId);
     if (!ch || ch->id == 0) return;
@@ -686,6 +761,14 @@ void MixerViewModel::setMainOutputDestination(uint32_t channelId, uint32_t targe
     }
 }
 
+/**
+ * Generate a user-facing warning when a channel routes audio to the same audible destination multiple times.
+ *
+ * Counts audible destinations for the given channel (the main output — treated as `Master` when `masterSendEnabled` is true or `mainOutputId == 0` — plus any sends that are not muted and not marked sidechain-only). Returns an empty string when there are no duplicated audible destinations, the single-message `"Duplicate audible route"` when exactly one destination is duplicated, or `"<n> duplicate audible routes"` when more than one destination is duplicated.
+ *
+ * @param channelId Channel identifier to evaluate.
+ * @return std::string Empty if no warning; otherwise a short warning message describing the number of duplicate audible routes.
+ */
 std::string MixerViewModel::getRoutingWarning(uint32_t channelId) const {
     const auto* ch = getChannelById(channelId);
     if (!ch || ch->id == 0) return {};
@@ -717,6 +800,19 @@ std::string MixerViewModel::getRoutingWarning(uint32_t channelId) const {
 
 
 
+/**
+ * @brief Set or clear the bypass state for an insert slot on a channel.
+ *
+ * Updates the channel's local insert state (sets `bypassed` and marks `bypassDirty`)
+ * and, if the engine channel exists, applies the bypass to the engine effect chain
+ * and signals that the project was modified.
+ *
+ * If the channel is not found or the slot index is out of range, the call is a no-op.
+ *
+ * @param channelId ID of the channel to modify (0 for master).
+ * @param slotIndex Index of the insert slot to bypass.
+ * @param bypassed True to bypass the insert, false to enable it.
+ */
 void MixerViewModel::setInsertBypass(uint32_t channelId, int slotIndex, bool bypassed) {
     auto* ch = getChannelById(channelId);
     if (!ch || slotIndex < 0 || slotIndex >= static_cast<int>(ch->inserts.size())) return;

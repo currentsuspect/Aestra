@@ -85,6 +85,15 @@ void UIMixerFader::setValueDb(float db)
     }
 }
 
+/**
+ * @brief Renders the mixer fader UI: track, filled level, handle, drag tooltip, and value readout.
+ *
+ * Draws the vertical track background, the filled portion representing the current dB value,
+ * the fader handle (with hover/active styling), an in-drag tooltip showing the numeric dB value,
+ * and the bottom-aligned value readout.
+ *
+ * @param renderer Renderer used to draw the widget visuals.
+ */
 void UIMixerFader::onRender(NUIRenderer& renderer)
 {
     auto bounds = getBounds();
@@ -184,6 +193,19 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     renderer.drawTextCentered(m_cachedText, textRect, fontSize, m_textSecondary);
 }
 
+/**
+ * @brief Handle mouse input for the mixer fader, updating hover state, initiating/ending drags, and changing the fader value.
+ *
+ * Processes mouse presses, releases, moves, and double-clicks:
+ * - Updates hover state based on cursor position.
+ * - Double-clicking the left button resets the fader to its default dB value.
+ * - Left-button press begins a drag; clicking outside the handle moves the fader to the clicked position.
+ * - While dragging, pointer movement adjusts the fader value; holding Shift reduces sensitivity, and holding Ctrl or Alt snaps changes to increments defined by `SNAP_DB`.
+ * - Drag latching: small initial movements within `DRAG_SLOP` do not change the value until movement exceeds the slop threshold.
+ *
+ * @param event The mouse event to handle.
+ * @return bool `true` if the event was handled (consumed) by the fader, `false` otherwise.
+ */
 bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || !isEnabled()) return false;

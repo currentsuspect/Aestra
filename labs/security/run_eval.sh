@@ -16,10 +16,14 @@ for arg in "$@"; do
   esac
 done
 
+# log prints messages to stdout prefixed with "[security-eval]".
 log()  { echo "[security-eval] $*"; }
+# fail prints a fatal message prefixed with [security-eval] to stderr and exits the script with status 1.
 fail() { echo "[security-eval] FATAL: $*" >&2; exit 1; }
 
+# timestamp outputs the current UTC timestamp in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ).
 timestamp() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
+# run_id echoes a UTC run identifier in the form run_YYYYmmdd_HHMMSS.
 run_id()    { date -u +"run_%Y%m%d_%H%M%S"; }
 
 mkdir -p "$RESULTS_DIR"
@@ -37,7 +41,8 @@ if command -v git &>/dev/null && git -C "$REPO_ROOT" rev-parse --git-dir &>/dev/
   [ -n "$(git -C "$REPO_ROOT" status --porcelain 2>/dev/null)" ] && GIT_DIRTY=true
 fi
 
-# Build security tests
+# do_build Configures CMake with security-test-specific flags and builds the project into BUILD_DIR.
+# On configuration or build failure it calls fail and exits the script.
 do_build() {
   log "Configuring..."
   cmake -S "$REPO_ROOT" -B "$BUILD_DIR" \

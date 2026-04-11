@@ -18,6 +18,17 @@ struct CacheEntry {
     uint64_t cachedMtime;
 };
 
+/**
+ * @brief Validate that a cached modification-time value matches the file's current mtime.
+ *
+ * If `cachedMtime` is zero the check is skipped. If the file's timestamp cannot be read
+ * (e.g., path does not exist or stat fails) the check is skipped. Otherwise the stored
+ * `cachedMtime` is compared bit-for-bit against the file's current `last_write_time`.
+ *
+ * @param path Filesystem path of the cached file to verify.
+ * @param cachedMtime Stored modification-time value (as the raw `time_since_epoch().count()` bits); `0` means unknown.
+ * @return bool `true` if the check is skipped or the stored timestamp exactly equals the file's current timestamp, `false` if the stored timestamp is known and does not match the file's timestamp.
+ */
 bool verifyCacheEntryMtime(const std::string& path, uint64_t cachedMtime) {
     if (cachedMtime == 0) return true;  // Unknown mtime, skip check
     std::error_code ec;
@@ -27,6 +38,15 @@ bool verifyCacheEntryMtime(const std::string& path, uint64_t cachedMtime) {
     return currentMtimeBits == cachedMtime;
 }
 
+/**
+ * @brief Test executable that verifies plugin cache mtime integrity (RTM-006).
+ *
+ * Runs two proof-style checks: a static cache-format/version assertion and a set of
+ * runtime mtime validation scenarios that exercise the verifier's handling of
+ * matching mtimes, updated files, unknown cached mtimes (0), and non-existent files.
+ *
+ * @return int Exit status: `0` if all checks pass, `1` if any check fails.
+ */
 int main() {
     std::cout << "=== RTM-006: Plugin cache mtime integrity — proof of fix ===" << std::endl;
 

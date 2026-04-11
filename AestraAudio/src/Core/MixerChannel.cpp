@@ -172,6 +172,14 @@ void MixerChannel::setSendPan(int index, float pan) {
     }
 }
 
+/**
+ * @brief Set the destination channel ID for a send at the given index.
+ *
+ * Updates the send's target channel identifier to `destId`. If `index` is out of range, no action is taken.
+ *
+ * @param index Zero-based index of the send to modify.
+ * @param destId Target channel identifier to route the send to.
+ */
 void MixerChannel::setSendDestination(int index, uint32_t destId) {
     std::lock_guard<std::mutex> lock(m_sendMutex);
     if (index >= 0 && index < static_cast<int>(m_sends.size())) {
@@ -179,6 +187,14 @@ void MixerChannel::setSendDestination(int index, uint32_t destId) {
     }
 }
 
+/**
+ * @brief Set whether a send at the given index is post-fader.
+ *
+ * Updates the specified send's post-fader flag in a thread-safe manner. If the index is out of range, no change is made.
+ *
+ * @param index Zero-based send index to modify.
+ * @param postFader `true` to make the send post-fader, `false` to make it pre-fader.
+ */
 void MixerChannel::setSendPostFader(int index, bool postFader) {
     std::lock_guard<std::mutex> lock(m_sendMutex);
     if (index >= 0 && index < static_cast<int>(m_sends.size())) {
@@ -186,6 +202,16 @@ void MixerChannel::setSendPostFader(int index, bool postFader) {
     }
 }
 
+/**
+ * @brief Mark a send to route only as a sidechain or restore normal routing.
+ *
+ * Updates the specified send's sidechain-only flag; if set to `true` the send
+ * will be treated as sidechain-only, if `false` it will participate in normal routing.
+ * The operation is thread-safe and does nothing if `index` is out of range.
+ *
+ * @param index Zero-based index of the send to modify.
+ * @param sidechainOnly `true` to make the send sidechain-only, `false` to disable sidechain-only.
+ */
 void MixerChannel::setSendSidechainOnly(int index, bool sidechainOnly) {
     std::lock_guard<std::mutex> lock(m_sendMutex);
     if (index >= 0 && index < static_cast<int>(m_sends.size())) {

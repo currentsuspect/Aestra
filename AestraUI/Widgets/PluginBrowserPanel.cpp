@@ -559,6 +559,14 @@ EffectChainRack::EffectChainRack() {
     m_bypassOverride.fill(-1);
 }
 
+/**
+ * @brief Renders the effect chain rack, its slots, and an active drag ghost.
+ *
+ * Draws the rack background and borders, enables clipping to the rack bounds,
+ * renders each slot with vertical offset driven by the current scroll position,
+ * and clears the clip. If a slot is being reordered, renders a visual ghost of
+ * the dragged slot at the current mouse Y position.
+ */
 void EffectChainRack::onRender(NUIRenderer& renderer) {
     auto bounds = getBounds();
     
@@ -586,6 +594,20 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
     
 }
 
+/**
+ * @brief Render a single effect chain slot row at the given vertical position.
+ *
+ * Draws the slot background, borders and subtle inner stroke; renders a left-side
+ * index chip, an empty-slot hint or populated plugin name/status, a dry/wet
+ * arc-style knob, and a bypass status indicator. Visual states include hover,
+ * bypassed, pending removal, and a faint appearance for the slot currently being
+ * dragged for reorder.
+ *
+ * @param renderer Renderer used to draw the slot.
+ * @param index Zero-based slot index within the rack.
+ * @param yOffset Top Y coordinate (in pixels) where the slot should be drawn relative
+ *                to the rack's origin.
+ */
 void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset) {
     NUIRect slotRect = slotRectForTop(yOffset);
     
@@ -708,16 +730,40 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     }
 }
 
+/**
+ * @brief Compute the bounding rectangle for a slot using its top Y coordinate.
+ *
+ * @param slotY Top Y coordinate of the slot in the rack's coordinate space.
+ * @return NUIRect Rectangle representing the slot's position and size within the rack,
+ *         accounting for the horizontal inset and the fixed slot height. 
+ */
 NUIRect EffectChainRack::slotRectForTop(float slotY) const {
     auto bounds = getBounds();
     return {bounds.x + 8.0f, slotY, bounds.width - 16.0f, SLOT_HEIGHT - 6.0f};
 }
 
+/**
+ * @brief Compute the rectangle for a slot by index, accounting for rack padding and current scroll offset.
+ *
+ * @param index Zero-based slot index.
+ * @return NUIRect Rectangle (in rack coordinates) corresponding to the slot's area for the given index.
+ */
 NUIRect EffectChainRack::slotRectForIndex(int index) const {
     auto bounds = getBounds();
     return slotRectForTop(bounds.y + 8.0f + index * SLOT_HEIGHT - m_scrollOffset);
 }
 
+/**
+ * @brief Handle mouse interactions for the effect chain rack.
+ *
+ * Processes presses, releases, moves, drags, wheel scrolling, knob adjustments,
+ * slot bypass toggles, slot reordering (drag & drop), double-click actions,
+ * and right-click context menu creation while updating hover/drag state and
+ * invoking the associated callbacks.
+ *
+ * @param event Mouse event to handle.
+ * @return true if the rack consumed the event, false otherwise.
+ */
 bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
     if (event.type == NUIMouseEventType::Down) {
          char logBuf[128];

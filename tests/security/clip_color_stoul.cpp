@@ -10,7 +10,15 @@
 #include <cstdint>
 #include <stdexcept>
 
-// Reproduce the FIXED clip color parsing logic from ProjectSerializer.cpp:691
+/**
+ * @brief Attempts to parse a decimal numeric color string into a 32-bit color value.
+ *
+ * Parses the input decimal string and stores the value cast to uint32_t in result.
+ *
+ * @param colorStr Decimal numeric color string to parse.
+ * @param[out] result Parsed 32-bit color on success; set to 0xFFFFFFFF on parse failure.
+ * @return true if parsing succeeded and result contains the parsed value, false if parsing failed and result was set to 0xFFFFFFFF.
+ */
 bool fixedClipColorParse(const std::string& colorStr, uint32_t& result) {
     try {
         result = static_cast<uint32_t>(std::stoul(colorStr));
@@ -21,6 +29,15 @@ bool fixedClipColorParse(const std::string& colorStr, uint32_t& result) {
     }
 }
 
+/**
+ * @brief Execute a small test program that verifies guarded clip-color parsing and reports success.
+ *
+ * Runs a set of invalid and edge-case input strings through fixedClipColorParse to ensure parsing failures
+ * are handled without crashing, and performs a regression check that a known valid decimal color string
+ * ("4278190335") parses to 0xFF0000FF.
+ *
+ * @return int 0 when all invalid inputs are handled gracefully and the regression check passes, 1 otherwise.
+ */
 int main() {
     std::cout << "=== RTM-009: Clip color stoul crash — proof of fix ===" << std::endl;
 

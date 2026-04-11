@@ -13,6 +13,14 @@ namespace fs = std::filesystem;
 using Aestra::Audio::Plugins::SamplerPlugin;
 
 namespace {
+/**
+ * @brief Create or overwrite a minimal valid WAV file at the given path.
+ *
+ * Writes a tiny RIFF/WAVE file (PCM, mono, 16-bit, 44.1 kHz) containing two silent samples.
+ * The function does not perform error handling or validate the output stream state.
+ *
+ * @param path Filesystem path where the WAV will be created or overwritten.
+ */
 void writeTinyWav(const fs::path& path) {
     std::ofstream out(path, std::ios::binary);
     const uint32_t fileSize = 36u + 4u;
@@ -42,13 +50,29 @@ void writeTinyWav(const fs::path& path) {
     out.write(reinterpret_cast<const char*>(samples), sizeof(samples));
 }
 
+/**
+ * @brief Create a JSON state payload containing fixed parameters and the provided sample path.
+ *
+ * @param samplePath Path string to set as the JSON `samplePath` field.
+ * @return std::vector<uint8_t> Byte sequence of the JSON string (UTF-8) representing:
+ *         {"params":[0.01,0.1,1.0,0.1,0.5],"samplePath":"<samplePath>"}
+ */
 std::vector<uint8_t> makeState(const std::string& samplePath) {
     const std::string json = "{"
                              "\"params\":[0.01,0.1,1.0,0.1,0.5],"
                              "\"samplePath\":\"" + samplePath + "\"}";
     return std::vector<uint8_t>(json.begin(), json.end());
 }
-} // namespace
+} /**
+ * @brief Security regression test for SamplerPlugin::loadState() path traversal handling.
+ *
+ * Creates a temporary project tree with a legitimate sample file, initializes a SamplerPlugin,
+ * verifies that an in-project relative sample path can be loaded and is preserved by saveState(),
+ * and then asserts that various path-traversal and absolute-path inputs are rejected.
+ *
+ * @return int Returns 0 if the plugin accepts the local sample path and blocks all traversal/escape paths;
+ * returns 1 if the legitimate path fails to load/retain or if any traversal path is accepted.
+ */
 
 int main() {
     std::cout << "=== SEC-004: SamplerPlugin path traversal rejection ===" << std::endl;

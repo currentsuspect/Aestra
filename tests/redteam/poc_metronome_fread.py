@@ -18,12 +18,12 @@ import os
 
 def create_truncated_wav(output_path):
     """
-    Create a WAV file with a header claiming more samples than the file contains.
-
-    Format: 16-bit PCM, mono, 44100 Hz
-    Header claims 1000 samples (2000 bytes of audio data)
-    File contains only 100 bytes of audio data (50 samples)
-    The remaining 950 samples (1900 bytes) are uninitialized.
+    Create a deliberately malformed WAV file whose header advertises more audio data than is actually written.
+    
+    This writes a RIFF/WAVE file containing 16-bit PCM, mono, 44100 Hz audio where the `data` chunk claims 1000 samples (2000 bytes) but the file contains only 50 samples (100 bytes). The discrepancy is intended to reproduce an unchecked fread/uninitialized-memory condition in WAV parsers that allocate buffers based on the header and read the claimed byte count without validating the actual file length.
+    
+    Parameters:
+        output_path (str): Filesystem path where the WAV file will be created. Parent directories will be created if needed.
     """
     os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True)
 

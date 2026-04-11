@@ -8,7 +8,15 @@
 #include <set>
 #include <functional>
 
-// Reproduce isTrustedPath from PluginScanner.cpp
+/**
+ * @brief Checks whether a plugin file path is considered trusted based on platform-specific allowlisted directories.
+ *
+ * The path is normalized before comparison. A path is trusted if it begins with a known system plugin directory
+ * for the current platform (Linux, Windows, or macOS).
+ *
+ * @param path Filesystem path to the plugin file to check.
+ * @return `true` if the normalized path begins with one of the platform-specific trusted plugin directories, `false` otherwise.
+ */
 bool isTrustedPath(const std::filesystem::path& path) {
     std::string p = path.lexically_normal().string();
 
@@ -35,6 +43,18 @@ bool isTrustedPath(const std::filesystem::path& path) {
     return false;
 }
 
+/**
+ * @brief Runs allowlist tests for plugin trusted paths and simulates a first-load warning callback.
+ *
+ * Executes a set of deterministic test cases that verify whether various platform-specific
+ * plugin paths are considered trusted by isTrustedPath(), prints per-case PASS/FAIL results,
+ * and demonstrates a non-interactive simulation of a first-load warning callback that would
+ * prompt the user for untrusted plugins while using a seen-plugins set to avoid repeated prompts.
+ *
+ * The function prints diagnostic output to stdout and returns an exit code indicating overall success.
+ *
+ * @return int 0 if all allowlist tests pass, 1 otherwise.
+ */
 int main() {
     std::cout << "=== RTM-005: Plugin trusted path allowlist — proof of fix ===" << std::endl;
 

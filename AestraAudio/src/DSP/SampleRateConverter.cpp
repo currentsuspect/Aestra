@@ -23,6 +23,15 @@ struct FilterCache {
     std::map<SRCQuality, std::weak_ptr<const PolyphaseFilterBank>> entries;
 };
 
+/**
+ * @brief Destroys a heap-allocated PolyphaseFilterBank and releases its memory.
+ *
+ * Calls the object's destructor if `bank` is non-null, releases any allocator-specific
+ * memory reserved for the filter bank via AESTRA_MEMORY_FREE(sizeof(PolyphaseFilterBank)),
+ * and then deallocates the raw pointer with ::operator delete.
+ *
+ * @param bank Pointer to the PolyphaseFilterBank to destroy; if null, the function does nothing.
+ */
 void destroySharedFilterBank(PolyphaseFilterBank* bank) {
     if (!bank) {
         return;
@@ -32,11 +41,29 @@ void destroySharedFilterBank(PolyphaseFilterBank* bank) {
     ::operator delete(bank);
 }
 
+/**
+ * @brief Returns the process-wide shared filter cache instance.
+ *
+ * Provides a single function-local static FilterCache used to store and
+ * reuse generated polyphase filter banks across the process.
+ *
+ * @return FilterCache& Reference to the shared, long-lived FilterCache instance.
+ */
 FilterCache& getFilterCache() {
     static FilterCache cache;
     return cache;
 }
-} // namespace
+} /**
+ * @brief Retrieve or create a shared polyphase filter bank for the given SRC quality.
+ *
+ * Obtains a process-wide cached filter bank for the specified quality in a
+ * thread-safe manner; if no valid entry exists, allocates and constructs a
+ * new filter bank, generates its coefficients, stores it in the cache, and
+ * returns a shared ownership handle.
+ *
+ * @param quality The desired SRCQuality used to select or build the filter bank.
+ * @return std::shared_ptr<const PolyphaseFilterBank> Shared pointer owning the filter bank for `quality`; the pointer will be non-null and may be a newly created or previously cached instance.
+ */
 
 std::shared_ptr<const PolyphaseFilterBank> SampleRateConverter::getSharedFilterBank(SRCQuality quality) {
     auto& cache = getFilterCache();

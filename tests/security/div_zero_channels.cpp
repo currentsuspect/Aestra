@@ -15,6 +15,15 @@ using Aestra::Audio::ClipSourceID;
 using Aestra::Audio::TrackManager;
 
 namespace {
+/**
+ * @brief Creates or overwrites a minimal WAV file at the given path that contains a malformed header with `numChannels == 0`.
+ *
+ * The written file contains a RIFF/WAVE container with a 16-byte `fmt ` chunk and a `data` chunk containing 8 zeroed bytes.
+ * The `fmt ` chunk fields are: `audioFormat = 1` (PCM), `numChannels = 0`, `sampleRate = 44100`, `byteRate = 0`,
+ * `blockAlign = 0`, and `bitsPerSample = 16`.
+ *
+ * @param path Filesystem path where the WAV file will be created or overwritten.
+ */
 void writeZeroChannelWav(const fs::path& path) {
     std::ofstream out(path, std::ios::binary);
     const uint32_t fileSize = 36u + 8u;
@@ -44,6 +53,15 @@ void writeZeroChannelWav(const fs::path& path) {
     out.write(reinterpret_cast<const char*>(data), sizeof(data));
 }
 
+/**
+ * @brief Constructs a minimal project JSON that references a WAV file.
+ *
+ * The JSON contains fixed project fields (version 1, tempo 120.0, playhead 0.0),
+ * a single source entry with `id` 1 and the provided path, and an empty `lanes` array.
+ *
+ * @param wavPath Path to the WAV file to embed in the source entry.
+ * @return std::string JSON text representing the minimal project.
+ */
 std::string buildProjectJson(const std::string& wavPath) {
     return "{\n"
            "  \"version\": 1,\n"
@@ -58,7 +76,18 @@ std::string buildProjectJson(const std::string& wavPath) {
            "  \"lanes\": []\n"
            "}\n";
 }
-} // namespace
+} /**
+ * @brief Run the SEC-003 regression test that checks handling of WAV headers with zero channels.
+ *
+ * Executes a standalone test which writes a malformed WAV file declaring `numChannels == 0`,
+ * builds a minimal project referencing that file, invokes `ProjectSerializer::load`, and
+ * verifies the loader does not throw, returns a successful result, and produces a decoded
+ * source that falls back to a single channel (mono).
+ *
+ * @return int `0` if the test passes (loader succeeds and source falls back to 1 channel),
+ * non-zero if the load throws, returns an error, or the decoded output is missing or has an
+ * unexpected channel count.
+ */
 
 int main() {
     std::cout << "=== SEC-003: ProjectSerializer zero-channel WAV handling ===" << std::endl;

@@ -19,6 +19,15 @@ UIMixerHeader::UIMixerHeader()
     cacheThemeColors();
 }
 
+/**
+ * @brief Cache theme-derived colors into the header's member color fields.
+ *
+ * Retrieves color values from the global theme and stores them into the instance members:
+ * - m_text        <- theme key "textPrimary"
+ * - m_textSecondary <- theme key "textSecondary"
+ * - m_selectedText  <- theme key "textPrimary"
+ * - m_selectedBg    <- theme key "accentPrimary" with alpha set to 0.13f
+ */
 void UIMixerHeader::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
@@ -28,6 +37,14 @@ void UIMixerHeader::cacheThemeColors()
     m_selectedBg = theme.getColor("accentPrimary").withAlpha(0.13f);
 }
 
+/**
+ * @brief Create an NUIColor from a 32-bit packed ARGB value.
+ *
+ * @param argb 32-bit integer in ARGB order where the highest byte is alpha,
+ *             followed by red, green, and blue (0xAARRGGBB).
+ * @return NUIColor Color with red, green, blue, and alpha channels normalized
+ *         to the range [0.0, 1.0] (returned as {r, g, b, a}).
+ */
 NUIColor UIMixerHeader::colorFromARGB(uint32_t argb)
 {
     const float a = ((argb >> 24) & 0xFF) / 255.0f;
@@ -72,6 +89,16 @@ void UIMixerHeader::setIsMaster(bool isMaster)
     repaint();
 }
 
+/**
+ * @brief Renders the mixer header widget into the provided renderer.
+ *
+ * Draws an optional rounded selection background, a full-width top color bar (uses track color
+ * or the theme primary color when this is a master with no track color), and a vertically centered
+ * title (track name) with an optional subtitle (route). Font sizes, vertical spacing, and
+ * color/opacity for the subtitle differ between master and non-master modes and change when selected.
+ *
+ * @param renderer Rendering backend used to draw rects and centered text.
+ */
 void UIMixerHeader::onRender(NUIRenderer& renderer)
 {
     auto bounds = getBounds();

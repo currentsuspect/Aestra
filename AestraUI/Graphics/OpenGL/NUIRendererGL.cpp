@@ -788,6 +788,19 @@ void NUIRendererGL::drawLine(const NUIPoint& start, const NUIPoint& end, float t
     addQuadIndices(base + 2, base + 3, base + 6, base + 7);
 }
 
+/**
+ * @brief Renders a stroked polyline with anti-aliased edges and mitered joins.
+ *
+ * Draws a connected series of line segments defined by an array of points, using a central
+ * stroke of the given thickness and a soft feathered edge for anti-aliasing. For two-point
+ * inputs this delegates to the single-segment line routine. If a texture batch is active it
+ * is flushed before emitting geometry so the polyline is drawn as non-textured geometry.
+ *
+ * @param points Pointer to an array of ordered points defining the polyline.
+ * @param count Number of points in the array; no geometry is produced when less than 2.
+ * @param thickness Stroke thickness in pixels.
+ * @param color RGBA color used for the stroke (edge feathering fades to transparent).
+ */
 void NUIRendererGL::drawPolyline(const NUIPoint* points, int count, float thickness, const NUIColor& color) {
     ensureBasicPrimitive();
 

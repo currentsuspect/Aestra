@@ -75,6 +75,15 @@ AestraContent::~AestraContent() {
     }
 }
 
+/**
+ * @brief Constructs the AestraContent root component and initializes UI, audio, and controller subsystems.
+ *
+ * Initializes workspace and overlay layers; creates and wires the plugin controller, TrackManager,
+ * TrackManagerUI (with loop, selection, audition and pattern callbacks), transport bar (play/pause/stop/record/metronome/count-in handlers),
+ * file and plugin browsers, file preview panel, pattern browser, overlay panels (mixer, piano roll, sequencer/Arsenal) and their drag/maximize/close handlers,
+ * compact audio visualizers, and the preview engine. Also configures plugin scan/load flows, audition bounce-and-queue behavior,
+ * demo track population, and final view state synchronization.
+ */
 AestraContent::AestraContent() {
     // Create layers
     m_workspaceLayer = std::make_shared<AestraUI::NUIComponent>();

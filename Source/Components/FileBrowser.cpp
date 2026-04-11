@@ -38,6 +38,14 @@ constexpr float BROWSER_BREADCRUMB_ROW_H = 32.0f;
 constexpr float BROWSER_SEARCH_ROW_H = 38.0f;
 constexpr float BROWSER_ROW_SPACING = 8.0f;
 
+/**
+ * @brief Finds the top-most ancestor of a UI component.
+ *
+ * Walks parent pointers until a component with no parent is reached.
+ *
+ * @param component The starting component (may be nullptr).
+ * @return A pointer to the root ancestor component, the original component if it has no parent, or `nullptr` if `component` is `nullptr`.
+ */
 AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* component) {
     AestraUI::NUIComponent* root = component;
     while (root && root->getParent()) {
@@ -749,7 +757,16 @@ void FileBrowser::processScanResults() {
 
 // =============================================================================
 // SECTION: Rendering with FBO Caching
-// =============================================================================
+/**
+ * @brief Draws the file browser's static user-interface into the given bounds.
+ *
+ * Renders the background, top rounded / bottom square borders, toolbar (including search box),
+ * the virtualized file list content, and the scrollbar. Also updates layout-dependent internal
+ * state used by other methods (for example, effectiveWidth_ and scrollbarTrackHeight_).
+ *
+ * @param renderer Renderer used for drawing primitives and text.
+ * @param bounds Area within which the file browser should be rendered.
+ */
 
 void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& themeManager = NUIThemeManager::getInstance();
@@ -939,6 +956,16 @@ void FileBrowser::onUpdate(double deltaTime) {
 }
 }
 
+/**
+ * @brief Recomputes the FileBrowser layout for a new component size.
+ *
+ * Updates the search input bounds, itemHeight and visible item count, scrollbar
+ * dimensions and track height, breadcrumb layout and current scroll position,
+ * then invalidates per-item caches and the render cache so the view is re-laid out.
+ *
+ * @param width New component width in pixels.
+ * @param height New component height in pixels.
+ */
 void FileBrowser::onResize(int width, int height) {
     NUIComponent::onResize(width, height);
 
@@ -1019,7 +1046,24 @@ void FileBrowser::invalidateAllItemCaches() {
 
 // =============================================================================
 // SECTION: Event Handling
-// =============================================================================
+/**
+ * @brief Handle mouse input for the file browser, including focus, hover, selection,
+ * drag-and-drop, context menus, toolbar controls, breadcrumb interaction, and scrolling.
+ *
+ * Processes clicks, releases, movement, and wheel events to update UI state:
+ * - Claims or clears keyboard focus and forwards events to the search input when appropriate.
+ * - Updates hover state and shows/hides truncated-item tooltips.
+ * - Manages selection (single, Ctrl-toggle, Shift-range), double-click behavior, and notifies
+ *   selection/open/preview callbacks when applicable.
+ * - Initiates and updates drag-and-drop operations for allowed files.
+ * - Displays and hides popup/context menus and handles toolbar button activations
+ *   (refresh, favorites, tags, sort).
+ * - Handles breadcrumb hover/clicks and shows hidden-crumb menus.
+ * - Handles scrollbar interaction and mouse-wheel scrolling when the cursor is over the browser.
+ *
+ * @param event The mouse event to handle.
+ * @return true if the event was consumed by the file browser, false otherwise.
+ */
 
 bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     lastMousePos_ = event.position;
@@ -2188,6 +2232,16 @@ std::shared_ptr<NUIIcon> FileBrowser::getIconForFileType(FileType type) {
     }
 }
 
+/**
+ * @brief Draws the file list viewport (background, rows, icons, names, sizes, and tree guides).
+ *
+ * Renders the visible portion of the current file view into the given renderer, including list background,
+ * per-row selection/hover visuals, tree indentation and guides, expanders for directories, file type icons,
+ * truncated display names, and optional size metadata. The function uses virtualization to draw only
+ * visible rows, applies clipping to the list area, and shows a centered "Loading..." placeholder when
+ * the root directory scan is in progress and no items are available. Cached per-item display name and
+ * size strings are read and populated when stale to reduce repeated measurement work.
+ */
 void FileBrowser::renderFileList(NUIRenderer& renderer) {
     // Get component dimensions from theme ONCE outside the loop
     auto& themeManager = NUIThemeManager::getInstance();
@@ -2454,6 +2508,18 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     renderer.clearClipRect();
 }
 
+/**
+ * @brief Renders the file browser's top toolbar including buttons and breadcrumbs.
+ *
+ * Draws the toolbar background and separators, lays out and renders the left action
+ * cluster (refresh, favorites), the right-side controls (sort, tags), and the
+ * interactive breadcrumb row in the middle. Updates bounds members used for hit-testing
+ * and interaction (sortButtonBounds_, tagsButtonBounds_, favoritesButtonBounds_,
+ * refreshButtonBounds_, breadcrumbBounds_) and renders associated icons and chevrons
+ * according to current hover/active state.
+ *
+ * @param renderer Rendering context used to draw UI primitives and text.
+ */
 void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     // Get layout dimensions from theme
     auto& themeManager = NUIThemeManager::getInstance();
@@ -2913,6 +2979,13 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 	    invalidateCache();
 	}
 
+/**
+ * @brief Ensures the currently selected list item is visible by adjusting the scroll offset.
+ *
+ * Adjusts internal scroll state so the selected row is brought into the visible list viewport if it lies
+ * above or below the currently visible area. After adjusting, the scroll offset is clamped to valid bounds,
+ * the target scroll offset and scroll velocity are updated, and the scrollbar visibility/position is refreshed.
+ */
 void FileBrowser::updateScrollPosition() {
     if (selectedIndex_ < 0) return;
 
@@ -2956,6 +3029,15 @@ void FileBrowser::updateScrollPosition() {
     updateScrollbarVisibility();
 }
 
+/**
+ * @brief Renders the file list's vertical scrollbar (track, thumb, highlights, and markers).
+ *
+ * Uses the active view and stored scrollbar metrics to compute visibility and layout, applies
+ * theme colors and radii, and respects hover/drag state and scrollbar opacity. Returns early
+ * when no scrollbar is needed or opacity is effectively zero.
+ *
+ * @param renderer Renderer used to draw the scrollbar primitives.
+ */
 void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
     auto& themeManager = NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
@@ -3094,6 +3176,17 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
         thumbBase.lightened(0.1f).withAlpha(std::clamp(thumbBase.a * 0.8f, 0.0f, 1.0f)));
 }
 
+/**
+ * @brief Handle mouse events for the file list scrollbar and perform scrolling interactions.
+ *
+ * Begins a thumb drag when the left button is pressed on the thumb, jumps the scroll
+ * position when the left button is pressed on the track, updates the scroll offset
+ * continuously while dragging, reveals the scrollbar on hover, and stops dragging on
+ * left-button release.
+ *
+ * @param event Mouse event to handle.
+ * @return bool `true` if the event was handled (consumed) by the scrollbar, `false` otherwise.
+ */
 bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
     // Get component dimensions from theme
     auto& themeManager = NUIThemeManager::getInstance();

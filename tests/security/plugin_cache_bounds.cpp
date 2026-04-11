@@ -14,7 +14,12 @@
 constexpr uint32_t kMaxCachedPlugins = 10000;
 constexpr uint32_t kMaxStringLen = 65536;
 
-// Reproduce the FIXED cache count validation
+/**
+ * @brief Validates that a plugin count does not exceed the configured maximum.
+ *
+ * @param count Number of cached plugins to validate.
+ * @return true if count is less than or equal to kMaxCachedPlugins, false if it exceeds the limit.
+ */
 bool validatePluginCount(uint32_t count) {
     if (count > kMaxCachedPlugins) {
         return false;
@@ -22,7 +27,19 @@ bool validatePluginCount(uint32_t count) {
     return true;
 }
 
-// Reproduce the FIXED string length validation
+/**
+ * @brief Validates a requested string length and, if valid, reads that many bytes into result.
+ *
+ * Ensures `len` does not exceed `kMaxStringLen` and that `len` bytes can be read from
+ * `data` without exceeding `dataLen`. When both checks pass, `result` is assigned the
+ * `len` bytes from `data`.
+ *
+ * @param len Number of bytes to read from `data`.
+ * @param data Pointer to the input buffer.
+ * @param dataLen Size of the input buffer in bytes.
+ * @param[out] result String that will be populated with the read bytes on success.
+ * @return bool `true` if the read succeeded and `result` was assigned, `false` otherwise.
+ */
 bool validateAndReadString(uint32_t len, const char* data, size_t dataLen, std::string& result) {
     if (len > kMaxStringLen) {
         return false;
@@ -34,6 +51,16 @@ bool validateAndReadString(uint32_t len, const char* data, size_t dataLen, std::
     return true;
 }
 
+/**
+ * @brief Runs regression tests that verify the plugin cache loader enforces upper bounds.
+ *
+ * Executes three test groups that validate: plugin count bounds, string length bounds
+ * (including buffer-length checks), and realistic attack vectors using oversized counts
+ * and strings. Each test prints PASS/FAIL lines summarizing results and the program
+ * exits with a status reflecting overall success.
+ *
+ * @return int 0 if all tests pass and bounds validation is verified, 1 otherwise.
+ */
 int main() {
     std::cout << "=== RTM-010: Plugin cache unbounded allocation — proof of fix ===" << std::endl;
 

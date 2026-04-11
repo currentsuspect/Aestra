@@ -72,6 +72,16 @@ void NUIScrollbar::onRender(NUIRenderer& renderer)
     drawArrows(renderer);
 }
 
+/**
+ * @brief Advances per-frame scrollbar state: progresses scroll animations and auto-hide timer.
+ *
+ * Advances any active scroll animation (when not dragging) using an ease-out interpolation, updates
+ * the current range and invokes scroll callbacks when the animated position changes or completes.
+ * Also decrements the auto-hide timer when enabled and not hovered/dragging, setting the component
+ * to the auto-hidden state when the timer elapses. Finally delegates to the base component update.
+ *
+ * @param deltaTime Time elapsed since the last update, in seconds.
+ */
 void NUIScrollbar::onUpdate(double deltaTime)
 {
     if (isAnimating_ && !isDragging_) {

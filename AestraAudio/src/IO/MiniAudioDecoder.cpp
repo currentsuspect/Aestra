@@ -65,6 +65,19 @@ void downmixToStereoImpl(const std::vector<float>& input, uint32_t inChannels, s
     }
 }
 
+/**
+ * @brief Loads a WAV file and decodes its audio samples into a float buffer.
+ *
+ * Decodes PCM (format 1) or IEEE float (format 3) WAV data with 16-, 24-, or 32-bit sample depths
+ * into normalized 32-bit floats (interleaved channels, samples in range approximately [-1.0, 1.0]).
+ *
+ * @param filePath Path to the WAV file to read.
+ * @param audioData Output buffer that will be filled with decoded interleaved float samples.
+ * @param sampleRate Output sample rate of the decoded audio.
+ * @param numChannels Output number of channels in the decoded audio.
+ * @return true if the file was successfully read and decoded into audioData; false on any error
+ * (invalid file, unsupported format/bit depth, inconsistent chunk sizes, or allocation safety limits).
+ */
 bool loadWav(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate, uint32_t& numChannels) {
     std::ifstream file(makeUnicodePath(filePath), std::ios::binary);
     if (!file)

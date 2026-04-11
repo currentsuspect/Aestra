@@ -285,7 +285,15 @@ std::vector<PluginInfo> PluginScanner::searchPlugins(const std::string& query) c
 
 // ==============================
 // Cache Persistence
-// ==============================
+/**
+ * @brief Writes the current scanned plugin metadata to a binary cache file.
+ *
+ * The cache is written in the v2 serialization format and includes each plugin's
+ * metadata and a cached file modification timestamp used for later integrity verification.
+ *
+ * @param cachePath Filesystem path where the cache will be written.
+ * @return true if the cache was written successfully, `false` on I/O error or other failure.
+ */
 
 bool PluginScanner::saveScanCache(const std::filesystem::path& cachePath) const {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -343,6 +351,17 @@ bool PluginScanner::saveScanCache(const std::filesystem::path& cachePath) const 
     }
 }
 
+/**
+ * @brief Loads a previously saved plugin scan cache and replaces the current scanned plugin list with validated entries.
+ *
+ * Reads and validates a binary cache at the given path, rejects the file if the header or version is invalid,
+ * enforces a maximum plugin count and per-string length cap, and skips entries that fail validation or
+ * whose on-disk modification time differs from the cached timestamp (cache format version 2). Built-in
+ * plugins are merged into the final results before replacing the scanner's stored plugin list.
+ *
+ * @param cachePath Filesystem path to the binary cache to load.
+ * @return true if the cache was successfully loaded and applied (possibly with some entries skipped), false on any validation error, I/O error, or exception.
+ */
 bool PluginScanner::loadScanCache(const std::filesystem::path& cachePath) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -464,7 +483,26 @@ bool PluginScanner::isPluginModified(const std::filesystem::path& pluginPath) co
 
 // ==============================
 // Internal Scanning Methods
-// ==============================
+/**
+ * @brief Recursively scans a directory for VST3 and CLAP plugins and appends discovered plugin metadata to results.
+ *
+ * Scans `dir` recursively (permission-denied entries are skipped), detects plugin files by extension
+ * (".vst3" bundles and ".clap" files), invokes the appropriate per-file scanner, and appends any
+ * discovered PluginInfo entries into `results`. Respects an atomic cancellation flag and returns
+ * early if cancellation is requested. For each discovered plugin the optional `callback` is invoked
+ * with the plugin path, the incremented `currentIndex`, and `totalCount`.
+ *
+ * This function also enforces a first-load policy for untrusted paths: when a plugin path is not
+ * considered trusted, an optional first-load warning callback may be called once per unique path;
+ * if that callback denies loading, the plugin is skipped. After accepting a plugin, its file
+ * modification time is recorded in the scanner's timestamp map.
+ *
+ * @param dir Filesystem directory to scan recursively.
+ * @param results Mutable vector that will be appended with discovered PluginInfo entries.
+ * @param callback Optional progress callback invoked as each plugin file is processed; may be null.
+ * @param currentIndex Reference to the running index of processed plugin files; incremented for each discovery.
+ * @param totalCount Total number of plugin files expected (used for progress reporting).
+ */
 
 void PluginScanner::scanDirectory(const std::filesystem::path& dir, std::vector<PluginInfo>& results,
                                   ScanProgressCallback callback, int& currentIndex, int totalCount) {
@@ -574,6 +612,15 @@ std::vector<PluginInfo> PluginScanner::scanCLAPPlugin(const std::filesystem::pat
 #endif
 }
 
+/**
+ * @brief Counts plugin files with `.vst3` or `.clap` extensions within the configured search paths.
+ *
+ * Traverses each configured search path recursively and increments the count for entries whose
+ * extension is `.vst3` or `.clap`. Non-existent paths are ignored and inaccessible directories
+ * are skipped.
+ *
+ * @return int Number of plugin files found with `.vst3` or `.clap` extensions.
+ */
 int PluginScanner::countPluginFiles() const {
     int count = 0;
 
@@ -604,7 +651,15 @@ int PluginScanner::countPluginFiles() const {
 
 // ==============================
 // Security: Trusted Paths (SEC-RTM-005)
-// ==============================
+/**
+ * @brief Checks whether a filesystem path is considered a trusted system plugin location.
+ *
+ * Normalizes the provided path and tests it against known system directories for VST3 and CLAP
+ * plugins on Linux, Windows, and macOS.
+ *
+ * @param path Filesystem path to evaluate.
+ * @return true if the path is inside a recognized system-wide plugin directory (VST3 or CLAP), false otherwise.
+ */
 
 bool PluginScanner::isTrustedPath(const std::filesystem::path& path) {
     std::string p = path.lexically_normal().string();
@@ -633,6 +688,17 @@ bool PluginScanner::isTrustedPath(const std::filesystem::path& path) {
     return false;
 }
 
+/**
+ * @brief Sets the callback invoked the first time an untrusted plugin path is encountered during scanning.
+ *
+ * The provided callback will be called at most once per unique untrusted plugin path encountered while scanning.
+ * The callback receives the plugin file path and the plugin name; returning `true` permits the plugin to be added,
+ * returning `false` prevents the plugin from being included.
+ *
+ * @param cb Callback with signature `bool(const std::filesystem::path& path, const std::string& name)`.
+ *           Called for untrusted plugin paths to decide whether the scanner should accept the plugin on first load.
+ *
+ */
 void PluginScanner::setFirstLoadWarningCallback(FirstLoadWarningCallback cb) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_firstLoadWarningCb = std::move(cb);

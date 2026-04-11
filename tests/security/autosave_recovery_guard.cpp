@@ -15,6 +15,20 @@
 #include <string>
 #include <filesystem>
 
+/**
+ * @brief Verifies RTM-015 silent autosave fallback by inspecting Source/App/AestraApp.cpp.
+ *
+ * This test executable locates and reads the AestraApp.cpp source file from a set of
+ * repository-relative paths (with a final absolute fallback). If the file cannot be
+ * found or opened the test prints a skip message and exits successfully. When the
+ * source is available, the program checks for evidence that autosave is discarded
+ * (presence of "discard" / "discarding"), that the phrase "falling back to silent load"
+ * is absent, and that a nearby "RecoveryDialog not available" branch contains a
+ * filesystem remove call. It prints PASS/FAIL status lines for each check and a final
+ * verification summary.
+ *
+ * @return int 0 if the verification passes or the test is skipped; 1 if the verification fails.
+ */
 int main() {
     std::cout << "=== RTM-015: Silent autosave fallback — proof of fix ===" << std::endl;
 

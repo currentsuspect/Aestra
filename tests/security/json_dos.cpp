@@ -9,6 +9,16 @@
 #include <iostream>
 #include <string>
 
+/**
+ * @brief Executes the SEC-002 regression test for JSON parser stack exhaustion.
+ *
+ * Generates a JSON string with 50,000 nested array brackets, attempts to parse it
+ * with Aestra::JSON::parse, reports whether the parser rejected the excessive
+ * nesting without crashing, and prints a PASS/FAIL message to stdout.
+ *
+ * @return int Exit status: 0 if the parser rejected the excessively nested input (test pass),
+ * 1 if the parser accepted the excessively nested input (test fail).
+ */
 int main() {
     std::cout << "=== SEC-002: JSON parser stack exhaustion ===" << std::endl;
 

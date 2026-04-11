@@ -41,8 +41,26 @@ private:
 
     bool m_dragging{false};
     bool m_dragLatched{false};
-    NUIPoint m_dragStartPos{};
-    float m_dragStartDb{0.0f};
+    /**
+ * @brief Initial mouse position at the start of a drag operation.
+ *
+ * Recorded when dragging begins and used to measure pointer movement relative to the drag origin.
+ */
+NUIPoint m_dragStartPos{};
+    /**
+ * Cache theme-related colors used by the fader into the component's color members.
+ */
+ 
+/**
+ * Update the cached textual representation of the current dB value and sync the numeric cache used for change detection.
+ */
+ 
+/**
+ * Clamp a dB value to the component's configured range.
+ * @param db Proposed dB value.
+ * @returns The input value constrained to the interval [m_minDb, m_maxDb].
+ */
+float m_dragStartDb{0.0f};
 
     // Cached value string (updated only on value change)
     float m_cachedDbValue{1000.0f};

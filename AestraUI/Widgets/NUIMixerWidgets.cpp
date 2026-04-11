@@ -186,6 +186,18 @@ void InsertSlot::setOnActivate(std::function<void()> callback)
 }
 
 
+/**
+ * @brief Constructs a UIMixerSend and initializes its child controls and interactions.
+ *
+ * Creates and configures the destination selector, level knob, mode (Pre/Post)
+ * and send-type (Audio/SC) segmented controls, and a delete button. Sets the
+ * initial accent color for controls, selects "Post" mode and "Audio" send-type
+ * by default, and initializes the level knob to 0.7. Wires user interactions
+ * so that selection or value changes invoke the corresponding callbacks
+ * (destination change, level change, post-fader change, sidechain-mode change)
+ * and the delete button invokes the delete callback. All created controls are
+ * added as children of this widget.
+ */
 UIMixerSend::UIMixerSend()
     : m_accentColor(NUIThemeManager::getInstance().getColor("accentPrimary"))
 {
@@ -260,6 +272,14 @@ UIMixerSend::UIMixerSend()
     addChild(deleteButton_);
 }
 
+/**
+ * @brief Set the accent color for this send strip and propagate it to child controls.
+ *
+ * Updates the stored accent color, applies it to the destination selector, level knob,
+ * mode segmented control, and send-type segmented control when present, and requests a repaint.
+ *
+ * @param color Accent color to apply to this send and its child widgets.
+ */
 void UIMixerSend::setAccentColor(const NUIColor& color)
 {
     m_accentColor = color;
@@ -278,6 +298,15 @@ void UIMixerSend::setAccentColor(const NUIColor& color)
     repaint();
 }
 
+/**
+ * @brief Render the send strip UI and arrange its child controls.
+ *
+ * Draws the send strip background, accent index chip, kind/mute chip, formatted level text,
+ * section labels, and positions/bounds for the knob, destination selector, segmented controls,
+ * and delete button before rendering child widgets.
+ *
+ * @param renderer Renderer used to draw the UI elements.
+ */
 void UIMixerSend::onRender(NUIRenderer& renderer)
 {
     auto b = getBounds();
@@ -353,6 +382,15 @@ void UIMixerSend::onRender(NUIRenderer& renderer)
     renderChildren(renderer);
 }
 
+/**
+ * @brief Selects the stored destination that matches the given destination id.
+ *
+ * Searches the widget's stored destinations for an entry whose id equals `destId`
+ * and sets the destination selector's selected index to that entry if found.
+ *
+ * @param destId The destination identifier to select.
+ * @param name Unused; provided for API compatibility and ignored by this function.
+ */
 void UIMixerSend::setDestination(uint32_t destId, const std::string& name)
 {
     // Find index for destId
@@ -364,6 +402,13 @@ void UIMixerSend::setDestination(uint32_t destId, const std::string& name)
     }
 }
 
+/**
+ * @brief Sets whether the send is post-fader or pre-fader.
+ *
+ * Updates the internal post-fader flag, synchronizes the mode segmented control selection, and requests a repaint.
+ *
+ * @param postFader true to use post-fader routing, false to use pre-fader routing.
+ */
 void UIMixerSend::setPostFader(bool postFader)
 {
     m_postFader = postFader;
@@ -373,6 +418,14 @@ void UIMixerSend::setPostFader(bool postFader)
     repaint();
 }
 
+/**
+ * @brief Enable or disable sidechain-only send mode for this send strip.
+ *
+ * Updates the internal sidechain-only flag, updates the send-type segmented control
+ * to reflect the new mode, and marks the widget for repaint.
+ *
+ * @param sidechainOnly `true` to set the send to sidechain-only mode, `false` for normal audio send.
+ */
 void UIMixerSend::setSidechainOnly(bool sidechainOnly)
 {
     m_sidechainOnly = sidechainOnly;
@@ -382,6 +435,11 @@ void UIMixerSend::setSidechainOnly(bool sidechainOnly)
     repaint();
 }
 
+/**
+ * @brief Retrieve the currently selected destination identifier.
+ *
+ * @return uint32_t Selected destination ID, or 0 if no valid destination is selected.
+ */
 uint32_t UIMixerSend::getDestinationId() const
 {
     int idx = destSelector_->getSelectedIndex();
@@ -391,21 +449,43 @@ uint32_t UIMixerSend::getDestinationId() const
     return 0; // Default to 0? Or maybe verify valid?
 }
 
+/**
+ * @brief Set the send level as a linear gain.
+ *
+ * Updates the internal level control to the given linear gain value.
+ *
+ * @param level Linear gain where 1.0 is unity (no change) and 0.0 is silence; typically in the range [0.0, 1.0].
+ */
 void UIMixerSend::setLevel(float level)
 {
     levelKnob_->setValue(level);
 }
 
+/**
+ * @brief Sets the callback invoked when the send's post-fader mode changes.
+ *
+ * @param cb Function called with `true` when post-fader is enabled, `false` when post-fader is disabled.
+ */
 void UIMixerSend::setOnPostFaderChanged(std::function<void(bool)> cb)
 {
     m_onPostFaderChanged = std::move(cb);
 }
 
+/**
+ * @brief Set a callback notified when the send's sidechain-only mode changes.
+ *
+ * @param cb Callback invoked with `true` when sidechain-only mode is enabled, `false` when it is disabled.
+ */
 void UIMixerSend::setOnSidechainModeChanged(std::function<void(bool)> cb)
 {
     m_onSidechainModeChanged = std::move(cb);
 }
 
+/**
+ * @brief Retrieves the send's current level.
+ *
+ * @return float Current send level as a linear amplitude (0.0 means silent; typical range 0.0–1.0).
+ */
 float UIMixerSend::getLevel() const
 {
     return levelKnob_->getValue();

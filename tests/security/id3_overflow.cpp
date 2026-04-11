@@ -13,11 +13,27 @@
 #include <vector>
 #include <cstdlib>
 
-// Reproduces the vulnerable logic from MetadataParser.cpp:107-112
+/**
+ * @brief Decode a 4-byte ID3v2 "synchsafe" integer into a 32-bit size value.
+ *
+ * @param data Pointer to the first of four synchsafe bytes; the caller must ensure
+ *             at least 4 readable bytes are available at this address.
+ * @return uint32_t The decoded 32-bit integer representing the synchsafe value.
+ */
 uint32_t readSynchsafeInt(const uint8_t* data) {
     return (data[0] << 21) | (data[1] << 14) | (data[2] << 7) | data[3];
 }
 
+/**
+ * @brief Validate a declared ID3v2 synchsafe tag size from header bytes against a 10 MiB limit and report the result.
+ *
+ * Decodes the 4-byte synchsafe integer at the provided header pointer, prints the declared size, and emits a vulnerability message
+ * if the declared size exceeds 10 * 1024 * 1024 bytes. The function simulates the decision point where an unbounded allocation
+ * would occur in vulnerable code.
+ *
+ * @param header Pointer to the first of 4 bytes containing the ID3v2 synchsafe-encoded tag size.
+ * @return true if the decoded tag size is less than or equal to 10 MiB (accepted), false if it is greater than 10 MiB (rejected).
+ */
 bool vulnerableTagParse(const uint8_t* header) {
     uint32_t tagSize = readSynchsafeInt(header);
     std::cout << "  Declared tag size: " << tagSize << " bytes (" << (tagSize / 1024 / 1024) << " MB)" << std::endl;
@@ -37,6 +53,13 @@ bool vulnerableTagParse(const uint8_t* header) {
     return true;
 }
 
+/**
+ * @brief Execute a security test that supplies a crafted ID3v2 header with the maximum synchsafe tag size to the vulnerable parser and reports whether a size limit is enforced.
+ *
+ * The program constructs an ID3v2 header whose synchsafe size decodes to 268,435,455 bytes, invokes vulnerableTagParse with the size bytes, and prints a PASS message and exits successfully when the oversized declaration is rejected or prints a FAIL message and exits with failure when the parser would accept it.
+ *
+ * @return int 0 when the oversized tag was rejected (test PASS); 1 when the parser would accept the oversized tag (test FAIL).
+ */
 int main() {
     std::cout << "=== SEC-005: Unbounded ID3v2 tag allocation ===" << std::endl;
 

@@ -14,6 +14,12 @@
 
 namespace {
 
+/**
+ * @brief Removes trailing newline and carriage-return characters from a string.
+ *
+ * @param value Input string from which trailing '\n' and '\r' characters will be removed.
+ * @return std::string The input string with all trailing '\n' and '\r' characters removed.
+ */
 std::string trimTrailingNewlines(std::string value) {
     while (!value.empty() && (value.back() == '\n' || value.back() == '\r')) {
         value.pop_back();
@@ -25,6 +31,15 @@ std::string trimTrailingNewlines(std::string value) {
 
 namespace Aestra {
 
+/**
+ * @brief Produce a shell-safe single-quoted string from arbitrary input.
+ *
+ * Wraps the input in single quotes and escapes any embedded single quotes so
+ * the result can be used safely in a POSIX shell command.
+ *
+ * @param input The original string to quote.
+ * @return std::string The input wrapped in single quotes with embedded `'` characters escaped as `'\''`.
+ */
 std::string shellEscape(const std::string& input) {
     std::string escaped = "'";
     for (char c : input) {
@@ -40,6 +55,12 @@ std::string shellEscape(const std::string& input) {
 
 namespace {
 
+/**
+ * @brief Executes a shell command and returns its standard output with trailing newlines removed.
+ *
+ * @param command Shell command to execute.
+ * @return std::string Captured standard output with trailing `\n` and `\r` removed; returns an empty string if the command could not be started or exited with a non-zero status.
+ */
 std::string runDialogCommand(const std::string& command) {
     std::array<char, 512> buffer{};
     std::string output;
@@ -60,7 +81,13 @@ std::string runDialogCommand(const std::string& command) {
     return trimTrailingNewlines(output);
 }
 
-} // namespace
+} /**
+ * @brief Retrieves a monotonic high-resolution time value.
+ *
+ * The value is suitable for measuring elapsed time but is not tied to any wall-clock epoch.
+ *
+ * @return double Time in seconds since an unspecified starting point. 
+ */
 
 double PlatformUtilsLinux::getTime() const {
     return (double)SDL_GetPerformanceCounter() / SDL_GetPerformanceFrequency();

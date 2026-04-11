@@ -7,7 +7,17 @@
 #include <cstring>
 #include <vector>
 
-// Reproduce the fixed parsing logic from MetadataParser.cpp
+/**
+ * @brief Checks whether a Vorbis-comment metadata block contains the minimal required fields.
+ *
+ * Validates that the provided buffer is large enough to hold a 4-byte vendor length, the vendor
+ * string of that length, and a subsequent 4-byte comments-count field without overflowing.
+ *
+ * @param blockData Buffer containing the metadata block bytes.
+ * @param blockSize Number of bytes in blockData to consider.
+ * @return true if the buffer contains a well-formed minimal Vorbis-comment header (vendor length,
+ * vendor string, and space for the comments-count), false otherwise.
+ */
 bool fixedVorbisCommentParse(const std::vector<uint8_t>& blockData, uint32_t blockSize) {
     if (blockSize < 8) return false;
 
@@ -25,6 +35,14 @@ bool fixedVorbisCommentParse(const std::vector<uint8_t>& blockData, uint32_t blo
     return true;  // Would continue parsing comments
 }
 
+/**
+ * @brief Run table-driven tests that validate vendorLen bounds-check behavior for Vorbis comment parsing.
+ *
+ * Executes a suite of test cases covering normal, boundary, and oversized vendorLen values, prints per-test
+ * PASS/FAIL results and a final summary, and returns an exit code based on whether all expectations matched.
+ *
+ * @return int 0 if all tests passed, 1 if any test failed.
+ */
 int main() {
     std::cout << "=== RTM-012: FLAC vendorLen overflow — proof of fix ===" << std::endl;
 

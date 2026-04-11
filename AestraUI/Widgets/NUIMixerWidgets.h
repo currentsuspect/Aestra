@@ -117,7 +117,91 @@ private:
     std::vector<std::pair<uint32_t, std::string>> destinations_;
     bool m_postFader{true};
     bool m_muted{false};
-    bool m_sidechainOnly{false};
+    /**
+ * Construct a MeterStrip.
+ */
+ 
+/**
+ * Construct a ChannelStrip.
+ */
+
+/**
+ * Render the channel strip and its child components.
+ * @param renderer Renderer used to draw the component.
+ */
+
+/**
+ * Get the fader component contained in this channel strip.
+ * @returns Reference to the contained Fader.
+ */
+
+/**
+ * Get the pan knob component contained in this channel strip.
+ * @returns Reference to the contained PanKnob.
+ */
+
+/**
+ * Get the track label component contained in this channel strip.
+ * @returns Reference to the contained TrackLabel.
+ */
+
+/**
+ * Get the mute button contained in this channel strip.
+ * @returns Reference to the contained MuteButton.
+ */
+
+/**
+ * Get the solo button contained in this channel strip.
+ * @returns Reference to the contained SoloButton.
+ */
+
+/**
+ * Get the arm button contained in this channel strip.
+ * @returns Reference to the contained ArmButton.
+ */
+
+/**
+ * Get the meter strip contained in this channel strip.
+ * @returns Reference to the contained MeterStrip.
+ */
+
+/**
+ * Get the list of insert slots for this channel.
+ * @returns Reference to the vector of insert slot shared pointers.
+ */
+
+/**
+ * Get the list of sends for this channel.
+ * @returns Reference to the vector of send shared pointers.
+ */
+
+/**
+ * Add a new insert slot to this channel strip.
+ */
+
+/**
+ * Add a new send to this channel strip.
+ */
+
+/**
+ * Construct a MixerPanel.
+ */
+
+/**
+ * Render the mixer panel and its channel strips.
+ * @param renderer Renderer used to draw the component.
+ */
+
+/**
+ * Add a channel strip to the mixer panel.
+ * @param strip Shared pointer to the ChannelStrip to append.
+ */
+
+/**
+ * Get the channel strips contained in this mixer panel.
+ * @returns Const reference to the vector of channel strip shared pointers.
+ */
+bool m_sidechainOnly{false};
     bool m_modeEditable{true};
     NUIColor m_accentColor;
     

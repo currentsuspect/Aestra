@@ -16,6 +16,15 @@
 #include <thread>
 #include <vector>
 
+/**
+ * Background worker that produces analyzer and spectrum data for the UI.
+ *
+ * Waits for work requests, fills the internal worker output buffers with computed
+ * spectrum and analyzer-window data, and signals when results are ready for the
+ * main thread to consume. Coordinates request/result matching using the analyzer
+ * serial counters and uses the spectrum mutex and condition variable for
+ * synchronization and lifecycle control.
+ */
 namespace AestraUI {
 
 class AestraEQEditor : public NUIComponent {

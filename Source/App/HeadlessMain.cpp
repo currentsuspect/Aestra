@@ -582,6 +582,19 @@ static void printHelp() {
         << "  --min-peak <v>              Fail if max peak < v\n";
 }
 
+/**
+ * Parse command-line arguments and environment overrides into a populated Cli structure.
+ *
+ * Recognizes scenario-mode and legacy flags, applies a default scenario-file path when not
+ * provided (Tests/headless_scenarios.json under the current working directory if present),
+ * and applies the AESTRA_MIN_PEAK environment variable when valid. If `--help` or `-h` is
+ * passed the program prints help and exits.
+ *
+ * @param argc Argument count from main().
+ * @param argv Argument vector from main().
+ * @return Cli Populated CLI configuration describing scenario-file mode, legacy mode,
+ *             and any reporting/output options.
+ */
 static Cli parseCli(int argc, char** argv) {
     Cli cli;
 
@@ -656,7 +669,13 @@ static int runLegacyProjectOnce(const Cli& cli) {
     return m.ok ? 0 : 1;
 }
 
-} // namespace
+} /**
+ * @brief Command-line entry point that runs headless audio test scenarios or a legacy single-project run and writes a JSON report.
+ *
+ * The program operates in two modes: scenario-file mode (loads scenarios from a JSON file, optionally filters/listing, executes selected scenarios, and emits a JSON report) or legacy mode (runs a single project defined by CLI flags). Human-readable summaries may be printed to stderr when requested.
+ *
+ * @return int Exit code: `0` on success (all executed scenarios passed or listing succeeded), `1` if any executed scenario failed, `2` for usage, configuration, parsing, or I/O errors. 
+ */
 
 int main(int argc, char** argv) {
     const Cli cli = parseCli(argc, argv);

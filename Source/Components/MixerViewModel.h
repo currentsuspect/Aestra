@@ -36,7 +36,11 @@ struct ChannelViewModel {
 
     std::string name;                    ///< Display name
     uint32_t trackColor{0xFF808080};     ///< Track color (ARGB)
-    std::string routeName{"Master"};     ///< Output routing name
+    std::string routeName{"Master"};     /**
+ * Main output destination ID for this channel.
+ *
+ * 0 selects the Master output; other values are IDs of routing destinations (tracks/outputs).
+ */
     uint32_t mainOutputId{0};            ///< 0 = Master, otherwise channel ID
     bool masterSendEnabled{true};        ///< True when audible main path reaches master directly
 
@@ -92,7 +96,13 @@ struct ChannelViewModel {
         float gain{1.0f};           // Linear gain
         float pan{0.0f};
         bool postFader{true};
-        bool muted{false};
+        /**
+ * Reset all meter-related fields to a silent initial state.
+ *
+ * Sets envelopes, smoothed peaks, and peak-hold values to MixerMath::DB_MIN,
+ * resets peak-hold timers to 0.0, and clears clip latches.
+ */
+bool muted{false};
         bool sidechainOnly{false};
     };
     std::vector<SendViewModel> sends;

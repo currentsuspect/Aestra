@@ -46,6 +46,16 @@ public:
         }
         return *arrayValue_;
     }
+    /**
+     * Return a reference to the stored array or an empty vector if this JSON is not an array.
+     *
+     * @returns A reference to the underlying array when this JSON's type is Array; otherwise a reference to a static empty `std::vector<JSON>`.
+     */
+    /**
+     * Return a copy of the stored object map or an empty map if this JSON is not an object.
+     *
+     * @returns A `std::map<std::string, JSON>` containing the object's members when this JSON's type is Object; otherwise an empty map.
+     */
     const std::vector<JSON>& asArray() const {
         static const std::vector<JSON> e;
         return e;
@@ -147,7 +157,11 @@ public:
         return ss.str();
     }
 
-    // Parsing
+    /**
+     * Parse a JSON-formatted string into a JSON value.
+     * @param jsonString The UTF-8 encoded string containing JSON text to parse.
+     * @returns The parsed JSON value. If parsing fails (malformed input or excessive nesting), returns a JSON null value.
+     */
     static JSON parse(const std::string& jsonString) {
         size_t pos = 0;
         return parseValue(jsonString, pos, 0);
@@ -189,7 +203,21 @@ private:
         return out;
     }
 
-    void serialize(std::stringstream& ss, int indent, int depth) const {
+    /**
+ * Serialize this JSON value into the provided stringstream.
+ *
+ * Produces a JSON text representation of the current value and appends it to
+ * `ss`. When `indent` is greater than zero the output is pretty-printed using
+ * `indent` spaces per nesting level; `depth` indicates the current nesting
+ * level used to compute indentation.
+ *
+ * @param ss String stream to which the JSON text is appended.
+ * @param indent Number of spaces to use per indent level; if zero the output
+ *               is compact (no additional newlines or indentation).
+ * @param depth  Current nesting depth (0 for top-level); used only to compute
+ *               indentation for pretty printing.
+ */
+void serialize(std::stringstream& ss, int indent, int depth) const {
         std::string indentStr(depth * indent, ' ');
         std::string nextIndentStr((depth + 1) * indent, ' ');
 

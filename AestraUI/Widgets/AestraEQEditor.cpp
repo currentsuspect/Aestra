@@ -17,6 +17,12 @@ constexpr float kCloseSize = 16.0f;
 constexpr float kRadius = 12.0f;
 constexpr float kPi = 3.14159265358979323846f;
 
+/**
+ * @brief Selects a color from the editor's fixed band palette.
+ *
+ * @param index Zero-based band index; when greater than the palette size it wraps via modulo.
+ * @return NUIColor Color from the internal palette corresponding to `index % paletteSize`.
+ */
 NUIColor bandColorForIndex(size_t index) {
     static const NUIColor colors[] = {
         NUIColor(0.55f, 0.72f, 1.0f, 1.0f),
@@ -31,6 +37,12 @@ NUIColor bandColorForIndex(size_t index) {
     return colors[index % (sizeof(colors) / sizeof(colors[0]))];
 }
 
+/**
+ * @brief Map a filter type index to a short glyph label.
+ *
+ * @param type Filter type index (expected 0..7).
+ * @return const char* One of the labels "Bell", "Cut", "Shelf", "Notch", "Band", or "Tilt"; returns "Bell" if `type` is outside 0..7.
+ */
 const char* glyphTypeLabel(uint32_t type) {
     static const char* labels[] = {"Bell", "Cut", "Cut", "Shelf", "Shelf", "Notch", "Band", "Tilt"};
     return type < 8 ? labels[type] : "Bell";
@@ -114,6 +126,16 @@ NUIRect graphNodeSafeBounds(const NUIRect& graphBounds) {
 }
 }
 
+/**
+ * @brief Constructs the EQ editor, initializes UI state, and starts background spectrum analysis.
+ *
+ * Initializes internal state from the provided plugin instance, builds UI controls, sets
+ * component identifier and size, and launches a background worker thread that performs
+ * spectrum analysis for the editor.
+ *
+ * @param instance Shared pointer to the plugin instance whose parameters and analyzer data
+ *        the editor will read and control. Ownership is stored by the editor.
+ */
 AestraEQEditor::AestraEQEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
     : m_instance(std::move(instance)) {
     setId("AestraEQEditor");
@@ -122,6 +144,11 @@ AestraEQEditor::AestraEQEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> i
     m_spectrumWorker = std::thread([this]() { analyzerWorkerMain(); });
 }
 
+/**
+ * @brief Cleanly shuts down the analyzer background worker.
+ *
+ * Signals the worker thread to stop, notifies the worker condition variable, and waits for the thread to join.
+ */
 AestraEQEditor::~AestraEQEditor() {
     {
         std::lock_guard<std::mutex> lock(m_spectrumMutex);
@@ -133,6 +160,19 @@ AestraEQEditor::~AestraEQEditor() {
     }
 }
 
+/**
+ * @brief Initializes the editor's band controls from the hosted plugin instance.
+ *
+ * Clears the current band list and, if a plugin instance is present, populates m_bands
+ * with kNumBands entries. For each band i it sets:
+ * - paramBase = i * 5
+ * - name = "B" + (i+1)
+ * - enabled from parameter at paramBase
+ * - type from parameter at paramBase+1 (mapped to 0..7)
+ * - freq/gain/q from parameters at paramBase+2, +3, +4 respectively.
+ *
+ * After populating m_bands the function calls layoutControls() to apply derived layout.
+ */
 void AestraEQEditor::buildControls() {
     m_bands.clear();
     if (!m_instance) return;
@@ -201,6 +241,18 @@ void AestraEQEditor::drawTitleBar(NUIRenderer& renderer) {
                       1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.06f));
 }
 
+/**
+ * @brief Render the EQ response panel including spectrum backdrop, frequency response curve, band nodes, and selected-band HUD.
+ *
+ * Draws the response graph for all enabled bands using the editor's current band parameters and analyzer data,
+ * renders grid lines and frequency labels, plots a smoothed response polyline with visual halo, draws per-band
+ * node markers and pill labels, and, if a band is selected, shows a right-side HUD with band metadata.
+ *
+ * This function updates m_lastResponseBounds to the inner graph rectangle used for node layout and hit testing.
+ *
+ * @param renderer Low-level renderer used to draw shapes and text.
+ * @param bounds Outer rectangle allocated for the response panel; internal graph area is derived from this.
+ */
 void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
     renderer.fillRoundedRect(bounds, kRadius, NUIColor(0.06f, 0.06f, 0.07f, 0.95f));
@@ -431,6 +483,25 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     }
 }
 
+/**
+ * @brief Integrates any completed analyzer results into the UI spectrum and, if available,
+ *        queues a new analyzer window for background processing.
+ *
+ * If the background worker has produced magnitudes, those values are neighbor-smoothed and
+ * applied to the visible spectrum using an attack/release blend. Then, if the hosted EQ
+ * instance provides a new analyzer window and no work is already pending for that serial,
+ * the window/serial are enqueued for the worker and the worker condition variable is notified.
+ *
+ * Side effects:
+ * - Updates m_spectrumMagnitudes with smoothed/filtered values.
+ * - Updates m_lastAnalyzerSerial and clears m_pendingAnalyzerSerial when consuming results.
+ * - Sets m_workerAnalyzerWindow, m_workerRequestedSerial and m_spectrumWorkPending when queuing work.
+ * - Notifies m_spectrumCv to wake the analyzer worker thread.
+ *
+ * The function returns without queuing work if the plugin instance is not available, if
+ * getAnalyzerWindow fails, if the returned serial matches the last-consumed serial, or if
+ * a pending analyzer serial is already set.
+ */
 void AestraEQEditor::updateSpectrumSnapshot() {
     std::array<float, 160> nextMagnitudes{};
     bool hasReadyMagnitudes = false;
@@ -492,6 +563,16 @@ void AestraEQEditor::updateSpectrumSnapshot() {
     m_spectrumCv.notify_one();
 }
 
+/**
+ * @brief Background worker that computes spectrum magnitudes from queued analyzer windows.
+ *
+ * Runs a loop that waits for work or shutdown, consumes a queued analyzer window and serial,
+ * computes per-bin magnitudes for a fixed log-spaced frequency grid (applying a Hann window),
+ * and publishes the resulting magnitudes and serial to the editor's shared worker result state.
+ *
+ * The worker exits when the stop flag is set. Results are written under m_spectrumMutex to
+ * m_workerResultMagnitudes, m_workerResultSerial and m_spectrumResultReady.
+ */
 void AestraEQEditor::analyzerWorkerMain() {
     while (true) {
         std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> analyzerWindow{};
@@ -555,6 +636,16 @@ void AestraEQEditor::analyzerWorkerMain() {
     }
 }
 
+/**
+ * @brief Renders the analyzer spectrum backdrop as a series of vertical magnitude bars.
+ *
+ * Draws a two-layer (glow + core) bar for each spectrum bin inside an inset plot area derived from the provided bounds.
+ * The bar heights and alpha values reflect the current smoothed spectrum magnitudes; if no analyzer snapshot has been set
+ * (internal serial is zero) the function returns without drawing.
+ *
+ * @param renderer Rendering context used to draw the bars.
+ * @param bounds Outer rectangle that defines the response graph area; the function computes an inner inset for the spectrum plot.
+ */
 void AestraEQEditor::drawSpectrumBackdrop(NUIRenderer& renderer, const NUIRect& bounds) {
     if (m_lastAnalyzerSerial == 0) {
         return;

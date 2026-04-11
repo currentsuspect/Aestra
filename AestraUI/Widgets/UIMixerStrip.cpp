@@ -29,6 +29,19 @@ namespace {
 
     constexpr float SELECT_TOP_H = 4.0f;
 
+    /**
+     * @brief Builds a compact route summary string for a channel.
+     *
+     * For the master channel (id == 0) this returns the channel's routeName.
+     * For other channels it produces a compact token list describing routing:
+     * - "Bus" when the channel is effectively bus-only,
+     * - "Send" for a single audible send or "+N" for N audible sends,
+     * - "SC" when any non-muted send is marked sidechain-only.
+     * Tokens are joined with " • ". If no tokens apply, an empty string is returned.
+     *
+     * @param channel Channel view model containing routing and send state.
+     * @return std::string The compact route summary string.
+     */
     std::string buildStripRouteSummary(const Aestra::ChannelViewModel& channel)
     {
         if (channel.id == 0) {
@@ -67,6 +80,24 @@ namespace {
     }
 }
 
+/**
+ * @brief Create a mixer-strip UI bound to a specific channel.
+ *
+ * Constructs a UIMixerStrip for the given channel id and track number, attaches it to
+ * the provided MixerViewModel, and instantiates child UI components (header, knobs,
+ * button row, meter, fader, footer, FX summary). The constructor also wires up callbacks
+ * so UI interactions update the view model and continuous parameter buffer, and so
+ * meter clip clears propagate to the view model and meter snapshot buffer.
+ *
+ * @param channelId Channel identifier (0 is the master bus).
+ * @param trackNumber Display track number for the footer.
+ * @param viewModel Pointer to the MixerViewModel providing channel state and accessors.
+ * @param meterSnapshots Optional meter snapshot buffer used for clearing meter clip state.
+ * @param continuousParams Optional continuous-parameter buffer used for trim/pan/fader updates.
+ *
+ * @note When `channelId == 0` (master) several per-strip controls (buttons, pan, width, footer)
+ *       are hidden to keep the master visually distinct.
+ */
 UIMixerStrip::UIMixerStrip(uint32_t channelId,
                            int trackNumber,
                            Aestra::MixerViewModel* viewModel,
@@ -293,6 +324,18 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     layoutChildren();
 }
 
+/**
+ * @brief Cache theme-derived colors used for rendering the mixer strip.
+ *
+ * Populates member color fields from the current NUI theme so subsequent
+ * rendering and layout code can use a consistent, cached set of colors.
+ *
+ * Sets:
+ * - selection visuals: `m_selectedTint`, `m_selectedOutline`, `m_selectedGlow`, `m_selectedTopHighlight`
+ * - master-specific visuals: `m_masterBackground`, `m_masterBorder`
+ * - strip visuals: `m_stripBg`
+ * - muted overlay: `m_mutedOverlay`
+ */
 void UIMixerStrip::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
@@ -397,6 +440,17 @@ void UIMixerStrip::onResize(int width, int height)
     invalidateStaticCache();
 }
 
+/**
+ * @brief Synchronizes the strip's UI state with the mixer view model and updates child components.
+ *
+ * This method reads the channel state from the associated MixerViewModel and applies any changes
+ * to the strip's visible controls (header, buttons, knobs, FX summary, meter, fader, footer).
+ * It updates cached values, toggles visibility for channel controls when appropriate, invalidates
+ * the static rendering cache on state changes, triggers layout updates when control visibility
+ * changes, and forwards per-frame update timing to child components.
+ *
+ * @param deltaTime Time elapsed since the last update, in seconds.
+ */
 void UIMixerStrip::onUpdate(double deltaTime)
 {
     (void)deltaTime;
@@ -565,6 +619,15 @@ void UIMixerStrip::onUpdate(double deltaTime)
     updateChildren(deltaTime);
 }
 
+/**
+ * @brief Renders the mixer strip visuals into the provided renderer.
+ *
+ * Draws the strip background, master border, selection highlights, child components, and muted overlay
+ * according to current channel and interaction state. If a drag is active on the fader or knobs, the
+ * method forces live rendering of children and invalidates the static cache so interactive controls update.
+ *
+ * @param renderer Destination renderer used to draw the strip.
+ */
 void UIMixerStrip::onRender(NUIRenderer& renderer)
 {
     Aestra::ChannelViewModel* channel = nullptr;

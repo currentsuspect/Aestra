@@ -12,7 +12,19 @@
 #include <cstdio>
 #include <vector>
 
-// Reproduce the FIXED fread parsing logic from MetronomeEngine.cpp
+/**
+ * @brief Read 16-bit PCM frames and produce one float per frame (channels averaged).
+ *
+ * Reads exactly `numSamples` frames of 16-bit interleaved PCM from `file`, converts each frame
+ * to a floating-point sample in the range [-1, 1) by dividing raw values by 32768, and stores
+ * the per-frame average across `numChannels` into `samples`.
+ *
+ * @param file Pointer to an open FILE positioned at the start of raw PCM frames.
+ * @param numSamples Number of frames to read (one float produced per frame).
+ * @param numChannels Number of interleaved channels present in the file.
+ * @param[out] samples Destination vector which will be resized to `numSamples` and filled with the resulting floats.
+ * @return true if exactly `numSamples` frames were read and converted; false if the file provided fewer samples.
+ */
 bool fixedWavRead16(FILE* file, uint32_t numSamples, uint16_t numChannels,
                     std::vector<float>& samples) {
     std::vector<int16_t> rawData(numSamples * numChannels);
@@ -32,6 +44,19 @@ bool fixedWavRead16(FILE* file, uint32_t numSamples, uint16_t numChannels,
     return true;
 }
 
+/**
+ * @brief Read 24-bit PCM frames and produce one normalized float sample per frame.
+ *
+ * Reads exactly `numSamples` frames of 24-bit little-endian PCM from `file`, converts each frame
+ * to a signed 24-bit value normalized to the range [-1, 1), and averages across `numChannels`
+ * producing a mono-compatible float per frame written into `samples`.
+ *
+ * @param file Open FILE* positioned at the start of raw PCM frame data.
+ * @param numSamples Number of frames to read (one float produced per frame on success).
+ * @param numChannels Number of interleaved channels per frame; channel values are averaged.
+ * @param samples Output vector that will be resized to `numSamples` and filled with normalized samples on success.
+ * @return true if the file contained exactly the expected amount of PCM data and `samples` was populated; `false` if the file did not contain the expected bytes (no partial writes to `samples` occur).
+ */
 bool fixedWavRead24(FILE* file, uint32_t numSamples, uint16_t numChannels,
                     std::vector<float>& samples) {
     std::vector<uint8_t> rawData(numSamples * numChannels * 3);
@@ -55,7 +80,19 @@ bool fixedWavRead24(FILE* file, uint32_t numSamples, uint16_t numChannels,
     return true;
 }
 
-// Helper: write a minimal WAV file with specific data size
+/**
+ * @brief Write a minimal 16-bit PCM WAV file to the given path.
+ *
+ * Creates a WAV file containing exactly numSamples frames with the specified
+ * sample rate and channel count, writing the provided interleaved int16_t
+ * sample buffer as PCM16 data.
+ *
+ * @param path Filesystem path where the WAV file will be written.
+ * @param sampleRate Sample rate in Hz (e.g., 44100).
+ * @param channels Number of audio channels (interleaved in `data`).
+ * @param data Pointer to interleaved 16-bit PCM samples (length = numSamples * channels).
+ * @param numSamples Number of frames (samples per channel) to write.
+ */
 static void writeWav16(const char* path, uint32_t sampleRate, uint16_t channels,
                        const int16_t* data, uint32_t numSamples) {
     FILE* f = fopen(path, "wb");
@@ -86,7 +123,16 @@ static void writeWav16(const char* path, uint32_t sampleRate, uint16_t channels,
     fclose(f);
 }
 
-// Write a TRUNCATED WAV: header claims more data than file contains
+/**
+ * @brief Create a WAV file whose header claims more PCM frames than are actually written.
+ *
+ * @param path Filesystem path to write the WAV file to.
+ * @param sampleRate Sample rate in Hz to store in the WAV header.
+ * @param channels Number of interleaved channels recorded in the header.
+ * @param actualData Pointer to the interleaved int16_t PCM samples that will be written.
+ * @param actualSamples Number of frames actually written from `actualData`.
+ * @param claimedSamples Number of frames written into the WAV header's data size (may be greater than `actualSamples`).
+ */
 static void writeTruncatedWav16(const char* path, uint32_t sampleRate, uint16_t channels,
                                  const int16_t* actualData, uint32_t actualSamples,
                                  uint32_t claimedSamples) {
@@ -120,6 +166,17 @@ static void writeTruncatedWav16(const char* path, uint32_t sampleRate, uint16_t 
     fclose(f);
 }
 
+/**
+ * @brief Runs runtime tests that validate guarded WAV fread behavior for 16-bit PCM.
+ *
+ * Creates a valid and a header-truncated WAV file, exercises the fixed 16-bit WAV reader
+ * to verify (1) normal files parse successfully, (2) truncated files are rejected without
+ * producing or leaking uninitialized output, and (3) sentinel values remain preserved if a
+ * truncated read were to incorrectly succeed. Prints PASS/FAIL results for each test and
+ * removes the temporary files before exiting.
+ *
+ * @return int `0` if all tests pass; non-zero if any test fails or required files cannot be opened.
+ */
 int main() {
     std::cout << "=== RTM-011: MetronomeEngine fread unchecked return — proof of fix ===" << std::endl;
 

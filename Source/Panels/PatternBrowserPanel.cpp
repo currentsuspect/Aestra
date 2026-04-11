@@ -64,7 +64,16 @@ int compareNaturalNames(const std::string& lhs, const std::string& rhs) {
     }
     return (a.size() < b.size()) ? -1 : 1;
 }
-} // namespace
+} /**
+ * @brief Construct a PatternBrowserPanel and initialize its UI and state.
+ *
+ * Initializes theme colors, the footer mode segmented control, SVG icons (add/copy/trash/midi/audio),
+ * and icon-style toolbar buttons with their click callbacks (create, duplicate, delete).
+ * Registers child components, applies button styling, refreshes pattern and clip lists, and sets
+ * the initial browser mode to "Clips".
+ *
+ * @param trackManager Pointer to the TrackManager used to access pattern and source managers; may be null.
+ */
 
 PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     : m_trackManager(trackManager)
@@ -346,6 +355,15 @@ void PatternBrowserPanel::renderHeader(AestraUI::NUIRenderer& renderer) {
     }
 }
 
+/**
+ * @brief Renders the panel's main content area: either an empty-state card or the scrollable list of items.
+ *
+ * Draws a themed empty-state card when the current browser mode has no items (the card's text and accent
+ * respond to mode and drag-over state). If items are present, sets a clipping region for the list area and
+ * renders the mode-appropriate list (patterns or clips).
+ *
+ * @param renderer Renderer used to draw UI elements within the content area.
+ */
 void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
     auto bounds = getBounds();
     AestraUI::NUIRect listRect(bounds.x, bounds.y + m_headerHeight, bounds.width, bounds.height - m_headerHeight - m_footerHeight);
@@ -721,6 +739,19 @@ void PatternBrowserPanel::renderClipItem(AestraUI::NUIRenderer& renderer, const 
     renderer.drawText(durStr, AestraUI::NUIPoint(itemRect.x + itemRect.width - 40, y + 9), 11.0f, theme.getColor("textDisabled"));
 }
 
+/**
+ * @brief Lays out child controls when the panel is resized.
+ *
+ * Centers the mode toggle horizontally inside the footer area and positions the
+ * create/duplicate/delete icon buttons right-aligned in the header.
+ *
+ * The mode toggle is assigned a fixed width of 140 and height of 24 and is vertically
+ * centered within the footer. Toolbar buttons are laid out at 24x24 with an 8px
+ * horizontal padding from the panel edge and 4px spacing between buttons.
+ *
+ * @param width New panel width in pixels.
+ * @param height New panel height in pixels.
+ */
 void PatternBrowserPanel::onResize(int width, int height) {
     auto bounds = getBounds();
     float padding = 8.0f;

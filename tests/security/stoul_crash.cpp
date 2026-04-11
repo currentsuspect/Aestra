@@ -15,6 +15,14 @@ namespace fs = std::filesystem;
 using Aestra::Audio::TrackManager;
 
 namespace {
+/**
+ * @brief Builds a minimal project JSON containing a single lane with the specified color.
+ *
+ * The provided color string is inserted verbatim into the lane's "color" field; no validation or normalization is performed.
+ *
+ * @param color The string to place into the lane's "color" property (e.g., a hex color or malformed input).
+ * @return std::string JSON text representing the minimal project with one lane containing the given color.
+ */
 std::string buildProjectJson(const std::string& color) {
     return "{\n"
            "  \"version\": 1,\n"
@@ -33,7 +41,20 @@ std::string buildProjectJson(const std::string& color) {
            "  ]\n"
            "}\n";
 }
-} // namespace
+} /**
+ * @brief Runs a security regression test that verifies ProjectSerializer safely handles malformed lane color values.
+ *
+ * The test writes temporary project files containing a single lane whose `"color"` field is set to several malformed
+ * strings, attempts to load each project into a TrackManager, and validates that loading neither throws nor leaves
+ * the playlist in an invalid state. For each case the test checks that exactly one lane is loaded and that the lane's
+ * color falls back to white (0xFFFFFFFF). Results are printed to stdout.
+ *
+ * Side effects: creates a temporary directory under the system temp path, writes `.aes` files, and removes the
+ * directory tree before exiting.
+ *
+ * @return int `0` if all malformed color cases were handled safely (loaded with white fallback), `1` if any case
+ * failed or caused an exception.
+ */
 
 int main() {
     std::cout << "=== SEC-001: ProjectSerializer malformed lane color handling ===" << std::endl;

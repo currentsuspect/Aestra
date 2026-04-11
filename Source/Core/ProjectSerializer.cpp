@@ -166,6 +166,21 @@ static void writeHistorySnapshot(const std::string& projectPath, const std::stri
     pruneHistorySnapshots(historyDir);
 }
 
+/**
+ * @brief Serializes the current project state into a JSON representation.
+ *
+ * Produces a JSON document containing project metadata and all serializable
+ * runtime state: version, tempo, playhead, sources, patterns, playlist lanes
+ * (including routing, automation, and clips), arsenal units, and optional UI
+ * state (settings dialog and panels).
+ *
+ * @param trackManager Manager providing playlist, sources, patterns, channels and unit manager; serialization is not performed if this is null.
+ * @param tempo Project tempo in BPM.
+ * @param playheadSeconds Playhead position in seconds.
+ * @param indentSpaces Number of spaces to use for pretty-printing the JSON output.
+ * @param uiState Optional pointer to UI state to include (settings dialog and panels); omitted when null.
+ * @return SerializeResult Result object containing `contents` with the JSON text and `ok` set to `true` on success; returns a default (unsuccessful) result if serialization is not performed (e.g., null trackManager).
+ */
 ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::shared_ptr<TrackManager>& trackManager,
                                                                double tempo,
                                                                double playheadSeconds,
@@ -385,6 +400,17 @@ bool ProjectSerializer::save(const std::string& path,
     return true;
 }
 
+/**
+ * @brief Loads a project file, validates/migrates its JSON, and populates the application models.
+ *
+ * Performs a non-destructive validation pass (JSON parsing, version checks, optional migrations,
+ * and asset existence checks). If validation succeeds, clears the current playlist, sources,
+ * patterns, and channels, then loads sources (with audio decoding when available), patterns,
+ * lanes (including routing and automation), clips, and arsenal units into the provided TrackManager.
+ *
+ * @param path Filesystem path to the project file to load.
+ * @param trackManager TrackManager instance to populate; must be non-null.
+ * @return LoadResult Result of the load. On success `ok` is `true`. On failure `ok` is `false` and `errorMessage` is set. `missingAssets` (if any) lists referenced audio files that were not found.
 ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                                       const std::shared_ptr<TrackManager>& trackManager) {
     LoadResult result;

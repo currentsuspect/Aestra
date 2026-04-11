@@ -1307,6 +1307,20 @@ void AudioEngine::loudnessWorkerLoop() {
     }
 }
 
+/**
+ * @brief Renders the provided audio graph for a single block into the engine's master and track buffers.
+ *
+ * Processes timeline clips, pattern/arsenal units, per-track effect chains, routing (main outputs and sends),
+ * automation overrides, solo/mute behavior, resampling/interpolation, and per-track metering for the specified
+ * frame range, accumulating results into the engine's internal master and track buffers.
+ *
+ * @param graph The audio graph describing tracks, clips, units, sends, and routing for this render.
+ * @param numFrames Number of frames to render for this block; must be <= engine max buffer frames.
+ * @param bufferOffset Frame offset into the engine's master buffer where rendered samples will be written.
+ *
+ * @note Updates internal meter snapshots and telemetry counters (underruns/overruns/src-active blocks).
+ * @note May early-return without rendering if configuration/state is invalid (e.g., channel count != 2 or no track buffers).
+ */
 void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset) {
     bool srcActiveThisBlock = false;
     const uint32_t numChannels = m_outputChannels.load(std::memory_order_relaxed);
@@ -2052,7 +2066,26 @@ void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
     m_loopEndBeat.store(endBeat, std::memory_order_relaxed);
 }
 
-// === Antigravity Graph Compiler ===
+/**
+ * @brief Builds the runtime render-track routing state and publishes it for real-time rendering.
+ *
+ * Compiles the active graph snapshot into the inactive render-state buffer: for each track present
+ * in the active graph it creates a RenderTrack entry containing the track's self buffer and a list
+ * of runtime connections. Each connection targets either the master interleaved buffer or another
+ * track's slot buffer and carries per-channel (L/R) unity or send-scaled gains with a stride of 2.
+ *
+ * Behavior notes:
+ * - Acquires m_graphMutex for thread safety.
+ * - Uses double-buffering: writes into the inactive m_graphStates slot and atomically swaps it
+ *   into m_activeRenderTrackIndex on success.
+ * - If m_channelSlotMapRaw is not available, the function returns without modifying state.
+ * - Main outputs route to master when mainOutputId == 0xFFFFFFFF, otherwise routed to the corresponding
+ *   channel slot if valid.
+ * - Sends with send.mute == true or send.sidechainOnly == true are skipped. Send gains are scaled
+ *   by send.gain and panned using a cosine/sine approximation from send.pan ∈ [-1,1].
+ *
+ * No return value.
+ */
 void AudioEngine::compileGraph() {
     std::lock_guard<std::mutex> lock(m_graphMutex);
 

@@ -16,6 +16,23 @@
 
 namespace Aestra {
 namespace Audio {
+/**
+ * Compute RBJ-style biquad filter coefficients for the specified filter shape and parameters.
+ *
+ * Designs a second-order IIR (biquad) using the Robert Bristow-Johnson cookbook formulas for
+ * the given FilterType, center/cutoff frequency, gain in dB, quality factor (Q), and sample rate.
+ *
+ * @param type Filter shape to design (Bell, LowCut, HighCut, LowShelf, HighShelf, Notch, BandPass, Tilt).
+ * @param frequency Center or cutoff frequency in Hz.
+ * @param gainDb Gain in decibels (used for shelving/peaking/tilt shapes).
+ * @param q Quality factor (resonance) for peaking and band filters; for cut filters this is interpreted
+ *          according to the implementation calling this function.
+ * @param sampleRate Sample rate in Hz used to convert frequency to normalized radian frequency.
+ *
+ * @returns FilterCoeffs containing raw biquad coefficients {b0, b1, b2, a0, a1, a2}. The coefficients
+ *          are returned in their canonical (unnormalized by a0) form; callers should normalize by a0
+ *          if required by their filter implementation.
+ */
 namespace Plugins {
 
 // ============================================================================

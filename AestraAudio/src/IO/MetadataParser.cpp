@@ -109,7 +109,13 @@ std::string MetadataParser::decodeID3String(const uint8_t* data, size_t size, ui
 
 // ============================================================================
 // ID3v2 PARSER (MP3)
-// ============================================================================
+/**
+ * @brief Parses an ID3v2 tag from the specified MP3 file and extracts title, artist, album and attached picture into the provided metadata object.
+ *
+ * @param filePath Path to the MP3 file to read.
+ * @param meta Output metadata object that will be populated with any discovered fields (e.g., title, artist, album, coverArtData, coverArtMimeType, durationSeconds left unchanged). The object may be partially populated if parsing stops early or fails.
+ * @return `true` if an ID3v2 tag was successfully parsed and frames were processed, `false` otherwise.
+ */
 
 bool MetadataParser::parseID3v2(const std::string& filePath, AudioMetadata& meta) {
     std::ifstream file(filePath, std::ios::binary);
@@ -221,7 +227,18 @@ bool MetadataParser::parseID3v2(const std::string& filePath, AudioMetadata& meta
 
 // ============================================================================
 // FLAC PARSER
-// ============================================================================
+/**
+ * @brief Extracts metadata from a FLAC file and populates an AudioMetadata object.
+ *
+ * Parses FLAC metadata blocks to populate duration (from STREAMINFO), textual tags
+ * (from VORBIS_COMMENT: title, artist, album), and embedded cover art (from PICTURE).
+ * On malformed or non-FLAC files the function returns false and leaves `meta` unchanged.
+ *
+ * @param filePath Path to the FLAC file to parse.
+ * @param[out] meta AudioMetadata structure to populate with any discovered fields.
+ * @return true if the file was recognized as FLAC and metadata parsing completed (may be partial);
+ *         false if the file could not be opened, is not a valid FLAC stream, or a required read failed. 
+ */
 
 bool MetadataParser::parseFLAC(const std::string& filePath, AudioMetadata& meta) {
     std::ifstream file(filePath, std::ios::binary);
