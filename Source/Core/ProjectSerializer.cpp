@@ -678,10 +678,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             const JSON& sj = rj["sends"];
                             for (size_t s = 0; s < sj.size(); ++s) {
                                 if (!sj[s].isObject()) continue;
+                                if (!sj[s].has("targetId") || !sj[s]["targetId"].isNumber()) continue;
                                 AudioRoute route;
-                                const uint32_t targetId = (sj[s].has("targetId") && sj[s]["targetId"].isNumber())
-                                    ? static_cast<uint32_t>(sj[s]["targetId"].asNumber())
-                                    : 0u;
+                                const uint32_t targetId = static_cast<uint32_t>(sj[s]["targetId"].asNumber());
                                 route.targetChannelId = (targetId == 0) ? 0xFFFFFFFFu : targetId;
                                 if (sj[s].has("gain") && sj[s]["gain"].isNumber()) route.gain = static_cast<float>(sj[s]["gain"].asNumber());
                                 if (sj[s].has("pan") && sj[s]["pan"].isNumber()) route.pan = static_cast<float>(sj[s]["pan"].asNumber());

@@ -2624,8 +2624,8 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
 
 
     // 3. Middle (Breadcrumbs)
-    const float breadcrumbRowY = toolbarRect.y + 40.0f;
-    const float breadcrumbRowH = 32.0f;
+    const float breadcrumbRowY = toolbarRect.y + BROWSER_BUTTONS_ROW_H;
+    const float breadcrumbRowH = BROWSER_BREADCRUMB_ROW_H;
     
     float breadcrumbX = toolbarRect.x + innerPad;
     float breadcrumbW = toolbarRect.width - innerPad * 2.0f;
