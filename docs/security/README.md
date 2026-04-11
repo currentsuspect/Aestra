@@ -65,11 +65,11 @@ Mapping between red team findings (RTM-xxx) and blue team vulnerabilities (SEC-x
 | RTM-002 (WAV heap exhaustion) | SEC-005 (ID3v2 unbounded alloc) | Same class of vuln (unbounded allocation), different parsers | ✅ Both Fixed |
 | RTM-003 (UnitManager stoul) | SEC-001 (stoul crash) | Same root cause, different call sites | ✅ Both Fixed |
 | RTM-004 (JSON stack exhaustion) | SEC-002 (JSON DoS) | Same vuln, different perspectives | ✅ Both Mitigated |
-| RTM-005 (Plugin RCE) | SEC-007 (Plugin arbitrary code exec) | Same vuln | ✅ Both By-design |
-| RTM-006 (Plugin cache spoofing) | — | No blue team entry yet | ⚠️ Needs SEC entry |
-| RTM-007 (Crash flag + autosave) | — | No blue team entry yet | ⚠️ Needs SEC entry |
-| RTM-008 (Headless env var) | — | No blue team entry yet | ⚠️ Needs SEC entry |
+| RTM-005 (Plugin RCE) | SEC-007 (Plugin arbitrary code exec) | Same vuln | ✅ Both Monitor |
+| RTM-006 (Plugin cache spoofing) | SEC-009 (Plugin cache binary spoofing) | Same vuln | ✅ Both Monitor |
+| RTM-007 (Crash flag + autosave) | SEC-010 (Crash flag + autosave pre-seeding) | Same vuln | ✅ Both Monitor |
+| RTM-008 (Headless env var) | SEC-011 (Headless env var injection) | Same vuln | ✅ Both Monitor |
 
 ### Documentation Audit Notes
 - RTM-001, RTM-002, RTM-003 were previously marked 🔴 Open in REDTEAM.md but verified as 🟢 Fixed in source code (as of 2026-04-10 red team session S001). Status corrected.
-- RTM-006, RTM-007, RTM-008 need corresponding SEC entries in the blue team register for full traceability.
+- RTM-006, RTM-007, and RTM-008 now map to SEC-009, SEC-010, and SEC-011 in the blue team register.

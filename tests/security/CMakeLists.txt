@@ -3,6 +3,7 @@ project(SecurityTests LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(REPO_ROOT "${CMAKE_CURRENT_LIST_DIR}/../..")
 
 enable_testing()
 
@@ -49,8 +50,8 @@ add_test(NAME SecCacheMtimeIntegrity COMMAND SecCacheMtimeIntegrity)
 add_test(NAME SecPluginTrustedPath COMMAND SecPluginTrustedPath)
 
 if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
-    target_sources(SecStoulCrash PRIVATE ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp)
-    target_sources(SecDivZero PRIVATE ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp)
+    target_sources(SecStoulCrash PRIVATE ${REPO_ROOT}/Source/Core/ProjectSerializer.cpp)
+    target_sources(SecDivZero PRIVATE ${REPO_ROOT}/Source/Core/ProjectSerializer.cpp)
 
     target_link_libraries(SecStoulCrash PRIVATE AestraAudio AestraCore AestraPlat)
     target_link_libraries(SecDivZero PRIVATE AestraAudio AestraCore AestraPlat)
@@ -59,36 +60,36 @@ if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
     target_link_libraries(SecJsonDos PRIVATE AestraCore)
 
     target_include_directories(SecStoulCrash PRIVATE
-        ${CMAKE_SOURCE_DIR}/Source/Core
-        ${CMAKE_SOURCE_DIR}/AestraAudio/include
-        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
-        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
-        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
-        ${CMAKE_SOURCE_DIR}/AestraCore/include
-        ${CMAKE_SOURCE_DIR}/AestraPlat/include
+        ${REPO_ROOT}/Source/Core
+        ${REPO_ROOT}/AestraAudio/include
+        ${REPO_ROOT}/AestraAudio/include/Core
+        ${REPO_ROOT}/AestraAudio/include/Models
+        ${REPO_ROOT}/AestraAudio/include/IO
+        ${REPO_ROOT}/AestraCore/include
+        ${REPO_ROOT}/AestraPlat/include
     )
     target_include_directories(SecDivZero PRIVATE
-        ${CMAKE_SOURCE_DIR}/Source/Core
-        ${CMAKE_SOURCE_DIR}/AestraAudio/include
-        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
-        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
-        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
-        ${CMAKE_SOURCE_DIR}/AestraCore/include
-        ${CMAKE_SOURCE_DIR}/AestraPlat/include
+        ${REPO_ROOT}/Source/Core
+        ${REPO_ROOT}/AestraAudio/include
+        ${REPO_ROOT}/AestraAudio/include/Core
+        ${REPO_ROOT}/AestraAudio/include/Models
+        ${REPO_ROOT}/AestraAudio/include/IO
+        ${REPO_ROOT}/AestraCore/include
+        ${REPO_ROOT}/AestraPlat/include
     )
     target_include_directories(SecSamplerPath PRIVATE
-        ${CMAKE_SOURCE_DIR}/AestraAudio/include
-        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
-        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
-        ${CMAKE_SOURCE_DIR}/AestraCore/include
-        ${CMAKE_SOURCE_DIR}/AestraPlat/include
+        ${REPO_ROOT}/AestraAudio/include
+        ${REPO_ROOT}/AestraAudio/include/Plugin
+        ${REPO_ROOT}/AestraAudio/include/IO
+        ${REPO_ROOT}/AestraCore/include
+        ${REPO_ROOT}/AestraPlat/include
     )
     target_include_directories(SecShellEscape PRIVATE
-        ${CMAKE_SOURCE_DIR}/AestraCore/include
-        ${CMAKE_SOURCE_DIR}/AestraPlat/include
-        ${CMAKE_SOURCE_DIR}/AestraPlat/src
+        ${REPO_ROOT}/AestraCore/include
+        ${REPO_ROOT}/AestraPlat/include
+        ${REPO_ROOT}/AestraPlat/src
     )
     target_include_directories(SecJsonDos PRIVATE
-        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${REPO_ROOT}/AestraCore/include
     )
 endif()
