@@ -848,6 +848,10 @@ void NUIRendererGL::drawPolyline(const NUIPoint* points, int count, float thickn
                 nx = nextNx;
                 ny = nextNy;
             } else {
+                // TODO(renderer): When the miter limit is exceeded, switch this join
+                // to bevel/round geometry instead of clamping the miter scale. The
+                // current clamp avoids extreme spikes, but a real join fallback is the
+                // correct long-term fix for acute polyline corners.
                 const float dot = std::max(0.25f, miterNormX * nextNx + miterNormY * nextNy);
                 const float miterScale = std::min(3.0f, 1.0f / dot);
                 nx = miterNormX * miterScale;

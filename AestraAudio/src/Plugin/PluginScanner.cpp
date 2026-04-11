@@ -3,6 +3,7 @@
 #include "PluginScanner.h"
 
 #include "Plugin/BuiltInPlugins.h"
+#include "AestraLog.h"
 
 #include <algorithm>
 #include <cctype>
@@ -298,7 +299,7 @@ bool PluginScanner::saveScanCache(const std::filesystem::path& cachePath) const 
         const char magic[4] = {'N', 'P', 'S', 'C'}; // Aestra Plugin Scan Cache
         file.write(magic, 4);
 
-        uint32_t version = 1;
+        uint32_t version = 2;  // v2: includes file mtime for integrity (SEC-RTM-006)
         file.write(reinterpret_cast<const char*>(&version), sizeof(version));
 
         // Write plugin count
@@ -328,6 +329,12 @@ bool PluginScanner::saveScanCache(const std::filesystem::path& cachePath) const 
             file.write(reinterpret_cast<const char*>(&p.hasMidiInput), sizeof(p.hasMidiInput));
             file.write(reinterpret_cast<const char*>(&p.hasMidiOutput), sizeof(p.hasMidiOutput));
             file.write(reinterpret_cast<const char*>(&p.hasEditor), sizeof(p.hasEditor));
+
+            // [SEC-RTM-006] Cache the file modification time for integrity verification
+            std::error_code ec;
+            auto mtime = std::filesystem::last_write_time(p.path, ec);
+            uint64_t mtimeBits = ec ? 0 : mtime.time_since_epoch().count();
+            file.write(reinterpret_cast<const char*>(&mtimeBits), sizeof(mtimeBits));
         }
 
         return true;
@@ -353,22 +360,33 @@ bool PluginScanner::loadScanCache(const std::filesystem::path& cachePath) {
 
         uint32_t version;
         file.read(reinterpret_cast<char*>(&version), sizeof(version));
-        if (version != 1)
+        if (version != 1 && version != 2)
             return false;
 
         // Read plugin count
         uint32_t count;
         file.read(reinterpret_cast<char*>(&count), sizeof(count));
 
+        // [SEC-RTM-010] Guard against crafted cache files with massive counts
+        constexpr uint32_t kMaxCachedPlugins = 10000;
+        if (count > kMaxCachedPlugins) {
+            return false;
+        }
+
         std::vector<PluginInfo> plugins;
         plugins.reserve(count);
 
         // Read each plugin
-        auto readString = [&file]() -> std::string {
+        // [SEC-RTM-010] String length cap: no single metadata string > 64 KB
+        constexpr uint32_t kMaxStringLen = 65536;
+        auto readString = [&file, kMaxStringLen]() -> std::string {
             uint32_t len;
             file.read(reinterpret_cast<char*>(&len), sizeof(len));
+            if (!file.good()) return "";
+            if (len > kMaxStringLen) return "";
             std::string s(len, '\0');
             file.read(s.data(), len);
+            if (!file.good()) return "";
             return s;
         };
 
@@ -389,6 +407,27 @@ bool PluginScanner::loadScanCache(const std::filesystem::path& cachePath) {
             file.read(reinterpret_cast<char*>(&p.hasMidiOutput), sizeof(p.hasMidiOutput));
             file.read(reinterpret_cast<char*>(&p.hasEditor), sizeof(p.hasEditor));
 
+            // [SEC-RTM-006] Verify file integrity: compare cached mtime with current mtime
+            bool integrityOk = true;
+            if (version >= 2) {
+                uint64_t cachedMtimeBits = 0;
+                file.read(reinterpret_cast<char*>(&cachedMtimeBits), sizeof(cachedMtimeBits));
+                if (cachedMtimeBits != 0) {
+                    std::error_code ec;
+                    auto currentMtime = std::filesystem::last_write_time(p.path, ec);
+                    if (!ec) {
+                        uint64_t currentMtimeBits = currentMtime.time_since_epoch().count();
+                        if (currentMtimeBits != cachedMtimeBits) {
+                            integrityOk = false;  // File modified — needs rescan
+                        }
+                    }
+                }
+            }
+
+            if (!p.isValid() || !integrityOk) {
+                // Skip invalid or tampered entries
+                continue;
+            }
             plugins.push_back(std::move(p));
         }
 
@@ -460,6 +499,24 @@ void PluginScanner::scanDirectory(const std::filesystem::path& dir, std::vector<
                 }
 
                 for (auto& info : scanned) {
+                    // [SEC-RTM-005] First-load warning for untrusted-path plugins
+                    if (!isTrustedPath(info.path)) {
+                        std::unique_lock<std::mutex> cbLock(m_mutex);
+                        if (m_seenUntrustedPlugins.find(info.path.string()) == m_seenUntrustedPlugins.end()) {
+                            if (m_firstLoadWarningCb) {
+                                // Unlock before calling UI callback (may re-enter)
+                                cbLock.unlock();
+                                bool allowed = m_firstLoadWarningCb(info.path, info.name);
+                                cbLock.lock();
+                                if (!allowed) {
+                                    Log::warning("[PluginSecurity] Skipping untrusted plugin: " + info.name +
+                                                 " from " + info.path.string());
+                                    continue;  // Skip this plugin
+                                }
+                            }
+                            m_seenUntrustedPlugins.insert(info.path.string());
+                        }
+                    }
                     results.push_back(std::move(info));
                 }
 
@@ -543,6 +600,42 @@ int PluginScanner::countPluginFiles() const {
     }
 
     return count;
+}
+
+// ==============================
+// Security: Trusted Paths (SEC-RTM-005)
+// ==============================
+
+bool PluginScanner::isTrustedPath(const std::filesystem::path& path) {
+    std::string p = path.lexically_normal().string();
+
+    // Linux: system-wide paths are trusted
+    if (p.find("/usr/lib/vst3") == 0 ||
+        p.find("/usr/lib/clap") == 0 ||
+        p.find("/usr/local/lib/vst3") == 0 ||
+        p.find("/usr/local/lib/clap") == 0) {
+        return true;
+    }
+
+    // Windows: Program Files paths are trusted
+    if (p.find("C:\\Program Files\\Common Files\\VST3") == 0 ||
+        p.find("C:\\Program Files\\Common Files\\CLAP") == 0) {
+        return true;
+    }
+
+    // macOS: system Library paths are trusted
+    if (p.find("/Library/Audio/Plug-Ins/VST3") == 0 ||
+        p.find("/Library/Audio/Plug-Ins/CLAP") == 0) {
+        return true;
+    }
+
+    // Everything else (user home directories, custom paths) is untrusted
+    return false;
+}
+
+void PluginScanner::setFirstLoadWarningCallback(FirstLoadWarningCallback cb) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_firstLoadWarningCb = std::move(cb);
 }
 
 } // namespace Audio

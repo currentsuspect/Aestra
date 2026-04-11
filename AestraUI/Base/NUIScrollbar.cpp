@@ -84,8 +84,7 @@ void NUIScrollbar::onUpdate(double deltaTime)
 
         if (t >= 1.0) {
             isAnimating_ = false;
-            currentRangeStart_ = animationTargetValue_;
-            setCurrentRange(currentRangeStart_, currentRangeSize_);
+            setCurrentRange(animationTargetValue_, currentRangeSize_);
             triggerScroll();
         }
     }

@@ -85,6 +85,8 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     m_modeToggle = std::make_shared<AestraUI::NUISegmentedControl>(
         std::vector<std::string>{"Clips", "Patterns"}
     );
+    m_modeToggle->setCornerRadius(10.0f);
+    m_modeToggle->setAccentColor(AestraUI::NUIColor(0.62f, 0.58f, 0.98f, 0.98f));
     m_modeToggle->setSelectedIndex(static_cast<size_t>(m_mode), false);
     m_modeToggle->setOnSelectionChanged([this](size_t index) {
         switchMode(static_cast<BrowserMode>(index));
@@ -352,10 +354,65 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
     bool isEmpty = (m_mode == BrowserMode::Patterns) ? m_patterns.empty() : m_clips.empty();
     
     if (isEmpty) {
-        std::string emptyText = (m_mode == BrowserMode::Patterns) 
-            ? "No patterns" 
-            : "No clips loaded\nDrop files here";
-        renderer.drawTextCentered(emptyText, listRect, 12.0f, m_textColor.withAlpha(0.5f));
+        auto& theme = AestraUI::NUIThemeManager::getInstance();
+        const bool dropActive = m_isDragOver;
+        const AestraUI::NUIRect stateCard{
+            bounds.x + 26.0f,
+            bounds.y + m_headerHeight + 34.0f,
+            std::max(0.0f, bounds.width - 52.0f),
+            std::max(96.0f, listRect.height - 68.0f)
+        };
+        const float radius = 16.0f;
+        const auto accent = theme.getColor("accentPrimary");
+        renderer.fillRoundedRect(stateCard, radius,
+                                 dropActive ? accent.withAlpha(0.10f)
+                                            : theme.getColor("surfaceRaised").withAlpha(0.22f));
+        renderer.strokeRoundedRect(stateCard, radius, 1.0f,
+                                   dropActive ? accent.withAlpha(0.26f)
+                                              : theme.getColor("borderSubtle").withAlpha(0.24f));
+
+        const std::string title = dropActive
+            ? "Drop To Import"
+            : (m_mode == BrowserMode::Patterns ? "No Patterns Yet" : "No Clips Yet");
+        const std::string detailLine1 = dropActive
+            ? "Release audio files here"
+            : (m_mode == BrowserMode::Patterns
+                ? "Create a pattern, or drop files"
+                : "Drop audio files here");
+        const std::string detailLine2 = dropActive
+            ? "to add them to Clips"
+            : (m_mode == BrowserMode::Patterns
+                ? "to switch into Clips"
+                : "to import them as clips");
+
+        const AestraUI::NUIRect iconChip{
+            stateCard.center().x - 26.0f,
+            stateCard.y + 20.0f,
+            52.0f,
+            28.0f
+        };
+        renderer.fillRoundedRect(iconChip, 14.0f,
+                                 dropActive ? accent.withAlpha(0.16f)
+                                            : theme.getColor("backgroundTertiary").withAlpha(0.52f));
+        renderer.strokeRoundedRect(iconChip, 14.0f, 1.0f,
+                                   dropActive ? accent.withAlpha(0.30f)
+                                              : theme.getColor("border").withAlpha(0.22f));
+        renderer.drawTextCentered(dropActive ? "DROP" : (m_mode == BrowserMode::Patterns ? "PATTERN" : "CLIPS"),
+                                  iconChip,
+                                  9.0f,
+                                  dropActive ? theme.getColor("textPrimary") : theme.getColor("textSecondary").withAlpha(0.92f));
+        renderer.drawTextCentered(title,
+                                  {stateCard.x + 18.0f, iconChip.bottom() + 12.0f, stateCard.width - 36.0f, 18.0f},
+                                  13.0f,
+                                  theme.getColor("textPrimary").withAlpha(0.94f));
+        renderer.drawTextCentered(detailLine1,
+                                  {stateCard.x + 24.0f, iconChip.bottom() + 34.0f, stateCard.width - 48.0f, 14.0f},
+                                  10.5f,
+                                  theme.getColor("textSecondary").withAlpha(0.86f));
+        renderer.drawTextCentered(detailLine2,
+                                  {stateCard.x + 24.0f, iconChip.bottom() + 48.0f, stateCard.width - 48.0f, 14.0f},
+                                  10.5f,
+                                  theme.getColor("textSecondary").withAlpha(0.86f));
         return;
     }
     
@@ -671,7 +728,8 @@ void PatternBrowserPanel::onResize(int width, int height) {
     
     if (m_modeToggle) {
         float toggleY = height - m_footerHeight + (m_footerHeight - 24) / 2.0f;
-        m_modeToggle->setBounds(AestraUI::NUIAbsolute(bounds, padding, toggleY, toggleWidth, 24));
+        float toggleX = std::round((width - toggleWidth) * 0.5f);
+        m_modeToggle->setBounds(AestraUI::NUIAbsolute(bounds, toggleX, toggleY, toggleWidth, 24));
     }
     
     // Layout buttons (right aligned in header)

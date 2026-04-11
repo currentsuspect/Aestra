@@ -132,6 +132,12 @@ bool MetadataParser::parseID3v2(const std::string& filePath, AudioMetadata& meta
     // uint8_t flags = header[5];
     uint32_t tagSize = readSynchsafeInt(&header[6]);
 
+    // Guard against heap exhaustion: max 10 MB tag
+    constexpr uint32_t MAX_TAG_SIZE = 10 * 1024 * 1024;
+    if (tagSize > MAX_TAG_SIZE) {
+        return false;
+    }
+
     // Read entire tag
     std::vector<uint8_t> tagData(tagSize);
     file.read(reinterpret_cast<char*>(tagData.data()), tagSize);
@@ -273,6 +279,9 @@ bool MetadataParser::parseFLAC(const std::string& filePath, AudioMetadata& meta)
             size_t pos = 0;
             // Vendor string (little-endian length)
             uint32_t vendorLen = blockData[0] | (blockData[1] << 8) | (blockData[2] << 16) | (blockData[3] << 24);
+            // [SEC-RTM-012] Guard against integer overflow: vendorLen must fit within blockSize
+            if (vendorLen > blockSize - 4)
+                continue;
             pos = 4 + vendorLen;
             if (pos + 4 > blockSize)
                 continue;

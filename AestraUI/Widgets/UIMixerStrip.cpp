@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <sstream>
 
 namespace AestraUI {
 
@@ -26,7 +27,44 @@ namespace {
     constexpr float METER_W = 28.0f;
     constexpr float MASTER_METER_W = 36.0f;
 
-    constexpr float SELECT_TOP_H = 3.0f;
+    constexpr float SELECT_TOP_H = 4.0f;
+
+    std::string buildStripRouteSummary(const Aestra::ChannelViewModel& channel)
+    {
+        if (channel.id == 0) {
+            return channel.routeName;
+        }
+
+        const bool busOnly = !channel.masterSendEnabled && channel.mainOutputId != 0;
+        int audibleSendCount = 0;
+        bool hasSidechainSend = false;
+
+        for (const auto& send : channel.sends) {
+            if (send.muted) continue;
+            if (send.sidechainOnly) {
+                hasSidechainSend = true;
+                continue;
+            }
+            ++audibleSendCount;
+        }
+
+        std::ostringstream summary;
+        bool first = true;
+        auto appendToken = [&](const std::string& token) {
+            if (token.empty()) return;
+            if (!first) summary << " • ";
+            summary << token;
+            first = false;
+        };
+
+        if (busOnly) appendToken("Bus");
+        if (audibleSendCount > 0) {
+            appendToken(audibleSendCount == 1 ? "Send" : ("+" + std::to_string(audibleSendCount)));
+        }
+        if (hasSidechainSend) appendToken("SC");
+
+        return summary.str();
+    }
 }
 
 UIMixerStrip::UIMixerStrip(uint32_t channelId,
@@ -258,10 +296,10 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 void UIMixerStrip::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
-    m_selectedTint = theme.getColor("primary").withAlpha(0.10f);
-    m_selectedOutline = theme.getColor("borderActive").withAlpha(0.18f);
-    m_selectedGlow = theme.getColor("primary").withAlpha(0.06f);
-    m_selectedTopHighlight = theme.getColor("primary").withAlpha(0.42f);
+    m_selectedTint = theme.getColor("primary").withAlpha(0.012f);
+    m_selectedOutline = theme.getColor("borderActive").withAlpha(0.30f);
+    m_selectedGlow = theme.getColor("primary").withAlpha(0.050f);
+    m_selectedTopHighlight = theme.getColor("primary").withAlpha(0.62f);
     
     // Master: Distinct Dark Glass
     m_masterBackground = theme.getColor("surfaceRaised").withAlpha(0.78f);
@@ -270,7 +308,7 @@ void UIMixerStrip::cacheThemeColors()
     // Standard Strip: Use Theme Glass Border/Hover for consistency
     // m_stripBg = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.02f); 
     // Use theme.glassHover (0.04f) or similar. Let's use a custom weak glass for strips.
-    m_stripBg = theme.getColor("surfaceTertiary").withAlpha(0.52f);
+    m_stripBg = theme.getColor("surfaceTertiary").withAlpha(0.58f);
     
     // Master Border
     m_masterBorder = theme.getColor("border").withAlpha(0.36f);
@@ -423,11 +461,12 @@ void UIMixerStrip::onUpdate(double deltaTime)
             invalidateStaticCache();
         }
         m_header->setTrackName(channel->name);
-        if (m_cachedRoute != channel->routeName) {
-            m_cachedRoute = channel->routeName;
+        const std::string stripRoute = buildStripRouteSummary(*channel);
+        if (m_cachedRoute != stripRoute) {
+            m_cachedRoute = stripRoute;
             invalidateStaticCache();
         }
-        m_header->setRouteName(channel->routeName);
+        m_header->setRouteName(stripRoute);
         if (m_cachedTrackColorArgb != channel->trackColor) {
             m_cachedTrackColorArgb = channel->trackColor;
             invalidateStaticCache();
@@ -550,9 +589,13 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     }
 
     if (selected) {
+        renderer.drawShadow(bounds, 0.0f, 8.0f, 18.0f, m_selectedGlow.withAlpha(0.20f));
         renderer.fillRoundedRect(bounds, radius, m_selectedTint);
 
         renderer.fillRect(NUIRect{bounds.x, bounds.y, bounds.width, SELECT_TOP_H}, m_selectedTopHighlight);
+        renderer.fillRoundedRect(NUIRect{bounds.x + 2.0f, bounds.y + 2.0f, bounds.width - 4.0f, 34.0f},
+                                 std::max(0.0f, radius - 2.0f),
+                                 m_selectedGlow.withAlpha(0.08f));
         renderer.strokeRoundedRect(NUIRect{bounds.x - 1.0f, bounds.y - 1.0f, bounds.width + 2.0f, bounds.height + 2.0f},
                                    radius + 1.0f,
                                    1.0f,

@@ -6,6 +6,7 @@
 #include "../App/ServiceLocator.h"
 #include "../Core/AestraAudioController.h"
 #include <cstdio>
+#include <unordered_map>
 
 namespace Aestra {
 
@@ -151,6 +152,22 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
     // Rebuild channel list to match tracks
     std::vector<std::unique_ptr<ChannelViewModel>> newChannels;
     newChannels.reserve(channelInfo.size());
+    std::unordered_map<uint32_t, std::string> channelInfoById;
+    channelInfoById.reserve(channelInfo.size());
+    for (const auto& info : channelInfo) {
+        channelInfoById[info.id] = info.name;
+    }
+
+    auto resolveMainOutputName = [&](uint32_t mainOutputId) -> std::string {
+        if (mainOutputId == 0xFFFFFFFFu || mainOutputId == 0u) {
+            return "Master";
+        }
+        auto targetIt = channelInfoById.find(mainOutputId);
+        if (targetIt != channelInfoById.end()) {
+            return targetIt->second;
+        }
+        return "Unknown (" + std::to_string(mainOutputId) + ")";
+    };
 
     for (const auto& info : channelInfo) {
         const auto it = existingIds.find(info.id);
@@ -170,6 +187,10 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             if (auto* mc = info.channel) {
                 existing->inputChannelIndex = mc->getInputChannelIndex();
                 existing->width = mc->getWidth();
+                const uint32_t engineMainOutputId = mc->getMainOutputId();
+                existing->mainOutputId = (engineMainOutputId == 0xFFFFFFFFu) ? 0u : engineMainOutputId;
+                existing->masterSendEnabled = (engineMainOutputId == 0xFFFFFFFFu);
+                existing->routeName = resolveMainOutputName(engineMainOutputId);
             }
             if (continuousParams && info.slot != Audio::ChannelSlotMap::INVALID_SLOT) {
                 continuousParams->read(info.slot, existing->faderGainDb, existing->pan, existing->trimDb);
@@ -191,6 +212,10 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             if (auto* mc = info.channel) {
                 channel->inputChannelIndex = mc->getInputChannelIndex();
                 channel->width = mc->getWidth();
+                const uint32_t engineMainOutputId = mc->getMainOutputId();
+                channel->mainOutputId = (engineMainOutputId == 0xFFFFFFFFu) ? 0u : engineMainOutputId;
+                channel->masterSendEnabled = (engineMainOutputId == 0xFFFFFFFFu);
+                channel->routeName = resolveMainOutputName(engineMainOutputId);
             }
             if (continuousParams && info.slot != Audio::ChannelSlotMap::INVALID_SLOT) {
                 continuousParams->read(info.slot, channel->faderGainDb, channel->pan, channel->trimDb);
@@ -204,7 +229,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                auto engineSends = mc->getSends();
                ch->sends.clear();
                for (const auto& route : engineSends) {
-                   ChannelViewModel::SendViewModel uiSend;
+                   ChannelViewModel::SendViewModel uiSend{};
                    // Handle Legacy Master ID
                    if (route.targetChannelId == 0xFFFFFFFF) {
                        uiSend.targetId = 0;
@@ -212,10 +237,9 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                    } else {
                        uiSend.targetId = route.targetChannelId;
                        // Try to resolve name from current snapshot info
-                       auto targetIt = std::find_if(channelInfo.begin(), channelInfo.end(), 
-                           [&](const ChannelInfo& ci){ return ci.id == route.targetChannelId; });
-                       if (targetIt != channelInfo.end()) {
-                           uiSend.targetName = targetIt->name;
+                       auto targetIt = channelInfoById.find(route.targetChannelId);
+                       if (targetIt != channelInfoById.end()) {
+                           uiSend.targetName = targetIt->second;
                        } else if (route.targetChannelId == 0) {
                            uiSend.targetName = "Master";
                        } else {
@@ -224,7 +248,9 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                    }
                    uiSend.gain = route.gain;
                    uiSend.pan = route.pan;
-                   // uiSend.postFader = ... engine doesn't have this yet, assume true
+                   uiSend.postFader = route.postFader;
+                   uiSend.muted = route.mute;
+                   uiSend.sidechainOnly = route.sidechainOnly;
                    ch->sends.push_back(uiSend);
                }
             }
@@ -519,7 +545,7 @@ void MixerViewModel::addSend(uint32_t channelId) {
     if (!ch) return;
     
     // Create new SendViewModel
-    ChannelViewModel::SendViewModel send;
+    ChannelViewModel::SendViewModel send{};
     
     // Auto-select a meaningful destination (Avoid Master if it's already the main Output)
     uint32_t defaultTarget = 0; // Fallback to Master
@@ -541,14 +567,16 @@ void MixerViewModel::addSend(uint32_t channelId) {
     send.targetId = defaultTarget; 
     send.targetName = defaultName;
     send.gain = 1.0f; // 0dB
+    send.sidechainOnly = false;
     ch->sends.push_back(send);
 
     // Update Engine
     if (auto mc = ch->channel) {
-        Audio::AudioRoute route;
+        Audio::AudioRoute route{};
         // Map 0 -> 0xFFFFFFFF for engine
         route.targetChannelId = (defaultTarget == 0) ? 0xFFFFFFFF : defaultTarget; 
         route.gain = 1.0f;
+        route.sidechainOnly = false;
         mc->addSend(route);
         
         if (m_onGraphDirty) m_onGraphDirty();
@@ -607,6 +635,84 @@ void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint3
         if (m_onGraphDirty) m_onGraphDirty();
         if (m_onProjectModified) m_onProjectModified();
     }
+}
+
+void MixerViewModel::setSendPostFader(uint32_t channelId, int sendIndex, bool postFader) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
+
+    ch->sends[sendIndex].postFader = postFader;
+
+    if (auto mc = ch->channel) {
+        mc->setSendPostFader(sendIndex, postFader);
+        if (m_onGraphDirty) m_onGraphDirty();
+        if (m_onProjectModified) m_onProjectModified();
+    }
+}
+
+void MixerViewModel::setSendSidechainOnly(uint32_t channelId, int sendIndex, bool sidechainOnly) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
+
+    ch->sends[sendIndex].sidechainOnly = sidechainOnly;
+
+    if (auto mc = ch->channel) {
+        mc->setSendSidechainOnly(sendIndex, sidechainOnly);
+        if (m_onGraphDirty) m_onGraphDirty();
+        if (m_onProjectModified) m_onProjectModified();
+    }
+}
+
+void MixerViewModel::setMainOutputDestination(uint32_t channelId, uint32_t targetId) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || ch->id == 0) return;
+
+    ch->mainOutputId = targetId;
+    ch->masterSendEnabled = (targetId == 0);
+    ch->routeName = (targetId == 0) ? "Master" : "Unknown";
+
+    if (targetId != 0) {
+        if (auto* target = getChannelById(targetId)) {
+            ch->routeName = target->name;
+        } else {
+            ch->routeName = "Unknown (" + std::to_string(targetId) + ")";
+        }
+    }
+
+    if (auto mc = ch->channel) {
+        mc->setMainOutputId(targetId == 0 ? 0xFFFFFFFFu : targetId);
+        if (m_onGraphDirty) m_onGraphDirty();
+        if (m_onProjectModified) m_onProjectModified();
+    }
+}
+
+std::string MixerViewModel::getRoutingWarning(uint32_t channelId) const {
+    const auto* ch = getChannelById(channelId);
+    if (!ch || ch->id == 0) return {};
+
+    std::unordered_map<uint32_t, int> audibleRouteCounts;
+    auto addAudibleTarget = [&](uint32_t targetId) {
+        audibleRouteCounts[targetId] += 1;
+    };
+
+    const uint32_t mainTarget = (ch->masterSendEnabled || ch->mainOutputId == 0) ? 0u : ch->mainOutputId;
+    addAudibleTarget(mainTarget);
+
+    for (const auto& send : ch->sends) {
+        if (send.muted || send.sidechainOnly) continue;
+        addAudibleTarget(send.targetId);
+    }
+
+    int duplicateDestinations = 0;
+    for (const auto& entry : audibleRouteCounts) {
+        if (entry.second > 1) {
+            duplicateDestinations++;
+        }
+    }
+
+    if (duplicateDestinations <= 0) return {};
+    if (duplicateDestinations == 1) return "Duplicate audible route";
+    return std::to_string(duplicateDestinations) + " duplicate audible routes";
 }
 
 

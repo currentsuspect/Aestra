@@ -1,8 +1,9 @@
-// ¶¸ 2025 Aestra Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "NUIComponent.h"
 #include "NUIDropdown.h"
+#include "NUISegmentedControl.h"
 
 #include <cstdint>
 #include <string>
@@ -65,11 +66,15 @@ private:
 
     // Inserts
     std::shared_ptr<EffectChainRack> m_effectRack;
+    std::shared_ptr<NUISegmentedControl> m_tabControl;
 
     // I/O
     std::shared_ptr<NUIDropdown> m_ioInputDropdown;
+    std::shared_ptr<NUIDropdown> m_mainOutputDropdown;
     std::vector<std::string> m_cachedInputNames;
     std::vector<int> m_cachedInputDeviceIds;
+    std::vector<std::string> m_cachedOutputNames;
+    std::vector<int> m_cachedOutputIds;
 
     // Sends
     std::vector<std::shared_ptr<class UIMixerSend>> m_sendWidgets;
@@ -83,14 +88,21 @@ private:
     std::string m_cachedHeaderTitle;
     std::string m_cachedHeaderSubtitle;
     int m_cachedTrackNumber{0};
+    uint32_t m_cachedMainOutputId{0xFFFFFFFFu};
+    bool m_cachedMasterSendEnabled{true};
+    size_t m_cachedSendsCount{0};
 
     std::vector<std::function<void()>> m_deferredActions; // Added m_deferredActions
+    float m_scrollOffset{0.0f};
+    float m_targetScrollOffset{0.0f};
+    float m_maxScrollOffset{0.0f};
 
     void cacheThemeColors();
     void layoutHitRects();
     int hitTestTab(const NUIPoint& p) const;
     int findTrackNumber(uint32_t channelId) const;
     void updateHeaderCache(const Aestra::ChannelViewModel* channel);
+    void clampScrollOffsets();
 };
 
 } // namespace AestraUI

@@ -626,7 +626,15 @@ static Cli parseCli(int argc, char** argv) {
     }
 
     if (const char* env = std::getenv("AESTRA_MIN_PEAK")) {
-        cli.minPeak = static_cast<float>(std::strtod(env, nullptr));
+        // [SEC-RTM-016] Use endptr to detect malformed values — silently accepting
+        // 0.0 from a bad env var is a CI supply-chain risk.
+        char* end = nullptr;
+        double val = std::strtod(env, &end);
+        if (end == env || *end != '\0' || !std::isfinite(val)) {
+            Log::warning("[Headless] Ignoring malformed AESTRA_MIN_PEAK: '" + std::string(env) + "'");
+        } else {
+            cli.minPeak = static_cast<float>(val);
+        }
     }
 
     return cli;
@@ -677,13 +685,23 @@ int main(int argc, char** argv) {
             Scenario sc = sc0;
             // Environment override knobs for agents.
             if (const char* env = std::getenv("AESTRA_MIN_PEAK")) {
-                sc.minPeak = static_cast<float>(std::strtod(env, nullptr));
+                // [SEC-RTM-016] Validate env var with endptr + isfinite
+                char* end = nullptr;
+                double val = std::strtod(env, &end);
+                if (end == env || *end != '\0' || !std::isfinite(val)) {
+                    std::cerr << "[Headless] Ignoring malformed AESTRA_MIN_PEAK: '" << env << "'\n";
+                } else {
+                    sc.minPeak = static_cast<float>(val);
+                }
             }
 
             if (sc.type == ScenarioType::Project) {
-                // Allow overriding project path via env for container runs.
+                // [SEC-RTM-008] Removed AESTRA_PROJECT env var override.
+                // Use --project <path> CLI flag instead — visible in CI logs,
+                // auditable, and eliminates silent supply-chain injection.
                 if (const char* envProj = std::getenv("AESTRA_PROJECT")) {
-                    sc.projectPath = envProj;
+                    std::cerr << "[Headless] WARNING: AESTRA_PROJECT env var is ignored for security.\n"
+                              << "  Use --project \"" << envProj << "\" instead.\n";
                 }
             }
 

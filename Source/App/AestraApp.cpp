@@ -477,6 +477,36 @@ bool AestraApp::initialize(const std::string& projectPath) {
         bool crashedSession = isCrashedSession();
 
         if (crashedSession && RecoveryDialog::detectAutosave(autosavePath, timestamp)) {
+            // [SEC-RTM-007] Verify temporal consistency: the autosave file must have
+            // been written within a reasonable window of the crash flag. A large delta
+            // suggests a planted attack (pre-seeded crash flag + malicious autosave).
+            bool timeConsistent = true;
+            {
+                std::error_code ecFlag, ecAuto;
+                auto flagMtime = std::filesystem::last_write_time(
+                    std::filesystem::path(getCrashFlagPath()), ecFlag);
+                auto saveMtime = std::filesystem::last_write_time(
+                    std::filesystem::path(autosavePath), ecAuto);
+                if (!ecFlag && !ecAuto) {
+                    auto deltaSec = std::abs(
+                        std::chrono::duration_cast<std::chrono::seconds>(
+                            saveMtime - flagMtime).count());
+                    constexpr int kMaxRecoveryDeltaSec = 300; // 5 minutes
+                    if (deltaSec > kMaxRecoveryDeltaSec) {
+                        timeConsistent = false;
+                        Log::warning("[Recovery] Crash flag and autosave mtime delta = " +
+                                     std::to_string(deltaSec) + "s (limit: " +
+                                     std::to_string(kMaxRecoveryDeltaSec) +
+                                     "s) — discarding as possible pre-seeded attack");
+                        std::error_code rmEc;
+                        std::filesystem::remove(autosavePath, rmEc);
+                        std::filesystem::remove(std::filesystem::path(getCrashFlagPath()), rmEc);
+                        m_recoveryHandled = true;
+                    }
+                }
+            }
+
+            if (timeConsistent) {
             Log::info("[Recovery] Crash detected, showing recovery dialog");
             // Store the path for later use and show the recovery dialog
             m_pendingAutosavePath = autosavePath;
@@ -516,21 +546,19 @@ bool AestraApp::initialize(const std::string& projectPath) {
                 });
                 Log::info("[Recovery] Showing recovery dialog for autosave");
             } else {
-                // Fallback: if dialog not available, silently load (shouldn't happen)
-                Log::warning("[Recovery] RecoveryDialog not available, falling back to silent load");
-                const std::string previousProjectPath = m_projectPath;
-                m_projectPath = autosavePath;
-                auto result = loadProject();
-                if (result.ok) {
-                    syncRecordingProjectPath(m_content, m_projectPath);
-                    if (result.ui) applyUIState(*result.ui);
-                    m_projectPath = getAutosavePath();
-                    syncRecordingProjectPath(m_content, m_projectPath);
-                } else {
-                    m_projectPath = previousProjectPath;
+                // [SEC-RTM-015] RecoveryDialog unavailable — do NOT silently load
+                // the autosave, as it may have been planted by a local attacker.
+                // Instead, discard it and start with a fresh project.
+                Log::warning("[Recovery] RecoveryDialog not available — discarding "
+                             "autosave for safety (possible pre-seeded crash recovery attack)");
+                std::error_code ec;
+                std::filesystem::remove(autosavePath, ec);
+                if (ec) {
+                    Log::warning("[Recovery] Failed to remove suspicious autosave: " + ec.message());
                 }
                 m_recoveryHandled = true;
             }
+            } // if (timeConsistent)
         } else {
             // No autosave found - mark recovery as "handled" (nothing to do)
             m_recoveryHandled = true;

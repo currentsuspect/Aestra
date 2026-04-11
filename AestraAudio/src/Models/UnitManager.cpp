@@ -297,8 +297,15 @@ void UnitManager::loadFromJSON(const JSON& json) {
         unit.isEnabled = unit.enabled;
         unit.targetMixerRoute = ju.has("targetMixerRoute") ? ju["targetMixerRoute"].asInt() : -1;
         if (ju.has("color")) {
-            unit.color = ju["color"].isString() ? static_cast<uint32_t>(std::stoul(ju["color"].asString()))
-                                                 : static_cast<uint32_t>(ju["color"].asNumber());
+            if (ju["color"].isString()) {
+                try {
+                    unit.color = static_cast<uint32_t>(std::stoul(ju["color"].asString()));
+                } catch (const std::exception&) {
+                    unit.color = 0xFFFFFFFF; // Default white on parse error
+                }
+            } else {
+                unit.color = static_cast<uint32_t>(ju["color"].asNumber());
+            }
         }
         unit.isMuted = ju.has("muted") ? ju["muted"].asBool() : false;
         unit.isSolo = ju.has("solo") ? ju["solo"].asBool() : false;

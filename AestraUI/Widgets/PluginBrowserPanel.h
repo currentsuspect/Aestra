@@ -292,6 +292,8 @@ public:
 private:
     void renderSlot(NUIRenderer& renderer, int index, float slotY);
     int hitTestSlot(float y) const;
+    NUIRect slotRectForIndex(int index) const;
+    NUIRect slotRectForTop(float slotY) const;
     
     std::array<EffectSlotInfo, MAX_SLOTS> m_slots;
     std::array<int, MAX_SLOTS> m_bypassOverride; // -1=None, 0=Active, 1=Bypassed
