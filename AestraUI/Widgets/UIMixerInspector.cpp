@@ -266,7 +266,9 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
                     m_cachedRoute == channel->routeName &&
                     m_cachedMainOutputId == channel->mainOutputId &&
                     m_cachedMasterSendEnabled == channel->masterSendEnabled &&
-                    m_cachedSendsCount == channel->sends.size())
+                    m_cachedSendsCount == channel->sends.size() &&
+                    m_cachedInsertsCount == channel->inserts.size() &&
+                    m_cachedFxCount == channel->fxCount)
                  : (m_cachedName.empty() && m_cachedRoute.empty()));
     if (identityUnchanged) return;
 
@@ -279,6 +281,8 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
     m_cachedMainOutputId = channel ? channel->mainOutputId : 0xFFFFFFFFu;
     m_cachedMasterSendEnabled = channel ? channel->masterSendEnabled : true;
     m_cachedSendsCount = channel ? channel->sends.size() : 0;
+    m_cachedInsertsCount = channel ? channel->inserts.size() : 0;
+    m_cachedFxCount = channel ? channel->fxCount : 0;
 
     if (!channel) {
         m_cachedHeaderTitle = "Inspector";

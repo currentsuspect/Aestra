@@ -56,7 +56,7 @@ const PluginInfo& eqInfo() {
         p.category = "Equalizer";
         p.format = PluginFormat::Internal;
         p.type = PluginType::Effect;
-        p.numAudioInputs = 2;
+        p.numAudioInputs = 4;
         p.numAudioOutputs = 2;
         p.hasMidiInput = false;
         p.hasMidiOutput = false;
@@ -76,7 +76,7 @@ const PluginInfo& compInfo() {
         p.category = "Dynamics";
         p.format = PluginFormat::Internal;
         p.type = PluginType::Effect;
-        p.numAudioInputs = 2;
+        p.numAudioInputs = 4;
         p.numAudioOutputs = 2;
         p.hasMidiInput = false;
         p.hasMidiOutput = false;

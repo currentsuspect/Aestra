@@ -441,11 +441,14 @@ private:
     std::atomic<uint64_t> m_globalSamplePos{0};
 
     // Pre-allocated buffers - DOUBLE PRECISION for internal mixing
-    std::vector<std::vector<double>> m_trackBuffersD; // Double precision track buffers
-    std::vector<double> m_masterBufferD;              // Double precision master
-    std::vector<float> m_scratchL;                    // Scratch L for plugins
-    std::vector<float> m_scratchR;                    // Scratch R for plugins
-    std::vector<MidiBuffer> m_scratchMidiBuffers;     // [NEW] Scratch MIDI buffers for units
+    std::vector<std::vector<double>> m_trackBuffersD;          // Double precision track buffers
+    std::vector<std::vector<double>> m_trackSidechainBuffersD; // Sidechain-only per-track buffers
+    std::vector<double> m_masterBufferD;                       // Double precision master
+    std::vector<float> m_scratchL;                             // Scratch L for plugins
+    std::vector<float> m_scratchR;                             // Scratch R for plugins
+    std::vector<float> m_sidechainScratchL;                    // Scratch sidechain L for plugins
+    std::vector<float> m_sidechainScratchR;                    // Scratch sidechain R for plugins
+    std::vector<MidiBuffer> m_scratchMidiBuffers;              // [NEW] Scratch MIDI buffers for units
 
     struct UnitAuditionState {
         UnitID unitId{0};

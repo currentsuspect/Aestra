@@ -220,6 +220,29 @@ Do not block v1 Beta on:
 - Favor a routing model that is simpler to understand and harder to break over maximum theoretical flexibility.
 - Excellent mono/stereo routing plus buses, sends, sidechain, alt outputs, and trustworthy export matters more than deep multichannel graphs for Beta.
 
+### Routing Trust Status
+
+- `[x][P0][G-013a]` Render/export trust
+  - Offline full-song export parity now has explicit regression coverage for:
+    - baseline render parity
+    - audible send routing parity
+    - sidechain-compressed routing parity
+  - Stem/bus-print coverage remains tracked under internal print/export trust, not full-song export parity.
+- `[ ][P0][G-011a]` Solo/mute semantics through routed graphs
+  - Not closed yet.
+- `[~][P0][G-010a]` Feedback/illegal-route protection
+  - Duplicate audible-route warning exists.
+  - Real feedback-loop prevention still remains.
+- `[~][P0][G-017a]` Route-state trust tests
+  - Save/load persistence is real.
+  - Reopen/render/reopen trust coverage still needs a dedicated test pass.
+- `[~][P1][G-009a]` Strip-level route visibility
+  - Compact strip markers exist (`Bus`, `Send`, `+N`, `SC`).
+  - Final visibility polish still remains.
+- `[~][P1][G-014a]` Sidechain consumer breadth
+  - Built-in `Aestra Comp` now consumes real sidechain sends with live GR proof.
+  - Broader third-party/plugin capability coverage still remains.
+
 ---
 
 ## EPIC H — Transport + timing (tempo/metronome/latency semantics) (P0)

@@ -986,6 +986,10 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
             m_scratchL.resize(monoSize);
         if (m_scratchR.size() < monoSize)
             m_scratchR.resize(monoSize);
+        if (m_sidechainScratchL.size() < monoSize)
+            m_sidechainScratchL.resize(monoSize);
+        if (m_sidechainScratchR.size() < monoSize)
+            m_sidechainScratchR.resize(monoSize);
 
         // Pre-allocate per-unit MIDI scratch buffers so RT never resizes.
         // Note: units are expected to be low-count; we cap to a reasonable maximum.
@@ -1014,6 +1018,11 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         m_trackBuffersD.clear();
         m_trackBuffersD.resize(kMaxTracks);
         for (auto& buf : m_trackBuffersD) {
+            buf.assign(requiredSize, 0.0);
+        }
+        m_trackSidechainBuffersD.clear();
+        m_trackSidechainBuffersD.resize(kMaxTracks);
+        for (auto& buf : m_trackSidechainBuffersD) {
             buf.assign(requiredSize, 0.0);
         }
         if (m_trackState.size() != kMaxTracks) {
@@ -1046,6 +1055,11 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
                         ptr[i] = c;
                     }
                 }
+            }
+        }
+        for (auto& buf : m_trackSidechainBuffersD) {
+            if (!buf.empty()) {
+                VirtualLock(buf.data(), buf.size() * sizeof(double));
             }
         }
 #endif
@@ -1400,6 +1414,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         }
         auto& buffer = m_trackBuffersD[trackIdx];
         std::memset(buffer.data(), 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
+        auto& sidechainBuffer = m_trackSidechainBuffersD[trackIdx];
+        std::memset(sidechainBuffer.data(), 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
     }
 
     // Process tracks in audible topological order so any routed upstream
@@ -1431,7 +1447,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             addEdge(track.mainOutputId);
         }
         for (const auto& send : track.sends) {
-            if (send.mute || send.sidechainOnly || send.targetChannelId == 0xFFFFFFFFu) {
+            if (send.mute || send.targetChannelId == 0xFFFFFFFFu) {
                 continue;
             }
             addEdge(send.targetChannelId);
@@ -1852,21 +1868,28 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         // === Plugin Processing (EffectChain) ===
         if (track.effectChain && track.effectChain->getActiveSlotCount() > 0) {
             // Check if scratches are large enough (should be from setBufferConfig)
-            if (m_scratchL.size() >= numFrames && m_scratchR.size() >= numFrames) {
+            if (m_scratchL.size() >= numFrames && m_scratchR.size() >= numFrames &&
+                m_sidechainScratchL.size() >= numFrames && m_sidechainScratchR.size() >= numFrames) {
                 // 1. De-interleave Double -> Float
                 const double* dBuf = buffer.data();
+                const double* dScBuf = m_trackSidechainBuffersD[trackIdx].data();
                 float* fL = m_scratchL.data();
                 float* fR = m_scratchR.data();
+                float* scL = m_sidechainScratchL.data();
+                float* scR = m_sidechainScratchR.data();
 
                 // Allow vectorization
                 for (uint32_t k = 0; k < numFrames; ++k) {
                     fL[k] = static_cast<float>(dBuf[k * 2]);
                     fR[k] = static_cast<float>(dBuf[k * 2 + 1]);
+                    scL[k] = static_cast<float>(dScBuf[k * 2]);
+                    scR[k] = static_cast<float>(dScBuf[k * 2 + 1]);
                 }
 
                 // 2. Process
                 float* channels[2] = {fL, fR};
-                track.effectChain->process(channels, 2, numFrames);
+                const float* sidechainChannels[2] = {scL, scR};
+                track.effectChain->process(channels, 2, numFrames, sidechainChannels, 2);
 
                 // 3. Re-interleave Float -> Double
                 double* dOut = buffer.data();
@@ -1921,7 +1944,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                 }
 
                 for (const auto& send : track.sends) {
-                    if (send.mute || send.sidechainOnly) {
+                    if (send.mute) {
                         continue;
                     }
 
@@ -1938,7 +1961,15 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     const double routedL = sendSrcL * sendGainL;
                     const double routedR = sendSrcR * sendGainR;
 
-                    if (send.targetChannelId == 0xFFFFFFFFu) {
+                    if (send.sidechainOnly && send.targetChannelId != 0xFFFFFFFFu && slotMap) {
+                        const uint32_t scDestSlot = slotMap->getSlotIndex(send.targetChannelId);
+                        if (scDestSlot != ChannelSlotMap::INVALID_SLOT && scDestSlot < availableTracks &&
+                            scDestSlot != trackIdx) {
+                            auto& scDestBuffer = m_trackSidechainBuffersD[scDestSlot];
+                            scDestBuffer[i * 2] += routedL;
+                            scDestBuffer[i * 2 + 1] += routedR;
+                        }
+                    } else if (send.targetChannelId == 0xFFFFFFFFu) {
                         masterBuf[i * 2] += routedL;
                         masterBuf[i * 2 + 1] += routedR;
                     } else if (slotMap) {

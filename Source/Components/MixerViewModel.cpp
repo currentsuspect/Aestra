@@ -360,9 +360,20 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
     m_channels = std::move(newChannels);
     rebuildIdMap();
 
-    // Validate selection
+    // Validate or establish startup selection.
     if (m_selectedChannelId >= 0 && !getChannelById(static_cast<uint32_t>(m_selectedChannelId))) {
         m_selectedChannelId = -1;
+    }
+
+    if (m_selectedChannelId < 0 && !m_channels.empty()) {
+        uint32_t fallbackId = m_channels.front()->id;
+        for (const auto& channel : m_channels) {
+            if (channel && channel->fxCount > 0) {
+                fallbackId = channel->id;
+                break;
+            }
+        }
+        m_selectedChannelId = static_cast<int32_t>(fallbackId);
     }
 }
 

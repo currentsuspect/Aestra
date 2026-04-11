@@ -91,6 +91,8 @@ private:
     uint32_t m_cachedMainOutputId{0xFFFFFFFFu};
     bool m_cachedMasterSendEnabled{true};
     size_t m_cachedSendsCount{0};
+    size_t m_cachedInsertsCount{0};
+    int m_cachedFxCount{0};
 
     std::vector<std::function<void()>> m_deferredActions; // Added m_deferredActions
     float m_scrollOffset{0.0f};
