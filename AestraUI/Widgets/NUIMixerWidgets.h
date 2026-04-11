@@ -110,8 +110,8 @@ private:
     std::shared_ptr<UIItemSelector> destSelector_;
     std::shared_ptr<UIMixerKnob> levelKnob_;
     std::shared_ptr<NUIButton> deleteButton_;
-    std::shared_ptr<NUISegmentedControl> modeControl_;
-    std::shared_ptr<NUISegmentedControl> sendTypeControl_;
+    std::shared_ptr<NUISegmentedControl> m_modeControl;
+    std::shared_ptr<NUISegmentedControl> m_sendTypeControl;
     
     // Store mapping from index to ID
     std::vector<std::pair<uint32_t, std::string>> destinations_;
@@ -123,8 +123,8 @@ private:
     
     std::function<void(uint32_t)> onDestChanged_;
     std::function<void(float)> onLevelChanged_;
-    std::function<void(bool)> onPostFaderChanged_;
-    std::function<void(bool)> onSidechainModeChanged_;
+    std::function<void(bool)> m_onPostFaderChanged;
+    std::function<void(bool)> m_onSidechainModeChanged;
     std::function<void()> onDelete_;
 };
 

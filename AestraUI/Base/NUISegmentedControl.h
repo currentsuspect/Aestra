@@ -4,9 +4,9 @@
 #include "NUIRenderer.h"
 #include "NUITypes.h"
 #include "NUIThemeSystem.h"
-#include <vector>
-#include <string>
 #include <functional>
+#include <string>
+#include <vector>
 
 namespace AestraUI {
 
@@ -69,6 +69,11 @@ public:
             theme.getColor("borderSubtle").withAlpha(0.34f));
         renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
             std::max(0.0f, cornerRadius_ - 1.0f), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.018f));
+
+        if (segments_.empty()) {
+            NUIComponent::onRender(renderer);
+            return;
+        }
         
         // Calculate segment dimensions
         float segmentWidth = bounds.width / static_cast<float>(segments_.size());
@@ -133,7 +138,8 @@ public:
     
     bool onMouseEvent(const NUIMouseEvent& event) override {
         if (!isVisible() || !isEnabled()) return false;
-        
+        if (segments_.empty()) return false;
+
         auto bounds = getBounds();
 
         if (event.button == NUIMouseButton::None) {
@@ -167,6 +173,15 @@ public:
         }
         
         return NUIComponent::onMouseEvent(event);
+    }
+
+    void onMouseLeave() override
+    {
+        if (hoveredIndex_ != -1) {
+            hoveredIndex_ = -1;
+            setDirty(true);
+        }
+        NUIComponent::onMouseLeave();
     }
     
 private:

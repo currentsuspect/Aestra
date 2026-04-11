@@ -6,6 +6,7 @@
 #include "../App/ServiceLocator.h"
 #include "../Core/AestraAudioController.h"
 #include <cstdio>
+#include <unordered_map>
 
 namespace Aestra {
 
@@ -151,15 +152,19 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
     // Rebuild channel list to match tracks
     std::vector<std::unique_ptr<ChannelViewModel>> newChannels;
     newChannels.reserve(channelInfo.size());
+    std::unordered_map<uint32_t, std::string> channelInfoById;
+    channelInfoById.reserve(channelInfo.size());
+    for (const auto& info : channelInfo) {
+        channelInfoById[info.id] = info.name;
+    }
 
     auto resolveMainOutputName = [&](uint32_t mainOutputId) -> std::string {
         if (mainOutputId == 0xFFFFFFFFu || mainOutputId == 0u) {
             return "Master";
         }
-        auto targetIt = std::find_if(channelInfo.begin(), channelInfo.end(),
-            [&](const ChannelInfo& ci) { return ci.id == mainOutputId; });
-        if (targetIt != channelInfo.end()) {
-            return targetIt->name;
+        auto targetIt = channelInfoById.find(mainOutputId);
+        if (targetIt != channelInfoById.end()) {
+            return targetIt->second;
         }
         return "Unknown (" + std::to_string(mainOutputId) + ")";
     };
@@ -224,7 +229,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                auto engineSends = mc->getSends();
                ch->sends.clear();
                for (const auto& route : engineSends) {
-                   ChannelViewModel::SendViewModel uiSend;
+                   ChannelViewModel::SendViewModel uiSend{};
                    // Handle Legacy Master ID
                    if (route.targetChannelId == 0xFFFFFFFF) {
                        uiSend.targetId = 0;
@@ -232,10 +237,9 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                    } else {
                        uiSend.targetId = route.targetChannelId;
                        // Try to resolve name from current snapshot info
-                       auto targetIt = std::find_if(channelInfo.begin(), channelInfo.end(), 
-                           [&](const ChannelInfo& ci){ return ci.id == route.targetChannelId; });
-                       if (targetIt != channelInfo.end()) {
-                           uiSend.targetName = targetIt->name;
+                       auto targetIt = channelInfoById.find(route.targetChannelId);
+                       if (targetIt != channelInfoById.end()) {
+                           uiSend.targetName = targetIt->second;
                        } else if (route.targetChannelId == 0) {
                            uiSend.targetName = "Master";
                        } else {
@@ -541,7 +545,7 @@ void MixerViewModel::addSend(uint32_t channelId) {
     if (!ch) return;
     
     // Create new SendViewModel
-    ChannelViewModel::SendViewModel send;
+    ChannelViewModel::SendViewModel send{};
     
     // Auto-select a meaningful destination (Avoid Master if it's already the main Output)
     uint32_t defaultTarget = 0; // Fallback to Master
@@ -568,7 +572,7 @@ void MixerViewModel::addSend(uint32_t channelId) {
 
     // Update Engine
     if (auto mc = ch->channel) {
-        Audio::AudioRoute route;
+        Audio::AudioRoute route{};
         // Map 0 -> 0xFFFFFFFF for engine
         route.targetChannelId = (defaultTarget == 0) ? 0xFFFFFFFF : defaultTarget; 
         route.gain = 1.0f;

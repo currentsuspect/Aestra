@@ -121,37 +121,37 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     if (m_isMaster) {
         // The master strip reads better when title + subtitle are treated as one
         // vertically centered stack instead of using the generic track split.
-        constexpr float kMasterNameH = 14.0f;
-        constexpr float kMasterRouteH = 11.0f;
-        constexpr float kMasterGap = 1.5f;
+        constexpr float MASTER_NAME_H = 14.0f;
+        constexpr float MASTER_ROUTE_H = 11.0f;
+        constexpr float MASTER_GAP = 1.5f;
         const float stackH = m_route.empty()
-            ? kMasterNameH
-            : (kMasterNameH + kMasterGap + kMasterRouteH);
+            ? MASTER_NAME_H
+            : (MASTER_NAME_H + MASTER_GAP + MASTER_ROUTE_H);
         const float stackY = textRect.y + std::max(0.0f, (textRect.height - stackH) * 0.5f) - 1.0f;
 
-        NUIRect nameRect{textRect.x, stackY, textRect.width, kMasterNameH};
+        NUIRect nameRect{textRect.x, stackY, textRect.width, MASTER_NAME_H};
         renderer.drawTextCentered(m_name, nameRect, nameFont, m_selected ? m_selectedText : m_text);
 
         if (!m_route.empty()) {
-            NUIRect routeRect{textRect.x, stackY + kMasterNameH + kMasterGap, textRect.width, kMasterRouteH};
+            NUIRect routeRect{textRect.x, stackY + MASTER_NAME_H + MASTER_GAP, textRect.width, MASTER_ROUTE_H};
             renderer.drawTextCentered(m_route, routeRect, routeFont, m_textSecondary);
         }
         return;
     }
 
-    constexpr float kTrackNameH = 13.5f;
-    constexpr float kTrackRouteH = 10.5f;
-    constexpr float kTrackGap = 1.5f;
+    constexpr float TRACK_NAME_H = 13.5f;
+    constexpr float TRACK_ROUTE_H = 10.5f;
+    constexpr float TRACK_GAP = 1.5f;
     const float stackH = m_route.empty()
-        ? kTrackNameH
-        : (kTrackNameH + kTrackGap + kTrackRouteH);
+        ? TRACK_NAME_H
+        : (TRACK_NAME_H + TRACK_GAP + TRACK_ROUTE_H);
     const float stackY = textRect.y + std::max(0.0f, (textRect.height - stackH) * 0.5f) - 0.5f;
 
-    NUIRect nameRect{textRect.x, stackY, textRect.width, kTrackNameH};
+    NUIRect nameRect{textRect.x, stackY, textRect.width, TRACK_NAME_H};
     renderer.drawTextCentered(m_name, nameRect, nameFont, m_selected ? m_selectedText : m_text);
 
     if (!m_route.empty()) {
-        NUIRect routeRect{textRect.x, stackY + kTrackNameH + kTrackGap, textRect.width, kTrackRouteH};
+        NUIRect routeRect{textRect.x, stackY + TRACK_NAME_H + TRACK_GAP, textRect.width, TRACK_ROUTE_H};
         renderer.drawTextCentered(m_route,
                                   routeRect,
                                   routeFont,

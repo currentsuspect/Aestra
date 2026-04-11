@@ -36,7 +36,7 @@ def main():
     sz = os.path.getsize(output)
     ds = struct.unpack('<I', wav[wav.find(b'data')+4:wav.find(b'data')+8])[0]
     print(f"[+] PoC: {output} ({sz} bytes, declares {ds/1e9:.1f} GB of audio)")
-    print(f"[+] dataSize=0xFFFFFFFF → resize(2.1B floats) → ~8.5 GB → crash")
+    print("[+] dataSize=0xFFFFFFFF → resize(2.1B floats) → ~8.5 GB → crash")
 
 if __name__ == '__main__':
     main()

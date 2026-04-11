@@ -111,7 +111,8 @@ void MetronomeEngine::loadClickSounds(const std::string& downbeatPath, const std
                 }
                 const uint32_t numSamples = chunkLen / (numChannels * bytesPerSample);
                 // Guard against excessive allocation from malformed chunkLen
-                if (numSamples > 10000000) { // ~10M samples max (~200 seconds at 48kHz)
+                constexpr uint32_t MAX_SAMPLE_COUNT = 10'000'000;
+                if (numSamples > MAX_SAMPLE_COUNT) { // ~10M samples max (~200 seconds at 48kHz)
                     fclose(file);
                     return false;
                 }

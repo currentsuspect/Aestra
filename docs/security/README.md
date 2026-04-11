@@ -1,5 +1,9 @@
 # Aestra Security Lab — Blue Team
 
+## Private Disclosure
+Report vulnerabilities privately to `makoridylangmail.com` with the subject prefix
+`SECURITY: [summary]`. Acknowledgment SLA: 72 hours.
+
 ## Methodology
 Every vulnerability must have:
 1. **Proof of existence** — automated test that demonstrates the vuln
@@ -9,15 +13,21 @@ Every vulnerability must have:
 No "trust me bro". Every claim backed by reproducible code.
 
 ## Running Tests
+
 ```bash
-cd tests/security
-g++ -std=c++17 -o stoul_crash stoul_crash.cpp && ./stoul_crash
-g++ -std=c++17 -o json_dos json_dos.cpp && ./json_dos
-g++ -std=c++17 -o div_zero_channels div_zero_channels.cpp && ./div_zero_channels
-g++ -std=c++17 -o sampler_path_traversal sampler_path_traversal.cpp && ./sampler_path_traversal
-g++ -std=c++17 -o id3_overflow id3_overflow.cpp && ./id3_overflow
-g++ -std=c++17 -o shell_escape_test shell_escape_test.cpp && ./shell_escape_test
+cmake -S . -B build/tests-security -DCMAKE_BUILD_TYPE=Debug
+cmake --build build/tests-security --parallel
+ctest --test-dir build/tests-security -V
 ```
+
+Targeted security-only runs:
+
+```bash
+ctest --test-dir build/tests-security -R 'Sec'
+```
+
+Keep this README aligned with the repository security targets in
+`tests/security/CMakeLists.txt` and the CI workflow that runs them.
 
 ## Vulnerability Register
 

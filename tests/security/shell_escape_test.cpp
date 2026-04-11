@@ -6,22 +6,10 @@
 // shell injection becomes immediate. This test verifies the escaping function
 // correctly handles all dangerous inputs.
 
+#include "Linux/PlatformUtilsLinux.h"
+
 #include <iostream>
 #include <string>
-
-// Copy of the actual shellEscape from PlatformUtilsLinux.cpp
-std::string shellEscape(const std::string& input) {
-    std::string escaped = "'";
-    for (char c : input) {
-        if (c == '\'') {
-            escaped += "'\\''";
-        } else {
-            escaped += c;
-        }
-    }
-    escaped += "'";
-    return escaped;
-}
 
 // Check if the escaped string is safe — no unquoted shell metacharacters
 bool isSafeEscaped(const std::string& escaped) {
@@ -83,7 +71,7 @@ int main() {
 
     bool allSafe = true;
     for (const auto& input : attackInputs) {
-        std::string escaped = shellEscape(input);
+        std::string escaped = Aestra::shellEscape(input);
         bool safe = isSafeEscaped(escaped);
         std::cout << "  Input: \"" << input << "\"" << std::endl;
         std::cout << "    Escaped: " << escaped << std::endl;

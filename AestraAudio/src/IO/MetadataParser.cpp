@@ -133,8 +133,8 @@ bool MetadataParser::parseID3v2(const std::string& filePath, AudioMetadata& meta
     uint32_t tagSize = readSynchsafeInt(&header[6]);
 
     // Guard against heap exhaustion: max 10 MB tag
-    constexpr uint32_t kMaxTagSize = 10 * 1024 * 1024;
-    if (tagSize > kMaxTagSize) {
+    constexpr uint32_t MAX_TAG_SIZE = 10 * 1024 * 1024;
+    if (tagSize > MAX_TAG_SIZE) {
         return false;
     }
 

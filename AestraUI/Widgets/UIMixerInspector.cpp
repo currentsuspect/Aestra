@@ -1,4 +1,4 @@
-// ¶¸ 2025 Aestra Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerInspector.h"
 
 #include "NUIThemeSystem.h"
@@ -262,7 +262,12 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
     const uint32_t selectedId = channel ? channel->id : 0xFFFFFFFFu;
     const bool identityUnchanged =
         (m_cachedSelectedId == selectedId) &&
-        (channel ? (m_cachedName == channel->name && m_cachedRoute == channel->routeName) : (m_cachedName.empty() && m_cachedRoute.empty()));
+        (channel ? (m_cachedName == channel->name &&
+                    m_cachedRoute == channel->routeName &&
+                    m_cachedMainOutputId == channel->mainOutputId &&
+                    m_cachedMasterSendEnabled == channel->masterSendEnabled &&
+                    m_cachedSendsCount == channel->sends.size())
+                 : (m_cachedName.empty() && m_cachedRoute.empty()));
     if (identityUnchanged) return;
 
     m_cachedSelectedId = selectedId;
@@ -271,6 +276,9 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
     m_cachedTrackNumber = 0;
     m_cachedName = channel ? channel->name : std::string();
     m_cachedRoute = channel ? channel->routeName : std::string();
+    m_cachedMainOutputId = channel ? channel->mainOutputId : 0xFFFFFFFFu;
+    m_cachedMasterSendEnabled = channel ? channel->masterSendEnabled : true;
+    m_cachedSendsCount = channel ? channel->sends.size() : 0;
 
     if (!channel) {
         m_cachedHeaderTitle = "Inspector";
@@ -459,6 +467,18 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
     const NUIRect contentRect{b.x + PAD, contentTop, b.width - PAD * 2.0f, b.height - (contentTop - b.y) - PAD};
 
     if (!channel) {
+        if (m_effectRack) {
+            m_effectRack->setVisible(false);
+        }
+        if (m_ioInputDropdown) {
+            m_ioInputDropdown->setVisible(false);
+        }
+        if (m_mainOutputDropdown) {
+            m_mainOutputDropdown->setVisible(false);
+        }
+        for (auto& widget : m_sendWidgets) {
+            widget->setVisible(false);
+        }
         const float emptyCardH = 160.0f;
         const float emptyTop = contentRect.y + 8.0f;
         const float emptyBottom = contentRect.bottom() - 54.0f;
