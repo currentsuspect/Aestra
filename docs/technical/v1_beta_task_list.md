@@ -228,18 +228,23 @@ Do not block v1 Beta on:
     - audible send routing parity
     - sidechain-compressed routing parity
   - Stem/bus-print coverage remains tracked under internal print/export trust, not full-song export parity.
-- `[ ][P0][G-011a]` Solo/mute semantics through routed graphs
-  - Not closed yet.
-- `[~][P0][G-010a]` Feedback/illegal-route protection
+- `[x][P0][G-011a]` Solo/mute semantics through routed graphs
+  - Solo now propagates through audible and sidechain routing dependencies instead of muting routed graphs incorrectly.
+  - Source tracks needed for bus/feed/sidechain behavior keep processing without leaking unintended direct output.
+- `[x][P0][G-010a]` Feedback/illegal-route protection
   - Duplicate audible-route warning exists.
-  - Real feedback-loop prevention still remains.
-- `[~][P0][G-017a]` Route-state trust tests
+  - Self-routes and multi-track routing cycles are now filtered from destination pickers and blocked at the model layer.
+- `[x][P0][G-017a]` Route-state trust tests
   - Save/load persistence is real.
-  - Reopen/render/reopen trust coverage still needs a dedicated test pass.
-- `[~][P1][G-009a]` Strip-level route visibility
+  - Project round-trip regression now proves main-output rerouting, audible sends, pre/post tap, and sidechain-only sends survive save + reopen for both canonical save and autosave paths.
+- `[x][P1][G-009a]` Strip-level route visibility
+  - compact strip summaries now surface route truth (`Bus T2`, `Snd T2`, `SC T2`, `S+N`, `SC+N`) without falling back to inspector-length subtitles
   - Compact strip markers exist (`Bus`, `Send`, `+N`, `SC`).
   - Final visibility polish still remains.
 - `[~][P1][G-014a]` Sidechain consumer breadth
+  - built-in compressor path is complete and live-proofed
+  - VST3 live instances now report real input bus counts so sidechain-capable inserts can be recognized honestly
+  - CLAP-side capability discovery is still deferred
   - Built-in `Aestra Comp` now consumes real sidechain sends with live GR proof.
   - Broader third-party/plugin capability coverage still remains.
 

@@ -492,6 +492,18 @@ private:
     // Let's use AudioEngine::m_trackState.
     std::vector<TrackRTState> m_trackState;
 
+    // Reused render-graph scratch state to avoid heap churn in the audio callback.
+    std::unordered_map<uint32_t, size_t> m_rtTrackIndexById;
+    std::vector<std::vector<size_t>> m_rtAudibleDownstream;
+    std::vector<std::vector<size_t>> m_rtAudibleIncoming;
+    std::vector<std::vector<size_t>> m_rtSidechainIncoming;
+    std::vector<std::vector<size_t>> m_rtTopoEdges;
+    std::vector<uint32_t> m_rtTopoIndegree;
+    std::vector<bool> m_rtAudibleEligible;
+    std::vector<bool> m_rtProcessActive;
+    std::vector<size_t> m_rtProcessOrder;
+    std::vector<size_t> m_rtIndexQueue;
+
     // --- Antigravity Routing Engine (v3.1) ---
     // Moved struct definitions to AudioGraphState.h
 
@@ -748,6 +760,7 @@ private:
     static const BiquadCoeff kKWeightRLB;       // HPF
 
     TrackRTState m_dummyTrackState; // [FIX] Replaces static local to remove priority inversion risk
+    bool m_loggedRoutingCycleWarning{false};
 
     // Guard for resource loading (e.g., metronome samples)
     std::atomic<bool> m_resourcesLoading{false};
