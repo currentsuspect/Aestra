@@ -184,7 +184,8 @@ void EffectChain::prepare(double sampleRate, uint32_t maxBlockSize) {
     }
 }
 
-void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFrames) {
+void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFrames,
+                          const float* const* sidechainInputs, uint32_t numSidechainChannels) {
     // Skip if entire chain is bypassed
     if (m_chainBypassed.load(std::memory_order_acquire)) {
         return;
@@ -209,10 +210,31 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
 
         float dryWet = slot.dryWetMix.load(std::memory_order_acquire);
 
+        const PluginInfo& pluginInfo = plugin->getInfo();
+        const bool isBuiltInComp = (pluginInfo.id == "com.Aestrastudios.comp");
+        const uint32_t requestedInputChannels = numChannels + numSidechainChannels;
+        const bool canUseSidechain = sidechainInputs && numSidechainChannels > 0 &&
+                                     (pluginInfo.numAudioInputs >= requestedInputChannels || isBuiltInComp);
+        std::array<const float*, 4> inputChannels{};
+        const float* const* processInputs = reinterpret_cast<const float* const*>(buffer);
+        uint32_t processInputChannels = numChannels;
+        if (canUseSidechain) {
+            for (uint32_t ch = 0; ch < numChannels && ch < inputChannels.size(); ++ch) {
+                inputChannels[ch] = buffer[ch];
+            }
+            for (uint32_t ch = 0; ch < numSidechainChannels && (numChannels + ch) < inputChannels.size(); ++ch) {
+                inputChannels[numChannels + ch] = sidechainInputs[ch];
+            }
+            processInputs = inputChannels.data();
+            processInputChannels = isBuiltInComp
+                                       ? requestedInputChannels
+                                       : std::min<uint32_t>(pluginInfo.numAudioInputs, requestedInputChannels);
+        }
+
         // If fully wet, process directly
         if (dryWet >= 0.999f) {
             // Process in-place
-            plugin->process(buffer, buffer, numChannels, numChannels, numFrames);
+            plugin->process(processInputs, buffer, processInputChannels, numChannels, numFrames);
             // printf("[EffectChain] Processed plugin %s (Wet)\n", plugin->getInfo().name.c_str());
         }
         // If not fully wet, need to blend
@@ -222,7 +244,7 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
             if (m_dryBuffer.size() < requiredDry) {
                 // Not prepared (or prepared for a smaller block). Stay RT-safe: no allocation.
                 // Fallback: process fully wet rather than crashing or dropping audio.
-                plugin->process(buffer, buffer, numChannels, numChannels, numFrames);
+                plugin->process(processInputs, buffer, processInputChannels, numChannels, numFrames);
                 continue;
             }
 
@@ -232,7 +254,7 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
             }
 
             // Process wet
-            plugin->process(buffer, buffer, numChannels, numChannels, numFrames);
+            plugin->process(processInputs, buffer, processInputChannels, numChannels, numFrames);
 
             // Blend dry/wet
             float wetGain = dryWet;
