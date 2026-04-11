@@ -73,6 +73,14 @@ namespace {
             return {};
         }
 
+        bool hasSidechainSend = false;
+        for (const auto& send : channel.sends) {
+            if (!send.muted && send.sidechainOnly) {
+                hasSidechainSend = true;
+                break;
+            }
+        }
+
         auto& chain = channel.channel->getEffectChain();
         for (size_t i = 0; i < Aestra::Audio::EffectChain::MAX_SLOTS; ++i) {
             auto plugin = chain.getPlugin(i);
@@ -82,15 +90,19 @@ namespace {
             }
 
             const float grDb = comp->getCurrentGainReductionDb();
-            if (grDb < 0.1f) {
-                return {};
+            if (grDb >= 0.1f) {
+                std::ostringstream out;
+                out.setf(std::ios::fixed);
+                out.precision(grDb >= 10.0f ? 0 : 1);
+                out << "GR " << grDb;
+                return out.str();
             }
 
-            std::ostringstream out;
-            out.setf(std::ios::fixed);
-            out.precision(grDb >= 10.0f ? 0 : 1);
-            out << "GR " << grDb;
-            return out.str();
+            if (hasSidechainSend && channel.sidechainPeak > 0.001f) {
+                return "SC live";
+            }
+
+            return {};
         }
 
         return {};
