@@ -201,6 +201,39 @@ public:
      */
     bool isPluginModified(const std::filesystem::path& pluginPath) const;
 
+    // ==============================
+    // Security: Trusted Paths (SEC-RTM-005)
+    // ==============================
+
+    /**
+     * @brief Check if a plugin path is in a trusted system directory.
+     *
+     * Trusted paths (auto-loaded without warning):
+     *   Linux:   /usr/lib/vst3, /usr/lib/clap, /usr/local/lib/*
+     *   Windows: C:\Program Files\Common Files\VST3, C:\Program Files\Common Files\CLAP
+     *   macOS:   /Library/Audio/Plug-Ins/VST3, /Library/Audio/Plug-Ins/CLAP
+     *
+     * Untrusted paths (require user confirmation on first load):
+     *   Linux:   ~/.vst3, ~/.clap
+     *   Windows: %LOCALAPPDATA%\Programs\Common\VST3, etc.
+     *   macOS:   ~/Library/Audio/Plug-Ins/*
+     */
+    static bool isTrustedPath(const std::filesystem::path& path);
+
+    /**
+     * @brief Callback invoked when a plugin from an untrusted path is loaded for the first time.
+     * @param pluginPath Path to the plugin file
+     * @param pluginName Display name of the plugin
+     * @return true to allow loading, false to skip this plugin
+     */
+    using FirstLoadWarningCallback = std::function<bool(const std::filesystem::path& pluginPath, const std::string& pluginName)>;
+
+    /**
+     * @brief Set the callback for first-load warnings from untrusted paths.
+     * If not set, untrusted-path plugins are loaded without warning (legacy behavior).
+     */
+    void setFirstLoadWarningCallback(FirstLoadWarningCallback cb);
+
 private:
     mutable std::mutex m_mutex;
     std::set<std::filesystem::path> m_searchPaths;
@@ -213,6 +246,10 @@ private:
 
     // Cache metadata (path -> last modified time)
     std::unordered_map<std::string, std::filesystem::file_time_type> m_fileTimestamps;
+
+    // [SEC-RTM-005] First-load warning for untrusted-path plugins
+    FirstLoadWarningCallback m_firstLoadWarningCb;
+    std::set<std::string> m_seenUntrustedPlugins;  // path strings already acknowledged
 
     // Internal scanning methods
     void scanDirectory(const std::filesystem::path& dir, std::vector<PluginInfo>& results,

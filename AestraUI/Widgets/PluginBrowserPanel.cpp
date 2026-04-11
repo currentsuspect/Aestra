@@ -587,8 +587,7 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
 }
 
 void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset) {
-    auto bounds = getBounds();
-    NUIRect slotRect = {bounds.x + 8, yOffset, bounds.width - 16, SLOT_HEIGHT - 6};
+    NUIRect slotRect = slotRectForTop(yOffset);
     
     const auto& slot = m_slots[index];
     const bool isHovered = (index == m_hoveredSlot);
@@ -709,6 +708,16 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     }
 }
 
+NUIRect EffectChainRack::slotRectForTop(float slotY) const {
+    auto bounds = getBounds();
+    return {bounds.x + 8.0f, slotY, bounds.width - 16.0f, SLOT_HEIGHT - 6.0f};
+}
+
+NUIRect EffectChainRack::slotRectForIndex(int index) const {
+    auto bounds = getBounds();
+    return slotRectForTop(bounds.y + 8.0f + index * SLOT_HEIGHT - m_scrollOffset);
+}
+
 bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
     if (event.type == NUIMouseEventType::Down) {
          char logBuf[128];
@@ -767,18 +776,16 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
     // Hit Testing Helpers
     auto isOverKnob = [&](int index) {
         if (index < 0) return false;
-        float slotY = bounds.y + 5 + index * SLOT_HEIGHT - m_scrollOffset;
-        NUIRect slotRect = {bounds.x + 4, slotY, bounds.width - 8, SLOT_HEIGHT - 4};
+        NUIRect slotRect = slotRectForIndex(index);
         float knobX = slotRect.x + slotRect.width - 22.0f; 
-        return (mx >= knobX - 2 && mx <= knobX + 22) && (my >= slotY + 2 && my <= slotY + 26);
+        return (mx >= knobX - 2 && mx <= knobX + 22) && (my >= slotRect.y + 2 && my <= slotRect.y + 26);
     };
 
     auto isOverBypass = [&](int index) {
         if (index < 0) return false;
-        float slotY = bounds.y + 5 + index * SLOT_HEIGHT - m_scrollOffset;
-        NUIRect slotRect = {bounds.x + 4, slotY, bounds.width - 8, SLOT_HEIGHT - 4};
+        NUIRect slotRect = slotRectForIndex(index);
         float knobX = slotRect.x + slotRect.width - 22.0f;
-        return (mx >= knobX - 20 && mx <= knobX - 2) && (my >= slotY + 2 && my <= slotY + 26);
+        return (mx >= knobX - 20 && mx <= knobX - 2) && (my >= slotRect.y + 2 && my <= slotRect.y + 26);
     };
 
     // RELEASED Event Handling (Must be checked before general Drag handling to allow drops)
@@ -791,7 +798,7 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
         // Handle Reorder Drop or Click
         if (m_isDraggingReorder && m_draggingSlotIndex != -1) {
              // Fix: Must account for scroll offset to map visual position back to slot index
-             float contentY = event.position.y - (bounds.y + 5) + m_scrollOffset;
+             float contentY = event.position.y - (bounds.y + 8) + m_scrollOffset;
              int currentTarget = static_cast<int>(contentY / SLOT_HEIGHT);
              
              if (currentTarget >= 0 && currentTarget < MAX_SLOTS && currentTarget != m_draggingSlotIndex) {

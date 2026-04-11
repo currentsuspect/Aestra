@@ -7,10 +7,13 @@
 #include "Plugin/AestraEQ.h"
 #include "PluginHost.h"
 
+#include <array>
+#include <condition_variable>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
-#include <array>
+#include <thread>
 #include <vector>
 
 namespace AestraUI {
@@ -18,7 +21,7 @@ namespace AestraUI {
 class AestraEQEditor : public NUIComponent {
 public:
     explicit AestraEQEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance);
-    ~AestraEQEditor() override = default;
+    ~AestraEQEditor() override;
 
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
@@ -70,6 +73,7 @@ private:
     std::string freqLabel(float norm) const;
     std::string gainLabel(float norm) const;
     std::string qLabel(float norm, uint32_t type) const;
+    void analyzerWorkerMain();
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
     std::vector<BandControl> m_bands;
@@ -83,7 +87,18 @@ private:
     NUIRect m_lastResponseBounds;
     std::array<float, 160> m_spectrumMagnitudes{};
     std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> m_analyzerWindow{};
+    std::array<float, 160> m_workerResultMagnitudes{};
+    std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> m_workerAnalyzerWindow{};
+    std::mutex m_spectrumMutex;
+    std::condition_variable m_spectrumCv;
+    std::thread m_spectrumWorker;
+    bool m_spectrumStop = false;
+    bool m_spectrumWorkPending = false;
+    bool m_spectrumResultReady = false;
     uint64_t m_lastAnalyzerSerial = 0;
+    uint64_t m_pendingAnalyzerSerial = 0;
+    uint64_t m_workerRequestedSerial = 0;
+    uint64_t m_workerResultSerial = 0;
     std::shared_ptr<NUIContextMenu> m_bandTypeMenu;
 
     static constexpr float kWindowWidth = 760.0f;

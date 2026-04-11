@@ -2,8 +2,8 @@
 #include "FilePreviewPanel.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <iostream>
 
@@ -42,6 +42,39 @@ std::vector<float> generateWaveformFromAudio(const std::vector<float>& samples,
     }
     
     return waveform;
+}
+
+std::string truncateToWidth(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth) {
+    if (maxWidth <= 0.0f) return "";
+    if (renderer.measureText(text, fontSize).width <= maxWidth) {
+        return text;
+    }
+
+    static const std::string ellipsis = "...";
+    if (renderer.measureText(ellipsis, fontSize).width > maxWidth) {
+        return "";
+    }
+
+    auto trimLastUtf8Codepoint = [](std::string& value) {
+        if (value.empty()) {
+            return;
+        }
+        size_t index = value.size();
+        do {
+            --index;
+        } while (index > 0 && (static_cast<unsigned char>(value[index]) & 0xC0u) == 0x80u);
+        value.erase(index);
+    };
+
+    std::string candidate = text;
+    while (!candidate.empty()) {
+        trimLastUtf8Codepoint(candidate);
+        const std::string attempt = candidate + ellipsis;
+        if (renderer.measureText(attempt, fontSize).width <= maxWidth) {
+            return attempt;
+        }
+    }
+    return "";
 }
 
 } // namespace
@@ -168,8 +201,12 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
     
     const float cornerRadius = 6.0f;
+    const bool hasSelection = currentFile_ != nullptr;
     NUIColor bgColor = theme.getColor("surfaceRaised");
-    NUIColor borderColor = theme.getColor("borderSubtle");
+    NUIColor borderColor = hasSelection
+        ? theme.getColor("borderActive").withAlpha(0.30f)
+        : theme.getColor("borderSubtle").withAlpha(0.72f);
+    NUIColor accent = theme.getColor("accentPrimary").withAlpha(hasSelection ? 0.34f : 0.24f);
 
     renderer.fillRect(bounds, bgColor);
 
@@ -196,6 +233,10 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         renderer.strokeRoundedRect(bounds, cornerRadius, 1.0f, borderColor);
         renderer.clearClipRect();
     }
+
+    renderer.fillRoundedRect({bounds.x + 10.0f, bounds.y, std::max(0.0f, bounds.width - 20.0f), 1.5f},
+                             0.75f,
+                             accent);
     
     // === EMPTY STATE ===
     if (!currentFile_) {
@@ -263,11 +304,9 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     float playBtnWidth = 28.0f;
     float playX = bounds.x + bounds.width - playBtnWidth - 10;
 
-    std::string displayName = currentFile_->name;
-    if (displayName.length() > 25) {
-        displayName = displayName.substr(0, 22) + "...";
-    }
-    renderer.drawText(displayName, NUIPoint(infoX, topRowY + 2), 11.0f, theme.getColor("textPrimary"));
+    const float textMaxWidth = std::max(0.0f, playX - infoX - 10.0f);
+    std::string displayName = truncateToWidth(renderer, currentFile_->name, 11.5f, textMaxWidth);
+    renderer.drawText(displayName, NUIPoint(infoX, topRowY + 2), 11.5f, theme.getColor("textPrimary"));
     
     std::string sizeStr;
     if (currentFile_->size < 1024) {
@@ -283,7 +322,7 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     if (!ext.empty() && ext[0] == '.') ext = ext.substr(1);
     
     std::string meta = sizeStr + " • " + ext;
-    renderer.drawText(meta, NUIPoint(infoX, topRowY + 16), 9.0f, theme.getColor("textSecondary"));
+    renderer.drawText(meta, NUIPoint(infoX, topRowY + 16), 9.25f, theme.getColor("textSecondary").withAlpha(0.92f));
 
     playButtonBounds_ = NUIRect(playX, topRowY + 1.0f, playBtnWidth, 24.0f);
 
@@ -317,8 +356,8 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     
     NUIRect waveformBounds(bounds.x + 8, waveformY, bounds.width - 16, waveformHeight);
     
-    renderer.fillRoundedRect(waveformBounds, 7.0f, theme.getColor("surfaceTertiary").withAlpha(0.82f));
-    renderer.strokeRoundedRect(waveformBounds, 7.0f, 1.0f, theme.getColor("border").withAlpha(0.20f));
+    renderer.fillRoundedRect(waveformBounds, 7.0f, theme.getColor("surfaceTertiary").withAlpha(0.86f));
+    renderer.strokeRoundedRect(waveformBounds, 7.0f, 1.0f, theme.getColor("border").withAlpha(0.24f));
     
     // Draw waveform or loading state
     // Draw waveform or loading state

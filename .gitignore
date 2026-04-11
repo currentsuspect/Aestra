@@ -179,3 +179,4 @@ recent_files.json
 **/bin/
 **/obj/
 **/dist/
+.qwen/

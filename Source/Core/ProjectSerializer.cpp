@@ -230,6 +230,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
 
     // 3. Save Lanes and Clips
     JSON lanesJson = JSON::array();
+    size_t laneIndex = 0;
     for (const auto& laneId : playlist.getLaneIDs()) {
         if (const auto* lane = playlist.getLane(laneId)) {
             JSON ljs = JSON::object();
@@ -241,6 +242,26 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             ljs.set("pan", JSON(lane->pan));
             ljs.set("mute", JSON(lane->muted));
             ljs.set("solo", JSON(lane->solo));
+            if (const auto* channel = trackManager->getChannel(laneIndex)) {
+                JSON routingJson = JSON::object();
+                const uint32_t mainOutputId = channel->getMainOutputId();
+                routingJson.set("mainOutputId", JSON(static_cast<double>(mainOutputId == 0xFFFFFFFFu ? 0u : mainOutputId)));
+
+                JSON sendsJson = JSON::array();
+                const auto sends = channel->getSends();
+                for (const auto& send : sends) {
+                    JSON sjs = JSON::object();
+                    sjs.set("targetId", JSON(static_cast<double>(send.targetChannelId == 0xFFFFFFFFu ? 0u : send.targetChannelId)));
+                    sjs.set("gain", JSON(static_cast<double>(send.gain)));
+                    sjs.set("pan", JSON(static_cast<double>(send.pan)));
+                    sjs.set("postFader", JSON(send.postFader));
+                    sjs.set("mute", JSON(send.mute));
+                    sjs.set("sidechainOnly", JSON(send.sidechainOnly));
+                    sendsJson.push(sjs);
+                }
+                routingJson.set("sends", sendsJson);
+                ljs.set("routing", routingJson);
+            }
 
             // Automation (v3.1)
             JSON autoJson = JSON::array();
@@ -290,6 +311,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             ljs.set("clips", clipsJson);
             lanesJson.push(ljs);
         }
+        ++laneIndex;
     }
     root.set("lanes", lanesJson);
 
@@ -561,7 +583,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     buffer->interleavedData = std::move(decodedData);
                     buffer->sampleRate = sampleRate;
                     buffer->numChannels = numChannels;
-                    buffer->numFrames = buffer->interleavedData.size() / numChannels;
+                    if (numChannels == 0) {
+                        Log::warning("[ProjectLoad] Audio file reports 0 channels: " + filePath);
+                        buffer->numChannels = 1;
+                    }
+                    buffer->numFrames = buffer->interleavedData.size() / buffer->numChannels;
                     source->setBuffer(buffer);
                     Log::info("[ProjectLoad] Loaded audio: " + filePath + 
                               " (" + std::to_string(buffer->numFrames) + " frames, " + 
@@ -620,7 +646,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             MixerChannel* channel = trackManager->addChannel(lj[i]["name"].asString());
             if (auto* lane = playlist.getLane(laneId)) {
                 if (lj[i]["color"].isString()) {
-                    lane->colorRGBA = static_cast<uint32_t>(std::stoul(lj[i]["color"].asString()));
+                    try {
+                        lane->colorRGBA = static_cast<uint32_t>(std::stoul(lj[i]["color"].asString()));
+                    } catch (const std::exception&) {
+                        lane->colorRGBA = 0xFFFFFFFF;
+                    }
                 } else {
                     lane->colorRGBA = static_cast<uint32_t>(lj[i]["color"].asNumber());
                 }
@@ -636,6 +666,31 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     channel->setPan(lane->pan);
                     channel->setMute(lane->muted);
                     channel->setSolo(lane->solo);
+
+                    if (lj[i].has("routing") && lj[i]["routing"].isObject()) {
+                        const JSON& rj = lj[i]["routing"];
+                        const uint32_t mainOutputId = (rj.has("mainOutputId") && rj["mainOutputId"].isNumber())
+                            ? static_cast<uint32_t>(rj["mainOutputId"].asNumber())
+                            : 0u;
+                        channel->setMainOutputId(mainOutputId == 0 ? 0xFFFFFFFFu : mainOutputId);
+
+                        if (rj.has("sends") && rj["sends"].isArray()) {
+                            const JSON& sj = rj["sends"];
+                            for (size_t s = 0; s < sj.size(); ++s) {
+                                if (!sj[s].isObject()) continue;
+                                if (!sj[s].has("targetId") || !sj[s]["targetId"].isNumber()) continue;
+                                AudioRoute route;
+                                const uint32_t targetId = static_cast<uint32_t>(sj[s]["targetId"].asNumber());
+                                route.targetChannelId = (targetId == 0) ? 0xFFFFFFFFu : targetId;
+                                if (sj[s].has("gain") && sj[s]["gain"].isNumber()) route.gain = static_cast<float>(sj[s]["gain"].asNumber());
+                                if (sj[s].has("pan") && sj[s]["pan"].isNumber()) route.pan = static_cast<float>(sj[s]["pan"].asNumber());
+                                if (sj[s].has("postFader") && sj[s]["postFader"].isBool()) route.postFader = sj[s]["postFader"].asBool();
+                                if (sj[s].has("mute") && sj[s]["mute"].isBool()) route.mute = sj[s]["mute"].asBool();
+                                if (sj[s].has("sidechainOnly") && sj[s]["sidechainOnly"].isBool()) route.sidechainOnly = sj[s]["sidechainOnly"].asBool();
+                                channel->addSend(route);
+                            }
+                        }
+                    }
                 }
 
                 if (lj[i].has("automation")) {
@@ -680,7 +735,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             clip.durationBeats = cj[c]["duration"].asNumber();
                             clip.name = cj[c]["name"].asString();
                             if (cj[c]["color"].isString()) {
-                                clip.colorRGBA = static_cast<uint32_t>(std::stoul(cj[c]["color"].asString()));
+                                try {
+                                    clip.colorRGBA = static_cast<uint32_t>(std::stoul(cj[c]["color"].asString()));
+                                } catch (const std::exception&) {
+                                    clip.colorRGBA = 0xFFFFFFFF;
+                                }
                             } else {
                                 clip.colorRGBA = static_cast<uint32_t>(cj[c]["color"].asNumber());
                             }

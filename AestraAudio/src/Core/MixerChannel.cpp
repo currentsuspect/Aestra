@@ -179,5 +179,19 @@ void MixerChannel::setSendDestination(int index, uint32_t destId) {
     }
 }
 
+void MixerChannel::setSendPostFader(int index, bool postFader) {
+    std::lock_guard<std::mutex> lock(m_sendMutex);
+    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
+        m_sends[index].postFader = postFader;
+    }
+}
+
+void MixerChannel::setSendSidechainOnly(int index, bool sidechainOnly) {
+    std::lock_guard<std::mutex> lock(m_sendMutex);
+    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
+        m_sends[index].sidechainOnly = sidechainOnly;
+    }
+}
+
 } // namespace Audio
 } // namespace Aestra
