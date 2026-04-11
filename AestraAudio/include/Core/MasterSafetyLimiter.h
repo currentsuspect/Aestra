@@ -48,31 +48,36 @@ public:
     double getDcCoeff() const { return m_dcCoeff; }
 
     // Default DC blocker coefficient (~30Hz cutoff at 48kHz)
-    static constexpr double kDefaultDcCoeff = 0.997;
-    static constexpr double kSoftKneeStart = 0.85;
-    static constexpr double kOutputCeiling = 0.95;
-    static constexpr double kHardClamp = 1.25;
+    static constexpr double DEFAULT_DC_COEFF = 0.997;
+    static constexpr double SOFT_KNEE_START = 0.85;
+    static constexpr double OUTPUT_CEILING = 0.95;
+    static constexpr double HARD_CLAMP = 1.25;
 
     static double limitSample(double x, bool& limited) {
-        if (x > kHardClamp) {
+        if (!std::isfinite(x)) {
             limited = true;
-            return kOutputCeiling;
+            return 0.0;
         }
-        if (x < -kHardClamp) {
+
+        if (x > HARD_CLAMP) {
             limited = true;
-            return -kOutputCeiling;
+            return OUTPUT_CEILING;
+        }
+        if (x < -HARD_CLAMP) {
+            limited = true;
+            return -OUTPUT_CEILING;
         }
 
         const double ax = std::abs(x);
-        if (ax <= kSoftKneeStart) {
+        if (ax <= SOFT_KNEE_START) {
             return x;
         }
 
         limited = true;
         const double sign = (x >= 0.0) ? 1.0 : -1.0;
-        const double t = std::clamp((ax - kSoftKneeStart) / (kHardClamp - kSoftKneeStart), 0.0, 1.0);
-        const double shaped = kSoftKneeStart + (kOutputCeiling - kSoftKneeStart) * (1.0 - std::exp(-4.0 * t));
-        return sign * std::min(shaped, kOutputCeiling);
+        const double t = std::clamp((ax - SOFT_KNEE_START) / (HARD_CLAMP - SOFT_KNEE_START), 0.0, 1.0);
+        const double shaped = SOFT_KNEE_START + (OUTPUT_CEILING - SOFT_KNEE_START) * (1.0 - std::exp(-4.0 * t));
+        return sign * std::min(shaped, OUTPUT_CEILING);
     }
 
 private:
@@ -83,7 +88,7 @@ private:
 
     DCBlocker m_dcBlockerL;
     DCBlocker m_dcBlockerR;
-    double m_dcCoeff = kDefaultDcCoeff;
+    double m_dcCoeff = DEFAULT_DC_COEFF;
 };
 
 } // namespace Audio

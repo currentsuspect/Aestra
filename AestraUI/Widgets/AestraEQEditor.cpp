@@ -7,8 +7,8 @@
 
 #include <algorithm>
 #include <cmath>
-#include <sstream>
 #include <iomanip>
+#include <sstream>
 
 namespace AestraUI {
 
@@ -29,11 +29,6 @@ NUIColor bandColorForIndex(size_t index) {
         NUIColor(0.78f, 0.76f, 1.0f, 1.0f),
     };
     return colors[index % (sizeof(colors) / sizeof(colors[0]))];
-}
-
-const char* shortTypeLabel(uint32_t type) {
-    static const char* labels[] = {"Bell", "LC", "HC", "LS", "HS", "Notch", "BP", "Tilt"};
-    return type < 8 ? labels[type] : "Bell";
 }
 
 const char* glyphTypeLabel(uint32_t type) {
@@ -124,6 +119,18 @@ AestraEQEditor::AestraEQEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> i
     setId("AestraEQEditor");
     setSize(kWindowWidth, kWindowHeight);
     buildControls();
+    m_spectrumWorker = std::thread([this]() { analyzerWorkerMain(); });
+}
+
+AestraEQEditor::~AestraEQEditor() {
+    {
+        std::lock_guard<std::mutex> lock(m_spectrumMutex);
+        m_spectrumStop = true;
+    }
+    m_spectrumCv.notify_all();
+    if (m_spectrumWorker.joinable()) {
+        m_spectrumWorker.join();
+    }
 }
 
 void AestraEQEditor::buildControls() {
@@ -425,79 +432,131 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
 }
 
 void AestraEQEditor::updateSpectrumSnapshot() {
+    std::array<float, 160> nextMagnitudes{};
+    bool hasReadyMagnitudes = false;
+    {
+        std::lock_guard<std::mutex> lock(m_spectrumMutex);
+        if (m_spectrumResultReady) {
+            nextMagnitudes = m_workerResultMagnitudes;
+            m_lastAnalyzerSerial = m_workerResultSerial;
+            m_pendingAnalyzerSerial = 0;
+            m_spectrumResultReady = false;
+            hasReadyMagnitudes = true;
+        }
+    }
+
+    if (hasReadyMagnitudes) {
+        std::array<float, 160> smoothedMagnitudes{};
+        for (size_t i = 0; i < nextMagnitudes.size(); ++i) {
+            const size_t i0 = (i == 0) ? i : (i - 1);
+            const size_t i2 = std::min(i + 1, nextMagnitudes.size() - 1);
+            smoothedMagnitudes[i] =
+                nextMagnitudes[i0] * 0.22f +
+                nextMagnitudes[i]  * 0.56f +
+                nextMagnitudes[i2] * 0.22f;
+        }
+
+        for (size_t i = 0; i < m_spectrumMagnitudes.size(); ++i) {
+            const float current = m_spectrumMagnitudes[i];
+            const float target = smoothedMagnitudes[i];
+            const float attack = 0.62f;
+            const float release = 0.92f;
+            if (target >= current) {
+                m_spectrumMagnitudes[i] = current + (target - current) * attack;
+            } else {
+                m_spectrumMagnitudes[i] = current * release + target * (1.0f - release);
+            }
+        }
+    }
+
     auto eq = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraEQ>(m_instance);
     if (!eq) {
         return;
     }
 
     uint64_t serial = 0;
-    if (!eq->getAnalyzerWindow(m_analyzerWindow, &serial) || serial == m_lastAnalyzerSerial) {
+    if (!eq->getAnalyzerWindow(m_analyzerWindow, &serial) ||
+        serial == m_lastAnalyzerSerial ||
+        m_pendingAnalyzerSerial != 0) {
         return;
     }
 
-    m_lastAnalyzerSerial = serial;
     const double sampleRate = std::max(1.0, eq->getAnalyzerSampleRate());
-    const size_t sampleCount = m_analyzerWindow.size();
-    std::array<float, 160> nextMagnitudes{};
-    std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> windowedSamples{};
-
-    for (size_t n = 0; n < sampleCount; ++n) {
-        const float window = 0.5f - 0.5f * std::cos((2.0f * kPi * static_cast<float>(n)) / static_cast<float>(sampleCount - 1));
-        windowedSamples[n] = m_analyzerWindow[n] * window;
+    {
+        std::lock_guard<std::mutex> lock(m_spectrumMutex);
+        m_workerAnalyzerWindow = m_analyzerWindow;
+        m_workerRequestedSerial = serial;
+        m_spectrumWorkPending = true;
+        m_pendingAnalyzerSerial = serial;
     }
+    m_spectrumCv.notify_one();
+}
 
-    for (size_t bin = 0; bin < nextMagnitudes.size(); ++bin) {
-        const float norm = static_cast<float>(bin) / static_cast<float>(nextMagnitudes.size() - 1);
-        const float targetHz = std::pow(10.0f, std::log10(20.0f) + norm * (std::log10(20000.0f) - std::log10(20.0f)));
-        const float omega = 2.0f * kPi * targetHz / static_cast<float>(sampleRate);
-        const float cosine = std::cos(omega);
-        const float sine = std::sin(omega);
-        const float coeff = 2.0f * cosine;
-        float q0 = 0.0f;
-        float q1 = 0.0f;
-        float q2 = 0.0f;
-
-        for (size_t n = 0; n < sampleCount; ++n) {
-            q0 = coeff * q1 - q2 + windowedSamples[n];
-            q2 = q1;
-            q1 = q0;
+void AestraEQEditor::analyzerWorkerMain() {
+    while (true) {
+        std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> analyzerWindow{};
+        uint64_t serial = 0;
+        {
+            std::unique_lock<std::mutex> lock(m_spectrumMutex);
+            m_spectrumCv.wait(lock, [this]() { return m_spectrumStop || m_spectrumWorkPending; });
+            if (m_spectrumStop) {
+                return;
+            }
+            analyzerWindow = m_workerAnalyzerWindow;
+            serial = m_workerRequestedSerial;
+            m_spectrumWorkPending = false;
         }
 
-        const float real = q1 - q2 * cosine;
-        const float imag = q2 * sine;
-        const float magnitude = std::sqrt(real * real + imag * imag) / static_cast<float>(sampleCount);
-        const float db = 20.0f * std::log10(std::max(magnitude * 8.0f, 1.0e-5f));
-        const float normalized = std::clamp((db + 72.0f) / 72.0f, 0.0f, 1.0f);
-        nextMagnitudes[bin] = normalized;
-    }
+        auto eq = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraEQ>(m_instance);
+        const double sampleRate = eq ? std::max(1.0, eq->getAnalyzerSampleRate()) : 1.0;
+        constexpr size_t kSpectrumBins = 160;
+        const size_t sampleCount = analyzerWindow.size();
+        std::array<float, kSpectrumBins> nextMagnitudes{};
+        std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> windowedSamples{};
 
-    // Smooth across neighboring bins so the analyzer reads as a continuous
-    // spectral bed instead of a set of independent vertical spikes.
-    std::array<float, 160> smoothedMagnitudes{};
-    for (size_t i = 0; i < nextMagnitudes.size(); ++i) {
-        const size_t i0 = (i == 0) ? i : (i - 1);
-        const size_t i2 = std::min(i + 1, nextMagnitudes.size() - 1);
-        smoothedMagnitudes[i] =
-            nextMagnitudes[i0] * 0.22f +
-            nextMagnitudes[i]  * 0.56f +
-            nextMagnitudes[i2] * 0.22f;
-    }
+        for (size_t n = 0; n < sampleCount; ++n) {
+            const float window = 0.5f - 0.5f * std::cos((2.0f * kPi * static_cast<float>(n)) /
+                                                        static_cast<float>(sampleCount - 1));
+            windowedSamples[n] = analyzerWindow[n] * window;
+        }
 
-    for (size_t i = 0; i < m_spectrumMagnitudes.size(); ++i) {
-        const float current = m_spectrumMagnitudes[i];
-        const float target = smoothedMagnitudes[i];
-        const float attack = 0.62f;
-        const float release = 0.92f;
-        if (target >= current) {
-            m_spectrumMagnitudes[i] = current + (target - current) * attack;
-        } else {
-            m_spectrumMagnitudes[i] = current * release + target * (1.0f - release);
+        for (size_t bin = 0; bin < nextMagnitudes.size(); ++bin) {
+            const float norm = static_cast<float>(bin) / static_cast<float>(nextMagnitudes.size() - 1);
+            const float targetHz = std::pow(10.0f,
+                                            std::log10(20.0f) +
+                                                norm * (std::log10(20000.0f) - std::log10(20.0f)));
+            const float omega = 2.0f * kPi * targetHz / static_cast<float>(sampleRate);
+            const float cosine = std::cos(omega);
+            const float sine = std::sin(omega);
+            const float coeff = 2.0f * cosine;
+            float q0 = 0.0f;
+            float q1 = 0.0f;
+            float q2 = 0.0f;
+
+            for (size_t n = 0; n < sampleCount; ++n) {
+                q0 = coeff * q1 - q2 + windowedSamples[n];
+                q2 = q1;
+                q1 = q0;
+            }
+
+            const float real = q1 - q2 * cosine;
+            const float imag = q2 * sine;
+            const float magnitude = std::sqrt(real * real + imag * imag) / static_cast<float>(sampleCount);
+            const float db = 20.0f * std::log10(std::max(magnitude * 8.0f, 1.0e-5f));
+            nextMagnitudes[bin] = std::clamp((db + 72.0f) / 72.0f, 0.0f, 1.0f);
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(m_spectrumMutex);
+            m_workerResultMagnitudes = nextMagnitudes;
+            m_workerResultSerial = serial;
+            m_spectrumResultReady = true;
         }
     }
 }
 
 void AestraEQEditor::drawSpectrumBackdrop(NUIRenderer& renderer, const NUIRect& bounds) {
-    if (m_spectrumMagnitudes.empty()) {
+    if (m_lastAnalyzerSerial == 0) {
         return;
     }
 

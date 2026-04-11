@@ -119,8 +119,25 @@ bool loadWav(const std::string& filePath, std::vector<float>& audioData, uint32_
     if (audioFormat != 1 && audioFormat != 3)
         return false;
 
+    // Guard against division by zero (RTM-001) and unsupported bit depths
+    if (bitsPerSample != 16 && bitsPerSample != 24 && bitsPerSample != 32)
+        return false;
+
+    // Guard against heap exhaustion — cap dataSize to actual remaining file size (RTM-002)
+    file.seekg(0, std::ios::end);
+    std::streamoff fileSize = file.tellg();
+    std::streamoff expectedDataEnd = static_cast<std::streamoff>(dataPos) + static_cast<std::streamoff>(dataSize);
+    if (expectedDataEnd > fileSize || dataSize == 0) {
+        return false;
+    }
     file.seekg(dataPos);
+
     size_t samplesCount = dataSize / (bitsPerSample / 8);
+    // Secondary cap: prevent allocations > 500M samples (~2 GB for float32)
+    constexpr size_t kMaxSamples = 500000000;
+    if (samplesCount > kMaxSamples) {
+        return false;
+    }
     audioData.resize(samplesCount);
 
     if (bitsPerSample == 16) {

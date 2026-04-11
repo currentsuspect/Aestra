@@ -25,7 +25,7 @@ void UIMixerHeader::cacheThemeColors()
     m_text = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary");
     m_selectedText = theme.getColor("textPrimary");
-    m_selectedBg = theme.getColor("accentPrimary").withAlpha(0.10f);
+    m_selectedBg = theme.getColor("accentPrimary").withAlpha(0.13f);
 }
 
 NUIColor UIMixerHeader::colorFromARGB(uint32_t argb)
@@ -81,11 +81,11 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
 
     // Background for selection
     if (m_selected) {
-        renderer.fillRect(bounds, m_selectedBg);
+        renderer.fillRoundedRect(bounds, 10.0f, m_selectedBg);
     }
 
     // Top Colored Bar (Visual Indicator) - Replaces side chip
-    constexpr float TOP_BAR_H = 3.0f;
+    constexpr float TOP_BAR_H = 4.0f;
     
     // Explicitly define top bar rect to cover full width
     // Use floor/ceil to snap to pixels and avoid subpixel gaps (which causes "missing right/top" look)
@@ -115,37 +115,47 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
         bounds.height - (TOP_BAR_H + 2.0f)
     };
 
-    const float nameFont = m_isMaster ? 13.0f : 12.0f;
-    const float routeFont = m_isMaster ? 10.0f : 9.0f;
+    const float nameFont = m_isMaster ? 13.0f : 12.5f;
+    const float routeFont = m_isMaster ? 10.0f : 9.5f;
 
     if (m_isMaster) {
         // The master strip reads better when title + subtitle are treated as one
         // vertically centered stack instead of using the generic track split.
-        constexpr float kMasterNameH = 14.0f;
-        constexpr float kMasterRouteH = 11.0f;
-        constexpr float kMasterGap = 1.5f;
-        const float stackH = kMasterNameH + kMasterGap + kMasterRouteH;
+        constexpr float MASTER_NAME_H = 14.0f;
+        constexpr float MASTER_ROUTE_H = 11.0f;
+        constexpr float MASTER_GAP = 1.5f;
+        const float stackH = m_route.empty()
+            ? MASTER_NAME_H
+            : (MASTER_NAME_H + MASTER_GAP + MASTER_ROUTE_H);
         const float stackY = textRect.y + std::max(0.0f, (textRect.height - stackH) * 0.5f) - 1.0f;
 
-        NUIRect nameRect{textRect.x, stackY, textRect.width, kMasterNameH};
+        NUIRect nameRect{textRect.x, stackY, textRect.width, MASTER_NAME_H};
         renderer.drawTextCentered(m_name, nameRect, nameFont, m_selected ? m_selectedText : m_text);
 
         if (!m_route.empty()) {
-            NUIRect routeRect{textRect.x, stackY + kMasterNameH + kMasterGap, textRect.width, kMasterRouteH};
+            NUIRect routeRect{textRect.x, stackY + MASTER_NAME_H + MASTER_GAP, textRect.width, MASTER_ROUTE_H};
             renderer.drawTextCentered(m_route, routeRect, routeFont, m_textSecondary);
         }
         return;
     }
 
-    // Name (top half of remaining space)
-    NUIRect nameRect{textRect.x, textRect.y, textRect.width, textRect.height * 0.55f};
+    constexpr float TRACK_NAME_H = 13.5f;
+    constexpr float TRACK_ROUTE_H = 10.5f;
+    constexpr float TRACK_GAP = 1.5f;
+    const float stackH = m_route.empty()
+        ? TRACK_NAME_H
+        : (TRACK_NAME_H + TRACK_GAP + TRACK_ROUTE_H);
+    const float stackY = textRect.y + std::max(0.0f, (textRect.height - stackH) * 0.5f) - 0.5f;
+
+    NUIRect nameRect{textRect.x, stackY, textRect.width, TRACK_NAME_H};
     renderer.drawTextCentered(m_name, nameRect, nameFont, m_selected ? m_selectedText : m_text);
 
-    // Route (bottom half)
     if (!m_route.empty()) {
-        const float routeH = 12.0f;
-        NUIRect routeRect{textRect.x, textRect.y + textRect.height - routeH - 2.0f, textRect.width, routeH};
-        renderer.drawTextCentered(m_route, routeRect, routeFont, m_textSecondary);
+        NUIRect routeRect{textRect.x, stackY + TRACK_NAME_H + TRACK_GAP, textRect.width, TRACK_ROUTE_H};
+        renderer.drawTextCentered(m_route,
+                                  routeRect,
+                                  routeFont,
+                                  m_selected ? m_textSecondary.withAlpha(0.96f) : m_textSecondary.withAlpha(0.88f));
     }
 }
 

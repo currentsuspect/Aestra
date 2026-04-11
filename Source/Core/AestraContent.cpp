@@ -266,7 +266,8 @@ AestraContent::AestraContent() {
     m_browserToggle = std::make_shared<AestraUI::NUISegmentedControl>(
         std::vector<std::string>{"Files", "Plugins"}
     );
-    m_browserToggle->setCornerRadius(8.0f);
+    m_browserToggle->setCornerRadius(10.0f);
+    m_browserToggle->setAccentColor(AestraUI::NUIColor(0.62f, 0.58f, 0.98f, 1.0f));
     m_browserToggle->setOnSelectionChanged([this](size_t index) {
         bool showFiles = (index == 0);
         if (m_fileBrowser) m_fileBrowser->setVisible(showFiles);
@@ -557,6 +558,7 @@ AestraContent::AestraContent() {
         std::vector<std::string>{"Arsenal", "Timeline", "Audition"}
     );
     m_viewToggle->setCornerRadius(12.0f);
+    m_viewToggle->setAccentColor(AestraUI::NUIColor(0.62f, 0.58f, 0.98f, 1.0f));
     m_viewToggle->setOnSelectionChanged([this](size_t index) {
         ViewFocus newFocus;
         switch (index) {

@@ -4,6 +4,7 @@
 #include "NUIComponent.h"
 #include "NUISlider.h"
 #include "NUICoreWidgets.h"
+#include "NUISegmentedControl.h"
 #include "UIItemSelector.h"
 #include "UIMixerKnob.h"
 #include <functional>
@@ -89,15 +90,19 @@ public:
     
     void setLevel(float level);
     float getLevel() const;
-    void setPostFader(bool postFader) { postFader_ = postFader; repaint(); }
-    void setMuted(bool muted) { muted_ = muted; repaint(); }
-    void setAccentColor(const NUIColor& color) { accentColor_ = color; if (destSelector_) destSelector_->setAccentColor(color); if (levelKnob_) levelKnob_->setAccentColor(color); repaint(); }
+    void setPostFader(bool postFader);
+    void setSidechainOnly(bool sidechainOnly);
+    void setMuted(bool muted) { m_muted = muted; repaint(); }
+    void setAccentColor(const NUIColor& color);
+    void setPostFaderEditable(bool editable) { m_modeEditable = editable; repaint(); }
 
     void setAvailableDestinations(const std::vector<std::pair<uint32_t, std::string>>& dests);
     
     // Callbacks
     void setOnDestinationChanged(std::function<void(uint32_t)> cb);
     void setOnLevelChanged(std::function<void(float)> cb);
+    void setOnPostFaderChanged(std::function<void(bool)> cb);
+    void setOnSidechainModeChanged(std::function<void(bool)> cb);
     void setOnDelete(std::function<void()> cb);
 
 private:
@@ -105,15 +110,21 @@ private:
     std::shared_ptr<UIItemSelector> destSelector_;
     std::shared_ptr<UIMixerKnob> levelKnob_;
     std::shared_ptr<NUIButton> deleteButton_;
+    std::shared_ptr<NUISegmentedControl> m_modeControl;
+    std::shared_ptr<NUISegmentedControl> m_sendTypeControl;
     
     // Store mapping from index to ID
     std::vector<std::pair<uint32_t, std::string>> destinations_;
-    bool postFader_{true};
-    bool muted_{false};
-    NUIColor accentColor_;
+    bool m_postFader{true};
+    bool m_muted{false};
+    bool m_sidechainOnly{false};
+    bool m_modeEditable{true};
+    NUIColor m_accentColor;
     
     std::function<void(uint32_t)> onDestChanged_;
     std::function<void(float)> onLevelChanged_;
+    std::function<void(bool)> m_onPostFaderChanged;
+    std::function<void(bool)> m_onSidechainModeChanged;
     std::function<void()> onDelete_;
 };
 

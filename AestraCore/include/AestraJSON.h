@@ -37,33 +37,28 @@ public:
     int asInt() const { return static_cast<int>(numberValue_); }
     const std::string& asString() const { return stringValue_; }
 
-    std::vector<JSON>& asArray() {
+    // [SEC-RTM-014] Return by value to avoid exposing a mutable global static.
+    // Callers who modify the returned value on a non-array/non-object JSON
+    // get their own copy that disappears at scope end — no cross-call contamination.
+    std::vector<JSON> asArray() {
         if (type_ != Type::Array) {
-            static std::vector<JSON> e;
-            return e;
+            return {};
         }
         return *arrayValue_;
     }
     const std::vector<JSON>& asArray() const {
-        if (type_ != Type::Array) {
-            static std::vector<JSON> e;
-            return e;
-        }
-        return *arrayValue_;
+        static const std::vector<JSON> e;
+        return e;
     }
-    std::map<std::string, JSON>& asObject() {
+    std::map<std::string, JSON> asObject() {
         if (type_ != Type::Object) {
-            static std::map<std::string, JSON> e;
-            return e;
+            return {};
         }
         return *objectValue_;
     }
     const std::map<std::string, JSON>& asObject() const {
-        if (type_ != Type::Object) {
-            static std::map<std::string, JSON> e;
-            return e;
-        }
-        return *objectValue_;
+        static const std::map<std::string, JSON> e;
+        return e;
     }
 
     // Array operations
@@ -155,7 +150,7 @@ public:
     // Parsing
     static JSON parse(const std::string& jsonString) {
         size_t pos = 0;
-        return parseValue(jsonString, pos);
+        return parseValue(jsonString, pos, 0);
     }
 
 private:
@@ -259,16 +254,19 @@ private:
         }
     }
 
-    static JSON parseValue(const std::string& str, size_t& pos) {
+    static constexpr size_t kMaxJsonDepth = 1024; // Prevent stack exhaustion on crafted input
+
+    static JSON parseValue(const std::string& str, size_t& pos, size_t depth) {
+        if (depth > kMaxJsonDepth) return JSON();
         skipWhitespace(str, pos);
         if (pos >= str.size())
             return JSON();
 
         char c = str[pos];
         if (c == '{')
-            return parseObject(str, pos);
+            return parseObject(str, pos, depth + 1);
         if (c == '[')
-            return parseArray(str, pos);
+            return parseArray(str, pos, depth + 1);
         if (c == '"')
             return parseString(str, pos);
         if (c == 't' || c == 'f')
@@ -281,7 +279,7 @@ private:
         return JSON();
     }
 
-    static JSON parseObject(const std::string& str, size_t& pos) {
+    static JSON parseObject(const std::string& str, size_t& pos, size_t depth) {
         JSON obj = JSON::object();
         pos++; // Skip '{'
 
@@ -302,7 +300,7 @@ private:
                 break;
             pos++; // Skip ':'
 
-            JSON value = parseValue(str, pos);
+            JSON value = parseValue(str, pos, depth);
             obj.set(key.asString(), value);
 
             skipWhitespace(str, pos);
@@ -320,7 +318,7 @@ private:
         return obj;
     }
 
-    static JSON parseArray(const std::string& str, size_t& pos) {
+    static JSON parseArray(const std::string& str, size_t& pos, size_t depth) {
         JSON arr = JSON::array();
         pos++; // Skip '['
 
@@ -331,7 +329,7 @@ private:
         }
 
         while (pos < str.size()) {
-            JSON value = parseValue(str, pos);
+            JSON value = parseValue(str, pos, depth);
             arr.push(value);
 
             skipWhitespace(str, pos);
@@ -405,8 +403,22 @@ private:
                 pos++;
             }
         }
-        double value = std::stod(str.substr(start, pos - start));
-        return JSON(value);
+
+        // [SEC-RTM-013] Guard against malformed number strings that pass
+        // character checks but throw from std::stod (e.g. "-.", "1e", ".")
+        std::string numStr = str.substr(start, pos - start);
+        if (numStr.empty() || numStr == "-" || numStr == "." || numStr == "-." ||
+            numStr.back() == 'e' || numStr.back() == 'E' || numStr.back() == '+' ||
+            (numStr.size() > 1 && numStr.back() == '-' && numStr[numStr.size()-2] != 'e' && numStr[numStr.size()-2] != 'E')) {
+            return JSON(0.0);
+        }
+
+        try {
+            double value = std::stod(numStr);
+            return JSON(value);
+        } catch (const std::exception&) {
+            return JSON(0.0);
+        }
     }
 
     static JSON parseBool(const std::string& str, size_t& pos) {

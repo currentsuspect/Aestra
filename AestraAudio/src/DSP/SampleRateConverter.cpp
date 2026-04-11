@@ -23,6 +23,15 @@ struct FilterCache {
     std::map<SRCQuality, std::weak_ptr<const PolyphaseFilterBank>> entries;
 };
 
+void destroySharedFilterBank(PolyphaseFilterBank* bank) {
+    if (!bank) {
+        return;
+    }
+    bank->~PolyphaseFilterBank();
+    AESTRA_MEMORY_FREE(sizeof(PolyphaseFilterBank));
+    ::operator delete(bank);
+}
+
 FilterCache& getFilterCache() {
     static FilterCache cache;
     return cache;
@@ -43,9 +52,10 @@ std::shared_ptr<const PolyphaseFilterBank> SampleRateConverter::getSharedFilterB
     // Not in cache or expired, create a heap-owned bank. configure() is already
     // documented as non-RT-safe, and shared cache entries need normal lifetime
     // management instead of leaking arena-backed allocations after expiry.
-    auto newBank = std::make_shared<PolyphaseFilterBank>();
-    newBank->clear();
+    auto* rawBank = static_cast<PolyphaseFilterBank*>(::operator new(sizeof(PolyphaseFilterBank)));
     AESTRA_MEMORY_ALLOC(sizeof(PolyphaseFilterBank));
+    auto newBank = std::shared_ptr<PolyphaseFilterBank>(new (rawBank) PolyphaseFilterBank(),
+                                                        destroySharedFilterBank);
 
     // We use a temporary SRC instance to generate the bank with a standard upsampling cutoff (0.98)
     SampleRateConverter temp;
