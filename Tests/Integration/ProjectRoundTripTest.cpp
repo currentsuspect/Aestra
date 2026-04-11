@@ -121,12 +121,17 @@ int main() {
     auto& playlist1 = tm1->getPlaylistModel();
     playlist1.setBPM(128.0);
 
-    PlaylistLaneID laneId = playlist1.createLane("Lane 1");
-    require(laneId.isValid(), "Failed to create lane");
+    PlaylistLaneID lane1Id = playlist1.createLane("Lane 1");
+    require(lane1Id.isValid(), "Failed to create lane 1");
     auto* channel1 = tm1->addChannel("Lane 1");
-    require(channel1 != nullptr, "Failed to create channel");
+    require(channel1 != nullptr, "Failed to create channel 1");
 
-    if (auto* lane = playlist1.getLane(laneId)) {
+    PlaylistLaneID lane2Id = playlist1.createLane("Lane 2");
+    require(lane2Id.isValid(), "Failed to create lane 2");
+    auto* channel2Src = tm1->addChannel("Lane 2");
+    require(channel2Src != nullptr, "Failed to create channel 2");
+
+    if (auto* lane = playlist1.getLane(lane1Id)) {
         lane->volume = 0.75f;
         lane->pan = -0.25f;
         lane->muted = false;
@@ -137,7 +142,18 @@ int main() {
     channel1->setMute(false);
     channel1->setSolo(false);
 
-    ClipInstanceID clipId = playlist1.addClipFromPattern(laneId, patId, 0.0, 4.0);
+    if (auto* lane = playlist1.getLane(lane2Id)) {
+        lane->volume = 0.65f;
+        lane->pan = 0.15f;
+        lane->muted = false;
+        lane->solo = false;
+    }
+    channel2Src->setVolume(0.65f);
+    channel2Src->setPan(0.15f);
+    channel2Src->setMute(false);
+    channel2Src->setSolo(false);
+
+    ClipInstanceID clipId = playlist1.addClipFromPattern(lane1Id, patId, 0.0, 4.0);
     require(clipId.isValid(), "Failed to add clip from pattern");
 
     if (auto* clip = playlist1.getClip(clipId)) {
@@ -149,6 +165,25 @@ int main() {
         clip->edits.fadeOutBeats = 0.0;
         clip->edits.sourceStart = 0.0;
     }
+
+    channel1->setMainOutputId(channel2Src->getChannelId());
+    AudioRoute audibleSend{};
+    audibleSend.targetChannelId = channel2Src->getChannelId();
+    audibleSend.gain = 0.5f;
+    audibleSend.pan = -0.2f;
+    audibleSend.postFader = false;
+    audibleSend.mute = false;
+    audibleSend.sidechainOnly = false;
+    channel1->addSend(audibleSend);
+
+    AudioRoute sidechainSend{};
+    sidechainSend.targetChannelId = channel2Src->getChannelId();
+    sidechainSend.gain = 1.0f;
+    sidechainSend.pan = 0.0f;
+    sidechainSend.postFader = true;
+    sidechainSend.mute = false;
+    sidechainSend.sidechainOnly = true;
+    channel1->addSend(sidechainSend);
 
     // --- Autosave-style path: serialize compact (indent=0) + atomic write
     {
@@ -191,27 +226,56 @@ int main() {
     require(std::abs(loadResult.playhead - 2.345) < 1e-9, "Playhead did not roundtrip");
 
     auto& playlist2 = tm2->getPlaylistModel();
-    require(playlist2.getLaneCount() == 1, "Lane count mismatch after load");
-    require(tm2->getChannelCount() == 1, "Channel count mismatch after load");
+    require(playlist2.getLaneCount() == 2, "Lane count mismatch after load");
+    require(tm2->getChannelCount() == 2, "Channel count mismatch after load");
 
-    PlaylistLaneID lane2Id = playlist2.getLaneId(0);
-    const auto* lane2 = playlist2.getLane(lane2Id);
-    require(lane2 != nullptr, "Loaded lane missing");
-    require(lane2->name == "Lane 1", "Lane name mismatch after load");
-    require(std::abs(lane2->volume - 0.75f) < 1e-6f, "Lane volume mismatch after load");
-    require(std::abs(lane2->pan - (-0.25f)) < 1e-6f, "Lane pan mismatch after load");
+    PlaylistLaneID loadedLane1Id = playlist2.getLaneId(0);
+    const auto* loadedLane1 = playlist2.getLane(loadedLane1Id);
+    require(loadedLane1 != nullptr, "Loaded lane 1 missing");
+    require(loadedLane1->name == "Lane 1", "Lane 1 name mismatch after load");
+    require(std::abs(loadedLane1->volume - 0.75f) < 1e-6f, "Lane 1 volume mismatch after load");
+    require(std::abs(loadedLane1->pan - (-0.25f)) < 1e-6f, "Lane 1 pan mismatch after load");
 
-    require(lane2->clips.size() == 1, "Clip count mismatch after load");
-    const auto& loadedClip = lane2->clips[0];
+    require(loadedLane1->clips.size() == 1, "Clip count mismatch after load");
+    const auto& loadedClip = loadedLane1->clips[0];
     require(std::abs(loadedClip.startBeat - 0.0) < 1e-9, "Clip start mismatch after load");
     require(std::abs(loadedClip.durationBeats - 4.0) < 1e-9, "Clip duration mismatch after load");
     require(std::abs(loadedClip.edits.gainLinear - 0.9f) < 1e-6f, "Clip gain mismatch after load");
 
-    const auto* channel2 = tm2->getChannel(0);
-    require(channel2 != nullptr, "Loaded channel missing");
-    require(channel2->getName() == "Lane 1", "Channel name mismatch after load");
-    require(std::abs(channel2->getVolume() - 0.75f) < 1e-6f, "Channel volume mismatch after load");
-    require(std::abs(channel2->getPan() - (-0.25f)) < 1e-6f, "Channel pan mismatch after load");
+    PlaylistLaneID loadedLane2Id = playlist2.getLaneId(1);
+    const auto* loadedLane2 = playlist2.getLane(loadedLane2Id);
+    require(loadedLane2 != nullptr, "Loaded lane 2 missing");
+    require(loadedLane2->name == "Lane 2", "Lane 2 name mismatch after load");
+    require(std::abs(loadedLane2->volume - 0.65f) < 1e-6f, "Lane 2 volume mismatch after load");
+    require(std::abs(loadedLane2->pan - 0.15f) < 1e-6f, "Lane 2 pan mismatch after load");
+    require(loadedLane2->clips.empty(), "Lane 2 should not gain clips after load");
+
+    const auto* loadedChannel1 = tm2->getChannel(0);
+    require(loadedChannel1 != nullptr, "Loaded channel 1 missing");
+    require(loadedChannel1->getName() == "Lane 1", "Channel 1 name mismatch after load");
+    require(std::abs(loadedChannel1->getVolume() - 0.75f) < 1e-6f, "Channel 1 volume mismatch after load");
+    require(std::abs(loadedChannel1->getPan() - (-0.25f)) < 1e-6f, "Channel 1 pan mismatch after load");
+
+    const auto* loadedChannel2 = tm2->getChannel(1);
+    require(loadedChannel2 != nullptr, "Loaded channel 2 missing");
+    require(loadedChannel2->getName() == "Lane 2", "Channel 2 name mismatch after load");
+    require(std::abs(loadedChannel2->getVolume() - 0.65f) < 1e-6f, "Channel 2 volume mismatch after load");
+    require(std::abs(loadedChannel2->getPan() - 0.15f) < 1e-6f, "Channel 2 pan mismatch after load");
+
+    require(loadedChannel1->getMainOutputId() == loadedChannel2->getChannelId(),
+            "Main output destination mismatch after load");
+    const auto loadedSends = loadedChannel1->getSends();
+    require(loadedSends.size() == 2, "Send count mismatch after load");
+    require(loadedSends[0].targetChannelId == loadedChannel2->getChannelId(),
+            "Audible send target mismatch after load");
+    require(std::abs(loadedSends[0].gain - 0.5f) < 1e-6f, "Audible send gain mismatch after load");
+    require(std::abs(loadedSends[0].pan - (-0.2f)) < 1e-6f, "Audible send pan mismatch after load");
+    require(loadedSends[0].postFader == false, "Audible send tap mismatch after load");
+    require(loadedSends[0].sidechainOnly == false, "Audible send sidechain flag mismatch after load");
+    require(loadedSends[1].targetChannelId == loadedChannel2->getChannelId(),
+            "Sidechain send target mismatch after load");
+    require(loadedSends[1].postFader == true, "Sidechain send tap mismatch after load");
+    require(loadedSends[1].sidechainOnly == true, "Sidechain send flag mismatch after load");
 
     auto patterns2 = tm2->getPatternManager().getAllPatterns();
     require(patterns2.size() == 1, "Pattern count mismatch after load");
@@ -230,6 +294,18 @@ int main() {
     std::cout << "[INFO] Autosave project loaded.\n";
     require(std::abs(autosaveLoadResult.tempo - 128.0) < 1e-9, "Autosave tempo did not roundtrip");
     require(std::abs(autosaveLoadResult.playhead - 1.234) < 1e-9, "Autosave playhead did not roundtrip");
+    require(tm3->getChannelCount() == 2, "Autosave channel count mismatch");
+    const auto* autosaveChannel1 = tm3->getChannel(0);
+    const auto* autosaveChannel2 = tm3->getChannel(1);
+    require(autosaveChannel1 != nullptr && autosaveChannel2 != nullptr, "Autosave channels missing");
+    require(autosaveChannel1->getMainOutputId() == autosaveChannel2->getChannelId(),
+            "Autosave main output destination mismatch");
+    const auto autosaveSends = autosaveChannel1->getSends();
+    require(autosaveSends.size() == 2, "Autosave send count mismatch");
+    require(autosaveSends[0].postFader == false && autosaveSends[0].sidechainOnly == false,
+            "Autosave audible send mismatch");
+    require(autosaveSends[1].postFader == true && autosaveSends[1].sidechainOnly == true,
+            "Autosave sidechain send mismatch");
 
     std::cout << "[PASS] ProjectRoundTripTest\n";
     return 0;
