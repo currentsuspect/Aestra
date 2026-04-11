@@ -2,6 +2,7 @@
 #include "AestraCompEditor.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "Plugin/AestraComp.h"
 #include <algorithm>
 #include <cmath>
 
@@ -70,8 +71,11 @@ void AestraCompEditor::drawMeter(NUIRenderer& renderer, const NUIRect& bounds) {
     float meterBot = bounds.bottom() - 4.0f;
     float meterH = meterBot - meterTop;
     renderer.fillRoundedRect({meterX, meterTop, meterW, meterH}, 3.0f, NUIColor(0.06f, 0.06f, 0.07f, 0.9f));
-    // Simulated GR display (would be driven by plugin in real implementation)
-    float grNorm = 0.3f;
+    float grNorm = 0.0f;
+    if (auto comp = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraComp>(m_instance)) {
+        const float grDb = comp->getCurrentGainReductionDb();
+        grNorm = std::clamp(grDb / 24.0f, 0.0f, 1.0f);
+    }
     float grH = meterH * grNorm;
     NUIColor grColor = NUIColor(1.0f, 0.6f, 0.2f);
     renderer.fillRoundedRect({meterX, meterBot - grH, meterW, grH}, 3.0f, grColor.withAlpha(0.8f));

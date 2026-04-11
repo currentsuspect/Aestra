@@ -96,6 +96,7 @@ private:
     float m_cachedPan{0.0f};
     float m_cachedWidth{1.0f}; // New!
     int m_cachedFxCount{0};
+    std::string m_cachedFxStatus;
 
     void cacheThemeColors();
     void layoutChildren();

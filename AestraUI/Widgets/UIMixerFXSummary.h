@@ -20,6 +20,7 @@ public:
 
     void setFxCount(int count);
     int getFxCount() const { return m_fxCount; }
+    void setStatusText(std::string text);
 
     std::function<void()> onClicked;
     std::function<void()> onInvalidateRequested;
@@ -27,6 +28,7 @@ public:
 private:
     int m_fxCount{0};
     std::string m_labelText;
+    std::string m_statusText;
     bool m_pressed{false};
     bool m_hovered{false};
 

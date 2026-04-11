@@ -986,6 +986,10 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
             m_scratchL.resize(monoSize);
         if (m_scratchR.size() < monoSize)
             m_scratchR.resize(monoSize);
+        if (m_sidechainScratchL.size() < monoSize)
+            m_sidechainScratchL.resize(monoSize);
+        if (m_sidechainScratchR.size() < monoSize)
+            m_sidechainScratchR.resize(monoSize);
 
         // Pre-allocate per-unit MIDI scratch buffers so RT never resizes.
         // Note: units are expected to be low-count; we cap to a reasonable maximum.
@@ -1014,6 +1018,11 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         m_trackBuffersD.clear();
         m_trackBuffersD.resize(kMaxTracks);
         for (auto& buf : m_trackBuffersD) {
+            buf.assign(requiredSize, 0.0);
+        }
+        m_trackSidechainBuffersD.clear();
+        m_trackSidechainBuffersD.resize(kMaxTracks);
+        for (auto& buf : m_trackSidechainBuffersD) {
             buf.assign(requiredSize, 0.0);
         }
         if (m_trackState.size() != kMaxTracks) {
@@ -1046,6 +1055,11 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
                         ptr[i] = c;
                     }
                 }
+            }
+        }
+        for (auto& buf : m_trackSidechainBuffersD) {
+            if (!buf.empty()) {
+                VirtualLock(buf.data(), buf.size() * sizeof(double));
             }
         }
 #endif
@@ -1334,13 +1348,117 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     const uint64_t blockEnd = blockStart + numFrames;
     const bool isPlaying = m_transportPlaying.load(std::memory_order_relaxed); // [NEW] Check transport
 
-    // Solo detection (single pass)
+    // Solo detection and routed solo support.
     bool anySolo = false;
-    for (const auto& tr : graph.tracks) {
+    m_rtTrackIndexById.clear();
+    m_rtTrackIndexById.reserve(graph.tracks.size());
+    for (size_t i = 0; i < graph.tracks.size(); ++i) {
+        m_rtTrackIndexById[graph.tracks[i].trackId] = i;
+    }
+
+    m_rtAudibleDownstream.resize(graph.tracks.size());
+    m_rtAudibleIncoming.resize(graph.tracks.size());
+    m_rtSidechainIncoming.resize(graph.tracks.size());
+    for (size_t i = 0; i < graph.tracks.size(); ++i) {
+        m_rtAudibleDownstream[i].clear();
+        m_rtAudibleIncoming[i].clear();
+        m_rtSidechainIncoming[i].clear();
+    }
+    m_rtAudibleEligible.assign(availableTracks, false);
+    m_rtProcessActive.assign(availableTracks, false);
+
+    auto addTrackEdge = [&](size_t srcIndex, uint32_t destTrackId, bool sidechainOnly) {
+        auto it = m_rtTrackIndexById.find(destTrackId);
+        if (it == m_rtTrackIndexById.end()) {
+            return;
+        }
+        const size_t destIndex = it->second;
+        if (destIndex == srcIndex) {
+            return;
+        }
+        if (sidechainOnly) {
+            m_rtSidechainIncoming[destIndex].push_back(srcIndex);
+        } else {
+            m_rtAudibleDownstream[srcIndex].push_back(destIndex);
+            m_rtAudibleIncoming[destIndex].push_back(srcIndex);
+        }
+    };
+
+    for (size_t i = 0; i < graph.tracks.size(); ++i) {
+        const auto& tr = graph.tracks[i];
         auto& state = ensureTrackState(tr.trackIndex);
         if (tr.solo || state.solo) {
             anySolo = true;
-            break;
+        }
+        if (tr.mainOutputId != 0xFFFFFFFFu) {
+            addTrackEdge(i, tr.mainOutputId, false);
+        }
+        for (const auto& send : tr.sends) {
+            if (send.mute || send.targetChannelId == 0xFFFFFFFFu) {
+                continue;
+            }
+            addTrackEdge(i, send.targetChannelId, send.sidechainOnly);
+        }
+    }
+
+    if (anySolo) {
+        m_rtIndexQueue.clear();
+        size_t audibleQueueRead = 0;
+        std::vector<size_t> processQueue;
+        processQueue.reserve(graph.tracks.size());
+        size_t processQueueRead = 0;
+
+        for (size_t i = 0; i < graph.tracks.size(); ++i) {
+            const auto& tr = graph.tracks[i];
+            auto& state = ensureTrackState(tr.trackIndex);
+            const bool soloed = tr.solo || state.solo;
+            const bool soloSafe = tr.isSoloSafe || state.soloSafe;
+            if (!soloed && !soloSafe) {
+                continue;
+            }
+            if (static_cast<size_t>(tr.trackIndex) < availableTracks &&
+                !m_rtAudibleEligible[tr.trackIndex]) {
+                m_rtAudibleEligible[tr.trackIndex] = true;
+                m_rtIndexQueue.push_back(i);
+            }
+        }
+
+        while (audibleQueueRead < m_rtIndexQueue.size()) {
+            const size_t index = m_rtIndexQueue[audibleQueueRead++];
+            processQueue.push_back(index);
+            for (const size_t destIndex : m_rtAudibleDownstream[index]) {
+                const uint32_t destTrackIndex = graph.tracks[destIndex].trackIndex;
+                if (static_cast<size_t>(destTrackIndex) >= availableTracks ||
+                    m_rtAudibleEligible[destTrackIndex]) {
+                    continue;
+                }
+                m_rtAudibleEligible[destTrackIndex] = true;
+                m_rtIndexQueue.push_back(destIndex);
+            }
+        }
+
+        while (processQueueRead < processQueue.size()) {
+            const size_t index = processQueue[processQueueRead++];
+            const uint32_t processTrackIndex = graph.tracks[index].trackIndex;
+            if (static_cast<size_t>(processTrackIndex) < availableTracks &&
+                !m_rtProcessActive[processTrackIndex]) {
+                m_rtProcessActive[processTrackIndex] = true;
+            }
+
+            auto enqueueUpstream = [&](const std::vector<size_t>& upstream) {
+                for (const size_t upstreamIndex : upstream) {
+                    const uint32_t upstreamTrackIndex = graph.tracks[upstreamIndex].trackIndex;
+                    if (static_cast<size_t>(upstreamTrackIndex) >= availableTracks ||
+                        m_rtProcessActive[upstreamTrackIndex]) {
+                        continue;
+                    }
+                    m_rtProcessActive[upstreamTrackIndex] = true;
+                    processQueue.push_back(upstreamIndex);
+                }
+            };
+
+            enqueueUpstream(m_rtAudibleIncoming[index]);
+            enqueueUpstream(m_rtSidechainIncoming[index]);
         }
     }
 
@@ -1400,73 +1518,81 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         }
         auto& buffer = m_trackBuffersD[trackIdx];
         std::memset(buffer.data(), 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
+        auto& sidechainBuffer = m_trackSidechainBuffersD[trackIdx];
+        std::memset(sidechainBuffer.data(), 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
     }
 
     // Process tracks in audible topological order so any routed upstream
     // content reaches a destination before that destination runs inserts/fader/metering.
-    std::vector<size_t> processOrder;
-    processOrder.reserve(graph.tracks.size());
-    std::map<uint32_t, size_t> trackIndexById;
-    std::vector<uint32_t> indegree(graph.tracks.size(), 0u);
-    std::vector<std::vector<size_t>> edges(graph.tracks.size());
+    m_rtProcessOrder.clear();
+    m_rtProcessOrder.reserve(graph.tracks.size());
+    m_rtTopoIndegree.assign(graph.tracks.size(), 0u);
+    m_rtTopoEdges.resize(graph.tracks.size());
     for (size_t i = 0; i < graph.tracks.size(); ++i) {
-        trackIndexById[graph.tracks[i].trackId] = i;
+        m_rtTopoEdges[i].clear();
     }
     for (size_t i = 0; i < graph.tracks.size(); ++i) {
         const auto& track = graph.tracks[i];
         auto addEdge = [&](uint32_t destTrackId) {
-            auto it = trackIndexById.find(destTrackId);
-            if (it == trackIndexById.end()) {
+            auto it = m_rtTrackIndexById.find(destTrackId);
+            if (it == m_rtTrackIndexById.end()) {
                 return;
             }
             const size_t destIndex = it->second;
             if (destIndex == i) {
                 return;
             }
-            edges[i].push_back(destIndex);
-            indegree[destIndex] += 1u;
+            m_rtTopoEdges[i].push_back(destIndex);
+            m_rtTopoIndegree[destIndex] += 1u;
         };
 
         if (track.mainOutputId != 0xFFFFFFFFu) {
             addEdge(track.mainOutputId);
         }
         for (const auto& send : track.sends) {
-            if (send.mute || send.sidechainOnly || send.targetChannelId == 0xFFFFFFFFu) {
+            if (send.mute || send.targetChannelId == 0xFFFFFFFFu) {
                 continue;
             }
             addEdge(send.targetChannelId);
         }
     }
 
-    std::queue<size_t> ready;
-    for (size_t i = 0; i < indegree.size(); ++i) {
-        if (indegree[i] == 0u) {
-            ready.push(i);
+    m_rtIndexQueue.clear();
+    size_t readyRead = 0;
+    for (size_t i = 0; i < m_rtTopoIndegree.size(); ++i) {
+        if (m_rtTopoIndegree[i] == 0u) {
+            m_rtIndexQueue.push_back(i);
         }
     }
-    while (!ready.empty()) {
-        const size_t index = ready.front();
-        ready.pop();
-        processOrder.push_back(index);
-        for (const size_t destIndex : edges[index]) {
-            if (--indegree[destIndex] == 0u) {
-                ready.push(destIndex);
+    while (readyRead < m_rtIndexQueue.size()) {
+        const size_t index = m_rtIndexQueue[readyRead++];
+        m_rtProcessOrder.push_back(index);
+        for (const size_t destIndex : m_rtTopoEdges[index]) {
+            if (--m_rtTopoIndegree[destIndex] == 0u) {
+                m_rtIndexQueue.push_back(destIndex);
             }
         }
     }
-    if (processOrder.size() != graph.tracks.size()) {
+    const bool cycleDetected = m_rtProcessOrder.size() != graph.tracks.size();
+    if (cycleDetected) {
+        if (!m_loggedRoutingCycleWarning) {
+            Aestra::Log::warning("[AudioEngine] Routing cycle detected; cyclic routes will not render correctly.");
+            m_loggedRoutingCycleWarning = true;
+        }
         std::vector<bool> alreadyAdded(graph.tracks.size(), false);
-        for (const size_t index : processOrder) {
+        for (const size_t index : m_rtProcessOrder) {
             alreadyAdded[index] = true;
         }
         for (size_t i = 0; i < graph.tracks.size(); ++i) {
             if (!alreadyAdded[i]) {
-                processOrder.push_back(i);
+                m_rtProcessOrder.push_back(i);
             }
         }
+    } else {
+        m_loggedRoutingCycleWarning = false;
     }
 
-    for (const size_t orderedIndex : processOrder) {
+    for (const size_t orderedIndex : m_rtProcessOrder) {
         const auto& track = graph.tracks[orderedIndex];
         const uint32_t trackIdx = track.trackIndex;
         if (static_cast<size_t>(trackIdx) >= availableTracks) {
@@ -1516,14 +1642,46 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         // Skip early (solo suppression only).
         // Muted tracks still render so meters keep moving, but they don't mix into master.
         const bool muted = track.mute || state.mute;
-        const bool soloed = track.solo || state.solo;
-        const bool soloSafe = track.isSoloSafe || state.soloSafe; // Access cached state or track prop
+        const bool audibleEligible =
+            !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtAudibleEligible[trackIdx]);
+        const bool processActive =
+            !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtProcessActive[trackIdx]);
 
-        // If any track is soloed, we suppress this track UNLESS it is also soloed OR it is solo-safe.
-        if (anySolo && !soloed && !soloSafe) {
+        if (state.sendGainL.size() != track.sends.size()) {
+            state.sendGainL.resize(track.sends.size());
+            state.sendGainR.resize(track.sends.size());
+            for (size_t sendIndex = 0; sendIndex < track.sends.size(); ++sendIndex) {
+                double targetL = 0.0;
+                double targetR = 0.0;
+                fastPanGainsD(
+                    clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                    static_cast<double>(track.sends[sendIndex].gain),
+                    targetL,
+                    targetR);
+                state.sendGainL[sendIndex].current = targetL;
+                state.sendGainL[sendIndex].target = targetL;
+                state.sendGainR[sendIndex].current = targetR;
+                state.sendGainR[sendIndex].target = targetR;
+            }
+        }
+
+        for (size_t sendIndex = 0; sendIndex < track.sends.size(); ++sendIndex) {
+            double targetL = 0.0;
+            double targetR = 0.0;
+            fastPanGainsD(
+                clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                static_cast<double>(track.sends[sendIndex].gain),
+                targetL,
+                targetR);
+            state.sendGainL[sendIndex].setTarget(targetL);
+            state.sendGainR[sendIndex].setTarget(targetR);
+        }
+
+        if (!processActive) {
             auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
             if (snaps && slot != ChannelSlotMap::INVALID_SLOT) {
                 snaps->writePeak(slot, 0.0f, 0.0f);
+                snaps->writeSidechainPeak(slot, 0.0f);
             }
             continue;
         }
@@ -1850,23 +2008,32 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         }
 
         // === Plugin Processing (EffectChain) ===
+        float trackSidechainPeak = 0.0f;
         if (track.effectChain && track.effectChain->getActiveSlotCount() > 0) {
             // Check if scratches are large enough (should be from setBufferConfig)
-            if (m_scratchL.size() >= numFrames && m_scratchR.size() >= numFrames) {
+            if (m_scratchL.size() >= numFrames && m_scratchR.size() >= numFrames &&
+                m_sidechainScratchL.size() >= numFrames && m_sidechainScratchR.size() >= numFrames) {
                 // 1. De-interleave Double -> Float
                 const double* dBuf = buffer.data();
+                const double* dScBuf = m_trackSidechainBuffersD[trackIdx].data();
                 float* fL = m_scratchL.data();
                 float* fR = m_scratchR.data();
-
+                float* scL = m_sidechainScratchL.data();
+                float* scR = m_sidechainScratchR.data();
                 // Allow vectorization
                 for (uint32_t k = 0; k < numFrames; ++k) {
                     fL[k] = static_cast<float>(dBuf[k * 2]);
                     fR[k] = static_cast<float>(dBuf[k * 2 + 1]);
+                    scL[k] = static_cast<float>(dScBuf[k * 2]);
+                    scR[k] = static_cast<float>(dScBuf[k * 2 + 1]);
+                    trackSidechainPeak =
+                        std::max(trackSidechainPeak, std::max(std::abs(scL[k]), std::abs(scR[k])));
                 }
 
                 // 2. Process
                 float* channels[2] = {fL, fR};
-                track.effectChain->process(channels, 2, numFrames);
+                const float* sidechainChannels[2] = {scL, scR};
+                track.effectChain->process(channels, 2, numFrames, sidechainChannels, 2);
 
                 // 3. Re-interleave Float -> Double
                 double* dOut = buffer.data();
@@ -1894,8 +2061,24 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
         auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
         const bool publishTrackSnapshot = (snaps && slot != ChannelSlotMap::INVALID_SLOT);
+        if (publishTrackSnapshot) {
+            snaps->writeSidechainPeak(slot, trackSidechainPeak);
+        }
         double* lfStateL = publishTrackSnapshot ? &m_meterLfStateL[slot] : nullptr;
         double* lfStateR = publishTrackSnapshot ? &m_meterLfStateR[slot] : nullptr;
+
+        const bool hasPreFaderSend = std::any_of(
+            track.sends.begin(),
+            track.sends.end(),
+            [](const auto& send) { return !send.mute && !send.postFader; });
+        if (hasPreFaderSend) {
+            state.preFaderBuffer.resize(static_cast<size_t>(numFrames) * 2u);
+            std::memcpy(state.preFaderBuffer.data(),
+                        trackData,
+                        static_cast<size_t>(numFrames) * 2u * sizeof(double));
+        } else {
+            state.preFaderBuffer.clear();
+        }
 
         for (uint32_t i = 0; i < numFrames; ++i) {
             // Apply smoothed gain
@@ -1907,50 +2090,23 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             const double outL = preL * leftGain;
             const double outR = preR * rightGain;
 
+            buffer[i * 2] = outL;
+            buffer[i * 2 + 1] = outR;
+
             if (!muted) {
-                if (track.mainOutputId == 0xFFFFFFFFu) {
+                if (audibleEligible && track.mainOutputId == 0xFFFFFFFFu) {
                     masterBuf[i * 2] += outL;
                     masterBuf[i * 2 + 1] += outR;
-                } else if (slotMap) {
+                } else if (audibleEligible && slotMap) {
                     const uint32_t destSlot = slotMap->getSlotIndex(track.mainOutputId);
-                    if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < availableTracks && destSlot != trackIdx) {
+                    if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < availableTracks && destSlot != trackIdx &&
+                        (!anySolo || m_rtAudibleEligible[destSlot])) {
                         auto& destBuffer = m_trackBuffersD[destSlot];
                         destBuffer[i * 2] += outL;
                         destBuffer[i * 2 + 1] += outR;
                     }
                 }
 
-                for (const auto& send : track.sends) {
-                    if (send.mute || send.sidechainOnly) {
-                        continue;
-                    }
-
-                    const double sendSrcL = send.postFader ? outL : preL;
-                    const double sendSrcR = send.postFader ? outR : preR;
-                    double sendGainL = static_cast<double>(send.gain);
-                    double sendGainR = static_cast<double>(send.gain);
-
-                    const double panClamped = clampD(static_cast<double>(send.pan), -1.0, 1.0);
-                    const double angle = (panClamped + 1.0) * QUARTER_PI_D;
-                    sendGainL *= std::cos(angle);
-                    sendGainR *= std::sin(angle);
-
-                    const double routedL = sendSrcL * sendGainL;
-                    const double routedR = sendSrcR * sendGainR;
-
-                    if (send.targetChannelId == 0xFFFFFFFFu) {
-                        masterBuf[i * 2] += routedL;
-                        masterBuf[i * 2 + 1] += routedR;
-                    } else if (slotMap) {
-                        const uint32_t sendDestSlot = slotMap->getSlotIndex(send.targetChannelId);
-                        if (sendDestSlot != ChannelSlotMap::INVALID_SLOT && sendDestSlot < availableTracks &&
-                            sendDestSlot != trackIdx) {
-                            auto& sendDestBuffer = m_trackBuffersD[sendDestSlot];
-                            sendDestBuffer[i * 2] += routedL;
-                            sendDestBuffer[i * 2 + 1] += routedR;
-                        }
-                    }
-                }
             }
 
             const double absL = (outL >= 0.0) ? outL : -outL;
@@ -1971,6 +2127,72 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                 lowAccTrackL += lpL * lpL;
                 lowAccTrackR += lpR * lpR;
                 sumLRTrack += outL * outR;
+            }
+        }
+
+        if (!muted) {
+            struct PreparedSendRoute {
+                const double* source{nullptr};
+                double* dest{nullptr};
+                SmoothedParamD* gainL{nullptr};
+                SmoothedParamD* gainR{nullptr};
+            };
+
+            std::vector<PreparedSendRoute> preparedRoutes;
+            preparedRoutes.reserve(track.sends.size());
+            for (size_t sendIndex = 0; sendIndex < track.sends.size(); ++sendIndex) {
+                const auto& send = track.sends[sendIndex];
+                if (send.mute) {
+                    continue;
+                }
+
+                PreparedSendRoute route;
+                route.source = send.postFader ? buffer.data() : state.preFaderBuffer.data();
+                route.gainL = &state.sendGainL[sendIndex];
+                route.gainR = &state.sendGainR[sendIndex];
+
+                if (send.sidechainOnly && send.targetChannelId != 0xFFFFFFFFu && slotMap) {
+                    const uint32_t scDestSlot = slotMap->getSlotIndex(send.targetChannelId);
+                    if (scDestSlot != ChannelSlotMap::INVALID_SLOT &&
+                        scDestSlot < availableTracks &&
+                        scDestSlot != trackIdx) {
+                        route.dest = m_trackSidechainBuffersD[scDestSlot].data();
+                        preparedRoutes.push_back(route);
+                    }
+                    continue;
+                }
+
+                if (!audibleEligible) {
+                    continue;
+                }
+
+                if (send.targetChannelId == 0xFFFFFFFFu) {
+                    route.dest = masterBuf;
+                    preparedRoutes.push_back(route);
+                    continue;
+                }
+
+                if (!slotMap) {
+                    continue;
+                }
+
+                const uint32_t sendDestSlot = slotMap->getSlotIndex(send.targetChannelId);
+                if (sendDestSlot != ChannelSlotMap::INVALID_SLOT &&
+                    sendDestSlot < availableTracks &&
+                    sendDestSlot != trackIdx &&
+                    (!anySolo || m_rtAudibleEligible[sendDestSlot])) {
+                    route.dest = m_trackBuffersD[sendDestSlot].data();
+                    preparedRoutes.push_back(route);
+                }
+            }
+
+            for (const auto& route : preparedRoutes) {
+                for (uint32_t i = 0; i < numFrames; ++i) {
+                    const double sendGainL = route.gainL->next();
+                    const double sendGainR = route.gainR->next();
+                    route.dest[i * 2] += route.source[i * 2] * sendGainL;
+                    route.dest[i * 2 + 1] += route.source[i * 2 + 1] * sendGainR;
+                }
             }
         }
 
@@ -1998,6 +2220,10 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         // Snap smoothed params to target for next block
         state.gainL.snap();
         state.gainR.snap();
+        for (size_t sendIndex = 0; sendIndex < state.sendGainL.size(); ++sendIndex) {
+            state.sendGainL[sendIndex].snap();
+            state.sendGainR[sendIndex].snap();
+        }
     }
 
     if (unitSnapshot) {
@@ -2122,14 +2348,13 @@ void AudioEngine::compileGraph() {
             if (send.mute || send.sidechainOnly)
                 continue;
 
-            double sendGainL = static_cast<double>(send.gain);
-            double sendGainR = static_cast<double>(send.gain);
-
-            // Apply Send Pan (Approximated if mono source, or balance if stereo)
-            const double panClamped = clampD(static_cast<double>(send.pan), -1.0, 1.0);
-            const double angle = (panClamped + 1.0) * QUARTER_PI_D;
-            sendGainL *= std::cos(angle);
-            sendGainR *= std::sin(angle);
+            double sendGainL = 0.0;
+            double sendGainR = 0.0;
+            fastPanGainsD(
+                clampD(static_cast<double>(send.pan), -1.0, 1.0),
+                static_cast<double>(send.gain),
+                sendGainL,
+                sendGainR);
 
             if (send.targetChannelId == 0xFFFFFFFF) {
                 // Route to Master

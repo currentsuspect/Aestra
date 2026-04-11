@@ -78,6 +78,7 @@ struct ChannelViewModel {
     float smoothedRmsL{MixerMath::DB_MIN};   ///< Smoothed left RMS (dB)
     float smoothedRmsR{MixerMath::DB_MIN};   ///< Smoothed right RMS (dB)
     float correlation{0.0f};                 ///< Phase correlation (-1.0 to 1.0)
+    float sidechainPeak{0.0f};               ///< Live sidechain detector input peak (linear 0..1)
     float integratedLufs{-144.0f};           ///< Integrated/Gated LUFS (dB)
     float peakHoldL{MixerMath::DB_MIN};      ///< Peak hold left (dB)
     float peakHoldR{MixerMath::DB_MIN};      ///< Peak hold right (dB)
@@ -286,6 +287,7 @@ public:
 private:
     std::function<void()> m_onGraphDirty;
     std::function<void()> m_onProjectModified;
+    std::unordered_map<uint32_t, std::string> m_blockedRoutingWarnings;
 
     /// Stable storage - pointers remain valid across add/remove
     std::vector<std::unique_ptr<ChannelViewModel>> m_channels;
@@ -320,6 +322,8 @@ private:
     void smoothMeterChannel(ChannelViewModel& channel,
                             const Audio::MeterSnapshotBuffer::MeterReadout& snapshot,
                             double deltaTime);
+    bool routeWouldCreateCycle(uint32_t sourceId, uint32_t targetId) const;
+    bool hasRoutePath(uint32_t fromId, uint32_t targetId) const;
 };
 
 } // namespace Aestra

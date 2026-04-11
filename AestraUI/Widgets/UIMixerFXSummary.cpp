@@ -53,6 +53,13 @@ void UIMixerFXSummary::setFxCount(int count)
     requestInvalidate();
 }
 
+void UIMixerFXSummary::setStatusText(std::string text)
+{
+    if (text == m_statusText) return;
+    m_statusText = std::move(text);
+    requestInvalidate();
+}
+
 void UIMixerFXSummary::onRender(NUIRenderer& renderer)
 {
     const auto b = getBounds();
@@ -90,8 +97,21 @@ void UIMixerFXSummary::onRender(NUIRenderer& renderer)
                                1.0f,
                                hasFx ? m_accent.withAlpha(0.36f) : m_border.withAlpha(0.35f));
 
+    float rightInset = 10.0f;
+    if (!m_statusText.empty()) {
+        const float statusW = renderer.measureText(m_statusText, 8.5f).width + 14.0f;
+        const NUIRect statusRect{visualRect.right() - statusW - 8.0f,
+                                 visualRect.y + (visualRect.height - 16.0f) * 0.5f,
+                                 statusW,
+                                 16.0f};
+        renderer.fillRoundedRect(statusRect, 8.0f, m_accent.withAlpha(0.14f));
+        renderer.strokeRoundedRect(statusRect, 8.0f, 1.0f, m_accent.withAlpha(0.24f));
+        renderer.drawTextCentered(m_statusText, statusRect, 8.5f, m_accent.withAlpha(0.92f));
+        rightInset = (visualRect.right() - statusRect.x) + 6.0f;
+    }
+
     const float textX = chipRect.right() + 8.0f;
-    const NUIRect textRect{textX, visualRect.y, std::max(1.0f, visualRect.right() - textX - 10.0f), visualRect.height};
+    const NUIRect textRect{textX, visualRect.y, std::max(1.0f, visualRect.right() - textX - rightInset), visualRect.height};
     renderer.drawText(m_labelText.empty() ? std::string("FX") : m_labelText,
                       {textRect.x, textRect.y + 6.5f},
                       10.0f,
