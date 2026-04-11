@@ -360,9 +360,20 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
     m_channels = std::move(newChannels);
     rebuildIdMap();
 
-    // Validate selection
+    // Validate or establish startup selection.
     if (m_selectedChannelId >= 0 && !getChannelById(static_cast<uint32_t>(m_selectedChannelId))) {
         m_selectedChannelId = -1;
+    }
+
+    if (m_selectedChannelId < 0 && !m_channels.empty()) {
+        uint32_t fallbackId = m_channels.front()->id;
+        for (const auto& channel : m_channels) {
+            if (channel && channel->fxCount > 0) {
+                fallbackId = channel->id;
+                break;
+            }
+        }
+        m_selectedChannelId = static_cast<int32_t>(fallbackId);
     }
 }
 
@@ -474,6 +485,7 @@ void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
     
     // Correlation and LUFS (already computed/smoothed in audio engine)
     channel.correlation = snapshot.correlation;
+    channel.sidechainPeak = snapshot.sidechainPeak;
     channel.integratedLufs = snapshot.integratedLufs;
     
     channel.smoothedPeakR = smoothDb(channel.smoothedPeakR, channel.envPeakR, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
@@ -533,6 +545,7 @@ std::vector<MixerViewModel::Destination> MixerViewModel::getAvailableDestination
         if (!ch) continue;
         if (ch->id == excludeId) continue;
         if (ch->id == 0) continue; // Handled above
+        if (routeWouldCreateCycle(excludeId, ch->id)) continue;
 
         dests.push_back({ch->id, ch->name});
     }
@@ -615,8 +628,13 @@ void MixerViewModel::setSendLevel(uint32_t channelId, int sendIndex, float linea
 void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint32_t targetId) {
     auto* ch = getChannelById(channelId);
     if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
+    if (routeWouldCreateCycle(channelId, targetId)) {
+        m_blockedRoutingWarnings[channelId] = "Routing loop blocked";
+        return;
+    }
 
     ch->sends[sendIndex].targetId = targetId;
+    m_blockedRoutingWarnings.erase(channelId);
     
     // Resolve name
     if (targetId == 0) {
@@ -666,9 +684,14 @@ void MixerViewModel::setSendSidechainOnly(uint32_t channelId, int sendIndex, boo
 void MixerViewModel::setMainOutputDestination(uint32_t channelId, uint32_t targetId) {
     auto* ch = getChannelById(channelId);
     if (!ch || ch->id == 0) return;
+    if (routeWouldCreateCycle(channelId, targetId)) {
+        m_blockedRoutingWarnings[channelId] = "Routing loop blocked";
+        return;
+    }
 
     ch->mainOutputId = targetId;
     ch->masterSendEnabled = (targetId == 0);
+    m_blockedRoutingWarnings.erase(channelId);
     ch->routeName = (targetId == 0) ? "Master" : "Unknown";
 
     if (targetId != 0) {
@@ -689,6 +712,10 @@ void MixerViewModel::setMainOutputDestination(uint32_t channelId, uint32_t targe
 std::string MixerViewModel::getRoutingWarning(uint32_t channelId) const {
     const auto* ch = getChannelById(channelId);
     if (!ch || ch->id == 0) return {};
+    auto blockedIt = m_blockedRoutingWarnings.find(channelId);
+    if (blockedIt != m_blockedRoutingWarnings.end()) {
+        return blockedIt->second;
+    }
 
     std::unordered_map<uint32_t, int> audibleRouteCounts;
     auto addAudibleTarget = [&](uint32_t targetId) {
@@ -713,6 +740,50 @@ std::string MixerViewModel::getRoutingWarning(uint32_t channelId) const {
     if (duplicateDestinations <= 0) return {};
     if (duplicateDestinations == 1) return "Duplicate audible route";
     return std::to_string(duplicateDestinations) + " duplicate audible routes";
+}
+
+bool MixerViewModel::routeWouldCreateCycle(uint32_t sourceId, uint32_t targetId) const {
+    if (sourceId == 0 || targetId == 0) return false;
+    if (sourceId == targetId) return true;
+    return hasRoutePath(targetId, sourceId);
+}
+
+bool MixerViewModel::hasRoutePath(uint32_t fromId, uint32_t targetId) const {
+    if (fromId == 0 || targetId == 0) return false;
+
+    std::vector<uint32_t> stack{fromId};
+    std::unordered_map<uint32_t, bool> visited;
+
+    while (!stack.empty()) {
+        const uint32_t currentId = stack.back();
+        stack.pop_back();
+
+        if (currentId == targetId) {
+            return true;
+        }
+        if (visited[currentId]) {
+            continue;
+        }
+        visited[currentId] = true;
+
+        const auto* ch = getChannelById(currentId);
+        if (!ch) {
+            continue;
+        }
+
+        if (!ch->masterSendEnabled && ch->mainOutputId != 0 && !visited[ch->mainOutputId]) {
+            stack.push_back(ch->mainOutputId);
+        }
+
+        for (const auto& send : ch->sends) {
+            if (send.targetId == 0 || visited[send.targetId]) {
+                continue;
+            }
+            stack.push_back(send.targetId);
+        }
+    }
+
+    return false;
 }
 
 

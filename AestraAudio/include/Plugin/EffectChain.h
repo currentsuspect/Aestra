@@ -197,7 +197,8 @@ public:
      * @param numChannels Number of channels (typically 2 for stereo)
      * @param numFrames Number of frames to process
      */
-    void process(float** buffer, uint32_t numChannels, uint32_t numFrames);
+    void process(float** buffer, uint32_t numChannels, uint32_t numFrames,
+                 const float* const* sidechainInputs = nullptr, uint32_t numSidechainChannels = 0);
 
     // ==============================
     // State Management

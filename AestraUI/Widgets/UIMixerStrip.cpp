@@ -7,9 +7,11 @@
 #include "ContinuousParamBuffer.h"
 #include "ChannelSlotMap.h"
 #include "MeterSnapshot.h"
+#include "Plugin/AestraComp.h"
 
 #include <algorithm>
 #include <cmath>
+#include <unordered_set>
 #include <sstream>
 
 namespace AestraUI {
@@ -29,6 +31,25 @@ namespace {
 
     constexpr float SELECT_TOP_H = 4.0f;
 
+    std::string compactRouteName(uint32_t targetId, const std::string& targetName)
+    {
+        if (targetId == 0 || targetName == "Master" || targetName == "MASTER") {
+            return "M";
+        }
+        const std::string trackPrefix = "Track ";
+        if (targetName.rfind(trackPrefix, 0) == 0) {
+            return "T" + targetName.substr(trackPrefix.size());
+        }
+        const std::string lanePrefix = "Lane ";
+        if (targetName.rfind(lanePrefix, 0) == 0) {
+            return "L" + targetName.substr(lanePrefix.size());
+        }
+        if (targetName.size() <= 6) {
+            return targetName;
+        }
+        return targetName.substr(0, 6);
+    }
+
     std::string buildStripRouteSummary(const Aestra::ChannelViewModel& channel)
     {
         if (channel.id == 0) {
@@ -37,15 +58,27 @@ namespace {
 
         const bool busOnly = !channel.masterSendEnabled && channel.mainOutputId != 0;
         int audibleSendCount = 0;
-        bool hasSidechainSend = false;
+        int sidechainSendCount = 0;
+        std::string audibleTarget;
+        std::string sidechainTarget;
+        std::unordered_set<uint32_t> audibleTargets;
+        std::unordered_set<uint32_t> sidechainTargets;
 
         for (const auto& send : channel.sends) {
             if (send.muted) continue;
             if (send.sidechainOnly) {
-                hasSidechainSend = true;
+                ++sidechainSendCount;
+                sidechainTargets.insert(send.targetId);
+                if (sidechainTarget.empty()) {
+                    sidechainTarget = compactRouteName(send.targetId, send.targetName);
+                }
                 continue;
             }
             ++audibleSendCount;
+            audibleTargets.insert(send.targetId);
+            if (audibleTarget.empty()) {
+                audibleTarget = compactRouteName(send.targetId, send.targetName);
+            }
         }
 
         std::ostringstream summary;
@@ -57,13 +90,66 @@ namespace {
             first = false;
         };
 
-        if (busOnly) appendToken("Bus");
-        if (audibleSendCount > 0) {
-            appendToken(audibleSendCount == 1 ? "Send" : ("+" + std::to_string(audibleSendCount)));
+        if (busOnly) {
+            appendToken("Bus " + compactRouteName(channel.mainOutputId, channel.routeName));
         }
-        if (hasSidechainSend) appendToken("SC");
+        if (audibleSendCount > 0) {
+            if (audibleTargets.size() == 1) {
+                appendToken("Snd " + audibleTarget);
+            } else {
+                appendToken("S+" + std::to_string(static_cast<int>(audibleTargets.size())));
+            }
+        }
+        if (sidechainSendCount > 0) {
+            if (sidechainTargets.size() == 1) {
+                appendToken("SC " + sidechainTarget);
+            } else {
+                appendToken("SC+" + std::to_string(static_cast<int>(sidechainTargets.size())));
+            }
+        }
 
         return summary.str();
+    }
+
+    std::string buildFxStatus(const Aestra::ChannelViewModel& channel)
+    {
+        if (!channel.channel) {
+            return {};
+        }
+
+        bool hasSidechainSend = false;
+        for (const auto& send : channel.sends) {
+            if (!send.muted && send.sidechainOnly) {
+                hasSidechainSend = true;
+                break;
+            }
+        }
+
+        auto& chain = channel.channel->getEffectChain();
+        for (size_t i = 0; i < Aestra::Audio::EffectChain::MAX_SLOTS; ++i) {
+            auto plugin = chain.getPlugin(i);
+            auto comp = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraComp>(plugin);
+            if (!comp) {
+                continue;
+            }
+
+            const float grDb = comp->getCurrentGainReductionDb();
+            if (grDb >= 0.1f) {
+                std::ostringstream out;
+                out.setf(std::ios::fixed);
+                out.precision(grDb >= 10.0f ? 0 : 1);
+                out << "GR " << grDb;
+                return out.str();
+            }
+
+            if (hasSidechainSend && channel.sidechainPeak > 0.001f) {
+                return "SC live";
+            }
+
+            return {};
+        }
+
+        return {};
     }
 }
 
@@ -525,6 +611,12 @@ void UIMixerStrip::onUpdate(double deltaTime)
             m_cachedFxCount = channel->fxCount;
             invalidateStaticCache();
             m_fxSummary->setFxCount(channel->fxCount);
+        }
+        const std::string fxStatus = buildFxStatus(*channel);
+        if (m_cachedFxStatus != fxStatus) {
+            m_cachedFxStatus = fxStatus;
+            invalidateStaticCache();
+            m_fxSummary->setStatusText(fxStatus);
         }
     }
 

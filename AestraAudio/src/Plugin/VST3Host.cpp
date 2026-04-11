@@ -72,6 +72,22 @@ static bool SafeProcessCall(IAudioProcessor* processor, ProcessData& data) {
 #endif
 }
 
+static uint32_t countAudioBusChannels(IComponent* component, BusDirection direction) {
+    if (!component) {
+        return 0;
+    }
+
+    uint32_t totalChannels = 0;
+    const int32_t busCount = component->getBusCount(kAudio, direction);
+    for (int32_t busIndex = 0; busIndex < busCount; ++busIndex) {
+        BusInfo busInfo{};
+        if (component->getBusInfo(kAudio, direction, busIndex, busInfo) == kResultOk && busInfo.channelCount > 0) {
+            totalChannels += static_cast<uint32_t>(busInfo.channelCount);
+        }
+    }
+    return totalChannels;
+}
+
 // ============================================================================
 // VST3PluginInstance Implementation
 // ============================================================================
@@ -183,9 +199,11 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
             }
         }
 
-        // Get I/O configuration
-        m_info.numAudioInputs = 2; // Default stereo
-        m_info.numAudioOutputs = 2;
+        // Get I/O configuration from the real component buses.
+        const uint32_t discoveredInputs = countAudioBusChannels(comp, kInput);
+        const uint32_t discoveredOutputs = countAudioBusChannels(comp, kOutput);
+        m_info.numAudioInputs = discoveredInputs > 0 ? discoveredInputs : 2;
+        m_info.numAudioOutputs = discoveredOutputs > 0 ? discoveredOutputs : 2;
 
         // Check for editor
         if (m_controller) {

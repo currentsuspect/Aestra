@@ -28,6 +28,7 @@ struct MeterSnapshotBuffer {
         float rmsR = 0.0f;
         float lowL = 0.0f;
         float lowR = 0.0f;
+        float sidechainPeak = 0.0f;
         float lufs = -144.0f;
         float integratedLufs = -144.0f;
         float correlation = 0.0f;
@@ -43,6 +44,7 @@ struct MeterSnapshotBuffer {
         std::atomic<float> rmsR{0.0f};
         std::atomic<float> lowL{0.0f};
         std::atomic<float> lowR{0.0f};
+        std::atomic<float> sidechainPeak{0.0f};
         std::atomic<float> correlation{0.0f};
         std::atomic<float> lufs{-144.0f};
         std::atomic<float> integratedLufs{-144.0f};
@@ -56,6 +58,11 @@ struct MeterSnapshotBuffer {
         if (slot < 0 || slot >= MAX_CHANNELS) return;
         slots[slot].peakL.store(pL, std::memory_order_relaxed);
         slots[slot].peakR.store(pR, std::memory_order_relaxed);
+    }
+
+    void writeSidechainPeak(int slot, float peak) {
+        if (slot < 0 || slot >= MAX_CHANNELS) return;
+        slots[slot].sidechainPeak.store(peak, std::memory_order_relaxed);
     }
 
     void writeLevels(int slot, float pL, float pR, float rL, float rR,
@@ -95,6 +102,7 @@ struct MeterSnapshotBuffer {
         r.rmsR = s.rmsR.load(std::memory_order_relaxed);
         r.lowL = s.lowL.load(std::memory_order_relaxed);
         r.lowR = s.lowR.load(std::memory_order_relaxed);
+        r.sidechainPeak = s.sidechainPeak.load(std::memory_order_relaxed);
         r.correlation = s.correlation.load(std::memory_order_relaxed);
         r.lufs = s.lufs.load(std::memory_order_relaxed);
         r.integratedLufs = s.integratedLufs.load(std::memory_order_relaxed);

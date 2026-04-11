@@ -35,6 +35,8 @@ public:
 
     AestraComp() = default;
 
+    float getCurrentGainReductionDb() const { return m_currentGainReductionDb.load(std::memory_order_relaxed); }
+
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         m_sampleRate = sampleRate;
         m_maxBlockSize = maxBlockSize;
@@ -93,19 +95,23 @@ public:
         const float releaseCoeff = std::exp(-1.0f / (m_sampleRate * releaseTime));
         const float makeupLinear = std::pow(10.0f, makeupGain / 20.0f);
 
-        const uint32_t channels = std::min(numInputChannels, numOutputChannels);
+        const uint32_t channels = std::min<uint32_t>(2, std::min(numInputChannels, numOutputChannels));
         const bool stereo = channels >= 2;
+        const bool hasSidechain = numInputChannels >= 4 && inputs[2] && inputs[3];
 
         float envL = m_envL;
         float envR = m_envR;
 
+        float blockGainReductionDb = 0.0f;
         for (uint32_t i = 0; i < numFrames; ++i) {
             // Input levels (dB)
             float inL = (stereo && inputs[0] && inputs[1]) ? inputs[0][i] : (inputs[0] ? inputs[0][i] : 0.0f);
             float inR = stereo ? (inputs[1] ? inputs[1][i] : 0.0f) : inL;
+            float detL = hasSidechain ? inputs[2][i] : inL;
+            float detR = hasSidechain ? inputs[3][i] : inR;
 
-            float levelL = std::abs(inL);
-            float levelR = std::abs(inR);
+            float levelL = std::abs(detL);
+            float levelR = std::abs(detR);
             float level = std::max(levelL, levelR);
 
             // Level to dB (clamp to -120dB floor)
@@ -134,6 +140,9 @@ public:
             // Below knee/threshold: no reduction
 
             // Apply gain reduction + makeup
+            const float currentGainReductionDb = std::max(0.0f, -reductionDb);
+            blockGainReductionDb = std::max(blockGainReductionDb, currentGainReductionDb);
+
             float gainDb = reductionDb + makeupGain;
             float gain = std::pow(10.0f, gainDb / 20.0f);
             gain = std::clamp(gain, 0.0f, 10.0f); // clamp to +20dB max boost
@@ -152,6 +161,7 @@ public:
 
         m_envL = envL;
         m_envR = envR;
+        m_currentGainReductionDb.store(blockGainReductionDb, std::memory_order_relaxed);
     }
 
     // Parameters
@@ -245,6 +255,7 @@ private:
 
     std::array<std::atomic<float>, kParamCount> m_params;
     float m_envL = 0, m_envR = 0;
+    std::atomic<float> m_currentGainReductionDb{0.0f};
 };
 
 } // namespace Plugins

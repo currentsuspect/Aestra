@@ -28,6 +28,9 @@ struct TrackRTState {
     // Optimized: Store smoothed L/R gains directly to avoid per-sample sin/cos
     SmoothedParamD gainL;
     SmoothedParamD gainR;
+    std::vector<SmoothedParamD> sendGainL;
+    std::vector<SmoothedParamD> sendGainR;
+    std::vector<double> preFaderBuffer;
 
     // Logical state for command updates (snapshot of last known values)
     float currentVolume{1.0f};

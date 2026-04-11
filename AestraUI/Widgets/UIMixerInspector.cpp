@@ -43,6 +43,50 @@ namespace {
         }
         return clipped.empty() ? ellipsis : clipped + ellipsis;
     }
+
+    bool pluginSupportsSidechain(const Aestra::Audio::PluginInfo& info)
+    {
+        return info.numAudioInputs >= 4;
+    }
+
+    bool channelHasSidechainConsumer(const Aestra::ChannelViewModel* channel)
+    {
+        if (!channel || !channel->channel) {
+            return false;
+        }
+
+        const auto& effectChain = channel->channel->getEffectChain();
+        for (size_t slotIndex = 0; slotIndex < Aestra::Audio::EffectChain::MAX_SLOTS; ++slotIndex) {
+            const auto* slot = effectChain.getSlot(slotIndex);
+            if (!slot || slot->isEmpty() || !slot->plugin) {
+                continue;
+            }
+            if (pluginSupportsSidechain(slot->plugin->getInfo())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool hasSidechainReadyDestination(const Aestra::MixerViewModel* viewModel, const Aestra::ChannelViewModel* channel)
+    {
+        if (!viewModel || !channel) {
+            return false;
+        }
+
+        for (const auto& send : channel->sends) {
+            if (!send.sidechainOnly) {
+                continue;
+            }
+            const auto* targetChannel = viewModel->getChannelById(send.targetId);
+            if (channelHasSidechainConsumer(targetChannel)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 
 void UIMixerInspector::clampScrollOffsets()
@@ -266,7 +310,9 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
                     m_cachedRoute == channel->routeName &&
                     m_cachedMainOutputId == channel->mainOutputId &&
                     m_cachedMasterSendEnabled == channel->masterSendEnabled &&
-                    m_cachedSendsCount == channel->sends.size())
+                    m_cachedSendsCount == channel->sends.size() &&
+                    m_cachedInsertsCount == channel->inserts.size() &&
+                    m_cachedFxCount == channel->fxCount)
                  : (m_cachedName.empty() && m_cachedRoute.empty()));
     if (identityUnchanged) return;
 
@@ -279,6 +325,8 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
     m_cachedMainOutputId = channel ? channel->mainOutputId : 0xFFFFFFFFu;
     m_cachedMasterSendEnabled = channel ? channel->masterSendEnabled : true;
     m_cachedSendsCount = channel ? channel->sends.size() : 0;
+    m_cachedInsertsCount = channel ? channel->inserts.size() : 0;
+    m_cachedFxCount = channel ? channel->fxCount : 0;
 
     if (!channel) {
         m_cachedHeaderTitle = "Inspector";
@@ -640,7 +688,8 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         renderer.strokeRoundedRect(routingCard, 12.0f, 1.0f, m_border.withAlpha(0.30f));
         renderer.drawText("Route Map", {routingCard.x + 10.0f, routingCard.y + 8.0f}, 9.5f, m_text.withAlpha(0.92f));
 
-        const char* sidechainLabel = "SC unavailable";
+        const bool sidechainReady = hasSidechainReadyDestination(m_viewModel, channel);
+        const char* sidechainLabel = sidechainReady ? "SC ready" : "SC unavailable";
         const float sidechainW = renderer.measureText(sidechainLabel, 8.5f).width + 18.0f;
         const bool busOnly = !channel->masterSendEnabled && channel->mainOutputId != 0;
         const char* masterLabel = busOnly ? "Master off" : "Master on";
@@ -650,9 +699,17 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         renderer.fillRoundedRect(masterChip, 9.0f, busOnly ? accent.withAlpha(0.10f) : m_bg.withAlpha(0.28f));
         renderer.strokeRoundedRect(masterChip, 9.0f, 1.0f, busOnly ? accent.withAlpha(0.20f) : m_border.withAlpha(0.14f));
         renderer.drawTextCentered(masterLabel, masterChip, 8.5f, m_textSecondary.withAlpha(0.88f));
-        renderer.fillRoundedRect(sidechainChip, 9.0f, m_bg.withAlpha(0.28f));
-        renderer.strokeRoundedRect(sidechainChip, 9.0f, 1.0f, m_border.withAlpha(0.14f));
-        renderer.drawTextCentered(sidechainLabel, sidechainChip, 8.5f, m_textSecondary.withAlpha(0.82f));
+        renderer.fillRoundedRect(sidechainChip,
+                                 9.0f,
+                                 sidechainReady ? accent.withAlpha(0.10f) : m_bg.withAlpha(0.28f));
+        renderer.strokeRoundedRect(sidechainChip,
+                                   9.0f,
+                                   1.0f,
+                                   sidechainReady ? accent.withAlpha(0.20f) : m_border.withAlpha(0.14f));
+        renderer.drawTextCentered(sidechainLabel,
+                                  sidechainChip,
+                                  8.5f,
+                                  m_textSecondary.withAlpha(sidechainReady ? 0.92f : 0.82f));
 
         const float laneTop = routingCard.y + 34.0f;
         const float sourceW = 52.0f;
