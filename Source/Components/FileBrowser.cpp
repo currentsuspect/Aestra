@@ -33,6 +33,10 @@ namespace AestraUI {
 namespace {
 
 constexpr float kPreviewPanelHeight = 90.0f;
+constexpr float BROWSER_BUTTONS_ROW_H = 40.0f;
+constexpr float BROWSER_BREADCRUMB_ROW_H = 32.0f;
+constexpr float BROWSER_SEARCH_ROW_H = 38.0f;
+constexpr float BROWSER_ROW_SPACING = 8.0f;
 
 AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* component) {
     AestraUI::NUIComponent* root = component;
@@ -759,11 +763,8 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     // Update scrollbar track height to match current visible area
     // This ensures drag and scroll clamping work correctly
     // Re-calculate header height (must match onMouseEvent/onResize logic)
-    const float buttonsRowHeight = 28.0f;
-    const float breadcrumbRowHeight = 24.0f;
-    const float searchRowHeight = 26.0f; 
-    const float rowSpacing = 4.0f;
-    float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
+    float totalHeaderH = BROWSER_BUTTONS_ROW_H + BROWSER_BREADCRUMB_ROW_H +
+                         BROWSER_ROW_SPACING + BROWSER_SEARCH_ROW_H + BROWSER_ROW_SPACING;
     
     // Store for other methods to use
     scrollbarTrackHeight_ = fileBrowserHeight - totalHeaderH;
@@ -943,18 +944,16 @@ void FileBrowser::onResize(int width, int height) {
 
     auto& themeManager = NUIThemeManager::getInstance();
     // Ignore legacy headerHeight, define our own stack
-    const float buttonsRowHeight = 40.0f;     // Increased from 36
-    const float breadcrumbRowHeight = 32.0f;  // Increased from 28
-    const float searchRowHeight = 38.0f;
     const float innerPad = 8.0f;
-    const float rowSpacing = 8.0f;            // Increased from 4
+    const float rowSpacing = BROWSER_ROW_SPACING;
     
     // 1. Header background area (Buttons + Breadcrumbs)
     // We don't set bounds for this render pass, but renderToolbar uses getBounds() top area.
     
     // 2. Search Input Position
     // Position search input below Buttons and Breadcrumbs
-    const float searchY = getBounds().y + buttonsRowHeight + breadcrumbRowHeight + rowSpacing;
+    const float searchY =
+        getBounds().y + BROWSER_BUTTONS_ROW_H + BROWSER_BREADCRUMB_ROW_H + rowSpacing;
     
     if (searchInput_) {
         // Full width minus padding
@@ -962,7 +961,7 @@ void FileBrowser::onResize(int width, int height) {
             getBounds().x + innerPad, 
             searchY, 
             static_cast<float>(width) - innerPad * 2.0f, 
-            searchRowHeight
+            BROWSER_SEARCH_ROW_H
         );
         searchInput_->setBounds(searchBounds);
         
@@ -979,7 +978,7 @@ void FileBrowser::onResize(int width, int height) {
     // FIX: Calculate list height taking preview panel into account, consistent with onMouseEvent
     float availableHeight = height;
 
-    const float listYOffset = (searchY - getBounds().y) + searchRowHeight + rowSpacing;
+    const float listYOffset = (searchY - getBounds().y) + BROWSER_SEARCH_ROW_H + rowSpacing;
     float listHeight = availableHeight - listYOffset;
     
     visibleItems_ = static_cast<int>(listHeight / itemHeight_);
@@ -1028,17 +1027,12 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     const auto& view = getActiveView();
     auto& themeManager = NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
-	    float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
 	    float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
 
     // NEW STACK LAYOUT LOGIC (Shared with onResize and renderToolbar)
-    const float buttonsRowHeight = 40.0f;
-    const float breadcrumbRowHeight = 32.0f;
-    const float searchRowHeight = 36.0f; 
-    const float rowSpacing = 8.0f;
-    
     // Calculate header total height
-    float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
+    float totalHeaderH = BROWSER_BUTTONS_ROW_H + BROWSER_BREADCRUMB_ROW_H +
+                         BROWSER_ROW_SPACING + BROWSER_SEARCH_ROW_H + BROWSER_ROW_SPACING;
     
     // FIX: Calculate list height taking preview panel into account
     // FIX: Calculate list height taking preview panel into account
@@ -2205,16 +2199,12 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     float effectiveW = effectiveWidth_ > 0 ? effectiveWidth_ : bounds.width;
     
     // NEW STACK LAYOUT LOGIC (Shared with onResize and renderToolbar)
-    const float buttonsRowHeight = 40.0f;
-    const float breadcrumbRowHeight = 32.0f;
-    const float searchRowHeight = 36.0f; 
-    const float rowSpacing = 8.0f;
-    
     // Restore itemHeight which acts as the row height for file list items
     float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
     
     // Calculate header total height
-    float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
+    float totalHeaderH = BROWSER_BUTTONS_ROW_H + BROWSER_BREADCRUMB_ROW_H +
+                         BROWSER_ROW_SPACING + BROWSER_SEARCH_ROW_H + BROWSER_ROW_SPACING;
     
     // FIX: Subtract preview panel height from list height for correct clipping
     // FIX: Subtract preview panel height from list height for correct clipping
@@ -2468,9 +2458,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     // Get layout dimensions from theme
     auto& themeManager = NUIThemeManager::getInstance();
     // Use fixed heights matching onResize logic
-    const float buttonsRowHeight = 40.0f;
-    const float breadcrumbRowHeight = 32.0f;
-    float totalHeaderHeight = buttonsRowHeight + breadcrumbRowHeight;
+    float totalHeaderHeight = BROWSER_BUTTONS_ROW_H + BROWSER_BREADCRUMB_ROW_H;
     const float innerPad = 8.0f;
 
     NUIRect bounds = getBounds();
@@ -2488,7 +2476,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
                       AestraUI::NUIColor::white().withAlpha(0.035f));
     
     // Draw separator below buttons row (before breadcrumbs)
-    float buttonRowSepY = toolbarRect.y + buttonsRowHeight;
+    float buttonRowSepY = toolbarRect.y + BROWSER_BUTTONS_ROW_H;
     renderer.drawLine(NUIPoint(bounds.x, buttonRowSepY), NUIPoint(bounds.x + effectiveW, buttonRowSepY), 1.0f, themeManager.getColor("glassBorder").withAlpha(0.6f));
     
     // Draw separator below entire header (after breadcrumbs) 
@@ -2503,7 +2491,7 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     const float buttonH = 24.0f; // Standardized Aestra UI toolbar height
     
     // Center buttons in the TOP row (0 to buttonsRowHeight)
-    const float buttonY = toolbarRect.y + (buttonsRowHeight - buttonH) / 2.0f;
+    const float buttonY = toolbarRect.y + (BROWSER_BUTTONS_ROW_H - buttonH) / 2.0f;
     const float iconSize = 14.0f;     
     const float iconGap = 6.0f;       
     const float clusterGap = 6.0f;   // Standardized Aestra UI gap
@@ -2538,7 +2526,11 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
             border = themeManager.getColor("border").withAlpha(iconOnly ? 0.20f : 0.34f);
         }
 
-        renderer.drawShadow(rect, 0.0f, iconOnly ? 2.0f : 4.0f, iconOnly ? 8.0f : 12.0f, NUIColor(0, 0, 0, iconOnly ? 0.06f : 0.14f));
+        renderer.drawShadow(rect,
+                            0.0f,
+                            iconOnly ? 2.0f : 4.0f,
+                            iconOnly ? 8.0f : 12.0f,
+                            NUIColor(0, 0, 0, iconOnly ? 0.06f : 0.14f));
         renderer.fillRoundedRect(rect, buttonRadius, bg);
         renderer.strokeRoundedRect(rect, buttonRadius, 1.0f, border);
         renderer.strokeRoundedRect({rect.x + 1.0f, rect.y + 1.0f, rect.width - 2.0f, rect.height - 2.0f},
@@ -2548,8 +2540,13 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
         
         if (!text.empty()) {
             float tY = std::round(renderer.calculateTextY(rect, toolbarFont));
-            renderer.drawText(text, NUIPoint(rect.x + buttonPadX, tY), 
-                              toolbarFont, active ? textColor_ : hovered ? textColor_.withAlpha(0.94f) : textColor_.withAlpha(0.76f));
+            renderer.drawText(
+                text,
+                NUIPoint(rect.x + buttonPadX, tY),
+                toolbarFont,
+                active ? textColor_
+                       : hovered ? textColor_.withAlpha(0.94f)
+                                 : textColor_.withAlpha(0.76f));
         }
     };
 
@@ -2925,11 +2922,8 @@ void FileBrowser::updateScrollPosition() {
     NUIRect bounds = getBounds();
     
     // USE UNIFIED STACK LAYOUT LOGIC
-    const float buttonsRowHeight = 40.0f;
-    const float breadcrumbRowHeight = 32.0f;
-    const float searchRowHeight = 36.0f; 
-    const float rowSpacing = 8.0f;
-    float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
+    float totalHeaderH = BROWSER_BUTTONS_ROW_H + BROWSER_BREADCRUMB_ROW_H +
+                         BROWSER_ROW_SPACING + BROWSER_SEARCH_ROW_H + BROWSER_ROW_SPACING;
     
     float availableHeight = bounds.height;
     // Preview panel moved to FilePreviewPanel
@@ -2985,11 +2979,8 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
     float scrollbarX = bounds.x + layout.panelMargin;
     
     // RE-CALCULATE List Y (Unified Stack) - Scrollbar starts at list top
-    const float buttonsRowHeight = 40.0f;
-    const float breadcrumbRowHeight = 32.0f;
-    const float searchRowHeight = 36.0f; 
-    const float rowSpacing = 8.0f;
-    float totalHeaderH = buttonsRowHeight + breadcrumbRowHeight + rowSpacing + searchRowHeight + rowSpacing;
+    float totalHeaderH = BROWSER_BUTTONS_ROW_H + BROWSER_BREADCRUMB_ROW_H +
+                         BROWSER_ROW_SPACING + BROWSER_SEARCH_ROW_H + BROWSER_ROW_SPACING;
     
     float scrollbarY = bounds.y + totalHeaderH;
     float scrollbarHeight = scrollbarTrackHeight_;
@@ -3109,10 +3100,9 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
     const auto& layout = themeManager.getLayoutDimensions();
 
     NUIRect bounds = getBounds();
-    float headerHeight = themeManager.getComponentDimension("fileBrowser", "headerHeight");
     float scrollbarX = bounds.x + layout.panelMargin; // Left-side scrollbar
-    const float pathBarHeight = 30.0f;
-    float scrollbarY = bounds.y + headerHeight + 8 + pathBarHeight; // After path bar
+    float scrollbarY = bounds.y + BROWSER_BUTTONS_ROW_H + BROWSER_BREADCRUMB_ROW_H +
+                       BROWSER_ROW_SPACING + BROWSER_SEARCH_ROW_H + BROWSER_ROW_SPACING;
     
     // Use the member variable scrollbarTrackHeight_ for consistency
     // It's set in onResize() and used for thumb calculation

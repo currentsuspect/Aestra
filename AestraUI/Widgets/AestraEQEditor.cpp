@@ -7,7 +7,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <future>
 #include <iomanip>
 #include <sstream>
 
@@ -120,6 +119,18 @@ AestraEQEditor::AestraEQEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> i
     setId("AestraEQEditor");
     setSize(kWindowWidth, kWindowHeight);
     buildControls();
+    m_spectrumWorker = std::thread([this]() { analyzerWorkerMain(); });
+}
+
+AestraEQEditor::~AestraEQEditor() {
+    {
+        std::lock_guard<std::mutex> lock(m_spectrumMutex);
+        m_spectrumStop = true;
+    }
+    m_spectrumCv.notify_all();
+    if (m_spectrumWorker.joinable()) {
+        m_spectrumWorker.join();
+    }
 }
 
 void AestraEQEditor::buildControls() {
@@ -421,12 +432,20 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
 }
 
 void AestraEQEditor::updateSpectrumSnapshot() {
-    if (m_spectrumFuture.valid() &&
-        m_spectrumFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-        const auto nextMagnitudes = m_spectrumFuture.get();
-        m_lastAnalyzerSerial = m_pendingAnalyzerSerial;
-        m_pendingAnalyzerSerial = 0;
+    std::array<float, 160> nextMagnitudes{};
+    bool hasReadyMagnitudes = false;
+    {
+        std::lock_guard<std::mutex> lock(m_spectrumMutex);
+        if (m_spectrumResultReady) {
+            nextMagnitudes = m_workerResultMagnitudes;
+            m_lastAnalyzerSerial = m_workerResultSerial;
+            m_pendingAnalyzerSerial = 0;
+            m_spectrumResultReady = false;
+            hasReadyMagnitudes = true;
+        }
+    }
 
+    if (hasReadyMagnitudes) {
         std::array<float, 160> smoothedMagnitudes{};
         for (size_t i = 0; i < nextMagnitudes.size(); ++i) {
             const size_t i0 = (i == 0) ? i : (i - 1);
@@ -463,9 +482,33 @@ void AestraEQEditor::updateSpectrumSnapshot() {
     }
 
     const double sampleRate = std::max(1.0, eq->getAnalyzerSampleRate());
-    const auto analyzerWindow = m_analyzerWindow;
-    m_pendingAnalyzerSerial = serial;
-    m_spectrumFuture = std::async(std::launch::async, [analyzerWindow, sampleRate]() {
+    {
+        std::lock_guard<std::mutex> lock(m_spectrumMutex);
+        m_workerAnalyzerWindow = m_analyzerWindow;
+        m_workerRequestedSerial = serial;
+        m_spectrumWorkPending = true;
+        m_pendingAnalyzerSerial = serial;
+    }
+    m_spectrumCv.notify_one();
+}
+
+void AestraEQEditor::analyzerWorkerMain() {
+    while (true) {
+        std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> analyzerWindow{};
+        uint64_t serial = 0;
+        {
+            std::unique_lock<std::mutex> lock(m_spectrumMutex);
+            m_spectrumCv.wait(lock, [this]() { return m_spectrumStop || m_spectrumWorkPending; });
+            if (m_spectrumStop) {
+                return;
+            }
+            analyzerWindow = m_workerAnalyzerWindow;
+            serial = m_workerRequestedSerial;
+            m_spectrumWorkPending = false;
+        }
+
+        auto eq = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraEQ>(m_instance);
+        const double sampleRate = eq ? std::max(1.0, eq->getAnalyzerSampleRate()) : 1.0;
         constexpr size_t kSpectrumBins = 160;
         const size_t sampleCount = analyzerWindow.size();
         std::array<float, kSpectrumBins> nextMagnitudes{};
@@ -503,8 +546,13 @@ void AestraEQEditor::updateSpectrumSnapshot() {
             nextMagnitudes[bin] = std::clamp((db + 72.0f) / 72.0f, 0.0f, 1.0f);
         }
 
-        return nextMagnitudes;
-    });
+        {
+            std::lock_guard<std::mutex> lock(m_spectrumMutex);
+            m_workerResultMagnitudes = nextMagnitudes;
+            m_workerResultSerial = serial;
+            m_spectrumResultReady = true;
+        }
+    }
 }
 
 void AestraEQEditor::drawSpectrumBackdrop(NUIRenderer& renderer, const NUIRect& bounds) {

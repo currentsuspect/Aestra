@@ -44,7 +44,7 @@ int main() {
     uint8_t maliciousHeader[10] = { 'I', 'D', '3', 0x04, 0x00, 0x00, 0x7F, 0x7F, 0x7F, 0x7F };
 
     bool ok = vulnerableTagParse(&maliciousHeader[6]);
-    if (!ok) {
+    if (ok) {
         std::cout << "\n[FAIL] Vulnerability confirmed: no maximum tag size limit." << std::endl;
         std::cout << "Fix: enforce max tag size (e.g., 10MB) in MetadataParser.cpp before allocating tagData vector" << std::endl;
         return 1;

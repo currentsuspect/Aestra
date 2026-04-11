@@ -359,7 +359,7 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
         const AestraUI::NUIRect stateCard{
             bounds.x + 26.0f,
             bounds.y + m_headerHeight + 34.0f,
-            bounds.width - 52.0f,
+            std::max(0.0f, bounds.width - 52.0f),
             std::max(96.0f, listRect.height - 68.0f)
         };
         const float radius = 16.0f;

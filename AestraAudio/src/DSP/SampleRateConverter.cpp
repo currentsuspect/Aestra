@@ -52,8 +52,8 @@ std::shared_ptr<const PolyphaseFilterBank> SampleRateConverter::getSharedFilterB
     // Not in cache or expired, create a heap-owned bank. configure() is already
     // documented as non-RT-safe, and shared cache entries need normal lifetime
     // management instead of leaking arena-backed allocations after expiry.
-    AESTRA_MEMORY_ALLOC(sizeof(PolyphaseFilterBank));
     auto* rawBank = static_cast<PolyphaseFilterBank*>(::operator new(sizeof(PolyphaseFilterBank)));
+    AESTRA_MEMORY_ALLOC(sizeof(PolyphaseFilterBank));
     auto newBank = std::shared_ptr<PolyphaseFilterBank>(new (rawBank) PolyphaseFilterBank(),
                                                         destroySharedFilterBank);
 

@@ -206,31 +206,31 @@ UIMixerSend::UIMixerSend()
         if (onLevelChanged_) onLevelChanged_(v);
     };
 
-    modeControl_ = std::make_shared<NUISegmentedControl>(std::vector<std::string>{"Pre", "Post"});
-    modeControl_->setCornerRadius(8.0f);
-    modeControl_->setAccentColor(m_accentColor);
-    modeControl_->setSelectedIndex(1, false);
-    modeControl_->setOnSelectionChanged([this](size_t index) {
+    m_modeControl = std::make_shared<NUISegmentedControl>(std::vector<std::string>{"Pre", "Post"});
+    m_modeControl->setCornerRadius(8.0f);
+    m_modeControl->setAccentColor(m_accentColor);
+    m_modeControl->setSelectedIndex(1, false);
+    m_modeControl->setOnSelectionChanged([this](size_t index) {
         const bool post = (index == 1);
         if (m_postFader != post) {
             m_postFader = post;
-            if (onPostFaderChanged_) {
-                onPostFaderChanged_(post);
+            if (m_onPostFaderChanged) {
+                m_onPostFaderChanged(post);
             }
             repaint();
         }
     });
 
-    sendTypeControl_ = std::make_shared<NUISegmentedControl>(std::vector<std::string>{"Audio", "SC"});
-    sendTypeControl_->setCornerRadius(8.0f);
-    sendTypeControl_->setAccentColor(m_accentColor);
-    sendTypeControl_->setSelectedIndex(0, false);
-    sendTypeControl_->setOnSelectionChanged([this](size_t index) {
+    m_sendTypeControl = std::make_shared<NUISegmentedControl>(std::vector<std::string>{"Audio", "SC"});
+    m_sendTypeControl->setCornerRadius(8.0f);
+    m_sendTypeControl->setAccentColor(m_accentColor);
+    m_sendTypeControl->setSelectedIndex(0, false);
+    m_sendTypeControl->setOnSelectionChanged([this](size_t index) {
         const bool scOnly = (index == 1);
         if (m_sidechainOnly != scOnly) {
             m_sidechainOnly = scOnly;
-            if (onSidechainModeChanged_) {
-                onSidechainModeChanged_(scOnly);
+            if (m_onSidechainModeChanged) {
+                m_onSidechainModeChanged(scOnly);
             }
             repaint();
         }
@@ -255,8 +255,8 @@ UIMixerSend::UIMixerSend()
 
     addChild(destSelector_);
     addChild(levelKnob_);
-    addChild(modeControl_);
-    addChild(sendTypeControl_);
+    addChild(m_modeControl);
+    addChild(m_sendTypeControl);
     addChild(deleteButton_);
 }
 
@@ -269,11 +269,11 @@ void UIMixerSend::setAccentColor(const NUIColor& color)
     if (levelKnob_) {
         levelKnob_->setAccentColor(color);
     }
-    if (modeControl_) {
-        modeControl_->setAccentColor(color);
+    if (m_modeControl) {
+        m_modeControl->setAccentColor(color);
     }
-    if (sendTypeControl_) {
-        sendTypeControl_->setAccentColor(color);
+    if (m_sendTypeControl) {
+        m_sendTypeControl->setAccentColor(color);
     }
     repaint();
 }
@@ -337,15 +337,17 @@ void UIMixerSend::onRender(NUIRenderer& renderer)
     const NUIRect comboRect{b.x + 40.0f, b.y + 32.0f, b.width - 40.0f - 78.0f, 22.0f};
 
     renderer.drawText("Destination", {comboRect.x, b.y + 17.0f}, 7.5f, theme.getColor("textSecondary").withAlpha(0.76f));
-    renderer.drawText("Tap", {modeGroupRect.x, modeGroupRect.y - 1.0f}, 7.25f, theme.getColor("textSecondary").withAlpha(0.76f));
+    if (m_modeEditable) {
+        renderer.drawText("Tap", {modeGroupRect.x, modeGroupRect.y - 1.0f}, 7.25f, theme.getColor("textSecondary").withAlpha(0.76f));
+    }
     renderer.drawText("Send", {typeGroupRect.x, typeGroupRect.y - 1.0f}, 7.25f, theme.getColor("textSecondary").withAlpha(0.76f));
     renderer.drawText("Level", {knobRect.x - 2.0f, b.y + 8.0f}, 7.5f, theme.getColor("textSecondary").withAlpha(0.76f));
 
     levelKnob_->setBounds(knobRect);
     destSelector_->setBounds(comboRect);
-    modeControl_->setVisible(m_modeEditable);
-    modeControl_->setBounds(modeRect);
-    sendTypeControl_->setBounds(typeRect);
+    m_modeControl->setVisible(m_modeEditable);
+    m_modeControl->setBounds(modeRect);
+    m_sendTypeControl->setBounds(typeRect);
     deleteButton_->setBounds(deleteRect);
 
     renderChildren(renderer);
@@ -365,8 +367,8 @@ void UIMixerSend::setDestination(uint32_t destId, const std::string& name)
 void UIMixerSend::setPostFader(bool postFader)
 {
     m_postFader = postFader;
-    if (modeControl_) {
-        modeControl_->setSelectedIndex(postFader ? 1u : 0u, false);
+    if (m_modeControl) {
+        m_modeControl->setSelectedIndex(postFader ? 1u : 0u, false);
     }
     repaint();
 }
@@ -374,8 +376,8 @@ void UIMixerSend::setPostFader(bool postFader)
 void UIMixerSend::setSidechainOnly(bool sidechainOnly)
 {
     m_sidechainOnly = sidechainOnly;
-    if (sendTypeControl_) {
-        sendTypeControl_->setSelectedIndex(sidechainOnly ? 1u : 0u, false);
+    if (m_sendTypeControl) {
+        m_sendTypeControl->setSelectedIndex(sidechainOnly ? 1u : 0u, false);
     }
     repaint();
 }
@@ -396,12 +398,12 @@ void UIMixerSend::setLevel(float level)
 
 void UIMixerSend::setOnPostFaderChanged(std::function<void(bool)> cb)
 {
-    onPostFaderChanged_ = std::move(cb);
+    m_onPostFaderChanged = std::move(cb);
 }
 
 void UIMixerSend::setOnSidechainModeChanged(std::function<void(bool)> cb)
 {
-    onSidechainModeChanged_ = std::move(cb);
+    m_onSidechainModeChanged = std::move(cb);
 }
 
 float UIMixerSend::getLevel() const
