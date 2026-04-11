@@ -1348,13 +1348,111 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     const uint64_t blockEnd = blockStart + numFrames;
     const bool isPlaying = m_transportPlaying.load(std::memory_order_relaxed); // [NEW] Check transport
 
-    // Solo detection (single pass)
+    // Solo detection and routed solo support.
     bool anySolo = false;
-    for (const auto& tr : graph.tracks) {
+    std::unordered_map<uint32_t, size_t> trackIndexById;
+    trackIndexById.reserve(graph.tracks.size());
+    for (size_t i = 0; i < graph.tracks.size(); ++i) {
+        trackIndexById[graph.tracks[i].trackId] = i;
+    }
+
+    std::vector<std::vector<size_t>> audibleDownstream(graph.tracks.size());
+    std::vector<std::vector<size_t>> audibleIncoming(graph.tracks.size());
+    std::vector<std::vector<size_t>> sidechainIncoming(graph.tracks.size());
+    std::vector<bool> audibleEligibleByTrackIndex(availableTracks, false);
+    std::vector<bool> processActiveByTrackIndex(availableTracks, false);
+
+    auto addTrackEdge = [&](size_t srcIndex, uint32_t destTrackId, bool sidechainOnly) {
+        auto it = trackIndexById.find(destTrackId);
+        if (it == trackIndexById.end()) {
+            return;
+        }
+        const size_t destIndex = it->second;
+        if (destIndex == srcIndex) {
+            return;
+        }
+        if (sidechainOnly) {
+            sidechainIncoming[destIndex].push_back(srcIndex);
+        } else {
+            audibleDownstream[srcIndex].push_back(destIndex);
+            audibleIncoming[destIndex].push_back(srcIndex);
+        }
+    };
+
+    for (size_t i = 0; i < graph.tracks.size(); ++i) {
+        const auto& tr = graph.tracks[i];
         auto& state = ensureTrackState(tr.trackIndex);
         if (tr.solo || state.solo) {
             anySolo = true;
-            break;
+        }
+        if (tr.mainOutputId != 0xFFFFFFFFu) {
+            addTrackEdge(i, tr.mainOutputId, false);
+        }
+        for (const auto& send : tr.sends) {
+            if (send.mute || send.targetChannelId == 0xFFFFFFFFu) {
+                continue;
+            }
+            addTrackEdge(i, send.targetChannelId, send.sidechainOnly);
+        }
+    }
+
+    if (anySolo) {
+        std::queue<size_t> audibleQueue;
+        std::queue<size_t> processQueue;
+
+        for (size_t i = 0; i < graph.tracks.size(); ++i) {
+            const auto& tr = graph.tracks[i];
+            auto& state = ensureTrackState(tr.trackIndex);
+            const bool soloed = tr.solo || state.solo;
+            const bool soloSafe = tr.isSoloSafe || state.soloSafe;
+            if (!soloed && !soloSafe) {
+                continue;
+            }
+            if (static_cast<size_t>(tr.trackIndex) < availableTracks &&
+                !audibleEligibleByTrackIndex[tr.trackIndex]) {
+                audibleEligibleByTrackIndex[tr.trackIndex] = true;
+                audibleQueue.push(i);
+            }
+        }
+
+        while (!audibleQueue.empty()) {
+            const size_t index = audibleQueue.front();
+            audibleQueue.pop();
+            processQueue.push(index);
+            for (const size_t destIndex : audibleDownstream[index]) {
+                const uint32_t destTrackIndex = graph.tracks[destIndex].trackIndex;
+                if (static_cast<size_t>(destTrackIndex) >= availableTracks ||
+                    audibleEligibleByTrackIndex[destTrackIndex]) {
+                    continue;
+                }
+                audibleEligibleByTrackIndex[destTrackIndex] = true;
+                audibleQueue.push(destIndex);
+            }
+        }
+
+        while (!processQueue.empty()) {
+            const size_t index = processQueue.front();
+            processQueue.pop();
+            const uint32_t processTrackIndex = graph.tracks[index].trackIndex;
+            if (static_cast<size_t>(processTrackIndex) < availableTracks &&
+                !processActiveByTrackIndex[processTrackIndex]) {
+                processActiveByTrackIndex[processTrackIndex] = true;
+            }
+
+            auto enqueueUpstream = [&](const std::vector<size_t>& upstream) {
+                for (const size_t upstreamIndex : upstream) {
+                    const uint32_t upstreamTrackIndex = graph.tracks[upstreamIndex].trackIndex;
+                    if (static_cast<size_t>(upstreamTrackIndex) >= availableTracks ||
+                        processActiveByTrackIndex[upstreamTrackIndex]) {
+                        continue;
+                    }
+                    processActiveByTrackIndex[upstreamTrackIndex] = true;
+                    processQueue.push(upstreamIndex);
+                }
+            };
+
+            enqueueUpstream(audibleIncoming[index]);
+            enqueueUpstream(sidechainIncoming[index]);
         }
     }
 
@@ -1422,12 +1520,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     // content reaches a destination before that destination runs inserts/fader/metering.
     std::vector<size_t> processOrder;
     processOrder.reserve(graph.tracks.size());
-    std::map<uint32_t, size_t> trackIndexById;
     std::vector<uint32_t> indegree(graph.tracks.size(), 0u);
     std::vector<std::vector<size_t>> edges(graph.tracks.size());
-    for (size_t i = 0; i < graph.tracks.size(); ++i) {
-        trackIndexById[graph.tracks[i].trackId] = i;
-    }
     for (size_t i = 0; i < graph.tracks.size(); ++i) {
         const auto& track = graph.tracks[i];
         auto addEdge = [&](uint32_t destTrackId) {
@@ -1532,14 +1626,16 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         // Skip early (solo suppression only).
         // Muted tracks still render so meters keep moving, but they don't mix into master.
         const bool muted = track.mute || state.mute;
-        const bool soloed = track.solo || state.solo;
-        const bool soloSafe = track.isSoloSafe || state.soloSafe; // Access cached state or track prop
+        const bool audibleEligible =
+            !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && audibleEligibleByTrackIndex[trackIdx]);
+        const bool processActive =
+            !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && processActiveByTrackIndex[trackIdx]);
 
-        // If any track is soloed, we suppress this track UNLESS it is also soloed OR it is solo-safe.
-        if (anySolo && !soloed && !soloSafe) {
+        if (!processActive) {
             auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
             if (snaps && slot != ChannelSlotMap::INVALID_SLOT) {
                 snaps->writePeak(slot, 0.0f, 0.0f);
+                snaps->writeSidechainPeak(slot, 0.0f);
             }
             continue;
         }
@@ -1866,6 +1962,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         }
 
         // === Plugin Processing (EffectChain) ===
+        float trackSidechainPeak = 0.0f;
         if (track.effectChain && track.effectChain->getActiveSlotCount() > 0) {
             // Check if scratches are large enough (should be from setBufferConfig)
             if (m_scratchL.size() >= numFrames && m_scratchR.size() >= numFrames &&
@@ -1877,13 +1974,14 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                 float* fR = m_scratchR.data();
                 float* scL = m_sidechainScratchL.data();
                 float* scR = m_sidechainScratchR.data();
-
                 // Allow vectorization
                 for (uint32_t k = 0; k < numFrames; ++k) {
                     fL[k] = static_cast<float>(dBuf[k * 2]);
                     fR[k] = static_cast<float>(dBuf[k * 2 + 1]);
                     scL[k] = static_cast<float>(dScBuf[k * 2]);
                     scR[k] = static_cast<float>(dScBuf[k * 2 + 1]);
+                    trackSidechainPeak =
+                        std::max(trackSidechainPeak, std::max(std::abs(scL[k]), std::abs(scR[k])));
                 }
 
                 // 2. Process
@@ -1917,6 +2015,9 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
         auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
         const bool publishTrackSnapshot = (snaps && slot != ChannelSlotMap::INVALID_SLOT);
+        if (publishTrackSnapshot) {
+            snaps->writeSidechainPeak(slot, trackSidechainPeak);
+        }
         double* lfStateL = publishTrackSnapshot ? &m_meterLfStateL[slot] : nullptr;
         double* lfStateR = publishTrackSnapshot ? &m_meterLfStateR[slot] : nullptr;
 
@@ -1931,12 +2032,13 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             const double outR = preR * rightGain;
 
             if (!muted) {
-                if (track.mainOutputId == 0xFFFFFFFFu) {
+                if (audibleEligible && track.mainOutputId == 0xFFFFFFFFu) {
                     masterBuf[i * 2] += outL;
                     masterBuf[i * 2 + 1] += outR;
-                } else if (slotMap) {
+                } else if (audibleEligible && slotMap) {
                     const uint32_t destSlot = slotMap->getSlotIndex(track.mainOutputId);
-                    if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < availableTracks && destSlot != trackIdx) {
+                    if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < availableTracks && destSlot != trackIdx &&
+                        (!anySolo || audibleEligibleByTrackIndex[destSlot])) {
                         auto& destBuffer = m_trackBuffersD[destSlot];
                         destBuffer[i * 2] += outL;
                         destBuffer[i * 2 + 1] += outR;
@@ -1970,12 +2072,16 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                             scDestBuffer[i * 2 + 1] += routedR;
                         }
                     } else if (send.targetChannelId == 0xFFFFFFFFu) {
+                        if (!audibleEligible) {
+                            continue;
+                        }
                         masterBuf[i * 2] += routedL;
                         masterBuf[i * 2 + 1] += routedR;
                     } else if (slotMap) {
                         const uint32_t sendDestSlot = slotMap->getSlotIndex(send.targetChannelId);
                         if (sendDestSlot != ChannelSlotMap::INVALID_SLOT && sendDestSlot < availableTracks &&
-                            sendDestSlot != trackIdx) {
+                            sendDestSlot != trackIdx &&
+                            (!anySolo || audibleEligibleByTrackIndex[sendDestSlot])) {
                             auto& sendDestBuffer = m_trackBuffersD[sendDestSlot];
                             sendDestBuffer[i * 2] += routedL;
                             sendDestBuffer[i * 2 + 1] += routedR;

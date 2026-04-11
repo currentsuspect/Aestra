@@ -485,6 +485,7 @@ void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
     
     // Correlation and LUFS (already computed/smoothed in audio engine)
     channel.correlation = snapshot.correlation;
+    channel.sidechainPeak = snapshot.sidechainPeak;
     channel.integratedLufs = snapshot.integratedLufs;
     
     channel.smoothedPeakR = smoothDb(channel.smoothedPeakR, channel.envPeakR, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
