@@ -46,8 +46,8 @@ def main():
     with open(output, 'w') as f:
         json.dump(project, f, indent=2)
     print(f"[+] PoC: {output} ({os.path.getsize(output)} bytes)")
-    print(f"[+] UnitManager.cpp:300 → std::stoul(\"not_a_number\") → std::invalid_argument → crash")
-    print(f"[+] Note: ProjectSerializer.cpp:628 has try/catch, but UnitManager.cpp:300 does NOT")
+    print("[+] UnitManager.cpp:300 → std::stoul(\"not_a_number\") → std::invalid_argument → crash")
+    print("[+] Note: ProjectSerializer.cpp:628 has try/catch, but UnitManager.cpp:300 does NOT")
 
 if __name__ == '__main__':
     main()

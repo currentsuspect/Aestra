@@ -1,4 +1,4 @@
-// ¶¸ 2025 Aestra Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "NUIComponent.h"
@@ -88,6 +88,9 @@ private:
     std::string m_cachedHeaderTitle;
     std::string m_cachedHeaderSubtitle;
     int m_cachedTrackNumber{0};
+    uint32_t m_cachedMainOutputId{0xFFFFFFFFu};
+    bool m_cachedMasterSendEnabled{true};
+    size_t m_cachedSendsCount{0};
 
     std::vector<std::function<void()>> m_deferredActions; // Added m_deferredActions
     float m_scrollOffset{0.0f};

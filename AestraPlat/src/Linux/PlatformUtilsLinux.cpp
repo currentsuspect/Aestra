@@ -21,6 +21,10 @@ std::string trimTrailingNewlines(std::string value) {
     return value;
 }
 
+} // namespace
+
+namespace Aestra {
+
 std::string shellEscape(const std::string& input) {
     std::string escaped = "'";
     for (char c : input) {
@@ -33,6 +37,8 @@ std::string shellEscape(const std::string& input) {
     escaped += "'";
     return escaped;
 }
+
+namespace {
 
 std::string runDialogCommand(const std::string& command) {
     std::array<char, 512> buffer{};
@@ -55,8 +61,6 @@ std::string runDialogCommand(const std::string& command) {
 }
 
 } // namespace
-
-namespace Aestra {
 
 double PlatformUtilsLinux::getTime() const {
     return (double)SDL_GetPerformanceCounter() / SDL_GetPerformanceFrequency();

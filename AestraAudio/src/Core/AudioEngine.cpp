@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <queue>
 #if defined(_MSC_VER) || defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
 #include <immintrin.h> // AVX/SSE for high-performance mixing
 #endif
@@ -1401,8 +1402,72 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         std::memset(buffer.data(), 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
     }
 
-    // Process tracks
-    for (const auto& track : graph.tracks) {
+    // Process tracks in audible topological order so any routed upstream
+    // content reaches a destination before that destination runs inserts/fader/metering.
+    std::vector<size_t> processOrder;
+    processOrder.reserve(graph.tracks.size());
+    std::map<uint32_t, size_t> trackIndexById;
+    std::vector<uint32_t> indegree(graph.tracks.size(), 0u);
+    std::vector<std::vector<size_t>> edges(graph.tracks.size());
+    for (size_t i = 0; i < graph.tracks.size(); ++i) {
+        trackIndexById[graph.tracks[i].trackId] = i;
+    }
+    for (size_t i = 0; i < graph.tracks.size(); ++i) {
+        const auto& track = graph.tracks[i];
+        auto addEdge = [&](uint32_t destTrackId) {
+            auto it = trackIndexById.find(destTrackId);
+            if (it == trackIndexById.end()) {
+                return;
+            }
+            const size_t destIndex = it->second;
+            if (destIndex == i) {
+                return;
+            }
+            edges[i].push_back(destIndex);
+            indegree[destIndex] += 1u;
+        };
+
+        if (track.mainOutputId != 0xFFFFFFFFu) {
+            addEdge(track.mainOutputId);
+        }
+        for (const auto& send : track.sends) {
+            if (send.mute || send.sidechainOnly || send.targetChannelId == 0xFFFFFFFFu) {
+                continue;
+            }
+            addEdge(send.targetChannelId);
+        }
+    }
+
+    std::queue<size_t> ready;
+    for (size_t i = 0; i < indegree.size(); ++i) {
+        if (indegree[i] == 0u) {
+            ready.push(i);
+        }
+    }
+    while (!ready.empty()) {
+        const size_t index = ready.front();
+        ready.pop();
+        processOrder.push_back(index);
+        for (const size_t destIndex : edges[index]) {
+            if (--indegree[destIndex] == 0u) {
+                ready.push(destIndex);
+            }
+        }
+    }
+    if (processOrder.size() != graph.tracks.size()) {
+        std::vector<bool> alreadyAdded(graph.tracks.size(), false);
+        for (const size_t index : processOrder) {
+            alreadyAdded[index] = true;
+        }
+        for (size_t i = 0; i < graph.tracks.size(); ++i) {
+            if (!alreadyAdded[i]) {
+                processOrder.push_back(i);
+            }
+        }
+    }
+
+    for (const size_t orderedIndex : processOrder) {
+        const auto& track = graph.tracks[orderedIndex];
         const uint32_t trackIdx = track.trackIndex;
         if (static_cast<size_t>(trackIdx) >= availableTracks) {
             m_telemetry.incrementOverruns();
@@ -1819,8 +1884,6 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         state.gainR.setTarget(tR);
 
         const double* trackData = buffer.data();
-        double* master = m_masterBufferD.data();
-
         double peakTrackL = 0.0;
         double peakTrackR = 0.0;
         double rmsAccTrackL = 0.0;
@@ -1846,8 +1909,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
             if (!muted) {
                 if (track.mainOutputId == 0xFFFFFFFFu) {
-                    master[i * 2] += outL;
-                    master[i * 2 + 1] += outR;
+                    masterBuf[i * 2] += outL;
+                    masterBuf[i * 2 + 1] += outR;
                 } else if (slotMap) {
                     const uint32_t destSlot = slotMap->getSlotIndex(track.mainOutputId);
                     if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < availableTracks && destSlot != trackIdx) {
@@ -1876,8 +1939,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     const double routedR = sendSrcR * sendGainR;
 
                     if (send.targetChannelId == 0xFFFFFFFFu) {
-                        master[i * 2] += routedL;
-                        master[i * 2 + 1] += routedR;
+                        masterBuf[i * 2] += routedL;
+                        masterBuf[i * 2 + 1] += routedR;
                     } else if (slotMap) {
                         const uint32_t sendDestSlot = slotMap->getSlotIndex(send.targetChannelId);
                         if (sendDestSlot != ChannelSlotMap::INVALID_SLOT && sendDestSlot < availableTracks &&

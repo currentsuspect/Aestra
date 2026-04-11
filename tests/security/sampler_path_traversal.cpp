@@ -1,95 +1,112 @@
-// © 2025 Aestra Studios — All Rights Reserved.
-// SEC-004: Path traversal in SamplerPlugin::loadState via samplePath
-//
-// Proof: A crafted plugin state with "samplePath": "../../../etc/passwd"
-// causes the sampler to attempt loading arbitrary files from the filesystem.
-// While decodeAudioFile will fail on non-audio files, the file is still
-// opened and read (information disclosure / existence oracle).
-//
-// After fix: samplePath is validated to be within allowed directories
-// (project directory or standard sample paths), rejecting path traversal.
+// © 2026 Aestra Studios — All Rights Reserved.
+// SEC-004: SamplerPlugin must reject path traversal in loadState()
 
+#include "Plugin/SamplerPlugin.h"
+
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
-#include <filesystem>
+#include <vector>
 
 namespace fs = std::filesystem;
+using Aestra::Audio::Plugins::SamplerPlugin;
 
-// Simulates the vulnerable path handling from SamplerPlugin.cpp:369-377
-bool vulnerableLoadSample(const std::string& samplePath) {
-    // No path sanitization — uses path directly
-    if (!fs::exists(samplePath)) return false;
-    // File would be opened and read here
-    return true;
+namespace {
+void writeTinyWav(const fs::path& path) {
+    std::ofstream out(path, std::ios::binary);
+    const uint32_t fileSize = 36u + 4u;
+    const uint32_t fmtChunkSize = 16u;
+    const uint16_t audioFormat = 1u;
+    const uint16_t numChannels = 1u;
+    const uint32_t sampleRate = 44100u;
+    const uint32_t byteRate = 88200u;
+    const uint16_t blockAlign = 2u;
+    const uint16_t bitsPerSample = 16u;
+    const uint32_t dataSize = 4u;
+    const int16_t samples[2] = {0, 0};
+
+    out.write("RIFF", 4);
+    out.write(reinterpret_cast<const char*>(&fileSize), sizeof(fileSize));
+    out.write("WAVE", 4);
+    out.write("fmt ", 4);
+    out.write(reinterpret_cast<const char*>(&fmtChunkSize), sizeof(fmtChunkSize));
+    out.write(reinterpret_cast<const char*>(&audioFormat), sizeof(audioFormat));
+    out.write(reinterpret_cast<const char*>(&numChannels), sizeof(numChannels));
+    out.write(reinterpret_cast<const char*>(&sampleRate), sizeof(sampleRate));
+    out.write(reinterpret_cast<const char*>(&byteRate), sizeof(byteRate));
+    out.write(reinterpret_cast<const char*>(&blockAlign), sizeof(blockAlign));
+    out.write(reinterpret_cast<const char*>(&bitsPerSample), sizeof(bitsPerSample));
+    out.write("data", 4);
+    out.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize));
+    out.write(reinterpret_cast<const char*>(samples), sizeof(samples));
 }
 
-// Check if a path is safely within a base directory
-bool isPathWithin(const fs::path& target, const fs::path& base) {
-    auto canonicalTarget = fs::weakly_canonical(target);
-    auto canonicalBase = fs::weakly_canonical(base);
-    auto rel = fs::relative(canonicalTarget, canonicalBase);
-    // If relative path starts with "..", it escapes the base directory
-    for (const auto& comp : rel) {
-        if (comp == "..") return false;
-    }
-    return true;
+std::vector<uint8_t> makeState(const std::string& samplePath) {
+    const std::string json = "{"
+                             "\"params\":[0.01,0.1,1.0,0.1,0.5],"
+                             "\"samplePath\":\"" + samplePath + "\"}";
+    return std::vector<uint8_t>(json.begin(), json.end());
 }
-
-// Safe version (what the fix should look like)
-bool safeLoadSample(const std::string& samplePath, const std::string& projectDir) {
-    fs::path target(samplePath);
-    fs::path base(projectDir);
-
-    // Absolute paths outside the project directory are rejected
-    if (target.is_absolute() && !isPathWithin(target, base)) {
-        std::cerr << "  [SAFE] Rejected path traversal: " << samplePath << std::endl;
-        return false;
-    }
-
-    // Relative paths are resolved against project directory and validated
-    if (target.is_relative()) {
-        fs::path resolved = fs::weakly_canonical(base / target);
-        if (!isPathWithin(resolved, base)) {
-            std::cerr << "  [SAFE] Rejected relative traversal: " << samplePath << std::endl;
-            return false;
-        }
-    }
-
-    return vulnerableLoadSample(samplePath);  // proceed with sanitized path
-}
+} // namespace
 
 int main() {
-    std::cout << "=== SEC-004: Path traversal in SamplerPlugin loadState ===" << std::endl;
+    std::cout << "=== SEC-004: SamplerPlugin path traversal rejection ===" << std::endl;
 
-    std::string projectDir = "/home/user/projects/my-song";
+    const fs::path tempDir = fs::temp_directory_path() / "aestra_sec004";
+    const fs::path sampleDir = tempDir / "samples";
+    const fs::path legitPath = sampleDir / "legit.wav";
+    fs::create_directories(sampleDir);
+    writeTinyWav(legitPath);
 
-    const std::string attackPaths[] = {
+    const fs::path oldCwd = fs::current_path();
+    fs::current_path(tempDir);
+
+    SamplerPlugin plugin;
+    plugin.initialize(44100.0, 512);
+
+    const bool legitLoaded = plugin.loadState(makeState("samples/legit.wav"));
+    if (!legitLoaded) {
+        std::cout << "  [FAIL] legitimate in-project sample did not load" << std::endl;
+        fs::current_path(oldCwd);
+        fs::remove_all(tempDir);
+        return 1;
+    }
+    const auto savedBytes = plugin.saveState();
+    const std::string savedState(savedBytes.begin(), savedBytes.end());
+    if (savedState.find("samples/legit.wav") == std::string::npos) {
+        std::cout << "  [FAIL] legitimate sample path was not retained after loadState()" << std::endl;
+        fs::current_path(oldCwd);
+        fs::remove_all(tempDir);
+        return 1;
+    }
+
+    const std::vector<std::string> attackPaths = {
         "../../../etc/passwd",
-        "..\\..\\..\\windows\\system32\\config\\sam",
+        "..\\\\..\\\\windows\\\\system32\\\\config\\\\sam",
         "/etc/shadow",
-        "./samples/legit.wav",           // should pass
-        "subdir/../../../etc/passwd",    // should be blocked
+        "\\\\server\\share\\file.wav",
+        "\\absolute\\windows\\path.wav",
     };
 
-    int blocked = 0, passed = 0;
-    for (const auto& path : attackPaths) {
-        std::cout << "  Testing: " << path << " ... ";
-        if (safeLoadSample(path, projectDir)) {
-            std::cout << "ALLOWED";
-            passed++;
-        } else {
-            std::cout << "BLOCKED";
-            blocked++;
+    bool blockedAll = true;
+    for (const auto& attack : attackPaths) {
+        const bool allowed = plugin.loadState(makeState(attack));
+        std::cout << "  " << attack << " -> " << (allowed ? "ALLOWED" : "BLOCKED") << std::endl;
+        if (allowed) {
+            blockedAll = false;
         }
-        std::cout << std::endl;
     }
 
-    // The legitimate sample should pass, attacks should be blocked
-    if (blocked >= 4) {
-        std::cout << "\n[PASS] Path traversal attacks blocked (" << blocked << "/" << 5 << " blocked)." << std::endl;
-        return 0;
+    fs::current_path(oldCwd);
+    fs::remove_all(tempDir);
+
+    if (!blockedAll) {
+        std::cout << "\n[FAIL] One or more traversal paths were accepted by SamplerPlugin::loadState()." << std::endl;
+        return 1;
     }
 
-    std::cout << "\n[FAIL] Only " << blocked << "/" << 5 << " traversal attacks blocked." << std::endl;
-    return 1;
+    std::cout << "\n[PASS] Real SamplerPlugin::loadState() accepts local sample paths and blocks traversal."
+              << std::endl;
+    return 0;
 }

@@ -2,8 +2,8 @@
 #include "FilePreviewPanel.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <iostream>
 
@@ -51,15 +51,30 @@ std::string truncateToWidth(NUIRenderer& renderer, const std::string& text, floa
     }
 
     static const std::string ellipsis = "...";
+    if (renderer.measureText(ellipsis, fontSize).width > maxWidth) {
+        return "";
+    }
+
+    auto trimLastUtf8Codepoint = [](std::string& value) {
+        if (value.empty()) {
+            return;
+        }
+        size_t index = value.size();
+        do {
+            --index;
+        } while (index > 0 && (static_cast<unsigned char>(value[index]) & 0xC0u) == 0x80u);
+        value.erase(index);
+    };
+
     std::string candidate = text;
     while (!candidate.empty()) {
-        candidate.pop_back();
+        trimLastUtf8Codepoint(candidate);
         const std::string attempt = candidate + ellipsis;
         if (renderer.measureText(attempt, fontSize).width <= maxWidth) {
             return attempt;
         }
     }
-    return ellipsis;
+    return "";
 }
 
 } // namespace

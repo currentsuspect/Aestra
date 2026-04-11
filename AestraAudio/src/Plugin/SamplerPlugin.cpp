@@ -388,7 +388,7 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
         // that escape the expected sample directories.
         if (!path.empty()) {
             // Reject absolute paths (could reference arbitrary filesystem locations)
-            if (path[0] == '/' || (path.size() >= 2 && path[1] == ':')) {
+            if (path[0] == '/' || path[0] == '\\' || (path.size() >= 2 && path[1] == ':')) {
                 return false;
             }
             // Reject path traversal components

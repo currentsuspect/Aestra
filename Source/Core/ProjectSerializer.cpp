@@ -669,7 +669,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 
                     if (lj[i].has("routing") && lj[i]["routing"].isObject()) {
                         const JSON& rj = lj[i]["routing"];
-                        const uint32_t mainOutputId = (rj.has("mainOutputId"))
+                        const uint32_t mainOutputId = (rj.has("mainOutputId") && rj["mainOutputId"].isNumber())
                             ? static_cast<uint32_t>(rj["mainOutputId"].asNumber())
                             : 0u;
                         channel->setMainOutputId(mainOutputId == 0 ? 0xFFFFFFFFu : mainOutputId);
@@ -679,12 +679,12 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             for (size_t s = 0; s < sj.size(); ++s) {
                                 if (!sj[s].isObject()) continue;
                                 AudioRoute route;
-                                const uint32_t targetId = sj[s].has("targetId")
+                                const uint32_t targetId = (sj[s].has("targetId") && sj[s]["targetId"].isNumber())
                                     ? static_cast<uint32_t>(sj[s]["targetId"].asNumber())
                                     : 0u;
                                 route.targetChannelId = (targetId == 0) ? 0xFFFFFFFFu : targetId;
-                                if (sj[s].has("gain")) route.gain = static_cast<float>(sj[s]["gain"].asNumber());
-                                if (sj[s].has("pan")) route.pan = static_cast<float>(sj[s]["pan"].asNumber());
+                                if (sj[s].has("gain") && sj[s]["gain"].isNumber()) route.gain = static_cast<float>(sj[s]["gain"].asNumber());
+                                if (sj[s].has("pan") && sj[s]["pan"].isNumber()) route.pan = static_cast<float>(sj[s]["pan"].asNumber());
                                 if (sj[s].has("postFader") && sj[s]["postFader"].isBool()) route.postFader = sj[s]["postFader"].asBool();
                                 if (sj[s].has("mute") && sj[s]["mute"].isBool()) route.mute = sj[s]["mute"].asBool();
                                 if (sj[s].has("sidechainOnly") && sj[s]["sidechainOnly"].isBool()) route.sidechainOnly = sj[s]["sidechainOnly"].asBool();

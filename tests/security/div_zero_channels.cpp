@@ -1,59 +1,120 @@
-// © 2025 Aestra Studios — All Rights Reserved.
-// SEC-003: Division by zero when numChannels == 0 in project deserialization
-//
-// Proof: A malformed audio file reporting 0 channels causes
-// buffer->numFrames = buffer->interleavedData.size() / numChannels
-// to divide by zero (SIGFPE), crashing the process.
-//
-// After fix: The parser validates numChannels > 0 before the division.
+// © 2026 Aestra Studios — All Rights Reserved.
+// SEC-003: ProjectSerializer must guard numChannels == 0 from malformed WAV input
 
+#include "ProjectSerializer.h"
+#include "TrackManager.h"
+
+#include <filesystem>
+#include <fstream>
 #include <iostream>
-#include <cstdint>
+#include <memory>
 #include <vector>
-#include <cstdlib>
 
-// Reproduces the vulnerable logic from ProjectSerializer.cpp:566
-bool vulnerableChannelCalc(size_t dataSize, uint32_t numChannels, uint32_t& numFrames) {
-    // EXACT code from ProjectSerializer.cpp line 566:
-    // buffer->numFrames = buffer->interleavedData.size() / numChannels;
-    if (numChannels == 0) {
-        // In the original code, this check does NOT exist.
-        // The division happens directly, causing SIGFPE.
-        // This test simulates what happens WITHOUT the check.
-        volatile uint32_t zero = 0;  // volatile prevents compile-time optimization
-        numFrames = static_cast<uint32_t>(dataSize / zero);
-        return false;  // never reached
-    }
-    numFrames = static_cast<uint32_t>(dataSize / numChannels);
-    return true;
+namespace fs = std::filesystem;
+using Aestra::Audio::ClipSourceID;
+using Aestra::Audio::TrackManager;
+
+namespace {
+void writeZeroChannelWav(const fs::path& path) {
+    std::ofstream out(path, std::ios::binary);
+    const uint32_t fileSize = 36u + 8u;
+    const uint32_t fmtChunkSize = 16u;
+    const uint16_t audioFormat = 1u;
+    const uint16_t numChannels = 0u;
+    const uint32_t sampleRate = 44100u;
+    const uint32_t byteRate = 0u;
+    const uint16_t blockAlign = 0u;
+    const uint16_t bitsPerSample = 16u;
+    const uint32_t dataSize = 8u;
+    const uint8_t data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+    out.write("RIFF", 4);
+    out.write(reinterpret_cast<const char*>(&fileSize), sizeof(fileSize));
+    out.write("WAVE", 4);
+    out.write("fmt ", 4);
+    out.write(reinterpret_cast<const char*>(&fmtChunkSize), sizeof(fmtChunkSize));
+    out.write(reinterpret_cast<const char*>(&audioFormat), sizeof(audioFormat));
+    out.write(reinterpret_cast<const char*>(&numChannels), sizeof(numChannels));
+    out.write(reinterpret_cast<const char*>(&sampleRate), sizeof(sampleRate));
+    out.write(reinterpret_cast<const char*>(&byteRate), sizeof(byteRate));
+    out.write(reinterpret_cast<const char*>(&blockAlign), sizeof(blockAlign));
+    out.write(reinterpret_cast<const char*>(&bitsPerSample), sizeof(bitsPerSample));
+    out.write("data", 4);
+    out.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize));
+    out.write(reinterpret_cast<const char*>(data), sizeof(data));
 }
 
-// Safe version (what the fix should look like)
-bool safeChannelCalc(size_t dataSize, uint32_t numChannels, uint32_t& numFrames) {
-    if (numChannels == 0) {
-        std::cerr << "  [SAFE] Rejected numChannels == 0" << std::endl;
-        return false;
-    }
-    numFrames = static_cast<uint32_t>(dataSize / numChannels);
-    return true;
+std::string buildProjectJson(const std::string& wavPath) {
+    return "{\n"
+           "  \"version\": 1,\n"
+           "  \"tempo\": 120.0,\n"
+           "  \"playhead\": 0.0,\n"
+           "  \"sources\": [\n"
+           "    {\n"
+           "      \"id\": 1,\n"
+           "      \"path\": \"" + wavPath + "\"\n"
+           "    }\n"
+           "  ],\n"
+           "  \"lanes\": []\n"
+           "}\n";
 }
+} // namespace
 
 int main() {
-    std::cout << "=== SEC-003: Division by zero on numChannels == 0 ===" << std::endl;
+    std::cout << "=== SEC-003: ProjectSerializer zero-channel WAV handling ===" << std::endl;
 
-    // Test the safe version first
-    uint32_t frames = 0;
-    bool ok = safeChannelCalc(192000, 0, frames);
-    if (!ok) {
-        std::cout << "  Safe version correctly rejected numChannels == 0" << std::endl;
+    const fs::path tempDir = fs::temp_directory_path() / "aestra_sec003";
+    fs::create_directories(tempDir);
+
+    const fs::path wavPath = tempDir / "zero_channels.wav";
+    const fs::path projectPath = tempDir / "zero_channels.aes";
+    writeZeroChannelWav(wavPath);
+
+    std::ofstream out(projectPath);
+    out << buildProjectJson(wavPath.string());
+    out.close();
+
+    auto trackManager = std::make_shared<TrackManager>();
+    ProjectSerializer::LoadResult result;
+    try {
+        result = ProjectSerializer::load(projectPath.string(), trackManager);
+    } catch (const std::exception& e) {
+        std::cout << "  [FAIL] load threw: " << e.what() << std::endl;
+        fs::remove_all(tempDir);
+        return 1;
+    } catch (...) {
+        std::cout << "  [FAIL] load threw unknown exception" << std::endl;
+        fs::remove_all(tempDir);
+        return 1;
     }
 
-    // Test the vulnerable version — this will SIGFPE on most systems.
-    // We skip actually running it to avoid crashing the test suite.
-    std::cout << "  Vulnerable version: would cause SIGFPE (skipped to avoid crash)" << std::endl;
-    std::cout << "  Proof: ProjectSerializer.cpp:566 has no numChannels > 0 check" << std::endl;
+    if (!result.ok) {
+        std::cout << "  [FAIL] load failed: " << result.errorMessage << std::endl;
+        fs::remove_all(tempDir);
+        return 1;
+    }
 
-    std::cout << "\n[FAIL] Vulnerability confirmed: no numChannels validation before division." << std::endl;
-    std::cout << "Fix: add 'if (numChannels == 0) return false;' before division in ProjectSerializer.cpp:566" << std::endl;
-    return 1;
+    const auto sourceIds = trackManager->getSourceManager().getAllSourceIDs();
+    if (sourceIds.size() != 1) {
+        std::cout << "  [FAIL] expected one decoded source, got " << sourceIds.size() << std::endl;
+        fs::remove_all(tempDir);
+        return 1;
+    }
+
+    const auto* source = trackManager->getSourceManager().getSource(sourceIds.front());
+    if (!source || !source->getBuffer()) {
+        std::cout << "  [FAIL] decoded source buffer missing" << std::endl;
+        fs::remove_all(tempDir);
+        return 1;
+    }
+
+    if (source->getNumChannels() != 1) {
+        std::cout << "  [FAIL] expected fallback to mono, got " << source->getNumChannels() << " channels" << std::endl;
+        fs::remove_all(tempDir);
+        return 1;
+    }
+
+    std::cout << "  [PASS] Zero-channel WAV loaded safely with mono fallback and no crash." << std::endl;
+    fs::remove_all(tempDir);
+    return 0;
 }

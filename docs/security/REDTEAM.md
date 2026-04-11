@@ -30,20 +30,25 @@
 **Original attack:** Craft a WAV with `bitsPerSample = 0`. Division by zero → SIGFPE.
 
 **Fix — MiniAudioDecoder.cpp (line 123):**
+
 ```cpp
 if (bitsPerSample != 16 && bitsPerSample != 24 && bitsPerSample != 32)
     return false;
 ```
+
 This guard runs 12 lines before the division at line 135, ensuring `bitsPerSample / 8` is always 2, 3, or 4 — never zero.
 
 **Fix — MetronomeEngine.cpp (lines 91-94, 99):**
+
 ```cpp
 if (bitsPerSample != 16 && bitsPerSample != 24) {
     fclose(file);
     return false;
 }
 ```
+
 Redundant guard at line 99:
+
 ```cpp
 if (audioFormat != 1 || (bitsPerSample != 16 && bitsPerSample != 24)) {
     fclose(file);
@@ -64,6 +69,7 @@ if (audioFormat != 1 || (bitsPerSample != 16 && bitsPerSample != 24)) {
 **Fix — MiniAudioDecoder.cpp dual-layer defense:**
 
 Layer 1 — file size consistency (lines 127-130):
+
 ```cpp
 file.seekg(0, std::ios::end);
 std::streamoff fileSize = file.tellg();
@@ -74,6 +80,7 @@ if (expectedDataEnd > fileSize || dataSize == 0) {
 ```
 
 Layer 2 — absolute sample cap (lines 136-138):
+
 ```cpp
 constexpr size_t kMaxSamples = 500000000;
 if (samplesCount > kMaxSamples) {
@@ -121,6 +128,7 @@ On any parse exception (empty string, non-numeric, out of range), the code falls
 **File:** `AestraJSON.h` — `kMaxJsonDepth = 1024`
 
 **Attack:** 50,000-level nesting → before fix: stack overflow. After fix: returns empty JSON.
+
 
 ```bash
 python3 tests/redteam/poc_json_stack.py /tmp/poc_deep.aes

@@ -5,6 +5,8 @@
 
 namespace Aestra {
 
+std::string shellEscape(const std::string& input);
+
 class PlatformUtilsLinux : public IPlatformUtils {
 public:
     double getTime() const override;
