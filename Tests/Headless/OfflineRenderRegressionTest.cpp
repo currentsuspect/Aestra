@@ -6,6 +6,8 @@
 #include "IO/AudioExporter.h"
 #include "IO/MiniAudioDecoder.h"
 #include "Models/TrackManager.h"
+#include "Plugin/BuiltInPlugins.h"
+#include "Plugin/PluginFactory.h"
 
 #include <cmath>
 #include <filesystem>
@@ -32,7 +34,14 @@ struct DecodedAudio {
     uint32_t channels = 0;
 };
 
-std::shared_ptr<AudioBufferData> makeToneBuffer() {
+enum class FixtureMode {
+    Baseline,
+    AudibleSend,
+    SidechainComp
+};
+
+std::shared_ptr<AudioBufferData> makeToneBuffer(double frequencyHz = kFrequencyHz,
+                                                float amplitude = kAmplitude) {
     auto buffer = std::make_shared<AudioBufferData>();
     buffer->sampleRate = kSampleRate;
     buffer->numChannels = kChannels;
@@ -41,25 +50,25 @@ std::shared_ptr<AudioBufferData> makeToneBuffer() {
 
     for (uint32_t frame = 0; frame < buffer->numFrames; ++frame) {
         const double t = static_cast<double>(frame) / static_cast<double>(kSampleRate);
-        const float sample = static_cast<float>(std::sin(kTau * kFrequencyHz * t) * kAmplitude);
+        const float sample = static_cast<float>(std::sin(kTau * frequencyHz * t) * amplitude);
         buffer->interleavedData[static_cast<size_t>(frame) * 2] = sample;
         buffer->interleavedData[static_cast<size_t>(frame) * 2 + 1] = sample;
     }
     return buffer;
 }
 
-std::shared_ptr<TrackManager> makeTrackManagerFixture(const std::filesystem::path& tempRoot) {
-    auto trackManager = std::make_shared<TrackManager>();
-    trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
-    trackManager->getPlaylistModel().setBPM(kBpm);
-    trackManager->addChannel("Parity Track");
-    const PlaylistLaneID laneId = trackManager->getPlaylistModel().createLane("Parity Track");
-
-    auto buffer = makeToneBuffer();
-    const auto sourcePath = (tempRoot / "offline_export_parity_source.wav").string();
-    const ClipSourceID sourceId = trackManager->getSourceManager().createRecordedSource(sourcePath, "ParityTone", buffer);
+bool addAudioClipToLane(TrackManager& trackManager,
+                        const std::filesystem::path& tempRoot,
+                        const std::string& stem,
+                        PlaylistLaneID laneId,
+                        double frequencyHz,
+                        float amplitude = kAmplitude) {
+    auto buffer = makeToneBuffer(frequencyHz, amplitude);
+    const auto sourcePath = (tempRoot / (stem + ".wav")).string();
+    const ClipSourceID sourceId = trackManager.getSourceManager().createRecordedSource(
+        sourcePath, stem, buffer);
     if (!sourceId.isValid()) {
-        return nullptr;
+        return false;
     }
 
     AudioSlicePayload payload;
@@ -68,15 +77,71 @@ std::shared_ptr<TrackManager> makeTrackManagerFixture(const std::filesystem::pat
     payload.slices.push_back({0.0, kDurationSeconds, 0.0, static_cast<double>(buffer->numFrames)});
 
     const PatternID patternId =
-        trackManager->getPatternManager().createAudioPattern("ParityTone", kDurationBeats, payload);
+        trackManager.getPatternManager().createAudioPattern(stem, kDurationBeats, payload);
     if (!patternId.isValid()) {
+        return false;
+    }
+
+    const ClipInstanceID clipId =
+        trackManager.getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, kDurationBeats);
+    return clipId.isValid();
+}
+
+bool insertBuiltInComp(MixerChannel& channel) {
+    InProcessPluginFactory factory;
+    PluginInstancePtr plugin;
+    factory.createPluginAsync(BuiltInPlugins::compInfo(), [&](PluginInstancePtr instance) {
+        plugin = std::move(instance);
+    });
+    if (!plugin) {
+        return false;
+    }
+    return channel.getEffectChain().insertPlugin(0, plugin);
+}
+
+std::shared_ptr<TrackManager> makeTrackManagerFixture(const std::filesystem::path& tempRoot,
+                                                      FixtureMode mode) {
+    auto trackManager = std::make_shared<TrackManager>();
+    trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
+    trackManager->getPlaylistModel().setBPM(kBpm);
+
+    if (mode == FixtureMode::Baseline) {
+        trackManager->addChannel("Parity Track");
+        const PlaylistLaneID laneId = trackManager->getPlaylistModel().createLane("Parity Track");
+        if (!addAudioClipToLane(*trackManager, tempRoot, "offline_export_parity_source", laneId, kFrequencyHz)) {
+            return nullptr;
+        }
+        return trackManager;
+    }
+
+    auto* track1 = trackManager->addChannel("Track 1");
+    auto* track2 = trackManager->addChannel("Track 2");
+    if (!track1 || !track2) {
         return nullptr;
     }
 
-    const ClipInstanceID clipId = trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, kDurationBeats);
-    if (!clipId.isValid()) {
+    const PlaylistLaneID lane1 = trackManager->getPlaylistModel().createLane("Track 1");
+    const PlaylistLaneID lane2 = trackManager->getPlaylistModel().createLane("Track 2");
+
+    if (!addAudioClipToLane(*trackManager, tempRoot, "offline_export_track1", lane1, 220.0, 0.32f)) {
         return nullptr;
     }
+
+    if (mode == FixtureMode::SidechainComp) {
+        if (!addAudioClipToLane(*trackManager, tempRoot, "offline_export_track2", lane2, 110.0, 0.18f)) {
+            return nullptr;
+        }
+        if (!insertBuiltInComp(*track2)) {
+            return nullptr;
+        }
+    }
+
+    AudioRoute route{};
+    route.targetChannelId = track2->getChannelId();
+    route.gain = 1.0f;
+    route.postFader = true;
+    route.sidechainOnly = (mode == FixtureMode::SidechainComp);
+    track1->addSend(route);
 
     return trackManager;
 }
@@ -173,14 +238,14 @@ double rmsDifferenceDb(const std::vector<float>& a, const std::vector<float>& b)
     return 20.0 * std::log10(static_cast<double>(rms) + 1e-12);
 }
 
-bool runExportParityTest() {
+bool runExportParityTest(FixtureMode mode, const char* label) {
     namespace fs = std::filesystem;
     const fs::path tempRoot = fs::temp_directory_path() / "aestra_offline_export_parity";
     std::error_code ec;
     fs::create_directories(tempRoot, ec);
 
-    auto exportTrackManager = makeTrackManagerFixture(tempRoot);
-    auto referenceTrackManager = makeTrackManagerFixture(tempRoot);
+    auto exportTrackManager = makeTrackManagerFixture(tempRoot, mode);
+    auto referenceTrackManager = makeTrackManagerFixture(tempRoot, mode);
     if (!exportTrackManager || !referenceTrackManager) {
         std::cerr << "Failed to create in-memory export fixture.\n";
         return false;
@@ -191,7 +256,7 @@ bool runExportParityTest() {
     AudioEngine referenceEngine;
     configureEngineFixture(referenceEngine, referenceTrackManager);
 
-    const fs::path exportPath = tempRoot / "offline_export.wav";
+    const fs::path exportPath = tempRoot / (std::string("offline_export_") + label + ".wav");
     fs::remove(exportPath, ec);
 
     AudioExporter exporter(exportEngine, *exportTrackManager);
@@ -249,7 +314,7 @@ bool runExportParityTest() {
         return false;
     }
 
-    std::cout << "Offline export parity OK. peak=" << exportPeak
+    std::cout << "Offline export parity [" << label << "] OK. peak=" << exportPeak
               << " correlation=" << correlation
               << " rmsDiffDb=" << diffDb << "\n";
     return true;
@@ -258,5 +323,8 @@ bool runExportParityTest() {
 } // namespace
 
 int main() {
-    return runExportParityTest() ? 0 : 1;
+    const bool baselineOk = runExportParityTest(FixtureMode::Baseline, "baseline");
+    const bool sendOk = runExportParityTest(FixtureMode::AudibleSend, "audible_send");
+    const bool sidechainOk = runExportParityTest(FixtureMode::SidechainComp, "sidechain_comp");
+    return (baselineOk && sendOk && sidechainOk) ? 0 : 1;
 }

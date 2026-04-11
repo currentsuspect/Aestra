@@ -7,6 +7,7 @@
 #include "ContinuousParamBuffer.h"
 #include "ChannelSlotMap.h"
 #include "MeterSnapshot.h"
+#include "Plugin/AestraComp.h"
 
 #include <algorithm>
 #include <cmath>
@@ -64,6 +65,35 @@ namespace {
         if (hasSidechainSend) appendToken("SC");
 
         return summary.str();
+    }
+
+    std::string buildFxStatus(const Aestra::ChannelViewModel& channel)
+    {
+        if (!channel.channel) {
+            return {};
+        }
+
+        auto& chain = channel.channel->getEffectChain();
+        for (size_t i = 0; i < Aestra::Audio::EffectChain::MAX_SLOTS; ++i) {
+            auto plugin = chain.getPlugin(i);
+            auto comp = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraComp>(plugin);
+            if (!comp) {
+                continue;
+            }
+
+            const float grDb = comp->getCurrentGainReductionDb();
+            if (grDb < 0.1f) {
+                return {};
+            }
+
+            std::ostringstream out;
+            out.setf(std::ios::fixed);
+            out.precision(grDb >= 10.0f ? 0 : 1);
+            out << "GR " << grDb;
+            return out.str();
+        }
+
+        return {};
     }
 }
 
@@ -525,6 +555,12 @@ void UIMixerStrip::onUpdate(double deltaTime)
             m_cachedFxCount = channel->fxCount;
             invalidateStaticCache();
             m_fxSummary->setFxCount(channel->fxCount);
+        }
+        const std::string fxStatus = buildFxStatus(*channel);
+        if (m_cachedFxStatus != fxStatus) {
+            m_cachedFxStatus = fxStatus;
+            invalidateStaticCache();
+            m_fxSummary->setStatusText(fxStatus);
         }
     }
 
