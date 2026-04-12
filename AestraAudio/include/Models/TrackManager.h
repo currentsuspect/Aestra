@@ -360,22 +360,15 @@ public:
         }
 
         struct RecordingWriteGuard {
-            RecordingWriteGuard(std::atomic<uint32_t>& writersIn,
-                                std::condition_variable& writersCvIn,
-                                std::mutex& writersMutexIn)
-                : writers(writersIn), writersCv(writersCvIn), writersMutex(writersMutexIn) {
+            RecordingWriteGuard(std::atomic<uint32_t>& writersIn)
+                : writers(writersIn) {
                 writers.fetch_add(1, std::memory_order_acq_rel);
             }
             ~RecordingWriteGuard() {
-                if (writers.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-                    std::lock_guard<std::mutex> lock(writersMutex);
-                    writersCv.notify_all();
-                }
+                writers.fetch_sub(1, std::memory_order_acq_rel);
             }
             std::atomic<uint32_t>& writers;
-            std::condition_variable& writersCv;
-            std::mutex& writersMutex;
-        } guard(m_recordingWriters, m_recordingWritersCv, m_recordingWritersMutex);
+        } guard(m_recordingWriters);
 
         if (!m_recordingCaptureAccepting.load(std::memory_order_acquire)) {
             return;
@@ -947,13 +940,15 @@ private:
     void finalizeCaptureSession() {
         m_recordingCaptureAccepting.store(false, std::memory_order_release);
         m_isCapturing.store(false, std::memory_order_relaxed);
-        std::unique_lock<std::mutex> writersLock(m_recordingWritersMutex);
-        const bool writersDrained =
-            m_recordingWritersCv.wait_for(writersLock, std::chrono::milliseconds(250), [this]() {
-                return m_recordingWriters.load(std::memory_order_acquire) == 0;
-            });
-        writersLock.unlock();
-        if (!writersDrained) {
+
+        // Wait for recording writers to drain using lock-free polling
+        int waitCount = 0;
+        while (m_recordingWriters.load(std::memory_order_acquire) > 0 && waitCount < 250) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            ++waitCount;
+        }
+
+        if (waitCount >= 250) {
             Log::warning("[TrackManager] Timed out waiting for recording writers to drain before finalizing capture.");
         }
 
@@ -1294,8 +1289,6 @@ private:
     mutable std::mutex m_recordingMutex;
     std::unordered_map<uint32_t, std::unique_ptr<RecordingCapture>> m_recordingCaptures;
     std::atomic<uint32_t> m_recordingWriters{0};
-    mutable std::mutex m_recordingWritersMutex;
-    std::condition_variable m_recordingWritersCv;
     std::atomic<bool> m_recordingCaptureAccepting{false};
     std::array<std::atomic<float>, 8> m_inputPeaks{};
     double m_maxRecordingSeconds{15.0};
