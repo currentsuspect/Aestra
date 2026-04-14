@@ -1,0 +1,4 @@
+AestraAudio/include/Models/TrackManager.h:365: Mutex usage (check for locks in RT) found in critical section candidate: 'std::mutex& writersMutexIn)'
+AestraAudio/include/Models/TrackManager.h:371: Mutex usage (check for locks in RT) found in critical section candidate: 'std::lock_guard<std::mutex> lock(writersMutex);'
+AestraAudio/include/Models/TrackManager.h:371: Lock guard usage found in critical section candidate: 'std::lock_guard<std::mutex> lock(writersMutex);'
+AestraAudio/include/Models/TrackManager.h:377: Mutex usage (check for locks in RT) found in critical section candidate: 'std::mutex& writersMutex;'

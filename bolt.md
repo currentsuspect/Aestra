@@ -24,6 +24,21 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Analyze dependency graph of tracks/busses. Dispatch independent branches to separate threads using a work-stealing scheduler.
 - **Benefit**: Massive multi-core scaling (e.g., 64-core Threadripper support).
 
+### Aestra Unified Framework
+
+- **Innovation**: Provide a singular SDK that spans timeline-based DAWs (Aestra) and node-based setups (Spot).
+- **Benefit**: Write plugin code once, automatically generating robust host-integrations and hardware remote interfaces for both DAWs.
+
+### GPU Accelerated DSP
+
+- **Innovation**: Offload intense matrix/convolutional processing to the GPU using Vulkan or CUDA.
+- **Benefit**: Frees up the CPU for branching logic and low-latency scheduling, allowing for massive reverb tails and complex neural network models at high sample rates.
+
+### Predictive Caching
+
+- **Innovation**: Pre-render and cache portions of the audio graph ahead of the playhead.
+- **Benefit**: Ensures uninterrupted playback even under extreme load by masking temporary CPU spikes.
+
 ### WASM Sandboxed Plugins
 
 - **Innovation**: Run third-party VST3s inside a WebAssembly container (using `wasm2c` or similar).
@@ -74,6 +89,16 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Benefit**: Lower per-buffer overhead on dense sessions.
 
 ## 3. Sound Quality
+
+### Quantum-Modeled Reverb
+
+- **Innovation**: Use probabilistic algorithms mimicking particle wave propagation to calculate room responses.
+- **Benefit**: Creates highly realistic, dense, and naturally evolving acoustic spaces without the static footprint of traditional impulse responses.
+
+### SimdLin Integration
+
+- **Innovation**: Tightly integrate the SimdLin linear algebra library into the core engine to accelerate complex spatial and spectral mixing calculations.
+- **Benefit**: Unprecedented resolution and clarity for 3D and Ambisonic workflows.
 
 ### 64-bit End-to-End Mixing
 
