@@ -19,6 +19,8 @@
 #include "pluginterfaces/vst/ivstcomponent.h"
 #include "pluginterfaces/vst/ivsteditcontroller.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
+#include "pluginterfaces/vst/ivstevents.h"
+#include "pluginterfaces/base/ibstream.h"
 #include "public.sdk/source/vst/hosting/hostclasses.h"
 #include "public.sdk/source/vst/hosting/module.h"
 #include "public.sdk/source/vst/hosting/plugprovider.h"
@@ -430,21 +432,21 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
 
     // MIDI output events (simple pass-through buffer)
     struct OutputEventList : public IEventList {
-        Event events[256];
+        Steinberg::Vst::Event events[256];
         int32 count = 0;
 
-        tresult addEvent(Event& e) override {
+        tresult PLUGIN_API addEvent(Steinberg::Vst::Event& e) override {
             if (count < 256) { events[count++] = e; return kResultOk; }
             return kOutOfMemory;
         }
-        int32 getEventCount() override { return count; }
-        tresult getEvent(int32 index, Event& e) override {
+        int32 PLUGIN_API getEventCount() override { return count; }
+        tresult PLUGIN_API getEvent(int32 index, Steinberg::Vst::Event& e) override {
             if (index >= 0 && index < count) { e = events[index]; return kResultOk; }
             return kInvalidArgument;
         }
-        uint32 addRef() override { return 1; }
-        uint32 release() override { return 0; }
-        tresult queryInterface(const TUID, void**) override { return kNoInterface; }
+        uint32 PLUGIN_API addRef() override { return 1; }
+        uint32 PLUGIN_API release() override { return 0; }
+        tresult PLUGIN_API queryInterface(const TUID, void**) override { return kNoInterface; }
     } outputEvents;
     data.outputEvents = &outputEvents;
 
@@ -504,15 +506,15 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
     // Wire MIDI output events back to caller's buffer
     if (midiOutput && outputEvents.count > 0) {
         for (int32 i = 0; i < outputEvents.count; ++i) {
-            const Event& ev = outputEvents.events[i];
-            if (ev.type == Event::kNoteOnEvent) {
+            const Steinberg::Vst::Event& ev = outputEvents.events[i];
+            if (ev.type == Steinberg::Vst::Event::kNoteOnEvent) {
                 uint8_t data[3] = {
                     static_cast<uint8_t>(0x90 | (ev.noteOn.channel & 0x0F)),
                     static_cast<uint8_t>(ev.noteOn.pitch),
                     static_cast<uint8_t>(ev.noteOn.velocity * 127.0f)
                 };
                 midiOutput->addEvent(ev.sampleOffset, data, 3);
-            } else if (ev.type == Event::kNoteOffEvent) {
+            } else if (ev.type == Steinberg::Vst::Event::kNoteOffEvent) {
                 uint8_t data[3] = {
                     static_cast<uint8_t>(0x80 | (ev.noteOff.channel & 0x0F)),
                     static_cast<uint8_t>(ev.noteOff.pitch),
@@ -579,7 +581,7 @@ std::vector<uint8_t> VST3PluginInstance::saveState() const {
         MemStream() { addRef(); }
         ~MemStream() { if (i) i->release(); }
 
-        tresult STDCALL write(void* buffer, int32 numBytes, int32* numBytesWritten) override {
+        tresult PLUGIN_API write(void* buffer, int32 numBytes, int32* numBytesWritten) override {
             if (!buffer || numBytes < 0 || pos < 0) {
                 if (numBytesWritten) *numBytesWritten = 0;
                 return kInvalidArgument;
@@ -591,7 +593,7 @@ std::vector<uint8_t> VST3PluginInstance::saveState() const {
             pos += numBytes;
             return kResultOk;
         }
-        tresult STDCALL read(void* buffer, int32 numBytes, int32* numBytesRead) override {
+        tresult PLUGIN_API read(void* buffer, int32 numBytes, int32* numBytesRead) override {
             if (numBytesRead) *numBytesRead = 0;
             if (!buffer || numBytes < 0 || pos < 0) {
                 return kInvalidArgument;
@@ -607,26 +609,26 @@ std::vector<uint8_t> VST3PluginInstance::saveState() const {
             pos += toRead;
             return kResultOk;
         }
-        tresult STDCALL seek(int64 pos, int32 type, int64* result) override {
-            if (type == kIBSeekSet) this->pos = pos;
-            else if (type == kIBSeekCur) this->pos += pos;
-            else if (type == kIBSeekEnd) this->pos = static_cast<int64_t>(data.size()) + pos;
+        tresult PLUGIN_API seek(int64 pos, int32 type, int64* result) override {
+            if (type == IBStream::IStreamSeekMode::kIBSeekSet) this->pos = pos;
+            else if (type == IBStream::IStreamSeekMode::kIBSeekCur) this->pos += pos;
+            else if (type == IBStream::IStreamSeekMode::kIBSeekEnd) this->pos = static_cast<int64_t>(data.size()) + pos;
             else return kInvalidArgument;
             this->pos = std::clamp<int64_t>(this->pos, 0, static_cast<int64_t>(data.size()));
             if (result) *result = this->pos;
             return kResultOk;
         }
-        tresult STDCALL tell(int64* pos) override {
+        tresult PLUGIN_API tell(int64* pos) override {
             if (pos) *pos = this->pos;
             return kResultOk;
         }
-        uint32 STDCALL addRef() override { return ++refCount; }
-        uint32 STDCALL release() override {
+        uint32 PLUGIN_API addRef() override { return ++refCount; }
+        uint32 PLUGIN_API release() override {
             uint32 r = --refCount;
             if (r == 0) { /* don't delete - stack allocated */ return 0; }
             return r;
         }
-        tresult STDCALL queryInterface(const TUID iid, void** obj) override {
+        tresult PLUGIN_API queryInterface(const TUID iid, void** obj) override {
             if (iid == IBStream::iid || iid == FUnknown::iid) { *obj = static_cast<IBStream*>(this); addRef(); return kResultOk; }
             return kNoInterface;
         }
@@ -654,8 +656,8 @@ bool VST3PluginInstance::loadState(const std::vector<uint8_t>& state) {
 
         MemStream(const std::vector<uint8_t>& d) : data(d) { addRef(); }
 
-        tresult STDCALL write(void*, int32, int32*) override { return kNotImplemented; }
-        tresult STDCALL read(void* buffer, int32 numBytes, int32* numBytesRead) override {
+        tresult PLUGIN_API write(void*, int32, int32*) override { return kNotImplemented; }
+        tresult PLUGIN_API read(void* buffer, int32 numBytes, int32* numBytesRead) override {
             if (numBytesRead) *numBytesRead = 0;
             if (!buffer || numBytes < 0 || pos < 0) {
                 return kInvalidArgument;
@@ -671,19 +673,19 @@ bool VST3PluginInstance::loadState(const std::vector<uint8_t>& state) {
             pos += toRead;
             return kResultOk;
         }
-        tresult STDCALL seek(int64 p, int32 type, int64* result) override {
-            if (type == kIBSeekSet) pos = p;
-            else if (type == kIBSeekCur) pos += p;
-            else if (type == kIBSeekEnd) pos = static_cast<int64_t>(data.size()) + p;
+        tresult PLUGIN_API seek(int64 p, int32 type, int64* result) override {
+            if (type == IBStream::IStreamSeekMode::kIBSeekSet) pos = p;
+            else if (type == IBStream::IStreamSeekMode::kIBSeekCur) pos += p;
+            else if (type == IBStream::IStreamSeekMode::kIBSeekEnd) pos = static_cast<int64_t>(data.size()) + p;
             else return kInvalidArgument;
             pos = std::clamp<int64_t>(pos, 0, static_cast<int64_t>(data.size()));
             if (result) *result = pos;
             return kResultOk;
         }
-        tresult STDCALL tell(int64* p) override { if (p) *p = pos; return kResultOk; }
-        uint32 STDCALL addRef() override { return ++refCount; }
-        uint32 STDCALL release() override { uint32 r = --refCount; if (r == 0) return 0; return r; }
-        tresult STDCALL queryInterface(const TUID iid, void** obj) override {
+        tresult PLUGIN_API tell(int64* p) override { if (p) *p = pos; return kResultOk; }
+        uint32 PLUGIN_API addRef() override { return ++refCount; }
+        uint32 PLUGIN_API release() override { uint32 r = --refCount; if (r == 0) return 0; return r; }
+        tresult PLUGIN_API queryInterface(const TUID iid, void** obj) override {
             if (iid == IBStream::iid || iid == FUnknown::iid) { *obj = static_cast<IBStream*>(this); addRef(); return kResultOk; }
             return kNoInterface;
         }

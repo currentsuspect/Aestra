@@ -45,6 +45,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 - **Innovation**: Let Aestra plugins and devices move cleanly into Spot-style modular workflows.
 - **Benefit**: Shared DSP investment across the timeline DAW and the node-based ecosystem.
 
+### Aestra Unified Framework
+
+- **Innovation**: Develop a centralized abstraction layer that seamlessly handles UI, DSP, and project state serialization for all Aestra plugins, standardizing behavior across the host DAW and the Spot ecosystem.
+- **Benefit**: Vastly reduces plugin boilerplate, ensures consistent UX and guarantees deterministic save/restore cycles anywhere in the ecosystem.
+
 ## 2. Performance Boosts
 
 ### AVX-512 Everywhere
@@ -72,6 +77,21 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Innovation**: Explore LLVM-style JIT fusion for hot audio chains so repeated gain, pan, and utility stages stay cache-friendly.
 - **Benefit**: Lower per-buffer overhead on dense sessions.
+
+### Predictive Caching
+
+- **Innovation**: Prefetching mechanism relying on playback context and user interactions to preemptively cache audio regions.
+- **Benefit**: Smooth zooming and scrolling on multi-hour projects, and instantaneous playback response even on slow disks.
+
+### GPU Accelerated DSP
+
+- **Innovation**: Offload highly parallel computations, such as enormous FFT-based reverbs or massively multi-voice synthesizers, directly to the GPU using Vulkan or CUDA.
+- **Benefit**: Frees up the CPU for time-critical serial path rendering and enables plugin scales previously thought impossible on standard hardware.
+
+### SimdLin Integration
+
+- **Innovation**: Leverage specialized SIMD implementations of common linear algebra and matrix operations for audio math (e.g., fast matrix multiplications for ML models).
+- **Benefit**: Lowers inference times of heavy NeuralFX components, ensuring they are practical for real-time tracking use cases.
 
 ## 3. Sound Quality
 
@@ -103,6 +123,11 @@ Move from a linear processing list to a DAG (Directed Acyclic Graph) task schedu
 
 - **Innovation**: Intelligently filter imperceptible bands before bit-depth or sample-rate reduction.
 - **Benefit**: Lo-fi textures that stay musical and preserve transient clarity instead of collapsing into harsh alias-heavy artifacts.
+
+### Quantum-Modeled Reverb
+
+- **Innovation**: Instead of raytracing, employ stochastic waveform diffusion equations to compute acoustic spaces, producing endlessly complex and non-repeating reverberant fields.
+- **Benefit**: Achieves a density and hyper-realism beyond traditional algorithmic or convolution reverbs without massive impulse response footprint.
 
 ## 4. Audit Notes
 
