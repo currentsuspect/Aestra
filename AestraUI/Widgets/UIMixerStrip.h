@@ -47,6 +47,14 @@ public:
     // Request opening the inspector on the Inserts tab for this channel.
     std::function<void(uint32_t channelId)> onFXClicked;
 
+    // Callback fired when fader value changes — for undo/redo wiring
+    std::function<void(float newDb)> onFaderChanged;
+
+    // Callbacks for mute/solo/pan undo/redo wiring
+    std::function<void(bool muted)> onMuteChanged;
+    std::function<void(bool soloed)> onSoloChanged;
+    std::function<void(float pan)> onPanChanged;
+
 private:
     uint32_t m_channelId{0};
     int m_trackNumber{0};

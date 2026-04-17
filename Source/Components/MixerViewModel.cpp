@@ -274,15 +274,6 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                      oldCh = getChannelById(ch->id);
                 }
 
-                // DEBUG LOGGING START
-                if (oldCh) {
-                     // Verify if we are finding the old channel
-                     // Aestra::Log::info("[MixerVM] Found oldCh for sync.");
-                } else {
-                     // Aestra::Log::warning("[MixerVM] Sync could not find oldCh! UI state may be lost.");
-                }
-                // DEBUG LOGGING END
-
                 for (size_t i = 0; i < Audio::EffectChain::MAX_SLOTS; ++i) {
                     const auto* slot = chain.getSlot(i);
                     auto& vm = ch->inserts[i];
@@ -291,13 +282,6 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                     if (oldCh && i < oldCh->inserts.size()) {
                         vm.pendingRemoval = oldCh->inserts[i].pendingRemoval;
                         vm.bypassDirty = oldCh->inserts[i].bypassDirty;
-                        
-                        // Trace specifically for pending removal restoration
-                        if (vm.pendingRemoval) {
-                            char logBuf[128];
-                            std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] RESTORED pendingRemoval for Ch %u Slot %zu", info.id, i);
-                            Aestra::Log::info(logBuf);
-                        }
                     }
 
                     const auto* slotptr = slot; // alias for clarity if needed
@@ -305,25 +289,13 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                     bool hasPlugin = (slot && !slot->isEmpty() && slot->plugin);
                     
                      if (vm.pendingRemoval) {
-                          // TRACE LOG
-                          char logBuf[128];
-                          std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] Sync Ch %u Slot %zu: Pending Removal. HasPlugin? %d", info.id, i, hasPlugin ? 1 : 0);
-                          Aestra::Log::info(logBuf);
-
                           if (!hasPlugin) {
                               // Engine finally removed it
-                              char logBuf[128];
-                              std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] Ch %u Slot %zu: Engine confirmed removal. Clearing pending flag.", info.id, i);
-                              Aestra::Log::info(logBuf);
-                              
                               vm.pendingRemoval = false;
                               vm.isEmpty = true;
                               vm.name.clear();
                           } else {
                               // Still waiting for engine, force empty UI
-                              std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] Ch %u Slot %zu: Engine still has plugin. Forcing UI empty.", info.id, i);
-                              Aestra::Log::info(logBuf);
-                              
                               vm.isEmpty = true;
                               vm.name.clear(); // Optional: show "Removing..."
                           }
@@ -862,13 +834,10 @@ void MixerViewModel::removeInsert(uint32_t channelId, int slot) {
     // auto wrapper = Aestra::ServiceLocator::get<AestraAudioController>();
     // if (!wrapper) return; // REMOVED: This was blocking the delete!
     
-    char logBuf[128];
-    std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] removeInsert requested for Ch %u Slot %d", channelId, slot);
-    Aestra::Log::info(logBuf); 
-
     if (auto* ch = getChannelById(channelId)) {
         // Validate bounds
         if (slot < 0 || slot >= static_cast<int>(ch->inserts.size())) {
+            char logBuf[128];
             std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] removeInsert: Invalid slot %d for Ch %u", slot, channelId);
             Aestra::Log::warning(logBuf);
             return;
@@ -881,12 +850,14 @@ void MixerViewModel::removeInsert(uint32_t channelId, int slot) {
         ch->inserts[slot].pendingRemoval = true;
         ch->inserts[slot].isEmpty = true; 
         
-        std::snprintf(logBuf, sizeof(logBuf), "[MixerVM] Ch %u Slot %d marked PENDING REMOVAL", channelId, slot);
-        Aestra::Log::info(logBuf); 
-        
         if (auto mc = ch->channel) {
             auto& chain = mc->getEffectChain();
-            chain.removePlugin(slot);
+            if (m_commandHistory) {
+                m_commandHistory->pushAndExecute(
+                    std::make_shared<Audio::RemovePluginCommand>(*mc, static_cast<size_t>(slot)));
+            } else {
+                chain.removePlugin(slot);
+            }
             
             if (m_onProjectModified) m_onProjectModified();
         }

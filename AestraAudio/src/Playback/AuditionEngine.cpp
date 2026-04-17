@@ -335,13 +335,12 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
             output[i * numChannels + 1] = outR;
         } else {
             // Mono source or mono output - use ClipResampler (falls back to Cubic for mono)
-            static ClipResampler resampler;
-            resampler.setQuality(ClipResamplingQuality::High);
+            m_resampler.setQuality(ClipResamplingQuality::High);
 
             for (uint32_t ch = 0; ch < numChannels; ++ch) {
                 uint32_t srcCh = (srcChannels == 1) ? 0 : ch;
                 output[i * numChannels + ch] =
-                    resampler.getSample(interleavedData, totalFrames, srcChannels, srcPosition, srcCh);
+                    m_resampler.getSample(interleavedData, totalFrames, srcChannels, srcPosition, srcCh);
             }
         }
     }
@@ -357,12 +356,12 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
     m_positionSeconds.store(currentPos);
 
     // Check for end of track
-    double duration = getDurationSeconds();
+    double duration = m_cachedDurationSeconds.load(std::memory_order_acquire);
     if (currentPos >= duration && duration > 0.0) {
         if (m_repeatMode == RepeatMode::One) {
-            seekSeconds(0.0);
+            m_positionSeconds.store(0.0);
         } else {
-            nextTrack();
+            m_trackTransitionPending.store(true, std::memory_order_release);
         }
     }
 
@@ -372,8 +371,7 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
     }
 
     // Position callback (throttled)
-    static int callbackCounter = 0;
-    if (++callbackCounter % 10 == 0 && m_onPositionChanged) {
+    if (m_positionCallbackCounter.fetch_add(1, std::memory_order_relaxed) % 10 == 0 && m_onPositionChanged) {
         m_onPositionChanged(currentPos);
     }
 }
@@ -421,6 +419,7 @@ void AuditionEngine::loadCurrentTrack(bool startPlayback) {
             } catch (const std::exception& e) {
                 Log::error("[AuditionEngine] Exception creating source: " + std::string(e.what()));
                 m_currentSource.reset();
+                m_cachedDurationSeconds.store(0.0, std::memory_order_release);
             }
         } else {
             Log::error("[AuditionEngine] Failed to decode file: " + item.filePath);
@@ -429,6 +428,7 @@ void AuditionEngine::loadCurrentTrack(bool startPlayback) {
     }
 
     m_positionSeconds.store(item.lastPosition);
+    m_cachedDurationSeconds.store(getDurationSeconds(), std::memory_order_release);
 
     notifyTrackChanged();
 
@@ -673,6 +673,12 @@ void AuditionEngine::applyDSPChain(float* buffer, uint32_t numFrames, uint32_t n
         if (numChannels > 1) {
             buffer[i * numChannels + 1] = std::clamp(right, -1.0f, 1.0f);
         }
+    }
+}
+
+void AuditionEngine::handleDeferredTrackTransition() {
+    if (m_trackTransitionPending.exchange(false, std::memory_order_acq_rel)) {
+        nextTrack();
     }
 }
 

@@ -29,7 +29,7 @@ namespace {
     constexpr float METER_W = 28.0f;
     constexpr float MASTER_METER_W = 36.0f;
 
-    constexpr float SELECT_TOP_H = 4.0f;
+    constexpr float SELECT_TOP_H = 3.0f;
 
     std::string compactRouteName(uint32_t targetId, const std::string& targetName)
     {
@@ -203,6 +203,9 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
         channel->pan = pan;
         m_continuousParams->setPan(channel->slotIndex, pan);
+
+        // Fire undo/redo callback
+        if (onPanChanged) onPanChanged(pan);
     };
     addChild(m_panKnob);
 
@@ -232,13 +235,14 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         invalidateStaticCache();
 
         if (auto mc = channel->channel) {
-            mc->setMute(muted);
             if (muted && mc->isSoloed()) {
                 mc->setSolo(false);
                 channel->soloed = false;
             }
         }
 
+        // Fire undo/redo callback
+        if (onMuteChanged) onMuteChanged(muted);
     };
     m_buttons->onSoloToggled = [this](bool soloed, NUIModifiers modifiers) {
         if (!m_viewModel) return;
@@ -288,12 +292,14 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         invalidateStaticCache();
 
         if (auto mc = channel->channel) {
-            mc->setSolo(soloed);
             if (soloed && mc->isMuted()) {
                 mc->setMute(false);
                 channel->muted = false;
             }
         }
+
+        // Fire undo/redo callback
+        if (onSoloChanged) onSoloChanged(soloed);
     };
     m_buttons->onArmToggled = [this](bool armed) {
         if (!m_viewModel) return;
@@ -340,6 +346,9 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
         channel->faderGainDb = db;
         m_continuousParams->setFaderDb(channel->slotIndex, db);
+        
+        // Fire undo/redo callback
+        if (onFaderChanged) onFaderChanged(db);
     };
     addChild(m_fader);
 
@@ -382,10 +391,10 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 void UIMixerStrip::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
-    m_selectedTint = theme.getColor("primary").withAlpha(0.012f);
-    m_selectedOutline = theme.getColor("borderActive").withAlpha(0.30f);
-    m_selectedGlow = theme.getColor("primary").withAlpha(0.050f);
-    m_selectedTopHighlight = theme.getColor("primary").withAlpha(0.62f);
+    m_selectedTint = theme.getColor("primary").withAlpha(0.022f);
+    m_selectedOutline = theme.getColor("primary").withAlpha(0.18f);
+    m_selectedGlow = theme.getColor("primary").withAlpha(0.10f);
+    m_selectedTopHighlight = theme.getColor("primary").withAlpha(0.18f);
     
     // Master: Distinct Dark Glass
     m_masterBackground = theme.getColor("surfaceRaised").withAlpha(0.78f);
@@ -681,17 +690,17 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     }
 
     if (selected) {
-        renderer.drawShadow(bounds, 0.0f, 8.0f, 18.0f, m_selectedGlow.withAlpha(0.20f));
+        renderer.drawShadow(bounds, 0.0f, 8.0f, 18.0f, m_selectedGlow.withAlpha(0.08f));
         renderer.fillRoundedRect(bounds, radius, m_selectedTint);
 
         renderer.fillRect(NUIRect{bounds.x, bounds.y, bounds.width, SELECT_TOP_H}, m_selectedTopHighlight);
         renderer.fillRoundedRect(NUIRect{bounds.x + 2.0f, bounds.y + 2.0f, bounds.width - 4.0f, 34.0f},
                                  std::max(0.0f, radius - 2.0f),
-                                 m_selectedGlow.withAlpha(0.08f));
+                                 m_selectedTopHighlight.withAlpha(0.05f));
         renderer.strokeRoundedRect(NUIRect{bounds.x - 1.0f, bounds.y - 1.0f, bounds.width + 2.0f, bounds.height + 2.0f},
                                    radius + 1.0f,
                                    1.0f,
-                                   m_selectedGlow);
+                                   m_selectedGlow.withAlpha(0.14f));
         renderer.strokeRoundedRect(bounds, radius, 1.0f, m_selectedOutline);
     }
 

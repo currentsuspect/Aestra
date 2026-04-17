@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <iomanip>
 #include <sstream>
 #include <iostream>
@@ -125,11 +126,9 @@ std::string ellipsizeMiddle(NUIRenderer& renderer, const std::string& text, floa
 }
 
 std::filesystem::path canonicalOrNormalized(const std::filesystem::path& p) {
-    try {
-        return std::filesystem::weakly_canonical(p);
-    } catch (...) {
-        return p.lexically_normal();
-    }
+    std::error_code ec;
+    std::filesystem::path canonical = std::filesystem::weakly_canonical(p, ec);
+    return ec ? p.lexically_normal() : canonical;
 }
 
 std::string normalizedPathForCompare(const std::filesystem::path& p) {
@@ -147,6 +146,24 @@ std::string mapKeyForPath(const std::string& path) {
     std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 #endif
     return s;
+}
+
+bool parseFloatValue(const std::string& text, float& out) {
+    char* endPtr = nullptr;
+    const char* begin = text.c_str();
+    const float parsed = std::strtof(begin, &endPtr);
+    if (endPtr == begin || *endPtr != '\0') return false;
+    out = parsed;
+    return true;
+}
+
+bool parseIntValue(const std::string& text, int& out) {
+    char* endPtr = nullptr;
+    const char* begin = text.c_str();
+    const long parsed = std::strtol(begin, &endPtr, 10);
+    if (endPtr == begin || *endPtr != '\0') return false;
+    out = static_cast<int>(parsed);
+    return true;
 }
 
 bool isPathUnderRoot(const std::filesystem::path& candidatePath, const std::filesystem::path& rootPath) {
@@ -453,8 +470,7 @@ FileBrowser::FileBrowser()
     // Use theme accent for selection (consistent with the rest of the app)
     selectedColor_ = themeManager.getColor("accentPrimary");
     
-    // Pure white glass for hover (matches transport buttons now)
-    hoverColor_ = NUIColor(1.0f, 1.0f, 1.0f, 0.04f);
+    hoverColor_ = themeManager.getColor("buttonBgHover").withAlpha(0.72f);
     borderColor_ = themeManager.getColor("glassBorder");
     
     // Perform initial layout now that all members (icons, search input) are initialized
@@ -626,8 +642,9 @@ std::vector<FileItem> FileBrowser::scanDirectory(const std::string& path, int de
             
             // --- SMART FILTER APPLIED HERE ---
             // If it's not a directory and not in our whitelist, skip it.
-            bool isDir = false;
-            try { isDir = entry.is_directory(); } catch(...) { continue; }
+            std::error_code dirEc;
+            const bool isDir = entry.is_directory(dirEc);
+            if (dirEc) continue;
 
             if (!isDir && !FileFilter::isAllowed(entryPath)) {
                 continue; // Whitelist filter
@@ -638,11 +655,9 @@ std::vector<FileItem> FileBrowser::scanDirectory(const std::string& path, int de
             std::string lastModified;
 
             if (!isDir) {
-                 try {
-                    size = entry.file_size();
-                } catch (...) {
-                    size = 0;
-                }
+                std::error_code sizeEc;
+                size = static_cast<size_t>(entry.file_size(sizeEc));
+                if (sizeEc) size = 0;
             }
 
             FileItem item(name, entryPath, type, isDir, size, lastModified);
@@ -772,11 +787,8 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, fileBrowserHeight);
     
     // === SOLID BASE FILL ===
-    // USE GLASS BACKGROUND (Deep Transparency)
-    // First, fill with "Deep Space" base (Explicit Opaque Float)
-    renderer.fillRect(fileBrowserBounds, AestraUI::NUIColor(0.02f, 0.02f, 0.03f, 1.0f));
-    // Then apply the Glass overlay (Hardcoded to avoid missing token magenta)
-    renderer.fillRect(fileBrowserBounds, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.02f));
+    renderer.fillRect(fileBrowserBounds, themeManager.getColor("backgroundPrimary"));
+    renderer.fillRect(fileBrowserBounds, themeManager.getColor("backgroundSecondary").withAlpha(0.28f));
     
     // === CLIPPED BACKGROUND RENDERING ===
     // To achieve rounded-top, square-bottom corners WITH proper borders,
@@ -1108,7 +1120,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	                dragData.type = AestraUI::DragDataType::File;
 	                dragData.filePath = dragFile->path;
 	                dragData.displayName = dragFile->name;
-	                dragData.accentColor = NUIColor(0.733f, 0.525f, 0.988f, 1.0f); // Purple accent
+	                dragData.accentColor = NUIThemeManager::getInstance().getColor("accentPrimary");
                 dragData.previewWidth = 150.0f;
                 dragData.previewHeight = 30.0f;
 	                
@@ -1193,6 +1205,16 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         sortHovered_ = newSortHovered;
         invalidateCache();
     }
+
+    if (refreshHovered_) {
+        AestraUI::NUIComponent::showRemoteTooltip("Refresh", event.position, this);
+    } else if (favoritesHovered_) {
+        AestraUI::NUIComponent::showRemoteTooltip("Favorites", event.position, this);
+    } else if (tagsHovered_) {
+        AestraUI::NUIComponent::showRemoteTooltip("Tags", event.position, this);
+    } else if (sortHovered_) {
+        AestraUI::NUIComponent::showRemoteTooltip("Sort", event.position, this);
+    }
     
     // Handle scrollbar mouse events first - check if scrollbar should be visible
 	    float contentHeight = view.size() * itemHeight;
@@ -1274,7 +1296,6 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             // Outside list area - clear hover and tooltip
             if (hoveredIndex_ != -1) {
                 hoveredIndex_ = -1;
-                NUIComponent::hideRemoteTooltip();
                 invalidateCache();
             }
         }
@@ -1301,16 +1322,24 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                         tooltipPos.x += 16.0f; // Offset
                         tooltipPos.y += 16.0f;
                         
-                        NUIComponent::showRemoteTooltip(item->name, tooltipPos);
+                        NUIComponent::showRemoteTooltip(item->name, tooltipPos, this);
                     } else {
-                        NUIComponent::hideRemoteTooltip();
+                        NUIComponent::hideRemoteTooltip(this);
                     }
                 } else {
-                    NUIComponent::hideRemoteTooltip();
+                    NUIComponent::hideRemoteTooltip(this);
                 }
 
 	            invalidateCache(); // Trigger redraw when hover state changes
 	        }
+
+            // Keep tooltip alive while hovering list items (not only on hover-change events).
+            if (hoveredIndex_ >= 0 && hoveredIndex_ < static_cast<int>(view.size())) {
+                const FileItem* item = view[hoveredIndex_];
+                if (item) {
+                    AestraUI::NUIComponent::showRemoteTooltip(item->name, event.position, this);
+                }
+            }
 
 	        // Context menu (right-click)
 	        if (event.pressed && event.button == NUIMouseButton::Right) {
@@ -1403,7 +1432,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                 
                 // Update selection with multi-select support
                 bool ctrl = event.modifiers & NUIModifiers::Ctrl;
-                bool shift = event.modifiers & NUIModifiers::Shift;
+                bool shift = (event.modifiers & NUIModifiers::Shift) || (event.modifiers & NUIModifiers::CapsLock);
                 toggleFileSelection(itemIndex, ctrl, shift);
 	                // Update selectedFile_ from active view
 	                const auto& activeView = getActiveView();
@@ -1600,8 +1629,14 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
             if (selectedIndex_ > 0 && !view.empty()) {
                 selectedIndex_--;
                 selectedFile_ = view[selectedIndex_];
-                selectedIndices_.clear();
-                selectedIndices_.push_back(selectedIndex_);
+                const bool rangeSelect = (event.modifiers & NUIModifiers::Shift) || (event.modifiers & NUIModifiers::CapsLock);
+                if (rangeSelect) {
+                    toggleFileSelection(selectedIndex_, false, true);
+                } else {
+                    selectedIndices_.clear();
+                    selectedIndices_.push_back(selectedIndex_);
+                    lastShiftSelectIndex_ = selectedIndex_;
+                }
                 updateScrollPosition();
                 if (onFileSelected_) {
                     onFileSelected_(*selectedFile_);
@@ -1624,8 +1659,14 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
             if (!view.empty() && selectedIndex_ < static_cast<int>(view.size()) - 1) {
                 selectedIndex_++;
                 selectedFile_ = view[selectedIndex_];
-                selectedIndices_.clear();
-                selectedIndices_.push_back(selectedIndex_);
+                const bool rangeSelect = (event.modifiers & NUIModifiers::Shift) || (event.modifiers & NUIModifiers::CapsLock);
+                if (rangeSelect) {
+                    toggleFileSelection(selectedIndex_, false, true);
+                } else {
+                    selectedIndices_.clear();
+                    selectedIndices_.push_back(selectedIndex_);
+                    lastShiftSelectIndex_ = selectedIndex_;
+                }
                 updateScrollPosition();
                 if (onFileSelected_) {
                     onFileSelected_(*selectedFile_);
@@ -1687,10 +1728,8 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
 }
 
 void FileBrowser::onMouseLeave() {
-    // Hide any active tooltip when leaving the file browser
     if (hoveredIndex_ >= 0) {
         hoveredIndex_ = -1;
-        NUIComponent::hideRemoteTooltip();
         invalidateCache();
     }
     NUIComponent::onMouseLeave();
@@ -1857,13 +1896,10 @@ void FileBrowser::selectFile(const std::string& path) {
 }
 
 void FileBrowser::openFile(const std::string& path) {
-    try {
-        const std::filesystem::path p(path);
-        const std::filesystem::path parent = p.parent_path();
-        if (!parent.empty() && parent.string() != currentPath_) {
-            setCurrentPath(parent.string());
-        }
-    } catch (...) {
+    const std::filesystem::path p(path);
+    const std::filesystem::path parent = p.parent_path();
+    if (!parent.empty() && parent.string() != currentPath_) {
+        setCurrentPath(parent.string());
     }
 
     selectFile(path);
@@ -2736,20 +2772,12 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 
 		        for (const auto& favPath : favorites) {
 		            std::string label = favPath;
-		            try {
-		                std::filesystem::path p(favPath);
-		                const std::string name = p.filename().string();
-		                if (!name.empty()) label = name;
-		            } catch (...) {
-		            }
+		            std::filesystem::path p(favPath);
+		            const std::string name = p.filename().string();
+		            if (!name.empty()) label = name;
 
-		            bool isDir = false;
-		            try {
-                        std::error_code ec;
-		                isDir = std::filesystem::exists(favPath, ec) && std::filesystem::is_directory(favPath, ec);
-		            } catch (...) {
-		                isDir = false;
-		            }
+		            std::error_code ec;
+		            const bool isDir = std::filesystem::exists(favPath, ec) && std::filesystem::is_directory(favPath, ec);
 
 		            if (isDir) {
 		                popupMenu_->addItem(label, [this, path = favPath]() { openFolder(path); });
@@ -2867,14 +2895,11 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 		    } else {
 	        // Navigate to containing folder
 	        popupMenu_->addItem("Show in Browser", [this, path = item.path]() {
-	            try {
-	                std::filesystem::path p(path);
-	                std::filesystem::path parent = p.parent_path();
-	                if (!parent.empty()) {
-	                    setCurrentPath(parent.string());
-	                    selectFile(path);
-	                }
-	            } catch (...) {
+	            std::filesystem::path p(path);
+	            std::filesystem::path parent = p.parent_path();
+	            if (!parent.empty()) {
+	                setCurrentPath(parent.string());
+	                selectFile(path);
 	            }
 	        });
 
@@ -3664,8 +3689,8 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
         } else if (isLast) {
              renderer.fillRoundedRect(partRect, chipRadius, selectedColor_.withAlpha(0.15f));
              renderer.strokeRoundedRect(partRect, chipRadius, 1, selectedColor_.withAlpha(0.3f));
-        } else {
-             renderer.fillRoundedRect(partRect, chipRadius, NUIColor(1.0f, 1.0f, 1.0f, 0.03f));
+         } else {
+             renderer.fillRoundedRect(partRect, chipRadius, NUIThemeManager::getInstance().getColor("hover").withAlpha(0.44f));
         }
         
         NUIColor color = isHovered ? NUIColor::white() : (isLast ? selectedColor_ : textColor_);
@@ -3756,7 +3781,7 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
             renderer.fillRoundedRect(partRect, chipRadius, selectedColor_.withAlpha(0.15f));
             renderer.strokeRoundedRect(partRect, chipRadius, 1, selectedColor_.withAlpha(0.3f));
         } else {
-            renderer.fillRoundedRect(partRect, chipRadius, NUIColor(1.0f, 1.0f, 1.0f, 0.03f));
+            renderer.fillRoundedRect(partRect, chipRadius, NUIThemeManager::getInstance().getColor("hover").withAlpha(0.44f));
         }
 
         const auto color = isHovered ? NUIColor::white() : (isLast ? selectedColor_ : textColor_);
@@ -3933,16 +3958,18 @@ void FileBrowser::loadState(const std::string& filePath) {
             loadedRootPath = value;
         }
         else if (key == "scrollOffset") {
-            try {
-                loadedScrollOffset = std::stof(value);
+            float parsed = 0.0f;
+            if (parseFloatValue(value, parsed)) {
+                loadedScrollOffset = parsed;
                 hasScrollOffset = true;
-            } catch (...) {}
+            }
         }
         else if (key == "sortMode") {
-            try {
-                loadedSortMode = static_cast<SortMode>(std::stoi(value));
+            int parsed = 0;
+            if (parseIntValue(value, parsed)) {
+                loadedSortMode = static_cast<SortMode>(parsed);
                 hasSortMode = true;
-            } catch (...) {}
+            }
         }
         else if (key == "sortAscending") {
             loadedSortAscending = (value == "1");

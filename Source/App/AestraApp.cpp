@@ -440,6 +440,10 @@ bool AestraApp::initialize(const std::string& projectPath) {
             Log::info("Show Arsenal - Not yet fully implemented");
         });
 
+        menu->addItem("Show History  Ctrl+H", [this]() {
+            if (m_content) m_content->toggleHistoryPanel();
+        });
+
         m_windowManager->showDropdownMenu(menu, 100.0f);
     });
 
@@ -643,7 +647,7 @@ void AestraApp::connectAudioToUI() {
             Aestra::ServiceLocator::provide<Aestra::Audio::TrackManager>(m_content->getTrackManager());
 
             auto trackMgr = m_content->getTrackManager();
-            trackMgr->getCommandHistory().setOnStateChanged([trackMgr]() {
+            trackMgr->getCommandHistory().addOnStateChanged([trackMgr]() {
                 if (trackMgr) trackMgr->markModified();
             });
 

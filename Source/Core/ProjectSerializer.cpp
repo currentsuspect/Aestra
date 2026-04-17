@@ -3,7 +3,9 @@
 #include "ProjectMigrations.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "MiniAudioDecoder.h"
+#include "PluginManager.h"
 #include <atomic>
+#include <cctype>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -22,6 +24,40 @@ namespace {
     constexpr int PROJECT_VERSION_MIN_SUPPORTED = 1;
     constexpr size_t PROJECT_HISTORY_MAX_ENTRIES = 50;
     std::atomic<uint64_t> g_projectHistoryCounter{0};
+
+    std::string bytesToHex(const std::vector<uint8_t>& bytes) {
+        std::ostringstream oss;
+        oss << std::hex << std::setfill('0');
+        for (uint8_t byte : bytes) {
+            oss << std::setw(2) << static_cast<int>(byte);
+        }
+        return oss.str();
+    }
+
+    std::vector<uint8_t> hexToBytes(const std::string& hex) {
+        std::vector<uint8_t> bytes;
+        if (hex.size() % 2 != 0) {
+            return bytes;
+        }
+
+        bytes.reserve(hex.size() / 2);
+        for (size_t i = 0; i < hex.size(); i += 2) {
+            const char hi = static_cast<char>(std::tolower(static_cast<unsigned char>(hex[i])));
+            const char lo = static_cast<char>(std::tolower(static_cast<unsigned char>(hex[i + 1])));
+            auto hexValue = [](char c) -> int {
+                if (c >= '0' && c <= '9') return c - '0';
+                if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+                return -1;
+            };
+            const int high = hexValue(hi);
+            const int low = hexValue(lo);
+            if (high < 0 || low < 0) {
+                return {};
+            }
+            bytes.push_back(static_cast<uint8_t>((high << 4) | low));
+        }
+        return bytes;
+    }
 }
 
 static bool writeAtomicallyImpl(const std::string& path, const std::string& contents) {
@@ -222,7 +258,18 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             pjs.set("slices", slicesArray);
         } else {
             pjs.set("type", JSON("midi"));
-            // TODO: Save MIDI notes
+            const auto& payload = std::get<MidiPayload>(p->payload);
+            JSON notesArray = JSON::array();
+            for (const auto& note : payload.notes) {
+                JSON nj = JSON::object();
+                nj.set("pitch", JSON(static_cast<double>(note.pitch)));
+                nj.set("startBeat", JSON(note.startBeat));
+                nj.set("durationBeats", JSON(note.durationBeats));
+                nj.set("velocity", JSON(static_cast<double>(note.velocity)));
+                nj.set("unitId", JSON(static_cast<double>(note.unitId)));
+                notesArray.push(nj);
+            }
+            pjs.set("notes", notesArray);
         }
         patternsJson.push(pjs);
     }
@@ -261,6 +308,11 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 }
                 routingJson.set("sends", sendsJson);
                 ljs.set("routing", routingJson);
+
+                const auto effectChainState = channel->getEffectChain().saveState();
+                if (!effectChainState.empty()) {
+                    ljs.set("effectChainStateHex", JSON(bytesToHex(effectChainState)));
+                }
             }
 
             // Automation (v3.1)
@@ -292,6 +344,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 cjs.set("patternId", JSON(static_cast<double>(serializedPatternId)));
                 cjs.set("start", JSON(clip.startBeat));
                 cjs.set("duration", JSON(clip.durationBeats));
+                cjs.set("sourceOffset", JSON(clip.sourceOffset));
                 cjs.set("name", JSON(clip.name));
                 cjs.set("color", JSON(std::to_string(clip.colorRGBA)));
 
@@ -499,9 +552,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     // PHASE 3: Commit - clear existing state and load new data
     // ========================================================================
     
-    result.tempo = root.has("tempo") ? root["tempo"].asNumber() : 120.0;
-    result.playhead = root.has("playhead") ? root["playhead"].asNumber() : 0.0;
-    result.playhead = root.has("playhead") ? root["playhead"].asNumber() : 0.0;
+    result.tempo = (root.has("tempo") && root["tempo"].isNumber()) ? root["tempo"].asNumber() : 120.0;
+    result.playhead = (root.has("playhead") && root["playhead"].isNumber()) ? root["playhead"].asNumber() : 0.0;
 
     // Optional UI state
     if (root.has("ui") && root["ui"].isObject()) {
@@ -627,7 +679,23 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     patternMap[oldId] = newId;
                 }
             } else {
-                // TODO: Load MIDI patterns
+                MidiPayload payload;
+                if (pj[i].has("notes") && pj[i]["notes"].isArray()) {
+                    const JSON& notes = pj[i]["notes"];
+                    payload.notes.reserve(notes.size());
+                    for (size_t n = 0; n < notes.size(); ++n) {
+                        if (!notes[n].isObject()) continue;
+                        MidiNote note;
+                        if (notes[n].has("pitch")) note.pitch = static_cast<int>(notes[n]["pitch"].asNumber());
+                        if (notes[n].has("startBeat")) note.startBeat = notes[n]["startBeat"].asNumber();
+                        if (notes[n].has("durationBeats")) note.durationBeats = notes[n]["durationBeats"].asNumber();
+                        if (notes[n].has("velocity")) note.velocity = static_cast<float>(notes[n]["velocity"].asNumber());
+                        if (notes[n].has("unitId")) note.unitId = static_cast<uint64_t>(notes[n]["unitId"].asNumber());
+                        payload.notes.push_back(note);
+                    }
+                }
+                PatternID newId = patternManager.createMidiPattern(name, length, payload);
+                patternMap[oldId] = newId;
             }
         }
     }
@@ -691,6 +759,18 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             }
                         }
                     }
+
+                    if (lj[i].has("effectChainStateHex") && lj[i]["effectChainStateHex"].isString()) {
+                        const auto effectState = hexToBytes(lj[i]["effectChainStateHex"].asString());
+                        if (!effectState.empty()) {
+                            auto& pluginManager = PluginManager::getInstance();
+                            auto& chain = channel->getEffectChain();
+                            chain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
+                            if (!chain.loadState(effectState, pluginManager)) {
+                                Log::warning("[ProjectLoad] Failed to restore effect chain on lane: " + lane->name);
+                            }
+                        }
+                    }
                 }
 
                 if (lj[i].has("automation")) {
@@ -733,6 +813,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             clip.sourceId = clip.patternId.value;
                             clip.startBeat = cj[c]["start"].asNumber();
                             clip.durationBeats = cj[c]["duration"].asNumber();
+                            clip.sourceOffset = (cj[c].has("sourceOffset") && cj[c]["sourceOffset"].isNumber())
+                                ? cj[c]["sourceOffset"].asNumber()
+                                : 0.0;
                             clip.name = cj[c]["name"].asString();
                             if (cj[c]["color"].isString()) {
                                 try {

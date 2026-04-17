@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIPianoRollWidgets.h"
+#include "../Common/MusicHelpers.h"
 #include "NUIDropdown.h"
 #include "NUIButton.h"
 #include "NUIContextMenu.h"
@@ -26,6 +27,47 @@ static std::string getNoteLabel(int midiPitch) {
     return std::string(noteNames[midiPitch % 12]) + std::to_string(octave);
 }
 
+static float safeClampScroll(float value, float upper) {
+    if (!std::isfinite(value) || !std::isfinite(upper) || upper <= 0.0f) {
+        return 0.0f;
+    }
+    if (value <= 0.0f) {
+        return 0.0f;
+    }
+    if (value >= upper) {
+        return upper;
+    }
+    return value;
+}
+
+static float safeClampRange(float value, float lower, float upper) {
+    if (!std::isfinite(value) || !std::isfinite(lower) || !std::isfinite(upper)) {
+        return std::max(0.0f, lower);
+    }
+    if (upper < lower) {
+        upper = lower;
+    }
+    if (value <= lower) {
+        return lower;
+    }
+    if (value >= upper) {
+        return upper;
+    }
+    return value;
+}
+
+static float beatToScreenX(double beat, float pixelsPerBeat, float scrollX, float originX) {
+    return originX + static_cast<float>((beat * static_cast<double>(pixelsPerBeat)) - static_cast<double>(scrollX));
+}
+
+static float snapVerticalLineX(float x) {
+    return std::floor(x) + 0.5f;
+}
+
+static float snapRectX(float x) {
+    return std::round(x);
+}
+
 // =============================================================================
 // MusicTheory Implementation
 // =============================================================================
@@ -35,7 +77,7 @@ static std::string getNoteLabel(int midiPitch) {
 // PianoRollKeyLane
 // =============================================================================
 PianoRollKeyLane::PianoRollKeyLane()
-    : keyHeight_(24.0f), scrollY_(0.0f), hoveredKey_(-1)
+    : keyHeight_(24.0f), scrollY_(0.0f), hoveredKey_(-1), previewPitch_(-1), onPreviewNote_(nullptr), m_isPlayingCallback(nullptr)
 {
 }
 
@@ -102,10 +144,17 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
 
         renderer.drawLine(NUIPoint(b.x, y + keyHeight_), NUIPoint(b.x + b.width, y + keyHeight_), 1.0f, keySeparator);
 
-        if (p % 12 == 0) {
+        // Show note label for every pitch row
+        if (keyHeight_ >= 14.0f) {
             std::string lbl = getNoteLabel(p);
-            float txtY = y + (keyHeight_ * 0.5f) - 6.0f;
-            renderer.drawText(lbl, NUIPoint(b.x + 7.0f, txtY), 10.0f, isBlack ? blackText : whiteText);
+            float txtY = y + (keyHeight_ * 0.5f) - 5.0f;
+            float fontSize = (keyHeight_ >= 20.0f) ? 10.0f : 8.0f;
+            float txtX = isBlack ? (b.x + 4.0f) : (b.x + 7.0f);
+            renderer.drawText(lbl, NUIPoint(txtX, txtY), fontSize, isBlack ? blackText : whiteText);
+        }
+
+        // Accent bar for C notes (root keys)
+        if (p % 12 == 0) {
             renderer.fillRoundedRect(NUIRect(b.x + b.width - 4.0f, y + 4.0f, 2.0f, keyHeight_ - 8.0f), 1.0f, rootAccent);
         }
     }
@@ -121,6 +170,24 @@ bool PianoRollKeyLane::onMouseEvent(const NUIMouseEvent& event) {
     auto b = getBounds();
     float localY = event.position.y - b.y + scrollY_;
     int pitch = 127 - static_cast<int>(localY / keyHeight_);
+    pitch = std::clamp(pitch, 0, 127);
+
+    if (m_isPlayingCallback && m_isPlayingCallback()) {
+        return NUIComponent::onMouseEvent(event);
+    }
+
+    if (event.pressed && event.button == NUIMouseButton::Left) {
+        previewPitch_ = pitch;
+        if (onPreviewNote_) {
+            onPreviewNote_(pitch, 100);
+        }
+    }
+    else if (event.released && event.button == NUIMouseButton::Left && previewPitch_ != -1) {
+        if (onPreviewNote_) {
+            onPreviewNote_(previewPitch_, 0);
+        }
+        previewPitch_ = -1;
+    }
     
     return NUIComponent::onMouseEvent(event);
 }
@@ -133,6 +200,10 @@ void PianoRollKeyLane::setKeyHeight(float height) {
 void PianoRollKeyLane::setScrollOffsetY(float offset) {
     scrollY_ = offset;
     repaint();
+}
+
+void PianoRollKeyLane::setOnPreviewNote(std::function<void(int pitch, int velocity)> cb) {
+    onPreviewNote_ = std::move(cb);
 }
 
 // =============================================================================
@@ -417,8 +488,7 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
     int iEnd = static_cast<int>(endBeat) + 1;
 
     for (int i = iStart; i <= iEnd; ++i) {
-        double relativeX = (static_cast<double>(i) * pixelsPerBeat_) - static_cast<double>(scrollX_);
-        float x = b.x + static_cast<float>(relativeX);
+        float x = snapVerticalLineX(beatToScreenX(static_cast<double>(i), pixelsPerBeat_, scrollX_, b.x));
         
         // Prevent drawing text partially off-screen left if we can help it, 
         // but setClipRect handles the actual pixels.
@@ -514,6 +584,7 @@ void PianoRollToolbar::setupUI() {
         for (int i = 0; i < roots.size(); ++i) {
             rootMenu->addItem(roots[i], [this, i]() {
                 if (auto g = grid_.lock()) g->setRootKey(i);
+                if (auto n = notes_.lock()) n->setRootKey(i);
             });
         }
         menu->addSubmenu("Root Key", rootMenu);
@@ -524,9 +595,21 @@ void PianoRollToolbar::setupUI() {
         for (int i = 0; i < scales.size(); ++i) {
             scaleMenu->addItem(scales[i].name, [this, i]() {
                 if (auto g = grid_.lock()) g->setScaleType(static_cast<ScaleType>(i));
+                if (auto n = notes_.lock()) n->setScaleType(static_cast<ScaleType>(i));
             });
         }
         menu->addSubmenu("Scale Type", scaleMenu);
+
+        // --- SNAP TO SCALE TOGGLE ---
+        bool snapToScaleActive = false;
+        if (auto n = notes_.lock()) {
+            snapToScaleActive = n->getSnapToScale();
+        }
+        menu->addCheckbox("Snap to Scale", snapToScaleActive, [this](bool) {
+            if (auto n = notes_.lock()) {
+                n->setSnapToScale(!n->getSnapToScale());
+            }
+        });
 
         auto b = m_menuBtn->getBounds();
         if (auto* parent = getParent()) {
@@ -549,6 +632,18 @@ void PianoRollToolbar::setupUI() {
 
     m_eraserBtn = std::make_shared<NUIButton>("");
     m_eraserBtn->setOnClick([this](){ setActiveTool(GlobalTool::Eraser); });
+
+    m_lengthDownBtn = std::make_shared<NUIButton>("");
+    m_lengthDownBtn->setTooltip("Shorten Pattern By 4 Bars");
+    m_lengthDownBtn->setOnClick([this]() {
+        if (onAdjustPatternLength_) onAdjustPatternLength_(-4);
+    });
+
+    m_lengthUpBtn = std::make_shared<NUIButton>("");
+    m_lengthUpBtn->setTooltip("Extend Pattern By 4 Bars");
+    m_lengthUpBtn->setOnClick([this]() {
+        if (onAdjustPatternLength_) onAdjustPatternLength_(4);
+    });
     
     // Icons
     const char* ptrSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 2l12 11.2-5.8.5 3.3 7.3-2.2.9-3.2-7.4-4.4 4V2z"/></svg>)";
@@ -560,14 +655,26 @@ void PianoRollToolbar::setupUI() {
     const char* eraserSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.14 3c-.51 0-1.02.2-1.41.59L2.59 14.73c-.78.78-.78 2.05 0 2.83L5.43 20.39c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l10.96-10.96c.78-.78.78-2.05 0-2.83l-2.66-2.67c-.39-.39-.9-.59-1.41-.59zM9 16l-3.37-3.37L15.14 3.1 19 6.9 9 16z"/></svg>)";
     m_eraserIcon = std::make_shared<NUIIcon>(eraserSvg);
 
+    const char* minusSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 11h14v2H5z"/></svg>)";
+    const char* plusSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 5h2v14h-2zM5 11h14v2H5z"/></svg>)";
+    m_lengthDownIcon = std::make_shared<NUIIcon>(minusSvg);
+    m_lengthUpIcon = std::make_shared<NUIIcon>(plusSvg);
+
     addChild(m_menuBtn);
     addChild(m_ptrBtn);
     addChild(m_pencilBtn);
     addChild(m_eraserBtn);
+    addChild(m_lengthDownBtn);
+    addChild(m_lengthUpBtn);
 }
 
 void PianoRollToolbar::setPatternName(const std::string& name) {
     m_patternName = name;
+    repaint();
+}
+
+void PianoRollToolbar::setPatternLengthBeats(double beats) {
+    m_patternLengthBeats = std::max(4.0, beats);
     repaint();
 }
 
@@ -650,6 +757,30 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     renderButton(m_pencilBtn, m_pencilIcon, activeTool_ == GlobalTool::Pencil);
     renderButton(m_eraserBtn, m_eraserIcon, activeTool_ == GlobalTool::Eraser);
 
+    currentX += 4.0f;
+    renderer.drawLine(NUIPoint(currentX, currentY + 4), NUIPoint(currentX, currentY + buttonSize - 4), 1.0f, borderCol.withAlpha(0.45f));
+    currentX += 10.0f;
+
+    renderButton(m_lengthDownBtn, m_lengthDownIcon, false);
+
+    const int patternBars = std::max(1, static_cast<int>(std::lround(m_patternLengthBeats / 4.0)));
+    const std::string lengthLabel = std::to_string(patternBars) + " Bars";
+    const float lengthFontSize = 10.0f;
+    const auto lengthSize = renderer.measureText(lengthLabel, lengthFontSize);
+    const float pillPadX = 10.0f;
+    const float pillW = std::max(56.0f, lengthSize.width + pillPadX * 2.0f);
+    const NUIRect pillRect(currentX, currentY, pillW, buttonSize);
+    renderer.fillRoundedRect(pillRect, radius, themeManager.getColor("surfaceSecondary").withAlpha(0.92f));
+    renderer.strokeRoundedRect(pillRect, radius, 1.0f, borderCol.withAlpha(0.35f));
+    renderer.drawText(lengthLabel,
+                      NUIPoint(pillRect.x + (pillRect.width - lengthSize.width) * 0.5f,
+                               pillRect.y + (pillRect.height - lengthSize.height) * 0.5f + 1.0f),
+                      lengthFontSize,
+                      themeManager.getColor("textPrimary").withAlpha(0.82f));
+    currentX += pillW + buttonSpacing;
+
+    renderButton(m_lengthUpBtn, m_lengthUpIcon, false);
+
     // Editing Pattern Label (Right Side)
     if (!m_patternName.empty()) {
         std::string labelStr = m_patternName;
@@ -698,6 +829,8 @@ bool PianoRollToolbar::onMouseEvent(const NUIMouseEvent& event) {
     if (m_ptrBtn->onMouseEvent(event)) return true;
     if (m_pencilBtn->onMouseEvent(event)) return true;
     if (m_eraserBtn->onMouseEvent(event)) return true;
+    if (m_lengthDownBtn->onMouseEvent(event)) return true;
+    if (m_lengthUpBtn->onMouseEvent(event)) return true;
     
     return false;
 }
@@ -768,8 +901,7 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     
     for (; current <= endBeat + snapDur; current += snapDur) {
         // Calculate X in double precision relative to scrollX_ BEFORE casting to float
-        double relativeX = (current * pixelsPerBeat_) - static_cast<double>(scrollX_);
-        float x = b.x + static_cast<float>(relativeX);
+        float x = snapVerticalLineX(beatToScreenX(current, pixelsPerBeat_, scrollX_, b.x));
         
         // Check hierarchy
         bool isBar = (std::fmod(std::abs(current), (double)beatsPerBar_) < 0.001);
@@ -803,6 +935,24 @@ double PianoRollNoteLayer::snapToGrid(double beat) {
     return std::round(beat / grid) * grid;
 }
 
+int PianoRollNoteLayer::snapPitchToScale(int pitch) {
+    if (!snapToScale_ || scaleType_ == ScaleType::Chromatic) return pitch;
+    if (MusicTheory::isNoteInScale(pitch, rootKey_, scaleType_)) return pitch;
+    int bestPitch = pitch;
+    int bestDist = 128;
+    for (int candidate = pitch - 6; candidate <= pitch + 6; ++candidate) {
+        if (candidate < 0 || candidate > 127) continue;
+        if (MusicTheory::isNoteInScale(candidate, rootKey_, scaleType_)) {
+            int dist = std::abs(candidate - pitch);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestPitch = candidate;
+            }
+        }
+    }
+    return bestPitch;
+}
+
 void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
     auto b = getBounds();
@@ -820,15 +970,14 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         NUIColor gBorder = ghost.color.withAlpha(0.2f);
         
         for (const auto& n : ghost.notes) {
-            double relX = (n.startBeat * pixelsPerBeat_) - static_cast<double>(scrollX_);
-            float x = b.x + static_cast<float>(relX);
+            float x = snapRectX(beatToScreenX(n.startBeat, pixelsPerBeat_, scrollX_, b.x));
             float y = b.y + (127 - n.pitch) * keyHeight_ - scrollY_;
-            float w = static_cast<float>(n.durationBeats * pixelsPerBeat_);
+            float w = std::max(1.0f, std::round(static_cast<float>(n.durationBeats * pixelsPerBeat_)));
             float h = keyHeight_;
             
             if (x + w < b.x || x > b.x + b.width || y + h < b.y || y > b.y + b.height) continue;
             
-            NUIRect r(x + 1, y + 1, std::max(4.0f, w - 2), h - 2);
+            NUIRect r(x, y + 1, std::max(4.0f, w), h - 2);
             renderer.fillRoundedRect(r, 4.0f, gCol); // More rounded
             renderer.strokeRoundedRect(r, 4.0f, 1.0f, gBorder);
         }
@@ -839,10 +988,9 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
     for (const auto& n : notes_) {
         if (n.startBeat > visibleEndBeat) break;
         
-        double relX = (n.startBeat * pixelsPerBeat_) - static_cast<double>(scrollX_);
-        float x = b.x + static_cast<float>(relX);
+        float x = snapRectX(beatToScreenX(n.startBeat, pixelsPerBeat_, scrollX_, b.x));
         float y = b.y + (127 - n.pitch) * keyHeight_ - scrollY_;
-        float w = static_cast<float>(n.durationBeats * pixelsPerBeat_);
+        float w = std::max(1.0f, std::round(static_cast<float>(n.durationBeats * pixelsPerBeat_)));
         float h = keyHeight_;
         
         if (x + w < b.x || y + h < b.y || y > b.y + b.height) continue;
@@ -860,7 +1008,7 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
 
         if (n.isDeleted && animScale <= 0.01f) continue;
         
-        NUIRect r(x + 1, y + 1, std::max(6.0f, w - 2), h - 2);
+        NUIRect r(x, y + 1, std::max(6.0f, w), h - 2);
         
         NUIColor baseColor = n.selected ? noteColorSelected : noteColor;
         NUIColor glowColor = baseColor.withAlpha(0.18f);
@@ -877,6 +1025,23 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         renderer.fillRoundedRect(NUIRect(r.x + 1.0f, r.y + 1.0f, r.width - 2.0f, r.height * 0.42f), 5.0f, NUIColor::white().withAlpha(n.selected ? 0.18f : 0.11f));
         renderer.strokeRoundedRect(r, 6.0f, 1.0f, edgeColor);
         renderer.fillRoundedRect(NUIRect(r.x + 2.0f, r.bottom() - 3.0f, std::max(8.0f, r.width - 4.0f), 1.5f), 0.75f, glowColor);
+
+        // [FEATURE] Render pitch name label inside the note block
+        // Minimum width threshold: hide label if note is too narrow to avoid overflow
+        constexpr float kMinWidthForLabel = 22.0f;
+        if (w >= kMinWidthForLabel) {
+            std::string pitchLabel = MusicTheory::getPitchName(n.pitch);
+            constexpr float kFontSize = 10.0f;
+            auto measured = renderer.measureText(pitchLabel, kFontSize);
+            // Left-align with padding, vertically centered
+            float labelX = r.x + 5.0f;
+            float labelY = r.y + (r.height - measured.height) * 0.5f;
+            // Clip label to note bounds (renderer should handle this, but extra safety)
+            if (labelX + measured.width < r.x + r.width) {
+                NUIColor labelColor = NUIColor::white().withAlpha(0.85f);
+                renderer.drawText(pitchLabel, NUIPoint(labelX, labelY), kFontSize, labelColor);
+            }
+        }
     }
 
     renderer.clearClipRect();
@@ -971,8 +1136,9 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                  double beat = std::max(0.0, static_cast<double>(localX / pixelsPerBeat_));
                  beat = snapToGrid(beat);
                  
-                 int pitch = 127 - static_cast<int>(localY / keyHeight_);
-                 pitch = std::clamp(pitch, 0, 127);
+                  int pitch = 127 - static_cast<int>(localY / keyHeight_);
+                  pitch = std::clamp(pitch, 0, 127);
+                  pitch = snapPitchToScale(pitch);
                  
                  MidiNote newNote;
                  newNote.pitch = pitch;
@@ -1026,7 +1192,8 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             paintStartBeat_ = snapToGrid(beat);
             
             int pitch = 127 - static_cast<int>(localY / keyHeight_);
-            paintPitch_ = std::clamp(pitch, 0, 127);
+            pitch = std::clamp(pitch, 0, 127);
+            paintPitch_ = snapPitchToScale(pitch);
             
             MidiNote newNote;
             newNote.pitch = paintPitch_;
@@ -1041,6 +1208,8 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             paintingNoteIndex_ = static_cast<int>(notes_.size()) - 1;
             
             dragStartPos_ = event.position;
+            dragStartScrollX_ = scrollX_;
+            dragStartScrollY_ = scrollY_;
             repaint();
             return true;
         }
@@ -1076,6 +1245,8 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             
             state_ = isRightEdge ? State::Resizing : State::Moving;
             dragStartPos_ = event.position;
+            dragStartScrollX_ = scrollX_;
+            dragStartScrollY_ = scrollY_;
             dragStartNotes_ = notes_; 
             
             repaint();
@@ -1099,6 +1270,13 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     
     // --- DRAGGING (Left Button) ---
     if (!event.pressed && !event.released && state_ != State::None) {
+        auto parent = getParent();
+        updateEdgeScrolling(event.position.x, event.position.y, b, [this, parent]() {
+            if (parent) {
+                parent->repaint();
+            }
+        });
+        
         if (state_ == State::SelectingBox) {
             float w = event.position.x - dragStartPos_.x;
             float h = event.position.y - dragStartPos_.y;
@@ -1139,7 +1317,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         }
         
         if (state_ == State::Painting && paintingNoteIndex_ != -1) {
-            float dx = event.position.x - dragStartPos_.x;
+            float dx = (event.position.x - dragStartPos_.x) + (scrollX_ - dragStartScrollX_);
             double beatDelta = dx / pixelsPerBeat_;
             
             double newDur = lastNoteDuration_ + beatDelta; 
@@ -1150,8 +1328,8 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
         else if (state_ == State::Moving) {
-            float dx = event.position.x - dragStartPos_.x;
-            float dy = event.position.y - dragStartPos_.y;
+            float dx = (event.position.x - dragStartPos_.x) + (scrollX_ - dragStartScrollX_);
+            float dy = (event.position.y - dragStartPos_.y) + (scrollY_ - dragStartScrollY_);
             
             double beatDelta = dx / pixelsPerBeat_;
             int pitchDelta = -static_cast<int>(dy / keyHeight_);
@@ -1161,14 +1339,15 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                     double newStart = dragStartNotes_[i].startBeat + beatDelta;
                     notes_[i].startBeat = std::max(0.0, snapToGrid(newStart));
                     int newPitch = dragStartNotes_[i].pitch + pitchDelta;
-                    notes_[i].pitch = std::clamp(newPitch, 0, 127);
+                    newPitch = std::clamp(newPitch, 0, 127);
+                    notes_[i].pitch = snapPitchToScale(newPitch);
                 }
             }
             repaint();
             return true;
         }
         else if (state_ == State::Resizing) {
-            float dx = event.position.x - dragStartPos_.x;
+            float dx = (event.position.x - dragStartPos_.x) + (scrollX_ - dragStartScrollX_);
             double beatDelta = dx / pixelsPerBeat_;
             
             for (size_t i = 0; i < notes_.size(); ++i) {
@@ -1415,6 +1594,64 @@ void PianoRollNoteLayer::setPixelsPerBeat(float ppb) { pixelsPerBeat_ = std::max
 void PianoRollNoteLayer::setKeyHeight(float height) { keyHeight_ = std::max(8.0f, height); repaint(); }
 void PianoRollNoteLayer::setScrollOffsetX(float offset) { scrollX_ = offset; repaint(); }
 void PianoRollNoteLayer::setScrollOffsetY(float offset) { scrollY_ = offset; repaint(); }
+
+void PianoRollNoteLayer::updateEdgeScrolling(float mouseX, float mouseY, const NUIRect& bounds, std::function<void()> syncCallback) {
+    if (state_ == State::None) {
+        isEdgeScrolling_ = false;
+        edgeScrollDir_ = {0.0f, 0.0f};
+        return;
+    }
+
+    float edgeL = mouseX - bounds.x;
+    float edgeR = (bounds.x + bounds.width) - mouseX;
+    float edgeT = mouseY - bounds.y;
+    float edgeB = (bounds.y + bounds.height) - mouseY;
+
+    float speedX = 0.0f;
+    float speedY = 0.0f;
+
+    if (edgeL < kEdgeThreshold) {
+        const float t = std::clamp(1.0f - (edgeL / kEdgeThreshold), 0.0f, 1.0f);
+        speedX = -kMaxScrollSpeed * t;
+    } else if (edgeR < kEdgeThreshold) {
+        const float t = std::clamp(1.0f - (edgeR / kEdgeThreshold), 0.0f, 1.0f);
+        speedX = kMaxScrollSpeed * t;
+    }
+
+    if (edgeT < kEdgeThreshold) {
+        const float t = std::clamp(1.0f - (edgeT / kEdgeThreshold), 0.0f, 1.0f);
+        speedY = -kMaxScrollSpeed * t;
+    } else if (edgeB < kEdgeThreshold) {
+        const float t = std::clamp(1.0f - (edgeB / kEdgeThreshold), 0.0f, 1.0f);
+        speedY = kMaxScrollSpeed * t;
+    }
+
+    if (std::abs(speedX) > 0.1f || std::abs(speedY) > 0.1f) {
+        isEdgeScrolling_ = true;
+        edgeScrollDir_ = {speedX, speedY};
+
+        float totalH = 128.0f * keyHeight_;
+        float maxScrollY = std::max(0.0f, totalH - bounds.height);
+        float totalW = static_cast<float>(std::max(4.0, totalDurationBeats_)) * pixelsPerBeat_;
+        float maxScrollX = std::max(0.0f, totalW - bounds.width);
+
+        scrollX_ = safeClampScroll(scrollX_ + speedX, maxScrollX);
+        scrollY_ = safeClampScroll(scrollY_ + speedY, maxScrollY);
+
+        if (auto* view = dynamic_cast<PianoRollView*>(getParent())) {
+            view->applyEdgeAutoScroll(scrollX_, scrollY_);
+        }
+
+        repaint();
+        
+        if (syncCallback) {
+            syncCallback();
+        }
+    } else {
+        isEdgeScrolling_ = false;
+        edgeScrollDir_ = {0.0f, 0.0f};
+    }
+}
 void PianoRollNoteLayer::setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb) { onNotesChanged_ = cb; }
 
 // =============================================================================
@@ -1667,8 +1904,13 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
 // PianoRollView
 // =============================================================================
 PianoRollView::PianoRollView()
-    : m_keyLaneWidth(60.0f), m_rulerHeight(30.0f), m_pixelsPerBeat(80.0f), m_keyHeight(24.0f), m_scrollX(0.0f), m_scrollY(1800.0f), m_targetScrollX(0.0f), m_targetScrollY(1800.0f)
+    : m_keyLaneWidth(60.0f), m_rulerHeight(30.0f), m_pixelsPerBeat(80.0f), m_keyHeight(24.0f),
+      m_scrollX(0.0f), m_targetScrollX(0.0f)
 {
+    // [FIX] Canonical default octave: C3 (MIDI 48).
+    // scrollY = (127 - targetPitch) * keyHeight => (127 - 48) * 24 = 1896
+    m_scrollY = 1896.0f;
+    m_targetScrollY = 1896.0f;
     m_keys = std::make_shared<PianoRollKeyLane>();
     m_ruler = std::make_shared<PianoRollRuler>();
     m_grid = std::make_shared<PianoRollGrid>();
@@ -1679,6 +1921,7 @@ PianoRollView::PianoRollView()
     m_toolbar = std::make_shared<PianoRollToolbar>();
     m_toolbar->setGrid(m_grid);
     m_toolbar->setNoteLayer(m_notes);
+    m_toolbar->setPatternLengthBeats(m_patternLengthBeats);
 
     m_controls->setNoteLayer(m_notes);
     
@@ -1731,7 +1974,7 @@ PianoRollView::PianoRollView()
         float totalH = 128 * m_keyHeight;
         float visibleH = m_grid->getHeight();
         float maxScroll = std::max(0.0f, totalH - visibleH);
-        m_targetScrollY = std::clamp(static_cast<float>(val), 0.0f, maxScroll);
+        m_targetScrollY = safeClampRange(static_cast<float>(val), 0.0f, maxScroll);
     });
     
     addChild(m_keys);
@@ -1759,8 +2002,7 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
     const double visibleEndBeat = visibleStartBeat + getViewDurationBeats();
     if (m_playheadBeat < visibleStartBeat || m_playheadBeat > visibleEndBeat) return;
 
-    const float playheadX =
-        gridBounds.x + static_cast<float>((m_playheadBeat - visibleStartBeat) * (gridBounds.width / std::max(0.25, getViewDurationBeats())));
+    const float playheadX = snapVerticalLineX(beatToScreenX(m_playheadBeat, m_pixelsPerBeat, m_scrollX, gridBounds.x));
     const float playheadStartY = rulerBounds.bottom();
     const float playheadEndY = gridBounds.bottom();
 
@@ -1803,7 +2045,7 @@ void PianoRollView::onUpdate(double deltaTime) {
     const float totalH = 128 * m_keyHeight;
     const float visibleH = m_grid ? m_grid->getHeight() : 0.0f;
     const float maxScrollY = std::max(0.0f, totalH - visibleH);
-    m_targetScrollY = std::clamp(m_targetScrollY, 0.0f, maxScrollY);
+    m_targetScrollY = safeClampRange(m_targetScrollY, 0.0f, maxScrollY);
     m_targetScrollX = std::max(0.0f, m_targetScrollX);
 
     bool changed = false;
@@ -1849,9 +2091,9 @@ void PianoRollView::layoutChildren() {
     
     float topTotalH = toolbarH + miniMapH + rulerH;
     
-    float keyW = m_keyLaneWidth;
-    float contentW = b.width - keyW - sbSize;
-    float contentH = b.height - topTotalH - m_controlPanelHeight; // Subtract control panel
+    float keyW = std::max(40.0f, m_keyLaneWidth);
+    float contentW = std::max(0.0f, b.width - keyW - sbSize);
+    float contentH = std::max(0.0f, b.height - topTotalH - m_controlPanelHeight); // Subtract control panel
     
     // 1. Minimap (Top)
     m_minimap->setVisible(m_showLocalMinimap);
@@ -1971,7 +2213,8 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
         float dy = event.position.y - m_dragStartPos.y;
         // Dragging UP increases height
         float newH = m_dragStartPanelHeight - dy;
-        m_controlPanelHeight = std::clamp(newH, 20.0f, b.height * 0.5f);
+        const float maxPanelHeight = std::max(20.0f, b.height * 0.5f);
+        m_controlPanelHeight = std::min(std::max(newH, 20.0f), maxPanelHeight);
         layoutChildren();
         return true;
     }
@@ -1987,7 +2230,7 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
 
     // 2. View-level fallback for Grid Scrolling (if Grid didn't handle it)
     if (event.wheelDelta != 0.0f) {
-        bool shift = (event.modifiers & NUIModifiers::Shift);
+        bool shift = (event.modifiers & NUIModifiers::Shift) || (event.modifiers & NUIModifiers::CapsLock);
         bool ctrl = (event.modifiers & NUIModifiers::Ctrl);
         
         if (ctrl) {
@@ -2003,7 +2246,7 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
             float maxScroll = std::max(0.0f, totalH - visibleH);
             
             float newY = m_targetScrollY - event.wheelDelta * 30.0f;
-            m_targetScrollY = std::clamp(newY, 0.0f, maxScroll);
+            m_targetScrollY = safeClampRange(newY, 0.0f, maxScroll);
         }
         
         if (ctrl) {
@@ -2045,6 +2288,17 @@ void PianoRollView::setOnNotesChanged(std::function<void(const std::vector<MidiN
     });
 }
 
+void PianoRollView::setIsPlayingCallback(std::function<bool()> cb) {
+    m_isPlayingCallback = std::move(cb);
+}
+
+void PianoRollView::setOnPreviewNote(std::function<void(int pitch, int velocity)> cb) {
+    if (m_keys) {
+        m_keys->setOnPreviewNote(std::move(cb));
+        m_keys->setIsPlayingFromParent(m_isPlayingCallback);
+    }
+}
+
 void PianoRollView::setDefaultUnitId(uint64_t unitId) {
     m_notes->setDefaultUnitId(unitId);
 }
@@ -2069,10 +2323,26 @@ void PianoRollView::setScale(int root, ScaleType type) {
         m_grid->setRootKey(root);
         m_grid->setScaleType(type);
     }
+    if (m_notes) {
+        m_notes->setRootKey(root);
+        m_notes->setScaleType(type);
+    }
 }
 
 void PianoRollView::setPatternName(const std::string& name) {
     if (m_toolbar) m_toolbar->setPatternName(name);
+}
+
+void PianoRollView::setPatternLengthBeats(double beats) {
+    m_patternLengthBeats = std::max(16.0, beats);
+    if (m_toolbar) {
+        m_toolbar->setPatternLengthBeats(m_patternLengthBeats);
+    }
+    if (std::abs(m_totalDurationBeats - m_patternLengthBeats) > 0.001) {
+        setTotalDurationBeats(m_patternLengthBeats);
+    } else {
+        repaint();
+    }
 }
 
 void PianoRollView::setPlayheadBeat(double beat, bool follow) {
@@ -2099,15 +2369,42 @@ void PianoRollView::setPlayheadBeat(double beat, bool follow) {
 }
 
 void PianoRollView::setTotalDurationBeats(double beats) {
-    m_totalDurationBeats = std::max(4.0, beats);
+    m_totalDurationBeats = std::max(16.0, beats);
+    m_patternLengthBeats = m_totalDurationBeats;
+    if (m_toolbar) {
+        m_toolbar->setPatternLengthBeats(m_patternLengthBeats);
+    }
     updateScrollbars();
     syncChildren();
+}
+
+void PianoRollView::setOnAdjustPatternLength(std::function<void(int barsDelta)> cb) {
+    if (m_toolbar) {
+        m_toolbar->setOnAdjustPatternLength(std::move(cb));
+    }
 }
 
 void PianoRollView::setLocalMinimapVisible(bool visible) {
     if (m_showLocalMinimap == visible) return;
     m_showLocalMinimap = visible;
     layoutChildren();
+}
+
+void PianoRollView::applyEdgeAutoScroll(float scrollX, float scrollY) {
+    const float totalH = 128.0f * m_keyHeight;
+    const float visibleH = m_grid ? m_grid->getHeight() : 0.0f;
+    const float maxScrollY = std::max(0.0f, totalH - visibleH);
+    const float visibleW = m_grid ? m_grid->getWidth() : 0.0f;
+    const double dynamicTotalBeats = std::max(std::max(4.0, m_totalDurationBeats), getViewDurationBeats() + 8.0);
+    const float totalW = static_cast<float>(dynamicTotalBeats) * m_pixelsPerBeat;
+    const float maxScrollX = std::max(0.0f, totalW - visibleW);
+
+    m_scrollX = safeClampScroll(scrollX, maxScrollX);
+    m_scrollY = safeClampScroll(scrollY, maxScrollY);
+    m_targetScrollX = m_scrollX;
+    m_targetScrollY = m_scrollY;
+    updateScrollbars();
+    syncChildren();
 }
 
 double PianoRollView::getViewStartBeat() const {

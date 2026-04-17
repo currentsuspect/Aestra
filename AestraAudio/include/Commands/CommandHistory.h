@@ -81,6 +81,16 @@ public:
     std::string getUndoName() const;
     std::string getRedoName() const;
 
+    // Public accessors for history panel
+    /** @brief Get the undo stack (most recent first). */
+    const std::vector<std::shared_ptr<ICommand>>& getUndoStack() const { return m_undoStack; }
+    /** @brief Get the redo stack (most recent first). */
+    const std::vector<std::shared_ptr<ICommand>>& getRedoStack() const { return m_redoStack; }
+    /** @brief Undo to a specific position in the undo stack. */
+    void undoTo(int targetIndex);
+    /** @brief Redo to a specific position in the redo stack. */
+    void redoTo(int targetIndex);
+
     void clear();
 
     /**
@@ -103,7 +113,10 @@ public:
 
     // Callbacks for UI updates
     using StateChangedCallback = std::function<void()>;
-    void setOnStateChanged(StateChangedCallback cb) { m_onStateChanged = cb; }
+    /** @brief Replace all state-changed callbacks with a single one. */
+    void setOnStateChanged(StateChangedCallback cb) { m_onStateChangedCallbacks = {std::move(cb)}; }
+    /** @brief Add an additional state-changed callback without removing existing ones. */
+    void addOnStateChanged(StateChangedCallback cb) { m_onStateChangedCallbacks.push_back(std::move(cb)); }
 
 private:
     std::vector<std::shared_ptr<ICommand>> m_undoStack;
@@ -116,7 +129,7 @@ private:
     size_t m_maxHistoryMemory = 100 * 1024 * 1024; // 100MB default
 
     mutable std::mutex m_mutex;
-    StateChangedCallback m_onStateChanged;
+    std::vector<StateChangedCallback> m_onStateChangedCallbacks;
 
     void trimHistory();
     void trimHistoryByMemory();

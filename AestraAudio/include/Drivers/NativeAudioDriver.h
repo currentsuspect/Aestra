@@ -62,8 +62,8 @@ public:
     // Note: isAvailable is in IAudioDriver
 
     // Dithering defaults (can be overridden by specific drivers like WASAPI Shared)
-    virtual void setDitheringEnabled(bool enabled) override {}
-    virtual bool isDitheringEnabled() const override { return false; }
+    virtual void setDitheringEnabled(bool enabled) {}
+    virtual bool isDitheringEnabled() const { return false; }
 
     /**
      * @brief Get typical latency for this driver type

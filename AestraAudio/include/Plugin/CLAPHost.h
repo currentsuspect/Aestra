@@ -109,6 +109,7 @@ private:
     const clap_plugin_entry* m_entry = nullptr;
     const clap_plugin* m_plugin = nullptr;
     clap_host* m_host = nullptr;
+    std::unique_ptr<clap_host> m_hostStorage;
 
     // Parameter cache
     mutable std::vector<PluginParameter> m_parameterCache;

@@ -32,6 +32,7 @@ private:
     // UI Controls
     std::shared_ptr<AestraUI::Fader> m_volumeFader;
     std::shared_ptr<AestraUI::PanKnob> m_panKnob;
+    float m_volumeAtDragStart = 0.8f; // Captured at drag start for undo
     std::shared_ptr<AestraUI::MuteButton> m_muteButton;
     std::shared_ptr<AestraUI::SoloButton> m_soloButton;
     

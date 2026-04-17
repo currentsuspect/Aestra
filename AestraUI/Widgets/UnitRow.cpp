@@ -13,6 +13,38 @@
 
 namespace AestraUI {
 
+namespace {
+float safeClampUnitRowFloat(float value, float lower, float upper)
+{
+    if (!std::isfinite(value) || !std::isfinite(lower) || !std::isfinite(upper)) {
+        return lower;
+    }
+    if (upper < lower) {
+        upper = lower;
+    }
+    if (value <= lower) {
+        return lower;
+    }
+    if (value >= upper) {
+        return upper;
+    }
+    return value;
+}
+
+void drawUnitRowChip(NUIRenderer& renderer,
+                     const NUIRect& rect,
+                     const std::string& text,
+                     const NUIColor& fill,
+                     const NUIColor& stroke,
+                     const NUIColor& textColor,
+                     float fontSize = 9.0f)
+{
+    renderer.fillRoundedRect(rect, 5.0f, fill);
+    renderer.strokeRoundedRect(rect, 5.0f, 1.0f, stroke);
+    renderer.drawTextCentered(text, rect, fontSize, textColor);
+}
+}
+
 UnitRow::UnitRow(std::shared_ptr<Aestra::Audio::TrackManager> trackManager, Aestra::Audio::UnitManager& manager, Aestra::Audio::UnitID unitId, Aestra::Audio::PatternID patternId)
     : m_trackManager(trackManager), m_manager(manager), m_unitId(unitId), m_patternId(patternId)
 {
@@ -287,7 +319,7 @@ void UnitRow::drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
 void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
     float centerY = bounds.y + bounds.height * 0.5f;
-    float x = bounds.x;
+    float x = bounds.x + 2.0f;
     
     // === 1. Power Button ===
     NUIRect pwrRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
@@ -312,7 +344,7 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     // === 5. Edit Button (New) ===
     NUIRect gearRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
     drawGearIcon(renderer, gearRect, false); // Always "inactive" state unless toggled? Just use clickable style
-    x += BUTTON_SIZE + BUTTON_SPACING + 4.0f;
+    x += BUTTON_SIZE + BUTTON_SPACING + 10.0f;
     
     // === Right-aligned info cluster ===
     float rightX = bounds.x + bounds.width - 4.0f;
@@ -330,27 +362,27 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     if (!m_isEditingName) {
         // Truncate long names to fit available space
         std::string displayName = m_name;
-        float maxNameWidth = nameWidth - 10.0f; // Leave some padding
-        auto textSize = renderer.measureText(displayName, 13.0f);
+        float maxNameWidth = nameWidth - 10.0f;
+        auto textSize = renderer.measureText(displayName, 13.5f);
         
         if (textSize.width > maxNameWidth && displayName.length() > 3) {
             // Binary search for truncation point
             while (textSize.width > maxNameWidth && displayName.length() > 3) {
                 displayName = displayName.substr(0, displayName.length() - 1);
-                textSize = renderer.measureText(displayName + "...", 13.0f);
+                textSize = renderer.measureText(displayName + "...", 13.5f);
             }
             displayName += "...";
         }
         
-        renderer.drawText(displayName, NUIPoint(x, bounds.y + 9.0f), 13.0f, theme.getColor("textPrimary"));
+        renderer.drawText(displayName, NUIPoint(x, bounds.y + 7.0f), 13.5f, theme.getColor("textPrimary"));
 
-        std::string metaText = m_groupLabel;
+        std::string metaText = m_groupLabel + " • " + m_sourceSummary;
 
         float maxMetaWidth = std::max(40.0f, nameWidth - 10.0f);
-        auto metaSize = renderer.measureText(metaText, 10.0f);
+        auto metaSize = renderer.measureText(metaText, 9.5f);
         while (metaSize.width > maxMetaWidth && metaText.length() > 3) {
             metaText.pop_back();
-            metaSize = renderer.measureText(metaText + "...", 10.0f);
+            metaSize = renderer.measureText(metaText + "...", 9.5f);
         }
         if (metaSize.width > maxMetaWidth) {
             metaText = "...";
@@ -359,7 +391,44 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         }
 
         if (nameWidth > 90.0f) {
-            renderer.drawText(metaText, NUIPoint(x, bounds.y + 24.0f), 10.0f, theme.getColor("textSecondary"));
+            renderer.drawText(metaText, NUIPoint(x, bounds.y + 22.0f), 9.5f, theme.getColor("textSecondary").withAlpha(0.95f));
+        }
+
+        if (nameWidth > 140.0f) {
+            std::string stateText = m_isEnabled ? "ACTIVE" : "BYPASSED";
+            if (m_isMuted) {
+                stateText = "MUTED";
+            } else if (m_isSolo) {
+                stateText = "SOLO";
+            } else if (m_isArmed) {
+                stateText = "ARMED";
+            }
+
+            const float stateW = renderer.measureText(stateText, 8.5f).width + 12.0f;
+            const NUIRect stateRect(x, bounds.y + 35.0f, stateW, 14.0f);
+            NUIColor stateFill = theme.getColor("surfaceSecondary").withAlpha(0.72f);
+            NUIColor stateStroke = theme.getColor("borderSubtle").withAlpha(0.9f);
+            NUIColor stateTextColor = theme.getColor("textSecondary");
+
+            if (m_isMuted) {
+                stateFill = NUIColor(1.0f, 0.65f, 0.20f, 0.18f);
+                stateStroke = NUIColor(1.0f, 0.75f, 0.30f, 0.7f);
+                stateTextColor = NUIColor(1.0f, 0.85f, 0.45f, 1.0f);
+            } else if (m_isSolo) {
+                stateFill = NUIColor(1.0f, 0.88f, 0.25f, 0.18f);
+                stateStroke = NUIColor(1.0f, 0.88f, 0.35f, 0.7f);
+                stateTextColor = NUIColor(1.0f, 0.9f, 0.45f, 1.0f);
+            } else if (m_isArmed) {
+                stateFill = NUIColor(0.96f, 0.30f, 0.36f, 0.18f);
+                stateStroke = NUIColor(1.0f, 0.42f, 0.48f, 0.75f);
+                stateTextColor = NUIColor(1.0f, 0.72f, 0.78f, 1.0f);
+            } else if (m_isEnabled) {
+                stateFill = theme.getColor("accentPrimary").withAlpha(0.16f);
+                stateStroke = theme.getColor("accentPrimary").withAlpha(0.72f);
+                stateTextColor = theme.getColor("accentPrimary").lightened(0.18f);
+            }
+
+            drawUnitRowChip(renderer, stateRect, stateText, stateFill, stateStroke, stateTextColor, 8.5f);
         }
     }
 
@@ -403,7 +472,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         int startStep{0};
         int endStep{0};
         int lane{0};
-        int pitch{60};
+        int pitch{48};
         float velocity{1.0f};
     };
     
@@ -412,10 +481,27 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     float g = ((m_color >> 8) & 0xFF) / 255.0f;
     float b = (m_color & 0xFF) / 255.0f;
     NUIColor unitAccent(r, g, b, 1.0f);
+
+    const NUIRect contentCard(bounds.x + 2.0f, bounds.y + 5.0f,
+                              std::max(0.0f, bounds.width - 4.0f),
+                              std::max(0.0f, bounds.height - 10.0f));
+    renderer.fillRoundedRect(contentCard, 8.0f, theme.getColor("backgroundSecondary").withAlpha(0.8f));
+    renderer.strokeRoundedRect(contentCard, 8.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.8f));
+
+    const float laneHeaderHeight = 16.0f;
+    const float lanePadding = 6.0f;
+    const NUIRect timelineStrip(contentCard.x + lanePadding,
+                                contentCard.y + lanePadding,
+                                std::max(0.0f, contentCard.width - lanePadding * 2.0f),
+                                laneHeaderHeight);
+    const NUIRect noteLane(contentCard.x + lanePadding,
+                           timelineStrip.bottom() + 4.0f,
+                           std::max(0.0f, contentCard.width - lanePadding * 2.0f),
+                           std::max(0.0f, contentCard.height - (timelineStrip.height + lanePadding * 2.0f + 4.0f)));
+    renderer.fillRoundedRect(timelineStrip, 5.0f, theme.getColor("surfaceTertiary").withAlpha(0.8f));
     
     // === Step Grid Layout ===
-    // Use minimum step width to enable scrolling for high step counts
-    float availWidth = bounds.width;
+    float availWidth = noteLane.width;
     float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f); // Min 26px
     float totalWidth = stepWidth * m_stepCount;
     
@@ -425,10 +511,9 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     
     float padSize = stepWidth - PAD_SPACING;
     padSize = std::max(padSize, PAD_MIN_SIZE);
-    // Cap pad size to height (minus margins)
-    padSize = std::min(padSize, bounds.height - 10.0f);
+    padSize = std::min(padSize, noteLane.height - 2.0f);
     
-    float gridY = bounds.y + (bounds.height - padSize) / 2.0f;
+    float gridY = noteLane.y + std::max(0.0f, (noteLane.height - padSize) / 2.0f);
     
     // === Fetch Active Steps ===
     std::vector<int> activeSteps;
@@ -481,89 +566,134 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     NUIColor stepActiveColor = unitAccent; 
     NUIColor stepGlowColor = unitAccent.withAlpha(0.5f);
     
-    // Clip to bounds to handle scrolling
-    // Note: If NUIRenderer doesn't support nested clip well, we manually clip logic below.
-    // We'll rely on manual visibility check.
-    
-    // === Render Each Step Pad ===
-    // === Render Each Step Pad (Neon Grid) ===
-    float padRadius = theme.getRadius("radiusS");
-    
-    for (int i = 0; i < m_stepCount; ++i) {
-        float stepX = bounds.x + (i * stepWidth) + (stepWidth - padSize) / 2.0f - m_scrollX;
+    // === Render Note Spans (Piano Roll Minimap) ===
+    if (!noteSpans.empty()) {
+        // Calculate pitch range
+        int minPitch = noteSpans[0].pitch;
+        int maxPitch = noteSpans[0].pitch;
+        for (const auto& span : noteSpans) {
+            if (span.pitch < minPitch) minPitch = span.pitch;
+            if (span.pitch > maxPitch) maxPitch = span.pitch;
+        }
         
-        // Visibility Culling
-        if (stepX + padSize < bounds.x) continue;
-        if (stepX > bounds.x + bounds.width) continue;
+        // Expand pitch range to show context (add 2 semitones padding)
+        minPitch = std::max(0, minPitch - 2);
+        maxPitch = std::min(127, maxPitch + 2);
+        const int pitchRange = std::max(maxPitch - minPitch, 12); // Min 1 octave visible
+        const float noteBarHeight = 6.0f;
         
-        NUIRect padRect(stepX, gridY, padSize, padSize);
+        // Calculate minimap height based on pitch range
+        const float minimapMinHeight = 40.0f;
+        const float minimapMaxHeight = std::max(minimapMinHeight, bounds.height - 8.0f);
+        const float minimapHeight = safeClampUnitRowFloat(
+            static_cast<float>(pitchRange) * 2.5f, // 2.5px per semitone
+            minimapMinHeight,
+            minimapMaxHeight
+        );
+        const float minimapY = bounds.y + (bounds.height - minimapHeight) / 2.0f;
         
-        // Visual hierarchy markers
-        bool isBarStart = (i % 4 == 0);
-        bool isHovered = (i == m_hoveredStep);
-        
-        bool isActive = std::find(activeSteps.begin(), activeSteps.end(), i) != activeSteps.end();
+        // Apply scroll offset to visible pitch range
+        const float scrolledMinPitch = static_cast<float>(minPitch) + m_minimapPitchOffset;
+        const float scrolledMaxPitch = scrolledMinPitch + static_cast<float>(pitchRange);
 
-        if (isActive) {
-            // == ACTIVE PAD (ON) ==
-            // Filled Neon
-            renderer.fillRoundedRect(padRect, padRadius, unitAccent);
-            // Inner Highlight
-            renderer.fillRoundedRect(NUIAligned(padRect, 2,2,2, padRect.height/2), padRadius-1, 
-                                     NUIColor::white().withAlpha(0.3f));
-            // Glow
-            renderer.drawShadow(padRect, 0, 0, 10.0f, unitAccent.withAlpha(0.6f));
-        } else {
-            // == INACTIVE PAD (OFF) ==
-            // Empty Glass Style
-            NUIColor padBg = theme.getColor("surfaceLight").withAlpha(0.3f);
-            
-            if (isHovered) {
-                padBg = unitAccent.withAlpha(0.2f);
-                renderer.drawShadow(padRect, 0, 0, 4.0f, unitAccent.withAlpha(0.2f));
-            } else if (isBarStart) {
-                padBg = theme.getColor("surfaceLight").withAlpha(0.5f);
+        // Draw grid lines (octave boundaries + pitch labels)
+        const char* pitchNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+        for (int p = minPitch; p <= maxPitch; ++p) {
+            if (p % 12 == 0) { // C notes = octave boundaries
+                float lineY = minimapY + minimapHeight
+                    - ((static_cast<float>(p) - scrolledMinPitch) / static_cast<float>(pitchRange)) * minimapHeight;
+                if (lineY >= minimapY && lineY <= minimapY + minimapHeight) {
+                    // Octave line — visible but subtle
+                    renderer.drawLine(
+                        NUIPoint(noteLane.x, lineY),
+                        NUIPoint(noteLane.right(), lineY),
+                        0.5f, NUIColor(1.0f, 1.0f, 1.0f, 0.2f)
+                    );
+                    // Pitch label
+                    int octave = (p / 12) - 1;
+                    std::string label = std::string("C") + std::to_string(octave);
+                    renderer.drawText(label, NUIPoint(noteLane.x + 2.0f, lineY - 7.0f), 8.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.35f));
+                }
             }
             
-            renderer.fillRoundedRect(padRect, padRadius, padBg);
-            
-            // Border
-            NUIColor borderColor = theme.getColor("border");
-            if (isBarStart) borderColor = borderColor.withAlpha(0.3f);
-            if (isHovered) borderColor = unitAccent.withAlpha(0.5f);
-            
-            renderer.strokeRoundedRect(padRect, padRadius, 1.0f, borderColor);
+            // Draw every semitone as a faint line for reference
+            if (p % 12 != 0) {
+                float lineY = minimapY + minimapHeight
+                    - ((static_cast<float>(p) - scrolledMinPitch) / static_cast<float>(pitchRange)) * minimapHeight;
+                if (lineY >= minimapY && lineY <= minimapY + minimapHeight) {
+                    renderer.drawLine(
+                        NUIPoint(noteLane.x, lineY),
+                        NUIPoint(noteLane.right(), lineY),
+                        0.3f, NUIColor(1.0f, 1.0f, 1.0f, 0.05f)
+                    );
+                }
+            }
         }
-    }
+        
+        // Draw beat grid lines (every 4 steps = 1 beat)
+        for (int s = 0; s <= m_stepCount; s += 1) {
+            float lineX = noteLane.x + (s * stepWidth) - m_scrollX;
+            if (lineX < noteLane.x || lineX > noteLane.right()) continue;
+            
+            bool isBeat = (s % 4 == 0);
+            bool isBar = (s % 16 == 0);
+            float thickness = isBar ? 1.0f : (isBeat ? 0.5f : 0.3f);
+            float alpha = isBar ? 0.24f : (isBeat ? 0.12f : 0.06f);
 
-    if (!noteSpans.empty()) {
-        const int laneCount = std::max(1, std::min(4, static_cast<int>(
-            std::max_element(noteSpans.begin(), noteSpans.end(),
-                             [](const NoteSpan& a, const NoteSpan& b) { return a.lane < b.lane; })->lane + 1)));
-        const float laneGap = 2.0f;
-        const float laneHeight = std::max(5.0f, (padSize - laneGap * (laneCount - 1)) / laneCount);
+            if (s < m_stepCount) {
+                NUIRect tickRect(lineX + 1.5f, timelineStrip.y + 2.0f, std::max(0.0f, stepWidth - 3.0f), timelineStrip.height - 4.0f);
+                if (isBar) {
+                    renderer.fillRoundedRect(tickRect, 3.5f, unitAccent.withAlpha(0.18f));
+                    renderer.strokeRoundedRect(tickRect, 3.5f, 1.0f, unitAccent.withAlpha(0.45f));
+                    const int barIndex = (s / 16) + 1;
+                    renderer.drawTextCentered("Bar " + std::to_string(barIndex), tickRect, 8.0f, theme.getColor("textSecondary").withAlpha(0.95f));
+                } else if (isBeat) {
+                    renderer.fillRoundedRect(tickRect, 3.0f, theme.getColor("surfaceSecondary").withAlpha(0.55f));
+                }
+            }
+            
+            renderer.drawLine(
+                NUIPoint(lineX, noteLane.y),
+                NUIPoint(lineX, noteLane.bottom()),
+                thickness, NUIColor(1.0f, 1.0f, 1.0f, alpha)
+            );
+        }
 
         for (const auto& span : noteSpans) {
             const float startX =
-                bounds.x + (span.startStep * stepWidth) + PAD_SPACING * 0.5f - m_scrollX;
+                noteLane.x + (span.startStep * stepWidth) + PAD_SPACING * 0.5f - m_scrollX;
             const float endX =
-                bounds.x + (span.endStep * stepWidth) - PAD_SPACING * 0.5f - m_scrollX;
+                noteLane.x + (span.endStep * stepWidth) - PAD_SPACING * 0.5f - m_scrollX;
             const float width = std::max(6.0f, endX - startX);
 
-            if (startX + width < bounds.x || startX > bounds.x + bounds.width) {
+            // Visibility culling
+            if (startX + width < noteLane.x || startX > noteLane.right()) {
                 continue;
             }
 
-            const float laneY = gridY + span.lane * (laneHeight + laneGap);
-            NUIRect spanRect(startX, laneY, width, laneHeight);
+            // Pitch-to-Y mapping using scrolled viewport
+            float pitchY = minimapY + minimapHeight
+                - ((span.pitch - scrolledMinPitch) / static_cast<float>(pitchRange)) * minimapHeight
+                - noteBarHeight;
+
+            // Clamp to minimap bounds
+            const float pitchYMin = minimapY + 1.0f;
+            const float pitchYMax = std::max(pitchYMin, minimapY + minimapHeight - noteBarHeight - 1.0f);
+            pitchY = safeClampUnitRowFloat(pitchY, pitchYMin, pitchYMax);
+
+            NUIRect spanRect(startX, pitchY, width, noteBarHeight);
             const float velocity = std::clamp(span.velocity <= 1.0f ? span.velocity : span.velocity / 127.0f, 0.1f, 1.0f);
             const NUIColor fill = unitAccent.withAlpha(0.45f + velocity * 0.35f);
             const NUIColor border = unitAccent.lightened(0.15f).withAlpha(0.95f);
 
-            renderer.fillRoundedRect(spanRect, std::min(laneHeight * 0.5f, 5.0f), fill);
-            renderer.strokeRoundedRect(spanRect, std::min(laneHeight * 0.5f, 5.0f), 1.0f, border);
-
+            renderer.fillRoundedRect(spanRect, std::min(noteBarHeight * 0.5f, 3.0f), fill);
+            renderer.strokeRoundedRect(spanRect, std::min(noteBarHeight * 0.5f, 3.0f), 1.0f, border);
         }
+    } else {
+        renderer.drawTextCentered("Empty lane · draw in Piano Roll or drop a sample/plugin",
+                                  noteLane,
+                                  10.0f,
+                                  theme.getColor("textSecondary").withAlpha(0.78f));
     }
 }
 
@@ -628,16 +758,35 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     
     // === Scroll Handling ===
     if (std::abs(event.wheelDelta) > 0.0f) {
-        // Only scroll if hovering over step grid
+        // Only scroll if hovering over context area (right of controls)
         if (bounds.contains(event.position) && (event.position.x - bounds.x > m_controlWidth)) {
-            // Log for debugging
-            std::cout << "[UnitRow] Scroll Delta: " << event.wheelDelta << std::endl;
-            // Adjust sensitivity (assuming 1.0 delta usually, but safety clamp)
             float delta = event.wheelDelta;
-            if (delta > 10.0f) delta = 1.0f; // Fix for raw 120 vs normalized 1
+            if (delta > 10.0f) delta = 1.0f;
             if (delta < -10.0f) delta = -1.0f;
             
-            m_scrollX -= delta * 40.0f; // 40px per 'tick'
+            // If notes exist, scroll pitch viewport instead of horizontal
+            bool hasNotes = false;
+            if (m_patternId.isValid()) {
+                auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId);
+                if (pattern && pattern->isMidi()) {
+                    auto& midi = std::get<Aestra::Audio::MidiPayload>(pattern->payload);
+                    for (const auto& note : midi.notes) {
+                        if (note.unitId == m_unitId || note.unitId == 0) {
+                            hasNotes = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (hasNotes) {
+                // Pitch viewport scroll (up/down = see higher/lower pitches)
+                m_minimapPitchOffset -= delta * 4.0f; // 4 semitones per tick
+                m_minimapPitchOffset = std::clamp(m_minimapPitchOffset, -60.0f, 60.0f);
+            } else {
+                // Horizontal scroll for step grid
+                m_scrollX -= delta * 40.0f;
+            }
             invalidateVisuals();
             return true;
         }

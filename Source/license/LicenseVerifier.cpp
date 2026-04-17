@@ -5,6 +5,7 @@
 #include <filesystem>
 
 #include "AestraJSON.h"
+#include "../AestraCore/include/AestraLog.h"
 
 namespace Aestra {
 
@@ -73,8 +74,8 @@ UserProfile loadProfile() {
 	try {
 		Aestra::JSON j = Aestra::JSON::parse(buffer.str());
 		profile = parseProfile(j);
-	} catch (...) {
-		// ignore parse errors, keep defaults
+	} catch (const std::exception& e) {
+		Aestra::Log::warning(std::string("[LicenseVerifier] Failed to parse user profile: ") + e.what());
 	}
 	return profile;
 }
@@ -88,7 +89,8 @@ bool saveProfile(const UserProfile& profile) {
 		Aestra::JSON j = serializeProfile(profile);
 		f << j.toString(2);
 		return true;
-	} catch (...) {
+	} catch (const std::exception& e) {
+		Aestra::Log::warning(std::string("[LicenseVerifier] Failed to save user profile: ") + e.what());
 		return false;
 	}
 }
@@ -99,6 +101,8 @@ bool verifyLicense(UserProfile& profile) {
 	// - Otherwise unverified; force tier to Aestra Core
 	const std::string payload = profile.username + profile.serial + profile.tier;
 	(void)payload; (void)kPublicKeyPem; // placeholders for real verification
+	// Deliberate stub: Aestra_CORE_MODE builds accept "MOCK-VALID" as a placeholder
+	// signature. Real cryptographic verification is implemented in the private repo.
 	bool ok = (profile.signature == "MOCK-VALID");
 	profile.verified = ok;
 	if (!ok) {

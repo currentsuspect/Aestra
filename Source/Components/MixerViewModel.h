@@ -5,6 +5,8 @@
 #include "MeterSnapshot.h"
 #include "ChannelSlotMap.h"
 #include "TrackManager.h"
+#include "Commands/CommandHistory.h"
+#include "Commands/PluginCommands.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -259,6 +261,9 @@ public:
     void setMeterMode(MeterMode mode) { m_meterMode = mode; }
     MeterMode getMeterMode() const { return m_meterMode; }
 
+    /** @brief Set CommandHistory for undo/redo on plugin operations. */
+    void setCommandHistory(Audio::CommandHistory* ch) { m_commandHistory = ch; }
+
     struct Destination {
         uint32_t id;
         std::string name;
@@ -303,6 +308,9 @@ private:
 
     // Default: FL-style body (energy) + peak overlay line (UI draws peak separately).
     MeterMode m_meterMode{MeterMode::Technical};
+
+    /// CommandHistory pointer for undo/redo on plugin operations (optional)
+    Audio::CommandHistory* m_commandHistory = nullptr;
 
     /**
      * @brief Rebuild id→index map after channel list changes.

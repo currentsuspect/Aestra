@@ -13,39 +13,38 @@ namespace Audio {
 /**
  * @brief AVX-512 optimized dot product for Sinc64 Turbo.
  *
+ * TASK 2: Phase interpolation — blend between c0 and c1 using alpha.
+ * coeff[t] = c0[t] + alpha * (c1[t] - c0[t])
+ * Then standard vectorized dot product with interleaved stereo de-interleaving.
+ *
  * Processes 16 taps per iteration (4 iterations for 64 taps).
  * Requires CPUDetection::hasAVX512F().
  */
-void sincDotProductAVX512(const float* coeffs,
+void sincDotProductAVX512(const float* c0,
+                          const float* c1,
+                          float alpha,
                           const float* samples, // Interleaved L/R stereo
                           float& sumL, float& sumR) {
     __m512 vSumL = _mm512_setzero_ps();
     __m512 vSumR = _mm512_setzero_ps();
-
-    // Indices for de-interleaving:
-    // We load 32 floats (16 pairs).
-    // Evens go to L, Odds go to R.
-    // _mm512_permutex2var_ps(a, idx, b) selects from concatenated pair (a, b).
-    // Note: The intrinsic signature is _mm512_permutex2var_ps(a, idx, b).
-
-    // Pattern to extract Even elements (0, 2, 4...) from two registers
-    // Indices 0..15 select from 'a', 16..31 select from 'b'.
-    // We want 0 from a, 2 from a ... 14 from a, 0 from b (index 16), 2 from b (index 18)...
+    __m512 vAlpha = _mm512_set1_ps(alpha);
 
     static const __m512i vIdxL =
-        _mm512_set_epi32(30, 28, 26, 24, 22, 20, 18, 16, // From second register (indices 16-31 map to 0-15 of b)
-                         14, 12, 10, 8, 6, 4, 2, 0       // From first register
-        );
+        _mm512_set_epi32(30, 28, 26, 24, 22, 20, 18, 16,
+                         14, 12, 10, 8, 6, 4, 2, 0);
 
     static const __m512i vIdxR = _mm512_set_epi32(31, 29, 27, 25, 23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1);
 
     for (int i = 0; i < 64; i += 16) {
-        __m512 vCoeff = _mm512_loadu_ps(&coeffs[i]);
+        __m512 vC0 = _mm512_loadu_ps(&c0[i]);
+        __m512 vC1 = _mm512_loadu_ps(&c1[i]);
 
-        // Load 32 floats (16 stereo pairs) -> 128 bytes
-        // Address is 64-byte aligned ideally, but using loadu to be safe
+        // Phase interpolation: coeff = c0 + alpha * (c1 - c0)
+        __m512 vCoeff = _mm512_fmadd_ps(_mm512_sub_ps(vC1, vC0), vAlpha, vC0);
+
+        // Load 32 floats (16 stereo pairs)
         __m512 vRaw1 = _mm512_loadu_ps(&samples[i * 2]);
-        __m512 vRaw2 = _mm512_loadu_ps(&samples[i * 2 + 16]); // Next 16 floats
+        __m512 vRaw2 = _mm512_loadu_ps(&samples[i * 2 + 16]);
 
         // De-interleave
         __m512 vL = _mm512_permutex2var_ps(vRaw1, vIdxL, vRaw2);
@@ -61,12 +60,16 @@ void sincDotProductAVX512(const float* coeffs,
 
 /**
  * @brief Reversed coefficient AVX-512 dot product.
+ * TASK 2: Phase interpolation + reversed coefficient access.
  */
-void sincDotProductAVX512_Reversed(const float* coeffs, const float* samples, float& sumL, float& sumR) {
+void sincDotProductAVX512_Reversed(const float* c0,
+                                   const float* c1,
+                                   float alpha,
+                                   const float* samples, float& sumL, float& sumR) {
     __m512 vSumL = _mm512_setzero_ps();
     __m512 vSumR = _mm512_setzero_ps();
+    __m512 vAlpha = _mm512_set1_ps(alpha);
 
-    // De-interleave indices (same as above)
     static const __m512i vIdxL = _mm512_set_epi32(30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 0);
     static const __m512i vIdxR = _mm512_set_epi32(31, 29, 27, 25, 23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1);
 
@@ -74,13 +77,17 @@ void sincDotProductAVX512_Reversed(const float* coeffs, const float* samples, fl
     static const __m512i vRev = _mm512_set_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
     for (int i = 0; i < 64; i += 16) {
-        // Load coeffs from the end backwards
-        // i=0 -> want c[63]..c[48]. Load &c[48].
-        const float* cPtr = &coeffs[64 - 16 - i];
-        __m512 vCoeff = _mm512_loadu_ps(cPtr);
+        const float* c0Ptr = &c0[64 - 16 - i];
+        const float* c1Ptr = &c1[64 - 16 - i];
+        __m512 vC0 = _mm512_loadu_ps(c0Ptr);
+        __m512 vC1 = _mm512_loadu_ps(c1Ptr);
 
         // Reverse coefficients
-        vCoeff = _mm512_permutexvar_ps(vRev, vCoeff);
+        vC0 = _mm512_permutexvar_ps(vRev, vC0);
+        vC1 = _mm512_permutexvar_ps(vRev, vC1);
+
+        // Phase interpolation
+        __m512 vCoeff = _mm512_fmadd_ps(_mm512_sub_ps(vC1, vC0), vAlpha, vC0);
 
         __m512 vRaw1 = _mm512_loadu_ps(&samples[i * 2]);
         __m512 vRaw2 = _mm512_loadu_ps(&samples[i * 2 + 16]);

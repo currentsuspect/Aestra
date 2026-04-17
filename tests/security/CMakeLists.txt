@@ -60,6 +60,7 @@ if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
     target_link_libraries(SecJsonDos PRIVATE AestraCore)
 
     target_include_directories(SecStoulCrash PRIVATE
+        ${REPO_ROOT}/Source
         ${REPO_ROOT}/Source/Core
         ${REPO_ROOT}/AestraAudio/include
         ${REPO_ROOT}/AestraAudio/include/Core
@@ -69,6 +70,7 @@ if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
         ${REPO_ROOT}/AestraPlat/include
     )
     target_include_directories(SecDivZero PRIVATE
+        ${REPO_ROOT}/Source
         ${REPO_ROOT}/Source/Core
         ${REPO_ROOT}/AestraAudio/include
         ${REPO_ROOT}/AestraAudio/include/Core
@@ -92,4 +94,41 @@ if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
     target_include_directories(SecJsonDos PRIVATE
         ${REPO_ROOT}/AestraCore/include
     )
+
+    target_include_directories(SecJsonParserHardening PRIVATE
+        ${REPO_ROOT}/Source/Core
+        ${REPO_ROOT}/AestraCore/include
+    )
+    target_link_libraries(SecJsonParserHardening PRIVATE AestraCore)
+
+    target_include_directories(SecEnvVarValidation PRIVATE
+        ${REPO_ROOT}/AestraCore/include
+    )
+    target_link_libraries(SecEnvVarValidation PRIVATE AestraCore)
+
+    target_include_directories(SecAutosaveRecoveryGuard PRIVATE
+        ${REPO_ROOT}/Source/Core
+        ${REPO_ROOT}/AestraCore/include
+        ${REPO_ROOT}/AestraAudio/include
+    )
+    target_link_libraries(SecAutosaveRecoveryGuard PRIVATE AestraCore)
+
+    target_include_directories(SecFlacVendorlenBounds PRIVATE
+        ${REPO_ROOT}/AestraCore/include
+        ${REPO_ROOT}/AestraAudio/include
+        ${REPO_ROOT}/AestraAudio/include/IO
+    )
+    target_link_libraries(SecFlacVendorlenBounds PRIVATE AestraCore)
+
+    target_include_directories(SecCacheMtimeIntegrity PRIVATE
+        ${REPO_ROOT}/AestraCore/include
+    )
+    target_link_libraries(SecCacheMtimeIntegrity PRIVATE AestraCore)
+
+    target_include_directories(SecPluginTrustedPath PRIVATE
+        ${REPO_ROOT}/AestraAudio/include
+        ${REPO_ROOT}/AestraAudio/include/Plugin
+        ${REPO_ROOT}/AestraCore/include
+    )
+    target_link_libraries(SecPluginTrustedPath PRIVATE AestraAudio AestraCore)
 endif()

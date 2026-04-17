@@ -367,6 +367,10 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         std::string pluginId(reinterpret_cast<const char*>(&state[offset]), idLen);
         offset += idLen;
 
+        if (offset + 1 + sizeof(float) > state.size()) {
+            return false;
+        }
+
         // Read bypass state
         bool bypassed = state[offset++] != 0;
 

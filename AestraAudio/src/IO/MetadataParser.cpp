@@ -378,24 +378,49 @@ bool MetadataParser::parseWAV(const std::string& filePath, AudioMetadata& meta) 
     if (!file)
         return false;
 
-    // Read RIFF header
-    uint8_t header[44];
-    file.read(reinterpret_cast<char*>(header), 44);
-    if (!file || file.gcount() < 44)
+    uint8_t riffHeader[12];
+    file.read(reinterpret_cast<char*>(riffHeader), 12);
+    if (!file || file.gcount() < 12)
         return false;
 
-    // Validate RIFF/WAVE
-    if (std::memcmp(header, "RIFF", 4) != 0 || std::memcmp(header + 8, "WAVE", 4) != 0) {
+    if (std::memcmp(riffHeader, "RIFF", 4) != 0 || std::memcmp(riffHeader + 8, "WAVE", 4) != 0) {
         return false;
     }
 
-    // Extract duration from fmt chunk
-    uint16_t numChannels = header[22] | (header[23] << 8);
-    uint32_t sampleRate = header[24] | (header[25] << 8) | (header[26] << 16) | (header[27] << 24);
-    uint16_t bitsPerSample = header[34] | (header[35] << 8);
+    uint16_t numChannels = 0;
+    uint32_t sampleRate = 0;
+    uint16_t bitsPerSample = 0;
+    uint32_t dataSize = 0;
+    bool foundFmt = false;
+    bool foundData = false;
 
-    // Find data chunk size (simplified: assume at offset 40)
-    uint32_t dataSize = header[40] | (header[41] << 8) | (header[42] << 16) | (header[43] << 24);
+    uint8_t chunkHeader[8];
+    while (file.read(reinterpret_cast<char*>(chunkHeader), 8)) {
+        uint32_t chunkSize = chunkHeader[4] | (chunkHeader[5] << 8) |
+                             (chunkHeader[6] << 16) | (chunkHeader[7] << 24);
+        char chunkId[5] = {};
+        std::memcpy(chunkId, chunkHeader, 4);
+
+        if (std::memcmp(chunkHeader, "fmt ", 4) == 0 && !foundFmt) {
+            foundFmt = true;
+            std::vector<uint8_t> fmtData(std::min<uint32_t>(chunkSize, 40));
+            file.read(reinterpret_cast<char*>(fmtData.data()), fmtData.size());
+            if (fmtData.size() >= 16) {
+                numChannels = fmtData[2] | (fmtData[3] << 8);
+                sampleRate = fmtData[4] | (fmtData[5] << 8) | (fmtData[6] << 16) | (fmtData[7] << 24);
+                bitsPerSample = fmtData[14] | (fmtData[15] << 8);
+            }
+            if (chunkSize > fmtData.size()) {
+                file.seekg(chunkSize - fmtData.size(), std::ios::cur);
+            }
+        } else if (std::memcmp(chunkHeader, "data", 4) == 0 && !foundData) {
+            foundData = true;
+            dataSize = chunkSize;
+            break;
+        } else {
+            file.seekg(chunkSize, std::ios::cur);
+        }
+    }
 
     if (sampleRate > 0 && numChannels > 0 && bitsPerSample > 0) {
         uint32_t bytesPerSample = (bitsPerSample / 8) * numChannels;
@@ -404,7 +429,6 @@ bool MetadataParser::parseWAV(const std::string& filePath, AudioMetadata& meta) 
         }
     }
 
-    // WAV has minimal metadata - title from filename would be handled by caller
     return true;
 }
 

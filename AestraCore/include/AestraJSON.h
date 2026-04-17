@@ -370,6 +370,7 @@ private:
                     value += '\\';
                     break;
                 default:
+                    value += '\\';
                     value += str[pos];
                     break;
                 }

@@ -1,6 +1,7 @@
 #pragma once
 #include "../../AestraCore/include/AestraJSON.h"
 #include "../Plugin/PluginHost.h"
+#include "Models/PatternSource.h"
 
 #include <cstdint>
 #include <memory>
@@ -12,6 +13,7 @@ namespace Aestra {
 namespace Audio {
 
 // Forward declarations
+class PatternManager;
 using UnitID = uint64_t;
 
 enum class UnitGroup : uint32_t {
@@ -54,6 +56,8 @@ struct UnitInfo {
     std::string audioClipPath;
     /** @brief High-level group classification used by the Arsenal UI. */
     UnitGroup group;
+    /** @brief Default pattern associated with this unit for Piano Roll editing. */
+    PatternID defaultPatternId;
 };
 
 /**
@@ -187,12 +191,16 @@ public:
     /** @brief Restore unit state from JSON. */
     void loadFromJSON(const JSON& json);
 
+    /** @brief Set the PatternManager used for auto-creating patterns per unit. */
+    void setPatternManager(PatternManager* pm) { m_patternManager = pm; }
+
 private:
     UnitID nextId{1};
     std::unordered_map<UnitID, UnitInfo> m_units;
     std::vector<UnitID> m_unitOrder;
     std::atomic<double> m_sampleRate{48000.0};
     std::atomic<uint32_t> m_blockSize{512};
+    PatternManager* m_patternManager{nullptr};
 
 public:
     void setSampleRate(double rate) { m_sampleRate.store(rate, std::memory_order_relaxed); }

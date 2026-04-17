@@ -131,6 +131,7 @@ private:
     // Mouse position tracking for wheel events
     int m_lastMouseX;
     int m_lastMouseY;
+    bool m_capsLockLatched = false;
     
     // Cursor style tracking
     NUICursorStyle m_currentCursorStyle = NUICursorStyle::Arrow;

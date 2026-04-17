@@ -45,9 +45,39 @@ void NUISlider::onRender(NUIRenderer& renderer)
 bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isEnabled() || !isVisible()) return false;
+    const bool isOverSlider = isPointOnSlider(event.position);
 
-    // Check if mouse is over the slider
-    if (!isPointOnSlider(event.position)) return false;
+    if (event.doubleClick && event.pressed && event.button == NUIMouseButton::Left)
+    {
+        if (doubleClickReturnValueEnabled_)
+        {
+            setValue(doubleClickReturnValue_);
+        }
+        return true;
+    }
+
+    // Keep drag interaction alive even when cursor leaves bounds.
+    if (isDragging_)
+    {
+        if (event.released && event.button == NUIMouseButton::Left)
+        {
+            isDragging_ = false;
+            triggerDragEnd();
+            setDirty(true);
+            return true;
+        }
+        if (event.button == NUIMouseButton::None)
+        {
+            if (valueChangeMode_ != ValueChangeMode::Click)
+            {
+                updateValueFromMousePosition(event.position);
+            }
+            return true;
+        }
+    }
+
+    // Not dragging yet: only start when pointer is in bounds.
+    if (!isOverSlider) return false;
 
     if (event.pressed && event.button == NUIMouseButton::Left)
     {
@@ -56,37 +86,14 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
         lastMousePosition_ = event.position;
         valueWhenDragStarted_ = value_;
         
-        // Update value if not in drag-only mode
-        if (valueChangeMode_ != ValueChangeMode::Drag)
+        // Click mode updates only on click, drag mode updates only while dragging.
+        if (valueChangeMode_ == ValueChangeMode::Normal || valueChangeMode_ == ValueChangeMode::Click)
         {
             updateValueFromMousePosition(event.position);
         }
         
         triggerDragStart();
         setDirty(true);
-        return true;
-    }
-    else if (event.released && event.button == NUIMouseButton::Left && isDragging_)
-    {
-        // Stop dragging
-        isDragging_ = false;
-        triggerDragEnd();
-        setDirty(true);
-        return true;
-    }
-    else if (isDragging_ && event.button == NUIMouseButton::None)
-    {
-        // Handle dragging (mouse move events have button = None)
-        updateValueFromMousePosition(event.position);
-        return true;
-    }
-    else if (event.pressed && event.button == NUIMouseButton::Left && event.doubleClick)
-    {
-        // Double-click to reset value
-        if (doubleClickReturnValue_)
-        {
-            setValue(doubleClickReturnValue_);
-        }
         return true;
     }
 
@@ -221,7 +228,7 @@ void NUISlider::setSnapValue(double snapValue)
 
 void NUISlider::setDoubleClickReturnValue(bool enabled, double valueToReturn)
 {
-    doubleClickReturnValue_ = enabled;
+    doubleClickReturnValueEnabled_ = enabled;
     doubleClickReturnValue_ = valueToReturn;
 }
 

@@ -20,13 +20,15 @@ This file documents the public automation expectations for this repository.
 - Update public docs when contributor workflow, CI posture, or release-status language changes.
 - Prefer surgical commits grouped by concern.
 - Recording pipeline now supports armed capture, take commit, monitoring modes, project-relative recordings, and input diagnostics.
-- `Loop -> Project` now has empty-project fallback behavior and live extent sync as arrangement content changes.
+- `Loop -> Project` has empty-project fallback (16 bars). Loop extent is set on selection, not auto-updated on clip changes — reselect "Project" to recalculate. This is acceptable for v1 Beta.
+- Piano Roll ↔ Arsenal sync is complete: double-click unit opens Piano Roll with unit's pattern, edits save back and refresh Arsenal minimap. Minimap shows pitch-based note bars with grid lines, octave labels, and scroll-wheel pitch viewport.
+- Arsenal audio leakage is prevented: `processArsenalUnits()` returns early in Timeline mode (`m_patternPlaybackMode` guard at AudioEngine.cpp:2459).
 - Offline export now renders through the live engine path and temporarily suspends the realtime stream during export.
-- Last validated: 2026-04-02 by Codex (verified against TrackManager.h and TrackManagerUI.cpp)
+  - Last validated: 2026-04-13 (Piano Roll ↔ Arsenal sync, minimap, audio leakage verified)
 
 ## Freshness
 
-Last reviewed: 2026-04-04 by Codex.
+Last reviewed: 2026-04-13 by Hermes.
 
 ---
 

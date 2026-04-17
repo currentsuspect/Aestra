@@ -44,6 +44,10 @@ set(Aestra_SOURCES
 	Panels/PatternBrowserPanel.cpp
 	Panels/AuditionPanel.h
 	Panels/AuditionPanel.cpp
+	Panels/AestraHistoryPanel.h
+	Panels/AestraHistoryPanel.cpp
+	Panels/SampleEditorPanel.h
+	Panels/SampleEditorPanel.cpp
 	
 	# Settings
 	Settings/ConfirmationDialog.h

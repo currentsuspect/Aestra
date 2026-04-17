@@ -25,7 +25,8 @@ void UIMixerHeader::cacheThemeColors()
     m_text = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary");
     m_selectedText = theme.getColor("textPrimary");
-    m_selectedBg = theme.getColor("accentPrimary").withAlpha(0.13f);
+    m_selectedBg = theme.getColor("primary").withAlpha(0.06f);
+    m_selectedBorder = theme.getColor("primary").withAlpha(0.16f);
 }
 
 NUIColor UIMixerHeader::colorFromARGB(uint32_t argb)
@@ -82,6 +83,7 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     // Background for selection
     if (m_selected) {
         renderer.fillRoundedRect(bounds, 10.0f, m_selectedBg);
+        renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, m_selectedBorder);
     }
 
     // Top Colored Bar (Visual Indicator) - Replaces side chip

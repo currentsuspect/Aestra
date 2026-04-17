@@ -193,6 +193,9 @@ void TransportBar::createIcons() {
 void TransportBar::createButtons() {
     // Play/Pause/Stop/Record...
     // Play/Pause/Stop/Record...
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+    const auto buttonGlass = theme.getColor("buttonBgDefault").withAlpha(0.62f);
+    const auto buttonBorder = theme.getColor("borderSubtle").withAlpha(0.92f);
     auto createBtn = [&](std::shared_ptr<AestraUI::NUIButton>& btn, std::function<void()> cb) {
         btn = std::make_shared<AestraUI::NUIButton>();
         btn->setText("");
@@ -201,8 +204,8 @@ void TransportBar::createButtons() {
         
         // APPLIZED GLASS STYLE - UPDATED
         // Brighter tinted glass to match AuditionPanel and improve visibility
-        btn->setBackgroundColor(AestraUI::NUIColor(0.12f, 0.12f, 0.22f, 0.4f)); // Purple/Blue tint
-        btn->setBorderColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f)); // Brighter border
+        btn->setBackgroundColor(buttonGlass);
+        btn->setBorderColor(buttonBorder);
         btn->setBorderWidth(1.0f);
         btn->setCornerRadius(20.0f); // Circular
         btn->setGlowEnabled(true); // Hover glow
@@ -436,10 +439,9 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     const auto& layout = themeManager.getLayoutDimensions();
     
     // Colors
-    // Pure White Glass - Clean frosted effect without grey contamination
-    AestraUI::NUIColor glassBg = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.04f); 
-    AestraUI::NUIColor glassBorder = themeManager.getColor("glassBorder");
-    AestraUI::NUIColor glassHover = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
+    AestraUI::NUIColor glassBg = themeManager.getColor("buttonBgDefault").withAlpha(0.95f);
+    AestraUI::NUIColor glassBorder = themeManager.getColor("borderSubtle").withAlpha(0.90f);
+    AestraUI::NUIColor glassHover = themeManager.getColor("buttonBgHover").withAlpha(0.98f);
     AestraUI::NUIColor glassActive = themeManager.getColor("accentPrimary").withAlpha(0.15f);
     
     AestraUI::NUIColor iconGrey = themeManager.getColor("textSecondary");
@@ -454,11 +456,13 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     float x = padding;
     
     const float iconSize = 18.0f; // Reduced from 24 to 18 for better padding in 28px button
-    float iconPadding = (buttonSize - iconSize) * 0.5f; // (28 - 18)/2 = 5px padding
-    if (iconPadding < 2.0f) iconPadding = 2.0f;
 
     // Helper to render universal Glass Box button
-    auto renderGlassButton = [&](std::shared_ptr<AestraUI::NUIButton>& btn, std::shared_ptr<AestraUI::NUIIcon>& icon, bool isActive, bool isRecording = false) {
+    auto renderGlassButton = [&](std::shared_ptr<AestraUI::NUIButton>& btn,
+                                 std::shared_ptr<AestraUI::NUIIcon>& icon,
+                                 bool isActive,
+                                 bool isRecording = false,
+                                 bool isPrimaryTransport = false) {
         if (!btn || !icon) return;
 
         AestraUI::NUIRect buttonRect = btn->getBounds(); // Use bounds set in layoutComponents
@@ -482,14 +486,27 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
              currentBg = themeManager.getColor("buttonBgActive").withAlpha(0.98f);
              currentBorder = themeManager.getColor("borderActive").withAlpha(0.22f);
              iconColor = themeManager.getColor("textPrimary");
-        } else if (isHovered) {
-             currentBg = themeManager.getColor("buttonBgHover").withAlpha(0.98f);
+         } else if (isHovered) {
+             currentBg = glassHover;
              currentBorder = themeManager.getColor("border").withAlpha(0.38f);
              iconColor = themeManager.getColor("textPrimary");
+         }
+
+        if (isPrimaryTransport) {
+            if (!isRecording && !isActive && !isHovered) {
+                currentBg = themeManager.getColor("buttonBgHover").withAlpha(0.92f);
+                currentBorder = themeManager.getColor("border").withAlpha(0.48f);
+            } else if (isActive && !isRecording) {
+                currentBg = themeManager.getColor("accentPrimary").withAlpha(0.22f);
+                currentBorder = themeManager.getColor("accentPrimary").withAlpha(0.46f);
+            }
+            if (!isRecording) {
+                iconColor = themeManager.getColor("textPrimary").withAlpha(isActive || isHovered ? 1.0f : 0.94f);
+            }
         }
         
         // Draw Button Background
-        renderer.drawShadow(buttonRect, 0.0f, 6.0f, 18.0f, AestraUI::NUIColor(0, 0, 0, 0.14f));
+        renderer.drawShadow(buttonRect, 0.0f, isPrimaryTransport ? 8.0f : 6.0f, isPrimaryTransport ? 22.0f : 18.0f, AestraUI::NUIColor(0, 0, 0, isPrimaryTransport ? 0.20f : 0.14f));
         renderer.fillRoundedRect(buttonRect, 7.0f, currentBg);
         renderer.strokeRoundedRect(buttonRect, 7.0f, 1.0f, currentBorder);
         renderer.strokeRoundedRect({buttonRect.x + 1.0f, buttonRect.y + 1.0f, buttonRect.width - 2.0f, buttonRect.height - 2.0f},
@@ -502,7 +519,10 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         }
 
         // Render Icon
-        AestraUI::NUIRect iconRect = NUIAbsolute(buttonRect, iconPadding, iconPadding, iconSize, iconSize);
+        const float localIconSize = isPrimaryTransport ? 20.0f : iconSize;
+        float localPadding = (buttonRect.width - localIconSize) * 0.5f;
+        if (localPadding < 2.0f) localPadding = 2.0f;
+        AestraUI::NUIRect iconRect = NUIAbsolute(buttonRect, localPadding, localPadding, localIconSize, localIconSize);
         icon->setBounds(iconRect);
         icon->setColor(iconColor);
         icon->onRender(renderer);
@@ -514,16 +534,16 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     if (m_playButton) {
         bool isPlaying = (m_state == TransportState::Playing);
         auto currentIcon = isPlaying ? m_pauseIcon : m_playIcon;
-        renderGlassButton(m_playButton, currentIcon, isPlaying);
+        renderGlassButton(m_playButton, currentIcon, isPlaying, false, true);
     }
 
     // Stop
-    renderGlassButton(m_stopButton, m_stopIcon, false);
+    renderGlassButton(m_stopButton, m_stopIcon, false, false, true);
 
     // Use isToggled() for immediate visual feedback. 
     // 3rd arg (isActive): Controls pressed look. 4th arg (isRecording): Controls RED color.
     // We want RED only when toggled.
-    renderGlassButton(m_recordButton, m_recordIcon, m_recordButton->isToggled(), m_recordButton->isToggled());
+    renderGlassButton(m_recordButton, m_recordIcon, m_recordButton->isToggled(), m_recordButton->isToggled(), true);
 
     // --- Transport Extras (Left of Metronome) ---
     renderGlassButton(m_countInButton, m_countInIcon, m_countInActive);
@@ -587,9 +607,10 @@ void TransportBar::layoutComponents() {
         islandWidth = bounds.width - 20.0f;
     }
 
-    float islandHeight = 48.0f; // Increased from 42.0f to fit 34px buttons
-    float islandX = (bounds.width - islandWidth) / 2.0f;
-    float islandY = (bounds.height - islandHeight) / 2.0f;
+    const float islandHeight = 48.0f;
+    const float visualCenterBiasY = -1.0f;
+    float islandX = std::round((bounds.width - islandWidth) * 0.5f);
+    float islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);
     
     // Check min width/fallback
     if (bounds.width < islandWidth) {
@@ -597,7 +618,7 @@ void TransportBar::layoutComponents() {
         islandWidth = bounds.width;
     }
 
-    float centerOffsetY = islandY + (islandHeight - buttonSize) / 2.0f;
+    float centerOffsetY = std::round(islandY + (islandHeight - buttonSize) * 0.5f);
 
     // --- Placement ---
     float xCursor = islandX + islandPadding;
@@ -679,9 +700,10 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     
     if (islandWidth > bounds.width - 20.0f) islandWidth = bounds.width - 20.0f;
     
-    float islandHeight = 48.0f; 
-    float islandX = (bounds.width - islandWidth) / 2.0f;
-    float islandY = (bounds.height - islandHeight) / 2.0f;
+    const float islandHeight = 48.0f;
+    const float visualCenterBiasY = -1.0f;
+    float islandX = std::round((bounds.width - islandWidth) * 0.5f);
+    float islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);
     
     if (bounds.width < islandWidth) {
         islandX = 0;
@@ -700,6 +722,18 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     
     // 4. Border
     renderer.strokeRoundedRect(islandRect, 12.0f, 1.0f, themeManager.getColor("border"));
+
+    // 5. Group separators to improve hierarchy readability
+    const float leftEdge = islandRect.x + islandPadding;
+    const float sep1X = leftEdge + group1Width + (groupSpacing * 0.5f);
+    const float sep2X = sep1X + groupSpacing * 0.5f + group2Width + (groupSpacing * 0.5f);
+    const float sep3X = sep2X + groupSpacing * 0.5f + infoWidth + (groupSpacing * 0.5f);
+    const float sepTop = islandRect.y + 8.0f;
+    const float sepBottom = islandRect.bottom() - 8.0f;
+    const auto sepColor = themeManager.getColor("borderSubtle").withAlpha(0.70f);
+    renderer.drawLine({sep1X, sepTop}, {sep1X, sepBottom}, 1.0f, sepColor);
+    renderer.drawLine({sep2X, sepTop}, {sep2X, sepBottom}, 1.0f, sepColor);
+    renderer.drawLine({sep3X, sepTop}, {sep3X, sepBottom}, 1.0f, sepColor);
     
     renderChildren(renderer);
     renderButtonIcons(renderer);
@@ -716,8 +750,40 @@ void TransportBar::onResize(int width, int height) {
 
 bool TransportBar::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // Standard event dispatch to children (respects Z-order: Buttons are on Top)
-    return AestraUI::NUIComponent::onMouseEvent(event);
+    const bool handled = AestraUI::NUIComponent::onMouseEvent(event);
+    if (!getBounds().contains(event.position)) {
+        return handled;
+    }
 
+    const auto updateTooltipForButton = [&](const std::shared_ptr<AestraUI::NUIButton>& button,
+                                            const char* text) -> bool {
+        return button && button->isVisible() && button->getBounds().contains(event.position)
+            && button->isEnabled() && text && text[0] != '\0';
+    };
+
+    const std::pair<std::shared_ptr<AestraUI::NUIButton>, const char*> tooltipButtons[] = {
+        {m_playButton, "Play / Pause"},
+        {m_stopButton, "Stop"},
+        {m_recordButton, "Record"},
+        {m_metronomeButton, "Metronome"},
+        {m_countInButton, "Count-In"},
+        {m_waitButton, "Wait for Input"},
+        {m_loopRecordButton, "Loop Record"},
+        {m_mixerButton, "Mixer"},
+        {m_sequencerButton, "Arsenal"},
+        {m_pianoRollButton, "Piano Roll"},
+        {m_playlistButton, "Timeline"}
+    };
+
+    for (const auto& [button, text] : tooltipButtons) {
+        if (updateTooltipForButton(button, text)) {
+            AestraUI::NUIComponent::showRemoteTooltip(text, event.position, this);
+            return handled;
+        }
+    }
+
+    AestraUI::NUIComponent::hideRemoteTooltip(this);
+    return handled;
 }
 
 } // namespace Aestra

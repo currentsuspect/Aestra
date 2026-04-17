@@ -112,31 +112,23 @@ void MixerChannel::processAudio(float* outputBuffer, uint32_t numFrames, double 
         // Plugins expect planar format (LL...LL, RR...RR)
         // So we need to de-interleave -> process -> re-interleave
 
-        // Allocate temporary planar buffers
-        std::vector<float> leftChannel(numFrames);
-        std::vector<float> rightChannel(numFrames);
-
-        // De-interleave: split interleaved stereo into separate L/R channels
-        for (uint32_t i = 0; i < numFrames; ++i) {
-            leftChannel[i] = outputBuffer[i * 2];      // L samples at even indices
-            rightChannel[i] = outputBuffer[i * 2 + 1]; // R samples at odd indices
+        if (m_leftChannelBuf.size() < numFrames) {
+            m_leftChannelBuf.resize(numFrames);
+            m_rightChannelBuf.resize(numFrames);
         }
 
-        // Process through effect chain in planar format
-        float* channels[2] = {leftChannel.data(), rightChannel.data()};
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            m_leftChannelBuf[i] = outputBuffer[i * 2];
+            m_rightChannelBuf[i] = outputBuffer[i * 2 + 1];
+        }
 
-        // Debug: Print first sample before processing
-        // if (numFrames > 0 && m_channelId == 1) Log::info("Pre-FX val: " + std::to_string(channels[0][0]));
+        float* channels[2] = {m_leftChannelBuf.data(), m_rightChannelBuf.data()};
 
         m_effectChain.process(channels, 2, numFrames);
 
-        // Debug: Print first sample after processing
-        // if (numFrames > 0 && m_channelId == 1) Log::info("Post-FX val: " + std::to_string(channels[0][0]));
-
-        // Re-interleave: merge processed L/R channels back to interleaved format
         for (uint32_t i = 0; i < numFrames; ++i) {
-            outputBuffer[i * 2] = leftChannel[i];      // L to even indices
-            outputBuffer[i * 2 + 1] = rightChannel[i]; // R to odd indices
+            outputBuffer[i * 2] = m_leftChannelBuf[i];
+            outputBuffer[i * 2 + 1] = m_rightChannelBuf[i];
         }
     }
 }
